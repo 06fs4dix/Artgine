@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8" />
+		<script src='../artgine/external/legacy/popper/poper.min.js'></script>
+	<link rel='stylesheet' href='../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+	<script src='../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+	<link rel='stylesheet' href='../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+	<script type="module" src="Server.js"></script>
+
+	<title>Artgine</title>
+</head>
+
+<body>
+	<div class="container mt-3"> <!-- 전체 간격 적당히 조정 -->
+		<div class="d-flex justify-content-center">
+			<div class="w-100" style="max-width: 500px;">
+				<div class="row align-items-center mb-2">
+					<label class="col-sm-4 col-form-label">URL</label>
+					<div class="col-sm-8 d-flex">
+						<input type="text" class="form-control me-2" id="url_txt" readonly>
+						<button class="btn btn-outline-secondary" id="url_btn">Copy</button>
+					</div>
+				</div>
+				<div class="mb-3 row align-items-center">
+					<label class="col-sm-4 col-form-label">Private IP</label>
+					<div class="col-sm-8 d-flex">
+						<input type="text" class="form-control me-2" id="privateIP_txt" readonly>
+						<button class="btn btn-outline-secondary" id="privateIP_btn">Copy</button>
+					</div>
+				</div>
+				<div class="mb-3 row align-items-center">
+					<label class="col-sm-4 col-form-label">Public IP</label>
+					<div class="col-sm-8 d-flex">
+						<input type="text" class="form-control me-2" id="publicIP_txt" readonly>
+						<button class="btn btn-outline-secondary" id="publicIP_btn">Copy</button>
+					</div>
+				</div>
+				<div class="text-center">
+					<button class="btn btn-primary" id="browser_btn">Browser</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>

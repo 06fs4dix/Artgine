@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "🚀 Electron Exe",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd",
+            "args": [
+                "."
+            ],
+            "cwd": "${workspaceFolder}",
+            "windows": {
+                "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+            }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "🧪 Node.js",
+            "program": "${workspaceFolder}/script/DBTest.js",
+            "cwd": "${workspaceFolder}",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}

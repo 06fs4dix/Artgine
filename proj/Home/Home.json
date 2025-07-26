@@ -1,0 +1,34 @@
+{
+  "preference": {
+    "mTargetWidth": 0,
+    "mTargetHeight": 0,
+    "mRenderer": "Null",
+    "m32fDepth": false,
+    "mTexture16f": false,
+    "mAnti": true,
+    "mBatchPool": true,
+    "mXR": false,
+    "mDeveloper": true,
+    "mIAuto": true,
+    "mWASM": false
+  },
+  "pluging": [],
+  "includes": {
+    "pakozlib": true,
+    "jszip": true,
+    "screenfull": true,
+    "popper": true,
+    "bootstrap": true,
+    "excel": false,
+    "lzstring": false,
+    "firebase": false,
+    "nosleep": false,
+    "colorpicker": false,
+    "jquery": false,
+    "MonacoEditor": true,
+    "summernote": false,
+    "tone": false,
+    "soundfont": false,
+    "toastui": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "text":"test용",
+    "include":true
+
+}

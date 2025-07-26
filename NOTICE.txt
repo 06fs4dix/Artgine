@@ -1,0 +1,73 @@
+This project includes third-party software under their respective open source licenses:
+
+---
+
+Library: Bootstrap 5.3.3  
+License: MIT  
+https://github.com/twbs/bootstrap
+
+Library: Bootstrap Icons 1.11.3  
+License: MIT  
+https://github.com/twbs/icons
+
+Library: jQuery  
+License: MIT  
+https://jquery.org/license/
+
+Library: Monaco Editor  
+License: MIT  
+https://github.com/microsoft/monaco-editor
+
+Library: Pako  
+License: Zlib  
+https://github.com/nodeca/pako
+
+Library: Popper.js  
+License: MIT  
+https://github.com/popperjs/popper-core
+
+Library: Screenfull  
+License: MIT  
+https://github.com/sindresorhus/screenfull
+
+Library: Soundfont (MIDI.js or similar)  
+License: MIT 
+https://github.com/danigb/soundfont-player
+
+Library: LZ-String  
+License: MIT  
+https://github.com/pieroxy/lz-string
+
+Library: JSZip  
+License: MIT or BSD 
+https://github.com/Stuk/jszip
+
+Library: NoSleep.js  
+License: MIT  
+https://github.com/richtr/NoSleep.js
+
+Library: Tone.js  
+License: MIT  
+https://github.com/Tonejs/Tone.js
+
+Library: webgl-debug.js  
+License: Apache 2.0  
+https://github.com/greggman/webgl-debug
+
+Library: Firebase JS SDK  
+License: Apache 2.0  
+https://github.com/firebase/firebase-js-sdk
+
+Library: glTF-Transform  
+License: MIT  
+https://github.com/gltf-transform/gltf-transform
+
+Library: SoundTouchJS  
+License: BSD  
+https://github.com/also/soundtouch-js
+
+Library: ToastUI Editor  
+License: MIT  
+https://github.com/nhn/tui.editor
+---
+Please refer to each library's repository for the full license texts and any further requirements.

@@ -1,0 +1,8 @@
+{
+    "dependencies": {
+		"artgine":1
+    },
+    "version":1,
+    "include":true
+
+}
