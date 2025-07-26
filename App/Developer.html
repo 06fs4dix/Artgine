@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8" />
+
+	<script src='../artgine/external/legacy/popper/poper.min.js'></script>
+	<link rel='stylesheet' href='../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+	<script src='../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+	<link rel='stylesheet' href='../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+	<script type="module" src="Developer.js"></script>
+
+	<title>Artgine</title>
+</head>
+
+<body class="p-4">
+	<!-- 탭 네비게이션 -->
+	<ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
+		<li class="nav-item" role="presentation">
+			<button class="nav-link active" id="app-tab" data-bs-toggle="tab" data-bs-target="#app" type="button"
+				role="tab">App</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="pref-tab" data-bs-toggle="tab" data-bs-target="#preference" type="button"
+				role="tab">Preference</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="include-tab" data-bs-toggle="tab" data-bs-target="#include" type="button"
+				role="tab">Include</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="manifest-tab" data-bs-toggle="tab" data-bs-target="#manifest" type="button"
+				role="tab">
+				Manifest
+			</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="service-tab" data-bs-toggle="tab" data-bs-target="#serviceworker" type="button"
+				role="tab">
+				ServiceWorker
+			</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="plugin-tab" data-bs-toggle="tab" data-bs-target="#plugin" type="button"
+				role="tab">Plugin</button>
+		</li>
+	</ul>
+
+	<div class="tab-content" id="settingsTabsContent">
+		<!-- App -->
+		<div class="tab-pane fade show active" id="app" role="tabpanel">
+			<div class="mb-2">
+				<label class="form-label">url</label>
+				<input type="text" class="form-control" id="url_txt" value="http://localhost:8082/Artgine">
+			</div>
+			<!-- <div class="mb-2">
+				<label class="form-label">libPath</label>
+				<div class="input-group">
+					<input type="text" class="form-control" id="libPath_txt" value="lib">
+					<button class="btn btn-outline-secondary" type="button" id="selectLibPath_btn">폴더 선택</button>
+				</div>
+			</div> -->
+			<div class="mb-2">
+				<label class="form-label">projectPath</label>
+				<div class="input-group">
+					<input type="text" class="form-control" id="projectPath_txt" value="proj/Sample">
+					<button class="btn btn-outline-secondary" type="button" id="selectProjectPath_btn">폴더 선택</button>
+				</div>
+			</div>
+			<!-- <div class="mb-2">
+				<label class="form-label">projectName</label>
+				<input type="text" class="form-control" id="projectName_txt">
+			</div> -->
+			<div class="row mb-2">
+				<div class="col">
+					<label class="form-label">width</label>
+					<input type="number" class="form-control" id="width_num" value="1024">
+				</div>
+				<div class="col">
+					<label class="form-label">height</label>
+					<input type="number" class="form-control" id="height_num" value="768">
+				</div>
+			</div>
+
+			<div class="mb-2">
+				<label class="form-label">program</label>
+				<select class="form-select" id="program_sel">
+					<option value="developer">developer</option>
+					<option value="client">client</option>
+					<option value="server">server</option>
+				</select>
+			</div>
+
+			<div class="mb-2">
+				<label class="form-label">server</label>
+				<select class="form-select" id="server_sel">
+					<option value="local">local</option>
+					<option value="remote">remote</option>
+					<option value="webServer">webServer</option>
+					<option value="webServer+other">webServer+other</option>
+				</select>
+			</div>
+
+			<div class="form-check mb-3">
+				<input class="form-check-input" type="checkbox" id="fullScreen_chk">
+				<label class="form-check-label" for="fullScreen_chk">fullScreen</label>
+			</div>
+			<div class="d-flex gap-2">
+				<button class="btn btn-primary" id="Run_btn">Run</button>
+				<button class="btn btn-dark" id="VSCode_btn">VSCode</button>
+			</div>
+			<div class="mt-2 d-flex align-items-center flex-wrap gap-3">
+				<div class="d-flex align-items-center">
+					<pre class="form-control user-select-all mb-0 me-2" style="width: auto; display: inline-block;">npm install</pre>
+					<span style="user-select: none;"> node_modules Install</span>
+				</div>
+				<div class="d-flex align-items-center">
+					<pre class="form-control user-select-all mb-0 me-2" style="width: auto; display: inline-block;">npx tsc -w</pre>
+					<span style="user-select: none;"> ts Build</span>
+				</div>
+			</div>
+
+		</div>
+
+		<!-- Preference -->
+		<div class="tab-pane fade" id="preference" role="tabpanel">
+			<div class="row mb-2">
+				<div class="col">
+					<label class="form-label">targetWidth</label>
+					<input id="targetWidth" type="number" class="form-control" value="0">
+
+					<div class="form-check mb-1">
+						<input class="form-check-input" type="checkbox" id="depth">
+						<label class="form-check-label" for="depth" data-bs-toggle="tooltip" 
+							title="32BitDepth Use">32fDepth</label>
+					</div>
+					<div class="form-check mb-1">
+						<input class="form-check-input" type="checkbox" id="anti">
+						<label class="form-check-label" for="anti">anti</label>
+					</div>
+					<div class="form-check mb-1">
+						<input class="form-check-input" type="checkbox" id="xr">
+						<label class="form-check-label" for="xr">xr</label>
+					</div>
+				</div>
+				<div class="col">
+					<label class="form-label">targetHeight</label>
+					<input id="targetHeight" type="number" class="form-control" value="0">
+
+					<div class="form-check mb-1">
+						<input class="form-check-input" type="checkbox" id="devTool" checked>
+						<label class="form-check-label" for="devTool" data-bs-toggle="tooltip" 
+							title="개발자 모드가 꺼지면 개발창을 열수없다">developer</label>
+					</div>
+					<div class="form-check mb-1">
+						<input class="form-check-input" type="checkbox" id="IAuto" checked>
+						<label class="form-check-label" for="IAuto" data-bs-toggle="tooltip" 
+							title="Auto가 없으면 상태갱신을 수동으로 해야한다">IAuto(CAtelier Include</label>
+					</div>
+					<div class="form-check mb-3">
+						<input class="form-check-input" type="checkbox" id="wasm">
+						<label class="form-check-label" for="wasm">wasm</label>
+					</div>
+				</div>
+			</div>
+
+
+			<div class="mb-3">
+				<label class="form-label">Renderer</label>
+				<select class="form-select">
+					<option value="Null">Null</option>
+					<option value="GL" selected>GL</option>
+					<option value="GPU">GPU</option>
+				</select>
+			</div>
+			<button class="btn btn-secondary">Default</button>
+		</div>
+
+		<!-- Include -->
+		<div class="tab-pane fade" id="include" role="tabpanel">
+			<div class="row mb-3">
+				<div class="col-md-6">
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="pakozlib_chk" checked>
+						<label class="form-check-label" for="pakozlib_chk">PakoZlib(FBX)</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="jszip_chk" checked>
+						<label class="form-check-label" for="jszip_chk">JSZip</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="screenfull_chk" checked>
+						<label class="form-check-label" for="screenfull_chk">ScreenFull</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="popper_chk" checked>
+						<label class="form-check-label" for="popper_chk">Popper</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="bootstrap_chk" checked>
+						<label class="form-check-label" for="bootstrap_chk">Bootstrap</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="MonacoEditor_chk" checked>
+						<label class="form-check-label" for="MonacoEditor_chk">MonacoEditor</label>
+					</div>
+				</div>
+
+				<div class="col-md-6">
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="excel_chk">
+						<label class="form-check-label" for="excel_chk">Excel</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="lzstring_chk">
+						<label class="form-check-label" for="lzstring_chk">LZString</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="firebase_chk">
+						<label class="form-check-label" for="firebase_chk">Firebase</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="nosleep_chk">
+						<label class="form-check-label" for="nosleep_chk">NoSleep</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="tone_chk">
+						<label class="form-check-label" for="tone_chk">Tone</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="soundfont_chk">
+						<label class="form-check-label" for="soundfont_chk">SoundFont</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="toastui_chk">
+						<label class="form-check-label" for="toastui_chk">ToastUI</label>
+					</div>
+				</div>
+			</div>
+
+			
+
+			
+		</div>
+		<div class="tab-pane fade" id="manifest" role="tabpanel">
+			<div class="mb-2">
+				<label class="form-label">short_name</label>
+				<input type="text" class="form-control" id="short_name_txt">
+			</div>
+			<div class="mb-2">
+				<label class="form-label">name</label>
+				<input type="text" class="form-control" id="name_txt">
+			</div>
+			<div class="mb-3">
+				<label class="form-label">Icons<small class="text-muted ms-1">(192×192 minimum, 512×512
+						recommended)</small> </label>
+				<div class="list-group" id="icons_list"
+					style="min-height: 120px; border: 1px solid #ccc; border-radius: 5px;"></div>
+				<button type="button" class="btn btn-sm btn-outline-primary mt-2" id="iconsAdd_btn">+ Add Icon</button>
+			</div>
+
+
+			<div class="mb-2">
+				<label class="form-label">orientation</label>
+				<select class="form-select" id="orientation_sel">
+					<option value="any">any</option>
+					<option value="portrait">portrait</option>
+					<option value="landscape">landscape</option>
+				</select>
+			</div>
+			<div class="mb-2">
+				<label class="form-label">display</label>
+				<select class="form-select" id="display_sel">
+					<option value="fullscreen">fullscreen</option>
+					<option value="standalone">standalone</option>
+					<option value="minimal-ui">minimal-ui</option>
+					<option value="browser">browser</option>
+				</select>
+			</div>
+			<div class="mb-2">
+				<label class="form-label">background_color</label>
+				<input type="color" class="form-control form-control-color" id="background_color_pick" value="#ffffff">
+			</div>
+			<div class="mb-2">
+				<label class="form-label">theme_color</label>
+				<input type="color" class="form-control form-control-color" id="theme_color_pick" value="#000000">
+			</div>
+
+			<div class="mb-2">
+				<label class="form-label">start_url</label>
+				<input type="text" class="form-control" id="start_url_txt">
+			</div>
+			<div class="mb-2">
+				<label class="form-label">id</label>
+				<input type="text" class="form-control" id="id_txt">
+			</div>
+			<div class="mb-2">
+				<label class="form-label">description</label>
+				<textarea class="form-control" id="description_txt" rows="2"></textarea>
+			</div>
+			<div class="mb-2">
+				<label class="form-label">categories</label>
+				<input type="text" class="form-control" id="categories_txt" placeholder='comma separated'>
+			</div>
+			<div class="mb-2">
+				<label class="form-label">screenshots</label>
+				<textarea class="form-control" id="screenshots_txt" placeholder='JSON array' rows="2">[]</textarea>
+			</div>
+			<div class="mb-2">
+				<label class="form-label">scope</label>
+				<input type="text" class="form-control" id="scope_txt" value=".">
+			</div>
+			<div class="mb-2">
+				<label class="form-label">shortcuts</label>
+				<textarea class="form-control" id="shortcuts_txt" placeholder='JSON array' rows="2">[]</textarea>
+			</div>
+		</div>
+		<div class="tab-pane fade" id="serviceworker" role="tabpanel">
+			<div class="mb-3">
+				<label class="form-label">CACHE_NAME</label>
+				<input type="text" class="form-control" id="cache_name_txt" value="ServiceWorker-1" readonly>
+			</div>
+			<div class="mb-3">
+				<label class="form-label">MAX_CACHE_SIZE <small class="text-muted">(in MB)</small></label>
+				<input type="number" class="form-control" id="max_cache_size_num" min="1" value="50">
+			</div>
+
+			<div class="form-check mb-2">
+				<input class="form-check-input" type="checkbox" id="log_chk">
+				<label class="form-check-label" for="log_chk">Log</label>
+			</div>
+
+			<div class="form-check mb-2">
+				<input class="form-check-input" type="checkbox" id="api_cache_chk">
+				<label class="form-check-label" for="api_cache_chk">API_CACHE</label>
+			</div>
+		</div>
+		<div class="tab-pane fade" id="plugin" role="tabpanel">
+			<div class="row" id="plugin_list"></div>
+		</div>
+
+
+	</div>
+
+
+</body>
+
+</html>

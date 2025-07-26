@@ -1,0 +1,66 @@
+import { WebSocketServer } from 'ws';
+import { CEvent } from '../basic/CEvent.js';
+import { CServer } from './CServerMain.js';
+import { CConsol } from '../basic/CConsol.js';
+export class CServerSocker extends CServer {
+    mWSS;
+    constructor() {
+        super();
+    }
+    Connect() {
+        if (this.mMainServer == null)
+            return false;
+        let pathArr = CServer.FindURLPatterns(this);
+        CConsol.Log("[CServerSocker]" + pathArr + " Start", CConsol.eColor.blue);
+        if (pathArr != null) {
+            let path = pathArr[0];
+            if (path[0] != "/")
+                path = "/" + path;
+            this.mWSS = new WebSocketServer({ noServer: true });
+            this.mMainServer.GetServer().on('upgrade', (req, socket, head) => {
+                const url = new URL(req.url, `http://${req.headers.host}`);
+                if (url.pathname === path) {
+                    this.mWSS.handleUpgrade(req, socket, head, (ws) => {
+                        this.mWSS.emit('connection', ws, req);
+                    });
+                }
+                else {
+                    CConsol.Log("경로 불일치. 연결 거부됨", "red");
+                    socket.destroy();
+                }
+            });
+        }
+        else
+            this.mWSS = new WebSocketServer({ server: this.mMainServer.GetServer() });
+        this.mWSS.on('connection', (ws) => {
+            this.GetEvent(CEvent.eType.Open).Call(ws);
+            ws.on('message', (message) => {
+                this.GetEvent(CEvent.eType.Message).Call(ws, message);
+            });
+            ws.on('close', () => {
+                this.GetEvent(CEvent.eType.Open).Call(ws);
+            });
+        });
+    }
+    Destroy() {
+        CConsol.Log("[CServerSocker] Destroy", CConsol.eColor.red);
+        if (this.mWSS && this.mWSS.clients) {
+            for (const ws of this.mWSS.clients) {
+                try {
+                    ws.close();
+                }
+                catch (e) {
+                    console.error("Error closing client socket:", e);
+                }
+            }
+        }
+        if (this.mWSS) {
+            this.mWSS.close((err) => {
+                if (err)
+                    console.error("Error closing WebSocketServer:", err);
+                else
+                    CConsol.Log("[CServerSocker] WebSocketServer closed", CConsol.eColor.red);
+            });
+        }
+    }
+}

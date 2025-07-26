@@ -1,0 +1,18 @@
+{
+	"class": "CCanvas",
+	"mSubMap": {
+		"class": "map",
+		"key": [],
+		"value": []
+	},
+	"mColCan": [],
+	"mResMap": {
+		"class": "map",
+		"key": [],
+		"value": []
+	},
+	"mCameraKey": "2D",
+	"mPause": false,
+	"mSave": false,
+	"mKey": "Main"
+}

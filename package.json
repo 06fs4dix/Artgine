@@ -1,0 +1,62 @@
+{
+  "name": "webcontent",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "App/App.js",
+  "build": {
+    "appId": "com.Artgine",
+    "productName": "Artgine",
+    "files": [
+      "**/*",
+      "!**/*.ts",
+      "!**/*.map",
+      "!test/**",
+      "!*.md"
+    ],
+    "asar": false,
+    "win": {
+      "target": "portable"
+    }
+  },
+  "scripts": {
+    "start": "electron .",
+    "package": "cmd /c package.bat",
+    "artgine_class": "node script/gen_class_push.js",
+    "artgine_packet": "node script/gen_packet.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "connect-livereload": "^0.6.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-session": "^1.18.2",
+    "image-size": "^2.0.2",
+    "livereload": "^0.9.3",
+    "nodemon": "^3.1.9",
+    "path": "^0.12.7",
+    "raw-body": "^3.0.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "url": "^0.11.4",
+    "ws": "^8.18.1"
+  },
+  "description": "",
+  "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "@types/node": "^22.14.1",
+    "@types/ws": "^8.18.1",
+    "@webgpu/types": "^0.1.40",
+    "del": "^8.0.0",
+    "electron": "^35.2.1",
+    "electron-packager": "^17.1.2",
+    "gulp": "^5.0.1",
+    "gulp-javascript-obfuscator": "^1.1.6",
+    "mysql2": "^3.14.2",
+    "nodemailer": "^7.0.5",
+    "through2": "^4.0.2",
+    "typescript": "^5.8.2",
+    "vinyl-sourcemaps-apply": "^0.2.1"
+  }
+}
