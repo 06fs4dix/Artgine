@@ -12,7 +12,7 @@ import { CPaint2D } from "./paint/CPaint2D.js";
 import { CUpdate } from "../../basic/Basic.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CPoolGeo } from "../../geometry/CPoolGeo.js";
-export class CCollusionObject {
+export class CCollisionObject {
     mTar = null;
     mOrg = null;
     mPush = null;

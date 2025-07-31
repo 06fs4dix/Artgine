@@ -169,7 +169,7 @@ export class CRoomServer extends CServerSocker
     }
     Destroy(): void {
         //CConsol.Log("[CRoomServer] Destroy", CConsol.eColor.red);
-        this.Destroy();
+        super.Destroy();
         // 모든 클라이언트 소켓 종료
         if (this.mWSS && this.mWSS.clients) {
             for (const ws of this.mWSS.clients) {

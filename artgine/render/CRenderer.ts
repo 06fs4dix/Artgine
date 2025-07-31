@@ -191,7 +191,19 @@ export class CRendererGL extends CRenderer
 	//x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
 	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
 	{
+		var uniDf=_vf.GetDefault(_key);
+		if(uniDf!=null || uniDf.mEach==4 || uniDf.mEach==16){}
+		else
+			CAlert.E("error");
 		
+		if(_count==null)
+			_count=_buf.length/4;
+		this.mUniTexLastOff=uniDf.mData[0];
+		this.RebuildTexture(this.mUniToSam2d,uniDf.mData[0],0,uniDf.mData[1],_count,1,_buf);
+		if(_buf.length==0)
+			this.SendGPU(_vf,new CVec2(0,0),_key,null,0);
+		else
+			this.SendGPU(_vf,new CVec2(uniDf.mData[0],uniDf.mData[1]),_key,null,0);
 	}
 	TexBindReset()
 	{
@@ -253,7 +265,23 @@ export class CRendererGL extends CRenderer
 	}
 	override RebuildTexture(_tex : CTexture,_active :number,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView)
 	{
+		this.mDev.GL().activeTexture(this.mDev.GL().TEXTURE0+_active);
 		
+		var fmt1 = Number(this.mDev.GL().RGBA);
+		var fmt2 = Number(this.mDev.GL().UNSIGNED_BYTE);
+
+		fmt1 = this.mDev.GL().RGBA;
+		var info=_tex.GetInfo();
+
+		if(_tex.GetInfo()[0].mFormat==CTexture.eFormat.RGBA32F)
+			fmt2 = this.mDev.GL().FLOAT;
+		
+		
+		var gBuf=_tex.GetGBuf();
+		gBuf=gBuf[0];
+		
+		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D, gBuf);
+		this.mDev.GL().texSubImage2D(this.mDev.GL().TEXTURE_2D, 0,_xOff,_yOff,_width,_height,fmt1,fmt2,_fa);   
 	}
 	RebuildVideo(_video : HTMLVideoElement,_key : string=null)  : string
 	{

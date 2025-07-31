@@ -2,11 +2,19 @@ import { CAlert } from "../basic/CAlert.js";
 import { CObject } from "../basic/CObject.js";
 import { CUtil } from "../basic/CUtil.js";
 var gCaacheMap = new Map();
+let gFsPromises = null;
+let gPathModule = null;
+async function EnsureNodeModules() {
+    if (!gFsPromises)
+        gFsPromises = await import('fs/promises');
+    if (!gPathModule)
+        gPathModule = await import('path');
+}
 export class CFile {
     static PushCache(_key, _data) {
         gCaacheMap.set(_key, _data);
     }
-    static Load(_name = null, _modal = false) {
+    static async Load(_name = null, _modal = false) {
         let cbuf = gCaacheMap.get(_name);
         if (cbuf != null)
             return cbuf;
@@ -311,15 +319,14 @@ export class CFile {
     static async Delete(_path) {
         if (!CUtil.IsNode())
             return false;
-        const fsPromises = await import('fs/promises');
-        const pathModule = await import('path');
+        await EnsureNodeModules();
         try {
-            const stat = await fsPromises.stat(_path);
+            const stat = await gFsPromises.stat(_path);
             if (stat.isDirectory()) {
-                const files = await fsPromises.readdir(_path);
-                await Promise.all(files.map(f => this.Delete(pathModule.join(_path, f))));
+                const files = await gFsPromises.readdir(_path);
+                await Promise.all(files.map(f => this.Delete(gPathModule.join(_path, f))));
             }
-            await fsPromises.rm(_path, { recursive: true, force: true });
+            await gFsPromises.rm(_path, { recursive: true, force: true });
             return true;
         }
         catch (err) {
@@ -330,9 +337,9 @@ export class CFile {
     static async FolderCreate(_path) {
         if (!CUtil.IsNode())
             return false;
-        const fsPromises = await import('fs/promises');
+        await EnsureNodeModules();
         try {
-            await fsPromises.mkdir(_path, { recursive: true });
+            await gFsPromises.mkdir(_path, { recursive: true });
             return true;
         }
         catch (err) {
@@ -343,8 +350,7 @@ export class CFile {
     static async FolderList(_path) {
         if (!CUtil.IsNode())
             return [];
-        const fsPromises = await import('fs/promises');
-        const list = [];
+        await EnsureNodeModules();
         const ignorePatterns = [
             "AlbumArt_",
             "AlbumArtSmall",
@@ -353,29 +359,36 @@ export class CFile {
             "Thumbs.db"
         ];
         try {
-            const files = await fsPromises.readdir(_path, { withFileTypes: true });
-            for (const file of files) {
-                const name = file.name;
-                if (name.startsWith("."))
-                    continue;
-                if (ignorePatterns.some(p => name.startsWith(p) || name === p))
-                    continue;
-                const isFile = file.isFile();
-                let ext = "";
-                const dotIndex = name.lastIndexOf(".");
-                if (dotIndex !== -1 && dotIndex < name.length - 1) {
-                    ext = name.substring(dotIndex + 1).toLowerCase();
+            const fileNames = await gFsPromises.readdir(_path);
+            const stats = await Promise.all(fileNames.map(async (name) => {
+                if (name.startsWith(".") || ignorePatterns.some(p => name.startsWith(p) || name === p)) {
+                    return null;
                 }
-                list.push({
-                    file: isFile,
-                    name: name,
-                    ext: ext,
-                });
-            }
+                const fullPath = gPathModule.join(_path, name);
+                try {
+                    const stat = await gFsPromises.stat(fullPath);
+                    const isFile = stat.isFile();
+                    let ext = "";
+                    const dotIndex = name.lastIndexOf(".");
+                    if (dotIndex !== -1 && dotIndex < name.length - 1) {
+                        ext = name.substring(dotIndex + 1).toLowerCase();
+                    }
+                    return {
+                        file: isFile,
+                        name: name,
+                        ext: ext,
+                    };
+                }
+                catch (err) {
+                    console.warn("stat error for:", name, err);
+                    return null;
+                }
+            }));
+            return stats.filter(v => v !== null);
         }
         catch (err) {
             console.warn("FolderList Error:", err);
+            return [];
         }
-        return list;
     }
 }

@@ -26,7 +26,11 @@
     "colorpicker": false,
     "jquery": false,
     "summernote": false,
-    "jsoneditor": false
+    "jsoneditor": false,
+    "MonacoEditor": true,
+    "tone": false,
+    "soundfont": false,
+    "toastui": false
   },
   "dependencies": {
     "test": 1

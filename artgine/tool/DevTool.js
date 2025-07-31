@@ -28,7 +28,6 @@ import { CMath } from "../geometry/CMath.js";
 import { CUtilMath } from "../geometry/CUtilMath.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CBound } from "../geometry/CBound.js";
-import { CDrop } from "../basic/Basic.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -351,7 +350,7 @@ function DevToolRender() {
     gAtl.Frame().Dev().SetDepthTest(true);
 }
 function DevToolDrop(_drop) {
-    if (_drop.GetDropType() == CDrop.eType.File) {
+    if (_drop.mFiles != null) {
         let fileDrop = _drop;
         let pathLoad = true;
         for (let i = 0; i < fileDrop.mPaths.length; ++i) {
@@ -461,6 +460,23 @@ function DevToolDrop(_drop) {
                 }
                 CAlert.Info(loadName + " load!");
             }, () => { }], ["OK", "Cancel"]);
+    }
+    else {
+        if (gLeftSelect == null || gLeftSelect instanceof CCanvas == false) {
+            CAlert.Info("캔버스를 선택해주세요");
+            return;
+        }
+        if (_drop.mObject instanceof CSubject == false) {
+            return;
+        }
+        let cobject = _drop.mObject.Export();
+        let can = gLeftSelect;
+        if (gAtl.Brush().GetCamDev().GetOrthographic()) {
+            let pos = gAtl.Brush().GetCamDev().ScreenToWorldPoint(_drop.mX, _drop.mY);
+            let z = cobject.GetPos().z;
+            cobject.SetPos(new CVec3(pos.x, pos.y, z));
+        }
+        can.Push(cobject);
     }
 }
 function DevToolUpdate(_delay) {
@@ -579,9 +595,9 @@ function DevToolUpdate(_delay) {
             }
             pos = CMath.V3AddV3(pos, moveVec);
         }
-        CUtil.IDValue("PosX", pos.x);
-        CUtil.IDValue("PosY", pos.y);
-        CUtil.IDValue("PosZ", pos.z);
+        CUtil.IDValue("PosX", Number(pos.x.toFixed(2)));
+        CUtil.IDValue("PosY", Number(pos.y.toFixed(2)));
+        CUtil.IDValue("PosZ", Number(pos.z.toFixed(2)));
         subject.SetPos(pos);
         gMouse = mouse;
     }

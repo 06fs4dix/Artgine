@@ -1,4 +1,4 @@
-const version = '2025-07-27 02:41:42';
+const version = '2025-07-29 11:00:03';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -15,8 +15,8 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
-import { CPluging } from "../../../artgine/util/CPluging.js";
-CPluging.PushPath('ShadowPlane', '../../../plugin/ShadowPlane/');
+import { CPlugin } from "../../../artgine/util/CPlugin.js";
+CPlugin.PushPath('ShadowPlane', '../../../plugin/ShadowPlane/');
 import "../../../plugin/ShadowPlane/ShadowPlane.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -25,12 +25,16 @@ var Main = gAtl.Canvas('Main.json');
 var Real = gAtl.Canvas('Real.json');
 import { CCIndex } from "../../../artgine/canvas/CCIndex.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
 import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
+import { CBlackboardModal } from "../../../artgine/util/CModalUtil.js";
+import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
+import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
 {
     const backVoxel = Main.Find("BackGround");
     if (backVoxel) {
         const decoNames = ["LTree", "MTree", "Flower1", "Flower2"];
-        const decoObjs = decoNames.map(name => CBlackBoard.Get(name)).filter(obj => obj && obj.Export);
+        const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
         const width = backVoxel.mCount?.x || 0;
         const height = backVoxel.mCount?.y || 0;
         const tileSize = backVoxel.mSize || 200;
@@ -62,6 +66,7 @@ import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
                     if (deco) {
                         const obj = deco.Export();
                         obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
+                        obj.SetSave(false);
                         Real.Push(obj);
                         placed.add(x + ',' + y);
                     }
@@ -70,3 +75,18 @@ import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
         }
     }
 }
+CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
+    let ba = [];
+    let ta = [];
+    let ca = [];
+    for (let [key, value] of CBlackBoard.Map()) {
+        if (value instanceof CSubject) {
+            ba.push(key);
+            let pt2d = value.FindComp(CPaint2D);
+            const texName = pt2d.GetTexture()[0];
+            ta.push(texName);
+            ca.push(pt2d.GetLeftTopRightBottom(gAtl.Frame()));
+        }
+    }
+    new CBlackboardModal(ba, ta, ca);
+}));

@@ -364,6 +364,9 @@ export class CShadowBaker extends CObject {
                 const tex = fw.Res().Find(texKey);
                 newMesh.texture.push(texKey);
                 fw.Ren().UseShader(vf);
+                fw.Dev().GL().activeTexture(fw.Dev().GL().TEXTURE0 + 9);
+                fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D, null);
+                fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D_ARRAY, null);
                 let beforeRP = fw.Dev().ChangeRenderPass(bakeRP);
                 fw.Dev().SetClearColor(true, new CVec4(0, 0, 0, 0));
                 fw.Dev().SetClearDepth(true);
@@ -386,6 +389,9 @@ export class CShadowBaker extends CObject {
                     fw.Ren().SendGPU(vf, attr);
                 }
                 CCanvas.GlobalVF(brush, vf, brush.GetCam3D());
+                let btu = fw.Ren().mTexUse;
+                fw.Ren().TexUseReset();
+                fw.Ren().SetTexGBuf(vf, fw.Ren().mUniToSam2d, btu, fw.Ren().mUniTexLastOff);
                 if (pt.mMeshRes.skin.length > 0 && vf.mUniform.get("weightArrMat") != null) {
                     if (pt.mWeightMat.length == 0) {
                         pt.mWeightMat = new Float32Array(4 * 4);

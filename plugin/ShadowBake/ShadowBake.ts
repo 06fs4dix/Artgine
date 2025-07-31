@@ -26,6 +26,7 @@ import { CDevice } from "../../artgine/render/CDevice.js";
 import { CWindow } from "../../artgine/system/CWindow.js";
 import { CUtil } from "../../artgine/basic/CUtil.js";
 import { CCamera } from "../../artgine/render/CCamera.js";
+import { CRendererGL } from "../../artgine/render/CRenderer.js";
 
 
 let g_xAtlas : XAtlasAPI = null;
@@ -509,9 +510,9 @@ export class CShadowBaker extends CObject
                 newMesh.texture.push(texKey);
 
                 fw.Ren().UseShader(vf);
-                // fw.Dev().GL().activeTexture(fw.Dev().GL().TEXTURE0+9);	
-                // fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D, null);
-                // fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D_ARRAY, null);
+                fw.Dev().GL().activeTexture(fw.Dev().GL().TEXTURE0+9);	
+                fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D, null);
+                fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D_ARRAY, null);
 
                 //fw.Ren().SendGPU(vf,[fw.Pal().GetShadowArrTex()],null);
                 
@@ -549,6 +550,13 @@ export class CShadowBaker extends CObject
                     fw.Ren().SendGPU(vf, attr);
                 }
                 CCanvas.GlobalVF(brush, vf,brush.GetCam3D());
+                // fw.Dev().GL().activeTexture(fw.Dev().GL().TEXTURE0+9);	
+                // fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D, fw.Ren().mTexUse);
+
+                let btu=fw.Ren().mTexUse;
+                fw.Ren().TexUseReset();
+                (fw.Ren() as CRendererGL).SetTexGBuf(vf,fw.Ren().mUniToSam2d,btu,fw.Ren().mUniTexLastOff);
+
                 //this.GlobalVF(brush, vf);
 
                 if(pt.mMeshRes.skin.length > 0 && vf.mUniform.get("weightArrMat")!=null) {

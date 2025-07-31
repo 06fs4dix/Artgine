@@ -1,10 +1,3 @@
-export class CDrop {
-    static eType = {
-        File: 0,
-        CObject: 1,
-        Hash: 2,
-    };
-}
 export class CUpdate {
     static eType = {
         Not: 0,

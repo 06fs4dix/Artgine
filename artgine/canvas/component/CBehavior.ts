@@ -3,7 +3,7 @@ import { CObject } from "../../basic/CObject.js";
 import {CPlaneInside} from "../../geometry/CPlaneInside.js";
 import {CVec3} from "../../geometry/CVec3.js";
 import {CRayMouse} from "../CRayMouse.js";
-import {CCollider,  CCollusionObject } from "./CCollider.js";
+import {CCollider,  CCollisionObject } from "./CCollider.js";
 import {CComponent} from "./CComponent.js";
 
 

@@ -23,7 +23,7 @@ import { CObject, CPointer } from "../../basic/CObject.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CPoolGeo } from "../../geometry/CPoolGeo.js";
 
-export class CCollusionObject
+export class CCollisionObject
 {
 	public mTar : CCollider=null;
 	public mOrg : CCollider=null;

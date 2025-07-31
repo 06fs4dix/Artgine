@@ -23,7 +23,7 @@ gPF.mServer = 'local';
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPluging} from "../../../artgine/util/CPluging.js";
+import {CPlugin} from "../../../artgine/util/CPluging.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);

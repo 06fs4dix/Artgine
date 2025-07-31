@@ -1,4 +1,4 @@
-const version = '2025-07-24 12:11:34';
+const version = '2025-07-28 10:12:20';
 import "../../artgine/artgine.js";
 import { CPreferences } from "../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();

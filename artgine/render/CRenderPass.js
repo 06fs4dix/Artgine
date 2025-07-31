@@ -124,6 +124,21 @@ export class CRenderPass extends CObject {
     GetPriority() { return this.mPriority; }
     SetLine(_v) { this.mLine = _v; this.Reset(); }
     GetLine() { return this.mLine; }
+    FindSA(_key) {
+        for (let sa of this.mShaderAttr) {
+            if (sa.mKey == _key)
+                return sa;
+        }
+        return null;
+    }
+    DeleteSA(_key) {
+        for (let i = 0; i < this.mShaderAttr.length; ++i) {
+            if (this.mShaderAttr[i].mKey == _key) {
+                this.mShaderAttr.splice(i, 1);
+                break;
+            }
+        }
+    }
     mKey = "";
     mCP = null;
     IsShould(_member, _type) {
@@ -253,6 +268,9 @@ export class CRenderPass extends CObject {
     EditChange(_pointer, _childe) {
         super.EditChange(_pointer, _childe);
         this.Reset();
+    }
+    Export(_copy, _resetKey) {
+        return super.Export(_copy, _resetKey);
     }
 }
 ;

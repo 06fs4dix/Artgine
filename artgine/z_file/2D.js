@@ -57,7 +57,7 @@ Build("Pre2Simple", ["simple"], vs_main_simple, [
 Build("Pre2Mask", ["mask"], vs_main, [
     worldMat, viewMat, projectMat, texCodi, reverse, alphaCut, mask
 ], [
-    out_position, to_uv
+    out_position, to_uv, to_worldPos
 ], ps_main_mask, [out_color]);
 Build("Pre2Blit", ["blit"], vs_main_blit, [], [
     out_position, to_uv

@@ -1,4 +1,4 @@
-import { CDrop, ICJSON, IDrop, IMember, IRecycle, IStream } from "./Basic.js";
+import {  ICJSON,  IMember, IRecycle, IStream } from "./Basic.js";
 import { CBlackBoard } from "./CBlackBoard.js";
 import { CClass } from "./CClass.js";
 import { CDomFactory } from "./CDOMFactory.js";
@@ -26,7 +26,7 @@ export var ProxyHandle = {
 			
 		else if(obj.IsShould(name,CObject.eShould.Proxy))
 		{
-			let bb=CBlackBoard.Get(obj.Key());
+			let bb=CBlackBoard.Find(obj.Key());
 			if(bb!=null)	return bb[name];
 		}
 			
@@ -39,7 +39,7 @@ export var ProxyHandle = {
 
 		else if(obj.IsShould(name,CObject.eShould.Proxy))
 		{
-			let bb=CBlackBoard.Get(obj.Key());
+			let bb=CBlackBoard.Find(obj.Key());
 			if(bb!=null)
 				bb[name]=value;
 			return true;
@@ -112,12 +112,9 @@ export class CPointer
 }
 
 
-export class CObject implements IMember,IRecycle,IStream,ICJSON,IDrop
+export class CObject implements IMember,IRecycle,IStream,ICJSON
 {
-	GetDropType() {
-		return CDrop.eType.CObject;
-	}
-    
+
 
 	Icon(){		return "";	}
 	Key()	: string
@@ -148,7 +145,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON,IDrop
 			delete target["mBlackboard"];
 		else
 		{
-			CBlackBoard.Set(this.Key(),target);
+			CBlackBoard.Push(this.Key(),target);
 			target["mBlackboard"]=_write;
 		}
 
@@ -346,10 +343,10 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON,IDrop
 			if(_obj.GetBool("mBlackboard")==true)
 			{
 				obj.SetKey(_obj.GetStr("mKey"));
-				if(CBlackBoard.Get(obj.Key())!=null)
+				if(CBlackBoard.Find(obj.Key())!=null)
 				{
 					let p=new Proxy(obj,ProxyHandle);
-					obj["mProxy"]=CBlackBoard.Get(obj.Key());
+					obj["mProxy"]=CBlackBoard.Find(obj.Key());
 					return p;
 				}
 					
@@ -623,13 +620,13 @@ export class CBlackBoardRef<T> extends CObject
 	{
 		if(_ref!=null)	
 			this.mKey=_ref;
-		return CBlackBoard.Get(this.mKey);
+		return CBlackBoard.Find(this.mKey);
 	}
 	
 	Icon() { return "bi bi-link"; }
 	EditDrop(_object: CObject): void 
 	{
-		if(CBlackBoard.Get(_object.Key())!=null)
+		if(CBlackBoard.Find(_object.Key())!=null)
 	    {
 	        this.mKey=_object.Key();
 	        this.EditRefresh();

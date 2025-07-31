@@ -57,18 +57,11 @@ export interface IRecycle
     SetRecycleType(_type : string);
     IsRecycle();
 }
-export interface IDrop
-{
-	GetDropType();
-}
-export class CDrop
-{
-	static eType={
-		File:0,
-		CObject:1,
-		Hash:2,
-	};
-}
+// export interface IDrop
+// {
+// 	GetDropType();
+// }
+
 export class CUpdate
 {
 	static eType=

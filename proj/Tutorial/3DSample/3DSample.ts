@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-17 10:26:15';
+const version='2025-07-31 16:06:23';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,14 +19,14 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mLocal = true;
+gPF.mServer = 'local';
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPluging} from "../../../artgine/util/CPluging.js";
-CPluging.PushPath('ShadowBake','../../../plugin/ShadowBake/');
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
+CPlugin.PushPath('ShadowBake','../../../plugin/ShadowBake/');
 import "../../../plugin/ShadowBake/ShadowBake.js"
-CPluging.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
+CPlugin.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
 import "../../../plugin/ShadowPlane/ShadowPlane.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;

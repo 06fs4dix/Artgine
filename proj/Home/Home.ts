@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-24 12:11:34';
+const version='2025-07-28 10:12:20';
 import "../../artgine/artgine.js"
 
 //Class
@@ -23,7 +23,7 @@ gPF.mServer = 'webServer+other';
 
 import {CAtelier} from "../../artgine/canvas/CAtelier.js";
 
-import {CPluging} from "../../artgine/util/CPluging.js";
+import {CPlugin} from "../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([]);

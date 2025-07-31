@@ -13,7 +13,6 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mLocal = true;
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;

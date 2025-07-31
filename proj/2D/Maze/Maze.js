@@ -84,7 +84,7 @@ let FindPath = (_target, _end) => {
             tileList.push(C);
         }
 };
-CBlackBoard.Set("FindPath", FindPath);
+CBlackBoard.Push("FindPath", FindPath);
 let size = 100;
 let count = new CVec2(5, 5);
 let maze = new Array();
@@ -108,7 +108,7 @@ let RayExtrapolate = (_st, _ed, _target) => {
     }
     return false;
 };
-CBlackBoard.Set("RayExtrapolate", RayExtrapolate);
+CBlackBoard.Push("RayExtrapolate", RayExtrapolate);
 let ResetMaze = (_xCount, _yCount) => {
     g_fadeEffect.AniStart("Level : " + CStage.level);
     Main.GetGGI().mNavi.Reset(true);
@@ -314,7 +314,7 @@ let ResetMaze = (_xCount, _yCount) => {
     }
 };
 ResetMaze(5, 5);
-CBlackBoard.Set("ResetMaze", ResetMaze);
+CBlackBoard.Push("ResetMaze", ResetMaze);
 let cam2D = gAtl.Brush().GetCam2D();
 cam2D.Set2DZoom(1.5);
 gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
@@ -356,7 +356,7 @@ function ClickCamOption(_id) {
     }
     else if (_id == "FlowCam") {
         g_camMode = 1;
-        let user = CBlackBoard.Get("User");
+        let user = CBlackBoard.Find("User");
         user.FindComp(CUser).m_camMode = g_camMode;
         let camcon = new CCamCon2DFollow(gAtl.Frame().Input());
         camcon.m_smoothSpeed = 0.05;

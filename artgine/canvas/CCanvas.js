@@ -8,6 +8,7 @@ import { CBase64File } from "../util/CBase64File.js";
 import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js";
 import { CCollider } from "./component/CCollider.js";
 import { CAtlas } from "../util/CAtlas.js";
+import { CUpdate } from "../basic/Basic.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CRoomClient } from "../server/CRoomClient.js";
 import { CBlackBoardRef, CObject } from "../basic/CObject.js";
@@ -16,7 +17,7 @@ import { CUtil } from "../basic/CUtil.js";
 import { CAlert } from "../basic/CAlert.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
-import { RenderQueTool } from "../tool/RenderQue.js";
+import { RenderQueTool } from "../tool/RenderQueTool.js";
 import { CConsol } from "../basic/CConsol.js";
 import { CPaint } from "./component/paint/CPaint.js";
 import { CRPMgr } from "./CRPMgr.js";
@@ -80,11 +81,14 @@ export class CCanvas extends CObject {
             for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
                 this.mBrush.RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
             }
+            this.mBrush.mAutoRPUpdate = CUpdate.eType.Not;
             for (let i = 0; i < this.mRPMgr.mSufArr.length; ++i) {
                 const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
                 if (obj)
                     obj.Destroy();
+                this.Detach(this.mRPMgr.mSufArr[i].Key());
             }
+            this.mBrush.ClearRen();
         }
         for (let [key, obj] of this.mSubMap) {
             let ptVec = obj.FindComps(CPaint, true);
@@ -413,7 +417,7 @@ export class CCanvas extends CObject {
             this.mResMap.set(each0.Key(), each0);
         }
         if (this.mSave)
-            CFile.Save(this, _file);
+            CFile.Save(this, _file + ".json");
     }
     ToJSON() {
         let rpMgr = this.mRPMgr;

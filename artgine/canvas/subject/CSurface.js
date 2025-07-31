@@ -9,7 +9,6 @@ export class CSurface extends CSubject {
     mPaint = null;
     mTexInfo = null;
     mTexSize = null;
-    mTexKey = null;
     mTexLinear = null;
     mRTUse = true;
     mTexCreate = true;
@@ -19,8 +18,7 @@ export class CSurface extends CSubject {
         this.mPaint = new CPaintSurface(null);
         this.PushComp(this.mPaint);
         this.mRenderPass.mPriority = CRenderPass.ePriority.Surface + gSurfaceOff;
-        this.mTexKey = CUniqueID.GetHash() + ".tex";
-        this.mRenderPass.mRenderTarget = this.mTexKey;
+        this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
     }
     IsShould(_member, _type) {
         if (_member == "mTexKey" || _member == "mTexSize" || _member == "mTexInfo" || _member == "mTexLinear" ||
@@ -33,48 +31,63 @@ export class CSurface extends CSubject {
         if (_fw != null) {
             if (this.mRenderPass.mShader == "")
                 this.mRenderPass.mShader = _fw.Pal().Sl2D().GetShader("Pre2Blit").Key();
-            if (this.mTexCreate) {
+            if (this.mTexCreate && this.mRenderPass.mRenderTarget != "") {
                 this.mTexCreate = false;
-                this.mRenderPass.mRenderTarget = this.GetFrame().Ren().BuildRenderTarget(this.mTexInfo, this.mTexSize, this.mTexKey);
-                if (this.mTexLinear) {
-                    let tex = this.GetFrame().Res().Find(this.GetTexKey());
-                    tex.SetFilter(CTexture.eFilter.Linear);
+                if (this.GetFrame().Res().Find(this.mRenderPass.mRenderTarget) == null) {
+                    this.mRenderPass.mRenderTarget = this.GetFrame().Ren().
+                        BuildRenderTarget(this.mTexInfo, this.mTexSize, this.mRenderPass.mRenderTarget);
+                    if (this.mTexLinear) {
+                        let tex = this.GetFrame().Res().Find(this.GetTexKey());
+                        tex.SetFilter(CTexture.eFilter.Linear);
+                    }
                 }
             }
             this.mPaint.SetRenderPass(this.mRenderPass, false);
         }
-        if (this.mRTUse)
-            this.mRenderPass.mRenderTarget = this.mTexKey;
-        else
+        if (this.mRTUse == false)
             this.mRenderPass.mRenderTarget = "";
     }
     static NewPriority() { gSurfaceOff++; return CRenderPass.ePriority.Surface + gSurfaceOff; }
     SetUseRT(_enable) {
         this.mRTUse = _enable;
-        if (_enable)
-            this.mRenderPass.mRenderTarget = this.mTexKey;
+        if (_enable) {
+            this.mTexCreate = false;
+            this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
+        }
         else
             this.mRenderPass.mRenderTarget = "";
     }
     GetPaint() { return this.mPaint; }
     GetRP() { return this.mRenderPass; }
-    GetTexKey() { return this.mTexKey; }
+    NewRT(_texInfo = null, _texSize = null, _texLinear = false) {
+        if (this.GetFrame() == null) {
+            this.mTexInfo = _texInfo;
+            this.mTexSize = _texSize;
+            this.mTexCreate = true;
+            this.mTexLinear = _texLinear;
+        }
+        else {
+            this.GetFrame().Ren().BuildRenderTarget(this.mTexInfo, this.mTexSize, this.mRenderPass.mRenderTarget);
+            let tex = this.GetFrame().Res().Find(this.GetTexKey());
+            tex.SetFilter(CTexture.eFilter.Linear);
+            this.mRenderPass.Reset();
+        }
+    }
+    GetTexKey() { return this.mRenderPass.mRenderTarget; }
     Export(_copy, _resetKey) {
         const watch = super.Export(_copy, _resetKey);
         watch.mPaint = watch.FindComps(CPaintSurface)[0];
+        for (let i = 0; i < this.mChilde.length; ++i) {
+            if (this.mChilde[i] instanceof CSurface) {
+                watch.mChilde[i].mRenderPass.Import(this.mChilde[i].mRenderPass);
+            }
+        }
         return watch;
     }
     ImportCJSON(_json) {
         const watch = super.ImportCJSON(_json);
         watch.mPaint = watch.FindComps(CPaintSurface)[0];
         return watch;
-    }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
-        if (_pointer.member == "mTexKey") {
-            this.mRenderPass.mRenderTarget = this.mTexKey;
-            this.mRenderPass.Reset();
-        }
     }
 }
 ;

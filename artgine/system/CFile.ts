@@ -5,13 +5,22 @@ import {CUtil} from "../basic/CUtil.js";
 
 var gCaacheMap=new Map<string,ArrayBuffer>();
 
+
+let gFsPromises: typeof import('fs/promises') = null;
+let gPathModule: typeof import('path') = null;
+
+async function EnsureNodeModules() {
+    if (!gFsPromises) gFsPromises = await import('fs/promises');
+    if (!gPathModule) gPathModule = await import('path');
+}
+
 export class CFile
 {
 	static PushCache(_key : string,_data : ArrayBuffer)
 	{
 		gCaacheMap.set(_key,_data);
 	}
-    static Load(_name : string=null,_modal=false)
+    static async Load(_name : string=null,_modal=false) : Promise<ArrayBuffer>
     {
 		let cbuf=gCaacheMap.get(_name);
 		if(cbuf!=null)	return cbuf;
@@ -362,18 +371,18 @@ export class CFile
 	// 📁 파일/폴더 삭제 (재귀)
 	static async Delete(_path: string): Promise<boolean> {
 		if (!CUtil.IsNode()) return false;
-		const fsPromises = await import('fs/promises');
-		const pathModule = await import('path');
+		await EnsureNodeModules();
+		
 
 		try {
-			const stat = await fsPromises.stat(_path);
+			const stat = await gFsPromises.stat(_path);
 			if (stat.isDirectory()) {
-				const files = await fsPromises.readdir(_path);
+				const files = await gFsPromises.readdir(_path);
 				await Promise.all(
-					files.map(f => this.Delete(pathModule.join(_path, f))) // ✅ 수정
+					files.map(f => this.Delete(gPathModule.join(_path, f))) // ✅ 수정
 				);
 			}
-			await fsPromises.rm(_path, { recursive: true, force: true });
+			await gFsPromises.rm(_path, { recursive: true, force: true });
 			return true;
 		} catch (err) {
 			console.warn("Delete Error:", err);
@@ -384,10 +393,10 @@ export class CFile
 	// 📁 폴더 생성 (중첩 경로 포함)
 	static async FolderCreate(_path: string): Promise<boolean> {
 		if (!CUtil.IsNode()) return false;
-		const fsPromises = await import('fs/promises');
+		await EnsureNodeModules();
 
 		try {
-			await fsPromises.mkdir(_path, { recursive: true });
+			await gFsPromises.mkdir(_path, { recursive: true });
 			return true;
 		} catch (err) {
 			console.warn("FolderCreate Error:", err);
@@ -395,52 +404,106 @@ export class CFile
 		}
 	}
 
-	static async FolderList(_path: string): Promise<Array<{ file: boolean; name: string; ext: string }>> 
-	{
+	// static async FolderList(_path: string): Promise<Array<{ file: boolean; name: string; ext: string }>> 
+	// {
+	// 	if (!CUtil.IsNode()) return [];
+
+	// 	await EnsureNodeModules();
+	// 	const list = [];
+
+	// 	// 제외할 파일 이름 접두사나 정확한 이름 목록
+	// 	const ignorePatterns = [
+	// 		"AlbumArt_",        // AlbumArt_XXXX.jpg
+	// 		"AlbumArtSmall",    // AlbumArtSmall.jpg
+	// 		"Folder",           // Folder.jpg
+	// 		"desktop.ini",
+	// 		"Thumbs.db"
+	// 	];
+
+	// 	try {
+	// 		const files = await fsPromises.readdir(_path, { withFileTypes: true });
+
+	// 		for (const file of files) {
+	// 			const name = file.name;
+
+	// 			// 숨김파일 무시
+	// 			if (name.startsWith(".")) continue;
+
+	// 			// 시스템 또는 자동 생성된 파일 무시
+	// 			if (ignorePatterns.some(p => name.startsWith(p) || name === p)) continue;
+
+	// 			const isFile = file.isFile();
+
+	// 			let ext = "";
+	// 			const dotIndex = name.lastIndexOf(".");
+	// 			if (dotIndex !== -1 && dotIndex < name.length - 1) {
+	// 				ext = name.substring(dotIndex + 1).toLowerCase();
+	// 			}
+
+	// 			list.push({
+	// 				file: isFile,
+	// 				name: name,
+	// 				ext: ext,
+	// 			});
+	// 		}
+	// 	} catch (err) {
+	// 		console.warn("FolderList Error:", err);
+	// 	}
+
+	// 	return list;
+	// }
+
+	static async FolderList(_path: string): Promise<Array<{ file: boolean; name: string; ext: string }>> {
 		if (!CUtil.IsNode()) return [];
 
-		const fsPromises = await import('fs/promises');
-		const list = [];
+		await EnsureNodeModules();
+		
 
-		// 제외할 파일 이름 접두사나 정확한 이름 목록
 		const ignorePatterns = [
-			"AlbumArt_",        // AlbumArt_XXXX.jpg
-			"AlbumArtSmall",    // AlbumArtSmall.jpg
-			"Folder",           // Folder.jpg
+			"AlbumArt_",
+			"AlbumArtSmall",
+			"Folder",
 			"desktop.ini",
 			"Thumbs.db"
 		];
 
 		try {
-			const files = await fsPromises.readdir(_path, { withFileTypes: true });
-
-			for (const file of files) {
-				const name = file.name;
-
-				// 숨김파일 무시
-				if (name.startsWith(".")) continue;
-
-				// 시스템 또는 자동 생성된 파일 무시
-				if (ignorePatterns.some(p => name.startsWith(p) || name === p)) continue;
-
-				const isFile = file.isFile();
-
-				let ext = "";
-				const dotIndex = name.lastIndexOf(".");
-				if (dotIndex !== -1 && dotIndex < name.length - 1) {
-					ext = name.substring(dotIndex + 1).toLowerCase();
+			const fileNames = await gFsPromises.readdir(_path); // withFileTypes ❌ (정확한 stat을 위해)
+			
+			// ⏱️ 모든 파일에 대해 병렬로 처리
+			const stats = await Promise.all(fileNames.map(async (name) => {
+				// ❌ 숨김파일, 필터된 이름 제외
+				if (name.startsWith(".") || ignorePatterns.some(p => name.startsWith(p) || name === p)) {
+					return null;
 				}
 
-				list.push({
-					file: isFile,
-					name: name,
-					ext: ext,
-				});
-			}
+				const fullPath = gPathModule.join(_path, name);
+				try {
+					const stat = await gFsPromises.stat(fullPath);
+					const isFile = stat.isFile();
+
+					let ext = "";
+					const dotIndex = name.lastIndexOf(".");
+					if (dotIndex !== -1 && dotIndex < name.length - 1) {
+						ext = name.substring(dotIndex + 1).toLowerCase();
+					}
+
+					return {
+						file: isFile,
+						name: name,
+						ext: ext,
+					};
+				} catch (err) {
+					console.warn("stat error for:", name, err);
+					return null;
+				}
+			}));
+
+			// ❗ null 제거
+			return stats.filter(v => v !== null);
 		} catch (err) {
 			console.warn("FolderList Error:", err);
+			return [];
 		}
-
-		return list;
 	}
 }

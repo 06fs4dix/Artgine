@@ -3,7 +3,7 @@ import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
-import { CConfirm, CFileDrop } from "../basic/CModal.js";
+import { CConfirm, CDrop } from "../basic/CModal.js";
 import { CModalFlex } from "../util/CModalUtil.js";
 import { CObject, CPointer } from "../basic/CObject.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
@@ -39,7 +39,6 @@ import { CBound } from "../geometry/CBound.js";
 import { CMouse } from "../system/CMouse.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
-import { CDrop, IDrop } from "../basic/Basic.js";
 
 
 var gModal : CModalFlex;
@@ -492,11 +491,11 @@ function DevToolRender()
 
 
 }
-function DevToolDrop(_drop : IDrop)
+function DevToolDrop(_drop : CDrop)
 {
-    if(_drop.GetDropType()==CDrop.eType.File)
+    if(_drop.mFiles!=null)
     {
-        let fileDrop=_drop as CFileDrop;
+        let fileDrop=_drop;
         let pathLoad=true;
         for(let i=0;i<fileDrop.mPaths.length;++i)
         {
@@ -653,7 +652,30 @@ function DevToolDrop(_drop : IDrop)
             CAlert.Info(loadName+" load!");
         }, () => {}], ["OK", "Cancel"]);
     }
-    
+    else
+    {
+        if(gLeftSelect==null || gLeftSelect instanceof CCanvas==false)
+        {
+            CAlert.Info("캔버스를 선택해주세요");
+            return;
+        }
+        if(_drop.mObject instanceof CSubject==false)
+        {
+            
+            return;
+        }
+        let cobject=(_drop.mObject as CObject).Export() as CSubject;
+        let can=gLeftSelect as CCanvas;
+
+        if(gAtl.Brush().GetCamDev().GetOrthographic())
+        {
+            //let mouse=gAtl.Frame().Input().Mouse();
+            let pos=gAtl.Brush().GetCamDev().ScreenToWorldPoint(_drop.mX,_drop.mY);
+            let z=cobject.GetPos().z;
+            cobject.SetPos(new CVec3(pos.x,pos.y,z));
+        }
+        can.Push(cobject);
+    }
 
     
 }
@@ -762,6 +784,9 @@ function DevToolUpdate(_delay)
         {
             x*=gAtl.Brush().GetCamDev().GetZoom();
             y*=gAtl.Brush().GetCamDev().GetZoom();
+            // const zoom = gAtl.Brush().GetCamDev().GetZoom();
+            // x = Number((x * zoom).toFixed(2));
+            // y = Number((y * zoom).toFixed(2));
 
             if(gDragBound==1)
             {
@@ -833,9 +858,9 @@ function DevToolUpdate(_delay)
 
             pos = CMath.V3AddV3(pos, moveVec);
         }
-        CUtil.IDValue("PosX",pos.x);
-        CUtil.IDValue("PosY",pos.y);
-        CUtil.IDValue("PosZ",pos.z);
+        CUtil.IDValue("PosX", Number(pos.x.toFixed(2)));
+        CUtil.IDValue("PosY", Number(pos.y.toFixed(2)));
+        CUtil.IDValue("PosZ", Number(pos.z.toFixed(2)));
         subject.SetPos(pos);
         
 
