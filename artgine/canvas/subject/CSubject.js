@@ -43,6 +43,10 @@ export class CSubject extends CObject {
     mInMsg = new CArray();
     mOutMsg = new CArray();
     mUpdateMat = CUpdate.eType.Updated;
+    mSave = true;
+    SetSave(_enable) {
+        this.mSave = _enable;
+    }
     constructor(_comArr = new Array()) {
         super();
         this.mComArr = _comArr;
@@ -548,6 +552,8 @@ export class CSubject extends CObject {
         target.SetFrame(null);
         if (_resetKey && this.mPMat == null)
             target.SetKey(CUniqueID.GetHash());
+        else
+            target.SetKey(this.Key());
         return target;
     }
     Prefab(_fw) {

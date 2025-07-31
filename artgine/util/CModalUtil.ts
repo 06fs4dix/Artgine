@@ -1,15 +1,18 @@
 
 import { Bootstrap } from "../basic/Bootstrap.js";
+import { CBlackBoard } from "../basic/CBlackBoard.js";
 import {CDomFactory} from "../basic/CDOMFactory.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CJSON} from "../basic/CJSON.js";
 import {CModal} from "../basic/CModal.js";
+import { CObject } from "../basic/CObject.js";
 import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 
 import {CVec2} from "../geometry/CVec2.js";
+import { CVec4 } from "../geometry/CVec4.js";
 import { CShaderInterpret, ExtractImportPaths, GetImportFile } from "../render/CShaderInterpret.js";
 import { CFile } from "../system/CFile.js";
 import { CUtilWeb } from "./CUtilWeb.js";
@@ -745,16 +748,88 @@ export class CModalFlex extends CModal
         
     }
 }
-
-class CUnitInfo
-{
-    mBlackBoardKey="";
-    mImg="";
-}
-export class CUnitModal extends CModal 
-{
-    constructor()
-    {
+export class CBlackboardModal extends CModal {
+    constructor(
+        _blackboard: Array<string>,
+        _img: Array<string> = [],
+        LeftTopRightBottom: Array<CVec4> = []
+    ) {
         super();
+
+        this.SetHeader("블랙보드 리스트");
+        this.SetTitle(CModal.eTitle.TextClose);
+        this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
+        this.SetSize(600, 400);
+
+        const container = document.createElement("div");
+        container.className = "d-flex flex-wrap justify-content-start p-2";
+
+        _blackboard.forEach((key, i) => {
+            const imgPath = _img[i];
+            const tex = LeftTopRightBottom[i];
+
+            const box = document.createElement("div");
+            box.className = "position-relative m-1 border rounded";
+            box.style.width = "64px";
+            box.style.height = "64px";
+            box.style.cursor = "grab";
+            box.style.overflow = "hidden";
+
+            box.setAttribute("draggable", "true");
+            box.addEventListener("dragstart", (event) => {
+                event.dataTransfer.setData('text', key);
+                CObject.SetDrag("CObject", CBlackBoard.Find(key));
+            });
+
+            if (imgPath && tex instanceof CVec4) {
+                const img = new Image();
+                img.src = imgPath;
+                img.onload = () => {
+                    const cutW = tex.z - tex.x;
+                    const cutH = tex.w - tex.y;
+
+                    const scaleX = 64 / cutW;
+                    const scaleY = 64 / cutH;
+
+                    const clipper = document.createElement("div");
+                    clipper.style.position = "relative";
+                    clipper.style.width = "64px";
+                    clipper.style.height = "64px";
+                    clipper.style.overflow = "hidden";
+
+                    img.style.position = "absolute";
+                    img.style.left = `-${tex.x * scaleX}px`;
+                    img.style.top = `-${tex.y * scaleY}px`;
+                    img.style.width = `${img.width * scaleX}px`;
+                    img.style.height = `${img.height * scaleY}px`;
+                    img.style.pointerEvents = "none";
+                    img.draggable = false;
+
+                    clipper.appendChild(img);
+                    box.appendChild(clipper);
+
+                    const label = document.createElement("div");
+                    label.className = "position-absolute top-50 start-50 translate-middle text-white text-center fw-bold";
+                    label.style.textShadow = `
+                        -1px -1px 2px black,
+                        1px -1px 2px black,
+                        -1px 1px 2px black,
+                        1px 1px 2px black`;
+                    label.innerText = key;
+                    label.draggable = false;
+
+                    box.appendChild(label);
+                };
+            } else {
+                box.classList.add("bg-secondary", "text-white", "d-flex", "align-items-center", "justify-content-center");
+                box.style.fontWeight = "bold";
+                box.innerText = key;
+            }
+
+            container.appendChild(box);
+        });
+
+        this.SetBody(container);
+        this.Open();
     }
 }

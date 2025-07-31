@@ -16,7 +16,7 @@ import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js"
 import {CRay} from "../geometry/CRay.js"
 import {CCollider} from "./component/CCollider.js"
 import {CAtlas} from "../util/CAtlas.js"
-import { IAutoRender, IAutoUpdate } from "../basic/Basic.js"
+import { CUpdate, IAutoRender, IAutoUpdate } from "../basic/Basic.js"
 import {CDomFactory} from "../basic/CDOMFactory.js"
 import {CWebSocket} from "../network/CWebSocket.js"
 import {CRoomClient} from "../server/CRoomClient.js"
@@ -29,7 +29,7 @@ import { CAlert } from "../basic/CAlert.js"
 import { CUtilObj } from "../basic/CUtilObj.js"
 import { IFile } from "../system/System.js"
 import { CFile } from "../system/CFile.js"
-import {RenderQueTool} from "../tool/RenderQue.js"
+import {RenderQueTool} from "../tool/RenderQueTool.js"
 import { CConsol } from "../basic/CConsol.js"
 import { CPaint } from "./component/paint/CPaint.js"
 import { CRPMgr } from "./CRPMgr.js"
@@ -124,18 +124,22 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			{
 				this.mBrush.RemoveAutoRP(this.mRPMgr.Key()+"_"+i);
 			}
+			this.mBrush.mAutoRPUpdate=CUpdate.eType.Not;
+			
 			for(let i=0;i<this.mRPMgr.mSufArr.length;++i)
 			{
 				const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
 				if(obj) obj.Destroy();
+				this.Detach(this.mRPMgr.mSufArr[i].Key());
 			}
-
+			this.mBrush.ClearRen();
 		}
 		for(let [key, obj] of this.mSubMap)
 		{
 			let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
 			for(let pt of ptVec)
 			{
+				
 				pt.ClearCRPAuto();
 			}
 			
@@ -636,7 +640,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			this.mResMap.set(each0.Key(),each0);
 		}
 		
-		if(this.mSave)	CFile.Save(this,_file);
+		if(this.mSave)	CFile.Save(this,_file+".json");
 		
 	}
 	override ToJSON(): { class: string } 

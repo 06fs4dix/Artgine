@@ -1,9 +1,8 @@
-import { CDrop } from "../basic/Basic.js";
 import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
-import { CFileDrop } from "../basic/CModal.js";
+import { CDrop } from "../basic/CModal.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CAtelier } from "../canvas/CAtelier.js";
@@ -252,8 +251,10 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
         const files = input.files;
         CAlert.Info("Drag and Drop Use!Select File->Only Base64");
         if (files?.length) {
-            let paths = new Array(files.length);
-            AniToolDrop(new CFileDrop(files, paths));
+            let dorp = new CDrop();
+            dorp.mFiles = files;
+            dorp.mPaths = new Array(files.length);
+            AniToolDrop(dorp);
         }
     });
     CUtil.ID("AniPlay_btn").onclick = AniToolPlay;
@@ -315,7 +316,7 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
     CUtil.ID("EDY_num").onchange = AniToolRangeInit;
 }
 async function AniToolDrop(_drop) {
-    if (_drop.GetDropType() == CDrop.eType.File) {
+    if (_drop.mFiles != null) {
         let fileDrop = _drop;
         for (let i = 0; i < fileDrop.mPaths.length; ++i) {
             if (fileDrop.mPaths.length > 0 && fileDrop.mPaths[i] != null) {

@@ -440,9 +440,9 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
     if (_json.projetJSON.preference.mIAuto) {
         pfStr += "\nimport {CAtelier} from \"" + upFolder + "artgine/canvas/CAtelier.js\";\n";
-        pfStr += "\nimport {CPluging} from \"" + upFolder + "artgine/util/CPluging.js\";\n";
+        pfStr += "\nimport {CPlugin} from \"" + upFolder + "artgine/util/CPlugin.js\";\n";
         for (let p in _json.projetJSON.dependencies) {
-            pfStr += "CPluging.PushPath('" + p + "','" + upFolder + "plugin/" + p + "/');\n";
+            pfStr += "CPlugin.PushPath('" + p + "','" + upFolder + "plugin/" + p + "/');\n";
             pfStr += "import \"" + upFolder + "plugin/" + p + "/" + p + ".js\"\n";
         }
         pfStr += "var gAtl = new CAtelier();\n";

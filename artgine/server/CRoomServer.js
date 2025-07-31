@@ -97,7 +97,7 @@ let CRoomServer = class CRoomServer extends CServerSocker {
         }
     }
     Destroy() {
-        this.Destroy();
+        super.Destroy();
         if (this.mWSS && this.mWSS.clients) {
             for (const ws of this.mWSS.clients) {
                 try {

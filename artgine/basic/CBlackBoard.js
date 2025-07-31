@@ -1,9 +1,9 @@
 var gBBMap = new Map();
 export class CBlackBoard {
-    static Get(_key) {
+    static Find(_key) {
         return gBBMap.get(_key);
     }
-    static Set(_key, _val) {
+    static Push(_key, _val) {
         if (_val["mProxy"] != null)
             console.log("CBlackBoard m_proxy!!!!error");
         if (gBBMap.get(_key) != null)

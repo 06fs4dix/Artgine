@@ -107,13 +107,13 @@ var toneMappingFactor : number = 0.5;
 
 //for sample
 /********************************/
-var srcResolution : CVec2=Null();
+
 var mipLevel : number=Null();
 var threshold : number=Null();
 var softThreshold : number=Null();
 var mixFactor : number=Null();
 var exposure : number=Null();
-var aspect : number=Null();
+
 var blendFactor : number=Null();
 /********************************/
 
@@ -228,22 +228,16 @@ Build("PostExpandBakedLight",["bake"],
 Build("PostDownSample",["sample", "down"],
     vs_main, [
         worldMat,viewMat,projectMat,
-        srcResolution,mipLevel,
+        mipLevel,
         threshold,softThreshold
     ],[out_position,to_uv],
     ps_main_DownSample,[out_color]);
 Build("PostUpSample",["sample", "up"],
     vs_main, [
         worldMat,viewMat,projectMat,
-        aspect,blendFactor
+        blendFactor
     ],[out_position,to_uv],
     ps_main_UpSample,[out_color]);
-Build("PostDownSampleHZB",["sample", "down", "hzb"],
-    vs_main, [
-        worldMat,viewMat,projectMat,
-        srcResolution
-    ],[out_position,to_uv],
-    ps_main_hzb_DownSample,[out_color]);
 
 function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
     var result : CVec2 = new CVec2(_uv.x * _texCodi.x + _texCodi.z, _uv.y * _texCodi.y + _texCodi.w);
@@ -860,9 +854,9 @@ function PreFilter(_col : CVec3) : CVec3 {
  */
 
 function ps_main_DownSample() {
-    var srcTexelSize : CVec2 = new CVec2(1.0 / srcResolution.x, 1.0 / srcResolution.y);
-    var x : number = srcTexelSize.x;
-    var y : number = srcTexelSize.y;
+    var texSize : CVec2 = Sam2DSize(0.0);  // 현재 텍스처 크기
+    var x : number = 1.0 / texSize.x;      // 실제 픽셀 크기
+    var y : number = 1.0 / texSize.y;      // 실제 픽셀 크기
 
     var a : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - 2.0 * x, to_uv.y + 2.0 * y)).rgb;
     var b : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x          , to_uv.y + 2.0 * y)).rgb;
@@ -902,6 +896,7 @@ function ps_main_DownSample() {
     }
     out_color.rgb = V3Max(out_color.rgb, new CVec3(0.0001, 0.0001, 0.0001));
     out_color.rgb = PreFilter(out_color.rgb);
+    //out_color.rgb=new CVec3(1.0,1.0,1.0);
     out_color.w = 1.0;
 }
 /**     샘플링 방법
@@ -917,8 +912,12 @@ function ps_main_DownSample() {
  * 
  */
 function ps_main_UpSample() {
-    var x : number = 0.004 / aspect;
-    var y : number = 0.004;
+    // var x : number = 0.004 / aspect;
+    // var y : number = 0.004;
+
+    var texSize : CVec2 = Sam2DSize(0.0);  // 현재 텍스처 크기
+    var x : number = 1.0 / texSize.x;      // 실제 픽셀 크기
+    var y : number = 1.0 / texSize.y;      // 실제 픽셀 크기
 
     var a : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y + y)).rgb;
     var b : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y + y)).rgb;
@@ -937,42 +936,4 @@ function ps_main_UpSample() {
     out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(a,c), V3AddV3(g,i)), 0.0625));
     //out_color.rgb = V3MulFloat(out_color.rgb, blendFactor);
     out_color.w = blendFactor;
-}
-
-function ps_main_hzb_DownSample() {
-    var srcTexelSize : CVec2 = new CVec2(1.0 / srcResolution.x, 1.0 / srcResolution.y);
-    var x : number = srcTexelSize.x;
-    var y : number = srcTexelSize.y;
-
-    var texels : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
-    texels.x = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y - y)).x;
-    texels.y = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y - y)).x;
-    texels.z = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y - y)).x;
-    texels.w = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y    )).x;
-
-    //근처 2 x 2 픽셀 중 가장 높은 값 가져옴(가장 먼 깊이값)
-    var maxZ : number = max(max(texels.x,texels.y),max(texels.z,texels.w));
-
-    //이전 텍스쳐밖에서 텍셀 가져온 경우에 안쪽도 넣어서 다시 계산해줌
-    //반드시 clamp로 해야 밖에서 가져온 z값이 0이 됨
-    var extra : CVec3 = new CVec3(0.0,0.0,0.0);
-    //우측 테두리
-    if((FloatToInt(srcResolution.x) & 1) != 0 && FloatToInt(screenPos.x) == FloatToInt(srcResolution.x)-3) {
-        //우측 상단 모서리
-        if((FloatToInt(srcResolution.y) & 1) != 0 && FloatToInt(screenPos.y) == FloatToInt(srcResolution.y)-3) {
-            extra.z = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y + y)).x;
-            maxZ = max(maxZ, extra.z);
-        }
-        extra.x = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y    )).x;
-        extra.y = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y - y)).x;
-        maxZ = max(maxZ, max(extra.x, extra.y));
-    }
-    //아랫쪽 테두리
-    else if((FloatToInt(srcResolution.y) & 1) != 0 && FloatToInt(screenPos.y) == FloatToInt(srcResolution.y)-3) {
-        extra.x = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y + y)).x;
-        extra.y = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y + y)).x;
-        maxZ = max(maxZ, max(extra.x, extra.y));
-    }
-
-    out_color = new CVec4(maxZ, maxZ, maxZ, 1.0);
 }

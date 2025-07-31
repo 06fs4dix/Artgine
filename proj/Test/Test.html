@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover' />
+<style>
+    :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+    }
+    html, body {
+        overflow: hidden;
+    }
+</style>
+<!--Include--><script type='text/javascript' src='../../lib/external/legacy/pako-master/dist/pako.min.js'></script>
+<script type='text/javascript' src='../../lib/external/legacy/jszip.min.js'></script>
+<script type='text/javascript' src='../../lib/external/legacy/screenfull/screenfull.min.js'></script>
+<link rel='stylesheet' href='../../lib/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+<script src='../../lib/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+<link rel='stylesheet' href='../../lib/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+<script>function BootstrapSearchList(searchId, listId) {
+			const input = document.getElementById(searchId);
+			const listItems = document.querySelectorAll(`#${listId} li`);
+		
+			input.addEventListener('keyup', function () {
+				const value = input.value.toLowerCase();
+		
+				listItems.forEach(item => {
+					const text = item.textContent.toLowerCase();
+					item.style.display = text.includes(value) ? '' : 'none';
+				});
+			});
+		}</script>
+<script src='../../lib/external/legacy/popper/poper.min.js'></script>
+<script src='../..//lib/external/legacy/Jquery/jquery-3.6.0.min.js'></script>
+<link rel='stylesheet' href='../..//lib/external/legacy/summernote-0.9.0-dist/summernote-bs5.min.css'>
+<script src='../..//lib/external/legacy/summernote-0.9.0-dist/summernote-bs5.min.js'></script>
+<script type='text/javascript' src='../..//lib/external/legacy/jquery.json-editor-master/dist/jquery.json-editor.min.js'></script>
+<script type='module' src='Test.js'></script>
+
+<!--Manifest-->
+<!--EntryPoint-->
+
+
+
+
+
+

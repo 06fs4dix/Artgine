@@ -1,4 +1,4 @@
-const version = '2025-07-16 22:51:39';
+const version = '2025-07-31 10:17:16';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -13,6 +13,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = true;
+gPF.mServer = 'local';
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;

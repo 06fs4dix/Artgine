@@ -1,4 +1,4 @@
-const version = '2025-07-16 21:37:01';
+const version = '2025-07-31 15:59:02';
 import "../../../artgine/artgine.js";
 import { CClass } from "../../../artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
@@ -28,10 +28,10 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mLocal = true;
+gPF.mServer = 'local';
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
-import { CPluging } from "../../../artgine/util/CPluging.js";
-CPluging.PushPath('test', '../../../plugin/test/');
+import { CPlugin } from "../../../artgine/util/CPlugin.js";
+CPlugin.PushPath('test', '../../../plugin/test/');
 import "../../../plugin/test/test.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -42,6 +42,7 @@ var UI = gAtl.Canvas('UI.json');
 import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
 import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CTexture, CTextureInfo } from "../../../artgine/render/CTexture.js";
 import { CModalChat, CModalEvent } from "../../../artgine/util/CModalUtil.js";
 import { CPacRoom, CRoomClient } from "../../../artgine/server/CRoomClient.js";
 import { CStream } from "../../../artgine/basic/CStream.js";
@@ -55,6 +56,11 @@ import { CForce } from "../../../artgine/canvas/component/CForce.js";
 import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
 import { CEvent } from "../../../artgine/basic/CEvent.js";
 import { CPool } from "../../../artgine/basic/CPool.js";
+import { CRPAuto, CRPMgr } from "../../../artgine/canvas/CRPMgr.js";
+import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
+import { CSurface } from "../../../artgine/canvas/subject/CSurface.js";
+import { CSurfaceBloom } from "../../../plugin/Bloom/Bloom.js";
+import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
 gAtl.Brush().GetCam2D().SetSize(600, 800);
 let back = Main.Push(new BackGround());
 let gStartBtn = new CModalEvent("StartBtn");
@@ -70,7 +76,7 @@ let socket = new CRoomClient(gPF.mServer == "local");
 let gOwner = false;
 socket.On(CRoomClient.eEvent.RoomConnect, (_stream) => {
     let packet = CPacRoom.GetRoomConnect(_stream);
-    let userBB = CBlackBoard.Get("User");
+    let userBB = CBlackBoard.Find("User");
     let user = userBB.Export(true, true);
     user.SetKey(packet.suk);
     user.FindComp(CUserComp).SetNick(packet.nick);
@@ -133,7 +139,7 @@ socket.On(CPacShooting.eHeader.Pos, (_stream) => {
     let packet = CPacShooting.Pos(_stream);
     let user = Main.Find(packet.suk);
     if (user == null) {
-        let userPF = CBlackBoard.Get("User");
+        let userPF = CBlackBoard.Find("User");
         user = userPF.Export();
         user.SetKey(packet.suk);
         user.FindComp(CUserComp).SetNick(packet.nick);
@@ -146,7 +152,7 @@ socket.On(CPacShooting.eHeader.Pos, (_stream) => {
     rb.Push(new CForce("move", packet.dir, 400));
 });
 CPool.On("Monster", () => {
-    let Mon = CBlackBoard.Get("Monster");
+    let Mon = CBlackBoard.Find("Monster");
     let mon = Mon.Export(true, true);
     mon.FindComp(CRigidBody).Push(new CForce("move", new CVec3(0, -1), 200));
     return mon;
@@ -200,4 +206,41 @@ socket.On("Chat", (_stream) => {
 gAtl.Frame().PushEvent(CEvent.eType.Resize, new CEvent(() => {
     chat.SetPosition(gAtl.PF().mLeft, gAtl.PF().mTop);
     chat.SetSize(gAtl.PF().mWidth * 0.5, gAtl.PF().mHeight * 0.4);
+}));
+CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
+    let BloomRPM = new CRPMgr();
+    let emissiveTex = new CTexture();
+    emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
+    let emissiveTexKey = BloomRPM.PushTex("emissiveTex.tex", emissiveTex);
+    let rp = BloomRPM.PushRP(new CRPAuto());
+    rp.PushAutoPaint(CPaint2D);
+    rp.PushAutoTag("bloom");
+    rp.mShader = gAtl.Frame().Pal().Sl2DKey();
+    rp.mRenderTarget = emissiveTexKey;
+    rp.mTag = "mask";
+    let basiceTex = new CTexture();
+    basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
+    let basiceTexKey = BloomRPM.PushTex("basiceTex.tex", basiceTex);
+    rp = BloomRPM.PushRP(new CRPAuto());
+    rp.PushAutoPaint(CPaint2D);
+    rp.mShader = gAtl.Frame().Pal().Sl2DKey();
+    rp.mRenderTarget = basiceTexKey;
+    let sufBloom = BloomRPM.PushSuf(new CSurfaceBloom());
+    let srp = sufBloom.GetRP();
+    srp.mShader = gAtl.Frame().Pal().Sl2DKey();
+    srp.mTag = "blit";
+    srp.mShaderAttr.push(new CShaderAttr(0, emissiveTexKey));
+    let sufLast = BloomRPM.PushSuf(new CSurface());
+    srp = sufLast.GetRP();
+    sufLast.SetUseRT(false);
+    srp.mShader = gAtl.Frame().Pal().SlPostKey();
+    srp.mTag = "blend";
+    srp.mShaderAttr.push(new CShaderAttr(0, basiceTexKey));
+    srp.mShaderAttr.push(new CShaderAttr(1, sufBloom.GetTexKey()));
+    srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
+    srp.mShaderAttr.push(new CShaderAttr("opacity", 1, 1));
+    Main.SetRPMgr(BloomRPM);
+}));
+CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Basic", async () => {
+    Main.SetRPMgr(null);
 }));

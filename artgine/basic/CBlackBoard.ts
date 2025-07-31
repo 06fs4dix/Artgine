@@ -3,13 +3,13 @@
 var gBBMap=new Map<string,any>();
 export class CBlackBoard
 {
-    static Get(_key : string) : any;
-    static Get<T>(_key : string) : T;
-    static Get<T>(_key : string) : T
+    static Find(_key : string) : any;
+    static Find<T>(_key : string) : T;
+    static Find<T>(_key : string) : T
     {
         return gBBMap.get(_key);
     }
-    static Set(_key : string,_val : any)
+    static Push(_key : string,_val : any)
     {
         
         if(_val["mProxy"]!=null)

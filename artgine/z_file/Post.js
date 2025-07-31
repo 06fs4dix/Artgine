@@ -1,6 +1,6 @@
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
-import { Attribute, Build, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3DivV3, V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, V4SubV4, abs, clamp, discard, fract, max, min, pow, screenPos, sign, sin, smoothstep } from "./Shader";
+import { Attribute, Build, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3DivV3, V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, V4SubV4, abs, clamp, discard, fract, max, min, pow, sign, sin, smoothstep } from "./Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
@@ -48,13 +48,11 @@ var contrast = 1.5;
 var brightness = 1.2;
 var colorCorrection = new CVec3(1.2, 1.1, 1.0);
 var toneMappingFactor = 0.5;
-var srcResolution = Null();
 var mipLevel = Null();
 var threshold = Null();
 var softThreshold = Null();
 var mixFactor = Null();
 var exposure = Null();
-var aspect = Null();
 var blendFactor = Null();
 Build("PostBlend", ["blend"], vs_main, [
     worldMat, viewMat, projectMat, blend, opacity
@@ -123,17 +121,13 @@ Build("PostExpandBakedLight", ["bake"], vs_main, [
 ], [out_position, to_uv], ps_main_ExpandBakedLight, [out_color]);
 Build("PostDownSample", ["sample", "down"], vs_main, [
     worldMat, viewMat, projectMat,
-    srcResolution, mipLevel,
+    mipLevel,
     threshold, softThreshold
 ], [out_position, to_uv], ps_main_DownSample, [out_color]);
 Build("PostUpSample", ["sample", "up"], vs_main, [
     worldMat, viewMat, projectMat,
-    aspect, blendFactor
+    blendFactor
 ], [out_position, to_uv], ps_main_UpSample, [out_color]);
-Build("PostDownSampleHZB", ["sample", "down", "hzb"], vs_main, [
-    worldMat, viewMat, projectMat,
-    srcResolution
-], [out_position, to_uv], ps_main_hzb_DownSample, [out_color]);
 function GetTexCodiedUV(_uv, _texCodi) {
     var result = new CVec2(_uv.x * _texCodi.x + _texCodi.z, _uv.y * _texCodi.y + _texCodi.w);
     if (result.x < 0.0)
@@ -560,9 +554,9 @@ function PreFilter(_col) {
     return V3MulFloat(_col, contribution);
 }
 function ps_main_DownSample() {
-    var srcTexelSize = new CVec2(1.0 / srcResolution.x, 1.0 / srcResolution.y);
-    var x = srcTexelSize.x;
-    var y = srcTexelSize.y;
+    var texSize = Sam2DSize(0.0);
+    var x = 1.0 / texSize.x;
+    var y = 1.0 / texSize.y;
     var a = Sam2D0ToColor(new CVec2(to_uv.x - 2.0 * x, to_uv.y + 2.0 * y)).rgb;
     var b = Sam2D0ToColor(new CVec2(to_uv.x, to_uv.y + 2.0 * y)).rgb;
     var c = Sam2D0ToColor(new CVec2(to_uv.x + 2.0 * x, to_uv.y + 2.0 * y)).rgb;
@@ -600,8 +594,9 @@ function ps_main_DownSample() {
     out_color.w = 1.0;
 }
 function ps_main_UpSample() {
-    var x = 0.004 / aspect;
-    var y = 0.004;
+    var texSize = Sam2DSize(0.0);
+    var x = 1.0 / texSize.x;
+    var y = 1.0 / texSize.y;
     var a = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y + y)).rgb;
     var b = Sam2D0ToColor(new CVec2(to_uv.x, to_uv.y + y)).rgb;
     var c = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y + y)).rgb;
@@ -615,31 +610,4 @@ function ps_main_UpSample() {
     out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(b, d), V3AddV3(f, h)), 0.125));
     out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(a, c), V3AddV3(g, i)), 0.0625));
     out_color.w = blendFactor;
-}
-function ps_main_hzb_DownSample() {
-    var srcTexelSize = new CVec2(1.0 / srcResolution.x, 1.0 / srcResolution.y);
-    var x = srcTexelSize.x;
-    var y = srcTexelSize.y;
-    var texels = new CVec4(0.0, 0.0, 0.0, 0.0);
-    texels.x = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y - y)).x;
-    texels.y = Sam2D0ToColor(new CVec2(to_uv.x, to_uv.y - y)).x;
-    texels.z = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y - y)).x;
-    texels.w = Sam2D0ToColor(new CVec2(to_uv.x, to_uv.y)).x;
-    var maxZ = max(max(texels.x, texels.y), max(texels.z, texels.w));
-    var extra = new CVec3(0.0, 0.0, 0.0);
-    if ((FloatToInt(srcResolution.x) & 1) != 0 && FloatToInt(screenPos.x) == FloatToInt(srcResolution.x) - 3) {
-        if ((FloatToInt(srcResolution.y) & 1) != 0 && FloatToInt(screenPos.y) == FloatToInt(srcResolution.y) - 3) {
-            extra.z = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y + y)).x;
-            maxZ = max(maxZ, extra.z);
-        }
-        extra.x = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y)).x;
-        extra.y = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y - y)).x;
-        maxZ = max(maxZ, max(extra.x, extra.y));
-    }
-    else if ((FloatToInt(srcResolution.y) & 1) != 0 && FloatToInt(screenPos.y) == FloatToInt(srcResolution.y) - 3) {
-        extra.x = Sam2D0ToColor(new CVec2(to_uv.x, to_uv.y + y)).x;
-        extra.y = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y + y)).x;
-        maxZ = max(maxZ, max(extra.x, extra.y));
-    }
-    out_color = new CVec4(maxZ, maxZ, maxZ, 1.0);
 }

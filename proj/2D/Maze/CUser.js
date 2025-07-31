@@ -66,7 +66,7 @@ export default class CUser extends CBehavior {
     }
     *ReadyMouse() {
         this.GetOwner().FindComp(CPaint2D).SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBMul));
-        let cam = CBlackBoard.Get("2D");
+        let cam = CBlackBoard.Find("2D");
         let camShake = new CCamShakeNoise();
         cam.SetCamShake(camShake);
         camShake.Shake(1000);
@@ -78,20 +78,20 @@ export default class CUser extends CBehavior {
     }
     PickMouse(_rayMouse) {
         let mouse = this.GetOwner().GetFrame().Input().Mouse();
-        let cam = CBlackBoard.Get("2D");
+        let cam = CBlackBoard.Find("2D");
         let npos = cam.ScreenToWorldPoint(mouse.x, mouse.y);
         let pos = this.GetOwner().GetPos();
         if (this.GetOwner().GetFrame().Input().KeyDown(CInput.eKey.LButton) && this.m_ready == true &&
-            CBlackBoard.Get("RayExtrapolate")(pos, npos, this.GetOwner()) == false) {
+            CBlackBoard.Find("RayExtrapolate")(pos, npos, this.GetOwner()) == false) {
             this.m_move = true;
         }
     }
     CamInit(_type) {
-        let cam = CBlackBoard.Get("2D");
+        let cam = CBlackBoard.Find("2D");
         let camcon = cam.GetCamCon();
         let fw = this.GetOwner().GetFrame();
         if (_type == 0 && (camcon instanceof CCamCon2DFollow) == false) {
-            let user = CBlackBoard.Get("User");
+            let user = CBlackBoard.Find("User");
             let camcon = new CCamCon2DFollow(fw.Input());
             cam.SetCamCon(camcon);
             camcon.SetPosKey(CInput.eKey.LButton);
@@ -106,7 +106,7 @@ export default class CUser extends CBehavior {
     }
     Update(_delay) {
         super.Update(true);
-        let cam = CBlackBoard.Get("2D");
+        let cam = CBlackBoard.Find("2D");
         if (cam.GetCamCon() instanceof CCamCon2DFollow) {
             let camcon = cam.GetCamCon();
             camcon.SetPos(this.GetOwner().GetPos());
@@ -122,10 +122,10 @@ export default class CUser extends CBehavior {
         }
         if (this.m_move) {
             let mouse = this.GetOwner().GetFrame().Input().Mouse();
-            let cam = CBlackBoard.Get("2D");
+            let cam = CBlackBoard.Find("2D");
             let npos = cam.ScreenToWorldPoint(mouse.x, mouse.y);
             let pos = this.GetOwner().GetPos();
-            if (CBlackBoard.Get("RayExtrapolate")(pos, npos, this.GetOwner()) == false) {
+            if (CBlackBoard.Find("RayExtrapolate")(pos, npos, this.GetOwner()) == false) {
                 this.GetOwner().SetPos(cam.ScreenToWorldPoint(mouse.x, mouse.y));
             }
             else {
@@ -157,9 +157,9 @@ export default class CUser extends CBehavior {
         }
         if (this.GetOwner().GetFrame().Input().KeyUp(CInput.eKey.J)) {
             let mouse = this.GetOwner().GetFrame().Input().Mouse();
-            let cam = CBlackBoard.Get("2D");
+            let cam = CBlackBoard.Find("2D");
             let npos = cam.ScreenToWorldPoint(mouse.x, mouse.y);
-            CBlackBoard.Get("FindPath")(this.GetOwner(), npos);
+            CBlackBoard.Find("FindPath")(this.GetOwner(), npos);
         }
     }
     Collision(_org, _size, _tar, _push) {
@@ -184,7 +184,7 @@ export default class CUser extends CBehavior {
     Trigger(_org, _size, _tar) {
         if (this.m_move == false) {
             CStage.LevelUp();
-            CBlackBoard.Get("ResetMaze")(11, 11);
+            CBlackBoard.Find("ResetMaze")(11, 11);
         }
     }
 }

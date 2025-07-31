@@ -2,7 +2,7 @@ import {CComponent} from "../component/CComponent.js"
 import {CForce} from "./CForce.js"
 import {CVec3} from "../../geometry/CVec3.js"
 import {CMath} from "../../geometry/CMath.js"
-import {CCollider,CCollusionObject} from "../component/CCollider.js"
+import {CCollider,CCollisionObject} from "../component/CCollider.js"
 import {CPhysics} from "../component/CPhysics.js"
 import {CStopover} from "./CStopover.js"
 import {CSubject} from "../subject/CSubject.js"
@@ -405,7 +405,7 @@ export class CRigidBody extends CComponent
 	}
 
 	
-	Ground(_co : Array<CCollusionObject>)
+	Ground(_co : Array<CCollisionObject>)
 	{
 		
 		

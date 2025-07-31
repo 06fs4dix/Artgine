@@ -463,7 +463,7 @@ export class CCamera extends CObject
 		CMath.V3AddV3(this.mLook, L_temp,this.mLook);
 		this.mReset=true;
 	}
-	GetRay(_x,_y)
+	GetRay(_x : number,_y : number)
 	{
 		var width=this.mWidth;
 		var height=this.mHeight;

@@ -22,18 +22,40 @@ export class CCMDMgr {
             return false;
         }
     }
-    static IsEmptyFolder(_pname) {
+    static GetFileCount(_pname) {
         if (!fs.existsSync(_pname))
-            return false;
+            return 0;
         const stat = fs.statSync(_pname);
         if (!stat.isDirectory())
-            return false;
+            return 0;
         const files = fs.readdirSync(_pname);
-        return files.length === 0;
+        return files.length;
     }
     static async RunCMD(_cmd, _new) {
+        const platform = os.platform();
         if (_new) {
-            const finalCmd = `start cmd /k "${_cmd}"`;
+            let finalCmd;
+            if (platform === 'win32') {
+                finalCmd = `start cmd /k "${_cmd}"`;
+            }
+            else if (platform === 'darwin') {
+                finalCmd = `osascript -e 'tell app "Terminal" to do script "${_cmd}"'`;
+            }
+            else {
+                if (this.IsCommandAvailable('gnome-terminal')) {
+                    finalCmd = `gnome-terminal -- bash -c "${_cmd}; exec bash"`;
+                }
+                else if (this.IsCommandAvailable('konsole')) {
+                    finalCmd = `konsole -e bash -c "${_cmd}; exec bash"`;
+                }
+                else if (this.IsCommandAvailable('xterm')) {
+                    finalCmd = `xterm -e bash -c "${_cmd}; exec bash"`;
+                }
+                else {
+                    console.warn("터미널 에뮬레이터를 찾을 수 없습니다. 현재 터미널에서 실행합니다.");
+                    finalCmd = _cmd;
+                }
+            }
             try {
                 await execAsync(finalCmd);
             }
@@ -43,7 +65,13 @@ export class CCMDMgr {
         }
         else {
             return new Promise((resolve, reject) => {
-                const child = spawn('cmd', ['/c', _cmd], { stdio: 'inherit' });
+                let child;
+                if (platform === 'win32') {
+                    child = spawn('cmd', ['/c', _cmd], { stdio: 'inherit' });
+                }
+                else {
+                    child = spawn('bash', ['-c', _cmd], { stdio: 'inherit' });
+                }
                 child.on('exit', (code) => {
                     console.log(`명령어 종료됨. 종료 코드: ${code}`);
                     resolve();
@@ -70,8 +98,19 @@ export class CCMDMgr {
             console.error('VSCode 실행 실패:', e);
         }
     }
+    static IsCommandAvailable(command) {
+        try {
+            execSync(`which ${command}`, { stdio: 'pipe' });
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
     static VSCodeOpenCode(_filePath) {
-        exec(`code "${_filePath}"`, (error, stdout, stderr) => {
+        const platform = os.platform();
+        const codeCommand = platform === 'win32' ? 'code.cmd' : 'code';
+        exec(`${codeCommand} "${_filePath}"`, (error, stdout, stderr) => {
             if (error) {
                 console.error('VS Code 실행 실패:', error);
             }

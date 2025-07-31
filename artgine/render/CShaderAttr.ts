@@ -19,7 +19,7 @@ export class CShaderAttr extends CObject
 	
 	//텍스쳐 등록할때
 	constructor(_texOff : number,_texKey : string);
-	constructor(_texOff : number,_texKey : string,_texAtt : Array<boolean>);
+	constructor(_texOff : number,_texKey : string,_texUse : Array<boolean>);
 	
 	constructor(_key : string,_val : CVec1);
 	constructor(_key : string,_val : CVec2);

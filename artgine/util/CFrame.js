@@ -24,7 +24,7 @@ import { CVec2 } from "../geometry/CVec2.js";
 import { CTexture } from "../render/CTexture.js";
 import { CBatchMgrGL } from "../render/CBatchMgr.js";
 import { CPalette } from "./CPalette.js";
-import { CPluging } from "./CPluging.js";
+import { CPlugin } from "./CPlugin.js";
 import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CRollBack } from "./CRollBack.js";
@@ -373,7 +373,7 @@ export class CFrame {
                 for (let i = 0; i < this.mResizeList.length; ++i) {
                     let res = this.mRes.Find(this.mResizeList[i]);
                     if (res.m_depthBuf != null) {
-                        var size = new CVec2(res.GetRWidth() * this.PF().mWidth, res.GetRHeight() * this.PF().mHeight);
+                        var size = new CVec2(Math.trunc(res.GetRWidth() * this.PF().mWidth), Math.trunc(res.GetRHeight() * this.PF().mHeight));
                         if (size.IsZero())
                             continue;
                         if (res.GetWidth() != size.x || res.GetHeight() != size.y)
@@ -396,7 +396,7 @@ export class CFrame {
                     if (res instanceof CTexture) {
                         if (res.GetAutoResize() && res.GetInfo()[0].mTarget == CTexture.eTarget.Sigle) {
                             if (res.mDepthBuf != null) {
-                                var size = new CVec2(res.GetRWidth() * this.PF().mWidth, res.GetRHeight() * this.PF().mHeight);
+                                var size = new CVec2(Math.trunc(res.GetRWidth() * this.PF().mWidth), Math.trunc(res.GetRHeight() * this.PF().mHeight));
                                 if (size.IsZero())
                                     continue;
                                 if (res.GetWidth() != size.x || res.GetHeight() != size.y)
@@ -428,8 +428,8 @@ export class CFrame {
         await CWASM.Init(this.mPreferences.mWASM);
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller)
             await CPWA.IsOnline();
-        if (CPluging.sEventVec.length > 0 && gMainFramework == this) {
-            for (let event of CPluging.sEventVec) {
+        if (CPlugin.sEventVec.length > 0 && gMainFramework == this) {
+            for (let event of CPlugin.sEventVec) {
                 this.PushEvent(event.mKey, event);
             }
         }

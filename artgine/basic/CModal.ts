@@ -1,4 +1,4 @@
-import { CDrop, IAutoUpdate, IDrop, IListener } from "./Basic.js";
+import {  IAutoUpdate,  IListener } from "./Basic.js";
 import { Bootstrap } from "./Bootstrap.js";
 import { CClass } from "./CClass.js";
 import {CDomFactory} from "./CDOMFactory.js";
@@ -6,19 +6,20 @@ import {CEvent} from "./CEvent.js";
 import {CJSON} from "./CJSON.js";
 import { CString } from "./CString.js";
 
-export class CFileDrop implements IDrop
+export class CDrop
 {
-    constructor(_files :any,_paths : Array<string>)
-    {
-        this.mFiles=_files;
-        this.mPaths=_paths;
-    }
-    GetDropType() {
-        return CDrop.eType.File;
-    }
-    mFiles :FileList;
+	// static eType={
+	// 	File:0,
+	// 	CObject:1,
+	// 	Hash:2,
+	// };
+	mFiles :FileList;
     mPaths : Array<string>;
+	mObject : any;
+    mX;
+    mY;
 }
+
 export class CModalTitleBar
 {
     

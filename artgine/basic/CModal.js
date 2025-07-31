@@ -1,18 +1,13 @@
-import { CDrop } from "./Basic.js";
 import { CClass } from "./CClass.js";
 import { CDomFactory } from "./CDOMFactory.js";
 import { CEvent } from "./CEvent.js";
 import { CString } from "./CString.js";
-export class CFileDrop {
-    constructor(_files, _paths) {
-        this.mFiles = _files;
-        this.mPaths = _paths;
-    }
-    GetDropType() {
-        return CDrop.eType.File;
-    }
+export class CDrop {
     mFiles;
     mPaths;
+    mObject;
+    mX;
+    mY;
 }
 export class CModalTitleBar {
     constructor(_parent, _key, _event = null) {

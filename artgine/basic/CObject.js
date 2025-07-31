@@ -1,4 +1,3 @@
-import { CDrop } from "./Basic.js";
 import { CBlackBoard } from "./CBlackBoard.js";
 import { CClass } from "./CClass.js";
 import { CJSON } from "./CJSON.js";
@@ -10,7 +9,7 @@ export var ProxyHandle = {
     get: (obj, name) => {
         if (typeof obj[name] == "function" || name == "mProxy") { }
         else if (obj.IsShould(name, CObject.eShould.Proxy)) {
-            let bb = CBlackBoard.Get(obj.Key());
+            let bb = CBlackBoard.Find(obj.Key());
             if (bb != null)
                 return bb[name];
         }
@@ -19,7 +18,7 @@ export var ProxyHandle = {
     set: (obj, name, value) => {
         if (typeof obj[name] == "function") { }
         else if (obj.IsShould(name, CObject.eShould.Proxy)) {
-            let bb = CBlackBoard.Get(obj.Key());
+            let bb = CBlackBoard.Find(obj.Key());
             if (bb != null)
                 bb[name] = value;
             return true;
@@ -75,9 +74,6 @@ export class CPointer {
     }
 }
 export class CObject {
-    GetDropType() {
-        return CDrop.eType.CObject;
-    }
     Icon() { return ""; }
     Key() {
         if (this["mKey"] == null)
@@ -100,7 +96,7 @@ export class CObject {
         if (_write == false)
             delete target["mBlackboard"];
         else {
-            CBlackBoard.Set(this.Key(), target);
+            CBlackBoard.Push(this.Key(), target);
             target["mBlackboard"] = _write;
         }
         this.EditRefresh();
@@ -228,9 +224,9 @@ export class CObject {
                 return;
             if (_obj.GetBool("mBlackboard") == true) {
                 obj.SetKey(_obj.GetStr("mKey"));
-                if (CBlackBoard.Get(obj.Key()) != null) {
+                if (CBlackBoard.Find(obj.Key()) != null) {
                     let p = new Proxy(obj, ProxyHandle);
-                    obj["mProxy"] = CBlackBoard.Get(obj.Key());
+                    obj["mProxy"] = CBlackBoard.Find(obj.Key());
                     return p;
                 }
             }
@@ -440,11 +436,11 @@ export class CBlackBoardRef extends CObject {
     Ref(_ref = null) {
         if (_ref != null)
             this.mKey = _ref;
-        return CBlackBoard.Get(this.mKey);
+        return CBlackBoard.Find(this.mKey);
     }
     Icon() { return "bi bi-link"; }
     EditDrop(_object) {
-        if (CBlackBoard.Get(_object.Key()) != null) {
+        if (CBlackBoard.Find(_object.Key()) != null) {
             this.mKey = _object.Key();
             this.EditRefresh();
         }

@@ -608,7 +608,7 @@ export class CWFEnv
 	{
 		let val=this.mListener.get(_key);
 		if(val==null)
-			val=CBlackBoard.Get(_key);
+			val=CBlackBoard.Find(_key);
 		if(val==null)
 			val=window[_key] as any;
 		return val;		

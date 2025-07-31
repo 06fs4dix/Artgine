@@ -18,6 +18,7 @@ import {CTexture} from "../../../render/CTexture.js";
 import { CUtilRender } from "../../../render/CUtilRender.js";
 import {CAtlas} from "../../../util/CAtlas.js";
 import { CFontRef } from "../../../util/CFont.js";
+import { CFrame } from "../../../util/CFrame.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import {CSubject} from "../../subject/CSubject.js";
 import {CLight} from "../CLight.js";
@@ -197,7 +198,7 @@ export class CPaint2D extends CPaint
 	SetYSort(_enable : boolean) {
 		this.mYSort = _enable;
 		if(this.mYSort && this.GetSize() != null) {
-			this.mYSortOrigin = -0.5 * this.GetSize().y;
+			this.mYSortOrigin = -0.5 * this.GetSize().y+1;
 		}
 	}
 	SetYSortOrigin(_origin : number)
@@ -375,7 +376,25 @@ export class CPaint2D extends CPaint
 	GetTexCodi() {
 		return this.mTexCodi;
 	}
-	
+	//left,top,right,bottom
+	GetLeftTopRightBottom(_frame : CFrame) 
+	{
+		const tex = _frame.Res().Find(this.mTexture[0]) as CTexture;
+		const imgW = tex.GetWidth();
+		const imgH = tex.GetHeight();
+
+		const uv = this.mTexCodi;
+
+		// 역변환: tex = (left, top, right, bottom) in px
+		const width = uv.x * imgW;
+		const height = uv.y * imgH;
+		const left = uv.z * imgW;
+		const top = (1 - uv.w - uv.y) * imgH;
+		const right = left + width;
+		const bottom = top + height;
+		
+		return new CVec4(left,top,right,bottom);
+	}
 	Render(_vf : CShader)
 	{
 

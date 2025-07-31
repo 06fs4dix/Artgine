@@ -28,7 +28,7 @@ gPF.mWASM = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPluging} from "../../../artgine/util/CPluging.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
@@ -132,7 +132,7 @@ let FindPath=(_target : CSubject,_end : CVec3)=>
      
     }
 };
-CBlackBoard.Set("FindPath",FindPath);
+CBlackBoard.Push("FindPath",FindPath);
 
 let size=100;
 
@@ -166,7 +166,7 @@ let RayExtrapolate=(_st : CVec3,_ed : CVec3,_target : CSubject)=>
     }
     return false;
 }
-CBlackBoard.Set("RayExtrapolate",RayExtrapolate);
+CBlackBoard.Push("RayExtrapolate",RayExtrapolate);
 let ResetMaze=(_xCount,_yCount)=>
 {
     g_fadeEffect.AniStart("Level : "+CStage.level);
@@ -446,7 +446,7 @@ let ResetMaze=(_xCount,_yCount)=>
 
 ResetMaze(5,5);
 
-CBlackBoard.Set("ResetMaze",ResetMaze);
+CBlackBoard.Push("ResetMaze",ResetMaze);
 //CStage.nextCorutine.Start();
 
 
@@ -526,7 +526,7 @@ function ClickCamOption(_id)
     else if(_id=="FlowCam")
     {
         g_camMode=1;
-        let user=CBlackBoard.Get("User") as CSubject;
+        let user=CBlackBoard.Find("User") as CSubject;
         user.FindComp(CUser).m_camMode=g_camMode;
         let camcon=new CCamCon2DFollow(gAtl.Frame().Input());
         camcon.m_smoothSpeed=0.05;

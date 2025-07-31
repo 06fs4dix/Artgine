@@ -62,9 +62,13 @@ export class CSubject extends CObject implements IFile
 	public mOutMsg = new CArray<CRouteMsg>();
 
 	public mUpdateMat : number = CUpdate.eType.Updated;
+	mSave=true;
 	//public m_updateRS : boolean=true;
 
-	
+	SetSave(_enable : boolean)
+	{
+		this.mSave=_enable;
+	}
 	constructor(_comArr =new Array<CComponent>())
 	{
 		super();
@@ -832,6 +836,8 @@ export class CSubject extends CObject implements IFile
 		target.SetFrame(null);
 		if(_resetKey && this.mPMat==null)
 			target.SetKey(CUniqueID.GetHash());
+		else
+			target.SetKey(this.Key());
 
 		
 		return target;

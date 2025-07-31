@@ -1,3 +1,4 @@
+import { CAlert } from "../basic/CAlert.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CVec2 } from "../geometry/CVec2.js";
@@ -105,6 +106,18 @@ export class CRendererGL extends CRenderer {
     mXREye = -1;
     mXRSize = new CVec2();
     SetUniToSam2D(_vf, _key, _buf, _count = null) {
+        var uniDf = _vf.GetDefault(_key);
+        if (uniDf != null || uniDf.mEach == 4 || uniDf.mEach == 16) { }
+        else
+            CAlert.E("error");
+        if (_count == null)
+            _count = _buf.length / 4;
+        this.mUniTexLastOff = uniDf.mData[0];
+        this.RebuildTexture(this.mUniToSam2d, uniDf.mData[0], 0, uniDf.mData[1], _count, 1, _buf);
+        if (_buf.length == 0)
+            this.SendGPU(_vf, new CVec2(0, 0), _key, null, 0);
+        else
+            this.SendGPU(_vf, new CVec2(uniDf.mData[0], uniDf.mData[1]), _key, null, 0);
     }
     TexBindReset() {
     }
@@ -141,6 +154,17 @@ export class CRendererGL extends CRenderer {
         return "";
     }
     RebuildTexture(_tex, _active, _xOff, _yOff, _width, _height, _fa) {
+        this.mDev.GL().activeTexture(this.mDev.GL().TEXTURE0 + _active);
+        var fmt1 = Number(this.mDev.GL().RGBA);
+        var fmt2 = Number(this.mDev.GL().UNSIGNED_BYTE);
+        fmt1 = this.mDev.GL().RGBA;
+        var info = _tex.GetInfo();
+        if (_tex.GetInfo()[0].mFormat == CTexture.eFormat.RGBA32F)
+            fmt2 = this.mDev.GL().FLOAT;
+        var gBuf = _tex.GetGBuf();
+        gBuf = gBuf[0];
+        this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D, gBuf);
+        this.mDev.GL().texSubImage2D(this.mDev.GL().TEXTURE_2D, 0, _xOff, _yOff, _width, _height, fmt1, fmt2, _fa);
     }
     RebuildVideo(_video, _key = null) {
         return "";
