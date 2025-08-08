@@ -186,21 +186,21 @@ export class CSing
 
 
         
-        findPWDiv.push({'<>':'div', 'class':'card header', 'id':'findPWCardHeader','data-LG':CLan.T('CUSS.PWFindTitle', '비번찾기')});
+        findPWDiv.push({'<>':'div', 'class':'card header', 'id':'findPWCardHeader','data-CLan':CLan.Set(null,'CSing.PWFindTitle', '비번찾기')});
         findPWDiv.push({'<>':'div', 'class':'card-body', 'html':[
             {'<>':'label',"for":"email_txt" },
             {'<>':'input',"type":"text","class":"form-control","id":"email_txt",
-                "placeholder":"","data-LG":CLan.T('CUSS.FindEmail', "이메일을 입력하세요")},
+                "placeholder":"","data-CLan":CLan.Set(null,'CSing.FindEmail', "이메일을 입력하세요")},
             {'<>':'label',"for":"code_txt"},
             {'<>':'input',"type":"text","class":"form-control","id":"code_txt",
-                "placeholder":"","data-LG":CLan.T('CUSS.FindEmailCode', "이메일에서 확인된 코드를 입력해주세요"), 'disabled':'disabled'},
+                "placeholder":"","data-CLan":CLan.Set(null,'CSing.FindEmailCode', "이메일에서 확인된 코드를 입력해주세요"), 'disabled':'disabled'},
 
             {'<>':'button','type':'button','class':'btn btn-secondary float-left', 'id':'findPWCardBackBtn',
-                "data-LG":CLan.T('CUSS.Cancel', '취소'), "onclick":()=>{
+                "data-CLan":CLan.Set(null,'CSing.Cancel', '취소'), "onclick":()=>{
                     CUtil.ID("findPWDiv").hidden=true;
                 }},
             {'<>':'button',"type":"button","class":"btn btn-primary float-right", 'id':'findPWCardNextBtn',
-                "data-LG":CLan.T('CUSS.Next', "다음"), "onclick":()=>{
+                "data-CLan":CLan.Set(null,'CSing.Next', "다음"), "onclick":()=>{
                     let code=CUtil.ID("code_txt") as HTMLInputElement;
                     let email=CUtil.ID("email_txt") as HTMLInputElement;
                     let btn=CUtil.ID("findPWCardNextBtn");
@@ -259,7 +259,7 @@ export class CSing
             else
             {
                 logoutDiv.push({'<>':'button','type':'button','class':'btn btn-danger btn-lg w-100',"id":"ModifyBtn",
-                        "onclick":modifyFun,"data-LG":CLan.T('CUSS.Modify', "정보수정")});
+                        "onclick":modifyFun,"data-CLan":CLan.Set(null,'CSing.Modify', "정보수정")});
             }
         }
         if(_option.mLogoutBtn!=null)
@@ -289,7 +289,7 @@ export class CSing
             else
             {
                 logoutDiv.push({'<>':'button','type':'button','class':'btn btn-primary btn-lg w-100',"id":"IDBtn",
-                        "onclick":logoutFun,"data-LG":CLan.T('CUSS.Logout', "로그아웃")});
+                        "onclick":logoutFun,"data-CLan":CLan.Set(null,'CSing.Logout', "로그아웃")});
             }
         }
         
@@ -309,9 +309,9 @@ export class CSing
         };
         if(_option.mID!=null)
         {
-            loginDiv.push({'<>':"input",'type':'text','class':'form-control w-100',"id":"id_txt","placeholder":"","data-LG":CLan.T('CUSS.ID',"아이디"),
+            loginDiv.push({'<>':"input",'type':'text','class':'form-control w-100',"id":"id_txt","placeholder":"","data-CLan":CLan.Set(null,'CSing.ID',"아이디"),
                 "style":"width:220px;margin:0 auto;"});
-                loginDiv.push({'<>':"input",'type':'password','class':'form-control w-100',"id":"pw_txt","placeholder":"","data-LG":CLan.T('CUSS.PW',"비밀번호"),
+                loginDiv.push({'<>':"input",'type':'password','class':'form-control w-100',"id":"pw_txt","placeholder":"","data-CLan":CLan.Set(null,'CSing.PW',"비밀번호"),
                 "style":"width:220px;margin:0 auto;",'onkeyup':()=>{
                     if(window.event["keyCode"]==13)
                         loginFun();
@@ -330,7 +330,7 @@ export class CSing
             else
             {
                 loginDiv.push({'<>':'button','type':'button','class':'btn btn-primary w-100',"style":"width:220px;margin:4px auto;",
-                    "onclick":function(){loginFun();},"data-LG":CLan.T('CUSS.Login',"로그인") });
+                    "onclick":function(){loginFun();},"data-CLan":CLan.Set(null,'CSing.Login',"로그인") });
             }
         }
         if(_option.mJoinBtn!=null)
@@ -350,7 +350,7 @@ export class CSing
             else
             {
                 loginDiv.push({'<>':'button','type':'button','class':'btn btn-secondary w-100',"style":"width:220px;margin:4px auto;",
-                    "onclick":joinFun,"data-LG":CLan.T('CUSS.Join',"가입")});
+                    "onclick":joinFun,"data-CLan":CLan.Set(null,'CSing.Join',"가입")});
             }
         }
         if(_option.mFindPWBtn!=null)
@@ -372,7 +372,7 @@ export class CSing
             {
                 loginDiv.push({'<>':'button','type':'button','class':'btn btn-success w-100',
                     "style":"width:220px;margin:4px auto;", 'id': _option.mFindPWBtn,
-                    "onclick":findPWFun,"data-LG":CLan.T('CUSS.FindPW',"비번찾기")})
+                    "onclick":findPWFun,"data-CLan":CLan.Set(null,'CSing.FindPW',"비번찾기")})
             }
         }
         let state=CUniqueID.GetHash();
@@ -394,7 +394,7 @@ export class CSing
                 loginDiv.push({'<>':'button', 'type':'button', 'class':'btn btn-outline-warning w-100', 'onclick':kakaoFun, 'id':_option.mKakaoBtn,
                     'style':'width:220px; margin:4px auto;', 'html':[
                         {'<>':'i', 'class':'bi bi-chat-dots'},
-                        {'<>':'text', 'data-LG': CLan.T('CUSS.Kakao',"카카오톡")}
+                        {'<>':'text', 'data-CLan': CLan.Set(null,'CSing.Kakao',"카카오톡")}
                     ]
                 });
             }
@@ -417,7 +417,7 @@ export class CSing
                 loginDiv.push({'<>':'button', 'type':'button', 'class':'btn btn-outline-success w-100', 'onclick':naverFun, 'id':_option.mNaverBtn,
                     'style':'width:220px; margin:4px auto;', 'html':[
                         {'<>':'i', 'class':'bi bi-chat-dots'},
-                        {'<>':'text', 'data-LG': CLan.T('CUSS.Naver',"네이버")}
+                        {'<>':'text', 'data-CLan': CLan.Set(null,'CSing.Naver',"네이버")}
                     ]
                 });
             }
@@ -447,7 +447,7 @@ export class CSing
                 loginDiv.push({'<>':'button', 'type':'button', 'class':'btn btn-outline-danger w-100', 'onclick':googleFun, 'id':_option.mGoogleBtn,
                     'style':'width:220px; margin:4px auto;', 'html':[
                         {'<>':'i', 'class':'bi bi-chat-dots'},
-                        {'<>':'text', 'data-LG': CLan.T('CUSS.Google',"구글")}
+                        {'<>':'text', 'data-CLan': CLan.Set(null,'CSing.Google',"구글")}
                     ]
                 });
             }
@@ -492,7 +492,7 @@ export class CSing
                 loginDiv.push({'<>':"button", 'type':'button', 'class':'btn btn-outline-info w-100', 'id':_option.mFirebaseAnoBtn,
                 'style':'width:220px;margin:4px auto;', 'onclick':FireBaseAnonymousLogin, 'html':[
                         {'<>':'i', 'class':'bi bi-person'},
-                        {'<>':'text', 'data-LG': CLan.T('CUSS.Anonymous', "익명")}
+                        {'<>':'text', 'data-CLan': CLan.Set(null,'CSing.Anonymous', "익명")}
                     ]
                 });
             }
@@ -510,7 +510,7 @@ export class CSing
                 loginDiv.push({'<>':"button", 'type':'button', 'class':'btn btn-outline-danger w-100', 'id':_option.mFirebaseEmailBtn,
                     'style':'width:220px;margin:4px auto;', 'onclick':function() {emailNextBtnEvent(_option.mFirebaseEmailBtn);}, 'html':[
                         {'<>':'i', 'class':'bi bi-envelope'},
-                        {'<>':'text', 'data-LG': CLan.T('CUSS.Email', "이메일")}
+                        {'<>':'text', 'data-CLan': CLan.Set(null,'CSing.Email', "이메일")}
                     ]
                 });
             }
@@ -528,7 +528,7 @@ export class CSing
                 loginDiv.push({'<>':"button", 'type':'button', 'class':'btn btn-outline-primary w-100', 'id':_option.mFirebasePhoneBtn,
                     'style':'width:220px;margin:4px auto;', 'onclick':function() {phoneNextBtnEvent(_option.mFirebasePhoneBtn);}, 'html':[
                         {'<>':'i', 'class':'bi bi-phone'},
-                        {'<>':'text', 'data-LG': CLan.T('CUSS.Phone', "전화번호")}
+                        {'<>':'text', 'data-CLan': CLan.Set(null,'CSing.Phone', "전화번호")}
                     ]
                 });
             }
@@ -536,27 +536,27 @@ export class CSing
 
         firebaseCardDiv.push({'<>':'div', 'class':'card text-center', 'id':_option.mFirebasePhoneBtn + 'Card',
             'style':'width:23rem;margin:0 auto;', 'hidden':'true', 'html':[
-                {'<>':'div', 'class':'card-header', 'id':_option.mFirebasePhoneBtn + 'CardHeader', 'data-LG':CLan.T('CUSS.TelTitle_InputTel', '전화번호 입력')},
+                {'<>':'div', 'class':'card-header', 'id':_option.mFirebasePhoneBtn + 'CardHeader', 'data-CLan':CLan.Set(null,'CSing.TelTitle_InputTel', '전화번호 입력')},
                 {'<>':'div', 'class':'card-body', 'html':[
                     {'<>':'center', 'class':'input-group mb-3', 'html':[
-                        {'<>':'span', 'class':'input-group-text', 'data-LG':CLan.T('CUSS.Tel', '전화번호')},
-                        {'<>':'input', 'type':'tel', 'name':'phoneNumber', 'class':'card-text','id':'Tel', 'placeholder':"","data-LG":CLan.T('CUSS.Tel', '전화번호')}
+                        {'<>':'span', 'class':'input-group-text', 'data-CLan':CLan.Set(null,'CSing.Tel', '전화번호')},
+                        {'<>':'input', 'type':'tel', 'name':'phoneNumber', 'class':'card-text','id':'Tel', 'placeholder':"","data-CLan":CLan.Set(null,'CSing.Tel', '전화번호')}
                     ]},
                     {'<>':'center', 'id':'recaptcha-container'},
                     {'<>':'br'},
                     {'<>':'div', 'id':'recaptcha-code-container', 'hidder':'true', 'html':[
                         {'<>':'center', 'class':'input-group mb-3', 'html':[
-                            {'<>':'span', 'class':'input-group-text', 'data-LG':CLan.T('CUSS.RecaptchaCode', '인증번호')},
-                            {'<>':'input', 'type':'number', 'id':'recaptchaCode', 'placeholder':"","data-LG":CLan.T('CUSS.RecaptchaCode', '인증번호')}
+                            {'<>':'span', 'class':'input-group-text', 'data-CLan':CLan.Set(null,'CSing.RecaptchaCode', '인증번호')},
+                            {'<>':'input', 'type':'number', 'id':'recaptchaCode', 'placeholder':"","data-CLan":CLan.Set(null,'CSing.RecaptchaCode', '인증번호')}
                         ]}
                     ]},
                     {'<>':'h6', 'id':'PhoneErrorMessage'},
                     {'<>':'br'},
                     {'<>':'button', 'type':'button', 'class':'btn btn-secondary float-left',
-                        'id':_option.mFirebasePhoneBtn+'CardBackBtn', 'data-LG':CLan.T('CUSS.Cancel', '취소'),
+                        'id':_option.mFirebasePhoneBtn+'CardBackBtn', 'data-CLan':CLan.Set(null,'CSing.Cancel', '취소'),
                         'onclick':function() {phoneBackBtnEvent(_option.mFirebasePhoneBtn);}},
                     {'<>':'button', 'type':'button', 'class':'btn btn-primary float-right',
-                        'id':_option.mFirebasePhoneBtn+'CardNextBtn', 'data-LG':CLan.T('CUSS.Enter', '다음'),
+                        'id':_option.mFirebasePhoneBtn+'CardNextBtn', 'data-CLan':CLan.Set(null,'CSing.Enter', '다음'),
                         'onclick':function() {phoneNextBtnEvent(_option.mFirebasePhoneBtn);}}
                 ]}
             ]
@@ -564,24 +564,24 @@ export class CSing
         {'<>':'div', 'class':'card text-center', 'id':_option.mFirebaseEmailBtn + 'Card',
             'style':'width:23rem;margin:0 auto;', 'hidden':'true', 'html':[
                 {'<>':'div', 'class':'card header', 'id':_option.mFirebaseEmailBtn + 'CardHeader',
-                    'data-LG':CLan.T('CUSS.EmailTitle_InputEmail','이메일 입력')},
+                    'data-CLan':CLan.Set(null,'CSing.EmailTitle_InputEmail','이메일 입력')},
                 {'<>':'div', 'class':'card-body', 'html':[
                 {'<>':'center', 'class':'input-group mb-3', 'id':'EmailDiv', 'html': [
-                    {'<>':'span', 'class':'input-group-text', 'data-LG':CLan.T('CUSS.Email', '이메일')},
+                    {'<>':'span', 'class':'input-group-text', 'data-CLan':CLan.Set(null,'CSing.Email', '이메일')},
                     {'<>':'input', 'type':'email', 'name':'email', 'id':'Email', 'class':'form-control',
-                        'placeholder':"","data-LG":CLan.T('CUSS.Email','이메일')}
+                        'placeholder':"","data-CLan":CLan.Set(null,'CSing.Email','이메일')}
                 ]},
                 {'<>':'center', 'class':'input-group mb-3', 'id':'PasswordDiv', 'html': [
-                    {'<>':'span', 'class':'input-group-text', 'data-LG':CLan.T('CUSS.PW', '패스워드')},
+                    {'<>':'span', 'class':'input-group-text', 'data-CLan':CLan.Set(null,'CSing.PW', '패스워드')},
                     {'<>':'input', 'type':'password', 'name':'password', 'id':'Password',
-                        'class':'form-control', 'placeholder':"","data-LG":CLan.T('CUSS.PW', '패스워드')}
+                        'class':'form-control', 'placeholder':"","data-CLan":CLan.Set(null,'CSing.PW', '패스워드')}
                 ]},
                 {'<>':'h6', 'id':'EmailErrorMessage'},
                     {'<>':'button', 'type':'button', 'class':'btn btn-secondary float-left',
-                    'id':_option.mFirebaseEmailBtn+'CardBackBtn', 'data-LG':CLan.T('CUSS.Cancel', '취소'),
+                    'id':_option.mFirebaseEmailBtn+'CardBackBtn', 'data-CLan':CLan.Set(null,'CSing.Cancel', '취소'),
                      'onclick':function() {emailBackBtnEvent(_option.mFirebaseEmailBtn);}},
                     {'<>':'button', 'type':'button', 'class':'btn btn-primary float-right',
-                     'id':_option.mFirebaseEmailBtn+'CardNextBtn', 'data-LG':CLan.T('CUSS.Enter','다음'),
+                     'id':_option.mFirebaseEmailBtn+'CardNextBtn', 'data-CLan':CLan.Set(null,'CSing.Enter','다음'),
                       'onclick':function() {emailNextBtnEvent(_option.mFirebaseEmailBtn);}},
                 ]}
             ]
@@ -589,19 +589,19 @@ export class CSing
         {'<>':'div', 'class': 'card text-center', 'id':_option.mFindPWBtn + 'Card',
             'style':'width:23rem;margin:0 auto;', 'hidden':true, 'html':[
                 {'<>':'div', 'class':'card header', 'id':_option.mFindPWBtn + 'CardHeader',
-                    'data-LG':CLan.T('CUSS.PWFindTitle', '비번찾기')},
+                    'data-CLan':CLan.Set(null,'CSing.PWFindTitle', '비번찾기')},
                 {'<>':'div', 'class':'card-body', 'html':[
                     {'<>':'label',"for":"email_txt" },
                     {'<>':'input',"type":"text","class":"form-control","id":"email_txt",
-                        "placeholder":"","data-LG":CLan.T('CUSS.Email', "이메일을 입력하세요")},
+                        "placeholder":"","data-CLan":CLan.Set(null,'CSing.Email', "이메일을 입력하세요")},
                     {'<>':'label',"for":"code_txt"},
                     {'<>':'input',"type":"text","class":"form-control","id":"code_txt",
-                        "placeholder":"","data-LG":CLan.T('CUSS.EmailCode', "이메일에서 확인된 코드를 입력해주세요"), 'disabled':'disabled'},
+                        "placeholder":"","data-CLan":CLan.Set(null,'CSing.EmailCode', "이메일에서 확인된 코드를 입력해주세요"), 'disabled':'disabled'},
 
                     {'<>':'button','type':'button','class':'btn btn-secondary float-left', 'id':_option.mFindPWBtn + 'CardBackBtn',
-                        "data-LG":CLan.T('CUSS.Cancel', '취소'), "onclick":function() {}},
+                        "data-CLan":CLan.Set(null,'CSing.Cancel', '취소'), "onclick":function() {}},
                     {'<>':'button',"type":"button","class":"btn btn-primary float-right", 'id':_option.mFindPWBtn + 'CardNextBtn',
-                        "data-LG":CLan.T('CUSS.Enter', "완료"), "onclick":function() {}}
+                        "data-CLan":CLan.Set(null,'CSing.Enter', "완료"), "onclick":function() {}}
 
                 ]}
             ]
@@ -612,10 +612,10 @@ export class CSing
         joinDiv.push({'<>':'div',"id":"IDPWDiv","html":[
             {'<>':'label',"for":"join_id_txt","text":"ID","id":"join_id_label"},
             {'<>':'input',"type":"text","class":"form-control","id":"join_id_txt",
-                "placeholder":"","data-LG":CLan.T('CUSS.IDInfo', "아이디를 영어 문자와 숫자로만 입력하세요 6자이상 12자이하로 입력하세요"),
+                "placeholder":"","data-CLan":CLan.Set(null,'CSing.IDInfo', "아이디를 영어 문자와 숫자로만 입력하세요 6자이상 12자이하로 입력하세요"),
                 
             },
-            // {'<>':'button',"type":"button","class":"btn btn-danger","id":"id_btn","data-LG":CLan.T('CUSS.DuplicateCheck', "중복체크"),
+            // {'<>':'button',"type":"button","class":"btn btn-danger","id":"id_btn","data-CLan":CLan.T('CSing.DuplicateCheck', "중복체크"),
             //     "onclick":()=>{
             //         CWebUtil.ID("id_btn").className="btn btn-success";
             //         //DuplicateCheck(CWebUtil.IDValue("id_txt"),"id");
@@ -625,18 +625,18 @@ export class CSing
             
             {'<>':'label',"for":"join_pw_txt","text":"PassWord","id":"join_pw_label"},
             {'<>':'input',"type":"password","class":"form-control","id":"join_pw_txt",
-                "placeholder":"","data-LG":CLan.T('CUSS.PWInfo', "비밀번호를 4자 이상 14자 이하로 입력하세요")},
+                "placeholder":"","data-CLan":CLan.Set(null,'CSing.PWInfo', "비밀번호를 4자 이상 14자 이하로 입력하세요")},
             {'<>':'input',"type":"password","class":"form-control","id":"join_pwChk_txt",
-                "placeholder":"","data-LG":CLan.T('PWCheck', "비밀번호를 다시 입력하여 확인하세요")},
+                "placeholder":"","data-CLan":CLan.Set(null,'PWCheck', "비밀번호를 다시 입력하여 확인하세요")},
 
         ]});
         
         joinDiv.push({'<>':'label',"for":"join_nick_txt","text":"Nick"});
         joinDiv.push({'<>':'input',"type":"text","class":"form-control","id":"join_nick_txt",
-            "placeholder":"","data-LG":CLan.T('CUSS.Nick', "닉네임"),
+            "placeholder":"","data-CLan":CLan.Set(null,'CSing.Nick', "닉네임"),
             
         });
-        // joinDiv.push({'<>':'button',"type":"button","class":"btn btn-danger","id":"nick_btn","data-LG":CLan.T('CUSS.DuplicateCheck', "중복체크"),
+        // joinDiv.push({'<>':'button',"type":"button","class":"btn btn-danger","id":"nick_btn","data-CLan":CLan.T('CSing.DuplicateCheck', "중복체크"),
         //     "onclick":()=>{
         //         CWebUtil.ID("nick_btn").className="btn btn-success";
         //     }
@@ -644,10 +644,10 @@ export class CSing
         
         joinDiv.push({'<>':'label',"for":"join_email_txt","text":"Email"});
         joinDiv.push({'<>':'input',"type":"text","class":"form-control","id":"join_email_txt",
-            "placeholder":"","data-LG":CLan.T('CUSS.Email', "이메일(계정,패스워드 분실시 필요)"),
+            "placeholder":"","data-CLan":CLan.Set(null,'CSing.Email', "이메일(계정,패스워드 분실시 필요)"),
             
         });
-        // joinDiv.push({'<>':'button',"type":"button","class":"btn btn-danger","id":"email_btn","data-LG":CLan.T('CUSS.DuplicateCheck', "중복체크"),
+        // joinDiv.push({'<>':'button',"type":"button","class":"btn btn-danger","id":"email_btn","data-CLan":CLan.T('CSing.DuplicateCheck', "중복체크"),
         //     "onclick":()=>{
         //         CWebUtil.ID("email_btn").className="btn btn-success";
         //     }
@@ -659,7 +659,7 @@ export class CSing
         joinDiv.push({'<>':'br'});
         
             
-        joinDiv.push({'<>':'button',"type":"button","class":"btn btn-primary btn-lg w-100","id":"uc_btn","data-LG":CLan.T('CUSS.Enter', "완료"),
+        joinDiv.push({'<>':'button',"type":"button","class":"btn btn-primary btn-lg w-100","id":"uc_btn","data-CLan":CLan.Set(null,'CSing.Enter', "완료"),
             "onclick":()=>{
                 
 
@@ -766,7 +766,7 @@ export class CSing
                 });
             }
         });
-        joinDiv.push({'<>':'button',"type":"button","class":"btn btn-danger btn-lg w-100","id":"uc_cancel_btn","data-LG":CLan.T('CUSS.Cancel', "취소"),
+        joinDiv.push({'<>':'button',"type":"button","class":"btn btn-danger btn-lg w-100","id":"uc_cancel_btn","data-CLan":CLan.Set(null,'CSing.Cancel', "취소"),
             "onclick":()=>{
                 if(CSing.PrivateKey()==null)
                 {
@@ -1010,8 +1010,8 @@ function emailCardPageOne(_btnName) {
 	btn.hidden = true;
 	card.hidden = false;
 	
-	document.getElementById(_btnName + 'CardHeader').setAttribute("data-LG",CLan.T('CUSS.EmailTitle_InputEmail', '이메일 입력'))
-	//document.getElementById(_btnName + 'CardHeader').innerText = CLan.T('CUSS.EmailTitle_InputEmail', '이메일 입력');
+	document.getElementById(_btnName + 'CardHeader').setAttribute("data-CLan",CLan.Set(null,'CSing.EmailTitle_InputEmail', '이메일 입력'))
+	//document.getElementById(_btnName + 'CardHeader').innerText = CLan.T('CSing.EmailTitle_InputEmail', '이메일 입력');
 	document.getElementById("PasswordDiv").hidden = true;
 	document.getElementById("EmailErrorMessage").innerText = '';
 	
@@ -1022,15 +1022,15 @@ function emailCardPageOne(_btnName) {
 function emailCardPageSignIn(_btnName) {
 	document.getElementById(_btnName + 'Card').hidden = false;
 	document.getElementById("PasswordDiv").hidden = false;
-	document.getElementById(_btnName + 'CardHeader').setAttribute("data-LG",CLan.T('CUSS.Login', '로그인'))
-	//document.getElementById(_btnName + 'CardHeader').innerText = CLan.T('CUSS.Login', '로그인');
+	document.getElementById(_btnName + 'CardHeader').setAttribute("data-CLan",CLan.Set(null,'CSing.Login', '로그인'))
+	//document.getElementById(_btnName + 'CardHeader').innerText = CLan.T('CSing.Login', '로그인');
 	document.getElementById("EmailErrorMessage").innerText = '';
 	emailCardState = 2;
 }
 function emailCardPageSignUp(_btnName) {
 	document.getElementById(_btnName + 'Card').hidden = false;
-	document.getElementById(_btnName + 'CardHeader').setAttribute("data-LG",CLan.T('CUSS.SignUp', '회원가입'))
-	//document.getElementById(_btnName + 'CardHeader').innerText = CLan.T('CUSS.SignUp', '회원가입');
+	document.getElementById(_btnName + 'CardHeader').setAttribute("data-CLan",CLan.Set(null,'CSing.SignUp', '회원가입'))
+	//document.getElementById(_btnName + 'CardHeader').innerText = CLan.T('CSing.SignUp', '회원가입');
 	document.getElementById("PasswordDiv").hidden = false;
 	document.getElementById("EmailErrorMessage").innerText = '';
 	emailCardState = 3;

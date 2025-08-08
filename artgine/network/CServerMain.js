@@ -3,9 +3,12 @@ import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import cors from 'cors';
+import * as fs from 'fs';
+import * as path from 'path';
 import { CConsol } from '../basic/CConsol.js';
 import { CPath } from '../basic/CPath.js';
 import { CEvent } from '../basic/CEvent.js';
+import { CScript } from '../util/CScript.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 var gDummyEvent = new CEvent();
@@ -40,16 +43,20 @@ export class CServer {
         CConsol.Log("[" + this.constructor.name + "]  Destroy", CConsol.eColor.red);
     }
 }
+var gMain = null;
 export class CServerMain {
     mApp;
     mPort;
     mPath;
     mServer = null;
     mWebServerArr = new Array();
+    mLoadScript = new Set();
     constructor(_port, _path, _watchPath = null) {
         this.mPort = _port;
         this.mPath = _path;
+        gMain = this;
     }
+    static Main() { return gMain; }
     GetServer() { return this.mServer; }
     GetPath() { return this.mPath; }
     GetApp() { return this.mApp; }
@@ -60,8 +67,38 @@ export class CServerMain {
     async Init() {
         return new Promise((resolve) => {
             this.mApp = express();
-            this.mApp.use((req, res, next) => {
+            this.mApp.use(async (req, res, next) => {
                 res.setHeader('Access-Control-Allow-Origin', '*');
+                if (req.url && req.url.endsWith('.html')) {
+                    console.log(`call URL: ${req.url}`);
+                    let cleanUrl = req.url;
+                    if (this.mPath && cleanUrl.startsWith(this.mPath)) {
+                        cleanUrl = cleanUrl.substring(this.mPath.length);
+                    }
+                    const filePath = path.join(process.cwd(), cleanUrl);
+                    try {
+                        if (fs.existsSync(filePath)) {
+                            const htmlContent = fs.readFileSync(filePath, 'utf8');
+                            const serverScriptRegex = /<script[^>]*type\s*=\s*["']server["'][^>]*src\s*=\s*["']([^"']+)["'][^>]*>/gi;
+                            let match;
+                            while ((match = serverScriptRegex.exec(htmlContent)) !== null) {
+                                let scriptPath = match[1];
+                                if (!scriptPath.startsWith('/') && !scriptPath.startsWith('http')) {
+                                    const pathModule = await import('path');
+                                    const htmlDir = pathModule.default.dirname(filePath);
+                                    scriptPath = pathModule.default.join(htmlDir, scriptPath);
+                                }
+                                await CScript.Build(scriptPath, scriptPath);
+                            }
+                        }
+                        else {
+                            console.log(`파일이 존재하지 않음: ${filePath}`);
+                        }
+                    }
+                    catch (error) {
+                        console.error('HTML 파일 읽기 오류:', error);
+                    }
+                }
                 next();
             });
             this.mApp.use(session({
@@ -99,5 +136,6 @@ export class CServerMain {
             server.Destroy();
         }
         CConsol.Log("[WebServer]  Destroy", CConsol.eColor.red);
+        CScript.Clear();
     }
 }

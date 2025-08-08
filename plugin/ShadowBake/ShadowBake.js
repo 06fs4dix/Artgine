@@ -389,9 +389,7 @@ export class CShadowBaker extends CObject {
                     fw.Ren().SendGPU(vf, attr);
                 }
                 CCanvas.GlobalVF(brush, vf, brush.GetCam3D());
-                let btu = fw.Ren().mTexUse;
-                fw.Ren().TexUseReset();
-                fw.Ren().SetTexGBuf(vf, fw.Ren().mUniToSam2d, btu, fw.Ren().mUniTexLastOff);
+                fw.Ren().SendGPU(vf, [fw.Ren().mUniToSam2dKey], [0], null, 9);
                 if (pt.mMeshRes.skin.length > 0 && vf.mUniform.get("weightArrMat") != null) {
                     if (pt.mWeightMat.length == 0) {
                         pt.mWeightMat = new Float32Array(4 * 4);

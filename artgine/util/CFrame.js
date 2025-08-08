@@ -9,7 +9,7 @@ import { CCoroutine } from "./CCoroutine.js";
 import { CConfirm, CModal } from "../basic/CModal.js";
 import { CPWA } from "../system/CPWA.js";
 import { CConsol } from "../basic/CConsol.js";
-import { CModalChat, CModalFrameView, CSourceViewer } from "./CModalUtil.js";
+import { CModalChat, CModalFrameView, CFileViewer } from "./CModalUtil.js";
 import { CAlert } from "../basic/CAlert.js";
 import { CInput } from "../system/CInput.js";
 import { CWebView } from "../system/CWebView.js";
@@ -247,7 +247,7 @@ export class CFrame {
                 }
                 if (e.keyCode == 115 && (CWebView.IsWebView() == CWebView.eType.None || e.ctrlKey == true) && this.mPreferences.mDeveloper == true) {
                     let info = CString.ExtCut(CPath.FullPath());
-                    let sv = new CSourceViewer([info.name + ".ts", info.name + ".json", info.name + ".html"]);
+                    let sv = new CFileViewer([info.name + ".ts", info.name + ".json", info.name + ".html"]);
                     sv.Open();
                 }
             };

@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-31 09:43:31';
+const version='2025-08-08 17:51:26';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -53,7 +53,7 @@ sub.PushComp(new CPaint2D());
 
 
 
-//애니 수동 등록
+// Manual animation registration / 애니메이션 수동 등록
 let ani=new CAnimation();
 ani.Push(new CClipImg(0,0,"Res/Slime/Slime.png"));
 let off=0;
@@ -68,13 +68,13 @@ for(let x=0;x<4;++x)
 sub.SetKey("Ani2DSub");
 sub.PushComp(new CAniFlow(ani));
 let pth=sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="Change animation with numbers 1,2<br>Press F to view info<br>↓">
   숫자 1,2로 애니메이션 변경<br>F로 정보보기<br>↓
 </div>`),null,null));
 pth.SetPos(new CVec3(0,200));
 
 
-//블랙보드에 등록
+// Register to blackboard / 블랙보드에 등록
 ani=new CAnimation();
 ani.SetKey("top");
 ani.SetBlackBoard(true);
@@ -85,7 +85,7 @@ for(let y=0;y<4;++y)
     ani.Push(new CClipCoodi(off*100,100,0*16,y*16,(0+1)*16,(y+1)*16));
     off++;
 }   
-//블랙보드에 등록
+// Register to blackboard / 블랙보드에 등록
 ani=new CAnimation();
 ani.SetKey("bottom");
 ani.SetBlackBoard(true);
@@ -99,7 +99,7 @@ for(let y=0;y<4;++y)
 
 
 gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
-    //등록된 애니 가져오기
+    // Get registered animation / 등록된 애니메이션 가져오기
     let Ani2DSub=gAtl.Canvas("Main").Find("Ani2DSub");
     if(gAtl.Frame().Input().KeyUp(CInput.eKey.Num1))
     {
@@ -117,14 +117,14 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
 
 //====================================================================
 
-//YSort
+// YSort / YSort
 sub=gAtl.Canvas("Main").Push(new CSubject());
 sub.SetPos(new CVec3(200,0,0));
 let pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetYSort(true);
 
 pth=sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="YSort test<br>↓">
   YSort 테스트<br>↓
 </div>`),null,null));
 pth.SetPos(new CVec3(0,200));
@@ -139,43 +139,19 @@ sub.SetPos(new CVec3(240,80,0));
 pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetYSort(true);
 
-//피벗 변경
+// Pivot change / 피벗 변경
 sub=gAtl.Canvas("Main").Push(new CSubject());
 sub.SetPos(new CVec3(400,0,0));
 pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetPivot(new CVec3(1,1,1));
 
 pth=sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="Pivot change<br>↓">
   피벗 변경<br>↓
 </div>`),null,null));
 pth.SetPos(new CVec3(0,200));
 
 
-// let modal=new CModal();
-// modal.SetHeader("Info")
-// modal.SetTitle(CModal.eTitle.Text);
-// modal.SetBody(`애니메이션 사용법과 YSort,Pivot확인할수 있습니다.<br>
-// 숫자키1,2로 애니메이션 변경<br>
-// F키로 현재 서브젝트 확인가능<br>
-// `);
-// modal.SetZIndex(CModal.eSort.Top);
-// //modal.SetBG(CModal.eBG.danger);
-// modal.SetBodyClose(true);
-// modal.Open(CModal.ePos.Center);
-// modal.Close(1000*31);
-
-
-//=============================================
-// let line=gAtl.Canvas("Main").Push(new CSubject());
-// let trail=line.PushComp(new CPaintTrail(gAtl.Frame().Pal().GetNoneTex()));
-// trail.mLastHide=false;
-// trail.mLastSmall=false;
-// trail.SetStaticPosList([new CVec3(),new CVec3(1000,1000)]);
-
-// // let rp=new CRenderPass(gAtl.Frame().Pal().Sl2DKey());
-// // rp.mCullFace=CRenderPass.eCull.None;
-// // trail.SetRenderPass(rp);
 
 sub=gAtl.Canvas("Main").Push(new CSubject());
 sub.SetPos(new CVec3(-200,0,0));
@@ -186,7 +162,7 @@ ani.Push(new CClipMesh(0,1000,"Res/teapot/teapot.gltf","left"));
 sub.PushComp(new CAniFlow(ani));
 
 pth=sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="3D Animation<br>↓">
   3D 애니메이션<br>↓
 </div>`),null,null));
 pth.SetPos(new CVec3(0,200));

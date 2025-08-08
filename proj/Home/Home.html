@@ -65,24 +65,24 @@
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button"
-            role="tab" aria-controls="main" aria-selected="true">메인</button>
+            role="tab" aria-controls="main" aria-selected="true" data-en="Main">메인</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab"
-            aria-controls="board" aria-selected="false">보드</button>
+            aria-controls="board" aria-selected="false" data-en="Board">보드</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="project-tab" data-bs-toggle="tab" data-bs-target="#project" type="button"
-            role="tab" aria-controls="project" aria-selected="false">프로젝트</button>
+            role="tab" aria-controls="project" aria-selected="false" data-en="Project">프로젝트</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab"
-            aria-controls="file" aria-selected="false">파일</button>
+            aria-controls="file" aria-selected="false" data-en="File">파일</button>
     </li>
     <!-- 로그인 버튼 (오른쪽 정렬) -->
     <li class="nav-item ms-auto" role="presentation">
-        <button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button">
-            로그인
+        <button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button" >
+            Login
         </button>
     </li>
 </ul>
@@ -90,7 +90,7 @@
 <!-- 탭 콘텐츠 (남은 영역 전부 차지) -->
 <div class="tab-content flex-fill overflow-auto" id="myTabContent">
     <div class="tab-pane h-100 show active" id="main" role="tabpanel" aria-labelledby="main-tab">
-        <div class="text-center">
+        <div class="text-center" data-en="Welcome.">
             환영합니다.
         </div>
     </div>
@@ -108,8 +108,8 @@
             </div>
             <div id="Tutorial/Canvas" class="collapse show">
                 <div class="card-body">
-                    <p>기본적인 캔버스 구조를 볼수있는 샘플</p>
-                    <p>튜토리얼을 제공합니다<p>
+                    <p data-en="Sample showing basic canvas structure">기본적인 캔버스 구조를 볼수있는 샘플</p>
+                    <p data-en="Provides tutorial">튜토리얼을 제공합니다<p>
                     <a href="../Tutorial/Canvas/Canvas.html">Link</a>
                 </div>
             </div>
@@ -123,7 +123,7 @@
             </div>
             <div id="Tutorial/Animation" class="collapse">
                 <div class="card-body">
-                    <p>각종 애니메이션 샘플을 볼수있습니다</p>
+                    <p data-en="You can see various animation samples">각종 애니메이션 샘플을 볼수있습니다</p>
                     <a href="../Tutorial/Animation/Animation.html">Link</a>
                 </div>
             </div>
@@ -137,7 +137,7 @@
             </div>
             <div id="Tutorial/Collusion" class="collapse">
                 <div class="card-body">
-                    <p>충돌 처리 볼수 있습니다</p>
+                    <p data-en="You can see collision handling">충돌 처리 볼수 있습니다</p>
                     <a href="../Tutorial/Collusion/Collusion.html">Link</a>
                 </div>
             </div>
@@ -151,7 +151,7 @@
             </div>
             <div id="Tutorial/Light" class="collapse">
                 <div class="card-body">
-                    <p>2D 빛 처리</p>
+                    <p data-en="2D light processing">2D 빛 처리</p>
                     <a href="../Tutorial/Light/Light.html">Link</a>
                 </div>
             </div>
@@ -165,7 +165,7 @@
             </div>
             <div id="Tutorial/Wind" class="collapse">
                 <div class="card-body">
-                    <p>바람 처리</p>
+                    <p data-en="Wind processing">바람 처리</p>
                     <a href="../Tutorial/Wind/Wind.html">Link</a>
                 </div>
             </div>
@@ -179,7 +179,7 @@
             </div>
             <div id="Tutorial/ShaderEditer" class="collapse">
                 <div class="card-body">
-                    <p>실시간 쉐이더 컴파일</p>
+                    <p data-en="Real-time shader compilation">실시간 쉐이더 컴파일</p>
                     <a href="../Tutorial/ShaderEditer/ShaderEditer.html">Link</a>
                 </div>
             </div>
@@ -193,7 +193,7 @@
             </div>
             <div id="Tutorial/3DSample" class="collapse">
                 <div class="card-body">
-                    <p>3D RPMgr 사용법</p>
+                    <p data-en="3D RPMgr usage">3D RPMgr 사용법</p>
                     <a href="../Tutorial/3DSample/3DSample.html">Link</a>
                 </div>
             </div>
@@ -207,7 +207,7 @@
             </div>
             <div id="Tutorial/Plugin" class="collapse">
                 <div class="card-body">
-                    <p>플러그인 사용 예제</p>
+                    <p data-en="Plugin usage example">플러그인 사용 예제</p>
                     <a href="../Tutorial/Plugin/Plugin.html">Link</a>
                 </div>
             </div>
@@ -221,7 +221,7 @@
             </div>
             <div id="Tutorial/IKSample" class="collapse">
                 <div class="card-body">
-                    <p>IK 샘플</p>
+                    <p data-en="IK sample">IK 샘플</p>
                     <a href="../Tutorial/IKSample/IKSample.html">Link</a>
                 </div>
             </div>
@@ -235,7 +235,7 @@
             </div>
             <div id="Tutorial/Renderer" class="collapse">
                 <div class="card-body">
-                    <p>수동 렌더링</p>
+                    <p data-en="Manual rendering">수동 렌더링</p>
                     <a href="../Tutorial/Renderer/Renderer.html">Link</a>
                 </div>
             </div>
@@ -247,3 +247,5 @@
     </div>
 </div>
 </div>
+
+<script type="server" src="Server.js" />

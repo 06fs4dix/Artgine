@@ -15,7 +15,6 @@ import { CPath } from '../artgine/basic/CPath.js';
 import { CString } from '../artgine/basic/CString.js';
 import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr, GetProjName, LoadPluginMap, PluginMapDependenciesChk, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
-import { ImportServer } from './OtherServer.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let gMainWindow = null;
@@ -77,9 +76,6 @@ async function RunServer() {
                 message: '서버를 시작할 수 없습니다.\n중복 포트를 확인해보세요.',
             });
             return;
-        }
-        if (gAppJSON.server == "webServer+other") {
-            ImportServer(gWebServer);
         }
     }
 }

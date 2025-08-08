@@ -1,9 +1,34 @@
 import { CJSON } from "./CJSON.js";
-var g_langugeMap = {};
-var g_country = "";
+import { CHash } from "./CHash.js";
+import { CUtil } from "./CUtil.js";
+var gLangugeMap = {};
+var gLanCode = (() => {
+    if (CUtil.IsNode()) {
+        return process.env.LANG?.split('_')[0]?.toLowerCase() ||
+            process.env.LC_ALL?.split('_')[0]?.toLowerCase() ||
+            'en';
+    }
+    if (CUtil.IsWeb()) {
+        const language = navigator.language || navigator.languages?.[0] || 'en';
+        return language.split('-')[0].toLowerCase();
+    }
+    return 'en';
+})();
 export class CLan {
+    static eType = {
+        "ko": "ko",
+        "en": "en",
+        "ja": "ja",
+        "zh": "zh",
+        "es": "es",
+        "fr": "fr",
+        "de": "de",
+        "it": "it",
+        "pt": "pt",
+        "ru": "ru"
+    };
     static Set(_country, _sub = null, _text = null) {
-        if (typeof _country == "object") {
+        if (_country != null && typeof _country == "object") {
             if (_country instanceof CJSON)
                 _country = _country.GetDocument();
             for (var countryEach in _country) {
@@ -12,25 +37,35 @@ export class CLan {
             }
         }
         else {
-            if (g_langugeMap[_country] == null)
-                g_langugeMap[_country] = {};
-            g_langugeMap[_country][_sub] = _text;
-        }
-    }
-    static T(_sub, _defaultText = "") {
-        if (g_langugeMap[g_country] == null) {
-            g_langugeMap[g_country] = {};
-        }
-        if (g_langugeMap[g_country][_sub] == null) {
-            g_langugeMap[g_country][_sub] = _defaultText;
+            if (_country == null || _country == "")
+                _country = gLanCode;
+            if (typeof _sub == "number")
+                _sub = _sub + "";
+            if (gLangugeMap[_country] == null)
+                gLangugeMap[_country] = {};
+            gLangugeMap[_country][_sub] = _text;
         }
         return _sub;
     }
-    static Get(_text) {
-        if (g_langugeMap[g_country] == null)
-            g_langugeMap[g_country] = {};
-        if (g_langugeMap[g_country][_text] == null)
-            g_langugeMap[g_country][_text] = _text;
-        return g_langugeMap[g_country][_text];
+    static Get(_sub, _defaultText = null) {
+        if (gLangugeMap[gLanCode] == null) {
+            gLangugeMap[gLanCode] = {};
+        }
+        if (_sub == null || _sub == "")
+            _sub = CHash.HashCode(_defaultText) + "";
+        if (gLangugeMap[gLanCode][_sub] == null)
+            gLangugeMap[gLanCode][_sub] = _defaultText;
+        return gLangugeMap[gLanCode][_sub];
+    }
+    static Map() {
+        return gLangugeMap;
+    }
+    static SetCode(_code) {
+        if (_code == null)
+            return;
+        gLanCode = _code;
+    }
+    static GetCode() {
+        return gLanCode;
     }
 }

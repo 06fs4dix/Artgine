@@ -1,4 +1,5 @@
 import { CBlackBoard } from "../basic/CBlackBoard.js";
+import { CLan } from "../basic/CLan.js";
 import { CObject } from "../basic/CObject.js";
 import { CPath } from "../basic/CPath.js";
 export class CRes extends CObject {
@@ -64,6 +65,7 @@ export class CRes extends CObject {
     }
     EditInit() {
         this["blackboard"] = CBlackBoard.Map();
+        this["languge"] = CLan.Map();
         var div = super.EditInit();
         var input = document.createElement("input");
         input.type = "search";

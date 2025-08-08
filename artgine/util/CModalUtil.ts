@@ -392,7 +392,7 @@ export class CModalChat extends CModal
     // }
 }
 
-export class CSourceViewer extends CModal 
+export class CFileViewer extends CModal 
 {
     mEditer=null;
     mExeEvent : CEvent;
@@ -454,70 +454,11 @@ export class CSourceViewer extends CModal
                 let info=CString.ExtCut(_file);
                 if(info.ext=="ts")    
                 {
-                    let eArr=ExtractImportPaths(source,false);
-                    let full=CPath.FullPath();
-                    let resolvedPaths: string[] = [];
-                    for (let i = 0; i < eArr.length; ++i) {
-                        const rel = eArr[i]; // 예: "../../../artgine/z_file/Shader"
-
-                        // 기준 경로에서 현재 파일 이름 제거
-                        let base = full.replace(/\\/g, "/").replace(/\/[^\/]*$/, "/"); // "Artgine/proj/Tutorial/ShaderEditer/"
-
-                        // 상대 경로 처리
-                        const parts = base.split("/").filter(p => p.length > 0);
-                        const relParts = rel.split("/");
-
-                        for (const part of relParts) 
-                        {
-                            if (part === "..") {
-                                parts.pop(); // 상위 폴더로
-                            } else if (part !== ".") {
-                                parts.push(part); // 하위 경로 추가
-                            }
-                        }
-
-                        let absPath = parts.join("/");
-                        absPath=CString.ReplaceAll(absPath,"http:/","http://");
-                        absPath=CString.ReplaceAll(absPath,"file:/","file://");
-                        
-                        if(absPath.indexOf(".js")!=-1)
-                        {
-                            absPath=absPath.substring(0,absPath.length-3);
-                            //absPath+=".ts";
-                        }
-                        
-
-                        resolvedPaths.push(absPath); // 예: "Artgine/artgine/z_file/Shader"
-                        
-
-                        source = source.replace(new RegExp(rel, 'g'), absPath);
-                    }
+                 
 
                     CUtilWeb.MonacoEditer(CUtil.ID(id+"_body"),source,"typescript","vs-dark",async (monacoEditer)=>{
                         this.mEditer=monacoEditer;
-                        
-                        for (let i = 0; i < resolvedPaths.length; ++i) 
-                        {
-                            let fName=resolvedPaths[i];
-                            if(fName.indexOf(".js")==-1)
-                                fName+=".ts";
-                            let buf=await CFile.Load(fName);
-                            window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(
-                                CUtil.ArrayToString(buf),
-                                fName
-                            );
-                            // fName=resolvedPaths[i];
-                            // if(fName.indexOf(".js")!=-1)
-                            // {
-                            //     fName+=fName.substring(0,fName.length-3);
-                            //     fName+=".ts";
-                            // }
-                            // buf=await CFile.Load(fName);
-                            // window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(
-                            //     CUtil.ArrayToString(buf),
-                            //     fName
-                            // );
-                        }
+                       
 
                         if(monacoEditer!=null)
                         {
@@ -832,4 +773,73 @@ export class CBlackboardModal extends CModal {
         this.SetBody(container);
         this.Open();
     }
+}
+
+
+export class CMonacoViewer extends CModal {
+
+    private mEditor: any = null;
+
+    constructor(_source: string, _fileName : string )
+    {
+        super();
+        this.SetHeader("CCodeViewer");
+        this.SetTitle(CModal.eTitle.TextClose);
+        this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
+        this.SetSize(800, 600);
+
+        
+
+
+        // JSON 데이터를 문자열로 변환
+        //const jsonString = typeof _jsonData === 'string' ? _jsonData : JSON.stringify(_jsonData, null, 2);
+        
+        // Monaco Editor를 위한 컨테이너 생성
+        const container = document.createElement("div");
+        container.id = "modal_editor";
+        container.style.width = "100%";
+        container.style.height = "500px";
+        container.style.border = "1px solid #ccc";
+
+        this.SetBody(container);
+        this.Open();
+
+        // 파일 확장자에 따른 언어 타입 자동 설정
+        let languageType  = "plaintext";
+        if (_fileName) {
+            const extension = _fileName.toLowerCase().split('.').pop();
+            switch (extension) {
+                case 'ts':
+                    languageType = 'typescript';
+                    break;
+                case 'js':
+                    languageType = 'javascript';
+                    break;
+                case 'json':
+                    languageType = 'json';
+                    break;
+                case 'html':case 'htm':
+                    languageType = 'html';
+                    break;
+                case 'wgsl':
+                    languageType = 'wgsl';
+                    break;
+                case 'css':
+                    languageType = 'css';
+                    break;
+                case 'xml':
+                    languageType = 'xml';
+                    break;
+                case 'md':
+                    languageType = 'markdown';
+                    break;
+          
+            }
+        }
+
+        // Monaco Editor 초기화
+        CUtilWeb.MonacoEditer(CUtil.ID("modal_editor"), _source, languageType as any, "vs-dark");
+    }
+
+    
 }

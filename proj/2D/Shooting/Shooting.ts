@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-31 15:59:02';
+const version='2025-08-08 15:13:55';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -32,7 +32,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mServer = 'local';
+gPF.mServer = 'webServer';
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 

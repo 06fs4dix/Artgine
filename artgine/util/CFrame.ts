@@ -10,7 +10,7 @@ import {CConfirm, CModal} from "../basic/CModal.js"
 import { IAutoRender, IAutoUpdate } from "../basic/Basic.js"
 import {CPWA} from "../system/CPWA.js"
 import {CConsol} from "../basic/CConsol.js"
-import { CModalChat, CModalFrameView, CSourceViewer } from "./CModalUtil.js"
+import { CModalChat, CModalFrameView, CFileViewer } from "./CModalUtil.js"
 import {CAlert} from "../basic/CAlert.js"
 import {CInput} from "../system/CInput.js"
 import {CWebView} from "../system/CWebView.js"
@@ -331,7 +331,7 @@ export class CFrame
 				{
 					let info=CString.ExtCut(CPath.FullPath());
 					
-					let sv=new CSourceViewer([info.name+".ts",info.name+".json",info.name+".html"]);
+					let sv=new CFileViewer([info.name+".ts",info.name+".json",info.name+".html"]);
 					sv.Open();
 				}
 				//if(e.keyCode ==119 )	CWebView.JToWKeyUp("F8");

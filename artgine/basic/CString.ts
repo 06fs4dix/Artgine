@@ -3,12 +3,17 @@ import {CClass} from "./CClass.js";
 
 export class CString
 {
-	static PathSub(_data : string)
+	static PathSub(_data : string,_count=1)
 	{
-		var pos=_data.lastIndexOf("/");
-		if(pos==-1)
-			return _data;
-		return _data.substr(0,pos);
+		var result = _data;
+		for(var i = 0; i < _count; i++)
+		{
+			var pos = result.lastIndexOf("/");
+			if(pos == -1)
+				break;
+			result = result.substr(0, pos);
+		}
+		return result;
 	}
 	static DataConvert(_data : string) : any
 	{
@@ -194,4 +199,18 @@ export class CString
 	{
 		return str.slice(0, index) + insertStr + str.slice(index);
 	}
+	
+	// static ExtractParentDirCount(path: string): { count: number, cleanPath: string }
+	// {
+	// 	let count = 0;
+	// 	let cleanPath = path;
+		
+	// 	// "../" 패턴을 찾아서 개수를 세고 제거
+	// 	while (cleanPath.startsWith("../")) {
+	// 		count++;
+	// 		cleanPath = cleanPath.substring(3);
+	// 	}
+		
+	// 	return { count, cleanPath };
+	// }
 }

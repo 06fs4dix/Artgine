@@ -10,7 +10,7 @@ import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CAtelier } from "../canvas/CAtelier.js";
 import { CColor } from "../canvas/component/CColor.js";
-import { CPaint2D, CPaintHTML, CPaintTail } from "../canvas/component/paint/CPaint2D.js";
+import { CPaint2D, CPaintHTML } from "../canvas/component/paint/CPaint2D.js";
 import { CPaintTrail } from "../canvas/component/paint/CPaintTrail.js";
 import { CSubject } from "../canvas/subject/CSubject.js";
 import { CVec2 } from "../geometry/CVec2.js";

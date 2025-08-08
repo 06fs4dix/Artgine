@@ -1,4 +1,4 @@
-const version = '2025-07-28 11:51:01';
+const version = '2025-08-07 14:45:48';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -13,7 +13,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mServer = 'local';
+gPF.mServer = 'webServer';
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 import { CPlugin } from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('ShadowPlane', '../../../plugin/ShadowPlane/');

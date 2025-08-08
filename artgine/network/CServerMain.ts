@@ -3,12 +3,15 @@ import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import cors from 'cors';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { Server } from 'http';
 import {CConsol} from '../basic/CConsol.js';
 import {CPath} from '../basic/CPath.js';
 import { CEvent } from '../basic/CEvent.js';
 import { IListener } from '../basic/Basic.js';
+import { CScript } from '../util/CScript.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -62,7 +65,7 @@ export class CServer implements IListener
         CConsol.Log("["+this.constructor.name+"]  Destroy",CConsol.eColor.red);
     }
 }
-
+var gMain : CServerMain=null;
 export class CServerMain 
 {
     private mApp;
@@ -72,12 +75,15 @@ export class CServerMain
     private mServer: Server | null = null;
     //private mLiveReloadServer = null;
     mWebServerArr=new Array<CServer>();
+    mLoadScript=new Set<string>();
 
     constructor(_port: number, _path: string, _watchPath: string | null = null) {
         this.mPort = _port;
         this.mPath = _path;
+        gMain=this;
         //this.mWatchPath = _watchPath;
     }
+    static Main()   {   return gMain;   }
     GetServer() {   return this.mServer;    }
     GetPath(){  return this.mPath;  }
     GetApp(){  return this.mApp;  }
@@ -91,20 +97,63 @@ export class CServerMain
         return new Promise((resolve) => {
             this.mApp = express();
 
-            this.mApp.use((req: Request, res: Response, next: NextFunction) => {
+            this.mApp.use(async (req: Request, res: Response, next: NextFunction) => {
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 // res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
                 // res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 
+                // HTML 파일에서 server 스크립트 찾기
+                if (req.url && req.url.endsWith('.html')) {
+                    //console.log(`\n=== HTML 요청 감지 ===`);
+                    console.log(`call URL: ${req.url}`);
+                    //console.log(`현재 작업 디렉토리: ${process.cwd()}`);
+                    
+                    // 요청 URL에서 mPath 부분 제거
+                    let cleanUrl = req.url;
+                    if (this.mPath && cleanUrl.startsWith(this.mPath)) {
+                        cleanUrl = cleanUrl.substring(this.mPath.length);
+                    }
+                    const filePath = path.join(process.cwd(), cleanUrl);
+                    //console.log(`파일 경로: ${filePath}`);
+                    //console.log(`파일 존재 여부: ${fs.existsSync(filePath)}`);
+                    
+                    try {
+                        if (fs.existsSync(filePath)) {
+                            const htmlContent = fs.readFileSync(filePath, 'utf8');
+                            //console.log(`파일 크기: ${htmlContent.length} bytes`);
+                            
 
-                // let reqPath = decodeURI(req.path);
-                // reqPath=reqPath.replace(this.mPath,"");
-                // if(gHTMLNext.has(reqPath)==true)
-                // {
-                //     return next();
-                // }
-                
-                //express.static(CPath.PHPC())(req, res, next);
+                            const serverScriptRegex = /<script[^>]*type\s*=\s*["']server["'][^>]*src\s*=\s*["']([^"']+)["'][^>]*>/gi;
+                            let match;
+
+                            while ((match = serverScriptRegex.exec(htmlContent)) !== null) {
+                                //console.log(`Server Script src: ${match[1]}`);
+                                
+                                // 파일 경로 처리
+                                let scriptPath = match[1];
+                                
+                                // 상대 경로인 경우 절대 경로로 변환
+                                if (!scriptPath.startsWith('/') && !scriptPath.startsWith('http')) {
+                                    // Node.js path 모듈을 사용하여 정확한 경로 해결
+                                    const pathModule = await import('path');
+                                    const htmlDir = (pathModule as any).default.dirname(filePath);
+                                    scriptPath = (pathModule as any).default.join(htmlDir, scriptPath);
+                                }
+                                
+                                
+                                
+                                // CScript.Build 호출 (중복 로드 방지는 이미 내부에서 처리됨)
+                                await CScript.Build(scriptPath, scriptPath);
+                            }
+                            
+                        } else {
+                            console.log(`파일이 존재하지 않음: ${filePath}`);
+                        }
+                    } catch (error) {
+                        console.error('HTML 파일 읽기 오류:', error);
+                    }
+                } 
+
                 next();
                 
             });
@@ -218,6 +267,8 @@ export class CServerMain
             server.Destroy();
         }
         CConsol.Log("[WebServer]  Destroy",CConsol.eColor.red);
+        CScript.Clear();
+        
         //CConsol.Log(`[WebServer] Destroy`, CConsol.eColor.blue);
     }
 }

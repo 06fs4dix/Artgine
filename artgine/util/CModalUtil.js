@@ -4,12 +4,10 @@ import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
 import { CObject } from "../basic/CObject.js";
-import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CVec4 } from "../geometry/CVec4.js";
-import { ExtractImportPaths } from "../render/CShaderInterpret.js";
 import { CFile } from "../system/CFile.js";
 import { CUtilWeb } from "./CUtilWeb.js";
 export class CModalBackGround extends CModal {
@@ -290,7 +288,7 @@ export class CModalChat extends CModal {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 }
-export class CSourceViewer extends CModal {
+export class CFileViewer extends CModal {
     mEditer = null;
     mExeEvent;
     mLoadEvent;
@@ -336,40 +334,8 @@ export class CSourceViewer extends CModal {
                 let source = CUtil.ArrayToString(_buf);
                 let info = CString.ExtCut(_file);
                 if (info.ext == "ts") {
-                    let eArr = ExtractImportPaths(source, false);
-                    let full = CPath.FullPath();
-                    let resolvedPaths = [];
-                    for (let i = 0; i < eArr.length; ++i) {
-                        const rel = eArr[i];
-                        let base = full.replace(/\\/g, "/").replace(/\/[^\/]*$/, "/");
-                        const parts = base.split("/").filter(p => p.length > 0);
-                        const relParts = rel.split("/");
-                        for (const part of relParts) {
-                            if (part === "..") {
-                                parts.pop();
-                            }
-                            else if (part !== ".") {
-                                parts.push(part);
-                            }
-                        }
-                        let absPath = parts.join("/");
-                        absPath = CString.ReplaceAll(absPath, "http:/", "http://");
-                        absPath = CString.ReplaceAll(absPath, "file:/", "file://");
-                        if (absPath.indexOf(".js") != -1) {
-                            absPath = absPath.substring(0, absPath.length - 3);
-                        }
-                        resolvedPaths.push(absPath);
-                        source = source.replace(new RegExp(rel, 'g'), absPath);
-                    }
                     CUtilWeb.MonacoEditer(CUtil.ID(id + "_body"), source, "typescript", "vs-dark", async (monacoEditer) => {
                         this.mEditer = monacoEditer;
-                        for (let i = 0; i < resolvedPaths.length; ++i) {
-                            let fName = resolvedPaths[i];
-                            if (fName.indexOf(".js") == -1)
-                                fName += ".ts";
-                            let buf = await CFile.Load(fName);
-                            window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(CUtil.ArrayToString(buf), fName);
-                        }
                         if (monacoEditer != null) {
                             const model = monacoEditer.getModel();
                             const lastLine = model.getLineCount();
@@ -608,5 +574,54 @@ export class CBlackboardModal extends CModal {
         });
         this.SetBody(container);
         this.Open();
+    }
+}
+export class CMonacoViewer extends CModal {
+    mEditor = null;
+    constructor(_source, _fileName) {
+        super();
+        this.SetHeader("CCodeViewer");
+        this.SetTitle(CModal.eTitle.TextClose);
+        this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
+        this.SetSize(800, 600);
+        const container = document.createElement("div");
+        container.id = "modal_editor";
+        container.style.width = "100%";
+        container.style.height = "500px";
+        container.style.border = "1px solid #ccc";
+        this.SetBody(container);
+        this.Open();
+        let languageType = "plaintext";
+        if (_fileName) {
+            const extension = _fileName.toLowerCase().split('.').pop();
+            switch (extension) {
+                case 'ts':
+                    languageType = 'typescript';
+                    break;
+                case 'js':
+                    languageType = 'javascript';
+                    break;
+                case 'json':
+                    languageType = 'json';
+                    break;
+                case 'html':
+                case 'htm':
+                    languageType = 'html';
+                    break;
+                case 'wgsl':
+                    languageType = 'wgsl';
+                    break;
+                case 'css':
+                    languageType = 'css';
+                    break;
+                case 'xml':
+                    languageType = 'xml';
+                    break;
+                case 'md':
+                    languageType = 'markdown';
+                    break;
+            }
+        }
+        CUtilWeb.MonacoEditer(CUtil.ID("modal_editor"), _source, languageType, "vs-dark");
     }
 }

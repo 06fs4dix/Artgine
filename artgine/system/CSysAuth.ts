@@ -27,8 +27,8 @@ export class CSysAuth
 		}
 		let str="";
 		if(_audio)
-			str+=CLan.T("CWebAuth.Enable.Sound", "사운드");
-		str+=CLan.T("CWebAuth.Enable.Question", "권한을 활성화 하시겠습니까?");
+			str+=CLan.Get("CWebAuth.Enable.Sound", "사운드");
+		str+=CLan.Get("CWebAuth.Enable.Question", "권한을 활성화 하시겠습니까?");
 		
 		gLock=true;
 		return new Promise((resolve, reject)=>{

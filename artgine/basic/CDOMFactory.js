@@ -1,5 +1,24 @@
 import { CJSON } from "./CJSON.js";
 import { CLan } from "./CLan.js";
+function CLanChk(element) {
+    let clanAttr = element.getAttribute("data-CLan");
+    if (clanAttr != null) {
+        if (clanAttr == "default")
+            clanAttr = element.innerHTML;
+        const data = CLan.Get(clanAttr);
+        if (data != null) {
+            if (element instanceof HTMLInputElement)
+                element.placeholder = data;
+            else
+                element.innerHTML = data;
+        }
+        return;
+    }
+    clanAttr = element.getAttribute("data-" + CLan.GetCode());
+    if (clanAttr != null) {
+        element.innerHTML = clanAttr;
+    }
+}
 export class CDomFactory {
     static DataToDom(_data) {
         if (_data == null)
@@ -28,11 +47,21 @@ export class CDomFactory {
         template.innerHTML = str.includes("<") ? str : `<span>${str}</span>`;
         const children = template.content.childNodes;
         if (children.length === 1 && children[0] instanceof HTMLElement) {
-            return children[0];
+            const element = children[0];
+            CDomFactory.ProcessCLanInElement(element);
+            return element;
         }
         const wrapper = document.createElement("div");
         wrapper.append(...children);
+        CDomFactory.ProcessCLanInElement(wrapper);
         return wrapper;
+    }
+    static ProcessCLanInElement(element) {
+        CLanChk(element);
+        const children = element.children;
+        for (let i = 0; i < children.length; i++) {
+            CDomFactory.ProcessCLanInElement(children[i]);
+        }
     }
     static JSONToDom(_json) {
         if (_json instanceof CJSON)
@@ -71,19 +100,9 @@ export class CDomFactory {
             else if (each0 == "style") {
                 el.style.cssText = _json[each0];
             }
-            else if (each0 == "data-LG") {
+            else if (each0 == "data-CLan") {
                 el.setAttribute(each0, _json[each0]);
-                var lg = el.getAttribute("data-LG");
-                var data = CLan.Get(lg);
-                if (typeof data == "object") {
-                    el.append(CDomFactory.JSONToDom(data));
-                }
-                else if (data != "") {
-                    if (el instanceof HTMLInputElement)
-                        el.placeholder = data;
-                    else
-                        el.innerHTML = data;
-                }
+                CLanChk(el);
             }
             else if (each0.indexOf("data-") != -1) {
                 el.setAttribute(each0, _json[each0]);
@@ -117,10 +136,10 @@ export class CDomFactory {
         }
         return el;
     }
-    static RefreshDataLG() {
-        var inputList = document.querySelectorAll("[data-LG]");
+    static RefreshDataCLan() {
+        var inputList = document.querySelectorAll("[data-CLan]");
         for (var each0 of inputList) {
-            var lg = each0.getAttribute("data-LG");
+            var lg = each0.getAttribute("data-CLan");
             var data = CLan.Get(lg);
             if (typeof data == "object") {
                 each0.append(CDomFactory.DataToDom(data));

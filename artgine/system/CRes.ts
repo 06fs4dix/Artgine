@@ -1,5 +1,6 @@
 import {CBlackBoard} from "../basic/CBlackBoard.js";
 import {CConsol} from "../basic/CConsol.js";
+import { CLan } from "../basic/CLan.js";
 import {CObject} from "../basic/CObject.js";
 import {CPath} from "../basic/CPath.js"
 
@@ -135,6 +136,7 @@ export class CRes extends CObject
 	{
 		//이걸 등록해서 자동 생성되게 처리
 		this["blackboard"]=CBlackBoard.Map();
+		this["languge"]=CLan.Map();
 		var div=super.EditInit();
 		var input=document.createElement("input");
 		input.type="search";

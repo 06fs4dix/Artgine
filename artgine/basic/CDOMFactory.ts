@@ -2,7 +2,31 @@ import {CJSON} from "./CJSON.js";
 import {CLan} from "./CLan.js";
 
 
+function CLanChk(element)
+{
+    let clanAttr = element.getAttribute("data-CLan");
+    if (clanAttr!=null) 
+    {
+        if(clanAttr=="default")    clanAttr=element.innerHTML;
+        
+        const data = CLan.Get(clanAttr);
+        if(data!=null)
+        {
+            if(element instanceof HTMLInputElement)
+                element.placeholder=data;
+            else
+                element.innerHTML = data;
+        }
+            
+        return;
+    }
+    clanAttr = element.getAttribute("data-"+CLan.GetCode());
+    if (clanAttr!=null) 
+    {
+        element.innerHTML = clanAttr;
+    }
 
+}
 
 export class CDomFactory
 {
@@ -20,6 +44,7 @@ export class CDomFactory
 
         // 안전하게 HTMLElement로 보장
         if (_data instanceof HTMLElement) {
+            
             return _data;
         }
         if (_data instanceof DocumentFragment && _data.firstElementChild instanceof HTMLElement) {
@@ -48,13 +73,40 @@ export class CDomFactory
         const children = template.content.childNodes;
 
         if (children.length === 1 && children[0] instanceof HTMLElement) {
-            return children[0] as any;
+            const element = children[0] as HTMLElement;
+            // CLan 치환 처리
+            CDomFactory.ProcessCLanInElement(element);
+            return element as any;
         }
 
         const wrapper = document.createElement("div");
         wrapper.append(...children);
+        
+        // CLan 치환 처리
+        CDomFactory.ProcessCLanInElement(wrapper);
+        
         return wrapper as any;
-}
+    }
+
+    // CLan 치환을 위한 헬퍼 함수
+    private static ProcessCLanInElement(element: HTMLElement) {
+        CLanChk(element);
+        // let clanAttr = element.getAttribute("data-CLan");
+        // if (clanAttr) {
+        //     if(clanAttr=="default")    clanAttr=element.innerHTML;
+            
+        //     const data = CLan.Get(clanAttr);
+        //     if(data!=null)
+        //         element.innerHTML = data;
+            
+        // }
+
+        // 자식 요소들도 재귀적으로 처리
+        const children = element.children;
+        for (let i = 0; i < children.length; i++) {
+            CDomFactory.ProcessCLanInElement(children[i] as HTMLElement);
+        }
+    }
 
     
     
@@ -111,30 +163,25 @@ export class CDomFactory
                 el.style.cssText=_json[each0];
                 
             }
-            else if(each0=="data-LG")
+            else if(each0=="data-CLan")
             {
                 el.setAttribute(each0, _json[each0]);
 
-                var lg=el.getAttribute("data-LG");
-                var data=CLan.Get(lg);
+                CLanChk(el);
+
+                // var lg=el.getAttribute("data-CLan");
+                // if(lg=="default")    lg=el.innerHTML;
+                // var data=CLan.Get(lg);
                 
         
-                if(typeof data=="object")
-                {
-                    el.append(CDomFactory.JSONToDom(data));
-                    
-                }
-                else if(data!="")
-                {
-                    // let ext=_obj.getAttribute("data-LGExtra");
-                    // if(ext==null)
-                    //     _obj.innerHTML=LG.F(lg);
-                    // else
-                    if(el instanceof HTMLInputElement)
-                        el.placeholder=data;
-                    else
-                        el.innerHTML=data;
-                }
+                // if(data!=null)
+                // {
+                 
+                //     if(el instanceof HTMLInputElement)
+                //         el.placeholder=data;
+                //     else
+                //         el.innerHTML=data;
+                // }
 
             }
             else if(each0.indexOf("data-")!=-1)
@@ -191,11 +238,11 @@ export class CDomFactory
         return el;
         //return json2html.render(obj,template,options);
     }
-    static RefreshDataLG() 
+    static RefreshDataCLan() 
     {
-        var inputList = document.querySelectorAll("[data-LG]");
+        var inputList = document.querySelectorAll("[data-CLan]");
         for (var each0 of inputList) {
-            var lg = each0.getAttribute("data-LG");
+            var lg = each0.getAttribute("data-CLan");
             var data = CLan.Get(lg);
             if (typeof data == "object") {
                 each0.append(CDomFactory.DataToDom(data));

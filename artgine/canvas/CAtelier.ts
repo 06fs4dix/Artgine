@@ -1,5 +1,6 @@
 import { CAlert } from "../basic/CAlert.js";
 import { CEvent } from "../basic/CEvent.js";
+import { CLan } from "../basic/CLan.js";
 import { CModal } from "../basic/CModal.js";
 import { CPreferences } from "../basic/CPreferences.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
@@ -81,36 +82,40 @@ export class CAtelier
 				if(this.mFrame.Input().KeyUp(CInput.eKey.F1))
 				{
 					let modal=new CModal("HelpModal");
-					modal.SetHeader("도움말")
+					modal.SetHeader("Help")
 					modal.SetTitle(CModal.eTitle.Text);
+
+					
 					modal.SetBody(`
 						<div class="table-responsive">
-  <table class="table table-sm table-bordered align-middle mb-2">
-    <thead class="table-light">
-      <tr>
-        <th class="text-center">단축키</th>
-        <th>기능 설명</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td class="text-center fw-bold">F2</td><td>Resource / BlackBoard</td></tr>
-      <tr><td class="text-center fw-bold">F3</td><td>DevTool</td></tr>
-      <tr><td class="text-center fw-bold">F4</td><td>VSCode Project Open <small class="text-muted">(Only Electron)</small></td></tr>
-      <tr><td class="text-center fw-bold">F5</td><td>Refresh</td></tr>
-      <tr><td class="text-center fw-bold">F6</td><td>Stop <small class="text-muted">(Only DevTool Mode)</small></td></tr>
-      <tr><td class="text-center fw-bold">F7</td><td>Windows Project Folder Open <small class="text-muted">(Only Electron)</small></td></tr>
-      <tr><td class="text-center fw-bold">F8</td><td>Browser Open <small class="text-muted">(Only Electron)</small></td></tr>
-      <tr><td class="text-center fw-bold">F9</td><td>Setting <small class="text-muted">(Only Electron)</small></td></tr>
-      <tr><td class="text-center fw-bold">Ctrl + C</td><td>Subject 선택 후 복사</td></tr>
-      <tr><td class="text-center fw-bold">Ctrl + V</td><td>Canvas 선택 후 붙여넣기</td></tr>
-    </tbody>
-  </table>
-</div>
-<div class="mb-2">
-  <p class="mb-1"><strong>Call</strong> : 함수명을 수동으로 실행 가능</p>
-  <p class="mb-0">복사한 JSON 문자열을 입력하면 <strong>Import</strong> 가능</p>
-</div>
+						<table class="table table-sm table-bordered align-middle mb-2">
+							<thead class="table-light">
+							<tr>
+								<th class="text-center">Shortcut Key</th>
+								<th>Function Description</th>
+							</tr>
+							</thead>
+							<tbody>
+							<tr><td class="text-center fw-bold">F2</td><td>Resource / BlackBoard / Language</td></tr>
+							<tr><td class="text-center fw-bold">F3</td><td>DevTool</td></tr>
+							<tr><td class="text-center fw-bold">F4</td><td>VSCode Project Open <small class="text-muted">(Only Electron)</small></td></tr>
+							<tr><td class="text-center fw-bold">F5</td><td>Refresh</td></tr>
+							<tr><td class="text-center fw-bold">F6</td><td>Stop <small class="text-muted">(Only DevTool Mode)</small></td></tr>
+							<tr><td class="text-center fw-bold">F7</td><td>Windows Project Folder Open <small class="text-muted">(Only Electron)</small></td></tr>
+							<tr><td class="text-center fw-bold">F8</td><td>Browser Open <small class="text-muted">(Only Electron)</small></td></tr>
+							<tr><td class="text-center fw-bold">F9</td><td>Setting <small class="text-muted">(Only Electron)</small></td></tr>
+							<tr><td class="text-center fw-bold">Ctrl + C</td><td>Copy after selecting Subject</td></tr>
+							<tr><td class="text-center fw-bold">Ctrl + V</td><td>Paste after selecting Canvas</td></tr>
+							</tbody>
+						</table>
+						</div>
+						<div class="mb-2">
+						<p class="mb-1"><strong>Call</strong> : You can manually execute function names</p>
+						<p class="mb-0">You can <strong>Import</strong> by entering copied JSON strings</p>
+						</div>
 					`);
+					
+					
 					/*
 						F2 Resource/BlackBoard
 						F3 DevTool
