@@ -1,5 +1,7 @@
 //Version
-const version='2025-06-24 11:06:08';
+const version='2025-08-09 02:09:38';
+import "../../../artgine/artgine.js"
+
 //Class
 import {CClass} from "../../../artgine/basic/CClass.js";
 
@@ -17,6 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = false;
 gPF.mWASM = false;
+gPF.mServer = 'local';
 
 //EntryPoint
 import { CCamera } from "../../../artgine/render/CCamera.js";
@@ -42,7 +45,7 @@ var gSelectShader="";
 gFrame.PushEvent(CEvent.eType.Load,async ()=>{
     let sInter=gFrame.Ren().SInter().New();
     let str=await CFile.Load("TestShader.ts");
-    sInter.Exe("TestShader.ts",CUtil.ArrayToString(str));
+    await sInter.Exe("TestShader.ts",CUtil.ArrayToString(str));
     gFrame.Res().Push("TestShader",sInter.GetShaderList().GetShader("TestShader"));
     gFrame.Res().Push("TestShaderUV",sInter.GetShaderList().GetShader("TestShaderUV"));
 

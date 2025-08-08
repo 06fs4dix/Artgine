@@ -187,7 +187,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
         }
         //이건 안보여준다
         else if(_member.indexOf('mObject')!=-1 || _member=='class' || _member=="mProxy" || _member=="mPatchUpdate" ||
-			_member=="mRecycleType" || _member=="mRecycle" //||  _member=="mToolUpdate"
+			_member=="mRecycleType" || _member=="mRecycle" ||  _member=="mTemp"
 		)
 			return false;
 		return true;

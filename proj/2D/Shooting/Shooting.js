@@ -1,4 +1,4 @@
-const version = '2025-07-31 15:59:02';
+const version = '2025-08-08 15:13:55';
 import "../../../artgine/artgine.js";
 import { CClass } from "../../../artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
@@ -28,7 +28,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mServer = 'local';
+gPF.mServer = 'webServer';
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 import { CPlugin } from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('test', '../../../plugin/test/');

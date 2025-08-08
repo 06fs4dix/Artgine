@@ -265,23 +265,7 @@ export class CRendererGL extends CRenderer
 	}
 	override RebuildTexture(_tex : CTexture,_active :number,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView)
 	{
-		this.mDev.GL().activeTexture(this.mDev.GL().TEXTURE0+_active);
 		
-		var fmt1 = Number(this.mDev.GL().RGBA);
-		var fmt2 = Number(this.mDev.GL().UNSIGNED_BYTE);
-
-		fmt1 = this.mDev.GL().RGBA;
-		var info=_tex.GetInfo();
-
-		if(_tex.GetInfo()[0].mFormat==CTexture.eFormat.RGBA32F)
-			fmt2 = this.mDev.GL().FLOAT;
-		
-		
-		var gBuf=_tex.GetGBuf();
-		gBuf=gBuf[0];
-		
-		this.mDev.GL().bindTexture(this.mDev.GL().TEXTURE_2D, gBuf);
-		this.mDev.GL().texSubImage2D(this.mDev.GL().TEXTURE_2D, 0,_xOff,_yOff,_width,_height,fmt1,fmt2,_fa);   
 	}
 	RebuildVideo(_video : HTMLVideoElement,_key : string=null)  : string
 	{

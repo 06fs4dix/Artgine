@@ -5,7 +5,7 @@ export class CSQLite extends CRDBMS {
     mConn;
     async Init() {
         this.mConn = await open({
-            filename: this.mDatabase || './artgine.sqlite',
+            filename: this.mDatabase || './db/artgine.sqlite',
             driver: sqlite3.Database
         });
     }

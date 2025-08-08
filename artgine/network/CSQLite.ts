@@ -9,7 +9,7 @@ export class CSQLite extends CRDBMS {
     async Init(): Promise<void> {
         //this.mType=CRDBMS.eType.Sqlite;
         this.mConn = await open({
-            filename: this.mDatabase || './artgine.sqlite',
+            filename: this.mDatabase || './db/artgine.sqlite',
             driver: sqlite3.Database
         });
     }

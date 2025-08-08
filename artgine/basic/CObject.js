@@ -123,7 +123,7 @@ export class CObject {
                 return false;
         }
         else if (_member.indexOf('mObject') != -1 || _member == 'class' || _member == "mProxy" || _member == "mPatchUpdate" ||
-            _member == "mRecycleType" || _member == "mRecycle")
+            _member == "mRecycleType" || _member == "mRecycle" || _member == "mTemp")
             return false;
         return true;
     }

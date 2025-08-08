@@ -553,9 +553,10 @@ export class CShadowBaker extends CObject
                 // fw.Dev().GL().activeTexture(fw.Dev().GL().TEXTURE0+9);	
                 // fw.Dev().GL().bindTexture(fw.Dev().GL().TEXTURE_2D, fw.Ren().mTexUse);
 
-                let btu=fw.Ren().mTexUse;
-                fw.Ren().TexUseReset();
-                (fw.Ren() as CRendererGL).SetTexGBuf(vf,fw.Ren().mUniToSam2d,btu,fw.Ren().mUniTexLastOff);
+                fw.Ren().SendGPU(vf, [fw.Ren().mUniToSam2dKey],[0],null,9);
+                // let btu=fw.Ren().mTexUse;
+                // fw.Ren().TexUseReset();
+                // (fw.Ren() as CRendererGL).SetTexGBuf(vf,fw.Ren().mUniToSam2d,btu,fw.Ren().mUniTexLastOff);
 
                 //this.GlobalVF(brush, vf);
 

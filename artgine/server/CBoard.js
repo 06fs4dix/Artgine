@@ -1,6 +1,7 @@
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CLan } from "../basic/CLan.js";
 import { CPath } from "../basic/CPath.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CFecth } from "../network/CFecth.js";
 import { CSing } from "../server/CSing.js";
@@ -54,10 +55,10 @@ export class CBoard {
                 { "<>": "table", "class": "table table-hover", "html": [
                         { "<>": "thead", "class": "thead-light", "html": [
                                 { "<>": "tr", "html": [
-                                        { "<>": "th", "scope": "col", "width": "10%", "data-LG": CLan.T("CBoard.List.Offset", "Offset") },
-                                        { "<>": "th", "scope": "col", "width": "10%", "data-LG": CLan.T("CBoard.List.Nick", "Nick") },
-                                        { "<>": "th", "scope": "col", "width": "60%", "data-LG": CLan.T("CBoard.List.Subject", "Subject") },
-                                        { "<>": "th", "scope": "col", "width": "20%", "data-LG": CLan.T("CBoard.List.Datetime", "Datetime") },
+                                        { "<>": "th", "scope": "col", "width": "10%", "data-CLan": CLan.Set(null, "CBoard.List.Offset", "Offset") },
+                                        { "<>": "th", "scope": "col", "width": "10%", "data-CLan": CLan.Set(null, "CBoard.List.Nick", "Nick") },
+                                        { "<>": "th", "scope": "col", "width": "60%", "data-CLan": CLan.Set(null, "CBoard.List.Subject", "Subject") },
+                                        { "<>": "th", "scope": "col", "width": "20%", "data-CLan": CLan.Set(null, "CBoard.List.Datetime", "Datetime") },
                                     ] }
                             ] },
                         { "<>": "tbody", "id": "Board_tbody" },
@@ -71,7 +72,7 @@ export class CBoard {
                             ] },
                         { "<>": "div", "class": "col-sm", "html": [
                                 { "<>": "button", "type": "button", "id": "Write_btn", "class": "btn btn-primary float-end", "hidden": true,
-                                    "onclick": WriteClick, "data-LG": CLan.T("CBoard.List.Write", "Write") },
+                                    "onclick": WriteClick, "data-CLan": CLan.Set(null, "CBoard.List.Write", "Write") },
                             ] },
                     ] }
             ] };
@@ -136,11 +137,11 @@ export class CBoard {
                         { "<>": "input", "id": "Offset_num", "value": -1, "hidden": true },
                         { "<>": "span", "id": "Subject_span", "text": "test" },
                         { "<>": "button", "type": "button", "class": "btn btn-primary float-end", "hidden": true,
-                            "id": "Delete_btn", "data-LG": CLan.T("CBoard.Read.Delete", "Delete"), "onclick": DeleteClick },
+                            "id": "Delete_btn", "data-CLan": CLan.Set(null, "CBoard.Read.Delete", "Delete"), "onclick": DeleteClick },
                         { "<>": "button", "type": "button", "class": "btn btn-danger float-end", "hidden": true,
-                            "id": "Modify_btn", "data-LG": CLan.T("CBoard.Read.Modify", "Modify"), "onclick": WriteClick },
+                            "id": "Modify_btn", "data-CLan": CLan.Set(null, "CBoard.Read.Modify", "Modify"), "onclick": WriteClick },
                         { "<>": "button", "type": "button", "class": "btn btn-secondary float-end",
-                            "id": "Modify_btn", "data-LG": CLan.T("CBoard.Read.Back", "Back"), "onclick": BackClick },
+                            "id": "Modify_btn", "data-CLan": CLan.Set(null, "CBoard.Read.Back", "Back"), "onclick": BackClick },
                     ] },
                 { "<>": "div", "class": "card-body", "id": "Content_div", "text": "test" },
             ] };
@@ -179,22 +180,35 @@ export class CBoard {
         if (typeof _listOffset == "string")
             _listOffset = Number(_listOffset);
         let btnClick = () => {
-            CSing.PrivateInfo(CSing.PrivateKey()).then((_info) => {
-                if (_offset == -1 && _info != null) {
-                    CUtil.IDValue("Nick_txt", _info._nick);
-                }
-                let publicKey = "";
-                if (_info != null)
-                    publicKey = _info._publicKey;
+            if (CSing.PrivateKey() == null) {
+                let publicKey = CUniqueID.Get();
                 let content = CUtil.IDValue("Content_txt");
                 if (this.mEditer != null)
                     content = this.mEditer.getHTML();
-                return CFecth.Exe(CPath.PHPC() + "CBoard/Write", { category: this.mCategory, publicKey: publicKey,
+                CFecth.Exe(CPath.PHPC() + "CBoard/Write", { category: this.mCategory, publicKey: publicKey,
                     offset: CUtil.IDValue("Offset_num"), subject: CUtil.IDValue("Subject_txt"),
-                    nick: CUtil.IDValue("Nick_txt"), content: content });
-            }).then(() => {
-                this.List(-1, this.mListCount);
-            });
+                    nick: CUtil.IDValue("Nick_txt"), content: content }).then(() => {
+                    this.List(-1, this.mListCount);
+                });
+            }
+            else {
+                CSing.PrivateInfo(CSing.PrivateKey()).then((_info) => {
+                    if (_offset == -1 && _info != null) {
+                        CUtil.IDValue("Nick_txt", _info._nick);
+                    }
+                    let publicKey = "";
+                    if (_info != null)
+                        publicKey = _info._publicKey;
+                    let content = CUtil.IDValue("Content_txt");
+                    if (this.mEditer != null)
+                        content = this.mEditer.getHTML();
+                    return CFecth.Exe(CPath.PHPC() + "CBoard/Write", { category: this.mCategory, publicKey: publicKey,
+                        offset: CUtil.IDValue("Offset_num"), subject: CUtil.IDValue("Subject_txt"),
+                        nick: CUtil.IDValue("Nick_txt"), content: content });
+                }).then(() => {
+                    this.List(-1, this.mListCount);
+                });
+            }
         };
         let backClick = () => {
             this.List(this.mListOffset, this.mListCount);
@@ -208,9 +222,9 @@ export class CBoard {
                 { "<>": "label", "for": "Content_txt", "text": "Content" },
                 { "<>": "textarea", "class": "form-control", "id": "Content_txt" },
                 { "<>": "div", "id": "ContentW_div" },
-                { "<>": "button", "type": "button", "class": "btn btn-primary btn-block", "data-LG": CLan.T("CBoard.Write.Submit", "Submit"),
+                { "<>": "button", "type": "button", "class": "btn btn-primary btn-block", "data-CLan": CLan.Set(null, "CBoard.Write.Submit", "Submit"),
                     "onclick": btnClick },
-                { "<>": "button", "type": "button", "class": "btn btn-secondary btn-block", "data-LG": CLan.T("CBoard.Write.Back", "Back"),
+                { "<>": "button", "type": "button", "class": "btn btn-secondary btn-block", "data-CLan": CLan.Set(null, "CBoard.Write.Back", "Back"),
                     "onclick": backClick },
             ] };
         this.mTarget.innerHTML = "";

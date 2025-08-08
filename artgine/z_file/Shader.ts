@@ -54,7 +54,8 @@ export class ToV4{
     constructor(_x : CVec2, _y : CVec2);
     constructor(_x : CVec3, _y : number);
     constructor(_x : CVec4);
-    constructor(_x : CVec4|CVec3|CVec2|number=null ,_y? : CVec3|CVec2|number,_z? : CVec2|number,_w? : number){this.x=_x;this.y=_y;}}
+    constructor(_x : CVec4|CVec3|CVec2|number=null ,_y? : CVec3|CVec2|number,_z? : CVec2|number,_w? : number){this.x=_x;this.y=_y;}
+}
 
 
 
@@ -85,16 +86,17 @@ export class CVec4{
     constructor(_x : CVec2, _y : CVec2);
     constructor(_x : CVec3, _y : number);
     constructor(_x : CVec4);
-    constructor(_x : CVec4|CVec3|CVec2|number=null ,_y? : CVec3|CVec2|number,_z? : CVec2|number,_w? : number){this.x=_x;this.y=_y;}}
+    constructor(_x : CVec4|CVec3|CVec2|number=null ,_y? : CVec3|CVec2|number,_z? : CVec2|number,_w? : number){this.x=_x;this.y=_y;}
+}
 export class CMat{constructor(_x){}public b;}//4*4
 export class CMat3{
     public a;
     constructor(_x);
     constructor(_x,_y,_z);
     constructor(_x:CVec3|number,_y?:CVec3,_z?:CVec3){}
-}//3*3
-export class CMat34{constructor(_x){} public a;}//3*4
-export class CMat42{constructor(_x){} public a;}//3*4
+}
+export class CMat34{constructor(_x){} public a;}
+export class CMat42{constructor(_x){} public a;}
 
 
 export class Vertex1 extends float{}

@@ -292,6 +292,8 @@ export class CModal {
         if (this.mCard) {
             this.mCard.style.display = "";
             setTimeout(() => {
+                if (this.mCard == null)
+                    return;
                 this.mCard.style.opacity = "1";
                 this.mCard.style.transform = "scale(1)";
                 this.mBody.style.width = "100%";

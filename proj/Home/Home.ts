@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-28 10:12:20';
+const version='2025-08-08 17:34:26';
 import "../../artgine/artgine.js"
 
 //Class
@@ -19,7 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mServer = 'webServer+other';
+gPF.mServer = 'webServer';
 
 import {CAtelier} from "../../artgine/canvas/CAtelier.js";
 
@@ -40,9 +40,9 @@ import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CDomFactory } from "../../artgine/basic/CDOMFactory.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
-import { CSourceViewer } from "../../artgine/util/CModalUtil.js";
+import { CFileViewer } from "../../artgine/util/CModalUtil.js";
 
-if(gPF.mServer!="webServer+other")
+if(gPF.mServer!="webServer")
     CAlert.E("서버 세팅이 잘못되었습니다");
 
 
@@ -50,15 +50,15 @@ let option=new CSingOption();
 option.mFindPWBtn="pass";
 CSing.On(CSing.eEvent.State,()=>{
     if(CSing.PrivateKey()==null)
-        CUtil.ID("login-btn").innerText="로그인";
+        CUtil.ID("login-btn").innerText="Login";
     else
-        CUtil.ID("login-btn").innerText="로그아웃";
+        CUtil.ID("login-btn").innerText="Logout";
 });
 CSing.On(CSing.eEvent.Init,()=>{
     if(CSing.PrivateKey()==null)
-        CUtil.ID("login-btn").innerText="로그인";
+        CUtil.ID("login-btn").innerText="Login";
     else
-        CUtil.ID("login-btn").innerText="로그아웃";
+        CUtil.ID("login-btn").innerText="Logout";
 });
 CSing.On(CSing.eEvent.Insert,()=>{
    loginModal.Open();

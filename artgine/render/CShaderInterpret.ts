@@ -194,6 +194,7 @@ export class CShaderInterpret
 							
 						}
 						this.mString=this.mString.slice(0,i) + importStr + this.mString.slice(i);
+						
 						break;
 					}
 					
@@ -1521,6 +1522,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 // }
 
 import CShaderInterpret_imple from "../render_imple/CShaderInterpret.js";
+import { CConsol } from "../basic/CConsol.js"
 CShaderInterpret_imple();
 
 

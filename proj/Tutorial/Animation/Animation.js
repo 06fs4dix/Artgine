@@ -1,4 +1,4 @@
-const version = '2025-07-31 09:43:31';
+const version = '2025-08-08 17:51:26';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -44,7 +44,7 @@ for (let x = 0; x < 4; ++x) {
 sub.SetKey("Ani2DSub");
 sub.PushComp(new CAniFlow(ani));
 let pth = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="Change animation with numbers 1,2<br>Press F to view info<br>↓">
   숫자 1,2로 애니메이션 변경<br>F로 정보보기<br>↓
 </div>`), null, null));
 pth.SetPos(new CVec3(0, 200));
@@ -83,7 +83,7 @@ sub.SetPos(new CVec3(200, 0, 0));
 let pt = sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetYSort(true);
 pth = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="YSort test<br>↓">
   YSort 테스트<br>↓
 </div>`), null, null));
 pth.SetPos(new CVec3(0, 200));
@@ -100,7 +100,7 @@ sub.SetPos(new CVec3(400, 0, 0));
 pt = sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetPivot(new CVec3(1, 1, 1));
 pth = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="Pivot change<br>↓">
   피벗 변경<br>↓
 </div>`), null, null));
 pth.SetPos(new CVec3(0, 200));
@@ -111,7 +111,7 @@ ani = new CAnimation();
 ani.Push(new CClipMesh(0, 1000, "Res/teapot/teapot.gltf", "left"));
 sub.PushComp(new CAniFlow(ani));
 pth = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center border rounded p-2 bg-light shadow-sm"
-     style="width: 200px;">
+     style="width: 200px;" data-en="3D Animation<br>↓">
   3D 애니메이션<br>↓
 </div>`), null, null));
 pth.SetPos(new CVec3(0, 200));

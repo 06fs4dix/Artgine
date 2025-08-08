@@ -44,7 +44,7 @@ import { CEvent } from "../../../artgine/basic/CEvent.js";
 import { CForce } from "../../../artgine/canvas/component/CForce.js";
 import { CSMPattern, CStateMachine } from "../../../artgine/canvas/component/CStateMachine.js";
 import { CConsol } from "../../../artgine/basic/CConsol.js";
-import { CSourceViewer } from "../../../artgine/util/CModalUtil.js";
+import { CFileViewer } from "../../../artgine/util/CModalUtil.js";
 import { CPath } from "../../../artgine/basic/CPath.js";
 import { CString } from "../../../artgine/basic/CString.js";
 import { CCanvas } from "../../../artgine/canvas/CCanvas.js";

@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-17 09:24:22';
+const version='2025-08-06 14:44:38';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,11 +19,11 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mLocal = true;
+gPF.mServer = 'local';
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPluging.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('InverseKinematics','../../../plugin/InverseKinematics/');
 import "../../../plugin/InverseKinematics/InverseKinematics.js"
 var gAtl = new CAtelier();

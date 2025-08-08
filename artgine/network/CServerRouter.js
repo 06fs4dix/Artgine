@@ -96,6 +96,8 @@ export class CServerRouter extends CServer {
                 return;
             }
         }
-        _res.send("");
+        if (!_res.headersSent) {
+            _res.send("");
+        }
     }
 }

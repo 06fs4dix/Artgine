@@ -18,11 +18,8 @@ import { Binormal3, Build, CMat, CVec2, CVec3, CVec4,  FloatMulMat,  LWVPMul,
 	V2MulFloat,
 	V2AddV2,
 	V4Fract,
-	Null} from "../../../artgine/z_file/shader"
+	Null} from "../../../artgine/z_file/Shader"
 
-import {
-	SDF
-} from "../../../artgine/z_file/SDF";
 
 var worldMat : CMat;
 var viewMat : CMat;

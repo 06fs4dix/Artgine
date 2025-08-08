@@ -8,11 +8,11 @@ import { COAuthServer } from "../artgine/server/COAuthServer.js";
 
 export function ImportServer(_main : CServerMain)
 {
-    new CRoomServer().SetServerMain(_main);
-    new CSingServer().SetServerMain(_main);
-    new CBoardServer().SetServerMain(_main);
-    new CFileServer().SetServerMain(_main);
-    new COAuthServer().SetServerMain(_main);
+    //new CRoomServer().SetServerMain(_main);
+    //new CSingServer().SetServerMain(_main);
+    //new CBoardServer().SetServerMain(_main);
+    //new CFileServer().SetServerMain(_main);
+    //new COAuthServer().SetServerMain(_main);
    
 
 }

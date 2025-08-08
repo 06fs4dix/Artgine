@@ -128,7 +128,7 @@ export class CPath
 				}
 				if (_type.includes(CPath.eUrl.Route)) {
 					// Sub: Sample 폴더까지
-					str += parts.slice(1, parts.length - 1).join("/") + "/";
+					str += parts.slice(baseIdx, parts.length - 1).join("/") + "/";
 				}
 				if (_type.includes(CPath.eUrl.Endpoint)) {
 					// Page: Sample.html

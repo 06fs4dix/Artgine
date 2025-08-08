@@ -1,10 +1,14 @@
 import { CClass } from "./CClass.js";
 export class CString {
-    static PathSub(_data) {
-        var pos = _data.lastIndexOf("/");
-        if (pos == -1)
-            return _data;
-        return _data.substr(0, pos);
+    static PathSub(_data, _count = 1) {
+        var result = _data;
+        for (var i = 0; i < _count; i++) {
+            var pos = result.lastIndexOf("/");
+            if (pos == -1)
+                break;
+            result = result.substr(0, pos);
+        }
+        return result;
     }
     static DataConvert(_data) {
         if (_data[0] != "n" && _data[1] != "e") { }

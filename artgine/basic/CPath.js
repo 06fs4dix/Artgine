@@ -77,7 +77,7 @@ export class CPath {
                     str += parts.slice(1, baseIdx).join("/") + "/";
                 }
                 if (_type.includes(CPath.eUrl.Route)) {
-                    str += parts.slice(1, parts.length - 1).join("/") + "/";
+                    str += parts.slice(baseIdx, parts.length - 1).join("/") + "/";
                 }
                 if (_type.includes(CPath.eUrl.Endpoint)) {
                     const page = parts[parts.length - 1];

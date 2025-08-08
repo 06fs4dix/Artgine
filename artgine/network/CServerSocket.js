@@ -33,12 +33,15 @@ export class CServerSocker extends CServer {
         else
             this.mWSS = new WebSocketServer({ server: this.mMainServer.GetServer() });
         this.mWSS.on('connection', (ws) => {
-            this.GetEvent(CEvent.eType.Open).Call(ws);
+            if (this.GetEvent(CEvent.eType.Open) != null)
+                this.GetEvent(CEvent.eType.Open).Call(ws);
             ws.on('message', (message) => {
-                this.GetEvent(CEvent.eType.Message).Call(ws, message);
+                if (this.GetEvent(CEvent.eType.Message) != null)
+                    this.GetEvent(CEvent.eType.Message).Call(ws, message);
             });
             ws.on('close', () => {
-                this.GetEvent(CEvent.eType.Open).Call(ws);
+                if (this.GetEvent(CEvent.eType.Close) != null)
+                    this.GetEvent(CEvent.eType.Close).Call(ws);
             });
         });
     }

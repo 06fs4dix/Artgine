@@ -17,7 +17,7 @@ import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([]);
-import { CSourceViewer } from "../../../artgine/util/CModalUtil.js";
+import { CFileViewer } from "../../../artgine/util/CModalUtil.js";
 import { CCamCon3DThirdPerson } from "../../../artgine/util/CCamCon.js";
 import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
 import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
@@ -29,7 +29,7 @@ let Main = gAtl.NewCanvas("Main");
 let camCon = new CCamCon3DThirdPerson(gAtl.Frame().Input());
 gAtl.Brush().GetCam3D().SetCamCon(camCon);
 gAtl.Brush().GetCam3D().EyeMoveAndViewCac(new CVec3());
-let editer = new CSourceViewer(["TestShader.ts", "ShaderEditer.json", "ShaderEditer.html", "ShaderEditer.js", "ShaderEditer.ts"], async (_file, _source) => {
+let editer = new CFileViewer(["TestShader.ts", "ShaderEditer.json", "ShaderEditer.html", "ShaderEditer.js", "ShaderEditer.ts"], async (_file, _source) => {
     if (_file != "TestShader.ts")
         return;
     let shaMgr = gAtl.Frame().Ren().SInter().New();

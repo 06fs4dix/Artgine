@@ -4,6 +4,9 @@ export class CUtil {
             process.versions != null &&
             process.versions.node != null);
     }
+    static IsWeb() {
+        return typeof navigator != 'undefined';
+    }
     static IsMobile() {
         var filter = "win16|win32|win64|mac|macintel";
         if (navigator.platform) {

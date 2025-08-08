@@ -116,10 +116,10 @@ async function RunServer()
 			return;
 		}
 		
-		if(gAppJSON.server=="webServer+other")
-		{
-			ImportServer(gWebServer);
-		}
+		// if(gAppJSON.server=="webServer+other")
+		// {
+		// 	ImportServer(gWebServer);
+		// }
 
 	}
 }
