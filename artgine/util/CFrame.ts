@@ -636,10 +636,13 @@ export class CFrame
 	
 	async Process()
 	{
-		//CConsol.Log(1);
+		
 		if(this.mDevice)	await this.mDevice.Init();
-		//CConsol.Log(2);
-		await CWASM.Init(this.mPreferences.mWASM);
+		
+		let path=CPath.PHPC();
+		if(this.mPreferences.mGitHub)
+			path="https://06fs4dix.github.io/Artgine/";
+		await CWASM.Init(this.mPreferences.mWASM,path);
 		if ('serviceWorker' in navigator && navigator.serviceWorker.controller) await CPWA.IsOnline();
 		//CConsol.Log(3);
 		if(CPlugin.sEventVec.length>0 && gMainFramework==this)

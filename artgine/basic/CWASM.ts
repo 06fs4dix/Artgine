@@ -22,7 +22,7 @@ export class CWASM
         gThread=_enable;
     }
     static GetThread()  {   return gThread;    }
-    static async Init(_simd : boolean)
+    static async Init(_simd : boolean,_path : string)
     {
         if(_simd)
         {
@@ -48,9 +48,9 @@ export class CWASM
             if(gSimd)   await SIMDModule(gWASM);
             else   await NoSIMDModule(gWASM);
 
-            let path=CPath.PHPC();
+         
             const encoder = new TextEncoder();
-            const encoded = encoder.encode(path); 
+            const encoded = encoder.encode(_path); 
             let ptr = gWASM._malloc(encoded.length + 1);
             gWASM.HEAPU8.set(encoded, ptr);
             gWASM.HEAPU8[ptr + encoded.length] = 0;

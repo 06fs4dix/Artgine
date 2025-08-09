@@ -425,7 +425,10 @@ export class CFrame {
     async Process() {
         if (this.mDevice)
             await this.mDevice.Init();
-        await CWASM.Init(this.mPreferences.mWASM);
+        let path = CPath.PHPC();
+        if (this.mPreferences.mGitHub)
+            path = "https://06fs4dix.github.io/Artgine/";
+        await CWASM.Init(this.mPreferences.mWASM, path);
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller)
             await CPWA.IsOnline();
         if (CPlugin.sEventVec.length > 0 && gMainFramework == this) {

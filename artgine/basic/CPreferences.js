@@ -22,4 +22,5 @@ export class CPreferences extends CObject {
     mIAuto = false;
     mWASM = false;
     mServer = "local";
+    mGitHub = false;
 }
