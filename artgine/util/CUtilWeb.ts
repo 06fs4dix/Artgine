@@ -167,9 +167,10 @@ export class CUtilWeb
 				adjustedFullPath = fullPath +  path;
 				// 첫 번째 매치만 변경하도록 수정
 				_source = _source.replace(importPathArr[i], adjustedFullPath);
+				processedPaths.set(importPathArr[i], adjustedFullPath);
 				importPathArr[i]=adjustedFullPath;
 				// 처리된 경로를 맵에 저장
-				processedPaths.set(importPathArr[i], adjustedFullPath);
+				
 				
 			}
 			if(_monaco && window["require"]!=null)
