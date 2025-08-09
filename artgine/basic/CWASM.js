@@ -17,7 +17,7 @@ export class CWASM {
         gThread = _enable;
     }
     static GetThread() { return gThread; }
-    static async Init(_simd) {
+    static async Init(_simd, _path) {
         if (_simd) {
             if (typeof WebAssembly === "object" && typeof WebAssembly.FeatureDetect === "function") {
                 gSimd = await WebAssembly.FeatureDetect("simd");
@@ -38,9 +38,8 @@ export class CWASM {
                 await SIMDModule(gWASM);
             else
                 await NoSIMDModule(gWASM);
-            let path = CPath.PHPC();
             const encoder = new TextEncoder();
-            const encoded = encoder.encode(path);
+            const encoded = encoder.encode(_path);
             let ptr = gWASM._malloc(encoded.length + 1);
             gWASM.HEAPU8.set(encoded, ptr);
             gWASM.HEAPU8[ptr + encoded.length] = 0;
