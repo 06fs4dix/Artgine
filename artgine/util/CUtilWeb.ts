@@ -107,7 +107,7 @@ export class CUtilWeb
 	// 	}
 
 	// }
-	static async TSImport(_source : string,_monaco=true)
+	static async TSImport(_source : string,_monaco=true,_github=false)
 	{
 		let importPathArr=[];
 		importPathArr=ExtractImportPaths(_source,false);
@@ -145,6 +145,8 @@ export class CUtilWeb
 				
 				// 상위 디렉토리 개수만큼 fullPath에서 제거
 				let adjustedFullPath = CString.PathSub(fullPath, count);
+				if(_github)	adjustedFullPath="https://06fs4dix.github.io/Artgine/";
+
 				adjustedFullPath = adjustedFullPath + "/" + path;
 				// 첫 번째 매치만 변경하도록 수정
 				_source = _source.replace(importPathArr[i], adjustedFullPath);
@@ -158,6 +160,7 @@ export class CUtilWeb
 				if(aChk!=-1)
 					path=path.substring(aChk);
 				let adjustedFullPath = CPath.PHPC();
+				if(_github)	adjustedFullPath="https://06fs4dix.github.io/Artgine/";
 				fullPath=adjustedFullPath;
 				//fullPath=fullPath.substring(0,fullPath.indexOf(adjustedFullPath)+adjustedFullPath.length);
 				
@@ -187,7 +190,7 @@ export class CUtilWeb
 		return _source;
 	}
 	static MonacoEditer(_target : HTMLElement,_value : string,_language : "plaintext"|"json"|"typescript"|"javascript"|"wgsl"|"html"="plaintext",
-		_theme : "vs"|"vs-dark"="vs-dark",_exeFun=null)
+		_theme : "vs"|"vs-dark"="vs-dark",_exeFun=null,_github=false)
 	{
 		if(window["require"]==null)
 		{
@@ -201,125 +204,32 @@ export class CUtilWeb
 			(require as any).config({ paths: { vs: CPath.PHPC()+'/artgine/external/legacy/monaco-editor/min/vs' } });
 			gMonaco=false;
 		}
-		let importPathArr=[];
 		if(_language=="typescript")
 		{
-			importPathArr=ExtractImportPaths(_value,false);//"../../../artgine/z_file/Shader"
-			let fullPath=CPath.FullPath();//file://E:/svn/Artgine/WebContent/"Artgine/proj/Tutorial/ShaderEditer/"
-			fullPath=CString.PathSub(fullPath);
+			(require as any)(['vs/editor/editor.main'], async function () {
+				_value=await CUtilWeb.TSImport(_value,true,_github);
+				// ✅ JS 파일에 대한 설정
+				window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
+					allowJs: true,
+					checkJs: true,
+					//allowNonTsExtensions: true,
+					target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
+					module: window["monaco"].languages.typescript.ModuleKind.ESNext
+				});
+				let editor=window["monaco"].editor.create(_target, {
+					value: _value,
+					language: _language,
+					automaticLayout: true,
+					readOnly: false,
+					theme: _theme
+				});
 
-			// 이미 처리된 경로를 추적하는 맵
-			let processedPaths = new Map<string, string>();
-
-			for(let i=0;i<importPathArr.length;++i)
-			{
-				let path=importPathArr[i];
-				
-				// 이미 처리된 경로인지 확인
-				if(processedPaths.has(path)) {
-					// 이미 처리된 경로는 건너뛰기
-					continue;
-				}
-
-				// "../" 패턴 처리
-				let count = 0;
-				// "../" 패턴을 찾아서 개수를 세고 제거
-				while (path.startsWith("../")) {
-					count++;
-					path = path.substring(3);
-				}
-				path=CString.ReplaceAll(path,"./","");
-				path=CString.ReplaceAll(path,".js","");
-				if(count>0)
-				{
-					
-					
-					// 상위 디렉토리 개수만큼 fullPath에서 제거
-					let adjustedFullPath = CString.PathSub(fullPath, count);
-					adjustedFullPath = adjustedFullPath + "/" + path;
-					// 첫 번째 매치만 변경하도록 수정
-					_value = _value.replace(importPathArr[i], adjustedFullPath);
-					importPathArr[i]=adjustedFullPath;
-					// 처리된 경로를 맵에 저장
-					processedPaths.set(importPathArr[i], adjustedFullPath);
-				}
-				else
-				{
-					let aChk=path.indexOf("artgine");
-					if(aChk!=-1)
-						path=path.substring(aChk);
-					let adjustedFullPath = CPath.PHPC();
-					fullPath=adjustedFullPath;
-					//fullPath=fullPath.substring(0,fullPath.indexOf(adjustedFullPath)+adjustedFullPath.length);
-					
-					adjustedFullPath = fullPath +  path;
-					// 첫 번째 매치만 변경하도록 수정
-					_value = _value.replace(importPathArr[i], adjustedFullPath);
-					importPathArr[i]=adjustedFullPath;
-					// 처리된 경로를 맵에 저장
-					processedPaths.set(importPathArr[i], adjustedFullPath);
-					
-				}
-				
-
-			}
-
-
-
-			//CConsol.Log(fullPath);
-
+				if(_exeFun!=null)
+					_exeFun(editor,_value);
+			});
+		
 		}
 
-
-		
-		(require as any)(['vs/editor/editor.main'], async function () {
-
-			if(_language=="typescript")
-			{
-				for(let i=0;i<importPathArr.length;++i)
-				{
-					let fName=importPathArr[i];
-					
-					fName+=".ts";
-					let buf=await CFile.Load(fName);
-					//if(buf==null)
-
-
-
-					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(
-						CUtil.ArrayToString(buf),
-						fName
-					);
-				}
-			}
-			
-
-
-			 // ✅ JS 파일에 대한 설정
-			 window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
-				allowJs: true,
-				checkJs: true,
-				//allowNonTsExtensions: true,
-				target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
-				module: window["monaco"].languages.typescript.ModuleKind.ESNext
-			});
-			let editor=window["monaco"].editor.create(_target, {
-				value: _value,
-				language: _language,
-				automaticLayout: true,
-				readOnly: false,
-				theme: _theme
-			});
-
-
-
-			if(_exeFun!=null)
-				_exeFun(editor,_value);
-
-			
-
-
-		});
 
 	}
 	static async TSToJS(_source) {

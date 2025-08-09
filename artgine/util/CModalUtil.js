@@ -291,13 +291,13 @@ export class CModalChat extends CModal {
 export class CFileViewer extends CModal {
     mEditer = null;
     mExeEvent;
-    mLoadEvent;
     mFile;
-    constructor(_file, _exeEvent = null, _loadEvent = null) {
+    mGitHub = false;
+    constructor(_file, _exeEvent = null, _github = false) {
         super();
+        this.mGitHub = _github;
         this.mFile = _file;
         this.mExeEvent = CEvent.ToCEvent(_exeEvent);
-        this.mLoadEvent = CEvent.ToCEvent(_loadEvent);
         let id = this.Key();
         this.SetTitle(CModal.eTitle.TextFullClose);
         this.SetResize(true);
@@ -329,7 +329,6 @@ export class CFileViewer extends CModal {
             this.mEditer = editer;
         };
         let LoadFile = (_file) => {
-            this.mLoadEvent.Call();
             CFile.Load(_file).then((_buf) => {
                 let source = CUtil.ArrayToString(_buf);
                 let info = CString.ExtCut(_file);
@@ -341,7 +340,7 @@ export class CFileViewer extends CModal {
                             const lastLine = model.getLineCount();
                             monacoEditer.revealLineInCenter(lastLine);
                         }
-                    });
+                    }, this.mGitHub);
                 }
                 else if (info.ext == "js")
                     CUtilWeb.MonacoEditer(CUtil.ID(id + "_body"), source, "javascript", "vs-dark", event);
