@@ -91,8 +91,8 @@ export class CUtilWeb {
                 fullPath = adjustedFullPath;
                 adjustedFullPath = fullPath + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
-                importPathArr[i] = adjustedFullPath;
                 processedPaths.set(importPathArr[i], adjustedFullPath);
+                importPathArr[i] = adjustedFullPath;
             }
             if (_monaco && window["require"] != null) {
                 let fName = importPathArr[i];
