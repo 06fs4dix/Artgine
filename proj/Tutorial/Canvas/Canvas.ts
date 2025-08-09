@@ -1,12 +1,12 @@
 //Version
-const version='2025-08-08 15:14:12';
-import "../../../artgine/artgine.js"
+const version='2025-08-10 00:04:38';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
-import {CClass} from "../../../artgine/basic/CClass.js";
+import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "../../../artgine/basic/CPreferences.js";
+import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -19,40 +19,41 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mServer = 'webServer';
+gPF.mServer = 'local';
+gPF.mGitHub = true;
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPlugin.js";
+import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([]);
 
 //EntryPoint
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CInput } from "../../../artgine/system/CInput.js";
-import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
-import { CFrame } from "../../../artgine/util/CFrame.js";
-import {  CModalBackGround, CFileViewer } from "../../../artgine/util/CModalUtil.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CUtil } from "../../../artgine/basic/CUtil.js";
-import { CUtilObj } from "../../../artgine/basic/CUtilObj.js";
-import { CEvent } from "../../../artgine/basic/CEvent.js";
-import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
-import { CString } from "../../../artgine/basic/CString.js";
-import { CPath } from "../../../artgine/basic/CPath.js";
-import { CAlert } from "../../../artgine/basic/CAlert.js";
-import { CModal } from "../../../artgine/basic/CModal.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CChecker } from "../../../artgine/util/CChecker.js";
-import { CTimer } from "../../../artgine/system/CTimer.js";
-import { CTutorial } from "../../../artgine/util/CTutorial.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CLan } from "../../../artgine/basic/CLan.js";
-import { CStorage } from "../../../artgine/system/CStorage.js";
-import { CObject } from "../../../artgine/basic/CObject.js";
-import { CScript } from "../../../artgine/util/CScript.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
+import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
+import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
+import {  CModalBackGround, CFileViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
+import { CUtilObj } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtilObj.js";
+import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
+import { CString } from "https://06fs4dix.github.io/Artgine/artgine/basic/CString.js";
+import { CPath } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPath.js";
+import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
+import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CChecker } from "https://06fs4dix.github.io/Artgine/artgine/util/CChecker.js";
+import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
+import { CTutorial } from "https://06fs4dix.github.io/Artgine/artgine/util/CTutorial.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CLan } from "https://06fs4dix.github.io/Artgine/artgine/basic/CLan.js";
+import { CStorage } from "https://06fs4dix.github.io/Artgine/artgine/system/CStorage.js";
+import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
+import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
 
 //CLan.SetCode("en");
 
@@ -182,9 +183,9 @@ path = CString.PathSub(path);
 let sv = new CFileViewer([path + "/Test.ts"], async (_file, _source) => {
 
 
-    let moudle=await CScript.Build("Test.ts",_source);
+    let moudle=await CScript.Build("Test.ts",_source,gAtl.mPF.mGitHub);
     
     sv.Close();
-});
+},gAtl.mPF.mGitHub);
 sv.Open();
 

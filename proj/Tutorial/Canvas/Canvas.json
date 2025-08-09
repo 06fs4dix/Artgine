@@ -29,6 +29,7 @@
     "jsoneditor": false,
     "MonacoEditor": true,
     "tone": false,
-    "soundfont": false
+    "soundfont": false,
+    "toastui": false
   }
 }
