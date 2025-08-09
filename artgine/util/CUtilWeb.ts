@@ -199,7 +199,7 @@ export class CUtilWeb
 
 			return;
 		}
-		_target.innerHTML="";
+		
 		if(gMonaco)
 		{
 			(require as any).config({ paths: { vs: CPath.PHPC()+'/artgine/external/legacy/monaco-editor/min/vs' } });
@@ -209,6 +209,7 @@ export class CUtilWeb
 		{
 			(require as any)(['vs/editor/editor.main'], async function () {
 				_value=await CUtilWeb.TSImport(_value,true,_github);
+				_target.innerHTML="";
 				// ✅ JS 파일에 대한 설정
 				window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
 					allowJs: true,

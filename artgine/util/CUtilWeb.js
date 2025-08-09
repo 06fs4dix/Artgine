@@ -108,7 +108,6 @@ export class CUtilWeb {
             _target.innerHTML = "MonacoEditer not import!";
             return;
         }
-        _target.innerHTML = "";
         if (gMonaco) {
             require.config({ paths: { vs: CPath.PHPC() + '/artgine/external/legacy/monaco-editor/min/vs' } });
             gMonaco = false;
@@ -116,6 +115,7 @@ export class CUtilWeb {
         if (_language == "typescript") {
             require(['vs/editor/editor.main'], async function () {
                 _value = await CUtilWeb.TSImport(_value, true, _github);
+                _target.innerHTML = "";
                 window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
                     allowJs: true,
                     checkJs: true,

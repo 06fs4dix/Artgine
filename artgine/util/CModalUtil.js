@@ -318,7 +318,16 @@ export class CFileViewer extends CModal {
             
         </div>
         `);
-        this.SetBody("<div id='" + id + "_body' class='h-100' style='min-height:640px;'></div>");
+        this.SetBody(`
+            <div id='${id}_body' class='h-100 d-flex align-items-center justify-content-center' style='min-height:640px;'>
+                <div id='${id}_loading' class='text-center'>
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="h5 text-muted">Loading Editor...</div>
+                </div>
+            </div>
+        `);
     }
     Open(_startPos) {
         super.Open(_startPos);
