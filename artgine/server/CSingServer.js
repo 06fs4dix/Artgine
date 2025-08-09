@@ -74,13 +74,13 @@ let CSingServer = class CSingServer extends CServerRouter {
             let chk = null;
             if (loginType != "modify") {
                 chk = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey, "or")], null, null);
-                if (chk.length == 0)
+                if (chk.length != 0)
                     return "-1";
                 chk = await sql.Select("user_list", [new CORMCondition("_nick", "==", nick, "or")], null, null);
-                if (chk.length == 0)
+                if (chk.length != 0)
                     return "-2";
                 chk = await sql.Select("user_list", [new CORMCondition("_email", "==", email, "or")], null, null);
-                if (chk.length == 0)
+                if (chk.length != 0)
                     return "-3";
                 var publicKey = CUniqueID.Get();
                 sql.Insert("user_list", [new CORMField("_privateKey", privateKey), new CORMField("_email", email),
@@ -92,15 +92,15 @@ let CSingServer = class CSingServer extends CServerRouter {
             }
             else {
                 chk = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", newPrivateKey, "or")], null, null);
-                if (chk.length == 0)
+                if (chk.length != 0)
                     return "-5";
                 if (newPrivateKey.length == 0)
                     newPrivateKey = privateKey;
                 let option = new CORMOption();
                 option.mOrderBy = "_offset";
                 option.mLimit = 1;
-                var userVec = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey)], ["_offset", "_publicKey", "_id", "_loginType", "_nick", "_email"], option);
-                if (userVec.length != 0)
+                var userVec = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey, "and"), new CORMCondition("_lock", "==", 0, "and")], ["_offset", "_publicKey", "_id", "_loginType", "_nick", "_email"], option);
+                if (userVec.length == 0)
                     return "-100";
                 if (userVec[0]._nick != nick) {
                     chk = await sql.Select("user_list", [new CORMCondition("_nick", "==", nick, "or")], null, null);
@@ -112,7 +112,7 @@ let CSingServer = class CSingServer extends CServerRouter {
                     if (chk.length != 0)
                         return "-3";
                 }
-                await sql.Update("user_list", [new CORMCondition("_offset", "==", userVec[0][0])], [new CORMField("_lock", 1)]);
+                await sql.Update("user_list", [new CORMCondition("_offset", "==", userVec[0]._offset)], [new CORMField("_lock", 1)]);
                 sql.Insert("user_list", [new CORMField("_privateKey", newPrivateKey), new CORMField("_email", email),
                     new CORMField("_publicKey", userVec[0]._publicKey), new CORMField("_id", userVec[0]._id), new CORMField("_nick", nick),
                     new CORMField("_loginType", userVec[0]._loginType)]);
@@ -153,7 +153,7 @@ let CSingServer = class CSingServer extends CServerRouter {
             option.mOrderBy = "_offset";
             option.mLimit = 1;
             let sql = await CPool.Product("CLocalDB");
-            let jsonArr = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", _json.GetStr("key"))], ["_publicKey", "_id", "_nick", "_email", "_loginType"], option);
+            let jsonArr = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", _json.GetStr("key"), "and"), new CORMCondition("_lock", "==", 0, "and")], ["_publicKey", "_id", "_nick", "_email", "_loginType"], option);
             CPool.Recycle(sql);
             if (jsonArr.length == 0)
                 return "null";
@@ -164,7 +164,7 @@ let CSingServer = class CSingServer extends CServerRouter {
             option.mOrderBy = "_offset";
             option.mLimit = 1;
             let sql = await CPool.Product("CLocalDB");
-            let jsonArr = await sql.Select("user_list", [new CORMCondition("_publicKey", "==", _json.GetStr("key"))], ["_publicKey", "_nick"], option);
+            let jsonArr = await sql.Select("user_list", [new CORMCondition("_publicKey", "==", _json.GetStr("key"), "and"), new CORMCondition("_lock", "==", 0, "and")], ["_publicKey", "_nick"], option);
             CPool.Recycle(sql);
             if (jsonArr.length == 0)
                 return "null";

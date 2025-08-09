@@ -51,7 +51,7 @@ export class CSing {
         }
         return data;
     }
-    static PublicInfo(_key = null, _tag = null) {
+    static PublicInfo(_key, _tag = null) {
         return new Promise(async (resolve, reject) => {
             let write = false;
             let data = CSing.MapGet(_key);
@@ -498,8 +498,10 @@ export class CSing {
                     }
                     CUtil.ID("uc_btn").hidden = true;
                     var tag = CSing.GetEvent(CSing.eEvent.JoinSubmit).Call();
-                    for (let i = 0; i < tag.length; ++i) {
-                        user[tag[i].key] = tag[i].value;
+                    if (tag != null) {
+                        for (let i = 0; i < tag.length; ++i) {
+                            user[tag[i].key] = tag[i].value;
+                        }
                     }
                 }
                 else {
@@ -520,8 +522,10 @@ export class CSing {
                     }
                     CUtil.ID("uc_btn").hidden = true;
                     var tag = CSing.GetEvent(CSing.eEvent.JoinSubmit).Call();
-                    for (let i = 0; i < tag.length; ++i) {
-                        user[tag[i].key] = tag[i].value;
+                    if (tag != null) {
+                        for (let i = 0; i < tag.length; ++i) {
+                            user[tag[i].key] = tag[i].value;
+                        }
                     }
                 }
                 UserCreate(user).then((_error) => {
@@ -532,6 +536,10 @@ export class CSing {
                         CUtil.ID('loginDiv').hidden = true;
                         CUtil.ID('logoutDiv').hidden = false;
                         CUtil.ID('joinDiv').hidden = true;
+                        CUtil.IDValue("join_pw_txt", "");
+                        CUtil.IDValue("join_pwChk_txt", "");
+                        gInfoMap.clear();
+                        CStorage.Set(CSing.PrivateKey(), null);
                     }
                 });
             }
