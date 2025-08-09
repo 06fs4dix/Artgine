@@ -82,7 +82,7 @@ export class CSing
         }
         return data;
     }
-    static PublicInfo(_key : string=null,_tag : Array<string>=null): Promise<{_publicKey,_nick}>
+    static PublicInfo(_key : string,_tag : Array<string>=null): Promise<{_publicKey,_nick}>
     {
         return new Promise<{_publicKey,_id,_nick,_email,_loginType}>(async (resolve, reject) => {
 
@@ -341,6 +341,7 @@ export class CSing
                 CUtil.ID('joinDiv').hidden=false;
                 //CWebUtil.ID("uc_btn").hidden=false;
                 CSing.GetEvent(CSing.eEvent.JoinInit).Call();
+                //CSing.GetEvent(CSing.eEvent.State).Call();
             };
             var joinBtn=CUtil.ID(_option.mJoinBtn);
             if(joinBtn!=null)
@@ -699,10 +700,14 @@ export class CSing
                     
                    
                     var tag=CSing.GetEvent(CSing.eEvent.JoinSubmit).Call() as Array<{key,value}>;
-                    for(let i=0;i<tag.length;++i)
+                    if(tag!=null)
                     {
-                        user[tag[i].key]=tag[i].value;
+                        for(let i=0;i<tag.length;++i)
+                        {
+                            user[tag[i].key]=tag[i].value;
+                        }
                     }
+                    
                     
                 }
                 else
@@ -733,10 +738,14 @@ export class CSing
                     
                 
                     var tag=CSing.GetEvent(CSing.eEvent.JoinSubmit).Call() as Array<{key,value}>;
-                    for(let i=0;i<tag.length;++i)
+                    if(tag!=null)
                     {
-                        user[tag[i].key]=tag[i].value;
+                        for(let i=0;i<tag.length;++i)
+                        {
+                            user[tag[i].key]=tag[i].value;
+                        }
                     }
+                    
                     
                 }
                 
@@ -759,6 +768,15 @@ export class CSing
                         CUtil.ID('loginDiv').hidden=true;
                         CUtil.ID('logoutDiv').hidden=false;
                         CUtil.ID('joinDiv').hidden=true;
+                        CUtil.IDValue("join_pw_txt","");
+                        CUtil.IDValue("join_pwChk_txt","");
+                        gInfoMap.clear();
+                        // CSing.PublicInfo().then((pui)=>{
+                        //     if(pui._publicKey==null)    return;
+                        //     CStorage.Set(pui._publicKey,null);
+                        // });
+                        CStorage.Set(CSing.PrivateKey(),null);
+                        
                     }
                     
                     

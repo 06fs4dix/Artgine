@@ -98,15 +98,15 @@ export class CSingServer extends CServerRouter
             if(loginType!="modify")
             {
                 chk=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey,"or")], null, null);
-                if(chk.length==0)
+                if(chk.length!=0)
                     return "-1";
                 
                 chk=await sql.Select("user_list", [new CORMCondition("_nick", "==", nick,"or")], null, null);
-                if(chk.length==0)
+                if(chk.length!=0)
                     return "-2";
                 
                 chk=await sql.Select("user_list", [new CORMCondition("_email", "==", email,"or")], null, null);
-                if(chk.length==0)
+                if(chk.length!=0)
                     return "-3";
                 
                 var publicKey=CUniqueID.Get();
@@ -124,7 +124,7 @@ export class CSingServer extends CServerRouter
             {
                 
                 chk=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", newPrivateKey,"or")], null, null);
-                if(chk.length==0)
+                if(chk.length!=0)
                     return "-5";
                 
                 if(newPrivateKey.length==0)
@@ -134,10 +134,11 @@ export class CSingServer extends CServerRouter
                 option.mOrderBy="_offset";
                 option.mLimit=1;
                 
-                var userVec=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey)], 
+                var userVec=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey,"and"),new CORMCondition("_lock", "==", 0,"and")], 
                         ["_offset","_publicKey","_id","_loginType","_nick","_email"], option);
-                        
-                if(userVec.length!=0)//이미 존재
+                   
+                //기존 정보를 가져오는 작업
+                if(userVec.length==0)
                     return "-100";
                 
                 //닉변경시 다시 확인
@@ -158,7 +159,7 @@ export class CSingServer extends CServerRouter
                 
                 
                 
-                await sql.Update("user_list", [new CORMCondition("_offset", "==", userVec[0][0])], 
+                await sql.Update("user_list", [new CORMCondition("_offset", "==", userVec[0]._offset)], 
                         [new CORMField("_lock",1)]);
                 
                 
@@ -211,7 +212,7 @@ export class CSingServer extends CServerRouter
             option.mOrderBy="_offset";
             option.mLimit=1;
             let sql=await CPool.Product("CLocalDB")  as CRDBMS;
-            let jsonArr=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", _json.GetStr("key"))], 
+            let jsonArr=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", _json.GetStr("key"),"and"),new CORMCondition("_lock", "==", 0,"and")], 
                     ["_publicKey","_id","_nick","_email","_loginType"], option);
             
             
@@ -228,7 +229,7 @@ export class CSingServer extends CServerRouter
             option.mOrderBy="_offset";
             option.mLimit=1;
             let sql=await CPool.Product("CLocalDB")  as CRDBMS;
-            let jsonArr=await sql.Select("user_list", [new CORMCondition("_publicKey", "==", _json.GetStr("key"))], 
+            let jsonArr=await sql.Select("user_list", [new CORMCondition("_publicKey", "==", _json.GetStr("key"),"and"),new CORMCondition("_lock", "==", 0,"and")], 
                     ["_publicKey","_nick"], option);
 
             CPool.Recycle(sql);
