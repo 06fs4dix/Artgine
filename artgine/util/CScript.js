@@ -5,7 +5,7 @@ import { CTimer } from "../system/CTimer.js";
 import { CUtilWeb } from "./CUtilWeb.js";
 var gScriptMap = new Map();
 export class CScript extends CObject {
-    static async Build(_key, _source) {
+    static async Build(_key, _source, _github = false) {
         if (!gScriptMap.has(_key)) {
             gScriptMap.set(_key, null);
             try {
@@ -46,7 +46,7 @@ export class CScript extends CObject {
                     }
                 }
                 else {
-                    _source = await CUtilWeb.TSImport(_source, false);
+                    _source = await CUtilWeb.TSImport(_source, false, _github);
                     if (_source.indexOf(":") != -1)
                         _source = await CUtilWeb.TSToJS(_source);
                     _source = "//@sourceURL=" + _key + ".js\n" + _source;
