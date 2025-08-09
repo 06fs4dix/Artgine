@@ -1,18 +1,18 @@
-import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "../../../artgine/canvas/component/CAnimation.js";
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CForce } from "../../../artgine/canvas/component/CForce.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CBound } from "../../../artgine/geometry/CBound.js";
-import { CMath } from "../../../artgine/geometry/CMath.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CVec4 } from "../../../artgine/geometry/CVec4.js";
-import { CH5Canvas } from "../../../artgine/render/CH5Canvas.js";
-import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
-import { CCurve } from "../../../artgine/util/CCurve.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
+import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
+import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CH5Canvas } from "https://06fs4dix.github.io/Artgine/artgine/render/CH5Canvas.js";
+import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
+import { CCurve } from "https://06fs4dix.github.io/Artgine/artgine/util/CCurve.js";
 
 export default class CMonster extends CBehavior
 {
