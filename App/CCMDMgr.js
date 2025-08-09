@@ -1,5 +1,6 @@
 import { execSync, spawn, exec } from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as os from 'os';
 import { promisify } from 'util';
 const execAsync = promisify(exec);
@@ -36,7 +37,7 @@ export class CCMDMgr {
         if (_new) {
             let finalCmd;
             if (platform === 'win32') {
-                finalCmd = `start cmd /k "${_cmd}"`;
+                finalCmd = `start cmd /k "chcp 65001 && ${_cmd}"`;
             }
             else if (platform === 'darwin') {
                 finalCmd = `osascript -e 'tell app "Terminal" to do script "${_cmd}"'`;
@@ -67,10 +68,24 @@ export class CCMDMgr {
             return new Promise((resolve, reject) => {
                 let child;
                 if (platform === 'win32') {
-                    child = spawn('cmd', ['/c', _cmd], { stdio: 'inherit' });
+                    child = spawn('cmd', ['/c', 'chcp 65001 >nul && ' + _cmd], {
+                        stdio: 'inherit',
+                        env: {
+                            ...process.env,
+                            LANG: 'C.UTF-8',
+                            LC_ALL: 'C.UTF-8'
+                        }
+                    });
                 }
                 else {
-                    child = spawn('bash', ['-c', _cmd], { stdio: 'inherit' });
+                    child = spawn('bash', ['-c', _cmd], {
+                        stdio: 'inherit',
+                        env: {
+                            ...process.env,
+                            LANG: 'C.UTF-8',
+                            LC_ALL: 'C.UTF-8'
+                        }
+                    });
                 }
                 child.on('exit', (code) => {
                     console.log(`명령어 종료됨. 종료 코드: ${code}`);
@@ -86,16 +101,41 @@ export class CCMDMgr {
     static RunVSCode(folderPath = process.cwd()) {
         try {
             const isWin = os.platform() === 'win32';
-            const codeCommand = isWin ? 'code.cmd' : 'code';
-            const child = spawn(codeCommand, [folderPath], {
-                detached: true,
-                stdio: 'ignore',
-                shell: true
-            });
-            child.unref();
+            const absolutePath = path.resolve(folderPath);
+            if (isWin) {
+                const command = `code "${absolutePath}"`;
+                exec(command, {
+                    encoding: 'utf8',
+                    env: {
+                        ...process.env,
+                        LANG: 'C.UTF-8',
+                        LC_ALL: 'C.UTF-8',
+                        PYTHONIOENCODING: 'utf-8'
+                    },
+                    windowsHide: true
+                }, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error('VSCode 실행 실패:', error);
+                        console.log('경로:', absolutePath);
+                    }
+                });
+            }
+            else {
+                const child = spawn('code', [absolutePath], {
+                    detached: true,
+                    stdio: 'ignore',
+                    env: {
+                        ...process.env,
+                        LANG: 'C.UTF-8',
+                        LC_ALL: 'C.UTF-8'
+                    }
+                });
+                child.unref();
+            }
         }
         catch (e) {
             console.error('VSCode 실행 실패:', e);
+            console.log('경로:', folderPath);
         }
     }
     static IsCommandAvailable(command) {
@@ -109,12 +149,39 @@ export class CCMDMgr {
     }
     static VSCodeOpenCode(_filePath) {
         const platform = os.platform();
-        const codeCommand = platform === 'win32' ? 'code.cmd' : 'code';
-        exec(`${codeCommand} "${_filePath}"`, (error, stdout, stderr) => {
-            if (error) {
-                console.error('VS Code 실행 실패:', error);
-            }
-        });
+        const absolutePath = path.resolve(_filePath);
+        if (platform === 'win32') {
+            exec(`code "${absolutePath}"`, {
+                encoding: 'utf8',
+                env: {
+                    ...process.env,
+                    LANG: 'C.UTF-8',
+                    LC_ALL: 'C.UTF-8',
+                    PYTHONIOENCODING: 'utf-8'
+                },
+                windowsHide: true
+            }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('VS Code 실행 실패:', error);
+                    console.log('파일 경로:', absolutePath);
+                }
+            });
+        }
+        else {
+            exec(`code "${absolutePath}"`, {
+                encoding: 'utf8',
+                env: {
+                    ...process.env,
+                    LANG: 'C.UTF-8',
+                    LC_ALL: 'C.UTF-8'
+                }
+            }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('VS Code 실행 실패:', error);
+                    console.log('파일 경로:', absolutePath);
+                }
+            });
+        }
     }
     static CreateEmptyFolder(folderPath) {
         if (!fs.existsSync(folderPath)) {
