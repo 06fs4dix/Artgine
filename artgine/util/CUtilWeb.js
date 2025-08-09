@@ -51,7 +51,7 @@ export class CUtilWeb {
     static PageBack() {
         window.history.back();
     }
-    static async TSImport(_source, _monaco = true) {
+    static async TSImport(_source, _monaco = true, _github = false) {
         let importPathArr = [];
         importPathArr = ExtractImportPaths(_source, false);
         let fullPath = CPath.FullPath();
@@ -74,6 +74,8 @@ export class CUtilWeb {
                 path += ".js";
             if (count > 0) {
                 let adjustedFullPath = CString.PathSub(fullPath, count);
+                if (_github)
+                    adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
                 adjustedFullPath = adjustedFullPath + "/" + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
                 importPathArr[i] = adjustedFullPath;
@@ -84,6 +86,8 @@ export class CUtilWeb {
                 if (aChk != -1)
                     path = path.substring(aChk);
                 let adjustedFullPath = CPath.PHPC();
+                if (_github)
+                    adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
                 fullPath = adjustedFullPath;
                 adjustedFullPath = fullPath + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
@@ -99,7 +103,7 @@ export class CUtilWeb {
         }
         return _source;
     }
-    static MonacoEditer(_target, _value, _language = "plaintext", _theme = "vs-dark", _exeFun = null) {
+    static MonacoEditer(_target, _value, _language = "plaintext", _theme = "vs-dark", _exeFun = null, _github = false) {
         if (window["require"] == null) {
             _target.innerHTML = "MonacoEditer not import!";
             return;
@@ -109,69 +113,26 @@ export class CUtilWeb {
             require.config({ paths: { vs: CPath.PHPC() + '/artgine/external/legacy/monaco-editor/min/vs' } });
             gMonaco = false;
         }
-        let importPathArr = [];
         if (_language == "typescript") {
-            importPathArr = ExtractImportPaths(_value, false);
-            let fullPath = CPath.FullPath();
-            fullPath = CString.PathSub(fullPath);
-            let processedPaths = new Map();
-            for (let i = 0; i < importPathArr.length; ++i) {
-                let path = importPathArr[i];
-                if (processedPaths.has(path)) {
-                    continue;
-                }
-                let count = 0;
-                while (path.startsWith("../")) {
-                    count++;
-                    path = path.substring(3);
-                }
-                path = CString.ReplaceAll(path, "./", "");
-                path = CString.ReplaceAll(path, ".js", "");
-                if (count > 0) {
-                    let adjustedFullPath = CString.PathSub(fullPath, count);
-                    adjustedFullPath = adjustedFullPath + "/" + path;
-                    _value = _value.replace(importPathArr[i], adjustedFullPath);
-                    importPathArr[i] = adjustedFullPath;
-                    processedPaths.set(importPathArr[i], adjustedFullPath);
-                }
-                else {
-                    let aChk = path.indexOf("artgine");
-                    if (aChk != -1)
-                        path = path.substring(aChk);
-                    let adjustedFullPath = CPath.PHPC();
-                    fullPath = adjustedFullPath;
-                    adjustedFullPath = fullPath + path;
-                    _value = _value.replace(importPathArr[i], adjustedFullPath);
-                    importPathArr[i] = adjustedFullPath;
-                    processedPaths.set(importPathArr[i], adjustedFullPath);
-                }
-            }
+            require(['vs/editor/editor.main'], async function () {
+                _value = await CUtilWeb.TSImport(_value, true, _github);
+                window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
+                    allowJs: true,
+                    checkJs: true,
+                    target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
+                    module: window["monaco"].languages.typescript.ModuleKind.ESNext
+                });
+                let editor = window["monaco"].editor.create(_target, {
+                    value: _value,
+                    language: _language,
+                    automaticLayout: true,
+                    readOnly: false,
+                    theme: _theme
+                });
+                if (_exeFun != null)
+                    _exeFun(editor, _value);
+            });
         }
-        require(['vs/editor/editor.main'], async function () {
-            if (_language == "typescript") {
-                for (let i = 0; i < importPathArr.length; ++i) {
-                    let fName = importPathArr[i];
-                    fName += ".ts";
-                    let buf = await CFile.Load(fName);
-                    window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(CUtil.ArrayToString(buf), fName);
-                }
-            }
-            window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
-                allowJs: true,
-                checkJs: true,
-                target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
-                module: window["monaco"].languages.typescript.ModuleKind.ESNext
-            });
-            let editor = window["monaco"].editor.create(_target, {
-                value: _value,
-                language: _language,
-                automaticLayout: true,
-                readOnly: false,
-                theme: _theme
-            });
-            if (_exeFun != null)
-                _exeFun(editor, _value);
-        });
     }
     static async TSToJS(_source) {
         const patchImportPaths = (code) => {
