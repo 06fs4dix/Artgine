@@ -10,7 +10,7 @@ var gScriptMap=new Map<string,any>();
 export class CScript extends CObject
 {
     //key로 구분이 된다.
-    static async Build(_key : string,_source : string)
+    static async Build(_key : string,_source : string,_github=false)
     {
         // 기존 모듈이 있는지 확인
         if (!gScriptMap.has(_key)) {
@@ -85,7 +85,7 @@ export class CScript extends CObject
                 }
                 else
                 {
-                    _source=await CUtilWeb.TSImport(_source,false);
+                    _source=await CUtilWeb.TSImport(_source,false,_github);
                     if(_source.indexOf(":")!=-1)
                         _source=await CUtilWeb.TSToJS(_source);
 
