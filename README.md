@@ -58,6 +58,62 @@
 
   ---
 
+
+  After running the program, you'll see a configuration interface with several tabs for setting up and launching your Artgine projects.
+
+  ### Tab Descriptions
+
+  - **App**: Application launch settings
+  - **Preference**: Project configuration changes
+  - **Include**: Project include file settings
+  - **Manifest**: PWA configuration
+  - **ServiceWorker**: Cache settings
+  - **Plugin**: External library configuration for Artgine
+
+  ### App Tab Configuration Options
+
+  **Basic Settings:**
+  - **url**: Web server address to run
+    - Example: `http://localhost:8050/Artgine`
+  
+  - **projectPath**: Project to start
+    - Example: `proj/Tutorial/ShaderEditer`
+    - Use the "Folder" button to browse and select project directory
+  
+  - **width, height**: Starting dimensions
+    - Example: `1024 x 768`
+    - Note: Only maintained when running as .exe file
+  
+  **Program Mode:**
+  - **program**: Program role
+    - `developer`: Developer mode (prohibited for deployment)
+      - Server and client applied simultaneously
+    - `client`: Client mode
+    - `server`: Web server mode
+  
+  **Server Configuration:**
+  - **server**: Server operation
+    - `local`: File-based local execution
+    - `remote`: Use when connecting to external server
+    - `webserver`: Web server operation (allows external access)
+  
+  **Display Options:**
+  - **fullScreen**: Full screen mode
+  - **github**: Run using GitHub library
+    - Chrome local executable file (.bat) generated in project
+  
+  **Action Buttons:**
+  - **Run**: Launch application
+  - **VSCode**: Open in Visual Studio Code
+  
+  **Development Commands:**
+  - **npm install**: Install Node.js dependencies
+  - **node_modules Install**: Alternative node modules installation
+  - **npx tsc -w**: TypeScript compiler in watch mode
+  - **ts Build**: TypeScript build process
+
+  ---
+
   ### Project Examples
   The `proj/` folder contains various example projects demonstrating different features of the Artgine engine:
   
@@ -79,12 +135,6 @@
     - **Village** - Village simulation with LTree, MTree, Flower objects
     - **Shooting** - 2D shooting game mechanics with room server synchronization and pooling system
     - **SideScroll** - Side-scrolling platformer with physics processing and animation control
-
-  **Live Demo Links:**
-  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-
   ---
 
   ## Artgine Engine Core Classes
@@ -318,7 +368,60 @@
      - 실행: `npm start`
 
   ---
+  프로그램을 실행한 후, Artgine 프로젝트를 설정하고 실행하기 위한 여러 탭이 있는 구성 인터페이스가 표시됩니다.
 
+  ### 탭 설명
+
+  - **App**: 애플리케이션 실행 설정
+  - **Preference**: 프로젝트 구성 변경
+  - **Include**: 프로젝트 포함 파일 설정
+  - **Manifest**: PWA 구성
+  - **ServiceWorker**: 캐시 설정
+  - **Plugin**: Artgine용 외부 라이브러리 구성
+
+  ### App 탭 구성 옵션
+
+  **기본 설정:**
+  - **url**: 실행할 웹 서버 주소
+    - 예시: `http://localhost:8050/Artgine`
+  
+  - **projectPath**: 시작할 프로젝트
+    - 예시: `proj/Tutorial/ShaderEditer`
+    - "Folder" 버튼을 사용하여 프로젝트 디렉토리를 찾아보고 선택
+  
+  - **width, height**: 시작 크기
+    - 예시: `1024 x 768`
+    - 참고: .exe 파일로 실행할 때만 유지됨
+  
+  **프로그램 모드:**
+  - **program**: 프로그램 역할
+    - `developer`: 개발자 모드 (배포 금지)
+      - 서버와 클라이언트가 동시에 적용됨
+    - `client`: 클라이언트 모드
+    - `server`: 웹 서버 모드
+  
+  **서버 구성:**
+  - **server**: 서버 운영
+    - `local`: 파일 기반 로컬 실행
+    - `remote`: 외부 서버에 연결할 때 사용
+    - `webserver`: 웹 서버 운영 (외부 접근 허용)
+  
+  **표시 옵션:**
+  - **fullScreen**: 전체 화면 모드
+  - **github**: GitHub 라이브러리를 사용하여 실행
+    - 프로젝트에 Chrome 로컬 실행 파일(.bat) 생성
+  
+  **작업 버튼:**
+  - **Run**: 애플리케이션 실행
+  - **VSCode**: Visual Studio Code에서 열기
+  
+  **개발 명령:**
+  - **npm install**: Node.js 의존성 설치
+  - **node_modules Install**: 대안적인 node 모듈 설치
+  - **npx tsc -w**: 감시 모드의 TypeScript 컴파일러
+  - **ts Build**: TypeScript 빌드 프로세스
+
+  ---
   ### 프로젝트 예제
   `proj/` 폴더에는 Artgine 엔진의 다양한 기능을 보여주는 예제 프로젝트들이 포함되어 있습니다:
   
@@ -437,8 +540,6 @@
   ```
   
   > **참고**: 다른 CPaint 컴포넌트들(CPaint3D, CPaintText 등)은 GitHub의 [paint components 디렉토리](https://github.com/06fs4dix/Artgine/tree/main/artgine/canvas/component/paint)에서 확인하세요.
-
-  ---
 
   ---
 
