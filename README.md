@@ -319,6 +319,9 @@
 <details>
   <summary><b>한국어</b></summary>
   
+  <details>
+    <summary>📂 디렉토리 구조 & 실행법</summary>
+    
   ## 디렉토리 구조
   ```
   ├── README.md
@@ -423,8 +426,11 @@
   - **node_modules Install**: 대안적인 node 모듈 설치
   - **npx tsc -w**: 감시 모드의 TypeScript 컴파일러
   - **ts Build**: TypeScript 빌드 프로세스
-
-  ---
+  
+  </details>
+  <details>
+    <summary>프로젝트 예제</summary>
+    
   ### 프로젝트 예제
   `proj/` 폴더에는 Artgine 엔진의 다양한 기능을 보여주는 예제 프로젝트들이 포함되어 있습니다:
   
@@ -447,13 +453,10 @@
     - **Shooting** - 2D 슈팅 게임 메커니즘 (룸서버 동기화, 풀링 시스템)
     - **SideScroll** - 사이드 스크롤링 플랫폼 (물리처리, 애니메이션 컨트롤)
 
-  **실행 가능한 데모 링크:**
-  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-
-  ---
-
+  </details>
+  <details>
+    <summary>코드 설명</summary>
+    
   ## Artgine 엔진 핵심 클래스
 
   ### CAtelier
@@ -621,6 +624,7 @@
   // 캔버스 생성 및 카메라 설정
   let Main = gAtl.NewCanvas("Main");
   Main.SetCameraKey(gAtl.Brush().GetCam2D().Key());
+</details>
   
   // 주체 생성 및 2D 페인트 컴포넌트 추가
   let sub = Main.Push(new CSubject());
