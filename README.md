@@ -10,9 +10,10 @@
      - **Windows**: Run `Start.bat` (Windows batch file)
      - **Linux/macOS**: Run `Start.sh` (Unix shell script)
 
-  3. **Install Required Dependencies**
+  3. **Install Required Dependencies** (Follow the console instructions to complete the installation)
      - Install Node.js (version 14 or higher)
      - Install Node modules: `npm install`
+
 
   4. **Select and Run Project**
      - Navigate to the `proj/` folder
@@ -255,9 +256,10 @@
      - **Windows**: `Start.bat` 파일 실행 (Windows 배치 파일)
      - **Linux/macOS**: `Start.sh` 파일 실행 (Unix 셸 스크립트)
 
-  3. **필요한 파일 설치**
+  3. **필요한 파일 설치** (콘솔 안내에 맞게 실행하면 됩니다)
      - Node.js 설치 (버전 14 이상)
      - Node 모듈 설치: `npm install`
+
 
   4. **프로젝트 선택 및 실행**
      - `proj/` 폴더로 이동
