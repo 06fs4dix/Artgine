@@ -52,7 +52,7 @@
   Main.SetCameraKey(gAtl.Brush().GetCam2D().Key());
   
   // Get existing canvas
-  const canvas = gAtl.Canvas('Main.json');
+  const canvas = gAtl.Canvas('Main');
   ```
 
   ---
@@ -247,7 +247,7 @@
   Main.SetCameraKey(gAtl.Brush().GetCam2D().Key());
   
   // 기존 캔버스 가져오기
-  const canvas = gAtl.Canvas('Main.json');
+  const canvas = gAtl.Canvas('Main');
   ```
 
   ---
