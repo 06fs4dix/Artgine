@@ -58,8 +58,9 @@
   3. **Start Development Server**
      - Open a new terminal in VS Code
      - Run: `npm start`
-
-  ---
+  </details>
+  <details>
+    <summary>App</summary>
 
 ![Artgine App](https://06fs4dix.github.io/Artgine/help/Artgine.png)
 
@@ -112,9 +113,8 @@
   
   **Development Commands:**
   - **npm install**: Install Node.js dependencies
-  - **node_modules Install**: Alternative node modules installation
   - **npx tsc -w**: TypeScript compiler in watch mode
-  - **ts Build**: TypeScript build process
+  
 
   </details>
   <details>
@@ -377,8 +377,10 @@
   3. **개발 서버 시작**
      - VS Code에서 새 터미널 열기
      - 실행: `npm start`
-
-  ---
+  </details>
+  <details>
+    <summary>앱 설명</summary>
+    
   ![Artgine App](https://06fs4dix.github.io/Artgine/help/Artgine.png)
   
   프로그램을 실행한 후, Artgine 프로젝트를 설정하고 실행하기 위한 여러 탭이 있는 구성 인터페이스가 표시됩니다.
@@ -430,9 +432,8 @@
   
   **개발 명령:**
   - **npm install**: Node.js 의존성 설치
-  - **node_modules Install**: 대안적인 node 모듈 설치
   - **npx tsc -w**: 감시 모드의 TypeScript 컴파일러
-  - **ts Build**: TypeScript 빌드 프로세스
+
   
   </details>
   <details>
