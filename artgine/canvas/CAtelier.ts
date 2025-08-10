@@ -99,7 +99,7 @@ export class CAtelier
 							<tr><td class="text-center fw-bold">F2</td><td>Resource / BlackBoard / Language</td></tr>
 							<tr><td class="text-center fw-bold">F3</td><td>DevTool</td></tr>
 							<tr><td class="text-center fw-bold">F4</td><td>VSCode Project Open <small class="text-muted">(Only Electron)</small></td></tr>
-							<tr><td class="text-center fw-bold">F5</td><td>Refresh</td></tr>
+							<tr><td class="text-center fw-bold">F5</td><td>Refresh. Ctrl+F5(Chach Clear)</td></tr>
 							<tr><td class="text-center fw-bold">F6</td><td>Stop <small class="text-muted">(Only DevTool Mode)</small></td></tr>
 							<tr><td class="text-center fw-bold">F7</td><td>Windows Project Folder Open <small class="text-muted">(Only Electron)</small></td></tr>
 							<tr><td class="text-center fw-bold">F8</td><td>Browser Open <small class="text-muted">(Only Electron)</small></td></tr>
