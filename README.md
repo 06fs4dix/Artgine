@@ -162,10 +162,7 @@
   
   **Key Features:**
   - Camera management (2D/3D)
-  - Dynamic lighting system
-  - Shadow rendering
-  - Wind simulation effects
-  - Automatic updates via frame system
+
   
   **Basic Usage:**
   ```typescript
@@ -408,11 +405,7 @@
   
   **주요 기능:**
   - 카메라 관리 (2D/3D)
-  - 동적 조명 시스템
-  - 그림자 렌더링
-  - 바람 시뮬레이션 효과
-  - 프레임 시스템을 통한 자동 업데이트
-  
+
   **기본 사용법:**
   ```typescript
   // 아틀리에에서 브러시 접근
