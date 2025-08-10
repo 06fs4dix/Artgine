@@ -7,6 +7,9 @@
 <details>
   <summary><b>English</b></summary>
   
+  <details>
+    <summary>📂 Directory Structure & Execution</summary>
+    
   ## Directory Structure
   ```
   ├── README.md
@@ -113,8 +116,10 @@
   - **npx tsc -w**: TypeScript compiler in watch mode
   - **ts Build**: TypeScript build process
 
-  ---
-
+  </details>
+  <details>
+    <summary>Project Examples</summary>
+    
   ### Project Examples
   The `proj/` folder contains various example projects demonstrating different features of the Artgine engine:
   
@@ -136,7 +141,9 @@
     - **Village** - Village simulation with LTree, MTree, Flower objects
     - **Shooting** - 2D shooting game mechanics with room server synchronization and pooling system
     - **SideScroll** - Side-scrolling platformer with physics processing and animation control
-  ---
+   </details>
+  <details>
+    <summary>Code Explanation</summary>
 
   ## Artgine Engine Core Classes
 
@@ -313,7 +320,7 @@
   let sub = Main.Push(new CSubject());
   sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex(), new CVec2(100, 100)));
   ```
-
+</details>
 </details>
 
 <details>
