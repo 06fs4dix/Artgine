@@ -58,6 +58,7 @@
 
   ---
 
+![Artgine App](https://06fs4dix.github.io/Artgine/help/Artgine.png)
 
   After running the program, you'll see a configuration interface with several tabs for setting up and launching your Artgine projects.
 
@@ -368,6 +369,8 @@
      - 실행: `npm start`
 
   ---
+  ![Artgine App](https://06fs4dix.github.io/Artgine/help/Artgine.png)
+  
   프로그램을 실행한 후, Artgine 프로젝트를 설정하고 실행하기 위한 여러 탭이 있는 구성 인터페이스가 표시됩니다.
 
   ### 탭 설명
