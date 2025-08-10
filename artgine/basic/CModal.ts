@@ -397,7 +397,7 @@ export class CModal implements IAutoUpdate , IListener
     LimitPushChk()
     {
         if(this.mOW==0 && this.mCard.offsetWidth!=0)
-            this.mOW=this.mCard.offsetWidth;
+            this.mOW=this.mCard.offsetWidth+3;
         if(this.mOH==0 && this.mCard.offsetHeight!=0)
             this.mOH=this.mCard.offsetHeight;
         
