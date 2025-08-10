@@ -8,6 +8,28 @@
   ---
 
   ### Project Examples
+  The `proj/` folder contains various example projects demonstrating different features of the Artgine engine:
+  
+  - **Home** - Main application with server integration and database tools
+  - **Tutorial** - Learning examples covering various engine features:
+    - **Wind** - Wind simulation effects
+    - **3DSample** - 3D rendering examples
+    - **Particle** - Particle system demonstrations
+    - **Collusion** - Collision detection examples
+    - **Animation** - Animation system tutorials
+    - **Renderer** - Custom renderer implementations
+    - **Plugin** - Plugin system examples
+    - **Light** - Lighting and shadow tutorials
+    - **Voxel** - Voxel-based rendering
+    - **IKSample** - Inverse kinematics examples
+    - **ShaderEditer** - Shader editing tools
+  - **2D** - 2D game examples:
+    - **Maze** - Maze generation and pathfinding
+    - **Village** - Village simulation with LTree, MTree, Flower objects
+    - **Shooting** - 2D shooting game mechanics
+    - **SideScroll** - Side-scrolling platformer
+
+  **Live Demo Links:**
   - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
   - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
   - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
@@ -203,6 +225,28 @@
   ---
 
   ### 프로젝트 예제
+  `proj/` 폴더에는 Artgine 엔진의 다양한 기능을 보여주는 예제 프로젝트들이 포함되어 있습니다:
+  
+  - **Home** - 서버 통합 및 데이터베이스 도구가 포함된 메인 애플리케이션
+  - **Tutorial** - 다양한 엔진 기능을 다루는 학습 예제:
+    - **Wind** - 바람 시뮬레이션 효과
+    - **3DSample** - 3D 렌더링 예제
+    - **Particle** - 파티클 시스템 데모
+    - **Collusion** - 충돌 감지 예제
+    - **Animation** - 애니메이션 시스템 튜토리얼
+    - **Renderer** - 커스텀 렌더러 구현
+    - **Plugin** - 플러그인 시스템 예제
+    - **Light** - 조명 및 그림자 튜토리얼
+    - **Voxel** - 복셀 기반 렌더링
+    - **IKSample** - 역운동학 예제
+    - **ShaderEditer** - 셰이더 편집 도구
+  - **2D** - 2D 게임 예제:
+    - **Maze** - 미로 생성 및 경로찾기
+    - **Village** - LTree, MTree, Flower 오브젝트가 포함된 마을 시뮬레이션
+    - **Shooting** - 2D 슈팅 게임 메커니즘
+    - **SideScroll** - 사이드 스크롤링 플랫폼
+
+  **실행 가능한 데모 링크:**
   - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
   - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
   - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
