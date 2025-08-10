@@ -27,7 +27,7 @@
   ```
   
   ### start.bat/start.sh Execution Method
-
+  When running the `start.bat` file, a warning saying "Unknown Publisher" may appear.
   1. **Download Source**
      - Download the file from the repository (ex:Artgine-main.zip)
 
@@ -351,6 +351,7 @@
   ```
   
   ### start.bat/start.sh를 이용한 실행법
+  `start.bat` 파일 실행 시, "알 수 없는 게시자" 경고가 표시될 수 있습니다.
 
   1. **소스 다운로드**
      - 저장소에서 파일을 다운로드하세요(ex:Artgine-main.zip)
