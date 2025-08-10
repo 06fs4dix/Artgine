@@ -1,4 +1,4 @@
-const version = '2025-08-09 21:23:57';
+const version = '2025-08-10 22:12:06';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";
@@ -208,6 +208,7 @@ let ResetMaze = (_xCount, _yCount) => {
                 let cl = sub.PushComp(new CCollider(pt));
                 cl.SetLayer("block");
                 let navi = sub.PushComp(new CNavigation());
+                navi.mStatic = true;
                 navi.InitBound(pt);
                 if (IsBlockFun(x - 1, y) == 1) {
                     pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
@@ -216,6 +217,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
                     navi = sub.PushComp(new CNavigation());
+                    navi.mStatic = true;
                     navi.InitBound(pt);
                 }
                 else
@@ -227,6 +229,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
                     navi = sub.PushComp(new CNavigation());
+                    navi.mStatic = true;
                     navi.InitBound(pt);
                 }
                 else
@@ -238,6 +241,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
                     navi = sub.PushComp(new CNavigation());
+                    navi.mStatic = true;
                     navi.InitBound(pt);
                 }
                 else
@@ -249,6 +253,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
                     navi = sub.PushComp(new CNavigation());
+                    navi.mStatic = true;
                     navi.InitBound(pt);
                 }
                 else
@@ -275,6 +280,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     let cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
                     let navi = sub.PushComp(new CNavigation());
+                    navi.mStatic = true;
                     navi.InitBound(pt);
                 }
         }

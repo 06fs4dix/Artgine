@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-09 21:23:57';
+const version='2025-08-10 22:12:06';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -293,6 +293,7 @@ let ResetMaze=(_xCount,_yCount)=>
             let cl=sub.PushComp(new CCollider(pt)) as CCollider;
             cl.SetLayer("block");
             let navi=sub.PushComp(new CNavigation());
+            navi.mStatic=true;
             navi.InitBound(pt);
 
             if(IsBlockFun(x-1,y)==1)
@@ -303,6 +304,7 @@ let ResetMaze=(_xCount,_yCount)=>
                 cl=sub.PushComp(new CCollider(pt)) as CCollider;
                 cl.SetLayer("block");
                 navi=sub.PushComp(new CNavigation());
+                navi.mStatic=true;
                 navi.InitBound(pt);
             }
             else    sub.PushComp(RandBasicTile(-1,0));
@@ -314,6 +316,7 @@ let ResetMaze=(_xCount,_yCount)=>
                 cl=sub.PushComp(new CCollider(pt)) as CCollider;
                 cl.SetLayer("block");
                 navi=sub.PushComp(new CNavigation());
+                navi.mStatic=true;
                 navi.InitBound(pt);
             }
             else    sub.PushComp(RandBasicTile(1,0));
@@ -326,6 +329,7 @@ let ResetMaze=(_xCount,_yCount)=>
                 cl=sub.PushComp(new CCollider(pt)) as CCollider;
                 cl.SetLayer("block");
                 navi=sub.PushComp(new CNavigation());
+                navi.mStatic=true;
                 navi.InitBound(pt);
             }
             else    sub.PushComp(RandBasicTile(0,-1));
@@ -337,6 +341,7 @@ let ResetMaze=(_xCount,_yCount)=>
                 cl=sub.PushComp(new CCollider(pt)) as CCollider;
                 cl.SetLayer("block");
                 navi=sub.PushComp(new CNavigation());
+                navi.mStatic=true;
                 navi.InitBound(pt);
             }
             else    sub.PushComp(RandBasicTile(0,1));
@@ -377,6 +382,7 @@ let ResetMaze=(_xCount,_yCount)=>
                 let cl=sub.PushComp(new CCollider(pt)) as CCollider;
                 cl.SetLayer("block");
                 let navi=sub.PushComp(new CNavigation());
+                navi.mStatic=true;
                 navi.InitBound(pt);
             }
             
