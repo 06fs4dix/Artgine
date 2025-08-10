@@ -1,3 +1,9 @@
+ **Live Demo Links:**
+  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
+  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
+  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
+
+  ---
 <details>
   <summary><b>English</b></summary>
   
@@ -58,12 +64,7 @@
     - **Shooting** - 2D shooting game mechanics with room server synchronization and pooling system
     - **SideScroll** - Side-scrolling platformer with physics processing and animation control
 
-  **Live Demo Links:**
-  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-
-  ---
+ 
 
   ## Artgine Engine Core Classes
 
@@ -301,12 +302,6 @@
     - **Shooting** - 2D 슈팅 게임 메커니즘 (룸서버 동기화, 풀링 시스템)
     - **SideScroll** - 사이드 스크롤링 플랫폼 (물리처리, 애니메이션 컨트롤)
 
-  **실행 가능한 데모 링크:**
-  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-
-  ---
 
   ## Artgine 엔진 핵심 클래스
 
