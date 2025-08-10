@@ -1,9 +1,37 @@
 <details>
   <summary><b>English</b></summary>
   
-  ### How to Run
-  - **Windows**: Run `Start.bat`
-  - **Other systems (Linux, macOS, etc.)**: Run `Start.sh`
+  ### Start.bat/Start.sh를 이용한 실행법
+
+  1. **Download Source**
+     - Download the file from the repository (ex:Artgine-main.zip)
+
+  2. **Run System-Specific Startup File**
+     - **Windows**: Run `Start.bat` (Windows batch file)
+     - **Linux/macOS**: Run `Start.sh` (Unix shell script)
+
+  3. **Install Required Dependencies**
+     - Install Node.js (version 14 or higher)
+     - Install Node modules: `npm install`
+
+  4. **Select and Run Project**
+     - Navigate to the `proj/` folder
+     - Choose your desired project folder
+     - Run the project
+
+  ### VS Code를 이용한 실행법
+
+  1. **Open Source Folder in VS Code**
+     - Open VS Code
+     - Select the source folder (e.g., Artgine-main)
+
+  2. **Start TypeScript Compilation**
+     - Open terminal in VS Code: `Ctrl+Shift+` (Windows/Linux) or `Cmd+Shift+` (macOS)
+     - Run: `npx tsc -w` (watches for file changes and compiles automatically)
+
+  3. **Start Development Server**
+     - Open a new terminal in VS Code
+     - Run: `npm start`
 
   ---
 
@@ -24,10 +52,10 @@
     - **IKSample** - Inverse kinematics examples
     - **ShaderEditer** - Shader editing tools
   - **2D** - 2D game examples:
-    - **Maze** - Maze generation and pathfinding
+    - **Maze** - Maze generation and pathfinding with coroutine usage
     - **Village** - Village simulation with LTree, MTree, Flower objects
-    - **Shooting** - 2D shooting game mechanics
-    - **SideScroll** - Side-scrolling platformer
+    - **Shooting** - 2D shooting game mechanics with room server synchronization and pooling system
+    - **SideScroll** - Side-scrolling platformer with physics processing and animation control
 
   **Live Demo Links:**
   - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
@@ -218,9 +246,37 @@
 <details>
   <summary><b>한국어</b></summary>
   
-  ### 실행 방법
-  - **Windows**: `Start.bat` 파일을 실행해 주세요.
-  - **Linux, macOS 등**: `Start.sh` 파일을 실행해 주세요.
+  ### Start.bat/Start.sh를 이용한 실행법
+
+  1. **소스 다운로드**
+     - 저장소에서 파일을 다운로드하세요(ex:Artgine-main.zip)
+
+  2. **시스템에 맞는 시작 파일 실행**
+     - **Windows**: `Start.bat` 파일 실행 (Windows 배치 파일)
+     - **Linux/macOS**: `Start.sh` 파일 실행 (Unix 셸 스크립트)
+
+  3. **필요한 파일 설치**
+     - Node.js 설치 (버전 14 이상)
+     - Node 모듈 설치: `npm install`
+
+  4. **프로젝트 선택 및 실행**
+     - `proj/` 폴더로 이동
+     - 원하는 프로젝트 폴더 선택
+     - 프로젝트 실행
+
+  ### VS Code를 이용한 실행법
+
+  1. **VS Code에서 소스 폴더 열기**
+     - VS Code 실행
+     - 소스 폴더 선택 (예: Artgine-main)
+
+  2. **TypeScript 컴파일 시작**
+     - VS Code에서 터미널 열기: `Ctrl+Shift+` (Windows/Linux) 또는 `Cmd+Shift+` (macOS)
+     - 실행: `npx tsc -w` (파일 변경 감지 및 자동 컴파일)
+
+  3. **개발 서버 시작**
+     - VS Code에서 새 터미널 열기
+     - 실행: `npm start`
 
   ---
 
@@ -241,10 +297,10 @@
     - **IKSample** - 역운동학 예제
     - **ShaderEditer** - 셰이더 편집 도구
   - **2D** - 2D 게임 예제:
-    - **Maze** - 미로 생성 및 경로찾기
+    - **Maze** - 미로 생성 및 경로찾기 (코루틴 사용법 포함)
     - **Village** - LTree, MTree, Flower 오브젝트가 포함된 마을 시뮬레이션
-    - **Shooting** - 2D 슈팅 게임 메커니즘
-    - **SideScroll** - 사이드 스크롤링 플랫폼
+    - **Shooting** - 2D 슈팅 게임 메커니즘 (룸서버 동기화, 풀링 시스템)
+    - **SideScroll** - 사이드 스크롤링 플랫폼 (물리처리, 애니메이션 컨트롤)
 
   **실행 가능한 데모 링크:**
   - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
