@@ -396,6 +396,10 @@ export class CModal implements IAutoUpdate , IListener
     }
     LimitPushChk()
     {
+        if(this.mOW==0 && this.mCard.offsetWidth!=0)
+            this.mOW=this.mCard.offsetWidth;
+        if(this.mOH==0 && this.mCard.offsetHeight!=0)
+            this.mOH=this.mCard.offsetHeight;
         
         let w=window.innerWidth;
         let h=window.innerHeight;
@@ -403,16 +407,36 @@ export class CModal implements IAutoUpdate , IListener
         
         let right=this.mCard.offsetLeft+this.mOW;
         let bottom=this.mCard.offsetTop+this.mOH;
+        if(this.mOW>w)
+            this.mCard.style.width=w+"px";
+        else
+            this.mCard.style.width=this.mOW+"px";
+        if(this.mOH>h)
+            this.mCard.style.height=h+"px";
+        else
+            this.mCard.style.height=this.mOH+"px";
+        
+
         if(w<right)
             this.mCard.style.left=(w-this.mOW)+"px";
         else if(0>this.mCard.offsetLeft)
+        {
             this.mCard.style.left="0px";
+            
+        }
+            
+
         if(h<bottom)
             this.mCard.style.top=(h-this.mOH)+"px";
         else if(0>this.mCard.offsetTop)
+        {
             this.mCard.style.top="0px";
+ 
+        }
+            
         
-
+        
+        
             
         
     }
