@@ -51,11 +51,16 @@
      - Open VS Code
      - Select the source folder (e.g., Artgine-main)
 
-  2. **Start TypeScript Compilation**
+  2. **Install Node modules**
+     - Install Node.js (version 14 or higher)
+     - Open terminal in VS Code: `Ctrl+Shift+` (Windows/Linux) or `Cmd+Shift+` (macOS)
+     - Run: `npm install`
+       
+  4. **Start TypeScript Compilation**
      - Open terminal in VS Code: `Ctrl+Shift+` (Windows/Linux) or `Cmd+Shift+` (macOS)
      - Run: `npx tsc -w` (watches for file changes and compiles automatically)
 
-  3. **Start Development Server**
+  5. **Start Development Server**
      - Open a new terminal in VS Code
      - Run: `npm start`
   </details>
@@ -370,11 +375,17 @@
      - VS Code 실행
      - 소스 폴더 선택 (예: Artgine-main)
 
-  2. **TypeScript 컴파일 시작**
+
+  2. **Node 모듈 설치**
+     - VS Code에서 터미널 열기: `Ctrl+Shift+` (Windows/Linux) 또는 `Cmd+Shift+` (macOS)
+     - Node.js 설치 (버전 14 이상)
+     - 실행: `npm install`
+       
+  3. **TypeScript 컴파일 시작**
      - VS Code에서 터미널 열기: `Ctrl+Shift+` (Windows/Linux) 또는 `Cmd+Shift+` (macOS)
      - 실행: `npx tsc -w` (파일 변경 감지 및 자동 컴파일)
 
-  3. **개발 서버 시작**
+  4. **개발 서버 시작**
      - VS Code에서 새 터미널 열기
      - 실행: `npm start`
   </details>
