@@ -1,7 +1,7 @@
 <details>
   <summary><b>English</b></summary>
   
-  ### Start.bat/Start.sh를 이용한 실행법
+  ### Start.bat/Start.sh Execution Method
 
   1. **Download Source**
      - Download the file from the repository (ex:Artgine-main.zip)
@@ -20,7 +20,7 @@
      - Choose your desired project folder
      - Run the project
 
-  ### VS Code를 이용한 실행법
+  ### VS Code Development Setup
 
   1. **Open Source Folder in VS Code**
      - Open VS Code
