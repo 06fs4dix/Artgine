@@ -315,25 +315,31 @@ export class CModal {
             this.mOH = this.mCard.offsetHeight;
         let w = window.innerWidth;
         let h = window.innerHeight;
-        let right = this.mCard.offsetLeft + this.mOW;
-        let bottom = this.mCard.offsetTop + this.mOH;
-        if (this.mOW > w)
+        if (this.mOW > w) {
             this.mCard.style.width = w + "px";
-        else
-            this.mCard.style.width = this.mOW + "px";
-        if (this.mOH > h)
-            this.mCard.style.height = h + "px";
-        else
-            this.mCard.style.height = this.mOH + "px";
-        if (w < right)
-            this.mCard.style.left = (w - this.mOW) + "px";
-        else if (0 > this.mCard.offsetLeft) {
             this.mCard.style.left = "0px";
         }
-        if (h < bottom)
-            this.mCard.style.top = (h - this.mOH) + "px";
-        else if (0 > this.mCard.offsetTop) {
+        else {
+            this.mCard.style.width = this.mOW + "px";
+            let right = this.mCard.offsetLeft + this.mOW;
+            if (w < right)
+                this.mCard.style.left = (w - this.mOW) + "px";
+            else if (0 > this.mCard.offsetLeft) {
+                this.mCard.style.left = "0px";
+            }
+        }
+        if (this.mOH > h) {
+            this.mCard.style.height = h + "px";
             this.mCard.style.top = "0px";
+        }
+        else {
+            this.mCard.style.height = this.mOH + "px";
+            let bottom = this.mCard.offsetTop + this.mOH;
+            if (h < bottom)
+                this.mCard.style.top = (h - this.mOH) + "px";
+            else if (0 > this.mCard.offsetTop) {
+                this.mCard.style.top = "0px";
+            }
         }
     }
     Focus(_action) {

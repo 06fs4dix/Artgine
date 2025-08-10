@@ -405,34 +405,52 @@ export class CModal implements IAutoUpdate , IListener
         let h=window.innerHeight;
 
         
-        let right=this.mCard.offsetLeft+this.mOW;
-        let bottom=this.mCard.offsetTop+this.mOH;
+        
+        
         if(this.mOW>w)
+        {
             this.mCard.style.width=w+"px";
+            this.mCard.style.left="0px";
+        }
         else
+        {
             this.mCard.style.width=this.mOW+"px";
-        if(this.mOH>h)
-            this.mCard.style.height=h+"px";
-        else
-            this.mCard.style.height=this.mOH+"px";
+
+            let right=this.mCard.offsetLeft+this.mOW;
+            if(w<right)
+                this.mCard.style.left=(w-this.mOW)+"px";
+            else if(0>this.mCard.offsetLeft)
+            {
+                this.mCard.style.left="0px";
+            }
+        }
         
 
-        if(w<right)
-            this.mCard.style.left=(w-this.mOW)+"px";
-        else if(0>this.mCard.offsetLeft)
+        if(this.mOH>h)
         {
-            this.mCard.style.left="0px";
-            
+            this.mCard.style.height=h+"px";
+            this.mCard.style.top="0px";
         }
+            
+        else
+        {
+            this.mCard.style.height=this.mOH+"px";
+            let bottom=this.mCard.offsetTop+this.mOH;
+            if(h<bottom)
+                this.mCard.style.top=(h-this.mOH)+"px";
+            else if(0>this.mCard.offsetTop)
+            {
+                this.mCard.style.top="0px";
+    
+            }
+        }
+            
+        
+        
+        
             
 
-        if(h<bottom)
-            this.mCard.style.top=(h-this.mOH)+"px";
-        else if(0>this.mCard.offsetTop)
-        {
-            this.mCard.style.top="0px";
- 
-        }
+        
             
         
         

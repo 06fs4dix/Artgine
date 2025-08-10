@@ -55,7 +55,7 @@ else
 type ProgramType = 'developer' | 'client' | 'server';
 var gAppJSON =new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
 	{"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
-		"server":""}
+		"server":"","github":false}
 );
 
 const createWindow = () => {
@@ -477,29 +477,80 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	let IStr="";
 	let MStr="";
 	let EStr="";
-	let root=upFolder;
+
+	
+	if(_json.appJSON.github==true)
+	{
+		upFolder="https://06fs4dix.github.io/Artgine/";
+		
+		// GitHub 모드일 때 start.bat 파일 생성
+		const startBatContent = `@echo off
+title Chrome CORS Disabled
+color 0A
+
+echo ================================================
+echo Starting Chrome with CORS disabled
+echo ================================================
+echo.
+
+REM Check existing Chrome processes
+tasklist /FI "IMAGENAME eq chrome.exe" 2>NUL | find /I /N "chrome.exe">NUL
+if "%ERRORLEVEL%"=="0" (
+    echo Warning: Chrome is already running.
+    echo Please close all Chrome windows and try again.
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Find Chrome path
+set CHROME_PATH=
+if exist "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" (
+    set "CHROME_PATH=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+) else if exist "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" (
+    set "CHROME_PATH=C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+) else if exist "%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe" (
+    set "CHROME_PATH=%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"
+) else (
+    echo Error: Chrome not found.
+    echo Opening Chrome download page...
+    start https://www.google.com/chrome/
+    pause
+    exit /b 1
+)
+
+echo Starting Chrome...
+echo HTML file: ${projectName}.html
+"%CHROME_PATH%" --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir="%TEMP%\\chrome_dev" --allow-running-insecure-content --disable-extensions --no-sandbox --ignore-certificate-errors --disable-site-isolation-trials "file:///%~dp0${projectName}.html"
+
+echo Chrome closed.
+pause`;
+		
+		await CFile.Save(startBatContent, CPath.PHPC()+_json.projectPath+"/chrome_start.bat");
+	}
+	//let root=upFolder;
 	
 	if(_json.projetJSON.includes["pakozlib"])
 	{
-		IStr+="<script type='text/javascript' src='"+root+"artgine/external/legacy/pako-master/dist/pako.min.js'></script>\n";
+		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/pako-master/dist/pako.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["jszip"])
 	{
-		IStr+="<script type='text/javascript' src='"+root+"artgine/external/legacy/jszip.min.js'></script>\n";
+		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/jszip.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["screenfull"])
 	{
-		IStr+="<script type='text/javascript' src='"+root+"artgine/external/legacy/screenfull/screenfull.min.js'></script>\n";
+		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/screenfull/screenfull.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["popper"])
 	{
-		IStr+="<script src='"+root+"artgine/external/legacy/popper/poper.min.js'></script>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/popper/poper.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["bootstrap"])
 	{
-		IStr+="<link rel='stylesheet' href='"+root+"artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>\n";
-		IStr+="<script src='"+root+"artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>\n";
-		IStr+="<link rel='stylesheet' href='"+root+"artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>\n";
+		IStr+="<link rel='stylesheet' href='"+upFolder+"artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>\n";
+		IStr+="<link rel='stylesheet' href='"+upFolder+"artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>\n";
 		
 		IStr += `<script>function BootstrapSearchList(searchId, listId) {
 			const input = document.getElementById(searchId);
@@ -519,12 +570,12 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	
 	if(_json.projetJSON.includes["excel"])
 	{
-		IStr+="<script type='text/javascript' src='"+root+"artgine/external/legacy/excel/xlsx.mini.min.js'></script>\n";
+		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/excel/xlsx.mini.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["lzstring"])
 	{
-		IStr+="<script src='"+root+"artgine/external/legacy/lz-string-master/libs/base64-string.js'></script>\n";
-		IStr+="<script src='"+root+"artgine/external/legacy/lz-string-master/libs/lz-string.min.js'></script>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/lz-string-master/libs/base64-string.js'></script>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/lz-string-master/libs/lz-string.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["firebase"])
 	{
@@ -537,7 +588,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	}
 	if(_json.projetJSON.includes["nosleep"])
 	{
-		IStr+="<script type='text/javascript' src='"+root+"artgine/external/legacy/NoSleep.min.js'></script>\n";
+		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/NoSleep.min.js'></script>\n";
 		IStr+="<script>";
 		IStr+="var noSleep = new NoSleep();";
 		IStr+="var sChk= ()=>{setTimeout(()=>{noSleep.enable();	if(noSleep.isEnabled==false)	sChk();},1000*10);};sChk();";
@@ -545,33 +596,33 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	}
 	// if(_json.projetJSON.includes["colorpicker"])
 	// {
-	// 	IStr+="<link type='text/css' rel='stylesheet' href='"+root+"/lib/external/legacy/pickr/classic.min.css'>\n";
-	// 	IStr+="<link type='text/css' rel='stylesheet' href='"+root+"/lib/external/legacy/pickr/monolith.min.css'>\n";
-	// 	IStr+="<link type='text/css' rel='stylesheet' href='"+root+"/lib/external/legacy/pickr/nano.min.css'>\n";
+	// 	IStr+="<link type='text/css' rel='stylesheet' href='"+upFolder+"/lib/external/legacy/pickr/classic.min.css'>\n";
+	// 	IStr+="<link type='text/css' rel='stylesheet' href='"+upFolder+"/lib/external/legacy/pickr/monolith.min.css'>\n";
+	// 	IStr+="<link type='text/css' rel='stylesheet' href='"+upFolder+"/lib/external/legacy/pickr/nano.min.css'>\n";
 		
-	// 	IStr+="<script type='text/javascript' src='"+root+"/lib/external/legacy/pickr/pickr.min.js'></script>\n";
-	// 	IStr+="<script type='text/javascript' src='"+root+"/lib/external/legacy/pickr/pickr.es5.min.js'></script>\n";
+	// 	IStr+="<script type='text/javascript' src='"+upFolder+"/lib/external/legacy/pickr/pickr.min.js'></script>\n";
+	// 	IStr+="<script type='text/javascript' src='"+upFolder+"/lib/external/legacy/pickr/pickr.es5.min.js'></script>\n";
 	// }
 	if(_json.projetJSON.includes["soundfont"])
 	{
-		IStr+="<script src='"+root+"artgine/external/legacy/soundfont/soundfont-player.min.js'></script>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/soundfont/soundfont-player.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["tone"])
 	{
-		IStr+="<script src='"+root+"artgine/external/legacy/Tone.js'></script>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/Tone.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["jquery"])
 	{
-		IStr+="<script src='"+root+"artgine/external/legacy/Jquery/jquery-3.6.0.min.js'></script>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/Jquery/jquery-3.6.0.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["toastui"])
 	{
-		IStr+="<link rel='stylesheet' href='"+root+"artgine/external/legacy/toastui/toastui-editor.min.css'>\n";
-		IStr+="<script src='"+root+"artgine/external/legacy/toastui/toastui-editor-all.min.js'></script>\n";
+		IStr+="<link rel='stylesheet' href='"+upFolder+"artgine/external/legacy/toastui/toastui-editor.min.css'>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/toastui/toastui-editor-all.min.js'></script>\n";
 	}
 	if(_json.projetJSON.includes["MonacoEditor"])
 	{
-		IStr+="<script type='text/javascript' src='"+root+"artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
+		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
 	}
 
 	
@@ -622,7 +673,24 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	if(oTS!="")
 	{
 		pos=bTS.indexOf("//EntryPoint");
-		bTS=CString.InsertAt(bTS,pos+12,""+oTS.substring(oTS.indexOf("//EntryPoint")+12,oTS.length));
+		let epStr=oTS.substring(oTS.indexOf("//EntryPoint")+12,oTS.length);
+		//if(_json.appJSON.github==true)
+		
+		
+		epStr = epStr.replace(
+			/(["'])[^"']*?(artgine\/[^"']+)/g,
+			(match, quote, artginePath) => {
+				// upFolder 끝 / 제거, artginePath 앞 / 제거 후 결합
+				const cleanUpFolder = upFolder.replace(/\/+$/, '');
+				const cleanArtginePath = artginePath.replace(/^\/+/, '');
+				return `${quote}${cleanUpFolder}/${cleanArtginePath}`;
+			}
+		);
+
+		await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC()+_json.projectPath,upFolder);
+		
+
+		bTS=CString.InsertAt(bTS,pos+12,epStr);
 	}
 	else
 	{
@@ -646,6 +714,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		}
 	}
 	pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
+	pfStr += `gPF.mGitHub = ${_json.appJSON.github};\n`;
 	
 	//CConsol.Log("mIAuto L "+_json.projetJSON.preference.mIAuto);
 	if(_json.projetJSON.preference.mIAuto)
@@ -741,7 +810,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 				defaultId: 0,
 				cancelId: 1,
 				title: 'build error',
-				message: 'js file version late. tsc build run?',
+				message: 'js file version late. tsc build run? 8sec wait',
 			});
 
 			if (result === 0) // '예' 선택
@@ -749,6 +818,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 				if(CCMDMgr.IsTSC())
 					await CCMDMgr.RunCMD("npm init",false);
 				CCMDMgr.RunCMD("npx tsc -w",true);
+				await new Promise(resolve => setTimeout(resolve, 1000*8));
 				
 				return "error";
 			}
