@@ -1,20 +1,30 @@
- **Live Demo Links:**
-  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-
-  ---
 <details>
   <summary><b>English</b></summary>
   
-  ### Start.bat/Start.sh Execution Method
+  ## Directory Structure
+  ```
+  ├── README.md
+  ├── LICENSE.txt
+  ├── NOTICE.txt
+  ├── package.json
+  ├── start.bat
+  ├── start.sh
+  ├── tsconfig.json
+  ├── App/
+  ├── artgine/
+  ├── db/
+  ├── plugin/
+  └── proj/
+  ```
+  
+  ### start.bat/start.sh Execution Method
 
   1. **Download Source**
      - Download the file from the repository (ex:Artgine-main.zip)
 
   2. **Run System-Specific Startup File**
-     - **Windows**: Run `Start.bat` (Windows batch file)
-     - **Linux/macOS**: Run `Start.sh` (Unix shell script)
+     - **Windows**: Run `start.bat` (Windows batch file)
+     - **Linux/macOS**: Run `start.sh` (Unix shell script)
 
   3. **Install Required Dependencies** (Follow the console instructions to complete the installation)
      - Install Node.js (version 14 or higher)
@@ -64,7 +74,12 @@
     - **Shooting** - 2D shooting game mechanics with room server synchronization and pooling system
     - **SideScroll** - Side-scrolling platformer with physics processing and animation control
 
- 
+  **Live Demo Links:**
+  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
+  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
+  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
+
+  ---
 
   ## Artgine Engine Core Classes
 
@@ -153,6 +168,8 @@
   // Add component to subject
   sub.PushComp(paint2D);
   ```
+  
+  > **Note**: For other CPaint components (CPaint3D, CPaintText, etc.), check the [paint components directory](https://github.com/06fs4dix/Artgine/tree/main/artgine/canvas/component/paint) on GitHub.
 
   ---
 
@@ -245,14 +262,30 @@
 <details>
   <summary><b>한국어</b></summary>
   
-  ### Start.bat/Start.sh를 이용한 실행법
+  ## 디렉토리 구조
+  ```
+  ├── README.md
+  ├── LICENSE.txt
+  ├── NOTICE.txt
+  ├── package.json
+  ├── start.bat
+  ├── start.sh
+  ├── tsconfig.json
+  ├── App/
+  ├── artgine/
+  ├── db/
+  ├── plugin/
+  └── proj/
+  ```
+  
+  ### start.bat/start.sh를 이용한 실행법
 
   1. **소스 다운로드**
      - 저장소에서 파일을 다운로드하세요(ex:Artgine-main.zip)
 
   2. **시스템에 맞는 시작 파일 실행**
-     - **Windows**: `Start.bat` 파일 실행 (Windows 배치 파일)
-     - **Linux/macOS**: `Start.sh` 파일 실행 (Unix 셸 스크립트)
+     - **Windows**: `start.bat` 파일 실행 (Windows 배치 파일)
+     - **Linux/macOS**: `start.sh` 파일 실행 (Unix 셸 스크립트)
 
   3. **필요한 파일 설치** (콘솔 안내에 맞게 실행하면 됩니다)
      - Node.js 설치 (버전 14 이상)
@@ -302,6 +335,12 @@
     - **Shooting** - 2D 슈팅 게임 메커니즘 (룸서버 동기화, 풀링 시스템)
     - **SideScroll** - 사이드 스크롤링 플랫폼 (물리처리, 애니메이션 컨트롤)
 
+  **실행 가능한 데모 링크:**
+  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
+  - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
+  - **MazeGame**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
+
+  ---
 
   ## Artgine 엔진 핵심 클래스
 
@@ -390,6 +429,8 @@
   // 주체에 컴포넌트 추가
   sub.PushComp(paint2D);
   ```
+  
+  > **참고**: 다른 CPaint 컴포넌트들(CPaint3D, CPaintText 등)은 GitHub의 [paint components 디렉토리](https://github.com/06fs4dix/Artgine/tree/main/artgine/canvas/component/paint)에서 확인하세요.
 
   ---
 
