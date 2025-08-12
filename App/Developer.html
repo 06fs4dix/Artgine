@@ -64,7 +64,7 @@
 				<label class="form-label">projectPath</label>
 				<div class="input-group">
 					<input type="text" class="form-control" id="projectPath_txt" value="proj/Sample">
-					<button class="btn btn-outline-secondary" type="button" id="selectProjectPath_btn">폴더 선택</button>
+					<button class="btn btn-outline-secondary" type="button" id="selectProjectPath_btn">Folder</button>
 				</div>
 			</div>
 			<!-- <div class="mb-2">
@@ -101,9 +101,20 @@
 				</select>
 			</div>
 
-			<div class="form-check mb-3">
-				<input class="form-check-input" type="checkbox" id="fullScreen_chk">
-				<label class="form-check-label" for="fullScreen_chk">fullScreen</label>
+			<div class="row mb-2">
+				<div class="col d-flex align-items-center">
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="fullScreen_chk">
+						<label class="form-check-label" for="fullScreen_chk">fullScreen</label>
+					</div>
+				</div>
+				<div class="col d-flex align-items-center">
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="github_chk">
+						<label class="form-check-label" for="github_chk" data-bs-toggle="tooltip" 
+								title="github에서 가져와서 사용한다. chrome_start.bat파일이 생기고 로컬 실행가능.현재 proj파일만 패스 변경됌! ">github</label>
+					</div>
+				</div>
 			</div>
 			<div class="d-flex gap-2">
 				<button class="btn btn-primary" id="Run_btn">Run</button>
@@ -157,7 +168,7 @@
 						<label class="form-check-label" for="IAuto" data-bs-toggle="tooltip" 
 							title="Auto가 없으면 상태갱신을 수동으로 해야한다">IAuto(CAtelier Include</label>
 					</div>
-					<div class="form-check mb-3">
+					<div class="form-check mb-3" hidden>
 						<input class="form-check-input" type="checkbox" id="wasm">
 						<label class="form-check-label" for="wasm">wasm</label>
 					</div>

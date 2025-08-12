@@ -32,36 +32,71 @@ export class CCMDMgr {
         const files = fs.readdirSync(_pname);
         return files.length;
     }
+    static async KillPID(pid) {
+        try {
+            if (os.platform() === 'win32') {
+                execSync(`taskkill /PID ${pid} /T /F`, { stdio: 'ignore' });
+            }
+            else {
+                try {
+                    process.kill(-pid, 'SIGTERM');
+                }
+                catch {
+                    process.kill(pid, 'SIGTERM');
+                }
+            }
+            return true;
+        }
+        catch (e) {
+            console.warn(`KillPID 실패(pid=${pid}):`, e);
+            return false;
+        }
+    }
     static async RunCMD(_cmd, _new) {
         const platform = os.platform();
         if (_new) {
-            let finalCmd;
-            if (platform === 'win32') {
-                finalCmd = `start cmd /k "chcp 65001 && ${_cmd}"`;
-            }
-            else if (platform === 'darwin') {
-                finalCmd = `osascript -e 'tell app "Terminal" to do script "${_cmd}"'`;
-            }
-            else {
-                if (this.IsCommandAvailable('gnome-terminal')) {
-                    finalCmd = `gnome-terminal -- bash -c "${_cmd}; exec bash"`;
+            try {
+                if (platform === 'win32') {
+                    const child = spawn('cmd.exe', ['/k', `chcp 65001 >nul && ${_cmd}`], {
+                        detached: true,
+                        stdio: 'ignore',
+                        windowsHide: false,
+                    });
+                    child.unref();
+                    return child.pid ?? null;
                 }
-                else if (this.IsCommandAvailable('konsole')) {
-                    finalCmd = `konsole -e bash -c "${_cmd}; exec bash"`;
-                }
-                else if (this.IsCommandAvailable('xterm')) {
-                    finalCmd = `xterm -e bash -c "${_cmd}; exec bash"`;
+                else if (platform === 'darwin') {
+                    const child = spawn('osascript', [
+                        '-e',
+                        `tell app "Terminal" to do script "${_cmd.replace(/"/g, '\\"')}"`
+                    ], {
+                        detached: true,
+                        stdio: 'ignore',
+                    });
+                    child.unref();
+                    return child.pid ?? null;
                 }
                 else {
-                    console.warn("터미널 에뮬레이터를 찾을 수 없습니다. 현재 터미널에서 실행합니다.");
-                    finalCmd = _cmd;
+                    const tryTerms = [
+                        { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${_cmd}; exec bash`] },
+                        { bin: 'konsole', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
+                        { bin: 'xterm', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
+                    ];
+                    for (const t of tryTerms) {
+                        if (this.IsCommandAvailable(t.bin)) {
+                            const child = spawn(t.bin, t.args, { detached: true, stdio: 'ignore' });
+                            child.unref();
+                            return child.pid ?? null;
+                        }
+                    }
+                    const child = spawn('bash', ['-c', _cmd], { detached: true, stdio: 'ignore' });
+                    child.unref();
+                    return child.pid ?? null;
                 }
             }
-            try {
-                await execAsync(finalCmd);
-            }
             catch (err) {
-                console.error("RunCMD (새창) 에러:", err);
+                console.error('RunCMD (새창) 에러:', err);
+                return null;
             }
         }
         else {
@@ -89,7 +124,7 @@ export class CCMDMgr {
                 }
                 child.on('exit', (code) => {
                     console.log(`명령어 종료됨. 종료 코드: ${code}`);
-                    resolve();
+                    resolve(null);
                 });
                 child.on('error', (err) => {
                     console.error("RunCMD 에러:", err);
@@ -186,6 +221,75 @@ export class CCMDMgr {
     static CreateEmptyFolder(folderPath) {
         if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath, { recursive: true });
+        }
+    }
+    static async ReplaceArtginePathsInFolder(workFolder, upFolder) {
+        try {
+            if (!fs.existsSync(workFolder)) {
+                console.error(`폴더가 존재하지 않습니다: ${workFolder}`);
+                return;
+            }
+            const tsFiles = this.FindTSFiles(workFolder);
+            if (tsFiles.length === 0) {
+                console.log('처리할 TypeScript 파일이 없습니다.');
+                return;
+            }
+            let processedCount = 0;
+            let modifiedCount = 0;
+            for (const filePath of tsFiles) {
+                try {
+                    const modified = await this.ReplaceArtginePathsInFile(filePath, upFolder);
+                    processedCount++;
+                    if (modified) {
+                        modifiedCount++;
+                    }
+                }
+                catch (error) {
+                    console.error(`❌ 파일 처리 실패 ${filePath}:`, error);
+                }
+            }
+        }
+        catch (error) {
+            console.error('ReplaceArtginePathsInFolder 실행 중 오류:', error);
+        }
+    }
+    static FindTSFiles(folderPath) {
+        const tsFiles = [];
+        const searchRecursive = (currentPath) => {
+            const items = fs.readdirSync(currentPath);
+            for (const item of items) {
+                const fullPath = path.join(currentPath, item);
+                const stat = fs.statSync(fullPath);
+                if (stat.isDirectory()) {
+                    if (!['node_modules', '.git', 'dist', 'build'].includes(item)) {
+                        searchRecursive(fullPath);
+                    }
+                }
+                else if (stat.isFile() && item.endsWith('.ts')) {
+                    tsFiles.push(fullPath);
+                }
+            }
+        };
+        searchRecursive(folderPath);
+        return tsFiles;
+    }
+    static async ReplaceArtginePathsInFile(filePath, upFolder) {
+        try {
+            const originalContent = fs.readFileSync(filePath, 'utf8');
+            const modifiedContent = originalContent.replace(/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g, (match, quote, path) => {
+                const cleanUpFolder = upFolder.replace(/\/+$/, '');
+                const cleanPath = path.replace(/^\/+/, '');
+                return `${quote}${cleanUpFolder}/${cleanPath}`;
+            });
+            if (originalContent !== modifiedContent) {
+                fs.writeFileSync(filePath, modifiedContent, 'utf8');
+                return true;
+            }
+            return false;
+        }
+        catch (error) {
+            console.error(`파일 처리 중 오류 ${filePath}:`, error);
+            return false;
         }
     }
 }

@@ -1,12 +1,12 @@
 //Version
-const version='2025-08-12 21:21:38';
-import "../../../artgine/artgine.js"
+const version='2025-08-12 23:09:27';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
-import {CClass} from "../../../artgine/basic/CClass.js";
+import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "../../../artgine/basic/CPreferences.js";
+import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -20,15 +20,15 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
-gPF.mGitHub = false;
+gPF.mGitHub = true;
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPlugin.js";
-CPlugin.PushPath('ShadowBake','../../../plugin/ShadowBake/');
-import "../../../plugin/ShadowBake/ShadowBake.js"
-CPlugin.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
-import "../../../plugin/ShadowPlane/ShadowPlane.js"
+import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+CPlugin.PushPath('ShadowBake','https://06fs4dix.github.io/Artgine/plugin/ShadowBake/');
+import "https://06fs4dix.github.io/Artgine/plugin/ShadowBake/ShadowBake.js"
+CPlugin.PushPath('ShadowPlane','https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/');
+import "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
@@ -37,25 +37,25 @@ var Main = gAtl.Canvas('Main.json');
 
 //EntryPoint
 
-import {CObject} from "../../../artgine/basic/CObject.js"
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CCamCon3DThirdPerson } from "../../../artgine/util/CCamCon.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CRPAuto, CRPMgr } from "../../../artgine/canvas/CRPMgr.js";
-import { CTexture, CTextureInfo } from "../../../artgine/render/CTexture.js";
-import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
-import { CShaderAttr } from "../../../artgine/render/CShaderAttr.js";
-import { CVec1 } from "../../../artgine/geometry/CVec1.js";
-import { CLight } from "../../../artgine/canvas/component/CLight.js";
-import { CShadowPlane } from "../../../plugin/ShadowPlane/ShadowPlane.js";
-import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
-import { SDF } from "../../../artgine/z_file/SDF.js";
-import { CSurface } from "../../../artgine/canvas/subject/CSurface.js";
-import { CShadowBaker } from "../../../plugin/ShadowBake/ShadowBake.js";
-import { CVec4 } from "../../../artgine/geometry/CVec4.js";
-import { CAnimation, CClip, CClipMesh } from "../../../artgine/canvas/component/CAnimation.js";
-import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
+import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+import { CCamCon3DThirdPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
+import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
+import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
+import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
+import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
+import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
+import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
+import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
+import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
+import { CShadowBaker } from "https://06fs4dix.github.io/Artgine/plugin/ShadowBake/ShadowBake.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CAnimation, CClip, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 
 
 
@@ -462,6 +462,23 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
     
 
 }));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
