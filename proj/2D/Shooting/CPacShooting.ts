@@ -1,6 +1,6 @@
-import { CStream } from "../../../artgine/basic/CStream.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 
 export class CPacShooting {
     static eHeader = {
@@ -77,7 +77,7 @@ var json={
 		"dir": "CVec3"
 	}
 };
-import { CVec4 } from "../../../artgine/geometry/CVec4.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 function Test(_test : CVec4): any 
 {
        

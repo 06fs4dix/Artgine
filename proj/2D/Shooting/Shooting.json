@@ -27,7 +27,7 @@
     "jquery": false,
     "summernote": false,
     "jsoneditor": false,
-    "MonacoEditor": true,
+    "MonacoEditor": false,
     "tone": false,
     "soundfont": false,
     "toastui": false

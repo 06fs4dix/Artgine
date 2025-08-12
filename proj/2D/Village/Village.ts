@@ -1,13 +1,13 @@
 //Version
-const version='2025-08-12 16:32:47';
-import "../../../artgine/artgine.js"
+const version='2025-08-12 22:19:34';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
-import {CClass} from "../../../artgine/basic/CClass.js";
+import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CUser } from "./CUser.js";
 CClass.Push(CUser);
 //Atelier
-import {CPreferences} from "../../../artgine/basic/CPreferences.js";
+import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,13 +21,13 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
-gPF.mGitHub = false;
+gPF.mGitHub = true;
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPlugin.js";
-CPlugin.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
-import "../../../plugin/ShadowPlane/ShadowPlane.js"
+import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+CPlugin.PushPath('ShadowPlane','https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/');
+import "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json','Real.json']);
@@ -38,22 +38,22 @@ var Real = gAtl.Canvas('Real.json');
 //EntryPoint
 let comcon=gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
 gAtl.Brush().GetCam2D().Set2DZoom(1.5);
-import {CObject} from "../../../artgine/basic/CObject.js"
+import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
 
 // === vinfo==3 위치에 랜덤 조형물 배치 (Village) ===
-import { CCIndex } from "../../../artgine/canvas/CCIndex.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
-import { CPaint } from "../../../artgine/canvas/component/paint/CPaint.js";
-import { CBlackboardModal } from "../../../artgine/util/CModalUtil.js";
-import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
-import { CVec4 } from "../../../artgine/geometry/CVec4.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CTexture } from "../../../artgine/render/CTexture.js";
-import { CCamCon2DFollow } from "../../../artgine/util/CCamCon.js";
-import { CSysAuth } from "../../../artgine/system/CSysAuth.js";
-import { CAudioTag } from "../../../artgine/system/audio/CAudio.js";
+import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCIndex.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
+import { CBlackboardModal } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
+import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
+import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
+import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
@@ -135,6 +135,9 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 });
+
+
+
 
 
 

@@ -1,9 +1,9 @@
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CComponent } from "../../../artgine/canvas/component/CComponent.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
+import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CComponent.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 export class CProComp extends CBehavior {
     mHP = 100;
@@ -21,8 +21,9 @@ export class CProComp extends CBehavior {
         return super.IsShould(_member, _type);
     }
     SetHP(_val) {
-        this.mHP += _val;
+        this.mHP = _val;
     }
+    GetHP() { return this.mHP; }
     CameraOut(_pArr) {
         for (var each0 of _pArr) {
             if (each0.mLen > 100) {
