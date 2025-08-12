@@ -1,4 +1,4 @@
-const version = '2025-08-09 02:24:27';
+const version = '2025-08-12 21:21:38';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -14,6 +14,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 import { CPlugin } from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('ShadowBake', '../../../plugin/ShadowBake/');
@@ -314,6 +315,11 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "ShadowBake", async () =>
     lig.mShadowDistance = shadowDistance;
     lig.mDigit = digit;
     L.PushComp(lig);
+    let back = Main.Push(new CSubject());
+    let pt = back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+    pt.SetTexture(["Res/teapot/1zflt0j.jpg", "Res/teapot/1zflt0j_NRM.jpg", "Res/teapot/1zflt0j_lig.jpg"]);
+    pt.Shadow();
+    back.SetSca(new CVec3(10, 0.01, 10));
     let teapot = Main.Push(new CSubject());
     let pt2 = teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     pt2.Shadow();

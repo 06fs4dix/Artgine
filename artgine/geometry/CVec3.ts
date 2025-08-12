@@ -54,6 +54,13 @@ export class CVec3 extends CFloat32
         "Right":3,
         "Front":4,
         "Back":5,
+
+		// "LastUp":10,
+        // "LastDown":11,
+        // "LastLeft":12,
+        // "LastRight":13,
+        // "LastFront":14,
+        // "LastBack":15,
 	}
 	// static Right2D() : CVec3
 	// {

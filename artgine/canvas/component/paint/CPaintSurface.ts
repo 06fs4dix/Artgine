@@ -18,7 +18,7 @@ export class CPaintSurface extends CPaint
         if(_rp==null)	return;
         else
         {
-            this.SetRenderPass(_rp);
+            this.PushRenderPass(_rp);
 
         }
         this.mBoundFMatR=0xffffffff;

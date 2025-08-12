@@ -63,37 +63,6 @@ export class CVertexFormat extends CObject
 		//this.instance=null;
 		this.location=-1;
 	}
-	// SysDataType(_device : CDevice)
-	// {
-	// 	if (this.dataType != Df.DataType.Float)
-	// 		return _device.GL1().UNSIGNED_BYTE;
-	// 	return _device.GL1().FLOAT;
-	// }
-
-	// DataTypeAddCount()
-	// {
-	// 	if (this.dataType == Df.DataType.Float)
-	// 	{
-	// 		switch (this.eachCount)
-	// 		{
-	// 		case 16:
-	// 			return "mat4";
-	// 		case 4:
-	// 			return "vec4";
-	// 		case 3:
-	// 			return "vec3";
-	// 		case 2:
-	// 			return "vec2";
-	// 		case 1:
-	// 			return "float";
-	// 		}
-	// 	}
-	
-	// 	CMsg.E("error!");
-	// 	return "Null";
-	// }
-	
-	
 }
 
 

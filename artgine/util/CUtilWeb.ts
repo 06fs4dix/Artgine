@@ -205,32 +205,33 @@ export class CUtilWeb
 			(require as any).config({ paths: { vs: CPath.PHPC()+'/artgine/external/legacy/monaco-editor/min/vs' } });
 			gMonaco=false;
 		}
-		if(_language=="typescript")
-		{
-			(require as any)(['vs/editor/editor.main'], async function () {
-				_value=await CUtilWeb.TSImport(_value,true,_github);
-				_target.innerHTML="";
-				// ✅ JS 파일에 대한 설정
-				window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
-					allowJs: true,
-					checkJs: true,
-					//allowNonTsExtensions: true,
-					target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
-					module: window["monaco"].languages.typescript.ModuleKind.ESNext
-				});
-				let editor=window["monaco"].editor.create(_target, {
-					value: _value,
-					language: _language,
-					automaticLayout: true,
-					readOnly: false,
-					theme: _theme
-				});
-
-				if(_exeFun!=null)
-					_exeFun(editor,_value);
-			});
 		
-		}
+		(require as any)(['vs/editor/editor.main'], async function () {
+			if(_language=="typescript")
+				_value=await CUtilWeb.TSImport(_value,true,_github);
+			
+			_target.innerHTML="";
+			// ✅ JS 파일에 대한 설정
+			window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
+				allowJs: true,
+				checkJs: true,
+				//allowNonTsExtensions: true,
+				target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
+				module: window["monaco"].languages.typescript.ModuleKind.ESNext
+			});
+			let editor=window["monaco"].editor.create(_target, {
+				value: _value,
+				language: _language,
+				automaticLayout: true,
+				readOnly: false,
+				theme: _theme
+			});
+
+			if(_exeFun!=null)
+				_exeFun(editor,_value);
+		});
+		
+		
 
 
 	}

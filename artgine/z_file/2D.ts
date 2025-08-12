@@ -61,7 +61,7 @@ var depthMap : number = 0.0;
 var screenResolution : CVec2=new CVec2(1.0, 1.0);
 var sam2DCount : number=Null();
 
-Build("Pre2Plane",[],
+Build("2DPlane",[],
 	vs_main,[
 		worldMat,viewMat,projectMat,texCodi,reverse,
 		alphaCut
@@ -69,15 +69,8 @@ Build("Pre2Plane",[],
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
-Build("Pre2PlaneThin",["Thin"],
-	vs_main_thin,[
-		viewMat,projectMat,texCodi,reverse,
-		alphaCut
-	],[
-		out_position,to_uv,to_worldPos
-	],ps_main,[out_color]
-);
-Build("Pre2Tail",["tail"],
+
+Build("2DTail",["tail"],
 	vs_main_tail,[
 		worldMat,viewMat,projectMat,texCodi,reverse,
 		alphaCut
@@ -85,7 +78,7 @@ Build("Pre2Tail",["tail"],
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
-Build("Pre2Trail",["trail"],
+Build("2DTrail",["trail"],
 	vs_main_trail,[
 		worldMat,viewMat,projectMat,texCodi,reverse,trailPos,lastHide,
 		alphaCut
@@ -93,21 +86,21 @@ Build("Pre2Trail",["trail"],
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
-Build("Pre2Simple",["simple"],
+Build("2DSimple",["simple"],
 	vs_main_simple,[
 		worldMat,viewMat,projectMat,alphaCut
 	],[
 		out_position,to_uv
 	],ps_main_simple,[out_color]
 );
-Build("Pre2Mask",["mask"],
+Build("2DMask",["mask"],
 	vs_main,[
 		worldMat,viewMat,projectMat,texCodi,reverse,alphaCut,mask
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main_mask,[out_color]
 );
-Build("Pre2Blit",["blit"],vs_main_blit,[
+Build("2DBlit",["blit"],vs_main_blit,[
 
 	],[
 		out_position,to_uv
@@ -267,18 +260,6 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	BranchEnd();
 
 	to_worldPos=P;
-	P=V4MulMatCoordi(P,viewMat);
-	out_position=V4MulMatCoordi(P, projectMat);
-}
-
-function vs_main_thin(f3_ver : Vertex3,f2_uv : UV2)
-{
-	to_uv = GetTexCodiedUV(f2_uv, texCodi, reverse);		
-
-	var P : CVec4 = new CVec4(f3_ver, 1.0);
-	P = V4MulMatCoordi(P, worldMat);
-	to_worldPos=P;
-
 	P=V4MulMatCoordi(P,viewMat);
 	out_position=V4MulMatCoordi(P, projectMat);
 }

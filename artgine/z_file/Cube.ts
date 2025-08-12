@@ -66,19 +66,19 @@ var auroraStep : number = 10.0;
 
 var camPos : CVec3=Null();
 
-Build("PreCubeMap", [], 
+Build("CubeObject", [], 
     vs_main, [worldMat, viewMat, projectMat], 
     [out_position,to_uvw], 
     ps_main, [out_color]
 );
 
-Build("PreSkybox", ["sky"], 
+Build("CubeSkybox", ["sky"], 
     vs_main_camBased, [worldMat, viewMat, projectMat], 
     [out_position,to_uvw], 
     ps_main, [out_color]
 );
 
-Build("PreSkyGradient", ["gradient"], vs_main_camBased, [
+Build("CubeSkyGradient", ["gradient"], vs_main_camBased, [
     worldMat, viewMat, projectMat,
 
     camPos,
@@ -146,6 +146,7 @@ function ps_main() {
 	//out_color.rgb = ApplyFog(mixCol, fogColor, lowerFog, upperFog, uvw);
 
     out_color.rgb=aCol.xyz;
+    //out_color.rgb=new CVec3(1.0,1.0,1.0);
     out_color.a = 1.0;
 }
 

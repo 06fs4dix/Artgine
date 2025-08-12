@@ -1,13 +1,13 @@
-const version = '2025-08-10 22:12:06';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
-import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+const version = '2025-08-12 10:42:54';
+import "../../../artgine/artgine.js";
+import { CClass } from "../../../artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";
 CClass.Push(CMonster);
 import CStage from "./CStage.js";
 CClass.Push(CStage);
 import CUser from "./CUser.js";
 CClass.Push(CUser);
-import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,37 +21,37 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
-gPF.mGitHub = true;
-import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+gPF.mGitHub = false;
+import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
 var Main = gAtl.Canvas('Main.json');
-import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CNavigation.js";
-import { CBGAttachButton, CBGFadeEffect } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CNaviMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CNavigationMgr.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CAlpha, CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
-import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
-import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
-import { CRay } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CRay.js";
-import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
-import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
-import { CPWA } from "https://06fs4dix.github.io/Artgine/artgine/system/CPWA.js";
-import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
-import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
-import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
-import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
-import { CWindow } from "https://06fs4dix.github.io/Artgine/artgine/system/CWindow.js";
+import { CNavigation } from "../../../artgine/canvas/component/CNavigation.js";
+import { CBGAttachButton, CBGFadeEffect } from "../../../artgine/util/CModalUtil.js";
+import { CNaviMgr } from "../../../artgine/canvas/CNavigationMgr.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
+import { CMath } from "../../../artgine/geometry/CMath.js";
+import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CAlpha, CColor } from "../../../artgine/canvas/component/CColor.js";
+import { SDF } from "../../../artgine/z_file/SDF.js";
+import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
+import { CRay } from "../../../artgine/geometry/CRay.js";
+import { CConsol } from "../../../artgine/basic/CConsol.js";
+import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
+import { CTexture } from "../../../artgine/render/CTexture.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CCamCon2DFollow } from "../../../artgine/util/CCamCon.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CAlert } from "../../../artgine/basic/CAlert.js";
+import { CPWA } from "../../../artgine/system/CPWA.js";
+import { CUtil } from "../../../artgine/basic/CUtil.js";
+import { CInput } from "../../../artgine/system/CInput.js";
+import { CSysAuth } from "../../../artgine/system/CSysAuth.js";
+import { CAudioTag } from "../../../artgine/system/audio/CAudio.js";
+import { CWindow } from "../../../artgine/system/CWindow.js";
 CNavigation.Normal = 50;
 CNavigation.Small = 10;
 var g_camMode = 0;
@@ -170,7 +170,7 @@ let ResetMaze = (_xCount, _yCount) => {
         let rand = Math.trunc(Math.random() * 4);
         let pt = new CPaint2D("floor/rect_gray" + rand + ".png", new CVec2(size / 3, size / 3));
         pt.SetPos(new CVec3(size / 3 * x, size / 3 * y));
-        pt.SetRenderPass(rp);
+        pt.PushRenderPass(rp);
         return pt;
     };
     let IsBlockFun = (x, y) => {
@@ -192,19 +192,19 @@ let ResetMaze = (_xCount, _yCount) => {
             }
             else if (maze[x + y * count.x] == 2) {
                 pt = sub.PushComp(new CPaint2D("floor/tomb0.png", new CVec2(size, size)));
-                pt.SetRenderPass(rp);
+                pt.PushRenderPass(rp);
                 pt.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
             }
             else if (maze[x + y * count.x] == 3) {
                 pt = sub.PushComp(new CPaint2D("floor/tutorial_pad.png", new CVec2(size, size)));
-                pt.SetRenderPass(rp);
+                pt.PushRenderPass(rp);
                 pt.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
                 let cl = sub.PushComp(new CCollider(pt));
                 cl.SetLayer("endpoint");
             }
             else {
                 pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
-                pt.SetRenderPass(rp);
+                pt.PushRenderPass(rp);
                 let cl = sub.PushComp(new CCollider(pt));
                 cl.SetLayer("block");
                 let navi = sub.PushComp(new CNavigation());
@@ -212,7 +212,7 @@ let ResetMaze = (_xCount, _yCount) => {
                 navi.InitBound(pt);
                 if (IsBlockFun(x - 1, y) == 1) {
                     pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
-                    pt.SetRenderPass(rp);
+                    pt.PushRenderPass(rp);
                     pt.SetPos(new CVec3(-size / 3, 0));
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
@@ -224,7 +224,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     sub.PushComp(RandBasicTile(-1, 0));
                 if (IsBlockFun(x + 1, y) == 1) {
                     pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
-                    pt.SetRenderPass(rp);
+                    pt.PushRenderPass(rp);
                     pt.SetPos(new CVec3(size / 3, 0));
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
@@ -236,7 +236,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     sub.PushComp(RandBasicTile(1, 0));
                 if (IsBlockFun(x, y - 1) == 1) {
                     pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
-                    pt.SetRenderPass(rp);
+                    pt.PushRenderPass(rp);
                     pt.SetPos(new CVec3(0, -size / 3));
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
@@ -248,7 +248,7 @@ let ResetMaze = (_xCount, _yCount) => {
                     sub.PushComp(RandBasicTile(0, -1));
                 if (IsBlockFun(x, y + 1) == 1) {
                     pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
-                    pt.SetRenderPass(rp);
+                    pt.PushRenderPass(rp);
                     pt.SetPos(new CVec3(0, size / 3));
                     cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");
@@ -275,7 +275,7 @@ let ResetMaze = (_xCount, _yCount) => {
             for (let sy = -1; sy <= 1; ++sy)
                 for (let sx = -1; sx <= 1; ++sx) {
                     let pt = sub.PushComp(new CPaint2D("floor/sandstone_floor0.png", new CVec2(size / 3, size / 3)));
-                    pt.SetRenderPass(rp);
+                    pt.PushRenderPass(rp);
                     pt.SetPos(new CVec3(size / 3 * sx, size / 3 * sy));
                     let cl = sub.PushComp(new CCollider(pt));
                     cl.SetLayer("block");

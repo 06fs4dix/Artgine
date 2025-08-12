@@ -362,7 +362,7 @@ export class CUIText extends CUI {
         this.m_text = _text + "";
         if (this.mUIPT == null) {
             this.mUIPT = new CPaint2D();
-            this.mUIPT.SetRenderPass(gUIRP);
+            this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
         this.mUpdate = true;
@@ -414,7 +414,7 @@ export class CUIPicture extends CUI {
         this.mUpdate = true;
         if (this.mUIPT == null) {
             this.mUIPT = new CPaint2D(this.m_tex, this.mSize);
-            this.mUIPT.SetRenderPass(gUIRP);
+            this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
     }
@@ -461,7 +461,7 @@ export class CUIButtonImg extends CUI {
         this.mUpdate = true;
         if (this.mUIPT == null) {
             this.mUIPT = new CPaint2D(this.m_normal, this.mSize);
-            this.mUIPT.SetRenderPass(gUIRP);
+            this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
     }
@@ -520,7 +520,7 @@ export class CUIButtonRGBA extends CUI {
         this.m_pressRGBA = _press;
         if (this.mUIPT == null && this.m_normal != null) {
             this.mUIPT = new CPaint2D(this.m_normal, this.mSize);
-            this.mUIPT.SetRenderPass(gUIRP);
+            this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
     }
@@ -582,7 +582,7 @@ export class CUIProgressBar extends CUI {
                 redOn = true;
             }
             this.mUIPT = new CPaint2D("", this.mSize);
-            this.mUIPT.SetRenderPass(gUIRP);
+            this.mUIPT.PushRenderPass(gUIRP);
             if (redOn)
                 this.mUIPT.SetRGBA(new CVec4(1, 0, 0, 0));
             else if (this.mRGBA)
@@ -591,7 +591,7 @@ export class CUIProgressBar extends CUI {
         }
         if (this.m_ptBack == null) {
             this.m_ptBack = new CPaint2D("", this.mSize);
-            this.m_ptBack.SetRenderPass(gUIRP);
+            this.m_ptBack.PushRenderPass(gUIRP);
             this.m_ptBack.SetPos(new CVec3(0, 0, -0.1));
             this.PushComp(this.m_ptBack);
         }

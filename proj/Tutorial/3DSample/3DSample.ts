@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-09 02:24:27';
+const version='2025-08-12 21:21:38';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,6 +20,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
@@ -32,8 +33,10 @@ var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
 var Main = gAtl.Canvas('Main.json');
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
+
 import {CObject} from "../../../artgine/basic/CObject.js"
 import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
 import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
@@ -439,12 +442,12 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
     lig.mDigit=digit;
     L.PushComp(lig);
 
-    // let back=Main.Push(new CSubject());
-    // let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-    // pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
-    // pt.Shadow();
+    let back=Main.Push(new CSubject());
+    let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+    pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
+    pt.Shadow();
     
-    // back.SetSca(new CVec3(10,0.01,10));
+    back.SetSca(new CVec3(10,0.01,10));
 
 
     let teapot=Main.Push(new CSubject());
@@ -459,3 +462,20 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
     
 
 }));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

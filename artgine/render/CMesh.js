@@ -21,7 +21,6 @@ var MeshBoneMat = 100;
 export class CMesh extends CObject {
     vertexNormal;
     meshTree;
-    material;
     texture;
     skin;
     aniMap;
@@ -29,7 +28,6 @@ export class CMesh extends CObject {
         super();
         this.vertexNormal = false;
         this.meshTree = new CTree();
-        this.material = new Array();
         this.texture = new Array();
         this.aniMap = new Map();
         this.skin = new Array();

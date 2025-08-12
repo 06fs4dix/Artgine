@@ -191,10 +191,6 @@ export class CSubject extends CObject implements IFile
 	// 		this.mInMsg.Push(cm);
 		
 	// }
-	Canvas()
-	{
-		
-	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
 
@@ -205,13 +201,17 @@ export class CSubject extends CObject implements IFile
 			if(_member=="mDestroy")
 				return true;
 		}
-
+		
 		if(_member=="mFrame" || _member=="mKeyChange" || _member=="mInMsg" || _member=="mOutMsg" || _member=="mBroMsg" || 
 			_member=="mPushArr" || _member=="mPushLock" ||
 			_member=="mDestroy" || _member=="mPTArr" || 
 			_member=="mCLArr" || _member=="mUpdateMat")
 			return false;
-		
+		if(_type==CObject.eShould.Proxy)
+		{
+			if(_member=="mPos" || _member=="mRot" || _member=="mSca")
+				return false;
+		}
 		
 		
 		return super.IsShould(_member,_type);
@@ -258,8 +258,8 @@ export class CSubject extends CObject implements IFile
 
 			if(this.mPTArr)	this.mPTArr.length=0;
 			this.mPTArr=null;
-			if(this.mCLArr)	this.mCLArr.Clear();
-			this.mPTArr=null;
+			//if(this.mCLArr)	this.mCLArr.Clear();
+			
 	
 		}
 		else if(_pointer.member=="mChilde")
@@ -294,14 +294,14 @@ export class CSubject extends CObject implements IFile
 			this.Reset();
 		this.mFrame=_frame;
 		
-		this.mCLArr.Clear();
+		//this.mCLArr.Clear();
 		for(let each0 of this.mComArr)
 		{
 			each0.SetOwner(this);
-			if(each0 instanceof CCollider || each0 instanceof CNavigation)
-			{
-				this.mCLArr.Push(each0);
-			}
+			// if(each0 instanceof CCollider || each0 instanceof CNavigation)
+			// {
+			// 	this.mCLArr.Push(each0);
+			// }
 		}
 
 		
@@ -309,8 +309,8 @@ export class CSubject extends CObject implements IFile
 		{
 			each0.SetFrame(_frame);
 		}
-		if(this.mFrame!=null)
-			this.Start();
+		// if(this.mFrame!=null)
+		// 	this.Start();
 	}
 	GetRemove() { return this.mDestroy || this.IsRecycle(); }
 	KeyChange() { return this.mKeyChange; }
@@ -710,10 +710,10 @@ export class CSubject extends CObject implements IFile
 		// if(this.m_clVec)
 		// 	this.m_clVec.length=0;
 		// this.m_clVec=null;
-		if(_com instanceof CCollider || _com instanceof CNavigation)
-		{
-			this.mCLArr.Push(_com);
-		}
+		// if(_com instanceof CCollider || _com instanceof CNavigation)
+		// {
+		// 	this.mCLArr.Push(_com);
+		// }
 
 		//중간 삽입을 제외하면 뒤로 넣는게 복사가 덜하다
 		for(var i=0;i<this.mComArr.length;++i)
@@ -850,6 +850,7 @@ export class CSubject extends CObject implements IFile
 			each0.Prefab(this);
 		}
 		this.mFrame=null;
+		
 
 	}
 	

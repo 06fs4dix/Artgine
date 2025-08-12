@@ -180,11 +180,11 @@ function RPToolRPAutoInit(_rp: CRPAuto) {
                  data-bs-target="#${collapseId}"
                  aria-expanded="false"
                  aria-controls="${collapseId}">
-                <div class="flex-grow-1">
-                    <div class="fw-bold text-primary">${hash}</div>
-                    <div>${_rp.mPriority}-${_rp.mShader}</div>
+                <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
+                    <div class="fw-bold text-primary text-truncate">${hash}</div>
+                    <div class="text-truncate">${_rp.mPriority}-${_rp.mShader}</div>
                 </div>
-                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto;"></button>
+                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
             </div>
             <div class="collapse" id="${collapseId}">
                 <div class="card-body" id="${collapseId}_body"></div>
@@ -227,10 +227,10 @@ function RPToolTexInit(_tex: CTexture) {
                  data-bs-target="#${collapseId}"
                  aria-expanded="false"
                  aria-controls="${collapseId}">
-                <div class="flex-grow-1">
-                    <input type="text" class="form-control form-control-sm mb-1" id="${collapseId}_key_input" value="${_tex.Key() || ""}" style="width:70%" />
+                <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
+                    <input type="text" class="form-control form-control-sm mb-1" id="${collapseId}_key_input" value="${_tex.Key() || ""}" style="width:100%; max-width: 200px;" />
                 </div>
-                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto;"></button>
+                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
             </div>
             <div class="collapse" id="${collapseId}">
                 <div class="card-body" id="${collapseId}_body"></div>
@@ -281,8 +281,8 @@ function RPToolSufInit(_suf: CSurface) {
                  data-bs-target="#${collapseId}"
                  aria-expanded="false"
                  aria-controls="${collapseId}">
-                <div class="flex-grow-1 fw-bold text-primary">${_suf.ObjHash()}</div>
-                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto;"></button>
+                <div class="flex-grow-1 fw-bold text-primary" style="min-width: 0; overflow: hidden; text-truncate;">${_suf.ObjHash()}</div>
+                <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
             </div>
             <div class="collapse" id="${collapseId}">
                 <div class="card-body" id="${collapseId}_body"></div>

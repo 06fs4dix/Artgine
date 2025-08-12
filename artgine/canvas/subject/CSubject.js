@@ -14,10 +14,8 @@ import { CVec3 } from "../../geometry/CVec3.js";
 import { CVec4 } from "../../geometry/CVec4.js";
 import { CFile } from "../../system/CFile.js";
 import { CComponent } from "../component/CComponent.js";
-import { CNavigation } from "../component/CNavigation.js";
 import { CRouteMsg } from "../CRouteMsg.js";
 import { CPaint } from "../component/paint/CPaint.js";
-import { CCollider } from "../component/CCollider.js";
 var g_offCObjHD = 0;
 export class CSubject extends CObject {
     mComArr;
@@ -118,8 +116,6 @@ export class CSubject extends CObject {
         cm.mMsgData = _para;
         this.mInMsg.Push(cm);
     }
-    Canvas() {
-    }
     IsShould(_member, _type) {
         if (_type == CObject.eShould.Editer) {
             if (_member == "mPEnable" || _member == "mPMat")
@@ -132,6 +128,10 @@ export class CSubject extends CObject {
             _member == "mDestroy" || _member == "mPTArr" ||
             _member == "mCLArr" || _member == "mUpdateMat")
             return false;
+        if (_type == CObject.eShould.Proxy) {
+            if (_member == "mPos" || _member == "mRot" || _member == "mSca")
+                return false;
+        }
         return super.IsShould(_member, _type);
     }
     EditForm(_pointer, _body, _input) {
@@ -165,9 +165,6 @@ export class CSubject extends CObject {
             if (this.mPTArr)
                 this.mPTArr.length = 0;
             this.mPTArr = null;
-            if (this.mCLArr)
-                this.mCLArr.Clear();
-            this.mPTArr = null;
         }
         else if (_pointer.member == "mChilde") {
             if (_pointer.state == 1) {
@@ -193,18 +190,12 @@ export class CSubject extends CObject {
         if (this.mFrame != null)
             this.Reset();
         this.mFrame = _frame;
-        this.mCLArr.Clear();
         for (let each0 of this.mComArr) {
             each0.SetOwner(this);
-            if (each0 instanceof CCollider || each0 instanceof CNavigation) {
-                this.mCLArr.Push(each0);
-            }
         }
         for (let each0 of this.mChilde) {
             each0.SetFrame(_frame);
         }
-        if (this.mFrame != null)
-            this.Start();
     }
     GetRemove() { return this.mDestroy || this.IsRecycle(); }
     KeyChange() { return this.mKeyChange; }
@@ -463,9 +454,6 @@ export class CSubject extends CObject {
         if (this.mPTArr)
             this.mPTArr.length = 0;
         this.mPTArr = null;
-        if (_com instanceof CCollider || _com instanceof CNavigation) {
-            this.mCLArr.Push(_com);
-        }
         for (var i = 0; i < this.mComArr.length; ++i) {
             if (this.mComArr[i].mSysc > _com.mSysc) {
                 this.mComArr.splice(i, 0, _com);

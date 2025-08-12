@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-25 09:59:18';
+const version='2025-08-10 11:09:38';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,10 +20,11 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPluging.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
@@ -35,8 +36,9 @@ import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
 import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import CWind from "../../../artgine/canvas/component/CWind.js";
+
 import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
+import { CWind } from "../../../artgine/canvas/component/CWind.js";
 
 
 let gXSize=10;

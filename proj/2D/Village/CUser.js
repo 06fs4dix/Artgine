@@ -1,0 +1,133 @@
+import { CConsol } from "../../../artgine/basic/CConsol.js";
+import { CBlackBoardRef } from "../../../artgine/basic/CObject.js";
+import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
+import { CAnimation, CClipCoodi } from "../../../artgine/canvas/component/CAnimation.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CForce } from "../../../artgine/canvas/component/CForce.js";
+import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
+import { CSMPattern, CStateMachine } from "../../../artgine/canvas/component/CStateMachine.js";
+import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CPad } from "../../../artgine/canvas/subject/CPad.js";
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CTexture } from "../../../artgine/render/CTexture.js";
+import { CAudioBuf } from "../../../artgine/system/audio/CAudio.js";
+import { CScript } from "../../../artgine/util/CScript.js";
+import { CShadowPlane } from "../../../plugin/ShadowPlane/ShadowPlane.js";
+export class CUser extends CSubject {
+    mRB;
+    mAF;
+    mPT;
+    mCL;
+    mBDir = new CVec3();
+    m2DCam = new CBlackBoardRef("2D");
+    mAniMap = new Map();
+    constructor() {
+        super();
+    }
+    Start() {
+        this.mPT = this.PushComp(new CPaint2D("Res/Actor/Villager5/SeparateAnim/Walk.png", new CVec2(100, 100)));
+        this.mPT.mSave = false;
+        this.mPT.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
+        this.mPT.SetYSort(true);
+        this.mPT.SetYSortOrigin(-50);
+        this.PushChilde(new CPad()).mSave = false;
+        this.mRB = this.PushComp(new CRigidBody());
+        this.mRB.mSave = false;
+        this.mRB.SetRestitution(1);
+        this.mSave = false;
+        this.mCL = this.PushComp(new CCollider(this.mPT));
+        this.mCL.mSave = false;
+        this.mCL.SetLayer("player");
+        this.mCL.PushCollisionLayer("object");
+        this.PushComp(new CShadowPlane());
+        let sm = this.PushComp(new CStateMachine());
+        sm.PushPattern(new CSMPattern("StandLeft", [], []));
+        sm.PushPattern(new CSMPattern("StandLeft", ["Last" + CVec3.eDir.Left], ["move"]));
+        sm.PushPattern(new CSMPattern("StandRight", ["Last" + CVec3.eDir.Right], ["move"]));
+        sm.PushPattern(new CSMPattern("StandUp", ["Last" + CVec3.eDir.Up], ["move"]));
+        sm.PushPattern(new CSMPattern("StandDown", ["Last" + CVec3.eDir.Down], ["move"]));
+        sm.PushPattern(new CSMPattern("MoveLeft", ["move" + CVec3.eDir.Left], []));
+        sm.PushPattern(new CSMPattern("MoveRight", ["move" + CVec3.eDir.Right], []));
+        sm.PushPattern(new CSMPattern("MoveUp", ["move" + CVec3.eDir.Up], []));
+        sm.PushPattern(new CSMPattern("MoveDown", ["move" + CVec3.eDir.Down], []));
+        let ani = new CAnimation();
+        ani.Push(new CClipCoodi(0, 0, 0, 0, 16, 16));
+        this.mAniMap.set("StandDown", ani);
+        ani = new CAnimation();
+        ani.Push(new CClipCoodi(0, 0, 1 * 16, 0, 2 * 16, 16));
+        this.mAniMap.set("StandUp", ani);
+        ani = new CAnimation();
+        ani.Push(new CClipCoodi(0, 0, 2 * 16, 0, 3 * 16, 16));
+        this.mAniMap.set("StandLeft", ani);
+        ani = new CAnimation();
+        ani.Push(new CClipCoodi(0, 0, 3 * 16, 0, 4 * 16, 16));
+        this.mAniMap.set("StandRight", ani);
+        let tick = 100;
+        ani = new CAnimation();
+        for (let i = 0; i < 4; ++i)
+            ani.Push(new CClipCoodi(i * tick, tick, 0, i * 16, 16, (1 + i) * 16));
+        this.mAniMap.set("MoveDown", ani);
+        ani = new CAnimation();
+        for (let i = 0; i < 4; ++i)
+            ani.Push(new CClipCoodi(i * tick, tick, 1 * 16, i * 16, 2 * 16, (1 + i) * 16));
+        this.mAniMap.set("MoveUp", ani);
+        ani = new CAnimation();
+        for (let i = 0; i < 4; ++i)
+            ani.Push(new CClipCoodi(i * tick, tick, 2 * 16, i * 16, 3 * 16, (1 + i) * 16));
+        this.mAniMap.set("MoveLeft", ani);
+        ani = new CAnimation();
+        for (let i = 0; i < 4; ++i)
+            ani.Push(new CClipCoodi(i * tick, tick, 3 * 16, i * 16, 4 * 16, (1 + i) * 16));
+        this.mAniMap.set("MoveRight", ani);
+        this.mAF = this.PushComp(new CAniFlow(ani));
+        this.mAF.mSave = false;
+    }
+    StandLeft() {
+        this.mAF.ResetAni(this.mAniMap.get("StandLeft"));
+    }
+    StandRight() {
+        this.mAF.ResetAni(this.mAniMap.get("StandRight"));
+    }
+    StandUp() {
+        this.mAF.ResetAni(this.mAniMap.get("StandUp"));
+    }
+    StandDown() {
+        this.mAF.ResetAni(this.mAniMap.get("StandDown"));
+    }
+    MoveLeft() {
+        this.mAF.ResetAni(this.mAniMap.get("MoveLeft"));
+    }
+    MoveRight() {
+        this.mAF.ResetAni(this.mAniMap.get("MoveRight"));
+    }
+    MoveUp() {
+        this.mAF.ResetAni(this.mAniMap.get("MoveUp"));
+    }
+    MoveDown() {
+        this.mAF.ResetAni(this.mAniMap.get("MoveDown"));
+    }
+    Update(_delay) {
+        super.Update(_delay);
+        if (this.FindChild(CPad) == null)
+            return;
+        let dir = this.FindChild(CPad).GetDir();
+        if (dir.IsZero() == false) {
+            if (this.mBDir.Equals(dir) == false)
+                this.mRB.Push(new CForce("move", dir, 400));
+            CScript.Action([this], () => {
+                let audio = new CAudioBuf("Res/sound/jute-dh-steps/stepdirt_2.wav");
+                audio.Volume(0.5);
+                audio.Play();
+                CConsol.Log("test");
+            }, 0, 0.3);
+        }
+        else {
+            this.mRB.Remove("move");
+            this.mBDir.Zero();
+        }
+        let camcon = this.m2DCam.Ref().GetCamCon();
+        camcon.SetPos(this.GetPos());
+    }
+}

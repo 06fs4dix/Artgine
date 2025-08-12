@@ -14,6 +14,7 @@ import {CMesh} from "../../../render/CMesh.js";
 import { CMeshCopyNode } from "../../../render/CMeshCopyNode.js";
 import {CMeshPaint} from "../../../render/CMeshPaint.js";
 import {CMeshTreeUpdate} from "../../../render/CMeshTreeUpdate.js";
+import { CRenderPass } from "../../../render/CRenderPass.js";
 
 import {CShader} from "../../../render/CShader.js";
 import {CShaderAttr} from "../../../render/CShaderAttr.js";
@@ -231,17 +232,6 @@ export class CPaint3D extends CPaint
 		if(this.mTexture.length==0)
 		{
 			this.SetTexture(this.mMeshRes.texture);
-
-			
-			// for(let texKey of this.mTexture)
-			// {
-			// 	if(texKey.indexOf("base64")!=-1)
-			// 	{
-			// 		this.mTexture.length=0;
-			// 		//this.BatchClear();
-			// 		return;
-			// 	}
-			// }
 			
 		}
 		
@@ -498,4 +488,32 @@ export class CPaint3D extends CPaint
 	
 	
 
+}
+
+export class CPaintCube extends CPaint3D
+{
+	constructor(_cubeTex)
+	{
+		super();
+		this.mTexture[0]=_cubeTex;
+	}
+	InitPaint()
+	{
+		this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
+		this.mRenderPass[0]=new CRenderPass(this.GetOwner().GetFrame().Pal().SlCubeKey());
+		if(this.mTag.has("sky"))
+		{
+			this.mRenderPass[0].mPriority=CRenderPass.ePriority.BackGround;
+			this.mRenderPass[0].mCullFace=CRenderPass.eCull.None;
+			this.mRenderPass[0].mCullFrustum=false;
+		}
+		super.InitPaint();
+
+		
+	}
+	Sky()
+	{
+		
+		this.PushTag("sky");
+	}
 }

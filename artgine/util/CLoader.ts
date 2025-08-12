@@ -276,9 +276,9 @@ export class CLoader
 	// 	});
 	// }
 	//async Load(_asset : CAsset);
-	async Load(_file : Array<string>) 
-	async Load(_file : string) 
-	async Load(_file : string,_option : CLoaderOption) 
+	async Load(_file : Array<string>) : Promise<boolean>
+	async Load(_file : string) : Promise<boolean>
+	async Load(_file : string,_option : CLoaderOption) : Promise<boolean>
 	async Load(_file : any,_option : CLoaderOption=null) : Promise<boolean>
 	{
 		if(_file=="")	return true;

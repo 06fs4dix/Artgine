@@ -25,41 +25,35 @@ var trailPos = new Sam2DV4(9);
 var depthMap = 0.0;
 var screenResolution = new CVec2(1.0, 1.0);
 var sam2DCount = Null();
-Build("Pre2Plane", [], vs_main, [
+Build("2DPlane", [], vs_main, [
     worldMat, viewMat, projectMat, texCodi, reverse,
     alphaCut
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
-Build("Pre2PlaneThin", ["Thin"], vs_main_thin, [
-    viewMat, projectMat, texCodi, reverse,
-    alphaCut
-], [
-    out_position, to_uv, to_worldPos
-], ps_main, [out_color]);
-Build("Pre2Tail", ["tail"], vs_main_tail, [
+Build("2DTail", ["tail"], vs_main_tail, [
     worldMat, viewMat, projectMat, texCodi, reverse,
     alphaCut
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
-Build("Pre2Trail", ["trail"], vs_main_trail, [
+Build("2DTrail", ["trail"], vs_main_trail, [
     worldMat, viewMat, projectMat, texCodi, reverse, trailPos, lastHide,
     alphaCut
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
-Build("Pre2Simple", ["simple"], vs_main_simple, [
+Build("2DSimple", ["simple"], vs_main_simple, [
     worldMat, viewMat, projectMat, alphaCut
 ], [
     out_position, to_uv
 ], ps_main_simple, [out_color]);
-Build("Pre2Mask", ["mask"], vs_main, [
+Build("2DMask", ["mask"], vs_main, [
     worldMat, viewMat, projectMat, texCodi, reverse, alphaCut, mask
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main_mask, [out_color]);
-Build("Pre2Blit", ["blit"], vs_main_blit, [], [
+Build("2DBlit", ["blit"], vs_main_blit, [], [
     out_position, to_uv
 ], ps_main_blit, [out_color]);
 function vs_main_blit(f3_ver, f2_uv) {
@@ -163,14 +157,6 @@ function vs_main(f3_ver, f2_uv) {
     BranchDefault();
     P = V4MulMatCoordi(P, worldMat);
     BranchEnd();
-    to_worldPos = P;
-    P = V4MulMatCoordi(P, viewMat);
-    out_position = V4MulMatCoordi(P, projectMat);
-}
-function vs_main_thin(f3_ver, f2_uv) {
-    to_uv = GetTexCodiedUV(f2_uv, texCodi, reverse);
-    var P = new CVec4(f3_ver, 1.0);
-    P = V4MulMatCoordi(P, worldMat);
     to_worldPos = P;
     P = V4MulMatCoordi(P, viewMat);
     out_position = V4MulMatCoordi(P, projectMat);

@@ -158,60 +158,14 @@ export class CRDBMS extends CORM
             }
         }
     }
-    async Insert(_collection: string, _data: Array<CORMField>) {
-        // GridFS 업로드 처리
-        if (this.mFileDB) {
-            await this.FileDBChk();
-
-            const gridList = [];
-
-            for (const field of _data) 
-            {
-                if (typeof field.mValue === 'string' && field.mValue.length > 0xffff) 
-                {
-                    const holder = {};
-                    holder[field.mKey] = field.mValue;
-                    gridList.push(new CFileDB(holder,field.mKey));
-                }
-                else if(field.mValue instanceof CJSON)
-                {
-                    field.mValue.FileDB(true,gridList);
-                }
-            }
-
-            await this.FileDBUpload(_collection, gridList);
-
-            // GridFSUpload에서 실제 데이터가 변경되었으므로 다시 덮어쓰기
-            for (const grid of gridList) 
-            {
-                const key = grid.mKey;
-                const index = _data.findIndex(f => f.mKey === key);
-                if (index !== -1) {
-                    _data[index].mValue = grid.mDoc[key];
-                }
-            }
-        }
-
-        const keys = _data.map(f => `${f.mKey}`).join(',');
-        const values = _data.map(() => '?').join(',');
-        const params = _data.map(f => f.mValue);
-        const sql = `INSERT INTO ${_collection} (${keys}) VALUES (${values})`;
-        return await this.Send(sql, params);
+    async Insert(_collection: string, _data: Array<CORMField>) 
+    {
+        return null;
     }
 
 
     async Update(_collection: string, _condition: Array<CORMCondition>, _data: Array<CORMField>) {
-        const setClause = _data.map(f => `${f.mKey}=?`).join(',');
-        const setParams = _data.map(f => f.mValue);
-
-        const whereClause = _condition.map((c, i) => {
-            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
-            return `${logic} ${c.mKey} ${c.mCondition} ?`;
-        }).join('');
-        const whereParams = _condition.map(c => c.mValue);
-
-        const sql = `UPDATE ${_collection} SET ${setClause} WHERE ${whereClause}`;
-        return await this.Send(sql, [...setParams, ...whereParams]);
+        return null;
     }
     
    // 오버로드 선언
@@ -219,61 +173,11 @@ export class CRDBMS extends CORM
     async Select<K extends string>(_collection: string,_condition: Array<CORMCondition>,_projection: [K, ...K[]],_limit: CORMOption): Promise<{ [P in K]: any }[]>;
     async Select(_collection: string,_condition: Array<CORMCondition>,_projection: string[],_limit: CORMOption): Promise<object[]> 
     {
-        // Projection이 비어있으면 자동으로 컬럼명 조회
-        if (!_projection || _projection.length === 0) 
-            _projection = await this.GetProjection(_collection);
-        
-
-        const columns = _projection.length > 0 ? _projection.map(k => `${k}`).join(',') : '*';
-        let sql = `SELECT ${columns} FROM ${_collection}`;
-
-        const whereClause = _condition.map((c, i) => {
-            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
-            if(c.mCondition=="==")    return `${logic} ${c.mKey} = ?`;
-            return `${logic} ${c.mKey} ${c.mCondition} ?`;
-        }).join('');
-        const whereParams = _condition.map(c => c.mValue);
-
-        if (whereClause.length > 0) sql += ` WHERE ${whereClause}`;
-        if (_limit?.mOrderBy) sql += ` ORDER BY ${_limit.mOrderBy}`;
-        if (_limit?.mLimit > 0) sql += ` LIMIT ${_limit.mLimitOffset}, ${_limit.mLimit}`;
-
-        const rows: any[][] = await this.Recv(sql, whereParams);
-        const result: Record<string, any>[] = [];
-        if(rows==null)  return null;
-
-        for (const row of rows) {
-            const rowObj: Record<string, any> = {};
-            for (let i = 0; i < _projection.length; i++) {
-                rowObj[_projection[i]] = row[i];
-            }
-            result.push(rowObj);
-        }
-
-        // GridFS 처리
-        if (this.mFileDB) {
-            const gridList: Array<CFileDB> = [];
-            for (const doc of result) {
-                for (const key of Object.keys(doc)) {
-                    if (typeof doc[key] === 'string' && doc[key].startsWith('#GridFS:')) {
-                        gridList.push({ mDoc: doc, mKey: key });
-                    }
-                }
-            }
-            await this.FileDBDownload(gridList);
-        }
-
-        return result as any;
+       return null;
     }
 
     async Delete(_collection: string, _condition: Array<CORMCondition>) {
-        const whereClause = _condition.map((c, i) => {
-            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
-            return `${logic} ${c.mKey} ${c.mCondition} ?`;
-        }).join('');
-        const whereParams = _condition.map(c => c.mValue);
-        const sql = `DELETE FROM ${_collection} WHERE ${whereClause}`;
-        return await this.Send(sql, whereParams);
+        return null;
     }
 
     async Close() {
@@ -306,3 +210,6 @@ export class CRDBMS extends CORM
 
 
 
+
+import CORM_imple from "../network_imple/CORM.js";
+CORM_imple();

@@ -501,15 +501,16 @@ export class CPaint extends CComponent
 
 	
 	GetRenderPass()	{	return this.mRenderPass;	}
-	SetRenderPass(_rp : CRenderPass);
-	SetRenderPass(_rp : Array<CRenderPass>);
-	SetRenderPass(_rp : Array<CRenderPass>,_copy : boolean);
-	SetRenderPass(_rp : CRenderPass,_copy : boolean);
-	SetRenderPass(_rp : any,_copy=true) : void
+	PushRenderPass(_rp : CRenderPass);
+	PushRenderPass(_rp : Array<CRenderPass>);
+	PushRenderPass(_rp : Array<CRenderPass>,_copy : boolean);
+	PushRenderPass(_rp : CRenderPass,_copy : boolean);
+	PushRenderPass(_rp : any,_copy=true)
 	{
 		this.mDefaultAttr=new Set<string>();
 		this.mRenderPass=new Array();	
 
+		this.BatchClear();
 		if(_rp instanceof Array)
 		{
 			for(let each0 of _rp as Array<CRenderPass>)
@@ -520,8 +521,7 @@ export class CPaint extends CComponent
 					this.mRenderPass.push(each0);
 					
 			}
-				
-			//this.m_renderPass=_rp;
+			return this.mRenderPass;
 		}
 		else
 		{
@@ -532,8 +532,11 @@ export class CPaint extends CComponent
 				rp=_rp;
 			
 			this.mRenderPass.push(rp);
+			return this.mRenderPass[this.mRenderPass.length-1];
 		}
-		this.BatchClear();			
+		
+		
+		return null;	
 	}
 
 	PushCShaderAttr(_sa : CShaderAttr)

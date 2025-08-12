@@ -643,7 +643,7 @@ export class CUIText extends CUI
 		if(this.mUIPT==null)
 		{
 			this.mUIPT = new CPaint2D();
-			this.mUIPT.SetRenderPass(gUIRP);
+			this.mUIPT.PushRenderPass(gUIRP);
 			//this.m_uiPt.PushTag("ui");
 			
 			
@@ -720,7 +720,7 @@ export class CUIPicture extends CUI
 		if(this.mUIPT == null) {
 			this.mUIPT = new CPaint2D(this.m_tex,this.mSize);
 			//this.m_uiPt.PushTag("ui");
-			this.mUIPT.SetRenderPass(gUIRP);
+			this.mUIPT.PushRenderPass(gUIRP);
 			this.PushComp(this.mUIPT);
 		}
 	}
@@ -787,7 +787,7 @@ export class CUIButtonImg extends CUI
 		{
 			this.mUIPT = new CPaint2D(this.m_normal,this.mSize);
 			//this.m_uiPt.PushTag("ui");
-			this.mUIPT.SetRenderPass(gUIRP);
+			this.mUIPT.PushRenderPass(gUIRP);
 			this.PushComp(this.mUIPT);
 		}
 	}
@@ -874,7 +874,7 @@ export class CUIButtonRGBA extends CUI
 		{
 			this.mUIPT = new CPaint2D(this.m_normal,this.mSize);
 			//this.m_uiPt.PushTag("ui");
-			this.mUIPT.SetRenderPass(gUIRP);
+			this.mUIPT.PushRenderPass(gUIRP);
 			this.PushComp(this.mUIPT);
 		}
 	}
@@ -964,7 +964,7 @@ export class CUIProgressBar extends CUI
 
 			this.mUIPT = new CPaint2D("",this.mSize);
 			//this.m_uiPt.PushTag("ui");
-			this.mUIPT.SetRenderPass(gUIRP);
+			this.mUIPT.PushRenderPass(gUIRP);
 			//this.m_uiPt.Sort2D(this.m_zValue+1);
 
 			if(redOn)
@@ -981,7 +981,7 @@ export class CUIProgressBar extends CUI
 			// 	this.m_texBack=this.m_fw.Pal().GetBlackTex();
 			this.m_ptBack = new CPaint2D("",this.mSize);
 			//this.m_ptBack.PushTag("ui");
-			this.m_ptBack.SetRenderPass(gUIRP);
+			this.m_ptBack.PushRenderPass(gUIRP);
 			//this.m_ptBack.Sort2D(this.m_zValue);
 			this.m_ptBack.SetPos(new CVec3(0,0,-0.1));
 			

@@ -64,6 +64,7 @@ let gBWidth=0;
 let gBHeight=0;
 let gSelectBound=new CBound();
 let gAddMove=new CVec3();
+let gLastCanvas=null;
 function ResetBoxXYZ(_subject : CSubject)
 {
     let pos=_subject.GetWMat().xyz;
@@ -287,7 +288,7 @@ function DevToolRender()
     let clArr=subject.FindComps(CCollider);
 
     const render=gAtl.Frame().Ren();
-    let shader=gAtl.Frame().Res().Find("Pre3Simple") as CShader;
+    let shader=gAtl.Frame().Res().Find("3DSimple") as CShader;
     
     let meshDraw=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
     if(meshDraw==null)
@@ -654,7 +655,7 @@ function DevToolDrop(_drop : CDrop)
     }
     else
     {
-        if(gLeftSelect==null || gLeftSelect instanceof CCanvas==false)
+        if(gLastCanvas==null)
         {
             CAlert.Info("캔버스를 선택해주세요");
             return;
@@ -665,7 +666,8 @@ function DevToolDrop(_drop : CDrop)
             return;
         }
         let cobject=(_drop.mObject as CObject).Export() as CSubject;
-        let can=gLeftSelect as CCanvas;
+        cobject.SetBlackBoard(false);
+        let can=gLastCanvas as CCanvas;
 
         if(gAtl.Brush().GetCamDev().GetOrthographic())
         {
@@ -1325,6 +1327,7 @@ function DevToolGiftSwap(_obj: CSubject)
             if(obj!=null)
             {
                 can.Detach(_obj.Key());
+                _obj.mPTArr=null;
                 //_obj.SetFrame(null);
                 can.GetResMap().set(_obj.Key(),_obj);
                 DevToolLeftRemove(false);
@@ -1333,6 +1336,7 @@ function DevToolGiftSwap(_obj: CSubject)
             {
                 can.DetachRes(_obj.Key());
                 can.Push(_obj);
+                _obj.mPTArr=null;
                 //can.mSubMap.set(_obj.Key(),_obj);
                 DevToolLeftRemove(false);
             }
@@ -1852,6 +1856,7 @@ function DevToolLeft()
                 textDiv.textContent = key;
             }
             gLeftItem.get(objHash).SetKey(key);
+
         };
 
         // 입력창 HTML 생성
@@ -1899,6 +1904,7 @@ function DevToolLeft()
         canDiv.addEventListener('dragover', (ev) => ev.preventDefault());
         canDiv.addEventListener('drop', (ev) => {
             ev.preventDefault();
+            ev.stopPropagation();
             const sourceKey = ev.dataTransfer?.getData('hash');
             let cutObj=gLeftItem.get(sourceKey);
             for(let can of gAtl.mCanvasMap.values())
@@ -1988,8 +1994,12 @@ function LeftSelect(_obj : CObject)
     rightPanel.append(_obj.EditInit());
 
     gLeftSelect = _obj;
+    
 
-    if (_obj instanceof CCanvas) {
+    if (_obj instanceof CCanvas) 
+    {
+        gLastCanvas=_obj;
+
         const bdiv = CUtil.ID(_obj.ObjHash() + "_ul");
         if (bdiv.children.length === 0) {
             for (let [key, value] of _obj.GetSubMap()) {

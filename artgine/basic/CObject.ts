@@ -160,7 +160,10 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 		
 	}
-	
+	ExportProxy(_resetKey=true)
+	{
+		return new Proxy(this.Export(false,_resetKey),ProxyHandle);
+	}
 	//내꺼를 내보냄 export
 	Export(_copy=true,_resetKey=true)	: this
 	{	
@@ -608,33 +611,94 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	}
 
 }
-export class CBlackBoardRef<T> extends CObject
-{
-    mKey : string;
-	constructor(_key="")
-	{
-		super();
-		this.mKey=_key;
-	}
-	Ref(_ref : string=null) : T
-	{
-		if(_ref!=null)	
-			this.mKey=_ref;
-		return CBlackBoard.Find(this.mKey);
-	}
-	
-	Icon() { return "bi bi-link"; }
-	EditDrop(_object: CObject): void 
-	{
-		if(CBlackBoard.Find(_object.Key())!=null)
-	    {
-	        this.mKey=_object.Key();
-	        this.EditRefresh();
-	    }
-	}
-	
-}
 
+
+// export class CBlackBoardRef<T> extends CObject
+// {
+//     mKey : string;
+// 	mTemplate;
+// 	constructor(_key : any="")
+// 	{
+// 		super();
+// 		if(typeof _key =="string")
+// 			this.mKey=_key;
+// 		else
+// 		{
+// 			this.mTemplate=_key.name;
+// 			this.mKey="";
+
+// 		}
+		
+// 	}
+// 	override IsShould(_member: string, _type: CObject.eShould): boolean {
+// 		if(_member=="mTemplate")return false;
+
+// 		return super.IsShould(_member,_type);
+// 	}
+// 	Ref(_ref : string=null) : T
+// 	{
+// 		if(_ref!=null)	
+// 			this.mKey=_ref;
+// 		return CBlackBoard.Find(this.mKey);
+// 	}
+	
+// 	Icon() { return "bi bi-link"; }
+// 	EditDrop(_object: CObject): void 
+// 	{
+// 		if(CBlackBoard.Find(_object.Key())!=null)
+// 	    {
+// 	        this.mKey=_object.Key();
+// 	        this.EditRefresh();
+// 	    }
+// 	}
+	
+// }
+export class CBlackBoardRef<T> extends CObject {
+    mKey: string = "";
+    mTemplate: string;
+
+   
+    constructor();
+    constructor(classType: new (...args: any[]) => T);
+    constructor(key: string);
+
+    constructor(param?: any) {
+        super();
+        if (typeof param === "string") {
+            this.mKey = param;
+        } else if (typeof param === "function") {
+            this.mTemplate = param.name;
+			this.mKey="";
+        }
+    }
+
+    override IsShould(_member: string, _type: CObject.eShould): boolean {
+        if (_member === "mTemplate") return false;
+        return super.IsShould(_member, _type);
+    }
+
+    Ref(_ref: string = null): T 
+	{
+        if (_ref != null)
+            this.mKey = _ref;
+        return CBlackBoard.Find(this.mKey) as T;
+    }
+
+    Icon() { return "bi bi-link"; }
+
+    EditDrop(_object: CObject): void 
+	{
+        if (CBlackBoard.Find(_object.Key()) != null) 
+		{
+			if(this.mTemplate!=null && this.mTemplate!=_object.constructor.name)
+			{
+				alert("class Type Diffrent");
+			}
+            this.mKey = _object.Key();
+            this.EditRefresh();
+        }
+    }
+}
 
 export namespace CObject {
 	 export enum eShould {

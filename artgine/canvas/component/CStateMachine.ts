@@ -11,6 +11,17 @@ import { CComponent } from "./CComponent.js";
 import { CRigidBody } from "./CRigidBody.js";
 
 
+// class CSMPI
+// {
+//     constructor(_class,_data0,_data1=null)
+//     {
+//         this.mClass=_class;
+//         this.mData.push(_data0);
+//         if(_data1)
+//     }
+//     mClass;
+//     mData=new Array();
+// }
 export class CSMPattern extends CObject
 {
     //mName="";
@@ -43,10 +54,11 @@ CAniFlow
 
 
 */
-export class CStateMachine extends CComponent implements IListener
+export class CStateMachine extends CComponent //implements IListener
 {
     mPattern=new Array<CSMPattern>;
-    mEvent=new Map<string,CEvent>();
+    //mEvent=new Map<string,CEvent>();
+    mLastDir : number =null;
     mStatePst=new Set<string>();;
     mStateLast=new Set<string>();;
     mNameSet=new Set<string>();
@@ -56,16 +68,16 @@ export class CStateMachine extends CComponent implements IListener
         super();
         //this.mParrern=_pattern;
     }
-    On(_key: any, _event: any, _target: any=null) 
-    {
-        this.mEvent.set(_key,CEvent.ToCEvent(_event));
-    }
-    Off(_key: any, _target: any) {
-        throw new Error("Method not implemented.");
-    }
-    GetEvent(_key: any, _target: any) {
-        throw new Error("Method not implemented.");
-    }
+    // On(_key: any, _event: any, _target: any=null) 
+    // {
+    //     this.mEvent.set(_key,CEvent.ToCEvent(_event));
+    // }
+    // Off(_key: any, _target: any) {
+    //     throw new Error("Method not implemented.");
+    // }
+    // GetEvent(_key: any, _target: any) {
+    //     throw new Error("Method not implemented.");
+    // }
 
     PushPattern(_smp)
     {
@@ -91,40 +103,56 @@ export class CStateMachine extends CComponent implements IListener
                 for(let f of com.mForceArr)
                 {
                     this.mNameSet.add(f.mKey);
-                }
-                let dirDot=[0,0,0,0,0,0];
+                    if(f.Key()=="g")    continue;
+                    
+                    let dirDot=[0,0,0,0,0,0];
 
-                //CConsol.Log(com.MoveDir());
-                dirDot[0]=CMath.V3Dot(CVec3.Left(),com.MoveDir());
-                dirDot[1]=CMath.V3Dot(CVec3.Right(),com.MoveDir());
-                // dirDot[2]=CMath.V3Dot(CVec3.Up(),com.MoveDir());
-                // dirDot[3]=CMath.V3Dot(CVec3.Down(),com.MoveDir());
-                dirDot[4]=CMath.V3Dot(CVec3.Front(),com.MoveDir());
-                dirDot[5]=CMath.V3Dot(CVec3.Back(),com.MoveDir());
+                    //CConsol.Log(com.MoveDir());
+                    dirDot[0]=CMath.V3Dot(CVec3.Left(),f.mDirection);
+                    dirDot[1]=CMath.V3Dot(CVec3.Right(),f.mDirection);
+                    dirDot[2]=CMath.V3Dot(CVec3.Up(),f.mDirection);
+                    dirDot[3]=CMath.V3Dot(CVec3.Down(),f.mDirection);
+                    dirDot[4]=CMath.V3Dot(CVec3.Front(),f.mDirection);
+                    dirDot[5]=CMath.V3Dot(CVec3.Back(),f.mDirection);
 
-                let select=-1;
-                let selectMax=0;
-                for(let i=0;i<6;++i)
-                {
-                    if(dirDot[i]>selectMax)
+                    let select=-1;
+                    let selectMax=0;
+                    for(let i=0;i<6;++i)
                     {
-                        selectMax=dirDot[i];
-                        select=i;
+                        if(dirDot[i]>selectMax)
+                        {
+                            selectMax=dirDot[i];
+                            select=i;
+                        }
                     }
+                    this.mLastDir=select;
+                    switch(select)
+                    {
+                        case 0:this.mNameSet.add(f.mKey+CVec3.eDir.Left);break;
+                        case 1:this.mNameSet.add(f.mKey+CVec3.eDir.Right);break;
+                        case 2:this.mNameSet.add(f.mKey+CVec3.eDir.Up);break;
+                        case 3:this.mNameSet.add(f.mKey+CVec3.eDir.Down);break;
+                        case 4:this.mNameSet.add(f.mKey+CVec3.eDir.Front);break;
+                        case 5:this.mNameSet.add(f.mKey+CVec3.eDir.Back);break;
+                    }
+                    
+                    
                 }
-                switch(select)
-                {
-                    case 0:this.mNameSet.add(CVec3.eDir.Left+"");break;
-                    case 1:this.mNameSet.add(CVec3.eDir.Right+"");break;
-                    case 2:this.mNameSet.add(CVec3.eDir.Up+"");break;
-                    case 3:this.mNameSet.add(CVec3.eDir.Down+"");break;
-                    case 4:this.mNameSet.add(CVec3.eDir.Front+"");break;
-                    case 5:this.mNameSet.add(CVec3.eDir.Back+"");break;
-                }
-                
                 if(com.IsJump()) this.mNameSet.add("Jump");
                 if(com.IsFall()) this.mNameSet.add("Fall");
-                
+                if(this.mLastDir!=null)
+                {
+                    switch(this.mLastDir)
+                    {
+                        case 0:this.mNameSet.add("Last"+CVec3.eDir.Left);break;
+                        case 1:this.mNameSet.add("Last"+CVec3.eDir.Right);break;
+                        case 2:this.mNameSet.add("Last"+CVec3.eDir.Up);break;
+                        case 3:this.mNameSet.add("Last"+CVec3.eDir.Down);break;
+                        case 4:this.mNameSet.add("Last"+CVec3.eDir.Front);break;
+                        case 5:this.mNameSet.add("Last"+CVec3.eDir.Back);break;
+                    }
+                }
+                    
             }
             else if(com instanceof CAniFlow)
             {
@@ -133,10 +161,16 @@ export class CStateMachine extends CComponent implements IListener
  
         }
         let callCount=0;
+        let defaultPat : CSMPattern =null;
         for(let pat of this.mPattern)
         {
             let call=true;
-         
+            if(pat.mInArr.length==0 && pat.mOutArr.length==0)
+            {
+                defaultPat=pat;
+                continue;
+            }
+                
             for(let data of pat.mInArr)
             {
                 if(this.mNameSet.has(data)==false)
@@ -159,8 +193,9 @@ export class CStateMachine extends CComponent implements IListener
                 this.mStatePst.add(pat.mName);
                 if(this.mStateLast.has(pat.mName)==false)
                 {
-                    let event=this.mEvent.get(pat.mName);
-                    if(event!=null) event.Call();
+                    this.GetOwner().NewInMsg(pat.mName);
+                    //let event=this.mEvent.get(pat.mName);
+                    //if(event!=null) event.Call();
                     this.mOnList.add(pat.mName);
                     
                 }
@@ -173,8 +208,9 @@ export class CStateMachine extends CComponent implements IListener
             this.mStatePst.add("");
             if(this.mStateLast.has("")==false)
             {
-                let event=this.mEvent.get("");
-                if(event!=null) event.Call();
+                this.GetOwner().NewInMsg(defaultPat.mName);
+                // let event=this.mEvent.get("");
+                // if(event!=null) event.Call();
             }
             
         }
@@ -184,4 +220,5 @@ export class CStateMachine extends CComponent implements IListener
         this.mStatePst=dummy;
         this.mNameSet.clear();
     }
+
 }

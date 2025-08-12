@@ -1,13 +1,31 @@
-MIT License
+MIT License with Trademark and Patent Clause
 
-Copyright (c) 2025 JH88
+Copyright (c) 2025 Artgine  
+https://github.com/06fs4dix/Artgine  
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
+Permission is hereby granted, free of charge, to any person obtaining a copy  
+of this software and associated documentation files (the "Software"), to deal  
 in the Software without restriction, including without limitation the rights  
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell  
 copies of the Software, and to permit persons to whom the Software is  
 furnished to do so, subject to the following conditions:
+
+1. Any modified or derivative versions of the Software are recommended to acknowledge  
+   the original project name "Artgine" and the project URL https://github.com/06fs4dix/Artgine  
+   in their documentation or about section. The names "Artgine" and associated logos are trademarks of the original author  
+   and may be restricted for inappropriate, harmful purposes or uses that  
+   damage the Artgine brand image. Legitimate commercial use and promotion are  
+   freely permitted.
+
+2. This license does not grant permission to use the project name "Artgine" or  
+   any associated trademarks for inappropriate, harmful, or illegal purposes  
+   unless explicit written consent is obtained from the copyright holder.
+
+3. Patent Retaliation Clause: If you institute patent litigation (including a  
+   cross-claim or counterclaim in a lawsuit) alleging that the Software or a  
+   contribution within the Software constitutes patent infringement, then any  
+   licenses granted to you under this License shall terminate as of the date  
+   such litigation is filed.
 
 The above copyright notice and this permission notice shall be included in all  
 copies or substantial portions of the Software.
@@ -19,3 +37,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  
 SOFTWARE.
+-------------------------------------------------------------------------
+
+MIT 라이선스(상표권 및 특허 조항 포함)
+
+저작권 (c) 2025 Artgine  
+https://github.com/06fs4dix/Artgine  
+
+본 소프트웨어 및 관련 문서 파일(이하 "소프트웨어")의 복제본을 취득하는 모든  
+사람에게, 소프트웨어를 사용, 복사, 수정, 병합, 게시, 배포, 서브라이선스, 판매  
+및 소프트웨어의 복제본을 다른 사람에게 허용할 수 있는 권한을 무료로 부여합니다.  
+단, 다음 조건을 충족해야 합니다.
+
+1. 수정되거나 파생된 소프트웨어는 원 프로젝트명 "Artgine"과  
+   프로젝트 URL https://github.com/06fs4dix/Artgine 를 문서나 소개 화면에  
+   표시하는 것이 좋습니다. "Artgine" 및 관련 로고는 원 저작자의  
+   상표이며, 부적절하거나 유해한 목적이나 Artgine 브랜드 이미지를 훼손하는  
+   사용에 대해서만 제한될 수 있습니다. 정당한 상업적 이용 및 홍보는 자유롭게 허용됩니다.
+
+2. 본 라이선스는 "Artgine" 또는 관련 상표를 부적절하거나 유해하거나 불법적인  
+   목적으로 사용하는 권한은 명시적 서면 승인이 있어야만 부여합니다.
+
+3. 특허 보복 조항: 본 소프트웨어 또는 그 기여물이 특허를 침해한다고 주장하며  
+   특허 소송(반소·교차청구 포함)을 제기하는 경우, 본 라이선스에 따라 부여된  
+   모든 권리는 소송 제기일에 즉시 종료됩니다.
+
+위 저작권 고지와 본 허가 고지는 소프트웨어의 모든 복제본 또는 중요한 부분에 포함되어야 합니다.
+
+본 소프트웨어는 "있는 그대로" 제공되며, 상품성, 특정 목적에의 적합성, 비침해  
+등을 포함하나 이에 국한되지 않는 명시적 또는 묵시적인 어떠한 보증도 하지 않습니다.  
+저작권자나 권리자는 소프트웨어 또는 소프트웨어 사용과 관련하여 발생하는  
+어떠한 청구, 손해, 기타 책임에 대해서도 계약, 불법행위, 기타 사유를 불문하고  
+책임지지 않습니다.

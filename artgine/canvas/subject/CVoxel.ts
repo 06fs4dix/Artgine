@@ -34,13 +34,6 @@ import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CVec1 } from "../../geometry/CVec1.js";
 
 /*						
-CClass.Push(CVTile);
-CClass.Push(CVTileRoleCondition);
-CClass.Push(CVTileRole);
-CClass.Push(CVTileSurfacePattern);
-
-CClass.Push(CVTileMold);
-
 
 CVTileSurface : 타일 표면 정보
 CVTileSurface 표면 정보
