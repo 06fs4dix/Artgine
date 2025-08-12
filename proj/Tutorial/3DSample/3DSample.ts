@@ -463,7 +463,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
 
 }));
 
-
+CAlert.Info("F3로 개발자 모드로 가서, 왼쪽 상단 메뉴에 여러가지 쉐도우 방식을 테스트 해보세요!");
 
 
 
