@@ -131,7 +131,7 @@
 
   </details>
   <details>
-    <summary>Project Examples</summary>
+    <summary>Project Examples & Usage</summary>
     
   ### Project Examples
   The `proj/` folder contains various example projects demonstrating different features of the Artgine engine:
@@ -154,10 +154,29 @@
     - **Village** - Village simulation with LTree, MTree, Flower objects
     - **Shooting** - 2D shooting game mechanics with room server synchronization and pooling system
     - **SideScroll** - Side-scrolling platformer with physics processing and animation control
+   
+    ---
+    ## Source Code Explanation
+  
+   ### ⚠️ Important Notes
+   This project runs as an Electron app. The following files are **automatically generated and managed based on the project folder name**, so **never modify them**:
+   
+   - HTML files
+   - TypeScript files  
+   - JSON files
+   - Web Manifest files
+   
+   ### 📝 Modifiable Scope
+   - Only **code after EntryPoint** can be modified
+   - Do not touch automatically generated code
+   
+   > 💡 **Note**: Manually created files can be freely modified
+
+ 
    </details>
   <details>
     <summary>Code Explanation</summary>
-
+   
   ## Artgine Engine Core Classes
 
   ### CAtelier
@@ -457,7 +476,7 @@
   
   </details>
   <details>
-    <summary>프로젝트 예제</summary>
+    <summary>프로젝트 예제 및 사용법</summary>
     
   ### 프로젝트 예제
   `proj/` 폴더에는 Artgine 엔진의 다양한 기능을 보여주는 예제 프로젝트들이 포함되어 있습니다:
@@ -480,6 +499,25 @@
     - **Village** - LTree, MTree, Flower 오브젝트가 포함된 마을 시뮬레이션
     - **Shooting** - 2D 슈팅 게임 메커니즘 (룸서버 동기화, 풀링 시스템)
     - **SideScroll** - 사이드 스크롤링 플랫폼 (물리처리, 애니메이션 컨트롤)
+  ---
+  ## 소스 코드 설명
+  
+  ### ⚠️ 주의사항
+  이 프로젝트는 일렉트론 앱으로 실행됩니다. 다음 파일들은 **프로젝트 폴더명을 기준으로 자동 생성 및 관리**되므로 **절대 수정하지 마세요**:
+  
+  - HTML 파일
+  - TypeScript 파일  
+  - JSON 파일
+  - Web Manifest 파일
+  
+  ### 📝 수정 가능한 범위
+  - **EntryPoint 이후의 코드만** 수정 가능합니다
+  - 자동 생성되는 코드는 건드리지 마세요
+  
+  > 💡 **참고**: 수동으로 생성한 파일은 자유롭게 수정 가능합니다
+
+  
+  
 
   </details>
   <details>
