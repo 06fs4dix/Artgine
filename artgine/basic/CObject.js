@@ -106,6 +106,9 @@ export class CObject {
     }
     static Import(_tar, _org) {
     }
+    ExportProxy(_resetKey = true) {
+        return new Proxy(this.Export(false, _resetKey), ProxyHandle);
+    }
     Export(_copy = true, _resetKey = true) {
         return CObject.Export(this, _copy, _resetKey);
     }
@@ -428,10 +431,22 @@ export class CObject {
     }
 }
 export class CBlackBoardRef extends CObject {
-    mKey;
-    constructor(_key = "") {
+    mKey = "";
+    mTemplate;
+    constructor(param) {
         super();
-        this.mKey = _key;
+        if (typeof param === "string") {
+            this.mKey = param;
+        }
+        else if (typeof param === "function") {
+            this.mTemplate = param.name;
+            this.mKey = "";
+        }
+    }
+    IsShould(_member, _type) {
+        if (_member === "mTemplate")
+            return false;
+        return super.IsShould(_member, _type);
     }
     Ref(_ref = null) {
         if (_ref != null)
@@ -441,6 +456,9 @@ export class CBlackBoardRef extends CObject {
     Icon() { return "bi bi-link"; }
     EditDrop(_object) {
         if (CBlackBoard.Find(_object.Key()) != null) {
+            if (this.mTemplate != null && this.mTemplate != _object.constructor.name) {
+                alert("class Type Diffrent");
+            }
             this.mKey = _object.Key();
             this.EditRefresh();
         }

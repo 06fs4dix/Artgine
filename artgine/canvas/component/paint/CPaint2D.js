@@ -380,6 +380,7 @@ export class CPaint2D extends CPaint {
                 this.mBound.InitBound(v1);
                 this.mBound.InitBound(v2);
                 this.mBound.InitBound(v3);
+                this.mLMat.Unit();
                 this.GetFMat().SetV3(0, v0);
                 this.GetFMat().SetV3(1, v1);
                 this.GetFMat().SetV3(2, v2);

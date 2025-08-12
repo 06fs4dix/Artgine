@@ -80,20 +80,20 @@ var weightArrMat: Sam2DMat = new Sam2DMat(9);
 var time : number = Attribute(0,"time");
 
 //Skin
-Build("Pre3Skin",[],
+Build("3DSkin",[],
 	vs_main,[worldMat,viewMat,projectMat,alphaCut,skin,weightArrMat],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
 //Simple
-Build("Pre3Simple",["simple"],
+Build("3DSimple",["simple"],
 	vs_main_simple,[worldMat,viewMat,projectMat,colorModel,alphaModel,alphaCut],
 	[out_position,to_uv],
 	ps_main_simple,[out_color]
 );
 
 //gBuffer
-Build("Pre3GBuffer", ["gBuf"], 
+Build("3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
 		sam2DCount,material,outputType,
@@ -101,7 +101,7 @@ Build("Pre3GBuffer", ["gBuf"],
 	ps_main_gBuffer,[out_color]
 );
 //gBuffer MultiTex
-Build("Pre3GBufferMulti", ["gBufMulti"], 
+Build("3DGBufferMulti", ["gBufMulti"], 
 	vs_main_gBuffer, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
 		sam2DCount,material,
@@ -110,7 +110,7 @@ Build("Pre3GBufferMulti", ["gBufMulti"],
 );
 
 //shadow
-Build("Pre3ShadowWrite", ["shadowWrite"], 
+Build("3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
@@ -119,7 +119,7 @@ Build("Pre3ShadowWrite", ["shadowWrite"],
 	ps_main_shadow_write,[out_color]
 );
 
-Build("Pre3ShadowRead", ["shadowRead"], 
+Build("3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
@@ -131,7 +131,7 @@ Build("Pre3ShadowRead", ["shadowRead"],
 );
 
 //baking
-Build("Pre3Bake", ["bake"], 
+Build("3DBake", ["bake"], 
 	vs_main_bake, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut
 	], [out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],

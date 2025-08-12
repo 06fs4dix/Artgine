@@ -1,8 +1,9 @@
 import { CObject } from "../../basic/CObject.js";
 import { CRouteMsg } from "../CRouteMsg.js";
 export class CComponent extends CObject {
-    mDestroy;
     mEnable;
+    mSave;
+    mDestroy;
     mSysc = CComponent.eSysn.Event;
     mComMsg = null;
     mComMsgSwap = new Array();
@@ -13,6 +14,7 @@ export class CComponent extends CObject {
         super();
         this.mDestroy = false;
         this.mEnable = true;
+        this.mSave = true;
         this.mComMsg = new Array();
     }
     GetSysc() { return this.mSysc; }

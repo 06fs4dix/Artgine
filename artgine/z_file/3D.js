@@ -33,29 +33,29 @@ var depthMap = 0.0;
 var screenResolution = new CVec2(1.0, 1.0);
 var weightArrMat = new Sam2DMat(9);
 var time = Attribute(0, "time");
-Build("Pre3Skin", [], vs_main, [worldMat, viewMat, projectMat, alphaCut, skin, weightArrMat], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
-Build("Pre3Simple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel, alphaCut], [out_position, to_uv], ps_main_simple, [out_color]);
-Build("Pre3GBuffer", ["gBuf"], vs_main_gBuffer, [
+Build("3DSkin", [], vs_main, [worldMat, viewMat, projectMat, alphaCut, skin, weightArrMat], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
+Build("3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel, alphaCut], [out_position, to_uv], ps_main_simple, [out_color]);
+Build("3DGBuffer", ["gBuf"], vs_main_gBuffer, [
     worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
     sam2DCount, material, outputType,
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer, [out_color]);
-Build("Pre3GBufferMulti", ["gBufMulti"], vs_main_gBuffer, [
+Build("3DGBufferMulti", ["gBufMulti"], vs_main_gBuffer, [
     worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
     sam2DCount, material,
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer_multi, [out_color, out_pos, out_nor, out_spc]);
-Build("Pre3ShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
+Build("3DShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
 ], [out_position, to_uv, to_viewPos], ps_main_shadow_write, [out_color]);
-Build("Pre3ShadowRead", ["shadowRead"], vs_main_shadow_read, [
+Build("3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
     shadowRate, PCF, texture16f, bias, normalBias, dotCac,
     ligDir, ligCol, ligCount,
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
-Build("Pre3Bake", ["bake"], vs_main_bake, [
+Build("3DBake", ["bake"], vs_main_bake, [
     worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut
 ], [out_position, to_uv, to_normal, to_worldPos, to_tangent, to_binormal, to_ref], ps_main_bake, [out_color]);
 function vs_main_simple(f3_ver, f2_uv) {

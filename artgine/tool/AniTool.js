@@ -19,6 +19,7 @@ import { CTexture } from "../render/CTexture.js";
 import { CInput } from "../system/CInput.js";
 import { CCamCon2DFreeMove, CCamCon3DThirdPerson } from "../util/CCamCon.js";
 import { CChecker } from "../util/CChecker.js";
+import { CLoaderOption } from "../util/CLoader.js";
 import { CModalFlex } from "../util/CModalUtil.js";
 var gAtlas = null;
 var gCloseEvent = null;
@@ -227,6 +228,9 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
         gAtl.Frame().PushEvent(CEvent.eType.Update, gUpdateEvent);
         AniToolSubjectInit();
     });
+    gAtl.Frame().PushEvent(CEvent.eType.Render, () => {
+        gAtl.Frame().Dev().SetClearColor(true, new CVec4(1, 0, 1, 1));
+    });
     const selectEl = CUtil.ID("clipTypeSelect");
     const addBtn = CUtil.ID("addClipBtn");
     const classMap = CClass.ExtendsList(CClip);
@@ -320,7 +324,7 @@ async function AniToolDrop(_drop) {
         let fileDrop = _drop;
         for (let i = 0; i < fileDrop.mPaths.length; ++i) {
             if (fileDrop.mPaths.length > 0 && fileDrop.mPaths[i] != null) {
-                gAtl.Frame().Load().Load(fileDrop.mPaths[i]);
+                gAtl.Frame().Load().Load(fileDrop.mPaths[i], new CLoaderOption().Set("mFilter", CTexture.eFilter.Neaest));
                 let info = CString.ExtCut(fileDrop.mPaths[i]);
                 let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
                 if (info.ext == "png" || info.ext == "jpg") {
@@ -582,7 +586,7 @@ async function AniToolSubjectInit() {
     else {
         gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
         gSubject = gAtl.Canvas("AniTool").Push(new CSubject());
-        await gAtl.Frame().Load().Load(gBasicTex);
+        await gAtl.Frame().Load().Load(gBasicTex, new CLoaderOption().Set("mFilter", CTexture.eFilter.Neaest));
         gImg = gAtl.Frame().Res().Find(gBasicTex);
         let pt = gSubject.PushComp(new CPaint2D(gBasicTex));
         pt.SetPivot(new CVec3(1, -1, 1));

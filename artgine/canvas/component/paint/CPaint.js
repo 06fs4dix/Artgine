@@ -332,9 +332,10 @@ export class CPaint extends CComponent {
         this.PushTag("shadow");
     }
     GetRenderPass() { return this.mRenderPass; }
-    SetRenderPass(_rp, _copy = true) {
+    PushRenderPass(_rp, _copy = true) {
         this.mDefaultAttr = new Set();
         this.mRenderPass = new Array();
+        this.BatchClear();
         if (_rp instanceof Array) {
             for (let each0 of _rp) {
                 if (_copy)
@@ -342,6 +343,7 @@ export class CPaint extends CComponent {
                 else
                     this.mRenderPass.push(each0);
             }
+            return this.mRenderPass;
         }
         else {
             var rp = null;
@@ -350,8 +352,9 @@ export class CPaint extends CComponent {
             else
                 rp = _rp;
             this.mRenderPass.push(rp);
+            return this.mRenderPass[this.mRenderPass.length - 1];
         }
-        this.BatchClear();
+        return null;
     }
     PushCShaderAttr(_sa) {
         let attr = this.mShaderAttrMap.get(_sa.mKey);

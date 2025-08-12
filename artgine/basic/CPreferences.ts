@@ -29,7 +29,7 @@ export class CPreferences extends CObject
     public mDeveloper=true;
     public mDebugMode=false;
 
-    public mIAuto=false;
+    public mIAuto=true;
     public mWASM=false;
     public mServer="local";
     public mGitHub=false;

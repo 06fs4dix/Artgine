@@ -1,4 +1,4 @@
-const CACHE_NAME = "CACHE_NAME_2025-07-03 22:32:05";
+const CACHE_NAME = "CACHE_NAME_2025-08-10 16:21:59";
 		const MAX_CACHE_SIZE = 0;
 		const LOG = false;
 		const API_CACHE = false;//Start
@@ -153,9 +153,13 @@ self.addEventListener("message", async (event) =>
 
 // AbortSignal.timeout 폴리필 - iOS Safari 호환성을 위함
 function CreateTimeoutSignal(timeout) {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), timeout);
-    return controller.signal;
+    try {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), timeout);
+        return controller.signal;
+    } catch (e) {
+        return undefined; // Safari 등 구형 대응
+    }
 }
 
 // 서버 상태 체크 함수 (HEAD 요청 사용)
@@ -465,9 +469,17 @@ async function FetchTimeout(request) {
         });
     }
     catch (error) {
-        
         SendCacheOffline();
-        throw error;
+        if (error.name === "AbortError") {
+            SWLog("⏱ 요청 타임아웃:", request.url);
+        } else {
+            console.error("❗ Fetch 오류:", error);
+        }
+
+        return new Response("요청 실패 또는 타임아웃", {
+            status: 504,
+            headers: { 'Content-Type': 'text/plain' }
+        });
     }
 }
 
@@ -488,9 +500,17 @@ async function FetchTimeoutCache(request, cache) {
         return networkResponse;
     }
     catch (error) {
-        
         SendCacheOffline();
-        throw error;
+        if (error.name === "AbortError") {
+            SWLog("⏱ 요청 타임아웃:", request.url);
+        } else {
+            console.error("❗ Fetch 오류:", error);
+        }
+
+        return new Response("요청 실패 또는 타임아웃", {
+            status: 504,
+            headers: { 'Content-Type': 'text/plain' }
+        });
     }
 }
 

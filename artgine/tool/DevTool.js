@@ -48,6 +48,7 @@ let gBWidth = 0;
 let gBHeight = 0;
 let gSelectBound = new CBound();
 let gAddMove = new CVec3();
+let gLastCanvas = null;
 function ResetBoxXYZ(_subject) {
     let pos = _subject.GetWMat().xyz;
     gBoundXY.mMin.Import(pos);
@@ -217,7 +218,7 @@ function DevToolRender() {
     let ptArr = subject.FindComps(CPaint);
     let clArr = subject.FindComps(CCollider);
     const render = gAtl.Frame().Ren();
-    let shader = gAtl.Frame().Res().Find("Pre3Simple");
+    let shader = gAtl.Frame().Res().Find("3DSimple");
     let meshDraw = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh() + "Dev");
     if (meshDraw == null) {
         let mesh = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh());
@@ -462,7 +463,7 @@ function DevToolDrop(_drop) {
             }, () => { }], ["OK", "Cancel"]);
     }
     else {
-        if (gLeftSelect == null || gLeftSelect instanceof CCanvas == false) {
+        if (gLastCanvas == null) {
             CAlert.Info("캔버스를 선택해주세요");
             return;
         }
@@ -470,7 +471,8 @@ function DevToolDrop(_drop) {
             return;
         }
         let cobject = _drop.mObject.Export();
-        let can = gLeftSelect;
+        cobject.SetBlackBoard(false);
+        let can = gLastCanvas;
         if (gAtl.Brush().GetCamDev().GetOrthographic()) {
             let pos = gAtl.Brush().GetCamDev().ScreenToWorldPoint(_drop.mX, _drop.mY);
             let z = cobject.GetPos().z;
@@ -887,12 +889,14 @@ function DevToolGiftSwap(_obj) {
             let obj = can.Find(_obj.Key(), true);
             if (obj != null) {
                 can.Detach(_obj.Key());
+                _obj.mPTArr = null;
                 can.GetResMap().set(_obj.Key(), _obj);
                 DevToolLeftRemove(false);
             }
             else {
                 can.DetachRes(_obj.Key());
                 can.Push(_obj);
+                _obj.mPTArr = null;
                 DevToolLeftRemove(false);
             }
         }
@@ -1311,6 +1315,7 @@ function DevToolLeft() {
         canDiv.addEventListener('dragover', (ev) => ev.preventDefault());
         canDiv.addEventListener('drop', (ev) => {
             ev.preventDefault();
+            ev.stopPropagation();
             const sourceKey = ev.dataTransfer?.getData('hash');
             let cutObj = gLeftItem.get(sourceKey);
             for (let can of gAtl.mCanvasMap.values()) {
@@ -1361,6 +1366,7 @@ function LeftSelect(_obj) {
     rightPanel.append(_obj.EditInit());
     gLeftSelect = _obj;
     if (_obj instanceof CCanvas) {
+        gLastCanvas = _obj;
         const bdiv = CUtil.ID(_obj.ObjHash() + "_ul");
         if (bdiv.children.length === 0) {
             for (let [key, value] of _obj.GetSubMap()) {

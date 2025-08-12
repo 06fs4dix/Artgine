@@ -2,7 +2,7 @@ import {CObject} from "../basic/CObject.js";
 import {CTree} from "../basic/CTree.js"
 
 import {CMat} from "../geometry/CMat.js"
-import {CMaterial} from "../render/CMaterial.js"
+//import {CMaterial} from "../render/CMaterial.js"
 import {CMeshDataNode} from "../render/CMeshDataNode.js"
 export class CWeightMat
 {
@@ -30,7 +30,7 @@ export class CMesh extends CObject
 	public vertexNormal : boolean;
 	public meshTree : CTree<CMeshDataNode>;
 	
-	public material : Array<CMaterial>;
+	//public material : Array<CMaterial>;
 	public texture : Array<string>;
 	//public weightName : Array<string>;
 	//public weightMat : Array<CWeightMat>;
@@ -45,7 +45,7 @@ export class CMesh extends CObject
 		
 		this.meshTree=new CTree();
 	
-		this.material=new Array();//메터리얼 텍스처 한세트이다
+		//this.material=new Array();//메터리얼 텍스처 한세트이다
 		this.texture=new Array();//사용법은 메쉬에서 메터리얼 텍스처 번호를 참조해서 불러오기 때문이다
 		//this.weightName=new Array();
 		//this.weightMat=new Array();

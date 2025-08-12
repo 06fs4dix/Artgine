@@ -82,7 +82,7 @@ export class CSurface extends CSubject
 					
 			}
 			
-			this.mPaint.SetRenderPass(this.mRenderPass,false);
+			this.mPaint.PushRenderPass(this.mRenderPass,false);
 		}
         
 		if(this.mRTUse==false)

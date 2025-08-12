@@ -19,7 +19,7 @@ export class CPreferences extends CObject {
     mXR = false;
     mDeveloper = true;
     mDebugMode = false;
-    mIAuto = false;
+    mIAuto = true;
     mWASM = false;
     mServer = "local";
     mGitHub = false;

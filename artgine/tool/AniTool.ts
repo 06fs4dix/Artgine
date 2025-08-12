@@ -257,6 +257,9 @@ export function AniTool(_ani: CAnimation, _basicTex=null,_basicMesh=null) {
 
         AniToolSubjectInit();
     });
+    gAtl.Frame().PushEvent(CEvent.eType.Render,()=>{
+        gAtl.Frame().Dev().SetClearColor(true,new CVec4(1,0,1,1));
+    });
     
 
     // ClipType SelectBox 및 추가 버튼 설정
@@ -384,7 +387,7 @@ async function AniToolDrop(_drop : CDrop)
         {
             if (fileDrop.mPaths.length > 0 && fileDrop.mPaths[i] != null) 
             {
-                gAtl.Frame().Load().Load(fileDrop.mPaths[i]);
+                gAtl.Frame().Load().Load(fileDrop.mPaths[i],new CLoaderOption().Set("mFilter",CTexture.eFilter.Neaest));
                 let info = CString.ExtCut(fileDrop.mPaths[i]);
                 let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
                 if (info.ext == "png" || info.ext == "jpg") {
@@ -704,7 +707,7 @@ async function AniToolSubjectInit() {
         gSubject = gAtl.Canvas("AniTool").Push(new CSubject());
 
 
-        await gAtl.Frame().Load().Load(gBasicTex);
+        await gAtl.Frame().Load().Load(gBasicTex,new CLoaderOption().Set("mFilter",CTexture.eFilter.Neaest));
         gImg = gAtl.Frame().Res().Find(gBasicTex);
         
 
@@ -808,6 +811,8 @@ async function AniToolSubjectInit() {
 
 // }
 function AniToolViewRender() {
+
+    
     const viewDiv = CUtil.ID("AniToolView_div");
     viewDiv.innerHTML = "";
 

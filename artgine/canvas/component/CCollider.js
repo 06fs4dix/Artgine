@@ -73,6 +73,9 @@ export class CCollider extends CComponent {
             this.InitBound(this.mBound);
             this.mUpdateMat = CUpdate.eType.Updated;
         }
+        else if (_pointer.member == "mLayer") {
+            this.mUpdateMat = CUpdate.eType.Updated;
+        }
     }
     IsShould(_member, _type) {
         if (_member == "mUpdateMat" || _member == "mGJK" || _member == "m_colMsg" || _member == "mPaintLoad" ||
@@ -143,8 +146,10 @@ export class CCollider extends CComponent {
         }
         if (this.mGJKShape == null || this.mGGI == null)
             return;
-        if (this.mBound.GetType() == CBound.eType.Voxel)
+        if (this.mBound.GetType() == CBound.eType.Voxel) {
+            this.mUpdateMat = CUpdate.eType.Not;
             return;
+        }
         this.mStartChk = false;
         this.Start();
     }
@@ -176,8 +181,18 @@ export class CCollider extends CComponent {
             this.mBound.Reset();
             this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetLMat()));
             this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetLMat()));
-            if (this.mBoundType == CBound.eType.Null)
+            let size = this.mBound.GetSize();
+            let center = this.mBound.GetCenter();
+            this.mBound.mMin.x = -size.x * 0.5;
+            this.mBound.mMin.y = -size.y * 0.5;
+            this.mBound.mMin.z = -size.z * 0.5;
+            this.mBound.mMax.x = size.x * 0.5;
+            this.mBound.mMax.y = size.y * 0.5;
+            this.mBound.mMax.z = size.z * 0.5;
+            if (this.mBoundType == CBound.eType.Null) {
                 this.mBound.SetType(bound.GetType());
+                this.mBoundType = bound.GetType();
+            }
             else
                 this.mBound.SetType(this.mBoundType);
         }
@@ -239,10 +254,11 @@ export class CCollider extends CComponent {
     UpdateMat() {
         if (this.mGJKShape == null)
             return;
-        if (this.mUpdateMat == CUpdate.eType.Updated || this.GetOwner().mUpdateMat != 0) {
+        if (this.mUpdateMat != CUpdate.eType.Not || this.GetOwner().mUpdateMat != 0) {
             this.mGJKShape.SetMatrix(this.GetOwner().GetWMat());
             this.ResetBoundGJK();
-            this.mUpdateMat = CUpdate.eType.Already;
+            if (this.mUpdateMat == CUpdate.eType.Updated)
+                this.mUpdateMat = CUpdate.eType.Already;
         }
     }
     GetCollision() {

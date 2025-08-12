@@ -1,4 +1,3 @@
-import { CFileDB, CJSON } from "../basic/CJSON.js";
 import { CPool } from "../basic/CPool.js";
 export class CORMField {
     mKey = "";
@@ -110,95 +109,16 @@ export class CRDBMS extends CORM {
         }
     }
     async Insert(_collection, _data) {
-        if (this.mFileDB) {
-            await this.FileDBChk();
-            const gridList = [];
-            for (const field of _data) {
-                if (typeof field.mValue === 'string' && field.mValue.length > 0xffff) {
-                    const holder = {};
-                    holder[field.mKey] = field.mValue;
-                    gridList.push(new CFileDB(holder, field.mKey));
-                }
-                else if (field.mValue instanceof CJSON) {
-                    field.mValue.FileDB(true, gridList);
-                }
-            }
-            await this.FileDBUpload(_collection, gridList);
-            for (const grid of gridList) {
-                const key = grid.mKey;
-                const index = _data.findIndex(f => f.mKey === key);
-                if (index !== -1) {
-                    _data[index].mValue = grid.mDoc[key];
-                }
-            }
-        }
-        const keys = _data.map(f => `${f.mKey}`).join(',');
-        const values = _data.map(() => '?').join(',');
-        const params = _data.map(f => f.mValue);
-        const sql = `INSERT INTO ${_collection} (${keys}) VALUES (${values})`;
-        return await this.Send(sql, params);
+        return null;
     }
     async Update(_collection, _condition, _data) {
-        const setClause = _data.map(f => `${f.mKey}=?`).join(',');
-        const setParams = _data.map(f => f.mValue);
-        const whereClause = _condition.map((c, i) => {
-            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
-            return `${logic} ${c.mKey} ${c.mCondition} ?`;
-        }).join('');
-        const whereParams = _condition.map(c => c.mValue);
-        const sql = `UPDATE ${_collection} SET ${setClause} WHERE ${whereClause}`;
-        return await this.Send(sql, [...setParams, ...whereParams]);
+        return null;
     }
     async Select(_collection, _condition, _projection, _limit) {
-        if (!_projection || _projection.length === 0)
-            _projection = await this.GetProjection(_collection);
-        const columns = _projection.length > 0 ? _projection.map(k => `${k}`).join(',') : '*';
-        let sql = `SELECT ${columns} FROM ${_collection}`;
-        const whereClause = _condition.map((c, i) => {
-            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
-            if (c.mCondition == "==")
-                return `${logic} ${c.mKey} = ?`;
-            return `${logic} ${c.mKey} ${c.mCondition} ?`;
-        }).join('');
-        const whereParams = _condition.map(c => c.mValue);
-        if (whereClause.length > 0)
-            sql += ` WHERE ${whereClause}`;
-        if (_limit?.mOrderBy)
-            sql += ` ORDER BY ${_limit.mOrderBy}`;
-        if (_limit?.mLimit > 0)
-            sql += ` LIMIT ${_limit.mLimitOffset}, ${_limit.mLimit}`;
-        const rows = await this.Recv(sql, whereParams);
-        const result = [];
-        if (rows == null)
-            return null;
-        for (const row of rows) {
-            const rowObj = {};
-            for (let i = 0; i < _projection.length; i++) {
-                rowObj[_projection[i]] = row[i];
-            }
-            result.push(rowObj);
-        }
-        if (this.mFileDB) {
-            const gridList = [];
-            for (const doc of result) {
-                for (const key of Object.keys(doc)) {
-                    if (typeof doc[key] === 'string' && doc[key].startsWith('#GridFS:')) {
-                        gridList.push({ mDoc: doc, mKey: key });
-                    }
-                }
-            }
-            await this.FileDBDownload(gridList);
-        }
-        return result;
+        return null;
     }
     async Delete(_collection, _condition) {
-        const whereClause = _condition.map((c, i) => {
-            const logic = i === 0 ? '' : ` ${c.mLogical.toUpperCase()}`;
-            return `${logic} ${c.mKey} ${c.mCondition} ?`;
-        }).join('');
-        const whereParams = _condition.map(c => c.mValue);
-        const sql = `DELETE FROM ${_collection} WHERE ${whereClause}`;
-        return await this.Send(sql, whereParams);
+        return null;
     }
     async Close() {
     }
@@ -212,3 +132,5 @@ export class CRDBMS extends CORM {
         return await this.Send(sql);
     }
 }
+import CORM_imple from "../network_imple/CORM.js";
+CORM_imple();

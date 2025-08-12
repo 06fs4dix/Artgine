@@ -37,9 +37,9 @@ var auroraHeight = 0.0;
 var auroraCut = 0.0;
 var auroraStep = 10.0;
 var camPos = Null();
-Build("PreCubeMap", [], vs_main, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
-Build("PreSkybox", ["sky"], vs_main_camBased, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
-Build("PreSkyGradient", ["gradient"], vs_main_camBased, [
+Build("CubeObject", [], vs_main, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
+Build("CubeSkybox", ["sky"], vs_main_camBased, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
+Build("CubeSkyGradient", ["gradient"], vs_main_camBased, [
     worldMat, viewMat, projectMat,
     camPos,
     horizon, sunset,

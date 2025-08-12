@@ -85,9 +85,11 @@ export class CScript extends CObject {
         }
     }
     static Action(_data, _event, count = 0, delay = 0, start = 0, end = 0) {
+        if (_data[0]["mTemp"] == null)
+            _data[0]["mTemp"] = { mRun: 0 };
         let run = _data[0]["mTemp"]["mRun"];
         let timer;
-        if (_data[0]["mTemp"]["mTimer"] == null) {
+        if (_data[0]["mTemp"]["mTimer" + run] == null) {
             _data[0]["mTemp"]["mTimer" + run] = new CTimer();
             _data[0]["mTemp"]["mCount" + run] = 0;
             _data[0]["mTemp"]["mTime" + run] = 0;
@@ -105,7 +107,7 @@ export class CScript extends CObject {
             return;
         if (end != 0 && _data[0]["mTemp"]["mTime" + run] > end)
             return;
-        _data[0]["mTemp"]["mDelay" + run] = _data[0]["mTemp"]["mDelay" + run] - delay;
+        _data[0]["mTemp"]["mDelay" + run] = 0;
         _data[0]["mTemp"]["mCount" + run] = _data[0]["mTemp"]["mCount" + run] + 1;
         if (_event instanceof CEvent)
             _event.Call();
@@ -128,10 +130,11 @@ export function main(_data : Array<any>)
     mActiveFun = "main";
     mKey = "";
     mData = [{}];
+    mGitHub = false;
     async Exe() {
         if (this.mSource == "")
             return;
-        let moudle = await CScript.Build(this.mKey, this.mSource);
+        let moudle = await CScript.Build(this.mKey, this.mSource, this.mGitHub);
         if (moudle == null)
             return;
         if (moudle[this.mActiveFun] == null) {

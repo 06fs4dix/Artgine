@@ -1,10 +1,11 @@
 //Version
-const version='2025-07-29 11:00:03';
+const version='2025-08-12 16:32:47';
 import "../../../artgine/artgine.js"
 
 //Class
 import {CClass} from "../../../artgine/basic/CClass.js";
-
+import { CUser } from "./CUser.js";
+CClass.Push(CUser);
 //Atelier
 import {CPreferences} from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -20,6 +21,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
@@ -31,8 +33,11 @@ gAtl.mPF = gPF;
 await gAtl.Init(['Main.json','Real.json']);
 var Main = gAtl.Canvas('Main.json');
 var Real = gAtl.Canvas('Real.json');
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
+let comcon=gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
+gAtl.Brush().GetCam2D().Set2DZoom(1.5);
 import {CObject} from "../../../artgine/basic/CObject.js"
 
 // === vinfo==3 위치에 랜덤 조형물 배치 (Village) ===
@@ -46,6 +51,10 @@ import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
 import { CVec4 } from "../../../artgine/geometry/CVec4.js";
 import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
 import { CTexture } from "../../../artgine/render/CTexture.js";
+import { CCamCon2DFollow } from "../../../artgine/util/CCamCon.js";
+import { CSysAuth } from "../../../artgine/system/CSysAuth.js";
+import { CAudioTag } from "../../../artgine/system/audio/CAudio.js";
+
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
 {
@@ -115,3 +124,27 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
 
     new CBlackboardModal(ba, ta, ca);
 }));
+Real.Push(new CUser()).SetPos(new CVec3(5200,6500));
+
+CSysAuth.Confirm(true).then(async (_enable)=>{
+    
+    if(_enable==false)  return;
+    let audio=new CAudioTag("Res/sound/TownTheme.mp3");
+    audio.Volume(0.5);
+    audio.Play();
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,8 @@
-const version = '2025-07-29 11:00:03';
+const version = '2025-08-12 16:32:47';
 import "../../../artgine/artgine.js";
+import { CClass } from "../../../artgine/basic/CClass.js";
+import { CUser } from "./CUser.js";
+CClass.Push(CUser);
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
@@ -14,6 +17,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 import { CPlugin } from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('ShadowPlane', '../../../plugin/ShadowPlane/');
@@ -23,6 +27,8 @@ gAtl.mPF = gPF;
 await gAtl.Init(['Main.json', 'Real.json']);
 var Main = gAtl.Canvas('Main.json');
 var Real = gAtl.Canvas('Real.json');
+let comcon = gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
+gAtl.Brush().GetCam2D().Set2DZoom(1.5);
 import { CCIndex } from "../../../artgine/canvas/CCIndex.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
@@ -30,6 +36,9 @@ import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
 import { CBlackboardModal } from "../../../artgine/util/CModalUtil.js";
 import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
 import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CCamCon2DFollow } from "../../../artgine/util/CCamCon.js";
+import { CSysAuth } from "../../../artgine/system/CSysAuth.js";
+import { CAudioTag } from "../../../artgine/system/audio/CAudio.js";
 {
     const backVoxel = Main.Find("BackGround");
     if (backVoxel) {
@@ -90,3 +99,11 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     }
     new CBlackboardModal(ba, ta, ca);
 }));
+Real.Push(new CUser()).SetPos(new CVec3(5200, 6500));
+CSysAuth.Confirm(true).then(async (_enable) => {
+    if (_enable == false)
+        return;
+    let audio = new CAudioTag("Res/sound/TownTheme.mp3");
+    audio.Volume(0.5);
+    audio.Play();
+});

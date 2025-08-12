@@ -192,7 +192,7 @@ export class CShadowPlane extends CPaint2D {
     Update(_delay) {
         this.UpdatePaintTarget();
         this.UpdateLightTarget();
-        if (this.m_pt?.IsUpdateFMat() || this.m_updateShadow) {
+        if (this.m_pt?.IsUpdateFMat() || this.m_updateShadow || (this.m_lig != null && this.m_lig.mUpdate != 0)) {
             this.UpdateShadow();
         }
         if (this.m_updateShadow) {
@@ -348,6 +348,7 @@ export class CShadowPlane extends CPaint2D {
             alpha = 1;
             height = fBound.GetSize().y * this.m_shadowLen;
         }
+        alpha = alpha * (lig.GetColor().x + lig.GetColor().y + lig.GetColor().z) / 3;
         const p1Far = CMath.V3AddV3(p1, CMath.V3MulFloat(dir, height));
         const p2Far = CMath.V3AddV3(p2, CMath.V3MulFloat(dir, height));
         const ptFMat = CMath.MatMul(pt.GetLMat(), pt.GetOwner().GetWMat());
@@ -418,7 +419,7 @@ export class CShadowPlane extends CPaint2D {
         const beforeRP = fw.Dev().ChangeRenderPass(tempRP);
         fw.Dev().SetClearColor(true, new CVec4(0.5, 0.5, 0.5, 0));
         fw.Ren().Begin(tex);
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Pre3SkinC").mKey);
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("3DSkinC").mKey);
         fw.Ren().UseShader(vf);
         fw.Ren().SendGPU(vf, new CMat(), "worldMat");
         fw.Ren().SendGPU(vf, cam.GetViewMat(), "viewMat");

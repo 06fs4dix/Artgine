@@ -416,17 +416,16 @@ export class CFileViewer extends CModal
         this.SetHeader(`
         <div class="d-flex flex-column h-100">
             <div class="row mb-2 align-items-center">
-            <div class="col">
-                <select id="${id}_select" class="form-select form-select-sm">${options}</select>
+                <div class="col">
+                    <select id="${id}_select" class="form-select form-select-sm">${options}</select>
+                </div>
+                <div class="col-auto">
+                    <button id="${id}_load" class="btn btn-sm btn-primary">Load</button>
+                </div>
+                <div class="col-auto">
+                    <button id="${id}_exe" class="btn btn-sm btn-success">Execute</button>
+                </div>
             </div>
-            <div class="col-auto">
-                <button id="${id}_load" class="btn btn-sm btn-primary">Load</button>
-            </div>
-            <div class="col-auto">
-                <button id="${id}_exe" class="btn btn-sm btn-success">Execute</button>
-            </div>
-            </div>
-            
         </div>
         `);
 

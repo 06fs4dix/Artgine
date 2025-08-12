@@ -16,6 +16,7 @@ export class CScriptComp extends CComponent
         super.Update(_delay);
         this.mScript.mKey=this.Key();
         this.mScript.mData[0]=this.GetOwner();
+        this.mScript.mGitHub=this.GetOwner().GetFrame().PF().mGitHub;
         this.mScript.Exe();
     }
     Icon(){		return "bi bi-pc";	}

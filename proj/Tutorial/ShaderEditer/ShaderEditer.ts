@@ -1,5 +1,7 @@
 //Version
-const version='2025-07-03 22:32:06';
+const version='2025-08-10 16:22:00';
+import "../../../artgine/artgine.js"
+
 //Class
 import {CClass} from "../../../artgine/basic/CClass.js";
 
@@ -17,11 +19,12 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mLocal = true;
+gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPluging.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([]);
@@ -76,7 +79,7 @@ function Init()
     let pt=sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
     let rp=new CRenderPass("TestShader.ts");
-    pt.SetRenderPass(rp);
+    pt.PushRenderPass(rp);
     //pt.SetColorModel(new CColor(1,1,1,CColor.eModel.RGBAdd));
 }
 Init();

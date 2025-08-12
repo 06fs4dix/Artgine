@@ -47,7 +47,7 @@ export class CBound extends CObject {
                 _pointer.Set(valArr[ct.selectedIndex]);
                 _input.value = valArr[ct.selectedIndex] + "";
                 if (_pointer.target instanceof CObject)
-                    _pointer.target.EditChange(_pointer);
+                    _pointer.target.EditChange(_pointer, false);
             };
             _div.append(select);
             select.addEventListener("change", () => {

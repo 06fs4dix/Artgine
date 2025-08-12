@@ -8,15 +8,15 @@ import {CSubject} from "../subject/CSubject.js";
 
 export class CComponent extends CObject
 {
+	protected mEnable : boolean;
+	public mSave : boolean;
+
 
 	
 	protected mDestroy : boolean;
-	protected mEnable : boolean;
 	public mSysc=CComponent.eSysn.Event;
 	public mComMsg : Array<CRouteMsg>=null;
 	protected mComMsgSwap=new Array<CRouteMsg>();
-	
-	
 	public mComMsgLen=0;
 	protected mOwner : CSubject=null;
 	public mStartChk=true;
@@ -25,20 +25,12 @@ export class CComponent extends CObject
 		super();
 		this.mDestroy=false;
 		this.mEnable=true;
+		this.mSave=true;
 		this.mComMsg=new Array<CRouteMsg>();
+		
 
-//		if(this.m_comMsg==null)
-//			alert("??");
 	}
-	// SaveJSON(_file: any=null) 
-	// {
-	// 	CFile.Save(_file);
-	// }
-	// async LoadJSON(_file: any=null)
-	// {
-	// 	let buf=await CFile.Load(_file);
-	// 	this.LoadJSON(new CJSON(buf));
-	// }
+
 	GetSysc(){	return this.mSysc;	}
 	
 	override IsShould(_member: string, _type: CObject.eShould) 

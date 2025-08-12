@@ -160,17 +160,20 @@ export class CUnwrapUV {
         g_stopLock = false;
     }
 }
-function GetOptimalResoultion(_bound, _max, _min = 256) {
+function GetOptimalResoultion(_bound, _max, _shadowSize, _min = 256) {
     const dx = _bound.mMax.x - _bound.mMin.x;
     const dy = _bound.mMax.y - _bound.mMin.y;
     const dz = _bound.mMax.z - _bound.mMin.z;
-    const surfaceSize = 2 * (dx * dy + dy * dz + dz * dx) / 1000 / 10;
+    const surfaceSize = 2 * (dx * dy + dy * dz + dz * dx) / _shadowSize;
     let num = 0;
     if (surfaceSize <= 1)
         num = 1;
     num = 1;
     while (num * 2 < surfaceSize) {
         num *= 2;
+    }
+    if (_max < _min) {
+        return _max;
     }
     return CMath.Clamp(num, _min, _max);
 }
@@ -315,7 +318,18 @@ export class CShadowBaker extends CObject {
         for (let light of _ligArr) {
             lightDistanceMap.set(light, light.mShadowDistance);
         }
-        const resolution = GetOptimalResoultion(_ptOrigin.GetBoundFMat(), _option.texMaxSize);
+        function nearestLowerPowerOfTwo(n) {
+            if (n < 1)
+                return 1;
+            return 1 << Math.floor(Math.log2(n));
+        }
+        let textureSize = 1;
+        if (_ptOrigin.GetTexture().length > 0) {
+            const tex = fw.Res().Find(_ptOrigin.GetTexture()[0]);
+            textureSize = nearestLowerPowerOfTwo(Math.max(tex.GetWidth(), tex.GetHeight()));
+        }
+        const shadowSize = fw.Res().Find(fw.Pal().GetShadowArrTex()).GetWidth();
+        const resolution = GetOptimalResoultion(_ptOrigin.GetBoundFMat(), _option.texMaxSize, shadowSize, textureSize);
         const tempTexKey = fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)], new CVec2(resolution, resolution));
         const tempTex = fw.Res().Find(tempTexKey);
         tempTex.SetFilter(CTexture.eFilter.Neaest);
@@ -406,7 +420,7 @@ export class CShadowBaker extends CObject {
                     fw.Ren().SendGPU(vf, SDF.eSkin.None, "skin");
                 }
                 fw.Ren().SendGPU(vf, pt.mWindInfluence, "windInfluence");
-                fw.Ren().SendGPU(vf, oldMesh.texture, nodemp.mpi.mData.textureOff);
+                fw.Ren().SendGPU(vf, _ptOrigin.GetTexture(), nodemp.mpi.mData.textureOff);
                 if (vf.mUniform.get("material") != null) {
                     fw.Ren().SendGPU(vf, pt.mMaterial, "material");
                 }
@@ -453,7 +467,7 @@ export class CShadowBaker extends CObject {
         _ptOrigin.SetMesh(newMeshKey);
         _ptOrigin.RemoveTag("light");
         _ptOrigin.RemoveTag("shadow");
-        _ptOrigin.SetRenderPass([]);
+        _ptOrigin.PushRenderPass([]);
         _ptOrigin.BatchClear();
         _ptOrigin.Update(1);
     }
@@ -482,13 +496,13 @@ export class CShadowBaker extends CObject {
             obj.SetSca(sca);
             obj.SetRot(rot);
             shadowCanv.Push(obj);
-            ptCopy.SetRenderPass(shadowWriteRPArr, false);
+            ptCopy.PushRenderPass(shadowWriteRPArr, false);
             ptCopy.Update(1);
             ptCopy.CacBound();
         }
         for (let i = 0; i < shadowCanv.mPushObj.Size(); i++) {
             const obj = shadowCanv.mPushObj.Find(i);
-            obj.Canvas();
+            obj.Start();
             obj.SubjectUpdate(1);
             shadowCanv.GetSubMap().set(obj.Key(), obj);
         }

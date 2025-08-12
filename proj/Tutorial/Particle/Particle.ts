@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-25 11:08:25';
+const version='2025-08-09 22:38:49';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,6 +20,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
@@ -53,7 +54,7 @@ var pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
 let rp=new CRenderPass(gAtl.Frame().Pal().Sl3DKey());
 //강제로 렌더링 순서를 조정했다.
 rp.SetPriority(CRenderPass.ePriority.BackGround);
-pt.SetRenderPass(rp);
+pt.PushRenderPass(rp);
 pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
 //pt.SetRenderPass(rp);
 obj.PushComp(pt);
