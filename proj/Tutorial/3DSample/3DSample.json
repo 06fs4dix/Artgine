@@ -29,7 +29,8 @@
     "MonacoEditor": true,
     "jsoneditor": false,
     "tone": false,
-    "soundfont": false
+    "soundfont": false,
+    "toastui": false
   },
   "dependencies": {
     "ShadowBake": 1,

@@ -20,7 +20,6 @@ import {CString} from '../artgine/basic/CString.js';
 
 import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
-import {  ImportServer } from './OtherServer.js';
 
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -50,13 +49,22 @@ else
 	CConsol.Log("App.json Load!");
 	LoadPluginMap([CPath.PHPC()+"/plugin/",CPath.PHPC()+"/artgine"]);
 }
-	
+
 
 type ProgramType = 'developer' | 'client' | 'server';
 var gAppJSON =new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
 	{"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
-		"server":"","github":false}
+		"server":"","github":false,"tsc":true}
 );
+var gTSCPID=0;
+if(gAppJSON.tsc)
+{
+	CCMDMgr.RunCMD("npx tsc -w", true).then((_pid)=>{
+		gTSCPID=_pid;
+		CConsol.Log("TSC Build");
+	});
+}
+
 
 const createWindow = () => {
     gMainWindow = new BrowserWindow({
@@ -87,6 +95,7 @@ const createWindow = () => {
 			message: err,
 		});
 	}
+	
 	//gMainWindow.webContents.openDevTools();
     //g_mainWindow.loadFile(path.join(__dirname, 'Client.html'));
 	//g_mainWindow.webContents.openDevTools();
@@ -185,6 +194,15 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
+});
+
+// 앱 종료 시 TSC 프로세스 정리
+app.on('before-quit', async () => {
+    if (gTSCPID && gTSCPID > 0) {
+        CConsol.Log(`TSC 프로세스 종료 중... (PID: ${gTSCPID})`);
+        await CCMDMgr.KillPID(gTSCPID);
+        gTSCPID = 0;
+    }
 });
 
 function RefreshDevScreen()
@@ -662,6 +680,7 @@ pause`;
 	{
 		pos=bHTML.indexOf("<!--EntryPoint-->");
 		bHTML=bHTML.substring(0,bHTML.indexOf("<!--EntryPoint-->")+17);
+		//bHTML="<!-- The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥 -->\n"+bHTML;
 		bHTML=CString.InsertAt(bHTML,pos+17,oHTML.substring(oHTML.indexOf("<!--EntryPoint-->")+17,oHTML.length));
 	}
 	if(oMF!="")
@@ -678,12 +697,12 @@ pause`;
 		
 		
 		epStr = epStr.replace(
-			/(["'])[^"']*?(artgine\/[^"']+)/g,
-			(match, quote, artginePath) => {
-				// upFolder 끝 / 제거, artginePath 앞 / 제거 후 결합
+			/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g,
+			(match, quote, path) => {
+				// upFolder 끝 / 제거, path 앞 / 제거 후 결합
 				const cleanUpFolder = upFolder.replace(/\/+$/, '');
-				const cleanArtginePath = artginePath.replace(/^\/+/, '');
-				return `${quote}${cleanUpFolder}/${cleanArtginePath}`;
+				const cleanPath = path.replace(/^\/+/, '');
+				return `${quote}${cleanUpFolder}/${cleanPath}`;
 			}
 		);
 
@@ -691,6 +710,9 @@ pause`;
 		
 
 		bTS=CString.InsertAt(bTS,pos+12,epStr);
+		
+		
+
 	}
 	else
 	{
@@ -750,6 +772,7 @@ pause`;
 			const baseName = canName.replace(/\.json$/i, ""); // 또는 split(".")[0];
 			pfStr += "var " + baseName + " = gAtl.Canvas('" + canName + "');\n";
 		}
+		pfStr+="//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥\n";
 	}
 	//CConsol.Log(_json.projetJSON.dependencies);
 	
@@ -791,38 +814,39 @@ pause`;
 	let waitTS=await WaitForBuild(savePath+".ts");
 	if(waitTS)
 	{
-		if(gTSCRun)
-		{
-			dialog.showMessageBoxSync({
-				type: 'error',
-				buttons: ['OK'],
-				defaultId: 0,
-				title: 'info',
-				message: 'wait! typescript build!',
-			});
-		}
-		else
-		{
-			gTSCRun=true;
-			const result = dialog.showMessageBoxSync({
-				type: 'error',
-				buttons: ['yes', 'no'],
-				defaultId: 0,
-				cancelId: 1,
-				title: 'build error',
-				message: 'js file version late. tsc build run? 8sec wait',
-			});
+		// if(gTSCRun)
+		// {
+		dialog.showMessageBoxSync({
+			type: 'error',
+			buttons: ['OK'],
+			defaultId: 0,
+			title: 'info',
+			message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
+		});
+		return "error";
+		// }
+		// else
+		// {
+		// 	gTSCRun=true;
+		// 	const result = dialog.showMessageBoxSync({
+		// 		type: 'error',
+		// 		buttons: ['yes', 'no'],
+		// 		defaultId: 0,
+		// 		cancelId: 1,
+		// 		title: 'build error',
+		// 		message: 'js file version late. tsc build run? 8sec wait',
+		// 	});
 
-			if (result === 0) // '예' 선택
-			{ 
-				if(CCMDMgr.IsTSC())
-					await CCMDMgr.RunCMD("npm init",false);
-				CCMDMgr.RunCMD("npx tsc -w",true);
-				await new Promise(resolve => setTimeout(resolve, 1000*8));
+		// 	if (result === 0) // '예' 선택
+		// 	{ 
+		// 		if(CCMDMgr.IsTSC())
+		// 			await CCMDMgr.RunCMD("npm init",false);
+		// 		CCMDMgr.RunCMD("npx tsc -w",true);
+		// 		await new Promise(resolve => setTimeout(resolve, 1000*8));
 				
-				return "error";
-			}
-		}
+		// 		return "error";
+		// 	}
+		// }
 		
 	}
 	
