@@ -1,9 +1,9 @@
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CMath } from "../../../artgine/geometry/CMath.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import { CProComp } from "./CProComp.js";
 export class CBulletComp extends CBehavior {
@@ -27,7 +27,7 @@ export class CBulletComp extends CBehavior {
     }
     Collision(_org, _size, _tar, _push) {
         let pro = _tar[0].GetOwner().FindComp(CProComp);
-        pro.SetHP(-10);
+        pro.SetHP(pro.GetHP() - 10);
         this.GetOwner().PushPac(CPacShooting.Effect("Flash", this.GetOwner().GetPos(), new CVec2(25, 25)));
         this.GetOwner().Destroy();
     }

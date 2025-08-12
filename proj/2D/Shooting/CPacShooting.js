@@ -1,4 +1,4 @@
-import { CStream } from "../../../artgine/basic/CStream.js";
+import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
 export class CPacShooting {
     static eHeader = {
         "MonCreate": "MonCreate",
