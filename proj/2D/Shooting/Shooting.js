@@ -1,4 +1,4 @@
-const version = '2025-08-12 22:17:41';
+const version = '2025-08-13 21:21:32';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
@@ -44,7 +44,7 @@ import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subj
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CModalChat, CModalEvent } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CBGAttachButton, CModalChat, CModalEvent } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CPacRoom, CRoomClient } from "https://06fs4dix.github.io/Artgine/artgine/server/CRoomClient.js";
 import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
@@ -60,7 +60,7 @@ import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js
 import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
-import { CSurfaceBloom } from "../../../plugin/Bloom/Bloom.js";
+import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 gAtl.Brush().GetCam2D().SetSize(600, 800);
 let back = Main.Push(new BackGround());
@@ -172,10 +172,12 @@ socket.On(CPacShooting.eHeader.Effect, (stream) => {
     let flash = new CSubject();
     flash.SetPos(packet.pos);
     let size = new CVec2(50, 50);
-    if (packet.key == "Explosion")
+    if (packet.key == "Explosion") {
         size = new CVec2(200, 200);
+    }
     let pt = new CPaint2D(null, size);
     pt.PushTag("bloom");
+    pt.PushCShaderAttr(new CShaderAttr("mask", new CVec1(0.1)));
     flash.PushComp(pt);
     let af = flash.PushComp(new CAniFlow(packet.key));
     af.SetSpeed(1.5);
@@ -248,3 +250,9 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Basic", async () => {
     Main.SetRPMgr(null);
 }));
+let Option_btn = new CBGAttachButton("DevToolModal", 101, new CVec2(320, 120));
+Option_btn.SetTitleText("Option");
+Option_btn.SetContent(`
+<div>
+    블룸,기본 설정 가능
+</div>`);

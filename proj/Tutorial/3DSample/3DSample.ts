@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-12 23:09:27';
+const version='2025-08-13 21:20:32';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -56,6 +56,9 @@ import { CShadowBaker } from "https://06fs4dix.github.io/Artgine/plugin/ShadowBa
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CAnimation, CClip, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
+import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
+import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 
 
 
@@ -463,7 +466,31 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
 
 }));
 
-CAlert.Info("F3로 개발자 모드로 가서, 왼쪽 상단 메뉴에 여러가지 쉐도우 방식을 테스트 해보세요!");
+
+//CAlert.Info("F3로 개발자 모드로 가서, 왼쪽 상단 메뉴에 여러가지 쉐도우 방식을 테스트 해보세요!");
+
+
+let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,240));
+//gAtl.Frame().Win().HtmlPush(Option_btn);
+Help.SetTitleText("Help");
+Help.SetContent(`
+<div>
+타이틀바 메뉴를 누르면 여러가지 그림자 구현 방식을 확인할수 있습니다
+</div>`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
