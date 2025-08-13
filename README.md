@@ -227,31 +227,28 @@
 
     ---
 
-    ## Source Code Explanation
+    ## ⚠️ Notice
 
-   ### ⚠️ Important Notes
+    This project runs as an **Electron app**.  
+    The following files are **automatically generated and managed based on the project folder name**, so **please be cautious when making changes**:
 
-   This project runs as an Electron app. The following files are **automatically generated and managed based on the project folder name**, so **never modify them**:
+    - HTML files  
+    - TypeScript files  
+    - JSON files  
+    - Web Manifest files  
 
-   - HTML files
+    ---
 
-   - TypeScript files
+    ## 📝 Editable Scope
 
-   - JSON files
+    - You may only modify the code **after the EntryPoint**.  
+    - Do **not** modify the automatically generated code.  
 
-   - Web Manifest files
-
-   ### 📝 Modifiable Scope
-
-   - Only **code after EntryPoint** can be modified
-
-   - Do not touch automatically generated code
-
-   > 💡 **Note**: Manually created files can be freely modified
+    > 💡 **Tip**: When working manually, you are free to make changes as needed.
 
    </details>
   <details>
-    <summary>Code Explanation</summary>
+    <summary>Class Description</summary>
 
   ## Artgine Engine Core Classes
 
@@ -668,18 +665,14 @@
 
   ---
 
-  ## 소스 코드 설명
-
   ### ⚠️ 주의사항
 
-  이 프로젝트는 일렉트론 앱으로 실행됩니다. 다음 파일들은 **프로젝트 폴더명을 기준으로 자동 생성 및 관리**되므로 **절대 수정하지 마세요**:
+  이 프로젝트는 일렉트론 앱으로 실행됩니다. 
+  다음 파일들은 **프로젝트 폴더명을 기준으로 자동 생성 및 관리**되므로 **수정에 주의하세요**:
 
   - HTML 파일
-
   - TypeScript 파일
-
   - JSON 파일
-
   - Web Manifest 파일
 
   ### 📝 수정 가능한 범위
@@ -688,11 +681,11 @@
 
   - 자동 생성되는 코드는 건드리지 마세요
 
-  > 💡 **참고**: 수동으로 생성한 파일은 자유롭게 수정 가능합니다
+  > 💡 **참고**: 수동으로 작업시 자유롭게 수정 가능합니다
 
   </details>
   <details>
-    <summary>코드 설명</summary>
+    <summary>클래스 설명</summary>
 
   ## Artgine 엔진 핵심 클래스
 
