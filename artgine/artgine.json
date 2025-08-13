@@ -1,7 +1,5 @@
 {
-	"version":1,
     "dependencies": {
     },
-    "include":true,
-	"text":""
+    "version":1
 }

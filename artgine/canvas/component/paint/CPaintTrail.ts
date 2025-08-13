@@ -414,11 +414,18 @@ export class CPaintTrail extends CPaint
 						let sumtC=0;
 
 						//예비용 곡선 데이터 지우고
-						for(let i=0;i<=this.mBCnt;i++) sumtC += this.mTCnt[this.mTCnt.length-1-i];
-						this.mPosList.splice(this.mPosList.length-1-this.mBCnt);
-						this.mVList.splice(this.mVList.length-1-this.mBCnt);
-						this.mPCnt.splice(this.mPCnt.length-1-this.mBCnt);
-						this.mTCnt.splice(this.mTCnt.length-1-this.mBCnt);
+						let startIndex = Math.max(0, this.mTCnt.length - this.mBCnt - 1);
+						for(let i = startIndex; i < this.mTCnt.length; i++) {
+							sumtC += this.mTCnt[i];
+						}
+						
+						let removeCount = Math.min(this.mBCnt + 1, this.mPosList.length - 2);
+						if (removeCount > 0) {
+							this.mPosList.splice(this.mPosList.length - removeCount);
+							this.mVList.splice(this.mVList.length - removeCount);
+							this.mPCnt.splice(this.mPCnt.length - removeCount);
+							this.mTCnt.splice(this.mTCnt.length - removeCount);
+						}
 
 						//곡선 새로 넣어주기.
 						for(let i=0;i<this.mEdgeCount;i++){

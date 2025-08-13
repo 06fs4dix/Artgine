@@ -15,6 +15,7 @@ import {CVec2} from "../geometry/CVec2.js";
 import { CVec4 } from "../geometry/CVec4.js";
 import { CShaderInterpret, ExtractImportPaths, GetImportFile } from "../render/CShaderInterpret.js";
 import { CFile } from "../system/CFile.js";
+import { CChecker } from "./CChecker.js";
 import { CUtilWeb } from "./CUtilWeb.js";
 
 
@@ -36,6 +37,147 @@ export class CModalBackGround extends CModal
         this.mDebugMode=true;
     }
 }
+export class CLoadingBack extends CModalBackGround
+{
+    private mProgressBar: HTMLElement;
+    private mRemainingText: HTMLElement;
+    private mRemainingFun: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>;
+    private mUpdateInterval: number;
+
+    constructor(_id: string,_remainingFun: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,_context : HTMLElement=null)
+    {
+        super(_id);
+
+        this.mRemainingFun = _remainingFun;
+        
+        // 전체화면을 덮는 배경 설정
+        this.SetBG(Bootstrap.eColor.dark);
+        this.SetSize(window.innerWidth, window.innerHeight);
+        this.SetPosition(0, 0);
+        
+         // 모달 카드 자체를 전체화면으로 설정
+         if (this.mCard) {
+            this.mCard.style.position = "fixed";
+            this.mCard.style.top = "0";
+            this.mCard.style.left = "0";
+            this.mCard.style.width = "100vw";
+            this.mCard.style.height = "100vh";
+            this.mCard.style.maxWidth = "none";
+            this.mCard.style.maxHeight = "none";
+            this.mCard.style.margin = "0";
+            this.mCard.style.borderRadius = "0";
+            this.mCard.style.zIndex = "9999";
+            this.mCard.style.pointerEvents = "auto";
+            this.mCard.style.backgroundColor = "#212529"; // Bootstrap dark 색상
+        }
+        // 로딩바 UI 생성
+       
+        this.SetBody(`
+            <div class="d-flex flex-column align-items-center justify-content-center" 
+                 style="width: 100%; height: 100%;">
+                <div class="mb-4" id='${_id}_div'>
+                   
+                </div>
+                <div class="w-50 mb-3">
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                             role="progressbar" 
+                             style="width: 0%" 
+                             id="${this.Key()}_progress">
+                        </div>
+                    </div>
+                </div>
+                <div class="text-white h4" id="${this.Key()}_remaining">Remaining Load: ?개</div>
+            </div>
+        `);
+        if(_context==null)
+            CUtil.ID(_id+"_div").append(CDomFactory.DataToDom(`<h2 class="text-white fw-bold">Loading...</h2>`));
+        else
+            CUtil.ID(_id+"_div").append(_context);
+
+        // 요소 참조 저장
+        this.mProgressBar = CUtil.ID(this.Key() + "_progress");
+        this.mRemainingText = CUtil.ID(this.Key() + "_remaining");
+
+        // 로딩 상태 업데이트 시작
+        this.StartProgressUpdate();
+    }
+
+    private StartProgressUpdate(): void
+    {
+        this.mUpdateInterval = window.setInterval(() => {
+            this.UpdateProgress();
+        }, 100);
+    }
+
+    private UpdateProgress(): void
+    {
+        try {
+            let remaining = 0;
+            
+            if (typeof this.mRemainingFun === 'function') {
+                remaining = this.mRemainingFun();
+            } else if (this.mRemainingFun instanceof CEvent) {
+                const result = this.mRemainingFun.Call();
+                if (result !== null && result !== undefined) {
+                    remaining = result;
+                }
+            }
+
+            remaining = Math.max(0, remaining);
+            
+            // 남은 개수에 따라 진행률 계산 (0개면 100%, 많을수록 0%에 가까움)
+            const progressPercent = remaining === 0 ? 100 : Math.max(0, 100 - (remaining * 10)); // 예시: 10개 남으면 0%, 5개 남으면 50%
+            const clampedProgress = Math.max(0, Math.min(100, progressPercent));
+
+            this.mProgressBar.style.width = clampedProgress + "%";
+            this.mRemainingText.textContent = `Remaining Load: ${remaining}`;
+
+            if (remaining <= 0) {
+                this.StopProgressUpdate();
+                // 로드가 완료되면 모달 자동 종료
+                setTimeout(() => {
+                    this.Close();
+                }, 500); // 0.5초 후 자동 종료
+            }
+        } catch (error) {
+            console.warn("로딩 진행률 업데이트 중 오류:", error);
+        }
+    }
+
+    private StopProgressUpdate(): void
+    {
+        if (this.mUpdateInterval) {
+            clearInterval(this.mUpdateInterval);
+            this.mUpdateInterval = 0;
+        }
+    }
+
+    public SetRemaining(remaining: number): void
+    {
+        const clampedRemaining = Math.max(0, remaining);
+        
+        // 남은 개수에 따라 진행률 계산
+        const progressPercent = clampedRemaining === 0 ? 100 : Math.max(0, 100 - (clampedRemaining * 10));
+        const clampedProgress = Math.max(0, Math.min(100, progressPercent));
+        
+        this.mProgressBar.style.width = clampedProgress + "%";
+        this.mRemainingText.textContent = `Remaining Load: ${clampedRemaining}`;
+        
+        // 로드가 완료되면 모달 자동 종료
+        if (clampedRemaining <= 0) {
+            setTimeout(() => {
+                this.Close();
+            }, 500); // 0.5초 후 자동 종료
+        }
+    }
+
+    public Close(): void
+    {
+        this.StopProgressUpdate();
+        super.Close();
+    }
+}
 export class CBGAttachButton extends CModalBackGround
 {
 
@@ -44,15 +186,17 @@ export class CBGAttachButton extends CModalBackGround
     constructor(_id : string,_layer : number=100,_size=new CVec2(600,800))
     {
         super();
+
+        this.mKey=_id+"btn";
         this.SetBody(`<div class='d-flex justify-content-end' style='margin-top:5px;margin-right:10px;'>
-                <button type='button' class='btn btn-success' style='pointer-events:auto;' id='${_id}_jbox'>Button</button>
+                <button type='button' class='btn btn-success' style='pointer-events:auto;' id='${this.mKey}_jbox'>Button</button>
             </div>`);
         
 
         this.mSize=_size;
-        this.mKey=_id;
+        
 
-        this.mModal=new CModal("CHtmlModal");
+        this.mModal=new CModal(_id);
         this.mModal.SetBody("<div id='"+this.Key()+"_div'></div>");
         this.mModal.SetSize(this.mSize.x,this.mSize.y);
         this.mModal.SetHeader("<div id='"+this.Key()+"_jboxTitle'></div>");
