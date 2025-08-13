@@ -10,7 +10,7 @@ import {CConfirm, CModal} from "../basic/CModal.js"
 import { IAutoRender, IAutoUpdate } from "../basic/Basic.js"
 import {CPWA} from "../system/CPWA.js"
 import {CConsol} from "../basic/CConsol.js"
-import { CModalChat, CModalFrameView, CFileViewer } from "./CModalUtil.js"
+import { CModalChat, CModalFrameView, CFileViewer, CLoadingBack } from "./CModalUtil.js"
 import {CAlert} from "../basic/CAlert.js"
 import {CInput} from "../system/CInput.js"
 import {CWebView} from "../system/CWebView.js"
@@ -83,6 +83,8 @@ function CConsolModalInit()
 }
 window.addEventListener('error', function (event) 
 {
+	if(event.message.indexOf("ResizeObserver")!=-1 )	return;
+
 	if(gConsolChat==null && gMainFramework==null)
 		CConsolModalInit();
 	
@@ -636,7 +638,11 @@ export class CFrame
 	
 	async Process()
 	{
-		
+		new CLoadingBack("MainLoading", ()=>{
+			return this.Load().mLoadSet.size;
+		});
+
+
 		if(this.mDevice)	await this.mDevice.Init();
 		
 		let path=CPath.PHPC();
@@ -704,8 +710,8 @@ export class CFrame
 		CChecker.Exe(async ()=>{
 			if(this.mMainProcess==null)	return;
 
-			// if(this.Load().LoadCompleteChk() && this.m_load!=null)
-			this.mLoadChk=true;
+			if(this.Load().LoadCompleteChk())
+				this.mLoadChk=true;
 			
 			if (this.mLoadChk)
 			{	

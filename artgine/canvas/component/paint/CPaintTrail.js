@@ -306,12 +306,17 @@ export class CPaintTrail extends CPaint {
                     if (success > 0) {
                         this.mInCurve = false;
                         let sumtC = 0;
-                        for (let i = 0; i <= this.mBCnt; i++)
-                            sumtC += this.mTCnt[this.mTCnt.length - 1 - i];
-                        this.mPosList.splice(this.mPosList.length - 1 - this.mBCnt);
-                        this.mVList.splice(this.mVList.length - 1 - this.mBCnt);
-                        this.mPCnt.splice(this.mPCnt.length - 1 - this.mBCnt);
-                        this.mTCnt.splice(this.mTCnt.length - 1 - this.mBCnt);
+                        let startIndex = Math.max(0, this.mTCnt.length - this.mBCnt - 1);
+                        for (let i = startIndex; i < this.mTCnt.length; i++) {
+                            sumtC += this.mTCnt[i];
+                        }
+                        let removeCount = Math.min(this.mBCnt + 1, this.mPosList.length - 2);
+                        if (removeCount > 0) {
+                            this.mPosList.splice(this.mPosList.length - removeCount);
+                            this.mVList.splice(this.mVList.length - removeCount);
+                            this.mPCnt.splice(this.mPCnt.length - removeCount);
+                            this.mTCnt.splice(this.mTCnt.length - removeCount);
+                        }
                         for (let i = 0; i < this.mEdgeCount; i++) {
                             this.mPosList.push(CUtilMath.Bezier(pArr, i / (this.mEdgeCount - 1), 0, 0));
                             this.mVList.push(CMath.V3Nor(CMath.V3SubV3(this.mPosList[this.mPosList.length - 1], this.mPosList[this.mPosList.length - 2])));

@@ -136,37 +136,199 @@ function RPToolRPEx(_rp : CRenderPass)
             sList.push(...gShaderArr);
             _body.append(CUtilObj.Select(_pointer,_input,sList,sList,true));
         }
-        else if(_pointer.member=="mRenderTarget")
-        {
-            let sList=[];
-            sList.push(...gTexArr);
-            _body.append(CUtilObj.Select(_pointer,_input,sList,sList,false));
-        }
-        else if(_pointer.member=="mShaderAttr")
-        {
-            for(let sa of _rp.mShaderAttr)
-            {
-                if(sa.mType==-2)
-                {
+        // else if(_pointer.member=="mRenderTarget")
+        // {
+        //     let sList=[];
+        //     sList.push(...gTexArr);
+        //     _body.append(CUtilObj.Select(_pointer,_input,sList,sList,false));
+        // }
+        // else if(_pointer.member=="mShaderAttr")
+        // {
+        //     for(let sa of _rp.mShaderAttr)
+        //     {
+        //         if(sa.mType==-2)
+        //         {
                     
-                    sa.EditFormEx=(_pointer2 : CPointer,_body2 : HTMLDivElement,_input2 : HTMLElement)=>{
-                        if(_pointer2.member=="mKey")
-                        {
-                            let sList=[];
-                            sList.push(...gTexArr);
-                            _body2.append(CUtilObj.Select(_pointer2,_input2,sList,sList,false));
-                        }
+        //             sa.EditFormEx=(_pointer2 : CPointer,_body2 : HTMLDivElement,_input2 : HTMLElement)=>{
+        //                 if(_pointer2.member=="mKey")
+        //                 {
+        //                     let sList=[];
+        //                     sList.push(...gTexArr);
+        //                     _body2.append(CUtilObj.Select(_pointer2,_input2,sList,sList,false));
+        //                 }
                         
-                    };
-                }
-            }
+        //             };
+        //         }
+        //     }
 
-        }
+        // }
     };
     _rp.EditChangeEx=(_pointer : CPointer,_childe : boolean)=>{
         
         RPToolLeftInit();
     };
+}
+
+
+function RPInOutTexForm(_rp: CRenderPass,_reFun) : HTMLElement
+{
+    const hash = _rp.ObjHash(); 
+
+    const texContainer = document.createElement('div');
+    texContainer.className = 'mb-3';
+    texContainer.innerHTML = `
+        <div class="card mb-2">
+            <div class="card-header">
+                <h6 class="mb-0">InTex</h6>
+            </div>
+            <div class="card-body p-1">
+                <button class="btn btn-primary btn-sm" id="add_intex_${hash}">[add]</button>
+                <div id="intex_inputs_${hash}"></div>
+            </div>
+        </div>
+        <div class="card mb-2">
+            <div class="card-header">
+                <h6 class="mb-0">OutTex</h6>
+            </div>
+            <div class="card-body p-1">
+                <div class="mb-2">
+                    <div class="d-flex gap-2 mb-2 align-items-center">
+                        <input type="text" class="form-control form-control-sm" placeholder="datalist" list="outtex_datalist_${hash}" id="outtex_target_${hash}">
+                        <datalist id="outtex_datalist_${hash}">
+                            ${gTexArr.map(tex => `<option value="${tex}">`).join('')}
+                        </datalist>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="number" class="form-control form-control-sm" placeholder="number" style="width: 80px;" id="outtex_level_${hash}">
+                        <input type="text" class="form-control form-control-sm" placeholder="0,1,2" id="outtex_use_${hash}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+ 
+    // InTex 정보를 기반으로 초기 input 필드 생성
+    for(let attr of _rp.mShaderAttr)
+    {
+        if(attr.mType==-2)
+        {
+            const inputsContainer = texContainer.querySelector(`#intex_inputs_${hash}`) as HTMLElement;
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'mb-2';
+            
+            // datalist ID 생성
+            const datalistId = `intex_datalist_${hash}_${Date.now()}`;
+            
+            inputGroup.innerHTML = `
+                <div class="d-flex gap-2 mb-2 align-items-center">
+                    <input type="text" class="form-control form-control-sm" placeholder="datalist" list="${datalistId}" value="${attr.mKey || ''}">
+                    <datalist id="${datalistId}">
+                        ${gTexArr.map(tex => `<option value="${tex}">`).join('')}
+                    </datalist>
+                    <input type="number" class="form-control form-control-sm" placeholder="number" style="width: 80px;" value="${attr.mEach || 0}">
+                    <button class="btn btn-danger btn-sm" style="min-width: 24px;">×</button>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" class="form-control form-control-sm" placeholder="true,false" value="${attr.mData && attr.mData.length > 0 ? attr.mData.map(b => b.toString()).join(',') : ''}">
+                </div>
+            `;
+            
+            // 입력값 변경 시 mShaderAttr에 반영
+            const textInput = inputGroup.querySelector('input[type="text"]') as HTMLInputElement;
+            const numberInput = inputGroup.querySelector('input[type="number"]') as HTMLInputElement;
+            const dataInput = inputGroup.querySelectorAll('input[type="text"]')[1] as HTMLInputElement; // 두 번째 text input
+            
+            textInput.addEventListener('input', () => {
+                attr.mKey = textInput.value;
+            });
+            
+            numberInput.addEventListener('input', () => {
+                attr.mEach = parseFloat(numberInput.value) || 0;
+            });
+            
+            dataInput.addEventListener('input', () => {
+                const inputValue = dataInput.value.trim();
+                if (inputValue) {
+                    // 쉼표로 구분된 boolean 값들을 파싱
+                    const boolValues = inputValue.split(',').map(s => s.trim().toLowerCase()).filter(s => s !== '');
+                    attr.mData = boolValues.map(s => s === 'true');
+                } else {
+                    attr.mData = [];
+                }
+            });
+            
+            
+            // 제거 버튼 이벤트
+            const removeBtn = inputGroup.querySelector('.btn-danger') as HTMLButtonElement;
+            removeBtn.addEventListener('click', () => {
+                // mShaderAttr에서 해당 항목 제거
+                const index = _rp.mShaderAttr.indexOf(attr);
+                if (index > -1) {
+                    _rp.mShaderAttr.splice(index, 1);
+                }
+                
+                // UI 갱신
+                _reFun();
+            });
+            
+            inputsContainer.appendChild(inputGroup);
+        }
+    }
+    
+    // InTex add 버튼 이벤트
+    const addInTexBtn = texContainer.querySelector(`#add_intex_${hash}`) as HTMLButtonElement;
+            if (addInTexBtn) {
+            addInTexBtn.addEventListener('click', () => {
+                // mShaderAttr에 새로운 InTex 속성 추가
+                const newAttr = new CShaderAttr(-2, ""); // InTex 타입은 -2
+                newAttr.mData = []; // mData 초기화
+                _rp.mShaderAttr.push(newAttr);
+                
+                _reFun();
+            });
+        }
+    
+    // 아웃 텍스처 정보 초기화
+    const renderTargetInput = texContainer.querySelector(`#outtex_target_${hash}`) as HTMLInputElement;
+    const renderTargetLevelInput = texContainer.querySelector(`#outtex_level_${hash}`) as HTMLInputElement;
+    const renderTargetUseInput = texContainer.querySelector(`#outtex_use_${hash}`) as HTMLInputElement;
+    
+    if (renderTargetInput && renderTargetLevelInput && renderTargetUseInput) {
+        // 기존 값으로 초기화
+        renderTargetInput.value = _rp.mRenderTarget || '';
+        renderTargetLevelInput.value = _rp.mRenderTargetLevel?.toString() || '0';
+        // Set의 모든 값을 쉼표로 구분하여 표시
+        const useValues = _rp.mRenderTargetUse && _rp.mRenderTargetUse.size > 0 ? 
+            Array.from(_rp.mRenderTargetUse).join(',') : '';
+        renderTargetUseInput.value = useValues;
+        
+        // 값 변경 이벤트 리스너 추가
+        renderTargetInput.addEventListener('input', () => {
+            _rp.mRenderTarget = renderTargetInput.value;
+        });
+        
+        renderTargetLevelInput.addEventListener('input', () => {
+            _rp.mRenderTargetLevel = parseInt(renderTargetLevelInput.value) || 0;
+        });
+        
+        renderTargetUseInput.addEventListener('input', () => {
+            const inputValue = renderTargetUseInput.value.trim();
+            _rp.mRenderTargetUse.clear();
+            
+            if (inputValue) {
+                // 쉼표로 구분된 숫자들을 파싱
+                const numbers = inputValue.split(',').map(s => s.trim()).filter(s => s !== '');
+                for (const numStr of numbers) {
+                    const num = parseInt(numStr);
+                    if (!isNaN(num)) {
+                        _rp.mRenderTargetUse.add(num);
+                    }
+                }
+            }
+        });
+    }
+    return texContainer;
 }
 function RPToolRPAutoInit(_rp: CRPAuto) {
     const hash = _rp.ObjHash(); 
@@ -187,7 +349,7 @@ function RPToolRPAutoInit(_rp: CRPAuto) {
                 <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
             </div>
             <div class="collapse" id="${collapseId}">
-                <div class="card-body" id="${collapseId}_body"></div>
+                <div class="card-body p-1" id="${collapseId}_body"></div>
             </div>
         </div>
     `);
@@ -195,6 +357,17 @@ function RPToolRPAutoInit(_rp: CRPAuto) {
     // 바디 UI 구성
     const body = html.querySelector(`#${collapseId}_body`);
     if (body) {
+        
+        body.append(RPInOutTexForm(_rp,()=>{
+            // UI 갱신을 위해 RPToolRPAutoInit 다시 호출
+            const parent = gModal.FindFlex(1)?.querySelector("#tab-content") as HTMLElement;
+            if (parent) {
+                parent.innerHTML = ""; 
+                RPToolRightRPTabInit(parent);
+            }
+        }));
+        
+        // 기존 _rp.EditInit(null) 추가
         body.append(_rp.EditInit(null));
     }
 
@@ -285,7 +458,7 @@ function RPToolSufInit(_suf: CSurface) {
                 <button class="btn btn-sm btn-close ms-auto" style="pointer-events:auto; flex-shrink: 0; min-width: 24px;"></button>
             </div>
             <div class="collapse" id="${collapseId}">
-                <div class="card-body" id="${collapseId}_body"></div>
+                <div class="card-body p-1" id="${collapseId}_body"></div>
             </div>
         </div>
     `);
@@ -293,6 +466,16 @@ function RPToolSufInit(_suf: CSurface) {
     // 바디 구성
     const body = html.querySelector(`#${collapseId}_body`);
     if (body) {
+        // 서페이스에 인아웃텍스 추가
+        body.append(RPInOutTexForm(_suf.mRenderPass, () => {
+            // UI 갱신을 위해 RPToolRightSufTabInit 다시 호출
+            const parent = gModal.FindFlex(1)?.querySelector("#tab-content") as HTMLElement;
+            if (parent) {
+                parent.innerHTML = ""; 
+                RPToolRightSufTabInit(parent);
+            }
+        }));
+        
         body.append(_suf.EditInit(null));
     }
 
