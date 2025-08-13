@@ -60,7 +60,11 @@ export class CPaint3D extends CPaint
 		//this.m_texture=new Array();
 		
 	}
-	
+	SetOwner(_obj :CSubject)
+	{
+		super.SetOwner(_obj);
+		this.InitMesh(this.mMesh);
+	}
 	Bake() {		this.PushTag("bake");	}
 	//Shadow()	{		this.PushTag("shadow");	}
 	Env()	{		this.PushTag("env");	}
