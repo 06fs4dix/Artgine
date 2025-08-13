@@ -705,11 +705,13 @@ export class CFrame
 				requestIdleCallback(this.mSubProcess);
 			CWASM.Checker(1);
 		};
-
+		this.Load().mLoadSet.add("load");
 		await CFrame.EventCall(this.GetEvent(CEvent.eType.Load));
 		CChecker.Exe(async ()=>{
 			if(this.mMainProcess==null)	return;
 
+			if(this.Load().mLoadSet.has("load"))
+				this.Load().mLoadSet.delete("load");
 			if(this.Load().LoadCompleteChk())
 				this.mLoadChk=true;
 			
