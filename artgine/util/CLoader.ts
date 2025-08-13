@@ -321,9 +321,10 @@ export class CLoader
 			this.VideoLoad(_file,null);
 			
 		}
-		else if (ext=="tex" || ext=="rgba")
+		else if (ext=="tex" || ext=="rgba" || ext=="mesh")
 		{
 			this.mLoadSet.delete(_file);
+			return false;
 		}
 		else if (ext=="js" || ext=="jsm")
 		{
@@ -332,7 +333,11 @@ export class CLoader
 		}
 		
 		let buf= await CFile.Load(_file);
-		if(buf==null)	return true;
+		if(buf==null)
+		{
+			this.mLoadSet.delete(_file);
+			return true;
+		}
 		await this.LoadSwitch(_file,buf,_option);
 		
 		return false;
