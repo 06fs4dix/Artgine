@@ -95,6 +95,7 @@ export class CCamera extends CObject {
     Set2DZoom(_val) {
         this.mZoom = _val;
         this.mReset = true;
+        this.mUpdateMat = CUpdate.eType.Updated;
     }
     GetViewPort() {
         return this.mViewPort;

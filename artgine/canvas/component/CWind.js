@@ -37,6 +37,9 @@ export class CWind extends CCamComp {
         super.Update(_delay);
     }
     CCamCompReq(_brush) {
+        if (_brush.mDoubleChk.has(this))
+            return;
+        _brush.mDoubleChk.add(this);
         if (_brush.mWindCount > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 4)
             return;
         _brush.mWindDir[_brush.mWindCount * 4 + 0] = this.mDir.x;

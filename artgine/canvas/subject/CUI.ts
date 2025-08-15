@@ -431,30 +431,11 @@ export class CUI extends CSubject
 		if(this.mUIPT.mRenPT.length>0)
 		{
 			let cam = this.mUIPT.mRenPT[0].mCam;
-			if(this.m_camResize && (this.mFrame.Win().IsResize() || this.mUpdate || cam.mUpdateMat!=0))
+			if(this.m_camResize && Math.abs(cam.mZoom-this.mSca.x)>0.001)
 			{
-				//if(this.m_uiPt.m_renPt.length==0 || g_toolMode){}
-				//if(this.m_updateScale)
-				//{
-					//임의 지정 사이즈가 아니면 확대 가능하다는 의미
-					//그리고 타겟에 맞춰서 사이즈 변경되는 모드는 이걸 켜야함
-					// if(cam.m_width==0 && this.m_targetResize)
-					// {
-					// 	var tw=this.GetFW().PF().m_width/this.GetFW().PF().m_targetWidth;
-					// 	this.SetSca(new CVec3(tw,tw,tw));
-					// }
-					// else 
-					//if(this.m_camResize)
-					{
-						this.SetSca(new CVec3(cam.mZoom,cam.mZoom,cam.mZoom));
-					}
-					//this.m_updateScale=false;
-					
-				// }
-				// else
-				// {
-				// 	this.SetSca(new CVec3(cam.m_zoom,cam.m_zoom,cam.m_zoom));
-				// }
+				
+				this.SetSca(new CVec3(cam.mZoom,cam.mZoom,cam.mZoom));
+				
 				
 			}
 		}

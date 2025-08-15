@@ -55,8 +55,10 @@ export class CLoadingBack extends CModalBackGround
         this.SetSize(window.innerWidth, window.innerHeight);
         this.SetPosition(0, 0);
         
+        //this.mCard.innerHTML="";
          // 모달 카드 자체를 전체화면으로 설정
-         if (this.mCard) {
+         if (this.mCard && this.mCard.style.position!="fixed") 
+        {
             this.mCard.style.position = "fixed";
             this.mCard.style.top = "0";
             this.mCard.style.left = "0";
@@ -69,27 +71,66 @@ export class CLoadingBack extends CModalBackGround
             this.mCard.style.zIndex = "9999";
             this.mCard.style.pointerEvents = "auto";
             this.mCard.style.backgroundColor = "#212529"; // Bootstrap dark 색상
+            this.SetBody(`
+                <div class="d-flex flex-column align-items-center justify-content-center" 
+                        style="width: 100%; height: 100%;">
+                    <div class="mb-4" id='${_id}_div'>
+                        
+                    </div>
+                    <div class="w-50 mb-3">
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                    role="progressbar" 
+                                    style="width: 0%" 
+                                    id="${this.Key()}_progress">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-white h4" id="${this.Key()}_remaining">Remaining Load: ?개</div>
+                </div>
+            `);
         }
-        // 로딩바 UI 생성
-       
-        this.SetBody(`
+        else//미리 만들어둔거에 넣기
+        {
+            
+            this.mCard.innerHTML=`
             <div class="d-flex flex-column align-items-center justify-content-center" 
-                 style="width: 100%; height: 100%;">
+                style="width: 100%; height: 100%;">
                 <div class="mb-4" id='${_id}_div'>
-                   
+                
                 </div>
                 <div class="w-50 mb-3">
                     <div class="progress" style="height: 30px;">
                         <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-                             role="progressbar" 
-                             style="width: 0%" 
-                             id="${this.Key()}_progress">
+                            role="progressbar" 
+                            style="width: 0%" 
+                            id="${this.Key()}_progress">
                         </div>
                     </div>
                 </div>
                 <div class="text-white h4" id="${this.Key()}_remaining">Remaining Load: ?개</div>
             </div>
-        `);
+        `;
+        }
+        
+        // this.SetBody(`
+        //     <div class="d-flex flex-column align-items-center justify-content-center" 
+        //          style="width: 100%; height: 100%;">
+        //         <div class="mb-4" id='${_id}_div'>
+                   
+        //         </div>
+        //         <div class="w-50 mb-3">
+        //             <div class="progress" style="height: 30px;">
+        //                 <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+        //                      role="progressbar" 
+        //                      style="width: 0%" 
+        //                      id="${this.Key()}_progress">
+        //                 </div>
+        //             </div>
+        //         </div>
+        //         <div class="text-white h4" id="${this.Key()}_remaining">Remaining Load: ?개</div>
+        //     </div>
+        // `);
         if(_context==null)
             CUtil.ID(_id+"_div").append(CDomFactory.DataToDom(`<h2 class="text-white fw-bold">Loading...</h2>`));
         else

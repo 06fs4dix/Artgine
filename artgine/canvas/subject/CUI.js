@@ -255,10 +255,8 @@ export class CUI extends CSubject {
             return;
         if (this.mUIPT.mRenPT.length > 0) {
             let cam = this.mUIPT.mRenPT[0].mCam;
-            if (this.m_camResize && (this.mFrame.Win().IsResize() || this.mUpdate || cam.mUpdateMat != 0)) {
-                {
-                    this.SetSca(new CVec3(cam.mZoom, cam.mZoom, cam.mZoom));
-                }
+            if (this.m_camResize && Math.abs(cam.mZoom - this.mSca.x) > 0.001) {
+                this.SetSca(new CVec3(cam.mZoom, cam.mZoom, cam.mZoom));
             }
         }
         this.UpdateAnchor();

@@ -382,8 +382,19 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,ambient
             //var lightDir : CVec3=lDir.xyz;
             var angle:number=max(0.0,V3Dot(normal,L));
             var diffuse:CVec3=V3MulFloat(lCol.xyz,angle);
+            //diffuse=new CVec3(1.0,1.0,1.0);
             DDirAll=V3AddV3(DDirAll,V3MulV3(albedo.rgb,diffuse));	
         }
     }
+    var ambientLight :CVec3 = V3MulV3(albedo.xyz,ambientColor);
+    //최저점으로 계산한다
+    //DDirAll=V3AddV3(ambientLight,DDirAll);
+    if(DDirAll.x<ambientLight.x)DDirAll.x=ambientLight.x;
+    if(DDirAll.y<ambientLight.y)DDirAll.y=ambientLight.y;
+    if(DDirAll.z<ambientLight.z)DDirAll.z=ambientLight.z;
+
+
+    //DPtAll=new CVec3(1.0,1.0,1.0);
+    //DDirAll=V3MulV3(albedo.rgb,new CVec3(1.0,1.0,1.0));	
     return new CMat3(V3AddV3(DPtAll,DDirAll), new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0));
 }

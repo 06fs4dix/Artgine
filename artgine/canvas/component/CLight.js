@@ -177,13 +177,16 @@ export class CLight extends CCamComp {
         return this.mDirPos.w > 0.5;
     }
     CCamCompReq(_brush) {
+        if (_brush.mDoubleChk.has(this))
+            return;
+        _brush.mDoubleChk.add(this);
         if (this.mWrite.length == 0) {
             let fw = _brush.mFrame;
             let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
             srp.mCopy = false;
             srp.mTag = "shadowWrite";
-            srp.mAutoTag = "shadow";
-            srp.mAutoPaint.add("CPaint3D");
+            srp.mInTag = "shadow";
+            srp.mInPaint.add("CPaint3D");
             srp.mPriority = CRenderPass.ePriority.BackGround - 2;
             this.PushRPAuto(srp);
             srp = new CRPAuto(fw.Pal().SlVoxel().mKey);
@@ -191,8 +194,8 @@ export class CLight extends CCamComp {
             srp.mClearColor = false;
             srp.mClearDepth = false;
             srp.mTag = "shadowWrite";
-            srp.mAutoTag = "shadow";
-            srp.mAutoPaint.add("CPaintVoxel");
+            srp.mInTag = "shadow";
+            srp.mInPaint.add("CPaintVoxel");
             srp.mPriority = CRenderPass.ePriority.BackGround - 1;
             this.PushRPAuto(srp);
         }

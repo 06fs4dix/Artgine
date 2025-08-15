@@ -19,7 +19,7 @@ import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util
 import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
 import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
 import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
-import { CShadowPlane } from "../../../plugin/ShadowPlane/ShadowPlane.js";
+import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 
 export class CUser extends CSubject
 {
@@ -156,7 +156,6 @@ export class CUser extends CSubject
                 let audio=new CAudioBuf("Res/sound/jute-dh-steps/stepdirt_2.wav");
                 audio.Volume(0.5);
                 audio.Play();
-                CConsol.Log("test");
             },0,0.3);
         }
         else

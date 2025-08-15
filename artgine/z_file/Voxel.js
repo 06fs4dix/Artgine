@@ -1,7 +1,7 @@
 import { ColorModelCac } from "./ColorFun";
-import { ligCol, ligCount, ligDir } from "./Light";
+import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
-import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, Sam2DToMat, Sam2DV4, Sam2DToV4, Sam2DSize, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, } from "./Shader";
+import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, Sam2DToMat, Sam2DV4, Sam2DToV4, Sam2DSize, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, } from "./Shader";
 import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowPointProj, shadowRightCasP2, shadowTopCasV1, dotCac, calcShadow, } from "./Shadow";
 var size = 100;
 var worldMat = Null();
@@ -18,8 +18,8 @@ var to_worldPos = Null();
 var to_normal = Null();
 var shadowReadList = new Sam2DV4(9);
 var shadowOn = -1.0;
-var sun = 1.0;
-Build("PreVoxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv], ps_main, [out_color]);
+var sun = 0.0;
+Build("PreVoxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos], ps_main, [out_color]);
 Build("PreVoxelShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, colorModel, alphaModel, size,
     ligDir, ligCol, ligCount,
@@ -220,27 +220,31 @@ function vs_main(f4_ver, f4_uv, f2_color) {
     else
         to_uv.w = light;
     P = V4MulMatCoordi(P, worldMat);
+    to_worldPos = P;
     P = V4MulMatCoordi(P, viewMat);
     P = V4MulMatCoordi(P, projectMat);
     out_position = P;
 }
 function ps_main() {
     var L_cor = new CVec4(0.0, 0.0, 0.0, 1.0);
+    var light = to_uv.w;
     if (to_uv.w > 1.5) {
         discard;
         return;
     }
-    else if (to_uv.w < -0.5) {
+    else if (light < -0.5) {
         L_cor.xyz = to_uv.xyz;
+        light = -light;
     }
     else {
         L_cor = Sam2DToColor(0.0, to_uv.xy);
-        L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.w);
-        L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.z);
     }
     L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
-    if (L_cor.a <= 0.1)
-        discard;
+    var DSE = new CMat3(0);
+    BranchBegin("light", "L", [ligDir, ligCol, ligCount, ambientColor]);
+    DSE = LightCac2D(to_worldPos, L_cor, new CVec3(0.0, 0.0, 0.0), ambientColor);
+    L_cor.rgb = DSE[0];
+    BranchEnd();
     var shadow = 1.0;
     if (shadowOn > 0.5) {
         var shadowSize = Sam2DSize(shadowOn);

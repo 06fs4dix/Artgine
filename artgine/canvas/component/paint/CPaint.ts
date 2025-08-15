@@ -376,7 +376,7 @@ export class CPaint extends CComponent
 				
 				//this.BatchClear();
 				this.ClearCRPAuto();
-				if(_pointer.target instanceof CRenderPass)
+				if(_pointer.Get() instanceof CRenderPass)
 					_pointer.target.Reset();
 				else
 					CAlert.E("CRPAuto는 페인트 내에서 수정 불가합니다.");

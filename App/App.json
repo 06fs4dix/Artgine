@@ -4,9 +4,9 @@
   "fullScreen": false,
   "program": "developer",
   "url": "http://localhost:8050/Artgine",
-  "projectPath": "proj/Tutorial/3DSample",
+  "projectPath": "proj/2D/Village",
   "page": "html",
   "server": "local",
-  "github": true,
+  "github": false,
   "tsc": true
 }

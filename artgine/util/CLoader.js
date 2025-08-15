@@ -190,15 +190,18 @@ export class CLoader {
         else if (ext == "mp4") {
             this.VideoLoad(_file, null);
         }
-        else if (ext == "tex" || ext == "rgba") {
+        else if (ext == "tex" || ext == "rgba" || ext == "mesh") {
             this.mLoadSet.delete(_file);
+            return false;
         }
         else if (ext == "js" || ext == "jsm") {
             await this.JSLoad(_file);
         }
         let buf = await CFile.Load(_file);
-        if (buf == null)
+        if (buf == null) {
+            this.mLoadSet.delete(_file);
             return true;
+        }
         await this.LoadSwitch(_file, buf, _option);
         return false;
     }

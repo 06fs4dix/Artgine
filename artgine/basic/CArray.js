@@ -12,6 +12,11 @@ export class CArray {
             this.mArray.push(_data);
         this.mLength++;
     }
+    PushArray(_data) {
+        for (let i = 0; i < _data.Size(); ++i) {
+            this.Push(_data.Find(i));
+        }
+    }
     New(_new) {
         if (this.mArray.length > this.mLength) {
             this.mLength++;

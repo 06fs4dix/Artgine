@@ -21,6 +21,7 @@ import { CFontRef } from "../../../util/CFont.js";
 import { CFrame } from "../../../util/CFrame.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import {CSubject} from "../../subject/CSubject.js";
+import { CClipCoodi } from "../CAnimation.js";
 import {CLight} from "../CLight.js";
 import {CPaint} from "./CPaint.js";
 
@@ -148,9 +149,9 @@ export class CPaint2D extends CPaint
 			this.SetTexture(_object.Key());
 		}
 	}
-	EditForm(_pointer : CPointer,_div : HTMLDivElement,_input : HTMLInputElement)
+	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
-		super.EditForm(_pointer,_div,_input);
+		super.EditForm(_pointer,_body,_input);
 		if(_pointer.member=="mSize" && this.mSize==null)
 		{
 			let btn=document.createElement("button");
@@ -159,7 +160,7 @@ export class CPaint2D extends CPaint
 				this.mSize=new CVec2();
 				this.EditRefresh();
 			};
-			_div.append(btn);
+			_body.append(btn);
 		}
 	}
 	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
@@ -172,6 +173,27 @@ export class CPaint2D extends CPaint
 			if(this.mTexture.length>0)
 			{
 				let ani=CClass.New("CAnimation");
+				if(this.mTexCodi.Equals(new CVec4(1,1,0,0))==false)
+				{
+					var tex=this.mOwner.GetFrame().Res().Find(this.mTexture[0]);
+					if(tex instanceof CTexture)
+					{
+						if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return;
+						//this.SetSize(new CVec2(tex.GetWidth(),tex.GetHeight()));
+						
+						// 텍스처 사이즈를 이용해서 절대좌표 구하기
+						const imgW = tex.GetWidth();
+						const imgH = tex.GetHeight();
+						
+						// 현재 텍스처 좌표를 절대좌표로 변환
+						const absCoords = CPaint2D.AbsoluteCoordsFromTexCodi(this.mTexCodi, imgW, imgH);
+						
+						// CClipCoodi에 절대좌표 전달 (startX, startY, endX, endY)
+						ani.Push(new CClipCoodi(0, 0, absCoords.x, absCoords.y, absCoords.z, absCoords.w));	
+					}
+				
+					
+				}
 				window["AniTool"](ani,this.mTexture[0]);
 				window["AniToolTexcodiEvent"](this, ()=>{
 
@@ -218,7 +240,7 @@ export class CPaint2D extends CPaint
 			this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
 		}
 
-		if(_delay>1000 || this.mTag.has("tail")==false)	return;
+		if(_delay>1000 || this.mTag.has("tail")==false || this.mSize==null)	return;
 
 
 		this.Camera();
@@ -456,6 +478,35 @@ export class CPaint2D extends CPaint
 			this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-0.1/_imgH;
 		}
 	}
+
+	// 텍스처 사이즈를 이용해서 절대좌표 구하기 (보정값 반영)
+	static AbsoluteCoordsFromTexCodi(_texCodi : CVec4, _imgW : number, _imgH : number) : CVec4
+	{
+		// 텍스처 좌표를 절대좌표로 변환 (SetTexCodi의 보정값을 역산)
+		// _texCodi: (width_ratio, height_ratio, startX_ratio, startY_ratio)
+		
+		// SetTexCodi에서 +0.1/_imgW, +0.1/_imgH 보정값을 역산
+		const startX = Math.round((_texCodi.z - 0.1/_imgW) * _imgW);
+		const startY = Math.round((1 - _texCodi.w - _texCodi.y - 0.1/_imgH) * _imgH);
+		
+		// SetTexCodi에서 -0.2/_imgW, -0.2/_imgH 보정값을 역산
+		const endX = Math.round((_texCodi.z + _texCodi.x + 0.2/_imgW) * _imgW);
+		const endY = Math.round((1 - _texCodi.w + 0.2/_imgH) * _imgH);
+		
+		return new CVec4(startX, startY, endX, endY);
+	}
+
+	// 절대좌표를 텍스처 좌표로 변환 (보정값 반영)
+	static TexCodiFromAbsoluteCoords(_startX : number, _startY : number, _endX : number, _endY : number, _imgW : number, _imgH : number) : CVec4
+	{
+		// 절대좌표를 텍스처 좌표로 변환 (SetTexCodi와 동일한 보정값 적용)
+		const widthRatio = (_endX - _startX) / _imgW - 0.2/_imgW;
+		const heightRatio = (_endY - _startY) / _imgH - 0.2/_imgH;
+		const startXRatio = _startX / _imgW + 0.1/_imgW;
+		const startYRatio = 1 - (_startY / _imgH) - heightRatio - 0.1/_imgH;
+		
+		return new CVec4(widthRatio, heightRatio, startXRatio, startYRatio);
+	}
 	SetPivot(_pivot : CVec3)
 	{
 		this.mPivot = _pivot;
@@ -559,7 +610,7 @@ export class CPaint2D extends CPaint
 	}
 	CacBound()
 	{
-		if(this.mTag.has("tail"))
+		if(this.mTag.has("tail") && this.mSize!=null)
 		{
 			this.mBoundFMat.Import(this.mBound);
 			this.mBoundFMat.GetCenter(this.mBoundFMatC);

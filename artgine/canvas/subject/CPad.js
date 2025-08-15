@@ -196,8 +196,8 @@ export class CPad extends CSubject {
                 btn.Init("PadStickCircle.tex");
                 btn.SetKey("PadStickCircle");
                 {
-                    btn.SetAnchorX(CUI.eAnchor.Min, 30);
-                    btn.SetAnchorY(CUI.eAnchor.Min, 30);
+                    btn.SetAnchorX(CUI.eAnchor.Min, 40);
+                    btn.SetAnchorY(CUI.eAnchor.Min, 40);
                 }
                 btn.SetSize(100 * this.mPadScale, 100 * this.mPadScale);
                 btn.SetPressTraking(true);

@@ -9,7 +9,7 @@ import {CWebView} from "../artgine/system/CWebView.js";
 
 
 var gProjJSON = null;
-var gAppJSON: { url, projectPath, program, server, width, height, fullScreen } = null;
+var gAppJSON: { url, projectPath, program, server, width, height, fullScreen,github } = null;
 var gManifest=null;
 var gPlugin;
 var gServiceWorker=null;
@@ -66,6 +66,7 @@ function WatchInputChanges() {
         gAppJSON.height = parseInt((document.getElementById("height_num") as HTMLInputElement).value);
         gAppJSON.program = (document.getElementById("program_sel") as HTMLSelectElement).value;
         gAppJSON.fullScreen = (document.getElementById("fullScreen_chk") as HTMLInputElement).checked;
+        gAppJSON.github = (document.getElementById("github_chk") as HTMLInputElement).checked;
 
     };
     const updateManifest = () => {
@@ -185,6 +186,8 @@ async function Init() {
     CUtil.IDValue("height_num", gAppJSON.height);
     CUtil.IDInput("server_sel").value = gAppJSON.server;
     CUtil.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
+    CUtil.IDInput("github_chk").checked = gAppJSON.github;
+    
     CUtil.IDInput("program_sel").value = gAppJSON.program;
 
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {

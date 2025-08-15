@@ -261,8 +261,8 @@ export class CPad extends CSubject
                 // }
                 // else
                 {
-                    btn.SetAnchorX(CUI.eAnchor.Min,30);
-                    btn.SetAnchorY(CUI.eAnchor.Min,30);
+                    btn.SetAnchorX(CUI.eAnchor.Min,40);
+                    btn.SetAnchorY(CUI.eAnchor.Min,40);
                 }
                 
                 btn.SetSize(100*this.mPadScale,100*this.mPadScale);
