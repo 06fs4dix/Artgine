@@ -1,11 +1,13 @@
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CObject, CPointer } from "../../artgine/basic/CObject.js";
+import { CUtilObj } from "../../artgine/basic/CUtilObj.js";
 import { CAlpha, CColor } from "../../artgine/canvas/component/CColor.js";
 import { CLight } from "../../artgine/canvas/component/CLight.js";
 import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/canvas/component/paint/CPaint3D.js";
+import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
 import { CBound } from "../../artgine/geometry/CBound.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
@@ -188,8 +190,8 @@ export class CShadowPlane extends CPaint2D
 {
     //public
     public m_shadowLen : number = 1;        // 2d에서는 그림자 길이, 3d에서는 그림자 월드좌표 y값
-    public m_shadowAlpha : number = 0.75;   // 그림자 투명도
-    public m_updateShadow : boolean = false;
+    public m_shadowAlpha : number = 0.5;   // 그림자 투명도
+    public m_updateShadow : boolean = true;
 
     //private
     private m_ptKey : string;
@@ -207,6 +209,8 @@ export class CShadowPlane extends CPaint2D
         this.PushCShaderAttr(new CShaderAttr("alphaCut", 0.001));
         this.SetColorModel(new CColor(0,0,0,CColor.eModel.RGBMul));
         this.SetAlphaModel(new CAlpha(0.75,CAlpha.eModel.Mul));
+        this.PushTag("shadowPlane");
+        
     }
 
     override IsShould(_member: string, _type: CObject.eShould) 
@@ -238,6 +242,7 @@ export class CShadowPlane extends CPaint2D
         if(this.m_pt?.IsUpdateFMat() || this.m_updateShadow || (this.m_lig!=null && this.m_lig.mUpdate!=0)) 
         {
             this.UpdateShadow();
+            
         }
 
         if(this.m_updateShadow) {
@@ -281,6 +286,7 @@ export class CShadowPlane extends CPaint2D
         const points : CLight[] = [];
         for(let lig of this.m_ligSet) 
         {
+            if(lig.IsEnable()==false || lig.GetColor().IsZero())    continue;
             if(this.m_ligKeys.length) 
             {
                 if(this.m_ligKeys.includes(lig.Key()) || this.m_ligKeys.includes(lig.GetOwner().Key())){}
@@ -352,23 +358,23 @@ export class CShadowPlane extends CPaint2D
         }
     }
 
-    private GetLightDirection() {
-        if (!this.m_lig || !this.m_pt) return new CVec3(0, 1, 0);
+    // private GetLightDirection() {
+    //     if (!this.m_lig || !this.m_pt) return new CVec3(0, 1, 0);
 
-        const c = this.GetPaintCenter();
-        if(this.m_lig.IsPointLight()) {
-            return CMath.V3Nor(CMath.V3SubV3(c, this.m_lig.GetDirectPos()));
-        }
-        else {
-            return CMath.V3Nor(this.m_lig.GetDirectPos());
-        }
-    }
+    //     const c = this.GetPaintCenter();
+    //     if(this.m_lig.IsPointLight()) {
+    //         return CMath.V3Nor(CMath.V3SubV3(c, this.m_lig.GetDirectPos()));
+    //     }
+    //     else {
+    //         return CMath.V3Nor(this.m_lig.GetDirectPos());
+    //     }
+    // }
 
     private UpdateAlpha() {
         let reset = false;
         for(let rp of this.GetRenderPass()) {
-            if(rp.mSort != CRenderPass.eSort.RPAlphaGroup) {
-                rp.mSort = CRenderPass.eSort.RPAlphaGroup;
+            if(rp.mSort != CRenderPass.eSort.ReversAlphaGroup) {
+                rp.mSort = CRenderPass.eSort.ReversAlphaGroup;
                 reset = true;
                 rp.Reset();
             }
@@ -379,6 +385,9 @@ export class CShadowPlane extends CPaint2D
     }
 
     private UpdateShadow2D() {
+
+        // let rp=new CRPAuto(this.GetOwner().GetFrame().Pal().Sl2DKey());
+        // rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
         const pt = this.m_pt as CPaint2D;
         const lig = this.m_lig;
 
@@ -387,13 +396,17 @@ export class CShadowPlane extends CPaint2D
         const p1 = new CVec3(fBound.mMin.x, fBound.mMin.y);
         const p2 = new CVec3(fBound.mMax.x, fBound.mMin.y);
 
-        const dir = this.GetLightDirection();
+        //const dir = this.GetLightDirection();
+        let dir=new CVec3(0, 1, 0);
 
         const c = this.GetPaintCenter();
 
         let height : number;
         let alpha : number;
-        if(lig.IsPointLight()) {
+        if(lig.IsPointLight()) 
+        {
+            if(this.m_lig!=null)
+                dir=CMath.V3Nor(CMath.V3SubV3(c, this.m_lig.GetDirectPos()));
             const inner = lig.GetInRadius();
             const outer = lig.GetOutRadius();
             const dist = CMath.V3Distance(c, lig.GetDirectPos());
@@ -408,12 +421,19 @@ export class CShadowPlane extends CPaint2D
             }
         }
         else {
-            
+            if(this.m_lig!=null)
+                dir=CMath.V3Nor(this.m_lig.GetDirectPos());
             alpha = 1;
             height = fBound.GetSize().y * this.m_shadowLen;
         }
-        alpha=alpha*(lig.GetColor().x+lig.GetColor().y+lig.GetColor().z)/3;
+
+        //alpha
+        if(lig.GetColor().IsZero()) alpha=0;
         
+        let dot=CMath.V3Dot(new CVec3(0,1,0),dir);
+        dot*=0.1;
+        if(dot>0)
+            dir=CMath.V3MulFloat(dir,1+dot);
         const p1Far = CMath.V3AddV3(p1, CMath.V3MulFloat(dir, height));
         const p2Far = CMath.V3AddV3(p2, CMath.V3MulFloat(dir, height));
 
@@ -424,22 +444,31 @@ export class CShadowPlane extends CPaint2D
         CMath.V3SubV3(p1Far, posOffset, p1Far); 
         CMath.V3SubV3(p2Far, posOffset, p2Far);
 
-        const lmat = pt.GetLMat().Export();
-        lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
+        // const lmat = pt.GetLMat().Export();
+        // lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
 
         this.SetSize(pt.GetSize().Export());
         this.SetTexture(pt.GetTexture());
         this.SetTexCodi(pt.GetTexCodi());
-        this.mAutoLoad=pt.mAutoLoad.Export();
+
+        this.mAutoLoad.Import(pt.mAutoLoad);
         if(pt.GetTag().has("wind") && pt instanceof CPaint2D) {
+            if(this.mTag.has("wind")==false)
+            {
+                this.BatchClear();
+            }
             this.PushTag("wind");
             this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
         }
-        if(pt.mYSort) 
+        if(pt.mYSort)
+        {
             this.SetYSort(true);
+            this.SetYSortOrigin(this.mYSortOrigin+1);
+        }
+            
 
         this.SetPosList([p1Far,p2Far,p1,p2]);
-        this.SetLMat(lmat);
+        //this.SetLMat(lmat);
         this.SetAlphaModel(new CAlpha(alpha * this.m_shadowAlpha, CAlpha.eModel.Mul));
     }
 
@@ -551,6 +580,14 @@ export class CShadowPlane extends CPaint2D
 
     SetLight(_light: CLight): void {
         this.m_ligSet.add(_light);
+    }
+    override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+    {
+        super.EditForm(_pointer,_body,_input);
+        if(_pointer.member=="m_ligKeys")
+        {
+            CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""],true);
+        }
     }
 
     // WTForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
