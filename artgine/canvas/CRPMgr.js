@@ -8,21 +8,27 @@ import { CTexture } from "../render/CTexture.js";
 import { CFile } from "../system/CFile.js";
 import { CPaint } from "./component/paint/CPaint.js";
 export class CRPAuto extends CRenderPass {
-    mAutoTag = null;
-    mAutoPaint = new Set();
+    mInTag = null;
+    mOutTag = null;
+    mInPaint = new Set();
     mCopy = true;
-    PushAutoPaint(_name) {
+    PushInPaint(_name) {
         if (typeof _name == "string")
-            this.mAutoPaint.add(_name);
+            this.mInPaint.add(_name);
         else
-            this.mAutoPaint.add(_name.name);
+            this.mInPaint.add(_name.name);
     }
-    PushAutoTag(_tag) {
-        this.mAutoTag = _tag;
+    PushInTag(_tag) {
+        this.mInTag = _tag;
+    }
+    PushOutTag(_tag) {
+        this.mOutTag = _tag;
     }
     EditForm(_pointer, _body, _input) {
         super.EditForm(_pointer, _body, _input);
-        if (_pointer.member == "mAutoTag")
+        if (_pointer.member == "mInTag")
+            CUtilObj.NullEdit(_pointer, _body, _input, "");
+        else if (_pointer.member == "mOutTag")
             CUtilObj.NullEdit(_pointer, _body, _input, "");
         else if (_pointer.member == "mAutoPaint") {
             const paintList = CClass.ExtendsList(CPaint, true);

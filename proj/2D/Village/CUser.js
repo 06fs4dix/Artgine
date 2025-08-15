@@ -1,4 +1,3 @@
-import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
@@ -14,7 +13,7 @@ import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
-import { CShadowPlane } from "../../../plugin/ShadowPlane/ShadowPlane.js";
+import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 export class CUser extends CSubject {
     mRB;
     mAF;
@@ -120,7 +119,6 @@ export class CUser extends CSubject {
                 let audio = new CAudioBuf("Res/sound/jute-dh-steps/stepdirt_2.wav");
                 audio.Volume(0.5);
                 audio.Play();
-                CConsol.Log("test");
             }, 0, 0.3);
         }
         else {

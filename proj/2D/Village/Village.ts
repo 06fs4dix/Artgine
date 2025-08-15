@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-12 22:19:34';
+const version='2025-08-16 02:10:18';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -46,7 +46,7 @@ import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
-import { CBlackboardModal } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CBGAttachButton, CBlackboardModal, CLoadingBack } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
@@ -54,6 +54,14 @@ import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTex
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
+import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
+import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
+import { CVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CVoxel.js";
+import { CPaintVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaintVoxel.js";
+import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
+import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
 
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
@@ -140,9 +148,91 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 
+let lightRP=new CRPMgr();
+let rp=lightRP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaint2D);
+rp.PushOutTag("shadowPlane");
+rp.mShader=gAtl.Frame().Pal().Sl2DKey();
+rp.mTag="light";
+
+
+rp=lightRP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaintVoxel);
+rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
+rp.mTag="light";
+Real.SetRPMgr(lightRP);
+
+// let voxel=Main.Find("BackGround") as CVoxel;
+// voxel.mLight=true;
+// voxel.mUpdateRes=true;
 
 
 
+let Option_btn=new CBGAttachButton("Test",101,new CVec2(320,120));
+Option_btn.SetTitleText("Option");
+Option_btn.SetContent(`
+<div>
+    <button onclick="AM7()">AM7</button>
+    <button onclick="PM1()">PM1</button>
+    <button onclick="PM11()">PM11</button>
+</div>`);
+
+function AM7()
+{
+    let Direct=Main.Find("Direct");
+    let PointList=Main.Find("PointList");
+
+    let dirLight=Direct.FindComp(CLight);
+    dirLight.SetColor(new CVec3(1,0.8,0.8));
+    Direct.SetPos(new CVec3(1,0.5,0));
+
+    let ptLights=PointList.FindComps(CLight,true);
+    for(let pt of ptLights)
+    {
+        pt.SetColor(new CVec3());
+    }
+
+}
+window["AM7"]=AM7;
+
+
+function PM1()
+{
+    let Direct=Main.Find("Direct");
+    let PointList=Main.Find("PointList");
+
+    let dirLight=Direct.FindComp(CLight);
+    dirLight.SetColor(new CVec3(1,1,1));
+    Direct.SetPos(new CVec3(0,1,0));
+
+    let ptLights=PointList.FindComps(CLight,true);
+    for(let pt of ptLights)
+    {
+        pt.SetColor(new CVec3());
+    }
+
+}
+window["PM1"]=PM1;
+
+
+
+function PM11()
+{
+    let Direct=Main.Find("Direct");
+    let PointList=Main.Find("PointList");
+
+    let dirLight=Direct.FindComp(CLight);
+    dirLight.SetColor(new CVec3());
+    Direct.SetPos(new CVec3(0,1,0));
+
+    let ptLights=PointList.FindComps(CLight,true);
+    for(let pt of ptLights)
+    {
+        pt.SetColor(new CVec3(1,1,1));
+    }
+
+}
+window["PM11"]=PM11;
 
 
 

@@ -9,6 +9,7 @@ import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
 import {CRenderPass} from "../../../render/CRenderPass.js";
 import {CShader,  CVertexFormat } from "../../../render/CShader.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
+import { CRPAuto } from "../../CRPMgr.js";
 import {CPaint} from "./CPaint.js";
 
 export class CVoxPlane extends CObject
@@ -67,7 +68,7 @@ export class CPaintVoxel extends CPaint
 
 		if(this.mRenderPass.length==0)
 		{
-			var rp=new CRenderPass(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
+			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
 			rp.mPriority = CRenderPass.ePriority.BackGround;
 			this.mRenderPass=[rp];
 		}

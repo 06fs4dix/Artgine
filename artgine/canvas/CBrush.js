@@ -72,6 +72,7 @@ export class CBrush extends CObject {
     mCam2d = null;
     mCam3d = null;
     mCamDev = null;
+    mDoubleChk = new Set();
     mLightDir = null;
     mLightColor = null;
     mLightCount;
@@ -172,6 +173,7 @@ export class CBrush extends CObject {
             this.mShadowCount = 0;
             this.mShadowRead.clear();
             this.mWindCount = 0;
+            this.mDoubleChk.clear();
         }
         for (var cam of this.mCameraMap.values()) {
             if (this.mFrame.Win().IsResize()) {

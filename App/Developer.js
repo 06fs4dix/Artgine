@@ -47,6 +47,7 @@ function WatchInputChanges() {
         gAppJSON.height = parseInt(document.getElementById("height_num").value);
         gAppJSON.program = document.getElementById("program_sel").value;
         gAppJSON.fullScreen = document.getElementById("fullScreen_chk").checked;
+        gAppJSON.github = document.getElementById("github_chk").checked;
     };
     const updateManifest = () => {
         gManifest.short_name = CUtil.IDValue("short_name_txt");
@@ -125,6 +126,7 @@ async function Init() {
     CUtil.IDValue("height_num", gAppJSON.height);
     CUtil.IDInput("server_sel").value = gAppJSON.server;
     CUtil.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
+    CUtil.IDInput("github_chk").checked = gAppJSON.github;
     CUtil.IDInput("program_sel").value = gAppJSON.program;
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {
         projectPath: gAppJSON.projectPath,

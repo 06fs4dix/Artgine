@@ -35,7 +35,14 @@ else {
     LoadPluginMap([CPath.PHPC() + "/plugin/", CPath.PHPC() + "/artgine"]);
 }
 var gAppJSON = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
-    "server": "", "github": false });
+    "server": "", "github": false, "tsc": true });
+var gTSCPID = 0;
+if (gAppJSON.tsc) {
+    CCMDMgr.RunCMD("npx tsc -w", true).then((_pid) => {
+        gTSCPID = _pid;
+        CConsol.Log("TSC Build");
+    });
+}
 const createWindow = () => {
     gMainWindow = new BrowserWindow({
         width: 1024,
@@ -122,6 +129,13 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin')
         app.quit();
+});
+app.on('before-quit', async () => {
+    if (gTSCPID && gTSCPID > 0) {
+        CConsol.Log(`TSC 프로세스 종료 중... (PID: ${gTSCPID})`);
+        await CCMDMgr.KillPID(gTSCPID);
+        gTSCPID = 0;
+    }
 });
 function RefreshDevScreen() {
     gMainWindow.setFullScreen(false);
@@ -461,10 +475,10 @@ pause`;
     if (oTS != "") {
         pos = bTS.indexOf("//EntryPoint");
         let epStr = oTS.substring(oTS.indexOf("//EntryPoint") + 12, oTS.length);
-        epStr = epStr.replace(/(["'])[^"']*?(artgine\/[^"']+)/g, (match, quote, artginePath) => {
+        epStr = epStr.replace(/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g, (match, quote, path) => {
             const cleanUpFolder = upFolder.replace(/\/+$/, '');
-            const cleanArtginePath = artginePath.replace(/^\/+/, '');
-            return `${quote}${cleanUpFolder}/${cleanArtginePath}`;
+            const cleanPath = path.replace(/^\/+/, '');
+            return `${quote}${cleanUpFolder}/${cleanPath}`;
         });
         await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder);
         bTS = CString.InsertAt(bTS, pos + 12, epStr);
@@ -512,6 +526,7 @@ pause`;
             const baseName = canName.replace(/\.json$/i, "");
             pfStr += "var " + baseName + " = gAtl.Canvas('" + canName + "');\n";
         }
+        pfStr += "//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥\n";
     }
     if (DependenciesChk(_json.projetJSON.dependencies)) {
         dialog.showMessageBoxSync({
@@ -537,33 +552,14 @@ pause`;
     await CFile.Save(_json.projetJSON, savePath + ".json");
     let waitTS = await WaitForBuild(savePath + ".ts");
     if (waitTS) {
-        if (gTSCRun) {
-            dialog.showMessageBoxSync({
-                type: 'error',
-                buttons: ['OK'],
-                defaultId: 0,
-                title: 'info',
-                message: 'wait! typescript build!',
-            });
-        }
-        else {
-            gTSCRun = true;
-            const result = dialog.showMessageBoxSync({
-                type: 'error',
-                buttons: ['yes', 'no'],
-                defaultId: 0,
-                cancelId: 1,
-                title: 'build error',
-                message: 'js file version late. tsc build run? 8sec wait',
-            });
-            if (result === 0) {
-                if (CCMDMgr.IsTSC())
-                    await CCMDMgr.RunCMD("npm init", false);
-                CCMDMgr.RunCMD("npx tsc -w", true);
-                await new Promise(resolve => setTimeout(resolve, 1000 * 8));
-                return "error";
-            }
-        }
+        dialog.showMessageBoxSync({
+            type: 'error',
+            buttons: ['OK'],
+            defaultId: 0,
+            title: 'info',
+            message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
+        });
+        return "error";
     }
     let appChange = false;
     if (gAppJSON.program !== _json.appJSON.program)

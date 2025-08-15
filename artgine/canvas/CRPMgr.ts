@@ -12,24 +12,31 @@ import { CPaint } from "./component/paint/CPaint.js";
 import { CSurface } from "./subject/CSurface.js";
 
 export class CRPAuto extends CRenderPass {
-	public mAutoTag:string=null;//null : 태그검사 안함 || 있으면 특정 태그 있는것만
-	public mAutoPaint:Set<string>=new Set<string>();//이 페인트만 렌더설정
+	public mInTag:string=null;//null : 태그검사 안함 || 있으면 특정 태그 있는것만
+	public mOutTag:string=null;
+	public mInPaint:Set<string>=new Set<string>();//이 페인트만 렌더설정
 	public mCopy:boolean=true;//rp가 복사되서 페인트에 들어감
 	
-	PushAutoPaint(_name : any)
+	PushInPaint(_name : any)
 	{
 		if(typeof _name == "string")
-			this.mAutoPaint.add(_name);
+			this.mInPaint.add(_name);
 		else
-			this.mAutoPaint.add(_name.name);
+			this.mInPaint.add(_name.name);
 	}
-	PushAutoTag(_tag)
+	PushInTag(_tag)
 	{
-		this.mAutoTag=_tag;
+		this.mInTag=_tag;
+	}
+	PushOutTag(_tag)
+	{
+		this.mOutTag=_tag;
 	}
 	EditForm(_pointer: CPointer, _body: HTMLDivElement, _input: HTMLElement): void {
 		super.EditForm(_pointer,_body,_input);
-		if(_pointer.member=="mAutoTag")
+		if(_pointer.member=="mInTag")
+			CUtilObj.NullEdit(_pointer,_body,_input,"");
+		else if(_pointer.member=="mOutTag")
 			CUtilObj.NullEdit(_pointer,_body,_input,"");
 		else if(_pointer.member=="mAutoPaint")
 		{

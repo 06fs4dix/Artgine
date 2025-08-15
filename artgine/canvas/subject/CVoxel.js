@@ -270,6 +270,11 @@ export class CVoxel extends CSubject {
         let x = _index.x + _dir.x;
         let y = _index.y + _dir.y;
         let z = _index.z + _dir.z;
+        if (this.m2D) {
+            _light.x = 1.0;
+            _light.y = 0.0;
+            return;
+        }
         if (x < 0 || x >= this.mCount.x || y < 0 || y >= this.mCount.y ||
             z < 0 || z >= this.mCount.z)
             return 0;

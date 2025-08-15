@@ -98,6 +98,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	protected mCam2d : CCamera=null;
 	protected mCam3d : CCamera=null;
 	protected mCamDev : CCamera=null;
+	mDoubleChk=new Set<any>();
 	public mLightDir : Float32Array=null;
 	public mLightColor : Float32Array=null;
 	public mLightCount : number;
@@ -105,6 +106,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	//public m_shadowCamera=new Map<string,CCamera>();
 	public mShadowCount=0;
 
+	//mWindChk=new Set<any>();
 	public mWindDir : Float32Array=null;
 	public mWindPos : Float32Array=null;
 	public mWindInfo : Float32Array=null;
@@ -245,6 +247,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 			this.mShadowRead.clear();
 
 			this.mWindCount=0;
+			this.mDoubleChk.clear();
 		}
 
 		for(var cam of this.mCameraMap.values())

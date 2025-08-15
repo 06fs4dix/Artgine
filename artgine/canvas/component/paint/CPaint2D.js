@@ -14,6 +14,7 @@ import { CUtilRender } from "../../../render/CUtilRender.js";
 import { CAtlas } from "../../../util/CAtlas.js";
 import { CFontRef } from "../../../util/CFont.js";
 import { CRPAuto } from "../../CRPMgr.js";
+import { CClipCoodi } from "../CAnimation.js";
 import { CPaint } from "./CPaint.js";
 export class CPaint2D extends CPaint {
     mSize;
@@ -79,8 +80,8 @@ export class CPaint2D extends CPaint {
             this.SetTexture(_object.Key());
         }
     }
-    EditForm(_pointer, _div, _input) {
-        super.EditForm(_pointer, _div, _input);
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
         if (_pointer.member == "mSize" && this.mSize == null) {
             let btn = document.createElement("button");
             btn.innerText = "생성";
@@ -88,7 +89,7 @@ export class CPaint2D extends CPaint {
                 this.mSize = new CVec2();
                 this.EditRefresh();
             };
-            _div.append(btn);
+            _body.append(btn);
         }
     }
     EditHTMLInit(_div, _pointer) {
@@ -98,6 +99,17 @@ export class CPaint2D extends CPaint {
         button.onclick = () => {
             if (this.mTexture.length > 0) {
                 let ani = CClass.New("CAnimation");
+                if (this.mTexCodi.Equals(new CVec4(1, 1, 0, 0)) == false) {
+                    var tex = this.mOwner.GetFrame().Res().Find(this.mTexture[0]);
+                    if (tex instanceof CTexture) {
+                        if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
+                            return;
+                        const imgW = tex.GetWidth();
+                        const imgH = tex.GetHeight();
+                        const absCoords = CPaint2D.AbsoluteCoordsFromTexCodi(this.mTexCodi, imgW, imgH);
+                        ani.Push(new CClipCoodi(0, 0, absCoords.x, absCoords.y, absCoords.z, absCoords.w));
+                    }
+                }
                 window["AniTool"](ani, this.mTexture[0]);
                 window["AniToolTexcodiEvent"](this, () => {
                     this.EditRefresh();
@@ -128,7 +140,7 @@ export class CPaint2D extends CPaint {
             let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
             this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
         }
-        if (_delay > 1000 || this.mTag.has("tail") == false)
+        if (_delay > 1000 || this.mTag.has("tail") == false || this.mSize == null)
             return;
         this.Camera();
         var pos = this.mOwner.GetWMat().xyz;
@@ -281,6 +293,20 @@ export class CPaint2D extends CPaint {
             this.mTexCodi.w = 1 - (_stY / _imgH) - this.mTexCodi.y - 0.1 / _imgH;
         }
     }
+    static AbsoluteCoordsFromTexCodi(_texCodi, _imgW, _imgH) {
+        const startX = Math.round((_texCodi.z - 0.1 / _imgW) * _imgW);
+        const startY = Math.round((1 - _texCodi.w - _texCodi.y - 0.1 / _imgH) * _imgH);
+        const endX = Math.round((_texCodi.z + _texCodi.x + 0.2 / _imgW) * _imgW);
+        const endY = Math.round((1 - _texCodi.w + 0.2 / _imgH) * _imgH);
+        return new CVec4(startX, startY, endX, endY);
+    }
+    static TexCodiFromAbsoluteCoords(_startX, _startY, _endX, _endY, _imgW, _imgH) {
+        const widthRatio = (_endX - _startX) / _imgW - 0.2 / _imgW;
+        const heightRatio = (_endY - _startY) / _imgH - 0.2 / _imgH;
+        const startXRatio = _startX / _imgW + 0.1 / _imgW;
+        const startYRatio = 1 - (_startY / _imgH) - heightRatio - 0.1 / _imgH;
+        return new CVec4(widthRatio, heightRatio, startXRatio, startYRatio);
+    }
     SetPivot(_pivot) {
         this.mPivot = _pivot;
         this.PRSReset();
@@ -344,7 +370,7 @@ export class CPaint2D extends CPaint {
         }
     }
     CacBound() {
-        if (this.mTag.has("tail")) {
+        if (this.mTag.has("tail") && this.mSize != null) {
             this.mBoundFMat.Import(this.mBound);
             this.mBoundFMat.GetCenter(this.mBoundFMatC);
             this.mBoundFMatR = this.mSize.x > this.mSize.y ? this.mSize.x : this.mSize.y;

@@ -247,5 +247,12 @@ export function LightCac2D(position, albedo, normal, ambientColor) {
             DDirAll = V3AddV3(DDirAll, V3MulV3(albedo.rgb, diffuse));
         }
     }
+    var ambientLight = V3MulV3(albedo.xyz, ambientColor);
+    if (DDirAll.x < ambientLight.x)
+        DDirAll.x = ambientLight.x;
+    if (DDirAll.y < ambientLight.y)
+        DDirAll.y = ambientLight.y;
+    if (DDirAll.z < ambientLight.z)
+        DDirAll.z = ambientLight.z;
     return new CMat3(V3AddV3(DPtAll, DDirAll), new CVec3(0.0, 0.0, 0.0), new CVec3(0.0, 0.0, 0.0));
 }

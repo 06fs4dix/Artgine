@@ -275,19 +275,23 @@ export class CLight extends CCamComp
 	GetOutRadius()  {
 		return this.mDirPos.w;
 	}
-	IsPointLight() {
+	IsPointLight() 
+	{
 		return this.mDirPos.w > 0.5;
 	}
 	override CCamCompReq(_brush : CBrush)
     {
+		if(_brush.mDoubleChk.has(this))	return;
+		_brush.mDoubleChk.add(this);
+
 		if(this.mWrite.length == 0) {
 			let fw = _brush.mFrame;
 
 			let srp=new CRPAuto(fw.Pal().Sl3D().mKey);
 			srp.mCopy=false;
 			srp.mTag="shadowWrite";
-			srp.mAutoTag="shadow";
-			srp.mAutoPaint.add("CPaint3D");
+			srp.mInTag="shadow";
+			srp.mInPaint.add("CPaint3D");
 			srp.mPriority=CRenderPass.ePriority.BackGround-2;
 			this.PushRPAuto(srp);
 	
@@ -296,8 +300,8 @@ export class CLight extends CCamComp
 			srp.mClearColor = false;
 			srp.mClearDepth = false;
 			srp.mTag="shadowWrite";
-			srp.mAutoTag="shadow";
-			srp.mAutoPaint.add("CPaintVoxel");
+			srp.mInTag="shadow";
+			srp.mInPaint.add("CPaintVoxel");
 			srp.mPriority=CRenderPass.ePriority.BackGround-1;
 			this.PushRPAuto(srp);
 		}
@@ -514,6 +518,7 @@ export class CLight extends CCamComp
 		_brush.mLightColor[_brush.mLightCount * 4 + 2] = this.mColor.z;
 		_brush.mLightColor[_brush.mLightCount * 4 + 3] = this.mColor.w;
 		_brush.mLightCount++;
+		
     }
 	
 }

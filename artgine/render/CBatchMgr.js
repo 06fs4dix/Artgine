@@ -34,6 +34,7 @@ export class CBatchMgr {
     mBatchGlobal = new CArray();
     mBaSortArr = new CArray();
     mBatchGDummy = new CBatch();
+    mUniArr = new CArray();
     mBasePriority = null;
     mFeedbackLoop = new Set();
     constructor(_render) {

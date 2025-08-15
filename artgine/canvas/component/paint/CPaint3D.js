@@ -37,6 +37,10 @@ export class CPaint3D extends CPaint {
         this.mMesh = _mesh;
         this.mWeightMat = new Float32Array(0);
     }
+    SetOwner(_obj) {
+        super.SetOwner(_obj);
+        this.InitMesh(this.mMesh);
+    }
     Bake() { this.PushTag("bake"); }
     Env() { this.PushTag("env"); }
     Wind(_influence) {

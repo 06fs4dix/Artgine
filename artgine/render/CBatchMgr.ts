@@ -21,6 +21,7 @@ export class CBatch
 	public mTexOff = new Array<number>();
 	public mTexAtt = new Array<number>();
 	public mValue = new Array<CShaderAttr>();
+	
 
 	CreateKey()
 	{
@@ -54,7 +55,7 @@ export class CBatchMgr
 	public mBatchGlobal =new CArray<CShaderAttr>();
 	public mBaSortArr =new CArray<CBatchArray>();
 	public mBatchGDummy : CBatch=new CBatch();
-	
+	public mUniArr=new CArray<CUniform>();
 	
 	public mBasePriority : number=null;
 	public mFeedbackLoop=new Set<any>();
@@ -234,4 +235,5 @@ export class CBatchMgrGL extends CBatchMgr
 	}
 }
 import CBatchMgr_imple from "../render_imple/CBatchMgr.js";
+import { CUtil } from "../basic/CUtil.js";
 CBatchMgr_imple();

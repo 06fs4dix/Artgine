@@ -96,7 +96,8 @@ export class CRenderPass extends CObject {
     };
     static eSort = {
         Distance: 1,
-        RPAlphaGroup: 0,
+        AlphaGroup: 0,
+        ReversAlphaGroup: 2,
         None: -1,
     };
     mDepthTest = null;

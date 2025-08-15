@@ -61,6 +61,9 @@ export class CWind extends CCamComp
 
     CCamCompReq(_brush : CBrush) 
     {
+        if(_brush.mDoubleChk.has(this))	return;
+		_brush.mDoubleChk.add(this);
+        
         if(_brush.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)/4)
             return;
 

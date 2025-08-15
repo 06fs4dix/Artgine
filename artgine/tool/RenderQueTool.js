@@ -120,8 +120,10 @@ function Init() {
             let sortStr = "";
             if (rp.mSort === CRenderPass.eSort.Distance)
                 sortStr = "Distance";
-            else if (rp.mSort === CRenderPass.eSort.RPAlphaGroup)
-                sortStr = "RPAlphaGroup";
+            else if (rp.mSort === CRenderPass.eSort.AlphaGroup)
+                sortStr = "AlphaGroup";
+            else if (rp.mSort === CRenderPass.eSort.ReversAlphaGroup)
+                sortStr = "ReversAlphaGroup";
             else if (rp.mSort === CRenderPass.eSort.None)
                 sortStr = "None";
             fields.push(`sort: ${sortStr}`);
