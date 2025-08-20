@@ -1,5 +1,5 @@
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CCoroutine } from "../../../artgine/util/CCoroutine.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
 
 export default class CStage
 {
@@ -24,7 +24,7 @@ export default class CStage
 
     static *Next()
     {
-
+        
         CStage.mazeSize.x+=2;
         CStage.mazeSize.y+=2;
         yield CCoroutine.eState.Stop;

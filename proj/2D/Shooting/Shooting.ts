@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-13 21:21:32';
+const version='2025-08-21 06:31:47';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -32,6 +32,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
@@ -42,7 +43,7 @@ CPlugin.PushPath('test','https://06fs4dix.github.io/Artgine/plugin/test/');
 import "https://06fs4dix.github.io/Artgine/plugin/test/test.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json','Res.json','UI.json']);
+await gAtl.Init(['Main.json','Res.json','UI.json'],"");
 var Main = gAtl.Canvas('Main.json');
 var Res = gAtl.Canvas('Res.json');
 var UI = gAtl.Canvas('UI.json');
@@ -276,8 +277,8 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
     let emissiveTexKey=BloomRPM.PushTex("emissiveTex.tex",emissiveTex);
     let rp=BloomRPM.PushRP(new CRPAuto());
-    rp.PushAutoPaint(CPaint2D);
-    rp.PushAutoTag("bloom");
+    rp.PushInPaint(CPaint2D);
+    rp.PushInTag("bloom");
     rp.mShader=gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget=emissiveTexKey;
     rp.mTag="mask";
@@ -287,7 +288,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
     let basiceTexKey=BloomRPM.PushTex("basiceTex.tex",basiceTex);
     rp=BloomRPM.PushRP(new CRPAuto());
-    rp.PushAutoPaint(CPaint2D);
+    rp.PushInPaint(CPaint2D);
     rp.mShader=gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget=basiceTexKey;
 
@@ -340,6 +341,17 @@ Option_btn.SetContent(`
 <div>
     블룸,기본 설정 가능
 </div>`);
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -10,7 +10,8 @@
     "mXR": false,
     "mDeveloper": true,
     "mIAuto": true,
-    "mWASM": false
+    "mWASM": false,
+    "mCanvas": ""
   },
   "dependencies": {},
   "includes": {

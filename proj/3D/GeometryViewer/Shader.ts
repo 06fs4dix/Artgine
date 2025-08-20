@@ -1,4 +1,4 @@
-import { Build, CMat, Color3, CVec3, CVec4, LWVPMul, Null, OutColor, OutPosition, ToV3, Vertex3 } from "../../../artgine/z_file/Shader";
+import { Build, CMat, Color3, CVec3, CVec4, LWVPMul, Null, OutColor, OutPosition, ToV3, Vertex3 } from "https://06fs4dix.github.io/Artgine/artgine/z_file/Shader";
 
 //mat
 var worldMat : CMat=Null();

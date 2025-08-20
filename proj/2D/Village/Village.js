@@ -1,6 +1,8 @@
-const version = '2025-08-16 02:10:18';
+const version = '2025-08-21 06:32:43';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import { CNPC } from "./CNPC.js";
+CClass.Push(CNPC);
 import { CUser } from "./CUser.js";
 CClass.Push(CUser);
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
@@ -16,6 +18,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
@@ -24,11 +27,12 @@ CPlugin.PushPath('ShadowPlane', 'https://06fs4dix.github.io/Artgine/plugin/Shado
 import "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json', 'Real.json']);
+await gAtl.Init(['Main.json', 'Real.json'], "");
 var Main = gAtl.Canvas('Main.json');
 var Real = gAtl.Canvas('Real.json');
 let comcon = gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
 gAtl.Brush().GetCam2D().Set2DZoom(1.5);
+import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCIndex.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
@@ -77,7 +81,7 @@ import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/compon
                         continue;
                     const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
                     if (deco) {
-                        const obj = deco.Export();
+                        const obj = deco.ExportProxy();
                         obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
                         obj.SetSave(false);
                         Real.Push(obj);
@@ -104,6 +108,9 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     new CBlackboardModal(ba, ta, ca);
 }));
 Real.Push(new CUser()).SetPos(new CVec3(5200, 6500));
+Real.Push(new CNPC("Dante", "Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6400, 6400));
+Real.Push(new CNPC("Miles", "Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200, 9200));
+Real.Push(new CNPC("Poppy", "Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000, 8000));
 CSysAuth.Confirm(true).then(async (_enable) => {
     if (_enable == false)
         return;
@@ -140,6 +147,7 @@ function AM7() {
     for (let pt of ptLights) {
         pt.SetColor(new CVec3());
     }
+    Real.SetRPMgr(lightRP);
 }
 window["AM7"] = AM7;
 function PM1() {
@@ -152,6 +160,7 @@ function PM1() {
     for (let pt of ptLights) {
         pt.SetColor(new CVec3());
     }
+    Real.SetRPMgr(null);
 }
 window["PM1"] = PM1;
 function PM11() {
@@ -164,5 +173,18 @@ function PM11() {
     for (let pt of ptLights) {
         pt.SetColor(new CVec3(1, 1, 1));
     }
+    Real.SetRPMgr(lightRP);
 }
 window["PM11"] = PM11;
+class CTest extends CObject {
+    mKey = "a";
+    mValue = 1;
+    mArr = new Array();
+    IsShould(_member, _type) {
+        if (_type == CObject.eShould.Proxy) {
+            if (_member == "mKey")
+                return false;
+        }
+        return super.IsShould(_member, _type);
+    }
+}

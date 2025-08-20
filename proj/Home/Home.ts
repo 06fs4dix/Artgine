@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-08 17:34:26';
+const version='2025-08-21 06:44:50';
 import "../../artgine/artgine.js"
 
 //Class
@@ -19,14 +19,17 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'webServer';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../artgine/canvas/CAtelier.js";
 
 import {CPlugin} from "../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([],"");
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import {CObject} from "../../artgine/basic/CObject.js"
@@ -45,6 +48,7 @@ import { CFileViewer } from "../../artgine/util/CModalUtil.js";
 if(gPF.mServer!="webServer")
     CAlert.E("서버 세팅이 잘못되었습니다");
 
+//CStorage.Set("privateKey",null);
 
 let option=new CSingOption();
 option.mFindPWBtn="pass";
@@ -60,6 +64,10 @@ CSing.On(CSing.eEvent.Init,()=>{
     else
         CUtil.ID("login-btn").innerText="Logout";
 });
+CSing.On(CSing.eEvent.JoinInit,()=>{
+    loginModal.SetPosition(CModal.ePos.Center);
+});
+
 CSing.On(CSing.eEvent.Insert,()=>{
    loginModal.Open();
    CSing.ModifyMode();
@@ -70,7 +78,7 @@ loginModal.SetHeader("Sing");
 loginModal.SetBody(html);
 loginModal.SetTitle(CModal.eTitle.TextClose);
 loginModal.SetCloseToHide(true);
-
+loginModal.SetSize(320,640);
 
 
 CUtil.ID("login-btn").addEventListener("click",()=>{
@@ -854,3 +862,18 @@ function NextPhoto()
     CAlert.Info("더 이상 없습니다.");
 }
 window["NextPhoto"]=NextPhoto;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

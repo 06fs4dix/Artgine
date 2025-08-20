@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-13 21:20:32';
+const version='2025-08-21 06:34:36';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -19,6 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
@@ -31,7 +32,7 @@ CPlugin.PushPath('ShadowPlane','https://06fs4dix.github.io/Artgine/plugin/Shadow
 import "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json']);
+await gAtl.Init(['Main.json'],"");
 var Main = gAtl.Canvas('Main.json');
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
@@ -74,7 +75,7 @@ let gBufPosTex=new CTexture();
 gBufPosTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F,1)]);
 let gBufPos=DeferredSingle.PushTex("gBufPos.tex",gBufPosTex);
 let rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -87,7 +88,7 @@ let gBufNorTex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufNor=DeferredSingle.PushTex("gBufNor.tex",gBufNorTex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.Normal+1;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Normal));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -99,7 +100,7 @@ let gBufAlbTex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufAlb=DeferredSingle.PushTex("gBufAlb.tex",gBufAlbTex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.Normal+2;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Albedo));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -111,7 +112,7 @@ let gBufSPETex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufSPE=DeferredSingle.PushTex("gBufSPE.tex",gBufSPETex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.Normal+3;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.SpeculerPowEmissive));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -120,7 +121,7 @@ rp.mTag="gBuf";
 
 let ShadowKey=DeferredSingle.PushTex("shadowread.tex",new CTexture());
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -177,7 +178,7 @@ gBufMultiTex.PushInfo([
     new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1),]);
 let gBufMulti=DeferredMulti.PushTex("gBufMulti.tex",gBufMultiTex);
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -187,7 +188,7 @@ rp.mTag="gBufMulti";
 
 ShadowKey=DeferredMulti.PushTex("shadowread.tex",new CTexture());
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -233,7 +234,7 @@ srp.mShaderAttr.push(new CShaderAttr("opacity",1,1));
 let forward=new CRPMgr();
 let texKey=forward.PushTex("shadowread.tex",new CTexture());
 rp=forward.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -246,7 +247,7 @@ rp.mRenderTarget="shadowread.tex";
 rp.mTag="shadowRead";
 
 rp=forward.PushRP(new CRPAuto());
-rp.PushAutoPaint(CPaint3D);
+rp.PushInPaint(CPaint3D);
 rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -477,6 +478,15 @@ Help.SetContent(`
 <div>
 타이틀바 메뉴를 누르면 여러가지 그림자 구현 방식을 확인할수 있습니다
 </div>`);
+
+
+
+
+
+
+
+
+
 
 
 

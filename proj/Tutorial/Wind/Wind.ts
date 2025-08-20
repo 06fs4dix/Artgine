@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-10 11:09:38';
+const version='2025-08-13 11:05:14';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -29,6 +29,7 @@ var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
 var Main = gAtl.Canvas('Main.json');
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import {CObject} from "../../../artgine/basic/CObject.js"
@@ -39,6 +40,7 @@ import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 
 import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
 import { CWind } from "../../../artgine/canvas/component/CWind.js";
+import { CBGAttachButton } from "../../../artgine/util/CModalUtil.js";
 
 
 let gXSize=10;
@@ -71,3 +73,11 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","Pos",()=>{
     wind.SetFrequency(10);
 }));
 //3D 오브젝트는 본이 있으면 윈드로 작동함
+
+let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,240));
+//gAtl.Frame().Win().HtmlPush(Option_btn);
+Help.SetTitleText("Help");
+Help.SetContent(`
+<div>
+[Global] Global Wind, [Pos]Local Wind
+</div>`);

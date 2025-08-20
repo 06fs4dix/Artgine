@@ -1,4 +1,4 @@
-const version = '2025-08-08 17:34:26';
+const version = '2025-08-21 06:44:50';
 import "../../artgine/artgine.js";
 import { CPreferences } from "../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -13,11 +13,13 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'webServer';
+gPF.mGitHub = false;
 import { CAtelier } from "../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([], "");
 import { CSing, CSingOption } from "../../artgine/server/CSing.js";
 import { CConfirm, CModal } from "../../artgine/basic/CModal.js";
 import { CUtil } from "../../artgine/basic/CUtil.js";
@@ -44,6 +46,9 @@ CSing.On(CSing.eEvent.Init, () => {
     else
         CUtil.ID("login-btn").innerText = "Logout";
 });
+CSing.On(CSing.eEvent.JoinInit, () => {
+    loginModal.SetPosition(CModal.ePos.Center);
+});
 CSing.On(CSing.eEvent.Insert, () => {
     loginModal.Open();
     CSing.ModifyMode();
@@ -54,6 +59,7 @@ loginModal.SetHeader("Sing");
 loginModal.SetBody(html);
 loginModal.SetTitle(CModal.eTitle.TextClose);
 loginModal.SetCloseToHide(true);
+loginModal.SetSize(320, 640);
 CUtil.ID("login-btn").addEventListener("click", () => {
     loginModal.Open();
 });
