@@ -1,4 +1,4 @@
-import { Build, CVec4, LWVPMul, Null } from "../../../artgine/z_file/Shader";
+import { Build, CVec4, LWVPMul, Null } from "https://06fs4dix.github.io/Artgine/artgine/z_file/Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();

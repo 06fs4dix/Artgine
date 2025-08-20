@@ -1,4 +1,4 @@
-const version = '2025-08-06 14:44:38';
+const version = '2025-08-19 15:07:14';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -14,6 +14,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 import { CPlugin } from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('InverseKinematics', '../../../plugin/InverseKinematics/');

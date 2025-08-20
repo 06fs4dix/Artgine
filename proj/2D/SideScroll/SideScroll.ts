@@ -1,5 +1,5 @@
 //Version
-const version='2025-07-13 01:33:21';
+const version='2025-08-19 15:08:52';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,7 +19,8 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-
+gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
@@ -28,6 +29,7 @@ var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
 var Main = gAtl.Canvas('Main.json');
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import { CObject } from "../../../artgine/basic/CObject.js"
@@ -54,7 +56,7 @@ import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
 let back = Main.Push(new CSubject());
 back.PushComp(new CPaint2D("Res/back.jpg", new CVec2(gAtl.PF().mWidth, gAtl.PF().mHeight)));
 
-
+//맵만들기
 function CreateBrick() {
     let brick = Main.Push(new CSubject());
     let pt = brick.PushComp(new CPaint2D("Res/brick-1.png"));
@@ -78,7 +80,7 @@ for (let i = 1; i < 10; ++i) {
     brick.SetPos(new CVec3(-gAtl.PF().mWidth * 0.5 + i * 32 + 500, -gAtl.PF().mHeight * 0.5 + 96 + i * 32, 1));
 }
 
-
+//캐릭터 설정
 let mary = Main.Push(new CSubject());
 mary.SetKey("mary");
 let pt = mary.PushComp(new CPaint2D("Res/mary.png", new CVec2(52, 62)));
@@ -92,11 +94,12 @@ let af = mary.PushComp(new CAniFlow("MaryStand"));
 af.SetSpeed(0.4);
 let pad = mary.PushChilde(new CPad());
 
-//상
+//상태머신
 let sm = mary.PushComp(new CStateMachine());
+sm.PushPattern(new CSMPattern("Default", [], []));
 sm.PushPattern(new CSMPattern("MaryWalk", ["move"], ["Jump"]));
-sm.PushPattern(new CSMPattern("Left", [CVec3.eDir.Left]));
-sm.PushPattern(new CSMPattern("Right", [CVec3.eDir.Right]));
+sm.PushPattern(new CSMPattern("Left", ["move"+CVec3.eDir.Left]));
+sm.PushPattern(new CSMPattern("Right", ["move"+CVec3.eDir.Right]));
 sm.PushPattern(new CSMPattern("MaryWalkReset", ["MaryJumpLoopPlay"], ["Fall"]));
 
 sm.PushPattern(new CSMPattern("MaryJumpStart", ["Jump"]));
@@ -108,31 +111,31 @@ sm.PushPattern(new CSMPattern("MaryJumpStart", ["Fall"], ["Jump"]));
 sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Fall", "MaryJumpStartStop"], ["Jump"]));
 sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Fall", "MaryJumpLoopPlay"], ["Jump"]));
 
-sm.On("", () => {
+sm["Default"]= () => {
     af.ResetAni("MaryStand");
-});
-sm.On("MaryWalk", () => {
+};
+sm["MaryWalk"]= () => {
     af.ResetAni("MaryWalk");
-});
-sm.On("MaryWalkReset", () => {
+};
+sm["MaryWalkReset"]= () => {
     af.ResetAni("MaryWalk");
-});
-
-sm.On("Left", () => {
+};
+sm["Left"]= () => {
     pt.SetReverse(true, false);
-});
-sm.On("Right", () => {
+};
+sm["Right"]= () => {
     pt.SetReverse(false, false);
-});
-sm.On("MaryJumpStart", () => {
+};
+sm["MaryJumpStart"]= () => {
     af.ResetAni("MaryJumpStart");
-});
-sm.On("MaryJumpLoop", () => {
+};
+sm["MaryJumpLoop"]= () => {
     af.ResetAni("MaryJumpLoop");
-});
-sm.On("MaryDown", () => {
+};
+sm["MaryDown"]= () => {
     af.ResetAni("MaryDown");
-});
+};
+//키조작시 이동처리
 mary.Update = () => {
     let dir = pad.GetDir();
 
@@ -158,14 +161,6 @@ mary.Update = () => {
     }
 
 };
-
-export function GetAtl(): CAtelier {
-    return gAtl;
-}
-export function GetMain(): CCanvas {
-    return Main;
-}
-
 
 
 

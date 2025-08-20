@@ -1,12 +1,12 @@
 //Version
-const version='2025-08-20 17:20:44';
-import "../../../artgine/artgine.js"
+const version='2025-08-21 06:39:04';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
-import {CClass} from "../../../artgine/basic/CClass.js";
+import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "../../../artgine/basic/CPreferences.js";
+import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,11 +21,11 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = false;
+gPF.mGitHub = true;
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPlugin.js";
+import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
@@ -33,15 +33,15 @@ await gAtl.Init([],"");
 
 //EntryPoint
 
-import {CObject} from "../../../artgine/basic/CObject.js"
+import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
 
 // Main 캔버스 새로 생성
-import {CCanvas} from "../../../artgine/canvas/CCanvas.js";
-import {CSubject} from "../../../artgine/canvas/subject/CSubject.js";
-import {CVec3} from "../../../artgine/geometry/CVec3.js";
-import {CVec4} from "../../../artgine/geometry/CVec4.js";
-import {CPaint3D} from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import {CColor} from "../../../artgine/canvas/component/CColor.js";
+import {CCanvas} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCanvas.js";
+import {CSubject} from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import {CVec3} from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import {CVec4} from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import {CPaint3D} from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+import {CColor} from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 
 // Main 캔버스 새로 생성
 var Main = gAtl.NewCanvas("Main");
@@ -49,8 +49,8 @@ var Main = gAtl.NewCanvas("Main");
 console.log("Main 캔버스가 성공적으로 생성되었습니다.");
 
 // 카메라 설정 (3D 박스를 잘 볼 수 있도록)
-import {CCamera} from "../../../artgine/render/CCamera.js";
-import {CCamCon3DFirstPerson} from "../../../artgine/util/CCamCon.js";
+import {CCamera} from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
+import {CCamCon3DFirstPerson} from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 
 // Main 캔버스에 3D 카메라 설정
 Main.SetCameraKey("3D");
@@ -60,11 +60,11 @@ var firstPersonCamCon = new CCamCon3DFirstPerson(gAtl.Frame().Input());
 Main.GetCam().SetCamCon(firstPersonCamCon);
 
 // 박스 파도 효과 구현
-import {CMath} from "../../../artgine/geometry/CMath.js";
-import {CInput} from "../../../artgine/system/CInput.js";
-import {CEvent} from "../../../artgine/basic/CEvent.js";
-import { CBGAttachButton } from "../../../artgine/util/CModalUtil.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import {CMath} from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
+import {CInput} from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
+import {CEvent} from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 
 // 박스 파도 설정 (변수로 변경하여 수정 가능하게)
 var WAVE_GRID_SIZE = 50; // 25x25 격자 (더 많은 박스)
@@ -592,6 +592,9 @@ Option_btn.mModal.Show = function() {
 Option_btn.mModal.GetBody().addEventListener('DOMContentLoaded', function() {
     setTimeout(setupWaveControls, 500);
 });
+
+
+
 
 
 

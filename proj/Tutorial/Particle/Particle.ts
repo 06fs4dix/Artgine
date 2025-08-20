@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-09 22:38:49';
+const version='2025-08-19 15:08:13';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -28,6 +28,7 @@ import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([]);
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import {CObject} from "../../../artgine/basic/CObject.js"
@@ -133,3 +134,8 @@ for(var i=0;i<10;++i)
 
 trail.PushComp(new CAniFlow(ani));
 Main.Push(trail);
+
+
+
+
+

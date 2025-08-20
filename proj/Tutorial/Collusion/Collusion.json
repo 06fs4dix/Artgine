@@ -10,7 +10,7 @@
     "mXR": false,
     "mDeveloper": true,
     "mIAuto": true,
-    "mWASM": true
+    "mWASM": false
   },
   "pluging": [],
   "includes": {

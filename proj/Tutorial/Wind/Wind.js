@@ -1,4 +1,4 @@
-const version = '2025-08-10 11:09:38';
+const version = '2025-08-13 11:05:14';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -26,6 +26,7 @@ import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
 import { CWind } from "../../../artgine/canvas/component/CWind.js";
+import { CBGAttachButton } from "../../../artgine/util/CModalUtil.js";
 let gXSize = 10;
 let gYSize = 10;
 for (let y = -gYSize; y <= gYSize; ++y) {
@@ -49,3 +50,9 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Pos", () => {
     wind.SetInnerOuter(100, 500);
     wind.SetFrequency(10);
 }));
+let Help = new CBGAttachButton("DevToolModal", 101, new CVec2(320, 240));
+Help.SetTitleText("Help");
+Help.SetContent(`
+<div>
+[Global] Global Wind, [Pos]Local Wind
+</div>`);

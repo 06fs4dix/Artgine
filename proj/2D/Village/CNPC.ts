@@ -1,59 +1,56 @@
-import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
-import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
+import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
 import { CSMPattern, CStateMachine } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
+import { CRayMouse } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRayMouse.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
-import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
-import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
-import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
+import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 
-export class CUser extends CSubject
+
+export class CNPC extends CSubject
 {
     mRB : CRigidBody;
     mAF : CAniFlow;
     mPT : CPaint2D;
     mCL : CCollider;
     mBDir : CVec3=new CVec3();
-    m2DCam=new CBlackBoardRef<CCamera>("2D");
     mAniMap=new Map<string,CAnimation>();
-    constructor()
+    mBaseImage="";
+    mName="";
+    constructor(_name,_baseImg : string)
     {
         super();
-        
+        this.mBaseImage=_baseImg;
+        this.mName=_name;
     }
     Start()
     {
-        this.mPT=this.PushComp(new CPaint2D("Res/Actor/Villager5/SeparateAnim/Walk.png",new CVec2(100,100)));
+        this.mPT=this.PushComp(new CPaint2D(this.mBaseImage,new CVec2(100,100)));
         this.mPT.mSave=false;
         this.mPT.mAutoLoad.mFilter=CTexture.eFilter.Neaest;
         this.mPT.SetYSort(true);
         this.mPT.SetYSortOrigin(-50);
-        this.PushChilde(new CPad()).mSave=false;
         this.mRB=this.PushComp(new CRigidBody());
         this.mRB.mSave=false;
-        this.mRB.SetRestitution(1);
+        this.mRB.SetRestitution(0);
         this.mSave=false;
         this.mCL=this.PushComp(new CCollider(this.mPT));
         this.mCL.mSave=false;
         this.mCL.SetLayer("player");
         this.mCL.PushCollisionLayer("object");
         this.mCL.PushCollisionLayer("player");
+        this.mCL.SetPickMouse(true);
         
         this.PushComp(new CShadowPlane());
+        
         
         let sm = this.PushComp(new CStateMachine());
 
@@ -141,35 +138,20 @@ export class CUser extends CSubject
     {
         this.mAF.ResetAni(this.mAniMap.get("MoveDown"));
     }
-    Update(_delay: number): void 
+    PickMouse(_rayMouse : CRayMouse)
     {
-        super.Update(_delay);
-        if(this.FindChild(CPad)==null)  return;
-        let dir = this.FindChild(CPad).GetDir();
-        
-        
-
-        if (dir.IsZero()==false)
+        if(this.GetFrame().Input().KeyUp(CInput.eKey.LButton))
         {
-            if(this.mBDir.Equals(dir)==false)
-                this.mRB.Push(new CForce("move", dir, 400));
-            CScript.Action([this],()=>{
-                let audio=new CAudioBuf("Res/sound/jute-dh-steps/stepdirt_2.wav");
-                audio.Volume(0.5);
-                audio.Play();
-            },0,0.3);
+            // 모달창 생성
+            let modal = new CModal("NPCModal");
+            modal.SetTitle(CModal.eTitle.TextFullClose);
+            modal.SetHeader(this.mName);
+            modal.SetBody("안녕");
+            modal.SetSize(400, 300);
+            modal.Open();
         }
-        else
-        {
-            this.mRB.Remove("move");
-            this.mBDir.Zero();
-        }
-        let camcon=this.m2DCam.Ref().GetCamCon() as CCamCon2DFollow;
-        camcon.SetPos(this.GetPos());
+        
     }
-    // *StepSound()
-    // {
-        
-    //     yield CCoroutine.Wait(500);
-    // }
+   
+
 }

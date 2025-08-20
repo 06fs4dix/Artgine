@@ -1,4 +1,4 @@
-const version = '2025-08-10 00:04:38';
+const version = '2025-08-21 06:35:18';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -13,12 +13,13 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([], "");
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
@@ -28,9 +29,10 @@ import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/comp
 import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
 import { CUtilObj } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtilObj.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
 import { CString } from "https://06fs4dix.github.io/Artgine/artgine/basic/CString.js";
 import { CPath } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPath.js";
-import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CConfirm, CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CChecker } from "https://06fs4dix.github.io/Artgine/artgine/util/CChecker.js";
 import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
 import { CTutorial } from "https://06fs4dix.github.io/Artgine/artgine/util/CTutorial.js";
@@ -74,6 +76,12 @@ CLan.Set("en", "tuto7", "Press F2 to check currently loaded resources");
 CLan.Set("en", "tuto8", "Press F4 to check the current project code");
 CLan.Set("en", "tuto9", "This project is a 2D/3D canvas mixed example.<br>You can check subjects in the left hierarchy-canvas");
 CLan.Set("en", "tuto10", "Press [N] key to code directly.<br>Check the comments and test it");
+if (CUtil.IsMobile()) {
+    CConfirm.List(CLan.Get("tutoMobile", "튜토리얼은 모바일 미지원!"), [() => { CUtilWeb.PageBack(); }], ["Back"]);
+    await CChecker.Exe(async () => {
+        return true;
+    });
+}
 var mode = 0;
 await CTutorial.Exe(CTutorial.eWait.ModalClose, null, `<div class="p-3 border rounded bg-light">
   <p class="mb-3 fs-5" data-CLan='tuto1'>환영합니다.<br> 튜토리얼을 보고싶으면 [튜토리얼]을 이어서 코드편집을 하려면 [코드] 눌러주세요</p>

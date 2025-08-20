@@ -1,6 +1,7 @@
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
 import { CPreferences } from "../basic/CPreferences.js";
+import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CInput } from "../system/CInput.js";
 import { DevTool } from "../tool/DevTool.js";
@@ -17,8 +18,12 @@ export class CAtelier {
     async Init(_canvas, _canvasHTMLKey = "", _devTool = true) {
         if (gMain == null)
             gMain = this;
-        if (this.mPF.mRenderer == CPreferences.eRenderer.Null)
+        if (this.mPF.mRenderer == CPreferences.eRenderer.Null) {
+            let MainLoading = CUtil.ID("MainLoading");
+            if (MainLoading != null && MainLoading.parentNode)
+                MainLoading.hidden = true;
             return;
+        }
         this.mFrame = new CFrame(this.mPF, _canvasHTMLKey);
         this.mBrush = new CBrush(this.mFrame);
         this.mBrush.InitCamera(false);

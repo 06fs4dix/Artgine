@@ -4,9 +4,9 @@
   "fullScreen": false,
   "program": "developer",
   "url": "http://localhost:8050/Artgine",
-  "projectPath": "proj/2D/Shooting",
+  "projectPath": "proj/Home",
   "page": "html",
-  "server": "local",
+  "server": "webServer",
   "github": false,
   "tsc": true
 }

@@ -1,4 +1,4 @@
-const version = '2025-07-13 01:33:21';
+const version = '2025-08-19 15:08:52';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -13,6 +13,8 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mServer = 'local';
+gPF.mGitHub = false;
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -63,9 +65,10 @@ let af = mary.PushComp(new CAniFlow("MaryStand"));
 af.SetSpeed(0.4);
 let pad = mary.PushChilde(new CPad());
 let sm = mary.PushComp(new CStateMachine());
+sm.PushPattern(new CSMPattern("Default", [], []));
 sm.PushPattern(new CSMPattern("MaryWalk", ["move"], ["Jump"]));
-sm.PushPattern(new CSMPattern("Left", [CVec3.eDir.Left]));
-sm.PushPattern(new CSMPattern("Right", [CVec3.eDir.Right]));
+sm.PushPattern(new CSMPattern("Left", ["move" + CVec3.eDir.Left]));
+sm.PushPattern(new CSMPattern("Right", ["move" + CVec3.eDir.Right]));
 sm.PushPattern(new CSMPattern("MaryWalkReset", ["MaryJumpLoopPlay"], ["Fall"]));
 sm.PushPattern(new CSMPattern("MaryJumpStart", ["Jump"]));
 sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Jump", "MaryJumpStartStop"]));
@@ -74,30 +77,30 @@ sm.PushPattern(new CSMPattern("MaryDown", ["Down"], ["Jump", "move"]));
 sm.PushPattern(new CSMPattern("MaryJumpStart", ["Fall"], ["Jump"]));
 sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Fall", "MaryJumpStartStop"], ["Jump"]));
 sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Fall", "MaryJumpLoopPlay"], ["Jump"]));
-sm.On("", () => {
+sm["Default"] = () => {
     af.ResetAni("MaryStand");
-});
-sm.On("MaryWalk", () => {
+};
+sm["MaryWalk"] = () => {
     af.ResetAni("MaryWalk");
-});
-sm.On("MaryWalkReset", () => {
+};
+sm["MaryWalkReset"] = () => {
     af.ResetAni("MaryWalk");
-});
-sm.On("Left", () => {
+};
+sm["Left"] = () => {
     pt.SetReverse(true, false);
-});
-sm.On("Right", () => {
+};
+sm["Right"] = () => {
     pt.SetReverse(false, false);
-});
-sm.On("MaryJumpStart", () => {
+};
+sm["MaryJumpStart"] = () => {
     af.ResetAni("MaryJumpStart");
-});
-sm.On("MaryJumpLoop", () => {
+};
+sm["MaryJumpLoop"] = () => {
     af.ResetAni("MaryJumpLoop");
-});
-sm.On("MaryDown", () => {
+};
+sm["MaryDown"] = () => {
     af.ResetAni("MaryDown");
-});
+};
 mary.Update = () => {
     let dir = pad.GetDir();
     if (dir.y < 0)
@@ -116,9 +119,3 @@ mary.Update = () => {
         rb.Push(jump);
     }
 };
-export function GetAtl() {
-    return gAtl;
-}
-export function GetMain() {
-    return Main;
-}

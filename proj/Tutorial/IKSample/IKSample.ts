@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-06 14:44:38';
+const version='2025-08-19 15:07:14';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,6 +20,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
@@ -29,6 +30,7 @@ import "../../../plugin/InverseKinematics/InverseKinematics.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([]);
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import {CBlackBoardRef, CObject} from "../../../artgine/basic/CObject.js"
@@ -108,3 +110,4 @@ obj.PushComp(new CIKReach(new CBlackBoardRef(target1.Key()), "leg_joint_R_5", 4,
 obj.PushComp(new CSocketAttacher(new CBlackBoardRef(target3.Key()), "arm_joint_L_3"));
 obj.PushComp(new CIKLook(new CBlackBoardRef(target2.Key()), "neck_joint_1"));
 Main.Push(obj);
+

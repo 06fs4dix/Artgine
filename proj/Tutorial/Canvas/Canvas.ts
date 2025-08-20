@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-10 00:04:38';
+const version='2025-08-21 06:35:18';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -19,6 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
@@ -27,9 +28,11 @@ import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAteli
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([],"");
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
@@ -44,7 +47,7 @@ import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilW
 import { CString } from "https://06fs4dix.github.io/Artgine/artgine/basic/CString.js";
 import { CPath } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPath.js";
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
-import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CConfirm, CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CChecker } from "https://06fs4dix.github.io/Artgine/artgine/util/CChecker.js";
 import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
@@ -108,6 +111,15 @@ CLan.Set("en", "tuto8", "Press F4 to check the current project code");
 CLan.Set("en", "tuto9", "This project is a 2D/3D canvas mixed example.<br>You can check subjects in the left hierarchy-canvas");
 CLan.Set("en", "tuto10", "Press [N] key to code directly.<br>Check the comments and test it");
 
+if(CUtil.IsMobile())
+{
+    CConfirm.List(CLan.Get("tutoMobile","튜토리얼은 모바일 미지원!"),[()=>{CUtilWeb.PageBack();}],["Back"]);
+    await CChecker.Exe(async ()=>{
+    
+    
+        return true;
+    });
+}
 
 
 
@@ -188,4 +200,8 @@ let sv = new CFileViewer([path + "/Test.ts"], async (_file, _source) => {
     sv.Close();
 },gAtl.mPF.mGitHub);
 sv.Open();
+
+
+
+
 

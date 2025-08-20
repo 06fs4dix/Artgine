@@ -23,14 +23,12 @@ gPF.mServer = 'local';
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPluging.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json']);
 var Main = gAtl.Canvas('Main.json');
 
-//EntryPoint
-import {CBlackBoardRef, CObject} from "../../../artgine/basic/CObject.js"
+//EntryPointimport {CBlackBoardRef, CObject} from "../../../artgine/basic/CObject.js"
 import { CConfirm } from "../../../artgine/basic/CModal.js";
 import { CVoxel, CVoxelLightSpace, CVTile, CVTileMold, CVTileSurface } from "../../../artgine/canvas/subject/CVoxel.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
@@ -48,6 +46,7 @@ import { CNavigation } from "../../../artgine/canvas/component/CNavigation.js";
 import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 import { CAlert } from "../../../artgine/basic/CAlert.js";
+import { CBlackBoardRef } from "../../../artgine/basic/CObject.js";
 var gVoxel=new CVoxel();
 gVoxel.SetBlackBoard(true);
 await gVoxel.mAtlas.Push("Res/floor/tutorial_pad.png");//1
