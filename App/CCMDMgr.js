@@ -223,7 +223,7 @@ export class CCMDMgr {
             fs.mkdirSync(folderPath, { recursive: true });
         }
     }
-    static async ReplaceArtginePathsInFolder(workFolder, upFolder) {
+    static async ReplaceArtginePathsInFolder(workFolder, upFolder, projPath) {
         try {
             if (!fs.existsSync(workFolder)) {
                 console.error(`폴더가 존재하지 않습니다: ${workFolder}`);
@@ -238,7 +238,7 @@ export class CCMDMgr {
             let modifiedCount = 0;
             for (const filePath of tsFiles) {
                 try {
-                    const modified = await this.ReplaceArtginePathsInFile(filePath, upFolder);
+                    const modified = await this.ReplaceArtginePathsInFile(filePath, upFolder, projPath);
                     processedCount++;
                     if (modified) {
                         modifiedCount++;
@@ -273,13 +273,24 @@ export class CCMDMgr {
         searchRecursive(folderPath);
         return tsFiles;
     }
-    static async ReplaceArtginePathsInFile(filePath, upFolder) {
+    static async ReplaceArtginePathsInFile(filePath, upFolder, projPath) {
         try {
+            let additionalLevels = 0;
             const originalContent = fs.readFileSync(filePath, 'utf8');
+            if (upFolder.indexOf("http") == -1) {
+                const normalizedFilePath = filePath.replace(/\\/g, '/');
+                const normalizedProjPath = projPath.replace(/\\/g, '/');
+                const filePathParts = normalizedFilePath.split('/');
+                const projPathParts = normalizedProjPath.split('/');
+                if (filePathParts.length > projPathParts.length) {
+                    additionalLevels = filePathParts.length - projPathParts.length - 1;
+                }
+            }
             const modifiedContent = originalContent.replace(/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g, (match, quote, path) => {
                 const cleanUpFolder = upFolder.replace(/\/+$/, '');
                 const cleanPath = path.replace(/^\/+/, '');
-                return `${quote}${cleanUpFolder}/${cleanPath}`;
+                const upPath = '../'.repeat(additionalLevels);
+                return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
             });
             if (originalContent !== modifiedContent) {
                 fs.writeFileSync(filePath, modifiedContent, 'utf8');

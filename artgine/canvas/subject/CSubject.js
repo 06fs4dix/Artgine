@@ -97,7 +97,11 @@ export class CSubject extends CObject {
         this.mCLArr.Clear();
         this.mUpdateMat = CUpdate.eType.Updated;
     }
-    Icon() { return "bi bi-box"; }
+    Icon() {
+        if (this.IsProxy())
+            return "bi bi-crosshair";
+        return "bi bi-box";
+    }
     RegistHeap(_F32A) {
     }
     ImportCJSON(_json) {
@@ -129,7 +133,8 @@ export class CSubject extends CObject {
             _member == "mCLArr" || _member == "mUpdateMat")
             return false;
         if (_type == CObject.eShould.Proxy) {
-            if (_member == "mPos" || _member == "mRot" || _member == "mSca")
+            if (_member == "mPos" || _member == "mRot" || _member == "mSca" || _member == "mWMat" || _member == "mPMat" ||
+                _member == "mKey" || _member == "mEnable" || _member == "mPEnable")
                 return false;
         }
         return super.IsShould(_member, _type);

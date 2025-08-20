@@ -405,7 +405,7 @@ export class CCamera extends CObject {
         bound.InitBound(CMath.V3AddV3(ltRay.GetOriginal(), CMath.V3MulFloat(ltRay.GetDirect(), this.mProjFar)));
         return bound;
     }
-    ScreenToWorldPoint(_mouseX, _mouseY) {
+    ScreenToWorld2DPoint(_mouseX, _mouseY) {
         let piMat = CMath.MatInvert(this.mProjMat);
         let viMat = CMath.MatInvert(this.mViewMat);
         let mpos = new CVec3(_mouseX, _mouseY);
@@ -414,6 +414,12 @@ export class CCamera extends CObject {
         mpos = CMath.V3MulMatCoordi(mpos, piMat);
         mpos = CMath.V3MulMatCoordi(mpos, viMat);
         mpos.z = 0;
+        return mpos;
+    }
+    ScreenToWorld3DPoint(_mouseX, _mouseY, _dist) {
+        let ray = this.GetRay(_mouseX, _mouseY);
+        let mpos = ray.GetOriginal();
+        CMath.V3AddV3(mpos, CMath.V3MulFloat(ray.GetDirect(), _dist), mpos);
         return mpos;
     }
     EditChange(_pointer, _childe) {

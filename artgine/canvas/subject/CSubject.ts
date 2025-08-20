@@ -141,7 +141,11 @@ export class CSubject extends CObject implements IFile
 		this.mUpdateMat = CUpdate.eType.Updated;
 	}
 	
-	Icon(){	return "bi bi-box";	}
+	Icon(){	
+		if(this.IsProxy())
+			return "bi bi-crosshair";
+		return "bi bi-box";	
+	}
 	
 	RegistHeap(_F32A: Float32Array) {
 		//this.m_heap.Push(_F32A);
@@ -196,10 +200,13 @@ export class CSubject extends CObject implements IFile
 
 		if(_type==CObject.eShould.Editer)
 		{
+			
+
 			if(_member=="mPEnable" || _member=="mPMat")
 				return false;
 			if(_member=="mDestroy")
 				return true;
+			
 		}
 		
 		if(_member=="mFrame" || _member=="mKeyChange" || _member=="mInMsg" || _member=="mOutMsg" || _member=="mBroMsg" || 
@@ -209,7 +216,8 @@ export class CSubject extends CObject implements IFile
 			return false;
 		if(_type==CObject.eShould.Proxy)
 		{
-			if(_member=="mPos" || _member=="mRot" || _member=="mSca")
+			if(_member=="mPos" || _member=="mRot" || _member=="mSca" || _member=="mWMat" || _member=="mPMat" ||
+				_member=="mKey" || _member=="mEnable" || _member=="mPEnable")//_member=="mChilde" || _member=="mComArr"
 				return false;
 		}
 		

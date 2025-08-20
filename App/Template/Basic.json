@@ -10,7 +10,9 @@
 		"mXR": false,
 		"mDeveloper": true,
 		"mIAuto": true,
+		"mCanvas":"",
 		"mWASM": false
+
 	},
 	"pluging": [
 	],

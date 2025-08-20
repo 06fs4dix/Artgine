@@ -108,7 +108,7 @@ export class CInput
 		Move:0,
 		Stop:1,
 	};
-
+	static sKeyPress=new Array(256);
 	public mPF : CPreferences;
 	public mKeyPress=new Array(256);
 	public mKey=new Array(256);
@@ -202,6 +202,10 @@ export class CInput
 	DragState()
 	{
 		return this.mDragState;
+	}
+	static Key(_key)
+	{
+		return CInput.sKeyPress[_key];
 	}
 	KeyDown(_key,_first=false)
 	{

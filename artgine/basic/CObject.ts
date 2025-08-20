@@ -19,30 +19,25 @@ Proxy 시스템
 ProxyData함수가 지정되어 있으면 거기에 맞게 원본이나 복사본을 가져온다.
 */
 export var ProxyHandle = {
-	get: (obj, name) => 
-	{
-		//let t=obj.Get();
-		if(typeof obj[name] =="function" || name=="mProxy"){}
-			
-		else if(obj.IsShould(name,CObject.eShould.Proxy))
-		{
-			let bb=CBlackBoard.Find(obj.Key());
-			if(bb!=null)	return bb[name];
-		}
-			
-
-		return obj[name];
-	},
+	
 	set: (obj, name, value) => 
 	{
+		//console.log(name);
 		if(typeof obj[name] =="function"){}
 
-		else if(obj.IsShould(name,CObject.eShould.Proxy))
+		else if(obj.IsShould(name,CObject.eShould.Proxy)==true && obj["mProxy"]!=null)
 		{
-			let bb=CBlackBoard.Find(obj.Key());
-			if(bb!=null)
-				bb[name]=value;
-			return true;
+			for(let ch of obj["mProxy"] as Array<CPointer>)
+			{
+				let pt=ch.Get();
+				
+				pt[name]=value;
+				let npt=new CPointer(pt,name);
+				npt.refArr.push(...ch.refArr);
+				npt.refArr.push(pt);
+				ch.target.EditChange(npt,false);
+				
+			}
 		}
 			
 		obj[name]=value;
@@ -50,6 +45,29 @@ export var ProxyHandle = {
 		return true;
 	},
 };
+
+export var ProxyHandleParent = (_parent,_parentKey) => ({
+    set: (obj, name, value) => {
+        if(typeof obj[name] =="function"){}
+
+		else if(_parent.IsShould(name,CObject.eShould.Proxy)==true && obj["mProxy"]!=null)
+		{
+			for(let ch of _parent["mProxy"] as Array<CPointer>)
+			{
+				let pt=ch.Get();
+				pt[_parentKey][name]=value;
+				ch.refArr.push(pt[_parentKey]);
+				ch.target.EditChange(ch,false);
+				ch.refArr.splice(ch.refArr.length-1,1);
+			}
+		}
+
+		obj[name]=value;
+
+		return true;
+    }
+});
+
 export class CPointer
 {
 	//public refer : Array<any>=new Array<any>();
@@ -68,13 +86,19 @@ export class CPointer
 	Get()
 	{
 		if(this.key==null)
+		{
+			if(this.member==null && this.target!=null)
+				return this.target;
 			return this.target[this.member];
+		}
+			
 		if(this.target[this.member] instanceof Set)
 			return this.key;
 		else if(this.target[this.member] instanceof Map)
 		{
 			return this.target[this.member].get(this.key);
 		}
+		
 			
 		return this.target[this.member][this.key];
 	}
@@ -160,10 +184,179 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 		
 	}
+	
 	ExportProxy(_resetKey=true)
 	{
-		return new Proxy(this.Export(false,_resetKey),ProxyHandle);
+		if(this.IsBlackBoard()==false)
+			this.SetBlackBoard(true);
+
+		let target=this.Export(true,_resetKey);
+		let pointer=new CPointer(target,null);
+		pointer.refArr.push(target);
+		target.ProxyTARPush(this,pointer)
+		target["mProxy"]=this;
+		return target;
 	}
+	ProxyORGPush(_childe : CPointer)
+	{
+		if(this["mProxy"] instanceof Array==false)
+			this["mProxy"]=new Array();
+		
+		this["mProxy"].push(_childe);
+	}
+	static ProxyTree(_target : CObject)
+	{
+		
+		for(let key in _target)
+		{
+			if(typeof _target[key]=="object" && _target.IsShould(key,CObject.eShould.Proxy))
+			{
+				if(_target[key] instanceof Array)
+				{
+					let a=_target[key] as Array<any>;
+					for(let i=0;i<a.length;++i)
+					{
+						if(_target[key][i] instanceof CObject)
+							_target[key][i]=CObject.ProxyTree(_target[key][i]);
+						
+							
+					}
+					_target[key]=new Proxy(_target[key],ProxyHandleParent(_target,key));
+					
+				}
+				else if(_target[key] instanceof Set)
+				{
+					let a=_target[key] as Set<any>;
+					for(let sKey of a)
+					{
+						if(a[sKey] instanceof CObject)
+							_target[key][sKey]=CObject.ProxyTree(_target[key][sKey]);
+							
+					}
+					//_target[key]=new Proxy(_target[key],ProxyHandleParent(_target,key));
+					
+				}
+				else if(_target[key] instanceof Map)
+				{
+					let a=_target[key] as Map<any,any>;
+					for(let sKey of a.keys())
+					{
+						let v=a.get(key);
+						if(v instanceof CObject)
+							_target[key].set(sKey,a.get(sKey));
+					}
+					//_target[key]=new Proxy(_target[key],ProxyHandleParent(_target,key));
+					
+				}
+				else if(_target[key] instanceof CObject)
+				{
+					_target[key]=CObject.ProxyTree(_target[key]);
+				}
+			}
+			
+		}
+		return new Proxy(_target,ProxyHandle);
+	}
+	private ProxyTARPush(_target,_pointer : CPointer=null)
+	{
+		_target.ProxyORGPush(_pointer);
+		
+		for(let key in this)
+		{
+
+
+			if(this.IsShould(key,CObject.eShould.Proxy))
+			{
+			
+				if(this[key] instanceof Array)
+				{
+					let a=this[key] as Array<any>;
+					for(let i=0;i<a.length;++i)
+					{
+						if(_target[key][i] instanceof CObject)
+						{
+							let pointer=new CPointer(this,key,i);
+							if(_pointer!=null)
+							{
+								for(let each0 of _pointer.refArr)
+								{
+									pointer.refArr.push(each0);
+								}
+							}
+							pointer.refArr.push(a[i]);
+							a[i].ProxyTARPush(_target[key][i],pointer);
+						}
+							
+					}
+					
+				}
+				else if(this[key] instanceof Set)
+				{
+					let a=this[key] as Set<any>;
+					for(let sKey of a)
+					{
+						if(a[sKey] instanceof CObject)
+						{
+							let pointer=new CPointer(this,key,sKey);
+							if(_pointer!=null)
+							{
+								for(let each0 of _pointer.refArr)
+								{
+									pointer.refArr.push(each0);
+								}
+							}
+							pointer.refArr.push(a[sKey]);
+							a[sKey].ProxyTARPush(_target[key][sKey],pointer);
+						}
+						
+							
+					}
+					
+				}
+				else if(this[key] instanceof Map)
+				{
+					let a=this[key] as Map<any,any>;
+					for(let sKey of a.keys())
+					{
+						let v=a.get(key);
+						if(v instanceof CObject)
+						{
+							let pointer=new CPointer(this,key,sKey);
+							if(_pointer!=null)
+							{
+								for(let each0 of _pointer.refArr)
+								{
+									pointer.refArr.push(each0);
+								}
+							}
+							pointer.refArr.push(v);
+							v.ProxyTARPush(_target[key].get(sKey),pointer);
+						}
+							
+					}
+					
+				}
+				else if(this[key] instanceof CObject)
+				{
+					let pointer=new CPointer(this,key);
+					if(_pointer!=null)
+					{
+						for(let each0 of _pointer.refArr)
+						{
+							pointer.refArr.push(each0);
+						}
+					}
+					this[key].ProxyTARPush(_target[key],pointer);
+				}
+				
+			}
+		
+		}
+
+	
+		
+	}
+
 	//내꺼를 내보냄 export
 	Export(_copy=true,_resetKey=true)	: this
 	{	
@@ -174,6 +367,12 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 		CObject.Import(this,_target);
 	}
+	IsProxy()
+	{
+		if(this["mProxy"] instanceof Array==false && this["mProxy"]!=null)
+			return true;
+		return false;
+	}
 	IsBlackBoard()
 	{
 		return this["mBlackboard"];
@@ -181,6 +380,12 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	//true면 긍정(노출),false 부정(숨김)
     IsShould(_member: string, _type: CObject.eShould) 
     {
+		if(this.IsProxy() && _type==CObject.eShould.Editer)
+		{
+			if(this.IsShould(_member,CObject.eShould.Proxy)==true) //&& this[_member] instanceof Array ==false)
+				return false;
+		}
+
         if(_type==CObject.eShould.Patch)
         {
             if(this["mPatch"]!=null && this["mPatch"].has(_member))
@@ -346,12 +551,10 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			if(_obj.GetBool("mBlackboard")==true)
 			{
 				obj.SetKey(_obj.GetStr("mKey"));
-				if(CBlackBoard.Find(obj.Key())!=null)
-				{
-					let p=new Proxy(obj,ProxyHandle);
-					obj["mProxy"]=CBlackBoard.Find(obj.Key());
-					return p;
-				}
+				let bk=CBlackBoard.Find(obj.Key());
+				if(bk !=null)	return bk;
+				
+				obj.SetBlackBoard(true);
 					
 
 			}
@@ -739,4 +942,5 @@ gObjectEditerBtn.push(new CObjectEditerBtn("LoadJSON","Load",(_target)=>{
 }));
 
 import CObject_imple from "../basic_impl/CObject.js";
+import { CConsol } from "./CConsol.js";
 CObject_imple();

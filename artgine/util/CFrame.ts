@@ -29,6 +29,7 @@ import { CPlugin } from "./CPlugin.js"
 import { CPath } from "../basic/CPath.js"
 import { CString } from "../basic/CString.js"
 import { CRollBack } from "./CRollBack.js"
+import { CSysAuth } from "../system/CSysAuth.js"
 
 const invisibleButton = document.createElement("div");
 invisibleButton.style.position = "absolute";
@@ -232,6 +233,7 @@ export class CFrame
 				document.body.append(canDummy);
 				document.body.style.userSelect='none';
 				document.body.style.backgroundColor="black";
+				canDummy.style.backgroundColor='black';
 				
 			}
 			else
@@ -249,7 +251,7 @@ export class CFrame
 
 			
 			canDummy.style.display='block';
-			canDummy.style.backgroundColor='black';
+			//canDummy.style.backgroundColor='black';
 			canDummy.style.userSelect='none';
 			canDummy.style.outline = 'none';
 			(canDummy as HTMLCanvasElement).style.webkitUserSelect="none";
@@ -284,6 +286,9 @@ export class CFrame
 				
 			});
 			window.onkeydown = (e) => {
+
+				CInput.sKeyPress[e.keyCode]=true;
+
 				if(e.keyCode >= 112 && e.keyCode <= 121) {
 					if(e.keyCode >= 112 && e.keyCode <= 115)	
 						this.mInput.mKeyPress[e.keyCode]=true;
@@ -324,6 +329,7 @@ export class CFrame
 			}
 			window.onkeyup=(e)=>
 			{
+				CInput.sKeyPress[e.keyCode]=false;
 				if(e.keyCode >= 112 && e.keyCode <= 115 )
 				{
 					this.mInput.mKeyPress[e.keyCode]=false;
@@ -710,7 +716,7 @@ export class CFrame
 		CChecker.Exe(async ()=>{
 			if(this.mMainProcess==null)	return;
 
-			if(this.Load().mLoadSet.has("load"))
+			if(this.Load().mLoadSet.has("load") && CSysAuth.IsLock()==false)
 				this.Load().mLoadSet.delete("load");
 			if(this.Load().LoadCompleteChk())
 				this.mLoadChk=true;

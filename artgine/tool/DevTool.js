@@ -49,6 +49,7 @@ let gBHeight = 0;
 let gSelectBound = new CBound();
 let gAddMove = new CVec3();
 let gLastCanvas = null;
+let gCanStyle = null;
 function ResetBoxXYZ(_subject) {
     let pos = _subject.GetWMat().xyz;
     gBoundXY.mMin.Import(pos);
@@ -75,6 +76,55 @@ export function DevTool(_atl) {
     _frame.PF().mDebugMode = true;
     gBTargetWidth = _frame.PF().mTargetWidth;
     gBTargetHeight = _frame.PF().mTargetHeight;
+    gCanStyle = {
+        width: canvas.style.width,
+        height: canvas.style.height,
+        position: canvas.style.position,
+        top: canvas.style.top,
+        left: canvas.style.left,
+        right: canvas.style.right,
+        bottom: canvas.style.bottom,
+        margin: canvas.style.margin,
+        padding: canvas.style.padding,
+        border: canvas.style.border,
+        borderRadius: canvas.style.borderRadius,
+        boxShadow: canvas.style.boxShadow,
+        backgroundColor: canvas.style.backgroundColor,
+        overflow: canvas.style.overflow,
+        display: canvas.style.display,
+        flex: canvas.style.flex,
+        flexDirection: canvas.style.flexDirection,
+        justifyContent: canvas.style.justifyContent,
+        alignItems: canvas.style.alignItems,
+        minWidth: canvas.style.minWidth,
+        minHeight: canvas.style.minHeight,
+        maxWidth: canvas.style.maxWidth,
+        maxHeight: canvas.style.maxHeight,
+        pointerEvents: canvas.style.pointerEvents
+    };
+    canvas.style.width = '';
+    canvas.style.height = '';
+    canvas.style.position = '';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.right = '0';
+    canvas.style.bottom = '0';
+    canvas.style.margin = '0';
+    canvas.style.padding = '0';
+    canvas.style.border = 'none';
+    canvas.style.borderRadius = '0';
+    canvas.style.boxShadow = 'none';
+    canvas.style.overflow = 'hidden';
+    canvas.style.display = 'block';
+    canvas.style.flex = 'none';
+    canvas.style.flexDirection = 'initial';
+    canvas.style.justifyContent = 'initial';
+    canvas.style.alignItems = 'initial';
+    canvas.style.minWidth = '';
+    canvas.style.minHeight = '';
+    canvas.style.maxWidth = '';
+    canvas.style.maxHeight = '';
+    canvas.style.pointerEvents = 'auto';
     _frame.PF().mTargetWidth = 0;
     _frame.PF().mTargetHeight = 0;
     if (!parent) {
@@ -132,6 +182,30 @@ export function DevTool(_atl) {
         _frame.PF().mDebugMode = false;
         _frame.PF().mTargetWidth = gBTargetWidth;
         _frame.PF().mTargetHeight = gBTargetHeight;
+        if (gCanStyle) {
+            canvas.style.position = gCanStyle.position;
+            canvas.style.top = gCanStyle.top;
+            canvas.style.left = gCanStyle.left;
+            canvas.style.right = gCanStyle.right;
+            canvas.style.bottom = gCanStyle.bottom;
+            canvas.style.margin = gCanStyle.margin;
+            canvas.style.padding = gCanStyle.padding;
+            canvas.style.border = gCanStyle.border;
+            canvas.style.borderRadius = gCanStyle.borderRadius;
+            canvas.style.boxShadow = gCanStyle.boxShadow;
+            canvas.style.backgroundColor = gCanStyle.backgroundColor;
+            canvas.style.overflow = gCanStyle.overflow;
+            canvas.style.display = gCanStyle.display;
+            canvas.style.flex = gCanStyle.flex;
+            canvas.style.flexDirection = gCanStyle.flexDirection;
+            canvas.style.justifyContent = gCanStyle.justifyContent;
+            canvas.style.alignItems = gCanStyle.alignItems;
+            canvas.style.minWidth = gCanStyle.minWidth;
+            canvas.style.minHeight = gCanStyle.minHeight;
+            canvas.style.maxWidth = gCanStyle.maxWidth;
+            canvas.style.maxHeight = gCanStyle.maxHeight;
+            canvas.style.pointerEvents = gCanStyle.pointerEvents;
+        }
         if (canvas.parentElement === middle) {
             middle.removeChild(canvas);
         }
@@ -470,11 +544,16 @@ function DevToolDrop(_drop) {
         if (_drop.mObject instanceof CSubject == false) {
             return;
         }
-        let cobject = _drop.mObject.Export();
+        let cobject = null;
+        if (CInput.Key(CInput.eKey.LControl)) {
+            cobject = _drop.mObject.ExportProxy();
+        }
+        else
+            cobject = _drop.mObject.Export();
         cobject.SetBlackBoard(false);
         let can = gLastCanvas;
         if (gAtl.Brush().GetCamDev().GetOrthographic()) {
-            let pos = gAtl.Brush().GetCamDev().ScreenToWorldPoint(_drop.mX, _drop.mY);
+            let pos = gAtl.Brush().GetCamDev().ScreenToWorld2DPoint(_drop.mX, _drop.mY);
             let z = cobject.GetPos().z;
             cobject.SetPos(new CVec3(pos.x, pos.y, z));
         }
@@ -577,7 +656,8 @@ function DevToolUpdate(_delay) {
                 pos = CMath.V3AddV3(pos, new CVec3(y, 0, x));
         }
         else {
-            gAtl.Brush().GetCamDev().GetCamCon().SetInput(null);
+            if (gAtl.Brush().GetCamDev().GetCamCon() != null)
+                gAtl.Brush().GetCamDev().GetCamCon().SetInput(null);
             let cross = gAtl.Brush().GetCamDev().GetCross();
             let up = gAtl.Brush().GetCamDev().GetUp();
             let front = gAtl.Brush().GetCamDev().GetFront();
@@ -633,7 +713,8 @@ function DevToolUpdate(_delay) {
         gDragBound = 4;
     if (gAtl.Frame().Input().KeyUp(CInput.eKey.LButton)) {
         gAddMove.Zero();
-        gAtl.Brush().GetCamDev().GetCamCon().SetInput(gAtl.Frame().Input());
+        if (gAtl.Brush().GetCamDev().GetCamCon() != null)
+            gAtl.Brush().GetCamDev().GetCamCon().SetInput(gAtl.Frame().Input());
         if (gDragBound == 4) {
             gDragBound = 0;
             return;

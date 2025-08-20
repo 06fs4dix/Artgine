@@ -1,5 +1,6 @@
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
+import { CConsol } from "../../artgine/basic/CConsol.js";
 import { CObject, CPointer } from "../../artgine/basic/CObject.js";
 import { CUtilObj } from "../../artgine/basic/CUtilObj.js";
 import { CAlpha, CColor } from "../../artgine/canvas/component/CColor.js";
@@ -189,22 +190,23 @@ function LightFalloff(_dist : number, _inner : number, _outer : number) {
 export class CShadowPlane extends CPaint2D
 {
     //public
-    public m_shadowLen : number = 1;        // 2d에서는 그림자 길이, 3d에서는 그림자 월드좌표 y값
-    public m_shadowAlpha : number = 0.5;   // 그림자 투명도
-    public m_updateShadow : boolean = true;
+    public mShadowLen : number = 1;        // 2d에서는 그림자 길이, 3d에서는 그림자 월드좌표 y값
+    public mShadowAlpha : number = 0.5;   // 그림자 투명도
+    public mUpdateShadow : boolean = true;
 
     //private
-    private m_ptKey : string;
-    private m_ligKeys : string[];
+    private mPTKey : string;
+    private mLIGKeys : string[];
 
-    private m_pt : CPaint;
-    private m_lig : CLight;
-    private m_ligSet : Set<CLight> = new Set();
+    private mPT : CPaint;
+    private mLIG : CLight;
+    private mLIGSet : Set<CLight> = new Set();
+    
 
     constructor(_ptKey : string = null, _ligKeys : string[] = []) {
         super();
-        this.m_ptKey = _ptKey;
-        this.m_ligKeys = _ligKeys;
+        this.mPTKey = _ptKey;
+        this.mLIGKeys = _ligKeys;
 
         this.PushCShaderAttr(new CShaderAttr("alphaCut", 0.001));
         this.SetColorModel(new CColor(0,0,0,CColor.eModel.RGBMul));
@@ -229,7 +231,7 @@ export class CShadowPlane extends CPaint2D
             "m_shadowLen", "m_shadowAlpha", "m_ptKey", "m_ligKeys"
         ];
         if(change.includes(_pointer.member)) {
-			this.m_updateShadow = true;
+			this.mUpdateShadow = true;
 		}
     }
 
@@ -239,25 +241,39 @@ export class CShadowPlane extends CPaint2D
         this.UpdatePaintTarget();
         this.UpdateLightTarget();
 
-        if(this.m_pt?.IsUpdateFMat() || this.m_updateShadow || (this.m_lig!=null && this.m_lig.mUpdate!=0)) 
+        if(this.mPT?.IsUpdateFMat() || this.mUpdateShadow || (this.mLIG!=null && this.mLIG.mUpdate!=0)) 
         {
             this.UpdateShadow();
             
         }
 
-        if(this.m_updateShadow) {
-            this.m_updateShadow = false;
+        if(this.mUpdateShadow) {
+            this.mUpdateShadow = false;
         }
+        
 
         this.UpdateAlpha();
         super.Update(_delay);
+        if(this.mPT instanceof CPaint2D && this.mTexCodi.Equals(this.mPT.GetTexCodi())==false)
+        {
+            this.SetTexCodi(this.mPT.GetTexCodi());
+        }
+
+        // if(this.m_pt?.mTex)
+        //     this.BatchClear();
+
+        // if(this.mTag.has("wind")==false)
+        // {
+        //     this.PushTag("wind");
+        //     this.BatchClear();
+        // }
     }
 
     private UpdatePaintTarget() {
-        if(this.m_ptKey != null && this.m_pt?.Key() == this.m_ptKey) return;
-        if(this.m_ptKey == null && this.m_pt != null) return;
+        if(this.mPTKey != null && this.mPT?.Key() == this.mPTKey) return;
+        if(this.mPTKey == null && this.mPT != null) return;
 
-        this.m_pt = null;
+        this.mPT = null;
         
         const owner = this.GetOwner();
         if(owner == null) return;
@@ -267,29 +283,29 @@ export class CShadowPlane extends CPaint2D
             if(pt.GetBound().GetType() == CBound.eType.Null) continue;
             if(pt.IsUpdateFMat()) continue;
             if(pt instanceof CPaint3D && !pt.mTree) continue;
-            if(this.m_ptKey && this.m_ptKey != pt.Key()) continue;
-            this.m_pt = pt;
+            if(this.mPTKey && this.mPTKey != pt.Key()) continue;
+            this.mPT = pt;
             break;
         }
     }
 
     private UpdateLightTarget() {
-        for(let lig of this.m_ligSet) {
+        for(let lig of this.mLIGSet) {
             if(!lig.GetOwner() || lig.GetOwner().GetFrame() == null || lig.IsDestroy()) {
-                this.m_ligSet.delete(lig);
+                this.mLIGSet.delete(lig);
             }
         }
 
-        if(!this.m_pt) return;
+        if(!this.mPT) return;
 
         const directs : CLight[] = [];
         const points : CLight[] = [];
-        for(let lig of this.m_ligSet) 
+        for(let lig of this.mLIGSet) 
         {
             if(lig.IsEnable()==false || lig.GetColor().IsZero())    continue;
-            if(this.m_ligKeys.length) 
+            if(this.mLIGKeys.length) 
             {
-                if(this.m_ligKeys.includes(lig.Key()) || this.m_ligKeys.includes(lig.GetOwner().Key())){}
+                if(this.mLIGKeys.includes(lig.Key()) || this.mLIGKeys.includes(lig.GetOwner().Key())){}
                 else    continue;
             }
                 
@@ -312,49 +328,50 @@ export class CShadowPlane extends CPaint2D
         //direct 2개 이상이면 첫번째것만 적용함
         if (!pickedLig && directs.length) pickedLig = directs[0];
 
-        if(pickedLig != this.m_lig) {
-            this.m_lig = pickedLig;
-            this.m_updateShadow = true;
+        if(pickedLig != this.mLIG) {
+            this.mLIG = pickedLig;
+            this.mUpdateShadow = true;
+            //this.BatchClear();
         }
 
-        if(this.m_lig?.mUpdate == CUpdate.eType.Updated) {
-            this.m_updateShadow = true;
+        if(this.mLIG?.mUpdate == CUpdate.eType.Updated) {
+            this.mUpdateShadow = true;
+            //this.BatchClear();
         }
     }
 
     private UpdateShadow() {
-        this.ResetTail();
+        
 
-        if(!this.m_pt || !this.m_lig) {
+        if(!this.mPT || !this.mLIG) {
             this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
             this.mUpdateLMat = true;
             return;
         }
 
-        if(this.m_pt instanceof CPaint2D) {
+        if(this.mPT instanceof CPaint2D) {
             this.UpdateShadow2D();
         }
-        else if(this.m_pt instanceof CPaint3D) {
+        else if(this.mPT instanceof CPaint3D) {
             this.UpdateShadow3D();
         }
     }
 
     private ResetTail() {
         this.SetTexCodi(new CVec4(1, 1, 0, 0));
-        this.RemoveTag("wind");
         this.SetYSort(false);
     }
 
     private GetPaintCenter() {
-        if(!this.m_pt) return;
-        if(this.m_pt instanceof CPaint2D) {
-            const fBound = this.m_pt.GetBoundFMat();
+        if(!this.mPT) return;
+        if(this.mPT instanceof CPaint2D) {
+            const fBound = this.mPT.GetBoundFMat();
             const p1 = new CVec3(fBound.mMin.x, fBound.mMin.y);
             const p2 = new CVec3(fBound.mMax.x, fBound.mMin.y);
             return CMath.V3MulFloat(CMath.V3AddV3(p1, p2), 0.5);
         }
         else {
-            return this.m_pt.GetBoundFMat().GetCenter();
+            return this.mPT.GetBoundFMat().GetCenter();
         }
     }
 
@@ -377,6 +394,7 @@ export class CShadowPlane extends CPaint2D
                 rp.mSort = CRenderPass.eSort.ReversAlphaGroup;
                 reset = true;
                 rp.Reset();
+                //this.ResetTail();
             }
         }
         if(reset) {
@@ -388,10 +406,12 @@ export class CShadowPlane extends CPaint2D
 
         // let rp=new CRPAuto(this.GetOwner().GetFrame().Pal().Sl2DKey());
         // rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
-        const pt = this.m_pt as CPaint2D;
-        const lig = this.m_lig;
+
+        const pt = this.mPT as CPaint2D;
+        const lig = this.mLIG;
 
         const fBound = pt.GetBoundFMat();
+        
 
         const p1 = new CVec3(fBound.mMin.x, fBound.mMin.y);
         const p2 = new CVec3(fBound.mMax.x, fBound.mMin.y);
@@ -405,26 +425,26 @@ export class CShadowPlane extends CPaint2D
         let alpha : number;
         if(lig.IsPointLight()) 
         {
-            if(this.m_lig!=null)
-                dir=CMath.V3Nor(CMath.V3SubV3(c, this.m_lig.GetDirectPos()));
+            if(this.mLIG!=null)
+                dir=CMath.V3Nor(CMath.V3SubV3(c, this.mLIG.GetDirectPos()));
             const inner = lig.GetInRadius();
             const outer = lig.GetOutRadius();
             const dist = CMath.V3Distance(c, lig.GetDirectPos());
             
             alpha = LightFalloff(dist, inner, outer);
 
-            if(this.m_shadowLen == 0) {
+            if(this.mShadowLen == 0) {
                 height = (outer - dist);
             }
             else {
-                height = fBound.GetSize().y * this.m_shadowLen;
+                height = fBound.GetSize().y * this.mShadowLen;
             }
         }
         else {
-            if(this.m_lig!=null)
-                dir=CMath.V3Nor(this.m_lig.GetDirectPos());
+            if(this.mLIG!=null)
+                dir=CMath.V3Nor(this.mLIG.GetDirectPos());
             alpha = 1;
-            height = fBound.GetSize().y * this.m_shadowLen;
+            height = fBound.GetSize().y * this.mShadowLen;
         }
 
         //alpha
@@ -450,13 +470,16 @@ export class CShadowPlane extends CPaint2D
         this.SetSize(pt.GetSize().Export());
         this.SetTexture(pt.GetTexture());
         this.SetTexCodi(pt.GetTexCodi());
+        // if(pt.GetTexCodi().x==1)
+        // {
+        //     CConsol.Log("test");
+        // }
 
         this.mAutoLoad.Import(pt.mAutoLoad);
         if(pt.GetTag().has("wind") && pt instanceof CPaint2D) {
             if(this.mTag.has("wind")==false)
-            {
                 this.BatchClear();
-            }
+            
             this.PushTag("wind");
             this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
         }
@@ -469,19 +492,19 @@ export class CShadowPlane extends CPaint2D
 
         this.SetPosList([p1Far,p2Far,p1,p2]);
         //this.SetLMat(lmat);
-        this.SetAlphaModel(new CAlpha(alpha * this.m_shadowAlpha, CAlpha.eModel.Mul));
+        this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
     }
 
     private UpdateShadow3D() {
-        const pt = this.m_pt as CPaint3D;
-        const lig = this.m_lig;
+        const pt = this.mPT as CPaint3D;
+        const lig = this.mLIG;
 
         const ligDir = CMath.V3Nor(lig.GetDirectPos());
         
-        const fBound = this.m_pt.GetBoundFMat();
+        const fBound = this.mPT.GetBoundFMat();
         const fCenter = fBound.GetCenter();
 
-        const floorDist = ((5 + this.m_shadowLen) - fCenter.y) / ligDir.y;
+        const floorDist = ((5 + this.mShadowLen) - fCenter.y) / ligDir.y;
         const shadowPlanePos : CVec3 = CMath.V3AddV3(fCenter, CMath.V3MulFloat(ligDir, floorDist));
         const area = ComputeShadowAreaOntoPlane(fBound, new CVec3(0, 1, 0), shadowPlanePos, ligDir);
 
@@ -493,12 +516,12 @@ export class CShadowPlane extends CPaint2D
 
         this.CaptureShadow();
 
-        this.SetAlphaModel(new CAlpha(this.m_shadowAlpha, CAlpha.eModel.Mul));
+        this.SetAlphaModel(new CAlpha(this.mShadowAlpha, CAlpha.eModel.Mul));
     }
 
     private CaptureShadow() {
-        const pt = this.m_pt as CPaint3D;
-        const lig = this.m_lig;
+        const pt = this.mPT as CPaint3D;
+        const lig = this.mLIG;
 
         const fw = this.GetOwner().GetFrame();
 
@@ -579,7 +602,7 @@ export class CShadowPlane extends CPaint2D
     }
 
     SetLight(_light: CLight): void {
-        this.m_ligSet.add(_light);
+        this.mLIGSet.add(_light);
     }
     override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
     {

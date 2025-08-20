@@ -92,7 +92,7 @@ export class CPaint extends CComponent {
         this.BatchClear();
     }
     IsShould(_member, _type) {
-        if (_type == CObject.eShould.Editer) {
+        if (_type == CObject.eShould.Editer && this.IsProxy() == false) {
             if (_member == "mColorModel" || _member == "mAlphaModel" || _member == "mColorVFX")
                 return true;
         }

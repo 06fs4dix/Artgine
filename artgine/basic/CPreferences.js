@@ -23,4 +23,5 @@ export class CPreferences extends CObject {
     mWASM = false;
     mServer = "local";
     mGitHub = false;
+    mCanvas = "";
 }

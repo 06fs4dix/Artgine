@@ -469,14 +469,9 @@ ipcMain.handle("NewPage", async (_event, _json: {
 
 	const depth = (_json.projectPath.match(/\//g) || []).length;
 	let upFolder = "../"+"../".repeat(depth);
-	//CConsol.Log("upFolder : "+upFolder);
+	//let upProjPath="../"+"../".repeat(depth);
 
-	// CConsol.Log("__dirname : "+__dirname);
-	// if(__dirname.indexOf("resources")!=-1)
-	// {
-	// 	upFolder="./../../resources/app/";
-	// }
-	// CConsol.Log("upFolder : "+upFolder);
+	
 	let projectName=GetProjName(_json.projectPath);
 	let savePath=CPath.PHPC()+_json.projectPath+"/"+projectName;
 
@@ -649,7 +644,7 @@ pause`;
 
 	
 	//IStr+="<script type='module' src='"+upFolder+"artgine/artgine.js'></script>\n";
-	IStr+="<script type='module' src='"+projectName+".js'></script>\n";
+	
 	let canvasList=GetFolderCanvasFileName(CPath.PHPC()+_json.projectPath+"/Canvas");
 
 	// CConsol.Log("canvasList");
@@ -680,9 +675,12 @@ pause`;
 	{
 		pos=bHTML.indexOf("<!--EntryPoint-->");
 		bHTML=bHTML.substring(0,bHTML.indexOf("<!--EntryPoint-->")+17);
-		//bHTML="<!-- The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥 -->\n"+bHTML;
+		//모듈이 포함 안되어 있으면 강제로 넣음
+		if(oHTML.indexOf(projectName+".js")==-1)
+			bHTML+="<script type='module' src='"+projectName+".js'></script>\n";
 		bHTML=CString.InsertAt(bHTML,pos+17,oHTML.substring(oHTML.indexOf("<!--EntryPoint-->")+17,oHTML.length));
 	}
+
 	if(oMF!="")
 	{
 		bMF=JSON.stringify(oMF);
@@ -706,7 +704,7 @@ pause`;
 			}
 		);
 
-		await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC()+_json.projectPath,upFolder);
+		await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC()+_json.projectPath,upFolder,CPath.PHPC()+_json.projectPath);
 		
 
 		bTS=CString.InsertAt(bTS,pos+12,epStr);
@@ -764,7 +762,7 @@ pause`;
 		}
 		
 
-		pfStr+="]);\n";
+		pfStr+=`],"${pref.mCanvas}");\n`;
 		for (let canName of canvasList) 
 		{
 			if (canName.indexOf("Brush") !== -1) continue;

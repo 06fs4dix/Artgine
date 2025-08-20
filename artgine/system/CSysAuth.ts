@@ -11,6 +11,7 @@ export class CSysAuth
 {
 	static IsAudio()	{	return gAudio;	}
 	static IsVoice()	{	return gVoice;	}
+	static IsLock()	{	return gLock;	}
 	static Confirm(_audio : boolean,_voice=false,_gps=false,_camera=false)
 	{
 		if(gLock)

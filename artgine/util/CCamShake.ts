@@ -51,7 +51,7 @@ export class CCamShake extends CObject implements ICamShake
         let hide = [
             "mSeed", "mTranslation", 
             "mRotation", "mRotationQuat", "mRotationMat", 
-            "mTrauma","mUpdateEye","mUpdateLook"
+            "mTrauma","mUpdateEye","mUpdateLook","mCamera"
         ];
         if(hide.includes(_member)) 
             return false;
