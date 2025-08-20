@@ -6,27 +6,38 @@ import { CStream } from "./CStream.js";
 import { CString } from "./CString.js";
 import { CUniqueID } from "./CUniqueID.js";
 export var ProxyHandle = {
-    get: (obj, name) => {
-        if (typeof obj[name] == "function" || name == "mProxy") { }
-        else if (obj.IsShould(name, CObject.eShould.Proxy)) {
-            let bb = CBlackBoard.Find(obj.Key());
-            if (bb != null)
-                return bb[name];
-        }
-        return obj[name];
-    },
     set: (obj, name, value) => {
         if (typeof obj[name] == "function") { }
-        else if (obj.IsShould(name, CObject.eShould.Proxy)) {
-            let bb = CBlackBoard.Find(obj.Key());
-            if (bb != null)
-                bb[name] = value;
-            return true;
+        else if (obj.IsShould(name, CObject.eShould.Proxy) == true && obj["mProxy"] != null) {
+            for (let ch of obj["mProxy"]) {
+                let pt = ch.Get();
+                pt[name] = value;
+                let npt = new CPointer(pt, name);
+                npt.refArr.push(...ch.refArr);
+                npt.refArr.push(pt);
+                ch.target.EditChange(npt, false);
+            }
         }
         obj[name] = value;
         return true;
     },
 };
+export var ProxyHandleParent = (_parent, _parentKey) => ({
+    set: (obj, name, value) => {
+        if (typeof obj[name] == "function") { }
+        else if (_parent.IsShould(name, CObject.eShould.Proxy) == true && obj["mProxy"] != null) {
+            for (let ch of _parent["mProxy"]) {
+                let pt = ch.Get();
+                pt[_parentKey][name] = value;
+                ch.refArr.push(pt[_parentKey]);
+                ch.target.EditChange(ch, false);
+                ch.refArr.splice(ch.refArr.length - 1, 1);
+            }
+        }
+        obj[name] = value;
+        return true;
+    }
+});
 export class CPointer {
     target;
     member;
@@ -39,8 +50,11 @@ export class CPointer {
         this.key = _array;
     }
     Get() {
-        if (this.key == null)
+        if (this.key == null) {
+            if (this.member == null && this.target != null)
+                return this.target;
             return this.target[this.member];
+        }
         if (this.target[this.member] instanceof Set)
             return this.key;
         else if (this.target[this.member] instanceof Map) {
@@ -107,7 +121,114 @@ export class CObject {
     static Import(_tar, _org) {
     }
     ExportProxy(_resetKey = true) {
-        return new Proxy(this.Export(false, _resetKey), ProxyHandle);
+        if (this.IsBlackBoard() == false)
+            this.SetBlackBoard(true);
+        let target = this.Export(true, _resetKey);
+        let pointer = new CPointer(target, null);
+        pointer.refArr.push(target);
+        target.ProxyTARPush(this, pointer);
+        target["mProxy"] = this;
+        return target;
+    }
+    ProxyORGPush(_childe) {
+        if (this["mProxy"] instanceof Array == false)
+            this["mProxy"] = new Array();
+        this["mProxy"].push(_childe);
+    }
+    static ProxyTree(_target) {
+        for (let key in _target) {
+            if (typeof _target[key] == "object" && _target.IsShould(key, CObject.eShould.Proxy)) {
+                if (_target[key] instanceof Array) {
+                    let a = _target[key];
+                    for (let i = 0; i < a.length; ++i) {
+                        if (_target[key][i] instanceof CObject)
+                            _target[key][i] = CObject.ProxyTree(_target[key][i]);
+                    }
+                    _target[key] = new Proxy(_target[key], ProxyHandleParent(_target, key));
+                }
+                else if (_target[key] instanceof Set) {
+                    let a = _target[key];
+                    for (let sKey of a) {
+                        if (a[sKey] instanceof CObject)
+                            _target[key][sKey] = CObject.ProxyTree(_target[key][sKey]);
+                    }
+                }
+                else if (_target[key] instanceof Map) {
+                    let a = _target[key];
+                    for (let sKey of a.keys()) {
+                        let v = a.get(key);
+                        if (v instanceof CObject)
+                            _target[key].set(sKey, a.get(sKey));
+                    }
+                }
+                else if (_target[key] instanceof CObject) {
+                    _target[key] = CObject.ProxyTree(_target[key]);
+                }
+            }
+        }
+        return new Proxy(_target, ProxyHandle);
+    }
+    ProxyTARPush(_target, _pointer = null) {
+        _target.ProxyORGPush(_pointer);
+        for (let key in this) {
+            if (this.IsShould(key, CObject.eShould.Proxy)) {
+                if (this[key] instanceof Array) {
+                    let a = this[key];
+                    for (let i = 0; i < a.length; ++i) {
+                        if (_target[key][i] instanceof CObject) {
+                            let pointer = new CPointer(this, key, i);
+                            if (_pointer != null) {
+                                for (let each0 of _pointer.refArr) {
+                                    pointer.refArr.push(each0);
+                                }
+                            }
+                            pointer.refArr.push(a[i]);
+                            a[i].ProxyTARPush(_target[key][i], pointer);
+                        }
+                    }
+                }
+                else if (this[key] instanceof Set) {
+                    let a = this[key];
+                    for (let sKey of a) {
+                        if (a[sKey] instanceof CObject) {
+                            let pointer = new CPointer(this, key, sKey);
+                            if (_pointer != null) {
+                                for (let each0 of _pointer.refArr) {
+                                    pointer.refArr.push(each0);
+                                }
+                            }
+                            pointer.refArr.push(a[sKey]);
+                            a[sKey].ProxyTARPush(_target[key][sKey], pointer);
+                        }
+                    }
+                }
+                else if (this[key] instanceof Map) {
+                    let a = this[key];
+                    for (let sKey of a.keys()) {
+                        let v = a.get(key);
+                        if (v instanceof CObject) {
+                            let pointer = new CPointer(this, key, sKey);
+                            if (_pointer != null) {
+                                for (let each0 of _pointer.refArr) {
+                                    pointer.refArr.push(each0);
+                                }
+                            }
+                            pointer.refArr.push(v);
+                            v.ProxyTARPush(_target[key].get(sKey), pointer);
+                        }
+                    }
+                }
+                else if (this[key] instanceof CObject) {
+                    let pointer = new CPointer(this, key);
+                    if (_pointer != null) {
+                        for (let each0 of _pointer.refArr) {
+                            pointer.refArr.push(each0);
+                        }
+                    }
+                    this[key].ProxyTARPush(_target[key], pointer);
+                }
+            }
+        }
     }
     Export(_copy = true, _resetKey = true) {
         return CObject.Export(this, _copy, _resetKey);
@@ -115,10 +236,19 @@ export class CObject {
     Import(_target) {
         CObject.Import(this, _target);
     }
+    IsProxy() {
+        if (this["mProxy"] instanceof Array == false && this["mProxy"] != null)
+            return true;
+        return false;
+    }
     IsBlackBoard() {
         return this["mBlackboard"];
     }
     IsShould(_member, _type) {
+        if (this.IsProxy() && _type == CObject.eShould.Editer) {
+            if (this.IsShould(_member, CObject.eShould.Proxy) == true)
+                return false;
+        }
         if (_type == CObject.eShould.Patch) {
             if (this["mPatch"] != null && this["mPatch"].has(_member))
                 return true;
@@ -227,11 +357,10 @@ export class CObject {
                 return;
             if (_obj.GetBool("mBlackboard") == true) {
                 obj.SetKey(_obj.GetStr("mKey"));
-                if (CBlackBoard.Find(obj.Key()) != null) {
-                    let p = new Proxy(obj, ProxyHandle);
-                    obj["mProxy"] = CBlackBoard.Find(obj.Key());
-                    return p;
-                }
+                let bk = CBlackBoard.Find(obj.Key());
+                if (bk != null)
+                    return bk;
+                obj.SetBlackBoard(true);
             }
             if (obj != null) {
                 obj.ImportCJSON(_obj);

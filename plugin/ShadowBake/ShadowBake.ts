@@ -480,7 +480,9 @@ export class CShadowBaker extends CObject
         brush.mLightCount=0;
         brush.mShadowCount=0;
         brush.mShadowRead.clear();
-        for(let light of _ligArr) {
+        brush.mDoubleChk.clear();
+        for(let light of _ligArr) 
+        {
             light.mShadowDistance = pt.mBoundFMatR / 2000;
             light.CCamCompReq(brush);
         }
@@ -881,7 +883,7 @@ export class CShadowBaker extends CObject
             for(var i=0;i<light.mCascadeCycle.length;++i) {
                 if(light.mCascadeCycle[i]==-1)	continue;
                 for(let rp of light.GetWrite()) {
-                    if(!rp.mAutoPaint.has("CPaint3D")) continue;
+                    if(!rp.mInPaint.has("CPaint3D")) continue;
                     var srpKey=light.mShadowKey+rp.mShader+i;
                     if (_brush.AutoRP().has(srpKey)) {
                         shadowWriteRPArr.push(_brush.GetAutoRP(srpKey));

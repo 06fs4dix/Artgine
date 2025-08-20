@@ -369,17 +369,6 @@ export class CPaint2D extends CPaint {
             this.mBound.SetType(CBound.eType.Box);
         }
     }
-    CacBound() {
-        if (this.mTag.has("tail") && this.mSize != null) {
-            this.mBoundFMat.Import(this.mBound);
-            this.mBoundFMat.GetCenter(this.mBoundFMatC);
-            this.mBoundFMatR = this.mSize.x > this.mSize.y ? this.mSize.x : this.mSize.y;
-            this.mBoundFMatR *= 1.5;
-        }
-        else {
-            super.CacBound();
-        }
-    }
     Camera() {
         if (this.mPosList != null) {
             if (this.mUpdateFMat == false)
@@ -397,27 +386,26 @@ export class CPaint2D extends CPaint {
                 let v3 = CPoolGeo.ProductV3();
                 let vd = CPoolGeo.ProductV3();
                 let pos = this.GetFMat().xyz;
+                this.mBound.Reset();
+                this.mBound.InitBound(this.mPosList);
+                this.mBound.SetType(CBound.eType.Box);
+                this.mFMat.mF32A[0] = 1;
+                this.mFMat.mF32A[5] = 1;
+                this.mFMat.mF32A[10] = 1;
+                this.CacBound();
                 CMath.V3AddV3(this.mPosList[0], pos, v0);
                 CMath.V3AddV3(this.mPosList[1], pos, v1);
                 CMath.V3AddV3(this.mPosList[2], pos, v2);
                 CMath.V3AddV3(this.mPosList[3], pos, v3);
-                this.mBound.Reset();
-                this.mBound.InitBound(v0);
-                this.mBound.InitBound(v1);
-                this.mBound.InitBound(v2);
-                this.mBound.InitBound(v3);
-                this.mLMat.Unit();
                 this.GetFMat().SetV3(0, v0);
                 this.GetFMat().SetV3(1, v1);
                 this.GetFMat().SetV3(2, v2);
                 this.GetFMat().SetV3(3, v3);
-                this.mBound.SetType(CBound.eType.Box);
                 CPoolGeo.RecycleV3(v0);
                 CPoolGeo.RecycleV3(v1);
                 CPoolGeo.RecycleV3(v2);
                 CPoolGeo.RecycleV3(v3);
                 CPoolGeo.RecycleV3(vd);
-                this.CacBound();
             }
             this.mFMat.mF32A[3] = 1;
             this.mFMat.mF32A[7] = 1;

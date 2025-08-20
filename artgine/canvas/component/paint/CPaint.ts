@@ -135,7 +135,7 @@ export class CPaint extends CComponent
 
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_type==CObject.eShould.Editer)
+		if(_type==CObject.eShould.Editer && this.IsProxy()==false)
 		{
 			if(_member=="mColorModel" || _member=="mAlphaModel" || _member=="mColorVFX" )
 					return true;
@@ -152,6 +152,11 @@ export class CPaint extends CComponent
 			_member=="mAutoRPUpdate" || _member=="mCamCullUpdate" ||
 			_member=="mColorModel" || _member=="mAlphaModel" || _member=="mColorVFX" )
 				return false;
+		// if(_type==CObject.eShould.Proxy)
+		// {
+		// 	if(_member=="mTexture" || _member=="mLMat")
+		// 		return false;
+		// }
 		
 		return super.IsShould(_member,_type);
 	}

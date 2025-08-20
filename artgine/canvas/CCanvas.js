@@ -77,6 +77,8 @@ export class CCanvas extends CObject {
         return this.mGGI;
     }
     SetRPMgr(_rpMgr) {
+        if (this.mRPMgr == null && _rpMgr == null)
+            return;
         if (this.mRPMgr != null) {
             for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
                 this.mBrush.RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
@@ -342,9 +344,12 @@ export class CCanvas extends CObject {
     ImportCJSON(_json) {
         super.ImportCJSON(_json);
         this.LoadRes();
-        for (var eachKey of this.mSubMap) {
-            var each0 = eachKey[1];
+        for (let eachKey of this.mSubMap) {
+            let each0 = eachKey[1];
             each0.SetFrame(this.mFrame);
+        }
+        for (let [key, value] of this.mResMap) {
+            this.mResMap.set(key, CObject.ProxyTree(value));
         }
         const rpMgr = this.mRPMgr;
         this.mRPMgr = null;

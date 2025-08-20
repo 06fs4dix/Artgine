@@ -12,8 +12,8 @@ export class CBlackBoard
     static Push(_key : string,_val : any)
     {
         
-        if(_val["mProxy"]!=null)
-            console.log("CBlackBoard m_proxy!!!!error" );
+        // if(_val["mProxy"]!=null)
+        //     console.log("CBlackBoard m_proxy!!!!error" );
 
         if(gBBMap.get(_key)!=null)
             console.log("CBlackBoard dup!!!!error : "+_key );

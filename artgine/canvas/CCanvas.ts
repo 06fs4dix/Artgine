@@ -20,7 +20,7 @@ import { CUpdate, IAutoRender, IAutoUpdate } from "../basic/Basic.js"
 import {CDomFactory} from "../basic/CDOMFactory.js"
 import {CWebSocket} from "../network/CWebSocket.js"
 import {CRoomClient} from "../server/CRoomClient.js"
-import { CBlackBoardRef, CObject, CPointer } from "../basic/CObject.js"
+import { CBlackBoardRef, CObject, CPointer, ProxyHandle } from "../basic/CObject.js"
 import { CFrame } from "../util/CFrame.js"
 import { CRouteMsg } from "./CRouteMsg.js"
 import { CClass } from "../basic/CClass.js"
@@ -118,6 +118,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	
 	SetRPMgr(_rpMgr : CRPMgr) 
 	{
+		if(this.mRPMgr==null && _rpMgr==null)	return;
 		if(this.mRPMgr!=null)
 		{
 			for(let i=0;i<this.mRPMgr.mRPArr.length;++i)
@@ -537,10 +538,18 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	{
 		super.ImportCJSON(_json);	
 		this.LoadRes();
-		for (var eachKey of this.mSubMap)
+		for (let eachKey of this.mSubMap)
 		{
-			var each0=eachKey[1];
+			let each0=eachKey[1];
 			each0.SetFrame(this.mFrame);
+		}
+
+		for (let [key,value] of this.mResMap)
+		{
+			
+			//this.mResMap.set(key,new Proxy(value,ProxyHandle));
+			this.mResMap.set(key,CObject.ProxyTree(value));
+			
 		}
 		const rpMgr = this.mRPMgr;
 		this.mRPMgr = null;

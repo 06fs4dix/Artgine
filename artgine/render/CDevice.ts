@@ -37,8 +37,16 @@ export class CDevice
 	GPU()	:  GPUDevice	{	    return null;	}
     DrawType()	{	return -1;	}
 	async Init(){}
-    SetClearColor(_enable,_val=new CVec4(0,0,0,1)){	this.mClearColor=_enable;	this.mColorVal=_val;}
-	SetClearDepth(_enable,_val=1.0){	this.mClearDepth=_enable;	this.mDepthVal=_val;}
+    SetClearColor(_enable,_val=null)
+	{	
+		this.mClearColor=_enable;	
+		if(_val!=null)	this.mColorVal=_val;
+	}
+	SetClearDepth(_enable,_val=null)
+	{	
+		this.mClearDepth=_enable;
+		if(_val!=null)	this.mDepthVal=_val;
+	}
 	SetAlpha(_enable){}
 	SetCullFace(_enable : number){}
 	SetDepthWrite(_enable){}

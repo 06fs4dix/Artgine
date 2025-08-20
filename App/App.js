@@ -445,7 +445,6 @@ pause`;
         IStr += "<script type='text/javascript' src='" + upFolder + "artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
     }
     IStr += "<link rel='manifest' href='./" + projectName + ".webmanifest'/>\n";
-    IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
     let canvasList = GetFolderCanvasFileName(CPath.PHPC() + _json.projectPath + "/Canvas");
     if (_json.appJSON.server.indexOf("web") != -1 && _json.serviceWorker.MAX_CACHE_SIZE > 0) {
         IStr += `
@@ -467,6 +466,8 @@ pause`;
     if (oHTML != "") {
         pos = bHTML.indexOf("<!--EntryPoint-->");
         bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
+        if (oHTML.indexOf(projectName + ".js") == -1)
+            bHTML += "<script type='module' src='" + projectName + ".js'></script>\n";
         bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
     }
     if (oMF != "") {
@@ -480,7 +481,7 @@ pause`;
             const cleanPath = path.replace(/^\/+/, '');
             return `${quote}${cleanUpFolder}/${cleanPath}`;
         });
-        await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder);
+        await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder, CPath.PHPC() + _json.projectPath);
         bTS = CString.InsertAt(bTS, pos + 12, epStr);
     }
     else {
@@ -519,7 +520,7 @@ pause`;
             pfStr += "'" + canName + "'";
             add = true;
         }
-        pfStr += "]);\n";
+        pfStr += `],"${pref.mCanvas}");\n`;
         for (let canName of canvasList) {
             if (canName.indexOf("Brush") !== -1)
                 continue;

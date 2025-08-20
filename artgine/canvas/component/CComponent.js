@@ -20,8 +20,7 @@ export class CComponent extends CObject {
     GetSysc() { return this.mSysc; }
     IsShould(_member, _type) {
         if (_type == CObject.eShould.Proxy) {
-            if (_member == "mComMsg" || _member == "mComMsgLen" || _member == "mComMsgSwap" || _member == "mStartChk" ||
-                _member == "mOwner" || _member == "mDestroy" || _member == "mSysc" || _member == "mEnable")
+            if (_member == "mEnable")
                 return false;
         }
         if (_member == "mComMsg" || _member == "mComMsgLen" || _member == "mComMsgSwap" || _member == "mStartChk" ||

@@ -30,7 +30,7 @@ export interface IMember
 	//Array:
 	//[GetComp("test"),mPos] 
 
-	//String
+	//String:
 	//mComArr[0].mPos 
 	//mPos
 	Get(_member : Array<string>|string) : any;//멤버값을 찾을때

@@ -24,6 +24,9 @@ function WatchInputChanges() {
                 else if (id === "targetHeight")
                     pref.mTargetHeight = input.valueAsNumber;
             }
+            else if (input.type === "text") {
+                pref.mCanvas = input.value;
+            }
         });
         const select = document.querySelector("#preference select");
         if (select) {
@@ -173,6 +176,9 @@ async function Init() {
         CUtil.IDInput("wasm").checked = !!pref.mWASM;
         CUtil.IDInput("targetWidth").value = pref.mTargetWidth ?? 0;
         CUtil.IDInput("targetHeight").value = pref.mTargetHeight ?? 0;
+        CUtil.IDInput("canvas_txt").value = pref.mCanvas ?? "";
+        if (pref.mCanvas == null)
+            pref.mCanvas = "";
         const rendererSelect = document.querySelector("#preference select");
         if (rendererSelect && pref.mRenderer) {
             for (let i = 0; i < rendererSelect.options.length; i++) {

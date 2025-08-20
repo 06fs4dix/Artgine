@@ -37,6 +37,10 @@ function WatchInputChanges() {
                 if (id === "targetWidth") pref.mTargetWidth = input.valueAsNumber;
                 else if (id === "targetHeight") pref.mTargetHeight = input.valueAsNumber;
             }
+            else if (input.type === "text") {
+                pref.mCanvas = input.value;
+                
+            }
         });
 
         const select = document.querySelector("#preference select") as HTMLSelectElement;
@@ -253,6 +257,12 @@ async function Init() {
 
         CUtil.IDInput("targetWidth").value = pref.mTargetWidth ?? 0;
         CUtil.IDInput("targetHeight").value = pref.mTargetHeight ?? 0;
+
+        CUtil.IDInput("canvas_txt").value = pref.mCanvas ?? "";
+
+        if(pref.mCanvas==null)
+            pref.mCanvas="";
+        
 
         // const prefInputs = document.querySelectorAll("#preference input[type='number']") as NodeListOf<HTMLInputElement>;;
         // if (prefInputs.length >= 2) {

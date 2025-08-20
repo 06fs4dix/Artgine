@@ -61,6 +61,7 @@ export class CModal implements IAutoUpdate , IListener
     mCard : HTMLDivElement=null;
     mHeader : HTMLDivElement=null;
     mBody : HTMLDivElement=null;
+    mFooter : HTMLElement=null;
     mOverlayDiv : HTMLDivElement=null;
     mBodyClose=false;
 
@@ -74,6 +75,7 @@ export class CModal implements IAutoUpdate , IListener
 
     mHeaderData=null;
     mBodyData=null;
+    mFooterData=null;
     mBG:string=null;
     mWindow : WindowProxy=null;
 
@@ -257,6 +259,18 @@ export class CModal implements IAutoUpdate , IListener
         {
             this.mBody.innerHTML="";
             this.mBody.append(CDomFactory.DataToDom(_data));
+        }
+    }
+    SetFooter(_data : HTMLElement|string|object|CJSON)
+    {
+        if(this.mFooter==null)
+        {
+            this.mFooterData=_data;
+        }
+        else
+        {
+            this.mFooter.innerHTML="";
+            this.mFooter.append(CDomFactory.DataToDom(_data));
         }
     }
     SetHeader(_html:string|HTMLElement)
@@ -510,13 +524,9 @@ export namespace CModal {
 
 export class CConfirm extends CModal
 {
-    // m_yesEvent : CEvent=null;
-    // m_noEvent : CEvent=null;
-    m_footer : HTMLElement;
-
-    m_eventList=new Array<CEvent>();
-    m_textList=new Array<string>();
-    m_themaList=new Array<string>();
+    mEventList=new Array<CEvent>();
+    mTextList=new Array<string>();
+    mThemaList=new Array<string>();
     static List(_body,_eventList : Array<((...args: any[]) => any) | CEvent<(...args: any[]) => any>>,_text=new Array<string>())
     {
 
@@ -537,33 +547,33 @@ export class CConfirm extends CModal
     {
         if(_type==CConfirm.eConfirm.OK)
         {
-            this.m_eventList[0]=CEvent.ToCEvent(_eventList[0]);
-            this.m_textList[0]=_text[0];
-            if(this.m_textList[0]==null)
-                this.m_textList[0]="OK";
-            this.m_themaList[0]="btn btn-primary";
+            this.mEventList[0]=CEvent.ToCEvent(_eventList[0]);
+            this.mTextList[0]=_text[0];
+            if(this.mTextList[0]==null)
+                this.mTextList[0]="OK";
+            this.mThemaList[0]="btn btn-primary";
         }
         else if(_type==CConfirm.eConfirm.YesNo)
         {
-            this.m_eventList[0]=CEvent.ToCEvent(_eventList[0]);
-            this.m_textList[0]=_text[0];
-            if(this.m_textList[0]==null)
-                this.m_textList[0]="Yes";
-            this.m_themaList[0]="btn btn-primary";
+            this.mEventList[0]=CEvent.ToCEvent(_eventList[0]);
+            this.mTextList[0]=_text[0];
+            if(this.mTextList[0]==null)
+                this.mTextList[0]="Yes";
+            this.mThemaList[0]="btn btn-primary";
 
-            this.m_eventList[1]=CEvent.ToCEvent(_eventList[1]);
-            this.m_textList[1]=_text[1];
-            if(this.m_textList[1]==null)
-                this.m_textList[1]="No";
-            this.m_themaList[1]="btn btn-danger";
+            this.mEventList[1]=CEvent.ToCEvent(_eventList[1]);
+            this.mTextList[1]=_text[1];
+            if(this.mTextList[1]==null)
+                this.mTextList[1]="No";
+            this.mThemaList[1]="btn btn-danger";
         }
         else 
         {
             for(let i=0;i<_text.length;++i)
             {
-                this.m_eventList[i]=CEvent.ToCEvent(_eventList[i]);
-                this.m_textList[i]=_text[i];
-                this.m_themaList[i]="btn btn-success";
+                this.mEventList[i]=CEvent.ToCEvent(_eventList[i]);
+                this.mTextList[i]=_text[i];
+                this.mThemaList[i]="btn btn-success";
             }
         }
     }
@@ -571,30 +581,31 @@ export class CConfirm extends CModal
     Open(_startPos: number = CModal.ePos.Center): void {
         this.mResize=false;
         this.mLimitPush=true;
+        this.SetFooter("");
         super.Open(_startPos);
 
        
         // 버튼 컨테이너 생성 (부트스트랩 스타일 적용)
-        this.m_footer = document.createElement("div");
-        this.m_footer.className = "card-footer text-muted p-1"; // 부트스트랩4 modal-footer 사용
+        // this.m_footer = document.createElement("div");
+        // this.m_footer.className = "card-footer text-muted p-1"; 
 
         let buttonContainer = document.createElement("div");
         buttonContainer.className = "d-flex justify-content-between";
 
 
-        for(let i=0;i<this.m_textList.length;++i)
+        for(let i=0;i<this.mTextList.length;++i)
         {
-            let event=this.m_eventList[i];
+            let event=this.mEventList[i];
             let button = document.createElement("button");
-            button.textContent = this.m_textList[i];
-            button.className = this.m_themaList[i];
+            button.textContent = this.mTextList[i];
+            button.className = this.mThemaList[i];
             if(i!=0)
                 button.className+=button.className+" ms-2";
 
             button.onclick = () => {
                 if (event)
                 {
-                    event.Call(this.m_textList[i]);
+                    event.Call(this.mTextList[i]);
                 }
                 this.Close();
             };
@@ -603,11 +614,11 @@ export class CConfirm extends CModal
         }
 
         
-        this.m_footer.appendChild(buttonContainer);
+        this.mFooter.appendChild(buttonContainer);
         
 
         // 컨테이너를 모달 바디에 추가
-        this.mCard.appendChild(this.m_footer);
+        //this.mCard.appendChild(this.m_footer);
         this.SetPosition(CModal.ePos.Center);
     }
 }

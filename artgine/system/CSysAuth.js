@@ -6,6 +6,7 @@ var gLock = false;
 export class CSysAuth {
     static IsAudio() { return gAudio; }
     static IsVoice() { return gVoice; }
+    static IsLock() { return gLock; }
     static Confirm(_audio, _voice = false, _gps = false, _camera = false) {
         if (gLock) {
             return new Promise((resolve, reject) => {

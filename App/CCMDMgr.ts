@@ -262,7 +262,7 @@ export class CCMDMgr {
      * @param workFolder 작업할 폴더 경로
      * @param upFolder 상위 폴더명 (예: "../artgine")
      */
-    static async ReplaceArtginePathsInFolder(workFolder: string, upFolder: string): Promise<void> {
+    static async ReplaceArtginePathsInFolder(workFolder: string, upFolder: string,projPath : string): Promise<void> {
         try {
             // console.log(`작업 폴더: ${workFolder}`);
             // console.log(`상위 폴더: ${upFolder}`);
@@ -288,7 +288,7 @@ export class CCMDMgr {
 
             for (const filePath of tsFiles) {
                 try {
-                    const modified = await this.ReplaceArtginePathsInFile(filePath, upFolder);
+                    const modified = await this.ReplaceArtginePathsInFile(filePath, upFolder,projPath);
                     processedCount++;
                     if (modified) {
                         modifiedCount++;
@@ -336,10 +336,28 @@ export class CCMDMgr {
         return tsFiles;
     }
 
-   private static async ReplaceArtginePathsInFile(filePath: string, upFolder: string): Promise<boolean> {
+    private static async ReplaceArtginePathsInFile(filePath: string, upFolder: string,projPath : string): Promise<boolean> {
         try {
+            let additionalLevels = 0;
+
             // 파일 읽기
             const originalContent = fs.readFileSync(filePath, 'utf8');
+            if(upFolder.indexOf("http")==-1)
+            {
+                // 경로 구분자를 /로 통일
+                const normalizedFilePath = filePath.replace(/\\/g, '/');
+                const normalizedProjPath = projPath.replace(/\\/g, '/');
+                
+                // 추가 경로 횟수 계산
+                const filePathParts = normalizedFilePath.split('/');
+                const projPathParts = normalizedProjPath.split('/');
+                
+                // projPath 이후의 추가 디렉토리 개수 계산
+                if (filePathParts.length > projPathParts.length) {
+                    additionalLevels = filePathParts.length - projPathParts.length-1;
+                }
+            }
+            
             
             // artgine/ 또는 plugin/ 경로 치환
             const modifiedContent = originalContent.replace(
@@ -348,7 +366,11 @@ export class CCMDMgr {
                     // upFolder 끝 / 제거, path 앞 / 제거 후 결합
                     const cleanUpFolder = upFolder.replace(/\/+$/, '');
                     const cleanPath = path.replace(/^\/+/, '');
-                    return `${quote}${cleanUpFolder}/${cleanPath}`;
+                    
+                    // 추가 경로 횟수만큼 ../ 추가
+                    const upPath = '../'.repeat(additionalLevels);
+                    
+                    return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
                 }
             );
 

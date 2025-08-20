@@ -41,6 +41,7 @@ export class CModal {
     mCard = null;
     mHeader = null;
     mBody = null;
+    mFooter = null;
     mOverlayDiv = null;
     mBodyClose = false;
     mTitle = CModal.eTitle.TextFullClose;
@@ -51,6 +52,7 @@ export class CModal {
     mOverlay = false;
     mHeaderData = null;
     mBodyData = null;
+    mFooterData = null;
     mBG = null;
     mWindow = null;
     mEventMap = new Map();
@@ -204,6 +206,15 @@ export class CModal {
         else {
             this.mBody.innerHTML = "";
             this.mBody.append(CDomFactory.DataToDom(_data));
+        }
+    }
+    SetFooter(_data) {
+        if (this.mFooter == null) {
+            this.mFooterData = _data;
+        }
+        else {
+            this.mFooter.innerHTML = "";
+            this.mFooter.append(CDomFactory.DataToDom(_data));
         }
     }
     SetHeader(_html) {
@@ -386,10 +397,9 @@ export class CModal {
     })(eAction = CModal.eAction || (CModal.eAction = {}));
 })(CModal || (CModal = {}));
 export class CConfirm extends CModal {
-    m_footer;
-    m_eventList = new Array();
-    m_textList = new Array();
-    m_themaList = new Array();
+    mEventList = new Array();
+    mTextList = new Array();
+    mThemaList = new Array();
     static List(_body, _eventList, _text = new Array()) {
         let list = new CConfirm();
         list.SetBody(_body);
@@ -405,57 +415,55 @@ export class CConfirm extends CModal {
     }
     SetConfirm(_type, _eventList, _text = new Array()) {
         if (_type == CConfirm.eConfirm.OK) {
-            this.m_eventList[0] = CEvent.ToCEvent(_eventList[0]);
-            this.m_textList[0] = _text[0];
-            if (this.m_textList[0] == null)
-                this.m_textList[0] = "OK";
-            this.m_themaList[0] = "btn btn-primary";
+            this.mEventList[0] = CEvent.ToCEvent(_eventList[0]);
+            this.mTextList[0] = _text[0];
+            if (this.mTextList[0] == null)
+                this.mTextList[0] = "OK";
+            this.mThemaList[0] = "btn btn-primary";
         }
         else if (_type == CConfirm.eConfirm.YesNo) {
-            this.m_eventList[0] = CEvent.ToCEvent(_eventList[0]);
-            this.m_textList[0] = _text[0];
-            if (this.m_textList[0] == null)
-                this.m_textList[0] = "Yes";
-            this.m_themaList[0] = "btn btn-primary";
-            this.m_eventList[1] = CEvent.ToCEvent(_eventList[1]);
-            this.m_textList[1] = _text[1];
-            if (this.m_textList[1] == null)
-                this.m_textList[1] = "No";
-            this.m_themaList[1] = "btn btn-danger";
+            this.mEventList[0] = CEvent.ToCEvent(_eventList[0]);
+            this.mTextList[0] = _text[0];
+            if (this.mTextList[0] == null)
+                this.mTextList[0] = "Yes";
+            this.mThemaList[0] = "btn btn-primary";
+            this.mEventList[1] = CEvent.ToCEvent(_eventList[1]);
+            this.mTextList[1] = _text[1];
+            if (this.mTextList[1] == null)
+                this.mTextList[1] = "No";
+            this.mThemaList[1] = "btn btn-danger";
         }
         else {
             for (let i = 0; i < _text.length; ++i) {
-                this.m_eventList[i] = CEvent.ToCEvent(_eventList[i]);
-                this.m_textList[i] = _text[i];
-                this.m_themaList[i] = "btn btn-success";
+                this.mEventList[i] = CEvent.ToCEvent(_eventList[i]);
+                this.mTextList[i] = _text[i];
+                this.mThemaList[i] = "btn btn-success";
             }
         }
     }
     Open(_startPos = CModal.ePos.Center) {
         this.mResize = false;
         this.mLimitPush = true;
+        this.SetFooter("");
         super.Open(_startPos);
-        this.m_footer = document.createElement("div");
-        this.m_footer.className = "card-footer text-muted p-1";
         let buttonContainer = document.createElement("div");
         buttonContainer.className = "d-flex justify-content-between";
-        for (let i = 0; i < this.m_textList.length; ++i) {
-            let event = this.m_eventList[i];
+        for (let i = 0; i < this.mTextList.length; ++i) {
+            let event = this.mEventList[i];
             let button = document.createElement("button");
-            button.textContent = this.m_textList[i];
-            button.className = this.m_themaList[i];
+            button.textContent = this.mTextList[i];
+            button.className = this.mThemaList[i];
             if (i != 0)
                 button.className += button.className + " ms-2";
             button.onclick = () => {
                 if (event) {
-                    event.Call(this.m_textList[i]);
+                    event.Call(this.mTextList[i]);
                 }
                 this.Close();
             };
             buttonContainer.appendChild(button);
         }
-        this.m_footer.appendChild(buttonContainer);
-        this.mCard.appendChild(this.m_footer);
+        this.mFooter.appendChild(buttonContainer);
         this.SetPosition(CModal.ePos.Center);
     }
 }
