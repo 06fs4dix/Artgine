@@ -1,21 +1,17 @@
  **Live Demo Links:**
 
+- **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
+
+  
  ## Tutorial
-
-  - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-
   - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-   
-  - **BoxShow**: [https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html)
-    
   - **3DSample**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/3DSample/3DSample.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DSample/3DSample.html)
-
-  ## Game
-
+  ## 3D
+  - **BoxShow**: [https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html)
+  - **Map**: [https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html)
+  ## 2D
   - **Maze**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-
   - **Village**: [https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html)
-
   - **Shooting**: [https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html)
 
   ---
