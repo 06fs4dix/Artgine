@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 06:36:55';
+const version='2025-08-21 21:56:21';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -58,7 +58,7 @@ var Can3D = gAtl.NewCanvas('Can3D');
 Can3D.SetCameraKey("3D");
 Can3D.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
 
-gAtl.Frame().Dev().SetClearColor(true,new CVec4(1,1,1,0));
+gAtl.Frame().Dev().SetClearColor(true,new CVec4(0,0,0,0));
 
 
 let sub=Can3D.Push(new CSubject());
@@ -273,6 +273,18 @@ function CacLatLng(_lat: number, _lng: number, baseLat=0, baseLng=0)
  
     return new CVec2(screenPoint.x,screenPoint.y);
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

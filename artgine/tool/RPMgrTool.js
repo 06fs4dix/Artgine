@@ -492,33 +492,9 @@ async function RPToolLeftInit() {
     gLeftInit = true;
     gAtl.Canvas("RPTool").Clear();
     const leftPanel = CUtil.ID("RPLeft_div");
-    const marginX = 30;
-    const marginY = 30;
+    const marginX = 50;
+    const marginY = 50;
     let rpArr = [];
-    for (let i = 0; i < gTexArr.length; ++i) {
-        let texKey = gTexArr[i];
-        const simpleHtml = `
-            <div class="card mb-2" id="cardLeft_tex_${texKey}">
-                <div class="card-header fw-bold" style="pointer-events:auto; cursor:pointer;">
-                    <span style="color: green;">CTexture</span> : 
-                </div>
-                <div class="card-body p-2 small text-muted">
-                    ${texKey}
-                </div>
-            </div>
-        `;
-        let sub = gAtl.Canvas("RPTool").Push(new CSubject());
-        let html = CDomFactory.DataToDom(simpleHtml);
-        html.style.pointerEvents = "auto";
-        html.style.cursor = "pointer";
-        let pt = sub.PushComp(new CPaintHTML(html, null, leftPanel));
-        pt.SetSize(new CVec2(200, 100));
-        sub.SetPos(new CVec3(-100 - marginX, -i * (100 + marginY), 0));
-        html.setAttribute('draggable', 'true');
-        html.addEventListener('dragstart', (ev) => {
-            ev.dataTransfer?.setData('sourceKey', texKey);
-        });
-    }
     for (let rp of gRPMgr.mRPArr) {
         rpArr.push({ key: rp.ObjHash(), value: rp });
     }
@@ -526,6 +502,37 @@ async function RPToolLeftInit() {
         rpArr.push({ key: suf.ObjHash(), value: suf.GetRP() });
     }
     rpArr.sort((a, b) => a.value.mPriority - b.value.mPriority);
+    let rp2Arr = [];
+    for (let { key, value } of rpArr) {
+        let inDependencies = [];
+        for (let sa of value.mShaderAttr) {
+            if (sa.mType == -2) {
+                inDependencies.push(sa.mKey);
+            }
+        }
+        let outData = value.mRenderTarget;
+        if (inDependencies.length > 0) {
+            let maxLevel = -1;
+            for (let inDep of inDependencies) {
+                for (let level = 0; level < rp2Arr.length; level++) {
+                    if (rp2Arr[level].some(item => item.value.mRenderTarget === inDep)) {
+                        maxLevel = Math.max(maxLevel, level);
+                    }
+                }
+            }
+            let targetLevel = maxLevel + 1;
+            if (!rp2Arr[targetLevel]) {
+                rp2Arr[targetLevel] = [];
+            }
+            rp2Arr[targetLevel].push({ key, value });
+        }
+        else {
+            if (!rp2Arr[0]) {
+                rp2Arr[0] = [];
+            }
+            rp2Arr[0].push({ key, value });
+        }
+    }
     for (let { key, value } of rpArr) {
         let cardBodyTop = 'In : ';
         let cardBodyCenter = '';
@@ -608,80 +615,55 @@ async function RPToolLeftInit() {
         html.style.cursor = "pointer";
         sub.PushComp(new CPaintHTML(html, null, leftPanel));
         sub.SetPos(new CVec3(0, 0, 0));
-        html.setAttribute('draggable', 'true');
-        html.addEventListener('dragstart', (ev) => {
-            ev.dataTransfer?.setData('sourceKey', key);
-        });
-        html.addEventListener('dragover', (ev) => ev.preventDefault());
-        html.addEventListener('drop', (ev) => {
-            ev.preventDefault();
-            const sourceKey = ev.dataTransfer?.getData('sourceKey');
-            const targetKey = key;
-            if (sourceKey != targetKey) {
-                const sourceRP = rpArr.find(r => r.key === sourceKey)?.value;
-                const targetRP = rpArr.find(r => r.key === targetKey)?.value;
-                if (sourceRP == null)
-                    targetRP.mRenderTarget = sourceKey;
-                else if (sourceRP.mRenderTarget != "")
-                    targetRP.mShaderAttr.push(new CShaderAttr(0, sourceRP.mRenderTarget));
-                RPToolLeftInit();
-            }
-        });
     }
-    let lastPriority = null;
     let currentX = 0;
-    let currentY = 0;
     let columnMaxWidth = 0;
-    for (let { key, value } of rpArr) {
-        let sub = gAtl.Canvas("RPTool").Find(key);
-        let pt = sub.FindComp(CPaintHTML);
-        if (pt == null) {
-            CAlert.E(key + "error");
-            gAtl.Canvas("RPTool").Find(key);
-        }
-        await CChecker.Exe(async () => (pt.mAttach ? false : true), 1);
-        let size = new CVec2();
-        let html = pt.GetElement();
-        size.x = html.clientWidth + 10 || 150;
-        size.y = html.clientHeight + 10 || 100;
-        pt.SetSize(size);
-        pt.SetPivot(new CVec3(1, -1, 1));
-        if (lastPriority === null || value.mPriority !== lastPriority) {
-            if (lastPriority !== null) {
-                currentX += columnMaxWidth + marginX;
+    for (let level = 0; level < rp2Arr.length; level++) {
+        let currentY = 0;
+        let levelMaxWidth = 0;
+        for (let { key, value } of rp2Arr[level]) {
+            let sub = gAtl.Canvas("RPTool").Find(key);
+            let pt = sub.FindComp(CPaintHTML);
+            if (pt == null) {
+                CAlert.E(key + "error");
+                gAtl.Canvas("RPTool").Find(key);
             }
-            lastPriority = value.mPriority;
-            columnMaxWidth = size.x;
-            currentY = 0;
-        }
-        else {
+            await CChecker.Exe(async () => (pt.mAttach ? false : true), 1);
+            let size = new CVec2();
+            let html = pt.GetElement();
+            size.x = html.clientWidth + 10 || 150;
+            size.y = html.clientHeight + 10 || 100;
+            pt.SetSize(size);
+            pt.SetPivot(new CVec3(1, -1, 1));
+            sub.SetPos(new CVec3(currentX, -currentY, 0));
             currentY += size.y + marginY;
-            columnMaxWidth = Math.max(columnMaxWidth, size.x);
-        }
-        sub.SetPos(new CVec3(currentX, -currentY, 0));
-        let headerDiv = html.querySelector(".card-header");
-        headerDiv.addEventListener("click", () => {
-            let type = headerDiv.getAttribute("data-type");
-            let id = headerDiv.getAttribute("data-key");
-            let activeTab = document.querySelector(".nav-tabs .nav-link.active");
-            let targetTab = document.getElementById(type === "rp" ? "tab-rp" : "tab-suf");
-            if (targetTab && targetTab !== activeTab) {
-                targetTab.click();
-            }
-            setTimeout(() => {
-                let cardElem = document.getElementById(`cardRight_${id}`);
-                if (cardElem) {
-                    const trigger = cardElem.querySelector('[data-bs-toggle="collapse"]');
-                    if (trigger) {
-                        let isExpanded = trigger.getAttribute('aria-expanded') === 'true';
-                        if (!isExpanded) {
-                            trigger.click();
-                        }
-                    }
-                    cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
+            levelMaxWidth = Math.max(levelMaxWidth, size.x);
+            let headerDiv = html.querySelector(".card-header");
+            headerDiv.addEventListener("click", () => {
+                let type = headerDiv.getAttribute("data-type");
+                let id = headerDiv.getAttribute("data-key");
+                let activeTab = document.querySelector(".nav-tabs .nav-link.active");
+                let targetTab = document.getElementById(type === "rp" ? "tab-rp" : "tab-suf");
+                if (targetTab && targetTab !== activeTab) {
+                    targetTab.click();
                 }
-            }, 100);
-        });
+                setTimeout(() => {
+                    let cardElem = document.getElementById(`cardRight_${id}`);
+                    if (cardElem) {
+                        const trigger = cardElem.querySelector('[data-bs-toggle="collapse"]');
+                        if (trigger) {
+                            let isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+                            if (!isExpanded) {
+                                trigger.click();
+                            }
+                        }
+                        cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }, 100);
+            });
+        }
+        currentX += levelMaxWidth + marginX;
+        columnMaxWidth = Math.max(columnMaxWidth, levelMaxWidth);
     }
     gLeftInit = false;
     RPToolLeftLine();
@@ -702,6 +684,7 @@ function RPToolLeftLine() {
         return null;
     };
     for (let { key, value } of rpArr) {
+        let color = new CColor(Math.random(), Math.random(), Math.random(), CColor.eModel.RGBAdd);
         for (let sa of value.mShaderAttr) {
             if (sa.mType == -2) {
                 let texObj = FindTex(sa.mKey);
@@ -716,7 +699,7 @@ function RPToolLeftLine() {
                     let tarSize = tar.FindComp(CPaintHTML).mOrgSize;
                     trail.SetStaticPosList([CMath.V3AddV3(org.GetPos(), new CVec3(orgSize.x * 0.5, -orgSize.y * 0.5)),
                         CMath.V3AddV3(tar.GetPos(), new CVec3(tarSize.x * 0.5, -tarSize.y * 0.5))]);
-                    trail.SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBAdd));
+                    trail.SetColorModel(color);
                 }
             }
         }

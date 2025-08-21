@@ -51,7 +51,7 @@ export class CModal implements IAutoUpdate , IListener
     mResizeObserver : ResizeObserver;
     mKey="";
     mSort=CModal.eSort.Auto;
-    mZIndex=1000;
+    mZIndex=0;
 
     private mCloseToHide=false;
     mOT=null;
@@ -428,7 +428,10 @@ export class CModal implements IAutoUpdate , IListener
         }
         else
         {
-            this.mCard.style.width=this.mOW+"px";
+            if(this.mFull)
+                this.mCard.style.width=w+"px";
+            else
+                this.mCard.style.width=this.mOW+"px";
 
             let right=this.mCard.offsetLeft+this.mOW;
             if(w<right)
@@ -448,7 +451,10 @@ export class CModal implements IAutoUpdate , IListener
             
         else
         {
-            this.mCard.style.height=this.mOH+"px";
+            if(this.mFull)
+                this.mCard.style.height=h+"px";
+            else
+                this.mCard.style.height=this.mOH+"px";
             let bottom=this.mCard.offsetTop+this.mOH;
             if(h<bottom)
                 this.mCard.style.top=(h-this.mOH)+"px";
@@ -582,7 +588,9 @@ export class CConfirm extends CModal
         this.mResize=false;
         this.mLimitPush=true;
         this.SetFooter("");
+        this.SetZIndex(CModal.eSort.Top);
         super.Open(_startPos);
+        
 
        
         // 버튼 컨테이너 생성 (부트스트랩 스타일 적용)

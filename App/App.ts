@@ -18,7 +18,7 @@ import {CPath} from '../artgine/basic/CPath.js';
 import {CString} from '../artgine/basic/CString.js';
 
 
-import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, WaitForBuild } from './AppFunc.js';
+import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 
 // __dirname 대체 코드 (TS + ESM 환경)
@@ -704,7 +704,7 @@ pause`;
 			}
 		);
 
-		await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC()+_json.projectPath,upFolder,CPath.PHPC()+_json.projectPath);
+		await ReplaceArtginePathsInFolder(CPath.PHPC()+_json.projectPath,upFolder,CPath.PHPC()+_json.projectPath);
 		
 
 		bTS=CString.InsertAt(bTS,pos+12,epStr);

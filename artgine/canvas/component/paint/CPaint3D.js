@@ -322,7 +322,7 @@ export class CPaintCube extends CPaint3D {
     InitPaint() {
         this.mMesh = this.GetOwner().GetFrame().Pal().GetBoxMesh();
         this.mRenderPass[0] = new CRenderPass(this.GetOwner().GetFrame().Pal().SlCubeKey());
-        if (this.mTag.has("sky")) {
+        if (this.mTag.has("sky") || this.mTag.has("table")) {
             this.mRenderPass[0].mPriority = CRenderPass.ePriority.BackGround;
             this.mRenderPass[0].mCullFace = CRenderPass.eCull.None;
             this.mRenderPass[0].mCullFrustum = false;

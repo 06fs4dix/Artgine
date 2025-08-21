@@ -5,6 +5,7 @@ import { CUpdate } from "../basic/Basic.js";
 import {CAlert} from "../basic/CAlert.js";
 import {CObject } from "../basic/CObject.js";
 import {CMath} from "../geometry/CMath.js";
+import { CPoolGeo } from "../geometry/CPoolGeo.js";
 import {CVec3} from "../geometry/CVec3.js";
 import {CCamera,  ICamCon } from "../render/CCamera.js";
 
@@ -445,16 +446,17 @@ export class CCamCon2DFollow extends CCamCon2D
         // if(this.m_follow.Get() != null)
         //     CMath.V3AddV3(this.m_follow.Get().GetPos(), this.m_offset, destination);
         // else
-            CMath.V3AddV3(this.mPos, this.m_offset, destination);
+        CMath.V3AddV3(this.mPos, this.m_offset, destination);
 
-        let smoothedPos : CVec3 = CMath.V3Interpolate(this.mCamera.GetEye(), destination, this.m_smoothSpeed);
+        let smoothedPos : CVec3=CPoolGeo.ProductV3();
+        CMath.V3Interpolate(this.mCamera.GetEye(), destination, this.m_smoothSpeed,smoothedPos);
         smoothedPos.z = this.mCamera.GetEye().z;
 
         //카메라 초기화
         let look = this.m_tempVec3;
         CMath.V3AddV3(smoothedPos, new CVec3(0, 0, -1), look);
         this.mCamera.Init(smoothedPos, look);
-
+        CPoolGeo.RecycleV3(smoothedPos);
         //카메라 업데이트
         this.mCamera.ResetOrthographic();
 

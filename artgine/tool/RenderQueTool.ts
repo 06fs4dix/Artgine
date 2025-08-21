@@ -225,8 +225,7 @@ function Init() {
                 `;
                 countKey="";
             }
-            else
-
+            
             prev = current;
             count = 1;
             

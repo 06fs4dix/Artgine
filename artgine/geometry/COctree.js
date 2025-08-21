@@ -15,15 +15,15 @@ export class COctreeData {
     }
 }
 export class COctree {
-    mCenter = new CVec3();
-    mHalf = new CVec3();
+    mCenter;
+    mHalf;
     mChilde = null;
     mData = null;
     mMax = new CVec3();
     mBound;
     constructor(_center, _half) {
-        this.mCenter.Import(_center);
-        this.mHalf.Import(_half);
+        this.mCenter = _center;
+        this.mHalf = _half;
         this.mBound = new CBound();
     }
     ContainingPoint(point) {

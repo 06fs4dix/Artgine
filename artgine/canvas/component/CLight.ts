@@ -269,6 +269,10 @@ export class CLight extends CCamComp
 	GetColor() : CVec3 {
 		return this.mColor.xyz;
 	}
+	IsColorZero()
+	{
+		return this.mColor.mF32A[0]==0 && this.mColor.mF32A[0]==0 && this.mColor.mF32A[0]==0;
+	}
 	GetInRadius() {
 		return this.mColor.w;
 	}

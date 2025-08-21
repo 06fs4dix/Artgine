@@ -182,8 +182,7 @@ function Init() {
                 `;
                 countKey = "";
             }
-            else
-                prev = current;
+            prev = current;
             count = 1;
         }
         countKey = "";

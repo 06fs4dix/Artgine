@@ -13,7 +13,7 @@ import { CConsol } from '../artgine/basic/CConsol.js';
 import { CCMDMgr } from './CCMDMgr.js';
 import { CPath } from '../artgine/basic/CPath.js';
 import { CString } from '../artgine/basic/CString.js';
-import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr, GetProjName, LoadPluginMap, PluginMapDependenciesChk, WaitForBuild } from './AppFunc.js';
+import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr, GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -481,7 +481,7 @@ pause`;
             const cleanPath = path.replace(/^\/+/, '');
             return `${quote}${cleanUpFolder}/${cleanPath}`;
         });
-        await CCMDMgr.ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder, CPath.PHPC() + _json.projectPath);
+        await ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder, CPath.PHPC() + _json.projectPath);
         bTS = CString.InsertAt(bTS, pos + 12, epStr);
     }
     else {

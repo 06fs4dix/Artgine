@@ -245,10 +245,19 @@ export class CPaint2D extends CPaint
 
 		this.Camera();
 
-		var pos=this.mOwner.GetWMat().xyz;
+		let pos=CPoolGeo.ProductV3();
+		pos.mF32A[0]=this.mOwner.GetWMat().mF32A[12];
+		pos.mF32A[1]=this.mOwner.GetWMat().mF32A[13];
+		pos.mF32A[2]=this.mOwner.GetWMat().mF32A[14];
+		
 		
 		var v0=CMath.V3SubV3(pos,this.mBeforePos);
-		if(v0.IsZero())	return;
+		if(v0.IsZero())	
+		{
+			CPoolGeo.RecycleV3(pos);
+			return;
+		}
+			
 
 		var len=CMath.V3Len(v0);
 		if(len>this.mSize.y)
@@ -263,7 +272,8 @@ export class CPaint2D extends CPaint
 				CMath.V3MulFloat(this.mBeforePos,1-_delay/100*this.mRemoveSpeed));
 		}	
 		
-		this.mStopPos=pos;
+		this.mStopPos.Import(pos);
+		CPoolGeo.RecycleV3(pos);
 	}
 	
 
