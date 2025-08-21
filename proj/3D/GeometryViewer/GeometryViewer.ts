@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 06:37:20';
+const version='2025-08-21 22:26:26';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -580,6 +580,11 @@ if (polygonArr.length === 0) {
 }
 
 new CModalFrameView();
+
+
+
+
+
 
 
 
