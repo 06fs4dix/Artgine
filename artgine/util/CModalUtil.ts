@@ -226,8 +226,8 @@ export class CBGAttachButton extends CModalBackGround
     mSize : CVec2;
     constructor(_id : string,_layer : number=100,_size=new CVec2(600,800))
     {
-        super();
-
+        super(null,_layer);
+        //this.mZIndex=_layer;
         this.mKey=_id+"btn";
         this.SetBody(`<div class='d-flex justify-content-end' style='margin-top:5px;margin-right:10px;'>
                 <button type='button' class='btn btn-success' style='pointer-events:auto;' id='${this.mKey}_jbox'>Button</button>
