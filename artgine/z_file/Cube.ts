@@ -12,7 +12,9 @@ import {
     clamp, V4Mix, V4AddV4, V4MulFloat, Exp2, ToV3,
     TexSizeHalfInt,
     Attribute,
-    Null
+    Null,
+    BranchEnd,
+    BranchBegin
 } from "./Shader"
 
 var worldMat: CMat=Null();
@@ -44,21 +46,33 @@ var totalIntensity : number = 1.0;
 
 var sunColorNum : number = 0.0;
 
+var star : number = 1.0;
 var starCount: number = 2000.0;
 var starSize: number = 0.6;
 var starRandCol: CVec3 = new CVec3(0.2, 0.3, 0.9);
 var starBaseCol: CVec3 = new CVec3(0.5, 0.5, 0.5);
 
-var cloudy : number = 0.5;
-var cloudHeight : number = 15.0;
-var cloudSpeed : number = 1.0;
-var cloudStep : number = 25.0;
-var cloudPlanetCenter : CVec3 = new CVec3(0.0, -450.0, 0.0);
+// 구름 밀도 (0.0: 맑음, 1.0: 매우 흐림)
+var cloud : number = 0.3;
+// 구름 레이어의 두께 (높을수록 구름이 두껍게 보임)
+var cloudHeight : number = 10.0;
+// 구름 이동 속도 (높을수록 빠르게 움직임)
+var cloudSpeed : number = 0.1;
+// 구름 레이마칭 단계 수 (높을수록 품질이 좋지만 성능 저하)
+var cloudStep : number = 50.0;
+// 구름이 존재할 구형 공간의 중심점
+var cloudPlanetCenter : CVec3 = new CVec3(0.0, 0.0, 0.0);
+// 구름이 존재할 수 있는 최대 반지름 (클수록 구름이 멀리 보임)
 var cloudPlanetRadius : number = 500.0;
+// 구름이 어디서 시작해서 어디부터 완전히 나올지 -1~1
+var cloudHorizon : CVec2 = new CVec2(0.0,0.2);
+
+
 
 var sunsetXYRatio : number = 0.0;
 var sunsetRadius : number = 0.25;
 
+var aurora : number = 1.0;
 var auroraColor : CVec3 = new CVec3(2.15, -0.5, 1.2);
 var auroraHeight : number = 0.0;
 var auroraCut : number = 0.0;
@@ -66,43 +80,63 @@ var auroraStep : number = 10.0;
 
 var camPos : CVec3=Null();
 
+
+
+
+//진짜 파란 하늘 - 지평선은 밝고 천정은 적당히 어둡게 조정
+var SkyColorRTable: CMat = new CMat(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.015, 0.01, 0.005);
+var SkyColorGTable: CMat = new CMat(0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01);
+var SkyColorBTable: CMat = new CMat(0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15);
+
+
+
 Build("CubeObject", [], 
     vs_main, [worldMat, viewMat, projectMat], 
     [out_position,to_uvw], 
     ps_main, [out_color]
 );
 
-Build("CubeSkybox", ["sky"], 
+Build("CubeSky", ["sky"], 
     vs_main_camBased, [worldMat, viewMat, projectMat], 
     [out_position,to_uvw], 
     ps_main, [out_color]
 );
+Build("CubeTable", ["table"], 
+    vs_main_camBased, [worldMat, viewMat, projectMat,
+        
+        SkyColorRTable,SkyColorGTable,SkyColorBTable,
 
-Build("CubeSkyGradient", ["gradient"], vs_main_camBased, [
-    worldMat, viewMat, projectMat,
+        time,camPos,
+    ], 
+    [out_position,to_uvw], 
+    ps_main_table, [out_color]
+);
 
-    camPos,
+// Build("CubeSkyGradient", ["gradient"], vs_main_camBased, [
+//     worldMat, viewMat, projectMat,
 
-    horizon, sunset,
+//     camPos,
 
-    ligDir, ligCol, ligCount,
-    totalIntensity,
+//     horizon, sunset,
 
-    RTable, GTable, BTable, 
-    tableNum, colorNum,
+//     ligDir, ligCol, ligCount,
+//     totalIntensity,
 
-    sunRTable, sunGTable, sunBTable, sunColorNum,
+//     RTable, GTable, BTable, 
+//     tableNum, colorNum,
 
-    starCount, starRandCol, starBaseCol, starSize,
+//     sunRTable, sunGTable, sunBTable, sunColorNum,
 
-    cloudy, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius,
+//     starCount, starRandCol, starBaseCol, starSize,
 
-    sunsetXYRatio, sunsetRadius,
+//     cloudy, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius,
 
-    auroraColor, auroraHeight, auroraCut, auroraStep,
+//     sunsetXYRatio, sunsetRadius,
 
-    time
-], [out_position,to_uvw], ps_main_skyGradient, [out_color]);
+//     auroraColor, auroraHeight, auroraCut, auroraStep,
+
+//     time
+// ], [out_position,to_uvw], ps_main_skyGradient, [out_color]);
 
 function vs_main(f3_ver: Vertex3) {
     to_uvw = f3_ver;
@@ -124,17 +158,7 @@ function vs_main_camBased(f3_ver: Vertex3) {
     out_position = new CVec4(P.x, P.y, P.w, P.w);
 }
 
-function RotateByYAxis(_uvw: CVec3, _angle: number): CVec3 {
-    var uvw: CVec3 = _uvw;
-    var cosTime: number = Math.cos(_angle);
-    var sinTime: number = Math.sin(_angle);
-    var prevX: number = uvw.x;
-    uvw.x = cosTime * prevX + sinTime * uvw.z;
-    uvw.z = -sinTime * prevX + cosTime * uvw.z;
-    uvw = V3Nor(uvw);
 
-    return uvw;
-}
 
 function ps_main() {
     var uvw : CVec3 = V3Nor(to_uvw);
@@ -149,6 +173,36 @@ function ps_main() {
     //out_color.rgb=new CVec3(1.0,1.0,1.0);
     out_color.a = 1.0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /************************************************************************************************/
 //cloud
@@ -212,7 +266,7 @@ function GetCloud(_eye : CVec3, _dir : CVec3, _cloudy : number, _height : number
         //calc dens
         var dens : number = GetDensity(pos, wind, _cloudy);
         //y=0에서 자연스럽게 사라지게 하기 위해서 블렌딩함
-        var yBlend : number = smoothstep(0.0, 0.2, _dir.y);
+        var yBlend : number = smoothstep(cloudHorizon.x, cloudHorizon.y, _dir.y);
         dens *= yBlend * yBlend;
 
         //투과도(구름 뒤가 얼마나 보이는지 정도) 너무 낮아지면 브레이크
@@ -398,119 +452,179 @@ function GetSkyByColTable(
     return skyCol;
 }
 
-function ps_main_skyGradient() {
-    //view Direction
+// function ps_main_skyGradient() {
+//     //view Direction
+//     var fragDir: CVec3 = V3Nor(to_uvw);
+
+//     //sunset 초기화
+//     var sunPass : number =  0.0;
+//     var sun_cos : number = -1.0;
+//     var sun_deg : number =  1.0;
+
+//     var ligSum      : CVec3  = new CVec3(0.0, 0.0, 0.0);
+//     var ligMax      : CVec3  = new CVec3(0.0, 0.0, 0.0);
+//     var sunsetCol   : CVec3  = new CVec3(0.0, 0.0, 0.0);
+//     var sunsetBlend : number = 0.0;
+
+//     for(var i = 0; i < TexSizeHalfInt; i++) {
+//         if(i >= FloatToInt(ligCount)) break;
+
+//         var lDir : CVec4 = Sam2DToV4(ligDir, i);
+//         if(lDir.w>1.5) continue;
+
+//         //태양 설정
+//         if(sunPass < 0.5 && lDir.w > -1.5) {
+//             sunPass = 1.0;
+//             sun_cos = V3Dot(lDir.xyz, new CVec3(0.0, 1.0, 0.0));
+//             sun_deg = (1.0 - sun_cos) * 0.5;
+
+//             var sunDir : CVec3 = V3Nor(lDir.xyz);
+//             var sun_a : number = V3Dot(sunDir, new CVec3(0.0, 1.0, 0.0));
+
+//             //석양 색상 테이블 인덱스 계산
+//             var sun_theta   : number = acos(sun_a);
+//             var sunXdir_cos : number = V3Dot(sunDir, fragDir);
+//             var sunXdir_deg : number = (1.0 - sunXdir_cos) * 4.0;
+//             var sunSliceNum : number = sunColorNum - 1.0;
+//             var sunOffset   : number = min(floor(sunSliceNum * sunXdir_deg), sunSliceNum - 1.0);
+    
+//             var sunset_upCol: CVec3 = new CVec3(
+//                 sunRTable[FloatToInt(floor(sunOffset / 4.0))][FloatToInt(mod(sunOffset, 4.0))],
+//                 sunGTable[FloatToInt(floor(sunOffset / 4.0))][FloatToInt(mod(sunOffset, 4.0))],
+//                 sunBTable[FloatToInt(floor(sunOffset / 4.0))][FloatToInt(mod(sunOffset, 4.0))]
+//             );
+//             var sunset_downCol: CVec3 = new CVec3(
+//                 sunRTable[FloatToInt(floor((sunOffset + 1.0) / 4.0))][FloatToInt(mod(sunOffset + 1.0, 4.0))],
+//                 sunGTable[FloatToInt(floor((sunOffset + 1.0) / 4.0))][FloatToInt(mod(sunOffset + 1.0, 4.0))],
+//                 sunBTable[FloatToInt(floor((sunOffset + 1.0) / 4.0))][FloatToInt(mod(sunOffset + 1.0, 4.0))]
+//             );
+    
+//             sunsetCol = V3Mix(sunset_upCol, sunset_downCol, smoothstep(
+//                 sunOffset, sunOffset + 1.0,
+//                 min(sunSliceNum * sunXdir_deg, sunSliceNum - 1.0)
+//             ));
+
+//             sunsetBlend = smoothstep(sunset, 0.0, abs(sun_theta - horizon)) * smoothstep(sunsetRadius, 0.05, sunXdir_deg) * smoothstep(sunsetXYRatio, 0.0, abs(sunDir.y - fragDir.y)) * smoothstep(2.0, 0.0, totalIntensity);
+//         }
+
+//         //일반 광원 색상 누적
+//         var lCol      : CVec4  = Sam2DToV4(ligCol, i);
+//         var dir       : CVec3  = V3Nor(lDir.xyz);
+//         var angle     : number = acos(V3Dot(dir, fragDir));
+//         var intensity : number = V3Len(lCol.rgb);
+//         var col       : CVec3  = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
+//         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
+//         ligMax = V3Max(ligMax, col);
+//         ligSum = V3AddV3(ligSum, col);
+//     }
+
+//     //기본 하늘 색상 계산
+//     var dir_cos         : number = V3Dot(fragDir, new CVec3(0.0, 1.0, 0.0));
+//     var dir_deg         : number = (1.0 - dir_cos) * 0.5;
+//     var table           : number = tableNum * sun_deg;
+//     var tableOffset     : number = min(floor(table), tableNum - 1.0);
+//     var tableFract      : number = fract(table * 0.9999999); //1되면 fract 0되서 문제생김
+//     var nextTableOffset : number = clamp(tableFract < 0.5 ? tableOffset - 1.0 : tableOffset + 1.0, 0.0, tableNum - 1.0);
+
+//     var rTable: CMat = Sam2DToMat(RTable, tableOffset);
+//     var gTable: CMat = Sam2DToMat(GTable, tableOffset);
+//     var bTable: CMat = Sam2DToMat(BTable, tableOffset);
+
+//     var next_rTable: CMat = Sam2DToMat(RTable, nextTableOffset);
+//     var next_gTable: CMat = Sam2DToMat(GTable, nextTableOffset);
+//     var next_bTable: CMat = Sam2DToMat(BTable, nextTableOffset);
+
+//     //skyCol
+//     var skyCol : CVec3 = GetSkyByColTable(dir_deg, colorNum, tableFract, rTable, gTable, bTable, next_rTable, next_gTable, next_bTable);
+//     skyCol = V3Mix(skyCol,sunsetCol,sunsetBlend);
+//     skyCol = V3Max(V3AddV3(skyCol, V3MulFloat(ligSum, 0.2)), ligMax);
+
+//     //하늘임
+//     if(fragDir.y > 0.0) 
+//     {
+//         //밤하늘 처리
+//         if(totalIntensity <= 0.1) {
+//             var nightBlend : number = smoothstep(0.1, 0.0, totalIntensity);
+//             //별이 존재함
+//             if(starSize > 0.0) {
+//                 var star: CVec3 = GetStars(fragDir, starCount, starSize, starBaseCol, starRandCol);
+//                 skyCol = V3AddV3(skyCol, V3MulFloat(star, nightBlend));
+//             }
+
+//             //오로라
+//             var aurora : CVec4 = Aurora(fragDir, auroraHeight, auroraCut, auroraColor, auroraStep);
+//             skyCol = V3AddV3(V3MulFloat(skyCol, (1.0 - aurora.w)), V3MulFloat(aurora.rgb, nightBlend));
+//         }
+
+//         //cloud
+//         if(cloudy > 0.0) {
+//             var cloud: CVec4 = GetCloud(camPos, fragDir, cloudy, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius);
+
+//             //멀리 있는 구름 자연스럽게 자름
+//             skyCol = V3Mix(skyCol, V3MulFloat(cloud.rgb, 1.0 / max(1e-5, cloud.w)), cloud.w);
+//         }
+//     }
+
+//     out_color.rgb = skyCol;
+//     out_color.w = 1.0;
+// }
+
+
+function ps_main_table() {
     var fragDir: CVec3 = V3Nor(to_uvw);
-
-    //sunset 초기화
-    var sunPass : number =  0.0;
-    var sun_cos : number = -1.0;
-    var sun_deg : number =  1.0;
-
-    var ligSum      : CVec3  = new CVec3(0.0, 0.0, 0.0);
-    var ligMax      : CVec3  = new CVec3(0.0, 0.0, 0.0);
-    var sunsetCol   : CVec3  = new CVec3(0.0, 0.0, 0.0);
-    var sunsetBlend : number = 0.0;
-
-    for(var i = 0; i < TexSizeHalfInt; i++) {
-        if(i >= FloatToInt(ligCount)) break;
-
-        var lDir : CVec4 = Sam2DToV4(ligDir, i);
-        if(lDir.w>1.5) continue;
-
-        //태양 설정
-        if(sunPass < 0.5 && lDir.w > -1.5) {
-            sunPass = 1.0;
-            sun_cos = V3Dot(lDir.xyz, new CVec3(0.0, 1.0, 0.0));
-            sun_deg = (1.0 - sun_cos) * 0.5;
-
-            var sunDir : CVec3 = V3Nor(lDir.xyz);
-            var sun_a : number = V3Dot(sunDir, new CVec3(0.0, 1.0, 0.0));
-
-            //석양 색상 테이블 인덱스 계산
-            var sun_theta   : number = acos(sun_a);
-            var sunXdir_cos : number = V3Dot(sunDir, fragDir);
-            var sunXdir_deg : number = (1.0 - sunXdir_cos) * 4.0;
-            var sunSliceNum : number = sunColorNum - 1.0;
-            var sunOffset   : number = min(floor(sunSliceNum * sunXdir_deg), sunSliceNum - 1.0);
     
-            var sunset_upCol: CVec3 = new CVec3(
-                sunRTable[FloatToInt(floor(sunOffset / 4.0))][FloatToInt(mod(sunOffset, 4.0))],
-                sunGTable[FloatToInt(floor(sunOffset / 4.0))][FloatToInt(mod(sunOffset, 4.0))],
-                sunBTable[FloatToInt(floor(sunOffset / 4.0))][FloatToInt(mod(sunOffset, 4.0))]
-            );
-            var sunset_downCol: CVec3 = new CVec3(
-                sunRTable[FloatToInt(floor((sunOffset + 1.0) / 4.0))][FloatToInt(mod(sunOffset + 1.0, 4.0))],
-                sunGTable[FloatToInt(floor((sunOffset + 1.0) / 4.0))][FloatToInt(mod(sunOffset + 1.0, 4.0))],
-                sunBTable[FloatToInt(floor((sunOffset + 1.0) / 4.0))][FloatToInt(mod(sunOffset + 1.0, 4.0))]
-            );
+    // 방향을 16개 구간으로 변환
+    var dir_cos: number = V3Dot(fragDir, new CVec3(0.0, 1.0, 0.0));
+    var dir_deg: number = (1.0 - dir_cos) * 0.5;
     
-            sunsetCol = V3Mix(sunset_upCol, sunset_downCol, smoothstep(
-                sunOffset, sunOffset + 1.0,
-                min(sunSliceNum * sunXdir_deg, sunSliceNum - 1.0)
-            ));
+    // 16개 방향 중 현재 방향에 해당하는 인덱스 계산
+    var directionIndex: number = floor(dir_deg * 14.0);
+    
+    
+    
+    // 현재 구간과 다음 구간의 색상 가져오기
+    var currentColor: CVec3 = new CVec3(
+        SkyColorRTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))],
+        SkyColorGTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))],
+        SkyColorBTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))]
+    );
+    
+    // 다음 구간의 색상 (16번째 구간이면 0번째 구간으로)
+    var nextIndex: number = directionIndex + 1.0;
+    var nextColor: CVec3 = new CVec3(
+        SkyColorRTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))],
+        SkyColorGTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))],
+        SkyColorBTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))]
+    );
+    
+    
+    // 현재 구간 내에서의 위치 (0.0 ~ 1.0)
+    var t: number = fract(dir_deg * 14.0);
 
-            sunsetBlend = smoothstep(sunset, 0.0, abs(sun_theta - horizon)) * smoothstep(sunsetRadius, 0.05, sunXdir_deg) * smoothstep(sunsetXYRatio, 0.0, abs(sunDir.y - fragDir.y)) * smoothstep(2.0, 0.0, totalIntensity);
-        }
+    // 두 색상을 선형 보간으로 부드럽게 혼합
+    var finalColor: CVec3 = V3Mix(currentColor, nextColor, t);
+    
+    var value: CVec4;
+    
+    
+    
+    BranchBegin("star","S",[star,starCount, starSize, starBaseCol, starRandCol]);
+    value.xyz = GetStars(fragDir, starCount, starSize, starBaseCol, starRandCol);
+    finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, star));
+    BranchEnd();
 
-        //일반 광원 색상 누적
-        var lCol      : CVec4  = Sam2DToV4(ligCol, i);
-        var dir       : CVec3  = V3Nor(lDir.xyz);
-        var angle     : number = acos(V3Dot(dir, fragDir));
-        var intensity : number = V3Len(lCol.rgb);
-        var col       : CVec3  = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
-        col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
-        ligMax = V3Max(ligMax, col);
-        ligSum = V3AddV3(ligSum, col);
-    }
+    
+    BranchBegin("aurora","A",[aurora,auroraHeight, auroraCut, auroraColor, auroraStep]);
+    value = Aurora(fragDir, auroraHeight, auroraCut, auroraColor, auroraStep);
+    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), V3MulFloat(value.rgb, aurora));
+    BranchEnd();
+    BranchBegin("cloud","C",[cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius,cloudHorizon]);
+    value = GetCloud(camPos, fragDir, cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius);
+        //멀리 있는 구름 자연스럽게 자름
+    finalColor = V3Mix(finalColor, V3MulFloat(value.rgb, 1.0 / max(1e-5, value.w)), value.w);
+    BranchEnd();
 
-    //기본 하늘 색상 계산
-    var dir_cos         : number = V3Dot(fragDir, new CVec3(0.0, 1.0, 0.0));
-    var dir_deg         : number = (1.0 - dir_cos) * 0.5;
-    var table           : number = tableNum * sun_deg;
-    var tableOffset     : number = min(floor(table), tableNum - 1.0);
-    var tableFract      : number = fract(table * 0.9999999); //1되면 fract 0되서 문제생김
-    var nextTableOffset : number = clamp(tableFract < 0.5 ? tableOffset - 1.0 : tableOffset + 1.0, 0.0, tableNum - 1.0);
-
-    var rTable: CMat = Sam2DToMat(RTable, tableOffset);
-    var gTable: CMat = Sam2DToMat(GTable, tableOffset);
-    var bTable: CMat = Sam2DToMat(BTable, tableOffset);
-
-    var next_rTable: CMat = Sam2DToMat(RTable, nextTableOffset);
-    var next_gTable: CMat = Sam2DToMat(GTable, nextTableOffset);
-    var next_bTable: CMat = Sam2DToMat(BTable, nextTableOffset);
-
-    //skyCol
-    var skyCol : CVec3 = GetSkyByColTable(dir_deg, colorNum, tableFract, rTable, gTable, bTable, next_rTable, next_gTable, next_bTable);
-    skyCol = V3Mix(skyCol,sunsetCol,sunsetBlend);
-    skyCol = V3Max(V3AddV3(skyCol, V3MulFloat(ligSum, 0.2)), ligMax);
-
-    //하늘임
-    if(fragDir.y > 0.0) 
-    {
-        //밤하늘 처리
-        if(totalIntensity <= 0.1) {
-            var nightBlend : number = smoothstep(0.1, 0.0, totalIntensity);
-            //별이 존재함
-            if(starSize > 0.0) {
-                var star: CVec3 = GetStars(fragDir, starCount, starSize, starBaseCol, starRandCol);
-                skyCol = V3AddV3(skyCol, V3MulFloat(star, nightBlend));
-            }
-
-            //오로라
-            var aurora : CVec4 = Aurora(fragDir, auroraHeight, auroraCut, auroraColor, auroraStep);
-            skyCol = V3AddV3(V3MulFloat(skyCol, (1.0 - aurora.w)), V3MulFloat(aurora.rgb, nightBlend));
-        }
-
-        //cloud
-        if(cloudy > 0.0) {
-            var cloud: CVec4 = GetCloud(camPos, fragDir, cloudy, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius);
-
-            //멀리 있는 구름 자연스럽게 자름
-            skyCol = V3Mix(skyCol, V3MulFloat(cloud.rgb, 1.0 / max(1e-5, cloud.w)), cloud.w);
-        }
-    }
-
-    out_color.rgb = skyCol;
-    out_color.w = 1.0;
+    out_color.rgb = finalColor;
+    //out_color.rgb = new CVec3(1.0,1.0,1.0);
+    out_color.a = 1.0;
 }

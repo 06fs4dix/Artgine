@@ -1,4 +1,4 @@
-const version = '2025-08-21 06:36:55';
+const version = '2025-08-21 21:56:21';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -31,7 +31,7 @@ import { CUIText } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subje
 var Can3D = gAtl.NewCanvas('Can3D');
 Can3D.SetCameraKey("3D");
 Can3D.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
-gAtl.Frame().Dev().SetClearColor(true, new CVec4(1, 1, 1, 0));
+gAtl.Frame().Dev().SetClearColor(true, new CVec4(0, 0, 0, 0));
 let sub = Can3D.Push(new CSubject());
 sub.SetSca(new CVec3(0.1, 0.1, 0.1));
 sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));

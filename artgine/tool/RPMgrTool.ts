@@ -643,46 +643,41 @@ async function RPToolLeftInit()
     gLeftInit=true;
     gAtl.Canvas("RPTool").Clear();
     const leftPanel = CUtil.ID("RPLeft_div");
-    const marginX = 30;
-    const marginY = 30;
-
+    const marginX = 50;
+    const marginY = 50;
     let rpArr: Array<{ key: string; value: CRenderPass }> = [];
 
-    // for (let rp of gRPMgr.mRPArr) {
-    //     rpArray.push({ key: "RP : " + rp.ObjHash(), value: rp });
-    // }
-    // for (let suf of gRPMgr.mSufArr) {
-    //     rpArray.push({ key: "Suf : " + suf.ObjHash(), value: suf.GetRP() });
-    // }
-    for (let i=0;i<gTexArr.length;++i) 
-    {
-        let texKey=gTexArr[i];
-        const simpleHtml = `
-            <div class="card mb-2" id="cardLeft_tex_${texKey}">
-                <div class="card-header fw-bold" style="pointer-events:auto; cursor:pointer;">
-                    <span style="color: green;">CTexture</span> : 
-                </div>
-                <div class="card-body p-2 small text-muted">
-                    ${texKey}
-                </div>
-            </div>
-        `;
+
+
+    // for (let i=0;i<gTexArr.length;++i) 
+    // {
+    //     let texKey=gTexArr[i];
+    //     const simpleHtml = `
+    //         <div class="card mb-2" id="cardLeft_tex_${texKey}">
+    //             <div class="card-header fw-bold" style="pointer-events:auto; cursor:pointer;">
+    //                 <span style="color: green;">CTexture</span> : 
+    //             </div>
+    //             <div class="card-body p-2 small text-muted">
+    //                 ${texKey}
+    //             </div>
+    //         </div>
+    //     `;
         
 
-        let sub = gAtl.Canvas("RPTool").Push(new CSubject());
-        let html = CDomFactory.DataToDom(simpleHtml);
-        html.style.pointerEvents = "auto"; // 클릭 가능하게 설정
-        html.style.cursor = "pointer";     // 마우스 커서 변경
-        let pt=sub.PushComp(new CPaintHTML(html, null, leftPanel));
-        pt.SetSize(new CVec2(200,100));
+    //     let sub = gAtl.Canvas("RPTool").Push(new CSubject());
+    //     let html = CDomFactory.DataToDom(simpleHtml);
+    //     html.style.pointerEvents = "auto"; // 클릭 가능하게 설정
+    //     html.style.cursor = "pointer";     // 마우스 커서 변경
+    //     let pt=sub.PushComp(new CPaintHTML(html, null, leftPanel));
+    //     pt.SetSize(new CVec2(200,100));
         
-        sub.SetPos(new CVec3(-100-marginX, -i*(100+marginY), 0));
+    //     sub.SetPos(new CVec3(-100-marginX, -i*(100+marginY), 0));
 
-        html.setAttribute('draggable', 'true');
-        html.addEventListener('dragstart', (ev) => {
-            ev.dataTransfer?.setData('sourceKey', texKey); // 오른쪽 카드의 key/hash
-        });
-    }
+    //     html.setAttribute('draggable', 'true');
+    //     html.addEventListener('dragstart', (ev) => {
+    //         ev.dataTransfer?.setData('sourceKey', texKey); // 오른쪽 카드의 key/hash
+    //     });
+    // }
     for (let rp of gRPMgr.mRPArr) {
         rpArr.push({ key: rp.ObjHash(), value: rp });
     }
@@ -693,6 +688,51 @@ async function RPToolLeftInit()
     // ✅ 우선순위 오름차순 정렬
     rpArr.sort((a, b) => a.value.mPriority - b.value.mPriority);
 
+    let rp2Arr: Array<Array<{ key: string; value: CRenderPass }>> = [];
+    
+    // rp2Arr 구성 - 의존성에 따른 계층적 배열 생성
+    for (let { key, value } of rpArr) {
+        // in 데이터 추출 (cardBodyTop에서)
+        let inDependencies: string[] = [];
+        for (let sa of value.mShaderAttr) {
+            if (sa.mType == -2) {
+                // sa.mKey가 in 데이터 (참조하는 대상)
+                inDependencies.push(sa.mKey);
+            }
+        }
+        
+        // out 데이터 추출 (cardBodyBottom에서)
+        let outData = value.mRenderTarget;
+        
+        // 의존성이 있는지 확인
+        if (inDependencies.length > 0) {
+            // 의존성이 있는 경우, 참조하는 배열 다음에 배치
+            let maxLevel = -1;
+            for (let inDep of inDependencies) {
+                // 참조하는 대상이 이미 rp2Arr에 있는지 확인
+                // inDep은 텍스처 이름, item.value.mRenderTarget과 비교해야 함
+                for (let level = 0; level < rp2Arr.length; level++) {
+                    if (rp2Arr[level].some(item => item.value.mRenderTarget === inDep)) {
+                        maxLevel = Math.max(maxLevel, level);
+                    }
+                }
+            }
+            
+            // 참조하는 배열 다음 레벨에 배치
+            let targetLevel = maxLevel + 1;
+            if (!rp2Arr[targetLevel]) {
+                rp2Arr[targetLevel] = [];
+            }
+            rp2Arr[targetLevel].push({ key, value });
+        } else {
+            // 의존성이 없는 경우 0번 배열에 배치
+            if (!rp2Arr[0]) {
+                rp2Arr[0] = [];
+            }
+            rp2Arr[0].push({ key, value });
+        }
+    }
+    
     // 카드 생성
     for (let { key, value } of rpArr) 
     {
@@ -778,112 +818,77 @@ async function RPToolLeftInit()
         sub.SetPos(new CVec3(0, 0, 0));
 
 
-        // function HandleCardDrop(sourceKey: string, targetKey: string) {
-        //     console.log(`드래그 소스: ${sourceKey}, 드롭 타겟: ${targetKey}`);
         
-        // }
-        html.setAttribute('draggable', 'true');
-        html.addEventListener('dragstart', (ev) => {
-            ev.dataTransfer?.setData('sourceKey', key); // 오른쪽 카드의 key/hash
-        });
-        html.addEventListener('dragover', (ev) => ev.preventDefault());
-        html.addEventListener('drop', (ev) => {
-            ev.preventDefault();
-            const sourceKey = ev.dataTransfer?.getData('sourceKey');
-            const targetKey = key;
-            if (sourceKey!=targetKey) 
-            {
-                
-                const sourceRP = rpArr.find(r => r.key === sourceKey)?.value;
-                const targetRP = rpArr.find(r => r.key === targetKey)?.value;
-                if(sourceRP==null)
-                    targetRP.mRenderTarget=sourceKey;
-                else if(sourceRP.mRenderTarget!="")
-                    targetRP.mShaderAttr.push(new CShaderAttr(0,sourceRP.mRenderTarget));
-                
-                RPToolLeftInit();
-                //HandleCardDrop(sourceKey, targetKey); 
-            }
-        });
     }
     
-    // 레이아웃 계산
-    let lastPriority: number | null = null;
+    // 레이아웃 계산 - rp2Arr를 사용한 2차원 배열 레이아웃
     let currentX = 0;
-    let currentY = 0;
     let columnMaxWidth = 0;
     
+    for (let level = 0; level < rp2Arr.length; level++) {
+        let currentY = 0;
+        let levelMaxWidth = 0;
+        
+        for (let { key, value } of rp2Arr[level]) {
+            let sub = gAtl.Canvas("RPTool").Find(key);
+            let pt = sub.FindComp(CPaintHTML);
+            if(pt==null)
+                {
+                    CAlert.E(key+"error");
+                    gAtl.Canvas("RPTool").Find(key);
+                }    
+            await CChecker.Exe(
+                async () => (pt.mAttach ? false : true),1
+            );
 
-    // CChecker.Exe(
-    //     async () => (gAtl.Canvas("RPTool").mPushObj.Size()==0 ? false : true),1
-    // );
-   
-    for (let { key, value } of rpArr) {
-        let sub = gAtl.Canvas("RPTool").Find(key);
-        let pt = sub.FindComp(CPaintHTML);
-        if(pt==null)
-            {
-                CAlert.E(key+"error");
-                gAtl.Canvas("RPTool").Find(key);
-            }    
-        await CChecker.Exe(
-            async () => (pt.mAttach ? false : true),1
-        );
-
-        let size = new CVec2();
-        let html = pt.GetElement();
-        size.x = html.clientWidth+10 || 150;
-        size.y = html.clientHeight+10 || 100;
-        pt.SetSize(size);
-        pt.SetPivot(new CVec3(1,-1,1));
-        //pt.SetPos(new CVec3(size.x*0.5,-size.y*0.5));
-
-        // 우선순위가 바뀌면 새로운 열 시작
-        if (lastPriority === null || value.mPriority !== lastPriority) {
-            if (lastPriority !== null) {
-                currentX += columnMaxWidth + marginX;
-            }
-            lastPriority = value.mPriority;
-            columnMaxWidth = size.x;
-            currentY = 0;
-        } else {
+            let size = new CVec2();
+            let html = pt.GetElement();
+            size.x = html.clientWidth+10 || 150;
+            size.y = html.clientHeight+10 || 100;
+            pt.SetSize(size);
+            pt.SetPivot(new CVec3(1,-1,1));
+            
+            // 같은 레벨 내에서는 세로로 정렬
+            sub.SetPos(new CVec3(currentX, -currentY, 0));
             currentY += size.y + marginY;
-            columnMaxWidth = Math.max(columnMaxWidth, size.x);
-        }
+            levelMaxWidth = Math.max(levelMaxWidth, size.x);
 
-        sub.SetPos(new CVec3(currentX, -currentY, 0));
+            // 카드 헤더 클릭 이벤트
+            let headerDiv = html.querySelector(".card-header") as HTMLElement;
+            headerDiv.addEventListener("click", () => {
+                let type = headerDiv.getAttribute("data-type"); // "rp" or "suf"
+                let id = headerDiv.getAttribute("data-key");    // key
 
-        // 카드 헤더 클릭 이벤트
-        let headerDiv = html.querySelector(".card-header") as HTMLElement;
-        headerDiv.addEventListener("click", () => {
-            let type = headerDiv.getAttribute("data-type"); // "rp" or "suf"
-            let id = headerDiv.getAttribute("data-key");    // key
+                // 현재 활성화된 탭 검사
+                let activeTab = document.querySelector(".nav-tabs .nav-link.active") as HTMLElement;
+                let targetTab = document.getElementById(type === "rp" ? "tab-rp" : "tab-suf") as HTMLElement;
 
-            // 현재 활성화된 탭 검사
-            let activeTab = document.querySelector(".nav-tabs .nav-link.active") as HTMLElement;
-            let targetTab = document.getElementById(type === "rp" ? "tab-rp" : "tab-suf") as HTMLElement;
-
-            if (targetTab && targetTab !== activeTab) {
-                targetTab.click();
-            }
-
-            setTimeout(() => {
-                let cardElem = document.getElementById(`cardRight_${id}`) as HTMLElement;
-
-                if (cardElem) {
-                    // 트리거 찾기
-                    const trigger = cardElem.querySelector('[data-bs-toggle="collapse"]') as HTMLElement;
-                    // 트리거가 있는 경우
-                    if (trigger) {
-                        let isExpanded = trigger.getAttribute('aria-expanded') === 'true';
-                        if (!isExpanded) {
-                            trigger.click();
-                        }
-                    }
-                    cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
+                if (targetTab && targetTab !== activeTab) {
+                    targetTab.click();
                 }
-            }, 100);
-        });
+
+                setTimeout(() => {
+                    let cardElem = document.getElementById(`cardRight_${id}`) as HTMLElement;
+
+                    if (cardElem) {
+                        // 트리거 찾기
+                        const trigger = cardElem.querySelector('[data-bs-toggle="collapse"]') as HTMLElement;
+                        // 트리거가 있는 경우
+                        if (trigger) {
+                            let isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+                            if (!isExpanded) {
+                                trigger.click();
+                            }
+                        }
+                        cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }, 100);
+            });
+        }
+        
+        // 다음 레벨로 넘어갈 때는 가로로 이동
+        currentX += levelMaxWidth + marginX;
+        columnMaxWidth = Math.max(columnMaxWidth, levelMaxWidth);
     }
     gLeftInit=false;
     RPToolLeftLine();
@@ -916,7 +921,7 @@ function RPToolLeftLine()
 
     for (let { key, value } of rpArr) 
     {
-        
+        let color=new CColor(Math.random(),Math.random(),Math.random(),CColor.eModel.RGBAdd); 
         for (let sa of value.mShaderAttr) 
         {
             if(sa.mType==-2)
@@ -937,7 +942,7 @@ function RPToolLeftLine()
                     
                     trail.SetStaticPosList([CMath.V3AddV3(org.GetPos(),new CVec3(orgSize.x*0.5,-orgSize.y*0.5)),
                         CMath.V3AddV3(tar.GetPos(),new CVec3(tarSize.x*0.5,-tarSize.y*0.5))]);
-                    trail.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBAdd));
+                    trail.SetColorModel(color);
                 }
             }
             

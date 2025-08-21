@@ -27,7 +27,7 @@ export class CLoadingBack extends CModalBackGround {
     mRemainingFun;
     mUpdateInterval;
     constructor(_id, _remainingFun, _context = null) {
-        super(_id);
+        super(_id, 5000);
         this.mRemainingFun = _remainingFun;
         this.SetBG(Bootstrap.eColor.dark);
         this.SetSize(window.innerWidth, window.innerHeight);

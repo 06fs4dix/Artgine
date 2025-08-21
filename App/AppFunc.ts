@@ -372,3 +372,130 @@ function copyFolderRecursive(src: string, dest: string) {
 		}
 	}
 }
+
+/**
+ * 지정된 폴더의 모든 TypeScript 파일에서 artgine/ 경로를 상위 폴더 경로로 변경
+ * @param workFolder 작업할 폴더 경로
+ * @param upFolder 상위 폴더명 (예: "../artgine")
+ */
+export async function ReplaceArtginePathsInFolder(workFolder: string, upFolder: string,projPath : string): Promise<void> {
+    try {
+        // console.log(`작업 폴더: ${workFolder}`);
+        // console.log(`상위 폴더: ${upFolder}`);
+        
+        // 폴더가 존재하는지 확인
+        if (!fs.existsSync(workFolder)) {
+            console.error(`폴더가 존재하지 않습니다: ${workFolder}`);
+            return;
+        }
+
+        // 모든 .ts 파일 찾기
+        const tsFiles = FindTSFiles(workFolder);
+        //console.log(`찾은 TypeScript 파일: ${tsFiles.length}개`);
+
+        if (tsFiles.length === 0) {
+            console.log('처리할 TypeScript 파일이 없습니다.');
+            return;
+        }
+
+        // 각 파일 처리
+        let processedCount = 0;
+        let modifiedCount = 0;
+
+        for (const filePath of tsFiles) {
+            try {
+                const modified = await ReplaceArtginePathsInFile(filePath, upFolder,projPath);
+                processedCount++;
+                if (modified) {
+                    modifiedCount++;
+                    //console.log(`✅ 수정됨: ${path.relative(workFolder, filePath)}`);
+                }
+            } catch (error) {
+                console.error(`❌ 파일 처리 실패 ${filePath}:`, error);
+            }
+        }
+
+        
+
+    } catch (error) {
+        console.error('ReplaceArtginePathsInFolder 실행 중 오류:', error);
+    }
+}
+
+
+function FindTSFiles(folderPath: string): string[] {
+    const tsFiles: string[] = [];
+
+    const searchRecursive = (currentPath: string) => {
+        const items = fs.readdirSync(currentPath);
+
+        for (const item of items) {
+            const fullPath = path.join(currentPath, item);
+            const stat = fs.statSync(fullPath);
+
+            if (stat.isDirectory()) {
+                // 특정 폴더는 제외 (node_modules, .git 등)
+                if (!['node_modules', '.git', 'dist', 'build'].includes(item)) {
+                    searchRecursive(fullPath);
+                }
+            } else if (stat.isFile() && item.endsWith('.ts')) {
+                tsFiles.push(fullPath);
+            }
+        }
+    };
+
+    searchRecursive(folderPath);
+    return tsFiles;
+}
+
+async function ReplaceArtginePathsInFile(filePath: string, upFolder: string,projPath : string): Promise<boolean> {
+    try {
+        let additionalLevels = 0;
+
+        // 파일 읽기
+        const originalContent = fs.readFileSync(filePath, 'utf8');
+        if(upFolder.indexOf("http")==-1)
+        {
+            // 경로 구분자를 /로 통일
+            const normalizedFilePath = filePath.replace(/\\/g, '/');
+            const normalizedProjPath = projPath.replace(/\\/g, '/');
+            
+            // 추가 경로 횟수 계산
+            const filePathParts = normalizedFilePath.split('/');
+            const projPathParts = normalizedProjPath.split('/');
+            
+            // projPath 이후의 추가 디렉토리 개수 계산
+            if (filePathParts.length > projPathParts.length) {
+                additionalLevels = filePathParts.length - projPathParts.length-1;
+            }
+        }
+        
+        
+        // artgine/ 또는 plugin/ 경로 치환
+        const modifiedContent = originalContent.replace(
+            /(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g,
+            (match, quote, path) => {
+                // upFolder 끝 / 제거, path 앞 / 제거 후 결합
+                const cleanUpFolder = upFolder.replace(/\/+$/, '');
+                const cleanPath = path.replace(/^\/+/, '');
+                
+                // 추가 경로 횟수만큼 ../ 추가
+                const upPath = '../'.repeat(additionalLevels);
+                
+                return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
+            }
+        );
+
+        // 내용이 변경되었는지 확인
+        if (originalContent !== modifiedContent) {
+            // 수정된 내용 저장
+            fs.writeFileSync(filePath, modifiedContent, 'utf8');
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        console.error(`파일 처리 중 오류 ${filePath}:`, error);
+        return false;
+    }
+}

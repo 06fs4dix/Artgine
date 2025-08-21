@@ -167,9 +167,11 @@ export class CMath
 	}
 	static V3Distance(_a:CVec3,_b:CVec3)
 	{
-		//  if(_a.Ptr()!=null && _b.Ptr()!=null)
-		//  	CWASM.V3Distance(_a.Ptr(),_b.Ptr());
-		return CMath.V3Len(CMath.V3SubV3(_a, _b));
+		let dummy=CPoolGeo.ProductV3();
+		CMath.V3SubV3(_a, _b,dummy);
+		let len=CMath.V3Len(dummy);
+		CPoolGeo.RecycleV3(dummy);
+		return len;
 	}
 	//타일러 급수 기반
 	static ApproxSqrt(x: number): number {

@@ -32,7 +32,7 @@ export class CModal {
     mResizeObserver;
     mKey = "";
     mSort = CModal.eSort.Auto;
-    mZIndex = 1000;
+    mZIndex = 0;
     mCloseToHide = false;
     mOT = null;
     mOL = null;
@@ -331,7 +331,10 @@ export class CModal {
             this.mCard.style.left = "0px";
         }
         else {
-            this.mCard.style.width = this.mOW + "px";
+            if (this.mFull)
+                this.mCard.style.width = w + "px";
+            else
+                this.mCard.style.width = this.mOW + "px";
             let right = this.mCard.offsetLeft + this.mOW;
             if (w < right)
                 this.mCard.style.left = (w - this.mOW) + "px";
@@ -344,7 +347,10 @@ export class CModal {
             this.mCard.style.top = "0px";
         }
         else {
-            this.mCard.style.height = this.mOH + "px";
+            if (this.mFull)
+                this.mCard.style.height = h + "px";
+            else
+                this.mCard.style.height = this.mOH + "px";
             let bottom = this.mCard.offsetTop + this.mOH;
             if (h < bottom)
                 this.mCard.style.top = (h - this.mOH) + "px";
@@ -445,6 +451,7 @@ export class CConfirm extends CModal {
         this.mResize = false;
         this.mLimitPush = true;
         this.SetFooter("");
+        this.SetZIndex(CModal.eSort.Top);
         super.Open(_startPos);
         let buttonContainer = document.createElement("div");
         buttonContainer.className = "d-flex justify-content-between";

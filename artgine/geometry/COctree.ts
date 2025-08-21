@@ -25,17 +25,20 @@ export class COctreeData
 }
 export class COctree 
 {
-	mCenter : CVec3 = new CVec3();
-	mHalf : CVec3 = new CVec3();
+	mCenter : CVec3;
+	mHalf : CVec3;
 	mChilde : Array<COctree> = null;
 	mData : Array<COctreeData> = null;
     mMax : CVec3 = new CVec3();
     mBound : CBound;
     //m_preCollusion=true;
 
+    //복사로 사용한다 위험한데 최적화
     constructor(_center:CVec3, _half:CVec3) {
-        this.mCenter.Import(_center);
-        this.mHalf.Import(_half);
+        // this.mCenter.Import(_center);
+        // this.mHalf.Import(_half);
+        this.mCenter=_center;
+        this.mHalf=_half;
         this.mBound=new CBound();
 
     }

@@ -2,6 +2,7 @@ import { CUpdate } from "../basic/Basic.js";
 import { CAlert } from "../basic/CAlert.js";
 import { CObject } from "../basic/CObject.js";
 import { CMath } from "../geometry/CMath.js";
+import { CPoolGeo } from "../geometry/CPoolGeo.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CInput } from "../system/CInput.js";
 export class CCamCon extends CObject {
@@ -311,11 +312,13 @@ export class CCamCon2DFollow extends CCamCon2D {
             this.mPos = this.mCamera.GetEye().Export();
         let destination = this.m_tempVec3;
         CMath.V3AddV3(this.mPos, this.m_offset, destination);
-        let smoothedPos = CMath.V3Interpolate(this.mCamera.GetEye(), destination, this.m_smoothSpeed);
+        let smoothedPos = CPoolGeo.ProductV3();
+        CMath.V3Interpolate(this.mCamera.GetEye(), destination, this.m_smoothSpeed, smoothedPos);
         smoothedPos.z = this.mCamera.GetEye().z;
         let look = this.m_tempVec3;
         CMath.V3AddV3(smoothedPos, new CVec3(0, 0, -1), look);
         this.mCamera.Init(smoothedPos, look);
+        CPoolGeo.RecycleV3(smoothedPos);
         this.mCamera.ResetOrthographic();
     }
 }

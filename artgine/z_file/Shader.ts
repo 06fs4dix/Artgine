@@ -88,7 +88,12 @@ export class CVec4{
     constructor(_x : CVec4);
     constructor(_x : CVec4|CVec3|CVec2|number=null ,_y? : CVec3|CVec2|number,_z? : CVec2|number,_w? : number){this.x=_x;this.y=_y;}
 }
-export class CMat{constructor(_x){}public b;}//4*4
+export class CMat{
+    constructor(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15);
+    constructor(_x,);
+    constructor(_x){}
+    public b;
+}//4*4
 export class CMat3{
     public a;
     constructor(_x);

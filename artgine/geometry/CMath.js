@@ -124,7 +124,11 @@ export class CMath {
         return new CVec4(v.x * s, v.y * s, v.z * s, v.w);
     }
     static V3Distance(_a, _b) {
-        return CMath.V3Len(CMath.V3SubV3(_a, _b));
+        let dummy = CPoolGeo.ProductV3();
+        CMath.V3SubV3(_a, _b, dummy);
+        let len = CMath.V3Len(dummy);
+        CPoolGeo.RecycleV3(dummy);
+        return len;
     }
     static ApproxSqrt(x) {
         return x * (0.41731 + 0.59016 / (x + 1e-6));

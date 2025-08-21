@@ -46,7 +46,7 @@ export class CLoadingBack extends CModalBackGround
 
     constructor(_id: string,_remainingFun: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,_context : HTMLElement=null)
     {
-        super(_id);
+        super(_id,5000);
 
         this.mRemainingFun = _remainingFun;
         

@@ -241,7 +241,7 @@ export class CShadowPlane extends CPaint2D {
         const directs = [];
         const points = [];
         for (let lig of this.mLIGSet) {
-            if (lig.IsEnable() == false || lig.GetColor().IsZero())
+            if (lig.IsEnable() == false || lig.IsColorZero())
                 continue;
             if (this.mLIGKeys.length) {
                 if (this.mLIGKeys.includes(lig.Key()) || this.mLIGKeys.includes(lig.GetOwner().Key())) { }
@@ -346,7 +346,7 @@ export class CShadowPlane extends CPaint2D {
             alpha = 1;
             height = fBound.GetSize().y * this.mShadowLen;
         }
-        if (lig.GetColor().IsZero())
+        if (lig.IsColorZero())
             alpha = 0;
         let dot = CMath.V3Dot(new CVec3(0, 1, 0), dir);
         dot *= 0.1;
