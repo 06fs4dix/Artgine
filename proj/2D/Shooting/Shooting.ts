@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 06:31:47';
+const version='2025-08-22 07:52:48';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -81,6 +81,10 @@ import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgi
 
 
 gAtl.Brush().GetCam2D().SetSize(600,800);
+gAtl.Frame().PushEvent(CEvent.eType.Init,()=>{
+    gAtl.Frame().Load().Load("Res/shmup_effects/explosion1.png");
+    gAtl.Frame().Load().Load("Res/shmup_effects/flash5_64x64x4x2.png");
+});
 
 let back=Main.Push(new BackGround());
 
@@ -341,6 +345,12 @@ Option_btn.SetContent(`
 <div>
     블룸,기본 설정 가능
 </div>`);
+
+
+
+
+
+
 
 
 

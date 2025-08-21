@@ -1,4 +1,4 @@
-const version = '2025-08-21 06:31:47';
+const version = '2025-08-22 07:52:48';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
@@ -64,6 +64,10 @@ import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subj
 import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 gAtl.Brush().GetCam2D().SetSize(600, 800);
+gAtl.Frame().PushEvent(CEvent.eType.Init, () => {
+    gAtl.Frame().Load().Load("Res/shmup_effects/explosion1.png");
+    gAtl.Frame().Load().Load("Res/shmup_effects/flash5_64x64x4x2.png");
+});
 let back = Main.Push(new BackGround());
 let gStartBtn = new CModalEvent("StartBtn");
 gStartBtn.SetBody(`
