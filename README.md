@@ -6,9 +6,12 @@
  ## Tutorial
   - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
   - **3DSample**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/3DSample/3DSample.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DSample/3DSample.html)
+  - **Skybox**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html)
+  - **Wind**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html)
   ## 3D
   - **BoxShow**: [https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html)
   - **Map**: [https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html)
+  - **GeometryViewer**: [https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html)
   ## 2D
   - **Maze**: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
   - **Village**: [https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html)
