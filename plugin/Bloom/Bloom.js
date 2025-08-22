@@ -91,7 +91,7 @@ export class CSurfaceBloom extends CSurface {
     IsShould(_member, _type) {
         let view = [
             "m_threshold", "m_softThreshold", "m_preFilterType", "m_intensity",
-            "m_lowFrequencyBoostCurvation", "m_lowFrequencyBoost", "m_highPassFrequency"
+            "m_lowFrequencyBoostCurvation", "m_lowFrequencyBoost", "m_highPassFrequency",
         ];
         if (view.includes(_member)) {
             return true;
@@ -193,18 +193,30 @@ export class CSurfaceBloom extends CSurface {
         if (this.mChilde.length == 0) {
             return;
         }
+        let mipTex = [];
+        mipTex.push(this.mRenderPass.mRenderTarget);
+        let pri = this.mRenderPass.mPriority;
+        pri++;
         for (let i = 0; i < this.m_mipMax; i++) {
             const downSample = this.GetDownSample(i);
             downSample.m_threshold = this.m_threshold;
             downSample.m_softThreshold = this.m_softThreshold;
+            downSample.GetRP().mShaderAttr.length = 0;
+            downSample.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
             downSample.SetShaderAttr();
+            downSample.GetRP().mPriority = pri;
+            pri++;
+            mipTex.push(downSample.GetTexKey());
         }
         for (let i = 0; i < this.m_mipMax; i++) {
             const upSample = this.GetUpSample(i);
-            const texIndex = this.m_mipMax - i;
+            upSample.GetRP().mPriority = pri;
+            pri++;
             upSample.m_blendFactor = this.GetBlendFactor(i, this.m_mipMax);
             upSample.SetShaderAttr();
         }
+        this.mChilde[this.mChilde.length - 1].GetPaint().SetTexture(mipTex[1]);
+        this.mChilde[this.mChilde.length - 1].GetRP().mRenderTarget = mipTex[0];
     }
     Update(_delay) {
     }

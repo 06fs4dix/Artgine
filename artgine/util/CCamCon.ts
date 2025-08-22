@@ -3,6 +3,7 @@
 
 import { CUpdate } from "../basic/Basic.js";
 import {CAlert} from "../basic/CAlert.js";
+import { CConsol } from "../basic/CConsol.js";
 import {CObject } from "../basic/CObject.js";
 import {CMath} from "../geometry/CMath.js";
 import { CPoolGeo } from "../geometry/CPoolGeo.js";
@@ -158,6 +159,7 @@ export class CCamCon extends CObject implements ICamCon
                 //CMsg.Info(1);
                 let fpos=new CVec3(mVec[0].x,mVec[0].y);
                 let spos=new CVec3(mVec[1].x,mVec[1].y);
+                //CConsol.Log(mVec[0].x+","+mVec[0].y+" / "+mVec[1].x+","+mVec[1].y);
                 //CMsg.Info(fpos.toJSONStr()+" / "+spos.toJSONStr());
                 //CMsg.Info(this.mBfpos+"/");
                 if(this.mBfpos!=null)
@@ -176,7 +178,8 @@ export class CCamCon extends CObject implements ICamCon
                 
                 this.mBfpos=fpos;
                 this.mBspos=spos;
-                
+                this.mlX=-1;
+                this.mlY=-1;
                 
             }
             else
@@ -196,12 +199,14 @@ export class CCamCon extends CObject implements ICamCon
                     if(this.mRotYLock==false)
                         this.mRotY=this.mMovX;
                     this.mReset=true;
+                    //CConsol.Log("mRotKey");
                 }
                 else if(this.mInput.KeyDown(this.mPosKey))
                 {
                     this.mPosX=-this.mMovY;
                     this.mPosY=this.mMovX;
                     this.mReset=true;
+                    //CConsol.Log("mPosKey");
                 }
                 if (this.mInput.KeyUp(CInput.eKey.Wheel))
                 {

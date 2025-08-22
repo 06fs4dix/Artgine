@@ -127,6 +127,7 @@ export class CFrame {
     mLoadProcess = null;
     mRenderProcess = null;
     mLoadChk = null;
+    mInit = true;
     m_offset;
     mDevice;
     mRenderer;
@@ -429,7 +430,10 @@ export class CFrame {
     }
     async Process() {
         new CLoadingBack("MainLoading", () => {
-            return this.Load().mLoadSet.size;
+            let size = this.Load().mLoadSet.size + (this.mInit ? 1 : 0);
+            if (this.Load().mLoadSet.size == 0 && this.mInit)
+                this.mInit = false;
+            return size;
         });
         if (this.mDevice)
             await this.mDevice.Init();

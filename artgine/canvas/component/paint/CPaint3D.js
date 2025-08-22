@@ -329,7 +329,17 @@ export class CPaintCube extends CPaint3D {
         }
         super.InitPaint();
     }
-    Sky() {
+    Sky(_table = false, _cloud = false, _light = false, _star = false, _aurora = false) {
         this.PushTag("sky");
+        if (_table)
+            this.PushTag("table");
+        if (_cloud)
+            this.PushTag("cloud");
+        if (_aurora)
+            this.PushTag("aurora");
+        if (_star)
+            this.PushTag("star");
+        if (_light)
+            this.PushTag("light");
     }
 }

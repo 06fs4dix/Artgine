@@ -88,7 +88,6 @@ export class CCanvas extends CObject {
                 const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
                 if (obj)
                     obj.Destroy();
-                this.Detach(this.mRPMgr.mSufArr[i].Key());
             }
             this.mBrush.ClearRen();
         }

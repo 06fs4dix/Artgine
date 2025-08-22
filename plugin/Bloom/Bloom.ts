@@ -1,19 +1,12 @@
 
 
 /* 
-	다음 해야 하는 것
+	전부 임시로 처리해뒀다.
+	아주 무제있다.
 
-	현재 라이팅에서 sRGB로 변경됨
-	현재 gBuf => lighting(sRGB) => bloom(sRGB) => blend(sRGB) 인데
-	gBuf => lighting(hdr) => bloom(hdr) => blend&toneMapping(sRGB) 로 변경해야 함.
-	
-	또 blend를 blendFactor를 사용해서 하면 중간 라이팅이 저장되지 않지만 패스를 한번 줄일 수 있음.
-	blendFactor를 사용가능하게 되면 frequency boost도 사용 가능함
 
-	스카이박스가 블룸된 값을 덮어버리는 문제도 있음.
-	gBuf에 있는 z값으로 depthTest를 하는 바람에 gBuf 이후에 생기는 블룸이 depthTest에 적용이 안됨.
-	screenSpace 텍스쳐에도 depth를 적어서 스카이박스 검사를 하던가 아니면 스카이박스를 먼저 screenSpace에 적고
-	그 후에 블룸값을 적어야 할 듯 함.
+	rp는 복사되고 자식,컴포넌트는 새로 만들어서 렌더패스쪽 텍스처 꼬임 문제가 생긴다.
+	그리고 프리오리티 순서도 다시 정렬해줘야함.
 */
 
 import { CClass } from "../../artgine/basic/CClass.js";
@@ -164,7 +157,7 @@ export class CSurfaceBloom extends CSurface
     {
 		let view = [
 			"m_threshold", "m_softThreshold", "m_preFilterType", "m_intensity", 
-			"m_lowFrequencyBoostCurvation", "m_lowFrequencyBoost", "m_highPassFrequency"
+			"m_lowFrequencyBoostCurvation", "m_lowFrequencyBoost", "m_highPassFrequency",
 		];
 		if(view.includes(_member)) {
 			return true;
@@ -302,22 +295,37 @@ export class CSurfaceBloom extends CSurface
 		if(this.mChilde.length == 0) {
 			return;
 		}
-
+		let mipTex : Array<string> = [];
+		mipTex.push(this.mRenderPass.mRenderTarget);
+		
 		//downSample
+		let pri=this.mRenderPass.mPriority;
+		pri++;
 		for(let i = 0; i < this.m_mipMax; i++) {
 			const downSample = this.GetDownSample(i);
 			downSample.m_threshold = this.m_threshold;
 			downSample.m_softThreshold = this.m_softThreshold;
+			downSample.GetRP().mShaderAttr.length=0;
+			downSample.GetRP().mShaderAttr.push(new CShaderAttr(0,mipTex[i]));
 			downSample.SetShaderAttr();
+			downSample.GetRP().mPriority=pri;
+			pri++;
+			mipTex.push(downSample.GetTexKey());
+			
 		}
 
 		//upSample
 		for(let i = 0; i < this.m_mipMax; i++) {
 			const upSample = this.GetUpSample(i);
-			const texIndex = this.m_mipMax - i;
+			//const texIndex = this.m_mipMax - i;
+			upSample.GetRP().mPriority=pri;
+			pri++;
 			upSample.m_blendFactor = this.GetBlendFactor(i, this.m_mipMax);
 			upSample.SetShaderAttr();
 		}
+
+		(this.mChilde[this.mChilde.length-1] as CSurfaceUpSample).GetPaint().SetTexture(mipTex[1]);
+		(this.mChilde[this.mChilde.length-1] as CSurfaceUpSample).GetRP().mRenderTarget=mipTex[0];
 	}
 	Update(_delay: number): void {
 		// srcResolution과 aspect는 더 이상 필요하지 않음

@@ -95,7 +95,7 @@ function Init() {
     
     for (let [key, info] of g_roBrush.mRenInfoMap) 
     {
-        if (!info.mRP) continue; // ✅ null이면 무시
+        if (!info.mRP || info.mShader==null) continue; // ✅ null이면 무시
 
         const rp = info.mRP;
         const fields = [];

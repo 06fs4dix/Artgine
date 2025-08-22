@@ -126,6 +126,8 @@ export class CCamCon extends CObject {
                 }
                 this.mBfpos = fpos;
                 this.mBspos = spos;
+                this.mlX = -1;
+                this.mlY = -1;
             }
             else {
                 if (this.mBfpos != null) {
