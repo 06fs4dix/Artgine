@@ -70,7 +70,7 @@ function Init() {
     let ptArr = new Array();
     let renderPassDivs = [];
     for (let [key, info] of g_roBrush.mRenInfoMap) {
-        if (!info.mRP)
+        if (!info.mRP || info.mShader == null)
             continue;
         const rp = info.mRP;
         const fields = [];

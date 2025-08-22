@@ -383,6 +383,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		this.mKeyMap.set("out_position","gl_position");
 		this.mKeyMap.set("UniToSam2D","float");
 		this.mKeyMap.set("screenPos", "gl_FragCoord");
+		this.mKeyMap.set("int","int");
 
 		this.mKeyMap.set("V3Dot","dot");
 		this.mKeyMap.set("CMath.","");

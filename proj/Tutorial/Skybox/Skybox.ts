@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 22:31:29';
+const version='2025-08-23 00:01:15';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -39,6 +39,7 @@ import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/compon
 import { CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
 var Main=gAtl.NewCanvas("Main");
 Main.SetCameraKey(gAtl.Brush().GetCam3D().Key());
 gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
@@ -57,6 +58,13 @@ for(let i=0;i<texKey.length;++i)
 let cubeTex=gAtl.Frame().Ren().BuildCubeMap(texList,true);
 
 
+let ligSub=Main.Push(new CSubject());
+let ligComp=ligSub.PushComp(new CLight());
+ligComp.SetDirect();
+//ligComp.SetDirectPos(new CVec3(-1,0,0));
+ligComp.SetColor(new CVec3(1,0.5,0.5));
+ligSub.SetPos(new CVec3(1,0,0));
+
 let sub=Main.Push(new CSubject());
 sub.SetPos(new CVec3(0,0,-300));
 let pt=sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
@@ -68,26 +76,24 @@ sub.SetPos(new CVec3(0,0,300));
 sub.PushComp(new CPaintCube(cubeTex));
 
 
-//수동
-// sub=Main.Push(new CSubject());
-// sub.SetSca(new CVec3(10,10,10));
-// pt=sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-// let rp=pt.PushRenderPass(new CRenderPass(gAtl.Frame().Pal().SlCubeKey()));
-// rp.mPriority=CRenderPass.ePriority.BackGround;
-// rp.mCullFace=CRenderPass.eCull.None;
-// pt.PushTag("sky");
-// pt.SetTexture(cubeTex);
 
 
 sub=Main.Push(new CSubject());
 sub.SetSca(new CVec3(10,10,10));
 let ptcube=sub.PushComp(new CPaintCube(cubeTex));
-ptcube.PushTag("table");
-ptcube.PushTag("cloud");
-ptcube.PushTag("aurora");
-ptcube.PushTag("star");
+ptcube.Sky(true,true,false,true,true);
 
 //ptcube.Sky();
+
+
+
+
+
+
+
+
+
+
 
 
 

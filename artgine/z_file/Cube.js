@@ -1,5 +1,6 @@
+import { ligCol, ligCount, ligDir } from "./Light";
 import { NoiseFBM, HashIQ2D, NoiseRand1D, NoiseRand2D, NoiseTri2D } from "./Noise";
-import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3SubV3, cos, V3AddV3, V3Mix, smoothstep, sin, mod, SamCubeToColor, min, max, fract, CVec2, pow, abs, floor, SaturateFloat, Sam2DMat, FloatToInt, Exp, LWVPMul, clamp, V4Mix, V4AddV4, V4MulFloat, Exp2, Attribute, Null, BranchEnd, BranchBegin } from "./Shader";
+import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3SubV3, cos, V3AddV3, V3Mix, smoothstep, sin, mod, V3Max, V3Len, SamCubeToColor, min, max, fract, CVec2, pow, abs, floor, SaturateFloat, Sam2DToV4, FloatToInt, Exp, LWVPMul, clamp, V4Mix, V4AddV4, V4MulFloat, Exp2, Attribute, Null, BranchEnd, BranchBegin, BranchDefault } from "./Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
@@ -7,18 +8,9 @@ var out_position = Null();
 var out_color = Null();
 var to_uvw = Null();
 var time = Attribute(0, "time");
-var horizon = 0.54;
-var sunset = 0.1;
-var RTable = new Sam2DMat(9);
-var GTable = new Sam2DMat(9);
-var BTable = new Sam2DMat(9);
-var sunRTable = Null();
-var sunGTable = Null();
-var sunBTable = Null();
-var tableNum = 0.0;
-var colorNum = 0.0;
-var totalIntensity = 1.0;
-var sunColorNum = 0.0;
+var sunColorRTable = new CMat(1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25);
+var sunColorGTable = new CMat(0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95);
+var sunColorBTable = new CMat(0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85);
 var star = 1.0;
 var starCount = 2000.0;
 var starSize = 0.6;
@@ -31,8 +23,6 @@ var cloudStep = 50.0;
 var cloudPlanetCenter = new CVec3(0.0, 0.0, 0.0);
 var cloudPlanetRadius = 500.0;
 var cloudHorizon = new CVec2(0.0, 0.2);
-var sunsetXYRatio = 0.0;
-var sunsetRadius = 0.25;
 var aurora = 1.0;
 var auroraColor = new CVec3(2.15, -0.5, 1.2);
 var auroraHeight = 0.0;
@@ -43,11 +33,7 @@ var SkyColorRTable = new CMat(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 
 var SkyColorGTable = new CMat(0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01);
 var SkyColorBTable = new CMat(0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15);
 Build("CubeObject", [], vs_main, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
-Build("CubeSky", ["sky"], vs_main_camBased, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
-Build("CubeTable", ["table"], vs_main_camBased, [worldMat, viewMat, projectMat,
-    SkyColorRTable, SkyColorGTable, SkyColorBTable,
-    time, camPos,
-], [out_position, to_uvw], ps_main_table, [out_color]);
+Build("CubeSky", ["sky"], vs_main_camBased, [worldMat, viewMat, projectMat, time, camPos], [out_position, to_uvw], ps_main, [out_color]);
 function vs_main(f3_ver) {
     to_uvw = f3_ver;
     out_position = LWVPMul(f3_ver, worldMat, viewMat, projectMat);
@@ -58,12 +44,6 @@ function vs_main_camBased(f3_ver) {
     var P = V4MulMatCoordi(v4, Mat3ToMat4(Mat4ToMat3(viewMat)));
     P = V4MulMatCoordi(P, projectMat);
     out_position = new CVec4(P.x, P.y, P.w, P.w);
-}
-function ps_main() {
-    var uvw = V3Nor(to_uvw);
-    var aCol = SamCubeToColor(0.0, uvw).xyz;
-    out_color.rgb = aCol.xyz;
-    out_color.a = 1.0;
 }
 function GetDensity(_pos, _wind, _cov) {
     var p = V3AddV3(V3MulFloat(_pos, 0.0212242), _wind);
@@ -183,31 +163,78 @@ function GetStars(_dir, _count, _size, _baseCol, _randCol) {
     var starCol = result;
     return starCol;
 }
-function GetSkyByColTable(_dirDeg, _colNum, _tableFract, _rT, _gT, _bT, _rTNext, _gTNext, _bTNext) {
-    var sliceNum = _colNum - 1.0;
-    var colorOffset = min(floor(sliceNum * _dirDeg), sliceNum - 1.0);
-    var cur_upSkyCol = new CVec3(_rT[FloatToInt(floor(colorOffset / 4.0))][FloatToInt(mod(colorOffset, 4.0))], _gT[FloatToInt(floor(colorOffset / 4.0))][FloatToInt(mod(colorOffset, 4.0))], _bT[FloatToInt(floor(colorOffset / 4.0))][FloatToInt(mod(colorOffset, 4.0))]);
-    var next_upSkyCol = new CVec3(_rTNext[FloatToInt(floor(colorOffset / 4.0))][FloatToInt(mod(colorOffset, 4.0))], _gTNext[FloatToInt(floor(colorOffset / 4.0))][FloatToInt(mod(colorOffset, 4.0))], _bTNext[FloatToInt(floor(colorOffset / 4.0))][FloatToInt(mod(colorOffset, 4.0))]);
-    next_upSkyCol = V3Mix(cur_upSkyCol, next_upSkyCol, 0.5);
-    var upSkyCol = V3Mix(cur_upSkyCol, next_upSkyCol, smoothstep(0.0, 0.5, abs(_tableFract - 0.5)));
-    var cur_downSkyCol = new CVec3(_rT[FloatToInt(floor((colorOffset + 1.0) / 4.0))][FloatToInt(mod(colorOffset + 1.0, 4.0))], _gT[FloatToInt(floor((colorOffset + 1.0) / 4.0))][FloatToInt(mod(colorOffset + 1.0, 4.0))], _bT[FloatToInt(floor((colorOffset + 1.0) / 4.0))][FloatToInt(mod(colorOffset + 1.0, 4.0))]);
-    var next_downSkyCol = new CVec3(_rTNext[FloatToInt(floor((colorOffset + 1.0) / 4.0))][FloatToInt(mod(colorOffset + 1.0, 4.0))], _gTNext[FloatToInt(floor((colorOffset + 1.0) / 4.0))][FloatToInt(mod(colorOffset + 1.0, 4.0))], _bTNext[FloatToInt(floor((colorOffset + 1.0) / 4.0))][FloatToInt(mod(colorOffset + 1.0, 4.0))]);
-    next_downSkyCol = V3Mix(cur_downSkyCol, next_downSkyCol, 0.5);
-    var downSkyCol = V3Mix(cur_downSkyCol, next_downSkyCol, smoothstep(0.0, 0.5, abs(_tableFract - 0.5)));
-    var skyCol = V3Mix(upSkyCol, downSkyCol, smoothstep(colorOffset, colorOffset + 1.0, min(sliceNum * _dirDeg, sliceNum - 1.0)));
-    return skyCol;
-}
-function ps_main_table() {
+function ps_main() {
     var fragDir = V3Nor(to_uvw);
+    var value;
     var dir_cos = V3Dot(fragDir, new CVec3(0.0, 1.0, 0.0));
     var dir_deg = (1.0 - dir_cos) * 0.5;
-    var directionIndex = floor(dir_deg * 14.0);
-    var currentColor = new CVec3(SkyColorRTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))], SkyColorGTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))], SkyColorBTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))]);
-    var nextIndex = directionIndex + 1.0;
-    var nextColor = new CVec3(SkyColorRTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))], SkyColorGTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))], SkyColorBTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))]);
-    var t = fract(dir_deg * 14.0);
-    var finalColor = V3Mix(currentColor, nextColor, t);
-    var value;
+    var directionIndex = 0.0;
+    var currentColor;
+    var nextIndex;
+    var nextColor;
+    var t = 0.0;
+    var finalColor = new CVec3(0.0, 0.0, 0.0);
+    BranchBegin("table", "T", [SkyColorRTable, SkyColorGTable, SkyColorBTable]);
+    dir_cos = V3Dot(fragDir, new CVec3(0.0, 1.0, 0.0));
+    dir_deg = (1.0 - dir_cos) * 0.5;
+    directionIndex = floor(dir_deg * 14.0);
+    currentColor = new CVec3(SkyColorRTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))], SkyColorGTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))], SkyColorBTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))]);
+    nextIndex = directionIndex + 1.0;
+    nextColor = new CVec3(SkyColorRTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))], SkyColorGTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))], SkyColorBTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))]);
+    t = fract(dir_deg * 14.0);
+    finalColor = V3Mix(currentColor, nextColor, t);
+    BranchDefault();
+    finalColor = SamCubeToColor(0.0, to_uvw).xyz;
+    t = -1.0;
+    BranchEnd();
+    var ligSum = new CVec3(0.0, 0.0, 0.0);
+    var ligMax = new CVec3(0.0, 0.0, 0.0);
+    var sunsetCol = new CVec3(0.0, 0.0, 0.0);
+    var sunsetBlend = -1.0;
+    var lDir;
+    var lCol;
+    var dir;
+    var angle = 0.0;
+    var intensity = 0.0;
+    var col;
+    var i;
+    var sunPass = 0.0;
+    var sun_deg = 1.0;
+    BranchBegin("light", "L", [ligDir, ligCol, ligCount, sunColorRTable, sunColorGTable, sunColorBTable]);
+    for (i.dummy = 0; i.dummy < 3; i.dummy++) {
+        if (i.dummy >= FloatToInt(ligCount))
+            break;
+        lDir = Sam2DToV4(ligDir, i);
+        if (lDir.w > 1.5)
+            continue;
+        dir = V3Nor(lDir.xyz);
+        if (sunPass < 0.5 && lDir.w > -1.5) {
+            sunPass = 1.0;
+            dir_cos = V3Dot(dir, fragDir);
+            dir_deg = (1.0 - dir_cos) * 0.5;
+            directionIndex = floor(dir_deg * 14.0);
+            currentColor = new CVec3(sunColorRTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))], sunColorGTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))], sunColorBTable[FloatToInt(floor(directionIndex / 4.0))][FloatToInt(mod(directionIndex, 4.0))]);
+            nextIndex = directionIndex + 1.0;
+            nextColor = new CVec3(sunColorRTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))], sunColorGTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))], sunColorBTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))]);
+            t = fract(dir_deg * 14.0);
+            sunsetCol = V3Mix(currentColor, nextColor, t);
+            sun_deg = 1.0 - abs(V3Dot(dir, new CVec3(0.0, 1.0, 0.0)));
+            sunsetBlend = sun_deg * (1.0 - dir_deg);
+        }
+        lCol = Sam2DToV4(ligCol, i);
+        angle = acos(V3Dot(dir, fragDir));
+        intensity = V3Len(lCol.rgb);
+        col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
+        col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
+        ligMax = V3Max(ligMax, col);
+        ligSum = V3AddV3(ligSum, col);
+    }
+    if (t < 0.0)
+        finalColor = V3MulV3(finalColor, V3Mix(new CVec3(1.0, 1.0, 1.0), sunsetCol, sunsetBlend));
+    else
+        finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend);
+    finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSum, 0.2)), ligMax);
+    BranchEnd();
     BranchBegin("star", "S", [star, starCount, starSize, starBaseCol, starRandCol]);
     value.xyz = GetStars(fragDir, starCount, starSize, starBaseCol, starRandCol);
     finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, star));

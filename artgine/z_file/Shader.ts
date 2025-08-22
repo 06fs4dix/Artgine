@@ -58,7 +58,7 @@ export class ToV4{
 }
 
 
-
+export class int{dummy}
 export class float{}
 export class CVec2 {
     x;y;xy;

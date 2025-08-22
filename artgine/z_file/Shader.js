@@ -31,6 +31,9 @@ export class ToV4 {
     notUsedCVec4Param;
     constructor(_x = null, _y, _z, _w) { this.x = _x; this.y = _y; }
 }
+export class int {
+    dummy;
+}
 export class float {
 }
 export class CVec2 {
