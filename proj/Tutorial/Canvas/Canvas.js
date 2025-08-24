@@ -1,4 +1,4 @@
-const version = '2025-08-24 23:36:13';
+const version = '2025-08-24 23:45:13';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -39,6 +39,8 @@ import { CTutorial } from "https://06fs4dix.github.io/Artgine/artgine/util/CTuto
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CLan } from "https://06fs4dix.github.io/Artgine/artgine/basic/CLan.js";
 import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
+import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip";
+import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 let can = gAtl.NewCanvas("2DCan");
 can.SetCameraKey("2D");
 let sub = can.Push(new CSubject());
