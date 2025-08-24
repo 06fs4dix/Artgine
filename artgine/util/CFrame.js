@@ -29,6 +29,7 @@ import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CRollBack } from "./CRollBack.js";
 import { CSysAuth } from "../system/CSysAuth.js";
+import { CUtilWeb } from "./CUtilWeb.js";
 const invisibleButton = document.createElement("div");
 invisibleButton.style.position = "absolute";
 invisibleButton.style.top = "0";
@@ -215,7 +216,11 @@ export class CFrame {
             });
             window.onkeydown = (e) => {
                 CInput.sKeyPress[e.keyCode] = true;
-                if (e.keyCode >= 112 && e.keyCode <= 121) {
+                if (e.keyCode == 116 && CWebView.IsWebView() == CWebView.eType.None) {
+                    CUtilWeb.PageReload();
+                    return false;
+                }
+                else if (e.keyCode >= 112 && e.keyCode <= 121) {
                     if (e.keyCode >= 112 && e.keyCode <= 115)
                         this.mInput.mKeyPress[e.keyCode] = true;
                     e.preventDefault();

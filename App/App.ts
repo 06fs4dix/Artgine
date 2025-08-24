@@ -27,7 +27,7 @@ const __dirname = path.dirname(__filename);
 
 let gMainWindow: BrowserWindow | null = null;
 var gWebServer : CServerMain=null;
-
+var gRunPage=false;
 
 //CConsol.Log("__dirname : "+__dirname);
 //CConsol.Log("CPath.PHPC() : "+CPath.PHPC());
@@ -103,6 +103,7 @@ const createWindow = () => {
 
 async function RunServer()
 {
+	
 	if(gAppJSON.server.indexOf("webServer")!=-1)
 	{
 		
@@ -134,6 +135,7 @@ async function RunServer()
 }
 async function RunPage()
 {
+	gRunPage=true;
 	RefreshScreen();
 	let url=gAppJSON.url;
 	let projectPath=gAppJSON.projectPath;
@@ -276,14 +278,25 @@ ipcMain.handle("KeyUp", async (_event, _key: string) => {
 		else if(_key=="F9")
 		{
 			
-			gMainWindow.loadFile(path.join(__dirname, 'Developer.html'));
-			if(gWebServer!=null)
+			if(gRunPage==true)
 			{
-				gWebServer.Destroy();
-				gWebServer=null;
+				gRunPage=false;
+				gMainWindow.loadFile(path.join(__dirname, 'Developer.html'));
+				if(gWebServer!=null)
+				{
+					gWebServer.Destroy();
+					gWebServer=null;
+				}
+			
+				RefreshDevScreen();
 			}
-		
-			RefreshDevScreen();
+			
+			// else
+			// {
+			// 	RunPage();
+			// }
+
+			
 		}
 		if(_key=="F4")
 		{

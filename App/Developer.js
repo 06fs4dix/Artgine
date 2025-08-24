@@ -267,7 +267,7 @@ document.getElementById("selectProjectPath_btn").addEventListener("click", async
     });
     Init();
 });
-document.getElementById("Run_btn").addEventListener("click", async function () {
+async function Run_btn() {
     CUtil.ID("Run_btn").disabled = true;
     let projectPath_txt = CUtil.IDValue("projectPath_txt");
     let url_txt = CUtil.IDValue("url_txt");
@@ -287,6 +287,9 @@ document.getElementById("Run_btn").addEventListener("click", async function () {
     CUtil.ID("Run_btn").disabled = false;
     if (await CWebView.Call("PageRun")) {
     }
+}
+document.getElementById("Run_btn").addEventListener("click", async function () {
+    await Run_btn();
 });
 function CreateArrayItemInput(fieldId, dataList, label) {
     const listEl = document.getElementById(`${fieldId}_list`);
@@ -323,4 +326,9 @@ document.getElementById("iconsAdd_btn").addEventListener("click", async function
     let iconSize = await CWebView.Call("ICONSize", list);
     gManifest.icons.push({ "src": list, "type": "image/" + ext.ext, "sizes": iconSize });
     CreateArrayItemInput("icons", gManifest.icons, "icons");
+});
+window.addEventListener("keyup", async (e) => {
+    let key = e.key;
+    if (e.keyCode == 120)
+        await await Run_btn();
 });

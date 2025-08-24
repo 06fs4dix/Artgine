@@ -714,16 +714,21 @@ export class CMonacoViewer extends CModal {
     mEditor = null;
     constructor(_source, _fileName) {
         super();
-        this.SetHeader("CCodeViewer");
+        this.SetHeader(_fileName);
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
         this.SetSize(800, 600);
-        const container = document.createElement("div");
-        container.id = "modal_editor";
-        container.style.width = "100%";
-        container.style.height = "500px";
-        container.style.border = "1px solid #ccc";
-        this.SetBody(container);
+        let id = this.Key() + "_editer";
+        this.SetBody(`
+            <div id='${id}' class='h-100 d-flex align-items-center justify-content-center' >
+                <div id='${id}_loading' class='text-center'>
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="h5 text-muted">Loading Editor...</div>
+                </div>
+            </div>
+        `);
         this.Open();
         let languageType = "plaintext";
         if (_fileName) {
@@ -756,6 +761,15 @@ export class CMonacoViewer extends CModal {
                     break;
             }
         }
-        CUtilWeb.MonacoEditer(CUtil.ID("modal_editor"), _source, languageType, "vs-dark");
+        CUtilWeb.MonacoEditer(CUtil.ID(id), _source, languageType, "vs-dark", async (monacoEditer) => {
+            this.mEditor = monacoEditer;
+        });
+    }
+    GetSource() {
+        return this.mEditor.getModel().getValue();
+    }
+    async SetSource(_source) {
+        _source = await CUtilWeb.TSImport(_source, true);
+        return this.mEditor.getModel().setValue(_source);
     }
 }

@@ -1,11 +1,16 @@
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
+import { CPath } from "../basic/CPath.js";
 import { CPreferences } from "../basic/CPreferences.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CInput } from "../system/CInput.js";
+import { CStorage } from "../system/CStorage.js";
+import { CWebView } from "../system/CWebView.js";
 import { DevTool } from "../tool/DevTool.js";
 import { CFrame } from "../util/CFrame.js";
+import { CScript } from "../util/CScript.js";
 import { CBrush } from "./CBrush.js";
 import { CCanvas } from "./CCanvas.js";
 var gMain = null;
@@ -28,15 +33,29 @@ export class CAtelier {
         this.mBrush = new CBrush(this.mFrame);
         this.mBrush.InitCamera(false);
         this.mBrush.mPause = true;
+        let script = "";
         this.mFrame.PushEvent(CEvent.eType.Load, async () => {
-            if (_canvas.length > 0)
-                await this.mBrush.LoadJSON("Canvas/Brush.json");
-            for (let key of _canvas) {
-                if (key == null || key == "")
-                    continue;
-                let can = new CCanvas(this.mFrame, this.mBrush);
-                this.mCanvasMap.set(key, can);
-                await can.LoadJSON("Canvas/" + key);
+            let data = CStorage.Get(CPath.PHPCR() + "Save.json");
+            if (CWebView.IsWebView() == CWebView.eType.None && data != null) {
+                let json = JSON.parse(data);
+                this.mBrush.ImportJSON(json.brash);
+                for (let canJson of json.canvas) {
+                    let can = new CCanvas(this.mFrame, this.mBrush);
+                    can.ImportJSON(canJson);
+                    this.mCanvasMap.set(can.Key(), can);
+                }
+                script = json.script;
+            }
+            else {
+                if (_canvas.length > 0)
+                    await this.mBrush.LoadJSON("Canvas/Brush.json");
+                for (let key of _canvas) {
+                    if (key == null || key == "")
+                        continue;
+                    let can = new CCanvas(this.mFrame, this.mBrush);
+                    this.mCanvasMap.set(key, can);
+                    await can.LoadJSON("Canvas/" + key);
+                }
             }
             this.mBrush.mPause = false;
             if (_devTool) {
@@ -87,6 +106,8 @@ export class CAtelier {
             }
         });
         await this.mFrame.Process();
+        if (script != "")
+            CScript.Build(CUniqueID.Get() + ".ts", script);
     }
     NewCanvas(_key) {
         if (this.mCanvasMap.has(_key))
