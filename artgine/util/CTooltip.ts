@@ -119,7 +119,7 @@ export class CTooltip extends CModal
         _attach : HTMLElement|[number, number], 
         _trigger : eTrigger=CTooltip.eTrigger.Hover, 
         _placement : ePlacement = ePlacement.Auto, 
-        _theme : Bootstrap.eColor=Bootstrap.eColor.light
+        _bg : Bootstrap.eColor=Bootstrap.eColor.light
     ) {
         
         
@@ -130,14 +130,15 @@ export class CTooltip extends CModal
 
         this.mTrigger = _trigger;
         this.mPlacement = _placement;
-        this.mTheme = _theme;
         this.mAttach = _attach;
 
         //this.CreateTooltipElement(_content, _theme);
         this.SetTitle(CModal.eTitle.None);
+        
         this.SetBody(`
-            <div class="bg-"${_theme} id=${"Content_" + this.mKey}></div>
+            <div  id="Content_${this.mKey}"></div>
         `);
+        this.SetBG(_bg);
         this.SetZIndex(CModal.eSort.Top);
         this.SetResize(false);
         this.Open();

@@ -19,6 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let gMainWindow = null;
 var gWebServer = null;
+var gRunPage = false;
 const isWindows = os.platform() === 'win32';
 let gAppRootPath = true;
 let initBuf = await CFile.Load(CPath.PHPC() + "App.json");
@@ -87,6 +88,7 @@ async function RunServer() {
     }
 }
 async function RunPage() {
+    gRunPage = true;
     RefreshScreen();
     let url = gAppJSON.url;
     let projectPath = gAppJSON.projectPath;
@@ -190,12 +192,15 @@ ipcMain.handle("KeyUp", async (_event, _key) => {
             }
         }
         else if (_key == "F9") {
-            gMainWindow.loadFile(path.join(__dirname, 'Developer.html'));
-            if (gWebServer != null) {
-                gWebServer.Destroy();
-                gWebServer = null;
+            if (gRunPage == true) {
+                gRunPage = false;
+                gMainWindow.loadFile(path.join(__dirname, 'Developer.html'));
+                if (gWebServer != null) {
+                    gWebServer.Destroy();
+                    gWebServer = null;
+                }
+                RefreshDevScreen();
             }
-            RefreshDevScreen();
         }
         if (_key == "F4") {
             const folderPath = path.resolve(CPath.PHPC() + gAppJSON.projectPath);

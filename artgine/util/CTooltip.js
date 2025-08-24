@@ -88,7 +88,7 @@ export class CTooltip extends CModal {
     mMouseLeaveHandler = null;
     mClickHandler = null;
     mBlurHandler = null;
-    constructor(_content, _attach, _trigger = CTooltip.eTrigger.Hover, _placement = ePlacement.Auto, _theme = Bootstrap.eColor.light) {
+    constructor(_content, _attach, _trigger = CTooltip.eTrigger.Hover, _placement = ePlacement.Auto, _bg = Bootstrap.eColor.light) {
         super(CUniqueID.Get());
         if (_attach == null)
             return;
@@ -97,12 +97,12 @@ export class CTooltip extends CModal {
         CTooltip.AddArrowStyle();
         this.mTrigger = _trigger;
         this.mPlacement = _placement;
-        this.mTheme = _theme;
         this.mAttach = _attach;
         this.SetTitle(CModal.eTitle.None);
         this.SetBody(`
-            <div class="bg-"${_theme} id=${"Content_" + this.mKey}></div>
+            <div  id="Content_${this.mKey}"></div>
         `);
+        this.SetBG(_bg);
         this.SetZIndex(CModal.eSort.Top);
         this.SetResize(false);
         this.Open();

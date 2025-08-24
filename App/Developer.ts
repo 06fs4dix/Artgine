@@ -360,19 +360,16 @@ document.getElementById("selectProjectPath_btn").addEventListener("click", async
     (CUtil.ID("Run_btn") as HTMLButtonElement).disabled =true;
     let list = await CWebView.Call("FolderSelectModal", { name: "", ext: ["folder"], mode: "load", absolute: false });
     (CUtil.ID("Run_btn") as HTMLButtonElement).disabled =false;
-    //CAlert.Info(list);
     if (list == "") return;
 
     CUtil.IDInput("projectPath_txt").value = list;
     gAppJSON.projectPath = list;
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {
         projectPath: list,
-        //projectName: gAppJSON.projectName,
     }));
 
     gManifest = JSON.parse(await CWebView.Call("LoadManifest", {
         projectPath: gAppJSON.projectPath,
-        //projectName: gAppJSON.projectName,
     }));
     gServiceWorker = JSON.parse(await CWebView.Call("LoadServiceWorker", {
         projectPath: gAppJSON.projectPath,
@@ -393,18 +390,19 @@ document.getElementById("selectProjectPath_btn").addEventListener("click", async
     Init();
 
 });
-document.getElementById("Run_btn").addEventListener("click", async function () {
-    //let libPath_txt=CWebUtil.IDValue("libPath_txt");
+
+async function Run_btn()
+{
     (CUtil.ID("Run_btn") as HTMLButtonElement).disabled =true;
     let projectPath_txt = CUtil.IDValue("projectPath_txt");
     let url_txt = CUtil.IDValue("url_txt");
-    //let projectName_txt = CWebUtil.IDValue("projectName_txt");
+    
 
     let server_sel = CUtil.IDValue("server_sel")
 
     if (server_sel == "local") url_txt = "";
 
-    //CAlert.Info(JSON.stringify(gServiceWorker));
+
     if(await CWebView.Call("NewPage", {
         appJSON: gAppJSON,
         projetJSON: gProjJSON,
@@ -427,6 +425,10 @@ document.getElementById("Run_btn").addEventListener("click", async function () {
     if (await CWebView.Call("PageRun")) {
 
     }
+}
+document.getElementById("Run_btn").addEventListener("click", async function () {
+    
+    await Run_btn();
 });
 
 
@@ -473,4 +475,12 @@ document.getElementById("iconsAdd_btn").addEventListener("click", async function
     let iconSize=await CWebView.Call("ICONSize",list);
     gManifest.icons.push({"src":list,"type":"image/"+ext.ext,"sizes":iconSize});
     CreateArrayItemInput("icons", gManifest.icons, "icons");
+});
+
+window.addEventListener("keyup", async (e) => {
+	
+	let key = e.key;
+	if(e.keyCode ==120 )	await await Run_btn();//await CWebView.Call("KeyUp","F9");//ipcRenderer.invoke("KeyUp", "F9");
+	
+	
 });

@@ -974,12 +974,12 @@ export class CBlackboardModal extends CModal {
 
 export class CMonacoViewer extends CModal {
 
-    private mEditor: any = null;
+    mEditor: any = null;
 
     constructor(_source: string, _fileName : string )
     {
         super();
-        this.SetHeader("CCodeViewer");
+        this.SetHeader(_fileName);
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
         this.SetSize(800, 600);
@@ -991,13 +991,24 @@ export class CMonacoViewer extends CModal {
         //const jsonString = typeof _jsonData === 'string' ? _jsonData : JSON.stringify(_jsonData, null, 2);
         
         // Monaco Editor를 위한 컨테이너 생성
-        const container = document.createElement("div");
-        container.id = "modal_editor";
-        container.style.width = "100%";
-        container.style.height = "500px";
-        container.style.border = "1px solid #ccc";
+        // const container = document.createElement("div");
+        // container.id = "modal_editor";
+        // container.style.width = "100%";
+        // container.style.height = "100%";
+        // container.style.border = "1px solid #ccc";
 
-        this.SetBody(container);
+        // this.SetBody(container);
+        let id=this.Key()+"_editer";
+        this.SetBody(`
+            <div id='${id}' class='h-100 d-flex align-items-center justify-content-center' >
+                <div id='${id}_loading' class='text-center'>
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="h5 text-muted">Loading Editor...</div>
+                </div>
+            </div>
+        `);
         this.Open();
 
         // 파일 확장자에 따른 언어 타입 자동 설정
@@ -1034,8 +1045,19 @@ export class CMonacoViewer extends CModal {
         }
 
         // Monaco Editor 초기화
-        CUtilWeb.MonacoEditer(CUtil.ID("modal_editor"), _source, languageType as any, "vs-dark");
+        CUtilWeb.MonacoEditer(CUtil.ID(id), _source, languageType as any, "vs-dark",async (monacoEditer)=>{
+            this.mEditor=monacoEditer;
+        });
     }
-
+    GetSource()
+    {
+        return this.mEditor.getModel().getValue();
+    }
+    async SetSource(_source)
+    {
+        //if(_language=="typescript")
+		_source=await CUtilWeb.TSImport(_source,true);
+        return this.mEditor.getModel().setValue(_source);
+    }
     
 }

@@ -3,8 +3,8 @@ import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
-import { CConfirm, CDrop } from "../basic/CModal.js";
-import { CModalFlex } from "../util/CModalUtil.js";
+import { CConfirm, CDrop, CModal, CModalTitleBar } from "../basic/CModal.js";
+import { CModalFlex, CMonacoViewer } from "../util/CModalUtil.js";
 import { CObject, CPointer } from "../basic/CObject.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
@@ -39,6 +39,10 @@ import { CBound } from "../geometry/CBound.js";
 import { CMouse } from "../system/CMouse.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
+import { CStorage } from "../system/CStorage.js";
+import { CPath } from "../basic/CPath.js";
+import { CScript } from "../util/CScript.js";
+import { CChecker } from "../util/CChecker.js";
 
 
 var gModal : CModalFlex;
@@ -119,8 +123,61 @@ function ResetBoxXYZ(_subject : CSubject)
     gBoundZX.mMax.z+=gBoundTick;
 }
 
+let gScriptViewer : CMonacoViewer=null;
+export async function InitDevToolScriptViewer()
+{
+    let json={brash:"",canvas:[],script:""};
+    let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+    if(data!=null)  json=JSON.parse(data);
+
+    if(json.script=="")
+    {
+        let buf=await CFile.Load(CPath.PHPC()+"App/Template/RuntimeScript.ts")
+        json.script=CUtil.ArrayToString(buf);
+    }
+    
+    gScriptViewer=new CMonacoViewer(json.script,"Runtime.ts");
+
+
+    gScriptViewer.mHeader.prepend(CDomFactory.DataToDom(
+        "<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>"+
+        "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>"));
+
+    CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
+        let moudle=await CScript.Build("Test.ts",gScriptViewer.GetSource());
+    });
+
+    CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
+        let moudle=await CScript.Build(CUniqueID.Get()+".ts",gScriptViewer.GetSource());
+    });
+    CUtil.ID("mvSave_btn").addEventListener("click",async ()=>{
+        
+        data=CStorage.Get(CPath.PHPCR()+"Save.json");
+        if(data!=null)  json=JSON.parse(data);
+
+        json.script=gScriptViewer.GetSource();
+        CStorage.Set(CPath.PHPCR()+"Save.json",JSON.stringify(json));
+        CAlert.Info("Script Save!");
+        //let moudle=await CScript.Build("Test.ts",mv.GetSource());
+    });
+    await CChecker.Exe(async ()=>{
+        if(gScriptViewer.mEditor!=null)
+            return false;
+
+        return true;
+    });
+    return gScriptViewer;
+}
+export async function GetDevToolScriptViewer()
+{
+    return gScriptViewer;
+}
 export function DevTool(_atl: CAtelier) 
 {
+    CModal.PushTitleBar(new CModalTitleBar("DevToolModal","RunTime",async ()=>{
+        InitDevToolScriptViewer();
+        
+    }));
     gAtl=_atl;
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
@@ -255,6 +312,7 @@ export function DevTool(_atl: CAtelier)
     DevToolLeft();
 
     gModal.On(CEvent.eType.Close,() => {
+        gScriptViewer=null;
         _frame.PF().mDebugMode = false;
         _frame.PF().mTargetWidth=gBTargetWidth;
         _frame.PF().mTargetHeight=gBTargetHeight;
@@ -1898,18 +1956,54 @@ function DevToolLeft()
     const saveIcon = CUtil.ID("DevToolAllSave");
     if (saveIcon) {
         saveIcon.onclick = async () => {
-            await CWebView.JToWFileSave("CBrush","Brush.json",gAtl.Brush().ToStr());
-            for(let [key,value] of gAtl.mCanvasMap)
+            let SaveFun=async ()=>{
+                await CWebView.JToWFileSave("CBrush","Brush.json",gAtl.Brush().ToStr());
+                for(let [key,value] of gAtl.mCanvasMap)
+                {
+                    if(value.GetCameraKey()=="Dev")
+                        value.SetCameraKey(gCanvasCam.get(value));
+                    if(value.GetCameraKey()==null)   value.SetCameraKey("2D");
+                    if(value.mSave)
+                        await CWebView.JToWFileSave("CCanvas",value.Key()+".json",value.ToStr());
+                    value.SetCameraKey("Dev");
+                }
+                
+                CAlert.Info("All Saved!");
+            };
+            if(CWebView.IsWebView()!=CWebView.eType.None)
             {
-                if(value.GetCameraKey()=="Dev")
-                    value.SetCameraKey(gCanvasCam.get(value));
-                if(value.GetCameraKey()==null)   value.SetCameraKey("2D");
-                if(value.mSave)
-                    await CWebView.JToWFileSave("CCanvas",value.Key()+".json",value.ToStr());
-                value.SetCameraKey("Dev");
+                SaveFun();
             }
+            else
+            {
+                CConfirm.List("Save Type Select!",[
+                    ()=>{
+                        let json={brash:"",canvas:[],script:""};
+                        let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+                        if(data!=null)  json=JSON.parse(data);
+
+                        json.brash=gAtl.Brush().ToStr();
+                        for(let [key,value] of gAtl.mCanvasMap)
+                        {
+                            if(value.GetCameraKey()=="Dev")
+                                value.SetCameraKey(gCanvasCam.get(value));
+                            if(value.GetCameraKey()==null)   value.SetCameraKey("2D");
+                            if(value.mSave)
+                                json.canvas.push(value.ToStr());
+                            value.SetCameraKey("Dev");
+                        }
+                        CStorage.Set(CPath.PHPCR()+"Save.json",JSON.stringify(json));
+                        
+                        CAlert.Info("All Saved!");
+                    },
+                    async ()=>{
+                        await SaveFun();
+                    }
+                ],["Web","File"]);
+            }//else
             
-            CAlert.Info("All Saved!");
+
+            
         };
     }
 

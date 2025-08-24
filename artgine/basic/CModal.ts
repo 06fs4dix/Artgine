@@ -64,7 +64,6 @@ export class CModal implements IAutoUpdate , IListener
     mFooter : HTMLElement=null;
     mOverlayDiv : HTMLDivElement=null;
     mBodyClose=false;
-
     mTitle=CModal.eTitle.TextFullClose;
     //타이틀이 있어야 드래그 가능
     mDrag=true;
@@ -99,7 +98,7 @@ export class CModal implements IAutoUpdate , IListener
         this.mZIndex=gIndex;
         gIndex-=1;
     }
-
+  
     Get<T>(_member: string | string[], _default?: T): T | undefined {
         let t: any = this;
         const path = Array.isArray(_member) ? _member : _member.split(".");

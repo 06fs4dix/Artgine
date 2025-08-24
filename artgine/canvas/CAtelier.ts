@@ -2,16 +2,31 @@ import { CAlert } from "../basic/CAlert.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CLan } from "../basic/CLan.js";
 import { CModal } from "../basic/CModal.js";
+import { CPath } from "../basic/CPath.js";
 import { CPreferences } from "../basic/CPreferences.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CInput } from "../system/CInput.js";
+import { CStorage } from "../system/CStorage.js";
 import { CWebView } from "../system/CWebView.js";
 import { DevTool } from "../tool/DevTool.js";
 import { CFrame } from "../util/CFrame.js";
+import { CScript } from "../util/CScript.js";
 import { CBrush } from "./CBrush.js";
 import { CCanvas } from "./CCanvas.js";
 
+/*
+저장된 파일 구성
+{
+	script:[]
+	canvas:[]
+	brash:""
+
+}
+
+
+*/
 var gMain : CAtelier=null;
 export class CAtelier
 {
@@ -23,6 +38,10 @@ export class CAtelier
 	//m_dev : CCanvasDev=null;
 	async Init(_canvas : Array<string>,_canvasHTMLKey="",_devTool=true)
 	{
+		
+
+		
+		
 		if(gMain==null)	gMain=this;
 		if(this.mPF.mRenderer==CPreferences.eRenderer.Null)
 		{
@@ -35,39 +54,52 @@ export class CAtelier
 		}
 			
 
-		// if(CWebView.IsWebView()!=CWebView.eType.None)
-	    // {
-		// 	if(!CWebView.Call("IsTSCompiled")) {
-		// 		CAlert.E("ts파일 컴파일이 진행 중이거나 진행되지 않고 있습니다. 5초 후에 자동으로 새로고침됩니다.");
-		// 		setTimeout(()=>{
-		// 			CWebView.Call("RemoveCache").then(() => {
-		// 				location.reload();
-		// 			});
-		// 		}, 5000);
-		// 		return;
-		// 	}
-		// }
 
 		this.mFrame = new CFrame(this.mPF,_canvasHTMLKey);
-		
-		//document.body.append(this.m_frame.Win().Handle());
-
 		this.mBrush = new CBrush(this.mFrame);
 		this.mBrush.InitCamera(false);
 		this.mBrush.mPause=true;
+		let script="";
 
 		this.mFrame.PushEvent(CEvent.eType.Load,async ()=>{
-			if(_canvas.length>0)
-			await this.mBrush.LoadJSON("Canvas/Brush.json");
-			for(let key of _canvas)
-			{
-				if(key==null || key=="")	continue;
 
-				let can=new CCanvas(this.mFrame,this.mBrush);
-				this.mCanvasMap.set(key,can);
+
+			let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+			if(CWebView.IsWebView()==CWebView.eType.None && data!=null)
+			{
+				let json:{script,canvas,brash}=JSON.parse(data);
+
+				this.mBrush.ImportJSON(json.brash)
+				for(let canJson of json.canvas)
+				{
+					let can=new CCanvas(this.mFrame,this.mBrush);
+					can.ImportJSON(canJson);
+					this.mCanvasMap.set(can.Key(),can);
+					
+				}
+				script=json.script;
+					
 				
-				await can.LoadJSON("Canvas/"+key);
 			}
+			else
+			{
+				if(_canvas.length>0)
+				await this.mBrush.LoadJSON("Canvas/Brush.json");
+				for(let key of _canvas)
+				{
+					if(key==null || key=="")	continue;
+
+					let can=new CCanvas(this.mFrame,this.mBrush);
+					this.mCanvasMap.set(key,can);
+					
+					await can.LoadJSON("Canvas/"+key);
+				}
+			}
+			
+
+
+
+			
 			this.mBrush.mPause=false;
 			
 
@@ -127,7 +159,8 @@ export class CAtelier
 			}
 		})
 		await this.mFrame.Process();
-
+		if(script!="")
+			CScript.Build(CUniqueID.Get()+".ts",script);
 		
 		
 	}
