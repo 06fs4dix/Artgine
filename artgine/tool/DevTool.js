@@ -74,7 +74,7 @@ function ResetBoxXYZ(_subject) {
     gBoundZX.mMax.z += gBoundTick;
 }
 let gScriptViewer = null;
-export async function InitDevToolScriptViewer() {
+export async function InitDevToolScriptViewer(_github) {
     let json = { brash: "", canvas: [], script: "" };
     let data = CStorage.Get(CPath.PHPCR() + "Save.json");
     if (data != null)
@@ -83,7 +83,7 @@ export async function InitDevToolScriptViewer() {
         let buf = await CFile.Load(CPath.PHPC() + "App/Template/RuntimeScript.ts");
         json.script = CUtil.ArrayToString(buf);
     }
-    gScriptViewer = new CMonacoViewer(json.script, "Runtime.ts");
+    gScriptViewer = new CMonacoViewer(json.script, "Runtime.ts", _github);
     gScriptViewer.mHeader.prepend(CDomFactory.DataToDom("<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>" +
         "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>"));
     CUtil.ID("mvExcute_btn").addEventListener("click", async () => {
@@ -112,7 +112,7 @@ export async function GetDevToolScriptViewer() {
 }
 export function DevTool(_atl) {
     CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "RunTime", async () => {
-        InitDevToolScriptViewer();
+        InitDevToolScriptViewer(_atl.PF().mGitHub);
     }));
     gAtl = _atl;
     const _frame = _atl.Frame();

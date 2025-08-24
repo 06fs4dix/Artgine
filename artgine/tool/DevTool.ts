@@ -124,7 +124,7 @@ function ResetBoxXYZ(_subject : CSubject)
 }
 
 let gScriptViewer : CMonacoViewer=null;
-export async function InitDevToolScriptViewer()
+export async function InitDevToolScriptViewer(_github)
 {
     let json={brash:"",canvas:[],script:""};
     let data=CStorage.Get(CPath.PHPCR()+"Save.json");
@@ -136,7 +136,7 @@ export async function InitDevToolScriptViewer()
         json.script=CUtil.ArrayToString(buf);
     }
     
-    gScriptViewer=new CMonacoViewer(json.script,"Runtime.ts");
+    gScriptViewer=new CMonacoViewer(json.script,"Runtime.ts",_github);
 
 
     gScriptViewer.mHeader.prepend(CDomFactory.DataToDom(
@@ -175,7 +175,7 @@ export async function GetDevToolScriptViewer()
 export function DevTool(_atl: CAtelier) 
 {
     CModal.PushTitleBar(new CModalTitleBar("DevToolModal","RunTime",async ()=>{
-        InitDevToolScriptViewer();
+        InitDevToolScriptViewer(_atl.PF().mGitHub);
         
     }));
     gAtl=_atl;
