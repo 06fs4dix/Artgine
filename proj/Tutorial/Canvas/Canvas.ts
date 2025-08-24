@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 06:35:18';
+const version='2025-08-24 23:31:36';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -64,11 +64,13 @@ import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript
 let can=gAtl.NewCanvas("2DCan");
 can.SetCameraKey("2D");
 let sub=can.Push(new CSubject());
+sub.SetKey("2DSubject");
 sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 
 can=gAtl.NewCanvas("3DCan");
 can.SetCameraKey("3D");
 sub=can.Push(new CSubject());
+sub.SetKey("3DSubject");
 sub.SetPos(new CVec3(-300,0,0));
 let pt=sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt.SetTexture([gAtl.Frame().Pal().GetNoneTex()]);
@@ -109,6 +111,9 @@ CLan.Set("en", "tuto6", "Press F3 to enter developer mode");
 CLan.Set("en", "tuto7", "Press F2 to check currently loaded resources");
 CLan.Set("en", "tuto8", "Press F4 to check the current project code");
 CLan.Set("en", "tuto9", "This project is a 2D/3D canvas mixed example.<br>You can check subjects in the left hierarchy-canvas");
+CLan.Set("en", "tuto9-1", "Select the 3D Canvas, then select the 3D Subject to change its position.");
+
+
 CLan.Set("en", "tuto10", "Press [N] key to code directly.<br>Check the comments and test it");
 
 if(CUtil.IsMobile())
@@ -150,7 +155,7 @@ if(mode==0)
     <p class="mb-3 fs-5" data-CLan='tuto7'>F2를 눌러 현재 로드한 리소스를 확인 가능합니다.</p>
     </div>`,{bodyClose:false});
 
-    var timer=new CTimer();
+     var timer=new CTimer();
     await CChecker.Exe(async ()=>{
 
         if(timer.Delay(false)>10)
@@ -163,19 +168,33 @@ if(mode==0)
     timer.Delay();
     await CChecker.Exe(async ()=>{
 
-        if(timer.Delay(false)>10)
+        if(timer.Delay(false)>15)
             return false;
         return true;
     })
 
     await CTutorial.Exe(CTutorial.eWait.ModalClose,null,`<div class="p-3 border rounded bg-light">
     <p class="mb-3 fs-5" data-CLan='tuto9'>현재 프로젝트는 2D/3D 캔버스 혼합 예제입니다.<br> 왼쪽 하이라키-캔버스에서 서브젝트를 확인가능합니다.</p>
+    <p class="mb-3 fs-5" data-CLan='tuto9-1'>3DCan캔버스를 선택하고 3DSubject 선택하여 포지션을 변경해 보세요</p>
     </div>`);
     timer.Delay();
+    let tip=new CTooltip("3DCan Click-> 3DSubject Click->Pos Move!",CUtil.ID(can.ObjHash()+"_li"),
+        CTooltip.eTrigger.Manual,CTooltip.ePlacement.Auto,Bootstrap.eColor.danger);
+    tip.Focus(CModal.eAction.Shake);
+    tip.Open();
     await CChecker.Exe(async ()=>{
 
-        if(timer.Delay(false)>10)
+        if(sub.GetPos().Equals(new CVec3(-300,0,0))==false)
+        {
+            tip.Close();
             return false;
+        }
+        if(timer.Delay(false)>5)
+        {
+            tip.Focus(CModal.eAction.Shake);
+            timer.Delay();
+        }
+            
         return true;
     })
     await CTutorial.Exe(CTutorial.eWait.KeyUp,CInput.eKey.N,`<div class="p-3 border rounded bg-light">
@@ -190,16 +209,46 @@ for(let i=modalList.length-1;i>=0;--i)
 }
 
 
-let path = CPath.FullPath();
-path = CString.PathSub(path);
-let sv = new CFileViewer([path + "/Test.ts"], async (_file, _source) => {
 
 
-    let moudle=await CScript.Build("Test.ts",_source,gAtl.mPF.mGitHub);
+// let path = CPath.FullPath();
+// path = CString.PathSub(path);
+// let sv = new CFileViewer([path + "/Test.ts"], async (_file, _source) => {
+
+
+//     let moudle=await CScript.Build("Test.ts",_source,gAtl.mPF.mGitHub);
     
-    sv.Close();
-},gAtl.mPF.mGitHub);
-sv.Open();
+//     sv.Close();
+// },gAtl.mPF.mGitHub);
+// sv.Open();
+
+
+
+import { InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
+import { CFile } from "https://06fs4dix.github.io/Artgine/artgine/system/CFile.js";
+import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip.js";
+import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
+
+
+let svmodal=await InitDevToolScriptViewer();
+let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+
+if(data==null)
+{
+    let path = CPath.FullPath();
+    path = CString.PathSub(path);
+    let buf=await CFile.Load(path + "/Test.ts");
+    svmodal.SetSource(CUtil.ArrayToString(buf));
+
+}
+
+
+
+
+
+
+
+
 
 
 

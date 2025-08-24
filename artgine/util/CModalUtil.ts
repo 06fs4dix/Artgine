@@ -975,15 +975,16 @@ export class CBlackboardModal extends CModal {
 export class CMonacoViewer extends CModal {
 
     mEditor: any = null;
+    mGithub=false;
 
-    constructor(_source: string, _fileName : string )
+    constructor(_source: string, _fileName : string,_github=false)
     {
         super();
         this.SetHeader(_fileName);
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
         this.SetSize(800, 600);
-
+        this.mGithub=_github;
         
 
 
@@ -1047,16 +1048,16 @@ export class CMonacoViewer extends CModal {
         // Monaco Editor 초기화
         CUtilWeb.MonacoEditer(CUtil.ID(id), _source, languageType as any, "vs-dark",async (monacoEditer)=>{
             this.mEditor=monacoEditer;
-        });
+        },this.mGithub);
     }
     GetSource()
     {
         return this.mEditor.getModel().getValue();
     }
-    async SetSource(_source)
+    async SetSource(_source,)
     {
         //if(_language=="typescript")
-		_source=await CUtilWeb.TSImport(_source,true);
+		_source=await CUtilWeb.TSImport(_source,true,this.mGithub);
         return this.mEditor.getModel().setValue(_source);
     }
     

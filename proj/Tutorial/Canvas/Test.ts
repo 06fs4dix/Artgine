@@ -96,11 +96,13 @@ import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilW
 // EntryPoint / 진입점
 // Get Atelier from main entry point / 메인 진입점에서 아틀리에 가져오기
 let gAtl=CAtelier.Main();
-CLan.Set(CLan.eType.en,"Test0","Code has been executed.<br>You can restart by refreshing with F5");
-CAlert.Info(CLan.Get("Test0","Code를 실행했습니다.<br>새로고침으로 다시 시작할수 있습니다.F5"),1000*10);
+CLan.Set(CLan.eType.en,"Test0","Code has been executed.");
+CAlert.Info(CLan.Get("Test0","Code를 실행했습니다."),1000*10);
 
 // Get 2D Canvas / 2D 캔버스를 가져온다
 let can=gAtl.Canvas("2DCan");
+//기존 캔버스 서브젝트 삭제
+can.Clear();
 // Create Subject / 서브젝트 생성
 let sub=can.Push(new CSubject());
 // Add Paint. Set with None texture and size / 페인트 추가. None 텍스처로 넣고 사이즈 설정
@@ -127,6 +129,17 @@ sub=can.Push(new CSubject());
 pt=sub.PushComp(new CPaint2D("test.tex",new CVec2(100,100)));
 sub.SetPos(new CVec3(-200,200));
 
-
+//오브젝트 이동하기
+gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
+    let tick=5;
+    if(gAtl.Frame().Input().KeyDown(CInput.eKey.Left))
+        sub.SetPos(CMath.V3AddV3(new CVec3(-tick,0),sub.GetPos()));
+    if(gAtl.Frame().Input().KeyDown(CInput.eKey.Right))
+        sub.SetPos(CMath.V3AddV3(new CVec3(tick,0),sub.GetPos()));
+    if(gAtl.Frame().Input().KeyDown(CInput.eKey.Up))
+        sub.SetPos(CMath.V3AddV3(new CVec3(0,tick),sub.GetPos()));
+    if(gAtl.Frame().Input().KeyDown(CInput.eKey.Down))
+        sub.SetPos(CMath.V3AddV3(new CVec3(0,-tick,0),sub.GetPos()));
+});
 
 // Please Execute when work is complete! / 작업을 완료하면 Execute해주세요!
