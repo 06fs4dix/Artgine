@@ -360,6 +360,8 @@ export class CShadowPlane extends CPaint2D {
         CMath.V3SubV3(p2, posOffset, p2);
         CMath.V3SubV3(p1Far, posOffset, p1Far);
         CMath.V3SubV3(p2Far, posOffset, p2Far);
+        const lmat = pt.GetLMat().Export();
+        lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
         this.SetSize(pt.GetSize().Export());
         this.SetTexture(pt.GetTexture());
         this.SetTexCodi(pt.GetTexCodi());
@@ -375,6 +377,7 @@ export class CShadowPlane extends CPaint2D {
             this.SetYSortOrigin(this.mYSortOrigin + 1);
         }
         this.SetPosList([p1Far, p2Far, p1, p2]);
+        this.SetLMat(lmat);
         this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
     }
     UpdateShadow3D() {

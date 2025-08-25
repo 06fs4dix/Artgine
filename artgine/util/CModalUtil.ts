@@ -972,6 +972,7 @@ export class CBlackboardModal extends CModal {
 }
 
 
+
 export class CMonacoViewer extends CModal {
 
     mEditor: any = null;
@@ -979,6 +980,7 @@ export class CMonacoViewer extends CModal {
 
     constructor(_source: string, _fileName : string,_github=false)
     {
+        
         super();
         this.SetHeader(_fileName);
         this.SetTitle(CModal.eTitle.TextClose);

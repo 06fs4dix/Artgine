@@ -1176,6 +1176,22 @@ export class CShaderInterpretGL extends CShaderInterpret
 		}
 		str += "	return vec2(float(ts.x),float(ts.y));\n";
 		str += "}\n";
+
+		str += "float SamCubeMaxLod(float _off)\n";
+		str += "{\n";
+		str += "    ivec2 ts;\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.SamCubeMax); ++j)
+		{
+			if (j == 0)
+				str += "    if(_off-0.5 <= " + j + ".0)";
+			else
+				str += "    else if(_off-0.5 <= " + j + ".0)";
+			str += "        ts = textureSize(samCube[" + j + "], 0);\n"; // lod=0에서 사이즈 구하기
+		}
+		str += "    int size = max(ts.x, ts.y);\n";
+		str += "    return floor(log2(float(size)));\n";
+		str += "}\n";
+		
 		str += "vec3 Sam2DArrSize(float _off)\n";
 		str += "{\n";
 		str += "	ivec3 ts;\n";

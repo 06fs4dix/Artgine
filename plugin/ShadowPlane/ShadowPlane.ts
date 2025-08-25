@@ -464,8 +464,8 @@ export class CShadowPlane extends CPaint2D
         CMath.V3SubV3(p1Far, posOffset, p1Far); 
         CMath.V3SubV3(p2Far, posOffset, p2Far);
 
-        // const lmat = pt.GetLMat().Export();
-        // lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
+        const lmat = pt.GetLMat().Export();
+        lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
 
         this.SetSize(pt.GetSize().Export());
         this.SetTexture(pt.GetTexture());
@@ -491,7 +491,7 @@ export class CShadowPlane extends CPaint2D
             
 
         this.SetPosList([p1Far,p2Far,p1,p2]);
-        //this.SetLMat(lmat);
+        this.SetLMat(lmat);
         this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
     }
 

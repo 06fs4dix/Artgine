@@ -1,6 +1,6 @@
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, max, min, pow, reflect, Sam2DMat, 
-    Sam2DToV4, Sam2DV4, SamCubeLodToColor, SaturateV3, TexSizeHalfInt, V2AddV2, V2MulFloat, V3AddV3, 
+import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, IntToFloat, max, min, pow, reflect, Sam2DMat, 
+    Sam2DToV4, Sam2DV4, SamCubeLodToColor, SamCubeMaxLod, SaturateV3, TexSizeHalfInt, V2AddV2, V2MulFloat, V3AddV3, 
     V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
@@ -71,10 +71,10 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
 {	
     roughness = clamp(roughness, 0.0, 1.0);
     metalic = clamp(metalic, 0.0, 1.0);
-
+    normal=V3Nor(normal);
 
     //낮을수록 정반사(0되면 이상하게 보임)
-    roughness = max(0.01, roughness);
+    roughness = max(0.05, roughness);
     var smoothness : number=1.0-roughness;
     
     var viewDir : CVec3 =V3Nor(V3SubV3(campos, position.xyz));
@@ -109,6 +109,7 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
         var specular : CVec3 = new CVec3(0.0,0.0,0.0);
 
         var isPointLight : number = lDir.w>1.1 ? 1.0 : 0.0;
+       
 
         //포인트라이트
         if(isPointLight > 0.5)
@@ -201,12 +202,13 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
             var F : CVec3 = FresnelSchlick(max(V3Dot(H, V), 0.0),F0);
 
             //기본 스펙큘러, 디퓨즈
-            var kS : CVec3=F;
+             var kS : CVec3=F;
             var kD : CVec3=V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0),kS),1.0-metalic);
+           
 
             //스펙큘러 계산
             var numerator : CVec3 = V3MulFloat(F, NDF * G);
-            var denominator : number = max(2.0 * max(V3Dot(N, V), 0.0) * max(V3Dot(N, L), 0.0), 0.0001);
+            var denominator : number = max(2.0 * max(V3Dot(N, V), 0.0) * max(V3Dot(N, L), 0.0), 0.001);
             specular = V3MulFloat(numerator, denominator);
             
             //쉐도우 값보다 낮으면 쉐도우 사용
@@ -289,20 +291,39 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
             var R2 : CVec3 = reflect(posToCam, normal);
 
             if(envCube > SDF.eEnvCube.Texture - 0.5) {
+
+                var baseReflectivity : CVec3 = new CVec3(0.04,0.04,0.04);
+                var F0 : CVec3 = V3Mix(baseReflectivity, albedo.rgb, metalic);
+
+                var NdotV : number = max(V3Dot(normal, viewDir), 0.0);
+                var kS_ibl : CVec3 = FresnelSchlickRoughness(NdotV, F0, roughness);
+                var kD_ibl : CVec3 = V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), kS_ibl), 1.0 - metalic);
+
+                
+
                 //diffuse
-                var cubeD : CVec3 = SamCubeLodToColor(0.0,normal, 20.0).xyz;
-                var ambientLight :CVec3 = V3MulV3(V3MulV3(albedo.xyz,cubeD),ambient_color);
+                var maxLod : number=SamCubeMaxLod(0.0);
+                
+                
+
+                var cubeD : CVec3 = SamCubeLodToColor(0.0,normal, maxLod*0.5).xyz;
+                var ambientLight :CVec3 = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl),cubeD),ambient_color);
                 DAll=V3AddV3(ambientLight,DAll);
 
                 //specular
-                var cubeS : CVec3 = SamCubeLodToColor(0.0,R2, roughness*20.0).xyz;
-                SAll=V3AddV3(SAll, V3MulV3(V3MulFloat(cubeS, metalic * 0.5 + 0.5*(1.0-roughness)), albedo.rgb));                
+                var lodmin : CVec3=SamCubeLodToColor(0.0,R2, 0.0).xyz;
+                
+
+
+                
+                var cubeS : CVec3=V3Mix(lodmin,cubeD,roughness);
+                SAll=V3AddV3(SAll, V3MulV3(cubeS, kS_ibl));                
             }
         }
         //pbr 모델 아님 : diffuse만 영향 받음
         else
         {
-            var cubeD : CVec3 = SamCubeLodToColor(0.0,normal,20.0).rgb;
+            var cubeD : CVec3 = SamCubeLodToColor(0.0,normal,0.0).rgb;
             var ambientLight :CVec3 = V3MulV3(V3MulV3(albedo.xyz,cubeD),ambient_color);
             DAll=V3AddV3(ambientLight,DAll);
         }

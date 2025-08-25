@@ -14,7 +14,6 @@ export class SDF {
 		Phong:1,
 		BlinnPhong:2,
 		CookTorrance:3,
-		LambertPhongPBR:4,
 	}
 	static eLightStep2=
 	{

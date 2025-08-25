@@ -188,6 +188,8 @@ export function Sam2DToV4(_uni : Sam2DV4,_off : number|any) : CVec4{    return n
 export function Sam2DToMat(_uni : Sam2DMat,_off : number|any) : CMat{    return new CVec4(0,0,0,0);}
 export function Sam2DSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function Sam2DArrSize(_off : number) : CVec3 { return new CVec3(0,0,0);}
+export function SamCubeMaxLod(_off : number) : number { return 0;}
+
 export function ParallaxNormal(TangentViewPos : CVec3,TangentFragPos : CVec3,_index:number,_uv:CVec2,height_scale:number) : CVec2{    return new CVec2(0,0);}
 
 //mapping range

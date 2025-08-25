@@ -1,5 +1,5 @@
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, max, min, pow, reflect, Sam2DToV4, Sam2DV4, SamCubeLodToColor, TexSizeHalfInt, V2AddV2, V2MulFloat, V3AddV3, V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
+import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, max, min, pow, reflect, Sam2DToV4, Sam2DV4, SamCubeLodToColor, SamCubeMaxLod, TexSizeHalfInt, V2AddV2, V2MulFloat, V3AddV3, V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
 export var ambientColor = new CVec3(0.2, 0.2, 0.2);
 export var ligCount = 0;
 export var ligStep0 = SDF.eLightStep0.HafeLambert;
@@ -56,7 +56,8 @@ function EnvBRDFApproxNonMetal(_color, _roughness, _nDotV) {
 export function LightCac3D(campos, position, albedo, normal, shadow, roughness, emissive, metalic, ambient_color) {
     roughness = clamp(roughness, 0.0, 1.0);
     metalic = clamp(metalic, 0.0, 1.0);
-    roughness = max(0.01, roughness);
+    normal = V3Nor(normal);
+    roughness = max(0.05, roughness);
     var smoothness = 1.0 - roughness;
     var viewDir = V3Nor(V3SubV3(campos, position.xyz));
     var DAll = new CVec3(0, 0, 0);
@@ -141,7 +142,7 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
             var kS = F;
             var kD = V3MulFloat(V3SubV3(new CVec3(1.0, 1.0, 1.0), kS), 1.0 - metalic);
             var numerator = V3MulFloat(F, NDF * G);
-            var denominator = max(2.0 * max(V3Dot(N, V), 0.0) * max(V3Dot(N, L), 0.0), 0.0001);
+            var denominator = max(2.0 * max(V3Dot(N, V), 0.0) * max(V3Dot(N, L), 0.0), 0.001);
             specular = V3MulFloat(numerator, denominator);
             if (nDotL > shadow && shadow > -0.5)
                 nDotL = shadow;
@@ -180,15 +181,22 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
             var posToCam = V3Nor(V3SubV3(position.xyz, campos));
             var R2 = reflect(posToCam, normal);
             if (envCube > SDF.eEnvCube.Texture - 0.5) {
-                var cubeD = SamCubeLodToColor(0.0, normal, 20.0).xyz;
-                var ambientLight = V3MulV3(V3MulV3(albedo.xyz, cubeD), ambient_color);
+                var baseReflectivity = new CVec3(0.04, 0.04, 0.04);
+                var F0 = V3Mix(baseReflectivity, albedo.rgb, metalic);
+                var NdotV = max(V3Dot(normal, viewDir), 0.0);
+                var kS_ibl = FresnelSchlickRoughness(NdotV, F0, roughness);
+                var kD_ibl = V3MulFloat(V3SubV3(new CVec3(1.0, 1.0, 1.0), kS_ibl), 1.0 - metalic);
+                var maxLod = SamCubeMaxLod(0.0);
+                var cubeD = SamCubeLodToColor(0.0, normal, maxLod * 0.5).xyz;
+                var ambientLight = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl), cubeD), ambient_color);
                 DAll = V3AddV3(ambientLight, DAll);
-                var cubeS = SamCubeLodToColor(0.0, R2, roughness * 20.0).xyz;
-                SAll = V3AddV3(SAll, V3MulV3(V3MulFloat(cubeS, metalic * 0.5 + 0.5 * (1.0 - roughness)), albedo.rgb));
+                var lodmin = SamCubeLodToColor(0.0, R2, 0.0).xyz;
+                var cubeS = V3Mix(lodmin, cubeD, roughness);
+                SAll = V3AddV3(SAll, V3MulV3(cubeS, kS_ibl));
             }
         }
         else {
-            var cubeD = SamCubeLodToColor(0.0, normal, 20.0).rgb;
+            var cubeD = SamCubeLodToColor(0.0, normal, 0.0).rgb;
             var ambientLight = V3MulV3(V3MulV3(albedo.xyz, cubeD), ambient_color);
             DAll = V3AddV3(ambientLight, DAll);
         }

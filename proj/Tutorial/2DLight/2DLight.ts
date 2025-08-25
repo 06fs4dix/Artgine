@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-07 14:45:48';
+const version='2025-08-25 09:31:54';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,7 +19,9 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'webServer';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
@@ -28,8 +30,9 @@ CPlugin.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
 import "../../../plugin/ShadowPlane/ShadowPlane.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json']);
+await gAtl.Init(['Main.json'],"");
 var Main = gAtl.Canvas('Main.json');
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import {CObject} from "../../../artgine/basic/CObject.js"
@@ -47,7 +50,7 @@ CAlert.Info("f3로 개발모드에서 라이팅 위치와 값을 수정해 보�
 
 
 // let source=`
-// import {CModal} from "artgine/basic/CModal.js"
+// import {CModal} from "../../../artgine/basic/CModal.js"
 // export function RoomStart1(_data )
 // {
 //     if(_data[0].test==0)
@@ -72,3 +75,5 @@ CAlert.Info("f3로 개발모드에서 라이팅 위치와 값을 수정해 보�
 // `;
 // CScript.Build("test",await CUtilWeb.TSToJS(await CUtilWeb.TSImport(source,false)));
 // new CMonacoViewer(source,"test.ts");
+
+
