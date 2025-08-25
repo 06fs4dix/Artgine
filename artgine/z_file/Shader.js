@@ -208,6 +208,7 @@ export function Sam2DToV4(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DToMat(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DSize(_off) { return new CVec2(0, 0); }
 export function Sam2DArrSize(_off) { return new CVec3(0, 0, 0); }
+export function SamCubeMaxLod(_off) { return 0; }
 export function ParallaxNormal(TangentViewPos, TangentFragPos, _index, _uv, height_scale) { return new CVec2(0, 0); }
 export function MappingV3ToTex(_a) { return new CVec3(0, 0, 0); }
 export function MappingTexToV3(_a) { return new CVec3(0, 0, 0); }

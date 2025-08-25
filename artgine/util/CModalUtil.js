@@ -712,12 +712,14 @@ export class CBlackboardModal extends CModal {
 }
 export class CMonacoViewer extends CModal {
     mEditor = null;
-    constructor(_source, _fileName) {
+    mGithub = false;
+    constructor(_source, _fileName, _github = false) {
         super();
         this.SetHeader(_fileName);
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
         this.SetSize(800, 600);
+        this.mGithub = _github;
         let id = this.Key() + "_editer";
         this.SetBody(`
             <div id='${id}' class='h-100 d-flex align-items-center justify-content-center' >
@@ -763,13 +765,13 @@ export class CMonacoViewer extends CModal {
         }
         CUtilWeb.MonacoEditer(CUtil.ID(id), _source, languageType, "vs-dark", async (monacoEditer) => {
             this.mEditor = monacoEditer;
-        });
+        }, this.mGithub);
     }
     GetSource() {
         return this.mEditor.getModel().getValue();
     }
     async SetSource(_source) {
-        _source = await CUtilWeb.TSImport(_source, true);
+        _source = await CUtilWeb.TSImport(_source, true, this.mGithub);
         return this.mEditor.getModel().setValue(_source);
     }
 }
