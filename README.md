@@ -5,7 +5,7 @@
   
  ## Tutorial
   - **CollusionTest**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-  - **3DSample**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/3DSample/3DSample.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DSample/3DSample.html)
+  - **3DLight**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html)
   - **Skybox**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html)
   - **Wind**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html)
   ## 3D
