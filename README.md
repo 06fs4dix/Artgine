@@ -1,3 +1,9 @@
+
+ **Artgine Bot:**
+ 
+- **Artgine Bot**:https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot?model=gpt-5-thinking
+
+ 
  **Live Demo Links:**
 
 - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
