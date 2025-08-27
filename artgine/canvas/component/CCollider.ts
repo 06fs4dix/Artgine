@@ -123,9 +123,9 @@ export class CCollider extends CComponent
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""]);
 
 	}
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
+		super.EditChange(_pointer,_child);
 		if(_pointer.IsRef(this.mBound))
 		{
 			this.InitBound(this.mBound);

@@ -130,10 +130,10 @@ export class CObject {
         target["mProxy"] = this;
         return target;
     }
-    ProxyORGPush(_childe) {
+    ProxyORGPush(_child) {
         if (this["mProxy"] instanceof Array == false)
             this["mProxy"] = new Array();
-        this["mProxy"].push(_childe);
+        this["mProxy"].push(_child);
     }
     static ProxyTree(_target) {
         for (let key in _target) {
@@ -313,9 +313,9 @@ export class CObject {
     }
     static EditArrayItem(_parent, _point) {
     }
-    EditChange(_pointer, _childe) {
+    EditChange(_pointer, _child) {
     }
-    EditChangeEx(_pointer, _childe) {
+    EditChangeEx(_pointer, _child) {
     }
     EditDrop(_object) {
         if (this.constructor.name == _object.constructor.name) {

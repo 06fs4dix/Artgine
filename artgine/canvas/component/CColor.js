@@ -82,8 +82,8 @@ export class CColor extends CVec4 {
         };
         _div.append(select);
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         if (_pointer.member == "mF32A" && _pointer.key == 3) {
             this.EditRefresh();
         }
@@ -118,7 +118,7 @@ export class CAlpha extends CVec2 {
         _div.append(CDomFactory.DataToDom({ "tag": "input", "type": "range", "class": "form-range",
             "min": "0", "max": "1", "step": "0.05", "value": this.mF32A[0], "onchange": (e) => {
                 let value = e.target.value;
-                this.mF32A[0] = value;
+                this.mF32A[0] = Number(value);
                 this.EditRefresh();
             }
         }));

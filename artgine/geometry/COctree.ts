@@ -27,7 +27,7 @@ export class COctree
 {
 	mCenter : CVec3;
 	mHalf : CVec3;
-	mChilde : Array<COctree> = null;
+	mChild : Array<COctree> = null;
 	mData : Array<COctreeData> = null;
     mMax : CVec3 = new CVec3();
     mBound : CBound;
@@ -49,10 +49,10 @@ export class COctree
     
 
     IsLeafNode() {
-        return this.mChilde == null;
+        return this.mChild == null;
     }
 
-    SelectChilde(point : CVec3) : COctree
+    SelectChild(point : CVec3) : COctree
     {
         return null;
     }
@@ -113,13 +113,13 @@ export class COctree
                 results(this.mData[i]);
             }
         } else {
-            for (let i = 0; i < this.mChilde.length; ++i) {
-                if(this.mChilde[i]==null)  continue;
+            for (let i = 0; i < this.mChild.length; ++i) {
+                if(this.mChild[i]==null)  continue;
                 
                 var r = CMath.Max(CMath.Max(this.mHalf.mF32A[0],this.mHalf.mF32A[1]),this.mHalf.mF32A[2]);
                 var rad = Math.sqrt(r*r+r*r+r*r);
-                if(CUtilMath.PlaneSphereInside(bplane,this.mChilde[i].mCenter,rad,null)) {
-                    this.mChilde[i].InsidePlane(bplane, results);
+                if(CUtilMath.PlaneSphereInside(bplane,this.mChild[i].mCenter,rad,null)) {
+                    this.mChild[i].InsidePlane(bplane, results);
                 }
             }
         }
@@ -159,14 +159,14 @@ export class COctreeMgr
         let bList=new Array<CBound>();
 
         let que=new Array<COctree>();
-        if(this.mOctree.mChilde==null)
+        if(this.mOctree.mChild==null)
         {
             return bList;
         }
-        for(let i=0;i<this.mOctree.mChilde.length;++i)
+        for(let i=0;i<this.mOctree.mChild.length;++i)
         {
-            if(this.mOctree.mChilde[i]!=null)
-                que.push(this.mOctree.mChilde[i]);
+            if(this.mOctree.mChild[i]!=null)
+                que.push(this.mOctree.mChild[i]);
         }
 
         
@@ -176,10 +176,10 @@ export class COctreeMgr
             let pst=que.splice(0,1)[0];
             if(pst==null)   continue;
             bList.push(pst.mBound);
-            if(pst.mChilde!=null)
+            if(pst.mChild!=null)
             {
-                for(let i=0;i<pst.mChilde.length;++i)
-                    que.push(pst.mChilde[i]);
+                for(let i=0;i<pst.mChild.length;++i)
+                    que.push(pst.mChild[i]);
             }
             
 

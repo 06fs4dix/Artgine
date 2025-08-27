@@ -82,8 +82,8 @@ export class CPaint3D extends CPaint {
             }
         }
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         if (_pointer.member == "mMesh") {
             this.SetMesh(this.mMesh);
         }
@@ -180,8 +180,8 @@ export class CPaint3D extends CPaint {
         node.Push(new CMeshPaint(this.mMeshRes.meshTree, this.mTree, null));
         while (node.Size() != nodeOff) {
             let nodemp = node.Find(nodeOff);
-            if (nodemp.md.mChilde != null) {
-                node.Push(new CMeshPaint(nodemp.md.mChilde, nodemp.mpi.mChilde, null));
+            if (nodemp.md.mChild != null) {
+                node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild, null));
             }
             if (nodemp.md.mColleague != null) {
                 node.Push(new CMeshPaint(nodemp.md.mColleague, nodemp.mpi.mColleague, null));
@@ -242,7 +242,7 @@ export class CPaint3D extends CPaint {
             }
             if (nodemp.mpi.mData.updateMat == CUpdate.eType.Updated)
                 nodemp.mpi.mData.updateMat = CUpdate.eType.Already;
-            if (nodemp.md.mChilde != null)
+            if (nodemp.md.mChild != null)
                 nodePOff++;
             if (nodemp.md.mColleague != null)
                 nodePOff++;
@@ -287,7 +287,7 @@ export class CPaint3D extends CPaint {
             this.RenderMesh(_vf, nodemp, barr, nodeOff);
             if (nodemp.mpi.mData.updateMat == CUpdate.eType.Updated)
                 nodemp.mpi.mData.updateMat = CUpdate.eType.Already;
-            if (nodemp.md.mChilde != null)
+            if (nodemp.md.mChild != null)
                 nodePOff++;
             if (nodemp.md.mColleague != null)
                 nodePOff++;

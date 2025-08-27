@@ -197,12 +197,12 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 		target["mProxy"]=this;
 		return target;
 	}
-	ProxyORGPush(_childe : CPointer)
+	ProxyORGPush(_child : CPointer)
 	{
 		if(this["mProxy"] instanceof Array==false)
 			this["mProxy"]=new Array();
 		
-		this["mProxy"].push(_childe);
+		this["mProxy"].push(_child);
 	}
 	static ProxyTree(_target : CObject)
 	{
@@ -476,11 +476,11 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 
 	}
 	//자신에 객체에 변화가 있을때
-	EditChange(_pointer : CPointer,_childe : boolean)
+	EditChange(_pointer : CPointer,_child : boolean)
 	{
 		
 	}
-	EditChangeEx(_pointer : CPointer,_childe : boolean)
+	EditChangeEx(_pointer : CPointer,_child : boolean)
 	{
 
 	}

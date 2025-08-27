@@ -319,11 +319,12 @@ function ps_main_blend() {
             {
                 all = tCol;
             }
-            else if(SDF.eBlend.Tar<=blend[i]+0.5)
+            else if(SDF.eBlend.DarkCut<=blend[i]+0.5)
             {
                 var so : number = all.r + all.g + all.b;
                 all = so < 2.5  ? new CVec4(0.0, 0.0, 0.0, 0.0): tCol;
             }
+            
         } 
         else 
         {

@@ -4,6 +4,7 @@ import { CClass } from "../../basic/CClass.js";
 import { CJSON } from "../../basic/CJSON.js";
 import { CConfirm } from "../../basic/CModal.js";
 import { CObject } from "../../basic/CObject.js";
+import { CStream } from "../../basic/CStream.js";
 import { CUniqueID } from "../../basic/CUniqueID.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import CSubject_imple from "../../canvas_imple/subject/CSubject.js";
@@ -23,7 +24,7 @@ export class CSubject extends CObject {
     mCLArr = null;
     mPushArr = new Array();
     mPushLock = false;
-    mChilde;
+    mChild;
     mPMat;
     mPos;
     mRot;
@@ -49,7 +50,7 @@ export class CSubject extends CObject {
         super();
         this.mComArr = _comArr;
         this.mCLArr = new CArray();
-        this.mChilde = new Array();
+        this.mChild = new Array();
         this.mPMat = null;
         this.mPos = new CVec3();
         this.mRot = new CVec3();
@@ -71,7 +72,7 @@ export class CSubject extends CObject {
         return this.mDestroy;
     }
     Reset() {
-        for (let each0 of this.mChilde) {
+        for (let each0 of this.mChild) {
             each0.Reset();
         }
         for (let each0 of this.mComArr) {
@@ -142,11 +143,11 @@ export class CSubject extends CObject {
     EditForm(_pointer, _body, _input) {
         if (_pointer.member == "mComArr")
             CUtilObj.ArrayAddDataList(_pointer, _body, _input, CClass.ExtendsList(CComponent, true), false, true);
-        if (_pointer.member == "mChilde")
+        if (_pointer.member == "mChild")
             CUtilObj.ArrayAddDataList(_pointer, _body, _input, CClass.ExtendsList(CSubject, true), false, true);
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         if (_pointer.member == "mKey") {
             this.mKeyChange = "keySwap";
         }
@@ -171,14 +172,14 @@ export class CSubject extends CObject {
                 this.mPTArr.length = 0;
             this.mPTArr = null;
         }
-        else if (_pointer.member == "mChilde") {
+        else if (_pointer.member == "mChild") {
             if (_pointer.state == 1) {
-                let ch = this.mChilde[_pointer.key];
-                this.mChilde.splice(_pointer.key, 1);
-                this.PushChilde(ch);
+                let ch = this.mChild[_pointer.key];
+                this.mChild.splice(_pointer.key, 1);
+                this.PushChild(ch);
             }
         }
-        else if (_childe) {
+        else if (_child) {
             if (_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) || _pointer.IsRef(this.mSca)) {
                 this.PRSReset();
             }
@@ -198,7 +199,7 @@ export class CSubject extends CObject {
         for (let each0 of this.mComArr) {
             each0.SetOwner(this);
         }
-        for (let each0 of this.mChilde) {
+        for (let each0 of this.mChild) {
             each0.SetFrame(_frame);
         }
     }
@@ -208,12 +209,12 @@ export class CSubject extends CObject {
     SetEnable(_enable) {
         this.mEnable = _enable;
         this.mUpdateMat = CUpdate.eType.Updated;
-        this.SetChildeShow(_enable);
+        this.SetChildShow(_enable);
     }
-    SetChildeShow(_enable) {
-        for (let each0 of this.mChilde) {
+    SetChildShow(_enable) {
+        for (let each0 of this.mChild) {
             each0.mPEnable = _enable;
-            each0.SetChildeShow(_enable && this.mEnable);
+            each0.SetChildShow(_enable && this.mEnable);
         }
     }
     IsEnable() {
@@ -239,9 +240,9 @@ export class CSubject extends CObject {
         return dummy;
     }
     SubjectUpdate(_delay) {
-        for (var i = 0; i < this.mChilde.length; ++i) {
-            if (this.mChilde[i].GetRemove()) {
-                this.mChilde.splice(i, 1);
+        for (var i = 0; i < this.mChild.length; ++i) {
+            if (this.mChild[i].GetRemove()) {
+                this.mChild.splice(i, 1);
                 if (this.mPTArr)
                     this.mPTArr.length = 0;
                 i--;
@@ -284,7 +285,7 @@ export class CSubject extends CObject {
                 if (each0.GetSysc() == CComponent.eSysn.Paint)
                     this.mPTArr.push(each0);
             }
-            for (let each0 of this.mChilde) {
+            for (let each0 of this.mChild) {
                 each0.GetCPaintVec(this.mPTArr);
             }
         }
@@ -307,14 +308,23 @@ export class CSubject extends CObject {
         for (var i = 0; i < this.mComArr.length; ++i) {
             this.mComArr[i].Destroy();
         }
-        for (var i = 0; i < this.mChilde.length; ++i) {
-            this.mChilde[i].Destroy();
+        for (var i = 0; i < this.mChild.length; ++i) {
+            this.mChild[i].Destroy();
         }
         this.mWMat.ReleaseWASM();
     }
     SetPMat(_mat) { this.mPMat = _mat; }
-    PushChilde(_obj) {
-        this.mChilde.push(_obj);
+    Push(_obj) {
+        if (_obj instanceof CSubject)
+            return this.PushChild(_obj);
+        else if (_obj instanceof CComponent)
+            return this.PushComp(_obj);
+        else if (_obj instanceof CStream)
+            return this.PushPac(_obj);
+        return null;
+    }
+    PushChild(_obj) {
+        this.mChild.push(_obj);
         if (this.mPMatMul)
             _obj.SetPMat(this.mWMat);
         _obj.mPEnable = this.IsEnable();
@@ -328,10 +338,10 @@ export class CSubject extends CObject {
     }
     DetachChild(_key) {
         let child = null;
-        for (var i = 0; i < this.mChilde.length; ++i) {
-            if (this.mChilde[i].Key() == _key) {
-                child = this.mChilde[i];
-                this.mChilde.splice(i, 1);
+        for (var i = 0; i < this.mChild.length; ++i) {
+            if (this.mChild[i].Key() == _key) {
+                child = this.mChild[i];
+                this.mChild.splice(i, 1);
                 break;
             }
         }
@@ -374,13 +384,13 @@ export class CSubject extends CObject {
         }
         return com;
     }
-    FindComp(_type, _childe = false, vec = new Array()) {
-        let cList = this.FindComps(_type, _childe, vec);
+    FindComp(_type, _child = false, vec = new Array()) {
+        let cList = this.FindComps(_type, _child, vec);
         if (cList.length == 0)
             return null;
         return cList[0];
     }
-    FindComps(_type, _childe = false, vec = new Array()) {
+    FindComps(_type, _child = false, vec = new Array()) {
         for (let each0 of this.mComArr) {
             if (each0.IsDestroy())
                 continue;
@@ -395,9 +405,9 @@ export class CSubject extends CObject {
             else if (each0 instanceof _type)
                 vec.push(each0);
         }
-        if (_childe) {
-            for (let each0 of this.mChilde) {
-                each0.FindComps(_type, _childe, vec);
+        if (_child) {
+            for (let each0 of this.mChild) {
+                each0.FindComps(_type, _child, vec);
             }
         }
         if (this.mPushLock) {
@@ -418,15 +428,15 @@ export class CSubject extends CObject {
         }
         return vec;
     }
-    FindChild(_key, _childe = false) {
-        const cList = this.FindChilds(_key, _childe);
+    FindChild(_key, _child = false) {
+        const cList = this.FindChilds(_key, _child);
         if (cList.length === 0)
             return null;
         return cList[0];
     }
-    FindChilds(_key, _childe = false) {
+    FindChilds(_key, _child = false) {
         var vec = new Array();
-        for (let each0 of this.mChilde) {
+        for (let each0 of this.mChild) {
             if (each0.GetRemove())
                 continue;
             if (typeof _key == "string") {
@@ -435,7 +445,7 @@ export class CSubject extends CObject {
             }
             else if (each0 instanceof _key)
                 vec.push(each0);
-            if (_childe) {
+            if (_child) {
                 let chvec = each0.FindChilds(_key, true);
                 if (chvec.length > 0)
                     vec = vec.concat(chvec);
@@ -563,9 +573,9 @@ export class CSubject extends CObject {
             this.mComArr[i].PatchStreamUpdate(_stream, _path);
             _path.pop();
         }
-        for (let i = 0; i < this.mChilde.length; ++i) {
-            _path.push("mChilde[" + i + "]");
-            this.mChilde[i].PatchStreamUpdate(_stream, _path);
+        for (let i = 0; i < this.mChild.length; ++i) {
+            _path.push("mChild[" + i + "]");
+            this.mChild[i].PatchStreamUpdate(_stream, _path);
             _path.pop();
         }
     }
@@ -578,8 +588,8 @@ export class CSubject extends CObject {
         for (let i = 0; i < this.mComArr.length; ++i) {
             this.mComArr[i].PatchTrackDefault();
         }
-        for (let i = 0; i < this.mChilde.length; ++i) {
-            this.mChilde[i].PatchTrackDefault();
+        for (let i = 0; i < this.mChild.length; ++i) {
+            this.mChild[i].PatchTrackDefault();
         }
     }
 }

@@ -7,7 +7,7 @@ export class CTree<Type> extends CObject
 {
 	public mKey : string;
 	public mData : Type;
-	public mChilde : CTree<Type>;
+	public mChild : CTree<Type>;
 	public mColleague : CTree<Type>;
 	public mParent : CTree<Type>;
 	public mValueArr : Array<CTree<Type>>;
@@ -17,7 +17,7 @@ export class CTree<Type> extends CObject
 		super();
 		this.mKey="";
 		this.mData=null;
-		this.mChilde = null;
+		this.mChild = null;
 		this.mColleague = null;
 		this.mParent=null;
 		this.mValueArr=null;
@@ -25,10 +25,10 @@ export class CTree<Type> extends CObject
 	public ImportCJSON(_json : CJSON)
 	{
 		var obj=super.ImportCJSON(_json);
-		if(this.mChilde!=null)
+		if(this.mChild!=null)
 		{
-			this.mChilde.mParent=this;
-			var node=this.mChilde.mColleague;
+			this.mChild.mParent=this;
+			var node=this.mChild.mColleague;
 			while(node!=null)
 			{
 				node.mParent=this;
@@ -41,10 +41,10 @@ export class CTree<Type> extends CObject
 	public Deserial(_stream  : CStream) 
 	{
 		super.Deserial(_stream);
-		if(this.mChilde!=null)
+		if(this.mChild!=null)
 		{
-			this.mChilde.mParent=this;
-			var node=this.mChilde.mColleague;
+			this.mChild.mParent=this;
+			var node=this.mChild.mColleague;
 			while(node!=null)
 			{
 				node.mParent=this;
@@ -82,27 +82,27 @@ export class CTree<Type> extends CObject
 		}
 		return this.mColleague;
 	}
-	PushChilde(_key : string|CTree<Type>) : CTree<Type>
+	PushChild(_key : string|CTree<Type>) : CTree<Type>
 	{
 		this.mValueArr=null;
-		if (this.mChilde == null)
+		if (this.mChild == null)
 		{
 			if(typeof(_key) == "string" || typeof(_key) == "number") 
 			{
-				this.mChilde = new CTree();
-				this.mChilde.mKey = _key+"";
-				this.mChilde.mParent = this;
+				this.mChild = new CTree();
+				this.mChild.mKey = _key+"";
+				this.mChild.mParent = this;
 			}
 			else {
-				this.mChilde = _key;
-				this.mChilde.mParent = this;
+				this.mChild = _key;
+				this.mChild.mParent = this;
 			}
 		}
 		else
 		{
-			return this.mChilde.PushColleague(_key);
+			return this.mChild.PushColleague(_key);
 		}
-		return this.mChilde;
+		return this.mChild;
 	}
 	Find(_key : string|number) : CTree<Type>
 	{
@@ -112,9 +112,9 @@ export class CTree<Type> extends CObject
 			return this;
 	
 		var dum=null;
-		if (this.mChilde != null)
+		if (this.mChild != null)
 		{
-			dum=this.mChilde.Find(_key);
+			dum=this.mChild.Find(_key);
 			if (dum != null)
 				return dum;
 		}
@@ -131,15 +131,15 @@ export class CTree<Type> extends CObject
 		if(this.mParent!=null)
 			this.mParent.mValueArr=null;
 		
-		if (this.mParent.mChilde == this)
+		if (this.mParent.mChild == this)
 		{
-			this.mParent.mChilde = this.mColleague;
+			this.mParent.mChild = this.mColleague;
 			
 		}
-		else if (this.mParent.mChilde != null)
+		else if (this.mParent.mChild != null)
 		{
 
-			var pct = this.mParent.mChilde;
+			var pct = this.mParent.mChild;
 			var pctb = pct;
 			while (pct != this)
 			{
@@ -169,8 +169,8 @@ export class CTree<Type> extends CObject
 			let node=que[off];
 			if(node.mData!=null)
 				this.mValueArr.push(node);
-			if ( node.mChilde != null)
-				que.push(node.mChilde);
+			if ( node.mChild != null)
+				que.push(node.mChild);
 
 			if ( node.mColleague != null)
 				que.push(node.mColleague);
@@ -179,7 +179,7 @@ export class CTree<Type> extends CObject
 		}
 		return this.mValueArr;
 	}
-	Keys(_childe=true)
+	Keys(_child=true)
 	{
 	
 		var keyArr=new Array<string>();
@@ -189,14 +189,14 @@ export class CTree<Type> extends CObject
 		
 		for (let off=0;off<que.length;++off)
 		{
-			let node=que[off];
-			if(node.data!=null)
-				keyArr.push(node.key);
-			if ( node.childe != null && _childe)
-				que.push(node.childe);
+			let node=que[off] as CTree<Type>;
+			if(node.mData!=null)
+				keyArr.push(node.mKey);
+			if ( node.mChild != null && _child)
+				que.push(node.mChild);
 
-			if ( node.colleague != null)
-				que.push(node.colleague);
+			if ( node.mColleague != null)
+				que.push(node.mColleague);
 				
 			
 		}

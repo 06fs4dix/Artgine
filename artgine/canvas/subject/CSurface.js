@@ -77,9 +77,9 @@ export class CSurface extends CSubject {
     Export(_copy, _resetKey) {
         const watch = super.Export(_copy, _resetKey);
         watch.mPaint = watch.FindComps(CPaintSurface)[0];
-        for (let i = 0; i < this.mChilde.length; ++i) {
-            if (this.mChilde[i] instanceof CSurface) {
-                watch.mChilde[i].mRenderPass.Import(this.mChilde[i].mRenderPass);
+        for (let i = 0; i < this.mChild.length; ++i) {
+            if (this.mChild[i] instanceof CSurface) {
+                watch.mChild[i].mRenderPass.Import(this.mChild[i].mRenderPass);
             }
         }
         return watch;

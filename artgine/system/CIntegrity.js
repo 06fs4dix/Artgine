@@ -11,7 +11,7 @@ export default class CIntegrity {
             return CHash.SHA256(String(_input));
         }
     }
-    static async ExeList(_fileList, _childe = false) {
+    static async ExeList(_fileList, _child = false) {
         const allFileHashes = [];
         for (const filePath of _fileList) {
             if (!fs.existsSync(filePath))
@@ -21,7 +21,7 @@ export default class CIntegrity {
                 const fileHash = await this.HashFile(filePath);
                 allFileHashes.push([filePath, fileHash]);
             }
-            else if (stats.isDirectory() && _childe) {
+            else if (stats.isDirectory() && _child) {
                 const files = this.RecursiveFileList(filePath);
                 for (const f of files) {
                     const fileHash = await this.HashFile(f);

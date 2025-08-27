@@ -107,5 +107,6 @@ export class SDF {
 		Org:7,
 		Tar:8,
 		DarkCut : 9,//0보다 크면 무조건 0
+		
 	}
 }

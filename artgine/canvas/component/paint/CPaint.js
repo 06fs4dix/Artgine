@@ -233,8 +233,8 @@ export class CPaint extends CComponent {
         super.Import(_target);
         this.Refresh();
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         if (_pointer.IsRef(this.mTexture)) {
             this.SetTexture(this.mTexture);
             this.BatchClear();
@@ -243,7 +243,7 @@ export class CPaint extends CComponent {
             this.mTagKey = null;
             this.BatchClear();
         }
-        else if (_childe) {
+        else if (_child) {
             if (_pointer.IsRef(this.mRenderPass)) {
                 this.ClearCRPAuto();
                 if (_pointer.Get() instanceof CRenderPass)

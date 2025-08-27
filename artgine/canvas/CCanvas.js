@@ -44,7 +44,7 @@ export class CCanvas extends CObject {
     mResMap = new Map();
     mCameraKey = "2D";
     mPause = false;
-    mPushObj = new CArray();
+    mPushSub = new CArray();
     mSave = true;
     constructor(_fw, _brash) {
         super();
@@ -288,9 +288,9 @@ export class CCanvas extends CObject {
             _input.prepend(CDomFactory.DataToDom(res));
         }
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
-        if (_childe == false)
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_child == false)
             return;
         if (_pointer.IsRef(this.mResMap) && _pointer.member == "mKey") {
             for (var key of this.mResMap.keys()) {
@@ -461,10 +461,10 @@ export class CCanvas extends CObject {
     }
     GetSubMap() { return this.mSubMap; }
     GetResMap() { return this.mResMap; }
-    Find(_key, _childe = false) {
+    Find(_key, _child = false) {
         let data = this.mSubMap.get(_key);
         if (data == null || data.IsDestroy()) {
-            if (_childe == true) {
+            if (_child == true) {
                 for (var each0 of this.mSubMap.values()) {
                     var chArr = each0.FindChilds(_key, true);
                     if (chArr.length > 0) {
@@ -472,9 +472,9 @@ export class CCanvas extends CObject {
                     }
                 }
             }
-            for (let i = 0; i < this.mPushObj.Size(); ++i) {
-                if (this.mPushObj.Find(i).mKey == _key)
-                    return this.mPushObj.Find(i);
+            for (let i = 0; i < this.mPushSub.Size(); ++i) {
+                if (this.mPushSub.Find(i).mKey == _key)
+                    return this.mPushSub.Find(i);
             }
             return null;
         }
@@ -501,7 +501,7 @@ export class CCanvas extends CObject {
         return null;
     }
     FindParentIn(_parent, _target) {
-        for (const child of _parent.mChilde) {
+        for (const child of _parent.mChild) {
             if (child === _target) {
                 return _parent;
             }
@@ -532,7 +532,7 @@ export class CCanvas extends CObject {
         obj.ClearKeyChange();
         if (obj.GetFrame() == null)
             obj.SetFrame(this.mFrame);
-        this.mPushObj.Push(obj);
+        this.mPushSub.Push(obj);
         return _obj;
     }
     KeyChange(_org, _tar) {

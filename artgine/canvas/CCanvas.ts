@@ -72,7 +72,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 
 	public mPause = false;
-	public mPushObj=new CArray<CSubject>();
+	public mPushSub=new CArray<CSubject>();
 	public mSave=true;
 	
 	//public m_msgDummy : CArray<CComMsg>=null;
@@ -464,10 +464,10 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	}
 
 	
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
-		if(_childe==false)return;
+		super.EditChange(_pointer,_child);
+		if(_child==false)return;
 
 		if(_pointer.IsRef(this.mResMap) && _pointer.member=="mKey")
 		{
@@ -721,12 +721,12 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	GetSubMap() { return this.mSubMap; }
 	GetResMap() { return this.mResMap; }
 
-	Find<T  extends CSubject>(_key : string,_childe=false) : T
+	Find<T  extends CSubject>(_key : string,_child=false) : T
 	{
 		let data=this.mSubMap.get(_key) as T;
 		if(data==null || data.IsDestroy())
 		{
-			if(_childe==true)
+			if(_child==true)
 			{
 				for(var each0 of this.mSubMap.values())
 				{
@@ -737,10 +737,10 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 					}
 				}
 			}
-			for(let i=0;i<this.mPushObj.Size();++i)
+			for(let i=0;i<this.mPushSub.Size();++i)
 			{
-				if(this.mPushObj.Find(i).mKey==_key)
-					return this.mPushObj.Find(i)  as T;
+				if(this.mPushSub.Find(i).mKey==_key)
+					return this.mPushSub.Find(i)  as T;
 			}
 
 			return null;
@@ -772,7 +772,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		return null;
 	}
 	private FindParentIn(_parent: CSubject,_target: CSubject): CSubject | null {
-		for (const child of _parent.mChilde) {
+		for (const child of _parent.mChild) {
 			if (child === _target) {
 				return _parent;
 			}
@@ -816,7 +816,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		if(obj.GetFrame()==null)
 			obj.SetFrame(this.mFrame);
 		
-		this.mPushObj.Push(obj);
+		this.mPushSub.Push(obj);
 
 		return _obj as T;		
 	}

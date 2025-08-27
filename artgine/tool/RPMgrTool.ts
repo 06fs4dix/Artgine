@@ -163,7 +163,7 @@ function RPToolRPEx(_rp : CRenderPass)
 
         // }
     };
-    _rp.EditChangeEx=(_pointer : CPointer,_childe : boolean)=>{
+    _rp.EditChangeEx=(_pointer : CPointer,_child : boolean)=>{
         
         RPToolLeftInit();
     };

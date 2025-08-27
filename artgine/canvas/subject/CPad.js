@@ -97,7 +97,7 @@ export class CPad extends CSubject {
                 btn.SetAnchorX(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
                 btn.SetAnchorY(CUI.eAnchor.Min, 30 + 100 * this.mPadScale);
                 btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
-                this.PushChilde(btn);
+                this.PushChild(btn);
                 this.mStick.push(btn);
                 btn.GetPt().GetRenderPass()[0].mDepthTest = false;
             }
@@ -121,7 +121,7 @@ export class CPad extends CSubject {
                 btn.SetAnchorX(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
                 btn.SetAnchorY(CUI.eAnchor.Min, 30 + this.mPadScale);
                 btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
-                this.PushChilde(btn);
+                this.PushChild(btn);
                 this.mStick.push(btn);
                 btn.GetPt().GetRenderPass()[0].mDepthTest = false;
             }
@@ -145,7 +145,7 @@ export class CPad extends CSubject {
                 btn.SetAnchorX(CUI.eAnchor.Min, 30);
                 btn.SetAnchorY(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
                 btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
-                this.PushChilde(btn);
+                this.PushChild(btn);
                 this.mStick.push(btn);
                 btn.GetPt().GetRenderPass()[0].mDepthTest = false;
             }
@@ -169,7 +169,7 @@ export class CPad extends CSubject {
                 btn.SetAnchorX(CUI.eAnchor.Min, 30 + 100 * this.mPadScale);
                 btn.SetAnchorY(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
                 btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
-                this.PushChilde(btn);
+                this.PushChild(btn);
                 this.mStick.push(btn);
                 btn.GetPt().GetRenderPass()[0].mDepthTest = false;
             }
@@ -201,7 +201,7 @@ export class CPad extends CSubject {
                 }
                 btn.SetSize(100 * this.mPadScale, 100 * this.mPadScale);
                 btn.SetPressTraking(true);
-                this.PushChilde(btn);
+                this.PushChild(btn);
                 this.mStick.push(btn);
                 btn.GetPt().GetRenderPass()[0].mDepthTest = false;
             }
@@ -237,7 +237,7 @@ export class CPad extends CSubject {
                     btn.SetAnchorX(CUI.eAnchor.Max, 20);
                     btn.SetAnchorY(CUI.eAnchor.Min, 40 + i * 60 * this.mPadScale);
                     btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
-                    this.PushChilde(btn);
+                    this.PushChild(btn);
                     this.mButton.push(btn);
                     btn.GetPt().GetRenderPass()[0].mDepthTest = false;
                 }
@@ -330,7 +330,7 @@ export class CPad extends CSubject {
     }
     PadReset() {
         this.SetKey("pad");
-        for (let c of this.mChilde) {
+        for (let c of this.mChild) {
             c.Destroy();
         }
         this.mStick = new Array();
@@ -352,7 +352,7 @@ export class CPad extends CSubject {
     }
     ImportCJSON(_json) {
         super.ImportCJSON(_json);
-        for (let ui of this.mChilde) {
+        for (let ui of this.mChild) {
             if (ui.Key().indexOf("PadButton") != -1)
                 this.mButton.push(ui);
             else
@@ -360,10 +360,10 @@ export class CPad extends CSubject {
         }
         return this;
     }
-    EditChange(_pointer, _childe) {
+    EditChange(_pointer, _child) {
         if (_pointer.member == "mPadType") {
             this.PadReset();
         }
-        super.EditChange(_pointer, _childe);
+        super.EditChange(_pointer, _child);
     }
 }

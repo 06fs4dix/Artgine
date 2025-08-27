@@ -1,12 +1,6 @@
-import express from 'express';
-import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import cors from 'cors';
-import * as fs from 'fs';
-import * as path from 'path';
 import { CConsol } from '../basic/CConsol.js';
-import { CPath } from '../basic/CPath.js';
 import { CEvent } from '../basic/CEvent.js';
 import { CScript } from '../util/CScript.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -65,67 +59,7 @@ export class CServerMain {
         _server.Connect();
     }
     async Init() {
-        return new Promise((resolve) => {
-            this.mApp = express();
-            this.mApp.use(async (req, res, next) => {
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                if (req.url && req.url.endsWith('.html')) {
-                    console.log(`call URL: ${req.url}`);
-                    let cleanUrl = req.url;
-                    if (this.mPath && cleanUrl.startsWith(this.mPath)) {
-                        cleanUrl = cleanUrl.substring(this.mPath.length);
-                    }
-                    const filePath = path.join(process.cwd(), cleanUrl);
-                    try {
-                        if (fs.existsSync(filePath)) {
-                            const htmlContent = fs.readFileSync(filePath, 'utf8');
-                            const serverScriptRegex = /<script[^>]*type\s*=\s*["']server["'][^>]*src\s*=\s*["']([^"']+)["'][^>]*>/gi;
-                            let match;
-                            while ((match = serverScriptRegex.exec(htmlContent)) !== null) {
-                                let scriptPath = match[1];
-                                if (!scriptPath.startsWith('/') && !scriptPath.startsWith('http')) {
-                                    const pathModule = await import('path');
-                                    const htmlDir = pathModule.default.dirname(filePath);
-                                    scriptPath = pathModule.default.join(htmlDir, scriptPath);
-                                }
-                                await CScript.Build(scriptPath, scriptPath);
-                            }
-                        }
-                        else {
-                            console.log(`파일이 존재하지 않음: ${filePath}`);
-                        }
-                    }
-                    catch (error) {
-                        console.error('HTML 파일 읽기 오류:', error);
-                    }
-                }
-                next();
-            });
-            this.mApp.use(session({
-                secret: 'secretKey',
-                resave: false,
-                saveUninitialized: true
-            }));
-            this.mApp.use(cors());
-            this.mApp.use(express.json({ limit: '100mb' }));
-            this.mApp.use(express.urlencoded({ extended: false, limit: '100mb' }));
-            this.mApp.use(this.mPath, express.static(CPath.PHPC()));
-            this.mServer = this.mApp.listen(this.mPort);
-            this.mServer.on('listening', async () => {
-                CConsol.Log(`[WebServer] started on port ${this.mPort} Path : ${this.mPath} `, CConsol.eColor.blue);
-                resolve(false);
-            });
-            this.mServer.on('error', (err) => {
-                if (err.code === 'EADDRINUSE') {
-                    console.error(`Port ${this.mPort} is already in use`);
-                    resolve(true);
-                }
-                else {
-                    console.error('Server error:', err);
-                    resolve(true);
-                }
-            });
-        });
+        return null;
     }
     Destroy() {
         if (this.mServer) {
@@ -139,3 +73,5 @@ export class CServerMain {
         CScript.Clear();
     }
 }
+import CServerMain_imple from "../network_imple/CServerMain.js";
+CServerMain_imple();

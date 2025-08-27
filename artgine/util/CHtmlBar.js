@@ -73,8 +73,8 @@ export class CHtmlBarTree extends CObject {
         let nodes = [this.m_root];
         while (nodes.length > 0) {
             let node = nodes.shift();
-            if (node.mChilde)
-                nodes.push(node.mChilde);
+            if (node.mChild)
+                nodes.push(node.mChild);
             if (node.mColleague)
                 nodes.push(node.mColleague);
             if (node.mData)
@@ -84,8 +84,8 @@ export class CHtmlBarTree extends CObject {
         nodes = [this.m_root];
         while (nodes.length > 0) {
             let node = nodes.shift();
-            if (node.mChilde)
-                nodes.push(node.mChilde);
+            if (node.mChild)
+                nodes.push(node.mChild);
             if (node.mColleague)
                 nodes.push(node.mColleague);
             if (node.mData && items.findIndex(n => n.Key() == node.mData.Key())) {
@@ -105,8 +105,8 @@ export class CHtmlBarTree extends CObject {
             let node = nodes.shift();
             if (node.mColleague)
                 nodes.push(node.mColleague);
-            if (node.mChilde)
-                nodes.push(node.mChilde);
+            if (node.mChild)
+                nodes.push(node.mChild);
             if (node.mData)
                 items.push(node.mData);
         }
@@ -124,7 +124,7 @@ export class CHtmlBarTree extends CObject {
         }
         let p = (_item.m_parent === ""
             ? this.m_root
-            : this.m_root.Find(_item.m_parent) || this.m_root).PushChilde(_item.Key());
+            : this.m_root.Find(_item.m_parent) || this.m_root).PushChild(_item.Key());
         p.mData = _item;
         if (CUtil.ID(this.RootID())?.innerHTML)
             this.Refresh();
@@ -178,7 +178,7 @@ export class CHtmlBarTree extends CObject {
     NavbarTitleEvent(e) { }
     Refresh() {
         const navArr = [];
-        let root = this.m_root.mChilde;
+        let root = this.m_root.mChild;
         const createNavItem = (root) => ({
             "<>": "li", "class": "nav-item", "hidden": root.mData.m_hidden ? " " : null, "html": [
                 {
@@ -203,7 +203,7 @@ export class CHtmlBarTree extends CObject {
                 },
                 {
                     "<>": "div", "class": "dropdown-menu", "aria-labelledby": root.mData.Key() + "_htmlBarRootNav",
-                    "html": this.RefreshTrunk(root.mChilde)
+                    "html": this.RefreshTrunk(root.mChild)
                 }
             ]
         });
@@ -275,7 +275,7 @@ export class CHtmlBarTree extends CObject {
                     "class": "dropdown-menu",
                     "aria-labelledby": this.MakeID(key, "barDropdown"),
                     "id": this.MakeID(key, "barDropdownMenu"),
-                    "html": this.RefreshTrunk(_tree.mChilde),
+                    "html": this.RefreshTrunk(_tree.mChild),
                     "style": "margin-left:0px;padding-left:0px;"
                 }
             ];

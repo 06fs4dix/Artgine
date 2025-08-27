@@ -37,7 +37,7 @@ export class CSubject extends CObject implements IFile
 	public mPushLock=false;
 	
 	
-	public mChilde : Array<CSubject>;
+	public mChild : Array<CSubject>;
 	public mPMat : CMat;
 	public mPos : CVec3;
 	public mRot : CVec3;
@@ -74,7 +74,7 @@ export class CSubject extends CObject implements IFile
 		super();
 		this.mComArr=_comArr;
 		this.mCLArr=new CArray<CComponent>();
-		this.mChilde=new Array();
+		this.mChild=new Array();
 		this.mPMat=null;
 		this.mPos = new CVec3();
 		this.mRot = new CVec3();
@@ -107,7 +107,7 @@ export class CSubject extends CObject implements IFile
 	}
 	Reset()
 	{
-		for(let each0 of this.mChilde)
+		for(let each0 of this.mChild)
 		{
 			each0.Reset();
 		}
@@ -217,7 +217,7 @@ export class CSubject extends CObject implements IFile
 		if(_type==CObject.eShould.Proxy)
 		{
 			if(_member=="mPos" || _member=="mRot" || _member=="mSca" || _member=="mWMat" || _member=="mPMat" ||
-				_member=="mKey" || _member=="mEnable" || _member=="mPEnable")//_member=="mChilde" || _member=="mComArr"
+				_member=="mKey" || _member=="mEnable" || _member=="mPEnable")//_member=="mChild" || _member=="mComArr"
 				return false;
 		}
 		
@@ -229,14 +229,14 @@ export class CSubject extends CObject implements IFile
 	{
 		if(_pointer.member=="mComArr")
 			CUtilObj.ArrayAddDataList(_pointer,_body,_input,CClass.ExtendsList(CComponent,true),false,true);
-		if(_pointer.member=="mChilde")
+		if(_pointer.member=="mChild")
 			CUtilObj.ArrayAddDataList(_pointer,_body,_input,CClass.ExtendsList(CSubject,true),false,true);
 
 	}
 
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
+		super.EditChange(_pointer,_child);
 		if(_pointer.member=="mKey")
 		{
 			this.mKeyChange="keySwap";
@@ -270,16 +270,16 @@ export class CSubject extends CObject implements IFile
 			
 	
 		}
-		else if(_pointer.member=="mChilde")
+		else if(_pointer.member=="mChild")
 		{
 			if(_pointer.state==1)
 			{
-				let ch=this.mChilde[_pointer.key];
-				this.mChilde.splice(_pointer.key,1);
-				this.PushChilde(ch);
+				let ch=this.mChild[_pointer.key];
+				this.mChild.splice(_pointer.key,1);
+				this.PushChild(ch);
 			}
 		}
-		else if(_childe)
+		else if(_child)
 		{
 			if(_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) || _pointer.IsRef(this.mSca))
 			{
@@ -293,6 +293,7 @@ export class CSubject extends CObject implements IFile
 		
 	}
 	GetFrame()	{	return this.mFrame;	}
+	//최초 1번만 실행
 	Start(){}
 	SetFrame(_frame : CFrame)	
 	{
@@ -313,7 +314,7 @@ export class CSubject extends CObject implements IFile
 		}
 
 		
-		for(let each0 of this.mChilde)
+		for(let each0 of this.mChild)
 		{
 			each0.SetFrame(_frame);
 		}
@@ -327,14 +328,14 @@ export class CSubject extends CObject implements IFile
 	{
 		this.mEnable = _enable;
 		this.mUpdateMat=CUpdate.eType.Updated;
-		this.SetChildeShow(_enable);
+		this.SetChildShow(_enable);
 	}
-	protected SetChildeShow(_enable : boolean)
+	protected SetChildShow(_enable : boolean)
 	{
-		for(let each0 of this.mChilde)
+		for(let each0 of this.mChild)
 		{
 			each0.mPEnable=_enable;
-			each0.SetChildeShow(_enable && this.mEnable);
+			each0.SetChildShow(_enable && this.mEnable);
 		}
 	}
 	
@@ -366,11 +367,11 @@ export class CSubject extends CObject implements IFile
 	SubjectUpdate(_delay : number) : void
 	{
 		
-		for (var i = 0; i < this.mChilde.length; ++i)
+		for (var i = 0; i < this.mChild.length; ++i)
 		{
-			if(this.mChilde[i].GetRemove())
+			if(this.mChild[i].GetRemove())
 			{
-				this.mChilde.splice(i,1);
+				this.mChild.splice(i,1);
 				if(this.mPTArr)
 					this.mPTArr.length=0;
 				i--;
@@ -438,7 +439,7 @@ export class CSubject extends CObject implements IFile
 				if (each0.GetSysc() == CComponent.eSysn.Paint)//&&  (each0 as CPaint).GetCamera()!=null)
 					this.mPTArr.push(each0);
 			}
-			for (let each0 of this.mChilde)
+			for (let each0 of this.mChild)
 			{
 				each0.GetCPaintVec(this.mPTArr);
 			}
@@ -473,10 +474,10 @@ export class CSubject extends CObject implements IFile
 			this.mComArr[i].Destroy();
 		}
 	
-		for (var i = 0; i < this.mChilde.length; ++i)
+		for (var i = 0; i < this.mChild.length; ++i)
 		{
 			
-			this.mChilde[i].Destroy();
+			this.mChild[i].Destroy();
 		}
 		this.mWMat.ReleaseWASM();
 	}
@@ -485,11 +486,22 @@ export class CSubject extends CObject implements IFile
 	
 	//==================================================================
 	SetPMat(_mat : CMat) { this.mPMat = _mat;	 }//toCopy해야 안전한데 성능상...
+
 	
-	PushChilde<T extends  CSubject>(_obj : T)
+	Push<T>(_obj : T)
+	{
+		if(_obj instanceof CSubject)
+			return this.PushChild(_obj) as T;
+		else if(_obj instanceof CComponent)
+			return this.PushComp(_obj) as T;
+		else if(_obj instanceof CStream)
+			return this.PushPac(_obj) as T;
+		return null;
+	}
+	PushChild<T extends  CSubject>(_obj : T)
 	{ 
 		
-		this.mChilde.push(_obj);
+		this.mChild.push(_obj);
 		if(this.mPMatMul)	_obj.SetPMat(this.mWMat);
 		_obj.mPEnable=this.IsEnable();
 		_obj.PRSReset();
@@ -506,12 +518,12 @@ export class CSubject extends CObject implements IFile
 	DetachChild(_key : string)
 	{
 		let child : CSubject = null;
-		for (var i = 0; i < this.mChilde.length; ++i)
+		for (var i = 0; i < this.mChild.length; ++i)
 		{
-			if (this.mChilde[i].Key() == _key)
+			if (this.mChild[i].Key() == _key)
 			{
-				child = this.mChilde[i];
-				this.mChilde.splice(i,1);
+				child = this.mChild[i];
+				this.mChild.splice(i,1);
 				break;
 			}
 		}
@@ -586,20 +598,20 @@ export class CSubject extends CObject implements IFile
 		// }
 		return com;
 	}
-	FindComp<T = CComponent>(_type : string|number,_childe?,vec?) : CComponent;
-	FindComp<T>(_type : (new (...args:any[]) => T),_childe?,vec?) : T;
-	FindComp<T>(_type : (new (...args:any[]) => T)|string|number,_childe?,vec?) : T|CComponent;
-	FindComp<T>(_type : (new (...args:any[]) => T)|string|number,_childe=false,vec = new Array()) : T|CComponent
+	FindComp<T = CComponent>(_type : string|number,_child?,vec?) : CComponent;
+	FindComp<T>(_type : (new (...args:any[]) => T),_child?,vec?) : T;
+	FindComp<T>(_type : (new (...args:any[]) => T)|string|number,_child?,vec?) : T|CComponent;
+	FindComp<T>(_type : (new (...args:any[]) => T)|string|number,_child=false,vec = new Array()) : T|CComponent
 	{
-		let cList=this.FindComps(_type,_childe,vec);
+		let cList=this.FindComps(_type,_child,vec);
 		if(cList.length==0)
 			return null;
 		return cList[0];
 	}
-	FindComps<T = CComponent>(_type : string|number,_childe?:boolean,vec?:CComponent[]) : CComponent[];
-	FindComps<T>(_type : (new (...args:any[]) => T),_childe?:boolean,vec?:T[]) : T[];
-	FindComps<T>(_type : (new (...args:any[]) => T)|string|number,_childe?,vec?) : T[]|CComponent[];
-	FindComps<T>(_type : (new (...args:any[]) => T)|string|number,_childe=false,vec=new Array()) : T[]|CComponent[]
+	FindComps<T = CComponent>(_type : string|number,_child?:boolean,vec?:CComponent[]) : CComponent[];
+	FindComps<T>(_type : (new (...args:any[]) => T),_child?:boolean,vec?:T[]) : T[];
+	FindComps<T>(_type : (new (...args:any[]) => T)|string|number,_child?,vec?) : T[]|CComponent[];
+	FindComps<T>(_type : (new (...args:any[]) => T)|string|number,_child=false,vec=new Array()) : T[]|CComponent[]
 	{	
 		for (let each0 of this.mComArr)
 		{
@@ -618,11 +630,11 @@ export class CSubject extends CObject implements IFile
 			else if(each0 instanceof _type)
 				vec.push(each0);
 		}
-		if(_childe)
+		if(_child)
 		{
-			for(let each0 of this.mChilde)
+			for(let each0 of this.mChild)
 			{
-				each0.FindComps(_type,_childe,vec);
+				each0.FindComps(_type,_child,vec);
 			}
 		}
 		if(this.mPushLock)
@@ -651,20 +663,20 @@ export class CSubject extends CObject implements IFile
 		
 		return vec;
 	}
-	FindChild<T extends CSubject>(_key: new (...args: any[]) => T, _childe?: boolean): T | null;
-	FindChild<T extends CSubject>(_key: string, _childe?: boolean): T | null;
-	FindChild<T extends CSubject>(_key: any, _childe = false): T | null {
-		const cList = this.FindChilds(_key, _childe);
+	FindChild<T extends CSubject>(_key: new (...args: any[]) => T, _child?: boolean): T | null;
+	FindChild<T extends CSubject>(_key: string, _child?: boolean): T | null;
+	FindChild<T extends CSubject>(_key: any, _child = false): T | null {
+		const cList = this.FindChilds(_key, _child);
 		if (cList.length === 0)
 			return null;
 		return cList[0] as T;
 	}
-	FindChilds(_key : any,_childe=false)
+	FindChilds(_key : any,_child=false)
 	{
 		var vec=new Array<CSubject>();
 		
 		
-		for(let each0 of this.mChilde)
+		for(let each0 of this.mChild)
 		{
 			if(each0.GetRemove())	continue;
 			
@@ -677,7 +689,7 @@ export class CSubject extends CObject implements IFile
 			else if(each0 instanceof _key)
 				vec.push(each0);
 
-			if(_childe)
+			if(_child)
 			{
 				let chvec=each0.FindChilds(_key,true);
 				if(chvec.length>0)
@@ -873,10 +885,10 @@ export class CSubject extends CObject implements IFile
 			_path.pop();
 			
 		}
-		for(let i=0;i<this.mChilde.length;++i)
+		for(let i=0;i<this.mChild.length;++i)
 		{
-			_path.push("mChilde["+i+"]");
-			this.mChilde[i].PatchStreamUpdate(_stream,_path);
+			_path.push("mChild["+i+"]");
+			this.mChild[i].PatchStreamUpdate(_stream,_path);
 			_path.pop();
 		}
 	}
@@ -895,9 +907,9 @@ export class CSubject extends CObject implements IFile
 			
 			
 		}
-		for(let i=0;i<this.mChilde.length;++i)
+		for(let i=0;i<this.mChild.length;++i)
 		{
-			this.mChilde[i].PatchTrackDefault();	
+			this.mChild[i].PatchTrackDefault();	
 		}
 	}
 	

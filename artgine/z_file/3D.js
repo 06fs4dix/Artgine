@@ -246,7 +246,7 @@ function ps_main_gBuffer() {
     if (L_cor.a < alphaCut)
         discard;
     if (outputType < SDF.eGBuf.Position + 0.5) {
-        out_color = new CVec4(to_viewPos.xyz, 1.0);
+        out_color = new CVec4(to_viewPos.xyz, 0.5);
     }
     else if (outputType < SDF.eGBuf.Normal + 0.5) {
         var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);

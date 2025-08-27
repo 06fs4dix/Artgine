@@ -102,7 +102,7 @@ export class CParticle extends CSubject {
     mTime = 0;
     mShape = new CParticleShape();
     IsShould(_member, _type) {
-        if (_member == 'mChilde' || _member == 'mComArr' || _member == 'mTime')
+        if (_member == 'mChild' || _member == 'mComArr' || _member == 'mTime')
             return false;
         return super.IsShould(_member, _type);
     }
@@ -135,7 +135,7 @@ export class CParticle extends CSubject {
                     var obj = new CSubject();
                     obj.Import(sub);
                     obj.SetKey(CUniqueID.GetHash());
-                    this.PushChilde(obj);
+                    this.PushChild(obj);
                     objArr.push(obj);
                 }
             }
@@ -143,7 +143,7 @@ export class CParticle extends CSubject {
         }
         this.mTime += _delay;
         this.m_cTime -= _delay;
-        if (this.mEndTime < this.mTime && this.mChilde.length == 0) {
+        if (this.mEndTime < this.mTime && this.mChild.length == 0) {
             this.Destroy();
         }
     }

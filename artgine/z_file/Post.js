@@ -179,7 +179,7 @@ function ps_main_blend() {
             else if (SDF.eBlend.Tar <= blend[i] + 0.5) {
                 all = tCol;
             }
-            else if (SDF.eBlend.Tar <= blend[i] + 0.5) {
+            else if (SDF.eBlend.DarkCut <= blend[i] + 0.5) {
                 var so = all.r + all.g + all.b;
                 all = so < 2.5 ? new CVec4(0.0, 0.0, 0.0, 0.0) : tCol;
             }

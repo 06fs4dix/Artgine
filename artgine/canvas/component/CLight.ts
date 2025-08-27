@@ -66,10 +66,10 @@ export class CLight extends CCamComp
 	}
 	Icon(){		return "bi bi-lightbulb";	}
 
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
-		if(_childe==false)	return;
+		super.EditChange(_pointer,_child);
+		if(_child==false)	return;
 		for(let ref of _pointer.refArr) 
 		{
 			if(ref == this.mDirPos || ref == this.mColor) {
@@ -173,7 +173,7 @@ export class CLight extends CCamComp
 
 		//라이트 메세지
 		var cm=this.ProductMsg("SetLight");
-		cm.mChilde = true;
+		cm.mChild = true;
 		cm.mInter="";
 		cm.mMsgData[0]=this;
 

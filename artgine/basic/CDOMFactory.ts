@@ -120,8 +120,10 @@ export class CDomFactory
         var tag=_json["<>"];
         var html=_json["html"];
         var el : HTMLElement=null;
-        if(tag==null)
-            tag=_json["tag"];
+        
+
+        if(html==null)  html=_json["children"];
+        if(tag==null)   tag=_json["tag"];
         if(tag!=null)
             el=document.createElement(tag) as HTMLElement;
         if(_json instanceof Array)

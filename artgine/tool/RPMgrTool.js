@@ -110,7 +110,7 @@ function RPToolRPEx(_rp) {
             _body.append(CUtilObj.Select(_pointer, _input, sList, sList, true));
         }
     };
-    _rp.EditChangeEx = (_pointer, _childe) => {
+    _rp.EditChangeEx = (_pointer, _child) => {
         RPToolLeftInit();
     };
 }

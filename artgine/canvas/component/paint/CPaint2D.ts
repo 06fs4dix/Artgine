@@ -326,9 +326,9 @@ export class CPaint2D extends CPaint
 	Wind() {this.PushTag("wind"); }
 	
 	
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
+		super.EditChange(_pointer,_child);
 		if(_pointer.member == "mYSort" || _pointer.member == "mYSortOrigin") 
 		{
 			if(_pointer.member == "mYSort")
@@ -342,7 +342,7 @@ export class CPaint2D extends CPaint
 		{
 			this.SetWindInfluence(this.mWindInfluence.x);
 		}
-		else if(_childe)
+		else if(_child)
 		{
 			if(_pointer.IsRef(this.mPos) ||_pointer.IsRef(this.mRot) ||
 			_pointer.IsRef(this.mSize) || _pointer.IsRef(this.mPivot))
