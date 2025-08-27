@@ -27,6 +27,8 @@
 
 <details>
   <summary><b>English</b></summary>
+ 
+  Learn how to use Artgine in detail with GPT [Link](https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot?model=gpt-5-thinking)
 
   <details>
     <summary>📂 Directory Structure & Execution</summary>
@@ -435,7 +437,9 @@
 
 <details>
   <summary><b>한국어</b></summary>
-
+ 
+  GPT를 이용해 Artgine 자세한 사용법을 배울 수 있습니다 [Link](https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot?model=gpt-5-thinking)
+  
   <details>
     <summary>📂 디렉토리 구조 & 실행법</summary>
 
@@ -635,7 +639,7 @@
     <summary>클래스 설명</summary>
 
   ## Artgine 엔진 핵심 클래스
-
+  
   ### CAtelier
 
   **메인 애플리케이션 매니저**로 엔진을 초기화하고 캔버스들을 관리합니다.
