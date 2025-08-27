@@ -355,9 +355,9 @@ export class CRenderPass extends CObject
 		}
 	}
 	
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
+		super.EditChange(_pointer,_child);
 		this.Reset();
 	}
 	override Export(_copy?: boolean, _resetKey?: boolean): this {

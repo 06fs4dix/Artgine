@@ -450,8 +450,8 @@ async function VoxelToolTileArrModifyReset() {
         VoxelToolTileArrModifyReset();
     };
     let EditEXPush = (tile) => {
-        tile.EditChangeEx = (_pointer, _childe) => {
-            if (_childe)
+        tile.EditChangeEx = (_pointer, _child) => {
+            if (_child)
                 return;
             if (_pointer.member == "mVInfo") {
                 gVoxelTar.ColliderEventReset();
@@ -516,7 +516,7 @@ async function VoxelToolRoleArrModifyReset() {
     let RoleArrModify_div = CUtil.ID("RoleArrModify_div");
     RoleArrModify_div.innerHTML = "";
     let EditEXPush = (role) => {
-        role.EditChangeEx = (_pointer, _childe) => {
+        role.EditChangeEx = (_pointer, _child) => {
             if (_pointer.member == "mPattern" && _pointer.state == 1) {
                 EditEXPush(role);
             }

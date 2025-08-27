@@ -583,10 +583,10 @@ export class CCamera extends CObject
 		CMath.V3AddV3(mpos,CMath.V3MulFloat(ray.GetDirect(),_dist),mpos);
 		return mpos;
 	}
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
-		if(_childe==false)	return;
+		super.EditChange(_pointer,_child);
+		if(_child==false)	return;
 		if(_pointer.IsRef(this.mEye) || _pointer.IsRef(this.mLook))
 		{
 			this.mReset=true;

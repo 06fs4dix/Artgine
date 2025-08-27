@@ -199,8 +199,8 @@ export class CPaint2D extends CPaint {
         }
     }
     Wind() { this.PushTag("wind"); }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         if (_pointer.member == "mYSort" || _pointer.member == "mYSortOrigin") {
             if (_pointer.member == "mYSort") {
                 this.SetYSort(this.mYSort);
@@ -210,7 +210,7 @@ export class CPaint2D extends CPaint {
         else if (_pointer.IsRef(this.mWindInfluence)) {
             this.SetWindInfluence(this.mWindInfluence.x);
         }
-        else if (_childe) {
+        else if (_child) {
             if (_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) ||
                 _pointer.IsRef(this.mSize) || _pointer.IsRef(this.mPivot)) {
                 this.PRSReset();

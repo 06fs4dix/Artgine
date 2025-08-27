@@ -375,7 +375,7 @@ function ps_main_gBuffer() {
 
 	//position
 	if(outputType < SDF.eGBuf.Position + 0.5) {
-		out_color = new CVec4(to_viewPos.xyz, 1.0);
+		out_color = new CVec4(to_viewPos.xyz, 0.5);
 	}
 	//normal
 	else if(outputType < SDF.eGBuf.Normal + 0.5) {

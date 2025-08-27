@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-24 23:45:13';
+const version='2025-08-27 22:10:28';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -57,8 +57,6 @@ import { CLan } from "https://06fs4dix.github.io/Artgine/artgine/basic/CLan.js";
 import { CStorage } from "https://06fs4dix.github.io/Artgine/artgine/system/CStorage.js";
 import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
-import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip";
-import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 
 //CLan.SetCode("en");
 
@@ -213,36 +211,38 @@ for(let i=modalList.length-1;i>=0;--i)
 
 
 
-let path = CPath.FullPath();
-path = CString.PathSub(path);
-let sv = new CFileViewer([path + "/Test.ts"], async (_file, _source) => {
+// let path = CPath.FullPath();
+// path = CString.PathSub(path);
+// let sv = new CFileViewer([path + "/Test.ts"], async (_file, _source) => {
 
 
-    let moudle=await CScript.Build("Test.ts",_source,gAtl.mPF.mGitHub);
+//     let moudle=await CScript.Build("Test.ts",_source,gAtl.mPF.mGitHub);
     
-    sv.Close();
-},gAtl.mPF.mGitHub);
-sv.Open();
+//     sv.Close();
+// },gAtl.mPF.mGitHub);
+// sv.Open();
 
 
 
-// import { InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
-// import { CFile } from "https://06fs4dix.github.io/Artgine/artgine/system/CFile.js";
-// import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip.js";
-// import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
+import { InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
+import { CFile } from "https://06fs4dix.github.io/Artgine/artgine/system/CFile.js";
+import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip.js";
+import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 
 
-// let svmodal=await InitDevToolScriptViewer(gAtl.PF().mGitHub);
-// let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+let svmodal=await InitDevToolScriptViewer(gAtl.PF().mGitHub);
+let data=CStorage.Get(CPath.PHPCR()+"Save.json");
 
-// if(data==null)
-// {
-//     let path = CPath.FullPath();
-//     path = CString.PathSub(path);
-//     let buf=await CFile.Load(path + "/Test.ts");
-//     svmodal.SetSource(CUtil.ArrayToString(buf));
+if(data==null)
+{
+    let path = CPath.FullPath();
+    path = CString.PathSub(path);
+    let buf=await CFile.Load(path + "/Test.ts");
+    svmodal.SetSource(CUtil.ArrayToString(buf));
 
-// }
+}
+
+
 
 
 

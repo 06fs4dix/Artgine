@@ -141,8 +141,38 @@ export async function InitDevToolScriptViewer(_github)
 
     gScriptViewer.mHeader.prepend(CDomFactory.DataToDom(
         "<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>"+
-        "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>"));
+        "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>"+
+        "<button type='button' class='btn btn-info' id='mvGPT_btn'>GPT</button>"));
 
+       
+    
+    CUtil.ID("mvGPT_btn").addEventListener("click",async ()=>{
+
+       
+
+        const URL_ARTGINE="https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot";
+        const modal = new CModal("mvGPT_link_modal");
+        modal.SetOverlay(true); // 배경 오버레이
+        modal.SetHeader("GPT Artgine bot Link");
+        modal.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 2);
+        // 본문: 클릭 가능한 앵커 + 복사용 input
+        modal.SetBody(`
+            <div style="padding:12px;">
+                <p>Get help from GPT</p>
+                <a href="${URL_ARTGINE}" target="_blank" rel="noopener noreferrer">
+                    ${URL_ARTGINE}
+                </a>
+                <div style="margin-top:10px;">
+                    <input id="mvGPT_link_copy" type="text" value="${URL_ARTGINE}" readonly style="width:100%;"/>
+                </div>
+            </div>
+        `);
+
+        modal.Open();
+        modal.Show();
+
+       
+    });
     CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
         let moudle=await CScript.Build("Test.ts",gScriptViewer.GetSource());
     });
@@ -1259,7 +1289,7 @@ function SyncSubjectTreeRecursive(_parent: CObject, _target: CSubject,_gift : bo
                     
                 }
             }
-            _target.PushChilde(cutObj as CSubject);
+            _target.PushChild(cutObj as CSubject);
 
             
 
@@ -1300,7 +1330,7 @@ function SyncSubjectTreeRecursive(_parent: CObject, _target: CSubject,_gift : bo
     if (isOpen) 
     {
         const currentHashes = new Set<string>();
-        for (let child of _target.mChilde) 
+        for (let child of _target.mChild) 
         {
             currentHashes.add(child.ObjHash());
         }
@@ -1331,7 +1361,7 @@ function SyncSubjectTreeRecursive(_parent: CObject, _target: CSubject,_gift : bo
     }
     else    return;
 
-    for(let ch of _target.mChilde)
+    for(let ch of _target.mChild)
         SyncSubjectTreeRecursive(_target, ch,_gift);
 
 
@@ -1392,7 +1422,7 @@ function DevToolLeftPush()
                 if (gLeftSelect instanceof CCanvas)
                     gLeftSelect.Push(cls);
                 else if (gLeftSelect instanceof CSubject)
-                    gLeftSelect.PushChilde(cls);
+                    gLeftSelect.PushChild(cls);
             }
             confirm.Close(); // ✅ 닫기 추가
         };

@@ -356,9 +356,9 @@ export class CPaint extends CComponent
 		this.Refresh();
 	}
 	
-	override EditChange(_pointer : CPointer,_childe : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
+		super.EditChange(_pointer,_child);
 
 		if(_pointer.IsRef(this.mTexture))
 		{
@@ -374,7 +374,7 @@ export class CPaint extends CComponent
 			//this.ClearCRPAuto();
 			//this.WTRefresh();
 		}
-		else if(_childe)
+		else if(_child)
 		{
 			if(_pointer.IsRef(this.mRenderPass))
 			{

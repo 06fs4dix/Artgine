@@ -185,7 +185,7 @@ export class CParticle extends CSubject
 
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member=='mChilde' || _member=='mComArr' || _member=='mTime')
+		if(_member=='mChild' || _member=='mComArr' || _member=='mTime')
 			return false;
 		return super.IsShould(_member,_type);
 	}
@@ -243,7 +243,7 @@ export class CParticle extends CSubject
 					obj.Import(sub);
 					obj.SetKey(CUniqueID.GetHash());
 					
-					this.PushChilde(obj);
+					this.PushChild(obj);
 					objArr.push(obj);
 				}
 			}
@@ -254,7 +254,7 @@ export class CParticle extends CSubject
 		
 		this.m_cTime-=_delay;
 		//this.m_endTime-=_delay;
-		if(this.mEndTime<this.mTime && this.mChilde.length==0)
+		if(this.mEndTime<this.mTime && this.mChild.length==0)
 		{
 			this.Destroy();
 		}

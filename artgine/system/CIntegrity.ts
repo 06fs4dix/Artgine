@@ -15,7 +15,7 @@ export default class CIntegrity {
     }
 
     /** 무결성 검사 - 파일/폴더 목록 */
-    static async ExeList(_fileList: Array<string>, _childe = false): Promise<string> {
+    static async ExeList(_fileList: Array<string>, _child = false): Promise<string> {
         const allFileHashes: [string, string][] = [];
 
         for (const filePath of _fileList) {
@@ -25,7 +25,7 @@ export default class CIntegrity {
             if (stats.isFile()) {
                 const fileHash = await this.HashFile(filePath);
                 allFileHashes.push([filePath, fileHash]);
-            } else if (stats.isDirectory() && _childe) {
+            } else if (stats.isDirectory() && _child) {
                 const files = this.RecursiveFileList(filePath);
                 for (const f of files) {
                     const fileHash = await this.HashFile(f);

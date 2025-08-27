@@ -78,7 +78,7 @@ export class CComponent extends CObject
 			cm.mMsgName=_name;
 			cm.mIntra=null;
 			cm.mInter=null;
-			cm.mChilde=false;
+			cm.mChild=false;
 		}
 		else
 		{

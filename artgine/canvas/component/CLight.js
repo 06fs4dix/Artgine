@@ -32,9 +32,9 @@ export class CLight extends CCamComp {
         this.mSysc = CComponent.eSysn.Light;
     }
     Icon() { return "bi bi-lightbulb"; }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
-        if (_childe == false)
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_child == false)
             return;
         for (let ref of _pointer.refArr) {
             if (ref == this.mDirPos || ref == this.mColor) {
@@ -110,7 +110,7 @@ export class CLight extends CCamComp {
             this.mUpdate = CUpdate.eType.Already;
         }
         var cm = this.ProductMsg("SetLight");
-        cm.mChilde = true;
+        cm.mChild = true;
         cm.mInter = "";
         cm.mMsgData[0] = this;
         if (this.GetOwner().mUpdateMat != 0 || this.mUpdate == CUpdate.eType.Updated) {

@@ -67,8 +67,8 @@ export class CCollider extends CComponent {
         if (_pointer.member == "mCollision" || _pointer.member == "mGGI")
             CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""]);
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         if (_pointer.IsRef(this.mBound)) {
             this.InitBound(this.mBound);
             this.mUpdateMat = CUpdate.eType.Updated;

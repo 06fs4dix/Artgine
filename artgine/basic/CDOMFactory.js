@@ -69,6 +69,8 @@ export class CDomFactory {
         var tag = _json["<>"];
         var html = _json["html"];
         var el = null;
+        if (html == null)
+            html = _json["children"];
         if (tag == null)
             tag = _json["tag"];
         if (tag != null)

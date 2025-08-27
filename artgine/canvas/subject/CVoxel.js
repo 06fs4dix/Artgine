@@ -193,9 +193,9 @@ export class CVoxel extends CSubject {
             CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [new CBlackBoardRef]);
         }
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
-        if (_childe == false)
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_child == false)
             return;
         if (_pointer.member == "mCollider") {
             this.mColliderEvent.fill(0);

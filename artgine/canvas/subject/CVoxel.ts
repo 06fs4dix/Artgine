@@ -294,10 +294,10 @@ export class CVoxel extends CSubject
 		}
 
 	}
-	EditChange(_pointer : CPointer,_childe : boolean)
+	EditChange(_pointer : CPointer,_child : boolean)
 	{
-		super.EditChange(_pointer,_childe);
-		if(_childe==false)	return;
+		super.EditChange(_pointer,_child);
+		if(_child==false)	return;
 		if(_pointer.member=="mCollider")
 		{
 			this.mColliderEvent.fill(0);

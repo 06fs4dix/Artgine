@@ -266,8 +266,8 @@ export class CRenderPass extends CObject {
             _body.append(CUtilObj.Select(_pointer, _input, enumKeys, enumVals, true));
         }
     }
-    EditChange(_pointer, _childe) {
-        super.EditChange(_pointer, _childe);
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
         this.Reset();
     }
     Export(_copy, _resetKey) {

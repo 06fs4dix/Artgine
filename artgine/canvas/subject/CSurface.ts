@@ -138,11 +138,11 @@ export class CSurface extends CSubject
 	public Export(_copy?: boolean, _resetKey?: boolean): this {
 		const watch = super.Export(_copy, _resetKey);
 		watch.mPaint = watch.FindComps(CPaintSurface)[0];
-		for(let i=0;i<this.mChilde.length;++i)
+		for(let i=0;i<this.mChild.length;++i)
 		{
-			if(this.mChilde[i] instanceof CSurface)
+			if(this.mChild[i] instanceof CSurface)
 			{
-				(watch.mChilde[i]as CSurface).mRenderPass.Import((this.mChilde[i] as CSurface).mRenderPass);
+				(watch.mChild[i]as CSurface).mRenderPass.Import((this.mChild[i] as CSurface).mRenderPass);
 			}
 		}
 		//watch.mPaint.SetTexture(this.mPaint.GetTexture());
@@ -157,18 +157,6 @@ export class CSurface extends CSubject
 		//watch.mPaint.Import(this.mPaint);
 		return watch as this;
 	}
-	// override EditChange(_pointer: CPointer, _childe: boolean): void {
-	// 	super.EditChange(_pointer,_childe);
-	// 	if(_pointer.member=="mTexKey")
-	// 	{
-	// 		this.mRenderPass.mRenderTarget=this.mTexKey;
-	// 		this.mRenderPass.Reset();
-	// 		//this.mRenderPass.EditRefresh();
-			
-			
-	// 	}
-
-		
-	// }
+	
 
 };
