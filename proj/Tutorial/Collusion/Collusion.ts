@@ -1,12 +1,12 @@
 //Version
-const version='2025-08-13 12:14:44';
-import "../../../artgine/artgine.js"
+const version='2025-08-30 10:09:01';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
-import {CClass} from "../../../artgine/basic/CClass.js";
+import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "../../../artgine/basic/CPreferences.js";
+import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -20,35 +20,35 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mServer = 'local';
-gPF.mGitHub = false;
+gPF.mGitHub = true;
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPlugin.js";
+import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json']);
+await gAtl.Init(['Main.json'],"undefined");
 var Main = gAtl.Canvas('Main.json');
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-import {CObject} from "../../../artgine/basic/CObject.js"
-import { CPool } from "../../../artgine/basic/CPool.js";
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CBound } from "../../../artgine/geometry/CBound.js";
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CPaint } from "../../../artgine/canvas/component/paint/CPaint.js";
-import { CColor } from "../../../artgine/canvas/component/CColor.js";
-import { CUpdate } from "../../../artgine/basic/Basic.js";
-import { CForce } from "../../../artgine/canvas/component/CForce.js";
-import { CMath } from "../../../artgine/geometry/CMath.js";
-import { CBGAttachButton } from "../../../artgine/util/CModalUtil.js";
-import { CUtil } from "../../../artgine/basic/CUtil.js";
+import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
+import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
+import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
+import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
 var gPushMode=false;
 class CControl extends CBehavior
 {
@@ -164,7 +164,7 @@ async function Init()
         sub.SetPos(new CVec3(Math.random()*1000-500,Math.random()*1000-500));
         if(gPushMode==false)    sub.FindComp(CRigidBody).SetRestitution(0);
         else sub.FindComp(CRigidBody).SetRestitution(0.5);
-        Main.Push(sub);
+        Main.PushSub(sub);
     }
 }
 
@@ -224,6 +224,8 @@ Init();
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
+
+
 
 
 

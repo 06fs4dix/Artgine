@@ -1,4 +1,4 @@
-const version = '2025-08-21 06:32:43';
+const version = '2025-08-30 10:15:18';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -84,7 +84,7 @@ import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/compon
                         const obj = deco.ExportProxy();
                         obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
                         obj.SetSave(false);
-                        Real.Push(obj);
+                        Real.PushSub(obj);
                         placed.add(x + ',' + y);
                     }
                 }
@@ -107,10 +107,10 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     }
     new CBlackboardModal(ba, ta, ca);
 }));
-Real.Push(new CUser()).SetPos(new CVec3(5200, 6500));
-Real.Push(new CNPC("Dante", "Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6400, 6400));
-Real.Push(new CNPC("Miles", "Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200, 9200));
-Real.Push(new CNPC("Poppy", "Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000, 8000));
+Real.PushSub(new CUser()).SetPos(new CVec3(5200, 6500));
+Real.PushSub(new CNPC("Dante", "Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6400, 6400));
+Real.PushSub(new CNPC("Miles", "Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200, 9200));
+Real.PushSub(new CNPC("Poppy", "Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000, 8000));
 CSysAuth.Confirm(true).then(async (_enable) => {
     if (_enable == false)
         return;

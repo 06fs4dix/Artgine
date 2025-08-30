@@ -1,4 +1,4 @@
-const CACHE_NAME = "CACHE_NAME_2025-08-22 07:52:45";
+const CACHE_NAME = "CACHE_NAME_2025-08-30 10:15:51";
 		const MAX_CACHE_SIZE = 10485760;
 		const LOG = false;
 		const API_CACHE = false;//Start

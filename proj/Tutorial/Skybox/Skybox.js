@@ -1,4 +1,4 @@
-const version = '2025-08-23 00:01:15';
+const version = '2025-08-30 10:09:37';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -38,20 +38,20 @@ for (let i = 0; i < texKey.length; ++i) {
     texList.push(tex);
 }
 let cubeTex = gAtl.Frame().Ren().BuildCubeMap(texList, true);
-let ligSub = Main.Push(new CSubject());
+let ligSub = Main.PushSub(new CSubject());
 let ligComp = ligSub.PushComp(new CLight());
 ligComp.SetDirect();
 ligComp.SetColor(new CVec3(1, 0.5, 0.5));
 ligSub.SetPos(new CVec3(1, 0, 0));
-let sub = Main.Push(new CSubject());
+let sub = Main.PushSub(new CSubject());
 sub.SetPos(new CVec3(0, 0, -300));
 let pt = sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt.PushRenderPass(new CRenderPass(gAtl.Frame().Pal().SlCubeKey()));
 pt.SetTexture(cubeTex);
-sub = Main.Push(new CSubject());
+sub = Main.PushSub(new CSubject());
 sub.SetPos(new CVec3(0, 0, 300));
 sub.PushComp(new CPaintCube(cubeTex));
-sub = Main.Push(new CSubject());
+sub = Main.PushSub(new CSubject());
 sub.SetSca(new CVec3(10, 10, 10));
 let ptcube = sub.PushComp(new CPaintCube(cubeTex));
 ptcube.Sky(true, true, false, true, true);

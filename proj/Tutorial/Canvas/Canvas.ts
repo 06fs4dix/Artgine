@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-27 22:10:28';
+const version='2025-08-30 10:08:40';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -63,13 +63,13 @@ import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript
 //캔버스를 직접 생성한다
 let can=gAtl.NewCanvas("2DCan");
 can.SetCameraKey("2D");
-let sub=can.Push(new CSubject());
+let sub=can.PushSub(new CSubject());
 sub.SetKey("2DSubject");
 sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 
 can=gAtl.NewCanvas("3DCan");
 can.SetCameraKey("3D");
-sub=can.Push(new CSubject());
+sub=can.PushSub(new CSubject());
 sub.SetKey("3DSubject");
 sub.SetPos(new CVec3(-300,0,0));
 let pt=sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
@@ -241,6 +241,10 @@ if(data==null)
     svmodal.SetSource(CUtil.ArrayToString(buf));
 
 }
+
+
+
+
 
 
 

@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 06:39:04';
+const version='2025-08-30 10:12:05';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -168,7 +168,7 @@ function createWave() {
             boxSubject.PushComp(paint3D);
             
             // Main 캔버스에 박스 추가
-            Main.Push(boxSubject);
+            Main.PushSub(boxSubject);
             
             // 박스 참조 저장
             waveBoxes.push(boxSubject);
@@ -592,6 +592,11 @@ Option_btn.mModal.Show = function() {
 Option_btn.mModal.GetBody().addEventListener('DOMContentLoaded', function() {
     setTimeout(setupWaveControls, 500);
 });
+
+
+
+
+
 
 
 

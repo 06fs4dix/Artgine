@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-25 23:32:15';
+const version='2025-08-30 10:09:19';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -60,6 +60,8 @@ import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/comp
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+
 
 var skyTexKey=["Res/skybox/right.jpg","Res/skybox/left.jpg","Res/skybox/bottom.jpg","Res/skybox/top.jpg","Res/skybox/front.jpg","Res/skybox/back.jpg"];
 var skyTexList=[];
@@ -302,16 +304,22 @@ let camcon=new CCamCon3DThirdPerson(gAtl.Frame().Input());
 gAtl.Brush().GetCam3D().SetCamCon(camcon);
 camcon.SetPos(new CVec3());
 
-let back=Main.Push(new CSubject());
+let back=Main.PushSub(new CSubject());
 let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
 pt.Shadow();
 back.SetSca(new CVec3(10,0.01,10));
 
 
-let teapot=Main.Push(new CSubject());
+let teapot=Main.PushSub(new CSubject());
 let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
 pt2.Shadow();
+
+// let test=Main.PushSub(new CSubject());
+// pt2=test.PushComp(new CPaint3D("rigged_tree.gltf"));
+// //pt2.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j.jpg"]);
+// //test.SetSca(0.01);
+// pt2.Shadow();
 
 
 //pt.ShadowRead(7);
@@ -326,7 +334,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowPlane",()=>{
     //gAtl.Brush().ClearRen();
 
 
-    let L=Main.Push(new CSubject());
+    let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
 
     let lig=new CLight();
@@ -337,14 +345,14 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowPlane",()=>{
     lig.mDigit=digit;
     L.PushComp(lig);
 
-    let back=Main.Push(new CSubject());
+    let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
     
     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.Push(new CSubject());
+    let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     let plane=teapot.PushComp(new CShadowPlane());
     //plane.m
@@ -358,7 +366,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","Forward",()=>{
     //gAtl.Brush().ClearRen();
     Main.SetRPMgr(forward);
 
-    let L=Main.Push(new CSubject());
+    let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
 
     let lig=new CLight();
@@ -369,19 +377,19 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","Forward",()=>{
     lig.mDigit=digit;
     L.PushComp(lig);
 
-    let back=Main.Push(new CSubject());
+    let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
     pt.Shadow();
     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.Push(new CSubject());
+    let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     pt2.Shadow();
 
 
-    let skybox=Main.Push(new CSubject());
+    let skybox=Main.PushSub(new CSubject());
     skybox.SetSca(new CVec3(10,10,10));
     let ptcube=skybox.PushComp(new CPaintCube(cubeTex));
     ptcube.Sky(false,false,false,false,false);
@@ -413,13 +421,13 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","Deferred",()=>{
 
 }));
 
-CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredSingle(HafeLambert+Phong",()=>{
+CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredSingle(HafeLambert+Phong)/Parallax",()=>{
     Main.Clear();
     Main.ClearBatch();
     gAtl.Brush().ClearRen();
     Main.SetRPMgr(DeferredSingle);
 
-    let L=Main.Push(new CSubject());
+    let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
 
     let lig=new CLight();
@@ -430,15 +438,18 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredSingle(HafeLambert+Ph
     lig.mDigit=digit;
     L.PushComp(lig);
 
-    let back=Main.Push(new CSubject());
-    let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-    pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_lig.jpg","Res/teapot/1zflt0j_NRM.jpg"]);
+    let back=Main.PushSub(new CSubject());
+    let pt=back.PushComp(new CPaint3D("Res/plane/plane.FBX"));
+    pt.mAutoLoad.mMipMap=CTexture.eMipmap.None;
+    //pt.SetTexture(["Res/teapot/rocks.jpg","Res/teapot/rocks_NM_height.tga","Res/teapot/rocks_spec.tga"]);
     pt.Shadow();
     pt.Light();
+    pt.PushTag("parallax");
+    pt.PushCShaderAttr(new CShaderAttr("parallaxNormal",0.1));
     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.Push(new CSubject());
+    let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     //pt2.SetMaterial(0.0,0.0,1.0,0.0);
     //teapot.SetSca(100);
@@ -451,7 +462,7 @@ Main.Clear();
     gAtl.Brush().ClearRen();
     Main.SetRPMgr(DeferredMulti);
 
-    let L=Main.Push(new CSubject());
+    let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
 
     let lig=new CLight();
@@ -462,22 +473,21 @@ Main.Clear();
     lig.mDigit=digit;
     L.PushComp(lig);
 
-    let back=Main.Push(new CSubject());
+    let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_lig.jpg","Res/teapot/1zflt0j_NRM.jpg"]);
     pt.Shadow();
     pt.Light();
-    pt.SetMaterial(0,0,0.5,0);
     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.Push(new CSubject());
+    let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     pt2.Light();
     pt2.Shadow();
 
 
-    let skybox=Main.Push(new CSubject());
+    let skybox=Main.PushSub(new CSubject());
     skybox.SetSca(new CVec3(10,10,10));
     let ptcube=skybox.PushComp(new CPaintCube(cubeTex));
     ptcube.Sky(false,false,false,false,false);
@@ -491,7 +501,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
     //gAtl.Brush().ClearRen();
 
 
-    let L=Main.Push(new CSubject());
+    let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
 
     let lig=new CLight();
@@ -502,7 +512,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
     lig.mDigit=digit;
     L.PushComp(lig);
 
-    let back=Main.Push(new CSubject());
+    let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
     pt.Shadow();
@@ -510,7 +520,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.Push(new CSubject());
+    let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     pt2.Shadow();
 
@@ -534,6 +544,97 @@ Help.SetContent(`
 <div>
 타이틀바 메뉴를 누르면 여러가지 그림자 구현 방식을 확인할수 있습니다
 </div>`);
+
+
+
+
+
+
+
+import { CAlpha, CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+
+// const frame = gAtl.Frame();
+
+
+// // 공통 RT 사이즈(요청 주신 "사이즈 명시")
+// const rtSize = new CVec2(512,512);
+
+
+// // 2) 오프스크린 Surface(= RT) 2개 생성 --------------------------------------
+// const surfBlue = new CSurface();
+// const surfRed = new CSurface();
+// // Linear 필터로 512x512 RT 생성
+// surfBlue.NewRT(null, rtSize, true);
+// surfRed.NewRT (null, rtSize, true);
+// surfRed.GetPaint().SetTexture(gAtl.Frame().Pal().GetNoneTex());
+// // 씬에 등록(Subject이므로 직접 Push 가능)
+// Main.PushSub(surfBlue);
+// Main.PushSub(surfRed);
+
+
+// // 3) 각 RT에 '단색 면'을 풀스크린으로 렌더해 채우기 ---------------------------
+// // shader: 2DPlaneC (2DPlane + color 분기)
+// function fillRTSolid(rtKey, rgba /* CVec4 */, size /* CVec2 */){
+//     const node = new CSubject();
+//     // 텍스처 없이 사이즈만 지정해서 풀사이즈 쿼드 생성
+//     const paint = new CPaint2D(undefined, size);
+//     // CPaint의 SetRGBA( api_slim.jsonl: CPaint.SetRGBA )로 color/alpha 모델 세팅
+//     paint.SetRGBA(rgba);
+
+
+//     const rp = new CRenderPass(gAtl.Frame().Pal().Sl2DKey()); // shaderProgram.jsonl: 2DPlane의 color 분기(suffix 'C')
+//     rp.mRenderTarget = rtKey; // 출력 타깃 → 해당 RT
+//     rp.mDepthTest = false;
+//     rp.mDepthWrite = false;
+
+
+//     paint.PushRenderPass(rp);
+//     rp.Reset();
+//     node.PushComp(paint);
+//     Main.PushSub(node);
+// }
+
+
+// // 파랑/빨강으로 각 RT 채우기(풀사이즈)
+// fillRTSolid(surfBlue.GetTexKey(), new CVec4(0,0,1,1), rtSize); // 파랑
+// fillRTSolid(surfRed.GetTexKey(), new CVec4(1,0,0,1), rtSize); // 빨강
+
+
+// // 4) 화면 합성 출력 -----------------------------------------------------------
+// // (1) 파랑 RT를 화면에 그대로 블릿(텍스처 바인딩 명시)
+// {
+//     const node = new CSubject();
+//     const paint = new CPaint2D(surfBlue.GetTexKey(), rtSize); // ← 텍스처와 사이즈 명시
+//     const rp = new CRenderPass(gAtl.Frame().Pal().Sl2DKey()); // shaderProgram.jsonl: 2DBlit
+//     rp.mDepthTest = false;
+//     rp.mDepthWrite = false;
+//     paint.PushRenderPass(rp);
+//     rp.Reset();
+//     node.PushComp(paint);
+//     Main.Push(node);
+// }
+
+
+// // (2) 빨강 RT를 가산합성으로 덮기(텍스처/사이즈 + 블렌딩 명시)
+// {
+//     const node = new CSubject();
+//     const paint = new CPaint2D(surfRed.GetTexKey(), rtSize);
+//     const rp = new CRenderPass(gAtl.Frame().Pal().Sl2DKey());
+//     rp.mDepthTest = false;
+//     rp.mDepthWrite = false;
+//     rp.mAlpha = true;
+//     // mBlend: [eqRGB, eqA, srcRGB, dstRGB, srcA, dstA]
+//     rp.mBlend = [
+//     CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD,
+//     CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE,
+//     CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE
+//     ];
+//     paint.PushRenderPass(rp);
+//     rp.Reset();
+//     node.PushComp(paint);
+//     Main.Push(node);
+// }
+
 
 
 

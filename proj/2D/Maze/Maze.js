@@ -1,4 +1,4 @@
-const version = '2025-08-21 06:33:54';
+const version = '2025-08-30 10:11:18';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";
@@ -69,14 +69,14 @@ let FindPath = (_target, _end) => {
     let path = Main.GetGGI().mNavi.PathAll(_target.GetPos(), _end, bound, true);
     console.timeEnd();
     for (var i = 0; i < path.length; ++i) {
-        let C = Main.Push(new CSubject());
+        let C = Main.PushSub(new CSubject());
         C.SetPos(CMath.V3AddV3(path[i], new CVec3(0, 0, 2)));
         C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex(), new CVec2(20, 20)));
         tileList.push(C);
     }
     for (var y = 0; y < 20; ++y)
         for (var x = 0; x < 20; ++x) {
-            let C = Main.Push(new CSubject());
+            let C = Main.PushSub(new CSubject());
             C.SetPos(new CVec3(x * CNavigation.Normal + CNavigation.Normal * 0.5, y * CNavigation.Normal + CNavigation.Normal * 0.5, 1));
             let pt = C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetBlackTex(), new CVec2(CNavigation.Normal * 0.9, CNavigation.Normal * 0.9)));
             if (Main.GetGGI().mNavi.R().mKeyN[x + y * 100] != 0)
@@ -182,7 +182,7 @@ let ResetMaze = (_xCount, _yCount) => {
     };
     for (let y = 0; y < count.y; ++y)
         for (let x = 0; x < count.x; ++x) {
-            let sub = Main.Push(new CSubject());
+            let sub = Main.PushSub(new CSubject());
             sub.SetKey(resetCount + "/" + x + "/" + y);
             sub.SetPos(new CVec3(x * size, y * size, -1));
             let pt;
@@ -270,7 +270,7 @@ let ResetMaze = (_xCount, _yCount) => {
         let y = Math.trunc(Math.random() * CStage.mazeSize.y);
         if (maze[x + y * CStage.mazeSize.x] == 1) {
             Main.Find(resetCount + "/" + x + "/" + y).Destroy();
-            let sub = Main.Push(new CSubject());
+            let sub = Main.PushSub(new CSubject());
             sub.SetKey(resetCount + "/" + x + "/" + y);
             sub.SetPos(new CVec3(x * size, y * size));
             for (let sy = -1; sy <= 1; ++sy)
@@ -292,7 +292,7 @@ let ResetMaze = (_xCount, _yCount) => {
     sub.SetBlackBoard(true);
     sub.PushComp(new CUser());
     sub.SetPos(new CVec3(100, 100));
-    Main.Push(sub);
+    Main.PushSub(sub);
     gAtl.Brush().GetCam2D().SetBlackBoard(true);
     let camcon = gAtl.Brush().GetCam2D().GetCamCon();
     if (camcon == null) {
@@ -319,7 +319,7 @@ let ResetMaze = (_xCount, _yCount) => {
         sub.PushComp(new CMonster(rp, "acid_blob"));
         let road = FineRoad();
         sub.SetPos(new CVec3(road.x * size, road.y * size));
-        Main.Push(sub);
+        Main.PushSub(sub);
     }
 };
 ResetMaze(5, 5);

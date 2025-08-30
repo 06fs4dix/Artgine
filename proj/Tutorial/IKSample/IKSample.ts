@@ -54,7 +54,7 @@ let back = new CSubject();
 back.PushComp(new CPaint3D(Main.GetFrame().Pal().GetBoxMesh())).SetTexture(Main.GetFrame().Pal().GetNoneTex());
 
 back.SetSca(new CVec3(10, 0.01, 10));
-Main.Push(back);
+Main.PushSub(back);
 let pt : CPaint;
 let target1 = new CSubject();
 pt = new CPaint3D(Main.GetFrame().Pal().GetBoxMesh());
@@ -63,7 +63,7 @@ target1.PushComp(pt);
 target1.SetBlackBoard(true);
 target1.SetSca(new CVec3(0.2, 0.2, 0.2));
 target1.SetPos(new CVec3(-20,70,200));
-Main.Push(target1);
+Main.PushSub(target1);
 
 let target2 = new CSubject();
 pt = new CPaint3D(Main.GetFrame().Pal().GetBoxMesh());
@@ -76,7 +76,7 @@ target2.SetSca(new CVec3(0.2, 0.2, 0.2));
 let ani2=new CAnimation();
 ani2.Push(new CClipPRS(0,5000,[new CVec3(0,500,-500),new CVec3(-500,500,-500),new CVec3(500,500,-500),new CVec3(0,500,-500)],CClipPRS.eType.Pos));
 target2.PushComp(new CAniFlow(ani2));
-Main.Push(target2);
+Main.PushSub(target2);
 
 
 let target3 = new CSubject();
@@ -87,7 +87,7 @@ target3.SetBlackBoard(true);
 target3.SetPos(new CVec3(0, 0, 0));
 target3.SetSca(new CVec3(0.01, 0.3, 0.01));
 target3.SetRot(new CVec3(1.5,0,0));
-Main.Push(target3);
+Main.PushSub(target3);
 
 let obj = new CSubject();
 //let pt3d = new CPaint3D("Res/Avocado.gltf");
@@ -109,5 +109,5 @@ obj.SetSca(new CVec3(10, 10, 10));
 obj.PushComp(new CIKReach(new CBlackBoardRef(target1.Key()), "leg_joint_R_5", 4,100));
 obj.PushComp(new CSocketAttacher(new CBlackBoardRef(target3.Key()), "arm_joint_L_3"));
 obj.PushComp(new CIKLook(new CBlackBoardRef(target2.Key()), "neck_joint_1"));
-Main.Push(obj);
+Main.PushSub(obj);
 

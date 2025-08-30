@@ -29,7 +29,7 @@ import { CInput } from "../../../artgine/system/CInput.js";
 import { CAlert } from "../../../artgine/basic/CAlert.js";
 let CTest = CClass.New("CTest");
 CConsol.Log(CTest["v"]);
-Main.Push(await CPool.Product("test"));
+Main.PushSub(await CPool.Product("test"));
 let rpMgr = gAtl.Frame().Res().Find("testUVRPMgr");
 Main.SetRPMgr(rpMgr);
 gAtl.Frame().PushEvent(CEvent.eType.Update, () => {

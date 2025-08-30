@@ -1,6 +1,6 @@
-const version = '2025-08-22 07:52:48';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
-import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+const version = '2025-08-30 10:15:53';
+import "../../../artgine/artgine.js";
+import { CClass } from "../../../artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
 CClass.Push(BackGround);
 import { CBulletComp } from "./CBulletComp.js";
@@ -15,7 +15,7 @@ import { CUserComp } from "./CUserComp.js";
 CClass.Push(CUserComp);
 import { RoomSystem } from "./RoomSystem.js";
 CClass.Push(RoomSystem);
-import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 600;
 gPF.mTargetHeight = 800;
@@ -30,45 +30,45 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
-import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
-import { CPlugin } from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
-CPlugin.PushPath('test', 'https://06fs4dix.github.io/Artgine/plugin/test/');
-import "https://06fs4dix.github.io/Artgine/plugin/test/test.js";
+gPF.mGitHub = false;
+import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+import { CPlugin } from "../../../artgine/util/CPlugin.js";
+CPlugin.PushPath('test', '../../../plugin/test/');
+import "../../../plugin/test/test.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json', 'Res.json', 'UI.json'], "");
 var Main = gAtl.Canvas('Main.json');
 var Res = gAtl.Canvas('Res.json');
 var UI = gAtl.Canvas('UI.json');
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CBGAttachButton, CModalChat, CModalEvent } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CPacRoom, CRoomClient } from "https://06fs4dix.github.io/Artgine/artgine/server/CRoomClient.js";
-import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
-import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
-import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
-import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
-import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
-import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
-import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
-import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
+import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CTexture, CTextureInfo } from "../../../artgine/render/CTexture.js";
+import { CBGAttachButton, CModalChat, CModalEvent } from "../../../artgine/util/CModalUtil.js";
+import { CPacRoom, CRoomClient } from "../../../artgine/server/CRoomClient.js";
+import { CStream } from "../../../artgine/basic/CStream.js";
+import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CShaderAttr } from "../../../artgine/render/CShaderAttr.js";
+import { CVec1 } from "../../../artgine/geometry/CVec1.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
+import { CForce } from "../../../artgine/canvas/component/CForce.js";
+import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CPool } from "../../../artgine/basic/CPool.js";
+import { CRPAuto, CRPMgr } from "../../../artgine/canvas/CRPMgr.js";
+import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
+import { CSurface } from "../../../artgine/canvas/subject/CSurface.js";
+import { CSurfaceBloom } from "../../../plugin/Bloom/Bloom.js";
+import { CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
 gAtl.Brush().GetCam2D().SetSize(600, 800);
 gAtl.Frame().PushEvent(CEvent.eType.Init, () => {
     gAtl.Frame().Load().Load("Res/shmup_effects/explosion1.png");
     gAtl.Frame().Load().Load("Res/shmup_effects/flash5_64x64x4x2.png");
 });
-let back = Main.Push(new BackGround());
+let back = Main.PushSub(new BackGround());
 let gStartBtn = new CModalEvent("StartBtn");
 gStartBtn.SetBody(`
         <div id="MainContainer" class="min-vh-100 d-flex flex-column align-items-center justify-content-center">
@@ -86,7 +86,7 @@ socket.On(CRoomClient.eEvent.RoomConnect, (_stream) => {
     let user = userBB.Export(true, true);
     user.SetKey(packet.suk);
     user.FindComp(CUserComp).SetNick(packet.nick);
-    Main.Push(user);
+    Main.PushSub(user);
     if (packet.suk == socket.GetSuk()) {
         gRoomKey = packet.roomKey;
         gSuk = packet.suk;
@@ -112,7 +112,7 @@ socket.On(CRoomClient.eEvent.RoomConnect, (_stream) => {
 });
 socket.On(CRoomClient.eEvent.RoomClose, (_stream) => {
     if (gOwner) {
-        Main.Push(new RoomSystem());
+        Main.PushSub(new RoomSystem());
     }
     gStartBtn.Close();
 });
@@ -139,7 +139,7 @@ socket.On(CPacShooting.eHeader.UserShot, (_stream) => {
     packet.pos.z -= 0.1;
     ball.SetPos(packet.pos);
     ball.SetKey("bullet" + ball.Key());
-    Main.Push(ball);
+    Main.PushSub(ball);
 });
 socket.On(CPacShooting.eHeader.Pos, (_stream) => {
     let packet = CPacShooting.Pos(_stream);
@@ -149,7 +149,7 @@ socket.On(CPacShooting.eHeader.Pos, (_stream) => {
         user = userPF.Export();
         user.SetKey(packet.suk);
         user.FindComp(CUserComp).SetNick(packet.nick);
-        Main.Push(user);
+        Main.PushSub(user);
         user.FindChild("pad").SetEnable(false);
     }
     user.SetPos(packet.pos);
@@ -164,12 +164,6 @@ CPool.On("Monster", () => {
     return mon;
 }, CPool.ePool.Product);
 socket.On(CPacShooting.eHeader.MonCreate, async (_stream) => {
-    let packet = CPacShooting.MonCreate(_stream);
-    let mon = await CPool.Product("Monster");
-    mon.SetKey(packet.monKey);
-    mon.SetPos(packet.pos);
-    mon.FindComp(CProComp).SetHP(50);
-    Main.Push(mon);
 });
 socket.On(CPacShooting.eHeader.Effect, (stream) => {
     let packet = CPacShooting.Effect(stream);
@@ -186,7 +180,7 @@ socket.On(CPacShooting.eHeader.Effect, (stream) => {
     flash.PushComp(pt);
     let af = flash.PushComp(new CAniFlow(packet.key));
     af.SetSpeed(1.5);
-    Main.Push(flash);
+    Main.PushSub(flash);
 });
 socket.Connect().then(() => {
     if (socket.mAddrPortPath == "local") {

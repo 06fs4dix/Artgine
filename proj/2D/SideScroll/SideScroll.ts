@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-19 15:08:52';
+const version='2025-08-21 22:25:31';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,6 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
 
@@ -27,7 +28,7 @@ import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json']);
+await gAtl.Init(['Main.json'],"");
 var Main = gAtl.Canvas('Main.json');
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
@@ -53,12 +54,12 @@ import { CCanvas } from "../../../artgine/canvas/CCanvas.js";
 import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
 
 
-let back = Main.Push(new CSubject());
+let back = Main.PushSub(new CSubject());
 back.PushComp(new CPaint2D("Res/back.jpg", new CVec2(gAtl.PF().mWidth, gAtl.PF().mHeight)));
 
 //맵만들기
 function CreateBrick() {
-    let brick = Main.Push(new CSubject());
+    let brick = Main.PushSub(new CSubject());
     let pt = brick.PushComp(new CPaint2D("Res/brick-1.png"));
     let cl = brick.PushComp(new CCollider(pt));
     cl.SetLayer("brick");
@@ -81,7 +82,7 @@ for (let i = 1; i < 10; ++i) {
 }
 
 //캐릭터 설정
-let mary = Main.Push(new CSubject());
+let mary = Main.PushSub(new CSubject());
 mary.SetKey("mary");
 let pt = mary.PushComp(new CPaint2D("Res/mary.png", new CVec2(52, 62)));
 let cl = mary.PushComp(new CCollider(pt));
@@ -92,7 +93,7 @@ rb.SetRestitution(1);
 rb.SetGravity(true);
 let af = mary.PushComp(new CAniFlow("MaryStand"));
 af.SetSpeed(0.4);
-let pad = mary.PushChilde(new CPad());
+let pad = mary.PushChild(new CPad());
 
 //상태머신
 let sm = mary.PushComp(new CStateMachine());
@@ -161,6 +162,9 @@ mary.Update = () => {
     }
 
 };
+
+
+
 
 
 

@@ -92,7 +92,7 @@ var mold = new CVTileMold(2, 1);
 mold.mTileVInfoArr[0] = 2;
 mold.mTileVInfoArr[1] = 3;
 gVoxelSub.mTileMoldArr.push(mold);
-let A = Main.Push(new CSubject());
+let A = Main.PushSub(new CSubject());
 let pt = A.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
 let nv = A.PushComp(new CNavigation(pt));
@@ -113,7 +113,7 @@ bh.Update = () => {
         pt.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
     }
 };
-let B = Main.Push(new CSubject());
+let B = Main.PushSub(new CSubject());
 let pt2 = B.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt2.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
 nv = B.PushComp(new CNavigation(pt2));
@@ -123,7 +123,7 @@ cl.PushCollisionLayer("voxel");
 let vls = new CVoxelLightSpace();
 CConfirm.List("Voxel Mode Select!", [() => {
         gVoxel.ResetInfo(new CVec3(16, 16, 1), 100, true);
-        Main.Push(gVoxel);
+        Main.PushSub(gVoxel);
         gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 15, 0), 1);
         gVoxel.BondsFill(new CCIndex(5, 5, 0), new CCIndex(10, 10, 0), 2);
         naniMgr.Init(new CVec3(16, 16, 1));
@@ -135,11 +135,11 @@ CConfirm.List("Voxel Mode Select!", [() => {
             gVoxelSub.Bonds(new CCIndex(Math.trunc(Math.random() * 16), Math.trunc(Math.random() * 16), 0), 1);
         }
         gVoxelSub.SetPos(new CVec3(0, 0, 2));
-        Main.Push(gVoxelSub);
+        Main.PushSub(gVoxelSub);
     }, () => {
         mode2D = false;
         gVoxel.ResetInfo(new CVec3(16, 16, 16), 100, false);
-        Main.Push(gVoxel);
+        Main.PushSub(gVoxel);
         Main.SetCameraKey("3D");
         Main.ClearBatch();
         naniMgr.Init(new CVec3(16, 16, 16));
@@ -170,7 +170,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
         if (mode2D == true) {
             for (var y = 0; y < 16; ++y)
                 for (var x = 0; x < 16; ++x) {
-                    let C = Main.Push(new CSubject());
+                    let C = Main.PushSub(new CSubject());
                     C.SetPos(new CVec3(x * CNavigation.Normal + 50, y * CNavigation.Normal + 50, 110));
                     C.SetSca(new CVec3(0.4, 0.4, 0.4));
                     let pt = C.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
@@ -187,7 +187,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
             else
                 path = naniMgr.Path(A.GetPos(), B.GetPos(), A.FindComp(CNavigation).mBound, pass, true, false);
             for (var i = 0; i < path.length; ++i) {
-                let C = Main.Push(new CSubject());
+                let C = Main.PushSub(new CSubject());
                 path[i].z = 120;
                 C.SetPos(path[i]);
                 C.SetSca(new CVec3(0.4, 0.4, 0.4));
@@ -200,7 +200,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
             for (var z = 0; z < 16; ++z)
                 for (var y = 1; y < 2; ++y)
                     for (var x = 0; x < 16; ++x) {
-                        let C = Main.Push(new CSubject());
+                        let C = Main.PushSub(new CSubject());
                         C.SetPos(new CVec3(x * CNavigation.Normal + 50, y * CNavigation.Normal + 50 + 100, z * CNavigation.Normal + 50));
                         C.SetSca(new CVec3(0.1, 0.1, 0.1));
                         let pt = C.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
@@ -218,7 +218,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
             else
                 path = naniMgr.Path(A.GetPos(), B.GetPos(), A.FindComp(CNavigation).mBound, pass, false, false);
             for (var i = 0; i < path.length; ++i) {
-                let C = Main.Push(new CSubject());
+                let C = Main.PushSub(new CSubject());
                 path[i].y = 200;
                 C.SetPos(path[i]);
                 C.SetSca(new CVec3(0.1, 0.1, 0.1));

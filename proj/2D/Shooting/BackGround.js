@@ -1,15 +1,15 @@
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
+import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
+import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CForce } from "../../../artgine/canvas/component/CForce.js";
+import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
+import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CVec4 } from "../../../artgine/geometry/CVec4.js";
+import { CTexture } from "../../../artgine/render/CTexture.js";
+import { CLoaderOption } from "../../../artgine/util/CLoader.js";
 export class BackGround extends CSubject {
     mMoon = null;
     Start() {
@@ -25,7 +25,7 @@ export class BackGround extends CSubject {
     }
     Update() {
         if (this.mMoon == null || this.mMoon.IsDestroy()) {
-            this.mMoon = this.PushChilde(new CSubject());
+            this.mMoon = this.PushChild(new CSubject());
             let pt = this.mMoon.PushComp(new CPaint2D());
             this.mMoon.PushComp(new CAniFlow("BlueMoon"));
             this.mMoon.SetSca(new CVec3(0.1, 0.1, 0.1));
