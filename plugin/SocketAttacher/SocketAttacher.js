@@ -139,7 +139,7 @@ export class CSocketAttacher extends CComponent {
             prefixSpan.style.userSelect = 'none';
             line.append(prefixSpan, checkbox, label);
             const elements = [line];
-            let child = _node.mChilde;
+            let child = _node.mChild;
             const children = [];
             while (child) {
                 children.push(child);

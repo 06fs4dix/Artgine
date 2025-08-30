@@ -40,12 +40,12 @@ var shadowReadList: Sam2DV4=new Sam2DV4(9);
 var shadowOn : number = -1.0;
 var sun : number=0.0;
 
-Build("PreVoxel",[],
+Build("Voxel",[],
 	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun],[out_position,to_uv,to_worldPos],
     ps_main,[out_color]
 );
 	
-Build("PreVoxelShadowWrite",["shadowWrite"],
+Build("VoxelShadowWrite",["shadowWrite"],
 	vs_main_shadow_write,[
 		worldMat,viewMat,projectMat,colorModel,alphaModel,size,
 		ligDir,ligCol,ligCount,
@@ -56,7 +56,7 @@ Build("PreVoxelShadowWrite",["shadowWrite"],
     ps_main_shadow_write,[out_color]
 );
 
-Build("PreVoxelShadowRead",["shadowRead"],
+Build("VoxelShadowRead",["shadowRead"],
 	vs_main_shadow_read,[
 		worldMat,viewMat,projectMat,colorModel,alphaModel,size,
 		ligDir,ligCol,ligCount,

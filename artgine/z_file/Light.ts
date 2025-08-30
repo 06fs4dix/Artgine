@@ -17,7 +17,20 @@ export var ligDir: Sam2DV4=new Sam2DV4(9, 503);
 export var ligCol: Sam2DV4=new Sam2DV4(9, 504);
 
 export var envCube : number = -1;
+export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4
+{
+    var tm : CVec4=new CVec4(_material.x,_material.y,_material.z,_material.w);
+    if(sam2DCount>1.0)
+    {
+        if(tm.x<-0.5)	tm.x=_texColor.x;
+        if(tm.y<-0.5)	tm.y=_texColor.y;
+        if(tm.z<-0.5)	tm.z=_texColor.z;
+        if(tm.w<-0.5)	tm.w=_texColor.w;
+    }
+    
 
+    return tm;
+}
 function DistributionGGX(_normal : CVec3, _halfwayVector : CVec3, _roughness : number) : number {
     var roughnessSquared : number = _roughness * _roughness;
     var roughnessSquared2 : number = roughnessSquared * roughnessSquared;
@@ -67,7 +80,7 @@ function EnvBRDFApproxNonMetal(_color : CVec3, _roughness : number, _nDotV : num
 }
 
 export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,normal :CVec3,shadow : number,
-    roughness : number,emissive : number,metalic : number, ambient_color : CVec3) : CMat3
+    roughness : number,ao : number,metalic : number, ambient_color : CVec3) : CMat3
 {	
     roughness = clamp(roughness, 0.0, 1.0);
     metalic = clamp(metalic, 0.0, 1.0);
@@ -242,34 +255,6 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
     DAll = DDirAll;
     SAll = SDirAll;
 
-    if(ligStep2 > SDF.eLightStep2.Emissive - 0.5 && ligStep2 < SDF.eLightStep2.Emissive + 0.5) 
-    {
-
-        emAll = V3MulFloat(albedo.rgb, emissive);
-        
-
-        // emAll = V3MulFloat(emAll, 0.5); //em이 너무 많이 들어가서 반으로 줄임
-        // var brightness : number = V3Dot(emAll, new CVec3(0.2125, 0.7152, 0.0722));
-        // if(brightness > 1.0) {
-        //     emAll = SaturateV3(emAll);
-        //     emAll = V3MulFloat(emAll, 0.5); //em이 너무 밝아서 반으로 줄임
-        // }
-        // else {
-        //     emAll = new CVec3(0.0, 0.0, 0.0);
-        // }
-
-        // if(emissive > 1.0) {
-        //     emAll = V3MulFloat(albedo.rgb, emissive);
-        //     DAll = V3MulFloat(DAll, emissive); //diffuse값도 emissive값에 의해 커짐
-        //     SAll = new CVec3(0.0,0.0,0.0);
-        // }
-        // else if(emissive > 0.0) {
-        //     emAll = V3Mix(emAll, albedo.rgb, emissive); //초과된 빛과 albedo 사이의 값으로 나옴
-        //     DAll = V3Mix(DAll, emAll, emissive); //방출광과 diffuse 사이의 값으로 나옴
-        //     SAll = V3Mix(SAll, new CVec3(0.0,0.0,0.0), emissive); //emissive가 커지면 specular가 점점 줄어듬
-        // }
-    }
-
     //shadow
     if(shadow>-0.5)
     {
@@ -305,19 +290,19 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
                 var maxLod : number=SamCubeMaxLod(0.0);
                 
                 
-
+                 // ---- Ambient Diffuse (IBL) ----
                 var cubeD : CVec3 = SamCubeLodToColor(0.0,normal, maxLod*0.5).xyz;
                 var ambientLight :CVec3 = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl),cubeD),ambient_color);
+                ambientLight = V3MulFloat(ambientLight, ao);                        // AO
                 DAll=V3AddV3(ambientLight,DAll);
 
                 //specular
+               // ---- Ambient Specular (IBL) ----
                 var lodmin : CVec3=SamCubeLodToColor(0.0,R2, 0.0).xyz;
-                
-
-
-                
-                var cubeS : CVec3=V3Mix(lodmin,cubeD,roughness);
-                SAll=V3AddV3(SAll, V3MulV3(cubeS, kS_ibl));                
+                var cubeS  : CVec3=V3Mix(lodmin,cubeD,roughness);
+                // 광택(roughness↓)이 높을수록 AO 감쇠를 완화
+                var specAO : number = Math.pow(ao, 0.5 + 0.5*roughness);            // AO
+                SAll=V3AddV3(SAll, V3MulFloat(V3MulV3(cubeS, kS_ibl), specAO));     // AO
             }
         }
         //pbr 모델 아님 : diffuse만 영향 받음
@@ -325,6 +310,7 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
         {
             var cubeD : CVec3 = SamCubeLodToColor(0.0,normal,0.0).rgb;
             var ambientLight :CVec3 = V3MulV3(V3MulV3(albedo.xyz,cubeD),ambient_color);
+            ambientLight = V3MulFloat(ambientLight, ao);   
             DAll=V3AddV3(ambientLight,DAll);
         }
         

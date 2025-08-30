@@ -5,6 +5,7 @@ import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import { CPaint } from "./CPaint.js";
 
+
 export class CPaintSurface extends CPaint
 {
 
@@ -33,7 +34,7 @@ export class CPaintSurface extends CPaint
     {
         if(this.mRenderPass.length==0)
         {
-            var rp=new CRPAuto("Pre2Blit");
+            var rp=new CRPAuto("2DBlit");
             this.mRenderPass=[rp];
         }
         

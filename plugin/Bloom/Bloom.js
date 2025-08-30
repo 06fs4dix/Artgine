@@ -114,7 +114,7 @@ export class CSurfaceBloom extends CSurface {
             downSampleSurf.ResetTexture(mipSize[i], i, this.m_threshold, this.m_softThreshold);
             downSampleSurf.GetRP().mRenderTarget = "DownSample" + i + ".tex";
             downSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
-            this.PushChilde(downSampleSurf);
+            this.PushChild(downSampleSurf);
             mipTex.push(downSampleSurf.GetTexKey());
         }
         for (let i = this.m_mipMax; i > 1; i--) {
@@ -123,16 +123,16 @@ export class CSurfaceBloom extends CSurface {
             upSampleSurf.SetKey("UpSample" + texIndex);
             upSampleSurf.ResetTexture(mipTex[i - 1], this.GetBlendFactor(i, this.m_mipMax));
             upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
-            this.PushChilde(upSampleSurf);
+            this.PushChild(upSampleSurf);
         }
         let upSampleSurf = new CSurfaceUpSample();
         upSampleSurf.SetKey("UpSample" + (this.m_mipMax - 1));
         upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(0, this.m_mipMax));
         upSampleSurf.GetPaint().SetTexture(mipTex[1]);
-        this.PushChilde(upSampleSurf);
+        this.PushChild(upSampleSurf);
     }
     GetTexKey() {
-        return this.mChilde[this.mChilde.length - 1].GetTexKey();
+        return this.mChild[this.mChild.length - 1].GetTexKey();
     }
     GetDownSample(_index) {
         return this.FindChild("DownSample" + _index);
@@ -190,7 +190,7 @@ export class CSurfaceBloom extends CSurface {
         this.Refresh();
     }
     Refresh() {
-        if (this.mChilde.length == 0) {
+        if (this.mChild.length == 0) {
             return;
         }
         let mipTex = [];
@@ -215,8 +215,8 @@ export class CSurfaceBloom extends CSurface {
             upSample.m_blendFactor = this.GetBlendFactor(i, this.m_mipMax);
             upSample.SetShaderAttr();
         }
-        this.mChilde[this.mChilde.length - 1].GetPaint().SetTexture(mipTex[1]);
-        this.mChilde[this.mChilde.length - 1].GetRP().mRenderTarget = mipTex[0];
+        this.mChild[this.mChild.length - 1].GetPaint().SetTexture(mipTex[1]);
+        this.mChild[this.mChild.length - 1].GetRP().mRenderTarget = mipTex[0];
     }
     Update(_delay) {
     }

@@ -89,7 +89,7 @@ class CIK extends CComponent
         const bones = [_bone];
         while(bones.length > 0) {
             const bone = bones.pop();
-            let child = bone.mChilde;
+            let child = bone.mChild;
             while(child) {
                 if(_excludeBones.includes(child) == false) {
                     child.mData.PRSReset();
@@ -193,7 +193,7 @@ class CIK extends CComponent
 
             const elements = [line];
 
-            let child = _node.mChilde;
+            let child = _node.mChild;
             const children: CTree<CMeshCopyNode>[] = [];
             while (child) {
                 children.push(child);

@@ -366,13 +366,13 @@ export function VoxelTool(_voxel : CVoxel)
     gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
     gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
     
-    gAtl.Canvas("VoxelTool").Push(gVoxelTar);
+    gAtl.Canvas("VoxelTool").PushSub(gVoxelTar);
     gVoxelTar.GetPos().Zero();
     gVoxelTar.GetRot().Zero();
     gVoxelTar.SetSca(new CVec3(1,1,1));
     gVoxelTar.GetWMat().Unit();
-    gCurser=gAtl.Canvas("VoxelTool").Push(new CSubject());
-    gPress=gAtl.Canvas("VoxelTool").Push(new CSubject());
+    gCurser=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
+    gPress=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
     
     gAtl.Frame().PushEvent(CEvent.eType.Update,gUpdateEvent);
 
@@ -389,7 +389,7 @@ export function VoxelTool(_voxel : CVoxel)
             lay.mUpdateRes=true;
             //lay.PRSReset();
             //lay.GetWMat().Unit();
-            gAtl.Canvas("VoxelTool").Push(lay);
+            gAtl.Canvas("VoxelTool").PushSub(lay);
             //gVoxelLayer.push(lay);
         }
         

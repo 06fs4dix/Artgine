@@ -45,7 +45,7 @@ export class CPaint extends CComponent {
     mRenderPass = new Array();
     mRenPT = new Array();
     mTexture = new Array();
-    mMaterial = new CVec4(0, 0, 0, 1);
+    mMaterial = new CVec4(1, -1, -1, 1);
     mUpdateLMat = true;
     mUpdateFMat = true;
     mDefaultAttr = new Set();
@@ -145,9 +145,11 @@ export class CPaint extends CComponent {
         this.ClearCRPAuto();
         this.SetTexture(this.mTexture);
     }
-    SetMaterial(emission, roughness = 0, metalric = 0, texuse = 1) {
-        this.mMaterial = new CVec4(emission, roughness, metalric, texuse);
-        ;
+    SetMaterial(roughness = -1, metalric = -1, emissive = 1, ambientOcclusion = 1) {
+        this.mMaterial.x = ambientOcclusion;
+        this.mMaterial.y = roughness;
+        this.mMaterial.z = metalric;
+        this.mMaterial.w = emissive;
     }
     AlphaState() {
         if (this.mAlphaTex || (this.mAlphaModel.y == 0 && this.mAlphaModel.x != 0) ||

@@ -62,7 +62,7 @@ export class CSurface extends CSubject
 		if(_fw!=null)
 		{
 			if(this.mRenderPass.mShader=="")
-				this.mRenderPass.mShader=_fw.Pal().Sl2D().GetShader("Pre2Blit").Key();//_fw.Pal().Sl2D().m_key;
+				this.mRenderPass.mShader=_fw.Pal().Sl2D().GetShader("2DBlit").Key();//_fw.Pal().Sl2D().m_key;
 			if(this.mTexCreate && this.mRenderPass.mRenderTarget!="")
 			{
 				this.mTexCreate=false;

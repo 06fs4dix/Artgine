@@ -154,6 +154,10 @@ export class CPaint3D extends CPaint
 			if(sChk)
 				this.mRenderPass.push(new CRPAuto(this.mOwner.GetFrame().Pal().Sl3D().mKey));
 		}
+		if(this.mMesh=="")
+		{
+			this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
+		}
 			
 	}
 	//SetPivot(_pivot)	{	this.m_pivot=_pivot;	}

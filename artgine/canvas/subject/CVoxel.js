@@ -340,11 +340,11 @@ export class CVoxel extends CSubject {
         this.mFrame = dfw;
         this.mKey = dkey;
     }
-    ToJSON() {
+    ExportJSON() {
         let ptVoxel = this.DetachComp(CPaintVoxel);
         let col = this.DetachComp(CCollider);
         let navi = this.DetachComp(CNavigation);
-        let json = super.ToJSON();
+        let json = super.ExportJSON();
         if (ptVoxel)
             this.PushComp(ptVoxel);
         if (col)

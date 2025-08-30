@@ -129,7 +129,7 @@ function ScriptToolLeftInit(scriptStructure: any[]) {
     gAtl.Canvas("ScriptTool").Clear();
     
     // 배경 생성
-    let bgSub = gAtl.Canvas("ScriptTool").Push(new CSubject());
+    let bgSub = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
     bgSub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 
     const functionCards: { sub: CSubject, pt: CPaintHTML, el: HTMLElement, func: any }[] = [];
@@ -138,7 +138,7 @@ function ScriptToolLeftInit(scriptStructure: any[]) {
 
     // 각 함수별로 카드 생성
     for (let func of scriptStructure) {
-        const sub = gAtl.Canvas("ScriptTool").Push(new CSubject());
+        const sub = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
         sub.SetKey(func.function);
         const html = CreateFunctionCard(func);
         const pt = sub.PushComp(new CPaintHTML(html, null, leftPanel));
@@ -276,7 +276,7 @@ function DrawFunctionConnections(functionCards: { sub: CSubject, pt: CPaintHTML,
                     }
                     
                     // 연결선 생성
-                    const line = gAtl.Canvas("ScriptTool").Push(new CSubject());
+                    const line = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
                     const trail = line.PushComp(new CPaintTrail(gAtl.Frame().Pal().GetBlackTex()));
                     trail.SetLen(10);
                     trail.SetStaticPosList([startPos, endPos]);

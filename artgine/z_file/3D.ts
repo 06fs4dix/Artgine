@@ -22,7 +22,7 @@ import {
 } from "./ColorFun";
 import {
 	ambientColor,
-	envCube,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
+	envCube,GetMaterial,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -81,7 +81,7 @@ var time : number = Attribute(0,"time");
 
 //Skin
 Build("3DSkin",[],
-	vs_main,[worldMat,viewMat,projectMat,alphaCut,skin,weightArrMat],
+	vs_main,[worldMat,viewMat,projectMat,alphaCut,skin,weightArrMat,sam2DCount],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
@@ -170,14 +170,26 @@ function GetWorldWeightMat(_weightArrMat : Sam2DMat, _weight : CVec4, _weightInd
 	return woweMat;
 }
 
+// function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _wor : CVec4, _camPos : CVec3, _texOff : CVec3) : CVec2 {
+// 	var uv : CVec2 = _uv;
+// 	if(parallaxNormal>0.0001)
+// 	{
+// 		var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
+// 		uv=ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz,V3MulMat3Normal(_wor.xyz,TBN).xyz,_texOff.y,uv,parallaxNormal);
+// 	}
+// 	return uv;
+// }
 function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _wor : CVec4, _camPos : CVec3, _texOff : CVec3) : CVec2 {
-	var uv : CVec2 = _uv;
-	if(parallaxNormal>0.0001)
-	{
-		var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
-		uv=ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz,V3MulMat3Normal(_wor.xyz,TBN).xyz,_texOff.y,uv,parallaxNormal);
-	}
-	return uv;
+    var uv : CVec2 = _uv;
+    if(parallaxNormal>0.0001) {
+        var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
+        uv = ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz, V3MulMat3Normal(_wor.xyz,TBN).xyz, _texOff.y, uv, parallaxNormal);
+
+        // // clamp slightly inside to avoid sampling border texels (tweak epsilon if needed)
+        // uv.x = clamp(uv.x, 0.0005, 0.9995);
+        // uv.y = clamp(uv.y, 0.0005, 0.9995);
+    }
+    return uv;
 }
 
 function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _texOff : CVec3) : CVec3 {
@@ -322,13 +334,16 @@ function ps_main()
 	if(L_cor.a < alphaCut) discard;
 
 	var dseMat : CMat3=new CMat3(0);
+	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
-	if(to_ref.z > 0.5 && material.w > 0.5) {
-		dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref), shadow, Sam2DToColor(to_ref.z,uv).x, Sam2DToColor(to_ref.z,uv).y, Sam2DToColor(to_ref.z,uv).z, ambientColor);
-	}
-	else {
-		dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref), shadow, material.x, material.y, material.z, ambientColor);
-	}
+
+	
+	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
+
+	dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref), shadow, 
+		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
+
+
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchDefault();
 	if(shadow > -0.5) {
@@ -389,19 +404,8 @@ function ps_main_gBuffer() {
 	//(specular strength, emissive, specular power)
 	else if(outputType < SDF.eGBuf.SpeculerPowEmissive + 0.5)
 	{
-		//var emissive : number = material.x;
-		var texUse : number = material.w;
-		if((to_ref.z>0.5 || sam2DCount>=2.5) && texUse>0.5) 
-		{
-			L_cor = Sam2DToColor(to_ref.z, uv);
-		}
-		else 
-		{
-			L_cor.xyz = material.xyz;
-		}
-			
-		
-		out_color = new CVec4(L_cor.x,L_cor.y,L_cor.z, 1.0);
+		var lmaterial : CVec4=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
+		out_color = lmaterial;
 	}
 }
 
@@ -448,12 +452,8 @@ function ps_main_gBuffer_multi() {
 	//diffuse
 	out_color = L_cor;
 
-	var texUse : number = material.w;
-	if((to_ref.z>0.5 || sam2DCount>=2.5) && texUse>0.5) 
-		L_cor = Sam2DToColor(to_ref.z, uv);
-	else 
-		L_cor.xyz = material.xyz;
-	out_spc = new CVec4(L_cor.r, L_cor.g, L_cor.b, 1.0);
+	var lmaterial : CVec4=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
+	out_spc = lmaterial;
 }
 
 function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2) 

@@ -621,6 +621,8 @@ export class CUtilRender {
         mesh.meshTree.mData.ci = _mci;
         mesh.texture.push(_texture);
         mesh.meshTree.mData.textureOff.push(0);
+        mesh.meshTree.mData.textureOff.push(1);
+        mesh.meshTree.mData.textureOff.push(2);
         return mesh;
     }
     static GetBox(_size, _normalCenter = true) {
@@ -628,6 +630,7 @@ export class CUtilRender {
         var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
         var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
         var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
+        var texb = rVal.Create(CVertexFormat.eIdentifier.TexOff);
         posb.bufF.Push(new CVec3(-_size, _size, -_size));
         posb.bufF.Push(new CVec3(_size, _size, -_size));
         posb.bufF.Push(new CVec3(_size, _size, _size));
@@ -654,6 +657,7 @@ export class CUtilRender {
         posb.bufF.Push(new CVec3(-_size, _size, _size));
         for (var i = 0; i < posb.bufF.Size(3); ++i) {
             norb.bufF.Push(CMath.V3Nor(posb.bufF.V3(i)));
+            texb.bufF.Push(new CVec3(0, 1, 2));
         }
         if (_normalCenter) {
             norb.bufF.V3(0, new CVec3(0, 1, 0));

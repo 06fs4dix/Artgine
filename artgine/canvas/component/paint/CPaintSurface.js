@@ -17,7 +17,7 @@ export class CPaintSurface extends CPaint {
     }
     EmptyRPChk() {
         if (this.mRenderPass.length == 0) {
-            var rp = new CRPAuto("Pre2Blit");
+            var rp = new CRPAuto("2DBlit");
             this.mRenderPass = [rp];
         }
     }

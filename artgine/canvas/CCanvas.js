@@ -8,7 +8,6 @@ import { CBase64File } from "../util/CBase64File.js";
 import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js";
 import { CCollider } from "./component/CCollider.js";
 import { CAtlas } from "../util/CAtlas.js";
-import { CUpdate } from "../basic/Basic.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CRoomClient } from "../server/CRoomClient.js";
 import { CBlackBoardRef, CObject } from "../basic/CObject.js";
@@ -19,7 +18,6 @@ import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
 import { RenderQueTool } from "../tool/RenderQueTool.js";
 import { CConsol } from "../basic/CConsol.js";
-import { CPaint } from "./component/paint/CPaint.js";
 import { CRPMgr } from "./CRPMgr.js";
 var gRenderQue = new Array();
 var gCanvas = new Array();
@@ -41,6 +39,7 @@ export class CCanvas extends CObject {
     mBroMsg = new Array();
     mBroLen = 0;
     mRPMgr = null;
+    mChangeRPMgr = null;
     mResMap = new Map();
     mCameraKey = "2D";
     mPause = false;
@@ -57,7 +56,7 @@ export class CCanvas extends CObject {
         gCanvas.push(this);
     }
     IsShould(_member, _type) {
-        if (_member == "mBrush" || _member == "mRemoveList" || _member == "mFrame" || _member == "mPushObj" ||
+        if (_member == "mBrush" || _member == "mRemoveList" || _member == "mFrame" || _member == "mPushSub" ||
             _member == "mBroMsg" || _member == "mBroLen" || _member == "mWebSocket" || _member == "mPacArr" ||
             _member == "mKeyChangeList" || _member == "mGGI")
             return false;
@@ -79,35 +78,7 @@ export class CCanvas extends CObject {
     SetRPMgr(_rpMgr) {
         if (this.mRPMgr == null && _rpMgr == null)
             return;
-        if (this.mRPMgr != null) {
-            for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
-                this.mBrush.RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
-            }
-            this.mBrush.mAutoRPUpdate = CUpdate.eType.Not;
-            for (let i = 0; i < this.mRPMgr.mSufArr.length; ++i) {
-                const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
-                if (obj)
-                    obj.Destroy();
-            }
-            this.mBrush.ClearRen();
-        }
-        for (let [key, obj] of this.mSubMap) {
-            let ptVec = obj.FindComps(CPaint, true);
-            for (let pt of ptVec) {
-                pt.ClearCRPAuto();
-            }
-        }
-        if (_rpMgr != null) {
-            for (let i = 0; i < _rpMgr.mRPArr.length; ++i) {
-                this.mBrush.SetAutoRP(_rpMgr.Key() + "_" + i, _rpMgr.mRPArr[i]);
-            }
-            for (let i = 0; i < _rpMgr.mSufArr.length; ++i) {
-                let c = _rpMgr.mSufArr[i].Export(true, false);
-                this.Push(c);
-            }
-            _rpMgr.SetCanvas(this);
-        }
-        this.mRPMgr = _rpMgr;
+        this.mChangeRPMgr = _rpMgr;
     }
     ClearBatch() {
         this.mBrush.ClearRen();
@@ -207,7 +178,7 @@ export class CCanvas extends CObject {
                                         e.preventDefault();
                                         let sel = e.target.value;
                                         let newObj = CClass.New(sel);
-                                        this.Push(newObj);
+                                        this.PushSub(newObj);
                                         this.EditRefresh();
                                         e.target.value = "";
                                     }
@@ -220,7 +191,7 @@ export class CCanvas extends CObject {
                                 "onclick": () => {
                                     let sel = CUtil.IDValue(ukey + "subPush");
                                     let newObj = CClass.New(sel);
-                                    this.Push(newObj);
+                                    this.PushSub(newObj);
                                     this.EditRefresh();
                                 }
                             }
@@ -423,11 +394,11 @@ export class CCanvas extends CObject {
         if (this.mSave)
             CFile.Save(this, _file + ".json");
     }
-    ToJSON() {
+    ExportJSON() {
         let rpMgr = this.mRPMgr;
         this.SetRPMgr(null);
         this.mRPMgr = rpMgr;
-        const json = super.ToJSON();
+        const json = super.ExportJSON();
         this.mRPMgr = null;
         this.SetRPMgr(rpMgr);
         return json;
@@ -512,10 +483,10 @@ export class CCanvas extends CObject {
         return null;
     }
     New(_obj) {
-        this.Push(_obj);
+        this.PushSub(_obj);
         return _obj;
     }
-    Push(_obj) {
+    PushSub(_obj) {
         let key = _obj.Key();
         let obj = this.Find(key);
         if (obj != null) {

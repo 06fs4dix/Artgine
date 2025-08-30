@@ -458,7 +458,7 @@ export function DevTool(_atl: CAtelier)
                     wa.ImportCJSON(json);
                     wa.SetKey(CUniqueID.GetHash());
 
-                    (gLeftSelect as CCanvas).Push(wa);
+                    (gLeftSelect as CCanvas).PushSub(wa);
                     CAlert.Info("Paste!");
                 } catch (err) {
                     CAlert.E("Paste Failed: " + err);
@@ -887,7 +887,7 @@ function DevToolDrop(_drop : CDrop)
             let z=cobject.GetPos().z;
             cobject.SetPos(new CVec3(pos.x,pos.y,z));
         }
-        can.Push(cobject);
+        can.PushSub(cobject);
     }
 
     
@@ -1420,7 +1420,7 @@ function DevToolLeftPush()
                 LeftModifyItem(gLeftSelect.ObjHash());
 
                 if (gLeftSelect instanceof CCanvas)
-                    gLeftSelect.Push(cls);
+                    gLeftSelect.PushSub(cls);
                 else if (gLeftSelect instanceof CSubject)
                     gLeftSelect.PushChild(cls);
             }
@@ -1548,7 +1548,7 @@ function DevToolGiftSwap(_obj: CSubject)
             else
             {
                 can.DetachRes(_obj.Key());
-                can.Push(_obj);
+                can.PushSub(_obj);
                 _obj.mPTArr=null;
                 //can.mSubMap.set(_obj.Key(),_obj);
                 DevToolLeftRemove(false);
@@ -2172,7 +2172,7 @@ function DevToolLeft()
                     parent.DetachChild(cutObj.Key());
                 }
             }
-            can.Push(cutObj as CSubject);
+            can.PushSub(cutObj as CSubject);
             
 
             

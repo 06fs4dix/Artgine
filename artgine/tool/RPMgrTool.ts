@@ -809,7 +809,7 @@ async function RPToolLeftInit()
                 </div>
             </div>
         `;
-        let sub = gAtl.Canvas("RPTool").Push(new CSubject());
+        let sub = gAtl.Canvas("RPTool").PushSub(new CSubject());
         sub.SetKey(key);
         let html = CDomFactory.DataToDom(cardHtml);
         html.style.pointerEvents = "auto"; // 클릭 가능하게 설정
@@ -932,7 +932,7 @@ function RPToolLeftLine()
                 if(org!=null && tar!=null)
                 {
                 
-                    const line = gAtl.Canvas("RPTool").Push(new CSubject());
+                    const line = gAtl.Canvas("RPTool").PushSub(new CSubject());
                     let trail=line.PushComp(new CPaintTrail(gAtl.Frame().Pal().GetBlackTex()));
                     trail.SetLen(5);
                     

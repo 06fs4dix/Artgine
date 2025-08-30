@@ -18,8 +18,8 @@ export class CBase64File extends CObject {
             _div.removeChild(_input);
         }
     }
-    ToJSON() {
-        let result = super.ToJSON();
+    ExportJSON() {
+        let result = super.ExportJSON();
         result["mData"] = CUtil.ArrayToBase64(this.mData);
         return result;
     }

@@ -608,7 +608,7 @@ async function RPToolLeftInit() {
                 </div>
             </div>
         `;
-        let sub = gAtl.Canvas("RPTool").Push(new CSubject());
+        let sub = gAtl.Canvas("RPTool").PushSub(new CSubject());
         sub.SetKey(key);
         let html = CDomFactory.DataToDom(cardHtml);
         html.style.pointerEvents = "auto";
@@ -691,7 +691,7 @@ function RPToolLeftLine() {
                 let org = gAtl.Canvas("RPTool").Find(key);
                 let tar = gAtl.Canvas("RPTool").Find(texObj);
                 if (org != null && tar != null) {
-                    const line = gAtl.Canvas("RPTool").Push(new CSubject());
+                    const line = gAtl.Canvas("RPTool").PushSub(new CSubject());
                     let trail = line.PushComp(new CPaintTrail(gAtl.Frame().Pal().GetBlackTex()));
                     trail.SetLen(5);
                     trail.SetLastHide(false);

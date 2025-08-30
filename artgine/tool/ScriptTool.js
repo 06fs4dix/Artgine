@@ -101,13 +101,13 @@ function ScriptToolLeftInit(scriptStructure) {
     const leftPanel = CUtil.ID("ScriptToolLeft_div");
     leftPanel.innerHTML = "";
     gAtl.Canvas("ScriptTool").Clear();
-    let bgSub = gAtl.Canvas("ScriptTool").Push(new CSubject());
+    let bgSub = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
     bgSub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
     const functionCards = [];
     const centerX = gAtl.PF().mWidth / 2;
     const centerY = gAtl.PF().mHeight / 2;
     for (let func of scriptStructure) {
-        const sub = gAtl.Canvas("ScriptTool").Push(new CSubject());
+        const sub = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
         sub.SetKey(func.function);
         const html = CreateFunctionCard(func);
         const pt = sub.PushComp(new CPaintHTML(html, null, leftPanel));
@@ -203,7 +203,7 @@ function DrawFunctionConnections(functionCards) {
                         startPos = new CVec3(fromPos.x, fromPos.y + fromSize.y * 0.5, fromPos.z);
                         endPos = new CVec3(toPos.x, toPos.y - toSize.y * 0.3, toPos.z);
                     }
-                    const line = gAtl.Canvas("ScriptTool").Push(new CSubject());
+                    const line = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
                     const trail = line.PushComp(new CPaintTrail(gAtl.Frame().Pal().GetBlackTex()));
                     trail.SetLen(10);
                     trail.SetStaticPosList([startPos, endPos]);

@@ -189,7 +189,7 @@ export class CSurfaceBloom extends CSurface
 			downSampleSurf.GetRP().mRenderTarget="DownSample" + i+".tex";
 			downSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0,mipTex[i]));
 			//downSampleSurf.GetPaint().SetTexture(mipTex[i]);
-			this.PushChilde(downSampleSurf);
+			this.PushChild(downSampleSurf);
 
 			mipTex.push(downSampleSurf.GetTexKey());
 		}
@@ -204,7 +204,7 @@ export class CSurfaceBloom extends CSurface
 			//upSampleSurf.GetRP().mRenderTarget="UpSample" + i+".tex";
 			upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0,mipTex[i]));
 			//upSampleSurf.GetPaint().SetTexture(mipTex[i]);
-			this.PushChilde(upSampleSurf);
+			this.PushChild(upSampleSurf);
 		}
 
 		let upSampleSurf = new CSurfaceUpSample();
@@ -212,11 +212,11 @@ export class CSurfaceBloom extends CSurface
 		upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(0, this.m_mipMax));
 		//upSampleSurf.mRenderPass.mRenderTarget="UpSample.tex";
 		upSampleSurf.GetPaint().SetTexture(mipTex[1]);
-		this.PushChilde(upSampleSurf);
+		this.PushChild(upSampleSurf);
 	}
 	GetTexKey()
 	{
-		return (this.mChilde[this.mChilde.length-1] as CSurface).GetTexKey();
+		return (this.mChild[this.mChild.length-1] as CSurface).GetTexKey();
 	}
 
 	GetDownSample(_index : number) {
@@ -292,7 +292,7 @@ export class CSurfaceBloom extends CSurface
 
 	Refresh()
 	{
-		if(this.mChilde.length == 0) {
+		if(this.mChild.length == 0) {
 			return;
 		}
 		let mipTex : Array<string> = [];
@@ -324,8 +324,8 @@ export class CSurfaceBloom extends CSurface
 			upSample.SetShaderAttr();
 		}
 
-		(this.mChilde[this.mChilde.length-1] as CSurfaceUpSample).GetPaint().SetTexture(mipTex[1]);
-		(this.mChilde[this.mChilde.length-1] as CSurfaceUpSample).GetRP().mRenderTarget=mipTex[0];
+		(this.mChild[this.mChild.length-1] as CSurfaceUpSample).GetPaint().SetTexture(mipTex[1]);
+		(this.mChild[this.mChild.length-1] as CSurfaceUpSample).GetRP().mRenderTarget=mipTex[0];
 	}
 	Update(_delay: number): void {
 		// srcResolution과 aspect는 더 이상 필요하지 않음

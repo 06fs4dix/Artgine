@@ -9,6 +9,20 @@ export var ligStep3 = 0;
 export var ligDir = new Sam2DV4(9, 503);
 export var ligCol = new Sam2DV4(9, 504);
 export var envCube = -1;
+export function GetMaterial(_material, _texColor, sam2DCount) {
+    var tm = new CVec4(_material.x, _material.y, _material.z, _material.w);
+    if (sam2DCount > 1.0) {
+        if (tm.x < -0.5)
+            tm.x = _texColor.x;
+        if (tm.y < -0.5)
+            tm.y = _texColor.y;
+        if (tm.z < -0.5)
+            tm.z = _texColor.z;
+        if (tm.w < -0.5)
+            tm.w = _texColor.w;
+    }
+    return tm;
+}
 function DistributionGGX(_normal, _halfwayVector, _roughness) {
     var roughnessSquared = _roughness * _roughness;
     var roughnessSquared2 = roughnessSquared * roughnessSquared;
@@ -53,7 +67,7 @@ function EnvBRDFApproxNonMetal(_color, _roughness, _nDotV) {
     var r = V2AddV2(V2MulFloat(c0, _roughness), c1);
     return V3MulFloat(_color, min(r.x * r.x, Exp(-9.28 * _nDotV) * r.x + r.y));
 }
-export function LightCac3D(campos, position, albedo, normal, shadow, roughness, emissive, metalic, ambient_color) {
+export function LightCac3D(campos, position, albedo, normal, shadow, roughness, ao, metalic, ambient_color) {
     roughness = clamp(roughness, 0.0, 1.0);
     metalic = clamp(metalic, 0.0, 1.0);
     normal = V3Nor(normal);
@@ -167,9 +181,6 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
     }
     DAll = DDirAll;
     SAll = SDirAll;
-    if (ligStep2 > SDF.eLightStep2.Emissive - 0.5 && ligStep2 < SDF.eLightStep2.Emissive + 0.5) {
-        emAll = V3MulFloat(albedo.rgb, emissive);
-    }
     if (shadow > -0.5) {
         DAll = V3MulFloat(DAll, shadow);
         SAll = V3MulFloat(SAll, shadow);
@@ -189,15 +200,18 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
                 var maxLod = SamCubeMaxLod(0.0);
                 var cubeD = SamCubeLodToColor(0.0, normal, maxLod * 0.5).xyz;
                 var ambientLight = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl), cubeD), ambient_color);
+                ambientLight = V3MulFloat(ambientLight, ao);
                 DAll = V3AddV3(ambientLight, DAll);
                 var lodmin = SamCubeLodToColor(0.0, R2, 0.0).xyz;
                 var cubeS = V3Mix(lodmin, cubeD, roughness);
-                SAll = V3AddV3(SAll, V3MulV3(cubeS, kS_ibl));
+                var specAO = Math.pow(ao, 0.5 + 0.5 * roughness);
+                SAll = V3AddV3(SAll, V3MulFloat(V3MulV3(cubeS, kS_ibl), specAO));
             }
         }
         else {
             var cubeD = SamCubeLodToColor(0.0, normal, 0.0).rgb;
             var ambientLight = V3MulV3(V3MulV3(albedo.xyz, cubeD), ambient_color);
+            ambientLight = V3MulFloat(ambientLight, ao);
             DAll = V3AddV3(ambientLight, DAll);
         }
     }
