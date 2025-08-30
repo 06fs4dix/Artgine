@@ -84,7 +84,7 @@ function Init() {
     g_can = new CCanvas(g_fw, g_brush);
     g_brush.GetCam2D().SetCamCon(new CCamCon2DFreeMove(g_fw.Input()));
 
-    var sub = g_can.Push(new CSubject());
+    var sub = g_can.PushSub(new CSubject());
     sub.PushComp(new CPaint2D(g_fw.Pal().GetNoneTex(), new CVec2(128, 128)));
 
 
@@ -160,7 +160,7 @@ function Init() {
         </div>
         `;
 
-        const sub = g_can.Push(new CSubject());
+        const sub = g_can.PushSub(new CSubject());
         sub.SetKey(key);
         let pt=sub.PushComp(
             new CPaintHTML(
@@ -286,7 +286,7 @@ function Init() {
         </div>
         `;
 
-        const sub = g_can.Push(new CSubject());
+        const sub = g_can.PushSub(new CSubject());
         let pt=sub.PushComp(
             new CPaintHTML(
                 CDomFactory.DataToDom(html),

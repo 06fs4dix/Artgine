@@ -321,6 +321,10 @@ export class CPaint2D extends CPaint
 		{
 			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
 		}
+		if(this.mTexture.length==0)
+		{
+			this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
+		}
 	}
 
 	Wind() {this.PushTag("wind"); }

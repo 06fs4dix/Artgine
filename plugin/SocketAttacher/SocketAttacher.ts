@@ -186,7 +186,7 @@ export class CSocketAttacher extends CComponent
 
             const elements = [line];
 
-            let child = _node.mChilde;
+            let child = _node.mChild;
             const children: CTree<CMeshCopyNode>[] = [];
             while (child) {
                 children.push(child);

@@ -28,8 +28,8 @@ export class CBase64File extends CObject
 		}
 	}
 
-	public ToJSON(): { class: string; } {
-		let result = super.ToJSON();
+	public ExportJSON(): { class: string; } {
+		let result = super.ExportJSON();
 		result["mData"] = CUtil.ArrayToBase64(this.mData);
 		return result;
 	}

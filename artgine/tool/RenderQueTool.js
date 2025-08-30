@@ -63,7 +63,7 @@ function Init() {
     g_brush.InitCamera();
     g_can = new CCanvas(g_fw, g_brush);
     g_brush.GetCam2D().SetCamCon(new CCamCon2DFreeMove(g_fw.Input()));
-    var sub = g_can.Push(new CSubject());
+    var sub = g_can.PushSub(new CSubject());
     sub.PushComp(new CPaint2D(g_fw.Pal().GetNoneTex(), new CVec2(128, 128)));
     let posX = 0;
     let posY = 0;
@@ -136,7 +136,7 @@ function Init() {
             </ul>
         </div>
         `;
-        const sub = g_can.Push(new CSubject());
+        const sub = g_can.PushSub(new CSubject());
         sub.SetKey(key);
         let pt = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(html), new CVec2(256, 0), CUtil.ID("RenderOrderTool_div")));
         pt.SetPivot(new CVec3(0, 1, 0));
@@ -233,7 +233,7 @@ function Init() {
             </div>
         </div>
         `;
-        const sub = g_can.Push(new CSubject());
+        const sub = g_can.PushSub(new CSubject());
         let pt = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(html), new CVec2(256, 0), CUtil.ID("RenderOrderTool_div")));
         pt.SetPivot(new CVec3(0, -1, 0));
         sub.SetPos(new CVec3(posX, -50));

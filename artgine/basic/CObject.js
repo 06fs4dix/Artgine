@@ -375,12 +375,12 @@ export class CObject {
     ToStr() {
         return this.ExportCJSON().ToStr();
     }
-    ToJSON() {
+    ExportJSON() {
         var jData = { "class": this.constructor.name };
         return jData;
     }
     ExportCJSON() {
-        return new CJSON(this.ToJSON());
+        return new CJSON(this.ExportJSON());
     }
     ImportJSON(_json) {
         this.ImportCJSON(new CJSON(_json));

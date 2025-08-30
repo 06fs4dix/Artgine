@@ -533,14 +533,14 @@ function AniToolPlay() {
         gAtl.Brush().GetCam3D().SetCamCon(camcon);
         camcon.SetPos(new CVec3());
         camcon.SetZoom(500);
-        gSubject = gAtl.Canvas("AniTool").Push(new CSubject());
+        gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
         let pt = gSubject.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
         let af = gSubject.PushComp(new CAniFlow(gAni));
         af.mSpeed = speedRange;
     }
     else {
         gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
-        gSubject = gAtl.Canvas("AniTool").Push(new CSubject());
+        gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
         let pt = gSubject.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
         pt.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
         let af = gSubject.PushComp(new CAniFlow(gAni));
@@ -555,7 +555,7 @@ function AniToolRangeInit() {
     let STY_num = Number(CUtil.IDValue("STY_num"));
     let EDX_num = Number(CUtil.IDValue("EDX_num"));
     let EDY_num = Number(CUtil.IDValue("EDY_num"));
-    let ClipSub = gAtl.Canvas("AniTool").Push(new CSubject());
+    let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
     ClipSub.SetKey("Range");
     let pt = ClipSub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'></div>`), new CVec2(EDX_num - STX_num, EDY_num - STY_num), CUtil.ID("AniToolLeft_div")));
     pt.SetPivot(new CVec3(1, -1, 1));
@@ -579,13 +579,13 @@ async function AniToolSubjectInit() {
         gAtl.Brush().GetCam3D().SetCamCon(camcon);
         camcon.SetPos(new CVec3());
         camcon.SetZoom(500);
-        gSubject = gAtl.Canvas("AniTool").Push(new CSubject());
+        gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
         let pt = gSubject.PushComp(new CPaint3D(gBasicMesh));
         pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
     }
     else {
         gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
-        gSubject = gAtl.Canvas("AniTool").Push(new CSubject());
+        gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
         await gAtl.Frame().Load().Load(gBasicTex, new CLoaderOption().Set("mFilter", CTexture.eFilter.Neaest));
         gImg = gAtl.Frame().Res().Find(gBasicTex);
         let pt = gSubject.PushComp(new CPaint2D(gBasicTex));
@@ -616,7 +616,7 @@ async function AniToolSubjectInit() {
             }, 200);
         }
         else if (clip instanceof CClipCoodi) {
-            let ClipSub = gAtl.Canvas("AniTool").Push(new CSubject());
+            let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
             ClipSub.SetKey(i);
             let pt = ClipSub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class='border border-danger' style='color:red;font-size: x-small;'>${i}</div>`), new CVec2(clip.mEDX - clip.mSTX, clip.mEDY - clip.mSTY), CUtil.ID("AniToolLeft_div")));
             ClipSub.SetPos(new CVec3(clip.mSTX + pt.GetSize().x * 0.5, -(clip.mSTY + pt.GetSize().y * 0.5)));

@@ -61,6 +61,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	private mBroLen=0;
 	//protected m_navi : CNaviMgr=null;
 	private mRPMgr : CRPMgr=null;
+	private mChangeRPMgr : CRPMgr=null;
 	//public m_cpMap=new Map<string,CCanvasPaintVec>();
 	
 	
@@ -93,7 +94,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member=="mBrush" || _member=="mRemoveList" || _member=="mFrame" || _member=="mPushObj" ||
+		if(_member=="mBrush" || _member=="mRemoveList" || _member=="mFrame" || _member=="mPushSub" ||
 			_member=="mBroMsg" || _member=="mBroLen" || _member=="mWebSocket" ||_member=="mPacArr" ||
 			_member=="mKeyChangeList" || _member=="mGGI")
 			return false;
@@ -119,48 +120,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	SetRPMgr(_rpMgr : CRPMgr) 
 	{
 		if(this.mRPMgr==null && _rpMgr==null)	return;
-		if(this.mRPMgr!=null)
-		{
-			for(let i=0;i<this.mRPMgr.mRPArr.length;++i)
-			{
-				this.mBrush.RemoveAutoRP(this.mRPMgr.Key()+"_"+i);
-			}
-			this.mBrush.mAutoRPUpdate=CUpdate.eType.Not;
-			
-			for(let i=0;i<this.mRPMgr.mSufArr.length;++i)
-			{
-				const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
-				if(obj) obj.Destroy();
-				//this.Detach(this.mRPMgr.mSufArr[i].Key());
-			}
-			this.mBrush.ClearRen();
-		}
-		for(let [key, obj] of this.mSubMap)
-		{
-			let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
-			for(let pt of ptVec)
-			{
-				
-				pt.ClearCRPAuto();
-			}
-			
-		}
-
-		if(_rpMgr != null) {
-			for(let i=0;i<_rpMgr.mRPArr.length;++i)
-			{
-				this.mBrush.SetAutoRP(_rpMgr.Key()+"_"+i,_rpMgr.mRPArr[i]);
-			}
-			for(let i=0;i<_rpMgr.mSufArr.length;++i)
-			{
-				let c=_rpMgr.mSufArr[i].Export(true, false) as CSubject;
-				this.Push(c);
-			}
-			
-			_rpMgr.SetCanvas(this);
-		}
-
-		this.mRPMgr = _rpMgr;
+		this.mChangeRPMgr=_rpMgr;
 	}
 	ClearBatch() {
 		this.mBrush.ClearRen();
@@ -367,7 +327,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 								e.preventDefault();
 								let sel=e.target.value;
 								let newObj  : CSubject=CClass.New(sel);
-								this.Push(newObj);
+								this.PushSub(newObj);
 								this.EditRefresh();
 								e.target.value="";
 							}
@@ -380,7 +340,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 						"onclick":()=>{
 							let sel=CUtil.IDValue(ukey+"subPush");
 							let newObj  : CSubject=CClass.New(sel);
-							this.Push(newObj);
+							this.PushSub(newObj);
 							this.EditRefresh();
 							//CUtil.ID("m_obj_title").click();//??????????????????
 						}
@@ -652,13 +612,13 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		if(this.mSave)	CFile.Save(this,_file+".json");
 		
 	}
-	override ToJSON(): { class: string } 
+	override ExportJSON(): { class: string } 
 	{		
 		//rpMgr에서 넣어준 오브젝트 / RP 제거
 		let rpMgr = this.mRPMgr;
 		this.SetRPMgr(null);
 		this.mRPMgr = rpMgr;
-		const json = super.ToJSON();
+		const json = super.ExportJSON();
 	
 		//rpMgr 다시 세팅
 		this.mRPMgr = null;
@@ -784,11 +744,11 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	}
 	New(_obj : CSubject)
 	{
-		this.Push(_obj);
+		this.PushSub(_obj);
 		return _obj;
 	}
 
-	Push<T extends CSubject>(_obj : T)
+	PushSub<T extends CSubject>(_obj : T)
 	{
 		let key=(_obj as CSubject).Key();
 		let obj=this.Find(key) as CSubject;

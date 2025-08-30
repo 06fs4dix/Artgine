@@ -366,7 +366,7 @@ export class CShadowBaker extends CObject
             obj.SetPos(pos);
             obj.SetSca(sca);
             obj.SetRot(rot);
-            tempCanvas.Push(obj);
+            tempCanvas.PushSub(obj);
 
             ptCopy.Update(1);
             ptCopy.CacBound();
@@ -699,19 +699,19 @@ export class CShadowBaker extends CObject
             obj.SetPos(pos);
             obj.SetSca(sca);
             obj.SetRot(rot);
-            shadowCanv.Push(obj);
+            shadowCanv.PushSub(obj);
 
             ptCopy.PushRenderPass(shadowWriteRPArr, false);
             ptCopy.Update(1);
             ptCopy.CacBound();
         }
-        for(let i = 0; i < shadowCanv.mPushObj.Size(); i++) {
-            const obj = shadowCanv.mPushObj.Find(i);
+        for(let i = 0; i < shadowCanv.mPushSub.Size(); i++) {
+            const obj = shadowCanv.mPushSub.Find(i);
             obj.Start();
             obj.SubjectUpdate(1);
             shadowCanv.GetSubMap().set(obj.Key(), obj);
         }
-        shadowCanv.mPushObj.Clear();
+        shadowCanv.mPushSub.Clear();
         shadowCanv.Update(1);
 
         return shadowCanv;
@@ -735,7 +735,7 @@ export class CShadowBaker extends CObject
                     if(md.mData.ci && md.mData.ci.GetVFType(CVertexFormat.eIdentifier.Shadow).length == 0) {
                         ciArr.push(md.mData.ci);
                     }
-                    if(md.mChilde) mdArr.push(md.mChilde);
+                    if(md.mChild) mdArr.push(md.mChild);
                     if(md.mColleague) mdArr.push(md.mColleague);
                 }
 
@@ -809,7 +809,7 @@ export class CShadowBaker extends CObject
 
                 ciIndex++;
             }
-            if(md.mChilde) mdArr.push(md.mChilde);
+            if(md.mChild) mdArr.push(md.mChild);
             if(md.mColleague) mdArr.push(md.mColleague);
         }
 

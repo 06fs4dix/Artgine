@@ -581,14 +581,14 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
     {
         return this.ExportCJSON().ToStr();
     }
-    ToJSON()
+    ExportJSON()
 	{
 		var jData={"class":this.constructor.name };
 		return jData;
 	}
     ExportCJSON() : CJSON
     {
-        return new CJSON(this.ToJSON());
+        return new CJSON(this.ExportJSON());
     }
 	ImportJSON(_json: object) 
 	{

@@ -334,7 +334,7 @@ export function DevTool(_atl) {
                     let wa = CClass.New(json.mDocument["class"]);
                     wa.ImportCJSON(json);
                     wa.SetKey(CUniqueID.GetHash());
-                    gLeftSelect.Push(wa);
+                    gLeftSelect.PushSub(wa);
                     CAlert.Info("Paste!");
                 }
                 catch (err) {
@@ -624,7 +624,7 @@ function DevToolDrop(_drop) {
             let z = cobject.GetPos().z;
             cobject.SetPos(new CVec3(pos.x, pos.y, z));
         }
-        can.Push(cobject);
+        can.PushSub(cobject);
     }
 }
 function DevToolUpdate(_delay) {
@@ -969,7 +969,7 @@ function DevToolLeftPush() {
                 let lhtml = CDomFactory.DataToDom(item);
                 LeftModifyItem(gLeftSelect.ObjHash());
                 if (gLeftSelect instanceof CCanvas)
-                    gLeftSelect.Push(cls);
+                    gLeftSelect.PushSub(cls);
                 else if (gLeftSelect instanceof CSubject)
                     gLeftSelect.PushChild(cls);
             }
@@ -1043,7 +1043,7 @@ function DevToolGiftSwap(_obj) {
             }
             else {
                 can.DetachRes(_obj.Key());
-                can.Push(_obj);
+                can.PushSub(_obj);
                 _obj.mPTArr = null;
                 DevToolLeftRemove(false);
             }
@@ -1509,7 +1509,7 @@ function DevToolLeft() {
                     parent.DetachChild(cutObj.Key());
                 }
             }
-            can.Push(cutObj);
+            can.PushSub(cutObj);
             DevToolLeft();
         });
         const parentCaret = CUtil.ID(can.ObjHash() + "_caret");

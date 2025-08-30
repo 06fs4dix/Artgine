@@ -45,7 +45,35 @@ export class CRenPaint
     public mDistance : number = null;
     public mAlpha : number=null;
 }
+/*
+[Texture]
+2D 텍스쳐는 텍스쳐 넣는 순서로 조정
+-[0] : 디퓨즈
+-[1] : 노말
 
+3D는 파싱시 ref로 조정된다. 수동은 아래와 같음
+-texOff.x 디퓨즈 오프셋
+-texOff.y 노말
+-texOff.z 특수
+
+=노말 정보
+RGB : XYZ
+A : 깊이(페럴렉스용)
+
+=특수 정보
+R : AO(ambient occlusion)
+G : 매끄러움->거칠음(roughness
+B : 비금속->금속 (metallic
+A : emisive
+[Material]
+AO(1),roughness(-1),metalric(-1),emisive(1)
+
+-1 : 텍스쳐 사용(기본값은 1로 세팅됌)
+0~1 :  직접 사용
+
+
+
+*/
 export class CPaint extends CComponent 
 {
 
@@ -70,7 +98,7 @@ export class CPaint extends CComponent
 	mRenPT=new Array<CRenPaint>();
 
 	protected mTexture=new Array<string>();
-	public mMaterial=new CVec4(0,0,0,1);//emission,roughness,metalric,TexUse
+	public mMaterial=new CVec4(1,-1,-1,1);
 	
 	protected mUpdateLMat=true;
 	protected mUpdateFMat=true;
@@ -216,10 +244,12 @@ export class CPaint extends CComponent
 		this.SetTexture(this.mTexture);
 	}
 	//public m_material=new CVec4(1,0,0,0);
-	SetMaterial(emission : number,roughness=0, metalric=0,texuse=1)
+	SetMaterial(roughness=-1, metalric=-1,emissive=1,ambientOcclusion=1)
 	{
-		
-		this.mMaterial=new CVec4(emission,roughness,metalric,texuse);;
+		this.mMaterial.x=ambientOcclusion;
+		this.mMaterial.y=roughness;
+		this.mMaterial.z=metalric;
+		this.mMaterial.w=emissive;
 	}
 	AlphaState()
 	{
@@ -786,25 +816,7 @@ export class CPaint extends CComponent
 		}
 		return barr;
 	} 
-	/*
-	2D 텍스쳐
-	-[0] : 디퓨즈
-	-[1] : 노말
-	3D는 ref로 조정된다
-	-texOff.x 디퓨즈 오프셋
-	-texOff.y 노말
-	-texOff.z 특수
-
-	=노말 정보
-	RGB : XYZ
-	A : 깊이(페럴렉스용)
-	=특수 정보
-	R : 방출광(emisive 기존 디퓨즈 맵에서 추출해서 사용됌
-	G : 매끄러움->거칠음(roughness
-	B : 비금속->금속 (metallic
-	A : AO맵(jpg경우 1로 고정)
-
-	*/
+	
 	SetTexture(_a : Array<string>);
 	SetTexture(_a : string);
 	SetTexture(_a : string,_b : string);

@@ -83,7 +83,7 @@ export class CRes extends CObject {
                     continue;
                 var hel = each0;
                 if (each0.textContent.indexOf("mRes : map") != -1) { }
-                else if (each0.textContent.indexOf(val) != -1)
+                else if (each0.textContent.toLowerCase().indexOf(val.toLowerCase()) != -1)
                     hel.style.display = "";
                 else
                     hel.style.display = "none";

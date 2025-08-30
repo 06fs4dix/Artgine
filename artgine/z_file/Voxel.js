@@ -19,15 +19,15 @@ var to_normal = Null();
 var shadowReadList = new Sam2DV4(9);
 var shadowOn = -1.0;
 var sun = 0.0;
-Build("PreVoxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos], ps_main, [out_color]);
-Build("PreVoxelShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
+Build("Voxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos], ps_main, [out_color]);
+Build("VoxelShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, colorModel, alphaModel, size,
     ligDir, ligCol, ligCount,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowCount,
     shadowWrite, shadowPointProj, shadowReadList,
     shadowRate, PCF, texture16f, bias, normalBias
 ], [out_position, to_uv, to_viewPos, to_shadowBias], ps_main_shadow_write, [out_color]);
-Build("PreVoxelShadowRead", ["shadowRead"], vs_main_shadow_read, [
+Build("VoxelShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, colorModel, alphaModel, size,
     ligDir, ligCol, ligCount,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowCount,

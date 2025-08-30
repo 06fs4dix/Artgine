@@ -36,6 +36,8 @@ export class CCamCon extends CObject {
     mPosY = 0;
     mZoom = 0;
     mUp = 0;
+    mRotXCur = 0;
+    mRotYCur = 0;
     mReset = false;
     IsShould(_member, _type) {
         let hide = [
@@ -210,6 +212,13 @@ export class CCamCon extends CObject {
                 this.mBspos = null;
             }
         }
+        const t = Math.max(0, _delay * 0.05);
+        this.mRotXCur += this.mRotX;
+        this.mRotYCur += this.mRotY;
+        this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t;
+        this.mRotYCur = this.mRotY = this.mRotYCur * 0.5 * t;
+        if (this.mRotYCur > 0.001 && this.mRotYCur > 0.001)
+            this.mReset = true;
     }
 }
 class CCamCon3D extends CCamCon {
@@ -232,28 +241,30 @@ export class CCamCon3DFirstPerson extends CCamCon3D {
 }
 export class CCamCon3DThirdPerson extends CCamCon3D {
     mPos;
-    m_zoom = 1000;
+    mSZoom = 1000;
     SetPos(_pos) {
         if (!this.mPos) {
             this.mPos = _pos.Export();
-            this.m_zoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
+            this.mSZoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
         }
         else {
             this.mPos.Import(_pos);
         }
     }
     SetZoom(_zoom) {
-        this.m_zoom = _zoom;
+        this.mSZoom = _zoom;
     }
     Update(_delay) {
         super.Update(_delay);
+        if (this.mReset == false)
+            return;
         if (!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
         let rotX = this.mRotY * 0.001 * _delay * this.mRotSensitivity;
         let rotY = this.mRotX * 0.001 * _delay * this.mRotSensitivity;
         if (this.mZoom != 0)
-            this.m_zoom = this.m_zoom - this.mZoom * this.mZoomSensitivity;
-        this.mCamera.CharacterByRotation(this.mPos, rotY, rotX, this.m_zoom);
+            this.mSZoom = this.mSZoom - this.mZoom * this.mZoomSensitivity;
+        this.mCamera.CharacterByRotation(this.mPos, rotY, rotX, this.mSZoom);
     }
 }
 class CCamCon2D extends CCamCon {

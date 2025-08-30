@@ -187,6 +187,14 @@ export class CCamera extends CObject {
         this.mReset = false;
     }
     Update(_delay) {
+        if (this.mCamCon != null) {
+            this.mCamCon.InitCamera(this);
+            this.mCamCon.Update(_delay);
+        }
+        if (this.mCamShake != null) {
+            this.mCamShake.InitCamera(this);
+            this.mCamShake.Update(_delay);
+        }
         if (this.mReset) {
             if (this.mOrthographic)
                 this.ResetOrthographic();
@@ -207,14 +215,6 @@ export class CCamera extends CObject {
             this.mUpdateMat = CUpdate.eType.Already;
         }
         this.mViewMatComp.Import(this.mViewMat);
-        if (this.mCamCon != null) {
-            this.mCamCon.InitCamera(this);
-            this.mCamCon.Update(_delay);
-        }
-        if (this.mCamShake != null) {
-            this.mCamShake.InitCamera(this);
-            this.mCamShake.Update(_delay);
-        }
     }
     ResetOrthographic() {
         var width = this.mWidth;
@@ -521,15 +521,13 @@ export class CCamera extends CObject {
     CharacterByRotation(pa_chaPos, pa_xAxisRadian, pa_yAxisRadian, pa_zome) {
         if (pa_xAxisRadian != 0) {
             this.XAxisRotation(pa_xAxisRadian);
-            this.ViewAndCrossVector3Set();
         }
         if (pa_yAxisRadian != 0) {
             this.YAxisRotation(pa_yAxisRadian);
-            this.ViewAndCrossVector3Set();
         }
+        this.ViewAndCrossVector3Set();
         this.mEye.Import(pa_chaPos);
         this.mLook = CMath.V3AddV3(this.mEye, this.mView);
-        this.ViewAndCrossVector3Set();
         this.ZAxisZoom(-pa_zome);
     }
 }

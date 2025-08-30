@@ -51,6 +51,11 @@ export class CCamCon extends CObject implements ICamCon
     protected mPosY:number=0;
     protected mZoom:number=0;
     protected mUp:number=0;
+
+    protected mRotXCur : number = 0;
+    protected mRotYCur : number = 0;
+  
+
     protected mReset:boolean=false;
     override IsShould(_member: string, _type: CObject.eShould): boolean {
         let hide = [
@@ -295,7 +300,19 @@ export class CCamCon extends CObject implements ICamCon
             }
             
         }
-    }
+        //CConsol.Log(this.mRotX+"/"+this.mRotY);
+        const t = Math.max(0, _delay * 0.05); // ms -> sec
+
+        
+        this.mRotXCur+=this.mRotX;
+        this.mRotYCur+=this.mRotY;
+        this.mRotXCur=this.mRotX=this.mRotXCur*0.5*t;
+        this.mRotYCur=this.mRotY=this.mRotYCur*0.5*t;
+
+        if(this.mRotYCur>0.001 && this.mRotYCur>0.001)
+            this.mReset=true;
+
+    }//Update
     
 
   
@@ -332,24 +349,25 @@ export class CCamCon3DThirdPerson extends CCamCon3D
     public mPos : CVec3;
     //public m_follow : CBlackBoardRef<any> = new CBlackBoardRef();
 
-    public m_zoom=1000;
+    public mSZoom=1000;
 
     SetPos(_pos : CVec3) {
         if(!this.mPos) {
             this.mPos = _pos.Export();
-            this.m_zoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
+            this.mSZoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
         }
         else {
             this.mPos.Import(_pos);
         }
     }
     SetZoom(_zoom : number) {
-        this.m_zoom = _zoom;
+        this.mSZoom = _zoom;
     }
     Update(_delay: number): void
     {
         super.Update(_delay);
 
+        if(this.mReset==false) return;
         if(!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
 
@@ -357,13 +375,14 @@ export class CCamCon3DThirdPerson extends CCamCon3D
         let rotY=this.mRotX* 0.001 * _delay* this.mRotSensitivity;
 
         if (this.mZoom!=0)
-            this.m_zoom=this.m_zoom-this.mZoom* this.mZoomSensitivity;
+            this.mSZoom=this.mSZoom-this.mZoom* this.mZoomSensitivity;
 
         // if(this.m_follow.Get() != null)
         //     this.mCamera.CharacterByRotation(this.m_follow.Get().GetPos(),rotY,rotX,this.m_zoom);
         // else
-            this.mCamera.CharacterByRotation(this.mPos,rotY,rotX,this.m_zoom);
+            this.mCamera.CharacterByRotation(this.mPos,rotY,rotX,this.mSZoom);
 
+        //CConsol.Log(this.Key());
         //this.mCamera.ResetPerspective();
     }
 }

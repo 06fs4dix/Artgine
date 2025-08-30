@@ -237,8 +237,11 @@ export class CCamera extends CObject
 			height=this.mPF.mHeight;
 		}
 
+		
 		var eye = this.GetEye();
 		var look = this.GetLook();
+
+		//CConsol.Log(eye.ToStr()+"/"+look.ToStr());
 		if(this.mCamShake != null) {
 			this.mCamShake.InitCamera(this);
 			eye = this.mCamShake.GetEye();
@@ -273,6 +276,17 @@ export class CCamera extends CObject
 	}
 	Update(_delay)
 	{
+		if(this.mCamCon!=null)
+		{
+			this.mCamCon.InitCamera(this);
+			this.mCamCon.Update(_delay);
+		}
+		if(this.mCamShake!=null)
+		{
+			this.mCamShake.InitCamera(this);
+			this.mCamShake.Update(_delay);
+		}
+
 		if(this.mReset)
 		{
 			if(this.mOrthographic)	this.ResetOrthographic(); else this.ResetPerspective();
@@ -295,16 +309,7 @@ export class CCamera extends CObject
 			this.mUpdateMat=CUpdate.eType.Already;
 		}
 		this.mViewMatComp.Import(this.mViewMat);
-		if(this.mCamCon!=null)
-		{
-			this.mCamCon.InitCamera(this);
-			this.mCamCon.Update(_delay);
-		}
-		if(this.mCamShake!=null)
-		{
-			this.mCamShake.InitCamera(this);
-			this.mCamShake.Update(_delay);
-		}
+		
 	}
 	ResetOrthographic() : void
 	{
@@ -706,22 +711,24 @@ export class CCamera extends CObject
 		if (pa_xAxisRadian != 0)
 		{
 			this.XAxisRotation(pa_xAxisRadian);
-			this.ViewAndCrossVector3Set();
+			//this.ViewAndCrossVector3Set();
 		}
 			
 		if (pa_yAxisRadian != 0)
 		{
 			this.YAxisRotation(pa_yAxisRadian);
-			this.ViewAndCrossVector3Set();
+			//this.ViewAndCrossVector3Set();
 		}
 			
 
+		this.ViewAndCrossVector3Set();
 
 		this.mEye.Import(pa_chaPos);
 		this.mLook = CMath.V3AddV3(this.mEye, this.mView);
 
-		//this.ResetPerspective();
-		this.ViewAndCrossVector3Set();
+		
+		
+		//this.mView=CMath.V3Nor(new CVec3(1,1,0));
 
 		this.ZAxisZoom(-pa_zome);
 	}

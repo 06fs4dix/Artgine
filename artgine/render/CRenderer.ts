@@ -80,7 +80,7 @@ export class CRenderer
 	}
 	BlitDepth(_read : CTexture,_draw : CTexture=null){	}
 	BlitColor(_read : CTexture,_draw : CTexture=null){}
-	Begin(_tex : CTexture=null,_2d=false,_rtUse:Set<number>=null,_rtLevel=0){	return false;	}
+	Begin(_tex : CTexture=null,_surface=false,_rtUse:Set<number>=null,_rtLevel=0){	return false;	}
 	End(_tex : CTexture=null,_rtLevel=0){}
 	
 	GetMainFrameTex() {
@@ -174,7 +174,7 @@ export class CRenderer
 		let id=CUniqueID.Get();
 		id+="_div";
 		modal.SetTitle(CModal.eTitle.TextClose);
-		modal.SetBody("<textarea style='width:480px;height:64px;'>"+_error+"</textarea><div id='"+id+"' style='width:480px;height:640px;'></div>");
+		modal.SetBody("<textarea style='width:256px;height:128px;'>"+_error+"</textarea><div id='"+id+"' style='width:100%;height:640px;'></div>");
 		modal.SetZIndex(CModal.eSort.Top);
 		modal.Open(CModal.ePos.Center);
 		modal.Focus(CModal.eAction.Shake);
