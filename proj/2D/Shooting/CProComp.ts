@@ -1,11 +1,11 @@
-import { CObject } from "../../../artgine/basic/CObject.js";
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CComponent } from "../../../artgine/canvas/component/CComponent.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CPlaneInside } from "../../../artgine/geometry/CPlaneInside.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
+import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CComponent.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CPlaneInside } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CPlaneInside.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 
 
