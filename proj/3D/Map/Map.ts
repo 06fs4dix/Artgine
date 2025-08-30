@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 21:56:21';
+const version='2025-08-30 10:14:19';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -61,11 +61,11 @@ Can3D.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
 gAtl.Frame().Dev().SetClearColor(true,new CVec4(0,0,0,0));
 
 
-let sub=Can3D.Push(new CSubject());
+let sub=Can3D.PushSub(new CSubject());
 sub.SetSca(new CVec3(0.1,0.1,0.1));
 sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 sub.SetEnable(false);
-let ui=sub.PushChilde(new CUIText());
+let ui=sub.PushChild(new CUIText());
 ui.SetPos(new CVec3(0,0,200));
 ui.SetSca(new CVec3(5,5,5))
 ui.Init("Korea! Zoom in/out!",new CFontOption(64,"white","black",5));
@@ -273,6 +273,12 @@ function CacLatLng(_lat: number, _lng: number, baseLat=0, baseLng=0)
  
     return new CVec2(screenPoint.x,screenPoint.y);
 }
+
+
+
+
+
+
 
 
 

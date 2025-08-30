@@ -1,4 +1,4 @@
-const version = '2025-08-21 06:39:04';
+const version = '2025-08-30 10:12:05';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -121,7 +121,7 @@ function createWave() {
                 baseColor: new CVec4(colorR, colorG, colorB, 1.0)
             };
             boxSubject.PushComp(paint3D);
-            Main.Push(boxSubject);
+            Main.PushSub(boxSubject);
             waveBoxes.push(boxSubject);
         }
     }

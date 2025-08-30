@@ -52,7 +52,7 @@ function Init() {
     Main.ClearBatch();
     gAtl.Brush().ClearRen();
     Main.SetCameraKey("3D");
-    let sub = Main.Push(new CSubject());
+    let sub = Main.PushSub(new CSubject());
     let pt = sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
     let rp = new CRenderPass("TestShader.ts");

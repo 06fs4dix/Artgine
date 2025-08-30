@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 22:26:26';
+const version='2025-08-30 10:13:14';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -54,7 +54,8 @@ Can3D.SetCameraKey("3D");
 
 await gAtl.Frame().Load().Load("Shader.ts");
 
-Can3D.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
+let camcon=Can3D.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
+camcon.SetZoomSensitivity(10);
 Can3D.GetCam().Init(new CVec3(250, 10000, -150), new CVec3(-600, 750, 350));
 
 let newCenter : CVec2;
@@ -559,7 +560,7 @@ if (polygonArr.length === 0) {
     console.warn("No polygons to process.");
 } else {
     const obj = new CSubject();
-    Can3D.Push(obj);
+    Can3D.PushSub(obj);
 
     const createInfo = new CMeshCreateInfo();
     createInfo.Create(CVertexFormat.eIdentifier.Position);
@@ -580,6 +581,12 @@ if (polygonArr.length === 0) {
 }
 
 new CModalFrameView();
+
+
+
+
+
+
 
 
 

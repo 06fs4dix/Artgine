@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-19 15:08:13';
+const version='2025-08-27 12:11:38';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,6 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
 
@@ -27,7 +28,7 @@ import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([],"");
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
@@ -61,7 +62,7 @@ pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
 obj.PushComp(pt);
 obj.SetSca(new CVec3(10,0.1,10));
 //obj.SetSca(new CVec3(100,0.01,100));
-Main.Push(obj);
+Main.PushSub(obj);
 
 
 
@@ -111,7 +112,7 @@ particle.mShape=new CParticleShapeOut();
 //(particle.mShape as CParticleShapeOut).mDir=new CExtractMinMax(new CVec3(0,0,0),new CVec3(0,1,0));
 //particle.mCreateCount=new CExtract(1);
 //particle.mCreateTime=5000;
-Main.Push(particle);
+Main.PushSub(particle);
 
 
 //트레일 샘플
@@ -133,9 +134,6 @@ for(var i=0;i<10;++i)
 
 
 trail.PushComp(new CAniFlow(ani));
-Main.Push(trail);
+Main.PushSub(trail);
 
-
-
-
-
+//=====================================================================================================

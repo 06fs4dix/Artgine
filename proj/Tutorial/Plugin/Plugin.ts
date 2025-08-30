@@ -45,7 +45,7 @@ let CTest=CClass.New("CTest");
 CConsol.Log(CTest["v"]);
 
 //플러그인에서 설정한 생산자를 이용
-Main.Push(await CPool.Product<CSubject>("test"));
+Main.PushSub(await CPool.Product<CSubject>("test"));
 
 //플러그인에서 RPMgr가져오기
 let rpMgr=gAtl.Frame().Res().Find("testUVRPMgr") as CRPMgr;

@@ -202,7 +202,7 @@ export default class CUser extends CBehavior
             let pt=ch.PushComp(new CPaint2D(ptb.GetTexture()[0],ptb.GetSize())) as CPaint2D;
             pt.SetColorModel(new CColor(0,0,1,SDF.eColorModel.RGBMul));
             ch.SetPos(this.m_lastPos);
-            this.GetOwner().PushChilde(ch);
+            this.GetOwner().PushChild(ch);
             let ani=new CAnimation();
             ani.Push(new CClipColorAlpha(0,1000*15,new CVec4(-1,-1,1,-0.5),new CVec4(-1,-1,1,-1)));
             ani.Push(new CClipDestroy(1000*15));
@@ -238,7 +238,7 @@ export default class CUser extends CBehavior
         let pt=ch.PushComp(new CPaint2D(ptb.GetTexture()[0],ptb.GetSize())) as CPaint2D;
         pt.SetColorModel(new CColor(0,0,1,SDF.eColorModel.RGBMul));
         ch.SetPos(this.m_lastPos);
-        this.GetOwner().PushChilde(ch);
+        this.GetOwner().PushChild(ch);
         let ani=new CAnimation();
         ani.Push(new CClipColorAlpha(0,1000*10,new CVec4(1,-1,-1,-0.5),new CVec4(1,-1,-1,-1)));
         ani.Push(new CClipDestroy(1000*10));

@@ -31,7 +31,7 @@ export class CUser extends CSubject {
         this.mPT.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
         this.mPT.SetYSort(true);
         this.mPT.SetYSortOrigin(-50);
-        this.PushChilde(new CPad()).mSave = false;
+        this.PushChild(new CPad()).mSave = false;
         this.mRB = this.PushComp(new CRigidBody());
         this.mRB.mSave = false;
         this.mRB.SetRestitution(1);
