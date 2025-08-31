@@ -346,6 +346,13 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
     P = V4MulMatCoordi(P, viewMat);
     out_position = V4MulMatCoordi(P, projectMat);
 }
+function GetParallaxShadowWorldPos(_uv, _tan, _bi, _nor, _wor, _texOff, _scale) {
+    var h = Sam2DToColor(_texOff.y, _uv).a;
+    var disp = (h - 0.5) * _scale;
+    var N = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
+    var W = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
+    return new CVec4(W, _wor.w);
+}
 function ps_main_shadow_read() {
     var L_cor = Sam2DToColor(0.0, to_uv);
     BranchBegin("color", "C", [colorModel, alphaModel]);

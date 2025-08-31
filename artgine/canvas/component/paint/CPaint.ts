@@ -404,6 +404,11 @@ export class CPaint extends CComponent
 			//this.ClearCRPAuto();
 			//this.WTRefresh();
 		}
+		else if(_pointer.member=="mColorModel" || _pointer.member=="mAlphaModel")
+		{
+			this.PushTag("color");
+			this.BatchClear();
+		}
 		else if(_child)
 		{
 			if(_pointer.IsRef(this.mRenderPass))

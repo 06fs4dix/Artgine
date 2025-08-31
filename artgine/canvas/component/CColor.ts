@@ -70,6 +70,7 @@ export class CColor extends CVec4
                 } else {
                     this.xyz =inputColor.xyz;
                 }
+                this.EditChange(_pointer,false);
                 this.EditRefresh();
             }
         }));
