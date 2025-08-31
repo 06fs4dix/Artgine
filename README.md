@@ -1,11 +1,5 @@
 
- **Artgine Bot:**
- 
-- **Artgine Bot**:https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot?model=gpt-5-thinking
-
- 
  **Live Demo Links:**
-
 - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
 
   
@@ -31,7 +25,7 @@
   Learn how to use Artgine in detail with GPT [Link](https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot?model=gpt-5-thinking)
 
   <details>
-    <summary>📂 Directory Structure & Execution</summary>
+    <summary>Install and run</summary>
 
   ## Directory Structure
 
@@ -441,7 +435,7 @@
   GPT를 이용해 Artgine 자세한 사용법을 배울 수 있습니다 [Link](https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot?model=gpt-5-thinking)
   
   <details>
-    <summary>📂 디렉토리 구조 & 실행법</summary>
+    <summary>설치 및 실행</summary>
 
   ## 디렉토리 구조
 
