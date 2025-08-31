@@ -60,8 +60,12 @@ export class CAtelier {
             this.mBrush.mPause = false;
             if (_devTool) {
                 this.mFrame.PushEvent(CEvent.eType.Update, () => {
-                    if (this.mFrame.Input().KeyUp(CInput.eKey.F3) && this.mFrame.PF().mDebugMode == false)
-                        DevTool(this);
+                    if (this.mFrame.Input().KeyUp(CInput.eKey.F3) && this.mFrame.PF().mDebugMode == false) {
+                        if (window["bootstrap"] == null)
+                            alert("import bootstrap!");
+                        else
+                            DevTool(this);
+                    }
                     if (this.mFrame.Input().KeyUp(CInput.eKey.F2)) {
                         let modal = CUtilObj.ShowModal(this.mFrame.Res());
                         modal.SetZIndex(CModal.eSort.Manual, 2000);

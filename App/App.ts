@@ -497,62 +497,79 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	//buf=await CFile.Load(savePath+".webmanifest");
 	let oMF=_json.manifast;
 	//CConsol.Log(oMF);
-
+	
 
 
 	let IStr="";
 	let MStr="";
 	let EStr="";
 
-	
+	let ChromeStartCreate=async ()=>{
+		// GitHub 모드일 때 start.bat 파일 생성
+		const startBatContent = `@echo off
+		title Chrome CORS Disabled
+		color 0A
+
+		echo ================================================
+		echo Starting Chrome with CORS disabled
+		echo ================================================
+		echo.
+
+		REM Check existing Chrome processes
+		tasklist /FI "IMAGENAME eq chrome.exe" 2>NUL | find /I /N "chrome.exe">NUL
+		if "%ERRORLEVEL%"=="0" (
+			echo Warning: Chrome is already running.
+			echo Please close all Chrome windows and try again.
+			echo.
+			pause
+			exit /b 1
+		)
+
+		REM Find Chrome path
+		set CHROME_PATH=
+		if exist "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" (
+			set "CHROME_PATH=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+		) else if exist "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" (
+			set "CHROME_PATH=C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+		) else if exist "%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe" (
+			set "CHROME_PATH=%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"
+		) else (
+			echo Error: Chrome not found.
+			echo Opening Chrome download page...
+			start https://www.google.com/chrome/
+			pause
+			exit /b 1
+		)
+
+		echo Starting Chrome...
+		echo HTML file: ${projectName}.html
+		"%CHROME_PATH%" --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir="%TEMP%\\chrome_dev" --allow-running-insecure-content --disable-extensions --no-sandbox --ignore-certificate-errors --disable-site-isolation-trials "file:///%~dp0${projectName}.html"
+
+		echo Chrome closed.
+		pause`;
+		
+		await CFile.Save(startBatContent, CPath.PHPC()+_json.projectPath+"/chrome_start.bat");
+	};
 	if(_json.appJSON.github==true)
 	{
 		upFolder="https://06fs4dix.github.io/Artgine/";
 		
-		// GitHub 모드일 때 start.bat 파일 생성
-		const startBatContent = `@echo off
-title Chrome CORS Disabled
-color 0A
+		ChromeStartCreate();
+	}
 
-echo ================================================
-echo Starting Chrome with CORS disabled
-echo ================================================
-echo.
-
-REM Check existing Chrome processes
-tasklist /FI "IMAGENAME eq chrome.exe" 2>NUL | find /I /N "chrome.exe">NUL
-if "%ERRORLEVEL%"=="0" (
-    echo Warning: Chrome is already running.
-    echo Please close all Chrome windows and try again.
-    echo.
-    pause
-    exit /b 1
-)
-
-REM Find Chrome path
-set CHROME_PATH=
-if exist "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" (
-    set "CHROME_PATH=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-) else if exist "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" (
-    set "CHROME_PATH=C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-) else if exist "%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe" (
-    set "CHROME_PATH=%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"
-) else (
-    echo Error: Chrome not found.
-    echo Opening Chrome download page...
-    start https://www.google.com/chrome/
-    pause
-    exit /b 1
-)
-
-echo Starting Chrome...
-echo HTML file: ${projectName}.html
-"%CHROME_PATH%" --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir="%TEMP%\\chrome_dev" --allow-running-insecure-content --disable-extensions --no-sandbox --ignore-certificate-errors --disable-site-isolation-trials "file:///%~dp0${projectName}.html"
-
-echo Chrome closed.
-pause`;
-		
-		await CFile.Save(startBatContent, CPath.PHPC()+_json.projectPath+"/chrome_start.bat");
+	//이건 사용자가 직접 만든거다
+	if(oHTML!="" && oHTML.indexOf("EntryPoint")==-1)
+	{
+		ChromeStartCreate();
+		await ReplaceArtginePathsInFolder(CPath.PHPC()+_json.projectPath,upFolder,CPath.PHPC()+_json.projectPath);
+		dialog.showMessageBoxSync({
+			type: 'error',
+			buttons: ['OK'],
+			defaultId: 0,
+			title: 'info',
+			message: '수동으로 만들었습니다.폴더안 chrome_start.bat으로 직접 실행하세요!',
+		});
+		return "";
 	}
 	//let root=upFolder;
 	
@@ -702,6 +719,7 @@ pause`;
 
 	if(oTS!="")
 	{
+		
 		pos=bTS.indexOf("//EntryPoint");
 		let epStr=oTS.substring(oTS.indexOf("//EntryPoint")+12,oTS.length);
 		//if(_json.appJSON.github==true)
@@ -835,29 +853,7 @@ pause`;
 			message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
 		});
 		return "error";
-		// }
-		// else
-		// {
-		// 	gTSCRun=true;
-		// 	const result = dialog.showMessageBoxSync({
-		// 		type: 'error',
-		// 		buttons: ['yes', 'no'],
-		// 		defaultId: 0,
-		// 		cancelId: 1,
-		// 		title: 'build error',
-		// 		message: 'js file version late. tsc build run? 8sec wait',
-		// 	});
-
-		// 	if (result === 0) // '예' 선택
-		// 	{ 
-		// 		if(CCMDMgr.IsTSC())
-		// 			await CCMDMgr.RunCMD("npm init",false);
-		// 		CCMDMgr.RunCMD("npx tsc -w",true);
-		// 		await new Promise(resolve => setTimeout(resolve, 1000*8));
-				
-		// 		return "error";
-		// 	}
-		// }
+		
 		
 	}
 	

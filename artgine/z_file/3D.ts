@@ -528,7 +528,22 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	P = V4MulMatCoordi(P, viewMat);
 	out_position = V4MulMatCoordi(P, projectMat);
 }
+function GetParallaxShadowWorldPos(
+    _uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3,
+    _wor : CVec4, _texOff : CVec3, _scale : number) : CVec4
+{
+    // 페럴렉스 후 uv에서 높이(A) 샘플 (노말맵 알파: _texOff.y)
+    var h : number = Sam2DToColor(_texOff.y, _uv).a;    // 0..1
+    // -0.5..+0.5로 가운데 정렬 후 스케일
+    var disp : number = (h - 0.5) * _scale;
 
+    // 탄젠트 노말(이미 사용 중)
+    var N : CVec3 = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
+
+    // world pos를 노말 방향으로 살짝 이동
+    var W : CVec3 = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
+    return new CVec4(W, _wor.w);
+}
 function ps_main_shadow_read() 
 {	
 	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);

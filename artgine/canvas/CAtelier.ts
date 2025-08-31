@@ -108,7 +108,13 @@ export class CAtelier
 				this.mFrame.PushEvent(CEvent.eType.Update,()=>{
 
 					if(this.mFrame.Input().KeyUp(CInput.eKey.F3) && this.mFrame.PF().mDebugMode==false)
-						DevTool(this);
+					{
+						if(window["bootstrap"]==null)
+							alert("import bootstrap!");
+						else
+							DevTool(this);
+					}
+						
 					if(this.mFrame.Input().KeyUp(CInput.eKey.F2))
 					{
 						let modal=CUtilObj.ShowModal(this.mFrame.Res());

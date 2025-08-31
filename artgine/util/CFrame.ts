@@ -234,8 +234,10 @@ export class CFrame
 					canDummy.id=_htmlObj;
 				document.body.append(canDummy);
 				document.body.style.userSelect='none';
+				document.body.style.margin='0px';
 				document.body.style.backgroundColor="black";
 				canDummy.style.backgroundColor='black';
+				
 				
 			}
 			else
