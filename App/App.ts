@@ -20,6 +20,7 @@ import {CString} from '../artgine/basic/CString.js';
 
 import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
+import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -816,7 +817,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		});
 	}
 	
-	bTS=CString.InsertAt(bTS,bTS.indexOf("//Version")+9,"\nconst version=\'"+GetNowString()+"';\n"+"import \""+upFolder+"artgine/artgine.js\"\n");
+	bTS=CString.InsertAt(bTS,bTS.indexOf("//Version")+9,"\nconst version=\'"+CUniqueID.Get()+"';\n"+"import \""+upFolder+"artgine/artgine.js\"\n");
 	
 
 	

@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-29 16:57:40';
+const version='mf2jnnjd_2';
 import "../../../artgine/artgine.js"
 
 //Class
