@@ -564,7 +564,6 @@ export class CSubject extends CObject {
         for (var each0 of this.mComArr) {
             each0.Prefab(this);
         }
-        this.mFrame = null;
     }
     PatchStreamUpdate(_stream, _path) {
         super.PatchStreamUpdate(_stream, _path);

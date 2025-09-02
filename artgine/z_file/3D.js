@@ -1,4 +1,4 @@
-import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, floor, mod, } from "./Shader";
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, } from "./Shader";
 import { SDF } from "./SDF";
 import { ColorModelCac, ColorVFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
@@ -33,30 +33,30 @@ var depthMap = 0.0;
 var screenResolution = new CVec2(1.0, 1.0);
 var weightArrMat = new Sam2DMat(9);
 var time = Attribute(0, "time");
-Build("3DSkin", [], vs_main, [worldMat, viewMat, projectMat, alphaCut, skin, weightArrMat, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
-Build("3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel, alphaCut], [out_position, to_uv], ps_main_simple, [out_color]);
+Build("3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
+Build("3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel], [out_position, to_uv], ps_main_simple, [out_color]);
 Build("3DGBuffer", ["gBuf"], vs_main_gBuffer, [
-    worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
+    worldMat, viewMat, projectMat, skin, weightArrMat,
     sam2DCount, material, outputType,
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer, [out_color]);
 Build("3DGBufferMulti", ["gBufMulti"], vs_main_gBuffer, [
-    worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
+    worldMat, viewMat, projectMat, skin, weightArrMat,
     sam2DCount, material,
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer_multi, [out_color, out_pos, out_nor, out_spc]);
 Build("3DShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
-    worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
+    worldMat, viewMat, projectMat, skin, weightArrMat,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
 ], [out_position, to_uv, to_viewPos], ps_main_shadow_write, [out_color]);
 Build("3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
-    worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut,
+    worldMat, viewMat, projectMat, skin, weightArrMat,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
     shadowRate, PCF, texture16f, bias, normalBias, dotCac,
     ligDir, ligCol, ligCount,
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
 Build("3DBake", ["bake"], vs_main_bake, [
-    worldMat, viewMat, projectMat, skin, weightArrMat, alphaCut
+    worldMat, viewMat, projectMat, skin, weightArrMat
 ], [out_position, to_uv, to_normal, to_worldPos, to_tangent, to_binormal, to_ref], ps_main_bake, [out_color]);
 function vs_main_simple(f3_ver, f2_uv) {
     to_uv = f2_uv;
@@ -65,8 +65,10 @@ function vs_main_simple(f3_ver, f2_uv) {
 function ps_main_simple() {
     var L_cor = Sam2DToColor(0.0, to_uv);
     L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)
         discard;
+    BranchEnd();
     out_color = L_cor;
 }
 function GetWorldWeightMat(_weightArrMat, _weight, _weightIndex, _worldMat, _skin) {
@@ -199,8 +201,10 @@ function ps_main() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
         discard;
+    BranchEnd();
     var dseMat = new CMat3(0);
     var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
     BranchBegin("light", "L", [ligDir, ligCol, ligCount, camPos, material, ligStep0, ligStep1, ligStep2, ligStep3, envCube, ambientColor]);
@@ -240,8 +244,10 @@ function ps_main_gBuffer() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
         discard;
+    BranchEnd();
     if (outputType < SDF.eGBuf.Position + 0.5) {
         out_color = new CVec4(to_viewPos.xyz, 0.5);
     }
@@ -283,9 +289,10 @@ function ps_main_gBuffer_multi() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
-    if (L_cor.a < alphaCut) {
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a < alphaCut)
         discard;
-    }
+    BranchEnd();
     out_pos = new CVec4(to_viewPos.xyz, 1.0);
     var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
     out_nor = new CVec4(MappingV3ToTex(N), 1.0);
@@ -328,9 +335,10 @@ function ps_main_shadow_write() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
     BranchEnd();
-    if (L_cor.a < alphaCut) {
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a < alphaCut)
         discard;
-    }
+    BranchEnd();
     out_color = to_viewPos;
 }
 function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
@@ -346,12 +354,26 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
     P = V4MulMatCoordi(P, viewMat);
     out_position = V4MulMatCoordi(P, projectMat);
 }
-function GetParallaxShadowWorldPos(_uv, _tan, _bi, _nor, _wor, _texOff, _scale) {
-    var h = Sam2DToColor(_texOff.y, _uv).a;
-    var disp = (h - 0.5) * _scale;
-    var N = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
-    var W = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
-    return new CVec4(W, _wor.w);
+function vs_main_shadow_read_pa(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_bi, f3_ref) {
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var P = new CVec4(f3_ver, 1.0);
+    P = V4MulMatCoordi(P, woweMat);
+    BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
+    P = ApplyWind(P, skin, f4_we, time);
+    BranchEnd();
+    to_worldPos = P;
+    to_uv = f2_uv;
+    P = V4MulMatCoordi(P, viewMat);
+    out_position = V4MulMatCoordi(P, projectMat);
+    to_ref = f3_ref;
+    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
+    to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
+    if (f3_ref.y > 0.0) {
+        to_normal = V3Nor(V3MulMat3Normal(f3_nor, Mat4ToMat3(woweMat)).xyz);
+    }
+    else {
+        to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+    }
 }
 function ps_main_shadow_read() {
     var L_cor = Sam2DToColor(0.0, to_uv);
@@ -361,9 +383,10 @@ function ps_main_shadow_read() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
     BranchEnd();
-    if (L_cor.a < alphaCut) {
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a < alphaCut)
         discard;
-    }
+    BranchEnd();
     var all = 0.0;
     for (var i = 0; i < FloatToInt(shadowCount); i++) {
         var shadowRead = Sam2DToV4(shadowReadList, i);
@@ -373,6 +396,61 @@ function ps_main_shadow_read() {
     all /= shadowCount;
     if (all < 0.0)
         all = 0.0;
+    var occlusion = screenPos.z;
+    var scaled = occlusion * 65535.0;
+    var high = floor(scaled / 256.0);
+    var low = mod(scaled, 256.0);
+    out_color = new CVec4(all, high / 255.0, low / 255.0, 1.0);
+}
+function GetParallaxShadowWorldPos(_uv, _tan, _bi, _nor, _wor, _texOff, _scale) {
+    var h = Sam2DToColor(_texOff.y, _uv).a;
+    var disp = (h - 0.5) * _scale;
+    var N = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
+    var W = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
+    return new CVec4(W, _wor.w);
+}
+function ps_main_shadow_read_pa() {
+    var uv = to_uv;
+    uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+    var L_cor = Sam2DToColor(0.0, uv);
+    BranchBegin("color", "C", [colorModel, alphaModel]);
+    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchEnd();
+    BranchBegin("vfx", "V", [colorVFX, time]);
+    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    BranchEnd();
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a < alphaCut) {
+        discard;
+    }
+    BranchEnd();
+    var N_pa = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+    var h = Sam2DToColor(to_ref.y, uv).a;
+    var delta = (h - 0.5) * parallaxNormal;
+    var W_pa = new CVec4(V3AddV3(to_worldPos.xyz, V3MulFloat(N_pa, delta)), 1.0);
+    var all = 1.0;
+    if (shadowCount > 0.5) {
+        all = 0.0;
+        var K = 240.0;
+        var pushClamp = 0.08;
+        for (var i = 0; i < FloatToInt(shadowCount); i++) {
+            var shadowRead = Sam2DToV4(shadowReadList, i);
+            var L4 = Sam2DToV4(ligDir, shadowRead.x);
+            var L = V3Nor(L4.xyz);
+            var ndlAbs = abs(V3Dot(N_pa, L));
+            var push = delta * K;
+            push = clamp(push, -pushClamp, pushClamp);
+            var W_A = new CVec4(V3AddV3(W_pa.xyz, V3MulFloat(L, -push)), 1.0);
+            var W_B = new CVec4(V3AddV3(W_pa.xyz, V3MulFloat(L, push)), 1.0);
+            var sA = calcShadow(shadowRead, IntToFloat(i), N_pa, W_A);
+            var sB = calcShadow(shadowRead, IntToFloat(i), N_pa, W_B);
+            var sVal = (sA < sB) ? sA : sB;
+            all += sVal;
+        }
+        all /= shadowCount;
+        if (all < 0.0)
+            all = 0.0;
+    }
     var occlusion = screenPos.z;
     var scaled = occlusion * 65535.0;
     var high = floor(scaled / 256.0);
@@ -391,8 +469,10 @@ function ps_main_bake() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
     BranchEnd();
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
         discard;
+    BranchEnd();
     var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
     var shadow = -1.0;
     var i = 0.0;

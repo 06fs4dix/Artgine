@@ -1043,6 +1043,7 @@ function DevToolGiftSwap(_obj) {
             }
             else {
                 can.DetachRes(_obj.Key());
+                _obj.SetFrame(null);
                 can.PushSub(_obj);
                 _obj.mPTArr = null;
                 DevToolLeftRemove(false);

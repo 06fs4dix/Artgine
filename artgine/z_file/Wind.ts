@@ -47,7 +47,7 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
 
         var hasRange : number = inner + outer < 0.1 ? 0.0 : 1.0;
         var needCalcDir : number = V3Dot(dir, dir) < 0.01 ? 1.0 : 0.0;
-        var hasZVal : number = abs(dir.z) < 0.01 ? 0.0 : 1.0;
+        //var hasZVal : number = abs(dir.z) < 0.01 ? 0.0 : 1.0;
 
         if(hasRange > 0.5) {
             if(outer < dist) {
@@ -93,9 +93,10 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
         // 0 ~ 1 범위에서 -0.75 ~ 1.0 범위로 변환
         noise = V3AddV3(V3MulFloat(noise, range.y - range.x), new CVec3(range.x, range.x, range.x));
 
-        if(hasZVal < 0.5) {
-            noise.z = 0.0;  // 3d에서는 z값이 흔들리는게 자연스럽지만 2d에서는 문제생겨서 없앰
-        }
+        // if(_2d>0.5) 
+        // {
+        //     noise.z = 0.0;  // 3d에서는 z값이 흔들리는게 자연스럽지만 2d에서는 문제생겨서 없앰
+        // }
 
         var windResult : CVec3 = V3MulV3(noise, dir);
         var windPower : CVec3 = V3MulFloat(_size, pow);
@@ -109,6 +110,7 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
 
             windResult.x = clamp(windResult.x * verticalWeight, -1.0, 1.0);
             windResult.y = clamp(windResult.y * mix(downWeight, upWeight, step(0.0, windResult.y)), -1.0, 1.0);            
+            //windResult.z = clamp(windResult.z * verticalWeight, -1.0, 1.0);
         }
 
         wind = V3AddV3(wind, V3MulV3(windResult, windPower));

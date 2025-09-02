@@ -16,6 +16,8 @@ import { CFontRef } from "../../../util/CFont.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import { CClipCoodi } from "../CAnimation.js";
 import { CPaint } from "./CPaint.js";
+var gMargin = 0.2;
+;
 export class CPaint2D extends CPaint {
     mSize;
     mPivot;
@@ -100,15 +102,10 @@ export class CPaint2D extends CPaint {
             if (this.mTexture.length > 0) {
                 let ani = CClass.New("CAnimation");
                 if (this.mTexCodi.Equals(new CVec4(1, 1, 0, 0)) == false) {
-                    var tex = this.mOwner.GetFrame().Res().Find(this.mTexture[0]);
-                    if (tex instanceof CTexture) {
-                        if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
-                            return;
-                        const imgW = tex.GetWidth();
-                        const imgH = tex.GetHeight();
-                        const absCoords = CPaint2D.AbsoluteCoordsFromTexCodi(this.mTexCodi, imgW, imgH);
-                        ani.Push(new CClipCoodi(0, 0, absCoords.x, absCoords.y, absCoords.z, absCoords.w));
-                    }
+                    const absCoords = this.GetLeftTopRightBottom(this.mOwner.GetFrame());
+                    if (absCoords == null)
+                        return;
+                    ani.Push(new CClipCoodi(0, 0, absCoords.x, absCoords.y, absCoords.z, absCoords.w));
                 }
                 window["AniTool"](ani, this.mTexture[0]);
                 window["AniToolTexcodiEvent"](this, () => {
@@ -143,26 +140,28 @@ export class CPaint2D extends CPaint {
         if (_delay > 1000 || this.mTag.has("tail") == false || this.mSize == null)
             return;
         this.Camera();
-        let pos = CPoolGeo.ProductV3();
-        pos.mF32A[0] = this.mOwner.GetWMat().mF32A[12];
-        pos.mF32A[1] = this.mOwner.GetWMat().mF32A[13];
-        pos.mF32A[2] = this.mOwner.GetWMat().mF32A[14];
-        var v0 = CMath.V3SubV3(pos, this.mBeforePos);
-        if (v0.IsZero()) {
+        if (this.mPosList == null) {
+            let pos = CPoolGeo.ProductV3();
+            pos.mF32A[0] = this.mOwner.GetWMat().mF32A[12];
+            pos.mF32A[1] = this.mOwner.GetWMat().mF32A[13];
+            pos.mF32A[2] = this.mOwner.GetWMat().mF32A[14];
+            var v0 = CMath.V3SubV3(pos, this.mBeforePos);
+            if (v0.IsZero()) {
+                CPoolGeo.RecycleV3(pos);
+                return;
+            }
+            var len = CMath.V3Len(v0);
+            if (len > this.mSize.y)
+                this.mBeforePos = CMath.V3AddV3(pos, CMath.V3MulFloat(CMath.V3Nor(v0), -this.mSize.y));
+            if (len < 0.001) {
+                this.mBeforePos = pos;
+            }
+            else if (this.mStopPos.Equals(pos)) {
+                this.mBeforePos = CMath.V3AddV3(CMath.V3MulFloat(pos, _delay / 100 * this.mRemoveSpeed), CMath.V3MulFloat(this.mBeforePos, 1 - _delay / 100 * this.mRemoveSpeed));
+            }
+            this.mStopPos.Import(pos);
             CPoolGeo.RecycleV3(pos);
-            return;
         }
-        var len = CMath.V3Len(v0);
-        if (len > this.mSize.y)
-            this.mBeforePos = CMath.V3AddV3(pos, CMath.V3MulFloat(CMath.V3Nor(v0), -this.mSize.y));
-        if (len < 0.001) {
-            this.mBeforePos = pos;
-        }
-        else if (this.mStopPos.Equals(pos)) {
-            this.mBeforePos = CMath.V3AddV3(CMath.V3MulFloat(pos, _delay / 100 * this.mRemoveSpeed), CMath.V3MulFloat(this.mBeforePos, 1 - _delay / 100 * this.mRemoveSpeed));
-        }
-        this.mStopPos.Import(pos);
-        CPoolGeo.RecycleV3(pos);
     }
     Prefab(_owner) {
         super.Prefab(_owner);
@@ -261,16 +260,16 @@ export class CPaint2D extends CPaint {
     }
     GetLeftTopRightBottom(_frame) {
         const tex = _frame.Res().Find(this.mTexture[0]);
+        if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
+            return null;
         const imgW = tex.GetWidth();
         const imgH = tex.GetHeight();
         const uv = this.mTexCodi;
-        const width = uv.x * imgW;
-        const height = uv.y * imgH;
-        const left = uv.z * imgW;
-        const top = (1 - uv.w - uv.y) * imgH;
-        const right = left + width;
-        const bottom = top + height;
-        return new CVec4(left, top, right, bottom);
+        const startX = Math.round((this.mTexCodi.z - (gMargin * 0.5) / imgW) * imgW);
+        const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y - (gMargin * 0.5) / imgH) * imgH);
+        const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x + gMargin / imgW) * imgW);
+        const endY = Math.round((1 - this.mTexCodi.w + gMargin / imgH) * imgH);
+        return new CVec4(startX, startY, endX, endY);
     }
     Render(_vf) {
         var barr = this.RenderBatch(_vf, 1);
@@ -292,29 +291,26 @@ export class CPaint2D extends CPaint {
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
     }
     SetTexCodi(_stX, _stY = null, _edX = null, _edY = null, _imgW = null, _imgH = null) {
-        if (_stX instanceof CVec4) {
-            this.mTexCodi.Import(_stX);
+        if (_stX == null) {
+            this.mTexCodi.x = 1 - _stY;
+            this.mTexCodi.y = 1 - _stY;
+            this.mTexCodi.z = _stY * 0.5;
+            this.mTexCodi.w = _stY * 0.5;
+        }
+        else if (_stX instanceof CVec4) {
+            if (_stY == null)
+                _stY = 0;
+            this.mTexCodi.x = _stX.x - _stY;
+            this.mTexCodi.y = _stX.y - _stY;
+            this.mTexCodi.z = _stX.z + _stY * 0.5;
+            this.mTexCodi.w = _stX.w + _stY * 0.5;
         }
         else {
-            this.mTexCodi.x = (_edX - _stX) / _imgW - 0.2 / _imgW;
-            this.mTexCodi.y = (_edY - _stY) / _imgH - 0.2 / _imgH;
-            this.mTexCodi.z = (_stX) / _imgW + 0.1 / _imgW;
-            this.mTexCodi.w = 1 - (_stY / _imgH) - this.mTexCodi.y - 0.1 / _imgH;
+            this.mTexCodi.x = (_edX - _stX) / _imgW - gMargin / _imgW;
+            this.mTexCodi.y = (_edY - _stY) / _imgH - gMargin / _imgH;
+            this.mTexCodi.z = (_stX) / _imgW + (gMargin * 0.5) / _imgW;
+            this.mTexCodi.w = 1 - (_stY / _imgH) - this.mTexCodi.y - (gMargin * 0.5) / _imgH;
         }
-    }
-    static AbsoluteCoordsFromTexCodi(_texCodi, _imgW, _imgH) {
-        const startX = Math.round((_texCodi.z - 0.1 / _imgW) * _imgW);
-        const startY = Math.round((1 - _texCodi.w - _texCodi.y - 0.1 / _imgH) * _imgH);
-        const endX = Math.round((_texCodi.z + _texCodi.x + 0.2 / _imgW) * _imgW);
-        const endY = Math.round((1 - _texCodi.w + 0.2 / _imgH) * _imgH);
-        return new CVec4(startX, startY, endX, endY);
-    }
-    static TexCodiFromAbsoluteCoords(_startX, _startY, _endX, _endY, _imgW, _imgH) {
-        const widthRatio = (_endX - _startX) / _imgW - 0.2 / _imgW;
-        const heightRatio = (_endY - _startY) / _imgH - 0.2 / _imgH;
-        const startXRatio = _startX / _imgW + 0.1 / _imgW;
-        const startYRatio = 1 - (_startY / _imgH) - heightRatio - 0.1 / _imgH;
-        return new CVec4(widthRatio, heightRatio, startXRatio, startYRatio);
     }
     SetPivot(_pivot) {
         this.mPivot = _pivot;
@@ -324,8 +320,12 @@ export class CPaint2D extends CPaint {
         this.mBoundFMatR = 0;
         if (_size != null && _size.IsZero())
             this.mSize = null;
+        else if (this.mSize == null) {
+            this.mSize = new CVec2();
+            this.mSize.Import(_size);
+        }
         else
-            this.mSize = _size;
+            this.mSize.Import(_size);
         this.PRSReset();
     }
     SetPos(_pos) {

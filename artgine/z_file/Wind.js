@@ -1,5 +1,5 @@
 import { NoisePerlin2D } from "./Noise";
-import { abs, clamp, CVec2, CVec3, FloatToInt, mix, Sam2DToV4, Sam2DV4, smoothstep, step, TexSizeHalfInt, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
+import { clamp, CVec2, CVec3, FloatToInt, mix, Sam2DToV4, Sam2DV4, smoothstep, step, TexSizeHalfInt, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 export var windInfluence = 0.0;
 export var windDir = new Sam2DV4(9, 500);
 export var windPos = new Sam2DV4(9, 501);
@@ -31,7 +31,6 @@ export function GetWind(_objPos, _size, _time) {
         var range = new CVec2(-0.5, 1.0);
         var hasRange = inner + outer < 0.1 ? 0.0 : 1.0;
         var needCalcDir = V3Dot(dir, dir) < 0.01 ? 1.0 : 0.0;
-        var hasZVal = abs(dir.z) < 0.01 ? 0.0 : 1.0;
         if (hasRange > 0.5) {
             if (outer < dist) {
                 continue;
@@ -56,9 +55,6 @@ export function GetWind(_objPos, _size, _time) {
         }
         var noise = new CVec3(NoisePerlin2D(new CVec2(_objPos.x / -wave, speedFactor.x * freq * _time)), NoisePerlin2D(new CVec2(_objPos.y / -wave, speedFactor.y * freq * _time)), NoisePerlin2D(new CVec2(_objPos.z / -wave, speedFactor.z * freq * _time)));
         noise = V3AddV3(V3MulFloat(noise, range.y - range.x), new CVec3(range.x, range.x, range.x));
-        if (hasZVal < 0.5) {
-            noise.z = 0.0;
-        }
         var windResult = V3MulV3(noise, dir);
         var windPower = V3MulFloat(_size, pow);
         var useWeight = wPos.w;
