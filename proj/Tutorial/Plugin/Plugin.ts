@@ -1,5 +1,5 @@
 //Version
-const version='2025-06-24 16:18:01';
+const version='mf2jnnjd_2';
 //Class
 import {CClass} from "../../../artgine/basic/CClass.js";
 

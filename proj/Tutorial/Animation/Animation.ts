@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-09 22:36:14';
+const version='mf2jnnjd_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
