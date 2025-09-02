@@ -337,6 +337,9 @@ export class CPaint extends CComponent {
     Shadow() {
         this.PushTag("shadow");
     }
+    AlphaCut() {
+        this.PushTag("alphaCut");
+    }
     GetRenderPass() { return this.mRenderPass; }
     PushRenderPass(_rp, _copy = true) {
         this.mDefaultAttr = new Set();

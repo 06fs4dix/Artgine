@@ -212,13 +212,15 @@ export class CCamCon extends CObject {
                 this.mBspos = null;
             }
         }
-        const t = Math.max(0, _delay * 0.05);
-        this.mRotXCur += this.mRotX;
-        this.mRotYCur += this.mRotY;
-        this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t;
-        this.mRotYCur = this.mRotY = this.mRotYCur * 0.5 * t;
-        if (this.mRotYCur > 0.001 && this.mRotYCur > 0.001)
-            this.mReset = true;
+        if (_delay < 500) {
+            const t = Math.max(0, _delay * 0.05);
+            this.mRotXCur += this.mRotX;
+            this.mRotYCur += this.mRotY;
+            this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t;
+            this.mRotYCur = this.mRotY = this.mRotYCur * 0.5 * t;
+            if (this.mRotYCur > 0.001 && this.mRotYCur > 0.001)
+                this.mReset = true;
+        }
     }
 }
 class CCamCon3D extends CCamCon {

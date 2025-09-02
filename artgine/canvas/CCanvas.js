@@ -341,6 +341,10 @@ export class CCanvas extends CObject {
         this.mBroLen = 0;
     }
     Clear() {
+        for (let i = 0; i < this.mPushSub.Size(); ++i) {
+            this.mPushSub.Find(i).Destroy();
+        }
+        this.mPushSub.Clear();
         for (var eachKey of this.mSubMap) {
             var each0 = eachKey[1];
             each0.Destroy();

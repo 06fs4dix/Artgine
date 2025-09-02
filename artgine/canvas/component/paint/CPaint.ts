@@ -537,6 +537,10 @@ export class CPaint extends CComponent
 	{	
 		this.PushTag("shadow");
 	}
+	AlphaCut()	
+	{	
+		this.PushTag("alphaCut");
+	}
 	
 
 	

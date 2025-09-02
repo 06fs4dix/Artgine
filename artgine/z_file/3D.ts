@@ -81,13 +81,13 @@ var time : number = Attribute(0,"time");
 
 //Skin
 Build("3DSkin",[],
-	vs_main,[worldMat,viewMat,projectMat,alphaCut,skin,weightArrMat,sam2DCount],
+	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,sam2DCount],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
 //Simple
 Build("3DSimple",["simple"],
-	vs_main_simple,[worldMat,viewMat,projectMat,colorModel,alphaModel,alphaCut],
+	vs_main_simple,[worldMat,viewMat,projectMat,colorModel,alphaModel],
 	[out_position,to_uv],
 	ps_main_simple,[out_color]
 );
@@ -95,7 +95,7 @@ Build("3DSimple",["simple"],
 //gBuffer
 Build("3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
+		worldMat,viewMat,projectMat,skin,weightArrMat,
 		sam2DCount,material,outputType,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer,[out_color]
@@ -103,7 +103,7 @@ Build("3DGBuffer", ["gBuf"],
 //gBuffer MultiTex
 Build("3DGBufferMulti", ["gBufMulti"], 
 	vs_main_gBuffer, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
+		worldMat,viewMat,projectMat,skin,weightArrMat,
 		sam2DCount,material,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer_multi,[out_color, out_pos, out_nor, out_spc]
@@ -112,7 +112,7 @@ Build("3DGBufferMulti", ["gBufMulti"],
 //shadow
 Build("3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
+		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 	], [out_position,to_uv,to_viewPos],
@@ -121,7 +121,7 @@ Build("3DShadowWrite", ["shadowWrite"],
 
 Build("3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
+		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,dotCac,
@@ -130,10 +130,21 @@ Build("3DShadowRead", ["shadowRead"],
 	ps_main_shadow_read,[out_color]
 );
 
+// Build("3DShadowReadPa", ["shadowRead","parallax"], 
+// 	vs_main_shadow_read_pa, [
+// 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
+// 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
+// 		shadowCount,shadowPointProj,shadowReadList,
+// 		shadowRate,PCF,texture16f,bias,normalBias,dotCac,
+// 		ligDir,ligCol,ligCount,parallaxNormal, camPos,
+// 	], [out_position,to_uv,to_normal,to_worldPos,to_binormal,to_tangent,to_ref],
+// 	ps_main_shadow_read_pa,[out_color]
+// );
+
 //baking
 Build("3DBake", ["bake"], 
 	vs_main_bake, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut
+		worldMat,viewMat,projectMat,skin,weightArrMat
 	], [out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],
 	ps_main_bake,[out_color]
 );
@@ -147,8 +158,9 @@ function ps_main_simple()
 {
     var L_cor : CVec4=Sam2DToColor(0.0,to_uv);
 	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
-	if(L_cor.a <= alphaCut) 
-		discard;
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if(L_cor.a <= alphaCut) discard;
+	BranchEnd();
 	out_color=L_cor;
 }
 
@@ -330,9 +342,9 @@ function ps_main()
 	BranchBegin("vfx","V",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
 	BranchEnd();
-
+	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) discard;
-
+	BranchEnd();
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
@@ -386,7 +398,9 @@ function ps_main_gBuffer() {
 	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
 	BranchEnd();
 
+	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) discard;
+	BranchEnd();
 
 	//position
 	if(outputType < SDF.eGBuf.Position + 0.5) {
@@ -440,9 +454,9 @@ function ps_main_gBuffer_multi() {
 	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
 	BranchEnd();
 
-	if(L_cor.a < alphaCut) {
-		discard;
-	}
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if(L_cor.a < alphaCut) discard;
+	BranchEnd();
 
 	//position
 	out_pos = new CVec4(to_viewPos.xyz, 1.0);
@@ -505,9 +519,10 @@ function ps_main_shadow_write()
 	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
 	BranchEnd();
 
-	if(L_cor.a < alphaCut) {
-		discard;
-	}
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if(L_cor.a < alphaCut) 	discard;
+	BranchEnd();
+	
 
 	out_color = to_viewPos;
 }
@@ -528,22 +543,37 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	P = V4MulMatCoordi(P, viewMat);
 	out_position = V4MulMatCoordi(P, projectMat);
 }
-function GetParallaxShadowWorldPos(
-    _uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3,
-    _wor : CVec4, _texOff : CVec3, _scale : number) : CVec4
+
+function vs_main_shadow_read_pa(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) 
 {
-    // 페럴렉스 후 uv에서 높이(A) 샘플 (노말맵 알파: _texOff.y)
-    var h : number = Sam2DToColor(_texOff.y, _uv).a;    // 0..1
-    // -0.5..+0.5로 가운데 정렬 후 스케일
-    var disp : number = (h - 0.5) * _scale;
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+	
+	var P : CVec4 = new CVec4(f3_ver, 1.0);
+	P = V4MulMatCoordi(P, woweMat);
 
-    // 탄젠트 노말(이미 사용 중)
-    var N : CVec3 = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
+	BranchBegin("wind","W",[windInfluence, windDir, windPos, windInfo, windCount, time]);
+	P = ApplyWind(P, skin, f4_we, time);
+	BranchEnd();
 
-    // world pos를 노말 방향으로 살짝 이동
-    var W : CVec3 = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
-    return new CVec4(W, _wor.w);
+	to_worldPos = P;
+	//to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+	to_uv = f2_uv;
+
+	P = V4MulMatCoordi(P, viewMat);
+	out_position = V4MulMatCoordi(P, projectMat);
+
+	to_ref = f3_ref;
+
+	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
+	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
+	if(f3_ref.y > 0.0) {
+		to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
+	} else {
+		to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+	}
+
 }
+
 function ps_main_shadow_read() 
 {	
 	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
@@ -556,9 +586,10 @@ function ps_main_shadow_read()
 	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
 	BranchEnd();
 
-	if(L_cor.a < alphaCut) {
-		discard;
-	}
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if(L_cor.a < alphaCut) 	discard;
+	BranchEnd();
+	
 
 	var all : number=0.0;
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {
@@ -577,6 +608,99 @@ function ps_main_shadow_read()
 	out_color = new CVec4(all, high / 255.0, low / 255.0, 1.0);
 	//out_color = new CVec4(0.0,1.0,0.0,1.0);
 }
+function GetParallaxShadowWorldPos(
+    _uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3,
+    _wor : CVec4, _texOff : CVec3, _scale : number) : CVec4
+{
+    // 페럴렉스 후 uv에서 높이(A) 샘플 (노말맵 알파: _texOff.y)
+    var h : number = Sam2DToColor(_texOff.y, _uv).a;    // 0..1
+    // -0.5..+0.5로 가운데 정렬 후 스케일
+    var disp : number = (h - 0.5) * _scale;
+
+    // 탄젠트 노말(이미 사용 중)
+    var N : CVec3 = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
+
+    // world pos를 노말 방향으로 살짝 이동
+    var W : CVec3 = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
+    return new CVec4(W, _wor.w);
+}
+function ps_main_shadow_read_pa() 
+{	
+    // 1) POM UV 보정
+    var uv : CVec2 = to_uv;
+    uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+
+    // 2) 머티리얼/이펙트 (기존 유지)
+    var L_cor : CVec4 = Sam2DToColor(0.0, uv);
+
+    BranchBegin("color","C",[colorModel,alphaModel]);
+    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchEnd();
+
+    BranchBegin("vfx","V",[colorVFX,time]);
+    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    BranchEnd();
+
+	BranchBegin("alphaCut","A",[alphaCut]);
+    if (L_cor.a < alphaCut) { discard; }
+	BranchEnd();
+
+    // 3) POM 노멀/높이 → 기준 월드좌표
+    var N_pa : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+    var h    : number = Sam2DToColor(to_ref.y, uv).a;      // 높이 채널(A 가정)
+    var delta: number = (h - 0.5) * parallaxNormal;        // -0.5..+0.5 스케일
+    var W_pa : CVec4 = new CVec4(
+        V3AddV3(to_worldPos.xyz, V3MulFloat(N_pa, delta)), 1.0
+    );
+
+    // 4) 섀도우 누적 (라이트 방향 전진 근사)
+    var all : number = 1.0;
+    if (shadowCount > 0.5) {
+        all = 0.0;
+
+        // 튜닝 파라미터: 필요 시 장면 스케일에 맞춰 조정
+        var K : number = 240.0;         // 전진 강도(효과 약하면 300~400까지 올려 테스트)
+        var pushClamp : number = 0.08;  // 총 전진 상한(월드 유닛, 0.02~0.12 범위에서 조정)
+
+        for (var i = 0; i < FloatToInt(shadowCount); i++) {
+            var shadowRead : CVec4 = Sam2DToV4(shadowReadList, i);
+
+            // 캐스케이드별 라이트 방향
+            var L4 : CVec4 = Sam2DToV4(ligDir, shadowRead.x);
+            var L  : CVec3 = V3Nor(L4.xyz);
+
+            // 각도 의존 보정(너무 사선일 때 과발산 방지)
+            var ndlAbs : number = abs(V3Dot(N_pa, L));      // 0..1
+            var push   : number = delta * K;                // 기본 전진량
+            // 필요시 ndl 보정 추가하려면 아래 주석 해제
+            // push = push / (ndlAbs + 0.15);
+
+            // 상한 클램프(장면 스케일에 맞춰 조정)
+            push = clamp(push, -pushClamp, pushClamp);
+
+            // ±L 양방향 후보 좌표(장면/좌표계 부호차 자동 커버)
+            var W_A : CVec4 = new CVec4( V3AddV3(W_pa.xyz, V3MulFloat(L, -push)), 1.0 );
+            var W_B : CVec4 = new CVec4( V3AddV3(W_pa.xyz, V3MulFloat(L,  push)), 1.0 );
+
+            // POM 노멀/좌표로 섀도우 비교 → 더 어두운 값을 채택(빛 아래로 강제)
+            var sA : number = calcShadow(shadowRead, IntToFloat(i), N_pa, W_A);
+            var sB : number = calcShadow(shadowRead, IntToFloat(i), N_pa, W_B);
+            var sVal : number = (sA < sB) ? sA : sB;
+
+            all += sVal;
+        }
+        all /= shadowCount;
+        if (all < 0.0) all = 0.0;
+    }
+
+    // 5) 깊이 패킹(기존 유지)
+    var occlusion : number = screenPos.z;
+    var scaled : number = occlusion * 65535.0;
+    var high : number = floor(scaled / 256.0);
+    var low  : number = mod(scaled, 256.0);
+    out_color = new CVec4(all, high / 255.0, low / 255.0, 1.0);
+}
+
 
 function ps_main_bake() {
 	var uv : CVec2 = to_uv;
@@ -594,7 +718,9 @@ function ps_main_bake() {
 	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
 	BranchEnd();
 
+	BranchBegin("alphaCut","A",[alphaCut]);
 	if ( L_cor.a < alphaCut ) discard;
+	BranchEnd();
 
 	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
 

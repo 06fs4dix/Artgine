@@ -1548,10 +1548,13 @@ function DevToolGiftSwap(_obj: CSubject)
             else
             {
                 can.DetachRes(_obj.Key());
+                _obj.SetFrame(null);
                 can.PushSub(_obj);
                 _obj.mPTArr=null;
+                
                 //can.mSubMap.set(_obj.Key(),_obj);
                 DevToolLeftRemove(false);
+                
             }
         }
         else if(parent instanceof CSubject)

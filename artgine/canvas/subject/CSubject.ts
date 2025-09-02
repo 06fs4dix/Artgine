@@ -869,7 +869,7 @@ export class CSubject extends CObject implements IFile
 		{
 			each0.Prefab(this);
 		}
-		this.mFrame=null;
+		//this.mFrame=null;
 		
 
 	}

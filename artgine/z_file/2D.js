@@ -27,29 +27,26 @@ var screenResolution = new CVec2(1.0, 1.0);
 var sam2DCount = Null();
 Build("2DPlane", [], vs_main, [
     worldMat, viewMat, projectMat, texCodi, reverse,
-    alphaCut
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
 Build("2DTail", ["tail"], vs_main_tail, [
     worldMat, viewMat, projectMat, texCodi, reverse,
-    alphaCut
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
 Build("2DTrail", ["trail"], vs_main_trail, [
     worldMat, viewMat, projectMat, texCodi, reverse, trailPos, lastHide,
-    alphaCut
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
 Build("2DSimple", ["simple"], vs_main_simple, [
-    worldMat, viewMat, projectMat, alphaCut
+    worldMat, viewMat, projectMat
 ], [
     out_position, to_uv
 ], ps_main_simple, [out_color]);
 Build("2DMask", ["mask"], vs_main, [
-    worldMat, viewMat, projectMat, texCodi, reverse, alphaCut, mask
+    worldMat, viewMat, projectMat, texCodi, reverse, mask
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main_mask, [out_color]);
@@ -69,8 +66,10 @@ function vs_main_simple(f3_ver, f2_uv) {
 }
 function ps_main_simple() {
     var L_cor = Sam2D0ToColor(to_uv.xy);
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)
         discard;
+    BranchEnd();
     out_color = L_cor;
 }
 function vs_main_tail(f3_ver, f2_uv) {
@@ -178,8 +177,10 @@ function ps_main() {
     BranchBegin("vfx", "V", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv.xy, colorVFX, time);
     BranchEnd();
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)
         discard;
+    BranchEnd();
     var normal = new CVec3(0.0, 0.0, 0.0);
     BranchBegin("normalMap", "N", [sam2DCount]);
     if (sam2DCount > 1.0) {
@@ -199,8 +200,10 @@ function ps_main() {
 }
 function ps_main_mask() {
     var L_cor = Sam2D0ToColor(to_uv.xy);
+    BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)
         discard;
+    BranchEnd();
     L_cor.a = mask;
     out_color = L_cor;
 }

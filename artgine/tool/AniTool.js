@@ -226,7 +226,6 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
         AniToolAniListInit();
         gUpdateEvent = new CEvent(AniToolUpdate);
         gAtl.Frame().PushEvent(CEvent.eType.Update, gUpdateEvent);
-        AniToolSubjectInit();
     });
     gAtl.Frame().PushEvent(CEvent.eType.Render, () => {
         gAtl.Frame().Dev().SetClearColor(true, new CVec4(1, 0, 1, 1));
@@ -618,7 +617,7 @@ async function AniToolSubjectInit() {
         else if (clip instanceof CClipCoodi) {
             let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
             ClipSub.SetKey(i);
-            let pt = ClipSub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class='border border-danger' style='color:red;font-size: x-small;'>${i}</div>`), new CVec2(clip.mEDX - clip.mSTX, clip.mEDY - clip.mSTY), CUtil.ID("AniToolLeft_div")));
+            let pt = ClipSub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'>${i}</div>`), new CVec2(clip.mEDX - clip.mSTX, clip.mEDY - clip.mSTY), CUtil.ID("AniToolLeft_div")));
             ClipSub.SetPos(new CVec3(clip.mSTX + pt.GetSize().x * 0.5, -(clip.mSTY + pt.GetSize().y * 0.5)));
         }
         else if (clip instanceof CClipBase64) {

@@ -64,7 +64,6 @@ var sam2DCount : number=Null();
 Build("2DPlane",[],
 	vs_main,[
 		worldMat,viewMat,projectMat,texCodi,reverse,
-		alphaCut
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
@@ -73,7 +72,6 @@ Build("2DPlane",[],
 Build("2DTail",["tail"],
 	vs_main_tail,[
 		worldMat,viewMat,projectMat,texCodi,reverse,
-		alphaCut
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
@@ -81,21 +79,20 @@ Build("2DTail",["tail"],
 Build("2DTrail",["trail"],
 	vs_main_trail,[
 		worldMat,viewMat,projectMat,texCodi,reverse,trailPos,lastHide,
-		alphaCut
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
 Build("2DSimple",["simple"],
 	vs_main_simple,[
-		worldMat,viewMat,projectMat,alphaCut
+		worldMat,viewMat,projectMat
 	],[
 		out_position,to_uv
 	],ps_main_simple,[out_color]
 );
 Build("2DMask",["mask"],
 	vs_main,[
-		worldMat,viewMat,projectMat,texCodi,reverse,alphaCut,mask
+		worldMat,viewMat,projectMat,texCodi,reverse,mask
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main_mask,[out_color]
@@ -124,7 +121,9 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 function ps_main_simple()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
+	BranchBegin("alphaCut","A",[alphaCut]);
 	if ( L_cor.a <= alphaCut ) discard;
+	BranchEnd();
 	out_color=L_cor;
 }
 
@@ -176,12 +175,7 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 		);
 		//왼쪽 버텍스와 오른쪽 버텍스가 같은 크기만큼 움직이게 하기 위해서 둘의 사이값 사용
 		rpos.xyz = V3AddV3(
-			rpos.xyz, 
-			GetWind(
-				V3MulFloat(V3AddV3(worldMat[2].xyz, worldMat[3].xyz), 0.5), 
-				size, 
-				time
-			)
+			rpos.xyz, GetWind(V3MulFloat(V3AddV3(worldMat[2].xyz, worldMat[3].xyz), 0.5), size,time)
 		);
 	}
 	BranchEnd();
@@ -287,8 +281,9 @@ function ps_main()
 	L_cor=ColorVFX(L_cor,to_uv.xy,colorVFX,time);
 	BranchEnd();
 
-	if ( L_cor.a <= alphaCut ) 
-		discard;
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if ( L_cor.a <= alphaCut ) discard;
+	BranchEnd();
 	
 
 	var normal : CVec3=new CVec3(0.0,0.0,0.0);
@@ -316,8 +311,9 @@ function ps_main()
 function ps_main_mask()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
-	if ( L_cor.a <= alphaCut ) 
-		discard;
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if ( L_cor.a <= alphaCut ) discard;
+	BranchEnd();
 	L_cor.a=mask;
 	out_color=L_cor;
 }

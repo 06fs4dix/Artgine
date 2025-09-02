@@ -1282,10 +1282,8 @@ export class CShaderInterpretGL extends CShaderInterpret
 		}
 		str += "	return vec4(0,0,0,1);\n";
 		str += "}\n";
-		// str += "vec4 SamCubeLodToColor(int _off,vec3 _uv,float _lod)\n";
-		// str += "{\n";
-		// str += "	return SamCubeLodToColor(float(_off),_uv,_lod);\n";
-		// str += "}\n";
+	
+		
 		
 		str += "vec2 ParallaxNormal(vec3 TangentViewPos,vec3 TangentFragPos,float _index,vec2 _uv,float height_scale)\n";
 		str += "{\n";
@@ -1314,19 +1312,13 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return newUv;\n";
 		str += "}\n";
 		
-		// str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
-		// str += "	if(_uni.x-0.5<=0.0)";
-		// str += "		return texelFetch(sam2D[0],ivec2(_off,int(_uni.y)),0);\n";
-		// for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
-		// {
-		// 	str += "	else if(_uni.x-0.5<=" + j + ".0)";
-		// 	str += "		return texelFetch(sam2D["+j+"],ivec2(_off,int(_uni.y)),0);\n";
-		// }
-		// str += "	return texelFetch(sam2D[0],ivec2(_off,int(_uni.y)),0);\n";
-		// str += "}\n";
-		// str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
-		// str += "	return Sam2DToV4(_uni,int(_off));\n";
-		// str += "}\n";
+
+
+
+
+
+
+
 		str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
 		str += "	vec2 size = vec2("+CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)+".0, "+CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)+".0);\n";
 		str += "	if(_uni.x-0.5<=0.0) {";
