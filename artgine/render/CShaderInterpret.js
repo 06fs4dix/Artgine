@@ -431,6 +431,15 @@ export class CShaderInterpretGL extends CShaderInterpret {
         str += "{\n";
         str += "	return pa_mat*pa_val;\n";
         str += "}\n";
+        str += "mat4 Mat34ToMat(mat4x3 _wmat)\n";
+        str += "{\n";
+        str += "    mat4 m = mat4(1.0);\n";
+        str += "m[0] = vec4(_wmat[0][0], _wmat[1][1], _wmat[2][2],0.0);\n";
+        str += "m[1] = vec4(_wmat[0][1], _wmat[1][2], _wmat[3][0],0.0);\n";
+        str += "m[2] = vec4(_wmat[0][2], _wmat[2][0], _wmat[3][1],0.0);\n";
+        str += "m[3] = vec4(_wmat[1][0], _wmat[2][1], _wmat[3][2],1.0);\n";
+        str += "    return m;\n";
+        str += "}\n";
         str += "vec4 V3MulMatCoordi(vec3 pa_val,mat4 pa_mat)\n";
         str += "{\n";
         str += "	return pa_mat*vec4(pa_val,1.0);\n";

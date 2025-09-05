@@ -59,6 +59,34 @@ export class CClass {
         }
         return null;
     }
+    static async CallAsync(_class, _function, _para = new Array) {
+        if (_function == null)
+            alert("FunctionFinder error!");
+        if (_class == null && CUtil.IsNode() == false) {
+            if (window[_function] != null)
+                return await window[_function];
+        }
+        else {
+            if (_class[_function] == null)
+                return null;
+            switch (_para.length) {
+                case 0: return await _class[_function]();
+                case 1:
+                    return await _class[_function](_para[0]);
+                    break;
+                case 2:
+                    return await _class[_function](_para[0], _para[1]);
+                    break;
+                case 3:
+                    return await _class[_function](_para[0], _para[1], _para[2]);
+                    break;
+                case 4:
+                    return await _class[_function](_para[0], _para[1], _para[2], _para[3]);
+                    break;
+            }
+        }
+        return null;
+    }
     static New(_class, _para = new Array) {
         if (typeof _class === "function")
             _class = _class.name;

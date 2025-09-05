@@ -5,6 +5,7 @@ import {CVec3} from "../geometry/CVec3.js"
 import {CMath} from "../geometry/CMath.js"
 import {CArray} from "../basic/CArray.js";
 import {CObject,CPointer } from "../basic/CObject.js";
+import { CJSON } from "../basic/CJSON.js";
 
 
 

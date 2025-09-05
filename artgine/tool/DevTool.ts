@@ -43,6 +43,9 @@ import { CStorage } from "../system/CStorage.js";
 import { CPath } from "../basic/CPath.js";
 import { CScript } from "../util/CScript.js";
 import { CChecker } from "../util/CChecker.js";
+import { CLan } from "../basic/CLan.js";
+import { CShaderAttr } from "../render/CShaderAttr.js";
+import { CWASM } from "../basic/CWASM.js";
 
 
 var gModal : CModalFlex;
@@ -187,7 +190,7 @@ export async function InitDevToolScriptViewer(_github)
 
         json.script=gScriptViewer.GetSource();
         CStorage.Set(CPath.PHPCR()+"Save.json",JSON.stringify(json));
-        CAlert.Info("Script Save!");
+        CAlert.Info(CLan.Get("Script0","Script Save! Executed at program startup!"));
         //let moudle=await CScript.Build("Test.ts",mv.GetSource());
     });
     await CChecker.Exe(async ()=>{
@@ -512,6 +515,13 @@ function DevToolRender()
     color.w=SDF.eColorModel.RGBAdd;
     let alpha=new CAlpha();
     let wmat=new CMat();
+    let wMatSA=new CShaderAttr("worldMat",wmat);
+    //if(CWASM.IsWASM())wMatSA.mType=12;
+    let MatToMat12Fun=(_mat : CMat)=>{
+        //_mat.mF32A[3]=_mat.mF32A[12];
+        //_mat.mF32A[7]=_mat.mF32A[13];
+        //_mat.mF32A[11]=_mat.mF32A[14];
+    };
     gAtl.Frame().Dev().SetLine(true);
     gAtl.Frame().Dev().SetDepthTest(false);
     
@@ -528,10 +538,12 @@ function DevToolRender()
         wmat.mF32A[0]=0.2;
         wmat.mF32A[5]=0.2;
         wmat.mF32A[10]=0.01;
+        
         if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader,color,"colorModel");
         render.SendGPU(shader,alpha,"alphaModel");
-        render.SendGPU(shader,wmat,"worldMat");
+        MatToMat12Fun(wmat);
+        render.SendGPU(shader,wMatSA);
         render.MeshDrawNodeRender(shader,meshDraw);
         gAtl.Frame().Dev().SetLine(true);
 
@@ -550,7 +562,8 @@ function DevToolRender()
         if(gDragBound==2)gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader,color,"colorModel");
         render.SendGPU(shader,alpha,"alphaModel");
-        render.SendGPU(shader,wmat,"worldMat");
+        MatToMat12Fun(wmat);
+        render.SendGPU(shader,wMatSA);
         render.MeshDrawNodeRender(shader,meshDraw);
         gAtl.Frame().Dev().SetLine(true);
 
@@ -568,7 +581,8 @@ function DevToolRender()
         if(gDragBound==3)gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader,color,"colorModel");
         render.SendGPU(shader,alpha,"alphaModel");
-        render.SendGPU(shader,wmat,"worldMat");
+        MatToMat12Fun(wmat);
+        render.SendGPU(shader,wMatSA);
         render.MeshDrawNodeRender(shader,meshDraw);
         gAtl.Frame().Dev().SetLine(true);
     }
@@ -611,7 +625,8 @@ function DevToolRender()
 
         render.SendGPU(shader,color,"colorModel");
         render.SendGPU(shader,alpha,"alphaModel");
-        render.SendGPU(shader,wmat,"worldMat");
+        MatToMat12Fun(wmat);
+        render.SendGPU(shader,wMatSA);
         render.MeshDrawNodeRender(shader,meshDraw);
 
         if(pt instanceof CPaint2D)
@@ -631,7 +646,8 @@ function DevToolRender()
 
                 render.SendGPU(shader,color,"colorModel");
                 render.SendGPU(shader,alpha,"alphaModel");
-                render.SendGPU(shader,wmat,"worldMat");
+                MatToMat12Fun(wmat);
+                render.SendGPU(shader,wMatSA);
                 render.MeshDrawNodeRender(shader,meshDraw);
             }
             
@@ -674,11 +690,11 @@ function DevToolRender()
         wmat.mF32A[10]=scale.z;
 
 
-
-        render.SendGPU(shader,wmat,"worldMat");
+        
         render.SendGPU(shader,color,"colorModel");
         render.SendGPU(shader,alpha,"alphaModel");
-
+        MatToMat12Fun(wmat);
+        render.SendGPU(shader,wMatSA);
         render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
 
         

@@ -33,6 +33,8 @@ import { CClass } from "../../../basic/CClass.js"
 import { CAlert } from "../../../basic/CAlert.js"
 import { CRPAuto } from "../../CRPMgr.js"
 import { CVec1 } from "../../../geometry/CVec1.js"
+import { CPreferences } from "../../../basic/CPreferences.js"
+import { CConsol } from "../../../basic/CConsol.js"
 
 export class CRenPaint
 {
@@ -137,6 +139,9 @@ export class CPaint extends CComponent
 		this.mBoundFMat.NewWASM();
 		this.mBound=new CBound();
 		this.mBound.NewWASM();
+
+		if(CWASM.IsWASM())
+			this.PushTag("wasm");
 	}
 	SetEnable(_val: boolean): void {
 		super.SetEnable(_val);
@@ -719,12 +724,17 @@ export class CPaint extends CComponent
 		}
 		else
 		{
+			// if(this.mBound.mMin.Ptr()==null)
+			// 	CConsol.Log("test");
 			this.mBoundFMatR=CWASM.BoundMulMat(this.mBoundFMat.mMin.Ptr(),this.mBoundFMat.mMax.Ptr(),this.mBound.mMin.Ptr(),this.mBound.mMax.Ptr(),
 			this.mFMat.Ptr(),this.mBoundFMatC.Ptr());
 		}
 	
 		this.mBoundFMatR*=1.5;
 	}
+	// ImportCJSON(_json: CJSON): this {
+	// 	return super.ImportCJSON(_json);
+	// }
 	Prefab(_owner : CSubject)
 	{
 		if(this.mAutoLoad!=null)
@@ -749,6 +759,8 @@ export class CPaint extends CComponent
 		if(this.mUpdateLMat || this.mOwner.mUpdateMat!=0 || this.mBoundFMatR==0)
 		{
 			CMath.MatMul(this.mLMat,this.mOwner.GetWMat(),this.mFMat);
+			
+			
 			this.CacBound();
 			this.mUpdateFMat=true;
 		}
@@ -809,7 +821,7 @@ export class CPaint extends CComponent
 		let bcm=this.mOwner.GetFrame().BMgr().IsBatchMap();
 		// if(this.mBatchLastVF==_vf.mKey && bcm)
 		// 	return this.mOwner.GetFrame().BMgr().BatchPushArr(this.mBatchLastArr);
-		var barr=this.mBatchMap.get(_vf.mKey);
+		let barr=this.mBatchMap.get(_vf.mKey);
 		if(barr==null)
 		{
 			barr=new Array<CBatch>(_count);

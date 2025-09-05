@@ -3,10 +3,11 @@ import {CMath} from "../../geometry/CMath.js";
 import {CVec2} from "../../geometry/CVec2.js";
 import {CVec3} from "../../geometry/CVec3.js";
 import {CRenderPass} from "../../render/CRenderPass.js";
-import { CRPAuto } from "../../render/CRPMgr.js";
+
 import {CShaderAttr} from "../../render/CShaderAttr.js";
 import {CTexture,  CTextureInfo } from "../../render/CTexture.js";
 import {CBrush} from "../CBrush.js";
+import { CRPAuto } from "../CRPMgr.js";
 import {CCamComp} from "./CCamComp.js";
 
 export default class CEnvMap extends CCamComp
@@ -21,9 +22,9 @@ export default class CEnvMap extends CCamComp
         //6방면 구워서 6 * (light, skybox) rp 생성
         for(let i = 0; i < 6; i++) {
             //여기서 스카이박스 모델들 굽고
-            var rp=new CRPAuto("Pre3Light");
-            rp.mAutoTag="env";
-            rp.mAutoPaint.add("CPaint3D");
+            var rp=new CRPAuto("3DSkin");
+            rp.mInTag="env";
+            rp.mInPaint.add("CPaint3D");
             rp.mCullFrustum = false;
             rp.mCullFace=CRenderPass.eCull.CW;
             rp.mRenderTarget=this.GetTex();
@@ -34,9 +35,9 @@ export default class CEnvMap extends CCamComp
 
             //여기서 박스 그림
             //PreSkyGradient
-            var rp=new CRPAuto("PreSkybox");
-            rp.mAutoTag="skybox";
-            rp.mAutoPaint.add("CPaint3D");
+            var rp=new CRPAuto("CubeSky");
+            rp.mInTag="skybox";
+            rp.mInPaint.add("CPaint3D");
             rp.mClearColor = false;
             rp.mClearDepth = false;
             rp.mCullFrustum = false;

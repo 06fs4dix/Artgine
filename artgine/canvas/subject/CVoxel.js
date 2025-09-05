@@ -354,6 +354,7 @@ export class CVoxel extends CSubject {
         return json;
     }
     ImportCJSON(_json) {
+        this.mAtlas = new CAtlas();
         let count = _json.GetVal("mCount");
         if (typeof count == "number") {
             if (_json.GetBool("m2D"))

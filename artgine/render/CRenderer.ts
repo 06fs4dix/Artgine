@@ -174,7 +174,7 @@ export class CRenderer
 		let id=CUniqueID.Get();
 		id+="_div";
 		modal.SetTitle(CModal.eTitle.TextClose);
-		modal.SetBody("<textarea style='width:320px;height:128px;'>"+_error+"</textarea><div id='"+id+"' style='width:100%;height:100px;'></div>");
+		modal.SetBody("<div style='height:85%;min-height:320px;min-width:640px;'><textarea style='width:100%;height:128px;'>"+_error+"</textarea><div id='"+id+"' style='width:100%;height:100%;'></div></div>");
 		modal.SetZIndex(CModal.eSort.Top);
 		modal.Open(CModal.ePos.Center);
 		modal.Focus(CModal.eAction.Shake);

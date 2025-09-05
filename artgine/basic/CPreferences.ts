@@ -36,6 +36,6 @@ export class CPreferences extends CObject
     public mCanvas="";
 
     
-    
+    //static CMat12=true;
 
 }

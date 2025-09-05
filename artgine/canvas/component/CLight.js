@@ -213,12 +213,12 @@ export class CLight extends CCamComp {
                     var height = 2000 * this.mShadowDistance;
                     let eye = cam.GetEye().Export();
                     let viewDir = cam.GetView();
-                    viewDir.Snap(100);
+                    viewDir.Snap(3);
                     let safeWidth = Math.max(1e-6, width);
                     let exp = Math.floor(Math.log10(safeWidth)) - 2;
                     let floorDigit = Math.pow(10, exp) * this.mDigit;
                     let dir = this.mDirPos.xyz;
-                    dir.Snap(100);
+                    dir.Snap(3);
                     let slook;
                     let seye;
                     let sup = new CVec3(0, 1, 0);

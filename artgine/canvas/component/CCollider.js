@@ -182,7 +182,6 @@ export class CCollider extends CComponent {
             this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetLMat()));
             this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetLMat()));
             let size = this.mBound.GetSize();
-            let center = this.mBound.GetCenter();
             this.mBound.mMin.x = -size.x * 0.5;
             this.mBound.mMin.y = -size.y * 0.5;
             this.mBound.mMin.z = -size.z * 0.5;

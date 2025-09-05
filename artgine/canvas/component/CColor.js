@@ -9,6 +9,7 @@ import { SDF } from "../../z_file/SDF.js";
 export class CColor extends CVec4 {
     constructor(_r = 0, _g = 0, _b = 0, _model = SDF.eColorModel.None) {
         super(_r, _g, _b, _model);
+        this.Snap(8);
     }
     static eModel = SDF.eColorModel;
     GetString() {
@@ -22,6 +23,13 @@ export class CColor extends CVec4 {
             return `hsl(${Math.round(360 * this.mF32A[0])},${Math.round(100 * this.mF32A[1])},${Math.round(100 * this.mF32A[2])})`;
         }
         return "";
+    }
+    static Color(_r = 0, _g = 0, _b = 0, _model = SDF.eColorModel.None) {
+        gColor.mF32A[0] = _r;
+        gColor.mF32A[1] = _g;
+        gColor.mF32A[2] = _b;
+        gColor.mF32A[3] = _model;
+        return gColor;
     }
     EditHTMLInit(_div, _pointer = null) {
         super.EditHTMLInit(_div, _pointer);
@@ -108,6 +116,7 @@ export class CColor extends CVec4 {
     static white = new CColor(1, 1, 1);
     static yellow = new CColor(1, 0.92, 0.016);
 }
+var gColor = new CColor(0, 0, 0, 0);
 export class CAlpha extends CVec2 {
     static eModel = SDF.eAlphaModel;
     constructor(_a = 1, _model = SDF.eAlphaModel.None) {

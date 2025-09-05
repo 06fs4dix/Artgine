@@ -4,6 +4,8 @@ import {CShaderAttr} from "./CShaderAttr.js"
 import { CMeshDataNode } from "./CMeshDataNode.js";
 import { CMeshCopyNode } from "./CMeshCopyNode.js";
 import { CMeshDrawNode } from "./CMeshDrawNode.js";
+import { CPreferences } from "../basic/CPreferences.js";
+import { CWASM } from "../basic/CWASM.js";
 
 export class CMeshPaint
 {
@@ -19,5 +21,6 @@ export class CMeshPaint
 		this.mdraw=_mdraw;
 		this.sum=new CMat();
 		this.sumSA =new CShaderAttr("worldMat",this.sum);
+		//if(CWASM.IsWASM())	this.sumSA.mType=12;
 	}
 }

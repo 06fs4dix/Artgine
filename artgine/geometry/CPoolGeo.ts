@@ -11,12 +11,17 @@ var gMat=new CQueue<CMat>();
 var gBound=new CQueue<CBound>();
 var gRay=new CQueue<CRay>();
 
-
+var maxLen=0;
 
 export class CPoolGeo
 {
+    static V3()
+    {
+        return gV3;
+    }
     static ProductV3()
     {
+       
         let data=gV3.Dequeue();
         if(data==null)  data=new CVec3();
         return data;

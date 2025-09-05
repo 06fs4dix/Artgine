@@ -31,7 +31,6 @@ export class CAtelier {
         }
         this.mFrame = new CFrame(this.mPF, _canvasHTMLKey);
         this.mBrush = new CBrush(this.mFrame);
-        this.mBrush.InitCamera(false);
         this.mBrush.mPause = true;
         let script = "";
         this.mFrame.PushEvent(CEvent.eType.Load, async () => {
@@ -57,6 +56,7 @@ export class CAtelier {
                     await can.LoadJSON("Canvas/" + key);
                 }
             }
+            this.mBrush.InitCamera(false);
             this.mBrush.mPause = false;
             if (_devTool) {
                 this.mFrame.PushEvent(CEvent.eType.Update, () => {

@@ -325,7 +325,7 @@ export class CLight extends CCamComp
 					var height=2000*this.mShadowDistance;
 					let eye=cam.GetEye().Export();
 					let viewDir=cam.GetView();
-					viewDir.Snap(100);
+					viewDir.Snap(3);
 					//width가 작아지면 버그
 					//let floorDigit = 10*Math.max(0.0, Math.round(Math.log10(width)-2))*this.mDigit;
 
@@ -334,7 +334,7 @@ export class CLight extends CCamComp
 					let floorDigit = Math.pow(10, exp) * this.mDigit;
 
 					let dir : CVec3 = this.mDirPos.xyz;
-					dir.Snap(100);
+					dir.Snap(3);
 					let slook : CVec3;
 					let seye : CVec3;
 					// let sup : CVec3=CMath.V3Cross(viewDir, dir);

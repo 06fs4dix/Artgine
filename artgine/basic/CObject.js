@@ -350,24 +350,25 @@ export class CObject {
             return false;
         return this["mRecycle"];
     }
-    static NewImportCJSON(_obj) {
-        if (_obj.GetStr("class") != null) {
-            let obj = CClass.New(_obj.GetStr("class"));
-            if (obj == null)
+    static NewImportCJSON(_cjson, _newObj = null) {
+        if (_cjson.GetStr("class") != null) {
+            if (_newObj == null)
+                _newObj = CClass.New(_cjson.GetStr("class"));
+            if (_newObj == null)
                 return;
-            if (_obj.GetBool("mBlackboard") == true) {
-                obj.SetKey(_obj.GetStr("mKey"));
-                let bk = CBlackBoard.Find(obj.Key());
+            if (_cjson.GetBool("mBlackboard") == true) {
+                _newObj.SetKey(_cjson.GetStr("mKey"));
+                let bk = CBlackBoard.Find(_newObj.Key());
                 if (bk != null)
                     return bk;
-                obj.SetBlackBoard(true);
+                _newObj.SetBlackBoard(true);
             }
-            if (obj != null) {
-                obj.ImportCJSON(_obj);
+            if (_newObj != null) {
+                _newObj.ImportCJSON(_cjson);
             }
-            return obj;
+            return _newObj;
         }
-        return _obj.GetDocument();
+        return _cjson.GetDocument();
     }
     ToLog() {
         return this.ToStr();

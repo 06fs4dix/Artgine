@@ -57,7 +57,7 @@ export class CAtelier
 
 		this.mFrame = new CFrame(this.mPF,_canvasHTMLKey);
 		this.mBrush = new CBrush(this.mFrame);
-		this.mBrush.InitCamera(false);
+		
 		this.mBrush.mPause=true;
 		let script="";
 
@@ -99,7 +99,7 @@ export class CAtelier
 
 
 
-			
+			this.mBrush.InitCamera(false);
 			this.mBrush.mPause=false;
 			
 

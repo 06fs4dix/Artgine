@@ -3,6 +3,7 @@ import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
 import { CObject, CPointer } from "../../../basic/CObject.js";
+import { CWASM } from "../../../basic/CWASM.js";
 import {CBound} from "../../../geometry/CBound.js";
 import {CMath} from "../../../geometry/CMath.js";
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
@@ -40,7 +41,7 @@ Tail
 
 
 */
-var gMargin=0.2;;
+var gMargin=1.0;;
 export class CPaint2D extends CPaint
 {
 	protected mSize : CVec2;
@@ -229,14 +230,24 @@ export class CPaint2D extends CPaint
 	{
 		this.SizeCac();
 		super.Update(_delay);
+		
 
-		//ysort
-		if(this.mUpdateFMat == true && this.mYSort == true) {
-			const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
-			let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
-			this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
+		if(this.mUpdateFMat == true)
+		{
+			if(this.mYSort == true)
+			{
+				const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
+				let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
+				this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
+			}
+			if(CWASM.IsWASM() && this.mTag.has("tail")==false)
+			{
+				this.mFMat.mF32A[3]=this.mFMat.mF32A[12];
+				this.mFMat.mF32A[7]=this.mFMat.mF32A[13];
+				this.mFMat.mF32A[11]=this.mFMat.mF32A[14];	
+			}
 		}
-
+		
 		if(_delay>1000 || this.mTag.has("tail")==false || this.mSize==null)	return;
 
 
@@ -328,7 +339,7 @@ export class CPaint2D extends CPaint
 		}
 	}
 
-	Wind() {this.PushTag("wind"); }
+	//Wind() {this.PushTag("wind"); }
 	
 	
 	override EditChange(_pointer : CPointer,_child : boolean)
@@ -345,7 +356,7 @@ export class CPaint2D extends CPaint
 		}
 		else if(_pointer.IsRef(this.mWindInfluence))
 		{
-			this.SetWindInfluence(this.mWindInfluence.x);
+			this.Wind(this.mWindInfluence.x);
 		}
 		else if(_child)
 		{
@@ -462,18 +473,18 @@ export class CPaint2D extends CPaint
 		this.mOwner.GetFrame().BMgr().BatchOn();
 		this.Common(_vf);
 
-		// this.m_mat23[0]=this.m_fMat.m_F32A[0];this.m_mat23[1]=this.m_fMat.m_F32A[1];
-		// this.m_mat23[2]=this.m_fMat.m_F32A[4];this.m_mat23[3]=this.m_fMat.m_F32A[5];
-		// this.m_mat23[4]=this.m_fMat.m_F32A[12];this.m_mat23[5]=this.m_fMat.m_F32A[13];
-		// this.m_owner.GetFW().Ren().BMgr().SetValueFloat(_vf, "worldMat", this.m_mat23,6);
-
-		// this.m_mat34[0]=this.m_fMat.m_F32A[0];this.m_mat34[1]=this.m_fMat.m_F32A[1];this.m_mat34[2]=this.m_fMat.m_F32A[2];
-		// this.m_mat34[3]=this.m_fMat.m_F32A[4];this.m_mat34[4]=this.m_fMat.m_F32A[5];this.m_mat34[5]=this.m_fMat.m_F32A[6];
-		// this.m_mat34[6]=this.m_fMat.m_F32A[8];this.m_mat34[7]=this.m_fMat.m_F32A[9];this.m_mat34[8]=this.m_fMat.m_F32A[10];
-		// this.m_mat34[9]=this.m_fMat.m_F32A[12];this.m_mat34[10]=this.m_fMat.m_F32A[13];this.m_mat34[11]=this.m_fMat.m_F32A[14];
-		// this.m_owner.GetFW().Ren().BMgr().SetValueFloat(_vf, "worldMat", this.m_mat34,12);
+		if( CWASM.IsWASM() && this.mTag.has("tail")==false)
+		{
+			let wsa=new CShaderAttr("worldMat34", this.GetFMat());
+			wsa.mType=12;
+			this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+		}
+		else
+		{
+			let wsa=new CShaderAttr("worldMat", this.GetFMat());
+			this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+		}
 		
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
 		if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
@@ -488,7 +499,8 @@ export class CPaint2D extends CPaint
 	SetTexCodi(_uv : CVec4) : void;
 	SetTexCodi(_uv : CVec4,_margin : number) : void;
 	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
-	SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null)
+	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
+	SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
 	{
 		if(_stX==null)
 		{
@@ -508,11 +520,11 @@ export class CPaint2D extends CPaint
 		}
 		else
 		{
-			this.mTexCodi.x = (_edX - _stX) / _imgW-gMargin/_imgW;
-			this.mTexCodi.y = (_edY - _stY) / _imgH-gMargin/_imgH;
+			this.mTexCodi.x = (_edX - _stX) / _imgW-_margin/_imgW;
+			this.mTexCodi.y = (_edY - _stY) / _imgH-_margin/_imgH;
 
-			this.mTexCodi.z = (_stX) / _imgW+(gMargin*0.5)/_imgW;
-			this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(gMargin*0.5)/_imgH;
+			this.mTexCodi.z = (_stX) / _imgW+(_margin*0.5)/_imgW;
+			this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(_margin*0.5)/_imgH;
 		}
 	}
 
@@ -617,11 +629,11 @@ export class CPaint2D extends CPaint
 		
 		
 	}
-	SetWindInfluence(_influence: number) 
+	Wind(_influence: number) 
 	{
 		this.Tail()
 
-		this.Wind();
+		this.PushTag("wind");
 		this.mLastHide=false;
 		this.mWindInfluence.x = _influence;
 		this.mPosList=[

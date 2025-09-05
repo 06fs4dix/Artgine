@@ -18,7 +18,7 @@ import {CPath} from '../artgine/basic/CPath.js';
 import {CString} from '../artgine/basic/CString.js';
 
 
-import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
+import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 
@@ -34,29 +34,14 @@ var gRunPage=false;
 //CConsol.Log("CPath.PHPC() : "+CPath.PHPC());
 const isWindows = os.platform() === 'win32';
 let gAppRootPath=true;
-let initBuf=await CFile.Load(CPath.PHPC()+"App.json");
-if(initBuf==null)
-{
+if(await CFile.Load(CPath.PHPC()+"App.json")==null)
 	gAppRootPath=false;
-	initBuf=await CFile.Load(path.join(__dirname, "App.json"));
-}
-if(initBuf==null)
-{
-    CAlert.E("error");
-    app.exit(1);
-}
-else
-{
-	CConsol.Log("App.json Load!");
-	LoadPluginMap([CPath.PHPC()+"/plugin/",CPath.PHPC()+"/artgine"]);
-}
+	
 
+var gAppJSON = await GetAppJSON();
+if(gAppJSON==null)
+	app.exit(1);
 
-type ProgramType = 'developer' | 'client' | 'server';
-var gAppJSON =new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
-	{"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
-		"server":"","github":false,"tsc":true}
-);
 var gTSCPID=0;
 if(gAppJSON.tsc)
 {
@@ -673,7 +658,25 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	IStr+="<link rel='manifest' href='./"+projectName+".webmanifest'/>\n";
 
 
-	
+
+
+	IStr+="<script>\n";
+	const parsed = new URL(gAppJSON.url);
+	const port = parsed.port;       // "8080"
+	const pathname = parsed.pathname; // "/Artgine"
+	IStr+="let SERVER_BASE='http://localhost:"+port+pathname+"/"+_json.projectPath+"/"+projectName+".html';\n";
+	IStr+="const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);\n";
+	IStr+="if (location.protocol == 'file:' && isElectron==false){\n";
+	IStr +="	const page = (location.href.split('/').pop() || 'index.html').replace(/\\?.*$/, '');\n";
+	IStr+="	alert('Local Start Redirection!');\n";
+	IStr+="	const target = new URL(page, SERVER_BASE).toString();\n";
+	IStr+="	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{\n";
+	IStr+="	location.replace(target);\n";
+	IStr+="	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });\n";
+	IStr+="}</script>\n";
+
+
+
 	//IStr+="<script type='module' src='"+upFolder+"artgine/artgine.js'></script>\n";
 	
 	let canvasList=GetFolderCanvasFileName(CPath.PHPC()+_json.projectPath+"/Canvas");
