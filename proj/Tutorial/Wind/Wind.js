@@ -1,6 +1,6 @@
-const version = 'mf2jnnjd_2';
-import "../../../artgine/artgine.js";
-import { CPreferences } from "../../../artgine/basic/CPreferences.js";
+const version = 'mf7foteo_5';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
+import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -15,22 +15,22 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = false;
-import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+gPF.mGitHub = true;
+import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CConfirm, CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
-import { CWind } from "../../../artgine/canvas/component/CWind.js";
-import { CBGAttachButton } from "../../../artgine/util/CModalUtil.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CColor } from "../../../artgine/canvas/component/CColor.js";
-import { CShaderAttr } from "../../../artgine/render/CShaderAttr.js";
-import { CVec1 } from "../../../artgine/geometry/CVec1.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CConfirm, CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CWind } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CWind.js";
+import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
+import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
 let Main = gAtl.NewCanvas("Main");
 function Init2D() {
     Main.SetCameraKey("2D");
@@ -41,7 +41,7 @@ function Init2D() {
             let sub = Main.PushSub(new CSubject());
             let pt = sub.PushComp(new CPaint2D("Res/grass.png", new CVec2(50, 50)));
             sub.SetPos(new CVec3(x * 50, y * 50));
-            pt.SetWindInfluence(100);
+            pt.Wind(100);
         }
     }
     let sub = Main.PushSub(new CSubject());
@@ -73,7 +73,7 @@ function Init3D() {
             let sub = Main.PushSub(new CSubject());
             let pt = sub.PushComp(new CPaint2D("Res/grass.png", new CVec2(50, 50)));
             sub.SetPos(new CVec3(x * 50, 0, z * 50));
-            pt.SetWindInfluence(100);
+            pt.Wind(100);
             pt.SetBillBoard(true);
             pt.SetTexCodi(null, 0.02);
             pt.AlphaCut();
