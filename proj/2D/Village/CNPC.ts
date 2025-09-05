@@ -4,7 +4,7 @@ import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/comp
 import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CSMPattern, CStateMachine } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
+import { CSMComp, CSMP, CStateMachine } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
 import { CRayMouse } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRayMouse.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
@@ -139,19 +139,46 @@ export class CNPC extends CSubject
         
         this.PushComp(new CShadowPlane());
         
-        
-        let sm = this.PushComp(new CStateMachine());
+        let sm = this.PushComp(new CSMComp());
+        sm.GetSM().PushPattern([
+            {
+                "and":[{"s":"Last"+CVec3.eDir.Null,"o":"==","v":1}],
+                "exe":[{"t":"Message","a":"StandLeft"}]
+            },
+            {
+                "and":[{"s":"move"+CVec3.eDir.Left,"o":"==","v":1}],
+                "exe":[{"t":"Message","a":"MoveLeft"}]
+            },
+            {
+                "and":[{"s":"move"+CVec3.eDir.Right,"o":"==","v":1}],
+                "exe":[{"t":"Message","a":"MoveRight"}]
+            },
+            {
+                "and":[{"s":"move"+CVec3.eDir.Up,"o":"==","v":1}],
+                "exe":[{"t":"Message","a":"MoveUp"}]
+            },
+            {
+                "and":[{"s":"move"+CVec3.eDir.Down,"o":"==","v":1}],
+                "exe":[{"t":"Message","a":"MoveDown"}]
+            },
+            {
+                "and":[{"s":"Last"+CVec3.eDir.Left,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "exe":[{"t":"Message","a":"StandLeft"}]
+            },
+            {
+                "and":[{"s":"Last"+CVec3.eDir.Right,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "exe":[{"t":"Message","a":"StandRight"}]
+            },
+            {
+                "and":[{"s":"Last"+CVec3.eDir.Up,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "exe":[{"t":"Message","a":"StandUp"}]
+            },
+            {
+                "and":[{"s":"Last"+CVec3.eDir.Down,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "exe":[{"t":"Message","a":"StandDown"}]
+            },
+        ]);
 
-        sm.PushPattern(new CSMPattern("StandLeft", [], []));
-        sm.PushPattern(new CSMPattern("StandLeft", ["Last"+CVec3.eDir.Left], ["move"]));
-        sm.PushPattern(new CSMPattern("StandRight", ["Last"+CVec3.eDir.Right], ["move"]));
-        sm.PushPattern(new CSMPattern("StandUp", ["Last"+CVec3.eDir.Up], ["move"]));
-        sm.PushPattern(new CSMPattern("StandDown", ["Last"+CVec3.eDir.Down], ["move"]));
-
-        sm.PushPattern(new CSMPattern("MoveLeft", ["move"+CVec3.eDir.Left], []));
-        sm.PushPattern(new CSMPattern("MoveRight", ["move"+CVec3.eDir.Right], []));
-        sm.PushPattern(new CSMPattern("MoveUp", ["move"+CVec3.eDir.Up], []));
-        sm.PushPattern(new CSMPattern("MoveDown", ["move"+CVec3.eDir.Down], []));
 
         let ani=new CAnimation();
         ani.Push(new CClipCoodi(0,0,0,0,16,16));

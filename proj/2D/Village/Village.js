@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:15:18';
+const version = 'mf7fleec_5';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -17,7 +17,7 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
+gPF.mWASM = true;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;

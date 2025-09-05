@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mf7fleec_5';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -21,7 +21,7 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
+gPF.mWASM = true;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
@@ -283,6 +283,60 @@ class CTest extends CObject
 // org.mKey="11";
 // tar.mKey="22";
 // CConsol.Log(org.mKey+" / "+tar.mKey);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -7,9 +7,6 @@
         --sab: env(safe-area-inset-bottom);
         --sal: env(safe-area-inset-left);
     }
-    html, body {
-        overflow: hidden;
-    }
 </style>
 <script>
     const loadingCard = document.createElement('div');
@@ -66,6 +63,17 @@
 		}</script>
 <script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
 <link rel='manifest' href='./BoxShow.webmanifest'/>
+<script>
+let SERVER_BASE='http://localhost:8050/Artgine/proj/3D/BoxShow/BoxShow.html';
+const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
+if (location.protocol == 'file:' && isElectron==false){
+	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
+	alert('Local Start Redirection!');
+	const target = new URL(page, SERVER_BASE).toString();
+	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	location.replace(target);
+	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });
+}</script>
 
 <!--Manifest-->
 <!--EntryPoint-->
