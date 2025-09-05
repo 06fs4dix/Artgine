@@ -2,9 +2,9 @@ import { CMath } from "../../geometry/CMath.js";
 import { CVec2 } from "../../geometry/CVec2.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
-import { CRPAuto } from "../../render/CRPMgr.js";
 import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../render/CTexture.js";
+import { CRPAuto } from "../CRPMgr.js";
 import { CCamComp } from "./CCamComp.js";
 export default class CEnvMap extends CCamComp {
     mSize;
@@ -12,9 +12,9 @@ export default class CEnvMap extends CCamComp {
     constructor(_key, _size, _skyTex) {
         super(_key);
         for (let i = 0; i < 6; i++) {
-            var rp = new CRPAuto("Pre3Light");
-            rp.mAutoTag = "env";
-            rp.mAutoPaint.add("CPaint3D");
+            var rp = new CRPAuto("3DSkin");
+            rp.mInTag = "env";
+            rp.mInPaint.add("CPaint3D");
             rp.mCullFrustum = false;
             rp.mCullFace = CRenderPass.eCull.CW;
             rp.mRenderTarget = this.GetTex();
@@ -22,9 +22,9 @@ export default class CEnvMap extends CCamComp {
             rp.mPriority = CRenderPass.ePriority.BackGround - i * 2 - 2;
             rp.mCamera = this.mShadowKey + i;
             this.PushRPAuto(rp);
-            var rp = new CRPAuto("PreSkybox");
-            rp.mAutoTag = "skybox";
-            rp.mAutoPaint.add("CPaint3D");
+            var rp = new CRPAuto("CubeSky");
+            rp.mInTag = "skybox";
+            rp.mInPaint.add("CPaint3D");
             rp.mClearColor = false;
             rp.mClearDepth = false;
             rp.mCullFrustum = false;

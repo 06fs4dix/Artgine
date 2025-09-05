@@ -384,6 +384,10 @@ export class CShaderInterpretGL extends CShaderInterpret
 		this.mKeyMap.set("UniToSam2D","float");
 		this.mKeyMap.set("screenPos", "gl_FragCoord");
 		this.mKeyMap.set("int","int");
+		//if(CWASM.IsWASM())
+		//this.mKeyMap.set("CMat12","mat4x3");
+		//else
+		//	this.mKeyMap.set("CMat12","mat4");
 
 		this.mKeyMap.set("V3Dot","dot");
 		this.mKeyMap.set("CMath.","");
@@ -575,12 +579,26 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	return pa_mat*pa_val;\n";
 		str += "}\n";
-		// str += "vec4 V4MulMat34Coordi(vec4 pa_val,mat4x3 pa_mat)\n";
-		// str += "{\n";
-    	// str += "	vec4 result = pa_mat * pa_val.xyz;\n";
-		// str += "	result.w = pa_val.w;\n";
-		// str += "	return result;\n";
-		// str += "}\n";
+
+		// if(CWASM.IsWASM())
+		// {
+			str += "mat4 Mat34ToMat(mat4x3 _wmat)\n";
+			str += "{\n";
+			str += "    mat4 m = mat4(1.0);\n";
+			str += "m[0] = vec4(_wmat[0][0], _wmat[1][1], _wmat[2][2],0.0);\n";
+			str += "m[1] = vec4(_wmat[0][1], _wmat[1][2], _wmat[3][0],0.0);\n";
+			str += "m[2] = vec4(_wmat[0][2], _wmat[2][0], _wmat[3][1],0.0);\n";
+			str += "m[3] = vec4(_wmat[1][0], _wmat[2][1], _wmat[3][2],1.0);\n";
+			str += "    return m;\n";
+			str += "}\n";
+		// }
+		// else
+		// {
+		// 	str += "mat4 Mat12ToMat(mat4 _wmat)\n";
+		// 	str += "{    return _wmat;}\n";
+		// }
+		
+	
 		str += "vec4 V3MulMatCoordi(vec3 pa_val,mat4 pa_mat)\n";
 		str += "{\n";
 		str += "	return pa_mat*vec4(pa_val,1.0);\n";
@@ -1532,6 +1550,8 @@ export class CShaderInterpretGL extends CShaderInterpret
 
 import CShaderInterpret_imple from "../render_imple/CShaderInterpret.js";
 import { CConsol } from "../basic/CConsol.js"
+import { CPreferences } from "../basic/CPreferences.js"
+import { CWASM } from "../basic/CWASM.js"
 CShaderInterpret_imple();
 
 

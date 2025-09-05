@@ -1,9 +1,10 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, max, min, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
 import { ColorModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 var worldMat = Null();
+var worldMat34 = Null();
 var viewMat = Null();
 var projectMat = Null();
 var billboard = Null();
@@ -62,7 +63,13 @@ function ps_main_blit() {
 }
 function vs_main_simple(f3_ver, f2_uv) {
     to_uv = new CVec3(f2_uv, 1.0);
-    out_position = LWVPMul(f3_ver, worldMat, viewMat, projectMat);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    out_position = LWVPMul(f3_ver, wMat, viewMat, projectMat);
 }
 function ps_main_simple() {
     var L_cor = Sam2D0ToColor(to_uv.xy);
@@ -138,23 +145,29 @@ function vs_main(f3_ver, f2_uv) {
     var scaleX = 0.0;
     var scaleY = 0.0;
     var scaleZ = 0.0;
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
     BranchBegin("billboard", "B", [billboard, billboardMat]);
     if (billboard > 0.5) {
-        scaleX = V3Len(worldMat[0].xyz);
-        scaleY = V3Len(worldMat[1].xyz);
-        scaleZ = V3Len(worldMat[2].xyz);
+        scaleX = V3Len(wMat[0].xyz);
+        scaleY = V3Len(wMat[1].xyz);
+        scaleZ = V3Len(wMat[2].xyz);
         P.x *= scaleX;
         P.y *= scaleY;
         P.z *= scaleZ;
         P = V4MulMatCoordi(P, billboardMat);
-        P.x += worldMat[3].x;
-        P.y += worldMat[3].y;
-        P.z += worldMat[3].z;
+        P.x += wMat[3].x;
+        P.y += wMat[3].y;
+        P.z += wMat[3].z;
     }
     else
-        P = V4MulMatCoordi(P, worldMat);
+        P = V4MulMatCoordi(P, wMat);
     BranchDefault();
-    P = V4MulMatCoordi(P, worldMat);
+    P = V4MulMatCoordi(P, wMat);
     BranchEnd();
     to_worldPos = P;
     P = V4MulMatCoordi(P, viewMat);

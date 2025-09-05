@@ -9,7 +9,11 @@ var gV4 = new CQueue();
 var gMat = new CQueue();
 var gBound = new CQueue();
 var gRay = new CQueue();
+var maxLen = 0;
 export class CPoolGeo {
+    static V3() {
+        return gV3;
+    }
     static ProductV3() {
         let data = gV3.Dequeue();
         if (data == null)

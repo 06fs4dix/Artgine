@@ -57,7 +57,7 @@ export class CCollider extends CComponent
 	
 	public mElevator=false;//엘리베이터인지
 	public mStairs=false;//계단인지
-	public mDynamic=true;
+	public mDynamic=true;//static은 충돌 이벤트를 처리하지 않는다.
 	public mTrigger=false;
 
 	//점프해서 한쪽 방향에서 올라가는용. 2D게임에서 사용
@@ -301,7 +301,7 @@ export class CCollider extends CComponent
 			this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetLMat()));
 			this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetLMat()));
 			let size=this.mBound.GetSize();
-			let center=this.mBound.GetCenter();
+	
 			this.mBound.mMin.x=-size.x*0.5;this.mBound.mMin.y=-size.y*0.5;this.mBound.mMin.z=-size.z*0.5;
 			this.mBound.mMax.x=size.x*0.5;this.mBound.mMax.y=size.y*0.5;this.mBound.mMax.z=size.z*0.5;
 

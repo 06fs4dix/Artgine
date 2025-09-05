@@ -72,6 +72,8 @@ export class CPaint extends CComponent {
         this.mBoundFMat.NewWASM();
         this.mBound = new CBound();
         this.mBound.NewWASM();
+        if (CWASM.IsWASM())
+            this.PushTag("wasm");
     }
     SetEnable(_val) {
         super.SetEnable(_val);
@@ -523,7 +525,7 @@ export class CPaint extends CComponent {
     Render(_vf) { }
     RenderBatch(_vf, _count = 1) {
         let bcm = this.mOwner.GetFrame().BMgr().IsBatchMap();
-        var barr = this.mBatchMap.get(_vf.mKey);
+        let barr = this.mBatchMap.get(_vf.mKey);
         if (barr == null) {
             barr = new Array(_count);
             this.mBatchMap.set(_vf.mKey, barr);

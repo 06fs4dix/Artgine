@@ -7,14 +7,13 @@ import * as fs from "fs";
 import { imageSize } from 'image-size';
 import { CFile } from '../artgine/system/CFile.js';
 import { CUtil } from '../artgine/basic/CUtil.js';
-import { CJSON } from '../artgine/basic/CJSON.js';
-import { CAlert } from '../artgine/basic/CAlert.js';
 import { CConsol } from '../artgine/basic/CConsol.js';
 import { CCMDMgr } from './CCMDMgr.js';
 import { CPath } from '../artgine/basic/CPath.js';
 import { CString } from '../artgine/basic/CString.js';
-import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetFolderCanvasFileName, GetNowString, GetPluginArr, GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
+import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr, GetProjName, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
+import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let gMainWindow = null;
@@ -22,21 +21,11 @@ var gWebServer = null;
 var gRunPage = false;
 const isWindows = os.platform() === 'win32';
 let gAppRootPath = true;
-let initBuf = await CFile.Load(CPath.PHPC() + "App.json");
-if (initBuf == null) {
+if (await CFile.Load(CPath.PHPC() + "App.json") == null)
     gAppRootPath = false;
-    initBuf = await CFile.Load(path.join(__dirname, "App.json"));
-}
-if (initBuf == null) {
-    CAlert.E("error");
+var gAppJSON = await GetAppJSON();
+if (gAppJSON == null)
     app.exit(1);
-}
-else {
-    CConsol.Log("App.json Load!");
-    LoadPluginMap([CPath.PHPC() + "/plugin/", CPath.PHPC() + "/artgine"]);
-}
-var gAppJSON = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
-    "server": "", "github": false, "tsc": true });
 var gTSCPID = 0;
 if (gAppJSON.tsc) {
     CCMDMgr.RunCMD("npx tsc -w", true).then((_pid) => {
@@ -465,6 +454,20 @@ ipcMain.handle("NewPage", async (_event, _json) => {
         IStr += "<script type='text/javascript' src='" + upFolder + "artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
     }
     IStr += "<link rel='manifest' href='./" + projectName + ".webmanifest'/>\n";
+    IStr += "<script>\n";
+    const parsed = new URL(gAppJSON.url);
+    const port = parsed.port;
+    const pathname = parsed.pathname;
+    IStr += "let SERVER_BASE='http://localhost:" + port + pathname + "/" + _json.projectPath + "/" + projectName + ".html';\n";
+    IStr += "const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);\n";
+    IStr += "if (location.protocol == 'file:' && isElectron==false){\n";
+    IStr += "	const page = (location.href.split('/').pop() || 'index.html').replace(/\\?.*$/, '');\n";
+    IStr += "	alert('Local Start Redirection!');\n";
+    IStr += "	const target = new URL(page, SERVER_BASE).toString();\n";
+    IStr += "	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{\n";
+    IStr += "	location.replace(target);\n";
+    IStr += "	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });\n";
+    IStr += "}</script>\n";
     let canvasList = GetFolderCanvasFileName(CPath.PHPC() + _json.projectPath + "/Canvas");
     if (_json.appJSON.server.indexOf("web") != -1 && _json.serviceWorker.MAX_CACHE_SIZE > 0) {
         IStr += `
@@ -558,7 +561,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
             message: '프로젝트 플러그인 에러',
         });
     }
-    bTS = CString.InsertAt(bTS, bTS.indexOf("//Version") + 9, "\nconst version=\'" + GetNowString() + "';\n" + "import \"" + upFolder + "artgine/artgine.js\"\n");
+    bTS = CString.InsertAt(bTS, bTS.indexOf("//Version") + 9, "\nconst version=\'" + CUniqueID.Get() + "';\n" + "import \"" + upFolder + "artgine/artgine.js\"\n");
     bTS = CString.InsertAt(bTS, bTS.indexOf("//Atelier") + 9, pfStr);
     let ClassStr = "import {CClass} from \"" + upFolder + "artgine/basic/CClass.js\";\n";
     ClassStr += GenerateCClassPushes(CPath.PHPC() + _json.projectPath, savePath + ".ts");

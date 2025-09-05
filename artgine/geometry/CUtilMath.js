@@ -514,194 +514,129 @@ export class CUtilMath {
         return resultVec;
     }
     static ColBoxBoxOBB(_boundA, _matA, _boundB, _matB, _push = null) {
-        let aCen = CPoolGeo.ProductV3();
-        let bCen = CPoolGeo.ProductV3();
-        let aDir = [CPoolGeo.ProductV3(), CPoolGeo.ProductV3(), CPoolGeo.ProductV3()];
-        let bDir = [CPoolGeo.ProductV3(), CPoolGeo.ProductV3(), CPoolGeo.ProductV3()];
-        let aLen = CPoolGeo.ProductV3();
-        let bLen = CPoolGeo.ProductV3();
-        let atob = CPoolGeo.ProductV3();
-        let URenturn = () => {
-            CPoolGeo.RecycleV3(aCen);
-            CPoolGeo.RecycleV3(bCen);
-            CPoolGeo.RecycleV3(aLen);
-            CPoolGeo.RecycleV3(bLen);
-            CPoolGeo.RecycleV3(aDir[0]);
-            CPoolGeo.RecycleV3(aDir[1]);
-            CPoolGeo.RecycleV3(aDir[2]);
-            CPoolGeo.RecycleV3(bDir[0]);
-            CPoolGeo.RecycleV3(bDir[1]);
-            CPoolGeo.RecycleV3(bDir[2]);
-            CPoolGeo.RecycleV3(atob);
-            return null;
+        const a = {
+            center: CPoolGeo.ProductV3(),
+            axes: [CPoolGeo.ProductV3(), CPoolGeo.ProductV3(), CPoolGeo.ProductV3()],
+            extents: CPoolGeo.ProductV3(),
+            tmp: CPoolGeo.ProductV3(),
         };
-        _matA.GetV3(0, aDir[0]);
-        _matA.GetV3(1, aDir[1]);
-        _matA.GetV3(2, aDir[2]);
-        _matB.GetV3(0, bDir[0]);
-        _matB.GetV3(1, bDir[1]);
-        _matB.GetV3(2, bDir[2]);
-        _matA.GetV3(3, aCen);
-        _matB.GetV3(3, bCen);
-        _boundA.GetSize(aLen);
-        _boundB.GetSize(bLen);
-        CMath.V3MulFloat(aLen, 0.5, aLen);
-        CMath.V3MulFloat(bLen, 0.5, bLen);
-        aLen.x *= CMath.V3Len(aDir[0]);
-        aLen.y *= CMath.V3Len(aDir[1]);
-        aLen.z *= CMath.V3Len(aDir[2]);
-        bLen.x *= CMath.V3Len(bDir[0]);
-        bLen.y *= CMath.V3Len(bDir[1]);
-        bLen.z *= CMath.V3Len(bDir[2]);
-        CMath.V3Nor(aDir[0], aDir[0]);
-        CMath.V3Nor(aDir[1], aDir[1]);
-        CMath.V3Nor(aDir[2], aDir[2]);
-        CMath.V3Nor(bDir[0], bDir[0]);
-        CMath.V3Nor(bDir[1], bDir[1]);
-        CMath.V3Nor(bDir[2], bDir[2]);
-        let aDiff = CPoolGeo.ProductV3();
-        let bDiff = CPoolGeo.ProductV3();
-        let diffDum = CPoolGeo.ProductV3();
-        CMath.V3AddV3(_boundA.mMax, _boundA.mMin, aDiff);
-        CMath.V3MulFloat(aDiff, 0.5, aDiff);
-        CMath.V3AddV3(_boundB.mMax, _boundB.mMin, bDiff);
-        CMath.V3MulFloat(bDiff, 0.5, bDiff);
-        CMath.V3MulMatNormal(aDiff, _matA, diffDum);
-        CMath.V3AddV3(aCen, diffDum, aCen);
-        CMath.V3MulMatNormal(bDiff, _matB, diffDum);
-        CMath.V3AddV3(bCen, diffDum, bCen);
-        CPoolGeo.RecycleV3(aDiff);
-        CPoolGeo.RecycleV3(bDiff);
-        CPoolGeo.RecycleV3(diffDum);
-        var c = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-        var absC = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-        var d = [0, 0, 0];
-        var p = [0, 0, 0];
-        let pv = 0;
-        var r0 = 0, r1 = 0, r = 0;
-        CMath.V3SubV3(aCen, bCen, atob);
+        const b = {
+            center: CPoolGeo.ProductV3(),
+            axes: [CPoolGeo.ProductV3(), CPoolGeo.ProductV3(), CPoolGeo.ProductV3()],
+            extents: CPoolGeo.ProductV3(),
+            tmp: CPoolGeo.ProductV3(),
+        };
+        const t = CPoolGeo.ProductV3();
+        const bestAx = CPoolGeo.ProductV3();
+        const cross = CPoolGeo.ProductV3();
+        const mtv = CPoolGeo.ProductV3();
+        const mtvAxW = CPoolGeo.ProductV3();
+        const ReturnFun = () => {
+            CPoolGeo.RecycleV3(a.center);
+            CPoolGeo.RecycleV3(a.axes[0]);
+            CPoolGeo.RecycleV3(a.axes[1]);
+            CPoolGeo.RecycleV3(a.axes[2]);
+            CPoolGeo.RecycleV3(a.extents);
+            CPoolGeo.RecycleV3(a.tmp);
+            CPoolGeo.RecycleV3(b.center);
+            CPoolGeo.RecycleV3(b.axes[0]);
+            CPoolGeo.RecycleV3(b.axes[1]);
+            CPoolGeo.RecycleV3(b.axes[2]);
+            CPoolGeo.RecycleV3(b.extents);
+            CPoolGeo.RecycleV3(b.tmp);
+            CPoolGeo.RecycleV3(t);
+            CPoolGeo.RecycleV3(bestAx);
+            CPoolGeo.RecycleV3(cross);
+            CPoolGeo.RecycleV3(mtv);
+            CPoolGeo.RecycleV3(mtvAxW);
+        };
+        CMath.V3MulFloat(CMath.V3AddV3(_boundA.mMax, _boundA.mMin, a.tmp), 0.5, a.tmp);
+        CMath.V3MulMatCoordi(a.tmp, _matA, a.center);
+        _matA.GetV3(0, a.axes[0]);
+        _matA.GetV3(1, a.axes[1]);
+        _matA.GetV3(2, a.axes[2]);
+        _boundA.GetSize(a.extents);
+        a.extents.x *= 0.5 * CMath.V3Len(a.axes[0]);
+        a.extents.y *= 0.5 * CMath.V3Len(a.axes[1]);
+        a.extents.z *= 0.5 * CMath.V3Len(a.axes[2]);
+        CMath.V3Nor(a.axes[0], a.axes[0]);
+        CMath.V3Nor(a.axes[1], a.axes[1]);
+        CMath.V3Nor(a.axes[2], a.axes[2]);
+        CMath.V3MulFloat(CMath.V3AddV3(_boundB.mMax, _boundB.mMin, b.tmp), 0.5, b.tmp);
+        CMath.V3MulMatCoordi(b.tmp, _matB, b.center);
+        _matB.GetV3(0, b.axes[0]);
+        _matB.GetV3(1, b.axes[1]);
+        _matB.GetV3(2, b.axes[2]);
+        _boundB.GetSize(b.extents);
+        b.extents.x *= 0.5 * CMath.V3Len(b.axes[0]);
+        b.extents.y *= 0.5 * CMath.V3Len(b.axes[1]);
+        b.extents.z *= 0.5 * CMath.V3Len(b.axes[2]);
+        CMath.V3Nor(b.axes[0], b.axes[0]);
+        CMath.V3Nor(b.axes[1], b.axes[1]);
+        CMath.V3Nor(b.axes[2], b.axes[2]);
+        CMath.V3SubV3(b.center, a.center, t);
+        let minOverlap = Infinity;
+        const EPS2 = 1e-10;
+        const radiusOn = (ext, ax0, ax1, ax2, axis) => ext.x * Math.abs(CMath.V3Dot(axis, ax0)) +
+            ext.y * Math.abs(CMath.V3Dot(axis, ax1)) +
+            ext.z * Math.abs(CMath.V3Dot(axis, ax2));
+        const testAxis = (axis) => {
+            const ra = radiusOn(a.extents, a.axes[0], a.axes[1], a.axes[2], axis);
+            const rb = radiusOn(b.extents, b.axes[0], b.axes[1], b.axes[2], axis);
+            const dist = Math.abs(CMath.V3Dot(t, axis));
+            const overlap = ra + rb - dist;
+            if (overlap <= 0)
+                return false;
+            if (overlap < minOverlap) {
+                minOverlap = overlap;
+                mtvAxW.Import(axis);
+                if (CMath.V3Dot(t, mtvAxW) < 0)
+                    CMath.V3MulFloat(mtvAxW, -1, mtvAxW);
+                bestAx.Import(mtvAxW);
+            }
+            return true;
+        };
+        if (!testAxis(a.axes[0])) {
+            ReturnFun();
+            return null;
+        }
+        if (!testAxis(a.axes[1])) {
+            ReturnFun();
+            return null;
+        }
+        if (!testAxis(a.axes[2])) {
+            ReturnFun();
+            return null;
+        }
+        if (!testAxis(b.axes[0])) {
+            ReturnFun();
+            return null;
+        }
+        if (!testAxis(b.axes[1])) {
+            ReturnFun();
+            return null;
+        }
+        if (!testAxis(b.axes[2])) {
+            ReturnFun();
+            return null;
+        }
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
-                c[i][j] = CMath.V3Dot(aDir[i], bDir[j]);
+                CMath.V3Cross(a.axes[i], b.axes[j], cross);
+                if (CMath.V3Dot(cross, cross) <= EPS2)
+                    continue;
+                CMath.V3Nor(cross, cross);
+                if (!testAxis(cross)) {
+                    ReturnFun();
+                    return null;
+                }
             }
         }
-        let epsilon = 2.220446049250313e-16;
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-                absC[i][j] = CMath.Abs(c[i][j]) + epsilon;
-            }
-        }
-        d[0] = CMath.V3Dot(atob, aDir[0]);
-        d[1] = CMath.V3Dot(atob, aDir[1]);
-        d[2] = CMath.V3Dot(atob, aDir[2]);
-        for (let i = 0; i < 3; i++) {
-            r = CMath.Abs(d[i]);
-            r0 = aLen.mF32A[i];
-            r1 = bLen.mF32A[0] * absC[i][0] + bLen.mF32A[1] * absC[i][1] + bLen.mF32A[2] * absC[i][2];
-            if (r > r0 + r1)
-                return URenturn();
-            p[i] = r - (r0 + r1);
-        }
-        for (let i = 0; i < 3; i++) {
-            r = CMath.Abs(d[0] * c[0][i] + d[1] * c[1][i] + d[2] * c[2][i]);
-            r0 = aLen.mF32A[0] * absC[0][i] + aLen.mF32A[1] * absC[1][i] + aLen.mF32A[2] * absC[2][i];
-            r1 = bLen.mF32A[i];
-            if (r > r0 + r1)
-                return URenturn();
-            pv = r - (r0 + r1);
-            if (CMath.Abs(p[0]) > CMath.Abs(pv) && r > 0)
-                p[i] = pv * 0.99999;
-        }
-        let p2 = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-        r = CMath.Abs(d[2] * c[1][0] - d[1] * c[2][0]);
-        r0 = aLen.y * absC[2][0] + aLen.z * absC[1][0];
-        r1 = bLen.y * absC[0][2] + bLen.z * absC[0][1];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[2]) > CMath.Abs(pv) && r > 0 && pv != p[1] && pv != p[0])
-            p[2] = pv;
-        r = CMath.Abs(d[2] * c[1][1] - d[1] * c[2][1]);
-        r0 = aLen.y * absC[2][1] + aLen.z * absC[1][1];
-        r1 = bLen.x * absC[0][2] + bLen.z * absC[0][0];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[2]) > CMath.Abs(pv) && r > 0 && pv != p[1] && pv != p[0])
-            p[2] = pv;
-        r = CMath.Abs(d[2] * c[1][2] - d[1] * c[2][2]);
-        r0 = aLen.y * absC[2][2] + aLen.z * absC[1][2];
-        r1 = bLen.x * absC[0][1] + bLen.y * absC[0][0];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[2]) > CMath.Abs(pv) && r > 0 && pv != p[1] && pv != p[0])
-            p[2] = pv;
-        r = CMath.Abs(d[0] * c[2][0] - d[2] * c[0][0]);
-        r0 = aLen.x * absC[2][0] + aLen.z * absC[0][0];
-        r1 = bLen.y * absC[1][2] + bLen.z * absC[1][1];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[0]) > CMath.Abs(pv) && r > 0 && pv != p[1] && pv != p[2])
-            p[0] = pv;
-        r = CMath.Abs(d[0] * c[2][1] - d[2] * c[0][1]);
-        r0 = aLen.x * absC[2][1] + aLen.z * absC[0][1];
-        r1 = bLen.x * absC[1][2] + bLen.z * absC[1][0];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[0]) > CMath.Abs(pv) && r > 0 && pv != p[1] && pv != p[2])
-            p[0] = pv;
-        r = CMath.Abs(d[0] * c[2][2] - d[2] * c[0][2]);
-        r0 = aLen.x * absC[2][2] + aLen.z * absC[0][2];
-        r1 = bLen.x * absC[1][1] + bLen.y * absC[1][0];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[0]) > CMath.Abs(pv) && r > 0 && pv != p[1] && pv != p[2])
-            p[0] = pv;
-        r = CMath.Abs(d[1] * c[0][0] - d[0] * c[1][0]);
-        r0 = aLen.x * absC[1][0] + aLen.y * absC[0][0];
-        r1 = bLen.y * absC[2][2] + bLen.z * absC[2][1];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[1]) > CMath.Abs(pv) && r > 0 && pv != p[0] && pv != p[2])
-            p[1] = pv;
-        r = CMath.Abs(d[1] * c[0][1] - d[0] * c[1][1]);
-        r0 = aLen.x * absC[1][1] + aLen.y * absC[0][1];
-        r1 = bLen.x * absC[2][2] + bLen.z * absC[2][0];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[1]) > CMath.Abs(pv) && r > 0 && pv != p[0] && pv != p[2])
-            p[1] = pv;
-        r = CMath.Abs(d[1] * c[0][2] - d[0] * c[1][2]);
-        r0 = aLen.x * absC[1][2] + aLen.y * absC[0][2];
-        r1 = bLen.x * absC[2][1] + bLen.y * absC[2][0];
-        if (r > r0 + r1)
-            return URenturn();
-        pv = r - (r0 + r1);
-        if (CMath.Abs(p[1]) > CMath.Abs(pv) && r > 0 && pv != p[0] && pv != p[2])
-            p[1] = pv;
-        let push = _push;
-        if (push == null)
-            push = new CVec3();
-        if (CMath.Abs(p[0]) < CMath.Abs(p[1])) {
-            if (CMath.Abs(p[0]) < CMath.Abs(p[2]))
-                push.mF32A[0] = atob.mF32A[0] < 0 ? -p[0] : p[0];
-            else
-                push.mF32A[2] = atob.mF32A[2] < 0 ? -p[2] : p[2];
-        }
-        else {
-            if (CMath.Abs(p[1]) < CMath.Abs(p[2]))
-                push.mF32A[1] = atob.mF32A[1] < 0 ? -p[1] : p[1];
-            else
-                push.mF32A[2] = atob.mF32A[2] < 0 ? -p[2] : p[2];
-        }
-        URenturn();
-        return push;
+        CMath.V3MulFloat(bestAx, minOverlap, mtv);
+        const out = _push || new CVec3();
+        out.Import(mtv);
+        ReturnFun();
+        return out;
     }
     static Grad(_hash, _x, _y) {
         return ((_hash & 1) == 0 ? _x : -_x) + ((_hash & 2) == 0 ? _y : -_y);

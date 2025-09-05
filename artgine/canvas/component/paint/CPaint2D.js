@@ -1,5 +1,6 @@
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
+import { CWASM } from "../../../basic/CWASM.js";
 import { CBound } from "../../../geometry/CBound.js";
 import { CMath } from "../../../geometry/CMath.js";
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
@@ -16,7 +17,7 @@ import { CFontRef } from "../../../util/CFont.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import { CClipCoodi } from "../CAnimation.js";
 import { CPaint } from "./CPaint.js";
-var gMargin = 0.2;
+var gMargin = 1.0;
 ;
 export class CPaint2D extends CPaint {
     mSize;
@@ -132,10 +133,17 @@ export class CPaint2D extends CPaint {
     Update(_delay) {
         this.SizeCac();
         super.Update(_delay);
-        if (this.mUpdateFMat == true && this.mYSort == true) {
-            const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
-            let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
-            this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
+        if (this.mUpdateFMat == true) {
+            if (this.mYSort == true) {
+                const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
+                let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
+                this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
+            }
+            if (CWASM.IsWASM() && this.mTag.has("tail") == false) {
+                this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
+                this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
+                this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
+            }
         }
         if (_delay > 1000 || this.mTag.has("tail") == false || this.mSize == null)
             return;
@@ -200,7 +208,6 @@ export class CPaint2D extends CPaint {
             this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
         }
     }
-    Wind() { this.PushTag("wind"); }
     EditChange(_pointer, _child) {
         super.EditChange(_pointer, _child);
         if (_pointer.member == "mYSort" || _pointer.member == "mYSortOrigin") {
@@ -210,7 +217,7 @@ export class CPaint2D extends CPaint {
             this.PRSReset();
         }
         else if (_pointer.IsRef(this.mWindInfluence)) {
-            this.SetWindInfluence(this.mWindInfluence.x);
+            this.Wind(this.mWindInfluence.x);
         }
         else if (_child) {
             if (_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) ||
@@ -281,7 +288,15 @@ export class CPaint2D extends CPaint {
         }
         this.mOwner.GetFrame().BMgr().BatchOn();
         this.Common(_vf);
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
+        if (CWASM.IsWASM() && this.mTag.has("tail") == false) {
+            let wsa = new CShaderAttr("worldMat34", this.GetFMat());
+            wsa.mType = 12;
+            this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+        }
+        else {
+            let wsa = new CShaderAttr("worldMat", this.GetFMat());
+            this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+        }
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
         if (_vf.mUniform.get("windInfluence") != null)
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
@@ -290,7 +305,7 @@ export class CPaint2D extends CPaint {
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
     }
-    SetTexCodi(_stX, _stY = null, _edX = null, _edY = null, _imgW = null, _imgH = null) {
+    SetTexCodi(_stX, _stY = null, _edX = null, _edY = null, _imgW = null, _imgH = null, _margin = gMargin) {
         if (_stX == null) {
             this.mTexCodi.x = 1 - _stY;
             this.mTexCodi.y = 1 - _stY;
@@ -306,10 +321,10 @@ export class CPaint2D extends CPaint {
             this.mTexCodi.w = _stX.w + _stY * 0.5;
         }
         else {
-            this.mTexCodi.x = (_edX - _stX) / _imgW - gMargin / _imgW;
-            this.mTexCodi.y = (_edY - _stY) / _imgH - gMargin / _imgH;
-            this.mTexCodi.z = (_stX) / _imgW + (gMargin * 0.5) / _imgW;
-            this.mTexCodi.w = 1 - (_stY / _imgH) - this.mTexCodi.y - (gMargin * 0.5) / _imgH;
+            this.mTexCodi.x = (_edX - _stX) / _imgW - _margin / _imgW;
+            this.mTexCodi.y = (_edY - _stY) / _imgH - _margin / _imgH;
+            this.mTexCodi.z = (_stX) / _imgW + (_margin * 0.5) / _imgW;
+            this.mTexCodi.w = 1 - (_stY / _imgH) - this.mTexCodi.y - (_margin * 0.5) / _imgH;
         }
     }
     SetPivot(_pivot) {
@@ -357,9 +372,9 @@ export class CPaint2D extends CPaint {
             this.mUpdateLMat = true;
         }
     }
-    SetWindInfluence(_influence) {
+    Wind(_influence) {
         this.Tail();
-        this.Wind();
+        this.PushTag("wind");
         this.mLastHide = false;
         this.mWindInfluence.x = _influence;
         this.mPosList = [

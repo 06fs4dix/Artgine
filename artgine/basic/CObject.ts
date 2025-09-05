@@ -542,32 +542,33 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			return false;
 		return this["mRecycle"];
 	}
-	static NewImportCJSON(_obj : CJSON)
+	static NewImportCJSON(_cjson : CJSON,_newObj=null)
 	{
-		if(_obj.GetStr("class")!=null)
+		if(_cjson.GetStr("class")!=null)
 		{
-			let obj=CClass.New(_obj.GetStr("class")) as CObject;
-			if(obj==null)	return;
-			if(_obj.GetBool("mBlackboard")==true)
+			if(_newObj==null)
+				_newObj=CClass.New(_cjson.GetStr("class")) as CObject;
+			if(_newObj==null)	return;
+			if(_cjson.GetBool("mBlackboard")==true)
 			{
-				obj.SetKey(_obj.GetStr("mKey"));
-				let bk=CBlackBoard.Find(obj.Key());
+				_newObj.SetKey(_cjson.GetStr("mKey"));
+				let bk=CBlackBoard.Find(_newObj.Key());
 				if(bk !=null)	return bk;
 				
-				obj.SetBlackBoard(true);
+				_newObj.SetBlackBoard(true);
 					
 
 			}
-			if(obj!=null)
+			if(_newObj!=null)
 			{
-				obj.ImportCJSON(_obj);
+				_newObj.ImportCJSON(_cjson);
 			}
 			
-			return obj;
+			return _newObj;
 		}
 		
 		
-		return _obj.GetDocument();
+		return _cjson.GetDocument();
 	}
 	
 

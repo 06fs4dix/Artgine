@@ -94,6 +94,12 @@ export class CMat{
     constructor(_x){}
     public b;
 }//4*4
+export class CMat12{
+    constructor(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11);
+    constructor(_x,);
+    constructor(_x){}
+    public b;
+}//4*4
 export class CMat3{
     public a;
     constructor(_x);
@@ -212,6 +218,8 @@ export function V3MulMat3Normal(_v3 : CVec3,_mat : CMat3) : CVec3{    return new
 export function FloatMulMat(_val : number,_mat : CMat) : CMat{    return new CMat(0);}
 export function MatAdd(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
 export function MatMul(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
+export function Mat34ToMat(_mat : CMat34) : CMat { return new CMat(0); }
+
 
 //mat3
 export function TransposeMat3(_a : CMat3) : CMat3{    return new CMat3(0);}

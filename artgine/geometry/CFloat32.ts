@@ -42,8 +42,14 @@ export class CFloat32 extends CObject
 
 	Equals(_target : CFloat32)
 	{
-		if(this.constructor.name!=_target.constructor.name)
-			return false;
+		// if(this.constructor.name!=_target.constructor.name)
+		// 	return false;
+		
+		// const ba = Buffer.from(this.mF32A.buffer, this.mF32A.byteOffset, this.mF32A.byteLength);
+    	// const bb = Buffer.from(_target.mF32A.buffer, _target.mF32A.byteOffset, _target.mF32A.byteLength);
+
+		// return ba.equals(bb);
+
 		for(let i=0;i<this.mF32A.length;++i)
 		{
 			if(this.mF32A[i]!=_target.mF32A[i])
@@ -77,12 +83,12 @@ export class CFloat32 extends CObject
 		}
 			
 	}
-	Snap(_cut=10000)
+	Snap(decimals = 8) 
 	{
-		
-		for (let i = 0; i < this.mF32A.length; ++i) 
-		{
-			this.mF32A[i]=Math.floor(this.mF32A[i] * _cut) / _cut;
+		const m = 10 ** decimals;      // 8자리면 1e8
+		const a = this.mF32A;
+		for (let i = 0; i < a.length; ++i) {
+			a[i] = Math.trunc(a[i] * m) / m; // 음수도 절삭
 		}
 	}
 	override ToLog()

@@ -3,6 +3,7 @@ import { CAlert } from "../../../basic/CAlert.js";
 import { CArray } from "../../../basic/CArray.js";
 import { CString } from "../../../basic/CString.js";
 import { CTree } from "../../../basic/CTree.js";
+import { CWASM } from "../../../basic/CWASM.js";
 import { CBound } from "../../../geometry/CBound.js";
 import { CMat } from "../../../geometry/CMat.js";
 import { CMath } from "../../../geometry/CMath.js";
@@ -201,6 +202,11 @@ export class CPaint3D extends CPaint {
     }
     Update(_delay) {
         super.Update(_delay);
+        if (CWASM.IsWASM()) {
+            this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
+            this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
+            this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
+        }
         if (this.mTree == null) {
             if (this.InitMesh(this.mMesh) == false)
                 return;
@@ -219,11 +225,13 @@ export class CPaint3D extends CPaint {
                 else if (mpiData.FMatAtt == false && mpiData.pst.IsUnit()) {
                     nodemp.mpi.mData.FMatAtt = true;
                     nodemp.sumSA.mData = this.GetFMat();
+                    nodemp.sumSA.mTag = null;
                 }
                 else if (mpiData.FMatAtt == true) {
                     if (mpiData.pst.IsUnit() == false) {
                         nodemp.sumSA.mData = nodemp.sum;
                         nodemp.mpi.mData.FMatAtt = false;
+                        nodemp.sumSA.mTag = null;
                         CMath.MatMul(nodemp.mpi.mData.pst, this.GetFMat(), nodemp.sum);
                     }
                     else if (this.GetFMat() != nodemp.sumSA.mData) {
@@ -301,6 +309,10 @@ export class CPaint3D extends CPaint {
     RenderMesh(_vf, _node, _barr, _off) {
         if (_node.md.mData != null && _node.md.mData.ci != null) {
             this.mOwner.GetFrame().BMgr().BatchOn();
+            if (CWASM.IsWASM()) {
+                _node.sumSA.mKey = "worldMat34";
+                _node.sumSA.mType = 12;
+            }
             this.mOwner.GetFrame().BMgr().SetBatchSA(_node.sumSA);
             this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture, _node.mpi.mData.textureOff);
             if (_vf.mUniform.get("material") != null) {

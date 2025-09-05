@@ -14,6 +14,7 @@ export class CColor extends CVec4
 {
     constructor(_r : number=0, _g : number=0, _b : number=0, _model : number = SDF.eColorModel.None) {
         super(_r, _g, _b, _model);
+        this.Snap(8);
     }
     static eModel=SDF.eColorModel;
 
@@ -28,6 +29,15 @@ export class CColor extends CVec4
             return `hsl(${Math.round(360*this.mF32A[0])},${Math.round(100*this.mF32A[1])},${Math.round(100*this.mF32A[2])})`;
         }
         return "";
+    }
+    static Color(_r : number=0, _g : number=0, _b : number=0, _model : number = SDF.eColorModel.None)
+    {
+        gColor.mF32A[0]=_r;
+        gColor.mF32A[1]=_g;
+        gColor.mF32A[2]=_b;
+        gColor.mF32A[3]=_model;
+
+        return gColor;
     }
     
     override EditHTMLInit(_div: HTMLDivElement,_pointer : CPointer=null): void {
@@ -128,7 +138,7 @@ export class CColor extends CVec4
     static white : CColor = new CColor(1, 1, 1);
     static yellow : CColor = new CColor(1, 0.92, 0.016);
 }
-
+var gColor=new CColor(0,0,0,0);
 export class CAlpha extends CVec2
 {
     static eModel=SDF.eAlphaModel;

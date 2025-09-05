@@ -1,6 +1,12 @@
 import * as path from "path";
 import * as fs from "fs";
+import { fileURLToPath } from 'url';
 import { CConsol } from "../artgine/basic/CConsol.js";
+import { CFile } from "../artgine/system/CFile.js";
+import { CPath } from "../artgine/basic/CPath.js";
+import { CAlert } from "../artgine/basic/CAlert.js";
+import { CUtil } from "../artgine/basic/CUtil.js";
+import { CJSON } from "../artgine/basic/CJSON.js";
 
 export function GetNowString(): string {
     const now = new Date();
@@ -13,7 +19,33 @@ export function GetNowString(): string {
 
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
-
+export async function GetAppJSON()
+{
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    let initBuf=await CFile.Load(CPath.PHPC()+"App.json");
+    if(initBuf==null)
+    {
+        initBuf=await CFile.Load(path.join(__dirname, "App.json"));
+    }
+    if(initBuf==null)
+    {
+        CAlert.E("error");
+        return null;
+    }
+    else
+    {
+        CConsol.Log("App.json Load!");
+        LoadPluginMap([CPath.PHPC()+"/plugin/",CPath.PHPC()+"/artgine"]);
+    }
+    
+    
+    type ProgramType = 'developer' | 'client' | 'server';
+    return new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
+        {"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
+            "server":"","github":false,"tsc":true}
+    );
+}
 export function GetProjName(projectPath)
 {
 

@@ -13,6 +13,9 @@ import {
 	clamp,
 	floor,
 	mod,
+	Mat34ToMat,
+	CMat12,
+	CMat34,
 } from "./Shader"
 import {
 	SDF
@@ -45,6 +48,7 @@ var colorVFX : CMat=Null();
 
 //mat
 var worldMat : CMat=Null();
+var worldMat34 : CMat34=Null();
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 
@@ -151,8 +155,15 @@ Build("3DBake", ["bake"],
 
 function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 {
-	to_uv=f2_uv;		
-	out_position=LWVPMul(f3_ver,worldMat,viewMat,projectMat);
+	to_uv=f2_uv;
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+
+	out_position=LWVPMul(f3_ver,wMat,viewMat,projectMat);
 }
 function ps_main_simple()
 {
@@ -226,7 +237,14 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 {
 	to_uv=f2_uv;
 
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
 
@@ -252,7 +270,13 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, f4_we : Weight4, f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) {
 	to_uv = f2_uv;
 	to_ref = f3_ref;
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
 
 	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
 	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
@@ -283,7 +307,13 @@ function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, 
 	var clip_space_pos : CVec2 = V2SubV2(V2MulFloat(f2_sha, 2.0), new CVec2(1.0, 1.0));
 	out_position = new CVec4(clip_space_pos, 0.0, 1.0);
 
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
 
@@ -474,7 +504,13 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 {
 	to_uv = f2_uv;
 
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
 
 	var svm : CMat=new CMat(0);
 	var spm : CMat=new CMat(0);
@@ -527,7 +563,14 @@ function ps_main_shadow_write()
 	out_color = to_viewPos;
 }
 function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3) {
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
 	
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
@@ -546,7 +589,13 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 
 function vs_main_shadow_read_pa(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) 
 {
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+	var wMat : CMat;
+	BranchBegin("wasm","WASM",[worldMat34]);
+	wMat=Mat34ToMat(worldMat34);
+	BranchDefault();
+	wMat=worldMat;
+	BranchEnd();
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
 	
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
@@ -659,7 +708,7 @@ function ps_main_shadow_read_pa()
         all = 0.0;
 
         // 튜닝 파라미터: 필요 시 장면 스케일에 맞춰 조정
-        var K : number = 240.0;         // 전진 강도(효과 약하면 300~400까지 올려 테스트)
+        var K : number = 500.0;         // 전진 강도(효과 약하면 300~400까지 올려 테스트)
         var pushClamp : number = 0.08;  // 총 전진 상한(월드 유닛, 0.02~0.12 범위에서 조정)
 
         for (var i = 0; i < FloatToInt(shadowCount); i++) {

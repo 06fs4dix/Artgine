@@ -1,4 +1,4 @@
-import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, } from "./Shader";
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, Mat34ToMat, } from "./Shader";
 import { SDF } from "./SDF";
 import { ColorModelCac, ColorVFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
@@ -13,6 +13,7 @@ var material = new CVec4(0.0, 0.0, 0.0, 1.0);
 var alphaCut = 0.1;
 var colorVFX = Null();
 var worldMat = Null();
+var worldMat34 = Null();
 var viewMat = Null();
 var projectMat = Null();
 var to_uv = Null();
@@ -60,7 +61,13 @@ Build("3DBake", ["bake"], vs_main_bake, [
 ], [out_position, to_uv, to_normal, to_worldPos, to_tangent, to_binormal, to_ref], ps_main_bake, [out_color]);
 function vs_main_simple(f3_ver, f2_uv) {
     to_uv = f2_uv;
-    out_position = LWVPMul(f3_ver, worldMat, viewMat, projectMat);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    out_position = LWVPMul(f3_ver, wMat, viewMat, projectMat);
 }
 function ps_main_simple() {
     var L_cor = Sam2DToColor(0.0, to_uv);
@@ -108,7 +115,13 @@ function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff) {
 }
 function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
     to_uv = f2_uv;
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -130,7 +143,13 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
 function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_bi, f3_ref) {
     to_uv = f2_uv;
     to_ref = f3_ref;
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
     to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
     to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
     if (f3_ref.y > 0.0) {
@@ -153,7 +172,13 @@ function vs_main_bake(f3_ver, f4_wi, f4_we, f2_uv, f2_sha, f3_nor, f4_tan, f3_bi
     to_uv = f2_uv;
     var clip_space_pos = V2SubV2(V2MulFloat(f2_sha, 2.0), new CVec2(1.0, 1.0));
     out_position = new CVec4(clip_space_pos, 0.0, 1.0);
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -302,7 +327,13 @@ function ps_main_gBuffer_multi() {
 }
 function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
     to_uv = f2_uv;
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
     var svm = new CMat(0);
     var spm = new CMat(0);
     if (shadowWrite.x < SDF.eShadow.Cas0 + 0.5) {
@@ -342,7 +373,13 @@ function ps_main_shadow_write() {
     out_color = to_viewPos;
 }
 function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -355,7 +392,13 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
     out_position = V4MulMatCoordi(P, projectMat);
 }
 function vs_main_shadow_read_pa(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_bi, f3_ref) {
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, worldMat, skin);
+    var wMat;
+    BranchBegin("wasm", "WASM", [worldMat34]);
+    wMat = Mat34ToMat(worldMat34);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -431,7 +474,7 @@ function ps_main_shadow_read_pa() {
     var all = 1.0;
     if (shadowCount > 0.5) {
         all = 0.0;
-        var K = 240.0;
+        var K = 500.0;
         var pushClamp = 0.08;
         for (var i = 0; i < FloatToInt(shadowCount); i++) {
             var shadowRead = Sam2DToV4(shadowReadList, i);

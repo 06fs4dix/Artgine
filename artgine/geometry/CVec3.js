@@ -28,6 +28,7 @@ export class CVec3 extends CFloat32 {
     static Front() { return g_front; }
     static Back() { return g_back; }
     static eDir = {
+        "Null": -1,
         "Up": 0,
         "Down": 1,
         "Left": 2,
@@ -101,8 +102,15 @@ export class CVec3 extends CFloat32 {
         inputs[1].onmousedown = MounsDownFun;
         inputs[2].onmousedown = MounsDownFun;
     }
+    static Vec3(_x, _y, _z) {
+        gVec3.mF32A[0] = _x;
+        gVec3.mF32A[1] = _y;
+        gVec3.mF32A[2] = _z;
+        return gVec3;
+    }
 }
 ;
+var gVec3 = new CVec3();
 var g_left = new CVec3(-1, 0, 0);
 var g_right = new CVec3(1, 0, 0);
 var g_up = new CVec3(0, 1, 0);

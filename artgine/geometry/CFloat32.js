@@ -24,8 +24,6 @@ export class CFloat32 extends CObject {
         }
     }
     Equals(_target) {
-        if (this.constructor.name != _target.constructor.name)
-            return false;
         for (let i = 0; i < this.mF32A.length; ++i) {
             if (this.mF32A[i] != _target.mF32A[i]) {
                 return false;
@@ -48,9 +46,11 @@ export class CFloat32 extends CObject {
             this.mF32A[i] = _val[i];
         }
     }
-    Snap(_cut = 10000) {
-        for (let i = 0; i < this.mF32A.length; ++i) {
-            this.mF32A[i] = Math.floor(this.mF32A[i] * _cut) / _cut;
+    Snap(decimals = 8) {
+        const m = 10 ** decimals;
+        const a = this.mF32A;
+        for (let i = 0; i < a.length; ++i) {
+            a[i] = Math.trunc(a[i] * m) / m;
         }
     }
     ToLog() {

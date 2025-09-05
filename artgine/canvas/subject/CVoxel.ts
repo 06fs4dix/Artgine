@@ -511,6 +511,7 @@ export class CVoxel extends CSubject
 
 	override ImportCJSON(_json: CJSON) 
 	{
+		this.mAtlas=new CAtlas();
 		let count=_json.GetVal("mCount");
 		if(typeof count =="number")
 		{

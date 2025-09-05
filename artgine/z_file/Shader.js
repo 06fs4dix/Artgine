@@ -70,6 +70,10 @@ export class CMat {
     constructor(_x) { }
     b;
 }
+export class CMat12 {
+    constructor(_x) { }
+    b;
+}
 export class CMat3 {
     a;
     constructor(_x, _y, _z) { }
@@ -221,6 +225,7 @@ export function V3MulMat3Normal(_v3, _mat) { return new CVec3(0, 0, 0); }
 export function FloatMulMat(_val, _mat) { return new CMat(0); }
 export function MatAdd(_a, _b) { return new CMat(0); }
 export function MatMul(_a, _b) { return new CMat(0); }
+export function Mat34ToMat(_mat) { return new CMat(0); }
 export function TransposeMat3(_a) { return new CMat3(0); }
 export function InverseMat3(_a) { return new CMat3(0); }
 export function V2SubV2(_a, _b) { return new CVec2(0, 0); }
