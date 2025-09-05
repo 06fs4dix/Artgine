@@ -1,6 +1,6 @@
-const version = '2025-08-21 22:25:31';
-import "../../../artgine/artgine.js";
-import { CPreferences } from "../../../artgine/basic/CPreferences.js";
+const version = 'mf7fleec_3';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
+import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -15,23 +15,23 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = false;
-import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+gPF.mGitHub = true;
+import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'], "");
 var Main = gAtl.Canvas('Main.json');
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
-import { CPad } from "../../../artgine/canvas/subject/CPad.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CEvent } from "../../../artgine/basic/CEvent.js";
-import { CForce } from "../../../artgine/canvas/component/CForce.js";
-import { CSMPattern, CStateMachine } from "../../../artgine/canvas/component/CStateMachine.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
+import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
+import { CSMA, CSMComp, CSMC, CSMP } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
 let back = Main.PushSub(new CSubject());
 back.PushComp(new CPaint2D("Res/back.jpg", new CVec2(gAtl.PF().mWidth, gAtl.PF().mHeight)));
 function CreateBrick() {
@@ -65,26 +65,21 @@ rb.SetGravity(true);
 let af = mary.PushComp(new CAniFlow("MaryStand"));
 af.SetSpeed(0.4);
 let pad = mary.PushChild(new CPad());
-let sm = mary.PushComp(new CStateMachine());
-sm.PushPattern(new CSMPattern("Default", [], []));
-sm.PushPattern(new CSMPattern("MaryWalk", ["move"], ["Jump"]));
-sm.PushPattern(new CSMPattern("Left", ["move" + CVec3.eDir.Left]));
-sm.PushPattern(new CSMPattern("Right", ["move" + CVec3.eDir.Right]));
-sm.PushPattern(new CSMPattern("MaryWalkReset", ["MaryJumpLoopPlay"], ["Fall"]));
-sm.PushPattern(new CSMPattern("MaryJumpStart", ["Jump"]));
-sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Jump", "MaryJumpStartStop"]));
-sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Jump", "MaryJumpLoopPlay"]));
-sm.PushPattern(new CSMPattern("MaryDown", ["Down"], ["Jump", "move"]));
-sm.PushPattern(new CSMPattern("MaryJumpStart", ["Fall"], ["Jump"]));
-sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Fall", "MaryJumpStartStop"], ["Jump"]));
-sm.PushPattern(new CSMPattern("MaryJumpLoop", ["Fall", "MaryJumpLoopPlay"], ["Jump"]));
+let sm = mary.PushComp(new CSMComp());
+let test = sm.GetSM();
+sm.GetSM().PushPattern(new CSMP([new CSMC("Jump", "!="), new CSMC("move", "!="), new CSMC("Fall", "!="), new CSMC("Down", "!=")], new CSMA(CSMA.eType.Message, "Default")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("move"), new CSMC("Jump", "!=")], new CSMA(CSMA.eType.Message, "MaryWalk")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("move" + CVec3.eDir.Left)], new CSMA(CSMA.eType.Message, "Left")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("move" + CVec3.eDir.Right)], new CSMA(CSMA.eType.Message, "Right")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("Jump")], new CSMA(CSMA.eType.Message, "MaryJumpStart")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("Jump"), new CSMC("MaryJumpStartStop")], new CSMA(CSMA.eType.Message, "MaryJumpLoop")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("Down"), new CSMC("Jump", "!="), new CSMC("move", "!=")], new CSMA(CSMA.eType.Message, "MaryDown")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("Fall"), new CSMC("Jump", "!=")], new CSMA(CSMA.eType.Message, "MaryJumpStart")));
+sm.GetSM().PushPattern(new CSMP([new CSMC("Fall"), new CSMC("MaryJumpStartStop", "!=")], new CSMA(CSMA.eType.Message, "MaryJumpLoop")));
 sm["Default"] = () => {
     af.ResetAni("MaryStand");
 };
 sm["MaryWalk"] = () => {
-    af.ResetAni("MaryWalk");
-};
-sm["MaryWalkReset"] = () => {
     af.ResetAni("MaryWalk");
 };
 sm["Left"] = () => {
@@ -105,7 +100,9 @@ sm["MaryDown"] = () => {
 mary.Update = () => {
     let dir = pad.GetDir();
     if (dir.y < 0)
-        sm.PushName("Down");
+        sm.GetSM().GetState()["Down"] = 1;
+    else
+        sm.GetSM().GetState()["Down"] = 0;
     if (dir.x > 0)
         rb.Push(new CForce("move", new CVec3(1, 0, 0), 200));
     else if (dir.x < 0)

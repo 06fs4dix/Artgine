@@ -34,8 +34,8 @@
 		)
 
 		echo Starting Chrome...
-		echo HTML file: Village.html
-		"%CHROME_PATH%" --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir="%TEMP%\chrome_dev" --allow-running-insecure-content --disable-extensions --no-sandbox --ignore-certificate-errors --disable-site-isolation-trials "file:///%~dp0Village.html"
+		echo HTML file: SideScroll.html
+		"%CHROME_PATH%" --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir="%TEMP%\chrome_dev" --allow-running-insecure-content --disable-extensions --no-sandbox --ignore-certificate-errors --disable-site-isolation-trials "file:///%~dp0SideScroll.html"
 
 		echo Chrome closed.
 		pause

@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:12:05';
+const version = 'mf7fleec_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -12,7 +12,7 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
+gPF.mWASM = true;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
@@ -136,12 +136,12 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
         let distanceToMouse = CMath.V3Len(CMath.V3SubV3(initialPos, mousePos));
         let waveOffset = Math.sin(time + distanceToMouse * 0.5) * WAVE_AMPLITUDE;
         let newY = initialPos.y + waveOffset;
-        box.SetPos(new CVec3(initialPos.x, newY, initialPos.z));
+        box.SetPos(CVec3.Vec3(initialPos.x, newY, initialPos.z), false, false);
         let rotationX = Math.sin(time + distanceToMouse * 0.3) * 0.1;
         let rotationZ = Math.cos(time + distanceToMouse * 0.4) * 0.1;
-        box.SetRot(new CVec3(rotationX, 0, rotationZ));
+        box.SetRot(CVec3.Vec3(rotationX, 0, rotationZ), false);
         let scaleFactor = 0.1 + Math.sin(time + distanceToMouse * 0.4) * 0.02;
-        box.SetSca(new CVec3(scaleFactor, scaleFactor, scaleFactor));
+        box.SetSca(CVec3.Vec3(scaleFactor, scaleFactor, scaleFactor));
         if (box.mHeightColorData && COLOR_HEIGHT_ENABLED) {
             let heightData = box.mHeightColorData;
             let baseColor = heightData.baseColor;
@@ -196,8 +196,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
             heightColorR = Math.max(0, Math.min(1, heightColorR));
             heightColorG = Math.max(0, Math.min(1, heightColorG));
             heightColorB = Math.max(0, Math.min(1, heightColorB));
-            let heightColor = new CColor(heightColorR, heightColorG, heightColorB, CColor.eModel.RGBAdd);
-            heightData.paint3D.SetColorModel(heightColor);
+            heightData.paint3D.SetColorModel(CColor.Color(heightColorR, heightColorG, heightColorB, CColor.eModel.RGBAdd));
         }
     }
 });

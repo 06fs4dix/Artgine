@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mf7fleec_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -18,7 +18,7 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
+gPF.mWASM = true;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
@@ -190,7 +190,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
     
     // 각 박스에 파도 효과 적용
     for (let i = 0; i < waveBoxes.length; i++) {
-        let box = waveBoxes[i];
+        let box = waveBoxes[i] as CSubject;
         let initialPos = initialPositions[i];
         
         // 마우스와의 거리 계산
@@ -207,16 +207,16 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
         let newY = initialPos.y + waveOffset;
         
         // 박스 위치 업데이트
-        box.SetPos(new CVec3(initialPos.x, newY, initialPos.z));
+        box.SetPos(CVec3.Vec3(initialPos.x, newY, initialPos.z),false,false);
         
         // 회전 효과 추가 (파도에 따라 살짝 기울어짐)
         let rotationX = Math.sin(time + distanceToMouse * 0.3) * 0.1;
         let rotationZ = Math.cos(time + distanceToMouse * 0.4) * 0.1;
-        box.SetRot(new CVec3(rotationX, 0, rotationZ));
+        box.SetRot(CVec3.Vec3(rotationX, 0, rotationZ),false);
         
         // 스케일 효과 (파도 높이에 따라 살짝 커졌다 작아짐)
         let scaleFactor = 0.1 + Math.sin(time + distanceToMouse * 0.4) * 0.02; // 기본 스케일 0.1에 맞게 조정
-        box.SetSca(new CVec3(scaleFactor, scaleFactor, scaleFactor));
+        box.SetSca(CVec3.Vec3(scaleFactor, scaleFactor, scaleFactor));
         
         // 높이에 따른 색상 변경
         if ((box as any).mHeightColorData && COLOR_HEIGHT_ENABLED) {
@@ -295,8 +295,8 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
             heightColorB = Math.max(0, Math.min(1, heightColorB));
             
             // SetColorModel을 사용하여 덧셈 방식으로 색상 적용
-            let heightColor = new CColor(heightColorR, heightColorG, heightColorB, CColor.eModel.RGBAdd);
-            heightData.paint3D.SetColorModel(heightColor);
+            //let heightColor = new CColor(heightColorR, heightColorG, heightColorB, CColor.eModel.RGBAdd);
+            heightData.paint3D.SetColorModel(CColor.Color(heightColorR, heightColorG, heightColorB, CColor.eModel.RGBAdd));
         }
     }
 });
@@ -592,6 +592,39 @@ Option_btn.mModal.Show = function() {
 Option_btn.mModal.GetBody().addEventListener('DOMContentLoaded', function() {
     setTimeout(setupWaveControls, 500);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
