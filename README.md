@@ -1,3 +1,10 @@
+**QuickStart:**
+```bash
+git clone https://github.com/06fs4dix/Artgine.git
+cd Artgine
+npm install
+npm start
+```
 
  **Live Demo Links:**
 - **ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
