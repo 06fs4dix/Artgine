@@ -40,7 +40,9 @@ npm start
 
 ## Setup
 
-Run `start.bat` / `start.sh` (you may see an **"Unknown Publisher"** warning), **or** enter the following in your console:
+Run `start.bat` / `start.sh` (you may see an **"Unknown Publisher"** warning) **or**
+
+ enter the following in your console:
 
 ```bash
 git clone https://github.com/06fs4dix/Artgine.git
