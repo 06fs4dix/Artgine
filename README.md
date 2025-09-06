@@ -8,31 +8,36 @@ npm start
 ```
 > Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-KR.md)**
 
-# Examples
-
-**ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
-
+## Examples
+[ArtgineTutorial](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html) : Shows how to use it
 <details>
   <summary>More</summary>
 
 **Tutorial**
 
-* CollusionTest: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-* 3DLight: [https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html)
-* Skybox: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html)
-* Wind: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html)
+[CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html) : Provides a collision test
+
+[3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html) : 3D lighting and shadows
+
+[Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html) : Skybox
+
+[Wind](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html) : Wind handling
 
 **3D**
 
-* BoxShow: [https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html)
-* Map: [https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html)
-* GeometryViewer: [https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html)
+[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : Box visualizer
+
+[Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html) : Track 3D objects on a 2D map
+
+[GeometryViewer](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html) : Build the scene based on GPS data
 
 **2D**
 
-* Maze: [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-* Village: [https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html)
-* Shooting: [https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html)
+[Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : Maze
+
+[Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : Village
+
+[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : Shooting
 
 </details>
 
@@ -70,7 +75,7 @@ To run **only the server**, use `npm run start_web` instead of `npm start`.
 └── proj/ (project files)
 ```
 
-${\textsf{\color{Red}🚫 Project files must not be located above the working folder.}}$
+>🚫 Project files must not be located above the working folder.
 
 # Electron
 
@@ -132,8 +137,8 @@ ${\textsf{\color{Red}🚫 Project files must not be located above the working fo
 When running via the Electron app:
 
 > **Note:** If you work manually, you can freely modify files.
-
-${\textsf{\color{Red}🚫The following files are auto-generated and managed based on the project folder name. Edit with caution.}}$ 
+ 
+>🚫The following files are auto-generated and managed based on the project folder name. Edit with caution.
 
 
 * HTML files
