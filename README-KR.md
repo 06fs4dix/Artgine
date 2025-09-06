@@ -9,25 +9,35 @@ npm start
 ```
 
 ## 예제
-**ArtgineTutorial**: [https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html)
+[ArtgineTutorial](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html) : 사용법을 알려줍니다
 <details>
   <summary>더보기</summary>
   
 **Tutorial**
-- CollusionTest : [https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html)
-- 3DLight : [https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html)
-- Skybox : [https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html)
-- Wind : [https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html)
+
+[CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html) : 충돌 테스트 제공
+
+[3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html) : 3D 빛,그림자 
+
+[Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html) : 스카이박스
+
+[Wind](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html) : 바람 처리
 
 **3D**
-- BoxShow : [https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html)
-- Map : [https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html)
-- GeometryViewer : [https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html)
+
+[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : 박스 비주얼 뷰어
+
+[Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html) : 2차원 맵에서 3D 오브젝트 추적
+
+[GeometryViewer](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html) : gps정보를 기반으로 화면 구성
 
 **2D**
-- Maze : [https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html)
-- Village : [https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html)
-- Shooting : [https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html)
+
+[Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : 미로찾기
+
+[Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : 마을 
+
+[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : 슈팅
 
 </details>
 
@@ -64,7 +74,7 @@ npm start
 ├── plugin/
 └── proj/(프로젝트 파일
 ```
-${\textsf{\color{Red}🚫프로젝트 파일은 작업 폴더보다 상위에 있으면 안됩니다.}}$ 
+>🚫프로젝트 파일은 작업 폴더보다 상위에 있으면 안됩니다.}}$ 
 
 ### 일렉트론
 
@@ -111,8 +121,9 @@ ${\textsf{\color{Red}🚫프로젝트 파일은 작업 폴더보다 상위에 �
 
 일렉트론 앱으로 실행시  
 > 💡 **참고**: 수동으로 작업시 자유롭게 수정 가능합니다
+> 🚫 다음 파일들은 프로젝트 폴더명을 기준으로 자동 생성 및 관리되므로 수정에 주의하세요
 
-${\textsf{\color{Red}🚫다음 파일들은 프로젝트 폴더명을 기준으로 자동 생성 및 관리되므로 수정에 주의하세요}}$ 
+
 
 - HTML 파일
 - TypeScript 파일
