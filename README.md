@@ -6,6 +6,7 @@ cd Artgine
 npm install
 npm start
 ```
+> Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-KR.md)**
 
 # Examples
 
