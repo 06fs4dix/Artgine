@@ -1,5 +1,5 @@
 //Version
-const version='mf7fleec_5';
+const version='mffeu6vk_17';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -49,7 +49,7 @@ import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
-import { CBGAttachButton, CBlackboardModal, CLoadingBack } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CBGAttachButton, CBlackboardModal, CLoadingBack, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
@@ -264,145 +264,7 @@ class CTest extends CObject
         return super.IsShould(_member,_type);
     }
 }
-
-// let org=new CTest();
-// org.mArr.push(new CVec3(1,0,0));
-
-// let tar=org.ExportProxy();
-// CConsol.Log(tar.mValue);
-// org.mValue=2;
-// CConsol.Log(tar.mValue);
-
-// CConsol.Log(tar.mArr[0].ToStr());
-// org.mArr[0].x=10;
-// tar.mArr[0].y=10;
-// CConsol.Log(tar.mArr[0].ToStr());
-
-
-// CConsol.Log(tar.mArr[0].ToStr());
-// org.mKey="11";
-// tar.mKey="22";
-// CConsol.Log(org.mKey+" / "+tar.mKey);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+new CMDViewer("README.md");
 
 
 

@@ -1,6 +1,6 @@
-const version = 'mf7fleec_3';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
-import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+const version = 'mfdjvc2e_2';
+import "../../../artgine/artgine.js";
+import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -15,23 +15,23 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
-import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+gPF.mGitHub = false;
+import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'], "");
 var Main = gAtl.Canvas('Main.json');
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
-import { CSMA, CSMComp, CSMC, CSMP } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
+import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
+import { CPad } from "../../../artgine/canvas/subject/CPad.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CForce } from "../../../artgine/canvas/component/CForce.js";
+import { CSMA, CSMComp, CSMC, CSMP } from "../../../artgine/canvas/component/CStateMachine.js";
 let back = Main.PushSub(new CSubject());
 back.PushComp(new CPaint2D("Res/back.jpg", new CVec2(gAtl.PF().mWidth, gAtl.PF().mHeight)));
 function CreateBrick() {
@@ -51,6 +51,7 @@ for (let i = 0; i < 40; ++i) {
 }
 for (let i = 1; i < 10; ++i) {
     let brick = CreateBrick();
+    brick.FindComp(CCollider).SetStairs(true);
     brick.SetPos(new CVec3(-gAtl.PF().mWidth * 0.5 + i * 32 + 500, -gAtl.PF().mHeight * 0.5 + 96 + i * 32, 1));
 }
 let mary = Main.PushSub(new CSubject());
@@ -60,8 +61,8 @@ let cl = mary.PushComp(new CCollider(pt));
 cl.SetLayer("mary");
 cl.PushCollisionLayer("brick");
 let rb = mary.PushComp(new CRigidBody());
-rb.SetRestitution(1);
-rb.SetGravity(true);
+cl.SetRestitution(1);
+rb.SetGravity(1);
 let af = mary.PushComp(new CAniFlow("MaryStand"));
 af.SetSpeed(0.4);
 let pad = mary.PushChild(new CPad());

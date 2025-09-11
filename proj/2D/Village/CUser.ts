@@ -6,7 +6,8 @@ import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgi
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CSMComp, CSMP, CStateMachine } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
+import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CSMComp.js";
+
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
@@ -45,13 +46,14 @@ export class CUser extends CSubject
         this.PushChild(new CPad()).mSave=false;
         this.mRB=this.PushComp(new CRigidBody());
         this.mRB.mSave=false;
-        this.mRB.SetRestitution(1);
+        
         this.mSave=false;
         this.mCL=this.PushComp(new CCollider(this.mPT));
         this.mCL.mSave=false;
         this.mCL.SetLayer("player");
         this.mCL.PushCollisionLayer("object");
         this.mCL.PushCollisionLayer("player");
+        this.mCL.SetRestitution(1);
         
         this.PushComp(new CShadowPlane());
         

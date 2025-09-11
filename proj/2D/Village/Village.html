@@ -68,11 +68,11 @@ let SERVER_BASE='http://localhost:8050/Artgine/proj/2D/Village/Village.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
-	alert('Local Start Redirection!');
 	const target = new URL(page, SERVER_BASE).toString();
 	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	alert('Local Start Redirection!');
 	location.replace(target);
-	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });
+	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
 }</script>
 
 <!--Manifest-->

@@ -3,7 +3,7 @@ import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/comp
 import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CStateMachine.js";
+import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CSMComp.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
@@ -100,7 +100,6 @@ export class CNPC extends CSubject {
         this.mPT.SetYSortOrigin(-50);
         this.mRB = this.PushComp(new CRigidBody());
         this.mRB.mSave = false;
-        this.mRB.SetRestitution(0);
         this.mSave = false;
         this.mCL = this.PushComp(new CCollider(this.mPT));
         this.mCL.mSave = false;
@@ -108,6 +107,7 @@ export class CNPC extends CSubject {
         this.mCL.PushCollisionLayer("object");
         this.mCL.PushCollisionLayer("player");
         this.mCL.SetPickMouse(true);
+        this.mCL.SetRestitution(0);
         this.PushComp(new CShadowPlane());
         let sm = this.PushComp(new CSMComp());
         sm.GetSM().PushPattern([
