@@ -82,7 +82,7 @@ export class CFileServer extends CServerRouter
 
 			for(let i=0;i<nameArr.mArray.length;++i)
 			{
-				CFile.Save(CUtil.Base64ToArray(dataArr.mArray[i]),fix(gRootPath + path+nameArr.mArray[i]));
+				CFile.Save(CUtil.Base64ToArray(dataArr.mArray[i]),fix(path+nameArr.mArray[i]));
 				
 			}
 			return "";

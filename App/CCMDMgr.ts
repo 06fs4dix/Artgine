@@ -1,4 +1,4 @@
-import { execSync, spawn,exec } from 'child_process';
+import { execSync, spawn, exec } from 'child_process';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,8 +25,7 @@ export class CCMDMgr {
             return false;
         }
     }
-    static GetFileCount(_pname : string)
-    {
+    static GetFileCount(_pname: string) {
         if (!fs.existsSync(_pname)) return 0; // 폴더가 존재하지 않음
 
         const stat = fs.statSync(_pname);
@@ -34,6 +33,9 @@ export class CCMDMgr {
 
         const files = fs.readdirSync(_pname);
         return files.length;
+    }
+    static async Delay(ms: number): Promise<void> {
+        await new Promise<void>(res => setTimeout(res, ms)); // ✅ 무조건 대기
     }
     /**
      * 지정된 PID의 프로세스를 종료한다.
@@ -68,7 +70,7 @@ export class CCMDMgr {
      */
     static async RunCMD(_cmd: string, _new: boolean): Promise<number | null> {
         const platform = os.platform();
-        
+
         if (_new) {
             // 새 콘솔 창에서 실행하고 PID 반환
             try {
@@ -94,10 +96,10 @@ export class CCMDMgr {
                     return child.pid ?? null;
                 } else {
                     // Linux: 가용한 터미널 에뮬레이터 우선 사용
-                    const tryTerms: Array<{bin: string; args: string[]}> = [
+                    const tryTerms: Array<{ bin: string; args: string[] }> = [
                         { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${_cmd}; exec bash`] },
-                        { bin: 'konsole',        args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
-                        { bin: 'xterm',          args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
+                        { bin: 'konsole', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
+                        { bin: 'xterm', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
                     ];
                     for (const t of tryTerms) {
                         if (this.IsCommandAvailable(t.bin)) {
@@ -121,19 +123,19 @@ export class CCMDMgr {
                 let child;
                 if (platform === 'win32') {
                     // Windows에서 유니코드 지원을 위해 UTF-8 코드페이지 설정
-                    child = spawn('cmd', ['/c', 'chcp 65001 >nul && ' + _cmd], { 
+                    child = spawn('cmd', ['/c', 'chcp 65001 >nul && ' + _cmd], {
                         stdio: 'inherit',
-                        env: { 
-                            ...process.env, 
+                        env: {
+                            ...process.env,
                             LANG: 'C.UTF-8',
                             LC_ALL: 'C.UTF-8'
                         }
                     });
                 } else {
-                    child = spawn('bash', ['-c', _cmd], { 
+                    child = spawn('bash', ['-c', _cmd], {
                         stdio: 'inherit',
-                        env: { 
-                            ...process.env, 
+                        env: {
+                            ...process.env,
                             LANG: 'C.UTF-8',
                             LC_ALL: 'C.UTF-8'
                         }
@@ -155,20 +157,20 @@ export class CCMDMgr {
     static RunVSCode(folderPath: string = process.cwd()): void {
         try {
             const isWin = os.platform() === 'win32';
-            
+
             // 경로를 절대 경로로 변환하여 안정성 확보
             const absolutePath = path.resolve(folderPath);
-            
+
             if (isWin) {
                 // Windows에서 유니코드 경로 처리를 위해 exec 사용
                 // 경로를 따옴표로 감싸고 유니코드 지원 환경 설정
                 const command = `code "${absolutePath}"`;
-                
-                exec(command, { 
+
+                exec(command, {
                     encoding: 'utf8',
                     // Windows 유니코드 지원을 위한 환경변수 설정
-                    env: { 
-                        ...process.env, 
+                    env: {
+                        ...process.env,
                         LANG: 'C.UTF-8',
                         LC_ALL: 'C.UTF-8',
                         // Windows 콘솔 UTF-8 지원
@@ -187,8 +189,8 @@ export class CCMDMgr {
                 const child = spawn('code', [absolutePath], {
                     detached: true,
                     stdio: 'ignore',
-                    env: { 
-                        ...process.env, 
+                    env: {
+                        ...process.env,
                         LANG: 'C.UTF-8',
                         LC_ALL: 'C.UTF-8'
                     }
@@ -209,19 +211,20 @@ export class CCMDMgr {
         }
     }
 
-    static VSCodeOpenCode(_filePath: string): void 
-    {
+    static VSCodeOpenCode(_filePath: string): void {
+
+
         const platform = os.platform();
-        
+
         // 경로를 절대 경로로 변환하여 안정성 확보
         const absolutePath = path.resolve(_filePath);
-        
+
         if (platform === 'win32') {
             // Windows에서 유니코드 경로 처리
-            exec(`code "${absolutePath}"`, { 
+            exec(`code "${absolutePath}"`, {
                 encoding: 'utf8',
-                env: { 
-                    ...process.env, 
+                env: {
+                    ...process.env,
                     LANG: 'C.UTF-8',
                     LC_ALL: 'C.UTF-8',
                     PYTHONIOENCODING: 'utf-8'
@@ -237,8 +240,8 @@ export class CCMDMgr {
             // Linux/Mac - 유니코드 지원 개선
             exec(`code "${absolutePath}"`, {
                 encoding: 'utf8',
-                env: { 
-                    ...process.env, 
+                env: {
+                    ...process.env,
                     LANG: 'C.UTF-8',
                     LC_ALL: 'C.UTF-8'
                 }
@@ -250,14 +253,68 @@ export class CCMDMgr {
             });
         }
     }
-    static CreateEmptyFolder(folderPath: string): void 
-    {
+    static CreateEmptyFolder(folderPath: string): void {
         if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath, { recursive: true });
         }
     }
 
-    
 
+    static async IsRun(target: string): Promise<boolean> {
+        const t = target.toLowerCase();
+
+        try {
+            if (process.platform === "win32") {
+                // 1) 창이 떠 있는 프로세스들
+                const { stdout } = await execAsync(
+                    `powershell -NoLogo -NoProfile -Command "Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -ExpandProperty ProcessName"`,
+                    { windowsHide: true, maxBuffer: 1024 * 1024 }
+                );
+                const names = stdout.split(/\r?\n/).map(s => s.trim().toLowerCase()).filter(Boolean);
+                if (names.some(n => n.includes(t) || `${n}.exe` === t)) return true;
+
+                // 2) 창이 없으면 전체 프로세스에서 폴백
+                const task = await execAsync(`tasklist /fo csv /nh`, { windowsHide: true, maxBuffer: 1024 * 1024 });
+                return task.stdout.split(/\r?\n/).some(line => {
+                    const m = line.match(/^"([^"]+)"/); // "Image Name","PID",...
+                    if (!m) return false;
+                    const name = m[1].toLowerCase();
+                    return name.includes(t) || name === t || name === `${t}.exe`;
+                });
+            }
+
+            if (process.platform === "darwin") {
+                // 1) 실제 창이 떠 있는지 (앱 이름 기준)
+                try {
+                    const { stdout } = await execAsync(
+                        `osascript -e 'tell application "${target}" to (count of windows) > 0'`
+                    );
+                    if (/true/i.test(stdout)) return true;
+                } catch { /* 앱 미실행/미설치 등의 에러 → 폴백 */ }
+
+                // 2) 프로세스 이름 기준 폴백
+                const { stdout } = await execAsync(`pgrep -ifl "${target}" || true`);
+                return !!stdout.trim();
+            }
+
+            // Linux
+            try {
+                // 1) 창 목록으로 확인 (wmctrl 설치 시)
+                const { stdout } = await execAsync(`wmctrl -lx 2>/dev/null || true`);
+                if (stdout && stdout.toLowerCase().includes(t)) return true;
+            } catch { /* wmctrl 없음 → 폴백 */ }
+
+            // 2) 프로세스 이름 기준 폴백
+            const { stdout } = await execAsync(`pgrep -ifl "${target}" || true`);
+            return !!stdout.trim();
+        } catch {
+            return false;
+        }
+    }
+    static async IsVSCodeOpen(): Promise<boolean> {
+        if (process.platform === "win32") return CCMDMgr.IsRun("Code");                // Code.exe / Code - Insiders.exe 등
+        if (process.platform === "darwin") return CCMDMgr.IsRun("Visual Studio Code"); // 앱 이름
+        return CCMDMgr.IsRun("code");                                                  // Linux 바이너리
+    }
 
 }

@@ -35,6 +35,7 @@ import { CScript } from "../util/CScript.js";
 import { CChecker } from "../util/CChecker.js";
 import { CLan } from "../basic/CLan.js";
 import { CShaderAttr } from "../render/CShaderAttr.js";
+import { CRigidBody } from "../canvas/component/CRigidBody.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -74,6 +75,12 @@ function ResetBoxXYZ(_subject) {
     gBoundZX.mMax.x += gBoundTick;
     gBoundZX.mMax.y += 1;
     gBoundZX.mMax.z += gBoundTick;
+}
+function SubjectRigidBodyClear(_subject) {
+    let rArr = _subject.FindComps(CRigidBody);
+    for (let rb of rArr) {
+        rb.Clear();
+    }
 }
 let gScriptViewer = null;
 export async function InitDevToolScriptViewer(_github) {
@@ -759,6 +766,7 @@ function DevToolUpdate(_delay) {
         CUtil.IDValue("PosY", Number(pos.y.toFixed(2)));
         CUtil.IDValue("PosZ", Number(pos.z.toFixed(2)));
         subject.SetPos(pos);
+        SubjectRigidBodyClear(subject);
         gMouse = mouse;
     }
     if (gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDragBound == 0 && gLeftSelect instanceof CSubject &&
@@ -1139,7 +1147,7 @@ function DevToolRight(_obj) {
             };
             x.onmousedown = y.onmousedown = z.onmousedown = MounsDownFun;
         };
-        setVec3("Pos", v => _obj.SetPos(v));
+        setVec3("Pos", v => { _obj.SetPos(v); SubjectRigidBodyClear(_obj); });
         setVec3("Rot", v => _obj.SetRot(v));
         setVec3("Sca", v => _obj.SetSca(v));
         const bbIcon = CUtil.ID("DevToolBB");

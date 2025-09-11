@@ -322,7 +322,7 @@ export class CMath {
             pa_out = new CVec3();
         else if (pa_vec == _out)
             CAlert.E("V3MulMatNormal error");
-        if (pa_mat.IsRotUnit())
+        if (pa_mat.IsRotScaUnit())
             pa_out.Import(_out);
         pa_out.mF32A[0] = (pa_mat.mF32A[0] * pa_vec.mF32A[0]) + (pa_mat.mF32A[4] * pa_vec.mF32A[1]) + (pa_mat.mF32A[8] * pa_vec.mF32A[2]);
         pa_out.mF32A[1] = (pa_mat.mF32A[1] * pa_vec.mF32A[0]) + (pa_mat.mF32A[5] * pa_vec.mF32A[1]) + (pa_mat.mF32A[9] * pa_vec.mF32A[2]);
@@ -462,7 +462,7 @@ export class CMath {
         pa_out.SetUnit(false);
         return pa_out;
     }
-    static MatRotExport(pa_viewMat, pa_x, pa_y, pa_z) {
+    static MatDecomposeRot(pa_viewMat, pa_x, pa_y, pa_z) {
         var pa_outMat = new CMat();
         pa_outMat.SetUnit(false);
         if (pa_x) {

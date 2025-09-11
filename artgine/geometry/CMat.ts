@@ -64,9 +64,17 @@ export class CMat extends CFloat32
 		this.mUnit=true;
 		//this.m_ref=null;
 	}
-	IsRotUnit()
+	IsRotScaUnit()
 	{
 		if(this.mF32A[0]==1 && this.mF32A[5]==1 && this.mF32A[10]==1)
+			return true;
+		return false;
+	}
+	IsRotUnit()
+	{
+		if(this.mF32A[1]==0 && this.mF32A[2]==0 && 
+			this.mF32A[4]==0 && this.mF32A[6]==0 &&
+			this.mF32A[8]==0 && this.mF32A[9]==0)
 			return true;
 		return false;
 	}

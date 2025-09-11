@@ -309,6 +309,7 @@ export class CModal {
                 this.mCard.style.transform = "scale(1)";
                 this.mBody.style.width = "100%";
                 this.mBody.style.height = "100%";
+                this.Focus();
             }, 10);
         }
     }
@@ -333,7 +334,7 @@ export class CModal {
         else {
             if (this.mFull)
                 this.mCard.style.width = w + "px";
-            else
+            else if (this.mOW != 0)
                 this.mCard.style.width = this.mOW + "px";
             let right = this.mCard.offsetLeft + this.mOW;
             if (w < right)
@@ -349,7 +350,7 @@ export class CModal {
         else {
             if (this.mFull)
                 this.mCard.style.height = h + "px";
-            else
+            else if (this.mOH != 0)
                 this.mCard.style.height = this.mOH + "px";
             let bottom = this.mCard.offsetTop + this.mOH;
             if (h < bottom)
@@ -359,7 +360,7 @@ export class CModal {
             }
         }
     }
-    Focus(_action) {
+    Focus(_action = null) {
     }
     static ListShow(_div = null) {
     }

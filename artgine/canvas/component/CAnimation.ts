@@ -509,6 +509,10 @@ export class CAnimation extends CObject
 		}
 		
 	}
+	Icon(){	
+	
+		return "bi bi-fast-forward-circle";	
+	}
 };
 
 

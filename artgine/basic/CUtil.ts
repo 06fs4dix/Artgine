@@ -97,5 +97,29 @@ export class CUtil
 		if (_value !== null) el.checked = _value;
 		return el.checked;
 	}
+	static Language()
+	{
+	
+		// Node.js 환경 체크
+		if (CUtil.IsNode()) 
+		{
+			// Node.js 환경에서 환경변수로 언어 코드 가져오기
+			return process.env.LANG?.split('_')[0]?.toLowerCase() || 
+				process.env.LC_ALL?.split('_')[0]?.toLowerCase() || 
+				'en';
+		}
+		
+		// 웹 브라우저 환경
+		if (CUtil.IsWeb()) 
+		{
+			// navigator.language에서 언어 코드 추출
+			const language = navigator.language || navigator.languages?.[0] || 'en';
+			return language.split('-')[0].toLowerCase();
+		}
+		
+		// 기본값
+		return 'en';
+
+	}
 }
 

@@ -32,6 +32,9 @@ export class CCMDMgr {
         const files = fs.readdirSync(_pname);
         return files.length;
     }
+    static async Delay(ms) {
+        await new Promise(res => setTimeout(res, ms));
+    }
     static async KillPID(pid) {
         try {
             if (os.platform() === 'win32') {
@@ -222,5 +225,52 @@ export class CCMDMgr {
         if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath, { recursive: true });
         }
+    }
+    static async IsRun(target) {
+        const t = target.toLowerCase();
+        try {
+            if (process.platform === "win32") {
+                const { stdout } = await execAsync(`powershell -NoLogo -NoProfile -Command "Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -ExpandProperty ProcessName"`, { windowsHide: true, maxBuffer: 1024 * 1024 });
+                const names = stdout.split(/\r?\n/).map(s => s.trim().toLowerCase()).filter(Boolean);
+                if (names.some(n => n.includes(t) || `${n}.exe` === t))
+                    return true;
+                const task = await execAsync(`tasklist /fo csv /nh`, { windowsHide: true, maxBuffer: 1024 * 1024 });
+                return task.stdout.split(/\r?\n/).some(line => {
+                    const m = line.match(/^"([^"]+)"/);
+                    if (!m)
+                        return false;
+                    const name = m[1].toLowerCase();
+                    return name.includes(t) || name === t || name === `${t}.exe`;
+                });
+            }
+            if (process.platform === "darwin") {
+                try {
+                    const { stdout } = await execAsync(`osascript -e 'tell application "${target}" to (count of windows) > 0'`);
+                    if (/true/i.test(stdout))
+                        return true;
+                }
+                catch { }
+                const { stdout } = await execAsync(`pgrep -ifl "${target}" || true`);
+                return !!stdout.trim();
+            }
+            try {
+                const { stdout } = await execAsync(`wmctrl -lx 2>/dev/null || true`);
+                if (stdout && stdout.toLowerCase().includes(t))
+                    return true;
+            }
+            catch { }
+            const { stdout } = await execAsync(`pgrep -ifl "${target}" || true`);
+            return !!stdout.trim();
+        }
+        catch {
+            return false;
+        }
+    }
+    static async IsVSCodeOpen() {
+        if (process.platform === "win32")
+            return CCMDMgr.IsRun("Code");
+        if (process.platform === "darwin")
+            return CCMDMgr.IsRun("Visual Studio Code");
+        return CCMDMgr.IsRun("code");
     }
 }

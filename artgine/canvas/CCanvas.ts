@@ -748,12 +748,6 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		}
 		return null;
 	}
-	New(_obj : CSubject)
-	{
-		this.PushSub(_obj);
-		return _obj;
-	}
-
 	PushSub<T extends CSubject>(_obj : T)
 	{
 		let key=(_obj as CSubject).Key();

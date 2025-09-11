@@ -199,13 +199,13 @@ export class CStateMachine extends CObject {
             for (let json of _p) {
                 let p = new CSMP([], null);
                 p.ImportJSON(json);
-                this.mPattern.push(p);
+                this.PushPattern(p);
             }
         }
         else {
             let p = new CSMP([], null);
             p.ImportJSON(_p);
-            this.mPattern.push(p);
+            this.PushPattern(p);
         }
     }
     PatternUpdate() {

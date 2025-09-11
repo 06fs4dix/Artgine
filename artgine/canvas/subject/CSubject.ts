@@ -771,7 +771,7 @@ export class CSubject extends CObject implements IFile
 		if(_patch)
 			this.PatchExe("mPos");
 	}
-	SetRot(_rot : any,_reset=true)
+	SetRot(_rot : CVec3|CVec4,_reset=true)
 	{
 		if(_rot.Equals(this.mRot))	return;
 		//this.m_updateRS=true;

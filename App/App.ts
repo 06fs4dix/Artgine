@@ -286,6 +286,12 @@ ipcMain.handle("KeyUp", async (_event, _key: string) => {
 		}
 		if(_key=="F4")
 		{
+			if(await CCMDMgr.IsVSCodeOpen()==false)
+			{
+				CCMDMgr.RunVSCode();
+				await CCMDMgr.Delay(2000);
+			}
+
 			const folderPath = path.resolve(CPath.PHPC()+gAppJSON.projectPath);
 			let projectName=GetProjName(gAppJSON.projectPath);
 			CCMDMgr.VSCodeOpenCode(folderPath+"/"+projectName+".ts");
@@ -653,7 +659,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	{
 		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
 	}
-
+	
 	
 	IStr+="<link rel='manifest' href='./"+projectName+".webmanifest'/>\n";
 
@@ -668,11 +674,12 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	IStr+="const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);\n";
 	IStr+="if (location.protocol == 'file:' && isElectron==false){\n";
 	IStr +="	const page = (location.href.split('/').pop() || 'index.html').replace(/\\?.*$/, '');\n";
-	IStr+="	alert('Local Start Redirection!');\n";
+	
 	IStr+="	const target = new URL(page, SERVER_BASE).toString();\n";
 	IStr+="	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{\n";
+	IStr+="	alert('Local Start Redirection!');\n";
 	IStr+="	location.replace(target);\n";
-	IStr+="	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });\n";
+	IStr+="	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });\n";
 	IStr+="}</script>\n";
 
 

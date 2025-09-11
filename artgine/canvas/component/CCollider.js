@@ -23,6 +23,11 @@ export class CCollisionObject {
     }
 }
 export class CCollider extends CComponent {
+    static eEvent = {
+        None: 0,
+        Trigger: 1,
+        Collision: 2
+    };
     mPaintLoad = null;
     mBound = new CBound;
     mLayer = "";
@@ -33,8 +38,7 @@ export class CCollider extends CComponent {
     mPushVec = new CVec3();
     mElevator = false;
     mStairs = false;
-    mDynamic = true;
-    mTrigger = false;
+    mEvent = CCollider.eEvent.Collision;
     mOneWayDir = new CVec3();
     mOneWayArc = -1;
     mGGI = null;
@@ -49,14 +53,14 @@ export class CCollider extends CComponent {
     mColPush = new CArray();
     mColPair = new Map();
     mBoundType = CBound.eType.Null;
-    constructor(_paint = null, _2d = false) {
+    constructor(_paint = null, _rb = null, _2d = false) {
         super();
+        this.mRB = _rb;
         this.m2D = _2d;
         if (_paint != null)
             this.InitBound(_paint);
-        else {
+        else
             this.mBound = new CBound();
-        }
         this.mSysc = CComponent.eSysn.Collider;
         this.mBoundGJK = new CBound();
     }
@@ -78,10 +82,10 @@ export class CCollider extends CComponent {
         }
     }
     IsShould(_member, _type) {
-        if (_member == "mUpdateMat" || _member == "mGJK" || _member == "m_colMsg" || _member == "mPaintLoad" ||
+        if (_member == "mUpdateMat" || _member == "mGJK" || _member == "mPaintLoad" ||
             _member == "mGJKShape" || _member == "mPushVec" || _member == "mGGI" ||
             _member == "mBoundGJK" || _member == "mCenterGJK" || _member == "mSizeGJK" ||
-            _member == "mColTarget" || _member == "mColPush")
+            _member == "mColTarget" || _member == "mColPush" || _member == "mOneWayMap" || _member == "mRB")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -205,8 +209,9 @@ export class CCollider extends CComponent {
         if (this.GetOwner() != null)
             this.UpdateMat();
     }
-    SetDynamic(_dynamic) { this.mDynamic = _dynamic; }
-    GetDynamic() { return this.mDynamic; }
+    SetEvent(_event) {
+        this.mEvent = _event;
+    }
     SetLayer(_key) {
         this.mLayer = _key;
         this.mUpdateMat = CUpdate.eType.Updated;
@@ -214,8 +219,6 @@ export class CCollider extends CComponent {
     GetLayer() { return this.mLayer; }
     GetElevator() { return this.mElevator; }
     SetElevator(_elevator) { this.mElevator = _elevator; }
-    GetTrigger() { return this.mTrigger; }
-    SetTrigger(_enable) { this.mTrigger = _enable; }
     GetStairs() { return this.mStairs; }
     SetStairs(_stairs) { this.mStairs = _stairs; }
     Update(_delay) {
@@ -291,7 +294,7 @@ export class CCollider extends CComponent {
             this.mBoundGJK.mMin.mF32A[1] = this.mCenterGJK.mF32A[1] - r;
             this.mBoundGJK.mMin.mF32A[2] = this.mCenterGJK.mF32A[2] - r;
         }
-        else if (this.mGJKShape.GetMatrix().IsRotUnit()) {
+        else if (this.mGJKShape.GetMatrix().IsRotScaUnit()) {
             this.mCenterGJK.mF32A[0] = this.mGJKShape.GetMatrix().mF32A[12];
             this.mCenterGJK.mF32A[1] = this.mGJKShape.GetMatrix().mF32A[13];
             this.mCenterGJK.mF32A[2] = this.mGJKShape.GetMatrix().mF32A[14];
@@ -348,7 +351,7 @@ export class CCollider extends CComponent {
     GetBoundGJK() {
         return this.mBoundGJK;
     }
-    CollisionChk(_co) {
+    CollisionChk(_co, _colTarget, _colPush) {
         return null;
     }
     Pushing(_co) {
@@ -368,6 +371,13 @@ export class CCollider extends CComponent {
     }
     CameraOutChk(_plane) {
         return null;
+    }
+    mRestitution = 0;
+    mRB = null;
+    mOneWayMap = new Map();
+    SetRestitution(_restitution = 0.5) { this.mRestitution = _restitution; }
+    GetRestitution() { return this.mRestitution; }
+    Collision(_org, _size, _tar, _push) {
     }
 }
 import CCollider_imple from "../../canvas_imple/component/CCollider.js";

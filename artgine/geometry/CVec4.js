@@ -25,4 +25,12 @@ export class CVec4 extends CFloat32 {
     get w() { return this.mF32A[3]; }
     get xyz() { return new CVec3(this.mF32A[0], this.mF32A[1], this.mF32A[2]); }
     set xyz(_val) { this.mF32A[0] = _val.mF32A[0]; this.mF32A[1] = _val.mF32A[1]; this.mF32A[2] = _val.mF32A[2]; }
+    static Vec4(_x, _y, _z, _w) {
+        gVec4.mF32A[0] = _x;
+        gVec4.mF32A[1] = _y;
+        gVec4.mF32A[2] = _z;
+        gVec4.mF32A[3] = _w;
+        return gVec4;
+    }
 }
+var gVec4 = new CVec4();

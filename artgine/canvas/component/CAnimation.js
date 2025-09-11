@@ -341,5 +341,8 @@ export class CAnimation extends CObject {
             _div.append(button);
         }
     }
+    Icon() {
+        return "bi bi-fast-forward-circle";
+    }
 }
 ;

@@ -192,6 +192,10 @@ ipcMain.handle("KeyUp", async (_event, _key) => {
             }
         }
         if (_key == "F4") {
+            if (await CCMDMgr.IsVSCodeOpen() == false) {
+                CCMDMgr.RunVSCode();
+                await CCMDMgr.Delay(2000);
+            }
             const folderPath = path.resolve(CPath.PHPC() + gAppJSON.projectPath);
             let projectName = GetProjName(gAppJSON.projectPath);
             CCMDMgr.VSCodeOpenCode(folderPath + "/" + projectName + ".ts");
@@ -462,11 +466,11 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     IStr += "const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);\n";
     IStr += "if (location.protocol == 'file:' && isElectron==false){\n";
     IStr += "	const page = (location.href.split('/').pop() || 'index.html').replace(/\\?.*$/, '');\n";
-    IStr += "	alert('Local Start Redirection!');\n";
     IStr += "	const target = new URL(page, SERVER_BASE).toString();\n";
     IStr += "	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{\n";
+    IStr += "	alert('Local Start Redirection!');\n";
     IStr += "	location.replace(target);\n";
-    IStr += "	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });\n";
+    IStr += "	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });\n";
     IStr += "}</script>\n";
     let canvasList = GetFolderCanvasFileName(CPath.PHPC() + _json.projectPath + "/Canvas");
     if (_json.appJSON.server.indexOf("web") != -1 && _json.serviceWorker.MAX_CACHE_SIZE > 0) {

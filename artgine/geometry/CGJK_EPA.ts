@@ -140,14 +140,14 @@ export class CGJKBox extends CGJKShape
     SetMatrix(_mat : CMat)
     {
         super.SetMatrix(_mat);
-        if(_mat.IsRotUnit()==false)
+        if(_mat.IsRotScaUnit()==false)
             CMath.MatInvert(this.modelMatrix,this.inversMatrix);
 	
     }
     SetMatrixDown(_mat : CMat,_pos : CVec3)
     {
         super.SetMatrixDown(_mat,_pos);
-        if(this.inversMatrix.IsRotUnit())
+        if(this.inversMatrix.IsRotScaUnit())
             this.inversMatrix.Unit();
         else
             CMath.MatInvert(this.modelMatrix,this.inversMatrix);
@@ -177,14 +177,14 @@ export class CGJKPolytope extends CGJKShape
     SetMatrix(_mat : CMat)
     {
         super.SetMatrix(_mat);
-        if(_mat.IsRotUnit()==false)
+        if(_mat.IsRotScaUnit()==false)
             CMath.MatInvert(this.modelMatrix,this.inversMatrix);
 	
     }
     SetMatrixDown(_mat : CMat,_pos : CVec3)
     {
         super.SetMatrixDown(_mat,_pos);
-        if(this.inversMatrix.IsRotUnit())
+        if(this.inversMatrix.IsRotScaUnit())
             this.inversMatrix.Unit();
         else
             CMath.MatInvert(this.modelMatrix,this.inversMatrix);

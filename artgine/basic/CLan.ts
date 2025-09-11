@@ -2,27 +2,7 @@ import {CJSON} from "./CJSON.js";
 import {CHash} from "./CHash.js";
 import { CUtil } from "./CUtil.js";
 var gLangugeMap={};
-var gLanCode = (() => {
-    // Node.js 환경 체크
-    if (CUtil.IsNode()) 
-    {
-        // Node.js 환경에서 환경변수로 언어 코드 가져오기
-        return process.env.LANG?.split('_')[0]?.toLowerCase() || 
-               process.env.LC_ALL?.split('_')[0]?.toLowerCase() || 
-               'en';
-    }
-    
-    // 웹 브라우저 환경
-    if (CUtil.IsWeb()) 
-    {
-        // navigator.language에서 언어 코드 추출
-        const language = navigator.language || navigator.languages?.[0] || 'en';
-        return language.split('-')[0].toLowerCase();
-    }
-    
-    // 기본값
-    return 'en';
-})();
+var gLanCode = CUtil.Language();
 
 
 
@@ -72,18 +52,7 @@ export class CLan
         }
         return _sub;
     }
-    //Get가져오는건 서브가 먼저다. 설정된 컨트리에서 가져옴
-    // static G(_sub : string,_defaultText="",_country : string=null)
-	// {
-    //     if(_country==null) _country=g_country;
 
-	// 	if(g_langugeMap[_country]!=null && g_langugeMap[_country][_sub]!=null)
-	// 	{
-    //         return g_langugeMap[_country][_sub];
-    //     }
-
-	// 	return _defaultText;
-	// }
     //Tag
     static Get(_sub : string,_defaultText=null)
 	{
@@ -99,16 +68,7 @@ export class CLan
 
 		return gLangugeMap[gLanCode][_sub];
 	}
-    // static Get(_text) : string
-    // {
-    //     if(g_langugeMap[g_country]==null)
-    //         g_langugeMap[g_country]={};
 
-    //     let sub=CHash.HashCode(_text);
-    //     if(g_langugeMap[g_country][sub]==null)
-    //         g_langugeMap[g_country][sub]=_text;
-    //     return g_langugeMap[g_country][sub];
-    // }
     static Map()
     {
         return gLangugeMap;

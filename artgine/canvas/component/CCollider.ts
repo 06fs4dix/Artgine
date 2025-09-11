@@ -41,7 +41,12 @@ export class CCollisionObject
 
 export class CCollider extends CComponent
 {
-
+	static eEvent=
+	{
+		None:0,
+		Trigger:1,
+		Collision:2
+	};
 	public mPaintLoad =null;
 	public mBound =new  CBound;
 	public mLayer  = "";
@@ -57,8 +62,9 @@ export class CCollider extends CComponent
 	
 	public mElevator=false;//엘리베이터인지
 	public mStairs=false;//계단인지
-	public mDynamic=true;//static은 충돌 이벤트를 처리하지 않는다.
-	public mTrigger=false;
+	public mEvent=CCollider.eEvent.Collision;
+	// public mDynamic=true;//static은 충돌 이벤트를 처리하지 않는다.
+	// public mTrigger=false;
 
 	//점프해서 한쪽 방향에서 올라가는용. 2D게임에서 사용
 	//특정 방향으로 설정시 그방향이랑 동일한 값일시 밀어내기 무시
@@ -83,19 +89,19 @@ export class CCollider extends CComponent
 	constructor();
 	constructor(_paint : CBound);
 	constructor(_paint : CPaint);
-	constructor(_paint : CBound,_2d : boolean);
-	constructor(_paint=null,_2d=false)
+	constructor(_paint : CPaint,_rb : CRigidBody);
+	constructor(_paint : CBound,_rb : CRigidBody,_2d : boolean);
+	constructor(_paint=null,_rb=null,_2d=false)
 	{
 		super();
 
-		
+		this.mRB=_rb;
 		this.m2D=_2d;
 		if(_paint !=null)
 			this.InitBound(_paint);
 		else
-		{
 			this.mBound=new CBound();
-		}
+		
 		this.mSysc=CComponent.eSysn.Collider;
 		
 		this.mBoundGJK=new CBound();
@@ -142,10 +148,10 @@ export class CCollider extends CComponent
 
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member=="mUpdateMat" || _member=="mGJK" || _member=="m_colMsg" || _member=="mPaintLoad" || 
+		if(_member=="mUpdateMat" || _member=="mGJK" || _member=="mPaintLoad" || 
 			_member=="mGJKShape" || _member=="mPushVec" || _member=="mGGI" ||
 			_member=="mBoundGJK" || _member=="mCenterGJK" || _member=="mSizeGJK" ||
-			_member=="mColTarget" || _member=="mColPush")
+			_member=="mColTarget" || _member=="mColPush" || _member=="mOneWayMap" || _member=="mRB")
 			return false;
 			
 		return super.IsShould(_member,_type);
@@ -256,6 +262,7 @@ export class CCollider extends CComponent
 		
 		this.mStartChk=false;
 		this.Start();
+		
 	}
 	SetOwner(_obj: any): void {
 		super.SetOwner(_obj);
@@ -329,8 +336,12 @@ export class CCollider extends CComponent
 	}
 	
 	//SetDamping(_damping:number){this.m_damping = _damping;}
-	SetDynamic(_dynamic:boolean){this.mDynamic = _dynamic;}
-	GetDynamic(){	return this.mDynamic;	}
+	//SetDynamic(_dynamic:boolean){this.mDynamic = _dynamic;}
+	//GetDynamic(){	return this.mDynamic;	}
+	SetEvent(_event)
+	{
+		this.mEvent=_event;
+	}
 	
 	SetLayer(_key : string)	
 	{
@@ -347,8 +358,8 @@ export class CCollider extends CComponent
 	// }
 	GetElevator()	{	return this.mElevator;	}
 	SetElevator(_elevator:boolean){ this.mElevator = _elevator;}
-	GetTrigger()	{	return this.mTrigger;	}
-	SetTrigger(_enable:boolean){ this.mTrigger = _enable;}
+	// GetTrigger()	{	return this.mTrigger;	}
+	// SetTrigger(_enable:boolean){ this.mTrigger = _enable;}
 
 	GetStairs()	{	return this.mStairs;	}
 	SetStairs(_stairs:boolean){ this.mStairs = _stairs;}
@@ -489,7 +500,7 @@ export class CCollider extends CComponent
 
 			
 		}
-		else if(this.mGJKShape.GetMatrix().IsRotUnit())
+		else if(this.mGJKShape.GetMatrix().IsRotScaUnit())
 		{
 			this.mCenterGJK.mF32A[0]=this.mGJKShape.GetMatrix().mF32A[12];
 			this.mCenterGJK.mF32A[1]=this.mGJKShape.GetMatrix().mF32A[13];
@@ -565,7 +576,7 @@ export class CCollider extends CComponent
 	}
 	//GetLMat() {	return this.m_mat;	}
 	
-	CollisionChk( _co : CCollider) : CVec3
+	CollisionChk( _co : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
 	{
 		return null;
 	}
@@ -597,10 +608,25 @@ export class CCollider extends CComponent
 	{
 		return null;
 	}
+	protected mRestitution = 0;
+	
+	mRB : CRigidBody=null;
+	mOneWayMap=new Map<any,number>();
+	
+	SetRestitution(_restitution:number=0.5) {this.mRestitution = _restitution;}
+	GetRestitution(){return this.mRestitution;}
+	Collision(_org : CCollider,_size : number,_tar : Array<CCollider>,_push : Array<CVec3>)
+	{
+		
+	}
 	
 }
 import CCollider_imple from "../../canvas_imple/component/CCollider.js";
 import CStage from "../../../proj/2D/Maze/CStage.js";
+import { CRigidBody } from "./CRigidBody.js";
+import { CPhysics } from "./CPhysics.js";
+import { CUtilMath } from "../../geometry/CUtilMath.js";
+import { CForce } from "./CForce.js";
 
 
 

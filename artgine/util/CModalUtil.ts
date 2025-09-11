@@ -983,8 +983,9 @@ export class CMonacoViewer extends CModal {
         
         super();
         this.SetHeader(_fileName);
-        this.SetTitle(CModal.eTitle.TextClose);
+        this.SetTitle(CModal.eTitle.TextFullClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
+        this.SetResize(true);
         this.SetSize(800, 600);
         this.mGithub=_github;
         
@@ -1063,4 +1064,52 @@ export class CMonacoViewer extends CModal {
         return this.mEditor.getModel().setValue(_source);
     }
     
+}
+
+
+export class CMDViewer extends CModal 
+{
+    constructor(_file)
+    {
+        super();
+        //let id=this.Key();
+        this.SetTitle(CModal.eTitle.TextFullClose);
+        //this.SetResize(true);
+        this.SetHeader("README");
+        
+
+        let lan=CUtil.Language();
+
+        (async () => {
+            const lan = CUtil.Language(); // ← 건드리지 않음(그대로 사용)
+            let finalPath = _file;
+
+            const base = _file.replace(/\.md$/i, '');
+            const candidate = `${base}-${lan}.md`;
+            try {
+                const probed = await CFile.Load(candidate);
+                // 존재하면 그걸 사용, 아니면 원본 유지
+                if (probed) finalPath = candidate;
+            } catch {
+                // 로드 실패 → 원본(_file)로 fallback
+            }
+            
+
+            //this.mBody.innerHTML = '';
+            //this.mBody.append(await CUtilWeb.MDReader(finalPath));
+            this.SetBody(await CUtilWeb.MDReader(finalPath));
+            this.Open();
+        })().catch(err => console.error('CMDViewer init error:', err));
+
+        // let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
+        //     if(buf==null || lan=="en")  lan="";
+        //     else lan="-"+lan;
+        //     this.mBody.innerHTML="";
+        //     this.mBody.append(await CUtilWeb.MDReader("../../README"+lan+".md"));
+        // });
+
+
+
+    }
+
 }

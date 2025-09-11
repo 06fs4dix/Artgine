@@ -420,7 +420,7 @@ export class CMath
 		if(pa_out==null)
 			pa_out=new CVec3();
 		else if(pa_vec==_out)	CAlert.E("V3MulMatNormal error");
-		if(pa_mat.IsRotUnit())
+		if(pa_mat.IsRotScaUnit())
 			pa_out.Import(_out);
 		
 
@@ -669,7 +669,7 @@ export class CMath
 	}
 
 	
-	static MatRotExport(pa_viewMat : CMat,pa_x:boolean,pa_y:boolean,pa_z:boolean)
+	static MatDecomposeRot(pa_viewMat : CMat,pa_x:boolean,pa_y:boolean,pa_z:boolean)
 	{
 		var pa_outMat=new CMat();
 		pa_outMat.SetUnit(false);

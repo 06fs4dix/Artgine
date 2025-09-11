@@ -168,7 +168,7 @@ export class CVTile extends CVTileSurfacePattern
 {
 	//mKey="";
 	mVInfo=0;//voxel info
-	mCollider : number = CVoxel.eColliderEvent.Null;
+	mCollider : number = CCollider.eEvent.None;
 	//mPattern=new Array<CVTileSurface>();
 	
 	constructor()
@@ -180,7 +180,7 @@ export class CVTile extends CVTileSurfacePattern
 		super.EditForm(_pointer, _div, _input);
 		if(_pointer.member == "mCollider") {
 			let textArr = [], valArr = [];
-			for(let [text, val] of Object.entries(CVoxel.eColliderEvent)) {
+			for(let [text, val] of Object.entries(CCollider.eEvent)) {
 				textArr.push(text);
 				valArr.push(val);
 			}
@@ -225,13 +225,42 @@ CClass.Push(CVTileRole);
 CClass.Push(CVTileSurfacePattern);
 CClass.Push(CVTileSurface);
 CClass.Push(CVTileMold);
+export class  CColliderVoxel extends CCollider
+{
+	constructor(_voxel : CVoxel)
+	{
+		super();
+		this.mVoxel=_voxel;
+
+		
+        this.mBound.mMax.x=this.mVoxel.mSize*this.mVoxel.mCount.x;
+		this.mBound.mMax.y=this.mVoxel.mSize*this.mVoxel.mCount.y;
+		this.mBound.mMax.z=this.mVoxel.mSize*this.mVoxel.mCount.z;
+        this.mBound.mMin.Zero();
+		this.mBound.mType=CBound.eType.Voxel;
+	}
+	mVoxel : CVoxel;
+	mResults=new CArray<CCIndex>();
+	mBoundDummy=new CBound();
+	override IsShould(_member: string, _type: CObject.eShould) 
+	{
+		if(_member=="mVoxel" || _member=="mResults" || _member=="mBoundDummy" )
+			return false;
+			
+		return super.IsShould(_member,_type);
+	}
+	CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
+    {
+		return false;
+    }
+}
 export class CVoxel extends CSubject
 {
-	static eColliderEvent={
-		Null:0,
-		Collision:1,
-		Trigger:2,
-	};
+	// static eColliderEvent={
+	// 	Null:0,
+	// 	Collision:1,
+	// 	Trigger:2,
+	// };
     mAtlas : CAtlas=new CAtlas();
     mVInfo : Uint8Array=null;
 	
@@ -350,7 +379,7 @@ export class CVoxel extends CSubject
 
 		this.mPlane.length=0;
 		this.RemoveComps(CPaintVoxel);
-		this.RemoveComps(CCollider);
+		this.RemoveComps(CColliderVoxel);
 		this.RemoveComps(CNavigation);
 
 		this.mSize=_size;
@@ -463,12 +492,10 @@ export class CVoxel extends CSubject
 				break;
 		}
 	}
-	CollisionChk(_tar : CCollider,_cList : Array<CCollider>)
-	{
-		
-
-
-	}
+	// CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
+	// {
+	// 	return false;
+	// }
 
 	PickBox(_ray : CRay) : CCIndexPick
 	{
@@ -479,7 +506,7 @@ export class CVoxel extends CSubject
 	{
 		var copy=super.Export(_copy,_resetKey);
 		copy.DetachComp(CPaintVoxel);
-		copy.DetachComp(CCollider);
+		copy.DetachComp(CColliderVoxel);
 		copy.DetachComp(CNavigation);
 		// copy.ResetOctree();
 		return copy;
@@ -492,7 +519,7 @@ export class CVoxel extends CSubject
 		let dkey=this.mKey;
 		super.Import(_target);
 		this.DetachComp(CPaintVoxel);
-		this.DetachComp(CCollider);
+		this.DetachComp(CColliderVoxel);
 		this.DetachComp(CNavigation);
 		this.mFrame=dfw;
 		this.mKey=dkey;
@@ -500,7 +527,7 @@ export class CVoxel extends CSubject
 	}
 	public ExportJSON(): { class: string; } {
 		let ptVoxel = this.DetachComp(CPaintVoxel);
-		let col = this.DetachComp(CCollider);
+		let col = this.DetachComp(CColliderVoxel);
 		let navi = this.DetachComp(CNavigation);
 		let json = super.ExportJSON();
 		if(ptVoxel) this.PushComp(ptVoxel);
@@ -831,4 +858,5 @@ export class CVoxelLightSpace
 
 
 import CVoxel_imple from "../../canvas_imple/subject/CVoxel.js";
+import { CMat } from "../../geometry/CMat.js";
 CVoxel_imple();

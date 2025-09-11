@@ -716,8 +716,9 @@ export class CMonacoViewer extends CModal {
     constructor(_source, _fileName, _github = false) {
         super();
         this.SetHeader(_fileName);
-        this.SetTitle(CModal.eTitle.TextClose);
+        this.SetTitle(CModal.eTitle.TextFullClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
+        this.SetResize(true);
         this.SetSize(800, 600);
         this.mGithub = _github;
         let id = this.Key() + "_editer";
@@ -773,5 +774,28 @@ export class CMonacoViewer extends CModal {
     async SetSource(_source) {
         _source = await CUtilWeb.TSImport(_source, true, this.mGithub);
         return this.mEditor.getModel().setValue(_source);
+    }
+}
+export class CMDViewer extends CModal {
+    constructor(_file) {
+        super();
+        this.SetTitle(CModal.eTitle.TextFullClose);
+        this.SetHeader("README");
+        let lan = CUtil.Language();
+        (async () => {
+            const lan = CUtil.Language();
+            let finalPath = _file;
+            const base = _file.replace(/\.md$/i, '');
+            const candidate = `${base}-${lan}.md`;
+            try {
+                const probed = await CFile.Load(candidate);
+                if (probed)
+                    finalPath = candidate;
+            }
+            catch {
+            }
+            this.SetBody(await CUtilWeb.MDReader(finalPath));
+            this.Open();
+        })().catch(err => console.error('CMDViewer init error:', err));
     }
 }

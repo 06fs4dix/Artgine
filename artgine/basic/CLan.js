@@ -2,18 +2,7 @@ import { CJSON } from "./CJSON.js";
 import { CHash } from "./CHash.js";
 import { CUtil } from "./CUtil.js";
 var gLangugeMap = {};
-var gLanCode = (() => {
-    if (CUtil.IsNode()) {
-        return process.env.LANG?.split('_')[0]?.toLowerCase() ||
-            process.env.LC_ALL?.split('_')[0]?.toLowerCase() ||
-            'en';
-    }
-    if (CUtil.IsWeb()) {
-        const language = navigator.language || navigator.languages?.[0] || 'en';
-        return language.split('-')[0].toLowerCase();
-    }
-    return 'en';
-})();
+var gLanCode = CUtil.Language();
 export class CLan {
     static eType = {
         "ko": "ko",

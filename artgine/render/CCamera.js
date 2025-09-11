@@ -142,7 +142,7 @@ export class CCamera extends CObject {
             this.mBillboardMat.mF32A[10] = 0;
         }
         var inMat = CMath.MatInvert(this.GetViewMat());
-        var rote = CMath.MatRotExport(inMat, true, true, true);
+        var rote = CMath.MatDecomposeRot(inMat, true, true, true);
         var rot = CMath.MatRotation(new CVec3(0, 0, 0));
         CMath.MatMul(rot, rote, this.mBillboardMat);
     }

@@ -486,10 +486,6 @@ export class CCanvas extends CObject {
         }
         return null;
     }
-    New(_obj) {
-        this.PushSub(_obj);
-        return _obj;
-    }
     PushSub(_obj) {
         let key = _obj.Key();
         let obj = this.Find(key);
