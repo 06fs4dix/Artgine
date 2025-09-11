@@ -1,5 +1,5 @@
 //Version
-const version='2025-08-21 06:44:50';
+const version='mfeoxpxp_13';
 import "../../artgine/artgine.js"
 
 //Class
@@ -44,6 +44,15 @@ import { CDomFactory } from "../../artgine/basic/CDOMFactory.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CFileViewer } from "../../artgine/util/CModalUtil.js";
+import { CFile } from "../../artgine/system/CFile.js";
+
+
+// let mdModal=new CModal("test");
+// mdModal.SetBody();
+// mdModal.SetTitle(CModal.eTitle.TextClose);
+// mdModal.Open();
+
+
 
 if(gPF.mServer!="webServer")
     CAlert.E("서버 세팅이 잘못되었습니다");
@@ -95,20 +104,7 @@ CUtil.ID("board-tab").onclick=()=>{
 };
 
 //==================================================================================================================
-
-let path=CUtilWeb.Parameter("path");
-let admin=CUtilWeb.Parameter("admin");
-if(path!=null)    CUtil.ID("file-tab").click();
-if(admin!="admin") admin="admin";
-
-
-let data=await CFecth.Exe("File/List",{path:path,admin:admin},"json") as {"list","root","path","down"};
-window["g_dirList"]=data.list;
-window["g_root"]=data.root;
-window["g_path"]=data.path;
-window["g_down"]=data.down;
 var g_contentJBox=new CModal("content_modal");
-//g_contentJBox.SetTitle(CModal.eTitle.TextMin);
 g_contentJBox.SetCloseToHide(true);
 g_contentJBox.SetBody("<img id='ImageModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' onclick='NextPhoto()'/>"+
 			"<video id='VideoModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' controls autoplay onended='NextPhoto()'></video>"+
@@ -119,6 +115,7 @@ g_contentJBox.Open(CModal.ePos.Center);
 
 
 var g_deleteJBox=new CModal("delete_modal");
+//g_deleteJBox.SetSize(400,600);
 g_deleteJBox.SetCloseToHide(true);
 g_deleteJBox.SetBody("<div id='Delete_div'/>");
 g_deleteJBox.Hide();
@@ -148,12 +145,209 @@ g_musicJBox.Open(CModal.ePos.Center);
 
 
 
-// if(CSing.PrivateKey()!=null || CUtilWeb.Parameter("admin")!=null){}
-// else
-// {
-//     CUtilWeb.PageCall("./SamplePage.jsp");
-// }
-let g_openList=new Set<string>();
+let index=0;
+var folderList={"<>":"ul","class":"list-group","html":[]};
+var fileList={"<>":"ul","class":"list-group","html":[]};
+function DirListRefresh()
+{
+    CUtil.ID("File_div").innerHTML="";
+    CUtil.ID("Delete_div").innerHTML="";
+    folderList={"<>":"ul","class":"list-group","html":[]};
+    fileList={"<>":"ul","class":"list-group","html":[]};
+
+    if(window["g_path"]!=null && window["g_path"]!="/")
+    {
+        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-warning list-group-item-action","html":"<i class='bi bi-folder'></i> 최상위 폴더",
+            "onclick":()=>{FolderCD("/")},
+        });
+        let path=(window["g_path"] as string);
+        let pos=path.lastIndexOf("/",path.length-2);
+        let bpath=path.substr(0,pos);
+        bpath+="/";
+        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-primary list-group-item-action","html":"<i class='bi bi-folder'></i> 상위 폴더",
+            "onclick":()=>{FolderCD(bpath)},
+        });
+    }
+
+    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number}>)
+    {
+        if(fl.hidden)   continue;
+        fl.open=false;
+        fl.index=index;
+        index++;
+        
+        let name="";
+        let onclick=null;
+        if(fl.file==false)
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-folder-fill'>"+fl.name,"onclick":()=>{
+                FolderCD(window["g_path"]+fl.name+"/");
+            }});
+        }       
+        else if(fl.ext=="png" || fl.ext=="jpg" || fl.ext=="jpeg" || fl.ext=="bmp")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-folder-image'>"+fl.name,"onclick":(e)=>{
+                CUtil.ID("ImageModalSrc").hidden=false;
+                (CUtil.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
+                CUtil.ID("VideoModalSrc").hidden=true;
+                CUtil.ID("FileModalSrc").hidden=true;
+                //g_openList.add(fl.name);
+                fl.open=true;
+                RefreshOpen();
+                g_contentJBox.Show();
+                //e.target.className="list-group-item list-group-item-action list-group-item-secondary";
+            
+            }});
+        }
+        // else if(fl.ext=="ts" || fl.ext=="js" || fl.ext=="html" || fl.ext=="json")
+        // {
+        //     folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+        //         "html":"<i class='bi bi-file-earmark'>"+fl.name,"onclick":(e)=>{
+                
+
+        //         let modal=new CSourceViewer([window["g_down"]+window["g_path"]+fl.name]);
+        //         modal.Open();
+                
+        //         //e.target.className="list-group-item list-group-item-action list-group-item-secondary";
+            
+        //     }});
+        // }
+        else if(fl.ext=="mp3" || fl.ext=="ogg")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-folder-music'>"+fl.name,"onclick":()=>{
+                //g_soundList.fullPath.push();
+
+                if((CUtil.ID("soundAddChk") as HTMLInputElement).checked)
+                {
+                    g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
+                    g_soundList.name.push(fl.name);
+                    CAlert.Info(fl.name+" 추가");
+                }
+                else
+                {
+                    
+
+                    g_soundList.name.length=0;
+                    g_soundList.fullPath.length=0;
+                    g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
+                    g_soundList.name.push(fl.name);
+
+                    for(let fl2 of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
+                    {
+                        if(fl.name==fl2.name)   continue;
+                        
+                        if(fl2.ext=="mp3" || fl.ext=="ogg")
+                        {
+                            g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl2.name);
+                            g_soundList.name.push(fl2.name);
+                            
+                        }
+                    }
+                    SoundListRefresh();
+                    SoundPlay(0);
+                }
+                
+                SoundListSave();
+                fl.open=true;
+                RefreshOpen();
+                
+            }});
+        }
+        else if(fl.ext=="mp4" || fl.ext=="mov" || fl.ext=="avi")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-folder-play'>"+fl.name,"onclick":()=>{
+                
+                CUtil.ID("ImageModalSrc").hidden=true;
+                (CUtil.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
+                CUtil.ID("VideoModalSrc").hidden=false;
+                CUtil.ID("FileModalSrc").hidden=true;
+                fl.open=true;
+                RefreshOpen();
+                g_contentJBox.Show();
+                
+            
+            }});
+        }
+        else if(fl.ext=="soundlist")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-flower1'>"+fl.name,"onclick":()=>{
+                var oReq = new XMLHttpRequest();
+                oReq.onload = (e)=> 
+                {
+                    if (oReq.status != 200) 
+                    {
+                        CAlert.E("XMLHttpRequest error code" + oReq.status);
+                    }
+                    else
+                    {
+                        g_soundList=oReq.response;
+                        SoundListSave();
+                        CAlert.Info("ListUp!");
+                    }
+                }
+                oReq.open("GET", window["g_down"]+window["g_path"]+fl.name);
+                oReq.responseType = "json";
+                oReq.send();
+            }});
+        }
+        else
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
+                
+                CUtil.ID("ImageModalSrc").hidden=true;
+                (CUtil.ID("FileModalSrc") as HTMLLinkElement).href=window["g_down"]+window["g_path"]+fl.name;
+                CUtil.ID("VideoModalSrc").hidden=true;
+                CUtil.ID("FileModalSrc").hidden=false;
+
+                g_contentJBox.Show();
+            
+            }});
+        }
+        
+        if(fl.file==true)
+        {
+            fileList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
+                Delete(fl.name);
+            }});
+        }
+
+    }
+
+    CUtil.ID("File_div").append(CDomFactory.DataToDom(folderList));
+    CUtil.ID("Delete_div").append(CDomFactory.DataToDom(fileList));
+}
+let path=CUtilWeb.Parameter("path");
+let admin=CUtilWeb.Parameter("admin");
+
+if(admin!="admin") admin="admin";
+
+window["g_dirList"]=CStorage.Get(path==null?"root":path);
+if(window["g_dirList"]!=null)   
+{
+    window["g_dirList"]=JSON.parse(window["g_dirList"]);
+    DirListRefresh();
+}
+
+
+CFecth.Exe("File/List",{path:path,admin:admin},"json").then((data : {"list","root","path","down"})=>{
+    CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
+    window["g_dirList"]=data.list;
+    window["g_root"]=data.root;
+    window["g_path"]=data.path;
+    window["g_down"]=data.down;
+    DirListRefresh();
+});
+
+
+
+
 let g_soundList={"fullPath":[],"name":[]};
 let SoundListStr=CStorage.Get("SoundList");
 if(SoundListStr!=null)
@@ -201,176 +395,13 @@ function Redirection(_multi : boolean)
 window["Redirection"]=Redirection;
 
 //var pageAction=CWebUtil.Parameter("pageAction","");
-var folderList={"<>":"ul","class":"list-group","html":[]};
-var fileList={"<>":"ul","class":"list-group","html":[]};
 
-if(window["g_path"]!="/")
-{
-    folderList.html.push({"<>":"li","class":"list-group-item list-group-item-warning list-group-item-action","html":"<i class='bi bi-folder'></i> 최상위 폴더",
-        "onclick":()=>{FolderCD("/")},
-    });
-    let path=(window["g_path"] as string);
-    let pos=path.lastIndexOf("/",path.length-2);
-    let bpath=path.substr(0,pos);
-    bpath+="/";
-    folderList.html.push({"<>":"li","class":"list-group-item list-group-item-primary list-group-item-action","html":"<i class='bi bi-folder'></i> 상위 폴더",
-        "onclick":()=>{FolderCD(bpath)},
-    });
-}
-let index=0;
-for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number}>)
-{
-    if(fl.hidden)   continue;
-    fl.open=false;
-    fl.index=index;
-    index++;
-    
-    let name="";
-    let onclick=null;
-    if(fl.file==false)
-    {
-        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-folder-fill'>"+fl.name,"onclick":()=>{
-            FolderCD(window["g_path"]+fl.name+"/");
-        }});
-    }       
-    else if(fl.ext=="png" || fl.ext=="jpg" || fl.ext=="jpeg" || fl.ext=="bmp")
-    {
-        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-folder-image'>"+fl.name,"onclick":(e)=>{
-            CUtil.ID("ImageModalSrc").hidden=false;
-            (CUtil.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
-            CUtil.ID("VideoModalSrc").hidden=true;
-            CUtil.ID("FileModalSrc").hidden=true;
-            //g_openList.add(fl.name);
-            fl.open=true;
-            RefreshOpen();
-            g_contentJBox.Show();
-            //e.target.className="list-group-item list-group-item-action list-group-item-secondary";
-         
-        }});
-    }
-    // else if(fl.ext=="ts" || fl.ext=="js" || fl.ext=="html" || fl.ext=="json")
-    // {
-    //     folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-    //         "html":"<i class='bi bi-file-earmark'>"+fl.name,"onclick":(e)=>{
-            
 
-    //         let modal=new CSourceViewer([window["g_down"]+window["g_path"]+fl.name]);
-    //         modal.Open();
-            
-    //         //e.target.className="list-group-item list-group-item-action list-group-item-secondary";
-         
-    //     }});
-    // }
-    else if(fl.ext=="mp3" || fl.ext=="ogg")
-    {
-        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-folder-music'>"+fl.name,"onclick":()=>{
-            //g_soundList.fullPath.push();
 
-            if((CUtil.ID("soundAddChk") as HTMLInputElement).checked)
-            {
-                g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
-                g_soundList.name.push(fl.name);
-                CAlert.Info(fl.name+" 추가");
-            }
-            else
-            {
-                
 
-                g_soundList.name.length=0;
-                g_soundList.fullPath.length=0;
-                g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
-                g_soundList.name.push(fl.name);
 
-                for(let fl2 of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
-                {
-                    if(fl.name==fl2.name)   continue;
-                    
-                    if(fl2.ext=="mp3" || fl.ext=="ogg")
-                    {
-                        g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl2.name);
-                        g_soundList.name.push(fl2.name);
-                        
-                    }
-                }
-                SoundListRefresh();
-                SoundPlay(0);
-            }
-            
-            SoundListSave();
-            fl.open=true;
-            RefreshOpen();
-            
-        }});
-    }
-    else if(fl.ext=="mp4" || fl.ext=="mov" || fl.ext=="avi")
-    {
-        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-folder-play'>"+fl.name,"onclick":()=>{
-            
-            CUtil.ID("ImageModalSrc").hidden=true;
-            (CUtil.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
-            CUtil.ID("VideoModalSrc").hidden=false;
-            CUtil.ID("FileModalSrc").hidden=true;
-            fl.open=true;
-            RefreshOpen();
-            g_contentJBox.Show();
-            
-        
-        }});
-    }
-    else if(fl.ext=="soundlist")
-    {
-        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-flower1'>"+fl.name,"onclick":()=>{
-            var oReq = new XMLHttpRequest();
-			oReq.onload = (e)=> 
-			{
-				if (oReq.status != 200) 
-				{
-					CAlert.E("XMLHttpRequest error code" + oReq.status);
-				}
-				else
-				{
-					g_soundList=oReq.response;
-                    SoundListSave();
-                    CAlert.Info("ListUp!");
-				}
-			}
-			oReq.open("GET", window["g_down"]+window["g_path"]+fl.name);
-			oReq.responseType = "json";
-			oReq.send();
-        }});
-    }
-    else
-    {
-        folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
-            
-            CUtil.ID("ImageModalSrc").hidden=true;
-            (CUtil.ID("FileModalSrc") as HTMLLinkElement).href=window["g_down"]+window["g_path"]+fl.name;
-            CUtil.ID("VideoModalSrc").hidden=true;
-            CUtil.ID("FileModalSrc").hidden=false;
 
-            g_contentJBox.Show();
-        
-        }});
-    }
-    
-    if(fl.file==true)
-    {
-        fileList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
-            Delete(fl.name);
-        }});
-    }
 
-}
-
-CUtil.ID("File_div").append(CDomFactory.DataToDom(folderList));
-CUtil.ID("Delete_div").append(CDomFactory.DataToDom(fileList));
 //==========================================================
 
 
@@ -449,32 +480,34 @@ function Delete(_file)
     Redirection(false);
 }
 window["Delete"]=Delete;
-async function Upload()
-{
-    CAlert.E("막아둠");return;
-    var input=document.createElement('input');
-    input.type="file";
-    input.accept=".json";
-    input.click();
+// async function Upload()
+// {
+//     CAlert.E("막아둠");return;
+//     var input=document.createElement('input');
+//     input.type="file";
+//     input.accept=".json";
+//     input.click();
 
-    await new Promise<void>((resolve) => {
-        input.onchange=async(e)=>{
-            var fi=e.target as HTMLInputElement;
-            let _str = await CUtil.FileToStr(fi.files[0]) as string|object;
+//     await new Promise<void>((resolve) => {
+//         input.onchange=async(e)=>{
+//             var fi=e.target as HTMLInputElement;
+//             let _str = await CUtil.FileToStr(fi.files[0]) as string|object;
            
-            resolve();
-        };
-        //파일 선택 취소
-        input.addEventListener('cancel', () => {
-            resolve();
-        });
-    });
-}
+//             resolve();
+//         };
+//         //파일 선택 취소
+//         input.addEventListener('cancel', () => {
+//             resolve();
+//         });
+//     });
+// }
 
-window["Upload"]=Upload;
+// window["Upload"]=Upload;
 
 
 CUtil.ID("uploadBtn").onchange=async (e)=>{
+
+    CAlert.E("막아둠");return;
     var fi=e.target as HTMLInputElement;
     let json={data:[],name:[],path:window["g_root"]+window["g_path"]};
     for(let i=0;i<fi.files.length;++i)
@@ -862,6 +895,44 @@ function NextPhoto()
     CAlert.Info("더 이상 없습니다.");
 }
 window["NextPhoto"]=NextPhoto;
+
+
+
+
+
+
+let lan=CUtil.Language();
+let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
+    if(buf==null || lan=="en")  lan="";
+    else lan="-"+lan;
+    CUtil.ID("main").innerHTML="";
+    CUtil.ID("main").append(await CUtilWeb.MDReader("../../README"+lan+".md"));
+});
+
+// CUtil.ID("main").innerHTML="";
+//     CUtil.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:09:19';
+const version = 'mffeu6vk_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -41,8 +41,9 @@ import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgi
 import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
 import { CShadowBaker } from "https://06fs4dix.github.io/Artgine/plugin/ShadowBake/ShadowBake.js";
-import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CBGAttachButton, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
 var skyTexKey = ["Res/skybox/right.jpg", "Res/skybox/left.jpg", "Res/skybox/bottom.jpg", "Res/skybox/top.jpg", "Res/skybox/front.jpg", "Res/skybox/back.jpg"];
 var skyTexList = [];
 await gAtl.Frame().Load().Load(skyTexKey);
@@ -296,7 +297,7 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred", "DeferredSingle(HafeLambert+P
     let L = Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0, 1, 0));
     let lig = new CLight();
-    lig.SetShadow("test", 0);
+    lig.SetShadow("test", 0, 100);
     lig.SetDirect();
     lig.SetColor(new CVec3(1, 1, 1));
     lig.mShadowDistance = shadowDistance;
@@ -308,7 +309,7 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred", "DeferredSingle(HafeLambert+P
     pt.Shadow();
     pt.Light();
     pt.PushTag("parallax");
-    pt.PushCShaderAttr(new CShaderAttr("parallaxNormal", 0.1));
+    pt.PushCShaderAttr(new CShaderAttr("parallaxNormal", 0.01));
     back.SetSca(new CVec3(10, 0.01, 10));
     let teapot = Main.PushSub(new CSubject());
     let pt2 = teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
@@ -323,7 +324,7 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred", "DeferredMulti(None+CookTorra
     let L = Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0, 1, 0));
     let lig = new CLight();
-    lig.SetShadow("test", 0);
+    lig.SetShadow("test", 0, 100);
     lig.SetDirect();
     lig.SetColor(new CVec3(1, 1, 1));
     lig.mShadowDistance = shadowDistance;
@@ -367,9 +368,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "ShadowBake", async () =>
         await CShadowBaker.Bake(Main);
     }, 0);
 }));
-let Help = new CBGAttachButton("DevToolModal", 101, new CVec2(320, 240));
+let mdviewer = new CMDViewer("README.md");
+let Help = new CBGAttachButton("DevToolModal", 101, new CVec2(320, 320));
 Help.SetTitleText("Help");
-Help.SetContent(`
-<div>
-타이틀바 메뉴를 누르면 여러가지 그림자 구현 방식을 확인할수 있습니다
-</div>`);
+Help.SetContent(await CUtilWeb.MDReader("README.md"));

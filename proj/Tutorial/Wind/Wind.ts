@@ -1,5 +1,5 @@
 //Version
-const version='mf7foteo_5';
+const version='mffeu6vk_13';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -48,6 +48,7 @@ import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1
 import { CLoader, CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
 
 
 
@@ -177,6 +178,16 @@ CConfirm.List("Select Init!", [
         Init3D();
     }
 ], ["2D", "3D"]);
+
+
+
+let test=CUtilWeb.MDReader("../../README.md");
+
+
+
+
+
+
 
 
 

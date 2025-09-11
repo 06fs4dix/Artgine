@@ -10,7 +10,8 @@
     "mXR": false,
     "mDeveloper": true,
     "mIAuto": true,
-    "mWASM": false
+    "mWASM": false,
+    "mCanvas": ""
   },
   "pluging": [],
   "includes": {
@@ -26,6 +27,10 @@
     "colorpicker": false,
     "jquery": false,
     "summernote": false,
-    "jsoneditor": false
+    "jsoneditor": false,
+    "MonacoEditor": true,
+    "tone": false,
+    "soundfont": false,
+    "toastui": false
   }
 }

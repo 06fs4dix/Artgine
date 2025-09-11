@@ -7,9 +7,6 @@
         --sab: env(safe-area-inset-bottom);
         --sal: env(safe-area-inset-left);
     }
-    html, body {
-        overflow: hidden;
-    }
 </style>
 <script>
     const loadingCard = document.createElement('div');
@@ -68,6 +65,17 @@
 <script src='../../artgine/external/legacy/toastui/toastui-editor-all.min.js'></script>
 <script type='text/javascript' src='../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
 <link rel='manifest' href='./Home.webmanifest'/>
+<script>
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Home/Home.html';
+const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
+if (location.protocol == 'file:' && isElectron==false){
+	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
+	alert('Local Start Redirection!');
+	const target = new URL(page, SERVER_BASE).toString();
+	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	location.replace(target);
+	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });
+}</script>
 
 <!--Manifest-->
 <!--EntryPoint-->
@@ -93,7 +101,7 @@
     });
 </script>
 <!-- 탭 네비게이션 -->
-<div class="container vh-100 d-flex flex-column p-0" >
+<div class="container vh-100 d-flex flex-column p-0 pb-4" >
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button"
@@ -102,10 +110,6 @@
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab"
             aria-controls="board" aria-selected="false" data-en="Board">보드</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="project-tab" data-bs-toggle="tab" data-bs-target="#project" type="button"
-            role="tab" aria-controls="project" aria-selected="false" data-en="Project">프로젝트</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab"
@@ -129,153 +133,10 @@
     <div class="tab-pane h-100 " id="board" role="tabpanel" aria-labelledby="board-tab" style="overflow-x: hidden;">
         
     </div>
-    <div class="tab-pane overflow-auto" id="project" role="tabpanel" aria-labelledby="project-tab" >
-        
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Canvas" aria-expanded="true">
-                    Tutorial/Canvas
-                </button>
-            </div>
-            <div id="Tutorial/Canvas" class="collapse show">
-                <div class="card-body">
-                    <p data-en="Sample showing basic canvas structure">기본적인 캔버스 구조를 볼수있는 샘플</p>
-                    <p data-en="Provides tutorial">튜토리얼을 제공합니다<p>
-                    <a href="../Tutorial/Canvas/Canvas.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Animation" aria-expanded="true">
-                    Tutorial/Animation
-                </button>
-            </div>
-            <div id="Tutorial/Animation" class="collapse">
-                <div class="card-body">
-                    <p data-en="You can see various animation samples">각종 애니메이션 샘플을 볼수있습니다</p>
-                    <a href="../Tutorial/Animation/Animation.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Collusion" aria-expanded="true">
-                    Tutorial/Collusion
-                </button>
-            </div>
-            <div id="Tutorial/Collusion" class="collapse">
-                <div class="card-body">
-                    <p data-en="You can see collision handling">충돌 처리 볼수 있습니다</p>
-                    <a href="../Tutorial/Collusion/Collusion.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Light" aria-expanded="true">
-                    Tutorial/Light
-                </button>
-            </div>
-            <div id="Tutorial/Light" class="collapse">
-                <div class="card-body">
-                    <p data-en="2D light processing">2D 빛 처리</p>
-                    <a href="../Tutorial/Light/Light.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Wind" aria-expanded="true">
-                    Tutorial/Wind
-                </button>
-            </div>
-            <div id="Tutorial/Wind" class="collapse">
-                <div class="card-body">
-                    <p data-en="Wind processing">바람 처리</p>
-                    <a href="../Tutorial/Wind/Wind.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/ShaderEditer" aria-expanded="true">
-                    Tutorial/ShaderEditer
-                </button>
-            </div>
-            <div id="Tutorial/ShaderEditer" class="collapse">
-                <div class="card-body">
-                    <p data-en="Real-time shader compilation">실시간 쉐이더 컴파일</p>
-                    <a href="../Tutorial/ShaderEditer/ShaderEditer.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/3DSample" aria-expanded="true">
-                    Tutorial/3DSample
-                </button>
-            </div>
-            <div id="Tutorial/3DSample" class="collapse">
-                <div class="card-body">
-                    <p data-en="3D RPMgr usage">3D RPMgr 사용법</p>
-                    <a href="../Tutorial/3DSample/3DSample.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Plugin" aria-expanded="true">
-                    Tutorial/Plugin
-                </button>
-            </div>
-            <div id="Tutorial/Plugin" class="collapse">
-                <div class="card-body">
-                    <p data-en="Plugin usage example">플러그인 사용 예제</p>
-                    <a href="../Tutorial/Plugin/Plugin.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/IKSample" aria-expanded="true">
-                    Tutorial/IKSample
-                </button>
-            </div>
-            <div id="Tutorial/IKSample" class="collapse">
-                <div class="card-body">
-                    <p data-en="IK sample">IK 샘플</p>
-                    <a href="../Tutorial/IKSample/IKSample.html">Link</a>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <button class="btn btn-link text-decoration-none" data-bs-toggle="collapse"
-                    data-bs-target="#Tutorial/Renderer" aria-expanded="true">
-                    Tutorial/Renderer
-                </button>
-            </div>
-            <div id="Tutorial/Renderer" class="collapse">
-                <div class="card-body">
-                    <p data-en="Manual rendering">수동 렌더링</p>
-                    <a href="../Tutorial/Renderer/Renderer.html">Link</a>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="tab-pane h-100" id="file" role="tabpanel" aria-labelledby="file-tab">
         <div id='Menu_div'></div>
 	    <div id='File_div'></div>
+        <br>
     </div>
 </div>
 </div>

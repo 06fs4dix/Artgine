@@ -1,12 +1,12 @@
 //Version
-const version='mf2jnnjd_2';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
+const version='mfeoxpxp_18';
+import "../../../artgine/artgine.js"
 
 //Class
-import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import {CClass} from "../../../artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import {CPreferences} from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -19,35 +19,37 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
+gPF.mGitHub = false;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
-import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([],"");
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint2D, CPaintHTML } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CAnimation, CClipCoodi, CClipImg, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
-import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
-import { CUtilObj } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtilObj.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
-import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
-import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CPaintTrail } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaintTrail.js";
-import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import {CObject} from "../../../artgine/basic/CObject.js"
+import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
+import { CPaint2D, CPaintHTML } from "../../../artgine/canvas/component/paint/CPaint2D.js";
+import { CAnimation, CClipCoodi, CClipImg, CClipMesh } from "../../../artgine/canvas/component/CAnimation.js";
+import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
+import { CFrame } from "../../../artgine/util/CFrame.js";
+import { CInput } from "../../../artgine/system/CInput.js";
+import { CUtilObj } from "../../../artgine/basic/CUtilObj.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CAlert } from "../../../artgine/basic/CAlert.js";
+import { CModal } from "../../../artgine/basic/CModal.js";
+import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
+import { CPaintTrail } from "../../../artgine/canvas/component/paint/CPaintTrail.js";
+import { CDomFactory } from "../../../artgine/basic/CDOMFactory.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
 gAtl.NewCanvas("Main");
 gAtl.Canvas("Main").SetCameraKey("2D");
-let sub=gAtl.Canvas("Main").Push(new CSubject());
+let sub=gAtl.Canvas("Main").PushSub(new CSubject());
 sub.PushComp(new CPaint2D());
 
 
@@ -119,7 +121,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
 //====================================================================
 
 // YSort / YSort
-sub=gAtl.Canvas("Main").Push(new CSubject());
+sub=gAtl.Canvas("Main").PushSub(new CSubject());
 sub.SetPos(new CVec3(200,0,0));
 let pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetYSort(true);
@@ -130,18 +132,18 @@ pth=sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center b
 </div>`),null,null));
 pth.SetPos(new CVec3(0,200));
 
-sub=gAtl.Canvas("Main").Push(new CSubject());
+sub=gAtl.Canvas("Main").PushSub(new CSubject());
 sub.SetPos(new CVec3(220,40,0));
 pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetYSort(true);
 
-sub=gAtl.Canvas("Main").Push(new CSubject());
+sub=gAtl.Canvas("Main").PushSub(new CSubject());
 sub.SetPos(new CVec3(240,80,0));
 pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetYSort(true);
 
 // Pivot change / 피벗 변경
-sub=gAtl.Canvas("Main").Push(new CSubject());
+sub=gAtl.Canvas("Main").PushSub(new CSubject());
 sub.SetPos(new CVec3(400,0,0));
 pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
 pt.SetPivot(new CVec3(1,1,1));
@@ -154,7 +156,7 @@ pth.SetPos(new CVec3(0,200));
 
 
 
-sub=gAtl.Canvas("Main").Push(new CSubject());
+sub=gAtl.Canvas("Main").PushSub(new CSubject());
 sub.SetPos(new CVec3(-200,0,0));
 let pt3d=sub.PushComp(new CPaint3D("Res/teapot/teapot.gltf"));
 //gAtl.Frame().Load().Load("Res/teapot/teapot.FBX");
@@ -167,3 +169,5 @@ pth=sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class="text-center b
   3D 애니메이션<br>↓
 </div>`),null,null));
 pth.SetPos(new CVec3(0,200));
+
+

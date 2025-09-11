@@ -10,7 +10,8 @@
     "mXR": false,
     "mDeveloper": true,
     "mIAuto": true,
-    "mWASM": false
+    "mWASM": true,
+    "mCanvas": ""
   },
   "pluging": [],
   "includes": {
@@ -27,5 +28,8 @@
     "jquery": false,
     "summernote": false,
     "jsoneditor": false
+  },
+  "dependencies": {
+    "Rapier": 1
   }
 }

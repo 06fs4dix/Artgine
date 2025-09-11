@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mfdjvc2e_8';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,14 +19,18 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
-gPF.mServer = 'local';
+gPF.mCanvas = "";
+gPF.mServer = 'webServer';
+gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json']);
+await gAtl.Init(['Main.json'],"");
 var Main = gAtl.Canvas('Main.json');
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPointimport {CBlackBoardRef, CObject} from "../../../artgine/basic/CObject.js"
 import { CConfirm } from "../../../artgine/basic/CModal.js";
@@ -59,31 +63,31 @@ let naniMgr=new CNaviMgr();
 let tile=new CVTile();
 tile.mVInfo=1;
 tile.mPattern.push(new CVTileSurface(1));
-tile.mCollider=CVoxel.eColliderEvent.Null;
+tile.mCollider=CCollider.eEvent.None;
 gVoxel.PushTile(tile);
 
 tile=new CVTile();
 tile.mVInfo=2;
 tile.mPattern.push(new CVTileSurface(2));
-tile.mCollider=CVoxel.eColliderEvent.Collision;
+tile.mCollider=CCollider.eEvent.Collision;
 gVoxel.PushTile(tile);
 
 tile=new CVTile();
 tile.mVInfo=3;
 tile.mPattern.push(new CVTileSurface(3));
-tile.mCollider=CVoxel.eColliderEvent.Collision;
+tile.mCollider=CCollider.eEvent.Collision;
 gVoxel.PushTile(tile);
 
 tile=new CVTile();
 tile.mVInfo=4;
 tile.mPattern.push(new CVTileSurface(4));
-tile.mCollider=CVoxel.eColliderEvent.Collision;
+tile.mCollider=CCollider.eEvent.Collision;
 gVoxel.PushTile(tile);
 
 tile=new CVTile();
 tile.mVInfo=5;
 tile.mPattern.push(new CVTileSurface(5));
-tile.mCollider=CVoxel.eColliderEvent.Collision;
+tile.mCollider=CCollider.eEvent.Collision;
 gVoxel.PushTile(tile);
 
 var gVoxelSub=new CVoxel();
@@ -306,3 +310,6 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
  
 });
 CAlert.Info("2D/3D 선택후 F를 누르면 A->B로 길찾기 실행<br>컨트롤 누르고 누르면 최적화 길찾기<br>3D에서 L누르면 라이팅 적용");
+
+
+

@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:09:01';
+const version = 'mffeu6vk_9';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -12,13 +12,17 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
+gPF.mWASM = true;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import { CPlugin } from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+CPlugin.PushPath('Rapier', 'https://06fs4dix.github.io/Artgine/plugin/Rapier/');
+import "https://06fs4dix.github.io/Artgine/plugin/Rapier/Rapier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init(['Main.json'], "undefined");
+await gAtl.Init(['Main.json'], "");
 var Main = gAtl.Canvas('Main.json');
 import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
@@ -35,11 +39,17 @@ import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/compon
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
+import { CRapier, CRapierCollider, CRapierRigidBody } from "https://06fs4dix.github.io/Artgine/plugin/Rapier/Rapier.js";
+import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 var gPushMode = false;
 class CControl extends CBehavior {
     mCollision = CUpdate.eType.Not;
     mPush = new CVec3();
     mSleep = 0;
+    Trigger(_org, _size, _tar) {
+        this.GetOwner().FindComp(CPaint).SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBMul));
+        this.mCollision = CUpdate.eType.Updated;
+    }
     Collision(_org, _size, _tar, _push) {
         this.GetOwner().FindComp(CPaint).SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBMul));
         this.mCollision = CUpdate.eType.Updated;
@@ -90,7 +100,7 @@ CPool.On("Box", () => {
     cl.SetLayer("basic");
     cl.PushCollisionLayer("basic");
     let rb = sub.PushComp(new CRigidBody());
-    rb.SetRestitution();
+    cl.SetRestitution();
     sub.SetSca(new CVec3(0.1, 0.1, 0.1));
     sub.PushComp(new CControl());
     return sub;
@@ -104,11 +114,25 @@ CPool.On("Sphere", () => {
     cl.PushCollisionLayer("basic");
     cl.SetBoundType(CBound.eType.Sphere);
     let rb = sub.PushComp(new CRigidBody());
-    rb.SetRestitution();
+    cl.SetRestitution();
     sub.SetSca(new CVec3(0.1, 0.1, 0.1));
     sub.PushComp(new CControl());
     return sub;
 }, CPool.ePool.Product);
+var gRapier = false;
+await CRapier.Init();
+const h = 500;
+const t = 10000;
+const hz = 10000;
+CRapier.PushCuboid(-gAtl.PF().mWidth * 0.5 - h, 0, 0, h, t, hz);
+CRapier.PushCuboid(gAtl.PF().mWidth * 0.5 + h, 0, 0, h, t, hz);
+CRapier.PushCuboid(0, -gAtl.PF().mHeight * 0.5 - h, 0, t, h, hz);
+CRapier.PushCuboid(0, gAtl.PF().mHeight * 0.5 + h, 0, t, h, hz);
+CRapier.PushCuboid(0, 0, -t, t, t, h);
+CRapier.PushCuboid(0, 0, t, t, t, h);
+gAtl.Frame().PushEvent(CEvent.eType.Update, (_delay) => {
+    CRapier.Update(_delay);
+});
 async function Init() {
     Main.Clear();
     const pushCheckbox = CUtil.IDInput('pushCheckbox');
@@ -117,20 +141,62 @@ async function Init() {
     gPushMode = pushCheckbox.checked;
     let count = Number(countInput.value);
     for (let i = 0; i < count; ++i) {
-        let type = typeSelect.value;
-        if (type == "Box_Sphere") {
-            if (Math.random() > 0.5)
-                type = "Sphere";
-            else
-                type = "Box";
+        if (gRapier) {
+            let sub = Main.PushSub(new CSubject());
+            let pt = sub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+            pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
+            let bound = new CBound();
+            bound.mMin.x = -10;
+            bound.mMin.y = -10;
+            bound.mMin.z = -10;
+            bound.mMax.x = 10;
+            bound.mMax.y = 10;
+            bound.mMax.z = 10;
+            const tick = 10000000;
+            let rrb = sub.PushComp(new CRapierRigidBody());
+            rrb.SetFreezePos(false, false, true);
+            let rcl = sub.PushComp(new CRapierCollider(pt, rrb));
+            rcl.SetFriction(0);
+            rcl.SetRestitution(1);
+            if (gPushMode) {
+                rcl.SetEvent(CCollider.eEvent.Collision);
+                rrb.SetGravity(100);
+                rcl.SetFriction(1);
+            }
+            else {
+                rcl.SetEvent(CCollider.eEvent.Trigger);
+                sub.Update = () => {
+                    let pos = sub.GetPos();
+                    let len = CMath.V3Len(pos);
+                    if (len > 1000) {
+                        let dir = CMath.V3MulFloat(CMath.V3Nor(pos), -1);
+                        rrb.Linvel(new CVec3(200 * dir.x, 200 * dir.y));
+                    }
+                };
+            }
+            sub.SetPos(new CVec3(Math.random() * 1000 - 500, Math.random() * 500 - 250));
+            sub.SetSca(new CVec3(0.1, 0.1, 0.1));
+            rrb.Impulse(new CVec3(tick * Math.random() - tick * 0.5, tick * Math.random() - tick * 0.5));
         }
-        let sub = await CPool.Product(type);
-        sub.SetPos(new CVec3(Math.random() * 1000 - 500, Math.random() * 1000 - 500));
-        if (gPushMode == false)
-            sub.FindComp(CRigidBody).SetRestitution(0);
-        else
-            sub.FindComp(CRigidBody).SetRestitution(0.5);
-        Main.PushSub(sub);
+        else {
+            let type = typeSelect.value;
+            if (type == "Box_Sphere") {
+                if (Math.random() > 0.5)
+                    type = "Sphere";
+                else
+                    type = "Box";
+            }
+            let sub = await CPool.Product(type);
+            sub.SetPos(new CVec3(Math.random() * 1000 - 500, Math.random() * 1000 - 500));
+            if (gPushMode == false) {
+                sub.FindComp(CCollider).SetEvent(CCollider.eEvent.Trigger);
+            }
+            else {
+                sub.FindComp(CCollider).SetEvent(CCollider.eEvent.Collision);
+                sub.FindComp(CCollider).SetRestitution(0.5);
+            }
+            Main.PushSub(sub);
+        }
     }
 }
 let option = new CBGAttachButton("option_btn");
@@ -143,6 +209,7 @@ option.SetContent(`
       Push
     </label>
   </div>
+ 
 
   <div class="mb-3">
     <label for="countInput" class="form-label">Count</label>
@@ -158,9 +225,17 @@ option.SetContent(`
     </select>
   </div>
 
+   <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="rapierCheckbox">
+    <label class="form-check-label" for="rapierCheckbox">
+      Rapier(Plugin)
+    </label>
+  </div>
+
     
 `);
 const pushCheckbox = CUtil.IDInput('pushCheckbox');
+const rapierCheckbox = CUtil.IDInput('rapierCheckbox');
 const countInput = CUtil.IDInput('countInput');
 const typeSelect = CUtil.IDInput('typeSelect');
 pushCheckbox.addEventListener('change', () => {
@@ -170,6 +245,10 @@ countInput.addEventListener('input', () => {
     Init();
 });
 typeSelect.addEventListener('change', () => {
+    Init();
+});
+rapierCheckbox.addEventListener('change', () => {
+    gRapier = rapierCheckbox.checked;
     Init();
 });
 Init();

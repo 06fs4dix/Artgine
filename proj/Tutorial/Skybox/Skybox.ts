@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mffeu6vk_11';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -84,6 +84,8 @@ let ptcube=sub.PushComp(new CPaintCube(cubeTex));
 ptcube.Sky(true,true,false,true,true);
 
 //ptcube.Sky();
+
+
 
 
 

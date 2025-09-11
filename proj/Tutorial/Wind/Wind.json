@@ -27,6 +27,10 @@
     "colorpicker": false,
     "jquery": false,
     "MonacoEditor": true,
-    "summernote": false
+    "summernote": false,
+    "tone": false,
+    "soundfont": false,
+    "toastui": false,
+    "md": false
   }
 }

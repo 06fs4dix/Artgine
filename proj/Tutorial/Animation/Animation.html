@@ -7,17 +7,47 @@
         --sab: env(safe-area-inset-bottom);
         --sal: env(safe-area-inset-left);
     }
-    html, body {
-        overflow: hidden;
-    }
 </style>
-<!--Include--><script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/pako-master/dist/pako.min.js'></script>
-<script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/jszip.min.js'></script>
-<script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/screenfull/screenfull.min.js'></script>
-<script src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/popper/poper.min.js'></script>
-<link rel='stylesheet' href='https://06fs4dix.github.io/Artgine/artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
-<script src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
-<link rel='stylesheet' href='https://06fs4dix.github.io/Artgine/artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+<script>
+    const loadingCard = document.createElement('div');
+    loadingCard.id = "MainLoading";
+    loadingCard.style.position = "fixed";
+    loadingCard.style.top = "0";
+    loadingCard.style.left = "0";
+    loadingCard.style.width = "100vw";
+    loadingCard.style.height = "100vh";
+    loadingCard.style.maxWidth = "none";
+    loadingCard.style.maxHeight = "none";
+    loadingCard.style.margin = "0";
+    loadingCard.style.borderRadius = "0";
+    loadingCard.style.zIndex = "9999";
+    loadingCard.style.pointerEvents = "auto";
+    loadingCard.style.backgroundColor = "#212529"; // Bootstrap dark 색상
+    loadingCard.style.display = "flex";
+    loadingCard.style.alignItems = "center";
+    loadingCard.style.justifyContent = "center";
+    loadingCard.style.color = "white";
+    loadingCard.style.fontSize = "32px";
+    
+    loadingCard.innerHTML = `
+        <div style="text-align: center;"><div>Initialization...</div></div>
+    `;
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('readystatechange', function() {
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                if (document.body)  document.body.appendChild(loadingCard);
+            }
+        });
+    }
+</script>
+<!--Include--><script type='text/javascript' src='../../../artgine/external/legacy/pako-master/dist/pako.min.js'></script>
+<script type='text/javascript' src='../../../artgine/external/legacy/jszip.min.js'></script>
+<script type='text/javascript' src='../../../artgine/external/legacy/screenfull/screenfull.min.js'></script>
+<script src='../../../artgine/external/legacy/popper/poper.min.js'></script>
+<link rel='stylesheet' href='../../../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+<script src='../../../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+<link rel='stylesheet' href='../../../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
 <script>function BootstrapSearchList(searchId, listId) {
 			const input = document.getElementById(searchId);
 			const listItems = document.querySelectorAll(`#${listId} li`);
@@ -31,8 +61,19 @@
 				});
 			});
 		}</script>
+<script type='text/javascript' src='../../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
 <link rel='manifest' href='./Animation.webmanifest'/>
-<script type='module' src='Animation.js'></script>
+<script>
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Tutorial/Animation/Animation.html';
+const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
+if (location.protocol == 'file:' && isElectron==false){
+	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
+	alert('Local Start Redirection!');
+	const target = new URL(page, SERVER_BASE).toString();
+	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	location.replace(target);
+	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });
+}</script>
 
 <!--Manifest-->
 <!--EntryPoint-->
@@ -57,3 +98,4 @@ window.addEventListener("beforeinstallprompt", (event) => {
     // });
 });
 </script>
+<script type='module' src='Animation.js'></script>

@@ -1,4 +1,4 @@
-const version = 'mf7foteo_5';
+const version = 'mffeu6vk_13';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -31,6 +31,7 @@ import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/comp
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
 let Main = gAtl.NewCanvas("Main");
 function Init2D() {
     Main.SetCameraKey("2D");
@@ -116,3 +117,4 @@ CConfirm.List("Select Init!", [
         Init3D();
     }
 ], ["2D", "3D"]);
+let test = CUtilWeb.MDReader("../../README.md");

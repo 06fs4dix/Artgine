@@ -1,4 +1,4 @@
-const version = '2025-06-24 16:18:01';
+const version = 'mf2jnnjd_2';
 import { CClass } from "../../../artgine/basic/CClass.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();

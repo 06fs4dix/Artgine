@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:09:37';
+const version = 'mffeu6vk_11';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();

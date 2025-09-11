@@ -1,0 +1,14 @@
+import { CAtelier } from "../../artgine/canvas/CAtelier.js";
+import { CColor } from "../../artgine/canvas/component/CColor.js";
+import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
+import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
+import { CVec2 } from "../../artgine/geometry/CVec2.js";
+
+
+var gAtl = new CAtelier();
+await gAtl.Init([], "");
+let Main = gAtl.NewCanvas("Main");
+const box = Main.PushSub(new CSubject());
+const paint2D = new CPaint2D(null,new CVec2(120,120));
+paint2D.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBAdd))
+box.PushComp(paint2D);
