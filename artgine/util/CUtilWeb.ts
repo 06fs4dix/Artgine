@@ -253,7 +253,7 @@ export class CUtilWeb {
 				// 로딩 중인 경우 잠깐 기다리기
 				//await new Promise(r => setTimeout(r, 100));
 				CChecker.Exe(async ()=>{
-					if(window["ts"]!=null)
+					if(window["ts"]!=null && window["ts"].transpileModule!=null)
 						return false;
 					return true;
 				});

@@ -157,7 +157,7 @@ export class CUtilWeb {
             }
             else {
                 CChecker.Exe(async () => {
-                    if (window["ts"] != null)
+                    if (window["ts"] != null && window["ts"].transpileModule != null)
                         return false;
                     return true;
                 });
