@@ -301,7 +301,7 @@ export class CCamCon extends CObject implements ICamCon
             
         }
         //CConsol.Log(this.mRotX+"/"+this.mRotY);
-        if(_delay<500)
+        if(_delay<200)
         {
             const t = Math.max(0, _delay * 0.05); // ms -> sec
 

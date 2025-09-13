@@ -1069,13 +1069,13 @@ export class CMonacoViewer extends CModal {
 
 export class CMDViewer extends CModal 
 {
-    constructor(_file)
+    constructor(_file,_title=CModal.eTitle.TextFullClose)
     {
         super();
         //let id=this.Key();
-        this.SetTitle(CModal.eTitle.TextFullClose);
+        this.SetTitle(_title);
         //this.SetResize(true);
-        this.SetHeader("README");
+        this.SetHeader(_file);
         
 
         let lan=CUtil.Language();

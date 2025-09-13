@@ -1,3 +1,4 @@
+import { CAlert } from "../basic/CAlert.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CObject } from "../basic/CObject.js";
 import { CUtil } from "../basic/CUtil.js";
@@ -102,19 +103,14 @@ export class CScript extends CObject
                 }
                 
             } catch (error) {
-                console.error(`CScript.Exe 컴파일 오류 (${_key}):`, error);
-                
-                // 더 자세한 오류 정보 출력
-                if (error instanceof Error) {
-                    console.error(`오류 메시지: ${error.message}`);
-                    console.error(`오류 스택: ${error.stack}`);
-                } else {
-                    console.error(`오류 타입: ${typeof error}`);
-                    console.error(`오류 내용:`, error);
-                }
-                
-                // 에러가 발생하면 맵에서 제거
-                
+                CAlert.E(`
+                    오류 메시지 : ${error.message}<br>
+                    오류 스택: ${error.stack}<br>
+                    오류 타입: ${typeof error}<br>
+                    오류 내용: ${error}<br>
+                `);
+
+               
                 return null;
             }
         }
@@ -222,7 +218,14 @@ export function main(_data : Array<any>)
             if(next!=null)
                 this.mActiveFun=next;
         } catch (error) {
-            console.error(`CScript.Exe 런타임 오류 (${this.mKey}.${this.mActiveFun}):`, error);
+            CAlert.E(`
+                오류 메시지 : ${error.message}<br>
+                오류 스택: ${error.stack}<br>
+                오류 타입: ${typeof error}<br>
+                오류 내용: ${error}<br>
+            `);
+            //CAlert.E(`${this.mKey}.${this.mActiveFun} <br> `+error);
+            //console.error(`CScript.Exe 런타임 오류 (${this.mKey}.${this.mActiveFun}):`, error);
             gScriptMap.set(this.mKey, null);//강제로 널해서 작동안되게
         }
     }

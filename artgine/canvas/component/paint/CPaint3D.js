@@ -202,7 +202,7 @@ export class CPaint3D extends CPaint {
     }
     Update(_delay) {
         super.Update(_delay);
-        if (CWASM.IsWASM()) {
+        if (this.mUpdateFMat == true && CWASM.IsWASM()) {
             this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
             this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
             this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
@@ -253,6 +253,8 @@ export class CPaint3D extends CPaint {
             }
             if (nodemp.mpi.mData.updateMat == CUpdate.eType.Updated)
                 nodemp.mpi.mData.updateMat = CUpdate.eType.Already;
+            else if (nodemp.mpi.mData.updateMat == CUpdate.eType.Already)
+                nodemp.mpi.mData.updateMat = CUpdate.eType.Not;
             if (nodemp.md.mChild != null)
                 nodePOff++;
             if (nodemp.md.mColleague != null)
@@ -296,8 +298,6 @@ export class CPaint3D extends CPaint {
         while (node.Size() != nodeOff) {
             let nodemp = node.Find(nodeOff);
             this.RenderMesh(_vf, nodemp, barr, nodeOff);
-            if (nodemp.mpi.mData.updateMat == CUpdate.eType.Updated)
-                nodemp.mpi.mData.updateMat = CUpdate.eType.Already;
             if (nodemp.md.mChild != null)
                 nodePOff++;
             if (nodemp.md.mColleague != null)

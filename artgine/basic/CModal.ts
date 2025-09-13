@@ -306,7 +306,7 @@ export class CModal implements IAutoUpdate , IListener
                 this.mZIndex=CModal.eSort.Top;
                 break;
         }
-            
+        this.Focus();
         
     }
     FullSwitch(_enable : boolean=null)
@@ -410,6 +410,7 @@ export class CModal implements IAutoUpdate , IListener
     }
     LimitPushChk()
     {
+        if(this.mCard==null)    return;
         if(this.mOW==0 && this.mCard.offsetWidth!=0)
             this.mOW=this.mCard.offsetWidth+3;
         if(this.mOH==0 && this.mCard.offsetHeight!=0)

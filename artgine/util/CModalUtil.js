@@ -777,10 +777,10 @@ export class CMonacoViewer extends CModal {
     }
 }
 export class CMDViewer extends CModal {
-    constructor(_file) {
+    constructor(_file, _title = CModal.eTitle.TextFullClose) {
         super();
-        this.SetTitle(CModal.eTitle.TextFullClose);
-        this.SetHeader("README");
+        this.SetTitle(_title);
+        this.SetHeader(_file);
         let lan = CUtil.Language();
         (async () => {
             const lan = CUtil.Language();

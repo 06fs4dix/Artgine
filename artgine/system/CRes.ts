@@ -1,42 +1,44 @@
-import {CBlackBoard} from "../basic/CBlackBoard.js";
-import {CConsol} from "../basic/CConsol.js";
+import { CBlackBoard } from "../basic/CBlackBoard.js";
+import { CConsol } from "../basic/CConsol.js";
 import { CLan } from "../basic/CLan.js";
-import {CObject} from "../basic/CObject.js";
-import {CPath} from "../basic/CPath.js"
+import { CObject } from "../basic/CObject.js";
+import { CPath } from "../basic/CPath.js"
+import { CTree } from "../basic/CTree.js";
+import { CUtil } from "../basic/CUtil.js";
+import { CMesh } from "../render/CMesh.js";
+import { CTexture } from "../render/CTexture.js";
 
-export class CRes extends CObject
-{
-	public mResMap=new Map<string,any>();
-	HttpPathChange(_key)
-	{
-		
-		
+export class CRes extends CObject {
+	public mResMap = new Map<string, any>();
+	HttpPathChange(_key) {
+
+
 		let url = new URL(_key);
 		url.host = location.host;
 
 		//proj이름 변경
 		let myProjName = "";
 		let splitPathName = location.pathname.split("/");
-		if(splitPathName.length > 1) {
+		if (splitPathName.length > 1) {
 			myProjName = splitPathName[1];
 		}
 
-		if(myProjName != "") {
+		if (myProjName != "") {
 			let resProjName = "";
 			splitPathName = url.pathname.split("/");
-			if(splitPathName.length > 1) {
+			if (splitPathName.length > 1) {
 				resProjName = url.pathname.split("/")[1];
 			}
 
-			if(resProjName != "") {
+			if (resProjName != "") {
 				url.pathname = "";
-				for(let split of splitPathName) {
-					if(split == resProjName) {
+				for (let split of splitPathName) {
+					if (split == resProjName) {
 						split = myProjName;
 					}
-					if(split != "") {
+					if (split != "") {
 						url.pathname += split;
-						if(splitPathName[splitPathName.length - 1] != split) {
+						if (splitPathName[splitPathName.length - 1] != split) {
 							url.pathname += "/";
 						}
 					}
@@ -45,42 +47,36 @@ export class CRes extends CObject
 		}
 		return url.toString();
 	}
-	Keys()
-	{
+	Keys() {
 		return this.mResMap.keys();
 	}
-	Values()
-	{
+	Values() {
 		return this.mResMap.values();
 	}
-	
-	Find(_key : string) : any
-	{
-		if(_key==null)	return null;
-		if(this.mResMap.has(_key)) {
+
+	Find(_key: string): any {
+		if (_key == null) return null;
+		if (this.mResMap.has(_key)) {
 			return this.mResMap.get(_key);
 		}
 
 		let key = _key;
 		//만약 url이면 현재 host로 바꿔줌
-		if(_key.startsWith("http") && (_key.indexOf(CPath.Join("root")) != -1 || _key.indexOf("localhost")!=-1))
-		{
-			
-			
+		if (_key.startsWith("http") && (_key.indexOf(CPath.Join("root")) != -1 || _key.indexOf("localhost") != -1)) {
+
+
 			key = this.HttpPathChange(_key);
-			if(this.mResMap.has(key)) {
+			if (this.mResMap.has(key)) {
 				this.mResMap.set(_key, this.mResMap.get(key));
 			}
 		}
 		return this.mResMap.get(key);
 	}
-	Push(_key: string, _value: any)
-	{
-		this.mResMap.set(_key as string,_value);
+	Push(_key: string, _value: any) {
+		this.mResMap.set(_key as string, _value);
 		return this;
 	}
-	Remove(_key: string)
-	{
+	Remove(_key: string) {
 		this.mResMap.delete(_key);
 	}
 	// toString()
@@ -89,31 +85,31 @@ export class CRes extends CObject
 	// 	for(var eachKey of this.m_res.keys())
 	// 	{
 	// 		var ext=eachKey.substr(eachKey.indexOf("."),eachKey.length-eachKey.indexOf("."));
-			
+
 	// 		if(ext==".FBX" || ext==".jpg" || ext==".png" || ext==".sl")
 	// 		{
 	// 			var key=eachKey;
 	// 			if(eachKey.indexOf(CPath.Combine("Host"))!=-1 || eachKey.indexOf("localhost"))
 	// 			{
-					
+
 	// 				key="RootPath/"+eachKey.substring(eachKey.indexOf(CPath.Combine("Root")),eachKey.length);
 	// 			}
-				
+
 	// 			var rl={"file":key,"option":"{}"};
 	// 			var data=this.m_res.get(eachKey);
 	// 			if(data["LoaderOption"]!=null)
 	// 				rl.option=data["LoaderOption"]();
-			
+
 	// 			list.push(rl);
 	// 		}
 	// 	}
 	// 	var str="";
-		
+
 	// 	for(var each0 of list)
 	// 	{
 	// 		str+=each0.file+"#323"+each0.option+"~728";
 	// 	}
-		
+
 	// 	return str;
 	// }
 	// Parsing(_str : string)
@@ -129,222 +125,389 @@ export class CRes extends CObject
 	// 			rl.file.replace("RootPath/",CPath.Combine("Protocol"+"Host"+"Port")+"/");
 	// 		list.push(rl);
 	// 	}
-		
+
 	// 	return list;
 	// }
-	override EditInit() : HTMLElement
-	{
-		//이걸 등록해서 자동 생성되게 처리
-		this["blackboard"]=CBlackBoard.Map();
-		this["languge"]=CLan.Map();
-		var div=super.EditInit();
-		var input=document.createElement("input");
-		input.type="search";
-		input.className="form-control";
-		input.id="resSearch";
-		input.placeholder="Search";
-		input.onkeyup=(e)=>{
-			var t=e.target as HTMLInputElement;
-			var val=t.value;
-			var ch=div.getElementsByClassName("border p-1 mt-1");
-			for(var each0 of ch)
-			{
+	// override EditInit(): HTMLElement {
+	// 	//이걸 등록해서 자동 생성되게 처리
+	// 	this["blackboard"] = CBlackBoard.Map();
+	// 	this["languge"] = CLan.Map();
+	// 	var div = super.EditInit();
+	// 	var input = document.createElement("input");
+	// 	input.type = "search";
+	// 	input.className = "form-control";
+	// 	input.id = "resSearch";
+	// 	input.placeholder = "Search";
+	// 	input.onkeyup = (e) => {
+	// 		var t = e.target as HTMLInputElement;
+	// 		var val = t.value;
+	// 		var ch = div.getElementsByClassName("border p-1 mt-1");
+	// 		for (var each0 of ch) {
 
-				
-				if(each0.id=="mResMap_title" || each0.id=="blackboard_title")	continue;
-				if(each0==t)	continue;
 
-				var hel=each0 as HTMLElement;
-				if(each0.textContent.indexOf("mRes : map")!=-1){}
-				//else if(each0.textContent.indexOf(val)!=-1)
-				else if(each0.textContent.toLowerCase().indexOf(val.toLowerCase()) != -1)
-					hel.style.display="";
+	// 			if (each0.id == "mResMap_title" || each0.id == "blackboard_title") continue;
+	// 			if (each0 == t) continue;
+
+	// 			var hel = each0 as HTMLElement;
+	// 			if (each0.textContent.indexOf("mRes : map") != -1) { }
+	// 			//else if(each0.textContent.indexOf(val)!=-1)
+	// 			else if (each0.textContent.toLowerCase().indexOf(val.toLowerCase()) != -1)
+	// 				hel.style.display = "";
+	// 			else
+	// 				hel.style.display = "none";
+
+	// 		}
+	// 	};
+	// 	div.prepend(input);
+
+	// 	// let tree=new CTree<any>();
+	// 	// for(let [key,value] of this.mResMap)
+	// 	// {
+	// 	// 	if(value instanceof CTexture || value instanceof CMesh)
+	// 	// 	{
+
+	// 	// 	}
+	// 	// }
+
+
+	// 	// mResMap에서 텍스쳐/메쉬 && '/'가 있는 경로만 트리에 구성
+	// 	let tree = new CTree<any>();
+
+	// 	function normalizeKey(raw: string): string | null {
+	// 		if (!raw) return null;
+	// 		// URL이면 pathname만 사용
+	// 		if (raw.startsWith("http://") || raw.startsWith("https://")) {
+	// 			try {
+	// 				const u = new URL(raw);
+	// 				const p = u.pathname.replace(/^\/+/, "");
+	// 				return p.includes("/") ? p : null;
+	// 			} catch { return null; }
+	// 		}
+	// 		// 로컬/상대 경로
+	// 		return raw.includes("/") ? raw.replace(/^\/+/, "") : null;
+	// 	}
+
+	// 	// parent의 '직계 자식들' 중 key가 일치하면 반환, 없으면 생성
+	// 	function getOrMakeChild(parent: CTree<any>, key: string): CTree<any> {
+	// 		if (!parent.mChild) return parent.PushChild(key) as CTree<any>; // 첫 자식 생성
+
+	// 		// 첫 자식부터 형제들을 훑어 동일 key 찾기
+	// 		let node: CTree<any> = parent.mChild;
+	// 		while (true) {
+	// 			if (node.mKey === key) return node;
+	// 			if (!node.mColleague) break;
+	// 			node = node.mColleague;
+	// 		}
+	// 		// 동일 key가 없으면 형제로 추가
+	// 		return node.PushColleague(key) as CTree<any>;
+	// 	}
+
+	// 	for (const [key, value] of this.mResMap as Map<string, any>) {
+	// 		// 1) 텍스쳐/메쉬만 통과
+	// 		if (!(value instanceof CTexture) && !(value instanceof CMesh)) continue;
+
+	// 		// 2) '/' 포함 경로만 통과
+	// 		// const norm = normalizeKey(key);
+	// 		// if (!norm) continue;
+
+	// 		// 3) 경로 세그먼트별로 폴더 생성 → 파일 노드에 데이터 기록
+	// 		const parts = key.split("/").filter(Boolean);
+	// 		//if (parts.length < 2) continue; // 최소 "폴더/파일"
+
+	// 		const fileName = parts.pop()!;
+	// 		let cur = tree;
+	// 		for (const seg of parts) {
+	// 			cur = getOrMakeChild(cur, seg);
+	// 		}
+
+	// 		// 파일 노드(리프): 파일명으로 노드 찾거나 생성, mData에 리소스 저장
+	// 		const leaf = getOrMakeChild(cur, fileName);
+	// 		leaf.mData = value; // CTree의 mData 사용 :contentReference[oaicite:4]{index=4}
+
+	// 		// [선택] 리프의 mKey를 전체 경로로 두고 싶다면 다음 한 줄 추가/교체:
+	// 		// leaf.mKey = norm;  // 이 경우 getOrMakeChild 대신 그냥 새 노드 생성 로직이 더 적합
+	// 	}
+
+
+	// 	return div;
+	// }
+
+
+
+
+	// ===== CRes 클래스 내부 =====
+	override EditInit(): HTMLElement {
+		// 자동 생성 등록
+		(this as any)["blackboard"] = CBlackBoard.Map();
+		(this as any)["languge"] = CLan.Map();
+
+		const div = super.EditInit();
+
+		// ── 상단 검색 입력(기존 유지) ──
+		const input = document.createElement("input");
+		input.type = "search";
+		input.className = "form-control";
+		input.id = "resSearch";
+		input.placeholder = "Search";
+		input.onkeyup = (e) => {
+			const t = e.target as HTMLInputElement;
+			const val = t.value;
+			let ch = div.getElementsByClassName("border p-1 mt-1");
+			let resMapKey="";
+			let bbMapKey="";
+			
+			
+			for (const each0 of ch as any) {
+				if ((each0 as HTMLElement).id === "mResMap_title") 
+				{
+					resMapKey=(each0 as HTMLElement).getAttribute("data-bs-target").substring(1,99);
+					continue;
+				}
+				if ((each0 as HTMLElement).id === "blackboard_title") 
+				{
+					bbMapKey=(each0 as HTMLElement).getAttribute("data-bs-target").substring(1,99);;
+					continue;
+				}
+				if (each0 === t) continue;
+				const hel = each0 as HTMLElement;
+				if ((each0 as HTMLElement).textContent?.toLowerCase().indexOf(val.toLowerCase()) !== -1)
+					hel.style.display = "";
 				else
-					hel.style.display="none";
-				
+					hel.style.display = "none";
 			}
+			if(val=="")
+			{
+				CUtil.ID(resMapKey).className="border border-top-0 ps-2 collapse";
+				CUtil.ID(bbMapKey).className="border border-top-0 ps-2 collapse";	
+				return;
+			}
+			CUtil.ID(resMapKey).className="border border-top-0 ps-2 collapse show";
+			CUtil.ID(bbMapKey).className="border border-top-0 ps-2 collapse show";
+			
+			ch = div.getElementsByClassName("border border-top-0 ps-2 collapse show");
+			for (const each0 of ch as any) {
+				
+				if(each0.id!=resMapKey && each0.id!=bbMapKey) 
+					each0.className="border border-top-0 ps-2 collapse";
+				// if (each0 === t) continue;
+
+
+				// const hel = each0 as HTMLElement;
+				// if ((each0 as HTMLElement).textContent?.toLowerCase().indexOf(val.toLowerCase()) != -1)
+				// 	hel.style.display = "";
+				// else
+				// 	hel.style.display = "none";
+			}
+			
 		};
 		div.prepend(input);
 
-		
+		// ─────────────────────────────────────────
+		// 1) gTree 생성/재사용 + 증분 반영
+		// ─────────────────────────────────────────
+		if (!(gTree instanceof CTree)) gTree = new CTree<CObject>(); // 루트(mKey="")
 
-		return div; 
+		// 직계 자식 중 key로 찾기
+		const findChild = (parent: CTree<CObject>, key: string): CTree<CObject> | null => {
+			let n = parent.mChild as CTree<CObject> | null;
+			while (n) { if (n.mKey === key) return n; n = n.mColleague as any; }
+			return null;
+		};
+
+		// 없으면 생성해서 반환(있으면 그대로)
+		const getOrMakeChild = (parent: CTree<CObject>, key: string): CTree<CObject> => {
+			const found = findChild(parent, key);
+			if (found) return found;
+			if (!parent.mChild) return parent.PushChild(key) as CTree<CObject>;
+			let tail = parent.mChild as CTree<CObject>;
+			while (tail.mColleague) tail = tail.mColleague as CTree<CObject>;
+			return tail.PushColleague(key) as CTree<CObject>;
+		};
+
+		// mResMap → gTree에 증분 삽입(동일 경로/파일명이 이미 있으면 건너뜀)
+		for (const [key, value] of this.mResMap as Map<string, any>) {
+			if (!(value instanceof CTexture) && !(value instanceof CMesh)) continue;
+
+			const parts = String(key).split("/").filter(Boolean);
+			if (parts.length === 0) continue;
+
+			const fileName = parts.pop()!;
+			let cur = gTree;
+			for (const seg of parts) cur = getOrMakeChild(cur, seg);
+
+			const existed = findChild(cur, fileName);
+			if (existed) {
+				// 이미 있으면 건너뜀(단, mData가 비어있다면 채워줌)
+				if (existed.mData == null) existed.mData = value;
+			} else {
+				const leaf = getOrMakeChild(cur, fileName);
+				if (leaf.mData == null) leaf.mData = value;
+			}
+		}
+
+		// ★ 추가: 블랙보드 전부 병합(타입 필터 없음)
+		for (const [key, value] of CBlackBoard.Map() as Map<string, CObject>) {
+		if (!value) continue;
+
+		const parts = String(key).split("/").filter(Boolean);
+		if (parts.length === 0) continue;         // 빈 키는 스킵
+
+		const fileName = parts.pop()!;
+		let cur = gTree!;
+		for (const seg of parts) cur = getOrMakeChild(cur, seg);
+
+		const existed = findChild(cur, fileName);
+		if (existed) {
+			// 이미 노드가 있으면 건너뜀(단, 데이터가 비어있다면 채워줌)
+			if (existed.mData == null) existed.mData = value;
+		} else {
+			const leaf = getOrMakeChild(cur, fileName);
+			if (leaf.mData == null) leaf.mData = value;
+		}
+		}
+
+		// ─────────────────────────────────────────
+		// 2) CTree 기반 리소스 뷰어 렌더
+		// ─────────────────────────────────────────
+		const viewer = document.createElement("div");
+		viewer.className = "mt-3";
+		div.appendChild(viewer);
+
+		const childrenOf = (node: CTree<CObject>): CTree<CObject>[] => {
+			const arr: CTree<CObject>[] = [];
+			let ch = node.mChild;
+			while (ch) { arr.push(ch); ch = ch.mColleague; }
+			return arr;
+		};
+
+		const pathOf = (node: CTree<CObject>): string => {
+			const segs: string[] = [];
+			let p: CTree<CObject> | null = node;
+			while (p && p.mParent) { if (p.mKey) segs.push(p.mKey); p = p.mParent; }
+			return segs.reverse().join("/") || "(root)";
+		};
+
+		// 현재 포커스 노드: gCurNode가 null이면 루트로
+		let curNode: CTree<CObject> = gCurNode ?? gTree;
+
+		const render = () => {
+			viewer.innerHTML = "";
+
+			// ── 상단 breadcrumb ──
+			const pathBar = document.createElement("div");
+			pathBar.className = "mb-2";
+
+			const rootBtn = document.createElement("button");
+			rootBtn.type = "button";
+			rootBtn.className = "btn btn-sm btn-outline-warning me-1";
+			rootBtn.textContent = "/";
+			rootBtn.onclick = () => {
+				curNode = gTree!;
+				gCurNode = curNode;       // ← 마지막 위치 저장
+				render();
+			};
+			pathBar.appendChild(rootBtn);
+
+			const trail: CTree<any>[] = [];
+			{ let p: CTree<any> | null = curNode; while (p) { trail.push(p); p = p.mParent; } trail.reverse(); }
+
+			for (let i = 1; i < trail.length; i++) {
+				const node = trail[i];
+				const b = document.createElement("button");
+				b.type = "button";
+				b.className = "btn btn-sm btn-outline-danger me-1";
+				b.textContent = node.mKey;
+				b.onclick = () => {
+					curNode = node as CTree<CObject>;
+					gCurNode = curNode;     // ← 마지막 위치 저장
+					render();
+				};
+				pathBar.appendChild(b);
+			}
+
+			// const curTxt = document.createElement("span");
+			// curTxt.className = "ms-2 text-muted";
+			// curTxt.textContent = pathOf(curNode);
+			//pathBar.appendChild(curTxt);
+			viewer.appendChild(pathBar);
+
+			// ── 목록: 폴더 먼저, 파일 다음 ──
+			const list = document.createElement("div");
+			list.className = "d-flex flex-wrap gap-2";
+
+			const children = childrenOf(curNode);
+			children.sort((a, b) => {
+				const aIsFolder = a.mData == null;
+				const bIsFolder = b.mData == null;
+				if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+				return a.mKey.localeCompare(b.mKey);
+			});
+
+			for (const n of children) {
+				const isFolder = n.mData == null;
+				const btn = document.createElement("button");
+				btn.type = "button";
+
+				const i = document.createElement("i");
+				i.setAttribute("aria-hidden", "true");
+				i.classList.add("me-1");
+
+				if (isFolder) {
+					i.className = "bi bi-folder me-1";
+					btn.className = "btn btn-sm btn-warning border";
+				} else {
+					btn.setAttribute("draggable", "true");
+					btn.addEventListener("dragstart", (ev) => {
+						ev.stopPropagation();
+						ev.dataTransfer?.setData("hash", (n.mData as any).Key());
+						CObject.SetDrag("CObject", n.mData);
+					});
+					i.className = (typeof (n.mData as any)?.Icon === "function")
+						? (n.mData as any).Icon()
+						: "bi bi-file-earmark";
+					if(n.mData instanceof CTexture || n.mData instanceof CMesh)
+						btn.className = "btn btn-sm btn-light border";
+					else
+						btn.className = "btn btn-sm btn-outline-primary border";
+
+				}
+
+				const nameSpan = document.createElement("span");
+				nameSpan.textContent = ` ${n.mKey}`;
+				btn.append(i, nameSpan);
+
+				if (isFolder) {
+					btn.title = "Open folder";
+					btn.onclick = () => {
+						curNode = n as CTree<CObject>;
+						gCurNode = curNode;   // ← 마지막 위치 저장
+						render();
+					};
+				} else {
+					btn.title = pathOf(n);
+					btn.onclick = () => {
+						input.value=n.mData.Key();
+						input.dispatchEvent(new Event('keyup', {bubbles: true}));
+						// const fullPath = pathOf(n);
+						// try { navigator.clipboard?.writeText(fullPath); } catch { }
+						// console.log("[Res]", fullPath, n.mData);
+					};
+				}
+
+				list.appendChild(btn);
+			}
+
+			viewer.appendChild(list);
+		};
+
+		// 최초 진입 시에도 위치 저장(루트 또는 복구 위치)
+		gCurNode = curNode;
+		render();
+
+		return div;
 	}
 
 
-// 	override EditInit(): HTMLElement {
-//   // 기존 등록 유지
-//   (this as any)["blackboard"] = CBlackBoard.Map();
-//   (this as any)["languge"] = CLan.Map();
-
-//   const div = super.EditInit();
-
-//   // ── 검색 인풋(기존 유지) ──
-//   const input = document.createElement("input");
-//   input.type = "search";
-//   input.className = "form-control";
-//   input.id = "resSearch";
-//   input.placeholder = "Search";
-
-//   // ── 경로 트리 빌드 ──
-//   type Node = { name: string; children: Map<string, Node>; files: string[] };
-//   const root: Node = { name: "", children: new Map(), files: [] };
-
-//   const normalizeKey = (raw: string): string | null => {
-//     if (!raw || raw.indexOf("/") === -1) return null; // '/' 없는 건 제외
-//     try {
-//       if (raw.startsWith("http")) {
-//         const u = new URL(raw);
-//         return u.pathname.replace(/^\/+/, "");
-//       }
-//     } catch { /* ignore */ }
-//     return raw.replace(/^\/+/, "");
-//   };
-
-//   for (const [key] of this.mResMap as Map<string, any>) {
-//     const norm = normalizeKey(key);
-//     if (!norm) continue;
-
-//     const parts = norm.split("/").filter(Boolean);
-//     if (parts.length === 0) continue;
-
-//     const file = parts.pop()!;
-//     let cur = root;
-//     for (const p of parts) {
-//       let child = cur.children.get(p);
-//       if (!child) {
-//         child = { name: p, children: new Map(), files: [] };
-//         cur.children.set(p, child);
-//       }
-//       cur = child;
-//     }
-//     cur.files.push(key); // 원본 키 저장
-//   }
-
-//   const section = document.createElement("div");
-//   section.className = "mt-2";
-
-//   const countFiles = (n: Node): number =>
-//     n.files.length + [...n.children.values()].reduce((a, c) => a + countFiles(c), 0);
-
-//   const extIcon = (name: string) => {
-//     const ext = (name.split(".").pop() || "").toLowerCase();
-//     if (["png","jpg","jpeg","gif","webp","bmp","tga"].includes(ext)) return "🖼️";
-//     if (["gltf","glb","obj","fbx","dae","stl","ply"].includes(ext)) return "📦";
-//     if (["sl","wgsl","glsl","vert","frag"].includes(ext)) return "💡";
-//     if (["mp3","wav","ogg"].includes(ext)) return "🔊";
-//     return "📄";
-//   };
-
-//   const makeFileEl = (key: string) => {
-//     const el = document.createElement("button");
-//     el.type = "button";
-//     el.className = "btn btn-sm btn-light border d-inline-flex align-items-center gap-2 px-2 py-1 res-file";
-//     el.setAttribute("data-key", key.toLowerCase());
-//     el.title = key;
-
-//     const icon = document.createElement("span");
-//     const filename = key.split("/").pop() || key;
-//     icon.textContent = extIcon(filename);
-
-//     const label = document.createElement("span");
-//     label.textContent = filename;
-
-//     el.appendChild(icon);
-//     el.appendChild(label);
-
-//     el.onclick = () => { try { navigator.clipboard?.writeText(key); } catch {} console.log("[Res]", key); };
-//     return el;
-//   };
-
-//   const makeFolderEl = (node: Node): HTMLElement => {
-//     // 루트면 하위만 나열
-//     if (node === root) {
-//       const wrap = document.createElement("div");
-//       for (const child of [...node.children.values()].sort((a,b)=>a.name.localeCompare(b.name))) {
-//         wrap.appendChild(makeFolderEl(child));
-//       }
-//       for (const f of node.files.sort()) wrap.appendChild(makeFileEl(f));
-//       return wrap;
-//     }
-
-//     const details = document.createElement("details");
-//     details.className = "res-folder";
-//     details.open = false;
-
-//     const summary = document.createElement("summary");
-//     summary.className = "d-flex align-items-center gap-2 py-1";
-//     summary.style.cursor = "pointer";
-
-//     const title = document.createElement("span");
-//     title.textContent = node.name;
-
-//     const badge = document.createElement("span");
-//     badge.textContent = String(countFiles(node));
-//     badge.className = "badge bg-light text-muted";
-//     badge.style.border = "1px solid rgba(0,0,0,.08)";
-
-//     summary.appendChild(title);
-//     summary.appendChild(badge);
-//     details.appendChild(summary);
-
-//     const inner = document.createElement("div");
-//     inner.className = "ms-3 mt-1 d-flex flex-column gap-1";
-
-//     for (const child of [...node.children.values()].sort((a,b)=>a.name.localeCompare(b.name))) {
-//       inner.appendChild(makeFolderEl(child));
-//     }
-//     for (const f of node.files.sort()) inner.appendChild(makeFileEl(f));
-
-//     details.appendChild(inner);
-//     return details;
-//   };
-
-//   section.appendChild(makeFolderEl(root));
-//   div.appendChild(section);
-
-//   // ── 검색 시 트리 필터링(조상 폴더 자동 open) ──
-//   const applyTreeFilter = (q: string) => {
-//     const needle = (q || "").trim().toLowerCase();
-//     const folders = section.querySelectorAll<HTMLDetailsElement>("details.res-folder");
-//     const files = section.querySelectorAll<HTMLElement>(".res-file");
-
-//     if (!needle) {
-//       files.forEach(f => f.style.display = "");
-//       folders.forEach(d => { d.style.display = ""; d.open = false; });
-//       return;
-//     }
-//     files.forEach(f => f.style.display = "none");
-//     folders.forEach(d => { d.style.display = "none"; d.open = false; });
-
-//     files.forEach(f => {
-//       const key = f.getAttribute("data-key") || "";
-//       if (key.indexOf(needle) !== -1) {
-//         f.style.display = "";
-//         // 조상 폴더들 보여주고 open
-//         let p: HTMLElement | null = f.parentElement;
-//         while (p && p !== section) {
-//           if (p.tagName.toLowerCase() === "details") {
-//             (p as HTMLDetailsElement).style.display = "";
-//             (p as HTMLDetailsElement).open = true;
-//           }
-//           p = p.parentElement;
-//         }
-//       }
-//     });
-//   };
-
-//   // 기존 onkeyup 확장: 기존 필터 + 트리 필터
-//   const prevOnKeyUp = input.onkeyup;
-//   input.onkeyup = (e: any) => {
-//     prevOnKeyUp?.call(input, e);  // 기존 필터 로직 유지(기존 에디터 영역)
-//     applyTreeFilter((e.target as HTMLInputElement).value);
-//   };
-
-//   // 입력창을 맨 위에
-//   div.prepend(input);
-//   return div;
-// }
-
-
 }
+let gTree: CTree<CObject> | null = null;
+let gCurNode: CTree<CObject> | null = null;

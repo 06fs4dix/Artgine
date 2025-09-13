@@ -198,20 +198,36 @@ export class CUtilWeb {
     }
   `, host);
         upsertStyle(`mdr-style-2-${scopeClass}`, `
-    .${scopeClass} pre > code,
-    .${scopeClass} pre > code.hljs {
-      display: block;
-      background: #f6f8fa !important; /* 원하는 색 */
-      padding: 12px !important;
-      border-radius: 8px;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
-    }
-    .${scopeClass} :not(pre) > code {
-      background: #f6f8fa;
-      padding: .2em .4em;
-      border-radius: 4px;
-    }
-  `, host);
+  .${scopeClass} pre > code,
+  .${scopeClass} pre > code.hljs {
+    display: block;
+    background: #f6f8fa !important; /* 원하는 색 */
+    padding: 12px !important;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
+  }
+  .${scopeClass} :not(pre) > code {
+    background: #f6f8fa;
+    padding: .2em .4em;
+    border-radius: 4px;
+  }
+
+  /* ▼▼ 텍스트 선택 강제 허용 (중요) ▼▼ */
+  .${scopeClass} pre,
+  .${scopeClass} code,
+  .${scopeClass} .hljs,
+  .${scopeClass} .hljs * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+  .${scopeClass} pre,
+  .${scopeClass} code,
+  .${scopeClass} .hljs {
+    cursor: text;
+  }
+`, host);
         upsertStyle(`mdr-style-3-${scopeClass}`, `
     .${scopeClass} blockquote {
       margin: 1em 0;
@@ -228,6 +244,7 @@ export class CUtilWeb {
       background: #eef2ff !important;
       border-radius: 8px;
       padding: 12px;
+	  
     }
   `, host);
         CPath.PHPC();

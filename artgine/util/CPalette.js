@@ -31,7 +31,7 @@ export class CPalette {
         let upFolder = CPath.PHPC();
         if (_fw.PF().mGitHub)
             upFolder = "https://06fs4dix.github.io/Artgine/";
-        gNoneTex = upFolder + "artgine/z_file/none.png";
+        gNoneTex = "none.png";
         await _fw.Load().LoadSwitch(gNoneTex, CUtil.Base64ToArray(gNoneImg), new CLoaderOption());
         gSl2DKey = upFolder + "artgine/z_file/2D.ts";
         gSl3DKey = upFolder + "artgine/z_file/3D.ts";

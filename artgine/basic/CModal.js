@@ -243,6 +243,7 @@ export class CModal {
                 this.mZIndex = CModal.eSort.Top;
                 break;
         }
+        this.Focus();
     }
     FullSwitch(_enable = null) {
     }
@@ -321,6 +322,8 @@ export class CModal {
         this.mLimitPush = _push;
     }
     LimitPushChk() {
+        if (this.mCard == null)
+            return;
         if (this.mOW == 0 && this.mCard.offsetWidth != 0)
             this.mOW = this.mCard.offsetWidth + 3;
         if (this.mOH == 0 && this.mCard.offsetHeight != 0)

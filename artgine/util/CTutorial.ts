@@ -14,7 +14,7 @@ export class CTutorial
     }
     static Exe(_type,_data,_html,_option ={})
     {
-        const defaultOption = { pos: null, bodyClose: true,call:null,overlay:true };
+        const defaultOption = { pos: null, bodyClose: true,call:null,overlay:true,timeOut:0 };
         const option = { ...defaultOption, ..._option };
 
         let modal : CModal=null;
@@ -30,7 +30,8 @@ export class CTutorial
             modal.SetBodyClose(option.bodyClose);
 
             modal.Open(CModal.ePos.Center);
-            //modal.Close(1000*5);
+            if(option.timeOut!=0)
+                modal.Close(1000*option.timeOut);
         }
         
 

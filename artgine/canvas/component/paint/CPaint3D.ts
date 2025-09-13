@@ -33,8 +33,7 @@ export class CPaint3D extends CPaint
 	public mWeightMat : Float32Array;
 	public mCenterPos=false;
 	public mTreeNode=new CArray<CMeshPaint>();
-	//public m_shadow=false;
-	//public m_autoRP=new Set<string>();
+
 	public mSkinType=SDF.eSkin.Bone;
 	public mCamCompSet : Set<CCamComp>=new Set<CCamComp>();
 	public mBakedLight : string = null;
@@ -300,7 +299,7 @@ export class CPaint3D extends CPaint
 	Update(_delay: any): void 
 	{
 		super.Update(_delay);
-		if(CWASM.IsWASM())
+		if(this.mUpdateFMat==true && CWASM.IsWASM())
 		{
 			this.mFMat.mF32A[3]=this.mFMat.mF32A[12];
 			this.mFMat.mF32A[7]=this.mFMat.mF32A[13];
@@ -377,6 +376,8 @@ export class CPaint3D extends CPaint
 			
 			if(nodemp.mpi.mData.updateMat==CUpdate.eType.Updated)
 				nodemp.mpi.mData.updateMat=CUpdate.eType.Already;
+			else if(nodemp.mpi.mData.updateMat==CUpdate.eType.Already)
+				nodemp.mpi.mData.updateMat=CUpdate.eType.Not;
 
 			if ( nodemp.md.mChild != null)
 				nodePOff++;
@@ -453,8 +454,10 @@ export class CPaint3D extends CPaint
 			
 			this.RenderMesh(_vf, nodemp,barr,nodeOff);
 
-			if(nodemp.mpi.mData.updateMat==CUpdate.eType.Updated)
-				nodemp.mpi.mData.updateMat=CUpdate.eType.Already;
+			// if(nodemp.mpi.mData.updateMat==CUpdate.eType.Updated)
+			// 	nodemp.mpi.mData.updateMat=CUpdate.eType.Already;
+			// else if(nodemp.mpi.mData.updateMat==CUpdate.eType.Already)
+			// 	nodemp.mpi.mData.updateMat=CUpdate.eType.Not;
 
 			if ( nodemp.md.mChild != null)
 				nodePOff++;

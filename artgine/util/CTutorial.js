@@ -10,7 +10,7 @@ export class CTutorial {
         "Event": "Event"
     };
     static Exe(_type, _data, _html, _option = {}) {
-        const defaultOption = { pos: null, bodyClose: true, call: null, overlay: true };
+        const defaultOption = { pos: null, bodyClose: true, call: null, overlay: true, timeOut: 0 };
         const option = { ...defaultOption, ..._option };
         let modal = null;
         if (_html != null) {
@@ -22,6 +22,8 @@ export class CTutorial {
             modal.SetOverlay(option.overlay);
             modal.SetBodyClose(option.bodyClose);
             modal.Open(CModal.ePos.Center);
+            if (option.timeOut != 0)
+                modal.Close(1000 * option.timeOut);
         }
         return new Promise(async (resolve, reject) => {
             if (option.call != null)
