@@ -238,7 +238,7 @@ export class CUtilWeb {
 		};
 
 		// 1. typescript.js가 로드되어 있는지 확인
-		if (window["ts"]!=null || window["ts"].transpileModule!=null) 
+		if (window["ts"]==null || window["ts"].transpileModule==null) 
 		{
 			if (!gTSLoaded) {
 				gTSLoaded = true;
