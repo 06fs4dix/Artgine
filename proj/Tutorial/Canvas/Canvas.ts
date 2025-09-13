@@ -1,5 +1,5 @@
 //Version
-const version='mfichjgp_3';
+const version='mfidlit4_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -114,7 +114,7 @@ CLan.Set("en", "tuto9", "This project is a 2D/3D canvas mixed example.<br>You ca
 CLan.Set("en", "tuto9-1", "Select the 3D Canvas, then select the 3D Subject to change its position.");
 CLan.Set("en", "tuto10", "Press [N] key to code directly.<br>Check the comments and test it");
 
-CLan.Set("en", "tuto11-1", "On the 2DCan canvas, select “test” and change the mTexture on the CPaint2D component.");
+CLan.Set("en", "tuto11-1", "On the 2DCan canvas, select “test” and change the mTexture on the CPaint2D(mComArr[0]) component.");
 CLan.Set("en", "tuto11-2", "You can press F2 to open the Resource Viewer and drag the desired CTexture into the CPaint2D component, or directly edit mTexture.");
 
 
@@ -226,9 +226,9 @@ if(mode==0)
     })
 
     await CTutorial.Exe(CTutorial.eWait.ModalClose,null,`<div class="p-3 border rounded bg-light">
-    <p class="mb-3 fs-5" data-CLan='tuto_11-1'>2DCan캔버스에서 test 선택하여 CPaint2D컴포넌트에서 mTexture를 변경해보세요</p>
-    <p data-CLan='tuto_11-2'>F2를 이용해 리소스 뷰어에서 원하는 CTexture를 드래그해서 CPaint2D에 넣거나 mTextrue를 직접변경해도 됩니다</p>
-    </div>`,{bodyClose:false,timeOut:10});
+    <p class="mb-3 fs-5" data-CLan='tuto_11-1'>2DCan캔버스에서 test(CSubject) 선택하여 CPaint2D(mComArr[0])에서 mTexture를 변경해보세요</p>
+    <p data-CLan='tuto_11-2'>F2를 이용해 리소스 뷰어에서 원하는 CTexture를 드래그해서 CPaint2D에 넣거나 mTextrue를 변경해도 됩니다</p>
+    </div>`,{bodyClose:false,timeOut:15});
     let can2D=gAtl.Canvas("2DCan");
     let orgTex=can2D.Find("test").FindComp(CPaint2D).GetTexture()[0];
     tip=new CTooltip(`2DCan->test-mComArr[0]-mTexture  org : ${orgTex} Change!`,CUtil.ID(can2D.ObjHash()+"_li"),
@@ -293,6 +293,12 @@ if(data==null)
     svmodal.SetSource(CUtil.ArrayToString(buf));
 
 }
+
+
+
+
+
+
 
 
 
