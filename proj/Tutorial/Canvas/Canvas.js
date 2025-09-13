@@ -1,6 +1,6 @@
-const version = 'mfeoxpxp_15';
-import "../../../artgine/artgine.js";
-import { CPreferences } from "../../../artgine/basic/CPreferences.js";
+const version = 'mfichjgp_3';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
+import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -15,30 +15,30 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = false;
-import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+gPF.mGitHub = true;
+import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CInput } from "../../../artgine/system/CInput.js";
-import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
-import { CModalBackGround } from "../../../artgine/util/CModalUtil.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CUtil } from "../../../artgine/basic/CUtil.js";
-import { CUtilObj } from "../../../artgine/basic/CUtilObj.js";
-import { CEvent } from "../../../artgine/basic/CEvent.js";
-import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
-import { CString } from "../../../artgine/basic/CString.js";
-import { CPath } from "../../../artgine/basic/CPath.js";
-import { CConfirm, CModal } from "../../../artgine/basic/CModal.js";
-import { CChecker } from "../../../artgine/util/CChecker.js";
-import { CTimer } from "../../../artgine/system/CTimer.js";
-import { CTutorial } from "../../../artgine/util/CTutorial.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CLan } from "../../../artgine/basic/CLan.js";
-import { CStorage } from "../../../artgine/system/CStorage.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
+import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
+import { CModalBackGround, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
+import { CUtilObj } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtilObj.js";
+import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
+import { CString } from "https://06fs4dix.github.io/Artgine/artgine/basic/CString.js";
+import { CPath } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPath.js";
+import { CConfirm, CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CChecker } from "https://06fs4dix.github.io/Artgine/artgine/util/CChecker.js";
+import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
+import { CTutorial } from "https://06fs4dix.github.io/Artgine/artgine/util/CTutorial.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CLan } from "https://06fs4dix.github.io/Artgine/artgine/basic/CLan.js";
+import { CStorage } from "https://06fs4dix.github.io/Artgine/artgine/system/CStorage.js";
 let can = gAtl.NewCanvas("2DCan");
 can.SetCameraKey("2D");
 let sub = can.PushSub(new CSubject());
@@ -79,6 +79,8 @@ CLan.Set("en", "tuto8", "Press F4 to check the current project code");
 CLan.Set("en", "tuto9", "This project is a 2D/3D canvas mixed example.<br>You can check subjects in the left hierarchy-canvas");
 CLan.Set("en", "tuto9-1", "Select the 3D Canvas, then select the 3D Subject to change its position.");
 CLan.Set("en", "tuto10", "Press [N] key to code directly.<br>Check the comments and test it");
+CLan.Set("en", "tuto11-1", "On the 2DCan canvas, select “test” and change the mTexture on the CPaint2D component.");
+CLan.Set("en", "tuto11-2", "You can press F2 to open the Resource Viewer and drag the desired CTexture into the CPaint2D component, or directly edit mTexture.");
 if (CUtil.IsMobile()) {
     CConfirm.List(CLan.Get("tutoMobile", "튜토리얼은 모바일 미지원!"), [() => { CUtilWeb.PageBack(); }], ["Back"]);
     await CChecker.Exe(async () => {
@@ -102,28 +104,26 @@ if (mode == 0) {
     await CTutorial.Exe(CTutorial.eWait.KeyUp, CInput.eKey.F3, `<div class="p-3 border rounded bg-light">
     <p class="mb-3 fs-5" data-CLan='tuto6'>F3를 눌러 개발자 모드로 갈수있습니다.</p>
     </div>`, { bodyClose: false });
-    await CTutorial.Exe(CTutorial.eWait.KeyUp, CInput.eKey.F2, `<div class="p-3 border rounded bg-light">
-    <p class="mb-3 fs-5" data-CLan='tuto7'>F2를 눌러 현재 로드한 리소스를 확인 가능합니다.</p>
-    </div>`, { bodyClose: false });
+    await CChecker.Exe(async () => {
+        if (CUtil.ID("RunTime_btn") != null)
+            return false;
+        return true;
+    });
+    await CTutorial.Exe(CTutorial.eWait.Click, "RunTime_btn", `왼쪽 상단에 [RunTime]버튼을 누르세요.`, { bodyClose: false, timeOut: 3 });
+    let md = new CMDViewer("SampleCode.md", CModal.eTitle.Text);
+    md.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 10);
+    await CChecker.Exe(async () => {
+        let test = gAtl.Canvas("2DCan").Find("test");
+        if (test != null && test.FindComp(CPaint2D) != null)
+            return false;
+        return true;
+    });
+    md.Close();
     var timer = new CTimer();
-    await CChecker.Exe(async () => {
-        if (timer.Delay(false) > 10)
-            return false;
-        return true;
-    });
-    await CTutorial.Exe(CTutorial.eWait.KeyUp, CInput.eKey.F4, `<div class="p-3 border rounded bg-light">
-    <p class="mb-3 fs-5" data-CLan='tuto8'>F4를 눌러서 현재 프로젝트 코드를 확인가능합니다.</p>
-    </div>`, { bodyClose: false });
-    timer.Delay();
-    await CChecker.Exe(async () => {
-        if (timer.Delay(false) > 15)
-            return false;
-        return true;
-    });
     await CTutorial.Exe(CTutorial.eWait.ModalClose, null, `<div class="p-3 border rounded bg-light">
     <p class="mb-3 fs-5" data-CLan='tuto9'>현재 프로젝트는 2D/3D 캔버스 혼합 예제입니다.<br> 왼쪽 하이라키-캔버스에서 서브젝트를 확인가능합니다.</p>
     <p class="mb-3 fs-5" data-CLan='tuto9-1'>3DCan캔버스를 선택하고 3DSubject 선택하여 포지션을 변경해 보세요</p>
-    </div>`);
+    </div>`, { bodyClose: false, timeOut: 10 });
     timer.Delay();
     let tip = new CTooltip("3DCan Click-> 3DSubject Click->Pos Move!", CUtil.ID(can.ObjHash() + "_li"), CTooltip.eTrigger.Manual, CTooltip.ePlacement.Auto, Bootstrap.eColor.danger);
     tip.Focus(CModal.eAction.Shake);
@@ -139,8 +139,31 @@ if (mode == 0) {
         }
         return true;
     });
+    await CTutorial.Exe(CTutorial.eWait.KeyUp, CInput.eKey.F2, `<div class="p-3 border rounded bg-light">
+    <p class="mb-3 fs-5" data-CLan='tuto7'>F2를 눌러 현재 로드한 리소스를 확인 가능합니다.</p>
+    </div>`, { bodyClose: false });
+    timer.Delay();
+    await CChecker.Exe(async () => {
+        if (timer.Delay(false) > 10)
+            return false;
+        return true;
+    });
+    await CTutorial.Exe(CTutorial.eWait.ModalClose, null, `<div class="p-3 border rounded bg-light">
+    <p class="mb-3 fs-5" data-CLan='tuto_11-1'>2DCan캔버스에서 test 선택하여 CPaint2D컴포넌트에서 mTexture를 변경해보세요</p>
+    <p data-CLan='tuto_11-2'>F2를 이용해 리소스 뷰어에서 원하는 CTexture를 드래그해서 CPaint2D에 넣거나 mTextrue를 직접변경해도 됩니다</p>
+    </div>`, { bodyClose: false, timeOut: 10 });
+    let can2D = gAtl.Canvas("2DCan");
+    let orgTex = can2D.Find("test").FindComp(CPaint2D).GetTexture()[0];
+    tip = new CTooltip(`2DCan->test-mComArr[0]-mTexture  org : ${orgTex} Change!`, CUtil.ID(can2D.ObjHash() + "_li"), CTooltip.eTrigger.Manual, CTooltip.ePlacement.Auto, Bootstrap.eColor.danger);
+    tip.Focus(CModal.eAction.Shake);
+    tip.Open();
+    await CChecker.Exe(async () => {
+        if (can2D.Find("test").FindComp(CPaint2D).GetTexture()[0] != orgTex)
+            return false;
+        return true;
+    });
     await CTutorial.Exe(CTutorial.eWait.KeyUp, CInput.eKey.N, `<div class="p-3 border rounded bg-light">
-    <p class="mb-3 fs-5" data-CLan='tuto10'>[N]키를 누르면 직접 코딩해볼수 있습니다.<br>주석을 확인하고 테스트 해보세요.</p>
+    <p class="mb-3 fs-5" data-CLan='tuto10'>튜토리얼이 끝났습니다.<br> [N]키를 누르면 더 코딩해볼수 있습니다.<br>주석을 확인하고 테스트 해보세요.</p>
     </div>`, { bodyClose: false });
 }
 var modalList = CModal.GetModalList();
@@ -149,10 +172,10 @@ for (let i = modalList.length - 1; i >= 0; --i) {
         continue;
     modalList[i].Close();
 }
-import { InitDevToolScriptViewer } from "../../../artgine/tool/DevTool.js";
-import { CFile } from "../../../artgine/system/CFile.js";
-import { CTooltip } from "../../../artgine/util/CTooltip.js";
-import { Bootstrap } from "../../../artgine/basic/Bootstrap.js";
+import { InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
+import { CFile } from "https://06fs4dix.github.io/Artgine/artgine/system/CFile.js";
+import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip.js";
+import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 let svmodal = await InitDevToolScriptViewer(gAtl.PF().mGitHub);
 let data = CStorage.Get(CPath.PHPCR() + "Save.json");
 if (data == null) {
