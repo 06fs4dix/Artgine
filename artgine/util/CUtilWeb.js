@@ -144,7 +144,7 @@ export class CUtilWeb {
                 return match.replace(path, `${path}.js`);
             });
         };
-        if (!window["ts"]) {
+        if (window["ts"] != null && window["ts"].transpileModule != null) {
             if (!gTSLoaded) {
                 gTSLoaded = true;
                 await new Promise((resolve, reject) => {
