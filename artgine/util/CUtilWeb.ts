@@ -238,7 +238,7 @@ export class CUtilWeb {
 		};
 
 		// 1. typescript.js가 로드되어 있는지 확인
-		if (window["ts"]!=null && window["ts"].transpileModule!=null) 
+		if (window["ts"]!=null || window["ts"].transpileModule!=null) 
 		{
 			if (!gTSLoaded) {
 				gTSLoaded = true;
@@ -253,7 +253,7 @@ export class CUtilWeb {
 			} else {
 				// 로딩 중인 경우 잠깐 기다리기
 				//await new Promise(r => setTimeout(r, 100));
-				CChecker.Exe(async ()=>{
+				await CChecker.Exe(async ()=>{
 					if(window["ts"]!=null && window["ts"].transpileModule!=null)
 						return false;
 					return true;
