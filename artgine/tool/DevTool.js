@@ -117,9 +117,6 @@ export async function InitDevToolScriptViewer(_github) {
         modal.Show();
     });
     CUtil.ID("mvExcute_btn").addEventListener("click", async () => {
-        let moudle = await CScript.Build("Test.ts", gScriptViewer.GetSource());
-    });
-    CUtil.ID("mvExcute_btn").addEventListener("click", async () => {
         let moudle = await CScript.Build(CUniqueID.Get() + ".ts", gScriptViewer.GetSource());
     });
     CUtil.ID("mvSave_btn").addEventListener("click", async () => {
@@ -137,7 +134,7 @@ export async function InitDevToolScriptViewer(_github) {
     });
     return gScriptViewer;
 }
-export async function GetDevToolScriptViewer() {
+export function GetDevToolScriptViewer() {
     return gScriptViewer;
 }
 export function DevTool(_atl) {

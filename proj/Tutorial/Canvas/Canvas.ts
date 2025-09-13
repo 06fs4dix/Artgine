@@ -1,5 +1,5 @@
 //Version
-const version='mfidlit4_1';
+const version='mfixflyr_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -114,8 +114,33 @@ CLan.Set("en", "tuto9", "This project is a 2D/3D canvas mixed example.<br>You ca
 CLan.Set("en", "tuto9-1", "Select the 3D Canvas, then select the 3D Subject to change its position.");
 CLan.Set("en", "tuto10", "Press [N] key to code directly.<br>Check the comments and test it");
 
-CLan.Set("en", "tuto11-1", "On the 2DCan canvas, select “test” and change the mTexture on the CPaint2D(mComArr[0]) component.");
-CLan.Set("en", "tuto11-2", "You can press F2 to open the Resource Viewer and drag the desired CTexture into the CPaint2D component, or directly edit mTexture.");
+CLan.Set("en", "tuto11-1", "Now, try changing the texture");
+CLan.Set("en", "tuto12", `
+In the left hierarchy, select 3DCan.<br>
+<br>
+Select 3DSubject.<br>
+<br>
+Move Pos using either of the two methods below.<br>
+A. Grab the red square at the center of the subject and move it.<br>
+B. Edit the numbers in the top-right Pos field (e.g., [-300][0][0]).<br>
+`);
+// CLan.Set("en", "tuto13", `
+// Texture changes are supported in three ways: drag & drop, editor edits, and code changes.<br>
+// 1.In the left hierarchy, select 2DCan.<br>
+// 2.Select the test subject.<br>
+// 3.Press F2 to open the Resource Viewer.<br>
+// <br>
+// A. Drag & Drop<br>
+// From the Resource Viewer, drop the desired texture onto mConArr[0]: CPaint2D or onto mTexture.<br>
+// B. Edit in the Editor<br>
+// In the right Inspector, select the object in mComArr[0].<br>
+// Change mTexture to the desired texture by selecting it from the Resource Viewer.<br>
+// <br>
+// C. Code Changes<br>
+// Click the RunTime button to open the code editor.<br>
+// gAtl.Canvas("2DCan").Find("test").FindComp(CPaint2D).SetTexture("none.png");<br>
+// Write the code and click Excute.<br>
+// `);
 
 
 if(CUtil.IsMobile())
@@ -182,17 +207,24 @@ if(mode==0)
         return true;
     })
     md.Close();
-
+    GetDevToolScriptViewer().Close();
 
     var timer=new CTimer();
 
   
     await CTutorial.Exe(CTutorial.eWait.ModalClose,null,`<div class="p-3 border rounded bg-light">
     <p class="mb-3 fs-5" data-CLan='tuto9'>현재 프로젝트는 2D/3D 캔버스 혼합 예제입니다.<br> 왼쪽 하이라키-캔버스에서 서브젝트를 확인가능합니다.</p>
-    <p class="mb-3 fs-5" data-CLan='tuto9-1'>3DCan캔버스를 선택하고 3DSubject 선택하여 포지션을 변경해 보세요</p>
+    <p class="mb-3 fs-5" data-CLan='tuto9-1'>3DSubject 선택하여 위치를 변경해 보세요</p>
     </div>`,{bodyClose:false,timeOut:10});
     timer.Delay();
-    let tip=new CTooltip("3DCan Click-> 3DSubject Click->Pos Move!",CUtil.ID(can.ObjHash()+"_li"),
+    let tip=new CTooltip(CDomFactory.DataToDom(`<div style='white-space: nowrap;' data-CLan='tuto_12'>
+        1.왼쪽 하이라키에서 3DCan를 선택해주세요.<br>
+        2.3DSubject 선택해 주세요.<br>
+        3.두가지 방식중 원하는 방법으로 Pos 이동해 주세요.<br>
+        A.서브젝트에 중심에있는 빨강 네모를 잡고 움직이세요.<br>
+        B.오른쪽 상단에 Pos : [-300][0][0] 숫자를 수정해 주세요.<br>
+        </div>`),
+        CUtil.ID(can.ObjHash()+"_li"),
         CTooltip.eTrigger.Manual,CTooltip.ePlacement.Auto,Bootstrap.eColor.danger);
     tip.Focus(CModal.eAction.Shake);
     tip.Open();
@@ -226,15 +258,37 @@ if(mode==0)
     })
 
     await CTutorial.Exe(CTutorial.eWait.ModalClose,null,`<div class="p-3 border rounded bg-light">
-    <p class="mb-3 fs-5" data-CLan='tuto_11-1'>2DCan캔버스에서 test(CSubject) 선택하여 CPaint2D(mComArr[0])에서 mTexture를 변경해보세요</p>
-    <p data-CLan='tuto_11-2'>F2를 이용해 리소스 뷰어에서 원하는 CTexture를 드래그해서 CPaint2D에 넣거나 mTextrue를 변경해도 됩니다</p>
-    </div>`,{bodyClose:false,timeOut:15});
+    <p class="mb-3 fs-5" data-CLan='tuto_11-1'>이제 텍스쳐를 변경해보세요</p>
+    </div>`);
     let can2D=gAtl.Canvas("2DCan");
     let orgTex=can2D.Find("test").FindComp(CPaint2D).GetTexture()[0];
-    tip=new CTooltip(`2DCan->test-mComArr[0]-mTexture  org : ${orgTex} Change!`,CUtil.ID(can2D.ObjHash()+"_li"),
-        CTooltip.eTrigger.Manual,CTooltip.ePlacement.Auto,Bootstrap.eColor.danger);
-    tip.Focus(CModal.eAction.Shake);
-    tip.Open();
+    // tip=new CTooltip(CDomFactory.DataToDom(`
+    //     <div style='white-space: nowrap;' data-CLan='tuto_13'>
+    //     test에 현재 텍스쳐 : ${orgTex} <br>
+    //     텍스쳐 변경은 에디터 수정,드래그 앤 드랍, 코드 수정 세가지 방식을 지원합니다<br>
+        
+    //     1.왼쪽 하이라키에서 2DCan를 선택해주세요.<br>
+    //     2.test 서브젝트를 선택해 주세요.<br>
+    //     3.F2를 눌러 리소스 뷰를 열어주세요.<br>
+    //     <br>
+    //     A.드래그엔 드랍<br>
+    //     *리소스 뷰어에서 원하는 텍스쳐를 mConArr[0] : CPaint2D or mTexture에 드랍해주세요.<br>
+    //     <br>
+    //     B.에디터 수정<br>
+    //     *오른쪽 인스펙터에서 mComArr에 [0]배열에 오브젝트를 선택하세요.<br>
+    //     *mTexture에 원하는 텍스쳐로 리소스뷰에서 보고 수정해주세요. <br>
+    //     <br>
+    //     C.코드수정<br>
+    //     *RunTime 버튼누르고 코드 수정창을 엽니다.<br>
+    //     *gAtl.Canvas("2DCan").Find("test").FindComp(CPaint2D).SetTexture("none.png");<br>
+    //     코드를 작성하고 Excute합니다<br>
+
+    //     </div>`),CUtil.ID(can2D.ObjHash()+"_li"),
+    //     CTooltip.eTrigger.Manual,CTooltip.ePlacement.Auto,Bootstrap.eColor.danger);
+    // tip.Focus(CModal.eAction.Shake);
+    // tip.Open();
+    md=new CMDViewer("TexChange.md",CModal.eTitle.Text);
+    md.SetZIndex(CModal.eSort.Manual,CModal.eSort.Auto+10);
 
     
     await CChecker.Exe(async ()=>{
@@ -243,7 +297,7 @@ if(mode==0)
             return false;
         return true;
     })
-
+    md.Close();
 
     
     await CTutorial.Exe(CTutorial.eWait.KeyUp,CInput.eKey.N,`<div class="p-3 border rounded bg-light">
@@ -275,11 +329,12 @@ for(let i=modalList.length-1;i>=0;--i)
 
 
 
-import { InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
+import { GetDevToolScriptViewer, InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
 import { CFile } from "https://06fs4dix.github.io/Artgine/artgine/system/CFile.js";
 import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip.js";
 import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
+import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
 
 
 let svmodal=await InitDevToolScriptViewer(gAtl.PF().mGitHub);
@@ -293,6 +348,8 @@ if(data==null)
     svmodal.SetSource(CUtil.ArrayToString(buf));
 
 }
+
+
 
 
 

@@ -184,9 +184,9 @@ export async function InitDevToolScriptViewer(_github)
 
        
     });
-    CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
-        let moudle=await CScript.Build("Test.ts",gScriptViewer.GetSource());
-    });
+    // CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
+    //     let moudle=await CScript.Build("Test.ts",gScriptViewer.GetSource());
+    // });
 
     CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
         let moudle=await CScript.Build(CUniqueID.Get()+".ts",gScriptViewer.GetSource());
@@ -209,7 +209,7 @@ export async function InitDevToolScriptViewer(_github)
     });
     return gScriptViewer;
 }
-export async function GetDevToolScriptViewer()
+export function GetDevToolScriptViewer()
 {
     return gScriptViewer;
 }
