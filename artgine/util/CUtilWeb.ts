@@ -98,6 +98,7 @@ export class CUtilWeb {
 
 	// 	}
 
+
 	// }
 	static async TSImport(_source: string, _monaco = true, _github = false) {
 		let importPathArr = [];
@@ -134,7 +135,7 @@ export class CUtilWeb {
 
 				// 상위 디렉토리 개수만큼 fullPath에서 제거
 				let adjustedFullPath = CString.PathSub(fullPath, count);
-				if (_github) adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
+				if (_github) adjustedFullPath = "https://06fs4dix.github.io/Artgine";
 
 				adjustedFullPath = adjustedFullPath + "/" + path;
 				// 첫 번째 매치만 변경하도록 수정
@@ -148,7 +149,7 @@ export class CUtilWeb {
 				if (aChk != -1)
 					path = path.substring(aChk);
 				let adjustedFullPath = CPath.PHPC();
-				if (_github) adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
+				if (_github) adjustedFullPath = "https://06fs4dix.github.io/Artgine";
 				fullPath = adjustedFullPath;
 				//fullPath=fullPath.substring(0,fullPath.indexOf(adjustedFullPath)+adjustedFullPath.length);
 
@@ -177,6 +178,7 @@ export class CUtilWeb {
 
 		return _source;
 	}
+	
 	static MonacoEditer(_target: HTMLElement, _value: string, _language: "plaintext" | "json" | "typescript" | "javascript" | "wgsl" | "html" = "plaintext",
 		_theme: "vs" | "vs-dark" = "vs-dark", _exeFun = null, _github = false) {
 		if (window["require"] == null) {

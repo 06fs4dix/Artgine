@@ -76,7 +76,7 @@ export class CUtilWeb {
             if (count > 0) {
                 let adjustedFullPath = CString.PathSub(fullPath, count);
                 if (_github)
-                    adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
+                    adjustedFullPath = "https://06fs4dix.github.io/Artgine";
                 adjustedFullPath = adjustedFullPath + "/" + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
                 importPathArr[i] = adjustedFullPath;
@@ -88,7 +88,7 @@ export class CUtilWeb {
                     path = path.substring(aChk);
                 let adjustedFullPath = CPath.PHPC();
                 if (_github)
-                    adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
+                    adjustedFullPath = "https://06fs4dix.github.io/Artgine";
                 fullPath = adjustedFullPath;
                 adjustedFullPath = fullPath + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
