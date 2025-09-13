@@ -6,6 +6,7 @@ import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import { ExtractImportPaths } from "../render/CShaderInterpret.js";
 import { CFile } from "../system/CFile.js";
+import { CChecker } from "./CChecker.js";
 
 
 var gMonaco = true;
@@ -178,7 +179,7 @@ export class CUtilWeb {
 
 		return _source;
 	}
-	
+
 	static MonacoEditer(_target: HTMLElement, _value: string, _language: "plaintext" | "json" | "typescript" | "javascript" | "wgsl" | "html" = "plaintext",
 		_theme: "vs" | "vs-dark" = "vs-dark", _exeFun = null, _github = false) {
 		if (window["require"] == null) {
@@ -250,7 +251,12 @@ export class CUtilWeb {
 				});
 			} else {
 				// 로딩 중인 경우 잠깐 기다리기
-				await new Promise(r => setTimeout(r, 100));
+				//await new Promise(r => setTimeout(r, 100));
+				CChecker.Exe(async ()=>{
+					if(window["ts"]!=null)
+						return false;
+					return true;
+				});
 			}
 		}
 

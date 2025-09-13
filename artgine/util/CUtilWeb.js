@@ -5,6 +5,7 @@ import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import { ExtractImportPaths } from "../render/CShaderInterpret.js";
 import { CFile } from "../system/CFile.js";
+import { CChecker } from "./CChecker.js";
 var gMonaco = true;
 export class CUtilWeb {
     static ToastUI(_html, _height = 400) {
@@ -155,7 +156,11 @@ export class CUtilWeb {
                 });
             }
             else {
-                await new Promise(r => setTimeout(r, 100));
+                CChecker.Exe(async () => {
+                    if (window["ts"] != null)
+                        return false;
+                    return true;
+                });
             }
         }
         const jsCode = window["ts"].transpileModule(_source, {
