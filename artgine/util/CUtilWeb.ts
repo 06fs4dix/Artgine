@@ -154,7 +154,7 @@ export class CUtilWeb {
 				fullPath = adjustedFullPath;
 				//fullPath=fullPath.substring(0,fullPath.indexOf(adjustedFullPath)+adjustedFullPath.length);
 
-				adjustedFullPath = fullPath + path;
+				adjustedFullPath = fullPath +"/"+ path;
 				// 첫 번째 매치만 변경하도록 수정
 				_source = _source.replace(importPathArr[i], adjustedFullPath);
 				processedPaths.set(importPathArr[i], adjustedFullPath);

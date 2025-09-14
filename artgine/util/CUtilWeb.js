@@ -91,7 +91,7 @@ export class CUtilWeb {
                 if (_github)
                     adjustedFullPath = "https://06fs4dix.github.io/Artgine";
                 fullPath = adjustedFullPath;
-                adjustedFullPath = fullPath + path;
+                adjustedFullPath = fullPath + "/" + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
                 processedPaths.set(importPathArr[i], adjustedFullPath);
                 importPathArr[i] = adjustedFullPath;
