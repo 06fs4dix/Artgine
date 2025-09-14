@@ -1,5 +1,5 @@
 //Version
-const version='mfixflyr_1';
+const version='mfiydbic_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -142,7 +142,7 @@ B. Edit the numbers in the top-right Pos field (e.g., [-300][0][0]).<br>
 // Write the code and click Excute.<br>
 // `);
 
-
+CLan.Set("en", "tuto13", "Click the [RunTime] button in the top-left.");
 if(CUtil.IsMobile())
 {
     CConfirm.List(CLan.Get("tutoMobile","튜토리얼은 모바일 미지원!"),[()=>{CUtilWeb.PageBack();}],["Back"]);
@@ -185,7 +185,7 @@ if(mode==0)
             
         return true;
     })
-    await CTutorial.Exe(CTutorial.eWait.Click,"RunTime_btn",`왼쪽 상단에 [RunTime]버튼을 누르세요.`,{bodyClose:false,timeOut:3});
+    await CTutorial.Exe(CTutorial.eWait.Click,"<div data-CLan='tuto13'>RunTime_btn",`왼쪽 상단에 [RunTime]버튼을 누르세요.</div>`,{bodyClose:false,timeOut:3});
     let md=new CMDViewer("SampleCode.md",CModal.eTitle.Text);
     md.SetZIndex(CModal.eSort.Manual,CModal.eSort.Auto+10);
     
@@ -262,31 +262,7 @@ if(mode==0)
     </div>`);
     let can2D=gAtl.Canvas("2DCan");
     let orgTex=can2D.Find("test").FindComp(CPaint2D).GetTexture()[0];
-    // tip=new CTooltip(CDomFactory.DataToDom(`
-    //     <div style='white-space: nowrap;' data-CLan='tuto_13'>
-    //     test에 현재 텍스쳐 : ${orgTex} <br>
-    //     텍스쳐 변경은 에디터 수정,드래그 앤 드랍, 코드 수정 세가지 방식을 지원합니다<br>
-        
-    //     1.왼쪽 하이라키에서 2DCan를 선택해주세요.<br>
-    //     2.test 서브젝트를 선택해 주세요.<br>
-    //     3.F2를 눌러 리소스 뷰를 열어주세요.<br>
-    //     <br>
-    //     A.드래그엔 드랍<br>
-    //     *리소스 뷰어에서 원하는 텍스쳐를 mConArr[0] : CPaint2D or mTexture에 드랍해주세요.<br>
-    //     <br>
-    //     B.에디터 수정<br>
-    //     *오른쪽 인스펙터에서 mComArr에 [0]배열에 오브젝트를 선택하세요.<br>
-    //     *mTexture에 원하는 텍스쳐로 리소스뷰에서 보고 수정해주세요. <br>
-    //     <br>
-    //     C.코드수정<br>
-    //     *RunTime 버튼누르고 코드 수정창을 엽니다.<br>
-    //     *gAtl.Canvas("2DCan").Find("test").FindComp(CPaint2D).SetTexture("none.png");<br>
-    //     코드를 작성하고 Excute합니다<br>
 
-    //     </div>`),CUtil.ID(can2D.ObjHash()+"_li"),
-    //     CTooltip.eTrigger.Manual,CTooltip.ePlacement.Auto,Bootstrap.eColor.danger);
-    // tip.Focus(CModal.eAction.Shake);
-    // tip.Open();
     md=new CMDViewer("TexChange.md",CModal.eTitle.Text);
     md.SetZIndex(CModal.eSort.Manual,CModal.eSort.Auto+10);
 

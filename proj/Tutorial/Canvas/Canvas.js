@@ -1,4 +1,4 @@
-const version = 'mfixflyr_1';
+const version = 'mfiydbic_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -89,6 +89,7 @@ Move Pos using either of the two methods below.<br>
 A. Grab the red square at the center of the subject and move it.<br>
 B. Edit the numbers in the top-right Pos field (e.g., [-300][0][0]).<br>
 `);
+CLan.Set("en", "tuto13", "Click the [RunTime] button in the top-left.");
 if (CUtil.IsMobile()) {
     CConfirm.List(CLan.Get("tutoMobile", "튜토리얼은 모바일 미지원!"), [() => { CUtilWeb.PageBack(); }], ["Back"]);
     await CChecker.Exe(async () => {
@@ -117,7 +118,7 @@ if (mode == 0) {
             return false;
         return true;
     });
-    await CTutorial.Exe(CTutorial.eWait.Click, "RunTime_btn", `왼쪽 상단에 [RunTime]버튼을 누르세요.`, { bodyClose: false, timeOut: 3 });
+    await CTutorial.Exe(CTutorial.eWait.Click, "<div data-CLan='tuto13'>RunTime_btn", `왼쪽 상단에 [RunTime]버튼을 누르세요.</div>`, { bodyClose: false, timeOut: 3 });
     let md = new CMDViewer("SampleCode.md", CModal.eTitle.Text);
     md.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 10);
     await CChecker.Exe(async () => {
