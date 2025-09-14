@@ -185,7 +185,7 @@ if(mode==0)
             
         return true;
     })
-    await CTutorial.Exe(CTutorial.eWait.Click,"<div data-CLan='tuto13'>RunTime_btn",`왼쪽 상단에 [RunTime]버튼을 누르세요.</div>`,{bodyClose:false,timeOut:3});
+    await CTutorial.Exe(CTutorial.eWait.Click,"RunTime_btn",`<div data-CLan='tuto13'>왼쪽 상단에 [RunTime]버튼을 누르세요.</div>`,{bodyClose:false,timeOut:3});
     let md=new CMDViewer("SampleCode.md",CModal.eTitle.Text);
     md.SetZIndex(CModal.eSort.Manual,CModal.eSort.Auto+10);
     
