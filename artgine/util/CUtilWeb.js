@@ -89,9 +89,9 @@ export class CUtilWeb {
                     path = path.substring(aChk);
                 let adjustedFullPath = CPath.PHPC();
                 if (_github)
-                    adjustedFullPath = "https://06fs4dix.github.io/Artgine";
+                    adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
                 fullPath = adjustedFullPath;
-                adjustedFullPath = fullPath + "/" + path;
+                adjustedFullPath = fullPath + path;
                 _source = _source.replace(importPathArr[i], adjustedFullPath);
                 processedPaths.set(importPathArr[i], adjustedFullPath);
                 importPathArr[i] = adjustedFullPath;
