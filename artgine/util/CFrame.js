@@ -450,6 +450,7 @@ export class CFrame {
         }
     }
     async Process() {
+        this.Load().mLoadSet.add("load");
         new CLoadingBack("MainLoading", () => {
             let size = this.Load().mLoadSet.size + (this.mInit ? 1 : 0);
             if (this.Load().mLoadSet.size == 0 && this.mInit)
@@ -504,7 +505,6 @@ export class CFrame {
                 requestIdleCallback(this.mSubProcess);
             CWASM.Checker(1);
         };
-        this.Load().mLoadSet.add("load");
         await CFrame.EventCall(this.GetEvent(CEvent.eType.Load));
         CChecker.Exe(async () => {
             if (this.mMainProcess == null)

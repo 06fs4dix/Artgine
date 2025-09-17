@@ -674,6 +674,7 @@ export class CFrame
 	
 	async Process()
 	{
+		this.Load().mLoadSet.add("load");
 		new CLoadingBack("MainLoading", ()=>{
 
 			//init씬 확인용
@@ -748,7 +749,7 @@ export class CFrame
 				requestIdleCallback(this.mSubProcess);
 			CWASM.Checker(1);
 		};
-		this.Load().mLoadSet.add("load");
+		
 		await CFrame.EventCall(this.GetEvent(CEvent.eType.Load));
 		CChecker.Exe(async ()=>{
 			if(this.mMainProcess==null)	return;
