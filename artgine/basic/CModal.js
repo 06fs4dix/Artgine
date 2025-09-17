@@ -29,6 +29,7 @@ export class CModal {
     }
     static Index() { return gIndex; }
     ;
+    mESC = true;
     mResizeObserver;
     mKey = "";
     mSort = CModal.eSort.Auto;
@@ -177,6 +178,9 @@ export class CModal {
     }
     SetCloseToHide(_enable) {
         this.mCloseToHide = _enable;
+    }
+    SetCloseEsc(_enable) {
+        this.mESC = _enable;
     }
     IsPause() {
         return this.mPause;

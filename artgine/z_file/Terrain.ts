@@ -26,7 +26,7 @@ var to_pos : ToV3=Null();
 
 var uvRepeat : CVec2=new CVec2(1,1);
 
-Build("PreTerrain",[],
+Build("Artgine/Shader/PreTerrain",[],
 	vs_main,[worldMat,viewMat,projectMat,brushType,brushInner,brushOuter,brushPos,size,uvRepeat],
 	[out_position,to_uv,to_pos],
     ps_main,[out_color]

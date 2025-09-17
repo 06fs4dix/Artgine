@@ -48,6 +48,7 @@ export class CModal implements IAutoUpdate , IListener
     }
     static Index(){ return gIndex;  };
     
+    mESC=true;
     mResizeObserver : ResizeObserver;
     mKey="";
     mSort=CModal.eSort.Auto;
@@ -216,9 +217,13 @@ export class CModal implements IAutoUpdate , IListener
     {
         return this.mShow;
     }
-    SetCloseToHide(_enable)
+    SetCloseToHide(_enable : boolean)
     {
         this.mCloseToHide=_enable;
+    }
+    SetCloseEsc(_enable : boolean)
+    {
+        this.mESC=_enable;
     }
     
 

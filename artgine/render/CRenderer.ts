@@ -46,7 +46,7 @@ export class CRenderer
 	mTexBind=new Array<number>();
 
 	public mUniToSam2d : CTexture;
-	public mUniToSam2dKey="uniToSam2dKey";
+	public mUniToSam2dKey="Artgine/uniToSam2dKey";
 	public mUniTexLastOff=-1;
 
 	
@@ -109,7 +109,7 @@ export class CRenderer
 	GL_TEXTURE_CUBE_MAP_POSITIVE_Z 	앞
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z 	뒤
 	*/
-	BuildCubeMap(_texList : Array<CTexture>,_mipmap=true)	: string{	return null;	}
+	BuildCubeMap(_texList : Array<CTexture>,_mipmap=true,_key=null)	: string{	return null;	}
 	RebuildTexture(_tex : CTexture,_active :number,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView)
 	{
 

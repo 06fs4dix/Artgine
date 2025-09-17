@@ -122,12 +122,11 @@ export class CUtilObj {
             SummerNote(_pointer, _th);
         };
     }
-    static ShowModal(_watch, _showInNewJBox = false) {
-        let title = "Modal";
+    static ShowModal(_watch, _title = "Modal", _showInNewJBox = false) {
         if (_showInNewJBox) {
             let htmlString = null;
             if (_watch instanceof CObject) {
-                title = _watch.Key() + "-" + _watch.constructor.name;
+                _title = _watch.Key() + "-" + _watch.constructor.name;
                 htmlString = _watch.EditInit();
             }
             else
@@ -135,7 +134,7 @@ export class CUtilObj {
             var id = CUniqueID.Get();
             let jbox = new CModal();
             jbox.SetTitle(CModal.eTitle.TextFullClose);
-            jbox.SetHeader(title);
+            jbox.SetHeader(_title);
             jbox.SetBody("<div id='" + id + "'></div>");
             jbox.SetSize(480, 640);
             jbox.Open();

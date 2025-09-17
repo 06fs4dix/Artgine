@@ -13,7 +13,7 @@ var out_color = Null();
 var to_uv = Null();
 var to_pos = Null();
 var uvRepeat = new CVec2(1, 1);
-Build("PreTerrain", [], vs_main, [worldMat, viewMat, projectMat, brushType, brushInner, brushOuter, brushPos, size, uvRepeat], [out_position, to_uv, to_pos], ps_main, [out_color]);
+Build("Artgine/Shader/PreTerrain", [], vs_main, [worldMat, viewMat, projectMat, brushType, brushInner, brushOuter, brushPos, size, uvRepeat], [out_position, to_uv, to_pos], ps_main, [out_color]);
 function vs_main(f3_ver, f2_uv) {
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, worldMat);

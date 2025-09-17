@@ -118,24 +118,24 @@ var blendFactor : number=Null();
 /********************************/
 
 //Blend
-Build("PostBlend",["blend"],
+Build("Artgine/Shader/PostBlend",["blend"],
     vs_main,[
         worldMat,viewMat,projectMat,blend,opacity
     ],[out_position,to_uv],
     ps_main_blend,[out_color]);
 //Blur
-Build("PostBlur",["blur"],
+Build("Artgine/Shader/PostBlur",["blur"],
     vs_main,[
         worldMat,viewMat,projectMat,renderCount,renderType
     ],[out_position,to_uv],
     ps_main_blur,[out_color]);
-Build("PostFloodFill",["floodFill"],
+Build("Artgine/Shader/PostFloodFill",["floodFill"],
         vs_main,[
             worldMat,viewMat,projectMat,
         ],[out_position,to_uv],
         ps_main_floodFill,[out_color]);
 //Light
-Build("PostLight",["light"],
+Build("Artgine/Shader/PostLight",["light"],
     vs_main,[
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
@@ -147,7 +147,7 @@ Build("PostLight",["light"],
     ],[out_position,to_uv],
     ps_main_light,[out_color]);
 //Light MultiTex
-Build("PostLightMulti",["lightMulti"],
+Build("Artgine/Shader/PostLightMulti",["lightMulti"],
     vs_main,[
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
@@ -159,7 +159,7 @@ Build("PostLightMulti",["lightMulti"],
     ],[out_position,to_uv],
     ps_main_light_MultiTex,[out_color, out_specular, out_emissive]);
 //Distort
-Build("PostDistort",["distort"],
+Build("Artgine/Shader/PostDistort",["distort"],
     vs_main,[
         worldMat,viewMat,projectMat,
         time,
@@ -167,7 +167,7 @@ Build("PostDistort",["distort"],
     ],[out_position,to_uv],
     ps_main_distort,[out_color]);
 //Aberrate
-Build("PostAberrate",["aberrate"],
+Build("Artgine/Shader/PostAberrate",["aberrate"],
     vs_main,[
         worldMat,viewMat,projectMat,
         time,
@@ -175,14 +175,14 @@ Build("PostAberrate",["aberrate"],
     ],[out_position,to_uv],
     ps_main_aberrate,[out_color]);
 //Pixel
-Build("PostPixel",["pixel"],
+Build("Artgine/Shader/PostPixel",["pixel"],
     vs_main,[
         worldMat,viewMat,projectMat,
         pixelSize
     ],[out_position,to_uv],
     ps_main_pixel,[out_color]);
 //Noise
-Build("PostNoise",["noise"],
+Build("Artgine/Shader/PostNoise",["noise"],
     vs_main_modelPos,[
         worldMat,viewMat,projectMat,
         time,
@@ -190,49 +190,49 @@ Build("PostNoise",["noise"],
     ],[out_position,to_uv, to_worldPos],
     ps_main_noise,[out_color]);
 //tvBorder
-Build("PostTVBorder",["tvBorder"],
+Build("Artgine/Shader/PostTVBorder",["tvBorder"],
     vs_main_modelPos,[
         worldMat,viewMat,projectMat,
         borderIntensity,borderThickness
     ],[out_position,to_uv, to_worldPos],
     ps_main_tvBorderLight,[out_color]);
 //ScanLine
-Build("PostScanLine",["scanline"],
+Build("Artgine/Shader/PostScanLine",["scanline"],
     vs_main_modelPos,[
         worldMat,viewMat,projectMat,
         scanLineThickness,scanLineDensity,scanLineIntensity
     ],[out_position,to_uv, to_worldPos],
     ps_main_scanLine,[out_color]);
 //Fxaa
-Build("PostFXAA",["fxaa"],
+Build("Artgine/Shader/PostFXAA",["fxaa"],
     vs_main,[
         worldMat,viewMat,projectMat,
         span_max,reduce_mul,reduce_min,subpix_shift
     ],[out_position,to_uv],
     ps_main_fxaa,[out_color]);
 //Gamma
-Build("PostGamma",["gamma"],
+Build("Artgine/Shader/PostGamma",["gamma"],
     vs_main,[
         worldMat,viewMat,projectMat,
         gamma,brightness,toneMappingFactor,colorCorrection,exposure,contrast
     ],[out_position,to_uv],
     ps_main_gamma,[out_color]);
 //baked light
-Build("PostExpandBakedLight",["bake"],
+Build("Artgine/Shader/PostExpandBakedLight",["bake"],
     vs_main,[
         worldMat,viewMat,projectMat,
     ],[out_position,to_uv],
     ps_main_ExpandBakedLight,[out_color]);
 //아래는 반드시 float texture텍스쳐를 받고 float texture로 내보내야 함
 //https://catlikecoding.com/unity/tutorials/advanced-rendering/
-Build("PostDownSample",["sample", "down"],
+Build("Artgine/Shader/PostDownSample",["sample", "down"],
     vs_main, [
         worldMat,viewMat,projectMat,
         mipLevel,
         threshold,softThreshold
     ],[out_position,to_uv],
     ps_main_DownSample,[out_color]);
-Build("PostUpSample",["sample", "up"],
+Build("Artgine/Shader/PostUpSample",["sample", "up"],
     vs_main, [
         worldMat,viewMat,projectMat,
         blendFactor

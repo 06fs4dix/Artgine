@@ -326,7 +326,7 @@ export class CRes extends CObject {
 
 		// mResMap → gTree에 증분 삽입(동일 경로/파일명이 이미 있으면 건너뜀)
 		for (const [key, value] of this.mResMap as Map<string, any>) {
-			if (!(value instanceof CTexture) && !(value instanceof CMesh)) continue;
+			//if (!(value instanceof CTexture) && !(value instanceof CMesh)) continue;
 
 			const parts = String(key).split("/").filter(Boolean);
 			if (parts.length === 0) continue;
@@ -467,8 +467,11 @@ export class CRes extends CObject {
 						: "bi bi-file-earmark";
 					if(n.mData instanceof CTexture || n.mData instanceof CMesh)
 						btn.className = "btn btn-sm btn-light border";
-					else
+					else if(n.mData instanceof CObject && n.mData.IsBlackBoard())
 						btn.className = "btn btn-sm btn-outline-primary border";
+					else 
+						btn.className = "btn btn-sm btn-secondary border";
+					
 
 				}
 
@@ -486,6 +489,7 @@ export class CRes extends CObject {
 				} else {
 					btn.title = pathOf(n);
 					btn.onclick = () => {
+						if(n.mData.Key==null)	return;
 						input.value=n.mData.Key();
 						input.dispatchEvent(new Event('keyup', {bubbles: true}));
 						// const fullPath = pathOf(n);

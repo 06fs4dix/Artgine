@@ -261,7 +261,7 @@ export class CVoxel extends CSubject
 	// 	Collision:1,
 	// 	Trigger:2,
 	// };
-    mAtlas : CAtlas=new CAtlas();
+    mAtlas : CAtlas=new CAtlas("Voxel/");
     mVInfo : Uint8Array=null;
 	
 	mTexInfo : Uint32Array=null;//1비트 텍스쳐/컬러 2bit 방향 (1byte) 24bit(3byte)  텍스쳐/컬러

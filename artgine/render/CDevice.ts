@@ -352,6 +352,9 @@ export class CDeviceGL extends CDevice
 		else
 		{
 			this.GL().depthFunc(this.GL().ALWAYS);
+
+			
+			
 			//this.GL().disable(this.GL().DEPTH_TEST);
 		}
 	}

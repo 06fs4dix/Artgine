@@ -15,6 +15,7 @@ export class CTutorial {
         let modal = null;
         if (_html != null) {
             modal = new CModal();
+            modal.SetCloseEsc(false);
             modal.SetTitle(CModal.eTitle.None);
             modal.SetBody(_html);
             modal.SetZIndex(CModal.eSort.Top);

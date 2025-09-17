@@ -65,7 +65,7 @@ var depthMap : number = 0.0;
 var screenResolution : CVec2=new CVec2(1.0, 1.0);
 var sam2DCount : number=Null();
 
-Build("2DPlane",[],
+Build("Artgine/Shader/2DPlane",[],
 	vs_main,[
 		worldMat,viewMat,projectMat,texCodi,reverse,
 	],[
@@ -73,35 +73,35 @@ Build("2DPlane",[],
 	],ps_main,[out_color]
 );
 
-Build("2DTail",["tail"],
+Build("Artgine/Shader/2DTail",["tail"],
 	vs_main_tail,[
 		worldMat,viewMat,projectMat,texCodi,reverse,
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
-Build("2DTrail",["trail"],
+Build("Artgine/Shader/2DTrail",["trail"],
 	vs_main_trail,[
 		worldMat,viewMat,projectMat,texCodi,reverse,trailPos,lastHide,
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
-Build("2DSimple",["simple"],
+Build("Artgine/Shader/2DSimple",["simple"],
 	vs_main_simple,[
 		worldMat,viewMat,projectMat
 	],[
 		out_position,to_uv
 	],ps_main_simple,[out_color]
 );
-Build("2DMask",["mask"],
+Build("Artgine/Shader/2DMask",["mask"],
 	vs_main,[
 		worldMat,viewMat,projectMat,texCodi,reverse,mask
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main_mask,[out_color]
 );
-Build("2DBlit",["blit"],vs_main_blit,[
+Build("Artgine/Shader/2DBlit",["blit"],vs_main_blit,[
 
 	],[
 		out_position,to_uv
@@ -329,6 +329,9 @@ function ps_main()
 function ps_main_mask()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
+	BranchBegin("color","C",[colorModel,alphaModel]);
+	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchEnd();
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if ( L_cor.a <= alphaCut ) discard;
 	BranchEnd();

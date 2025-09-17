@@ -15,6 +15,7 @@ import { CUpdate } from "../../basic/Basic.js";
 import { CPointer } from "../../basic/CObject.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
+import { CJSON } from "../../basic/CJSON.js";
 
 /*
 https://wiki.ogre3d.org/-Point+Light+Attenuation
@@ -437,7 +438,8 @@ export class CLight extends CCamComp
 							var tex=fw.Res().Find(this.GetTex()) as CTexture;
 							if(tex.GetInfo()[0].mCount<(_brush.mShadowCount+1)*6)
 							{
-								fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,(_brush.mShadowCount+1)*6)],new CVec2(fw.PF().mWidth, fw.PF().mHeight),"shadowArr.tex");	
+								fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,
+									(_brush.mShadowCount+1)*6)],new CVec2(fw.PF().mWidth, fw.PF().mHeight),fw.Pal().GetShadowArrTex());	
 							}
 							srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,_brush.mShadowCount,_brush.mShadowCount*6+i)));
 						}
@@ -524,5 +526,8 @@ export class CLight extends CCamComp
 		_brush.mLightCount++;
 		
     }
+	ImportCJSON(_json: CJSON): this {
+		return super.ImportCJSON(_json);
+	}
 	
 }

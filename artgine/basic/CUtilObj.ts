@@ -235,14 +235,14 @@ export class CUtilObj
 		};
 		
 	}
-	static ShowModal(_watch : CObject|Array<CObject>|IterableIterator<CObject>, _showInNewJBox : boolean = false)
+	static ShowModal(_watch : CObject|Array<CObject>|IterableIterator<CObject>,_title="Modal", _showInNewJBox : boolean = false)
 	{		
-		let title="Modal";
+		//let title="Modal";
 		if(_showInNewJBox) {
 			let htmlString : HTMLElement=null;
 			if(_watch instanceof CObject)
 			{
-				title=_watch.Key()+"-"+_watch.constructor.name;
+				_title=_watch.Key()+"-"+_watch.constructor.name;
 				htmlString = _watch.EditInit();
 			}
 				
@@ -251,7 +251,7 @@ export class CUtilObj
 			var id=CUniqueID.Get();
 			let jbox = new CModal();
 			jbox.SetTitle(CModal.eTitle.TextFullClose);
-			jbox.SetHeader(title);
+			jbox.SetHeader(_title);
 			jbox.SetBody("<div id='"+id+"'></div>");
 			jbox.SetSize(480, 640);
 			jbox.Open();

@@ -77,13 +77,13 @@ var SkyColorBTable: CMat = new CMat(0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 
 
 
 
-Build("CubeObject", [], 
+Build("Artgine/Shader/CubeObject", [], 
     vs_main, [worldMat, viewMat, projectMat], 
     [out_position,to_uvw], 
     ps_main, [out_color]
 );
 
-Build("CubeSky", ["sky"], 
+Build("Artgine/Shader/CubeSky", ["sky"], 
     vs_main_camBased, [worldMat, viewMat, projectMat,time,camPos], 
     [out_position,to_uvw], 
     ps_main, [out_color]

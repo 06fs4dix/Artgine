@@ -30,6 +30,11 @@ var g_offCObjHD = 0;
 //2.sysn처리(함수 호출)
 export class CSubject extends CObject implements IFile
 {
+	public mKey : string;
+	public mDestroy : boolean;
+	public mEnable : boolean;
+	public mPMatMul=true;
+
 	public mComArr : Array<CComponent>;
 	public mPTArr : Array<CComponent>=null;
 	public mCLArr : CArray<CComponent>=null;
@@ -43,14 +48,12 @@ export class CSubject extends CObject implements IFile
 	public mRot : CVec3;
 	public mSca : CVec3;
 	public mWMat : CMat;
-	public mPMatMul=true;
+	
 	//public m_addPos : CVec3;
 	//public m_refresh : boolean;
 	
-	public mKey : string;
+	
 	public mKeyChange : string;
-	public mDestroy : boolean;
-	public mEnable : boolean;
 	public mPEnable : boolean;
 	
 	public mSpeed : number;
@@ -304,14 +307,14 @@ export class CSubject extends CObject implements IFile
 		this.mFrame=_frame;
 		
 		//this.mCLArr.Clear();
-		for(let each0 of this.mComArr)
+		//if(this.mFrame!=null)
 		{
-			each0.SetOwner(this);
-			// if(each0 instanceof CCollider || each0 instanceof CNavigation)
-			// {
-			// 	this.mCLArr.Push(each0);
-			// }
+			for(let each0 of this.mComArr)
+			{
+				each0.SetOwner(this);
+			}
 		}
+		
 
 		
 		for(let each0 of this.mChild)
@@ -346,12 +349,15 @@ export class CSubject extends CObject implements IFile
 	
 	SetKey(_key) 
 	{
+		
 		if(this.mKey==_key)
 			return;
-		// if(this.m_key.length!=0)
-		// 	this.m_keyChange = this.m_key;
+		//let bb=this.IsBlackBoard() && this.IsProxy()==false;
+		//if(bb)	this.SetBlackBoard(false);
+
 		this.mKeyChange="keySwap";
-		this.mKey = _key+""; 	
+		this.mKey = _key+"";
+		//if(bb)	this.SetBlackBoard(true);
 	}
 	GetSpeed() {return this.mSpeed;	};
 	SetSpeed(_speed) {	this.mSpeed = _speed;	}

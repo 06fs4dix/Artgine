@@ -496,7 +496,7 @@ export class CPaint3D extends CPaint
 			{
 				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
 			}
-			var dm=this.GetDrawMesh(this.mMesh+_node.md.mKey,_vf,_node.md.mData.ci);
+			var dm=this.GetDrawMesh("Artgine/DM/"+this.mMesh+_node.md.mKey,_vf,_node.md.mData.ci);
 			this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 			//this.m_owner.GetFW().Ren().BMgr().SetAlpha(this.AlphaState());
 			_barr[_off]=this.mOwner.GetFrame().BMgr().BatchOff();

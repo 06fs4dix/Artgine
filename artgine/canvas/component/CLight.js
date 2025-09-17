@@ -288,7 +288,7 @@ export class CLight extends CCamComp {
                             var fw = this.GetOwner().GetFrame();
                             var tex = fw.Res().Find(this.GetTex());
                             if (tex.GetInfo()[0].mCount < (_brush.mShadowCount + 1) * 6) {
-                                fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, (_brush.mShadowCount + 1) * 6)], new CVec2(fw.PF().mWidth, fw.PF().mHeight), "shadowArr.tex");
+                                fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, (_brush.mShadowCount + 1) * 6)], new CVec2(fw.PF().mWidth, fw.PF().mHeight), fw.Pal().GetShadowArrTex());
                             }
                             srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(i, _brush.mShadowCount, _brush.mShadowCount * 6 + i)));
                         }
@@ -352,5 +352,8 @@ export class CLight extends CCamComp {
         _brush.mLightColor[_brush.mLightCount * 4 + 2] = this.mColor.z;
         _brush.mLightColor[_brush.mLightCount * 4 + 3] = this.mColor.w;
         _brush.mLightCount++;
+    }
+    ImportCJSON(_json) {
+        return super.ImportCJSON(_json);
     }
 }

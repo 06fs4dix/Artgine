@@ -9,6 +9,7 @@ export class CSurface extends CSubject {
     mPaint = null;
     mTexInfo = null;
     mTexSize = null;
+    mTexKey = null;
     mTexLinear = null;
     mRTUse = true;
     mTexCreate = true;
@@ -18,7 +19,10 @@ export class CSurface extends CSubject {
         this.mPaint = new CPaintSurface(null);
         this.PushComp(this.mPaint);
         this.mRenderPass.mPriority = CRenderPass.ePriority.Surface + gSurfaceOff;
-        this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
+        if (this.mTexKey == null)
+            this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
+        else
+            this.mRenderPass.mRenderTarget = this.mTexKey;
     }
     IsShould(_member, _type) {
         if (_member == "mTexKey" || _member == "mTexSize" || _member == "mTexInfo" || _member == "mTexLinear" ||
@@ -52,7 +56,10 @@ export class CSurface extends CSubject {
         this.mRTUse = _enable;
         if (_enable) {
             this.mTexCreate = false;
-            this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
+            if (this.mTexKey == null)
+                this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
+            else
+                this.mRenderPass.mRenderTarget = this.mTexKey;
         }
         else
             this.mRenderPass.mRenderTarget = "";
@@ -60,6 +67,10 @@ export class CSurface extends CSubject {
     GetPaint() { return this.mPaint; }
     GetRP() { return this.mRenderPass; }
     NewRT(_texInfo = null, _texSize = null, _texLinear = false) {
+        if (this.mTexKey == null)
+            this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
+        else
+            this.mRenderPass.mRenderTarget = this.mTexKey;
         if (this.GetFrame() == null) {
             this.mTexInfo = _texInfo;
             this.mTexSize = _texSize;

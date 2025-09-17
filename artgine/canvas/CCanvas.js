@@ -8,6 +8,7 @@ import { CBase64File } from "../util/CBase64File.js";
 import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js";
 import { CCollider } from "./component/CCollider.js";
 import { CAtlas } from "../util/CAtlas.js";
+import { CUpdate } from "../basic/Basic.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CRoomClient } from "../server/CRoomClient.js";
 import { CBlackBoardRef, CObject } from "../basic/CObject.js";
@@ -18,6 +19,7 @@ import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
 import { RenderQueTool } from "../tool/RenderQueTool.js";
 import { CConsol } from "../basic/CConsol.js";
+import { CPaint } from "./component/paint/CPaint.js";
 import { CRPMgr } from "./CRPMgr.js";
 var gRenderQue = new Array();
 var gCanvas = new Array();
@@ -78,6 +80,29 @@ export class CCanvas extends CObject {
     SetRPMgr(_rpMgr) {
         if (this.mRPMgr == null && _rpMgr == null)
             return;
+        if (this.mRPMgr != null) {
+            for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
+                this.mBrush.RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
+            }
+            if (this.mRPMgr != null) {
+                for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
+                    this.mBrush.RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
+                }
+                this.mBrush.mAutoRPUpdate = CUpdate.eType.Not;
+                for (let i = 0; i < this.mRPMgr.mSufArr.length; ++i) {
+                    const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
+                    if (obj)
+                        obj.Destroy();
+                }
+                this.mBrush.ClearRen();
+            }
+            for (let [key, obj] of this.mSubMap) {
+                let ptVec = obj.FindComps(CPaint, true);
+                for (let pt of ptVec) {
+                    pt.ClearCRPAuto();
+                }
+            }
+        }
         this.mChangeRPMgr = _rpMgr;
     }
     ClearBatch() {

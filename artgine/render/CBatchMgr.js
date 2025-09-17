@@ -1,5 +1,10 @@
 import { CArray } from "../basic/CArray.js";
 import { CHash } from "../basic/CHash.js";
+export class CTypeUni {
+    type;
+    uni;
+    last;
+}
 export class CBatch {
     mKey = null;
     mMesh = null;

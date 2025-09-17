@@ -352,6 +352,26 @@ export class CFrame
 					let sv=new CFileViewer([info.name+".ts",info.name+".json",info.name+".html"]);
 					sv.Open();
 				}
+				if(e.key=="Escape")
+				{
+					let mList=CModal.GetModalList();
+					let top : CModal=null;
+					let topIndex=-1;
+					for(let m of mList)
+					{
+						let index=Number(m.mCard.style.zIndex==""?0:m.mCard.style.zIndex);
+						if(topIndex<index)
+						{
+							topIndex=index;
+							top=m;
+						}
+						
+					}
+					if(top!=null && top.mESC)
+					{
+						top.Close();
+					}
+				}
 				//if(e.keyCode ==119 )	CWebView.JToWKeyUp("F8");
 				//if(e.keyCode ==120 )	CWebView.JToWKeyUp("F9");
 				//if(e.keyCode ==123 )	CWebView.JToWKeyUp("F12");

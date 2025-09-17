@@ -31,26 +31,50 @@ export class CPalette {
         let upFolder = CPath.PHPC();
         if (_fw.PF().mGitHub)
             upFolder = "https://06fs4dix.github.io/Artgine/";
-        gNoneTex = "none.png";
+        gNoneTex = "Artgine/none.png";
         await _fw.Load().LoadSwitch(gNoneTex, CUtil.Base64ToArray(gNoneImg), new CLoaderOption());
-        gSl2DKey = upFolder + "artgine/z_file/2D.ts";
-        gSl3DKey = upFolder + "artgine/z_file/3D.ts";
-        gSlPostKey = upFolder + "artgine/z_file/Post.ts";
-        gSlCubeKey = upFolder + "artgine/z_file/Cube.ts";
-        gSlVoxelKey = upFolder + "artgine/z_file/Voxel.ts";
-        gSlTerrainKey = upFolder + "artgine/z_file/Terrain.ts";
-        await _fw.Load().Load(gSl3DKey);
-        await _fw.Load().Load(gSlVoxelKey);
-        await _fw.Load().Load(gSl2DKey);
-        await _fw.Load().Load(gSlPostKey);
-        await _fw.Load().Load(gSlCubeKey);
-        await _fw.Load().Load(gSlTerrainKey);
-        this.mSL2D = _fw.Res().Find(this.Sl2DKey());
-        this.mSL3D = _fw.Res().Find(this.Sl3DKey());
-        this.mSLPost = _fw.Res().Find(this.SlPostKey());
-        this.mSLCube = _fw.Res().Find(this.SlCubeKey());
-        this.mSLVoxel = _fw.Res().Find(this.SlVoxelKey());
-        this.mSLTerrain = _fw.Res().Find(this.SlTerrainKey());
+        let Sl2DKey = upFolder + "artgine/z_file/2D.ts";
+        let Sl3DKey = upFolder + "artgine/z_file/3D.ts";
+        let SlPostKey = upFolder + "artgine/z_file/Post.ts";
+        let SlCubeKey = upFolder + "artgine/z_file/Cube.ts";
+        let SlVoxelKey = upFolder + "artgine/z_file/Voxel.ts";
+        let SlTerrainKey = upFolder + "artgine/z_file/Terrain.ts";
+        gSl2DKey = "Artgine/2D.sl";
+        gSl3DKey = "Artgine/3D.sl";
+        gSlPostKey = "Artgine/Post.sl";
+        gSlCubeKey = "Artgine/Cube.sl";
+        gSlVoxelKey = "Artgine/Voxel.sl";
+        gSlTerrainKey = "Artgine/Terrain.sl";
+        await _fw.Load().Load(Sl2DKey);
+        await _fw.Load().Load(Sl3DKey);
+        await _fw.Load().Load(SlPostKey);
+        await _fw.Load().Load(SlCubeKey);
+        await _fw.Load().Load(SlVoxelKey);
+        await _fw.Load().Load(SlTerrainKey);
+        this.mSL2D = _fw.Res().Find(Sl2DKey);
+        this.mSL3D = _fw.Res().Find(Sl3DKey);
+        this.mSLPost = _fw.Res().Find(SlPostKey);
+        this.mSLCube = _fw.Res().Find(SlCubeKey);
+        this.mSLVoxel = _fw.Res().Find(SlVoxelKey);
+        this.mSLTerrain = _fw.Res().Find(SlTerrainKey);
+        _fw.Res().Remove(Sl2DKey);
+        this.mSL2D.mKey = gSl2DKey;
+        _fw.Res().Push(gSl2DKey, this.mSL2D);
+        _fw.Res().Remove(Sl3DKey);
+        this.mSL3D.mKey = gSl3DKey;
+        _fw.Res().Push(gSl3DKey, this.mSL3D);
+        _fw.Res().Remove(SlPostKey);
+        this.mSLPost.mKey = gSlPostKey;
+        _fw.Res().Push(gSlPostKey, this.mSLPost);
+        _fw.Res().Remove(SlCubeKey);
+        this.mSLCube.mKey = gSlCubeKey;
+        _fw.Res().Push(gSlCubeKey, this.mSLCube);
+        _fw.Res().Remove(SlVoxelKey);
+        this.mSLVoxel.mKey = gSlVoxelKey;
+        _fw.Res().Push(gSlVoxelKey, this.mSLVoxel);
+        _fw.Res().Remove(SlTerrainKey);
+        this.mSLTerrain.mKey = gSlTerrainKey;
+        _fw.Res().Push(gSlTerrainKey, this.mSLTerrain);
     }
     Init(_fw) {
         if (_fw.Ren() == null)
@@ -62,15 +86,15 @@ export class CPalette {
         _fw.Ren().BuildTexture(tex);
         _fw.Res().Push(this.GetBlackTex(), tex);
         var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0, 1, 0, 100)), this.GetBlackTex());
-        _fw.Res().Push("plane.mesh", mesh);
+        _fw.Res().Push(this.GetPlaneMesh(), mesh);
         var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100), this.GetBlackTex());
-        _fw.Res().Push("box.mesh", mesh);
+        _fw.Res().Push(this.GetBoxMesh(), mesh);
         mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32), this.GetBlackTex());
-        _fw.Res().Push("sphere.mesh", mesh);
+        _fw.Res().Push(this.GetSphereMesh(), mesh);
         var half = CUtilRender.Mesh2DSize / 2.0;
         this.mMCI2D = CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
-        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 6)], new CVec2(2048, 2048), "shadowArr.tex");
-        let stex = _fw.Res().Find("shadowArr.tex");
+        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 6)], new CVec2(2048, 2048), this.GetShadowArrTex());
+        let stex = _fw.Res().Find(this.GetShadowArrTex());
     }
     Sl2D() { return this.mSL2D; }
     Sl3D() { return this.mSL3D; }
@@ -91,21 +115,18 @@ export class CPalette {
         return gNoneTex;
     }
     GetBlackTex() {
-        return "Black.tex";
+        return "Artgine/Black.tex";
     }
     GetBoxMesh() {
-        return "box.mesh";
+        return "Artgine/box.mesh";
     }
     GetSphereMesh() {
-        return "sphere.mesh";
+        return "Artgine/sphere.mesh";
     }
     GetPlaneMesh() {
-        return "plane.mesh";
-    }
-    GetGrassMesh() {
-        return "grass.mesh";
+        return "Artgine/plane.mesh";
     }
     GetShadowArrTex() {
-        return "shadowArr.tex";
+        return "Artgine/shadowArr.tex";
     }
 }

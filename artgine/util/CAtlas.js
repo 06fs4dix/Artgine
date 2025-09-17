@@ -25,9 +25,9 @@ export class CAtlas extends CObject {
     mTexMipMap = CTexture.eMipmap.GL;
     mCreate = false;
     mBase64Map = new Map();
-    constructor() {
+    constructor(_path = "") {
         super();
-        this.SetKey(CUniqueID.GetHash() + ".atl");
+        this.SetKey(_path + CUniqueID.GetHash() + ".atl");
     }
     IsShould(_member, _type) {
         if (_member == "mTex" && _type != CObject.eShould.Editer)

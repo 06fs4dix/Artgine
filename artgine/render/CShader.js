@@ -107,7 +107,7 @@ export class CShader extends CObject {
         return size;
     }
 }
-export class CShaderList {
+export class CShaderList extends CObject {
     mKey = "";
     mShader = new Array();
     PushShader(_shader) {

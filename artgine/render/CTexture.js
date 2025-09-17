@@ -134,6 +134,14 @@ export class CTexture extends CObject {
             };
             _div.prepend(CDomFactory.DataToDom(img));
         }
+        _div.prepend(CDomFactory.DataToDom({
+            '<>': 'button', "class": "btn btn-primary btn-sm", style: "width:100%;", 'text': 'Refresh', 'onclick': (e) => {
+                this.mUpdate.clear();
+                if (this.mReadPixelEvent != null)
+                    this.mReadPixelEvent.Call(this);
+                this.EditRefresh();
+            }
+        }));
     }
     EditForm(_pointer, _div, _input) {
         if (_pointer.member == "mMipMap") {
@@ -165,17 +173,6 @@ export class CTexture extends CObject {
                 }
             }
             _div.append(CUtilObj.Select(_pointer, _input, textArr, valArr));
-        }
-        else if (_pointer.member == "mAutoResize") {
-            _div.innerHTML = "";
-            _div.append(CDomFactory.DataToDom({
-                '<>': 'button', 'text': 'ReLoad', 'style': 'width:100%;', 'onclick': (e) => {
-                    this.mUpdate.clear();
-                    if (this.mReadPixelEvent != null)
-                        this.mReadPixelEvent.Call(this);
-                    this.EditRefresh();
-                }
-            }));
         }
     }
     CreateBuf() {

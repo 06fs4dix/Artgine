@@ -24,7 +24,7 @@ export class CSurface extends CSubject
 
 	public mTexInfo : Array<CTextureInfo>=null;
 	public mTexSize : CVec2=null;
-	//public mTexKey : string=null;
+	public mTexKey : string=null;
 	public mTexLinear : boolean=null;
 	public mRTUse=true;
 	public mTexCreate=true;
@@ -40,7 +40,10 @@ export class CSurface extends CSubject
 		
 		this.mRenderPass.mPriority=CRenderPass.ePriority.Surface+gSurfaceOff;
 		//this.mTexKey=CUniqueID.GetHash()+".tex";
-		this.mRenderPass.mRenderTarget=CUniqueID.GetHash()+".tex";
+		if(this.mTexKey==null)
+			this.mRenderPass.mRenderTarget=CUniqueID.GetHash()+".tex";
+		else
+			this.mRenderPass.mRenderTarget=this.mTexKey;
 	}
 	// SurfaceHide(_member : string) : boolean {
 	// 	return true;
@@ -100,7 +103,11 @@ export class CSurface extends CSubject
 		if(_enable)
 		{
 			this.mTexCreate=false;
-			this.mRenderPass.mRenderTarget=CUniqueID.GetHash()+".tex";
+			//this.mRenderPass.mRenderTarget=CUniqueID.GetHash()+".tex";
+			if(this.mTexKey==null)
+				this.mRenderPass.mRenderTarget=CUniqueID.GetHash()+".tex";
+			else
+				this.mRenderPass.mRenderTarget=this.mTexKey;
 		}
 			
 		else
@@ -110,7 +117,10 @@ export class CSurface extends CSubject
 	GetRP()	{	return this.mRenderPass;	}
 	NewRT(_texInfo : Array<CTextureInfo>=null,_texSize : CVec2=null,_texLinear : boolean=false)	
 	{
-		//this.mRenderPass.mRenderTarget = CUniqueID.GetHash()+".tex";
+		if(this.mTexKey==null)
+			this.mRenderPass.mRenderTarget=CUniqueID.GetHash()+".tex";
+		else
+			this.mRenderPass.mRenderTarget=this.mTexKey;
 
 		if(this.GetFrame()==null)
 		{

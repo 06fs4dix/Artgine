@@ -84,20 +84,20 @@ var weightArrMat: Sam2DMat = new Sam2DMat(9);
 var time : number = Attribute(0,"time");
 
 //Skin
-Build("3DSkin",[],
+Build("Artgine/Shader/3DSkin",[],
 	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,sam2DCount],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
 //Simple
-Build("3DSimple",["simple"],
+Build("Artgine/Shader/3DSimple",["simple"],
 	vs_main_simple,[worldMat,viewMat,projectMat,colorModel,alphaModel],
 	[out_position,to_uv],
 	ps_main_simple,[out_color]
 );
 
 //gBuffer
-Build("3DGBuffer", ["gBuf"], 
+Build("Artgine/Shader/3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		sam2DCount,material,outputType,
@@ -105,7 +105,7 @@ Build("3DGBuffer", ["gBuf"],
 	ps_main_gBuffer,[out_color]
 );
 //gBuffer MultiTex
-Build("3DGBufferMulti", ["gBufMulti"], 
+Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], 
 	vs_main_gBuffer, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		sam2DCount,material,
@@ -114,7 +114,7 @@ Build("3DGBufferMulti", ["gBufMulti"],
 );
 
 //shadow
-Build("3DShadowWrite", ["shadowWrite"], 
+Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
@@ -123,7 +123,7 @@ Build("3DShadowWrite", ["shadowWrite"],
 	ps_main_shadow_write,[out_color]
 );
 
-Build("3DShadowRead", ["shadowRead"], 
+Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
@@ -146,7 +146,7 @@ Build("3DShadowRead", ["shadowRead"],
 // );
 
 //baking
-Build("3DBake", ["bake"], 
+Build("Artgine/Shader/3DBake", ["bake"], 
 	vs_main_bake, [
 		worldMat,viewMat,projectMat,skin,weightArrMat
 	], [out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],

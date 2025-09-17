@@ -119,7 +119,64 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	
 	SetRPMgr(_rpMgr : CRPMgr) 
 	{
+		// this.mBrush.ClearRen();
+			
+		// for(let [key, obj] of this.mSubMap)
+		// {
+		// 	let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
+		// 	for(let pt of ptVec)
+		// 	{
+				
+		// 		pt.ClearCRPAuto();
+		// 	}
+			
+		// }
+
 		if(this.mRPMgr==null && _rpMgr==null)	return;
+		if(this.mRPMgr!=null)
+		{
+			for(let i=0;i<this.mRPMgr.mRPArr.length;++i)
+			{
+				this.mBrush.RemoveAutoRP(this.mRPMgr.Key()+"_"+i);
+			}
+			if(this.mRPMgr!=null)
+			{
+				for(let i=0;i<this.mRPMgr.mRPArr.length;++i)
+				{
+					this.mBrush.RemoveAutoRP(this.mRPMgr.Key()+"_"+i);
+				}
+				this.mBrush.mAutoRPUpdate=CUpdate.eType.Not;
+				
+				for(let i=0;i<this.mRPMgr.mSufArr.length;++i)
+				{
+					const obj = this.Find(this.mRPMgr.mSufArr[i].Key());
+					if(obj) obj.Destroy();
+					//this.Detach(this.mRPMgr.mSufArr[i].Key());
+				}
+				this.mBrush.ClearRen();
+			}
+			for(let [key, obj] of this.mSubMap)
+			{
+				let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
+				for(let pt of ptVec)
+				{
+					
+					pt.ClearCRPAuto();
+				}
+				
+			}
+			
+			// for(let [key, obj] of this.mSubMap)
+			// {
+			// 	let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
+			// 	for(let pt of ptVec)
+			// 	{
+					
+			// 		pt.ClearCRPAuto();
+			// 	}
+				
+			// }
+		}
 		this.mChangeRPMgr=_rpMgr;
 	}
 	ClearBatch() {

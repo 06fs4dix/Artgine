@@ -10,8 +10,14 @@ import { CShader } from "./CShader.js";
 import { CShaderAttr } from "./CShaderAttr.js";
 import { CTexture, CTextureInfo } from "./CTexture.js";
 import { CUniform } from "./CUniform.js";
+import { CUtil } from "../basic/CUtil.js";
 
-
+export class CTypeUni
+{
+	type :number;
+	uni :CUniform
+	last;
+}
 
 export class CBatch
 {
@@ -55,7 +61,7 @@ export class CBatchMgr
 	public mBatchGlobal =new CArray<CShaderAttr>();
 	public mBaSortArr =new CArray<CBatchArray>();
 	public mBatchGDummy : CBatch=new CBatch();
-	public mUniArr=new CArray<CUniform>();
+	public mUniArr=new CArray<CTypeUni>();
 	
 	public mBasePriority : number=null;
 	public mFeedbackLoop=new Set<any>();
@@ -231,9 +237,7 @@ export class CBatchMgrGL extends CBatchMgr
     BatchExcute(_vf : CShader)
 	{
 		
-
 	}
 }
 import CBatchMgr_imple from "../render_imple/CBatchMgr.js";
-import { CUtil } from "../basic/CUtil.js";
 CBatchMgr_imple();

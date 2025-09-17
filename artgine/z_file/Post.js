@@ -54,16 +54,16 @@ var softThreshold = Null();
 var mixFactor = Null();
 var exposure = Null();
 var blendFactor = Null();
-Build("PostBlend", ["blend"], vs_main, [
+Build("Artgine/Shader/PostBlend", ["blend"], vs_main, [
     worldMat, viewMat, projectMat, blend, opacity
 ], [out_position, to_uv], ps_main_blend, [out_color]);
-Build("PostBlur", ["blur"], vs_main, [
+Build("Artgine/Shader/PostBlur", ["blur"], vs_main, [
     worldMat, viewMat, projectMat, renderCount, renderType
 ], [out_position, to_uv], ps_main_blur, [out_color]);
-Build("PostFloodFill", ["floodFill"], vs_main, [
+Build("Artgine/Shader/PostFloodFill", ["floodFill"], vs_main, [
     worldMat, viewMat, projectMat,
 ], [out_position, to_uv], ps_main_floodFill, [out_color]);
-Build("PostLight", ["light"], vs_main, [
+Build("Artgine/Shader/PostLight", ["light"], vs_main, [
     worldMat, viewMat, projectMat,
     viewMatInv3D, camPos3D,
     ligDir, ligCol, ligCount, shadowOn,
@@ -72,7 +72,7 @@ Build("PostLight", ["light"], vs_main, [
     time, renType,
     diffuse, position, normal, specular, shadow
 ], [out_position, to_uv], ps_main_light, [out_color]);
-Build("PostLightMulti", ["lightMulti"], vs_main, [
+Build("Artgine/Shader/PostLightMulti", ["lightMulti"], vs_main, [
     worldMat, viewMat, projectMat,
     viewMatInv3D, camPos3D,
     ligDir, ligCol, ligCount, shadowOn,
@@ -81,50 +81,50 @@ Build("PostLightMulti", ["lightMulti"], vs_main, [
     time,
     diffuse, position, normal, specular, shadow
 ], [out_position, to_uv], ps_main_light_MultiTex, [out_color, out_specular, out_emissive]);
-Build("PostDistort", ["distort"], vs_main, [
+Build("Artgine/Shader/PostDistort", ["distort"], vs_main, [
     worldMat, viewMat, projectMat,
     time,
     distortDistance
 ], [out_position, to_uv], ps_main_distort, [out_color]);
-Build("PostAberrate", ["aberrate"], vs_main, [
+Build("Artgine/Shader/PostAberrate", ["aberrate"], vs_main, [
     worldMat, viewMat, projectMat,
     time,
     abrBaseStr, abrAddedStr
 ], [out_position, to_uv], ps_main_aberrate, [out_color]);
-Build("PostPixel", ["pixel"], vs_main, [
+Build("Artgine/Shader/PostPixel", ["pixel"], vs_main, [
     worldMat, viewMat, projectMat,
     pixelSize
 ], [out_position, to_uv], ps_main_pixel, [out_color]);
-Build("PostNoise", ["noise"], vs_main_modelPos, [
+Build("Artgine/Shader/PostNoise", ["noise"], vs_main_modelPos, [
     worldMat, viewMat, projectMat,
     time,
     noiseSpeed, noiseIntensity
 ], [out_position, to_uv, to_worldPos], ps_main_noise, [out_color]);
-Build("PostTVBorder", ["tvBorder"], vs_main_modelPos, [
+Build("Artgine/Shader/PostTVBorder", ["tvBorder"], vs_main_modelPos, [
     worldMat, viewMat, projectMat,
     borderIntensity, borderThickness
 ], [out_position, to_uv, to_worldPos], ps_main_tvBorderLight, [out_color]);
-Build("PostScanLine", ["scanline"], vs_main_modelPos, [
+Build("Artgine/Shader/PostScanLine", ["scanline"], vs_main_modelPos, [
     worldMat, viewMat, projectMat,
     scanLineThickness, scanLineDensity, scanLineIntensity
 ], [out_position, to_uv, to_worldPos], ps_main_scanLine, [out_color]);
-Build("PostFXAA", ["fxaa"], vs_main, [
+Build("Artgine/Shader/PostFXAA", ["fxaa"], vs_main, [
     worldMat, viewMat, projectMat,
     span_max, reduce_mul, reduce_min, subpix_shift
 ], [out_position, to_uv], ps_main_fxaa, [out_color]);
-Build("PostGamma", ["gamma"], vs_main, [
+Build("Artgine/Shader/PostGamma", ["gamma"], vs_main, [
     worldMat, viewMat, projectMat,
     gamma, brightness, toneMappingFactor, colorCorrection, exposure, contrast
 ], [out_position, to_uv], ps_main_gamma, [out_color]);
-Build("PostExpandBakedLight", ["bake"], vs_main, [
+Build("Artgine/Shader/PostExpandBakedLight", ["bake"], vs_main, [
     worldMat, viewMat, projectMat,
 ], [out_position, to_uv], ps_main_ExpandBakedLight, [out_color]);
-Build("PostDownSample", ["sample", "down"], vs_main, [
+Build("Artgine/Shader/PostDownSample", ["sample", "down"], vs_main, [
     worldMat, viewMat, projectMat,
     mipLevel,
     threshold, softThreshold
 ], [out_position, to_uv], ps_main_DownSample, [out_color]);
-Build("PostUpSample", ["sample", "up"], vs_main, [
+Build("Artgine/Shader/PostUpSample", ["sample", "up"], vs_main, [
     worldMat, viewMat, projectMat,
     blendFactor
 ], [out_position, to_uv], ps_main_UpSample, [out_color]);

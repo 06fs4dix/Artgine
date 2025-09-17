@@ -36,6 +36,7 @@ import { CChecker } from "../util/CChecker.js";
 import { CLan } from "../basic/CLan.js";
 import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
+import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -141,6 +142,11 @@ export function DevTool(_atl) {
     CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "RunTime", async () => {
         InitDevToolScriptViewer(_atl.PF().mGitHub);
     }));
+    CRollBack.On("DevTool", (_data) => {
+        if (_data.type == "Pos") {
+            _data.sub.SetPos(_data.pos);
+        }
+    });
     gAtl = _atl;
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
@@ -234,6 +240,7 @@ export function DevTool(_atl) {
     syncSize();
     parent.replaceChild(devToolTempDiv, canvas);
     gModal = new CModalFlex([0.2, 0.6, 0.2], "DevToolModal");
+    gModal.SetCloseEsc(false);
     gModal.SetHeader("DevTool");
     gModal.SetSize(800, 600);
     gModal.Open();
@@ -251,6 +258,7 @@ export function DevTool(_atl) {
     middle.appendChild(canvas);
     DevToolLeft();
     gModal.On(CEvent.eType.Close, () => {
+        CRollBack.Off("DevTool");
         gScriptViewer = null;
         _frame.PF().mDebugMode = false;
         _frame.PF().mTargetWidth = gBTargetWidth;
@@ -318,6 +326,9 @@ export function DevTool(_atl) {
             return;
         if (e.key === "Control")
             ctrlPressed = true;
+        if (e.key == "Delete") {
+            DevToolLeftRemove();
+        }
         if (ctrlPressed && e.key.toLowerCase() === "c") {
             if (gLeftSelect instanceof CSubject) {
                 navigator.clipboard.writeText(gLeftSelect.ToStr());
@@ -365,7 +376,7 @@ function DevToolRender() {
     let ptArr = subject.FindComps(CPaint);
     let clArr = subject.FindComps(CCollider);
     const render = gAtl.Frame().Ren();
-    let shader = gAtl.Frame().Res().Find("3DSimple");
+    let shader = gAtl.Frame().Res().Find("Artgine/Shader/3DSimple");
     let meshDraw = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh() + "Dev");
     if (meshDraw == null) {
         let mesh = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh());
@@ -394,8 +405,8 @@ function DevToolRender() {
         wmat.xyz = gBoundXY.mMin;
         wmat.mF32A[12] += gBoundTick * 0.5;
         wmat.mF32A[13] += gBoundTick * 0.5;
-        wmat.mF32A[0] = 0.2;
-        wmat.mF32A[5] = 0.2;
+        wmat.mF32A[0] = gBoundTick / 200;
+        wmat.mF32A[5] = gBoundTick / 200;
         wmat.mF32A[10] = 0.01;
         if (gDragBound == 1)
             gAtl.Frame().Dev().SetLine(false);
@@ -412,8 +423,8 @@ function DevToolRender() {
         wmat.mF32A[13] += gBoundTick * 0.5;
         wmat.mF32A[14] += gBoundTick * 0.5;
         wmat.mF32A[0] = 0.01;
-        wmat.mF32A[5] = 0.2;
-        wmat.mF32A[10] = 0.2;
+        wmat.mF32A[5] = gBoundTick / 200;
+        wmat.mF32A[10] = gBoundTick / 200;
         if (gDragBound == 2)
             gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader, color, "colorModel");
@@ -428,9 +439,9 @@ function DevToolRender() {
         wmat.xyz = gBoundZX.mMin;
         wmat.mF32A[12] += gBoundTick * 0.5;
         wmat.mF32A[14] += gBoundTick * 0.5;
-        wmat.mF32A[0] = 0.2;
+        wmat.mF32A[0] = gBoundTick / 200;
         wmat.mF32A[5] = 0.01;
-        wmat.mF32A[10] = 0.2;
+        wmat.mF32A[10] = gBoundTick / 200;
         if (gDragBound == 3)
             gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader, color, "colorModel");
@@ -441,6 +452,8 @@ function DevToolRender() {
         gAtl.Frame().Dev().SetLine(true);
     }
     for (let pt of ptArr) {
+        if (pt.GetOwner() == null)
+            continue;
         color.x = 1;
         color.y = 0;
         color.z = 0;
@@ -484,6 +497,8 @@ function DevToolRender() {
     color.z = 1;
     color.w = SDF.eColorModel.RGBAdd;
     for (let pt of clArr) {
+        if (pt.GetOwner() == null)
+            continue;
         let bound = pt.GetBoundGJK();
         bound.mMax;
         bound.mMin;
@@ -627,14 +642,13 @@ function DevToolDrop(_drop) {
             return;
         }
         let cobject = null;
-        if (CInput.Key(CInput.eKey.LControl)) {
+        if (CInput.Key(CInput.eKey.LControl))
             cobject = _drop.mObject.ExportProxy();
-        }
         else
             cobject = _drop.mObject.Export();
         cobject.SetBlackBoard(false);
         let can = gLastCanvas;
-        if (gAtl.Brush().GetCamDev().GetOrthographic()) {
+        if (gAtl.Brush().GetCamDev().IsOrthographic()) {
             let pos = gAtl.Brush().GetCamDev().ScreenToWorld2DPoint(_drop.mX, _drop.mY);
             let z = cobject.GetPos().z;
             cobject.SetPos(new CVec3(pos.x, pos.y, z));
@@ -643,6 +657,16 @@ function DevToolDrop(_drop) {
     }
 }
 function DevToolUpdate(_delay) {
+    if (gLeftSelect instanceof CSubject) {
+        let cam = gAtl.Brush().GetCamDev();
+        let pos = gLeftSelect.GetWMat().xyz;
+        let len = CMath.V3Distance(cam.GetEye(), pos);
+        if (cam.IsOrthographic())
+            len = cam.GetZoom();
+        else
+            len *= 0.002;
+        gBoundTick = 40 * len;
+    }
     let collapse = CUtil.ID(gAtl.Brush().ObjHash() + "_collapse");
     if (collapse == null)
         return;
@@ -713,7 +737,7 @@ function DevToolUpdate(_delay) {
         let y = (mouse.y - gMouse.y);
         let subject = gLeftSelect;
         let pos = subject.GetPos().Export();
-        if (gAtl.Brush().GetCamDev().GetOrthographic() == true) {
+        if (gAtl.Brush().GetCamDev().IsOrthographic() == true) {
             x *= gAtl.Brush().GetCamDev().GetZoom();
             y *= gAtl.Brush().GetCamDev().GetZoom();
             if (gDragBound == 1) {
@@ -769,7 +793,7 @@ function DevToolUpdate(_delay) {
     if (gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDragBound == 0 && gLeftSelect instanceof CSubject &&
         CInput.eDragState.None == gAtl.Frame().Input().DragState()) {
         let ray = gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x, gAtl.Frame().Input().Mouse().y);
-        if (gAtl.Brush().GetCamDev().GetOrthographic() && ray.GetDirect().z < -0.9)
+        if (gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z < -0.9)
             ray.GetOriginal().z += 1000;
         ResetBoxXYZ(gLeftSelect);
         let lenMin = 1000000;
@@ -791,6 +815,9 @@ function DevToolUpdate(_delay) {
             }
         }
         gMouse = gAtl.Frame().Input().Mouse().Export();
+        if (gDragBound != 0) {
+            CRollBack.Push(new CRollBackInfo("DevTool", { type: "Pos", sub: gLeftSelect, pos: gLeftSelect.GetPos().Export() }));
+        }
     }
     if (gAtl.Frame().Input().DragState() == CInput.eDragState.Move && gLeftSelect == null)
         gDragBound = 4;
@@ -810,7 +837,7 @@ function DevToolUpdate(_delay) {
         let selectSub = null;
         let bselectSub = null;
         let ray = gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x, gAtl.Frame().Input().Mouse().y);
-        if (gAtl.Brush().GetCamDev().GetOrthographic() && ray.GetDirect().z < -0.9)
+        if (gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z < -0.9)
             ray.GetOriginal().z += 1000;
         for (let canvas of gAtl.mCanvasMap.values()) {
             for (let subject of canvas.GetSubMap().values()) {
@@ -851,9 +878,6 @@ function DevToolUpdate(_delay) {
         }
         else
             LeftSelect(null);
-    }
-    if (gAtl.Frame().Input().KeyUp(CInput.eKey.Delete)) {
-        DevToolLeftRemove();
     }
     if (gAtl.Frame().Input().KeyUp(CInput.eKey.Esc)) {
         LeftSelect(null);
@@ -1385,7 +1409,7 @@ function DevToolLeft() {
     listDiv.html.push(`
         <div class="card bg-warning p-0">
             <div class="card-body p-1 d-flex justify-content-between align-items-center">
-                <div class="text-start ms-2 fw-bold">Hierarchy</div>
+                <div class="text-start ms-3 fw-bold">Hierarchy</div>
                 <div class="d-flex gap-2 me-2">
                     <i class="bi bi-save" style="cursor: pointer;" title="Save" id="DevToolAllSave"></i>
                     <i class="bi bi-file-earmark-plus" style="cursor: pointer;" title="Push" onclick='DevToolLeftPush()'></i>
@@ -1464,6 +1488,7 @@ function DevToolLeft() {
         LeftSelect(obj);
     });
     ulRoot?.addEventListener("dblclick", (e) => {
+        let cam = gAtl.Brush().GetCamDev();
         const target = e.target;
         if (target.tagName == "I")
             return;
@@ -1471,13 +1496,33 @@ function DevToolLeft() {
         if (!li)
             return;
         const objHash = li.id.replace(/_li$/, "");
+        let obj = gLeftItem.get(objHash);
+        if (obj instanceof CSubject) {
+            if (cam.IsOrthographic()) {
+                let eye = cam.GetEye().Export();
+                eye.x = obj.GetPos().x;
+                eye.y = obj.GetPos().y;
+                cam.EyeMoveAndViewCac(eye);
+            }
+            else {
+                let eye = obj.GetPos().Export();
+                ;
+                cam.CharacterByRotation(eye, 0, 0, 1000);
+            }
+        }
         const onRename = () => {
             const key = CUtil.IDValue("DevToolLeftRename");
             const textDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
             if (textDiv instanceof HTMLElement) {
                 textDiv.textContent = key;
             }
+            let obj = gLeftItem.get(objHash);
+            let bb = obj.IsBlackBoard();
+            if (bb)
+                obj.SetBlackBoard(false);
             gLeftItem.get(objHash).SetKey(key);
+            if (bb)
+                obj.SetBlackBoard(true);
         };
         const renameHtml = `
             Rename?<br>
@@ -1543,7 +1588,7 @@ function LeftSelect(_obj) {
     if (gLeftSelect) {
         const prevCard = CUtil.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card");
         if (prevCard)
-            prevCard.classList.remove("bg-secondary-subtle");
+            prevCard.classList.remove("bg-info-subtle");
     }
     if (_obj == null) {
         gLeftSelect = null;
@@ -1554,14 +1599,21 @@ function LeftSelect(_obj) {
     let li = CUtil.ID(_obj.ObjHash() + "_li");
     const curCard = li.querySelector(".card");
     if (curCard)
-        curCard.classList.add("bg-secondary-subtle");
+        curCard.classList.add("bg-info-subtle");
     const rightPanel = gModal.FindFlex(2);
     rightPanel.innerHTML = "";
     DevToolRight(_obj);
     rightPanel.append(_obj.EditInit());
     gLeftSelect = _obj;
     if (_obj instanceof CCanvas) {
+        if (gLastCanvas != null) {
+            let bli = CUtil.ID(gLastCanvas.ObjHash() + "_li");
+            let bcard = bli.querySelector(".card");
+            bcard.classList.remove("fw-bold");
+        }
         gLastCanvas = _obj;
+        if (curCard)
+            curCard.classList.add("fw-bold");
         const bdiv = CUtil.ID(_obj.ObjHash() + "_ul");
         if (bdiv.children.length === 0) {
             for (let [key, value] of _obj.GetSubMap()) {
@@ -1587,7 +1639,7 @@ function LeftNewItem(_obj) {
                 </div>
             </div>
         </div>
-        <div class="collapse ms-2" id="${collapseId}">
+        <div class="collapse ms-3" id="${collapseId}">
             <ul id="${_obj.ObjHash()}_ul" class='list-group w-100 h-100' style="list-style-type: none;"></ul>
         </div>
     </li>`;

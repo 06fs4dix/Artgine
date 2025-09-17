@@ -35,6 +35,9 @@ import { CRPAuto } from "../../CRPMgr.js"
 import { CVec1 } from "../../../geometry/CVec1.js"
 import { CPreferences } from "../../../basic/CPreferences.js"
 import { CConsol } from "../../../basic/CConsol.js"
+import { CUniqueID } from "../../../basic/CUniqueID.js"
+import { CUtil } from "../../../basic/CUtil.js"
+import { CDomFactory } from "../../../basic/CDOMFactory.js"
 
 export class CRenPaint
 {
@@ -140,6 +143,8 @@ export class CPaint extends CComponent
 		this.mBound=new CBound();
 		this.mBound.NewWASM();
 
+		this.PushTag("alphaCut");
+
 		if(CWASM.IsWASM())
 			this.PushTag("wasm");
 	}
@@ -216,7 +221,17 @@ export class CPaint extends CComponent
 	IsUpdateFMat()	{	return this.mUpdateFMat;}
 	UpdateFMat()	{	this.mUpdateFMat=true;	}
 	
-	
+	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+		super.EditHTMLInit(_div,_pointer);
+
+		var button=document.createElement("button");
+		button.className="btn btn-primary btn-sm";
+		button.innerText="Refresh";
+		button.onclick=()=>{
+			this.ClearCRPAuto();
+		};
+		_div.append(button);
+	}
 	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 		if(_pointer.member=="mColorVFX" && this.mColorVFX==null)
@@ -235,11 +250,54 @@ export class CPaint extends CComponent
 		else if(_pointer.member=="mTexture" || _pointer.member=="mTag")
 		{
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""],true);
-			if(_pointer.member=="mTag")
-			{
-				_body.append(CUtilObj.ArrayAddButton(_pointer,"Light","light"));
-			}
+			// if(_pointer.member=="mTag")
+			// {
+			// 	_body.append(CUtilObj.ArrayAddButton(_pointer,"Light","light"));
+			// }
 		}
+		else if(_pointer.member=="mShaderAttrMap")
+		{
+			var subList=new Array();
+			subList.push({"<>":"option","text":"CVec1","value":"CVec1"});
+			subList.push({"<>":"option","text":"CVec2","value":"CVec2"});
+			subList.push({"<>":"option","text":"CVec3","value":"CVec3"});
+			subList.push({"<>":"option","text":"CVec4","value":"CVec4"});
+			subList.push({"<>":"option","text":"CMat","value":"CMat"});
+
+			let ukey=CUniqueID.GetHash();
+			var pushDiv={"<>":"div","html":[
+				{"<>":"input","id":ukey+"_txt","class":"form-control"},
+				{"<>":"div","class":"row","html":[
+					{"<>":"div","class":"col-8","html":[
+						{"<>":"select","class":"form-select","id":ukey+"subPush","html":subList},
+					]},
+					{"<>":"div","class":"col-4","html":[
+						{"<>":"button","type":"button","class":"btn btn-primary","text":"Add",
+							"onclick":()=>{
+								let sel=CUtil.IDValue(ukey+"subPush");
+								let key=CUtil.IDValue(ukey+"_txt");
+								if(key=="")
+								{
+									CAlert.E("key 설정");	
+									return;
+								}
+								let newObj  =new CShaderAttr(key,CClass.New(sel));
+								this.PushCShaderAttr(newObj);
+								this.EditRefresh();
+								
+							}
+						}
+					]},
+				]}
+			]};
+			
+			
+			;
+			
+			_input.prepend(CDomFactory.DataToDom(pushDiv));
+			
+		}
+		
 		
 	}
 	SetOwner(_obj :CSubject)
@@ -421,7 +479,7 @@ export class CPaint extends CComponent
 				
 				//this.BatchClear();
 				this.ClearCRPAuto();
-				if(_pointer.Get() instanceof CRenderPass)
+				if(_pointer.target instanceof CRenderPass)
 					_pointer.target.Reset();
 				else
 					CAlert.E("CRPAuto는 페인트 내에서 수정 불가합니다.");
@@ -511,6 +569,7 @@ export class CPaint extends CComponent
 		
 			this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(drawMesh, _shader,_ci);
 			this.mOwner.GetFrame().Res().Push(_meshKey + _shader.ObjHash(),drawMesh);
+			drawMesh.SetKey(_meshKey + _shader.ObjHash());
 		}
 		
 		return drawMesh;

@@ -170,6 +170,7 @@ export class CPaint2D extends CPaint
 		super.EditHTMLInit(_div,_pointer);
 
 		var button=document.createElement("button");
+		button.className="btn btn-primary btn-sm";
 		button.innerText="TexcodiModif";
 		button.onclick=()=>{
 			if(this.mTexture.length>0)
@@ -489,7 +490,7 @@ export class CPaint2D extends CPaint
 		if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
 		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture );
-		var dm=this.GetDrawMesh("CPaint2D",_vf,this.mOwner.GetFrame().Pal().MCI2D());
+		var dm=this.GetDrawMesh("Artgine/DM/2D",_vf,this.mOwner.GetFrame().Pal().MCI2D());
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
 		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
@@ -896,6 +897,18 @@ export class CPaintHTML extends CPaint2D
 		// pos.y*=zoom;
 		this.mBound.SetType(CBound.eType.Box);
 		
+		
+		
+
+		if(this.mElement.offsetWidth!=0)
+		{
+			this.mOrgSize.x=this.mElement.clientWidth;
+			this.mOrgSize.y=this.mElement.clientHeight;
+
+			
+		}
+		let pivotX=0;
+		let pivotY=0;
 		if(this.mSize!=null)
 		{
 			pos.x+=this.mPivot.x*this.mSize.x*0.5;
@@ -906,13 +919,17 @@ export class CPaintHTML extends CPaint2D
 				this.mElement.style.height=this.mSize.y+"px";
 			//this.m_html.style.scale="scale("+zoom+","+zoom+")";
 			this.mElement.style.transform = "scale(" + zoom + "," + zoom + ")";
+			pivotX=this.mOrgSize.x*0.5;
+			pivotY=this.mOrgSize.y*0.5;
 		}
-		if(this.mElement.offsetWidth!=0)
+		else
 		{
-			this.mOrgSize.x=this.mElement.clientWidth;
-			this.mOrgSize.y=this.mElement.clientHeight;
+			pivotX=this.mOrgSize.x*(this.mPivot.x*0.5+0.5);
+			pivotY=this.mOrgSize.y*(this.mPivot.y*0.5+0.5);
 		}
-
+		
+	
+		
 		
 		pos=CMath.V3MulMatCoordi(pos,this.mRenPT[0].mCam.GetViewMat());
 		pos=CMath.V3MulMatCoordi(pos,this.mRenPT[0].mCam.GetProjMat());
@@ -921,8 +938,8 @@ export class CPaintHTML extends CPaint2D
 
 		var left=this.GetOwner().GetFrame().PF().mLeft;
 		var top=this.GetOwner().GetFrame().PF().mTop;
-		left+=x*this.mOwner.GetFrame().PF().mWidth-(this.mOrgSize.x)*0.5+this.mPos.x;
-		top+=y*this.mOwner.GetFrame().PF().mHeight-(this.mOrgSize.y)*0.5-this.mPos.y;
+		left+=x*this.mOwner.GetFrame().PF().mWidth-pivotX+this.mPos.x;
+		top+=y*this.mOwner.GetFrame().PF().mHeight-pivotY-this.mPos.y;
 		left=Math.trunc(left);
 		top=Math.trunc(top);
 		this.mElement.style.left=left+"px";

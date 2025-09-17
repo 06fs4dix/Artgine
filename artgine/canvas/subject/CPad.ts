@@ -112,7 +112,7 @@ export class CPad extends CSubject
             ];
             CH5Canvas.Draw(cmdList);
             let tex=CH5Canvas.GetNewTex();
-            this.GetFrame().Res().Push("PadStickCrossUP.tex",tex);
+            this.GetFrame().Res().Push("Pad/PadStickCrossUP.tex",tex);
             this.GetFrame().Ren().BuildTexture(tex);
 
 
@@ -120,7 +120,7 @@ export class CPad extends CSubject
             {
                 let btn = new CUIButtonRGBA();
                 btn.SetCamResize(true);
-                btn.Init("PadStickCrossUP.tex");
+                btn.Init("Pad/PadStickCrossUP.tex");
                 btn.SetKey("PadStickCrossUP");
                 btn.SetAnchorX(CUI.eAnchor.Min,30+50*this.mPadScale);
                 btn.SetAnchorY(CUI.eAnchor.Min,30+100*this.mPadScale);
@@ -144,7 +144,7 @@ export class CPad extends CSubject
             ];
             CH5Canvas.Draw(cmdList);
             tex=CH5Canvas.GetNewTex();
-            this.GetFrame().Res().Push("PadStickCrossDown.tex",tex);
+            this.GetFrame().Res().Push("Pad/PadStickCrossDown.tex",tex);
             this.GetFrame().Ren().BuildTexture(tex);
 
            
@@ -153,7 +153,7 @@ export class CPad extends CSubject
             {
                 let btn = new CUIButtonRGBA();
                 btn.SetCamResize(true);
-                btn.Init("PadStickCrossDown.tex");
+                btn.Init("Pad/PadStickCrossDown.tex");
                 btn.SetKey("PadStickCrossDown");
                 btn.SetAnchorX(CUI.eAnchor.Min,30+50*this.mPadScale);
                 btn.SetAnchorY(CUI.eAnchor.Min,30+this.mPadScale);
@@ -177,7 +177,7 @@ export class CPad extends CSubject
             ];
             CH5Canvas.Draw(cmdList);
             tex=CH5Canvas.GetNewTex();
-            this.GetFrame().Res().Push("PadStickCrossLeft.tex",tex);
+            this.GetFrame().Res().Push("Pad/PadStickCrossLeft.tex",tex);
             this.GetFrame().Ren().BuildTexture(tex);
 
 
@@ -185,7 +185,7 @@ export class CPad extends CSubject
             {
                 let btn = new CUIButtonRGBA();
                 btn.SetCamResize(true);
-                btn.Init("PadStickCrossLeft.tex");
+                btn.Init("Pad/PadStickCrossLeft.tex");
                 btn.SetKey("PadStickCrossLeft");
                 btn.SetAnchorX(CUI.eAnchor.Min,30);
                 btn.SetAnchorY(CUI.eAnchor.Min,30+50*this.mPadScale);
@@ -208,14 +208,14 @@ export class CPad extends CSubject
             ];
             CH5Canvas.Draw(cmdList);
             tex=CH5Canvas.GetNewTex();
-            this.GetFrame().Res().Push("PadStickCrossRight.tex",tex);
+            this.GetFrame().Res().Push("Pad/PadStickCrossRight.tex",tex);
             this.GetFrame().Ren().BuildTexture(tex);
 
             if(this.FindChilds("PadStickCrossRight").length==0)
             {
                 let btn = new CUIButtonRGBA();
                 btn.SetCamResize(true);
-                btn.Init("PadStickCrossRight.tex");
+                btn.Init("Pad/PadStickCrossRight.tex");
                 btn.SetKey("PadStickCrossRight");
                 btn.SetAnchorX(CUI.eAnchor.Min,30+100*this.mPadScale);
                 btn.SetAnchorY(CUI.eAnchor.Min,30+50*this.mPadScale);
@@ -243,7 +243,7 @@ export class CPad extends CSubject
             ];
             CH5Canvas.Draw(cmdList);
             let tex=CH5Canvas.GetNewTex();
-            this.GetFrame().Res().Push("PadStickCircle.tex",tex);
+            this.GetFrame().Res().Push("Pad/PadStickCircle.tex",tex);
             this.GetFrame().Ren().BuildTexture(tex);
 
             if(this.FindChilds("PadStickCircle").length==0)
@@ -252,7 +252,7 @@ export class CPad extends CSubject
                 let btn = new CUIButtonRGBA();
                 btn.SetCamResize(true);
                 //btn.m_updateScale=false;
-                btn.Init("PadStickCircle.tex");
+                btn.Init("Pad/PadStickCircle.tex");
                 btn.SetKey("PadStickCircle");
                 // if(CWindow.IsMobile())
                 // {
@@ -304,7 +304,7 @@ export class CPad extends CSubject
 
                 CH5Canvas.Draw(cmdList);
                 let tex=CH5Canvas.GetNewTex();
-                this.GetFrame().Res().Push(ch5key+".tex",tex);
+                this.GetFrame().Res().Push("Pad/"+ch5key+".tex",tex);
                 this.GetFrame().Ren().BuildTexture(tex);
                 
                
@@ -313,7 +313,7 @@ export class CPad extends CSubject
                 {
                     let btn = new CUIButtonRGBA();
                     btn.SetCamResize(true);
-                    btn.Init(ch5key+".tex");
+                    btn.Init("Pad/"+ch5key+".tex");
                     btn.SetKey(ch5key);
                     btn.SetAnchorX(CUI.eAnchor.Max,20);
                     btn.SetAnchorY(CUI.eAnchor.Min,40+i*60*this.mPadScale);

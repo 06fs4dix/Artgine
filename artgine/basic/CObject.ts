@@ -149,10 +149,15 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	}
 	SetKey(_key)
 	{
+		//let bb=this.IsBlackBoard() && this.IsProxy()==false;
+		//if(bb)	this.SetBlackBoard(false);
+			
+		
 		if(_key=="")
 			delete this["mKey"];
 		else
 			this["mKey"]=_key;
+		//if(bb)	this.SetBlackBoard(true);
 	}
 	IsKey()
 	{

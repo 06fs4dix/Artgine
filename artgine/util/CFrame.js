@@ -262,6 +262,21 @@ export class CFrame {
                     let sv = new CFileViewer([info.name + ".ts", info.name + ".json", info.name + ".html"]);
                     sv.Open();
                 }
+                if (e.key == "Escape") {
+                    let mList = CModal.GetModalList();
+                    let top = null;
+                    let topIndex = -1;
+                    for (let m of mList) {
+                        let index = Number(m.mCard.style.zIndex == "" ? 0 : m.mCard.style.zIndex);
+                        if (topIndex < index) {
+                            topIndex = index;
+                            top = m;
+                        }
+                    }
+                    if (top != null && top.mESC) {
+                        top.Close();
+                    }
+                }
             };
         }
         if (this.mPreferences.mIAuto) {

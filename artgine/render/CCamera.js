@@ -9,6 +9,7 @@ import { CObject } from "../basic/CObject.js";
 import { CUpdate } from "../basic/Basic.js";
 import { CUtilMath } from "../geometry/CUtilMath.js";
 import { CPoolGeo } from "../geometry/CPoolGeo.js";
+import { CClass } from "../basic/CClass.js";
 var g_offset = 1024;
 export class CCamera extends CObject {
     mEye;
@@ -70,7 +71,7 @@ export class CCamera extends CObject {
             return false;
         return super.IsShould(_member, _type);
     }
-    GetOrthographic() { return this.mOrthographic; }
+    IsOrthographic() { return this.mOrthographic; }
     GetZoom() { return this.mZoom; }
     SetViewPort(_v) {
         this.mViewPort = _v.Export();
@@ -529,5 +530,33 @@ export class CCamera extends CObject {
         this.mEye.Import(pa_chaPos);
         this.mLook = CMath.V3AddV3(this.mEye, this.mView);
         this.ZAxisZoom(-pa_zome);
+    }
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mCamCon") {
+            var select = document.createElement("select");
+            select.className = "form-select";
+            let list = ["null", "CCamCon3DFirstPerson", "CCamCon3DThirdPerson", "CCamCon2DFreeMove", "CCamCon2DFollow"];
+            for (var i = 0; i < list.length; ++i) {
+                var opt = document.createElement("option");
+                opt.value = list[i];
+                opt.text = list[i];
+                if (_pointer.Get() != null && _pointer.Get().constructor.name == list[i])
+                    opt.selected = true;
+                select.add(opt);
+            }
+            select.onchange = (_event) => {
+                var ct = _event.currentTarget;
+                if (ct.value == "null")
+                    this.SetCamCon(null);
+                else
+                    this.SetCamCon(CClass.New(ct.value));
+                this.EditRefresh();
+            };
+            _body.append(select);
+        }
+    }
+    Icon() {
+        return "bi bi-camera";
     }
 }

@@ -47,6 +47,7 @@ import { CLan } from "../basic/CLan.js";
 import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CWASM } from "../basic/CWASM.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
+import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 
 
 var gModal : CModalFlex;
@@ -104,7 +105,11 @@ interface ICanvasStyle {
 let gCanStyle: ICanvasStyle | null = null;
 function ResetBoxXYZ(_subject : CSubject)
 {
+
+
     let pos=_subject.GetWMat().xyz;
+  
+
     gBoundXY.mMin.Import(pos);
     gBoundXY.mMax.Import(pos);
 
@@ -219,6 +224,12 @@ export function DevTool(_atl: CAtelier)
         InitDevToolScriptViewer(_atl.PF().mGitHub);
         
     }));
+    CRollBack.On("DevTool",(_data : {type:string,sub:CSubject,pos:CVec3})=>{
+        if(_data.type=="Pos")
+        {
+            _data.sub.SetPos(_data.pos);
+        }
+    });
     gAtl=_atl;
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
@@ -332,6 +343,7 @@ export function DevTool(_atl: CAtelier)
     parent.replaceChild(devToolTempDiv, canvas);
 
     gModal = new CModalFlex([0.2, 0.6, 0.2], "DevToolModal");
+    gModal.SetCloseEsc(false);
     gModal.SetHeader("DevTool");
     gModal.SetSize(800, 600);
     gModal.Open();
@@ -353,6 +365,7 @@ export function DevTool(_atl: CAtelier)
     DevToolLeft();
 
     gModal.On(CEvent.eType.Close,() => {
+        CRollBack.Off("DevTool");
         gScriptViewer=null;
         _frame.PF().mDebugMode = false;
         _frame.PF().mTargetWidth=gBTargetWidth;
@@ -435,6 +448,11 @@ export function DevTool(_atl: CAtelier)
         
         if(IsFocusInput())  return;
         if (e.key === "Control")    ctrlPressed = true;
+
+        if(e.key=="Delete")
+        {
+            DevToolLeftRemove();
+        }
         
 
         // ✅ Ctrl + C → Subject 복사
@@ -451,7 +469,7 @@ export function DevTool(_atl: CAtelier)
         if (ctrlPressed && e.key.toLowerCase() === "v") 
         {
             if (!(gLeftSelect instanceof CCanvas)) {
-                //CAlert.E("Paste Target Canvas Select!");
+                //CAlert.Info("Paste Target Canvas Select!");
                 e.preventDefault();
                 return;
             }
@@ -500,7 +518,7 @@ function DevToolRender()
     let clArr=subject.FindComps(CCollider);
 
     const render=gAtl.Frame().Ren();
-    let shader=gAtl.Frame().Res().Find("3DSimple") as CShader;
+    let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimple") as CShader;
     
     let meshDraw=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
     if(meshDraw==null)
@@ -543,8 +561,8 @@ function DevToolRender()
 
         
         
-        wmat.mF32A[0]=0.2;
-        wmat.mF32A[5]=0.2;
+        wmat.mF32A[0]=gBoundTick/200;
+        wmat.mF32A[5]=gBoundTick/200;
         wmat.mF32A[10]=0.01;
         
         if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
@@ -564,8 +582,8 @@ function DevToolRender()
         
         
         wmat.mF32A[0]=0.01;
-        wmat.mF32A[5]=0.2;
-        wmat.mF32A[10]=0.2;
+        wmat.mF32A[5]=gBoundTick/200;
+        wmat.mF32A[10]=gBoundTick/200;
 
         if(gDragBound==2)gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader,color,"colorModel");
@@ -582,9 +600,9 @@ function DevToolRender()
         wmat.mF32A[12]+=gBoundTick*0.5;
         wmat.mF32A[14]+=gBoundTick*0.5;
         
-        wmat.mF32A[0]=0.2;
+        wmat.mF32A[0]=gBoundTick/200;
         wmat.mF32A[5]=0.01;
-        wmat.mF32A[10]=0.2;
+        wmat.mF32A[10]=gBoundTick/200;
 
         if(gDragBound==3)gAtl.Frame().Dev().SetLine(false);
         render.SendGPU(shader,color,"colorModel");
@@ -596,10 +614,11 @@ function DevToolRender()
     }
     
     
-    
+    //gAtl.Frame().Dev().SetDepthTest(true);
     
     for(let pt of ptArr)
     {
+        if(pt.GetOwner()==null) continue;
         color.x=1;
         color.y=0;
         color.z=0;
@@ -672,7 +691,7 @@ function DevToolRender()
 
     for(let pt of clArr)
     {
-       
+        if(pt.GetOwner()==null) continue;
         let bound=pt.GetBoundGJK();
         bound.mMax;
         bound.mMin;
@@ -893,9 +912,7 @@ function DevToolDrop(_drop : CDrop)
 
         let cobject : CSubject=null;
         if(CInput.Key(CInput.eKey.LControl))
-        {
             cobject=(_drop.mObject as CObject).ExportProxy() as CSubject;
-        }
         else
             cobject=(_drop.mObject as CObject).Export() as CSubject;
 
@@ -904,7 +921,7 @@ function DevToolDrop(_drop : CDrop)
         cobject.SetBlackBoard(false);
         let can=gLastCanvas as CCanvas;
 
-        if(gAtl.Brush().GetCamDev().GetOrthographic())
+        if(gAtl.Brush().GetCamDev().IsOrthographic())
         {
             //let mouse=gAtl.Frame().Input().Mouse();
             let pos=gAtl.Brush().GetCamDev().ScreenToWorld2DPoint(_drop.mX,_drop.mY);
@@ -918,6 +935,21 @@ function DevToolDrop(_drop : CDrop)
 }
 function DevToolUpdate(_delay)
 {
+    if(gLeftSelect instanceof CSubject)
+    {
+        let cam=gAtl.Brush().GetCamDev();
+
+        let pos=gLeftSelect.GetWMat().xyz;
+        let len=CMath.V3Distance(cam.GetEye(),pos);
+        if(cam.IsOrthographic())
+            len=cam.GetZoom();
+        else
+            len*=0.002;
+        gBoundTick=40*len;
+    }
+    
+
+
     //브러시쪽 삭제는 처리안했다. 삭제될일이 거의 없어서 안함..
     let collapse=CUtil.ID(gAtl.Brush().ObjHash()+"_collapse");
     if(collapse==null)  return;
@@ -1007,6 +1039,8 @@ function DevToolUpdate(_delay)
             gLeftItem.delete(objHash);
         }
     }
+    
+
 
     if(gDragBound!=0 && gDragBound!=4)
     {
@@ -1017,7 +1051,7 @@ function DevToolUpdate(_delay)
         let subject=gLeftSelect as CSubject;
         
         let pos=subject.GetPos().Export();
-        if(gAtl.Brush().GetCamDev().GetOrthographic()==true)
+        if(gAtl.Brush().GetCamDev().IsOrthographic()==true)
         {
             x*=gAtl.Brush().GetCamDev().GetZoom();
             y*=gAtl.Brush().GetCamDev().GetZoom();
@@ -1108,8 +1142,14 @@ function DevToolUpdate(_delay)
     if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton) && gDragBound==0 && gLeftSelect instanceof CSubject && 
         CInput.eDragState.None==gAtl.Frame().Input().DragState())
     {
+
+        
+        
+
+
+
         let ray=gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x,gAtl.Frame().Input().Mouse().y);
-        if(gAtl.Brush().GetCamDev().GetOrthographic() && ray.GetDirect().z<-0.9)//2D는 가림 문제로 하드코딩
+        if(gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z<-0.9)//2D는 가림 문제로 하드코딩
             ray.GetOriginal().z+=1000;
         ResetBoxXYZ(gLeftSelect);
         //gDragBound=4;
@@ -1142,6 +1182,11 @@ function DevToolUpdate(_delay)
         }
         gMouse=gAtl.Frame().Input().Mouse().Export();
        
+        if(gDragBound!=0)
+        {
+            
+            CRollBack.Push(new CRollBackInfo("DevTool",{type:"Pos",sub:gLeftSelect,pos:gLeftSelect.GetPos().Export()}));
+        }
     }
     if(gAtl.Frame().Input().DragState()==CInput.eDragState.Move && gLeftSelect==null)
         gDragBound=4;
@@ -1169,7 +1214,7 @@ function DevToolUpdate(_delay)
         let bselectSub=null;
         //let t1=CPoolGeo.ProductRay();
         let ray=gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x,gAtl.Frame().Input().Mouse().y);
-        if(gAtl.Brush().GetCamDev().GetOrthographic() && ray.GetDirect().z<-0.9)//2D는 가림 문제로 하드코딩
+        if(gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z<-0.9)//2D는 가림 문제로 하드코딩
             ray.GetOriginal().z+=1000;
         for (let canvas of gAtl.mCanvasMap.values()) 
         {
@@ -1239,10 +1284,10 @@ function DevToolUpdate(_delay)
         else
             LeftSelect(null);
     }//if LButton
-    if(gAtl.Frame().Input().KeyUp(CInput.eKey.Delete))
-    {
-        DevToolLeftRemove();
-    }
+    // if(gAtl.Frame().Input().KeyUp(CInput.eKey.Delete))
+    // {
+    //     DevToolLeftRemove();
+    // }
     if(gAtl.Frame().Input().KeyUp(CInput.eKey.Esc))
     {
         LeftSelect(null);
@@ -1988,7 +2033,7 @@ function DevToolLeft()
     listDiv.html.push(`
         <div class="card bg-warning p-0">
             <div class="card-body p-1 d-flex justify-content-between align-items-center">
-                <div class="text-start ms-2 fw-bold">Hierarchy</div>
+                <div class="text-start ms-3 fw-bold">Hierarchy</div>
                 <div class="d-flex gap-2 me-2">
                     <i class="bi bi-save" style="cursor: pointer;" title="Save" id="DevToolAllSave"></i>
                     <i class="bi bi-file-earmark-plus" style="cursor: pointer;" title="Push" onclick='DevToolLeftPush()'></i>
@@ -2118,12 +2163,35 @@ function DevToolLeft()
     });
     ulRoot?.addEventListener("dblclick", (e: MouseEvent) => {
 
-         const target = e.target as HTMLElement;
+        let cam=gAtl.Brush().GetCamDev();
+        
+       
+
+        const target = e.target as HTMLElement;
         if (target.tagName == "I") return;
 
         const li = target.closest("li[id$='_li']") as HTMLElement;
         if (!li) return;
         const objHash = li.id.replace(/_li$/, "");
+
+        let obj=gLeftItem.get(objHash);
+        if(obj instanceof CSubject)
+        {
+            if(cam.IsOrthographic())
+            {
+                let eye=cam.GetEye().Export();
+                eye.x=obj.GetPos().x;
+                eye.y=obj.GetPos().y;
+                cam.EyeMoveAndViewCac(eye);
+            }
+            else
+            {
+                let eye=obj.GetPos().Export();;
+                cam.CharacterByRotation(eye,0,0,1000);
+            }
+        }
+        
+
 
         // 콜백 정의
         const onRename = () => {
@@ -2132,7 +2200,12 @@ function DevToolLeft()
             if (textDiv instanceof HTMLElement) {
                 textDiv.textContent = key;
             }
+
+            let obj=gLeftItem.get(objHash);
+            let bb=obj.IsBlackBoard();
+            if(bb)  obj.SetBlackBoard(false);
             gLeftItem.get(objHash).SetKey(key);
+            if(bb)  obj.SetBlackBoard(true);
 
         };
 
@@ -2234,7 +2307,7 @@ function LeftSelect(_obj : CObject)
     // 이전 선택 카드 배경 제거
     if (gLeftSelect) {
         const prevCard = CUtil.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card") as HTMLElement;
-        if (prevCard) prevCard.classList.remove("bg-secondary-subtle");
+        if (prevCard) prevCard.classList.remove("bg-info-subtle");
 
     }
     if(_obj==null)  
@@ -2250,11 +2323,7 @@ function LeftSelect(_obj : CObject)
         
         return;
     }
-    // if(gAtl.Brush().GetCamDev().GetCamCon()!=null)
-    // {
-    //     gAtl.Brush().GetCamDev().GetCamCon().SetRotXLock(true);
-    //     gAtl.Brush().GetCamDev().GetCamCon().SetRotYLock(true);
-    // }
+
     
         
     let li=CUtil.ID(_obj.ObjHash() + "_li");
@@ -2262,7 +2331,7 @@ function LeftSelect(_obj : CObject)
  
     // 현재 선택 카드 배경 회색 적용
     const curCard = li.querySelector(".card") as HTMLElement;
-    if (curCard) curCard.classList.add("bg-secondary-subtle");
+    if (curCard) curCard.classList.add("bg-info-subtle");
 
     // 우측 패널 갱신
     const rightPanel = gModal.FindFlex(2) as HTMLElement;
@@ -2275,7 +2344,15 @@ function LeftSelect(_obj : CObject)
 
     if (_obj instanceof CCanvas) 
     {
+        if(gLastCanvas!=null)
+        {
+            let bli=CUtil.ID(gLastCanvas.ObjHash() + "_li");
+            let bcard=bli.querySelector(".card") as HTMLElement;
+            bcard.classList.remove("fw-bold");
+        }
         gLastCanvas=_obj;
+        if (curCard) curCard.classList.add("fw-bold");
+        
 
         const bdiv = CUtil.ID(_obj.ObjHash() + "_ul");
         if (bdiv.children.length === 0) {
@@ -2303,7 +2380,7 @@ function LeftNewItem(_obj : CObject)
                 </div>
             </div>
         </div>
-        <div class="collapse ms-2" id="${collapseId}">
+        <div class="collapse ms-3" id="${collapseId}">
             <ul id="${_obj.ObjHash()}_ul" class='list-group w-100 h-100' style="list-style-type: none;"></ul>
         </div>
     </li>`;

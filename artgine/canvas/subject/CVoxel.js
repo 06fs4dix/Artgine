@@ -164,7 +164,7 @@ export class CColliderVoxel extends CCollider {
     }
 }
 export class CVoxel extends CSubject {
-    mAtlas = new CAtlas();
+    mAtlas = new CAtlas("Voxel/");
     mVInfo = null;
     mTexInfo = null;
     mColliderEvent = new Array(256);

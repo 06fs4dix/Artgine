@@ -154,7 +154,7 @@ export class CShader extends CObject
 
 	
 }
-export class CShaderList
+export class CShaderList extends CObject
 {
 	public mKey ="";
 	public mShader = new Array<CShader>();

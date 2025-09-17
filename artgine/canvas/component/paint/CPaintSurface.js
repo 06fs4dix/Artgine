@@ -17,7 +17,7 @@ export class CPaintSurface extends CPaint {
     }
     EmptyRPChk() {
         if (this.mRenderPass.length == 0) {
-            var rp = new CRPAuto("2DBlit");
+            var rp = new CRPAuto("Artgine/Shader/2DBlit");
             this.mRenderPass = [rp];
         }
     }
@@ -33,7 +33,7 @@ export class CPaintSurface extends CPaint {
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
         this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
-        var dm = this.GetDrawMesh("CPaint2D", _vf, this.mOwner.GetFrame().Pal().MCI2D());
+        var dm = this.GetDrawMesh("Artgine/DM/Surface", _vf, this.mOwner.GetFrame().Pal().MCI2D());
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
     }

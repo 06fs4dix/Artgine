@@ -22,7 +22,7 @@ export class CRenderer {
     mTexUse = new CTexUse();
     mTexBind = new Array();
     mUniToSam2d;
-    mUniToSam2dKey = "uniToSam2dKey";
+    mUniToSam2dKey = "Artgine/uniToSam2dKey";
     mUniTexLastOff = -1;
     mMainFrameTex;
     mFrameBufStack = new Array();
@@ -62,7 +62,7 @@ export class CRenderer {
     BuildRenderTarget(_info = null, _size = null, _key = null) {
         return "";
     }
-    BuildCubeMap(_texList, _mipmap = true) { return null; }
+    BuildCubeMap(_texList, _mipmap = true, _key = null) { return null; }
     RebuildTexture(_tex, _active, _xOff, _yOff, _width, _height, _fa) {
     }
     BuildVideo(_video, _key = null) {

@@ -19,6 +19,10 @@ import { CRouteMsg } from "../CRouteMsg.js";
 import { CPaint } from "../component/paint/CPaint.js";
 var g_offCObjHD = 0;
 export class CSubject extends CObject {
+    mKey;
+    mDestroy;
+    mEnable;
+    mPMatMul = true;
     mComArr;
     mPTArr = null;
     mCLArr = null;
@@ -30,11 +34,7 @@ export class CSubject extends CObject {
     mRot;
     mSca;
     mWMat;
-    mPMatMul = true;
-    mKey;
     mKeyChange;
-    mDestroy;
-    mEnable;
     mPEnable;
     mSpeed;
     mFrame = null;
@@ -196,8 +196,10 @@ export class CSubject extends CObject {
         if (this.mFrame != null)
             this.Reset();
         this.mFrame = _frame;
-        for (let each0 of this.mComArr) {
-            each0.SetOwner(this);
+        {
+            for (let each0 of this.mComArr) {
+                each0.SetOwner(this);
+            }
         }
         for (let each0 of this.mChild) {
             each0.SetFrame(_frame);

@@ -21,6 +21,7 @@ export class CTutorial
         if(_html!=null)
         {
             modal=new CModal();
+            modal.SetCloseEsc(false);
             //modal.SetHeader("Info")
             modal.SetTitle(CModal.eTitle.None);
             modal.SetBody(_html);
