@@ -67,8 +67,9 @@ export default class CUser extends CBehavior
     
         cl=sub.PushComp(new CCollider(pt)) as CCollider;
         cl.SetLayer("user");
-        cl.SetTrigger(true);
+        cl.SetEvent(CCollider.eEvent.Trigger);
         cl.PushCollisionLayer("endpoint");
+        cl.SetRestitution(15);
 
         let bound=new CBound();
         bound.mMin=new CVec3(-50,-50,-50);
@@ -83,7 +84,7 @@ export default class CUser extends CBehavior
         
     
         let rb=sub.PushComp<CRigidBody>(new CRigidBody());
-        rb.SetRestitution(15);
+        
         
         
     }

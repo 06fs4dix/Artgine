@@ -49,10 +49,10 @@ export default class CMonster extends CBehavior {
         bound.mType = CBound.eType.Box;
         cl = sub.PushComp(new CCollider(bound));
         cl.SetLayer("monSearch");
-        cl.SetTrigger(true);
+        cl.SetEvent(CCollider.eEvent.Trigger);
+        cl.SetRestitution(2);
         cl.PushCollisionLayer("user");
         let rb = sub.PushComp(new CRigidBody());
-        rb.SetRestitution(2);
     }
     Trigger(_org, _size, _tar) {
         this.m_enemy = _tar[0];

@@ -50,8 +50,9 @@ export default class CUser extends CBehavior {
         cl.PushCollisionLayer(["block", "mon"]);
         cl = sub.PushComp(new CCollider(pt));
         cl.SetLayer("user");
-        cl.SetTrigger(true);
+        cl.SetEvent(CCollider.eEvent.Trigger);
         cl.PushCollisionLayer("endpoint");
+        cl.SetRestitution(15);
         let bound = new CBound();
         bound.mMin = new CVec3(-50, -50, -50);
         bound.mMax = new CVec3(50, 50, 50);
@@ -62,7 +63,6 @@ export default class CUser extends CBehavior {
         navi.InitBound(pt);
         this.GetOwner().PushComp(navi);
         let rb = sub.PushComp(new CRigidBody());
-        rb.SetRestitution(15);
     }
     *ReadyMouse() {
         this.GetOwner().FindComp(CPaint2D).SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBMul));

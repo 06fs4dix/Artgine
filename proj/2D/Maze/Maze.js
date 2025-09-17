@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:11:18';
+const version = 'mfo0fumr_6';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";
@@ -340,12 +340,13 @@ Option_btn.SetContent(`
         <label for="zoomSize">줌</label>
         <input type="range" class="form-control-range" id="zoomSize" min="0.5" max="3" step="0.1" value="1.5" onchange='ClickCamOption("zoomSize")'>
     </div>
-    <button id='Restart_btn' onclick='ClickCamOption("Restart_btn")'>재시작</button>
+    <p>White ball. pick move!</p>
+    <button id='Restart_btn' onclick='ClickCamOption("Restart_btn")'>Restart</button>
     
     <button id='PWAInstall_btn'>앱 설치</button>
-    <button id='FlowCam' onclick='ClickCamOption("FlowCam")'>카메라 따라가기</button>
-    <button id='StopCam' onclick='ClickCamOption("StopCam")'>카메라 멈추기</button>
-    <button id='StopCam' onclick='ClickScreenFull()'>풀화면</button>
+    <button id='FlowCam' onclick='ClickCamOption("FlowCam")'>CamFlow</button>
+    <button id='StopCam' onclick='ClickCamOption("StopCam")'>CamStop</button>
+    <button id='StopCam' onclick='ClickScreenFull()'>Full</button>
     
 </div>`);
 function ClickScreenFull() {

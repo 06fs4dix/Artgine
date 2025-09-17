@@ -1,4 +1,4 @@
-const version = '2025-08-30 10:24:45';
+const version = 'mfo0fumr_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";

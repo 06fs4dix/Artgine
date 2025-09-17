@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mfo0fumr_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -329,12 +329,6 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Basic", async () => {
     Main.SetRPMgr(null);
 }));
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-
-
 
 
 
@@ -345,29 +339,6 @@ Option_btn.SetContent(`
 <div>
     블룸,기본 설정 가능
 </div>`);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
