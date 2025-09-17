@@ -9,6 +9,7 @@ import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/canvas/component/paint/CPaint3D.js";
 import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
+import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
 import { CBound } from "../../artgine/geometry/CBound.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
@@ -218,7 +219,53 @@ export class CShadowPlane extends CPaint2D
         this.PushTag("shadowPlane");
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
         
+        this.PushTag("wind");
+
+        //this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
+        
     }
+    EmptyRPChk()
+	{
+        super.EmptyRPChk();
+        for(let rp of this.mRenderPass)
+        {
+            rp.mPriority=CRenderPass.ePriority.AlphaAuto;
+            rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
+            rp.mCullFace = CRenderPass.eCull.None;
+        }
+        
+	}
+
+    // SetOwner(_obj: CSubject): void {
+    //     super.SetOwner(_obj);
+    //     if(_obj.GetFrame()==null)   return;
+    //     let rp=this.PushRenderPass(new CRenderPass(_obj.GetFrame().Pal().Sl2DKey())) as CRenderPass;
+    //     rp.mPriority=CRenderPass.ePriority.AlphaAuto;
+    //     rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
+    //     rp.mCullFace = CRenderPass.eCull.None;
+    //     //rp.mAlpha=false;
+
+    //     //rp.mDepthTest=false;
+    //     //rp.mDepthWrite=false;
+    //     // rp.mBlend=[
+    //     //     CRenderPass.eBlend.FUNC_MIN,   // 색 방정식 = MIN (Darken)
+    //     //     CRenderPass.eBlend.FUNC_ADD,   // 알파는 아무거나(미사용이면 상관없음)
+    //     //     CRenderPass.eBlend.ONE,        // MIN/MAX에서는 factor들은 무시됨
+    //     //     CRenderPass.eBlend.ONE,
+    //     //     CRenderPass.eBlend.ONE,
+    //     //     CRenderPass.eBlend.ONE
+    //     // ];
+    //     // rp.mBlend=[
+    //     //     CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,
+    //     //     CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA
+    //     // ];
+    //     // rp.mBlend=[
+    //     //     CRenderPass.eBlend.FUNC_MIN,CRenderPass.eBlend.FUNC_ADD,
+    //     //     CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,
+    //     //     CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_COLOR
+    //     // ];
+        
+    // }
     override IsShould(_member: string, _type: CObject.eShould) 
     {
         const hide = [
@@ -331,6 +378,11 @@ export class CShadowPlane extends CPaint2D
         }
         if(this.mLIG==null) return;
 
+        // for(let rp of this.GetRenderPass()) {
+        //     if(rp.mSort != CRenderPass.eSort.ReversAlphaGroup) {
+        //         rp.mSort = CRenderPass.eSort.ReversAlphaGroup;
+        //     }
+        // }
         this.UpdateShadow();
         super.Update(_delay);
 
@@ -501,15 +553,13 @@ export class CShadowPlane extends CPaint2D
 
         // 위에서 만든 텍스쳐에 위의 카메라로 랜더링
         const beforeRP = fw.Dev().ChangeRenderPass(tempRP);
-        fw.Dev().SetClearColor(true, new CVec4(0.5,0.5,0.5,0));
+        //fw.Dev().SetClearColor(true, new CVec4(0.5,0.5,0.5,0));
         fw.Ren().Begin(tex);
         
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("3DSkinC").mKey) as CShader;
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinC").mKey) as CShader;
 
         fw.Ren().UseShader(vf);
 
-        // fw.Ren().BMgr().SetValue(vf,"colorModel",this.GetColorModel());
-        // fw.Ren().BMgr().SetValue(vf,"alphaModel",this.GetAlphaModel());
         fw.Ren().SendGPU(vf,new CMat(),"worldMat");
         fw.Ren().SendGPU(vf,cam.GetViewMat(),"viewMat");
         fw.Ren().SendGPU(vf,cam.GetProjMat(),"projectMat");
@@ -523,6 +573,8 @@ export class CShadowPlane extends CPaint2D
         }
 
         fw.Ren().SendGPU(vf,[fw.Pal().GetBlackTex()]);
+        //fw.Ren().SendGPU(vf,new CVec2(0.5,CAlpha.eModel.Mul),"alphaModel");
+        
 
         let nodeOff = 0;
         let node = pt.mTreeNode;

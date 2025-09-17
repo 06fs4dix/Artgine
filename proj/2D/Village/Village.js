@@ -1,4 +1,4 @@
-const version = 'mffeu6vk_17';
+const version = 'mfo0fumr_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -32,7 +32,6 @@ var Main = gAtl.Canvas('Main.json');
 var Real = gAtl.Canvas('Real.json');
 let comcon = gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
 gAtl.Brush().GetCam2D().Set2DZoom(1.5);
-import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCIndex.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
@@ -40,17 +39,23 @@ import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CB
 import { CBGAttachButton, CBlackboardModal, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
 import { CPaintVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaintVoxel.js";
+import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
+import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
+import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
+import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
+import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 {
     const backVoxel = Main.Find("BackGround");
     if (backVoxel) {
-        const decoNames = ["LTree", "MTree", "Flower1", "Flower2"];
+        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
         const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
         const width = backVoxel.mCount?.x || 0;
         const height = backVoxel.mCount?.y || 0;
@@ -118,17 +123,59 @@ CSysAuth.Confirm(true).then(async (_enable) => {
     audio.Volume(0.5);
     audio.Play();
 });
-let lightRP = new CRPMgr();
-let rp = lightRP.PushRP(new CRPAuto());
+let lightAM7RP = new CRPMgr();
+let rp = lightAM7RP.PushRP(new CRPAuto());
 rp.PushInPaint(CPaint2D);
 rp.PushOutTag("shadowPlane");
 rp.mShader = gAtl.Frame().Pal().Sl2DKey();
 rp.mTag = "light";
-rp = lightRP.PushRP(new CRPAuto());
+rp = lightAM7RP.PushRP(new CRPAuto());
 rp.PushInPaint(CPaintVoxel);
 rp.mShader = gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag = "light";
-Real.SetRPMgr(lightRP);
+Real.SetRPMgr(lightAM7RP);
+let lightPM11RP = new CRPMgr();
+let emissiveTex = new CTexture();
+emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
+let emissiveTexKey = lightPM11RP.PushTex("Bloom/emissiveTex.tex", emissiveTex);
+rp = lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaint2D);
+rp.PushInTag("bloom");
+rp.mShader = gAtl.Frame().Pal().Sl2DKey();
+rp.mRenderTarget = emissiveTexKey;
+rp.mTag = "mask";
+let basiceTex = new CTexture();
+basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
+let basiceTexKey = lightPM11RP.PushTex("Bloom/basiceTex.tex", basiceTex);
+rp = lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaint2D);
+rp.PushOutTag("shadowPlane");
+rp.mShader = gAtl.Frame().Pal().Sl2DKey();
+rp.mTag = "light";
+rp.mRenderTarget = basiceTexKey;
+rp = lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaintVoxel);
+rp.mShader = gAtl.Frame().Pal().SlVoxelKey();
+rp.mTag = "light";
+rp.mRenderTarget = basiceTexKey;
+rp = lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CShadowPlane);
+rp.mShader = gAtl.Frame().Pal().Sl2DKey();
+rp.mRenderTarget = basiceTexKey;
+let sufBloom = lightPM11RP.PushSuf(new CSurfaceBloom());
+let srp = sufBloom.GetRP();
+srp.mShader = gAtl.Frame().Pal().Sl2DKey();
+srp.mTag = "blit";
+srp.mShaderAttr.push(new CShaderAttr(0, emissiveTexKey));
+let sufLast = lightPM11RP.PushSuf(new CSurface());
+srp = sufLast.GetRP();
+sufLast.SetUseRT(false);
+srp.mShader = gAtl.Frame().Pal().SlPostKey();
+srp.mTag = "blend";
+srp.mShaderAttr.push(new CShaderAttr(0, basiceTexKey));
+srp.mShaderAttr.push(new CShaderAttr(1, sufBloom.GetTexKey()));
+srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
+srp.mShaderAttr.push(new CShaderAttr("opacity", 1, 1));
 let Option_btn = new CBGAttachButton("Test", 101, new CVec2(320, 120));
 Option_btn.SetTitleText("Option");
 Option_btn.SetContent(`
@@ -138,54 +185,34 @@ Option_btn.SetContent(`
     <button onclick="PM11()">PM11</button>
 </div>`);
 function AM7() {
+    Real.SetRPMgr(lightAM7RP);
     let Direct = Main.Find("Direct");
     let PointList = Main.Find("PointList");
     let dirLight = Direct.FindComp(CLight);
     dirLight.SetColor(new CVec3(1, 0.8, 0.8));
     Direct.SetPos(new CVec3(1, 0.5, 0));
-    let ptLights = PointList.FindComps(CLight, true);
-    for (let pt of ptLights) {
-        pt.SetColor(new CVec3());
-    }
-    Real.SetRPMgr(lightRP);
+    PointList.SetEnable(false);
 }
 window["AM7"] = AM7;
 function PM1() {
+    Real.SetRPMgr(null);
     let Direct = Main.Find("Direct");
     let PointList = Main.Find("PointList");
     let dirLight = Direct.FindComp(CLight);
     dirLight.SetColor(new CVec3(1, 1, 1));
     Direct.SetPos(new CVec3(0, 1, 0));
-    let ptLights = PointList.FindComps(CLight, true);
-    for (let pt of ptLights) {
-        pt.SetColor(new CVec3());
-    }
-    Real.SetRPMgr(null);
+    PointList.SetEnable(false);
 }
 window["PM1"] = PM1;
 function PM11() {
+    Real.SetRPMgr(lightPM11RP);
     let Direct = Main.Find("Direct");
     let PointList = Main.Find("PointList");
     let dirLight = Direct.FindComp(CLight);
     dirLight.SetColor(new CVec3());
     Direct.SetPos(new CVec3(0, 1, 0));
-    let ptLights = PointList.FindComps(CLight, true);
-    for (let pt of ptLights) {
-        pt.SetColor(new CVec3(1, 1, 1));
-    }
-    Real.SetRPMgr(lightRP);
+    PointList.SetEnable(true);
 }
 window["PM11"] = PM11;
-class CTest extends CObject {
-    mKey = "a";
-    mValue = 1;
-    mArr = new Array();
-    IsShould(_member, _type) {
-        if (_type == CObject.eShould.Proxy) {
-            if (_member == "mKey")
-                return false;
-        }
-        return super.IsShould(_member, _type);
-    }
-}
 new CMDViewer("README.md");
+PM11();

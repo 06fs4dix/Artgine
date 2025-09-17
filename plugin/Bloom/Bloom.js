@@ -11,7 +11,7 @@ export class CSurfaceDownSample extends CSurface {
     m_softThreshold;
     constructor() {
         super();
-        this.GetRP().mShader = "PostDownSample";
+        this.GetRP().mShader = "Artgine/Shader/PostDownSample";
         this.GetRP().mClearColor = false;
         this.GetRP().mDepthWrite = false;
         this.GetRP().mDepthTest = false;
@@ -46,7 +46,7 @@ export class CSurfaceUpSample extends CSurface {
     m_blendFactor;
     constructor() {
         super();
-        this.GetRP().mShader = "PostUpSample";
+        this.GetRP().mShader = "Artgine/Shader/PostUpSample";
         this.GetRP().mDepthWrite = false;
         this.GetRP().mDepthTest = false;
         this.GetRP().mClearColor = false;
@@ -105,14 +105,16 @@ export class CSurfaceBloom extends CSurface {
         this.GetRP().mClearColor = false;
         this.GetRP().mDepthWrite = false;
         this.GetRP().mDepthTest = false;
+        this.mTexKey = "Bloom/Main.tex";
         this.NewRT([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA32F)], mipSize[0], true);
         mipTex.push(this.mRenderPass.mRenderTarget);
         for (let i = 0; i < this.m_mipMax; i++) {
             mipSize.push(new CVec2(mipSize[i].x * 0.5, mipSize[i].y * 0.5));
             let downSampleSurf = new CSurfaceDownSample();
+            downSampleSurf.mTexKey = "Bloom/" + "DownSample" + i + ".tex";
             downSampleSurf.SetKey("DownSample" + i);
             downSampleSurf.ResetTexture(mipSize[i], i, this.m_threshold, this.m_softThreshold);
-            downSampleSurf.GetRP().mRenderTarget = "DownSample" + i + ".tex";
+            downSampleSurf.GetRP().mRenderTarget = downSampleSurf.GetTexKey();
             downSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
             this.PushChild(downSampleSurf);
             mipTex.push(downSampleSurf.GetTexKey());
@@ -121,13 +123,16 @@ export class CSurfaceBloom extends CSurface {
             let upSampleSurf = new CSurfaceUpSample();
             const texIndex = this.m_mipMax - i;
             upSampleSurf.SetKey("UpSample" + texIndex);
+            upSampleSurf.mTexKey = "Bloom/" + "UpSample" + i + ".tex";
             upSampleSurf.ResetTexture(mipTex[i - 1], this.GetBlendFactor(i, this.m_mipMax));
             upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
             this.PushChild(upSampleSurf);
         }
         let upSampleSurf = new CSurfaceUpSample();
         upSampleSurf.SetKey("UpSample" + (this.m_mipMax - 1));
+        upSampleSurf.mTexKey = "Bloom/" + "UpSample" + (this.m_mipMax - 1) + ".tex";
         upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(0, this.m_mipMax));
+        upSampleSurf.mTexCreate = false;
         upSampleSurf.GetPaint().SetTexture(mipTex[1]);
         this.PushChild(upSampleSurf);
     }
@@ -217,6 +222,14 @@ export class CSurfaceBloom extends CSurface {
         }
         this.mChild[this.mChild.length - 1].GetPaint().SetTexture(mipTex[1]);
         this.mChild[this.mChild.length - 1].GetRP().mRenderTarget = mipTex[0];
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_child == true)
+            return;
+        this.Refresh();
+        let msg = this.NewOutMsg("ClearBatch");
+        msg.mInter = "canvas";
     }
     Update(_delay) {
     }

@@ -10,7 +10,6 @@ import { CPoolGeo } from "../../artgine/geometry/CPoolGeo.js";
 import { CVec1 } from "../../artgine/geometry/CVec1.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
-import { CVec4 } from "../../artgine/geometry/CVec4.js";
 import { CCamera } from "../../artgine/render/CCamera.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
@@ -175,6 +174,15 @@ export class CShadowPlane extends CPaint2D {
         this.SetAlphaModel(new CAlpha(this.mShadowAlpha, CAlpha.eModel.Mul));
         this.PushTag("shadowPlane");
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
+        this.PushTag("wind");
+    }
+    EmptyRPChk() {
+        super.EmptyRPChk();
+        for (let rp of this.mRenderPass) {
+            rp.mPriority = CRenderPass.ePriority.AlphaAuto;
+            rp.mSort = CRenderPass.eSort.ReversAlphaGroup;
+            rp.mCullFace = CRenderPass.eCull.None;
+        }
     }
     IsShould(_member, _type) {
         const hide = [
@@ -378,9 +386,8 @@ export class CShadowPlane extends CPaint2D {
         tempRP.mBlend[4] = CRenderPass.eBlend.ONE;
         tempRP.mBlend[5] = CRenderPass.eBlend.ZERO;
         const beforeRP = fw.Dev().ChangeRenderPass(tempRP);
-        fw.Dev().SetClearColor(true, new CVec4(0.5, 0.5, 0.5, 0));
         fw.Ren().Begin(tex);
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("3DSkinC").mKey);
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinC").mKey);
         fw.Ren().UseShader(vf);
         fw.Ren().SendGPU(vf, new CMat(), "worldMat");
         fw.Ren().SendGPU(vf, cam.GetViewMat(), "viewMat");

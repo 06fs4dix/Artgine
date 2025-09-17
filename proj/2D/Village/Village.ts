@@ -1,5 +1,5 @@
 //Version
-const version='mffeu6vk_17';
+const version='mfo0fumr_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -53,7 +53,7 @@ import { CBGAttachButton, CBlackboardModal, CLoadingBack, CMDViewer } from "http
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
+import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
@@ -66,13 +66,17 @@ import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
+import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
+import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
+import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
+import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 //Real.Clear();
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
 {
     const backVoxel = Main.Find("BackGround") as any;
     if (backVoxel) {
-        const decoNames = ["LTree", "MTree", "Flower1", "Flower2"];
+        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
         // 블랙보드에서 직접 가져오기
         const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
 
@@ -157,24 +161,93 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 
-let lightRP=new CRPMgr();
-let rp=lightRP.PushRP(new CRPAuto());
+let lightAM7RP=new CRPMgr();
+let rp=lightAM7RP.PushRP(new CRPAuto());
 rp.PushInPaint(CPaint2D);
 rp.PushOutTag("shadowPlane");
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mTag="light";
 
 
-rp=lightRP.PushRP(new CRPAuto());
+rp=lightAM7RP.PushRP(new CRPAuto());
 rp.PushInPaint(CPaintVoxel);
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag="light";
-Real.SetRPMgr(lightRP);
+Real.SetRPMgr(lightAM7RP);
 
 // let voxel=Main.Find("BackGround") as CVoxel;
 // voxel.mLight=true;
 // voxel.mUpdateRes=true;
 
+let lightPM11RP=new CRPMgr();
+
+
+let emissiveTex=new CTexture();
+emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
+let emissiveTexKey=lightPM11RP.PushTex("Bloom/emissiveTex.tex",emissiveTex);
+rp=lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaint2D);
+rp.PushInTag("bloom");
+rp.mShader=gAtl.Frame().Pal().Sl2DKey();
+rp.mRenderTarget=emissiveTexKey;
+rp.mTag="mask";
+
+
+let basiceTex=new CTexture();
+basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
+let basiceTexKey=lightPM11RP.PushTex("Bloom/basiceTex.tex",basiceTex);
+rp=lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaint2D);
+rp.PushOutTag("shadowPlane");
+rp.mShader=gAtl.Frame().Pal().Sl2DKey();
+rp.mTag="light";
+rp.mRenderTarget=basiceTexKey;
+
+
+rp=lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CPaintVoxel);
+rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
+rp.mTag="light";
+rp.mRenderTarget=basiceTexKey;
+
+
+rp=lightPM11RP.PushRP(new CRPAuto());
+rp.PushInPaint(CShadowPlane);
+//rp.PushInTag("shadowPlane");
+rp.mShader=gAtl.Frame().Pal().Sl2DKey();
+rp.mRenderTarget=basiceTexKey;
+
+
+
+let sufBloom=lightPM11RP.PushSuf(new CSurfaceBloom()) as CSurfaceBloom;
+let srp=sufBloom.GetRP();
+srp.mShader=gAtl.Frame().Pal().Sl2DKey();
+srp.mTag="blit";
+srp.mShaderAttr.push(new CShaderAttr(0,emissiveTexKey));
+//sufBloom.Natural();
+// sufBloom.m_intensity = 1000.0;//업샘플 합성의 기본 강도
+// sufBloom.m_threshold = 2.0;//이 값보다 어두운 픽셀은 블룸 입력에서 배제
+// sufBloom.m_softThreshold = 1.0;//임계 부근이 점진적으로 섞여 더 자연스러운 하이라이트 선택
+// sufBloom.m_lowFrequencyBoost = 100.0;//값을 올리면 멀리 퍼져 보이는 느낌이 커짐.
+// sufBloom.m_lowFrequencyBoostCurvation = 200.0;//멀리 퍼지는 긴 꼬리
+// sufBloom.m_highPassFrequency = 1.0;//코드상 1.0이면 모든 mip 기여 허용, 값이 작아질수록 큰 mip(멀리 퍼지는 부분) 기여가 빠르게 줄어듭니다. 즉 멀리 퍼지게 하려면 1.0 유지가 유리
+// sufBloom.Refresh();
+
+let sufLast=lightPM11RP.PushSuf(new CSurface());
+srp=sufLast.GetRP();
+sufLast.SetUseRT(false);
+
+
+srp.mShader=gAtl.Frame().Pal().SlPostKey();
+srp.mTag="blend";
+srp.mShaderAttr.push(new CShaderAttr(0,basiceTexKey));
+srp.mShaderAttr.push(new CShaderAttr(1,sufBloom.GetTexKey()));
+srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
+srp.mShaderAttr.push(new CShaderAttr("opacity",1,1));
+
+
+
+//Real.SetRPMgr(null);
 
 
 let Option_btn=new CBGAttachButton("Test",101,new CVec2(320,120));
@@ -188,6 +261,7 @@ Option_btn.SetContent(`
 
 function AM7()
 {
+    Real.SetRPMgr(lightAM7RP);
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
 
@@ -195,12 +269,13 @@ function AM7()
     dirLight.SetColor(new CVec3(1,0.8,0.8));
     Direct.SetPos(new CVec3(1,0.5,0));
 
-    let ptLights=PointList.FindComps(CLight,true);
-    for(let pt of ptLights)
-    {
-        pt.SetColor(new CVec3());
-    }
-    Real.SetRPMgr(lightRP);
+    PointList.SetEnable(false);
+    // let ptLights=PointList.FindComps(CLight,true);
+    // for(let pt of ptLights)
+    // {
+    //     pt.SetColor(new CVec3());
+    // }
+    
 
 }
 window["AM7"]=AM7;
@@ -208,6 +283,7 @@ window["AM7"]=AM7;
 
 function PM1()
 {
+    Real.SetRPMgr(null);
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
 
@@ -215,12 +291,14 @@ function PM1()
     dirLight.SetColor(new CVec3(1,1,1));
     Direct.SetPos(new CVec3(0,1,0));
 
-    let ptLights=PointList.FindComps(CLight,true);
-    for(let pt of ptLights)
-    {
-        pt.SetColor(new CVec3());
-    }
-    Real.SetRPMgr(null);
+    PointList.SetEnable(false);
+    // let ptLights=PointList.FindComps(CLight,true);
+    // for(let pt of ptLights)
+    // {
+    //     //pt.SetEnable(false);
+    //     pt.SetColor(new CVec3());
+    // }
+    
 
 }
 window["PM1"]=PM1;
@@ -229,6 +307,7 @@ window["PM1"]=PM1;
 
 function PM11()
 {
+    Real.SetRPMgr(lightPM11RP);
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
 
@@ -236,35 +315,71 @@ function PM11()
     dirLight.SetColor(new CVec3());
     Direct.SetPos(new CVec3(0,1,0));
 
-    let ptLights=PointList.FindComps(CLight,true);
-    for(let pt of ptLights)
-    {
-        pt.SetColor(new CVec3(1,1,1));
-    }
-    Real.SetRPMgr(lightRP);
+    PointList.SetEnable(true);
+    // let ptLights=PointList.FindComps(CLight,true);
+    // for(let pt of ptLights)
+    // {
+    //     pt.SetColor(new CVec3(1,1,1));
+    // }
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 window["PM11"]=PM11;
 
 
-
-
-class CTest extends CObject
-{
-    mKey="a";
-    mValue=1;
-    mArr=new Array<CVec3>();
-    IsShould(_member: string, _type: CObject.eShould): boolean 
-    {
-        if(_type==CObject.eShould.Proxy)
-        {
-            if(_member=="mKey")
-                return false;
-        }
-        return super.IsShould(_member,_type);
-    }
-}
 new CMDViewer("README.md");
+PM11();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

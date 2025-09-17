@@ -1,3 +1,4 @@
+import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
 import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
@@ -6,13 +7,14 @@ import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/com
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
 import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CSMComp.js";
 
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+import { CPaint2D, CPaintHTML } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
 import { CRayMouse } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRayMouse.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
+import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 
 
@@ -221,7 +223,9 @@ export class CNPC extends CSubject
 
         this.mAF=this.PushComp(new CAniFlow(ani));
         this.mAF.mSave=false;
-        
+     
+        let co=new CCoroutine(this.AutoChat,this);
+        co.Start();
     }
     StandLeft()
     {
@@ -272,6 +276,28 @@ export class CNPC extends CSubject
         }
         
     }
-   
+    mLastChat : CPaintHTML;
+    *AutoChat()
+    {
+        const raw = this.GetDialogue(); // ex) "<div>안녕! 자동 대화 테스트</div>"
+        const bubble = `
+        <div class="card border-0 shadow-sm bg-white rounded-4">
+            <div class="card-body py-2 px-3 text-body d-inline-block text-wrap"
+                style="max-width:256px; min-width:256px; width:256px; word-break:keep-all; overflow-wrap:break-word; flex:0 0 auto;">
+            ${raw}
+            </div>
+        </div>
+        
+        `;
+
+        this.mLastChat = new CPaintHTML(CDomFactory.DataToDom(bubble));
+        this.mLastChat.SetPivot(new CVec3(0,1,0));
+        this.mLastChat.SetPos(new CVec3(0,30,0))
+        this.PushComp(this.mLastChat);
+        yield CCoroutine.Wait(1000*5);
+        this.mLastChat.Destroy();
+        yield CCoroutine.Wait(1000*2);
+        return CCoroutine.eState.Loop;
+    }
 
 }

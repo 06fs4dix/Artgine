@@ -385,7 +385,7 @@ export class CShadowBaker extends CObject {
                 let beforeRP = fw.Dev().ChangeRenderPass(bakeRP);
                 fw.Dev().SetClearColor(true, new CVec4(0, 0, 0, 0));
                 fw.Dev().SetClearDepth(true);
-                fw.Ren().Begin(tempTex, brush.GetCam3D().GetOrthographic(), bakeRP.mRenderTargetUse, bakeRP.mRenderTargetLevel);
+                fw.Ren().Begin(tempTex, brush.GetCam3D().IsOrthographic(), bakeRP.mRenderTargetUse, bakeRP.mRenderTargetLevel);
                 fw.Ren().SendGPU(vf, new CVec2(tempTex.GetRWidth(), tempTex.GetRHeight()), "rtSize");
                 fw.Dev().ViewPort(0, 0, resolution, resolution);
                 for (let each2 of vf.mDefault) {
@@ -613,7 +613,7 @@ export class CShadowBaker extends CObject {
         if (_option.envMap) {
             RP.mShaderAttr.push(new CShaderAttr(0, _option.envMap), new CShaderAttr("envCube", 0));
         }
-        RP.mShaderAttr.push(new CShaderAttr(0.0, "shadowArr.tex"));
+        RP.mShaderAttr.push(new CShaderAttr(0.0, _fw.Pal().GetShadowArrTex()));
         RP.mRenderTarget = _renderTarget;
         RP.Reset();
         return RP;

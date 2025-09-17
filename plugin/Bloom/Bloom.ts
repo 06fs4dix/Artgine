@@ -11,7 +11,8 @@
 
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CJSON } from "../../artgine/basic/CJSON.js";
-import { CObject } from "../../artgine/basic/CObject.js";
+import { CObject, CPointer } from "../../artgine/basic/CObject.js";
+import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
 import { CPaintSurface } from "../../artgine/canvas/component/paint/CPaintSurface.js";
 import { CSurface } from "../../artgine/canvas/subject/CSurface.js";
@@ -32,7 +33,7 @@ export class CSurfaceDownSample extends CSurface
 	{
 		super();
 
-		this.GetRP().mShader = "PostDownSample";
+		this.GetRP().mShader = "Artgine/Shader/PostDownSample";
 		this.GetRP().mClearColor = false;
 		this.GetRP().mDepthWrite = false;
 		this.GetRP().mDepthTest = false;
@@ -82,7 +83,7 @@ export class CSurfaceUpSample extends CSurface
 	{
 		super();
 
-		this.GetRP().mShader = "PostUpSample";
+		this.GetRP().mShader = "Artgine/Shader/PostUpSample";
 		this.GetRP().mDepthWrite = false;
 		this.GetRP().mDepthTest = false;
 		this.GetRP().mClearColor = false;
@@ -132,25 +133,32 @@ export class CSurfaceBloom extends CSurface
 		EnergyConserving : 0,
 		Additive : 1
 	};
+	
+
+
+
+
 	m_preFilterType = CSurfaceBloom.ePreFilterType.EnergyConserving;
 	//threshold
-	m_threshold : number = 0.0;
-	m_softThreshold : number = 0.0;
+	m_threshold : number = 0.0;//이 값보다 어두운 픽셀은 블룸 입력에서 배제
+	m_softThreshold : number = 0.0;//임계 부근이 점진적으로 섞여 더 자연스러운 하이라이트 선택
 	
 	//params
-	m_intensity : number = 0.15;
-	m_lowFrequencyBoostCurvation : number = 0.95;
-	m_lowFrequencyBoost : number = 0.7;
+	m_intensity : number = 0.15;//업샘플 합성의 기본 강도
+	m_lowFrequencyBoostCurvation : number = 0.95;//멀리 퍼지는 긴 꼬리
+	m_lowFrequencyBoost : number = 0.7;//값을 올리면 멀리 퍼져 보이는 느낌이 커짐.
 	m_highPassFrequency : number = 1.0;
 
 	//num of mip
-	m_mipMax : number = 6;
+	m_mipMax : number = 6;//클수록 이론상 더 멀리 퍼지는 블러 반경
 
 	constructor()
 	{
 		super();
 		this.Natural();
 		this.Init();
+		
+		//this.mTexCreate=false;
 	}
 
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -175,6 +183,7 @@ export class CSurfaceBloom extends CSurface
 		this.GetRP().mClearColor = false;
 		this.GetRP().mDepthWrite = false;
 		this.GetRP().mDepthTest = false;
+		this.mTexKey="Bloom/Main.tex";
 		this.NewRT([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA32F)], mipSize[0], true);
 		mipTex.push(this.mRenderPass.mRenderTarget);
 
@@ -183,10 +192,11 @@ export class CSurfaceBloom extends CSurface
 			mipSize.push(new CVec2(mipSize[i].x * 0.5, mipSize[i].y * 0.5));
 
 			let downSampleSurf = new CSurfaceDownSample();
+			downSampleSurf.mTexKey="Bloom/"+"DownSample" + i+".tex";
 			downSampleSurf.SetKey("DownSample" + i);
 			
 			downSampleSurf.ResetTexture(mipSize[i], i, this.m_threshold, this.m_softThreshold);
-			downSampleSurf.GetRP().mRenderTarget="DownSample" + i+".tex";
+			downSampleSurf.GetRP().mRenderTarget=downSampleSurf.GetTexKey();
 			downSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0,mipTex[i]));
 			//downSampleSurf.GetPaint().SetTexture(mipTex[i]);
 			this.PushChild(downSampleSurf);
@@ -199,6 +209,7 @@ export class CSurfaceBloom extends CSurface
 			let upSampleSurf = new CSurfaceUpSample();
 			const texIndex = this.m_mipMax - i;
 			upSampleSurf.SetKey("UpSample" + texIndex);
+			upSampleSurf.mTexKey="Bloom/"+"UpSample" + i+".tex";
 			upSampleSurf.ResetTexture(mipTex[i - 1], this.GetBlendFactor(i, this.m_mipMax));
 			//upSampleSurf.mRenderPass.mRenderTarget="UpSample" + i+".tex";
 			//upSampleSurf.GetRP().mRenderTarget="UpSample" + i+".tex";
@@ -209,7 +220,9 @@ export class CSurfaceBloom extends CSurface
 
 		let upSampleSurf = new CSurfaceUpSample();
 		upSampleSurf.SetKey("UpSample" + (this.m_mipMax - 1));
+		upSampleSurf.mTexKey="Bloom/"+"UpSample" + (this.m_mipMax - 1)+".tex";
 		upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(0, this.m_mipMax));
+		upSampleSurf.mTexCreate=false;
 		//upSampleSurf.mRenderPass.mRenderTarget="UpSample.tex";
 		upSampleSurf.GetPaint().SetTexture(mipTex[1]);
 		this.PushChild(upSampleSurf);
@@ -326,6 +339,21 @@ export class CSurfaceBloom extends CSurface
 
 		(this.mChild[this.mChild.length-1] as CSurfaceUpSample).GetPaint().SetTexture(mipTex[1]);
 		(this.mChild[this.mChild.length-1] as CSurfaceUpSample).GetRP().mRenderTarget=mipTex[0];
+	}
+	EditChange(_pointer: CPointer, _child: boolean): void {
+		super.EditChange(_pointer,_child);
+		if(_child==true)	return;
+		
+		// let ptArr=this.FindComps(CPaint,true);
+		// for(let pt of ptArr)
+		// {
+		// 	pt.ClearCRPAuto();
+		// }
+		this.Refresh();
+		let msg=this.NewOutMsg("ClearBatch");
+		msg.mInter="canvas";
+
+		
 	}
 	Update(_delay: number): void {
 		// srcResolution과 aspect는 더 이상 필요하지 않음
