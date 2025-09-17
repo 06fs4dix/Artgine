@@ -1,5 +1,5 @@
-**When you’re finished, click [Excute]**
->Please add the SampleCode to the RunTime code window!
+**Please add the SampleCode to the RunTime code window**
+>When you’re finished, click! [Excute]
 
 **Code to create a texture using HTML5 canvas functions**
 ```js

@@ -10,6 +10,20 @@ Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합
 <details>
   <summary>예제 더보기</summary>
   
+
+**2D**
+[Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : 마을 
+
+[Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : 미로찾기
+
+[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : 슈팅
+
+**3D**
+[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : 박스 비주얼 뷰어
+
+[Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html) : 2차원 맵에서 3D 오브젝트 추적
+
+
 **Tutorial**
 
 [CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html) : 충돌 테스트 제공
@@ -17,24 +31,6 @@ Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합
 [3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html) : 3D 빛,그림자 
 
 [Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html) : 스카이박스
-
-[Wind](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html) : 바람 처리
-
-**3D**
-
-[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : 박스 비주얼 뷰어
-
-[Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html) : 2차원 맵에서 3D 오브젝트 추적
-
-[GeometryViewer](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html) : gps정보를 기반으로 화면 구성
-
-**2D**
-
-[Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : 미로찾기
-
-[Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : 마을 
-
-[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : 슈팅
 
 </details>
 

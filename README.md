@@ -8,21 +8,20 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 <details>
   <summary>More examples</summary>
 
-**Tutorial**  
+**2D**
+[Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : Village 
+[Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : Maze
+[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : Shooting
+
+**3D**
+[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html): Box visual viewer.  
+[Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html): Track 3D objects from a 2D map.  
+
+**Tutorial**
 [CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html): Collision testing.  
 [3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html): 3D lights and shadows.  
 [Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html): Skybox.  
-[Wind](https://06fs4dix.github.io/Artgine/proj/Tutorial/Wind/Wind.html): Wind effects.
 
-**3D**  
-[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html): Box visual viewer.  
-[Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html): Track 3D objects from a 2D map.  
-[GeometryViewer](https://06fs4dix.github.io/Artgine/proj/3D/GeometryViewer/GeometryViewer.html): Compose the view based on GPS information.
-
-**2D**  
-[Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html): Maze.  
-[Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html): Village.  
-[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html): Shooting.
 </details>
 
 ## Getting Started

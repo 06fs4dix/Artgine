@@ -1,5 +1,5 @@
-**작업이 다끝나면 [Excute]를 눌러주세요**
->SampleCode를 RunTime코드창에 추가해주세요!
+**SampleCode를 RunTime코드창(스크롤 하단)에 추가해주세요!**
+>작업이 다끝나면 [Excute]를 눌러주세요.
 
 **html5 canvas함수로 텍스쳐를 만드는 코드**
 ```js
