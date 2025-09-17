@@ -213,12 +213,12 @@ if(mode==0)
 
   
     await CTutorial.Exe(CTutorial.eWait.ModalClose,null,`<div class="p-3 border rounded bg-light">
-    <p class="mb-3 fs-5" data-CLan='tuto9'>현재 프로젝트는 2D/3D 캔버스 혼합 예제입니다.<br> 왼쪽 하이라키-캔버스에서 서브젝트를 확인가능합니다.</p>
+    <p class="mb-3 fs-5" data-CLan='tuto9'>현재 프로젝트는 2D/3D 캔버스 혼합 예제입니다.<br> 왼쪽 Hierarchy에서 서브젝트를 확인가능합니다.</p>
     <p class="mb-3 fs-5" data-CLan='tuto9-1'>3DSubject 선택하여 위치를 변경해 보세요</p>
     </div>`,{bodyClose:false,timeOut:10});
     timer.Delay();
     let tip=new CTooltip(CDomFactory.DataToDom(`<div style='white-space: nowrap;' data-CLan='tuto_12'>
-        1.왼쪽 하이라키에서 3DCan를 선택해주세요.<br>
+        1.왼쪽 Hierarchy에서 3DCan를 선택해주세요.<br>
         2.3DSubject 선택해 주세요.<br>
         3.두가지 방식중 원하는 방법으로 Pos 이동해 주세요.<br>
         A.서브젝트에 중심에있는 빨강 네모를 잡고 움직이세요.<br>
