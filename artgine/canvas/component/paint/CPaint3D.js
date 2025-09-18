@@ -177,12 +177,12 @@ export class CPaint3D extends CPaint {
         this.mTree = new CTree();
         this.mTree.mData = new CMeshCopyNode();
         CMeshTreeUpdate.TreeCopy(this.mMeshRes.meshTree, this.mTree, new CMat(), this.mBound);
+        this.UpdateLMat();
         this.mBound.mType = CBound.eType.Box;
         this.mTreeNode.Clear();
-        var nodeOff = 0;
         var node = this.mTreeNode;
         node.Push(new CMeshPaint(this.mMeshRes.meshTree, this.mTree, null));
-        while (node.Size() != nodeOff) {
+        for (let nodeOff = 0; nodeOff < node.Size(); nodeOff++) {
             let nodemp = node.Find(nodeOff);
             if (nodemp.md.mChild != null) {
                 node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild, null));
@@ -190,7 +190,6 @@ export class CPaint3D extends CPaint {
             if (nodemp.md.mColleague != null) {
                 node.Push(new CMeshPaint(nodemp.md.mColleague, nodemp.mpi.mColleague, null));
             }
-            nodeOff++;
         }
         if (this.mCenterPos) {
             this.mLMat.UnitCheck();
@@ -199,54 +198,61 @@ export class CPaint3D extends CPaint {
         this.BatchClear();
         this.mUpdateFMat = true;
         this.mBoundFMatR = 0;
+        return true;
+    }
+    StartChk() {
+        if (this.mTree == null) {
+            if (this.InitMesh(this.mMesh) == false)
+                return;
+            this.mStartChk = false;
+        }
+        else if (this.mStartChk) {
+            this.mStartChk = false;
+        }
     }
     Update(_delay) {
         super.Update(_delay);
-        if (this.mUpdateFMat == true && CWASM.IsWASM()) {
+        if (this.mUpdateFMat == false)
+            return;
+        if (CWASM.IsWASM()) {
             this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
             this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
             this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
         }
-        if (this.mTree == null) {
-            if (this.InitMesh(this.mMesh) == false)
-                return;
-        }
-        var skin = this.mMeshRes.skin.length > 0;
-        var nodePOff = 1;
-        var nodeOff = 0;
-        var node = this.mTreeNode;
-        while (node.Size() != nodeOff) {
+        const skin = this.mMeshRes.skin.length > 0;
+        const node = this.mTreeNode;
+        for (let nodeOff = 0; nodeOff < node.Size(); nodeOff++) {
             let nodemp = node.Find(nodeOff);
             const mpiData = nodemp.mpi.mData;
-            if (this.mUpdateFMat == true || nodemp.mpi.mData.updateMat != 0) {
+            if (mpiData.updateMat != 0 || mpiData.FMatAtt == false) {
                 if (skin && nodemp.md.mData.ci != null) {
                     CMath.MatMul(this.mLMat, this.mOwner.GetWMat(), nodemp.sum);
                 }
                 else if (mpiData.FMatAtt == false && mpiData.pst.IsUnit()) {
-                    nodemp.mpi.mData.FMatAtt = true;
+                    mpiData.FMatAtt = true;
                     nodemp.sumSA.mData = this.GetFMat();
                     nodemp.sumSA.mTag = null;
                 }
                 else if (mpiData.FMatAtt == true) {
                     if (mpiData.pst.IsUnit() == false) {
                         nodemp.sumSA.mData = nodemp.sum;
-                        nodemp.mpi.mData.FMatAtt = false;
+                        mpiData.FMatAtt = false;
                         nodemp.sumSA.mTag = null;
-                        CMath.MatMul(nodemp.mpi.mData.pst, this.GetFMat(), nodemp.sum);
+                        CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum);
                     }
                     else if (this.GetFMat() != nodemp.sumSA.mData) {
                         nodemp.sumSA.mData = this.GetFMat();
                     }
                 }
                 else {
-                    CMath.MatMul(nodemp.mpi.mData.pst, this.GetFMat(), nodemp.sum);
+                    CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum);
                 }
             }
             if (skin) {
                 for (var i = 0; i < this.mMeshRes.skin.length; ++i) {
                     if (nodemp.md.mData.IsSkinKey(this.mMeshRes.skin[i].key)) {
                         var all = new CMat();
-                        all = CMath.MatMul(this.mMeshRes.skin[i].mat, nodemp.mpi.mData.pst);
+                        all = CMath.MatMul(this.mMeshRes.skin[i].mat, mpiData.pst);
                         this.SetWeightMat(i, all);
                     }
                 }
@@ -255,11 +261,6 @@ export class CPaint3D extends CPaint {
                 nodemp.mpi.mData.updateMat = CUpdate.eType.Already;
             else if (nodemp.mpi.mData.updateMat == CUpdate.eType.Already)
                 nodemp.mpi.mData.updateMat = CUpdate.eType.Not;
-            if (nodemp.md.mChild != null)
-                nodePOff++;
-            if (nodemp.md.mColleague != null)
-                nodePOff++;
-            nodeOff++;
         }
     }
     Render(_vf) {

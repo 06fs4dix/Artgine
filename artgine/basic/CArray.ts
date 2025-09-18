@@ -2,9 +2,9 @@ export class CArray<T>
 {
     mArray : Array<T>;
     mLength : number=0;
-    constructor(_size=0)
-    {
-        this.mArray=new Array(_size);
+    constructor(_size = 0) {
+        this.mArray = _size > 0 ? new Array(_size).fill(null) : []; // 구멍 제거
+        this.mLength = 0;
     }
     Push(_data : T)
     {

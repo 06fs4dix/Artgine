@@ -155,28 +155,57 @@ export class CMat extends CFloat32
 		this.UnitCheck();
 		
 	}
-	override Import(_target : CObject)
+	override Import(_target : CMat)
 	{
 		super.Import(_target);
-		this.mUnit=_target["m_unit"];
+		this.mUnit=_target["mUnit"];
 	}
+
 	NewWASM(): void {
 		super.NewWASM();
 		this.mUnit=false;
 		this.Unit();
 	}
-	// F32A()	: Float32Array
-	// {
-	// 	if(this.m_ref!=null)
-	// 		return this.m_ref.F32A();
+	F32A()	: Float32Array
+	{
+		if(this["mRef"]!=null)
+			return this["mRef"].F32A();
 
-	// 	return this.m_F32A;
-	// }
-	// Ptr() : number
+		return this.mF32A;
+	}
+	Ptr() : number
+	{
+		if(this["mRef"]!=null)
+			return this["mRef"].Ptr();
+		return this.mF32A["ptr"];
+	}
+	// GetUpdateOffset()
 	// {
-	// 	if(this.m_ref!=null)
-	// 		return this.m_ref.Ptr();
-	// 	return this.m_F32A["ptr"];
+	// 	return this["mUpdate"]==null?0:this["mUpdate"];
 	// }
+	// AddUpdateOffser()
+	// {
+	// 	let offset=this.GetUpdateOffset();
+	// 	this["mUpdate"]=offset+1;
+	// }
+	GetRef()
+	{
+		return this["mRef"];
+	}
+	SetRef(_target : CMat)
+	{
+		if(_target!=null)	this.Import(_target);
+		this["mRef"]=_target;
+		
+	}
+	IsRef()
+	{
+		return this["mRef"]!=null;
+	}
+	override IsShould(_member: string, _type: CObject.eShould): boolean 
+	{
+		if(_member=="mRef")	return false;
+		return super.IsShould(_member,_type);	
+	}
 }
 

@@ -190,49 +190,52 @@ export class CMath
 	// 	return this.V3Distance(_a,_b);
 	// }
 	//Mat=================================================================
-	static MatMul(pa_val1 : CMat,pa_val2: CMat,pa_val3: CMat=null)
+	static MatMul(pa_val1 : CMat,pa_val2: CMat,pa_val3: CMat=null,_ref=false)
 	{
 		var L_matrix=pa_val3;
 		
-		if(L_matrix == null)
-		{
-			L_matrix=new CMat();
-		}
+		if(L_matrix == null)	L_matrix=new CMat();
+		
 
 		if(pa_val2.IsUnit() && pa_val1.IsUnit())
 		{
 			L_matrix.Unit();
-	
 		}
 		else if(pa_val2.IsUnit())
 		{
-			//CWASM.MatMemcpy(L_matrix.Ptr(),pa_val1.Ptr());
-			L_matrix.mF32A.set(pa_val1.mF32A);
-			L_matrix.SetUnit(false);
+			// if(_ref)
+			// {
+			// 	if(L_matrix.GetRef()!=pa_val1)
+			// 		L_matrix.SetRef(pa_val1);
+
+			// }
+			// else
+			{
+				L_matrix.mF32A.set(pa_val1.mF32A);
+				L_matrix.SetUnit(false);
+			}
+			
 
 		}
 		else if(pa_val1.IsUnit())
 		{
-			//CWASM.MatMemcpy(L_matrix.Ptr(),pa_val2.Ptr());
-			L_matrix.mF32A.set(pa_val2.mF32A);
-			L_matrix.SetUnit(false);
+			// if(_ref)
+			// {
+			// 	if(L_matrix.GetRef()!=pa_val2)
+			// 		L_matrix.SetRef(pa_val2);
+
+			// }
+			// else
+			{
+				L_matrix.mF32A.set(pa_val2.mF32A);
+				L_matrix.SetUnit(false);
+			}
 		}
 		else
 		{
+			//if(_ref && L_matrix.IsRef())	L_matrix.SetRef(null);
 			L_matrix.SetUnit(false);
-			// var str="";
-			// for(var i=0;i<4;++i)
-			// {
-			// 	for(var j=0;j<4;++j)
-			// 	{
-			// 		L_matrix.m_F32A[i*4+j]=0;
-			// 		for(var k=0;k<4;++k)
-			// 		{
-			// 			L_matrix.m_F32A[i*4+j]+=pa_val1.m_F32A[i*4+k]*pa_val2.m_F32A[k*4+j];
-			// 			str+=(i*4+j)+"/"+(i*4+k)+"/"+(k*4+j);
-			// 		}
-			// 	}
-			// }
+
 			
 			if(pa_val1.Ptr()!=null && pa_val2.Ptr()!=null && L_matrix.Ptr()!=null)
 			{

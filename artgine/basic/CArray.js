@@ -2,7 +2,8 @@ export class CArray {
     mArray;
     mLength = 0;
     constructor(_size = 0) {
-        this.mArray = new Array(_size);
+        this.mArray = _size > 0 ? new Array(_size).fill(null) : [];
+        this.mLength = 0;
     }
     Push(_data) {
         if (this.mLength < this.mArray.length) {

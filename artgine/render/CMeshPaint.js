@@ -1,11 +1,13 @@
 import { CMat } from "../geometry/CMat.js";
 import { CShaderAttr } from "./CShaderAttr.js";
+import { CUpdate } from "../basic/Basic.js";
 export class CMeshPaint {
     md;
     mpi;
     mdraw;
     sum;
     sumSA;
+    update = CUpdate.eType.Not;
     constructor(_md, _mpi, _mdraw = null) {
         this.md = _md;
         this.mpi = _mpi;

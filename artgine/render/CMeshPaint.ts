@@ -6,6 +6,7 @@ import { CMeshCopyNode } from "./CMeshCopyNode.js";
 import { CMeshDrawNode } from "./CMeshDrawNode.js";
 import { CPreferences } from "../basic/CPreferences.js";
 import { CWASM } from "../basic/CWASM.js";
+import { CUpdate } from "../basic/Basic.js";
 
 export class CMeshPaint
 {
@@ -14,6 +15,7 @@ export class CMeshPaint
 	public mdraw : CTree<CMeshDrawNode>;
 	public sum : CMat;
 	public sumSA : CShaderAttr;
+	public update=CUpdate.eType.Not;
 	constructor(_md : CTree<CMeshDataNode>,_mpi : CTree<CMeshCopyNode>,_mdraw=null)
 	{
 		this.md=_md;

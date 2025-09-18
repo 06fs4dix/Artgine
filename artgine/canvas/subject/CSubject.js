@@ -42,6 +42,7 @@ export class CSubject extends CObject {
     mInMsg = new CArray();
     mOutMsg = new CArray();
     mUpdateMat = CUpdate.eType.Updated;
+    mUpdateComp = true;
     mSave = true;
     SetSave(_enable) {
         this.mSave = _enable;
@@ -78,6 +79,7 @@ export class CSubject extends CObject {
         for (let each0 of this.mComArr) {
             each0.Reset();
         }
+        this.UpdateComp();
         if (this.mPTArr) {
             for (let pt of this.mPTArr) {
                 pt.ClearCRPAuto();
@@ -121,6 +123,10 @@ export class CSubject extends CObject {
         cm.mMsgData = _para;
         this.mInMsg.Push(cm);
     }
+    UpdateComp() {
+        this.mUpdateComp = true;
+        this.mCLArr.Clear();
+    }
     IsShould(_member, _type) {
         if (_type == CObject.eShould.Editer) {
             if (_member == "mPEnable" || _member == "mPMat")
@@ -129,7 +135,7 @@ export class CSubject extends CObject {
                 return true;
         }
         if (_member == "mFrame" || _member == "mKeyChange" || _member == "mInMsg" || _member == "mOutMsg" || _member == "mBroMsg" ||
-            _member == "mPushArr" || _member == "mPushLock" ||
+            _member == "mPushArr" || _member == "mPushLock" || _member == "mUpdateComp" ||
             _member == "mDestroy" || _member == "mPTArr" ||
             _member == "mCLArr" || _member == "mUpdateMat")
             return false;
@@ -156,6 +162,7 @@ export class CSubject extends CObject {
             this.Destroy();
         }
         else if (_pointer.member == "mComArr") {
+            this.UpdateComp();
             if (_pointer.state == 1) {
                 let com = this.mComArr[_pointer.key];
                 com.SetOwner(this);
@@ -196,6 +203,7 @@ export class CSubject extends CObject {
         if (this.mFrame != null)
             this.Reset();
         this.mFrame = _frame;
+        this.UpdateComp();
         {
             for (let each0 of this.mComArr) {
                 each0.SetOwner(this);
@@ -299,6 +307,7 @@ export class CSubject extends CObject {
         });
     }
     Destroy() {
+        this.UpdateComp();
         if (this.GetRecycleType() != null) {
             this.Recycle();
             this.Reset();
@@ -471,6 +480,7 @@ export class CSubject extends CObject {
         if (this.mPTArr)
             this.mPTArr.length = 0;
         this.mPTArr = null;
+        this.UpdateComp();
         for (var i = 0; i < this.mComArr.length; ++i) {
             if (this.mComArr[i].mSysc > _com.mSysc) {
                 this.mComArr.splice(i, 0, _com);

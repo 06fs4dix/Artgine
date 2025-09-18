@@ -110,7 +110,7 @@ export class CPaint extends CComponent
 	private mDefaultAttr=new Set<string>();
 	public mTag=new Set<string>();
 	public mTagKey=null;
-	public mBatchMap=new Map<string,Array<CBatch>>();
+	public mBatchMap=new Map<CShader,Array<CBatch>>();
 	//public mBatchLastArr : Array<CBatch>=null;
 	//public mBatchLastVF : string=null;
 	public mAutoLoad=new CLoaderOption();
@@ -219,7 +219,7 @@ export class CPaint extends CComponent
 		//this.mBatchLastVF=null;
 	}
 	IsUpdateFMat()	{	return this.mUpdateFMat;}
-	UpdateFMat()	{	this.mUpdateFMat=true;	}
+	UpdateLMat()	{	this.mUpdateLMat=true;	}
 	
 	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
 		super.EditHTMLInit(_div,_pointer);
@@ -746,7 +746,11 @@ export class CPaint extends CComponent
 	
 	CacBound()
 	{
-		if(this.mFMat.Ptr()==null)
+		if(this.mFMat.IsRotScaUnit() && this.mBoundFMatR!=0)
+		{
+
+		}
+		else if(this.mFMat.Ptr()==null)
 		{
 			
 			this.mBoundFMat.mMin.mF32A[0]=this.mBound.mMin.mF32A[0]*this.mFMat.mF32A[0];
@@ -874,20 +878,18 @@ export class CPaint extends CComponent
 		this.mBound=_bound;
 		this.mBoundFMatR=0;
 	}
-	Render(_vf : CShader)	{} 
-	RenderBatch(_vf : CShader,_count=1)
+	Render(_shader : CShader)	{} 
+	RenderBatch(_shader : CShader,_count=1)
 	{
 		let bcm=this.mOwner.GetFrame().BMgr().IsBatchMap();
-		// if(this.mBatchLastVF==_vf.mKey && bcm)
-		// 	return this.mOwner.GetFrame().BMgr().BatchPushArr(this.mBatchLastArr);
-		let barr=this.mBatchMap.get(_vf.mKey);
+	
+		let barr=this.mBatchMap.get(_shader);
 		if(barr==null)
 		{
 			barr=new Array<CBatch>(_count);
-			this.mBatchMap.set(_vf.mKey,barr);
+			this.mBatchMap.set(_shader,barr);
 			barr.length=_count;
-			// this.mBatchLastArr=barr;
-			// this.mBatchLastVF=_vf.mKey;
+			
 		}
 		else if(bcm==false){}
 		else if(barr.length>0)

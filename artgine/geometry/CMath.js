@@ -139,21 +139,24 @@ export class CMath {
         const z = _a.mF32A[2] - _b.mF32A[2];
         return CMath.ApproxSqrt(x * x + y * y + z * z);
     }
-    static MatMul(pa_val1, pa_val2, pa_val3 = null) {
+    static MatMul(pa_val1, pa_val2, pa_val3 = null, _ref = false) {
         var L_matrix = pa_val3;
-        if (L_matrix == null) {
+        if (L_matrix == null)
             L_matrix = new CMat();
-        }
         if (pa_val2.IsUnit() && pa_val1.IsUnit()) {
             L_matrix.Unit();
         }
         else if (pa_val2.IsUnit()) {
-            L_matrix.mF32A.set(pa_val1.mF32A);
-            L_matrix.SetUnit(false);
+            {
+                L_matrix.mF32A.set(pa_val1.mF32A);
+                L_matrix.SetUnit(false);
+            }
         }
         else if (pa_val1.IsUnit()) {
-            L_matrix.mF32A.set(pa_val2.mF32A);
-            L_matrix.SetUnit(false);
+            {
+                L_matrix.mF32A.set(pa_val2.mF32A);
+                L_matrix.SetUnit(false);
+            }
         }
         else {
             L_matrix.SetUnit(false);

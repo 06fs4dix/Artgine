@@ -125,7 +125,7 @@ export class CPaint extends CComponent {
         this.mCamCullUpdate = true;
     }
     IsUpdateFMat() { return this.mUpdateFMat; }
-    UpdateFMat() { this.mUpdateFMat = true; }
+    UpdateLMat() { this.mUpdateLMat = true; }
     EditHTMLInit(_div, _pointer) {
         super.EditHTMLInit(_div, _pointer);
         var button = document.createElement("button");
@@ -488,7 +488,9 @@ export class CPaint extends CComponent {
     ;
     SetLMat(_mat) { this.mLMat.Import(_mat); this.mUpdateLMat = true; }
     CacBound() {
-        if (this.mFMat.Ptr() == null) {
+        if (this.mFMat.IsRotScaUnit() && this.mBoundFMatR != 0) {
+        }
+        else if (this.mFMat.Ptr() == null) {
             this.mBoundFMat.mMin.mF32A[0] = this.mBound.mMin.mF32A[0] * this.mFMat.mF32A[0];
             this.mBoundFMat.mMin.mF32A[1] = this.mBound.mMin.mF32A[1] * this.mFMat.mF32A[5];
             this.mBoundFMat.mMin.mF32A[2] = this.mBound.mMin.mF32A[2] * this.mFMat.mF32A[10];
@@ -568,13 +570,13 @@ export class CPaint extends CComponent {
         this.mBound = _bound;
         this.mBoundFMatR = 0;
     }
-    Render(_vf) { }
-    RenderBatch(_vf, _count = 1) {
+    Render(_shader) { }
+    RenderBatch(_shader, _count = 1) {
         let bcm = this.mOwner.GetFrame().BMgr().IsBatchMap();
-        let barr = this.mBatchMap.get(_vf.mKey);
+        let barr = this.mBatchMap.get(_shader);
         if (barr == null) {
             barr = new Array(_count);
-            this.mBatchMap.set(_vf.mKey, barr);
+            this.mBatchMap.set(_shader, barr);
             barr.length = _count;
         }
         else if (bcm == false) { }

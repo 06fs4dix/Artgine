@@ -65,6 +65,8 @@ export class CSubject extends CObject implements IFile
 	public mOutMsg = new CArray<CRouteMsg>();
 
 	public mUpdateMat : number = CUpdate.eType.Updated;
+	mUpdateComp=true;
+
 	mSave=true;
 	//public m_updateRS : boolean=true;
 
@@ -118,6 +120,7 @@ export class CSubject extends CObject implements IFile
 		{
 			each0.Reset();
 		}
+		this.UpdateComp();
 		if(this.mPTArr)
 		{
 			for(let pt of this.mPTArr as Array<CPaint>)
@@ -198,6 +201,11 @@ export class CSubject extends CObject implements IFile
 	// 		this.mInMsg.Push(cm);
 		
 	// }
+	UpdateComp()
+	{
+		this.mUpdateComp=true;
+		this.mCLArr.Clear();
+	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
 
@@ -213,7 +221,7 @@ export class CSubject extends CObject implements IFile
 		}
 		
 		if(_member=="mFrame" || _member=="mKeyChange" || _member=="mInMsg" || _member=="mOutMsg" || _member=="mBroMsg" || 
-			_member=="mPushArr" || _member=="mPushLock" ||
+			_member=="mPushArr" || _member=="mPushLock" ||_member=="mUpdateComp" ||
 			_member=="mDestroy" || _member=="mPTArr" || 
 			_member=="mCLArr" || _member=="mUpdateMat")
 			return false;
@@ -251,6 +259,7 @@ export class CSubject extends CObject implements IFile
 		}
 		else if(_pointer.member=="mComArr")
 		{
+			this.UpdateComp();
 			if(_pointer.state==1)
 			{
 				let com=this.mComArr[_pointer.key];
@@ -306,6 +315,7 @@ export class CSubject extends CObject implements IFile
 			this.Reset();
 		this.mFrame=_frame;
 		
+		this.UpdateComp();
 		//this.mCLArr.Clear();
 		//if(this.mFrame!=null)
 		{
@@ -461,7 +471,7 @@ export class CSubject extends CObject implements IFile
 	}
 	Destroy()
 	{
-
+		this.UpdateComp();
 		if(this.GetRecycleType()!=null)
 		{
 			this.Recycle();
@@ -472,7 +482,7 @@ export class CSubject extends CObject implements IFile
 
 		if(this.mDestroy)
 			return;
-			
+		
 		this.mDestroy = true;
 		//this.m_show = false;
 		for (var i = 0; i < this.mComArr.length; ++i)
@@ -733,6 +743,7 @@ export class CSubject extends CObject implements IFile
 		if(this.mPTArr)
 			this.mPTArr.length=0;
 		this.mPTArr = null;
+		this.UpdateComp();
 		// if(this.m_clVec)
 		// 	this.m_clVec.length=0;
 		// this.m_clVec=null;

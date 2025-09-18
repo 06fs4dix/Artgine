@@ -37,7 +37,7 @@ export class CFloat32 extends CObject {
     Import(_target) {
         if (_target == null)
             return;
-        this.mF32A.set(_target["mF32A"]);
+        this.mF32A.set(_target.F32A());
     }
     set array(_val) {
         for (let i = 0; i < _val.length; ++i) {

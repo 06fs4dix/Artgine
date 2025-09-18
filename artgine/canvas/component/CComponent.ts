@@ -133,6 +133,7 @@ export class CComponent extends CObject
 			this.mStartChk=false;
 			this.Start();
 		}
+		//return this.mStartChk;
 	}
 	//스타트는 업데이트 전에 최초 한번만 호출
 	Start(){}

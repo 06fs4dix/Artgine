@@ -65,11 +65,11 @@ export class CFloat32 extends CObject
 		return this.mF32A;	
 	}
 
-	override Import(_target : CObject)
+	override Import(_target : CFloat32)
 	{
 		if(_target==null)	return;
 		
-		this.mF32A.set(_target["mF32A"]);
+		this.mF32A.set(_target.F32A());
 		
 		
 	}
@@ -101,4 +101,6 @@ export class CFloat32 extends CObject
 			
 		return str;
 	}
+	
+
 }
