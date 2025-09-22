@@ -220,8 +220,20 @@ export class CShadowPlane extends CPaint2D
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
         
         this.PushTag("wind");
+        //this.PushTag("zDepth");
+        
 
         //this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
+        
+    }
+
+    //강제로 이상한 RP지우기
+    StartChk(): void {
+        if(this.mStartChk==true)
+        {
+            this.mRenderPass.length=0;
+        }
+        super.StartChk();
         
     }
     EmptyRPChk()
@@ -231,6 +243,7 @@ export class CShadowPlane extends CPaint2D
         {
             rp.mPriority=CRenderPass.ePriority.AlphaAuto;
             rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
+            //rp.mSort=CRenderPass.eSort.AlphaGroup;
             rp.mCullFace = CRenderPass.eCull.None;
         }
         
@@ -484,6 +497,7 @@ export class CShadowPlane extends CPaint2D
         }
         else if(this.mPT instanceof CPaint3D) 
         {
+            this.PushTag("zDepth");
             const pt = this.mPT as CPaint3D;
             const lig = this.mLIG;
 

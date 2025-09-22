@@ -67,11 +67,7 @@ export class CSubject extends CObject {
         this.mInMsg.Push(new CRouteMsg("dummy"));
         this.mInMsg.Clear();
     }
-    IsDestroy() {
-        if (this.IsRecycle())
-            return true;
-        return this.mDestroy;
-    }
+    IsDestroy() { return this.mDestroy || this.IsRecycle(); }
     Reset() {
         for (let each0 of this.mChild) {
             each0.Reset();
@@ -213,7 +209,6 @@ export class CSubject extends CObject {
             each0.SetFrame(_frame);
         }
     }
-    GetRemove() { return this.mDestroy || this.IsRecycle(); }
     KeyChange() { return this.mKeyChange; }
     ClearKeyChange() { this.mKeyChange = ""; }
     SetEnable(_enable) {
@@ -251,7 +246,7 @@ export class CSubject extends CObject {
     }
     SubjectUpdate(_delay) {
         for (var i = 0; i < this.mChild.length; ++i) {
-            if (this.mChild[i].GetRemove()) {
+            if (this.mChild[i].IsDestroy()) {
                 this.mChild.splice(i, 1);
                 if (this.mPTArr)
                     this.mPTArr.length = 0;
@@ -448,7 +443,7 @@ export class CSubject extends CObject {
     FindChilds(_key, _child = false) {
         var vec = new Array();
         for (let each0 of this.mChild) {
-            if (each0.GetRemove())
+            if (each0.IsDestroy())
                 continue;
             if (typeof _key == "string") {
                 if (each0.Key() == _key)

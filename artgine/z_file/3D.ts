@@ -51,6 +51,7 @@ var worldMat : CMat=Null();
 var worldMat34 : CMat34=Null();
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
+var zDepth : number=0.0;
 
 //varying
 var to_uv : ToV2=Null();
@@ -254,7 +255,11 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	
 	to_worldPos=P;
 	P=V4MulMatCoordi(P,viewMat);
-	out_position=V4MulMatCoordi(P, projectMat);
+	P=V4MulMatCoordi(P, projectMat);;
+	// BranchBegin("zDepth","Z",[zDepth]);
+	// P.z+=zDepth;
+	// BranchEnd();
+	out_position=P;
 
 	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
 	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);

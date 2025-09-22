@@ -20,19 +20,27 @@ export class CSMC extends CObject {
         ">": ">",
     };
     Excute(_state) {
+        let st = _state.Get(this.mState);
         if (this.mOperator == "==")
-            return _state == this.mValue;
+            return st == this.mValue;
         if (this.mOperator == "!=")
-            return _state != this.mValue;
+            return st != this.mValue;
         if (this.mOperator == "<=")
-            return _state <= this.mValue;
+            return st <= this.mValue;
         if (this.mOperator == ">=")
-            return _state >= this.mValue;
+            return st >= this.mValue;
         if (this.mOperator == "<")
-            return _state < this.mValue;
+            return st < this.mValue;
         if (this.mOperator == ">")
-            return _state > this.mValue;
+            return st > this.mValue;
         return true;
+    }
+    ImportCJSON(_json) {
+        let json = _json.mDocument;
+        this.mState = json["mState"] == null ? json["s"] : json["mState"];
+        this.mOperator = json["mOperator"] == null ? json["o"] : json["mOperator"];
+        this.mValue = json["mValue"] == null ? json["v"] : json["mValue"];
+        return this;
     }
 }
 export class CSMA extends CObject {
@@ -91,6 +99,21 @@ export class CSMA extends CObject {
             mag.mMsgData = this.mParameter;
         }
     }
+    ImportCJSON(_json) {
+        let json = _json.mDocument;
+        this.mType = json["mType"] == null ? json["t"] : json["mType"];
+        this.mAction = json["mAction"] == null ? json["a"] : json["mAction"];
+        this.mParameter = json["mParameter"] == null ? json["p"] : json["mParameter"];
+        if (json["mDelay"] != null)
+            this.mDelay = json["mDelay"];
+        if (json["mCount"] != null)
+            this.mCount = json["mCount"];
+        if (json["mBegin"] != null)
+            this.mBegin = json["mBegin"];
+        if (json["mEnd"] != null)
+            this.mEnd = json["mEnd"];
+        return this;
+    }
 }
 export class CSMP extends CObject {
     constructor(_and, _ex) {
@@ -110,53 +133,41 @@ export class CSMP extends CObject {
     mAnd = new Array;
     mOr = new Array;
     mExcute = new Array;
-    ImportJSON(_json) {
-        let and = _json["mAnd"] == null ? _json["and"] : _json["mAnd"];
+    ImportCJSON(_json) {
+        let json = _json.mDocument;
+        let and = json["mAnd"] == null ? json["and"] : json["mAnd"];
         if (and != null) {
             this.mAnd.length = 0;
             for (let con of and) {
-                let state = con["mState"] == null ? con["s"] : con["mState"];
-                let operator = con["mOperator"] == null ? con["o"] : con["mOperator"];
-                let value = con["mValue"] == null ? con["v"] : con["mValue"];
-                let SMC = new CSMC(state, operator, value);
+                let SMC = new CSMC(null);
+                SMC.ImportJSON(con);
                 this.mAnd.push(SMC);
             }
         }
-        let or = _json["mAnd"] == null ? _json["or"] : _json["mOr"];
+        let or = json["mOr"] == null ? json["or"] : json["mOr"];
         if (or != null) {
             this.mOr.length = 0;
             for (let con of or) {
-                let state = con["mState"] == null ? con["s"] : con["mState"];
-                let operator = con["mOperator"] == null ? con["o"] : con["mOperator"];
-                let value = con["mValue"] == null ? con["v"] : con["mValue"];
-                let SMC = new CSMC(state, operator, value);
+                let SMC = new CSMC(null);
+                SMC.ImportJSON(con);
                 this.mOr.push(SMC);
             }
         }
-        this.mPriority = _json["mPriority"] == null ? _json["priority"] : _json["mPriority"];
-        let exe = _json["mExcute"] == null ? _json["exe"] : _json["mExcute"];
+        this.mPriority = json["mPriority"] == null ? json["priority"] : json["mPriority"];
+        let exe = json["mExcute"] == null ? json["exe"] : json["mExcute"];
         if (exe != null) {
             for (let ac of exe) {
-                let type = exe["mType"] == null ? ac["t"] : ac["mType"];
-                let action = exe["mAction"] == null ? ac["a"] : ac["mAction"];
-                let parameter = exe["mParameter"] == null ? ac["p"] : ac["mParameter"];
-                let sma = new CSMA(type, action, parameter);
-                if (ac["mDelay"] != null)
-                    sma.mDelay = ac["mDelay"];
-                if (ac["mCount"] != null)
-                    sma.mCount = ac["mCount"];
-                if (ac["mBegin"] != null)
-                    sma.mBegin = ac["mBegin"];
-                if (ac["mEnd"] != null)
-                    sma.mEnd = ac["mEnd"];
+                let sma = new CSMA(null, null);
+                sma.ImportJSON(ac);
                 this.mExcute.push(sma);
             }
         }
+        return this;
     }
     IsCondition(_state) {
         let excute = true;
         for (let con of this.mAnd) {
-            if (con.Excute(_state.Get(con.mState)) == false) {
+            if (con.Excute(_state) == false) {
                 excute = false;
                 break;
             }
@@ -165,7 +176,7 @@ export class CSMP extends CObject {
             return false;
         excute = this.mOr.length == 0;
         for (let con of this.mOr) {
-            if (con.Excute(_state.Get(con.mState)) == true) {
+            if (con.Excute(_state) == true) {
                 excute = true;
                 break;
             }

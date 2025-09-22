@@ -332,7 +332,7 @@ export class CPaint3D extends CPaint
 		//while (node.Size()!=nodeOff)
 		for(let nodeOff=0;nodeOff<node.Size();nodeOff++)
 		{
-			let nodemp=node.Find(nodeOff);
+			let nodemp=node.mArray[nodeOff];//node.Find(nodeOff);
 			const mpiData=nodemp.mpi.mData;
 
 			//FMat로 되어 있으면 유니폼해서 계산 필요 없다. 내부 매트릭스 갱신되면 다시 해야함

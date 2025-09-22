@@ -177,7 +177,12 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				
 			// }
 		}
-		this.mChangeRPMgr=_rpMgr;
+		
+
+		if(_rpMgr==null)
+			this.mChangeRPMgr=new CRPMgr();
+		else
+			this.mChangeRPMgr=_rpMgr;
 	}
 	ClearBatch() {
 		this.mBrush.ClearRen();
@@ -811,7 +816,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		let obj=this.Find(key) as CSubject;
 		if (obj != null)
 		{
-			if (obj.GetRemove())
+			if (obj.IsDestroy())
 			{
 				
 				this.mSubMap.delete(obj.Key());

@@ -16,7 +16,7 @@ export class CParticleShape extends CObject {
     TargetPos(_objList) {
         if (this.mTarget != null) {
             for (let each0 of _objList) {
-                if (this.mTarget.GetRemove()) {
+                if (this.mTarget.IsDestroy()) {
                     each0.Destroy();
                 }
                 else

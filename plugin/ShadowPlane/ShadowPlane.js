@@ -176,6 +176,12 @@ export class CShadowPlane extends CPaint2D {
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
         this.PushTag("wind");
     }
+    StartChk() {
+        if (this.mStartChk == true) {
+            this.mRenderPass.length = 0;
+        }
+        super.StartChk();
+    }
     EmptyRPChk() {
         super.EmptyRPChk();
         for (let rp of this.mRenderPass) {
@@ -339,6 +345,7 @@ export class CShadowPlane extends CPaint2D {
             this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
         }
         else if (this.mPT instanceof CPaint3D) {
+            this.PushTag("zDepth");
             const pt = this.mPT;
             const lig = this.mLIG;
             const ligDir = CMath.V3Nor(lig.GetDirectPos());

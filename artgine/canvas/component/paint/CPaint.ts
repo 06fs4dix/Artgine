@@ -145,8 +145,7 @@ export class CPaint extends CComponent
 
 		this.PushTag("alphaCut");
 
-		if(CWASM.IsWASM())
-			this.PushTag("wasm");
+		
 	}
 	SetEnable(_val: boolean): void {
 		super.SetEnable(_val);
@@ -300,6 +299,7 @@ export class CPaint extends CComponent
 		
 		
 	}
+	
 	SetOwner(_obj :CSubject)
 	{
 		super.SetOwner(_obj);
@@ -746,11 +746,7 @@ export class CPaint extends CComponent
 	
 	CacBound()
 	{
-		if(this.mFMat.IsRotScaUnit() && this.mBoundFMatR!=0)
-		{
-
-		}
-		else if(this.mFMat.Ptr()==null)
+		if(this.mFMat.Ptr()==null)
 		{
 			
 			this.mBoundFMat.mMin.mF32A[0]=this.mBound.mMin.mF32A[0]*this.mFMat.mF32A[0];
@@ -811,6 +807,10 @@ export class CPaint extends CComponent
 	}
 	Start()
 	{
+		if(CWASM.IsWASM())
+			this.mTag.add("wasm");
+		else
+			this.mTag.delete("wasm");
 		this.InitPaint();
 		if(this.mTexture.length>0)
 			this.SetTexture(this.mTexture);

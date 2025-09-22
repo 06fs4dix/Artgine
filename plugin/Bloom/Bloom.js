@@ -87,6 +87,7 @@ export class CSurfaceBloom extends CSurface {
         super();
         this.Natural();
         this.Init();
+        this.mSave = false;
     }
     IsShould(_member, _type) {
         let view = [

@@ -104,12 +104,7 @@ export class CSubject extends CObject implements IFile
 	
 		
 	}
-	IsDestroy()	
-	{	
-		if(this.IsRecycle())	return true;
-
-		return this.mDestroy;	
-	}
+	IsDestroy()	{ return this.mDestroy || this.IsRecycle(); }
 	Reset()
 	{
 		for(let each0 of this.mChild)
@@ -147,7 +142,8 @@ export class CSubject extends CObject implements IFile
 		this.mUpdateMat = CUpdate.eType.Updated;
 	}
 	
-	Icon(){	
+	Icon() : string
+	{	
 		if(this.IsProxy())
 			return "bi bi-crosshair";
 		return "bi bi-box";	
@@ -334,7 +330,7 @@ export class CSubject extends CObject implements IFile
 		// if(this.mFrame!=null)
 		// 	this.Start();
 	}
-	GetRemove() { return this.mDestroy || this.IsRecycle(); }
+	//IsDestroy() { return this.mDestroy || this.IsRecycle(); }
 	KeyChange() { return this.mKeyChange; }
 	ClearKeyChange() { this.mKeyChange = "";	 }
 	SetEnable(_enable : boolean) 
@@ -385,7 +381,7 @@ export class CSubject extends CObject implements IFile
 		
 		for (var i = 0; i < this.mChild.length; ++i)
 		{
-			if(this.mChild[i].GetRemove())
+			if(this.mChild[i].IsDestroy())
 			{
 				this.mChild.splice(i,1);
 				if(this.mPTArr)
@@ -694,7 +690,7 @@ export class CSubject extends CObject implements IFile
 		
 		for(let each0 of this.mChild)
 		{
-			if(each0.GetRemove())	continue;
+			if(each0.IsDestroy())	continue;
 			
 			if(typeof _key =="string")
 			{

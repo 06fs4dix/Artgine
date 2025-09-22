@@ -7,7 +7,7 @@ import {
     V2MulV2, V2SubV2, V3AddV3,V3DivV3,V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, 
     V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, 
     V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, 
-    V4SubV4, Vertex3, abs, clamp, discard, fract, gl_Position, max, min, pow, sampler2D, screenPos, sign, sin, smoothstep 
+    V4SubV4, Vertex3, abs, clamp, discard, floor, fract, gl_Position, max, min, pow, sampler2D, screenPos, sign, sin, smoothstep 
 } from "./Shader";
 
 //mat
@@ -855,49 +855,53 @@ function PreFilter(_col : CVec3) : CVec3 {
  */
 
 function ps_main_DownSample() {
-    var texSize : CVec2 = Sam2DSize(0.0);  // 현재 텍스처 크기
-    var x : number = 1.0 / texSize.x;      // 실제 픽셀 크기
-    var y : number = 1.0 / texSize.y;      // 실제 픽셀 크기
+    var texSize : CVec2 = Sam2DSize(0.0);
+    var x : number = 1.0 / texSize.x;
+    var y : number = 1.0 / texSize.y;
 
-    var a : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - 2.0 * x, to_uv.y + 2.0 * y)).rgb;
-    var b : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x          , to_uv.y + 2.0 * y)).rgb;
-    var c : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + 2.0 * x, to_uv.y + 2.0 * y)).rgb;
+    var uvx : number = to_uv.x;
+    var uvy : number = to_uv.y;
 
-    var d : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - 2.0 * x, to_uv.y)).rgb;
-    var e : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x          , to_uv.y)).rgb;
-    var f : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + 2.0 * x, to_uv.y)).rgb;
+    // 5x5 텐트형 표본(대칭 유지, half-texel 불가산)
+    var a : CVec3 = Sam2D0ToColor(new CVec2(uvx - 2.0*x, uvy + 2.0*y)).rgb;
+    var b : CVec3 = Sam2D0ToColor(new CVec2(uvx         , uvy + 2.0*y)).rgb;
+    var c : CVec3 = Sam2D0ToColor(new CVec2(uvx + 2.0*x, uvy + 2.0*y)).rgb;
 
-    var g : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - 2.0 * x, to_uv.y - 2.0 * y)).rgb;
-    var h : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x          , to_uv.y - 2.0 * y)).rgb;
-    var i : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + 2.0 * x, to_uv.y - 2.0 * y)).rgb;
+    var d : CVec3 = Sam2D0ToColor(new CVec2(uvx - 2.0*x, uvy          )).rgb;
+    var e : CVec3 = Sam2D0ToColor(new CVec2(uvx         , uvy          )).rgb; // center
+    var f : CVec3 = Sam2D0ToColor(new CVec2(uvx + 2.0*x, uvy          )).rgb;
 
-    var j : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y + y)).rgb;
-    var k : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y + y)).rgb;
-    var l : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y - y)).rgb;
-    var m : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y - y)).rgb;
+    var g : CVec3 = Sam2D0ToColor(new CVec2(uvx - 2.0*x, uvy - 2.0*y)).rgb;
+    var h : CVec3 = Sam2D0ToColor(new CVec2(uvx         , uvy - 2.0*y)).rgb;
+    var i : CVec3 = Sam2D0ToColor(new CVec2(uvx + 2.0*x, uvy - 2.0*y)).rgb;
 
-    if(mipLevel < 0.5) {
-        var group0 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(a, b), V3AddV3(d,e)), 0.125/4.0);
-        var group1 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(b, c), V3AddV3(e,f)), 0.125/4.0);
-        var group2 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(d, e), V3AddV3(g,h)), 0.125/4.0);
-        var group3 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(e, f), V3AddV3(h,i)), 0.125/4.0);
-        var group4 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(j, k), V3AddV3(l,m)), 0.5/4.0);
-        group0 = V3MulFloat(group0, KarisAverage(group0));
-        group1 = V3MulFloat(group1, KarisAverage(group1));
-        group2 = V3MulFloat(group2, KarisAverage(group2));
-        group3 = V3MulFloat(group3, KarisAverage(group3));
-        group4 = V3MulFloat(group4, KarisAverage(group4));
-        out_color.rgb = V3AddV3(V3AddV3(V3AddV3(group0, group1),V3AddV3(group2,group3)),group4);
+    var j : CVec3 = Sam2D0ToColor(new CVec2(uvx - 1.0*x, uvy + 1.0*y)).rgb;
+    var k : CVec3 = Sam2D0ToColor(new CVec2(uvx + 1.0*x, uvy + 1.0*y)).rgb;
+    var l : CVec3 = Sam2D0ToColor(new CVec2(uvx - 1.0*x, uvy - 1.0*y)).rgb;
+    var m : CVec3 = Sam2D0ToColor(new CVec2(uvx + 1.0*x, uvy - 1.0*y)).rgb;
+
+    if (mipLevel < 0.5) {
+        var g0 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(a,b), V3AddV3(d,e)), 0.125/4.0);
+        var g1 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(b,c), V3AddV3(e,f)), 0.125/4.0);
+        var g2 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(d,e), V3AddV3(g,h)), 0.125/4.0);
+        var g3 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(e,f), V3AddV3(h,i)), 0.125/4.0);
+        var g4 : CVec3 = V3MulFloat(V3AddV3(V3AddV3(j,k), V3AddV3(l,m)), 0.5/4.0);
+
+        g0 = V3MulFloat(g0, KarisAverage(g0));
+        g1 = V3MulFloat(g1, KarisAverage(g1));
+        g2 = V3MulFloat(g2, KarisAverage(g2));
+        g3 = V3MulFloat(g3, KarisAverage(g3));
+        g4 = V3MulFloat(g4, KarisAverage(g4));
+
+        out_color.rgb = V3AddV3(V3AddV3(V3AddV3(g0, g1), V3AddV3(g2, g3)), g4);
+        out_color.rgb = PreFilter(out_color.rgb);  // mip0에서만
+    } else {
+        out_color.rgb  = V3MulFloat(e, 0.125);
+        out_color.rgb  = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(a,c), V3AddV3(g,i)), 0.03125));
+        out_color.rgb  = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(b,d), V3AddV3(f,h)), 0.0625));
+        out_color.rgb  = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(j,k), V3AddV3(l,m)), 0.125));
     }
-    else {
-        out_color.rgb = V3MulFloat(e,0.125);
-        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(a,c), V3AddV3(g,i)),0.03125));
-        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(b,d), V3AddV3(f,h)),0.0625));
-        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(j,k), V3AddV3(l,m)),0.125));
-    }
-    out_color.rgb = V3Max(out_color.rgb, new CVec3(0.0001, 0.0001, 0.0001));
-    out_color.rgb = PreFilter(out_color.rgb);
-    //out_color.rgb=new CVec3(1.0,1.0,1.0);
+
     out_color.w = 1.0;
 }
 /**     샘플링 방법
@@ -913,28 +917,32 @@ function ps_main_DownSample() {
  * 
  */
 function ps_main_UpSample() {
-    // var x : number = 0.004 / aspect;
-    // var y : number = 0.004;
+    var texSize : CVec2 = Sam2DSize(0.0);
+    var x : number = 1.0 / texSize.x;
+    var y : number = 1.0 / texSize.y;
 
-    var texSize : CVec2 = Sam2DSize(0.0);  // 현재 텍스처 크기
-    var x : number = 1.0 / texSize.x;      // 실제 픽셀 크기
-    var y : number = 1.0 / texSize.y;      // 실제 픽셀 크기
+    var uvx : number = to_uv.x;
+    var uvy : number = to_uv.y;
 
-    var a : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y + y)).rgb;
-    var b : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y + y)).rgb;
-    var c : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y + y)).rgb;
+    var a : CVec3 = Sam2D0ToColor(new CVec2(uvx - x, uvy + y)).rgb;
+    var b : CVec3 = Sam2D0ToColor(new CVec2(uvx    , uvy + y)).rgb;
+    var c : CVec3 = Sam2D0ToColor(new CVec2(uvx + x, uvy + y)).rgb;
 
-    var d : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y)).rgb;
-    var e : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y)).rgb;
-    var f : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y)).rgb;
+    var d : CVec3 = Sam2D0ToColor(new CVec2(uvx - x, uvy    )).rgb;
+    var e : CVec3 = Sam2D0ToColor(new CVec2(uvx    , uvy    )).rgb;
+    var f : CVec3 = Sam2D0ToColor(new CVec2(uvx + x, uvy    )).rgb;
 
-    var g : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x - x, to_uv.y - y)).rgb;
-    var h : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x    , to_uv.y - y)).rgb;
-    var i : CVec3 = Sam2D0ToColor(new CVec2(to_uv.x + x, to_uv.y - y)).rgb;
+    var g : CVec3 = Sam2D0ToColor(new CVec2(uvx - x, uvy - y)).rgb;
+    var h : CVec3 = Sam2D0ToColor(new CVec2(uvx    , uvy - y)).rgb;
+    var i : CVec3 = Sam2D0ToColor(new CVec2(uvx + x, uvy - y)).rgb;
 
-    out_color.rgb = V3MulFloat(e, 0.25);
-    out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(b,d), V3AddV3(f,h)), 0.125));
-    out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(V3AddV3(V3AddV3(a,c), V3AddV3(g,i)), 0.0625));
-    //out_color.rgb = V3MulFloat(out_color.rgb, blendFactor);
-    out_color.w = blendFactor;
+    var col : CVec3 = V3MulFloat(e, 0.25);
+    col = V3AddV3(col, V3MulFloat(V3AddV3(V3AddV3(b,d), V3AddV3(f,h)), 0.125));
+    col = V3AddV3(col, V3MulFloat(V3AddV3(V3AddV3(a,c), V3AddV3(g,i)), 0.0625));
+
+    // (현재 ONE,ONE) → 프리멀티로 팩터 적용
+    col = V3MulFloat(col, blendFactor);
+
+    out_color.rgb = col;
+    out_color.w   = blendFactor; // 정보용
 }

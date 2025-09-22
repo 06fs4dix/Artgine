@@ -372,6 +372,41 @@ export class CUtilMath
             return vlen;
         return -1;
     }
+    static PlaneSphereDist(pa_plane : CPlane,pa_posion : CVec3, pa_radius : number,_dist : CMat)
+    {
+
+        let minVal=100000000;
+        let L_dist = 0;
+
+        
+        _dist.mF32A[6]=-1;
+
+        
+        for(let i=0;i<6;++i)
+        {
+
+            _dist.mF32A[i] = CMath.PlaneVec3DotCoordinate(pa_plane,i*4, pa_posion);
+            if(minVal>_dist.mF32A[i])
+            {
+                _dist.mF32A[6]=i;
+                _dist.mF32A[7]=_dist.mF32A[i];
+                minVal=_dist.mF32A[i];
+            }
+            // if (-L_dist-pa_radius > 0)
+            // {
+            //     _dist.mF32A[i]=-L_dist-pa_radius;    
+            //     if(minVal>_dist.mF32A[i])
+            //     {
+            //         _dist.mF32A[6]=i;
+            //         _dist.mF32A[7]=_dist.mF32A[i];
+            //         minVal=_dist.mF32A[i];
+            //     }
+                
+            // }
+            // else
+            //     _dist.mF32A[i]=0;
+        }
+    }
     
     static PlaneSphereInside(pa_plane : CPlane,pa_posion : CVec3, pa_radius : number,_pArr : Array<CPlaneInside>)
     {

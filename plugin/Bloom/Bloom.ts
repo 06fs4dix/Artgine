@@ -157,7 +157,7 @@ export class CSurfaceBloom extends CSurface
 		super();
 		this.Natural();
 		this.Init();
-		
+		this.mSave=false;
 		//this.mTexCreate=false;
 	}
 

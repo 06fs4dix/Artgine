@@ -23,8 +23,8 @@ var time = Attribute(0, "time");
 var mask = 1.0;
 var lastHide = Null();
 var trailPos = new Sam2DV4(9);
-var depthMap = 0.0;
-var screenResolution = new CVec2(1.0, 1.0);
+var zDepth = 0.0;
+var zDepthBias = 0.001;
 var sam2DCount = Null();
 Build("Artgine/Shader/2DPlane", [], vs_main, [
     worldMat, viewMat, projectMat, texCodi, reverse,
@@ -122,6 +122,9 @@ function vs_main_tail(f3_ver, f2_uv) {
     to_worldPos = rpos;
     rpos = V4MulMatCoordi(rpos, viewMat);
     rpos = V4MulMatCoordi(rpos, projectMat);
+    BranchBegin("zDepth", "Z", [zDepth, zDepthBias]);
+    rpos.z += zDepth * zDepthBias;
+    BranchEnd();
     out_position = rpos;
 }
 function vs_main_trail(f3_ver) {

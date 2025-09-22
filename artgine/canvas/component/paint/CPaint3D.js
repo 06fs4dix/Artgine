@@ -222,7 +222,7 @@ export class CPaint3D extends CPaint {
         const skin = this.mMeshRes.skin.length > 0;
         const node = this.mTreeNode;
         for (let nodeOff = 0; nodeOff < node.Size(); nodeOff++) {
-            let nodemp = node.Find(nodeOff);
+            let nodemp = node.mArray[nodeOff];
             const mpiData = nodemp.mpi.mData;
             if (mpiData.updateMat != 0 || mpiData.FMatAtt == false) {
                 if (skin && nodemp.md.mData.ci != null) {

@@ -45,6 +45,9 @@ export class CSurface extends CSubject
 		else
 			this.mRenderPass.mRenderTarget=this.mTexKey;
 	}
+	override Icon(){	
+		return "bi bi-badge-hd";	
+	}
 	// SurfaceHide(_member : string) : boolean {
 	// 	return true;
 	// }

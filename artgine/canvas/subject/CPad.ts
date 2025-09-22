@@ -336,7 +336,9 @@ export class CPad extends CSubject
         */
        
     }
-
+    override Icon(){	
+		return "bi bi-dpad";	
+	}
     SetPad(_type : ePadType)
     {
         this.mPadType=_type;

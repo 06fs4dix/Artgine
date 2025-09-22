@@ -24,6 +24,9 @@ export class CSurface extends CSubject {
         else
             this.mRenderPass.mRenderTarget = this.mTexKey;
     }
+    Icon() {
+        return "bi bi-badge-hd";
+    }
     IsShould(_member, _type) {
         if (_member == "mTexKey" || _member == "mTexSize" || _member == "mTexInfo" || _member == "mTexLinear" ||
             _member == "mRenderPass" || _member == "mRTUse")

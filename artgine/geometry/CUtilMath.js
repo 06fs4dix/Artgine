@@ -302,6 +302,19 @@ export class CUtilMath {
             return vlen;
         return -1;
     }
+    static PlaneSphereDist(pa_plane, pa_posion, pa_radius, _dist) {
+        let minVal = 100000000;
+        let L_dist = 0;
+        _dist.mF32A[6] = -1;
+        for (let i = 0; i < 6; ++i) {
+            _dist.mF32A[i] = CMath.PlaneVec3DotCoordinate(pa_plane, i * 4, pa_posion);
+            if (minVal > _dist.mF32A[i]) {
+                _dist.mF32A[6] = i;
+                _dist.mF32A[7] = _dist.mF32A[i];
+                minVal = _dist.mF32A[i];
+            }
+        }
+    }
     static PlaneSphereInside(pa_plane, pa_posion, pa_radius, _pArr) {
         if (pa_plane.Ptr() != null && pa_posion.Ptr() != null && _pArr == null)
             return CWASM.PlaneSphereInside(pa_plane.Ptr(), pa_posion.Ptr(), pa_radius);

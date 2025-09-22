@@ -16,6 +16,7 @@ var worldMat = Null();
 var worldMat34 = Null();
 var viewMat = Null();
 var projectMat = Null();
+var zDepth = 0.0;
 var to_uv = Null();
 var to_normal = Null();
 var to_binormal = Null();
@@ -129,7 +130,9 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
     BranchEnd();
     to_worldPos = P;
     P = V4MulMatCoordi(P, viewMat);
-    out_position = V4MulMatCoordi(P, projectMat);
+    P = V4MulMatCoordi(P, projectMat);
+    ;
+    out_position = P;
     to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
     to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
     if (f3_ref.y > 0.0) {
