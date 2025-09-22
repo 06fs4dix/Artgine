@@ -1,4 +1,4 @@
-const version = 'mfo0fumr_1';
+const version = 'mfuof8jg_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -17,7 +17,7 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = true;
+gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
@@ -32,7 +32,6 @@ var Main = gAtl.Canvas('Main.json');
 var Real = gAtl.Canvas('Real.json');
 let comcon = gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
 gAtl.Brush().GetCam2D().Set2DZoom(1.5);
-import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCIndex.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
@@ -52,51 +51,6 @@ import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/B
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
-{
-    const backVoxel = Main.Find("BackGround");
-    if (backVoxel) {
-        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
-        const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
-        const width = backVoxel.mCount?.x || 0;
-        const height = backVoxel.mCount?.y || 0;
-        const tileSize = backVoxel.mSize || 200;
-        const placed = new Set();
-        const minDist = 2;
-        const placeProb = 0.1;
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = new CCIndex(x, y, 0);
-                const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
-                if (vinfo === 3 && Math.random() < placeProb) {
-                    let overlap = false;
-                    for (let dy = -minDist; dy <= minDist; dy++) {
-                        for (let dx = -minDist; dx <= minDist; dx++) {
-                            if (dx === 0 && dy === 0)
-                                continue;
-                            const key = (x + dx) + ',' + (y + dy);
-                            if (placed.has(key)) {
-                                overlap = true;
-                                break;
-                            }
-                        }
-                        if (overlap)
-                            break;
-                    }
-                    if (overlap)
-                        continue;
-                    const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
-                    if (deco) {
-                        const obj = deco.ExportProxy();
-                        obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
-                        obj.SetSave(false);
-                        Real.PushSub(obj);
-                        placed.add(x + ',' + y);
-                    }
-                }
-            }
-        }
-    }
-}
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     let ba = [];
     let ta = [];
@@ -113,7 +67,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     new CBlackboardModal(ba, ta, ca);
 }));
 Real.PushSub(new CUser()).SetPos(new CVec3(5200, 6500));
-Real.PushSub(new CNPC("Dante", "Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6400, 6400));
+Real.PushSub(new CNPC("Dante", "Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6600, 6400));
 Real.PushSub(new CNPC("Miles", "Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200, 9200));
 Real.PushSub(new CNPC("Poppy", "Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000, 8000));
 CSysAuth.Confirm(true).then(async (_enable) => {
@@ -167,6 +121,9 @@ let srp = sufBloom.GetRP();
 srp.mShader = gAtl.Frame().Pal().Sl2DKey();
 srp.mTag = "blit";
 srp.mShaderAttr.push(new CShaderAttr(0, emissiveTexKey));
+sufBloom.OldSchool();
+sufBloom.m_threshold = 1.0;
+sufBloom.m_softThreshold = 1.0;
 let sufLast = lightPM11RP.PushSuf(new CSurface());
 srp = sufLast.GetRP();
 sufLast.SetUseRT(false);

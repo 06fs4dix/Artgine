@@ -1,5 +1,5 @@
 //Version
-const version='mfo0fumr_1';
+const version='mfuof8jg_1';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -21,7 +21,7 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = true;
+gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
@@ -73,56 +73,56 @@ import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPl
 //Real.Clear();
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
-{
-    const backVoxel = Main.Find("BackGround") as any;
-    if (backVoxel) {
-        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
-        // 블랙보드에서 직접 가져오기
-        const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
+// {
+//     const backVoxel = Main.Find("BackGround") as any;
+//     if (backVoxel) {
+//         const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
+//         // 블랙보드에서 직접 가져오기
+//         const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
 
-        const width = backVoxel.mCount?.x || 0;
-        const height = backVoxel.mCount?.y || 0;
-        const tileSize = backVoxel.mSize || 200;
+//         const width = backVoxel.mCount?.x || 0;
+//         const height = backVoxel.mCount?.y || 0;
+//         const tileSize = backVoxel.mSize || 200;
 
-        const placed = new Set<string>();
-        const minDist = 2; // 최소 거리(칸 단위)
-        const placeProb = 0.1; // 10% 확률
+//         const placed = new Set<string>();
+//         const minDist = 2; // 최소 거리(칸 단위)
+//         const placeProb = 0.1; // 10% 확률
 
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = new CCIndex(x, y, 0);
-                const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
-                if (vinfo === 3 && Math.random() < placeProb) {
-                    // 주변에 이미 배치된 조형물이 있는지 체크
-                    let overlap = false;
-                    for (let dy = -minDist; dy <= minDist; dy++) {
-                        for (let dx = -minDist; dx <= minDist; dx++) {
-                            if (dx === 0 && dy === 0) continue;
-                            const key = (x + dx) + ',' + (y + dy);
-                            if (placed.has(key)) {
-                                overlap = true;
-                                break;
-                            }
-                        }
-                        if (overlap) break;
-                    }
-                    if (overlap) continue;
+//         for (let y = 0; y < height; y++) {
+//             for (let x = 0; x < width; x++) {
+//                 const idx = new CCIndex(x, y, 0);
+//                 const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
+//                 if (vinfo === 3 && Math.random() < placeProb) {
+//                     // 주변에 이미 배치된 조형물이 있는지 체크
+//                     let overlap = false;
+//                     for (let dy = -minDist; dy <= minDist; dy++) {
+//                         for (let dx = -minDist; dx <= minDist; dx++) {
+//                             if (dx === 0 && dy === 0) continue;
+//                             const key = (x + dx) + ',' + (y + dy);
+//                             if (placed.has(key)) {
+//                                 overlap = true;
+//                                 break;
+//                             }
+//                         }
+//                         if (overlap) break;
+//                     }
+//                     if (overlap) continue;
 
-                    // 배치
-                    const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
-                    if (deco) {
-                        //const obj = deco.Export() as CSubject;
-                        const obj = deco.ExportProxy() as CSubject;
-                        obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
-                        obj.SetSave(false);
-                        Real.PushSub(obj);
-                        placed.add(x + ',' + y);
-                    }
-                }
-            }
-        }
-    }
-}
+//                     // 배치
+//                     const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
+//                     if (deco) {
+//                         //const obj = deco.Export() as CSubject;
+//                         const obj = deco.ExportProxy() as CSubject;
+//                         obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
+//                         obj.SetSave(false);
+//                         Real.PushSub(obj);
+//                         placed.add(x + ',' + y);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     let ba: string[] = [];
     let ta: string[] = [];
@@ -142,7 +142,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     new CBlackboardModal(ba, ta, ca);
 }));
 Real.PushSub(new CUser()).SetPos(new CVec3(5200,6500));
-Real.PushSub(new CNPC("Dante","Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6400,6400));
+Real.PushSub(new CNPC("Dante","Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6600,6400));
 Real.PushSub(new CNPC("Miles","Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200,9200));
 Real.PushSub(new CNPC("Poppy","Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000,8000));
 
@@ -224,10 +224,10 @@ let srp=sufBloom.GetRP();
 srp.mShader=gAtl.Frame().Pal().Sl2DKey();
 srp.mTag="blit";
 srp.mShaderAttr.push(new CShaderAttr(0,emissiveTexKey));
-//sufBloom.Natural();
+sufBloom.OldSchool();
 // sufBloom.m_intensity = 1000.0;//업샘플 합성의 기본 강도
-// sufBloom.m_threshold = 2.0;//이 값보다 어두운 픽셀은 블룸 입력에서 배제
-// sufBloom.m_softThreshold = 1.0;//임계 부근이 점진적으로 섞여 더 자연스러운 하이라이트 선택
+sufBloom.m_threshold = 1.0;//이 값보다 어두운 픽셀은 블룸 입력에서 배제
+sufBloom.m_softThreshold = 1.0;//임계 부근이 점진적으로 섞여 더 자연스러운 하이라이트 선택
 // sufBloom.m_lowFrequencyBoost = 100.0;//값을 올리면 멀리 퍼져 보이는 느낌이 커짐.
 // sufBloom.m_lowFrequencyBoostCurvation = 200.0;//멀리 퍼지는 긴 꼬리
 // sufBloom.m_highPassFrequency = 1.0;//코드상 1.0이면 모든 mip 기여 허용, 값이 작아질수록 큰 mip(멀리 퍼지는 부분) 기여가 빠르게 줄어듭니다. 즉 멀리 퍼지게 하려면 1.0 유지가 유리
@@ -345,6 +345,22 @@ window["PM11"]=PM11;
 
 new CMDViewer("README.md");
 PM11();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

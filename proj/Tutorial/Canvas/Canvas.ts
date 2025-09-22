@@ -1,5 +1,5 @@
 //Version
-const version='mfo0fumr_11';
+const version='mfuof8jg_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -324,6 +324,9 @@ if(data==null)
     svmodal.SetSource(CUtil.ArrayToString(buf));
 
 }
+
+
+
 
 
 
