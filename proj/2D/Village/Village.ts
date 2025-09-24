@@ -1,5 +1,5 @@
 //Version
-const version='mfxzy4qh_5';
+const version='mfxzy4qh_9';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -74,56 +74,56 @@ import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CSta
 //Real.Clear();
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
-// {
-//     const backVoxel = Main.Find("BackGround") as any;
-//     if (backVoxel) {
-//         const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
-//         // 블랙보드에서 직접 가져오기
-//         const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
+{
+    const backVoxel = Main.Find("BackGround") as any;
+    if (backVoxel) {
+        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
+        // 블랙보드에서 직접 가져오기
+        const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
 
-//         const width = backVoxel.mCount?.x || 0;
-//         const height = backVoxel.mCount?.y || 0;
-//         const tileSize = backVoxel.mSize || 200;
+        const width = backVoxel.mCount?.x || 0;
+        const height = backVoxel.mCount?.y || 0;
+        const tileSize = backVoxel.mSize || 200;
 
-//         const placed = new Set<string>();
-//         const minDist = 2; // 최소 거리(칸 단위)
-//         const placeProb = 0.1; // 10% 확률
+        const placed = new Set<string>();
+        const minDist = 2; // 최소 거리(칸 단위)
+        const placeProb = 0.1; // 10% 확률
 
-//         for (let y = 0; y < height; y++) {
-//             for (let x = 0; x < width; x++) {
-//                 const idx = new CCIndex(x, y, 0);
-//                 const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
-//                 if (vinfo === 3 && Math.random() < placeProb) {
-//                     // 주변에 이미 배치된 조형물이 있는지 체크
-//                     let overlap = false;
-//                     for (let dy = -minDist; dy <= minDist; dy++) {
-//                         for (let dx = -minDist; dx <= minDist; dx++) {
-//                             if (dx === 0 && dy === 0) continue;
-//                             const key = (x + dx) + ',' + (y + dy);
-//                             if (placed.has(key)) {
-//                                 overlap = true;
-//                                 break;
-//                             }
-//                         }
-//                         if (overlap) break;
-//                     }
-//                     if (overlap) continue;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = new CCIndex(x, y, 0);
+                const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
+                if (vinfo === 3 && Math.random() < placeProb) {
+                    // 주변에 이미 배치된 조형물이 있는지 체크
+                    let overlap = false;
+                    for (let dy = -minDist; dy <= minDist; dy++) {
+                        for (let dx = -minDist; dx <= minDist; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            const key = (x + dx) + ',' + (y + dy);
+                            if (placed.has(key)) {
+                                overlap = true;
+                                break;
+                            }
+                        }
+                        if (overlap) break;
+                    }
+                    if (overlap) continue;
 
-//                     // 배치
-//                     const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
-//                     if (deco) {
-//                         //const obj = deco.Export() as CSubject;
-//                         const obj = deco.ExportProxy() as CSubject;
-//                         obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
-//                         obj.SetSave(false);
-//                         Real.PushSub(obj);
-//                         placed.add(x + ',' + y);
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
+                    // 배치
+                    const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
+                    if (deco) {
+                        //const obj = deco.Export() as CSubject;
+                        const obj = deco.ExportProxy() as CSubject;
+                        obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
+                        obj.SetSave(false);
+                        Real.PushSub(obj);
+                        placed.add(x + ',' + y);
+                    }
+                }
+            }
+        }
+    }
+}
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     let ba: string[] = [];
     let ta: string[] = [];
@@ -348,6 +348,7 @@ window["PM11"]=PM11;
 
 new CMDViewer("README.md");
 PM11();
+
 
 
 
