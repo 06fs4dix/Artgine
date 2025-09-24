@@ -1,5 +1,5 @@
 //Version
-const version='mfuof8jg_1';
+const version='mfxzy4qh_5';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -70,6 +70,7 @@ import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/B
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
 //Real.Clear();
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
@@ -163,14 +164,16 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 let lightAM7RP=new CRPMgr();
 let rp=lightAM7RP.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint2D);
-rp.PushOutTag("shadowPlane");
+rp.PushCondition(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushCondition(new CCondition({"s":"mTag[shadowPlane]","v":0}));
+//rp.PushInPaint(CPaint2D);
+//rp.PushOutTag("shadowPlane");
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mTag="light";
 
 
 rp=lightAM7RP.PushRP(new CRPAuto());
-rp.PushInPaint(CPaintVoxel);
+rp.PushCondition(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag="light";
 Real.SetRPMgr(lightAM7RP);
@@ -186,8 +189,8 @@ let emissiveTex=new CTexture();
 emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let emissiveTexKey=lightPM11RP.PushTex("Bloom/emissiveTex.tex",emissiveTex);
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint2D);
-rp.PushInTag("bloom");
+rp.PushCondition(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushCondition(new CCondition({"s":"mTag[bloom]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mRenderTarget=emissiveTexKey;
 rp.mTag="mask";
@@ -197,23 +200,23 @@ let basiceTex=new CTexture();
 basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let basiceTexKey=lightPM11RP.PushTex("Bloom/basiceTex.tex",basiceTex);
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint2D);
-rp.PushOutTag("shadowPlane");
+rp.PushCondition(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushCondition(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mTag="light";
 rp.mRenderTarget=basiceTexKey;
 
 
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushInPaint(CPaintVoxel);
+rp.PushCondition(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag="light";
 rp.mRenderTarget=basiceTexKey;
 
 
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushInPaint(CShadowPlane);
-//rp.PushInTag("shadowPlane");
+rp.PushCondition(new CCondition({"s":"class","v":"CShadowPlane"}));
+rp.PushCondition(new CCondition({"s":"mTag[shadowPlane]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mRenderTarget=basiceTexKey;
 
@@ -345,6 +348,10 @@ window["PM11"]=PM11;
 
 new CMDViewer("README.md");
 PM11();
+
+
+
+
 
 
 

@@ -33,8 +33,5 @@
     "soundfont": false,
     "toastui": false
   },
-  "dependencies": {
-    "ShadowBake": 1,
-    "ShadowPlane": 1
-  }
+  "dependencies": {}
 }

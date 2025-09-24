@@ -12,4 +12,4 @@ Open the app’s **Help** panel and select each mode to see how it works.
     Performs multiple render passes and **bakes** each result into textures.
   - **Multi**: Outputs multiple attributes in a single render (G‑buffer style).  
     Uses **PBR** and adds skybox‑based **ambient** lighting.
-- **ShadowBake**: Uses **baked** (static) shadows.
+

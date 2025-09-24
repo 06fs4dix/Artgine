@@ -1,5 +1,5 @@
 //Version
-const version='mffeu6vk_7';
+const version='mfxzy4qh_8';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -26,10 +26,6 @@ gPF.mGitHub = true;
 import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
-CPlugin.PushPath('ShadowBake','https://06fs4dix.github.io/Artgine/plugin/ShadowBake/');
-import "https://06fs4dix.github.io/Artgine/plugin/ShadowBake/ShadowBake.js"
-CPlugin.PushPath('ShadowPlane','https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/');
-import "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'],"");
@@ -62,6 +58,8 @@ import { CBGAttachButton, CMDViewer } from "https://06fs4dix.github.io/Artgine/a
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
 import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
 
 
 var skyTexKey=["Res/skybox/right.jpg","Res/skybox/left.jpg","Res/skybox/bottom.jpg","Res/skybox/top.jpg","Res/skybox/front.jpg","Res/skybox/back.jpg"];
@@ -72,7 +70,7 @@ for(let i=0;i<skyTexKey.length;++i)
     let tex=gAtl.Frame().Res().Find(skyTexKey[i]);
     skyTexList.push(tex);
 }
-let cubeTex=gAtl.Frame().Ren().BuildCubeMap(skyTexList,true);
+let cubeTex=gAtl.Frame().Ren().BuildCubeMap(skyTexList,true,"cube.tex");
 
 
 let PCF=new CVec1(1.0);
@@ -87,7 +85,7 @@ let gBufPosTex=new CTexture();
 gBufPosTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F,1)]);
 let gBufPos=DeferredSingle.PushTex("gBufPos.tex",gBufPosTex);
 let rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -100,7 +98,7 @@ let gBufNorTex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufNor=DeferredSingle.PushTex("gBufNor.tex",gBufNorTex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+1;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Normal));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -112,7 +110,7 @@ let gBufAlbTex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufAlb=DeferredSingle.PushTex("gBufAlb.tex",gBufAlbTex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+2;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Albedo));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -124,7 +122,7 @@ let gBufSPETex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufSPE=DeferredSingle.PushTex("gBufSPE.tex",gBufSPETex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+3;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.SpeculerPowEmissive));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -133,7 +131,7 @@ rp.mTag="gBuf";
 
 let ShadowKey=DeferredSingle.PushTex("shadowread.tex",new CTexture());
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -190,7 +188,7 @@ gBufMultiTex.PushInfo([
     new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1),]);
 let gBufMulti=DeferredMulti.PushTex("gBufMulti.tex",gBufMultiTex);
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -200,7 +198,7 @@ rp.mTag="gBufMulti";
 
 ShadowKey=DeferredMulti.PushTex("shadowread.tex",new CTexture());
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -247,7 +245,7 @@ srp.mShaderAttr.push(new CShaderAttr("envCube",new CVec1(0)));
 
 
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushInPaint(CPaintCube);
+rp.PushCondition(new CCondition("class","==","CPaintCube"));
 rp.mPriority=CRenderPass.ePriority.Normal+2;
 rp.mShader=gAtl.Frame().Pal().SlCubeKey();
 rp.mCullFace=CRenderPass.eCull.None;
@@ -280,7 +278,7 @@ srp.mShaderAttr.push(new CShaderAttr("opacity",1,1,1));
 let forward=new CRPMgr();
 let texKey=forward.PushTex("shadowread.tex",new CTexture());
 rp=forward.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -293,7 +291,7 @@ rp.mRenderTarget="shadowread.tex";
 rp.mTag="shadowRead";
 
 rp=forward.PushRP(new CRPAuto());
-rp.PushInPaint(CPaint3D);
+rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -321,6 +319,8 @@ pt2.Shadow();
 
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowPlane",()=>{
     Main.Clear();
+    Main.SetRPMgr(null);
+    gAtl.Brush().ClearRen();
     //Main.ClearBatch();
     //gAtl.Brush().ClearRen();
 
@@ -340,13 +340,20 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowPlane",()=>{
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
     
+    back.SetPos(new CVec3(0,-1,0))
     back.SetSca(new CVec3(10,0.01,10));
 
 
     let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     let plane=teapot.PushComp(new CShadowPlane());
-    //plane.m
+
+
+    teapot=Main.PushSub(new CSubject());
+    teapot.SetPos(new CVec3(500,500,0))
+    pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+    plane=teapot.PushComp(new CShadowPlane());
+    
     
 
 
@@ -464,10 +471,23 @@ Main.Clear();
     lig.mDigit=digit;
     L.PushComp(lig);
 
+    L=Main.PushSub(new CSubject());
+    L.SetPos(new CVec3(500,200,0));
+    L.SetSca(0.1);
+    let ptl=L.PushComp(new CPaint3D());
+    ptl.SetColorModel(new CColor(1,0.2,0.2,CColor.eModel.RGBAdd));
+    
+    lig=new CLight();
+    lig.SetPoint(1000,500);
+    lig.SetColor(new CVec3(3,0.2,0.2));
+    L.PushComp(lig);
+
+
     let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_lig.jpg","Res/teapot/1zflt0j_NRM.jpg"]);
     pt.Shadow();
+    pt.SetMaterial(0.1,0.6);
     pt.Light();
     back.SetSca(new CVec3(10,0.01,10));
 
@@ -486,43 +506,43 @@ Main.Clear();
 }));
 
 
-CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
-    Main.Clear();
-    //Main.ClearBatch();
-    //gAtl.Brush().ClearRen();
+// CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowBake",async ()=>{
+//     Main.Clear();
+//     //Main.ClearBatch();
+//     //gAtl.Brush().ClearRen();
 
 
-    let L=Main.PushSub(new CSubject());
-    L.SetPos(new CVec3(0,1,0));
+//     let L=Main.PushSub(new CSubject());
+//     L.SetPos(new CVec3(0,1,0));
 
-    let lig=new CLight();
-    lig.SetShadow("test",0);
-    lig.SetDirect();
-    lig.SetColor(new CVec3(1,1,1));
-    lig.mShadowDistance=shadowDistance;
-    lig.mDigit=digit;
-    L.PushComp(lig);
+//     let lig=new CLight();
+//     lig.SetShadow("test",0);
+//     lig.SetDirect();
+//     lig.SetColor(new CVec3(1,1,1));
+//     lig.mShadowDistance=shadowDistance;
+//     lig.mDigit=digit;
+//     L.PushComp(lig);
 
-    let back=Main.PushSub(new CSubject());
-    let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-    pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
-    pt.Shadow();
+//     let back=Main.PushSub(new CSubject());
+//     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+//     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
+//     pt.Shadow();
     
-    back.SetSca(new CVec3(10,0.01,10));
+//     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.PushSub(new CSubject());
-    let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-    pt2.Shadow();
+//     let teapot=Main.PushSub(new CSubject());
+//     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+//     pt2.Shadow();
 
-    setTimeout(async () => {
-        //Main.SetPause(true);
-        await CShadowBaker.Bake(Main);
-        //Main.SetPause(false);    
-    }, 0);
+//     setTimeout(async () => {
+//         //Main.SetPause(true);
+//         await CShadowBaker.Bake(Main);
+//         //Main.SetPause(false);    
+//     }, 0);
     
 
-}));
+// }));
 
 
 //CAlert.Info("F3로 개발자 모드로 가서, 왼쪽 상단 메뉴에 여러가지 쉐도우 방식을 테스트 해보세요!");
@@ -532,6 +552,40 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

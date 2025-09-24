@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mfw30p1p_9';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -41,12 +41,13 @@ import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 import { CAnimation, CClipColorAlpha, CClipDestroy, CClipPRS } from "../../../artgine/canvas/component/CAnimation.js";
 import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
-import { CExtract, CExtractMinMax, CExtractSample } from "../../../artgine/geometry/CExtract.js";
+
 import { CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
 import { CPaintTrail } from "../../../artgine/canvas/component/paint/CPaintTrail.js";
 import { CAlpha, CColor } from "../../../artgine/canvas/component/CColor.js";
 import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
 import { SDF } from "../../../artgine/z_file/SDF.js";
+import { CSamplerList } from "../../../artgine/geometry/CSampler.js";
 
 var Main=gAtl.NewCanvas("Main");
 Main.SetCameraKey("3D");
@@ -82,13 +83,13 @@ sub0.PushComp(new CAniFlow(ani));
 
 
 var sub1=new CSubject();
-ptbill=new CPaint2D(gAtl.Frame().Pal().GetNoneTex(),new CVec2(50,100));
+ptbill=new CPaint2D(gAtl.Frame().Pal().GetNoneTex(),new CVec2(10,100));
 ptbill.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBMul))
 //ptbill.SetBillBoard(true);
 ptbill.Tail();
 sub1.PushComp(ptbill);
 var ani=new CAnimation();
-ani.Push(new CClipDestroy(1000*5));
+ani.Push(new CClipDestroy(1000*10));
 sub1.PushComp(new CAniFlow(ani));
 
 
@@ -102,8 +103,8 @@ ani.Push(new CClipDestroy(1000*5));
 sub2.PushComp(new CAniFlow(ani));
 
 //3가지 샘플을 4:2:1 비율로 선택함
-var sam=new CExtractSample([sub0,sub1,sub2],[4,2,1]);
-//var sam=new CExtractSample([sub1]);
+var sam=new CSamplerList([sub0,sub1,sub2],[1,4,2]);
+//var sam=new CSamplerList([sub1]);
 particle.mSample=sam;
 //particle.m_createCount=new CExtract(1);
 //particle.m_createTime=1000*5;
@@ -137,3 +138,7 @@ trail.PushComp(new CAniFlow(ani));
 Main.PushSub(trail);
 
 //=====================================================================================================
+
+
+
+
