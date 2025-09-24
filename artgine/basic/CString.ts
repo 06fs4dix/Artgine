@@ -63,12 +63,12 @@ export class CString
 		
 		return Number(_data);
 	}
-	static LeftRightCut(_str : string,_left,_right)
+	static LeftRightCut(_str : string,_left : string,_right:string)
 	{
 		let st=_str.indexOf(_left);
 		let ed=_str.lastIndexOf(_right);
 
-		return {in:_str.substr(0,st),out:_str.substr(st+1,ed-st-1)};
+		return _str.substring(st+_left.length,ed);
 	}
 	static FunctionAnalyze(_str : string)
 	{

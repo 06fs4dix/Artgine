@@ -72,6 +72,8 @@ export class CRenderer {
     }
     BuildMeshDrawNode(_mesh, _info, _shader) {
     }
+    ReleaseMeshDrawNode(_mesh) {
+    }
     ShaderComplie(_shader) {
     }
     BuildMeshAutoFix(mesh, _drawTree, _shader) { }
@@ -163,6 +165,8 @@ export class CRendererGL extends CRenderer {
     RebuildMeshDrawNode(_mesh, _gBufOff, _bufStartOff, _buf) {
     }
     BuildMeshDrawNode(_mesh, _info, _vf) {
+    }
+    ReleaseMeshDrawNode(_mesh) {
     }
     BuildMeshAutoFix(mesh, _drawTree, _vf) {
     }

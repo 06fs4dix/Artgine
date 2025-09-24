@@ -396,6 +396,9 @@ export class CPaint2D extends CPaint {
     }
     Camera() {
         if (this.mPosList != null) {
+            this.mBound.Reset();
+            this.mBound.InitBound(this.mPosList);
+            this.mBound.SetType(CBound.eType.Box);
             if (this.mUpdateFMat == false)
                 return;
             if (this.mWMatMul == false) {
@@ -411,9 +414,6 @@ export class CPaint2D extends CPaint {
                 let v3 = CPoolGeo.ProductV3();
                 let vd = CPoolGeo.ProductV3();
                 let pos = this.GetFMat().xyz;
-                this.mBound.Reset();
-                this.mBound.InitBound(this.mPosList);
-                this.mBound.SetType(CBound.eType.Box);
                 this.mFMat.mF32A[0] = 1;
                 this.mFMat.mF32A[5] = 1;
                 this.mFMat.mF32A[10] = 1;
@@ -471,10 +471,7 @@ export class CPaint2D extends CPaint {
             this.mFMat.mF32A[15] = 1;
         }
         this.mBound.Reset();
-        this.mBound.InitBound(v0);
-        this.mBound.InitBound(v1);
-        this.mBound.InitBound(v2);
-        this.mBound.InitBound(v3);
+        this.mBound.InitBound(CUtilRender.Mesh2DSize);
         this.mBound.SetType(CBound.eType.Box);
         this.mUpdateLMat = true;
     }

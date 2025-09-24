@@ -36,7 +36,7 @@ import { CRPMgr } from "./CRPMgr.js"
 
 
 var gRenderQue=new Array<CCanvas>();
-var gCanvas=new Array<CCanvas>();
+var gCanvas=new Map<CFrame,Array<CCanvas>>();
 export class CPairStrStr 
 {
 	first;
@@ -89,7 +89,16 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		this.mFrame=_fw;
 		this.mBrush=_brash;
 		if(_fw.PF().mIAuto)	_fw.PushIAuto(this);
-		gCanvas.push(this);
+		
+		let list=this.ListCanvas();
+		if(list==null)
+		{
+			list=[];
+			gCanvas.set(this.mFrame,list);
+		}
+		list.push(this);
+
+		//gCanvas.set(_fw,this);
 		
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -108,9 +117,30 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		return this.mPause;
 	}
 	Icon(){		return "bi bi-aspect-ratio";	}
-	static GetCanvasList()
+
+	// PushCanvas(_canvas)
+	// {
+	// 	let list=this.ListCanvas();
+	// 	if(list==null)
+	// 	{
+	// 		list=[];
+	// 		gCanvas.set(this.mFrame,list);
+	// 	}
+	// 	list.push(this);
+	// }
+	ListCanvas()
 	{
-		return gCanvas;
+		return gCanvas.get(this.mFrame);
+	}
+	Destroy()
+	{
+		this.Clear();
+		let list=this.ListCanvas();
+		let index = list.indexOf(this);
+		if(index != -1) {
+			list.splice(index, 1);
+		}
+
 	}
 	GetGGI()
 	{
@@ -718,7 +748,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				
 			gRenderQue.push(this);
 		}
-		else
+		else if (gRenderQue.length>0)
 		{
 			CCanvas.RenderCanvas(this.mBrush,gRenderQue);
 			gRenderQue.length=0;

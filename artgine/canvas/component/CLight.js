@@ -12,6 +12,7 @@ import { CDomFactory } from "../../basic/CDOMFactory.js";
 import { CUpdate } from "../../basic/Basic.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
+import { CCondition } from "../../util/CStateMachine.js";
 export class CLight extends CCamComp {
     mCascadeCycle = [0, -1, -1];
     mShadowDistance = 1;
@@ -188,8 +189,8 @@ export class CLight extends CCamComp {
             let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
             srp.mCopy = false;
             srp.mTag = "shadowWrite";
-            srp.mInTag = "shadow";
-            srp.mInPaint.add("CPaint3D");
+            srp.PushCondition(new CCondition("class", "==", "CPaint3D"));
+            srp.PushCondition(new CCondition("mTag[shadow]"));
             srp.mPriority = CRenderPass.ePriority.BackGround - 2;
             this.PushRPAuto(srp);
             srp = new CRPAuto(fw.Pal().SlVoxel().mKey);
@@ -197,8 +198,8 @@ export class CLight extends CCamComp {
             srp.mClearColor = false;
             srp.mClearDepth = false;
             srp.mTag = "shadowWrite";
-            srp.mInTag = "shadow";
-            srp.mInPaint.add("CPaintVoxel");
+            srp.PushCondition(new CCondition("class", "==", "CPaintVoxel"));
+            srp.PushCondition(new CCondition("mTag[shadow]"));
             srp.mPriority = CRenderPass.ePriority.BackGround - 1;
             this.PushRPAuto(srp);
         }

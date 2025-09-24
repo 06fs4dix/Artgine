@@ -2,7 +2,7 @@
 import {CSubject} from "./CSubject.js";
 import {CVec3} from "../../geometry/CVec3.js";
 import {CMath} from "../../geometry/CMath.js";
-import {CExtract,  CExtractMinMax, CExtractSample } from "../../geometry/CExtract.js";
+import {CSampler, CSamplerList, CSamplerMinMax, CSamplerTimer } from "../../geometry/CSampler.js";
 import {CRigidBody} from "../component/CRigidBody.js";
 import {CForce} from "../component/CForce.js";
 import {CCurve} from "../../util/CCurve.js";
@@ -57,10 +57,10 @@ export class CParticleShape extends CObject
 //위치에서 밖으로
 export class CParticleShapeOut extends CParticleShape
 {
-	public mDir=new CExtractMinMax(new CVec3(-1,-1,-1),new CVec3(1,1,1));
-	public mPos=new CExtract(new CVec3());
-	public mSca=new CExtractMinMax(1,1);
-	public mSpeed=new CExtract(100);//속도
+	public mDir=new CSamplerMinMax<CVec3>(new CVec3(-1,-1,-1),new CVec3(1,1,1));
+	public mPos=new CSampler(new CVec3());
+	public mSca=new CSamplerMinMax<number>(1,1);
+	public mSpeed=new CSampler<number>(100);//속도
 	public mMovementKey="CParticleShapeOut";
 	public mCurve=new CCurve();
 	
@@ -75,15 +75,15 @@ export class CParticleShapeOut extends CParticleShape
 				rb=new CRigidBody();
 				each0.PushComp(rb);
 			}
-			let force=new CForce(this.mMovementKey,this.mDir.V3(),this.mSpeed.V1());
+			let force=new CForce(this.mMovementKey,this.mDir.Excute(),this.mSpeed.Excute());
 			force.SetCurve(this.mCurve);
 			rb.Push(force);
 
-			let sca=this.mSca.V1();
+			let sca=this.mSca.Excute();
 			each0.SetSca(new CVec3(sca,sca,sca));
 			
 			
-			var pos=this.mPos.V3();
+			var pos=this.mPos.Excute();
 			if(pos.IsZero()==false)
 				each0.SetPos(CMath.V3AddV3(each0.GetPos(),pos));
 		}
@@ -165,22 +165,17 @@ export class CParticleTexBuf extends CParticleShapeOut
 		
 	}
 }
-export class CExtractSamSub extends CExtractSample
-{
-	constructor(_val : Array<CSubject>,_rate : Array<number>=null)
-	{
-		super(_val,_rate);
-	}
-}
+
 export class CParticle extends CSubject
 {
 
-	public mSample : CExtractSamSub=null;
-	public mCreateCount=new CExtract(5);//생성 곗수
-	public mCreateTime=100;//생성 주기
-	public mStartTime=0;//언제부터 시작
-	public mEndTime=1000*60*60;//언제까지 생성
-	private mTime=0;
+	public mSample : CSamplerList<CSubject>=null;
+	public mCreateCount=new CSampler(5);//생성 곗수
+	public mTimer=new CSamplerTimer(true);
+	// public mCreateTime=100;//생성 주기
+	// public mStartTime=0;//언제부터 시작
+	// public mEndTime=1000*60*60;//언제까지 생성
+	//private mTime=0;
 	public mShape =new CParticleShape();
 
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -193,12 +188,15 @@ export class CParticle extends CSubject
 	constructor()
 	{
 		super();
+		this.mTimer.mDelay=100;
+		this.mTimer.mEnd=1000*60*60;
+
 	}
-	SetCrateTime(_time)
-	{
-		this.mCreateTime=_time;
-	}
-	SetCrateCount(_count : CExtract)
+	// SetCrateTime(_time)
+	// {
+	// 	this.mCreateTime=_time;
+	// }
+	SetCrateCount(_count : CSampler<number>)
 	{
 		this.mCreateCount=_count;
 	}
@@ -206,58 +204,37 @@ export class CParticle extends CSubject
 	{
 		this.mShape=_shape;
 	}
-//	WTArrayForm(_pointer : CPointer,_aHtml : HTMLElement,_iHtml : HTMLElement)
-//	{
-//		if(_pointer.member=="m_cptcArr")
-//			this.WTArrayAdd(_pointer,_aHtml,_iHtml,[new CPaint2D(),new CPaintTail(),new CPaintTrail(),new CPaint3D(),new CAniFlow()]);
-//	}
 
 	SubjectUpdate(_delay)
 	{
 		super.SubjectUpdate(_delay);
 		
-		if(this.mStartTime>this.mTime || this.mSample==null)
-		{
-			this.mTime+=_delay;
-			return;
-		}
+		if(this.mTimer.Excute(_delay)==false || this.mSample==null)	return;
 			
 		
-			
 		
-		if(0>=this.m_cTime && this.mEndTime>this.mTime)
+		let count=this.mCreateCount.Excute();
+		var objArr=new Array<CSubject>();
+		for(var i=0;i<count;++i)
 		{
-			this.m_cTime=this.mCreateTime;
-			let count=this.mCreateCount.V1();
-			var objArr=new Array<CSubject>();
-			for(var i=0;i<count;++i)
+			let sub=this.mSample.Excute();
+			if(sub!=null)
 			{
-				var sub=this.mSample.Obj() as CSubject;
-				if(sub!=null)
-				{
-					var obj=new CSubject();
-					
+				var obj=new CSubject();
+				
 
 
-					
-					obj.Import(sub);
-					obj.SetKey(CUniqueID.GetHash());
-					
-					this.PushChild(obj);
-					objArr.push(obj);
-				}
+				
+				obj.Import(sub);
+				obj.SetKey(CUniqueID.GetHash());
+				
+				this.PushChild(obj);
+				objArr.push(obj);
 			}
-			this.mShape.LineUp(this.mTime,objArr);
-			
 		}
-		this.mTime+=_delay;
+		this.mShape.LineUp(this.mTimer.mTimeAll,objArr);
 		
-		this.m_cTime-=_delay;
-		//this.m_endTime-=_delay;
-		if(this.mEndTime<this.mTime && this.mChild.length==0)
-		{
-			this.Destroy();
-		}
+		
 	}
 	public toJSON(): { class: string; } {
 		return {class:""};

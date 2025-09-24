@@ -416,7 +416,7 @@ export function DevTool(_atl: CAtelier)
                 cam.GetCamCon().SetInput(key.GetFrame().Input());
             key.ClearBatch();
         }
-        
+        gLeftItem.clear();
         gLeftSelect=null;
     });
 
@@ -753,10 +753,19 @@ function DevToolDrop(_drop : CDrop)
 
         if((gLeftSelect==null || gLeftSelect instanceof CCanvas==false) && pathLoad==false)
         {
-            CAlert.E("Empty Path! Load Target Canvas Select!");
-            return;
+            
+            
+            if(gAtl.mCanvasMap.size==0)
+            {
+                CAlert.E("Canvas Empyt!");
+                return;
+            }
+            //CAlert.Info("Empty Path! First Canvas Select!");
+            LeftSelect(gAtl.mCanvasMap.values().next().value);
+            
+            
         }
-        
+        const canvas = gLeftSelect as CCanvas;
         
         const GetIconClass=(path: string | null): string =>{
             if (!path) return "bi bi-question-circle";
@@ -770,6 +779,7 @@ function DevToolDrop(_drop : CDrop)
                     return "bi bi-image";
                 case "fbx":
                 case "gltf":
+                case "obj":
                     return "bi bi-globe";
                 case "ts":
                     return "bi bi-filetype-sh";
@@ -779,7 +789,8 @@ function DevToolDrop(_drop : CDrop)
         }
         const listGroup = CDomFactory.DataToDom("ul");
         listGroup.className = "list-group";
-
+        fileDrop.mObject=[];
+        let uk=CUniqueID.GetHash(8);
         for (let i = 0; i < fileDrop.mFiles.length; ++i) {
             const path = fileDrop.mPaths[i];
             const file = fileDrop.mFiles[i];
@@ -797,8 +808,8 @@ function DevToolDrop(_drop : CDrop)
             // span.textContent = path ?? `${file.name}(base64)`;
             // li.append(icon, span);
 
-            const pathText = path ?? `${file.name}(base64)`;
-
+            const pathText = path ?? `${canvas.Key()+"/"+uk+"/"+file.name}`;
+            fileDrop.mObject.push(pathText);
             // 복사 가능 pre
             const pre = document.createElement("pre");
             pre.className = "form-control user-select-all mb-0 me-2";
@@ -832,7 +843,7 @@ function DevToolDrop(_drop : CDrop)
             }
             else 
             {
-                const canvas = gLeftSelect as CCanvas;
+                
 
                 const textureMap = new Map<string, string>(); // file name → base64 name
                 const meshFiles: File[] = [];
@@ -842,9 +853,9 @@ function DevToolDrop(_drop : CDrop)
                     const file = fileDrop.mFiles[i];
                     const ext = file.name.split('.').pop()?.toLowerCase() ?? "";
                     loadName.push(file.name);
-                    if (ext === "gltf" || ext === "fbx") 
+                    if (ext === "gltf" || ext === "fbx" || ext === "glb" || ext === "obj") 
                     {
-                        meshFiles.push(file);
+                        //meshFiles.push(file);
                     } 
                     else 
                     {
@@ -857,17 +868,23 @@ function DevToolDrop(_drop : CDrop)
                         base64.mOption = option.Export();
 
                         canvas.GetResMap().set(base64.mHash, base64);
-                        textureMap.set(file.name.toLowerCase(), base64.FileName()); // ✅ 파일명 → 해시이름
+                        textureMap.set(file.name.toLowerCase(), fileDrop.mObject[i]); // ✅ 파일명 → 해시이름
 
-                        base64.mOption.mCache=file.name;
-                        await gAtl.Frame().Load().LoadSwitch(base64.FileName(), base64.mData, base64.mOption);
+                        base64.mOption.mCache=fileDrop.mObject[i];
+                        await gAtl.Frame().Load().LoadSwitch(fileDrop.mObject[i], base64.mData, base64.mOption);
                         
                         //CFile.PushCache(base64.mOption.mCache,base64.mData);
                     }
                 }
 
                 // 2. 메시 처리
-                for (const file of meshFiles) {
+                for (let i = 0; i < fileDrop.mFiles.length; ++i) 
+                {
+                    const file = fileDrop.mFiles[i];
+                    const ext = file.name.split('.').pop()?.toLowerCase() ?? "";
+                    if (ext === "gltf" || ext === "fbx" || ext === "glb" || ext === "obj") {}
+                    else continue;
+                    
                     const arrayBuffer = await file.arrayBuffer();
                     const base64 = new CBase64File();
                     base64.mExt = file.name.split('.').pop()?.toLowerCase() ?? "bin";
@@ -877,10 +894,10 @@ function DevToolDrop(_drop : CDrop)
 
                     canvas.GetResMap().set(base64.mHash, base64);
                     base64.mOption.mAutoLoad=false;
-                    await gAtl.Frame().Load().LoadSwitch(base64.FileName(), base64.mData, base64.mOption);
+                    await gAtl.Frame().Load().LoadSwitch(fileDrop.mObject[i], base64.mData, base64.mOption);
 
                     // 메시 후처리
-                    const mesh = gAtl.Frame().Res().Find(base64.FileName()) as CMesh;
+                    const mesh = gAtl.Frame().Res().Find(fileDrop.mObject[i]) as CMesh;
                     if (mesh?.texture instanceof Array) {
                         for (let ti = 0; ti < mesh.texture.length; ++ti) {
                             const texPath = mesh.texture[ti];
@@ -962,6 +979,7 @@ function DevToolUpdate(_delay)
             if(item!=null)
             {
                 const li = CUtil.ID(obj0.ObjHash() + "_li");
+                
                 
                 
                 const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
@@ -2033,8 +2051,9 @@ function DevToolLeft()
     listDiv.html.push(`
         <div class="card bg-warning p-0">
             <div class="card-body p-1 d-flex justify-content-between align-items-center">
-                <div class="text-start ms-3 fw-bold">Hierarchy</div>
-                <div class="d-flex gap-2 me-2">
+                <div class="text-start ms-1 me-1 fw-bold">Hierarchy</div>
+                <input type='search' class='form-control' id='DevToolHSearch' />
+                <div class="d-flex gap-2 ms-1 me-1">
                     <i class="bi bi-save" style="cursor: pointer;" title="Save" id="DevToolAllSave"></i>
                     <i class="bi bi-file-earmark-plus" style="cursor: pointer;" title="Push" onclick='DevToolLeftPush()'></i>
                     <i class="bi bi-trash" style="cursor: pointer;" title="Remove" onclick='DevToolLeftRemove()'></i>
@@ -2109,7 +2128,23 @@ function DevToolLeft()
             
         };
     }
+    CUtil.ID("DevToolHSearch").addEventListener("keyup",(e)=>{
+        const t = e.target as HTMLInputElement;
+		const val = t.value;
 
+        for(let [key,value] of gLeftItem)
+        {
+            const li = CUtil.ID(key + "_li");    
+            if(li.innerText.includes(val) || val=="")
+                li.style.display = "";
+            else
+                li.style.display = "none";
+        }
+        
+        
+
+
+    });
 
     // 이벤트 위임: 클릭한 대상이 어떤 _obj 인지 확인
     const ulRoot = CUtil.ID("DevToolLeft");

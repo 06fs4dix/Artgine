@@ -96,19 +96,19 @@ export class CDevice {
     };
 }
 export class CDeviceGL extends CDevice {
-    m_gl;
+    mGL;
     constructor(_pf, _handle) {
         super(_pf, _handle);
-        this.m_gl = _handle.getContext("webgl2", { antialias: this.m_pf.mAnti, depth: true, stencil: true, "xrCompatible": _pf.mXR,
+        this.mGL = _handle.getContext("webgl2", { antialias: this.m_pf.mAnti, depth: true, stencil: true, "xrCompatible": _pf.mXR,
             "premultipliedAlpha": false, "alpha": true });
         if (window["WebGLDebugUtils"] != null) {
-            this.m_gl = window["WebGLDebugUtils"].makeDebugContext(this.m_gl, function (err, funcName, args) {
+            this.mGL = window["WebGLDebugUtils"].makeDebugContext(this.mGL, function (err, funcName, args) {
                 console.error(`🚨 WebGL error: ${window["WebGLDebugUtils"].glEnumToString(err)} in ${funcName}`, args);
                 debugger;
             });
         }
         this.GL().pixelStorei(this.GL().UNPACK_FLIP_Y_WEBGL, true);
-        if (!this.m_gl) {
+        if (!this.mGL) {
             CAlert.E("초기화 실패.(하드웨어 가속을 켜주세요!");
             return;
         }
@@ -182,10 +182,10 @@ export class CDeviceGL extends CDevice {
         this.GL().clear(this.GL().COLOR_BUFFER_BIT | this.GL().DEPTH_BUFFER_BIT);
     }
     GetHandle() {
-        return this.m_gl;
+        return this.mGL;
     }
     GL() {
-        return this.m_gl;
+        return this.mGL;
     }
     DrawType() { return this.mDrawType; }
     ViewPort(_x, _y, _w, _h) {

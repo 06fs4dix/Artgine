@@ -1,7 +1,7 @@
 import { CSubject } from "./CSubject.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CMath } from "../../geometry/CMath.js";
-import { CExtract, CExtractMinMax, CExtractSample } from "../../geometry/CExtract.js";
+import { CSampler, CSamplerMinMax, CSamplerTimer } from "../../geometry/CSampler.js";
 import { CRigidBody } from "../component/CRigidBody.js";
 import { CForce } from "../component/CForce.js";
 import { CCurve } from "../../util/CCurve.js";
@@ -29,10 +29,10 @@ export class CParticleShape extends CObject {
     }
 }
 export class CParticleShapeOut extends CParticleShape {
-    mDir = new CExtractMinMax(new CVec3(-1, -1, -1), new CVec3(1, 1, 1));
-    mPos = new CExtract(new CVec3());
-    mSca = new CExtractMinMax(1, 1);
-    mSpeed = new CExtract(100);
+    mDir = new CSamplerMinMax(new CVec3(-1, -1, -1), new CVec3(1, 1, 1));
+    mPos = new CSampler(new CVec3());
+    mSca = new CSamplerMinMax(1, 1);
+    mSpeed = new CSampler(100);
     mMovementKey = "CParticleShapeOut";
     mCurve = new CCurve();
     LineUp(_time, _objList) {
@@ -43,12 +43,12 @@ export class CParticleShapeOut extends CParticleShape {
                 rb = new CRigidBody();
                 each0.PushComp(rb);
             }
-            let force = new CForce(this.mMovementKey, this.mDir.V3(), this.mSpeed.V1());
+            let force = new CForce(this.mMovementKey, this.mDir.Excute(), this.mSpeed.Excute());
             force.SetCurve(this.mCurve);
             rb.Push(force);
-            let sca = this.mSca.V1();
+            let sca = this.mSca.Excute();
             each0.SetSca(new CVec3(sca, sca, sca));
-            var pos = this.mPos.V3();
+            var pos = this.mPos.Excute();
             if (pos.IsZero() == false)
                 each0.SetPos(CMath.V3AddV3(each0.GetPos(), pos));
         }
@@ -88,18 +88,10 @@ export class CParticleTexBuf extends CParticleShapeOut {
         }
     }
 }
-export class CExtractSamSub extends CExtractSample {
-    constructor(_val, _rate = null) {
-        super(_val, _rate);
-    }
-}
 export class CParticle extends CSubject {
     mSample = null;
-    mCreateCount = new CExtract(5);
-    mCreateTime = 100;
-    mStartTime = 0;
-    mEndTime = 1000 * 60 * 60;
-    mTime = 0;
+    mCreateCount = new CSampler(5);
+    mTimer = new CSamplerTimer(true);
     mShape = new CParticleShape();
     IsShould(_member, _type) {
         if (_member == 'mChild' || _member == 'mComArr' || _member == 'mTime')
@@ -109,9 +101,8 @@ export class CParticle extends CSubject {
     m_cTime = 0;
     constructor() {
         super();
-    }
-    SetCrateTime(_time) {
-        this.mCreateTime = _time;
+        this.mTimer.mDelay = 100;
+        this.mTimer.mEnd = 1000 * 60 * 60;
     }
     SetCrateCount(_count) {
         this.mCreateCount = _count;
@@ -121,31 +112,21 @@ export class CParticle extends CSubject {
     }
     SubjectUpdate(_delay) {
         super.SubjectUpdate(_delay);
-        if (this.mStartTime > this.mTime || this.mSample == null) {
-            this.mTime += _delay;
+        if (this.mTimer.Excute(_delay) == false || this.mSample == null)
             return;
-        }
-        if (0 >= this.m_cTime && this.mEndTime > this.mTime) {
-            this.m_cTime = this.mCreateTime;
-            let count = this.mCreateCount.V1();
-            var objArr = new Array();
-            for (var i = 0; i < count; ++i) {
-                var sub = this.mSample.Obj();
-                if (sub != null) {
-                    var obj = new CSubject();
-                    obj.Import(sub);
-                    obj.SetKey(CUniqueID.GetHash());
-                    this.PushChild(obj);
-                    objArr.push(obj);
-                }
+        let count = this.mCreateCount.Excute();
+        var objArr = new Array();
+        for (var i = 0; i < count; ++i) {
+            let sub = this.mSample.Excute();
+            if (sub != null) {
+                var obj = new CSubject();
+                obj.Import(sub);
+                obj.SetKey(CUniqueID.GetHash());
+                this.PushChild(obj);
+                objArr.push(obj);
             }
-            this.mShape.LineUp(this.mTime, objArr);
         }
-        this.mTime += _delay;
-        this.m_cTime -= _delay;
-        if (this.mEndTime < this.mTime && this.mChild.length == 0) {
-            this.Destroy();
-        }
+        this.mShape.LineUp(this.mTimer.mTimeAll, objArr);
     }
     toJSON() {
         return { class: "" };

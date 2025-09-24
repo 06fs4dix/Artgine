@@ -317,8 +317,9 @@ export class CFrame {
                     for (var each0 of this.mIAutoRenderArr) {
                         each0.RenderQue(true);
                     }
-                    if (this.mIAutoRenderArr.length > 0)
-                        this.mIAutoRenderArr[0].RenderQue(false);
+                    for (var each0 of this.mIAutoRenderArr) {
+                        each0.RenderQue(false);
+                    }
                     await CFrame.EventCall(this.GetEvent(CEvent.eType.Render));
                     this.Ren().End();
                 };
@@ -532,6 +533,12 @@ export class CFrame {
         this.mLoadProcess = null;
         this.mSubProcess = null;
         this.mMainProcess = null;
+        for (let [key, value] of this.mRes.mResMap) {
+            if (key.indexOf("png") || key.indexOf("jpg") || key.indexOf("tga") || key.indexOf("tex"))
+                this.mRenderer.ReleaseTexture(value);
+            else if (key.indexOf("mesh"))
+                this.mRenderer.ReleaseMeshDrawNode(value);
+        }
     }
     static eCurser = {
         default: "default",

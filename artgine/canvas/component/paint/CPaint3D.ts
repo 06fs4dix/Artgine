@@ -46,7 +46,7 @@ export class CPaint3D extends CPaint
 	constructor(_mesh : string);
 	constructor(_mesh : string);
 	constructor(_mesh : string);
-	constructor(_mesh="",_centerPos=false)
+	constructor(_mesh="Artgine/box.mesh",_centerPos=false)
 	{
 		super();
 		
@@ -154,10 +154,10 @@ export class CPaint3D extends CPaint
 			if(sChk)
 				this.mRenderPass.push(new CRPAuto(this.mOwner.GetFrame().Pal().Sl3D().mKey));
 		}
-		if(this.mMesh=="")
-		{
-			this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
-		}
+		// if(this.mMesh=="")
+		// {
+		// 	this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
+		// }
 			
 	}
 	//SetPivot(_pivot)	{	this.m_pivot=_pivot;	}
@@ -179,6 +179,7 @@ export class CPaint3D extends CPaint
 		this.mWeightMat=new Float32Array(0);
 		this.mBound.Reset();
 		this.BatchClear();
+		this.mStartChk=true;
 		//this.m_texture=new Array();
 		//this.m_material=new Array();
 		//this.m_emissive=new Array();
@@ -305,10 +306,13 @@ export class CPaint3D extends CPaint
 			if(this.InitMesh(this.mMesh)==false)
 		 		return;
 			this.mStartChk=false;
+			this.Start();
 		}
 		else if(this.mStartChk)
 		{
+			
 			this.mStartChk=false;
+			this.Start();
 		}
 	}
 	Update(_delay: any): void 

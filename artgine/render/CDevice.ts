@@ -136,7 +136,7 @@ export class CDevice
 }
 export class CDeviceGL extends CDevice
 {
-	public m_gl : RenderingContext;
+	public mGL : RenderingContext;
 	constructor(_pf : CPreferences,_handle : HTMLCanvasElement)
 	{
 		super(_pf,_handle);
@@ -149,13 +149,13 @@ export class CDeviceGL extends CDevice
 		//시스템 성능이 낮을 경우에 컨텍스트를 생성할지 여부를 나타내는 불리언입니다.
 		
 		
-		this.m_gl=_handle.getContext("webgl2",{antialias: this.m_pf.mAnti,depth:true,stencil:true,"xrCompatible":_pf.mXR,
+		this.mGL=_handle.getContext("webgl2",{antialias: this.m_pf.mAnti,depth:true,stencil:true,"xrCompatible":_pf.mXR,
 			"premultipliedAlpha": false,"alpha": true});
 
 		// webgl-debug.js를 추가하면 웹지엘 워링도 캐치 가능하다!
 		if(window["WebGLDebugUtils"]!=null)
 		{
-			this.m_gl = window["WebGLDebugUtils"].makeDebugContext(this.m_gl, function (err, funcName, args) {
+			this.mGL = window["WebGLDebugUtils"].makeDebugContext(this.mGL, function (err, funcName, args) {
 				console.error(`🚨 WebGL error: ${window["WebGLDebugUtils"].glEnumToString(err)} in ${funcName}`, args);
 				debugger;
 			});
@@ -163,7 +163,7 @@ export class CDeviceGL extends CDevice
 		
 		
 		this.GL().pixelStorei(this.GL().UNPACK_FLIP_Y_WEBGL, true);
-		if (!this.m_gl)
+		if (!this.mGL)
 		{	
 			CAlert.E("초기화 실패.(하드웨어 가속을 켜주세요!");
 			return;
@@ -288,12 +288,12 @@ export class CDeviceGL extends CDevice
 	
 	GetHandle()
 	{
-	    return this.m_gl;
+	    return this.mGL;
 	}
 
 	GL()	:  WebGL2RenderingContext
 	{
-	    return this.m_gl as WebGL2RenderingContext;
+	    return this.mGL as WebGL2RenderingContext;
 	}
 	DrawType()	{	return this.mDrawType;	}
 

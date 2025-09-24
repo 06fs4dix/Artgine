@@ -679,6 +679,12 @@ export class CPaint2D extends CPaint
 	{
 		if(this.mPosList!=null)
 		{
+			this.mBound.Reset();
+			this.mBound.InitBound(this.mPosList);
+			this.mBound.SetType(CBound.eType.Box);
+
+
+
 			if(this.mUpdateFMat == false) return;
 
 			if(this.mWMatMul==false)
@@ -687,14 +693,6 @@ export class CPaint2D extends CPaint
 				this.GetFMat().SetV3(1,this.mPosList[1]);
 				this.GetFMat().SetV3(2,this.mPosList[2]);
 				this.GetFMat().SetV3(3,this.mPosList[3]);
-
-				
-				// for(let i=0;i<3;++i)
-				// 	this.mBound.mMin.mF32A[i]=this.mBound.mMin.mF32A[i]-this.GetOwner().GetWMat().mF32A[12+i];
-				// for(let i=0;i<3;++i)
-				// 	this.mBound.mMax.mF32A[i]=this.mBound.mMax.mF32A[i]-this.GetOwner().GetWMat().mF32A[12+i];
-
-				
 				
 			}
 			else
@@ -708,9 +706,7 @@ export class CPaint2D extends CPaint
 				
 
 				let pos = this.GetFMat().xyz;
-				this.mBound.Reset();
-				this.mBound.InitBound(this.mPosList);
-				this.mBound.SetType(CBound.eType.Box);
+				
 				this.mFMat.mF32A[0]=1;
 				this.mFMat.mF32A[5]=1;
 				this.mFMat.mF32A[10]=1;
@@ -719,13 +715,6 @@ export class CPaint2D extends CPaint
 				CMath.V3AddV3(this.mPosList[1], pos, v1);
 				CMath.V3AddV3(this.mPosList[2], pos, v2);
 				CMath.V3AddV3(this.mPosList[3], pos, v3);
-
-				// this.mBound.Reset();
-				// this.mBound.InitBound(v0);
-				// this.mBound.InitBound(v1);
-				// this.mBound.InitBound(v2);
-				// this.mBound.InitBound(v3);
-				// this.mLMat.Unit();
 
 				this.GetFMat().SetV3(0,v0);
 				this.GetFMat().SetV3(1,v1);
@@ -739,11 +728,7 @@ export class CPaint2D extends CPaint
 				CPoolGeo.RecycleV3(vd);
 
 
-				// for(let i=0;i<3;++i)
-				// 	this.mBound.mMin.mF32A[i]=this.mBound.mMin.mF32A[i]-this.GetOwner().GetWMat().mF32A[12+i];
-				// for(let i=0;i<3;++i)
-				// 	this.mBound.mMax.mF32A[i]=this.mBound.mMax.mF32A[i]-this.GetOwner().GetWMat().mF32A[12+i];
-
+			
 				
 			}
 			this.mFMat.mF32A[3]=1;
@@ -803,10 +788,7 @@ export class CPaint2D extends CPaint
 		
 
 		this.mBound.Reset();
-		this.mBound.InitBound(v0);
-		this.mBound.InitBound(v1);
-		this.mBound.InitBound(v2);
-		this.mBound.InitBound(v3);
+		this.mBound.InitBound(CUtilRender.Mesh2DSize);
 		this.mBound.SetType(CBound.eType.Box);
 		this.mUpdateLMat=true;
 

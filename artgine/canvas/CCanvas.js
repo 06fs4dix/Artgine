@@ -22,7 +22,7 @@ import { CConsol } from "../basic/CConsol.js";
 import { CPaint } from "./component/paint/CPaint.js";
 import { CRPMgr } from "./CRPMgr.js";
 var gRenderQue = new Array();
-var gCanvas = new Array();
+var gCanvas = new Map();
 export class CPairStrStr {
     first;
     second;
@@ -55,7 +55,12 @@ export class CCanvas extends CObject {
         this.mBrush = _brash;
         if (_fw.PF().mIAuto)
             _fw.PushIAuto(this);
-        gCanvas.push(this);
+        let list = this.ListCanvas();
+        if (list == null) {
+            list = [];
+            gCanvas.set(this.mFrame, list);
+        }
+        list.push(this);
     }
     IsShould(_member, _type) {
         if (_member == "mBrush" || _member == "mRemoveList" || _member == "mFrame" || _member == "mPushSub" ||
@@ -71,8 +76,16 @@ export class CCanvas extends CObject {
         return this.mPause;
     }
     Icon() { return "bi bi-aspect-ratio"; }
-    static GetCanvasList() {
-        return gCanvas;
+    ListCanvas() {
+        return gCanvas.get(this.mFrame);
+    }
+    Destroy() {
+        this.Clear();
+        let list = this.ListCanvas();
+        let index = list.indexOf(this);
+        if (index != -1) {
+            list.splice(index, 1);
+        }
     }
     GetGGI() {
         return this.mGGI;
@@ -448,7 +461,7 @@ export class CCanvas extends CObject {
             }
             gRenderQue.push(this);
         }
-        else {
+        else if (gRenderQue.length > 0) {
             CCanvas.RenderCanvas(this.mBrush, gRenderQue);
             gRenderQue.length = 0;
         }

@@ -3,20 +3,31 @@ import { CClass } from "../basic/CClass.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CObject } from "../basic/CObject.js";
 import { CRouteMsg } from "../canvas/CRouteMsg.js";
+import { CSamplerTimer } from "../geometry/CSampler.js";
 
 
 //condition
-export class CSMC extends CObject
+export class CCondition extends CObject
 {
-    constructor(_stage : string,_op : string="==",_value : number=1)
+    constructor(_stage : string|{s}|{s,v}|{s,v,o},_op : string="==",_value : any=1)
     {
         super();
-        this.mState=_stage;
         this.mOperator=_op==null?"==":_op;
         this.mValue=_value==null?1:_value;
+
+        if(_stage==null)    {}
+        else if(typeof _stage=="string")
+        {
+            this.mState=_stage;
+        }
+        else
+        {
+            this.ImportJSON(_stage);
+        }
+        
     }
     mState="";
-    mValue=1;
+    mValue : any=1;
     mOperator="==";
     static eOperator={
         "==":"==",
@@ -25,10 +36,18 @@ export class CSMC extends CObject
         ">=":">=",
         "<":"<",
         ">":">",
+
+        Equal:"==",
+        NotEqual:"!=",
+        LessEqual: "<=",
+        GreaterEqual: ">=",
+        Less: "<",
+        Greater: ">"
     };
     Excute(_state : CObject)
     {
         let st=_state.Get(this.mState) as any;
+       
         if(this.mOperator=="==")    return st==this.mValue;
         if(this.mOperator=="!=")    return st!=this.mValue;
         if(this.mOperator=="<=")    return st<=this.mValue;
@@ -43,13 +62,15 @@ export class CSMC extends CObject
         let json=_json.mDocument;
         this.mState=json["mState"]==null?json["s"]:json["mState"];
         this.mOperator=json["mOperator"]==null?json["o"]:json["mOperator"];
+        if(this.mOperator==null)    this.mOperator="==";
         this.mValue=json["mValue"]==null?json["v"]:json["mValue"];
+        if(this.mValue==null)    this.mValue=1;
         return this;
     }
 
 }
 //action
-export class CSMA extends CObject
+export class CAction extends CObject
 {
     constructor(_type,_action : string,_para : Array<any>=[])
     {
@@ -63,61 +84,36 @@ export class CSMA extends CObject
         "Function":"Function",
         "Listener":"Listener",
         "Message":"Message",
+
+        "Code":"Code",
+        "Ramda":"Ramda",
     };
     mType : string="Function";
     mAction : string="";
     mParameter : Array<any>=new Array<any>();
-
-    mDelay=0;
-    mCount=1;
-    mBegin=0;
-    mEnd=0;
-
-    mTimeAll=0;
-    mTimeDelay=0;
-    mExcute=0;
-    mUpdate=0;
+    mSamplerTimer=new CSamplerTimer(true);
+ 
     
 
     async Excute(_target,_delay : number,_update=1,_async=false)
     {
-        //업데이트 오프셋이 차이남
-        if(_update-1!=this.mUpdate)
-        {
-            this.mTimeAll=0;
-            this.mExcute=0;
-            this.mTimeDelay=0;
-        }
-        this.mUpdate=_update;
+        if(this.mSamplerTimer.Excute(_delay,_update)==false)    return;
 
-        if(this.mTimeAll<this.mBegin || (this.mCount!=0 && this.mCount<=this.mExcute) || 
-            (this.mEnd!=0 && this.mEnd<this.mTimeAll) || (0<this.mTimeDelay))  
-        {
-            this.mTimeAll+=_delay;
-            this.mTimeDelay-=_delay;
-            return;
-        }
-        
-
-        this.mTimeAll+=_delay;
-        this.mTimeDelay=this.mDelay;
-        this.mExcute++;
-
-        if(this.mType==CSMA.eType.Function)
+        if(this.mType==CAction.eType.Function)
         {
             if(_async)
                 return await CClass.CallAsync(_target,this.mAction,this.mParameter);    
             else
                 CClass.Call(_target,this.mAction,this.mParameter);
         }
-        else if(this.mType==CSMA.eType.Listener)
+        else if(this.mType==CAction.eType.Listener)
         {
             if(_async)
                 return await _target.GetEvent(this.mAction).CallAsync(this.mParameter);
             else
                 _target.GetEvent(this.mAction).Call(this.mParameter);
         }
-        else if(this.mType==CSMA.eType.Message)
+        else if(this.mType==CAction.eType.Message)
         {
             let mag=_target.NewInMsg(this.mAction) as CRouteMsg;
             mag.mMsgData=this.mParameter;
@@ -131,17 +127,17 @@ export class CSMA extends CObject
 
         
 
-        if(json["mDelay"]!=null)    this.mDelay=json["mDelay"];
-        if(json["mCount"]!=null)    this.mCount=json["mCount"];
-        if(json["mBegin"]!=null)    this.mBegin=json["mBegin"];
-        if(json["mEnd"]!=null)    this.mEnd=json["mEnd"];
+        if(json["mDelay"]!=null)    this.mSamplerTimer.mDelay=json["mDelay"]==null?json["d"]:json["mDelay"];
+        if(json["mCount"]!=null)    this.mSamplerTimer.mCount=json["mCount"]==null?json["c"]:json["mCount"];
+        if(json["mBegin"]!=null)    this.mSamplerTimer.mBegin=json["mBegin"]==null?json["b"]:json["mBegin"];
+        if(json["mEnd"]!=null)    this.mSamplerTimer.mEnd=json["mEnd"]==null?json["e"]:json["mEnd"];
         return this;
     }
 }
 //pattern
 export class CSMP extends CObject
 {
-    constructor(_and : CSMC|Array<CSMC>,_ex : CSMA|Array<CSMA>)
+    constructor(_and : CCondition|Array<CCondition>,_ex : CAction|Array<CAction>)
     {
         super();
         if(_and==null){}
@@ -157,9 +153,9 @@ export class CSMP extends CObject
 
     }
     mPriority : number=10000;
-    mAnd =new Array<CSMC>;
-    mOr =new Array<CSMC>;
-    mExcute=new Array<CSMA>;
+    mAnd =new Array<CCondition>;
+    mOr =new Array<CCondition>;
+    mExcute=new Array<CAction>;
     ImportCJSON(_json: CJSON): this {
         let json=_json.mDocument;
         let and=json["mAnd"]==null?json["and"]:json["mAnd"];
@@ -168,7 +164,7 @@ export class CSMP extends CObject
             this.mAnd.length=0;
             for(let con of and)
             {
-                let SMC=new CSMC(null);
+                let SMC=new CCondition(null);
                 SMC.ImportJSON(con);
                 this.mAnd.push(SMC);
             }
@@ -179,7 +175,7 @@ export class CSMP extends CObject
             this.mOr.length=0;
             for(let con of or)
             {
-                let SMC=new CSMC(null);
+                let SMC=new CCondition(null);
                 SMC.ImportJSON(con);
                 this.mOr.push(SMC);
             }
@@ -192,7 +188,7 @@ export class CSMP extends CObject
         {
             for(let ac of exe)
             {
-                let sma=new CSMA(null,null);
+                let sma=new CAction(null,null);
                 sma.ImportJSON(ac);
                 this.mExcute.push(sma);
             }
@@ -231,8 +227,8 @@ export class CStateMachine extends CObject
 {
     mPattern=new Array<CSMP>;
     mState=new CObject();
-    mExcuteList=new CArray<CSMA>();
-    mExcuteLock : CSMA=null;
+    mExcuteList=new CArray<CAction>();
+    mExcuteLock : CAction=null;
     mUpdateOffset=0;
     //mExcuteData=new Map<>
 

@@ -1,12 +1,19 @@
 import { CArray } from "../basic/CArray.js";
 import { CClass } from "../basic/CClass.js";
 import { CObject } from "../basic/CObject.js";
-export class CSMC extends CObject {
+import { CSamplerTimer } from "../geometry/CSampler.js";
+export class CCondition extends CObject {
     constructor(_stage, _op = "==", _value = 1) {
         super();
-        this.mState = _stage;
         this.mOperator = _op == null ? "==" : _op;
         this.mValue = _value == null ? 1 : _value;
+        if (_stage == null) { }
+        else if (typeof _stage == "string") {
+            this.mState = _stage;
+        }
+        else {
+            this.ImportJSON(_stage);
+        }
     }
     mState = "";
     mValue = 1;
@@ -18,6 +25,12 @@ export class CSMC extends CObject {
         ">=": ">=",
         "<": "<",
         ">": ">",
+        Equal: "==",
+        NotEqual: "!=",
+        LessEqual: "<=",
+        GreaterEqual: ">=",
+        Less: "<",
+        Greater: ">"
     };
     Excute(_state) {
         let st = _state.Get(this.mState);
@@ -39,11 +52,15 @@ export class CSMC extends CObject {
         let json = _json.mDocument;
         this.mState = json["mState"] == null ? json["s"] : json["mState"];
         this.mOperator = json["mOperator"] == null ? json["o"] : json["mOperator"];
+        if (this.mOperator == null)
+            this.mOperator = "==";
         this.mValue = json["mValue"] == null ? json["v"] : json["mValue"];
+        if (this.mValue == null)
+            this.mValue = 1;
         return this;
     }
 }
-export class CSMA extends CObject {
+export class CAction extends CObject {
     constructor(_type, _action, _para = []) {
         super();
         this.mAction = _action;
@@ -54,47 +71,29 @@ export class CSMA extends CObject {
         "Function": "Function",
         "Listener": "Listener",
         "Message": "Message",
+        "Code": "Code",
+        "Ramda": "Ramda",
     };
     mType = "Function";
     mAction = "";
     mParameter = new Array();
-    mDelay = 0;
-    mCount = 1;
-    mBegin = 0;
-    mEnd = 0;
-    mTimeAll = 0;
-    mTimeDelay = 0;
-    mExcute = 0;
-    mUpdate = 0;
+    mSamplerTimer = new CSamplerTimer(true);
     async Excute(_target, _delay, _update = 1, _async = false) {
-        if (_update - 1 != this.mUpdate) {
-            this.mTimeAll = 0;
-            this.mExcute = 0;
-            this.mTimeDelay = 0;
-        }
-        this.mUpdate = _update;
-        if (this.mTimeAll < this.mBegin || (this.mCount != 0 && this.mCount <= this.mExcute) ||
-            (this.mEnd != 0 && this.mEnd < this.mTimeAll) || (0 < this.mTimeDelay)) {
-            this.mTimeAll += _delay;
-            this.mTimeDelay -= _delay;
+        if (this.mSamplerTimer.Excute(_delay, _update) == false)
             return;
-        }
-        this.mTimeAll += _delay;
-        this.mTimeDelay = this.mDelay;
-        this.mExcute++;
-        if (this.mType == CSMA.eType.Function) {
+        if (this.mType == CAction.eType.Function) {
             if (_async)
                 return await CClass.CallAsync(_target, this.mAction, this.mParameter);
             else
                 CClass.Call(_target, this.mAction, this.mParameter);
         }
-        else if (this.mType == CSMA.eType.Listener) {
+        else if (this.mType == CAction.eType.Listener) {
             if (_async)
                 return await _target.GetEvent(this.mAction).CallAsync(this.mParameter);
             else
                 _target.GetEvent(this.mAction).Call(this.mParameter);
         }
-        else if (this.mType == CSMA.eType.Message) {
+        else if (this.mType == CAction.eType.Message) {
             let mag = _target.NewInMsg(this.mAction);
             mag.mMsgData = this.mParameter;
         }
@@ -105,13 +104,13 @@ export class CSMA extends CObject {
         this.mAction = json["mAction"] == null ? json["a"] : json["mAction"];
         this.mParameter = json["mParameter"] == null ? json["p"] : json["mParameter"];
         if (json["mDelay"] != null)
-            this.mDelay = json["mDelay"];
+            this.mSamplerTimer.mDelay = json["mDelay"] == null ? json["d"] : json["mDelay"];
         if (json["mCount"] != null)
-            this.mCount = json["mCount"];
+            this.mSamplerTimer.mCount = json["mCount"] == null ? json["c"] : json["mCount"];
         if (json["mBegin"] != null)
-            this.mBegin = json["mBegin"];
+            this.mSamplerTimer.mBegin = json["mBegin"] == null ? json["b"] : json["mBegin"];
         if (json["mEnd"] != null)
-            this.mEnd = json["mEnd"];
+            this.mSamplerTimer.mEnd = json["mEnd"] == null ? json["e"] : json["mEnd"];
         return this;
     }
 }
@@ -139,7 +138,7 @@ export class CSMP extends CObject {
         if (and != null) {
             this.mAnd.length = 0;
             for (let con of and) {
-                let SMC = new CSMC(null);
+                let SMC = new CCondition(null);
                 SMC.ImportJSON(con);
                 this.mAnd.push(SMC);
             }
@@ -148,7 +147,7 @@ export class CSMP extends CObject {
         if (or != null) {
             this.mOr.length = 0;
             for (let con of or) {
-                let SMC = new CSMC(null);
+                let SMC = new CCondition(null);
                 SMC.ImportJSON(con);
                 this.mOr.push(SMC);
             }
@@ -157,7 +156,7 @@ export class CSMP extends CObject {
         let exe = json["mExcute"] == null ? json["exe"] : json["mExcute"];
         if (exe != null) {
             for (let ac of exe) {
-                let sma = new CSMA(null, null);
+                let sma = new CAction(null, null);
                 sma.ImportJSON(ac);
                 this.mExcute.push(sma);
             }

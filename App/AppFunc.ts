@@ -65,7 +65,7 @@ export function GetFolderCanvasFileName(folderPath: string): string[] {
 }
 export async function WaitForBuild(tsFilePath: string): Promise<boolean> {
     const jsFilePath = tsFilePath.replace(/\.ts$/, '.js');
-    const maxWaitTime = 5000;
+    const maxWaitTime = 1000*10;
     const interval = 200;
     const startTime = Date.now();
 

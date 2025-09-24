@@ -14,6 +14,7 @@ import CParserGLTF from "./parser/CParserGLTF.js";
 import { CParserIMG } from "./parser/CParserIMG.js";
 import { CChecker } from "./CChecker.js";
 import { CFile } from "../system/CFile.js";
+import { CParserOBJ } from "./parser/CParserOBJ.js";
 export class CLoaderOption extends CObject {
     mAutoLoad = true;
     mFilter = CTexture.eFilter.Linear;
@@ -73,8 +74,9 @@ export class CLoader {
         return this.mLoadSet.size == 0;
     }
     async LoadSwitch(_file, _buffer, _option) {
-        if (_option != null && _option.mCache != null)
+        if (_option != null && _option.mCache != null) {
             CFile.PushCache(_option.mCache, _buffer);
+        }
         var pos = _file.lastIndexOf(".") + 1;
         var ext = _file.substr(pos, _file.length - pos).toLowerCase();
         if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "tga" || ext == "gif") {
@@ -91,7 +93,7 @@ export class CLoader {
         else if (ext == "mp4" || ext == "webm") {
             this.VideoLoad(_file, _buffer);
         }
-        else if (ext == "fbx" || ext == "gltf" || ext == "glb") {
+        else if (ext == "fbx" || ext == "gltf" || ext == "glb" || ext == "obj") {
             await this.MeshLoad(_file, _buffer, _option);
             this.mLoadSet.delete(_file);
         }
@@ -151,7 +153,7 @@ export class CLoader {
             this.mRes.Push(fileName, flieList);
             this.mLoadSet.delete(_file);
         }
-        else if (ext == "bin") {
+        else if (ext == "bin" || ext == "mtl") {
             return new Promise((resolve, reject) => {
                 this.mRes.Push(_file, _buffer);
                 this.mLoadSet.delete(_file);
@@ -263,6 +265,8 @@ export class CLoader {
         var par = null;
         if (ext == "fbx")
             par = new CParserFBX();
+        else if (ext == "obj")
+            par = new CParserOBJ();
         else
             par = new CParserGLTF(_option.mInch);
         par.SetBuffer(new Uint8Array(_buffer), _buffer.byteLength);
@@ -281,9 +285,9 @@ export class CLoader {
                 texMap.set(newName, CUtil.Base64ToArray(base64data));
             }
             else if (mesh.texture[i].indexOf(".rgba") != -1) {
-                let ne = CString.ExtCut(mesh.texture[i]);
+                let ne = CString.LeftRightCut(mesh.texture[i], "rgba", ".rgba");
                 CH5Canvas.Init(1, 1);
-                var para = [CH5Canvas.Cmd("fillStyle", ne.name), CH5Canvas.Cmd("fillRect", [0, 0, 1, 1])];
+                var para = [CH5Canvas.Cmd("fillStyle", "rgba" + ne), CH5Canvas.Cmd("fillRect", [0, 0, 1, 1])];
                 CH5Canvas.Draw(para);
                 var tex = CH5Canvas.GetNewTex();
                 this.mRender.BuildTexture(tex);

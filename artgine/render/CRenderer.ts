@@ -93,6 +93,7 @@ export class CRenderer
 	ReleaseTexture(pa_tex : CTexture)
 	{
 	}
+	
 	BuildRenderTarget() : string
 	BuildRenderTarget(_info : Array<CTextureInfo>) : string
 	BuildRenderTarget(_info : Array<CTextureInfo>,_size : CVec2) : string
@@ -128,6 +129,11 @@ export class CRenderer
 		
 		
 	}
+	ReleaseMeshDrawNode(_mesh : CMeshDrawNode)
+	{
+
+	}
+
 	ShaderComplie(_shader : CShader)
 	{
 		
@@ -285,6 +291,10 @@ export class CRendererGL extends CRenderer
 	{
 
 		
+	}
+	override ReleaseMeshDrawNode(_mesh : CMeshDrawNode)
+	{
+
 	}
 	BuildMeshAutoFix(mesh : CMesh,_drawTree : CTree<CMeshDrawNode>,_vf : CShader)
 	{

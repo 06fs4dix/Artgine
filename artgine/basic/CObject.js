@@ -404,9 +404,12 @@ export class CObject {
         return this["mObjectKey" + _seed];
     }
     Get(_member, _default) {
+        if (_member == "class")
+            return this.constructor.name;
         let t = this;
         const path = Array.isArray(_member) ? _member : _member.split(".");
         for (let key of path) {
+            let asOff = key.indexOf("[");
             if (key.includes("(")) {
                 const fun = CString.FunctionAnalyze(key);
                 if (t?.[fun.function] != null) {
@@ -418,13 +421,16 @@ export class CObject {
                     t = null;
                 }
             }
-            else if (key.includes("[")) {
-                const index = Number(key.substring(key.indexOf("[") + 1, key.length - 1));
-                t = t?.[index];
+            else if (asOff != -1) {
+                let inStr = key.substring(asOff + 1, key.length - 1);
+                let mm = key.substring(0, asOff);
+                if (t[mm] instanceof Set)
+                    t = t[mm].has(inStr);
+                else
+                    t = t[mm][Number(inStr)];
             }
-            else {
+            else
                 t = t?.[key];
-            }
             if (t == null)
                 break;
         }

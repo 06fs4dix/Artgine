@@ -49,7 +49,7 @@ export class CString {
     static LeftRightCut(_str, _left, _right) {
         let st = _str.indexOf(_left);
         let ed = _str.lastIndexOf(_right);
-        return { in: _str.substr(0, st), out: _str.substr(st + 1, ed - st - 1) };
+        return _str.substring(st + _left.length, ed);
     }
     static FunctionAnalyze(_str) {
         var rVal = { "function": "", "parameter": [], "return": "" };

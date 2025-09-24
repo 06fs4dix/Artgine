@@ -23,6 +23,7 @@ import { CParserIMG } from "./parser/CParserIMG.js"
 import { CChecker } from "./CChecker.js"
 import { CFile } from "../system/CFile.js"
 import { CConsol } from "../basic/CConsol.js"
+import { CParserOBJ } from "./parser/CParserOBJ.js"
 //https://github.com/JordiRos/GLGif
 //gif animation은 이걸로
 
@@ -34,7 +35,7 @@ export class CLoaderOption extends CObject
 	public mMipMap=CTexture.eMipmap.GL;
 	//public mBufCopy=false;
 	public mAlphaCut=0x09;
-	mCache=null;
+	mCache=null;//버퍼 등록용
 	
 	
 	public mInch=false;
@@ -107,7 +108,10 @@ export class CLoader
 	async LoadSwitch(_file,_buffer : ArrayBuffer,_option : CLoaderOption)
 	{
 		if(_option!=null &&_option.mCache!=null)
+		{
 			CFile.PushCache(_option.mCache,_buffer);
+		}
+			
 
 		var pos=_file.lastIndexOf(".")+1;
 		var ext=_file.substr(pos,_file.length-pos).toLowerCase();
@@ -134,7 +138,7 @@ export class CLoader
 			
 		
 		}
-		else if(ext=="fbx" || ext=="gltf" || ext=="glb")
+		else if(ext=="fbx" || ext=="gltf" || ext=="glb" || ext=="obj")
 		{
 			
 			await this.MeshLoad(_file,_buffer,_option);
@@ -224,7 +228,7 @@ export class CLoader
 		// 		resolve("");
 		// 	});
 		// }
-		else if(ext=="bin")
+		else if(ext=="bin" || ext=="mtl")
 		{
 			return new Promise((resolve, reject) => {
 				this.mRes.Push(_file,_buffer);
@@ -537,7 +541,9 @@ export class CLoader
 		
 		var par :CParser=null;
 		if(ext=="fbx")	par = new CParserFBX();
+		else if(ext=="obj") 	par = new CParserOBJ();
 		else 	par = new CParserGLTF(_option.mInch);
+		
 		
 
 		par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
@@ -567,9 +573,9 @@ export class CLoader
 			}
 			else if(mesh.texture[i].indexOf(".rgba")!=-1)
 			{
-				let ne = CString.ExtCut(mesh.texture[i]);
+				let ne = CString.LeftRightCut(mesh.texture[i],"rgba",".rgba");
 				CH5Canvas.Init(1,1);
-				var para=[CH5Canvas.Cmd("fillStyle",ne.name),CH5Canvas.Cmd("fillRect",[0,0,1,1])];
+				var para=[CH5Canvas.Cmd("fillStyle","rgba"+ne),CH5Canvas.Cmd("fillRect",[0,0,1,1])];
 				CH5Canvas.Draw(para);
 				var tex=CH5Canvas.GetNewTex();
 				this.mRender.BuildTexture(tex);

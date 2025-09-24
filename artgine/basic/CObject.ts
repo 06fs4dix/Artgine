@@ -627,11 +627,18 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
     
 	
     Get<T>(_member: string | string[], _default?: T): T | undefined {
+
+
+		if(_member=="class")	return this.constructor.name as T;
+		
 		let t: any = this;
 		const path = Array.isArray(_member) ? _member : _member.split(".");
 
-		for (let key of path) {
-			if (key.includes("(")) {
+		for (let key of path) 
+		{
+			let asOff=key.indexOf("[");
+			if (key.includes("(")) 
+			{
 				const fun = CString.FunctionAnalyze(key);
 				if (t?.[fun.function] != null) {
 					t = CClass.Call(t, fun.function, fun.parameter);
@@ -639,12 +646,19 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 				} else {
 					t = null;
 				}
-			} else if (key.includes("[")) {
-				const index = Number(key.substring(key.indexOf("[") + 1, key.length - 1));
-				t = t?.[index];
-			} else {
-				t = t?.[key];
-			}
+			} 
+			else if (asOff!=-1) 
+			{
+				let inStr=key.substring(asOff + 1, key.length - 1);
+				let mm=key.substring(0,asOff);
+
+				if(t[mm] instanceof Set)	t = t[mm].has(inStr);
+				else	t = t[mm][Number(inStr)];
+				
+			} 
+			else 	t = t?.[key];
+
+			
 			if (t == null) break;
 		}
 
