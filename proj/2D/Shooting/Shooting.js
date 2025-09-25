@@ -1,4 +1,4 @@
-const version = 'mfo0fumr_4';
+const version = 'mfzfxhf5_6';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
@@ -33,8 +33,8 @@ gPF.mServer = 'local';
 gPF.mGitHub = true;
 import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 import { CPlugin } from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
-CPlugin.PushPath('test', 'https://06fs4dix.github.io/Artgine/plugin/test/');
-import "https://06fs4dix.github.io/Artgine/plugin/test/test.js";
+CPlugin.PushPath('Bloom', 'https://06fs4dix.github.io/Artgine/plugin/Bloom/');
+import "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json', 'Res.json', 'UI.json'], "");
@@ -63,6 +63,7 @@ import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/C
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
 import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
 gAtl.Brush().GetCam2D().SetSize(600, 800);
 gAtl.Frame().PushEvent(CEvent.eType.Init, () => {
     gAtl.Frame().Load().Load("Res/shmup_effects/explosion1.png");
@@ -224,8 +225,8 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
     let emissiveTexKey = BloomRPM.PushTex("emissiveTex.tex", emissiveTex);
     let rp = BloomRPM.PushRP(new CRPAuto());
-    rp.PushInPaint(CPaint2D);
-    rp.PushInTag("bloom");
+    rp.PushCondition(new CCondition("class", "==", "CPaint2D"));
+    rp.PushCondition(new CCondition("mTag[bloom]"));
     rp.mShader = gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget = emissiveTexKey;
     rp.mTag = "mask";
@@ -233,7 +234,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
     let basiceTexKey = BloomRPM.PushTex("basiceTex.tex", basiceTex);
     rp = BloomRPM.PushRP(new CRPAuto());
-    rp.PushInPaint(CPaint2D);
+    rp.PushCondition(new CCondition("class", "==", "CPaint2D"));
     rp.mShader = gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget = basiceTexKey;
     let sufBloom = BloomRPM.PushSuf(new CSurfaceBloom());

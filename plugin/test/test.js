@@ -7,6 +7,7 @@ import { CRPAuto, CRPMgr } from "../../artgine/canvas/CRPMgr.js";
 import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
+import { CCondition } from "../../artgine/util/CStateMachine.js";
 export class CTest extends CObject {
     v = "test class";
 }
@@ -18,12 +19,12 @@ CPlugin.PushEvent(CEvent.eType.Load, () => {
     CFrame.Main().Load().Load(CPlugin.FindPath("test") + "TestShader.ts");
     let rp = new CRPAuto();
     rp.mShader = CPlugin.FindPath("test") + "TestShader.ts";
-    rp.PushInPaint(CPaint2D);
+    rp.PushCondition(new CCondition("class", "==", "CPaint2D"));
     gRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testRPMgr", gRPMgr);
     rp = new CRPAuto();
     rp.mShader = CPlugin.FindPath("test") + "TestShader.ts";
-    rp.PushInPaint(CPaint2D);
+    rp.PushCondition(new CCondition("class", "==", "CPaint2D"));
     rp.mTag = "uv";
     gUVRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testUVRPMgr", gUVRPMgr);

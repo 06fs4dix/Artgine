@@ -9,6 +9,7 @@ import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
 import { CInput } from "../../artgine/system/CInput.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
+import { CCondition } from "../../artgine/util/CStateMachine.js";
 
 export class CTest extends CObject
 {
@@ -27,13 +28,13 @@ CPlugin.PushEvent(CEvent.eType.Load,()=>{
     
     let rp=new CRPAuto();
     rp.mShader=CPlugin.FindPath("test")+"TestShader.ts";
-    rp.PushInPaint(CPaint2D);
+    rp.PushCondition(new CCondition("class","==","CPaint2D"));
     gRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testRPMgr",gRPMgr);
 
     rp=new CRPAuto();
     rp.mShader=CPlugin.FindPath("test")+"TestShader.ts";
-    rp.PushInPaint(CPaint2D);
+    rp.PushCondition(new CCondition("class","==","CPaint2D"));
     rp.mTag="uv";
     gUVRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testUVRPMgr",gUVRPMgr);
