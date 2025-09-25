@@ -256,6 +256,7 @@ export class CUtilObj {
         inputGroup.className = "input-group";
         const input = document.createElement("input");
         input.className = "form-control";
+        input.placeholder = "Array New...";
         input.setAttribute("list", "arrayadd_datalist_" + Math.random().toString(36).substr(2, 9));
         const datalist = document.createElement("datalist");
         datalist.id = input.getAttribute("list");

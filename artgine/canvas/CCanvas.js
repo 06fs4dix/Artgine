@@ -585,8 +585,8 @@ export class CCanvas extends CObject {
         }
         return rVal;
     }
-    CCamCompAck(_light) {
-        _light.CCamCompReq(this.mBrush);
+    SendGetBrush(_camcomp) {
+        _camcomp.RecvGetBrush(this.mBrush);
     }
     Patch(_stream, _sukPass = true) {
         let sendSUK = _stream.GetString();

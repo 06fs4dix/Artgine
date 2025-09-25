@@ -490,23 +490,27 @@ export class CUtilRender {
         }
     }
     static TangentCalculate(pa_verArr, pa_norArr, pa_uvArr, pa_index, pa_out) {
-        var tan1 = new Array();
-        var tan2 = new Array();
-        for (var i = 0; i < pa_verArr.Size(3); ++i) {
-            tan1[i] = new CVec3();
-            tan2[i] = new CVec3();
+        const vcount = pa_verArr.Size(3);
+        const tan1 = new Array(vcount);
+        const tan2 = new Array(vcount);
+        for (let i = 0; i < vcount; ++i) {
+            tan1[i] = new CVec3(0, 0, 0);
+            tan2[i] = new CVec3(0, 0, 0);
         }
-        for (var a = 0; a < pa_index.length; a += 3) {
-            var i0 = pa_index[a + 0];
-            var i1 = pa_index[a + 1];
-            var i2 = pa_index[a + 2];
-            var v1 = CMath.V3SubV3(pa_verArr.V3(i1), pa_verArr.V3(i0));
-            var v2 = CMath.V3SubV3(pa_verArr.V3(i2), pa_verArr.V3(i0));
-            var uv1 = CMath.Vec2MinusVec2(pa_uvArr.V2(i1), pa_uvArr.V2(i0));
-            var uv2 = CMath.Vec2MinusVec2(pa_uvArr.V2(i2), pa_uvArr.V2(i0));
-            var r = 1.0 / (uv1.x * uv2.y - uv2.x * uv1.y);
-            var sdir = new CVec3((uv2.y * v1.x - uv1.y * v2.x) * r, (uv2.y * v1.y - uv1.y * v2.y) * r, (uv2.y * v1.z - uv1.y * v2.z) * r);
-            var tdir = new CVec3((uv1.x * v2.x - uv2.x * v1.x) * r, (uv1.x * v2.y - uv2.x * v1.y) * r, (uv1.x * v2.z - uv2.x * v1.z) * r);
+        for (let a = 0; a < pa_index.length; a += 3) {
+            const i0 = pa_index[a + 0], i1 = pa_index[a + 1], i2 = pa_index[a + 2];
+            const p0 = pa_verArr.V3(i0), p1 = pa_verArr.V3(i1), p2 = pa_verArr.V3(i2);
+            const e1 = CMath.V3SubV3(p1, p0);
+            const e2 = CMath.V3SubV3(p2, p0);
+            const uv0 = pa_uvArr.V2(i0), uv1 = pa_uvArr.V2(i1), uv2 = pa_uvArr.V2(i2);
+            const du1 = uv1.x - uv0.x, dv1 = uv1.y - uv0.y;
+            const du2 = uv2.x - uv0.x, dv2 = uv2.y - uv0.y;
+            const det = du1 * dv2 - du2 * dv1;
+            if (Math.abs(det) < 1e-20)
+                continue;
+            const r = 1.0 / det;
+            const sdir = new CVec3((dv2 * e1.x - dv1 * e2.x) * r, (dv2 * e1.y - dv1 * e2.y) * r, (dv2 * e1.z - dv1 * e2.z) * r);
+            const tdir = new CVec3((du1 * e2.x - du2 * e1.x) * r, (du1 * e2.y - du2 * e1.y) * r, (du1 * e2.z - du2 * e1.z) * r);
             tan1[i0] = CMath.V3AddV3(tan1[i0], sdir);
             tan1[i1] = CMath.V3AddV3(tan1[i1], sdir);
             tan1[i2] = CMath.V3AddV3(tan1[i2], sdir);
@@ -514,11 +518,14 @@ export class CUtilRender {
             tan2[i1] = CMath.V3AddV3(tan2[i1], tdir);
             tan2[i2] = CMath.V3AddV3(tan2[i2], tdir);
         }
-        for (var a = 0; a < pa_verArr.Size(3); a++) {
-            var n = pa_norArr.V3(a);
-            var t = tan1[a];
-            var t2 = CMath.V3Nor(tan1[a]);
-            pa_out.V4(a, t2.x, t2.y, t2.z, 1);
+        for (let i = 0; i < vcount; ++i) {
+            const n = pa_norArr.V3(i);
+            let t = tan1[i];
+            const ndotT = CMath.V3Dot(n, t);
+            t = CMath.V3SubV3(t, CMath.V3MulFloat(n, ndotT));
+            t = CMath.V3Nor(t);
+            const w = (CMath.V3Dot(CMath.V3Cross(n, t), tan2[i]) < 0.0) ? -1.0 : 1.0;
+            pa_out.V4(i, t.x, t.y, t.z, w);
         }
     }
     static PolygonNormalToVertexNormal(_nor, pa_index, pa_verNum) {
@@ -893,58 +900,118 @@ export class CUtilRender {
         rVal.indexCount = rVal.index.length;
         return rVal;
     }
-    static RebuildNormals(_ci) {
-        const vertex = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
-        const normal = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
-        normal.bufF.Resize(vertex.bufF.Size(1));
-        for (let i = 0; i < normal.bufF.Size(3); i++) {
-            normal.bufF.V3(i, new CVec3());
+    static WeldVerticesByPosUvNor(_ci, posEps = 1e-6, uvEps = 1e-6, norEps = 1e-6, useUV = true, useNormal = true) {
+        const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+        const norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
+        if (!posEnt) {
+            console.error("Position buffer not found.");
+            return;
         }
-        const typeMap = new Map();
-        for (const meshBuf of _ci.vertex) {
-            const elementCount = meshBuf.bufF.Size(1) / vertex.bufF.Size(3);
-            typeMap.set(meshBuf.vfType, elementCount);
+        const posBuf = posEnt.bufF;
+        const uvEnts = _ci.GetVFType(CVertexFormat.eIdentifier.UV);
+        const uvBuf = (uvEnts && uvEnts.length > 0) ? uvEnts[0].bufF : null;
+        const norBuf = norEnt ? norEnt.bufF : null;
+        const vertCount = posBuf.Size(3);
+        if (useUV && !uvBuf)
+            useUV = false;
+        if (useNormal && !norBuf)
+            useNormal = false;
+        const elemPerVert = new Map();
+        for (const vb of _ci.vertex)
+            elemPerVert.set(vb.vfType, vb.bufF.Size(1) / vertCount);
+        const outBufs = _ci.vertex.map(() => new CFloat32Mgr());
+        const outPos = outBufs[_ci.vertex.findIndex(v => v.vfType === CVertexFormat.eIdentifier.Position)];
+        const q = (v, eps) => Math.round(v / eps);
+        const makeKey = (i) => {
+            const p = posBuf.V3(i);
+            let k = `p:${q(p.x, posEps)},${q(p.y, posEps)},${q(p.z, posEps)}`;
+            if (useUV && uvBuf) {
+                const uv = uvBuf.V2(i);
+                k += `|uv:${q(uv.x, uvEps)},${q(uv.y, uvEps)}`;
+            }
+            if (useNormal && norBuf) {
+                const n = norBuf.V3(i);
+                k += `|n:${q(n.x, norEps)},${q(n.y, norEps)},${q(n.z, norEps)}`;
+            }
+            return k;
+        };
+        const mapOldToNew = new Array(vertCount);
+        const keyToNew = new Map();
+        function copyVertex(iSrc) {
+            let newIdx = -1;
+            for (let b = 0; b < _ci.vertex.length; ++b) {
+                const inEnt = _ci.vertex[b], out = outBufs[b];
+                const elems = elemPerVert.get(inEnt.vfType) || 3;
+                if (elems === 2)
+                    out.Push(inEnt.bufF.V2(iSrc));
+                else if (elems === 3)
+                    out.Push(inEnt.bufF.V3(iSrc));
+                else if (elems === 4)
+                    out.Push(inEnt.bufF.V4(iSrc));
+                else
+                    out.Push(inEnt.bufF.V3(iSrc));
+                if (inEnt.vfType === CVertexFormat.eIdentifier.Position)
+                    newIdx = out.Size(3) - 1;
+            }
+            return newIdx;
         }
-        const faceCount = _ci.index.length / 3;
-        for (let i = 0; i < faceCount; i++) {
-            const i0 = _ci.index[i * 3 + 0];
-            const i1 = _ci.index[i * 3 + 1];
-            const i2 = _ci.index[i * 3 + 2];
-            const V0 = vertex.bufF.V3(i0);
-            const V1 = vertex.bufF.V3(i1);
-            const V2 = vertex.bufF.V3(i2);
-            const edge1 = CMath.V3SubV3(V1, V0);
-            const edge2 = CMath.V3SubV3(V2, V0);
-            const newNor = CMath.V3Nor(CMath.V3Cross(edge1, edge2));
-            for (let j = 0; j < 3; ++j) {
-                const idx = _ci.index[i * 3 + j];
-                const curNor = normal.bufF.V3(idx);
-                if (CMath.V3Dot(curNor, newNor) < 0.9 && !curNor.IsZero()) {
-                    for (const meshBuf of _ci.vertex) {
-                        const type = typeMap.get(meshBuf.vfType);
-                        switch (type) {
-                            case 2:
-                                meshBuf.bufF.Push(meshBuf.bufF.V2(idx));
-                                break;
-                            case 3:
-                                meshBuf.bufF.Push(meshBuf.bufF.V3(idx));
-                                break;
-                            case 4:
-                                meshBuf.bufF.Push(meshBuf.bufF.V4(idx));
-                                break;
-                            default:
-                                meshBuf.bufF.Push(meshBuf.bufF.GetArray());
-                                break;
-                        }
-                    }
-                    _ci.index[i * 3 + j] = vertex.bufF.Size(3) - 1;
-                }
-                normal.bufF.V3(_ci.index[i * 3 + j], newNor);
+        for (let i = 0; i < vertCount; ++i) {
+            const k = makeKey(i);
+            const found = keyToNew.get(k);
+            if (found != null) {
+                mapOldToNew[i] = found;
+            }
+            else {
+                const ni = copyVertex(i);
+                keyToNew.set(k, ni);
+                mapOldToNew[i] = ni;
             }
         }
-        CUtilRender.VertexToNormalReCac(vertex.bufF, normal.bufF, _ci.index);
-        _ci.vertexCount = vertex.bufF.Size(3);
+        const newIndex = [];
+        for (let f = 0; f < _ci.index.length; f += 3) {
+            const a = mapOldToNew[_ci.index[f + 0]];
+            const b = mapOldToNew[_ci.index[f + 1]];
+            const c = mapOldToNew[_ci.index[f + 2]];
+            if (a === b || b === c || c === a)
+                continue;
+            newIndex.push(a, b, c);
+        }
+        _ci.index = newIndex;
+        for (let b = 0; b < _ci.vertex.length; ++b)
+            _ci.vertex[b].bufF = outBufs[b];
+        _ci.vertexCount = outPos.Size(3);
         _ci.indexCount = _ci.index.length;
+    }
+    static RebuildNormals(_ci, posEps = 1e-6, uvEps = 1e-6, norEps = 1e-6, useUV = true, useNormal = true) {
+        CUtilRender.WeldVerticesByPosUvNor(_ci, posEps, uvEps, norEps, useUV, useNormal);
+        const posEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+        const norEnt = _ci.GetVFType(CVertexFormat.eIdentifier.Normal)[0];
+        if (!posEnt || !norEnt) {
+            console.error("Position or Normal buffer not found.");
+            return;
+        }
+        const posBuf = posEnt.bufF;
+        const norBuf = norEnt.bufF;
+        const vertCount = posEnt.bufF.Size(3);
+        const accNormals = new Array(vertCount);
+        for (let i = 0; i < vertCount; ++i)
+            accNormals[i] = new CVec3(0, 0, 0);
+        for (let f = 0; f < _ci.index.length; f += 3) {
+            const i0 = _ci.index[f], i1 = _ci.index[f + 1], i2 = _ci.index[f + 2];
+            const p0 = posBuf.V3(i0), p1 = posBuf.V3(i1), p2 = posBuf.V3(i2);
+            const e1 = CMath.V3SubV3(p1, p0);
+            const e2 = CMath.V3SubV3(p2, p0);
+            const faceNormal = CMath.V3Cross(e1, e2);
+            if (CMath.V3Len(faceNormal) < 1e-12)
+                continue;
+            accNormals[i0] = CMath.V3AddV3(accNormals[i0], faceNormal);
+            accNormals[i1] = CMath.V3AddV3(accNormals[i1], faceNormal);
+            accNormals[i2] = CMath.V3AddV3(accNormals[i2], faceNormal);
+        }
+        for (let i = 0; i < vertCount; ++i) {
+            let n = accNormals[i];
+            norBuf.V3(i, (CMath.V3Len(n) > 1e-6) ? CMath.V3Nor(n) : new CVec3(0, 1, 0));
+        }
     }
 }
 ;

@@ -21,6 +21,7 @@ import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CTexture } from "../render/CTexture.js";
 import { CCamCon2DFreeMove } from "../util/CCamCon.js";
 import { CChecker } from "../util/CChecker.js";
+import { CModal } from "../basic/CModal.js";
 var gModal;
 var gAtl;
 var gRPMgr;
@@ -33,6 +34,7 @@ export function RPMgrTool(_rpMgr) {
     gModal.SetHeader("RPMgrTool");
     gModal.SetSize(1000, 800);
     gModal.Open();
+    gModal.SetZIndex(CModal.eSort.Manual, CModal.eSort.ZIndexTool);
     const maxHeight = "calc(100vh - 10px)";
     const leftPanel = gModal.FindFlex(0);
     const rightPanel = gModal.FindFlex(1);

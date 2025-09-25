@@ -17,6 +17,7 @@ import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
 import { CJSON } from "../../basic/CJSON.js";
 import { CCondition } from "../../util/CStateMachine.js";
+import { CVec1 } from "../../geometry/CVec1.js";
 
 /*
 https://wiki.ogre3d.org/-Point+Light+Attenuation
@@ -29,28 +30,26 @@ float attenuation = 1.0 / (light.constant + light.linear * distance + light.quad
 //방향과 위치는 상위 오브젝트 위치기반으로 한다
 export class CLight extends CCamComp
 {
-	
-	//public m_attenuation : CVec4;//range(범위),constant(강도 1),linear(선형 감쇠),quadratic(급속도로 감소되는 거리)
-	//
-
 	public mCascadeCycle=[0,-1,-1];
-	
 	public mShadowDistance=1;//얼마나 먼거리서
 	public mDigit=1;//커팅할 범위
-	//쉐도우 켜고 끔
 	public mShadowOff : boolean = false;
+
+
 	private mDirPos : CVec4;//XYZ,TYPE(디렉션 음수-1-2 거리 양수:포인트)
 	private mColor : CVec4;//RGB,User(사용 유무)
 	public mUpdate : number = CUpdate.eType.Updated;
 
+	// mPCF=new CVec1(1.0);
+	// mBias =new CVec1(10);
+	// mNormalBias =new CVec1(5);
+	// mShadowRate=new CVec1(0.7);
+	// mDotCac=new CVec1(0);
+
+
 	constructor()
 	{
-
-		
-
 		super(null);
-
-
 
 		this.mDirPos=new CVec4();
 		this.mColor=new CVec4();
@@ -163,7 +162,7 @@ export class CLight extends CCamComp
 		}
 	}
 
-	GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowArrTex();   }
+	GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
 	Update(_delay)
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
@@ -285,7 +284,7 @@ export class CLight extends CCamComp
 	{
 		return this.mDirPos.w > 0.5;
 	}
-	override CCamCompReq(_brush : CBrush)
+	override RecvGetBrush(_brush : CBrush)
     {
 		if(_brush.mDoubleChk.has(this))	return;
 		_brush.mDoubleChk.add(this);
@@ -310,6 +309,22 @@ export class CLight extends CCamComp
 			srp.PushCondition(new CCondition("mTag[shadow]"));
 			srp.mPriority=CRenderPass.ePriority.BackGround-1;
 			this.PushRPAuto(srp);
+
+
+			// srp=new CRPAuto(fw.Pal().Sl3D().mKey);
+			// srp.mCopy=false;
+			// srp.PushCondition(new CCondition("class","==","CPaint3D"));
+			// srp.mPriority=CRenderPass.ePriority.BackGround+1;
+			// srp.mShaderAttr.push(new CShaderAttr(0,this.GetOwner().GetFrame().Pal().GetShadowWriteTex()));
+			// srp.mShaderAttr.push(new CShaderAttr("shadowRate",this.mShadowRate));
+			// srp.mShaderAttr.push(new CShaderAttr("PCF",this.mPCF));
+			// srp.mShaderAttr.push(new CShaderAttr("bias",this.mBias));
+			// srp.mShaderAttr.push(new CShaderAttr("normalBias",this.mNormalBias));
+			// srp.mShaderAttr.push(new CShaderAttr("dotCac",this.mDotCac));
+			// srp.mRenderTarget=this.GetOwner().GetFrame().Pal().GetShadowReadTex();
+			// srp.mTag="shadowRead";
+			// //this.PushRPAuto(srp);
+			// _brush.SetAutoRP("shadowRead",srp);
 		}
 
 		if (this.mShadowKey!=null)
@@ -428,6 +443,8 @@ export class CLight extends CCamComp
 
 					for(let rp of this.mWrite)
 					{
+						if(rp.mTag!="shadowWrite")	continue;
+
 						var srpKey=this.mShadowKey+rp.mShader+i;
 						var srp : CRPAuto=_brush.GetAutoRP(srpKey);
 						if(srp==null)
@@ -440,7 +457,7 @@ export class CLight extends CCamComp
 							if(tex.GetInfo()[0].mCount<(_brush.mShadowCount+1)*6)
 							{
 								fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,
-									(_brush.mShadowCount+1)*6)],new CVec2(fw.PF().mWidth, fw.PF().mHeight),fw.Pal().GetShadowArrTex());	
+									(_brush.mShadowCount+1)*6)],new CVec2(fw.PF().mWidth, fw.PF().mHeight),fw.Pal().GetShadowWriteTex());	
 							}
 							srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,_brush.mShadowCount,_brush.mShadowCount*6+i)));
 						}

@@ -41,7 +41,7 @@ export default class CEnvMap extends CCamComp {
     SetCycle(_cycle) {
         this.mCycle = _cycle;
     }
-    CCamCompReq(_brush) {
+    RecvGetBrush(_brush) {
         var pos = this.GetOwner().GetPos();
         var camList = [
             new CVec3(1, 0, 0), new CVec3(-1, 0, 0), new CVec3(0, -1, 0),

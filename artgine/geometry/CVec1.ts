@@ -22,7 +22,7 @@ export class CVec1 extends CFloat32
 		_div.innerHTML="";
 		const self = this;
 		const row = CDomFactory.DataToDom({
-			"tag": "div","class": "d-flex align-items-center gap-2 mb-1",
+			"tag": "div","class": "d-flex align-items-center",
 			"html": [
 				{"tag": "input","type": "number","class": "form-control form-control-sm",
 					"value": this.x,"onchange": (e: Event) => {

@@ -927,9 +927,9 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		return rVal;
 	}
 	
-	CCamCompAck(_light : CCamComp)
+	SendGetBrush(_camcomp : CCamComp)
 	{
-		_light.CCamCompReq(this.mBrush);
+		_camcomp.RecvGetBrush(this.mBrush);
 	}
 	Patch(_stream : CStream,_sukPass=true)
 	{

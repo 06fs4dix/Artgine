@@ -118,7 +118,7 @@ export class CRenderPass extends CObject {
     mBlitType = 0;
     mBlitRead = "";
     mLine = null;
-    mSort = CRenderPass.eSort.Distance;
+    mSort = CRenderPass.eSort.AlphaGroup;
     mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.SRC_ALPHA, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
     mTag = "";
     SetPriority(_v) { this.mPriority = _v; this.Reset(); }

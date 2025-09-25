@@ -93,8 +93,9 @@ export class CPalette {
         _fw.Res().Push(this.GetSphereMesh(), mesh);
         var half = CUtilRender.Mesh2DSize / 2.0;
         this.mMCI2D = CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
-        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 6)], new CVec2(2048, 2048), this.GetShadowArrTex());
-        let stex = _fw.Res().Find(this.GetShadowArrTex());
+        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 6)], new CVec2(2048, 2048), this.GetShadowWriteTex());
+        let stex = _fw.Res().Find(this.GetShadowWriteTex());
+        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)], new CVec2(2048, 2048), this.GetShadowReadTex());
     }
     Sl2D() { return this.mSL2D; }
     Sl3D() { return this.mSL3D; }
@@ -126,7 +127,10 @@ export class CPalette {
     GetPlaneMesh() {
         return "Artgine/plane.mesh";
     }
-    GetShadowArrTex() {
-        return "Artgine/shadowArr.tex";
+    GetShadowWriteTex() {
+        return "Artgine/shadowWrite.tex";
+    }
+    GetShadowReadTex() {
+        return "Artgine/shadowRead.tex";
     }
 }

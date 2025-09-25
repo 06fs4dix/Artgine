@@ -118,7 +118,7 @@ export class CAtelier
 					if(this.mFrame.Input().KeyUp(CInput.eKey.F2))
 					{
 						let modal=CUtilObj.ShowModal(this.mFrame.Res(),"Resource");
-						modal.SetZIndex(CModal.eSort.Manual,2000);
+						modal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
 					}
 					if(this.mFrame.Input().KeyUp(CInput.eKey.F1))
 					{

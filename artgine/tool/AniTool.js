@@ -2,7 +2,7 @@ import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
-import { CDrop } from "../basic/CModal.js";
+import { CDrop, CModal } from "../basic/CModal.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CAtelier } from "../canvas/CAtelier.js";
@@ -50,6 +50,7 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
     gModal.SetHeader("AniTool");
     gModal.SetSize(1000, 800);
     gModal.Open();
+    gModal.SetZIndex(CModal.eSort.Manual, CModal.eSort.ZIndexTool);
     const maxHeight = "calc(100vh - 10px)";
     const leftPanel = gModal.FindFlex(0);
     const rightPanel = gModal.FindFlex(1);

@@ -155,7 +155,7 @@ export class CRenderPass extends CObject
 	public mBlitRead="";
 	
 	public mLine=null;
-	public mSort=CRenderPass.eSort.Distance;
+	public mSort=CRenderPass.eSort.AlphaGroup;
 	//public m_sortAlpha=true;
 	public mBlend=[CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
 	public mTag="";

@@ -1,5 +1,5 @@
 //Version
-const version='mfxzy4qh_8';
+const version='mfzf9j0i_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -76,9 +76,12 @@ let cubeTex=gAtl.Frame().Ren().BuildCubeMap(skyTexList,true,"cube.tex");
 let PCF=new CVec1(1.0);
 var bias : number = 10;
 var normalBias : number = 5;
+var bias : number = 5;
+var normalBias : number = 0;
 var shadowDistance=0.4;
 var digit=1;
 var shadowRate=0.7;
+var dotCac=1;
 //====================================================
 let DeferredSingle=new CRPMgr();
 let gBufPosTex=new CTexture();
@@ -133,7 +136,7 @@ let ShadowKey=DeferredSingle.PushTex("shadowread.tex",new CTexture());
 rp=DeferredSingle.PushRP(new CRPAuto());
 rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
-rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
+rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
@@ -200,7 +203,8 @@ ShadowKey=DeferredMulti.PushTex("shadowread.tex",new CTexture());
 rp=DeferredMulti.PushRP(new CRPAuto());
 rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
-rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
+
+rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
@@ -277,22 +281,27 @@ srp.mShaderAttr.push(new CShaderAttr("opacity",1,1,1));
 //=============================================
 let forward=new CRPMgr();
 let texKey=forward.PushTex("shadowread.tex",new CTexture());
+//let texKey=forward.PushTex("shadowread.tex",new CTexture());
 rp=forward.PushRP(new CRPAuto());
 rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
-rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowArrTex()));
+
+rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
 //rp.mShaderAttr.push(new CShaderAttr("dotCac",new CVec1(0.0)));
+rp.mShaderAttr.push(new CShaderAttr("dotCac",dotCac));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget="shadowread.tex";
+//rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
 rp.mTag="shadowRead";
 
 rp=forward.PushRP(new CRPAuto());
 rp.PushCondition(new CCondition("class","==","CPaint3D"));
 rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
+//rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 //=============================================
@@ -485,7 +494,7 @@ Main.Clear();
 
     let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-    pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_lig.jpg","Res/teapot/1zflt0j_NRM.jpg"]);
+    pt.SetTexture(["Res/teapot/1zflt0j.jpg"]);
     pt.Shadow();
     pt.SetMaterial(0.1,0.6);
     pt.Light();
@@ -552,6 +561,7 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
+
 
 
 

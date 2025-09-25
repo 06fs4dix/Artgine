@@ -32,6 +32,7 @@ export class CPaint3D extends CPaint
 	public mMeshRes : CMesh;
 	public mWeightMat : Float32Array;
 	public mCenterPos=false;
+	public mTargetScale=0;
 	public mTreeNode=new CArray<CMeshPaint>();
 
 	public mSkinType=SDF.eSkin.Bone;
@@ -44,14 +45,14 @@ export class CPaint3D extends CPaint
 
 	constructor();
 	constructor(_mesh : string);
-	constructor(_mesh : string);
-	constructor(_mesh : string);
-	constructor(_mesh="Artgine/box.mesh",_centerPos=false)
+	constructor(_mesh : string,_centerPos : boolean,_targetScale : number);
+	constructor(_mesh="Artgine/box.mesh",_centerPos=false,_targetScale=0)
 	{
 		super();
 		
 
 		this.mCenterPos=_centerPos;
+		this.mTargetScale=_targetScale;
 		this.mTree=null;
 		this.mMesh=_mesh;
 		
@@ -129,7 +130,9 @@ export class CPaint3D extends CPaint
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member=="mWeightMat" || _member=="mTreeNode" || _member=="mTree" || _member=="mMeshRes")
+		if(_member=="mWeightMat" || _member=="mTreeNode" || _member=="mTree" || _member=="mMeshRes" ||
+			_member=="mCenterPos" || _member=="mTargetScale"
+		)
 			return false;
 		return super.IsShould(_member,_type);
 	}
@@ -204,6 +207,7 @@ export class CPaint3D extends CPaint
 	private InitMesh(_mesh)
 	{
 		this.mTexLoad=false;
+		if(this.mOwner.GetFrame()==null)	return false;
 		if(this.mMesh==_mesh && this.mTree!=null)
 			return false;
 		
@@ -288,10 +292,18 @@ export class CPaint3D extends CPaint
 			}
 		}
 		if(this.mCenterPos)
-		{
-			this.mLMat.UnitCheck();
 			this.mLMat.SetV3(3,CMath.V3MulFloat(this.mBound.GetCenter(),-1))
+		if(this.mTargetScale!=0)
+		{
+			let size=this.mBound.GetSize();
+			let maxSize=CMath.Max(CMath.Max(size.x,size.y),size.z);
+			this.mLMat.mF32A[0]=this.mTargetScale/maxSize;
+			this.mLMat.mF32A[5]=this.mTargetScale/maxSize;
+			this.mLMat.mF32A[10]=this.mTargetScale/maxSize;
 		}
+		
+
+		this.mLMat.UnitCheck();
 
 		this.BatchClear();
 			

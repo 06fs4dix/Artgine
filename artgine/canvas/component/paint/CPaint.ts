@@ -316,8 +316,8 @@ export class CPaint extends CComponent
 	}
 	AlphaState()
 	{
-		if(this.mAlphaTex || (this.mAlphaModel.y==0 && this.mAlphaModel.x!=0) || 
-						(this.mAlphaModel.y>0.5 && this.mAlphaModel.x!=1))
+		if(this.mAlphaTex || (this.mAlphaModel.y==CAlpha.eModel.Add && this.mAlphaModel.x!=0) || 
+						(this.mAlphaModel.y==CAlpha.eModel.Mul && this.mAlphaModel.x!=1))
 			return true;
 		return false;
 	}
@@ -470,7 +470,8 @@ export class CPaint extends CComponent
 		else if(_pointer.member=="mColorModel" || _pointer.member=="mAlphaModel")
 		{
 			this.PushTag("color");
-			this.BatchClear();
+			//this.BatchClear();
+			this.ClearCRPAuto();
 		}
 		else if(_child)
 		{
@@ -944,16 +945,16 @@ export class CPaint extends CComponent
 
 		if(this.mAutoLoad!=null && this.mOwner!=null && this.mOwner.GetFrame()!=null)
 		{
-			for(let texKey of this.mTexture)
+			for(let i=0;i<this.mTexture.length;++i)
 			{
+				let texKey=this.mTexture[i];
 				if(texKey.indexOf(".atl")!=-1 || texKey.indexOf("base64")!=-1 ||texKey.indexOf(".tex")!=-1)	continue;
 				
 				let tex=this.mOwner.GetFrame().Res().Find(texKey);
-				if(tex!=null && tex instanceof CTexture)
+				if(tex!=null && tex instanceof CTexture && i==0)
 				{
-					if(tex.GetAlpha()) {
-						this.mAlphaTex = true;
-					}
+					if(tex.GetAlpha()) this.mAlphaTex = true;
+					
 					continue;
 				}
 

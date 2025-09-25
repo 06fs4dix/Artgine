@@ -28,6 +28,7 @@ export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : num
         if(tm.w<-0.5)	tm.w=_texColor.w;
     }
     
+    
 
     return tm;
 }

@@ -4,7 +4,7 @@ import { CClass } from "../basic/CClass.js";
 import { CConsol } from "../basic/CConsol.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
-import { CDrop } from "../basic/CModal.js";
+import { CDrop, CModal } from "../basic/CModal.js";
 
 import { CObject, CObjectEditerBtn } from "../basic/CObject.js";
 import { CString } from "../basic/CString.js";
@@ -69,6 +69,7 @@ export function AniTool(_ani: CAnimation, _basicTex=null,_basicMesh=null) {
     gModal.SetHeader("AniTool");
     gModal.SetSize(1000, 800);
     gModal.Open();
+    gModal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
     const maxHeight = "calc(100vh - 10px)"; // 필요 시 조정
     const leftPanel = gModal.FindFlex(0) as HTMLElement;
     const rightPanel = gModal.FindFlex(1) as HTMLElement;

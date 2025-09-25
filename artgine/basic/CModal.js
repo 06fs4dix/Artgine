@@ -389,6 +389,7 @@ export class CModal {
         eSort[eSort["Auto"] = 1000] = "Auto";
         eSort[eSort["Manual"] = 0] = "Manual";
         eSort[eSort["Top"] = 10000] = "Top";
+        eSort[eSort["ZIndexTool"] = 1200] = "ZIndexTool";
     })(eSort = CModal.eSort || (CModal.eSort = {}));
     let ePos;
     (function (ePos) {

@@ -102,7 +102,7 @@ export class CLight extends CCamComp {
             _div.append(CDomFactory.DataToDom(div));
         }
     }
-    GetTex() { return this.GetOwner().GetFrame().Pal().GetShadowArrTex(); }
+    GetTex() { return this.GetOwner().GetFrame().Pal().GetShadowWriteTex(); }
     Update(_delay) {
         if (this.mUpdate == CUpdate.eType.Already) {
             this.mUpdate = CUpdate.eType.Not;
@@ -180,7 +180,7 @@ export class CLight extends CCamComp {
     IsPointLight() {
         return this.mDirPos.w > 0.5;
     }
-    CCamCompReq(_brush) {
+    RecvGetBrush(_brush) {
         if (_brush.mDoubleChk.has(this))
             return;
         _brush.mDoubleChk.add(this);
@@ -280,6 +280,8 @@ export class CLight extends CCamComp {
                     if (this.mCascadeCycle[i] == -1)
                         continue;
                     for (let rp of this.mWrite) {
+                        if (rp.mTag != "shadowWrite")
+                            continue;
                         var srpKey = this.mShadowKey + rp.mShader + i;
                         var srp = _brush.GetAutoRP(srpKey);
                         if (srp == null) {
@@ -289,7 +291,7 @@ export class CLight extends CCamComp {
                             var fw = this.GetOwner().GetFrame();
                             var tex = fw.Res().Find(this.GetTex());
                             if (tex.GetInfo()[0].mCount < (_brush.mShadowCount + 1) * 6) {
-                                fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, (_brush.mShadowCount + 1) * 6)], new CVec2(fw.PF().mWidth, fw.PF().mHeight), fw.Pal().GetShadowArrTex());
+                                fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, (_brush.mShadowCount + 1) * 6)], new CVec2(fw.PF().mWidth, fw.PF().mHeight), fw.Pal().GetShadowWriteTex());
                             }
                             srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(i, _brush.mShadowCount, _brush.mShadowCount * 6 + i)));
                         }

@@ -100,9 +100,9 @@ function GetParallaxMappedUV(_uv, _tan, _bi, _nor, _wor, _camPos, _texOff) {
     }
     return uv;
 }
-function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff) {
+function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff, sam2DCount) {
     var N = _nor;
-    if (to_ref.y > 0.5) {
+    if (to_ref.y > 0.5 && sam2DCount > 1.5) {
         var TBN = V3ToMat3(_tan, _bi, _nor);
         N = Sam2DToColor(to_ref.y, _uv).xyz;
         N = MappingTexToV3(N);
@@ -237,7 +237,7 @@ function ps_main() {
     var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
     BranchBegin("light", "L", [ligDir, ligCol, ligCount, camPos, material, ligStep0, ligStep1, ligStep2, ligStep3, envCube, ambientColor]);
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref), shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
+    dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount), shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
     L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
     BranchDefault();
     if (shadow > -0.5) {
@@ -280,7 +280,7 @@ function ps_main_gBuffer() {
         out_color = new CVec4(to_viewPos.xyz, 0.5);
     }
     else if (outputType < SDF.eGBuf.Normal + 0.5) {
-        var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+        var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
         out_color = new CVec4(MappingV3ToTex(N), 1.0);
     }
     else if (outputType < SDF.eGBuf.Albedo + 0.5) {
@@ -322,7 +322,7 @@ function ps_main_gBuffer_multi() {
         discard;
     BranchEnd();
     out_pos = new CVec4(to_viewPos.xyz, 1.0);
-    var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+    var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
     out_nor = new CVec4(MappingV3ToTex(N), 1.0);
     out_color = L_cor;
     var lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);

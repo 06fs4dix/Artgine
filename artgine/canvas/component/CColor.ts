@@ -81,7 +81,7 @@ export class CColor extends CVec4
                     this.xyz =inputColor.xyz;
                 }
                 this.EditChange(_pointer,false);
-                this.EditRefresh();
+                //this.EditRefresh(_pointer);
             }
         }));
                 
@@ -106,7 +106,8 @@ export class CColor extends CVec4
         select.onchange=(_event)=>{
             var ct=_event.currentTarget as HTMLSelectElement;
             this.mF32A[3] = valArr[ct.selectedIndex];
-            this.EditRefresh();
+            this.EditChange(_pointer,false);
+            //this.EditRefresh();
         };
         _div.append(select);
     }
@@ -155,7 +156,8 @@ export class CAlpha extends CVec2
                 let value=(e.target as HTMLInputElement).value;
 
                 this.mF32A[0]=Number(value);
-                this.EditRefresh();
+                this.EditChange(_pointer,false);
+                //this.EditRefresh();
             }
         }));
 
@@ -178,7 +180,7 @@ export class CAlpha extends CVec2
         select.onchange=(_event)=>{
             var ct=_event.currentTarget as HTMLSelectElement;
             this.mF32A[1] = valArr[ct.selectedIndex];
-            this.EditRefresh(_pointer);
+            this.EditChange(_pointer,false);
         };
         _div.append(select);
     }

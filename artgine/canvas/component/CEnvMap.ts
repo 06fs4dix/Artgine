@@ -57,7 +57,7 @@ export default class CEnvMap extends CCamComp
         this.mCycle = _cycle;
     }
 
-    override CCamCompReq(_brush : CBrush)
+    override RecvGetBrush(_brush : CBrush)
     {
         var pos=this.GetOwner().GetPos();
         var camList=[

@@ -216,9 +216,9 @@ function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec
     return uv;
 }
 
-function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _texOff : CVec3) : CVec3 {
+function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _texOff : CVec3,sam2DCount :number) : CVec3 {
 	var N : CVec3 = _nor;
-	if(to_ref.y>0.5)
+	if(to_ref.y>0.5 && sam2DCount>1.5)
 	{
 		var TBN : CMat3 = V3ToMat3(_tan, _bi, _nor);
 
@@ -387,7 +387,7 @@ function ps_main()
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
 
-	dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref), shadow, 
+	dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount), shadow, 
 		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
 
 
@@ -443,7 +443,7 @@ function ps_main_gBuffer() {
 	}
 	//normal
 	else if(outputType < SDF.eGBuf.Normal + 0.5) {
-		var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+		var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
 		out_color = new CVec4(MappingV3ToTex(N), 1.0);
 	}
 	//diffuse
@@ -496,7 +496,7 @@ function ps_main_gBuffer_multi() {
 	//position
 	out_pos = new CVec4(to_viewPos.xyz, 1.0);
 	//normal
-	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
 	out_nor = new CVec4(MappingV3ToTex(N), 1.0);
 	//diffuse
 	out_color = L_cor;

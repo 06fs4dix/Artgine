@@ -11,12 +11,12 @@ export class CWebSocket
 	public mPath : string;
 	public mSocket : WebSocket;
 	public mError : CEvent;
-	public mMessage : CEvent;
-	public mSsl : boolean;
+	public mReceive : CEvent;
+	public mSSL : boolean;
 	
 
 	//_AddrPortPath : local/relay면 자신한테 간다
-	constructor(_AddrPortPath : string,_path : string,_message : ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,
+	constructor(_AddrPortPath : string,_path : string,_receive : ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,
 		_error : ((...args: any[]) => any) | CEvent<(...args: any[]) => any>)
 	{
 		if(_AddrPortPath==null)
@@ -34,7 +34,7 @@ export class CWebSocket
 			var s=_AddrPortPath.indexOf("https://");
 			if(s!=-1)
 			{
-				this.mSsl=true;
+				this.mSSL=true;
 				this.mAddrPortPath=_AddrPortPath.substr(8,_AddrPortPath.length-8);
 			}
 			else
@@ -50,7 +50,7 @@ export class CWebSocket
 		this.mSocket=null;
 
 		this.mError=CEvent.ToCEvent(_error);
-		this.mMessage=CEvent.ToCEvent(_message);
+		this.mReceive=CEvent.ToCEvent(_receive);
 	}
 	Connect()
 	{
@@ -61,7 +61,7 @@ export class CWebSocket
 				resolve(true);
 				return;
 			}
-			if(this.mSsl)
+			if(this.mSSL)
 				this.mSocket=new WebSocket('wss://'+this.mAddrPortPath+"/"+this.mPath);
 			else
 				this.mSocket=new WebSocket('ws://'+this.mAddrPortPath+"/"+this.mPath);
@@ -78,7 +78,7 @@ export class CWebSocket
 			};
 			this.mSocket.onmessage = (event)=> 
 			{
-				this.Message(event.data);
+				this.Recv(event.data);
 				
 				
 			};
@@ -103,7 +103,7 @@ export class CWebSocket
 			_str=_str.Data();
 		if(this.mAddrPortPath=="local" || this.mAddrPortPath=="relay")	
 		{
-			this.Message(_str);
+			this.Recv(_str);
 			return;
 		}
 		if(this.mSocket && this.mSocket.readyState==1)
@@ -113,9 +113,9 @@ export class CWebSocket
 			this.mError.Call("error");
 		}
 	}
-	Message(_str : any)
+	Recv(_str : any)
 	{
-		this.mMessage.Call(_str);
+		this.mReceive.Call(_str);
 	}
 	DisConnect()
 	{

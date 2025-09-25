@@ -17,7 +17,7 @@ export class CCamComp extends CComponent {
         this.mWrite.push(_write);
     }
     Update(_delay) {
-        var cm = this.ProductMsg("CCamCompAck");
+        var cm = this.ProductMsg("SendGetBrush");
         cm.mInter = "canvas";
         cm.mMsgData[0] = this;
         if (this.mRead != null) {
@@ -27,6 +27,6 @@ export class CCamComp extends CComponent {
             cm.mMsgData[0] = this;
         }
     }
-    CCamCompReq(_brush) {
+    RecvGetBrush(_brush) {
     }
 }

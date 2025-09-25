@@ -5,6 +5,7 @@ import {CVec4} from "../geometry/CVec4.js";
 import {CMat} from "../geometry/CMat.js";
 import {CObject, CPointer} from "../basic/CObject.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
+import { CDomFactory } from "../basic/CDOMFactory.js";
 
 
 
@@ -153,5 +154,52 @@ export class CShaderAttr extends CObject
 	
 
 		return str;
+	}
+	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+		//super.EditHTMLInit(_div,_pointer);
+		let KeyInputFun=()=>{
+			const keyRow = CDomFactory.DataToDom({
+				"tag": "div", "class": "d-flex align-items-center",
+				"html": [
+					{ "tag": "div", "class": "text-danger ps-1 pe-1", "text": "mKey" },
+					{
+						"tag": "input", "type": "text", "class": "form-control form-control-sm",
+						"value": this.mKey,
+						"onchange": (e: Event) => {
+							const v = (e.target as HTMLInputElement).value ?? "";
+							// 값 반영
+							this.mKey = v;
+
+							// EditChange 통지 (CVec1의 패턴과 동일한 호출 흐름)
+							if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+								// mKey를 가리키는 포인터 구성
+								const keyPtr = new CPointer(this, "mKey");
+								keyPtr.refArr.push(..._pointer.refArr);
+								_pointer.target.EditChange(keyPtr, false);
+							}
+						}
+					}
+				]
+			});
+			_div.prepend(keyRow);
+
+		};
+		let str="";
+		switch(this.mType)
+		{
+			case -2:		break;
+			case 1:case 2:case 3:case 4:case 16:	
+			{
+				_div.innerHTML="";
+				let pointer=new CPointer(this,"mData");
+				pointer.refArr.push(..._pointer.refArr);
+				this.mData.EditHTMLInit(_div,pointer);
+				KeyInputFun();
+			}break;
+			case -1:
+			{
+				
+			}break;
+		}
 	}
 };

@@ -24,6 +24,7 @@ export class CPaint3D extends CPaint {
     mMeshRes;
     mWeightMat;
     mCenterPos = false;
+    mTargetScale = 0;
     mTreeNode = new CArray();
     mSkinType = SDF.eSkin.Bone;
     mCamCompSet = new Set();
@@ -31,9 +32,10 @@ export class CPaint3D extends CPaint {
     mWindInfluence = new CVec1(0.0);
     mCamCompLayer = [];
     mTexLoad = false;
-    constructor(_mesh = "Artgine/box.mesh", _centerPos = false) {
+    constructor(_mesh = "Artgine/box.mesh", _centerPos = false, _targetScale = 0) {
         super();
         this.mCenterPos = _centerPos;
+        this.mTargetScale = _targetScale;
         this.mTree = null;
         this.mMesh = _mesh;
         this.mWeightMat = new Float32Array(0);
@@ -90,7 +92,8 @@ export class CPaint3D extends CPaint {
         }
     }
     IsShould(_member, _type) {
-        if (_member == "mWeightMat" || _member == "mTreeNode" || _member == "mTree" || _member == "mMeshRes")
+        if (_member == "mWeightMat" || _member == "mTreeNode" || _member == "mTree" || _member == "mMeshRes" ||
+            _member == "mCenterPos" || _member == "mTargetScale")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -138,6 +141,8 @@ export class CPaint3D extends CPaint {
     }
     InitMesh(_mesh) {
         this.mTexLoad = false;
+        if (this.mOwner.GetFrame() == null)
+            return false;
         if (this.mMesh == _mesh && this.mTree != null)
             return false;
         this.mMesh = _mesh;
@@ -189,10 +194,16 @@ export class CPaint3D extends CPaint {
                 node.Push(new CMeshPaint(nodemp.md.mColleague, nodemp.mpi.mColleague, null));
             }
         }
-        if (this.mCenterPos) {
-            this.mLMat.UnitCheck();
+        if (this.mCenterPos)
             this.mLMat.SetV3(3, CMath.V3MulFloat(this.mBound.GetCenter(), -1));
+        if (this.mTargetScale != 0) {
+            let size = this.mBound.GetSize();
+            let maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
+            this.mLMat.mF32A[0] = this.mTargetScale / maxSize;
+            this.mLMat.mF32A[5] = this.mTargetScale / maxSize;
+            this.mLMat.mF32A[10] = this.mTargetScale / maxSize;
         }
+        this.mLMat.UnitCheck();
         this.BatchClear();
         this.mUpdateFMat = true;
         this.mBoundFMatR = 0;

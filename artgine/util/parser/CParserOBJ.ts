@@ -11,6 +11,7 @@ import { CFile } from "../../system/CFile.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CVec2 } from "../../geometry/CVec2.js";
 import { CAlert } from "../../basic/CAlert.js";
+import { CTree } from "../../basic/CTree.js";
 
 type ObjFaceV = { vi:number, vti:number, vni:number };
 
@@ -60,7 +61,7 @@ export class CParserOBJ extends CParser
 
         // OBJ는 다수의 오브젝트/그룹을 가질 수 있음 → 노드 풀 관리
         type NodeBag = {
-            node: any, // CTree<CMeshDataNode>
+            node: CTree<CMeshDataNode>, // CTree<CMeshDataNode>
             name: string,
             // unified buffers per node
             pos: number[], uv: number[], nor: number[], idx: number[],
@@ -296,6 +297,8 @@ export class CParserOBJ extends CParser
             // Indices
             for (const id of bag.idx) bag.node.mData.ci.index.push(id);
 
+            //bag.node.mData.ci.vertexCount=bag.pos.length/3;
+            //bag.node.mData.ci.indexCount=bag.node.mData.ci.index.length;
             // 노말 재계산(필요 시)
             CUtilRender.RebuildNormals(bag.node.mData.ci);
 

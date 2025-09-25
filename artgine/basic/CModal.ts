@@ -512,6 +512,9 @@ export namespace CModal {
 		Auto = 1000,
         Manual = 0,
         Top = 10000,
+
+
+        ZIndexTool = 1200,
     }
     export enum ePos {
 		Center=0,

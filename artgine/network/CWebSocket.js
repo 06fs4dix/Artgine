@@ -5,9 +5,9 @@ export class CWebSocket {
     mPath;
     mSocket;
     mError;
-    mMessage;
-    mSsl;
-    constructor(_AddrPortPath, _path, _message, _error) {
+    mReceive;
+    mSSL;
+    constructor(_AddrPortPath, _path, _receive, _error) {
         if (_AddrPortPath == null)
             _AddrPortPath = CPath.Join(CPath.eUrl.Host + CPath.eUrl.Port);
         this.mAddrPortPath = _AddrPortPath;
@@ -19,7 +19,7 @@ export class CWebSocket {
             var h = _AddrPortPath.indexOf("http://");
             var s = _AddrPortPath.indexOf("https://");
             if (s != -1) {
-                this.mSsl = true;
+                this.mSSL = true;
                 this.mAddrPortPath = _AddrPortPath.substr(8, _AddrPortPath.length - 8);
             }
             else
@@ -30,7 +30,7 @@ export class CWebSocket {
         }
         this.mSocket = null;
         this.mError = CEvent.ToCEvent(_error);
-        this.mMessage = CEvent.ToCEvent(_message);
+        this.mReceive = CEvent.ToCEvent(_receive);
     }
     Connect() {
         return new Promise((resolve, reject) => {
@@ -38,7 +38,7 @@ export class CWebSocket {
                 resolve(true);
                 return;
             }
-            if (this.mSsl)
+            if (this.mSSL)
                 this.mSocket = new WebSocket('wss://' + this.mAddrPortPath + "/" + this.mPath);
             else
                 this.mSocket = new WebSocket('ws://' + this.mAddrPortPath + "/" + this.mPath);
@@ -50,7 +50,7 @@ export class CWebSocket {
                 resolve(true);
             };
             this.mSocket.onmessage = (event) => {
-                this.Message(event.data);
+                this.Recv(event.data);
             };
         });
     }
@@ -65,7 +65,7 @@ export class CWebSocket {
         if (typeof _str == "object")
             _str = _str.Data();
         if (this.mAddrPortPath == "local" || this.mAddrPortPath == "relay") {
-            this.Message(_str);
+            this.Recv(_str);
             return;
         }
         if (this.mSocket && this.mSocket.readyState == 1)
@@ -74,8 +74,8 @@ export class CWebSocket {
             this.mError.Call("error");
         }
     }
-    Message(_str) {
-        this.mMessage.Call(_str);
+    Recv(_str) {
+        this.mReceive.Call(_str);
     }
     DisConnect() {
         this.mSocket.close();

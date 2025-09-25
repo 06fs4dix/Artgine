@@ -213,6 +213,7 @@ export class CPaint2D extends CPaint
 	{
 		this.mShaderAttrMap.get("billboard").mData.mF32A[0]=_enabel?1.0:0.0;
 		this.PushTag("billboard");
+		this.ClearCRPAuto();
 	}
 	
 	

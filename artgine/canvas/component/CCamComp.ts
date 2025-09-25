@@ -32,7 +32,7 @@ export class CCamComp extends CComponent
     {
         //브러시 정보는 캔버스에 있어서 받으려고 처리
         //CC->Can->Light,Env
-        var cm=this.ProductMsg("CCamCompAck");
+        var cm=this.ProductMsg("SendGetBrush");
         cm.mInter="canvas";
         cm.mMsgData[0]=this;
 
@@ -46,7 +46,7 @@ export class CCamComp extends CComponent
     }
   
     
-    CCamCompReq(_brush : CBrush) 
+    RecvGetBrush(_brush : CBrush) 
     {
 
     }

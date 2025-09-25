@@ -212,7 +212,7 @@ export class CCamCon extends CObject {
                 this.mBspos = null;
             }
         }
-        if (_delay < 200) {
+        if (_delay < 50) {
             const t = Math.max(0, _delay * 0.05);
             this.mRotXCur += this.mRotX;
             this.mRotYCur += this.mRotY;

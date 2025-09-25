@@ -960,7 +960,7 @@ ipcMain.handle("LoadServiceWorker", async (_event,_json: {
 			API_CACHE: boolean;
 		};
 	}
-	bSW.CACHE_NAME="CACHE_NAME_"+GetNowString();
+	bSW.CACHE_NAME=CUniqueID.GetHash();
 	
 	return JSON.stringify(bSW);
 });

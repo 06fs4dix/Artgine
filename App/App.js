@@ -11,7 +11,7 @@ import { CConsol } from '../artgine/basic/CConsol.js';
 import { CCMDMgr } from './CCMDMgr.js';
 import { CPath } from '../artgine/basic/CPath.js';
 import { CString } from '../artgine/basic/CString.js';
-import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr, GetProjName, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
+import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetPluginArr, GetProjName, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './AppFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -650,7 +650,7 @@ ipcMain.handle("LoadServiceWorker", async (_event, _json) => {
     if (buf != null) {
         bSW = ExtractServiceWorkerConfig(CUtil.ArrayToString(buf));
     }
-    bSW.CACHE_NAME = "CACHE_NAME_" + GetNowString();
+    bSW.CACHE_NAME = CUniqueID.GetHash();
     return JSON.stringify(bSW);
 });
 export function GetPrivateIP() {

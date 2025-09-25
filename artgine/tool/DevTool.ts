@@ -48,6 +48,7 @@ import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CWASM } from "../basic/CWASM.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
+import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
 
 
 var gModal : CModalFlex;
@@ -921,31 +922,45 @@ function DevToolDrop(_drop : CDrop)
             CAlert.Info("캔버스를 선택해주세요");
             return;
         }
-        if(_drop.mObject instanceof CSubject==false)
+
+        let dropPos : CVec3;
+        let camDev=gAtl.Brush().GetCamDev();
+        if(camDev.IsOrthographic())
+            dropPos=camDev.ScreenToWorld2DPoint(_drop.mX,_drop.mY);
+        else
+            dropPos=gAtl.Brush().GetCamDev().ScreenToWorld3DPoint(_drop.mX,_drop.mY,CMath.V3Distance(camDev.GetEye(),camDev.GetLook()));
+
+        let can=gLastCanvas as CCanvas;
+        let newSub : CSubject=null;
+        if(_drop.mObject instanceof CSubject)
         {
             
-            return;
+            if(CInput.Key(CInput.eKey.LControl))
+                newSub=(_drop.mObject as CObject).ExportProxy() as CSubject;
+            else
+                newSub=(_drop.mObject as CObject).Export() as CSubject;
+            newSub.SetBlackBoard(false);
+            
+
+            dropPos.z=newSub.GetPos().z;
+
+            
+            //LeftSelect(cobject);
         }
-
-        let cobject : CSubject=null;
-        if(CInput.Key(CInput.eKey.LControl))
-            cobject=(_drop.mObject as CObject).ExportProxy() as CSubject;
-        else
-            cobject=(_drop.mObject as CObject).Export() as CSubject;
-
+        else if(_drop.mObject instanceof CMesh)
+        {
+            newSub=new CSubject();
+            newSub.PushComp(new CPaint3D(_drop.mObject.Key(),true,100));
+        }
+        else if(_drop.mObject instanceof CTexture)
+        {
+            newSub=new CSubject();
+            newSub.PushComp(new CPaint2D(_drop.mObject.Key()));
+        }
+        newSub.SetPos(dropPos);
+        can.PushSub(newSub);
 
         
-        cobject.SetBlackBoard(false);
-        let can=gLastCanvas as CCanvas;
-
-        if(gAtl.Brush().GetCamDev().IsOrthographic())
-        {
-            //let mouse=gAtl.Frame().Input().Mouse();
-            let pos=gAtl.Brush().GetCamDev().ScreenToWorld2DPoint(_drop.mX,_drop.mY);
-            let z=cobject.GetPos().z;
-            cobject.SetPos(new CVec3(pos.x,pos.y,z));
-        }
-        can.PushSub(cobject);
     }
 
     

@@ -13,7 +13,7 @@ export class CRPAuto extends CRenderPass {
         "mTag": "mTag",
     };
     mAnd = new Array();
-    mCopy = true;
+    mCopy = false;
     PushCondition(_con) {
         this.mAnd.push(_con);
     }

@@ -59,7 +59,7 @@ export class CWind extends CCamComp
         super.Update(_delay);
 	}
 
-    CCamCompReq(_brush : CBrush) 
+    RecvGetBrush(_brush : CBrush) 
     {
         if(_brush.mDoubleChk.has(this))	return;
 		_brush.mDoubleChk.add(this);
