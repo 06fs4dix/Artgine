@@ -1,4 +1,4 @@
-const version = 'mfzf9j0i_7';
+const version = 'mg0uwcd1_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -243,6 +243,10 @@ back.SetSca(new CVec3(10, 0.01, 10));
 let teapot = Main.PushSub(new CSubject());
 let pt2 = teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
 pt2.Shadow();
+teapot = Main.PushSub(new CSubject());
+teapot.SetPos(new CVec3(500, 0, 0));
+pt2 = teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+pt2.Shadow();
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "ShadowPlane", () => {
     Main.Clear();
     Main.SetRPMgr(null);
@@ -316,7 +320,7 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred", "DeferredSingle(HafeLambert+P
     pt.Shadow();
     pt.Light();
     pt.PushTag("parallax");
-    pt.PushCShaderAttr(new CShaderAttr("parallaxNormal", 0.01));
+    pt.PushCShaderAttr(new CShaderAttr("parallaxNormal", 0.1));
     back.SetSca(new CVec3(10, 0.01, 10));
     let teapot = Main.PushSub(new CSubject());
     let pt2 = teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
