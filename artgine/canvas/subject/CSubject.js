@@ -311,6 +311,7 @@ export class CSubject extends CObject {
         if (this.mDestroy)
             return;
         this.mDestroy = true;
+        this.mPTArr = null;
         for (var i = 0; i < this.mComArr.length; ++i) {
             this.mComArr[i].Destroy();
         }

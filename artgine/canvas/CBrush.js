@@ -24,6 +24,12 @@ export class CRenPriority {
     static CompareAlpha(a, b) {
         return (b.mAlpha + b.mDistance) - (a.mAlpha + a.mDistance);
     }
+    static CompareNormal(a, b) {
+        return (a.mDistance + a.mTexHash) - (b.mDistance + b.mTexHash);
+    }
+    static CompareReverse(a, b) {
+        return (b.mDistance + b.mTexHash) - (a.mDistance + a.mTexHash);
+    }
 }
 export class CBrush extends CObject {
     constructor(_frame) {

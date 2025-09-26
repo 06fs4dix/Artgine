@@ -18,6 +18,7 @@ import { CRPAuto } from "../CRPMgr.js";
 import { CJSON } from "../../basic/CJSON.js";
 import { CCondition } from "../../util/CStateMachine.js";
 import { CVec1 } from "../../geometry/CVec1.js";
+import { CUtilObj } from "../../basic/CUtilObj.js";
 
 /*
 https://wiki.ogre3d.org/-Point+Light+Attenuation
@@ -79,9 +80,12 @@ export class CLight extends CCamComp
 			}
 		}
 	}
-	EditForm(_pointer : CPointer,_div : HTMLDivElement,_input : HTMLInputElement)
+	EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLInputElement)
 	{
-		if(_pointer.member=="mColor")
+		super.EditForm(_pointer,_body,_input);
+		if(_pointer.member=="mShadowKey")
+			CUtilObj.NullEdit(_pointer,_body,_input,"test");
+		else if(_pointer.member=="mColor")
 		{
 			var div={"tag":"div","html":[]};
 	
@@ -156,7 +160,7 @@ export class CLight extends CCamComp
 					this.EditRefresh();
 				}
 			});
-			_div.append(CDomFactory.DataToDom(div));
+			_body.append(CDomFactory.DataToDom(div));
 
 
 		}

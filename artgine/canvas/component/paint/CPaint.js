@@ -5,24 +5,24 @@ import { CBound } from "../../../geometry/CBound.js";
 import { CMath } from "../../../geometry/CMath.js";
 import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
 import { CRenderPass } from "../../../render/CRenderPass.js";
-import { CTexture } from "../../../render/CTexture.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
-import { CWASM } from "../../../basic/CWASM.js";
-import { SDF } from "../../../z_file/SDF.js";
-import { CComponent } from "../CComponent.js";
-import { CColor, CAlpha, CColorVFX } from "../CColor.js";
-import { CHash } from "../../../basic/CHash.js";
-import { CLoaderOption } from "../../../util/CLoader.js";
-import { CObject } from "../../../basic/CObject.js";
-import { CUtilObj } from "../../../basic/CUtilObj.js";
-import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
-import { CUtilMath } from "../../../geometry/CUtilMath.js";
-import { CClass } from "../../../basic/CClass.js";
+import { CTexture } from "../../../render/CTexture.js";
 import { CAlert } from "../../../basic/CAlert.js";
-import { CRPAuto } from "../../CRPMgr.js";
+import { CClass } from "../../../basic/CClass.js";
+import { CDomFactory } from "../../../basic/CDOMFactory.js";
+import { CHash } from "../../../basic/CHash.js";
+import { CObject } from "../../../basic/CObject.js";
 import { CUniqueID } from "../../../basic/CUniqueID.js";
 import { CUtil } from "../../../basic/CUtil.js";
-import { CDomFactory } from "../../../basic/CDOMFactory.js";
+import { CUtilObj } from "../../../basic/CUtilObj.js";
+import { CWASM } from "../../../basic/CWASM.js";
+import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
+import { CUtilMath } from "../../../geometry/CUtilMath.js";
+import { CLoaderOption } from "../../../util/CLoader.js";
+import { SDF } from "../../../z_file/SDF.js";
+import { CRPAuto } from "../../CRPMgr.js";
+import { CAlpha, CColor, CColorVFX } from "../CColor.js";
+import { CComponent } from "../CComponent.js";
 export class CRenPaint {
     mRenInfoKey = null;
     mCam = null;
@@ -112,7 +112,7 @@ export class CPaint extends CComponent {
     BatchClear() {
         for (let ren of this.mRenPT) {
             if (ren != null) {
-                ren.mDistance = -0x7f000000;
+                ren.mDistance = 0x7FFFFF00;
                 ren.mShow = null;
             }
         }
@@ -205,37 +205,39 @@ export class CPaint extends CComponent {
     UpdateRenPt() {
         for (let i = 0; i < this.mRenPT.length; ++i) {
             let ren = this.mRenPT[i];
-            if (ren.mShow == 2)
+            if (ren.mShow == 2) {
                 ren.mShow = 0;
+                ren.mDistance = 0;
+            }
             if (this.mOwner.IsEnable() == false || this.IsEnable() == false) {
                 ren.mShow = 2;
-                ren.mDistance = -0x70000000;
+                ren.mDistance = 0x7FFFFE00;
             }
-            else if (ren.mDistance == 0 || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
+            else if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
                 let cam = ren.mCam;
                 let plane = ren.mCam.GetPlane();
-                if (ren.mDistance != null) {
+                if (this.mRenderPass[i].mZEarly) {
                     let eye = ren.mCam.GetEye();
                     let pos = CPoolGeo.ProductV3();
-                    if (this.mRenderPass[i].mSort == CRenderPass.eSort.None) {
-                        ren.mDistance = null;
-                    }
-                    else if (cam.GetView().z < -0.98) {
+                    if (cam.GetView().z < -0.98) {
                         ren.mDistance = eye.z - this.mFMat.z;
                     }
                     else {
                         pos.mF32A[0] = this.mFMat.mF32A[12];
                         pos.mF32A[1] = this.mFMat.mF32A[13];
                         pos.mF32A[2] = this.mFMat.mF32A[14];
-                        ren.mDistance = CMath.V3DistancePseudo(eye, pos);
+                        ren.mDistance = CMath.V3Distance(eye, pos);
                     }
+                    ren.mDistance = Math.trunc(ren.mDistance * 128) << 9;
                     CPoolGeo.RecycleV3(pos);
                 }
+                else
+                    ren.mDistance = 0;
                 if (CUtilMath.PlaneSphereInside(plane, this.mBoundFMatC, this.mBoundFMatR, null) || this.mRenderPass[i].mCullFrustum == false)
                     ren.mShow = 0;
                 else {
                     ren.mShow = 1;
-                    ren.mDistance = -0x70000000;
+                    ren.mDistance = 0x7FFFFE00;
                 }
             }
         }
@@ -638,10 +640,8 @@ export class CPaint extends CComponent {
             str += texKey;
         }
         hash = CHash.HashCode(str);
-        hash = 0xffff & hash;
-        let floatHash = hash * 0.000000001;
-        const precision = 1e9;
-        return Math.floor(floatHash * precision) / precision;
+        hash = 0xff & hash;
+        return hash;
     }
     InitPaint() {
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;

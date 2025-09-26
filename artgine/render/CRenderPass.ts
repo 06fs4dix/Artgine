@@ -125,12 +125,14 @@ export class CRenderPass extends CObject
 		ONE_MINUS_CONSTANT_ALPHA:32772,
 		SRC_ALPHA_SATURATE:776,
 	}
-	static eSort={
-		Distance:1,
-		AlphaGroup:0,
-		ReversAlphaGroup:2,
-		None:-1,
-	};
+	// static eZSort={
+	// 	Normal:0,
+	// 	Revers:1,
+	// 	// Distance:1,
+	// 	// AlphaGroup:0,
+	// 	// ReversAlphaGroup:2,
+	// 	// None:-1,
+	// };
 	public mDepthTest : boolean=null;
 	public mDepthWrite : boolean=null;
 	public mAlpha : boolean=null;
@@ -155,7 +157,8 @@ export class CRenderPass extends CObject
 	public mBlitRead="";
 	
 	public mLine=null;
-	public mSort=CRenderPass.eSort.AlphaGroup;
+	//public mZSort=CRenderPass.eZSort.Normal;
+	public mZEarly=true;
 	//public m_sortAlpha=true;
 	public mBlend=[CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
 	public mTag="";
@@ -345,14 +348,14 @@ export class CRenderPass extends CObject
 		}
 		else if(_pointer.member=="mLine")
 			CUtilObj.NullEdit(_pointer,_body,_input,false);
-		else if(_pointer.member=="mSort")
-		{
-			const enumObj = CRenderPass.eSort; // 또는 CRenderPass.ePriority 등
-			const enumKeys = CClass.EnumName(enumObj); // ["CW", "None", "CCW"]
-			const enumVals = enumKeys.map(k => enumObj[k]); // [-1, 0, 1] 
-			_body.append(CUtilObj.Select(_pointer, _input, enumKeys, enumVals, true));
+		// else if(_pointer.member=="mZSort")
+		// {
+		// 	const enumObj = CRenderPass.eZSort; // 또는 CRenderPass.ePriority 등
+		// 	const enumKeys = CClass.EnumName(enumObj); // ["CW", "None", "CCW"]
+		// 	const enumVals = enumKeys.map(k => enumObj[k]); // [-1, 0, 1] 
+		// 	_body.append(CUtilObj.Select(_pointer, _input, enumKeys, enumVals, true));
 			
-		}
+		// }
 	}
 	
 	override EditChange(_pointer : CPointer,_child : boolean)

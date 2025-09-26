@@ -10,7 +10,6 @@ import { CSubject } from "../canvas/subject/CSubject.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
-import { CRenderPass } from "../render/CRenderPass.js";
 import { CCamCon2DFreeMove } from "../util/CCamCon.js";
 import { CChecker } from "../util/CChecker.js";
 import { CFrame } from "../util/CFrame.js";
@@ -116,18 +115,6 @@ function Init() {
             fields.push(`clearColor: ${rp.mClearColor}`);
         if (rp.mCycle != null)
             fields.push(`cycle: ${rp.mCycle}`);
-        if (rp.mSort != null) {
-            let sortStr = "";
-            if (rp.mSort === CRenderPass.eSort.Distance)
-                sortStr = "Distance";
-            else if (rp.mSort === CRenderPass.eSort.AlphaGroup)
-                sortStr = "AlphaGroup";
-            else if (rp.mSort === CRenderPass.eSort.ReversAlphaGroup)
-                sortStr = "ReversAlphaGroup";
-            else if (rp.mSort === CRenderPass.eSort.None)
-                sortStr = "None";
-            fields.push(`sort: ${sortStr}`);
-        }
         const html = `
         <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">
             <h6 class="text-center text-danger mb-2">RenderPass: ${key}</h6>

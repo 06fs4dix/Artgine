@@ -480,6 +480,7 @@ export class CSubject extends CObject implements IFile
 			return;
 		
 		this.mDestroy = true;
+		this.mPTArr = null;
 		//this.m_show = false;
 		for (var i = 0; i < this.mComArr.length; ++i)
 		{

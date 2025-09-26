@@ -490,27 +490,23 @@ export class CUtilRender {
         }
     }
     static TangentCalculate(pa_verArr, pa_norArr, pa_uvArr, pa_index, pa_out) {
-        const vcount = pa_verArr.Size(3);
-        const tan1 = new Array(vcount);
-        const tan2 = new Array(vcount);
-        for (let i = 0; i < vcount; ++i) {
-            tan1[i] = new CVec3(0, 0, 0);
-            tan2[i] = new CVec3(0, 0, 0);
+        var tan1 = new Array();
+        var tan2 = new Array();
+        for (var i = 0; i < pa_verArr.Size(3); ++i) {
+            tan1[i] = new CVec3();
+            tan2[i] = new CVec3();
         }
-        for (let a = 0; a < pa_index.length; a += 3) {
-            const i0 = pa_index[a + 0], i1 = pa_index[a + 1], i2 = pa_index[a + 2];
-            const p0 = pa_verArr.V3(i0), p1 = pa_verArr.V3(i1), p2 = pa_verArr.V3(i2);
-            const e1 = CMath.V3SubV3(p1, p0);
-            const e2 = CMath.V3SubV3(p2, p0);
-            const uv0 = pa_uvArr.V2(i0), uv1 = pa_uvArr.V2(i1), uv2 = pa_uvArr.V2(i2);
-            const du1 = uv1.x - uv0.x, dv1 = uv1.y - uv0.y;
-            const du2 = uv2.x - uv0.x, dv2 = uv2.y - uv0.y;
-            const det = du1 * dv2 - du2 * dv1;
-            if (Math.abs(det) < 1e-20)
-                continue;
-            const r = 1.0 / det;
-            const sdir = new CVec3((dv2 * e1.x - dv1 * e2.x) * r, (dv2 * e1.y - dv1 * e2.y) * r, (dv2 * e1.z - dv1 * e2.z) * r);
-            const tdir = new CVec3((du1 * e2.x - du2 * e1.x) * r, (du1 * e2.y - du2 * e1.y) * r, (du1 * e2.z - du2 * e1.z) * r);
+        for (var a = 0; a < pa_index.length; a += 3) {
+            var i0 = pa_index[a + 0];
+            var i1 = pa_index[a + 1];
+            var i2 = pa_index[a + 2];
+            var v1 = CMath.V3SubV3(pa_verArr.V3(i1), pa_verArr.V3(i0));
+            var v2 = CMath.V3SubV3(pa_verArr.V3(i2), pa_verArr.V3(i0));
+            var uv1 = CMath.Vec2MinusVec2(pa_uvArr.V2(i1), pa_uvArr.V2(i0));
+            var uv2 = CMath.Vec2MinusVec2(pa_uvArr.V2(i2), pa_uvArr.V2(i0));
+            var r = 1.0 / (uv1.x * uv2.y - uv2.x * uv1.y);
+            var sdir = new CVec3((uv2.y * v1.x - uv1.y * v2.x) * r, (uv2.y * v1.y - uv1.y * v2.y) * r, (uv2.y * v1.z - uv1.y * v2.z) * r);
+            var tdir = new CVec3((uv1.x * v2.x - uv2.x * v1.x) * r, (uv1.x * v2.y - uv2.x * v1.y) * r, (uv1.x * v2.z - uv2.x * v1.z) * r);
             tan1[i0] = CMath.V3AddV3(tan1[i0], sdir);
             tan1[i1] = CMath.V3AddV3(tan1[i1], sdir);
             tan1[i2] = CMath.V3AddV3(tan1[i2], sdir);
@@ -518,14 +514,11 @@ export class CUtilRender {
             tan2[i1] = CMath.V3AddV3(tan2[i1], tdir);
             tan2[i2] = CMath.V3AddV3(tan2[i2], tdir);
         }
-        for (let i = 0; i < vcount; ++i) {
-            const n = pa_norArr.V3(i);
-            let t = tan1[i];
-            const ndotT = CMath.V3Dot(n, t);
-            t = CMath.V3SubV3(t, CMath.V3MulFloat(n, ndotT));
-            t = CMath.V3Nor(t);
-            const w = (CMath.V3Dot(CMath.V3Cross(n, t), tan2[i]) < 0.0) ? -1.0 : 1.0;
-            pa_out.V4(i, t.x, t.y, t.z, w);
+        for (var a = 0; a < pa_verArr.Size(3); a++) {
+            var n = pa_norArr.V3(a);
+            var t = tan1[a];
+            var t2 = CMath.V3Nor(tan1[a]);
+            pa_out.V4(a, t2.x, t2.y, t2.z, 1);
         }
     }
     static PolygonNormalToVertexNormal(_nor, pa_index, pa_verNum) {

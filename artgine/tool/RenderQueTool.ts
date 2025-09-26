@@ -141,15 +141,15 @@ function Init() {
         if (rp.mClearDepth != null) fields.push(`clearDepth: ${rp.mClearDepth}`);
         if (rp.mClearColor != null) fields.push(`clearColor: ${rp.mClearColor}`);
         if (rp.mCycle != null) fields.push(`cycle: ${rp.mCycle}`);
-        if (rp.mSort != null) {
-            let sortStr = "";
-            if (rp.mSort === CRenderPass.eSort.Distance) sortStr = "Distance";
-            else if (rp.mSort === CRenderPass.eSort.AlphaGroup) sortStr = "AlphaGroup";
-            else if (rp.mSort === CRenderPass.eSort.ReversAlphaGroup) sortStr = "ReversAlphaGroup";
-            else if (rp.mSort === CRenderPass.eSort.None) sortStr = "None";
+        // if (rp.mSort != null) {
+        //     let sortStr = "";
+        //     if (rp.mSort === CRenderPass.eSort.Distance) sortStr = "Distance";
+        //     else if (rp.mSort === CRenderPass.eSort.AlphaGroup) sortStr = "AlphaGroup";
+        //     else if (rp.mSort === CRenderPass.eSort.ReversAlphaGroup) sortStr = "ReversAlphaGroup";
+        //     else if (rp.mSort === CRenderPass.eSort.None) sortStr = "None";
 
-            fields.push(`sort: ${sortStr}`);
-        }
+        //     fields.push(`sort: ${sortStr}`);
+        // }
 
         const html = `
         <div class="border rounded bg-light p-2" style="width: 256px; font-size: 12px;">

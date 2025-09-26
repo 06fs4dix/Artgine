@@ -4,7 +4,7 @@ import { CClass } from "../basic/CClass.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CConfirm, CDrop, CModal, CModalTitleBar } from "../basic/CModal.js";
-import { CModalFlex, CMonacoViewer } from "../util/CModalUtil.js";
+import { CMDViewer, CModalFlex, CMonacoViewer } from "../util/CModalUtil.js";
 import { CObject, CPointer } from "../basic/CObject.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
@@ -154,48 +154,55 @@ export async function InitDevToolScriptViewer(_github)
     }
     
     gScriptViewer=new CMonacoViewer(json.script,"Runtime.ts",_github);
+    gScriptViewer.SetCloseEsc(false);
 
 
     gScriptViewer.mHeader.prepend(CDomFactory.DataToDom(
         "<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>"+
         "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>"+
-        "<button type='button' class='btn btn-info' id='mvGPT_btn'>GPT</button>"));
-
+        //"<button type='button' class='btn btn-info' id='mvGPT_btn'>GPT</button>"
+        "<button type='button' class='btn btn-info' id='mvSample_btn'>Sample</button>"
+    
+    
+    ));
+    CUtil.ID("mvSample_btn").addEventListener("click",async ()=>{
+        new CMDViewer(CPath.PHPC()+"artgine/tool/RunTimeSample.md");
+    });
        
     
-    CUtil.ID("mvGPT_btn").addEventListener("click",async ()=>{
+    // CUtil.ID("mvGPT_btn").addEventListener("click",async ()=>{
 
        
 
-        const URL_ARTGINE="https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot";
-        const modal = new CModal("mvGPT_link_modal");
-        modal.SetOverlay(true); // 배경 오버레이
-        modal.SetHeader("GPT Artgine bot Link");
-        modal.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 2);
-        // 본문: 클릭 가능한 앵커 + 복사용 input
-        modal.SetBody(`
-            <div style="padding:12px;">
-                <p>Get help from GPT</p>
-                <a href="${URL_ARTGINE}" target="_blank" rel="noopener noreferrer">
-                    ${URL_ARTGINE}
-                </a>
-                <div style="margin-top:10px;">
-                    <input id="mvGPT_link_copy" type="text" value="${URL_ARTGINE}" readonly style="width:100%;"/>
-                </div>
-            </div>
-        `);
+    //     const URL_ARTGINE="https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot";
+    //     const modal = new CModal("mvGPT_link_modal");
+    //     modal.SetOverlay(true); // 배경 오버레이
+    //     modal.SetHeader("GPT Artgine bot Link");
+    //     modal.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 2);
+    //     // 본문: 클릭 가능한 앵커 + 복사용 input
+    //     modal.SetBody(`
+    //         <div style="padding:12px;">
+    //             <p>Get help from GPT</p>
+    //             <a href="${URL_ARTGINE}" target="_blank" rel="noopener noreferrer">
+    //                 ${URL_ARTGINE}
+    //             </a>
+    //             <div style="margin-top:10px;">
+    //                 <input id="mvGPT_link_copy" type="text" value="${URL_ARTGINE}" readonly style="width:100%;"/>
+    //             </div>
+    //         </div>
+    //     `);
 
-        modal.Open();
-        modal.Show();
+    //     modal.Open();
+    //     modal.Show();
 
        
-    });
-    // CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
-    //     let moudle=await CScript.Build("Test.ts",gScriptViewer.GetSource());
     // });
+   
 
     CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
-        let moudle=await CScript.Build(CUniqueID.Get()+".ts",gScriptViewer.GetSource());
+        let source=gScriptViewer.GetSource();
+        //let moudle=await CScript.Build(CHash.SHA256(source).substr(0, 32)+".ts",source);
+        let moudle=await CScript.Build(CUniqueID.GetHash()+".ts",source);
     });
     CUtil.ID("mvSave_btn").addEventListener("click",async ()=>{
         
@@ -965,8 +972,10 @@ function DevToolDrop(_drop : CDrop)
 
     
 }
+let gUpdateTime=0;
 function DevToolUpdate(_delay)
 {
+    
     if(gLeftSelect instanceof CSubject)
     {
         let cam=gAtl.Brush().GetCamDev();
@@ -982,96 +991,6 @@ function DevToolUpdate(_delay)
     
 
 
-    //브러시쪽 삭제는 처리안했다. 삭제될일이 거의 없어서 안함..
-    let collapse=CUtil.ID(gAtl.Brush().ObjHash()+"_collapse");
-    if(collapse==null)  return;
-    if(collapse.className.indexOf("show")!=-1)
-    {
-        const bdiv = CUtil.ID(gAtl.Brush().ObjHash() + "_ul");
-        for(let obj0 of gAtl.Brush().mCameraMap.values())
-        {
-            let item=gLeftItem.get(obj0.ObjHash());
-            if(item!=null)
-            {
-                const li = CUtil.ID(obj0.ObjHash() + "_li");
-                
-                
-                
-                const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
-                if (nameDiv && nameDiv.textContent !== obj0.Key()) {
-                    nameDiv.textContent = obj0.Key();
-                }
-
-                
-                
-            }
-            else//추가
-            {
-                const newItem = CDomFactory.DataToDom(LeftNewItem(obj0));
-                bdiv.append(newItem);
-                gLeftItem.set(obj0.ObjHash(), obj0);
-                LeftModifyItem(gAtl.Brush().ObjHash());
-            }
-        }
-    }
-
-    //추가,삭제 둘다 제외함
-    for (let canvas of gAtl.mCanvasMap.values()) 
-    {
-        //const bdiv = CUtil.ID(canvas.ObjHash() + "_ul");
-        let item = gLeftItem.get(canvas.ObjHash());
-        if (item != null) 
-        {
-            const li = CUtil.ID(canvas.ObjHash() + "_li");
-            const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
-            if (nameDiv && nameDiv.textContent !== canvas.Key()) 
-            {
-                nameDiv.textContent = canvas.Key();
-            }
-            const iconEl = li.querySelector(".card-body .d-flex.align-items-center > i");
-            if (iconEl) {
-                const targetClass = canvas.IsPause() ? "bi bi-aspect-ratio-fill" : "bi bi-aspect-ratio";
-                if (iconEl.className !== targetClass) {
-                    iconEl.className = targetClass;
-                }
-            }
-        }
-
-        for(let subject of canvas.GetSubMap().values())
-        {
-            SyncSubjectTreeRecursive(canvas,subject,false);
-        }
-        for(let subject of canvas.GetResMap().values())
-        {
-            if(subject instanceof CSubject)
-                SyncSubjectTreeRecursive(canvas,subject,true);
-        }
-    }
-    
-    for (let [objHash, obj] of gLeftItem.entries()) 
-    {
-        if (obj instanceof CSubject && obj.IsDestroy()) 
-        {
-            const li = CUtil.ID(obj.ObjHash() + "_li");
-            const parentUl = li?.parentElement;
-            li?.remove();
-
-            // 선택 해제
-            if (gLeftSelect === obj) {
-                const rightPanel = gModal.FindFlex(2) as HTMLElement;
-                rightPanel.innerHTML = "";
-                gLeftSelect = null;
-            }
-
-            // 💡 부모 DOM의 ID에서 _ul 제거하고 LeftModifyItem 호출
-            if (parentUl && parentUl.id.endsWith("_ul")) {
-                const parentHash = parentUl.id.replace(/_ul$/, "");
-                LeftModifyItem(parentHash);
-            }
-
-            gLeftItem.delete(objHash);
-        }
-    }
     
 
 
@@ -1317,21 +1236,109 @@ function DevToolUpdate(_delay)
         else
             LeftSelect(null);
     }//if LButton
-    // if(gAtl.Frame().Input().KeyUp(CInput.eKey.Delete))
-    // {
-    //     DevToolLeftRemove();
-    // }
+ 
     if(gAtl.Frame().Input().KeyUp(CInput.eKey.Esc))
     {
         LeftSelect(null);
     }
-    // if(gAtl.Frame().Input().KeyUp(CInput.eKey.C) && gAtl.Frame().Input().KeyDown(CInput.eKey.LControl) && gLeftSelect instanceof CSubject) 
-    // {
-    //     navigator.clipboard.writeText(gLeftSelect.ToStr());
-    //     CAlert.Info("Copy!");
-        
-        
-    // }
+    //=====================================================================================================
+
+    if(gUpdateTime>0)
+    {
+        gUpdateTime-=_delay;
+        return;
+    }
+    gUpdateTime=500;
+    //브러시쪽 삭제는 처리안했다. 삭제될일이 거의 없어서 안함..
+    let collapse=CUtil.ID(gAtl.Brush().ObjHash()+"_collapse");
+    if(collapse==null)  return;
+    if(collapse.className.indexOf("show")!=-1)
+    {
+        const bdiv = CUtil.ID(gAtl.Brush().ObjHash() + "_ul");
+        for(let obj0 of gAtl.Brush().mCameraMap.values())
+        {
+            let item=gLeftItem.get(obj0.ObjHash());
+            if(item!=null)
+            {
+                const li = CUtil.ID(obj0.ObjHash() + "_li");
+                
+                
+                
+                const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
+                if (nameDiv && nameDiv.textContent !== obj0.Key()) {
+                    nameDiv.textContent = obj0.Key();
+                }
+
+                
+                
+            }
+            else//추가
+            {
+                const newItem = CDomFactory.DataToDom(LeftNewItem(obj0));
+                bdiv.append(newItem);
+                gLeftItem.set(obj0.ObjHash(), obj0);
+                LeftModifyItem(gAtl.Brush().ObjHash());
+            }
+        }
+    }
+
+    //추가,삭제 둘다 제외함
+    for (let canvas of gAtl.mCanvasMap.values()) 
+    {
+        //const bdiv = CUtil.ID(canvas.ObjHash() + "_ul");
+        let item = gLeftItem.get(canvas.ObjHash());
+        if (item != null) 
+        {
+            const li = CUtil.ID(canvas.ObjHash() + "_li");
+            const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
+            if (nameDiv && nameDiv.textContent !== canvas.Key()) 
+            {
+                nameDiv.textContent = canvas.Key();
+            }
+            const iconEl = li.querySelector(".card-body .d-flex.align-items-center > i");
+            if (iconEl) {
+                const targetClass = canvas.IsPause() ? "bi bi-aspect-ratio-fill" : "bi bi-aspect-ratio";
+                if (iconEl.className !== targetClass) {
+                    iconEl.className = targetClass;
+                }
+            }
+        }
+
+        for(let subject of canvas.GetSubMap().values())
+        {
+            SyncSubjectTreeRecursive(canvas,subject,false);
+        }
+        for(let subject of canvas.GetResMap().values())
+        {
+            if(subject instanceof CSubject)
+                SyncSubjectTreeRecursive(canvas,subject,true);
+        }
+    }
+    
+    for (let [objHash, obj] of gLeftItem.entries()) 
+    {
+        if (obj instanceof CSubject && obj.IsDestroy()) 
+        {
+            const li = CUtil.ID(obj.ObjHash() + "_li");
+            const parentUl = li?.parentElement;
+            li?.remove();
+
+            // 선택 해제
+            if (gLeftSelect === obj) {
+                const rightPanel = gModal.FindFlex(2) as HTMLElement;
+                rightPanel.innerHTML = "";
+                gLeftSelect = null;
+            }
+
+            // 💡 부모 DOM의 ID에서 _ul 제거하고 LeftModifyItem 호출
+            if (parentUl && parentUl.id.endsWith("_ul")) {
+                const parentHash = parentUl.id.replace(/_ul$/, "");
+                LeftModifyItem(parentHash);
+            }
+
+            gLeftItem.delete(objHash);
+        }
+    }
 
 }
 function DevToolCamKeyChange(_key : string)

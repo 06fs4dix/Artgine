@@ -13,6 +13,7 @@ import { CUpdate } from "../../basic/Basic.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
 import { CCondition } from "../../util/CStateMachine.js";
+import { CUtilObj } from "../../basic/CUtilObj.js";
 export class CLight extends CCamComp {
     mCascadeCycle = [0, -1, -1];
     mShadowDistance = 1;
@@ -44,8 +45,11 @@ export class CLight extends CCamComp {
             }
         }
     }
-    EditForm(_pointer, _div, _input) {
-        if (_pointer.member == "mColor") {
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mShadowKey")
+            CUtilObj.NullEdit(_pointer, _body, _input, "test");
+        else if (_pointer.member == "mColor") {
             var div = { "tag": "div", "html": [] };
             div.html.push({ "<>": "br" });
             let wtKey = this.ObjHash();
@@ -99,7 +103,7 @@ export class CLight extends CCamComp {
                     this.EditRefresh();
                 }
             });
-            _div.append(CDomFactory.DataToDom(div));
+            _body.append(CDomFactory.DataToDom(div));
         }
     }
     GetTex() { return this.GetOwner().GetFrame().Pal().GetShadowWriteTex(); }

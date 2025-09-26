@@ -1,43 +1,37 @@
 
-import {CMat} from "../../../geometry/CMat.js"
-import {CVec3} from "../../../geometry/CVec3.js"
-import {CVec4} from "../../../geometry/CVec4.js"
+import { CMat } from "../../../geometry/CMat.js"
+import { CVec3 } from "../../../geometry/CVec3.js"
+import { CVec4 } from "../../../geometry/CVec4.js"
 
-import {CBound} from "../../../geometry/CBound.js"
-import {CMath} from "../../../geometry/CMath.js"
-import {CMeshDrawNode} from "../../../render/CMeshDrawNode.js"
-import {CShader} from "../../../render/CShader.js"
-import {CMeshCreateInfo} from "../../../render/CMeshCreateInfo.js"
+import { CBound } from "../../../geometry/CBound.js"
+import { CMath } from "../../../geometry/CMath.js"
+import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js"
+import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js"
+import { CShader } from "../../../render/CShader.js"
 
-import {CRenderPass} from "../../../render/CRenderPass.js"
-import {CTexture} from "../../../render/CTexture.js"
-import {CShaderAttr} from "../../../render/CShaderAttr.js"
-import {CJSON} from "../../../basic/CJSON.js"
-import {CDevice} from "../../../render/CDevice.js"
 import { CBatch } from "../../../render/CBatchMgr.js"
-import {CH5Canvas} from "../../../render/CH5Canvas.js"
+import { CRenderPass } from "../../../render/CRenderPass.js"
+import { CShaderAttr } from "../../../render/CShaderAttr.js"
+import { CTexture } from "../../../render/CTexture.js"
 
-import {CWASM} from "../../../basic/CWASM.js"
-import { SDF } from "../../../z_file/SDF.js"
-import {CComponent} from "../CComponent.js"
-import {CSubject} from "../../subject/CSubject.js"
-import {CColor,  CAlpha, CColorVFX } from "../CColor.js"
-import {CHash} from "../../../basic/CHash.js"
-import { CCamera } from "../../../render/CCamera.js"
-import { CLoaderOption } from "../../../util/CLoader.js"
-import { CObject, CPointer } from "../../../basic/CObject.js"
-import { CUtilObj } from "../../../basic/CUtilObj.js"
-import { CPoolGeo } from "../../../geometry/CPoolGeo.js"
-import { CUtilMath } from "../../../geometry/CUtilMath.js"
-import { CClass } from "../../../basic/CClass.js"
 import { CAlert } from "../../../basic/CAlert.js"
-import { CRPAuto } from "../../CRPMgr.js"
-import { CVec1 } from "../../../geometry/CVec1.js"
-import { CPreferences } from "../../../basic/CPreferences.js"
-import { CConsol } from "../../../basic/CConsol.js"
+import { CClass } from "../../../basic/CClass.js"
+import { CDomFactory } from "../../../basic/CDOMFactory.js"
+import { CHash } from "../../../basic/CHash.js"
+import { CObject, CPointer } from "../../../basic/CObject.js"
 import { CUniqueID } from "../../../basic/CUniqueID.js"
 import { CUtil } from "../../../basic/CUtil.js"
-import { CDomFactory } from "../../../basic/CDOMFactory.js"
+import { CUtilObj } from "../../../basic/CUtilObj.js"
+import { CWASM } from "../../../basic/CWASM.js"
+import { CPoolGeo } from "../../../geometry/CPoolGeo.js"
+import { CUtilMath } from "../../../geometry/CUtilMath.js"
+import { CCamera } from "../../../render/CCamera.js"
+import { CLoaderOption } from "../../../util/CLoader.js"
+import { SDF } from "../../../z_file/SDF.js"
+import { CRPAuto } from "../../CRPMgr.js"
+import { CSubject } from "../../subject/CSubject.js"
+import { CAlpha, CColor, CColorVFX } from "../CColor.js"
+import { CComponent } from "../CComponent.js"
 
 export class CRenPaint
 {
@@ -203,7 +197,7 @@ export class CPaint extends CComponent
 		{
 			if(ren!=null)
 			{
-				ren.mDistance=-0x7f000000;
+				ren.mDistance=0x7FFFFF00;
 				ren.mShow=null;
 			}
 				
@@ -328,29 +322,31 @@ export class CPaint extends CComponent
 		{
 			let ren=this.mRenPT[i];
 			if(ren.mShow==2)
+			{
 				ren.mShow=0;
+				ren.mDistance=0;
+			}
+				
 		
 			if(this.mOwner.IsEnable()==false || this.IsEnable()==false)
 			{
 				ren.mShow=2;
-				ren.mDistance=-0x70000000;
+				ren.mDistance=0x7FFFFE00;
 			}	
 			//중간 배치 삭제하면 컬링 갱신안되는 버그가 있다
 			//카메라를 움직이면 정산이됌
-			else if(ren.mDistance==0 || ren.mCam.mUpdateMat!=0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize())
+			else if(ren.mDistance==null || ren.mCam.mUpdateMat!=0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize())
 			{
 				let cam=ren.mCam;
 				let plane=ren.mCam.GetPlane();
 
-				if(ren.mDistance!=null)
+			
+				
+				if(this.mRenderPass[i].mZEarly)
 				{
 					let eye=ren.mCam.GetEye();
 					let pos=CPoolGeo.ProductV3();
-					if(this.mRenderPass[i].mSort==CRenderPass.eSort.None)
-					{
-						ren.mDistance=null;
-					}
-					else if(cam.GetView().z<-0.98) 
+					if(cam.GetView().z<-0.98) 
 					{
 						ren.mDistance = eye.z - this.mFMat.z;
 					}
@@ -359,12 +355,17 @@ export class CPaint extends CComponent
 						pos.mF32A[0]=this.mFMat.mF32A[12];
 						pos.mF32A[1]=this.mFMat.mF32A[13];
 						pos.mF32A[2]=this.mFMat.mF32A[14];
-						ren.mDistance = CMath.V3DistancePseudo(eye, pos);
+						ren.mDistance = CMath.V3Distance(eye, pos);
 						
 					}
+					ren.mDistance=Math.trunc(ren.mDistance*128)<<9;
 					CPoolGeo.RecycleV3(pos);
-					
 				}
+				else
+					ren.mDistance=0;
+				
+				
+			
 				
 			
 				//let camOff=_cam.Offset();
@@ -374,7 +375,7 @@ export class CPaint extends CComponent
 				else
 				{
 					ren.mShow=1;
-					ren.mDistance=-0x70000000;
+					ren.mDistance=0x7FFFFE00;
 				}
 					
 			}
@@ -975,12 +976,12 @@ export class CPaint extends CComponent
 		}
 		hash=CHash.HashCode(str);
 		// 특정 비트 영역만 유지 (0x000fffff 마스킹) 
-		hash = 0xffff & hash;
+		hash = 0xff & hash;
 
-		let floatHash = hash * 0.000000001; // 예: 0.000065535
+		// let floatHash = hash * 0.000000001; // 예: 0.000065535
 
-		const precision = 1e9; // 9자리 정밀도
-		return Math.floor(floatHash * precision) / precision;
+		// const precision = 1e9; // 9자리 정밀도
+		return hash;
 	}
 
 	InitPaint()

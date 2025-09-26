@@ -242,7 +242,7 @@ export class CShadowPlane extends CPaint2D
         for(let rp of this.mRenderPass)
         {
             rp.mPriority=CRenderPass.ePriority.AlphaAuto;
-            rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
+            //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
             //rp.mSort=CRenderPass.eSort.AlphaGroup;
             rp.mCullFace = CRenderPass.eCull.None;
         }

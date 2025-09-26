@@ -263,7 +263,12 @@ export class CUtilWeb {
 
 		// 2. ts → js 변환
 		const jsCode = window["ts"].transpileModule(_source, {
-			compilerOptions: { module: window["ts"].ModuleKind.ESNext }
+			compilerOptions: { 
+				module: window["ts"].ModuleKind.ESNext,
+				target: window["ts"].ScriptTarget.ES2020,           // 또는 ES2015 이상으로 올리기
+				downlevelIteration: true,              // ★ 중요
+				lib: ["es2015", "dom"]                 // Map/Iterator 타입 인식
+			}
 		}).outputText;
 
 		// 3. import 경로 확장자 자동 패치

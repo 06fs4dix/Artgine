@@ -94,12 +94,6 @@ export class CRenderPass extends CObject {
         ONE_MINUS_CONSTANT_ALPHA: 32772,
         SRC_ALPHA_SATURATE: 776,
     };
-    static eSort = {
-        Distance: 1,
-        AlphaGroup: 0,
-        ReversAlphaGroup: 2,
-        None: -1,
-    };
     mDepthTest = null;
     mDepthWrite = null;
     mAlpha = null;
@@ -118,7 +112,7 @@ export class CRenderPass extends CObject {
     mBlitType = 0;
     mBlitRead = "";
     mLine = null;
-    mSort = CRenderPass.eSort.AlphaGroup;
+    mZEarly = true;
     mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.SRC_ALPHA, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
     mTag = "";
     SetPriority(_v) { this.mPriority = _v; this.Reset(); }
@@ -259,12 +253,6 @@ export class CRenderPass extends CObject {
         }
         else if (_pointer.member == "mLine")
             CUtilObj.NullEdit(_pointer, _body, _input, false);
-        else if (_pointer.member == "mSort") {
-            const enumObj = CRenderPass.eSort;
-            const enumKeys = CClass.EnumName(enumObj);
-            const enumVals = enumKeys.map(k => enumObj[k]);
-            _body.append(CUtilObj.Select(_pointer, _input, enumKeys, enumVals, true));
-        }
     }
     EditChange(_pointer, _child) {
         super.EditChange(_pointer, _child);

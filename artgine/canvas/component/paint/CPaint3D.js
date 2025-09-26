@@ -11,9 +11,12 @@ import { CVec1 } from "../../../geometry/CVec1.js";
 import { CDevice } from "../../../render/CDevice.js";
 import { CMesh } from "../../../render/CMesh.js";
 import { CMeshCopyNode } from "../../../render/CMeshCopyNode.js";
+import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
+import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
 import { CMeshPaint } from "../../../render/CMeshPaint.js";
 import { CMeshTreeUpdate } from "../../../render/CMeshTreeUpdate.js";
 import { CRenderPass } from "../../../render/CRenderPass.js";
+import { CVertexFormat } from "../../../render/CShader.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
@@ -194,16 +197,7 @@ export class CPaint3D extends CPaint {
                 node.Push(new CMeshPaint(nodemp.md.mColleague, nodemp.mpi.mColleague, null));
             }
         }
-        if (this.mCenterPos)
-            this.mLMat.SetV3(3, CMath.V3MulFloat(this.mBound.GetCenter(), -1));
-        if (this.mTargetScale != 0) {
-            let size = this.mBound.GetSize();
-            let maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
-            this.mLMat.mF32A[0] = this.mTargetScale / maxSize;
-            this.mLMat.mF32A[5] = this.mTargetScale / maxSize;
-            this.mLMat.mF32A[10] = this.mTargetScale / maxSize;
-        }
-        this.mLMat.UnitCheck();
+        this.ExeLocalMat(this.mCenterPos, this.mTargetScale);
         this.BatchClear();
         this.mUpdateFMat = true;
         this.mBoundFMatR = 0;
@@ -340,6 +334,18 @@ export class CPaint3D extends CPaint {
     }
     GetMesh() { return this.mMesh; }
     GetTree() { return this.mTree; }
+    ExeLocalMat(_centerPos = false, _targetScale = 0) {
+        if (this.mCenterPos)
+            this.mLMat.SetV3(3, CMath.V3MulFloat(this.mBound.GetCenter(), -1));
+        if (this.mTargetScale != 0) {
+            let size = this.mBound.GetSize();
+            let maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
+            this.mLMat.mF32A[0] = this.mTargetScale / maxSize;
+            this.mLMat.mF32A[5] = this.mTargetScale / maxSize;
+            this.mLMat.mF32A[10] = this.mTargetScale / maxSize;
+        }
+        this.mLMat.UnitCheck();
+    }
 }
 export class CPaintCube extends CPaint3D {
     constructor(_cubeTex) {
@@ -368,5 +374,55 @@ export class CPaintCube extends CPaint3D {
             this.PushTag("star");
         if (_light)
             this.PushTag("light");
+    }
+}
+class CPaint3DMerge extends CPaint3D {
+    constructor(_meshList, _matList) {
+        super();
+    }
+    mMeshList;
+    mMatList;
+    mMeshDataNode = new CMeshDataNode();
+    Start() {
+        this.mMeshDataNode.ci = new CMeshCreateInfo();
+        for (let key of this.mMeshList) {
+            let mesh = this.GetOwner().GetFrame().Res().Find(key);
+        }
+    }
+    Merge(_WMat, _PMat, _mesh, _node, _ci, _bound) {
+        if (_node.mData.ci != null) {
+            let tvb = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Vertex);
+            let tub = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+            let tnb = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+            let ttb = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            for (let tex of _mesh.texture) {
+                let push = true;
+                for (let i = 0; i < this.mTexture.length; ++i) {
+                    if (this.mTexture[i] == tex) {
+                        push = false;
+                        break;
+                    }
+                }
+                if (push)
+                    this.mTexture.push(tex);
+            }
+            let texOff = [];
+            let ovb = _ci.GetVFType(CVertexFormat.eIdentifier.Vertex);
+            let oub = _ci.GetVFType(CVertexFormat.eIdentifier.UV);
+            let onb = _ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+            let otb = _ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            for (let i = 0; i < tvb[0].bufF.Size(3); ++i) {
+                let v = tvb[0].bufF.V3(i);
+                let u = tub[0].bufF.V2(i);
+                let n = tnb[0].bufF.V3(i);
+                let t = ttb[0].bufF.V3(i);
+                v = CMath.V3MulMatCoordi(v, CMath.MatMul(_PMat, _WMat));
+                _bound.InitBound(v);
+                ovb[0].bufF.Push(CMath.V3MulMatCoordi(v, CMath.MatMul(_PMat, _WMat)));
+                oub[0].bufF.Push(u);
+                onb[0].bufF.Push(n);
+                otb[0].bufF.Push(t);
+            }
+        }
     }
 }

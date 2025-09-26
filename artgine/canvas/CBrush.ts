@@ -41,6 +41,14 @@ export class CRenPriority
     {
         return (b.mAlpha+b.mDistance)-(a.mAlpha+a.mDistance);
     }
+	static CompareNormal(a : CRenPaint,b : CRenPaint)
+    {
+        return (a.mDistance+a.mTexHash)-(b.mDistance+b.mTexHash);
+    }
+	static CompareReverse(a : CRenPaint,b : CRenPaint)
+    {
+        return (b.mDistance+b.mTexHash)-(a.mDistance+a.mTexHash);
+    }
 }
 
 

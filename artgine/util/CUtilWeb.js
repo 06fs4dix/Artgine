@@ -164,7 +164,12 @@ export class CUtilWeb {
             }
         }
         const jsCode = window["ts"].transpileModule(_source, {
-            compilerOptions: { module: window["ts"].ModuleKind.ESNext }
+            compilerOptions: {
+                module: window["ts"].ModuleKind.ESNext,
+                target: window["ts"].ScriptTarget.ES2020,
+                downlevelIteration: true,
+                lib: ["es2015", "dom"]
+            }
         }).outputText;
         return patchImportPaths(jsCode);
     }
