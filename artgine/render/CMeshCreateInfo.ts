@@ -1,5 +1,6 @@
 
 import {CObject} from "../basic/CObject.js";
+import { CBound } from "../geometry/CBound.js";
 import {CFloat32Mgr} from "../geometry/CFloat32Mgr.js"
 import { CVertexFormat } from "./CShader.js";
 
@@ -28,7 +29,7 @@ export class CMeshCreateInfo extends CObject
 	public indexCount : number;
 	public vertex : Array<CMeshBuf>;
 	public index =new Array<number>();
-
+	bound : CBound;
 
 	
 	constructor()
@@ -38,7 +39,7 @@ export class CMeshCreateInfo extends CObject
 		this.vertexCount = 0;
 		this.indexCount = 0;
 		this.vertex=new Array<CMeshBuf>();
-
+		this.bound=new CBound();
 
 	}
 	GetVFType(_type)

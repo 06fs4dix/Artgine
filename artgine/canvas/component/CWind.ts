@@ -1,10 +1,10 @@
 import {CVec3} from "../../geometry/CVec3.js";
 import {CDevice} from "../../render/CDevice.js";
 import {CBrush} from "../CBrush.js";
-import {CCamComp} from "./CCamComp.js";
+import {CBrushComp} from "./CBrushComp.js";
 import {CComponent} from "./CComponent.js";
 
-export class CWind extends CCamComp
+export class CWind extends CBrushComp
 {
     //0,0,0이면 중심점 기준으로 바람
     public mDir : CVec3 = new CVec3(1,0,0);
@@ -57,32 +57,33 @@ export class CWind extends CCamComp
     Update(_delay)
 	{
         super.Update(_delay);
-	}
 
-    RecvGetBrush(_brush : CBrush) 
-    {
-        if(_brush.mDoubleChk.has(this))	return;
-		_brush.mDoubleChk.add(this);
+        //if(this.mBruch.mDoubleChk.has(this))	return;
+		//this.mBruch.mDoubleChk.add(this);
         
-        if(_brush.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)/4)
+        if(this.mBruch.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)/4)
             return;
 
-        _brush.mWindDir[_brush.mWindCount * 4 + 0] = this.mDir.x;
-        _brush.mWindDir[_brush.mWindCount * 4 + 1] = this.mDir.y;
-        _brush.mWindDir[_brush.mWindCount * 4 + 2] = this.mDir.z;
-        _brush.mWindDir[_brush.mWindCount * 4 + 3] = this.mPower;
+        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 0] = this.mDir.x;
+        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 1] = this.mDir.y;
+        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 2] = this.mDir.z;
+        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 3] = this.mPower;
 
-        _brush.mWindPos[_brush.mWindCount * 4 + 0] = this.GetOwner().GetWMat().x;
-        _brush.mWindPos[_brush.mWindCount * 4 + 1] = this.GetOwner().GetWMat().y;
-        _brush.mWindPos[_brush.mWindCount * 4 + 2] = this.GetOwner().GetWMat().z;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 0] = this.GetOwner().GetWMat().x;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 1] = this.GetOwner().GetWMat().y;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 2] = this.GetOwner().GetWMat().z;
         //아마도 이후에 noise texture offset을 넣으면 좋을듯함
-        _brush.mWindPos[_brush.mWindCount * 4 + 3] = this.mUseWeight ? 1.0 : 0.0;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 3] = this.mUseWeight ? 1.0 : 0.0;
 
-        _brush.mWindInfo[_brush.mWindCount * 4 + 0] = this.mInnerRadius;
-        _brush.mWindInfo[_brush.mWindCount * 4 + 1] = this.mOuterRadius;
-        _brush.mWindInfo[_brush.mWindCount * 4 + 2] = this.mFrequency;
-        _brush.mWindInfo[_brush.mWindCount * 4 + 3] = this.mWaveLength;
+        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 0] = this.mInnerRadius;
+        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 1] = this.mOuterRadius;
+        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 2] = this.mFrequency;
+        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 3] = this.mWaveLength;
 
-        _brush.mWindCount++;
-    }
+        this.mBruch.mWindCount++;
+	}
+    
+
+
+    
 }

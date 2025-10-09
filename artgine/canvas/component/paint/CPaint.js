@@ -79,7 +79,7 @@ export class CPaint extends CComponent {
     }
     SetEnable(_val) {
         super.SetEnable(_val);
-        this.BatchClear();
+        this.ClearCRPAuto();
     }
     GetColorModel() { return this.mColorModel; }
     GetAlphaModel() { return this.mAlphaModel; }
@@ -205,15 +205,7 @@ export class CPaint extends CComponent {
     UpdateRenPt() {
         for (let i = 0; i < this.mRenPT.length; ++i) {
             let ren = this.mRenPT[i];
-            if (ren.mShow == 2) {
-                ren.mShow = 0;
-                ren.mDistance = 0;
-            }
-            if (this.mOwner.IsEnable() == false || this.IsEnable() == false) {
-                ren.mShow = 2;
-                ren.mDistance = 0x7FFFFE00;
-            }
-            else if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
+            if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
                 let cam = ren.mCam;
                 let plane = ren.mCam.GetPlane();
                 if (this.mRenderPass[i].mZEarly) {
@@ -246,9 +238,9 @@ export class CPaint extends CComponent {
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
         this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
         if (this.mColorModel.mModel != SDF.eColorModel.None)
-            this.PushTag("color");
+            this.PushTag("CAModel");
         if (this.mColorModel.mModel != SDF.eAlphaModel.None)
-            this.PushTag("color");
+            this.PushTag("CAModel");
         if (this.mShaderAttrMap.get("colorVFX") != null)
             this.mColorVFX = this.mShaderAttrMap.get("colorVFX").mData;
     }
@@ -290,10 +282,10 @@ export class CPaint extends CComponent {
         }
         else if (_pointer.IsRef(this.mTag)) {
             this.mTagKey = null;
-            this.BatchClear();
+            this.ClearCRPAuto();
         }
         else if (_pointer.member == "mColorModel" || _pointer.member == "mAlphaModel") {
-            this.PushTag("color");
+            this.PushTag("CAModel");
             this.ClearCRPAuto();
         }
         else if (_child) {
@@ -305,11 +297,11 @@ export class CPaint extends CComponent {
                     CAlert.E("CRPAuto는 페인트 내에서 수정 불가합니다.");
             }
             else if (_pointer.IsRef(this.mAlphaModel)) {
-                this.PushTag("color");
+                this.PushTag("CAModel");
                 this.ClearCRPAuto();
             }
             else if (_pointer.IsRef(this.mColorModel)) {
-                this.PushTag("color");
+                this.PushTag("CAModel");
                 this.ClearCRPAuto();
             }
             else if (_pointer.IsRef(this.mColorVFX)) {
@@ -381,12 +373,15 @@ export class CPaint extends CComponent {
     }
     Light() {
         this.PushTag("light");
+        this.ClearCRPAuto();
     }
     Shadow() {
         this.PushTag("shadow");
+        this.ClearCRPAuto();
     }
     AlphaCut() {
         this.PushTag("alphaCut");
+        this.ClearCRPAuto();
     }
     GetRenderPass() { return this.mRenderPass; }
     PushRenderPass(_rp, _copy = true) {
@@ -432,18 +427,18 @@ export class CPaint extends CComponent {
         this.mColorModel.mF32A[3] = SDF.eColorModel.RGBAdd;
         this.mAlphaModel.mF32A[0] = _rgba.mF32A[3];
         this.mAlphaModel.mF32A[1] = SDF.eAlphaModel.Add;
-        if (this.mTag.has("color") == false)
+        if (this.mTag.has("CAModel") == false)
             this.BatchClear();
-        this.PushTag("color");
+        this.PushTag("CAModel");
     }
     SetColorModel(_color) {
         this.mColorModel.mF32A[0] = _color.mF32A[0];
         this.mColorModel.mF32A[1] = _color.mF32A[1];
         this.mColorModel.mF32A[2] = _color.mF32A[2];
         this.mColorModel.mF32A[3] = _color.mF32A[3];
-        if (this.mTag.has("color") == false)
+        if (this.mTag.has("CAModel") == false)
             this.BatchClear();
-        this.PushTag("color");
+        this.PushTag("CAModel");
     }
     SetAlphaModel(_alpha) {
         let as = this.AlphaState();
@@ -451,9 +446,9 @@ export class CPaint extends CComponent {
         this.mAlphaModel.mF32A[1] = _alpha.mF32A[1];
         if (as != this.AlphaState())
             this.ClearCRPAuto();
-        if (this.mTag.has("color") == false)
+        if (this.mTag.has("CAModel") == false)
             this.BatchClear();
-        this.PushTag("color");
+        this.PushTag("CAModel");
     }
     SetColorVFX(_a, _b = null) {
         if (this.mColorVFX == null) {
@@ -527,6 +522,7 @@ export class CPaint extends CComponent {
             this.mTag.add("wasm");
         else
             this.mTag.delete("wasm");
+        this.ClearCRPAuto();
         this.InitPaint();
         if (this.mTexture.length > 0)
             this.SetTexture(this.mTexture);

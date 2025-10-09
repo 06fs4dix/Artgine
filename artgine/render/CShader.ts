@@ -11,7 +11,6 @@ export class CVertexFormat extends CObject
 {
 	static eIdentifier=
 	{
-		Vertex:0,
 		Position:0,
 		UV:1,
 		Normal:3,

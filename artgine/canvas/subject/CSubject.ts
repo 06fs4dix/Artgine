@@ -34,6 +34,7 @@ export class CSubject extends CObject implements IFile
 	public mDestroy : boolean;
 	public mEnable : boolean;
 	public mPMatMul=true;
+	public mSelect=true;
 
 	public mComArr : Array<CComponent>;
 	public mPTArr : Array<CComponent>=null;
@@ -96,6 +97,7 @@ export class CSubject extends CObject implements IFile
 		this.mDestroy = false;
 		this.mEnable = true;
 		this.mPEnable = true;
+		this.mSelect = true;
 
 		this.mSpeed = 1.0;
 
@@ -338,6 +340,16 @@ export class CSubject extends CObject implements IFile
 		this.mEnable = _enable;
 		this.mUpdateMat=CUpdate.eType.Updated;
 		this.SetChildShow(_enable);
+
+		if(this.mPTArr!=null)
+		{
+			for(let pt of this.mPTArr as Array<CPaint>)
+			{
+				pt.ClearCRPAuto();
+			}
+		}
+		this.mPTArr.length=0;
+		this.mPTArr=null;
 	}
 	protected SetChildShow(_enable : boolean)
 	{

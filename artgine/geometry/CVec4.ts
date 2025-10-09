@@ -1,3 +1,5 @@
+import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CObject, CPointer } from "../basic/CObject.js";
 import {CVec3} from "../geometry/CVec3.js"
 import {CFloat32} from "./CFloat32.js";
 
@@ -51,7 +53,73 @@ export class CVec4 extends CFloat32
 
 		return gVec4;
 	}
+	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+			//super.EditHTMLInit(_div,_pointer);
+			_div.innerHTML="";
+			const self = this;
+			const row = CDomFactory.DataToDom({
+				"tag": "div","class": "d-flex align-items-center",
+				"html": [
+					{"tag": "input","type": "number","class": "form-control form-control-sm",
+						"value": this.x,"onchange": (e: Event) => {
+							const v = parseFloat((e.target as HTMLInputElement).value);
+							if (!isNaN(v)) { this.x = v; if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") { _pointer.target.EditChange(_pointer, false); } }
+						}
+					},
+					{"tag": "input","type": "number","class": "form-control form-control-sm",
+						"value": this.y,"onchange": (e: Event) => {
+							const v = parseFloat((e.target as HTMLInputElement).value);
+							if (!isNaN(v)) { this.y = v; if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") { _pointer.target.EditChange(_pointer, false); } }
+						}
+					},
+					{"tag": "input","type": "number","class": "form-control form-control-sm",
+						"value": this.z,"onchange": (e: Event) => {
+							const v = parseFloat((e.target as HTMLInputElement).value);
+							if (!isNaN(v)) { this.z = v; if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") { _pointer.target.EditChange(_pointer, false); } }
+						}
+					},
+					{"tag": "input","type": "number","class": "form-control form-control-sm",
+						"value": this.w,"onchange": (e: Event) => {
+							const v = parseFloat((e.target as HTMLInputElement).value);
+							if (!isNaN(v)) { this.w = v; if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") { _pointer.target.EditChange(_pointer, false); } }
+						}
+					}
+				]
+			});
+			_div.appendChild(row);
 	
+			// 마우스 다운 드래그로 값 조정 기능 추가
+			const inputs = row.querySelectorAll('input[type="number"]');
+			const setter = (vec: CVec4) => {
+				this.x = vec.x;
+				this.y = vec.y;
+				this.z = vec.z;
+				this.w = vec.w;
+				if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+					_pointer.target.EditChange(_pointer, false);
+				}
+			};
+			const getVec = () => new CVec4(
+				parseFloat((inputs[0] as HTMLInputElement).value),
+				parseFloat((inputs[1] as HTMLInputElement).value),
+				parseFloat((inputs[2] as HTMLInputElement).value),
+				parseFloat((inputs[3] as HTMLInputElement).value)
+			);
+			const MounsDownFun = (_event: MouseEvent) => {
+				if (_event.button === 1) {
+					_event.preventDefault();
+					const ct = _event.currentTarget as HTMLInputElement;
+					CObject.FocusInputNumberChange(ct, (_value: number) => {
+						const vec = getVec();
+						setter(vec);
+					});
+				}
+			};
+			(inputs[0] as HTMLInputElement).onmousedown = MounsDownFun;
+			(inputs[1] as HTMLInputElement).onmousedown = MounsDownFun;
+			(inputs[2] as HTMLInputElement).onmousedown = MounsDownFun;
+			(inputs[3] as HTMLInputElement).onmousedown = MounsDownFun;
+		}
 }
 var gVec4=new CVec4();
 

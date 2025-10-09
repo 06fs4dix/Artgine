@@ -16,7 +16,7 @@ import {
 	CMat34,
 } from "./Shader"
 import {
-	ColorModelCac, ColorVFX, GetTexCodiedUV
+	CAModelCac, ColorVFX, GetTexCodiedUV
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -58,7 +58,7 @@ var to_worldPos : ToV4=Null();
 var time : number=Attribute(0,"time");
 var mask: number=1.0;
 var lastHide : number=Null();
-var trailPos: Sam2DV4=new Sam2DV4(9);
+var trailPos: Sam2DV4=new Sam2DV4(11);
 
 //depthmap
 var zDepth : number=0.0;
@@ -293,11 +293,11 @@ function ps_main()
     var L_cor : CVec4=Sam2DToColor(0.0,to_uv.xy);
 	L_cor.a *= to_uv.z;
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,to_uv.xy,colorVFX,time);
 	BranchEnd();
 
@@ -331,8 +331,8 @@ function ps_main()
 function ps_main_mask()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if ( L_cor.a <= alphaCut ) discard;

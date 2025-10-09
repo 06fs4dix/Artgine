@@ -5,8 +5,8 @@ import { CRenderPass } from "../../render/CRenderPass.js";
 import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../render/CTexture.js";
 import { CRPAuto } from "../CRPMgr.js";
-import { CCamComp } from "./CCamComp.js";
-export default class CEnvMap extends CCamComp {
+import { CBrushComp } from "./CBrushComp.js";
+export default class CEnvMap extends CBrushComp {
     mSize;
     mCycle = 0;
     constructor(_key, _size, _skyTex) {

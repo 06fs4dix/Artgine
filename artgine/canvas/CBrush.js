@@ -17,6 +17,7 @@ export class CRenInfo {
 export class CRenPriority {
     mAlphaList = new CArray();
     mDistanceList = new CArray();
+    mRAlphaList = new CArray();
     mPriority = 0;
     static CompareDistance(a, b) {
         return (b.mDistance + b.mTexHash) - (a.mDistance + a.mTexHash);
@@ -109,6 +110,9 @@ export class CBrush extends CObject {
             }
             for (let i = 0; i < value.mDistanceList.Size(); ++i) {
                 value.mDistanceList.Find(i).mPaint.BatchClear();
+            }
+            for (let i = 0; i < value.mRAlphaList.Size(); ++i) {
+                value.mRAlphaList.Find(i).mPaint.BatchClear();
             }
         }
         this.mRenInfoMap.clear();

@@ -1,6 +1,7 @@
 import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import {CArray} from "../../../basic/CArray.js";
+import { CHash } from "../../../basic/CHash.js";
 import { CObject, CPointer } from "../../../basic/CObject.js";
 import {CString} from "../../../basic/CString.js";
 import {CTree} from "../../../basic/CTree.js";
@@ -9,6 +10,7 @@ import { CBound } from "../../../geometry/CBound.js";
 import {CMat} from "../../../geometry/CMat.js";
 import {CMath} from "../../../geometry/CMath.js";
 import {CVec1} from "../../../geometry/CVec1.js";
+import { CVec3 } from "../../../geometry/CVec3.js";
 import { CBatch } from "../../../render/CBatchMgr.js";
 import {CDevice} from "../../../render/CDevice.js";
 import {CMesh} from "../../../render/CMesh.js";
@@ -24,7 +26,7 @@ import {CShaderAttr} from "../../../render/CShaderAttr.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import {CSubject} from "../../subject/CSubject.js";
-import {CCamComp} from "../CCamComp.js";
+import {CBrushComp} from "../CBrushComp.js";
 import {CPaint} from "./CPaint.js";
 
 export class CPaint3D extends CPaint
@@ -38,7 +40,7 @@ export class CPaint3D extends CPaint
 	public mTreeNode=new CArray<CMeshPaint>();
 
 	public mSkinType=SDF.eSkin.Bone;
-	public mCamCompSet : Set<CCamComp>=new Set<CCamComp>();
+	public mCamCompSet : Set<CBrushComp>=new Set<CBrushComp>();
 	public mBakedLight : string = null;
 	public mWindInfluence : CVec1 = new CVec1(0.0);
 
@@ -86,7 +88,7 @@ export class CPaint3D extends CPaint
 			this.SetMesh(_object.Key());
 		}
 	}
-	CubeMap(_camComp : CCamComp)
+	CubeMap(_camComp : CBrushComp)
 	{
 		
 		if(this.mTag.has(_camComp.mRead)==false)	return;
@@ -581,68 +583,154 @@ export class CPaintCube extends CPaint3D
 	}
 }
 //static mesh only
-class CPaint3DMerge extends CPaint3D
+export class CPaintMeshMerge extends CPaint
 {
-	constructor(_meshList : Array<string>,_matList : Array<CMat>)
+	constructor(_meshList : Array<string>,_matList : Array<CMat>,_centerPos=false,_targetScale=0)
 	{
 		super();
+		this.mMeshList=_meshList;
+		this.mMatList=_matList;
+		this.mCenterPos=_centerPos;
+		this.mTargetScale=_targetScale;
 	}
 	mMeshList : Array<string>;
 	mMatList : Array<CMat>;
 	mMeshDataNode=new CMeshDataNode();
+	mHash="";
+	public mCenterPos=false;
+	public mTargetScale=0;
+	IsShould(_member: string, _type: CObject.eShould): boolean {
+		if(_member=="mMeshDataNode")	return false;
+		return super.IsShould(_member,_type);
+	}
+	StartChk(): void {
+		
+		if(this.mStartChk)
+		{
+			for(let i=0;i<this.mMeshList.length;++i)
+			{
+				let mesh=this.GetOwner().GetFrame().Res().Find(this.mMeshList[i]) as CMesh;
+				if(mesh==null)
+				{
+					if(this.GetOwner().GetFrame().Load().IsLoad(this.mMeshList[i]))
+						return;
+					this.GetOwner().GetFrame().Load().Load(this.mMeshList[i]);
+					return;
+				}
+
+			}
+			this.mStartChk=false;
+			this.Start();
+		}
+	}
+	Update(_delay: any): void {
+		super.Update(_delay);
+	}
 	Start(): void {
 		this.mMeshDataNode.ci=new CMeshCreateInfo();
-
-		for(let key of this.mMeshList)
+		this.mBound.Reset();
+		this.mBound.SetType(CBound.eType.Box);
+		this.mHash="";
+		for(let i=0;i<this.mMeshList.length;++i)
 		{
-			let mesh=this.GetOwner().GetFrame().Res().Find(key) as CMesh;
-
+			let mesh=this.GetOwner().GetFrame().Res().Find(this.mMeshList[i]) as CMesh;
+			this.mHash+=this.mMeshList[i];
+			this.mHash+=this.mMatList[i].ToStr();
+			this.Merge(this.mMatList[i],mesh,mesh.meshTree,this.mMeshDataNode.ci,this.mBound);
 
 		}
-
+		this.mHash=CHash.HashCode(this.mHash)+"";
 	}
-	Merge(_WMat : CMat,_PMat : CMat,_mesh : CMesh,_node : CTree<CMeshDataNode>,_ci : CMeshCreateInfo,_bound : CBound)
+	Render(_vf: CShader): void {
+		
+		
+
+		var barr=this.RenderBatch(_vf,1);
+		if(barr==null)	return;
+
+		
+		
+
+		this.mOwner.GetFrame().BMgr().BatchOn();
+		this.Common(_vf);
+
+		let wsa=new CShaderAttr("worldMat", this.mLMat);
+		this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+		if (_vf.mUniform.get("material") != null)
+		{
+			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
+		}
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.mHash,_vf,this.mMeshDataNode.ci);
+		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
+
+		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
+	}
+	Merge(_PMat : CMat,_mesh : CMesh,_node : CTree<CMeshDataNode>,_ci : CMeshCreateInfo,_bound : CBound)
 	{
+		let LMat=CMath.MatScale(_node.mData.sca);
+		CMath.MatMul(LMat,CMath.MatRotation(_node.mData.rot),LMat);
+		LMat.SetV3(3,_node.mData.pos);
+		let LPMat=CMath.MatMul(LMat,_PMat);
 		if(_node.mData.ci!=null)
 		{
-			let tvb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Vertex);
+			let bound=new CBound();
+			let tvb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position);
 			let tub=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.UV);
 			let tnb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
 			let ttb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
 
+			let texOff=[];
 			for(let tex of _mesh.texture)
 			{
+				
 				let push=true;
 				for(let i=0;i<this.mTexture.length;++i)
 				{
 					if(this.mTexture[i]==tex)
 					{
 						push=false;
+						texOff.push(i);
 						break;
 					}
 				}
-				if(push)	this.mTexture.push(tex);
+				if(push)
+				{
+					texOff.push(this.mTexture.length);
+					this.mTexture.push(tex);
+				}	
+				
 			}
-			let texOff=[];
+			
 
-			// let 
-			// for(let i=0;i<this.mTexture.length;++i)
-			// {
-			// 	if(this.mTexture[i]==tex)
-			// 	{
-			// 		push=false;
-			// 		break;
-			// 	}
-			// }
-			
-			
 			
 
 
-			let ovb=_ci.GetVFType(CVertexFormat.eIdentifier.Vertex);
+			let ovb=_ci.GetVFType(CVertexFormat.eIdentifier.Position);
 			let oub=_ci.GetVFType(CVertexFormat.eIdentifier.UV);
 			let onb=_ci.GetVFType(CVertexFormat.eIdentifier.Normal);
 			let otb=_ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+			if(ovb.length==0)
+			{
+				_ci.Create(CVertexFormat.eIdentifier.Position);
+				ovb=_ci.GetVFType(CVertexFormat.eIdentifier.Position);
+			}
+			if(oub.length==0)
+			{
+				_ci.Create(CVertexFormat.eIdentifier.UV);
+				oub=_ci.GetVFType(CVertexFormat.eIdentifier.UV);
+			}
+			if(onb.length==0)
+			{
+				_ci.Create(CVertexFormat.eIdentifier.Normal);
+				onb=_ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+			}
+			if(otb.length==0)
+			{
+				_ci.Create(CVertexFormat.eIdentifier.TexOff);
+				otb=_ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+			}
+
 
 			for(let i=0;i<tvb[0].bufF.Size(3);++i)
 			{
@@ -651,17 +739,101 @@ class CPaint3DMerge extends CPaint3D
 				let n=tnb[0].bufF.V3(i);
 				let t=ttb[0].bufF.V3(i);
 
-				v=CMath.V3MulMatCoordi(v,CMath.MatMul(_PMat,_WMat));
-				_bound.InitBound(v);
+				bound.InitBound(v);
 
-				ovb[0].bufF.Push(CMath.V3MulMatCoordi(v,CMath.MatMul(_PMat,_WMat)));
+				//v=CMath.V3MulMatCoordi(v,LPMat);
+				//_bound.InitBound(v);
+				ovb[0].bufF.Push(v);
 				oub[0].bufF.Push(u);
 				onb[0].bufF.Push(n);
-				otb[0].bufF.Push(t);
+				let toff=new CVec3(-1,-1,-1);
+				if(t.x!=-1)	toff.x=texOff[t.x];
+				if(t.y!=-1)	toff.y=texOff[t.y];
+				if(t.z!=-1)	toff.z=texOff[t.z];
+				otb[0].bufF.Push(toff);
 			}
-
-
+			let mat=new CMat();
 			
+			if(this.mTargetScale!=0)
+			{
+				let size=bound.GetSize();
+				let maxSize=CMath.Max(CMath.Max(size.x,size.y),size.z);
+				mat.mF32A[0]=this.mTargetScale/maxSize;
+				mat.mF32A[5]=this.mTargetScale/maxSize;
+				mat.mF32A[10]=this.mTargetScale/maxSize;
+			}
+			if(this.mCenterPos)
+			{
+				let center=bound.GetCenter();
+				mat.mF32A[12]=center.x*mat.mF32A[0];
+				mat.mF32A[13]=center.y*mat.mF32A[5];
+				mat.mF32A[14]=center.z*mat.mF32A[10];
+				//mat.SetV3(3,CMath.V3MulFloat(bound.GetCenter(),-1))
+			}
+				
+			mat.UnitCheck();
+			LPMat=CMath.MatMul(mat,LPMat);
+			let tempv=new CVec3();
+			for(let i=_ci.vertexCount;i<ovb[0].bufF.Size(3);++i)
+			{
+				let v=ovb[0].bufF.V3(i);
+			
+				CMath.V3MulMatCoordi(v,LPMat,tempv);
+				_bound.InitBound(tempv);
+				ovb[0].bufF.X3(i,tempv.x);
+				ovb[0].bufF.Y3(i,tempv.y);
+				ovb[0].bufF.Z3(i,tempv.z);
+			}
+			
+			
+			let tiv=_node.mData.ci.index;
+			for(let i=0;i<tiv.length;++i)
+			{
+				_ci.index.push(tiv[i]+_ci.vertexCount);
+			}
+			_ci.vertexCount+=_node.mData.ci.vertexCount;
+			_ci.indexCount+=_node.mData.ci.indexCount;
+
+		}
+		if(_node.mChild!=null)
+			this.Merge(LPMat,_mesh,_node.mChild,_ci,_bound);
+		if(_node.mColleague!=null)
+			this.Merge(_PMat,_mesh,_node.mColleague,_ci,_bound);
+
+		
+	}
+	
+	EmptyRPChk()
+	{
+		if(this.mRenderPass.length==0)
+		{
+			let sChk=true;
+			for(let each0 of this.mRenderPass)
+			{
+				if(each0.mTag=="shadowWrite")
+				{
+					continue;
+				}
+				sChk=false;
+			}
+			if(sChk)
+				this.mRenderPass.push(new CRPAuto(this.mOwner.GetFrame().Pal().Sl3D().mKey));
 		}
 	}
+	// ExeLocalMat(_centerPos=false,_targetScale=0)
+	// {
+	// 	if(this.mCenterPos)
+	// 		this.mLMat.SetV3(3,CMath.V3MulFloat(this.mBound.GetCenter(),-1))
+	// 	if(this.mTargetScale!=0)
+	// 	{
+	// 		let size=this.mBound.GetSize();
+	// 		let maxSize=CMath.Max(CMath.Max(size.x,size.y),size.z);
+	// 		this.mLMat.mF32A[0]=this.mTargetScale/maxSize;
+	// 		this.mLMat.mF32A[5]=this.mTargetScale/maxSize;
+	// 		this.mLMat.mF32A[10]=this.mTargetScale/maxSize;
+	// 	}
+		
+
+	// 	this.mLMat.UnitCheck();
+	// }
 }

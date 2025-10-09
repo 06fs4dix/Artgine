@@ -243,7 +243,7 @@ export class CShadowPlane extends CPaint2D
         {
             rp.mPriority=CRenderPass.ePriority.AlphaAuto;
             //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
-            //rp.mSort=CRenderPass.eSort.AlphaGroup;
+            rp.mSortRevers=true;
             rp.mCullFace = CRenderPass.eCull.None;
         }
         
@@ -404,6 +404,7 @@ export class CShadowPlane extends CPaint2D
     {
         if(this.mPT instanceof CPaint2D) 
         {
+            //this.PushTag("zDepth");
             const pt = this.mPT as CPaint2D;
             const lig = this.mLIG;
 

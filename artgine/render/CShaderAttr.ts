@@ -135,8 +135,8 @@ export class CShaderAttr extends CObject
 			case -2:	str+="Tex"+this.mEach;	break;
 			case 1:case 2:case 3:case 4:case 16:	
 			{
-				if(this.mData.mF32A==null)
-					alert("1");
+				//if(this.mData.mF32A==null)
+				//	alert("1");
 				for(let i=0;i<this.mData.mF32A.length;++i)
 					str+=this.mData.mF32A[i]+",";
 			}break;

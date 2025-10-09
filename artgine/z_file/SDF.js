@@ -1,4 +1,5 @@
 export class SDF {
+    static WriteDataTex = 11;
     static eLightStep0 = {
         None: 0,
         Distance: 1,

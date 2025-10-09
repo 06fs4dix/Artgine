@@ -28,13 +28,13 @@ CPlugin.PushEvent(CEvent.eType.Load,()=>{
     
     let rp=new CRPAuto();
     rp.mShader=CPlugin.FindPath("test")+"TestShader.ts";
-    rp.PushCondition(new CCondition("class","==","CPaint2D"));
+    rp.PushAnd(new CCondition("class","==","CPaint2D"));
     gRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testRPMgr",gRPMgr);
 
     rp=new CRPAuto();
     rp.mShader=CPlugin.FindPath("test")+"TestShader.ts";
-    rp.PushCondition(new CCondition("class","==","CPaint2D"));
+    rp.PushAnd(new CCondition("class","==","CPaint2D"));
     rp.mTag="uv";
     gUVRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testUVRPMgr",gUVRPMgr);

@@ -21,23 +21,24 @@ let g_roPriority: CRenPriority;
 let g_colorMap: Map<string, CVec4> = new Map();
 
 let g_remains: Map<string, CRenPaint[]> = new Map();
-let g_modal: CModal;
+let gModal: CModal;
 export function RenderQueTool(_brush: CBrush) {
     g_roBrush = _brush;
 
-    g_modal = new CModal("RenderOrderModal");
-    g_modal.mResize = true;
-    g_modal.SetSize(1400, 600);
-    g_modal.SetTitle(CModal.eTitle.TextMinFullClose);
-    g_modal.SetHeader("RenderOrderModal");
-    g_modal.SetBody(
+    gModal = new CModal("RenderOrderModal");
+    gModal.mResize = true;
+    gModal.SetSize(1400, 600);
+    gModal.SetTitle(CModal.eTitle.TextMinFullClose);
+    gModal.SetHeader("RenderOrderModal");
+    gModal.SetBody(
         `<div style='height:100%;' id='RenderOrderTool_div'>
             <canvas id='renderOrderCanvas'/>
         </div>`
     );
-    g_modal.On(CEvent.eType.Open,() => { Open(); });
-    g_modal.On(CEvent.eType.Close,() => { Close(); });
-    g_modal.Open();
+    gModal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
+    gModal.On(CEvent.eType.Open,() => { Open(); });
+    gModal.On(CEvent.eType.Close,() => { Close(); });
+    gModal.Open();
 }
 var g_fw: CFrame = null;
 var g_brush: CBrush = null;

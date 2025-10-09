@@ -13,9 +13,13 @@ export class CRPAuto extends CRenderPass {
         "mTag": "mTag",
     };
     mAnd = new Array();
+    mOr = new Array();
     mCopy = false;
-    PushCondition(_con) {
+    PushAnd(_con) {
         this.mAnd.push(_con);
+    }
+    PushOr(_con) {
+        this.mOr.push(_con);
     }
     EditForm(_pointer, _body, _input) {
         super.EditForm(_pointer, _body, _input);

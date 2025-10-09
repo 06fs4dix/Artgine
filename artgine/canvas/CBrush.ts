@@ -31,6 +31,7 @@ export class CRenPriority
 {
     mAlphaList=new CArray<CRenPaint>();
     mDistanceList=new CArray<CRenPaint>();
+	mRAlphaList=new CArray<CRenPaint>();
     mPriority : number=0;
     static CompareDistance(a : CRenPaint,b : CRenPaint)
     {
@@ -152,6 +153,10 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 			for(let i=0;i<value.mDistanceList.Size();++i)
 			{
 				value.mDistanceList.Find(i).mPaint.BatchClear();
+			}
+			for(let i=0;i<value.mRAlphaList.Size();++i)
+			{
+				value.mRAlphaList.Find(i).mPaint.BatchClear();
 			}
 		
 		}

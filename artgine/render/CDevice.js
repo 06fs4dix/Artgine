@@ -156,9 +156,9 @@ export class CDeviceGL extends CDevice {
         var texture_units = this.GL().getParameter(this.GL().MAX_TEXTURE_IMAGE_UNITS);
         var TexLay = this.GL().getParameter(this.GL().MAX_ARRAY_TEXTURE_LAYERS);
         var TexSize = this.GL().getParameter(this.GL().MAX_TEXTURE_SIZE);
-        g_property.set(CDevice.eProperty.Sam2DMax, 10);
+        g_property.set(CDevice.eProperty.Sam2DMax, 12);
         g_property.set(CDevice.eProperty.Sam2DArrMax, 1);
-        g_property.set(CDevice.eProperty.SamCubeMax, 5);
+        g_property.set(CDevice.eProperty.SamCubeMax, 3);
         g_property.set(CDevice.eProperty.Sam2dArrLayerMax, TexLay);
         g_property.set(CDevice.eProperty.VertexUniform, 1024);
         g_property.set(CDevice.eProperty.PixelUniform, 1024);

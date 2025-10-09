@@ -3,6 +3,7 @@ import {CMeshCreateInfo} from "./CMeshCreateInfo.js"
 
 import {CVec4} from "../geometry/CVec4.js";
 import {CObject} from "../basic/CObject.js";
+import { CBound } from "../geometry/CBound.js";
 
 export class CKeyFrame extends CObject
 {
@@ -31,7 +32,8 @@ export class CMeshDataNode extends CObject
 	public pos : CVec3;
 	public sca : CVec3;
 	public rot : CVec4;
-	rev=false;
+	
+	//rev=false;
 	public skinKey : Array<string>;
 	
 	constructor()
@@ -52,6 +54,7 @@ export class CMeshDataNode extends CObject
 		this.sca =new CVec3(1, 1, 1);
 		this.rot=new CVec4();
 		this.skinKey=new Array<string>();
+		
 	}
 	IsSkinKey(_key) : boolean
 	{

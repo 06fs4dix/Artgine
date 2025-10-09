@@ -59,6 +59,7 @@ export class CBatchMgr {
             this.mBatchMap = new Map();
         this.mRender.mUniTexLastOff = -1;
         this.mBasePriority = 0;
+        this.mBaSortArr.Clear();
     }
     BatchEnd() {
         this.mBatchMap = null;
@@ -101,6 +102,8 @@ export class CBatchMgr {
             val = this.mBatchMap.get(bKey);
             val.mPriority = this.mBasePriority;
         }
+        if (val.mData.length == 0)
+            this.mBaSortArr.Push(val);
         if (this.mBatchGlobal != null) {
             for (var i = 0; i < this.mBatchGlobal.Size(); ++i) {
                 this.mBatch.mValue.push(this.mBatchGlobal.Find(i));
@@ -124,6 +127,8 @@ export class CBatchMgr {
                 this.mBatchMap.set(bKey, val);
                 val.mPriority = this.mBasePriority;
             }
+            if (val.mData.length == 0)
+                this.mBaSortArr.Push(val);
             val.mData.push(batch);
         }
         return null;

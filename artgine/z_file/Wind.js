@@ -1,9 +1,9 @@
 import { NoisePerlin2D } from "./Noise";
 import { clamp, CVec2, CVec3, FloatToInt, mix, Sam2DToV4, Sam2DV4, smoothstep, step, TexSizeHalfInt, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 export var windInfluence = 0.0;
-export var windDir = new Sam2DV4(9, 500);
-export var windPos = new Sam2DV4(9, 501);
-export var windInfo = new Sam2DV4(9, 502);
+export var windDir = new Sam2DV4(11, 500);
+export var windPos = new Sam2DV4(11, 501);
+export var windInfo = new Sam2DV4(11, 502);
 export var windCount = 0.0;
 export function GetWind(_objPos, _size, _time) {
     if (windCount < 0.5) {

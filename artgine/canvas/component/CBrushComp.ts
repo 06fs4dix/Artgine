@@ -7,7 +7,7 @@ import {CComponent} from "./CComponent.js";
 import { CPaint3D } from "./paint/CPaint3D.js";
 
 
-export class CCamComp extends CComponent
+export class CBrushComp extends CComponent
 {
     constructor(_key : string)
     {
@@ -21,6 +21,7 @@ export class CCamComp extends CComponent
     public mRead : string=null;//텍스쳐 사용하는 페인트들 골라냄 태그를 넣어라
     public mReadLen=10000;
     public mLayer=0;
+    mBruch : CBrush=null;
 
     GetWrite() { return this.mWrite; }
     GetTex()    {   return this.mShadowKey+".tex";   }
@@ -32,9 +33,13 @@ export class CCamComp extends CComponent
     {
         //브러시 정보는 캔버스에 있어서 받으려고 처리
         //CC->Can->Light,Env
-        var cm=this.ProductMsg("SendGetBrush");
-        cm.mInter="canvas";
-        cm.mMsgData[0]=this;
+        if(this.mBruch==null)
+        {
+            var cm=this.ProductMsg("SendGetBrush");
+            cm.mInter="canvas";
+            cm.mMsgData[0]=this;
+        }
+        
 
         if(this.mRead!=null)
         {
@@ -48,7 +53,7 @@ export class CCamComp extends CComponent
     
     RecvGetBrush(_brush : CBrush) 
     {
-
+        this.mBruch=_brush;
     }
    
 }

@@ -1,4 +1,5 @@
 import { CObject } from "../basic/CObject.js";
+import { CBound } from "../geometry/CBound.js";
 import { CFloat32Mgr } from "../geometry/CFloat32Mgr.js";
 import { CVertexFormat } from "./CShader.js";
 export class CUVChannel {
@@ -20,12 +21,14 @@ export class CMeshCreateInfo extends CObject {
     indexCount;
     vertex;
     index = new Array();
+    bound;
     constructor() {
         super();
         this.name = "";
         this.vertexCount = 0;
         this.indexCount = 0;
         this.vertex = new Array();
+        this.bound = new CBound();
     }
     GetVFType(_type) {
         var rVal = new Array();

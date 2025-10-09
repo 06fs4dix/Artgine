@@ -110,6 +110,7 @@ export class CBound extends CObject
 	InitBound(_vInfo : number) : void;
 	InitBound(_vInfo : Array<CVec3>) : void;
 	InitBound(_vInfo : CVec3) : void;
+	InitBound(_vInfo : CBound) : void;
 	InitBound(_vInfo : any) : void
 	{
 		if(typeof _vInfo == "number" )
@@ -122,6 +123,22 @@ export class CBound extends CObject
 			this.mMax.y=_vInfo;
 			this.mMax.z=_vInfo;
 		}
+		else if(_vInfo instanceof CBound )
+		{
+			
+			this.mMin.x=CMath.Min(_vInfo.mMin.x,this.mMin.x);
+			this.mMin.y=CMath.Min(_vInfo.mMin.y,this.mMin.y);
+			this.mMin.z=CMath.Min(_vInfo.mMin.y,this.mMin.z);
+
+			this.mMax.x=CMath.Max(_vInfo.mMax.x,this.mMax.x);
+			this.mMax.y=CMath.Max(_vInfo.mMax.y,this.mMax.y);
+			this.mMax.z=CMath.Max(_vInfo.mMax.z,this.mMax.z);
+
+
+			this.mPos.PushArray(_vInfo.mPos);
+
+			
+		}
 		else if(_vInfo instanceof Array )
 		{
 			for (var each0 of _vInfo)
@@ -133,8 +150,8 @@ export class CBound extends CObject
 		}
 		else
 		{
-			if(this.GetType()==CBound.eType.Polytope)
-				this.mPos.Push(_vInfo);
+			//if(this.GetType()==CBound.eType.Polytope)
+			this.mPos.Push(_vInfo);
 			this.ResetBoxMinMax(_vInfo);
 		}	
 	}

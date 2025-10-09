@@ -8,9 +8,9 @@ import {CShaderAttr} from "../../render/CShaderAttr.js";
 import {CTexture,  CTextureInfo } from "../../render/CTexture.js";
 import {CBrush} from "../CBrush.js";
 import { CRPAuto } from "../CRPMgr.js";
-import {CCamComp} from "./CCamComp.js";
+import {CBrushComp} from "./CBrushComp.js";
 
-export default class CEnvMap extends CCamComp
+export default class CEnvMap extends CBrushComp
 {
     mSize : number;
     mCycle : number = 0;

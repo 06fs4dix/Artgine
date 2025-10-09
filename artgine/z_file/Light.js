@@ -6,8 +6,8 @@ export var ligStep0 = SDF.eLightStep0.HafeLambert;
 export var ligStep1 = SDF.eLightStep1.Phong;
 export var ligStep2 = SDF.eLightStep2.Emissive;
 export var ligStep3 = 0;
-export var ligDir = new Sam2DV4(9, 503);
-export var ligCol = new Sam2DV4(9, 504);
+export var ligDir = new Sam2DV4(11, 503);
+export var ligCol = new Sam2DV4(11, 504);
 export var envCube = -1;
 export function GetMaterial(_material, _texColor, sam2DCount) {
     var tm = new CVec4(_material.x, _material.y, _material.z, _material.w);

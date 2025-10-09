@@ -137,7 +137,7 @@ export class CUtilMath
     
         return viewMat;
     }
-    static RayTriangleIS(pa_one,pa_two,pa_three, pa_ray,pa_ccw=true)//IS -> Intersection
+    static RayTriangleIS(pa_one : CVec3,pa_two : CVec3,pa_three : CVec3, pa_ray,pa_ccw=true)//IS -> Intersection
     {
         var pvec=new CVec3();
         var tvec=new CVec3();

@@ -6,9 +6,9 @@ import { abs, clamp, CVec2, CVec3, CVec4, FloatToInt, MappingTexToV3, max, mix, 
     V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 
 export var windInfluence : number = 0.0;
-export var windDir : Sam2DV4 = new Sam2DV4(9,500);
-export var windPos : Sam2DV4 = new Sam2DV4(9,501);
-export var windInfo : Sam2DV4 = new Sam2DV4(9,502);
+export var windDir : Sam2DV4 = new Sam2DV4(11,500);
+export var windPos : Sam2DV4 = new Sam2DV4(11,501);
+export var windInfo : Sam2DV4 = new Sam2DV4(11,502);
 export var windCount : number = 0.0;
 
 export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3

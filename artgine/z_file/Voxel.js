@@ -1,4 +1,4 @@
-import { ColorModelCac } from "./ColorFun";
+import { CAModelCac } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
 import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, Sam2DToMat, Sam2DV4, Sam2DToV4, Sam2DSize, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, } from "./Shader";
@@ -16,7 +16,7 @@ var to_viewPos = Null();
 var to_shadowBias = Null();
 var to_worldPos = Null();
 var to_normal = Null();
-var shadowReadList = new Sam2DV4(9);
+var shadowReadList = new Sam2DV4(11);
 var shadowOn = -1.0;
 var sun = 0.0;
 Build("Artgine/Shader/Voxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos], ps_main, [out_color]);
@@ -239,7 +239,7 @@ function ps_main() {
     else {
         L_cor = Sam2DToColor(0.0, to_uv.xy);
     }
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     var DSE = new CMat3(0);
     BranchBegin("light", "L", [ligDir, ligCol, ligCount, ambientColor]);
     DSE = LightCac2D(to_worldPos, L_cor, new CVec3(0.0, 0.0, 0.0), ambientColor);
@@ -296,7 +296,7 @@ function ps_main_shadow_write() {
     else if (to_uv.w > 0.5) {
         L_cor = Sam2DToColor(0.0, to_uv.xy);
     }
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     if (L_cor.a <= 0.1)
         discard;
     out_color = to_viewPos;
@@ -336,7 +336,7 @@ function ps_main_shadow_read() {
         L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.w);
         L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.z);
     }
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     if (L_cor.a <= 0.1)
         discard;
     var all = 0.0;

@@ -21,7 +21,6 @@ export class CMeshDataNode extends CObject {
     pos;
     sca;
     rot;
-    rev = false;
     skinKey;
     constructor() {
         super();

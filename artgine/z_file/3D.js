@@ -1,6 +1,6 @@
 import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, Mat34ToMat, } from "./Shader";
 import { SDF } from "./SDF";
-import { ColorModelCac, ColorVFX } from "./ColorFun";
+import { CAModelCac, ColorVFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { bias, calcShadow, dotCac, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f } from "./Shadow";
@@ -33,7 +33,7 @@ var outputType = Null();
 var camPos = Null();
 var depthMap = 0.0;
 var screenResolution = new CVec2(1.0, 1.0);
-var weightArrMat = new Sam2DMat(9);
+var weightArrMat = new Sam2DMat(11);
 var time = Attribute(0, "time");
 Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
 Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel], [out_position, to_uv], ps_main_simple, [out_color]);
@@ -72,7 +72,7 @@ function vs_main_simple(f3_ver, f2_uv) {
 }
 function ps_main_simple() {
     var L_cor = Sam2DToColor(0.0, to_uv);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)
         discard;
@@ -223,10 +223,10 @@ function ps_main() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
     BranchEnd();
     var L_cor = Sam2DToColor(to_ref.x, uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -266,10 +266,10 @@ function ps_main_gBuffer() {
         L_cor = Sam2DToColor(0.0, uv);
     else
         L_cor = Sam2DToColor(to_ref.x, uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -311,10 +311,10 @@ function ps_main_gBuffer_multi() {
         L_cor = Sam2DToColor(0.0, uv);
     else
         L_cor = Sam2DToColor(to_ref.x, uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -363,10 +363,10 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
 }
 function ps_main_shadow_write() {
     var L_cor = Sam2DToColor(0.0, to_uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -423,10 +423,10 @@ function vs_main_shadow_read_pa(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_
 }
 function ps_main_shadow_read() {
     var L_cor = Sam2DToColor(0.0, to_uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -459,10 +459,10 @@ function ps_main_shadow_read_pa() {
     var uv = to_uv;
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
     var L_cor = Sam2DToColor(0.0, uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -509,10 +509,10 @@ function ps_main_bake() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
     BranchEnd();
     var L_cor = Sam2DToColor(to_ref.x, uv);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);

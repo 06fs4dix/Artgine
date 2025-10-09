@@ -94,6 +94,10 @@ export class CRenderPass extends CObject {
         ONE_MINUS_CONSTANT_ALPHA: 32772,
         SRC_ALPHA_SATURATE: 776,
     };
+    static eAlphaSort = {
+        Normal: 0,
+        Revers: 1,
+    };
     mDepthTest = null;
     mDepthWrite = null;
     mAlpha = null;
@@ -112,6 +116,7 @@ export class CRenderPass extends CObject {
     mBlitType = 0;
     mBlitRead = "";
     mLine = null;
+    mSortRevers = false;
     mZEarly = true;
     mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.SRC_ALPHA, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
     mTag = "";

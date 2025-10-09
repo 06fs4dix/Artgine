@@ -1,6 +1,9 @@
 import { CAlert } from "../basic/CAlert.js";
+import { CBound } from "../geometry/CBound.js";
 import { CFloat32Mgr } from "../geometry/CFloat32Mgr.js";
+import { CMat } from "../geometry/CMat.js";
 import { CMath } from "../geometry/CMath.js";
+import { CPoolGeo } from "../geometry/CPoolGeo.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
@@ -1006,5 +1009,43 @@ export class CUtilRender {
             norBuf.V3(i, (CMath.V3Len(n) > 1e-6) ? CMath.V3Nor(n) : new CVec3(0, 1, 0));
         }
     }
+    static MeshBoundUpdate(_mesh) {
+        MeshNodeBoundUpdate(_mesh.meshTree, new CMat());
+    }
 }
 ;
+function MeshNodeBoundUpdate(_node, _sum) {
+    var mat = CPoolGeo.ProductMat();
+    var sm = CPoolGeo.ProductMat();
+    var rm = CPoolGeo.ProductMat();
+    CMath.MatScale(_node.mData.sca, sm);
+    CMath.QutToMat(_node.mData.rot, rm);
+    CMath.MatMul(sm, rm, mat);
+    CPoolGeo.RecycleMat(sm);
+    CPoolGeo.RecycleMat(rm);
+    mat.mF32A[12] = _node.mData.pos.x;
+    mat.mF32A[13] = _node.mData.pos.y;
+    mat.mF32A[14] = _node.mData.pos.z;
+    mat.UnitCheck();
+    mat = CMath.MatMul(_sum, mat);
+    if (_node.mData.ci != null) {
+        _node.mData.ci.bound.SetType(CBound.eType.Box);
+        var posb = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+        if (_node.mData.ci.indexCount > 0) {
+            for (var i = 0; i < _node.mData.ci.indexCount; i += 3) {
+                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(_node.mData.ci.index[i + 0]), mat));
+                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(_node.mData.ci.index[i + 1]), mat));
+                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(_node.mData.ci.index[i + 2]), mat));
+            }
+        }
+        else {
+            for (var i = 0; i < posb.bufF.Size(3); ++i) {
+                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(i), mat));
+            }
+        }
+    }
+    if (_node.mChild != null)
+        MeshNodeBoundUpdate(_node.mChild, mat);
+    if (_node.mColleague != null)
+        MeshNodeBoundUpdate(_node.mColleague, _sum);
+}

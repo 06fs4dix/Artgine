@@ -2,7 +2,7 @@ import { CVec4 } from "../../geometry/CVec4.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CComponent } from "../component/CComponent.js";
 import { CMath } from "../../geometry/CMath.js";
-import { CCamComp } from "./CCamComp.js";
+import { CBrushComp } from "./CBrushComp.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
 import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CDevice } from "../../render/CDevice.js";
@@ -14,7 +14,8 @@ import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
 import { CCondition } from "../../util/CStateMachine.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
-export class CLight extends CCamComp {
+import { CAlert } from "../../basic/CAlert.js";
+export class CLight extends CBrushComp {
     mCascadeCycle = [0, -1, -1];
     mShadowDistance = 1;
     mDigit = 1;
@@ -129,6 +130,179 @@ export class CLight extends CCamComp {
             this.SetDirectPos(pos);
         }
         super.Update(_delay);
+        this.UpdateBaush();
+    }
+    UpdateBaush() {
+        if (this.mBruch == null)
+            return;
+        if (this.IsDestroy()) {
+            CAlert.Info("test");
+            return;
+        }
+        if (this.mWrite.length == 0) {
+            let fw = this.mBruch.mFrame;
+            let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
+            srp.mCopy = false;
+            srp.mTag = "shadowWrite";
+            srp.PushOr(new CCondition("class", "==", "CPaint3D"));
+            srp.PushOr(new CCondition("class", "==", "CPaintMeshMerge"));
+            srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.mPriority = CRenderPass.ePriority.BackGround - 2;
+            this.PushRPAuto(srp);
+            srp = new CRPAuto(fw.Pal().SlVoxel().mKey);
+            srp.mCopy = false;
+            srp.mClearColor = false;
+            srp.mClearDepth = false;
+            srp.mTag = "shadowWrite";
+            srp.PushAnd(new CCondition("class", "==", "CPaintVoxel"));
+            srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.mPriority = CRenderPass.ePriority.BackGround - 1;
+            this.PushRPAuto(srp);
+        }
+        if (this.mShadowKey != null) {
+            if (Math.abs(this.mDirPos.w) > 0.5) {
+                if (!this.mShadowOff) {
+                    let scam0 = this.mBruch.GetCamera(this.mShadowKey + 0);
+                    let scam1 = this.mBruch.GetCamera(this.mShadowKey + 1);
+                    let scam2 = this.mBruch.GetCamera(this.mShadowKey + 2);
+                    let cam = this.mBruch.GetCam3D();
+                    var width = 2000 * this.mShadowDistance;
+                    var height = 2000 * this.mShadowDistance;
+                    let eye = cam.GetEye().Export();
+                    let viewDir = cam.GetView();
+                    let dir = this.mDirPos.xyz;
+                    let slook;
+                    let seye;
+                    let sup = new CVec3(0, 1, 0);
+                    let n = width;
+                    const di = 100;
+                    slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
+                    slook.x = Math.round(slook.x / this.mDigit) * this.mDigit;
+                    slook.y = Math.round(slook.y / this.mDigit) * this.mDigit;
+                    slook.z = Math.round(slook.z / this.mDigit) * this.mDigit;
+                    seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 2));
+                    if (scam0.Init(seye, slook, sup)) {
+                        scam0.mWidth = width * 2;
+                        scam0.mHeight = height * 2;
+                        scam0.ResetOrthographic();
+                        this.mUpdate = CUpdate.eType.Updated;
+                    }
+                    this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
+                    this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
+                    scam0.Update(1);
+                    let digit = this.mDigit * 0.5;
+                    if (digit > 100)
+                        digit = 100;
+                    if (digit < 1)
+                        digit = 1;
+                    n = width * 4;
+                    slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
+                    slook.x = Math.round(slook.x / digit) * digit;
+                    slook.y = Math.round(slook.y / digit) * digit;
+                    slook.z = Math.round(slook.z / digit) * digit;
+                    seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 4));
+                    if (scam1.Init(seye, slook, sup)) {
+                        scam1.mWidth = width * 8;
+                        scam1.mHeight = height * 8;
+                        scam1.ResetOrthographic();
+                    }
+                    this.mBruch.mShadowView[2].set(scam1.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
+                    this.mBruch.mShadowView[3].set(scam1.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
+                    scam1.Update(1);
+                    n = width * 10;
+                    slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
+                    slook.x = Math.round(slook.x / this.mDigit) * this.mDigit;
+                    slook.y = Math.round(slook.y / this.mDigit) * this.mDigit;
+                    slook.z = Math.round(slook.z / this.mDigit) * this.mDigit;
+                    seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 8));
+                    if (scam2.Init(seye, slook, sup)) {
+                        scam2.mWidth = width * 16;
+                        scam2.mHeight = height * 16;
+                        scam2.ResetOrthographic();
+                    }
+                    this.mBruch.mShadowView[4].set(scam2.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
+                    this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
+                    scam2.Update(1);
+                }
+                for (var i = 0; i < this.mCascadeCycle.length; ++i) {
+                    if (this.mCascadeCycle[i] == -1)
+                        continue;
+                    for (let rp of this.mWrite) {
+                        if (rp.mTag != "shadowWrite")
+                            continue;
+                        var srpKey = this.mShadowKey + rp.mShader + i;
+                        var srp = this.mBruch.GetAutoRP(srpKey);
+                        if (srp == null) {
+                            srp = rp.Export();
+                            srp.mTag = "shadowWrite";
+                            this.mBruch.SetAutoRP(srpKey, srp);
+                            var fw = this.GetOwner().GetFrame();
+                            var tex = fw.Res().Find(this.GetTex());
+                            if (tex.GetInfo()[0].mCount < (this.mBruch.mShadowCount + 1) * 6) {
+                                fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, (this.mBruch.mShadowCount + 1) * 6)], new CVec2(fw.PF().mWidth, fw.PF().mHeight), fw.Pal().GetShadowWriteTex());
+                            }
+                            srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(i, this.mBruch.mShadowCount, this.mBruch.mShadowCount * 6 + i)));
+                        }
+                        srp.mRenderTarget = this.GetTex();
+                        srp.mRenderTargetUse = new Set([this.mBruch.mShadowCount * 6 + i]);
+                        srp.mCamera = this.mShadowKey + i;
+                        if (srp.mShaderAttr[0].mData.y != this.mBruch.mShadowCount) {
+                            srp.mShaderAttr[0].mData.x = i;
+                            srp.mShaderAttr[0].mData.y = this.mBruch.mShadowCount;
+                            srp.mShaderAttr[0].mData.z = this.mBruch.mShadowCount * 6 + i;
+                            this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+                        }
+                        if (this.mShadowOff) {
+                            srp.mCycle = 100000000;
+                        }
+                        else {
+                            srp.mCycle = this.mCascadeCycle[i];
+                        }
+                    }
+                    let maxVal = this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
+                    if (maxVal == null) {
+                        maxVal = new CVec4(this.mBruch.mLightCount, -1, -1, -1);
+                    }
+                    else {
+                        maxVal.x = this.mBruch.mLightCount;
+                    }
+                    if (i < 3) {
+                        if (i < 0.5) {
+                            maxVal.y = this.mBruch.mShadowCount * 6 + i;
+                            maxVal.z = -1;
+                            maxVal.w = -1;
+                        }
+                        else if (i < 1.5)
+                            maxVal.z = this.mBruch.mShadowCount * 6 + i;
+                        else
+                            maxVal.w = this.mBruch.mShadowCount * 6 + i;
+                    }
+                    this.mBruch.mShadowRead.set(this.mBruch.mShadowCount, maxVal);
+                }
+            }
+            else {
+                this.mBruch.mShadowView[0].fill(0, 0, 16);
+                this.mBruch.mShadowView[1].fill(0, 0, 16);
+                this.mBruch.mShadowView[2].fill(0, 0, 16);
+                this.mBruch.mShadowView[3].fill(0, 0, 16);
+                this.mBruch.mShadowView[4].fill(0, 0, 16);
+                this.mBruch.mShadowView[5].fill(0, 0, 16);
+                this.mBruch.mShadowView[6].fill(0, 0, 16);
+            }
+            if (!this.mShadowOff)
+                this.mBruch.mShadowCount++;
+        }
+        if (this.mBruch.mLightCount > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 4)
+            return;
+        this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 0] = this.mDirPos.x;
+        this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 1] = this.mDirPos.y;
+        this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 2] = this.mDirPos.z;
+        this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 3] = this.mDirPos.w;
+        this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 0] = this.mColor.x;
+        this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 1] = this.mColor.y;
+        this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 2] = this.mColor.z;
+        this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 3] = this.mColor.w;
+        this.mBruch.mLightCount++;
     }
     SetDirectPos(_dir) {
         this.mDirPos.mF32A[0] = _dir.mF32A[0];
@@ -183,182 +357,6 @@ export class CLight extends CCamComp {
     }
     IsPointLight() {
         return this.mDirPos.w > 0.5;
-    }
-    RecvGetBrush(_brush) {
-        if (_brush.mDoubleChk.has(this))
-            return;
-        _brush.mDoubleChk.add(this);
-        if (this.mWrite.length == 0) {
-            let fw = _brush.mFrame;
-            let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
-            srp.mCopy = false;
-            srp.mTag = "shadowWrite";
-            srp.PushCondition(new CCondition("class", "==", "CPaint3D"));
-            srp.PushCondition(new CCondition("mTag[shadow]"));
-            srp.mPriority = CRenderPass.ePriority.BackGround - 2;
-            this.PushRPAuto(srp);
-            srp = new CRPAuto(fw.Pal().SlVoxel().mKey);
-            srp.mCopy = false;
-            srp.mClearColor = false;
-            srp.mClearDepth = false;
-            srp.mTag = "shadowWrite";
-            srp.PushCondition(new CCondition("class", "==", "CPaintVoxel"));
-            srp.PushCondition(new CCondition("mTag[shadow]"));
-            srp.mPriority = CRenderPass.ePriority.BackGround - 1;
-            this.PushRPAuto(srp);
-        }
-        if (this.mShadowKey != null) {
-            if (Math.abs(this.mDirPos.w) > 0.5) {
-                if (!this.mShadowOff) {
-                    let scam0 = _brush.GetCamera(this.mShadowKey + 0);
-                    let scam1 = _brush.GetCamera(this.mShadowKey + 1);
-                    let scam2 = _brush.GetCamera(this.mShadowKey + 2);
-                    let cam = _brush.GetCam3D();
-                    var width = 2000 * this.mShadowDistance;
-                    var height = 2000 * this.mShadowDistance;
-                    let eye = cam.GetEye().Export();
-                    let viewDir = cam.GetView();
-                    viewDir.Snap(3);
-                    let safeWidth = Math.max(1e-6, width);
-                    let exp = Math.floor(Math.log10(safeWidth)) - 2;
-                    let floorDigit = Math.pow(10, exp) * this.mDigit;
-                    let dir = this.mDirPos.xyz;
-                    dir.Snap(3);
-                    let slook;
-                    let seye;
-                    let sup = new CVec3(0, 1, 0);
-                    let n = width;
-                    slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
-                    seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 2));
-                    slook.x = Math.round(slook.x / floorDigit) * floorDigit;
-                    slook.y = Math.round(slook.y / floorDigit) * floorDigit;
-                    slook.z = Math.round(slook.z / floorDigit) * floorDigit;
-                    seye.x = Math.round(seye.x / floorDigit) * floorDigit;
-                    seye.y = Math.round(seye.y / floorDigit) * floorDigit;
-                    seye.z = Math.round(seye.z / floorDigit) * floorDigit;
-                    if (scam0.Init(seye, slook, sup)) {
-                        scam0.mWidth = width * 2;
-                        scam0.mHeight = height * 2;
-                        scam0.ResetOrthographic();
-                        this.mUpdate = CUpdate.eType.Updated;
-                    }
-                    _brush.mShadowView[0].set(scam0.GetViewMat().F32A(), _brush.mShadowCount * 16);
-                    _brush.mShadowView[1].set(scam0.GetProjMat().F32A(), _brush.mShadowCount * 16);
-                    scam0.Update(1);
-                    n = width * 4;
-                    slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
-                    seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 4));
-                    slook.x = Math.round(slook.x / floorDigit) * floorDigit;
-                    slook.y = Math.round(slook.y / floorDigit) * floorDigit;
-                    slook.z = Math.round(slook.z / floorDigit) * floorDigit;
-                    seye.x = Math.round(seye.x / floorDigit) * floorDigit;
-                    seye.y = Math.round(seye.y / floorDigit) * floorDigit;
-                    seye.z = Math.round(seye.z / floorDigit) * floorDigit;
-                    if (scam1.Init(seye, slook, sup)) {
-                        scam1.mWidth = width * 8;
-                        scam1.mHeight = height * 8;
-                        scam1.ResetOrthographic();
-                    }
-                    _brush.mShadowView[2].set(scam1.GetViewMat().F32A(), _brush.mShadowCount * 16);
-                    _brush.mShadowView[3].set(scam1.GetProjMat().F32A(), _brush.mShadowCount * 16);
-                    scam1.Update(1);
-                    n = width * 10;
-                    slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
-                    seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 8));
-                    slook.x = Math.round(slook.x / floorDigit) * floorDigit;
-                    slook.y = Math.round(slook.y / floorDigit) * floorDigit;
-                    slook.z = Math.round(slook.z / floorDigit) * floorDigit;
-                    seye.x = Math.round(seye.x / floorDigit) * floorDigit;
-                    seye.y = Math.round(seye.y / floorDigit) * floorDigit;
-                    seye.z = Math.round(seye.z / floorDigit) * floorDigit;
-                    if (scam2.Init(seye, slook, sup)) {
-                        scam2.mWidth = width * 16;
-                        scam2.mHeight = height * 16;
-                        scam2.ResetOrthographic();
-                    }
-                    _brush.mShadowView[4].set(scam2.GetViewMat().F32A(), _brush.mShadowCount * 16);
-                    _brush.mShadowView[5].set(scam2.GetProjMat().F32A(), _brush.mShadowCount * 16);
-                    scam2.Update(1);
-                }
-                for (var i = 0; i < this.mCascadeCycle.length; ++i) {
-                    if (this.mCascadeCycle[i] == -1)
-                        continue;
-                    for (let rp of this.mWrite) {
-                        if (rp.mTag != "shadowWrite")
-                            continue;
-                        var srpKey = this.mShadowKey + rp.mShader + i;
-                        var srp = _brush.GetAutoRP(srpKey);
-                        if (srp == null) {
-                            srp = rp.Export();
-                            srp.mTag = "shadowWrite";
-                            _brush.SetAutoRP(srpKey, srp);
-                            var fw = this.GetOwner().GetFrame();
-                            var tex = fw.Res().Find(this.GetTex());
-                            if (tex.GetInfo()[0].mCount < (_brush.mShadowCount + 1) * 6) {
-                                fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, (_brush.mShadowCount + 1) * 6)], new CVec2(fw.PF().mWidth, fw.PF().mHeight), fw.Pal().GetShadowWriteTex());
-                            }
-                            srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(i, _brush.mShadowCount, _brush.mShadowCount * 6 + i)));
-                        }
-                        srp.mRenderTarget = this.GetTex();
-                        srp.mRenderTargetUse = new Set([_brush.mShadowCount * 6 + i]);
-                        srp.mCamera = this.mShadowKey + i;
-                        if (srp.mShaderAttr[0].mData.y != _brush.mShadowCount) {
-                            srp.mShaderAttr[0].mData.x = i;
-                            srp.mShaderAttr[0].mData.y = _brush.mShadowCount;
-                            srp.mShaderAttr[0].mData.z = _brush.mShadowCount * 6 + i;
-                            _brush.mAutoRPUpdate = CUpdate.eType.Updated;
-                        }
-                        if (this.mShadowOff) {
-                            srp.mCycle = 100000000;
-                        }
-                        else {
-                            srp.mCycle = this.mCascadeCycle[i];
-                        }
-                    }
-                    let maxVal = _brush.mShadowRead.get(_brush.mShadowCount);
-                    if (maxVal == null) {
-                        maxVal = new CVec4(_brush.mLightCount, -1, -1, -1);
-                    }
-                    else {
-                        maxVal.x = _brush.mLightCount;
-                    }
-                    if (i < 3) {
-                        if (i < 0.5) {
-                            maxVal.y = _brush.mShadowCount * 6 + i;
-                            maxVal.z = -1;
-                            maxVal.w = -1;
-                        }
-                        else if (i < 1.5)
-                            maxVal.z = _brush.mShadowCount * 6 + i;
-                        else
-                            maxVal.w = _brush.mShadowCount * 6 + i;
-                    }
-                    _brush.mShadowRead.set(_brush.mShadowCount, maxVal);
-                }
-            }
-            else {
-                _brush.mShadowView[0].fill(0, 0, 16);
-                _brush.mShadowView[1].fill(0, 0, 16);
-                _brush.mShadowView[2].fill(0, 0, 16);
-                _brush.mShadowView[3].fill(0, 0, 16);
-                _brush.mShadowView[4].fill(0, 0, 16);
-                _brush.mShadowView[5].fill(0, 0, 16);
-                _brush.mShadowView[6].fill(0, 0, 16);
-            }
-            if (!this.mShadowOff)
-                _brush.mShadowCount++;
-        }
-        if (_brush.mLightCount > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 4)
-            return;
-        _brush.mLightDir[_brush.mLightCount * 4 + 0] = this.mDirPos.x;
-        _brush.mLightDir[_brush.mLightCount * 4 + 1] = this.mDirPos.y;
-        _brush.mLightDir[_brush.mLightCount * 4 + 2] = this.mDirPos.z;
-        _brush.mLightDir[_brush.mLightCount * 4 + 3] = this.mDirPos.w;
-        _brush.mLightColor[_brush.mLightCount * 4 + 0] = this.mColor.x;
-        _brush.mLightColor[_brush.mLightCount * 4 + 1] = this.mColor.y;
-        _brush.mLightColor[_brush.mLightCount * 4 + 2] = this.mColor.z;
-        _brush.mLightColor[_brush.mLightCount * 4 + 3] = this.mColor.w;
-        _brush.mLightCount++;
     }
     ImportCJSON(_json) {
         return super.ImportCJSON(_json);

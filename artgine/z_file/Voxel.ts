@@ -1,4 +1,4 @@
-import { ColorModelCac } from "./ColorFun";
+import { CAModelCac } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -36,7 +36,7 @@ var to_shadowBias : ToV1=Null();
 var to_worldPos : ToV4=Null();
 var to_normal : ToV3=Null();
 
-var shadowReadList: Sam2DV4=new Sam2DV4(9);
+var shadowReadList: Sam2DV4=new Sam2DV4(11);
 var shadowOn : number = -1.0;
 var sun : number=0.0;
 
@@ -346,7 +346,7 @@ function ps_main()
 	//L_cor.rgb=V3MulFloat(L_cor.rgb,light);
 	
 
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	var DSE : CMat3=new CMat3(0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,ambientColor]);
 	DSE =LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0),ambientColor);
@@ -430,7 +430,7 @@ function ps_main_shadow_write()
 	{
 		L_cor=Sam2DToColor(0.0,to_uv.xy);	
 	}
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	
     
 	if ( L_cor.a <= 0.1 ) 
@@ -488,7 +488,7 @@ function ps_main_shadow_read()
 		L_cor.rgb=V3MulFloat(L_cor.rgb,to_uv.z);
 		
 	}
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	
     
 	if ( L_cor.a <= 0.1 ) 

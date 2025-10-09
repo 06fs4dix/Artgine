@@ -22,10 +22,15 @@ export class CRPAuto extends CRenderPass {
 		"mTag":"mTag",
 	};
 	mAnd=new Array<CCondition>();
+	mOr=new Array<CCondition>();
 	public mCopy:boolean=false;//rp가 복사되서 페인트에 들어감
-	PushCondition(_con : CCondition)
+	PushAnd(_con : CCondition)
 	{
 		this.mAnd.push(_con);
+	}
+	PushOr(_con : CCondition)
+	{
+		this.mOr.push(_con);
 	}
 	// PushInPaint(_name : any)
 	// {

@@ -125,14 +125,10 @@ export class CRenderPass extends CObject
 		ONE_MINUS_CONSTANT_ALPHA:32772,
 		SRC_ALPHA_SATURATE:776,
 	}
-	// static eZSort={
-	// 	Normal:0,
-	// 	Revers:1,
-	// 	// Distance:1,
-	// 	// AlphaGroup:0,
-	// 	// ReversAlphaGroup:2,
-	// 	// None:-1,
-	// };
+	static eAlphaSort={
+		Normal:0,
+		Revers:1,
+	};
 	public mDepthTest : boolean=null;
 	public mDepthWrite : boolean=null;
 	public mAlpha : boolean=null;
@@ -157,9 +153,9 @@ export class CRenderPass extends CObject
 	public mBlitRead="";
 	
 	public mLine=null;
-	//public mZSort=CRenderPass.eZSort.Normal;
+	public mSortRevers=false;
 	public mZEarly=true;
-	//public m_sortAlpha=true;
+	
 	public mBlend=[CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
 	public mTag="";
 

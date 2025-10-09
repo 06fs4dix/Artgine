@@ -13,8 +13,8 @@ export var ligStep2 : number=SDF.eLightStep2.Emissive;
 export var ligStep3 : number=0;
 
 //LUT
-export var ligDir: Sam2DV4=new Sam2DV4(9, 503);
-export var ligCol: Sam2DV4=new Sam2DV4(9, 504);
+export var ligDir: Sam2DV4=new Sam2DV4(11, 503);
+export var ligCol: Sam2DV4=new Sam2DV4(11, 504);
 
 export var envCube : number = -1;
 export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4
@@ -187,6 +187,7 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
             var R : CVec3 = V3Nor(V3AddV3(V3MulFloat(L,-1.0),V3MulFloat(normal,2.0 * angle)));
             var phongValue : number = Math.pow(max(0.0,V3Dot(viewDir,R)),20.0);
             var phongSpecular : number = phongValue*smoothness*nDotL;
+            //phongSpecular=0.0;
             specular = new CVec3(phongSpecular, phongSpecular, phongSpecular);
         }
         else if(ligStep1 < SDF.eLightStep1.BlinnPhong + 0.5)

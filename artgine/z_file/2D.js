@@ -1,5 +1,5 @@
 import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
-import { ColorModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
+import { CAModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
@@ -22,7 +22,7 @@ var to_worldPos = Null();
 var time = Attribute(0, "time");
 var mask = 1.0;
 var lastHide = Null();
-var trailPos = new Sam2DV4(9);
+var trailPos = new Sam2DV4(11);
 var zDepth = 0.0;
 var zDepthBias = 0.001;
 var sam2DCount = Null();
@@ -187,10 +187,10 @@ function ps_main() {
     BranchEnd();
     var L_cor = Sam2DToColor(0.0, to_uv.xy);
     L_cor.a *= to_uv.z;
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
-    BranchBegin("vfx", "V", [colorVFX, time]);
+    BranchBegin("vfx", "VFX", [colorVFX, time]);
     L_cor = ColorVFX(L_cor, to_uv.xy, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
@@ -216,8 +216,8 @@ function ps_main() {
 }
 function ps_main_mask() {
     var L_cor = Sam2D0ToColor(to_uv.xy);
-    BranchBegin("color", "C", [colorModel, alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)

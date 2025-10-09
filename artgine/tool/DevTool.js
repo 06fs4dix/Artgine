@@ -789,6 +789,8 @@ function DevToolUpdate(_delay) {
             ray.GetOriginal().z += 1000;
         for (let canvas of gAtl.mCanvasMap.values()) {
             for (let subject of canvas.GetSubMap().values()) {
+                if (subject.mSelect == false)
+                    continue;
                 let ptArr = subject.FindComps(CPaint);
                 let clArr = subject.FindComps(CCollider);
                 for (let pt of ptArr) {

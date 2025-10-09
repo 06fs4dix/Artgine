@@ -2,7 +2,9 @@
 
 import {CMesh} from "../../render/CMesh.js";
 import {CParser} from "./CParser.js";
-
+import { CTree } from "../../basic/CTree.js";
+import { CMeshDataNode } from "../../render/CMeshDataNode.js";
+import { CJSON } from "../../basic/CJSON.js";
 
 export default class CParserGLTF extends CParser
 {
@@ -36,8 +38,4 @@ export default class CParserGLTF extends CParser
     }
 }
 import CParserGLTF_imple from "../../util_imple/parser/CParserGLTF.js";
-import { CTree } from "../../basic/CTree.js";
-import { CMeshDataNode } from "../../render/CMeshDataNode.js";
-import { CJSON } from "../../basic/CJSON.js";
-
 CParserGLTF_imple();

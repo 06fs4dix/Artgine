@@ -23,6 +23,7 @@ export class CSubject extends CObject {
     mDestroy;
     mEnable;
     mPMatMul = true;
+    mSelect = true;
     mComArr;
     mPTArr = null;
     mCLArr = null;
@@ -63,6 +64,7 @@ export class CSubject extends CObject {
         this.mDestroy = false;
         this.mEnable = true;
         this.mPEnable = true;
+        this.mSelect = true;
         this.mSpeed = 1.0;
         this.mInMsg.Push(new CRouteMsg("dummy"));
         this.mInMsg.Clear();
@@ -215,6 +217,13 @@ export class CSubject extends CObject {
         this.mEnable = _enable;
         this.mUpdateMat = CUpdate.eType.Updated;
         this.SetChildShow(_enable);
+        if (this.mPTArr != null) {
+            for (let pt of this.mPTArr) {
+                pt.ClearCRPAuto();
+            }
+        }
+        this.mPTArr.length = 0;
+        this.mPTArr = null;
     }
     SetChildShow(_enable) {
         for (let each0 of this.mChild) {

@@ -502,6 +502,13 @@ export class CPaintHTML extends CPaint2D {
         this.mPos = _pos.Export();
         this.mUpdateFMat = true;
     }
+    UpdateRenPt() {
+        for (let i = 0; i < this.mRenPT.length; ++i) {
+            let ren = this.mRenPT[i];
+            ren.mShow = 2;
+            ren.mDistance = 0x7FFFFE00;
+        }
+    }
     SetSize(_size) {
         this.mSize = _size;
         this.mUpdateFMat = true;

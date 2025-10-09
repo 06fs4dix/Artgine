@@ -21,7 +21,7 @@ import {
 	SDF
 } from "./SDF";
 import { 
-	ColorModelCac, ColorVFX
+	CAModelCac, ColorVFX
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -80,7 +80,7 @@ var depthMap : number = 0.0;
 var screenResolution : CVec2=new CVec2(1.0, 1.0);
 
 //LUT
-var weightArrMat: Sam2DMat = new Sam2DMat(9);
+var weightArrMat: Sam2DMat = new Sam2DMat(11);
 
 var time : number = Attribute(0,"time");
 
@@ -169,7 +169,7 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 function ps_main_simple()
 {
     var L_cor : CVec4=Sam2DToColor(0.0,to_uv);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a <= alphaCut) discard;
 	BranchEnd();
@@ -370,11 +370,11 @@ function ps_main()
 
 	var L_cor : CVec4=Sam2DToColor(to_ref.x, uv);
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
 	BranchEnd();
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -425,11 +425,11 @@ function ps_main_gBuffer() {
 	else
 		L_cor = Sam2DToColor(to_ref.x, uv);
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
 	BranchEnd();
 
@@ -481,11 +481,11 @@ function ps_main_gBuffer_multi() {
 	else
 		L_cor = Sam2DToColor(to_ref.x, uv);
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
 	BranchEnd();
 
@@ -552,11 +552,11 @@ function ps_main_shadow_write()
 {
 	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
 	BranchEnd();
 
@@ -632,11 +632,11 @@ function ps_main_shadow_read()
 {	
 	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
 	BranchEnd();
 
@@ -687,11 +687,11 @@ function ps_main_shadow_read_pa()
     // 2) 머티리얼/이펙트 (기존 유지)
     var L_cor : CVec4 = Sam2DToColor(0.0, uv);
 
-    BranchBegin("color","C",[colorModel,alphaModel]);
-    L_cor = ColorModelCac(L_cor, colorModel, alphaModel);
+    BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
 
-    BranchBegin("vfx","V",[colorVFX,time]);
+    BranchBegin("vfx","VFX",[colorVFX,time]);
     L_cor = ColorVFX(L_cor, uv, colorVFX, time);
     BranchEnd();
 
@@ -764,11 +764,11 @@ function ps_main_bake() {
 
 	var L_cor : CVec4 = Sam2DToColor(to_ref.x,uv);
 
-	BranchBegin("color","C",[colorModel,alphaModel]);
-	L_cor=ColorModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","V",[colorVFX,time]);
+	BranchBegin("vfx","VFX",[colorVFX,time]);
 	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
 	BranchEnd();
 

@@ -1172,6 +1172,8 @@ function DevToolUpdate(_delay)
         {
             for(let subject of canvas.GetSubMap().values())
             {
+                if(subject.mSelect==false)  continue;
+                
                 let ptArr=subject.FindComps(CPaint);
                 let clArr=subject.FindComps(CCollider);
 

@@ -11,7 +11,7 @@ import {CVec3} from "../geometry/CVec3.js"
 import {CStream} from "../basic/CStream.js"
 import {CUniqueID} from "../basic/CUniqueID.js"
 import {CBase64File} from "../util/CBase64File.js"
-import {CCamComp} from "./component/CCamComp.js"
+import {CBrushComp} from "./component/CBrushComp.js"
 import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js"
 import {CRay} from "../geometry/CRay.js"
 import {CCollider} from "./component/CCollider.js"
@@ -927,7 +927,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		return rVal;
 	}
 	
-	SendGetBrush(_camcomp : CCamComp)
+	SendGetBrush(_camcomp : CBrushComp)
 	{
 		_camcomp.RecvGetBrush(this.mBrush);
 	}

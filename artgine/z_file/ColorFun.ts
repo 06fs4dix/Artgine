@@ -92,7 +92,7 @@ export function RGBToHSL(_vec3 : CVec3) : CVec3
     return new CVec3(h, s, l);
 }
 
-export function ColorModelCac(_rgba : CVec4, _cModel : CVec4, _aModel : CVec2) : CVec4 {
+export function CAModelCac(_rgba : CVec4, _cModel : CVec4, _aModel : CVec2) : CVec4 {
     var rgb : CVec3;
     if(_cModel.a < SDF.eColorModel.RGBAdd + 0.5)
         rgb = V3AddV3(_rgba.rgb, _cModel.rgb);
