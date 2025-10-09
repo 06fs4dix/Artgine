@@ -348,8 +348,12 @@ export class CSubject extends CObject implements IFile
 				pt.ClearCRPAuto();
 			}
 		}
-		this.mPTArr.length=0;
-		this.mPTArr=null;
+		if(this.mPTArr!=null)
+		{
+			this.mPTArr.length=0;
+			this.mPTArr=null;
+		}
+		
 	}
 	protected SetChildShow(_enable : boolean)
 	{

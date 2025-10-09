@@ -1,5 +1,5 @@
 //Version
-const version='mg0uwcd1_7';
+const version='mgjgxfbu_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -164,8 +164,8 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 let lightAM7RP=new CRPMgr();
 let rp=lightAM7RP.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition({"s":"class","v":"CPaint2D"}));
-rp.PushCondition(new CCondition({"s":"mTag[shadowPlane]","v":0}));
+rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 //rp.PushInPaint(CPaint2D);
 //rp.PushOutTag("shadowPlane");
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
@@ -173,7 +173,7 @@ rp.mTag="light";
 
 
 rp=lightAM7RP.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition({"s":"class","v":"CPaintVoxel"}));
+rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag="light";
 Real.SetRPMgr(lightAM7RP);
@@ -189,8 +189,8 @@ let emissiveTex=new CTexture();
 emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let emissiveTexKey=lightPM11RP.PushTex("Bloom/emissiveTex.tex",emissiveTex);
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition({"s":"class","v":"CPaint2D"}));
-rp.PushCondition(new CCondition({"s":"mTag[bloom]"}));
+rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushAnd(new CCondition({"s":"mTag[bloom]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mRenderTarget=emissiveTexKey;
 rp.mTag="mask";
@@ -200,23 +200,23 @@ let basiceTex=new CTexture();
 basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let basiceTexKey=lightPM11RP.PushTex("Bloom/basiceTex.tex",basiceTex);
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition({"s":"class","v":"CPaint2D"}));
-rp.PushCondition(new CCondition({"s":"mTag[shadowPlane]","v":0}));
+rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mTag="light";
 rp.mRenderTarget=basiceTexKey;
 
 
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition({"s":"class","v":"CPaintVoxel"}));
+rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag="light";
 rp.mRenderTarget=basiceTexKey;
 
 
 rp=lightPM11RP.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition({"s":"class","v":"CShadowPlane"}));
-rp.PushCondition(new CCondition({"s":"mTag[shadowPlane]"}));
+rp.PushAnd(new CCondition({"s":"class","v":"CShadowPlane"}));
+rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mRenderTarget=basiceTexKey;
 
@@ -348,6 +348,16 @@ window["PM11"]=PM11;
 
 new CMDViewer("README.md");
 PM11();
+
+
+
+
+
+
+
+
+
+
 
 
 

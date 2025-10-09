@@ -34,7 +34,8 @@ export class CWind extends CBrushComp {
         return "bi bi-wind";
     }
     Update(_delay) {
-        super.Update(_delay);
+        if (super.Update(_delay))
+            return;
         if (this.mBruch.mWindCount > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 4)
             return;
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 0] = this.mDir.x;
@@ -50,5 +51,6 @@ export class CWind extends CBrushComp {
         this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 2] = this.mFrequency;
         this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 3] = this.mWaveLength;
         this.mBruch.mWindCount++;
+        return false;
     }
 }

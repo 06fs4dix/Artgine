@@ -58,7 +58,7 @@ export class CComponent extends CObject
 		this.mComMsgLen++;	
 	}
 	
-	Update(_delay)
+	Update(_delay) : boolean|any
 	{
 		
 	}

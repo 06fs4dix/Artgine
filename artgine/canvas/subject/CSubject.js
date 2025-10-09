@@ -222,8 +222,10 @@ export class CSubject extends CObject {
                 pt.ClearCRPAuto();
             }
         }
-        this.mPTArr.length = 0;
-        this.mPTArr = null;
+        if (this.mPTArr != null) {
+            this.mPTArr.length = 0;
+            this.mPTArr = null;
+        }
     }
     SetChildShow(_enable) {
         for (let each0 of this.mChild) {

@@ -54,10 +54,11 @@ export class CWind extends CBrushComp
         return "bi bi-wind";
     }
 
-    Update(_delay)
+    Update(_delay) : boolean
 	{
-        super.Update(_delay);
+        if(super.Update(_delay))    return;
 
+        
         //if(this.mBruch.mDoubleChk.has(this))	return;
 		//this.mBruch.mDoubleChk.add(this);
         
@@ -81,6 +82,7 @@ export class CWind extends CBrushComp
         this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 3] = this.mWaveLength;
 
         this.mBruch.mWindCount++;
+        return false;
 	}
     
 

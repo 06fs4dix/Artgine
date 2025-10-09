@@ -22,6 +22,7 @@ export class CBrushComp extends CComponent {
             var cm = this.ProductMsg("SendGetBrush");
             cm.mInter = "canvas";
             cm.mMsgData[0] = this;
+            return true;
         }
         if (this.mRead != null) {
             var cm = this.ProductMsg("CubeMap");
@@ -29,6 +30,7 @@ export class CBrushComp extends CComponent {
             cm.mInter = "";
             cm.mMsgData[0] = this;
         }
+        return false;
     }
     RecvGetBrush(_brush) {
         this.mBruch = _brush;

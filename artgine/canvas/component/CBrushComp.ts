@@ -29,7 +29,7 @@ export class CBrushComp extends CComponent
     {
         this.mWrite.push(_write);
     }
-    Update(_delay: any): void 
+    Update(_delay: any): boolean 
     {
         //브러시 정보는 캔버스에 있어서 받으려고 처리
         //CC->Can->Light,Env
@@ -38,6 +38,7 @@ export class CBrushComp extends CComponent
             var cm=this.ProductMsg("SendGetBrush");
             cm.mInter="canvas";
             cm.mMsgData[0]=this;
+            return true;
         }
         
 
@@ -48,6 +49,7 @@ export class CBrushComp extends CComponent
             cm.mInter = "";
             cm.mMsgData[0]=this;
         }
+        return false;
     }
   
     
