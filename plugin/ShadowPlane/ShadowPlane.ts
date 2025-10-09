@@ -571,7 +571,7 @@ export class CShadowPlane extends CPaint2D
         //fw.Dev().SetClearColor(true, new CVec4(0.5,0.5,0.5,0));
         fw.Ren().Begin(tex);
         
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinC").mKey) as CShader;
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinCA").mKey) as CShader;
 
         fw.Ren().UseShader(vf);
 

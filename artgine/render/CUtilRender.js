@@ -593,6 +593,10 @@ export class CUtilRender {
         posb.bufF.Push(mcro);
         posb.bufF.Push(dir);
         posb.bufF.Push(cro);
+        rVal.bound.InitBound(mdir);
+        rVal.bound.InitBound(mcro);
+        rVal.bound.InitBound(dir);
+        rVal.bound.InitBound(cro);
         var uv = [
             new CVec2(0, 0), new CVec2(_uv.x, 0), new CVec2(_uv.x, _uv.y),
             new CVec2(0, _uv.y), new CVec2(0, 0), new CVec2(_uv.x, _uv.y)
@@ -659,6 +663,7 @@ export class CUtilRender {
         posb.bufF.Push(new CVec3(_size, _size, _size));
         posb.bufF.Push(new CVec3(-_size, _size, _size));
         for (var i = 0; i < posb.bufF.Size(3); ++i) {
+            rVal.bound.InitBound(posb.bufF.V3(i));
             norb.bufF.Push(CMath.V3Nor(posb.bufF.V3(i)));
             texb.bufF.Push(new CVec3(0, 1, 2));
         }
@@ -766,6 +771,8 @@ export class CUtilRender {
         var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
         var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
         MakeSphere2(posb.bufF, uvb.bufF, norb.bufF, _size, _count, _count);
+        for (var i = 0; i < posb.bufF.Size(3); ++i)
+            rVal.bound.InitBound(posb.bufF.V3(i));
         rVal.vertexCount = posb.bufF.Size(3);
         rVal.indexCount = rVal.index.length;
         return rVal;
@@ -786,6 +793,8 @@ export class CUtilRender {
         var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
         var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
         MakeSphere(posb.bufF, uvb.bufF, norb.bufF, rVal.index, _size, _vCount, _hCount, _vSize, _hSize);
+        for (var i = 0; i < posb.bufF.Size(3); ++i)
+            rVal.bound.InitBound(posb.bufF.V3(i));
         rVal.vertexCount = posb.bufF.Size(3);
         rVal.indexCount = rVal.index.length;
         return rVal;
@@ -814,28 +823,6 @@ export class CUtilRender {
             rVal.index[i * 4 * 3 + 9] = 1 + i * 2;
             rVal.index[i * 4 * 3 + 10] = 3 + i * 2;
             rVal.index[i * 4 * 3 + 11] = 2 + i * 2;
-        }
-        rVal.indexCount = rVal.index.length;
-        return rVal;
-    }
-    static GetTail(_count) {
-        _count = parseInt(_count + "");
-        var rVal = new CMeshCreateInfo();
-        var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
-        posb.bufF.Resize((2 * (_count + 1)) * 3);
-        rVal.vertexCount = 2 * (_count + 1);
-        rVal.index = new Array(12 * _count);
-        for (var i = 0; i < _count + 1; ++i) {
-            posb.bufF.V3(i * 2 + 0, 1 - i / _count, 0, i * 2 + 0);
-            posb.bufF.V3(i * 2 + 1, 1 - i / _count, 1, i * 2 + 1);
-        }
-        for (var i = 0; i < _count - 1; ++i) {
-            rVal.index[i * 6 + 0] = 0 + i * 2;
-            rVal.index[i * 6 + 1] = 1 + i * 2;
-            rVal.index[i * 6 + 2] = 2 + i * 2;
-            rVal.index[i * 6 + 3] = 2 + i * 2;
-            rVal.index[i * 6 + 4] = 3 + i * 2;
-            rVal.index[i * 6 + 5] = 1 + i * 2;
         }
         rVal.indexCount = rVal.index.length;
         return rVal;

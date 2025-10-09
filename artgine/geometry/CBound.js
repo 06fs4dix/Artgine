@@ -89,7 +89,7 @@ export class CBound extends CObject {
         else if (_vInfo instanceof CBound) {
             this.mMin.x = CMath.Min(_vInfo.mMin.x, this.mMin.x);
             this.mMin.y = CMath.Min(_vInfo.mMin.y, this.mMin.y);
-            this.mMin.z = CMath.Min(_vInfo.mMin.y, this.mMin.z);
+            this.mMin.z = CMath.Min(_vInfo.mMin.z, this.mMin.z);
             this.mMax.x = CMath.Max(_vInfo.mMax.x, this.mMax.x);
             this.mMax.y = CMath.Max(_vInfo.mMax.y, this.mMax.y);
             this.mMax.z = CMath.Max(_vInfo.mMax.z, this.mMax.z);

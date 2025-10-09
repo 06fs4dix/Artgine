@@ -394,7 +394,7 @@ export class CShadowPlane extends CPaint2D {
         tempRP.mBlend[5] = CRenderPass.eBlend.ZERO;
         const beforeRP = fw.Dev().ChangeRenderPass(tempRP);
         fw.Ren().Begin(tex);
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinC").mKey);
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinCA").mKey);
         fw.Ren().UseShader(vf);
         fw.Ren().SendGPU(vf, new CMat(), "worldMat");
         fw.Ren().SendGPU(vf, cam.GetViewMat(), "viewMat");
