@@ -1,5 +1,5 @@
 //Version
-const version='mg0uwcd1_2';
+const version='mgjh97sr_13';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -88,7 +88,7 @@ let gBufPosTex=new CTexture();
 gBufPosTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F,1)]);
 let gBufPos=DeferredSingle.PushTex("gBufPos.tex",gBufPosTex);
 let rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -101,7 +101,7 @@ let gBufNorTex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufNor=DeferredSingle.PushTex("gBufNor.tex",gBufNorTex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+1;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Normal));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -113,7 +113,7 @@ let gBufAlbTex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufAlb=DeferredSingle.PushTex("gBufAlb.tex",gBufAlbTex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+2;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Albedo));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -125,7 +125,7 @@ let gBufSPETex=new CTexture();
 gBufNorTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
 let gBufSPE=DeferredSingle.PushTex("gBufSPE.tex",gBufSPETex);
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+3;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.SpeculerPowEmissive));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -134,7 +134,7 @@ rp.mTag="gBuf";
 
 let ShadowKey=DeferredSingle.PushTex("shadowread.tex",new CTexture());
 rp=DeferredSingle.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -191,7 +191,7 @@ gBufMultiTex.PushInfo([
     new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1),]);
 let gBufMulti=DeferredMulti.PushTex("gBufMulti.tex",gBufMultiTex);
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
@@ -201,7 +201,7 @@ rp.mTag="gBufMulti";
 
 ShadowKey=DeferredMulti.PushTex("shadowread.tex",new CTexture());
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
@@ -249,7 +249,7 @@ srp.mShaderAttr.push(new CShaderAttr("envCube",new CVec1(0)));
 
 
 rp=DeferredMulti.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaintCube"));
+rp.PushAnd(new CCondition("class","==","CPaintCube"));
 rp.mPriority=CRenderPass.ePriority.Normal+2;
 rp.mShader=gAtl.Frame().Pal().SlCubeKey();
 rp.mCullFace=CRenderPass.eCull.None;
@@ -283,7 +283,7 @@ let forward=new CRPMgr();
 let texKey=forward.PushTex("shadowread.tex",new CTexture());
 //let texKey=forward.PushTex("shadowread.tex",new CTexture());
 rp=forward.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
@@ -299,7 +299,7 @@ rp.mRenderTarget="shadowread.tex";
 rp.mTag="shadowRead";
 
 rp=forward.PushRP(new CRPAuto());
-rp.PushCondition(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 //rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
@@ -566,6 +566,19 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
