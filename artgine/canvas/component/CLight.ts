@@ -258,9 +258,9 @@ export class CLight extends CBrushComp
 		if (this.mShadowKey!=null)
 		{
 			if(this.mColor.IsZero())
-				this.mShadowOff=false;
-			else
 				this.mShadowOff=true;
+			else
+				this.mShadowOff=false;
 
 
 			if(Math.abs(this.mDirPos.w)>0.5)
