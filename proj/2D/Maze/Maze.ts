@@ -1,5 +1,5 @@
 //Version
-const version='mfo0fumr_6';
+const version='mgnmxg44_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -38,7 +38,6 @@ var Main = gAtl.Canvas('Main.json');
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
 import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CNavigation.js";
 import { CBGAttachButton, CBGFadeEffect } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
@@ -65,6 +64,7 @@ import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CWindow } from "https://06fs4dix.github.io/Artgine/artgine/system/CWindow.js";
+import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 
 
 
@@ -242,6 +242,10 @@ let ResetMaze=(_xCount,_yCount)=>
         let pt=new CPaint2D("floor/rect_gray"+rand+".png",new CVec2(size/3,size/3));
         pt.SetPos(new CVec3(size/3*x,size/3*y));
         pt.PushRenderPass(rp);
+
+        //let cl=new CCollider(pt);
+        //cl.SetLayer("block");
+        //cl.SetBoundType(CBound.eType.Box);
         //pt.m_autoLoad.textureFilter=CTexture.eFilter.Neaest;
         //pt.SetColorModel(new CColor(0.1,0.1,0.1,SDF.eColorModel.RGBAdd));
         return pt;
@@ -567,9 +571,10 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 });
 
 
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
+
+
+
+
 
 
 

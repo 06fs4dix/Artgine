@@ -1,4 +1,5 @@
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
+import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
@@ -104,7 +105,7 @@ export default class CUser extends CBehavior {
             camcon.SetRotKey(CInput.eKey.RButton);
         }
     }
-    Update(_delay) {
+    async Update(_delay) {
         super.Update(true);
         let cam = CBlackBoard.Find("2D");
         if (cam.GetCamCon() instanceof CCamCon2DFollow) {
@@ -145,7 +146,9 @@ export default class CUser extends CBehavior {
             let ptb = this.GetOwner().FindComp(CPaint2D);
             let ch = new CSubject();
             ch.mPMatMul = false;
-            let pt = ch.PushComp(new CPaint2D(ptb.GetTexture()[0], ptb.GetSize()));
+            let pt = ch.PushComp(await CPool.Product(CPaint2D));
+            pt.SetTexture(ptb.GetTexture()[0]);
+            pt.SetSize(ptb.GetSize());
             pt.SetColorModel(new CColor(0, 0, 1, SDF.eColorModel.RGBMul));
             ch.SetPos(this.m_lastPos);
             this.GetOwner().PushChild(ch);
