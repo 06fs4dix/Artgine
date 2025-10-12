@@ -1,4 +1,4 @@
-const version = 'mgjgxfbu_7';
+const version = 'mgnmxg44_6';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -192,8 +192,7 @@ function AM7() {
     let Direct = Main.Find("Direct");
     let PointList = Main.Find("PointList");
     let dirLight = Direct.FindComp(CLight);
-    dirLight.SetColor(new CVec3(1, 0.8, 0.8));
-    Direct.SetPos(new CVec3(1, 0.5, 0));
+    Direct.SetPos(new CVec3(1, 1, 0));
     PointList.SetEnable(false);
 }
 window["AM7"] = AM7;
@@ -202,7 +201,6 @@ function PM1() {
     let Direct = Main.Find("Direct");
     let PointList = Main.Find("PointList");
     let dirLight = Direct.FindComp(CLight);
-    dirLight.SetColor(new CVec3(1, 1, 1));
     Direct.SetPos(new CVec3(0, 1, 0));
     PointList.SetEnable(false);
 }
@@ -211,9 +209,7 @@ function PM11() {
     Real.SetRPMgr(lightPM11RP);
     let Direct = Main.Find("Direct");
     let PointList = Main.Find("PointList");
-    let dirLight = Direct.FindComp(CLight);
-    dirLight.SetColor(new CVec3());
-    Direct.SetPos(new CVec3(0, 1, 0));
+    Direct.SetPos(new CVec3(1, 0, 0));
     PointList.SetEnable(true);
 }
 window["PM11"] = PM11;

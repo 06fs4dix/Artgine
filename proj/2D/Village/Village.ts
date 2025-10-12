@@ -1,5 +1,5 @@
 //Version
-const version='mgjgxfbu_7';
+const version='mgnmxg44_6';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -71,6 +71,8 @@ import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subj
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
+import { CDayCycle, CLightPlanet } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLightPlanet.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 //Real.Clear();
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
@@ -269,8 +271,8 @@ function AM7()
     let PointList=Main.Find("PointList");
 
     let dirLight=Direct.FindComp(CLight);
-    dirLight.SetColor(new CVec3(1,0.8,0.8));
-    Direct.SetPos(new CVec3(1,0.5,0));
+    //dirLight.SetColor(new CVec3(1,0.8,0.8));
+    Direct.SetPos(new CVec3(1,1,0));
 
     PointList.SetEnable(false);
     // let ptLights=PointList.FindComps(CLight,true);
@@ -291,7 +293,7 @@ function PM1()
     let PointList=Main.Find("PointList");
 
     let dirLight=Direct.FindComp(CLight);
-    dirLight.SetColor(new CVec3(1,1,1));
+    //dirLight.SetColor(new CVec3(1,1,1));
     Direct.SetPos(new CVec3(0,1,0));
 
     PointList.SetEnable(false);
@@ -314,19 +316,12 @@ function PM11()
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
 
-    let dirLight=Direct.FindComp(CLight);
-    dirLight.SetColor(new CVec3());
-    Direct.SetPos(new CVec3(0,1,0));
+    // let dirLight=Direct.FindComp(CLight);
+    // //dirLight.SetColor(new CVec3());
+    Direct.SetPos(new CVec3(1,0,0));
 
     PointList.SetEnable(true);
-    // let ptLights=PointList.FindComps(CLight,true);
-    // for(let pt of ptLights)
-    // {
-    //     pt.SetColor(new CVec3(1,1,1));
-    // }
     
-
-
 
 
 
@@ -351,72 +346,16 @@ PM11();
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// Main.Find("Direct").Destroy();
+
+// let ls=Main.PushSub(new CSubject());
+// ls.SetKey("Direct");
+// let lp=ls.PushComp(new CLightPlanet())
+// lp.Push(new CDayCycle(new CVec3(0,1),new CColor(1,1,1)));
+// lp.Push(new CDayCycle(new CVec3(1,1),new CColor(1,0.5,0.5)));
+// lp.Push(new CDayCycle(new CVec3(-1,1),new CColor(1,0.5,0.5)));
+// lp.Push(new CDayCycle(new CVec3(1,0),new CColor(0,0,0)));
+// lp.Push(new CDayCycle(new CVec3(-1,0),new CColor(0,0,0)));
 
 
 
