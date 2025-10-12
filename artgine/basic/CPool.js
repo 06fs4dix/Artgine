@@ -38,7 +38,7 @@ export class CPool {
         let que = CPool.sSpace.get(_typeName);
         if (que == null || que.IsEmpty()) {
             if (CPool.sProductEvent[_typeName] == null) {
-                p = CClass.New(_typeName);
+                p = CClass.New(_typeName, _destructor);
                 if (p == null)
                     return null;
                 p.SetRecycleType(p.constructor.name);
@@ -56,7 +56,7 @@ export class CPool {
             p.SetRecycleType(_typeName);
         else
             p.SetRecycleType(p.GetRecycleType());
-        if (_destructor != null)
+        if (_destructor != null && _destructor instanceof Array == false)
             gDestructorRegistry.register(_destructor, p);
         return p;
     }

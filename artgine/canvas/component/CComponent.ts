@@ -120,11 +120,20 @@ export class CComponent extends CObject
 	{
 		this.mStartChk=false;
 		this.mComMsgLen=0;
+		this.mOwner=null;
 	}
-	IsEnable()	{	return this.mEnable;	}
+	IsEnable()	
+	{	
+		if(this.IsDestroy())	return false;
+		return this.mEnable;	
+	}
 	SetEnable(_val : boolean)	{	this.mEnable=_val;	}
 	//ClassEqual(_type)	{	return false;	}
-	IsDestroy()	{	return this.mDestroy;	}
+	IsDestroy()	
+	{	
+		if(this.IsRecycle())	return true;
+		return this.mDestroy;	
+	}
 	//체크는 더 상위이다. 로드가 덜되었는지 체크하는게 스타트랑 차이점
 	StartChk()
 	{
@@ -154,6 +163,7 @@ export class CComponent extends CObject
 		this.mStartChk=true;
 		this.ClearMsg();
 		this.mComMsg=null;
+		this.Recycle();
 		  
 	}
 	//프리팹 상태에서 호출됌

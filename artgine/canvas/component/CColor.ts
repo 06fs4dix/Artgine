@@ -39,7 +39,18 @@ export class CColor extends CVec4
 
         return gColor;
     }
-    
+    ToRGBA()
+    {
+        //let inputColor = new CVec4(this.mF32A[0], this.mF32A[1], this.mF32A[2], this.mF32A[3]); // 유지되는 알파 포함
+                
+        if (this.mF32A[3] == SDF.eColorModel.HSVBaseHSPercent || this.mF32A[3] == SDF.eColorModel.HSV) 
+            return CUtilColor.RGBAToHSVA(this);
+        else if (this.mF32A[3] == SDF.eColorModel.HSL) 
+            return CUtilColor.RGBAToHSLA(this);
+        
+
+        return this;
+    }
     override EditHTMLInit(_div: HTMLDivElement,_pointer : CPointer=null): void {
         super.EditHTMLInit(_div,_pointer);
        

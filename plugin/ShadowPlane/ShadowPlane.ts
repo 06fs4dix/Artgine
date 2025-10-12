@@ -301,6 +301,7 @@ export class CShadowPlane extends CPaint2D
     }
     Update(_delay: any): void 
     {
+        
         if(this.mPT==null || this.mPT.Key()!=this.mPTKey)
         {
             
@@ -402,6 +403,12 @@ export class CShadowPlane extends CPaint2D
     }
     private UpdateShadow() 
     {
+        // if(this.mLIG.GetColor().IsZero() && this.mEnable==true)
+        //     this.SetEnable(false);
+        // else if(this.mEnable==false)
+        //     this.SetEnable(true);
+        
+
         if(this.mPT instanceof CPaint2D) 
         {
             //this.PushTag("zDepth");
@@ -450,7 +457,7 @@ export class CShadowPlane extends CPaint2D
             else {
                 if(this.mLIG!=null)
                     dir=CMath.V3Nor(this.mLIG.GetDirectPos());
-                alpha = 1;
+                alpha = Math.max(Math.max(lig.GetColor().x,lig.GetColor().y),lig.GetColor().z);
                 height = fBound.GetSize().y * this.mShadowLen;
             }
 

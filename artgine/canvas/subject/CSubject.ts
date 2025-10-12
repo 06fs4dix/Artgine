@@ -115,7 +115,9 @@ export class CSubject extends CObject implements IFile
 		}
 		for(let each0 of this.mComArr)
 		{
-			each0.Reset();
+			//each0.Reset();
+			each0.mStartChk=false;
+			each0.mComMsgLen=0;
 		}
 		this.UpdateComp();
 		if(this.mPTArr)
@@ -733,6 +735,15 @@ export class CSubject extends CObject implements IFile
 	}
 	PushComp<T extends CComponent>(_com : T) : T
 	{
+		if(_com instanceof Array)
+		{
+			for(let each4 of _com)
+			{
+				this.PushComp(each4);
+			}
+
+			return _com;
+		}
 		if(this.mFrame!=null && _com.GetOwner()==null)
 		{
 			_com.SetOwner(this);

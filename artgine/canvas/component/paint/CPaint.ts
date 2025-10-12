@@ -153,13 +153,41 @@ export class CPaint extends CComponent
 		//this.m_heap.Push(_F32A);
 	}
 	Destroy(): void {
+
+		if(this.GetRecycleType()!=null)
+		{
+			this.Recycle();
+			this.Reset();
+			return;
+		}
+
 		super.Destroy();
+
+		
+
 		this.mBoundFMatC.ReleaseWASM();
 		this.mFMat.ReleaseWASM();
 		this.mLMat.ReleaseWASM();
 		this.mBoundFMat.DeleteWASM();
 		this.mBound.DeleteWASM();
 		this.BatchClear();
+		
+	}
+	Reset()
+	{
+		super.Reset();
+		this.mFMat.Unit();
+		this.mLMat.Unit();
+		this.BatchClear();
+		this.mTexture.length=0;
+		this.mBoundFMat.Reset();
+		this.mBound.Reset();
+		this.mShaderAttrMap.delete("mColorVFX");
+		this.mColorVFX=null;
+		this.mTag.clear();
+		this.PushTag("alphaCut");
+		this.mBatchMap.clear();
+
 	}
 	//GetBillboad()	{	return this.m_billboad;	}
 

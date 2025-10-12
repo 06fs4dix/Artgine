@@ -80,10 +80,19 @@ export class CComponent extends CObject {
     Reset() {
         this.mStartChk = false;
         this.mComMsgLen = 0;
+        this.mOwner = null;
     }
-    IsEnable() { return this.mEnable; }
+    IsEnable() {
+        if (this.IsDestroy())
+            return false;
+        return this.mEnable;
+    }
     SetEnable(_val) { this.mEnable = _val; }
-    IsDestroy() { return this.mDestroy; }
+    IsDestroy() {
+        if (this.IsRecycle())
+            return true;
+        return this.mDestroy;
+    }
     StartChk() {
         if (this.mStartChk == true) {
             this.mStartChk = false;
@@ -103,6 +112,7 @@ export class CComponent extends CObject {
         this.mStartChk = true;
         this.ClearMsg();
         this.mComMsg = null;
+        this.Recycle();
     }
     Prefab(_owner) {
     }

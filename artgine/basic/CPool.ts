@@ -54,8 +54,9 @@ export class CPool
     }
 
     //static Product<T>(type: string|object,_destructor : any=null): T | null 
-    static Product<T extends object>(type: new (...args: any[]) => T,_destructor: any): T | null;
-    static Product<T extends object>(type: new (...args: any[]) => T): T | null;
+    //static Product<T extends object>(type: new () => T,_para: Array<any>): T | null;
+    static Product<T extends object>(type: new () => T,_destructor: any): T | null;
+    static Product<T extends object>(type: new () => T): T | null;
     static Product<T>(type: string) : T;
     static Product<T>(type: string,_destructor: any) : T;
     static async Product<T>(type: string|object,_destructor : any=null): Promise<T | null> 
@@ -75,8 +76,10 @@ export class CPool
         let p = null;
         let que = CPool.sSpace.get(_typeName);
         if (que == null || que.IsEmpty()) {
-            if (CPool.sProductEvent[_typeName] == null) {
-                p = CClass.New(_typeName);
+            if (CPool.sProductEvent[_typeName] == null) 
+            {
+
+                p = CClass.New(_typeName,_destructor);
                 if (p == null) return null;
                 p.SetRecycleType(p.constructor.name);
             } else {
@@ -91,7 +94,7 @@ export class CPool
             p.SetRecycleType(_typeName);
         else    
             p.SetRecycleType(p.GetRecycleType());
-        if(_destructor!=null)
+        if(_destructor!=null && _destructor instanceof Array==false)
             gDestructorRegistry.register(_destructor, p)
 
         return p as T;

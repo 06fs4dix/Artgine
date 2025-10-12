@@ -1,6 +1,7 @@
 
 
 
+import { CObject } from "../../basic/CObject.js";
 import {CBrush} from "../CBrush.js";
 import { CRPAuto } from "../CRPMgr.js";
 import {CComponent} from "./CComponent.js";
@@ -23,6 +24,10 @@ export class CBrushComp extends CComponent
     public mLayer=0;
     mBruch : CBrush=null;
 
+    override IsShould(_member: string, _type: CObject.eShould): boolean {
+        if(_member=="mBruch")   return false;
+        return super.IsShould(_member,_type);
+    }
     GetWrite() { return this.mWrite; }
     GetTex()    {   return this.mShadowKey+".tex";   }
     PushRPAuto(_write : CRPAuto)

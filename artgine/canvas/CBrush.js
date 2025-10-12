@@ -6,6 +6,7 @@ import { CObject } from "../basic/CObject.js";
 import { CUpdate } from "../basic/Basic.js";
 import { CArray } from "../basic/CArray.js";
 import { CFile } from "../system/CFile.js";
+import { CMat } from "../geometry/CMat.js";
 export class CRenInfo {
     mRP = null;
     mCam = null;
@@ -83,6 +84,8 @@ export class CBrush extends CObject {
     mLightDir = null;
     mLightColor = null;
     mLightCount;
+    mSkyTable = [new CMat, new CMat, new CMat];
+    mSunTable = [new CMat, new CMat, new CMat];
     mShadowView = new Array();
     mShadowCount = 0;
     mWindDir = null;

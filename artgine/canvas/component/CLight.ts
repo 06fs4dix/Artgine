@@ -22,6 +22,10 @@ import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CAlert } from "../../basic/CAlert.js";
 import { CCamera } from "../../render/CCamera.js";
 import { CConsol } from "../../basic/CConsol.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CColor } from "./CColor.js";
+
+
 
 /*
 https://wiki.ogre3d.org/-Point+Light+Attenuation
@@ -37,11 +41,11 @@ export class CLight extends CBrushComp
 	public mCascadeCycle=[0,-1,-1];
 	public mShadowDistance=1;//얼마나 먼거리서
 	public mDigit=1;//커팅할 범위
-	public mShadowOff : boolean = false;
+	protected mShadowOff : boolean = false;
 
 
-	private mDirPos : CVec4;//XYZ,TYPE(디렉션 음수-1-2 거리 양수:포인트)
-	private mColor : CVec4;//RGB,User(사용 유무)
+	protected mDirPos : CVec4;//XYZ,TYPE(디렉션 음수-1-2 거리 양수:포인트)
+	protected mColor : CVec4;//RGB,User(사용 유무)
 	public mUpdate : number = CUpdate.eType.Updated;
 	
 
@@ -171,7 +175,7 @@ export class CLight extends CBrushComp
 	}
 
 	GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
-	Update(_delay)
+	Update(_delay) : boolean|any
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
 			this.mUpdate = CUpdate.eType.Not;
@@ -211,12 +215,12 @@ export class CLight extends CBrushComp
 		
 		
 		super.Update(_delay);
-		this.UpdateBaush();
+		if(this.mBruch!=null)	this.UpdateBaush();
 
 	}
 	UpdateBaush()
 	{
-		if(this.mBruch==null)	return;
+		//if(this.mBruch==null)	return;
 	
 		if(this.IsDestroy())
 		{
@@ -253,6 +257,12 @@ export class CLight extends CBrushComp
 
 		if (this.mShadowKey!=null)
 		{
+			if(this.mColor.IsZero())
+				this.mShadowOff=false;
+			else
+				this.mShadowOff=true;
+
+
 			if(Math.abs(this.mDirPos.w)>0.5)
 			{
 				if(!this.mShadowOff) {

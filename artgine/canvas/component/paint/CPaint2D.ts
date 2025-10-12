@@ -133,6 +133,28 @@ export class CPaint2D extends CPaint
 		//this.m_shaderAttrMap.set("reverse",new CShaderAttr("reverse",new CVec2(0,0)));
 		//this.SizeCac();
 	}
+	Reset()
+	{
+		super.Reset();
+		this.mPivot.Zero();
+		this.mPos.Zero();
+		this.mRot.Zero();
+		this.mTexCodi.x=1;this.mTexCodi.y=1;this.mTexCodi.z=0;this.mTexCodi.w=0;
+		this.mShaderAttrMap.set("reverse",new CShaderAttr("reverse",new CVec2(0,0)));
+		this.mShaderAttrMap.set("billboard",new CShaderAttr("billboard",new CVec1(0)));
+		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMin.z = -0.5;
+
+		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMax.z = 0.5;
+		this.mBoundFMatR=0;
+		//if(_size!=null)
+		this.mBound.mType=CBound.eType.Box;
+		
+		
+	}
 	PushNormalMap(_tex : string)
 	{
 		if(this.mTexture.length==1)

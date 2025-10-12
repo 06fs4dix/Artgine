@@ -54,7 +54,7 @@ export class CWind extends CBrushComp
         return "bi bi-wind";
     }
 
-    Update(_delay) : boolean
+    override Update(_delay) : boolean
 	{
         if(super.Update(_delay))    return;
 

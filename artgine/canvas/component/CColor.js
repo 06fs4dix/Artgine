@@ -31,6 +31,13 @@ export class CColor extends CVec4 {
         gColor.mF32A[3] = _model;
         return gColor;
     }
+    ToRGBA() {
+        if (this.mF32A[3] == SDF.eColorModel.HSVBaseHSPercent || this.mF32A[3] == SDF.eColorModel.HSV)
+            return CUtilColor.RGBAToHSVA(this);
+        else if (this.mF32A[3] == SDF.eColorModel.HSL)
+            return CUtilColor.RGBAToHSLA(this);
+        return this;
+    }
     EditHTMLInit(_div, _pointer = null) {
         super.EditHTMLInit(_div, _pointer);
         let code = "#ffffff";

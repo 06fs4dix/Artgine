@@ -75,7 +75,8 @@ export class CSubject extends CObject {
             each0.Reset();
         }
         for (let each0 of this.mComArr) {
-            each0.Reset();
+            each0.mStartChk = false;
+            each0.mComMsgLen = 0;
         }
         this.UpdateComp();
         if (this.mPTArr) {
@@ -472,6 +473,12 @@ export class CSubject extends CObject {
         return vec;
     }
     PushComp(_com) {
+        if (_com instanceof Array) {
+            for (let each4 of _com) {
+                this.PushComp(each4);
+            }
+            return _com;
+        }
         if (this.mFrame != null && _com.GetOwner() == null) {
             _com.SetOwner(this);
             var cm = new CRouteMsg("PushComp");

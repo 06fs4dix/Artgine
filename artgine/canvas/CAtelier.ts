@@ -183,6 +183,8 @@ export class CAtelier
 	}
 	Canvas(_key)
 	{
+		let can=this.mCanvasMap.get(_key);
+		if(can!=null)	return can;
 		if(_key.indexOf(".json")==-1)	_key+=".json";
 
 		return this.mCanvasMap.get(_key);

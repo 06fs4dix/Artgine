@@ -310,7 +310,7 @@ export class CShadowPlane extends CPaint2D {
             else {
                 if (this.mLIG != null)
                     dir = CMath.V3Nor(this.mLIG.GetDirectPos());
-                alpha = 1;
+                alpha = Math.max(Math.max(lig.GetColor().x, lig.GetColor().y), lig.GetColor().z);
                 height = fBound.GetSize().y * this.mShadowLen;
             }
             if (lig.IsColorZero())

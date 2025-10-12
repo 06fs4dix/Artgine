@@ -130,11 +130,10 @@ export class CLight extends CBrushComp {
             this.SetDirectPos(pos);
         }
         super.Update(_delay);
-        this.UpdateBaush();
+        if (this.mBruch != null)
+            this.UpdateBaush();
     }
     UpdateBaush() {
-        if (this.mBruch == null)
-            return;
         if (this.IsDestroy()) {
             CAlert.Info("test");
             return;
@@ -160,6 +159,10 @@ export class CLight extends CBrushComp {
             this.PushRPAuto(srp);
         }
         if (this.mShadowKey != null) {
+            if (this.mColor.IsZero())
+                this.mShadowOff = false;
+            else
+                this.mShadowOff = true;
             if (Math.abs(this.mDirPos.w) > 0.5) {
                 if (!this.mShadowOff) {
                     let scam0 = this.mBruch.GetCamera(this.mShadowKey + 0);

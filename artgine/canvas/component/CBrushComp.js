@@ -12,6 +12,11 @@ export class CBrushComp extends CComponent {
     mReadLen = 10000;
     mLayer = 0;
     mBruch = null;
+    IsShould(_member, _type) {
+        if (_member == "mBruch")
+            return false;
+        return super.IsShould(_member, _type);
+    }
     GetWrite() { return this.mWrite; }
     GetTex() { return this.mShadowKey + ".tex"; }
     PushRPAuto(_write) {

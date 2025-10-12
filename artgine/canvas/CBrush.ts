@@ -16,6 +16,7 @@ import { CRenPaint } from "./component/paint/CPaint.js";
 import { IFile } from "../system/System.js";
 import { CFile } from "../system/CFile.js";
 import { CRPAuto } from "./CRPMgr.js";
+import { CMat } from "../geometry/CMat.js";
 
 export class CRenInfo
 {
@@ -111,6 +112,11 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	public mLightDir : Float32Array=null;
 	public mLightColor : Float32Array=null;
 	public mLightCount : number;
+
+	public mSkyTable : Array<CMat>=[new CMat,new CMat,new CMat];
+	public mSunTable : Array<CMat>=[new CMat,new CMat,new CMat];
+
+
 	public mShadowView=new Array<Float32Array>();
 	//public m_shadowCamera=new Map<string,CCamera>();
 	public mShadowCount=0;
