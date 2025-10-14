@@ -65,6 +65,7 @@ export class CBatchMgr
 	
 	public mBasePriority : number=null;
 	public mFeedbackLoop=new Set<any>();
+	mTexDataAtt=new Set<any>();
 	
 
 	constructor(_render : CRenderer)
@@ -93,6 +94,7 @@ export class CBatchMgr
 		//this.m_uniTexOff=-1;
 		this.mBasePriority=0;
 		this.mBaSortArr.Clear();
+		this.mTexDataAtt.clear();
 	}
 	BatchEnd()
 	{

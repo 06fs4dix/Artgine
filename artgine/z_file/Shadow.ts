@@ -32,7 +32,7 @@ export var normalBias : number = 1.0;
 export var PCF : number = 2.0;
 
 //빛과의 각도를 계산해서 오차에 보정하고 빛과 반대쪽 면을 더 어둡게 만듬
-export var dotCac : number = 0.0;
+//export var dotCac : number = 0.0;
 
 function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number) : CVec2
 {
@@ -233,15 +233,16 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
 
     //노말과 라이트 사이의 각도
     var nDotL : number = 1.0;
-    if(dotCac>0.5) {
-        nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
-    }
+    nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
+    // if(dotCac>0.5) {
+    //     nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
+    // }
 
     // 노말 오프셋 계산 (셀프 섀도잉 방지)
     var normalScale : number = normalBias;
     
     // 빛과의 각도가 90도에 가까울수록 노말 스케일 증가
-    normalScale *= (1.0 + (1.0 - Math.abs(nDotL)) * 2.0);
+    //normalScale *= (1.0 + (1.0 - Math.abs(nDotL)) * 2.0);
     
     var normalOffset : CVec3 = V3MulFloat(V3Nor(_nor), normalScale);
 
@@ -249,13 +250,13 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
     var biasAll : number = bias;
 
     // 빛과의 각도가 90도에 가까울수록 바이어스 증가
-    var slopeScale : number = 1.0 - nDotL;
-    biasAll *= (1.0 + slopeScale * 3.0);
+    //var slopeScale : number = 1.0 - nDotL;
+    //biasAll *= (1.0 + slopeScale * 3.0);
     
 
     var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, 1.0, normalOffset, _worldPos, _index);
-    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 4.0, normalOffset, _worldPos, _index);
-    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 8.0, normalOffset, _worldPos, _index);
+    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 1.0, normalOffset, _worldPos, _index);
+    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);
 
     var sVal_count : CVec2 = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll);
     // var sVal_count : CVec2 = ApplyJitteredPCF(uvZ0, uvZ1, uvZ2, _read, biasAll, _worldPos);
@@ -273,13 +274,13 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
     }
 
     //180도에 가까울수록 그림자가 진해짐 (역광 방지)
-    if(dotCac>0.5 && nDotL<=0.0)
-    {
-        if(nDotL<0.0)   nDotL=0.0;
-        sVal=nDotL;
+    // if(dotCac>0.5 && nDotL<=0.0)
+    // {
+    //     //if(nDotL<0.0)   nDotL=0.0;
+    //     sVal=nDotL;
         
 
-    }
+    // }
     
 
     //최소 그림자 강도 적용

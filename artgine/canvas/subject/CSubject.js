@@ -75,7 +75,7 @@ export class CSubject extends CObject {
             each0.Reset();
         }
         for (let each0 of this.mComArr) {
-            each0.mStartChk = false;
+            each0.mStartChk = true;
             each0.mComMsgLen = 0;
         }
         this.UpdateComp();

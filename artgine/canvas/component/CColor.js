@@ -206,9 +206,10 @@ export class CColorVFX extends CMat {
             _xDefault: 25, _yDefault: 5
         },
         {
-            _xDesc: "", _yDesc: "", _zDesc: "",
-            _xMin: 0, _xMax: 1, _yMin: 0, _yMax: 1, _zMin: 0, _zMax: 1,
-            _xStep: 0.1, _yStep: 0.1, _zStep: 0.1
+            _xDesc: "ULoop", _yDesc: "VLoop", _zDesc: "texOff",
+            _xMin: 0, _xMax: 64, _yMin: 0, _yMax: 64, _zMin: 0, _zMax: 8,
+            _xStep: 1, _yStep: 1, _zStep: 1,
+            _xDefault: 1, _yDefault: 1, _zDefault: 0
         },
     ];
     IsShould(_member, _type) {
@@ -220,6 +221,7 @@ export class CColorVFX extends CMat {
     EditHTMLInit(_div) {
         super.EditHTMLInit(_div);
         _div.innerHTML = "";
+        let orderStr = "";
         let arr = [];
         for (let [text, val] of Object.entries(SDF.eColorVFX)) {
             arr.push([text, val]);
@@ -277,6 +279,7 @@ export class CColorVFX extends CMat {
                 ] };
             _div.appendChild(CDomFactory.DataToDom(checkbox));
             if (checked != -1) {
+                orderStr += text;
                 let description = this.m_description[i];
                 let sliders = [];
                 if (description._xDesc) {
@@ -352,5 +355,6 @@ export class CColorVFX extends CMat {
                 _div.appendChild(CDomFactory.DataToDom(slider));
             }
         }
+        _div.prepend(CDomFactory.DataToDom("<span>" + orderStr + "</span>"));
     }
 }

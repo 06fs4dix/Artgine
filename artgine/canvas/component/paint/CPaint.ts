@@ -349,18 +349,7 @@ export class CPaint extends CComponent
 		for(let i=0;i<this.mRenPT.length;++i)
 		{
 			let ren=this.mRenPT[i];
-			// if(ren.mShow==2)
-			// {
-			// 	ren.mShow=0;
-			// 	ren.mDistance=0;
-			// }
-				
-		
-			// if(this.mOwner.IsEnable()==false || this.IsEnable()==false)
-			// {
-			// 	ren.mShow=2;
-			// 	ren.mDistance=0x7FFFFE00;
-			// }	
+			
 			//중간 배치 삭제하면 컬링 갱신안되는 버그가 있다
 			//카메라를 움직이면 정산이됌
 			if(ren.mDistance==null || ren.mCam.mUpdateMat!=0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize())
@@ -374,9 +363,17 @@ export class CPaint extends CComponent
 				{
 					let eye=ren.mCam.GetEye();
 					let pos=CPoolGeo.ProductV3();
+
+					//한축 정렬 되면
+					//2D란 의미다. 
 					if(cam.GetView().z<-0.98) 
 					{
-						ren.mDistance = eye.z - this.mFMat.z;
+						//리니어일경우 주변 퍼짐으로 반대로 정렬한다.
+						if(this.mAutoLoad.mFilter==CTexture.eFilter.Linear)
+							ren.mDistance = -(eye.z - this.mFMat.z);
+						else
+							ren.mDistance = eye.z - this.mFMat.z;
+
 					}
 					else 
 					{

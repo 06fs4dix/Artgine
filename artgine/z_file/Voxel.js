@@ -2,7 +2,7 @@ import { CAModelCac } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
 import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, Sam2DToMat, Sam2DV4, Sam2DToV4, Sam2DSize, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, } from "./Shader";
-import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowPointProj, shadowRightCasP2, shadowTopCasV1, dotCac, calcShadow, } from "./Shadow";
+import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowPointProj, shadowRightCasP2, shadowTopCasV1, calcShadow, } from "./Shadow";
 var size = 100;
 var worldMat = Null();
 var viewMat = Null();
@@ -32,7 +32,7 @@ Build("Artgine/Shader/VoxelShadowRead", ["shadowRead"], vs_main_shadow_read, [
     ligDir, ligCol, ligCount,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowCount,
     shadowWrite, shadowPointProj, shadowReadList,
-    shadowRate, PCF, texture16f, bias, normalBias, sun, dotCac
+    shadowRate, PCF, texture16f, bias, normalBias, sun
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
 function VoxelDirData(_dir, _f4_uv) {
     var data = new CMat3(0);

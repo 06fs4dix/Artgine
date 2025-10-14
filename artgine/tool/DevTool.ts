@@ -106,31 +106,76 @@ interface ICanvasStyle {
 let gCanStyle: ICanvasStyle | null = null;
 function ResetBoxXYZ(_subject : CSubject)
 {
-
-
+    let cam=gAtl.Brush().GetCamDev();
     let pos=_subject.GetWMat().xyz;
+
+    
+    // let len=CMath.V3Distance(cam.GetEye(),pos);
+    // if(cam.IsOrthographic())
+    //     len=cam.GetZoom();
+    // else
+    //     len*=0.002;
+    // gBoundTick=40*len;
   
 
-    gBoundXY.mMin.Import(pos);
-    gBoundXY.mMax.Import(pos);
+    
+    let t=gBoundTick/100*100;
+    let o=gBoundTick/1000*100;
 
-    gBoundXY.mMax.x+=gBoundTick;
-    gBoundXY.mMax.y+=gBoundTick;
-    gBoundXY.mMax.z+=1;
+    if(cam.IsOrthographic())
+    {
+        gBoundXY.mMin.Import(pos);
+        gBoundXY.mMax.Import(pos);
 
-    gBoundYZ.mMin.Import(pos);
-    gBoundYZ.mMax.Import(pos);
+        gBoundXY.mMax.x+=t;
+        gBoundXY.mMax.y+=t;
+        gBoundXY.mMax.z+=o;
 
-    gBoundYZ.mMax.x+=1;
-    gBoundYZ.mMax.y+=gBoundTick;
-    gBoundYZ.mMax.z+=gBoundTick;
+        gBoundXY.mMin.x-=t;
+        gBoundXY.mMin.y-=t;
+        gBoundXY.mMin.z-=o;
+        gBoundYZ.mMin.Zero();
+        gBoundYZ.mMax.Zero();
+        gBoundZX.mMin.Zero();
+        gBoundZX.mMax.Zero();
+    }
+    else
+    {
+        gBoundXY.mMin.Import(pos);
+        gBoundXY.mMax.Import(pos);
 
-    gBoundZX.mMin.Import(pos);
-    gBoundZX.mMax.Import(pos);
+        gBoundXY.mMax.x+=t;
+        gBoundXY.mMax.y+=o;
+        gBoundXY.mMax.z+=o;
 
-    gBoundZX.mMax.x+=gBoundTick;
-    gBoundZX.mMax.y+=1;
-    gBoundZX.mMax.z+=gBoundTick;
+        gBoundXY.mMin.x-=t;
+        gBoundXY.mMin.y-=o;
+        gBoundXY.mMin.z-=o;
+
+        gBoundYZ.mMin.Import(pos);
+        gBoundYZ.mMax.Import(pos);
+
+        gBoundYZ.mMax.x+=o;
+        gBoundYZ.mMax.y+=t;
+        gBoundYZ.mMax.z+=o;
+
+        gBoundYZ.mMin.x-=o;
+        gBoundYZ.mMin.y-=t;
+        gBoundYZ.mMin.z-=o;
+
+        gBoundZX.mMin.Import(pos);
+        gBoundZX.mMax.Import(pos);
+
+        gBoundZX.mMax.x+=o;
+        gBoundZX.mMax.y+=o;
+        gBoundZX.mMax.z+=t;
+
+        gBoundZX.mMin.x-=o;
+        gBoundZX.mMin.y-=o;
+        gBoundZX.mMin.z-=t;
+    }
+
+    
 }
 function SubjectRigidBodyClear(_subject : CSubject)
 {
@@ -543,7 +588,7 @@ function DevToolRender()
     render.SendGPU(shader,gAtl.Brush().GetCamDev().GetProjMat(),"projectMat");
     render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
 
-    ResetBoxXYZ(subject);
+    //ResetBoxXYZ(subject);
     let color=new CColor();
     
     color.w=SDF.eColorModel.RGBAdd;
@@ -556,72 +601,96 @@ function DevToolRender()
         //_mat.mF32A[7]=_mat.mF32A[13];
         //_mat.mF32A[11]=_mat.mF32A[14];
     };
-    gAtl.Frame().Dev().SetLine(true);
+    let pos=subject.GetWMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
-    
+    gAtl.Frame().Dev().SetLine(true);
     {
-        color.x=1;
-        color.y=0;
-        color.z=0;
-        wmat.xyz=gBoundXY.mMin;
-        wmat.mF32A[12]+=gBoundTick*0.5;
-        wmat.mF32A[13]+=gBoundTick*0.5;
+        
 
         
         
-        wmat.mF32A[0]=gBoundTick/200;
-        wmat.mF32A[5]=gBoundTick/200;
-        wmat.mF32A[10]=0.01;
         
-        if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
-        render.SendGPU(shader,color,"colorModel");
-        render.SendGPU(shader,alpha,"alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader,wMatSA);
-        render.MeshDrawNodeRender(shader,meshDraw);
-        gAtl.Frame().Dev().SetLine(true);
+        if(gAtl.Brush().GetCamDev().IsOrthographic())
+        {
+            color.x=1;
+            color.y=1;
+            color.z=0;
+            wmat.xyz=pos;
+                    
+            
+            wmat.mF32A[0]=gBoundTick/100;
+            wmat.mF32A[5]=gBoundTick/100;
+            wmat.mF32A[10]=gBoundTick/1000;
+            
+            if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.MeshDrawNodeRender(shader,meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+        }
+        else
+        {
 
-        color.x=0;
-        color.y=1;
-        color.z=0;
-        wmat.xyz=gBoundYZ.mMin;
-        wmat.mF32A[13]+=gBoundTick*0.5;
-        wmat.mF32A[14]+=gBoundTick*0.5;
+            color.x=1;
+            color.y=0;
+            color.z=0;
+            wmat.xyz=pos;
+                    
+            
+            wmat.mF32A[0]=gBoundTick/100;
+            wmat.mF32A[5]=gBoundTick/1000;
+            wmat.mF32A[10]=gBoundTick/1000;
+            
+            if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.MeshDrawNodeRender(shader,meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+            
+            color.x=0;
+            color.y=1;
+            color.z=0;
+            wmat.xyz=pos;
+
+            wmat.mF32A[0]=gBoundTick/1000;
+            wmat.mF32A[5]=gBoundTick/100;
+            wmat.mF32A[10]=gBoundTick/1000;
+
+            if(gDragBound==2)gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.MeshDrawNodeRender(shader,meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+
+            color.x=0;
+            color.y=0;
+            color.z=1;
+            wmat.xyz=pos;
+            //wmat.mF32A[12]+=gBoundTick*0.5;
+            //wmat.mF32A[14]+=gBoundTick*0.5;
+            
+            wmat.mF32A[0]=gBoundTick/1000;
+            wmat.mF32A[5]=gBoundTick/1000;
+            wmat.mF32A[10]=gBoundTick/100;
+
+            if(gDragBound==3)gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.MeshDrawNodeRender(shader,meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+        }
         
-        
-        wmat.mF32A[0]=0.01;
-        wmat.mF32A[5]=gBoundTick/200;
-        wmat.mF32A[10]=gBoundTick/200;
-
-        if(gDragBound==2)gAtl.Frame().Dev().SetLine(false);
-        render.SendGPU(shader,color,"colorModel");
-        render.SendGPU(shader,alpha,"alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader,wMatSA);
-        render.MeshDrawNodeRender(shader,meshDraw);
-        gAtl.Frame().Dev().SetLine(true);
-
-        color.x=0;
-        color.y=0;
-        color.z=1;
-        wmat.xyz=gBoundZX.mMin;
-        wmat.mF32A[12]+=gBoundTick*0.5;
-        wmat.mF32A[14]+=gBoundTick*0.5;
-        
-        wmat.mF32A[0]=gBoundTick/200;
-        wmat.mF32A[5]=0.01;
-        wmat.mF32A[10]=gBoundTick/200;
-
-        if(gDragBound==3)gAtl.Frame().Dev().SetLine(false);
-        render.SendGPU(shader,color,"colorModel");
-        render.SendGPU(shader,alpha,"alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader,wMatSA);
-        render.MeshDrawNodeRender(shader,meshDraw);
-        gAtl.Frame().Dev().SetLine(true);
     }
     
-    
+    gAtl.Frame().Dev().SetLine(true);
     //gAtl.Frame().Dev().SetDepthTest(true);
     
     for(let pt of ptArr)
@@ -1054,30 +1123,34 @@ function DevToolUpdate(_delay)
             x*=len;
             y*=len;
 
-            // if(gDragBound==1)   pos=CMath.V3AddV3(pos,new CVec3(x,y));
-            // else if(gDragBound==2)   pos=CMath.V3AddV3(pos,new CVec3(0,y,x));
-            // else if(gDragBound==3)   pos=CMath.V3AddV3(pos,new CVec3(y,0,x));
-
+         
             let moveVec = new CVec3(0, 0, 0);
 
             if (gDragBound == 1) {
-                // 자유 이동: dx * right + dy * up
-                moveVec = CMath.V3AddV3(
-                    CMath.V3MulFloat(cross, -x),
-                    CMath.V3MulFloat(up, y)
-                );
+
+                if(CMath.V3Dot(cross,CVec3.Left())>0)
+                    moveVec=CMath.V3MulFloat(CVec3.Left(),-x);
+                else
+                    moveVec=CMath.V3MulFloat(CVec3.Left(),x);
+                // moveVec = CMath.V3AddV3(
+                //     CMath.V3MulFloat(cross, -x),
+                //     CMath.V3MulFloat(up, y)
+                // );
             } else if (gDragBound == 2) {
-                // Z축 고정: dx * up + dy * forward
-                moveVec = CMath.V3AddV3(
-                    CMath.V3MulFloat(up, y),
-                    CMath.V3MulFloat(cross, -x)
-                );
+                moveVec=CMath.V3MulFloat(CVec3.Up(),y);
+                // moveVec = CMath.V3AddV3(
+                //     CMath.V3MulFloat(up, y),
+                //     CMath.V3MulFloat(cross, -x)
+                // );
             } else if (gDragBound == 3) {
-                // Y축 고정: dx * front + dy * right
-                moveVec = CMath.V3AddV3(
-                    CMath.V3MulFloat(front, y),
-                    CMath.V3MulFloat(cross, -x)
-                );
+                if(CMath.V3Dot(cross,CVec3.Back())>0)
+                    moveVec=CMath.V3MulFloat(CVec3.Back(),-x);
+                else
+                    moveVec=CMath.V3MulFloat(CVec3.Back(),x);
+                // moveVec = CMath.V3AddV3(
+                //     CMath.V3MulFloat(front, y),
+                //     CMath.V3MulFloat(cross, -x)
+                // );
             }
 
             pos = CMath.V3AddV3(pos, moveVec);

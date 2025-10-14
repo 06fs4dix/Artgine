@@ -231,7 +231,10 @@ export class CPaint extends CComponent {
                     let eye = ren.mCam.GetEye();
                     let pos = CPoolGeo.ProductV3();
                     if (cam.GetView().z < -0.98) {
-                        ren.mDistance = eye.z - this.mFMat.z;
+                        if (this.mAutoLoad.mFilter == CTexture.eFilter.Linear)
+                            ren.mDistance = -(eye.z - this.mFMat.z);
+                        else
+                            ren.mDistance = eye.z - this.mFMat.z;
                     }
                     else {
                         pos.mF32A[0] = this.mFMat.mF32A[12];

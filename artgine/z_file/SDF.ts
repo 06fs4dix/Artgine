@@ -86,16 +86,17 @@ export class SDF {
 	{
 		None:0,
 		//UV
-		Distort:1,//강도xy
-		Aberrate:2,//기본강도x,랜덤추가강도y
+		Distort:1,//강도xy  %울렁거림
+		Aberrate:2,//기본강도x,랜덤추가강도y  % RGB 분리되서 보여짐
 		//Color
-		Outline:3,//color xyz
-		Pixel:4,//픽셀사이즈xy
+		Outline:3,//color xyz   %외각선
+		Pixel:4,//픽셀사이즈xy   %픽셀화
 		//image Process
-		Noise:5,//속도x,강도y,픽셀사이즈z
+		Noise:5,//속도x,강도y,픽셀사이즈z   %노이즈
 		//BorderLight:6,//강도x,두께y
-		Scanline:7,//선 개수 x, 속도 y
-		Hologram:8,
+		Scanline:7,//선 개수 x, 속도 y %줄내려옴
+		OverWrite:8,//선택된 텍스쳐 컬러로 덮어쓰기
+		//Crop:8,//선택된 택스쳐 영역으로 보이게 하기
 	}
 	static eBlend=
 	{

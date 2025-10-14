@@ -3,7 +3,7 @@ import { SDF } from "./SDF";
 import { CAModelCac, ColorVFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
-import { bias, calcShadow, dotCac, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f } from "./Shadow";
+import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f } from "./Shadow";
 var colorModel = Null();
 var alphaModel = Null();
 var skin = Null();
@@ -54,7 +54,7 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, skin, weightArrMat,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
-    shadowRate, PCF, texture16f, bias, normalBias, dotCac,
+    shadowRate, PCF, texture16f, bias, normalBias,
     ligDir, ligCol, ligCount,
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
 Build("Artgine/Shader/3DBake", ["bake"], vs_main_bake, [
@@ -227,7 +227,7 @@ function ps_main() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -270,7 +270,7 @@ function ps_main_gBuffer() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -315,7 +315,7 @@ function ps_main_gBuffer_multi() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -367,7 +367,7 @@ function ps_main_shadow_write() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, to_uv, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -427,7 +427,7 @@ function ps_main_shadow_read() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, to_uv, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -463,7 +463,7 @@ function ps_main_shadow_read_pa() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut) {
@@ -513,7 +513,7 @@ function ps_main_bake() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, to_uv, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -522,7 +522,7 @@ function ps_main_bake() {
     var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
     var shadow = -1.0;
     var i = 0.0;
-    BranchBegin("shadow", "S", [shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite, shadowCount, shadowPointProj, shadowReadList, ligDir, shadowRate, texture16f, bias, normalBias, PCF, dotCac]);
+    BranchBegin("shadow", "S", [shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite, shadowCount, shadowPointProj, shadowReadList, ligDir, shadowRate, texture16f, bias, normalBias, PCF]);
     if (shadowCount > 0.5) {
         shadow = 0.0;
         for (; i < shadowCount; i++) {

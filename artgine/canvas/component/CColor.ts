@@ -251,10 +251,11 @@ export class CColorVFX extends CMat
             _xDefault:25, _yDefault:5
         }, // 7 : Scanline
         {	
-            _xDesc:"", _yDesc:"", _zDesc:"",
-            _xMin:0, _xMax:1, _yMin:0, _yMax:1, _zMin:0, _zMax:1,
-            _xStep:0.1, _yStep:0.1, _zStep:0.1
-        }, // 8 : Hologram
+            _xDesc:"ULoop", _yDesc:"VLoop", _zDesc:"texOff",
+            _xMin:0, _xMax:64, _yMin:0, _yMax:64, _zMin:0, _zMax:8,
+            _xStep:1, _yStep:1, _zStep:1,
+            _xDefault:1, _yDefault:1, _zDefault:0
+        }, // 5 : Noise
     ];
 
     override IsShould(_member: string, _type: CObject.eShould) 
@@ -269,6 +270,7 @@ export class CColorVFX extends CMat
         super.EditHTMLInit(_div);
 
         _div.innerHTML = "";
+        let orderStr="";
 
         let arr : [text : string, val : number][] = [];
         for(let [text, val] of Object.entries(SDF.eColorVFX)) {
@@ -278,6 +280,7 @@ export class CColorVFX extends CMat
         for(let i = 0; i < arr.length; i++) {
             let [text, val] = arr[i];
             if(val == 0) continue;
+            
             
             let checked = -1;
             for(let i = 0; i < 4; i++) {
@@ -330,9 +333,16 @@ export class CColorVFX extends CMat
                 }},
                 {"<>":"label", "class":"form-check-label checkbox-label", "for":"checkbox_" + text, "text":text}
             ]};
+            
             _div.appendChild(CDomFactory.DataToDom(checkbox));
+            
 
-            if(checked != -1) {
+            if(checked != -1) 
+            {
+                orderStr+=text;
+
+
+
                 let description = this.m_description[i];
                 let sliders = [];
                 if(description._xDesc) {
@@ -415,5 +425,6 @@ export class CColorVFX extends CMat
                 _div.appendChild(CDomFactory.DataToDom(slider));
             }
         }
+        _div.prepend(CDomFactory.DataToDom("<span>"+orderStr+"</span>"));
     }
 }

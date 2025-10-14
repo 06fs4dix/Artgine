@@ -118,7 +118,7 @@ export class CComponent extends CObject
 	// }
 	Reset()
 	{
-		this.mStartChk=false;
+		this.mStartChk=true;
 		this.mComMsgLen=0;
 		this.mOwner=null;
 	}

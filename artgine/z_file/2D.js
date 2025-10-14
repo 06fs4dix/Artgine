@@ -1,5 +1,5 @@
 import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
-import { CAModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
+import { CAModelCac, ColorVFX, GetTexCodiedUV, GetTexDecodedUV } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
@@ -191,7 +191,7 @@ function ps_main() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv.xy, colorVFX, time);
+    L_cor = ColorVFX(L_cor, to_uv.xy, GetTexDecodedUV(to_uv.xy, texCodi, reverse), colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)

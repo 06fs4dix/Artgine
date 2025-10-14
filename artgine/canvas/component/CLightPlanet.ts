@@ -108,7 +108,7 @@ export class CLightPlanet extends CLight
             // const t = (fVal-sVal)/r;
 
 
-            CConsol.Log(fOff+" / "+sOff+" t : "+t);
+            //CConsol.Log(fOff+" / "+sOff+" t : "+t);
             this.mTempColor.x=CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.x,this.mDCArr[fOff].mEmission.x,t);
             this.mTempColor.y=CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.y,this.mDCArr[fOff].mEmission.y,t);
             this.mTempColor.z=CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.z,this.mDCArr[fOff].mEmission.z,t);

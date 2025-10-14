@@ -14,11 +14,10 @@ import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
 import { CCondition } from "../../util/CStateMachine.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
-import { CAlert } from "../../basic/CAlert.js";
 export class CLight extends CBrushComp {
     mCascadeCycle = [0, -1, -1];
     mShadowDistance = 1;
-    mDigit = 1;
+    mDigit = 500;
     mShadowOff = false;
     mDirPos;
     mColor;
@@ -134,10 +133,6 @@ export class CLight extends CBrushComp {
             this.UpdateBaush();
     }
     UpdateBaush() {
-        if (this.IsDestroy()) {
-            CAlert.Info("test");
-            return;
-        }
         if (this.mWrite.length == 0) {
             let fw = this.mBruch.mFrame;
             let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
@@ -178,7 +173,6 @@ export class CLight extends CBrushComp {
                     let seye;
                     let sup = new CVec3(0, 1, 0);
                     let n = width;
-                    const di = 100;
                     slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
                     slook.x = Math.round(slook.x / this.mDigit) * this.mDigit;
                     slook.y = Math.round(slook.y / this.mDigit) * this.mDigit;
@@ -193,16 +187,11 @@ export class CLight extends CBrushComp {
                     this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
                     scam0.Update(1);
-                    let digit = this.mDigit * 0.5;
-                    if (digit > 100)
-                        digit = 100;
-                    if (digit < 1)
-                        digit = 1;
                     n = width * 4;
                     slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
-                    slook.x = Math.round(slook.x / digit) * digit;
-                    slook.y = Math.round(slook.y / digit) * digit;
-                    slook.z = Math.round(slook.z / digit) * digit;
+                    slook.x = Math.round(slook.x / this.mDigit) * this.mDigit;
+                    slook.y = Math.round(slook.y / this.mDigit) * this.mDigit;
+                    slook.z = Math.round(slook.z / this.mDigit) * this.mDigit;
                     seye = CMath.V3AddV3(slook, CMath.V3MulFloat(dir, n * 4));
                     if (scam1.Init(seye, slook, sup)) {
                         scam1.mWidth = width * 8;
@@ -337,6 +326,9 @@ export class CLight extends CBrushComp {
         this.mCascadeCycle[2] = _CycleTime2;
         this.mUpdate = CUpdate.eType.Updated;
     }
+    SetShadowDistance(_dist) {
+        this.mShadowDistance = _dist;
+    }
     SetInRadius(_rad) {
         return this.mColor.w = _rad;
     }
@@ -363,5 +355,24 @@ export class CLight extends CBrushComp {
     }
     ImportCJSON(_json) {
         return super.ImportCJSON(_json);
+    }
+    Destroy() {
+        super.Destroy();
+        if (Math.abs(this.mDirPos.w) > 0.5 && this.mBruch != null) {
+            this.mBruch.mCameraMap.delete(this.mShadowKey + 0);
+            this.mBruch.mCameraMap.delete(this.mShadowKey + 1);
+            this.mBruch.mCameraMap.delete(this.mShadowKey + 2);
+            this.mBruch.ClearRen();
+            for (var i = 0; i < this.mCascadeCycle.length; ++i) {
+                if (this.mCascadeCycle[i] == -1)
+                    continue;
+                for (let rp of this.mWrite) {
+                    if (rp.mTag != "shadowWrite")
+                        continue;
+                    var srpKey = this.mShadowKey + rp.mShader + i;
+                    this.mBruch.RemoveAutoRP(srpKey);
+                }
+            }
+        }
     }
 }

@@ -27,6 +27,31 @@ export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4,_reverse : CVec2) :
 		result.y=result.y*-1.0;
 	return result;
 }
+// 코딩된(to_uv.xy) 좌표를 원본 uv(0..1)로 복원
+export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4, _reverse: CVec2): CVec2 {
+    // texCodi 해석: (sx, sy, ox, oy)
+    var sx :number= (_texCodi.x == 0.0) ? 1.0 : _texCodi.x;
+    var sy :number= (_texCodi.y == 0.0) ? 1.0 : _texCodi.y;
+
+    // GetTexCodiedUV에서 음수면 부호를 뒤집는(abs 유사) 보정이 있어 정보가 애매해질 수 있음.
+    // 일반적으로 coded는 양수일 테니 그대로 사용, 혹시 음수면 대칭 복원 시도.
+    var cx :number= _coded.x; if (cx < 0.0) cx = -cx;
+    var cy :number= _coded.y; if (cy < 0.0) cy = -cy;
+
+    // 오프셋 제거 후 스케일 역변환
+    var u :number= (cx - _texCodi.z) / sx;
+    var v :number= (cy - _texCodi.w) / sy;
+
+    // reverse가 켜졌다면 1-uv로 반전 회복
+    if (_reverse.x > 0.5) u = 1.0 - u;
+    if (_reverse.y > 0.5) v = 1.0 - v;
+
+    // 필요 시 범위 정리
+    // u = clamp(u, 0.0, 1.0);
+    // v = clamp(v, 0.0, 1.0);
+
+    return new CVec2(u, v);
+}
 export function HSVToRGB(_vec3 : CVec3) : CVec3
 {
     var hk : number = mod(5.0 + _vec3.x * 6.0, 6.0);
@@ -290,7 +315,7 @@ function AddScanLine(_c : CVec4, _uv : CVec2, _time : number, _count : number, _
     return _c;
 }
 
-export function ColorVFX(_color : CVec4,_uv : CVec2, _value : CMat, _time : number) : CVec4
+export function ColorVFX(_color : CVec4,_uv : CVec2,_ruv : CVec2, _value : CMat,_time : number) : CVec4
 {
 
     for(var i=0;i<4;++i)
@@ -349,8 +374,16 @@ export function ColorVFX(_color : CVec4,_uv : CVec2, _value : CMat, _time : numb
         {
             _color = AddScanLine(_color, _uv, _time, _value[i].x, _value[i].y);
         }
-        else if(_value[i].w<SDF.eColorVFX.Hologram+0.5)
+        else if(_value[i].w<SDF.eColorVFX.OverWrite+0.5)
         {
+            //var ruv : CVec2=GetTexDecodedUV(_uv,);
+            var target:CVec4=Sam2DToColor(_value[i].z,new CVec2(_ruv.x*_value[i].x,_ruv.y*_value[i].y));
+            if(_color.a>0.01)
+            {
+                _color.rgb=target.rgb;
+            }
+            // _color.r=1.0;
+            // _color.b=0.0;
             
         }
     }

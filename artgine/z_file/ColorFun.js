@@ -19,6 +19,23 @@ export function GetTexCodiedUV(_uv, _texCodi, _reverse) {
         result.y = result.y * -1.0;
     return result;
 }
+export function GetTexDecodedUV(_coded, _texCodi, _reverse) {
+    var sx = (_texCodi.x == 0.0) ? 1.0 : _texCodi.x;
+    var sy = (_texCodi.y == 0.0) ? 1.0 : _texCodi.y;
+    var cx = _coded.x;
+    if (cx < 0.0)
+        cx = -cx;
+    var cy = _coded.y;
+    if (cy < 0.0)
+        cy = -cy;
+    var u = (cx - _texCodi.z) / sx;
+    var v = (cy - _texCodi.w) / sy;
+    if (_reverse.x > 0.5)
+        u = 1.0 - u;
+    if (_reverse.y > 0.5)
+        v = 1.0 - v;
+    return new CVec2(u, v);
+}
 export function HSVToRGB(_vec3) {
     var hk = mod(5.0 + _vec3.x * 6.0, 6.0);
     var sk = mod(3.0 + _vec3.x * 6.0, 6.0);
@@ -221,7 +238,7 @@ function AddScanLine(_c, _uv, _time, _count, _lineSpeed) {
     _c = V4MulV4(_c, sLine);
     return _c;
 }
-export function ColorVFX(_color, _uv, _value, _time) {
+export function ColorVFX(_color, _uv, _ruv, _value, _time) {
     for (var i = 0; i < 4; ++i) {
         if (_value[i].w < SDF.eColorVFX.None + 0.5) {
             return _color;
@@ -259,7 +276,11 @@ export function ColorVFX(_color, _uv, _value, _time) {
         else if (_value[i].w < SDF.eColorVFX.Scanline + 0.5) {
             _color = AddScanLine(_color, _uv, _time, _value[i].x, _value[i].y);
         }
-        else if (_value[i].w < SDF.eColorVFX.Hologram + 0.5) {
+        else if (_value[i].w < SDF.eColorVFX.OverWrite + 0.5) {
+            var target = Sam2DToColor(_value[i].z, new CVec2(_ruv.x * _value[i].x, _ruv.y * _value[i].y));
+            if (_color.a > 0.01) {
+                _color.rgb = target.rgb;
+            }
         }
     }
     return _color;

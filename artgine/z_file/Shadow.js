@@ -16,7 +16,6 @@ export var shadowRate = 0.3;
 export var bias = 5.0;
 export var normalBias = 1.0;
 export var PCF = 2.0;
-export var dotCac = 0.0;
 function ApplyPCF(_uvZ0, _uvZ1, _uvZ2, _read, _biasAll) {
     var f16Chk = 1.0;
     if (texture16f > 0.0)
@@ -149,18 +148,13 @@ export function calcShadow(_read, _index, _nor, _worldPos) {
         return 1.0;
     }
     var nDotL = 1.0;
-    if (dotCac > 0.5) {
-        nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
-    }
+    nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
     var normalScale = normalBias;
-    normalScale *= (1.0 + (1.0 - Math.abs(nDotL)) * 2.0);
     var normalOffset = V3MulFloat(V3Nor(_nor), normalScale);
     var biasAll = bias;
-    var slopeScale = 1.0 - nDotL;
-    biasAll *= (1.0 + slopeScale * 3.0);
     var uvZ0 = ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, 1.0, normalOffset, _worldPos, _index);
-    var uvZ1 = ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 4.0, normalOffset, _worldPos, _index);
-    var uvZ2 = ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 8.0, normalOffset, _worldPos, _index);
+    var uvZ1 = ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 1.0, normalOffset, _worldPos, _index);
+    var uvZ2 = ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);
     var sVal_count = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll);
     var sVal = sVal_count.x;
     var count = sVal_count.y;
@@ -169,11 +163,6 @@ export function calcShadow(_read, _index, _nor, _worldPos) {
     }
     else {
         sVal = 1.0;
-    }
-    if (dotCac > 0.5 && nDotL <= 0.0) {
-        if (nDotL < 0.0)
-            nDotL = 0.0;
-        sVal = nDotL;
     }
     return sVal * (1.0 - shadowRate) + shadowRate;
 }

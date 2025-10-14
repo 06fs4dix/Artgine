@@ -16,7 +16,7 @@ import {
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, 
-	shadowPointProj, shadowRightCasP2, shadowTopCasV1, dotCac,
+	shadowPointProj, shadowRightCasP2, shadowTopCasV1,
 	calcShadow, 
 } from "./Shadow";
 
@@ -62,7 +62,7 @@ Build("Artgine/Shader/VoxelShadowRead",["shadowRead"],
 		ligDir,ligCol,ligCount,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowCount,
 		shadowWrite,shadowPointProj,shadowReadList,
-		shadowRate,PCF,texture16f,bias,normalBias,sun,dotCac
+		shadowRate,PCF,texture16f,bias,normalBias,sun
 	],[out_position,to_uv,to_normal,to_worldPos],
 	ps_main_shadow_read,[out_color]
 );

@@ -42,6 +42,7 @@ export class CBatchMgr {
     mUniArr = new CArray();
     mBasePriority = null;
     mFeedbackLoop = new Set();
+    mTexDataAtt = new Set();
     constructor(_render) {
         this.mRender = _render;
     }
@@ -60,6 +61,7 @@ export class CBatchMgr {
         this.mRender.mUniTexLastOff = -1;
         this.mBasePriority = 0;
         this.mBaSortArr.Clear();
+        this.mTexDataAtt.clear();
     }
     BatchEnd() {
         this.mBatchMap = null;

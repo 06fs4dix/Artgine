@@ -1,4 +1,3 @@
-import { CConsol } from "../../basic/CConsol.js";
 import { CObject } from "../../basic/CObject.js";
 import { CMat } from "../../geometry/CMat.js";
 import { CMath } from "../../geometry/CMath.js";
@@ -81,7 +80,6 @@ export class CLightPlanet extends CLight {
             const eps = 1e-6;
             const denom = Math.max(eps, Math.abs(fVal) + Math.abs(sVal));
             const t = Math.min(1, Math.max(0, (fVal - sVal) / (1 - sVal)));
-            CConsol.Log(fOff + " / " + sOff + " t : " + t);
             this.mTempColor.x = CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.x, this.mDCArr[fOff].mEmission.x, t);
             this.mTempColor.y = CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.y, this.mDCArr[fOff].mEmission.y, t);
             this.mTempColor.z = CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.z, this.mDCArr[fOff].mEmission.z, t);

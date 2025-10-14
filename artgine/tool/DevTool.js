@@ -63,22 +63,50 @@ let gAddMove = new CVec3();
 let gLastCanvas = null;
 let gCanStyle = null;
 function ResetBoxXYZ(_subject) {
+    let cam = gAtl.Brush().GetCamDev();
     let pos = _subject.GetWMat().xyz;
-    gBoundXY.mMin.Import(pos);
-    gBoundXY.mMax.Import(pos);
-    gBoundXY.mMax.x += gBoundTick;
-    gBoundXY.mMax.y += gBoundTick;
-    gBoundXY.mMax.z += 1;
-    gBoundYZ.mMin.Import(pos);
-    gBoundYZ.mMax.Import(pos);
-    gBoundYZ.mMax.x += 1;
-    gBoundYZ.mMax.y += gBoundTick;
-    gBoundYZ.mMax.z += gBoundTick;
-    gBoundZX.mMin.Import(pos);
-    gBoundZX.mMax.Import(pos);
-    gBoundZX.mMax.x += gBoundTick;
-    gBoundZX.mMax.y += 1;
-    gBoundZX.mMax.z += gBoundTick;
+    let t = gBoundTick / 100 * 100;
+    let o = gBoundTick / 1000 * 100;
+    if (cam.IsOrthographic()) {
+        gBoundXY.mMin.Import(pos);
+        gBoundXY.mMax.Import(pos);
+        gBoundXY.mMax.x += t;
+        gBoundXY.mMax.y += t;
+        gBoundXY.mMax.z += o;
+        gBoundXY.mMin.x -= t;
+        gBoundXY.mMin.y -= t;
+        gBoundXY.mMin.z -= o;
+        gBoundYZ.mMin.Zero();
+        gBoundYZ.mMax.Zero();
+        gBoundZX.mMin.Zero();
+        gBoundZX.mMax.Zero();
+    }
+    else {
+        gBoundXY.mMin.Import(pos);
+        gBoundXY.mMax.Import(pos);
+        gBoundXY.mMax.x += t;
+        gBoundXY.mMax.y += o;
+        gBoundXY.mMax.z += o;
+        gBoundXY.mMin.x -= t;
+        gBoundXY.mMin.y -= o;
+        gBoundXY.mMin.z -= o;
+        gBoundYZ.mMin.Import(pos);
+        gBoundYZ.mMax.Import(pos);
+        gBoundYZ.mMax.x += o;
+        gBoundYZ.mMax.y += t;
+        gBoundYZ.mMax.z += o;
+        gBoundYZ.mMin.x -= o;
+        gBoundYZ.mMin.y -= t;
+        gBoundYZ.mMin.z -= o;
+        gBoundZX.mMin.Import(pos);
+        gBoundZX.mMax.Import(pos);
+        gBoundZX.mMax.x += o;
+        gBoundZX.mMax.y += o;
+        gBoundZX.mMax.z += t;
+        gBoundZX.mMin.x -= o;
+        gBoundZX.mMin.y -= o;
+        gBoundZX.mMin.z -= t;
+    }
 }
 function SubjectRigidBodyClear(_subject) {
     let rArr = _subject.FindComps(CRigidBody);
@@ -377,7 +405,6 @@ function DevToolRender() {
     render.SendGPU(shader, gAtl.Brush().GetCamDev().GetViewMat(), "viewMat");
     render.SendGPU(shader, gAtl.Brush().GetCamDev().GetProjMat(), "projectMat");
     render.SendGPU(shader, [gAtl.Frame().Pal().GetBlackTex()]);
-    ResetBoxXYZ(subject);
     let color = new CColor();
     color.w = SDF.eColorModel.RGBAdd;
     let alpha = new CAlpha();
@@ -385,61 +412,76 @@ function DevToolRender() {
     let wMatSA = new CShaderAttr("worldMat", wmat);
     let MatToMat12Fun = (_mat) => {
     };
-    gAtl.Frame().Dev().SetLine(true);
+    let pos = subject.GetWMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
+    gAtl.Frame().Dev().SetLine(true);
     {
-        color.x = 1;
-        color.y = 0;
-        color.z = 0;
-        wmat.xyz = gBoundXY.mMin;
-        wmat.mF32A[12] += gBoundTick * 0.5;
-        wmat.mF32A[13] += gBoundTick * 0.5;
-        wmat.mF32A[0] = gBoundTick / 200;
-        wmat.mF32A[5] = gBoundTick / 200;
-        wmat.mF32A[10] = 0.01;
-        if (gDragBound == 1)
-            gAtl.Frame().Dev().SetLine(false);
-        render.SendGPU(shader, color, "colorModel");
-        render.SendGPU(shader, alpha, "alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader, wMatSA);
-        render.MeshDrawNodeRender(shader, meshDraw);
-        gAtl.Frame().Dev().SetLine(true);
-        color.x = 0;
-        color.y = 1;
-        color.z = 0;
-        wmat.xyz = gBoundYZ.mMin;
-        wmat.mF32A[13] += gBoundTick * 0.5;
-        wmat.mF32A[14] += gBoundTick * 0.5;
-        wmat.mF32A[0] = 0.01;
-        wmat.mF32A[5] = gBoundTick / 200;
-        wmat.mF32A[10] = gBoundTick / 200;
-        if (gDragBound == 2)
-            gAtl.Frame().Dev().SetLine(false);
-        render.SendGPU(shader, color, "colorModel");
-        render.SendGPU(shader, alpha, "alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader, wMatSA);
-        render.MeshDrawNodeRender(shader, meshDraw);
-        gAtl.Frame().Dev().SetLine(true);
-        color.x = 0;
-        color.y = 0;
-        color.z = 1;
-        wmat.xyz = gBoundZX.mMin;
-        wmat.mF32A[12] += gBoundTick * 0.5;
-        wmat.mF32A[14] += gBoundTick * 0.5;
-        wmat.mF32A[0] = gBoundTick / 200;
-        wmat.mF32A[5] = 0.01;
-        wmat.mF32A[10] = gBoundTick / 200;
-        if (gDragBound == 3)
-            gAtl.Frame().Dev().SetLine(false);
-        render.SendGPU(shader, color, "colorModel");
-        render.SendGPU(shader, alpha, "alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader, wMatSA);
-        render.MeshDrawNodeRender(shader, meshDraw);
-        gAtl.Frame().Dev().SetLine(true);
+        if (gAtl.Brush().GetCamDev().IsOrthographic()) {
+            color.x = 1;
+            color.y = 1;
+            color.z = 0;
+            wmat.xyz = pos;
+            wmat.mF32A[0] = gBoundTick / 100;
+            wmat.mF32A[5] = gBoundTick / 100;
+            wmat.mF32A[10] = gBoundTick / 1000;
+            if (gDragBound == 1)
+                gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, wMatSA);
+            render.MeshDrawNodeRender(shader, meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+        }
+        else {
+            color.x = 1;
+            color.y = 0;
+            color.z = 0;
+            wmat.xyz = pos;
+            wmat.mF32A[0] = gBoundTick / 100;
+            wmat.mF32A[5] = gBoundTick / 1000;
+            wmat.mF32A[10] = gBoundTick / 1000;
+            if (gDragBound == 1)
+                gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, wMatSA);
+            render.MeshDrawNodeRender(shader, meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+            color.x = 0;
+            color.y = 1;
+            color.z = 0;
+            wmat.xyz = pos;
+            wmat.mF32A[0] = gBoundTick / 1000;
+            wmat.mF32A[5] = gBoundTick / 100;
+            wmat.mF32A[10] = gBoundTick / 1000;
+            if (gDragBound == 2)
+                gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, wMatSA);
+            render.MeshDrawNodeRender(shader, meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+            color.x = 0;
+            color.y = 0;
+            color.z = 1;
+            wmat.xyz = pos;
+            wmat.mF32A[0] = gBoundTick / 1000;
+            wmat.mF32A[5] = gBoundTick / 1000;
+            wmat.mF32A[10] = gBoundTick / 100;
+            if (gDragBound == 3)
+                gAtl.Frame().Dev().SetLine(false);
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, wMatSA);
+            render.MeshDrawNodeRender(shader, meshDraw);
+            gAtl.Frame().Dev().SetLine(true);
+        }
     }
+    gAtl.Frame().Dev().SetLine(true);
     for (let pt of ptArr) {
         if (pt.GetOwner() == null)
             continue;
@@ -721,13 +763,19 @@ function DevToolUpdate(_delay) {
             y *= len;
             let moveVec = new CVec3(0, 0, 0);
             if (gDragBound == 1) {
-                moveVec = CMath.V3AddV3(CMath.V3MulFloat(cross, -x), CMath.V3MulFloat(up, y));
+                if (CMath.V3Dot(cross, CVec3.Left()) > 0)
+                    moveVec = CMath.V3MulFloat(CVec3.Left(), -x);
+                else
+                    moveVec = CMath.V3MulFloat(CVec3.Left(), x);
             }
             else if (gDragBound == 2) {
-                moveVec = CMath.V3AddV3(CMath.V3MulFloat(up, y), CMath.V3MulFloat(cross, -x));
+                moveVec = CMath.V3MulFloat(CVec3.Up(), y);
             }
             else if (gDragBound == 3) {
-                moveVec = CMath.V3AddV3(CMath.V3MulFloat(front, y), CMath.V3MulFloat(cross, -x));
+                if (CMath.V3Dot(cross, CVec3.Back()) > 0)
+                    moveVec = CMath.V3MulFloat(CVec3.Back(), -x);
+                else
+                    moveVec = CMath.V3MulFloat(CVec3.Back(), x);
             }
             pos = CMath.V3AddV3(pos, moveVec);
         }

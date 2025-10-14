@@ -76,7 +76,7 @@ export class SDF {
         Pixel: 4,
         Noise: 5,
         Scanline: 7,
-        Hologram: 8,
+        OverWrite: 8,
     };
     static eBlend = {
         LinearDodge: 1,

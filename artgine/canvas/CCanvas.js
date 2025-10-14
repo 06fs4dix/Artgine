@@ -508,6 +508,8 @@ export class CCanvas extends CObject {
                 return parent;
         }
         for (const subject of this.mResMap.values()) {
+            if (subject instanceof CSubject == false)
+                continue;
             if (_obj == subject)
                 return this;
             const parent = this.FindParentIn(subject, _obj);

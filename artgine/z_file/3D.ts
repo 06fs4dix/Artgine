@@ -29,7 +29,7 @@ import {
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
-	bias, calcShadow, dotCac, normalBias, PCF, shadowCount, shadowOn, 
+	bias, calcShadow,  normalBias, PCF, shadowCount, shadowOn, 
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, 
 	shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f 
 } from "./Shadow";
@@ -129,7 +129,7 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
-		shadowRate,PCF,texture16f,bias,normalBias,dotCac,
+		shadowRate,PCF,texture16f,bias,normalBias,
 		ligDir,ligCol,ligCount,
 	], [out_position,to_uv,to_normal,to_worldPos],
 	ps_main_shadow_read,[out_color]
@@ -375,7 +375,7 @@ function ps_main()
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
+	L_cor=ColorVFX(L_cor,uv,uv,colorVFX,time);
 	BranchEnd();
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) discard;
@@ -430,7 +430,7 @@ function ps_main_gBuffer() {
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
+	L_cor=ColorVFX(L_cor,uv,uv,colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -486,7 +486,7 @@ function ps_main_gBuffer_multi() {
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,uv,colorVFX,time);
+	L_cor=ColorVFX(L_cor,uv,uv,colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -557,7 +557,7 @@ function ps_main_shadow_write()
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
+	L_cor=ColorVFX(L_cor,to_uv,to_uv,colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -637,7 +637,7 @@ function ps_main_shadow_read()
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
+	L_cor=ColorVFX(L_cor,to_uv,to_uv,colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -692,7 +692,7 @@ function ps_main_shadow_read_pa()
     BranchEnd();
 
     BranchBegin("vfx","VFX",[colorVFX,time]);
-    L_cor = ColorVFX(L_cor, uv, colorVFX, time);
+    L_cor = ColorVFX(L_cor, uv,uv, colorVFX, time);
     BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -769,7 +769,7 @@ function ps_main_bake() {
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv,colorVFX,time);
+	L_cor=ColorVFX(L_cor,to_uv,to_uv,colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
@@ -781,7 +781,7 @@ function ps_main_bake() {
 	//shadow
 	var shadow : number=-1.0;
 	var i : number = 0.0;
-	BranchBegin("shadow","S",[shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList,ligDir,shadowRate,texture16f,bias,normalBias,PCF,dotCac]);
+	BranchBegin("shadow","S",[shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList,ligDir,shadowRate,texture16f,bias,normalBias,PCF]);
 	if(shadowCount > 0.5) {
 		shadow = 0.0;
 		for(; i < shadowCount; i++) {

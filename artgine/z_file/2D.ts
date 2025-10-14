@@ -16,7 +16,8 @@ import {
 	CMat34,
 } from "./Shader"
 import {
-	CAModelCac, ColorVFX, GetTexCodiedUV
+	CAModelCac, ColorVFX, GetTexCodiedUV,
+	GetTexDecodedUV
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -298,7 +299,7 @@ function ps_main()
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv.xy,colorVFX,time);
+	L_cor=ColorVFX(L_cor,to_uv.xy,GetTexDecodedUV(to_uv.xy,texCodi, reverse),colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
