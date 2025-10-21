@@ -1,5 +1,5 @@
 //Version
-const version='mfzfxhf5_6';
+const version='mh13w5u5_16';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -39,8 +39,6 @@ gPF.mGitHub = true;
 import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
-CPlugin.PushPath('Bloom','https://06fs4dix.github.io/Artgine/plugin/Bloom/');
-import "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json','Res.json','UI.json'],"");
@@ -79,12 +77,13 @@ import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/B
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
+import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
 
 
 gAtl.Brush().GetCam2D().SetSize(600,800);
 gAtl.Frame().PushEvent(CEvent.eType.Init,()=>{
-    gAtl.Frame().Load().Load("Res/shmup_effects/explosion1.png");
-    gAtl.Frame().Load().Load("Res/shmup_effects/flash5_64x64x4x2.png");
+    gAtl.Frame().Load().Exe("Res/shmup_effects/explosion1.png");
+    gAtl.Frame().Load().Exe("Res/shmup_effects/flash5_64x64x4x2.png");
 });
 
 let back=Main.PushSub(new BackGround());
@@ -101,7 +100,7 @@ let gSuk="";
 let gNick="";
 let socket=new CRoomClient(gPF.mServer=="local");
 let gOwner=false;
-
+let gTimer=new CTimer();
 
 
 socket.On(CRoomClient.eEvent.RoomConnect,(_stream : CStream)=>{
@@ -146,11 +145,17 @@ socket.On(CRoomClient.eEvent.RoomClose,(_stream : CStream)=>{
         Main.PushSub(new RoomSystem());
     }
     gStartBtn.Close();
+    gTimer.Delay();
 
 });
 socket.On(CRoomClient.eEvent.RoomDisConnect,(_stream : CStream)=>{
     let packet=CPacRoom.GetRoomDisConnect(_stream);
     Main.Find(packet.suk).Destroy();
+
+});
+socket.On(CPacShooting.eHeader.Dead,(_stream : CStream)=>{
+    let packet=CPacShooting.Dead(_stream);
+    chat.ChatAdd(packet.nick+"플레이어가 죽었습니다. time : "+gTimer.Delay());
 
 });
 socket.On(CPacShooting.eHeader.UserShot,(_stream : CStream)=>{
@@ -220,13 +225,15 @@ socket.On(CPacShooting.eHeader.Effect,(stream : CStream)=>{
     let flash=new CSubject();
     flash.SetPos(packet.pos);
     let size=new CVec2(50,50);
-    if(packet.key=="Explosion")
-    {
-        size=new CVec2(200,200);
-    }
+    
         
     let pt = new CPaint2D(null,size);
     pt.PushTag("bloom");
+    if(packet.key=="Explosion")
+    {
+        pt.SetPivot(new CVec3(0,-1,0));
+    }
+    
     //특정 오브젝트만 블룸값을 조절할수 있다
     //지금은 전체 오브젝트 줄임
     pt.PushCShaderAttr(new CShaderAttr("mask",new CVec1(0.1)));
@@ -282,8 +289,8 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
     let emissiveTexKey=BloomRPM.PushTex("emissiveTex.tex",emissiveTex);
     let rp=BloomRPM.PushRP(new CRPAuto());
-    rp.PushCondition(new CCondition("class","==","CPaint2D"));
-    rp.PushCondition(new CCondition("mTag[bloom]"));
+    rp.PushAnd(new CCondition("class","==","CPaint2D"));
+    rp.PushAnd(new CCondition("mTag[bloom]"));
     rp.mShader=gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget=emissiveTexKey;
     rp.mTag="mask";
@@ -293,7 +300,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
     let basiceTexKey=BloomRPM.PushTex("basiceTex.tex",basiceTex);
     rp=BloomRPM.PushRP(new CRPAuto());
-    rp.PushCondition(new CCondition("class","==","CPaint2D"));
+    rp.PushAnd(new CCondition("class","==","CPaint2D"));
     rp.mShader=gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget=basiceTexKey;
 
@@ -341,6 +348,20 @@ Option_btn.SetContent(`
 <div>
     블룸,기본 설정 가능
 </div>`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

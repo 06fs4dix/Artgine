@@ -33,7 +33,5 @@
     "soundfont": false,
     "toastui": false
   },
-  "dependencies": {
-    "Bloom": 1
-  }
+  "dependencies": {}
 }

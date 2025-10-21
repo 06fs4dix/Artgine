@@ -1,6 +1,7 @@
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
 import { CUIText } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CUI.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import { CProComp } from "./CProComp.js";
@@ -11,6 +12,7 @@ export class CUserComp extends CProComp {
         this.mSpeed = 300;
         super.Start();
         this.mCL.SetLayer("user");
+        this.mCL.PushCollisionLayer("mon");
     }
     Update(_delay) {
         super.Update(_delay);
@@ -32,5 +34,10 @@ export class CUserComp extends CProComp {
         uit.Init(_nick);
         uit.SetPos(new CVec3(0, -40));
         this.GetOwner().PushChild(uit);
+    }
+    Collision(_org, _size, _tar, _push) {
+        this.GetOwner().PushPac(CPacShooting.Dead(this.GetOwner().Key()));
+        this.GetOwner().PushPac(CPacShooting.Effect("Flash", this.GetOwner().GetPos(), new CVec2(50, 50)));
+        this.GetOwner().Destroy();
     }
 }

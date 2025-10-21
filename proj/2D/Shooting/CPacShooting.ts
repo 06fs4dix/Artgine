@@ -7,7 +7,8 @@ export class CPacShooting {
         "MonCreate": "MonCreate",
         "UserShot": "UserShot",
         "Effect": "Effect",
-        "Pos": "Pos"
+        "Pos": "Pos",
+        "Dead": "Dead"
     };
 
     static MonCreate(monKey: string, pos: CVec3, type: string): CStream;
@@ -46,6 +47,15 @@ export class CPacShooting {
         return new CStream().Push("Pos").Push(suk).Push(nick).Push(pos).Push(dir);
     }
 
+    static Dead(nick: string): CStream;
+    static Dead(_stream: CStream): {nick: string};
+    static Dead(nick: string | CStream): any {
+        if (nick instanceof CStream) {
+            return nick.GetPacket("nick");
+        }
+        return new CStream().Push("Dead").Push(nick);
+    }
+
     static Test(_test : CVec4): any  {
 
        
@@ -75,7 +85,11 @@ var json={
         "nick": "string",
 		"pos": "CVec3",
 		"dir": "CVec3"
-	}
+	},
+    "Dead":{
+        "nick":"string"
+    }
+
 };
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 function Test(_test : CVec4): any 

@@ -22,8 +22,8 @@ var gUVRPMgr=new CRPMgr();
 
 
 CPlugin.PushEvent(CEvent.eType.Load,()=>{
-    CFrame.Main().Load().Load(CPlugin.FindPath("test")+"up-arrow-2.png");
-    CFrame.Main().Load().Load(CPlugin.FindPath("test")+"TestShader.ts");
+    CFrame.Main().Load().Exe(CPlugin.FindPath("test")+"up-arrow-2.png");
+    CFrame.Main().Load().Exe(CPlugin.FindPath("test")+"TestShader.ts");
 
     
     let rp=new CRPAuto();

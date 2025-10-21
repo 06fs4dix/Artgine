@@ -4,12 +4,7 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 > Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-ko.md)**
 
 ## Examples
-[ArtgineTutorial](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html): A guided tutorial on how to use Artgine.
-<details>
-  <summary>More examples</summary>
-
 **2D**
-
 [Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : Village 
 
 [Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : Maze
@@ -17,18 +12,24 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 [Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : Shooting
 
 **3D**
+[ModularVillage](https://06fs4dix.github.io/Artgine/proj/3D/ModularVillage/ModularVillage.html) : Village
 
-[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html): Box visual viewer.  
+[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : Box visual viewer
+
+<details>
+  <summary>More examples</summary>
+
+[ArtgineTutorial](https://06fs4dix.github.io/Artgine/proj/Tutorial/Canvas/Canvas.html) : A guided tutorial on how to use Artgine.
+
+[CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html): Collision testing.  
+
+[3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html): 3D lights and shadows.
+
+[Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html): Skybox.  
 
 [Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html): Track 3D objects from a 2D map.  
 
-**Tutorial**
 
-[CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html): Collision testing.
-  
-[3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html): 3D lights and shadows.  
-
-[Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html): Skybox.  
 
 </details>
 

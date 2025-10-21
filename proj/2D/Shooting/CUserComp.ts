@@ -1,6 +1,9 @@
+import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
 import { CUIText } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CUI.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import {CProComp} from "./CProComp.js";
@@ -20,6 +23,7 @@ export class CUserComp extends CProComp
         this.mSpeed=300;
         super.Start();
         this.mCL.SetLayer("user");
+        this.mCL.PushCollisionLayer("mon");
         // if(this.m_pad==null)
         // {
         //     this.m_pad=this.GetOwner().FindChild(CPad);
@@ -52,5 +56,12 @@ export class CUserComp extends CProComp
         uit.Init(_nick);
         uit.SetPos(new CVec3(0,-40));
         this.GetOwner().PushChild(uit);
+    }
+    override Collision(_org: CCollider, _size: number, _tar: Array<CCollider>, _push: Array<CVec3>): void {
+        this.GetOwner().PushPac(CPacShooting.Dead(this.GetOwner().Key()));
+        this.GetOwner().PushPac(CPacShooting.Effect("Flash",this.GetOwner().GetPos(),new CVec2(50,50)));
+        this.GetOwner().Destroy();
+
+        //CAlert.Info("[Die!]");
     }
 }

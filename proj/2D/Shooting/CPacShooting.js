@@ -4,7 +4,8 @@ export class CPacShooting {
         "MonCreate": "MonCreate",
         "UserShot": "UserShot",
         "Effect": "Effect",
-        "Pos": "Pos"
+        "Pos": "Pos",
+        "Dead": "Dead"
     };
     static MonCreate(monKey, pos = null, type = null) {
         if (monKey instanceof CStream) {
@@ -30,6 +31,12 @@ export class CPacShooting {
         }
         return new CStream().Push("Pos").Push(suk).Push(nick).Push(pos).Push(dir);
     }
+    static Dead(nick) {
+        if (nick instanceof CStream) {
+            return nick.GetPacket("nick");
+        }
+        return new CStream().Push("Dead").Push(nick);
+    }
     static Test(_test) {
     }
 }
@@ -52,6 +59,9 @@ var json = {
         "nick": "string",
         "pos": "CVec3",
         "dir": "CVec3"
+    },
+    "Dead": {
+        "nick": "string"
     }
 };
 function Test(_test) {

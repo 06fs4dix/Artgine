@@ -1,5 +1,5 @@
 //Version
-const version='mfdjvc2e_2';
+const version='mgynxomz_13';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -45,13 +45,16 @@ import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
 import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
 import { CEvent } from "../../../artgine/basic/CEvent.js";
 import { CForce } from "../../../artgine/canvas/component/CForce.js";
-import { CSMA, CSMComp, CSMC, CSMP } from "../../../artgine/canvas/component/CStateMachine.js";
+
 import { CConsol } from "../../../artgine/basic/CConsol.js";
 import { CFileViewer } from "../../../artgine/util/CModalUtil.js";
 import { CPath } from "../../../artgine/basic/CPath.js";
 import { CString } from "../../../artgine/basic/CString.js";
 import { CCanvas } from "../../../artgine/canvas/CCanvas.js";
 import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
+
+import { CAction, CCondition, CSMP } from "../../../artgine/util/CStateMachine.js";
+import { CSMComp } from "../../../artgine/canvas/component/CSMComp.js";
 
 
 let back = Main.PushSub(new CSubject());
@@ -110,19 +113,19 @@ let test=sm.GetSM();
 //     ],
 //     "exe":[{"t":"Message","a":"MaryWalk"}]
 // });
-sm.GetSM().PushPattern(new CSMP([new CSMC("Jump","!="),new CSMC("move","!="),new CSMC("Fall","!="),new CSMC("Down","!=")],new CSMA(CSMA.eType.Message,"Default")));
-sm.GetSM().PushPattern(new CSMP([new CSMC("move"),new CSMC("Jump","!=")],new CSMA(CSMA.eType.Message,"MaryWalk")));
-sm.GetSM().PushPattern(new CSMP([new CSMC("move"+CVec3.eDir.Left)],new CSMA(CSMA.eType.Message,"Left")));
-sm.GetSM().PushPattern(new CSMP([new CSMC("move"+CVec3.eDir.Right)],new CSMA(CSMA.eType.Message,"Right")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("Jump","!="),new CCondition("move","!="),new CCondition("Fall","!="),new CCondition("Down","!=")],new CAction(CAction.eType.Message,"Default")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("move"),new CCondition("Jump","!=")],new CAction(CAction.eType.Message,"MaryWalk")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("move"+CVec3.eDir.Left)],new CAction(CAction.eType.Message,"Left")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("move"+CVec3.eDir.Right)],new CAction(CAction.eType.Message,"Right")));
 
 
-sm.GetSM().PushPattern(new CSMP([new CSMC("Jump")],new CSMA(CSMA.eType.Message,"MaryJumpStart")));
-sm.GetSM().PushPattern(new CSMP([new CSMC("Jump"),new CSMC("MaryJumpStartStop")],new CSMA(CSMA.eType.Message,"MaryJumpLoop")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("Jump")],new CAction(CAction.eType.Message,"MaryJumpStart")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("Jump"),new CCondition("MaryJumpStartStop")],new CAction(CAction.eType.Message,"MaryJumpLoop")));
 
-sm.GetSM().PushPattern(new CSMP([new CSMC("Down"),new CSMC("Jump","!="),new CSMC("move","!=")],new CSMA(CSMA.eType.Message,"MaryDown")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("Down"),new CCondition("Jump","!="),new CCondition("move","!=")],new CAction(CAction.eType.Message,"MaryDown")));
 
-sm.GetSM().PushPattern(new CSMP([new CSMC("Fall"),new CSMC("Jump","!=")],new CSMA(CSMA.eType.Message,"MaryJumpStart")));
-sm.GetSM().PushPattern(new CSMP([new CSMC("Fall"),new CSMC("MaryJumpStartStop","!=")],new CSMA(CSMA.eType.Message,"MaryJumpLoop")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("Fall"),new CCondition("Jump","!=")],new CAction(CAction.eType.Message,"MaryJumpStart")));
+sm.GetSM().PushPattern(new CSMP([new CCondition("Fall"),new CCondition("MaryJumpStartStop","!=")],new CAction(CAction.eType.Message,"MaryJumpLoop")));
 
 
 
@@ -176,6 +179,9 @@ mary.Update = () => {
     }
 
 };
+
+
+
 
 
 

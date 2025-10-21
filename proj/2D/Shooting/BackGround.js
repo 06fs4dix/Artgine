@@ -14,7 +14,7 @@ export class BackGround extends CSubject {
     mMoon = null;
     Start() {
         this.SetPos(new CVec3(0, 0, -1));
-        this.GetFrame().Load().Load("Res/bg.png", new CLoaderOption().Set("mWrap", CTexture.eWrap.Mirrored));
+        this.GetFrame().Load().Exe("Res/bg.png", new CLoaderOption().Set("mWrap", CTexture.eWrap.Mirrored));
         let pt = this.PushComp(new CPaint2D("Res/bg.png", new CVec2(600, 800)));
         pt.SubUpdate = () => {
             let delay = this.GetFrame().Delay();
