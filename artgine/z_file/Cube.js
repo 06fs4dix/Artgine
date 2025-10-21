@@ -235,18 +235,6 @@ function ps_main() {
         finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend);
     finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSum, 0.2)), ligMax);
     BranchEnd();
-    BranchBegin("star", "S", [star, starCount, starSize, starBaseCol, starRandCol]);
-    value.xyz = GetStars(fragDir, starCount, starSize, starBaseCol, starRandCol);
-    finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, star));
-    BranchEnd();
-    BranchBegin("aurora", "A", [aurora, auroraHeight, auroraCut, auroraColor, auroraStep]);
-    value = Aurora(fragDir, auroraHeight, auroraCut, auroraColor, auroraStep);
-    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), V3MulFloat(value.rgb, aurora));
-    BranchEnd();
-    BranchBegin("cloud", "C", [cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius, cloudHorizon]);
-    value = GetCloud(camPos, fragDir, cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius);
-    finalColor = V3Mix(finalColor, V3MulFloat(value.rgb, 1.0 / max(1e-5, value.w)), value.w);
-    BranchEnd();
     out_color.rgb = finalColor;
     out_color.a = 1.0;
 }

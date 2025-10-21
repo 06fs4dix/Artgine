@@ -101,7 +101,7 @@ export class CRenderPass extends CObject {
     mDepthTest = null;
     mDepthWrite = null;
     mAlpha = null;
-    mCullFace = CRenderPass.eCull.CCW;
+    mCullFace = null;
     mCamera = null;
     mCullFrustum = true;
     mPriority = CRenderPass.ePriority.Normal;

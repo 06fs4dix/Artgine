@@ -71,12 +71,12 @@ export class CPalette
 
 		
 		
-		await _fw.Load().Load(Sl2DKey);
-		await _fw.Load().Load(Sl3DKey);
-		await _fw.Load().Load(SlPostKey);
-		await _fw.Load().Load(SlCubeKey);
-		await _fw.Load().Load(SlVoxelKey);
-		await _fw.Load().Load(SlTerrainKey);
+		await _fw.Load().Exe(Sl2DKey);
+		await _fw.Load().Exe(Sl3DKey);
+		await _fw.Load().Exe(SlPostKey);
+		await _fw.Load().Exe(SlCubeKey);
+		await _fw.Load().Exe(SlVoxelKey);
+		await _fw.Load().Exe(SlTerrainKey);
 
 		
 		

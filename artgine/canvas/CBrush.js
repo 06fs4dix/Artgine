@@ -38,7 +38,7 @@ export class CBrush extends CObject {
         super();
         this.SetKey("Brush");
         this.mFrame = _frame;
-        var size = CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX);
+        var size = CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
         this.mLightDir = new Float32Array(4 * size);
         this.mLightColor = new Float32Array(4 * size);
         this.mLightCount = 0;

@@ -164,8 +164,8 @@ export class sampler2DCube{}
 //export class UniToSam2DArr1{x;y;}
 
 //global var
-export var TexSizeHalfInt=1024;
-export var TexSizeHalfFloat=1024.0;
+//export var TexSizeHalfInt=1024;
+//export var TexSizeHalfFloat=1024.0;
 export var sam2D=0;
 export var gl_Position : CVec4;
 export var discard=0;

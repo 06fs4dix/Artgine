@@ -1,18 +1,18 @@
 import { ligDir } from "./Light";
-import { CMat, cos, CVec2, CVec3, CVec4, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DToV4, Sam2DV4, ShadowPosToUv, 
-    sin, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+import { CMat, cos, CVec2, CVec3, CVec4, fract, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
+    sin, V2Dot, V2Fract, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 
-export var shadowNearCasV0: Sam2DMat=new Sam2DMat(9,505);
-export var shadowFarCasP0: Sam2DMat=new Sam2DMat(9,509);
-export var shadowTopCasV1: Sam2DMat=new Sam2DMat(9,513);
-export var shadowBottomCasP1: Sam2DMat=new Sam2DMat(9,517);
-export var shadowLeftCasV2: Sam2DMat=new Sam2DMat(9,521);
-export var shadowRightCasP2: Sam2DMat=new Sam2DMat(9,525);
-export var shadowPointProj: Sam2DMat=new Sam2DMat(9,529);
+export var shadowNearCasV0: Sam2DMat=new Sam2DMat(11,505);
+export var shadowFarCasP0: Sam2DMat=new Sam2DMat(11,509);
+export var shadowTopCasV1: Sam2DMat=new Sam2DMat(11,513);
+export var shadowBottomCasP1: Sam2DMat=new Sam2DMat(11,517);
+export var shadowLeftCasV2: Sam2DMat=new Sam2DMat(11,521);
+export var shadowRightCasP2: Sam2DMat=new Sam2DMat(11,525);
+export var shadowPointProj: Sam2DMat=new Sam2DMat(11,529);
 
 //shadow uniform
 export var shadowOn : number = -1.0;
-export var shadowReadList: Sam2DV4=new Sam2DV4(9);
+export var shadowReadList: Sam2DV4=new Sam2DV4(11);
 
 //uniform
 export var texture16f : number =0;
@@ -30,10 +30,42 @@ export var normalBias : number = 1.0;
 //percentage-closer filtering 
 //경계면을 샘플링 해서 다듬는다. 다듬는 횟수
 export var PCF : number = 2.0;
+export var jitter : number = 0.0;
 
-//빛과의 각도를 계산해서 오차에 보정하고 빛과 반대쪽 면을 더 어둡게 만듬
-//export var dotCac : number = 0.0;
+// function UVHash(p : CVec2) : number
+// {
+//     p = V2Fract(new CVec2(123.34*p.x, 456.21*p.y));
+//     let p2 = V2Dot(p,new CVec2(p.x + 45.32,p.y + 45.32));
+    
+//     return fract((p.x+p2) * (p.y+p2));
+// }
+// function randomJitter(fragCoord: CVec2) : CVec2
+// {
+//     var r1 : number = UVHash(fragCoord);
+//     var r2 : number = UVHash(new CVec2(fragCoord.x + 13.37,fragCoord.y+13.37));
+//     // -0.5 ~ 0.5 사이로 변환
+//     return new CVec2(r1 - 0.5, r2 - 0.5);
+// }
 
+// 2D 해시 → 2D 난수 (0~1) 생성
+function Hash22(p : CVec2) : CVec2
+{
+    // 화면좌표/격자 좌표 등 연속 좌표와 잘 맞는 정사영 해시
+    // (정수 변환 없이 dot+sin 기반이라 WebGL 정밀도에서 안정적)
+    var n1 : number = V2Dot(p, new CVec2(127.1, 311.7));
+    var n2 : number = V2Dot(p, new CVec2(269.5, 183.3));
+    var h1 : number = fract(sin(n1) * 43758.5453);
+    var h2 : number = fract(sin(n2) * 43758.5453);
+    return new CVec2(h1, h2);
+}
+
+// 프래그먼트(또는 화면) 좌표 기반 난수 지터 (-0.5 ~ 0.5)
+function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
+{
+    // 기존 시그니처/반환 범위를 유지해 ApplyPCF에 바로 연동 가능
+    var h : CVec2 = Hash22(fragCoord);
+    return new CVec2((h.x - 0.5)*_strength, (h.y - 0.5)*_strength);
+}
 function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number) : CVec2
 {
     var f16Chk : number=1.0;
@@ -47,13 +79,25 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
 
     var x : number = -PCF;
     var depthChk : number=0.0;
+
+    var jitterValue : CVec2;
+    
+    
     for(; x <= PCF + 0.5; x += 1.0) 
     {
         var y : number = -PCF;
         for(; y <= PCF + 0.5; y += 1.0) 
         {
             
-            var uv0N : CVec3 = new CVec3(_uvZ0.x + x * texScale.x, _uvZ0.y + y * texScale.y,_read.y);
+            
+            if(jitter>0.01)
+            {
+                jitterValue=randomJitter(new CVec2(x+screenPos.x, y+screenPos.y),jitter);
+                //x+=jitterValue.x;
+                //y+=jitterValue.y;
+            }
+
+            var uv0N : CVec3 = new CVec3(_uvZ0.x + (x+jitterValue.x) * texScale.x, _uvZ0.y + (y+jitterValue.y) * texScale.y,_read.y);
             var uv1N : CVec3 = new CVec3(_uvZ1.x + x * texScale.x, _uvZ1.y + y * texScale.y,_read.z);
             var uv2N : CVec3 = new CVec3(_uvZ2.x + x * texScale.x, _uvZ2.y + y * texScale.y,_read.w);
 
@@ -234,10 +278,7 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
     //노말과 라이트 사이의 각도
     var nDotL : number = 1.0;
     nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
-    // if(dotCac>0.5) {
-    //     nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
-    // }
-
+  
     // 노말 오프셋 계산 (셀프 섀도잉 방지)
     var normalScale : number = normalBias;
     
@@ -273,14 +314,6 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
         sVal=1.0;
     }
 
-    //180도에 가까울수록 그림자가 진해짐 (역광 방지)
-    // if(dotCac>0.5 && nDotL<=0.0)
-    // {
-    //     //if(nDotL<0.0)   nDotL=0.0;
-    //     sVal=nDotL;
-        
-
-    // }
     
 
     //최소 그림자 강도 적용

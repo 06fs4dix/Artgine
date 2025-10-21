@@ -4,9 +4,11 @@ export default class CParserGLTF extends CParser {
     mMesh = new CMesh();
     mInch = false;
     mTexMap = new Map();
-    constructor(_inch) {
+    mColorTex;
+    constructor(_inch, _colorTex = false) {
         super();
         this.mInch = _inch;
+        this.mColorTex = _colorTex;
     }
     GetResult() {
         return this.mMesh;

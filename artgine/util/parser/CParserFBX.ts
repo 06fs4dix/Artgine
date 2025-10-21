@@ -163,10 +163,13 @@ export class CParserFBX extends CParser
 	public mAniCuvMap=new Map<string,FBXAnimCurveNode>();
 	public mDeformerMap=new Map<string,string>();
 	public mGeometryMap=new Map<string,string>();
+	public mModelKeyMap=new Map<string,string>();
+	mColorTex : boolean;
 
-	constructor()
+	constructor(_colorTex=false)
 	{
 		super();
+		this.mColorTex=_colorTex;
 	}
 	GetResult() 	{	return this.mMesh;	}
 	PosScaAxis(_vec)

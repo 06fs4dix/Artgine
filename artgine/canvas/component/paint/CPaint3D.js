@@ -31,7 +31,6 @@ export class CPaint3D extends CPaint {
     mCenterPos = false;
     mTargetScale = 0;
     mTreeNode = new CArray();
-    mSkinType = SDF.eSkin.Bone;
     mCamCompSet = new Set();
     mBakedLight = null;
     mWindInfluence = new CVec1(0.0);
@@ -139,7 +138,7 @@ export class CPaint3D extends CPaint {
             this.mMeshRes = _owner.GetFrame().Res().Find(this.mMesh);
             if (this.mMeshRes == null) {
                 if (_owner.GetFrame().Load().IsLoad(this.mMesh) == false) {
-                    this.mOwner.GetFrame().Load().Load(this.mMesh, this.mAutoLoad);
+                    this.mOwner.GetFrame().Load().Exe(this.mMesh, this.mAutoLoad);
                 }
             }
         }
@@ -154,7 +153,7 @@ export class CPaint3D extends CPaint {
         this.mMeshRes = this.mOwner.GetFrame().Res().Find(_mesh);
         if (this.mMeshRes == null) {
             if (this.mAutoLoad != null && this.mOwner.GetFrame().Load().IsLoad(_mesh) == false)
-                this.mOwner.GetFrame().Load().Load(_mesh, this.mAutoLoad);
+                this.mOwner.GetFrame().Load().Exe(_mesh, this.mAutoLoad);
             return false;
         }
         if (_mesh.indexOf(".zip") != -1) {
@@ -180,8 +179,10 @@ export class CPaint3D extends CPaint {
             else
                 this.mWeightMat[i] = 0;
         }
-        if (this.mMeshRes.skin.length > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteY) / 16)
-            CAlert.W(_mesh + "skin bone max!" + CDevice.GetProperty(CDevice.eProperty.Sam2DWriteY) / 16 + "->" + this.mMeshRes.skin.length);
+        if (this.mMeshRes.skin.length > CDevice.GetProperty(CDevice.eProperty.Sam2DSize) / 4) {
+            this.mWeightMat = new Float32Array(0);
+            CAlert.W(_mesh + "skin bone max!" + CDevice.GetProperty(CDevice.eProperty.Sam2DSize) / 4 + "->" + this.mMeshRes.skin.length);
+        }
         this.mTree = new CTree();
         this.mTree.mData = new CMeshCopyNode();
         CMeshTreeUpdate.TreeCopy(this.mMeshRes.meshTree, this.mTree, new CMat(), this.mBound);
@@ -226,7 +227,7 @@ export class CPaint3D extends CPaint {
             this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
             this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
         }
-        const skin = this.mMeshRes.skin.length > 0;
+        const skin = this.mWeightMat.length != 0;
         const node = this.mTreeNode;
         for (let nodeOff = 0; nodeOff < node.Size(); nodeOff++) {
             let nodemp = node.mArray[nodeOff];
@@ -276,11 +277,8 @@ export class CPaint3D extends CPaint {
         var barr = this.RenderBatch(_vf, this.mTreeNode.Size());
         if (barr == null)
             return;
-        if (this.mMeshRes.skin.length > 0 && this.mSkinType != SDF.eSkin.None && _vf.mUniform.get("skin") == null) {
-            CAlert.E("skin mesh인데 vf는 사용안함. m_skinType을 변경하세요!");
-        }
         this.mOwner.GetFrame().BMgr().BatchGlobalOn();
-        var skin = this.mMeshRes.skin.length > 0 && _vf.mUniform.get("weightArrMat") != null;
+        var skin = this.mWeightMat.length != 0 && _vf.mUniform.get("weightArrMat") != null;
         if (skin) {
             if (this.mWeightMat.length == 0) {
                 this.mWeightMat = new Float32Array(4 * 4);
@@ -292,7 +290,7 @@ export class CPaint3D extends CPaint {
                 }
             }
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("weightArrMat", 16, this.mWeightMat));
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("skin", this.mSkinType));
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("skin", SDF.eSkin.Bone));
         }
         else {
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("skin", SDF.eSkin.None));
@@ -315,7 +313,7 @@ export class CPaint3D extends CPaint {
         this.mOwner.GetFrame().BMgr().BatchGlobalClear();
     }
     RenderMesh(_vf, _node, _barr, _off) {
-        if (_node.md.mData != null && _node.md.mData.ci != null) {
+        if (_node.md.mData != null && _node.md.mData.ci != null && _node.md.mData.textureOff.length > 0) {
             this.mOwner.GetFrame().BMgr().BatchOn();
             if (CWASM.IsWASM()) {
                 _node.sumSA.mKey = "worldMat34";
@@ -323,9 +321,10 @@ export class CPaint3D extends CPaint {
             }
             this.mOwner.GetFrame().BMgr().SetBatchSA(_node.sumSA);
             this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture, _node.mpi.mData.textureOff);
-            if (_vf.mUniform.get("material") != null) {
+            if (_vf.mUniform.get("material") != null)
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
-            }
+            if (_vf.mUniform.get("part") != null)
+                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("part", CHash.HashCode(_node.md.mKey)));
             var dm = this.GetDrawMesh("Artgine/DM/" + this.mMesh + _node.md.mKey, _vf, _node.md.mData.ci);
             this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
             _barr[_off] = this.mOwner.GetFrame().BMgr().BatchOff();
@@ -404,7 +403,7 @@ export class CPaintMeshMerge extends CPaint {
                 if (mesh == null) {
                     if (this.GetOwner().GetFrame().Load().IsLoad(this.mMeshList[i]))
                         return;
-                    this.GetOwner().GetFrame().Load().Load(this.mMeshList[i]);
+                    this.GetOwner().GetFrame().Load().Exe(this.mMeshList[i]);
                     return;
                 }
             }

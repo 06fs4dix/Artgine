@@ -284,7 +284,7 @@ export class CLight extends CBrushComp {
             if (!this.mShadowOff)
                 this.mBruch.mShadowCount++;
         }
-        if (this.mBruch.mLightCount > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 4)
+        if (this.mBruch.mLightCount > CDevice.GetProperty(CDevice.eProperty.Sam2DSize) / 4)
             return;
         this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 0] = this.mDirPos.x;
         this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 1] = this.mDirPos.y;

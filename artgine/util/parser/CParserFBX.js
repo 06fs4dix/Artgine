@@ -103,8 +103,11 @@ export class CParserFBX extends CParser {
     mAniCuvMap = new Map();
     mDeformerMap = new Map();
     mGeometryMap = new Map();
-    constructor() {
+    mModelKeyMap = new Map();
+    mColorTex;
+    constructor(_colorTex = false) {
         super();
+        this.mColorTex = _colorTex;
     }
     GetResult() { return this.mMesh; }
     PosScaAxis(_vec) {

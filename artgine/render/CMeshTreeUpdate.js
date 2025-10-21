@@ -30,7 +30,7 @@ export class CMeshTreeUpdate {
         }
         return frame;
     }
-    static TreeUpdateMeshAni(_pst, _st, _ed, _md, _mci, _all) {
+    static TreeUpdateMeshAni(_pst, _st, _ed, _pmd, _amd, _mci, _all) {
     }
     static TreeMeshInter(_mci, _create) {
     }

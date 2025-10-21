@@ -61,7 +61,7 @@ export class CPaintTrail extends CPaint {
         this.mVList = new Array();
         this.mPCnt = new Array();
         this.mTCnt = new Array();
-        var count = CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 2;
+        var count = CDevice.GetProperty(CDevice.eProperty.Sam2DSize) / 2;
         if (_vertexCount > count)
             this.mVCount = count;
         else

@@ -453,8 +453,8 @@ export class CUIButtonImg extends CUI {
         this.m_overImg = _over;
         this.m_pressImg = _press;
         if (this.mFrame != null) {
-            this.mFrame.Load().Load(_over);
-            this.mFrame.Load().Load(_press);
+            this.mFrame.Load().Exe(_over);
+            this.mFrame.Load().Exe(_press);
         }
         this.mUpdate = true;
         if (this.mUIPT == null) {
@@ -497,8 +497,8 @@ export class CUIButtonImg extends CUI {
     SetFrame(_fw) {
         super.SetFrame(_fw);
         if (this.mFrame != null) {
-            this.mFrame.Load().Load(this.m_overImg);
-            this.mFrame.Load().Load(this.m_pressImg);
+            this.mFrame.Load().Exe(this.m_overImg);
+            this.mFrame.Load().Exe(this.m_pressImg);
         }
     }
 }

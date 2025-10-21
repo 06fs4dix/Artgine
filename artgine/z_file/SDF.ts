@@ -1,6 +1,7 @@
 export class SDF {
     
 	static WriteDataTex=11;
+	static TexSizeMax=2048;
 	static eLightStep0=
 	{
 		None:0,
@@ -51,8 +52,8 @@ export class SDF {
 	{
 		None:0,
 		Bone:1,
-		Grass:2,
-		Tree:3,
+		// Grass:2,
+		// Tree:3,
 	};
 	static eEnvCube=
 	{

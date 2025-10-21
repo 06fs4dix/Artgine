@@ -3,7 +3,7 @@ import { SDF } from "./SDF";
 import { CAModelCac, ColorVFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
-import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f } from "./Shadow";
+import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, jitter } from "./Shadow";
 var colorModel = Null();
 var alphaModel = Null();
 var skin = Null();
@@ -33,7 +33,7 @@ var outputType = Null();
 var camPos = Null();
 var depthMap = 0.0;
 var screenResolution = new CVec2(1.0, 1.0);
-var weightArrMat = new Sam2DMat(11);
+var weightArrMat = new Sam2DMat(11, 10);
 var time = Attribute(0, "time");
 Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
 Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel], [out_position, to_uv], ps_main_simple, [out_color]);
@@ -48,13 +48,13 @@ Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], vs_main_gBuffer, [
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, skin, weightArrMat,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
-    shadowCount, shadowPointProj, shadowReadList,
+    shadowCount, shadowPointProj, shadowReadList, jitter
 ], [out_position, to_uv, to_viewPos], ps_main_shadow_write, [out_color]);
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
     worldMat, viewMat, projectMat, skin, weightArrMat,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
-    shadowRate, PCF, texture16f, bias, normalBias,
+    shadowRate, PCF, texture16f, bias, normalBias, jitter,
     ligDir, ligCol, ligCount,
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
 Build("Artgine/Shader/3DBake", ["bake"], vs_main_bake, [
@@ -257,6 +257,7 @@ function ps_main_gBuffer() {
             discard;
     }
     BranchEnd();
+    ``;
     var uv = to_uv;
     BranchBegin("parallax", "P", [parallaxNormal, camPos]);
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
@@ -522,7 +523,7 @@ function ps_main_bake() {
     var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
     var shadow = -1.0;
     var i = 0.0;
-    BranchBegin("shadow", "S", [shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite, shadowCount, shadowPointProj, shadowReadList, ligDir, shadowRate, texture16f, bias, normalBias, PCF]);
+    BranchBegin("shadow", "S", [shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite, shadowCount, shadowPointProj, shadowReadList, ligDir, shadowRate, texture16f, bias, normalBias, PCF, jitter]);
     if (shadowCount > 0.5) {
         shadow = 0.0;
         for (; i < shadowCount; i++) {

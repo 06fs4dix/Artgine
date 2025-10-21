@@ -31,7 +31,8 @@ import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from 
 import { 
 	bias, calcShadow,  normalBias, PCF, shadowCount, shadowOn, 
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, 
-	shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f 
+	shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, 
+	jitter
 } from "./Shadow";
 
 //uniform
@@ -80,7 +81,7 @@ var depthMap : number = 0.0;
 var screenResolution : CVec2=new CVec2(1.0, 1.0);
 
 //LUT
-var weightArrMat: Sam2DMat = new Sam2DMat(11);
+var weightArrMat: Sam2DMat = new Sam2DMat(11,10);
 
 var time : number = Attribute(0,"time");
 
@@ -119,7 +120,7 @@ Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"],
 	vs_main_shadow_write, [
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
-		shadowCount,shadowPointProj,shadowReadList,
+		shadowCount,shadowPointProj,shadowReadList,jitter
 	], [out_position,to_uv,to_viewPos],
 	ps_main_shadow_write,[out_color]
 );
@@ -129,7 +130,7 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 		worldMat,viewMat,projectMat,skin,weightArrMat,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
-		shadowRate,PCF,texture16f,bias,normalBias,
+		shadowRate,PCF,texture16f,bias,normalBias,jitter,
 		ligDir,ligCol,ligCount,
 	], [out_position,to_uv,to_normal,to_worldPos],
 	ps_main_shadow_read,[out_color]
@@ -412,7 +413,7 @@ function ps_main_gBuffer() {
 		occlusion = (tempShadow.y * 255.0 * 256.0 + tempShadow.z * 255.0) / 65535.0;
 		if(screenPos.z > occlusion + 2e-5) discard;
 	}
-	BranchEnd();
+	BranchEnd();``
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
@@ -781,7 +782,7 @@ function ps_main_bake() {
 	//shadow
 	var shadow : number=-1.0;
 	var i : number = 0.0;
-	BranchBegin("shadow","S",[shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList,ligDir,shadowRate,texture16f,bias,normalBias,PCF]);
+	BranchBegin("shadow","S",[shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList,ligDir,shadowRate,texture16f,bias,normalBias,PCF,jitter]);
 	if(shadowCount > 0.5) {
 		shadow = 0.0;
 		for(; i < shadowCount; i++) {

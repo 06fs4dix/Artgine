@@ -499,7 +499,10 @@ export class CUtilMath {
         CMath.V3Nor(xAxis, xAxis);
         CMath.V3Nor(yAxis, yAxis);
         CMath.V3Nor(zAxis, zAxis);
-        let center = new CVec3(_matB.mF32A[12], _matB.mF32A[13], _matB.mF32A[14]);
+        let center = _boundB.GetCenter();
+        center.x += _matB.mF32A[12];
+        center.y += _matB.mF32A[13];
+        center.z += _matB.mF32A[14];
         let vec = new CVec3();
         CMath.V3SubV3(_posA, center, vec);
         let halfSize = new CVec3();

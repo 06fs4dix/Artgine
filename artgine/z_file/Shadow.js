@@ -1,14 +1,14 @@
 import { ligDir } from "./Light";
-import { cos, CVec2, CVec3, CVec4, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DToV4, Sam2DV4, ShadowPosToUv, sin, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
-export var shadowNearCasV0 = new Sam2DMat(9, 505);
-export var shadowFarCasP0 = new Sam2DMat(9, 509);
-export var shadowTopCasV1 = new Sam2DMat(9, 513);
-export var shadowBottomCasP1 = new Sam2DMat(9, 517);
-export var shadowLeftCasV2 = new Sam2DMat(9, 521);
-export var shadowRightCasP2 = new Sam2DMat(9, 525);
-export var shadowPointProj = new Sam2DMat(9, 529);
+import { cos, CVec2, CVec3, CVec4, fract, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, sin, V2Dot, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+export var shadowNearCasV0 = new Sam2DMat(11, 505);
+export var shadowFarCasP0 = new Sam2DMat(11, 509);
+export var shadowTopCasV1 = new Sam2DMat(11, 513);
+export var shadowBottomCasP1 = new Sam2DMat(11, 517);
+export var shadowLeftCasV2 = new Sam2DMat(11, 521);
+export var shadowRightCasP2 = new Sam2DMat(11, 525);
+export var shadowPointProj = new Sam2DMat(11, 529);
 export var shadowOn = -1.0;
-export var shadowReadList = new Sam2DV4(9);
+export var shadowReadList = new Sam2DV4(11);
 export var texture16f = 0;
 export var shadowCount = 0;
 export var shadowWrite = new CVec3(0, 0, 0);
@@ -16,6 +16,18 @@ export var shadowRate = 0.3;
 export var bias = 5.0;
 export var normalBias = 1.0;
 export var PCF = 2.0;
+export var jitter = 0.0;
+function Hash22(p) {
+    var n1 = V2Dot(p, new CVec2(127.1, 311.7));
+    var n2 = V2Dot(p, new CVec2(269.5, 183.3));
+    var h1 = fract(sin(n1) * 43758.5453);
+    var h2 = fract(sin(n2) * 43758.5453);
+    return new CVec2(h1, h2);
+}
+function randomJitter(fragCoord, _strength) {
+    var h = Hash22(fragCoord);
+    return new CVec2((h.x - 0.5) * _strength, (h.y - 0.5) * _strength);
+}
 function ApplyPCF(_uvZ0, _uvZ1, _uvZ2, _read, _biasAll) {
     var f16Chk = 1.0;
     if (texture16f > 0.0)
@@ -26,10 +38,14 @@ function ApplyPCF(_uvZ0, _uvZ1, _uvZ2, _read, _biasAll) {
     var count = 0.0;
     var x = -PCF;
     var depthChk = 0.0;
+    var jitterValue;
     for (; x <= PCF + 0.5; x += 1.0) {
         var y = -PCF;
         for (; y <= PCF + 0.5; y += 1.0) {
-            var uv0N = new CVec3(_uvZ0.x + x * texScale.x, _uvZ0.y + y * texScale.y, _read.y);
+            if (jitter > 0.01) {
+                jitterValue = randomJitter(new CVec2(x + screenPos.x, y + screenPos.y), jitter);
+            }
+            var uv0N = new CVec3(_uvZ0.x + (x + jitterValue.x) * texScale.x, _uvZ0.y + (y + jitterValue.y) * texScale.y, _read.y);
             var uv1N = new CVec3(_uvZ1.x + x * texScale.x, _uvZ1.y + y * texScale.y, _read.z);
             var uv2N = new CVec3(_uvZ2.x + x * texScale.x, _uvZ2.y + y * texScale.y, _read.w);
             if (_read.y > -0.5 && uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0) {

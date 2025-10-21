@@ -87,6 +87,8 @@ export class CRigidBody extends CComponent {
         this.PatchExe("mForceArr");
         for (var i = 0; i < this.mForceArr.length; ++i) {
             if (this.mForceArr[i].mKey == (_key + "")) {
+                if (this.mForceArr[i] == this.mForceGravity)
+                    this.mForceGravity = null;
                 this.mForceArr.splice(i, 1);
                 break;
             }
@@ -104,6 +106,7 @@ export class CRigidBody extends CComponent {
         this.PatchExe("mForceArr");
         this.mForceArr = new Array();
         this.mStopover = null;
+        this.mForceGravity = null;
     }
     MoveDir(_key = null) {
         if (_key == null)

@@ -11,6 +11,7 @@ import { CUpdate } from "../basic/Basic.js";
 export class CMeshPaint
 {
 	public md : CTree<CMeshDataNode>;
+	public mdp : CTree<CMeshDataNode>;
 	public mpi : CTree<CMeshCopyNode>;
 	public mdraw : CTree<CMeshDrawNode>;
 	public sum : CMat;

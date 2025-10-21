@@ -1,5 +1,5 @@
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, max, min, pow, reflect, Sam2DToV4, Sam2DV4, SamCubeLodToColor, SamCubeMaxLod, TexSizeHalfInt, V2AddV2, V2MulFloat, V3AddV3, V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
+import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, max, min, pow, reflect, Sam2DToV4, Sam2DV4, SamCubeLodToColor, SamCubeMaxLod, V2AddV2, V2MulFloat, V3AddV3, V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
 export var ambientColor = new CVec3(0.2, 0.2, 0.2);
 export var ligCount = 0;
 export var ligStep0 = SDF.eLightStep0.HafeLambert;
@@ -81,7 +81,7 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
     var DPtAll = new CVec3(0, 0, 0);
     var SDirAll = new CVec3(0, 0, 0);
     var SPtAll = new CVec3(0, 0, 0);
-    for (var i = 0; i < TexSizeHalfInt; ++i) {
+    for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(ligCount))
             break;
         var lDir = Sam2DToV4(ligDir, i);
@@ -233,7 +233,7 @@ export function LightCac2D(position, albedo, normal, ambientColor) {
     var norLen = V3Len(normal);
     if (norLen < 0.5)
         normal = new CVec3(0.0, 1.0, 0.0);
-    for (var i = 0; i < TexSizeHalfInt; ++i) {
+    for (var i = 0; i < SDF.TexSizeMax; ++i) {
         if (i >= FloatToInt(ligCount))
             break;
         var lDir = Sam2DToV4(ligDir, i);

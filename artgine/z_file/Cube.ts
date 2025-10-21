@@ -10,7 +10,6 @@ import {
     pow, abs, floor, SaturateFloat, 
     Sam2DToV4, Sam2DMat, Sam2DToMat, FloatToInt, Exp, LWVPMul, 
     clamp, V4Mix, V4AddV4, V4MulFloat, Exp2, ToV3,
-    TexSizeHalfInt,
     Attribute,
     Null,
     BranchEnd,
@@ -440,11 +439,14 @@ function ps_main() {
 
         //일반 광원 색상 누적
         lCol = Sam2DToV4(ligCol, i);
-        
         angle = acos(V3Dot(dir, fragDir));
         intensity  = V3Len(lCol.rgb);
+        //col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
+        //col = V3MulFloat(col, max(V3Dot(dir, fragDir), 0.0));
+        
         col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
+
         ligMax = V3Max(ligMax, col);
         ligSum = V3AddV3(ligSum, col);
     }
@@ -458,22 +460,6 @@ function ps_main() {
     finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSum, 0.2)), ligMax);
     BranchEnd();
 
-    
-    BranchBegin("star","S",[star,starCount, starSize, starBaseCol, starRandCol]);
-    value.xyz = GetStars(fragDir, starCount, starSize, starBaseCol, starRandCol);
-    finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, star));
-    BranchEnd();
-
-    
-    BranchBegin("aurora","A",[aurora,auroraHeight, auroraCut, auroraColor, auroraStep]);
-    value = Aurora(fragDir, auroraHeight, auroraCut, auroraColor, auroraStep);
-    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), V3MulFloat(value.rgb, aurora));
-    BranchEnd();
-    BranchBegin("cloud","C",[cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius,cloudHorizon]);
-    value = GetCloud(camPos, fragDir, cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetCenter, cloudPlanetRadius);
-        //멀리 있는 구름 자연스럽게 자름
-    finalColor = V3Mix(finalColor, V3MulFloat(value.rgb, 1.0 / max(1e-5, value.w)), value.w);
-    BranchEnd();
 
     out_color.rgb = finalColor;
     //out_color.rgb = new CVec3(1.0,1.0,1.0);

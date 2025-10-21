@@ -1,5 +1,6 @@
 import { NoisePerlin2D } from "./Noise";
-import { clamp, CVec2, CVec3, FloatToInt, mix, Sam2DToV4, Sam2DV4, smoothstep, step, TexSizeHalfInt, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
+import { SDF } from "./SDF";
+import { clamp, CVec2, CVec3, FloatToInt, mix, Sam2DToV4, Sam2DV4, smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 export var windInfluence = 0.0;
 export var windDir = new Sam2DV4(11, 500);
 export var windPos = new Sam2DV4(11, 501);
@@ -10,7 +11,7 @@ export function GetWind(_objPos, _size, _time) {
         return new CVec3(0.0, 0.0, 0.0);
     }
     var wind = new CVec3(0.0, 0.0, 0.0);
-    for (var i = 0; i < TexSizeHalfInt; i++) {
+    for (var i = 0; i < SDF.TexSizeMax; i++) {
         if (i >= FloatToInt(windCount))
             break;
         var wDir = Sam2DToV4(windDir, i);

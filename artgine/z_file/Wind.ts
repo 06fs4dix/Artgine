@@ -1,8 +1,8 @@
 import { NoisePerlin2D } from "./Noise";
+import { SDF } from "./SDF";
 import { abs, clamp, CVec2, CVec3, CVec4, FloatToInt, MappingTexToV3, max, mix, Sam2DToV4, Sam2DV4, 
     smoothstep, 
-    step, 
-    TexSizeHalfInt, 
+    step,  
     V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 
 export var windInfluence : number = 0.0;
@@ -18,7 +18,7 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
     }
 
     var wind : CVec3 = new CVec3(0.0, 0.0, 0.0);
-    for(var i = 0; i < TexSizeHalfInt; i++) {
+    for(var i = 0; i < SDF.TexSizeMax; i++) {
         if(i >= FloatToInt(windCount))
             break;
 

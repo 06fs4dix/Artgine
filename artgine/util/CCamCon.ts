@@ -301,7 +301,7 @@ export class CCamCon extends CObject implements ICamCon
             
         }
         //CConsol.Log(this.mRotX+"/"+this.mRotY);
-        if(_delay<50)
+        if(_delay<20)
         {
             const t = Math.max(0, _delay * 0.05); // ms -> sec
 
@@ -329,6 +329,7 @@ class CCamCon3D extends CCamCon
 {
     InitCamera(_cam: CCamera): void {
         super.InitCamera(_cam);
+        
     }
 }
 
@@ -355,14 +356,19 @@ export class CCamCon3DThirdPerson extends CCamCon3D
     //public m_follow : CBlackBoardRef<any> = new CBlackBoardRef();
 
     public mSZoom=1000;
-
-    SetPos(_pos : CVec3) {
+    mReset3D=true;
+    SetPos(_pos : CVec3) 
+    {
         if(!this.mPos) {
             this.mPos = _pos.Export();
             this.mSZoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
         }
-        else {
+        else 
+        {
+            if(_pos.Equals(this.mPos)==false)   this.mReset3D=true;
             this.mPos.Import(_pos);
+            
+
         }
     }
     SetZoom(_zoom : number) {
@@ -372,7 +378,9 @@ export class CCamCon3DThirdPerson extends CCamCon3D
     {
         super.Update(_delay);
 
-        if(this.mReset==false) return;
+        if(this.mReset==false && this.mReset3D==false) return;
+        this.mReset3D=false;
+
         if(!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
 

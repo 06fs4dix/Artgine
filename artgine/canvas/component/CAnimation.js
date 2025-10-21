@@ -168,16 +168,21 @@ export class CClipMesh extends CClip {
     mED;
     mMesh;
     mAutoCreate = true;
-    constructor(_time, _delay, _mesh, _st, _ed = null) {
+    constructor(_time, _delay, _st, _ed = null, _mesh = null) {
         super(_time, _delay);
         if (typeof _st == "number")
             this.mST = _st;
         else
             this.mST = _st;
         if (_ed != null) {
-            this.mED = _ed;
+            if (typeof _ed == "number")
+                this.mED = _ed;
+            else
+                this.mMesh = _ed;
         }
-        this.mMesh = _mesh;
+        if (_mesh != null) {
+            this.mMesh = _mesh;
+        }
     }
     WTForm(_pointer, _div, _input) {
         if (_pointer.member == "mST") {

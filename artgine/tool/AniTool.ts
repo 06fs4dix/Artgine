@@ -388,7 +388,7 @@ async function AniToolDrop(_drop : CDrop)
         {
             if (fileDrop.mPaths.length > 0 && fileDrop.mPaths[i] != null) 
             {
-                gAtl.Frame().Load().Load(fileDrop.mPaths[i],new CLoaderOption().Set("mFilter",CTexture.eFilter.Neaest));
+                gAtl.Frame().Load().Exe(fileDrop.mPaths[i],new CLoaderOption().Set("mFilter",CTexture.eFilter.Neaest));
                 let info = CString.ExtCut(fileDrop.mPaths[i]);
                 let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
                 if (info.ext == "png" || info.ext == "jpg") {
@@ -708,7 +708,7 @@ async function AniToolSubjectInit() {
         gSubject = gAtl.Canvas("AniTool").PushSub(new CSubject());
 
 
-        await gAtl.Frame().Load().Load(gBasicTex,new CLoaderOption().Set("mFilter",CTexture.eFilter.Neaest));
+        await gAtl.Frame().Load().Exe(gBasicTex,new CLoaderOption().Set("mFilter",CTexture.eFilter.Neaest));
         gImg = gAtl.Frame().Res().Find(gBasicTex);
         
 

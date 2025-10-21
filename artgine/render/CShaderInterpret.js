@@ -198,12 +198,16 @@ export class CShaderInterpretGL extends CShaderInterpret {
         this.mKeyMap.set("Math.", "");
         this.mKeyMap.set(".uniOff", "");
         this.mKeyMap.set(".dummy", "");
-        this.mKeyMap.set("TexSizeHalfInt", (CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)) + "");
-        this.mKeyMap.set("TexSizeHalfFloat", (CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)) + ".0");
         this.mKeyMap.set("export", "");
+        SDF.TexSizeMax = CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
         for (var each0 in SDF) {
-            for (var each1 in SDF[each0]) {
-                this.mKeyMap.set("SDF" + "." + each0 + "." + each1, SDF[each0][each1] + ".0");
+            if (typeof SDF[each0] == "object") {
+                for (var each1 in SDF[each0]) {
+                    this.mKeyMap.set("SDF" + "." + each0 + "." + each1, SDF[each0][each1] + ".0");
+                }
+            }
+            else {
+                this.mKeyMap.set("SDF" + "." + each0, SDF[each0]);
             }
         }
     }
@@ -975,7 +979,7 @@ export class CShaderInterpretGL extends CShaderInterpret {
         str += "	return newUv;\n";
         str += "}\n";
         str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
-        str += "	vec2 size = vec2(" + CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) + ".0, " + CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) + ".0);\n";
+        str += "	vec2 size = vec2(" + CDevice.GetProperty(CDevice.eProperty.Sam2DSize) + ".0, " + CDevice.GetProperty(CDevice.eProperty.Sam2DSize) + ".0);\n";
         str += "	if(_uni.x-0.5<=0.0) {";
         str += "		return texture(sam2D[0],vec2(_off+0.5,_uni.y+0.5)/size);\n";
         str += "	}";

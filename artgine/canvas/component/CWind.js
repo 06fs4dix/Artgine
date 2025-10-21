@@ -36,7 +36,7 @@ export class CWind extends CBrushComp {
     Update(_delay) {
         if (super.Update(_delay))
             return;
-        if (this.mBruch.mWindCount > CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX) / 4)
+        if (this.mBruch.mWindCount > CDevice.GetProperty(CDevice.eProperty.Sam2DSize))
             return;
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 0] = this.mDir.x;
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 1] = this.mDir.y;

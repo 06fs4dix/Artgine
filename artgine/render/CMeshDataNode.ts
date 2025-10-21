@@ -35,6 +35,7 @@ export class CMeshDataNode extends CObject
 	
 	//rev=false;
 	public skinKey : Array<string>;
+	//key : string="";
 	
 	constructor()
 	{

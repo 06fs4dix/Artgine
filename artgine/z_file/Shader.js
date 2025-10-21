@@ -191,8 +191,6 @@ export class sampler2DArray {
 }
 export class sampler2DCube {
 }
-export var TexSizeHalfInt = 1024;
-export var TexSizeHalfFloat = 1024.0;
 export var sam2D = 0;
 export var gl_Position;
 export var discard = 0;

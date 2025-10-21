@@ -3,6 +3,7 @@ import { CShaderAttr } from "./CShaderAttr.js";
 import { CUpdate } from "../basic/Basic.js";
 export class CMeshPaint {
     md;
+    mdp;
     mpi;
     mdraw;
     sum;

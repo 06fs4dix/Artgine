@@ -483,7 +483,7 @@ function DevToolRender() {
     }
     gAtl.Frame().Dev().SetLine(true);
     for (let pt of ptArr) {
-        if (pt.GetOwner() == null)
+        if (pt.GetOwner() == null || pt.GetOwner().IsEnable() == false)
             continue;
         color.x = 1;
         color.y = 0;
@@ -528,7 +528,7 @@ function DevToolRender() {
     color.z = 1;
     color.w = SDF.eColorModel.RGBAdd;
     for (let pt of clArr) {
-        if (pt.GetOwner() == null)
+        if (pt.GetOwner() == null || pt.IsEnable() == false || pt.GetLayer() == "")
             continue;
         let bound = pt.GetBoundGJK();
         bound.mMax;
@@ -620,7 +620,7 @@ function DevToolDrop(_drop) {
                 let loadName = [];
                 if (pathLoad) {
                     for (let i = 0; i < fileDrop.mPaths.length; ++i) {
-                        gAtl.Frame().Load().Load(fileDrop.mPaths[i], option);
+                        gAtl.Frame().Load().Exe(fileDrop.mPaths[i], option);
                     }
                 }
                 else {

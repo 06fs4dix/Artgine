@@ -61,7 +61,7 @@ export class CRenderer
 		this.mPF=_PF;
 
 		this.mUniToSam2d=new CTexture();
-		this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX),CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX));
+		this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DSize),CDevice.GetProperty(CDevice.eProperty.Sam2DSize));
 		this.mUniToSam2d.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
 		this.mUniToSam2d.CreateBuf();
 		this.BuildTexture(this.mUniToSam2d);
@@ -197,6 +197,7 @@ export class CRendererGL extends CRenderer
 	//x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
 	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
 	{
+		
 		var uniDf=_vf.GetDefault(_key);
 		if(uniDf!=null || uniDf.mEach==4 || uniDf.mEach==16){}
 		else
@@ -204,7 +205,11 @@ export class CRendererGL extends CRenderer
 		
 		if(_count==null)
 			_count=_buf.length/4;
+		//if("weightArrMat"==_key)	return;
 		this.mUniTexLastOff=uniDf.mData[0];
+		
+
+		//if(uniDf.mData[1]==10)	return;
 		this.RebuildTexture(this.mUniToSam2d,uniDf.mData[0],0,uniDf.mData[1],_count,1,_buf);
 		if(_buf.length==0)
 			this.SendGPU(_vf,new CVec2(0,0),_key,null,0);

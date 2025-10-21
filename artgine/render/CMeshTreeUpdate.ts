@@ -52,7 +52,7 @@ export class CMeshTreeUpdate
 		return frame;
 	}
 	
-	static TreeUpdateMeshAni(_pst : number,_st : number,_ed : number,_md : CMeshDataNode,_mci : CMeshCopyNode,_all : CMat)
+	static TreeUpdateMeshAni(_pst : number,_st : number,_ed : number,_pmd : CMeshDataNode,_amd : CMeshDataNode,_mci : CMeshCopyNode,_all : CMat)
 	{	
 
 

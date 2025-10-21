@@ -77,6 +77,25 @@ export class CPad extends CSubject
 
         return super.IsShould(_member,_type);
     }
+    IsOn()
+    {
+        
+        for(let each0 of this.mStick)
+        {
+            if(each0.GetLastEvent()!=CEvent.eType.Null)
+            {
+                return true;
+            }
+        }
+        for(let each0 of this.mButton)
+        {
+            if(each0.GetLastEvent()!=CEvent.eType.Null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
     GetDir()    {   return this.mDir;  }
     GetButtonEvent(_off)    
     {

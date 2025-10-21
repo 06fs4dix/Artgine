@@ -53,7 +53,6 @@ export class CLight extends CBrushComp
 	// mBias =new CVec1(10);
 	// mNormalBias =new CVec1(5);
 	// mShadowRate=new CVec1(0.7);
-	// mDotCac=new CVec1(0);
 
 
 	constructor()
@@ -454,7 +453,7 @@ export class CLight extends CBrushComp
 
 
 
-		if(this.mBruch.mLightCount>CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)/4)
+		if(this.mBruch.mLightCount>CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/4)
 			return;
 		
 		this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 0] = this.mDirPos.x;

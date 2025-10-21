@@ -90,8 +90,7 @@ export class CDevice {
         Sam2DArrMax: 3,
         SamCubeMax: 4,
         Sam2dArrLayerMax: 5,
-        Sam2DWriteX: 7,
-        Sam2DWriteY: 8,
+        Sam2DSize: 7,
         HalfFloat: 9,
     };
 }
@@ -162,8 +161,7 @@ export class CDeviceGL extends CDevice {
         g_property.set(CDevice.eProperty.Sam2dArrLayerMax, TexLay);
         g_property.set(CDevice.eProperty.VertexUniform, 1024);
         g_property.set(CDevice.eProperty.PixelUniform, 1024);
-        g_property.set(CDevice.eProperty.Sam2DWriteX, TexSize / 2 / 4);
-        g_property.set(CDevice.eProperty.Sam2DWriteY, TexSize / 2 / 4);
+        g_property.set(CDevice.eProperty.Sam2DSize, TexSize / 2 / 4);
         this.mStaticRP.mCullFace = CRenderPass.eCull.CCW;
     }
     async Init() {

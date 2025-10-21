@@ -695,7 +695,7 @@ function DevToolRender()
     
     for(let pt of ptArr)
     {
-        if(pt.GetOwner()==null) continue;
+        if(pt.GetOwner()==null || pt.GetOwner().IsEnable()==false) continue;
         color.x=1;
         color.y=0;
         color.z=0;
@@ -768,7 +768,7 @@ function DevToolRender()
 
     for(let pt of clArr)
     {
-        if(pt.GetOwner()==null) continue;
+        if(pt.GetOwner()==null || pt.IsEnable()==false || pt.GetLayer()=="") continue;
         let bound=pt.GetBoundGJK();
         bound.mMax;
         bound.mMin;
@@ -915,7 +915,7 @@ function DevToolDrop(_drop : CDrop)
             {
                 
                 for (let i = 0; i < fileDrop.mPaths.length; ++i) {
-                    gAtl.Frame().Load().Load(fileDrop.mPaths[i],option);
+                    gAtl.Frame().Load().Exe(fileDrop.mPaths[i],option);
                 }
             }
             else 

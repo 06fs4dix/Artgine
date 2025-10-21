@@ -212,7 +212,7 @@ export class CCamCon extends CObject {
                 this.mBspos = null;
             }
         }
-        if (_delay < 50) {
+        if (_delay < 20) {
             const t = Math.max(0, _delay * 0.05);
             this.mRotXCur += this.mRotX;
             this.mRotYCur += this.mRotY;
@@ -244,12 +244,15 @@ export class CCamCon3DFirstPerson extends CCamCon3D {
 export class CCamCon3DThirdPerson extends CCamCon3D {
     mPos;
     mSZoom = 1000;
+    mReset3D = true;
     SetPos(_pos) {
         if (!this.mPos) {
             this.mPos = _pos.Export();
             this.mSZoom = CMath.V3Len(CMath.V3SubV3(this.mPos, this.mCamera.GetEye()));
         }
         else {
+            if (_pos.Equals(this.mPos) == false)
+                this.mReset3D = true;
             this.mPos.Import(_pos);
         }
     }
@@ -258,8 +261,9 @@ export class CCamCon3DThirdPerson extends CCamCon3D {
     }
     Update(_delay) {
         super.Update(_delay);
-        if (this.mReset == false)
+        if (this.mReset == false && this.mReset3D == false)
             return;
+        this.mReset3D = false;
         if (!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
         let rotX = this.mRotY * 0.001 * _delay * this.mRotSensitivity;

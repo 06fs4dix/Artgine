@@ -62,7 +62,7 @@ export class CWind extends CBrushComp
         //if(this.mBruch.mDoubleChk.has(this))	return;
 		//this.mBruch.mDoubleChk.add(this);
         
-        if(this.mBruch.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)/4)
+        if(this.mBruch.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DSize))
             return;
 
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 0] = this.mDir.x;

@@ -831,7 +831,7 @@ export class CPaint extends CComponent
 			for(let texKey of this.mTexture)
 			{
 				if(texKey.indexOf(".atl")!=-1)	continue;
-				_owner.GetFrame().Load().Load(texKey,this.mAutoLoad);
+				_owner.GetFrame().Load().Exe(texKey,this.mAutoLoad);
 			}
 		}
 	}
@@ -989,7 +989,7 @@ export class CPaint extends CComponent
 				}
 
 				if(this.mOwner.GetFrame().Load().IsLoad(texKey)==false)
-					this.mOwner.GetFrame().Load().Load(texKey,this.mAutoLoad);
+					this.mOwner.GetFrame().Load().Exe(texKey,this.mAutoLoad);
 			}
 		}
 		

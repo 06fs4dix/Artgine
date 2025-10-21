@@ -132,7 +132,7 @@ export class CRenderPass extends CObject
 	public mDepthTest : boolean=null;
 	public mDepthWrite : boolean=null;
 	public mAlpha : boolean=null;
-	public mCullFace : number=CRenderPass.eCull.CCW;
+	public mCullFace : number=null;
 	public mCamera : string=null;
 
 	//public m_cull : boolean=true;

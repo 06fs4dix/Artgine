@@ -20,6 +20,7 @@ export class CLoaderOption extends CObject {
     mFilter = CTexture.eFilter.Linear;
     mWrap = CTexture.eWrap.Repeat;
     mMipMap = CTexture.eMipmap.GL;
+    mColorTex = false;
     mAlphaCut = 0x09;
     mCache = null;
     mInch = false;
@@ -163,13 +164,13 @@ export class CLoader {
         else
             CAlert.E(_file + "미지원");
     }
-    async Load(_file, _option = null) {
+    async Exe(_file, _option = null) {
         if (_file == "")
             return true;
         if (_file instanceof Array) {
             var parr = new Array();
             for (var eahc0 of _file) {
-                parr.push(this.Load(eahc0, _option));
+                parr.push(this.Exe(eahc0, _option));
             }
             parr = await Promise.all(parr);
             return parr.includes(true);
@@ -264,11 +265,11 @@ export class CLoader {
         var ext = _file.substr(pos, _file.length - pos).toLowerCase();
         var par = null;
         if (ext == "fbx")
-            par = new CParserFBX();
+            par = new CParserFBX(_option.mColorTex);
         else if (ext == "obj")
             par = new CParserOBJ();
         else
-            par = new CParserGLTF(_option.mInch);
+            par = new CParserGLTF(_option.mInch, _option.mColorTex);
         par.SetBuffer(new Uint8Array(_buffer), _buffer.byteLength);
         await par.Load(_file);
         var mesh = par.GetResult();
@@ -294,7 +295,7 @@ export class CLoader {
                 this.mRes.Push(mesh.texture[i], tex);
             }
             else
-                await this.Load(mesh.texture[i], _option);
+                await this.Exe(mesh.texture[i], _option);
         }
         for (let [key, value] of texMap) {
             await this.LoadSwitch(key, value, _option);

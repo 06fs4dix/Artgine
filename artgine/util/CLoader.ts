@@ -33,6 +33,7 @@ export class CLoaderOption extends CObject
 	public mFilter=CTexture.eFilter.Linear;
 	public mWrap=CTexture.eWrap.Repeat;
 	public mMipMap=CTexture.eMipmap.GL;
+	public mColorTex=false;
 	//public mBufCopy=false;
 	public mAlphaCut=0x09;
 	mCache=null;//버퍼 등록용
@@ -280,10 +281,10 @@ export class CLoader
 	// 	});
 	// }
 	//async Load(_asset : CAsset);
-	async Load(_file : Array<string>) : Promise<boolean>
-	async Load(_file : string) : Promise<boolean>
-	async Load(_file : string,_option : CLoaderOption) : Promise<boolean>
-	async Load(_file : any,_option : CLoaderOption=null) : Promise<boolean>
+	async Exe(_file : Array<string>) : Promise<boolean>
+	async Exe(_file : string) : Promise<boolean>
+	async Exe(_file : string,_option : CLoaderOption) : Promise<boolean>
+	async Exe(_file : any,_option : CLoaderOption=null) : Promise<boolean>
 	{
 		if(_file=="")	return true;
 		
@@ -292,7 +293,7 @@ export class CLoader
 			var parr=new Array();
 			for(var eahc0 of _file)
 			{
-				parr.push(this.Load(eahc0,_option));
+				parr.push(this.Exe(eahc0,_option));
 			}
 			parr=await Promise.all(parr);
 			
@@ -540,9 +541,9 @@ export class CLoader
 		
 		
 		var par :CParser=null;
-		if(ext=="fbx")	par = new CParserFBX();
+		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex);
 		else if(ext=="obj") 	par = new CParserOBJ();
-		else 	par = new CParserGLTF(_option.mInch);
+		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex);
 		
 		
 
@@ -582,7 +583,7 @@ export class CLoader
 				this.mRes.Push(mesh.texture[i],tex);
 			}
 			else
-				await this.Load(mesh.texture[i],_option);
+				await this.Exe(mesh.texture[i],_option);
 		}
 		for(let [key,value] of texMap)		
 		{

@@ -37,6 +37,10 @@ export class CAniFlow extends CComponent
 		this.mInterTime=0;
 	
 	}
+	GetAni()
+	{
+		return this.mAni;
+	}
 	IsEnd()
 	{
 		return this.mFClip.length == 0 && this.mOffset >= this.mAni.mClip.length;

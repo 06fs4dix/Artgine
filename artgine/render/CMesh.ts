@@ -23,6 +23,7 @@ export class CMeshSkin extends CObject
 {
 	public key ="";
 	public mat =new CMat();
+	//public link =new CMat();//임시
 }
 var MeshBoneMat=100;
 export class CMesh extends CObject

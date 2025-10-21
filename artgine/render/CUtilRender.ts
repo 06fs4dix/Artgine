@@ -1451,32 +1451,32 @@ export class CUtilRender {
 	// 	rVal.indexCount = rVal.index.length;
 	// 	return rVal;
 	// }
-	static CMeshCreateInfoToInstance(_mci: CMeshCreateInfo) {
-		var nmci = new CMeshCreateInfo();
-		let count = (CDevice.GetProperty(CDevice.eProperty.Sam2DWriteX)) / 4;
-		for (var each0 of _mci.vertex) {
-			var size = each0.bufF.Size(1);
-			var buf = nmci.Create(each0.vfType);
-			buf.bufF.Resize(size * count);
-			each0.bufF.Reserve(size);
-			//buf.bufI.length=each0.bufI.length*count;
-			for (var i = 0; i < count; ++i) {
-				buf.bufF.GetArray().set(each0.bufF.GetArray(), i * size);
-				buf.bufI.concat(each0.bufI);
-			}
-		}
-		var buft = nmci.Create(CVertexFormat.eIdentifier.TexOff);
-		buft.bufF.Resize(_mci.vertexCount * count);
-		for (var i = 0; i < count; ++i) {
-			for (var j = 0; j < _mci.vertexCount; ++j)
-				buft.bufF.V1(i * _mci.vertexCount + j, i);
-			nmci.index.concat(_mci.index);
-		}
-		nmci.indexCount = _mci.indexCount * count;
-		nmci.vertexCount = _mci.vertexCount * count;
+	// static CMeshCreateInfoToInstance(_mci: CMeshCreateInfo) {
+	// 	var nmci = new CMeshCreateInfo();
+	// 	let count = (CDevice.GetProperty(CDevice.eProperty.Sam2DSize));
+	// 	for (var each0 of _mci.vertex) {
+	// 		var size = each0.bufF.Size(1);
+	// 		var buf = nmci.Create(each0.vfType);
+	// 		buf.bufF.Resize(size * count);
+	// 		each0.bufF.Reserve(size);
+	// 		//buf.bufI.length=each0.bufI.length*count;
+	// 		for (var i = 0; i < count; ++i) {
+	// 			buf.bufF.GetArray().set(each0.bufF.GetArray(), i * size);
+	// 			buf.bufI.concat(each0.bufI);
+	// 		}
+	// 	}
+	// 	var buft = nmci.Create(CVertexFormat.eIdentifier.TexOff);
+	// 	buft.bufF.Resize(_mci.vertexCount * count);
+	// 	for (var i = 0; i < count; ++i) {
+	// 		for (var j = 0; j < _mci.vertexCount; ++j)
+	// 			buft.bufF.V1(i * _mci.vertexCount + j, i);
+	// 		nmci.index.concat(_mci.index);
+	// 	}
+	// 	nmci.indexCount = _mci.indexCount * count;
+	// 	nmci.vertexCount = _mci.vertexCount * count;
 
-		return nmci;
-	}
+	// 	return nmci;
+	// }
 
 	static GetTerrain(_count: number, _size: number) {
 

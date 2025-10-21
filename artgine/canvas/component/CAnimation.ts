@@ -273,9 +273,11 @@ export class CClipMesh extends CClip
 	public mMesh : string;
 	public mAutoCreate=true;
 	
-	constructor(_time : number,_delay : number,_mesh : string,_key : string);
-	constructor(_time : number,_delay : number,_mesh : string,_st : number,_ed : number);
-	constructor(_time : number,_delay : number,_mesh : string,_st : number|string,_ed : number=null)
+	constructor(_time : number,_delay : number,_key : string);
+	constructor(_time : number,_delay : number,_key : string,_mesh : string);
+	constructor(_time : number,_delay : number,_st : number,_ed : number);
+	constructor(_time : number,_delay : number,_st : number,_ed : number,_mesh : string);
+	constructor(_time : number,_delay : number,_st : number|string,_ed : number|string=null,_mesh : string=null)
 	{
 		super(_time,_delay);
 		
@@ -286,10 +288,16 @@ export class CClipMesh extends CClip
 			
 		if(_ed!=null)
 		{
-			this.mED=_ed;
+			if(typeof _ed =="number")
+				this.mED=_ed;
+			else
+				this.mMesh=_ed;
+		}
+		if(_mesh!=null)
+		{
+			this.mMesh=_mesh;
 		}
 		
-		this.mMesh=_mesh;
 	}
 
 	WTForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
