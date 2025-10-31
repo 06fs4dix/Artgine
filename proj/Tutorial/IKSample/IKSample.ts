@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mhd366tl_11';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,6 +19,7 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
 
@@ -29,7 +30,7 @@ CPlugin.PushPath('InverseKinematics','../../../plugin/InverseKinematics/');
 import "../../../plugin/InverseKinematics/InverseKinematics.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([],"");
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
@@ -43,6 +44,7 @@ import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
 import { CIKLook, CIKReach } from "../../../plugin/InverseKinematics/InverseKinematics.js";
 import { CSocketAttacher } from "../../../plugin/SocketAttacher/SocketAttacher.js";
 import { CPaint } from "../../../artgine/canvas/component/paint/CPaint.js";
+import { CLoaderOption } from "../../../artgine/util/CLoader.js";
 
 
 var Main=gAtl.NewCanvas("Main");
@@ -74,7 +76,7 @@ target2.SetPos(new CVec3(0, 500, -500));
 target2.SetSca(new CVec3(0.2, 0.2, 0.2));
 
 let ani2=new CAnimation();
-ani2.Push(new CClipPRS(0,5000,[new CVec3(0,500,-500),new CVec3(-500,500,-500),new CVec3(500,500,-500),new CVec3(0,500,-500)],CClipPRS.eType.Pos));
+ani2.Push(new CClipPRS(0,5,[new CVec3(0,500,-500),new CVec3(-500,500,-500),new CVec3(500,500,-500),new CVec3(0,500,-500)],CClipPRS.eType.Pos));
 target2.PushComp(new CAniFlow(ani2));
 Main.PushSub(target2);
 
@@ -89,6 +91,7 @@ target3.SetSca(new CVec3(0.01, 0.3, 0.01));
 target3.SetRot(new CVec3(1.5,0,0));
 Main.PushSub(target3);
 
+gAtl.Frame().Load().Exe("Res/RiggedFigure.glb",new CLoaderOption().Set("mColorTex",true));
 let obj = new CSubject();
 //let pt3d = new CPaint3D("Res/Avocado.gltf");
 let pt3d = new CPaint3D("Res/RiggedFigure.glb");
@@ -98,7 +101,7 @@ pt3d.SetTexture(Main.GetFrame().Pal().GetNoneTex());
 obj.PushComp(pt3d);
 
 var ani=new CAnimation();
-ani.mClip.push(new CClipMesh(0,1000*10,null,0,100*100));
+ani.mClip.push(new CClipMesh(0,10,0,100*100));
 //ani.mLoop=true;
 obj.PushComp(new CAniFlow(ani));
 //obj.SetSca(new CVec3(100, 100, 100));
@@ -110,4 +113,7 @@ obj.PushComp(new CIKReach(new CBlackBoardRef(target1.Key()), "leg_joint_R_5", 4,
 obj.PushComp(new CSocketAttacher(new CBlackBoardRef(target3.Key()), "arm_joint_L_3"));
 obj.PushComp(new CIKLook(new CBlackBoardRef(target2.Key()), "neck_joint_1"));
 Main.PushSub(obj);
+
+
+
 

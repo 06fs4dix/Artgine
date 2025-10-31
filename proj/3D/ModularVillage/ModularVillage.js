@@ -1,4 +1,4 @@
-const version = 'mh13w5u5_5';
+const version = 'mhexn37w_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -17,6 +17,9 @@ gPF.mWASM = false;
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import { CPlugin } from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+CPlugin.PushPath('ShadowPlane', 'https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/');
+import "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'], "");
@@ -36,6 +39,7 @@ import { CDayCycle, CLightPlanet } from "https://06fs4dix.github.io/Artgine/artg
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 import { CAnimation, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
+import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
@@ -43,6 +47,8 @@ import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBou
 import { CCamCon3DThirdPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
+import { CPaint3DDecal } from "https://06fs4dix.github.io/Artgine/plugin/Decal/Decal.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
 let PCF = new CVec1(1.0);
 var bias = 5;
 var normalBias = 4;
@@ -89,13 +95,13 @@ lp.Push(new CDayCycle(new CVec3(-2, 0.5, 0), new CColor(1, 0.8, 0.8)));
 lp.Push(new CDayCycle(new CVec3(-1, 0, 0), new CColor(1, 0.5, 0.5)));
 lp.Push(new CDayCycle(new CVec3(1, 0, 0), new CColor(1, 0.5, 0.5)));
 lp.Push(new CDayCycle(new CVec3(0, -1, 0), new CColor(0, 0, 0)));
-await gAtl.Frame().Load().Exe("Res/blocky/blocky.FBX");
 let chsub = Main.PushSub(new CSubject());
 chsub.SetKey("User");
-let pt3 = chsub.PushComp(new CPaint3D("Res/blocky/blocky.FBX"));
+let ptRes = "Res/blocky/blocky.FBX";
+let aniRes = "Res/blocky/blocky.FBX";
+let pt3 = chsub.PushComp(new CPaint3D(ptRes, true, 100));
 pt3.Shadow();
 chsub.SetPos(new CVec3(590, 600, 892));
-chsub.SetRot(new CVec3(0, 3.14 / 2, 0));
 let bound = new CBound();
 bound.InitBound(60);
 bound.SetType(CBound.eType.Sphere);
@@ -106,16 +112,17 @@ cl.SetRestitution(1);
 let rb = chsub.PushComp(new CRigidBody());
 rb.SetGravity(1);
 let aniStand = new CAnimation();
-aniStand.Push(new CClipMesh(0, 2000, 2500, 4500, "Res/blocky/Res/blocky.FBX"));
+let cm = aniStand.Push(new CClipMesh(0, 1, 2500, 4500, aniRes));
+cm.mBake = true;
 let aniWalk = new CAnimation();
-aniWalk.Push(new CClipMesh(0, 1500, 0, 2000, "Res/blocky/Res/blocky.FBX"));
+aniWalk.Push(new CClipMesh(0, 1.5, 0, 2000, aniRes));
 let af = chsub.PushComp(new CAniFlow(aniWalk));
 let camCon = new CCamCon3DThirdPerson(gAtl.Frame().Input());
 gAtl.Brush().GetCam3D().SetCamCon(camCon);
 let can2d = gAtl.NewCanvas("2D");
 can2d.SetCameraKey("2D");
 let pad = can2d.PushSub(new CPad());
-chsub.Update = (_delay) => {
+chsub.Update = (_update) => {
     camCon.SetPos(chsub.GetPos());
     if (pad.IsOn())
         camCon.SetPause(true);
@@ -167,8 +174,19 @@ chsub.Update = (_delay) => {
     if (pad.GetButtonEvent(0) == CEvent.eType.Click) {
         var jump = new CForce("jump");
         jump.SetDirVel(new CVec3(0, 1), 500, new CVec3(0, 1), 200);
-        jump.SetDelay(500);
+        jump.SetDelay(0.5);
         jump.mRemove = true;
         rb.Push(jump);
     }
 };
+gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
+    if (gAtl.Frame().Input().KeyUp(CInput.eKey.F)) {
+        let m = gAtl.Frame().Input().Mouse();
+        let ray = gAtl.Brush().GetCam3D().GetRay(m.x, m.y);
+        let ground = Main.Find("Ground");
+        let pt = ground.FindComp(CPaint);
+        let sub = new CSubject();
+        sub.PushComp(new CPaint3DDecal([gAtl.Frame().Pal().GetNoneTex()], pt.GetBound().mPos.Array(), pt.GetFMat(), ray, new CVec3(50, 50, 200)));
+        Main.PushSub(sub);
+    }
+});

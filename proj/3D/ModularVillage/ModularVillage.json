@@ -28,5 +28,8 @@
     "jquery": false,
     "MonacoEditor": true,
     "summernote": false
+  },
+  "dependencies": {
+    "ShadowPlane": 1
   }
 }

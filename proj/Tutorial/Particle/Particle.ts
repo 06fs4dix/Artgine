@@ -1,5 +1,5 @@
 //Version
-const version='mfw30p1p_9';
+const version='mhbb110w_12';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -77,19 +77,19 @@ ptbill.SetColorModel(new CColor(0,1,0,CColor.eModel.RGBMul))
 sub0.PushComp(ptbill);
 
 var ani=new CAnimation();
-ani.Push(new CClipColorAlpha(0,1000*5,new CAlpha(1,CAlpha.eModel.Mul),new CAlpha(0,CAlpha.eModel.Mul)));
-ani.Push(new CClipDestroy(1000*5));
+ani.Push(new CClipColorAlpha(0,5,new CAlpha(1,CAlpha.eModel.Mul),new CAlpha(0,CAlpha.eModel.Mul)));
+ani.Push(new CClipDestroy(5));
 sub0.PushComp(new CAniFlow(ani));
 
 
 var sub1=new CSubject();
 ptbill=new CPaint2D(gAtl.Frame().Pal().GetNoneTex(),new CVec2(10,100));
 ptbill.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBMul))
-//ptbill.SetBillBoard(true);
+ptbill.SetBillBoard(true);
 ptbill.Tail();
 sub1.PushComp(ptbill);
 var ani=new CAnimation();
-ani.Push(new CClipDestroy(1000*10));
+ani.Push(new CClipDestroy(10));
 sub1.PushComp(new CAniFlow(ani));
 
 
@@ -99,7 +99,7 @@ ptbill.SetColorModel(new CColor(0,0,1,CColor.eModel.RGBMul))
 //ptbill.SetBillBoard(true);
 sub2.PushComp(ptbill);
 var ani=new CAnimation();
-ani.Push(new CClipDestroy(1000*5));
+ani.Push(new CClipDestroy(5));
 sub2.PushComp(new CAniFlow(ani));
 
 //3가지 샘플을 4:2:1 비율로 선택함
@@ -120,7 +120,7 @@ Main.PushSub(particle);
 var trail=new CSubject();
 var tpt=new CPaintTrail(gAtl.Frame().Pal().GetNoneTex(),1024);
 tpt.mLastHide=false;
-tpt.mEndTime=1000*2;
+tpt.mEndTime=2;
 tpt.SetEdge(true,2,64);
 trail.PushComp(tpt);
 var ani=new CAnimation();
@@ -128,7 +128,7 @@ var before=new CVec3();
 for(var i=0;i<10;++i)
 {
     var pos=new CVec3(Math.random()*1000-500,500,Math.random()*1000-500);
-    var clip=new CClipPRS(i*1000,1000,before,pos,0);
+    var clip=new CClipPRS(i,1,before,pos,0);
     ani.Push(clip);
     before=pos;
 }
@@ -138,6 +138,16 @@ trail.PushComp(new CAniFlow(ani));
 Main.PushSub(trail);
 
 //=====================================================================================================
+
+
+
+
+
+
+
+
+
+
 
 
 
