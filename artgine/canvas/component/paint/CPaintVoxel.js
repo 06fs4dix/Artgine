@@ -48,13 +48,15 @@ export class CPaintVoxel extends CPaint {
             return false;
         return super.IsShould(_member, _type);
     }
-    InitPaint() {
-        super.InitPaint();
+    InitChk() {
+        super.InitChk();
         if (this.mRenderPass.length == 0) {
             var rp = new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
             rp.mPriority = CRenderPass.ePriority.BackGround;
             this.mRenderPass = [rp];
         }
+    }
+    Start() {
         this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD, this.mOwner.GetFrame().Pal().SlVoxel().mShader[0], this.mMCI);
     }
     Rebuild(_arr) {
@@ -124,7 +126,7 @@ export class CPaintVoxel extends CPaint {
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
         this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
         this.mOwner.GetFrame().BMgr().BatchOff();
     }

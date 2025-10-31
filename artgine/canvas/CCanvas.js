@@ -5,7 +5,6 @@ import { CArray } from "../basic/CArray.js";
 import { CString } from "../basic/CString.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CBase64File } from "../util/CBase64File.js";
-import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js";
 import { CCollider } from "./component/CCollider.js";
 import { CAtlas } from "../util/CAtlas.js";
 import { CUpdate } from "../basic/Basic.js";
@@ -31,7 +30,7 @@ export class CPairStrStr {
 export class CCanvas extends CObject {
     mRemoveList = new Array();
     mKeyChangeList = new Array();
-    mGGI = new CGlobalGeometryInfo();
+    mGI = null;
     mWebSocket = null;
     mPacArr = new CArray();
     mBrush;
@@ -47,12 +46,13 @@ export class CCanvas extends CObject {
     mPause = false;
     mPushSub = new CArray();
     mSave = true;
-    constructor(_fw, _brash) {
+    constructor(_fw, _brash, _GI) {
         super();
         if (_fw == null)
             return;
         this.mFrame = _fw;
         this.mBrush = _brash;
+        this.mGI = _GI;
         if (_fw.PF().mIAuto)
             _fw.PushIAuto(this);
         let list = this.ListCanvas();
@@ -65,7 +65,7 @@ export class CCanvas extends CObject {
     IsShould(_member, _type) {
         if (_member == "mBrush" || _member == "mRemoveList" || _member == "mFrame" || _member == "mPushSub" ||
             _member == "mBroMsg" || _member == "mBroLen" || _member == "mWebSocket" || _member == "mPacArr" ||
-            _member == "mKeyChangeList" || _member == "mGGI")
+            _member == "mKeyChangeList" || _member == "mGI" || _member == "mChangeRPMgr")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -87,12 +87,11 @@ export class CCanvas extends CObject {
             list.splice(index, 1);
         }
     }
-    GetGGI() {
-        return this.mGGI;
-    }
     SetRPMgr(_rpMgr) {
-        if (this.mRPMgr == null && _rpMgr == null)
+        if (this.mRPMgr == null && _rpMgr == null) {
+            this.mChangeRPMgr = null;
             return;
+        }
         if (this.mRPMgr != null) {
             for (let i = 0; i < this.mRPMgr.mRPArr.length; ++i) {
                 this.mBrush.RemoveAutoRP(this.mRPMgr.Key() + "_" + i);
@@ -448,7 +447,7 @@ export class CCanvas extends CObject {
         this.SetRPMgr(rpMgr);
         return json;
     }
-    Update(_delay) {
+    Update(_update) {
     }
     CComMsg(_delay) {
     }
@@ -589,6 +588,9 @@ export class CCanvas extends CObject {
     }
     SendGetBrush(_camcomp) {
         _camcomp.RecvGetBrush(this.mBrush);
+    }
+    SendGetGeometryInfo(_camcomp) {
+        _camcomp.RecvGetGeometryInfo(this.mGI, this.Key());
     }
     Patch(_stream, _sukPass = true) {
         let sendSUK = _stream.GetString();

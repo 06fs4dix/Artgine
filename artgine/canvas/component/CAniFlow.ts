@@ -90,7 +90,7 @@ export class CAniFlow extends CComponent
 		//	this.Update(1);
 	}
 	SetSpeed(_speed : number)	{	this.mSpeed=_speed;}
-	Update(_delay : number)
+	Update(_update : CUpdate)
 	{
 		
 		
@@ -142,6 +142,7 @@ export class CAniFlow extends CComponent
 	// }
 }
 import CAniFlow_imple from "../../canvas_imple/component/CAniFlow.js";
+import { CUpdate } from "../../basic/Basic.js";
 
 
 CAniFlow_imple();

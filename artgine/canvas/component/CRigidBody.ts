@@ -15,7 +15,7 @@ import { CString } from "../../basic/CString.js"
 
 var yPath=true;
 
-export class CRigidBody extends CComponent
+export class CRigidBody extends CGeometryComp
 {
 	
 	// mStartPos : CVec3 = null;
@@ -95,7 +95,9 @@ export class CRigidBody extends CComponent
 		return super.IsShould(_member,_type);
 	}
 	//IsMove()	{		return this.m_move;	}
-
+	Update(_update: CUpdate) {
+		if(this.mGI!=null)	this.mGI.mFixedComp.Push(this);
+	}
 	GetMoveQue()	{	return this.mForceArr;	}
 	GetMoveQueGravity(){
 		for(let each1 of this.mForceArr) if(each1.mKey==CPhysics.GravityKey) return each1;
@@ -104,7 +106,7 @@ export class CRigidBody extends CComponent
 	// Start(): void {
 	// 	this.mStartPos = this.GetOwner().GetPos().Export();
 	// }
-	Update(_delay : number)
+	Fixed(_update : CUpdate)
 	{
 	
 
@@ -252,6 +254,8 @@ export class CRigidBody extends CComponent
 }
 
 import CRigidBody_imple from "../../canvas_imple/component/CRigidBody.js";
+import { CUpdate } from "../../basic/Basic.js"
+import { CGeometryComp } from "./CGeometryComp.js"
 
 
 

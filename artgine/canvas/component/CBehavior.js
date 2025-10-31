@@ -2,7 +2,7 @@ import { CComponent } from "./CComponent.js";
 export default class CBehavior extends CComponent {
     Start() {
     }
-    Update(_delay) {
+    Update(_update) {
     }
     CameraOut(_pArr) {
     }

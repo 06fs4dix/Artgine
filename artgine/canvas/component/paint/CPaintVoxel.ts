@@ -62,9 +62,9 @@ export class CPaintVoxel extends CPaint
 
 		return super.IsShould(_member,_type);
 	}
-	InitPaint()
+	InitChk()
 	{
-		super.InitPaint();
+		super.InitChk();
 
 		if(this.mRenderPass.length==0)
 		{
@@ -75,6 +75,10 @@ export class CPaintVoxel extends CPaint
 
 		
 
+		//Start에 있어야 하지 않나?
+		
+	}
+	Start(): void {
 		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],this.mMCI);
 	}
 	//6면이 한세트로 들어있어야 한다.
@@ -171,7 +175,7 @@ export class CPaintVoxel extends CPaint
 		
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
 		this.mOwner.GetFrame().BMgr().BatchOff();
 	}

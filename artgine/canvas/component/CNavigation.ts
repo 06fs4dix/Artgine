@@ -4,11 +4,11 @@ import { CBound } from "../../geometry/CBound.js";
 import { CMath } from "../../geometry/CMath.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CComponent } from "./CComponent.js";
-import { CGlobalGeometryInfo } from "./CGlobalGeometryInfo.js";
+import { CGeometryComp, CGeometryInfo } from "./CGeometryComp.js";
 import { CPaint } from "./paint/CPaint.js";
 import { CPaint2D } from "./paint/CPaint2D.js";
 
-export class CNavigation extends CComponent
+export class CNavigation extends CGeometryComp
 {
     static Small=20;
     static Normal=100;
@@ -80,12 +80,12 @@ export class CNavigation extends CComponent
         return this.mBound;
     }
    
-    GeometryUpdate(_ggi : CGlobalGeometryInfo)
+    Update(_update : CUpdate)
     {
         this.UpdateMat();
-        if(_ggi.mNavi!=null)
+        if(this.mGI.mNavi!=null)
         {
-            _ggi.mNavi.Write(this,false);
+            this.mGI.mNavi.Write(this,false);
         }
     }
     UpdateMat()
@@ -99,7 +99,7 @@ export class CNavigation extends CComponent
     }
     StartChk()
 	{
-		//super.StartChk();
+		let start=super.StartChk();
 		if(this.mPaintLoad!=null)
 		{
 			if (this.mPaintLoad instanceof CPaint2D ? this.mPaintLoad.GetSize() != null : this.mPaintLoad.GetBound().GetType() != CBound.eType.Null) 
@@ -110,13 +110,14 @@ export class CNavigation extends CComponent
 				this.UpdateMat();
 			}
 			else
-				return;
-			
-			
+            {
+                this.mStartChk=true;
+                return false;
+            }
 		}
 
-        this.mStartChk=false;
-		this.Start();
+        //this.mStartChk=false;
+		return start;
     }
 }
 

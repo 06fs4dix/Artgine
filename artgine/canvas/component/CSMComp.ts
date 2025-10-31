@@ -1,4 +1,4 @@
-import { IListener } from "../../basic/Basic.js";
+import { CUpdate, IListener } from "../../basic/Basic.js";
 import { CArray } from "../../basic/CArray.js";
 import { CClass } from "../../basic/CClass.js";
 import { CConsol } from "../../basic/CConsol.js";
@@ -19,9 +19,9 @@ export class CSMComp extends CComponent
     mSM=new CStateMachine;
     mNameSet=new Set<string>();
     mLastDir : number =null;
-    Update(_delay: any): void 
+    Update(_update : CUpdate): void 
     {
-        super.Update(_delay);
+        super.Update(_update);
         for(let com of this.GetOwner().mComArr)
         {
             if(com instanceof CRigidBody)
@@ -98,7 +98,7 @@ export class CSMComp extends CComponent
             this.mSM.GetState()["Default"]=1;
         
         this.mSM.PatternUpdate();
-        this.mSM.ExcuteListUpdate(this.GetOwner(),_delay);
+        this.mSM.ExcuteListUpdate(this.GetOwner(),_update.DeltaTime());
         for(let name of this.mNameSet)
         {
             this.mSM.GetState()[name]=0;

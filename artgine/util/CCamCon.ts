@@ -105,7 +105,7 @@ export class CCamCon extends CObject implements ICamCon
     {
         this.mInput=_input;
     }
-    Update(_delay : number)
+    Update(_update : CUpdate)
     {
         if(this.mCamera==null || this.mInput==null) return;
         if(this.mPause) return;
@@ -301,9 +301,9 @@ export class CCamCon extends CObject implements ICamCon
             
         }
         //CConsol.Log(this.mRotX+"/"+this.mRotY);
-        if(_delay<20)
+        if(_update.DeltaTime()<0.05)
         {
-            const t = Math.max(0, _delay * 0.05); // ms -> sec
+            const t = Math.max(0, _update.DeltaTime()*50); // ms -> sec
 
         
             this.mRotXCur+=this.mRotX;
@@ -335,9 +335,9 @@ class CCamCon3D extends CCamCon
 
 export class CCamCon3DFirstPerson extends CCamCon3D
 {
-    Update(_delay: number): void
+    Update(_update : CUpdate): void
     {
-        super.Update(_delay);
+        super.Update(_update);
         if(this.mReset==false) return;
         
         this.mCamera.FrontMove(this.mPosX * this.mPosSensitivity);
@@ -374,9 +374,9 @@ export class CCamCon3DThirdPerson extends CCamCon3D
     SetZoom(_zoom : number) {
         this.mSZoom = _zoom;
     }
-    Update(_delay: number): void
+    Update(_update : CUpdate): void
     {
-        super.Update(_delay);
+        super.Update(_update);
 
         if(this.mReset==false && this.mReset3D==false) return;
         this.mReset3D=false;
@@ -384,8 +384,8 @@ export class CCamCon3DThirdPerson extends CCamCon3D
         if(!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
 
-        let rotX=this.mRotY* 0.001 * _delay* this.mRotSensitivity;
-        let rotY=this.mRotX* 0.001 * _delay* this.mRotSensitivity;
+        let rotX=this.mRotY* _update.DeltaTime()* this.mRotSensitivity;
+        let rotY=this.mRotX* _update.DeltaTime()* this.mRotSensitivity;
 
         if (this.mZoom!=0)
             this.mSZoom=this.mSZoom-this.mZoom* this.mZoomSensitivity;
@@ -420,9 +420,9 @@ class CCamCon2D extends CCamCon
 
 export class CCamCon2DFreeMove extends CCamCon2D
 {
-    Update(_delay: number): void
+    Update(_update : CUpdate): void
     {
-        super.Update(_delay);
+        super.Update(_update);
         if(this.mReset==false) return;
 
         this.AddZoom(-this.mZoom* this.mZoomSensitivity);
@@ -470,9 +470,9 @@ export class CCamCon2DFollow extends CCamCon2D
         
         return super.IsShould(_member, _type);
     }
-    Update(_delay: number): void
+    Update(_update : CUpdate): void
     {
-        super.Update(_delay);
+        super.Update(_update);
 
         this.AddZoom(-this.mZoom* this.mZoomSensitivity);
 

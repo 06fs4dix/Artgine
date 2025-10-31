@@ -7,7 +7,7 @@ import {CUniqueID} from "../basic/CUniqueID.js"
 import {CEvent} from "../basic/CEvent.js"
 import {CCoroutine} from "./CCoroutine.js"
 import {CConfirm, CModal} from "../basic/CModal.js"
-import { IAutoRender, IAutoUpdate } from "../basic/Basic.js"
+import { CUpdate, IAutoFixed, IAutoRender, IAutoUpdate } from "../basic/Basic.js"
 import {CPWA} from "../system/CPWA.js"
 import {CConsol} from "../basic/CConsol.js"
 import { CModalChat, CModalFrameView, CFileViewer, CLoadingBack } from "./CModalUtil.js"
@@ -31,6 +31,7 @@ import { CString } from "../basic/CString.js"
 import { CRollBack } from "./CRollBack.js"
 import { CSysAuth } from "../system/CSysAuth.js"
 import { CUtilWeb } from "./CUtilWeb.js"
+import { CGeometryInfo } from "../canvas/component/CGeometryComp.js"
 
 const invisibleButton = document.createElement("div");
 invisibleButton.style.position = "absolute";
@@ -176,26 +177,29 @@ export class CFrame
 	//private m_heap : CHeap=new CHeap();
 	private mRes=new CRes();
 	public mInput : CInput; 
-	private m_palette=new CPalette();
+	private mPalette=new CPalette();
 	private mIAutoRenderArr=new Array<IAutoRender>();
 	private mResizeList=new Array<string>();
-	mEventVec=new Array<CEvent>();
-	mDelay=0;
-	
-	//static sPluginEventVec=new Array<CEvent>();
 	
 
+	mEventVec=new Array<CEvent>();
+	//mDelay=0;
+	mUpdate =new CUpdate();
+	
+
+	DeltaTime()	{	return this.mUpdate.DeltaTime();	}
 	Input()	{	return this.mInput;	}
-	Delay()	{	return this.mDelay;	}
+	
 	Win()	{	return this.mWindow;	}
 	Dev()	{	return this.mDevice;	}
 	Ren()	{	return this.mRenderer;	}
 	BMgr()	{	return this.mBatchMgr;	}
+	
 	//SInter()	{	return this.m_shaderInterpret;	}
 	Load()	:CLoader {	return this.mLoader;	}
 	Res()	:CRes {	return this.mRes;	}
 	PF()	{	return this.mPreferences;	}
-	Pal()	{	return this.m_palette;	}
+	Pal()	{	return this.mPalette;	}
 	SMgr()	{	return this.mSoundMgr;	}
 	Off()	{	return this.m_offset;	}
 	//Heap()	{	return this.m_heap;	}
@@ -389,10 +393,10 @@ export class CFrame
 		if(this.mPreferences.mIAuto)
 		{
 			this.PushEvent(CEvent.eType.Load,new CEvent(async ()=>{
-				await this.m_palette.Load(this);
+				await this.mPalette.Load(this);
 			}));
 			this.PushEvent(CEvent.eType.Init,new CEvent(()=>{
-				this.m_palette.Init(this);
+				this.mPalette.Init(this);
 			}));
 		}
 
@@ -422,7 +426,7 @@ export class CFrame
 			gSubFramework=this;
 		
 	}
-	PushIAuto(_any : IAutoUpdate|IAutoRender)
+	PushIAuto(_any : IAutoUpdate|IAutoRender|IAutoFixed)
 	{
 		if(_any["Init"])
 		{
@@ -431,6 +435,10 @@ export class CFrame
 		if(_any["Update"])
 		{
 			this.mEventVec.push(new CEvent("Update",_any,CEvent.eType.Update));
+		}
+		if(_any["Fixed"])
+		{
+			this.mEventVec.push(new CEvent("Fixed",_any,CEvent.eType.Fixed));
 		}
 			
 		if(_any["Render"])
@@ -543,9 +551,9 @@ export class CFrame
 		
 		return earr;
 	}
-	private Update(_delay)
+	private Update(_update : CUpdate)
 	{
-		this.mDelay=_delay;
+		//this.mDelay=_delay;
 
 		if(document.visibilityState != "visible" || document.hidden==true)
 			this.SetCurser(CFrame.eCurser.notAllowed);
@@ -563,7 +571,7 @@ export class CFrame
 			for(let m of mList)
 			{
 				if(m.IsPause()==false)
-					m.Update(_delay);
+					m.Update(this.mUpdate);
 				
 				if(m.mDebugMode!=null)
 				{
@@ -591,16 +599,15 @@ export class CFrame
 			}
 			cLoop.Clear();
 		}
-		this.mInput.Update(_delay);
-		
-		this.mSoundMgr.Update(_delay);
+		this.mInput.Update(this.mUpdate);
+		this.mSoundMgr.Update(this.mUpdate);
 			
 		
 
 		
 		if(this.mWindow!=null)
 		{
-			this.mWindow.Update(_delay);
+			this.mWindow.Update(this.mUpdate);
 			if(this.mResizeList.length>0)
 			{
 				for(let i=0;i<this.mResizeList.length;++i)
@@ -717,14 +724,49 @@ export class CFrame
 			//CConsol.Log("m_mainProcess");
 			//this.m_heap.Clear();
 			if(this.mMainProcess==null)	return;
-			var time=timer.Delay()*1000;
-			if(time>1000)
-				time=10;
-			subWDelay+=time;
-			this.Update(time);
+			
+			this.mUpdate.mDeltaTime=timer.Delay();
+			//this.mUpdate.mDeltaTime=0.2;
+
+			const maxTime=0.03;
+			const maxCount=30;
+			if(this.mUpdate.mDeltaTime>0.5)
+			{
+				this.mUpdate.mDeltaTime=0.001;
+				this.mUpdate.mFixedCount=1;
+				this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime;
+			}
+			else
+			{
+				if(this.mUpdate.mDeltaTime>maxTime)
+				{
+					this.mUpdate.mFixedCount=Math.ceil(this.mUpdate.mDeltaTime/maxTime);
+					if(this.mUpdate.mFixedCount>maxCount)
+					{
+						this.mUpdate.mDeltaTime=maxCount*maxTime;
+						this.mUpdate.mFixedCount=maxCount;
+					}
+
+					this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime/this.mUpdate.mFixedCount;
+				}
+				else
+				{
+					this.mUpdate.mFixedCount=1;
+					this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime;
+				}
+			}
+			//CConsol.Log(this.mUpdate.mDeltaTime+" + "+this.mUpdate.mFixedCount+"/"+this.mUpdate.mFixedTime);
+			
+			
+
+			// if(time>1000)
+			// 	time=1;
+			//subWDelay+=time;
+			this.Update(this.mUpdate);
 
 			
-			await CFrame.EventCall(this.GetEvent(CEvent.eType.Update),time);
+			await CFrame.EventCall(this.GetEvent(CEvent.eType.Update),this.mUpdate);
+			await CFrame.EventCall(this.GetEvent(CEvent.eType.Fixed),this.mUpdate);
 			//IAutoRender가 있으면 내부 루프를 돌아야해서 이렇게
 			if(this.mRenderProcess==null)
 				await CFrame.EventCall(this.GetEvent(CEvent.eType.Render));
@@ -733,13 +775,13 @@ export class CFrame
 			
 			
 			requestAnimationFrame(this.mMainProcess);
-			if(subCall==false || subWDelay>1000*3)
-			{
-				CWASM.SetThread(true);
-				CFrame.EventCall(this.GetEvent(CEvent.eType.SubUpdate));
-				subWDelay=0;
+			// if(subCall==false || subWDelay>1000*3)
+			// {
+			// 	CWASM.SetThread(true);
+			// 	CFrame.EventCall(this.GetEvent(CEvent.eType.SubUpdate));
+			// 	subWDelay=0;
 				
-			}
+			// }
 			CWASM.SetThread(false);
 		};
 		this.mSubProcess=(deadline)=>{
@@ -766,7 +808,7 @@ export class CFrame
 			if (this.mLoadChk)
 			{	
 				await CFrame.EventCall(this.GetEvent(CEvent.eType.Init));
-			
+				timer.Delay();
 				requestAnimationFrame(this.mMainProcess);
 				if ('requestIdleCallback' in window) 
 					requestIdleCallback(this.mSubProcess);

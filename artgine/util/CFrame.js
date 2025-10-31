@@ -7,6 +7,7 @@ import { CUniqueID } from "../basic/CUniqueID.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CCoroutine } from "./CCoroutine.js";
 import { CConfirm, CModal } from "../basic/CModal.js";
+import { CUpdate } from "../basic/Basic.js";
 import { CPWA } from "../system/CPWA.js";
 import { CConsol } from "../basic/CConsol.js";
 import { CModalChat, CModalFrameView, CFileViewer, CLoadingBack } from "./CModalUtil.js";
@@ -139,13 +140,13 @@ export class CFrame {
     mLoader;
     mRes = new CRes();
     mInput;
-    m_palette = new CPalette();
+    mPalette = new CPalette();
     mIAutoRenderArr = new Array();
     mResizeList = new Array();
     mEventVec = new Array();
-    mDelay = 0;
+    mUpdate = new CUpdate();
+    DeltaTime() { return this.mUpdate.DeltaTime(); }
     Input() { return this.mInput; }
-    Delay() { return this.mDelay; }
     Win() { return this.mWindow; }
     Dev() { return this.mDevice; }
     Ren() { return this.mRenderer; }
@@ -153,7 +154,7 @@ export class CFrame {
     Load() { return this.mLoader; }
     Res() { return this.mRes; }
     PF() { return this.mPreferences; }
-    Pal() { return this.m_palette; }
+    Pal() { return this.mPalette; }
     SMgr() { return this.mSoundMgr; }
     Off() { return this.m_offset; }
     static Main() { return gMainFramework; }
@@ -281,10 +282,10 @@ export class CFrame {
         }
         if (this.mPreferences.mIAuto) {
             this.PushEvent(CEvent.eType.Load, new CEvent(async () => {
-                await this.m_palette.Load(this);
+                await this.mPalette.Load(this);
             }));
             this.PushEvent(CEvent.eType.Init, new CEvent(() => {
-                this.m_palette.Init(this);
+                this.mPalette.Init(this);
             }));
         }
         if (canDummy != null) {
@@ -309,6 +310,9 @@ export class CFrame {
         }
         if (_any["Update"]) {
             this.mEventVec.push(new CEvent("Update", _any, CEvent.eType.Update));
+        }
+        if (_any["Fixed"]) {
+            this.mEventVec.push(new CEvent("Fixed", _any, CEvent.eType.Fixed));
         }
         if (_any["Render"]) {
             if (this.mIAutoRenderArr.length == 0) {
@@ -359,8 +363,7 @@ export class CFrame {
         }
         return earr;
     }
-    Update(_delay) {
-        this.mDelay = _delay;
+    Update(_update) {
         if (document.visibilityState != "visible" || document.hidden == true)
             this.SetCurser(CFrame.eCurser.notAllowed);
         else if (gMainFramework.Win() != null && document.activeElement != gMainFramework.Win().Handle())
@@ -372,7 +375,7 @@ export class CFrame {
             let conFocus = true;
             for (let m of mList) {
                 if (m.IsPause() == false)
-                    m.Update(_delay);
+                    m.Update(this.mUpdate);
                 if (m.mDebugMode != null) {
                     if (this.PF().mDebugMode && m.mShow && m.mDebugMode == true) {
                         m.Hide(0);
@@ -393,10 +396,10 @@ export class CFrame {
             }
             cLoop.Clear();
         }
-        this.mInput.Update(_delay);
-        this.mSoundMgr.Update(_delay);
+        this.mInput.Update(this.mUpdate);
+        this.mSoundMgr.Update(this.mUpdate);
         if (this.mWindow != null) {
-            this.mWindow.Update(_delay);
+            this.mWindow.Update(this.mUpdate);
             if (this.mResizeList.length > 0) {
                 for (let i = 0; i < this.mResizeList.length; ++i) {
                     let res = this.mRes.Find(this.mResizeList[i]);
@@ -477,22 +480,36 @@ export class CFrame {
         this.mMainProcess = async () => {
             if (this.mMainProcess == null)
                 return;
-            var time = timer.Delay() * 1000;
-            if (time > 1000)
-                time = 10;
-            subWDelay += time;
-            this.Update(time);
-            await CFrame.EventCall(this.GetEvent(CEvent.eType.Update), time);
+            this.mUpdate.mDeltaTime = timer.Delay();
+            const maxTime = 0.03;
+            const maxCount = 30;
+            if (this.mUpdate.mDeltaTime > 0.5) {
+                this.mUpdate.mDeltaTime = 0.001;
+                this.mUpdate.mFixedCount = 1;
+                this.mUpdate.mFixedTime = this.mUpdate.mDeltaTime;
+            }
+            else {
+                if (this.mUpdate.mDeltaTime > maxTime) {
+                    this.mUpdate.mFixedCount = Math.ceil(this.mUpdate.mDeltaTime / maxTime);
+                    if (this.mUpdate.mFixedCount > maxCount) {
+                        this.mUpdate.mDeltaTime = maxCount * maxTime;
+                        this.mUpdate.mFixedCount = maxCount;
+                    }
+                    this.mUpdate.mFixedTime = this.mUpdate.mDeltaTime / this.mUpdate.mFixedCount;
+                }
+                else {
+                    this.mUpdate.mFixedCount = 1;
+                    this.mUpdate.mFixedTime = this.mUpdate.mDeltaTime;
+                }
+            }
+            this.Update(this.mUpdate);
+            await CFrame.EventCall(this.GetEvent(CEvent.eType.Update), this.mUpdate);
+            await CFrame.EventCall(this.GetEvent(CEvent.eType.Fixed), this.mUpdate);
             if (this.mRenderProcess == null)
                 await CFrame.EventCall(this.GetEvent(CEvent.eType.Render));
             else
                 await this.mRenderProcess();
             requestAnimationFrame(this.mMainProcess);
-            if (subCall == false || subWDelay > 1000 * 3) {
-                CWASM.SetThread(true);
-                CFrame.EventCall(this.GetEvent(CEvent.eType.SubUpdate));
-                subWDelay = 0;
-            }
             CWASM.SetThread(false);
         };
         this.mSubProcess = (deadline) => {
@@ -516,6 +533,7 @@ export class CFrame {
                 this.mLoadChk = true;
             if (this.mLoadChk) {
                 await CFrame.EventCall(this.GetEvent(CEvent.eType.Init));
+                timer.Delay();
                 requestAnimationFrame(this.mMainProcess);
                 if ('requestIdleCallback' in window)
                     requestIdleCallback(this.mSubProcess);

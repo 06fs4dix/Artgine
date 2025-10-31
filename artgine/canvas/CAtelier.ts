@@ -15,6 +15,7 @@ import { CFrame } from "../util/CFrame.js";
 import { CScript } from "../util/CScript.js";
 import { CBrush } from "./CBrush.js";
 import { CCanvas } from "./CCanvas.js";
+import { CGeometryInfo } from "./component/CGeometryComp.js";
 
 /*
 저장된 파일 구성
@@ -34,6 +35,7 @@ export class CAtelier
 	mPF : CPreferences=new CPreferences();
 	mFrame : CFrame=null;
 	mBrush : CBrush=null;
+	mGI : CGeometryInfo=null;
 	mCanvasMap : Map<string,CCanvas>=new Map<string,CCanvas>();
 	//m_dev : CCanvasDev=null;
 	async Init(_canvas : Array<string>,_canvasHTMLKey="",_devTool=true)
@@ -57,6 +59,7 @@ export class CAtelier
 
 		this.mFrame = new CFrame(this.mPF,_canvasHTMLKey);
 		this.mBrush = new CBrush(this.mFrame);
+		this.mGI = new CGeometryInfo(this.mFrame);
 		
 		this.mBrush.mPause=true;
 		let script="";
@@ -72,7 +75,7 @@ export class CAtelier
 				this.mBrush.ImportJSON(json.brash)
 				for(let canJson of json.canvas)
 				{
-					let can=new CCanvas(this.mFrame,this.mBrush);
+					let can=new CCanvas(this.mFrame,this.mBrush,this.mGI);
 					can.ImportJSON(canJson);
 					this.mCanvasMap.set(can.Key(),can);
 					
@@ -89,7 +92,7 @@ export class CAtelier
 				{
 					if(key==null || key=="")	continue;
 
-					let can=new CCanvas(this.mFrame,this.mBrush);
+					let can=new CCanvas(this.mFrame,this.mBrush,this.mGI);
 					this.mCanvasMap.set(key,can);
 					
 					await can.LoadJSON("Canvas/"+key);
@@ -174,7 +177,7 @@ export class CAtelier
 	{
 		if(this.mCanvasMap.has(_key))	return;
 		
-		let can=new CCanvas(this.mFrame,this.mBrush);
+		let can=new CCanvas(this.mFrame,this.mBrush,this.mGI);
 		can.SetKey(_key);
 		this.mCanvasMap.set(_key,can);
 		//if(this.m_dev==null && this.m_frame!=null)

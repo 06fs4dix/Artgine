@@ -42,6 +42,7 @@ export class SDF {
     static eSkin = {
         None: 0,
         Bone: 1,
+        Bake: 2,
     };
     static eEnvCube = {
         None: -1,

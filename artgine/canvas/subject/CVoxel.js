@@ -234,8 +234,8 @@ export class CVoxel extends CSubject {
         };
         _div.append(button);
     }
-    SubjectUpdate(_delay) {
-        super.SubjectUpdate(_delay);
+    SubjectUpdate(_update) {
+        super.SubjectUpdate(_update);
         if (this.mAtlas.mBase64.mData == null) {
             return;
         }

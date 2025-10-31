@@ -187,14 +187,14 @@ export class CCamera extends CObject {
         this.PlaneSet();
         this.mReset = false;
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mCamCon != null) {
             this.mCamCon.InitCamera(this);
-            this.mCamCon.Update(_delay);
+            this.mCamCon.Update(_update);
         }
         if (this.mCamShake != null) {
             this.mCamShake.InitCamera(this);
-            this.mCamShake.Update(_delay);
+            this.mCamShake.Update(_update);
         }
         if (this.mReset) {
             if (this.mOrthographic)

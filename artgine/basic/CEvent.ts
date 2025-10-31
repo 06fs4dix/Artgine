@@ -104,6 +104,7 @@ export namespace CEvent
 		Load="Load",
 		Init="Init",
 		Update="Update",
+		Fixed="Fixed",
 		Render="Render",
 		Resize="Resize",
 		SubUpdate="SubUpdate",

@@ -81,8 +81,8 @@ export class CPaintTrail extends CPaint {
         this.mCanTex = CPaintTrail.eCanTex.Arrow;
         this.mRepeat = true;
     }
-    InitPaint() {
-        super.InitPaint();
+    InitChk() {
+        super.InitChk();
         if (this.mCanTex == CPaintTrail.eCanTex.Line) {
             var texKey = this.mCanTexOption[0] + "_" + this.mCanTexOption[0] + "line.tex";
             var tex = this.mOwner.GetFrame().Res().Find(texKey);
@@ -173,31 +173,31 @@ export class CPaintTrail extends CPaint {
     SetUVTimeLen(_isTimeLen = true) {
         this.mUVTimeLen = _isTimeLen;
     }
-    Update(_delay) {
+    Update(_update) {
         this.Camera();
-        super.Update(_delay);
+        super.Update(_update);
         if (this.mStaticPos) {
             return;
         }
-        if (_delay > 1000)
+        if (_update.DeltaMil() > 1000)
             return;
         var pos = this.mOwner.GetWMat().xyz;
         let size = (this.mLen / 2);
-        this.mSumTime += _delay;
+        this.mSumTime += _update.DeltaMil();
         if (this.mStartTime > 0) {
-            this.mStartTime -= _delay;
+            this.mStartTime -= _update.DeltaMil();
             if (this.mVList.length == 0) {
                 if (this.mPosList[this.mPosList.length - 1].Equals(pos) == false) {
                     let nvec = CMath.V3SubV3(pos, this.mPosList[this.mPosList.length - 1]);
                     this.mVList.push(CMath.V3Nor(nvec));
                     this.mPosList.push(pos);
                     this.mPCnt.push(1);
-                    this.mTCnt.push(_delay);
+                    this.mTCnt.push(_update.DeltaMil());
                     this.mLastLinelen += CMath.V3Len(CMath.V3SubV3(pos, this.mPosList[this.mPosList.length - 1]));
                     this.mLastVec = CMath.V3Nor(nvec);
                 }
                 else {
-                    this.mSumTime -= _delay;
+                    this.mSumTime -= _update.DeltaMil();
                 }
             }
             else {
@@ -212,7 +212,7 @@ export class CPaintTrail extends CPaint {
                         this.mPosList.push(pos);
                         this.mVList.push(nowvec);
                         this.mPCnt.push(1);
-                        this.mTCnt.push(_delay);
+                        this.mTCnt.push(_update.DeltaMil());
                         this.mLastLinelen += CMath.V3Len(nvec);
                         if (this.mLastLinelen > (size * 2) * this.mEGFar) {
                             let delen = CMath.V3Len(CMath.V3SubV3(this.mPosList[this.mLastLinePos + 1], this.mPosList[this.mLastLinePos + 2]));
@@ -235,7 +235,7 @@ export class CPaintTrail extends CPaint {
                             this.mVList.push(CMath.V3Nor(CMath.V3SubV3(pos, this.mPosList[this.mPosList.length - 1])));
                             this.mPosList.push(pos);
                             this.mPCnt.push(1);
-                            this.mTCnt.push(_delay);
+                            this.mTCnt.push(_update.DeltaMil());
                             this.mInCurve = true;
                         }
                         else {
@@ -247,7 +247,7 @@ export class CPaintTrail extends CPaint {
                             for (let i = 0; i < edCnt; i++) {
                                 this.mPosList.push(pos);
                                 this.mPCnt.push(1);
-                                this.mTCnt.push(_delay / edCnt);
+                                this.mTCnt.push(_update.DeltaMil() / edCnt);
                                 this.mVList.push((CUtilMath.Bezier(vArr, i / (edCnt - 1), 0, 0)));
                             }
                             this.mLastLinelen = 0;
@@ -302,7 +302,7 @@ export class CPaintTrail extends CPaint {
                     this.mVList.push(CMath.V3Nor(CMath.V3SubV3(pos, this.mPosList[this.mPosList.length - 1])));
                     this.mPosList.push(pos);
                     this.mPCnt.push(1);
-                    this.mTCnt.push(_delay);
+                    this.mTCnt.push(_update.DeltaMil());
                     if (success > 0) {
                         this.mInCurve = false;
                         let sumtC = 0;
@@ -528,7 +528,7 @@ export class CPaintTrail extends CPaint {
     }
     SetLastHide(_enabel) {
         this.mLastHide = _enabel;
-        this.BatchClear();
+        this.ClearBatch();
     }
     Render(_vf) {
         var barr = this.RenderBatch(_vf, 1);
@@ -542,7 +542,7 @@ export class CPaintTrail extends CPaint {
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(1.0)));
         else
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(0.0)));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
         var dm = this.GetDrawMesh("CPaintTrail", _vf);
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();

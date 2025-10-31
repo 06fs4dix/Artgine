@@ -1,3 +1,4 @@
+import { CUpdate } from "../../basic/Basic.js";
 import { CJSON } from "../../basic/CJSON.js";
 import { CObject } from "../../basic/CObject.js";
 import {CString} from "../../basic/CString.js";
@@ -57,10 +58,17 @@ export class CComponent extends CObject
 			this.mComMsg.push(_msg);
 		this.mComMsgLen++;	
 	}
-	
-	Update(_delay) : boolean|any
+	Fixed(_update : CUpdate)
+	{
+
+	}
+	Update(_update : CUpdate) : boolean|any
 	{
 		
+	}
+	Build()
+	{
+
 	}
 	SubUpdate()
 	{
@@ -135,14 +143,14 @@ export class CComponent extends CObject
 		return this.mDestroy;	
 	}
 	//체크는 더 상위이다. 로드가 덜되었는지 체크하는게 스타트랑 차이점
-	StartChk()
+	StartChk() : boolean
 	{
 		if(this.mStartChk==true)
 		{
 			this.mStartChk=false;
-			this.Start();
+			return true;
 		}
-		//return this.mStartChk;
+		return false;
 	}
 	//스타트는 업데이트 전에 최초 한번만 호출
 	Start(){}

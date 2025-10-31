@@ -5,7 +5,7 @@ import { CMath } from "../../geometry/CMath.js";
 import { CPhysics } from "../component/CPhysics.js";
 import { CString } from "../../basic/CString.js";
 var yPath = true;
-export class CRigidBody extends CComponent {
+export class CRigidBody extends CGeometryComp {
     mForceArr = new Array();
     mForceGravity = null;
     mStopover = null;
@@ -43,6 +43,10 @@ export class CRigidBody extends CComponent {
             return true;
         return super.IsShould(_member, _type);
     }
+    Update(_update) {
+        if (this.mGI != null)
+            this.mGI.mFixedComp.Push(this);
+    }
     GetMoveQue() { return this.mForceArr; }
     GetMoveQueGravity() {
         for (let each1 of this.mForceArr)
@@ -50,7 +54,7 @@ export class CRigidBody extends CComponent {
                 return each1;
         return null;
     }
-    Update(_delay) {
+    Fixed(_update) {
     }
     deltacount = 0;
     Push(move, duplication = false) {
@@ -145,4 +149,5 @@ export class CRigidBody extends CComponent {
     }
 }
 import CRigidBody_imple from "../../canvas_imple/component/CRigidBody.js";
+import { CGeometryComp } from "./CGeometryComp.js";
 CRigidBody_imple();

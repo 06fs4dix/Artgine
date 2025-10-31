@@ -185,7 +185,7 @@ export class CModal {
     IsPause() {
         return this.mPause;
     }
-    Update(_delay) { }
+    Update(_update) { }
     Key() {
         if (this.mKey == null)
             this.mKey = CUniqueID.Get();

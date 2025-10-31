@@ -24,6 +24,7 @@ import { CChecker } from "./CChecker.js"
 import { CFile } from "../system/CFile.js"
 import { CConsol } from "../basic/CConsol.js"
 import { CParserOBJ } from "./parser/CParserOBJ.js"
+import CParserSpine from "./parser/CParserSpine.js"
 //https://github.com/JordiRos/GLGif
 //gif animation은 이걸로
 
@@ -631,19 +632,20 @@ export class CLoader
 	{
 		var str=CUtil.ArrayToString(_buffer);
 		var jData=new CJSON(str);
-		this.mRes.Push(_file,jData);
+
+		if(jData.Get("skeleton")!=null)
+		{
+			var par :CParserSpine=new CParserSpine();
+			par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
+			await par.Load(_file);
+			var mesh : CMesh = par.GetResult();
+			this.mRes.Push(_file,mesh);
+
+		}
+		else
+			this.mRes.Push(_file,jData);
 	}
-	// private async Base64Load(_file : string,_buffer : ArrayBuffer,_op : CLoaderOption)
-	// {
-	// 	var base64=new CBase64File();
-	// 	var enc = new TextDecoder("utf-8");		
-	// 	base64.m_file=enc.decode(new Uint8Array(_buffer,0,128));
-	// 	if(this.IsLoad(base64.m_file))	return new Promise((resolve, reject)=>{resolve("");});;
-	// 	base64.m_option=JSON.parse(enc.decode(new Uint8Array(_buffer,0,512)));
-	// 	base64.m_data=new Uint8Array(_buffer,0,(_buffer.byteLength-512-128));
-		
-	// 	return this.LoadSwitch(base64.m_file,base64.m_data,base64.m_option);
-	// }
+
 
 	//동적 로드인데 버퍼로는 안되고 파일명으로만 가능
 	private async JSLoad(_file : string)

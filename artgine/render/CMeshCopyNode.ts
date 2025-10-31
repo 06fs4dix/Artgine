@@ -14,13 +14,14 @@ export class CMeshCopyNode
 	public pos : CVec3;
 	public rot : CVec4;
 	public sca : CVec3;
+	public CA : CVec4;
 	public pst : CMat;
 	public updateMat=CUpdate.eType.Not;
 	public FMatAtt : boolean;
 	//public all : CMat;
 	
 	public textureOff : Array<number>;
-	public materialOff : Array<number>;
+	//public materialOff : Array<number>;
 	
 	constructor()
 	{
@@ -32,10 +33,11 @@ export class CMeshCopyNode
 		this.rot=new CVec4();
 		this.sca=new CVec3();
 		this.pst=new CMat();
+		this.CA=new CVec4(1,1,1,1);
 		//this.all=new CMat();
 		
 		this.textureOff=new Array();
-		this.materialOff=new Array();
+		//this.materialOff=new Array();
 		this.FMatAtt=false;
 	}
 	PRSReset()
@@ -62,6 +64,7 @@ export class CMeshCopyNode
 		this.pst.mF32A[14] = this.pos.z;
 		this.pst.UnitCheck();
 		this.updateMat=CUpdate.eType.Updated;
+		this.CA=this.CA;
 		
 	}
 }

@@ -23,18 +23,20 @@ export class CBatch
 {
 	public mKey : number=null;
 	public mMesh : CMeshDrawNode=null;
-	public mTexture = new Array<string>();
-	public mTexOff = new Array<number>();
-	public mTexAtt = new Array<number>();
+	public mTexture = new Array<CTexture>();
 	public mValue = new Array<CShaderAttr>();
 	
 
 	CreateKey()
 	{
 		var str=this.mMesh.Key();
-		for(var i=0;i<this.mTexOff.length;++i)
+		for(var i=0;i<this.mTexture.length;++i)
 		{
-			str+=this.mTexture[this.mTexOff[i]];
+			if(this.mTexture[i]==null)
+				str+="null";
+			else
+				str+=this.mTexture[i].Key();
+			str+="/";
 		}
 		for(let i=0;i<this.mValue.length;++i)
 			str+=this.mValue[i].mKey;
@@ -192,6 +194,20 @@ export class CBatchMgr
 			}
 			if(val.mData.length==0)
 				this.mBaSortArr.Push(val);
+
+			//이거 지워야함 20251030 테스트용 !!!!!!!!!!!!!!!!!!!!!!!
+			if(val.mData.length>0)
+			{
+				if(val.mData[0].mValue.length!=batch.mValue.length)
+				{
+					
+					CAlert.E("test!!!!!!!!!!!!!!!!"+batch.mKey);
+					batch.CreateKey();
+					val.mData[0].CreateKey();
+
+				}
+			}
+
 			val.mData.push(batch);	
 		}
 		return null;
@@ -202,27 +218,9 @@ export class CBatchMgr
     {
         this.mBatch.mValue.push(_sa);
     }
-    SetBatchTex(_texture : Array<string>,_textureOff : Array<number>=null,_attach : Array<number>=null)
+    SetBatchTex(_texture : Array<CTexture>)
     {
         this.mBatch.mTexture=_texture;
-		if(_textureOff==null)
-		{
-			this.mBatch.mTexOff=new Array<number>();
-			for (var i = 0; i < _texture.length; ++i)
-					this.mBatch.mTexOff.push(i);
-		}
-		else
-		{
-			if(_textureOff.length<_texture.length)
-			{
-				for (var i = _textureOff.length; i < _texture.length; ++i)
-					_textureOff.push(i);
-			}
-			
-			this.mBatch.mTexOff=_textureOff;
-		}
-        	
-        this.mBatch.mTexAtt=_attach;
     }
     SetBatchMesh(_mesh : CMeshDrawNode)
     {
@@ -248,4 +246,5 @@ export class CBatchMgrGL extends CBatchMgr
 	}
 }
 import CBatchMgr_imple from "../render_imple/CBatchMgr.js";
+import { CAlert } from "../basic/CAlert.js";
 CBatchMgr_imple();

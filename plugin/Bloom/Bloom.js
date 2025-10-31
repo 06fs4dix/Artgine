@@ -232,7 +232,7 @@ export class CSurfaceBloom extends CSurface {
         let msg = this.NewOutMsg("ClearBatch");
         msg.mInter = "canvas";
     }
-    Update(_delay) {
+    Update(_update) {
     }
     Export(_copy, _resetKey) {
         const watch = super.Export(_copy, _resetKey);

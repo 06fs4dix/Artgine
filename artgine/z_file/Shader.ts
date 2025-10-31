@@ -219,6 +219,7 @@ export function FloatMulMat(_val : number,_mat : CMat) : CMat{    return new CMa
 export function MatAdd(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
 export function MatMul(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
 export function Mat34ToMat(_mat : CMat34) : CMat { return new CMat(0); }
+export function MatMix(_a : CMat, _b : CMat, _c : number) : CMat { return new CMat(0);}
 
 
 //mat3

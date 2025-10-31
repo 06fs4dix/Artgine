@@ -1,3 +1,4 @@
+import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CJSON } from "../../artgine/basic/CJSON.js";
 import { CBlackBoardRef, CObject, CPointer } from "../../artgine/basic/CObject.js";
@@ -34,8 +35,8 @@ class CIK extends CComponent
         this.mSysc = CComponent.eSysn.IK;
     }
 
-    Update(_delay: any): void {
-        super.Update(_delay);
+    Update(_update : CUpdate): void {
+        super.Update(_update);
 
         this.SetPaint();
         this.SetBone();
@@ -307,8 +308,8 @@ export class CIKReach extends CIK
         }
     }
 
-    Update(_delay: any): void {
-        super.Update(_delay);
+    Update(_update : CUpdate): void {
+        super.Update(_update);
 
         // 본 세팅이 되지 않았으면 리턴
         if(this.m_numOfBones != this.m_bones.length) {
@@ -443,8 +444,8 @@ export class CIKLook extends CIK
         const ptPos = this.GetIKPos();
         this.m_startDir = CMath.V3SubV3(ptPos, bonePos);
     }
-    Update(_delay: any): void {
-        super.Update(_delay);
+    Update(_update : CUpdate): void {
+        super.Update(_update);
 
         if(!this.m_tipBone) {
             return;

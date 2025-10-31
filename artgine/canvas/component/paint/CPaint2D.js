@@ -33,7 +33,6 @@ export class CPaint2D extends CPaint {
     mStopPos = new CVec3();
     mRemoveSpeed = 1;
     mPosList = null;
-    mWMatMul = true;
     mLastHide = true;
     mWindInfluence = new CVec1(0.0);
     IsShould(_member, _type) {
@@ -95,7 +94,7 @@ export class CPaint2D extends CPaint {
         else if (this.mTexture.length == 2) {
             this.mTexture[1] = _tex;
         }
-        this.BatchClear();
+        this.ClearBatch();
         this.PushTag("normalMap");
     }
     EditDrop(_object) {
@@ -132,7 +131,7 @@ export class CPaint2D extends CPaint {
                 window["AniTool"](ani, this.mTexture[0]);
                 window["AniToolTexcodiEvent"](this, () => {
                     this.EditRefresh();
-                    this.BatchClear();
+                    this.ClearBatch();
                 });
             }
         };
@@ -152,9 +151,9 @@ export class CPaint2D extends CPaint {
     SetYSortOrigin(_origin) {
         this.mYSortOrigin = _origin;
     }
-    Update(_delay) {
+    Update(_update) {
         this.SizeCac();
-        super.Update(_delay);
+        super.Update(_update);
         if (this.mUpdateFMat == true) {
             if (this.mYSort == true) {
                 const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
@@ -167,30 +166,78 @@ export class CPaint2D extends CPaint {
                 this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
             }
         }
-        if (_delay > 1000 || this.mTag.has("tail") == false || this.mSize == null)
+        if (_update.DeltaTime() > 1 || this.mTag.has("tail") == false || this.mSize == null)
             return;
-        this.Camera();
-        if (this.mPosList == null) {
+        if (this.mUpdateFMat == false)
+            return;
+        this.mBound.Reset();
+        this.mBound.SetType(CBound.eType.Box);
+        if (this.mTag.has("billboard")) {
             let pos = CPoolGeo.ProductV3();
             pos.mF32A[0] = this.mOwner.GetWMat().mF32A[12];
             pos.mF32A[1] = this.mOwner.GetWMat().mF32A[13];
             pos.mF32A[2] = this.mOwner.GetWMat().mF32A[14];
-            var v0 = CMath.V3SubV3(pos, this.mBeforePos);
-            if (v0.IsZero()) {
+            CMath.V3SubV3(pos, this.mBeforePos, pos);
+            if (pos.IsZero()) {
                 CPoolGeo.RecycleV3(pos);
                 return;
             }
-            var len = CMath.V3Len(v0);
+            var len = CMath.V3Len(pos);
             if (len > this.mSize.y)
-                this.mBeforePos = CMath.V3AddV3(pos, CMath.V3MulFloat(CMath.V3Nor(v0), -this.mSize.y));
+                CMath.V3AddV3(pos, CMath.V3MulFloat(CMath.V3Nor(pos), -this.mSize.y), this.mBeforePos);
             if (len < 0.001) {
-                this.mBeforePos = pos;
+                this.mBeforePos.Import(pos);
             }
             else if (this.mStopPos.Equals(pos)) {
-                this.mBeforePos = CMath.V3AddV3(CMath.V3MulFloat(pos, _delay / 100 * this.mRemoveSpeed), CMath.V3MulFloat(this.mBeforePos, 1 - _delay / 100 * this.mRemoveSpeed));
+                CMath.V3AddV3(CMath.V3MulFloat(pos, _update.DeltaTime() * this.mRemoveSpeed), CMath.V3MulFloat(this.mBeforePos, 1 - _update.DeltaMil() * this.mRemoveSpeed), this.mBeforePos);
             }
             this.mStopPos.Import(pos);
             CPoolGeo.RecycleV3(pos);
+            let L_nor = new CVec3();
+            let st = new CVec3(), ed = new CVec3();
+            st = this.GetFMat().xyz;
+            CMath.V3AddV3(this.mPos, st, st);
+            ed = this.mBeforePos;
+            CMath.V3AddV3(this.mPos, ed, ed);
+            let v = new CVec3();
+            L_nor = CMath.V3Cross(this.mRenPT[0].mCam.GetView(), CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
+            CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)), v);
+            this.mBound.InitBound(v);
+            this.GetFMat().SetV3(0, v);
+            CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)), v);
+            this.mBound.InitBound(v);
+            this.GetFMat().SetV3(1, v);
+            CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)), v);
+            this.mBound.InitBound(v);
+            this.GetFMat().SetV3(2, v);
+            CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)), v);
+            this.mBound.InitBound(v);
+            this.GetFMat().SetV3(3, v);
+            if (this.mLastHide) {
+                this.mFMat.mF32A[3] = 1;
+                this.mFMat.mF32A[7] = 1;
+                this.mFMat.mF32A[11] = 0;
+                this.mFMat.mF32A[15] = 0;
+            }
+            else {
+                this.mFMat.mF32A[3] = 1;
+                this.mFMat.mF32A[7] = 1;
+                this.mFMat.mF32A[11] = 1;
+                this.mFMat.mF32A[15] = 1;
+            }
+        }
+        else {
+            let pos = this.GetFMat().xyz;
+            let v = new CVec3();
+            for (let i = 0; i < 4; ++i) {
+                CMath.V3AddV3(this.mPosList[i], pos, v);
+                this.mBound.InitBound(v);
+                this.GetFMat().SetV3(i, v);
+            }
+            this.mFMat.mF32A[3] = 1;
+            this.mFMat.mF32A[7] = 1;
+            this.mFMat.mF32A[11] = 1;
+            this.mFMat.mF32A[15] = 1;
         }
     }
     Prefab(_owner) {
@@ -287,6 +334,9 @@ export class CPaint2D extends CPaint {
     GetTexCodi() {
         return this.mTexCodi;
     }
+    GetMesh() {
+        return null;
+    }
     GetLeftTopRightBottom(_frame) {
         const tex = _frame.Res().Find(this.mTexture[0]);
         if (tex == null || (tex.GetWidth() == 1 && tex.GetHeight() == 1))
@@ -322,7 +372,7 @@ export class CPaint2D extends CPaint {
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
         if (_vf.mUniform.get("windInfluence") != null)
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
         var dm = this.GetDrawMesh("Artgine/DM/2D", _vf, this.mOwner.GetFrame().Pal().MCI2D());
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
@@ -390,7 +440,7 @@ export class CPaint2D extends CPaint {
     Tail() {
         if (this.mTag.has("tail") == false) {
             this.PushTag("tail");
-            this.BatchClear();
+            this.ClearBatch();
             this.mUpdateLMat = true;
         }
     }
@@ -414,87 +464,6 @@ export class CPaint2D extends CPaint {
             this.mBound.InitBound(this.mPosList);
             this.mBound.SetType(CBound.eType.Box);
         }
-    }
-    Camera() {
-        if (this.mPosList != null) {
-            this.mBound.Reset();
-            this.mBound.InitBound(this.mPosList);
-            this.mBound.SetType(CBound.eType.Box);
-            if (this.mUpdateFMat == false)
-                return;
-            if (this.mWMatMul == false) {
-                this.GetFMat().SetV3(0, this.mPosList[0]);
-                this.GetFMat().SetV3(1, this.mPosList[1]);
-                this.GetFMat().SetV3(2, this.mPosList[2]);
-                this.GetFMat().SetV3(3, this.mPosList[3]);
-            }
-            else {
-                let v0 = CPoolGeo.ProductV3();
-                let v1 = CPoolGeo.ProductV3();
-                let v2 = CPoolGeo.ProductV3();
-                let v3 = CPoolGeo.ProductV3();
-                let vd = CPoolGeo.ProductV3();
-                let pos = this.GetFMat().xyz;
-                this.mFMat.mF32A[0] = 1;
-                this.mFMat.mF32A[5] = 1;
-                this.mFMat.mF32A[10] = 1;
-                this.CacBound();
-                CMath.V3AddV3(this.mPosList[0], pos, v0);
-                CMath.V3AddV3(this.mPosList[1], pos, v1);
-                CMath.V3AddV3(this.mPosList[2], pos, v2);
-                CMath.V3AddV3(this.mPosList[3], pos, v3);
-                this.GetFMat().SetV3(0, v0);
-                this.GetFMat().SetV3(1, v1);
-                this.GetFMat().SetV3(2, v2);
-                this.GetFMat().SetV3(3, v3);
-                CPoolGeo.RecycleV3(v0);
-                CPoolGeo.RecycleV3(v1);
-                CPoolGeo.RecycleV3(v2);
-                CPoolGeo.RecycleV3(v3);
-                CPoolGeo.RecycleV3(vd);
-            }
-            this.mFMat.mF32A[3] = 1;
-            this.mFMat.mF32A[7] = 1;
-            this.mFMat.mF32A[11] = 1;
-            this.mFMat.mF32A[15] = 1;
-            return;
-        }
-        if (this.mRenPT.length == 0)
-            return;
-        var L_nor = new CVec3();
-        var st = new CVec3(), ed = new CVec3();
-        if (this.mTag.has("billboard")) {
-            CAlert.W("tail billboard not!");
-        }
-        st = this.GetFMat().xyz;
-        CMath.V3AddV3(this.mPos, st, st);
-        ed = this.mBeforePos;
-        CMath.V3AddV3(this.mPos, ed, ed);
-        L_nor = CMath.V3Cross(this.mRenPT[0].mCam.GetView(), CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
-        let v0 = CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-        let v1 = CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-        let v2 = CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-        let v3 = CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-        this.GetFMat().SetV3(0, v0);
-        this.GetFMat().SetV3(1, v1);
-        this.GetFMat().SetV3(2, v2);
-        this.GetFMat().SetV3(3, v3);
-        if (this.mLastHide) {
-            this.mFMat.mF32A[3] = 1;
-            this.mFMat.mF32A[7] = 1;
-            this.mFMat.mF32A[11] = 0;
-            this.mFMat.mF32A[15] = 0;
-        }
-        else {
-            this.mFMat.mF32A[3] = 1;
-            this.mFMat.mF32A[7] = 1;
-            this.mFMat.mF32A[11] = 1;
-            this.mFMat.mF32A[15] = 1;
-        }
-        this.mBound.Reset();
-        this.mBound.InitBound(CUtilRender.Mesh2DSize);
-        this.mBound.SetType(CBound.eType.Box);
-        this.mUpdateLMat = true;
     }
 }
 export class CPaintHTML extends CPaint2D {

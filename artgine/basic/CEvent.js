@@ -82,6 +82,7 @@ export class CEvent {
         eType["Load"] = "Load";
         eType["Init"] = "Init";
         eType["Update"] = "Update";
+        eType["Fixed"] = "Fixed";
         eType["Render"] = "Render";
         eType["Resize"] = "Resize";
         eType["SubUpdate"] = "SubUpdate";

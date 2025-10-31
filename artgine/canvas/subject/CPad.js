@@ -263,8 +263,8 @@ export class CPad extends CSubject {
     SetPad(_type) {
         this.mPadType = _type;
     }
-    SubjectUpdate(_delay) {
-        super.SubjectUpdate(_delay);
+    SubjectUpdate(_update) {
+        super.SubjectUpdate(_update);
         if (this.mStick.length != 0 || this.mButton.length != 0) {
             this.mDir.Zero();
             if (this.mStickType == CPad.eStickType.Cross) {

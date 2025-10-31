@@ -979,16 +979,15 @@ export class CShaderInterpretGL extends CShaderInterpret {
         str += "	return newUv;\n";
         str += "}\n";
         str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
-        str += "	vec2 size = vec2(" + CDevice.GetProperty(CDevice.eProperty.Sam2DSize) + ".0, " + CDevice.GetProperty(CDevice.eProperty.Sam2DSize) + ".0);\n";
         str += "	if(_uni.x-0.5<=0.0) {";
-        str += "		return texture(sam2D[0],vec2(_off+0.5,_uni.y+0.5)/size);\n";
-        str += "	}";
+        str += "		return texelFetch(sam2D[0],ivec2(int(_off),int(_uni.y)),0);";
+        str += "	}\n";
         for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j) {
             str += "	else if(_uni.x-0.5<=" + j + ".0) {";
-            str += "		return texture(sam2D[" + j + "],vec2(_off+0.5,_uni.y+0.5)/size);\n";
-            str += "	}";
+            str += "		return texelFetch(sam2D[" + j + "],ivec2(int(_off),int(_uni.y)),0);";
+            str += "	}\n";
         }
-        str += "	return texture(sam2D[0],vec2(_off+0.5,_uni.y+0.5)/size);\n";
+        str += "	return texelFetch(sam2D[0],ivec2(0.0,0.0),0);\n";
         str += "}\n";
         str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
         str += "	return Sam2DToV4(_uni,float(_off));\n";
@@ -999,6 +998,13 @@ export class CShaderInterpretGL extends CShaderInterpret {
         str += "Sam2DToV4(_uni,_off*4.0+1.0),\n";
         str += "Sam2DToV4(_uni,_off*4.0+2.0),\n";
         str += "Sam2DToV4(_uni,_off*4.0+3.0)\n";
+        str += ");}\n";
+        str += "mat4 MatMix(mat4 _a, mat4 _b, float _t) {\n";
+        str += "return mat4(\n";
+        str += "mix(_a[0], _b[0], _t),\n";
+        str += "mix(_a[1], _b[1], _t),\n";
+        str += "mix(_a[2], _b[2], _t),\n";
+        str += "mix(_a[3], _b[3], _t)\n";
         str += ");}\n";
         return str;
     }

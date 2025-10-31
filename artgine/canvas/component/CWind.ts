@@ -1,3 +1,4 @@
+import { CUpdate } from "../../basic/Basic.js";
 import {CVec3} from "../../geometry/CVec3.js";
 import {CDevice} from "../../render/CDevice.js";
 import {CBrush} from "../CBrush.js";
@@ -54,9 +55,9 @@ export class CWind extends CBrushComp
         return "bi bi-wind";
     }
 
-    override Update(_delay) : boolean
+    override Update(_update : CUpdate) : boolean
 	{
-        if(super.Update(_delay))    return;
+        if(super.Update(_update))    return;
 
         
         //if(this.mBruch.mDoubleChk.has(this))	return;

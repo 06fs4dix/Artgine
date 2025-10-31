@@ -33,8 +33,8 @@ export class CWind extends CBrushComp {
     Icon() {
         return "bi bi-wind";
     }
-    Update(_delay) {
-        if (super.Update(_delay))
+    Update(_update) {
+        if (super.Update(_update))
             return;
         if (this.mBruch.mWindCount > CDevice.GetProperty(CDevice.eProperty.Sam2DSize))
             return;

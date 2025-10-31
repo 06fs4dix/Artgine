@@ -15,8 +15,8 @@ export class CSocketAttacher extends CComponent {
         this.m_target = _targetRef;
         this.mSysc = CComponent.eSysn.Event;
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         this.SetPaint();
         this.SetBone();
         if (this.m_nodemp != null) {

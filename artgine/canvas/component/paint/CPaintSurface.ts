@@ -1,3 +1,4 @@
+import { CUpdate } from "../../../basic/Basic.js";
 import { CVec2 } from "../../../geometry/CVec2.js";
 import { CRenderPass } from "../../../render/CRenderPass.js";
 import { CShader } from "../../../render/CShader.js";
@@ -25,9 +26,9 @@ export class CPaintSurface extends CPaint
         }
         this.mBoundFMatR=0xffffffff;
     }
-    InitPaint()
+    InitChk()
     {
-        super.InitPaint();
+        super.InitChk();
 
         this.mBoundFMatR=0xffffffff;
     }
@@ -44,7 +45,7 @@ export class CPaintSurface extends CPaint
         // }
         
     }
-    Update(_delay)
+    Update(_update : CUpdate)
     {
         
         if(this.mRenPT.length==0)
@@ -59,7 +60,7 @@ export class CPaintSurface extends CPaint
         this.mOwner.GetFrame().BMgr().BatchOn();
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture );
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
         var dm=this.GetDrawMesh("Artgine/DM/Surface",_vf,this.mOwner.GetFrame().Pal().MCI2D());
         this.mOwner.GetFrame().BMgr().SetBatchMesh( dm);
 

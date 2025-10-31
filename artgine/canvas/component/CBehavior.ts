@@ -1,4 +1,5 @@
 
+import { CUpdate } from "../../basic/Basic.js";
 import { CObject } from "../../basic/CObject.js";
 import {CPlaneInside} from "../../geometry/CPlaneInside.js";
 import {CVec3} from "../../geometry/CVec3.js";
@@ -12,7 +13,7 @@ export default class CBehavior extends CComponent
     Start(): void {
         
     }
-    Update(_delay: any): void 
+    Update(_update : CUpdate): void 
     {
         
     }

@@ -1,4 +1,5 @@
 
+import { CUpdate } from "../basic/Basic.js";
 import { Bootstrap } from "../basic/Bootstrap.js";
 import { CEvent } from "../basic/CEvent.js";
 import {CModal} from "../basic/CModal.js";
@@ -213,7 +214,8 @@ export class CTooltip extends CModal
         });
     }
 
-    public Update(_delay: any): void {
+    public Update(_update : CUpdate): void 
+    {
         if(this.mRefDummy && this.mAttach instanceof HTMLTextAreaElement) {
             let pos = GetAttachPosition(this.mAttach);
             if(this.mRefDummy.m_original[0] != pos[0] || this.mRefDummy.m_original[1] != pos[1]) {

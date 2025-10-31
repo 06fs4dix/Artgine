@@ -39,7 +39,7 @@ export class CLightPlanet extends CLight {
     Push(_dc) {
         this.mDCArr.push(_dc);
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mBruch != null && this.mDCArr.length != 0) {
             let fOff = -1, sOff = -1;
             let fVal = -2, sVal = -2;
@@ -87,6 +87,6 @@ export class CLightPlanet extends CLight {
             this.mColor.xyz = this.mTempColor.ToRGBA().xyz;
             this.mDirPos.w = -1;
         }
-        super.Update(_delay);
+        super.Update(_update);
     }
 }

@@ -10,7 +10,7 @@ import { CTree } from "../../artgine/basic/CTree.js";
 import { CCollider } from "../../artgine/canvas/component/CCollider.js";
 import { CComponent } from "../../artgine/canvas/component/CComponent.js";
 import { CForce } from "../../artgine/canvas/component/CForce.js";
-import { CGlobalGeometryInfo } from "../../artgine/canvas/component/CGlobalGeometryInfo.js";
+
 import { CRigidBody } from "../../artgine/canvas/component/CRigidBody.js";
 import { CStopover } from "../../artgine/canvas/component/CStopover.js";
 import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
@@ -136,9 +136,9 @@ export class CRapierCollider extends CCollider
         if(this.mStartChk==true)
         {
             this.mStartChk=false;
-		    this.Start();   
+		    return true;
         }
-		
+		return false;
     }
     InitBound(_bound : CBound);
 	InitBound(_paint : CPaint);
@@ -224,7 +224,7 @@ export class CRapierCollider extends CCollider
             this.mDensity=null;
         }
     }
-    Update(_delay: any): void {
+    Update(_update : CUpdate): void {
         //super.Update(_delay);
 
         if(this.mPaintLoad!=null ||this.mCL==null)
@@ -313,7 +313,7 @@ export class CRapierRigidBody extends CRigidBody
 		this.mRB.setEnabledRotations(!_x, !_y, !_z, true);
 	}
     
-    Update(_delay: any): void {
+    Update(_update : CUpdate): void {
         //super.Update(_delay);
         if(this.mLateImpulse!=null)
         {

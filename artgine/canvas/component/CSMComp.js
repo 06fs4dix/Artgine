@@ -8,8 +8,8 @@ export class CSMComp extends CComponent {
     mSM = new CStateMachine;
     mNameSet = new Set();
     mLastDir = null;
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         for (let com of this.GetOwner().mComArr) {
             if (com instanceof CRigidBody) {
                 for (let f of com.mForceArr) {
@@ -92,7 +92,7 @@ export class CSMComp extends CComponent {
         if (this.mNameSet.size == 0)
             this.mSM.GetState()["Default"] = 1;
         this.mSM.PatternUpdate();
-        this.mSM.ExcuteListUpdate(this.GetOwner(), _delay);
+        this.mSM.ExcuteListUpdate(this.GetOwner(), _update.DeltaTime());
         for (let name of this.mNameSet) {
             this.mSM.GetState()[name] = 0;
         }

@@ -8,6 +8,7 @@ import {CForce} from "../component/CForce.js";
 import {CCurve} from "../../util/CCurve.js";
 import { CObject } from "../../basic/CObject.js";
 import { CUniqueID } from "../../basic/CUniqueID.js";
+import { CUpdate } from "../../basic/Basic.js";
 
 
 export class CParticleShape extends CObject
@@ -188,8 +189,8 @@ export class CParticle extends CSubject
 	constructor()
 	{
 		super();
-		this.mTimer.mDelay=100;
-		this.mTimer.mEnd=1000*60*60;
+		this.mTimer.mDelay=0.1;
+		this.mTimer.mEnd=1*60*60;
 
 	}
 	// SetCrateTime(_time)
@@ -205,11 +206,11 @@ export class CParticle extends CSubject
 		this.mShape=_shape;
 	}
 
-	SubjectUpdate(_delay)
+	SubjectUpdate(_update : CUpdate)
 	{
-		super.SubjectUpdate(_delay);
+		super.SubjectUpdate(_update);
 		
-		if(this.mTimer.Excute(_delay)==false || this.mSample==null)	return;
+		if(this.mTimer.Excute(_update.DeltaTime())==false || this.mSample==null)	return;
 			
 		
 		

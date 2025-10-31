@@ -117,13 +117,13 @@ export class CBrush extends CObject {
     ClearRen() {
         for (let value of this.mRenPriMap.values()) {
             for (let i = 0; i < value.mAlphaList.Size(); ++i) {
-                value.mAlphaList.Find(i).mPaint.BatchClear();
+                value.mAlphaList.Find(i).mPaint.ClearBatch();
             }
             for (let i = 0; i < value.mDistanceList.Size(); ++i) {
-                value.mDistanceList.Find(i).mPaint.BatchClear();
+                value.mDistanceList.Find(i).mPaint.ClearBatch();
             }
             for (let i = 0; i < value.mRAlphaList.Size(); ++i) {
-                value.mRAlphaList.Find(i).mPaint.BatchClear();
+                value.mRAlphaList.Find(i).mPaint.ClearBatch();
             }
         }
         this.mRenInfoMap.clear();
@@ -184,7 +184,7 @@ export class CBrush extends CObject {
             this.mCam2d.ResetOrthographic();
         }
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mPause != true) {
             if (this.mAutoRPUpdate == CUpdate.eType.Updated)
                 this.mAutoRPUpdate = CUpdate.eType.Already;
@@ -200,7 +200,7 @@ export class CBrush extends CObject {
             if (this.mFrame.Win().IsResize()) {
                 cam.mReset = true;
             }
-            cam.Update(_delay);
+            cam.Update(_update);
         }
         if (this.mCam2d != null) {
             if (this.mFrame.Win().IsResize()) {

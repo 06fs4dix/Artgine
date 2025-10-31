@@ -15,6 +15,7 @@ import { CParserIMG } from "./parser/CParserIMG.js";
 import { CChecker } from "./CChecker.js";
 import { CFile } from "../system/CFile.js";
 import { CParserOBJ } from "./parser/CParserOBJ.js";
+import CParserSpine from "./parser/CParserSpine.js";
 export class CLoaderOption extends CObject {
     mAutoLoad = true;
     mFilter = CTexture.eFilter.Linear;
@@ -329,7 +330,15 @@ export class CLoader {
     async JSONLoad(_file, _buffer, _op) {
         var str = CUtil.ArrayToString(_buffer);
         var jData = new CJSON(str);
-        this.mRes.Push(_file, jData);
+        if (jData.Get("skeleton") != null) {
+            var par = new CParserSpine();
+            par.SetBuffer(new Uint8Array(_buffer), _buffer.byteLength);
+            await par.Load(_file);
+            var mesh = par.GetResult();
+            this.mRes.Push(_file, mesh);
+        }
+        else
+            this.mRes.Push(_file, jData);
     }
     async JSLoad(_file) {
         this.mLoadSet.delete(_file);

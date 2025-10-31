@@ -13,12 +13,14 @@ import { CFrame } from "../util/CFrame.js";
 import { CScript } from "../util/CScript.js";
 import { CBrush } from "./CBrush.js";
 import { CCanvas } from "./CCanvas.js";
+import { CGeometryInfo } from "./component/CGeometryComp.js";
 var gMain = null;
 export class CAtelier {
     static Main() { return gMain; }
     mPF = new CPreferences();
     mFrame = null;
     mBrush = null;
+    mGI = null;
     mCanvasMap = new Map();
     async Init(_canvas, _canvasHTMLKey = "", _devTool = true) {
         if (gMain == null)
@@ -31,6 +33,7 @@ export class CAtelier {
         }
         this.mFrame = new CFrame(this.mPF, _canvasHTMLKey);
         this.mBrush = new CBrush(this.mFrame);
+        this.mGI = new CGeometryInfo(this.mFrame);
         this.mBrush.mPause = true;
         let script = "";
         this.mFrame.PushEvent(CEvent.eType.Load, async () => {
@@ -39,7 +42,7 @@ export class CAtelier {
                 let json = JSON.parse(data);
                 this.mBrush.ImportJSON(json.brash);
                 for (let canJson of json.canvas) {
-                    let can = new CCanvas(this.mFrame, this.mBrush);
+                    let can = new CCanvas(this.mFrame, this.mBrush, this.mGI);
                     can.ImportJSON(canJson);
                     this.mCanvasMap.set(can.Key(), can);
                 }
@@ -51,7 +54,7 @@ export class CAtelier {
                 for (let key of _canvas) {
                     if (key == null || key == "")
                         continue;
-                    let can = new CCanvas(this.mFrame, this.mBrush);
+                    let can = new CCanvas(this.mFrame, this.mBrush, this.mGI);
                     this.mCanvasMap.set(key, can);
                     await can.LoadJSON("Canvas/" + key);
                 }
@@ -116,7 +119,7 @@ export class CAtelier {
     NewCanvas(_key) {
         if (this.mCanvasMap.has(_key))
             return;
-        let can = new CCanvas(this.mFrame, this.mBrush);
+        let can = new CCanvas(this.mFrame, this.mBrush, this.mGI);
         can.SetKey(_key);
         this.mCanvasMap.set(_key, can);
         return can;

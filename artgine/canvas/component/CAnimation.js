@@ -168,6 +168,7 @@ export class CClipMesh extends CClip {
     mED;
     mMesh;
     mAutoCreate = true;
+    mBake = false;
     constructor(_time, _delay, _st, _ed = null, _mesh = null) {
         super(_time, _delay);
         if (typeof _st == "number")

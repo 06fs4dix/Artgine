@@ -45,9 +45,9 @@ export class CForce extends CObject {
     SetDelay(_delay) { this.mDelay = _delay; this.mTime = 0; }
     SetCurve(_curve) { this.mCurve = _curve; }
     SetRemove(_enable) { this.mRemove = _enable; }
-    Cac(_tick) {
-        var dtime = _tick * 0.001;
-        this.mTime += _tick;
+    Cac(_update) {
+        var dtime = _update.FixedTime();
+        this.mTime += _update.FixedTime();
         if (this.mDMulVEnd == null) {
             CMath.V3MulFloat(this.mDirection, dtime * this.mVelocity, this.mForce);
             return this.mForce;

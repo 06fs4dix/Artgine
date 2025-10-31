@@ -18,8 +18,8 @@ class CIK extends CComponent {
         this.m_target = _targetRef;
         this.mSysc = CComponent.eSysn.IK;
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         this.SetPaint();
         this.SetBone();
     }
@@ -249,8 +249,8 @@ export class CIKReach extends CIK {
             cur = cur.mParent;
         }
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (this.m_numOfBones != this.m_bones.length) {
             return;
         }
@@ -359,8 +359,8 @@ export class CIKLook extends CIK {
         const ptPos = this.GetIKPos();
         this.m_startDir = CMath.V3SubV3(ptPos, bonePos);
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (!this.m_tipBone) {
             return;
         }

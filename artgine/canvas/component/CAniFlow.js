@@ -57,7 +57,7 @@ export class CAniFlow extends CComponent {
         this.mFClip = new Array();
     }
     SetSpeed(_speed) { this.mSpeed = _speed; }
-    Update(_delay) {
+    Update(_update) {
     }
     IsShould(_member, _type) {
         if (_member == "m_ani" && this.mBlackBoard != null)

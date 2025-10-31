@@ -6,6 +6,11 @@ export class CArray<T>
         this.mArray = _size > 0 ? new Array(_size).fill(null) : []; // 구멍 제거
         this.mLength = 0;
     }
+    Array(): T[] 
+    {
+        return this.mArray.slice(0, this.mLength);
+    }
+
     Push(_data : T)
     {
         if(this.mLength<this.mArray.length)

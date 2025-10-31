@@ -148,7 +148,7 @@ export class CWindow {
                 this.mInput.SetWheel(e.deltaY);
         });
     }
-    Update(_delay) {
+    Update(_update) {
     }
     WindowResize() {
     }

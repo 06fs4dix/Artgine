@@ -192,19 +192,19 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 	}
 	BranchEnd();
 
-	var center : CVec3 = new CVec3(0.0,0.0,0.0);
-	BranchBegin("billboard","B",[billboard,billboardMat]);
-	if(billboard>0.5)
-	{
-		center = V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz);
-		center = V3MulFloat(center, 0.25);
+	// var center : CVec3 = new CVec3(0.0,0.0,0.0);
+	// BranchBegin("billboard","B",[billboard,billboardMat]);
+	// if(billboard>0.5)
+	// {
+	// 	center = V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz);
+	// 	center = V3MulFloat(center, 0.25);
 		
-		//world pos를 빼줘서 원하는 위치에서 로테이션, 스케일 함
-		rpos.xyz = V3SubV3(rpos.xyz, center);
-		rpos = V4MulMatCoordi(rpos, billboardMat);
-		rpos.xyz = V3AddV3(rpos.xyz, center);
-	}
-	BranchEnd();
+	// 	//world pos를 빼줘서 원하는 위치에서 로테이션, 스케일 함
+	// 	rpos.xyz = V3SubV3(rpos.xyz, center);
+	// 	rpos = V4MulMatCoordi(rpos, billboardMat);
+	// 	rpos.xyz = V3AddV3(rpos.xyz, center);
+	// }
+	// BranchEnd();
 
 	to_worldPos=rpos;
 	rpos=V4MulMatCoordi(rpos,viewMat);

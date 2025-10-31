@@ -9,13 +9,15 @@ export class CBatch {
     mKey = null;
     mMesh = null;
     mTexture = new Array();
-    mTexOff = new Array();
-    mTexAtt = new Array();
     mValue = new Array();
     CreateKey() {
         var str = this.mMesh.Key();
-        for (var i = 0; i < this.mTexOff.length; ++i) {
-            str += this.mTexture[this.mTexOff[i]];
+        for (var i = 0; i < this.mTexture.length; ++i) {
+            if (this.mTexture[i] == null)
+                str += "null";
+            else
+                str += this.mTexture[i].Key();
+            str += "/";
         }
         for (let i = 0; i < this.mValue.length; ++i)
             str += this.mValue[i].mKey;
@@ -131,6 +133,13 @@ export class CBatchMgr {
             }
             if (val.mData.length == 0)
                 this.mBaSortArr.Push(val);
+            if (val.mData.length > 0) {
+                if (val.mData[0].mValue.length != batch.mValue.length) {
+                    CAlert.E("test!!!!!!!!!!!!!!!!" + batch.mKey);
+                    batch.CreateKey();
+                    val.mData[0].CreateKey();
+                }
+            }
             val.mData.push(batch);
         }
         return null;
@@ -138,21 +147,8 @@ export class CBatchMgr {
     SetBatchSA(_sa) {
         this.mBatch.mValue.push(_sa);
     }
-    SetBatchTex(_texture, _textureOff = null, _attach = null) {
+    SetBatchTex(_texture) {
         this.mBatch.mTexture = _texture;
-        if (_textureOff == null) {
-            this.mBatch.mTexOff = new Array();
-            for (var i = 0; i < _texture.length; ++i)
-                this.mBatch.mTexOff.push(i);
-        }
-        else {
-            if (_textureOff.length < _texture.length) {
-                for (var i = _textureOff.length; i < _texture.length; ++i)
-                    _textureOff.push(i);
-            }
-            this.mBatch.mTexOff = _textureOff;
-        }
-        this.mBatch.mTexAtt = _attach;
     }
     SetBatchMesh(_mesh) {
         this.mBatch.mMesh = _mesh;
@@ -168,4 +164,5 @@ export class CBatchMgrGL extends CBatchMgr {
     }
 }
 import CBatchMgr_imple from "../render_imple/CBatchMgr.js";
+import { CAlert } from "../basic/CAlert.js";
 CBatchMgr_imple();

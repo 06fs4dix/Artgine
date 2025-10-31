@@ -165,7 +165,7 @@ export class CTooltip extends CModal {
             ]
         });
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mRefDummy && this.mAttach instanceof HTMLTextAreaElement) {
             let pos = GetAttachPosition(this.mAttach);
             if (this.mRefDummy.m_original[0] != pos[0] || this.mRefDummy.m_original[1] != pos[1]) {

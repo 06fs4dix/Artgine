@@ -1,4 +1,5 @@
 
+import { CUpdate } from "../basic/Basic.js";
 import { Bootstrap } from "../basic/Bootstrap.js";
 import { CBlackBoard } from "../basic/CBlackBoard.js";
 import {CDomFactory} from "../basic/CDOMFactory.js";
@@ -338,7 +339,7 @@ export class CModalEvent extends CModalBackGround
         });
         
     }
-    Update(_delay: any): void 
+    Update(_update : CUpdate): void 
     {
         if(this.mLast!="")
             this.mLast="";
@@ -399,15 +400,15 @@ export class CModalFrameView extends CModalBackGround
         
     }
 
-    public Update(_delay : number) : void
+    public Update(_update : CUpdate) : void
     {
-        this.mFrameTime += _delay;
+        this.mFrameTime += _update.DeltaTime();
         this.mFrame++;
-        if(this.mFrameTime > 1000) {
+        if(this.mFrameTime > 1) {
             this.AddLog(this.mFrame);
             this.UpdateFrameDiv();
 
-            this.mFrameTime -= 1000;
+            this.mFrameTime -= 1;
             this.mFrame = 0;
         }
     }

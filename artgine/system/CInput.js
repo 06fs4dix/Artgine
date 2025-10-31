@@ -164,7 +164,7 @@ export class CInput {
     TouchRefrash(_posX, _posY, _inOut) {
     }
     TouchClear() { }
-    Update(_delay) {
+    Update(_update) {
     }
     GetAxes(_offset = 0) {
         return this.mPadAxes[_offset];

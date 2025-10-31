@@ -5,6 +5,9 @@ export class CArray {
         this.mArray = _size > 0 ? new Array(_size).fill(null) : [];
         this.mLength = 0;
     }
+    Array() {
+        return this.mArray.slice(0, this.mLength);
+    }
     Push(_data) {
         if (this.mLength < this.mArray.length) {
             this.mArray[this.mLength] = _data;

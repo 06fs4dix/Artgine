@@ -2,6 +2,7 @@ import { CMath } from "../geometry/CMath.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CArray } from "../basic/CArray.js";
 import { CAudioBuf } from "./audio/CAudio.js";
+import { CUpdate } from "../basic/Basic.js";
 export class CSound {
     mNick;
     mAudio = null;
@@ -18,7 +19,7 @@ export class CSound {
         if (this.mLoopCount > 0)
             this.mLoopCount--;
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mAudio.IsPlay() == false) {
             if (this.mLoopCount > 0)
                 this.mAudio.Play();
@@ -72,14 +73,14 @@ export class CSoundMgr {
             this.mPlayList[i].AudioVolume(abVolume);
         }
     }
-    Update(_delay) {
+    Update(_update) {
         this.mPlayList.Clear();
         var removeList = new Array();
         for (var eachKey of this.mSoundMap.keys()) {
             var eachValue = this.mSoundMap.get(eachKey);
             if (eachValue.mAudio instanceof CAudioBuf == false)
                 continue;
-            eachValue.Update(_delay);
+            eachValue.Update(_update);
             if (eachValue.mAudio.mGain == null) {
                 removeList.push(eachKey);
             }
@@ -104,6 +105,6 @@ export class CSoundMgr {
     }
     UpdateLoop() {
         setTimeout(() => { this.UpdateLoop(); }, 100);
-        this.Update(100);
+        this.Update(new CUpdate(100));
     }
 }

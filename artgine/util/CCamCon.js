@@ -80,7 +80,7 @@ export class CCamCon extends CObject {
     SetInput(_input) {
         this.mInput = _input;
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mCamera == null || this.mInput == null)
             return;
         if (this.mPause)
@@ -212,8 +212,8 @@ export class CCamCon extends CObject {
                 this.mBspos = null;
             }
         }
-        if (_delay < 20) {
-            const t = Math.max(0, _delay * 0.05);
+        if (_update.DeltaTime() < 0.05) {
+            const t = Math.max(0, _update.DeltaTime() * 50);
             this.mRotXCur += this.mRotX;
             this.mRotYCur += this.mRotY;
             this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t;
@@ -229,8 +229,8 @@ class CCamCon3D extends CCamCon {
     }
 }
 export class CCamCon3DFirstPerson extends CCamCon3D {
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (this.mReset == false)
             return;
         this.mCamera.FrontMove(this.mPosX * this.mPosSensitivity);
@@ -259,15 +259,15 @@ export class CCamCon3DThirdPerson extends CCamCon3D {
     SetZoom(_zoom) {
         this.mSZoom = _zoom;
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (this.mReset == false && this.mReset3D == false)
             return;
         this.mReset3D = false;
         if (!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
-        let rotX = this.mRotY * 0.001 * _delay * this.mRotSensitivity;
-        let rotY = this.mRotX * 0.001 * _delay * this.mRotSensitivity;
+        let rotX = this.mRotY * _update.DeltaTime() * this.mRotSensitivity;
+        let rotY = this.mRotX * _update.DeltaTime() * this.mRotSensitivity;
         if (this.mZoom != 0)
             this.mSZoom = this.mSZoom - this.mZoom * this.mZoomSensitivity;
         this.mCamera.CharacterByRotation(this.mPos, rotY, rotX, this.mSZoom);
@@ -289,8 +289,8 @@ class CCamCon2D extends CCamCon {
     }
 }
 export class CCamCon2DFreeMove extends CCamCon2D {
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (this.mReset == false)
             return;
         this.AddZoom(-this.mZoom * this.mZoomSensitivity);
@@ -324,8 +324,8 @@ export class CCamCon2DFollow extends CCamCon2D {
             return false;
         return super.IsShould(_member, _type);
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         this.AddZoom(-this.mZoom * this.mZoomSensitivity);
         if (!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();

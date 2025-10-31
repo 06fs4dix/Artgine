@@ -37,7 +37,11 @@ export class CComponent extends CObject {
             this.mComMsg.push(_msg);
         this.mComMsgLen++;
     }
-    Update(_delay) {
+    Fixed(_update) {
+    }
+    Update(_update) {
+    }
+    Build() {
     }
     SubUpdate() {
     }
@@ -96,8 +100,9 @@ export class CComponent extends CObject {
     StartChk() {
         if (this.mStartChk == true) {
             this.mStartChk = false;
-            this.Start();
+            return true;
         }
+        return false;
     }
     Start() { }
     SetOwner(_obj) {

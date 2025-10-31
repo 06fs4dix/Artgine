@@ -228,12 +228,14 @@ export class CShadowPlane extends CPaint2D
     }
 
     //강제로 이상한 RP지우기
-    StartChk(): void {
+    StartChk(): boolean 
+    {
         if(this.mStartChk==true)
         {
             this.mRenderPass.length=0;
         }
-        super.StartChk();
+
+        return super.StartChk();
         
     }
     EmptyRPChk()
@@ -299,7 +301,7 @@ export class CShadowPlane extends CPaint2D
             this.mUpdateShadow=true;
 		}
     }
-    Update(_delay: any): void 
+    Update(_update : CUpdate): void 
     {
         
         if(this.mPT==null || this.mPT.Key()!=this.mPTKey)
@@ -318,7 +320,7 @@ export class CShadowPlane extends CPaint2D
 
                 
                 this.mPT = pt;
-                this.BatchClear();
+                this.ClearBatch();
                 this.mUpdateShadow=true;
 
                 if(this.mPT instanceof CPaint2D)
@@ -378,7 +380,7 @@ export class CShadowPlane extends CPaint2D
                 {
                     if(this.mLIG!=lig)  
                     {
-                        this.BatchClear();
+                        this.ClearBatch();
                         this.mUpdateShadow=true;
                     }
                         
@@ -398,7 +400,7 @@ export class CShadowPlane extends CPaint2D
         //     }
         // }
         this.UpdateShadow();
-        super.Update(_delay);
+        super.Update(_update);
 
     }
     private UpdateShadow() 
@@ -486,7 +488,7 @@ export class CShadowPlane extends CPaint2D
             this.mAutoLoad.Import(pt.mAutoLoad);
             if(pt.GetTag().has("wind") && pt instanceof CPaint2D) {
                 if(this.mTag.has("wind")==false)
-                    this.BatchClear();
+                    this.ClearBatch();
                 
                 this.PushTag("wind");
                 this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
@@ -505,10 +507,17 @@ export class CShadowPlane extends CPaint2D
         }
         else if(this.mPT instanceof CPaint3D) 
         {
-            this.PushTag("zDepth");
+            
             const pt = this.mPT as CPaint3D;
             const lig = this.mLIG;
 
+            
+            
+
+            if(this.mUpdateShadow==false && pt.IsUpdateFMat()==false && lig.mUpdate==0)   return;
+            this.mUpdateShadow = false;
+
+            this.PushTag("zDepth");
             const ligDir = CMath.V3Nor(lig.GetDirectPos());
             
             const fBound = this.mPT.GetBoundFMat();
@@ -516,10 +525,8 @@ export class CShadowPlane extends CPaint2D
 
             const floorDist = ((5 + this.mShadowLen) - fCenter.y) / ligDir.y;
             const shadowPlanePos : CVec3 = CMath.V3AddV3(fCenter, CMath.V3MulFloat(ligDir, floorDist));
-            const area = ComputeShadowAreaOntoPlane(fBound, new CVec3(0, 1, 0), shadowPlanePos, ligDir);
 
-            if(this.mUpdateShadow==false && pt.IsUpdateFMat()==false && lig.mUpdate==0)   return;
-            this.mUpdateShadow = false;
+            const area = ComputeShadowAreaOntoPlane(fBound, new CVec3(0, 1, 0), shadowPlanePos, ligDir);
 
             const points = area.m_points;
             points.forEach(p => CMath.V3SubV3(p, this.GetOwner().GetPos(), p));
@@ -532,20 +539,25 @@ export class CShadowPlane extends CPaint2D
             this.SetAlphaModel(new CAlpha(this.mShadowAlpha, CAlpha.eModel.Mul));
         }
     }
+
+    //20251022 이건 버그가 있다. 로컬 매트릭스로 값을 넣으면
+    //중심축을 제대로 못잡는다
     private CaptureShadow() {
         const pt = this.mPT as CPaint3D;
         const lig = this.mLIG;
 
         const fw = this.GetOwner().GetFrame();
 
-        const bound = pt.GetBound();
+        const bound = pt.GetBound().Export();
         const center = bound.GetCenter();
+        bound.mMin=CMath.V3MulMatNormal(bound.mMin,pt.GetLMat());
+        bound.mMax=CMath.V3MulMatNormal(bound.mMax,pt.GetLMat());
 
         const ligDir = new CVec3(0, 1, 0);//CMath.V3Nor(lig.GetDirectPos());
         const eye = CMath.V3AddV3(center, CMath.V3MulFloat(ligDir, bound.GetOutRadius()));
 
         const shadowPlanePos : CVec3 = CMath.V3AddV3(center, ligDir);
-        const area = ComputeShadowAreaOntoPlane(pt.GetBound(), ligDir, shadowPlanePos, ligDir);
+        const area = ComputeShadowAreaOntoPlane(bound, ligDir, shadowPlanePos, ligDir);
 
         let texKey = pt.Key() + "_Shadow.tex";
         this.SetTexture(texKey);
@@ -564,7 +576,7 @@ export class CShadowPlane extends CPaint2D
         cam.SetSize(area.m_size.x, area.m_size.y);
         cam.Init(eye, CMath.V3SubV3(eye, ligDir));
         cam.ResetOrthographic();
-        cam.Update(1);
+        cam.Update(new CUpdate(1));
 
         const tempRP = new CRenderPass();
         // tempRP.m_cullFace = CRenderPass.eCull.None;
@@ -588,7 +600,7 @@ export class CShadowPlane extends CPaint2D
 
         if(pt.mMeshRes.skin.length > 0) {
             fw.Ren().SendGPU(vf,  pt.mWeightMat,"weightArrMat", 16);
-            fw.Ren().SendGPU(vf,  pt.mSkinType,"skin");
+            fw.Ren().SendGPU(vf,  SDF.eSkin.Bone,"skin");
         }
         else {
             fw.Ren().SendGPU(vf,  SDF.eSkin.None,"skin");
@@ -600,10 +612,13 @@ export class CShadowPlane extends CPaint2D
 
         let nodeOff = 0;
         let node = pt.mTreeNode;
+        let wMat=new CMat();
         while(node.Size()!=nodeOff) {
             const nodemp = node.Find(nodeOff);
             if (nodemp.md.mData != null && nodemp.md.mData.ci != null) {
-                fw.Ren().SendGPU(vf,nodemp.mpi.mData.pst,"worldMat");
+                CMath.MatMul(nodemp.mpi.mData.pst,pt.GetLMat(),wMat);
+                fw.Ren().SendGPU(vf,wMat,"worldMat");
+                //fw.Ren().SendGPU(vf,nodemp.sumSA.mData,"worldMat");
                 const meshDraw = pt.GetDrawMesh(pt.mMesh + nodemp.md.mKey, vf, nodemp.md.mData.ci);
                 this.GetOwner().GetFrame().Ren().MeshDrawNodeRender(vf, meshDraw);
             }

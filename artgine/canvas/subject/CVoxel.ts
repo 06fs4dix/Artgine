@@ -351,8 +351,8 @@ export class CVoxel extends CSubject
 	}
 	
 
-	SubjectUpdate(_delay: number): void {
-		super.SubjectUpdate(_delay);
+	SubjectUpdate(_update : CUpdate): void {
+		super.SubjectUpdate(_update);
 		if(this.mAtlas.mBase64.mData == null) {
 			return;
 		}
@@ -859,4 +859,5 @@ export class CVoxelLightSpace
 
 import CVoxel_imple from "../../canvas_imple/subject/CVoxel.js";
 import { CMat } from "../../geometry/CMat.js";
+import { CUpdate } from "../../basic/Basic.js";
 CVoxel_imple();

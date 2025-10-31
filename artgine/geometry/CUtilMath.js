@@ -307,7 +307,7 @@ export class CUtilMath {
         let L_dist = 0;
         _dist.mF32A[6] = -1;
         for (let i = 0; i < 6; ++i) {
-            _dist.mF32A[i] = CMath.PlaneVec3DotCoordinate(pa_plane, i * 4, pa_posion);
+            _dist.mF32A[i] = CMath.PlaneDotV3Coordi(pa_plane, i * 4, pa_posion);
             if (minVal > _dist.mF32A[i]) {
                 _dist.mF32A[6] = i;
                 _dist.mF32A[7] = _dist.mF32A[i];
@@ -319,7 +319,7 @@ export class CUtilMath {
         if (pa_plane.Ptr() != null && pa_posion.Ptr() != null && _pArr == null)
             return CWASM.PlaneSphereInside(pa_plane.Ptr(), pa_posion.Ptr(), pa_radius);
         var L_dist = 0;
-        L_dist = CMath.PlaneVec3DotCoordinate(pa_plane, CPlane.eDir.Left, pa_posion);
+        L_dist = CMath.PlaneDotV3Coordi(pa_plane, CPlane.eDir.Left, pa_posion);
         if (_pArr == null) {
             if (L_dist < -pa_radius)
                 return false;
@@ -328,7 +328,7 @@ export class CUtilMath {
             if (L_dist < pa_radius)
                 _pArr.push(new CPlaneInside(CPlane.eDir.Left, -L_dist / pa_radius));
         }
-        L_dist = CMath.PlaneVec3DotCoordinate(pa_plane, CPlane.eDir.Right, pa_posion);
+        L_dist = CMath.PlaneDotV3Coordi(pa_plane, CPlane.eDir.Right, pa_posion);
         if (_pArr == null) {
             if (L_dist < -pa_radius)
                 return false;
@@ -337,7 +337,7 @@ export class CUtilMath {
             if (L_dist < pa_radius)
                 _pArr.push(new CPlaneInside(CPlane.eDir.Right, -L_dist / pa_radius));
         }
-        L_dist = CMath.PlaneVec3DotCoordinate(pa_plane, CPlane.eDir.Bottom, pa_posion);
+        L_dist = CMath.PlaneDotV3Coordi(pa_plane, CPlane.eDir.Bottom, pa_posion);
         if (_pArr == null) {
             if (L_dist < -pa_radius)
                 return false;
@@ -346,7 +346,7 @@ export class CUtilMath {
             if (L_dist < pa_radius)
                 _pArr.push(new CPlaneInside(CPlane.eDir.Bottom, -L_dist / pa_radius));
         }
-        L_dist = CMath.PlaneVec3DotCoordinate(pa_plane, CPlane.eDir.Top, pa_posion);
+        L_dist = CMath.PlaneDotV3Coordi(pa_plane, CPlane.eDir.Top, pa_posion);
         if (_pArr == null) {
             if (L_dist < -pa_radius)
                 return false;
@@ -355,7 +355,7 @@ export class CUtilMath {
             if (L_dist < pa_radius)
                 _pArr.push(new CPlaneInside(CPlane.eDir.Top, -L_dist / pa_radius));
         }
-        L_dist = CMath.PlaneVec3DotCoordinate(pa_plane, CPlane.eDir.Near, pa_posion);
+        L_dist = CMath.PlaneDotV3Coordi(pa_plane, CPlane.eDir.Near, pa_posion);
         if (_pArr == null) {
             if (L_dist < -pa_radius)
                 return false;
@@ -364,7 +364,7 @@ export class CUtilMath {
             if (L_dist < pa_radius)
                 _pArr.push(new CPlaneInside(CPlane.eDir.Near, -L_dist / pa_radius));
         }
-        L_dist = CMath.PlaneVec3DotCoordinate(pa_plane, CPlane.eDir.Far, pa_posion);
+        L_dist = CMath.PlaneDotV3Coordi(pa_plane, CPlane.eDir.Far, pa_posion);
         if (_pArr == null) {
             if (L_dist < -pa_radius)
                 return false;

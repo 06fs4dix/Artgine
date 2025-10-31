@@ -3,6 +3,7 @@ import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
 import { CObject, CPointer } from "../../../basic/CObject.js";
+import { CUtil } from "../../../basic/CUtil.js";
 import { CWASM } from "../../../basic/CWASM.js";
 import {CBound} from "../../../geometry/CBound.js";
 import {CMath} from "../../../geometry/CMath.js";
@@ -11,6 +12,7 @@ import {CVec1} from "../../../geometry/CVec1.js";
 import {CVec2} from "../../../geometry/CVec2.js";
 import {CVec3} from "../../../geometry/CVec3.js";
 import {CVec4} from "../../../geometry/CVec4.js";
+import { CMesh } from "../../../render/CMesh.js";
 import {CRenderPass} from "../../../render/CRenderPass.js";
 
 import {CShader} from "../../../render/CShader.js";
@@ -69,7 +71,7 @@ export class CPaint2D extends CPaint
 
 	//X는 크기,Y는 꼬리
 	public mPosList : Array<CVec3>=null;
-	public mWMatMul=true;
+	//public mWMatMul=true;
 	public mLastHide=true;
 
 	public mWindInfluence : CVec1 = new CVec1(0.0);
@@ -163,7 +165,7 @@ export class CPaint2D extends CPaint
 		{
 			this.mTexture[1]=_tex;
 		}
-		this.BatchClear();
+		this.ClearBatch();
 		this.PushTag("normalMap");
 	}
 	EditDrop(_object: CObject): void 
@@ -216,7 +218,7 @@ export class CPaint2D extends CPaint
 
 					
 					this.EditRefresh();
-					this.BatchClear();
+					this.ClearBatch();
 				});
 			}
 			
@@ -250,10 +252,10 @@ export class CPaint2D extends CPaint
 		this.mYSortOrigin = _origin;
 	}
 
-	Update(_delay)
+	Update(_update : CUpdate)
 	{
 		this.SizeCac();
-		super.Update(_delay);
+		super.Update(_update);
 		
 
 		if(this.mUpdateFMat == true)
@@ -272,12 +274,15 @@ export class CPaint2D extends CPaint
 			}
 		}
 		
-		if(_delay>1000 || this.mTag.has("tail")==false || this.mSize==null)	return;
+		if(_update.DeltaTime()>1 || this.mTag.has("tail")==false || this.mSize==null)	return;
 
+		
+		if(this.mUpdateFMat == false) return;
 
-		this.Camera();
-
-		if(this.mPosList==null)
+		this.mBound.Reset();
+		this.mBound.SetType(CBound.eType.Box);
+		
+		if(this.mTag.has("billboard"))
 		{
 			let pos=CPoolGeo.ProductV3();
 			pos.mF32A[0]=this.mOwner.GetWMat().mF32A[12];
@@ -285,30 +290,94 @@ export class CPaint2D extends CPaint
 			pos.mF32A[2]=this.mOwner.GetWMat().mF32A[14];
 			
 			
-			var v0=CMath.V3SubV3(pos,this.mBeforePos);
-			if(v0.IsZero())	
+			CMath.V3SubV3(pos,this.mBeforePos,pos);
+			if(pos.IsZero())	
 			{
 				CPoolGeo.RecycleV3(pos);
 				return;
 			}
 				
 
-			var len=CMath.V3Len(v0);
+			var len=CMath.V3Len(pos);
 			if(len>this.mSize.y)
-				this.mBeforePos=CMath.V3AddV3(pos,CMath.V3MulFloat(CMath.V3Nor(v0),-this.mSize.y));
+				CMath.V3AddV3(pos,CMath.V3MulFloat(CMath.V3Nor(pos),-this.mSize.y),this.mBeforePos);
 			if(len<0.001)
 			{
-				this.mBeforePos=pos;
+				this.mBeforePos.Import(pos);
 			}
 			else if(this.mStopPos.Equals(pos))
 			{
-				this.mBeforePos=CMath.V3AddV3(CMath.V3MulFloat(pos,_delay/100*this.mRemoveSpeed),
-					CMath.V3MulFloat(this.mBeforePos,1-_delay/100*this.mRemoveSpeed));
+				CMath.V3AddV3(CMath.V3MulFloat(pos,_update.DeltaTime()*this.mRemoveSpeed),
+					CMath.V3MulFloat(this.mBeforePos,1-_update.DeltaMil()*this.mRemoveSpeed),this.mBeforePos);
 			}	
 			
 			this.mStopPos.Import(pos);
 			CPoolGeo.RecycleV3(pos);
+
+			let L_nor=new CVec3();
+			let st=new CVec3(), ed=new CVec3();
+		
+	
+			st=this.GetFMat().xyz;
+			CMath.V3AddV3(this.mPos,st,st);
+			ed=this.mBeforePos;
+			CMath.V3AddV3(this.mPos,ed,ed);
+			let v=new CVec3();
+			
+			L_nor=CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
+			CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
+			this.mBound.InitBound(v);
+			this.GetFMat().SetV3(0,v);
+			CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
+			this.mBound.InitBound(v);
+			this.GetFMat().SetV3(1,v);
+			CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
+			this.mBound.InitBound(v);
+			this.GetFMat().SetV3(2,v);
+			CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
+			this.mBound.InitBound(v);
+			this.GetFMat().SetV3(3,v);
+
+
+			if(this.mLastHide)
+			{
+				this.mFMat.mF32A[3]=1;
+				this.mFMat.mF32A[7]=1;
+				this.mFMat.mF32A[11]=0;
+				this.mFMat.mF32A[15]=0;
+			}
+			else
+			{
+				this.mFMat.mF32A[3]=1;
+				this.mFMat.mF32A[7]=1;
+				this.mFMat.mF32A[11]=1;
+				this.mFMat.mF32A[15]=1;
+			}
+			
 		}
+		else
+		{
+			
+			let pos = this.GetFMat().xyz;
+			let v=new CVec3();
+			for(let i=0;i<4;++i)
+			{
+				CMath.V3AddV3(this.mPosList[i], pos, v);
+				this.mBound.InitBound(v);
+				this.GetFMat().SetV3(i,v);
+			}
+			
+
+			this.mFMat.mF32A[3]=1;
+			this.mFMat.mF32A[7]=1;
+			this.mFMat.mF32A[11]=1;
+			this.mFMat.mF32A[15]=1;
+
+		
+		}//else
+
+		
+		
 		
 	}
 	
@@ -448,6 +517,10 @@ export class CPaint2D extends CPaint
 	GetTexCodi() {
 		return this.mTexCodi;
 	}
+	GetMesh() : CMesh
+	{
+		return null;
+	}
 	//left,top,right,bottom
 	GetLeftTopRightBottom(_frame : CFrame) 
 	{
@@ -512,14 +585,14 @@ export class CPaint2D extends CPaint
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
 		if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture );
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
 		var dm=this.GetDrawMesh("Artgine/DM/2D",_vf,this.mOwner.GetFrame().Pal().MCI2D());
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
 		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
 		
 	}
-
+	
 	SetTexCodi(_uv : CVec4) : void;
 	SetTexCodi(_uv : CVec4,_margin : number) : void;
 	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
@@ -621,24 +694,6 @@ export class CPaint2D extends CPaint
 		else
 			rev.mData.y=0.0;
 	}
-	// SetTexture(_a: Array<string>);
-	// SetTexture(_a: string);
-	// SetTexture(_a: string, _b: string);
-	// SetTexture(_a: string, _b: string, _c: string);
-	// SetTexture(_a: string, _b: string, _c: string, _d: string);
-	// SetTexture(_a: string, _b: string, _c: string, _d: string, _e: string);
-	// SetTexture(_a: any, _b?: any, _c?: any, _d?: any, _e?: any): void {
-	// 	super.SetTexture(_a,_b,_c,_d,_e);
-	// 	if(this.mTexture.length>0 && this.mOwner!=null && this.mOwner.GetFrame()!=null)
-	// 	{
-	// 		let tex=this.mOwner.GetFrame().Res().Find(this.mTexture[0]) as CTexture;
-	// 		if(tex!=null)
-	// 		{
-	// 			this.SetTexCodi(0,0,tex.GetWidth(),tex.GetHeight(),tex.GetWidth(),tex.GetHeight());
-	// 		}
-			
-	// 	}
-	// }
 	
 
 
@@ -647,7 +702,7 @@ export class CPaint2D extends CPaint
 		if(this.mTag.has("tail")==false)
 		{
 			this.PushTag("tail");
-			this.BatchClear();
+			this.ClearBatch();
 			this.mUpdateLMat=true;
 		}
 		
@@ -698,124 +753,124 @@ export class CPaint2D extends CPaint
 	// 	}
 		
 	// }
-	Camera()
-	{
-		if(this.mPosList!=null)
-		{
-			this.mBound.Reset();
-			this.mBound.InitBound(this.mPosList);
-			this.mBound.SetType(CBound.eType.Box);
+	// Camera()
+	// {
+	// 	if(this.mPosList!=null)
+	// 	{
+	// 		this.mBound.Reset();
+	// 		this.mBound.InitBound(this.mPosList);
+	// 		this.mBound.SetType(CBound.eType.Box);
 
 
 
-			if(this.mUpdateFMat == false) return;
+	// 		if(this.mUpdateFMat == false) return;
 
-			if(this.mWMatMul==false)
-			{
-				this.GetFMat().SetV3(0,this.mPosList[0]);
-				this.GetFMat().SetV3(1,this.mPosList[1]);
-				this.GetFMat().SetV3(2,this.mPosList[2]);
-				this.GetFMat().SetV3(3,this.mPosList[3]);
+	// 		if(this.mWMatMul==false)
+	// 		{
+	// 			this.GetFMat().SetV3(0,this.mPosList[0]);
+	// 			this.GetFMat().SetV3(1,this.mPosList[1]);
+	// 			this.GetFMat().SetV3(2,this.mPosList[2]);
+	// 			this.GetFMat().SetV3(3,this.mPosList[3]);
 				
-			}
-			else
-			{
-				let v0=CPoolGeo.ProductV3();
-				let v1=CPoolGeo.ProductV3();
-				let v2=CPoolGeo.ProductV3();
-				let v3=CPoolGeo.ProductV3();
+	// 		}
+	// 		else
+	// 		{
+	// 			let v0=CPoolGeo.ProductV3();
+	// 			let v1=CPoolGeo.ProductV3();
+	// 			let v2=CPoolGeo.ProductV3();
+	// 			let v3=CPoolGeo.ProductV3();
 
-				let vd=CPoolGeo.ProductV3();
+	// 			let vd=CPoolGeo.ProductV3();
 				
 
-				let pos = this.GetFMat().xyz;
+	// 			let pos = this.GetFMat().xyz;
 				
-				this.mFMat.mF32A[0]=1;
-				this.mFMat.mF32A[5]=1;
-				this.mFMat.mF32A[10]=1;
-				this.CacBound();
-				CMath.V3AddV3(this.mPosList[0], pos, v0);
-				CMath.V3AddV3(this.mPosList[1], pos, v1);
-				CMath.V3AddV3(this.mPosList[2], pos, v2);
-				CMath.V3AddV3(this.mPosList[3], pos, v3);
+	// 			this.mFMat.mF32A[0]=1;
+	// 			this.mFMat.mF32A[5]=1;
+	// 			this.mFMat.mF32A[10]=1;
+	// 			this.CacBound();
+	// 			CMath.V3AddV3(this.mPosList[0], pos, v0);
+	// 			CMath.V3AddV3(this.mPosList[1], pos, v1);
+	// 			CMath.V3AddV3(this.mPosList[2], pos, v2);
+	// 			CMath.V3AddV3(this.mPosList[3], pos, v3);
 
-				this.GetFMat().SetV3(0,v0);
-				this.GetFMat().SetV3(1,v1);
-				this.GetFMat().SetV3(2,v2);
-				this.GetFMat().SetV3(3,v3);
+	// 			this.GetFMat().SetV3(0,v0);
+	// 			this.GetFMat().SetV3(1,v1);
+	// 			this.GetFMat().SetV3(2,v2);
+	// 			this.GetFMat().SetV3(3,v3);
 				
-				CPoolGeo.RecycleV3(v0);
-				CPoolGeo.RecycleV3(v1);
-				CPoolGeo.RecycleV3(v2);
-				CPoolGeo.RecycleV3(v3);
-				CPoolGeo.RecycleV3(vd);
+	// 			CPoolGeo.RecycleV3(v0);
+	// 			CPoolGeo.RecycleV3(v1);
+	// 			CPoolGeo.RecycleV3(v2);
+	// 			CPoolGeo.RecycleV3(v3);
+	// 			CPoolGeo.RecycleV3(vd);
 
 
 			
 				
-			}
-			this.mFMat.mF32A[3]=1;
-			this.mFMat.mF32A[7]=1;
-			this.mFMat.mF32A[11]=1;
-			this.mFMat.mF32A[15]=1;
+	// 		}
+	// 		this.mFMat.mF32A[3]=1;
+	// 		this.mFMat.mF32A[7]=1;
+	// 		this.mFMat.mF32A[11]=1;
+	// 		this.mFMat.mF32A[15]=1;
 
-			return;
-		}
-
-
+	// 		return;
+	// 	}
 
 
-		if(this.mRenPT.length==0)	return;
-		var L_nor=new CVec3();
-		var st=new CVec3(), ed=new CVec3();
+
+
+	// 	if(this.mRenPT.length==0)	return;
+	// 	var L_nor=new CVec3();
+	// 	var st=new CVec3(), ed=new CVec3();
 	
-		if(this.mTag.has("billboard"))
-		{
-			//일반 꼬리는 빌보드 기본이라서 다시 넣으면 중복 적용
-			CAlert.W("tail billboard not!");
-		}
-		st=this.GetFMat().xyz;
-		CMath.V3AddV3(this.mPos,st,st);
-		ed=this.mBeforePos;
-		CMath.V3AddV3(this.mPos,ed,ed);
+	// 	// if(this.mTag.has("billboard"))
+	// 	// {
+	// 	// 	//일반 꼬리는 빌보드 기본이라서 다시 넣으면 중복 적용
+	// 	// 	CAlert.W("tail billboard not!");
+	// 	// }
+	// 	st=this.GetFMat().xyz;
+	// 	CMath.V3AddV3(this.mPos,st,st);
+	// 	ed=this.mBeforePos;
+	// 	CMath.V3AddV3(this.mPos,ed,ed);
 		
-		L_nor=CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
-		//L_nor=new CVec3(1,0,0);//CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos));
-
-		let v0=CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-		let v1=CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-		let v2=CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-		let v3=CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
-
-
-		this.GetFMat().SetV3(0,v0);
-		this.GetFMat().SetV3(1,v1);
-		this.GetFMat().SetV3(2,v2);
-		this.GetFMat().SetV3(3,v3);
+	// 	L_nor=CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
+	// 	//L_nor=new CVec3(1,0,0);//CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos));
+	// 	//this.PushTag("billboard");
+	// 	let v0=CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
+	// 	let v1=CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
+	// 	let v2=CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
+	// 	let v3=CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)));
 
 
-		if(this.mLastHide)
-		{
-			this.mFMat.mF32A[3]=1;
-			this.mFMat.mF32A[7]=1;
-			this.mFMat.mF32A[11]=0;
-			this.mFMat.mF32A[15]=0;
-		}
-		else
-		{
-			this.mFMat.mF32A[3]=1;
-			this.mFMat.mF32A[7]=1;
-			this.mFMat.mF32A[11]=1;
-			this.mFMat.mF32A[15]=1;
-		}
+	// 	this.GetFMat().SetV3(0,v0);
+	// 	this.GetFMat().SetV3(1,v1);
+	// 	this.GetFMat().SetV3(2,v2);
+	// 	this.GetFMat().SetV3(3,v3);
+
+
+	// 	if(this.mLastHide)
+	// 	{
+	// 		this.mFMat.mF32A[3]=1;
+	// 		this.mFMat.mF32A[7]=1;
+	// 		this.mFMat.mF32A[11]=0;
+	// 		this.mFMat.mF32A[15]=0;
+	// 	}
+	// 	else
+	// 	{
+	// 		this.mFMat.mF32A[3]=1;
+	// 		this.mFMat.mF32A[7]=1;
+	// 		this.mFMat.mF32A[11]=1;
+	// 		this.mFMat.mF32A[15]=1;
+	// 	}
 		
 
-		this.mBound.Reset();
-		this.mBound.InitBound(CUtilRender.Mesh2DSize);
-		this.mBound.SetType(CBound.eType.Box);
-		this.mUpdateLMat=true;
+	// 	this.mBound.Reset();
+	// 	this.mBound.InitBound(CUtilRender.Mesh2DSize);
+	// 	this.mBound.SetType(CBound.eType.Box);
+	// 	this.mUpdateLMat=true;
 
-	}
+	// }
 	
 }
 

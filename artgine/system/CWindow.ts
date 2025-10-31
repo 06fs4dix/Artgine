@@ -207,7 +207,7 @@ export class CWindow
 				this.mInput.SetWheel(e.deltaY);
 	    });
 	}
-	Update(_delay)
+	Update(_update : CUpdate)
 	{
 	
 	}
@@ -269,6 +269,7 @@ export class CWindow
 }
 
 import CWindow_imple from "../system_imple/CWindow.js";
+import { CUpdate } from "../basic/Basic.js";
 
 
 CWindow_imple();

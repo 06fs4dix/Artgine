@@ -9,6 +9,7 @@
 	그리고 프리오리티 순서도 다시 정렬해줘야함.
 */
 
+import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CJSON } from "../../artgine/basic/CJSON.js";
 import { CObject, CPointer } from "../../artgine/basic/CObject.js";
@@ -355,7 +356,7 @@ export class CSurfaceBloom extends CSurface
 
 		
 	}
-	Update(_delay: number): void {
+	Update(_update : CUpdate): void {
 		// srcResolution과 aspect는 더 이상 필요하지 않음
 		// Sam2DSize(0.0)를 사용하여 쉐이더 내에서 동적으로 텍스처 크기를 가져옴
 	}

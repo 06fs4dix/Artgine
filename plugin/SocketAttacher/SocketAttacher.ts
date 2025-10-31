@@ -38,8 +38,8 @@ export class CSocketAttacher extends CComponent
         this.mSysc = CComponent.eSysn.Event;
     }
 
-    Update(_delay: any): void {
-        super.Update(_delay);
+    Update(_update : CUpdate): void {
+        super.Update(_update);
 
         this.SetPaint();
         this.SetBone();

@@ -11,8 +11,8 @@ export class CPaintSurface extends CPaint {
         }
         this.mBoundFMatR = 0xffffffff;
     }
-    InitPaint() {
-        super.InitPaint();
+    InitChk() {
+        super.InitChk();
         this.mBoundFMatR = 0xffffffff;
     }
     EmptyRPChk() {
@@ -21,7 +21,7 @@ export class CPaintSurface extends CPaint {
             this.mRenderPass = [rp];
         }
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mRenPT.length == 0)
             return;
     }
@@ -32,7 +32,7 @@ export class CPaintSurface extends CPaint {
         this.mOwner.GetFrame().BMgr().BatchOn();
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
         var dm = this.GetDrawMesh("Artgine/DM/Surface", _vf, this.mOwner.GetFrame().Pal().MCI2D());
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();

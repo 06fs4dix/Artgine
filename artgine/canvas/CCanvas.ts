@@ -12,7 +12,7 @@ import {CStream} from "../basic/CStream.js"
 import {CUniqueID} from "../basic/CUniqueID.js"
 import {CBase64File} from "../util/CBase64File.js"
 import {CBrushComp} from "./component/CBrushComp.js"
-import { CGlobalGeometryInfo } from "./component/CGlobalGeometryInfo.js"
+
 import {CRay} from "../geometry/CRay.js"
 import {CCollider} from "./component/CCollider.js"
 import {CAtlas} from "../util/CAtlas.js"
@@ -47,7 +47,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 {
 	protected mRemoveList = new Array<string>();
 	protected mKeyChangeList = new Array();
-	protected mGGI : CGlobalGeometryInfo= new CGlobalGeometryInfo();
+	protected mGI : CGeometryInfo= null;
 
 	mWebSocket : CWebSocket=null;
 	public mPacArr=new CArray<CStream>();
@@ -82,12 +82,13 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 	//public m_matchShadow =new Set<string>();
 	//public m_cas=1;
-	constructor(_fw : CFrame,_brash : CBrush)
+	constructor(_fw : CFrame,_brash : CBrush,_GI : CGeometryInfo)
 	{
 		super();
 		if(_fw==null)	return;
 		this.mFrame=_fw;
 		this.mBrush=_brash;
+		this.mGI=_GI;
 		if(_fw.PF().mIAuto)	_fw.PushIAuto(this);
 		
 		let list=this.ListCanvas();
@@ -103,9 +104,10 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
+		
 		if(_member=="mBrush" || _member=="mRemoveList" || _member=="mFrame" || _member=="mPushSub" ||
 			_member=="mBroMsg" || _member=="mBroLen" || _member=="mWebSocket" ||_member=="mPacArr" ||
-			_member=="mKeyChangeList" || _member=="mGGI")
+			_member=="mKeyChangeList" || _member=="mGI" || _member=="mChangeRPMgr")
 			return false;
 		return super.IsShould(_member,_type);
 	}
@@ -142,10 +144,6 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		}
 
 	}
-	GetGGI()
-	{
-		return this.mGGI;
-	}
 	
 	SetRPMgr(_rpMgr : CRPMgr) 
 	{
@@ -162,7 +160,12 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			
 		// }
 
-		if(this.mRPMgr==null && _rpMgr==null)	return;
+		if(this.mRPMgr==null && _rpMgr==null)	
+		{
+			this.mChangeRPMgr=null;
+			return;
+		}
+			
 		if(this.mRPMgr!=null)
 		{
 			for(let i=0;i<this.mRPMgr.mRPArr.length;++i)
@@ -724,7 +727,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		
 		return json;
 	}
-	Update(_delay)
+	Update(_update : CUpdate)
 	{
 
 	}//update
@@ -932,6 +935,11 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	{
 		_camcomp.RecvGetBrush(this.mBrush);
 	}
+	SendGetGeometryInfo(_camcomp : CGeometryComp)
+	{
+		_camcomp.RecvGetGeometryInfo(this.mGI,this.Key());
+	}
+	
 	Patch(_stream : CStream,_sukPass=true)
 	{
 		let sendSUK=_stream.GetString();
@@ -972,4 +980,5 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 
 import CCanvas_imple from "../canvas_imple/CCanvas.js";
+import { CGeometryComp, CGeometryInfo } from "./component/CGeometryComp.js"
 CCanvas_imple();

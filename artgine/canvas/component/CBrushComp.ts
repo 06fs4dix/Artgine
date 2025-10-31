@@ -1,9 +1,11 @@
 
 
 
+import { CUpdate } from "../../basic/Basic.js";
 import { CObject } from "../../basic/CObject.js";
 import {CBrush} from "../CBrush.js";
 import { CRPAuto } from "../CRPMgr.js";
+import { CSubject } from "../subject/CSubject.js";
 import {CComponent} from "./CComponent.js";
 import { CPaint3D } from "./paint/CPaint3D.js";
 
@@ -34,17 +36,34 @@ export class CBrushComp extends CComponent
     {
         this.mWrite.push(_write);
     }
-    Update(_delay: any): boolean 
-    {
-        //브러시 정보는 캔버스에 있어서 받으려고 처리
-        //CC->Can->Light,Env
-        if(this.mBruch==null)
+    StartChk(): boolean {
+        if(this.mStartChk==true && this.mBruch!=null)
+		{
+			this.mStartChk=false;
+			return true;
+		}
+        else
         {
             var cm=this.ProductMsg("SendGetBrush");
             cm.mInter="canvas";
             cm.mMsgData[0]=this;
-            return true;
         }
+        return false;
+    }
+    // SetOwner(_obj: any): void {
+    //     super.SetOwner(_obj);
+    // }
+    Update(_update : CUpdate): boolean 
+    {
+        //브러시 정보는 캔버스에 있어서 받으려고 처리
+        //CC->Can->Light,Env
+        // if(this.mBruch==null)
+        // {
+        //     var cm=this.ProductMsg("SendGetBrush");
+        //     cm.mInter="canvas";
+        //     cm.mMsgData[0]=this;
+        //     return true;
+        // }
         
 
         if(this.mRead!=null)

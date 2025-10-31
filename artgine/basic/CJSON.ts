@@ -70,6 +70,7 @@ export class CJSON
 	{
 		//return JSON.stringify(this.m_doc);
 		const replacer = (_key: string, value: any) => {
+			//if(_key=="mComMsg")	alert("error");
 			if (value !=null && typeof value=="object" && value.constructor.name=="CObject") 
 			{
 				return value.ToStr();

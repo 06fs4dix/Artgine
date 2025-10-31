@@ -1,3 +1,4 @@
+import { CUpdate } from "../../basic/Basic.js";
 import { CConsol } from "../../basic/CConsol.js";
 import { CObject } from "../../basic/CObject.js";
 import { CMat } from "../../geometry/CMat.js";
@@ -51,7 +52,7 @@ export class CLightPlanet extends CLight
     {
         this.mDCArr.push(_dc);
     }
-    Update(_delay: any) {
+    Update(_update : CUpdate) {
 
         if(this.mBruch!=null && this.mDCArr.length!=0)
         {
@@ -121,6 +122,6 @@ export class CLightPlanet extends CLight
 
 
         }
-        super.Update(_delay);
+        super.Update(_update);
     }
 }

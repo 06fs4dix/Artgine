@@ -91,8 +91,8 @@ export class CBound extends CObject
 		this.mMax.mF32A[0]=-100000;this.mMax.mF32A[1]=-100000;this.mMax.mF32A[2]=-100000;
 
 		this.mType=CBound.eType.Null;
-		if(this.GetType()==CBound.eType.Polytope)
-			this.mPos.Clear();
+		//if(this.GetType()==CBound.eType.Polytope)
+		this.mPos.Clear();
 	}
 	private ResetBoxMinMax(_vec : CVec3)
 	{

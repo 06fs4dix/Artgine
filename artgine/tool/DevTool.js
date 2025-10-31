@@ -394,12 +394,19 @@ function DevToolRender() {
     let clArr = subject.FindComps(CCollider);
     const render = gAtl.Frame().Ren();
     let shader = gAtl.Frame().Res().Find("Artgine/Shader/3DSimple");
-    let meshDraw = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh() + "Dev");
-    if (meshDraw == null) {
+    let meshDrawBox = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh() + "Dev");
+    if (meshDrawBox == null) {
         let mesh = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh());
-        meshDraw = new CMeshDrawNode();
-        gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDraw, shader, mesh.meshTree.mData.ci);
-        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetBoxMesh() + "Dev", meshDraw);
+        meshDrawBox = new CMeshDrawNode();
+        gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDrawBox, shader, mesh.meshTree.mData.ci);
+        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetBoxMesh() + "Dev", meshDrawBox);
+    }
+    let meshDrawSphere = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetSphereMesh() + "Dev");
+    if (meshDrawSphere == null) {
+        let mesh = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetSphereMesh());
+        meshDrawSphere = new CMeshDrawNode();
+        gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDrawSphere, shader, mesh.meshTree.mData.ci);
+        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetSphereMesh() + "Dev", meshDrawSphere);
     }
     render.UseShader(shader);
     render.SendGPU(shader, gAtl.Brush().GetCamDev().GetViewMat(), "viewMat");
@@ -430,7 +437,7 @@ function DevToolRender() {
             render.SendGPU(shader, alpha, "alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader, wMatSA);
-            render.MeshDrawNodeRender(shader, meshDraw);
+            render.MeshDrawNodeRender(shader, meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
         }
         else {
@@ -447,7 +454,7 @@ function DevToolRender() {
             render.SendGPU(shader, alpha, "alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader, wMatSA);
-            render.MeshDrawNodeRender(shader, meshDraw);
+            render.MeshDrawNodeRender(shader, meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
             color.x = 0;
             color.y = 1;
@@ -462,7 +469,7 @@ function DevToolRender() {
             render.SendGPU(shader, alpha, "alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader, wMatSA);
-            render.MeshDrawNodeRender(shader, meshDraw);
+            render.MeshDrawNodeRender(shader, meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
             color.x = 0;
             color.y = 0;
@@ -477,7 +484,7 @@ function DevToolRender() {
             render.SendGPU(shader, alpha, "alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader, wMatSA);
-            render.MeshDrawNodeRender(shader, meshDraw);
+            render.MeshDrawNodeRender(shader, meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
         }
     }
@@ -504,7 +511,7 @@ function DevToolRender() {
         render.SendGPU(shader, alpha, "alphaModel");
         MatToMat12Fun(wmat);
         render.SendGPU(shader, wMatSA);
-        render.MeshDrawNodeRender(shader, meshDraw);
+        render.MeshDrawNodeRender(shader, meshDrawBox);
         if (pt instanceof CPaint2D) {
             if (pt.mYSort) {
                 color.x = 0;
@@ -519,7 +526,7 @@ function DevToolRender() {
                 render.SendGPU(shader, alpha, "alphaModel");
                 MatToMat12Fun(wmat);
                 render.SendGPU(shader, wMatSA);
-                render.MeshDrawNodeRender(shader, meshDraw);
+                render.MeshDrawNodeRender(shader, meshDrawBox);
             }
         }
     }
@@ -531,8 +538,6 @@ function DevToolRender() {
         if (pt.GetOwner() == null || pt.IsEnable() == false || pt.GetLayer() == "")
             continue;
         let bound = pt.GetBoundGJK();
-        bound.mMax;
-        bound.mMin;
         const min = bound.mMin;
         const max = bound.mMax;
         const center = new CVec3((min.x + max.x) * 0.5, (min.y + max.y) * 0.5, (min.z + max.z) * 0.5);
@@ -547,7 +552,10 @@ function DevToolRender() {
         MatToMat12Fun(wmat);
         render.SendGPU(shader, wMatSA);
         render.SendGPU(shader, [gAtl.Frame().Pal().GetBlackTex()]);
-        render.MeshDrawNodeRender(shader, meshDraw);
+        if (pt.GetBound().GetType() == CBound.eType.Sphere)
+            render.MeshDrawNodeRender(shader, meshDrawSphere);
+        else
+            render.MeshDrawNodeRender(shader, meshDrawBox);
     }
     gAtl.Frame().Dev().SetLine(false);
     gAtl.Frame().Dev().SetDepthTest(true);
@@ -842,6 +850,8 @@ function DevToolUpdate(_delay) {
                 let ptArr = subject.FindComps(CPaint);
                 let clArr = subject.FindComps(CCollider);
                 for (let pt of ptArr) {
+                    if (selectSub == subject)
+                        continue;
                     let bound = pt.GetBoundFMat();
                     if (CUtilMath.RayBoxIS(bound.mMin, bound.mMax, ray)) {
                         let len = CMath.V3Distance(ray.GetOriginal(), ray.GetPosition());
@@ -852,9 +862,13 @@ function DevToolUpdate(_delay) {
                             gSelectBound = bound;
                             break;
                         }
+                        else if (bselectSub == null)
+                            bselectSub = subject;
                     }
                 }
                 for (let cl of clArr) {
+                    if (selectSub == subject)
+                        continue;
                     let bound = cl.GetBoundGJK();
                     if (bound.GetType() != CBound.eType.Null && CUtilMath.RayBoxIS(bound.mMin, bound.mMax, ray)) {
                         let len = CMath.V3Distance(ray.GetOriginal(), ray.GetPosition());
@@ -865,6 +879,8 @@ function DevToolUpdate(_delay) {
                             gSelectBound = bound;
                             break;
                         }
+                        else if (bselectSub == null)
+                            bselectSub = subject;
                     }
                 }
             }

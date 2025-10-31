@@ -190,6 +190,24 @@ export class CMath
 	// 	return this.V3Distance(_a,_b);
 	// }
 	//Mat=================================================================
+	static MatTranspose(pa_mat : CMat, pa_out : CMat = null)
+	{
+		if(pa_out == null) {
+			pa_out = new CMat();
+		}
+
+		const a00 = pa_mat.mF32A[0], a01 = pa_mat.mF32A[4], a02 = pa_mat.mF32A[8], a03 = pa_mat.mF32A[12];
+		const a10 = pa_mat.mF32A[1], a11 = pa_mat.mF32A[5], a12 = pa_mat.mF32A[9], a13 = pa_mat.mF32A[13];
+		const a20 = pa_mat.mF32A[2], a21 = pa_mat.mF32A[6], a22 = pa_mat.mF32A[10], a23 = pa_mat.mF32A[14];
+		const a30 = pa_mat.mF32A[3], a31 = pa_mat.mF32A[7], a32 = pa_mat.mF32A[11], a33 = pa_mat.mF32A[15];
+
+		pa_out.mF32A[0] = a00; pa_out.mF32A[1] = a01; pa_out.mF32A[2] = a02; pa_out.mF32A[3] = a03;
+		pa_out.mF32A[4] = a10; pa_out.mF32A[5] = a11; pa_out.mF32A[6] = a12; pa_out.mF32A[7] = a13;
+		pa_out.mF32A[8] = a20; pa_out.mF32A[9] = a21; pa_out.mF32A[10] = a22; pa_out.mF32A[11] = a23;
+		pa_out.mF32A[12] = a30; pa_out.mF32A[13] = a31; pa_out.mF32A[14] = a32; pa_out.mF32A[15] = a33;
+
+		return pa_out;
+	}
 	static MatMul(pa_val1 : CMat,pa_val2: CMat,pa_val3: CMat=null,_ref=false)
 	{
 		var L_matrix=pa_val3;
@@ -301,6 +319,16 @@ export class CMath
 	
 		return L_matrix;
 	}
+	static MatAdd(a : CMat,b : CMat,pa_out : CMat=null)
+	{
+		if(pa_out==null)	pa_out=new CMat();
+		for(let i=0;i<16;++i)
+		{
+			pa_out.mF32A[i]=a.mF32A[i]+b.mF32A[i];
+		}
+
+		return pa_out;
+	}
 	static MatAxisToRotation(axis : CVec3, radianAngle : number,pa_out : CMat=new CMat)
 	{
 		
@@ -345,15 +373,16 @@ export class CMath
 		return pa_out;
 	}
 	
-	static MatMulFloat(pa_val1 : CMat,pa_val2 : number)
+	static MatMulFloat(pa_val1 : CMat,pa_val2 : number,_out : CMat=null)
 	{
-		var L_matrix = new CMat();
-		L_matrix.SetUnit(false);
+		if(_out==null)	_out = new CMat();
+		_out.SetUnit(false);
+		
 		for (var i = 0; i < 16; ++i)
 		{
-			L_matrix.mF32A[i] = pa_val1.mF32A[i] * pa_val2;
+			_out.mF32A[i] = pa_val1.mF32A[i] * pa_val2;
 		}
-		return L_matrix;
+		return _out;
 	}
 	static MatToVec4(pa_vec : CVec3,pa_mat : CMat)
 	{
@@ -1159,7 +1188,7 @@ export class CMath
 	}
 
 
-	static Vec3toPlane(pa_vec1:CVec3, pa_vec2:CVec3, pa_vec3:CVec3)
+	static Vec3toPlaneEach(pa_vec1:CVec3, pa_vec2:CVec3, pa_vec3:CVec3)
 	{
 		var pa_out=new CVec4();
 		var L_t0=CPoolGeo.ProductV3();
@@ -1184,7 +1213,7 @@ export class CMath
 	static NormalAndVertexFromPlane(pa_normal : CVec3, pa_vertex : CVec3,_out : CFloat32=null,_planeOff=0)
 	{
 		var pa_out=_out;
-		if(pa_out==null)	pa_out=new CVec4();
+		if(pa_out==null)	pa_out=new CPlane();
 
 		pa_out.mF32A[_planeOff+0] = pa_normal.x;
 		pa_out.mF32A[_planeOff+1] = pa_normal.y;
@@ -1193,7 +1222,7 @@ export class CMath
 	
 		return pa_out;
 	}
-	static PlaneVec3DotCoordinate(pa_plane : CPlane,_dir : number, _pos : CVec3)
+	static PlaneDotV3Coordi(pa_plane : CPlane,_dir : number, _pos : CVec3)
 	{
 		var v=CPoolGeo.ProductV3();
 		v.mF32A[0]=pa_plane.mF32A[_dir+0];
@@ -1203,7 +1232,11 @@ export class CMath
 		CPoolGeo.RecycleV3(v);
 		return dot;
 	}
-	static PlaneVec3DotNormal(pa_plane:CVec4, pa_vec:CVec3)
+	static PlaneEachDotV3Coordi(pa_plane:CVec4, pa_vec:CVec3)
+	{
+		return CMath.V3Dot(new CVec3(pa_plane.x, pa_plane.y, pa_plane.z), pa_vec)+pa_plane.w;
+	}
+	static PlaneEachDotV3Normal(pa_plane:CVec4, pa_vec:CVec3)
 	{
 		return CMath.V3Dot(new CVec3(pa_plane.x, pa_plane.y, pa_plane.z), pa_vec);
 	}

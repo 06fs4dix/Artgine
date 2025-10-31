@@ -190,7 +190,7 @@ export class CInput
 	}
 	TouchClear(){}
 
-	Update(_delay)
+	Update(_update : CUpdate)
 	{
 		
 	}
@@ -286,6 +286,7 @@ export class CInput
 
 
 import CInput_imple from "../system_imple/CInput.js";
+import { CUpdate } from "../basic/Basic.js";
 
 CInput_imple();
 

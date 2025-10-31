@@ -22,13 +22,19 @@ export class CBrushComp extends CComponent {
     PushRPAuto(_write) {
         this.mWrite.push(_write);
     }
-    Update(_delay) {
-        if (this.mBruch == null) {
+    StartChk() {
+        if (this.mStartChk == true && this.mBruch != null) {
+            this.mStartChk = false;
+            return true;
+        }
+        else {
             var cm = this.ProductMsg("SendGetBrush");
             cm.mInter = "canvas";
             cm.mMsgData[0] = this;
-            return true;
         }
+        return false;
+    }
+    Update(_update) {
         if (this.mRead != null) {
             var cm = this.ProductMsg("CubeMap");
             cm.mIntra = CPaint3D;

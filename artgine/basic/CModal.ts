@@ -1,4 +1,4 @@
-import {  IAutoUpdate,  IListener } from "./Basic.js";
+import {  CUpdate, IAutoUpdate,  IListener } from "./Basic.js";
 import { Bootstrap } from "./Bootstrap.js";
 import { CClass } from "./CClass.js";
 import {CDomFactory} from "./CDOMFactory.js";
@@ -231,7 +231,7 @@ export class CModal implements IAutoUpdate , IListener
     IsPause(): boolean {
         return this.mPause;
     }
-    Update(_delay){}
+    Update(_update : CUpdate){}
     Key()   {   
         if(this.mKey==null)
             this.mKey=CUniqueID.Get();

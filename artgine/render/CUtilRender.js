@@ -8,8 +8,10 @@ import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
 import { CMesh } from "./CMesh.js";
+import { CMeshCopyNode } from "./CMeshCopyNode.js";
 import { CMeshCreateInfo, CMeshBuf } from "./CMeshCreateInfo.js";
 import { CMeshDataNode } from "./CMeshDataNode.js";
+import { CMeshTreeUpdate } from "./CMeshTreeUpdate.js";
 import { CVertexFormat } from "./CShader.js";
 const g_fEpsilon = 0.0001;
 class s_FACE {
@@ -972,11 +974,46 @@ export class CUtilRender {
         }
     }
     static MeshBoundUpdate(_mesh) {
-        MeshNodeBoundUpdate(_mesh.meshTree, new CMat());
+        MeshNodeBoundUpdate(_mesh, _mesh.meshTree, new CMat());
+    }
+    static MeshAniBake(_texture, _mesh, _st, _end) {
+        let buf = _texture.GetBuf()[0];
+        let XCount = _mesh.skin.length * 4;
+        let YCount = (_end - _st) * 0.01;
+        if (_texture.GetWidth() < XCount || _texture.GetHeight() < YCount) {
+            CAlert.E("error");
+            return;
+        }
+        let pst = 0;
+        let UpdateAni = (_node, _mat) => {
+            let mpi = new CMeshCopyNode();
+            mpi.pos = _node.mData.pos;
+            mpi.rot = _node.mData.rot;
+            mpi.sca = _node.mData.sca;
+            CMeshTreeUpdate.TreeUpdateMeshAni(pst, _st, _end, _node.mData, _node.mData, mpi, _mat);
+            mpi.PRSReset();
+            mpi.pst = CMath.MatMul(mpi.pst, _mat);
+            for (var i = 0; i < _mesh.skin.length; ++i) {
+                if (_node.mData.IsSkinKey(_mesh.skin[i].key)) {
+                    var all = new CMat();
+                    all = CMath.MatMul(_mesh.skin[i].mat, mpi.pst);
+                    for (let j = 0; j < 16; ++j)
+                        buf[(j + i * 16) + ((YCount - 1) - pst * YCount) * XCount * 4] = all.mF32A[j];
+                }
+            }
+            if (_node.mChild != null)
+                UpdateAni(_node.mChild, mpi.pst);
+            if (_node.mColleague != null)
+                UpdateAni(_node.mColleague, _mat);
+        };
+        for (let c = 0; c < YCount; ++c) {
+            pst = c / YCount;
+            UpdateAni(_mesh.meshTree, new CMat());
+        }
     }
 }
 ;
-function MeshNodeBoundUpdate(_node, _sum) {
+function MeshNodeBoundUpdate(_mesh, _node, _sum) {
     var mat = CPoolGeo.ProductMat();
     var sm = CPoolGeo.ProductMat();
     var rm = CPoolGeo.ProductMat();
@@ -990,14 +1027,39 @@ function MeshNodeBoundUpdate(_node, _sum) {
     mat.mF32A[14] = _node.mData.pos.z;
     mat.UnitCheck();
     mat = CMath.MatMul(_sum, mat);
-    if (_node.mData.ci != null) {
+    if (_node.mData.ci != null && _node.mData.textureOff.length > 0) {
         _node.mData.ci.bound.SetType(CBound.eType.Box);
         var posb = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+        var web = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight)[0];
+        var wib = _node.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex)[0];
         if (_node.mData.ci.indexCount > 0) {
+            let dmat = new CMat();
+            dmat.SetUnit(false);
             for (var i = 0; i < _node.mData.ci.indexCount; i += 3) {
-                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(_node.mData.ci.index[i + 0]), mat));
-                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(_node.mData.ci.index[i + 1]), mat));
-                _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(_node.mData.ci.index[i + 2]), mat));
+                for (let j = 0; j < 3; ++j) {
+                    let pos = posb.bufF.V3(_node.mData.ci.index[i + j]);
+                    if (web != null && _mesh.skin.length > 0) {
+                        let wmat = new CMat();
+                        wmat.Zero();
+                        wmat.SetUnit(false);
+                        let we = web.bufF.V4(_node.mData.ci.index[i + j]);
+                        let wi = wib.bufF.V4(_node.mData.ci.index[i + j]);
+                        CMath.MatMulFloat(_mesh.skin[wi.x].mat, we.x, dmat);
+                        CMath.MatAdd(wmat, dmat, wmat);
+                        CMath.MatMulFloat(_mesh.skin[wi.y].mat, we.y, dmat);
+                        CMath.MatAdd(wmat, dmat, wmat);
+                        CMath.MatMulFloat(_mesh.skin[wi.z].mat, we.z, dmat);
+                        CMath.MatAdd(wmat, dmat, wmat);
+                        CMath.MatMulFloat(_mesh.skin[wi.w].mat, we.w, dmat);
+                        CMath.MatAdd(wmat, dmat, wmat);
+                        CMath.MatMul(mat, wmat, dmat);
+                    }
+                    else
+                        dmat.Import(mat);
+                    if (dmat.IsZero() == false) {
+                        _node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(pos, dmat));
+                    }
+                }
             }
         }
         else {
@@ -1007,7 +1069,7 @@ function MeshNodeBoundUpdate(_node, _sum) {
         }
     }
     if (_node.mChild != null)
-        MeshNodeBoundUpdate(_node.mChild, mat);
+        MeshNodeBoundUpdate(_mesh, _node.mChild, mat);
     if (_node.mColleague != null)
-        MeshNodeBoundUpdate(_node.mColleague, _sum);
+        MeshNodeBoundUpdate(_mesh, _node.mColleague, _sum);
 }

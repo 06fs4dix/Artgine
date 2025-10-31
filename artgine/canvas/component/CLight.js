@@ -107,7 +107,7 @@ export class CLight extends CBrushComp {
         }
     }
     GetTex() { return this.GetOwner().GetFrame().Pal().GetShadowWriteTex(); }
-    Update(_delay) {
+    Update(_update) {
         if (this.mUpdate == CUpdate.eType.Already) {
             this.mUpdate = CUpdate.eType.Not;
         }
@@ -128,11 +128,11 @@ export class CLight extends CBrushComp {
             }
             this.SetDirectPos(pos);
         }
-        super.Update(_delay);
+        super.Update(_update);
         if (this.mBruch != null)
-            this.UpdateBaush();
+            this.UpdateBaush(_update);
     }
-    UpdateBaush() {
+    UpdateBaush(_update) {
         if (this.mWrite.length == 0) {
             let fw = this.mBruch.mFrame;
             let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
@@ -186,7 +186,7 @@ export class CLight extends CBrushComp {
                     }
                     this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
-                    scam0.Update(1);
+                    scam0.Update(_update);
                     n = width * 4;
                     slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
                     slook.x = Math.round(slook.x / this.mDigit) * this.mDigit;
@@ -200,7 +200,7 @@ export class CLight extends CBrushComp {
                     }
                     this.mBruch.mShadowView[2].set(scam1.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[3].set(scam1.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
-                    scam1.Update(1);
+                    scam1.Update(_update);
                     n = width * 10;
                     slook = CMath.V3AddV3(eye, CMath.V3MulFloat(viewDir, n));
                     slook.x = Math.round(slook.x / this.mDigit) * this.mDigit;
@@ -214,7 +214,7 @@ export class CLight extends CBrushComp {
                     }
                     this.mBruch.mShadowView[4].set(scam2.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
-                    scam2.Update(1);
+                    scam2.Update(_update);
                 }
                 for (var i = 0; i < this.mCascadeCycle.length; ++i) {
                     if (this.mCascadeCycle[i] == -1)

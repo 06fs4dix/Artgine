@@ -10,12 +10,12 @@ export class CStopover extends CObject
 	{
 		super();
 		this.mPos=_dest;
-		this.m_velocity=_velocity;
+		this.mVelocity=_velocity;
 	}
 	mPos=new Array<CVec3>;
-	m_curve=new CCurve();
-	m_bezier=false;
-	m_time=0;
-	m_delay=0;
-	m_velocity=0;
+	mCurve=new CCurve();
+	mBezier=false;
+	mTime=0;
+	mDelay=0;
+	mVelocity=0;
 }

@@ -16,6 +16,8 @@ import {
 	Mat34ToMat,
 	CMat12,
 	CMat34,
+	Sam2DArrSize,
+	MatMix,
 } from "./Shader"
 import {
 	SDF
@@ -53,7 +55,7 @@ var worldMat34 : CMat34=Null();
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 var zDepth : number=0.0;
-
+var zDepthBias : number=0.001;
 //varying
 var to_uv : ToV2=Null();
 var to_normal : ToV3=Null();
@@ -82,12 +84,14 @@ var screenResolution : CVec2=new CVec2(1.0, 1.0);
 
 //LUT
 var weightArrMat: Sam2DMat = new Sam2DMat(11,10);
+var weightBakeMat: number = 9.0;
+var weightBakeIndex : number;
 
 var time : number = Attribute(0,"time");
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
-	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,sam2DCount],
+	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,sam2DCount],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
@@ -101,7 +105,7 @@ Build("Artgine/Shader/3DSimple",["simple"],
 //gBuffer
 Build("Artgine/Shader/3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,
+		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		sam2DCount,material,outputType,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer,[out_color]
@@ -109,7 +113,7 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"],
 //gBuffer MultiTex
 Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], 
 	vs_main_gBuffer, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,
+		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		sam2DCount,material,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer_multi,[out_color, out_pos, out_nor, out_spc]
@@ -118,7 +122,7 @@ Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"],
 //shadow
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,
+		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,jitter
 	], [out_position,to_uv,to_viewPos],
@@ -127,7 +131,7 @@ Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"],
 
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,
+		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
@@ -150,8 +154,8 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 //baking
 Build("Artgine/Shader/3DBake", ["bake"], 
 	vs_main_bake, [
-		worldMat,viewMat,projectMat,skin,weightArrMat
-	], [out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],
+		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex], 
+		[out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],
 	ps_main_bake,[out_color]
 );
 
@@ -177,23 +181,56 @@ function ps_main_simple()
 	out_color=L_cor;
 }
 
-function GetWorldWeightMat(_weightArrMat : Sam2DMat, _weight : CVec4, _weightIndex : CVec4, _worldMat : CMat, _skin : number) : CMat {
+function GetWorldWeightMat(_weightArrMat : Sam2DMat,_weightBakeArrMat : number,_index : number, 
+	_weight : CVec4, _weightIndex : CVec4, _worldMat : CMat, _skin : number) : CMat 
+{
 	var woweMat : CMat = _worldMat;
 
 	if(_skin > 0.5 && _weight.x+_weight.y+_weight.z+_weight.w>0.0)
 	{
 		if(_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x>0.0)
-		{	
+		{
 			var weightMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(_weightArrMat,_weightIndex.x));
 			weightMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(_weightArrMat,_weightIndex.y)),weightMat);
 			weightMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(_weightArrMat,_weightIndex.z)),weightMat);
 			weightMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(_weightArrMat,_weightIndex.w)),weightMat);
 			woweMat = MatMul(weightMat,woweMat);
+			
 		}
+		else if(_skin < SDF.eSkin.Bake + 0.5 && _index>-0.5)
+		{
+			var st : number=floor(_index);
+			var ed : number=st+1.0;
+
+			
+			var weightSTMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.x));
+			weightSTMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.y)),weightSTMat);
+			weightSTMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.z)),weightSTMat);
+			weightSTMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.w)),weightSTMat);
+
+
+			var weightEDMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.x));
+			weightEDMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.y)),weightEDMat);
+			weightEDMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.z)),weightEDMat);
+			weightEDMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.w)),weightEDMat);
+
+
+			// var weightSTMat:CMat = Sam2DToMat(new CVec2(9.0,0.0),0.0);
+			// woweMat = MatMul(weightSTMat,woweMat);
+			//woweMat = weightSTMat;
+			var weightMat:CMat = MatMix(weightSTMat, weightEDMat, _index-st);
+			woweMat = MatMul(weightMat,woweMat);
+			
+		}
+		
+		
+		
 	}
 
 	return woweMat;
 }
+
+
 
 // function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _wor : CVec4, _camPos : CVec3, _texOff : CVec3) : CVec2 {
 // 	var uv : CVec2 = _uv;
@@ -246,7 +283,7 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	wMat=worldMat;
 	BranchEnd();
 
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
 
@@ -260,6 +297,9 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	// BranchBegin("zDepth","Z",[zDepth]);
 	// P.z+=zDepth;
 	// BranchEnd();
+	BranchBegin("zDepth","Z",[zDepth,zDepthBias]);
+	P.z+=zDepth*zDepthBias;
+	BranchEnd();
 	out_position=P;
 
 	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
@@ -282,7 +322,7 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 
 	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
 	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
@@ -319,7 +359,7 @@ function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, 
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
 
@@ -516,7 +556,7 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 
 	var svm : CMat=new CMat(0);
 	var spm : CMat=new CMat(0);
@@ -576,7 +616,7 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 	
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
@@ -601,7 +641,7 @@ function vs_main_shadow_read_pa(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : 
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 	
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);

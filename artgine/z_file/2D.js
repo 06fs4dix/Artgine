@@ -1,4 +1,4 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
+import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
 import { CAModelCac, ColorVFX, GetTexCodiedUV, GetTexDecodedUV } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
@@ -107,16 +107,6 @@ function vs_main_tail(f3_ver, f2_uv) {
     if (f2_uv.y > 0.5 && windInfluence > 0.01) {
         size = new CVec3(max(worldMat[0].x, worldMat[1].x) - min(worldMat[2].x, worldMat[3].x), max(worldMat[1].y, worldMat[3].y) - min(worldMat[0].y, worldMat[2].y), 0.0);
         rpos.xyz = V3AddV3(rpos.xyz, GetWind(V3MulFloat(V3AddV3(worldMat[2].xyz, worldMat[3].xyz), 0.5), size, time));
-    }
-    BranchEnd();
-    var center = new CVec3(0.0, 0.0, 0.0);
-    BranchBegin("billboard", "B", [billboard, billboardMat]);
-    if (billboard > 0.5) {
-        center = V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz);
-        center = V3MulFloat(center, 0.25);
-        rpos.xyz = V3SubV3(rpos.xyz, center);
-        rpos = V4MulMatCoordi(rpos, billboardMat);
-        rpos.xyz = V3AddV3(rpos.xyz, center);
     }
     BranchEnd();
     to_worldPos = rpos;

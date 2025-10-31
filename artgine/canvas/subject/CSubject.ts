@@ -17,7 +17,7 @@ import { CFile } from "../../system/CFile.js"
 import { IFile } from "../../system/System.js"
 import { CFrame } from "../../util/CFrame.js"
 import { CComponent } from "../component/CComponent.js"
-import { CGlobalGeometryInfo } from "../component/CGlobalGeometryInfo.js"
+
 import { CNavigation } from "../component/CNavigation.js"
 import { CRouteMsg } from "../CRouteMsg.js"
 import { CPaint } from "../component/paint/CPaint.js"
@@ -38,7 +38,6 @@ export class CSubject extends CObject implements IFile
 
 	public mComArr : Array<CComponent>;
 	public mPTArr : Array<CComponent>=null;
-	public mCLArr : CArray<CComponent>=null;
 	public mPushArr : Array<CComponent>=new Array<CComponent>();
 	public mPushLock=false;
 	
@@ -79,7 +78,7 @@ export class CSubject extends CObject implements IFile
 	{
 		super();
 		this.mComArr=_comArr;
-		this.mCLArr=new CArray<CComponent>();
+		//this.mCLArr=new CArray<CComponent>();
 		this.mChild=new Array();
 		this.mPMat=null;
 		this.mPos = new CVec3();
@@ -142,7 +141,7 @@ export class CSubject extends CObject implements IFile
 		this.mDestroy=false;
 		this.mInMsg.Clear();
 		this.mOutMsg.Clear();
-		this.mCLArr.Clear();
+		//this.mCLArr.Clear();
 		this.mUpdateMat = CUpdate.eType.Updated;
 	}
 	
@@ -204,7 +203,7 @@ export class CSubject extends CObject implements IFile
 	UpdateComp()
 	{
 		this.mUpdateComp=true;
-		this.mCLArr.Clear();
+		//this.mCLArr.Clear();
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
@@ -394,7 +393,7 @@ export class CSubject extends CObject implements IFile
 		dummy.mMax.x=0;dummy.mMax.y=0;dummy.mMax.z=0;
 		return dummy;	
 	}
-	SubjectUpdate(_delay : number) : void
+	SubjectUpdate(_update : CUpdate) : void
 	{
 		
 		for (var i = 0; i < this.mChild.length; ++i)
@@ -414,7 +413,7 @@ export class CSubject extends CObject implements IFile
 		//if(this.m_init==false)
 		// 	this.m_init=true;
 	}
-	Update(_delay : number){};
+	Update(_update : CUpdate){};
 	NewInMsg(_name : string) : CRouteMsg
 	{
 		let msg=new CRouteMsg(_name);
@@ -440,13 +439,11 @@ export class CSubject extends CObject implements IFile
 		
 		
 	}
-	RootMsgUpdate(_delay : number,_ggi : CGlobalGeometryInfo)
+	RootMsgUpdate(_update : CUpdate)
 	{
 		
 	}
-	
-
-	RouteMsgUpdate(_delay : number,_ggi : CGlobalGeometryInfo)
+	RouteMsgUpdate(_update : CUpdate)
 	{
 
 		
@@ -564,7 +561,7 @@ export class CSubject extends CObject implements IFile
 		if(this.mPTArr) {
 			for(let pt of this.mPTArr as Array<CPaint>)
 			{
-				pt.BatchClear();
+				pt.ClearBatch();
 			}
 
 			this.mPTArr.length = 0;
@@ -613,7 +610,7 @@ export class CSubject extends CObject implements IFile
 		if(this.mPTArr) {
 			for(let pt of this.mPTArr as Array<CPaint>)
 			{
-				pt.BatchClear();
+				pt.ClearBatch();
 			}
 
 			this.mPTArr.length = 0;

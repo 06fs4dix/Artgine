@@ -6,8 +6,8 @@ export class CScriptComp extends CComponent {
         super();
         this.mScript.mKey = this.Key();
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         this.mScript.mKey = this.Key();
         this.mScript.mData[0] = this.GetOwner();
         this.mScript.mGitHub = this.GetOwner().GetFrame().PF().mGitHub;

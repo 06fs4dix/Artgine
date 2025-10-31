@@ -22,7 +22,7 @@ export class CCollisionObject {
         this.mPush = _push;
     }
 }
-export class CCollider extends CComponent {
+export class CCollider extends CGeometryComp {
     static eEvent = {
         None: 0,
         Trigger: 1,
@@ -41,7 +41,7 @@ export class CCollider extends CComponent {
     mEvent = CCollider.eEvent.Collision;
     mOneWayDir = new CVec3();
     mOneWayArc = -1;
-    mGGI = null;
+    mGI = null;
     mGJK = null;
     mGJKShape = null;
     mBoundGJK = null;
@@ -68,7 +68,7 @@ export class CCollider extends CComponent {
     RegistHeap(_F32A) {
     }
     EditForm(_pointer, _body, _input) {
-        if (_pointer.member == "mCollision" || _pointer.member == "mGGI")
+        if (_pointer.member == "mCollision" || _pointer.member == "mGI")
             CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""]);
     }
     EditChange(_pointer, _child) {
@@ -83,9 +83,10 @@ export class CCollider extends CComponent {
     }
     IsShould(_member, _type) {
         if (_member == "mUpdateMat" || _member == "mGJK" || _member == "mPaintLoad" ||
-            _member == "mGJKShape" || _member == "mPushVec" || _member == "mGGI" ||
+            _member == "mGJKShape" || _member == "mPushVec" || _member == "mGI" ||
             _member == "mBoundGJK" || _member == "mCenterGJK" || _member == "mSizeGJK" ||
-            _member == "mColTarget" || _member == "mColPush" || _member == "mOneWayMap" || _member == "mRB")
+            _member == "mColTarget" || _member == "mColPush" || _member == "mColPair" ||
+            _member == "mOneWayMap" || _member == "mRB")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -122,12 +123,15 @@ export class CCollider extends CComponent {
         }
         return colList;
     }
-    GeometryUpdate(_ggi) {
-        this.mGGI = _ggi;
+    Update(_update) {
+        if (this.mGI != null)
+            this.mGI.mFixedComp.Push(this);
+    }
+    Build() {
         this.UpdateMat();
         if (this.IsEnable() == false || this.GetLayer() == "" || this.GetOwner().IsEnable() == false)
             return;
-        _ggi.mOctree.Insert(this.mCenterGJK, this.mSizeGJK, this, this.mBoundGJK.mMin, this.mBoundGJK.mMax);
+        this.mGI.mOctree.Insert(this.mCenterGJK, this.mSizeGJK, this, this.mBoundGJK.mMin, this.mBoundGJK.mMax);
     }
     Prefab(_owner) {
         if (this.mPaintLoad != null) {
@@ -139,23 +143,27 @@ export class CCollider extends CComponent {
         }
     }
     StartChk() {
+        let start = super.StartChk();
         if (this.mPaintLoad != null) {
             if (this.m2D ? this.mPaintLoad.GetSize() != null : this.mPaintLoad.GetBound().GetType() != CBound.eType.Null) {
                 this.InitBound(this.mPaintLoad);
                 this.mPaintLoad = null;
                 this.UpdateMat();
             }
-            else
-                return;
+            else {
+                this.mStartChk = true;
+                return false;
+            }
         }
-        if (this.mGJKShape == null || this.mGGI == null)
-            return;
+        if (this.mGJKShape == null) {
+            this.mStartChk = false;
+            return false;
+        }
         if (this.mBound.GetType() == CBound.eType.Voxel) {
             this.mUpdateMat = CUpdate.eType.Not;
-            return;
+            return true;
         }
-        this.mStartChk = false;
-        this.Start();
+        return start;
     }
     SetOwner(_obj) {
         super.SetOwner(_obj);
@@ -214,7 +222,7 @@ export class CCollider extends CComponent {
     SetElevator(_elevator) { this.mElevator = _elevator; }
     GetStairs() { return this.mStairs; }
     SetStairs(_stairs) { this.mStairs = _stairs; }
-    Update(_delay) {
+    Fixed(_update) {
     }
     SetBoundType(_type) {
         this.mBoundType = _type;
@@ -236,8 +244,8 @@ export class CCollider extends CComponent {
     ClearCollisionLayer() {
         this.mCollision = new Set();
     }
-    SetPickMouse(_val) { this.mPickRay.add("Main"); }
-    SetCameraOut(_val) { this.mPlaneOut = "Main"; }
+    SetPickMouse(_val) { this.mPickRay.add(""); }
+    SetCameraOut(_val) { this.mPlaneOut = ""; }
     PushPickRay(_val) {
         this.mPickRay.add(_val);
     }
@@ -370,8 +378,9 @@ export class CCollider extends CComponent {
     mOneWayMap = new Map();
     SetRestitution(_restitution = 0.5) { this.mRestitution = _restitution; }
     GetRestitution() { return this.mRestitution; }
-    Collision(_org, _size, _tar, _push) {
+    PushExe(_org, _size, _tar, _push) {
     }
 }
 import CCollider_imple from "../../canvas_imple/component/CCollider.js";
+import { CGeometryComp } from "./CGeometryComp.js";
 CCollider_imple();

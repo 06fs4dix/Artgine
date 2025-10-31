@@ -3,6 +3,7 @@ import {CVec3} from "../../geometry/CVec3.js"
 import {CMath} from "../../geometry/CMath.js"
 import {CCurve} from "../../util/CCurve.js";
 import { CObject } from "../../basic/CObject.js";
+import { CUpdate } from "../../basic/Basic.js";
 
 export class CForce extends CObject
 {
@@ -68,15 +69,15 @@ export class CForce extends CObject
 	SetCurve(_curve : CCurve)	{		this.mCurve=_curve;	}
 	SetRemove(_enable : boolean){	this.mRemove=_enable;	}
 	
-	Cac(_tick : number)
+	Cac(_update : CUpdate)
 	{
 		
 		
 		
 
 
-		var dtime = _tick * 0.001;
-		this.mTime+=_tick;
+		var dtime = _update.FixedTime();
+		this.mTime+=_update.FixedTime();
 		if(this.mDMulVEnd==null)
 		{
 			CMath.V3MulFloat(this.mDirection,dtime*this.mVelocity,this.mForce);

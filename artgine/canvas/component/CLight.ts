@@ -174,7 +174,7 @@ export class CLight extends CBrushComp
 	}
 
 	GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
-	Update(_delay) : boolean|any
+	Update(_update : CUpdate) : boolean|any
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
 			this.mUpdate = CUpdate.eType.Not;
@@ -213,11 +213,11 @@ export class CLight extends CBrushComp
 		}
 		
 		
-		super.Update(_delay);
-		if(this.mBruch!=null)	this.UpdateBaush();
+		super.Update(_update);
+		if(this.mBruch!=null)	this.UpdateBaush(_update);
 
 	}
-	UpdateBaush()
+	UpdateBaush(_update : CUpdate)
 	{
 		//if(this.mBruch==null)	return;
 	
@@ -313,7 +313,7 @@ export class CLight extends CBrushComp
 					this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
 					this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
 					
-					scam0.Update(1);
+					scam0.Update(_update);
 					
 					
 					n=width*4;
@@ -336,7 +336,7 @@ export class CLight extends CBrushComp
 					this.mBruch.mShadowView[2].set(scam1.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
 					this.mBruch.mShadowView[3].set(scam1.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
 					
-					scam1.Update(1);
+					scam1.Update(_update);
 					
 					n=width*10;
 					slook=CMath.V3AddV3(eye,CMath.V3MulFloat(viewDir,n));
@@ -356,7 +356,7 @@ export class CLight extends CBrushComp
 					this.mBruch.mShadowView[4].set(scam2.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
 					this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
 					
-					scam2.Update(1);
+					scam2.Update(_update);
 						
 				} 
 				

@@ -20,7 +20,7 @@ var g_offset=1024;
 export interface ICamCon
 {
 	InitCamera(_cam);
-	Update(_delay);
+	Update(_update : CUpdate);
 	SetRotKey(_key);
 	SetPosKey(_key);
 	SetRotXLock(_enable);
@@ -34,7 +34,7 @@ export interface ICamCon
 export interface ICamShake
 {
 	InitCamera(_cam : CCamera);
-	Update(_delay : number);
+	Update(_update : CUpdate);
 	GetEye();
 	GetLook();
 	Shake(_duration : number);
@@ -276,17 +276,17 @@ export class CCamera extends CObject
 		this.mReset=false;
 		
 	}
-	Update(_delay)
+	Update(_update : CUpdate)
 	{
 		if(this.mCamCon!=null)
 		{
 			this.mCamCon.InitCamera(this);
-			this.mCamCon.Update(_delay);
+			this.mCamCon.Update(_update);
 		}
 		if(this.mCamShake!=null)
 		{
 			this.mCamShake.InitCamera(this);
-			this.mCamShake.Update(_delay);
+			this.mCamShake.Update(_update);
 		}
 
 		if(this.mReset)

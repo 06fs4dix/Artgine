@@ -1,3 +1,4 @@
+import { CUpdate } from "../basic/Basic.js";
 import { CDomFactory } from "../basic/CDOMFactory.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
@@ -82,7 +83,7 @@ function Init() {
     g_fw.Pal().Init(g_fw);
     g_brush = new CBrush(g_fw);
     g_brush.InitCamera();
-    g_can = new CCanvas(g_fw, g_brush);
+    g_can = new CCanvas(g_fw, g_brush,null);
     g_brush.GetCam2D().SetCamCon(new CCamCon2DFreeMove(g_fw.Input()));
 
     var sub = g_can.PushSub(new CSubject());
@@ -500,9 +501,9 @@ function Init() {
 
 }
 var gBeforeSelect : HTMLElement=null;
-function Update(_delay: number) {
-    g_brush.Update(_delay);
-    g_can.Update(_delay);
+function Update(_update : CUpdate) {
+    g_brush.Update(_update);
+    g_can.Update(_update);
     // g_graph.Update(_delay);
     // g_graphHelper.Update(_delay);
 }

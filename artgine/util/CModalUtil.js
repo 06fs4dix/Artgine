@@ -237,7 +237,7 @@ export class CModalEvent extends CModalBackGround {
             this.mChangeEvent.Call();
         });
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mLast != "")
             this.mLast = "";
         if (this.mState != "") {
@@ -282,13 +282,13 @@ export class CModalFrameView extends CModalBackGround {
             this.mGraphDiv.appendChild(bar);
         }
     }
-    Update(_delay) {
-        this.mFrameTime += _delay;
+    Update(_update) {
+        this.mFrameTime += _update.DeltaTime();
         this.mFrame++;
-        if (this.mFrameTime > 1000) {
+        if (this.mFrameTime > 1) {
             this.AddLog(this.mFrame);
             this.UpdateFrameDiv();
-            this.mFrameTime -= 1000;
+            this.mFrameTime -= 1;
             this.mFrame = 0;
         }
     }

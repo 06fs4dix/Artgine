@@ -101,8 +101,8 @@ export class CParticle extends CSubject {
     m_cTime = 0;
     constructor() {
         super();
-        this.mTimer.mDelay = 100;
-        this.mTimer.mEnd = 1000 * 60 * 60;
+        this.mTimer.mDelay = 0.1;
+        this.mTimer.mEnd = 1 * 60 * 60;
     }
     SetCrateCount(_count) {
         this.mCreateCount = _count;
@@ -110,9 +110,9 @@ export class CParticle extends CSubject {
     SetShape(_shape) {
         this.mShape = _shape;
     }
-    SubjectUpdate(_delay) {
-        super.SubjectUpdate(_delay);
-        if (this.mTimer.Excute(_delay) == false || this.mSample == null)
+    SubjectUpdate(_update) {
+        super.SubjectUpdate(_update);
+        if (this.mTimer.Excute(_update.DeltaTime()) == false || this.mSample == null)
             return;
         let count = this.mCreateCount.Excute();
         var objArr = new Array();

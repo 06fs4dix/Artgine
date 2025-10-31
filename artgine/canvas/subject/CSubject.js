@@ -26,7 +26,6 @@ export class CSubject extends CObject {
     mSelect = true;
     mComArr;
     mPTArr = null;
-    mCLArr = null;
     mPushArr = new Array();
     mPushLock = false;
     mChild;
@@ -51,7 +50,6 @@ export class CSubject extends CObject {
     constructor(_comArr = new Array()) {
         super();
         this.mComArr = _comArr;
-        this.mCLArr = new CArray();
         this.mChild = new Array();
         this.mPMat = null;
         this.mPos = new CVec3();
@@ -96,7 +94,6 @@ export class CSubject extends CObject {
         this.mDestroy = false;
         this.mInMsg.Clear();
         this.mOutMsg.Clear();
-        this.mCLArr.Clear();
         this.mUpdateMat = CUpdate.eType.Updated;
     }
     Icon() {
@@ -124,7 +121,6 @@ export class CSubject extends CObject {
     }
     UpdateComp() {
         this.mUpdateComp = true;
-        this.mCLArr.Clear();
     }
     IsShould(_member, _type) {
         if (_type == CObject.eShould.Editer) {
@@ -256,7 +252,7 @@ export class CSubject extends CObject {
         dummy.mMax.z = 0;
         return dummy;
     }
-    SubjectUpdate(_delay) {
+    SubjectUpdate(_update) {
         for (var i = 0; i < this.mChild.length; ++i) {
             if (this.mChild[i].IsDestroy()) {
                 this.mChild.splice(i, 1);
@@ -267,7 +263,7 @@ export class CSubject extends CObject {
             }
         }
     }
-    Update(_delay) { }
+    Update(_update) { }
     ;
     NewInMsg(_name) {
         let msg = new CRouteMsg(_name);
@@ -286,9 +282,9 @@ export class CSubject extends CObject {
     }
     RouteMsg(_msg) {
     }
-    RootMsgUpdate(_delay, _ggi) {
+    RootMsgUpdate(_update) {
     }
-    RouteMsgUpdate(_delay, _ggi) {
+    RouteMsgUpdate(_update) {
     }
     GetCPaintVec(_vec = new Array) {
         if (this.mPTArr == null || this.mPTArr.length == 0) {
@@ -368,7 +364,7 @@ export class CSubject extends CObject {
             return null;
         if (this.mPTArr) {
             for (let pt of this.mPTArr) {
-                pt.BatchClear();
+                pt.ClearBatch();
             }
             this.mPTArr.length = 0;
             this.mPTArr = null;
@@ -396,7 +392,7 @@ export class CSubject extends CObject {
             return null;
         if (this.mPTArr) {
             for (let pt of this.mPTArr) {
-                pt.BatchClear();
+                pt.ClearBatch();
             }
             this.mPTArr.length = 0;
             this.mPTArr = null;

@@ -573,13 +573,21 @@ function DevToolRender()
     const render=gAtl.Frame().Ren();
     let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimple") as CShader;
     
-    let meshDraw=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
-    if(meshDraw==null)
+    let meshDrawBox=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
+    if(meshDrawBox==null)
     {
         let mesh=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()) as CMesh;
-        meshDraw=new CMeshDrawNode();
-		gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDraw, shader,mesh.meshTree.mData.ci);
-        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetBoxMesh()+"Dev",meshDraw);
+        meshDrawBox=new CMeshDrawNode();
+		gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDrawBox, shader,mesh.meshTree.mData.ci);
+        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetBoxMesh()+"Dev",meshDrawBox);
+    }
+    let meshDrawSphere=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetSphereMesh()+"Dev") as CMeshDrawNode;
+    if(meshDrawSphere==null)
+    {
+        let mesh=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetSphereMesh()) as CMesh;
+        meshDrawSphere=new CMeshDrawNode();
+		gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDrawSphere, shader,mesh.meshTree.mData.ci);
+        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetSphereMesh()+"Dev",meshDrawSphere);
     }
 
     render.UseShader(shader);
@@ -627,7 +635,7 @@ function DevToolRender()
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
-            render.MeshDrawNodeRender(shader,meshDraw);
+            render.MeshDrawNodeRender(shader,meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
         }
         else
@@ -648,7 +656,7 @@ function DevToolRender()
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
-            render.MeshDrawNodeRender(shader,meshDraw);
+            render.MeshDrawNodeRender(shader,meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
             
             color.x=0;
@@ -665,7 +673,7 @@ function DevToolRender()
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
-            render.MeshDrawNodeRender(shader,meshDraw);
+            render.MeshDrawNodeRender(shader,meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
 
             color.x=0;
@@ -684,7 +692,7 @@ function DevToolRender()
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
-            render.MeshDrawNodeRender(shader,meshDraw);
+            render.MeshDrawNodeRender(shader,meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
         }
         
@@ -731,7 +739,7 @@ function DevToolRender()
         render.SendGPU(shader,alpha,"alphaModel");
         MatToMat12Fun(wmat);
         render.SendGPU(shader,wMatSA);
-        render.MeshDrawNodeRender(shader,meshDraw);
+        render.MeshDrawNodeRender(shader,meshDrawBox);
 
         if(pt instanceof CPaint2D)
         {
@@ -752,7 +760,7 @@ function DevToolRender()
                 render.SendGPU(shader,alpha,"alphaModel");
                 MatToMat12Fun(wmat);
                 render.SendGPU(shader,wMatSA);
-                render.MeshDrawNodeRender(shader,meshDraw);
+                render.MeshDrawNodeRender(shader,meshDrawBox);
             }
             
 
@@ -770,8 +778,10 @@ function DevToolRender()
     {
         if(pt.GetOwner()==null || pt.IsEnable()==false || pt.GetLayer()=="") continue;
         let bound=pt.GetBoundGJK();
-        bound.mMax;
-        bound.mMin;
+
+
+
+       
         const min = bound.mMin;
         const max = bound.mMax;
 
@@ -801,8 +811,10 @@ function DevToolRender()
         render.SendGPU(shader,wMatSA);
         render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
 
-        
-        render.MeshDrawNodeRender(shader,meshDraw);
+        if(pt.GetBound().GetType()==CBound.eType.Sphere)
+            render.MeshDrawNodeRender(shader,meshDrawSphere);
+        else
+            render.MeshDrawNodeRender(shader,meshDrawBox);
     }
 
 
@@ -1256,7 +1268,7 @@ function DevToolUpdate(_delay)
                 
                 for(let pt of ptArr)
                 {
-               
+                    if(selectSub==subject)  continue;
                     let bound=pt.GetBoundFMat();
 
                     if(CUtilMath.RayBoxIS(bound.mMin,bound.mMax, ray))
@@ -1272,11 +1284,13 @@ function DevToolUpdate(_delay)
                             gSelectBound=bound;
                             break;
                         }
+                        else if(bselectSub==null)
+                            bselectSub=subject;
                     }
                 }
                 for(let cl of clArr)
                 {
-                  
+                    if(selectSub==subject)  continue;
                     let bound=cl.GetBoundGJK();
 
                     if(bound.GetType()!= CBound.eType.Null && CUtilMath.RayBoxIS(bound.mMin,bound.mMax, ray))
@@ -1293,6 +1307,8 @@ function DevToolUpdate(_delay)
                             
                             break;
                         }
+                        else if(bselectSub==null)
+                            bselectSub=subject;
                     }
                 }
 

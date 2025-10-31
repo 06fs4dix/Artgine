@@ -81,8 +81,9 @@ export class CRapierCollider extends CCollider {
     StartChk() {
         if (this.mStartChk == true) {
             this.mStartChk = false;
-            this.Start();
+            return true;
         }
+        return false;
     }
     InitBound(_bound) {
         if (this.GetOwner() == null)
@@ -139,7 +140,7 @@ export class CRapierCollider extends CCollider {
             this.mDensity = null;
         }
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mPaintLoad != null || this.mCL == null) {
             if (this.GetOwner() == null)
                 return;
@@ -208,7 +209,7 @@ export class CRapierRigidBody extends CRigidBody {
     SetFreezeRot(_x, _y, _z) {
         this.mRB.setEnabledRotations(!_x, !_y, !_z, true);
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mLateImpulse != null) {
             if (this.mRB.mass() != 0) {
                 this.mRB.applyImpulse(this.mLateImpulse, true);

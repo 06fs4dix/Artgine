@@ -1,3 +1,4 @@
+import { CUpdate } from "../../../basic/Basic.js";
 import { CBound } from "../../../geometry/CBound.js";
 import { CFloat32Mgr } from "../../../geometry/CFloat32Mgr.js";
 import { CMath } from "../../../geometry/CMath.js";
@@ -115,9 +116,9 @@ export class CPaintTrail extends CPaint
 		this.mCanTex=CPaintTrail.eCanTex.Arrow;
 		this.mRepeat=true;
 	}
-	InitPaint()
+	InitChk()
 	{
-		super.InitPaint();
+		super.InitChk();
 		
 		
 		
@@ -263,24 +264,24 @@ export class CPaintTrail extends CPaint
 	}
 
 
-	Update(_delay)
+	Update(_update : CUpdate)
 	{
 		this.Camera();
-		super.Update(_delay);
+		super.Update(_update);
 		
 		if(this.mStaticPos)
 		{
 			return;
 		}
-		if(_delay>1000)
+		if(_update.DeltaMil()>1000)
 			return;
 
 		var pos=this.mOwner.GetWMat().xyz;
 		let size=(this.mLen / 2);
 
-		this.mSumTime+=_delay;
+		this.mSumTime+=_update.DeltaMil();
 		if(this.mStartTime>0){
-			this.mStartTime-=_delay;
+			this.mStartTime-=_update.DeltaMil();
 			//시작 지점
 			if(this.mVList.length==0){
 				if(this.mPosList[this.mPosList.length-1].Equals(pos) == false){
@@ -288,12 +289,12 @@ export class CPaintTrail extends CPaint
 					this.mVList.push(CMath.V3Nor(nvec));
 					this.mPosList.push(pos);
 					this.mPCnt.push(1);
-					this.mTCnt.push(_delay);
+					this.mTCnt.push(_update.DeltaMil());
 					this.mLastLinelen+=CMath.V3Len(CMath.V3SubV3(pos,this.mPosList[this.mPosList.length-1]));
 					this.mLastVec=CMath.V3Nor(nvec);
 				}
 				else{
-					this.mSumTime-=_delay;
+					this.mSumTime-=_update.DeltaMil();
 				}
 			}
 			else{
@@ -313,7 +314,7 @@ export class CPaintTrail extends CPaint
 						this.mPosList.push(pos);
 						this.mVList.push(nowvec);
 						this.mPCnt.push(1);
-						this.mTCnt.push(_delay);
+						this.mTCnt.push(_update.DeltaMil());
 
 						this.mLastLinelen+=CMath.V3Len(nvec);
 
@@ -342,7 +343,7 @@ export class CPaintTrail extends CPaint
 							this.mVList.push(CMath.V3Nor(CMath.V3SubV3(pos,this.mPosList[this.mPosList.length-1])));
 							this.mPosList.push(pos);
 							this.mPCnt.push(1);
-							this.mTCnt.push(_delay);
+							this.mTCnt.push(_update.DeltaMil());
 							
 							this.mInCurve=true;
 						}
@@ -356,7 +357,7 @@ export class CPaintTrail extends CPaint
 							for(let i=0;i<edCnt;i++){
 								this.mPosList.push(pos);
 								this.mPCnt.push(1);
-								this.mTCnt.push(_delay/edCnt);
+								this.mTCnt.push(_update.DeltaMil()/edCnt);
 								this.mVList.push((CUtilMath.Bezier(vArr, i/(edCnt-1), 0, 0)));
 							}
 							this.mLastLinelen=0;
@@ -407,7 +408,7 @@ export class CPaintTrail extends CPaint
 					this.mVList.push(CMath.V3Nor(CMath.V3SubV3(pos,this.mPosList[this.mPosList.length-1])));
 					this.mPosList.push(pos);
 					this.mPCnt.push(1);
-					this.mTCnt.push(_delay);
+					this.mTCnt.push(_update.DeltaMil());
 	
 					if(success>0){
 						this.mInCurve=false;
@@ -687,7 +688,7 @@ export class CPaintTrail extends CPaint
 	SetLastHide(_enabel : boolean)
 	{
 		this.mLastHide=_enabel;
-		this.BatchClear();
+		this.ClearBatch();
 	}
 
 
@@ -709,7 +710,7 @@ export class CPaintTrail extends CPaint
 		else
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide",new CVec1(0.0)));
 		
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTexture);
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
 		var dm=this.GetDrawMesh("CPaintTrail",_vf);
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 		

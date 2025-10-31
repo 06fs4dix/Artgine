@@ -61,7 +61,7 @@ function Init() {
     g_fw.Pal().Init(g_fw);
     g_brush = new CBrush(g_fw);
     g_brush.InitCamera();
-    g_can = new CCanvas(g_fw, g_brush);
+    g_can = new CCanvas(g_fw, g_brush, null);
     g_brush.GetCam2D().SetCamCon(new CCamCon2DFreeMove(g_fw.Input()));
     var sub = g_can.PushSub(new CSubject());
     sub.PushComp(new CPaint2D(g_fw.Pal().GetNoneTex(), new CVec2(128, 128)));
@@ -251,9 +251,9 @@ function Init() {
     };
 }
 var gBeforeSelect = null;
-function Update(_delay) {
-    g_brush.Update(_delay);
-    g_can.Update(_delay);
+function Update(_update) {
+    g_brush.Update(_update);
+    g_can.Update(_update);
 }
 function Render() {
     g_fw.Dev().SetClearColor(true, new CVec4(1, 1, 1, 1));

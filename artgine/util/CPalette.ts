@@ -129,8 +129,9 @@ export class CPalette
 		_fw.Res().Push(this.GetBlackTex(),tex);
 		
 
-		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0,1,0,100)),this.GetBlackTex());
+		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0,0,1,CUtilRender.Mesh2DSize / 2.0)),this.GetBlackTex());
 		_fw.Res().Push(this.GetPlaneMesh(), mesh);
+		this.mMCI2D=mesh.meshTree.mData.ci;
 		
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100),this.GetBlackTex());
 		_fw.Res().Push(this.GetBoxMesh(), mesh);
@@ -141,8 +142,9 @@ export class CPalette
 
 		
 		
-		var half = CUtilRender.Mesh2DSize / 2.0;
-		this.mMCI2D= CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
+		//var half = CUtilRender.Mesh2DSize / 2.0;
+		//this.mMCI2D= CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
+		
 		
 		//_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(512, 512),"shadowArr.tex");
 		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,6)],new CVec2(2048, 2048),this.GetShadowWriteTex());

@@ -85,14 +85,13 @@ export class CPalette {
         let tex = CH5Canvas.GetNewTex();
         _fw.Ren().BuildTexture(tex);
         _fw.Res().Push(this.GetBlackTex(), tex);
-        var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0, 1, 0, 100)), this.GetBlackTex());
+        var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0, 0, 1, CUtilRender.Mesh2DSize / 2.0)), this.GetBlackTex());
         _fw.Res().Push(this.GetPlaneMesh(), mesh);
+        this.mMCI2D = mesh.meshTree.mData.ci;
         var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100), this.GetBlackTex());
         _fw.Res().Push(this.GetBoxMesh(), mesh);
         mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32), this.GetBlackTex());
         _fw.Res().Push(this.GetSphereMesh(), mesh);
-        var half = CUtilRender.Mesh2DSize / 2.0;
-        this.mMCI2D = CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
         _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 6)], new CVec2(2048, 2048), this.GetShadowWriteTex());
         let stex = _fw.Res().Find(this.GetShadowWriteTex());
         _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)], new CVec2(2048, 2048), this.GetShadowReadTex());

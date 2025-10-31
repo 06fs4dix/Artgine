@@ -1,3 +1,4 @@
+import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CAlpha, CColor } from "../../artgine/canvas/component/CColor.js";
 import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
@@ -180,7 +181,7 @@ export class CShadowPlane extends CPaint2D {
         if (this.mStartChk == true) {
             this.mRenderPass.length = 0;
         }
-        super.StartChk();
+        return super.StartChk();
     }
     EmptyRPChk() {
         super.EmptyRPChk();
@@ -208,7 +209,7 @@ export class CShadowPlane extends CPaint2D {
             this.mUpdateShadow = true;
         }
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mPT == null || this.mPT.Key() != this.mPTKey) {
             const owner = this.GetOwner();
             if (owner == null)
@@ -223,7 +224,7 @@ export class CShadowPlane extends CPaint2D {
                 if (pt instanceof CPaint3D && !pt.mTree)
                     continue;
                 this.mPT = pt;
-                this.BatchClear();
+                this.ClearBatch();
                 this.mUpdateShadow = true;
                 if (this.mPT instanceof CPaint2D)
                     this.SetSize(this.mPT.GetSize());
@@ -264,7 +265,7 @@ export class CShadowPlane extends CPaint2D {
                 }
                 if (minLen > len) {
                     if (this.mLIG != lig) {
-                        this.BatchClear();
+                        this.ClearBatch();
                         this.mUpdateShadow = true;
                     }
                     this.mLIG = lig;
@@ -275,7 +276,7 @@ export class CShadowPlane extends CPaint2D {
         if (this.mLIG == null)
             return;
         this.UpdateShadow();
-        super.Update(_delay);
+        super.Update(_update);
     }
     UpdateShadow() {
         if (this.mPT instanceof CPaint2D) {
@@ -332,7 +333,7 @@ export class CShadowPlane extends CPaint2D {
             this.mAutoLoad.Import(pt.mAutoLoad);
             if (pt.GetTag().has("wind") && pt instanceof CPaint2D) {
                 if (this.mTag.has("wind") == false)
-                    this.BatchClear();
+                    this.ClearBatch();
                 this.PushTag("wind");
                 this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
             }
@@ -345,18 +346,18 @@ export class CShadowPlane extends CPaint2D {
             this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
         }
         else if (this.mPT instanceof CPaint3D) {
-            this.PushTag("zDepth");
             const pt = this.mPT;
             const lig = this.mLIG;
+            if (this.mUpdateShadow == false && pt.IsUpdateFMat() == false && lig.mUpdate == 0)
+                return;
+            this.mUpdateShadow = false;
+            this.PushTag("zDepth");
             const ligDir = CMath.V3Nor(lig.GetDirectPos());
             const fBound = this.mPT.GetBoundFMat();
             const fCenter = fBound.GetCenter();
             const floorDist = ((5 + this.mShadowLen) - fCenter.y) / ligDir.y;
             const shadowPlanePos = CMath.V3AddV3(fCenter, CMath.V3MulFloat(ligDir, floorDist));
             const area = ComputeShadowAreaOntoPlane(fBound, new CVec3(0, 1, 0), shadowPlanePos, ligDir);
-            if (this.mUpdateShadow == false && pt.IsUpdateFMat() == false && lig.mUpdate == 0)
-                return;
-            this.mUpdateShadow = false;
             const points = area.m_points;
             points.forEach(p => CMath.V3SubV3(p, this.GetOwner().GetPos(), p));
             this.SetPosList(points);
@@ -369,12 +370,14 @@ export class CShadowPlane extends CPaint2D {
         const pt = this.mPT;
         const lig = this.mLIG;
         const fw = this.GetOwner().GetFrame();
-        const bound = pt.GetBound();
+        const bound = pt.GetBound().Export();
         const center = bound.GetCenter();
+        bound.mMin = CMath.V3MulMatNormal(bound.mMin, pt.GetLMat());
+        bound.mMax = CMath.V3MulMatNormal(bound.mMax, pt.GetLMat());
         const ligDir = new CVec3(0, 1, 0);
         const eye = CMath.V3AddV3(center, CMath.V3MulFloat(ligDir, bound.GetOutRadius()));
         const shadowPlanePos = CMath.V3AddV3(center, ligDir);
-        const area = ComputeShadowAreaOntoPlane(pt.GetBound(), ligDir, shadowPlanePos, ligDir);
+        const area = ComputeShadowAreaOntoPlane(bound, ligDir, shadowPlanePos, ligDir);
         let texKey = pt.Key() + "_Shadow.tex";
         this.SetTexture(texKey);
         if (fw.Res().Find(texKey) != null)
@@ -386,7 +389,7 @@ export class CShadowPlane extends CPaint2D {
         cam.SetSize(area.m_size.x, area.m_size.y);
         cam.Init(eye, CMath.V3SubV3(eye, ligDir));
         cam.ResetOrthographic();
-        cam.Update(1);
+        cam.Update(new CUpdate(1));
         const tempRP = new CRenderPass();
         tempRP.mBlend[2] = CRenderPass.eBlend.ONE;
         tempRP.mBlend[3] = CRenderPass.eBlend.ZERO;
@@ -401,7 +404,7 @@ export class CShadowPlane extends CPaint2D {
         fw.Ren().SendGPU(vf, cam.GetProjMat(), "projectMat");
         if (pt.mMeshRes.skin.length > 0) {
             fw.Ren().SendGPU(vf, pt.mWeightMat, "weightArrMat", 16);
-            fw.Ren().SendGPU(vf, pt.mSkinType, "skin");
+            fw.Ren().SendGPU(vf, SDF.eSkin.Bone, "skin");
         }
         else {
             fw.Ren().SendGPU(vf, SDF.eSkin.None, "skin");
@@ -409,10 +412,12 @@ export class CShadowPlane extends CPaint2D {
         fw.Ren().SendGPU(vf, [fw.Pal().GetBlackTex()]);
         let nodeOff = 0;
         let node = pt.mTreeNode;
+        let wMat = new CMat();
         while (node.Size() != nodeOff) {
             const nodemp = node.Find(nodeOff);
             if (nodemp.md.mData != null && nodemp.md.mData.ci != null) {
-                fw.Ren().SendGPU(vf, nodemp.mpi.mData.pst, "worldMat");
+                CMath.MatMul(nodemp.mpi.mData.pst, pt.GetLMat(), wMat);
+                fw.Ren().SendGPU(vf, wMat, "worldMat");
                 const meshDraw = pt.GetDrawMesh(pt.mMesh + nodemp.md.mKey, vf, nodemp.md.mData.ci);
                 this.GetOwner().GetFrame().Ren().MeshDrawNodeRender(vf, meshDraw);
             }

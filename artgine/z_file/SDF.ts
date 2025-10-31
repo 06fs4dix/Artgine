@@ -52,6 +52,7 @@ export class SDF {
 	{
 		None:0,
 		Bone:1,
+		Bake:2,
 		// Grass:2,
 		// Tree:3,
 	};

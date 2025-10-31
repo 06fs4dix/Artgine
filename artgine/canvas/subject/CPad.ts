@@ -1,4 +1,5 @@
 
+import { CUpdate } from "../../basic/Basic.js";
 import { CEvent } from "../../basic/CEvent.js";
 import {CJSON} from "../../basic/CJSON.js";
 import { CObject, CPointer } from "../../basic/CObject.js";
@@ -362,9 +363,9 @@ export class CPad extends CSubject
     {
         this.mPadType=_type;
     }
-    SubjectUpdate(_delay: number): void 
+    SubjectUpdate(_update: CUpdate): void 
     {
-        super.SubjectUpdate(_delay);
+        super.SubjectUpdate(_update);
 
        
 

@@ -1,4 +1,4 @@
-import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, Mat34ToMat, } from "./Shader";
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, Mat34ToMat, MatMix, } from "./Shader";
 import { SDF } from "./SDF";
 import { CAModelCac, ColorVFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
@@ -17,6 +17,7 @@ var worldMat34 = Null();
 var viewMat = Null();
 var projectMat = Null();
 var zDepth = 0.0;
+var zDepthBias = 0.001;
 var to_uv = Null();
 var to_normal = Null();
 var to_binormal = Null();
@@ -34,31 +35,33 @@ var camPos = Null();
 var depthMap = 0.0;
 var screenResolution = new CVec2(1.0, 1.0);
 var weightArrMat = new Sam2DMat(11, 10);
+var weightBakeMat = 9.0;
+var weightBakeIndex;
 var time = Attribute(0, "time");
-Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
+Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
 Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel], [out_position, to_uv], ps_main_simple, [out_color]);
 Build("Artgine/Shader/3DGBuffer", ["gBuf"], vs_main_gBuffer, [
-    worldMat, viewMat, projectMat, skin, weightArrMat,
+    worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
     sam2DCount, material, outputType,
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer, [out_color]);
 Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], vs_main_gBuffer, [
-    worldMat, viewMat, projectMat, skin, weightArrMat,
+    worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
     sam2DCount, material,
 ], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer_multi, [out_color, out_pos, out_nor, out_spc]);
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
-    worldMat, viewMat, projectMat, skin, weightArrMat,
+    worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList, jitter
 ], [out_position, to_uv, to_viewPos], ps_main_shadow_write, [out_color]);
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
-    worldMat, viewMat, projectMat, skin, weightArrMat,
+    worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
     shadowCount, shadowPointProj, shadowReadList,
     shadowRate, PCF, texture16f, bias, normalBias, jitter,
     ligDir, ligCol, ligCount,
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
 Build("Artgine/Shader/3DBake", ["bake"], vs_main_bake, [
-    worldMat, viewMat, projectMat, skin, weightArrMat
+    worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex
 ], [out_position, to_uv, to_normal, to_worldPos, to_tangent, to_binormal, to_ref], ps_main_bake, [out_color]);
 function vs_main_simple(f3_ver, f2_uv) {
     to_uv = f2_uv;
@@ -79,7 +82,7 @@ function ps_main_simple() {
     BranchEnd();
     out_color = L_cor;
 }
-function GetWorldWeightMat(_weightArrMat, _weight, _weightIndex, _worldMat, _skin) {
+function GetWorldWeightMat(_weightArrMat, _weightBakeArrMat, _index, _weight, _weightIndex, _worldMat, _skin) {
     var woweMat = _worldMat;
     if (_skin > 0.5 && _weight.x + _weight.y + _weight.z + _weight.w > 0.0) {
         if (_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x > 0.0) {
@@ -87,6 +90,20 @@ function GetWorldWeightMat(_weightArrMat, _weight, _weightIndex, _worldMat, _ski
             weightMat = MatAdd(FloatMulMat(_weight.y, Sam2DToMat(_weightArrMat, _weightIndex.y)), weightMat);
             weightMat = MatAdd(FloatMulMat(_weight.z, Sam2DToMat(_weightArrMat, _weightIndex.z)), weightMat);
             weightMat = MatAdd(FloatMulMat(_weight.w, Sam2DToMat(_weightArrMat, _weightIndex.w)), weightMat);
+            woweMat = MatMul(weightMat, woweMat);
+        }
+        else if (_skin < SDF.eSkin.Bake + 0.5 && _index > -0.5) {
+            var st = floor(_index);
+            var ed = st + 1.0;
+            var weightSTMat = FloatMulMat(_weight.x, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.x));
+            weightSTMat = MatAdd(FloatMulMat(_weight.y, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.y)), weightSTMat);
+            weightSTMat = MatAdd(FloatMulMat(_weight.z, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.z)), weightSTMat);
+            weightSTMat = MatAdd(FloatMulMat(_weight.w, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.w)), weightSTMat);
+            var weightEDMat = FloatMulMat(_weight.x, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.x));
+            weightEDMat = MatAdd(FloatMulMat(_weight.y, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.y)), weightEDMat);
+            weightEDMat = MatAdd(FloatMulMat(_weight.z, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.z)), weightEDMat);
+            weightEDMat = MatAdd(FloatMulMat(_weight.w, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.w)), weightEDMat);
+            var weightMat = MatMix(weightSTMat, weightEDMat, _index - st);
             woweMat = MatMul(weightMat, woweMat);
         }
     }
@@ -122,7 +139,7 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -132,6 +149,9 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
     P = V4MulMatCoordi(P, viewMat);
     P = V4MulMatCoordi(P, projectMat);
     ;
+    BranchBegin("zDepth", "Z", [zDepth, zDepthBias]);
+    P.z += zDepth * zDepthBias;
+    BranchEnd();
     out_position = P;
     to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
     to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
@@ -152,7 +172,7 @@ function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_bi, f3_
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
     to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
     if (f3_ref.y > 0.0) {
@@ -181,7 +201,7 @@ function vs_main_bake(f3_ver, f4_wi, f4_we, f2_uv, f2_sha, f3_nor, f4_tan, f3_bi
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -337,7 +357,7 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     var svm = new CMat(0);
     var spm = new CMat(0);
     if (shadowWrite.x < SDF.eShadow.Cas0 + 0.5) {
@@ -383,7 +403,7 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
@@ -402,7 +422,7 @@ function vs_main_shadow_read_pa(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, f4_we, f4_wi, wMat, skin);
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
     var P = new CVec4(f3_ver, 1.0);
     P = V4MulMatCoordi(P, woweMat);
     BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
