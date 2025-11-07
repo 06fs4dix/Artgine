@@ -317,8 +317,8 @@ export class CCollider extends CGeometryComp
 			
 			let bound=_paint.GetBound().Export() as CBound;
 			this.mBound.Reset();
-			this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetLMat()));
-			this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetLMat()));
+			this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetMat()));
+			this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetMat()));
 
 			//이거 버그 라서 임시 주석
 			//let size=this.mBound.GetSize();
@@ -459,7 +459,7 @@ export class CCollider extends CGeometryComp
 		if(this.mUpdateMat!=CUpdate.eType.Not || this.GetOwner().mUpdateMat!=0)
 		{
 			
-			this.mGJKShape.SetMatrix(this.GetOwner().GetWMat());
+			this.mGJKShape.SetMatrix(this.GetOwner().GetMat());
 			this.ResetBoundGJK();
 			if(this.mUpdateMat==CUpdate.eType.Updated)
 				this.mUpdateMat=CUpdate.eType.Already;
@@ -587,7 +587,7 @@ export class CCollider extends CGeometryComp
 	{
 		return this.mBoundGJK;	
 	}
-	//GetLMat() {	return this.m_mat;	}
+
 	
 	CollisionChk( _co : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
 	{

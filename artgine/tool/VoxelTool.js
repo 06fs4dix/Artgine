@@ -297,7 +297,7 @@ export function VoxelTool(_voxel) {
     gVoxelTar.GetPos().Zero();
     gVoxelTar.GetRot().Zero();
     gVoxelTar.SetSca(new CVec3(1, 1, 1));
-    gVoxelTar.GetWMat().Unit();
+    gVoxelTar.GetMat().Unit();
     gCurser = gAtl.Canvas("VoxelTool").PushSub(new CSubject());
     gPress = gAtl.Canvas("VoxelTool").PushSub(new CSubject());
     gAtl.Frame().PushEvent(CEvent.eType.Update, gUpdateEvent);

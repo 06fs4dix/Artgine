@@ -23,7 +23,8 @@ import {
 	SDF
 } from "./SDF";
 import { 
-	CAModelCac, ColorVFX
+	CAModelCac, ColorVFX,
+	GetTexCodiedUV
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -40,6 +41,7 @@ import {
 //uniform
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
+var texCodi : CVec4=Null();
 
 var skin : number=Null();
 var parallaxNormal : number=Attribute(0,"canvas");
@@ -274,7 +276,14 @@ function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CV
 function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndexI4,
 	f3_nor : Normal3,f4_tan : Tangent4,f3_bi : Binormal3,f3_ref : TexOff3)
 {
-	to_uv=f2_uv;
+	
+	//to_uv=f2_uv;
+
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
 
 	var wMat : CMat;
 	BranchBegin("wasm","WASM",[worldMat34]);
@@ -314,7 +323,11 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 }
 
 function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, f4_we : Weight4, f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) {
-	to_uv = f2_uv;
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
 	to_ref = f3_ref;
 	var wMat : CMat;
 	BranchBegin("wasm","WASM",[worldMat34]);
@@ -348,7 +361,11 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 }
 
 function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2, f2_sha : Shadow2, f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) {
-	to_uv = f2_uv;
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
 
 	var clip_space_pos : CVec2 = V2SubV2(V2MulFloat(f2_sha, 2.0), new CVec2(1.0, 1.0));
 	out_position = new CVec4(clip_space_pos, 0.0, 1.0);
@@ -453,7 +470,7 @@ function ps_main_gBuffer() {
 		occlusion = (tempShadow.y * 255.0 * 256.0 + tempShadow.z * 255.0) / 65535.0;
 		if(screenPos.z > occlusion + 2e-5) discard;
 	}
-	BranchEnd();``
+	BranchEnd();
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
@@ -548,7 +565,11 @@ function ps_main_gBuffer_multi() {
 
 function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2) 
 {
-	to_uv = f2_uv;
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
 
 	var wMat : CMat;
 	BranchBegin("wasm","WASM",[worldMat34]);
@@ -627,7 +648,11 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 
 	to_worldPos = P;
 	to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-	to_uv = f2_uv;
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
 
 	P = V4MulMatCoordi(P, viewMat);
 	out_position = V4MulMatCoordi(P, projectMat);

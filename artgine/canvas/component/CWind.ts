@@ -71,9 +71,9 @@ export class CWind extends CBrushComp
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 2] = this.mDir.z;
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 3] = this.mPower;
 
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 0] = this.GetOwner().GetWMat().x;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 1] = this.GetOwner().GetWMat().y;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 2] = this.GetOwner().GetWMat().z;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 0] = this.GetOwner().GetMat().x;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 1] = this.GetOwner().GetMat().y;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 2] = this.GetOwner().GetMat().z;
         //아마도 이후에 noise texture offset을 넣으면 좋을듯함
         this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 3] = this.mUseWeight ? 1.0 : 0.0;
 

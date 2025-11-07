@@ -92,11 +92,11 @@ class CIK extends CComponent {
     }
     GetIKPos() {
         const obj = this.m_target.Ref();
-        return CMath.MatMul(obj.GetWMat(), CMath.MatInvert(this.m_paint.GetFMat())).xyz;
+        return CMath.MatMul(obj.GetMat(), CMath.MatInvert(this.m_paint.GetFMat())).xyz;
     }
     GetIKRot() {
         const obj = this.m_target.Ref();
-        const lMat = CMath.MatMul(obj.GetWMat(), CMath.MatInvert(this.m_paint.GetFMat()));
+        const lMat = CMath.MatMul(obj.GetMat(), CMath.MatInvert(this.m_paint.GetFMat()));
         return this.MatDecomposeRot(lMat);
     }
     IsShould(_member, _type) {
@@ -322,7 +322,7 @@ export class CIKReach extends CIK {
     PoleConstraint() {
         const pole = this.m_pole?.Ref();
         if (pole) {
-            const lMat = CMath.MatMul(pole.GetWMat(), CMath.MatInvert(this.m_paint.GetFMat()));
+            const lMat = CMath.MatMul(pole.GetMat(), CMath.MatInvert(this.m_paint.GetFMat()));
             let pPos = this.MatDecomposeRot(lMat);
             for (let i = 1; i < this.m_bonePos.length - 1; i++) {
                 let tipBone = this.m_bonePos[i + 1];

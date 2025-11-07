@@ -42,7 +42,7 @@ var billboard : number=Null();
 var billboardMat : CMat=Null();
 
 var texCodi : CVec4=Null();
-var reverse : CVec2=new CVec2(0,0);
+
 
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
@@ -68,7 +68,7 @@ var sam2DCount : number=Null();
 
 Build("Artgine/Shader/2DPlane",[],
 	vs_main,[
-		worldMat,viewMat,projectMat,texCodi,reverse,
+		worldMat,viewMat,projectMat,
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
@@ -76,14 +76,14 @@ Build("Artgine/Shader/2DPlane",[],
 
 Build("Artgine/Shader/2DTail",["tail"],
 	vs_main_tail,[
-		worldMat,viewMat,projectMat,texCodi,reverse,
+		worldMat,viewMat,projectMat,
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
 );
 Build("Artgine/Shader/2DTrail",["trail"],
 	vs_main_trail,[
-		worldMat,viewMat,projectMat,texCodi,reverse,trailPos,lastHide,
+		worldMat,viewMat,projectMat,trailPos,lastHide,texCodi,
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
@@ -97,7 +97,7 @@ Build("Artgine/Shader/2DSimple",["simple"],
 );
 Build("Artgine/Shader/2DMask",["mask"],
 	vs_main,[
-		worldMat,viewMat,projectMat,texCodi,reverse,mask
+		worldMat,viewMat,projectMat,mask
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main_mask,[out_color]
@@ -141,8 +141,13 @@ function ps_main_simple()
 
 function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 {
-    to_uv = GetTexCodiedUV(f2_uv, texCodi,reverse);	
-	
+	BranchBegin("codi","C",[texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
+	to_uv.z=1.0;
+
 	var rpos : CVec4=new CVec4(f3_ver.xyz,1.0);	
 
 	
@@ -237,7 +242,14 @@ function vs_main_trail(f3_ver : Vertex3)
 
 function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 {
-	to_uv = GetTexCodiedUV(f2_uv, texCodi, reverse);
+	BranchBegin("codi","C",[texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+	BranchDefault();
+	to_uv.xy=f2_uv;
+	BranchEnd();
+	to_uv.z=1.0;
+	
+	
 
 
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
@@ -299,7 +311,7 @@ function ps_main()
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv.xy,GetTexDecodedUV(to_uv.xy,texCodi, reverse),colorVFX,time);
+	L_cor=ColorVFX(L_cor,to_uv.xy,GetTexDecodedUV(to_uv.xy,texCodi),colorVFX,time);
 	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);

@@ -116,11 +116,11 @@ class CIK extends CComponent
     }
     protected GetIKPos() {
         const obj = this.m_target.Ref();
-        return CMath.MatMul(obj.GetWMat(), CMath.MatInvert(this.m_paint.GetFMat())).xyz;
+        return CMath.MatMul(obj.GetMat(), CMath.MatInvert(this.m_paint.GetFMat())).xyz;
     }
     protected GetIKRot() {
         const obj = this.m_target.Ref();
-        const lMat = CMath.MatMul(obj.GetWMat(), CMath.MatInvert(this.m_paint.GetFMat()));
+        const lMat = CMath.MatMul(obj.GetMat(), CMath.MatInvert(this.m_paint.GetFMat()));
         return this.MatDecomposeRot(lMat);
     }
 
@@ -395,7 +395,7 @@ export class CIKReach extends CIK
     private PoleConstraint() {
         const pole = this.m_pole?.Ref();
         if(pole) {
-            const lMat = CMath.MatMul(pole.GetWMat(), CMath.MatInvert(this.m_paint.GetFMat()));
+            const lMat = CMath.MatMul(pole.GetMat(), CMath.MatInvert(this.m_paint.GetFMat()));
             let pPos = this.MatDecomposeRot(lMat);
 
             //  * ---- * ------ *

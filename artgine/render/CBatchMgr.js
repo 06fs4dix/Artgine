@@ -12,12 +12,19 @@ export class CBatch {
     mValue = new Array();
     CreateKey() {
         var str = this.mMesh.Key();
+        let nullCount = 0;
         for (var i = 0; i < this.mTexture.length; ++i) {
-            if (this.mTexture[i] == null)
+            if (this.mTexture[i] == null) {
+                nullCount++;
                 str += "null";
+            }
             else
                 str += this.mTexture[i].Key();
             str += "/";
+        }
+        if (nullCount != 0 && nullCount == this.mTexture.length) {
+            this.mKey = 0;
+            return;
         }
         for (let i = 0; i < this.mValue.length; ++i)
             str += this.mValue[i].mKey;
@@ -110,7 +117,16 @@ export class CBatchMgr {
             this.mBaSortArr.Push(val);
         if (this.mBatchGlobal != null) {
             for (var i = 0; i < this.mBatchGlobal.Size(); ++i) {
-                this.mBatch.mValue.push(this.mBatchGlobal.Find(i));
+                let push = true;
+                let gb = this.mBatchGlobal.Find(i);
+                for (let j = 0; j < this.mBatch.mValue.length; ++j) {
+                    if (this.mBatch.mValue[j].mKey == gb.mKey) {
+                        push = false;
+                        break;
+                    }
+                }
+                if (push)
+                    this.mBatch.mValue.push(this.mBatchGlobal.Find(i));
             }
         }
         val.mData.push(this.mBatch);
@@ -122,7 +138,7 @@ export class CBatchMgr {
             return _ba;
         for (let i = 0; i < _ba.length; ++i) {
             const batch = _ba[i];
-            if (batch == null)
+            if (batch == null || batch.mKey == 0)
                 continue;
             let bKey = batch.mKey + this.mBasePriority;
             var val = this.mBatchMap.get(bKey);
@@ -133,13 +149,6 @@ export class CBatchMgr {
             }
             if (val.mData.length == 0)
                 this.mBaSortArr.Push(val);
-            if (val.mData.length > 0) {
-                if (val.mData[0].mValue.length != batch.mValue.length) {
-                    CAlert.E("test!!!!!!!!!!!!!!!!" + batch.mKey);
-                    batch.CreateKey();
-                    val.mData[0].CreateKey();
-                }
-            }
             val.mData.push(batch);
         }
         return null;
@@ -164,5 +173,4 @@ export class CBatchMgrGL extends CBatchMgr {
     }
 }
 import CBatchMgr_imple from "../render_imple/CBatchMgr.js";
-import { CAlert } from "../basic/CAlert.js";
 CBatchMgr_imple();

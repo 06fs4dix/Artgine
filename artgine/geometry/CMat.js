@@ -221,29 +221,18 @@ export class CMat extends CFloat32 {
         this.Unit();
     }
     F32A() {
-        if (this["mRef"] != null)
-            return this["mRef"].F32A();
         return this.mF32A;
     }
     Ptr() {
-        if (this["mRef"] != null)
-            return this["mRef"].Ptr();
         return this.mF32A["ptr"];
     }
-    GetRef() {
-        return this["mRef"];
-    }
-    SetRef(_target) {
-        if (_target != null)
-            this.Import(_target);
-        this["mRef"] = _target;
-    }
-    IsRef() {
-        return this["mRef"] != null;
-    }
     IsShould(_member, _type) {
-        if (_member == "mRef")
-            return false;
         return super.IsShould(_member, _type);
+    }
+}
+class CMatRef extends CMat {
+    mRef = new Array;
+    F32A() {
+        return this.mF32A;
     }
 }

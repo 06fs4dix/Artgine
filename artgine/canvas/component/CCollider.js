@@ -191,8 +191,8 @@ export class CCollider extends CGeometryComp {
             }
             let bound = _paint.GetBound().Export();
             this.mBound.Reset();
-            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetLMat()));
-            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetLMat()));
+            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetMat()));
+            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetMat()));
             if (this.mBoundType == CBound.eType.Null) {
                 this.mBound.SetType(bound.GetType());
                 this.mBoundType = bound.GetType();
@@ -258,7 +258,7 @@ export class CCollider extends CGeometryComp {
         if (this.mGJKShape == null)
             return;
         if (this.mUpdateMat != CUpdate.eType.Not || this.GetOwner().mUpdateMat != 0) {
-            this.mGJKShape.SetMatrix(this.GetOwner().GetWMat());
+            this.mGJKShape.SetMatrix(this.GetOwner().GetMat());
             this.ResetBoundGJK();
             if (this.mUpdateMat == CUpdate.eType.Updated)
                 this.mUpdateMat = CUpdate.eType.Already;

@@ -1,4 +1,4 @@
-import { Build, CVec2, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
+import { Build, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
 import { CAModelCac, ColorVFX, GetTexCodiedUV, GetTexDecodedUV } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
@@ -10,7 +10,6 @@ var projectMat = Null();
 var billboard = Null();
 var billboardMat = Null();
 var texCodi = Null();
-var reverse = new CVec2(0, 0);
 var colorModel = Null();
 var alphaModel = Null();
 var colorVFX = Null();
@@ -27,17 +26,17 @@ var zDepth = 0.0;
 var zDepthBias = 0.001;
 var sam2DCount = Null();
 Build("Artgine/Shader/2DPlane", [], vs_main, [
-    worldMat, viewMat, projectMat, texCodi, reverse,
+    worldMat, viewMat, projectMat,
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
 Build("Artgine/Shader/2DTail", ["tail"], vs_main_tail, [
-    worldMat, viewMat, projectMat, texCodi, reverse,
+    worldMat, viewMat, projectMat,
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
 Build("Artgine/Shader/2DTrail", ["trail"], vs_main_trail, [
-    worldMat, viewMat, projectMat, texCodi, reverse, trailPos, lastHide,
+    worldMat, viewMat, projectMat, trailPos, lastHide, texCodi,
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
@@ -47,7 +46,7 @@ Build("Artgine/Shader/2DSimple", ["simple"], vs_main_simple, [
     out_position, to_uv
 ], ps_main_simple, [out_color]);
 Build("Artgine/Shader/2DMask", ["mask"], vs_main, [
-    worldMat, viewMat, projectMat, texCodi, reverse, mask
+    worldMat, viewMat, projectMat, mask
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main_mask, [out_color]);
@@ -80,7 +79,12 @@ function ps_main_simple() {
     out_color = L_cor;
 }
 function vs_main_tail(f3_ver, f2_uv) {
-    to_uv = GetTexCodiedUV(f2_uv, texCodi, reverse);
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    to_uv.z = 1.0;
     var rpos = new CVec4(f3_ver.xyz, 1.0);
     if (f2_uv.x < 0.5 && f2_uv.y < 0.5) {
         rpos.xyz = worldMat[2].xyz;
@@ -133,7 +137,12 @@ function vs_main_trail(f3_ver) {
     out_position = rpos;
 }
 function vs_main(f3_ver, f2_uv) {
-    to_uv = GetTexCodiedUV(f2_uv, texCodi, reverse);
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    to_uv.z = 1.0;
     var P = new CVec4(f3_ver, 1.0);
     var scaleX = 0.0;
     var scaleY = 0.0;
@@ -181,7 +190,7 @@ function ps_main() {
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv.xy, GetTexDecodedUV(to_uv.xy, texCodi, reverse), colorVFX, time);
+    L_cor = ColorVFX(L_cor, to_uv.xy, GetTexDecodedUV(to_uv.xy, texCodi), colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)

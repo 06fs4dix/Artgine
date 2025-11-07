@@ -3,7 +3,7 @@ import {CLight} from "./component/CLight.js"
 import {CMath} from "../geometry/CMath.js"
 import {CCamera} from "../render/CCamera.js"
 import {CShader} from "../render/CShader.js"
-import {CBrush} from "./CBrush.js"
+import {CBrush, CRenInfo, CRenPriority} from "./CBrush.js"
 import {CJSON} from "../basic/CJSON.js"
 import {CArray} from "../basic/CArray.js"
 import {CString} from "../basic/CString.js"
@@ -31,8 +31,8 @@ import { IFile } from "../system/System.js"
 import { CFile } from "../system/CFile.js"
 import {RenderQueTool} from "../tool/RenderQueTool.js"
 import { CConsol } from "../basic/CConsol.js"
-import { CPaint } from "./component/paint/CPaint.js"
-import { CRPMgr } from "./CRPMgr.js"
+import { CPaint, CRenPaint } from "./component/paint/CPaint.js"
+import { CRPAuto, CRPMgr } from "./CRPMgr.js"
 
 
 var gRenderQue=new Array<CCanvas>();
@@ -265,6 +265,147 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		return this.mPacArr;
 	}
 	RenderOrder()	{	return new CArray();}
+	PTUpdate(_ptList : Array<CPaint>)
+	{
+		for (var i=0;i<_ptList.length;++i)
+		{
+			
+			let pt = _ptList[i];
+			if(pt.mStartChk==true || pt.IsEnable()==false)	continue;
+			if(this.mBrush.AutoRP().size>0 && (pt.mAutoRPUpdate==true || this.mBrush.mAutoRPUpdate!=CUpdate.eType.Not))
+			{
+				pt.ClearCRPAuto();
+				for(let each4 of this.mBrush.AutoRP().values())
+				{
+					let push=true;
+					for(let condi of each4.mAnd)
+					{
+						if(condi.Excute(pt)==false)
+						{
+							push=false;
+							break;
+						}
+					}
+					if(push==false)	continue;
+
+
+					
+					if(each4.mOr.length!=0)
+					{
+						push=false;
+						for(let condi of each4.mOr)
+						{
+							if(condi.Excute(pt)==true)
+							{
+								push=true;
+								break;
+							}
+						}
+					}
+					
+					if(push)	pt.PushCRPAuto(each4);
+					
+				}
+				pt.mAutoRPUpdate=false;
+				pt.mCamCullUpdate=true;
+			}
+
+
+			if(pt.mCamCullUpdate || pt.mRenPT.length==0)
+			{
+				pt.mCamCullUpdate=false;
+				pt.EmptyRPChk();
+				//pt.Update(1);
+				for(let k=0;k<pt.GetRenderPass().length;++k)
+				{
+					if(pt.mRenPT[k]!=null)	continue;
+
+					
+					
+					const rp=pt.GetRenderPass()[k];
+					let cam : CCamera=null;
+					let renPt=new CRenPaint();
+
+					if(rp.mCamera==null)	cam=this.GetCam();
+					
+						
+					else	cam=this.mBrush.GetCamera(rp.mCamera);
+					renPt.mCam=cam;
+					
+					var vfprKey = cam.IsOrthographic()+"/";//+this.mBrush.m_fw.Off();
+					let cpKey=vfprKey+rp.Key()+pt.GetTagKey();
+					var renInfo=this.mBrush.mRenInfoMap.get(cpKey) as CRenInfo;
+					renPt.mRenInfoKey=cpKey;
+					renPt.mTexHash=pt.GetTexHash();
+					renPt.mPaint=pt;
+					pt.mRenPT[k]=renPt;
+					// if(rp.m_cycle>0)
+					// 	renInfo.m_cycle=new CTimer();
+
+
+					let renPri=this.mBrush.mRenPriMap.get(rp.mPriority) as CRenPriority;
+					if(renPri==null)
+					{
+						renPri=new CRenPriority();
+						renPri.mPriority = rp.mPriority;
+						this.mBrush.mRenPriMap.set(rp.mPriority,renPri);
+					}
+						
+
+
+					if(pt.AlphaState()==false)
+					{
+						renPri.mDistanceList.Push(renPt);
+					}
+					else
+					{
+						if(rp.mSortRevers)
+							renPri.mRAlphaList.Push(renPt);
+						else
+							renPri.mAlphaList.Push(renPt);
+					}
+					
+						
+					
+					
+					
+					
+					
+					
+					if(renInfo==null)
+					{
+						renInfo=new CRenInfo();
+						//cp.shaderKey = rp.m_shader;
+						renInfo.mRP = rp.Export();
+
+						//이것만 포인터 연산
+						if(rp instanceof CRPAuto)
+							renInfo.mRP.mShaderAttr=rp.mShaderAttr;
+
+
+						//renInfo.m_rp = rp;
+						for(let tag of pt.GetTag())
+							renInfo.mTag.add(tag);
+						
+						if(rp.mTag!="")
+							renInfo.mTag.add(rp.mTag);
+						
+						
+						renInfo.mCam=cam;
+						
+			
+						this.mBrush.mRenInfoMap.set(cpKey,renInfo);
+						
+					}
+					
+
+					
+				}
+			}//pt.m_camCull.length==0
+
+			//pt.UpdateRenPt();
+		}
+	}
 	
 	// GetListener(_member : Array<string>)
 	// {

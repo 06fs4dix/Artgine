@@ -2,8 +2,12 @@ import {CObject} from "../basic/CObject.js";
 import {CTree} from "../basic/CTree.js"
 
 import {CMat} from "../geometry/CMat.js"
+import { CVec3 } from "../geometry/CVec3.js";
+import { CVec4 } from "../geometry/CVec4.js";
 //import {CMaterial} from "../render/CMaterial.js"
 import {CMeshDataNode} from "../render/CMeshDataNode.js"
+import { CAtlas } from "../util/CAtlas.js";
+import { CTexture } from "./CTexture.js";
 export class CWeightMat
 {
 	public mat : CMat;
@@ -25,19 +29,43 @@ export class CMeshSkin extends CObject
 	public mat =new CMat();
 	//public link =new CMat();//임시
 }
+export class CMeshIK
+{
+	public bones : Array<string> = new Array<string>();
+	public target : string;
+	
+	public pole : string;
+	public mix : number = 1;
+}
+export class CMeshAttacher
+{
+	public bones : Array<string> = new Array<string>();
+	public target : string;
+
+	public offsetPos : CVec3 = new CVec3();
+	public offsetRot : CVec4 = new CVec4(0,0,0,1);
+	public offsetSca : CVec3 = new CVec3(1,1,1);
+
+	public mixPos : number = 1;
+	public mixRot : number = 1;
+	public mixSca : number = 1;
+}
 var MeshBoneMat=100;
 export class CMesh extends CObject
 {
 	public vertexNormal : boolean;
+	public clamp=true;
 	public meshTree : CTree<CMeshDataNode>;
 	
-	//public material : Array<CMaterial>;
+	
 	public texture : Array<string>;
-	//public weightName : Array<string>;
-	//public weightMat : Array<CWeightMat>;
+
 	
 	public skin : Array<CMeshSkin>;
 	public aniMap : Map<string,CMeshAniInfo>;
+
+	public ik : Map<string, CMeshIK>;
+	public attacher : Map<string, CMeshAttacher>;
 	
 	constructor()
 	{
@@ -53,6 +81,8 @@ export class CMesh extends CObject
 		this.aniMap=new Map<string,CMeshAniInfo>();
 		this.skin=new Array();
 		
+		this.ik = new Map<string, CMeshIK>;
+		this.attacher = new Map<string, CMeshAttacher>;
 	}
 	Icon(){		return "bi bi-globe";	}
 }

@@ -10,16 +10,20 @@ import {
 function HSVF(_k : number,_s : number,_v : number) : number {
 	return _v - _v * _s * max(min(min(_k, 4.0 - _k), 1.0), 0.0);
 }
-export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4,_reverse : CVec2) : CVec3 {
-	var result : CVec3 = new CVec3(0.0,0.0,1.0);
-	if(_reverse.x>0.5)
-		result.x = (1.0-_uv.x)*_texCodi.x+_texCodi.z;
-	else
-		result.x = _uv.x*_texCodi.x+_texCodi.z;
-	if(_reverse.y>0.5)
-		result.y = (1.0-_uv.y)*_texCodi.y+_texCodi.w;
-	else
-		result.y = _uv.y*_texCodi.y+_texCodi.w;
+export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
+	var result : CVec2 = new CVec2(0.0,0.0);
+	// if(_reverse.x>0.5)
+	// 	result.x = (1.0-_uv.x)*_texCodi.x+_texCodi.z;
+	// else
+	// 	result.x = _uv.x*_texCodi.x+_texCodi.z;
+	// if(_reverse.y>0.5)
+	// 	result.y = (1.0-_uv.y)*_texCodi.y+_texCodi.w;
+	// else
+	// 	result.y = _uv.y*_texCodi.y+_texCodi.w;
+
+    result.x = _uv.x*_texCodi.x+_texCodi.z;
+    result.y = _uv.y*_texCodi.y+_texCodi.w;
+
 
 	if(result.x<0.0) 
 		result.x=result.x*-1.0;
@@ -28,7 +32,7 @@ export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4,_reverse : CVec2) :
 	return result;
 }
 // 코딩된(to_uv.xy) 좌표를 원본 uv(0..1)로 복원
-export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4, _reverse: CVec2): CVec2 {
+export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4): CVec2 {
     // texCodi 해석: (sx, sy, ox, oy)
     var sx :number= (_texCodi.x == 0.0) ? 1.0 : _texCodi.x;
     var sy :number= (_texCodi.y == 0.0) ? 1.0 : _texCodi.y;
@@ -42,10 +46,7 @@ export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4, _reverse: CVec2)
     var u :number= (cx - _texCodi.z) / sx;
     var v :number= (cy - _texCodi.w) / sy;
 
-    // reverse가 켜졌다면 1-uv로 반전 회복
-    if (_reverse.x > 0.5) u = 1.0 - u;
-    if (_reverse.y > 0.5) v = 1.0 - v;
-
+ 
     // 필요 시 범위 정리
     // u = clamp(u, 0.0, 1.0);
     // v = clamp(v, 0.0, 1.0);

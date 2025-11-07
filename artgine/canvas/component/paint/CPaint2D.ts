@@ -6,6 +6,7 @@ import { CObject, CPointer } from "../../../basic/CObject.js";
 import { CUtil } from "../../../basic/CUtil.js";
 import { CWASM } from "../../../basic/CWASM.js";
 import {CBound} from "../../../geometry/CBound.js";
+import { CMat } from "../../../geometry/CMat.js";
 import {CMath} from "../../../geometry/CMath.js";
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
 import {CVec1} from "../../../geometry/CVec1.js";
@@ -51,7 +52,7 @@ export class CPaint2D extends CPaint
 	protected mPos : CVec3;
 	protected mRot : CVec4;
 	
-	protected mTexCodi : CVec4;
+	
 	
 	//2d y-sort
 	public mYSort : boolean = false;
@@ -68,9 +69,11 @@ export class CPaint2D extends CPaint
 	public mBeforePos=new CVec3;
 	public mStopPos=new CVec3();
 	public mRemoveSpeed=1;
+	public mRevers=new CVec2(1,1);
 
 	//X는 크기,Y는 꼬리
 	public mPosList : Array<CVec3>=null;
+	mTMat : CMat;
 	//public mWMatMul=true;
 	public mLastHide=true;
 
@@ -113,7 +116,8 @@ export class CPaint2D extends CPaint
 		this.mRot=new CVec4();
 		
 		
-		this.mTexCodi =new CVec4(1, 1, 0, 0);
+		//this.mTexCodi =new CVec4(1, 1, 0, 0);
+		this.mTMat=new CMat();
 		
 
 		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
@@ -129,11 +133,9 @@ export class CPaint2D extends CPaint
 		
 		this.PRSReset();
 		
-		this.mShaderAttrMap.set("reverse",new CShaderAttr("reverse",new CVec2(0,0)));
+		
 		this.mShaderAttrMap.set("billboard",new CShaderAttr("billboard",new CVec1(0)));
-		//this.m_reverse=this.m_shaderAttrMap.get("reverse");
-		//this.m_shaderAttrMap.set("reverse",new CShaderAttr("reverse",new CVec2(0,0)));
-		//this.SizeCac();
+		this.PushTag("codi");
 	}
 	Reset()
 	{
@@ -141,8 +143,8 @@ export class CPaint2D extends CPaint
 		this.mPivot.Zero();
 		this.mPos.Zero();
 		this.mRot.Zero();
-		this.mTexCodi.x=1;this.mTexCodi.y=1;this.mTexCodi.z=0;this.mTexCodi.w=0;
-		this.mShaderAttrMap.set("reverse",new CShaderAttr("reverse",new CVec2(0,0)));
+		//this.mTexCodi.x=1;this.mTexCodi.y=1;this.mTexCodi.z=0;this.mTexCodi.w=0;
+		
 		this.mShaderAttrMap.set("billboard",new CShaderAttr("billboard",new CVec1(0)));
 		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
 		this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
@@ -279,28 +281,40 @@ export class CPaint2D extends CPaint
 		
 		if(this.mUpdateFMat == false) return;
 
-		this.mBound.Reset();
-		this.mBound.SetType(CBound.eType.Box);
+		//this.mBound.Reset();
+		//this.mBound.SetType(CBound.eType.Box);
 		
 		if(this.mTag.has("billboard"))
 		{
 			let pos=CPoolGeo.ProductV3();
-			pos.mF32A[0]=this.mOwner.GetWMat().mF32A[12];
-			pos.mF32A[1]=this.mOwner.GetWMat().mF32A[13];
-			pos.mF32A[2]=this.mOwner.GetWMat().mF32A[14];
+			let nor=CPoolGeo.ProductV3();
+			let st=CPoolGeo.ProductV3();
+			let ed=CPoolGeo.ProductV3();
+			pos.mF32A[0]=this.GetFMat().mF32A[12];
+			pos.mF32A[1]=this.GetFMat().mF32A[13];
+			pos.mF32A[2]=this.GetFMat().mF32A[14];
 			
 			
-			CMath.V3SubV3(pos,this.mBeforePos,pos);
+			CMath.V3SubV3(pos,this.mBeforePos,st);
 			if(pos.IsZero())	
 			{
 				CPoolGeo.RecycleV3(pos);
+				CPoolGeo.RecycleV3(nor);
+				CPoolGeo.RecycleV3(st);
+				CPoolGeo.RecycleV3(ed);
+
 				return;
 			}
 				
 
-			var len=CMath.V3Len(pos);
+			var len=CMath.V3Len(st);
 			if(len>this.mSize.y)
-				CMath.V3AddV3(pos,CMath.V3MulFloat(CMath.V3Nor(pos),-this.mSize.y),this.mBeforePos);
+			{
+				CMath.V3Nor(st,nor);
+				CMath.V3AddV3(pos,CMath.V3MulFloat(nor,-this.mSize.y),this.mBeforePos);
+			}
+				
+
 			if(len<0.001)
 			{
 				this.mBeforePos.Import(pos);
@@ -312,47 +326,51 @@ export class CPaint2D extends CPaint
 			}	
 			
 			this.mStopPos.Import(pos);
-			CPoolGeo.RecycleV3(pos);
+			
 
-			let L_nor=new CVec3();
-			let st=new CVec3(), ed=new CVec3();
+			//let L_nor=new CVec3();
+			//let st=new CVec3(), ed=new CVec3();
 		
 	
-			st=this.GetFMat().xyz;
+			st.Import(pos);
 			CMath.V3AddV3(this.mPos,st,st);
-			ed=this.mBeforePos;
+			ed.Import(this.mBeforePos);
 			CMath.V3AddV3(this.mPos,ed,ed);
 			let v=new CVec3();
 			
-			L_nor=CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)));
-			CMath.V3SubV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
-			this.mBound.InitBound(v);
-			this.GetFMat().SetV3(0,v);
-			CMath.V3AddV3(st, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
-			this.mBound.InitBound(v);
-			this.GetFMat().SetV3(1,v);
-			CMath.V3SubV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
-			this.mBound.InitBound(v);
-			this.GetFMat().SetV3(2,v);
-			CMath.V3AddV3(ed, CMath.V3MulFloat(L_nor, (this.mSize.x / 2)),v);
-			this.mBound.InitBound(v);
-			this.GetFMat().SetV3(3,v);
+			CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)),nor);
+			CMath.V3SubV3(st, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
+			//this.mBound.InitBound(v);
+			this.mTMat.SetV3(0,v);
+			CMath.V3AddV3(st, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
+			//this.mBound.InitBound(v);
+			this.mTMat.SetV3(1,v);
+			CMath.V3SubV3(ed, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
+			//this.mBound.InitBound(v);
+			this.mTMat.SetV3(2,v);
+			CMath.V3AddV3(ed, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
+			//this.mBound.InitBound(v);
+			this.mTMat.SetV3(3,v);
 
 
 			if(this.mLastHide)
 			{
-				this.mFMat.mF32A[3]=1;
-				this.mFMat.mF32A[7]=1;
-				this.mFMat.mF32A[11]=0;
-				this.mFMat.mF32A[15]=0;
+				this.mTMat.mF32A[3]=1;
+				this.mTMat.mF32A[7]=1;
+				this.mTMat.mF32A[11]=0;
+				this.mTMat.mF32A[15]=0;
 			}
 			else
 			{
-				this.mFMat.mF32A[3]=1;
-				this.mFMat.mF32A[7]=1;
-				this.mFMat.mF32A[11]=1;
-				this.mFMat.mF32A[15]=1;
+				this.mTMat.mF32A[3]=1;
+				this.mTMat.mF32A[7]=1;
+				this.mTMat.mF32A[11]=1;
+				this.mTMat.mF32A[15]=1;
 			}
+			CPoolGeo.RecycleV3(pos);
+			CPoolGeo.RecycleV3(nor);
+			CPoolGeo.RecycleV3(st);
+			CPoolGeo.RecycleV3(ed);
 			
 		}
 		else
@@ -363,15 +381,15 @@ export class CPaint2D extends CPaint
 			for(let i=0;i<4;++i)
 			{
 				CMath.V3AddV3(this.mPosList[i], pos, v);
-				this.mBound.InitBound(v);
-				this.GetFMat().SetV3(i,v);
+				//this.mBound.InitBound(this.mPosList[i]);
+				this.mTMat.SetV3(i,v);
 			}
 			
 
-			this.mFMat.mF32A[3]=1;
-			this.mFMat.mF32A[7]=1;
-			this.mFMat.mF32A[11]=1;
-			this.mFMat.mF32A[15]=1;
+			this.mTMat.mF32A[3]=1;
+			this.mTMat.mF32A[7]=1;
+			this.mTMat.mF32A[11]=1;
+			this.mTMat.mF32A[15]=1;
 
 		
 		}//else
@@ -491,18 +509,18 @@ export class CPaint2D extends CPaint
 		
 		this.mLMat.UnitCheck();
 	
-
+		
 		this.mUpdateLMat=true;
 	}
 	GetHalf()
 	{
 		var pos=new CVec3((this.mSize.x * 0.5)*this.mPivot.x, (this.mSize.y * 0.5)*this.mPivot.y, 0);
-		pos = CMath.V3MulMatNormal(pos, this.mOwner.GetWMat());
+		pos = CMath.V3MulMatNormal(pos, this.mOwner.GetMat());
 		return pos;
 	}
 	GetScale()
 	{
-		return new CVec3(this.mSize.x / CUtilRender.Mesh2DSize, this.mSize.y / CUtilRender.Mesh2DSize, 1);
+		return new CVec3(this.mSize.x / CUtilRender.Mesh2DSize*this.mRevers.x, this.mSize.y / CUtilRender.Mesh2DSize*this.mRevers.y, 1);
 	}
 	
 	GetSize() 
@@ -520,6 +538,22 @@ export class CPaint2D extends CPaint
 	GetMesh() : CMesh
 	{
 		return null;
+	}
+	Start(): void {
+		super.Start();
+		if(this.mPosList!=null)
+		{
+			this.mBound.Reset();
+			this.mBound.InitBound(this.mPosList);
+			this.mBound.SetType(CBound.eType.Box);
+			
+		}
+		else if(this.mTag.has("tail"))
+		{
+			this.mBound.Reset();
+			this.mBound.InitBound(this.mSize.y);
+			this.mBound.SetType(CBound.eType.Box);
+		}
 	}
 	//left,top,right,bottom
 	GetLeftTopRightBottom(_frame : CFrame) 
@@ -569,8 +603,12 @@ export class CPaint2D extends CPaint
 
 		this.mOwner.GetFrame().BMgr().BatchOn();
 		this.Common(_vf);
-
-		if( CWASM.IsWASM() && this.mTag.has("tail")==false)
+		if(this.mTag.has("tail"))
+		{
+			let wsa=new CShaderAttr("worldMat", this.mTMat);
+			this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+		}
+		else if( CWASM.IsWASM())
 		{
 			let wsa=new CShaderAttr("worldMat34", this.GetFMat());
 			wsa.mType=12;
@@ -582,7 +620,7 @@ export class CPaint2D extends CPaint
 			this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
 		}
 		
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
+		
 		if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
 		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
@@ -599,6 +637,8 @@ export class CPaint2D extends CPaint
 	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
 	SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
 	{
+		if(this.PushTag("codi"))
+			this.ClearBatch();
 		if(_stX==null)
 		{
 			this.mTexCodi.x=1-_stY;
@@ -684,15 +724,16 @@ export class CPaint2D extends CPaint
 	}
 	SetReverse(_x : boolean,_y : boolean)
 	{
-		let rev=this.mShaderAttrMap.get("reverse");
-		if(_x)
-			rev.mData.x=1.0;
-		else
-			rev.mData.x=0.0;
-		if(_y)
-			rev.mData.y=1.0;
-		else
-			rev.mData.y=0.0;
+		if(_x)	this.mRevers.x=-1;
+		else	this.mRevers.x=1;
+
+		if(_y)	this.mRevers.y=-1;
+		else	this.mRevers.y=1;
+		this.PRSReset();
+		
+		
+		
+		
 	}
 	
 
@@ -727,13 +768,15 @@ export class CPaint2D extends CPaint
 
 		if(_array.length>=4)
 		{
+			if(this.mTMat==null)
+				this.mTMat=new CMat();
 			this.Tail()
 			this.mPosList=_array;
 
 			this.mBound.Reset();
 			this.mBound.InitBound(this.mPosList);
 			this.mBound.SetType(CBound.eType.Box);
-			
+			this.mBoundFMatR=0;
 		
 		}
 			
@@ -960,7 +1003,7 @@ export class CPaintHTML extends CPaint2D
 
 		
 		let zoom = 1 / this.mRenPT[0].mCam.mZoom;
-		let pos=this.GetOwner().GetWMat().xyz;
+		let pos=this.GetOwner().GetMat().xyz;
 		
 		// pos.x*=zoom;
 		// pos.y*=zoom;

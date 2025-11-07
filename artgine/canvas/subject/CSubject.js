@@ -500,7 +500,7 @@ export class CSubject extends CObject {
         this.mComArr.push(_com);
         return _com;
     }
-    GetWMat() { return this.mWMat; }
+    GetMat() { return this.mWMat; }
     GetPos() { return this.mPos; }
     GetRot() { return this.mRot; }
     ;

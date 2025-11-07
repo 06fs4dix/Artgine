@@ -51,12 +51,7 @@ export class CPaintTrail extends CPaint
 	//public m_removeTime=100;//몇초당 제거할껀지
 	public mLastHide=true;
 	public mLastSmall=false;
-	
-	//public m_staticPos=new Array<CVec3>();
-	public mTexCodi : CVec4=new CVec4(1, 1, 0, 0);
-	
 	public mStaticPos=false;
-
 	public mRepeat=false;
 	//public m_line=false;
 	
@@ -214,12 +209,12 @@ export class CPaintTrail extends CPaint
 
 		if(this.mStaticPos==false)
 		{
-			var pos=this.mOwner.GetWMat().xyz;
+			var pos=this.mOwner.GetMat().xyz;
 			this.mPosList.push(pos);
 		}
 		
 		if(this.mNormal!=null)
-			this.mNorList.push(CMath.V3MulMatNormal(this.mNormal,this.mOwner.GetWMat()));
+			this.mNorList.push(CMath.V3MulMatNormal(this.mNormal,this.mOwner.GetMat()));
 	}
 	EmptyRPChk()
 	{
@@ -276,7 +271,7 @@ export class CPaintTrail extends CPaint
 		if(_update.DeltaMil()>1000)
 			return;
 
-		var pos=this.mOwner.GetWMat().xyz;
+		var pos=this.mOwner.GetMat().xyz;
 		let size=(this.mLen / 2);
 
 		this.mSumTime+=_update.DeltaMil();
@@ -516,6 +511,7 @@ export class CPaintTrail extends CPaint
 		var t0=CPoolGeo.ProductV3();
 		var t1=CPoolGeo.ProductV3();
 		var texLen=0;
+		this.mBoundFMatR=0;
 		this.mBound.Reset();
 		this.mBound.SetType(CBound.eType.Box);
 
@@ -677,7 +673,7 @@ export class CPaintTrail extends CPaint
 		
 
 		
-		this.mLMat=CMath.MatInvert(this.mOwner.GetWMat());
+		this.mLMat=CMath.MatInvert(this.mOwner.GetMat());
 
         CPoolGeo.RecycleV3(t0);
         CPoolGeo.RecycleV3(t1);
@@ -703,7 +699,7 @@ export class CPaintTrail extends CPaint
 		super.Common(_vf);
 
 		//let meshDraw=this.m_owner.GetFW().Res().Find("line"+this.m_vCount+".meshDraw");
-		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi",this.mTexCodi));
+		//this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi",this.mTexCodi));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("trailPos",4,this.mOut.GetArray()));
 		if(this.mLastHide)
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide",new CVec1(1.0)));

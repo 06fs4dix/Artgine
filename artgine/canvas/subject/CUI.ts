@@ -358,8 +358,8 @@ export class CUI extends CSubject
         var bound = this.mUIPT.GetBound().Export();
         if (bound.GetType() == CBound.eType.Null)
             return;
-        bound.InitBound(CMath.V3MulMatCoordi(bound.mMin, this.mUIPT.GetLMat()));
-        bound.InitBound(CMath.V3MulMatCoordi(bound.mMax, this.mUIPT.GetLMat()));
+        bound.InitBound(CMath.V3MulMatCoordi(bound.mMin, this.mUIPT.GetMat()));
+        bound.InitBound(CMath.V3MulMatCoordi(bound.mMax, this.mUIPT.GetMat()));
         //var xRate=this.m_anXType*0.5+0.5;
         //var yRate=this.m_anYType*0.5+0.5;
 

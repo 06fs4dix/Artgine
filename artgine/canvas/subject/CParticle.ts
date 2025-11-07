@@ -30,7 +30,7 @@ export class CParticleShape extends CObject
 					each0.Destroy();
 				}
 				else
-					each0.SetPos(CMath.V3AddV3(each0.GetPos(),this.mTarget.GetWMat().xyz));
+					each0.SetPos(CMath.V3AddV3(each0.GetPos(),this.mTarget.GetMat().xyz));
 			}
 			
 		}
@@ -145,7 +145,7 @@ export class CParticleTexBuf extends CParticleShapeOut
 		
 		for(var each0 of _objList)
 		{
-			let pos=each0.GetWMat().xyz;
+			let pos=each0.GetMat().xyz;
 			while(true)
 			{
 				let x=Math.trunc(Math.random()*this.mWidth);

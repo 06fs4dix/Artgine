@@ -4,7 +4,10 @@ import {CVec3} from "../geometry/CVec3.js"
 import {CVec4} from "../geometry/CVec4.js"
 import {CFloat32} from "./CFloat32.js";
 
-
+export interface IMat
+{
+	GetMat()	: CMat;
+}
 export class CMat extends CFloat32
 {
 	
@@ -168,15 +171,12 @@ export class CMat extends CFloat32
 	}
 	F32A()	: Float32Array
 	{
-		if(this["mRef"]!=null)
-			return this["mRef"].F32A();
 
 		return this.mF32A;
 	}
 	Ptr() : number
 	{
-		if(this["mRef"]!=null)
-			return this["mRef"].Ptr();
+	
 		return this.mF32A["ptr"];
 	}
 	// GetUpdateOffset()
@@ -188,24 +188,25 @@ export class CMat extends CFloat32
 	// 	let offset=this.GetUpdateOffset();
 	// 	this["mUpdate"]=offset+1;
 	// }
-	GetRef()
-	{
-		return this["mRef"];
-	}
-	SetRef(_target : CMat)
-	{
-		if(_target!=null)	this.Import(_target);
-		this["mRef"]=_target;
-		
-	}
-	IsRef()
-	{
-		return this["mRef"]!=null;
-	}
+	
+	
 	override IsShould(_member: string, _type: CObject.eShould): boolean 
 	{
-		if(_member=="mRef")	return false;
+		
 		return super.IsShould(_member,_type);	
 	}
 }
 
+class CMatRef extends CMat
+{
+	mRef=new Array<CMat>;
+	F32A()	: Float32Array
+	{
+		// if(this.mRef.length>0)
+		// {
+		// 	let ref=
+		// 	for()
+		// }
+		return this.mF32A;
+	}
+}

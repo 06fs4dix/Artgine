@@ -1,5 +1,5 @@
 
-import { CMat } from "../../../geometry/CMat.js"
+import { CMat, IMat } from "../../../geometry/CMat.js"
 import { CVec3 } from "../../../geometry/CVec3.js"
 import { CVec4 } from "../../../geometry/CVec4.js"
 
@@ -14,6 +14,7 @@ import { CRenderPass } from "../../../render/CRenderPass.js"
 import { CShaderAttr } from "../../../render/CShaderAttr.js"
 import { CTexture } from "../../../render/CTexture.js"
 
+import { CUpdate } from "../../../basic/Basic.js"
 import { CAlert } from "../../../basic/CAlert.js"
 import { CClass } from "../../../basic/CClass.js"
 import { CDomFactory } from "../../../basic/CDOMFactory.js"
@@ -26,15 +27,13 @@ import { CWASM } from "../../../basic/CWASM.js"
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js"
 import { CUtilMath } from "../../../geometry/CUtilMath.js"
 import { CCamera } from "../../../render/CCamera.js"
+import { CAtlas } from "../../../util/CAtlas.js"
 import { CLoaderOption } from "../../../util/CLoader.js"
 import { SDF } from "../../../z_file/SDF.js"
 import { CRPAuto } from "../../CRPMgr.js"
 import { CSubject } from "../../subject/CSubject.js"
 import { CAlpha, CColor, CColorVFX } from "../CColor.js"
 import { CComponent } from "../CComponent.js"
-import { CAtlas } from "../../../util/CAtlas.js"
-import { CMesh } from "../../../render/CMesh.js"
-import { CUpdate } from "../../../basic/Basic.js"
 
 export class CRenPaint
 {
@@ -76,7 +75,7 @@ AO(1),roughness(-1),metalric(-1),emisive(1)
 
 
 */
-export class CPaint extends CComponent 
+export class CPaint extends CComponent implements IMat
 {
 
 	protected mFMat : CMat;//= new CMat();
@@ -86,6 +85,7 @@ export class CPaint extends CComponent
 	protected mColorModel  : CColor;
 	protected mAlphaModel  : CAlpha;
 	protected mColorVFX  : CColorVFX;
+	protected mTexCodi : CVec4;
 
 	public mAutoRPUpdate=true;
 	public mCamCullUpdate=true;
@@ -120,11 +120,14 @@ export class CPaint extends CComponent
 	{
 		super();
 		this.mSysc=CComponent.eSysn.Paint;
+		this.mTexCodi=new CVec4(1,1,0,0);
+		this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mShaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None)));
 		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(0,SDF.eAlphaModel.None)));
 		//this.m_shaderAttrMap.set("CVLS",new CShaderAttr("CVLS",new CVec4(0,0,0,0,this)));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
+		
 		
 		this.mColorVFX=null;
 		
@@ -215,7 +218,7 @@ export class CPaint extends CComponent
 		if(_member=="mFMat" ||  _member=="mUpdateLMat" || _member=="mUpdateFMat" ||
 			 _member=="mRenPT"  || _member=="mTagKey" ||
 			_member=="mDefaultAttr" || _member=="mBatchMap" || _member=="mBatchLastArr" || _member=="mBatchLastVF" || 
-			_member=="mBoundFMat" || _member=="mBoundFMatC" || _member=="mBoundFMatR" ||
+			_member=="mBoundFMat" || _member=="mBoundFMatC" || _member=="mBoundFMatR" || _member=="mBound" ||
 			_member=="mAutoRPUpdate" || _member=="mCamCullUpdate" ||
 			_member=="mColorModel" || _member=="mAlphaModel" || _member=="mColorVFX" )
 				return false;
@@ -354,6 +357,8 @@ export class CPaint extends CComponent
 	
 	UpdateRenPt()
 	{
+		let pos=CPoolGeo.ProductV3();
+
 		for(let i=0;i<this.mRenPT.length;++i)
 		{
 			let ren=this.mRenPT[i];
@@ -364,13 +369,15 @@ export class CPaint extends CComponent
 			{
 				let cam=ren.mCam;
 				let plane=ren.mCam.GetPlane();
-
+				pos.mF32A[0]=this.mFMat.mF32A[12]+this.mBoundFMatC.mF32A[0];
+				pos.mF32A[1]=this.mFMat.mF32A[13]+this.mBoundFMatC.mF32A[1];
+				pos.mF32A[2]=this.mFMat.mF32A[14]+this.mBoundFMatC.mF32A[2];
 			
 				
 				if(this.mRenderPass[i].mZEarly)
 				{
 					let eye=ren.mCam.GetEye();
-					let pos=CPoolGeo.ProductV3();
+					
 
 					//한축 정렬 되면
 					//2D란 의미다. 
@@ -385,25 +392,23 @@ export class CPaint extends CComponent
 					}
 					else 
 					{
-						pos.mF32A[0]=this.mFMat.mF32A[12];
-						pos.mF32A[1]=this.mFMat.mF32A[13];
-						pos.mF32A[2]=this.mFMat.mF32A[14];
+						
 						ren.mDistance = CMath.V3Distance(eye, pos);
 						
 					}
 					ren.mDistance=Math.trunc(ren.mDistance*128)<<9;
-					CPoolGeo.RecycleV3(pos);
+					
 				}
 				else
 					ren.mDistance=0;
 				
 				
-			
+				
 				
 			
 				//let camOff=_cam.Offset();
 				//강제로 모든 오브젝트는 컬링을 처리하게 함
-				if(CUtilMath.PlaneSphereInside(plane,this.mBoundFMatC,this.mBoundFMatR,null) || this.mRenderPass[i].mCullFrustum==false)
+				if(CUtilMath.PlaneSphereInside(plane,pos,this.mBoundFMatR,null) || this.mRenderPass[i].mCullFrustum==false)
 					ren.mShow=0;
 				else
 				{
@@ -413,6 +418,7 @@ export class CPaint extends CComponent
 					
 			}
 		}
+		CPoolGeo.RecycleV3(pos);
 	}
 	
 	//이 함수에 목적을 모르겟음.....
@@ -422,6 +428,8 @@ export class CPaint extends CComponent
 		//this.m_shaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None,this)));
 		//this.m_shaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(0,SDF.eAlphaModel.None,this)));
 		
+		if(this.mShaderAttrMap.get("texCodi")==null)		
+			this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
 
@@ -587,13 +595,19 @@ export class CPaint extends CComponent
 	GetTag()	{	return this.mTag;	}
 	PushTag(_tag : string)	
 	{
+		if(this.mTag.has(_tag))	return false;
+
 		this.mTag.add(_tag);
 		this.mTagKey=null;
+		this.ClearBatch();
+
+		return true;
 	}
 	RemoveTag(_tag : string)	
 	{
 		this.mTag.delete(_tag);
 		this.mTagKey=null;
+		this.ClearBatch();
 	}
 	GetDrawMesh(_meshKey : string,_shader : CShader,_ci : CMeshCreateInfo)
 	{
@@ -779,11 +793,12 @@ export class CPaint extends CComponent
 		return new CVec4(this.mColorModel.x, this.mColorModel.y, this.mColorModel.z, this.mAlphaModel.x);
 	}
 	
-	GetLMat() {	return this.mLMat;	};
+	GetMat() {	return this.mLMat;	};
 	SetLMat(_mat : CMat)	{	this.mLMat.Import(_mat);	this.mUpdateLMat=true;}
 	
 	CacBound()
 	{
+		if(this.mBoundFMatR!=0)	return;
 		if(this.mTag.has("tail"))
 		{
 
@@ -800,9 +815,9 @@ export class CPaint extends CComponent
 
 			this.mBoundFMat.GetCenter(this.mBoundFMatC);
 			
-			this.mBoundFMatC.mF32A[0]+=this.mFMat.mF32A[12];
-			this.mBoundFMatC.mF32A[1]+=this.mFMat.mF32A[13];
-			this.mBoundFMatC.mF32A[2]+=this.mFMat.mF32A[14];
+			// this.mBoundFMatC.mF32A[0]+=this.mFMat.mF32A[12];
+			// this.mBoundFMatC.mF32A[1]+=this.mFMat.mF32A[13];
+			// this.mBoundFMatC.mF32A[2]+=this.mFMat.mF32A[14];
 			
 
 			
@@ -826,13 +841,13 @@ export class CPaint extends CComponent
 			
 			
 
-			this.mBoundFMat.mMin.mF32A[0]+=this.mFMat.mF32A[12];
-			this.mBoundFMat.mMin.mF32A[1]+=this.mFMat.mF32A[13];
-			this.mBoundFMat.mMin.mF32A[2]+=this.mFMat.mF32A[14];
+			// this.mBoundFMat.mMin.mF32A[0]+=this.mFMat.mF32A[12];
+			// this.mBoundFMat.mMin.mF32A[1]+=this.mFMat.mF32A[13];
+			// this.mBoundFMat.mMin.mF32A[2]+=this.mFMat.mF32A[14];
 
-			this.mBoundFMat.mMax.mF32A[0]+=this.mFMat.mF32A[12];
-			this.mBoundFMat.mMax.mF32A[1]+=this.mFMat.mF32A[13];
-			this.mBoundFMat.mMax.mF32A[2]+=this.mFMat.mF32A[14];
+			// this.mBoundFMat.mMax.mF32A[0]+=this.mFMat.mF32A[12];
+			// this.mBoundFMat.mMax.mF32A[1]+=this.mFMat.mF32A[13];
+			// this.mBoundFMat.mMax.mF32A[2]+=this.mFMat.mF32A[14];
 
 			
 			
@@ -894,15 +909,16 @@ export class CPaint extends CComponent
 	Update(_update : CUpdate)
 	{
 		
+		
 		if(this.mUpdateFMat)	this.mUpdateFMat=false;
 		if(this.mUpdateLMat || this.mOwner.mUpdateMat!=0)// || this.mBoundFMatR==0)
 		{
-			CMath.MatMul(this.mLMat,this.mOwner.GetWMat(),this.mFMat);
 			
-			
+			CMath.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat);
 			this.CacBound();
 			this.mUpdateFMat=true;
 		}
+		this.UpdateRenPt();
 
 		this.mUpdateLMat=false;
 	}
@@ -947,7 +963,12 @@ export class CPaint extends CComponent
 	}
 	GetBoundFMat()
 	{
-		return this.mBoundFMat;
+		let bound=this.mBoundFMat.Export();
+		bound.mMax=CMath.V3AddV3(bound.mMax,this.GetFMat().xyz,bound.mMax);
+		bound.mMin=CMath.V3AddV3(bound.mMin,this.GetFMat().xyz,bound.mMin);
+
+
+		return bound;
 	}
 	SetBound(_bound)
 	{
@@ -974,6 +995,18 @@ export class CPaint extends CComponent
 		}
 		return barr;
 	} 
+	BatchKeySet(_nodeOff : number,_key=null)
+	{
+		for(let batchArr of this.mBatchMap.values())
+		{
+			if(batchArr==null)	continue;
+			if(_key==null)
+				batchArr[_nodeOff].CreateKey();
+			else
+				batchArr[_nodeOff].mKey=_key;
+		}
+		
+	}
 	
 	SetTexture(_a : Array<string>);
 	SetTexture(_a : string);
@@ -1045,9 +1078,9 @@ export class CPaint extends CComponent
 		}
 		
 	}
-	GetResTexture(_off : Array<number>=[]) 
+	GetResTexture(_off : Array<number>=[],_texArr : Array<CTexture>=null) 
 	{	
-		let texArr=new Array<CTexture>();
+		if(_texArr==null)	_texArr=new Array<CTexture>();
 		
 		if(_off.length==0)
 		{
@@ -1059,6 +1092,12 @@ export class CPaint extends CComponent
 		
 		for(let i=0;i<_off.length;++i)
 		{
+			if(_off[i]==-1)	
+			{
+				_texArr.push(null);
+				continue;
+			}
+				
 			let tex=this.GetOwner().GetFrame().Res().Find(this.mTexture[_off[i]]);
 			if(tex instanceof CAtlas)
 			{
@@ -1077,10 +1116,10 @@ export class CPaint extends CComponent
 				
 				tex=tex.GetTex();
 			}
-			texArr.push(tex);
+			_texArr.push(tex);
 		}
 
-		return texArr;	
+		return _texArr;	
 	}
 	GetTexture() {	return this.mTexture;	}
 	GetTexHash() 
@@ -1104,6 +1143,12 @@ export class CPaint extends CComponent
 	InitChk()
 	{
 		this.mInit=true;
+
+		//임시 코딩
+		if(this.mShaderAttrMap.get("texCodi")==null)		
+			this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
+		
+		
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
 		if(this.mShaderAttrMap.get("colorVFX")!=null)

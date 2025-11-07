@@ -10,7 +10,7 @@ import {CAlert} from "../basic/CAlert.js"
 import {CPoolGeo} from "./CPoolGeo.js"
  const d_PI=3.141592;
 
-
+var gDuumyV3=new CVec3();
 export class CMath
 {
 	static PI():number {return d_PI;}
@@ -1224,12 +1224,12 @@ export class CMath
 	}
 	static PlaneDotV3Coordi(pa_plane : CPlane,_dir : number, _pos : CVec3)
 	{
-		var v=CPoolGeo.ProductV3();
-		v.mF32A[0]=pa_plane.mF32A[_dir+0];
-		v.mF32A[1]=pa_plane.mF32A[_dir+1];
-		v.mF32A[2]=pa_plane.mF32A[_dir+2];
-		let dot=CMath.V3Dot(v, _pos) + pa_plane.mF32A[_dir+3];
-		CPoolGeo.RecycleV3(v);
+		//var v=CPoolGeo.ProductV3();
+		gDuumyV3.mF32A[0]=pa_plane.mF32A[_dir+0];
+		gDuumyV3.mF32A[1]=pa_plane.mF32A[_dir+1];
+		gDuumyV3.mF32A[2]=pa_plane.mF32A[_dir+2];
+		let dot=CMath.V3Dot(gDuumyV3, _pos) + pa_plane.mF32A[_dir+3];
+		//CPoolGeo.RecycleV3(v);
 		return dot;
 	}
 	static PlaneEachDotV3Coordi(pa_plane:CVec4, pa_vec:CVec3)

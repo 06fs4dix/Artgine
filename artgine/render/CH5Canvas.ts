@@ -245,6 +245,8 @@ export class CH5Canvas
 		gCanvas.width=w;
 		gCanvas.height=h;
 		gCTX.clearRect(0,0,w,h);
+		gCTX.imageSmoothingEnabled = false;
+		gCTX.globalCompositeOperation = "copy"; // 블렌딩/프리멀티 영향 없이 픽셀 복사
 		gLinear=_linear;
 		gExp=_exp;
 	}

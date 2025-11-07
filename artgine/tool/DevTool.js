@@ -64,7 +64,7 @@ let gLastCanvas = null;
 let gCanStyle = null;
 function ResetBoxXYZ(_subject) {
     let cam = gAtl.Brush().GetCamDev();
-    let pos = _subject.GetWMat().xyz;
+    let pos = _subject.GetMat().xyz;
     let t = gBoundTick / 100 * 100;
     let o = gBoundTick / 1000 * 100;
     if (cam.IsOrthographic()) {
@@ -419,7 +419,7 @@ function DevToolRender() {
     let wMatSA = new CShaderAttr("worldMat", wmat);
     let MatToMat12Fun = (_mat) => {
     };
-    let pos = subject.GetWMat().xyz;
+    let pos = subject.GetMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
     gAtl.Frame().Dev().SetLine(true);
     {
@@ -720,7 +720,7 @@ let gUpdateTime = 0;
 function DevToolUpdate(_delay) {
     if (gLeftSelect instanceof CSubject) {
         let cam = gAtl.Brush().GetCamDev();
-        let pos = gLeftSelect.GetWMat().xyz;
+        let pos = gLeftSelect.GetMat().xyz;
         let len = CMath.V3Distance(cam.GetEye(), pos);
         if (cam.IsOrthographic())
             len = cam.GetZoom();

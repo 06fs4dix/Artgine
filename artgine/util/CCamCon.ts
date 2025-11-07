@@ -301,17 +301,36 @@ export class CCamCon extends CObject implements ICamCon
             
         }
         //CConsol.Log(this.mRotX+"/"+this.mRotY);
-        if(_update.DeltaTime()<0.05)
-        {
-            const t = Math.max(0, _update.DeltaTime()*50); // ms -> sec
+        // if(_update.DeltaTime()<0.02)
+        // {
+        //     const t = Math.max(0, _update.DeltaTime()*50); // ms -> sec
 
         
-            this.mRotXCur+=this.mRotX;
-            this.mRotYCur+=this.mRotY;
-            this.mRotXCur=this.mRotX=this.mRotXCur*0.5*t;
-            this.mRotYCur=this.mRotY=this.mRotYCur*0.5*t;
-            if(this.mRotYCur>0.001 && this.mRotYCur>0.001)
-                this.mReset=true;
+        //     this.mRotXCur+=this.mRotX;
+        //     this.mRotYCur+=this.mRotY;
+        //     this.mRotXCur=this.mRotX=this.mRotXCur*0.5*t;
+        //     this.mRotYCur=this.mRotY=this.mRotYCur*0.5*t;
+        //     if(this.mRotYCur>0.001 && this.mRotYCur>0.001)
+        //         this.mReset=true;
+        // }
+        if (_update.DeltaTime() <= 0.05)                      // [수정] 0.02 → 0.10 (프레임 드랍 구간에서도 동작)
+        {
+            // 프레임레이트 독립 감쇠로 교체
+            const dt = Math.min(Math.max(_update.DeltaTime(), 1/240), 1/10); // [추가] 스파이크 클램프
+            const halfLife = 0.08;                              // [추가] 감쇠 하프라이프(튜닝 포인트)
+            const t = Math.pow(0.5, dt / halfLife);            // [수정] 선형(Δt*50) → 지수 감쇠
+
+            this.mRotXCur += this.mRotX;                        // (유지)
+            this.mRotYCur += this.mRotY;                        // (유지)
+
+            // 기존의 0.5 계수는 유지하되, 프레임 독립 t와 곱셈만 교체
+            this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t; // (형태 유지, 핵심만 교체)
+            this.mRotYCur = this.mRotY = this.mRotYCur * 0.5 * t; // (형태 유지, 핵심만 교체)
+
+            // [수정] 오타 및 의미 수정: X/Y 중 하나라도 임계 초과 시 리셋
+            if (Math.abs(this.mRotXCur) > 0.001 || Math.abs(this.mRotYCur) > 0.001) {
+                this.mReset = true;
+            }
         }
         
 

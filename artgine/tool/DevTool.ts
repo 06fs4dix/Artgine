@@ -107,7 +107,7 @@ let gCanStyle: ICanvasStyle | null = null;
 function ResetBoxXYZ(_subject : CSubject)
 {
     let cam=gAtl.Brush().GetCamDev();
-    let pos=_subject.GetWMat().xyz;
+    let pos=_subject.GetMat().xyz;
 
     
     // let len=CMath.V3Distance(cam.GetEye(),pos);
@@ -609,7 +609,7 @@ function DevToolRender()
         //_mat.mF32A[7]=_mat.mF32A[13];
         //_mat.mF32A[11]=_mat.mF32A[14];
     };
-    let pos=subject.GetWMat().xyz;
+    let pos=subject.GetMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
     gAtl.Frame().Dev().SetLine(true);
     {
@@ -1061,7 +1061,7 @@ function DevToolUpdate(_delay)
     {
         let cam=gAtl.Brush().GetCamDev();
 
-        let pos=gLeftSelect.GetWMat().xyz;
+        let pos=gLeftSelect.GetMat().xyz;
         let len=CMath.V3Distance(cam.GetEye(),pos);
         if(cam.IsOrthographic())
             len=cam.GetZoom();

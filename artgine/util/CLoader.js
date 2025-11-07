@@ -24,6 +24,7 @@ export class CLoaderOption extends CObject {
     mColorTex = false;
     mAlphaCut = 0x09;
     mCache = null;
+    mAtlas = false;
     mInch = false;
     EditForm(_pointer, _div, _input) {
         if (_pointer.member == "mMipMap") {
@@ -241,6 +242,8 @@ export class CLoader {
             }
         }
         this.mLoadSet.delete(_file);
+        tex = par.GetResult();
+        tex.SetKey(_file);
         this.mRes.Push(_file, par.GetResult());
     }
     async ShaderLoad(_file, _buffer) {
@@ -275,31 +278,40 @@ export class CLoader {
         await par.Load(_file);
         var mesh = par.GetResult();
         this.mRes.Push(_file, mesh);
+        await this.MeshTexLoad(_file, mesh, _option);
+    }
+    async MeshTexLoad(_file, mesh, _option) {
+        let option = _option.Export();
+        if (mesh.clamp)
+            option.mWrap = CTexture.eWrap.Clamp;
+        let path = _file.substring(0, _file.lastIndexOf("/")) + "/";
         let texMap = new Map();
         for (let i = 0; i < mesh.texture.length; i++) {
-            if (mesh.texture[i].indexOf("base64:") != -1) {
-                let tex = mesh.texture[i];
-                let base64Header = "base64:";
-                var base64data = tex.substring(base64Header.length);
-                let newName = CHash.SHA256(base64data) + ".png";
-                mesh.texture[i] = newName;
-                this.mLoadSet.add(newName);
-                texMap.set(newName, CUtil.Base64ToArray(base64data));
+            {
+                let texStr = mesh.texture[i];
+                if (texStr.indexOf("base64:") != -1) {
+                    let base64Header = "base64:";
+                    var base64data = texStr.substring(base64Header.length);
+                    let newName = path + (CHash.SHA256(base64data).substr(0, 16)) + ".png";
+                    mesh.texture[i] = newName;
+                    this.mLoadSet.add(newName);
+                    texMap.set(newName, CUtil.Base64ToArray(base64data));
+                }
+                else if (texStr.indexOf(".rgba") != -1) {
+                    let ne = CString.LeftRightCut(texStr, "rgba", ".rgba");
+                    CH5Canvas.Init(1, 1);
+                    var para = [CH5Canvas.Cmd("fillStyle", "rgba" + ne), CH5Canvas.Cmd("fillRect", [0, 0, 1, 1])];
+                    CH5Canvas.Draw(para);
+                    var tex = CH5Canvas.GetNewTex();
+                    this.mRender.BuildTexture(tex);
+                    this.mRes.Push(texStr, tex);
+                }
+                else
+                    await this.Exe(texStr, option);
             }
-            else if (mesh.texture[i].indexOf(".rgba") != -1) {
-                let ne = CString.LeftRightCut(mesh.texture[i], "rgba", ".rgba");
-                CH5Canvas.Init(1, 1);
-                var para = [CH5Canvas.Cmd("fillStyle", "rgba" + ne), CH5Canvas.Cmd("fillRect", [0, 0, 1, 1])];
-                CH5Canvas.Draw(para);
-                var tex = CH5Canvas.GetNewTex();
-                this.mRender.BuildTexture(tex);
-                this.mRes.Push(mesh.texture[i], tex);
-            }
-            else
-                await this.Exe(mesh.texture[i], _option);
         }
         for (let [key, value] of texMap) {
-            await this.LoadSwitch(key, value, _option);
+            await this.LoadSwitch(key, value, option);
         }
     }
     VideoLoad(_file, _buffer) {
@@ -327,7 +339,7 @@ export class CLoader {
     SoundLoad(_file, _buffer) {
         this.mRes.Push(_file, _buffer);
     }
-    async JSONLoad(_file, _buffer, _op) {
+    async JSONLoad(_file, _buffer, _option) {
         var str = CUtil.ArrayToString(_buffer);
         var jData = new CJSON(str);
         if (jData.Get("skeleton") != null) {
@@ -336,6 +348,7 @@ export class CLoader {
             await par.Load(_file);
             var mesh = par.GetResult();
             this.mRes.Push(_file, mesh);
+            await this.MeshTexLoad(_file, mesh, _option);
         }
         else
             this.mRes.Push(_file, jData);

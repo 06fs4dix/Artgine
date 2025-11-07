@@ -14,6 +14,7 @@ import { CMesh } from "./CMesh.js";
 import { CMeshCopyNode } from "./CMeshCopyNode.js";
 import { CMeshCreateInfo, CMeshBuf } from "./CMeshCreateInfo.js";
 import { CMeshDataNode } from "./CMeshDataNode.js";
+import { CMeshPaint } from "./CMeshPaint.js";
 import { CMeshTreeUpdate } from "./CMeshTreeUpdate.js";
 import { CVertexFormat } from "./CShader.js";
 import { CTexture } from "./CTexture.js";
@@ -1748,7 +1749,39 @@ export class CUtilRender
 	
 	static MeshBoundUpdate(_mesh : CMesh)
 	{
-		MeshNodeBoundUpdate(_mesh,_mesh.meshTree,new CMat());
+		let Tree = new CTree<CMeshCopyNode>();
+		Tree.mData=new CMeshCopyNode();
+		CMeshTreeUpdate.TreeCopy(_mesh.meshTree,Tree,new CMat(),null);
+		let skinMat=new Array<CMat>();
+		let node=new Array<CMeshPaint>();
+		node.push(new CMeshPaint(_mesh.meshTree, Tree,null));
+
+		for(let i=0;i<node.length;++i)
+		{
+
+			for (var j = 0; j < _mesh.skin.length; ++j)
+			{
+				if (node[i].md.mData.IsSkinKey(_mesh.skin[j].key))
+				{
+					var all=new CMat();
+					skinMat[j] = CMath.MatMul(_mesh.skin[j].mat, node[i].mpi.mData.pst);
+				}
+			}
+
+			if(node[i].md.mChild!=null)
+				node.push(new CMeshPaint(node[i].md.mChild, node[i].mpi.mChild,null));
+			if(node[i].md.mColleague!=null)
+				node.push(new CMeshPaint(node[i].md.mColleague, node[i].mpi.mColleague,null));
+			
+				
+		}
+
+		
+
+		for(let i=0;i<node.length;++i)
+		{
+			MeshNodeBoundUpdate(skinMat,node[i]);
+		}
 	}
 
 	static MeshAniBake(_texture : CTexture,_mesh : CMesh,_st : number,_end : number)
@@ -1823,104 +1856,139 @@ export class CUtilRender
 	}
 
 };
-function MeshNodeBoundUpdate(_mesh : CMesh,_node : CTree<CMeshDataNode>,_sum : CMat)
+function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 {
 	var mat=CPoolGeo.ProductMat();
-	var sm=CPoolGeo.ProductMat();
-	var rm=CPoolGeo.ProductMat();
+	// var sm=CPoolGeo.ProductMat();
+	// var rm=CPoolGeo.ProductMat();
 	
 
-	// if(_node.mData.sca.x!=1)
-	// {
-	// 	CConsol.Log("test");
-	// }
-	CMath.MatScale(_node.mData.sca,sm);
-	CMath.QutToMat(_node.mData.rot,rm);
-	//CMath.QutToMat(CMath.EulerToQut(this.rot.xyz),rm.dt);
+	
+	// CMath.MatScale(_node.mData.sca,sm);
+	// CMath.QutToMat(_node.mData.rot,rm);
+	// //CMath.QutToMat(CMath.EulerToQut(this.rot.xyz),rm.dt);
 		
 	
 
-	CMath.MatMul(sm, rm,mat);
-	CPoolGeo.RecycleMat(sm);
-	CPoolGeo.RecycleMat(rm);
+	// CMath.MatMul(sm, rm,mat);
+	// CPoolGeo.RecycleMat(sm);
+	// CPoolGeo.RecycleMat(rm);
 	
 
 	
 
-	mat.mF32A[12] = _node.mData.pos.x;
-	mat.mF32A[13] = _node.mData.pos.y;
-	mat.mF32A[14] = _node.mData.pos.z;
-	mat.UnitCheck();
+	// mat.mF32A[12] = _node.mData.pos.x;
+	// mat.mF32A[13] = _node.mData.pos.y;
+	// mat.mF32A[14] = _node.mData.pos.z;
+	// mat.UnitCheck();
 
-	mat=CMath.MatMul(_sum,mat);
+	// mat=CMath.MatMul(_sum,mat);
+
+	let mdd=_node.md.mData;
+	//let mdd=_node.md.mData;
 	
-	if(_node.mData.ci!=null && _node.mData.textureOff.length>0)
+	if(mdd.ci!=null && mdd.textureOff.length>0)
 	{
-		_node.mData.ci.bound.SetType(CBound.eType.Box);
-		var posb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
-		var web=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight)[0];
-		var wib=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex)[0];
-		if(_node.mData.ci.indexCount>0)
+		mdd.ci.bound.SetType(CBound.eType.Box);
+		let posb=mdd.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
+		let web=mdd.ci.GetVFType(CVertexFormat.eIdentifier.Weight)[0];
+		let wib=mdd.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex)[0];
+		if(mdd.ci.indexCount>0)
 		{
 			
 			let dmat=new CMat();
 			dmat.SetUnit(false);
-			for (var i = 0; i < _node.mData.ci.indexCount; i+=3)
+			for (let i = 0; i < mdd.ci.indexCount; i+=3)
 			{
 
 				for(let j=0;j<3;++j)
 				{
-					let pos=posb.bufF.V3(_node.mData.ci.index[i+j]);
-					if(web!=null && _mesh.skin.length>0)
+					let pos=posb.bufF.V3(mdd.ci.index[i+j]);
+					if(web!=null && _skinMat.length>0)
 					{
 						
 						
-						let wmat=new CMat();
-						wmat.Zero();
-						wmat.SetUnit(false);
-						let we=web.bufF.V4(_node.mData.ci.index[i+j]);
-						let wi=wib.bufF.V4(_node.mData.ci.index[i+j]);
+						//let wmat=new CMat();
+						mat.Zero();
+						mat.SetUnit(false);
+						let we=web.bufF.V4(mdd.ci.index[i+j]);
+						let wi=wib.bufF.V4(mdd.ci.index[i+j]);
 						
 
-						CMath.MatMulFloat(_mesh.skin[wi.x].mat,we.x,dmat);
-						CMath.MatAdd(wmat,dmat,wmat);
-						CMath.MatMulFloat(_mesh.skin[wi.y].mat,we.y,dmat);
-						CMath.MatAdd(wmat,dmat,wmat);
-						CMath.MatMulFloat(_mesh.skin[wi.z].mat,we.z,dmat);
-						CMath.MatAdd(wmat,dmat,wmat);
-						CMath.MatMulFloat(_mesh.skin[wi.w].mat,we.w,dmat);
-						CMath.MatAdd(wmat,dmat,wmat);
+						CMath.MatMulFloat(_skinMat[wi.x],we.x,dmat);
+						CMath.MatAdd(mat,dmat,mat);
+						CMath.MatMulFloat(_skinMat[wi.y],we.y,dmat);
+						CMath.MatAdd(mat,dmat,mat);
+						CMath.MatMulFloat(_skinMat[wi.z],we.z,dmat);
+						CMath.MatAdd(mat,dmat,mat);
+						CMath.MatMulFloat(_skinMat[wi.w],we.w,dmat);
+						CMath.MatAdd(mat,dmat,mat);
 
-						CMath.MatMul(mat,wmat,dmat);
+						//CMath.MatMul(mat,wmat,dmat);
 						
 					}
 					else
-						dmat.Import(mat);
+						mat.Import(_node.mpi.mData.pst);
 						
-					if(dmat.IsZero()==false)
+					if(mat.IsZero()==false)
 					{
-						_node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,dmat));	
+						mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat));	
 					}
+				}
+			}
+
+		}
+		else
+		{
+			for (let i = 0; i < posb.bufF.Size(3); ++i)
+			{
+				
+				let pos=posb.bufF.V3(i);
+				let dmat=new CMat();
+				dmat.SetUnit(false);
+				if(web!=null && _skinMat.length>0)
+				{
+					
+					
+					
+					mat.Zero();
+					mat.SetUnit(false);
+					let we=web.bufF.V4(i);
+					let wi=wib.bufF.V4(i);
+					
+
+					CMath.MatMulFloat(_skinMat[wi.x],we.x,dmat);
+					CMath.MatAdd(mat,dmat,mat);
+					CMath.MatMulFloat(_skinMat[wi.y],we.y,dmat);
+					CMath.MatAdd(mat,dmat,mat);
+					CMath.MatMulFloat(_skinMat[wi.z],we.z,dmat);
+					CMath.MatAdd(mat,dmat,mat);
+					CMath.MatMulFloat(_skinMat[wi.w],we.w,dmat);
+					CMath.MatAdd(mat,dmat,mat);
+
+					
+					
+				}
+				else
+					mat.Import(_node.mpi.mData.pst);
+					
+				if(mat.IsZero()==false)
+				{
+					mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat));	
 				}
 				
 				
 			}
-			//CConsol.Log(_node.Key()+" / "+_node.mData.ci.bound.ToStr());
-		}
-		else
-		{
-			for (var i = 0; i < posb.bufF.Size(3); ++i)
-			{
-				_node.mData.ci.bound.InitBound(CMath.V3MulMatCoordi(posb.bufF.V3(i),mat));
-			}
+			
+			
 			
 		}
 		
 	}
 	
-
-	if(_node.mChild!=null)	MeshNodeBoundUpdate(_mesh,_node.mChild,mat);
-	if(_node.mColleague!=null)	MeshNodeBoundUpdate(_mesh,_node.mColleague,_sum);
+	CPoolGeo.RecycleMat(mat);
+	// if(_node.mChild!=null)	MeshNodeBoundUpdate(_skinMat,_node.mChild,mat);
+	// if(_node.mColleague!=null)	MeshNodeBoundUpdate(_skinMat,_node.mColleague,_sum);
 	
 	
 }

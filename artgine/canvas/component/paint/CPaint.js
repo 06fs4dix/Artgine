@@ -18,12 +18,12 @@ import { CUtilObj } from "../../../basic/CUtilObj.js";
 import { CWASM } from "../../../basic/CWASM.js";
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
 import { CUtilMath } from "../../../geometry/CUtilMath.js";
+import { CAtlas } from "../../../util/CAtlas.js";
 import { CLoaderOption } from "../../../util/CLoader.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import { CAlpha, CColor, CColorVFX } from "../CColor.js";
 import { CComponent } from "../CComponent.js";
-import { CAtlas } from "../../../util/CAtlas.js";
 export class CRenPaint {
     mRenInfoKey = null;
     mCam = null;
@@ -40,6 +40,7 @@ export class CPaint extends CComponent {
     mColorModel;
     mAlphaModel;
     mColorVFX;
+    mTexCodi;
     mAutoRPUpdate = true;
     mCamCullUpdate = true;
     mBound = new CBound();
@@ -62,6 +63,8 @@ export class CPaint extends CComponent {
     constructor() {
         super();
         this.mSysc = CComponent.eSysn.Paint;
+        this.mTexCodi = new CVec4(1, 1, 0, 0);
+        this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
         this.mShaderAttrMap.set("colorModel", new CShaderAttr("colorModel", new CColor(0, 0, 0, SDF.eColorModel.None)));
         this.mShaderAttrMap.set("alphaModel", new CShaderAttr("alphaModel", new CAlpha(0, SDF.eAlphaModel.None)));
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
@@ -124,7 +127,7 @@ export class CPaint extends CComponent {
         if (_member == "mFMat" || _member == "mUpdateLMat" || _member == "mUpdateFMat" ||
             _member == "mRenPT" || _member == "mTagKey" ||
             _member == "mDefaultAttr" || _member == "mBatchMap" || _member == "mBatchLastArr" || _member == "mBatchLastVF" ||
-            _member == "mBoundFMat" || _member == "mBoundFMatC" || _member == "mBoundFMatR" ||
+            _member == "mBoundFMat" || _member == "mBoundFMatC" || _member == "mBoundFMatR" || _member == "mBound" ||
             _member == "mAutoRPUpdate" || _member == "mCamCullUpdate" ||
             _member == "mColorModel" || _member == "mAlphaModel" || _member == "mColorVFX")
             return false;
@@ -224,14 +227,17 @@ export class CPaint extends CComponent {
         return false;
     }
     UpdateRenPt() {
+        let pos = CPoolGeo.ProductV3();
         for (let i = 0; i < this.mRenPT.length; ++i) {
             let ren = this.mRenPT[i];
             if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
                 let cam = ren.mCam;
                 let plane = ren.mCam.GetPlane();
+                pos.mF32A[0] = this.mFMat.mF32A[12] + this.mBoundFMatC.mF32A[0];
+                pos.mF32A[1] = this.mFMat.mF32A[13] + this.mBoundFMatC.mF32A[1];
+                pos.mF32A[2] = this.mFMat.mF32A[14] + this.mBoundFMatC.mF32A[2];
                 if (this.mRenderPass[i].mZEarly) {
                     let eye = ren.mCam.GetEye();
-                    let pos = CPoolGeo.ProductV3();
                     if (cam.GetView().z < -0.98) {
                         if (this.mAutoLoad.mFilter == CTexture.eFilter.Linear)
                             ren.mDistance = -(eye.z - this.mFMat.z);
@@ -239,17 +245,13 @@ export class CPaint extends CComponent {
                             ren.mDistance = eye.z - this.mFMat.z;
                     }
                     else {
-                        pos.mF32A[0] = this.mFMat.mF32A[12];
-                        pos.mF32A[1] = this.mFMat.mF32A[13];
-                        pos.mF32A[2] = this.mFMat.mF32A[14];
                         ren.mDistance = CMath.V3Distance(eye, pos);
                     }
                     ren.mDistance = Math.trunc(ren.mDistance * 128) << 9;
-                    CPoolGeo.RecycleV3(pos);
                 }
                 else
                     ren.mDistance = 0;
-                if (CUtilMath.PlaneSphereInside(plane, this.mBoundFMatC, this.mBoundFMatR, null) || this.mRenderPass[i].mCullFrustum == false)
+                if (CUtilMath.PlaneSphereInside(plane, pos, this.mBoundFMatR, null) || this.mRenderPass[i].mCullFrustum == false)
                     ren.mShow = 0;
                 else {
                     ren.mShow = 1;
@@ -257,8 +259,11 @@ export class CPaint extends CComponent {
                 }
             }
         }
+        CPoolGeo.RecycleV3(pos);
     }
     Refresh() {
+        if (this.mShaderAttrMap.get("texCodi") == null)
+            this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
         this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
         if (this.mColorModel.mModel != SDF.eColorModel.None)
@@ -363,12 +368,17 @@ export class CPaint extends CComponent {
     ClassEqual(_type) { return _type == CPaint; }
     GetTag() { return this.mTag; }
     PushTag(_tag) {
+        if (this.mTag.has(_tag))
+            return false;
         this.mTag.add(_tag);
         this.mTagKey = null;
+        this.ClearBatch();
+        return true;
     }
     RemoveTag(_tag) {
         this.mTag.delete(_tag);
         this.mTagKey = null;
+        this.ClearBatch();
     }
     GetDrawMesh(_meshKey, _shader, _ci) {
         var drawMesh = this.mOwner.GetFrame().Res().Find(_meshKey + _shader.ObjHash());
@@ -503,10 +513,12 @@ export class CPaint extends CComponent {
     GetRGBA() {
         return new CVec4(this.mColorModel.x, this.mColorModel.y, this.mColorModel.z, this.mAlphaModel.x);
     }
-    GetLMat() { return this.mLMat; }
+    GetMat() { return this.mLMat; }
     ;
     SetLMat(_mat) { this.mLMat.Import(_mat); this.mUpdateLMat = true; }
     CacBound() {
+        if (this.mBoundFMatR != 0)
+            return;
         if (this.mTag.has("tail")) {
             this.mBoundFMat.mMin.mF32A[0] = this.mBound.mMin.mF32A[0];
             this.mBoundFMat.mMin.mF32A[1] = this.mBound.mMin.mF32A[1];
@@ -515,9 +527,6 @@ export class CPaint extends CComponent {
             this.mBoundFMat.mMax.mF32A[1] = this.mBound.mMax.mF32A[1];
             this.mBoundFMat.mMax.mF32A[2] = this.mBound.mMax.mF32A[2];
             this.mBoundFMat.GetCenter(this.mBoundFMatC);
-            this.mBoundFMatC.mF32A[0] += this.mFMat.mF32A[12];
-            this.mBoundFMatC.mF32A[1] += this.mFMat.mF32A[13];
-            this.mBoundFMatC.mF32A[2] += this.mFMat.mF32A[14];
             var maxX = Math.abs(this.mBoundFMat.mMax.mF32A[0] - this.mBoundFMatC.mF32A[0]);
             var maxY = Math.abs(this.mBoundFMat.mMax.mF32A[1] - this.mBoundFMatC.mF32A[1]);
             var maxZ = Math.abs(this.mBoundFMat.mMax.mF32A[2] - this.mBoundFMatC.mF32A[2]);
@@ -531,12 +540,6 @@ export class CPaint extends CComponent {
             this.mBoundFMat.mMax.mF32A[0] = this.mBound.mMax.mF32A[0] * this.mFMat.mF32A[0];
             this.mBoundFMat.mMax.mF32A[1] = this.mBound.mMax.mF32A[1] * this.mFMat.mF32A[5];
             this.mBoundFMat.mMax.mF32A[2] = this.mBound.mMax.mF32A[2] * this.mFMat.mF32A[10];
-            this.mBoundFMat.mMin.mF32A[0] += this.mFMat.mF32A[12];
-            this.mBoundFMat.mMin.mF32A[1] += this.mFMat.mF32A[13];
-            this.mBoundFMat.mMin.mF32A[2] += this.mFMat.mF32A[14];
-            this.mBoundFMat.mMax.mF32A[0] += this.mFMat.mF32A[12];
-            this.mBoundFMat.mMax.mF32A[1] += this.mFMat.mF32A[13];
-            this.mBoundFMat.mMax.mF32A[2] += this.mFMat.mF32A[14];
             this.mBoundFMat.GetCenter(this.mBoundFMatC);
             var maxX = Math.abs(this.mBoundFMat.mMax.mF32A[0] - this.mBoundFMatC.mF32A[0]);
             var maxY = Math.abs(this.mBoundFMat.mMax.mF32A[1] - this.mBoundFMatC.mF32A[1]);
@@ -577,10 +580,11 @@ export class CPaint extends CComponent {
         if (this.mUpdateFMat)
             this.mUpdateFMat = false;
         if (this.mUpdateLMat || this.mOwner.mUpdateMat != 0) {
-            CMath.MatMul(this.mLMat, this.mOwner.GetWMat(), this.mFMat);
+            CMath.MatMul(this.mLMat, this.mOwner.GetMat(), this.mFMat);
             this.CacBound();
             this.mUpdateFMat = true;
         }
+        this.UpdateRenPt();
         this.mUpdateLMat = false;
     }
     SetFMat(_fmat) {
@@ -608,7 +612,10 @@ export class CPaint extends CComponent {
         return this.mBound;
     }
     GetBoundFMat() {
-        return this.mBoundFMat;
+        let bound = this.mBoundFMat.Export();
+        bound.mMax = CMath.V3AddV3(bound.mMax, this.GetFMat().xyz, bound.mMax);
+        bound.mMin = CMath.V3AddV3(bound.mMin, this.GetFMat().xyz, bound.mMin);
+        return bound;
     }
     SetBound(_bound) {
         this.mBound = _bound;
@@ -628,6 +635,16 @@ export class CPaint extends CComponent {
             return this.mOwner.GetFrame().BMgr().BatchPushArr(barr);
         }
         return barr;
+    }
+    BatchKeySet(_nodeOff, _key = null) {
+        for (let batchArr of this.mBatchMap.values()) {
+            if (batchArr == null)
+                continue;
+            if (_key == null)
+                batchArr[_nodeOff].CreateKey();
+            else
+                batchArr[_nodeOff].mKey = _key;
+        }
     }
     SetTexture(_a, _b = null, _c = null, _d = null, _e = null) {
         if (_a instanceof Array) {
@@ -678,14 +695,19 @@ export class CPaint extends CComponent {
             }
         }
     }
-    GetResTexture(_off = []) {
-        let texArr = new Array();
+    GetResTexture(_off = [], _texArr = null) {
+        if (_texArr == null)
+            _texArr = new Array();
         if (_off.length == 0) {
             for (let i = 0; i < this.mTexture.length; ++i) {
                 _off.push(i);
             }
         }
         for (let i = 0; i < _off.length; ++i) {
+            if (_off[i] == -1) {
+                _texArr.push(null);
+                continue;
+            }
             let tex = this.GetOwner().GetFrame().Res().Find(this.mTexture[_off[i]]);
             if (tex instanceof CAtlas) {
                 if (tex.mBase64.mData == null || tex.GetTex() == null) {
@@ -697,9 +719,9 @@ export class CPaint extends CComponent {
                 }
                 tex = tex.GetTex();
             }
-            texArr.push(tex);
+            _texArr.push(tex);
         }
-        return texArr;
+        return _texArr;
     }
     GetTexture() { return this.mTexture; }
     GetTexHash() {
@@ -714,6 +736,8 @@ export class CPaint extends CComponent {
     }
     InitChk() {
         this.mInit = true;
+        if (this.mShaderAttrMap.get("texCodi") == null)
+            this.mShaderAttrMap.set("texCodi", new CShaderAttr("texCodi", this.mTexCodi));
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
         this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
         if (this.mShaderAttrMap.get("colorVFX") != null)

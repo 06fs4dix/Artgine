@@ -22,7 +22,6 @@ import { CVertexFormat } from "../../../render/CShader.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
-import { CAlpha, CColor } from "../CColor.js";
 import { CPaint } from "./CPaint.js";
 export class CPaint3D extends CPaint {
     mTree;
@@ -200,11 +199,11 @@ export class CPaint3D extends CPaint {
         node.Push(new CMeshPaint(this.mMeshRes.meshTree, this.mTree, null));
         for (let nodeOff = 0; nodeOff < node.Size(); nodeOff++) {
             let nodemp = node.Find(nodeOff);
-            if (nodemp.md.mChild != null) {
-                node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild, null));
-            }
             if (nodemp.md.mColleague != null) {
                 node.Push(new CMeshPaint(nodemp.md.mColleague, nodemp.mpi.mColleague, null));
+            }
+            if (nodemp.md.mChild != null) {
+                node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild, null));
             }
         }
         this.ExeLocalMat(this.mCenterPos, this.mTargetScale);
@@ -223,12 +222,13 @@ export class CPaint3D extends CPaint {
             this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
         }
         const node = this.mTreeNode;
-        for (let nodeOff = 0; nodeOff < node.Size(); nodeOff++) {
-            let nodemp = node.mArray[nodeOff];
+        const nSize = node.Size();
+        for (let nodeOff = 0; nodeOff < nSize; nodeOff++) {
+            const nodemp = node.mArray[nodeOff];
             const mpiData = nodemp.mpi.mData;
-            if (mpiData.updateMat != 0 || mpiData.FMatAtt == false) {
+            if (mpiData.updateMat !== CUpdate.eType.Not || mpiData.FMatAtt === false) {
                 if (this.mSkinType != SDF.eSkin.None && nodemp.md.mData.ci != null) {
-                    CMath.MatMul(this.mLMat, this.mOwner.GetWMat(), nodemp.sum);
+                    CMath.MatMul(this.mLMat, this.mOwner.GetMat(), nodemp.sum);
                 }
                 else if (mpiData.FMatAtt == false && mpiData.pst.IsUnit()) {
                     mpiData.FMatAtt = true;
@@ -249,6 +249,10 @@ export class CPaint3D extends CPaint {
                 else {
                     CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum);
                 }
+                if (mpiData.updateMat == CUpdate.eType.Updated)
+                    mpiData.updateMat = CUpdate.eType.Already;
+                else if (mpiData.updateMat == CUpdate.eType.Already)
+                    mpiData.updateMat = CUpdate.eType.Not;
             }
             if (this.mSkinType == SDF.eSkin.Bone) {
                 for (var i = 0; i < this.mMeshRes.skin.length; ++i) {
@@ -259,18 +263,16 @@ export class CPaint3D extends CPaint {
                     }
                 }
             }
-            if (nodemp.mpi.mData.updateMat == CUpdate.eType.Updated)
-                nodemp.mpi.mData.updateMat = CUpdate.eType.Already;
-            else if (nodemp.mpi.mData.updateMat == CUpdate.eType.Already)
-                nodemp.mpi.mData.updateMat = CUpdate.eType.Not;
         }
     }
     Render(_vf) {
-        if (this.mTree == null)
-            return;
         var barr = this.RenderBatch(_vf, this.mTreeNode.Size());
         if (barr == null)
             return;
+        if (this.mTree == null) {
+            this.ClearBatch();
+            return;
+        }
         this.mOwner.GetFrame().BMgr().BatchGlobalOn();
         if (this.mSkinType == SDF.eSkin.Bone) {
             if (this.mWeightMat.length == 0) {
@@ -288,17 +290,11 @@ export class CPaint3D extends CPaint {
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().BatchGlobalOff();
-        var nodePOff = 1;
-        var nodeOff = 0;
         var node = this.mTreeNode;
-        while (node.Size() != nodeOff) {
+        const nSize = node.Size();
+        for (let nodeOff = 0; nodeOff < nSize; nodeOff++) {
             let nodemp = node.Find(nodeOff);
             this.RenderMesh(_vf, nodemp, barr, nodeOff);
-            if (nodemp.md.mChild != null)
-                nodePOff++;
-            if (nodemp.md.mColleague != null)
-                nodePOff++;
-            nodeOff++;
         }
         this.mOwner.GetFrame().BMgr().BatchGlobalClear();
     }
@@ -310,12 +306,15 @@ export class CPaint3D extends CPaint {
                 _node.sumSA.mType = 12;
             }
             this.mOwner.GetFrame().BMgr().SetBatchSA(_node.sumSA);
-            if (_node.mpi.mData.CA.mF32A[0] != 1 || _node.mpi.mData.CA.mF32A[1] != 1 ||
-                _node.mpi.mData.CA.mF32A[2] != 1 || _node.mpi.mData.CA.mF32A[3] != 1) {
-                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel", new CColor(_node.mpi.mData.CA.mF32A[0], _node.mpi.mData.CA.mF32A[0], _node.mpi.mData.CA.mF32A[0], SDF.eColorModel.RGBMul)));
-                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel", new CAlpha(_node.mpi.mData.CA.mF32A[3], SDF.eAlphaModel.Mul)));
+            if (_node.mpi.mData.color != null) {
+                this.PushTag("CAModel");
+                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel", _node.mpi.mData.color));
+                this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel", _node.mpi.mData.alpha));
             }
-            this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
+            if (_node.mpi.mData.texture.length == 0)
+                this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
+            else
+                this.mOwner.GetFrame().BMgr().SetBatchTex(_node.mpi.mData.texture);
             if (_vf.mUniform.get("material") != null)
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
             if (_vf.mUniform.get("part") != null)
@@ -526,10 +525,10 @@ export class CPaintMeshMerge extends CPaint {
             _ci.vertexCount += _node.mData.ci.vertexCount;
             _ci.indexCount += _node.mData.ci.indexCount;
         }
-        if (_node.mChild != null)
-            this.Merge(LPMat, _mesh, _node.mChild, _ci, _bound);
         if (_node.mColleague != null)
             this.Merge(_PMat, _mesh, _node.mColleague, _ci, _bound);
+        if (_node.mChild != null)
+            this.Merge(LPMat, _mesh, _node.mChild, _ci, _bound);
     }
     EmptyRPChk() {
         if (this.mRenderPass.length == 0) {

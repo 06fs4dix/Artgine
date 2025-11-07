@@ -25,6 +25,7 @@ import { CFile } from "../system/CFile.js"
 import { CConsol } from "../basic/CConsol.js"
 import { CParserOBJ } from "./parser/CParserOBJ.js"
 import CParserSpine from "./parser/CParserSpine.js"
+import { CUniqueID } from "../basic/CUniqueID.js"
 //https://github.com/JordiRos/GLGif
 //gif animation은 이걸로
 
@@ -38,6 +39,7 @@ export class CLoaderOption extends CObject
 	//public mBufCopy=false;
 	public mAlphaCut=0x09;
 	mCache=null;//버퍼 등록용
+	mAtlas=false;
 	
 	
 	public mInch=false;
@@ -388,126 +390,10 @@ export class CLoader
 		}
 		
 		this.mLoadSet.delete(_file);
+		tex=par.GetResult();
+		tex.SetKey(_file);
 		this.mRes.Push(_file,par.GetResult());
 			
-		// return new Promise((resolve, reject)=>{
-			
-
-		// 	// if(ext!="tga")
-		// 	// {
-		// 	// 	// var url=null;
-		// 	// 	// if(typeof _buffer == "string")
-		// 	// 	// {
-		// 	// 	// 	url=_buffer;
-		// 	// 	// }
-		// 	// 	// else
-		// 	// 	// {
-		// 	// 	// 	let blob = new Blob([_buffer], { type: "image/"+ext });
-		// 	// 	// 	url = window.URL.createObjectURL(blob);
-		// 	// 	// }
-				
-				
-	
-		// 	// 	// var img = new Image();
-		// 	// 	// img.crossOrigin = "Anonymous";
-		// 	// 	// img.addEventListener('load', async (_event)=>
-		// 	// 	// {
-		// 	// 	// 	var img =_event.currentTarget as HTMLImageElement;
-		// 	// 	// 	tex.SetSize(img.width,img.height);
-		// 	// 	// 	tex.SetBuf(img);
-		// 	// 	// 	if(ext=="png" || _option.mBufCopy)
-		// 	// 	// 	{
-						
-		// 	// 	// 		CH5Canvas.CreateCanvas(tex.GetWidth(),tex.GetHeight());
-		// 	// 	// 		CH5Canvas.Draw(CH5Canvas.DrawImage(img,0,0,tex.GetWidth(),tex.GetHeight()));
-		// 	// 	// 		let imgData=CH5Canvas.GetContext().getImageData(0, 0, tex.GetWidth(),tex.GetHeight());
-
-		// 	// 	// 		let buf :Uint8Array=null;
-		// 	// 	// 		if(ext=="png" || _option.mBufCopy)
-		// 	// 	// 			buf=new Uint8Array(tex.GetWidth()*tex.GetHeight() * 4);
-
-		// 	// 	// 		//console.time();
-		// 	// 	// 		var hy=0;//Math.trunc(tex.GetHeight()/2);
-		// 	// 	// 		for(var x=tex.GetWidth()-1;x>=0;--x)
-		// 	// 	// 		{
-		// 	// 	// 			for(var y=tex.GetHeight()-1;y>=hy;--y)
-		// 	// 	// 			{
-		// 	// 	// 				if(buf!=null)
-		// 	// 	// 				{
-		// 	// 	// 					buf[x*4+y*tex.GetWidth()*4+0]=imgData.data[x*4+y*tex.GetWidth()*4+0];
-		// 	// 	// 					buf[x*4+y*tex.GetWidth()*4+1]=imgData.data[x*4+y*tex.GetWidth()*4+1];
-		// 	// 	// 					buf[x*4+y*tex.GetWidth()*4+2]=imgData.data[x*4+y*tex.GetWidth()*4+2];
-		// 	// 	// 					buf[x*4+y*tex.GetWidth()*4+3]=imgData.data[x*4+y*tex.GetWidth()*4+3];
-		// 	// 	// 					if(imgData.data[x*4+y*tex.GetWidth()*4+3]==0 ||imgData.data[x*4+y*tex.GetWidth()*4+3]==255)
-		// 	// 	// 					{
-										
-		// 	// 	// 					}
-		// 	// 	// 					else if(buf[x*4+y*tex.GetWidth()*4+3]<=_option.mAlphaCut)
-		// 	// 	// 						buf[x*4+y*tex.GetWidth()*4+3]=0;
-		// 	// 	// 					else
-		// 	// 	// 						tex.SetAlpha(true);
-		// 	// 	// 				}
-								
-
-								
-								
-		// 	// 	// 			}	
-		// 	// 	// 		}
-		// 	// 	// 		if(buf!=null)
-		// 	// 	// 		{
-		// 	// 	// 			tex.GetBuf()[0]=buf;
-		// 	// 	// 		}
-		// 	// 	// 	}
-		// 	// 	// 	//console.timeEnd();
-						
-		// 	// 	// 	if( this.mRender!=null)	await this.mRender.BuildTexture(tex);
-		// 	// 	// 		//await this.m_renderer.TMgr().Create(tex);
-		// 	// 	// 	//window.URL.revokeObjectURL(img.src);
-		// 	// 	// 	this.mLoadSet.delete(_file);
-		// 	// 	// 	resolve("");
-		// 	// 	// });
-		// 	// 	// //load 실패
-		// 	// 	// img.addEventListener('error', (_event) => {
-		// 	// 	// 	//this.mRes.mRes.delete(_file);
-		// 	// 	// 	this.mLoadSet.delete(_file);
-		// 	// 	// 	reject("");
-		// 	// 	// });
-		// 	// 	// if(url.startsWith("http") && (url.indexOf(CPath.Combine("root")) != -1 || url.indexOf("localhost")!=-1))
-		// 	// 	// {
-		// 	// 	// 	url = this.mRes.HttpPathChange(url);
-		// 	// 	// }
-		// 	// 	// img.src=url;
-		// 	// 	// //img["tex"]=tex;
-		// 	// 	// this.mRes.Set(_file,tex);
-		// 	// 	// //this.ResSet(_file,tex,_option);
-
-				
-		// 	// }
-		// 	// else
-		// 	// {
-		// 	// 	var par = new CParserTGA();
-		// 	// 	par.m_alphaCut=_option.mAlphaCut;
-		// 	// 	par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
-		// 	// 	par.Load(_file).then(() => {
-		// 	// 		par.GetResult().SetFilter(_option.mFilter);
-		// 	// 		par.GetResult().SetWrap(_option.mWrap);
-		// 	// 		par.GetResult().SetMipMap(_option.mMipMap);
-		// 	// 		if( this.mRender!=null)	
-		// 	// 		{
-		// 	// 			this.mRender.BuildTexture(par.GetResult());
-		// 	// 			this.mRender.ReleaseTexture(tex);
-		// 	// 		}
-						
-		// 	// 		//if( this.m_renderer.TMgr()!=null)
-		// 	// 			//this.m_renderer.TMgr().Create(par.GetResult());
-		// 	// 		this.mLoadSet.delete(_file);
-		// 	// 		this.mRes.Set(_file,par.GetResult());
-		// 	// 		//this.ResSet(_file,par.GetResult(),_option);
-		// 	// 		resolve("");
-		// 	// 	})
-		// 	// }
-		// });
-
 	}
 	
 	private async ShaderLoad(_file : string,_buffer : ArrayBuffer)
@@ -557,41 +443,72 @@ export class CLoader
 
 		this.mRes.Push(_file,mesh);
 
+		await this.MeshTexLoad(_file,mesh,_option);
+	
+
+	}
+	async MeshTexLoad(_file : string,mesh : CMesh,_option : CLoaderOption)
+	{
+		let option=_option.Export();
+		if(mesh.clamp)
+			option.mWrap=CTexture.eWrap.Clamp;
+
+		
+		let path=_file.substring(0,_file.lastIndexOf("/"))+"/";
+
 		let texMap=new Map<string,ArrayBuffer>();
 		for (let i = 0; i < mesh.texture.length; i++)
 		{
-			if(mesh.texture[i].indexOf("base64:")!=-1)
+			// if(mesh.texture[i] instanceof CTexture)
+			// {
+			// 	let tex=mesh.texture[i] as CTexture;
+			// 	tex.SetFilter(option.mFilter);
+			// 	tex.SetWrap(option.mWrap);
+			// 	tex.SetMipMap(option.mMipMap);
+			// 	if( this.mRender!=null)	
+			// 	{
+			// 		this.mRender.BuildTexture(tex);
+			// 	}
+			// 	let key=path+CUniqueID.GetHash(16)+".tex";
+			// 	tex.SetKey(key);
+			// 	mesh.texture[i]=key;
+			// 	this.mRes.Push(key,tex);
+			// }
+			// else 
 			{
-				let tex=mesh.texture[i];
-				let base64Header = "base64:";
-				var base64data = tex.substring(base64Header.length);
-				let newName = CHash.SHA256(base64data) + ".png";
-				mesh.texture[i] = newName;
-				this.mLoadSet.add(newName);
-				texMap.set(newName,CUtil.Base64ToArray(base64data));
-				//await this.LoadSwitch(newName, CUtil.Base64ToArray(base64data), _option);
+				let texStr=(mesh.texture[i] as string);
+				if(texStr.indexOf("base64:")!=-1)
+				{
+					
+					let base64Header = "base64:";
+					var base64data = texStr.substring(base64Header.length);
+					let newName = path+(CHash.SHA256(base64data).substr(0, 16)) + ".png";
+					mesh.texture[i] = newName;
+					this.mLoadSet.add(newName);
+					texMap.set(newName,CUtil.Base64ToArray(base64data));
+					
 
+				
+				}
+				else if(texStr.indexOf(".rgba")!=-1)
+				{
+					let ne = CString.LeftRightCut(texStr,"rgba",".rgba");
+					CH5Canvas.Init(1,1);
+					var para=[CH5Canvas.Cmd("fillStyle","rgba"+ne),CH5Canvas.Cmd("fillRect",[0,0,1,1])];
+					CH5Canvas.Draw(para);
+					var tex=CH5Canvas.GetNewTex();
+					this.mRender.BuildTexture(tex);
+					this.mRes.Push(texStr,tex);
+				}
+				else
+					await this.Exe(texStr,option);
+			}
 			
-			}
-			else if(mesh.texture[i].indexOf(".rgba")!=-1)
-			{
-				let ne = CString.LeftRightCut(mesh.texture[i],"rgba",".rgba");
-				CH5Canvas.Init(1,1);
-				var para=[CH5Canvas.Cmd("fillStyle","rgba"+ne),CH5Canvas.Cmd("fillRect",[0,0,1,1])];
-				CH5Canvas.Draw(para);
-				var tex=CH5Canvas.GetNewTex();
-				this.mRender.BuildTexture(tex);
-				this.mRes.Push(mesh.texture[i],tex);
-			}
-			else
-				await this.Exe(mesh.texture[i],_option);
 		}
 		for(let [key,value] of texMap)		
 		{
-			await this.LoadSwitch(key, value, _option);
+			await this.LoadSwitch(key, value, option);
 		}
-
-
 	}
 	private VideoLoad(_file : string,_buffer : ArrayBuffer)
 	{
@@ -628,7 +545,7 @@ export class CLoader
 		this.mRes.Push(_file,_buffer);
 	}
 	//리소스에도 저장되고,file window에도 등록됌
-	private async JSONLoad(_file : string,_buffer : ArrayBuffer,_op : CLoaderOption)
+	private async JSONLoad(_file : string,_buffer : ArrayBuffer,_option : CLoaderOption)
 	{
 		var str=CUtil.ArrayToString(_buffer);
 		var jData=new CJSON(str);
@@ -641,6 +558,30 @@ export class CLoader
 			var mesh : CMesh = par.GetResult();
 			this.mRes.Push(_file,mesh);
 
+			await this.MeshTexLoad(_file,mesh,_option);
+			//let texMap=new Map<string,ArrayBuffer>();
+			// for (let i = 0; i < mesh.texture.length; i++)
+			// {
+			// 	if(mesh.texture[i].indexOf("base64:")!=-1)
+			// 	{
+			// 		let tex=mesh.texture[i];
+			// 		let base64Header = "base64:";
+			// 		var base64data = tex.substring(base64Header.length);
+			// 		let newName = CHash.SHA256(base64data) + ".png";
+			// 		mesh.texture[i] = newName;
+			// 		this.mLoadSet.add(newName);
+			// 		//texMap.set(newName,CUtil.Base64ToArray(base64data));
+			// 		await this.LoadSwitch(newName, CUtil.Base64ToArray(base64data), _option);
+
+				
+			// 	}
+			// 	else
+			// 		await this.Exe(mesh.texture[i],_option);
+			// }
+			// for(let [key,value] of texMap)		
+			// {
+			// 	await this.LoadSwitch(key, value, _option);
+			// }
 		}
 		else
 			this.mRes.Push(_file,jData);

@@ -5,7 +5,6 @@ import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
 import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import { CVec1 } from "../../../geometry/CVec1.js";
 import { CVec3 } from "../../../geometry/CVec3.js";
-import { CVec4 } from "../../../geometry/CVec4.js";
 import { CDevice } from "../../../render/CDevice.js";
 import { CH5Canvas } from "../../../render/CH5Canvas.js";
 import { CIndexBuffer } from "../../../render/CIndexBuffer.js";
@@ -41,7 +40,6 @@ export class CPaintTrail extends CPaint {
     mEndTime = 1000;
     mLastHide = true;
     mLastSmall = false;
-    mTexCodi = new CVec4(1, 1, 0, 0);
     mStaticPos = false;
     mRepeat = false;
     mVCount = 32;
@@ -136,11 +134,11 @@ export class CPaintTrail extends CPaint {
             this.mTexture[0] = texKey;
         }
         if (this.mStaticPos == false) {
-            var pos = this.mOwner.GetWMat().xyz;
+            var pos = this.mOwner.GetMat().xyz;
             this.mPosList.push(pos);
         }
         if (this.mNormal != null)
-            this.mNorList.push(CMath.V3MulMatNormal(this.mNormal, this.mOwner.GetWMat()));
+            this.mNorList.push(CMath.V3MulMatNormal(this.mNormal, this.mOwner.GetMat()));
     }
     EmptyRPChk() {
         if (this.mRenderPass.length == 0) {
@@ -181,7 +179,7 @@ export class CPaintTrail extends CPaint {
         }
         if (_update.DeltaMil() > 1000)
             return;
-        var pos = this.mOwner.GetWMat().xyz;
+        var pos = this.mOwner.GetMat().xyz;
         let size = (this.mLen / 2);
         this.mSumTime += _update.DeltaMil();
         if (this.mStartTime > 0) {
@@ -397,6 +395,7 @@ export class CPaintTrail extends CPaint {
         var t0 = CPoolGeo.ProductV3();
         var t1 = CPoolGeo.ProductV3();
         var texLen = 0;
+        this.mBoundFMatR = 0;
         this.mBound.Reset();
         this.mBound.SetType(CBound.eType.Box);
         if (this.mStaticPos) {
@@ -520,7 +519,7 @@ export class CPaintTrail extends CPaint {
                 }
             }
         }
-        this.mLMat = CMath.MatInvert(this.mOwner.GetWMat());
+        this.mLMat = CMath.MatInvert(this.mOwner.GetMat());
         CPoolGeo.RecycleV3(t0);
         CPoolGeo.RecycleV3(t1);
         if (this.mRepeat)
@@ -536,7 +535,6 @@ export class CPaintTrail extends CPaint {
             return;
         this.mOwner.GetFrame().BMgr().BatchOn();
         super.Common(_vf);
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi", this.mTexCodi));
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("trailPos", 4, this.mOut.GetArray()));
         if (this.mLastHide)
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(1.0)));

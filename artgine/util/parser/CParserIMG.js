@@ -37,6 +37,7 @@ export class CParserIMG extends CParser {
                 const buf = new Uint8Array(image.width * image.height * 4);
                 const w = image.width;
                 const h = image.height;
+                alphaBleedRGBA(imgData.data, w, h, 2);
                 for (let x = w - 1; x >= 0; --x) {
                     for (let y = h - 1; y >= 0; --y) {
                         const i = x * 4 + y * w * 4;
@@ -62,5 +63,157 @@ export class CParserIMG extends CParser {
             };
             img.src = url;
         });
+    }
+}
+function alphaBleedRGBA(data, w, h, iters = 2) {
+    const N = w * h * 4;
+    const tmp = new Uint8ClampedArray(N);
+    for (let y = 0; y < h; y++) {
+        let found = false, r = 0, g = 0, b = 0;
+        for (let x = 0; x < w; x++) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let xx = 0; xx < x; xx++) {
+                        const ii = ((y * w + xx) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+        found = false;
+        for (let x = w - 1; x >= 0; x--) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let xx = w - 1; xx > x; xx--) {
+                        const ii = ((y * w + xx) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+    }
+    for (let x = 0; x < w; x++) {
+        let found = false, r = 0, g = 0, b = 0;
+        for (let y = 0; y < h; y++) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let yy = 0; yy < y; yy++) {
+                        const ii = ((yy * w + x) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+        found = false;
+        for (let y = h - 1; y >= 0; y--) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let yy = h - 1; yy > y; yy--) {
+                        const ii = ((yy * w + x) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+    }
+    const neighbors = [
+        [-1, 0], [1, 0], [0, -1], [0, 1],
+        [-1, -1], [1, -1], [-1, 1], [1, 1],
+    ];
+    for (let k = 0; k < iters; k++) {
+        tmp.set(data);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const i = ((y * w + x) << 2);
+                if (tmp[i + 3] !== 0)
+                    continue;
+                let rr = 0, gg = 0, bb = 0, cc = 0;
+                for (const [dx, dy] of neighbors) {
+                    const nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= w || ny < 0 || ny >= h)
+                        continue;
+                    const j = ((ny * w + nx) << 2);
+                    if (tmp[j + 3] > 0) {
+                        rr += tmp[j];
+                        gg += tmp[j + 1];
+                        bb += tmp[j + 2];
+                        cc++;
+                    }
+                }
+                if (cc > 0) {
+                    data[i] = (rr / cc) | 0;
+                    data[i + 1] = (gg / cc) | 0;
+                    data[i + 2] = (bb / cc) | 0;
+                }
+            }
+        }
     }
 }

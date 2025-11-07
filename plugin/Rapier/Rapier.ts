@@ -293,7 +293,7 @@ export class CRapierRigidBody extends CRigidBody
     mLateImpulse : CVec3=null;
     Start(): void {
     
-        const wMat = this.GetOwner().GetWMat();
+        const wMat = this.GetOwner().GetMat();
         const wPos = CMath.V3MulMatCoordi(new CVec3(0, 0, 0), wMat);
         const wRot= CMath.EulerToQut(CMath.MatDecomposeRot(wMat,true,true,true));
 
@@ -327,7 +327,7 @@ export class CRapierRigidBody extends CRigidBody
         }
         if(this.GetOwner().mUpdateMat!=0 && this.mUpdate==CUpdate.eType.Not)
         {
-            let wMat=this.GetOwner().GetWMat();
+            let wMat=this.GetOwner().GetMat();
             const wPos = CMath.V3MulMatCoordi(new CVec3(0, 0, 0), wMat);
             this.mRB.setTranslation({ x: wPos.x+this.mCenter.x, y: wPos.y+this.mCenter.y, z: wPos.z+this.mCenter.z }, true);
         }

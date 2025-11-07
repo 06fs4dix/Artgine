@@ -9,7 +9,7 @@ import { CUniqueID } from "../../basic/CUniqueID.js"
 import { CUtilObj } from "../../basic/CUtilObj.js"
 import CSubject_imple from "../../canvas_imple/subject/CSubject.js"
 import { CBound } from "../../geometry/CBound.js"
-import { CMat } from "../../geometry/CMat.js"
+import { CMat, IMat } from "../../geometry/CMat.js"
 import { CMath } from "../../geometry/CMath.js"
 import { CVec3 } from "../../geometry/CVec3.js"
 import { CVec4 } from "../../geometry/CVec4.js"
@@ -28,7 +28,7 @@ var g_offCObjHD = 0;
 //3번에 sysn가 돌고, 
 //1.updateMsg(인아웃 메세지 or 업데이트할 컴포넌트 정리)
 //2.sysn처리(함수 호출)
-export class CSubject extends CObject implements IFile
+export class CSubject extends CObject implements IFile , IMat
 {
 	public mKey : string;
 	public mDestroy : boolean;
@@ -790,7 +790,7 @@ export class CSubject extends CObject implements IFile
 
 
 
-	GetWMat()	{	return this.mWMat;	}
+	GetMat()	{	return this.mWMat;	}
 	GetPos() { return this.mPos; }
 	GetRot() { return this.mRot; };
 	GetSca() { return this.mSca; };

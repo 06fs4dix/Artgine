@@ -3,23 +3,17 @@ import { abs, clamp, max, min, mod, pow, sign, sin, smoothstep, CVec2, CVec3, CV
 function HSVF(_k, _s, _v) {
     return _v - _v * _s * max(min(min(_k, 4.0 - _k), 1.0), 0.0);
 }
-export function GetTexCodiedUV(_uv, _texCodi, _reverse) {
-    var result = new CVec3(0.0, 0.0, 1.0);
-    if (_reverse.x > 0.5)
-        result.x = (1.0 - _uv.x) * _texCodi.x + _texCodi.z;
-    else
-        result.x = _uv.x * _texCodi.x + _texCodi.z;
-    if (_reverse.y > 0.5)
-        result.y = (1.0 - _uv.y) * _texCodi.y + _texCodi.w;
-    else
-        result.y = _uv.y * _texCodi.y + _texCodi.w;
+export function GetTexCodiedUV(_uv, _texCodi) {
+    var result = new CVec2(0.0, 0.0);
+    result.x = _uv.x * _texCodi.x + _texCodi.z;
+    result.y = _uv.y * _texCodi.y + _texCodi.w;
     if (result.x < 0.0)
         result.x = result.x * -1.0;
     if (result.y < 0.0)
         result.y = result.y * -1.0;
     return result;
 }
-export function GetTexDecodedUV(_coded, _texCodi, _reverse) {
+export function GetTexDecodedUV(_coded, _texCodi) {
     var sx = (_texCodi.x == 0.0) ? 1.0 : _texCodi.x;
     var sy = (_texCodi.y == 0.0) ? 1.0 : _texCodi.y;
     var cx = _coded.x;
@@ -30,10 +24,6 @@ export function GetTexDecodedUV(_coded, _texCodi, _reverse) {
         cy = -cy;
     var u = (cx - _texCodi.z) / sx;
     var v = (cy - _texCodi.w) / sy;
-    if (_reverse.x > 0.5)
-        u = 1.0 - u;
-    if (_reverse.y > 0.5)
-        v = 1.0 - v;
     return new CVec2(u, v);
 }
 export function HSVToRGB(_vec3) {

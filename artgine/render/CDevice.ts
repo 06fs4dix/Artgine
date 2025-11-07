@@ -37,7 +37,7 @@ export class CDevice
 	GPU()	:  GPUDevice	{	    return null;	}
     DrawType()	{	return -1;	}
 	async Init(){}
-    SetClearColor(_enable,_val=null)
+    SetClearColor(_enable,_val : CVec4=null)
 	{	
 		this.mClearColor=_enable;	
 		if(_val!=null)	this.mColorVal=_val;
@@ -149,9 +149,9 @@ export class CDeviceGL extends CDevice
 		//failIfMajorPerformanceCaveat
 		//시스템 성능이 낮을 경우에 컨텍스트를 생성할지 여부를 나타내는 불리언입니다.
 		
-		
+		//premultipliedAlpha 20251107
 		this.mGL=_handle.getContext("webgl2",{antialias: this.m_pf.mAnti,depth:true,stencil:true,"xrCompatible":_pf.mXR,
-			"premultipliedAlpha": false,"alpha": true});
+			"premultipliedAlpha": true,"alpha": true});
 
 		// webgl-debug.js를 추가하면 웹지엘 워링도 캐치 가능하다!
 		if(window["WebGLDebugUtils"]!=null)
@@ -249,6 +249,7 @@ export class CDeviceGL extends CDevice
 		this.mStaticRP.mCullFace=CRenderPass.eCull.CCW;
 		
 		
+		
 
 	}
 	
@@ -284,6 +285,13 @@ export class CDeviceGL extends CDevice
 
 		this.GL().clearColor(0, 0, 0, 1);
 		this.GL().clear(this.GL().COLOR_BUFFER_BIT | this.GL().DEPTH_BUFFER_BIT);
+
+
+		//this.GL().pixelStorei(this.GL().UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); // 업로드 중 알파 사전곱 적용
+
+		
+		// this.GL().enable(this.GL().BLEND);
+		// this.GL().blendFunc(this.GL().ONE, this.GL().ONE_MINUS_SRC_ALPHA); // PMA 전용
 	}
 	
 	

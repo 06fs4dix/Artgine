@@ -1,5 +1,6 @@
 import { CSubject } from "./subject/CSubject.js";
 import { CMath } from "../geometry/CMath.js";
+import { CRenInfo, CRenPriority } from "./CBrush.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CArray } from "../basic/CArray.js";
 import { CString } from "../basic/CString.js";
@@ -18,8 +19,8 @@ import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
 import { RenderQueTool } from "../tool/RenderQueTool.js";
 import { CConsol } from "../basic/CConsol.js";
-import { CPaint } from "./component/paint/CPaint.js";
-import { CRPMgr } from "./CRPMgr.js";
+import { CPaint, CRenPaint } from "./component/paint/CPaint.js";
+import { CRPAuto, CRPMgr } from "./CRPMgr.js";
 var gRenderQue = new Array();
 var gCanvas = new Map();
 export class CPairStrStr {
@@ -154,6 +155,90 @@ export class CCanvas extends CObject {
         return this.mPacArr;
     }
     RenderOrder() { return new CArray(); }
+    PTUpdate(_ptList) {
+        for (var i = 0; i < _ptList.length; ++i) {
+            let pt = _ptList[i];
+            if (pt.mStartChk == true || pt.IsEnable() == false)
+                continue;
+            if (this.mBrush.AutoRP().size > 0 && (pt.mAutoRPUpdate == true || this.mBrush.mAutoRPUpdate != CUpdate.eType.Not)) {
+                pt.ClearCRPAuto();
+                for (let each4 of this.mBrush.AutoRP().values()) {
+                    let push = true;
+                    for (let condi of each4.mAnd) {
+                        if (condi.Excute(pt) == false) {
+                            push = false;
+                            break;
+                        }
+                    }
+                    if (push == false)
+                        continue;
+                    if (each4.mOr.length != 0) {
+                        push = false;
+                        for (let condi of each4.mOr) {
+                            if (condi.Excute(pt) == true) {
+                                push = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (push)
+                        pt.PushCRPAuto(each4);
+                }
+                pt.mAutoRPUpdate = false;
+                pt.mCamCullUpdate = true;
+            }
+            if (pt.mCamCullUpdate || pt.mRenPT.length == 0) {
+                pt.mCamCullUpdate = false;
+                pt.EmptyRPChk();
+                for (let k = 0; k < pt.GetRenderPass().length; ++k) {
+                    if (pt.mRenPT[k] != null)
+                        continue;
+                    const rp = pt.GetRenderPass()[k];
+                    let cam = null;
+                    let renPt = new CRenPaint();
+                    if (rp.mCamera == null)
+                        cam = this.GetCam();
+                    else
+                        cam = this.mBrush.GetCamera(rp.mCamera);
+                    renPt.mCam = cam;
+                    var vfprKey = cam.IsOrthographic() + "/";
+                    let cpKey = vfprKey + rp.Key() + pt.GetTagKey();
+                    var renInfo = this.mBrush.mRenInfoMap.get(cpKey);
+                    renPt.mRenInfoKey = cpKey;
+                    renPt.mTexHash = pt.GetTexHash();
+                    renPt.mPaint = pt;
+                    pt.mRenPT[k] = renPt;
+                    let renPri = this.mBrush.mRenPriMap.get(rp.mPriority);
+                    if (renPri == null) {
+                        renPri = new CRenPriority();
+                        renPri.mPriority = rp.mPriority;
+                        this.mBrush.mRenPriMap.set(rp.mPriority, renPri);
+                    }
+                    if (pt.AlphaState() == false) {
+                        renPri.mDistanceList.Push(renPt);
+                    }
+                    else {
+                        if (rp.mSortRevers)
+                            renPri.mRAlphaList.Push(renPt);
+                        else
+                            renPri.mAlphaList.Push(renPt);
+                    }
+                    if (renInfo == null) {
+                        renInfo = new CRenInfo();
+                        renInfo.mRP = rp.Export();
+                        if (rp instanceof CRPAuto)
+                            renInfo.mRP.mShaderAttr = rp.mShaderAttr;
+                        for (let tag of pt.GetTag())
+                            renInfo.mTag.add(tag);
+                        if (rp.mTag != "")
+                            renInfo.mTag.add(rp.mTag);
+                        renInfo.mCam = cam;
+                        this.mBrush.mRenInfoMap.set(cpKey, renInfo);
+                    }
+                }
+            }
+        }
+    }
     EditHTMLInit(_div) {
         super.EditHTMLInit(_div);
         var div = _div;

@@ -962,7 +962,6 @@ export class CShaderInterpretGL extends CShaderInterpret {
         str += "	vec2 P = viewDir.xy / viewDir.z * height_scale;\n";
         str += "	vec2 deltaTexCoords = P / numLayers;\n";
         str += "	vec2  currentTexCoords     = _uv;\n";
-        str += "	deltaTexCoords.y=-deltaTexCoords.y;\n";
         str += "	float currentDepthMapValue = 1.0-Sam2DToColor(_index, currentTexCoords).a;\n";
         str += "	for(int i=0;i<128;++i){\n";
         str += "		if(currentLayerDepth < currentDepthMapValue){\n";

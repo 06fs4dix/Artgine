@@ -42,9 +42,9 @@ export class CWind extends CBrushComp {
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 1] = this.mDir.y;
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 2] = this.mDir.z;
         this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 3] = this.mPower;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 0] = this.GetOwner().GetWMat().x;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 1] = this.GetOwner().GetWMat().y;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 2] = this.GetOwner().GetWMat().z;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 0] = this.GetOwner().GetMat().x;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 1] = this.GetOwner().GetMat().y;
+        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 2] = this.GetOwner().GetMat().z;
         this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 3] = this.mUseWeight ? 1.0 : 0.0;
         this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 0] = this.mInnerRadius;
         this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 1] = this.mOuterRadius;

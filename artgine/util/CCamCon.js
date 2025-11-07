@@ -212,14 +212,17 @@ export class CCamCon extends CObject {
                 this.mBspos = null;
             }
         }
-        if (_update.DeltaTime() < 0.05) {
-            const t = Math.max(0, _update.DeltaTime() * 50);
+        if (_update.DeltaTime() <= 0.05) {
+            const dt = Math.min(Math.max(_update.DeltaTime(), 1 / 240), 1 / 10);
+            const halfLife = 0.08;
+            const t = Math.pow(0.5, dt / halfLife);
             this.mRotXCur += this.mRotX;
             this.mRotYCur += this.mRotY;
             this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t;
             this.mRotYCur = this.mRotY = this.mRotYCur * 0.5 * t;
-            if (this.mRotYCur > 0.001 && this.mRotYCur > 0.001)
+            if (Math.abs(this.mRotXCur) > 0.001 || Math.abs(this.mRotYCur) > 0.001) {
                 this.mReset = true;
+            }
         }
     }
 }

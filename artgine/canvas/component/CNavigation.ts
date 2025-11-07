@@ -60,8 +60,8 @@ export class CNavigation extends CGeometryComp
 
             let bound=_paint.GetBound().Export() as CBound;
             this.mBound.Reset();
-            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetLMat()));
-            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetLMat()));
+            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMin, _paint.GetMat()));
+            this.mBound.InitBound(CMath.V3MulMatCoordi(bound.mMax, _paint.GetMat()));
             this.mBound.SetType(bound.GetType());
             
         }

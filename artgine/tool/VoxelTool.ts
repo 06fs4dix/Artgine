@@ -370,7 +370,7 @@ export function VoxelTool(_voxel : CVoxel)
     gVoxelTar.GetPos().Zero();
     gVoxelTar.GetRot().Zero();
     gVoxelTar.SetSca(new CVec3(1,1,1));
-    gVoxelTar.GetWMat().Unit();
+    gVoxelTar.GetMat().Unit();
     gCurser=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
     gPress=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
     
@@ -387,10 +387,7 @@ export function VoxelTool(_voxel : CVoxel)
             lay.GetRot().Zero();
             lay.SetSca(new CVec3(1,1,1));
             lay.mUpdateRes=true;
-            //lay.PRSReset();
-            //lay.GetWMat().Unit();
             gAtl.Canvas("VoxelTool").PushSub(lay);
-            //gVoxelLayer.push(lay);
         }
         
     }

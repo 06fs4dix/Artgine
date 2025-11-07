@@ -6,7 +6,7 @@ export class CUpdate
 		this.mFixedTime=_delta;
 		this.mFixedCount=1;
 	}
-	static eType=
+	static readonly eType=
 	{
 		Not:0,
 		Updated:1,

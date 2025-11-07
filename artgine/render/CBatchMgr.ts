@@ -26,18 +26,30 @@ export class CBatch
 	public mTexture = new Array<CTexture>();
 	public mValue = new Array<CShaderAttr>();
 	
+	
 
 	CreateKey()
 	{
 		var str=this.mMesh.Key();
+		let nullCount=0;
 		for(var i=0;i<this.mTexture.length;++i)
 		{
 			if(this.mTexture[i]==null)
+			{
+				nullCount++;
 				str+="null";
+			}
 			else
 				str+=this.mTexture[i].Key();
 			str+="/";
 		}
+		if(nullCount!=0 && nullCount==this.mTexture.length)
+		{
+			this.mKey=0;
+			return;	
+		}
+
+
 		for(let i=0;i<this.mValue.length;++i)
 			str+=this.mValue[i].mKey;
 		this.mKey=CHash.HashCode(str);
@@ -163,7 +175,18 @@ export class CBatchMgr
 		{
 			for(var i=0;i<this.mBatchGlobal.Size();++i)
 			{
-				this.mBatch.mValue.push(this.mBatchGlobal.Find(i));
+				let push=true;
+				let gb=this.mBatchGlobal.Find(i);
+				for(let j=0;j<this.mBatch.mValue.length;++j)
+				{
+					if(this.mBatch.mValue[j].mKey==gb.mKey)
+					{
+						push=false;
+						break;
+					}
+				}
+				if(push)
+					this.mBatch.mValue.push(this.mBatchGlobal.Find(i));
 			}
 		}
 		
@@ -182,7 +205,7 @@ export class CBatchMgr
 		for(let i=0;i<_ba.length;++i)
 		{
 			const batch=_ba[i];
-			if(batch==null)
+			if(batch==null ||batch.mKey==0)
 				continue;
 			let bKey=batch.mKey+this.mBasePriority;
 			var val=this.mBatchMap.get(bKey);
@@ -195,18 +218,19 @@ export class CBatchMgr
 			if(val.mData.length==0)
 				this.mBaSortArr.Push(val);
 
-			//이거 지워야함 20251030 테스트용 !!!!!!!!!!!!!!!!!!!!!!!
-			if(val.mData.length>0)
-			{
-				if(val.mData[0].mValue.length!=batch.mValue.length)
-				{
+			// //이거 지워야함 20251030 테스트용 !!!!!!!!!!!!!!!!!!!!!!!
+			// if(val.mData.length>0)
+			// {
+			// 	if(val.mData[0].mValue.length!=batch.mValue.length)
+			// 	{
 					
-					CAlert.E("test!!!!!!!!!!!!!!!!"+batch.mKey);
-					batch.CreateKey();
-					val.mData[0].CreateKey();
+			// 		CAlert.E("test!!!!!!!!!!!!!!!!"+batch.mKey);
+			// 		batch.CreateKey();
+			// 		val.mData[0].CreateKey();
 
-				}
-			}
+			// 	}
+			// }
+
 
 			val.mData.push(batch);	
 		}

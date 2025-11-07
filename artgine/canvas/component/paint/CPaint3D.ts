@@ -306,16 +306,25 @@ export class CPaint3D extends CPaint
 		for(let nodeOff=0;nodeOff<node.Size();nodeOff++)
 		{
 			let nodemp=node.Find(nodeOff);
-			if ( nodemp.md.mChild != null)
-			{
-				node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild,null));
-
-			}
-				
 			if (nodemp.md.mColleague != null)
 			{
+				// node.mArray.splice(nodeOff+1,0,new CMeshPaint(nodemp.md.mColleague,nodemp.mpi.mColleague,null));
+				// node.mLength++;
 				node.Push(new CMeshPaint(nodemp.md.mColleague,nodemp.mpi.mColleague,null));
 			}
+				
+			
+			if ( nodemp.md.mChild != null)
+			{
+				// node.mArray.splice(nodeOff+1,0,new CMeshPaint(nodemp.md.mChild,nodemp.mpi.mChild,null));
+				// node.mLength++;
+				node.Push(new CMeshPaint(nodemp.md.mChild, nodemp.mpi.mChild,null));
+			}
+				
+
+			
+				
+			
 		}
 		this.ExeLocalMat(this.mCenterPos,this.mTargetScale);
 		
@@ -346,18 +355,19 @@ export class CPaint3D extends CPaint
 		const node=this.mTreeNode;
 		
 		//while (node.Size()!=nodeOff)
-		for(let nodeOff=0;nodeOff<node.Size();nodeOff++)
+		const nSize=node.Size();
+
+		for(let nodeOff=0;nodeOff<nSize;nodeOff++)
 		{
-			let nodemp=node.mArray[nodeOff];//node.Find(nodeOff);
+			const nodemp=node.mArray[nodeOff];//node.Find(nodeOff);
 			const mpiData=nodemp.mpi.mData;
 
 			//FMat로 되어 있으면 유니폼해서 계산 필요 없다. 내부 매트릭스 갱신되면 다시 해야함
-			if(mpiData.updateMat!=0 || mpiData.FMatAtt==false)
+			if(mpiData.updateMat!==CUpdate.eType.Not || mpiData.FMatAtt===false)
 			{
 				if(this.mSkinType!=SDF.eSkin.None && nodemp.md.mData.ci!=null)
 				{
-					CMath.MatMul(this.mLMat,this.mOwner.GetWMat(),nodemp.sum);
-					//nodemp.sum.CopyImport(this.m_owner.GetWMat());
+					CMath.MatMul(this.mLMat,this.mOwner.GetMat(),nodemp.sum);
 				}
 				else if(mpiData.FMatAtt==false && mpiData.pst.IsUnit())
 				{
@@ -385,7 +395,10 @@ export class CPaint3D extends CPaint
 				{
 					CMath.MatMul(mpiData.pst,this.GetFMat(),nodemp.sum);
 				}
-				
+				if(mpiData.updateMat==CUpdate.eType.Updated)
+					mpiData.updateMat=CUpdate.eType.Already;
+				else if(mpiData.updateMat==CUpdate.eType.Already)
+					mpiData.updateMat=CUpdate.eType.Not;
 			}
 			if(this.mSkinType==SDF.eSkin.Bone)
 			{
@@ -403,10 +416,7 @@ export class CPaint3D extends CPaint
 			
 
 			
-			if(nodemp.mpi.mData.updateMat==CUpdate.eType.Updated)
-				nodemp.mpi.mData.updateMat=CUpdate.eType.Already;
-			else if(nodemp.mpi.mData.updateMat==CUpdate.eType.Already)
-				nodemp.mpi.mData.updateMat=CUpdate.eType.Not;
+			
 
 	
 			
@@ -418,8 +428,7 @@ export class CPaint3D extends CPaint
 	Render(_vf : CShader)
 	{
 		
-		if(this.mTree == null)
-			return;
+		
 		
 		
 		
@@ -427,7 +436,12 @@ export class CPaint3D extends CPaint
 		var barr=this.RenderBatch(_vf,this.mTreeNode.Size());
 		if(barr==null)	return;
 		
-		
+		if(this.mTree == null)
+		{
+			this.ClearBatch();
+			return;
+		}
+			
 		// if(this.mMeshRes.skin.length>0 && this.mSkinType!=SDF.eSkin.None && _vf.mUniform.get("skin")==null)
 		// {
 		// 	CAlert.E("skin mesh인데 vf는 사용안함. m_skinType을 변경하세요!");
@@ -465,32 +479,16 @@ export class CPaint3D extends CPaint
 		this.mOwner.GetFrame().BMgr().BatchGlobalOff();
 	
 	
-		var nodePOff=1;
-		var nodeOff=0;
-		var node=this.mTreeNode;
 		
-		while (node.Size()!=nodeOff)
+		var node=this.mTreeNode;
+
+		const nSize=node.Size();
+
+		for(let nodeOff=0;nodeOff<nSize;nodeOff++)
 		{
 			let nodemp=node.Find(nodeOff);
 			
-			this.RenderMesh(_vf, nodemp,barr,nodeOff);
-
-			// if(nodemp.mpi.mData.updateMat==CUpdate.eType.Updated)
-			// 	nodemp.mpi.mData.updateMat=CUpdate.eType.Already;
-			// else if(nodemp.mpi.mData.updateMat==CUpdate.eType.Already)
-			// 	nodemp.mpi.mData.updateMat=CUpdate.eType.Not;
-
-			if ( nodemp.md.mChild != null)
-				nodePOff++;
-			
-				
-			if (nodemp.md.mColleague != null)
-				nodePOff++;
-			
-			
-			
-			nodeOff++;
-			
+			this.RenderMesh(_vf, nodemp,barr,nodeOff);			
 		}
 		this.mOwner.GetFrame().BMgr().BatchGlobalClear();
 		
@@ -498,7 +496,11 @@ export class CPaint3D extends CPaint
 	
 	RenderMesh(_vf : CShader,_node :CMeshPaint,_barr : Array<CBatch>,_off : number)
 	{
-		
+		// let test=false;
+		// if(_node.md.Key().indexOf("head")!=-1 || _node.md.Key().indexOf("mouth")!=-1)
+		// {
+		// 	test=true;
+		// }
 		
 		if (_node.md.mData!=null && _node.md.mData.ci!=null && _node.md.mData.textureOff.length>0)
 		{
@@ -511,15 +513,16 @@ export class CPaint3D extends CPaint
 			}
 			this.mOwner.GetFrame().BMgr().SetBatchSA(_node.sumSA);
 
-			if(_node.mpi.mData.CA.mF32A[0]!=1 || _node.mpi.mData.CA.mF32A[1]!=1 ||
-				_node.mpi.mData.CA.mF32A[2]!=1 || _node.mpi.mData.CA.mF32A[3]!=1)
+			if(_node.mpi.mData.color!=null)
 			{
-				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel", 
-					new CColor(_node.mpi.mData.CA.mF32A[0],_node.mpi.mData.CA.mF32A[0],_node.mpi.mData.CA.mF32A[0],SDF.eColorModel.RGBMul)));
-				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel", 
-					new CAlpha(_node.mpi.mData.CA.mF32A[3],SDF.eAlphaModel.Mul)));
+				this.PushTag("CAModel");
+				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel",_node.mpi.mData.color));
+				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel",_node.mpi.mData.alpha));
 			}
-			this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
+			if(_node.mpi.mData.texture.length==0)
+				this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
+			else
+				this.mOwner.GetFrame().BMgr().SetBatchTex(_node.mpi.mData.texture);
 			
 			if (_vf.mUniform.get("material") != null)
 				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
@@ -816,10 +819,11 @@ export class CPaintMeshMerge extends CPaint
 			_ci.indexCount+=_node.mData.ci.indexCount;
 
 		}
-		if(_node.mChild!=null)
-			this.Merge(LPMat,_mesh,_node.mChild,_ci,_bound);
 		if(_node.mColleague!=null)
 			this.Merge(_PMat,_mesh,_node.mColleague,_ci,_bound);
+		if(_node.mChild!=null)
+			this.Merge(LPMat,_mesh,_node.mChild,_ci,_bound);
+		
 
 		
 	}

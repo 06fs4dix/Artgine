@@ -6,7 +6,7 @@ import { CUtilObj } from "../../artgine/basic/CUtilObj.js";
 import { CAlpha, CColor } from "../../artgine/canvas/component/CColor.js";
 import { CLight } from "../../artgine/canvas/component/CLight.js";
 import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
-import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
+import { CPaint2D, CPaintHTML } from "../../artgine/canvas/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/canvas/component/paint/CPaint3D.js";
 import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
 import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
@@ -311,7 +311,7 @@ export class CShadowPlane extends CPaint2D
             if(owner == null) return;
 
             for(const pt of owner.FindComps(CPaint)) {
-                if(pt instanceof CShadowPlane) continue;
+                if(pt instanceof CShadowPlane || pt instanceof CPaintHTML) continue;
                 if(pt.GetBound().GetType() == CBound.eType.Null) continue;
                 if(pt.IsUpdateFMat()) continue;
                 if(pt instanceof CPaint3D && !pt.mTree) continue;
@@ -435,7 +435,9 @@ export class CShadowPlane extends CPaint2D
 
             let dir=new CVec3(0, 1, 0);
 
-            const c = this.GetPaintCenter();
+            fBound.mMax.z=0;
+            fBound.mMin.z=0;
+            const c = fBound.GetCenter();
 
             let height : number;
             let alpha : number;
@@ -473,14 +475,14 @@ export class CShadowPlane extends CPaint2D
             const p1Far = CMath.V3AddV3(p1, CMath.V3MulFloat(dir, height));
             const p2Far = CMath.V3AddV3(p2, CMath.V3MulFloat(dir, height));
 
-            const ptFMat = CMath.MatMul(pt.GetLMat(), pt.GetOwner().GetWMat());
+            const ptFMat = CMath.MatMul(pt.GetMat(), pt.GetOwner().GetMat());
             const posOffset = new CVec3(ptFMat.x, ptFMat.y);
             CMath.V3SubV3(p1, posOffset, p1);
             CMath.V3SubV3(p2, posOffset, p2);
             CMath.V3SubV3(p1Far, posOffset, p1Far); 
             CMath.V3SubV3(p2Far, posOffset, p2Far);
 
-            const lmat = pt.GetLMat().Export();
+            const lmat = pt.GetMat().Export();
             lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
 
             
@@ -550,8 +552,8 @@ export class CShadowPlane extends CPaint2D
 
         const bound = pt.GetBound().Export();
         const center = bound.GetCenter();
-        bound.mMin=CMath.V3MulMatNormal(bound.mMin,pt.GetLMat());
-        bound.mMax=CMath.V3MulMatNormal(bound.mMax,pt.GetLMat());
+        bound.mMin=CMath.V3MulMatNormal(bound.mMin,pt.GetMat());
+        bound.mMax=CMath.V3MulMatNormal(bound.mMax,pt.GetMat());
 
         const ligDir = new CVec3(0, 1, 0);//CMath.V3Nor(lig.GetDirectPos());
         const eye = CMath.V3AddV3(center, CMath.V3MulFloat(ligDir, bound.GetOutRadius()));
@@ -616,7 +618,7 @@ export class CShadowPlane extends CPaint2D
         while(node.Size()!=nodeOff) {
             const nodemp = node.Find(nodeOff);
             if (nodemp.md.mData != null && nodemp.md.mData.ci != null) {
-                CMath.MatMul(nodemp.mpi.mData.pst,pt.GetLMat(),wMat);
+                CMath.MatMul(nodemp.mpi.mData.pst,pt.GetMat(),wMat);
                 fw.Ren().SendGPU(vf,wMat,"worldMat");
                 //fw.Ren().SendGPU(vf,nodemp.sumSA.mData,"worldMat");
                 const meshDraw = pt.GetDrawMesh(pt.mMesh + nodemp.md.mKey, vf, nodemp.md.mData.ci);

@@ -11,11 +11,14 @@ export class CMeshCopyNode {
     pos;
     rot;
     sca;
-    CA;
+    color;
+    alpha;
+    texHash;
     pst;
     updateMat = CUpdate.eType.Not;
     FMatAtt;
     textureOff;
+    texture;
     constructor() {
         this.bpos = null;
         this.brot = null;
@@ -24,8 +27,10 @@ export class CMeshCopyNode {
         this.rot = new CVec4();
         this.sca = new CVec3();
         this.pst = new CMat();
-        this.CA = new CVec4(1, 1, 1, 1);
+        this.color = null;
+        this.alpha = null;
         this.textureOff = new Array();
+        this.texture = new Array();
         this.FMatAtt = false;
     }
     PRSReset() {
@@ -41,6 +46,8 @@ export class CMeshCopyNode {
         this.pst.mF32A[14] = this.pos.z;
         this.pst.UnitCheck();
         this.updateMat = CUpdate.eType.Updated;
-        this.CA = this.CA;
+    }
+    GetMat() {
+        return this.pst;
     }
 }

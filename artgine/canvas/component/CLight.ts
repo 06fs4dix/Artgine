@@ -191,7 +191,7 @@ export class CLight extends CBrushComp
 
 		if(this.GetOwner().mUpdateMat !=0 || this.mUpdate==CUpdate.eType.Updated)
 		{
-			var pos=this.GetOwner().GetWMat().xyz;
+			var pos=this.GetOwner().GetMat().xyz;
 			
 
 			if(this.mDirPos.w<=-1)

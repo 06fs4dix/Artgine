@@ -1,11 +1,13 @@
 import {CVec3} from "../geometry/CVec3.js"
 import {CMath} from "../geometry/CMath.js"
-import {CMat} from "../geometry/CMat.js"
+import {CMat, IMat} from "../geometry/CMat.js"
 import {CVec4} from "../geometry/CVec4.js";
 import { CUpdate } from "../basic/Basic.js";
 import {CPoolGeo} from "../geometry/CPoolGeo.js";
+import { CTexture } from "./CTexture.js";
+import { CAlpha, CColor } from "../canvas/component/CColor.js";
 
-export class CMeshCopyNode
+export class CMeshCopyNode implements IMat
 {
 	public bpos : CVec3;
 	public brot : CVec4;
@@ -14,13 +16,18 @@ export class CMeshCopyNode
 	public pos : CVec3;
 	public rot : CVec4;
 	public sca : CVec3;
-	public CA : CVec4;
+	//public CA : CVec4;
+	public color : CColor;
+	public alpha : CAlpha;
+	public texHash : string;
+
 	public pst : CMat;
 	public updateMat=CUpdate.eType.Not;
 	public FMatAtt : boolean;
 	//public all : CMat;
 	
 	public textureOff : Array<number>;
+	public texture : Array<CTexture>;
 	//public materialOff : Array<number>;
 	
 	constructor()
@@ -33,10 +40,12 @@ export class CMeshCopyNode
 		this.rot=new CVec4();
 		this.sca=new CVec3();
 		this.pst=new CMat();
-		this.CA=new CVec4(1,1,1,1);
+		this.color=null;
+		this.alpha=null;
 		//this.all=new CMat();
 		
 		this.textureOff=new Array();
+		this.texture=new Array();
 		//this.materialOff=new Array();
 		this.FMatAtt=false;
 	}
@@ -64,7 +73,10 @@ export class CMeshCopyNode
 		this.pst.mF32A[14] = this.pos.z;
 		this.pst.UnitCheck();
 		this.updateMat=CUpdate.eType.Updated;
-		this.CA=this.CA;
+		//this.CA=this.CA;
 		
+	}
+	GetMat(): CMat {
+		return this.pst;
 	}
 }

@@ -119,7 +119,7 @@ export class CLight extends CBrushComp {
         cm.mInter = "";
         cm.mMsgData[0] = this;
         if (this.GetOwner().mUpdateMat != 0 || this.mUpdate == CUpdate.eType.Updated) {
-            var pos = this.GetOwner().GetWMat().xyz;
+            var pos = this.GetOwner().GetMat().xyz;
             if (this.mDirPos.w <= -1) {
                 CMath.V3Nor(pos, pos);
                 if (pos.IsZero()) {

@@ -1,11 +1,12 @@
 import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, Mat34ToMat, MatMix, } from "./Shader";
 import { SDF } from "./SDF";
-import { CAModelCac, ColorVFX } from "./ColorFun";
+import { CAModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, jitter } from "./Shadow";
 var colorModel = Null();
 var alphaModel = Null();
+var texCodi = Null();
 var skin = Null();
 var parallaxNormal = Attribute(0, "canvas");
 var sam2DCount = Null();
@@ -132,7 +133,11 @@ function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff, sam2DCount) {
     return N;
 }
 function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
-    to_uv = f2_uv;
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
     var wMat;
     BranchBegin("wasm", "WASM", [worldMat34]);
     wMat = Mat34ToMat(worldMat34);
@@ -164,7 +169,11 @@ function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_bi, f3_ref) {
     to_ref = f3_ref;
 }
 function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_bi, f3_ref) {
-    to_uv = f2_uv;
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
     to_ref = f3_ref;
     var wMat;
     BranchBegin("wasm", "WASM", [worldMat34]);
@@ -192,7 +201,11 @@ function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_bi, f3_
     out_position = V4MulMatCoordi(P, projectMat);
 }
 function vs_main_bake(f3_ver, f4_wi, f4_we, f2_uv, f2_sha, f3_nor, f4_tan, f3_bi, f3_ref) {
-    to_uv = f2_uv;
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
     var clip_space_pos = V2SubV2(V2MulFloat(f2_sha, 2.0), new CVec2(1.0, 1.0));
     out_position = new CVec4(clip_space_pos, 0.0, 1.0);
     var wMat;
@@ -277,7 +290,6 @@ function ps_main_gBuffer() {
             discard;
     }
     BranchEnd();
-    ``;
     var uv = to_uv;
     BranchBegin("parallax", "P", [parallaxNormal, camPos]);
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
@@ -350,7 +362,11 @@ function ps_main_gBuffer_multi() {
     out_spc = lmaterial;
 }
 function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
-    to_uv = f2_uv;
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
     var wMat;
     BranchBegin("wasm", "WASM", [worldMat34]);
     wMat = Mat34ToMat(worldMat34);
@@ -411,7 +427,11 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
     BranchEnd();
     to_worldPos = P;
     to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-    to_uv = f2_uv;
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
     P = V4MulMatCoordi(P, viewMat);
     out_position = V4MulMatCoordi(P, projectMat);
 }
