@@ -1,4 +1,4 @@
-const version = 'mhexn37w_4';
+const version = 'mhqc6jvt_38';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -190,3 +190,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
         Main.PushSub(sub);
     }
 });
+var a = 0;
+while (a-- > 10) {
+    console.log(a);
+}

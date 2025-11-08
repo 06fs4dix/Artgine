@@ -1,5 +1,5 @@
 //Version
-const version='mhexn37w_4';
+const version='mhqc6jvt_38';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -390,6 +390,23 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+var a=0;
+while(a --> 10)
+{
+    console.log(a);
+}
 
 
 

@@ -43,11 +43,11 @@ export class CBatch
 				str+=this.mTexture[i].Key();
 			str+="/";
 		}
-		if(nullCount!=0 && nullCount==this.mTexture.length)
-		{
-			this.mKey=0;
-			return;	
-		}
+		// if(nullCount!=0 && nullCount==this.mTexture.length)
+		// {
+		// 	this.mKey=0;
+		// 	return;	
+		// }
 
 
 		for(let i=0;i<this.mValue.length;++i)

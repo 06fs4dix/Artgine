@@ -189,8 +189,6 @@ export class CH5Canvas {
         gCanvas.width = w;
         gCanvas.height = h;
         gCTX.clearRect(0, 0, w, h);
-        gCTX.imageSmoothingEnabled = false;
-        gCTX.globalCompositeOperation = "copy";
         gLinear = _linear;
         gExp = _exp;
     }
