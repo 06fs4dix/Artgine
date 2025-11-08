@@ -1,4 +1,4 @@
-const version = 'mgjh97sr_13';
+const version = 'mhqb8w6q_10';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -42,7 +42,7 @@ import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/compon
 import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
 var skyTexKey = ["Res/skybox/right.jpg", "Res/skybox/left.jpg", "Res/skybox/bottom.jpg", "Res/skybox/top.jpg", "Res/skybox/front.jpg", "Res/skybox/back.jpg"];
 var skyTexList = [];
-await gAtl.Frame().Load().Load(skyTexKey);
+await gAtl.Frame().Load().Exe(skyTexKey);
 for (let i = 0; i < skyTexKey.length; ++i) {
     let tex = gAtl.Frame().Res().Find(skyTexKey[i]);
     skyTexList.push(tex);
@@ -56,7 +56,6 @@ var normalBias = 0;
 var shadowDistance = 0.4;
 var digit = 1;
 var shadowRate = 0.7;
-var dotCac = 1;
 let DeferredSingle = new CRPMgr();
 let gBufPosTex = new CTexture();
 gBufPosTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA32F, 1)]);
@@ -223,7 +222,6 @@ rp.mShaderAttr.push(new CShaderAttr("shadowRate", shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF", PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias", bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias", normalBias));
-rp.mShaderAttr.push(new CShaderAttr("dotCac", dotCac));
 rp.mShader = gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget = "shadowread.tex";
 rp.mTag = "shadowRead";

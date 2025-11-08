@@ -1,5 +1,5 @@
 //Version
-const version='mgjh97sr_13';
+const version='mhqb8w6q_10';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -64,7 +64,7 @@ import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CSta
 
 var skyTexKey=["Res/skybox/right.jpg","Res/skybox/left.jpg","Res/skybox/bottom.jpg","Res/skybox/top.jpg","Res/skybox/front.jpg","Res/skybox/back.jpg"];
 var skyTexList=[];
-await gAtl.Frame().Load().Load(skyTexKey);
+await gAtl.Frame().Load().Exe(skyTexKey);
 for(let i=0;i<skyTexKey.length;++i)
 {
     let tex=gAtl.Frame().Res().Find(skyTexKey[i]);
@@ -81,7 +81,7 @@ var normalBias : number = 0;
 var shadowDistance=0.4;
 var digit=1;
 var shadowRate=0.7;
-var dotCac=1;
+
 //====================================================
 let DeferredSingle=new CRPMgr();
 let gBufPosTex=new CTexture();
@@ -141,7 +141,7 @@ rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
-//rp.mShaderAttr.push(new CShaderAttr("dotCac",new CVec1(0.0)));
+
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=ShadowKey;
 rp.mTag="shadowRead";
@@ -209,7 +209,6 @@ rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
-//rp.mShaderAttr.push(new CShaderAttr("dotCac",new CVec1(0.0)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=ShadowKey;
 rp.mTag="shadowRead";
@@ -291,8 +290,7 @@ rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
-//rp.mShaderAttr.push(new CShaderAttr("dotCac",new CVec1(0.0)));
-rp.mShaderAttr.push(new CShaderAttr("dotCac",dotCac));
+
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget="shadowread.tex";
 //rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
@@ -566,6 +564,24 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
