@@ -1,5 +1,5 @@
 //Version
-const version='mgnmxg44_6';
+const version='mhqc6jvt_45';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -356,6 +356,31 @@ PM11();
 // lp.Push(new CDayCycle(new CVec3(-1,1),new CColor(1,0.5,0.5)));
 // lp.Push(new CDayCycle(new CVec3(1,0),new CColor(0,0,0)));
 // lp.Push(new CDayCycle(new CVec3(-1,0),new CColor(0,0,0)));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -201,7 +201,7 @@ export class CNPC extends CSubject
         this.mAniMap.set("StandRight",ani);
 
 
-        let tick=100;
+        let tick=0.1;
 
         ani=new CAnimation();
         for(let i=0;i<4;++i)    ani.Push(new CClipCoodi(i*tick,tick,0,i*16,16,(1+i)*16));

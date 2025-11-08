@@ -93,7 +93,7 @@ export class CUser extends CSubject {
         ani = new CAnimation();
         ani.Push(new CClipCoodi(0, 0, 3 * 16, 0, 4 * 16, 16));
         this.mAniMap.set("StandRight", ani);
-        let tick = 100;
+        let tick = 0.1;
         ani = new CAnimation();
         for (let i = 0; i < 4; ++i)
             ani.Push(new CClipCoodi(i * tick, tick, 0, i * 16, 16, (1 + i) * 16));
@@ -140,8 +140,8 @@ export class CUser extends CSubject {
     MoveDown() {
         this.mAF.ResetAni(this.mAniMap.get("MoveDown"));
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (this.FindChild(CPad) == null)
             return;
         let dir = this.FindChild(CPad).GetDir();
