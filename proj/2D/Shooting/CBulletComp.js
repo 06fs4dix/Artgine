@@ -13,7 +13,7 @@ export class CBulletComp extends CBehavior {
         this.m_pt = this.GetOwner().FindComp(CPaint2D);
         this.m_rb = this.GetOwner().FindComp(CRigidBody);
     }
-    Update(_delay) {
+    Update(_update) {
         let dir = this.m_rb.MoveDir();
         let angle = CMath.V3TwoAngle(new CVec3(1, 0, 0), dir);
         this.m_pt.SetRot(new CVec3(0, 0, angle));

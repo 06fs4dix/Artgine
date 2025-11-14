@@ -16,8 +16,8 @@ export class RoomSystem extends CSubject {
     mMon = new CBlackBoardRef("Monster");
     mMain = new CBlackBoardRef("Main");
     Start() { }
-    Update() {
-        const dt = this.GetFrame().Delay();
+    Update(_update) {
+        const dt = this.GetFrame().DeltaTime() * 1000;
         this.mTime += dt;
         this.mTick += dt;
         if (this.mTick >= WAVE_PERIOD_MS) {

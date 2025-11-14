@@ -1,3 +1,4 @@
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
@@ -21,14 +22,14 @@ export class BackGround extends CSubject
         this.GetFrame().Load().Exe("Res/bg.png",new CLoaderOption().Set("mWrap",CTexture.eWrap.Mirrored))
         let pt=this.PushComp(new CPaint2D("Res/bg.png",new CVec2(600,800)));
         pt.SubUpdate=()=>{
-            let delay=this.GetFrame().Delay();
+            let delay=this.GetFrame().DeltaTime();
             let AllDelay=pt.Get("AllDelay",0);
             pt.Set("AllDelay",AllDelay+delay);
             pt.SetTexCodi(new CVec4(1,1,0,AllDelay/100000))
         };
         
     }
-    Update(): void {
+    Update(_update : CUpdate): void {
         if(this.mMoon==null || this.mMoon.IsDestroy())
         {
             this.mMoon=this.PushChild(new CSubject())

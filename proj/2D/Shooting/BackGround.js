@@ -17,13 +17,13 @@ export class BackGround extends CSubject {
         this.GetFrame().Load().Exe("Res/bg.png", new CLoaderOption().Set("mWrap", CTexture.eWrap.Mirrored));
         let pt = this.PushComp(new CPaint2D("Res/bg.png", new CVec2(600, 800)));
         pt.SubUpdate = () => {
-            let delay = this.GetFrame().Delay();
+            let delay = this.GetFrame().DeltaTime();
             let AllDelay = pt.Get("AllDelay", 0);
             pt.Set("AllDelay", AllDelay + delay);
             pt.SetTexCodi(new CVec4(1, 1, 0, AllDelay / 100000));
         };
     }
-    Update() {
+    Update(_update) {
         if (this.mMoon == null || this.mMoon.IsDestroy()) {
             this.mMoon = this.PushChild(new CSubject());
             let pt = this.mMoon.PushComp(new CPaint2D());

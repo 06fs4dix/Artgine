@@ -1,5 +1,5 @@
 //Version
-const version='mh13w5u5_16';
+const version='mhyvhc2r_10';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -348,6 +348,7 @@ Option_btn.SetContent(`
 <div>
     블룸,기본 설정 가능
 </div>`);
+
 
 
 

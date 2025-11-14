@@ -1,3 +1,4 @@
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
@@ -30,8 +31,8 @@ export class CUserComp extends CProComp
         //     pad.SetPadScale(1.5);
         // }
     }
-    Update(_delay: any): void {
-        super.Update(_delay);
+    Update(_update : CUpdate): void {
+        super.Update(_update);
 
         if(this.mPad==null)
         {
@@ -42,7 +43,7 @@ export class CUserComp extends CProComp
                 return;
 
         }
-        this.mShotTime-=_delay;
+        this.mShotTime-=_update.DeltaMil();
         if(this.mPad.IsEnable() && this.mPad.GetButtonEvent(0)==CEvent.eType.Press && this.mShotTime<=0)
         {
             this.GetOwner().PushPac(CPacShooting.UserShot(this.GetOwner().GetPos()));

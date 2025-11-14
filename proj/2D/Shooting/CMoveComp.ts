@@ -1,3 +1,4 @@
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
 import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CComponent.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
@@ -70,8 +71,8 @@ export class CMoveComp extends CBehavior
         
     }
 
-    Update(_delay: number): void {
-        super.Update(_delay);
+    Update(_update : CUpdate): void {
+        super.Update(_update);
 
         this.m_input="";
         

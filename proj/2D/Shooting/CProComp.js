@@ -49,7 +49,7 @@ export class CProComp extends CBehavior {
         this.mPT.SetRot(new CVec3(0, 0, 0));
         this.EditRefresh();
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mRB == null)
             return;
         if (this.mHP <= 0) {

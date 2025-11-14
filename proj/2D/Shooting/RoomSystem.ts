@@ -1,3 +1,4 @@
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUniqueID.js";
 import { CCanvas } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCanvas.js";
@@ -25,8 +26,8 @@ export class RoomSystem extends CSubject {
 
     Start() { }
 
-    Update(): void {
-        const dt = this.GetFrame().Delay();
+    Update(_update : CUpdate): void {
+        const dt = this.GetFrame().DeltaTime()*1000;
         this.mTime += dt;
         this.mTick += dt;
 

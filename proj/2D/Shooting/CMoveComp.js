@@ -45,8 +45,8 @@ export class CMoveComp extends CBehavior {
             }
         }
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         this.m_input = "";
         this.MovePro(this.m_input);
     }

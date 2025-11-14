@@ -14,8 +14,8 @@ export class CUserComp extends CProComp {
         this.mCL.SetLayer("user");
         this.mCL.PushCollisionLayer("mon");
     }
-    Update(_delay) {
-        super.Update(_delay);
+    Update(_update) {
+        super.Update(_update);
         if (this.mPad == null) {
             let pad = this.GetOwner().FindChild(CPad);
             if (pad != null)
@@ -23,7 +23,7 @@ export class CUserComp extends CProComp {
             else
                 return;
         }
-        this.mShotTime -= _delay;
+        this.mShotTime -= _update.DeltaMil();
         if (this.mPad.IsEnable() && this.mPad.GetButtonEvent(0) == CEvent.eType.Press && this.mShotTime <= 0) {
             this.GetOwner().PushPac(CPacShooting.UserShot(this.GetOwner().GetPos()));
             this.mShotTime = 200;

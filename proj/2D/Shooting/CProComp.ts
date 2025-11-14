@@ -1,3 +1,4 @@
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
@@ -71,7 +72,7 @@ export class CProComp extends CBehavior
         //this.GetOwner().SetPower(this.m_speed);
         this.EditRefresh();
     }
-    Update(_delay: any): void {
+    Update(_update : CUpdate): void {
       
         if(this.mRB==null) return;
 

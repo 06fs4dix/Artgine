@@ -1,3 +1,4 @@
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
@@ -20,7 +21,7 @@ export class CBulletComp extends CBehavior
         //this.m_pt.PushTag()
         this.m_rb=this.GetOwner().FindComp(CRigidBody);
     }
-    Update(_delay: any): void 
+    Update(_update : CUpdate): void 
     {
         let dir=this.m_rb.MoveDir();
         let angle=CMath.V3TwoAngle(new CVec3(1,0,0),dir);
