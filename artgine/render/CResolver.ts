@@ -7,7 +7,7 @@ import { CVec4 } from "../geometry/CVec4.js";
 import { CMeshCopyNode } from "./CMeshCopyNode.js";
 
 
-class CResolver extends CObject
+export class CResolver extends CObject
 {
     m_source : CTree<CMeshCopyNode>;
     m_target : IMat;
@@ -17,7 +17,7 @@ class CResolver extends CObject
         this.m_source = _tip;
         this.m_target = _tgt;
     }
-    protected SolveIK() {}
+    public SolveIK() {}
     protected ApplyToBone(_bone : CTree<CMeshCopyNode>, _pos : CVec3, _sca : CVec3, _rot : CVec4) {
         const wMat = CMath.MatMul(CMath.QutToMat(_rot), CMath.MatScale(_sca));
         wMat.SetV3(3, _pos);
@@ -25,22 +25,27 @@ class CResolver extends CObject
         _bone.mData.pst = wMat;
 
         // 이후에 사용할 수도 있으므로 local도 변경
-        const lMat = CMath.MatMul(wMat, CMath.MatInvert(_bone.mParent.mData.pst));
+        //const lMat = CMath.MatMul(wMat, CMath.MatInvert(_bone.mParent.mData.pst));
+        let lMat = wMat;
+        if(_bone.mParent) 
+            lMat = CMath.MatMul(lMat, CMath.MatInvert(_bone.mParent.mData.pst));
+        
         _bone.mData.rot = MatDecomposeRot(lMat);
         _bone.mData.pos = lMat.xyz;
     }
     protected ApplyToChild(_bone : CTree<CMeshCopyNode>, _excludeBones : CTree<CMeshCopyNode>[] = []) {
         if(!_bone) return;
-        if(parent && !_excludeBones.includes(_bone)) {
+        if(_bone.mParent && !_excludeBones.includes(_bone)) {
             _bone.mData.PRSReset();
             _bone.mData.pst = CMath.MatMul(_bone.mData.pst, _bone.mParent.mData.pst);
         }
         if(_bone.mColleague) this.ApplyToChild(_bone.mColleague, _excludeBones);
         if(_bone.mChild) this.ApplyToChild(_bone.mChild, _excludeBones);
     }
+    
 }
 
-export class CAttachResolver extends CResolver
+export class CResolverAttach extends CResolver
 {
     // 오프셋
     m_offsetRot : CVec4 = new CVec4(0, 0, 0, 1);
@@ -49,8 +54,9 @@ export class CAttachResolver extends CResolver
 
     // 믹싱
     m_mixRot : number = 1;
-    m_mixPos : number = 1;
-    m_mixSca : number = 1;
+    m_mixPos : CVec3 = new CVec3(1, 1, 1);
+    m_mixSca : CVec3 = new CVec3(1, 1, 1);
+
 
     SolveIK() {
         // 타겟 trs 계산
@@ -70,8 +76,14 @@ export class CAttachResolver extends CResolver
         CMath.QutMul(tRot, this.m_offsetRot, tRot);
 
         // mix
-        const mPos = CMath.V3Interpolate(sPos, tPos, this.m_mixPos);
-        const mSca = CMath.V3Interpolate(sSca, tSca, this.m_mixSca);
+        const mPos = new CVec3();
+        mPos.x = CMath.FloatInterpolate(sPos.x, tPos.x, this.m_mixPos.x);
+        mPos.y = CMath.FloatInterpolate(sPos.y, tPos.y, this.m_mixPos.y);
+        mPos.z = CMath.FloatInterpolate(sPos.z, tPos.z, this.m_mixPos.z);
+        const mSca = new CVec3();
+        mSca.x = CMath.FloatInterpolate(sSca.x, tSca.x, this.m_mixSca.x);
+        mSca.y = CMath.FloatInterpolate(sSca.y, tSca.y, this.m_mixSca.y);
+        mSca.z = CMath.FloatInterpolate(sSca.z, tSca.z, this.m_mixSca.z);
         const mRot = CMath.QutInterpolate(sRot, tRot, this.m_mixRot);
 
         this.ApplyToBone(this.m_source, mPos, mSca, mRot);
@@ -79,12 +91,12 @@ export class CAttachResolver extends CResolver
     }
 }
 
-export class CIKLookResolver extends CResolver
+export class CResolverIKLook extends CResolver
 {
     private m_dirOrigin : CVec3;
     private m_rotOrigin : CVec4;
 
-    protected SolveIK() {
+    SolveIK() {
         const tPos = this.m_target.GetMat().xyz;
         const sPos = this.m_source.mData.pst.xyz;
         const curDir = CMath.V3SubV3(tPos, sPos);
@@ -98,7 +110,7 @@ export class CIKLookResolver extends CResolver
     }
 }
 
-export class CIKFABRResolver extends CResolver
+export class CResolverIKFABR extends CResolver
 {
     /*
         options
@@ -118,6 +130,7 @@ export class CIKFABRResolver extends CResolver
     private m_targetPos : CVec3;
     private m_boneRotOrigin : CVec4[];
     private m_boneDirOrigin : CVec3[];
+    private m_bonePosOrigin : CVec3[];
 
     private m_boneLenTotal : number;
     private m_boneLen : number[];
@@ -135,9 +148,14 @@ export class CIKFABRResolver extends CResolver
         this.m_boneLen = new Array(_numOfBones);
         this.m_boneRotOrigin = new Array(_numOfBones);
         this.m_boneDirOrigin = new Array(_numOfBones);
+        this.m_bonePosOrigin = new Array(_numOfBones);
     }
 
     SolveIK() {
+        if(!this.m_source || !this.m_target) {
+            return;
+        }
+
         if(!this.m_targetPos) {
             this.m_targetPos = this.m_target.GetMat().xyz;
             this.m_boneLenTotal = 0;
@@ -162,6 +180,8 @@ export class CIKFABRResolver extends CResolver
 
         for(let i = 0; i < this.m_bones.length; i++) {
             this.m_bonePos[i] = this.m_bones[i].mData.pst.xyz;
+            this.m_bonePosOrigin[i] = this.m_bones[i].mData.pst.xyz;
+            
         }
 
         const tPos = this.m_target.GetMat().xyz;
@@ -188,6 +208,10 @@ export class CIKFABRResolver extends CResolver
             }
         }
         this.PoleConstraint();
+        // mix
+        for(let i = 0; i < this.m_bonePos.length; i++) {
+            this.m_bonePos[i] = CMath.V3Interpolate(this.m_bonePosOrigin[i], this.m_bonePos[i], this.m_mix);
+        }
 
         for(let i = 0; i < this.m_bonePos.length - 1; i++) {
             const curDir = CMath.V3SubV3(this.m_bonePos[i + 1], this.m_bonePos[i]);

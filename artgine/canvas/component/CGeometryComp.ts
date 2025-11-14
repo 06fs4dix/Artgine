@@ -35,7 +35,7 @@ export class CGeometryInfo implements IAutoFixed
             for(let j=0;j<this.mFixedComp.Size();++j)
             {
                 let comp=this.mFixedComp.Find(j);
-                comp.Build();
+                comp.BuildGI();
             }
             this.mOctree.Build();
         }

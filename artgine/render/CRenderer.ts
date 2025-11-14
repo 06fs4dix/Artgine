@@ -48,6 +48,7 @@ export class CRenderer
 	public mUniToSam2d : CTexture;
 	public mUniToSam2dKey="Artgine/uniToSam2dKey";
 	public mUniTexLastOff=-1;
+	//mUniWriteSet=new Set<number>();
 
 	
 	public mMainFrameTex : CTexture;
@@ -154,6 +155,7 @@ export class CRenderer
 	SendGPU(_shader : CShader,_texture : Array<string>,_textureOff : Array<number>,_attach : Array<number>) : void;
 	SendGPU(_shader : CShader,_texture : Array<string>,_textureOff : Array<number>) : void;
 	SendGPU(_shader : CShader,_texture : Array<string>) : void;
+	SendGPU(_shader : CShader,pa_text : string) : void;
 	SendGPU(_shader : CShader,_value : any,_keyOff : any=null,_eachAttach=null,_off=null){}
 
 
@@ -171,7 +173,11 @@ export class CRenderer
 		this.mTexUse.mCube=0;
 	}
    //x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
-	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null){}
+	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
+	{
+
+	}
+	
 	static ShaderErrorModal(_wgsl,_error)
 	{
 		let modal=new CModal();
@@ -197,24 +203,7 @@ export class CRendererGL extends CRenderer
 	//x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
 	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
 	{
-		
-		var uniDf=_vf.GetDefault(_key);
-		if(uniDf!=null || uniDf.mEach==4 || uniDf.mEach==16){}
-		else
-			CAlert.E("error");
-		
-		if(_count==null)
-			_count=_buf.length/4;
-		//if("weightArrMat"==_key)	return;
-		this.mUniTexLastOff=uniDf.mData[0];
-		
 
-		//if(uniDf.mData[1]==10)	return;
-		this.RebuildTexture(this.mUniToSam2d,uniDf.mData[0],0,uniDf.mData[1],_count,1,_buf);
-		if(_buf.length==0)
-			this.SendGPU(_vf,new CVec2(0,0),_key,null,0);
-		else
-			this.SendGPU(_vf,new CVec2(uniDf.mData[0],uniDf.mData[1]),_key,null,0);
 	}
 	TexBindReset()
 	{

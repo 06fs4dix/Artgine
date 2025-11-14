@@ -22,7 +22,7 @@ export class CPaint3DDecal extends CPaint {
     mVMat;
     constructor(_textures, _vertex, _vMat, _ray, _size, _imageRot = 0) {
         super();
-        this.mTexture = _textures;
+        this.mTextureKey = _textures;
         this.mVertex = _vertex;
         this.mVMat = _vMat;
         this.mRay = _ray;
@@ -32,7 +32,7 @@ export class CPaint3DDecal extends CPaint {
     }
     InitChk() {
         super.InitChk();
-        this.RefreshMesh(this.mTexture, this.mVertex, this.mVMat, this.mRay, this.mSize, this.mRot);
+        this.RefreshMesh(this.mTextureKey, this.mVertex, this.mVMat, this.mRay, this.mSize, this.mRot);
     }
     EmptyRPChk() {
         if (this.mRenderPass.length == 0) {
@@ -61,7 +61,7 @@ export class CPaint3DDecal extends CPaint {
         if (_vf.mUniform.get("material") != null) {
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
         }
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         var dm = this.GetDrawMesh("Artgine/DM/Decal" + this.mIndex, _vf, this.mMCI);
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();

@@ -17,7 +17,8 @@ import {
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, 
 	shadowPointProj, shadowRightCasP2, shadowTopCasV1,
-	calcShadow, 
+	calcShadow,
+	jitter, 
 } from "./Shadow";
 
 var size : number=100;
@@ -26,6 +27,7 @@ var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
+var alphaCut : number=0.1;
 
 var out_position : OutPosition=Null();
 var out_color : OutColor=Null();
@@ -38,7 +40,7 @@ var to_normal : ToV3=Null();
 
 var shadowReadList: Sam2DV4=new Sam2DV4(11);
 var shadowOn : number = -1.0;
-var sun : number=0.0;
+var sun : number=1.0;
 
 Build("Artgine/Shader/Voxel",[],
 	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun],[out_position,to_uv,to_worldPos],
@@ -62,7 +64,7 @@ Build("Artgine/Shader/VoxelShadowRead",["shadowRead"],
 		ligDir,ligCol,ligCount,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowCount,
 		shadowWrite,shadowPointProj,shadowReadList,
-		shadowRate,PCF,texture16f,bias,normalBias,sun
+		shadowRate,PCF,texture16f,bias,normalBias,sun,jitter
 	],[out_position,to_uv,to_normal,to_worldPos],
 	ps_main_shadow_read,[out_color]
 );
@@ -302,6 +304,7 @@ function vs_main(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 	if(light<f2_color.y)	light=f2_color.y;
 	
 
+	light*=data[2].z;
 	if(f4_uv.w<-0.5)
 	{
 		to_uv.xyz=f4_uv.xyz;
@@ -310,6 +313,7 @@ function vs_main(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 		
 	else
 		to_uv.w=light;
+	
 
 
 	P=V4MulMatCoordi(P,worldMat);
@@ -343,8 +347,10 @@ function ps_main()
 	{
 		L_cor=Sam2DToColor(0.0,to_uv.xy);
 	}
-	//L_cor.rgb=V3MulFloat(L_cor.rgb,light);
-	
+	L_cor.rgb=V3MulFloat(L_cor.rgb,light);
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if ( L_cor.a <= alphaCut ) discard;
+	BranchEnd();
 
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	var DSE : CMat3=new CMat3(0);
@@ -353,8 +359,7 @@ function ps_main()
 	L_cor.rgb=DSE[0];
 	BranchEnd();
     
-	// if ( L_cor.a <= 0.1 ) 
-	// 	discard;
+	
 
 
 	var shadow : number = 1.0;
@@ -433,8 +438,9 @@ function ps_main_shadow_write()
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	
     
-	if ( L_cor.a <= 0.1 ) 
-		discard;
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if(L_cor.a < alphaCut) 	discard;
+	BranchEnd();
 	out_color=to_viewPos;
 }
 
@@ -491,8 +497,9 @@ function ps_main_shadow_read()
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	
     
-	if ( L_cor.a <= 0.1 ) 
-		discard;
+	BranchBegin("alphaCut","A",[alphaCut]);
+	if(L_cor.a < alphaCut) 	discard;
+	BranchEnd();
 
 	var all : number=0.0;
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {

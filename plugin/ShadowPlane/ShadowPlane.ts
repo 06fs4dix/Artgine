@@ -355,7 +355,7 @@ export class CShadowPlane extends CPaint2D
             if(this.mLIG!=null)
             {
                 if(this.mLIG.IsPointLight())
-                    minLen = CMath.V3Distance(this.mLIG.GetDirectPos(), center);
+                    minLen = CMath.V3Distance(this.mLIG.DirPosV4(), center);
                 else
                     minLen=0;
                     
@@ -374,7 +374,7 @@ export class CShadowPlane extends CPaint2D
                 let len=0;
                 if(lig.IsPointLight())
                 {
-                    len = CMath.V3Distance(lig.GetDirectPos(), center);
+                    len = CMath.V3Distance(lig.DirPosV4(), center);
                 }
                 if(minLen>len)
                 {
@@ -444,10 +444,10 @@ export class CShadowPlane extends CPaint2D
             if(lig.IsPointLight()) 
             {
                 if(this.mLIG!=null)
-                    dir=CMath.V3Nor(CMath.V3SubV3(c, this.mLIG.GetDirectPos()));
+                    dir=CMath.V3Nor(CMath.V3SubV3(c, this.mLIG.DirPosV4()));
                 const inner = lig.GetInRadius();
                 const outer = lig.GetOutRadius();
-                const dist = CMath.V3Distance(c, lig.GetDirectPos());
+                const dist = CMath.V3Distance(c, lig.DirPosV4());
                 
                 alpha = LightFalloff(dist, inner, outer);
 
@@ -460,7 +460,7 @@ export class CShadowPlane extends CPaint2D
             }
             else {
                 if(this.mLIG!=null)
-                    dir=CMath.V3Nor(this.mLIG.GetDirectPos());
+                    dir=CMath.V3Nor(this.mLIG.DirPosV4());
                 alpha = Math.max(Math.max(lig.GetColor().x,lig.GetColor().y),lig.GetColor().z);
                 height = fBound.GetSize().y * this.mShadowLen;
             }
@@ -520,7 +520,7 @@ export class CShadowPlane extends CPaint2D
             this.mUpdateShadow = false;
 
             this.PushTag("zDepth");
-            const ligDir = CMath.V3Nor(lig.GetDirectPos());
+            const ligDir = CMath.V3Nor(lig.DirPosV4());
             
             const fBound = this.mPT.GetBoundFMat();
             const fCenter = fBound.GetCenter();

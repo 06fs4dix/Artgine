@@ -23,7 +23,8 @@ export class CBatch
 {
 	public mKey : number=null;
 	public mMesh : CMeshDrawNode=null;
-	public mTexture = new Array<CTexture>();
+	public mTextureKey = new Array<string>();
+	public mTextureOff = new Array<number>();
 	public mValue = new Array<CShaderAttr>();
 	
 	
@@ -32,22 +33,18 @@ export class CBatch
 	{
 		var str=this.mMesh.Key();
 		let nullCount=0;
-		for(var i=0;i<this.mTexture.length;++i)
+		for(var i=0;i<this.mTextureOff.length;++i)
 		{
-			if(this.mTexture[i]==null)
-			{
+			if(this.mTextureOff[i]==-1 || this.mTextureKey[this.mTextureOff[i]]=="")
 				nullCount++;
-				str+="null";
-			}
-			else
-				str+=this.mTexture[i].Key();
-			str+="/";
+			
+			str+=this.mTextureKey[this.mTextureOff[i]];
 		}
-		// if(nullCount!=0 && nullCount==this.mTexture.length)
-		// {
-		// 	this.mKey=0;
-		// 	return;	
-		// }
+		if(nullCount!=0 && nullCount==this.mTextureOff.length)
+		{
+			this.mKey=0;
+			return;	
+		}
 
 
 		for(let i=0;i<this.mValue.length;++i)
@@ -121,7 +118,8 @@ export class CBatchMgr
 		this.mBatchGlobal.Clear();
 		this.mBatch=this.mBatchGDummy;
 		this.mBatchGDummy.mMesh=null;
-		this.mBatchGDummy.mTexture.length=0;
+		this.mBatchGDummy.mTextureKey.length=0;
+		this.mBatchGDummy.mTextureOff.length=0;
 		this.mBatchGDummy.mValue.length=0;
 
 	}
@@ -242,9 +240,27 @@ export class CBatchMgr
     {
         this.mBatch.mValue.push(_sa);
     }
-    SetBatchTex(_texture : Array<CTexture>)
+    SetBatchTex(_textureKey : Array<string>,_textureOff : Array<number>=null)
     {
-        this.mBatch.mTexture=_texture;
+        //this.mBatch.mTextureKey=_textureKey;
+		//this.mBatch.mTextureOff=_textureOff;
+
+		 this.mBatch.mTextureKey=_textureKey;
+		if(_textureOff==null)
+		{
+			this.mBatch.mTextureOff=new Array<number>();
+			for (var i = 0; i < _textureKey.length; ++i)
+					this.mBatch.mTextureOff.push(i);
+		}
+		else
+		{
+			if(_textureOff.length==0)
+				_textureOff.push(0);
+			
+			this.mBatch.mTextureOff=_textureOff;
+		}
+        	
+        //this.mBatch.mTexAtt=_attach;
     }
     SetBatchMesh(_mesh : CMeshDrawNode)
     {

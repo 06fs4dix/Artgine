@@ -1,5 +1,4 @@
-import { ligDir } from "./Light";
-import { cos, CVec2, CVec3, CVec4, fract, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, sin, V2Dot, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+import { cos, CVec2, CVec3, CVec4, fract, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DV4, screenPos, ShadowPosToUv, sin, V2Dot, V3AddV3, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 export var shadowNearCasV0 = new Sam2DMat(11, 505);
 export var shadowFarCasP0 = new Sam2DMat(11, 509);
 export var shadowTopCasV1 = new Sam2DMat(11, 513);
@@ -8,7 +7,7 @@ export var shadowLeftCasV2 = new Sam2DMat(11, 521);
 export var shadowRightCasP2 = new Sam2DMat(11, 525);
 export var shadowPointProj = new Sam2DMat(11, 529);
 export var shadowOn = -1.0;
-export var shadowReadList = new Sam2DV4(11);
+export var shadowReadList = new Sam2DV4(11, 533);
 export var texture16f = 0;
 export var shadowCount = 0;
 export var shadowWrite = new CVec3(0, 0, 0);
@@ -51,7 +50,7 @@ function ApplyPCF(_uvZ0, _uvZ1, _uvZ2, _read, _biasAll) {
             if (_read.y > -0.5 && uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0) {
                 var shadowParam = Sam2DArrToColor(0.0, uv0N);
                 var depth = shadowParam.z;
-                sVal += (_uvZ0.z + _biasAll) >= depth ? 1.0 : 0.0;
+                sVal += (_uvZ0.z + _biasAll * f16Chk) >= depth ? 1.0 : 0.0;
                 count += 1.0;
             }
             else if (_read.z > -0.5 && uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0) {
@@ -159,12 +158,6 @@ function ProcessCascadeLevel(_isActive, _viewMatOff, _projMatOff, _offsetScale, 
     return new CVec3(ShadowPosToUv(shadowPos).xy, viewPos.z);
 }
 export function calcShadow(_read, _index, _nor, _worldPos) {
-    var lightDir = Sam2DToV4(ligDir, _read.x);
-    if (lightDir.w > 1.5) {
-        return 1.0;
-    }
-    var nDotL = 1.0;
-    nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
     var normalScale = normalBias;
     var normalOffset = V3MulFloat(V3Nor(_nor), normalScale);
     var biasAll = bias;

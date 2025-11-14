@@ -833,9 +833,9 @@ export class CFrame
 		this.mMainProcess=null;
 		for(let [key,value] of this.mRes.mResMap)
 		{
-			if(key.indexOf("png") || key.indexOf("jpg") || key.indexOf("tga")  || key.indexOf("tex"))
+			if(key.indexOf("png")!=-1 || key.indexOf("jpg")!=-1 || key.indexOf("tga")!=-1  || key.indexOf("tex")!=-1)
 				this.mRenderer.ReleaseTexture(value);
-			else if(key.indexOf("mesh"))
+			else if(key.indexOf("/DM/")!=-1)
 				this.mRenderer.ReleaseMeshDrawNode(value);
 		}
 	

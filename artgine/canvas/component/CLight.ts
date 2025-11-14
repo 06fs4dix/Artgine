@@ -172,15 +172,17 @@ export class CLight extends CBrushComp
 
 		}
 	}
-
+	DirPosV4()	{	return this.mDirPos;	}
 	GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
 	Update(_update : CUpdate) : boolean|any
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
 			this.mUpdate = CUpdate.eType.Not;
+			this.mBruch.mUpdateLight=true;
 		}
 		else if(this.mUpdate == CUpdate.eType.Updated) {			
 			this.mUpdate = CUpdate.eType.Already;
+			this.mBruch.mUpdateLight=true;
 		}
 
 		//라이트 메세지
@@ -191,6 +193,7 @@ export class CLight extends CBrushComp
 
 		if(this.GetOwner().mUpdateMat !=0 || this.mUpdate==CUpdate.eType.Updated)
 		{
+			this.mBruch.mUpdateLight=true;
 			var pos=this.GetOwner().GetMat().xyz;
 			
 
@@ -208,6 +211,9 @@ export class CLight extends CBrushComp
 			// this.m_dirPos.y=pos.y;
 			// this.m_dirPos.z=pos.z;
 			this.SetDirectPos(pos);
+			// this.mDirPos.mF32A[0]=pos.mF32A[0];
+			// this.mDirPos.mF32A[1]=pos.mF32A[1];
+			// this.mDirPos.mF32A[2]=pos.mF32A[2];
 
 			// this.m_update = CState.eUpdate.Updated;
 		}
@@ -249,7 +255,7 @@ export class CLight extends CBrushComp
 
 
 		}
-
+		let ShadowUpdate=false;
 		if (this.mShadowKey!=null)
 		{
 			if(this.mColor.IsZero())
@@ -308,7 +314,9 @@ export class CLight extends CBrushComp
 						scam0.mHeight=height*2;
 						//scam0.Set2DZoom(1.5);
 						scam0.ResetOrthographic();
-						this.mUpdate = CUpdate.eType.Updated;
+						//this.mUpdate = CUpdate.eType.Updated;
+						ShadowUpdate=true;
+						this.mBruch.mUpdateShadow=true;
 					}
 					this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
 					this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
@@ -332,6 +340,8 @@ export class CLight extends CBrushComp
 						scam1.mWidth=width*8;
 						scam1.mHeight=height*8;
 						scam1.ResetOrthographic();
+						ShadowUpdate=true;
+						this.mBruch.mUpdateShadow=true;
 					}
 					this.mBruch.mShadowView[2].set(scam1.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
 					this.mBruch.mShadowView[3].set(scam1.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
@@ -352,6 +362,8 @@ export class CLight extends CBrushComp
 						scam2.mWidth=width*16;
 						scam2.mHeight=height*16;
 						scam2.ResetOrthographic();
+						ShadowUpdate=true;
+						this.mBruch.mUpdateShadow=true;
 					}
 					this.mBruch.mShadowView[4].set(scam2.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
 					this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
@@ -434,7 +446,12 @@ export class CLight extends CBrushComp
 							maxVal.w=this.mBruch.mShadowCount*6+i;
 						
 					}
-					this.mBruch.mShadowRead.set(this.mBruch.mShadowCount,maxVal);
+					//this.mBruch.mShadowRead.set(this.mBruch.mShadowCount,maxVal);
+
+					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+0]=maxVal.x;
+					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+1]=maxVal.y;
+					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+2]=maxVal.z;
+					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+3]=maxVal.w;
 				}
 			}
 			else
@@ -447,8 +464,11 @@ export class CLight extends CBrushComp
 				this.mBruch.mShadowView[5].fill(0,0,16);
 				this.mBruch.mShadowView[6].fill(0,0,16);
 			}
+
 			if(!this.mShadowOff)
 				this.mBruch.mShadowCount++;
+
+			
 		}//m_key
 
 
@@ -550,6 +570,8 @@ export class CLight extends CBrushComp
 		
 		if(Math.abs(this.mDirPos.w)>0.5 && this.mBruch!=null)
 		{
+			this.mBruch.mUpdateLight=true;
+			this.mBruch.mUpdateShadow=true;
 			this.mBruch.mCameraMap.delete(this.mShadowKey+0);
 			this.mBruch.mCameraMap.delete(this.mShadowKey+1);
 			this.mBruch.mCameraMap.delete(this.mShadowKey+2);

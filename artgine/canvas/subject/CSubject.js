@@ -469,6 +469,7 @@ export class CSubject extends CObject {
         return vec;
     }
     PushComp(_com) {
+        this.UpdateComp();
         if (_com instanceof Array) {
             for (let each4 of _com) {
                 this.PushComp(each4);
@@ -490,7 +491,6 @@ export class CSubject extends CObject {
         if (this.mPTArr)
             this.mPTArr.length = 0;
         this.mPTArr = null;
-        this.UpdateComp();
         for (var i = 0; i < this.mComArr.length; ++i) {
             if (this.mComArr[i].mSysc > _com.mSysc) {
                 this.mComArr.splice(i, 0, _com);
@@ -549,6 +549,7 @@ export class CSubject extends CObject {
         if (this.mPTArr)
             this.mPTArr.length = 0;
         this.mPTArr = null;
+        this.UpdateComp();
     }
     async LoadJSON(_file = null) {
         let buf = await CFile.Load(_file);

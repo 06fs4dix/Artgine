@@ -732,6 +732,7 @@ export class CSubject extends CObject implements IFile , IMat
 	}
 	PushComp<T extends CComponent>(_com : T) : T
 	{
+		this.UpdateComp();
 		if(_com instanceof Array)
 		{
 			for(let each4 of _com)
@@ -764,7 +765,7 @@ export class CSubject extends CObject implements IFile , IMat
 		if(this.mPTArr)
 			this.mPTArr.length=0;
 		this.mPTArr = null;
-		this.UpdateComp();
+		
 		// if(this.m_clVec)
 		// 	this.m_clVec.length=0;
 		// this.m_clVec=null;
@@ -851,12 +852,11 @@ export class CSubject extends CObject implements IFile , IMat
 		{
 			each0.Destroy();
 		}
-		// if(this.m_clVec)
-		// 	this.m_clVec.length=0;
-		// this.m_clVec=null;
+		
 		if(this.mPTArr)
 			this.mPTArr.length=0;
 		this.mPTArr = null;
+		this.UpdateComp();
 	}
 	
 	

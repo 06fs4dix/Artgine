@@ -2,13 +2,14 @@ import { CAModelCac } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
 import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, Sam2DToMat, Sam2DV4, Sam2DToV4, Sam2DSize, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, } from "./Shader";
-import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowPointProj, shadowRightCasP2, shadowTopCasV1, calcShadow, } from "./Shadow";
+import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowPointProj, shadowRightCasP2, shadowTopCasV1, calcShadow, jitter, } from "./Shadow";
 var size = 100;
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
 var colorModel = Null();
 var alphaModel = Null();
+var alphaCut = 0.1;
 var out_position = Null();
 var out_color = Null();
 var to_uv = Null();
@@ -18,7 +19,7 @@ var to_worldPos = Null();
 var to_normal = Null();
 var shadowReadList = new Sam2DV4(11);
 var shadowOn = -1.0;
-var sun = 0.0;
+var sun = 1.0;
 Build("Artgine/Shader/Voxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos], ps_main, [out_color]);
 Build("Artgine/Shader/VoxelShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
     worldMat, viewMat, projectMat, colorModel, alphaModel, size,
@@ -32,7 +33,7 @@ Build("Artgine/Shader/VoxelShadowRead", ["shadowRead"], vs_main_shadow_read, [
     ligDir, ligCol, ligCount,
     shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowCount,
     shadowWrite, shadowPointProj, shadowReadList,
-    shadowRate, PCF, texture16f, bias, normalBias, sun
+    shadowRate, PCF, texture16f, bias, normalBias, sun, jitter
 ], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
 function VoxelDirData(_dir, _f4_uv) {
     var data = new CMat3(0);
@@ -213,6 +214,7 @@ function vs_main(f4_ver, f4_uv, f2_color) {
     var light = f2_color.x * sun;
     if (light < f2_color.y)
         light = f2_color.y;
+    light *= data[2].z;
     if (f4_uv.w < -0.5) {
         to_uv.xyz = f4_uv.xyz;
         to_uv.w = -light;
@@ -239,6 +241,11 @@ function ps_main() {
     else {
         L_cor = Sam2DToColor(0.0, to_uv.xy);
     }
+    L_cor.rgb = V3MulFloat(L_cor.rgb, light);
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a <= alphaCut)
+        discard;
+    BranchEnd();
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     var DSE = new CMat3(0);
     BranchBegin("light", "L", [ligDir, ligCol, ligCount, ambientColor]);
@@ -297,8 +304,10 @@ function ps_main_shadow_write() {
         L_cor = Sam2DToColor(0.0, to_uv.xy);
     }
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    if (L_cor.a <= 0.1)
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a < alphaCut)
         discard;
+    BranchEnd();
     out_color = to_viewPos;
 }
 function vs_main_shadow_read(f4_ver, f4_uv, f2_color) {
@@ -337,8 +346,10 @@ function ps_main_shadow_read() {
         L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.z);
     }
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    if (L_cor.a <= 0.1)
+    BranchBegin("alphaCut", "A", [alphaCut]);
+    if (L_cor.a < alphaCut)
         discard;
+    BranchEnd();
     var all = 0.0;
     for (var i = 0; i < FloatToInt(shadowCount); i++) {
         var shadowRead = Sam2DToV4(shadowReadList, i);

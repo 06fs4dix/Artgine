@@ -8,19 +8,20 @@ export class CTypeUni {
 export class CBatch {
     mKey = null;
     mMesh = null;
-    mTexture = new Array();
+    mTextureKey = new Array();
+    mTextureOff = new Array();
     mValue = new Array();
     CreateKey() {
         var str = this.mMesh.Key();
         let nullCount = 0;
-        for (var i = 0; i < this.mTexture.length; ++i) {
-            if (this.mTexture[i] == null) {
+        for (var i = 0; i < this.mTextureOff.length; ++i) {
+            if (this.mTextureOff[i] == -1 || this.mTextureKey[this.mTextureOff[i]] == "")
                 nullCount++;
-                str += "null";
-            }
-            else
-                str += this.mTexture[i].Key();
-            str += "/";
+            str += this.mTextureKey[this.mTextureOff[i]];
+        }
+        if (nullCount != 0 && nullCount == this.mTextureOff.length) {
+            this.mKey = 0;
+            return;
         }
         for (let i = 0; i < this.mValue.length; ++i)
             str += this.mValue[i].mKey;
@@ -77,7 +78,8 @@ export class CBatchMgr {
         this.mBatchGlobal.Clear();
         this.mBatch = this.mBatchGDummy;
         this.mBatchGDummy.mMesh = null;
-        this.mBatchGDummy.mTexture.length = 0;
+        this.mBatchGDummy.mTextureKey.length = 0;
+        this.mBatchGDummy.mTextureOff.length = 0;
         this.mBatchGDummy.mValue.length = 0;
     }
     BatchGlobalOff() {
@@ -152,8 +154,18 @@ export class CBatchMgr {
     SetBatchSA(_sa) {
         this.mBatch.mValue.push(_sa);
     }
-    SetBatchTex(_texture) {
-        this.mBatch.mTexture = _texture;
+    SetBatchTex(_textureKey, _textureOff = null) {
+        this.mBatch.mTextureKey = _textureKey;
+        if (_textureOff == null) {
+            this.mBatch.mTextureOff = new Array();
+            for (var i = 0; i < _textureKey.length; ++i)
+                this.mBatch.mTextureOff.push(i);
+        }
+        else {
+            if (_textureOff.length == 0)
+                _textureOff.push(0);
+            this.mBatch.mTextureOff = _textureOff;
+        }
     }
     SetBatchMesh(_mesh) {
         this.mBatch.mMesh = _mesh;

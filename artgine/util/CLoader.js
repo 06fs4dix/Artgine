@@ -19,7 +19,7 @@ import CParserSpine from "./parser/CParserSpine.js";
 export class CLoaderOption extends CObject {
     mAutoLoad = true;
     mFilter = CTexture.eFilter.Linear;
-    mWrap = CTexture.eWrap.Repeat;
+    mWrap = CTexture.eWrap.Clamp;
     mMipMap = CTexture.eMipmap.GL;
     mColorTex = false;
     mAlphaCut = 0x09;
@@ -282,8 +282,8 @@ export class CLoader {
     }
     async MeshTexLoad(_file, mesh, _option) {
         let option = _option.Export();
-        if (mesh.clamp)
-            option.mWrap = CTexture.eWrap.Clamp;
+        if (mesh.clamp == false)
+            option.mWrap = CTexture.eWrap.Repeat;
         let path = _file.substring(0, _file.lastIndexOf("/")) + "/";
         let texMap = new Map();
         for (let i = 0; i < mesh.texture.length; i++) {

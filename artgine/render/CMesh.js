@@ -24,6 +24,7 @@ export class CMeshIK {
     target;
     pole;
     mix = 1;
+    aniInfo = new Array();
 }
 export class CMeshAttacher {
     bones = new Array();
@@ -31,9 +32,10 @@ export class CMeshAttacher {
     offsetPos = new CVec3();
     offsetRot = new CVec4(0, 0, 0, 1);
     offsetSca = new CVec3(1, 1, 1);
-    mixPos = 1;
+    mixPos = new CVec3(1, 1, 1);
     mixRot = 1;
-    mixSca = 1;
+    mixSca = new CVec3(1, 1, 1);
+    aniInfo = new Array();
 }
 var MeshBoneMat = 100;
 export class CMesh extends CObject {

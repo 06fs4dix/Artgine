@@ -144,6 +144,9 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	public mPause=false;
 	public mRenPriMap=new Map<number,CRenPriority>();
 	public mRenInfoMap=new Map<string,CRenInfo>();
+	mUpdateShadow=true;
+	mUpdateLight=true;
+	
 
 	
 	override IsShould(_member: string, _type: CObject.eShould): boolean 
@@ -162,15 +165,15 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 		{
 			for(let i=0;i<value.mAlphaList.Size();++i)
 			{
-				value.mAlphaList.Find(i).mPaint.ClearBatch();
+				value.mAlphaList.Find(i).mPaint.ClearCRPAuto();
 			}
 			for(let i=0;i<value.mDistanceList.Size();++i)
 			{
-				value.mDistanceList.Find(i).mPaint.ClearBatch();
+				value.mDistanceList.Find(i).mPaint.ClearCRPAuto();
 			}
 			for(let i=0;i<value.mRAlphaList.Size();++i)
 			{
-				value.mRAlphaList.Find(i).mPaint.ClearBatch();
+				value.mRAlphaList.Find(i).mPaint.ClearCRPAuto();
 			}
 		
 		}

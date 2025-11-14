@@ -66,7 +66,7 @@ export class CComponent extends CObject
 	{
 		
 	}
-	Build()
+	BuildGI()
 	{
 
 	}

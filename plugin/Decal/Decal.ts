@@ -33,7 +33,7 @@ export class CPaint3DDecal extends CPaint
     {
         super();
         //this.RefreshBound(_texture, _bound, _pos, _rot, _size);
-		this.mTexture=_textures;
+		this.mTextureKey=_textures;
 		//this.mTarget=_org;
         this.mVertex=_vertex;
         this.mVMat=_vMat;
@@ -46,7 +46,7 @@ export class CPaint3DDecal extends CPaint
 	InitChk(): void 
 	{
 		super.InitChk();	
-		this.RefreshMesh(this.mTexture,this.mVertex,this.mVMat,this.mRay,this.mSize,this.mRot);
+		this.RefreshMesh(this.mTextureKey,this.mVertex,this.mVMat,this.mRay,this.mSize,this.mRot);
 		
 		
 	}
@@ -91,7 +91,7 @@ export class CPaint3DDecal extends CPaint
 		{
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
 		}
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		var dm=this.GetDrawMesh("Artgine/DM/Decal"+this.mIndex,_vf,this.mMCI);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 

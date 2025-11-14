@@ -34,6 +34,7 @@ import { CRPAuto } from "../../CRPMgr.js"
 import { CSubject } from "../../subject/CSubject.js"
 import { CAlpha, CColor, CColorVFX } from "../CColor.js"
 import { CComponent } from "../CComponent.js"
+import { CJSON } from "../../../basic/CJSON.js"
 
 export class CRenPaint
 {
@@ -75,6 +76,9 @@ AO(1),roughness(-1),metalric(-1),emisive(1)
 
 
 */
+var gBoundDummy=new CBound();
+var gPosDummy=new CVec3();
+gPosDummy.NewWASM();
 export class CPaint extends CComponent implements IMat
 {
 
@@ -99,7 +103,7 @@ export class CPaint extends CComponent implements IMat
 	protected mRenderPass=new Array<CRenderPass>();
 	mRenPT=new Array<CRenPaint>();
 
-	protected mTexture=new Array<string>();
+	protected mTextureKey=new Array<string>();
 	public mMaterial=new CVec4(1,-1,-1,1);
 	
 	protected mUpdateLMat=true;
@@ -144,7 +148,8 @@ export class CPaint extends CComponent implements IMat
 		this.mBound.NewWASM();
 
 		this.PushTag("alphaCut");
-
+		if(gPosDummy.Ptr()==null)
+			gPosDummy.NewWASM();
 		
 	}
 	SetEnable(_val: boolean): void {
@@ -190,7 +195,7 @@ export class CPaint extends CComponent implements IMat
 		this.mFMat.Unit();
 		this.mLMat.Unit();
 		this.ClearBatch();
-		this.mTexture.length=0;
+		this.mTextureKey.length=0;
 		this.mBoundFMat.Reset();
 		this.mBound.Reset();
 		this.mShaderAttrMap.delete("mColorVFX");
@@ -279,7 +284,7 @@ export class CPaint extends CComponent implements IMat
 			};
 			_body.append(btn);
 		}
-		else if(_pointer.member=="mTexture" || _pointer.member=="mTag")
+		else if(_pointer.member=="mTextureKey" || _pointer.member=="mTag")
 		{
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""],true);
 			// if(_pointer.member=="mTag")
@@ -337,7 +342,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		super.SetOwner(_obj);
 		this.ClearCRPAuto();
-		this.SetTexture(this.mTexture);
+		this.SetTexture(this.mTextureKey);
 	}
 	//public m_material=new CVec4(1,0,0,0);
 	SetMaterial(roughness=-1, metalric=-1,emissive=1,ambientOcclusion=1)
@@ -357,7 +362,7 @@ export class CPaint extends CComponent implements IMat
 	
 	UpdateRenPt()
 	{
-		let pos=CPoolGeo.ProductV3();
+		let pos=gPosDummy;
 
 		for(let i=0;i<this.mRenPT.length;++i)
 		{
@@ -418,7 +423,7 @@ export class CPaint extends CComponent implements IMat
 					
 			}
 		}
-		CPoolGeo.RecycleV3(pos);
+		//CPoolGeo.RecycleV3(pos);
 	}
 	
 	//이 함수에 목적을 모르겟음.....
@@ -490,14 +495,21 @@ export class CPaint extends CComponent implements IMat
 		super.Import(_target);
 		this.Refresh();
 	}
+	// ImportCJSON(_json: CJSON): this {
+
+	// 	if(_json.Get("mTexture")!=null)
+	// 		_json.Set("mTextureKey",_json.Get("mTexture"));
+
+	// 	return super.ImportCJSON(_json);
+	// }
 	
 	override EditChange(_pointer : CPointer,_child : boolean)
 	{
 		super.EditChange(_pointer,_child);
 
-		if(_pointer.IsRef(this.mTexture))
+		if(_pointer.IsRef(this.mTextureKey))
 		{
-			this.SetTexture(this.mTexture);
+			this.SetTexture(this.mTextureKey);
 			this.ClearBatch();
 			//this.ClearCRPAuto();
 			//this.WTRefresh();
@@ -712,9 +724,17 @@ export class CPaint extends CComponent implements IMat
 		
 		
 	}
-	FindCShaderAttr(_key : string)
+	FindCShaderAttr(_key : string | number)
 	{
-		return this.mShaderAttrMap.get(_key);
+		if(typeof _key =="string")
+			return this.mShaderAttrMap.get(_key);
+		
+		for(let sa of this.mShaderAttrMap.values())
+		{
+			if(sa.mEach==_key)
+				return sa;
+		}
+		return null;
 	}
 	// SetRGBA(r : number,g : number,b : number,a : number);
 	SetRGBA(_rgba : CVec4)
@@ -877,7 +897,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		if(this.mAutoLoad!=null)
 		{
-			for(let texKey of this.mTexture)
+			for(let texKey of this.mTextureKey)
 			{
 				if(texKey.indexOf(".atl")!=-1)	continue;
 				_owner.GetFrame().Load().Exe(texKey,this.mAutoLoad);
@@ -963,12 +983,13 @@ export class CPaint extends CComponent implements IMat
 	}
 	GetBoundFMat()
 	{
-		let bound=this.mBoundFMat.Export();
-		bound.mMax=CMath.V3AddV3(bound.mMax,this.GetFMat().xyz,bound.mMax);
-		bound.mMin=CMath.V3AddV3(bound.mMin,this.GetFMat().xyz,bound.mMin);
+		gBoundDummy.Import(this.mBoundFMat);
+		//let bound=this.mBoundFMat.Export();
+		gBoundDummy.mMax=CMath.V3AddV3(gBoundDummy.mMax,this.GetFMat().xyz,gBoundDummy.mMax);
+		gBoundDummy.mMin=CMath.V3AddV3(gBoundDummy.mMin,this.GetFMat().xyz,gBoundDummy.mMin);
 
 
-		return bound;
+		return gBoundDummy;
 	}
 	SetBound(_bound)
 	{
@@ -1016,50 +1037,66 @@ export class CPaint extends CComponent implements IMat
 	SetTexture(_a : string,_b : string,_c : string,_d : string,_e : string);
 	SetTexture(_a,_b=null,_c=null,_d=null,_e=null)
 	{
+		let change=false;
 		if(_a instanceof Array)
 		{
-			if(_a != this.mTexture)
+			if(_a != this.mTextureKey)
 			{
-				this.mTexture.length=0;
+				//this.mTexture.length=0;
 				for(var i=0;i<_a.length;++i)
-					this.mTexture.push(_a[i]);
+				{
+					if(_a[i]!=this.mTextureKey[i])
+					{
+						change=true;
+						this.mTextureKey[i]=_a[i];
+					}
+					
+				}
+					
 			}
 			
 		}
 		else
 		{
 			//this.m_texture=new Array();
-			this.mTexture.length=0;
-			this.mTexture.push(_a);
-			if(_b!=null)	this.mTexture.push(_b);
-			if(_c!=null)	this.mTexture.push(_c);
-			if(_d!=null)	this.mTexture.push(_d);
-			if(_e!=null)	this.mTexture.push(_e);
-		}
-		for(let each0 of this.mBatchMap.values())
-		{
-			if(each0!=null)
+			if(_a!=this.mTextureKey[0])
 			{
-				for(let i=0;i<each0.length;++i)
-				{
-					let bh=each0[i];
-					//배치에 키만 재생성
-					if(bh!=null)	bh.CreateKey();
-				}
+				change=true;
+				this.mTextureKey[0]=_a;
 			}
-			
-			
+			if(_b!=this.mTextureKey[1])
+			{
+				change=true;
+				this.mTextureKey[1]=_b;
+			}
+			if(_c!=this.mTextureKey[2])
+			{
+				change=true;
+				this.mTextureKey[2]=_c;
+			}
+			if(_d!=this.mTextureKey[3])
+			{
+				change=true;
+				this.mTextureKey[3]=_d;
+			}
+			if(_e!=this.mTextureKey[4])
+			{
+				change=true;
+				this.mTextureKey[4]=_e;
+			}
 		}
-
+		
+		//let texList=new Array();
 		if(this.mAutoLoad!=null && this.mOwner!=null && this.mOwner.GetFrame()!=null)
 		{
-			for(let i=0;i<this.mTexture.length;++i)
+			for(let i=0;i<this.mTextureKey.length;++i)
 			{
-				let texKey=this.mTexture[i];
+				let texKey=this.mTextureKey[i];
 				if(texKey.indexOf(".atl")!=-1 || texKey.indexOf("base64")!=-1 ||texKey.indexOf(".tex")!=-1 || 
 					texKey=="" || texKey==null)	continue;
 				
 				let tex=this.mOwner.GetFrame().Res().Find(texKey);
+				//texList.push(tex);
 				if(tex!=null && tex instanceof CTexture && i==0)
 				{
 					if(tex.GetAlpha()) this.mAlphaTex = true;
@@ -1076,57 +1113,76 @@ export class CPaint extends CComponent implements IMat
 					
 			}
 		}
-		
-	}
-	GetResTexture(_off : Array<number>=[],_texArr : Array<CTexture>=null) 
-	{	
-		if(_texArr==null)	_texArr=new Array<CTexture>();
-		
-		if(_off.length==0)
+		if(change)
 		{
-			for(let i=0;i<this.mTexture.length;++i)
+			for(let each0 of this.mBatchMap.values())
 			{
-				_off.push(i);
-			}
-		}
-		
-		for(let i=0;i<_off.length;++i)
-		{
-			if(_off[i]==-1)	
-			{
-				_texArr.push(null);
-				continue;
-			}
-				
-			let tex=this.GetOwner().GetFrame().Res().Find(this.mTexture[_off[i]]);
-			if(tex instanceof CAtlas)
-			{
-				
-				if(tex.mBase64.mData==null || tex.GetTex()==null)
+				if(each0!=null)
 				{
-					if(tex.GetTex()==null)
-						tex.CreateTex();
-					
-				
-				}
-				else if(tex.GetTex().GetGBuf().length==0)
-				{
-					this.GetOwner().GetFrame().Ren().BuildTexture(tex.GetTex());
+					for(let i=0;i<each0.length;++i)
+					{
+						let bh=each0[i];
+						//배치에 키만 재생성
+						if(bh!=null)	bh.CreateKey();
+					}
 				}
 				
-				tex=tex.GetTex();
+				
 			}
-			_texArr.push(tex);
 		}
 
-		return _texArr;	
+		
+		
 	}
-	GetTexture() {	return this.mTexture;	}
+	// GetResTexture(_off : Array<number>=[],_texArr : Array<CTexture>=null) 
+	// {	
+	// 	if(_texArr==null)	_texArr=new Array<CTexture>();
+		
+	// 	if(_off.length==0)
+	// 	{
+	// 		for(let i=0;i<this.mTextureKey.length;++i)
+	// 		{
+	// 			_off.push(i);
+	// 		}
+	// 	}
+		
+	// 	for(let i=0;i<_off.length;++i)
+	// 	{
+	// 		if(_off[i]==-1)	
+	// 		{
+	// 			_texArr.push(null);
+	// 			continue;
+	// 		}
+				
+	// 		let tex=this.GetOwner().GetFrame().Res().Find(this.mTextureKey[_off[i]]);
+	// 		if(tex instanceof CAtlas)
+	// 		{
+				
+	// 			if(tex.mBase64.mData==null || tex.GetTex()==null)
+	// 			{
+	// 				if(tex.GetTex()==null)
+	// 					tex.CreateTex();
+					
+				
+	// 			}
+	// 			else if(tex.GetTex().GetGBuf().length==0)
+	// 			{
+	// 				this.GetOwner().GetFrame().Ren().BuildTexture(tex.GetTex());
+	// 			}
+				
+	// 			tex=tex.GetTex();
+	// 		}
+	// 		_texArr.push(tex);
+	// 	}
+
+	// 	return _texArr;	
+	// }
+	GetTexture() {	return this.mTextureKey;	}
 	GetTexHash() 
 	{
 		let str="";
 		let hash=0;
-		for(let texKey of this.mTexture)
+		for(let texKey of this.mTextureKey)
 		{
 			str+=texKey;
 		}
@@ -1153,7 +1209,7 @@ export class CPaint extends CComponent implements IMat
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
 		if(this.mShaderAttrMap.get("colorVFX")!=null)
 			this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
-		if(this.mTexture.length>0)
-			this.SetTexture(this.mTexture);
+		if(this.mTextureKey.length>0)
+			this.SetTexture(this.mTextureKey);
 	}
 }

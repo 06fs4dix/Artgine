@@ -241,13 +241,119 @@ export default class CParserSpine extends CParser {
                     }
                 }
                 else {
-                    console.log(texData);
                     continue;
                 }
                 node.mData.ci.vertexCount = posb.bufF.Size(3);
                 for (let i = 0; i < node.mData.ci.vertexCount; ++i) {
                     norb.bufF.Push(nor);
                 }
+            }
+        }
+        let constraintList = new Array();
+        if (this.mJSON.Get("ik")) {
+            let iks = this.mJSON.Get("ik").GetDocument();
+            for (let ikObj of iks) {
+                ikObj.type = "ik";
+                constraintList.push(ikObj);
+            }
+        }
+        if (this.mJSON.Get("transform")) {
+            let transforms = this.mJSON.Get("transform").GetDocument();
+            for (let transformObj of transforms) {
+                transformObj.type = "transform";
+                constraintList.push(transformObj);
+            }
+        }
+        if (this.mJSON.Get("path")) {
+            let transforms = this.mJSON.Get("path").GetDocument();
+            for (let transformObj of transforms) {
+                transformObj.type = "path";
+                constraintList.push(transformObj);
+            }
+        }
+        constraintList.sort((a, b) => {
+            const aOrder = a.order ?? 0;
+            const bOrder = b.order ?? 0;
+            if (aOrder > bOrder)
+                return 1;
+            if (aOrder == bOrder)
+                return 0;
+            if (aOrder < bOrder)
+                return -1;
+        });
+        for (let constraint of constraintList) {
+            if (constraint.type == "ik") {
+                if (constraint.target == null || constraint.bones.length == 0) {
+                    continue;
+                }
+                let tip = constraint.bones[constraint.bones.length - 1];
+                const tipBoneObj = bones.GetDocument().find(bone => bone.name == tip);
+                const length = tipBoneObj.length ? tipBoneObj.length : 0;
+                const info = new CMeshIK();
+                info.target = constraint.target;
+                info.bones = constraint.bones;
+                if (constraint.mix != null)
+                    info.mix = constraint.mix;
+                if (length > 0) {
+                    const tipBone = this.mMesh.meshTree.Find(tip);
+                    const ikBoneKey = tip + "_ik";
+                    info.bones.push(ikBoneKey);
+                    const newTipBone = tipBone.PushChild(ikBoneKey);
+                    newTipBone.mData = new CMeshDataNode();
+                    newTipBone.mData.pos = new CVec3(length, 0, 0);
+                    if (constraint.bendPositive != null) {
+                        const poleBoneKey = tip + "_pole";
+                        info.pole = poleBoneKey;
+                        const poleBone = tipBone.PushChild(poleBoneKey);
+                        poleBone.mData = new CMeshDataNode();
+                        poleBone.mData.pos = new CVec3(0, constraint.bendPositive ? -100 : 100, 0);
+                    }
+                }
+                this.mMesh.ik.set(constraint.name, info);
+            }
+            else if (constraint.type == "transform") {
+                if (constraint.target == null || constraint.bones.length == 0) {
+                    continue;
+                }
+                const info = new CMeshAttacher();
+                info.target = constraint.target;
+                info.bones = constraint.bones;
+                if (constraint.rotation != null)
+                    info.offsetRot = CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(constraint.rotation)));
+                if (constraint.x != null)
+                    info.offsetPos.x = constraint.x;
+                if (constraint.y != null)
+                    info.offsetPos.y = constraint.y;
+                if (constraint.scaleX != null)
+                    info.offsetSca.x = constraint.scaleX;
+                if (constraint.scaleY != null)
+                    info.offsetSca.y = constraint.scaleY;
+                if (constraint.mixRotate != null)
+                    info.mixRot = constraint.rotateMix;
+                if (constraint.mixX != null)
+                    info.mixPos.x = constraint.mixX;
+                if (constraint.mixY != null)
+                    info.mixPos.y = constraint.mixY;
+                if (constraint.mixScaleX != null)
+                    info.mixSca.x = constraint.scaleMix;
+                if (constraint.mixScaleY != null)
+                    info.mixSca.y = constraint.scaleMix;
+                if (constraint.translateMix != null) {
+                    info.mixPos.x = constraint.translateMix;
+                    info.mixPos.y = constraint.translateMix;
+                }
+                if (constraint.scaleMix != null) {
+                    info.mixSca.x = constraint.scaleMix;
+                    info.mixSca.y = constraint.scaleMix;
+                }
+                if (constraint.rotateMix != null) {
+                    info.mixRot = constraint.rotateMix;
+                }
+                info.mixPos.z = 0;
+                info.mixSca.z = 0;
+                this.mMesh.attacher.set(constraint.name, info);
+            }
+            else if (constraint.type == "path") {
             }
         }
         let endTime = 0;
@@ -326,8 +432,12 @@ export default class CParserSpine extends CParser {
                         kf.value = node.mData.rot.Export();
                         if (aData.time != null)
                             kf.key += Math.trunc(aData.time * 3000);
-                        if (aData.angle != null)
-                            kf.value = CMath.QutMul(kf.value, CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(aData.angle))));
+                        if (aData.angle != null) {
+                            if (kf.value.IsZero())
+                                kf.value = CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(aData.angle)));
+                            else
+                                kf.value = CMath.QutMul(kf.value, CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(aData.angle))));
+                        }
                         node.mData.keyFrameRot.push(kf);
                         if (endTime < kf.key)
                             endTime = kf.key;
@@ -359,6 +469,14 @@ export default class CParserSpine extends CParser {
             aniInfo.end = endTime;
             this.mMesh.aniMap.set(aniKey, aniInfo);
             endTime += 1000;
+            for (let ikKey in animations[aniKey].ik) {
+                let ikInfo = this.mMesh.ik.get(ikKey);
+                ikInfo.aniInfo.push(aniInfo);
+            }
+            for (let transformKey in animations[aniKey].transform) {
+                let attachInfo = this.mMesh.attacher.get(transformKey);
+                attachInfo.aniInfo.push(aniInfo);
+            }
         }
         for (const [aniKey, aniInfo] of this.mMesh.aniMap) {
             const AddStartKF = (_kfList, _basic) => {
@@ -466,102 +584,6 @@ export default class CParserSpine extends CParser {
                 AddStartKF(node.mData.keyFrameTex, baseTex);
                 AddEndKF(node.mData.keyFrameTex);
                 AddBaseKF(node.mData.keyFrameTex, baseTex);
-            }
-        }
-        let constraintList = new Array();
-        if (this.mJSON.Get("ik")) {
-            let iks = this.mJSON.Get("ik").GetDocument();
-            for (let ikObj of iks) {
-                ikObj.type = "ik";
-                constraintList.push(ikObj);
-            }
-        }
-        if (this.mJSON.Get("transform")) {
-            let transforms = this.mJSON.Get("transform").GetDocument();
-            for (let transformObj of transforms) {
-                transformObj.type = "transform";
-                constraintList.push(transformObj);
-            }
-        }
-        if (this.mJSON.Get("path")) {
-            let transforms = this.mJSON.Get("path").GetDocument();
-            for (let transformObj of transforms) {
-                transformObj.type = "path";
-                constraintList.push(transformObj);
-            }
-        }
-        constraintList.sort((a, b) => {
-            const aOrder = a.order ?? 0;
-            const bOrder = b.order ?? 0;
-            if (aOrder > bOrder)
-                return 1;
-            if (aOrder == bOrder)
-                return 0;
-            if (aOrder < bOrder)
-                return -1;
-        });
-        for (let constraint of constraintList) {
-            if (constraint.type == "ik") {
-                if (constraint.target == null || constraint.bones.length == 0) {
-                    continue;
-                }
-                let tip = constraint.bones[constraint.bones.length - 1];
-                const tipBoneObj = bones.GetDocument().find(bone => bone.name == tip);
-                const length = tipBoneObj.length ? tipBoneObj.length : 0;
-                const info = new CMeshIK();
-                info.target = constraint.target;
-                info.bones = constraint.bones;
-                if (constraint.mix != null)
-                    info.mix = constraint.mix;
-                if (length > 0) {
-                    const tipBone = this.mMesh.meshTree.Find(tip);
-                    const ikBoneKey = tip + "_ik";
-                    info.bones.push(ikBoneKey);
-                    const newTipBone = tipBone.PushChild(ikBoneKey);
-                    newTipBone.mData = new CMeshDataNode();
-                    newTipBone.mData.pos = new CVec3(length, 0, 0);
-                    if (constraint.bendPositive != null) {
-                        const poleBoneKey = tip + "_pole";
-                        info.pole = poleBoneKey;
-                        const poleBone = tipBone.PushChild(poleBoneKey);
-                        poleBone.mData = new CMeshDataNode();
-                        poleBone.mData.pos = new CVec3(0, constraint.bendPositive ? -100 : 100, 0);
-                    }
-                }
-                this.mMesh.ik.set(constraint.name, info);
-            }
-            else if (constraint.type == "transform") {
-                if (constraint.target == null || constraint.bones.length == 0) {
-                    continue;
-                }
-                const info = new CMeshAttacher();
-                info.target = constraint.target;
-                info.bones = constraint.bones;
-                if (constraint.rotation != null)
-                    info.offsetRot = CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(constraint.rotation)));
-                if (constraint.x != null)
-                    info.offsetPos.x = constraint.x;
-                if (constraint.y != null)
-                    info.offsetPos.y = constraint.y;
-                if (constraint.scaleX != null)
-                    info.offsetSca.x = constraint.scaleX;
-                if (constraint.scaleY != null)
-                    info.offsetSca.y = constraint.scaleY;
-                if (constraint.rotateMix != null)
-                    info.mixRot = constraint.rotateMix;
-                if (constraint.translateMix != null)
-                    info.mixPos = constraint.translateMix;
-                if (constraint.scaleMix != null)
-                    info.mixSca = constraint.scaleMix;
-                if (constraint.name == "front-foot-board-transform") {
-                    info.mixPos = 1;
-                }
-                if (constraint.name == "rear-foot-board-transform") {
-                    info.mixPos = 1;
-                }
-                this.mMesh.attacher.set(constraint.name, info);
-            }
-            else if (constraint.type == "path") {
             }
         }
         CUtilRender.MeshBoundUpdate(this.mMesh);

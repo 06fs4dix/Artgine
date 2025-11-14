@@ -230,6 +230,8 @@ export class  CColliderVoxel extends CCollider
 	constructor(_voxel : CVoxel)
 	{
 		super();
+		if(_voxel==null)	return;
+
 		this.mVoxel=_voxel;
 
 		
@@ -435,7 +437,7 @@ export class CVoxel extends CSubject
 			_light.y=0.0;
 			return;
 		}
-
+		
 
         if(x<0 || x>=this.mCount.x || y<0 || y>=this.mCount.y || 
 			z<0 || z>=this.mCount.z)
@@ -445,6 +447,7 @@ export class CVoxel extends CSubject
 			_light.x=CVoxel.GSun(this.mTexInfo[x+this.mCount.x*y+this.mCount.x*this.mCount.y*z])/CVoxel.Sun;
 			_light.y=CVoxel.GTorch(this.mTexInfo[x+this.mCount.x*y+this.mCount.x*this.mCount.y*z])/CVoxel.Torch;
 		}
+			
 		
 
 	}

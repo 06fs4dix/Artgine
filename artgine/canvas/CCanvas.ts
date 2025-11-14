@@ -188,16 +188,16 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				}
 				this.mBrush.ClearRen();
 			}
-			for(let [key, obj] of this.mSubMap)
-			{
-				let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
-				for(let pt of ptVec)
-				{
+			// for(let [key, obj] of this.mSubMap)
+			// {
+			// 	let ptVec=obj.FindComps(CPaint, true) as Array<CPaint>;
+			// 	for(let pt of ptVec)
+			// 	{
 					
-					pt.ClearCRPAuto();
-				}
+			// 		pt.ClearCRPAuto();
+			// 	}
 				
-			}
+			// }
 			
 			// for(let [key, obj] of this.mSubMap)
 			// {
@@ -1080,6 +1080,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	{
 		_camcomp.RecvGetGeometryInfo(this.mGI,this.Key());
 	}
+	GetGI()	{	return this.mGI;	}
 	
 	Patch(_stream : CStream,_sukPass=true)
 	{

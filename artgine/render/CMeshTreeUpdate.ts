@@ -16,15 +16,51 @@ export class CMeshTreeUpdate
 		
 	}
 	
-	static FindBFrame(_frameList : Array<CKeyFrame>,_key : number)
+	// static FindBFrame(_frameList : Array<CKeyFrame>,_key : number)
+	// {
+	// 	let frame : CKeyFrame=null;
+	// 	if (_frameList.length > 0)
+	// 	{
+	// 		frame = _frameList[0];
+	// 		for (var i = 0; i < _frameList.length; ++i)
+	// 		{
+	// 			if (_key > _frameList[i].key)
+	// 			{
+	// 				frame = _frameList[i];
+	// 			}
+	// 			else
+	// 				break;
+	// 		}
+	// 	}
+	// 	return frame;
+	// }
+	// static FindAFrame(_frameList : Array<CKeyFrame>,_key : number)
+	// {
+	// 	let frame : CKeyFrame=null;
+	// 	if (_frameList.length > 0)
+	// 	{
+	// 		for (var i = _frameList.length-1; i >= 0; --i)
+	// 		{
+	// 			if (_key <= _frameList[i].key)
+	// 			{
+	// 				frame = _frameList[i];
+	// 			}
+	// 			else
+	// 				break;
+	// 		}
+	// 	}
+	// 	return frame;
+	// }
+
+	static FindAFrame(_frameList : Array<CKeyFrame>,_key : number)
 	{
 		let frame : CKeyFrame=null;
 		if (_frameList.length > 0)
 		{
-			frame = _frameList[0];
-			for (var i = 0; i < _frameList.length; ++i)
+			frame = _frameList[_frameList.length-1];
+			for (var i = _frameList.length-1; i >= 0; --i)
 			{
-				if (_key > _frameList[i].key)
+				if (_key < _frameList[i].key)
 				{
 					frame = _frameList[i];
 				}
@@ -34,14 +70,15 @@ export class CMeshTreeUpdate
 		}
 		return frame;
 	}
-	static FindAFrame(_frameList : Array<CKeyFrame>,_key : number)
+	static FindBFrame(_frameList : Array<CKeyFrame>,_key : number)
 	{
 		let frame : CKeyFrame=null;
 		if (_frameList.length > 0)
 		{
-			for (var i = _frameList.length-1; i >= 0; --i)
+			frame = _frameList[0];
+			for (var i = 0; i < _frameList.length; ++i)
 			{
-				if (_key <= _frameList[i].key)
+				if (_key >= _frameList[i].key)
 				{
 					frame = _frameList[i];
 				}

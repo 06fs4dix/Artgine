@@ -36,6 +36,8 @@ export class CMeshIK
 	
 	public pole : string;
 	public mix : number = 1;
+
+	public aniInfo : Array<CMeshAniInfo> = new Array();
 }
 export class CMeshAttacher
 {
@@ -46,9 +48,11 @@ export class CMeshAttacher
 	public offsetRot : CVec4 = new CVec4(0,0,0,1);
 	public offsetSca : CVec3 = new CVec3(1,1,1);
 
-	public mixPos : number = 1;
+	public mixPos : CVec3 = new CVec3(1, 1, 1);
 	public mixRot : number = 1;
-	public mixSca : number = 1;
+	public mixSca : CVec3 = new CVec3(1, 1, 1);
+
+	public aniInfo : Array<CMeshAniInfo> = new Array();
 }
 var MeshBoneMat=100;
 export class CMesh extends CObject

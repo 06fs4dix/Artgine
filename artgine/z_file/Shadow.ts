@@ -12,7 +12,7 @@ export var shadowPointProj: Sam2DMat=new Sam2DMat(11,529);
 
 //shadow uniform
 export var shadowOn : number = -1.0;
-export var shadowReadList: Sam2DV4=new Sam2DV4(11);
+export var shadowReadList: Sam2DV4=new Sam2DV4(11,533);
 
 //uniform
 export var texture16f : number =0;
@@ -71,6 +71,10 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     var f16Chk : number=1.0;
     if(texture16f>0.0)	f16Chk=4.0;
 
+
+    
+
+
     var texSize : CVec3 = Sam2DArrSize(0.0);
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
@@ -110,7 +114,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv0N);
                 var depth : number = shadowParam.z;			
 
-                sVal += (_uvZ0.z + _biasAll) >= depth ? 1.0 : 0.0;
+                sVal += (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
                 count += 1.0;
                 
 
@@ -267,34 +271,20 @@ function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DMat, _projMa
 }
 
 export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPos : CVec4) : number {
-    var lightDir : CVec4 = Sam2DToV4(ligDir, _read.x);
+    
     
 
-    //라이트가 디렉셔널 라이트가 아니거나 Init되지 않았음
-    if(lightDir.w>1.5) {
-        return 1.0;
-    }
 
-    //노말과 라이트 사이의 각도
-    var nDotL : number = 1.0;
-    nDotL = V3Dot(V3Nor(_nor), V3Nor(lightDir.xyz));
   
     // 노말 오프셋 계산 (셀프 섀도잉 방지)
     var normalScale : number = normalBias;
-    
-    // 빛과의 각도가 90도에 가까울수록 노말 스케일 증가
-    //normalScale *= (1.0 + (1.0 - Math.abs(nDotL)) * 2.0);
     
     var normalOffset : CVec3 = V3MulFloat(V3Nor(_nor), normalScale);
 
     // 바이어스 계산 (셀프 섀도잉 방지)
     var biasAll : number = bias;
 
-    // 빛과의 각도가 90도에 가까울수록 바이어스 증가
-    //var slopeScale : number = 1.0 - nDotL;
-    //biasAll *= (1.0 + slopeScale * 3.0);
-    
-
+ 
     var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, 1.0, normalOffset, _worldPos, _index);
     var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 1.0, normalOffset, _worldPos, _index);
     var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);

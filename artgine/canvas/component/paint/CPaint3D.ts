@@ -54,6 +54,8 @@ export class CPaint3D extends CPaint
 
 	public mCamCompLayer=[];
 	public mTexLoad=false;
+	
+	mFMatLink=false;
 
 	constructor();
 	constructor(_mesh : string);
@@ -198,7 +200,7 @@ export class CPaint3D extends CPaint
 	SetMesh(_mesh)
 	{
 		this.mTree=null;
-		this.mTexture.length=0;
+		this.mTextureKey.length=0;
 		this.mMesh=_mesh;
 		this.mWeightMat=new Float32Array(0);
 		this.mBound.Reset();
@@ -263,7 +265,7 @@ export class CPaint3D extends CPaint
 		
 		
 		
-		if(this.mTexture.length==0)
+		if(this.mTextureKey.length==0)
 		{
 			this.SetTexture(this.mMeshRes.texture);
 			
@@ -288,6 +290,8 @@ export class CPaint3D extends CPaint
 		}
 		if(this.mMeshRes.skin.length>0)
 			this.mSkinType=SDF.eSkin.Bone;
+		else
+			this.mSkinType=SDF.eSkin.None;
 		
 	
 		this.mTree = new CTree();
@@ -333,6 +337,18 @@ export class CPaint3D extends CPaint
 			
 		this.mUpdateFMat=true;
 		this.mBoundFMatR = 0;
+
+		if(node.Size()==1)
+		{
+			let ne=node.Find(0);
+			if(ne.sum.IsUnit())
+			{
+				ne.sumSA.mData=this.GetFMat();
+				this.mFMatLink=true;
+			}
+		}
+
+
 		return true;
 	}
 	
@@ -341,7 +357,7 @@ export class CPaint3D extends CPaint
 		super.Update(_update);
 		
 
-		if(this.mUpdateFMat==false)	return;
+		if(this.mUpdateFMat==false || this.mFMatLink)	return;
 		if(CWASM.IsWASM())
 		{
 			this.mFMat.mF32A[3]=this.mFMat.mF32A[12];
@@ -367,7 +383,10 @@ export class CPaint3D extends CPaint
 			{
 				if(this.mSkinType!=SDF.eSkin.None && nodemp.md.mData.ci!=null)
 				{
-					CMath.MatMul(this.mLMat,this.mOwner.GetMat(),nodemp.sum);
+					//CMath.MatMul(this.mLMat,this.mOwner.GetMat(),nodemp.sum);
+					nodemp.sum.Import(this.GetFMat());
+					
+					//CMath.MatMul(this.mLMat,this.mOwner.GetMat(),nodemp.sum);
 				}
 				else if(mpiData.FMatAtt==false && mpiData.pst.IsUnit())
 				{
@@ -497,7 +516,7 @@ export class CPaint3D extends CPaint
 	RenderMesh(_vf : CShader,_node :CMeshPaint,_barr : Array<CBatch>,_off : number)
 	{
 		// let test=false;
-		// if(_node.md.Key().indexOf("head")!=-1 || _node.md.Key().indexOf("mouth")!=-1)
+		// if(_node.md.Key().indexOf("mu")!=-1)
 		// {
 		// 	test=true;
 		// }
@@ -519,10 +538,10 @@ export class CPaint3D extends CPaint
 				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel",_node.mpi.mData.color));
 				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel",_node.mpi.mData.alpha));
 			}
-			if(_node.mpi.mData.texture.length==0)
-				this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
-			else
-				this.mOwner.GetFrame().BMgr().SetBatchTex(_node.mpi.mData.texture);
+			// if(_node.mpi.mData.texture.length==0)
+			// 	this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
+			// else
+			this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey,_node.mpi.mData.textureOff);
 			
 			if (_vf.mUniform.get("material") != null)
 				this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
@@ -570,7 +589,7 @@ export class CPaintCube extends CPaint3D
 	constructor(_cubeTex)
 	{
 		super();
-		this.mTexture[0]=_cubeTex;
+		this.mTextureKey[0]=_cubeTex;
 	}
 	InitChk()
 	{
@@ -679,7 +698,7 @@ export class CPaintMeshMerge extends CPaint
 		{
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
 		}
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.mHash,_vf,this.mMeshDataNode.ci);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
@@ -704,9 +723,9 @@ export class CPaintMeshMerge extends CPaint
 			{
 				
 				let push=true;
-				for(let i=0;i<this.mTexture.length;++i)
+				for(let i=0;i<this.mTextureKey.length;++i)
 				{
-					if(this.mTexture[i]==tex)
+					if(this.mTextureKey[i]==tex)
 					{
 						push=false;
 						texOff.push(i);
@@ -715,8 +734,8 @@ export class CPaintMeshMerge extends CPaint
 				}
 				if(push)
 				{
-					texOff.push(this.mTexture.length);
-					this.mTexture.push(tex);
+					texOff.push(this.mTextureKey.length);
+					this.mTextureKey.push(tex);
 				}	
 				
 			}

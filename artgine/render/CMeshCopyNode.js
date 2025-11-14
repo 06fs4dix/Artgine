@@ -18,7 +18,7 @@ export class CMeshCopyNode {
     updateMat = CUpdate.eType.Not;
     FMatAtt;
     textureOff;
-    texture;
+    updateTex = false;
     constructor() {
         this.bpos = null;
         this.brot = null;
@@ -30,7 +30,6 @@ export class CMeshCopyNode {
         this.color = null;
         this.alpha = null;
         this.textureOff = new Array();
-        this.texture = new Array();
         this.FMatAtt = false;
     }
     PRSReset() {

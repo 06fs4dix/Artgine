@@ -210,7 +210,7 @@ export class CCollider extends CGeometryComp
 	Update(_update: CUpdate) {
 		if(this.mGI!=null)	this.mGI.mFixedComp.Push(this);
 	}
-	Build()
+	BuildGI()
 	{
 		
 

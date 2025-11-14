@@ -13,9 +13,9 @@ export class CRay extends CObject {
     GetPosition() { return this.mVec3List[1]; }
     GetOriginal() { return this.mVec3List[2]; }
     GetVecList() { return this.mVec3List; }
-    SetDirect(_vec) { this.mVec3List[0] = _vec.Export(); }
-    SetPosition(_vec) { this.mVec3List[1] = _vec.Export(); }
-    SetOriginal(_vec) { this.mVec3List[2] = _vec.Export(); }
+    SetDirect(_vec) { this.mVec3List[0].Import(_vec); }
+    SetPosition(_vec) { this.mVec3List[1].Import(_vec); }
+    SetOriginal(_vec) { this.mVec3List[2].Import(_vec); }
     Export(_copy, _resetKey) {
         var dummy = new CRay();
         for (var i = 0; i < 3; ++i)

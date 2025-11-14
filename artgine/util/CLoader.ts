@@ -33,7 +33,7 @@ export class CLoaderOption extends CObject
 {
 	public mAutoLoad=true;
 	public mFilter=CTexture.eFilter.Linear;
-	public mWrap=CTexture.eWrap.Repeat;
+	public mWrap=CTexture.eWrap.Clamp;
 	public mMipMap=CTexture.eMipmap.GL;
 	public mColorTex=false;
 	//public mBufCopy=false;
@@ -352,7 +352,7 @@ export class CLoader
 		
 
 	}
-	private async TextureLoad(_file,_buffer,_option : CLoaderOption)
+	async TextureLoad(_file,_buffer,_option : CLoaderOption)
 	{	
 		if(_option==null)	_option=new CLoaderOption();
 			
@@ -450,8 +450,8 @@ export class CLoader
 	async MeshTexLoad(_file : string,mesh : CMesh,_option : CLoaderOption)
 	{
 		let option=_option.Export();
-		if(mesh.clamp)
-			option.mWrap=CTexture.eWrap.Clamp;
+		if(mesh.clamp==false)
+			option.mWrap=CTexture.eWrap.Repeat;
 
 		
 		let path=_file.substring(0,_file.lastIndexOf("/"))+"/";

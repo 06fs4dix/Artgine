@@ -27,7 +27,8 @@ export class CMeshCopyNode implements IMat
 	//public all : CMat;
 	
 	public textureOff : Array<number>;
-	public texture : Array<CTexture>;
+	updateTex=false;
+	//public texture : Array<CTexture>;
 	//public materialOff : Array<number>;
 	
 	constructor()
@@ -45,7 +46,7 @@ export class CMeshCopyNode implements IMat
 		//this.all=new CMat();
 		
 		this.textureOff=new Array();
-		this.texture=new Array();
+		//this.texture=new Array();
 		//this.materialOff=new Array();
 		this.FMatAtt=false;
 	}

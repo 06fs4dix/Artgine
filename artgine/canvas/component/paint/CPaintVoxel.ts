@@ -54,6 +54,7 @@ export class CPaintVoxel extends CPaint
 		this.mMCI.Create(CVertexFormat.eIdentifier.Position);
 		this.mMCI.Create(CVertexFormat.eIdentifier.UV);
 		this.mMCI.Create(CVertexFormat.eIdentifier.Color);
+		this.PushTag("alphaCut");
 
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -62,21 +63,34 @@ export class CPaintVoxel extends CPaint
 
 		return super.IsShould(_member,_type);
 	}
-	InitChk()
-	{
-		super.InitChk();
+	// InitChk()
+	// {
+	// 	super.InitChk();
 
+	// 	if(this.mRenderPass.length==0)
+	// 	{
+	// 		var rp=new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
+	// 		rp.mPriority = CRenderPass.ePriority.BackGround;
+	// 		this.mRenderPass=[rp];
+	// 	}
+
+		
+
+	// 	//Start에 있어야 하지 않나?
+		
+	// }
+	EmptyRPChk()
+	{
 		if(this.mRenderPass.length==0)
 		{
-			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
+			
+
+			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxelKey());
 			rp.mPriority = CRenderPass.ePriority.BackGround;
 			this.mRenderPass=[rp];
 		}
 
-		
-
-		//Start에 있어야 하지 않나?
-		
+			
 	}
 	Start(): void {
 		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],this.mMCI);
@@ -175,9 +189,11 @@ export class CPaintVoxel extends CPaint
 		
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
 		this.mOwner.GetFrame().BMgr().BatchOff();
 	}
-	
+	ClearCRPAuto(): void {
+		super.ClearCRPAuto();
+	}
 }

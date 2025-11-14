@@ -1,4 +1,4 @@
-import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, mod, Mat34ToMat, MatMix, } from "./Shader";
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, floor, Mat34ToMat, MatMix, Sam2D0ToColor, } from "./Shader";
 import { SDF } from "./SDF";
 import { CAModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
@@ -40,7 +40,7 @@ var weightBakeMat = 9.0;
 var weightBakeIndex;
 var time = Attribute(0, "time");
 Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
-Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat, colorModel, alphaModel], [out_position, to_uv], ps_main_simple, [out_color]);
+Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat, viewMat, projectMat], [out_position, to_uv], ps_main_simple, [out_color]);
 Build("Artgine/Shader/3DGBuffer", ["gBuf"], vs_main_gBuffer, [
     worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
     sam2DCount, material, outputType,
@@ -75,8 +75,10 @@ function vs_main_simple(f3_ver, f2_uv) {
     out_position = LWVPMul(f3_ver, wMat, viewMat, projectMat);
 }
 function ps_main_simple() {
-    var L_cor = Sam2DToColor(0.0, to_uv);
+    var L_cor = Sam2D0ToColor(to_uv);
+    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
+    BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)
         discard;
@@ -233,22 +235,10 @@ function vs_main_bake(f3_ver, f4_wi, f4_we, f2_uv, f2_sha, f3_nor, f4_tan, f3_bi
 function ps_main() {
     var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
     var shadow = -1.0;
-    var occlusion = 1.5;
-    var high;
-    var low;
     BranchBegin("shadow", "S", [shadowOn]);
     if (shadowOn > 0.5) {
         shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
         shadow = shadowTex.x;
-        high = shadowTex.y * 255.0;
-        low = shadowTex.z * 255.0;
-        occlusion = (high * 256.0 + low) / 65535.0;
-    }
-    BranchEnd();
-    BranchBegin("occlusion", "O", []);
-    if (occlusion < 1.1) {
-        if (screenPos.z > occlusion + 2e-5)
-            discard;
     }
     BranchEnd();
     var uv = to_uv;
@@ -435,33 +425,6 @@ function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor) {
     P = V4MulMatCoordi(P, viewMat);
     out_position = V4MulMatCoordi(P, projectMat);
 }
-function vs_main_shadow_read_pa(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_bi, f3_ref) {
-    var wMat;
-    BranchBegin("wasm", "WASM", [worldMat34]);
-    wMat = Mat34ToMat(worldMat34);
-    BranchDefault();
-    wMat = worldMat;
-    BranchEnd();
-    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
-    var P = new CVec4(f3_ver, 1.0);
-    P = V4MulMatCoordi(P, woweMat);
-    BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
-    P = ApplyWind(P, skin, f4_we, time);
-    BranchEnd();
-    to_worldPos = P;
-    to_uv = f2_uv;
-    P = V4MulMatCoordi(P, viewMat);
-    out_position = V4MulMatCoordi(P, projectMat);
-    to_ref = f3_ref;
-    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
-    to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
-    if (f3_ref.y > 0.0) {
-        to_normal = V3Nor(V3MulMat3Normal(f3_nor, Mat4ToMat3(woweMat)).xyz);
-    }
-    else {
-        to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-    }
-}
 function ps_main_shadow_read() {
     var L_cor = Sam2DToColor(0.0, to_uv);
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
@@ -483,66 +446,7 @@ function ps_main_shadow_read() {
     all /= shadowCount;
     if (all < 0.0)
         all = 0.0;
-    var occlusion = screenPos.z;
-    var scaled = occlusion * 65535.0;
-    var high = floor(scaled / 256.0);
-    var low = mod(scaled, 256.0);
-    out_color = new CVec4(all, high / 255.0, low / 255.0, 1.0);
-}
-function GetParallaxShadowWorldPos(_uv, _tan, _bi, _nor, _wor, _texOff, _scale) {
-    var h = Sam2DToColor(_texOff.y, _uv).a;
-    var disp = (h - 0.5) * _scale;
-    var N = GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff);
-    var W = V3AddV3(_wor.xyz, V3MulFloat(N, disp));
-    return new CVec4(W, _wor.w);
-}
-function ps_main_shadow_read_pa() {
-    var uv = to_uv;
-    uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
-    var L_cor = Sam2DToColor(0.0, uv);
-    BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
-    L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
-    BranchEnd();
-    BranchBegin("alphaCut", "A", [alphaCut]);
-    if (L_cor.a < alphaCut) {
-        discard;
-    }
-    BranchEnd();
-    var N_pa = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
-    var h = Sam2DToColor(to_ref.y, uv).a;
-    var delta = (h - 0.5) * parallaxNormal;
-    var W_pa = new CVec4(V3AddV3(to_worldPos.xyz, V3MulFloat(N_pa, delta)), 1.0);
-    var all = 1.0;
-    if (shadowCount > 0.5) {
-        all = 0.0;
-        var K = 500.0;
-        var pushClamp = 0.08;
-        for (var i = 0; i < FloatToInt(shadowCount); i++) {
-            var shadowRead = Sam2DToV4(shadowReadList, i);
-            var L4 = Sam2DToV4(ligDir, shadowRead.x);
-            var L = V3Nor(L4.xyz);
-            var ndlAbs = abs(V3Dot(N_pa, L));
-            var push = delta * K;
-            push = clamp(push, -pushClamp, pushClamp);
-            var W_A = new CVec4(V3AddV3(W_pa.xyz, V3MulFloat(L, -push)), 1.0);
-            var W_B = new CVec4(V3AddV3(W_pa.xyz, V3MulFloat(L, push)), 1.0);
-            var sA = calcShadow(shadowRead, IntToFloat(i), N_pa, W_A);
-            var sB = calcShadow(shadowRead, IntToFloat(i), N_pa, W_B);
-            var sVal = (sA < sB) ? sA : sB;
-            all += sVal;
-        }
-        all /= shadowCount;
-        if (all < 0.0)
-            all = 0.0;
-    }
-    var occlusion = screenPos.z;
-    var scaled = occlusion * 65535.0;
-    var high = floor(scaled / 256.0);
-    var low = mod(scaled, 256.0);
-    out_color = new CVec4(all, high / 255.0, low / 255.0, 1.0);
+    out_color = new CVec4(all, all, all, 1.0);
 }
 function ps_main_bake() {
     var uv = to_uv;

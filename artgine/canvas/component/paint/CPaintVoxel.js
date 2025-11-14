@@ -42,16 +42,16 @@ export class CPaintVoxel extends CPaint {
         this.mMCI.Create(CVertexFormat.eIdentifier.Position);
         this.mMCI.Create(CVertexFormat.eIdentifier.UV);
         this.mMCI.Create(CVertexFormat.eIdentifier.Color);
+        this.PushTag("alphaCut");
     }
     IsShould(_member, _type) {
         if (_member == "mMCI" || _member == "mMD")
             return false;
         return super.IsShould(_member, _type);
     }
-    InitChk() {
-        super.InitChk();
+    EmptyRPChk() {
         if (this.mRenderPass.length == 0) {
-            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxel().mKey);
+            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().SlVoxelKey());
             rp.mPriority = CRenderPass.ePriority.BackGround;
             this.mRenderPass = [rp];
         }
@@ -126,8 +126,11 @@ export class CPaintVoxel extends CPaint {
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
         this.mOwner.GetFrame().BMgr().BatchOff();
+    }
+    ClearCRPAuto() {
+        super.ClearCRPAuto();
     }
 }

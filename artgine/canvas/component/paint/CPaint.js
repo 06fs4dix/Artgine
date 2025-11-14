@@ -16,9 +16,7 @@ import { CUniqueID } from "../../../basic/CUniqueID.js";
 import { CUtil } from "../../../basic/CUtil.js";
 import { CUtilObj } from "../../../basic/CUtilObj.js";
 import { CWASM } from "../../../basic/CWASM.js";
-import { CPoolGeo } from "../../../geometry/CPoolGeo.js";
 import { CUtilMath } from "../../../geometry/CUtilMath.js";
-import { CAtlas } from "../../../util/CAtlas.js";
 import { CLoaderOption } from "../../../util/CLoader.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
@@ -33,6 +31,9 @@ export class CRenPaint {
     mDistance = null;
     mAlpha = null;
 }
+var gBoundDummy = new CBound();
+var gPosDummy = new CVec3();
+gPosDummy.NewWASM();
 export class CPaint extends CComponent {
     mFMat;
     mLMat;
@@ -49,7 +50,7 @@ export class CPaint extends CComponent {
     mBoundFMatR = 0;
     mRenderPass = new Array();
     mRenPT = new Array();
-    mTexture = new Array();
+    mTextureKey = new Array();
     mMaterial = new CVec4(1, -1, -1, 1);
     mUpdateLMat = true;
     mUpdateFMat = true;
@@ -81,6 +82,8 @@ export class CPaint extends CComponent {
         this.mBound = new CBound();
         this.mBound.NewWASM();
         this.PushTag("alphaCut");
+        if (gPosDummy.Ptr() == null)
+            gPosDummy.NewWASM();
     }
     SetEnable(_val) {
         super.SetEnable(_val);
@@ -110,7 +113,7 @@ export class CPaint extends CComponent {
         this.mFMat.Unit();
         this.mLMat.Unit();
         this.ClearBatch();
-        this.mTexture.length = 0;
+        this.mTextureKey.length = 0;
         this.mBoundFMat.Reset();
         this.mBound.Reset();
         this.mShaderAttrMap.delete("mColorVFX");
@@ -171,7 +174,7 @@ export class CPaint extends CComponent {
             };
             _body.append(btn);
         }
-        else if (_pointer.member == "mTexture" || _pointer.member == "mTag") {
+        else if (_pointer.member == "mTextureKey" || _pointer.member == "mTag") {
             CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""], true);
         }
         else if (_pointer.member == "mShaderAttrMap") {
@@ -212,7 +215,7 @@ export class CPaint extends CComponent {
     SetOwner(_obj) {
         super.SetOwner(_obj);
         this.ClearCRPAuto();
-        this.SetTexture(this.mTexture);
+        this.SetTexture(this.mTextureKey);
     }
     SetMaterial(roughness = -1, metalric = -1, emissive = 1, ambientOcclusion = 1) {
         this.mMaterial.x = ambientOcclusion;
@@ -227,7 +230,7 @@ export class CPaint extends CComponent {
         return false;
     }
     UpdateRenPt() {
-        let pos = CPoolGeo.ProductV3();
+        let pos = gPosDummy;
         for (let i = 0; i < this.mRenPT.length; ++i) {
             let ren = this.mRenPT[i];
             if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
@@ -259,7 +262,6 @@ export class CPaint extends CComponent {
                 }
             }
         }
-        CPoolGeo.RecycleV3(pos);
     }
     Refresh() {
         if (this.mShaderAttrMap.get("texCodi") == null)
@@ -305,8 +307,8 @@ export class CPaint extends CComponent {
     }
     EditChange(_pointer, _child) {
         super.EditChange(_pointer, _child);
-        if (_pointer.IsRef(this.mTexture)) {
-            this.SetTexture(this.mTexture);
+        if (_pointer.IsRef(this.mTextureKey)) {
+            this.SetTexture(this.mTextureKey);
             this.ClearBatch();
         }
         else if (_pointer.IsRef(this.mTag)) {
@@ -452,7 +454,13 @@ export class CPaint extends CComponent {
             attr.Import(_sa);
     }
     FindCShaderAttr(_key) {
-        return this.mShaderAttrMap.get(_key);
+        if (typeof _key == "string")
+            return this.mShaderAttrMap.get(_key);
+        for (let sa of this.mShaderAttrMap.values()) {
+            if (sa.mEach == _key)
+                return sa;
+        }
+        return null;
     }
     SetRGBA(_rgba) {
         this.mColorModel.mF32A[0] = _rgba.mF32A[0];
@@ -554,7 +562,7 @@ export class CPaint extends CComponent {
     }
     Prefab(_owner) {
         if (this.mAutoLoad != null) {
-            for (let texKey of this.mTexture) {
+            for (let texKey of this.mTextureKey) {
                 if (texKey.indexOf(".atl") != -1)
                     continue;
                 _owner.GetFrame().Load().Exe(texKey, this.mAutoLoad);
@@ -612,10 +620,10 @@ export class CPaint extends CComponent {
         return this.mBound;
     }
     GetBoundFMat() {
-        let bound = this.mBoundFMat.Export();
-        bound.mMax = CMath.V3AddV3(bound.mMax, this.GetFMat().xyz, bound.mMax);
-        bound.mMin = CMath.V3AddV3(bound.mMin, this.GetFMat().xyz, bound.mMin);
-        return bound;
+        gBoundDummy.Import(this.mBoundFMat);
+        gBoundDummy.mMax = CMath.V3AddV3(gBoundDummy.mMax, this.GetFMat().xyz, gBoundDummy.mMax);
+        gBoundDummy.mMin = CMath.V3AddV3(gBoundDummy.mMin, this.GetFMat().xyz, gBoundDummy.mMin);
+        return gBoundDummy;
     }
     SetBound(_bound) {
         this.mBound = _bound;
@@ -647,37 +655,42 @@ export class CPaint extends CComponent {
         }
     }
     SetTexture(_a, _b = null, _c = null, _d = null, _e = null) {
+        let change = false;
         if (_a instanceof Array) {
-            if (_a != this.mTexture) {
-                this.mTexture.length = 0;
-                for (var i = 0; i < _a.length; ++i)
-                    this.mTexture.push(_a[i]);
-            }
-        }
-        else {
-            this.mTexture.length = 0;
-            this.mTexture.push(_a);
-            if (_b != null)
-                this.mTexture.push(_b);
-            if (_c != null)
-                this.mTexture.push(_c);
-            if (_d != null)
-                this.mTexture.push(_d);
-            if (_e != null)
-                this.mTexture.push(_e);
-        }
-        for (let each0 of this.mBatchMap.values()) {
-            if (each0 != null) {
-                for (let i = 0; i < each0.length; ++i) {
-                    let bh = each0[i];
-                    if (bh != null)
-                        bh.CreateKey();
+            if (_a != this.mTextureKey) {
+                for (var i = 0; i < _a.length; ++i) {
+                    if (_a[i] != this.mTextureKey[i]) {
+                        change = true;
+                        this.mTextureKey[i] = _a[i];
+                    }
                 }
             }
         }
+        else {
+            if (_a != this.mTextureKey[0]) {
+                change = true;
+                this.mTextureKey[0] = _a;
+            }
+            if (_b != this.mTextureKey[1]) {
+                change = true;
+                this.mTextureKey[1] = _b;
+            }
+            if (_c != this.mTextureKey[2]) {
+                change = true;
+                this.mTextureKey[2] = _c;
+            }
+            if (_d != this.mTextureKey[3]) {
+                change = true;
+                this.mTextureKey[3] = _d;
+            }
+            if (_e != this.mTextureKey[4]) {
+                change = true;
+                this.mTextureKey[4] = _e;
+            }
+        }
         if (this.mAutoLoad != null && this.mOwner != null && this.mOwner.GetFrame() != null) {
-            for (let i = 0; i < this.mTexture.length; ++i) {
-                let texKey = this.mTexture[i];
+            for (let i = 0; i < this.mTextureKey.length; ++i) {
+                let texKey = this.mTextureKey[i];
                 if (texKey.indexOf(".atl") != -1 || texKey.indexOf("base64") != -1 || texKey.indexOf(".tex") != -1 ||
                     texKey == "" || texKey == null)
                     continue;
@@ -694,40 +707,23 @@ export class CPaint extends CComponent {
                 }
             }
         }
-    }
-    GetResTexture(_off = [], _texArr = null) {
-        if (_texArr == null)
-            _texArr = new Array();
-        if (_off.length == 0) {
-            for (let i = 0; i < this.mTexture.length; ++i) {
-                _off.push(i);
+        if (change) {
+            for (let each0 of this.mBatchMap.values()) {
+                if (each0 != null) {
+                    for (let i = 0; i < each0.length; ++i) {
+                        let bh = each0[i];
+                        if (bh != null)
+                            bh.CreateKey();
+                    }
+                }
             }
         }
-        for (let i = 0; i < _off.length; ++i) {
-            if (_off[i] == -1) {
-                _texArr.push(null);
-                continue;
-            }
-            let tex = this.GetOwner().GetFrame().Res().Find(this.mTexture[_off[i]]);
-            if (tex instanceof CAtlas) {
-                if (tex.mBase64.mData == null || tex.GetTex() == null) {
-                    if (tex.GetTex() == null)
-                        tex.CreateTex();
-                }
-                else if (tex.GetTex().GetGBuf().length == 0) {
-                    this.GetOwner().GetFrame().Ren().BuildTexture(tex.GetTex());
-                }
-                tex = tex.GetTex();
-            }
-            _texArr.push(tex);
-        }
-        return _texArr;
     }
-    GetTexture() { return this.mTexture; }
+    GetTexture() { return this.mTextureKey; }
     GetTexHash() {
         let str = "";
         let hash = 0;
-        for (let texKey of this.mTexture) {
+        for (let texKey of this.mTextureKey) {
             str += texKey;
         }
         hash = CHash.HashCode(str);
@@ -742,7 +738,7 @@ export class CPaint extends CComponent {
         this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
         if (this.mShaderAttrMap.get("colorVFX") != null)
             this.mColorVFX = this.mShaderAttrMap.get("colorVFX").mData;
-        if (this.mTexture.length > 0)
-            this.SetTexture(this.mTexture);
+        if (this.mTextureKey.length > 0)
+            this.SetTexture(this.mTextureKey);
     }
 }

@@ -360,47 +360,49 @@ export function VoxelTool(_voxel : CVoxel)
     gAtl = new CAtelier();
     gAtl.mPF.mIAuto = true;
     gAtl.Init([], "VoxelLeft_can", false).then(()=>{
+        gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
+        gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));    
+
+        gAtl.NewCanvas("VoxelTool");
+    
+    
+        gAtl.Canvas("VoxelTool").PushSub(gVoxelTar);
+        gVoxelTar.GetPos().Zero();
+        gVoxelTar.GetRot().Zero();
+        gVoxelTar.SetSca(new CVec3(1,1,1));
+        gVoxelTar.GetMat().Unit();
+        gCurser=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
+        gPress=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
         
-    });
-    gAtl.NewCanvas("VoxelTool");
-    gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
-    gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
-    
-    gAtl.Canvas("VoxelTool").PushSub(gVoxelTar);
-    gVoxelTar.GetPos().Zero();
-    gVoxelTar.GetRot().Zero();
-    gVoxelTar.SetSca(new CVec3(1,1,1));
-    gVoxelTar.GetMat().Unit();
-    gCurser=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
-    gPress=gAtl.Canvas("VoxelTool").PushSub(new CSubject());
-    
-    gAtl.Frame().PushEvent(CEvent.eType.Update,gUpdateEvent);
+        gAtl.Frame().PushEvent(CEvent.eType.Update,gUpdateEvent);
 
 
-    for(let i=0;i<_voxel.mLayer.length;++i)
-    {
-        if(_voxel.mLayer[i].Ref() instanceof CVoxel)
+        for(let i=0;i<_voxel.mLayer.length;++i)
         {
-            let lay=_voxel.mLayer[i].Ref().Export();
-            let pos=CMath.V3SubV3(lay.GetPos(),gVoxelOrg.GetPos());
-            lay.SetPos(pos);
-            lay.GetRot().Zero();
-            lay.SetSca(new CVec3(1,1,1));
-            lay.mUpdateRes=true;
-            gAtl.Canvas("VoxelTool").PushSub(lay);
+            if(_voxel.mLayer[i].Ref() instanceof CVoxel)
+            {
+                let lay=_voxel.mLayer[i].Ref().Export();
+                let pos=CMath.V3SubV3(lay.GetPos(),gVoxelOrg.GetPos());
+                lay.SetPos(pos);
+                lay.GetRot().Zero();
+                lay.SetSca(new CVec3(1,1,1));
+                lay.mUpdateRes=true;
+                gAtl.Canvas("VoxelTool").PushSub(lay);
+            }
+            
         }
-        
-    }
 
-    VoxelToolResetCam();
-    VoxelToolResetCurser();
-    VoxelToolSelectTileArrReset();
+        VoxelToolResetCam();
+        VoxelToolResetCurser();
+        VoxelToolSelectTileArrReset();
 
-    CUtil.ID("main-tab").onclick=()=>{VoxelToolSelectTileArrReset();};
-    CUtil.ID("tile-tab").onclick=()=>{VoxelToolTileArrModifyReset();};
-    CUtil.ID("role-tab").onclick=()=>{VoxelToolRoleArrModifyReset();};
-    CUtil.ID("mold-tab").onclick=()=>{VoxelToolMoldArrModifyReset();};
-    MapDiv();
+        CUtil.ID("main-tab").onclick=()=>{VoxelToolSelectTileArrReset();};
+        CUtil.ID("tile-tab").onclick=()=>{VoxelToolTileArrModifyReset();};
+        CUtil.ID("role-tab").onclick=()=>{VoxelToolRoleArrModifyReset();};
+        CUtil.ID("mold-tab").onclick=()=>{VoxelToolMoldArrModifyReset();};
+        MapDiv();
+    });
+    
     
     
     

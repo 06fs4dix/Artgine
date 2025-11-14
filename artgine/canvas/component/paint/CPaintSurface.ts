@@ -60,7 +60,7 @@ export class CPaintSurface extends CPaint
         this.mOwner.GetFrame().BMgr().BatchOn();
         this.Common(_vf);
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMat", this.GetFMat()));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         var dm=this.GetDrawMesh("Artgine/DM/Surface",_vf,this.mOwner.GetFrame().Pal().MCI2D());
         this.mOwner.GetFrame().BMgr().SetBatchMesh( dm);
 

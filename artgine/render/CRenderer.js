@@ -1,4 +1,3 @@
-import { CAlert } from "../basic/CAlert.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CVec2 } from "../geometry/CVec2.js";
@@ -89,7 +88,8 @@ export class CRenderer {
         this.mTexUse.mArray = 0;
         this.mTexUse.mCube = 0;
     }
-    SetUniToSam2D(_vf, _key, _buf, _count = null) { }
+    SetUniToSam2D(_vf, _key, _buf, _count = null) {
+    }
     static ShaderErrorModal(_wgsl, _error) {
         let modal = new CModal();
         modal.SetHeader("Error");
@@ -108,18 +108,6 @@ export class CRendererGL extends CRenderer {
     mXREye = -1;
     mXRSize = new CVec2();
     SetUniToSam2D(_vf, _key, _buf, _count = null) {
-        var uniDf = _vf.GetDefault(_key);
-        if (uniDf != null || uniDf.mEach == 4 || uniDf.mEach == 16) { }
-        else
-            CAlert.E("error");
-        if (_count == null)
-            _count = _buf.length / 4;
-        this.mUniTexLastOff = uniDf.mData[0];
-        this.RebuildTexture(this.mUniToSam2d, uniDf.mData[0], 0, uniDf.mData[1], _count, 1, _buf);
-        if (_buf.length == 0)
-            this.SendGPU(_vf, new CVec2(0, 0), _key, null, 0);
-        else
-            this.SendGPU(_vf, new CVec2(uniDf.mData[0], uniDf.mData[1]), _key, null, 0);
     }
     TexBindReset() {
     }

@@ -19,7 +19,7 @@ import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
 import { RenderQueTool } from "../tool/RenderQueTool.js";
 import { CConsol } from "../basic/CConsol.js";
-import { CPaint, CRenPaint } from "./component/paint/CPaint.js";
+import { CRenPaint } from "./component/paint/CPaint.js";
 import { CRPAuto, CRPMgr } from "./CRPMgr.js";
 var gRenderQue = new Array();
 var gCanvas = new Map();
@@ -108,12 +108,6 @@ export class CCanvas extends CObject {
                         obj.Destroy();
                 }
                 this.mBrush.ClearRen();
-            }
-            for (let [key, obj] of this.mSubMap) {
-                let ptVec = obj.FindComps(CPaint, true);
-                for (let pt of ptVec) {
-                    pt.ClearCRPAuto();
-                }
             }
         }
         if (_rpMgr == null)
@@ -677,6 +671,7 @@ export class CCanvas extends CObject {
     SendGetGeometryInfo(_camcomp) {
         _camcomp.RecvGetGeometryInfo(this.mGI, this.Key());
     }
+    GetGI() { return this.mGI; }
     Patch(_stream, _sukPass = true) {
         let sendSUK = _stream.GetString();
         let readSUK = null;

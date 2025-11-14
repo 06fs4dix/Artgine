@@ -13,6 +13,7 @@ import { CClass } from "../basic/CClass.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CUtilRender } from "../render/CUtilRender.js";
+import { CConsol } from "../basic/CConsol.js";
 let g_atlJBox;
 export class CAtlas extends CObject {
     mTexCodi = new Array();
@@ -114,13 +115,17 @@ export class CAtlas extends CObject {
     }
     EditHTMLInit(_div) {
         super.EditHTMLInit(_div);
-        _div.append(CDomFactory.DataToDom({ "<>": "button", "text": "Modify", "onclick": () => {
+        _div.append(CDomFactory.DataToDom({
+            "<>": "button", "text": "Modify", "onclick": () => {
                 this.ModifyModal();
-            } }));
-        _div.append(CDomFactory.DataToDom({ "<>": "button", "text": "Reload Texture", "onclick": () => {
+            }
+        }));
+        _div.append(CDomFactory.DataToDom({
+            "<>": "button", "text": "Reload Texture", "onclick": () => {
                 this.mTex = null;
                 this.CreateTex();
-            } }));
+            }
+        }));
     }
     WTForm(_pointer, _div, _input) {
         if (_pointer.member == "mTexFilter") {
@@ -209,9 +214,11 @@ export class CAtlas extends CObject {
                 curIndex = -1;
             }
         };
-        let cardMain = { "<>": "div", "html": [
+        let cardMain = {
+            "<>": "div", "html": [
                 { "<>": "div", "id": "atlCan_card", "style": "width:100%;" }
-            ] };
+            ]
+        };
         let drawImgOnCard = (_index = -1) => {
             let AtlCan_Div = CUtil.ID("atlCan_card");
             AtlCan_Div.innerHTML = "";
@@ -356,9 +363,11 @@ export class CAtlas extends CObject {
                 });
             }
         };
-        let canvMain = { "<>": "div", "html": [
+        let canvMain = {
+            "<>": "div", "html": [
                 { "<>": "canvas", "id": "atlCan_can", "width": this.mWidth, "height": this.mHeight, "style": "border: 1px solid red;", "onclick": mainOnClick, "onmousemove": mainOnMouseMove },
-            ] };
+            ]
+        };
         let drawImgOnCanvas = async (_index = -1) => {
             let fontSize = 16;
             let canvas = CUtil.ID("atlCan_can");
@@ -405,25 +414,39 @@ export class CAtlas extends CObject {
         let prevActiveTabIndex = (prevCanvTab != null && prevCanvTab.classList.contains("active")) ? 1 : 0;
         let prevDiv = CUtil.ID("CAtlas_Div");
         let st = prevDiv == null ? 0 : prevDiv.scrollTop;
-        let tabs = { "<>": "div", "html": [
-                { "<>": "div", "style": "display:flex;", "html": [
-                        { "<>": "div", "id": "CAtlas_Div", "style": "width:100%;overflow:auto;", "html": [
-                                { "<>": "ul", "class": "nav nav-tabs", "html": [
-                                        { "<>": "li", "class": "nav-item", "html": [
+        let tabs = {
+            "<>": "div", "html": [
+                {
+                    "<>": "div", "style": "display:flex;", "html": [
+                        {
+                            "<>": "div", "id": "CAtlas_Div", "style": "width:100%;overflow:auto;", "html": [
+                                {
+                                    "<>": "ul", "class": "nav nav-tabs", "html": [
+                                        {
+                                            "<>": "li", "class": "nav-item", "html": [
                                                 { "<>": "a", "class": "nav-link" + (prevActiveTabIndex == 0 ? " active" : ""), "data-bs-toggle": "tab", "href": "#vCardStyle_tab", "text": "Card", "onclick": () => { drawImgOnCard(); } },
-                                            ] },
-                                        { "<>": "li", "class": "nav-item", "html": [
+                                            ]
+                                        },
+                                        {
+                                            "<>": "li", "class": "nav-item", "html": [
                                                 { "<>": "a", "class": "nav-link" + (prevActiveTabIndex == 1 ? " active" : ""), "data-bs-toggle": "tab", "href": "#vCanvStyle_tab", "text": "Canv", "onclick": () => { drawImgOnCanvas(); } }
-                                            ] }
-                                    ] },
-                                { "<>": "div", "class": "tab-content", "html": [
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "<>": "div", "class": "tab-content", "html": [
                                         { "<>": "div", "class": "tab-pane fade" + (prevActiveTabIndex == 0 ? " show active" : ""), "id": "vCardStyle_tab", "html": [cardMain] },
                                         { "<>": "div", "class": "tab-pane fade" + (prevActiveTabIndex == 1 ? " show active" : ""), "id": "vCanvStyle_tab", "html": [canvMain] }
-                                    ] }
-                            ] },
-                    ] },
+                                    ]
+                                }
+                            ]
+                        },
+                    ]
+                },
                 { "<>": "input", "type": "file", "multiple": "multiple", "onchange": AtlasPush },
-                { "<>": "button", "type": "button", "class": "btn btn-primary float-right", "text": "AniEditer", "onclick": () => {
+                {
+                    "<>": "button", "type": "button", "class": "btn btn-primary float-right", "text": "AniEditer", "onclick": () => {
                         let ani = CClass.New("CAnimation");
                         window["AniTool"](ani, null);
                         window["AniToolAtlasEvent"](this, () => {
@@ -431,9 +454,11 @@ export class CAtlas extends CObject {
                         });
                     }
                 },
-            ] };
+            ]
+        };
         if (_clickEvent == null) {
-            tabs.html.push({ "<>": "button", "type": "button", "class": "btn float-right " + (_remove ? "btn-danger" : "btn-primary"), "text": "Delete",
+            tabs.html.push({
+                "<>": "button", "type": "button", "class": "btn float-right " + (_remove ? "btn-danger" : "btn-primary"), "text": "Delete",
                 "onclick": (e) => {
                     if (e.target.classList.contains("btn-primary")) {
                         e.target.classList.remove("btn-primary");
@@ -521,6 +546,7 @@ export class CAtlas extends CObject {
             const img = new Image();
             img.crossOrigin = "Anonymous";
             img.addEventListener('load', async (_event) => {
+                CConsol.Log("pro");
                 if (this.m_rect == null) {
                     this.m_rect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);
                     for (let codi of this.mTexCodi) {
@@ -623,7 +649,7 @@ export class CAtlas extends CObject {
     }
     async RebuildRect(_w, _h, _beforeTex = null) {
         this.m_rect = new AtlasMaxRects(_w, _h);
-        let newTexCodi = [];
+        const newTexCodi = [];
         for (let oldTexCodi of this.mTexCodi) {
             if (oldTexCodi == null) {
                 newTexCodi.push(null);
@@ -631,48 +657,89 @@ export class CAtlas extends CObject {
             }
             const w = oldTexCodi.z - oldTexCodi.x;
             const h = oldTexCodi.w - oldTexCodi.y;
-            let rect = this.m_rect.Insert(w + this.mPadding * 2, h + this.mPadding * 2);
-            newTexCodi.push(new CVec4(rect.x + this.mPadding, rect.y + this.mPadding, rect.x + w + this.mPadding, rect.y + h + this.mPadding));
+            const r = this.m_rect.Insert(w + this.mPadding * 2, h + this.mPadding * 2);
+            newTexCodi.push(new CVec4(r.x + this.mPadding, r.y + this.mPadding, r.x + w + this.mPadding, r.y + h + this.mPadding));
         }
         const newTex = new CTexture();
         newTex.SetSize(_w, _h);
         newTex.CreateBuf();
         const newBuf = newTex.GetBuf()[0];
-        let oldTex = null;
+        let srcBuf = null;
+        let srcW = 0, srcH = 0;
         if (_beforeTex != null) {
-            let oldWidth = _beforeTex.GetWidth();
-            let oldHeight = _beforeTex.GetHeight();
-            let oldTexBuf = _beforeTex.GetBuf()[0];
-            for (let y = 0; y < oldHeight; y++) {
-                const srcStart = y * oldWidth * 4;
-                const dstStart = y * _w * 4;
-                const rowLength = oldWidth * 4;
-                newBuf.set(oldTexBuf.subarray(srcStart, srcStart + rowLength), dstStart);
-            }
+            srcW = _beforeTex.GetWidth();
+            srcH = _beforeTex.GetHeight();
+            srcBuf = _beforeTex.GetBuf()[0];
         }
         else if (this.mBase64.mData != null) {
             await this.CreateTex();
-            oldTex = this.GetTex();
-            let oldTexBuf = oldTex.GetBuf()[0];
-            for (let codiIdx = 0; codiIdx < this.mTexCodi.length; codiIdx++) {
-                let oldCodi = this.mTexCodi[codiIdx];
-                let newCodi = newTexCodi[codiIdx];
-                if (oldCodi == null)
+            const oldTex = this.GetTex();
+            srcW = this.mWidth;
+            srcH = this.mHeight;
+            srcBuf = oldTex.GetBuf()[0];
+        }
+        const blitSafe = (sBuf, sW, sH, dBuf, dW, dH, sx, sy, dx, dy, w, h) => {
+            let sx0 = sx, sy0 = sy, dx0 = dx, dy0 = dy, cw = w, ch = h;
+            if (sx0 < 0) {
+                cw += sx0;
+                dx0 -= sx0;
+                sx0 = 0;
+            }
+            if (dx0 < 0) {
+                cw += dx0;
+                sx0 -= dx0;
+                dx0 = 0;
+            }
+            if (sx0 + cw > sW)
+                cw = sW - sx0;
+            if (dx0 + cw > dW)
+                cw = Math.min(cw, dW - dx0);
+            if (sy0 < 0) {
+                ch += sy0;
+                dy0 -= sy0;
+                sy0 = 0;
+            }
+            if (dy0 < 0) {
+                ch += dy0;
+                sy0 -= dy0;
+                dy0 = 0;
+            }
+            if (sy0 + ch > sH)
+                ch = sH - sy0;
+            if (dy0 + ch > dH)
+                ch = Math.min(ch, dH - dy0);
+            if (cw <= 0 || ch <= 0)
+                return;
+            const rowBytes = cw * 4;
+            for (let y = 0; y < ch; y++) {
+                const s = ((sy0 + y) * sW + sx0) * 4;
+                const d = ((dy0 + y) * dW + dx0) * 4;
+                dBuf.set(sBuf.subarray(s, s + rowBytes), d);
+            }
+        };
+        if (srcBuf) {
+            for (let i = 0; i < this.mTexCodi.length; i++) {
+                const oldC = this.mTexCodi[i];
+                const newC = newTexCodi[i];
+                if (!oldC || !newC)
                     continue;
-                if (newCodi == null)
-                    continue;
-                const oldCodiW = oldCodi.z - oldCodi.x;
-                const oldCodiH = oldCodi.w - oldCodi.y;
-                for (let y = -this.mPadding; y < oldCodiH + this.mPadding; y++) {
-                    let src = ((oldCodi.y + y) * this.mWidth + (oldCodi.x - this.mPadding)) * 4;
-                    let dst = ((newCodi.y + y) * _w + (newCodi.x - this.mPadding)) * 4;
-                    newBuf.set(oldTexBuf.subarray(src, src + (oldCodiW + this.mPadding * 2) * 4), dst);
-                }
+                const ow = oldC.z - oldC.x;
+                const oh = oldC.w - oldC.y;
+                const pad = this.mPadding;
+                const srcX = oldC.x - pad;
+                const srcY = oldC.y - pad;
+                const dstX = newC.x - pad;
+                const dstY = newC.y - pad;
+                const ww = ow + pad * 2;
+                const hh = oh + pad * 2;
+                blitSafe(srcBuf, srcW, srcH, newBuf, _w, _h, srcX, srcY, dstX, dstY, ww, hh);
             }
         }
         this.mTexCodi = newTexCodi;
         this.mWidth = _w;
         this.mHeight = _h;
+        if (this.mBase64Map?.clear)
+            this.mBase64Map.clear();
         return newTex;
     }
 }

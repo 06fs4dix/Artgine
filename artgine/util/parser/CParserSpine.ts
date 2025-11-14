@@ -310,7 +310,7 @@ export default class CParserSpine extends CParser {
                 }
                 // boundingbox, path, point, clipping 등 텍스쳐가 없는 노드
                 else {
-                    console.log(texData);
+                    //console.log(texData);
                     continue;
                 }
                 node.mData.ci.vertexCount = posb.bufF.Size(3);
@@ -322,6 +322,120 @@ export default class CParserSpine extends CParser {
 
         }
 
+        
+        // 제약조건(IK, transform, path 제약 있음)
+        let constraintList=new Array<any>();
+        if(this.mJSON.Get("ik")) {
+            let iks = this.mJSON.Get("ik").GetDocument();
+            for(let ikObj of iks) {
+                ikObj.type = "ik";
+                constraintList.push(ikObj);
+            }
+        }
+        if(this.mJSON.Get("transform")) {
+            let transforms = this.mJSON.Get("transform").GetDocument();
+            for(let transformObj of transforms) {
+                transformObj.type = "transform";
+                constraintList.push(transformObj);
+            }
+        }
+        if(this.mJSON.Get("path")) {
+            let transforms = this.mJSON.Get("path").GetDocument();
+            for(let transformObj of transforms) {
+                transformObj.type = "path";
+                constraintList.push(transformObj);
+            }
+        }
+
+        constraintList.sort((a,b) => {
+            const aOrder = a.order ?? 0;
+            const bOrder = b.order ?? 0;
+            if(aOrder >  bOrder) return  1;
+            if(aOrder == bOrder) return  0;
+            if(aOrder <  bOrder) return -1;
+        });
+        for(let constraint of constraintList)
+        {
+            if(constraint.type == "ik") {
+                if(constraint.target == null || constraint.bones.length == 0) {
+                    continue;
+                }
+
+                let tip = constraint.bones[constraint.bones.length - 1];
+
+                const tipBoneObj = bones.GetDocument().find(bone => bone.name == tip);
+                const length = tipBoneObj.length ? tipBoneObj.length : 0;
+
+                const info = new CMeshIK();
+                info.target = constraint.target;
+                info.bones = constraint.bones;
+                if(constraint.mix != null) info.mix = constraint.mix;
+
+                // length가 있음
+                if(length > 0) {
+                    const tipBone = this.mMesh.meshTree.Find(tip);
+
+                    // ik용 joint를 bone 끝에 생성
+                    const ikBoneKey = tip + "_ik";
+                    info.bones.push(ikBoneKey);
+                    const newTipBone = tipBone.PushChild(ikBoneKey);
+                    newTipBone.mData=new CMeshDataNode();
+                    newTipBone.mData.pos = new CVec3(length, 0, 0);
+
+                    if(constraint.bendPositive != null) {
+                        const poleBoneKey = tip + "_pole";
+                        info.pole = poleBoneKey;
+                        const poleBone = tipBone.PushChild(poleBoneKey);
+                        poleBone.mData=new CMeshDataNode();
+                        poleBone.mData.pos = new CVec3(0, constraint.bendPositive ? -100 : 100, 0);
+                    }
+                }
+
+                this.mMesh.ik.set(constraint.name, info);
+            }
+            else if(constraint.type == "transform") {
+                if(constraint.target == null || constraint.bones.length == 0) {
+                    continue;
+                }
+
+                const info = new CMeshAttacher();
+                info.target = constraint.target;
+                info.bones = constraint.bones;
+                if(constraint.rotation != null) info.offsetRot = CMath.EulerToQut(new CVec3(0,0,CMath.DegreeToRadian(constraint.rotation)));
+                if(constraint.x != null) info.offsetPos.x = constraint.x;
+                if(constraint.y != null) info.offsetPos.y = constraint.y;
+                if(constraint.scaleX != null) info.offsetSca.x = constraint.scaleX;
+                if(constraint.scaleY != null) info.offsetSca.y = constraint.scaleY;
+                if(constraint.mixRotate != null) info.mixRot = constraint.rotateMix;
+                if(constraint.mixX != null) info.mixPos.x = constraint.mixX;
+                if(constraint.mixY != null) info.mixPos.y = constraint.mixY;
+                if(constraint.mixScaleX != null) info.mixSca.x = constraint.scaleMix;
+                if(constraint.mixScaleY != null) info.mixSca.y = constraint.scaleMix;
+                if(constraint.translateMix != null) {
+                    info.mixPos.x = constraint.translateMix;
+                    info.mixPos.y = constraint.translateMix;
+                }
+                if(constraint.scaleMix != null) {
+                    info.mixSca.x = constraint.scaleMix;
+                    info.mixSca.y = constraint.scaleMix;
+                }
+                if(constraint.rotateMix != null) {
+                    info.mixRot = constraint.rotateMix;
+                }
+                info.mixPos.z = 0;
+                info.mixSca.z = 0;
+
+                this.mMesh.attacher.set(constraint.name, info);
+            }
+            else if(constraint.type == "path") {
+
+            }
+        }//for
+
+
+        
+
+        
         let endTime = 0;
         let animations = this.mJSON.Get("animations").GetDocument();
         for (let aniKey in animations) {
@@ -397,8 +511,16 @@ export default class CParserSpine extends CParser {
                         kf.key = stTime;
                         kf.value = node.mData.rot.Export();
 
-                        if (aData.time != null) kf.key += Math.trunc(aData.time * 3000);
-                        if (aData.angle != null) kf.value = CMath.QutMul(kf.value, CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(aData.angle))));
+                        //if (aData.time != null) kf.key += Math.trunc(aData.time * 3000);
+                        //if (aData.angle != null) kf.value = CMath.QutMul(kf.value, CMath.EulerToQut(new CVec3(0, 0, CMath.DegreeToRadian(aData.angle))));
+
+                        if(aData.time!=null) kf.key+=Math.trunc(aData.time*3000);
+                        if(aData.angle!=null) {
+                            if(kf.value.IsZero())
+                                kf.value=CMath.EulerToQut(new CVec3(0,0,CMath.DegreeToRadian(aData.angle)));
+                            else
+                                kf.value=CMath.QutMul(kf.value,CMath.EulerToQut(new CVec3(0,0,CMath.DegreeToRadian(aData.angle))));
+                        }
 
                         node.mData.keyFrameRot.push(kf);
                         if (endTime < kf.key) endTime = kf.key;
@@ -429,8 +551,23 @@ export default class CParserSpine extends CParser {
             aniInfo.start = stTime;
             aniInfo.end = endTime;
             this.mMesh.aniMap.set(aniKey, aniInfo);
-
             endTime += 1000;
+            
+            for(let ikKey in animations[aniKey].ik)
+            {
+                let ikInfo=this.mMesh.ik.get(ikKey);
+                //let ikAni=animations[aniKey].ik[ikKey];
+
+                ikInfo.aniInfo.push(aniInfo);
+            }
+
+            for(let transformKey in animations[aniKey].transform)
+            {
+                let attachInfo=this.mMesh.attacher.get(transformKey);
+                //let attachAni=animations[aniKey].transform[transformKey];
+
+                attachInfo.aniInfo.push(aniInfo);
+            }
         }//for ani
 
         
@@ -568,110 +705,11 @@ export default class CParserSpine extends CParser {
             }
         }
 
-        
-        // 제약조건(IK, transform, path 제약 있음)
-        let constraintList=new Array<any>();
-        if(this.mJSON.Get("ik")) {
-            let iks = this.mJSON.Get("ik").GetDocument();
-            for(let ikObj of iks) {
-                ikObj.type = "ik";
-                constraintList.push(ikObj);
-            }
-        }
-        if(this.mJSON.Get("transform")) {
-            let transforms = this.mJSON.Get("transform").GetDocument();
-            for(let transformObj of transforms) {
-                transformObj.type = "transform";
-                constraintList.push(transformObj);
-            }
-        }
-        if(this.mJSON.Get("path")) {
-            let transforms = this.mJSON.Get("path").GetDocument();
-            for(let transformObj of transforms) {
-                transformObj.type = "path";
-                constraintList.push(transformObj);
-            }
-        }
-
-        constraintList.sort((a,b) => {
-            const aOrder = a.order ?? 0;
-            const bOrder = b.order ?? 0;
-            if(aOrder >  bOrder) return  1;
-            if(aOrder == bOrder) return  0;
-            if(aOrder <  bOrder) return -1;
-        });
-        for(let constraint of constraintList)
-        {
-            if(constraint.type == "ik") {
-                if(constraint.target == null || constraint.bones.length == 0) {
-                    continue;
-                }
-
-                let tip = constraint.bones[constraint.bones.length - 1];
-
-                const tipBoneObj = bones.GetDocument().find(bone => bone.name == tip);
-                const length = tipBoneObj.length ? tipBoneObj.length : 0;
-
-                const info = new CMeshIK();
-                info.target = constraint.target;
-                info.bones = constraint.bones;
-                if(constraint.mix != null) info.mix = constraint.mix;
-
-                // length가 있음
-                if(length > 0) {
-                    const tipBone = this.mMesh.meshTree.Find(tip);
-
-                    // ik용 joint를 bone 끝에 생성
-                    const ikBoneKey = tip + "_ik";
-                    info.bones.push(ikBoneKey);
-                    const newTipBone = tipBone.PushChild(ikBoneKey);
-                    newTipBone.mData=new CMeshDataNode();
-                    newTipBone.mData.pos = new CVec3(length, 0, 0);
-
-                    if(constraint.bendPositive != null) {
-                        const poleBoneKey = tip + "_pole";
-                        info.pole = poleBoneKey;
-                        const poleBone = tipBone.PushChild(poleBoneKey);
-                        poleBone.mData=new CMeshDataNode();
-                        poleBone.mData.pos = new CVec3(0, constraint.bendPositive ? -100 : 100, 0);
-                    }
-                }
-
-                this.mMesh.ik.set(constraint.name, info);
-            }
-            else if(constraint.type == "transform") {
-                if(constraint.target == null || constraint.bones.length == 0) {
-                    continue;
-                }
-
-                const info = new CMeshAttacher();
-                info.target = constraint.target;
-                info.bones = constraint.bones;
-                if(constraint.rotation != null) info.offsetRot = CMath.EulerToQut(new CVec3(0,0,CMath.DegreeToRadian(constraint.rotation)));
-                if(constraint.x != null) info.offsetPos.x = constraint.x;
-                if(constraint.y != null) info.offsetPos.y = constraint.y;
-                if(constraint.scaleX != null) info.offsetSca.x = constraint.scaleX;
-                if(constraint.scaleY != null) info.offsetSca.y = constraint.scaleY;
-                if(constraint.rotateMix != null) info.mixRot = constraint.rotateMix;
-                if(constraint.translateMix != null) info.mixPos = constraint.translateMix;
-                if(constraint.scaleMix != null) info.mixSca = constraint.scaleMix;
-
-                if(constraint.name == "front-foot-board-transform") {
-                    info.mixPos = 1;
-                }
-                if(constraint.name == "rear-foot-board-transform") {
-                    info.mixPos = 1;
-                }
-
-                this.mMesh.attacher.set(constraint.name, info);
-            }
-            else if(constraint.type == "path") {
-
-            }
-        }//for
 
 
         CUtilRender.MeshBoundUpdate(this.mMesh);
+
+
 
 
 
@@ -679,16 +717,7 @@ export default class CParserSpine extends CParser {
         let atlBuf = await CFile.Load(name + ".atlas");
         if (atlBuf != null) {
             let texBuf = await CFile.Load(name + ".png");
-            //let parImg = new CParserIMG();
-            //parImg.SetBuffer(new Uint8Array(texBuf), texBuf.byteLength);
-            //await parImg.Load(name + ".png");
-            //let tex = parImg.GetResult();
-
-            
-
-
-            
-
+ 
 
             const regions = parseAtlas(CUtil.ArrayToString(atlBuf));
             // ▼ 변경 시작: PNG 바이너리를 직접 RGBA로 디코드
@@ -730,32 +759,6 @@ export default class CParserSpine extends CParser {
                 }
 
 
-                // 결과(정상 방향) 크기: 항상 trimmed size (w, h)
-                // let tex=new CTexture();
-                // tex.SetSize(r.w,r.h);
-                // tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)]);
-                // tex.CreateBuf();
-                // const dstW = r.w, dstH = r.h;
-                // const dst = tex.GetBuf()[0];
-
-                // if (!r.rotate) {
-                //     blitRGBA(dst, dstW, src, srcW, sx, sy, clampW, clampH);
-                // } else {
-                //     blitRotateCWtoUpright(dst, dstW, dstH, src, srcW, sx, sy, clampW, clampH);
-                // }
-                // unpremultiplyInPlace(dst);
-                // alphaBleedRGB(dst,dstW,dstH,3,16);
-                
-                // // PNG base64(data URL)로 인코딩
-                // //const dataURL = await rgbaToPngDataURL(dst, dstW, dstH);
-                // for (let i = 0; i < this.mMesh.texture.length; ++i) {
-                //     if (typeof this.mMesh.texture[i] =="string" && this.mMesh.texture[i].indexOf(r.name) != -1) {
-                //         //this.mMesh.texture[i] = dataURL;
-                //         this.mMesh.texture[i]=tex;
-                //         break;
-                //     }
-                // }
-                
             }
 
         }

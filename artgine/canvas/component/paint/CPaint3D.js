@@ -37,6 +37,7 @@ export class CPaint3D extends CPaint {
     mWindInfluence = new CVec1(0.0);
     mCamCompLayer = [];
     mTexLoad = false;
+    mFMatLink = false;
     constructor(_mesh = "Artgine/box.mesh", _centerPos = false, _targetScale = 0) {
         super();
         this.mCenterPos = _centerPos;
@@ -129,7 +130,7 @@ export class CPaint3D extends CPaint {
     }
     SetMesh(_mesh) {
         this.mTree = null;
-        this.mTexture.length = 0;
+        this.mTextureKey.length = 0;
         this.mMesh = _mesh;
         this.mWeightMat = new Float32Array(0);
         this.mBound.Reset();
@@ -173,7 +174,7 @@ export class CPaint3D extends CPaint {
                 }
             }
         }
-        if (this.mTexture.length == 0) {
+        if (this.mTextureKey.length == 0) {
             this.SetTexture(this.mMeshRes.texture);
         }
         this.mWeightMat = new Float32Array(this.mMeshRes.skin.length * 4 * 4);
@@ -189,6 +190,8 @@ export class CPaint3D extends CPaint {
         }
         if (this.mMeshRes.skin.length > 0)
             this.mSkinType = SDF.eSkin.Bone;
+        else
+            this.mSkinType = SDF.eSkin.None;
         this.mTree = new CTree();
         this.mTree.mData = new CMeshCopyNode();
         CMeshTreeUpdate.TreeCopy(this.mMeshRes.meshTree, this.mTree, new CMat(), this.mBound);
@@ -210,11 +213,18 @@ export class CPaint3D extends CPaint {
         this.ClearBatch();
         this.mUpdateFMat = true;
         this.mBoundFMatR = 0;
+        if (node.Size() == 1) {
+            let ne = node.Find(0);
+            if (ne.sum.IsUnit()) {
+                ne.sumSA.mData = this.GetFMat();
+                this.mFMatLink = true;
+            }
+        }
         return true;
     }
     Update(_update) {
         super.Update(_update);
-        if (this.mUpdateFMat == false)
+        if (this.mUpdateFMat == false || this.mFMatLink)
             return;
         if (CWASM.IsWASM()) {
             this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
@@ -228,7 +238,7 @@ export class CPaint3D extends CPaint {
             const mpiData = nodemp.mpi.mData;
             if (mpiData.updateMat !== CUpdate.eType.Not || mpiData.FMatAtt === false) {
                 if (this.mSkinType != SDF.eSkin.None && nodemp.md.mData.ci != null) {
-                    CMath.MatMul(this.mLMat, this.mOwner.GetMat(), nodemp.sum);
+                    nodemp.sum.Import(this.GetFMat());
                 }
                 else if (mpiData.FMatAtt == false && mpiData.pst.IsUnit()) {
                     mpiData.FMatAtt = true;
@@ -311,10 +321,7 @@ export class CPaint3D extends CPaint {
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("colorModel", _node.mpi.mData.color));
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("alphaModel", _node.mpi.mData.alpha));
             }
-            if (_node.mpi.mData.texture.length == 0)
-                this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture(_node.mpi.mData.textureOff));
-            else
-                this.mOwner.GetFrame().BMgr().SetBatchTex(_node.mpi.mData.texture);
+            this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey, _node.mpi.mData.textureOff);
             if (_vf.mUniform.get("material") != null)
                 this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
             if (_vf.mUniform.get("part") != null)
@@ -345,7 +352,7 @@ export class CPaint3D extends CPaint {
 export class CPaintCube extends CPaint3D {
     constructor(_cubeTex) {
         super();
-        this.mTexture[0] = _cubeTex;
+        this.mTextureKey[0] = _cubeTex;
     }
     InitChk() {
         this.mMesh = this.GetOwner().GetFrame().Pal().GetBoxMesh();
@@ -426,7 +433,7 @@ export class CPaintMeshMerge extends CPaint {
         if (_vf.mUniform.get("material") != null) {
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
         }
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         var dm = this.GetDrawMesh("Artgine/DM/3DM" + this.mHash, _vf, this.mMeshDataNode.ci);
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();
@@ -444,16 +451,16 @@ export class CPaintMeshMerge extends CPaint {
             let texOff = [];
             for (let tex of _mesh.texture) {
                 let push = true;
-                for (let i = 0; i < this.mTexture.length; ++i) {
-                    if (this.mTexture[i] == tex) {
+                for (let i = 0; i < this.mTextureKey.length; ++i) {
+                    if (this.mTextureKey[i] == tex) {
                         push = false;
                         texOff.push(i);
                         break;
                     }
                 }
                 if (push) {
-                    texOff.push(this.mTexture.length);
-                    this.mTexture.push(tex);
+                    texOff.push(this.mTextureKey.length);
+                    this.mTextureKey.push(tex);
                 }
             }
             let ovb = _ci.GetVFType(CVertexFormat.eIdentifier.Position);

@@ -1,4 +1,5 @@
 //https://roystan.net/articles/camera-shake/
+import { CUpdate } from "../basic/Basic.js";
 import { CObject } from "../basic/CObject.js";
 import {CMat} from "../geometry/CMat.js";
 import {CMath} from "../geometry/CMath.js";
@@ -81,7 +82,7 @@ export class CCamShake extends CObject implements ICamShake
         return CMath.V3AddV3(view, this.GetEye(), this.mLook);
     }
 
-    public Update(_delay : number) {
+    public Update(_update : CUpdate) {
         if(this.mCamera==null) return;
 
        
@@ -90,7 +91,7 @@ export class CCamShake extends CObject implements ICamShake
             this.mCamera.mReset = true;
         }
 
-        let delaySec : number = _delay / 1000;
+        let delaySec : number = _update.DeltaTime();
         let timeSec : number = Date.now() / 1000;
         let trauma : number = CMath.Clamp(this.mTrauma, 0, 1);
         let shake : number = Math.pow(trauma, this.mTraumaExponent);

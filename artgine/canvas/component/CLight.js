@@ -106,19 +106,23 @@ export class CLight extends CBrushComp {
             _body.append(CDomFactory.DataToDom(div));
         }
     }
+    DirPosV4() { return this.mDirPos; }
     GetTex() { return this.GetOwner().GetFrame().Pal().GetShadowWriteTex(); }
     Update(_update) {
         if (this.mUpdate == CUpdate.eType.Already) {
             this.mUpdate = CUpdate.eType.Not;
+            this.mBruch.mUpdateLight = true;
         }
         else if (this.mUpdate == CUpdate.eType.Updated) {
             this.mUpdate = CUpdate.eType.Already;
+            this.mBruch.mUpdateLight = true;
         }
         var cm = this.ProductMsg("SetLight");
         cm.mChild = true;
         cm.mInter = "";
         cm.mMsgData[0] = this;
         if (this.GetOwner().mUpdateMat != 0 || this.mUpdate == CUpdate.eType.Updated) {
+            this.mBruch.mUpdateLight = true;
             var pos = this.GetOwner().GetMat().xyz;
             if (this.mDirPos.w <= -1) {
                 CMath.V3Nor(pos, pos);
@@ -153,6 +157,7 @@ export class CLight extends CBrushComp {
             srp.mPriority = CRenderPass.ePriority.BackGround - 1;
             this.PushRPAuto(srp);
         }
+        let ShadowUpdate = false;
         if (this.mShadowKey != null) {
             if (this.mColor.IsZero())
                 this.mShadowOff = true;
@@ -182,7 +187,8 @@ export class CLight extends CBrushComp {
                         scam0.mWidth = width * 2;
                         scam0.mHeight = height * 2;
                         scam0.ResetOrthographic();
-                        this.mUpdate = CUpdate.eType.Updated;
+                        ShadowUpdate = true;
+                        this.mBruch.mUpdateShadow = true;
                     }
                     this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
@@ -197,6 +203,8 @@ export class CLight extends CBrushComp {
                         scam1.mWidth = width * 8;
                         scam1.mHeight = height * 8;
                         scam1.ResetOrthographic();
+                        ShadowUpdate = true;
+                        this.mBruch.mUpdateShadow = true;
                     }
                     this.mBruch.mShadowView[2].set(scam1.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[3].set(scam1.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
@@ -211,6 +219,8 @@ export class CLight extends CBrushComp {
                         scam2.mWidth = width * 16;
                         scam2.mHeight = height * 16;
                         scam2.ResetOrthographic();
+                        ShadowUpdate = true;
+                        this.mBruch.mUpdateShadow = true;
                     }
                     this.mBruch.mShadowView[4].set(scam2.GetViewMat().F32A(), this.mBruch.mShadowCount * 16);
                     this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
@@ -269,7 +279,10 @@ export class CLight extends CBrushComp {
                         else
                             maxVal.w = this.mBruch.mShadowCount * 6 + i;
                     }
-                    this.mBruch.mShadowRead.set(this.mBruch.mShadowCount, maxVal);
+                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 0] = maxVal.x;
+                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 1] = maxVal.y;
+                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 2] = maxVal.z;
+                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 3] = maxVal.w;
                 }
             }
             else {
@@ -359,6 +372,8 @@ export class CLight extends CBrushComp {
     Destroy() {
         super.Destroy();
         if (Math.abs(this.mDirPos.w) > 0.5 && this.mBruch != null) {
+            this.mBruch.mUpdateLight = true;
+            this.mBruch.mUpdateShadow = true;
             this.mBruch.mCameraMap.delete(this.mShadowKey + 0);
             this.mBruch.mCameraMap.delete(this.mShadowKey + 1);
             this.mBruch.mCameraMap.delete(this.mShadowKey + 2);

@@ -56,13 +56,13 @@ export class CCamShake extends CObject {
         view = CMath.V3MulMatNormal(view, this.mRotationMat);
         return CMath.V3AddV3(view, this.GetEye(), this.mLook);
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mCamera == null)
             return;
         if (this.mTrauma > 0) {
             this.mCamera.mReset = true;
         }
-        let delaySec = _delay / 1000;
+        let delaySec = _update.DeltaTime();
         let timeSec = Date.now() / 1000;
         let trauma = CMath.Clamp(this.mTrauma, 0, 1);
         let shake = Math.pow(trauma, this.mTraumaExponent);

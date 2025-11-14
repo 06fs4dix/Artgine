@@ -149,4 +149,43 @@ export class CTree extends CObject {
         }
         return keyArr;
     }
+    SortKey(recursive = true) {
+        this.mValueArr = null;
+        if (this.mChild) {
+            const list = [];
+            let node = this.mChild;
+            while (node) {
+                list.push(node);
+                node = node.mColleague;
+            }
+            list.sort((a, b) => {
+                const ak = a.mKey || "";
+                const bk = b.mKey || "";
+                if (ak < bk)
+                    return -1;
+                if (ak > bk)
+                    return 1;
+                return 0;
+            });
+            this.mChild = null;
+            let prev = null;
+            for (const n of list) {
+                n.mParent = this;
+                n.mColleague = null;
+                if (prev) {
+                    prev.mColleague = n;
+                }
+                else {
+                    this.mChild = n;
+                }
+                prev = n;
+            }
+            if (recursive) {
+                for (const n of list) {
+                    n.SortKey(true);
+                }
+            }
+        }
+        return this;
+    }
 }

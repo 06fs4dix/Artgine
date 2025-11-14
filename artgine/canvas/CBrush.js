@@ -107,6 +107,8 @@ export class CBrush extends CObject {
     mPause = false;
     mRenPriMap = new Map();
     mRenInfoMap = new Map();
+    mUpdateShadow = true;
+    mUpdateLight = true;
     IsShould(_member, _type) {
         if (_member == "mCameraMap")
             return true;
@@ -117,13 +119,13 @@ export class CBrush extends CObject {
     ClearRen() {
         for (let value of this.mRenPriMap.values()) {
             for (let i = 0; i < value.mAlphaList.Size(); ++i) {
-                value.mAlphaList.Find(i).mPaint.ClearBatch();
+                value.mAlphaList.Find(i).mPaint.ClearCRPAuto();
             }
             for (let i = 0; i < value.mDistanceList.Size(); ++i) {
-                value.mDistanceList.Find(i).mPaint.ClearBatch();
+                value.mDistanceList.Find(i).mPaint.ClearCRPAuto();
             }
             for (let i = 0; i < value.mRAlphaList.Size(); ++i) {
-                value.mRAlphaList.Find(i).mPaint.ClearBatch();
+                value.mRAlphaList.Find(i).mPaint.ClearCRPAuto();
             }
         }
         this.mRenInfoMap.clear();

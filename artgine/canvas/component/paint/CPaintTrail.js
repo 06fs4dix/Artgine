@@ -52,7 +52,7 @@ export class CPaintTrail extends CPaint {
     mCanTexOption = null;
     constructor(_tex = "", _vertexCount = 32) {
         super();
-        this.mTexture.push(_tex);
+        this.mTextureKey.push(_tex);
         this.mOut = new CFloat32Mgr();
         this.mPosList = new Array();
         this.mNorList = new Array();
@@ -102,7 +102,7 @@ export class CPaintTrail extends CPaint {
                 tex.SetFilter(CTexture.eFilter.Neaest);
                 tex.SetMipMap(false);
             }
-            this.mTexture[0] = texKey;
+            this.mTextureKey[0] = texKey;
         }
         else if (this.mCanTex == CPaintTrail.eCanTex.Arrow) {
             var texKey = "arrow.tex";
@@ -131,7 +131,7 @@ export class CPaintTrail extends CPaint {
                 this.mOwner.GetFrame().Ren().BuildTexture(tex);
                 this.mOwner.GetFrame().Res().Push(texKey, tex);
             }
-            this.mTexture[0] = texKey;
+            this.mTextureKey[0] = texKey;
         }
         if (this.mStaticPos == false) {
             var pos = this.mOwner.GetMat().xyz;
@@ -540,7 +540,7 @@ export class CPaintTrail extends CPaint {
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(1.0)));
         else
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide", new CVec1(0.0)));
-        this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+        this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         var dm = this.GetDrawMesh("CPaintTrail", _vf);
         this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
         barr[0] = this.mOwner.GetFrame().BMgr().BatchOff();

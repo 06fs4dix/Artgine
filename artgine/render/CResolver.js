@@ -2,7 +2,7 @@ import { CObject } from "../basic/CObject.js";
 import { CMath } from "../geometry/CMath.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
-class CResolver extends CObject {
+export class CResolver extends CObject {
     m_source;
     m_target;
     constructor(_tip, _tgt) {
@@ -16,14 +16,16 @@ class CResolver extends CObject {
         wMat.SetV3(3, _pos);
         wMat.UnitCheck();
         _bone.mData.pst = wMat;
-        const lMat = CMath.MatMul(wMat, CMath.MatInvert(_bone.mParent.mData.pst));
+        let lMat = wMat;
+        if (_bone.mParent)
+            lMat = CMath.MatMul(lMat, CMath.MatInvert(_bone.mParent.mData.pst));
         _bone.mData.rot = MatDecomposeRot(lMat);
         _bone.mData.pos = lMat.xyz;
     }
     ApplyToChild(_bone, _excludeBones = []) {
         if (!_bone)
             return;
-        if (parent && !_excludeBones.includes(_bone)) {
+        if (_bone.mParent && !_excludeBones.includes(_bone)) {
             _bone.mData.PRSReset();
             _bone.mData.pst = CMath.MatMul(_bone.mData.pst, _bone.mParent.mData.pst);
         }
@@ -33,13 +35,13 @@ class CResolver extends CObject {
             this.ApplyToChild(_bone.mChild, _excludeBones);
     }
 }
-export class CAttachResolver extends CResolver {
+export class CResolverAttach extends CResolver {
     m_offsetRot = new CVec4(0, 0, 0, 1);
     m_offsetPos = new CVec3(0, 0, 0);
     m_offsetSca = new CVec3(1, 1, 1);
     m_mixRot = 1;
-    m_mixPos = 1;
-    m_mixSca = 1;
+    m_mixPos = new CVec3(1, 1, 1);
+    m_mixSca = new CVec3(1, 1, 1);
     SolveIK() {
         const tMat = this.m_target.GetMat();
         const tPos = tMat.xyz;
@@ -51,14 +53,20 @@ export class CAttachResolver extends CResolver {
         CMath.V3AddV3(tPos, this.m_offsetPos, tPos);
         CMath.V3MulV3(tSca, this.m_offsetSca, tSca);
         CMath.QutMul(tRot, this.m_offsetRot, tRot);
-        const mPos = CMath.V3Interpolate(sPos, tPos, this.m_mixPos);
-        const mSca = CMath.V3Interpolate(sSca, tSca, this.m_mixSca);
+        const mPos = new CVec3();
+        mPos.x = CMath.FloatInterpolate(sPos.x, tPos.x, this.m_mixPos.x);
+        mPos.y = CMath.FloatInterpolate(sPos.y, tPos.y, this.m_mixPos.y);
+        mPos.z = CMath.FloatInterpolate(sPos.z, tPos.z, this.m_mixPos.z);
+        const mSca = new CVec3();
+        mSca.x = CMath.FloatInterpolate(sSca.x, tSca.x, this.m_mixSca.x);
+        mSca.y = CMath.FloatInterpolate(sSca.y, tSca.y, this.m_mixSca.y);
+        mSca.z = CMath.FloatInterpolate(sSca.z, tSca.z, this.m_mixSca.z);
         const mRot = CMath.QutInterpolate(sRot, tRot, this.m_mixRot);
         this.ApplyToBone(this.m_source, mPos, mSca, mRot);
         this.ApplyToChild(this.m_source);
     }
 }
-export class CIKLookResolver extends CResolver {
+export class CResolverIKLook extends CResolver {
     m_dirOrigin;
     m_rotOrigin;
     SolveIK() {
@@ -74,7 +82,7 @@ export class CIKLookResolver extends CResolver {
         this.ApplyToChild(this.m_source);
     }
 }
-export class CIKFABRResolver extends CResolver {
+export class CResolverIKFABR extends CResolver {
     m_pole;
     m_iteration = 10;
     m_tolerance = 0.05;
@@ -82,6 +90,7 @@ export class CIKFABRResolver extends CResolver {
     m_targetPos;
     m_boneRotOrigin;
     m_boneDirOrigin;
+    m_bonePosOrigin;
     m_boneLenTotal;
     m_boneLen;
     m_bones;
@@ -95,8 +104,12 @@ export class CIKFABRResolver extends CResolver {
         this.m_boneLen = new Array(_numOfBones);
         this.m_boneRotOrigin = new Array(_numOfBones);
         this.m_boneDirOrigin = new Array(_numOfBones);
+        this.m_bonePosOrigin = new Array(_numOfBones);
     }
     SolveIK() {
+        if (!this.m_source || !this.m_target) {
+            return;
+        }
         if (!this.m_targetPos) {
             this.m_targetPos = this.m_target.GetMat().xyz;
             this.m_boneLenTotal = 0;
@@ -119,6 +132,7 @@ export class CIKFABRResolver extends CResolver {
         }
         for (let i = 0; i < this.m_bones.length; i++) {
             this.m_bonePos[i] = this.m_bones[i].mData.pst.xyz;
+            this.m_bonePosOrigin[i] = this.m_bones[i].mData.pst.xyz;
         }
         const tPos = this.m_target.GetMat().xyz;
         let distToTarget = CMath.V3Distance(tPos, this.m_bonePos[0]);
@@ -143,6 +157,9 @@ export class CIKFABRResolver extends CResolver {
             }
         }
         this.PoleConstraint();
+        for (let i = 0; i < this.m_bonePos.length; i++) {
+            this.m_bonePos[i] = CMath.V3Interpolate(this.m_bonePosOrigin[i], this.m_bonePos[i], this.m_mix);
+        }
         for (let i = 0; i < this.m_bonePos.length - 1; i++) {
             const curDir = CMath.V3SubV3(this.m_bonePos[i + 1], this.m_bonePos[i]);
             const rotQut = CMath.FromToRotation(this.m_boneDirOrigin[i], curDir);

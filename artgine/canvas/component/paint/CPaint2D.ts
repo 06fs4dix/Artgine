@@ -161,11 +161,11 @@ export class CPaint2D extends CPaint
 	}
 	PushNormalMap(_tex : string)
 	{
-		if(this.mTexture.length==1)
-			this.mTexture.push(_tex);
-		else if(this.mTexture.length==2)
+		if(this.mTextureKey.length==1)
+			this.mTextureKey.push(_tex);
+		else if(this.mTextureKey.length==2)
 		{
-			this.mTexture[1]=_tex;
+			this.mTextureKey[1]=_tex;
 		}
 		this.ClearBatch();
 		this.PushTag("normalMap");
@@ -199,7 +199,7 @@ export class CPaint2D extends CPaint
 		button.className="btn btn-primary btn-sm";
 		button.innerText="TexcodiModif";
 		button.onclick=()=>{
-			if(this.mTexture.length>0)
+			if(this.mTextureKey.length>0)
 			{
 				let ani=CClass.New("CAnimation");
 				if(this.mTexCodi.Equals(new CVec4(1,1,0,0))==false)
@@ -215,7 +215,7 @@ export class CPaint2D extends CPaint
 					
 					
 				}
-				window["AniTool"](ani,this.mTexture[0]);
+				window["AniTool"](ani,this.mTextureKey[0]);
 				window["AniToolTexcodiEvent"](this, ()=>{
 
 					
@@ -408,9 +408,9 @@ export class CPaint2D extends CPaint
 	
 	SizeCac()
 	{
-		if((this.mSize==null || this.mSize.IsZero())  && this.mOwner!=null && this.mTexture.length>0)
+		if((this.mSize==null || this.mSize.IsZero())  && this.mOwner!=null && this.mTextureKey.length>0)
 		{
-			var tex=this.mOwner.GetFrame().Res().Find(this.mTexture[0]);
+			var tex=this.mOwner.GetFrame().Res().Find(this.mTextureKey[0]);
 			if(tex instanceof CTexture)
 			{
 				if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return;
@@ -444,7 +444,7 @@ export class CPaint2D extends CPaint
 		{
 			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
 		}
-		if(this.mTexture.length==0)
+		if(this.mTextureKey.length==0)
 		{
 			this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
 		}
@@ -558,7 +558,7 @@ export class CPaint2D extends CPaint
 	//left,top,right,bottom
 	GetLeftTopRightBottom(_frame : CFrame) 
 	{
-		const tex = _frame.Res().Find(this.mTexture[0]) as CTexture;
+		const tex = _frame.Res().Find(this.mTextureKey[0]) as CTexture;
 		if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return null;
 		const imgW = tex.GetWidth();
 		const imgH = tex.GetHeight();
@@ -591,7 +591,7 @@ export class CPaint2D extends CPaint
 		var barr=this.RenderBatch(_vf,1);
 		if(barr==null)	return;
 
-		if(this.mSize==null || this.mTexture.length==0)
+		if(this.mSize==null || this.mTextureKey.length==0)
 		{
 			this.mBatchMap.clear();
 			//this.mBatchLastVF=null;
@@ -623,7 +623,7 @@ export class CPaint2D extends CPaint
 		
 		if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
-		this.mOwner.GetFrame().BMgr().SetBatchTex(this.GetResTexture());
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		var dm=this.GetDrawMesh("Artgine/DM/2D",_vf,this.mOwner.GetFrame().Pal().MCI2D());
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 

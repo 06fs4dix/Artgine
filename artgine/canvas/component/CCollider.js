@@ -127,7 +127,7 @@ export class CCollider extends CGeometryComp {
         if (this.mGI != null)
             this.mGI.mFixedComp.Push(this);
     }
-    Build() {
+    BuildGI() {
         this.UpdateMat();
         if (this.IsEnable() == false || this.GetLayer() == "" || this.GetOwner().IsEnable() == false)
             return;

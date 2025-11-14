@@ -41,7 +41,7 @@ export class CComponent extends CObject {
     }
     Update(_update) {
     }
-    Build() {
+    BuildGI() {
     }
     SubUpdate() {
     }

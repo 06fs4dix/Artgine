@@ -144,6 +144,8 @@ CClass.Push(CVTileMold);
 export class CColliderVoxel extends CCollider {
     constructor(_voxel) {
         super();
+        if (_voxel == null)
+            return;
         this.mVoxel = _voxel;
         this.mBound.mMax.x = this.mVoxel.mSize * this.mVoxel.mCount.x;
         this.mBound.mMax.y = this.mVoxel.mSize * this.mVoxel.mCount.y;
