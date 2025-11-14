@@ -1,4 +1,4 @@
-const version = 'mhqc6jvt_45';
+const version = 'mhyvhc2r_6';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -214,4 +214,4 @@ function PM11() {
 }
 window["PM11"] = PM11;
 new CMDViewer("README.md");
-PM11();
+PM1();
