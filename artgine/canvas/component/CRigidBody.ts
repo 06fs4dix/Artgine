@@ -179,7 +179,7 @@ export class CRigidBody extends CGeometryComp
 		}
 		
 	}
-	IsEmpty(_key)
+	IsEmptyForce(_key)
 	{
 		for (var i = 0; i < this.mForceArr.length; ++i)
 		{

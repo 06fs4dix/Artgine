@@ -4,7 +4,6 @@ import { CArray } from "../../../basic/CArray.js";
 import { CHash } from "../../../basic/CHash.js";
 import { CString } from "../../../basic/CString.js";
 import { CTree } from "../../../basic/CTree.js";
-import { CWASM } from "../../../basic/CWASM.js";
 import { CBound } from "../../../geometry/CBound.js";
 import { CMat } from "../../../geometry/CMat.js";
 import { CMath } from "../../../geometry/CMath.js";
@@ -224,13 +223,10 @@ export class CPaint3D extends CPaint {
     }
     Update(_update) {
         super.Update(_update);
-        if (this.mUpdateFMat == false || this.mFMatLink)
+        if (this.mUpdateFMat == false)
             return;
-        if (CWASM.IsWASM()) {
-            this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
-            this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
-            this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
-        }
+        if (this.mFMatLink)
+            return;
         const node = this.mTreeNode;
         const nSize = node.Size();
         for (let nodeOff = 0; nodeOff < nSize; nodeOff++) {
@@ -250,14 +246,14 @@ export class CPaint3D extends CPaint {
                         nodemp.sumSA.mData = nodemp.sum;
                         mpiData.FMatAtt = false;
                         nodemp.sumSA.mTag = null;
-                        CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum);
+                        CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum, true);
                     }
                     else if (this.GetFMat() != nodemp.sumSA.mData) {
                         nodemp.sumSA.mData = this.GetFMat();
                     }
                 }
                 else {
-                    CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum);
+                    CMath.MatMul(mpiData.pst, this.GetFMat(), nodemp.sum, true);
                 }
                 if (mpiData.updateMat == CUpdate.eType.Updated)
                     mpiData.updateMat = CUpdate.eType.Already;
@@ -311,10 +307,16 @@ export class CPaint3D extends CPaint {
     RenderMesh(_vf, _node, _barr, _off) {
         if (_node.md.mData != null && _node.md.mData.ci != null && _node.md.mData.textureOff.length > 0) {
             this.mOwner.GetFrame().BMgr().BatchOn();
-            if (CWASM.IsWASM()) {
-                _node.sumSA.mKey = "worldMat34";
-                _node.sumSA.mType = 12;
+            switch (this.mWorldMatType) {
+                case CMat.eType.PRS:
+                    _node.sumSA.mKey = "worldMat";
+                    break;
+                case CMat.eType.Short3D:
+                    _node.sumSA.mKey = "worldMatShort";
+                    break;
             }
+            _node.sumSA.mType = this.mWorldMatType;
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType", new CVec1(this.mWorldMatType)));
             this.mOwner.GetFrame().BMgr().SetBatchSA(_node.sumSA);
             if (_node.mpi.mData.color != null) {
                 this.PushTag("CAModel");

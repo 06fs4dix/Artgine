@@ -49,6 +49,7 @@ import { CWASM } from "../basic/CWASM.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
+import { CConsol } from "../basic/CConsol.js";
 
 
 var gModal : CModalFlex;
@@ -287,7 +288,12 @@ export function DevTool(_atl: CAtelier)
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
     const parent = canvas.parentElement;
-    _frame.PF().mDebugMode = true;
+    if(_frame.Input().KeyDown(CInput.eKey.LControl)==false)
+    {
+        _frame.PF().mDebugMode = true;
+        CConsol.Log("DebugMode");
+    }
+        
     gBTargetWidth=_frame.PF().mTargetWidth;
     gBTargetHeight=_frame.PF().mTargetHeight;
     
@@ -571,7 +577,7 @@ function DevToolRender()
     let clArr=subject.FindComps(CCollider);
 
     const render=gAtl.Frame().Ren();
-    let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimple") as CShader;
+    let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCA") as CShader;
     
     let meshDrawBox=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
     if(meshDrawBox==null)

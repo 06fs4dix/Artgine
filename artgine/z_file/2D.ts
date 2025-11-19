@@ -13,7 +13,8 @@ import {
 	max,
 	min,
 	CMat12,
-	CMat34,
+	CMat43,
+	MatTypeToMat,
 } from "./Shader"
 import {
 	CAModelCac, ColorVFX, GetTexCodiedUV,
@@ -33,7 +34,8 @@ import {
 } from "./Wind";
 
 var worldMat : CMat=Null();
-var worldMat34 : CMat34=Null();
+var worldMatShort : CVec4=Null();
+var worldMatType : number=0.0;
 
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
@@ -68,7 +70,8 @@ var sam2DCount : number=Null();
 
 Build("Artgine/Shader/2DPlane",[],
 	vs_main,[
-		worldMat,viewMat,projectMat,
+		worldMat,
+		viewMat,projectMat,
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main,[out_color]
@@ -90,14 +93,16 @@ Build("Artgine/Shader/2DTrail",["trail"],
 );
 Build("Artgine/Shader/2DSimple",["simple"],
 	vs_main_simple,[
-		worldMat,viewMat,projectMat
+		worldMat,
+		viewMat,projectMat
 	],[
 		out_position,to_uv
 	],ps_main_simple,[out_color]
 );
 Build("Artgine/Shader/2DMask",["mask"],
 	vs_main,[
-		worldMat,viewMat,projectMat,mask
+		worldMat,
+		viewMat,projectMat,mask
 	],[
 		out_position,to_uv,to_worldPos
 	],ps_main_mask,[out_color]
@@ -122,11 +127,12 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 {
 	to_uv = new CVec3(f2_uv, 1.0);
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
+	
 
 	out_position=LWVPMul(f3_ver,wMat,viewMat,projectMat);	
 }
@@ -259,11 +265,12 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	var scaleZ :number=0.0;
 
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
+	
 	
 	BranchBegin("billboard","B",[billboard,billboardMat]);
 	if(billboard>0.5)

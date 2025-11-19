@@ -167,24 +167,20 @@ export class CMath {
         pa_out.mF32A[15] = a33;
         return pa_out;
     }
-    static MatMul(pa_val1, pa_val2, pa_val3 = null, _ref = false) {
-        var L_matrix = pa_val3;
+    static MatMul(pa_val1, pa_val2, pa_val3 = null, _mat43 = false) {
+        let L_matrix = pa_val3;
         if (L_matrix == null)
             L_matrix = new CMat();
         if (pa_val2.IsUnit() && pa_val1.IsUnit()) {
             L_matrix.Unit();
         }
         else if (pa_val2.IsUnit()) {
-            {
-                L_matrix.mF32A.set(pa_val1.mF32A);
-                L_matrix.SetUnit(false);
-            }
+            L_matrix.mF32A.set(pa_val1.mF32A);
+            L_matrix.SetUnit(false);
         }
         else if (pa_val1.IsUnit()) {
-            {
-                L_matrix.mF32A.set(pa_val2.mF32A);
-                L_matrix.SetUnit(false);
-            }
+            L_matrix.mF32A.set(pa_val2.mF32A);
+            L_matrix.SetUnit(false);
         }
         else {
             L_matrix.SetUnit(false);
@@ -224,22 +220,42 @@ export class CMath {
             const b31 = pa_val1.mF32A[12 + 1];
             const b32 = pa_val1.mF32A[12 + 2];
             const b33 = pa_val1.mF32A[12 + 3];
-            L_matrix.mF32A[0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
-            L_matrix.mF32A[1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
-            L_matrix.mF32A[2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
-            L_matrix.mF32A[3] = a03 * b00 + a13 * b01 + a23 * b02 + a33 * b03;
-            L_matrix.mF32A[4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
-            L_matrix.mF32A[5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
-            L_matrix.mF32A[6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
-            L_matrix.mF32A[7] = a03 * b10 + a13 * b11 + a23 * b12 + a33 * b13;
-            L_matrix.mF32A[8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
-            L_matrix.mF32A[9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
-            L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
-            L_matrix.mF32A[11] = a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23;
-            L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
-            L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
-            L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
-            L_matrix.mF32A[15] = a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33;
+            if (_mat43) {
+                L_matrix.mF32A[0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
+                L_matrix.mF32A[1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
+                L_matrix.mF32A[2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
+                L_matrix.mF32A[3] = 0.0;
+                L_matrix.mF32A[4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
+                L_matrix.mF32A[5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
+                L_matrix.mF32A[6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
+                L_matrix.mF32A[7] = 0.0;
+                L_matrix.mF32A[8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
+                L_matrix.mF32A[9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
+                L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
+                L_matrix.mF32A[11] = 0.0;
+                L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
+                L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
+                L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
+                L_matrix.mF32A[15] = 1.0;
+            }
+            else {
+                L_matrix.mF32A[0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
+                L_matrix.mF32A[1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
+                L_matrix.mF32A[2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
+                L_matrix.mF32A[3] = a03 * b00 + a13 * b01 + a23 * b02 + a33 * b03;
+                L_matrix.mF32A[4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
+                L_matrix.mF32A[5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
+                L_matrix.mF32A[6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
+                L_matrix.mF32A[7] = a03 * b10 + a13 * b11 + a23 * b12 + a33 * b13;
+                L_matrix.mF32A[8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
+                L_matrix.mF32A[9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
+                L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
+                L_matrix.mF32A[11] = a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23;
+                L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
+                L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
+                L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
+                L_matrix.mF32A[15] = a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33;
+            }
         }
         return L_matrix;
     }

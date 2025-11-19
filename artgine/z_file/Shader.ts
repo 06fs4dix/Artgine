@@ -106,8 +106,9 @@ export class CMat3{
     constructor(_x,_y,_z);
     constructor(_x:CVec3|number,_y?:CVec3,_z?:CVec3){}
 }
-export class CMat34{constructor(_x){} public a;}
 export class CMat42{constructor(_x){} public a;}
+export class CMat43{constructor(_x){} public a;}
+
 
 
 export class Vertex1 extends float{}
@@ -180,8 +181,6 @@ export function Null() : any {}
 
 //vs func
 export function LWVPMul(_vertex : CVec3,_w : CMat,_v : CMat,_p : CMat) : CVec4 { return new CVec4(0,0,0,0);}
-export function LW34VPMul(_vertex : CVec3,_w : CMat34,_v : CMat,_p : CMat) : CVec4 { return new CVec4(0,0,0,0);}
-
 export function VLWVPMul(_vertex : CVec3, _l : CMat, _w : CMat, _v : CMat, _p : CMat) : CVec4 { return new CVec4(0,0,0,0); }
 
 //ps func
@@ -196,7 +195,7 @@ export function Sam2DSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function Sam2DArrSize(_off : number) : CVec3 { return new CVec3(0,0,0);}
 export function SamCubeMaxLod(_off : number) : number { return 0;}
 
-export function ParallaxNormal(TangentViewPos : CVec3,TangentFragPos : CVec3,_index:number,_uv:CVec2,height_scale:number) : CVec2{    return new CVec2(0,0);}
+export function ParallaxNormal(TangentViewPos : CVec3,TangentFragPos : CVec3,_index:number,_uv:CVec2,height_scale:number) : CVec3{    return new CVec3(0,0,0);}
 
 //mapping range
 export function MappingV3ToTex(_a : CVec3) : CVec3 { return new CVec3(0,0,0);}
@@ -209,16 +208,15 @@ export function RGBAAdd(_color : CVec4,_rgba : CVec4) : CVec4{    return new CVe
 //CMath func
 //translation
 export function V4MulMatCoordi(_v4 : CVec4,_mat : CMat) : CVec4{    return new CVec4(0,0,0,0);}
-//export function V4MulMat34Coordi(_v4 : CVec4,_mat : CMat34) : CVec4{    return new CVec4(0,0,0,0);}
 export function V3MulMatCoordi(_v4 : CVec3,_mat : CMat) : CVec4{    return new CVec4(0,0,0,0);}
-//export function V3MulMat34Coordi(_v3 : CVec3,_mat : CMat34) : CVec3{    return new CVec3(0,0,0);}
 export function V3MulMat3Normal(_v3 : CVec3,_mat : CMat3) : CVec3{    return new CVec3(0,0,0);}
 
 //mat4
 export function FloatMulMat(_val : number,_mat : CMat) : CMat{    return new CMat(0);}
 export function MatAdd(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
 export function MatMul(_a : CMat,_b : CMat) : CMat{    return new CMat(0);}
-export function Mat34ToMat(_mat : CMat34) : CMat { return new CMat(0); }
+export function Mat34ToMat(_mat : CMat43) : CMat { return new CMat(0); }
+export function MatTypeToMat(_type :number,_short : CVec4,_mat44 : CMat) : CMat { return new CMat(0); }
 export function MatMix(_a : CMat, _b : CMat, _c : number) : CMat { return new CMat(0);}
 
 
@@ -230,6 +228,7 @@ export function InverseMat3(_a : CMat3) : CMat3 { return new CMat3(0); }
 export function V2SubV2(_a : CVec2,_b : CVec2) : CVec2{    return new CVec2(0,0);}
 export function V2AddV2(_a : CVec2,_b : CVec2) : CVec2{    return new CVec2(0,0);}
 export function V2MulFloat(_a : CVec2,_b : number) : CVec2{    return new CVec2(0,0);}
+export function V2DivFloat(_a : CVec2,_b : number) : CVec2{    return new CVec2(0,0);}
 export function V2MulV2(_a : CVec2,_b : CVec2) : CVec2{    return new CVec2(0,0);}
 export function V2DivV2(_a : CVec2,_b : CVec2) : CVec2{    return new CVec2(0,0);}
 export function V2Len(_a : CVec2) : number{    return 0;}
@@ -268,6 +267,9 @@ export function V4Mix(_a : CVec4, _b : CVec4, _c : number) : CVec4 { return new 
 export function max(_a : number,_b : number) : number{    return 0;}
 export function min(_a : number, _b : number) : number { return 0;}
 export function abs(_a : number) : number { return 0;}
+export function dFdx(_a : any) : any { return 0;}
+export function dFdy(_a : any) : any { return 0;}
+export function length(_a : number) : number { return 0;}
 export function floor(_a : number) : number { return 0;}
 export function ceil(_a : number) : number { return 0;}
 export function round(_a : number) : number { return 0;}

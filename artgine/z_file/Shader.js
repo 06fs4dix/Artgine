@@ -78,11 +78,11 @@ export class CMat3 {
     a;
     constructor(_x, _y, _z) { }
 }
-export class CMat34 {
+export class CMat42 {
     constructor(_x) { }
     a;
 }
-export class CMat42 {
+export class CMat43 {
     constructor(_x) { }
     a;
 }
@@ -199,7 +199,6 @@ export function Build(_key, _tag, _vs, _attribute, _VsToPs, _ps, _psOut, _insCou
 export function Attribute(_value, _tag = "") { }
 export function Null() { }
 export function LWVPMul(_vertex, _w, _v, _p) { return new CVec4(0, 0, 0, 0); }
-export function LW34VPMul(_vertex, _w, _v, _p) { return new CVec4(0, 0, 0, 0); }
 export function VLWVPMul(_vertex, _l, _w, _v, _p) { return new CVec4(0, 0, 0, 0); }
 export function Sam2D0ToColor(_uv) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DToColor(_number, _uv) { return new CVec4(0, 0, 0, 0); }
@@ -211,7 +210,7 @@ export function Sam2DToMat(_uni, _off) { return new CVec4(0, 0, 0, 0); }
 export function Sam2DSize(_off) { return new CVec2(0, 0); }
 export function Sam2DArrSize(_off) { return new CVec3(0, 0, 0); }
 export function SamCubeMaxLod(_off) { return 0; }
-export function ParallaxNormal(TangentViewPos, TangentFragPos, _index, _uv, height_scale) { return new CVec2(0, 0); }
+export function ParallaxNormal(TangentViewPos, TangentFragPos, _index, _uv, height_scale) { return new CVec3(0, 0, 0); }
 export function MappingV3ToTex(_a) { return new CVec3(0, 0, 0); }
 export function MappingTexToV3(_a) { return new CVec3(0, 0, 0); }
 export function MappingV4ToTex(_a) { return new CVec4(0, 0, 0, 0); }
@@ -224,12 +223,14 @@ export function FloatMulMat(_val, _mat) { return new CMat(0); }
 export function MatAdd(_a, _b) { return new CMat(0); }
 export function MatMul(_a, _b) { return new CMat(0); }
 export function Mat34ToMat(_mat) { return new CMat(0); }
+export function MatTypeToMat(_type, _short, _mat44) { return new CMat(0); }
 export function MatMix(_a, _b, _c) { return new CMat(0); }
 export function TransposeMat3(_a) { return new CMat3(0); }
 export function InverseMat3(_a) { return new CMat3(0); }
 export function V2SubV2(_a, _b) { return new CVec2(0, 0); }
 export function V2AddV2(_a, _b) { return new CVec2(0, 0); }
 export function V2MulFloat(_a, _b) { return new CVec2(0, 0); }
+export function V2DivFloat(_a, _b) { return new CVec2(0, 0); }
 export function V2MulV2(_a, _b) { return new CVec2(0, 0); }
 export function V2DivV2(_a, _b) { return new CVec2(0, 0); }
 export function V2Len(_a) { return 0; }
@@ -261,6 +262,9 @@ export function V4Mix(_a, _b, _c) { return new CVec4(0, 0, 0, 0); }
 export function max(_a, _b) { return 0; }
 export function min(_a, _b) { return 0; }
 export function abs(_a) { return 0; }
+export function dFdx(_a) { return 0; }
+export function dFdy(_a) { return 0; }
+export function length(_a) { return 0; }
 export function floor(_a) { return 0; }
 export function ceil(_a) { return 0; }
 export function round(_a) { return 0; }

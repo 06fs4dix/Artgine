@@ -21,6 +21,8 @@ import { CUpdate } from "../../basic/Basic.js";
 import { CObject, CPointer } from "../../basic/CObject.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CPoolGeo } from "../../geometry/CPoolGeo.js";
+import { CRigidBody } from "./CRigidBody.js";
+import { CGeometryComp, CGeometryInfo } from "./CGeometryComp.js";
 
 export class CCollisionObject
 {
@@ -52,8 +54,8 @@ export class CCollider extends CGeometryComp
 
 
 	public mPickRay = new Set<string>();
-	public mPlaneOut : string= null;
-	public mPlaneOutLast=false;
+	public mCameraOut : string= null;
+	public mCameraOutLast=false;
 
 	public mCollision = new Set<string>();
 	public mPushVec=new CVec3();
@@ -126,6 +128,8 @@ export class CCollider extends CGeometryComp
 	{
 		if(_pointer.member=="mCollision" || _pointer.member=="mGI" )
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""]);
+		else if(_pointer.member=="mCameraOut")
+			CUtilObj.NullEdit(_pointer,_body,_input,"");
 
 	}
 	override EditChange(_pointer : CPointer,_child : boolean)
@@ -151,7 +155,7 @@ export class CCollider extends CGeometryComp
 			_member=="mGJKShape" || _member=="mPushVec" || _member=="mGI" ||
 			_member=="mBoundGJK" || _member=="mCenterGJK" || _member=="mSizeGJK" ||
 			_member=="mColTarget" || _member=="mColPush" || _member=="mColPair" || 
-			_member=="mOneWayMap" || _member=="mRB")
+			_member=="mOneWayMap" || _member=="mRB" || _member=="mCameraOutLast")
 			return false;
 			
 			
@@ -438,7 +442,7 @@ export class CCollider extends CGeometryComp
 		this.mCollision=new Set();
 	}
 	SetPickMouse(_val : boolean) { this.mPickRay.add(""); }	
-	SetCameraOut(_val : boolean) { this.mPlaneOut=""; }
+	SetCameraOut(_val : boolean) { this.mCameraOut=""; }
 	PushPickRay(_val)
 	{
 		this.mPickRay.add(_val);
@@ -621,6 +625,8 @@ export class CCollider extends CGeometryComp
 	{
 		return null;
 	}
+	//밀어내는 정도 0~1은 밀어내는 비율 0.5면 절반만 밀기
+	//1이상은 100%밀어내고 추가로 밀어낼 거리값
 	protected mRestitution = 0;
 	
 	mRB : CRigidBody=null;
@@ -635,12 +641,7 @@ export class CCollider extends CGeometryComp
 	
 }
 import CCollider_imple from "../../canvas_imple/component/CCollider.js";
-import CStage from "../../../proj/2D/Maze/CStage.js";
-import { CRigidBody } from "./CRigidBody.js";
-import { CPhysics } from "./CPhysics.js";
-import { CUtilMath } from "../../geometry/CUtilMath.js";
-import { CForce } from "./CForce.js";
-import { CGeometryComp, CGeometryInfo } from "./CGeometryComp.js";
+
 
 
 

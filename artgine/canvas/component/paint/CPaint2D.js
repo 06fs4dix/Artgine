@@ -1,6 +1,5 @@
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
-import { CWASM } from "../../../basic/CWASM.js";
 import { CBound } from "../../../geometry/CBound.js";
 import { CMat } from "../../../geometry/CMat.js";
 import { CMath } from "../../../geometry/CMath.js";
@@ -22,9 +21,8 @@ var gMargin = 1.0;
 ;
 export class CPaint2D extends CPaint {
     mSize;
-    mPivot;
     mPos;
-    mRot;
+    mPivot;
     mYSort = false;
     mYSortOrigin = 0;
     static mYSortRange = new CVec2(-10000, 10000);
@@ -56,7 +54,6 @@ export class CPaint2D extends CPaint {
         }
         this.mPivot = new CVec3();
         this.mPos = new CVec3();
-        this.mRot = new CVec4();
         this.mTMat = new CMat();
         this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
         this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
@@ -74,7 +71,6 @@ export class CPaint2D extends CPaint {
         super.Reset();
         this.mPivot.Zero();
         this.mPos.Zero();
-        this.mRot.Zero();
         this.mShaderAttrMap.set("billboard", new CShaderAttr("billboard", new CVec1(0)));
         this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
         this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
@@ -148,8 +144,13 @@ export class CPaint2D extends CPaint {
     SetYSortOrigin(_origin) {
         this.mYSortOrigin = _origin;
     }
-    Update(_update) {
+    InitChk() {
+        super.InitChk();
         this.SizeCac();
+        if (this.mSize == null)
+            this.mInit = false;
+    }
+    Update(_update) {
         super.Update(_update);
         if (this.mUpdateFMat == true) {
             if (this.mYSort == true) {
@@ -157,15 +158,10 @@ export class CPaint2D extends CPaint {
                 let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
                 this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
             }
-            if (CWASM.IsWASM() && this.mTag.has("tail") == false) {
-                this.mFMat.mF32A[3] = this.mFMat.mF32A[12];
-                this.mFMat.mF32A[7] = this.mFMat.mF32A[13];
-                this.mFMat.mF32A[11] = this.mFMat.mF32A[14];
-            }
         }
-        if (_update.DeltaTime() > 1 || this.mTag.has("tail") == false || this.mSize == null)
+        else
             return;
-        if (this.mUpdateFMat == false)
+        if (this.mTag.has("tail") == false || _update.DeltaTime() > 1)
             return;
         if (this.mTag.has("billboard")) {
             let pos = CPoolGeo.ProductV3();
@@ -288,7 +284,7 @@ export class CPaint2D extends CPaint {
             this.Wind(this.mWindInfluence.x);
         }
         else if (_child) {
-            if (_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) ||
+            if (_pointer.IsRef(this.mPos) ||
                 _pointer.IsRef(this.mSize) || _pointer.IsRef(this.mPivot)) {
                 this.PRSReset();
             }
@@ -301,13 +297,7 @@ export class CPaint2D extends CPaint {
         var lpos = this.mPos.Export();
         lpos.x += this.mBound.mMax.x * bSca.x * this.mPivot.x;
         lpos.y += this.mBound.mMax.y * bSca.y * this.mPivot.y;
-        var t0 = CPoolGeo.ProductMat();
-        var t1 = CPoolGeo.ProductMat();
-        CMath.MatScale(bSca, t0);
-        CMath.QutToMat(this.mRot, t1);
-        CMath.MatMul(t0, t1, this.mLMat);
-        CPoolGeo.RecycleMat(t0);
-        CPoolGeo.RecycleMat(t1);
+        CMath.MatScale(bSca, this.mLMat);
         this.mLMat.mF32A[12] = lpos.x;
         this.mLMat.mF32A[13] = lpos.y;
         this.mLMat.mF32A[14] = lpos.z;
@@ -376,13 +366,15 @@ export class CPaint2D extends CPaint {
             let wsa = new CShaderAttr("worldMat", this.mTMat);
             this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
         }
-        else if (CWASM.IsWASM()) {
-            let wsa = new CShaderAttr("worldMat34", this.GetFMat());
-            wsa.mType = 12;
-            this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
-        }
         else {
             let wsa = new CShaderAttr("worldMat", this.GetFMat());
+            switch (this.mWorldMatType) {
+                case CMat.eType.Short2D:
+                    wsa.mKey = "worldMatShort";
+                    break;
+            }
+            wsa.mType = this.mWorldMatType;
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType", new CVec1(this.mWorldMatType)));
             this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
         }
         if (_vf.mUniform.get("windInfluence") != null)
@@ -434,13 +426,6 @@ export class CPaint2D extends CPaint {
     }
     SetPos(_pos) {
         this.mPos = _pos;
-        this.PRSReset();
-    }
-    SetRot(_rot) {
-        if (_rot instanceof CVec4)
-            this.mRot.Import(_rot);
-        else
-            this.mRot.Import(CMath.EulerToQut(_rot));
         this.PRSReset();
     }
     SetReverse(_x, _y) {
@@ -526,6 +511,21 @@ export class CPaintHTML extends CPaint2D {
     GetElement() {
         return this.mElement;
     }
+    ClearCRPAuto() {
+        if (this.GetOwner() == null)
+            return;
+        this.mElement.hidden = !this.GetOwner().IsEnable();
+    }
+    EmptyRPChk() {
+        if (this.mRenderPass.length == 0) {
+            var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
+            rp.mCullFace = CRenderPass.eCull.None;
+            this.mRenderPass = [rp];
+        }
+        else if (this.mRenderPass[0].mShader == "") {
+            this.mRenderPass[0].mShader = this.mOwner.GetFrame().Pal().Sl2D().mKey;
+        }
+    }
     Update(_delay) {
         if (this.mRenPT.length == 0 || this.mElement == null)
             return;
@@ -535,6 +535,8 @@ export class CPaintHTML extends CPaint2D {
         this.mUpdateFMat = false;
         if (this.mAttach == false) {
             this.mParent.appendChild(this.mElement);
+            if (this.mParent == document.body)
+                this.mElement.style.zIndex = 1010 + "";
             this.mElement.style.position = "absolute";
             if (this.mElement.style.pointerEvents == '')
                 this.mElement.style.pointerEvents = "none";

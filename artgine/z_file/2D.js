@@ -1,10 +1,11 @@
-import { Build, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, Mat34ToMat, max, min, } from "./Shader";
+import { Build, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, max, min, MatTypeToMat, } from "./Shader";
 import { CAModelCac, ColorVFX, GetTexCodiedUV, GetTexDecodedUV } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 var worldMat = Null();
-var worldMat34 = Null();
+var worldMatShort = Null();
+var worldMatType = 0.0;
 var viewMat = Null();
 var projectMat = Null();
 var billboard = Null();
@@ -26,7 +27,8 @@ var zDepth = 0.0;
 var zDepthBias = 0.001;
 var sam2DCount = Null();
 Build("Artgine/Shader/2DPlane", [], vs_main, [
-    worldMat, viewMat, projectMat,
+    worldMat,
+    viewMat, projectMat,
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
@@ -41,12 +43,14 @@ Build("Artgine/Shader/2DTrail", ["trail"], vs_main_trail, [
     out_position, to_uv, to_worldPos
 ], ps_main, [out_color]);
 Build("Artgine/Shader/2DSimple", ["simple"], vs_main_simple, [
-    worldMat, viewMat, projectMat
+    worldMat,
+    viewMat, projectMat
 ], [
     out_position, to_uv
 ], ps_main_simple, [out_color]);
 Build("Artgine/Shader/2DMask", ["mask"], vs_main, [
-    worldMat, viewMat, projectMat, mask
+    worldMat,
+    viewMat, projectMat, mask
 ], [
     out_position, to_uv, to_worldPos
 ], ps_main_mask, [out_color]);
@@ -63,8 +67,8 @@ function ps_main_blit() {
 function vs_main_simple(f3_ver, f2_uv) {
     to_uv = new CVec3(f2_uv, 1.0);
     var wMat;
-    BranchBegin("wasm", "WASM", [worldMat34]);
-    wMat = Mat34ToMat(worldMat34);
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
     BranchDefault();
     wMat = worldMat;
     BranchEnd();
@@ -148,8 +152,8 @@ function vs_main(f3_ver, f2_uv) {
     var scaleY = 0.0;
     var scaleZ = 0.0;
     var wMat;
-    BranchBegin("wasm", "WASM", [worldMat34]);
-    wMat = Mat34ToMat(worldMat34);
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
     BranchDefault();
     wMat = worldMat;
     BranchEnd();

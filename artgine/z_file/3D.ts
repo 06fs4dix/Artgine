@@ -15,10 +15,19 @@ import {
 	mod,
 	Mat34ToMat,
 	CMat12,
-	CMat34,
+	CMat43,
 	Sam2DArrSize,
 	MatMix,
 	Sam2D0ToColor,
+	CMat42,
+	MatTypeToMat,
+	min,
+	abs,
+	max,
+	dFdy,
+	V3Len,
+	length,
+	dFdx,
 } from "./Shader"
 import {
 	SDF
@@ -36,7 +45,8 @@ import {
 	bias, calcShadow,  normalBias, PCF, shadowCount, shadowOn, 
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, 
 	shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, 
-	jitter
+	jitter,
+	calcParallaxShadow
 } from "./Shadow";
 
 //uniform
@@ -54,7 +64,10 @@ var colorVFX : CMat=Null();
 
 //mat
 var worldMat : CMat=Null();
-var worldMat34 : CMat34=Null();
+var worldMatShort : CVec4=Null();
+var worldMatType : number=16.0;
+
+
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 var zDepth : number=0.0;
@@ -94,13 +107,15 @@ var time : number = Attribute(0,"time");
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
-	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,sam2DCount],
+	vs_main,[worldMat,
+		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,sam2DCount],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
 //Simple
 Build("Artgine/Shader/3DSimple",["simple"],
-	vs_main_simple,[worldMat,viewMat,projectMat],
+	vs_main_simple,[worldMat,
+		viewMat,projectMat],
 	[out_position,to_uv],
 	ps_main_simple,[out_color]
 );
@@ -108,7 +123,8 @@ Build("Artgine/Shader/3DSimple",["simple"],
 //gBuffer
 Build("Artgine/Shader/3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		worldMat,
+		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		sam2DCount,material,outputType,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer,[out_color]
@@ -116,7 +132,8 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"],
 //gBuffer MultiTex
 Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], 
 	vs_main_gBuffer, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		worldMat,
+		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		sam2DCount,material,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer_multi,[out_color, out_pos, out_nor, out_spc]
@@ -125,7 +142,8 @@ Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"],
 //shadow
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		worldMat,
+		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,jitter
 	], [out_position,to_uv,to_viewPos],
@@ -134,12 +152,13 @@ Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"],
 
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		worldMat,
+		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
 		ligDir,ligCol,ligCount,
-	], [out_position,to_uv,to_normal,to_worldPos],
+	], [out_position,to_uv,to_normal,to_worldPos,to_binormal,to_tangent,to_ref],
 	ps_main_shadow_read,[out_color]
 );
 
@@ -157,7 +176,8 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 //baking
 Build("Artgine/Shader/3DBake", ["bake"], 
 	vs_main_bake, [
-		worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex], 
+		worldMat,
+		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex], 
 		[out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],
 	ps_main_bake,[out_color]
 );
@@ -166,11 +186,12 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 {
 	to_uv=f2_uv;
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
+	
 
 	out_position=LWVPMul(f3_ver,wMat,viewMat,projectMat);
 }
@@ -247,18 +268,21 @@ function GetWorldWeightMat(_weightArrMat : Sam2DMat,_weightBakeArrMat : number,_
 // 	}
 // 	return uv;
 // }
-function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _wor : CVec4, _camPos : CVec3, _texOff : CVec3) : CVec2 {
-    var uv : CVec2 = _uv;
+function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _wor : CVec4, _camPos : CVec3, _texOff : CVec3) : CVec3 {
+    var uvh : CVec3 = new CVec3(_uv, 0.0);
     if(parallaxNormal>0.0001) {
         var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
-        uv = ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz, V3MulMat3Normal(_wor.xyz,TBN).xyz, _texOff.y, uv, parallaxNormal);
+		uvh = ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz, V3MulMat3Normal(_wor.xyz,TBN).xyz, _texOff.y, _uv, parallaxNormal);
+		if(uvh.x > 1.0 || uvh.y > 1.0 || uvh.x <= 0.0 || uvh.y <= 0.0)
+			discard;
 
         // // clamp slightly inside to avoid sampling border texels (tweak epsilon if needed)
         // uv.x = clamp(uv.x, 0.0005, 0.9995);
         // uv.y = clamp(uv.y, 0.0005, 0.9995);
     }
-    return uv;
+    return uvh;
 }
+
 
 function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec3, _texOff : CVec3,sam2DCount :number) : CVec3 {
 	var N : CVec3 = _nor;
@@ -289,12 +313,22 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	to_uv.xy=f2_uv;
 	BranchEnd();
 
+
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
+
+	//var wMat : CMat=Mat34ToMat(worldMat43);
+	//var wMat : CMat=worldMat;
+	// var wMat : CMat;
+	// BranchBegin("wasm","WASM",[worldMat43]);
+	// wMat=Mat34ToMat(worldMat43);
+	// BranchDefault();
+	// wMat=worldMat;
+	// BranchEnd();
 
 	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 	//var woweMat : CMat = wMat;
@@ -335,8 +369,8 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 	BranchEnd();
 	to_ref = f3_ref;
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
@@ -376,8 +410,8 @@ function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, 
 	out_position = new CVec4(clip_space_pos, 0.0, 1.0);
 
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
@@ -417,7 +451,7 @@ function ps_main()
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal, camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
 	BranchEnd();
 
 	var L_cor : CVec4=Sam2DToColor(to_ref.x, uv);
@@ -468,7 +502,7 @@ function ps_main_gBuffer() {
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
 	BranchEnd();
 
 	var L_cor : CVec4;
@@ -524,7 +558,7 @@ function ps_main_gBuffer_multi() {
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
 	BranchEnd();
 
 	var L_cor : CVec4;
@@ -566,8 +600,8 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	BranchEnd();
 
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
@@ -623,11 +657,11 @@ function ps_main_shadow_write()
 
 	out_color = to_viewPos;
 }
-function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3) {
+function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3,f4_tan : Tangent4,f3_bi : Binormal3,f3_ref : TexOff3) {
 
 	var wMat : CMat;
-	BranchBegin("wasm","WASM",[worldMat34]);
-	wMat=Mat34ToMat(worldMat34);
+	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
@@ -648,6 +682,15 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	to_uv.xy=f2_uv;
 	BranchEnd();
 
+	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
+	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
+	if(f3_ref.y > 0.0) {
+		to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
+	} else {
+		to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+	}
+	to_ref=f3_ref;
+
 	P = V4MulMatCoordi(P, viewMat);
 	out_position = V4MulMatCoordi(P, projectMat);
 }
@@ -655,7 +698,57 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 
 function ps_main_shadow_read() 
 {	
-	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
+
+	var world : CVec4 = to_worldPos;
+
+	var uv : CVec2 = to_uv;
+	var uvh : CVec3;
+
+	var pAll : number = 1.0;
+	var worldLigDir : CVec4;
+	var worldNormal : CVec4;
+
+	BranchBegin("parallax","P",[parallaxNormal, camPos]);
+
+	// 패럴렉스 uv, 높이 계산
+	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, world, camPos, to_ref);
+	uv = uvh.xy;
+
+
+	world.xyz -= V3MulFloat(
+		V3Nor(V3SubV3(camPos, world.xyz)), 
+		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
+			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
+			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
+		)
+	);
+
+	worldNormal = Sam2DToColor(to_ref.y, uv);
+	worldNormal.xyz = MappingTexToV3(worldNormal.xyz);
+	worldNormal.y = -worldNormal.y;
+
+	pAll = 0.0;
+	for(var i = 0; i < FloatToInt(shadowCount); i++) {
+		worldLigDir = Sam2DToV4(ligDir, Sam2DToV4(shadowReadList,i).x);
+
+		// 디렉셔널 라이팅이고, 라이팅을 받는 영역임
+		if(worldLigDir.w < 1.5) {
+			// ligDir을 tangent space로 변환
+			worldLigDir.xyz = V3MulMat3Normal(V3Nor(worldLigDir.xyz), TransposeMat3(V3ToMat3(to_tangent, to_binormal, to_normal))).xyz;
+			if(V3Dot(worldNormal.xyz, worldLigDir.xyz) > 0.0) {
+				pAll += calcParallaxShadow(to_ref.y, uv, worldLigDir.xyz, parallaxNormal);
+			}
+			else {
+				pAll += 1.0;
+			}
+		}
+	}
+	pAll /= shadowCount;
+	if(pAll < 0.0) pAll=0.0;
+
+	BranchEnd();
+
+	var L_cor : CVec4 = Sam2DToColor(0.0, uv);
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
@@ -673,22 +766,22 @@ function ps_main_shadow_read()
 	var all : number=0.0;
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {
 		var shadowRead : CVec4=Sam2DToV4(shadowReadList,i);
-		var sVal : number = calcShadow(shadowRead, IntToFloat(i),to_normal,to_worldPos);
+		var sVal : number = calcShadow(shadowRead, IntToFloat(i), to_normal, world);
 		all+=sVal;
 	}
 	all/=shadowCount;
 	if(all<0.0)all=0.0;
 
+	// parallax self shadow 곱해줌
+	all = min(all, pAll);
 
-	
 	out_color = new CVec4(all, all,all, 1.0);
-	//out_color = new CVec4(0.0,1.0,0.0,1.0);
 }
 
 function ps_main_bake() {
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
 	BranchEnd();
 
 	var L_cor : CVec4 = Sam2DToColor(to_ref.x,uv);

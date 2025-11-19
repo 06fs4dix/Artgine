@@ -1,3 +1,4 @@
+import { CDomFactory } from "../../basic/CDOMFactory.js";
 import { CEvent } from "../../basic/CEvent.js";
 import { CBound } from "../../geometry/CBound.js";
 import { CMath } from "../../geometry/CMath.js";
@@ -8,7 +9,7 @@ import { CRenderPass } from "../../render/CRenderPass.js";
 import { CFont, CFontOption } from "../../util/CFont.js";
 import { CFrame } from "../../util/CFrame.js";
 import { CCollider } from "../component/CCollider.js";
-import { CPaint2D } from "../component/paint/CPaint2D.js";
+import { CPaint2D, CPaintHTML } from "../component/paint/CPaint2D.js";
 import { CSubject } from "./CSubject.js";
 var g_toolMode = false;
 var g_moveMode = false;
@@ -39,7 +40,7 @@ export class CUI extends CSubject {
     mRGBA = null;
     mClickEvent = new CEvent();
     mPressEvent = new CEvent();
-    m_camResize = false;
+    mCamResize = false;
     mAnchorXType = CUI.eAnchor.Null;
     mAnchorYType = CUI.eAnchor.Null;
     mAnchorXLen = 0;
@@ -84,7 +85,7 @@ export class CUI extends CSubject {
         super();
     }
     SetCamResize(_enable) {
-        this.m_camResize = _enable;
+        this.mCamResize = _enable;
     }
     SetPressTraking(_enable) {
         this.mPressTraking = _enable;
@@ -255,7 +256,7 @@ export class CUI extends CSubject {
             return;
         if (this.mUIPT.mRenPT.length > 0) {
             let cam = this.mUIPT.mRenPT[0].mCam;
-            if (this.m_camResize && Math.abs(cam.mZoom - this.mSca.x) > 0.001) {
+            if (this.mCamResize && Math.abs(cam.mZoom - this.mSca.x) > 0.001) {
                 this.SetSca(new CVec3(cam.mZoom, cam.mZoom, cam.mZoom));
             }
         }
@@ -346,18 +347,18 @@ export class CUI extends CSubject {
 }
 ;
 export class CUIText extends CUI {
-    m_text = null;
-    m_fo;
-    m_alignCenter = true;
+    mText = null;
+    mFontOption;
+    mAlignCenter = true;
     constructor() {
         super();
     }
     Init(_text, _fontOption = null) {
         if (_fontOption != null)
-            this.m_fo = _fontOption;
-        if (this.m_fo == null)
-            this.m_fo = new CFontOption(64);
-        this.m_text = _text + "";
+            this.mFontOption = _fontOption;
+        if (this.mFontOption == null)
+            this.mFontOption = new CFontOption(64);
+        this.mText = _text + "";
         if (this.mUIPT == null) {
             this.mUIPT = new CPaint2D();
             this.mUIPT.PushRenderPass(gUIRP);
@@ -366,13 +367,13 @@ export class CUIText extends CUI {
         this.mUpdate = true;
     }
     SubjectUpdate(_delay) {
-        if (this.mUpdate && this.m_text != null) {
+        if (this.mUpdate && this.mText != null) {
             if (this.mDebugMode != null)
                 this.mDebugMode.length = 0;
-            var fr = CFont.TextToTexName(this.GetFrame().Ren(), this.m_text, this.m_fo);
+            var fr = CFont.TextToTexName(this.GetFrame().Ren(), this.mText, this.mFontOption);
             this.mUIPT.SetTexture(fr.mKey);
             this.mUIPT.SetSize(null);
-            if (this.m_alignCenter) {
+            if (this.mAlignCenter) {
                 var xrate = fr.mXSize - fr.mRXSize;
                 this.mUIPT.SetPos(new CVec3(xrate * 0.5, 0, 0));
             }
@@ -396,30 +397,30 @@ export class CUIText extends CUI {
         return super.Export(_copy, _resetKey);
     }
     SetFrame(_fw) {
-        if (_fw != null && this.m_text != null)
-            CFont.TextToTexName(_fw.Ren(), this.m_text, this.m_fo);
+        if (_fw != null && this.mText != null)
+            CFont.TextToTexName(_fw.Ren(), this.mText, this.mFontOption);
         super.SetFrame(_fw);
     }
 }
 ;
 export class CUIPicture extends CUI {
-    m_tex = "";
+    mTextureKey = "";
     constructor() {
         super();
     }
     Init(_tex, _color = null) {
-        this.m_tex = _tex;
+        this.mTextureKey = _tex;
         this.mUpdate = true;
         if (this.mUIPT == null) {
-            this.mUIPT = new CPaint2D(this.m_tex, this.mSize);
+            this.mUIPT = new CPaint2D(this.mTextureKey, this.mSize);
             this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
     }
     SubjectUpdate(_delay) {
-        if (this.mUpdate && this.m_tex != null) {
+        if (this.mUpdate && this.mTextureKey != null) {
             this.mDebugMode.length = 0;
-            this.mUIPT.SetTexture(this.m_tex);
+            this.mUIPT.SetTexture(this.mTextureKey);
             this.mUIPT.SetSize(this.mSize);
             if (this.mRGBA != null)
                 this.mUIPT.SetRGBA(this.mRGBA);
@@ -441,34 +442,34 @@ export class CUIPicture extends CUI {
 }
 ;
 export class CUIButtonImg extends CUI {
-    m_normal = "";
-    m_overImg = "";
-    m_pressImg = "";
+    mNormal = "";
+    mOverImg = "";
+    mPressImg = "";
     constructor() {
         super();
     }
     Init(_normal, _over, _press) {
         this.mUpdate = true;
-        this.m_normal = _normal;
-        this.m_overImg = _over;
-        this.m_pressImg = _press;
+        this.mNormal = _normal;
+        this.mOverImg = _over;
+        this.mPressImg = _press;
         if (this.mFrame != null) {
             this.mFrame.Load().Exe(_over);
             this.mFrame.Load().Exe(_press);
         }
         this.mUpdate = true;
         if (this.mUIPT == null) {
-            this.mUIPT = new CPaint2D(this.m_normal, this.mSize);
+            this.mUIPT = new CPaint2D(this.mNormal, this.mSize);
             this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
     }
     SubjectUpdate(_delay) {
         if (this.mUpdate) {
-            if (this.m_normal != null) {
+            if (this.mNormal != null) {
                 this.mDebugMode.length = 0;
                 this.mUIPT.SetSize(this.mSize);
-                this.mUIPT.SetTexture(this.m_normal);
+                this.mUIPT.SetTexture(this.mNormal);
                 if (this.mRGBA != null)
                     this.mUIPT.SetRGBA(this.mRGBA);
                 this.SetPivot(this.mPivot);
@@ -479,45 +480,45 @@ export class CUIButtonImg extends CUI {
             this.AddCCollider();
         }
         if (this.mLastEvent == CEvent.eType.Press) {
-            if (this.m_pressImg != this.mUIPT.GetTexture()[0])
-                this.mUIPT.SetTexture(this.m_pressImg);
+            if (this.mPressImg != this.mUIPT.GetTexture()[0])
+                this.mUIPT.SetTexture(this.mPressImg);
             this.GetFrame().SetCurser(CFrame.eCurser.pointer);
         }
         else if (this.mLastEvent == CEvent.eType.Pick) {
-            if (this.m_overImg != this.mUIPT.GetTexture()[0])
-                this.mUIPT.SetTexture(this.m_overImg);
+            if (this.mOverImg != this.mUIPT.GetTexture()[0])
+                this.mUIPT.SetTexture(this.mOverImg);
             this.GetFrame().SetCurser(CFrame.eCurser.pointer);
         }
         else {
-            if (this.m_normal != this.mUIPT.GetTexture()[0])
-                this.mUIPT.SetTexture(this.m_normal);
+            if (this.mNormal != this.mUIPT.GetTexture()[0])
+                this.mUIPT.SetTexture(this.mNormal);
         }
         super.SubjectUpdate(_delay);
     }
     SetFrame(_fw) {
         super.SetFrame(_fw);
         if (this.mFrame != null) {
-            this.mFrame.Load().Exe(this.m_overImg);
-            this.mFrame.Load().Exe(this.m_pressImg);
+            this.mFrame.Load().Exe(this.mOverImg);
+            this.mFrame.Load().Exe(this.mPressImg);
         }
     }
 }
 ;
 export class CUIButtonRGBA extends CUI {
-    m_normal = "";
-    m_normalRGBA = new CVec4();
-    m_overRGBA = new CVec4();
-    m_pressRGBA = new CVec4();
+    mNormal = "";
+    mNormalRGBA = new CVec4();
+    mOverRGBA = new CVec4();
+    mPressRGBA = new CVec4();
     constructor() {
         super();
     }
     Init(_normal, _over = new CVec4(-0.2, -0.2, -0.2, 0), _press = new CVec4(0.2, 0.2, 0.2, 0)) {
         this.mUpdate = true;
-        this.m_normal = _normal;
-        this.m_overRGBA = _over;
-        this.m_pressRGBA = _press;
-        if (this.mUIPT == null && this.m_normal != null) {
-            this.mUIPT = new CPaint2D(this.m_normal, this.mSize);
+        this.mNormal = _normal;
+        this.mOverRGBA = _over;
+        this.mPressRGBA = _press;
+        if (this.mUIPT == null && this.mNormal != null) {
+            this.mUIPT = new CPaint2D(this.mNormal, this.mSize);
             this.mUIPT.PushRenderPass(gUIRP);
             this.PushComp(this.mUIPT);
         }
@@ -526,7 +527,7 @@ export class CUIButtonRGBA extends CUI {
         if (this.mUpdate) {
             this.mDebugMode.length = 0;
             this.mUIPT.SetSize(this.mSize);
-            this.mUIPT.SetTexture(this.m_normal);
+            this.mUIPT.SetTexture(this.mNormal);
             if (this.mRGBA != null)
                 this.mUIPT.SetRGBA(this.mRGBA);
             this.SetPivot(this.mPivot);
@@ -536,26 +537,26 @@ export class CUIButtonRGBA extends CUI {
             this.AddCCollider();
         }
         if (this.mLastEvent == CEvent.eType.Press) {
-            this.SetRGBA(this.m_pressRGBA);
+            this.SetRGBA(this.mPressRGBA);
             this.GetFrame().SetCurser(CFrame.eCurser.pointer);
         }
         else if (this.mLastEvent == CEvent.eType.Pick) {
-            this.SetRGBA(this.m_overRGBA);
+            this.SetRGBA(this.mOverRGBA);
             this.GetFrame().SetCurser(CFrame.eCurser.pointer);
         }
         else {
-            this.SetRGBA(this.m_normalRGBA);
+            this.SetRGBA(this.mNormalRGBA);
         }
         super.SubjectUpdate(_delay);
     }
 }
 ;
 export class CUIProgressBar extends CUI {
-    m_texFront;
-    m_texBack;
-    m_max = 0;
-    m_val = 0;
-    m_ptBack;
+    mTexFront;
+    mTexBack;
+    mMax = 0;
+    mVal = 0;
+    mPTBack;
     constructor() {
         super();
     }
@@ -563,20 +564,20 @@ export class CUIProgressBar extends CUI {
         let result = super.ImportCJSON(_json);
         let ptVec = result.FindComps(CPaint2D);
         if (ptVec.length > 1) {
-            this.m_ptBack = ptVec[1];
+            this.mPTBack = ptVec[1];
         }
         return result;
     }
     Init(_max, _val, _size = new CVec2(2, 2), _front = null, _back = null) {
-        this.m_texFront = _front;
-        this.m_texBack = _back;
-        this.m_max = _max;
-        this.m_val = _val;
+        this.mTexFront = _front;
+        this.mTexBack = _back;
+        this.mMax = _max;
+        this.mVal = _val;
         this.mSize = _size;
         this.mUpdate = true;
         if (this.mUIPT == null) {
             var redOn = false;
-            if (this.m_texFront == null && this.mRGBA == null) {
+            if (this.mTexFront == null && this.mRGBA == null) {
                 redOn = true;
             }
             this.mUIPT = new CPaint2D("", this.mSize);
@@ -587,33 +588,33 @@ export class CUIProgressBar extends CUI {
                 this.mUIPT.SetRGBA(this.mRGBA);
             this.PushComp(this.mUIPT);
         }
-        if (this.m_ptBack == null) {
-            this.m_ptBack = new CPaint2D("", this.mSize);
-            this.m_ptBack.PushRenderPass(gUIRP);
-            this.m_ptBack.SetPos(new CVec3(0, 0, -0.1));
-            this.PushComp(this.m_ptBack);
+        if (this.mPTBack == null) {
+            this.mPTBack = new CPaint2D("", this.mSize);
+            this.mPTBack.PushRenderPass(gUIRP);
+            this.mPTBack.SetPos(new CVec3(0, 0, -0.1));
+            this.PushComp(this.mPTBack);
         }
     }
     SetBarVal(_val) {
         if (_val < 0)
-            this.m_val = 0;
-        else if (_val > this.m_max)
-            this.m_val = this.m_max;
+            this.mVal = 0;
+        else if (_val > this.mMax)
+            this.mVal = this.mMax;
         else
-            this.m_val = _val;
+            this.mVal = _val;
         if (this.mUIPT == null)
             return;
-        var per = this.m_val / this.m_max * 1.0;
+        var per = this.mVal / this.mMax * 1.0;
         if (Number.isNaN(per)) {
             per = 0;
         }
         this.mUIPT.SetPos(new CVec3((this.mSize.x * per - this.mSize.x) * 0.5, 0, 0));
         this.mUIPT.SetSize(new CVec2(this.mSize.x * per, this.mSize.y));
     }
-    GetBarVal() { return this.m_val; }
-    GetBarMax() { return this.m_max; }
+    GetBarVal() { return this.mVal; }
+    GetBarMax() { return this.mMax; }
     SetBarMax(_val) {
-        this.m_max = _val;
+        this.mMax = _val;
         this.SetBarVal(this.GetBarVal());
     }
     SetSizeScreenX(_yLen) {
@@ -628,21 +629,21 @@ export class CUIProgressBar extends CUI {
     }
     SubjectUpdate(_delay) {
         if (this.mUpdate) {
-            if (!(this.mUIPT && this.m_ptBack)) {
+            if (!(this.mUIPT && this.mPTBack)) {
                 return;
             }
-            if (this.m_texFront == null) {
-                this.m_texFront = this.mFrame.Pal().GetBlackTex();
-                this.mUIPT.SetTexture(this.m_texFront);
+            if (this.mTexFront == null) {
+                this.mTexFront = this.mFrame.Pal().GetBlackTex();
+                this.mUIPT.SetTexture(this.mTexFront);
             }
-            if (this.m_texBack == null) {
-                this.m_texBack = this.mFrame.Pal().GetBlackTex();
-                this.m_ptBack.SetTexture(this.m_texBack);
+            if (this.mTexBack == null) {
+                this.mTexBack = this.mFrame.Pal().GetBlackTex();
+                this.mPTBack.SetTexture(this.mTexBack);
             }
             this.mUIPT.SetSize(this.mSize);
             if (this.mRGBA != null)
                 this.mUIPT.SetRGBA(this.mRGBA);
-            this.SetBarVal(this.m_val);
+            this.SetBarVal(this.mVal);
             if (this.mUICL != null) {
                 this.mUICL.SetPickMouse(false);
             }
@@ -656,5 +657,39 @@ export class CUIProgressBar extends CUI {
         super.SubjectUpdate(_delay);
         if (this.mUpdate)
             this.mUpdate = false;
+    }
+}
+export class CUiHTML extends CUI {
+    mHTML;
+    mHover = false;
+    Init(_html, _size = null) {
+        this.mHTML = _html;
+        if (this.mUIPT == null) {
+            this.mUIPT = new CPaintHTML(CDomFactory.DataToDom(this.mHTML), _size);
+            this.PushComp(this.mUIPT);
+        }
+        else {
+            this.mUIPT.Destroy();
+            this.mUIPT = new CPaintHTML(CDomFactory.DataToDom(this.mHTML), _size);
+            this.PushComp(this.mUIPT);
+        }
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.mUICL == null) {
+            this.AddCCollider();
+        }
+        let e = this.mUIPT.GetElement();
+        if (e.classList.length > 0 && this.mHover) {
+            if (this.mLastEvent == CEvent.eType.Pick || this.mLastEvent == CEvent.eType.Press) {
+                this.mUIPT.GetElement().classList.add("active");
+            }
+            else {
+                this.mUIPT.GetElement().classList.remove("active");
+            }
+        }
+    }
+    SetHover(_enable) {
+        this.mHover = _enable;
     }
 }

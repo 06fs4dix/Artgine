@@ -2,6 +2,11 @@ import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
 import { CFloat32 } from "./CFloat32.js";
 export class CMat extends CFloat32 {
+    static eType = {
+        Short3D: 14,
+        Short2D: 13,
+        PRS: 16,
+    };
     mUnit = true;
     constructor(_F32A = null) {
         super();

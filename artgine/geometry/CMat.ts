@@ -10,7 +10,12 @@ export interface IMat
 }
 export class CMat extends CFloat32
 {
-	
+	static eType=
+	{
+		Short3D:14,
+		Short2D:13,
+		PRS:16,
+	}	
 
 	private mUnit=true;
 	//public m_ref : CMat=null;

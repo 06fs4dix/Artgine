@@ -15,13 +15,13 @@ import { CObject } from "../../../basic/CObject.js";
 import { CUniqueID } from "../../../basic/CUniqueID.js";
 import { CUtil } from "../../../basic/CUtil.js";
 import { CUtilObj } from "../../../basic/CUtilObj.js";
-import { CWASM } from "../../../basic/CWASM.js";
 import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import { CLoaderOption } from "../../../util/CLoader.js";
 import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import { CAlpha, CColor, CColorVFX } from "../CColor.js";
 import { CComponent } from "../CComponent.js";
+import { CWASM } from "../../../basic/CWASM.js";
 export class CRenPaint {
     mRenInfoKey = null;
     mCam = null;
@@ -35,6 +35,12 @@ var gBoundDummy = new CBound();
 var gPosDummy = new CVec3();
 gPosDummy.NewWASM();
 export class CPaint extends CComponent {
+    static eTag = {
+        Light: "light",
+        Shadow: "shadow",
+        Wind: "Wind",
+        Parallax: "parallax",
+    };
     mFMat;
     mLMat;
     mShaderAttrMap = new Map();
@@ -61,6 +67,7 @@ export class CPaint extends CComponent {
     mAutoLoad = new CLoaderOption();
     mInit = false;
     mAlphaTex = false;
+    mWorldMatType = CMat.eType.PRS;
     constructor() {
         super();
         this.mSysc = CComponent.eSysn.Paint;
@@ -374,13 +381,13 @@ export class CPaint extends CComponent {
             return false;
         this.mTag.add(_tag);
         this.mTagKey = null;
-        this.ClearBatch();
+        this.ClearCRPAuto();
         return true;
     }
     RemoveTag(_tag) {
         this.mTag.delete(_tag);
         this.mTagKey = null;
-        this.ClearBatch();
+        this.ClearCRPAuto();
     }
     GetDrawMesh(_meshKey, _shader, _ci) {
         var drawMesh = this.mOwner.GetFrame().Res().Find(_meshKey + _shader.ObjHash());
@@ -406,18 +413,6 @@ export class CPaint extends CComponent {
             this.mTagKey = key;
         }
         return this.mTagKey;
-    }
-    Light() {
-        this.PushTag("light");
-        this.ClearCRPAuto();
-    }
-    Shadow() {
-        this.PushTag("shadow");
-        this.ClearCRPAuto();
-    }
-    AlphaCut() {
-        this.PushTag("alphaCut");
-        this.ClearCRPAuto();
     }
     GetRenderPass() { return this.mRenderPass; }
     PushRenderPass(_rp, _copy = true) {
@@ -570,10 +565,6 @@ export class CPaint extends CComponent {
         }
     }
     Start() {
-        if (CWASM.IsWASM())
-            this.mTag.add("wasm");
-        else
-            this.mTag.delete("wasm");
         this.ClearCRPAuto();
     }
     StartChk() {
@@ -588,7 +579,7 @@ export class CPaint extends CComponent {
         if (this.mUpdateFMat)
             this.mUpdateFMat = false;
         if (this.mUpdateLMat || this.mOwner.mUpdateMat != 0) {
-            CMath.MatMul(this.mLMat, this.mOwner.GetMat(), this.mFMat);
+            CMath.MatMul(this.mLMat, this.mOwner.GetMat(), this.mFMat, true);
             this.CacBound();
             this.mUpdateFMat = true;
         }

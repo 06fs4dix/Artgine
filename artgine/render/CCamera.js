@@ -477,11 +477,11 @@ export class CCamera extends CObject {
             CMath.NormalAndVertexFromPlane(this.mCross, vertex, this.mPlane, CPlane.eDir.Right);
             CMath.V3MulFloat(up, halfVSide, vertex);
             CMath.V3SubV3(this.mEye, vertex, vertex);
-            CMath.NormalAndVertexFromPlane(up, vertex, this.mPlane, CPlane.eDir.Top);
+            CMath.NormalAndVertexFromPlane(up, vertex, this.mPlane, CPlane.eDir.Bottom);
             CMath.V3MulFloat(up, -1, normal);
             CMath.V3MulFloat(up, halfVSide, vertex);
             CMath.V3AddV3(this.mEye, vertex, vertex);
-            CMath.NormalAndVertexFromPlane(normal, vertex, this.mPlane, CPlane.eDir.Bottom);
+            CMath.NormalAndVertexFromPlane(normal, vertex, this.mPlane, CPlane.eDir.Top);
         }
         else {
             CMath.V3MulFloat(this.mView, this.mProjNear, vertex);
@@ -504,12 +504,12 @@ export class CCamera extends CObject {
             CMath.V3AddV3(farMulView, vertex, vertex);
             CMath.V3Cross(this.mCross, vertex, normal);
             CMath.V3Nor(normal, normal);
-            CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Bottom);
+            CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Top);
             CMath.V3MulFloat(up, halfVSide, vertex);
             CMath.V3SubV3(farMulView, vertex, vertex);
             CMath.V3Cross(vertex, this.mCross, normal);
             CMath.V3Nor(normal, normal);
-            CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Top);
+            CMath.NormalAndVertexFromPlane(normal, this.mEye, this.mPlane, CPlane.eDir.Bottom);
         }
         CPoolGeo.RecycleV3(farMulView);
         CPoolGeo.RecycleV3(vertex);

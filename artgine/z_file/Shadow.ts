@@ -1,6 +1,6 @@
 import { ligDir } from "./Light";
-import { CMat, cos, CVec2, CVec3, CVec4, fract, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
-    sin, V2Dot, V2Fract, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+import { abs, CMat, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
+    sin, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 
 export var shadowNearCasV0: Sam2DMat=new Sam2DMat(11,505);
 export var shadowFarCasP0: Sam2DMat=new Sam2DMat(11,509);
@@ -114,7 +114,8 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv0N);
                 var depth : number = shadowParam.z;			
 
-                sVal += (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
+                if(shadowParam.w==0.0)    sVal+=1.0;
+                else sVal += (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
                 count += 1.0;
                 
 
@@ -125,18 +126,20 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv1N);
                 var depth : number = shadowParam.z;			
 
-                
-                sVal += (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : 0.0;
+                if(shadowParam.w==0.0)    sVal+=1.0;
+                else sVal += (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : 0.0;
 
                 count += 1.0;
                 
+                if(shadowParam.w==0.0)    sVal+=1.0;
             }
             else if(_read.w>-0.5 && uv2N.x>0.0 && uv2N.y>0.0 && uv2N.x<1.0 && uv2N.y<1.0)
             {
                 var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv2N);
                 var depth : number = shadowParam.z;			
         
-                sVal += (_uvZ2.z + _biasAll *f16Chk*4.0) >= depth ? 1.0 : 0.0;
+                if(shadowParam.w==0.0)    sVal+=1.0;
+                else sVal += (_uvZ2.z + _biasAll *f16Chk*4.0) >= depth ? 1.0 : 0.0;
 
                 count += 1.0;
             }
@@ -222,22 +225,27 @@ function ApplyJitteredPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : C
         if(_read.y>-0.5 && uv0N.x>0.0 && uv0N.y>0.0 && uv0N.x<1.0 && uv0N.y<1.0)
         {
             var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv0N);
+            
             var depth : number = shadowParam.z;			
             
             sVal += (_uvZ0.z + _biasAll) >= depth ? 1.0 : 0.0;
             count += 1.0;
+            
         }
         else if(_read.z>-0.5 && uv1N.x>0.0 && uv1N.y>0.0 && uv1N.x<1.0 && uv1N.y<1.0)
         {
             var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv1N);
+            
             var depth : number = shadowParam.z;			
             
             sVal += (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : 0.0;
             count += 1.0;
+            
         }
         else if(_read.w>-0.5 && uv2N.x>0.0 && uv2N.y>0.0 && uv2N.x<1.0 && uv2N.y<1.0)
         {
             var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv2N);
+            
             var depth : number = shadowParam.z;			
             
             sVal += (_uvZ2.z + _biasAll*f16Chk*4.0) >= depth ? 1.0 : 0.0;
@@ -308,4 +316,32 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
 
     //최소 그림자 강도 적용
     return sVal * (1.0-shadowRate) + shadowRate;
+}
+
+export function calcParallaxShadow(_index : number, _uv : CVec2, _ligDir : CVec3, _heightScale : number) : number {    
+    var minLayers : number = 4.0;
+    var maxLayers : number = 16.0;
+    var numLayers : number = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), _ligDir)));
+
+    var currentTexCoords : CVec2 = _uv;
+    var currentDepthMapValue : number = 1.0 - Sam2DToColor(_index, currentTexCoords).a + 0.01;
+    var currentLayerDepth : number = currentDepthMapValue;
+
+    var layerDepth : number = 1.0 / numLayers;
+    var P : CVec2 = V2MulFloat(V2DivFloat(_ligDir.xy, _ligDir.z),_heightScale);
+    var deltaTexCoords : CVec2 = V2DivFloat(P, numLayers);
+
+    // 반대로 레이마칭
+    while(currentLayerDepth <= currentDepthMapValue && currentLayerDepth > 0.0)
+    {
+        currentTexCoords=V2AddV2(currentTexCoords,deltaTexCoords);
+        //currentTexCoords += deltaTexCoords;
+        currentDepthMapValue = 1.0 - Sam2DToColor(_index, currentTexCoords).a;
+        currentLayerDepth -= layerDepth;
+    }
+
+    var shadow : number;
+    if(currentLayerDepth > currentDepthMapValue) shadow = 0.0;
+    else shadow = 1.0;
+    return shadow * (1.0-shadowRate) + shadowRate;
 }

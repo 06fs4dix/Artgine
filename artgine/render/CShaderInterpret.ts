@@ -246,7 +246,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		this.mKeyMap.set("CVec4","vec4");
 		this.mKeyMap.set("CMat3","mat3");
 		this.mKeyMap.set("CMat","mat4");
-		this.mKeyMap.set("CMat34","mat4x3");
+		this.mKeyMap.set("CMat43","mat3x4");
 		this.mKeyMap.set("CMat42","mat2x4");
 		this.mKeyMap.set("number","float");
 		this.mKeyMap.set("Instance1","float");
@@ -420,16 +420,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	return _proj*_view*_world*_local*vec4(_vertex,1.0);\n";
 		str += "}\n";
-		str += "vec4 LW34VPMul(vec3 pa_local,mat4 world,mat4 view,mat4 proj)\n";
-		str += "{\n";
-		str += "	mat4 wMat=mat4(0.0);\n";
-		str += "	wMat[0].xyz=world[0].xyz;\n";
-		str += "	wMat[1].xyz=world[1].xyz;\n";
-		str += "	wMat[2].xyz=world[2].xyz;\n";
-		str += "	wMat[3].xyz=world[3].xyz;\n";
-		str += "	wMat[3].w=1.0;\n";
-		str += "	return proj*view*wMat*vec4(pa_local,1.0);\n";
-		str += "}\n";
+	
 
 		//mapping
 		str += "vec3 MappingV3ToTex(vec3 vec)\n";
@@ -463,23 +454,56 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return pa_mat*pa_val;\n";
 		str += "}\n";
 
-		// if(CWASM.IsWASM())
-		// {
-			str += "mat4 Mat34ToMat(mat4x3 _wmat)\n";
-			str += "{\n";
-			str += "    mat4 m = mat4(1.0);\n";
-			str += "m[0] = vec4(_wmat[0][0], _wmat[1][1], _wmat[2][2],0.0);\n";
-			str += "m[1] = vec4(_wmat[0][1], _wmat[1][2], _wmat[3][0],0.0);\n";
-			str += "m[2] = vec4(_wmat[0][2], _wmat[2][0], _wmat[3][1],0.0);\n";
-			str += "m[3] = vec4(_wmat[1][0], _wmat[2][1], _wmat[3][2],1.0);\n";
-			str += "    return m;\n";
-			str += "}\n";
-		// }
-		// else
-		// {
-		// 	str += "mat4 Mat12ToMat(mat4 _wmat)\n";
-		// 	str += "{    return _wmat;}\n";
-		// }
+		
+		str += "mat4 Mat34ToMat(mat3x4 _wmat)\n";
+		str += "{\n";
+		str += "    mat4 m = mat4(1.0);\n";
+		str += "m[0] = vec4(_wmat[0][0], _wmat[1][0], _wmat[2][0],0.0);\n";
+		str += "m[1] = vec4(_wmat[0][1], _wmat[1][1], _wmat[2][1],0.0);\n";
+		str += "m[2] = vec4(_wmat[0][2], _wmat[1][2], _wmat[2][2],0.0);\n";
+		str += "m[3] = vec4(_wmat[0][3], _wmat[1][3], _wmat[2][3],1.0);\n";
+		str += "    return m;\n";
+		str += "}\n";
+
+		// str += "mat4 MatTypeToMat(float _type,vec4 _mat41,mat4x2 _mat42,mat4x3 _mat43,mat _mat44)\n";
+		// str += "{\n";
+		// str += "    mat4 m = mat4(1.0);\n";
+		// str += "	if(_type>0.5){\n";
+
+		// str += "	}\n";
+
+		// str += "m[0] = vec4(_wmat[0][0], _wmat[1][1], _wmat[2][2],0.0);\n";
+		// str += "m[1] = vec4(_wmat[0][1], _wmat[1][2], _wmat[3][0],0.0);\n";
+		// str += "m[2] = vec4(_wmat[0][2], _wmat[2][0], _wmat[3][1],0.0);\n";
+		// str += "m[3] = vec4(_wmat[1][0], _wmat[2][1], _wmat[3][2],1.0);\n";
+		// str += "    return m;\n";
+		// str += "}\n";
+
+		str += "mat4 MatTypeToMat(float _type, vec4 _short, mat4 _mat)\n";
+		str += "{\n";
+		
+
+		str += "    if(_type < 13.5){\n";
+		str += "    	mat4 m = mat4(1.0);\n";
+		str += "        m[0] = vec4(_short.z,0.0,0.0,0.0);\n";
+		str += "        m[1] = vec4(0.0,_short.w,0.0,0.0);\n";
+		str += "        m[3] = vec4(_short.xy,1.0,1.0);\n";
+		str += "    	return m;\n";
+		str += "    }\n";
+		str += "    else if(_type < 14.5){\n";
+		str += "    	mat4 m = mat4(1.0);\n";
+		str += "        m[0] = vec4(_short.w,0.0,0.0,0.0);\n";
+		str += "        m[1] = vec4(0.0,_short.w,0.0,0.0);\n";
+		str += "        m[2] = vec4(0.0,0.0,_short.w,0.0);\n";
+		str += "        m[3] = vec4(_short.xyz, 1.0);\n";
+		str += "    	return m;\n";
+		str += "    }\n";
+		
+
+		str += "    return _mat;\n";
+		str += "}\n";
+
+		
 		
 	
 		str += "vec4 V3MulMatCoordi(vec3 pa_val,mat4 pa_mat)\n";
@@ -537,6 +561,10 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "vec2 V2MulFloat(vec2 _a,float _b)\n";
 		str += "{\n";
 		str += "	return _a*_b;\n";
+		str += "}\n";
+		str += "vec2 V2DivFloat(vec2 _a,float _b)\n";
+		str += "{\n";
+		str += "	return _a/_b;\n";
 		str += "}\n";
 		str += "vec2 V2MulV2(vec2 _a,vec2 _b)\n";
 		str += "{\n";
@@ -1186,13 +1214,14 @@ export class CShaderInterpretGL extends CShaderInterpret
 	
 		
 		
-		str += "vec2 ParallaxNormal(vec3 TangentViewPos,vec3 TangentFragPos,float _index,vec2 _uv,float height_scale)\n";
+		str += "vec3 ParallaxNormal(vec3 TangentViewPos,vec3 TangentFragPos,float _index,vec2 _uv,float height_scale)\n";
 		str += "{\n";
 		str += "	const float minLayers = 8.0;const float maxLayers = 32.0;\n";
 		str += "	vec3 viewDir   = normalize(TangentViewPos - TangentFragPos);\n";
 		str += "	float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));\n";
 		str += "	float layerDepth = 1.0 / numLayers;\n";
 		str += "	float currentLayerDepth = 0.0;\n";
+		str += "	viewDir.z += 0.2;\n";
 		str += "	vec2 P = viewDir.xy / viewDir.z * height_scale;\n";
 		str += "	vec2 deltaTexCoords = P / numLayers;\n";
 		str += "	vec2  currentTexCoords     = _uv;\n";
@@ -1210,7 +1239,8 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	float beforeDepth = 1.0-Sam2DToColor(_index, prevTexCoords).a - currentLayerDepth + layerDepth;\n";
 		str += "	float weight = afterDepth / (afterDepth - beforeDepth);\n";
 		str += "	vec2 newUv = prevTexCoords * weight + currentTexCoords * (1.0 - weight);\n";
-		str += "	return newUv;\n";
+		str += "	currentLayerDepth += beforeDepth * weight + afterDepth * (1.0 - weight);\n";
+		str += "	return vec3(newUv, height_scale * currentLayerDepth / viewDir.z);\n";
 		str += "}\n";
 		
 

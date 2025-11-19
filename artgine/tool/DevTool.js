@@ -40,6 +40,7 @@ import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
+import { CConsol } from "../basic/CConsol.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -167,7 +168,10 @@ export function DevTool(_atl) {
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
     const parent = canvas.parentElement;
-    _frame.PF().mDebugMode = true;
+    if (_frame.Input().KeyDown(CInput.eKey.LControl) == false) {
+        _frame.PF().mDebugMode = true;
+        CConsol.Log("DebugMode");
+    }
     gBTargetWidth = _frame.PF().mTargetWidth;
     gBTargetHeight = _frame.PF().mTargetHeight;
     gCanStyle = {
@@ -393,7 +397,7 @@ function DevToolRender() {
     let ptArr = subject.FindComps(CPaint);
     let clArr = subject.FindComps(CCollider);
     const render = gAtl.Frame().Ren();
-    let shader = gAtl.Frame().Res().Find("Artgine/Shader/3DSimple");
+    let shader = gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCA");
     let meshDrawBox = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh() + "Dev");
     if (meshDrawBox == null) {
         let mesh = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh());

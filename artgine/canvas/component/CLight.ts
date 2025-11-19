@@ -372,7 +372,15 @@ export class CLight extends CBrushComp
 						
 				} 
 				
-
+				let maxVal : CVec4=this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
+				if(maxVal==null)
+				{
+					maxVal=new CVec4(this.mBruch.mLightCount,-1,-1,-1);
+				}
+				else
+				{
+					maxVal.x = this.mBruch.mLightCount;
+				}
 				for(var i=0;i<this.mCascadeCycle.length;++i)
 				{
 					if(this.mCascadeCycle[i]==-1)	continue;
@@ -421,15 +429,8 @@ export class CLight extends CBrushComp
 					}
 
 					
-					let maxVal : CVec4=this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
-					if(maxVal==null)
-					{
-						maxVal=new CVec4(this.mBruch.mLightCount,-1,-1,-1);
-					}
-					else
-					{
-						maxVal.x = this.mBruch.mLightCount;
-					}
+					//let maxVal : CVec4=this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
+					
 					//디렉션이다
 					if(i<3)
 					{						
@@ -448,11 +449,12 @@ export class CLight extends CBrushComp
 					}
 					//this.mBruch.mShadowRead.set(this.mBruch.mShadowCount,maxVal);
 
-					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+0]=maxVal.x;
-					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+1]=maxVal.y;
-					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+2]=maxVal.z;
-					this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+3]=maxVal.w;
+					
 				}
+				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+0]=maxVal.x;
+				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+1]=maxVal.y;
+				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+2]=maxVal.z;
+				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+3]=maxVal.w;
 			}
 			else
 			{
@@ -464,6 +466,8 @@ export class CLight extends CBrushComp
 				this.mBruch.mShadowView[5].fill(0,0,16);
 				this.mBruch.mShadowView[6].fill(0,0,16);
 			}
+
+			
 
 			if(!this.mShadowOff)
 				this.mBruch.mShadowCount++;

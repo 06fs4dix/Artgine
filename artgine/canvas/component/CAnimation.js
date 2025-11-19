@@ -136,7 +136,6 @@ export class CClipPRS extends CClip {
     mCurve = new CCurve();
     mBezierRangeX = -1;
     mBezierRangeY = -1;
-    mSubject = true;
     constructor(_time, _delay, _value0 = new Array(), _value1 = 0, _value2 = 0) {
         super(_time, _delay);
         if (_value0 instanceof CVec3) {

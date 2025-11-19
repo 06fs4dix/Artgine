@@ -62,7 +62,7 @@ export class CMeshCopyNode implements IMat
 			
 		
 
-		CMath.MatMul(sm, rm,this.pst);
+		CMath.MatMul(sm, rm,this.pst,true);
 		CPoolGeo.RecycleMat(sm);
 		CPoolGeo.RecycleMat(rm);
 		

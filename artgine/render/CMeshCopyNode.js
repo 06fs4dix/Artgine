@@ -37,7 +37,7 @@ export class CMeshCopyNode {
         var rm = CPoolGeo.ProductMat();
         CMath.MatScale(this.sca, sm);
         CMath.QutToMat(this.rot, rm);
-        CMath.MatMul(sm, rm, this.pst);
+        CMath.MatMul(sm, rm, this.pst, true);
         CPoolGeo.RecycleMat(sm);
         CPoolGeo.RecycleMat(rm);
         this.pst.mF32A[12] = this.pos.x;

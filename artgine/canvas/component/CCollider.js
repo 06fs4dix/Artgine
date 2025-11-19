@@ -12,6 +12,7 @@ import { CPaint2D } from "./paint/CPaint2D.js";
 import { CUpdate } from "../../basic/Basic.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CPoolGeo } from "../../geometry/CPoolGeo.js";
+import { CGeometryComp } from "./CGeometryComp.js";
 export class CCollisionObject {
     mTar = null;
     mOrg = null;
@@ -32,8 +33,8 @@ export class CCollider extends CGeometryComp {
     mBound = new CBound;
     mLayer = "";
     mPickRay = new Set();
-    mPlaneOut = null;
-    mPlaneOutLast = false;
+    mCameraOut = null;
+    mCameraOutLast = false;
     mCollision = new Set();
     mPushVec = new CVec3();
     mElevator = false;
@@ -70,6 +71,8 @@ export class CCollider extends CGeometryComp {
     EditForm(_pointer, _body, _input) {
         if (_pointer.member == "mCollision" || _pointer.member == "mGI")
             CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""]);
+        else if (_pointer.member == "mCameraOut")
+            CUtilObj.NullEdit(_pointer, _body, _input, "");
     }
     EditChange(_pointer, _child) {
         super.EditChange(_pointer, _child);
@@ -86,7 +89,7 @@ export class CCollider extends CGeometryComp {
             _member == "mGJKShape" || _member == "mPushVec" || _member == "mGI" ||
             _member == "mBoundGJK" || _member == "mCenterGJK" || _member == "mSizeGJK" ||
             _member == "mColTarget" || _member == "mColPush" || _member == "mColPair" ||
-            _member == "mOneWayMap" || _member == "mRB")
+            _member == "mOneWayMap" || _member == "mRB" || _member == "mCameraOutLast")
             return false;
         return super.IsShould(_member, _type);
     }
@@ -245,7 +248,7 @@ export class CCollider extends CGeometryComp {
         this.mCollision = new Set();
     }
     SetPickMouse(_val) { this.mPickRay.add(""); }
-    SetCameraOut(_val) { this.mPlaneOut = ""; }
+    SetCameraOut(_val) { this.mCameraOut = ""; }
     PushPickRay(_val) {
         this.mPickRay.add(_val);
     }
@@ -382,5 +385,4 @@ export class CCollider extends CGeometryComp {
     }
 }
 import CCollider_imple from "../../canvas_imple/component/CCollider.js";
-import { CGeometryComp } from "./CGeometryComp.js";
 CCollider_imple();

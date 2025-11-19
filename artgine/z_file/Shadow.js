@@ -1,4 +1,4 @@
-import { cos, CVec2, CVec3, CVec4, fract, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToMat, Sam2DV4, screenPos, ShadowPosToUv, sin, V2Dot, V3AddV3, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+import { abs, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DV4, screenPos, ShadowPosToUv, sin, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 export var shadowNearCasV0 = new Sam2DMat(11, 505);
 export var shadowFarCasP0 = new Sam2DMat(11, 509);
 export var shadowTopCasV1 = new Sam2DMat(11, 513);
@@ -50,19 +50,30 @@ function ApplyPCF(_uvZ0, _uvZ1, _uvZ2, _read, _biasAll) {
             if (_read.y > -0.5 && uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0) {
                 var shadowParam = Sam2DArrToColor(0.0, uv0N);
                 var depth = shadowParam.z;
-                sVal += (_uvZ0.z + _biasAll * f16Chk) >= depth ? 1.0 : 0.0;
+                if (shadowParam.w == 0.0)
+                    sVal += 1.0;
+                else
+                    sVal += (_uvZ0.z + _biasAll * f16Chk) >= depth ? 1.0 : 0.0;
                 count += 1.0;
             }
             else if (_read.z > -0.5 && uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0) {
                 var shadowParam = Sam2DArrToColor(0.0, uv1N);
                 var depth = shadowParam.z;
-                sVal += (_uvZ1.z + _biasAll * f16Chk * 2.0) >= depth ? 1.0 : 0.0;
+                if (shadowParam.w == 0.0)
+                    sVal += 1.0;
+                else
+                    sVal += (_uvZ1.z + _biasAll * f16Chk * 2.0) >= depth ? 1.0 : 0.0;
                 count += 1.0;
+                if (shadowParam.w == 0.0)
+                    sVal += 1.0;
             }
             else if (_read.w > -0.5 && uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0) {
                 var shadowParam = Sam2DArrToColor(0.0, uv2N);
                 var depth = shadowParam.z;
-                sVal += (_uvZ2.z + _biasAll * f16Chk * 4.0) >= depth ? 1.0 : 0.0;
+                if (shadowParam.w == 0.0)
+                    sVal += 1.0;
+                else
+                    sVal += (_uvZ2.z + _biasAll * f16Chk * 4.0) >= depth ? 1.0 : 0.0;
                 count += 1.0;
             }
         }
@@ -174,4 +185,26 @@ export function calcShadow(_read, _index, _nor, _worldPos) {
         sVal = 1.0;
     }
     return sVal * (1.0 - shadowRate) + shadowRate;
+}
+export function calcParallaxShadow(_index, _uv, _ligDir, _heightScale) {
+    var minLayers = 4.0;
+    var maxLayers = 16.0;
+    var numLayers = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), _ligDir)));
+    var currentTexCoords = _uv;
+    var currentDepthMapValue = 1.0 - Sam2DToColor(_index, currentTexCoords).a + 0.01;
+    var currentLayerDepth = currentDepthMapValue;
+    var layerDepth = 1.0 / numLayers;
+    var P = V2MulFloat(V2DivFloat(_ligDir.xy, _ligDir.z), _heightScale);
+    var deltaTexCoords = V2DivFloat(P, numLayers);
+    while (currentLayerDepth <= currentDepthMapValue && currentLayerDepth > 0.0) {
+        currentTexCoords = V2AddV2(currentTexCoords, deltaTexCoords);
+        currentDepthMapValue = 1.0 - Sam2DToColor(_index, currentTexCoords).a;
+        currentLayerDepth -= layerDepth;
+    }
+    var shadow;
+    if (currentLayerDepth > currentDepthMapValue)
+        shadow = 0.0;
+    else
+        shadow = 1.0;
+    return shadow * (1.0 - shadowRate) + shadowRate;
 }

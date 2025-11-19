@@ -1,10 +1,11 @@
 import { CEvent } from "../../basic/CEvent.js";
 import { CMath } from "../../geometry/CMath.js";
+import { CVec2 } from "../../geometry/CVec2.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CH5Canvas } from "../../render/CH5Canvas.js";
 import { CInput } from "../../system/CInput.js";
 import { CSubject } from "./CSubject.js";
-import { CUI, CUIButtonRGBA } from "./CUI.js";
+import { CUI, CUIButtonRGBA, CUiHTML as CUIHTML } from "./CUI.js";
 var eStickType;
 (function (eStickType) {
     eStickType["Cross"] = "Cross";
@@ -188,35 +189,24 @@ export class CPad extends CSubject {
             }
         }
         else if (_type == eStickType.Circle || _type == eStickType.Circle4 || _type == eStickType.Circle8) {
-            CH5Canvas.Init(128, 128, true, false);
-            let cmdList = [
-                CH5Canvas.FillLinearGradient(4, 4, 4, 128 - 8, [{ per: 0, color: "gray" }, { per: 1, color: "red" }]),
-                CH5Canvas.FillCircle(64, 64, 60),
-                CH5Canvas.StrokeCircle(64, 64, 60, 4),
-                CH5Canvas.FillStyle("black"),
-                CH5Canvas.FillText(20, 62, "◁", 32),
-                CH5Canvas.FillText(108, 62, "▷", 32),
-                CH5Canvas.FillText(66, 22, "△", 32),
-                CH5Canvas.FillText(66, 108, "▽", 32),
-            ];
-            CH5Canvas.Draw(cmdList);
-            let tex = CH5Canvas.GetNewTex();
-            this.GetFrame().Res().Push("Pad/PadStickCircle.tex", tex);
-            this.GetFrame().Ren().BuildTexture(tex);
             if (this.FindChilds("PadStickCircle").length == 0) {
-                let btn = new CUIButtonRGBA();
+                let btn = new CUIHTML();
                 btn.SetCamResize(true);
-                btn.Init("Pad/PadStickCircle.tex");
+                btn.Init(`  
+    <button class="btn btn-secondary rounded-circle">
+      <span class="position-absolute top-0 start-50 translate-middle-x fw-bold">↑</span>
+      <span class="position-absolute bottom-0 start-50 translate-middle-x fw-bold">↓</span>
+      <span class="position-absolute start-0 top-50 translate-middle-y fw-bold">←</span>
+      <span class="position-absolute end-0 top-50 translate-middle-y fw-bold">→</span>
+    </button>
+                `, new CVec2(100 * this.mPadScale, 100 * this.mPadScale));
                 btn.SetKey("PadStickCircle");
-                {
-                    btn.SetAnchorX(CUI.eAnchor.Min, 40);
-                    btn.SetAnchorY(CUI.eAnchor.Min, 40);
-                }
-                btn.SetSize(100 * this.mPadScale, 100 * this.mPadScale);
+                btn.SetHover(true);
+                btn.SetAnchorX(CUI.eAnchor.Min, 40);
+                btn.SetAnchorY(CUI.eAnchor.Min, 40);
                 btn.SetPressTraking(true);
                 this.PushChild(btn);
                 this.mStick.push(btn);
-                btn.GetPt().GetRenderPass()[0].mDepthTest = false;
             }
         }
     }
@@ -225,34 +215,19 @@ export class CPad extends CSubject {
             _count = 9;
         if (_type == CPad.eButtonType.Alphabet_Rectangle || _type == CPad.eButtonType.Number_Rectangle) {
             for (let i = 0; i < _count; ++i) {
-                CH5Canvas.Init(50, 50, true, false);
-                let cmdList = [
-                    CH5Canvas.FillStyle('#5A86FF'),
-                    CH5Canvas.FillRect(0, 0, 50, 50),
-                    CH5Canvas.LineWidth(5),
-                    CH5Canvas.StrokeRect(0, 0, 50, 50),
-                    CH5Canvas.FillStyle('black'),
-                ];
-                if (_type == CPad.eButtonType.Alphabet_Rectangle)
-                    cmdList.push(CH5Canvas.FillText(25, 25, String.fromCharCode(65 + i), 32));
-                else
-                    cmdList.push(CH5Canvas.FillText(25, 25, String.fromCharCode(49 + i), 32));
                 let ch5key = "PadButton" + i;
-                CH5Canvas.Draw(cmdList);
-                let tex = CH5Canvas.GetNewTex();
-                this.GetFrame().Res().Push("Pad/" + ch5key + ".tex", tex);
-                this.GetFrame().Ren().BuildTexture(tex);
                 if (this.FindChilds(ch5key).length == 0) {
-                    let btn = new CUIButtonRGBA();
+                    let btn = new CUIHTML();
                     btn.SetCamResize(true);
-                    btn.Init("Pad/" + ch5key + ".tex");
+                    btn.Init(`
+                        <button class="btn btn-outline-danger rounded-circle fw-bold p-0">${i}</button>
+                        `, new CVec2(50 * this.mPadScale, 50 * this.mPadScale));
                     btn.SetKey(ch5key);
                     btn.SetAnchorX(CUI.eAnchor.Max, 20);
                     btn.SetAnchorY(CUI.eAnchor.Min, 40 + i * 60 * this.mPadScale);
-                    btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
+                    btn.SetHover(true);
                     this.PushChild(btn);
                     this.mButton.push(btn);
-                    btn.GetPt().GetRenderPass()[0].mDepthTest = false;
                 }
             }
         }

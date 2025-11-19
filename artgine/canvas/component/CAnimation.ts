@@ -223,7 +223,7 @@ export class CClipPRS extends CClip
 	public mCurve=new CCurve();
 	public mBezierRangeX=-1;
 	public mBezierRangeY=-1;
-	public mSubject=true;
+	//public mSubject=true;
 
 	constructor(_time : number,_delay : number,_value0 : Array<CVec3>,_type : number);
 	constructor(_time : number,_delay : number,_value0 : CVec3,_value1 : CVec3,_type : number);

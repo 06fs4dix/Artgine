@@ -208,117 +208,222 @@ export class CMath
 
 		return pa_out;
 	}
-	static MatMul(pa_val1 : CMat,pa_val2: CMat,pa_val3: CMat=null,_ref=false)
-	{
-		var L_matrix=pa_val3;
+	// static MatMul(pa_val1 : CMat,pa_val2: CMat,pa_val3: CMat=null,_mat43=false)
+	// {
+	// 	var L_matrix=pa_val3;
 		
-		if(L_matrix == null)	L_matrix=new CMat();
+	// 	if(L_matrix == null)	L_matrix=new CMat();
 		
 
-		if(pa_val2.IsUnit() && pa_val1.IsUnit())
+	// 	if(pa_val2.IsUnit() && pa_val1.IsUnit())
+	// 	{
+	// 		L_matrix.Unit();
+	// 	}
+	// 	else if(pa_val2.IsUnit())
+	// 	{
+	
+	// 		L_matrix.mF32A.set(pa_val1.mF32A);
+	// 		L_matrix.SetUnit(false);
+		
+			
+
+	// 	}
+	// 	else if(pa_val1.IsUnit())
+	// 	{
+			
+	// 		L_matrix.mF32A.set(pa_val2.mF32A);
+	// 		L_matrix.SetUnit(false);
+		
+	// 	}
+	// 	else
+	// 	{
+			
+	// 		L_matrix.SetUnit(false);
+
+			
+	// 		if(pa_val1.Ptr()!=null && pa_val2.Ptr()!=null && L_matrix.Ptr()!=null)
+	// 		{
+	// 			CWASM.MatMul(pa_val1.Ptr(),pa_val2.Ptr(),L_matrix.Ptr());
+	// 			return L_matrix;
+	// 		}
+			
+	// 		const a00 = pa_val2.mF32A[0];
+	// 		const a01 = pa_val2.mF32A[1];
+	// 		const a02 = pa_val2.mF32A[2];
+	// 		const a03 = pa_val2.mF32A[3];
+	// 		const a10 = pa_val2.mF32A[ 4 + 0];
+	// 		const a11 = pa_val2.mF32A[ 4 + 1];
+	// 		const a12 = pa_val2.mF32A[ 4 + 2];
+	// 		const a13 = pa_val2.mF32A[ 4 + 3];
+	// 		const a20 = pa_val2.mF32A[ 8 + 0];
+	// 		const a21 = pa_val2.mF32A[ 8 + 1];
+	// 		const a22 = pa_val2.mF32A[ 8 + 2];
+	// 		const a23 = pa_val2.mF32A[ 8 + 3];
+	// 		const a30 = pa_val2.mF32A[12 + 0];
+	// 		const a31 = pa_val2.mF32A[12 + 1];
+	// 		const a32 = pa_val2.mF32A[12 + 2];
+	// 		const a33 = pa_val2.mF32A[12 + 3];
+	// 		const b00 = pa_val1.mF32A[0];
+	// 		const b01 = pa_val1.mF32A[1];
+	// 		const b02 = pa_val1.mF32A[2];
+	// 		const b03 = pa_val1.mF32A[3];
+	// 		const b10 = pa_val1.mF32A[ 4 + 0];
+	// 		const b11 = pa_val1.mF32A[ 4 + 1];
+	// 		const b12 = pa_val1.mF32A[ 4 + 2];
+	// 		const b13 = pa_val1.mF32A[ 4 + 3];
+	// 		const b20 = pa_val1.mF32A[ 8 + 0];
+	// 		const b21 = pa_val1.mF32A[ 8 + 1];
+	// 		const b22 = pa_val1.mF32A[ 8 + 2];
+	// 		const b23 = pa_val1.mF32A[ 8 + 3];
+	// 		const b30 = pa_val1.mF32A[12 + 0];
+	// 		const b31 = pa_val1.mF32A[12 + 1];
+	// 		const b32 = pa_val1.mF32A[12 + 2];
+	// 		const b33 = pa_val1.mF32A[12 + 3];
+
+	// 		L_matrix.mF32A[ 0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
+	// 		L_matrix.mF32A[ 1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
+	// 		L_matrix.mF32A[ 2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
+	// 		L_matrix.mF32A[ 3] = a03 * b00 + a13 * b01 + a23 * b02 + a33 * b03;
+	// 		L_matrix.mF32A[ 4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
+	// 		L_matrix.mF32A[ 5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
+	// 		L_matrix.mF32A[ 6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
+	// 		L_matrix.mF32A[ 7] = a03 * b10 + a13 * b11 + a23 * b12 + a33 * b13;
+	// 		L_matrix.mF32A[ 8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
+	// 		L_matrix.mF32A[ 9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
+	// 		L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
+	// 		L_matrix.mF32A[11] = a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23;
+	// 		L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
+	// 		L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
+	// 		L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
+	// 		L_matrix.mF32A[15] = a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33;
+	// 	}
+
+		
+	
+	
+	
+	
+	// 	return L_matrix;
+	// }
+	static MatMul(pa_val1: CMat, pa_val2: CMat, pa_val3: CMat = null, _mat43 = false)
+	{
+		let L_matrix = pa_val3;
+
+		if (L_matrix == null) L_matrix = new CMat();
+
+		if (pa_val2.IsUnit() && pa_val1.IsUnit())
 		{
 			L_matrix.Unit();
 		}
-		else if(pa_val2.IsUnit())
+		else if (pa_val2.IsUnit())
 		{
-			// if(_ref)
-			// {
-			// 	if(L_matrix.GetRef()!=pa_val1)
-			// 		L_matrix.SetRef(pa_val1);
-
-			// }
-			// else
-			{
-				L_matrix.mF32A.set(pa_val1.mF32A);
-				L_matrix.SetUnit(false);
-			}
-			
-
+			L_matrix.mF32A.set(pa_val1.mF32A);
+			L_matrix.SetUnit(false);
 		}
-		else if(pa_val1.IsUnit())
+		else if (pa_val1.IsUnit())
 		{
-			// if(_ref)
-			// {
-			// 	if(L_matrix.GetRef()!=pa_val2)
-			// 		L_matrix.SetRef(pa_val2);
-
-			// }
-			// else
-			{
-				L_matrix.mF32A.set(pa_val2.mF32A);
-				L_matrix.SetUnit(false);
-			}
+			L_matrix.mF32A.set(pa_val2.mF32A);
+			L_matrix.SetUnit(false);
 		}
 		else
 		{
-			//if(_ref && L_matrix.IsRef())	L_matrix.SetRef(null);
 			L_matrix.SetUnit(false);
 
-			
-			if(pa_val1.Ptr()!=null && pa_val2.Ptr()!=null && L_matrix.Ptr()!=null)
+			if (pa_val1.Ptr() != null && pa_val2.Ptr() != null && L_matrix.Ptr() != null)
 			{
-				CWASM.MatMul(pa_val1.Ptr(),pa_val2.Ptr(),L_matrix.Ptr());
+				CWASM.MatMul(pa_val1.Ptr(), pa_val2.Ptr(), L_matrix.Ptr());
 				return L_matrix;
 			}
-			
+
 			const a00 = pa_val2.mF32A[0];
 			const a01 = pa_val2.mF32A[1];
 			const a02 = pa_val2.mF32A[2];
 			const a03 = pa_val2.mF32A[3];
-			const a10 = pa_val2.mF32A[ 4 + 0];
-			const a11 = pa_val2.mF32A[ 4 + 1];
-			const a12 = pa_val2.mF32A[ 4 + 2];
-			const a13 = pa_val2.mF32A[ 4 + 3];
-			const a20 = pa_val2.mF32A[ 8 + 0];
-			const a21 = pa_val2.mF32A[ 8 + 1];
-			const a22 = pa_val2.mF32A[ 8 + 2];
-			const a23 = pa_val2.mF32A[ 8 + 3];
+			const a10 = pa_val2.mF32A[4 + 0];
+			const a11 = pa_val2.mF32A[4 + 1];
+			const a12 = pa_val2.mF32A[4 + 2];
+			const a13 = pa_val2.mF32A[4 + 3];
+			const a20 = pa_val2.mF32A[8 + 0];
+			const a21 = pa_val2.mF32A[8 + 1];
+			const a22 = pa_val2.mF32A[8 + 2];
+			const a23 = pa_val2.mF32A[8 + 3];
 			const a30 = pa_val2.mF32A[12 + 0];
 			const a31 = pa_val2.mF32A[12 + 1];
 			const a32 = pa_val2.mF32A[12 + 2];
 			const a33 = pa_val2.mF32A[12 + 3];
+
 			const b00 = pa_val1.mF32A[0];
 			const b01 = pa_val1.mF32A[1];
 			const b02 = pa_val1.mF32A[2];
 			const b03 = pa_val1.mF32A[3];
-			const b10 = pa_val1.mF32A[ 4 + 0];
-			const b11 = pa_val1.mF32A[ 4 + 1];
-			const b12 = pa_val1.mF32A[ 4 + 2];
-			const b13 = pa_val1.mF32A[ 4 + 3];
-			const b20 = pa_val1.mF32A[ 8 + 0];
-			const b21 = pa_val1.mF32A[ 8 + 1];
-			const b22 = pa_val1.mF32A[ 8 + 2];
-			const b23 = pa_val1.mF32A[ 8 + 3];
+			const b10 = pa_val1.mF32A[4 + 0];
+			const b11 = pa_val1.mF32A[4 + 1];
+			const b12 = pa_val1.mF32A[4 + 2];
+			const b13 = pa_val1.mF32A[4 + 3];
+			const b20 = pa_val1.mF32A[8 + 0];
+			const b21 = pa_val1.mF32A[8 + 1];
+			const b22 = pa_val1.mF32A[8 + 2];
+			const b23 = pa_val1.mF32A[8 + 3];
 			const b30 = pa_val1.mF32A[12 + 0];
 			const b31 = pa_val1.mF32A[12 + 1];
 			const b32 = pa_val1.mF32A[12 + 2];
 			const b33 = pa_val1.mF32A[12 + 3];
 
-			L_matrix.mF32A[ 0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
-			L_matrix.mF32A[ 1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
-			L_matrix.mF32A[ 2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
-			L_matrix.mF32A[ 3] = a03 * b00 + a13 * b01 + a23 * b02 + a33 * b03;
-			L_matrix.mF32A[ 4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
-			L_matrix.mF32A[ 5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
-			L_matrix.mF32A[ 6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
-			L_matrix.mF32A[ 7] = a03 * b10 + a13 * b11 + a23 * b12 + a33 * b13;
-			L_matrix.mF32A[ 8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
-			L_matrix.mF32A[ 9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
-			L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
-			L_matrix.mF32A[11] = a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23;
-			L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
-			L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
-			L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
-			L_matrix.mF32A[15] = a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33;
+			// 3×4(affine) 전용 경로 (_mat43 == true):
+			//  - 마지막 행: 항상 [0,0,0,1]
+			//  - 마지막 컬럼: [tx, ty, tz, 1]
+			if (_mat43) {
+				 // row 0, col 0~2
+				L_matrix.mF32A[ 0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
+				L_matrix.mF32A[ 1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
+				L_matrix.mF32A[ 2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
+				L_matrix.mF32A[ 3] = 0.0;  // 사용 안함
+
+				// row 1, col 0~2
+				L_matrix.mF32A[ 4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
+				L_matrix.mF32A[ 5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
+				L_matrix.mF32A[ 6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
+				L_matrix.mF32A[ 7] = 0.0;  // 사용 안함
+
+				// row 2, col 0~2
+				L_matrix.mF32A[ 8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
+				L_matrix.mF32A[ 9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
+				L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
+				L_matrix.mF32A[11] = 0.0;  // 사용 안함
+
+				// row 3, col 0~2 (translation 등)
+				L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
+				L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
+				L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
+				L_matrix.mF32A[15] = 1.0;  // 사용 안함: 보통 1 고정
+			}
+			else {
+				// 기존 4×4 일반 경로
+				L_matrix.mF32A[ 0] = a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03;
+				L_matrix.mF32A[ 1] = a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03;
+				L_matrix.mF32A[ 2] = a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03;
+				L_matrix.mF32A[ 3] = a03 * b00 + a13 * b01 + a23 * b02 + a33 * b03;
+
+				L_matrix.mF32A[ 4] = a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13;
+				L_matrix.mF32A[ 5] = a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13;
+				L_matrix.mF32A[ 6] = a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13;
+				L_matrix.mF32A[ 7] = a03 * b10 + a13 * b11 + a23 * b12 + a33 * b13;
+
+				L_matrix.mF32A[ 8] = a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23;
+				L_matrix.mF32A[ 9] = a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23;
+				L_matrix.mF32A[10] = a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23;
+				L_matrix.mF32A[11] = a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23;
+
+				L_matrix.mF32A[12] = a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33;
+				L_matrix.mF32A[13] = a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33;
+				L_matrix.mF32A[14] = a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33;
+				L_matrix.mF32A[15] = a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33;
+			}
 		}
 
-		
-	
-	
-	
-	
 		return L_matrix;
 	}
+
 	static MatAdd(a : CMat,b : CMat,pa_out : CMat=null)
 	{
 		if(pa_out==null)	pa_out=new CMat();

@@ -23,7 +23,7 @@ import { CObject, CPointer } from "../../../basic/CObject.js"
 import { CUniqueID } from "../../../basic/CUniqueID.js"
 import { CUtil } from "../../../basic/CUtil.js"
 import { CUtilObj } from "../../../basic/CUtilObj.js"
-import { CWASM } from "../../../basic/CWASM.js"
+
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js"
 import { CUtilMath } from "../../../geometry/CUtilMath.js"
 import { CCamera } from "../../../render/CCamera.js"
@@ -35,6 +35,7 @@ import { CSubject } from "../../subject/CSubject.js"
 import { CAlpha, CColor, CColorVFX } from "../CColor.js"
 import { CComponent } from "../CComponent.js"
 import { CJSON } from "../../../basic/CJSON.js"
+import { CWASM } from "../../../basic/CWASM.js"
 
 export class CRenPaint
 {
@@ -82,6 +83,16 @@ gPosDummy.NewWASM();
 export class CPaint extends CComponent implements IMat
 {
 
+	static eTag={
+		Light:"light",
+		// ShadowRead:"ShadowRead",
+		// ShadowWrite:"ShadowWrite",
+		Shadow:"shadow",
+		Wind:"Wind",
+		Parallax:"parallax",
+		
+
+	};
 	protected mFMat : CMat;//= new CMat();
 	protected mLMat : CMat;//= new CMat();
 
@@ -119,6 +130,7 @@ export class CPaint extends CComponent implements IMat
 	public mInit=false;
 	
 	public mAlphaTex : boolean = false;
+	mWorldMatType=CMat.eType.PRS;
 
 	constructor()
 	{
@@ -609,9 +621,18 @@ export class CPaint extends CComponent implements IMat
 	{
 		if(this.mTag.has(_tag))	return false;
 
+
+		// if(_tag=="Shadow")
+		// {
+		// 	this.mTag.add(CPaint.eTag.ShadowRead);
+		// 	this.mTag.add(CPaint.eTag.ShadowWrite);
+		// }
+		// else
 		this.mTag.add(_tag);
+
+
 		this.mTagKey=null;
-		this.ClearBatch();
+		this.ClearCRPAuto();
 
 		return true;
 	}
@@ -619,7 +640,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		this.mTag.delete(_tag);
 		this.mTagKey=null;
-		this.ClearBatch();
+		this.ClearCRPAuto();
 	}
 	GetDrawMesh(_meshKey : string,_shader : CShader,_ci : CMeshCreateInfo)
 	{
@@ -654,21 +675,21 @@ export class CPaint extends CComponent implements IMat
 
 		return this.mTagKey;	
 	}
-	Light()	
-	{	
-		this.PushTag("light");
-		this.ClearCRPAuto();
-	}
-	Shadow()	
-	{	
-		this.PushTag("shadow");
-		this.ClearCRPAuto();
-	}
-	AlphaCut()	
-	{	
-		this.PushTag("alphaCut");
-		this.ClearCRPAuto();
-	}
+	// Light()	
+	// {	
+	// 	this.PushTag("light");
+	// 	this.ClearCRPAuto();
+	// }
+	// Shadow()	
+	// {	
+	// 	this.PushTag("shadow");
+	// 	this.ClearCRPAuto();
+	// }
+	// AlphaCut()	
+	// {	
+	// 	this.PushTag("alphaCut");
+	// 	this.ClearCRPAuto();
+	// }
 	
 
 	
@@ -906,10 +927,7 @@ export class CPaint extends CComponent implements IMat
 	}
 	Start()
 	{
-		if(CWASM.IsWASM())
-			this.mTag.add("wasm");
-		else
-			this.mTag.delete("wasm");
+		
 		this.ClearCRPAuto();
 		//this.InitPaint();
 		
@@ -934,9 +952,14 @@ export class CPaint extends CComponent implements IMat
 		if(this.mUpdateLMat || this.mOwner.mUpdateMat!=0)// || this.mBoundFMatR==0)
 		{
 			
-			CMath.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat);
+			CMath.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat,true);
+			//this.mFMat.mF32A[12]=this.mOwner.GetMat()[12]+this.mLMat.mF32A[12]*;
+			//this.mLMat.IsUnit()
 			this.CacBound();
 			this.mUpdateFMat=true;
+
+			
+			
 		}
 		this.UpdateRenPt();
 

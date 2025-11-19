@@ -226,6 +226,13 @@ export class CLight extends CBrushComp {
                     this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(), this.mBruch.mShadowCount * 16);
                     scam2.Update(_update);
                 }
+                let maxVal = this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
+                if (maxVal == null) {
+                    maxVal = new CVec4(this.mBruch.mLightCount, -1, -1, -1);
+                }
+                else {
+                    maxVal.x = this.mBruch.mLightCount;
+                }
                 for (var i = 0; i < this.mCascadeCycle.length; ++i) {
                     if (this.mCascadeCycle[i] == -1)
                         continue;
@@ -261,13 +268,6 @@ export class CLight extends CBrushComp {
                             srp.mCycle = this.mCascadeCycle[i];
                         }
                     }
-                    let maxVal = this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
-                    if (maxVal == null) {
-                        maxVal = new CVec4(this.mBruch.mLightCount, -1, -1, -1);
-                    }
-                    else {
-                        maxVal.x = this.mBruch.mLightCount;
-                    }
                     if (i < 3) {
                         if (i < 0.5) {
                             maxVal.y = this.mBruch.mShadowCount * 6 + i;
@@ -279,11 +279,11 @@ export class CLight extends CBrushComp {
                         else
                             maxVal.w = this.mBruch.mShadowCount * 6 + i;
                     }
-                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 0] = maxVal.x;
-                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 1] = maxVal.y;
-                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 2] = maxVal.z;
-                    this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 3] = maxVal.w;
                 }
+                this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 0] = maxVal.x;
+                this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 1] = maxVal.y;
+                this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 2] = maxVal.z;
+                this.mBruch.mShadowView[7][this.mBruch.mShadowCount * 4 + 3] = maxVal.w;
             }
             else {
                 this.mBruch.mShadowView[0].fill(0, 0, 16);
