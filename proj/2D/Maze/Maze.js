@@ -1,4 +1,4 @@
-const version = 'mgnmxg44_2';
+const version = 'mi8vige2_21';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";
@@ -19,8 +19,8 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mWASM = false;
 gPF.mCanvas = "";
+gPF.mWASM = false;
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
@@ -48,17 +48,17 @@ import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 import { CPWA } from "https://06fs4dix.github.io/Artgine/artgine/system/CPWA.js";
-import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CWindow } from "https://06fs4dix.github.io/Artgine/artgine/system/CWindow.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 CNavigation.Normal = 50;
 CNavigation.Small = 10;
 var g_camMode = 0;
 let g_fadeEffect = new CBGFadeEffect("test");
-Main.GetGGI().mNavi = new CNaviMgr();
-Main.GetGGI().mNavi.Init(new CVec3(100, 100, 1));
+Main.GetGI().mNavi = new CNaviMgr();
+Main.GetGI().mNavi.Init(new CVec3(100, 100, 1));
 let tileList = new Array();
 let FindPath = (_target, _end) => {
     for (let each0 of tileList) {
@@ -66,7 +66,7 @@ let FindPath = (_target, _end) => {
     }
     let bound = _target.FindComp(CNavigation).mBound;
     console.time();
-    let path = Main.GetGGI().mNavi.PathAll(_target.GetPos(), _end, bound, true);
+    let path = Main.GetGI().mNavi.PathAll(_target.GetPos(), _end, bound, true);
     console.timeEnd();
     for (var i = 0; i < path.length; ++i) {
         let C = Main.PushSub(new CSubject());
@@ -79,7 +79,7 @@ let FindPath = (_target, _end) => {
             let C = Main.PushSub(new CSubject());
             C.SetPos(new CVec3(x * CNavigation.Normal + CNavigation.Normal * 0.5, y * CNavigation.Normal + CNavigation.Normal * 0.5, 1));
             let pt = C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetBlackTex(), new CVec2(CNavigation.Normal * 0.9, CNavigation.Normal * 0.9)));
-            if (Main.GetGGI().mNavi.R().mKeyN[x + y * 100] != 0)
+            if (Main.GetGI().mNavi.R().mKeyN[x + y * 100] != 0)
                 pt.SetColorModel(new CColor(1, 0, 0, SDF.eColorModel.RGBAdd));
             else
                 pt.SetColorModel(new CColor(0, 0, 0.5, SDF.eColorModel.RGBAdd));
@@ -114,10 +114,10 @@ let RayExtrapolate = (_st, _ed, _target) => {
 CBlackBoard.Push("RayExtrapolate", RayExtrapolate);
 let ResetMaze = (_xCount, _yCount) => {
     g_fadeEffect.AniStart("Level : " + CStage.level);
-    Main.GetGGI().mNavi.Reset(true);
+    Main.GetGI().mNavi.Reset(true);
     let rp = new CRenderPass(gAtl.Frame().Pal().Sl2DKey());
     if (CStage.fog)
-        rp.mTag = "light";
+        rp.mTag.add("light");
     resetCount++;
     Main.Clear();
     count.x = _xCount;
@@ -357,7 +357,7 @@ document.getElementById("PWAInstall_btn").addEventListener("click", () => {
     CPWA.Install();
 });
 function ClickCamOption(_id) {
-    let value = CUtil.IDValue(_id);
+    let value = CDOM.IDValue(_id);
     if (_id == "zoomSize") {
         cam2D.Set2DZoom(Number(value));
     }

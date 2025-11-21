@@ -1,4 +1,5 @@
 
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
@@ -65,12 +66,13 @@ export default class CUser extends CBehavior
         //cl.SetPickMouse(true);
         cl.SetLayer("user");
         cl.PushCollisionLayer(["block","mon"]);
+        cl.SetRestitution(15);
     
         cl=sub.PushComp(new CCollider(pt)) as CCollider;
         cl.SetLayer("user");
         cl.SetEvent(CCollider.eEvent.Trigger);
         cl.PushCollisionLayer("endpoint");
-        cl.SetRestitution(15);
+        //cl.SetRestitution(15);
 
         let bound=new CBound();
         bound.mMin=new CVec3(-50,-50,-50);
@@ -141,8 +143,8 @@ export default class CUser extends CBehavior
         }
 
     }
-    async Update(_delay: any): Promise<void> {
-        super.Update(true);
+    async Update(_update: CUpdate): Promise<void> {
+        super.Update(_update);
 
         let cam=CBlackBoard.Find("2D") as CCamera;
         if(cam.GetCamCon() instanceof CCamCon2DFollow)
@@ -193,7 +195,7 @@ export default class CUser extends CBehavior
             
         }
 
-        this.m_footTime+=_delay;
+        this.m_footTime+=_update.DeltaMil();
         if(CMath.V3Distance(this.m_lastPos,this.GetOwner().GetPos())>50 || this.m_footTime>500)
         {
             this.m_lastPos.Import(this.GetOwner().GetPos());

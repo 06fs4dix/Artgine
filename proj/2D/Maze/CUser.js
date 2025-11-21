@@ -49,11 +49,11 @@ export default class CUser extends CBehavior {
         let cl = sub.PushComp(new CCollider(pt));
         cl.SetLayer("user");
         cl.PushCollisionLayer(["block", "mon"]);
+        cl.SetRestitution(15);
         cl = sub.PushComp(new CCollider(pt));
         cl.SetLayer("user");
         cl.SetEvent(CCollider.eEvent.Trigger);
         cl.PushCollisionLayer("endpoint");
-        cl.SetRestitution(15);
         let bound = new CBound();
         bound.mMin = new CVec3(-50, -50, -50);
         bound.mMax = new CVec3(50, 50, 50);
@@ -105,8 +105,8 @@ export default class CUser extends CBehavior {
             camcon.SetRotKey(CInput.eKey.RButton);
         }
     }
-    async Update(_delay) {
-        super.Update(true);
+    async Update(_update) {
+        super.Update(_update);
         let cam = CBlackBoard.Find("2D");
         if (cam.GetCamCon() instanceof CCamCon2DFollow) {
             let camcon = cam.GetCamCon();
@@ -140,7 +140,7 @@ export default class CUser extends CBehavior {
                 audio.Play();
             }
         }
-        this.m_footTime += _delay;
+        this.m_footTime += _update.DeltaMil();
         if (CMath.V3Distance(this.m_lastPos, this.GetOwner().GetPos()) > 50 || this.m_footTime > 500) {
             this.m_lastPos.Import(this.GetOwner().GetPos());
             let ptb = this.GetOwner().FindComp(CPaint2D);

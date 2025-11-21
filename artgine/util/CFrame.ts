@@ -633,11 +633,22 @@ export class CFrame
 
 				if(CFrame.Main()==this)
 				{
-					const rect = this.mWindow.Handle().getBoundingClientRect()
+					
+					
 					CDOM.PaintDiv().style.width=this.mWindow.mPF.mWidth+"px";
 					CDOM.PaintDiv().style.height=this.mWindow.mPF.mHeight+"px";
-					CDOM.PaintDiv().style.left=rect.left+"px";
-					CDOM.PaintDiv().style.top=rect.top+"px";
+					if(this.mWindow.mPF.mTargetWidth==0)
+					{
+						const rect = this.mWindow.Handle().getBoundingClientRect()
+						CDOM.PaintDiv().style.left=rect.left+"px";
+						CDOM.PaintDiv().style.top=rect.top+"px";
+					}
+					else
+					{
+						CDOM.PaintDiv().style.left=0+"px";
+						CDOM.PaintDiv().style.top=0+"px";
+					}
+					
 				}
 				
 
