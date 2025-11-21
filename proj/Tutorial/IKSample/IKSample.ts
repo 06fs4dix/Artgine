@@ -1,5 +1,5 @@
 //Version
-const version='mhd366tl_11';
+const version='mi8uyskc_5';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -26,8 +26,6 @@ gPF.mGitHub = false;
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
 
 import {CPlugin} from "../../../artgine/util/CPlugin.js";
-CPlugin.PushPath('InverseKinematics','../../../plugin/InverseKinematics/');
-import "../../../plugin/InverseKinematics/InverseKinematics.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
@@ -41,10 +39,9 @@ import { CVec4 } from "../../../artgine/geometry/CVec4.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CAnimation, CClipMesh, CClipPRS } from "../../../artgine/canvas/component/CAnimation.js";
 import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
-import { CIKLook, CIKReach } from "../../../plugin/InverseKinematics/InverseKinematics.js";
-import { CSocketAttacher } from "../../../plugin/SocketAttacher/SocketAttacher.js";
 import { CPaint } from "../../../artgine/canvas/component/paint/CPaint.js";
 import { CLoaderOption } from "../../../artgine/util/CLoader.js";
+import { CAimIK, CAttacher, CLookAtIK } from "../../../artgine/canvas/component/CResolverComp.js";
 
 
 var Main=gAtl.NewCanvas("Main");
@@ -109,10 +106,29 @@ obj.SetSca(new CVec3(10, 10, 10));
 
 
 
-obj.PushComp(new CIKReach(new CBlackBoardRef(target1.Key()), "leg_joint_R_5", 4,100));
-obj.PushComp(new CSocketAttacher(new CBlackBoardRef(target3.Key()), "arm_joint_L_3"));
-obj.PushComp(new CIKLook(new CBlackBoardRef(target2.Key()), "neck_joint_1"));
+
+obj.PushComp(new CAimIK("leg_joint_R_5",target1,4));
+obj.PushComp(new CAttacher("arm_joint_L_3",target3));
+obj.PushComp(new CLookAtIK("neck_joint_1",target2));
+
 Main.PushSub(obj);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

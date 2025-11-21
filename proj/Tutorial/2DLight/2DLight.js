@@ -1,4 +1,4 @@
-const version = 'mf2jnnjd_2';
+const version = 'mi2flz3d_56';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();

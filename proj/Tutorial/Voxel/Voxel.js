@@ -1,4 +1,4 @@
-const version = 'mfdjvc2e_8';
+const version = 'mhsgi0es_5';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -14,7 +14,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
-gPF.mServer = 'webServer';
+gPF.mServer = 'local';
 gPF.mGitHub = false;
 import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
 var gAtl = new CAtelier();
@@ -106,7 +106,7 @@ bh.Collision = () => {
     bh["mCollision"] = CUpdate.eType.Updated;
     pt.SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBAdd));
 };
-bh.Update = () => {
+bh.Update = (_update) => {
     if (bh["mCollision"] == CUpdate.eType.Updated) {
         bh["mCollision"] = CUpdate.eType.Already;
     }
@@ -129,7 +129,7 @@ CConfirm.List("Voxel Mode Select!", [() => {
         gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 15, 0), 1);
         gVoxel.BondsFill(new CCIndex(5, 5, 0), new CCIndex(10, 10, 0), 2);
         naniMgr.Init(new CVec3(16, 16, 1));
-        Main.GetGGI().mNavi = naniMgr;
+        Main.GetGI().mNavi = naniMgr;
         A.SetPos(new CVec3(0, 0, 1));
         B.SetPos(new CVec3(1200, 1000, 1));
         gVoxelSub.ResetInfo(new CVec3(16, 16, 1), 100, true);
@@ -145,7 +145,7 @@ CConfirm.List("Voxel Mode Select!", [() => {
         Main.SetCameraKey("3D");
         Main.ClearBatch();
         naniMgr.Init(new CVec3(16, 16, 16));
-        Main.GetGGI().mNavi = naniMgr;
+        Main.GetGI().mNavi = naniMgr;
         A.SetPos(new CVec3(0, 200, 0));
         B.SetPos(new CVec3(1200, 200, 1000));
         gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 0, 15), 1);
@@ -154,7 +154,6 @@ CConfirm.List("Voxel Mode Select!", [() => {
 let gTileList = new Array();
 gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
     if (gAtl.Frame().Input().KeyUp(CInput.eKey.L)) {
-        gVoxel.ResetInfo(new CVec3(16, 16, 16), 100, false);
         gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 0, 15), 1);
         gVoxel.BondsFill(new CCIndex(6, 0, 6), new CCIndex(9, 1, 9), 2);
         vls.AttachVoxel(new CCIndex(0, 0, 0), gVoxel);

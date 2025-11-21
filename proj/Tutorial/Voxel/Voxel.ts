@@ -1,5 +1,5 @@
 //Version
-const version='mfdjvc2e_8';
+const version='mhsgi0es_5';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,7 +20,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
-gPF.mServer = 'webServer';
+gPF.mServer = 'local';
 gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
@@ -133,7 +133,7 @@ bh.Collision=()=>{
     bh["mCollision"]=CUpdate.eType.Updated;
     pt.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBAdd))
 };
-bh.Update=()=>{
+bh.Update=(_update : CUpdate)=>{
     if(bh["mCollision"]==CUpdate.eType.Updated)
     {
         bh["mCollision"]=CUpdate.eType.Already;
@@ -167,7 +167,7 @@ CConfirm.List("Voxel Mode Select!",[()=>{
     gVoxel.BondsFill(new CCIndex(0, 0, 0),new CCIndex(15, 15, 0), 1);
     gVoxel.BondsFill(new CCIndex(5, 5, 0),new CCIndex(10, 10, 0), 2);
     naniMgr.Init(new CVec3(16,16,1))
-    Main.GetGGI().mNavi=naniMgr;
+    Main.GetGI().mNavi=naniMgr;
     A.SetPos(new CVec3(0,0,1));
     B.SetPos(new CVec3(1200,1000,1));
 
@@ -197,7 +197,7 @@ CConfirm.List("Voxel Mode Select!",[()=>{
     Main.SetCameraKey("3D");
     Main.ClearBatch();
     naniMgr.Init(new CVec3(16,16,16))
-    Main.GetGGI().mNavi=naniMgr;
+    Main.GetGI().mNavi=naniMgr;
     A.SetPos(new CVec3(0,200,0));
     B.SetPos(new CVec3(1200,200,1000));
 
@@ -214,7 +214,7 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
     //초기화시키고 넣었음
     if(gAtl.Frame().Input().KeyUp(CInput.eKey.L))
     {
-        gVoxel.ResetInfo(new CVec3(16, 16, 16), 100, false);
+        //gVoxel.ResetInfo(new CVec3(16, 16, 16), 100, false);
         gVoxel.BondsFill(new CCIndex(0, 0, 0),new CCIndex(15, 0, 15), 1);
         gVoxel.BondsFill(new CCIndex(6, 0, 6),new CCIndex(9, 1, 9), 2);
         vls.AttachVoxel(new CCIndex(0,0,0),gVoxel);
@@ -310,6 +310,8 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
  
 });
 CAlert.Info("2D/3D 선택후 F를 누르면 A->B로 길찾기 실행<br>컨트롤 누르고 누르면 최적화 길찾기<br>3D에서 L누르면 라이팅 적용");
+
+
 
 
 

@@ -29,7 +29,5 @@
     "MonacoEditor": true,
     "summernote": false
   },
-  "dependencies": {
-    "InverseKinematics": 1
-  }
+  "dependencies": {}
 }

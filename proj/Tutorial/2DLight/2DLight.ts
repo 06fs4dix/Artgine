@@ -1,5 +1,5 @@
 //Version
-const version='mf2jnnjd_2';
+const version='mi2flz3d_56';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -75,6 +75,20 @@ CAlert.Info("f3로 개발모드에서 라이팅 위치와 값을 수정해 보�
 // `;
 // CScript.Build("test",await CUtilWeb.TSToJS(await CUtilWeb.TSImport(source,false)));
 // new CMonacoViewer(source,"test.ts");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
