@@ -1,4 +1,4 @@
-import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
@@ -231,7 +231,7 @@ export class CNPC extends CSubject {
         </div>
         
         `;
-        this.mLastChat = new CPaintHTML(CDomFactory.DataToDom(bubble));
+        this.mLastChat = new CPaintHTML(CDOM.DataToDom(bubble));
         this.mLastChat.SetPivot(new CVec3(0, 1, 0));
         this.mLastChat.SetPos(new CVec3(0, 30, 0));
         this.PushComp(this.mLastChat);

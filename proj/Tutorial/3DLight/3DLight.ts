@@ -1,5 +1,5 @@
 //Version
-const version='mhqb8w6q_10';
+const version='mi8vige2_5';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -49,9 +49,8 @@ import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPl
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
-import { CShadowBaker } from "https://06fs4dix.github.io/Artgine/plugin/ShadowBake/ShadowBake.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CAnimation, CClip, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
+import { CAnimation, CClip, CClipMesh, CClipPRS } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 import { CBGAttachButton, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
@@ -60,7 +59,17 @@ import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/comp
 import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
+import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
 
+
+
+let lop=new CLoaderOption();
+lop.mFilter=CTexture.eFilter.Linear;
+lop.mWrap=CTexture.eWrap.Repeat;
+await gAtl.Frame().Load().Exe("Res/teapot/1zflt0j.jpg",lop);
+await gAtl.Frame().Load().Exe("Res/teapot/1zflt0j_NRM.jpg",lop);
+await gAtl.Frame().Load().Exe("Res/teapot/1zflt0j_lig.jpg",lop);
 
 var skyTexKey=["Res/skybox/right.jpg","Res/skybox/left.jpg","Res/skybox/bottom.jpg","Res/skybox/top.jpg","Res/skybox/front.jpg","Res/skybox/back.jpg"];
 var skyTexList=[];
@@ -93,7 +102,7 @@ rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=gBufPos;
-rp.mTag="gBuf";
+rp.mTag.add("gBuf");
 
 
 
@@ -106,7 +115,7 @@ rp.mPriority=CRenderPass.ePriority.Normal+1;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Normal));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=gBufNor;
-rp.mTag="gBuf";
+rp.mTag.add("gBuf");
 
 
 let gBufAlbTex=new CTexture();
@@ -118,7 +127,7 @@ rp.mPriority=CRenderPass.ePriority.Normal+2;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Albedo));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=gBufAlb;
-rp.mTag="gBuf";
+rp.mTag.add("gBuf");
 
 
 let gBufSPETex=new CTexture();
@@ -130,7 +139,7 @@ rp.mPriority=CRenderPass.ePriority.Normal+3;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.SpeculerPowEmissive));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=gBufSPE;
-rp.mTag="gBuf";
+rp.mTag.add("gBuf");
 
 let ShadowKey=DeferredSingle.PushTex("shadowread.tex",new CTexture());
 rp=DeferredSingle.PushRP(new CRPAuto());
@@ -144,12 +153,12 @@ rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
 
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=ShadowKey;
-rp.mTag="shadowRead";
+rp.mTag.add("shadowRead");
 
 let sufLig0=DeferredSingle.PushSuf(new CSurface());
 let srp=sufLig0.GetRP();
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="light";
+srp.mTag.add("light");
 srp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 srp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 srp.mShaderAttr.push(new CShaderAttr(0,gBufAlb));
@@ -163,7 +172,7 @@ srp.mShaderAttr.push(new CShaderAttr("renType",0));
 let sufLig1=DeferredSingle.PushSuf(new CSurface());
 srp=sufLig1.GetRP();
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="light";
+srp.mTag.add("light");
 srp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 srp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 srp.mShaderAttr.push(new CShaderAttr(0,gBufAlb));
@@ -176,7 +185,7 @@ let sufLast=DeferredSingle.PushSuf(new CSurface());
 srp=sufLast.GetRP();
 sufLast.SetUseRT(false);
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="blend";
+srp.mTag.add("blend");
 srp.mShaderAttr.push(new CShaderAttr(0,sufLig0.GetTexKey()));
 srp.mShaderAttr.push(new CShaderAttr(1,sufLig1.GetTexKey()));
 srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
@@ -196,7 +205,7 @@ rp.mPriority=CRenderPass.ePriority.Normal+0;
 rp.mShaderAttr.push(new CShaderAttr("outputType",SDF.eGBuf.Position));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=gBufMulti;
-rp.mTag="gBufMulti";
+rp.mTag.add("gBufMulti");
 
 
 ShadowKey=DeferredMulti.PushTex("shadowread.tex",new CTexture());
@@ -211,12 +220,12 @@ rp.mShaderAttr.push(new CShaderAttr("bias",bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget=ShadowKey;
-rp.mTag="shadowRead";
+rp.mTag.add("shadowRead");
 
 sufLig0=DeferredMulti.PushSuf(new CSurface());
 srp=sufLig0.GetRP();
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="light";
+srp.mTag.add("light");
 srp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 srp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 srp.mShaderAttr.push(new CShaderAttr(0,gBufMulti));//순차적으로 등록된다
@@ -233,7 +242,7 @@ srp.mShaderAttr.push(new CShaderAttr("envCube",new CVec1(0)));
 sufLig1=DeferredMulti.PushSuf(new CSurface());
 srp=sufLig1.GetRP();
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="light";
+srp.mTag.add("light");
 srp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 srp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 srp.mShaderAttr.push(new CShaderAttr(0,gBufMulti));//순차적으로 등록된다
@@ -265,7 +274,7 @@ sufLast=DeferredMulti.PushSuf(new CSurface());
 srp=sufLast.GetRP();
 sufLast.SetUseRT(false);
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="blend";
+srp.mTag.add("blend");
 srp.mShaderAttr.push(new CShaderAttr(0,sufLig0.GetTexKey()));
 srp.mShaderAttr.push(new CShaderAttr(1,sufLig1.GetTexKey()));
 // srp.mShaderAttr.push(new CShaderAttr(2,rp.mRenderTarget));
@@ -294,7 +303,7 @@ rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget="shadowread.tex";
 //rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
-rp.mTag="shadowRead";
+rp.mTag.add("shadowRead");
 
 rp=forward.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition("class","==","CPaint3D"));
@@ -313,18 +322,18 @@ camcon.SetPos(new CVec3());
 let back=Main.PushSub(new CSubject());
 let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
-pt.Shadow();
+pt.PushTag(CPaint.eTag.Shadow);
 back.SetSca(new CVec3(10,0.01,10));
 
 
 let teapot=Main.PushSub(new CSubject());
 let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-pt2.Shadow();
+pt2.PushTag(CPaint.eTag.Shadow);
 
 teapot=Main.PushSub(new CSubject());
 teapot.SetPos(new CVec3(500,0,0));
 pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-pt2.Shadow();
+pt2.PushTag(CPaint.eTag.Shadow);
 
 
 
@@ -390,13 +399,14 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","Forward",()=>{
     let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
-    pt.Shadow();
+    pt.PushTag(CPaint.eTag.Shadow);
     back.SetSca(new CVec3(10,0.01,10));
 
 
     let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-    pt2.Shadow();
+    
+    pt2.PushTag(CPaint.eTag.Shadow);
 
 
     let skybox=Main.PushSub(new CSubject());
@@ -448,13 +458,17 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredSingle(HafeLambert+Ph
     lig.mDigit=digit;
     L.PushComp(lig);
 
+    
+    let ani=new CAnimation([new CClipPRS(0,10,[new CVec3(0,100,0),new CVec3(100,100,0),new CVec3(100,100,100),new CVec3(0,100,0)],CClipPRS.eType.Pos)]);    
+    L.PushComp(new CAniFlow(ani));
+
     let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D("Res/plane/plane.FBX"));
     pt.mAutoLoad.mMipMap=CTexture.eMipmap.None;
     //pt.SetTexture(["Res/teapot/rocks.jpg","Res/teapot/rocks_NM_height.tga","Res/teapot/rocks_spec.tga"]);
-    pt.Shadow();
-    pt.Light();
-    pt.PushTag("parallax");
+    pt.PushTag(CPaint.eTag.Light);
+    //pt.PushTag(CPaint.eTag.Shadow);
+    pt.PushTag(CPaint.eTag.Parallax);
     pt.PushCShaderAttr(new CShaderAttr("parallaxNormal",0.1));
     back.SetSca(new CVec3(10,0.01,10));
 
@@ -463,8 +477,9 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredSingle(HafeLambert+Ph
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
     //pt2.SetMaterial(0.0,0.0,1.0,0.0);
     //teapot.SetSca(100);
-    pt2.Light();
-    pt2.Shadow();
+    pt2.PushTag(CPaint.eTag.Light);
+    pt2.PushTag(CPaint.eTag.Shadow);
+    
 }));
 CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredMulti(None+CookTorrance(PBR)",()=>{
 Main.Clear();
@@ -483,9 +498,12 @@ Main.Clear();
     lig.mDigit=digit;
     L.PushComp(lig);
 
+
     L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(500,200,0));
     L.SetSca(0.1);
+    let ani=new CAnimation([new CClipPRS(0,10,[new CVec3(0,500,0),new CVec3(500,500,0),new CVec3(500,500,500),new CVec3(0,500,0)],CClipPRS.eType.Pos)]);    
+    L.PushComp(new CAniFlow(ani));
     let ptl=L.PushComp(new CPaint3D());
     ptl.SetColorModel(new CColor(1,0.2,0.2,CColor.eModel.RGBAdd));
     
@@ -498,16 +516,16 @@ Main.Clear();
     let back=Main.PushSub(new CSubject());
     let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
     pt.SetTexture(["Res/teapot/1zflt0j.jpg"]);
-    pt.Shadow();
+    pt.PushTag(CPaint.eTag.Light);
+    pt.PushTag(CPaint.eTag.Shadow);
     pt.SetMaterial(0.1,0.6);
-    pt.Light();
     back.SetSca(new CVec3(10,0.01,10));
 
 
     let teapot=Main.PushSub(new CSubject());
     let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-    pt2.Light();
-    pt2.Shadow();
+    pt2.PushTag(CPaint.eTag.Light);
+    pt2.PushTag(CPaint.eTag.Shadow);
 
 
     let skybox=Main.PushSub(new CSubject());
@@ -564,86 +582,6 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

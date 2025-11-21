@@ -1,5 +1,5 @@
 //Version
-const version='mhyvhc2r_6';
+const version='mi8vige2_15';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -57,7 +57,7 @@ import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgi
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
-import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
 import { CVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CVoxel.js";
 import { CPaintVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaintVoxel.js";
@@ -171,13 +171,13 @@ rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 //rp.PushInPaint(CPaint2D);
 //rp.PushOutTag("shadowPlane");
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
-rp.mTag="light";
+rp.mTag.add("light");
 
 
 rp=lightAM7RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
-rp.mTag="light";
+rp.mTag.add("light");
 Real.SetRPMgr(lightAM7RP);
 
 // let voxel=Main.Find("BackGround") as CVoxel;
@@ -195,7 +195,8 @@ rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
 rp.PushAnd(new CCondition({"s":"mTag[bloom]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mRenderTarget=emissiveTexKey;
-rp.mTag="mask";
+rp.mTag.add("mask");
+
 
 
 let basiceTex=new CTexture();
@@ -205,14 +206,14 @@ rp=lightPM11RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
 rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
-rp.mTag="light";
+rp.mTag.add("light");
 rp.mRenderTarget=basiceTexKey;
 
 
 rp=lightPM11RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
-rp.mTag="light";
+rp.mTag.add("light");
 rp.mRenderTarget=basiceTexKey;
 
 
@@ -227,7 +228,7 @@ rp.mRenderTarget=basiceTexKey;
 let sufBloom=lightPM11RP.PushSuf(new CSurfaceBloom()) as CSurfaceBloom;
 let srp=sufBloom.GetRP();
 srp.mShader=gAtl.Frame().Pal().Sl2DKey();
-srp.mTag="blit";
+srp.mTag.add("blit");
 srp.mShaderAttr.push(new CShaderAttr(0,emissiveTexKey));
 sufBloom.OldSchool();
 // sufBloom.m_intensity = 1000.0;//업샘플 합성의 기본 강도
@@ -244,7 +245,7 @@ sufLast.SetUseRT(false);
 
 
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
-srp.mTag="blend";
+srp.mTag.add("blend");
 srp.mShaderAttr.push(new CShaderAttr(0,basiceTexKey));
 srp.mShaderAttr.push(new CShaderAttr(1,sufBloom.GetTexKey()));
 srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
@@ -357,7 +358,6 @@ PM1();
 // lp.Push(new CDayCycle(new CVec3(-1,1),new CColor(1,0.5,0.5)));
 // lp.Push(new CDayCycle(new CVec3(1,0),new CColor(0,0,0)));
 // lp.Push(new CDayCycle(new CVec3(-1,0),new CColor(0,0,0)));
-
 
 
 
