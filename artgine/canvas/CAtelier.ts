@@ -47,7 +47,7 @@ export class CAtelier
 		if(gMain==null)	gMain=this;
 		if(this.mPF.mRenderer==CPreferences.eRenderer.Null)
 		{
-			let MainLoading=CUtil.ID("MainLoading");
+			let MainLoading=CDOM.ID("MainLoading");
 			if (MainLoading != null && MainLoading.parentNode) 
 				MainLoading.hidden=true;
 				//MainLoading.parentNode.removeChild(MainLoading);

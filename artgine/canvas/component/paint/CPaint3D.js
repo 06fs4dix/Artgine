@@ -113,7 +113,7 @@ export class CPaint3D extends CPaint {
         if (this.mTree == null || this.mRenderPass.length == 0) {
             let sChk = true;
             for (let each0 of this.mRenderPass) {
-                if (each0.mTag == "shadowWrite") {
+                if (each0.mTag.has("shadowWrite") == true) {
                     continue;
                 }
                 sChk = false;
@@ -543,7 +543,7 @@ export class CPaintMeshMerge extends CPaint {
         if (this.mRenderPass.length == 0) {
             let sChk = true;
             for (let each0 of this.mRenderPass) {
-                if (each0.mTag == "shadowWrite") {
+                if (each0.mTag.has("shadowWrite") == true) {
                     continue;
                 }
                 sChk = false;

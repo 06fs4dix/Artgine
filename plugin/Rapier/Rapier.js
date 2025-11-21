@@ -196,7 +196,7 @@ export class CRapierRigidBody extends CRigidBody {
     Start() {
         const wMat = this.GetOwner().GetMat();
         const wPos = CMath.V3MulMatCoordi(new CVec3(0, 0, 0), wMat);
-        const wRot = CMath.EulerToQut(CMath.MatDecomposeRot(wMat, true, true, true));
+        const wRot = CMath.EulerToQut(CMath.MatDecomposeRotMat(wMat, true, true, true));
         this.mRB.setTranslation({ x: wPos.x + this.mCenter.x, y: wPos.y + this.mCenter.y, z: wPos.z + this.mCenter.z }, true);
         this.mRB.setRotation({ x: wRot.x, y: wRot.y, z: wRot.z, w: wRot.w });
     }

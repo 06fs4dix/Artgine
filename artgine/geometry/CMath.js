@@ -518,7 +518,7 @@ export class CMath {
         pa_out.SetUnit(false);
         return pa_out;
     }
-    static MatDecomposeRot(pa_viewMat, pa_x, pa_y, pa_z) {
+    static MatDecomposeRotMat(pa_viewMat, pa_x, pa_y, pa_z) {
         var pa_outMat = new CMat();
         pa_outMat.SetUnit(false);
         if (pa_x) {
@@ -540,6 +540,14 @@ export class CMath {
             pa_outMat.mF32A[5] = pa_viewMat.mF32A[5];
         }
         return pa_outMat;
+    }
+    static MatDecomposeRot(_mat) {
+        const sca = CMath.MatDecomposeSca(_mat);
+        sca.x = 1 / sca.x;
+        sca.y = 1 / sca.y;
+        sca.z = 1 / sca.z;
+        const scaMat = CMath.MatScale(sca);
+        return CMath.MatToQut(CMath.MatMul(_mat, scaMat));
     }
     static MatDecomposeSca(pa_mat, _sca = new CVec3()) {
         let helpVec = CPoolGeo.ProductV3();

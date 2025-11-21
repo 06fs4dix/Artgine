@@ -6,7 +6,7 @@ import {CH5Canvas} from "./CH5Canvas.js";
 import {CEvent} from "../basic/CEvent.js";
 
 import {CModal} from "../basic/CModal.js";
-import {CDomFactory} from "../basic/CDOMFactory.js";
+import {CDOM} from "../basic/CDOM.js";
 import {CObject,  CPointer } from "../basic/CObject.js";
 import {CUtilObj} from "../basic/CUtilObj.js";
 import {CAlert} from "../basic/CAlert.js";
@@ -182,12 +182,12 @@ export class CTexture extends CObject
 					// jbox.open();
 				}
 			};
-			_div.prepend(CDomFactory.DataToDom(img));
+			_div.prepend(CDOM.DataToDom(img));
 			//break;
 		}
 		
 		
-		_div.prepend(CDomFactory.DataToDom({
+		_div.prepend(CDOM.DataToDom({
 			'<>':'button',"class":"btn btn-primary btn-sm" ,style:"width:100%;",'text':'Refresh', 'onclick':(e) => {
 				this.mUpdate.clear();
 				if(this.mReadPixelEvent!=null)
@@ -230,18 +230,7 @@ export class CTexture extends CObject
 			}
 			_div.append(CUtilObj.Select(_pointer, _input, textArr, valArr));
 		}
-		// else if(_pointer.member == "mAutoResize") {
-		// 	_div.innerHTML = "";
-		// 	_div.append(CDomFactory.DataToDom({
-		// 		'<>':'button',"class":"btn btn-primary btn-sm" ,'text':'Refresh', 'onclick':(e) => {
-		// 			this.mUpdate.clear();
-		// 			if(this.mReadPixelEvent!=null)
-		// 				this.mReadPixelEvent.Call(this);
-		// 			this.EditRefresh();
-		// 		}
-		// 	}));
-		// }
-
+	
 		
 
 	}

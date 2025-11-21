@@ -1,7 +1,8 @@
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CObject, CPointer } from "../basic/CObject.js";
 import {CVec3} from "../geometry/CVec3.js"
 import {CFloat32} from "./CFloat32.js";
+
 
 export class CVec4 extends CFloat32
 {
@@ -57,7 +58,7 @@ export class CVec4 extends CFloat32
 			//super.EditHTMLInit(_div,_pointer);
 			_div.innerHTML="";
 			const self = this;
-			const row = CDomFactory.DataToDom({
+			const row = CDOM.DataToDom({
 				"tag": "div","class": "d-flex align-items-center",
 				"html": [
 					{"tag": "input","type": "number","class": "form-control form-control-sm",

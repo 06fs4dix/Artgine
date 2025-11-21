@@ -7,11 +7,10 @@ import { CParserTGA, CTARGA } from "./parser/CParserTGA.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CModal } from "../basic/CModal.js";
 import { CVec2 } from "../geometry/CVec2.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CObject } from "../basic/CObject.js";
 import { CClass } from "../basic/CClass.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CUtilRender } from "../render/CUtilRender.js";
 import { CConsol } from "../basic/CConsol.js";
 let g_atlJBox;
@@ -115,12 +114,12 @@ export class CAtlas extends CObject {
     }
     EditHTMLInit(_div) {
         super.EditHTMLInit(_div);
-        _div.append(CDomFactory.DataToDom({
+        _div.append(CDOM.DataToDom({
             "<>": "button", "text": "Modify", "onclick": () => {
                 this.ModifyModal();
             }
         }));
-        _div.append(CDomFactory.DataToDom({
+        _div.append(CDOM.DataToDom({
             "<>": "button", "text": "Reload Texture", "onclick": () => {
                 this.mTex = null;
                 this.CreateTex();
@@ -220,7 +219,7 @@ export class CAtlas extends CObject {
             ]
         };
         let drawImgOnCard = (_index = -1) => {
-            let AtlCan_Div = CUtil.ID("atlCan_card");
+            let AtlCan_Div = CDOM.ID("atlCan_card");
             AtlCan_Div.innerHTML = "";
             let height100Container = document.createElement("div");
             AtlCan_Div.appendChild(height100Container);
@@ -370,7 +369,7 @@ export class CAtlas extends CObject {
         };
         let drawImgOnCanvas = async (_index = -1) => {
             let fontSize = 16;
-            let canvas = CUtil.ID("atlCan_can");
+            let canvas = CDOM.ID("atlCan_can");
             let ctx = canvas.getContext("2d");
             let adjustFontSize = (_text, _maxWidth, _maxHeight) => {
                 let textWidth, textHeight;
@@ -410,9 +409,9 @@ export class CAtlas extends CObject {
             img.src = base64Img;
         };
         let clickToRemove = _remove;
-        let prevCanvTab = CUtil.ID("vCanvStyle_tab");
+        let prevCanvTab = CDOM.ID("vCanvStyle_tab");
         let prevActiveTabIndex = (prevCanvTab != null && prevCanvTab.classList.contains("active")) ? 1 : 0;
-        let prevDiv = CUtil.ID("CAtlas_Div");
+        let prevDiv = CDOM.ID("CAtlas_Div");
         let st = prevDiv == null ? 0 : prevDiv.scrollTop;
         let tabs = {
             "<>": "div", "html": [
@@ -481,14 +480,14 @@ export class CAtlas extends CObject {
         g_atlJBox.SetBody("<div id='atl_div'></div>");
         g_atlJBox.SetResize(true);
         g_atlJBox.Open();
-        CUtil.ID("atl_div").append(CDomFactory.DataToDom(tabs));
+        CDOM.ID("atl_div").append(CDOM.DataToDom(tabs));
         if (prevActiveTabIndex == 0) {
             drawImgOnCard();
         }
         else if (prevActiveTabIndex == 1) {
             drawImgOnCanvas();
         }
-        CUtil.ID("CAtlas_Div").scrollTop = st;
+        CDOM.ID("CAtlas_Div").scrollTop = st;
     }
     async RemoveTexCodi(_off) {
         if (this.mBase64.mData == null)

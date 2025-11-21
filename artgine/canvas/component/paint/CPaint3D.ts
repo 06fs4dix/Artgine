@@ -169,7 +169,7 @@ export class CPaint3D extends CPaint
 			let sChk=true;
 			for(let each0 of this.mRenderPass)
 			{
-				if(each0.mTag=="shadowWrite")
+				if(each0.mTag.has("shadowWrite")==true)
 				{
 					continue;
 				}
@@ -866,7 +866,7 @@ export class CPaintMeshMerge extends CPaint
 			let sChk=true;
 			for(let each0 of this.mRenderPass)
 			{
-				if(each0.mTag=="shadowWrite")
+				if(each0.mTag.has("shadowWrite")==true)
 				{
 					continue;
 				}

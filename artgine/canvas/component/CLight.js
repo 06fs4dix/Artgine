@@ -8,9 +8,8 @@ import { CShaderAttr } from "../../render/CShaderAttr.js";
 import { CDevice } from "../../render/CDevice.js";
 import { CTexture, CTextureInfo } from "../../render/CTexture.js";
 import { CVec2 } from "../../geometry/CVec2.js";
-import { CDomFactory } from "../../basic/CDOMFactory.js";
+import { CDOM } from "../../basic/CDOM.js";
 import { CUpdate } from "../../basic/Basic.js";
-import { CUtil } from "../../basic/CUtil.js";
 import { CRPAuto } from "../CRPMgr.js";
 import { CCondition } from "../../util/CStateMachine.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
@@ -60,16 +59,16 @@ export class CLight extends CBrushComp {
                 ], "onchange": (e) => {
                     let selObj = e.target;
                     if (selObj.value == "-1") {
-                        CUtil.ID("ligPo_div" + wtKey).hidden = true;
-                        CUtil.ID("ligCor_div" + wtKey).hidden = false;
+                        CDOM.ID("ligPo_div" + wtKey).hidden = true;
+                        CDOM.ID("ligCor_div" + wtKey).hidden = false;
                     }
                     else if (selObj.value == "1") {
-                        CUtil.ID("ligPo_div" + wtKey).hidden = false;
-                        CUtil.ID("ligCor_div" + wtKey).hidden = false;
+                        CDOM.ID("ligPo_div" + wtKey).hidden = false;
+                        CDOM.ID("ligCor_div" + wtKey).hidden = false;
                     }
                     else {
-                        CUtil.ID("ligPo_div" + wtKey).hidden = true;
-                        CUtil.ID("ligCor_div" + wtKey).hidden = true;
+                        CDOM.ID("ligPo_div" + wtKey).hidden = true;
+                        CDOM.ID("ligCor_div" + wtKey).hidden = true;
                     }
                 } };
             div.html.push(sel);
@@ -86,24 +85,24 @@ export class CLight extends CBrushComp {
                 ] });
             div.html.push({ "<>": "button", "type": "button", "class": "btn btn-primary btn-lg btn-block btn-sm", "text": "적용",
                 "onclick": () => {
-                    let po = CUtil.ID("ligPo_div" + wtKey).hidden;
-                    let cor = CUtil.ID("ligCor_div" + wtKey).hidden;
+                    let po = CDOM.ID("ligPo_div" + wtKey).hidden;
+                    let cor = CDOM.ID("ligCor_div" + wtKey).hidden;
                     if (po == false) {
-                        let outer = Number(CUtil.IDValue("ligPoOuter_num" + wtKey));
-                        let inner = Number(CUtil.IDValue("ligPoInner_num" + wtKey));
+                        let outer = Number(CDOM.IDValue("ligPoOuter_num" + wtKey));
+                        let inner = Number(CDOM.IDValue("ligPoInner_num" + wtKey));
                         this.SetPoint(outer, inner);
                     }
                     else if (cor == false) {
                         this.SetDirect();
                     }
-                    let corX = Number(CUtil.IDValue("ligCorX_num" + wtKey));
-                    let corY = Number(CUtil.IDValue("ligCorY_num" + wtKey));
-                    let corZ = Number(CUtil.IDValue("ligCorZ_num" + wtKey));
+                    let corX = Number(CDOM.IDValue("ligCorX_num" + wtKey));
+                    let corY = Number(CDOM.IDValue("ligCorY_num" + wtKey));
+                    let corZ = Number(CDOM.IDValue("ligCorZ_num" + wtKey));
                     this.SetColor(new CVec3(corX, corY, corZ));
                     this.EditRefresh();
                 }
             });
-            _body.append(CDomFactory.DataToDom(div));
+            _body.append(CDOM.DataToDom(div));
         }
     }
     DirPosV4() { return this.mDirPos; }
@@ -141,7 +140,7 @@ export class CLight extends CBrushComp {
             let fw = this.mBruch.mFrame;
             let srp = new CRPAuto(fw.Pal().Sl3D().mKey);
             srp.mCopy = false;
-            srp.mTag = "shadowWrite";
+            srp.mTag.add("shadowWrite");
             srp.PushOr(new CCondition("class", "==", "CPaint3D"));
             srp.PushOr(new CCondition("class", "==", "CPaintMeshMerge"));
             srp.PushAnd(new CCondition("mTag[shadow]"));
@@ -151,7 +150,7 @@ export class CLight extends CBrushComp {
             srp.mCopy = false;
             srp.mClearColor = false;
             srp.mClearDepth = false;
-            srp.mTag = "shadowWrite";
+            srp.mTag.add("shadowWrite");
             srp.PushAnd(new CCondition("class", "==", "CPaintVoxel"));
             srp.PushAnd(new CCondition("mTag[shadow]"));
             srp.mPriority = CRenderPass.ePriority.BackGround - 1;
@@ -237,13 +236,13 @@ export class CLight extends CBrushComp {
                     if (this.mCascadeCycle[i] == -1)
                         continue;
                     for (let rp of this.mWrite) {
-                        if (rp.mTag != "shadowWrite")
+                        if (rp.mTag.has("shadowWrite") == false)
                             continue;
                         var srpKey = this.mShadowKey + rp.mShader + i;
                         var srp = this.mBruch.GetAutoRP(srpKey);
                         if (srp == null) {
                             srp = rp.Export();
-                            srp.mTag = "shadowWrite";
+                            srp.mTag.add("shadowWrite");
                             this.mBruch.SetAutoRP(srpKey, srp);
                             var fw = this.GetOwner().GetFrame();
                             var tex = fw.Res().Find(this.GetTex());
@@ -382,7 +381,7 @@ export class CLight extends CBrushComp {
                 if (this.mCascadeCycle[i] == -1)
                     continue;
                 for (let rp of this.mWrite) {
-                    if (rp.mTag != "shadowWrite")
+                    if (rp.mTag.has("shadowWrite") == false)
                         continue;
                     var srpKey = this.mShadowKey + rp.mShader + i;
                     this.mBruch.RemoveAutoRP(srpKey);

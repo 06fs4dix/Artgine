@@ -1,6 +1,6 @@
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CChecker } from "./CChecker.js";
 export class CTutorial {
     static eWait = {
@@ -24,13 +24,13 @@ export class CTutorial {
             modal.SetBodyClose(option.bodyClose);
             modal.Open(CModal.ePos.Center);
             if (option.timeOut != 0)
-                modal.Close(1000 * option.timeOut);
+                modal.Close(option.timeOut);
         }
         return new Promise(async (resolve, reject) => {
             if (option.call != null)
                 option.call();
             if (_type == CTutorial.eWait.Click) {
-                CUtil.ID(_data).addEventListener("click", () => {
+                CDOM.ID(_data).addEventListener("click", () => {
                     if (modal != null)
                         modal.Close();
                     resolve(true);

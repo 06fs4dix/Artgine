@@ -31,6 +31,7 @@ import { CString } from "../basic/CString.js";
 import { CRollBack } from "./CRollBack.js";
 import { CSysAuth } from "../system/CSysAuth.js";
 import { CUtilWeb } from "./CUtilWeb.js";
+import { CDOM } from "../basic/CDOM.js";
 const invisibleButton = document.createElement("div");
 invisibleButton.style.position = "absolute";
 invisibleButton.style.top = "0";
@@ -417,6 +418,13 @@ export class CFrame {
                 }
             }
             if (this.mWindow.IsResize() || CWebXR.IsResize()) {
+                if (CFrame.Main() == this) {
+                    const rect = this.mWindow.Handle().getBoundingClientRect();
+                    CDOM.PaintDiv().style.width = this.mWindow.mPF.mWidth + "px";
+                    CDOM.PaintDiv().style.height = this.mWindow.mPF.mHeight + "px";
+                    CDOM.PaintDiv().style.left = rect.left + "px";
+                    CDOM.PaintDiv().style.top = rect.top + "px";
+                }
                 let mList = CModal.GetModalList();
                 for (let m of mList) {
                     if (m.mLimitPush)

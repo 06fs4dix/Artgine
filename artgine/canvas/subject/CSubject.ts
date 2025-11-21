@@ -792,6 +792,11 @@ export class CSubject extends CObject implements IFile , IMat
 
 
 	GetMat()	{	return this.mWMat;	}
+	SetMat(_mat)
+	{	
+		this.SetPMat(_mat);
+		this.PRSReset();
+	}
 	GetPos() { return this.mPos; }
 	GetRot() { return this.mRot; };
 	GetSca() { return this.mSca; };

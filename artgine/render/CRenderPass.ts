@@ -7,7 +7,7 @@ import {CJSON} from "../basic/CJSON.js";
 import {CObject, CPointer} from "../basic/CObject.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CClass } from "../basic/CClass.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CVec1 } from "../geometry/CVec1.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
@@ -157,7 +157,7 @@ export class CRenderPass extends CObject
 	public mZEarly=true;
 	
 	public mBlend=[CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
-	public mTag="";
+	public mTag=new Set<string>();
 
 	SetPriority(_v){		this.mPriority=_v;	this.Reset();	}
 	GetPriority(){		return this.mPriority;	}
@@ -229,7 +229,7 @@ export class CRenderPass extends CObject
 		
 		if(this.mShader!=null)
 			str+=this.mShader;
-		str+=this.mTag;
+		str+=[...this.mTag].join(",");
 		this.mKey=CHash.HashCode(str)+"";
 		
 		this.mCP=null;
@@ -278,7 +278,7 @@ export class CRenderPass extends CObject
 		}
 		else if(_pointer.member=="mShaderAttr")
 		{
-			const html = CDomFactory.DataToDom(`
+			const html = CDOM.DataToDom(`
 				<div class="mb-3">
 					<div class="d-flex align-items-center gap-2">
 						<select class="form-select form-select-sm" id="shader_type_select">

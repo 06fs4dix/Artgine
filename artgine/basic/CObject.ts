@@ -1,7 +1,7 @@
 import {  ICJSON,  IMember, IRecycle, IStream } from "./Basic.js";
 import { CBlackBoard } from "./CBlackBoard.js";
 import { CClass } from "./CClass.js";
-import { CDomFactory } from "./CDOMFactory.js";
+import { CDOM } from "./CDOM.js";
 import { CJSON } from "./CJSON.js";
 import { CPool } from "./CPool.js";
 import { CStream } from "./CStream.js";

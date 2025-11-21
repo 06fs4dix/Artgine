@@ -2,7 +2,7 @@
 import { CUpdate } from "../basic/Basic.js";
 import { Bootstrap } from "../basic/Bootstrap.js";
 import { CBlackBoard } from "../basic/CBlackBoard.js";
-import {CDomFactory} from "../basic/CDOMFactory.js";
+import {CDOM} from "../basic/CDOM.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CJSON} from "../basic/CJSON.js";
 import {CModal} from "../basic/CModal.js";
@@ -133,13 +133,13 @@ export class CLoadingBack extends CModalBackGround
         //     </div>
         // `);
         if(_context==null)
-            CUtil.ID(_id+"_div").append(CDomFactory.DataToDom(`<h2 class="text-white fw-bold">Loading...</h2>`));
+            CDOM.ID(_id+"_div").append(CDOM.DataToDom(`<h2 class="text-white fw-bold">Loading...</h2>`));
         else
-            CUtil.ID(_id+"_div").append(_context);
+            CDOM.ID(_id+"_div").append(_context);
 
         // 요소 참조 저장
-        this.mProgressBar = CUtil.ID(this.Key() + "_progress");
-        this.mRemainingText = CUtil.ID(this.Key() + "_remaining");
+        this.mProgressBar = CDOM.ID(this.Key() + "_progress");
+        this.mRemainingText = CDOM.ID(this.Key() + "_remaining");
 
         // 로딩 상태 업데이트 시작
         this.StartProgressUpdate();
@@ -248,7 +248,7 @@ export class CBGAttachButton extends CModalBackGround
         this.mModal.Open();
         
 
-        CUtil.ID(this.Key()+"_jbox").onclick=()=>{
+        CDOM.ID(this.Key()+"_jbox").onclick=()=>{
             this.mModal.Show();
         };
         //this.m_jbox.open();
@@ -256,13 +256,13 @@ export class CBGAttachButton extends CModalBackGround
    
     SetContent(_data : CJSON|string|object)
     {
-        CUtil.ID(this.Key()+"_div").innerHTML="";
-        CUtil.ID(this.Key()+"_div").append(CDomFactory.DataToDom(_data));
+        CDOM.ID(this.Key()+"_div").innerHTML="";
+        CDOM.ID(this.Key()+"_div").append(CDOM.DataToDom(_data));
     }
     SetTitleText(_name : string)
     {
-        CUtil.ID(this.Key()+"_jboxTitle").innerText=_name;
-        CUtil.ID(this.Key()+"_jbox").innerText=_name;
+        CDOM.ID(this.Key()+"_jboxTitle").innerText=_name;
+        CDOM.ID(this.Key()+"_jbox").innerText=_name;
         
         //this.m_modal.GetHeader().children.
         //this.m_modal.GetHeader().innerText="<div id='"+this.Key()+"_jboxTitle'>"+_name+"</div>";
@@ -310,7 +310,7 @@ export class CBGFadeEffect extends CModalBackGround {
 
     AniStart(_text) {
         this.Show();
-        let stage = CUtil.ID(this.mKey + "_div");
+        let stage = CDOM.ID(this.mKey + "_div");
         stage.innerText=_text;
         stage.style.animation = "none"; // 애니메이션 초기화
         void stage.offsetWidth; // 강제 리페인트 (트릭)
@@ -383,8 +383,8 @@ export class CModalFrameView extends CModalBackGround
         `);
         //this.Hide(0);
         this.SetPause(false);
-        this.mFrameSpan = CUtil.ID("frameSpan") as HTMLSpanElement;
-        this.mGraphDiv = CUtil.ID("frameGraph") as HTMLDivElement;
+        this.mFrameSpan = CDOM.ID("frameSpan") as HTMLSpanElement;
+        this.mGraphDiv = CDOM.ID("frameGraph") as HTMLDivElement;
         this.mFrameSpan.innerText = "FPS";
         this.mGraphDiv.innerHTML = "";
         for(let i = 0; i < this.mMaxLog; i++) {
@@ -637,7 +637,7 @@ export class CFileViewer extends CModal
 
         let id=this.Key();
 
-        if(this.mExeEvent.IsCall()==false)  CUtil.ID(id+"_exe").hidden=true;
+        if(this.mExeEvent.IsCall()==false)  CDOM.ID(id+"_exe").hidden=true;
         
 
 
@@ -653,7 +653,7 @@ export class CFileViewer extends CModal
                 {
                  
 
-                    CUtilWeb.MonacoEditer(CUtil.ID(id+"_body"),source,"typescript","vs-dark",async (monacoEditer)=>{
+                    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"typescript","vs-dark",async (monacoEditer)=>{
                         this.mEditer=monacoEditer;
                        
 
@@ -673,23 +673,23 @@ export class CFileViewer extends CModal
 
                     
                 }
-                else if(info.ext=="js")    CUtilWeb.MonacoEditer(CUtil.ID(id+"_body"),source,"javascript","vs-dark",event);
-                else if(info.ext=="json")    CUtilWeb.MonacoEditer(CUtil.ID(id+"_body"),source,"json","vs-dark",event);
-                else if(info.ext=="html")    CUtilWeb.MonacoEditer(CUtil.ID(id+"_body"),source,"html","vs-dark",event);
-                else    CUtilWeb.MonacoEditer(CUtil.ID(id+"_body"),source,"plaintext","vs-dark",event);
+                else if(info.ext=="js")    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"javascript","vs-dark",event);
+                else if(info.ext=="json")    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"json","vs-dark",event);
+                else if(info.ext=="html")    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"html","vs-dark",event);
+                else    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"plaintext","vs-dark",event);
                 
             });
         };
         LoadFile(this.mFile[0]);
-        const loadBtn = CUtil.ID(`${id}_load`);
-        const exeBtn = CUtil.ID(`${id}_exe`);
+        const loadBtn = CDOM.ID(`${id}_load`);
+        const exeBtn = CDOM.ID(`${id}_exe`);
         loadBtn?.addEventListener("click", async () => {
-            LoadFile(CUtil.IDValue(`${id}_select`));
+            LoadFile(CDOM.IDValue(`${id}_select`));
         });
 
         exeBtn?.addEventListener("click", () => {
            let newBufStr=this.mEditer.getModel().getValue();
-           this.mExeEvent.Call(CUtil.IDValue(`${id}_select`),newBufStr);
+           this.mExeEvent.Call(CDOM.IDValue(`${id}_select`),newBufStr);
         });
     }
     GetEditer() {   return this.mEditer;    }
@@ -1050,7 +1050,7 @@ export class CMonacoViewer extends CModal {
         }
 
         // Monaco Editor 초기화
-        CUtilWeb.MonacoEditer(CUtil.ID(id), _source, languageType as any, "vs-dark",async (monacoEditer)=>{
+        CUtilWeb.MonacoEditer(CDOM.ID(id), _source, languageType as any, "vs-dark",async (monacoEditer)=>{
             this.mEditor=monacoEditer;
         },this.mGithub);
     }

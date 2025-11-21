@@ -1,10 +1,9 @@
 import { CConsol } from "../basic/CConsol.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CConfirm } from "../basic/CModal.js";
 import { CObject } from "../basic/CObject.js";
 import { CTree } from "../basic/CTree.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
-import { CUtil } from "../basic/CUtil.js";
 export class CHtmlBarItem extends CObject {
     m_parent;
     m_title;
@@ -126,7 +125,7 @@ export class CHtmlBarTree extends CObject {
             ? this.m_root
             : this.m_root.Find(_item.m_parent) || this.m_root).PushChild(_item.Key());
         p.mData = _item;
-        if (CUtil.ID(this.RootID())?.innerHTML)
+        if (CDOM.ID(this.RootID())?.innerHTML)
             this.Refresh();
     }
     Hide(_item) {
@@ -212,13 +211,13 @@ export class CHtmlBarTree extends CObject {
             root = root.mColleague;
         }
         const main = this.CreateNavbar(navArr);
-        const rootElement = CUtil.ID(this.RootID());
+        const rootElement = CDOM.ID(this.RootID());
         if (!rootElement) {
-            document.body.append(CDomFactory.DataToDom({ "<>": "div", "id": this.RootID(), "html": [main] }));
+            document.body.append(CDOM.DataToDom({ "<>": "div", "id": this.RootID(), "html": [main] }));
         }
         else {
             rootElement.innerHTML = "";
-            rootElement.append(CDomFactory.DataToDom(main));
+            rootElement.append(CDOM.DataToDom(main));
         }
     }
     NavbarContents() {
@@ -236,7 +235,7 @@ export class CHtmlBarTree extends CObject {
                                 ...this.NavbarContents(),
                                 { "<>": "li", "class": "nav-item dropdown",
                                     "html": [{ "<>": "i", "class": "nav-link bi bi-x-square", "href": "#", "style": "cursor:pointer;",
-                                            "onclick": () => { CUtil.ID(this.RootID()).innerHTML = ""; }
+                                            "onclick": () => { CDOM.ID(this.RootID()).innerHTML = ""; }
                                         }]
                                 }
                             ] }
@@ -294,13 +293,13 @@ export class CHtmlBarTree extends CObject {
                     }
                 ],
                 "onmouseover": (e) => {
-                    let menu = CUtil.ID(this.MakeID(key, "barDropdownMenu"));
+                    let menu = CDOM.ID(this.MakeID(key, "barDropdownMenu"));
                     if (menu && window["bootstrap"]) {
                         window["bootstrap"].Dropdown.getOrCreateInstance(menu).show();
                     }
                 },
                 "onmouseout": (e) => {
-                    let menu = CUtil.ID(this.MakeID(key, "barDropdownMenu"));
+                    let menu = CDOM.ID(this.MakeID(key, "barDropdownMenu"));
                     if (menu && window["bootstrap"]) {
                         window["bootstrap"].Dropdown.getOrCreateInstance(menu).hide();
                     }

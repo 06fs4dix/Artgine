@@ -1,4 +1,4 @@
-import { CDomFactory } from "../../basic/CDOMFactory.js";
+import { CDOM } from "../../basic/CDOM.js";
 import { CEvent } from "../../basic/CEvent.js";
 import { CBound } from "../../geometry/CBound.js";
 import { CMath } from "../../geometry/CMath.js";
@@ -665,12 +665,12 @@ export class CUiHTML extends CUI {
     Init(_html, _size = null) {
         this.mHTML = _html;
         if (this.mUIPT == null) {
-            this.mUIPT = new CPaintHTML(CDomFactory.DataToDom(this.mHTML), _size);
+            this.mUIPT = new CPaintHTML(CDOM.DataToDom(this.mHTML), _size);
             this.PushComp(this.mUIPT);
         }
         else {
             this.mUIPT.Destroy();
-            this.mUIPT = new CPaintHTML(CDomFactory.DataToDom(this.mHTML), _size);
+            this.mUIPT = new CPaintHTML(CDOM.DataToDom(this.mHTML), _size);
             this.PushComp(this.mUIPT);
         }
     }

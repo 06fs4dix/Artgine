@@ -1,7 +1,7 @@
 import {  CUpdate, IAutoUpdate,  IListener } from "./Basic.js";
 import { Bootstrap } from "./Bootstrap.js";
 import { CClass } from "./CClass.js";
-import {CDomFactory} from "./CDOMFactory.js";
+import {CDOM} from "./CDOM.js";
 import {CEvent} from "./CEvent.js";
 import {CJSON} from "./CJSON.js";
 import { CString } from "./CString.js";
@@ -35,6 +35,7 @@ export class CModalTitleBar
     mEvent : CEvent;
 }
 var gIndex=-1;
+
 export class CModal implements IAutoUpdate , IListener
 {
    
@@ -53,6 +54,7 @@ export class CModal implements IAutoUpdate , IListener
     mKey="";
     mSort=CModal.eSort.Auto;
     mZIndex=0;
+    mParent : HTMLElement=null;
 
     private mCloseToHide=false;
     mOT=null;
@@ -66,6 +68,7 @@ export class CModal implements IAutoUpdate , IListener
     mOverlayDiv : HTMLDivElement=null;
     mBodyClose=false;
     mTitle=CModal.eTitle.TextFullClose;
+    mHelp : HTMLElement=null;
     //타이틀이 있어야 드래그 가능
     mDrag=true;
     mLimitPush=false;
@@ -98,6 +101,14 @@ export class CModal implements IAutoUpdate , IListener
         
         this.mZIndex=gIndex;
         gIndex-=1;
+    }
+    SetHelp(_div : HTMLElement)
+    {
+        this.mHelp=_div;
+    }
+    SetParent(_div : HTMLElement)
+    {
+        this.mParent=_div;
     }
   
     Get<T>(_member: string | string[], _default?: T): T | undefined {
@@ -262,7 +273,7 @@ export class CModal implements IAutoUpdate , IListener
         else
         {
             this.mBody.innerHTML="";
-            this.mBody.append(CDomFactory.DataToDom(_data));
+            this.mBody.append(CDOM.DataToDom(_data));
         }
     }
     SetFooter(_data : HTMLElement|string|object|CJSON)
@@ -274,7 +285,7 @@ export class CModal implements IAutoUpdate , IListener
         else
         {
             this.mFooter.innerHTML="";
-            this.mFooter.append(CDomFactory.DataToDom(_data));
+            this.mFooter.append(CDOM.DataToDom(_data));
         }
     }
     SetHeader(_html:string|HTMLElement)
@@ -533,7 +544,6 @@ export namespace CModal {
         SlideUp= 4, //아래에서 위로 등장
         SlideDown= 5, //위에서 아래로 등장
     }
-  
     
 }
 

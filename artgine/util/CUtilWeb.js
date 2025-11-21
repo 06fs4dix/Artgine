@@ -1,5 +1,5 @@
 import { CAlert } from "../basic/CAlert.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
@@ -173,8 +173,8 @@ export class CUtilWeb {
         }).outputText;
         return patchImportPaths(jsCode);
     }
-    static async MDReader(_url) {
-        const root = CDomFactory.DataToDom(null);
+    static async MDReader(_urlOrText) {
+        const root = CDOM.DataToDom(null);
         const scopeClass = `mdr-scope-${Math.random().toString(36).slice(2)}`;
         root.classList.add(scopeClass);
         const getStyleHost = (node) => {
@@ -265,10 +265,17 @@ export class CUtilWeb {
         hljs.registerLanguage('javascript', javascript);
         hljs.registerLanguage('typescript', typescript);
         marked.setOptions({ gfm: true, breaks: false, mangle: false, headerIds: true });
-        const buf = await CFile.Load(_url);
-        if (!buf)
-            return root;
-        const md = CUtil.ArrayToString(buf);
+        let buf = null;
+        let md = "";
+        let ext = CString.ExtCut(_urlOrText);
+        if (ext.ext == "md") {
+            buf = await CFile.Load(_urlOrText);
+            if (!buf)
+                return root;
+            md = CUtil.ArrayToString(buf);
+        }
+        else
+            md = _urlOrText;
         const rawHtml = marked.parse(md, { xhtml: false });
         root.innerHTML = rawHtml;
         root.querySelectorAll('pre code').forEach(block => {

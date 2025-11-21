@@ -1,10 +1,9 @@
 import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModalFlex } from "../util/CModalUtil.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CAtelier } from "../canvas/CAtelier.js";
 import { CColor } from "../canvas/component/CColor.js";
@@ -42,7 +41,7 @@ export function RPMgrTool(_rpMgr) {
         panel.style.maxHeight = maxHeight;
         panel.style.overflowY = "auto";
     });
-    let canvas = CDomFactory.DataToDom(`
+    let canvas = CDOM.DataToDom(`
         <div style="position: relative; width: 100%; height: 100%;">
         <canvas id="RPLeft_can"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 0;">
@@ -242,7 +241,7 @@ function RPInOutTexForm(_rp, _reFun) {
 function RPToolRPAutoInit(_rp) {
     const hash = _rp.ObjHash();
     const collapseId = `collapse_${hash}`;
-    const html = CDomFactory.DataToDom(`
+    const html = CDOM.DataToDom(`
         <div class="card mb-2" id="cardRight_${hash}">
             <div class="card-header d-flex justify-content-between align-items-center"
                  style="cursor: pointer;"
@@ -286,7 +285,7 @@ function RPToolRPAutoInit(_rp) {
 function RPToolTexInit(_tex) {
     const hash = _tex.ObjHash();
     const collapseId = `collapse_${hash}`;
-    const html = CDomFactory.DataToDom(`
+    const html = CDOM.DataToDom(`
         <div class="card mb-2" id="cardRight_${hash}">
             <div class="card-header d-flex justify-content-between align-items-center"
                  style="cursor: pointer;"
@@ -332,7 +331,7 @@ function RPToolTexInit(_tex) {
 function RPToolSufInit(_suf) {
     const hash = _suf.ObjHash();
     const collapseId = `collapse_${hash}`;
-    const html = CDomFactory.DataToDom(`
+    const html = CDOM.DataToDom(`
         <div class="card mb-2" id="cardRight_${hash}">
             <div class="card-header d-flex justify-content-between align-items-center"
                  style="cursor: pointer;"
@@ -378,7 +377,7 @@ function RPToolSufInit(_suf) {
 function RPToolRightRPTabInit(container) {
     RPToolResChk();
     RPToolLeftInit();
-    const addHTML = CDomFactory.DataToDom(`
+    const addHTML = CDOM.DataToDom(`
         <div class="mb-3">
             <button id="btn_add_rp" class="btn btn-primary">RPAuto Add</button>
         </div>
@@ -397,7 +396,7 @@ function RPToolRightRPTabInit(container) {
 }
 function RPToolRightTexTabInit(container) {
     RPToolResChk();
-    const addHTML = CDomFactory.DataToDom(`
+    const addHTML = CDOM.DataToDom(`
         <div class="mb-3">
             <button id="btn_add_tex" class="btn btn-primary">RenderTarget Add</button>
         </div>
@@ -417,7 +416,7 @@ function RPToolRightTexTabInit(container) {
 }
 function RPToolRightSufTabInit(container) {
     RPToolLeftInit();
-    const addHTML = CDomFactory.DataToDom(`
+    const addHTML = CDOM.DataToDom(`
         <div class="mb-3 d-flex align-items-center gap-2">
             <select id="suf_select" class="form-select form-select-sm"></select>
             <button id="btn_add_suf" class="btn btn-primary btn-sm">Add Surface</button>
@@ -453,7 +452,7 @@ function RPToolInit() {
 function RPToolRightInit() {
     const rightPanel = gModal.FindFlex(1);
     rightPanel.innerHTML = "";
-    const tabs = CDomFactory.DataToDom(`
+    const tabs = CDOM.DataToDom(`
         <ul class="nav nav-tabs mb-2" id="rpTabMenu">
             <li class="nav-item"><a class="nav-link active" id="tab-rp" href="#">RP</a></li>
             <li class="nav-item"><a class="nav-link" id="tab-suf" href="#">Suf</a></li>
@@ -493,7 +492,7 @@ async function RPToolLeftInit() {
         return;
     gLeftInit = true;
     gAtl.Canvas("RPTool").Clear();
-    const leftPanel = CUtil.ID("RPLeft_div");
+    const leftPanel = CDOM.ID("RPLeft_div");
     const marginX = 50;
     const marginY = 50;
     let rpArr = [];
@@ -559,8 +558,8 @@ async function RPToolLeftInit() {
             cardBodyCenter += `<div>BlitType: ${value.mBlitType}</div>`;
         if (value.mLine != null)
             cardBodyCenter += `<div>Line: ${value.mLine}</div>`;
-        if (value.mTag !== '')
-            cardBodyCenter += `<div>Tag: ${value.mTag}</div>`;
+        if (value.mTag.size != 0)
+            cardBodyCenter += `<div>Tag: ${[...value.mTag].join(",")}</div>`;
         for (let sa of value.mShaderAttr) {
             if (sa.mType == -2) {
                 cardBodyTop += sa.mKey + " Off-" + sa.mEach + "<br>";
@@ -612,7 +611,7 @@ async function RPToolLeftInit() {
         `;
         let sub = gAtl.Canvas("RPTool").PushSub(new CSubject());
         sub.SetKey(key);
-        let html = CDomFactory.DataToDom(cardHtml);
+        let html = CDOM.DataToDom(cardHtml);
         html.style.pointerEvents = "auto";
         html.style.cursor = "pointer";
         sub.PushComp(new CPaintHTML(html, null, leftPanel));

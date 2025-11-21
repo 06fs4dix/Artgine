@@ -39,7 +39,7 @@ export class CMeshCopyNode implements IMat
 		
 		this.pos=new CVec3();
 		this.rot=new CVec4();
-		this.sca=new CVec3();
+		this.sca=new CVec3(1,1,1);
 		this.pst=new CMat();
 		this.color=null;
 		this.alpha=null;
@@ -79,5 +79,9 @@ export class CMeshCopyNode implements IMat
 	}
 	GetMat(): CMat {
 		return this.pst;
+	}
+	SetMat(_mat : CMat)
+	{
+		this.pst.Import(_mat);
 	}
 }

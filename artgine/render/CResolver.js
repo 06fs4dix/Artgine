@@ -5,6 +5,7 @@ import { CVec4 } from "../geometry/CVec4.js";
 export class CResolver extends CObject {
     m_source;
     m_target;
+    m_invWorldMat = null;
     constructor(_tip, _tgt) {
         super();
         this.m_source = _tip;
@@ -12,15 +13,22 @@ export class CResolver extends CObject {
     }
     SolveIK() { }
     ApplyToBone(_bone, _pos, _sca, _rot) {
-        const wMat = CMath.MatMul(CMath.QutToMat(_rot), CMath.MatScale(_sca));
-        wMat.SetV3(3, _pos);
-        wMat.UnitCheck();
-        _bone.mData.pst = wMat;
-        let lMat = wMat;
-        if (_bone.mParent)
-            lMat = CMath.MatMul(lMat, CMath.MatInvert(_bone.mParent.mData.pst));
-        _bone.mData.rot = MatDecomposeRot(lMat);
-        _bone.mData.pos = lMat.xyz;
+        if (_bone.mParent != null) {
+            const wMat = CMath.MatMul(CMath.QutToMat(_rot), CMath.MatScale(_sca));
+            wMat.SetV3(3, _pos);
+            wMat.UnitCheck();
+            _bone.mData.pst = wMat;
+            const pMat = CMath.MatMul(wMat, CMath.MatInvert(_bone.mParent.mData.pst));
+            _bone.mData.pos.Import(pMat.xyz);
+            _bone.mData.sca.Import(CMath.MatDecomposeSca(pMat));
+            _bone.mData.rot.Import(CMath.MatDecomposeRot(pMat));
+        }
+        else {
+            _bone.mData.pos.Import(_pos);
+            _bone.mData.sca.Import(_sca);
+            _bone.mData.rot.Import(_rot);
+            _bone.mData.PRSReset();
+        }
     }
     ApplyToChild(_bone, _excludeBones = []) {
         if (!_bone)
@@ -43,13 +51,16 @@ export class CResolverAttach extends CResolver {
     m_mixPos = new CVec3(1, 1, 1);
     m_mixSca = new CVec3(1, 1, 1);
     SolveIK() {
+        if (!this.m_source || !this.m_target) {
+            return;
+        }
         const tMat = this.m_target.GetMat();
         const tPos = tMat.xyz;
         const tSca = CMath.MatDecomposeSca(tMat);
-        const tRot = MatDecomposeRot(tMat);
+        const tRot = CMath.MatDecomposeRot(tMat);
         const sPos = this.m_source.mData.pst.xyz;
         const sSca = CMath.MatDecomposeSca(this.m_source.mData.pst);
-        const sRot = MatDecomposeRot(this.m_source.mData.pst);
+        const sRot = CMath.MatDecomposeRot(this.m_source.mData.pst);
         CMath.V3AddV3(tPos, this.m_offsetPos, tPos);
         CMath.V3MulV3(tSca, this.m_offsetSca, tSca);
         CMath.QutMul(tRot, this.m_offsetRot, tRot);
@@ -63,23 +74,30 @@ export class CResolverAttach extends CResolver {
         mSca.z = CMath.FloatInterpolate(sSca.z, tSca.z, this.m_mixSca.z);
         const mRot = CMath.QutInterpolate(sRot, tRot, this.m_mixRot);
         this.ApplyToBone(this.m_source, mPos, mSca, mRot);
-        this.ApplyToChild(this.m_source);
+        this.ApplyToChild(this.m_source, [this.m_source]);
     }
 }
 export class CResolverIKLook extends CResolver {
     m_dirOrigin;
     m_rotOrigin;
     SolveIK() {
-        const tPos = this.m_target.GetMat().xyz;
+        if (!this.m_source || !this.m_target) {
+            return;
+        }
+        let tMat = this.m_target.GetMat();
+        if (this.m_invWorldMat != null) {
+            tMat = CMath.MatMul(tMat, this.m_invWorldMat);
+        }
+        const tPos = tMat.xyz;
         const sPos = this.m_source.mData.pst.xyz;
         const curDir = CMath.V3SubV3(tPos, sPos);
         if (!this.m_dirOrigin || !this.m_rotOrigin) {
             this.m_dirOrigin = CMath.V3Nor(curDir);
-            this.m_rotOrigin = MatDecomposeRot(this.m_source.mData.pst);
+            this.m_rotOrigin = CMath.MatDecomposeRot(this.m_source.mData.pst);
         }
         const rot = CMath.QutMul(this.m_rotOrigin, CMath.FromToRotation(this.m_dirOrigin, curDir));
         this.ApplyToBone(this.m_source, sPos, CMath.MatDecomposeSca(this.m_source.mData.pst), rot);
-        this.ApplyToChild(this.m_source);
+        this.ApplyToChild(this.m_source, [this.m_source]);
     }
 }
 export class CResolverIKFABR extends CResolver {
@@ -110,14 +128,18 @@ export class CResolverIKFABR extends CResolver {
         if (!this.m_source || !this.m_target) {
             return;
         }
+        let tMat = this.m_target.GetMat();
+        if (this.m_invWorldMat != null) {
+            tMat = CMath.MatMul(tMat, this.m_invWorldMat);
+        }
         if (!this.m_targetPos) {
-            this.m_targetPos = this.m_target.GetMat().xyz;
+            this.m_targetPos = tMat.xyz;
             this.m_boneLenTotal = 0;
             let previousBone = null;
             let currentBone = this.m_source;
             for (let i = this.m_bonePos.length - 1; i >= 0; i--) {
                 this.m_bones[i] = currentBone;
-                this.m_boneRotOrigin[i] = MatDecomposeRot(currentBone.mData.pst);
+                this.m_boneRotOrigin[i] = CMath.MatDecomposeRot(currentBone.mData.pst);
                 if (i == this.m_bonePos.length - 1) {
                     this.m_boneDirOrigin[i] = CMath.V3SubV3(this.m_targetPos, currentBone.mData.pst.xyz);
                 }
@@ -134,7 +156,7 @@ export class CResolverIKFABR extends CResolver {
             this.m_bonePos[i] = this.m_bones[i].mData.pst.xyz;
             this.m_bonePosOrigin[i] = this.m_bones[i].mData.pst.xyz;
         }
-        const tPos = this.m_target.GetMat().xyz;
+        const tPos = tMat.xyz;
         let distToTarget = CMath.V3Distance(tPos, this.m_bonePos[0]);
         if (distToTarget >= this.m_boneLenTotal) {
             let dir = CMath.V3SubV3(tPos, this.m_bonePos[0]);
@@ -217,12 +239,4 @@ export class CResolverIKFABR extends CResolver {
 function ClosestPointOnPlane(_planeNor, _planeDist, _point) {
     let dis = CMath.V3Dot(_planeNor, _point) + _planeDist;
     return CMath.V3SubV3(_point, CMath.V3MulFloat(_planeNor, dis));
-}
-function MatDecomposeRot(_mat) {
-    const sca = CMath.MatDecomposeSca(_mat);
-    sca.x = 1 / sca.x;
-    sca.y = 1 / sca.y;
-    sca.z = 1 / sca.z;
-    const scaMat = CMath.MatScale(sca);
-    return CMath.MatToQut(CMath.MatMul(_mat, scaMat));
 }

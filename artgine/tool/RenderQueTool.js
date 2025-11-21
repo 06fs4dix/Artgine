@@ -1,8 +1,7 @@
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
 import { CPreferences } from "../basic/CPreferences.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CBrush } from "../canvas/CBrush.js";
 import { CCanvas } from "../canvas/CCanvas.js";
 import { CPaint2D, CPaintHTML } from "../canvas/component/paint/CPaint2D.js";
@@ -126,7 +125,7 @@ function Init() {
         `;
         const sub = g_can.PushSub(new CSubject());
         sub.SetKey(key);
-        let pt = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(html), new CVec2(256, 0), CUtil.ID("RenderOrderTool_div")));
+        let pt = sub.PushComp(new CPaintHTML(CDOM.DataToDom(html), new CVec2(256, 0), CDOM.ID("RenderOrderTool_div")));
         pt.SetPivot(new CVec3(0, 1, 0));
         sub.SetPos(new CVec3(posX, 0));
         ptArr.push(pt);
@@ -222,7 +221,7 @@ function Init() {
         </div>
         `;
         const sub = g_can.PushSub(new CSubject());
-        let pt = sub.PushComp(new CPaintHTML(CDomFactory.DataToDom(html), new CVec2(256, 0), CUtil.ID("RenderOrderTool_div")));
+        let pt = sub.PushComp(new CPaintHTML(CDOM.DataToDom(html), new CVec2(256, 0), CDOM.ID("RenderOrderTool_div")));
         pt.SetPivot(new CVec3(0, -1, 0));
         sub.SetPos(new CVec3(posX, -50));
         ptArr.push(pt);

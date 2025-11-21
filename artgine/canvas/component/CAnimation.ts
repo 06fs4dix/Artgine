@@ -1,6 +1,6 @@
 
 import { CClass } from "../../basic/CClass.js";
-import {CDomFactory} from "../../basic/CDOMFactory.js";
+import {CDOM} from "../../basic/CDOM.js";
 import {CJSON} from "../../basic/CJSON.js";
 import { CObject, CObjectEditerBtn, CPointer } from "../../basic/CObject.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
@@ -187,7 +187,7 @@ export class CClipColorAlpha extends CClip
 	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 		if(_pointer.member=="mSTColorVFX" && this.mSTColorVFX==null)
 		{
-			let btn=CDomFactory.TagToDom("button");
+			let btn=CDOM.TagToDom("button");
 			btn.innerText="생성";
 			btn.onclick=()=>{
 				this.mSTColorVFX = new CColorVFX();
@@ -197,7 +197,7 @@ export class CClipColorAlpha extends CClip
 		}
 		if(_pointer.member=="m_edColorVFX" && this.mEDColorVFX==null)
 		{
-			let btn=CDomFactory.TagToDom("button");
+			let btn=CDOM.TagToDom("button");
 			btn.innerText="생성";
 			btn.onclick=()=>{
 				this.mEDColorVFX = new CColorVFX();
@@ -305,7 +305,7 @@ export class CClipMesh extends CClip
 		if(_pointer.member == "mST") 
 		{
 			let val = typeof(_pointer.member) == "string"? 0 : 1;
-			_div.insertBefore(CDomFactory.DataToDom({
+			_div.insertBefore(CDOM.DataToDom({
 				'<>':'select', 'class':'form-select','style':'width:100%;', 'html':[
 					{'<>':'option', 'text':'AniKey', 'value':0, 'selected':val == 0? ' ': null},
 					{'<>':'option', 'text':'Start-End', 'value':1, 'selected':val == 1? ' ': null}
@@ -313,18 +313,18 @@ export class CClipMesh extends CClip
 					_div.removeChild(_div.lastChild);
 					let target=e.target as HTMLSelectElement;
 					if(target.value == "0") {
-						_div.append(CDomFactory.DataToDom({
+						_div.append(CDOM.DataToDom({
 							'<>':'input', 'class':'form-control', 'type':'string', "placeholder":"AniKey",'onchange':(e) => {
 								this.mST = target.value;
 							}
 						}));
 					} else {
-						_div.append(CDomFactory.DataToDom({
+						_div.append(CDOM.DataToDom({
 							'<>':'input', 'class':'form-control', 'type':'number', "placeholder":"start",'onchange':(e) => {
 								this.mST = Number(target.value);
 							}
 						}));
-						_div.append(CDomFactory.DataToDom({
+						_div.append(CDOM.DataToDom({
 							'<>':'input', 'class':'form-control', 'type':'number', "placeholder":"end", 'onchange':(e) => {
 								this.mED = Number(target.value);
 							}

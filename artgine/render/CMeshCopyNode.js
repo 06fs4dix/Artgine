@@ -25,7 +25,7 @@ export class CMeshCopyNode {
         this.bsca = null;
         this.pos = new CVec3();
         this.rot = new CVec4();
-        this.sca = new CVec3();
+        this.sca = new CVec3(1, 1, 1);
         this.pst = new CMat();
         this.color = null;
         this.alpha = null;
@@ -48,5 +48,8 @@ export class CMeshCopyNode {
     }
     GetMat() {
         return this.pst;
+    }
+    SetMat(_mat) {
+        this.pst.Import(_mat);
     }
 }

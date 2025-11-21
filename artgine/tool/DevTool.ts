@@ -1,7 +1,7 @@
 import { arrayBuffer } from "stream/consumers";
 import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CConfirm, CDrop, CModal, CModalTitleBar } from "../basic/CModal.js";
 import { CMDViewer, CModalFlex, CMonacoViewer } from "../util/CModalUtil.js";
@@ -203,7 +203,7 @@ export async function InitDevToolScriptViewer(_github)
     gScriptViewer.SetCloseEsc(false);
 
 
-    gScriptViewer.mHeader.prepend(CDomFactory.DataToDom(
+    gScriptViewer.mHeader.prepend(CDOM.DataToDom(
         "<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>"+
         "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>"+
         //"<button type='button' class='btn btn-info' id='mvGPT_btn'>GPT</button>"
@@ -211,12 +211,12 @@ export async function InitDevToolScriptViewer(_github)
     
     
     ));
-    CUtil.ID("mvSample_btn").addEventListener("click",async ()=>{
+    CDOM.ID("mvSample_btn").addEventListener("click",async ()=>{
         new CMDViewer(CPath.PHPC()+"artgine/tool/RunTimeSample.md");
     });
        
     
-    // CUtil.ID("mvGPT_btn").addEventListener("click",async ()=>{
+    // CDOM.ID("mvGPT_btn").addEventListener("click",async ()=>{
 
        
 
@@ -245,12 +245,12 @@ export async function InitDevToolScriptViewer(_github)
     // });
    
 
-    CUtil.ID("mvExcute_btn").addEventListener("click",async ()=>{
+    CDOM.ID("mvExcute_btn").addEventListener("click",async ()=>{
         let source=gScriptViewer.GetSource();
         //let moudle=await CScript.Build(CHash.SHA256(source).substr(0, 32)+".ts",source);
         let moudle=await CScript.Build(CUniqueID.GetHash()+".ts",source);
     });
-    CUtil.ID("mvSave_btn").addEventListener("click",async ()=>{
+    CDOM.ID("mvSave_btn").addEventListener("click",async ()=>{
         
         data=CStorage.Get(CPath.PHPCR()+"Save.json");
         if(data!=null)  json=JSON.parse(data);
@@ -288,11 +288,7 @@ export function DevTool(_atl: CAtelier)
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
     const parent = canvas.parentElement;
-    if(_frame.Input().KeyDown(CInput.eKey.LControl)==false)
-    {
-        _frame.PF().mDebugMode = true;
-        CConsol.Log("DebugMode");
-    }
+    
         
     gBTargetWidth=_frame.PF().mTargetWidth;
     gBTargetHeight=_frame.PF().mTargetHeight;
@@ -408,6 +404,14 @@ export function DevTool(_atl: CAtelier)
     gModal.Open();
     gModal.On(CEvent.eType.Drop,DevToolDrop);
     gModal.FullSwitch();
+
+    _frame.PF().mDebugMode = true;
+    CDOM.PaintDiv().hidden=true;
+
+
+    // else
+    //     gModal.SetZIndex(CModal.eSort.Manual,800);
+
     const maxHeight = "calc(100vh - 10px)"; // 필요 시 조정
     const leftPanel = gModal.FindFlex(0) as HTMLElement;
     const rightPanel = gModal.FindFlex(2) as HTMLElement;
@@ -427,6 +431,7 @@ export function DevTool(_atl: CAtelier)
         CRollBack.Off("DevTool");
         gScriptViewer=null;
         _frame.PF().mDebugMode = false;
+        CDOM.PaintDiv().hidden=false;
         _frame.PF().mTargetWidth=gBTargetWidth;
         _frame.PF().mTargetHeight=gBTargetHeight;
 
@@ -882,7 +887,7 @@ function DevToolDrop(_drop : CDrop)
                     return "bi bi-file-earmark";
             }
         }
-        const listGroup = CDomFactory.DataToDom("ul");
+        const listGroup = CDOM.DataToDom("ul");
         listGroup.className = "list-group";
         fileDrop.mObject=[];
         let uk=CUniqueID.GetHash(8);
@@ -890,10 +895,10 @@ function DevToolDrop(_drop : CDrop)
             const path = fileDrop.mPaths[i];
             const file = fileDrop.mFiles[i];
 
-            const li = CDomFactory.DataToDom("li");
+            const li = CDOM.DataToDom("li");
             li.className = "list-group-item d-flex align-items-center";
 
-            const icon = CDomFactory.DataToDom("i");
+            const icon = CDOM.DataToDom("i");
 
             // ✅ 항상 file.name 기준으로 확장자 판단
             icon.className = GetIconClass(file.name);
@@ -1173,9 +1178,9 @@ function DevToolUpdate(_delay)
 
             pos = CMath.V3AddV3(pos, moveVec);
         }
-        CUtil.IDValue("PosX", Number(pos.x.toFixed(2)));
-        CUtil.IDValue("PosY", Number(pos.y.toFixed(2)));
-        CUtil.IDValue("PosZ", Number(pos.z.toFixed(2)));
+        CDOM.IDValue("PosX", Number(pos.x.toFixed(2)));
+        CDOM.IDValue("PosY", Number(pos.y.toFixed(2)));
+        CDOM.IDValue("PosZ", Number(pos.z.toFixed(2)));
         subject.SetPos(pos);
         SubjectRigidBodyClear(subject);
         
@@ -1347,17 +1352,17 @@ function DevToolUpdate(_delay)
     }
     gUpdateTime=500;
     //브러시쪽 삭제는 처리안했다. 삭제될일이 거의 없어서 안함..
-    let collapse=CUtil.ID(gAtl.Brush().ObjHash()+"_collapse");
+    let collapse=CDOM.ID(gAtl.Brush().ObjHash()+"_collapse");
     if(collapse==null)  return;
     if(collapse.className.indexOf("show")!=-1)
     {
-        const bdiv = CUtil.ID(gAtl.Brush().ObjHash() + "_ul");
+        const bdiv = CDOM.ID(gAtl.Brush().ObjHash() + "_ul");
         for(let obj0 of gAtl.Brush().mCameraMap.values())
         {
             let item=gLeftItem.get(obj0.ObjHash());
             if(item!=null)
             {
-                const li = CUtil.ID(obj0.ObjHash() + "_li");
+                const li = CDOM.ID(obj0.ObjHash() + "_li");
                 
                 
                 
@@ -1371,7 +1376,7 @@ function DevToolUpdate(_delay)
             }
             else//추가
             {
-                const newItem = CDomFactory.DataToDom(LeftNewItem(obj0));
+                const newItem = CDOM.DataToDom(LeftNewItem(obj0));
                 bdiv.append(newItem);
                 gLeftItem.set(obj0.ObjHash(), obj0);
                 LeftModifyItem(gAtl.Brush().ObjHash());
@@ -1382,11 +1387,11 @@ function DevToolUpdate(_delay)
     //추가,삭제 둘다 제외함
     for (let canvas of gAtl.mCanvasMap.values()) 
     {
-        //const bdiv = CUtil.ID(canvas.ObjHash() + "_ul");
+        //const bdiv = CDOM.ID(canvas.ObjHash() + "_ul");
         let item = gLeftItem.get(canvas.ObjHash());
         if (item != null) 
         {
-            const li = CUtil.ID(canvas.ObjHash() + "_li");
+            const li = CDOM.ID(canvas.ObjHash() + "_li");
             const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
             if (nameDiv && nameDiv.textContent !== canvas.Key()) 
             {
@@ -1416,7 +1421,7 @@ function DevToolUpdate(_delay)
     {
         if (obj instanceof CSubject && obj.IsDestroy()) 
         {
-            const li = CUtil.ID(obj.ObjHash() + "_li");
+            const li = CDOM.ID(obj.ObjHash() + "_li");
             const parentUl = li?.parentElement;
             li?.remove();
 
@@ -1450,14 +1455,14 @@ function SyncSubjectTreeRecursive(_parent: CObject, _target: CSubject,_gift : bo
 {
     if(_target.IsDestroy()) return;
 
-    const parentUl = CUtil.ID(_parent.ObjHash() + "_ul");
+    const parentUl = CDOM.ID(_parent.ObjHash() + "_ul");
     if (!parentUl) return;
 
     // 1. DOM 없으면 추가
-    let li = CUtil.ID(_target.ObjHash() + "_li");
+    let li = CDOM.ID(_target.ObjHash() + "_li");
     if (!li) 
     {
-        const newItem = CDomFactory.DataToDom(LeftNewItem(_target));
+        const newItem = CDOM.DataToDom(LeftNewItem(_target));
         parentUl.append(newItem);
         const hash=_target.ObjHash();
         gLeftItem.set(_target.ObjHash(), _target);
@@ -1530,8 +1535,8 @@ function SyncSubjectTreeRecursive(_parent: CObject, _target: CSubject,_gift : bo
     LeftModifyItem(_parent.ObjHash()); 
 
     // 3. 자식 확인 (콜랩스 열려 있을 때만)
-    const collapseDiv = CUtil.ID(_parent.ObjHash() + "_collapse");
-    const childUl = CUtil.ID(_target.ObjHash() + "_ul");
+    const collapseDiv = CDOM.ID(_parent.ObjHash() + "_collapse");
+    const childUl = CDOM.ID(_target.ObjHash() + "_ul");
     const isOpen = collapseDiv && collapseDiv.className.indexOf("show") !== -1;
     
     if (isOpen) 
@@ -1594,7 +1599,7 @@ function DevToolLeftPush()
         datalistHtml += `</datalist>`;
 
         // input + datalist 포함한 div 생성
-        const div = CDomFactory.DataToDom(`
+        const div = CDOM.DataToDom(`
             <div>
                 <label class="form-label">Enter or choose a type to add:</label>
                 <input class="form-control" list="${datalistId}" id="DevToolLeftAdd_Input" placeholder="Type name...">
@@ -1604,14 +1609,14 @@ function DevToolLeftPush()
 
          // ✅ Push 동작 함수 따로 정의
         const onPush = () => {
-            let value = CUtil.IDValue("DevToolLeftAdd_Input");
+            let value = CDOM.IDValue("DevToolLeftAdd_Input");
             let cls = CClass.New(value);
             if (cls == null) {
                 CAlert.E("class not def");
             } else {
                 let item = LeftNewItem(cls);
-                let bdiv = CUtil.ID(gLeftSelect.ObjHash() + "_ul");
-                let lhtml=CDomFactory.DataToDom(item);
+                let bdiv = CDOM.ID(gLeftSelect.ObjHash() + "_ul");
+                let lhtml=CDOM.DataToDom(item);
                 
                 // lhtml.setAttribute('draggable', 'true');
                 // lhtml.addEventListener('dragstart', (ev) => {
@@ -1646,14 +1651,14 @@ function DevToolLeftPush()
         });
 
         // let confirm=CConfirm.List(div,[()=>{
-        //     let value=CUtil.IDValue("DevToolLeftAdd_Input");
+        //     let value=CDOM.IDValue("DevToolLeftAdd_Input");
         //     let cls=CClass.New(value);
         //     if(cls==null)
         //         CAlert.E("class not def");
         //     else
         //     {
         //         let item=LeftNewItem(cls);
-        //         let bdiv=CUtil.ID(gLeftSelect.ObjHash()+"_ul");
+        //         let bdiv=CDOM.ID(gLeftSelect.ObjHash()+"_ul");
         //         bdiv.append(CDomFactory.DataToDom(item));
         //         LeftModifyItem(gLeftSelect.ObjHash());
 
@@ -1674,8 +1679,8 @@ function DevToolLeftPush()
             
             
             let item=LeftNewItem(cam);
-            let bdiv=CUtil.ID(gLeftSelect.ObjHash()+"_ul");
-            bdiv.append(CDomFactory.DataToDom(item));
+            let bdiv=CDOM.ID(gLeftSelect.ObjHash()+"_ul");
+            bdiv.append(CDOM.DataToDom(item));
             LeftModifyItem(gLeftSelect.ObjHash());
             (gLeftSelect as CBrush).mCameraMap.set(cam.Key(),cam);
            
@@ -1690,8 +1695,8 @@ function DevToolLeftPush()
             
             
             let item=LeftNewItem(can);
-            let bdiv=CUtil.ID("DevToolLeft");
-            bdiv.append(CDomFactory.DataToDom(item));
+            let bdiv=CDOM.ID("DevToolLeft");
+            bdiv.append(CDOM.DataToDom(item));
           
             
            DevToolLeft();
@@ -1716,7 +1721,7 @@ function DevToolLeftRemove(_destry=true)
     else    return;
         
     
-    let li=CUtil.ID(gLeftSelect.ObjHash()+"_li");
+    let li=CDOM.ID(gLeftSelect.ObjHash()+"_li");
     const parentUl = li.parentElement as HTMLElement;
     li.remove(); // 자신을 DOM에서 제거
     gLeftItem.delete(gLeftSelect.ObjHash());
@@ -1789,7 +1794,7 @@ function DevToolRight(_obj: CObject)
         const enabled = _obj.IsEnable();
 
         // 1. 카드 상단 (Enable + 클래스명)
-        const headerCard = CDomFactory.DataToDom(`
+        const headerCard = CDOM.DataToDom(`
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -1808,7 +1813,7 @@ function DevToolRight(_obj: CObject)
         `);
 
         // 2. 하단 Pos/Rot/Sca
-        const transformDiv = CDomFactory.DataToDom(`
+        const transformDiv = CDOM.DataToDom(`
             <div class="d-flex flex-column gap-2 m-2">
                 <div class="d-flex align-items-center gap-2">
                     <label class="form-label mb-0" style="width: 3rem;">Pos:</label>
@@ -1836,16 +1841,16 @@ function DevToolRight(_obj: CObject)
         rightPanel.append(transformDiv);
 
         // Enable 체크박스 이벤트
-        const enableCheckbox = CUtil.ID("SubjectEnable") as HTMLInputElement;
+        const enableCheckbox = CDOM.ID("SubjectEnable") as HTMLInputElement;
         enableCheckbox.onchange = () => {
             _obj.SetEnable(enableCheckbox.checked);
         };
 
         // 공통 벡터 입력 바인딩
         const setVec3 = (prefix: string, setter: (v: any) => void) => {
-            const x = CUtil.ID(prefix + "X") as HTMLInputElement;
-            const y = CUtil.ID(prefix + "Y") as HTMLInputElement;
-            const z = CUtil.ID(prefix + "Z") as HTMLInputElement;
+            const x = CDOM.ID(prefix + "X") as HTMLInputElement;
+            const y = CDOM.ID(prefix + "Y") as HTMLInputElement;
+            const z = CDOM.ID(prefix + "Z") as HTMLInputElement;
             const ChangeFun = () => {
                 const vec = new CVec3(parseFloat(x.value), parseFloat(y.value), parseFloat(z.value));
                 setter(vec);
@@ -1873,7 +1878,7 @@ function DevToolRight(_obj: CObject)
 
 
         // 블랙보드 토글
-        const bbIcon = CUtil.ID("DevToolBB");
+        const bbIcon = CDOM.ID("DevToolBB");
         if (bbIcon) {
             bbIcon.onclick = () => {
                 const newState = !_obj.IsBlackBoard();
@@ -1889,7 +1894,7 @@ function DevToolRight(_obj: CObject)
         }
 
         // 클립보드 복사
-        const copyIcon = CUtil.ID("DevToolCopy");
+        const copyIcon = CDOM.ID("DevToolCopy");
         if (copyIcon) {
             copyIcon.onclick = () => {
                 navigator.clipboard.writeText(_obj.ToStr());
@@ -1898,7 +1903,7 @@ function DevToolRight(_obj: CObject)
         }
 
         // 기프트
-        const giftIcon = CUtil.ID("DevToolGift");
+        const giftIcon = CDOM.ID("DevToolGift");
         if (giftIcon) {
             giftIcon.onclick = () => 
             {
@@ -1909,7 +1914,7 @@ function DevToolRight(_obj: CObject)
         }
 
         // 삭제
-        const deleteIcon = CUtil.ID("DevToolDelete");
+        const deleteIcon = CDOM.ID("DevToolDelete");
         if (deleteIcon) {
             deleteIcon.onclick = () => {
                 _obj.Destroy();
@@ -1924,7 +1929,7 @@ function DevToolRight(_obj: CObject)
         const look = _obj.GetLook();
 
         
-        const cameraDiv = CDomFactory.DataToDom(`
+        const cameraDiv = CDOM.DataToDom(`
 
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -1958,9 +1963,9 @@ function DevToolRight(_obj: CObject)
         rightPanel.append(cameraDiv);
 
         const setVec3 = (prefix: string, setter: (v: any) => void) => {
-            const x = CUtil.ID(prefix + "X") as HTMLInputElement;
-            const y = CUtil.ID(prefix + "Y") as HTMLInputElement;
-            const z = CUtil.ID(prefix + "Z") as HTMLInputElement;
+            const x = CDOM.ID(prefix + "X") as HTMLInputElement;
+            const y = CDOM.ID(prefix + "Y") as HTMLInputElement;
+            const z = CDOM.ID(prefix + "Z") as HTMLInputElement;
             const update = () => {
                 const vec = new CVec3(parseFloat(x.value), parseFloat(y.value), parseFloat(z.value));
                 setter(vec);
@@ -1973,7 +1978,7 @@ function DevToolRight(_obj: CObject)
         setVec3("Look", v => {_obj.SetLook(v);_obj.mReset=true;});
 
         // 블랙보드 토글
-        const bbIcon = CUtil.ID("DevToolBB");
+        const bbIcon = CDOM.ID("DevToolBB");
         if (bbIcon) {
             bbIcon.onclick = () => {
                 const newState = !_obj.IsBlackBoard();
@@ -1988,7 +1993,7 @@ function DevToolRight(_obj: CObject)
             };
         }
         // 삭제
-        const deleteIcon = CUtil.ID("DevToolDelete");
+        const deleteIcon = CDOM.ID("DevToolDelete");
         if (deleteIcon) {
             deleteIcon.onclick = () => {
                 DevToolLeftRemove();
@@ -1999,7 +2004,7 @@ function DevToolRight(_obj: CObject)
     {
         const paused = _obj.IsPause();
 
-        const canvasCard = CDomFactory.DataToDom(`
+        const canvasCard = CDOM.DataToDom(`
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -2020,7 +2025,7 @@ function DevToolRight(_obj: CObject)
         rightPanel.append(canvasCard);
 
         // 블랙보드 토글
-        const bbIcon = CUtil.ID("DevToolBB");
+        const bbIcon = CDOM.ID("DevToolBB");
         if (bbIcon) {
             bbIcon.onclick = () => {
                 const newState = !_obj.IsBlackBoard();
@@ -2036,13 +2041,13 @@ function DevToolRight(_obj: CObject)
         }
 
         // Pause 체크박스 이벤트
-        const pauseCheckbox = CUtil.ID("CanvasPause") as HTMLInputElement;
+        const pauseCheckbox = CDOM.ID("CanvasPause") as HTMLInputElement;
         pauseCheckbox.onchange = () => {
             _obj.SetPause(pauseCheckbox.checked);
         };
 
         // 저장
-        const saveIcon = CUtil.ID("DevToolSave");
+        const saveIcon = CDOM.ID("DevToolSave");
         if (saveIcon) {
             saveIcon.onclick = async () => {
 
@@ -2058,7 +2063,7 @@ function DevToolRight(_obj: CObject)
         }
 
         // 클립보드 복사
-        const copyIcon = CUtil.ID("DevToolCopy");
+        const copyIcon = CDOM.ID("DevToolCopy");
         if (copyIcon) {
             copyIcon.onclick = () => {
                 navigator.clipboard.writeText(_obj.ToStr());
@@ -2067,7 +2072,7 @@ function DevToolRight(_obj: CObject)
         }
 
         // 삭제
-        const deleteIcon = CUtil.ID("DevToolDelete");
+        const deleteIcon = CDOM.ID("DevToolDelete");
         if (deleteIcon) {
             deleteIcon.onclick = () => {
                 DevToolLeftRemove();
@@ -2078,7 +2083,7 @@ function DevToolRight(_obj: CObject)
     {
         const paused = _obj.IsPause();
 
-        const brushCard = CDomFactory.DataToDom(`
+        const brushCard = CDOM.DataToDom(`
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -2093,19 +2098,25 @@ function DevToolRight(_obj: CObject)
             
             <label for="BrushCameraSelect" class="form-label ps-1">카메라 선택:</label>
             <select id="BrushCameraSelect" class="form-select form-select-sm"></select>
+
+            <button id='ModalView_btn'>ModalView</button>
             
         `);
 
         rightPanel.append(brushCard);
 
+        CDOM.ID("ModalView_btn").onclick=()=>{
+            CModal.ListShow();
+        };
+
         // Pause 체크박스 이벤트
-        const pauseCheckbox = CUtil.ID("BrushPause") as HTMLInputElement;
+        const pauseCheckbox = CDOM.ID("BrushPause") as HTMLInputElement;
         pauseCheckbox.onchange = () => {
             _obj.SetPause(pauseCheckbox.checked);
         };
 
         // 저장 아이콘
-        const saveIcon = CUtil.ID("DevToolSave");
+        const saveIcon = CDOM.ID("DevToolSave");
         if (saveIcon) {
             saveIcon.onclick = async () => {
                 CAlert.Info("Brush Saved!");
@@ -2192,9 +2203,9 @@ function DevToolLeft()
     
     const leftPanel = gModal.FindFlex(0) as HTMLElement;
     leftPanel.innerHTML = "";
-    leftPanel.append(CDomFactory.DataToDom(listDiv));
+    leftPanel.append(CDOM.DataToDom(listDiv));
 
-    const saveIcon = CUtil.ID("DevToolAllSave");
+    const saveIcon = CDOM.ID("DevToolAllSave");
     if (saveIcon) {
         saveIcon.onclick = async () => {
             let SaveFun=async ()=>{
@@ -2247,13 +2258,13 @@ function DevToolLeft()
             
         };
     }
-    CUtil.ID("DevToolHSearch").addEventListener("keyup",(e)=>{
+    CDOM.ID("DevToolHSearch").addEventListener("keyup",(e)=>{
         const t = e.target as HTMLInputElement;
 		const val = t.value;
 
         for(let [key,value] of gLeftItem)
         {
-            const li = CUtil.ID(key + "_li");    
+            const li = CDOM.ID(key + "_li");    
             if(li.innerText.includes(val) || val=="")
                 li.style.display = "";
             else
@@ -2266,7 +2277,7 @@ function DevToolLeft()
     });
 
     // 이벤트 위임: 클릭한 대상이 어떤 _obj 인지 확인
-    const ulRoot = CUtil.ID("DevToolLeft");
+    const ulRoot = CDOM.ID("DevToolLeft");
     ulRoot?.addEventListener("click", (e: MouseEvent) => {
 
         
@@ -2276,7 +2287,7 @@ function DevToolLeft()
         
         // // 이전 선택 카드 배경 제거
         // if (gLeftSelect) {
-        //     const prevCard = CUtil.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card") as HTMLElement;
+        //     const prevCard = CDOM.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card") as HTMLElement;
         //     if (prevCard) prevCard.classList.remove("bg-secondary-subtle");
         // }
         const li = target.closest("li[id$='_li']") as HTMLElement;
@@ -2293,27 +2304,7 @@ function DevToolLeft()
 
         LeftSelect(obj);
 
-        // // 현재 선택 카드 배경 회색 적용
-        // const curCard = li.querySelector(".card") as HTMLElement;
-        // if (curCard) curCard.classList.add("bg-secondary-subtle");
-
-        // // 우측 패널 갱신
-        // const rightPanel = gModal.FindFlex(2) as HTMLElement;
-        // rightPanel.innerHTML = "";
-        // DevToolRight(obj);
-        // rightPanel.append(obj.EditInit());
-
-        // gLeftSelect = obj;
-
-        // if (obj instanceof CCanvas) {
-        //     const bdiv = CUtil.ID(obj.ObjHash() + "_ul");
-        //     if (bdiv.children.length === 0) {
-        //         for (let [key, value] of obj.GetSubMap()) {
-        //             const item = LeftNewItem(value);
-        //             bdiv.append(CDomFactory.DataToDom(item));
-        //         }
-        //     }
-        // }
+    
     });
     ulRoot?.addEventListener("dblclick", (e: MouseEvent) => {
 
@@ -2349,7 +2340,7 @@ function DevToolLeft()
 
         // 콜백 정의
         const onRename = () => {
-            const key = CUtil.IDValue("DevToolLeftRename");
+            const key = CDOM.IDValue("DevToolLeftRename");
             const textDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
             if (textDiv instanceof HTMLElement) {
                 textDiv.textContent = key;
@@ -2390,8 +2381,8 @@ function DevToolLeft()
     for(let [key,value] of gAtl.Brush().mCameraMap)
     {
         let item=LeftNewItem(value);
-        let bdiv=CUtil.ID(gAtl.Brush().ObjHash()+"_ul");
-        bdiv.append(CDomFactory.DataToDom(item));
+        let bdiv=CDOM.ID(gAtl.Brush().ObjHash()+"_ul");
+        bdiv.append(CDOM.DataToDom(item));
         
     }
     LeftModifyItem(gAtl.Brush().ObjHash());
@@ -2402,7 +2393,7 @@ function DevToolLeft()
     for(let can of gAtl.mCanvasMap.values())
     {
         listDiv.html.push(LeftNewItem(can));
-        let canDiv=CUtil.ID(can.ObjHash()+"_li");
+        let canDiv=CDOM.ID(can.ObjHash()+"_li");
 
         
         canDiv.addEventListener('dragover', (ev) => ev.preventDefault());
@@ -2436,13 +2427,13 @@ function DevToolLeft()
         });
 
         // 2. 해당 상위 caret 아이콘 찾기
-        const parentCaret = CUtil.ID(can.ObjHash() + "_caret");
+        const parentCaret = CDOM.ID(can.ObjHash() + "_caret");
         if (parentCaret instanceof HTMLElement && parentCaret.hasAttribute("hidden")) {
             parentCaret.removeAttribute("hidden");
         }
 
         // 3. count 갱신 (자식 개수 기준)
-        const countSpan = CUtil.ID(can.ObjHash() + "_count");
+        const countSpan = CDOM.ID(can.ObjHash() + "_count");
         if (countSpan) {
             countSpan.textContent = `(${can.GetSubMap().size})`;
         }
@@ -2460,7 +2451,7 @@ function LeftSelect(_obj : CObject)
     
     // 이전 선택 카드 배경 제거
     if (gLeftSelect) {
-        const prevCard = CUtil.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card") as HTMLElement;
+        const prevCard = CDOM.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card") as HTMLElement;
         if (prevCard) prevCard.classList.remove("bg-info-subtle");
 
     }
@@ -2480,7 +2471,7 @@ function LeftSelect(_obj : CObject)
 
     
         
-    let li=CUtil.ID(_obj.ObjHash() + "_li");
+    let li=CDOM.ID(_obj.ObjHash() + "_li");
 
  
     // 현재 선택 카드 배경 회색 적용
@@ -2500,7 +2491,7 @@ function LeftSelect(_obj : CObject)
     {
         if(gLastCanvas!=null)
         {
-            let bli=CUtil.ID(gLastCanvas.ObjHash() + "_li");
+            let bli=CDOM.ID(gLastCanvas.ObjHash() + "_li");
             let bcard=bli.querySelector(".card") as HTMLElement;
             bcard.classList.remove("fw-bold");
         }
@@ -2508,11 +2499,11 @@ function LeftSelect(_obj : CObject)
         if (curCard) curCard.classList.add("fw-bold");
         
 
-        const bdiv = CUtil.ID(_obj.ObjHash() + "_ul");
+        const bdiv = CDOM.ID(_obj.ObjHash() + "_ul");
         if (bdiv.children.length === 0) {
             for (let [key, value] of _obj.GetSubMap()) {
                 const item = LeftNewItem(value);
-                bdiv.append(CDomFactory.DataToDom(item));
+                bdiv.append(CDOM.DataToDom(item));
             }
         }
     }
@@ -2542,13 +2533,13 @@ function LeftNewItem(_obj : CObject)
 }
 function LeftModifyItem(_key : string) {
 
-    const myUl = CUtil.ID(_key + "_ul") as HTMLElement;
+    const myUl = CDOM.ID(_key + "_ul") as HTMLElement;
     if (!myUl) return;
 
     const count = myUl.children.length;
 
     // 1. caret 처리
-    const caret = CUtil.ID(_key + "_caret") as HTMLElement;
+    const caret = CDOM.ID(_key + "_caret") as HTMLElement;
     if (caret) {
         if (count === 0) {
             caret.setAttribute("hidden", "true");
@@ -2558,7 +2549,7 @@ function LeftModifyItem(_key : string) {
     }
 
     // 2. count 텍스트 처리
-    const countSpan = CUtil.ID(_key + "_count") as HTMLElement;
+    const countSpan = CDOM.ID(_key + "_count") as HTMLElement;
     if (countSpan) {
         countSpan.textContent = count > 0 ? `(${count})` : "";
     }

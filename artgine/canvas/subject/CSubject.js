@@ -501,6 +501,10 @@ export class CSubject extends CObject {
         return _com;
     }
     GetMat() { return this.mWMat; }
+    SetMat(_mat) {
+        this.SetPMat(_mat);
+        this.PRSReset();
+    }
     GetPos() { return this.mPos; }
     GetRot() { return this.mRot; }
     ;

@@ -9,11 +9,10 @@ import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CTexture } from "../../../render/CTexture.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
-import { CDomFactory } from "../../../basic/CDOMFactory.js";
+import { CDOM } from "../../../basic/CDOM.js";
 import { CHash } from "../../../basic/CHash.js";
 import { CObject } from "../../../basic/CObject.js";
 import { CUniqueID } from "../../../basic/CUniqueID.js";
-import { CUtil } from "../../../basic/CUtil.js";
 import { CUtilObj } from "../../../basic/CUtilObj.js";
 import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import { CLoaderOption } from "../../../util/CLoader.js";
@@ -201,8 +200,8 @@ export class CPaint extends CComponent {
                             { "<>": "div", "class": "col-4", "html": [
                                     { "<>": "button", "type": "button", "class": "btn btn-primary", "text": "Add",
                                         "onclick": () => {
-                                            let sel = CUtil.IDValue(ukey + "subPush");
-                                            let key = CUtil.IDValue(ukey + "_txt");
+                                            let sel = CDOM.IDValue(ukey + "subPush");
+                                            let key = CDOM.IDValue(ukey + "_txt");
                                             if (key == "") {
                                                 CAlert.E("key 설정");
                                                 return;
@@ -216,7 +215,7 @@ export class CPaint extends CComponent {
                         ] }
                 ] };
             ;
-            _input.prepend(CDomFactory.DataToDom(pushDiv));
+            _input.prepend(CDOM.DataToDom(pushDiv));
         }
     }
     SetOwner(_obj) {
@@ -515,6 +514,8 @@ export class CPaint extends CComponent {
     }
     GetRGBA() {
         return new CVec4(this.mColorModel.x, this.mColorModel.y, this.mColorModel.z, this.mAlphaModel.x);
+    }
+    SetMat(_mat) {
     }
     GetMat() { return this.mLMat; }
     ;

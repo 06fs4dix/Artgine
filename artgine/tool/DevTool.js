@@ -1,6 +1,6 @@
 import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CConfirm, CModal, CModalTitleBar } from "../basic/CModal.js";
 import { CMDViewer, CModalFlex, CMonacoViewer } from "../util/CModalUtil.js";
@@ -40,7 +40,6 @@ import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
-import { CConsol } from "../basic/CConsol.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -127,17 +126,17 @@ export async function InitDevToolScriptViewer(_github) {
     }
     gScriptViewer = new CMonacoViewer(json.script, "Runtime.ts", _github);
     gScriptViewer.SetCloseEsc(false);
-    gScriptViewer.mHeader.prepend(CDomFactory.DataToDom("<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>" +
+    gScriptViewer.mHeader.prepend(CDOM.DataToDom("<button type='button' class='btn btn-success' id='mvExcute_btn'>Excute</button>" +
         "<button type='button' class='btn btn-primary' id='mvSave_btn'>Save</button>" +
         "<button type='button' class='btn btn-info' id='mvSample_btn'>Sample</button>"));
-    CUtil.ID("mvSample_btn").addEventListener("click", async () => {
+    CDOM.ID("mvSample_btn").addEventListener("click", async () => {
         new CMDViewer(CPath.PHPC() + "artgine/tool/RunTimeSample.md");
     });
-    CUtil.ID("mvExcute_btn").addEventListener("click", async () => {
+    CDOM.ID("mvExcute_btn").addEventListener("click", async () => {
         let source = gScriptViewer.GetSource();
         let moudle = await CScript.Build(CUniqueID.GetHash() + ".ts", source);
     });
-    CUtil.ID("mvSave_btn").addEventListener("click", async () => {
+    CDOM.ID("mvSave_btn").addEventListener("click", async () => {
         data = CStorage.Get(CPath.PHPCR() + "Save.json");
         if (data != null)
             json = JSON.parse(data);
@@ -168,10 +167,6 @@ export function DevTool(_atl) {
     const _frame = _atl.Frame();
     const canvas = _frame.Win().Handle();
     const parent = canvas.parentElement;
-    if (_frame.Input().KeyDown(CInput.eKey.LControl) == false) {
-        _frame.PF().mDebugMode = true;
-        CConsol.Log("DebugMode");
-    }
     gBTargetWidth = _frame.PF().mTargetWidth;
     gBTargetHeight = _frame.PF().mTargetHeight;
     gCanStyle = {
@@ -266,6 +261,8 @@ export function DevTool(_atl) {
     gModal.Open();
     gModal.On(CEvent.eType.Drop, DevToolDrop);
     gModal.FullSwitch();
+    _frame.PF().mDebugMode = true;
+    CDOM.PaintDiv().hidden = true;
     const maxHeight = "calc(100vh - 10px)";
     const leftPanel = gModal.FindFlex(0);
     const rightPanel = gModal.FindFlex(2);
@@ -281,6 +278,7 @@ export function DevTool(_atl) {
         CRollBack.Off("DevTool");
         gScriptViewer = null;
         _frame.PF().mDebugMode = false;
+        CDOM.PaintDiv().hidden = false;
         _frame.PF().mTargetWidth = gBTargetWidth;
         _frame.PF().mTargetHeight = gBTargetHeight;
         if (gCanStyle) {
@@ -601,16 +599,16 @@ function DevToolDrop(_drop) {
                     return "bi bi-file-earmark";
             }
         };
-        const listGroup = CDomFactory.DataToDom("ul");
+        const listGroup = CDOM.DataToDom("ul");
         listGroup.className = "list-group";
         fileDrop.mObject = [];
         let uk = CUniqueID.GetHash(8);
         for (let i = 0; i < fileDrop.mFiles.length; ++i) {
             const path = fileDrop.mPaths[i];
             const file = fileDrop.mFiles[i];
-            const li = CDomFactory.DataToDom("li");
+            const li = CDOM.DataToDom("li");
             li.className = "list-group-item d-flex align-items-center";
-            const icon = CDomFactory.DataToDom("i");
+            const icon = CDOM.DataToDom("i");
             icon.className = GetIconClass(file.name);
             icon.style.marginRight = "0.5rem";
             const pathText = path ?? `${canvas.Key() + "/" + uk + "/" + file.name}`;
@@ -791,9 +789,9 @@ function DevToolUpdate(_delay) {
             }
             pos = CMath.V3AddV3(pos, moveVec);
         }
-        CUtil.IDValue("PosX", Number(pos.x.toFixed(2)));
-        CUtil.IDValue("PosY", Number(pos.y.toFixed(2)));
-        CUtil.IDValue("PosZ", Number(pos.z.toFixed(2)));
+        CDOM.IDValue("PosX", Number(pos.x.toFixed(2)));
+        CDOM.IDValue("PosY", Number(pos.y.toFixed(2)));
+        CDOM.IDValue("PosZ", Number(pos.z.toFixed(2)));
         subject.SetPos(pos);
         SubjectRigidBodyClear(subject);
         gMouse = mouse;
@@ -905,22 +903,22 @@ function DevToolUpdate(_delay) {
         return;
     }
     gUpdateTime = 500;
-    let collapse = CUtil.ID(gAtl.Brush().ObjHash() + "_collapse");
+    let collapse = CDOM.ID(gAtl.Brush().ObjHash() + "_collapse");
     if (collapse == null)
         return;
     if (collapse.className.indexOf("show") != -1) {
-        const bdiv = CUtil.ID(gAtl.Brush().ObjHash() + "_ul");
+        const bdiv = CDOM.ID(gAtl.Brush().ObjHash() + "_ul");
         for (let obj0 of gAtl.Brush().mCameraMap.values()) {
             let item = gLeftItem.get(obj0.ObjHash());
             if (item != null) {
-                const li = CUtil.ID(obj0.ObjHash() + "_li");
+                const li = CDOM.ID(obj0.ObjHash() + "_li");
                 const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
                 if (nameDiv && nameDiv.textContent !== obj0.Key()) {
                     nameDiv.textContent = obj0.Key();
                 }
             }
             else {
-                const newItem = CDomFactory.DataToDom(LeftNewItem(obj0));
+                const newItem = CDOM.DataToDom(LeftNewItem(obj0));
                 bdiv.append(newItem);
                 gLeftItem.set(obj0.ObjHash(), obj0);
                 LeftModifyItem(gAtl.Brush().ObjHash());
@@ -930,7 +928,7 @@ function DevToolUpdate(_delay) {
     for (let canvas of gAtl.mCanvasMap.values()) {
         let item = gLeftItem.get(canvas.ObjHash());
         if (item != null) {
-            const li = CUtil.ID(canvas.ObjHash() + "_li");
+            const li = CDOM.ID(canvas.ObjHash() + "_li");
             const nameDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
             if (nameDiv && nameDiv.textContent !== canvas.Key()) {
                 nameDiv.textContent = canvas.Key();
@@ -953,7 +951,7 @@ function DevToolUpdate(_delay) {
     }
     for (let [objHash, obj] of gLeftItem.entries()) {
         if (obj instanceof CSubject && obj.IsDestroy()) {
-            const li = CUtil.ID(obj.ObjHash() + "_li");
+            const li = CDOM.ID(obj.ObjHash() + "_li");
             const parentUl = li?.parentElement;
             li?.remove();
             if (gLeftSelect === obj) {
@@ -978,12 +976,12 @@ function DevToolCamKeyChange(_key) {
 function SyncSubjectTreeRecursive(_parent, _target, _gift) {
     if (_target.IsDestroy())
         return;
-    const parentUl = CUtil.ID(_parent.ObjHash() + "_ul");
+    const parentUl = CDOM.ID(_parent.ObjHash() + "_ul");
     if (!parentUl)
         return;
-    let li = CUtil.ID(_target.ObjHash() + "_li");
+    let li = CDOM.ID(_target.ObjHash() + "_li");
     if (!li) {
-        const newItem = CDomFactory.DataToDom(LeftNewItem(_target));
+        const newItem = CDOM.DataToDom(LeftNewItem(_target));
         parentUl.append(newItem);
         const hash = _target.ObjHash();
         gLeftItem.set(_target.ObjHash(), _target);
@@ -1038,8 +1036,8 @@ function SyncSubjectTreeRecursive(_parent, _target, _gift) {
     if (_gift)
         _target.Prefab(gAtl.Frame());
     LeftModifyItem(_parent.ObjHash());
-    const collapseDiv = CUtil.ID(_parent.ObjHash() + "_collapse");
-    const childUl = CUtil.ID(_target.ObjHash() + "_ul");
+    const collapseDiv = CDOM.ID(_parent.ObjHash() + "_collapse");
+    const childUl = CDOM.ID(_target.ObjHash() + "_ul");
     const isOpen = collapseDiv && collapseDiv.className.indexOf("show") !== -1;
     if (isOpen) {
         const currentHashes = new Set();
@@ -1076,7 +1074,7 @@ function DevToolLeftPush() {
             datalistHtml += `<option value="${item.constructor.name}"></option>`;
         }
         datalistHtml += `</datalist>`;
-        const div = CDomFactory.DataToDom(`
+        const div = CDOM.DataToDom(`
             <div>
                 <label class="form-label">Enter or choose a type to add:</label>
                 <input class="form-control" list="${datalistId}" id="DevToolLeftAdd_Input" placeholder="Type name...">
@@ -1084,15 +1082,15 @@ function DevToolLeftPush() {
             </div>
         `);
         const onPush = () => {
-            let value = CUtil.IDValue("DevToolLeftAdd_Input");
+            let value = CDOM.IDValue("DevToolLeftAdd_Input");
             let cls = CClass.New(value);
             if (cls == null) {
                 CAlert.E("class not def");
             }
             else {
                 let item = LeftNewItem(cls);
-                let bdiv = CUtil.ID(gLeftSelect.ObjHash() + "_ul");
-                let lhtml = CDomFactory.DataToDom(item);
+                let bdiv = CDOM.ID(gLeftSelect.ObjHash() + "_ul");
+                let lhtml = CDOM.DataToDom(item);
                 LeftModifyItem(gLeftSelect.ObjHash());
                 if (gLeftSelect instanceof CCanvas)
                     gLeftSelect.PushSub(cls);
@@ -1114,8 +1112,8 @@ function DevToolLeftPush() {
         CConfirm.List("Camere Push?", [() => {
                 let cam = new CCamera(gAtl.PF());
                 let item = LeftNewItem(cam);
-                let bdiv = CUtil.ID(gLeftSelect.ObjHash() + "_ul");
-                bdiv.append(CDomFactory.DataToDom(item));
+                let bdiv = CDOM.ID(gLeftSelect.ObjHash() + "_ul");
+                bdiv.append(CDOM.DataToDom(item));
                 LeftModifyItem(gLeftSelect.ObjHash());
                 gLeftSelect.mCameraMap.set(cam.Key(), cam);
             }, () => { }], ["Push", "Cancel"]);
@@ -1124,8 +1122,8 @@ function DevToolLeftPush() {
         CConfirm.List("CCanvas Push?", [() => {
                 let can = gAtl.NewCanvas(CUniqueID.GetHash());
                 let item = LeftNewItem(can);
-                let bdiv = CUtil.ID("DevToolLeft");
-                bdiv.append(CDomFactory.DataToDom(item));
+                let bdiv = CDOM.ID("DevToolLeft");
+                bdiv.append(CDOM.DataToDom(item));
                 DevToolLeft();
             }, () => { }], ["Push", "Cancel"]);
     }
@@ -1143,7 +1141,7 @@ function DevToolLeftRemove(_destry = true) {
         gAtl.mBrush.mCameraMap.delete(gLeftSelect.Key());
     else
         return;
-    let li = CUtil.ID(gLeftSelect.ObjHash() + "_li");
+    let li = CDOM.ID(gLeftSelect.ObjHash() + "_li");
     const parentUl = li.parentElement;
     li.remove();
     gLeftItem.delete(gLeftSelect.ObjHash());
@@ -1188,7 +1186,7 @@ function DevToolRight(_obj) {
         const rot = _obj.GetRot();
         const sca = _obj.GetSca();
         const enabled = _obj.IsEnable();
-        const headerCard = CDomFactory.DataToDom(`
+        const headerCard = CDOM.DataToDom(`
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -1205,7 +1203,7 @@ function DevToolRight(_obj) {
                 </div>
             </div>
         `);
-        const transformDiv = CDomFactory.DataToDom(`
+        const transformDiv = CDOM.DataToDom(`
             <div class="d-flex flex-column gap-2 m-2">
                 <div class="d-flex align-items-center gap-2">
                     <label class="form-label mb-0" style="width: 3rem;">Pos:</label>
@@ -1229,14 +1227,14 @@ function DevToolRight(_obj) {
         `);
         rightPanel.append(headerCard);
         rightPanel.append(transformDiv);
-        const enableCheckbox = CUtil.ID("SubjectEnable");
+        const enableCheckbox = CDOM.ID("SubjectEnable");
         enableCheckbox.onchange = () => {
             _obj.SetEnable(enableCheckbox.checked);
         };
         const setVec3 = (prefix, setter) => {
-            const x = CUtil.ID(prefix + "X");
-            const y = CUtil.ID(prefix + "Y");
-            const z = CUtil.ID(prefix + "Z");
+            const x = CDOM.ID(prefix + "X");
+            const y = CDOM.ID(prefix + "Y");
+            const z = CDOM.ID(prefix + "Z");
             const ChangeFun = () => {
                 const vec = new CVec3(parseFloat(x.value), parseFloat(y.value), parseFloat(z.value));
                 setter(vec);
@@ -1257,7 +1255,7 @@ function DevToolRight(_obj) {
         setVec3("Pos", v => { _obj.SetPos(v); SubjectRigidBodyClear(_obj); });
         setVec3("Rot", v => _obj.SetRot(v));
         setVec3("Sca", v => _obj.SetSca(v));
-        const bbIcon = CUtil.ID("DevToolBB");
+        const bbIcon = CDOM.ID("DevToolBB");
         if (bbIcon) {
             bbIcon.onclick = () => {
                 const newState = !_obj.IsBlackBoard();
@@ -1272,20 +1270,20 @@ function DevToolRight(_obj) {
                 }
             };
         }
-        const copyIcon = CUtil.ID("DevToolCopy");
+        const copyIcon = CDOM.ID("DevToolCopy");
         if (copyIcon) {
             copyIcon.onclick = () => {
                 navigator.clipboard.writeText(_obj.ToStr());
                 CAlert.Info("Copy!");
             };
         }
-        const giftIcon = CUtil.ID("DevToolGift");
+        const giftIcon = CDOM.ID("DevToolGift");
         if (giftIcon) {
             giftIcon.onclick = () => {
                 DevToolGiftSwap(_obj);
             };
         }
-        const deleteIcon = CUtil.ID("DevToolDelete");
+        const deleteIcon = CDOM.ID("DevToolDelete");
         if (deleteIcon) {
             deleteIcon.onclick = () => {
                 _obj.Destroy();
@@ -1296,7 +1294,7 @@ function DevToolRight(_obj) {
     else if (_obj instanceof CCamera) {
         const eye = _obj.GetEye();
         const look = _obj.GetLook();
-        const cameraDiv = CDomFactory.DataToDom(`
+        const cameraDiv = CDOM.DataToDom(`
 
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -1328,9 +1326,9 @@ function DevToolRight(_obj) {
         `);
         rightPanel.append(cameraDiv);
         const setVec3 = (prefix, setter) => {
-            const x = CUtil.ID(prefix + "X");
-            const y = CUtil.ID(prefix + "Y");
-            const z = CUtil.ID(prefix + "Z");
+            const x = CDOM.ID(prefix + "X");
+            const y = CDOM.ID(prefix + "Y");
+            const z = CDOM.ID(prefix + "Z");
             const update = () => {
                 const vec = new CVec3(parseFloat(x.value), parseFloat(y.value), parseFloat(z.value));
                 setter(vec);
@@ -1339,7 +1337,7 @@ function DevToolRight(_obj) {
         };
         setVec3("Eye", v => { _obj.SetEye(v); _obj.mReset = true; });
         setVec3("Look", v => { _obj.SetLook(v); _obj.mReset = true; });
-        const bbIcon = CUtil.ID("DevToolBB");
+        const bbIcon = CDOM.ID("DevToolBB");
         if (bbIcon) {
             bbIcon.onclick = () => {
                 const newState = !_obj.IsBlackBoard();
@@ -1354,7 +1352,7 @@ function DevToolRight(_obj) {
                 }
             };
         }
-        const deleteIcon = CUtil.ID("DevToolDelete");
+        const deleteIcon = CDOM.ID("DevToolDelete");
         if (deleteIcon) {
             deleteIcon.onclick = () => {
                 DevToolLeftRemove();
@@ -1363,7 +1361,7 @@ function DevToolRight(_obj) {
     }
     else if (_obj instanceof CCanvas) {
         const paused = _obj.IsPause();
-        const canvasCard = CDomFactory.DataToDom(`
+        const canvasCard = CDOM.DataToDom(`
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -1381,7 +1379,7 @@ function DevToolRight(_obj) {
             </div>
         `);
         rightPanel.append(canvasCard);
-        const bbIcon = CUtil.ID("DevToolBB");
+        const bbIcon = CDOM.ID("DevToolBB");
         if (bbIcon) {
             bbIcon.onclick = () => {
                 const newState = !_obj.IsBlackBoard();
@@ -1396,11 +1394,11 @@ function DevToolRight(_obj) {
                 }
             };
         }
-        const pauseCheckbox = CUtil.ID("CanvasPause");
+        const pauseCheckbox = CDOM.ID("CanvasPause");
         pauseCheckbox.onchange = () => {
             _obj.SetPause(pauseCheckbox.checked);
         };
-        const saveIcon = CUtil.ID("DevToolSave");
+        const saveIcon = CDOM.ID("DevToolSave");
         if (saveIcon) {
             saveIcon.onclick = async () => {
                 if (_obj.GetCameraKey() == "Dev")
@@ -1412,14 +1410,14 @@ function DevToolRight(_obj) {
                 CAlert.Info(_obj.Key() + " Saved!");
             };
         }
-        const copyIcon = CUtil.ID("DevToolCopy");
+        const copyIcon = CDOM.ID("DevToolCopy");
         if (copyIcon) {
             copyIcon.onclick = () => {
                 navigator.clipboard.writeText(_obj.ToStr());
                 CAlert.Info("Copy!");
             };
         }
-        const deleteIcon = CUtil.ID("DevToolDelete");
+        const deleteIcon = CDOM.ID("DevToolDelete");
         if (deleteIcon) {
             deleteIcon.onclick = () => {
                 DevToolLeftRemove();
@@ -1428,7 +1426,7 @@ function DevToolRight(_obj) {
     }
     else if (_obj instanceof CBrush) {
         const paused = _obj.IsPause();
-        const brushCard = CDomFactory.DataToDom(`
+        const brushCard = CDOM.DataToDom(`
             <div class="card m-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
@@ -1443,14 +1441,19 @@ function DevToolRight(_obj) {
             
             <label for="BrushCameraSelect" class="form-label ps-1">카메라 선택:</label>
             <select id="BrushCameraSelect" class="form-select form-select-sm"></select>
+
+            <button id='ModalView_btn'>ModalView</button>
             
         `);
         rightPanel.append(brushCard);
-        const pauseCheckbox = CUtil.ID("BrushPause");
+        CDOM.ID("ModalView_btn").onclick = () => {
+            CModal.ListShow();
+        };
+        const pauseCheckbox = CDOM.ID("BrushPause");
         pauseCheckbox.onchange = () => {
             _obj.SetPause(pauseCheckbox.checked);
         };
-        const saveIcon = CUtil.ID("DevToolSave");
+        const saveIcon = CDOM.ID("DevToolSave");
         if (saveIcon) {
             saveIcon.onclick = async () => {
                 CAlert.Info("Brush Saved!");
@@ -1511,8 +1514,8 @@ function DevToolLeft() {
     }
     const leftPanel = gModal.FindFlex(0);
     leftPanel.innerHTML = "";
-    leftPanel.append(CDomFactory.DataToDom(listDiv));
-    const saveIcon = CUtil.ID("DevToolAllSave");
+    leftPanel.append(CDOM.DataToDom(listDiv));
+    const saveIcon = CDOM.ID("DevToolAllSave");
     if (saveIcon) {
         saveIcon.onclick = async () => {
             let SaveFun = async () => {
@@ -1558,18 +1561,18 @@ function DevToolLeft() {
             }
         };
     }
-    CUtil.ID("DevToolHSearch").addEventListener("keyup", (e) => {
+    CDOM.ID("DevToolHSearch").addEventListener("keyup", (e) => {
         const t = e.target;
         const val = t.value;
         for (let [key, value] of gLeftItem) {
-            const li = CUtil.ID(key + "_li");
+            const li = CDOM.ID(key + "_li");
             if (li.innerText.includes(val) || val == "")
                 li.style.display = "";
             else
                 li.style.display = "none";
         }
     });
-    const ulRoot = CUtil.ID("DevToolLeft");
+    const ulRoot = CDOM.ID("DevToolLeft");
     ulRoot?.addEventListener("click", (e) => {
         const target = e.target;
         if (target.className == "bi bi-file-earmark-plus" || target.className == "bi bi-trash")
@@ -1609,7 +1612,7 @@ function DevToolLeft() {
             }
         }
         const onRename = () => {
-            const key = CUtil.IDValue("DevToolLeftRename");
+            const key = CDOM.IDValue("DevToolLeftRename");
             const textDiv = li.querySelector(".card-body .d-flex.align-items-center > div:nth-child(2)");
             if (textDiv instanceof HTMLElement) {
                 textDiv.textContent = key;
@@ -1643,13 +1646,13 @@ function DevToolLeft() {
     });
     for (let [key, value] of gAtl.Brush().mCameraMap) {
         let item = LeftNewItem(value);
-        let bdiv = CUtil.ID(gAtl.Brush().ObjHash() + "_ul");
-        bdiv.append(CDomFactory.DataToDom(item));
+        let bdiv = CDOM.ID(gAtl.Brush().ObjHash() + "_ul");
+        bdiv.append(CDOM.DataToDom(item));
     }
     LeftModifyItem(gAtl.Brush().ObjHash());
     for (let can of gAtl.mCanvasMap.values()) {
         listDiv.html.push(LeftNewItem(can));
-        let canDiv = CUtil.ID(can.ObjHash() + "_li");
+        let canDiv = CDOM.ID(can.ObjHash() + "_li");
         canDiv.addEventListener('dragover', (ev) => ev.preventDefault());
         canDiv.addEventListener('drop', (ev) => {
             ev.preventDefault();
@@ -1672,11 +1675,11 @@ function DevToolLeft() {
             can.PushSub(cutObj);
             DevToolLeft();
         });
-        const parentCaret = CUtil.ID(can.ObjHash() + "_caret");
+        const parentCaret = CDOM.ID(can.ObjHash() + "_caret");
         if (parentCaret instanceof HTMLElement && parentCaret.hasAttribute("hidden")) {
             parentCaret.removeAttribute("hidden");
         }
-        const countSpan = CUtil.ID(can.ObjHash() + "_count");
+        const countSpan = CDOM.ID(can.ObjHash() + "_count");
         if (countSpan) {
             countSpan.textContent = `(${can.GetSubMap().size})`;
         }
@@ -1684,7 +1687,7 @@ function DevToolLeft() {
 }
 function LeftSelect(_obj) {
     if (gLeftSelect) {
-        const prevCard = CUtil.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card");
+        const prevCard = CDOM.ID(gLeftSelect.ObjHash() + "_li")?.querySelector(".card");
         if (prevCard)
             prevCard.classList.remove("bg-info-subtle");
     }
@@ -1694,7 +1697,7 @@ function LeftSelect(_obj) {
         rightPanel.innerHTML = "";
         return;
     }
-    let li = CUtil.ID(_obj.ObjHash() + "_li");
+    let li = CDOM.ID(_obj.ObjHash() + "_li");
     const curCard = li.querySelector(".card");
     if (curCard)
         curCard.classList.add("bg-info-subtle");
@@ -1705,18 +1708,18 @@ function LeftSelect(_obj) {
     gLeftSelect = _obj;
     if (_obj instanceof CCanvas) {
         if (gLastCanvas != null) {
-            let bli = CUtil.ID(gLastCanvas.ObjHash() + "_li");
+            let bli = CDOM.ID(gLastCanvas.ObjHash() + "_li");
             let bcard = bli.querySelector(".card");
             bcard.classList.remove("fw-bold");
         }
         gLastCanvas = _obj;
         if (curCard)
             curCard.classList.add("fw-bold");
-        const bdiv = CUtil.ID(_obj.ObjHash() + "_ul");
+        const bdiv = CDOM.ID(_obj.ObjHash() + "_ul");
         if (bdiv.children.length === 0) {
             for (let [key, value] of _obj.GetSubMap()) {
                 const item = LeftNewItem(value);
-                bdiv.append(CDomFactory.DataToDom(item));
+                bdiv.append(CDOM.DataToDom(item));
             }
         }
     }
@@ -1744,11 +1747,11 @@ function LeftNewItem(_obj) {
     return str;
 }
 function LeftModifyItem(_key) {
-    const myUl = CUtil.ID(_key + "_ul");
+    const myUl = CDOM.ID(_key + "_ul");
     if (!myUl)
         return;
     const count = myUl.children.length;
-    const caret = CUtil.ID(_key + "_caret");
+    const caret = CDOM.ID(_key + "_caret");
     if (caret) {
         if (count === 0) {
             caret.setAttribute("hidden", "true");
@@ -1757,7 +1760,7 @@ function LeftModifyItem(_key) {
             caret.removeAttribute("hidden");
         }
     }
-    const countSpan = CUtil.ID(_key + "_count");
+    const countSpan = CDOM.ID(_key + "_count");
     if (countSpan) {
         countSpan.textContent = count > 0 ? `(${count})` : "";
     }

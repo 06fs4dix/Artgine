@@ -9,7 +9,7 @@ import { CUniqueID } from "../basic/CUniqueID.js"
 import { CJSON } from "../basic/CJSON.js"
 import { CModal } from "../basic/CModal.js"
 import { CVec2 } from "../geometry/CVec2.js"
-import { CDomFactory } from "../basic/CDOMFactory.js"
+import { CDOM } from "../basic/CDOM.js"
 import { CObject, CPointer } from "../basic/CObject.js"
 import { CClass } from "../basic/CClass.js"
 import { CUtilObj } from "../basic/CUtilObj.js"
@@ -166,12 +166,12 @@ export class CAtlas extends CObject {
 		// 		});
 		// 	}}));
 		// }
-		_div.append(CDomFactory.DataToDom({
+		_div.append(CDOM.DataToDom({
 			"<>": "button", "text": "Modify", "onclick": () => {
 				this.ModifyModal();
 			}
 		}));
-		_div.append(CDomFactory.DataToDom({
+		_div.append(CDOM.DataToDom({
 			"<>": "button", "text": "Reload Texture", "onclick": () => {
 				this.mTex = null;
 				this.CreateTex();
@@ -276,7 +276,7 @@ export class CAtlas extends CObject {
 			]
 		};
 		let drawImgOnCard = (_index = -1) => {
-			let AtlCan_Div = CUtil.ID("atlCan_card");
+			let AtlCan_Div = CDOM.ID("atlCan_card");
 			AtlCan_Div.innerHTML = "";
 
 			let height100Container = document.createElement("div");
@@ -449,7 +449,7 @@ export class CAtlas extends CObject {
 		};
 		let drawImgOnCanvas = async (_index = -1) => {
 			let fontSize = 16;
-			let canvas = CUtil.ID("atlCan_can") as HTMLCanvasElement;
+			let canvas = CDOM.ID("atlCan_can") as HTMLCanvasElement;
 			let ctx = canvas.getContext("2d");
 			let adjustFontSize = (_text: string, _maxWidth: number, _maxHeight: number) => {
 				let textWidth, textHeight;
@@ -493,9 +493,9 @@ export class CAtlas extends CObject {
 
 		//탭
 		let clickToRemove = _remove;
-		let prevCanvTab = CUtil.ID("vCanvStyle_tab");
+		let prevCanvTab = CDOM.ID("vCanvStyle_tab");
 		let prevActiveTabIndex = (prevCanvTab != null && prevCanvTab.classList.contains("active")) ? 1 : 0;
-		let prevDiv = CUtil.ID("CAtlas_Div");
+		let prevDiv = CDOM.ID("CAtlas_Div");
 		let st = prevDiv == null ? 0 : prevDiv.scrollTop;
 		let tabs: any = {
 			"<>": "div", "html": [
@@ -565,7 +565,7 @@ export class CAtlas extends CObject {
 		g_atlJBox.SetResize(true);
 		// g_atlJBox.SetBodyClose(true);
 		g_atlJBox.Open();
-		CUtil.ID("atl_div").append(CDomFactory.DataToDom(tabs));
+		CDOM.ID("atl_div").append(CDOM.DataToDom(tabs));
 		// g_atlJBox.setContent(CDomFactory.DataToDom(tabs));
 
 		if (prevActiveTabIndex == 0) {
@@ -575,7 +575,7 @@ export class CAtlas extends CObject {
 			drawImgOnCanvas();
 		}
 
-		CUtil.ID("CAtlas_Div").scrollTop = st;
+		CDOM.ID("CAtlas_Div").scrollTop = st;
 	}
 
 

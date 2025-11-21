@@ -1,8 +1,7 @@
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CLan } from "../basic/CLan.js";
 import { CPath } from "../basic/CPath.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CFecth } from "../network/CFecth.js";
 import { CSing } from "../server/CSing.js";
 import { CUtilWeb } from "../util/CUtilWeb.js";
@@ -77,7 +76,7 @@ export class CBoard {
                     ] }
             ] };
         this.mTarget.innerHTML = "";
-        this.mTarget.append(CDomFactory.DataToDom(html));
+        this.mTarget.append(CDOM.DataToDom(html));
         CFecth.Exe(CPath.PHPC() + "CBoard/List", { category: this.mCategory, limitOffset: _offsetList, limitCount: _listCount }, "json").
             then((_result) => {
             var colArr = _result;
@@ -88,7 +87,7 @@ export class CBoard {
                         { "<>": "td", "text": each0._subject },
                         { "<>": "td", "text": each0._datetime },
                     ], style: "cursor:pointer;" };
-                CUtil.ID("Board_tbody").append(CDomFactory.DataToDom(rowHtml));
+                CDOM.ID("Board_tbody").append(CDOM.DataToDom(rowHtml));
             }
         });
         CFecth.Exe(CPath.PHPC() + "CBoard/ListCount", { category: this.mCategory }, "json").then((_result) => {
@@ -104,15 +103,15 @@ export class CBoard {
                 var li = { "<>": "li", "class": "page-item", "html": [
                         { "<>": "a", "class": "page-link", "id": "p" + (i * _listCount), "onclick": PageClick, "text": i }
                     ] };
-                CUtil.ID("Pagination_ul").append(CDomFactory.DataToDom(li));
+                CDOM.ID("Pagination_ul").append(CDOM.DataToDom(li));
             }
         });
         if (this.mAdmin == null) {
-            CUtil.ID("Write_btn").hidden = false;
+            CDOM.ID("Write_btn").hidden = false;
         }
         else if (CSing.PrivateKey() != null) {
             this.AdminChk().then((result) => {
-                CUtil.ID("Write_btn").hidden = result;
+                CDOM.ID("Write_btn").hidden = result;
             });
         }
     }
@@ -122,10 +121,10 @@ export class CBoard {
         if (typeof _listOffset == "string")
             _listOffset = Number(_listOffset);
         let WriteClick = () => {
-            this.Write(Number(CUtil.IDValue("Offset_num")));
+            this.Write(Number(CDOM.IDValue("Offset_num")));
         };
         let DeleteClick = () => {
-            CFecth.Exe(CPath.PHPC() + "CBoard/Delete", { offset: CUtil.IDValue("Offset_num") }).then(() => {
+            CFecth.Exe(CPath.PHPC() + "CBoard/Delete", { offset: CDOM.IDValue("Offset_num") }).then(() => {
                 this.List(-1, this.mListCount);
             });
         };
@@ -146,30 +145,30 @@ export class CBoard {
                 { "<>": "div", "class": "card-body", "id": "Content_div", "text": "test" },
             ] };
         this.mTarget.innerHTML = "";
-        this.mTarget.append(CDomFactory.DataToDom(html));
+        this.mTarget.append(CDOM.DataToDom(html));
         CFecth.Exe(CPath.PHPC() + "CBoard/Read", { offset: _offset }, "json").
             then(async (_result) => {
-            CUtil.ID("Subject_span").innerHTML = _result[0]._subject;
-            CUtil.ID("Content_div").innerHTML = _result[0]._content;
-            CUtil.IDValue("Offset_num", _result[0]._offset);
+            CDOM.ID("Subject_span").innerHTML = _result[0]._subject;
+            CDOM.ID("Content_div").innerHTML = _result[0]._content;
+            CDOM.IDValue("Offset_num", _result[0]._offset);
             if (_reply == true) {
-                CUtil.ID("Reply_div").hidden = false;
+                CDOM.ID("Reply_div").hidden = false;
             }
             if (CSing.PrivateKey() != null) {
                 CSing.PrivateInfo(CSing.PrivateKey()).then((_info) => {
                     if (_info._publicKey == _result[0]._publicKey) {
-                        CUtil.ID("Delete_btn").hidden = false;
-                        CUtil.ID("Modify_btn").hidden = false;
+                        CDOM.ID("Delete_btn").hidden = false;
+                        CDOM.ID("Modify_btn").hidden = false;
                     }
                 });
                 if (_reply == true) {
-                    CUtil.ID("ReplyAdd").hidden = false;
+                    CDOM.ID("ReplyAdd").hidden = false;
                 }
             }
             this.AdminChk().then((result) => {
                 if (result) {
-                    CUtil.ID("Delete_btn").hidden = false;
-                    CUtil.ID("Modify_btn").hidden = false;
+                    CDOM.ID("Delete_btn").hidden = false;
+                    CDOM.ID("Modify_btn").hidden = false;
                 }
             });
         });
@@ -182,29 +181,29 @@ export class CBoard {
         let btnClick = () => {
             if (CSing.PrivateKey() == null) {
                 let publicKey = CUniqueID.Get();
-                let content = CUtil.IDValue("Content_txt");
+                let content = CDOM.IDValue("Content_txt");
                 if (this.mEditer != null)
                     content = this.mEditer.getHTML();
                 CFecth.Exe(CPath.PHPC() + "CBoard/Write", { category: this.mCategory, publicKey: publicKey,
-                    offset: CUtil.IDValue("Offset_num"), subject: CUtil.IDValue("Subject_txt"),
-                    nick: CUtil.IDValue("Nick_txt"), content: content }).then(() => {
+                    offset: CDOM.IDValue("Offset_num"), subject: CDOM.IDValue("Subject_txt"),
+                    nick: CDOM.IDValue("Nick_txt"), content: content }).then(() => {
                     this.List(-1, this.mListCount);
                 });
             }
             else {
                 CSing.PrivateInfo(CSing.PrivateKey()).then((_info) => {
                     if (_offset == -1 && _info != null) {
-                        CUtil.IDValue("Nick_txt", _info._nick);
+                        CDOM.IDValue("Nick_txt", _info._nick);
                     }
                     let publicKey = "";
                     if (_info != null)
                         publicKey = _info._publicKey;
-                    let content = CUtil.IDValue("Content_txt");
+                    let content = CDOM.IDValue("Content_txt");
                     if (this.mEditer != null)
                         content = this.mEditer.getHTML();
                     return CFecth.Exe(CPath.PHPC() + "CBoard/Write", { category: this.mCategory, publicKey: publicKey,
-                        offset: CUtil.IDValue("Offset_num"), subject: CUtil.IDValue("Subject_txt"),
-                        nick: CUtil.IDValue("Nick_txt"), content: content });
+                        offset: CDOM.IDValue("Offset_num"), subject: CDOM.IDValue("Subject_txt"),
+                        nick: CDOM.IDValue("Nick_txt"), content: content });
                 }).then(() => {
                     this.List(-1, this.mListCount);
                 });
@@ -228,27 +227,27 @@ export class CBoard {
                     "onclick": backClick },
             ] };
         this.mTarget.innerHTML = "";
-        this.mTarget.append(CDomFactory.DataToDom(html));
+        this.mTarget.append(CDOM.DataToDom(html));
         if (_offset != -1) {
             CFecth.Exe(CPath.PHPC() + "CBoard/Modify", { offset: _offset }, "json").
                 then((_result) => {
-                CUtil.IDValue("Subject_txt", _result[0]._subject);
-                CUtil.IDValue("Content_txt", _result[0]._content);
-                CUtil.IDValue("Nick_txt", _result[0]._nick);
-                CUtil.IDValue("Offset_num", _result[0]._offset);
-                this.mEditer = CUtilWeb.ToastUI(CUtil.ID("ContentW_div"));
+                CDOM.IDValue("Subject_txt", _result[0]._subject);
+                CDOM.IDValue("Content_txt", _result[0]._content);
+                CDOM.IDValue("Nick_txt", _result[0]._nick);
+                CDOM.IDValue("Offset_num", _result[0]._offset);
+                this.mEditer = CUtilWeb.ToastUI(CDOM.ID("ContentW_div"));
                 if (this.mEditer != null)
-                    CUtil.ID("Content_txt").hidden = true;
+                    CDOM.ID("Content_txt").hidden = true;
             });
         }
         else {
-            this.mEditer = CUtilWeb.ToastUI(CUtil.ID("ContentW_div"));
+            this.mEditer = CUtilWeb.ToastUI(CDOM.ID("ContentW_div"));
             if (this.mEditer != null)
-                CUtil.ID("Content_txt").hidden = true;
+                CDOM.ID("Content_txt").hidden = true;
         }
         if (CSing.PrivateKey() != null) {
             CSing.PrivateInfo(CSing.PrivateKey()).then((_data) => {
-                CUtil.IDValue("Nick_txt", _data._nick);
+                CDOM.IDValue("Nick_txt", _data._nick);
             });
         }
     }

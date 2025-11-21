@@ -1,4 +1,4 @@
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CAtelier } from "../canvas/CAtelier.js";
@@ -37,7 +37,7 @@ export function ScriptTool(_sc: CScript)
         panel.style.maxHeight = maxHeight;
         panel.style.overflowY = "auto";
     });
-    let canvas = CDomFactory.DataToDom(`
+    let canvas = CDOM.DataToDom(`
       <div style="position: relative; width: 100%; height: 100%;">
     <canvas id="ScriptToolLeft_can"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 0;">
@@ -122,7 +122,7 @@ function ScriptToolInit() {
 }
 
 function ScriptToolLeftInit(scriptStructure: any[]) {
-    const leftPanel = CUtil.ID("ScriptToolLeft_div");
+    const leftPanel = CDOM.ID("ScriptToolLeft_div");
     leftPanel.innerHTML = "";
     
 
@@ -217,7 +217,7 @@ function CreateFunctionCard(func: any): HTMLElement {
         }
     }
     
-    const html = CDomFactory.DataToDom(`
+    const html = CDOM.DataToDom(`
         <div class="card shadow-sm" style="width: 280px;">
             <div class="card-header text-center py-3">
                 <h6 class="mb-0 fw-bold">${func.function}</h6>

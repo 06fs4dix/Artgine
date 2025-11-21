@@ -1,5 +1,5 @@
 import { CUpdate } from "../basic/Basic.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
 import { CPreferences } from "../basic/CPreferences.js";
@@ -166,9 +166,9 @@ function Init() {
         sub.SetKey(key);
         let pt=sub.PushComp(
             new CPaintHTML(
-                CDomFactory.DataToDom(html),
+                CDOM.DataToDom(html),
                 new CVec2(256, 0),
-                CUtil.ID("RenderOrderTool_div")
+                CDOM.ID("RenderOrderTool_div")
             )
         );
         pt.SetPivot(new CVec3(0, 1, 0)); // 상단 기준 (위쪽으로 배치)
@@ -291,9 +291,9 @@ function Init() {
         const sub = g_can.PushSub(new CSubject());
         let pt=sub.PushComp(
             new CPaintHTML(
-                CDomFactory.DataToDom(html),
+                CDOM.DataToDom(html),
                 new CVec2(256, 0),
-                CUtil.ID("RenderOrderTool_div")
+                CDOM.ID("RenderOrderTool_div")
             )
         );
         pt.SetPivot(new CVec3(0, -1, 0)); // 하단 기준 (아래쪽으로 배치)
@@ -438,7 +438,7 @@ function Init() {
     //             new CPaintHTML(
     //                 CDomFactory.DataToDom(html),
     //                 new CVec2(256, 0),
-    //                 CUtil.ID("RenderOrderTool_div")
+    //                 CDOM.ID("RenderOrderTool_div")
     //             )
     //         );
     //         pt.SetPivot(new CVec3(0, -1, 0)); // 하단 기준 (아래쪽으로 배치)

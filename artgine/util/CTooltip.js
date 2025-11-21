@@ -1,7 +1,6 @@
 import { Bootstrap } from "../basic/Bootstrap.js";
 import { CModal } from "../basic/CModal.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
-import { CUtil } from "../basic/CUtil.js";
 var eTrigger;
 (function (eTrigger) {
     eTrigger[eTrigger["Hover"] = 0] = "Hover";
@@ -108,10 +107,10 @@ export class CTooltip extends CModal {
         this.Open();
         this.Hide(0);
         if (typeof _content === "string") {
-            CUtil.ID("Content_" + this.mKey).textContent = _content;
+            CDOM.ID("Content_" + this.mKey).textContent = _content;
         }
         else {
-            CUtil.ID("Content_" + this.mKey).appendChild(_content);
+            CDOM.ID("Content_" + this.mKey).appendChild(_content);
         }
         const target = this.SetupAttachPos(_attach);
         if (this.mAttach instanceof HTMLElement) {
@@ -347,7 +346,7 @@ export class CTooltipList extends CTooltip {
     Hide(_animationTime = 300) {
         super.Hide(_animationTime);
         this.m_curIndex = -1;
-        const ulElement = CUtil.ID("Content_" + this.mKey).lastChild;
+        const ulElement = CDOM.ID("Content_" + this.mKey).lastChild;
         if (ulElement != null) {
             const listItems = Array.from(ulElement.children);
             for (let item of listItems) {
@@ -362,7 +361,7 @@ export class CTooltipList extends CTooltip {
     UpdateContent(_highlight = "") {
         if (CTooltip.IsPopper() == false)
             return;
-        let ulElement = CUtil.ID("Content_" + this.mKey).lastChild;
+        let ulElement = CDOM.ID("Content_" + this.mKey).lastChild;
         ulElement.innerHTML = "";
         ulElement.className = "list-group overflow-auto mw-100 mh-100";
         if (this.m_pair.length < this.m_curIndex + 1) {
@@ -421,7 +420,7 @@ export class CTooltipList extends CTooltip {
     navigateList(moveUp) {
         if (CTooltip.IsPopper() == false)
             return;
-        const ulElement = CUtil.ID("Content_" + this.mKey).lastChild;
+        const ulElement = CDOM.ID("Content_" + this.mKey).lastChild;
         const listItems = Array.from(ulElement.children);
         if (this.m_curIndex !== -1) {
             listItems[this.m_curIndex].classList.remove("active");

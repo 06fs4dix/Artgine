@@ -2,6 +2,7 @@
 import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
+import { CDOM } from "../../../basic/CDOM.js";
 import { CObject, CPointer } from "../../../basic/CObject.js";
 import { CUtil } from "../../../basic/CUtil.js";
 import { CWASM } from "../../../basic/CWASM.js";
@@ -944,7 +945,7 @@ export class CPaintHTML extends CPaint2D
 		super(null,_size);
 		this.mElement=_html as HTMLElement;
 		if(_parent==null)
-			this.mParent=document.body;
+			this.mParent=CDOM.PaintDiv();
 		else
 		{
 			this.mParent=_parent;
@@ -953,6 +954,12 @@ export class CPaintHTML extends CPaint2D
 			this.mParent.style.overflow="hidden";
 		}
 			
+	}
+	StartChk(): boolean {
+		super.StartChk();
+
+		this.mStartChk=false;
+		return true;
 	}
 	SetEnable(_val: boolean)
 	{
@@ -989,11 +996,11 @@ export class CPaintHTML extends CPaint2D
 	{
 		return this.mElement;
 	}
-	ClearCRPAuto()
-	{
-		if(this.GetOwner()==null)	return;
-		this.mElement.hidden=!this.GetOwner().IsEnable();
-	}
+	// ClearCRPAuto()
+	// {
+	// 	if(this.GetOwner()==null)	return;
+	// 	this.mElement.hidden=!this.GetOwner().IsEnable();
+	// }
 	EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)
@@ -1021,11 +1028,11 @@ export class CPaintHTML extends CPaint2D
 		if(this.mAttach==false)
 		{
 			this.mParent.appendChild(this.mElement);
-			if(this.mParent==document.body)
-				this.mElement.style.zIndex=1010+"";
+			// if(this.mParent==CDOM.CanvasDiv())
+			// 	this.mElement.style.zIndex=900+"";
 			this.mElement.style.position="absolute";
-			if(this.mElement.style.pointerEvents=='')
-				this.mElement.style.pointerEvents="none";
+			//if(this.mElement.style.pointerEvents=='')
+			//	this.mElement.style.pointerEvents="none";
 			this.mAttach=true;	
 		}
 

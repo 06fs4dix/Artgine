@@ -806,7 +806,7 @@ export class CMath
 	}
 
 	
-	static MatDecomposeRot(pa_viewMat : CMat,pa_x:boolean,pa_y:boolean,pa_z:boolean)
+	static MatDecomposeRotMat(pa_viewMat : CMat,pa_x:boolean,pa_y:boolean,pa_z:boolean)
 	{
 		var pa_outMat=new CMat();
 		pa_outMat.SetUnit(false);
@@ -827,6 +827,13 @@ export class CMath
 			pa_outMat.mF32A[4] = pa_viewMat.mF32A[4]; pa_outMat.mF32A[5] = pa_viewMat.mF32A[5];
 		}
 		return pa_outMat;
+	}
+
+	static MatDecomposeRot(_mat : CMat) {
+		const sca = CMath.MatDecomposeSca(_mat);
+		sca.x = 1 / sca.x; sca.y = 1 / sca.y; sca.z = 1 / sca.z;
+		const scaMat = CMath.MatScale(sca);
+		return CMath.MatToQut(CMath.MatMul(_mat, scaMat));
 	}
 	
 	//scale값이 음수가 아니어야 하고, 일반적이지 않은 값(i 등)이 포함되면 안됨
@@ -861,6 +868,7 @@ export class CMath
 
 		return _sca;
 	}
+	
 	
 	//PI================================================================
 	static DegreeToRadian(pa_val:number)

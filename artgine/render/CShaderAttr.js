@@ -5,7 +5,7 @@ import { CVec4 } from "../geometry/CVec4.js";
 import { CMat } from "../geometry/CMat.js";
 import { CObject, CPointer } from "../basic/CObject.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 export class CShaderAttr extends CObject {
     mKey = "";
     mData = null;
@@ -109,7 +109,7 @@ export class CShaderAttr extends CObject {
     }
     EditHTMLInit(_div, _pointer) {
         let KeyInputFun = () => {
-            const keyRow = CDomFactory.DataToDom({
+            const keyRow = CDOM.DataToDom({
                 "tag": "div", "class": "d-flex align-items-center",
                 "html": [
                     { "tag": "div", "class": "text-danger ps-1 pe-1", "text": "mKey" },

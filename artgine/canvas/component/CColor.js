@@ -1,6 +1,5 @@
-import { CDomFactory } from "../../basic/CDOMFactory.js";
+import { CDOM } from "../../basic/CDOM.js";
 import { CUniqueID } from "../../basic/CUniqueID.js";
-import { CUtil } from "../../basic/CUtil.js";
 import { CMat } from "../../geometry/CMat.js";
 import { CUtilColor } from "../../geometry/CUtilColor.js";
 import { CVec2 } from "../../geometry/CVec2.js";
@@ -56,9 +55,9 @@ export class CColor extends CVec4 {
         const g = Math.max(0, Math.min(255, Math.round(color.y * 255)));
         const b = Math.max(0, Math.min(255, Math.round(color.z * 255)));
         code = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-        _div.append(CDomFactory.DataToDom({ "tag": "input", "type": "color", "class": "form-control form-control-color",
+        _div.append(CDOM.DataToDom({ "tag": "input", "type": "color", "class": "form-control form-control-color",
             "id": tempKey + "_color", "value": code, "onchange": (e) => {
-                let value = CUtil.IDValue(tempKey + "_color");
+                let value = CDOM.IDValue(tempKey + "_color");
                 const r = parseInt(value.substring(1, 3), 16) / 255;
                 const g = parseInt(value.substring(3, 5), 16) / 255;
                 const b = parseInt(value.substring(5, 7), 16) / 255;
@@ -131,7 +130,7 @@ export class CAlpha extends CVec2 {
     EditHTMLInit(_div, _pointer = null) {
         super.EditHTMLInit(_div, _pointer);
         let input = _div.lastChild;
-        _div.append(CDomFactory.DataToDom({ "tag": "input", "type": "range", "class": "form-range",
+        _div.append(CDOM.DataToDom({ "tag": "input", "type": "range", "class": "form-range",
             "min": "0", "max": "1", "step": "0.05", "value": this.mF32A[0], "onchange": (e) => {
                 let value = e.target.value;
                 this.mF32A[0] = Number(value);
@@ -277,7 +276,7 @@ export class CColorVFX extends CMat {
                         } },
                     { "<>": "label", "class": "form-check-label checkbox-label", "for": "checkbox_" + text, "text": text }
                 ] };
-            _div.appendChild(CDomFactory.DataToDom(checkbox));
+            _div.appendChild(CDOM.DataToDom(checkbox));
             if (checked != -1) {
                 orderStr += text;
                 let description = this.m_description[i];
@@ -288,12 +287,12 @@ export class CColorVFX extends CMat {
                         "max": description._xMax || 1, "step": description._xStep || 0.01, "value": this.mF32A[checked * 4 + 0], "oninput": (e) => {
                             let result = Number(e.target.value);
                             this.mF32A[checked * 4 + 0] = result;
-                            let str = CUtil.ID(e.target.id + "_lab").innerText;
+                            let str = CDOM.ID(e.target.id + "_lab").innerText;
                             let pos = str.indexOf(":");
                             if (pos != -1)
                                 str = str.substr(0, pos);
                             str += ":" + result;
-                            CUtil.ID(e.target.id + "_lab").innerText = str;
+                            CDOM.ID(e.target.id + "_lab").innerText = str;
                         }, "list": "xticks_" + text });
                     let ticks = [];
                     let min = description._xMin || 0;
@@ -311,12 +310,12 @@ export class CColorVFX extends CMat {
                         "max": description._yMax || 0, "step": description._yStep || 0.01, "value": this.mF32A[checked * 4 + 1], "oninput": (e) => {
                             let result = Number(e.target.value);
                             this.mF32A[checked * 4 + 1] = result;
-                            let str = CUtil.ID(e.target.id + "_lab").innerText;
+                            let str = CDOM.ID(e.target.id + "_lab").innerText;
                             let pos = str.indexOf(":");
                             if (pos != -1)
                                 str = str.substr(0, pos);
                             str += ":" + result;
-                            CUtil.ID(e.target.id + "_lab").innerText = str;
+                            CDOM.ID(e.target.id + "_lab").innerText = str;
                         }, "list": "yticks_" + text });
                     let ticks = [];
                     let min = description._yMin || 0;
@@ -334,12 +333,12 @@ export class CColorVFX extends CMat {
                         "max": description._zMax || 0, "step": description._zStep || 0.01, "value": this.mF32A[checked * 4 + 2], "oninput": (e) => {
                             let result = Number(e.target.value);
                             this.mF32A[checked * 4 + 2] = result;
-                            let str = CUtil.ID(e.target.id + "_lab").innerText;
+                            let str = CDOM.ID(e.target.id + "_lab").innerText;
                             let pos = str.indexOf(":");
                             if (pos != -1)
                                 str = str.substr(0, pos);
                             str += ":" + result;
-                            CUtil.ID(e.target.id + "_lab").innerText = str;
+                            CDOM.ID(e.target.id + "_lab").innerText = str;
                         }, "list": "zticks_" + text });
                     let ticks = [];
                     let min = description._zMin || 0;
@@ -352,9 +351,9 @@ export class CColorVFX extends CMat {
                     sliders.push({ "<>": "datalist", "id": "zticks_" + text, "html": ticks });
                 }
                 let slider = { "<>": "div", "id": "controls_" + text, "html": sliders };
-                _div.appendChild(CDomFactory.DataToDom(slider));
+                _div.appendChild(CDOM.DataToDom(slider));
             }
         }
-        _div.prepend(CDomFactory.DataToDom("<span>" + orderStr + "</span>"));
+        _div.prepend(CDOM.DataToDom("<span>" + orderStr + "</span>"));
     }
 }

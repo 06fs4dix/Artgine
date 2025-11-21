@@ -1,6 +1,6 @@
 
 import { CUpdate } from "../../basic/Basic.js";
-import {CDomFactory} from "../../basic/CDOMFactory.js";
+import {CDOM} from "../../basic/CDOM.js";
 import {CEvent} from "../../basic/CEvent.js";
 import {CJSON} from "../../basic/CJSON.js";
 import { CObject } from "../../basic/CObject.js";
@@ -1037,13 +1037,13 @@ export class CUiHTML extends CUI
 	
 		if(this.mUIPT==null)
 		{
-			this.mUIPT = new CPaintHTML(CDomFactory.DataToDom(this.mHTML),_size);
+			this.mUIPT = new CPaintHTML(CDOM.DataToDom(this.mHTML),_size);
 			this.PushComp(this.mUIPT);
 		}
 		else
 		{
 			this.mUIPT.Destroy();
-			this.mUIPT = new CPaintHTML(CDomFactory.DataToDom(this.mHTML),_size);
+			this.mUIPT = new CPaintHTML(CDOM.DataToDom(this.mHTML),_size);
 			
 			this.PushComp(this.mUIPT);
 		}

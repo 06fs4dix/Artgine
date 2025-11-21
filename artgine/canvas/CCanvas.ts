@@ -17,7 +17,7 @@ import {CRay} from "../geometry/CRay.js"
 import {CCollider} from "./component/CCollider.js"
 import {CAtlas} from "../util/CAtlas.js"
 import { CUpdate, IAutoRender, IAutoUpdate } from "../basic/Basic.js"
-import {CDomFactory} from "../basic/CDOMFactory.js"
+import {CDOM} from "../basic/CDOM.js"
 import {CWebSocket} from "../network/CWebSocket.js"
 import {CRoomClient} from "../server/CRoomClient.js"
 import { CBlackBoardRef, CObject, CPointer, ProxyHandle } from "../basic/CObject.js"
@@ -387,8 +387,9 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 						for(let tag of pt.GetTag())
 							renInfo.mTag.add(tag);
 						
-						if(rp.mTag!="")
-							renInfo.mTag.add(rp.mTag);
+						//if(rp.mTag!="")
+						for(let tag of rp.mTag)
+							renInfo.mTag.add(tag);
 						
 						
 						renInfo.mCam=cam;
@@ -574,17 +575,17 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				{"<>":"div","class":"col-4","html":[
 					{"<>":"button","type":"button","class":"btn btn-primary","text":"Add",
 						"onclick":()=>{
-							let sel=CUtil.IDValue(ukey+"subPush");
+							let sel=CDOM.IDValue(ukey+"subPush");
 							let newObj  : CSubject=CClass.New(sel);
 							this.PushSub(newObj);
 							this.EditRefresh();
-							//CUtil.ID("m_obj_title").click();//??????????????????
+							//CDOM.ID("m_obj_title").click();//??????????????????
 						}
 					}
 				]},
 			]};
 			
-			_input.prepend(CDomFactory.DataToDom(pushDiv));
+			_input.prepend(CDOM.DataToDom(pushDiv));
 		}
 		if(_pointer.refArr[_pointer.refArr.length-1]==this.mResMap)
 		{
@@ -630,7 +631,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 					{"<>":"button","type":"button","class":"btn btn-primary btn-block","text":"Add",
 						"onclick":()=>{
 							//let testtestest=CWebUtil.ID(this.WTKey()+"resClass");
-							let sel=CUtil.IDValue(ukey+"resClass");
+							let sel=CDOM.IDValue(ukey+"resClass");
 							let newObj  : CSubject=CClass.New(sel);
 							if(newObj==null)
 							{
@@ -655,7 +656,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 					}
 				]},
 			]}
-			_input.prepend(CDomFactory.DataToDom(res));
+			_input.prepend(CDOM.DataToDom(res));
 		}
 	}
 

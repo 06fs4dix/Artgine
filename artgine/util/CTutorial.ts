@@ -1,3 +1,4 @@
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
 import { CUtil } from "../basic/CUtil.js";
@@ -32,7 +33,7 @@ export class CTutorial
 
             modal.Open(CModal.ePos.Center);
             if(option.timeOut!=0)
-                modal.Close(1000*option.timeOut);
+                modal.Close(option.timeOut);
         }
         
 
@@ -41,7 +42,7 @@ export class CTutorial
             if(option.call!=null)   option.call();
             if(_type==CTutorial.eWait.Click)
             {
-                CUtil.ID(_data).addEventListener("click",()=>{
+                CDOM.ID(_data).addEventListener("click",()=>{
                     
                     if(modal!=null)   modal.Close();
                     resolve(true);

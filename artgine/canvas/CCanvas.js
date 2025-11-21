@@ -9,11 +9,10 @@ import { CBase64File } from "../util/CBase64File.js";
 import { CCollider } from "./component/CCollider.js";
 import { CAtlas } from "../util/CAtlas.js";
 import { CUpdate } from "../basic/Basic.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CRoomClient } from "../server/CRoomClient.js";
 import { CBlackBoardRef, CObject } from "../basic/CObject.js";
 import { CClass } from "../basic/CClass.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CAlert } from "../basic/CAlert.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CFile } from "../system/CFile.js";
@@ -224,8 +223,8 @@ export class CCanvas extends CObject {
                             renInfo.mRP.mShaderAttr = rp.mShaderAttr;
                         for (let tag of pt.GetTag())
                             renInfo.mTag.add(tag);
-                        if (rp.mTag != "")
-                            renInfo.mTag.add(rp.mTag);
+                        for (let tag of rp.mTag)
+                            renInfo.mTag.add(tag);
                         renInfo.mCam = cam;
                         this.mBrush.mRenInfoMap.set(cpKey, renInfo);
                     }
@@ -308,7 +307,7 @@ export class CCanvas extends CObject {
                     { "<>": "div", "class": "col-4", "html": [
                             { "<>": "button", "type": "button", "class": "btn btn-primary", "text": "Add",
                                 "onclick": () => {
-                                    let sel = CUtil.IDValue(ukey + "subPush");
+                                    let sel = CDOM.IDValue(ukey + "subPush");
                                     let newObj = CClass.New(sel);
                                     this.PushSub(newObj);
                                     this.EditRefresh();
@@ -316,7 +315,7 @@ export class CCanvas extends CObject {
                             }
                         ] },
                 ] };
-            _input.prepend(CDomFactory.DataToDom(pushDiv));
+            _input.prepend(CDOM.DataToDom(pushDiv));
         }
         if (_pointer.refArr[_pointer.refArr.length - 1] == this.mResMap) {
             let ukey = CUniqueID.GetHash();
@@ -354,7 +353,7 @@ export class CCanvas extends CObject {
                     { "<>": "div", "class": "col-4", "html": [
                             { "<>": "button", "type": "button", "class": "btn btn-primary btn-block", "text": "Add",
                                 "onclick": () => {
-                                    let sel = CUtil.IDValue(ukey + "resClass");
+                                    let sel = CDOM.IDValue(ukey + "resClass");
                                     let newObj = CClass.New(sel);
                                     if (newObj == null) {
                                         CAlert.E("unknow class");
@@ -375,7 +374,7 @@ export class CCanvas extends CObject {
                             }
                         ] },
                 ] };
-            _input.prepend(CDomFactory.DataToDom(res));
+            _input.prepend(CDOM.DataToDom(res));
         }
     }
     EditChange(_pointer, _child) {

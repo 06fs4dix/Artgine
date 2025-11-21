@@ -1,5 +1,6 @@
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
+import { CDOM } from "../../../basic/CDOM.js";
 import { CBound } from "../../../geometry/CBound.js";
 import { CMat } from "../../../geometry/CMat.js";
 import { CMath } from "../../../geometry/CMath.js";
@@ -481,12 +482,17 @@ export class CPaintHTML extends CPaint2D {
         super(null, _size);
         this.mElement = _html;
         if (_parent == null)
-            this.mParent = document.body;
+            this.mParent = CDOM.PaintDiv();
         else {
             this.mParent = _parent;
             this.mParent.style.position = "relative";
             this.mParent.style.overflow = "hidden";
         }
+    }
+    StartChk() {
+        super.StartChk();
+        this.mStartChk = false;
+        return true;
     }
     SetEnable(_val) {
         super.SetEnable(_val);
@@ -511,11 +517,6 @@ export class CPaintHTML extends CPaint2D {
     GetElement() {
         return this.mElement;
     }
-    ClearCRPAuto() {
-        if (this.GetOwner() == null)
-            return;
-        this.mElement.hidden = !this.GetOwner().IsEnable();
-    }
     EmptyRPChk() {
         if (this.mRenderPass.length == 0) {
             var rp = new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
@@ -535,11 +536,7 @@ export class CPaintHTML extends CPaint2D {
         this.mUpdateFMat = false;
         if (this.mAttach == false) {
             this.mParent.appendChild(this.mElement);
-            if (this.mParent == document.body)
-                this.mElement.style.zIndex = 1010 + "";
             this.mElement.style.position = "absolute";
-            if (this.mElement.style.pointerEvents == '')
-                this.mElement.style.pointerEvents = "none";
             this.mAttach = true;
         }
         let zoom = 1 / this.mRenPT[0].mCam.mZoom;

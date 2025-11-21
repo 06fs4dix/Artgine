@@ -1,5 +1,4 @@
 import { CUniqueID } from "../basic/CUniqueID.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CDevice } from "./CDevice.js";
 import { CH5Canvas } from "./CH5Canvas.js";
@@ -100,7 +99,7 @@ export class CRenderer {
         modal.SetZIndex(CModal.eSort.Top);
         modal.Open(CModal.ePos.Center);
         modal.Focus(CModal.eAction.Shake);
-        CUtilWeb.MonacoEditer(CUtil.ID(id), _wgsl, "wgsl");
+        CUtilWeb.MonacoEditer(CDOM.ID(id), _wgsl, "wgsl");
     }
 }
 export class CRendererGL extends CRenderer {

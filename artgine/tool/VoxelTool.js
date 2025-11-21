@@ -1,8 +1,7 @@
 import { CAlert } from "../basic/CAlert.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModalFlex } from "../util/CModalUtil.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CAtelier } from "../canvas/CAtelier.js";
 import { CCIndex } from "../canvas/CCIndex.js";
@@ -20,6 +19,8 @@ import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../util/CCamCon.js";
 import { CUtilMath } from "../geometry/CUtilMath.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CArray } from "../basic/CArray.js";
+import { CString } from "../basic/CString.js";
+import { CBound } from "../geometry/CBound.js";
 var gModal;
 var gAtl;
 var gVoxelOrg;
@@ -39,7 +40,7 @@ async function VoxelAtlasCodiDiv(_tileSurfacePattern, _width = 200, _vinfo) {
     if (gVoxelTar == null)
         return null;
     if (_tileSurfacePattern == null || (_tileSurfacePattern instanceof CVTileSurfacePattern && _tileSurfacePattern.mPattern.length == 0)) {
-        return CDomFactory.JSONToDom({
+        return CDOM.JSONToDom({
             "<>": "div", "class": "border position-relative", "style": "width:" + _width + "px;height:" + _width + "px;overflow:hidden;"
         });
     }
@@ -62,13 +63,13 @@ async function VoxelAtlasCodiDiv(_tileSurfacePattern, _width = 200, _vinfo) {
             imgsrc = CH5Canvas.GetDataURL();
             gColorImgMap.set(colorStr, imgsrc);
         }
-        let baseDiv = CDomFactory.JSONToDom({
+        let baseDiv = CDOM.JSONToDom({
             "<>": "div", "class": "position-relative", "style": "width:" + _width + "px;height:" + _width + "px;overflow:hidden;" +
                 "background-image:url('" + imgsrc + "');background-size:contain;image-rendering: pixelated;" +
                 "background-position:center;background-repeat:no-repeat;"
         });
         if (_vinfo !== undefined) {
-            const badge = CDomFactory.JSONToDom({
+            const badge = CDOM.JSONToDom({
                 "<>": "span", "class": "position-absolute top-0 end-0 badge rounded-pill bg-primary m-1 fs-6", "text": _vinfo + ""
             });
             baseDiv.appendChild(badge);
@@ -83,13 +84,13 @@ async function VoxelAtlasCodiDiv(_tileSurfacePattern, _width = 200, _vinfo) {
     let imgHeight = _width * aspect;
     let reverseX = pat.mRevers == CCIndex.eRevers.X1Y0 || pat.mRevers == CCIndex.eRevers.X1Y1 ? -1 : 1;
     let reverseY = pat.mRevers == CCIndex.eRevers.X0Y1 || pat.mRevers == CCIndex.eRevers.X1Y1 ? -1 : 1;
-    let baseDiv = CDomFactory.JSONToDom({
+    let baseDiv = CDOM.JSONToDom({
         "<>": "div", "class": "position-relative", "style": "width:" + _width + "px;height:" + imgHeight + "px;overflow:hidden;" +
             "background-image:url('" + imgsrc + "');background-size:contain;transform:scaleX(" + reverseX + ") scaleY(" + reverseY + ");image-rendering: pixelated;" +
             "background-position:center;background-repeat:no-repeat;"
     });
     if (_vinfo !== undefined) {
-        const badge = CDomFactory.JSONToDom({
+        const badge = CDOM.JSONToDom({
             "<>": "span", "class": "position-absolute top-0 end-0 badge rounded-pill bg-primary m-1 fs-6", "text": _vinfo + ""
         });
         baseDiv.appendChild(badge);
@@ -106,6 +107,11 @@ export function VoxelTool(_voxel) {
     });
     gModal = new CModalFlex([0.7, 0.3], "VoxelModal");
     gModal.SetHeader("VoxelTool");
+    gModal.SetHelp(CDOM.DataToDom(`
+        <span>shift : 선택 취소</span><br>
+        <span>ctrl : 셀렉트 모드시 누르상태 타일선택시 매직봉</span><br>
+        <span>middle : 모드 변경</span><br>
+    `));
     gModal.SetSize(1000, 800);
     gModal.Open();
     const maxHeight = "calc(100vh - 10px)";
@@ -115,7 +121,7 @@ export function VoxelTool(_voxel) {
         panel.style.maxHeight = maxHeight;
         panel.style.overflowY = "auto";
     });
-    let canvas = CDomFactory.DataToDom(`
+    let canvas = CDOM.DataToDom(`
         <div style="position: relative; width: 100%; height: 100%;">
         <canvas id="VoxelLeft_can"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 0;">
@@ -123,7 +129,7 @@ export function VoxelTool(_voxel) {
       </div>
     `);
     leftPanel.append(canvas);
-    let rightHTML = CDomFactory.DataToDom(`<ul class="nav nav-tabs" id="myTab" role="tablist">
+    let rightHTML = CDOM.DataToDom(`<ul class="nav nav-tabs" id="myTab" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button" role="tab" aria-controls="main" aria-selected="true">Main</button>
         </li>
@@ -135,6 +141,9 @@ export function VoxelTool(_voxel) {
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="mold-tab" data-bs-toggle="tab" data-bs-target="#mold" type="button" role="tab" aria-controls="mold" aria-selected="false">Mold</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="script-tab" data-bs-toggle="tab" data-bs-target="#script" type="button" role="tab" aria-controls="script" aria-selected="false">Script</button>
         </li>
     </ul>
 
@@ -154,11 +163,12 @@ export function VoxelTool(_voxel) {
                 </select>
                 </div>
                 <div class="col-md-6">
-                <label for="actionSelect" class="form-label">동작(Ctrl)</label>
+                <label for="actionSelect" class="form-label">Change(Ctrl)</label>
                 <select class="form-select" id="actionSelect">
                     <option value="move">Move</option>
                     <option value="create">Create</option>
                     <option value="modify">Modify</option>
+                    <option value="select">Select</option>
                 </select>
                 </div>
             </div>
@@ -185,14 +195,15 @@ export function VoxelTool(_voxel) {
                 </div>
             </div>
             <div class="row mb-3">
-                <label for="tileArr_div" class="form-label">Tile</label>
-                <div id='tileArr_div' style="display: flex; flex-wrap: wrap; gap: 1px;"></div>
+                <label for="TileMold_sel" class="form-label">Tile,Mold</label>
+                <select class="form-select" id="TileMold_sel">
+                </select>
             </div>
             <div class="row mb-3">
                 <label for="moldArr_div" class="form-label">Mold</label>
                 <div id='moldArr_div' style="display: flex; flex-wrap: wrap; gap: 1px;"></div>
             </div>
-            <div id='Map_div'></div>
+            
             
             
             
@@ -228,13 +239,16 @@ export function VoxelTool(_voxel) {
             <div id="MoldArrModify_div" style="display: flex; flex-wrap: wrap; gap: 1px;"></div>
             <div id="MoldModify_div"></div>
         </div>
+        <div class="tab-pane fade" id="script" role="tabpanel" aria-labelledby="script-tab">
+            <div id='Map_div'></div>
+        </div>
         
     </div>`);
     rightPanel.append(rightHTML);
-    CUtil.ID("atlas_btn").addEventListener("click", () => {
+    CDOM.ID("atlas_btn").addEventListener("click", () => {
         gVoxelTar.mAtlas.ModifyModal();
     });
-    CUtil.ID("ground_btn").addEventListener("click", () => {
+    CDOM.ID("ground_btn").addEventListener("click", () => {
         if (gSelectedTile == -1) {
             CAlert.Info("타일을 선택해 주세요");
             return;
@@ -266,7 +280,7 @@ export function VoxelTool(_voxel) {
     });
     const ids = ["countX", "countY", "countZ", "sizeInput", "modeSelect"];
     for (const id of ids) {
-        const el = CUtil.ID(id);
+        const el = CDOM.ID(id);
         if (el) {
             el.addEventListener("change", VoxelToolResetVoxel);
         }
@@ -314,51 +328,90 @@ export function VoxelTool(_voxel) {
         VoxelToolResetCam();
         VoxelToolResetCurser();
         VoxelToolSelectTileArrReset();
-        CUtil.ID("main-tab").onclick = () => { VoxelToolSelectTileArrReset(); };
-        CUtil.ID("tile-tab").onclick = () => { VoxelToolTileArrModifyReset(); };
-        CUtil.ID("role-tab").onclick = () => { VoxelToolRoleArrModifyReset(); };
-        CUtil.ID("mold-tab").onclick = () => { VoxelToolMoldArrModifyReset(); };
+        CDOM.ID("main-tab").onclick = () => { VoxelToolSelectTileArrReset(); };
+        CDOM.ID("tile-tab").onclick = () => { VoxelToolTileArrModifyReset(); };
+        CDOM.ID("role-tab").onclick = () => { VoxelToolRoleArrModifyReset(); };
+        CDOM.ID("mold-tab").onclick = () => { VoxelToolMoldArrModifyReset(); };
         MapDiv();
+        CDOM.ID("actionSelect").onchange = () => {
+            gSelectMap.clear();
+            SelectMapRefresh();
+            CDOM.IDValue("TileMold_sel", 0);
+            gSelectedTile = 0;
+        };
     });
 }
 async function VoxelToolSelectTileArrReset() {
-    let SelectChange = (_select) => {
-        const prev = CUtil.ID("tile_" + gSelectedTile);
-        if (prev) {
-            prev.classList.remove("border", "border-2", "border-danger");
+    let TileMold_sel = CDOM.ID("TileMold_sel");
+    TileMold_sel.innerHTML = "";
+    TileMold_sel.onchange = () => {
+        let tmValue = CDOM.IDValue("TileMold_sel");
+        let actionSelect = CDOM.IDValue("actionSelect");
+        if (actionSelect == "select") {
+            CDOM.IDValue("TileMold_sel", 0);
+            if (tmValue.indexOf("tile") != -1) {
+                tmValue = Number(CString.ReplaceAll(tmValue, "tile", ""));
+                for (let index of gSelectMap.values()) {
+                    roll.mData.Push({ index: index.Export(), VInfo: gVoxelTar.GetVInfo(index) });
+                    gVoxelTar.Bonds(index, tmValue);
+                }
+                gSelectMap.clear();
+                SelectMapRefresh();
+                CRollBack.Push(roll);
+            }
+            else if (tmValue.indexOf("mold") == -1) {
+                let bound = new CBound();
+                for (let index of gSelectMap.values()) {
+                    bound.InitBound(new CVec3(index.x, index.y, index.z));
+                }
+                let mold = new CVTileMold();
+                mold.mSize = bound.GetSize();
+                mold.mSize.x += 1;
+                mold.mSize.y += 1;
+                mold.mSize.z += 1;
+                mold.mTileVInfoArr.length = 0;
+                for (let z = 0; z < mold.mSize.z; ++z)
+                    for (let y = 0; y < mold.mSize.y; ++y)
+                        for (let x = 0; x < mold.mSize.x; ++x) {
+                            let index = bound.mMin.Export();
+                            index.x += x;
+                            index.y += y;
+                            index.z += z;
+                            mold.mTileVInfoArr.push(gVoxelTar.mVInfo[index.x + index.y * gVoxelTar.mCount.x + index.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y]);
+                        }
+                gVoxelTar.mTileMoldArr.push(mold);
+                gSelectMap.clear();
+                SelectMapRefresh();
+                CRollBack.Push(roll);
+                VoxelToolSelectTileArrReset();
+            }
+            return;
         }
-        gSelectedTile = _select;
-        const now = CUtil.ID("tile_" + gSelectedTile);
-        if (now) {
-            now.classList.add("border", "border-2", "border-danger");
+        gSelectedTile = tmValue;
+        if (gSelectedTile.indexOf("tile") != -1) {
+            gSelectedTile = CString.ReplaceAll(gSelectedTile, "tile", "");
+            gSelectedTile = Number(gSelectedTile);
         }
+        else if (gSelectedTile.indexOf("mold") != -1) {
+            gSelectedTile = CString.ReplaceAll(gSelectedTile, "mold", "");
+            gSelectedTile = Number(gSelectedTile);
+            gSelectedTile = gVoxelTar.mTileMoldArr[gSelectedTile];
+        }
+        else
+            gSelectedTile = -1;
     };
-    let tileArr_div = CUtil.ID("tileArr_div");
-    tileArr_div.innerHTML = "";
-    let tileDiv = await VoxelAtlasCodiDiv(null, 50);
-    tileDiv.id = "tile_0";
-    tileDiv.onclick = () => {
-        SelectChange(0);
-    };
-    tileArr_div.append(tileDiv);
-    for (let tile of gVoxelTar.mTileArr) {
-        let tileDiv2 = await VoxelAtlasCodiDiv(tile, 50, tile.mVInfo);
-        tileDiv2.id = "tile_" + tile.mVInfo;
-        tileDiv2.onclick = () => {
-            SelectChange(tile.mVInfo);
-        };
-        tileArr_div.append(tileDiv2);
+    TileMold_sel.append(CDOM.DataToDom({ "tag": "option", "value": 0, "text": "empty" }));
+    for (let i = 0; i < gVoxelTar.mTileArr.length; ++i) {
+        let tile = gVoxelTar.mTileArr[i];
+        let key = tile.mVInfo + ":" + tile.mKey;
+        TileMold_sel.append(CDOM.DataToDom({ "tag": "option", "value": "tile" + tile.mVInfo, "text": key }));
     }
-    let moldArr_div = CUtil.ID("moldArr_div");
-    moldArr_div.innerHTML = "";
-    for (let mold of gVoxelTar.mTileMoldArr) {
-        let moldUp = await MoldTileReset(mold);
-        moldUp.id = "tile_" + mold.ObjHash();
-        moldUp.onclick = () => {
-            SelectChange(mold.ObjHash());
-        };
-        moldArr_div.append(moldUp);
+    for (let i = 0; i < gVoxelTar.mTileMoldArr.length; ++i) {
+        let mold = gVoxelTar.mTileMoldArr[i];
+        let key = mold.mSize.x + "/" + mold.mSize.y + "/" + mold.mSize.z + ":" + mold.mKey;
+        TileMold_sel.append(CDOM.DataToDom({ "tag": "option", "value": "mold" + i, "text": key }));
     }
+    TileMold_sel.append(CDOM.DataToDom({ "tag": "option", "value": -1, "text": "MoldCopy" }));
 }
 async function CVTileSurfaceEX(_pointer, _div, _input) {
     if (_pointer.member == "mRevers") {
@@ -401,9 +454,9 @@ async function CVTileSurfaceEX(_pointer, _div, _input) {
             const g = Math.max(0, Math.min(255, Math.round(_pointer.target.mColor.y * 255)));
             const b = Math.max(0, Math.min(255, Math.round(_pointer.target.mColor.z * 255)));
             let code = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-            let chtml = CDomFactory.DataToDom({ "tag": "input", "type": "color", "class": "form-control form-control-color",
+            let chtml = CDOM.DataToDom({ "tag": "input", "type": "color", "class": "form-control form-control-color",
                 "id": _pointer.target.ObjHash() + "_color", "value": code, "onchange": (e) => {
-                    let value = CUtil.IDValue(_pointer.target.ObjHash() + "_color");
+                    let value = CDOM.IDValue(_pointer.target.ObjHash() + "_color");
                     const r = parseInt(value.substring(1, 3), 16) / 255;
                     const g = parseInt(value.substring(3, 5), 16) / 255;
                     const b = parseInt(value.substring(5, 7), 16) / 255;
@@ -420,11 +473,11 @@ async function CVTileSurfaceEX(_pointer, _div, _input) {
     }
 }
 async function VoxelToolTileArrModifyReset() {
-    let TileDelete_sel = CUtil.ID("TileDelete_sel");
-    let TileAdd_btn = CUtil.ID("TileAdd_btn");
+    let TileDelete_sel = CDOM.ID("TileDelete_sel");
+    let TileAdd_btn = CDOM.ID("TileAdd_btn");
     TileDelete_sel.innerHTML = "";
     TileDelete_sel.onchange = () => {
-        let tds = Number(CUtil.IDValue("TileDelete_sel"));
+        let tds = Number(CDOM.IDValue("TileDelete_sel"));
         for (let i = 0; i < gVoxelTar.mTileArr.length; ++i) {
             if (gVoxelTar.mTileArr[i].mVInfo == tds) {
                 gVoxelTar.mTileArr.splice(i, 1);
@@ -433,10 +486,10 @@ async function VoxelToolTileArrModifyReset() {
             }
         }
     };
-    let option = CDomFactory.DataToDom(`<option value='-1'>Delete..</option>`);
+    let option = CDOM.DataToDom(`<option value='-1'>Delete..</option>`);
     TileDelete_sel.append(option);
     for (let t of gVoxelTar.mTileArr) {
-        let option = CDomFactory.DataToDom(`<option value='${t.mVInfo}'>${t.mVInfo}</option>`);
+        let option = CDOM.DataToDom(`<option value='${t.mVInfo}'>${t.mVInfo}</option>`);
         TileDelete_sel.append(option);
     }
     TileAdd_btn.onclick = () => {
@@ -473,11 +526,11 @@ async function VoxelToolTileArrModifyReset() {
             }
         }
         let html = tile.EditInit(null);
-        CUtil.ID("tileModify_div").innerHTML = "";
-        CUtil.ID("tileModify_div").append(html);
+        CDOM.ID("tileModify_div").innerHTML = "";
+        CDOM.ID("tileModify_div").append(html);
         EditEXPush(tile);
     };
-    let tileArrModify_div = CUtil.ID("tileArrModify_div");
+    let tileArrModify_div = CDOM.ID("tileArrModify_div");
     tileArrModify_div.innerHTML = "";
     for (let tile of gVoxelTar.mTileArr) {
         let tileDiv2 = await VoxelAtlasCodiDiv(tile, 50);
@@ -489,11 +542,11 @@ async function VoxelToolTileArrModifyReset() {
     }
 }
 async function VoxelToolRoleArrModifyReset() {
-    let RoleDelete_sel = CUtil.ID("RoleDelete_sel");
-    let RoleAdd_btn = CUtil.ID("RoleAdd_btn");
+    let RoleDelete_sel = CDOM.ID("RoleDelete_sel");
+    let RoleAdd_btn = CDOM.ID("RoleAdd_btn");
     RoleDelete_sel.innerHTML = "";
     RoleDelete_sel.onchange = () => {
-        let tds = CUtil.IDValue("RoleDelete_sel");
+        let tds = CDOM.IDValue("RoleDelete_sel");
         for (let i = 0; i < gVoxelTar.mTileRoleArr.length; ++i) {
             if (gVoxelTar.mTileRoleArr[i].ObjHash() == tds) {
                 gVoxelTar.mTileRoleArr.splice(i, 1);
@@ -502,10 +555,10 @@ async function VoxelToolRoleArrModifyReset() {
             }
         }
     };
-    let option = CDomFactory.DataToDom(`<option value='-1'>Delete..</option>`);
+    let option = CDOM.DataToDom(`<option value='-1'>Delete..</option>`);
     RoleDelete_sel.append(option);
     for (let t of gVoxelTar.mTileRoleArr) {
-        let option = CDomFactory.DataToDom(`<option value='${t.ObjHash()}'>${t.ObjHash()}</option>`);
+        let option = CDOM.DataToDom(`<option value='${t.ObjHash()}'>${t.ObjHash()}</option>`);
         RoleDelete_sel.append(option);
     }
     RoleAdd_btn.onclick = () => {
@@ -513,7 +566,7 @@ async function VoxelToolRoleArrModifyReset() {
         gVoxelTar.mTileRoleArr.push(role);
         VoxelToolRoleArrModifyReset();
     };
-    let RoleArrModify_div = CUtil.ID("RoleArrModify_div");
+    let RoleArrModify_div = CDOM.ID("RoleArrModify_div");
     RoleArrModify_div.innerHTML = "";
     let EditEXPush = (role) => {
         role.EditChangeEx = (_pointer, _child) => {
@@ -571,22 +624,22 @@ async function VoxelToolRoleArrModifyReset() {
                         let target = e.target;
                         let off = Number(target.title);
                         role.mRole[off] = Number(target.value);
-                        CUtil.ID(off + "_Role").innerHTML = "";
+                        CDOM.ID(off + "_Role").innerHTML = "";
                         let tile2 = null;
                         for (let t of gVoxelTar.mTileArr) {
                             if (t.mVInfo == role.mRole[i]) {
                                 tile2 = t;
                             }
                         }
-                        CUtil.ID(off + "_Role").append(await VoxelAtlasCodiDiv(tile2, 50));
+                        CDOM.ID(off + "_Role").append(await VoxelAtlasCodiDiv(tile2, 50));
                     };
                     html.html[i].html.push(copy);
                     html2.html[i]["id"] = i + "_Role";
                     html2.html[i].html.push(await VoxelAtlasCodiDiv(tile, 50));
                 }
                 _input.innerHTML = "";
-                _input.append(CDomFactory.DataToDom(html2));
-                _input.append(CDomFactory.DataToDom(html));
+                _input.append(CDOM.DataToDom(html2));
+                _input.append(CDOM.DataToDom(html));
             }
         };
         for (let pat of role.mPattern) {
@@ -603,10 +656,10 @@ async function VoxelToolRoleArrModifyReset() {
         }
         EditEXPush(role);
         let html = role.EditInit(null);
-        CUtil.ID("RoleModify_div").innerHTML = "";
-        CUtil.ID("RoleModify_div").append(html);
+        CDOM.ID("RoleModify_div").innerHTML = "";
+        CDOM.ID("RoleModify_div").append(html);
     };
-    CUtil.ID("RoleModify_div").innerHTML = "";
+    CDOM.ID("RoleModify_div").innerHTML = "";
     for (let role of gVoxelTar.mTileRoleArr) {
         let roleDiv2 = await VoxelAtlasCodiDiv(role, 50);
         roleDiv2.id = "roleM_" + role.ObjHash();
@@ -616,36 +669,12 @@ async function VoxelToolRoleArrModifyReset() {
         RoleArrModify_div.append(roleDiv2);
     }
 }
-async function MoldTileReset(mold) {
-    let upDiv = document.createElement('div');
-    upDiv.id = "moldM_" + mold.ObjHash();
-    let wrapperDiv = document.createElement('div');
-    wrapperDiv.className = `row row-cols-${mold.mWidth} m-0`;
-    wrapperDiv.style.width = (mold.mWidth * 50) + "px";
-    wrapperDiv.style.height = (mold.mHeight * 50) + "px";
-    for (let tileV of mold.mTileVInfoArr) {
-        const colDiv = document.createElement('div');
-        colDiv.className = 'col';
-        let tile = null;
-        for (let i = 0; i < gVoxelTar.mTileArr.length; ++i) {
-            if (gVoxelTar.mTileArr[i].mVInfo == tileV) {
-                tile = gVoxelTar.mTileArr[i];
-            }
-        }
-        const tileDiv = await VoxelAtlasCodiDiv(tile, 50);
-        colDiv.appendChild(tileDiv);
-        wrapperDiv.appendChild(colDiv);
-    }
-    upDiv.append(wrapperDiv);
-    return upDiv;
-}
-;
 async function VoxelToolMoldArrModifyReset() {
-    let MoldDelete_sel = CUtil.ID("MoldDelete_sel");
-    let MoldAdd_btn = CUtil.ID("MoldAdd_btn");
+    let MoldDelete_sel = CDOM.ID("MoldDelete_sel");
+    let MoldAdd_btn = CDOM.ID("MoldAdd_btn");
     MoldDelete_sel.innerHTML = "";
     MoldDelete_sel.onchange = () => {
-        let tds = CUtil.IDValue("MoldDelete_sel");
+        let tds = CDOM.IDValue("MoldDelete_sel");
         for (let i = 0; i < gVoxelTar.mTileMoldArr.length; ++i) {
             if (gVoxelTar.mTileMoldArr[i].ObjHash() == tds) {
                 gVoxelTar.mTileMoldArr.splice(i, 1);
@@ -654,10 +683,10 @@ async function VoxelToolMoldArrModifyReset() {
             }
         }
     };
-    let option = CDomFactory.DataToDom(`<option value='-1'>Delete..</option>`);
+    let option = CDOM.DataToDom(`<option value='-1'>Delete..</option>`);
     MoldDelete_sel.append(option);
     for (let t of gVoxelTar.mTileMoldArr) {
-        let option = CDomFactory.DataToDom(`<option value='${t.ObjHash()}'>${t.ObjHash()}</option>`);
+        let option = CDOM.DataToDom(`<option value='${t.ObjHash()}'>${t.ObjHash()}</option>`);
         MoldDelete_sel.append(option);
     }
     let SelectChange = (_select) => {
@@ -668,68 +697,21 @@ async function VoxelToolMoldArrModifyReset() {
                 break;
             }
         }
-        mold.EditChangeEx = (_pointer, _childe) => {
-            if (_pointer.member == "mWidth" || _pointer.member == "mHeight") {
-                mold.mTileVInfoArr = new Array(mold.mWidth * mold.mHeight);
-                mold.mTileVInfoArr.fill(-1);
-                mold.EditRefresh();
-            }
-        };
-        mold.EditFormEx = (_pointer, _div, _input) => {
-            if (_pointer.member == "mTileVInfoArr") {
-                _input.innerHTML = "";
-                const wrapper = document.createElement("div");
-                wrapper.className = `row row-cols-${mold.mWidth} gx-1 gy-1 mb-2`;
-                for (let idx = 0; idx < mold.mWidth * mold.mHeight; idx++) {
-                    const col = document.createElement("div");
-                    col.className = "col";
-                    const select = document.createElement("select");
-                    select.className = "form-select form-select-sm";
-                    let opt = document.createElement("option");
-                    opt.value = "-1";
-                    opt.text = "Pass";
-                    select.appendChild(opt);
-                    opt = document.createElement("option");
-                    opt.value = "0";
-                    opt.text = "Zero";
-                    select.appendChild(opt);
-                    for (let i = 0; i < gVoxelTar.mTileArr.length; i++) {
-                        const tileInfo = gVoxelTar.mTileArr[i].mVInfo + "";
-                        const o = document.createElement("option");
-                        o.value = tileInfo;
-                        o.text = tileInfo;
-                        select.appendChild(o);
-                    }
-                    select.value = mold.mTileVInfoArr[idx] + "";
-                    select.addEventListener("change", async () => {
-                        mold.mTileVInfoArr[idx] = parseInt(select.value, 10);
-                        CUtil.ID("moldM_" + mold.ObjHash()).innerHTML = "";
-                        let upDiv = await MoldTileReset(mold);
-                        upDiv.onclick = () => {
-                            SelectChange(mold.ObjHash());
-                        };
-                        CUtil.ID("moldM_" + mold.ObjHash()).append(upDiv);
-                    });
-                    col.appendChild(select);
-                    wrapper.appendChild(col);
-                }
-                _input.appendChild(wrapper);
-            }
-        };
         let html = mold.EditInit(null);
-        CUtil.ID("MoldModify_div").innerHTML = "";
-        CUtil.ID("MoldModify_div").append(html);
+        CDOM.ID("MoldModify_div").innerHTML = "";
+        CDOM.ID("MoldModify_div").append(html);
     };
     MoldAdd_btn.onclick = () => {
         let role = new CVTileMold();
         gVoxelTar.mTileMoldArr.push(role);
         VoxelToolMoldArrModifyReset();
     };
-    let MoldArrModify_div = CUtil.ID("MoldArrModify_div");
+    let MoldArrModify_div = CDOM.ID("MoldArrModify_div");
     MoldArrModify_div.innerHTML = "";
-    CUtil.ID("MoldModify_div").innerHTML = "";
+    CDOM.ID("MoldModify_div").innerHTML = "";
     for (let mold of gVoxelTar.mTileMoldArr) {
-        let upDiv = await MoldTileReset(mold);
+        let key = mold.mSize.x + "/" + mold.mSize.y + "/" + mold.mSize.z + ":" + mold.mKey;
+        let upDiv = CDOM.DataToDom({ "tag": "button", "text": key });
         upDiv.onclick = () => {
             SelectChange(mold.ObjHash());
         };
@@ -737,11 +719,11 @@ async function VoxelToolMoldArrModifyReset() {
     }
 }
 function VoxelToolResetVoxel() {
-    let countX = Number(CUtil.IDValue("countX"));
-    let countY = Number(CUtil.IDValue("countY"));
-    let countZ = Number(CUtil.IDValue("countZ"));
-    let sizeInput = Number(CUtil.IDValue("sizeInput"));
-    let modeSelect = CUtil.IDValue("modeSelect");
+    let countX = Number(CDOM.IDValue("countX"));
+    let countY = Number(CDOM.IDValue("countY"));
+    let countZ = Number(CDOM.IDValue("countZ"));
+    let sizeInput = Number(CDOM.IDValue("sizeInput"));
+    let modeSelect = CDOM.IDValue("modeSelect");
     gVoxelTar.ResetInfo(new CVec3(countX, countY, countZ), sizeInput, modeSelect == "2D" ? true : false);
     gAtl.Canvas("VoxelTool").ClearBatch();
     VoxelToolResetCam();
@@ -832,7 +814,7 @@ function SelectMapRefresh() {
 }
 function VoxelToolUpdate(_delay) {
     let input = gAtl.Frame().Input();
-    let actionSelect = CUtil.IDValue("actionSelect");
+    let actionSelect = CDOM.IDValue("actionSelect");
     let mouse = gAtl.Frame().Input().Mouse();
     let ray = gAtl.Brush().GetCam3D().GetRay(mouse.x, mouse.y);
     if (gVoxelTar.m2D)
@@ -848,22 +830,38 @@ function VoxelToolUpdate(_delay) {
         return;
     if (actionSelect == "create")
         pick.PickMove();
-    let sca = (gVoxelTar.mSize / 200) * 1.1;
     let pos = CMath.V3AddV3(pick.M2Pos(gVoxelTar.mSize), gVoxelTar.GetPos());
-    gCurser.SetSca(new CVec3(sca, sca, sca));
-    if (gAtl.Frame().Input().KeyUp(CInput.eKey.RControl) || gAtl.Frame().Input().KeyUp(CInput.eKey.LControl)) {
-        if (actionSelect == "move") {
+    if (gSelectedTile instanceof CVTileMold) {
+        let sca = (gVoxelTar.mSize / 200) * 1.1;
+        pos.x += (gSelectedTile.mSize.x - 1) * gVoxelTar.mSize * 0.5;
+        pos.y += (gSelectedTile.mSize.y - 1) * gVoxelTar.mSize * 0.5;
+        pos.z += (gSelectedTile.mSize.z - 1) * gVoxelTar.mSize * 0.5;
+        gCurser.SetSca(new CVec3(sca * gSelectedTile.mSize.x, sca * gSelectedTile.mSize.y, sca * gSelectedTile.mSize.z));
+    }
+    else {
+        let sca = (gVoxelTar.mSize / 200) * 1.1;
+        gCurser.SetSca(new CVec3(sca, sca, sca));
+    }
+    if (actionSelect == "move") {
+        gAtl.Brush().GetCam3D().GetCamCon().SetRotKey(CInput.eKey.LButton);
+        gAtl.Brush().GetCam2D().GetCamCon().SetRotKey(CInput.eKey.LButton);
+    }
+    else {
+        gAtl.Brush().GetCam3D().GetCamCon().SetRotKey(0);
+        gAtl.Brush().GetCam2D().GetCamCon().SetRotKey(0);
+    }
+    if (gAtl.Frame().Input().KeyUp(CInput.eKey.MiddleButton)) {
+        if (actionSelect == "move")
+            actionSelect = "create";
+        else if (actionSelect == "create")
             actionSelect = "modify";
-            CUtil.IDValue("actionSelect", "modify");
-            gAtl.Brush().GetCam3D().GetCamCon().SetRotKey(0);
-            gAtl.Brush().GetCam2D().GetCamCon().SetRotKey(0);
-        }
-        else {
+        else if (actionSelect == "modify")
+            actionSelect = "select";
+        else
             actionSelect = "move";
-            CUtil.IDValue("actionSelect", "move");
-            gAtl.Brush().GetCam3D().GetCamCon().SetRotKey(CInput.eKey.LButton);
-            gAtl.Brush().GetCam2D().GetCamCon().SetRotKey(CInput.eKey.LButton);
-        }
+        if (gSelectMap.size > 0 && actionSelect == "move") { }
+        else
+            CDOM.IDValue("actionSelect", actionSelect);
         gSelectMap.clear();
         SelectMapRefresh();
     }
@@ -947,12 +945,75 @@ function VoxelToolUpdate(_delay) {
     }
     if (input.KeyDown(CInput.eKey.LButton)) {
         let off = pick.Offset(gVoxelTar.mCount);
-        if (gSelectMap.get(off) == null) {
-            gSelectMap.set(pick.Offset(gVoxelTar.mCount), pick);
-            SelectMapRefresh();
+        if (input.KeyDown(CInput.eKey.Shift)) {
+            if (gSelectMap.get(off) != null) {
+                gSelectMap.delete(pick.Offset(gVoxelTar.mCount));
+                SelectMapRefresh();
+            }
+        }
+        else {
+            if (gSelectMap.get(off) == null) {
+                gSelectMap.set(pick.Offset(gVoxelTar.mCount), pick);
+                SelectMapRefresh();
+            }
         }
     }
     if (input.KeyUp(CInput.eKey.LButton)) {
+        if (actionSelect == "select") {
+            if (input.KeyDown(CInput.eKey.LControl)) {
+                let off = 0;
+                let search = new Array();
+                search.push(pick.Export());
+                let p = search[0];
+                let sameTile = gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y];
+                for (let i = 0; i < search.length; ++i) {
+                    p = search[i].Export();
+                    p.x += 1;
+                    off = p.Offset(gVoxelTar.mCount);
+                    if (gSelectMap.get(off) == null && gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y] == sameTile) {
+                        gSelectMap.set(p.Offset(gVoxelTar.mCount), p);
+                        search.push(p);
+                    }
+                    p = search[i].Export();
+                    p.x -= 1;
+                    off = p.Offset(gVoxelTar.mCount);
+                    if (gSelectMap.get(off) == null && gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y] == sameTile) {
+                        gSelectMap.set(p.Offset(gVoxelTar.mCount), p);
+                        search.push(p);
+                    }
+                    p = search[i].Export();
+                    p.y += 1;
+                    off = p.Offset(gVoxelTar.mCount);
+                    if (gSelectMap.get(off) == null && gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y] == sameTile) {
+                        gSelectMap.set(p.Offset(gVoxelTar.mCount), p);
+                        search.push(p);
+                    }
+                    p = search[i].Export();
+                    p.y -= 1;
+                    off = p.Offset(gVoxelTar.mCount);
+                    if (gSelectMap.get(off) == null && gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y] == sameTile) {
+                        gSelectMap.set(p.Offset(gVoxelTar.mCount), p);
+                        search.push(p);
+                    }
+                    p = search[i].Export();
+                    p.z += 1;
+                    off = p.Offset(gVoxelTar.mCount);
+                    if (gSelectMap.get(off) == null && gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y] == sameTile) {
+                        gSelectMap.set(p.Offset(gVoxelTar.mCount), p);
+                        search.push(p);
+                    }
+                    p = search[i].Export();
+                    p.z -= 1;
+                    off = p.Offset(gVoxelTar.mCount);
+                    if (gSelectMap.get(off) == null && gVoxelTar.mVInfo[p.x + p.y * gVoxelTar.mCount.x + p.z * gVoxelTar.mCount.x * gVoxelTar.mCount.y] == sameTile) {
+                        gSelectMap.set(p.Offset(gVoxelTar.mCount), p);
+                        search.push(p);
+                    }
+                }
+            }
+            SelectMapRefresh();
+            return;
+        }
         for (let index of gSelectMap.values()) {
             if (typeof gSelectedTile == "number") {
                 roll.mData.Push({ index: index.Export(), VInfo: gVoxelTar.GetVInfo(index) });
@@ -960,23 +1021,20 @@ function VoxelToolUpdate(_delay) {
             }
             else {
                 let nIndex = index.Export();
-                for (let mold of gVoxelTar.mTileMoldArr) {
-                    if (gSelectedTile == mold.ObjHash()) {
-                        for (let y = 0; y < mold.mHeight; ++y)
-                            for (let x = 0; x < mold.mWidth; ++x) {
-                                nIndex.Import(index);
-                                if (gVoxelTar.m2D)
-                                    nIndex.Add(x, y, 0);
-                                else
-                                    nIndex.Add(x, 0, y);
-                                let off = mold.mTileVInfoArr[x + y * mold.mWidth];
-                                if (off != -1) {
-                                    roll.mData.Push({ index: nIndex.Export(), VInfo: gVoxelTar.GetVInfo(nIndex) });
-                                    gVoxelTar.Bonds(nIndex, off);
-                                }
+                let mold = gSelectedTile;
+                for (let z = 0; z < mold.mSize.z; ++z)
+                    for (let y = 0; y < mold.mSize.y; ++y)
+                        for (let x = 0; x < mold.mSize.x; ++x) {
+                            nIndex.Import(index);
+                            nIndex.x += x;
+                            nIndex.y += y;
+                            nIndex.z += z;
+                            let off = mold.mTileVInfoArr[x + y * mold.mSize.x + z * mold.mSize.x * mold.mSize.y];
+                            if (off != -1) {
+                                roll.mData.Push({ index: nIndex.Export(), VInfo: gVoxelTar.GetVInfo(nIndex) });
+                                gVoxelTar.Bonds(nIndex, off);
                             }
-                    }
-                }
+                        }
                 break;
             }
         }
@@ -986,8 +1044,8 @@ function VoxelToolUpdate(_delay) {
     }
 }
 function MapDiv() {
-    let Map_div = CUtil.ID("Map_div");
-    Map_div.append(CDomFactory.DataToDom(`
+    let Map_div = CDOM.ID("Map_div");
+    Map_div.append(CDOM.DataToDom(`
         <div class="card">
             <!-- 헤더 -->
             <div class="card-header" id="headingNoise">
@@ -1018,10 +1076,10 @@ function MapDiv() {
             </div>
         </div>
     `));
-    CUtil.ID("MapCreate_btn").onclick = () => {
-        let NoiseTile_num = Number(CUtil.IDValue("NoiseTile_num"));
-        let NoiseInValue_sli = Number(CUtil.IDValue("NoiseInValue_sli"));
-        const NoiseTarget = CUtil.IDValue("NoiseTarget").split(",")
+    CDOM.ID("MapCreate_btn").onclick = () => {
+        let NoiseTile_num = Number(CDOM.IDValue("NoiseTile_num"));
+        let NoiseInValue_sli = Number(CDOM.IDValue("NoiseInValue_sli"));
+        const NoiseTarget = CDOM.IDValue("NoiseTarget").split(",")
             .map(v => Number(v.trim()))
             .filter(v => !isNaN(v));
         if (NoiseTile_num == 0) {
@@ -1054,158 +1112,7 @@ function MapDiv() {
         }
         CRollBack.Push(roll);
     };
-    Map_div.append(CDomFactory.DataToDom(`
-        <div class="card">
-            <!-- 헤더 -->
-            <div class="card-header" id="headingTree">
-                <h5 class="mb-0">
-                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTree" aria-expanded="false"
-                    aria-controls="collapseTree" >Tree</button>
-                </h5>
-            </div>
-
-            <!-- 바디 -->
-            <div    id="collapseTree" class="collapse" aria-labelledby="headingTree">
-                <div class="card-body p-1">
-                    <form>
-                        <!-- 트리 생성 버튼 -->
-                        <div class="mb-2">
-                            <button type="button" class="btn btn-success w-100" id="TreeCreate_btn">트리 생성</button>
-                        </div>
-                        <!-- 기본 확률 baseProb -->
-                        <div class="mb-2">
-                            <label for="TreeBaseProb" class="form-label">생성 확률</label>
-                            <input type="range" class="form-range" id="TreeBaseProb" min="0" max="1" step="0.01" value="0.2">
-                        </div>
-
-                        <!-- 군집 보정 clusterBoost -->
-                        <div class="mb-2">
-                            <label for="TreeClusterBoost" class="form-label">군집 영향</label>
-                            <input type="range" class="form-range" id="TreeClusterBoost" min="0" max="1" step="0.01" value="0.1">
-                        </div>
-
-                        <!-- 레이어 텍스트 입력 -->
-                        <div class="mb-2">
-                            <label for="TreeLayer" class="form-label">레이어(없으면 현재 복셀 선택)</label>
-                            <input type="text" class="form-control form-control-sm" id="TreeLayer" placeholder="Layer Name">
-                        </div>
-
-                        <!-- VInfo 넘버 입력 -->
-                        <div class="mb-2">
-                            <label for="TreeTarget" class="form-label">이 Tile에서만 적용 VInfo[1,2,3...]</label>
-                            <input type="text" class="form-control form-control-sm" id="TreeTarget" value="0">
-                        </div>
-
-                        <!-- 몰드 넘버 입력 -->
-                        <div class="mb-2">
-                            <label for="TreeMoldNum" class="form-label">몰드 오프셋[0,1,2...]</label>
-                            <input type="text" class="form-control form-control-sm" id="TreeMoldNum" value="0">
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    `));
-    CUtil.ID("TreeCreate_btn").onclick = () => {
-        const baseProb = Number(CUtil.IDValue("TreeBaseProb"));
-        const clusterBoost = Number(CUtil.IDValue("TreeClusterBoost"));
-        let TreeLayer = CUtil.IDValue("TreeLayer");
-        const TreeTargetList = CUtil.IDValue("TreeTarget").split(",")
-            .map(v => Number(v.trim()))
-            .filter(v => !isNaN(v));
-        const TreeMoldList = CUtil.IDValue("TreeMoldNum").split(",")
-            .map(v => Number(v.trim()))
-            .filter(v => !isNaN(v));
-        if (TreeTargetList.length === 0 || TreeMoldList.length === 0) {
-            CAlert.E("VInfo 또는 몰드 목록이 비어있습니다.");
-            return;
-        }
-        let fVoxel = gVoxelTar;
-        if (TreeLayer !== "") {
-            for (let b of gVoxelTar.mLayer) {
-                if (b.Ref() instanceof CVoxel && b.mKey == TreeLayer) {
-                    fVoxel = b.Ref();
-                    break;
-                }
-            }
-        }
-        const moldIndex = TreeMoldList[Math.floor(Math.random() * TreeMoldList.length)];
-        const mold = gVoxelTar.mTileMoldArr[moldIndex];
-        const width = fVoxel.mCount.x;
-        const height = fVoxel.mCount.y;
-        const moldW = mold.mWidth;
-        const moldH = mold.mHeight;
-        const index = new CCIndex();
-        roll = new CRollBackInfo("Voxel", new CArray());
-        const treeMap = [];
-        for (let y = 0; y < height; y++) {
-            treeMap[y] = [];
-            for (let x = 0; x < width; x++) {
-                treeMap[y][x] = false;
-            }
-        }
-        for (let y = 0; y <= height - moldH; y += 1) {
-            for (let x = 0; x <= width - moldW; x += 1) {
-                let valid = true;
-                for (let j = 0; j < moldH; j++) {
-                    for (let i = 0; i < moldW; i++) {
-                        index.x = x + i;
-                        index.y = y + j;
-                        let info = fVoxel.GetVInfo(index);
-                        if (!TreeTargetList.includes(info)) {
-                            valid = false;
-                            break;
-                        }
-                        info = gVoxelTar.GetVInfo(index);
-                        if (info !== 0) {
-                            valid = false;
-                            break;
-                        }
-                    }
-                    if (!valid)
-                        break;
-                }
-                if (valid) {
-                    let neighborCount = 0;
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            if (dx === 0 && dy === 0)
-                                continue;
-                            let nx = x + dx;
-                            let ny = y + dy;
-                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                                if (treeMap[ny][nx])
-                                    neighborCount++;
-                            }
-                        }
-                    }
-                    const prob = baseProb + clusterBoost * neighborCount;
-                    if (Math.random() < prob) {
-                        for (let j = 0; j < moldH; j++) {
-                            for (let i = 0; i < moldW; i++) {
-                                index.x = x + i;
-                                index.y = y + j;
-                                roll.mData.Push({ index: index.Export(), VInfo: gVoxelTar.GetVInfo(index) });
-                                const moldVal = mold.mTileVInfoArr[i + j * moldW];
-                                let tile = null;
-                                for (let k = 0; k < gVoxelTar.mTileArr.length; ++k) {
-                                    if (gVoxelTar.mTileArr[k].mVInfo === moldVal) {
-                                        tile = gVoxelTar.mTileArr[k];
-                                        break;
-                                    }
-                                }
-                                const num = tile?.GetTile() ?? 0;
-                                gVoxelTar.Bonds(index, num);
-                                treeMap[index.y][index.x] = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        CRollBack.Push(roll);
-    };
-    Map_div.append(CDomFactory.DataToDom(`
+    Map_div.append(CDOM.DataToDom(`
         <div class="card">
             <div class="card-header" id="headingPGRW">
                 <h5 class="mb-0">
@@ -1254,21 +1161,21 @@ function MapDiv() {
             </div>
         </div>
     `));
-    CUtil.ID("PGRWStepSlider").oninput = (e) => {
-        CUtil.ID("PGRWStepValue").innerText = CUtil.IDValue("PGRWStepSlider");
+    CDOM.ID("PGRWStepSlider").oninput = (e) => {
+        CDOM.ID("PGRWStepValue").innerText = CDOM.IDValue("PGRWStepSlider");
     };
-    CUtil.ID("PGRWSpikeChance").oninput = (e) => {
-        CUtil.ID("PGRWSpikeValue").innerText = CUtil.IDValue("PGRWSpikeChance");
+    CDOM.ID("PGRWSpikeChance").oninput = (e) => {
+        CDOM.ID("PGRWSpikeValue").innerText = CDOM.IDValue("PGRWSpikeChance");
     };
-    CUtil.ID("PGRWCreate_btn").onclick = () => {
-        const PGRWTargetList = CUtil.IDValue("PGRWTarget").split(",")
+    CDOM.ID("PGRWCreate_btn").onclick = () => {
+        const PGRWTargetList = CDOM.IDValue("PGRWTarget").split(",")
             .map(v => Number(v.trim()))
             .filter(v => !isNaN(v));
-        const PGRWTile_num = Number(CUtil.IDValue("PGRWTile_num"));
-        const stepMul = Number(CUtil.IDValue("PGRWStepSlider"));
-        const spikeChance = Number(CUtil.IDValue("PGRWSpikeChance"));
-        const PGRWX = Number(CUtil.IDValue("PGRWX"));
-        const PGRWY = Number(CUtil.IDValue("PGRWY"));
+        const PGRWTile_num = Number(CDOM.IDValue("PGRWTile_num"));
+        const stepMul = Number(CDOM.IDValue("PGRWStepSlider"));
+        const spikeChance = Number(CDOM.IDValue("PGRWSpikeChance"));
+        const PGRWX = Number(CDOM.IDValue("PGRWX"));
+        const PGRWY = Number(CDOM.IDValue("PGRWY"));
         if (PGRWTargetList.length === 0) {
             CAlert.E("적용할 타일 VInfo가 필요합니다.");
             return;
@@ -1326,7 +1233,7 @@ function MapDiv() {
         }
         CRollBack.Push(roll);
     };
-    Map_div.append(CDomFactory.DataToDom(`
+    Map_div.append(CDOM.DataToDom(`
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
@@ -1409,18 +1316,18 @@ function MapDiv() {
             branch(endX, endY, degree + rotate, nextLen, rotate, growth, tileNum, roll);
         }
     }
-    CUtil.ID("FractalCreate_btn").onclick = () => {
+    CDOM.ID("FractalCreate_btn").onclick = () => {
         const W = gVoxelTar.mCount.x;
         const H = gVoxelTar.mCount.y;
-        const FractalLen_num = Number(CUtil.IDValue("FractalLen_num"));
-        const FractalGrowth_num = Number(CUtil.IDValue("FractalGrowth_num"));
-        const FractalAngle_num = Number(CUtil.IDValue("FractalAngle_num"));
-        const FractalStartAngle_num = Number(CUtil.IDValue("FractalStartAngle_num"));
-        const tileNum = Number(CUtil.IDValue("FractalTile_num"));
-        const targetList = CUtil.IDValue("FractalTarget")
+        const FractalLen_num = Number(CDOM.IDValue("FractalLen_num"));
+        const FractalGrowth_num = Number(CDOM.IDValue("FractalGrowth_num"));
+        const FractalAngle_num = Number(CDOM.IDValue("FractalAngle_num"));
+        const FractalStartAngle_num = Number(CDOM.IDValue("FractalStartAngle_num"));
+        const tileNum = Number(CDOM.IDValue("FractalTile_num"));
+        const targetList = CDOM.IDValue("FractalTarget")
             .split(",").map(v => Number(v.trim())).filter(v => !isNaN(v));
-        const seedX = Math.floor(W * parseFloat(CUtil.IDValue("FractalSeedX")));
-        const seedY = Math.floor(H * parseFloat(CUtil.IDValue("FractalSeedY")));
+        const seedX = Math.floor(W * parseFloat(CDOM.IDValue("FractalSeedX")));
+        const seedY = Math.floor(H * parseFloat(CDOM.IDValue("FractalSeedY")));
         if (!gVoxelTar.m2D) {
             CAlert.E("2D 모드에서만 지원됩니다.");
             return;
@@ -1429,7 +1336,7 @@ function MapDiv() {
         branch(seedX, seedY, FractalStartAngle_num, FractalLen_num, FractalAngle_num, FractalGrowth_num, tileNum, roll);
         CRollBack.Push(roll);
     };
-    Map_div.append(CDomFactory.DataToDom(`
+    Map_div.append(CDOM.DataToDom(`
 <div class="card">
     <div class="card-header" id="headingCityBlock">
         <h5 class="mb-0">
@@ -1483,14 +1390,14 @@ function MapDiv() {
     </div>
 </div>
 `));
-    CUtil.ID("CityBlockRoad_btn").onclick = () => {
-        const roadTile = Number(CUtil.IDValue("CityRoadTile_num"));
-        const sx = Number(CUtil.IDValue("CityStartX"));
-        const sy = Number(CUtil.IDValue("CityStartY"));
-        const ex = Number(CUtil.IDValue("CityEndX"));
-        const ey = Number(CUtil.IDValue("CityEndY"));
-        const minSize = Number(CUtil.IDValue("CityMinSize"));
-        const splitCount = Number(CUtil.IDValue("CitySplitCount"));
+    CDOM.ID("CityBlockRoad_btn").onclick = () => {
+        const roadTile = Number(CDOM.IDValue("CityRoadTile_num"));
+        const sx = Number(CDOM.IDValue("CityStartX"));
+        const sy = Number(CDOM.IDValue("CityStartY"));
+        const ex = Number(CDOM.IDValue("CityEndX"));
+        const ey = Number(CDOM.IDValue("CityEndY"));
+        const minSize = Number(CDOM.IDValue("CityMinSize"));
+        const splitCount = Number(CDOM.IDValue("CitySplitCount"));
         if (!gVoxelTar.m2D) {
             CAlert.E("2D에서만 지원됩니다.");
             return;

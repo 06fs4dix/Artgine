@@ -41,14 +41,14 @@ export class CAlert
 		modal.Open(CModal.ePos.Center);
 		modal.Focus(CModal.eAction.Shake);
 		if(_textArea==false)
-			modal.Close(1000*5);
+			modal.Close(5);
 		
 	}
 	static W(_msg)
 	{
 		CConsol.Log(_msg,CConsol.eColor.yellow);
 	}
-	static Info(_msg : string,_time=5000)
+	static Info(_msg : string,_time=5)
 	{
 		let modal=new CModal();
 		modal.SetHeader("Info")
@@ -70,7 +70,7 @@ export class CAlert
 		modal.SetBG("warning");
 		modal.SetBodyClose(true);
 		modal.Open(CModal.ePos.Center);
-		modal.Close(5000);
+		modal.Close(5);
 	}
 	static Error(_msg)
 	{
@@ -85,7 +85,7 @@ export class CAlert
 		modal.SetBodyClose(true);
 		modal.Open(CModal.ePos.Center);
 		modal.Focus(CModal.eAction.Shake);
-		modal.Close(5000);
+		modal.Close(5);
 	}
 }
 

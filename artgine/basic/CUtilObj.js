@@ -1,7 +1,6 @@
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CModal } from "../basic/CModal.js";
 import { CObject, CPointer } from "./CObject.js";
-import { CUtil } from "./CUtil.js";
 import { CClass } from "./CClass.js";
 var jsummer = null;
 var jLastPt = null;
@@ -138,7 +137,7 @@ export class CUtilObj {
             jbox.SetBody("<div id='" + id + "'></div>");
             jbox.SetSize(480, 640);
             jbox.Open();
-            CUtil.ID(id).append(htmlString);
+            CDOM.ID(id).append(htmlString);
             return jbox;
         }
         var g_wjbox = new CModal("basicModal");
@@ -148,11 +147,11 @@ export class CUtilObj {
         g_wjbox.SetBody("<div id='basicModal_div' />");
         g_wjbox.SetSize(480, 640);
         g_wjbox.Open();
-        CUtil.ID("basicModal_div").innerHTML = "";
+        CDOM.ID("basicModal_div").innerHTML = "";
         if (_watch instanceof CObject)
-            CUtil.ID("basicModal_div").append(_watch.EditInit());
+            CDOM.ID("basicModal_div").append(_watch.EditInit());
         else
-            CUtil.ID("basicModal_div").append(CObject.EditArrayInit(_watch));
+            CDOM.ID("basicModal_div").append(CObject.EditArrayInit(_watch));
         return g_wjbox;
     }
     static ArrayAddSelectList(_pointer, _body, _iHtml, _valueList, _textArea = false) {

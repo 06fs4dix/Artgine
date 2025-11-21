@@ -234,7 +234,7 @@ export class CShadowPlane extends CPaint2D
         {
             this.mRenderPass.length=0;
         }
-
+        this.mSize=new CVec2(1,1);
         return super.StartChk();
         
     }

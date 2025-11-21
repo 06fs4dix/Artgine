@@ -3,7 +3,6 @@ import { CModal } from "../basic/CModal.js";
 import { CPath } from "../basic/CPath.js";
 import { CPreferences } from "../basic/CPreferences.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CInput } from "../system/CInput.js";
 import { CStorage } from "../system/CStorage.js";
@@ -26,7 +25,7 @@ export class CAtelier {
         if (gMain == null)
             gMain = this;
         if (this.mPF.mRenderer == CPreferences.eRenderer.Null) {
-            let MainLoading = CUtil.ID("MainLoading");
+            let MainLoading = CDOM.ID("MainLoading");
             if (MainLoading != null && MainLoading.parentNode)
                 MainLoading.hidden = true;
             return;

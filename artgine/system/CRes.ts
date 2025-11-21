@@ -277,12 +277,12 @@ export class CRes extends CObject {
 			}
 			if(val=="")
 			{
-				CUtil.ID(resMapKey).className="border border-top-0 ps-2 collapse";
-				CUtil.ID(bbMapKey).className="border border-top-0 ps-2 collapse";	
+				CDOM.ID(resMapKey).className="border border-top-0 ps-2 collapse";
+				CDOM.ID(bbMapKey).className="border border-top-0 ps-2 collapse";	
 				return;
 			}
-			CUtil.ID(resMapKey).className="border border-top-0 ps-2 collapse show";
-			CUtil.ID(bbMapKey).className="border border-top-0 ps-2 collapse show";
+			CDOM.ID(resMapKey).className="border border-top-0 ps-2 collapse show";
+			CDOM.ID(bbMapKey).className="border border-top-0 ps-2 collapse show";
 			
 			ch = div.getElementsByClassName("border border-top-0 ps-2 collapse show");
 			for (const each0 of ch as any) {

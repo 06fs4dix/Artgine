@@ -7,6 +7,7 @@ import {CFloat32} from "./CFloat32.js";
 export interface IMat
 {
 	GetMat()	: CMat;
+	SetMat(_mat : CMat);
 }
 export class CMat extends CFloat32
 {

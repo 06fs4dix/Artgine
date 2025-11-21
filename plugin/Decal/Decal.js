@@ -38,7 +38,7 @@ export class CPaint3DDecal extends CPaint {
         if (this.mRenderPass.length == 0) {
             let sChk = true;
             for (let each0 of this.mRenderPass) {
-                if (each0.mTag == "shadowWrite") {
+                if (each0.mTag.has("shadowWrite")) {
                     continue;
                 }
                 sChk = false;

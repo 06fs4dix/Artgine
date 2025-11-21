@@ -1,6 +1,6 @@
 import { CH5Canvas } from "./CH5Canvas.js";
 import { CModal } from "../basic/CModal.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CObject } from "../basic/CObject.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CAlert } from "../basic/CAlert.js";
@@ -132,9 +132,9 @@ export class CTexture extends CObject {
                     modal.FullSwitch();
                 }
             };
-            _div.prepend(CDomFactory.DataToDom(img));
+            _div.prepend(CDOM.DataToDom(img));
         }
-        _div.prepend(CDomFactory.DataToDom({
+        _div.prepend(CDOM.DataToDom({
             '<>': 'button', "class": "btn btn-primary btn-sm", style: "width:100%;", 'text': 'Refresh', 'onclick': (e) => {
                 this.mUpdate.clear();
                 if (this.mReadPixelEvent != null)

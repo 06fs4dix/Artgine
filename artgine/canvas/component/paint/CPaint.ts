@@ -17,7 +17,7 @@ import { CTexture } from "../../../render/CTexture.js"
 import { CUpdate } from "../../../basic/Basic.js"
 import { CAlert } from "../../../basic/CAlert.js"
 import { CClass } from "../../../basic/CClass.js"
-import { CDomFactory } from "../../../basic/CDOMFactory.js"
+import { CDOM } from "../../../basic/CDOM.js"
 import { CHash } from "../../../basic/CHash.js"
 import { CObject, CPointer } from "../../../basic/CObject.js"
 import { CUniqueID } from "../../../basic/CUniqueID.js"
@@ -323,8 +323,8 @@ export class CPaint extends CComponent implements IMat
 					{"<>":"div","class":"col-4","html":[
 						{"<>":"button","type":"button","class":"btn btn-primary","text":"Add",
 							"onclick":()=>{
-								let sel=CUtil.IDValue(ukey+"subPush");
-								let key=CUtil.IDValue(ukey+"_txt");
+								let sel=CDOM.IDValue(ukey+"subPush");
+								let key=CDOM.IDValue(ukey+"_txt");
 								if(key=="")
 								{
 									CAlert.E("key 설정");	
@@ -343,7 +343,7 @@ export class CPaint extends CComponent implements IMat
 			
 			;
 			
-			_input.prepend(CDomFactory.DataToDom(pushDiv));
+			_input.prepend(CDOM.DataToDom(pushDiv));
 			
 		}
 		
@@ -833,7 +833,9 @@ export class CPaint extends CComponent implements IMat
 	{
 		return new CVec4(this.mColorModel.x, this.mColorModel.y, this.mColorModel.z, this.mAlphaModel.x);
 	}
-	
+	SetMat(_mat: CMat) {
+		
+	}
 	GetMat() {	return this.mLMat;	};
 	SetLMat(_mat : CMat)	{	this.mLMat.Import(_mat);	this.mUpdateLMat=true;}
 	

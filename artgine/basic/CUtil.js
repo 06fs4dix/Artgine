@@ -55,25 +55,6 @@ export class CUtil {
         var enc = new TextDecoder("utf-8");
         return enc.decode(new Uint8Array(_arrayBuffer));
     }
-    static ID(_id, _doc = document) {
-        return _doc.getElementById(_id);
-    }
-    static IDInput(_id) {
-        return document.getElementById(_id);
-    }
-    static IDValue(_id, _value = null) {
-        if (_value != null)
-            document.getElementById(_id).value = _value;
-        return document.getElementById(_id).value;
-    }
-    static IDChecked(_id, _value = null) {
-        const el = document.getElementById(_id);
-        if (!el || el.type !== "checkbox")
-            return false;
-        if (_value !== null)
-            el.checked = _value;
-        return el.checked;
-    }
     static Language() {
         if (CUtil.IsNode()) {
             return process.env.LANG?.split('_')[0]?.toLowerCase() ||

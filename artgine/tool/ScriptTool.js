@@ -1,6 +1,5 @@
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CAtelier } from "../canvas/CAtelier.js";
 import { CSubject } from "../canvas/subject/CSubject.js";
 import { CPaint2D, CPaintHTML } from "../canvas/component/paint/CPaint2D.js";
@@ -34,7 +33,7 @@ export function ScriptTool(_sc) {
         panel.style.maxHeight = maxHeight;
         panel.style.overflowY = "auto";
     });
-    let canvas = CDomFactory.DataToDom(`
+    let canvas = CDOM.DataToDom(`
       <div style="position: relative; width: 100%; height: 100%;">
     <canvas id="ScriptToolLeft_can"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 0;">
@@ -98,7 +97,7 @@ function ScriptToolInit() {
     ScriptToolLeftInit(scriptStructure);
 }
 function ScriptToolLeftInit(scriptStructure) {
-    const leftPanel = CUtil.ID("ScriptToolLeft_div");
+    const leftPanel = CDOM.ID("ScriptToolLeft_div");
     leftPanel.innerHTML = "";
     gAtl.Canvas("ScriptTool").Clear();
     let bgSub = gAtl.Canvas("ScriptTool").PushSub(new CSubject());
@@ -164,7 +163,7 @@ function CreateFunctionCard(func) {
             conditionReturnPairs.push(`→ ${returnValue}`);
         }
     }
-    const html = CDomFactory.DataToDom(`
+    const html = CDOM.DataToDom(`
         <div class="card shadow-sm" style="width: 280px;">
             <div class="card-header text-center py-3">
                 <h6 class="mb-0 fw-bold">${func.function}</h6>

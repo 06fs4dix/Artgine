@@ -13,7 +13,7 @@ import {CVec3} from "../../geometry/CVec3.js";
 import {CVec4} from "../../geometry/CVec4.js";
 import {CRenderPass} from "../../render/CRenderPass.js";
 import {CAtlas} from "../../util/CAtlas.js";
-import { CDomFactory } from "../../basic/CDOMFactory.js";
+import { CDOM } from "../../basic/CDOM.js";
 
 import {CCollider} from "../component/CCollider.js";
 import { CPaintVoxel, CVoxPlane } from "../component/paint/CPaintVoxel.js";
@@ -166,7 +166,7 @@ export class CVTileSurfacePattern extends CObject
 }
 export class CVTile extends CVTileSurfacePattern
 {
-	//mKey="";
+	mKey="";
 	mVInfo=0;//voxel info
 	mCollider : number = CCollider.eEvent.None;
 	//mPattern=new Array<CVTileSurface>();
@@ -208,15 +208,14 @@ export class CVTileRole  extends CVTileSurfacePattern
 
 export class CVTileMold extends CObject
 {
-	mWidth : number;
-	mHeight : number;
+	mKey="";
+	mSize :  CVec3;
 	mTileVInfoArr : Array<number>;
 
 	constructor(_width : number = 1, _height : number = 1) {
 		super();
-		this.mWidth = _width;
-		this.mHeight = _height;
-		this.mTileVInfoArr = new Array(this.mWidth * this.mHeight);
+		this.mSize=new CVec3(1,1,1);
+		this.mTileVInfoArr = new Array(this.mSize.x * this.mSize.y,this.mSize.z);
 		this.mTileVInfoArr.fill(-1);
 	}
 }

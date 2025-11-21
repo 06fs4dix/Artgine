@@ -255,7 +255,7 @@ export class CUtilObj
 			jbox.SetBody("<div id='"+id+"'></div>");
 			jbox.SetSize(480, 640);
 			jbox.Open();
-			CUtil.ID(id).append(htmlString);
+			CDOM.ID(id).append(htmlString);
 			// jbox.position();
 			return jbox;
 		}
@@ -268,12 +268,12 @@ export class CUtilObj
 		g_wjbox.SetSize(480, 640);
 		g_wjbox.Open();
 
-		CUtil.ID("basicModal_div").innerHTML="";
+		CDOM.ID("basicModal_div").innerHTML="";
 		
 		if(_watch instanceof CObject)
-			CUtil.ID("basicModal_div").append(_watch.EditInit());
+			CDOM.ID("basicModal_div").append(_watch.EditInit());
 		else		
-			CUtil.ID("basicModal_div").append(CObject.EditArrayInit(_watch));
+			CDOM.ID("basicModal_div").append(CObject.EditArrayInit(_watch));
 		
 		return g_wjbox;
 		

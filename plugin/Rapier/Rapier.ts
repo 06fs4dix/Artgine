@@ -3,7 +3,7 @@ import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CArray } from "../../artgine/basic/CArray.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CConsol } from "../../artgine/basic/CConsol.js";
-import { CDomFactory } from "../../artgine/basic/CDOMFactory.js";
+import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CJSON } from "../../artgine/basic/CJSON.js";
 import { CBlackBoardRef, CObject, CPointer } from "../../artgine/basic/CObject.js";
 import { CTree } from "../../artgine/basic/CTree.js";
@@ -295,7 +295,7 @@ export class CRapierRigidBody extends CRigidBody
     
         const wMat = this.GetOwner().GetMat();
         const wPos = CMath.V3MulMatCoordi(new CVec3(0, 0, 0), wMat);
-        const wRot= CMath.EulerToQut(CMath.MatDecomposeRot(wMat,true,true,true));
+        const wRot= CMath.EulerToQut(CMath.MatDecomposeRotMat(wMat,true,true,true));
 
         this.mRB.setTranslation({ x: wPos.x+this.mCenter.x, y: wPos.y+this.mCenter.y, z: wPos.z+this.mCenter.z }, true);
         this.mRB.setRotation({x:wRot.x,y:wRot.y,z:wRot.z,w:wRot.w});
@@ -401,9 +401,7 @@ export class CRapierRigidBody extends CRigidBody
     EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
         _div.innerHTML="Not Support";
     }
-    // EditInit(_pointer?: CPointer): HTMLElement {
-    //     return CDomFactory.DataToDom("Not Support");
-    // }
+    
 }
 
 

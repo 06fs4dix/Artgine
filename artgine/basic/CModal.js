@@ -1,5 +1,5 @@
 import { CClass } from "./CClass.js";
-import { CDomFactory } from "./CDOMFactory.js";
+import { CDOM } from "./CDOM.js";
 import { CEvent } from "./CEvent.js";
 import { CString } from "./CString.js";
 export class CDrop {
@@ -34,6 +34,7 @@ export class CModal {
     mKey = "";
     mSort = CModal.eSort.Auto;
     mZIndex = 0;
+    mParent = null;
     mCloseToHide = false;
     mOT = null;
     mOL = null;
@@ -46,6 +47,7 @@ export class CModal {
     mOverlayDiv = null;
     mBodyClose = false;
     mTitle = CModal.eTitle.TextFullClose;
+    mHelp = null;
     mDrag = true;
     mLimitPush = false;
     mFull = false;
@@ -69,6 +71,12 @@ export class CModal {
         }
         this.mZIndex = gIndex;
         gIndex -= 1;
+    }
+    SetHelp(_div) {
+        this.mHelp = _div;
+    }
+    SetParent(_div) {
+        this.mParent = _div;
     }
     Get(_member, _default) {
         let t = this;
@@ -209,7 +217,7 @@ export class CModal {
         }
         else {
             this.mBody.innerHTML = "";
-            this.mBody.append(CDomFactory.DataToDom(_data));
+            this.mBody.append(CDOM.DataToDom(_data));
         }
     }
     SetFooter(_data) {
@@ -218,7 +226,7 @@ export class CModal {
         }
         else {
             this.mFooter.innerHTML = "";
-            this.mFooter.append(CDomFactory.DataToDom(_data));
+            this.mFooter.append(CDOM.DataToDom(_data));
         }
     }
     SetHeader(_html) {

@@ -197,13 +197,13 @@ export class CSing
 
             {'<>':'button','type':'button','class':'btn btn-secondary float-left', 'id':'findPWCardBackBtn',
                 "data-CLan":CLan.Set(null,'CSing.Cancel', '취소'), "onclick":()=>{
-                    CUtil.ID("findPWDiv").hidden=true;
+                    CDOM.ID("findPWDiv").hidden=true;
                 }},
             {'<>':'button',"type":"button","class":"btn btn-primary float-right", 'id':'findPWCardNextBtn',
                 "data-CLan":CLan.Set(null,'CSing.Next', "다음"), "onclick":()=>{
-                    let code=CUtil.ID("code_txt") as HTMLInputElement;
-                    let email=CUtil.ID("email_txt") as HTMLInputElement;
-                    let btn=CUtil.ID("findPWCardNextBtn");
+                    let code=CDOM.ID("code_txt") as HTMLInputElement;
+                    let email=CDOM.ID("email_txt") as HTMLInputElement;
+                    let btn=CDOM.ID("findPWCardNextBtn");
                     if(email.disabled==false)
                     {
                         email.disabled=true;
@@ -246,11 +246,11 @@ export class CSing
 
         if(_option.mModifyBtn!=null)
         {
-            var modifyBtn=CUtil.ID(_option.mModifyBtn);
+            var modifyBtn=CDOM.ID(_option.mModifyBtn);
             let modifyFun=()=>{
                 //UserLogout();
                 ModifyFun(CSing.PrivateKey());
-                CSing.GetEvent(CSing.eEvent.JoinInit).Call(CUtil.ID('joinDiv'));
+                CSing.GetEvent(CSing.eEvent.JoinInit).Call(CDOM.ID('joinDiv'));
             };
             if(modifyBtn!=null)
             {
@@ -264,12 +264,12 @@ export class CSing
         }
         if(_option.mLogoutBtn!=null)
         {
-            var logoutBtn=CUtil.ID(_option.mLogoutBtn);
+            var logoutBtn=CDOM.ID(_option.mLogoutBtn);
             let logoutFun=()=>{
                 
                 var privateKey = CStorage.Get("privateKey");
-                CUtil.ID("loginDiv").hidden=false;
-                CUtil.ID("logoutDiv").hidden=true;
+                CDOM.ID("loginDiv").hidden=false;
+                CDOM.ID("logoutDiv").hidden=true;
                 CStorage.Set("loginType",null);
                 CStorage.Set("privateKey",null);
                 CStorage.Set("publicKey",null);
@@ -294,13 +294,13 @@ export class CSing
         }
         
         let loginFun=()=>{
-            var id_txt=CUtil.IDValue("id_txt");
-            var pw_txt=CUtil.IDValue("pw_txt");
+            var id_txt=CDOM.IDValue("id_txt");
+            var pw_txt=CDOM.IDValue("pw_txt");
             UserLogin(CHash.SHA256(CHash.SHA256(id_txt+"_"+pw_txt))).then((_error)=>{
                 if(_error==false)
                 {
-                    CUtil.ID("loginDiv").hidden=true;
-                    CUtil.ID("logoutDiv").hidden=false;
+                    CDOM.ID("loginDiv").hidden=true;
+                    CDOM.ID("logoutDiv").hidden=false;
                 }
                 
             });
@@ -322,7 +322,7 @@ export class CSing
         if(_option.mLoginBtn!=null)
         {
             
-            var loginBtn=CUtil.ID(_option.mLoginBtn);
+            var loginBtn=CDOM.ID(_option.mLoginBtn);
             if(loginBtn!=null)
             {
                 logoutBtn.onclick=loginFun;
@@ -336,14 +336,14 @@ export class CSing
         if(_option.mJoinBtn!=null)
         {
             let joinFun=()=>{
-                CUtil.ID('loginDiv').hidden=true;
-                CUtil.ID('logoutDiv').hidden=true;
-                CUtil.ID('joinDiv').hidden=false;
+                CDOM.ID('loginDiv').hidden=true;
+                CDOM.ID('logoutDiv').hidden=true;
+                CDOM.ID('joinDiv').hidden=false;
                 //CWebUtil.ID("uc_btn").hidden=false;
                 CSing.GetEvent(CSing.eEvent.JoinInit).Call();
                 //CSing.GetEvent(CSing.eEvent.State).Call();
             };
-            var joinBtn=CUtil.ID(_option.mJoinBtn);
+            var joinBtn=CDOM.ID(_option.mJoinBtn);
             if(joinBtn!=null)
             {
                 joinBtn.onclick=joinFun;
@@ -357,14 +357,14 @@ export class CSing
         if(_option.mFindPWBtn!=null)
         {
             let findPWFun=()=>{
-                var btn=CUtil.ID(_option.mFindPWBtn);
-                var card=CUtil.ID("findPWDiv");
+                var btn=CDOM.ID(_option.mFindPWBtn);
+                var card=CDOM.ID("findPWDiv");
                 btn.insertAdjacentElement('afterend', card);
                 card.hidden=false;
-                (CUtil.ID("email_txt") as HTMLInputElement).disabled=false;
-                (CUtil.ID("code_txt") as HTMLInputElement).disabled=true;
+                (CDOM.ID("email_txt") as HTMLInputElement).disabled=false;
+                (CDOM.ID("code_txt") as HTMLInputElement).disabled=true;
             };
-            var findPWBtn=CUtil.ID(_option.mFindPWBtn);
+            var findPWBtn=CDOM.ID(_option.mFindPWBtn);
             if(findPWBtn!=null)
             {
                 findPWBtn.onclick=findPWFun;
@@ -673,13 +673,13 @@ export class CSing
                 
                 var modifyMode=CStorage.Get("loginType")=="modify";
                 var user={privateKey:"",email:"",nick:"",loginType:"id",id:"",newPrivateKey:""};
-                var id_txt=CUtil.IDValue("join_id_txt");
-                var pw_txt=CUtil.IDValue("join_pw_txt");
-                var pwChk_txt=CUtil.IDValue("join_pwChk_txt");
+                var id_txt=CDOM.IDValue("join_id_txt");
+                var pw_txt=CDOM.IDValue("join_pw_txt");
+                var pwChk_txt=CDOM.IDValue("join_pwChk_txt");
                 if(modifyMode)
                 {
-                    user.nick=CUtil.IDValue("join_nick_txt");
-                    user.email=CUtil.IDValue("join_email_txt");
+                    user.nick=CDOM.IDValue("join_nick_txt");
+                    user.email=CDOM.IDValue("join_email_txt");
     
                     
                     user.loginType="modify";
@@ -696,7 +696,7 @@ export class CSing
                     }
     
     
-                    CUtil.ID("uc_btn").hidden=true;
+                    CDOM.ID("uc_btn").hidden=true;
                     
                    
                     var tag=CSing.GetEvent(CSing.eEvent.JoinSubmit).Call() as Array<{key,value}>;
@@ -718,8 +718,8 @@ export class CSing
                         return;
                     }
                     
-                    user.nick=CUtil.IDValue("join_nick_txt");
-                    user.email=CUtil.IDValue("join_email_txt");
+                    user.nick=CDOM.IDValue("join_nick_txt");
+                    user.email=CDOM.IDValue("join_email_txt");
     
                     if(CStorage.Get("loginType")==null)
                     {
@@ -734,7 +734,7 @@ export class CSing
                     }
     
     
-                    CUtil.ID("uc_btn").hidden=true;
+                    CDOM.ID("uc_btn").hidden=true;
                     
                 
                     var tag=CSing.GetEvent(CSing.eEvent.JoinSubmit).Call() as Array<{key,value}>;
@@ -754,7 +754,7 @@ export class CSing
 
 
                 UserCreate(user).then((_error)=>{
-                    CUtil.ID("uc_btn").hidden=false;
+                    CDOM.ID("uc_btn").hidden=false;
 
 
                     if(_error)
@@ -765,11 +765,11 @@ export class CSing
                     }
                     else
                     {
-                        CUtil.ID('loginDiv').hidden=true;
-                        CUtil.ID('logoutDiv').hidden=false;
-                        CUtil.ID('joinDiv').hidden=true;
-                        CUtil.IDValue("join_pw_txt","");
-                        CUtil.IDValue("join_pwChk_txt","");
+                        CDOM.ID('loginDiv').hidden=true;
+                        CDOM.ID('logoutDiv').hidden=false;
+                        CDOM.ID('joinDiv').hidden=true;
+                        CDOM.IDValue("join_pw_txt","");
+                        CDOM.IDValue("join_pwChk_txt","");
                         gInfoMap.clear();
                         // CSing.PublicInfo().then((pui)=>{
                         //     if(pui._publicKey==null)    return;
@@ -788,14 +788,14 @@ export class CSing
             "onclick":()=>{
                 if(CSing.PrivateKey()==null)
                 {
-                    CUtil.ID('loginDiv').hidden=false;
+                    CDOM.ID('loginDiv').hidden=false;
                 }
                 else
                 {
-                    CUtil.ID('logoutDiv').hidden=false;
+                    CDOM.ID('logoutDiv').hidden=false;
                 }
                 
-                CUtil.ID('joinDiv').hidden=true;
+                CDOM.ID('joinDiv').hidden=true;
             }
         });
 
@@ -827,7 +827,7 @@ export class CSing
 
         }//else login
         CSing.GetEvent(CSing.eEvent.Init).Call();
-        return CDomFactory.DataToDom(main);
+        return CDOM.DataToDom(main);
     }
 	
 }
@@ -914,7 +914,7 @@ let signOut: any = null;
 import {CTimer} from "../system/CTimer.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CLan} from "../basic/CLan.js";
-import {CDomFactory} from "../basic/CDOMFactory.js";
+import {CDOM} from "../basic/CDOM.js";
 import {CObject} from "../basic/CObject.js";
 
 import {CAlert} from "../basic/CAlert.js";
@@ -943,7 +943,7 @@ function signInSuccessFunc(result) {
         CStorage.Set("privateKey",result.user.uid);
         if(_info==null)
         {
-            CUtil.ID('loginDiv').hidden=false;
+            CDOM.ID('loginDiv').hidden=false;
             CFecth.Exe("Sing/FireBase",{privateKey:result.user.uid}).then(()=>{
                 ModifyFun(CSing.PrivateKey());
             });
@@ -952,8 +952,8 @@ function signInSuccessFunc(result) {
         else
         {
             CFecth.Exe("Sing/SingIn",{privateKey:result.user.uid});
-            CUtil.ID('loginDiv').hidden=true;
-            CUtil.ID('logoutDiv').hidden=false;
+            CDOM.ID('loginDiv').hidden=true;
+            CDOM.ID('logoutDiv').hidden=false;
             CSing.GetEvent(CSing.eEvent.State).Call();
         }
             
@@ -986,24 +986,24 @@ window["FireBaseAnonymousLogin"]=FireBaseAnonymousLogin;
 
 function ModifyFun(_privateKey)
 {
-    CUtil.ID("findPWDiv").hidden=true;
-    CUtil.ID("loginDiv").hidden=true;
-    CUtil.ID("logoutDiv").hidden=true;
-    CUtil.ID("joinDiv").hidden=false;
+    CDOM.ID("findPWDiv").hidden=true;
+    CDOM.ID("loginDiv").hidden=true;
+    CDOM.ID("logoutDiv").hidden=true;
+    CDOM.ID("joinDiv").hidden=false;
     CSing.PrivateInfo(_privateKey).then((json)=>{
-        CUtil.ID("join_id_txt").hidden=true;
-        CUtil.ID("join_id_label").hidden=true;
+        CDOM.ID("join_id_txt").hidden=true;
+        CDOM.ID("join_id_label").hidden=true;
         
         if(json!=null)
         {
-            CUtil.IDInput("join_id_txt").value=json._id;
-            CUtil.IDInput("join_nick_txt").value=json._nick;
-            CUtil.IDInput("join_email_txt").value=json._email;    
+            CDOM.IDInput("join_id_txt").value=json._id;
+            CDOM.IDInput("join_nick_txt").value=json._nick;
+            CDOM.IDInput("join_email_txt").value=json._email;    
             if(json._loginType=="kakao" || json._loginType=="firebase")
             {
-                CUtil.ID("join_pw_label").hidden=true;
-                CUtil.IDInput("join_pw_txt").hidden=true;
-                CUtil.IDInput("join_pwChk_txt").hidden=true;
+                CDOM.ID("join_pw_label").hidden=true;
+                CDOM.IDInput("join_pw_txt").hidden=true;
+                CDOM.IDInput("join_pwChk_txt").hidden=true;
             }
         }
 

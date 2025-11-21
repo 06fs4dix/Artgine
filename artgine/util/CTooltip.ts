@@ -146,10 +146,10 @@ export class CTooltip extends CModal
         this.Hide(0);
 
         if (typeof _content === "string") {
-            CUtil.ID("Content_" + this.mKey).textContent = _content;
+            CDOM.ID("Content_" + this.mKey).textContent = _content;
         }
         else {
-            CUtil.ID("Content_" + this.mKey).appendChild(_content);
+            CDOM.ID("Content_" + this.mKey).appendChild(_content);
         }
         const target = this.SetupAttachPos(_attach);
 
@@ -423,7 +423,7 @@ export class CTooltipList extends CTooltip
         super.Hide(_animationTime);
         this.m_curIndex = -1;
 
-        const ulElement = CUtil.ID("Content_" + this.mKey).lastChild as HTMLUListElement;
+        const ulElement = CDOM.ID("Content_" + this.mKey).lastChild as HTMLUListElement;
         if(ulElement!=null)
         {
             const listItems = Array.from(ulElement.children);
@@ -444,7 +444,7 @@ export class CTooltipList extends CTooltip
     {
        if(CTooltip.IsPopper()==false) return;
 
-        let ulElement = CUtil.ID("Content_" + this.mKey).lastChild as HTMLUListElement;
+        let ulElement = CDOM.ID("Content_" + this.mKey).lastChild as HTMLUListElement;
         ulElement.innerHTML = "";
         ulElement.className = "list-group overflow-auto mw-100 mh-100";
 
@@ -539,7 +539,7 @@ export class CTooltipList extends CTooltip
     private navigateList(moveUp: boolean): void {
         if(CTooltip.IsPopper()==false) return;
 
-        const ulElement = CUtil.ID("Content_" + this.mKey).lastChild as HTMLUListElement;
+        const ulElement = CDOM.ID("Content_" + this.mKey).lastChild as HTMLUListElement;
         const listItems = Array.from(ulElement.children);
         
         // Remove active class from current item

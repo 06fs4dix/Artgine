@@ -1,5 +1,5 @@
 import {CConsol} from "../basic/CConsol.js";
-import {CDomFactory} from "../basic/CDOMFactory.js";
+import {CDOM} from "../basic/CDOM.js";
 import {CJSON} from "../basic/CJSON.js";
 import { CConfirm } from "../basic/CModal.js";
 import { CObject } from "../basic/CObject.js";
@@ -164,7 +164,7 @@ export class CHtmlBarTree extends CObject
 		p.mData = _item;
 
 		// 화면 갱신
-		if (CUtil.ID(this.RootID())?.innerHTML) this.Refresh();
+		if (CDOM.ID(this.RootID())?.innerHTML) this.Refresh();
 	}
 
 	Hide(_item: CHtmlBarItem | string) {
@@ -284,12 +284,12 @@ export class CHtmlBarTree extends CObject
 	
 		const main: any = this.CreateNavbar(navArr);
 	
-		const rootElement = CUtil.ID(this.RootID());
+		const rootElement = CDOM.ID(this.RootID());
 		if (!rootElement) {
-			document.body.append(CDomFactory.DataToDom({ "<>": "div", "id": this.RootID(), "html": [main] }));
+			document.body.append(CDOM.DataToDom({ "<>": "div", "id": this.RootID(), "html": [main] }));
 		} else {
 			rootElement.innerHTML = "";
-			rootElement.append(CDomFactory.DataToDom(main));
+			rootElement.append(CDOM.DataToDom(main));
 		}
 	}
 
@@ -309,7 +309,7 @@ export class CHtmlBarTree extends CObject
 						...this.NavbarContents(),
 						{ "<>": "li", "class": "nav-item dropdown", 
 							"html": [{ "<>": "i", "class": "nav-link bi bi-x-square", "href": "#", "style":"cursor:pointer;", 
-								"onclick": () => { CUtil.ID(this.RootID()).innerHTML = ""; } 
+								"onclick": () => { CDOM.ID(this.RootID()).innerHTML = ""; } 
 							}] 
 						}
 					]}
@@ -369,14 +369,14 @@ export class CHtmlBarTree extends CObject
 					}
 				],
 				"onmouseover": (e) => {
-					let menu = CUtil.ID(this.MakeID(key, "barDropdownMenu")) as HTMLDivElement;
+					let menu = CDOM.ID(this.MakeID(key, "barDropdownMenu")) as HTMLDivElement;
 					if(menu && window["bootstrap"]) {
 						window["bootstrap"].Dropdown.getOrCreateInstance(menu).show();
 						// menu.style.display = "block";
 					}
 				},
 				"onmouseout": (e) => {
-					let menu = CUtil.ID(this.MakeID(key, "barDropdownMenu")) as HTMLDivElement;
+					let menu = CDOM.ID(this.MakeID(key, "barDropdownMenu")) as HTMLDivElement;
 					if(menu && window["bootstrap"]) {
 						window["bootstrap"].Dropdown.getOrCreateInstance(menu).hide();
 						// menu.style.display = "none";

@@ -191,7 +191,7 @@ export class CRenderer
 		modal.Open(CModal.ePos.Center);
 		modal.Focus(CModal.eAction.Shake);
 
-		CUtilWeb.MonacoEditer(CUtil.ID(id),_wgsl,"wgsl");
+		CUtilWeb.MonacoEditer(CDOM.ID(id),_wgsl,"wgsl");
 	}
 }
 export class CRendererGL extends CRenderer

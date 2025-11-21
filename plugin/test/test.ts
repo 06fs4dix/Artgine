@@ -35,7 +35,7 @@ CPlugin.PushEvent(CEvent.eType.Load,()=>{
     rp=new CRPAuto();
     rp.mShader=CPlugin.FindPath("test")+"TestShader.ts";
     rp.PushAnd(new CCondition("class","==","CPaint2D"));
-    rp.mTag="uv";
+    rp.mTag.add("uv");
     gUVRPMgr.mRPArr.push(rp);
     CFrame.Main().Res().Push("testUVRPMgr",gUVRPMgr);
     

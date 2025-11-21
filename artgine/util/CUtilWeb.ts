@@ -1,6 +1,6 @@
 import { CAlert } from "../basic/CAlert.js";
 import { CConsol } from "../basic/CConsol.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
@@ -274,9 +274,9 @@ export class CUtilWeb {
 		// 3. import 경로 확장자 자동 패치
 		return patchImportPaths(jsCode);
 	}
-	static async MDReader(_url) {
+	static async MDReader(_urlOrText : string) {
 		// ---------- root & scope ----------
-		const root = CDomFactory.DataToDom(null);
+		const root = CDOM.DataToDom(null);
 		const scopeClass = `mdr-scope-${Math.random().toString(36).slice(2)}`;
 		root.classList.add(scopeClass); // 필요하면 'markdown-body'도 추가 가능
 
@@ -375,9 +375,19 @@ upsertStyle(`mdr-style-2-${scopeClass}`, `
 		marked.setOptions({ gfm: true, breaks: false, mangle: false, headerIds: true });
 
 		// ---------- MD -> HTML ----------
-		const buf = await CFile.Load(_url);
-		if (!buf) return root;
-		const md = CUtil.ArrayToString(buf);
+		let buf=null;
+		let md="";
+		let ext=CString.ExtCut(_urlOrText);
+		if(ext.ext=="md")
+		{
+			buf = await CFile.Load(_urlOrText);
+			if (!buf) return root;
+			md = CUtil.ArrayToString(buf);
+		}
+		else
+			md=_urlOrText;
+		
+		
 		const rawHtml = marked.parse(md, { xhtml: false });
 		root.innerHTML = rawHtml;
 

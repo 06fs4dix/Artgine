@@ -1,10 +1,9 @@
 import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
-import { CDomFactory } from "../basic/CDOMFactory.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CDrop, CModal } from "../basic/CModal.js";
 import { CString } from "../basic/CString.js";
-import { CUtil } from "../basic/CUtil.js";
 import { CAtelier } from "../canvas/CAtelier.js";
 import { CAniFlow } from "../canvas/component/CAniFlow.js";
 import { CClip, CClipBase64, CClipCoodi, CClipImg, CClipMesh } from "../canvas/component/CAnimation.js";
@@ -58,7 +57,7 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
         panel.style.maxHeight = maxHeight;
         panel.style.overflowY = "auto";
     });
-    let canvas = CDomFactory.DataToDom(`
+    let canvas = CDOM.DataToDom(`
   <div style="display: flex; flex-direction: column; height: 100%;">
     <div style="flex: 9 1 0%;" id="AniToolLeft_div">
         <canvas id="AniToolLeft_can" style="width: 100%; height: 100%;" />
@@ -216,7 +215,7 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
 
     
     `;
-    rightPanel.append(CDomFactory.DataToDom(rightDiv));
+    rightPanel.append(CDOM.DataToDom(rightDiv));
     gAtl.Init([], "AniToolLeft_can", false).then(() => {
         if (gBasicTex == null)
             gBasicTex = gAtl.Frame().Pal().GetNoneTex();
@@ -231,8 +230,8 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
     gAtl.Frame().PushEvent(CEvent.eType.Render, () => {
         gAtl.Frame().Dev().SetClearColor(true, new CVec4(1, 0, 1, 1));
     });
-    const selectEl = CUtil.ID("clipTypeSelect");
-    const addBtn = CUtil.ID("addClipBtn");
+    const selectEl = CDOM.ID("clipTypeSelect");
+    const addBtn = CDOM.ID("addClipBtn");
     const classMap = CClass.ExtendsList(CClip);
     for (const key in classMap) {
         const opt = document.createElement("option");
@@ -244,12 +243,12 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
     addBtn.addEventListener("click", () => {
         const selected = selectEl.value;
         let newClip = CClass.New(selected);
-        newClip.mDelay = Number(CUtil.IDValue("defaultDelay"));
+        newClip.mDelay = Number(CDOM.IDValue("defaultDelay"));
         newClip.mTime = -1;
         gAni.Push(newClip);
         AniToolAniListInit();
     });
-    const clipFileInput = CUtil.ID("clipFileInput");
+    const clipFileInput = CDOM.ID("clipFileInput");
     clipFileInput.addEventListener("change", async (e) => {
         const input = e.target;
         const files = input.files;
@@ -261,10 +260,10 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
             AniToolDrop(dorp);
         }
     });
-    CUtil.ID("AniPlay_btn").onclick = AniToolPlay;
-    CUtil.ID("AniPause_btn").onclick = AniToolSubjectInit;
-    CUtil.ID("CutExc_btn").onclick = AniToolCutExe;
-    const loopCheck = CUtil.ID("loopCheck");
+    CDOM.ID("AniPlay_btn").onclick = AniToolPlay;
+    CDOM.ID("AniPause_btn").onclick = AniToolSubjectInit;
+    CDOM.ID("CutExc_btn").onclick = AniToolCutExe;
+    const loopCheck = CDOM.ID("loopCheck");
     loopCheck.checked = gAni.mLoop ?? false;
     loopCheck.addEventListener("change", () => {
         gAni.mLoop = loopCheck.checked;
@@ -309,15 +308,15 @@ export function AniTool(_ani, _basicTex = null, _basicMesh = null) {
             gCloseEvent = null;
         }
     });
-    CUtil.ID("ModeMove_btn").onclick = () => { AniToolSetMode(1); };
-    CUtil.ID("ModeCreate_btn").onclick = () => { AniToolSetMode(2); };
-    CUtil.ID("ModeDelete_btn").onclick = () => { AniToolSetMode(3); };
-    CUtil.ID("ModeRange_btn").onclick = () => { AniToolSetMode(4); };
-    CUtil.ID("list-tab").onclick = () => { AniToolSetMode(0); };
-    CUtil.ID("STX_num").onchange = AniToolRangeInit;
-    CUtil.ID("STY_num").onchange = AniToolRangeInit;
-    CUtil.ID("EDX_num").onchange = AniToolRangeInit;
-    CUtil.ID("EDY_num").onchange = AniToolRangeInit;
+    CDOM.ID("ModeMove_btn").onclick = () => { AniToolSetMode(1); };
+    CDOM.ID("ModeCreate_btn").onclick = () => { AniToolSetMode(2); };
+    CDOM.ID("ModeDelete_btn").onclick = () => { AniToolSetMode(3); };
+    CDOM.ID("ModeRange_btn").onclick = () => { AniToolSetMode(4); };
+    CDOM.ID("list-tab").onclick = () => { AniToolSetMode(0); };
+    CDOM.ID("STX_num").onchange = AniToolRangeInit;
+    CDOM.ID("STY_num").onchange = AniToolRangeInit;
+    CDOM.ID("EDX_num").onchange = AniToolRangeInit;
+    CDOM.ID("EDY_num").onchange = AniToolRangeInit;
 }
 async function AniToolDrop(_drop) {
     if (_drop.mFiles != null) {
@@ -326,7 +325,7 @@ async function AniToolDrop(_drop) {
             if (fileDrop.mPaths.length > 0 && fileDrop.mPaths[i] != null) {
                 gAtl.Frame().Load().Exe(fileDrop.mPaths[i], new CLoaderOption().Set("mFilter", CTexture.eFilter.Neaest));
                 let info = CString.ExtCut(fileDrop.mPaths[i]);
-                let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
+                let defaultDelay = Number(CDOM.IDValue("defaultDelay"));
                 if (info.ext == "png" || info.ext == "jpg") {
                     let img = new CClipImg(-1, defaultDelay, fileDrop.mPaths[i]);
                     gAni.Push(img);
@@ -359,7 +358,7 @@ async function AniToolDrop(_drop) {
                     base64.mData = arrayBuffer;
                     base64.RefreshHash();
                     base64.mOption = clipBase64.mBase64File.mOption;
-                    let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
+                    let defaultDelay = Number(CDOM.IDValue("defaultDelay"));
                     let clip = new CClipImg(-1, defaultDelay, base64.FileName());
                     gAni.Push(clip);
                 }
@@ -424,16 +423,16 @@ function AniToolUpdate(_delay) {
         if (gMode == 4) {
             let point = DragBoxToPoint(gAtl.Frame().Input().GetDragBound());
             gAtl.Frame().Input().SetDragBox(false);
-            CUtil.IDValue("STX_num", point[0]);
-            CUtil.IDValue("STY_num", point[1]);
-            CUtil.IDValue("EDX_num", point[2]);
-            CUtil.IDValue("EDY_num", point[3]);
+            CDOM.IDValue("STX_num", point[0]);
+            CDOM.IDValue("STY_num", point[1]);
+            CDOM.IDValue("EDX_num", point[2]);
+            CDOM.IDValue("EDY_num", point[3]);
             AniToolRangeInit();
         }
         else if (gMode == 2) {
             let point = DragBoxToPoint(gAtl.Frame().Input().GetDragBound());
             gAtl.Frame().Input().SetDragBox(false);
-            let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
+            let defaultDelay = Number(CDOM.IDValue("defaultDelay"));
             gAni.Push(new CClipCoodi(-1, defaultDelay, point[0], point[1], point[2], point[3]));
             AniToolAniListInit();
         }
@@ -474,34 +473,34 @@ function AniToolUpdate(_delay) {
 }
 function AniToolSetMode(_mode) {
     gMode = _mode;
-    CUtil.ID("ModeMove_btn").className = "btn btn-outline-primary";
-    CUtil.ID("ModeCreate_btn").className = "btn btn-outline-success";
-    CUtil.ID("ModeDelete_btn").className = "btn btn-outline-danger";
-    CUtil.ID("ModeRange_btn").className = "btn btn-outline-secondary";
+    CDOM.ID("ModeMove_btn").className = "btn btn-outline-primary";
+    CDOM.ID("ModeCreate_btn").className = "btn btn-outline-success";
+    CDOM.ID("ModeDelete_btn").className = "btn btn-outline-danger";
+    CDOM.ID("ModeRange_btn").className = "btn btn-outline-secondary";
     switch (gMode) {
         case 1:
-            CUtil.ID("ModeMove_btn").className = "btn btn-primary";
+            CDOM.ID("ModeMove_btn").className = "btn btn-primary";
             break;
         case 2:
-            CUtil.ID("ModeCreate_btn").className = "btn btn-success";
+            CDOM.ID("ModeCreate_btn").className = "btn btn-success";
             break;
         case 3:
-            CUtil.ID("ModeDelete_btn").className = "btn btn-danger";
+            CDOM.ID("ModeDelete_btn").className = "btn btn-danger";
             break;
         case 4:
-            CUtil.ID("ModeRange_btn").className = "btn btn-secondary";
+            CDOM.ID("ModeRange_btn").className = "btn btn-secondary";
             break;
     }
 }
 function AniToolCutExe() {
-    let DivX_num = Number(CUtil.IDValue("DivX_num"));
-    let DivY_num = Number(CUtil.IDValue("DivY_num"));
-    let STX_num = Number(CUtil.IDValue("STX_num"));
-    let STY_num = Number(CUtil.IDValue("STY_num"));
-    let EDX_num = Number(CUtil.IDValue("EDX_num"));
-    let EDY_num = Number(CUtil.IDValue("EDY_num"));
-    let defaultDelay = Number(CUtil.IDValue("defaultDelay"));
-    let CutVertical = CUtil.IDChecked("CutVertical");
+    let DivX_num = Number(CDOM.IDValue("DivX_num"));
+    let DivY_num = Number(CDOM.IDValue("DivY_num"));
+    let STX_num = Number(CDOM.IDValue("STX_num"));
+    let STY_num = Number(CDOM.IDValue("STY_num"));
+    let EDX_num = Number(CDOM.IDValue("EDX_num"));
+    let EDY_num = Number(CDOM.IDValue("EDY_num"));
+    let defaultDelay = Number(CDOM.IDValue("defaultDelay"));
+    let CutVertical = CDOM.IDChecked("CutVertical");
     let tickX = (EDX_num - STX_num) / DivX_num;
     let tickY = (EDY_num - STY_num) / DivY_num;
     if (CutVertical) {
@@ -525,8 +524,8 @@ function AniToolCutExe() {
 function AniToolPlay() {
     gAtl.Canvas("AniTool").Clear();
     let d2 = AniToolIs2D();
-    let speedRange = Number(CUtil.IDValue("speedRange"));
-    CUtil.ID("speedRange_la").innerText = speedRange + "";
+    let speedRange = Number(CDOM.IDValue("speedRange"));
+    CDOM.ID("speedRange_la").innerText = speedRange + "";
     if (d2 == false) {
         gAtl.Canvas("AniTool").SetCameraKey("3D");
         let camcon = new CCamCon3DThirdPerson(gAtl.Frame().Input());
@@ -551,13 +550,13 @@ function AniToolRangeInit() {
     let b = gAtl.Canvas("AniTool").Find("Range");
     if (b != null)
         b.Destroy();
-    let STX_num = Number(CUtil.IDValue("STX_num"));
-    let STY_num = Number(CUtil.IDValue("STY_num"));
-    let EDX_num = Number(CUtil.IDValue("EDX_num"));
-    let EDY_num = Number(CUtil.IDValue("EDY_num"));
+    let STX_num = Number(CDOM.IDValue("STX_num"));
+    let STY_num = Number(CDOM.IDValue("STY_num"));
+    let EDX_num = Number(CDOM.IDValue("EDX_num"));
+    let EDY_num = Number(CDOM.IDValue("EDY_num"));
     let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
     ClipSub.SetKey("Range");
-    let pt = ClipSub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'></div>`), new CVec2(EDX_num - STX_num, EDY_num - STY_num), CUtil.ID("AniToolLeft_div")));
+    let pt = ClipSub.PushComp(new CPaintHTML(CDOM.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'></div>`), new CVec2(EDX_num - STX_num, EDY_num - STY_num), CDOM.ID("AniToolLeft_div")));
     pt.SetPivot(new CVec3(1, -1, 1));
     ClipSub.SetPos(new CVec3(STX_num, -STY_num));
 }
@@ -605,8 +604,8 @@ async function AniToolSubjectInit() {
                 if (tex != null) {
                     if (gImg != tex) {
                         gImg = tex;
-                        CUtil.IDValue("EDX_num", gImg.GetWidth());
-                        CUtil.IDValue("EDY_num", gImg.GetHeight());
+                        CDOM.IDValue("EDX_num", gImg.GetWidth());
+                        CDOM.IDValue("EDY_num", gImg.GetHeight());
                         pt2D.SetSize(new CVec2(gImg.GetWidth(), gImg.GetHeight()));
                     }
                     AniToolRangeInit();
@@ -618,7 +617,7 @@ async function AniToolSubjectInit() {
         else if (clip instanceof CClipCoodi) {
             let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
             ClipSub.SetKey(i);
-            let pt = ClipSub.PushComp(new CPaintHTML(CDomFactory.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'>${i}</div>`), new CVec2(clip.mEDX - clip.mSTX, clip.mEDY - clip.mSTY), CUtil.ID("AniToolLeft_div")));
+            let pt = ClipSub.PushComp(new CPaintHTML(CDOM.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'>${i}</div>`), new CVec2(clip.mEDX - clip.mSTX, clip.mEDY - clip.mSTY), CDOM.ID("AniToolLeft_div")));
             ClipSub.SetPos(new CVec3(clip.mSTX + pt.GetSize().x * 0.5, -(clip.mSTY + pt.GetSize().y * 0.5)));
         }
         else if (clip instanceof CClipBase64) {
@@ -666,7 +665,7 @@ async function AniToolSubjectInit() {
     }
 }
 function AniToolViewRender() {
-    const viewDiv = CUtil.ID("AniToolView_div");
+    const viewDiv = CDOM.ID("AniToolView_div");
     viewDiv.innerHTML = "";
     if (!gAni?.mClip?.length)
         return;
@@ -711,9 +710,9 @@ function AniToolViewRender() {
     viewDiv.appendChild(innerWrapper);
 }
 function AniToolAniListInit() {
-    const listDiv = CUtil.ID("listDiv");
+    const listDiv = CDOM.ID("listDiv");
     listDiv.innerHTML = "";
-    const AniToolView_div = CUtil.ID("AniToolView_div");
+    const AniToolView_div = CDOM.ID("AniToolView_div");
     for (let i = 0; i < gAni.mClip.length; ++i) {
         const clip = gAni.mClip[i];
         const card = document.createElement("div");

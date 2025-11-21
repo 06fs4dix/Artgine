@@ -27,19 +27,46 @@ function CLanChk(element)
     }
 
 }
-
-export class CDomFactory
+let gArtgineBodyHTML : HTMLElement=null;
+let gArtginePaintHTML : HTMLElement=null;
+export class CDOM
 {
+    static BodyDiv()
+    {
+        if(gArtgineBodyHTML==null)
+        {
+            gArtgineBodyHTML=document.createElement("div");
+            
+            document.body.append(gArtgineBodyHTML);
+            //gArtgineBodyHTML.style.zIndex=+"";
+        }
+        
+        return gArtgineBodyHTML;
+    }
+    static PaintDiv()
+    {
+        if(gArtginePaintHTML==null)
+        {
+            gArtginePaintHTML=document.createElement("div");
+            document.body.append(gArtginePaintHTML);
+            
+            gArtginePaintHTML.style.position="fixed";
+            gArtginePaintHTML.style.zIndex="1001";
+            gArtginePaintHTML.style.pointerEvents="none";
+        }
+        
+        return gArtginePaintHTML;
+    }
     static DataToDom(_data: HTMLElement | string | object | CJSON): HTMLElement {
         if (_data == null)
             _data = document.createElement("div");
 
         if (typeof _data === "string")
-            _data = CDomFactory.TagToDom(_data);
+            _data = CDOM.TagToDom(_data);
         else if (_data instanceof HTMLElement) {
             // 그대로 사용
         } else {
-            _data = CDomFactory.JSONToDom(_data);
+            _data = CDOM.JSONToDom(_data);
         }
 
         // 안전하게 HTMLElement로 보장
@@ -75,7 +102,7 @@ export class CDomFactory
         if (children.length === 1 && children[0] instanceof HTMLElement) {
             const element = children[0] as HTMLElement;
             // CLan 치환 처리
-            CDomFactory.ProcessCLanInElement(element);
+            CDOM.ProcessCLanInElement(element);
             return element as any;
         }
 
@@ -83,7 +110,7 @@ export class CDomFactory
         wrapper.append(...children);
         
         // CLan 치환 처리
-        CDomFactory.ProcessCLanInElement(wrapper);
+        CDOM.ProcessCLanInElement(wrapper);
         
         return wrapper as any;
     }
@@ -104,7 +131,7 @@ export class CDomFactory
         // 자식 요소들도 재귀적으로 처리
         const children = element.children;
         for (let i = 0; i < children.length; i++) {
-            CDomFactory.ProcessCLanInElement(children[i] as HTMLElement);
+            CDOM.ProcessCLanInElement(children[i] as HTMLElement);
         }
     }
 
@@ -131,7 +158,7 @@ export class CDomFactory
             el=document.createElement("div") as HTMLElement;
             for(var each1 of _json)
             {
-                el.append(CDomFactory.JSONToDom(each1));
+                el.append(CDOM.JSONToDom(each1));
             }
             return el;
         }
@@ -212,11 +239,7 @@ export class CDomFactory
         {
             for(var each1 of html)
             {
-                el.append(CDomFactory.DataToDom(each1));
-                // if(each1 instanceof HTMLElement)
-                //     el.append(each1);
-                // else
-                //     el.append(CDomFactory.JSONToDom(each1));
+                el.append(CDOM.DataToDom(each1));
             }
         }
         else if(html instanceof HTMLElement)
@@ -226,13 +249,13 @@ export class CDomFactory
         else if(typeof html=="string")
         {
             if(el==null)
-                el=CDomFactory.TagToDom(html) as any;
+                el=CDOM.TagToDom(html) as any;
             else
-                el.append(CDomFactory.TagToDom(html));
+                el.append(CDOM.TagToDom(html));
         }
         else if(html!=null)
         {
-            el.append(CDomFactory.JSONToDom(html));
+            el.append(CDOM.JSONToDom(html));
         }
         
         
@@ -247,7 +270,7 @@ export class CDomFactory
             var lg = each0.getAttribute("data-CLan");
             var data = CLan.Get(lg);
             if (typeof data == "object") {
-                each0.append(CDomFactory.DataToDom(data));
+                each0.append(CDOM.DataToDom(data));
             }
             else if (each0['placeholder'] != null)
                 each0['placeholder'] = data;
@@ -255,5 +278,27 @@ export class CDomFactory
                 each0.innerHTML = data;
         }
     }
+
+    static ID(_id : string,_doc=document) : HTMLElement
+	{
+		return _doc.getElementById(_id);
+	}
+	static IDInput(_id : string) : HTMLInputElement
+	{
+		return document.getElementById(_id) as HTMLInputElement;
+	}
+	static IDValue(_id : string,_value=null) : string
+	{
+		if(_value!=null)
+			(document.getElementById(_id) as HTMLInputElement).value=_value;
+		return (document.getElementById(_id) as HTMLInputElement).value;
+	}
+	static IDChecked(_id: string, _value: boolean | null = null): boolean {
+		const el = document.getElementById(_id) as HTMLInputElement;
+		if (!el || el.type !== "checkbox") return false;
+	
+		if (_value !== null) el.checked = _value;
+		return el.checked;
+	}
     
 }

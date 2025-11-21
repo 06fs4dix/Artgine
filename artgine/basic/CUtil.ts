@@ -76,27 +76,9 @@ export class CUtil
 		var enc = new TextDecoder("utf-8");		
 		return enc.decode(new Uint8Array(_arrayBuffer));
 	}
-	static ID(_id : string,_doc=document) : HTMLElement
-	{
-		return _doc.getElementById(_id);
-	}
-	static IDInput(_id : string) : HTMLInputElement
-	{
-		return document.getElementById(_id) as HTMLInputElement;
-	}
-	static IDValue(_id : string,_value=null) : string
-	{
-		if(_value!=null)
-			(document.getElementById(_id) as HTMLInputElement).value=_value;
-		return (document.getElementById(_id) as HTMLInputElement).value;
-	}
-	static IDChecked(_id: string, _value: boolean | null = null): boolean {
-		const el = document.getElementById(_id) as HTMLInputElement;
-		if (!el || el.type !== "checkbox") return false;
+
 	
-		if (_value !== null) el.checked = _value;
-		return el.checked;
-	}
+	
 	static Language()
 	{
 	

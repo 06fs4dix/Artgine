@@ -98,6 +98,7 @@ export class CVTileSurfacePattern extends CObject {
     }
 }
 export class CVTile extends CVTileSurfacePattern {
+    mKey = "";
     mVInfo = 0;
     mCollider = CCollider.eEvent.None;
     constructor() {
@@ -125,14 +126,13 @@ export class CVTileRole extends CVTileSurfacePattern {
     }
 }
 export class CVTileMold extends CObject {
-    mWidth;
-    mHeight;
+    mKey = "";
+    mSize;
     mTileVInfoArr;
     constructor(_width = 1, _height = 1) {
         super();
-        this.mWidth = _width;
-        this.mHeight = _height;
-        this.mTileVInfoArr = new Array(this.mWidth * this.mHeight);
+        this.mSize = new CVec3(1, 1, 1);
+        this.mTileVInfoArr = new Array(this.mSize.x * this.mSize.y, this.mSize.z);
         this.mTileVInfoArr.fill(-1);
     }
 }
