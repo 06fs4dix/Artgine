@@ -1,5 +1,5 @@
 //Version
-const version='mhqc6jvt_38';
+const version='mi8vige2_35';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -70,7 +70,7 @@ import { CPaint3DDecal } from "https://06fs4dix.github.io/Artgine/plugin/Decal/D
 import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
 import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
-let PCF=new CVec1(1.0);
+let PCF=new CVec1(0.0);
 var bias : number = 5;
 var normalBias : number = 4;
 var shadowRate=0.7;
@@ -85,11 +85,11 @@ rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
 rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
-//rp.mShaderAttr.push(new CShaderAttr("jitter",0.5));
+rp.mShaderAttr.push(new CShaderAttr("jitter",0.2));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mRenderTarget="shadowread.tex";
 //rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
-rp.mTag="shadowRead";
+rp.mTag.add("shadowRead");
 
 rp=forward.PushRP(new CRPAuto());
 rp.PushOr(new CCondition("class","==","CPaint3D"));
@@ -99,7 +99,7 @@ rp.mShaderAttr.push(new CShaderAttr(10,"shadowread.tex"));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(10)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 rp.mShaderAttr.push(new CShaderAttr("ligStep1",new CVec1(SDF.eLightStep1.None)));
-rp.mTag="light";
+rp.mTag.add("light");
 
 
 
@@ -182,7 +182,7 @@ let cubeSub=Main.PushSub(new CSubject());
 cubeSub.SetKey("Sky");
 cubeSub.SetSca(new CVec3(10,10,10));
 let ptcube=cubeSub.PushComp(new CPaintCube(""));
-ptcube.Sky(true,false,true,false,false);
+ptcube.Sky(true,false,false,false,false);
 gAtl.Brush().GetCam3D().Init(new CVec3(1580,670,1980),new CVec3(830,300,1220));
 
 
@@ -216,7 +216,7 @@ chsub.SetKey("User");
 let ptRes="Res/blocky/blocky.FBX";
 let aniRes="Res/blocky/blocky.FBX";
 let pt3=chsub.PushComp(new CPaint3D(ptRes,true,100));
-pt3.Shadow();
+pt3.PushTag(CPaint.eTag.Shadow);
 chsub.SetPos(new CVec3(590,600,892));
 //chsub.SetRot(new CVec3(0,3.14/2,0));
 let bound=new CBound();
@@ -230,10 +230,11 @@ let rb=chsub.PushComp(new CRigidBody());
 rb.SetGravity(1);
 let aniStand=new CAnimation();
 let cm=aniStand.Push(new CClipMesh(0,1,2500,4500,aniRes));
-cm.mBake=true;
+//cm.mBake=true;
 //aniStand.Push(new CClipMesh(0,2,500,2500,"blocky_short/blocky_short.FBX"));
 let aniWalk=new CAnimation();
-aniWalk.Push(new CClipMesh(0,1.5,0,2000,aniRes));
+cm=aniWalk.Push(new CClipMesh(0,1.5,0,2000,aniRes));
+cm.mBake=true;
 let af=chsub.PushComp(new CAniFlow(aniWalk));
 let camCon=new CCamCon3DThirdPerson(gAtl.Frame().Input());
 gAtl.Brush().GetCam3D().SetCamCon(camCon);
@@ -402,11 +403,20 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
 
 
 
-var a=0;
-while(a --> 10)
-{
-    console.log(a);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
