@@ -3,7 +3,6 @@ import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/com
 import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CComponent.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 export class CProComp extends CBehavior {
     mHP = 100;
@@ -46,7 +45,6 @@ export class CProComp extends CBehavior {
         else
             this.mCL = this.GetOwner().FindComp(CCollider);
         this.mCL.SetCameraOut(true);
-        this.mPT.SetRot(new CVec3(0, 0, 0));
         this.EditRefresh();
     }
     Update(_update) {

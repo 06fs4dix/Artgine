@@ -1,5 +1,5 @@
 //Version
-const version='mhyvhc2r_10';
+const version='mi8vige2_30';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -293,7 +293,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     rp.PushAnd(new CCondition("mTag[bloom]"));
     rp.mShader=gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget=emissiveTexKey;
-    rp.mTag="mask";
+    rp.mTag.add("mask");
 
 
     let basiceTex=new CTexture();
@@ -308,7 +308,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     let sufBloom=BloomRPM.PushSuf(new CSurfaceBloom()) as CSurfaceBloom;
     let srp=sufBloom.GetRP();
     srp.mShader=gAtl.Frame().Pal().Sl2DKey();
-    srp.mTag="blit";
+    srp.mTag.add("blit");
     srp.mShaderAttr.push(new CShaderAttr(0,emissiveTexKey));
     // sufBloom.m_intensity = 100.0;
     // sufBloom.m_threshold = 1.0;
@@ -327,7 +327,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
 
 
     srp.mShader=gAtl.Frame().Pal().SlPostKey();
-    srp.mTag="blend";
+    srp.mTag.add("blend");
     srp.mShaderAttr.push(new CShaderAttr(0,basiceTexKey));
     srp.mShaderAttr.push(new CShaderAttr(1,sufBloom.GetTexKey()));
     srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
@@ -348,6 +348,21 @@ Option_btn.SetContent(`
 <div>
     블룸,기본 설정 가능
 </div>`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

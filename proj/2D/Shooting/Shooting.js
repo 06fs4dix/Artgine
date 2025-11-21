@@ -1,4 +1,4 @@
-const version = 'mhyvhc2r_10';
+const version = 'mi8vige2_30';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
@@ -233,7 +233,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     rp.PushAnd(new CCondition("mTag[bloom]"));
     rp.mShader = gAtl.Frame().Pal().Sl2DKey();
     rp.mRenderTarget = emissiveTexKey;
-    rp.mTag = "mask";
+    rp.mTag.add("mask");
     let basiceTex = new CTexture();
     basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)]);
     let basiceTexKey = BloomRPM.PushTex("basiceTex.tex", basiceTex);
@@ -244,13 +244,13 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     let sufBloom = BloomRPM.PushSuf(new CSurfaceBloom());
     let srp = sufBloom.GetRP();
     srp.mShader = gAtl.Frame().Pal().Sl2DKey();
-    srp.mTag = "blit";
+    srp.mTag.add("blit");
     srp.mShaderAttr.push(new CShaderAttr(0, emissiveTexKey));
     let sufLast = BloomRPM.PushSuf(new CSurface());
     srp = sufLast.GetRP();
     sufLast.SetUseRT(false);
     srp.mShader = gAtl.Frame().Pal().SlPostKey();
-    srp.mTag = "blend";
+    srp.mTag.add("blend");
     srp.mShaderAttr.push(new CShaderAttr(0, basiceTexKey));
     srp.mShaderAttr.push(new CShaderAttr(1, sufBloom.GetTexKey()));
     srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));

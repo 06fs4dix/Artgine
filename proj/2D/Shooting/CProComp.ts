@@ -68,7 +68,7 @@ export class CProComp extends CBehavior
         this.mCL.SetCameraOut(true);
         
 
-        this.mPT.SetRot(new CVec3(0,0,0));
+        
         //this.GetOwner().SetPower(this.m_speed);
         this.EditRefresh();
     }
