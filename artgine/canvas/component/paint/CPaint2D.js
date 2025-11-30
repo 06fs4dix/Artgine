@@ -62,7 +62,6 @@ export class CPaint2D extends CPaint {
         this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
         this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
         this.mBound.mMax.z = 0.5;
-        this.mBoundFMatR = 0;
         this.mBound.mType = CBound.eType.Box;
         this.PRSReset();
         this.mShaderAttrMap.set("billboard", new CShaderAttr("billboard", new CVec1(0)));
@@ -79,7 +78,6 @@ export class CPaint2D extends CPaint {
         this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
         this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
         this.mBound.mMax.z = 0.5;
-        this.mBoundFMatR = 0;
         this.mBound.mType = CBound.eType.Box;
     }
     PushNormalMap(_tex) {
@@ -303,6 +301,16 @@ export class CPaint2D extends CPaint {
         this.mLMat.mF32A[13] = lpos.y;
         this.mLMat.mF32A[14] = lpos.z;
         this.mLMat.UnitCheck();
+        this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMin.z = -0.5;
+        this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+        this.mBound.mMax.z = 0.5;
+        this.mBound.MatCoordi(this.mLMat);
+        this.mBound.mMax.z = this.mBound.GetOutRadius();
+        this.mBound.mMin.z = -this.mBound.mMax.z;
+        this.mBW.mRadian = 0;
         this.mUpdateLMat = true;
     }
     GetHalf() {
@@ -329,6 +337,7 @@ export class CPaint2D extends CPaint {
     }
     Start() {
         super.Start();
+        this.PRSReset();
         if (this.mPosList != null) {
             this.mBound.Reset();
             this.mBound.InitBound(this.mPosList);
@@ -414,7 +423,6 @@ export class CPaint2D extends CPaint {
         this.PRSReset();
     }
     SetSize(_size) {
-        this.mBoundFMatR = 0;
         if (_size != null && _size.IsZero())
             this.mSize = null;
         else if (this.mSize == null) {
@@ -468,7 +476,8 @@ export class CPaint2D extends CPaint {
             this.mBound.Reset();
             this.mBound.InitBound(this.mPosList);
             this.mBound.SetType(CBound.eType.Box);
-            this.mBoundFMatR = 0;
+            this.mBW.mRadian = 0;
+            this.mLMat.Unit();
         }
     }
 }
@@ -533,6 +542,8 @@ export class CPaintHTML extends CPaint2D {
         if (this.mRenPT[0].mCam.mUpdateMat != 0 || this.mOwner.mUpdateMat != 0 || this.mOwner.GetFrame().Win().IsResize() || this.mUpdateFMat == true) { }
         else
             return;
+        this.PRSReset();
+        this.CacBound();
         this.mUpdateFMat = false;
         if (this.mAttach == false) {
             this.mParent.appendChild(this.mElement);
@@ -541,7 +552,6 @@ export class CPaintHTML extends CPaint2D {
         }
         let zoom = 1 / this.mRenPT[0].mCam.mZoom;
         let pos = this.GetOwner().GetMat().xyz;
-        this.mBound.SetType(CBound.eType.Box);
         if (this.mElement.offsetWidth != 0) {
             this.mOrgSize.x = this.mElement.clientWidth;
             this.mOrgSize.y = this.mElement.clientHeight;
@@ -555,7 +565,7 @@ export class CPaintHTML extends CPaint2D {
                 this.mElement.style.width = this.mSize.x + "px";
             if (this.mSize.y != 0)
                 this.mElement.style.height = this.mSize.y + "px";
-            this.mElement.style.transform = "scale(" + zoom + "," + zoom + ")";
+            this.mElement.style.transform = "scale(" + (zoom * this.GetOwner().GetMat().mF32A[0]) + "," + (zoom * this.GetOwner().GetMat().mF32A[5]) + ")";
             pivotX = this.mOrgSize.x * 0.5;
             pivotY = this.mOrgSize.y * 0.5;
         }

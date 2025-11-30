@@ -18,6 +18,9 @@ export class CComponent extends CObject {
         this.mComMsg = new Array();
     }
     GetSysc() { return this.mSysc; }
+    IsStart() {
+        return this.mStartChk == false;
+    }
     IsShould(_member, _type) {
         if (_type == CObject.eShould.Proxy) {
             if (_member == "mEnable")

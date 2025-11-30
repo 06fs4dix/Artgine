@@ -7,6 +7,7 @@ import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
 import { CRenderPass } from "../../../render/CRenderPass.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CTexture } from "../../../render/CTexture.js";
+import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
 import { CDOM } from "../../../basic/CDOM.js";
@@ -20,7 +21,7 @@ import { SDF } from "../../../z_file/SDF.js";
 import { CRPAuto } from "../../CRPMgr.js";
 import { CAlpha, CColor, CColorVFX } from "../CColor.js";
 import { CComponent } from "../CComponent.js";
-import { CWASM } from "../../../basic/CWASM.js";
+import { CBoundWorldPaint } from "../CBoundWorld.js";
 export class CRenPaint {
     mRenInfoKey = null;
     mCam = null;
@@ -40,6 +41,7 @@ export class CPaint extends CComponent {
         Wind: "Wind",
         Parallax: "parallax",
     };
+    mBW = new CBoundWorldPaint();
     mFMat;
     mLMat;
     mShaderAttrMap = new Map();
@@ -50,9 +52,6 @@ export class CPaint extends CComponent {
     mAutoRPUpdate = true;
     mCamCullUpdate = true;
     mBound = new CBound();
-    mBoundFMat;
-    mBoundFMatC;
-    mBoundFMatR = 0;
     mRenderPass = new Array();
     mRenPT = new Array();
     mTextureKey = new Array();
@@ -77,19 +76,20 @@ export class CPaint extends CComponent {
         this.mColorModel = this.mShaderAttrMap.get("colorModel").mData;
         this.mAlphaModel = this.mShaderAttrMap.get("alphaModel").mData;
         this.mColorVFX = null;
-        this.mBoundFMatC = new CVec3(0, 0, 0);
-        this.mBoundFMatC.NewWASM();
         this.mFMat = new CMat(null);
         this.mFMat.NewWASM();
         this.mLMat = new CMat(null);
         this.mLMat.NewWASM();
-        this.mBoundFMat = new CBound();
-        this.mBoundFMat.NewWASM();
+        this.mBW.mPos.NewWASM();
         this.mBound = new CBound();
         this.mBound.NewWASM();
         this.PushTag("alphaCut");
         if (gPosDummy.Ptr() == null)
             gPosDummy.NewWASM();
+    }
+    SetWorldType(_type) {
+        this.mWorldMatType = _type;
+        this.PushTag("worldType");
     }
     SetEnable(_val) {
         super.SetEnable(_val);
@@ -107,10 +107,9 @@ export class CPaint extends CComponent {
             return;
         }
         super.Destroy();
-        this.mBoundFMatC.ReleaseWASM();
+        this.mBW.mPos.ReleaseWASM();
         this.mFMat.ReleaseWASM();
         this.mLMat.ReleaseWASM();
-        this.mBoundFMat.DeleteWASM();
         this.mBound.DeleteWASM();
         this.ClearBatch();
     }
@@ -120,11 +119,14 @@ export class CPaint extends CComponent {
         this.mLMat.Unit();
         this.ClearBatch();
         this.mTextureKey.length = 0;
-        this.mBoundFMat.Reset();
         this.mBound.Reset();
+        this.mBound.SetType(CBound.eType.Box);
+        this.mBW.mBound.Reset();
+        this.mBW.mRadian = 0;
         this.mShaderAttrMap.delete("mColorVFX");
         this.mColorVFX = null;
         this.mTag.clear();
+        this.mInit = false;
         this.PushTag("alphaCut");
         this.mBatchMap.clear();
     }
@@ -137,7 +139,7 @@ export class CPaint extends CComponent {
             _member == "mRenPT" || _member == "mTagKey" ||
             _member == "mDefaultAttr" || _member == "mBatchMap" || _member == "mBatchLastArr" || _member == "mBatchLastVF" ||
             _member == "mBoundFMat" || _member == "mBoundFMatC" || _member == "mBoundFMatR" || _member == "mBound" ||
-            _member == "mAutoRPUpdate" || _member == "mCamCullUpdate" ||
+            _member == "mAutoRPUpdate" || _member == "mCamCullUpdate" || _member == "mBW" ||
             _member == "mColorModel" || _member == "mAlphaModel" || _member == "mColorVFX")
             return false;
         return super.IsShould(_member, _type);
@@ -236,15 +238,11 @@ export class CPaint extends CComponent {
         return false;
     }
     UpdateRenPt() {
-        let pos = gPosDummy;
         for (let i = 0; i < this.mRenPT.length; ++i) {
             let ren = this.mRenPT[i];
             if (ren.mDistance == null || ren.mCam.mUpdateMat != 0 || this.mUpdateFMat || this.mOwner.GetFrame().Win().IsResize()) {
                 let cam = ren.mCam;
                 let plane = ren.mCam.GetPlane();
-                pos.mF32A[0] = this.mFMat.mF32A[12] + this.mBoundFMatC.mF32A[0];
-                pos.mF32A[1] = this.mFMat.mF32A[13] + this.mBoundFMatC.mF32A[1];
-                pos.mF32A[2] = this.mFMat.mF32A[14] + this.mBoundFMatC.mF32A[2];
                 if (this.mRenderPass[i].mZEarly) {
                     let eye = ren.mCam.GetEye();
                     if (cam.GetView().z < -0.98) {
@@ -254,13 +252,13 @@ export class CPaint extends CComponent {
                             ren.mDistance = eye.z - this.mFMat.z;
                     }
                     else {
-                        ren.mDistance = CMath.V3Distance(eye, pos);
+                        ren.mDistance = CMath.V3Distance(eye, this.mBW.mPos);
                     }
                     ren.mDistance = Math.trunc(ren.mDistance * 128) << 9;
                 }
                 else
                     ren.mDistance = 0;
-                if (CUtilMath.PlaneSphereInside(plane, pos, this.mBoundFMatR, null) || this.mRenderPass[i].mCullFrustum == false)
+                if (CUtilMath.PlaneSphereInside(plane, this.mBW.mPos, this.mBW.mRadian, null) || this.mRenderPass[i].mCullFrustum == false)
                     ren.mShow = 0;
                 else {
                     ren.mShow = 1;
@@ -521,40 +519,12 @@ export class CPaint extends CComponent {
     ;
     SetLMat(_mat) { this.mLMat.Import(_mat); this.mUpdateLMat = true; }
     CacBound() {
-        if (this.mBoundFMatR != 0)
-            return;
-        if (this.mTag.has("tail")) {
-            this.mBoundFMat.mMin.mF32A[0] = this.mBound.mMin.mF32A[0];
-            this.mBoundFMat.mMin.mF32A[1] = this.mBound.mMin.mF32A[1];
-            this.mBoundFMat.mMin.mF32A[2] = this.mBound.mMin.mF32A[2];
-            this.mBoundFMat.mMax.mF32A[0] = this.mBound.mMax.mF32A[0];
-            this.mBoundFMat.mMax.mF32A[1] = this.mBound.mMax.mF32A[1];
-            this.mBoundFMat.mMax.mF32A[2] = this.mBound.mMax.mF32A[2];
-            this.mBoundFMat.GetCenter(this.mBoundFMatC);
-            var maxX = Math.abs(this.mBoundFMat.mMax.mF32A[0] - this.mBoundFMatC.mF32A[0]);
-            var maxY = Math.abs(this.mBoundFMat.mMax.mF32A[1] - this.mBoundFMatC.mF32A[1]);
-            var maxZ = Math.abs(this.mBoundFMat.mMax.mF32A[2] - this.mBoundFMatC.mF32A[2]);
-            var maxAll = CMath.Max(CMath.Max(maxX, maxY), maxZ);
-            this.mBoundFMatR = maxAll;
+        if (this.GetOwner().mUpdateRS != CUpdate.eType.Not || this.mBW.mRadian == 0) {
+            if (this.mTag.has("tail"))
+                this.mBW.Init(this.mBound, null);
+            else
+                this.mBW.Init(this.mBound, this.mOwner.GetMat());
         }
-        else if (this.mFMat.Ptr() == null) {
-            this.mBoundFMat.mMin.mF32A[0] = this.mBound.mMin.mF32A[0] * this.mFMat.mF32A[0];
-            this.mBoundFMat.mMin.mF32A[1] = this.mBound.mMin.mF32A[1] * this.mFMat.mF32A[5];
-            this.mBoundFMat.mMin.mF32A[2] = this.mBound.mMin.mF32A[2] * this.mFMat.mF32A[10];
-            this.mBoundFMat.mMax.mF32A[0] = this.mBound.mMax.mF32A[0] * this.mFMat.mF32A[0];
-            this.mBoundFMat.mMax.mF32A[1] = this.mBound.mMax.mF32A[1] * this.mFMat.mF32A[5];
-            this.mBoundFMat.mMax.mF32A[2] = this.mBound.mMax.mF32A[2] * this.mFMat.mF32A[10];
-            this.mBoundFMat.GetCenter(this.mBoundFMatC);
-            var maxX = Math.abs(this.mBoundFMat.mMax.mF32A[0] - this.mBoundFMatC.mF32A[0]);
-            var maxY = Math.abs(this.mBoundFMat.mMax.mF32A[1] - this.mBoundFMatC.mF32A[1]);
-            var maxZ = Math.abs(this.mBoundFMat.mMax.mF32A[2] - this.mBoundFMatC.mF32A[2]);
-            var maxAll = CMath.Max(CMath.Max(maxX, maxY), maxZ);
-            this.mBoundFMatR = maxAll;
-        }
-        else {
-            this.mBoundFMatR = CWASM.BoundMulMat(this.mBoundFMat.mMin.Ptr(), this.mBoundFMat.mMax.Ptr(), this.mBound.mMin.Ptr(), this.mBound.mMax.Ptr(), this.mFMat.Ptr(), this.mBoundFMatC.Ptr());
-        }
-        this.mBoundFMatR *= 1.5;
     }
     Prefab(_owner) {
         if (this.mAutoLoad != null) {
@@ -582,6 +552,7 @@ export class CPaint extends CComponent {
         if (this.mUpdateLMat || this.mOwner.mUpdateMat != 0) {
             CMath.MatMul(this.mLMat, this.mOwner.GetMat(), this.mFMat, true);
             this.CacBound();
+            this.mBW.UpdateMat(this.mOwner.GetMat());
             this.mUpdateFMat = true;
         }
         this.UpdateRenPt();
@@ -612,14 +583,10 @@ export class CPaint extends CComponent {
         return this.mBound;
     }
     GetBoundFMat() {
-        gBoundDummy.Import(this.mBoundFMat);
+        gBoundDummy.Import(this.mBW.mBound);
         gBoundDummy.mMax = CMath.V3AddV3(gBoundDummy.mMax, this.GetFMat().xyz, gBoundDummy.mMax);
         gBoundDummy.mMin = CMath.V3AddV3(gBoundDummy.mMin, this.GetFMat().xyz, gBoundDummy.mMin);
         return gBoundDummy;
-    }
-    SetBound(_bound) {
-        this.mBound = _bound;
-        this.mBoundFMatR = 0;
     }
     Render(_shader) { }
     RenderBatch(_shader, _count = 1) {

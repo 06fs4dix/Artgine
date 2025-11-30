@@ -52,7 +52,7 @@ export class CNavigation extends CGeometryComp
         }
         else
         {
-            if(_paint.GetBound().GetType()==CBound.eType.Null)
+            if((_paint as CPaint).IsStart()==false)
 			{
 				this.mPaintLoad=_paint;
 				return;
@@ -102,14 +102,11 @@ export class CNavigation extends CGeometryComp
 		let start=super.StartChk();
 		if(this.mPaintLoad!=null)
 		{
-			if (this.mPaintLoad instanceof CPaint2D ? this.mPaintLoad.GetSize() != null : this.mPaintLoad.GetBound().GetType() != CBound.eType.Null) 
-			{
-				this.InitBound(this.mPaintLoad);
-				this.mPaintLoad=null;
-				
-				this.UpdateMat();
-			}
-			else
+
+
+             this.InitBound(this.mPaintLoad);
+             this.UpdateMat();
+            if(this.mPaintLoad!=null)
             {
                 this.mStartChk=true;
                 return false;

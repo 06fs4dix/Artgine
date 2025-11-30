@@ -97,7 +97,7 @@ export class SDF {
 		Noise:5,//속도x,강도y,픽셀사이즈z   %노이즈
 		//BorderLight:6,//강도x,두께y
 		Scanline:7,//선 개수 x, 속도 y %줄내려옴
-		OverWrite:8,//선택된 텍스쳐 컬러로 덮어쓰기
+		OverWrite:8,//선택된 텍스쳐 컬러로 덮어쓰기 U,V 반복률,어떤 텍스쳐 알파에서 추출할지
 		//Crop:8,//선택된 택스쳐 영역으로 보이게 하기
 	}
 	static eBlend=

@@ -64,6 +64,8 @@ export class CSubject extends CObject implements IFile , IMat
 	public mInMsg = new CArray<CRouteMsg>();
 	public mOutMsg = new CArray<CRouteMsg>();
 
+
+	public mUpdateRS : number = CUpdate.eType.Updated;
 	public mUpdateMat : number = CUpdate.eType.Updated;
 	mUpdateComp=true;
 
@@ -142,7 +144,13 @@ export class CSubject extends CObject implements IFile , IMat
 		this.mInMsg.Clear();
 		this.mOutMsg.Clear();
 		//this.mCLArr.Clear();
+		this.mUpdateRS=CUpdate.eType.Updated;
 		this.mUpdateMat = CUpdate.eType.Updated;
+
+		for(let com of this.mComArr)
+		{
+			com.ClearMsg();
+		}
 	}
 	
 	Icon() : string
@@ -339,6 +347,7 @@ export class CSubject extends CObject implements IFile , IMat
 	SetEnable(_enable : boolean) 
 	{
 		this.mEnable = _enable;
+		this.mUpdateRS=CUpdate.eType.Updated;
 		this.mUpdateMat=CUpdate.eType.Updated;
 		this.SetChildShow(_enable);
 
@@ -486,7 +495,7 @@ export class CSubject extends CObject implements IFile , IMat
 		if(this.GetRecycleType()!=null)
 		{
 			this.Recycle();
-			this.Reset();
+			//this.Reset();
 			return;
 		}
 

@@ -654,6 +654,83 @@ export class CUtilMath {
         ReturnFun();
         return out;
     }
+    static ColBoxBoxAABB(_boundA, _matA, _boundB, _matB, _push = null) {
+        const aMin = _boundA.mMin;
+        const aMax = _boundA.mMax;
+        const bMin = _boundB.mMin;
+        const bMax = _boundB.mMax;
+        const aLocalCx = (aMin.x + aMax.x) * 0.5;
+        const aLocalCy = (aMin.y + aMax.y) * 0.5;
+        const aLocalCz = (aMin.z + aMax.z) * 0.5;
+        const bLocalCx = (bMin.x + bMax.x) * 0.5;
+        const bLocalCy = (bMin.y + bMax.y) * 0.5;
+        const bLocalCz = (bMin.z + bMax.z) * 0.5;
+        const aLocalHx = (aMax.x - aMin.x) * 0.5;
+        const aLocalHy = (aMax.y - aMin.y) * 0.5;
+        const aLocalHz = (aMax.z - aMin.z) * 0.5;
+        const bLocalHx = (bMax.x - bMin.x) * 0.5;
+        const bLocalHy = (bMax.y - bMin.y) * 0.5;
+        const bLocalHz = (bMax.z - bMin.z) * 0.5;
+        const mA = _matA.mF32A;
+        const mB = _matB.mF32A;
+        const aSx = mA[0];
+        const aSy = mA[5];
+        const aSz = mA[10];
+        const bSx = mB[0];
+        const bSy = mB[5];
+        const bSz = mB[10];
+        const aHx = Math.abs(aSx) * aLocalHx;
+        const aHy = Math.abs(aSy) * aLocalHy;
+        const aHz = Math.abs(aSz) * aLocalHz;
+        const bHx = Math.abs(bSx) * bLocalHx;
+        const bHy = Math.abs(bSy) * bLocalHy;
+        const bHz = Math.abs(bSz) * bLocalHz;
+        const aCx = mA[12] + aLocalCx * aSx;
+        const aCy = mA[13] + aLocalCy * aSy;
+        const aCz = mA[14] + aLocalCz * aSz;
+        const bCx = mB[12] + bLocalCx * bSx;
+        const bCy = mB[13] + bLocalCy * bSy;
+        const bCz = mB[14] + bLocalCz * bSz;
+        const tx = bCx - aCx;
+        const ty = bCy - aCy;
+        const tz = bCz - aCz;
+        if (Math.abs(tx) >= aHx + bHx)
+            return null;
+        if (Math.abs(ty) >= aHy + bHy)
+            return null;
+        if (Math.abs(tz) >= aHz + bHz)
+            return null;
+        const overlapX = aHx + bHx - Math.abs(tx);
+        const overlapY = aHy + bHy - Math.abs(ty);
+        const overlapZ = aHz + bHz - Math.abs(tz);
+        let minOverlap = overlapX;
+        let axis = 0;
+        let sign = (tx >= 0) ? 1 : -1;
+        if (overlapY < minOverlap) {
+            minOverlap = overlapY;
+            axis = 1;
+            sign = (ty >= 0) ? 1 : -1;
+        }
+        if (overlapZ < minOverlap) {
+            minOverlap = overlapZ;
+            axis = 2;
+            sign = (tz >= 0) ? 1 : -1;
+        }
+        const out = _push || new CVec3();
+        out.x = 0;
+        out.y = 0;
+        out.z = 0;
+        if (axis === 0) {
+            out.x = minOverlap * sign;
+        }
+        else if (axis === 1) {
+            out.y = minOverlap * sign;
+        }
+        else {
+            out.z = minOverlap * sign;
+        }
+        return out;
+    }
     static Grad(_hash, _x, _y) {
         return ((_hash & 1) == 0 ? _x : -_x) + ((_hash & 2) == 0 ? _y : -_y);
     }

@@ -28,8 +28,9 @@ export class CBound extends CObject {
     SetType(_type) {
         this.mType = _type;
     }
-    WTForm(_pointer, _div, _input) {
-        if (_pointer.member == "boundType") {
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mType") {
             let textArr = ["Box", "Sphere", "Polytope", "Null"], valArr = [0, 1, 2, 4];
             _input.hidden = true;
             let select = document.createElement("select");
@@ -49,7 +50,7 @@ export class CBound extends CObject {
                 if (_pointer.target instanceof CObject)
                     _pointer.target.EditChange(_pointer, false);
             };
-            _div.append(select);
+            _body.append(select);
             select.addEventListener("change", () => {
                 this.EditRefresh();
             });
@@ -111,13 +112,14 @@ export class CBound extends CObject {
         var maxX = CMath.Max(this.mMax.mF32A[0] - cen.mF32A[0], this.mMin.mF32A[0] - cen.mF32A[0]);
         var maxY = CMath.Max(this.mMax.mF32A[1] - cen.mF32A[1], this.mMin.mF32A[1] - cen.mF32A[1]);
         var maxZ = CMath.Max(this.mMax.mF32A[2] - cen.mF32A[2], this.mMin.mF32A[2] - cen.mF32A[2]);
-        return CMath.Max(CMath.Max(maxX, maxY), maxZ);
+        return Math.min(maxX, maxY, maxZ);
     }
     GetOutRadius() {
-        var ra = this.GetInRadius();
-        if (this.mType == CBound.eType.Sphere)
-            return ra;
-        return CMath.V3Len(new CVec3(ra, ra, ra));
+        var cen = this.GetCenter();
+        var maxX = CMath.Max(this.mMax.mF32A[0] - cen.mF32A[0], this.mMin.mF32A[0] - cen.mF32A[0]);
+        var maxY = CMath.Max(this.mMax.mF32A[1] - cen.mF32A[1], this.mMin.mF32A[1] - cen.mF32A[1]);
+        var maxZ = CMath.Max(this.mMax.mF32A[2] - cen.mF32A[2], this.mMin.mF32A[2] - cen.mF32A[2]);
+        return Math.hypot(maxX, maxY, maxZ);
     }
     GetCenter(_copy = null) {
         var L_cen = _copy;
@@ -148,6 +150,16 @@ export class CBound extends CObject {
         if (_z)
             pos.z = size.z * Math.random() + this.mMin.z;
         return pos;
+    }
+    MatCoordi(_mat) {
+        this.mMin = CMath.V3MulMatCoordi(this.mMin, _mat);
+        this.mMax = CMath.V3MulMatCoordi(this.mMax, _mat);
+        let dummy = new CVec3();
+        for (let i = 0; i < this.mPos.Size(); ++i) {
+            let v = this.mPos.Find(i);
+            dummy.Import(v);
+            CMath.V3MulMatCoordi(dummy, _mat, v);
+        }
     }
     WTBubbling() { return false; }
     Export(_copy, _resetKey) {

@@ -211,7 +211,7 @@ export class CPaint3D extends CPaint {
         this.ExeLocalMat(this.mCenterPos, this.mTargetScale);
         this.ClearBatch();
         this.mUpdateFMat = true;
-        this.mBoundFMatR = 0;
+        this.mBW.mRadian = 0;
         if (node.Size() == 1) {
             let ne = node.Find(0);
             if (ne.sum.IsUnit()) {
@@ -219,6 +219,7 @@ export class CPaint3D extends CPaint {
                 this.mFMatLink = true;
             }
         }
+        this.mBound.MatCoordi(this.mLMat);
         return true;
     }
     Update(_update) {

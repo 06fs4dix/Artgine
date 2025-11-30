@@ -262,8 +262,8 @@ export class CGJK_EPA
 
 	}
  
-    Intersect(shape1 : CGJKShape,shape2 : CGJKShape) : boolean    {	    return true;	}
-    support(shape1 : CGJKShape,shape2 : CGJKShape,_v : CVec3,p3 : CVec3=null)
+    Intersect(shape1 : CBoundWorldCollider,shape2 : CBoundWorldCollider) : boolean    {	    return true;	}
+    support(shape1 : CBoundWorldCollider,shape2 : CBoundWorldCollider,_v : CVec3,p3 : CVec3=null)
     {
 	    //v = CMath.V3Nor(v);
 	    var p1 = shape1.getFarthestPointInDirection(_v);
@@ -328,9 +328,10 @@ export class CGJK_EPA
     //Expanding Polytope Algorithm
     //Find minimum translation vector to resolve collision
     
-    EPA(coll1 : CGJKShape,coll2 : CGJKShape) : CVec3  {      return null;    }
+    EPA(coll1 : CBoundWorldCollider,coll2 : CBoundWorldCollider) : CVec3  {      return null;    }
 };
 import CGJK_EPA_imple from "../geometry_imple/CGJK_EPA.js";
+import { CBoundWorldCollider } from "../canvas/component/CBoundWorld.js"
 
 CGJK_EPA_imple();
 

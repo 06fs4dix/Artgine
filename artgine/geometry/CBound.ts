@@ -6,6 +6,7 @@ import {CMath} from "../geometry/CMath.js"
 import {CArray} from "../basic/CArray.js";
 import {CObject,CPointer } from "../basic/CObject.js";
 import { CJSON } from "../basic/CJSON.js";
+import { CMat } from "./CMat.js";
 
 
 
@@ -42,13 +43,11 @@ export class CBound extends CObject
 	SetType(_type) 
 	{
 		this.mType = _type; 
-		// if (_type == CBound.eType.Polytope && this.vInfo.len==0)
-		// {
-		// 	this.boundType = CBound.eType.Box;
-		// }
 	}
-	WTForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
-		if(_pointer.member == "boundType")
+	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+	{
+		super.EditForm(_pointer,_body,_input);
+		if(_pointer.member == "mType")
 		{
 		
 			let textArr = ["Box","Sphere","Polytope","Null"], valArr = [0,1,2,4];
@@ -73,7 +72,7 @@ export class CBound extends CObject
 			};
 
 			//let select = CWatchUtil.Select(_pointer, _input, textArr, valArr);
-			_div.append(select);
+			_body.append(select);
 
 
 
@@ -162,14 +161,16 @@ export class CBound extends CObject
 		var maxY = CMath.Max(this.mMax.mF32A[1] - cen.mF32A[1], this.mMin.mF32A[1] - cen.mF32A[1]);
 		var maxZ = CMath.Max(this.mMax.mF32A[2] - cen.mF32A[2], this.mMin.mF32A[2] - cen.mF32A[2]);
 
-		return CMath.Max(CMath.Max(maxX, maxY), maxZ);
+		return Math.min(maxX, maxY, maxZ);
 	}
 	GetOutRadius()
 	{
-		var ra=this.GetInRadius();
-		if (this.mType == CBound.eType.Sphere)
-			return ra;
-		return CMath.V3Len(new CVec3(ra, ra, ra));
+		var cen = this.GetCenter();
+		var maxX = CMath.Max(this.mMax.mF32A[0] - cen.mF32A[0], this.mMin.mF32A[0] - cen.mF32A[0]);
+		var maxY = CMath.Max(this.mMax.mF32A[1] - cen.mF32A[1], this.mMin.mF32A[1] - cen.mF32A[1]);
+		var maxZ = CMath.Max(this.mMax.mF32A[2] - cen.mF32A[2], this.mMin.mF32A[2] - cen.mF32A[2]);
+
+		return Math.hypot(maxX, maxY, maxZ);
 	}
 	GetCenter(_copy : CVec3=null)
 	{
@@ -215,6 +216,23 @@ export class CBound extends CObject
 		if(_z)	pos.z=size.z*Math.random()+this.mMin.z;
 
 		return pos;
+	}
+	MatCoordi(_mat :CMat)
+	{
+
+		this.mMin=CMath.V3MulMatCoordi(this.mMin,_mat);
+		this.mMax=CMath.V3MulMatCoordi(this.mMax,_mat);
+		
+		let dummy=new CVec3();
+		for(let i=0;i<this.mPos.Size();++i)
+		{
+			let v=this.mPos.Find(i);
+			dummy.Import(v);
+			CMath.V3MulMatCoordi(dummy,_mat,v);
+			
+		}
+
+		
 	}
 	// GetRadiusLen()
 	// {

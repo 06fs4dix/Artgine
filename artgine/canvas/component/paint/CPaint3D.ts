@@ -334,7 +334,7 @@ export class CPaint3D extends CPaint
 		this.ClearBatch();
 			
 		this.mUpdateFMat=true;
-		this.mBoundFMatR = 0;
+		this.mBW.mRadian=0;
 
 		if(node.Size()==1)
 		{
@@ -345,7 +345,9 @@ export class CPaint3D extends CPaint
 				this.mFMatLink=true;
 			}
 		}
-
+		// this.mBound.mMin=CMath.V3MulMatCoordi(this.mBound.mMin,this.mLMat);
+		// this.mBound.mMax=CMath.V3MulMatCoordi(this.mBound.mMax,this.mLMat);
+		this.mBound.MatCoordi(this.mLMat);
 
 		return true;
 	}

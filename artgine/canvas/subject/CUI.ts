@@ -30,8 +30,8 @@ var g_uiPDepth=new Array<CUI>();
 var gUIRP=new CRenderPass();
 gUIRP.mPriority=CRenderPass.ePriority.Ui;
 //g_uiRP.m_depthTest = false;
-gUIRP.mDepthTest = true;
-gUIRP.mDepthWrite = true;
+gUIRP.mDepthTest = false;
+gUIRP.mDepthWrite = false;
 
 
 export class CUI extends CSubject
@@ -359,8 +359,8 @@ export class CUI extends CSubject
         var bound = this.mUIPT.GetBound().Export();
         if (bound.GetType() == CBound.eType.Null)
             return;
-        bound.InitBound(CMath.V3MulMatCoordi(bound.mMin, this.mUIPT.GetMat()));
-        bound.InitBound(CMath.V3MulMatCoordi(bound.mMax, this.mUIPT.GetMat()));
+        //bound.InitBound(CMath.V3MulMatCoordi(bound.mMin, this.mUIPT.GetMat()));
+        //bound.InitBound(CMath.V3MulMatCoordi(bound.mMax, this.mUIPT.GetMat()));
         
 		var width = cam.mWidth;
 		var height = cam.mHeight;

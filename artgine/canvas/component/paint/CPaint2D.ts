@@ -129,9 +129,11 @@ export class CPaint2D extends CPaint
 		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
 		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
 		this.mBound.mMax.z = 0.5;
-		this.mBoundFMatR=0;
+
+		
+		
 		//if(_size!=null)
-		this.mBound.mType=CBound.eType.Box;
+			this.mBound.mType=CBound.eType.Box;
 		
 		this.PRSReset();
 		
@@ -155,7 +157,7 @@ export class CPaint2D extends CPaint
 		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
 		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
 		this.mBound.mMax.z = 0.5;
-		this.mBoundFMatR=0;
+		
 		//if(_size!=null)
 		this.mBound.mType=CBound.eType.Box;
 		
@@ -498,21 +500,37 @@ export class CPaint2D extends CPaint
 		lpos.x += this.mBound.mMax.x*bSca.x*this.mPivot.x;
 		lpos.y += this.mBound.mMax.y*bSca.y*this.mPivot.y;
 		
-		//var t0=CPoolGeo.ProductMat();
-		//var t1=CPoolGeo.ProductMat();
 		CMath.MatScale(bSca,this.mLMat);
-		//CMath.QutToMat(this.mRot,t1);
-
-		//CMath.MatMul(t0, t1,this.mLMat);
-		//CPoolGeo.RecycleMat(t0);
-		//CPoolGeo.RecycleMat(t1);
-		//CMat mat;
+	
 		this.mLMat.mF32A[12] = lpos.x;
 		this.mLMat.mF32A[13] = lpos.y;
 		this.mLMat.mF32A[14] = lpos.z;
 		
 		this.mLMat.UnitCheck();
 	
+
+		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMin.z = -0.5;
+
+		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMax.z = 0.5;
+
+
+		this.mBound.MatCoordi(this.mLMat);
+		//this.mBound.mMin=CMath.V3MulMatCoordi(this.mBound.mMin,this.mLMat);
+		//this.mBound.mMax=CMath.V3MulMatCoordi(this.mBound.mMax,this.mLMat);
+		this.mBound.mMax.z=this.mBound.GetOutRadius();
+		this.mBound.mMin.z=-this.mBound.mMax.z;
+		//this.mBound.mMax.z=1000;
+		//this.mBound.mMin.z=-1000;
+		
+
+
+		this.mBW.mRadian=0;
+
+
 		
 		this.mUpdateLMat=true;
 	}
@@ -545,6 +563,8 @@ export class CPaint2D extends CPaint
 	}
 	Start(): void {
 		super.Start();
+
+		this.PRSReset();
 		if(this.mPosList!=null)
 		{
 			this.mBound.Reset();
@@ -558,6 +578,7 @@ export class CPaint2D extends CPaint
 			this.mBound.InitBound(this.mSize.y);
 			this.mBound.SetType(CBound.eType.Box);
 		}
+		
 	}
 	//left,top,right,bottom
 	GetLeftTopRightBottom(_frame : CFrame) 
@@ -703,7 +724,7 @@ export class CPaint2D extends CPaint
 	}
 	SetSize(_size : CVec2)
 	{
-		this.mBoundFMatR=0;
+		
 		if(_size!=null && _size.IsZero())
 			this.mSize=null;
 		else if(this.mSize==null)
@@ -777,13 +798,14 @@ export class CPaint2D extends CPaint
 		{
 			if(this.mTMat==null)
 				this.mTMat=new CMat();
-			this.Tail()
+			this.Tail();
 			this.mPosList=_array;
 
 			this.mBound.Reset();
 			this.mBound.InitBound(this.mPosList);
 			this.mBound.SetType(CBound.eType.Box);
-			this.mBoundFMatR=0;
+			this.mBW.mRadian=0;
+			this.mLMat.Unit();
 		
 		}
 			
@@ -1022,9 +1044,11 @@ export class CPaintHTML extends CPaint2D
 		else return;
 
 		//if(this.GetOwner().IsDestroy())this.mElement.remove();
-
+		this.PRSReset();
+		this.CacBound();
+		
 		this.mUpdateFMat=false;
-
+		
 		if(this.mAttach==false)
 		{
 			this.mParent.appendChild(this.mElement);
@@ -1042,7 +1066,7 @@ export class CPaintHTML extends CPaint2D
 		
 		// pos.x*=zoom;
 		// pos.y*=zoom;
-		this.mBound.SetType(CBound.eType.Box);
+		//this.mBound.SetType(CBound.eType.Box);
 		
 		
 		
@@ -1058,6 +1082,8 @@ export class CPaintHTML extends CPaint2D
 		let pivotY=0;
 		if(this.mSize!=null)
 		{
+			//let sizeX=this.mSize.x*this.GetOwner().GetMat().mF32A[0];
+			//let sizeX=this.mSize.x*this.GetOwner().GetMat().mF32A[0];
 			pos.x+=this.mPivot.x*this.mSize.x*0.5;
 			pos.y+=this.mPivot.y*this.mSize.y*0.5;
 			if(this.mSize.x!=0)
@@ -1065,7 +1091,7 @@ export class CPaintHTML extends CPaint2D
 			if(this.mSize.y!=0)
 				this.mElement.style.height=this.mSize.y+"px";
 			//this.m_html.style.scale="scale("+zoom+","+zoom+")";
-			this.mElement.style.transform = "scale(" + zoom + "," + zoom + ")";
+			this.mElement.style.transform = "scale(" + (zoom*this.GetOwner().GetMat().mF32A[0]) + "," + (zoom*this.GetOwner().GetMat().mF32A[5]) + ")";
 			pivotX=this.mOrgSize.x*0.5;
 			pivotY=this.mOrgSize.y*0.5;
 		}

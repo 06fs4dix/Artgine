@@ -41,6 +41,7 @@ export class CSubject extends CObject {
     mBroMsg = new CArray();
     mInMsg = new CArray();
     mOutMsg = new CArray();
+    mUpdateRS = CUpdate.eType.Updated;
     mUpdateMat = CUpdate.eType.Updated;
     mUpdateComp = true;
     mSave = true;
@@ -94,7 +95,11 @@ export class CSubject extends CObject {
         this.mDestroy = false;
         this.mInMsg.Clear();
         this.mOutMsg.Clear();
+        this.mUpdateRS = CUpdate.eType.Updated;
         this.mUpdateMat = CUpdate.eType.Updated;
+        for (let com of this.mComArr) {
+            com.ClearMsg();
+        }
     }
     Icon() {
         if (this.IsProxy())
@@ -212,6 +217,7 @@ export class CSubject extends CObject {
     ClearKeyChange() { this.mKeyChange = ""; }
     SetEnable(_enable) {
         this.mEnable = _enable;
+        this.mUpdateRS = CUpdate.eType.Updated;
         this.mUpdateMat = CUpdate.eType.Updated;
         this.SetChildShow(_enable);
         if (this.mPTArr != null) {
@@ -313,7 +319,6 @@ export class CSubject extends CObject {
         this.UpdateComp();
         if (this.GetRecycleType() != null) {
             this.Recycle();
-            this.Reset();
             return;
         }
         if (this.mDestroy)

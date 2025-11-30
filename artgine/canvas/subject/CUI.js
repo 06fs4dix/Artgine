@@ -16,8 +16,8 @@ var g_moveMode = false;
 var g_uiPDepth = new Array();
 var gUIRP = new CRenderPass();
 gUIRP.mPriority = CRenderPass.ePriority.Ui;
-gUIRP.mDepthTest = true;
-gUIRP.mDepthWrite = true;
+gUIRP.mDepthTest = false;
+gUIRP.mDepthWrite = false;
 export class CUI extends CSubject {
     static eAnchor = {
         Min: -1,
@@ -207,8 +207,6 @@ export class CUI extends CSubject {
         var bound = this.mUIPT.GetBound().Export();
         if (bound.GetType() == CBound.eType.Null)
             return;
-        bound.InitBound(CMath.V3MulMatCoordi(bound.mMin, this.mUIPT.GetMat()));
-        bound.InitBound(CMath.V3MulMatCoordi(bound.mMax, this.mUIPT.GetMat()));
         var width = cam.mWidth;
         var height = cam.mHeight;
         if (width == 0) {

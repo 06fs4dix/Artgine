@@ -25,6 +25,7 @@ export class CORMOption {
     mDistinct = null;
     mOrderBy = null;
     mDownload = true;
+    mASC = true;
 }
 export class CORM {
     Recycle() {

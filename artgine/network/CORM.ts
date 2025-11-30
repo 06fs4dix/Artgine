@@ -37,8 +37,9 @@ export class CORMOption {
     public mLimitOffset = 0;
     public mLimit = 0;
     public mDistinct: string = null;
-    public mOrderBy: string = null;
+    public mOrderBy: string = null;//_offset desc 이렇게 설정 가능!
     public mDownload = true;
+    public mASC=true;
 }
 
 

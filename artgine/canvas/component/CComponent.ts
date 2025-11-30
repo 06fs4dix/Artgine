@@ -33,7 +33,10 @@ export class CComponent extends CObject
 	}
 
 	GetSysc(){	return this.mSysc;	}
-	
+	IsStart()
+	{
+		return this.mStartChk==false;
+	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
 		//원본데이터를 가져올지 유무
