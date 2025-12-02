@@ -1,6 +1,6 @@
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
-import { Attribute, Build, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3DivV3, V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, V4SubV4, abs, clamp, discard, fract, max, min, pow, sign, sin, smoothstep } from "./Shader";
+import { Attribute, BranchBegin, BranchEnd, Build, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3DivV3, V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, V4SubV4, abs, clamp, discard, fract, max, min, pow, sign, sin, smoothstep } from "./Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
@@ -66,7 +66,7 @@ Build("Artgine/Shader/PostFloodFill", ["floodFill"], vs_main, [
 Build("Artgine/Shader/PostLight", ["light"], vs_main, [
     worldMat, viewMat, projectMat,
     viewMatInv3D, camPos3D,
-    ligDir, ligCol, ligCount, shadowOn,
+    ligDir, ligCol, ligCount,
     envCube, ambientColor,
     ligStep0, ligStep1, ligStep2, ligStep3,
     time, renType,
@@ -75,7 +75,7 @@ Build("Artgine/Shader/PostLight", ["light"], vs_main, [
 Build("Artgine/Shader/PostLightMulti", ["lightMulti"], vs_main, [
     worldMat, viewMat, projectMat,
     viewMatInv3D, camPos3D,
-    ligDir, ligCol, ligCount, shadowOn,
+    ligDir, ligCol, ligCount,
     envCube, ambientColor,
     ligStep0, ligStep1, ligStep2, ligStep3,
     time,
@@ -301,9 +301,11 @@ function ps_main_light() {
     var L_nor = Sam2DToColor(normal, to_uv);
     var L_spc = Sam2DToColor(specular, to_uv).xyz;
     var shadow = -1.0;
+    BranchBegin("shadow", "S", [shadowOn]);
     if (shadowOn > 0.5) {
         shadow = Sam2DToColor(shadowOn, to_uv).x;
     }
+    BranchEnd();
     var L_cor = new CVec4(0.0, 0.0, 0.0, L_dif.a);
     var worldPos = V4MulMatCoordi(L_pos, viewMatInv3D);
     var Normal = MappingTexToV3(L_nor.rgb);
@@ -323,9 +325,11 @@ function ps_main_light_MultiTex() {
     var L_nor = Sam2DToColor(normal, to_uv);
     var L_spc = Sam2DToColor(specular, to_uv).xyz;
     var shadow = -1.0;
+    BranchBegin("shadow", "S", [shadowOn]);
     if (shadowOn > 0.5) {
         shadow = Sam2DToColor(shadowOn, to_uv).x;
     }
+    BranchEnd();
     var L_cor = new CVec4(0.0, 0.0, 0.0, L_dif.a);
     var worldPos = V4MulMatCoordi(L_pos, viewMatInv3D);
     var Normal = MappingTexToV3(L_nor.rgb);

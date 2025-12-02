@@ -87,8 +87,9 @@ export class CPaint extends CComponent implements IMat
 
 	static eTag={
 		Light:"light",
-		// ShadowRead:"ShadowRead",
-		// ShadowWrite:"ShadowWrite",
+		//ShadowRead:"ShadowRead",
+		//ShadowWrite:"ShadowWrite",
+		ShadowReadOnly:"shadowReadOnly",
 		Shadow:"shadow",
 		Wind:"Wind",
 		Parallax:"parallax",
@@ -186,7 +187,13 @@ export class CPaint extends CComponent implements IMat
 	{
 		//this.m_heap.Push(_F32A);
 	}
+	SetTexCodi(_codi : CVec4) : void
+	{
+		if(this.PushTag("codi"))
+			this.ClearBatch();
 	
+		this.mTexCodi.Import(_codi);
+	}
 	// GetMesh() : string
 	// {
 	// 	return null;
@@ -644,7 +651,7 @@ export class CPaint extends CComponent implements IMat
 		// 	this.mTag.add(CPaint.eTag.ShadowWrite);
 		// }
 		// else
-		this.mTag.add(_tag);
+			this.mTag.add(_tag);
 
 
 		this.mTagKey=null;

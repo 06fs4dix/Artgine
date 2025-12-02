@@ -273,8 +273,8 @@ function GetParallaxMappedUV(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CVec
     if(parallaxNormal>0.0001) {
         var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
 		uvh = ParallaxNormal(V3MulMat3Normal(_camPos,TBN).xyz, V3MulMat3Normal(_wor.xyz,TBN).xyz, _texOff.y, _uv, parallaxNormal);
-		if(uvh.x > 1.0 || uvh.y > 1.0 || uvh.x <= 0.0 || uvh.y <= 0.0)
-			discard;
+		// if(uvh.x > 1.0 || uvh.y > 1.0 || uvh.x <= 0.0 || uvh.y <= 0.0)
+		// 	discard;
 
         // // clamp slightly inside to avoid sampling border texels (tweak epsilon if needed)
         // uv.x = clamp(uv.x, 0.0005, 0.9995);
@@ -445,6 +445,7 @@ function ps_main()
 	{
 		shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
 		shadow = shadowTex.x;
+
 	}
 	BranchEnd();
 
@@ -489,16 +490,10 @@ function ps_main()
 }
 
 function ps_main_gBuffer() {
-	var tempShadow : CVec4;
-	var occlusion : number=1.5;
-	BranchBegin("occlusion","O",[shadowOn]);
-	if(shadowOn>0.5)
-	{
-		tempShadow = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
-		occlusion = (tempShadow.y * 255.0 * 256.0 + tempShadow.z * 255.0) / 65535.0;
-		if(screenPos.z > occlusion + 2e-5) discard;
-	}
-	BranchEnd();
+	
+
+	
+
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
@@ -545,16 +540,7 @@ function ps_main_gBuffer() {
 }
 
 function ps_main_gBuffer_multi() {
-	var tempShadow : CVec4;
-	var occlusion : number=1.5;
-	BranchBegin("occlusion","O",[shadowOn]);
-	if(shadowOn>0.5)
-	{
-		tempShadow = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
-		occlusion = (tempShadow.y * 255.0 * 256.0 + tempShadow.z * 255.0) / 65535.0;
-		if(screenPos.z > occlusion + 2e-5) discard;
-	}
-	BranchEnd();
+	
 
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);

@@ -607,6 +607,10 @@ export class CPaintCube extends CPaint3D
 	}
 	InitChk()
 	{
+		this.mLMat.mF32A[0]=100;
+		this.mLMat.mF32A[5]=100;
+		this.mLMat.mF32A[10]=100;
+		
 		this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
 		this.mRenderPass[0]=new CRenderPass(this.GetOwner().GetFrame().Pal().SlCubeKey());
 		if(this.mTag.has("sky") || this.mTag.has("table"))
@@ -616,7 +620,8 @@ export class CPaintCube extends CPaint3D
 			this.mRenderPass[0].mCullFrustum=false;
 		}
 		super.InitChk();
-
+		
+		
 		
 	}
 	Sky(_table : boolean=false,_cloud : boolean=false,_light : boolean=false,_star : boolean=false,_aurora : boolean=false)

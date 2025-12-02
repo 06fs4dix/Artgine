@@ -287,7 +287,7 @@ export class CDeviceGL extends CDevice
 		this.GL().clear(this.GL().COLOR_BUFFER_BIT | this.GL().DEPTH_BUFFER_BIT);
 
 
-		//this.GL().pixelStorei(this.GL().UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); // 업로드 중 알파 사전곱 적용
+		this.GL().pixelStorei(this.GL().UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); // 업로드 중 알파 사전곱 적용
 
 		
 		// this.GL().enable(this.GL().BLEND);

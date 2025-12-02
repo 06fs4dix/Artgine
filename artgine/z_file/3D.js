@@ -125,8 +125,6 @@ function GetParallaxMappedUV(_uv, _tan, _bi, _nor, _wor, _camPos, _texOff) {
     if (parallaxNormal > 0.0001) {
         var TBN = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
         uvh = ParallaxNormal(V3MulMat3Normal(_camPos, TBN).xyz, V3MulMat3Normal(_wor.xyz, TBN).xyz, _texOff.y, _uv, parallaxNormal);
-        if (uvh.x > 1.0 || uvh.y > 1.0 || uvh.x <= 0.0 || uvh.y <= 0.0)
-            discard;
     }
     return uvh;
 }
@@ -280,16 +278,6 @@ function ps_main() {
     out_color = L_cor;
 }
 function ps_main_gBuffer() {
-    var tempShadow;
-    var occlusion = 1.5;
-    BranchBegin("occlusion", "O", [shadowOn]);
-    if (shadowOn > 0.5) {
-        tempShadow = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
-        occlusion = (tempShadow.y * 255.0 * 256.0 + tempShadow.z * 255.0) / 65535.0;
-        if (screenPos.z > occlusion + 2e-5)
-            discard;
-    }
-    BranchEnd();
     var uv = to_uv;
     BranchBegin("parallax", "P", [parallaxNormal, camPos]);
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
@@ -325,16 +313,6 @@ function ps_main_gBuffer() {
     }
 }
 function ps_main_gBuffer_multi() {
-    var tempShadow;
-    var occlusion = 1.5;
-    BranchBegin("occlusion", "O", [shadowOn]);
-    if (shadowOn > 0.5) {
-        tempShadow = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
-        occlusion = (tempShadow.y * 255.0 * 256.0 + tempShadow.z * 255.0) / 65535.0;
-        if (screenPos.z > occlusion + 2e-5)
-            discard;
-    }
-    BranchEnd();
     var uv = to_uv;
     BranchBegin("parallax", "P", [parallaxNormal, camPos]);
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;

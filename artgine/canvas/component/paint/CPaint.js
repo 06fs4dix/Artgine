@@ -37,6 +37,7 @@ gPosDummy.NewWASM();
 export class CPaint extends CComponent {
     static eTag = {
         Light: "light",
+        ShadowReadOnly: "shadowReadOnly",
         Shadow: "shadow",
         Wind: "Wind",
         Parallax: "parallax",
@@ -99,6 +100,11 @@ export class CPaint extends CComponent {
     GetAlphaModel() { return this.mAlphaModel; }
     Icon() { return "bi bi-paint-bucket"; }
     RegistHeap(_F32A) {
+    }
+    SetTexCodi(_codi) {
+        if (this.PushTag("codi"))
+            this.ClearBatch();
+        this.mTexCodi.Import(_codi);
     }
     Destroy() {
         if (this.GetRecycleType() != null) {

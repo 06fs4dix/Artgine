@@ -1,11 +1,12 @@
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
-import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CComponent.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
-import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
-import { CPlane } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CPlane.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CComponent } from "../../../artgine/canvas/component/CComponent.js";
+import { CForce } from "../../../artgine/canvas/component/CForce.js";
+import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
+import { CPad } from "../../../artgine/canvas/subject/CPad.js";
+import { CMath } from "../../../artgine/geometry/CMath.js";
+import { CPlane } from "../../../artgine/geometry/CPlane.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 export class CMoveComp extends CBehavior {
     constructor() {
         super();
@@ -53,23 +54,21 @@ export class CMoveComp extends CBehavior {
     CameraOut(_pArr) {
         if (_pArr == null)
             return;
-        var size = this.GetOwner().GetCPaintVec()[0].GetSize().Export();
-        size.x *= this.GetOwner().GetSca().x;
-        size.y *= this.GetOwner().GetSca().y;
+        let rad = this.GetOwner().FindComp(CCollider).mBound.GetInRadius() * 0.5;
         var pos = this.GetOwner().GetPos().Export();
         for (var each0 of _pArr) {
             switch (each0.mPlane) {
                 case CPlane.eDir.Left:
-                    pos.x += (1 + each0.mLen) * size.x * 0.5;
+                    pos.x += (1 + each0.mLen) * rad;
                     break;
                 case CPlane.eDir.Right:
-                    pos.x -= (1 + each0.mLen) * size.x * 0.5;
+                    pos.x -= (1 + each0.mLen) * rad;
                     break;
                 case CPlane.eDir.Top:
-                    pos.y += (1 + each0.mLen) * size.y * 0.5;
+                    pos.y -= (1 + each0.mLen) * rad;
                     break;
                 case CPlane.eDir.Bottom:
-                    pos.y -= (1 + each0.mLen) * size.y * 0.5;
+                    pos.y += (1 + each0.mLen) * rad;
                     break;
             }
         }

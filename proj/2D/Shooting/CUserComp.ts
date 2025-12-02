@@ -1,11 +1,12 @@
-import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
-import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
-import { CUIText } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CUI.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CUpdate } from "../../../artgine/basic/Basic.js";
+import { CAlert } from "../../../artgine/basic/CAlert.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
+import { CPad } from "../../../artgine/canvas/subject/CPad.js";
+import { CUIText } from "../../../artgine/canvas/subject/CUI.js";
+import { CPlaneInside } from "../../../artgine/geometry/CPlaneInside.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import {CProComp} from "./CProComp.js";
 
@@ -64,5 +65,8 @@ export class CUserComp extends CProComp
         this.GetOwner().Destroy();
 
         //CAlert.Info("[Die!]");
+    }
+    CameraOut(_pArr: Array<CPlaneInside>): void {
+        
     }
 }

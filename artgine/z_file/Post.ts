@@ -1,7 +1,7 @@
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
 import { 
-    Attribute, BlendFun, Build, CMat, CMat3, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
+    Attribute, BlendFun, BranchBegin, BranchEnd, Build, CMat, CMat3, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
     MappingTexToV3, Null, OutColor, OutPosition,Sam2D0ToColor,Sam2DSize,Sam2DToColor, SaturateV3, 
     SaturateV4, ToV2, ToV3, UV2, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, 
     V2MulV2, V2SubV2, V3AddV3,V3DivV3,V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, 
@@ -139,7 +139,7 @@ Build("Artgine/Shader/PostLight",["light"],
     vs_main,[
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
-        ligDir,ligCol,ligCount,shadowOn,
+        ligDir,ligCol,ligCount,
         envCube,ambientColor,
         ligStep0,ligStep1,ligStep2,ligStep3,
         time,renType,
@@ -151,7 +151,7 @@ Build("Artgine/Shader/PostLightMulti",["lightMulti"],
     vs_main,[
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
-        ligDir,ligCol,ligCount,shadowOn,
+        ligDir,ligCol,ligCount,
         envCube,ambientColor,
         ligStep0,ligStep1,ligStep2,ligStep3,
         time,
@@ -459,9 +459,12 @@ function ps_main_light() {
     var L_spc : CVec3 = Sam2DToColor(specular, to_uv).xyz;
 
     var shadow : number = -1.0;
+    BranchBegin("shadow","S",[shadowOn]);
     if(shadowOn > 0.5) {
         shadow = Sam2DToColor(shadowOn, to_uv).x;
     }
+    BranchEnd();
+
     var L_cor : CVec4 = new CVec4(0.0,0.0,0.0,L_dif.a);
     
     var worldPos : CVec4 = V4MulMatCoordi(L_pos, viewMatInv3D);
@@ -498,9 +501,11 @@ function ps_main_light_MultiTex() {
     var L_spc : CVec3 = Sam2DToColor(specular, to_uv).xyz;
 
     var shadow : number = -1.0;
+    BranchBegin("shadow","S",[shadowOn]);
     if(shadowOn > 0.5) {
         shadow = Sam2DToColor(shadowOn, to_uv).x;
     }
+    BranchEnd();
     
     var L_cor : CVec4 = new CVec4(0.0,0.0,0.0,L_dif.a);
     

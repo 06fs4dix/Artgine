@@ -178,6 +178,7 @@ export class CDeviceGL extends CDevice {
         this.GL().viewport(0, 0, this.GL().canvas.width, this.GL().canvas.height);
         this.GL().clearColor(0, 0, 0, 1);
         this.GL().clear(this.GL().COLOR_BUFFER_BIT | this.GL().DEPTH_BUFFER_BIT);
+        this.GL().pixelStorei(this.GL().UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     }
     GetHandle() {
         return this.mGL;

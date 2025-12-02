@@ -1,6 +1,6 @@
-import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CStream } from "../../../artgine/basic/CStream.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 
 export class CPacShooting {
     static eHeader = {
@@ -11,9 +11,9 @@ export class CPacShooting {
         "Dead": "Dead"
     };
 
-    static MonCreate(monKey: string, pos: CVec3, type: string): CStream;
-    static MonCreate(_stream: CStream): {monKey: string, pos: CVec3, type: string};
-    static MonCreate(monKey: string | CStream, pos: CVec3 | null = null, type: string | null = null): any {
+    static MonCreate(monKey: string, pos: CVec3, type: number): CStream;
+    static MonCreate(_stream: CStream): {monKey: string, pos: CVec3, type: number};
+    static MonCreate(monKey: string | CStream, pos: CVec3 | null = null, type: number | null = null): any {
         if (monKey instanceof CStream) {
             return monKey.GetPacket("monKey", "pos", "type");
         }
@@ -91,7 +91,7 @@ var json={
     }
 
 };
-import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CVec4 } from "../../../artgine/geometry/CVec4.js";
 function Test(_test : CVec4): any 
 {
        

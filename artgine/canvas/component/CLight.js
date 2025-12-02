@@ -144,6 +144,7 @@ export class CLight extends CBrushComp {
             srp.PushOr(new CCondition("class", "==", "CPaint3D"));
             srp.PushOr(new CCondition("class", "==", "CPaintMeshMerge"));
             srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]", CCondition.eOperator["!="]));
             srp.mPriority = CRenderPass.ePriority.BackGround - 2;
             this.PushRPAuto(srp);
             srp = new CRPAuto(fw.Pal().SlVoxel().mKey);
@@ -153,6 +154,7 @@ export class CLight extends CBrushComp {
             srp.mTag.add("shadowWrite");
             srp.PushAnd(new CCondition("class", "==", "CPaintVoxel"));
             srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]", CCondition.eOperator["!="]));
             srp.mPriority = CRenderPass.ePriority.BackGround - 1;
             this.PushRPAuto(srp);
         }

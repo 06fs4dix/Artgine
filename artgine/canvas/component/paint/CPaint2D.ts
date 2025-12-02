@@ -494,8 +494,15 @@ export class CPaint2D extends CPaint
 			return;
 
 		
-		var bSca = this.GetScale();
+		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMin.z = -0.5;
 
+		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
+		this.mBound.mMax.z = 0.5;
+		
+		var bSca = this.GetScale();
 		var lpos=this.mPos.Export();
 		lpos.x += this.mBound.mMax.x*bSca.x*this.mPivot.x;
 		lpos.y += this.mBound.mMax.y*bSca.y*this.mPivot.y;
@@ -509,13 +516,7 @@ export class CPaint2D extends CPaint
 		this.mLMat.UnitCheck();
 	
 
-		this.mBound.mMin.x = -CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMin.y = -CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMin.z = -0.5;
-
-		this.mBound.mMax.x = CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
-		this.mBound.mMax.z = 0.5;
+		
 
 
 		this.mBound.MatCoordi(this.mLMat);

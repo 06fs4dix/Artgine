@@ -358,6 +358,9 @@ export class CPaintCube extends CPaint3D {
         this.mTextureKey[0] = _cubeTex;
     }
     InitChk() {
+        this.mLMat.mF32A[0] = 100;
+        this.mLMat.mF32A[5] = 100;
+        this.mLMat.mF32A[10] = 100;
         this.mMesh = this.GetOwner().GetFrame().Pal().GetBoxMesh();
         this.mRenderPass[0] = new CRenderPass(this.GetOwner().GetFrame().Pal().SlCubeKey());
         if (this.mTag.has("sky") || this.mTag.has("table")) {

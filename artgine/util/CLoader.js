@@ -259,8 +259,12 @@ export class CLoader {
         await shaMgr.Exe(_file, text);
         let sl = shaMgr.GetShaderList();
         this.mRes.Push(_file, sl);
+        let basePath = "";
+        if (_file.indexOf("z_file") == -1) {
+            basePath = "/" + CString.PathSub(_file);
+        }
         for (var each01 of sl.mShader) {
-            this.mRes.Push(each01.mKey, each01);
+            this.mRes.Push(basePath + each01.mKey, each01);
         }
     }
     async MeshLoad(_file, _buffer, _option) {

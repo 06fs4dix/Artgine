@@ -1,8 +1,8 @@
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
-import { CUIText } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CUI.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CPad } from "../../../artgine/canvas/subject/CPad.js";
+import { CUIText } from "../../../artgine/canvas/subject/CUI.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import { CProComp } from "./CProComp.js";
 export class CUserComp extends CProComp {
@@ -39,5 +39,7 @@ export class CUserComp extends CProComp {
         this.GetOwner().PushPac(CPacShooting.Dead(this.GetOwner().Key()));
         this.GetOwner().PushPac(CPacShooting.Effect("Flash", this.GetOwner().GetPos(), new CVec2(50, 50)));
         this.GetOwner().Destroy();
+    }
+    CameraOut(_pArr) {
     }
 }

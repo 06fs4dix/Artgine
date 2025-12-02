@@ -413,9 +413,18 @@ export class CLoader
 		let sl=shaMgr.GetShaderList();
 		this.mRes.Push(_file,sl);
 
+		
+		let basePath="";
+		if(_file.indexOf("z_file")==-1)
+		{
+			basePath="/"+CString.PathSub(_file);
+		}
 		for(var each01 of sl.mShader)
 		{
-			this.mRes.Push(each01.mKey,each01);
+			
+			
+			
+			this.mRes.Push(basePath+each01.mKey,each01);
 		}
 
 		
