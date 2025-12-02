@@ -1,4 +1,4 @@
-const version = 'mi8vige2_35';
+const version = 'miop4npb_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();

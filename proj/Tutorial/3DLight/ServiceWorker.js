@@ -1,4 +1,4 @@
-const CACHE_NAME = "c0dd6e8b80de5a4b";
+const CACHE_NAME = "caaa460748b05d6b";
 		const MAX_CACHE_SIZE = 0;
 		const LOG = false;
 		const API_CACHE = false;//Start

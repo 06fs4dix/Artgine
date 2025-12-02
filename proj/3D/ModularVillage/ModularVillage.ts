@@ -1,5 +1,5 @@
 //Version
-const version='mi8vige2_35';
+const version='miop4npb_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -388,6 +388,12 @@ gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
 
     }
 });
+
+
+
+
+
+
 
 
 

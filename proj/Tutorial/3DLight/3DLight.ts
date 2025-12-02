@@ -1,5 +1,5 @@
 //Version
-const version='mi8vige2_5';
+const version='miop4npb_10';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -159,6 +159,7 @@ let sufLig0=DeferredSingle.PushSuf(new CSurface());
 let srp=sufLig0.GetRP();
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
 srp.mTag.add("light");
+srp.mTag.add("shadow");
 srp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 srp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 srp.mShaderAttr.push(new CShaderAttr(0,gBufAlb));
@@ -173,6 +174,7 @@ let sufLig1=DeferredSingle.PushSuf(new CSurface());
 srp=sufLig1.GetRP();
 srp.mShader=gAtl.Frame().Pal().SlPostKey();
 srp.mTag.add("light");
+srp.mTag.add("shadow");
 srp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 srp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 srp.mShaderAttr.push(new CShaderAttr(0,gBufAlb));
@@ -582,6 +584,14 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
+
+
+
+
+
+
+
+
 
 
 
