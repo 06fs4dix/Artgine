@@ -17,6 +17,7 @@ import { CFile } from "../../system/CFile.js";
 import { CComponent } from "../component/CComponent.js";
 import { CRouteMsg } from "../CRouteMsg.js";
 import { CPaint } from "../component/paint/CPaint.js";
+import { CConsol } from "../../basic/CConsol.js";
 var g_offCObjHD = 0;
 export class CSubject extends CObject {
     mKey;
@@ -44,6 +45,7 @@ export class CSubject extends CObject {
     mUpdateRS = CUpdate.eType.Updated;
     mUpdateMat = CUpdate.eType.Updated;
     mUpdateComp = true;
+    mReset = false;
     mSave = true;
     SetSave(_enable) {
         this.mSave = _enable;
@@ -68,14 +70,15 @@ export class CSubject extends CObject {
         this.mInMsg.Push(new CRouteMsg("dummy"));
         this.mInMsg.Clear();
     }
-    IsDestroy() { return this.mDestroy || this.IsRecycle(); }
+    IsDestroy() { return this.mDestroy || this.mReset; }
     Reset() {
+        this.mReset = false;
         for (let each0 of this.mChild) {
             each0.Reset();
         }
         for (let each0 of this.mComArr) {
             each0.mStartChk = true;
-            each0.mComMsgLen = 0;
+            each0.ClearMsg();
         }
         this.UpdateComp();
         if (this.mPTArr) {
@@ -97,6 +100,8 @@ export class CSubject extends CObject {
         this.mOutMsg.Clear();
         this.mUpdateRS = CUpdate.eType.Updated;
         this.mUpdateMat = CUpdate.eType.Updated;
+        this.mPushLock = false;
+        this.mPushArr.length = 0;
         for (let com of this.mComArr) {
             com.ClearMsg();
         }
@@ -198,6 +203,7 @@ export class CSubject extends CObject {
     GetFrame() { return this.mFrame; }
     Start() { }
     SetFrame(_frame) {
+        CConsol.Log(this.mKey + " / " + (_frame != null));
         if (this.mFrame != null && _frame != null)
             return;
         if (this.mFrame != null)
@@ -237,7 +243,7 @@ export class CSubject extends CObject {
         }
     }
     IsEnable() {
-        return this.mEnable && this.mPEnable;
+        return this.mEnable && this.mPEnable && this.mReset == false;
     }
     SetKey(_key) {
         if (this.mKey == _key)
@@ -318,7 +324,7 @@ export class CSubject extends CObject {
     Destroy() {
         this.UpdateComp();
         if (this.GetRecycleType() != null) {
-            this.Recycle();
+            this.mReset = true;
             return;
         }
         if (this.mDestroy)

@@ -28,7 +28,7 @@ export default class CEnvMap extends CBrushComp {
                 rp.mCullFace = CRenderPass.eCull.CW;
                 rp.mRenderTarget = this.GetTex();
                 rp.mRenderTargetUse.add(i);
-                rp.mCamera = this.mShadowKey + i;
+                rp.mCamera = this.mTexKey + i;
                 rp.PushOr(new CCondition("class", "==", "CPaint3D"));
                 rp.PushAnd(new CCondition("mTag[water]", "==", false));
                 this.PushRPAuto(rp);
@@ -41,14 +41,14 @@ export default class CEnvMap extends CBrushComp {
                 rp.mCullFace = CRenderPass.eCull.CCW;
                 rp.mRenderTarget = this.GetTex();
                 rp.mRenderTargetUse.add(i);
-                rp.mCamera = this.mShadowKey + i;
+                rp.mCamera = this.mTexKey + i;
                 rp.PushOr(new CCondition("class", "==", "CPaintCube"));
                 rp.PushAnd(new CCondition("mTag[water]", "==", false));
                 rp.PushAnd(new CCondition("mTag[sky]"));
                 this.PushRPAuto(rp);
             }
             for (const rp of this.mWrite) {
-                const rpKey = this.mShadowKey + rp.mShader + rp.mCamera;
+                const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
                 this.mBruch.SetAutoRP(rpKey, rp);
             }
         }
@@ -69,7 +69,7 @@ export default class CEnvMap extends CBrushComp {
         ];
         for (let i = 0; i < 6; i++) {
             const camDir = camDirList[i];
-            const cam = this.mBruch.GetCamera(this.mShadowKey + i);
+            const cam = this.mBruch.GetCamera(this.mTexKey + i);
             cam.Init(pos, CMath.V3AddV3(pos, camDir));
             cam.SetFov(Math.PI * 0.5);
             cam.SetSize(this.mSize, this.mSize);

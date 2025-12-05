@@ -99,7 +99,7 @@ export class CDeviceGL extends CDevice {
     constructor(_pf, _handle) {
         super(_pf, _handle);
         this.mGL = _handle.getContext("webgl2", { antialias: this.m_pf.mAnti, depth: true, stencil: true, "xrCompatible": _pf.mXR,
-            "premultipliedAlpha": true, "alpha": true });
+            "premultipliedAlpha": false, "alpha": true });
         if (window["WebGLDebugUtils"] != null) {
             this.mGL = window["WebGLDebugUtils"].makeDebugContext(this.mGL, function (err, funcName, args) {
                 console.error(`🚨 WebGL error: ${window["WebGLDebugUtils"].glEnumToString(err)} in ${funcName}`, args);

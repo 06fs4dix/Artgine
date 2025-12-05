@@ -22,6 +22,7 @@ import { CNavigation } from "../component/CNavigation.js"
 import { CRouteMsg } from "../CRouteMsg.js"
 import { CPaint } from "../component/paint/CPaint.js"
 import { CCollider } from "../component/CCollider.js"
+import { CConsol } from "../../basic/CConsol.js"
 var g_offCObjHD = 0;
 
 
@@ -68,6 +69,7 @@ export class CSubject extends CObject implements IFile , IMat
 	public mUpdateRS : number = CUpdate.eType.Updated;
 	public mUpdateMat : number = CUpdate.eType.Updated;
 	mUpdateComp=true;
+	mReset=false;
 
 	mSave=true;
 	//public m_updateRS : boolean=true;
@@ -107,9 +109,10 @@ export class CSubject extends CObject implements IFile , IMat
 	
 		
 	}
-	IsDestroy()	{ return this.mDestroy || this.IsRecycle(); }
+	IsDestroy()	{ return this.mDestroy || this.mReset; }
 	Reset()
 	{
+		this.mReset=false;
 		for(let each0 of this.mChild)
 		{
 			each0.Reset();
@@ -118,7 +121,8 @@ export class CSubject extends CObject implements IFile , IMat
 		{
 			//each0.Reset();
 			each0.mStartChk=true;
-			each0.mComMsgLen=0;
+			//each0.mComMsgLen=0;
+			each0.ClearMsg();
 		}
 		this.UpdateComp();
 		if(this.mPTArr)
@@ -146,6 +150,8 @@ export class CSubject extends CObject implements IFile , IMat
 		//this.mCLArr.Clear();
 		this.mUpdateRS=CUpdate.eType.Updated;
 		this.mUpdateMat = CUpdate.eType.Updated;
+		this.mPushLock=false;
+		this.mPushArr.length=0;
 
 		for(let com of this.mComArr)
 		{
@@ -316,6 +322,9 @@ export class CSubject extends CObject implements IFile , IMat
 	Start(){}
 	SetFrame(_frame : CFrame)	
 	{
+
+
+		CConsol.Log(this.mKey+" / "+(_frame!=null));
 		if(this.mFrame!=null && _frame!=null)
 			return;
 		if(this.mFrame!=null)
@@ -376,7 +385,7 @@ export class CSubject extends CObject implements IFile , IMat
 	
 	IsEnable() 
 	{
-		return this.mEnable && this.mPEnable;	 
+		return this.mEnable && this.mPEnable && this.mReset==false;	 
 	}
 	
 	SetKey(_key) 
@@ -492,10 +501,13 @@ export class CSubject extends CObject implements IFile , IMat
 	Destroy()
 	{
 		this.UpdateComp();
+		//
 		if(this.GetRecycleType()!=null)
 		{
-			this.Recycle();
-			//this.Reset();
+			// this.Reset();
+			// this.Recycle();
+			this.mReset=true;
+			
 			return;
 		}
 

@@ -7,7 +7,7 @@ import { CAuthInfo } from "./CAuthInfo.js";
 
 export class CORMField {
     public mKey = "";
-    public mValue = null;//string,int,double
+    public mValue = null;//string(size),int,double,date,arrayBuffer
 
     constructor(_key: string, _value: any) {
         this.mKey = _key;
@@ -193,7 +193,8 @@ export class CRDBMS extends CORM
     // }
     
 
-    async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String) {
+    async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String=null) 
+    {
         const cols = _data.map(f => {
             const type = typeof f.mValue === 'number' ? (Number.isInteger(f.mValue) ? 'INT' : 'DOUBLE') : 'VARCHAR(255)';
             return `${f.mKey} ${type}`;
@@ -203,7 +204,7 @@ export class CRDBMS extends CORM
         return await this.Send(sql);
     }
 
-
+   
 
 }
 

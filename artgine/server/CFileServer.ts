@@ -8,7 +8,7 @@ import { CFile } from "../system/CFile.js";
 import  { Request, Response, NextFunction } from 'express';
 
 const gRootPath = "./"; // 필요 시 절대 경로로 설정
-const gDown = ""; // 복사 대상 기준 경로
+const gDown = "/Artgine"; // 복사 대상 기준 경로
 
 @URLPatterns(["/File/List","/File/Redirection","/File/Upload"])
 export class CFileServer extends CServerRouter

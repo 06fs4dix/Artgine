@@ -47,8 +47,12 @@ export class CServer implements IListener
     }
     static FindURLPatterns(_class)
     {
-        return gURLPatterns.get(_class.constructor.name);
+        let val=gURLPatterns.get(_class.constructor.name);
+        if(val==null)
+            val=gURLPatterns.get(_class);
+        return val;
     }
+   
     Destroy()
     {
         CConsol.Log("["+this.constructor.name+"]  Destroy",CConsol.eColor.red);

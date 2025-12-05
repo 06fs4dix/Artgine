@@ -151,7 +151,7 @@ export class CDeviceGL extends CDevice
 		
 		//premultipliedAlpha 20251107
 		this.mGL=_handle.getContext("webgl2",{antialias: this.m_pf.mAnti,depth:true,stencil:true,"xrCompatible":_pf.mXR,
-			"premultipliedAlpha": true,"alpha": true});
+			"premultipliedAlpha": false,"alpha": true});
 
 		// webgl-debug.js를 추가하면 웹지엘 워링도 캐치 가능하다!
 		if(window["WebGLDebugUtils"]!=null)

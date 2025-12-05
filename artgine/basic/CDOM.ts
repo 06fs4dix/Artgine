@@ -291,7 +291,10 @@ export class CDOM
 	{
 		if(_value!=null)
 			(document.getElementById(_id) as HTMLInputElement).value=_value;
-		return (document.getElementById(_id) as HTMLInputElement).value;
+        let html=(document.getElementById(_id) as HTMLInputElement);
+        if(html==null)  return null;
+
+		return html.value;
 	}
 	static IDChecked(_id: string, _value: boolean | null = null): boolean {
 		const el = document.getElementById(_id) as HTMLInputElement;

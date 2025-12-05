@@ -4,9 +4,9 @@ export class CBrushComp extends CComponent {
     constructor(_key) {
         super();
         this.mSysc = CComponent.eSysn.CamComp;
-        this.mShadowKey = _key;
+        this.mTexKey = _key;
     }
-    mShadowKey;
+    mTexKey;
     mWrite = new Array();
     mRead = null;
     mReadLen = 10000;
@@ -18,7 +18,7 @@ export class CBrushComp extends CComponent {
         return super.IsShould(_member, _type);
     }
     GetWrite() { return this.mWrite; }
-    GetTex() { return this.mShadowKey + ".tex"; }
+    GetTex() { return this.mTexKey + ".tex"; }
     PushRPAuto(_write) {
         this.mWrite.push(_write);
     }

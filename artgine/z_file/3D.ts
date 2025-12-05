@@ -28,6 +28,19 @@ import {
 	V3Len,
 	length,
 	dFdx,
+	V3MulV3,
+	V3Mix,
+	Exp,
+	V3SubV3,
+	SaturateFloat,
+	sin,
+	cos,
+	V2AddV2,
+	V2MulV2,
+	pow,
+	V3Min,
+	V2Len,
+	SaturateV3,
 } from "./Shader"
 import {
 	SDF
@@ -104,6 +117,12 @@ var weightBakeMat: number = 9.0;
 var weightBakeIndex : number;
 
 var time : number = Attribute(0,"time");
+
+var waterDeep : CVec2 = new CVec2(0.0,256.0);
+var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
+var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
+var causticMap : number = 5.0;
+var causticFlowDir : CVec2 = new CVec2(1.0, 0.0);
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
@@ -435,6 +454,43 @@ function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, 
 	to_ref=f3_ref;
 }
 
+function SampleNormalMapToCaustic(_map : number, _uv : CVec2) : CVec4
+{
+	var N : CVec3 = Sam2DToColor(_map, _uv).rgb;
+	N = V3Nor(V3SubV3(V3MulFloat(N, 2.0), new CVec3(1.0, 1.0, 1.0)));
+	var L : CVec3 = V3Nor(new CVec3(0.0, 1.0, 0.0));
+	var b : number = clamp(V3Dot(N, L), 0.0, 1.0);
+	return new CVec4(b, b, b, 1.0);
+}
+
+function SampleCaustics(_map : number, _uv : CVec2, _split : number) : CVec3
+{
+	var uv1 : CVec2 = V2AddV2(_uv, new CVec2( _split,  _split));
+	var uv2 : CVec2 = V2AddV2(_uv, new CVec2( _split, -_split));
+	var uv3 : CVec2 = V2AddV2(_uv, new CVec2(-_split, -_split));
+
+	var r : number = SampleNormalMapToCaustic(_map, uv1).r;
+	var g : number = SampleNormalMapToCaustic(_map, uv2).g;
+	var b : number = SampleNormalMapToCaustic(_map, uv3).b;
+
+	return new CVec3(r, g, b);
+}
+
+function Caustics(_map : number, _world : CVec3, _flow : CVec3) : CVec3
+{
+	var split : number = 1.0 / 500.0;
+	var worldToUV : CVec3 = V3MulFloat(_world, split);
+	var uv : CVec2 = new CVec2(worldToUV.x, worldToUV.z);
+
+	var uv1 : CVec2 = V2AddV2(V2MulV2(uv, new CVec2( 1.0,  1.0)), V2MulFloat(_flow.xy, _flow.z));
+	var uv2 : CVec2 = V2AddV2(V2MulV2(uv, new CVec2(-1.0, -1.0)), V2MulFloat(_flow.xy, _flow.z * 0.75));
+
+	var tex1 : CVec3 = SampleCaustics(_map, uv1, split);
+	var tex2 : CVec3 = SampleCaustics(_map, uv2, split);
+
+	return V3Min(tex1, tex2);
+}
+
 function ps_main()
 {
 	var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
@@ -445,15 +501,28 @@ function ps_main()
 	{
 		shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
 		shadow = shadowTex.x;
-
 	}
 	BranchEnd();
 
 
+	
+	var world : CVec4 = to_worldPos;
+
 	var uv : CVec2 = to_uv;
+	var uvh : CVec3;
 	BranchBegin("parallax","P",[parallaxNormal, camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
+	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+	uv = uvh.xy;
+
+	world.xyz -= V3MulFloat(
+		V3Nor(V3SubV3(camPos, world.xyz)), 
+		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
+			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
+			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
+		)
+	);
 	BranchEnd();
+
 
 	var L_cor : CVec4=Sam2DToColor(to_ref.x, uv);
 
@@ -487,6 +556,43 @@ function ps_main()
 	BranchEnd();
 
 	out_color=L_cor;
+
+	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, time]);
+	if(V2Len(causticFlowDir) > 0.0) {
+		out_color.rgb = V3AddV3(
+			out_color.rgb, 
+			// Caustics(
+			// 	causticMap, 
+			// 	world.xyz, 
+			// 	new CVec3(
+			// 		-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
+			// 		causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
+			// 		V2Len(causticFlowDir) * time * 0.03
+			// 	)
+			// )
+			V3MulFloat(
+				Caustics(
+					causticMap, 
+					world.xyz, 
+					new CVec3(
+						-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
+						causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
+						V2Len(causticFlowDir) * time * 0.03
+					)
+				),
+				0.5   // <<< 여기서 강도 줄이기
+			)
+		);
+		out_color.rgb = SaturateV3(out_color.rgb);
+	}
+	if(waterDeep.x > world.y) {
+		out_color.rgb = V3Mix(
+			deepColor, 
+			V3MulV3(out_color.rgb, shallowColor),
+			1.0 - SaturateFloat((waterDeep.x - world.y) / waterDeep.y)
+		);
+	}
+	BranchEnd();
 }
 
 function ps_main_gBuffer() {

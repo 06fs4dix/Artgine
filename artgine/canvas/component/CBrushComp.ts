@@ -16,10 +16,10 @@ export class CBrushComp extends CComponent
     {
         super();
         this.mSysc=CComponent.eSysn.CamComp;
-        this.mShadowKey=_key;
+        this.mTexKey=_key;
        
     }
-    public mShadowKey:string;
+    public mTexKey:string;
     protected mWrite : Array<CRPAuto>=new Array();
     public mRead : string=null;//텍스쳐 사용하는 페인트들 골라냄 태그를 넣어라
     public mReadLen=10000;
@@ -31,7 +31,7 @@ export class CBrushComp extends CComponent
         return super.IsShould(_member,_type);
     }
     GetWrite() { return this.mWrite; }
-    GetTex()    {   return this.mShadowKey+".tex";   }
+    GetTex()    {   return this.mTexKey+".tex";   }
     PushRPAuto(_write : CRPAuto)
     {
         this.mWrite.push(_write);

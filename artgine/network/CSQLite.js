@@ -57,4 +57,56 @@ export class CSQLite extends CRDBMS {
         return columnRows.map(row => row[1]);
         ;
     }
+    async CreateCollection(_name, _data, _primaryKey = null) {
+        if (!Array.isArray(_data) || _data.length === 0)
+            throw new Error('컬럼을 하나 이상 제공해야 합니다.');
+        if (typeof _name !== 'string' || _name.trim() === '')
+            throw new Error('테이블명을 제공하세요.');
+        const escapeIdent = (ident) => {
+            if (typeof ident !== 'string' || !/^[A-Za-z0-9_]+$/.test(ident)) {
+                throw new Error(`잘못된 식별자: ${ident}`);
+            }
+            return `\`${ident}\``;
+        };
+        const mapType = (value) => {
+            if (value instanceof Date)
+                return 'TEXT';
+            if (value instanceof ArrayBuffer || ArrayBuffer.isView(value))
+                return 'BLOB';
+            if (typeof value === 'number') {
+                return Number.isInteger(value) ? 'INTEGER' : 'REAL';
+            }
+            if (typeof value === 'string') {
+                const len = value.length;
+                if (len <= 255) {
+                    return 'CHAR(255)';
+                }
+                else if (len <= 65535) {
+                    return 'VARCHAR(65535)';
+                }
+                else {
+                    return 'TEXT';
+                }
+            }
+            return 'TEXT';
+        };
+        const colsSql = _data.map(f => {
+            const col = escapeIdent(String(f.mKey));
+            const sqlType = mapType(f.mValue);
+            return `${col} ${sqlType} NOT NULL`;
+        }).join(',\n    ');
+        let pkClause = '';
+        if (_primaryKey && _primaryKey.trim()) {
+            const keys = _primaryKey.split(',').map(k => k.trim()).filter(k => k);
+            const colNames = _data.map(x => String(x.mKey));
+            const invalid = keys.filter(k => !colNames.includes(k));
+            if (invalid.length > 0) {
+                throw new Error(`PRIMARY KEY에 존재하지 않는 컬럼: ${invalid.join(', ')}`);
+            }
+            pkClause = `, PRIMARY KEY (${keys.map(k => escapeIdent(k)).join(', ')})`;
+        }
+        const table = escapeIdent(_name);
+        const sql = `CREATE TABLE IF NOT EXISTS ${table} (\n    ${colsSql}${pkClause}\n);`;
+        return await this.Send(sql);
+    }
 }

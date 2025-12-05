@@ -9,7 +9,7 @@ import { URLPatterns } from "../network/CServerMain.js";
 import { CServerRouter } from "../network/CServerRouter.js";
 import { CFile } from "../system/CFile.js";
 const gRootPath = "./";
-const gDown = "";
+const gDown = "/Artgine";
 let CFileServer = class CFileServer extends CServerRouter {
     constructor() {
         super();

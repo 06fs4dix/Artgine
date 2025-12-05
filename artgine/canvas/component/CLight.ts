@@ -258,7 +258,7 @@ export class CLight extends CBrushComp
 
 		}
 		let ShadowUpdate=false;
-		if (this.mShadowKey!=null)
+		if (this.mTexKey!=null)
 		{
 			if(this.mColor.IsZero())
 				this.mShadowOff=true;
@@ -270,9 +270,9 @@ export class CLight extends CBrushComp
 			{
 				if(!this.mShadowOff) 
 				{
-					let scam0=this.mBruch.GetCamera(this.mShadowKey+0);
-					let scam1=this.mBruch.GetCamera(this.mShadowKey+1);
-					let scam2=this.mBruch.GetCamera(this.mShadowKey+2);
+					let scam0=this.mBruch.GetCamera(this.mTexKey+0);
+					let scam1=this.mBruch.GetCamera(this.mTexKey+1);
+					let scam2=this.mBruch.GetCamera(this.mTexKey+2);
 					
 					
 					let cam=this.mBruch.GetCam3D();
@@ -391,7 +391,7 @@ export class CLight extends CBrushComp
 					{
 						if(rp.mTag.has("shadowWrite")==false)	continue;
 
-						var srpKey=this.mShadowKey+rp.mShader+i;
+						var srpKey=this.mTexKey+rp.mShader+i;
 						var srp : CRPAuto=this.mBruch.GetAutoRP(srpKey);
 						if(srp==null)
 						{
@@ -409,7 +409,7 @@ export class CLight extends CBrushComp
 						}
 						srp.mRenderTarget=this.GetTex();
 						srp.mRenderTargetUse=new Set<number>([this.mBruch.mShadowCount*6+i]);
-						srp.mCamera=this.mShadowKey+i;
+						srp.mCamera=this.mTexKey+i;
 						//"shadowWrite"->[0]
 						if(srp.mShaderAttr[0].mData.y != this.mBruch.mShadowCount) {
 							srp.mShaderAttr[0].mData.x=i;
@@ -528,7 +528,7 @@ export class CLight extends CBrushComp
 	}
 	SetShadow(_shadowKey,_CycleTime0=0,_CycleTime1=-1,_CycleTime2=-1)
 	{
-		this.mShadowKey=_shadowKey;
+		this.mTexKey=_shadowKey;
 		this.mCascadeCycle[0]=_CycleTime0;
 		this.mCascadeCycle[1]=_CycleTime1;
 		this.mCascadeCycle[2]=_CycleTime2;
@@ -578,9 +578,9 @@ export class CLight extends CBrushComp
 		{
 			this.mBruch.mUpdateLight=true;
 			this.mBruch.mUpdateShadow=true;
-			this.mBruch.mCameraMap.delete(this.mShadowKey+0);
-			this.mBruch.mCameraMap.delete(this.mShadowKey+1);
-			this.mBruch.mCameraMap.delete(this.mShadowKey+2);
+			this.mBruch.mCameraMap.delete(this.mTexKey+0);
+			this.mBruch.mCameraMap.delete(this.mTexKey+1);
+			this.mBruch.mCameraMap.delete(this.mTexKey+2);
 			this.mBruch.ClearRen();
 			
 			
@@ -590,7 +590,7 @@ export class CLight extends CBrushComp
 				for(let rp of this.mWrite)
 				{
 					if(rp.mTag.has("shadowWrite")==false)	continue;
-					var srpKey=this.mShadowKey+rp.mShader+i;
+					var srpKey=this.mTexKey+rp.mShader+i;
 					this.mBruch.RemoveAutoRP(srpKey);
 
 				}

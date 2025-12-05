@@ -180,7 +180,10 @@ export class CDOM {
     static IDValue(_id, _value = null) {
         if (_value != null)
             document.getElementById(_id).value = _value;
-        return document.getElementById(_id).value;
+        let html = document.getElementById(_id);
+        if (html == null)
+            return null;
+        return html.value;
     }
     static IDChecked(_id, _value = null) {
         const el = document.getElementById(_id);

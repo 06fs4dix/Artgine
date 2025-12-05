@@ -123,7 +123,7 @@ export class CRDBMS extends CORM {
     }
     async Close() {
     }
-    async CreateCollection(_name, _data, _primaryKey) {
+    async CreateCollection(_name, _data, _primaryKey = null) {
         const cols = _data.map(f => {
             const type = typeof f.mValue === 'number' ? (Number.isInteger(f.mValue) ? 'INT' : 'DOUBLE') : 'VARCHAR(255)';
             return `${f.mKey} ${type}`;

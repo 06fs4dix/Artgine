@@ -1,4 +1,4 @@
-import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, floor, MatMix, Sam2D0ToColor, MatTypeToMat, min, abs, max, dFdy, V3Len, length, dFdx, } from "./Shader";
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, MatMix, Sam2D0ToColor, MatTypeToMat, min, abs, max, dFdy, V3Len, length, dFdx, V3MulV3, V3Mix, V3SubV3, SaturateFloat, V2AddV2, V2MulV2, V3Min, V2Len, SaturateV3, } from "./Shader";
 import { SDF } from "./SDF";
 import { CAModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
@@ -40,6 +40,11 @@ var weightArrMat = new Sam2DMat(11, 10);
 var weightBakeMat = 9.0;
 var weightBakeIndex;
 var time = Attribute(0, "time");
+var waterDeep = new CVec2(0.0, 256.0);
+var shallowColor = new CVec3(0.0, 0.0, 0.0);
+var deepColor = new CVec3(0.0, 0.1, 0.5);
+var causticMap = 5.0;
+var causticFlowDir = new CVec2(1.0, 0.0);
 Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat,
     viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex, sam2DCount], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
 Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat,
@@ -240,6 +245,32 @@ function vs_main_bake(f3_ver, f4_wi, f4_we, f2_uv, f2_sha, f3_nor, f4_tan, f3_bi
     }
     to_ref = f3_ref;
 }
+function SampleNormalMapToCaustic(_map, _uv) {
+    var N = Sam2DToColor(_map, _uv).rgb;
+    N = V3Nor(V3SubV3(V3MulFloat(N, 2.0), new CVec3(1.0, 1.0, 1.0)));
+    var L = V3Nor(new CVec3(0.0, 1.0, 0.0));
+    var b = clamp(V3Dot(N, L), 0.0, 1.0);
+    return new CVec4(b, b, b, 1.0);
+}
+function SampleCaustics(_map, _uv, _split) {
+    var uv1 = V2AddV2(_uv, new CVec2(_split, _split));
+    var uv2 = V2AddV2(_uv, new CVec2(_split, -_split));
+    var uv3 = V2AddV2(_uv, new CVec2(-_split, -_split));
+    var r = SampleNormalMapToCaustic(_map, uv1).r;
+    var g = SampleNormalMapToCaustic(_map, uv2).g;
+    var b = SampleNormalMapToCaustic(_map, uv3).b;
+    return new CVec3(r, g, b);
+}
+function Caustics(_map, _world, _flow) {
+    var split = 1.0 / 500.0;
+    var worldToUV = V3MulFloat(_world, split);
+    var uv = new CVec2(worldToUV.x, worldToUV.z);
+    var uv1 = V2AddV2(V2MulV2(uv, new CVec2(1.0, 1.0)), V2MulFloat(_flow.xy, _flow.z));
+    var uv2 = V2AddV2(V2MulV2(uv, new CVec2(-1.0, -1.0)), V2MulFloat(_flow.xy, _flow.z * 0.75));
+    var tex1 = SampleCaustics(_map, uv1, split);
+    var tex2 = SampleCaustics(_map, uv2, split);
+    return V3Min(tex1, tex2);
+}
 function ps_main() {
     var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
     var shadow = -1.0;
@@ -249,9 +280,13 @@ function ps_main() {
         shadow = shadowTex.x;
     }
     BranchEnd();
+    var world = to_worldPos;
     var uv = to_uv;
+    var uvh;
     BranchBegin("parallax", "P", [parallaxNormal, camPos]);
-    uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
+    uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+    uv = uvh.xy;
+    world.xyz -= V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))));
     BranchEnd();
     var L_cor = Sam2DToColor(to_ref.x, uv);
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
@@ -276,6 +311,15 @@ function ps_main() {
     }
     BranchEnd();
     out_color = L_cor;
+    BranchBegin("waterRefract", "waterRefract", [waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, time]);
+    if (V2Len(causticFlowDir) > 0.0) {
+        out_color.rgb = V3AddV3(out_color.rgb, V3MulFloat(Caustics(causticMap, world.xyz, new CVec3(-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), V2Len(causticFlowDir) * time * 0.03)), 0.5));
+        out_color.rgb = SaturateV3(out_color.rgb);
+    }
+    if (waterDeep.x > world.y) {
+        out_color.rgb = V3Mix(deepColor, V3MulV3(out_color.rgb, shallowColor), 1.0 - SaturateFloat((waterDeep.x - world.y) / waterDeep.y));
+    }
+    BranchEnd();
 }
 function ps_main_gBuffer() {
     var uv = to_uv;
