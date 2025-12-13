@@ -556,15 +556,15 @@ export class CSing {
             }
         });
         if (CSing.PrivateKey() != null) {
-            CSing.GetEvent(CSing.eEvent.State).Call();
-            let _info = await CSing.PrivateInfo(CSing.PrivateKey());
-            if (_info._email == "") {
-                setTimeout(() => {
+            setTimeout(async () => {
+                CSing.GetEvent(CSing.eEvent.State).Call();
+                let _info = await CSing.PrivateInfo(CSing.PrivateKey());
+                if (_info._email == "") {
                     CSing.GetEvent(CSing.eEvent.Insert).Call();
-                }, 100);
-            }
-            else
-                main.html[1].hidden = false;
+                }
+                else
+                    main.html[1].hidden = false;
+            }, 100);
         }
         else {
             main.html[0]['hidden'] = false;

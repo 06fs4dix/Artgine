@@ -2,18 +2,24 @@ import { WebSocketServer } from 'ws';
 import { CEvent } from '../basic/CEvent.js';
 import { CServer } from './CServerMain.js';
 import { CConsol } from '../basic/CConsol.js';
+import { CUniqueID } from '../basic/CUniqueID.js';
 export class CServerSocker extends CServer {
     mWSS;
     constructor() {
         super();
     }
+    GetPath() {
+        let pathArr = CServer.FindURLPatterns(this);
+        if (pathArr == null || pathArr.length == 0)
+            return null;
+        return pathArr[0];
+    }
     Connect() {
         if (this.mMainServer == null)
             return false;
-        let pathArr = CServer.FindURLPatterns(this);
-        CConsol.Log("[CServerSocker]" + pathArr + " Start", CConsol.eColor.blue);
-        if (pathArr != null) {
-            let path = pathArr[0];
+        let path = this.GetPath();
+        CConsol.Log("[CServerSocker]" + path + " Start", CConsol.eColor.blue);
+        if (path != null) {
             if (path[0] != "/")
                 path = "/" + path;
             this.mWSS = new WebSocketServer({ noServer: true });
@@ -33,6 +39,7 @@ export class CServerSocker extends CServer {
         else
             this.mWSS = new WebSocketServer({ server: this.mMainServer.GetServer() });
         this.mWSS.on('connection', (ws) => {
+            ws["id"] = CUniqueID.GetHash();
             if (this.GetEvent(CEvent.eType.Open) != null)
                 this.GetEvent(CEvent.eType.Open).Call(ws);
             ws.on('message', (message) => {

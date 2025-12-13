@@ -52,6 +52,10 @@ export class CServer implements IListener
             val=gURLPatterns.get(_class);
         return val;
     }
+    // static PushURLPatterns(_path,_this)
+    // {
+    //     gURLPatterns.set(_path,_this);
+    // }
    
     Destroy()
     {

@@ -11,6 +11,7 @@ import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
+import { CSubject } from "../canvas/subject/CSubject.js";
 
 import {CVec2} from "../geometry/CVec2.js";
 import { CVec4 } from "../geometry/CVec4.js";
@@ -888,13 +889,11 @@ export class CModalFlex extends CModal
 }
 export class CBlackboardModal extends CModal {
     constructor(
-        _blackboard: Array<string>,
-        _img: Array<string> = [],
-        LeftTopRightBottom: Array<CVec4> = []
+        _blackboard: Array<string>
     ) {
         super();
 
-        this.SetHeader("블랙보드 리스트");
+        this.SetHeader("BlackBoard Unit(Ctrl Drag->ProxyMode");
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
         this.SetSize(600, 400);
@@ -903,8 +902,13 @@ export class CBlackboardModal extends CModal {
         container.className = "d-flex flex-wrap justify-content-start p-2";
 
         _blackboard.forEach((key, i) => {
-            const imgPath = _img[i];
-            const tex = LeftTopRightBottom[i];
+            // 각 key마다 개별 블랙보드 찾기
+            const bb = CBlackBoard.Find(key) as CSubject;
+            if (!bb) {
+                return;
+            }
+
+            const durl = bb.CaptureTextureToDataURL();
 
             const box = document.createElement("div");
             box.className = "position-relative m-1 border rounded";
@@ -914,55 +918,28 @@ export class CBlackboardModal extends CModal {
             box.style.overflow = "hidden";
 
             box.setAttribute("draggable", "true");
-            box.addEventListener("dragstart", (event) => {
-                event.dataTransfer.setData('text', key);
-                CObject.SetDrag("CObject", CBlackBoard.Find(key));
+            box.addEventListener("dragstart", (event: DragEvent) => {
+                if (!event.dataTransfer) return;
+                event.dataTransfer.setData("text", key);
+                CObject.SetDrag("CObject", bb);
             });
 
-            if (imgPath && tex instanceof CVec4) {
-                const img = new Image();
-                img.src = imgPath;
-                img.onload = () => {
-                    const cutW = tex.z - tex.x;
-                    const cutH = tex.w - tex.y;
+            // === 썸네일 이미지 추가 부분 ===
+            const img = document.createElement("img");
+            img.src = durl;
+            img.alt = key;
 
-                    const scaleX = 64 / cutW;
-                    const scaleY = 64 / cutH;
+            // 박스(64x64)에 딱 맞게 고정
+            img.style.width = "100%";
+            img.style.height = "100%";
+            img.style.objectFit = "cover"; // 필요하면 "contain" 으로 바꿔도 됨
 
-                    const clipper = document.createElement("div");
-                    clipper.style.position = "relative";
-                    clipper.style.width = "64px";
-                    clipper.style.height = "64px";
-                    clipper.style.overflow = "hidden";
+            // 드래그는 box가 담당하도록
+            img.draggable = false;
+            img.style.pointerEvents = "none";
 
-                    img.style.position = "absolute";
-                    img.style.left = `-${tex.x * scaleX}px`;
-                    img.style.top = `-${tex.y * scaleY}px`;
-                    img.style.width = `${img.width * scaleX}px`;
-                    img.style.height = `${img.height * scaleY}px`;
-                    img.style.pointerEvents = "none";
-                    img.draggable = false;
-
-                    clipper.appendChild(img);
-                    box.appendChild(clipper);
-
-                    const label = document.createElement("div");
-                    label.className = "position-absolute top-50 start-50 translate-middle text-white text-center fw-bold";
-                    label.style.textShadow = `
-                        -1px -1px 2px black,
-                        1px -1px 2px black,
-                        -1px 1px 2px black,
-                        1px 1px 2px black`;
-                    label.innerText = key;
-                    label.draggable = false;
-
-                    box.appendChild(label);
-                };
-            } else {
-                box.classList.add("bg-secondary", "text-white", "d-flex", "align-items-center", "justify-content-center");
-                box.style.fontWeight = "bold";
-                box.innerText = key;
-            }
+            box.appendChild(img);
+            // ==============================
 
             container.appendChild(box);
         });

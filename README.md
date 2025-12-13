@@ -12,9 +12,13 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 [Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : Shooting
 
+[Up](https://06fs4dix.github.io/Artgine/proj/2D/SideScroll/SideScroll.html) : Up
+
 **3D**
 
 [ModularVillage](https://06fs4dix.github.io/Artgine/proj/3D/ModularVillage/ModularVillage.html) : Village
+
+[Voxel](https://06fs4dix.github.io/Artgine/proj/3D/Voxel/Voxel.html) : Voxel
 
 [BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : Box visual viewer
 
@@ -26,8 +30,6 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 [CollusionTest](https://06fs4dix.github.io/Artgine/proj/Tutorial/Collusion/Collusion.html): Collision testing.  
 
 [3DLight](https://06fs4dix.github.io/Artgine/proj/Tutorial/3DLight/3DLight.html): 3D lights and shadows.
-
-[Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html): Skybox.  
 
 [Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html): Track 3D objects from a 2D map.  
 

@@ -176,6 +176,52 @@ export class CH5Canvas {
         gCMDStack.push(...cmdVec);
         return cmdVec;
     }
+    static DrawBuf(_buf, _posX, _posY, _width, _height, _codi = null) {
+        const cmdVec = [];
+        if (!_buf || _buf.length === 0)
+            return cmdVec;
+        if (_width <= 0 || _height <= 0)
+            return cmdVec;
+        if (_codi == null) {
+            const data = new Uint8ClampedArray(_buf);
+            const imgData = new ImageData(data, _width, _height);
+            cmdVec.push(CH5Canvas.Cmd("putImageData", [imgData, _posX, _posY]));
+            gCMDStack.push(...cmdVec);
+            return cmdVec;
+        }
+        let left = _codi.x | 0;
+        let top = _codi.y | 0;
+        let right = _codi.z | 0;
+        let bottom = _codi.w | 0;
+        if (right < left) {
+            const t = left;
+            left = right;
+            right = t;
+        }
+        if (bottom < top) {
+            const t = top;
+            top = bottom;
+            bottom = t;
+        }
+        left = Math.max(0, Math.min(left, _width));
+        right = Math.max(0, Math.min(right, _width));
+        top = Math.max(0, Math.min(top, _height));
+        bottom = Math.max(0, Math.min(bottom, _height));
+        const sw = right - left;
+        const sh = bottom - top;
+        if (sw <= 0 || sh <= 0)
+            return cmdVec;
+        const slice = new Uint8ClampedArray(sw * sh * 4);
+        for (let y = 0; y < sh; ++y) {
+            const srcOffset = ((top + y) * _width + left) * 4;
+            const dstOffset = (y * sw) * 4;
+            slice.set(_buf.subarray(srcOffset, srcOffset + sw * 4), dstOffset);
+        }
+        const imgData = new ImageData(slice, sw, sh);
+        cmdVec.push(CH5Canvas.Cmd("putImageData", [imgData, _posX, _posY]));
+        gCMDStack.push(...cmdVec);
+        return cmdVec;
+    }
     static DrawImage(_img, _posX, _posY, _width = 0, _height = 0) {
         var cmdVec = new Array();
         if (_width != 0 && _height != 0)

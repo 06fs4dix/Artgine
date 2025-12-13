@@ -23,6 +23,7 @@ export class CSurface extends CSubject {
             this.mRenderPass.mRenderTarget = CUniqueID.GetHash() + ".tex";
         else
             this.mRenderPass.mRenderTarget = this.mTexKey;
+        this.mSelect = false;
     }
     Icon() {
         return "bi bi-badge-hd";

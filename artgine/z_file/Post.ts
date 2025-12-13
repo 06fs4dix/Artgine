@@ -3,11 +3,11 @@ import { SDF } from "./SDF";
 import { 
     Attribute, BlendFun, BranchBegin, BranchEnd, Build, CMat, CMat3, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
     MappingTexToV3, Null, OutColor, OutPosition,Sam2D0ToColor,Sam2DSize,Sam2DToColor, SaturateV3, 
-    SaturateV4, ToV2, ToV3, UV2, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, 
-    V2MulV2, V2SubV2, V3AddV3,V3DivV3,V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, 
+    SaturateV4, ToV2, ToV3, UV2, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2Mod, V2MulFloat, 
+    V2MulV2, V2SubV2, V3AddV3,V3Clamp,V3DivV3,V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, 
     V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, 
     V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, 
-    V4SubV4, Vertex3, abs, clamp, discard, floor, fract, gl_Position, max, min, pow, sampler2D, screenPos, sign, sin, smoothstep 
+    V4SubV4, Vertex3, abs, clamp, discard, floor, fract, gl_Position, max, min, mod, pow, sampler2D, screenPos, sign, sin, smoothstep 
 } from "./Shader";
 
 //mat
@@ -115,6 +115,8 @@ var mixFactor : number=Null();
 var exposure : number=Null();
 
 var blendFactor : number=Null();
+/********************************/
+
 /********************************/
 
 //Blend
@@ -238,6 +240,11 @@ Build("Artgine/Shader/PostUpSample",["sample", "up"],
         blendFactor
     ],[out_position,to_uv],
     ps_main_UpSample,[out_color]);
+Build("Artgine/Shader/PostColorPalatte",["palette"],
+    vs_main, [
+        worldMat,viewMat,projectMat
+    ],[out_position,to_uv],
+    ps_main_ColorPalette,[out_color]);
 
 function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
     var result : CVec2 = new CVec2(_uv.x * _texCodi.x + _texCodi.z, _uv.y * _texCodi.y + _texCodi.w);
@@ -950,4 +957,104 @@ function ps_main_UpSample() {
 
     out_color.rgb = col;
     out_color.w   = blendFactor; // 정보용
+}
+
+function DitherMatrix4x4(_p : CVec2) : number
+{
+    var x : number = floor(mod(_p.x, 4.0));
+    var y : number = floor(mod(_p.y, 4.0));
+
+    // Bayer Matrix (B4)
+    //  0  8  2 10
+    // 12  4 14  6
+    //  3 11  1  9
+    // 15  7 13  5
+    if(y < 0.5) {
+        if(x < 0.5) return 0.0 / 16.0;
+        if(x < 1.5) return 8.0 / 16.0;
+        if(x < 2.5) return 2.0 / 16.0;
+        if(x < 3.5) return 10.0 / 16.0;
+    }
+    else if(y < 1.5) {
+        if(x < 0.5) return 12.0 / 16.0;
+        if(x < 1.5) return 4.0 / 16.0;
+        if(x < 2.5) return 14.0 / 16.0;
+        if(x < 3.5) return 6.0 / 16.0;
+    }
+    else if(y < 2.5) {
+        if(x < 0.5) return 3.0 / 16.0;
+        if(x < 1.5) return 11.0 / 16.0;
+        if(x < 2.5) return 1.0 / 16.0;
+        if(x < 3.5) return 9.0 / 16.0;
+    }
+    else if(y < 3.5) {
+        if(x < 0.5) return 15.0 / 16.0;
+        if(x < 1.5) return 7.0 / 16.0;
+        if(x < 2.5) return 13.0 / 16.0;
+        if(x < 3.5) return 5.0 / 16.0;
+    }
+    return 0.0;
+}
+
+function MapToPaletteUV(_color : CVec3, _cellSize : number) : CVec2
+{
+    var palSize : CVec2 = Sam2DSize(1.0);
+
+    _color = V3Clamp(_color, 0.0, 0.9999);
+    var mappedColor : CVec3 = V3Floor(V3MulFloat(_color, _cellSize));
+
+    // 텍스쳐의 인덱스 계산
+    var mappedIndex : number = mappedColor.x + mappedColor.y * _cellSize + mappedColor.z * _cellSize * _cellSize;
+
+    return new CVec2(
+        floor(mappedIndex / palSize.x) / palSize.x, 
+        mod(mappedIndex, palSize.y) / palSize.y
+    );
+}
+
+function ps_main_ColorPalette()
+{
+    // 원본 색상
+    var src : CVec4 = Sam2DToColor(0.0, to_uv);
+
+    // 셀 사이즈 계산
+    var palSize : CVec2 = Sam2DSize(1.0);
+    var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+
+    BranchBegin("dither","dither",[]);
+    src.rgb = V3AddV3(src.rgb, V3MulFloat(new CVec3(1.0, 1.0, 1.0), (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0)));
+    BranchEnd();
+
+    // 테스트용
+    var test : number;
+    BranchBegin("test","test",[]);
+    if(to_uv.x < 0.2 && to_uv.y < 0.2) {
+        if(cellSize < 1.5) {
+            test = floor(to_uv.x * 5.0 * 64.0) * 64.0 + floor(to_uv.y * 5.0 * 64.0);
+            out_color.b = floor(test / (16.0 * 16.0)) / 16.0;
+            test = floor(mod(test, (16.0 * 16.0))); // rg
+            out_color.g = floor(test / 16.0) / 16.0;
+            out_color.r = floor(mod(test, 16.0)) / 16.0;
+            out_color.a = 1.0;
+        }
+        else {
+            out_color = Sam2DToColor(1.0, new CVec2(to_uv.x * 5.0, to_uv.y * 5.0));
+        }
+        return;
+    }
+    BranchEnd();
+
+    // 텍스쳐가 없으면 src 리턴
+    if(cellSize < 1.5) {
+        out_color = src;
+        return;
+    }
+
+    // 팔레트 매핑
+    var paletteUV : CVec2 = MapToPaletteUV(src.rgb, cellSize);
+
+    // 팔레트에서 샘플링
+    var final : CVec4 = Sam2DToColor(1.0, paletteUV);
+
+    out_color = new CVec4(final.rgb, 1.0);
 }

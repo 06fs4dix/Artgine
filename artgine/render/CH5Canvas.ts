@@ -1,6 +1,7 @@
 import {CObject} from "../basic/CObject.js";
 import {CString} from "../basic/CString.js";
 import {CVec2} from "../geometry/CVec2.js";
+import { CVec4 } from "../geometry/CVec4.js";
 import {CTexture} from "./CTexture.js";
 
 
@@ -229,6 +230,77 @@ export class CH5Canvas
 		gCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
+	static DrawBuf(
+		_buf   : Uint8Array,
+		_posX  : number,
+		_posY  : number,
+		_width : number,
+		_height: number,
+		_codi  : CVec4 = null
+	) {
+		const cmdVec: Array<CH5Cmd> = [];
+
+		// 기본 검증
+		if (!_buf || _buf.length === 0) return cmdVec;
+		if (_width <= 0 || _height <= 0) return cmdVec;
+
+		// 전체 버퍼를 그대로 그리는 경우
+		if (_codi == null) {
+			const data   = new Uint8ClampedArray(_buf);
+			const imgData = new ImageData(data, _width, _height);
+
+			cmdVec.push(
+				CH5Canvas.Cmd("putImageData", [imgData, _posX, _posY])
+			);
+
+			gCMDStack.push(...cmdVec);
+			return cmdVec;
+		}
+
+		// ---------- 여기부터 부분 그리기: _codi = (left, top, right, bottom) ----------
+		// 원본 좌표
+		let left   = _codi.x | 0;
+		let top    = _codi.y | 0;
+		let right  = _codi.z | 0;
+		let bottom = _codi.w | 0;
+
+		// 좌표 정리 (혹시 right < left, bottom < top 이 들어와도 정렬)
+		if (right < left)   { const t = left;   left = right;  right = t; }
+		if (bottom < top)   { const t = top;    top = bottom;  bottom = t; }
+
+		// 버퍼 범위로 클램프
+		left   = Math.max(0, Math.min(left,   _width));
+		right  = Math.max(0, Math.min(right,  _width));
+		top    = Math.max(0, Math.min(top,    _height));
+		bottom = Math.max(0, Math.min(bottom, _height));
+
+		const sw = right  - left;
+		const sh = bottom - top;
+
+		if (sw <= 0 || sh <= 0) return cmdVec;
+
+		// 잘라낼 영역용 버퍼 생성
+		const slice = new Uint8ClampedArray(sw * sh * 4);
+
+		for (let y = 0; y < sh; ++y) {
+			const srcOffset = ((top + y) * _width + left) * 4;
+			const dstOffset = (y * sw) * 4;
+			// 한 줄씩 복사 (4채널 * sw 픽셀)
+			slice.set(_buf.subarray(srcOffset, srcOffset + sw * 4), dstOffset);
+		}
+
+		const imgData = new ImageData(slice, sw, sh);
+
+		// 목적지 위치는 _posX, _posY (소스의 left/top 은 "어디서 잘랐는지" 정보일 뿐)
+		cmdVec.push(
+			CH5Canvas.Cmd("putImageData", [imgData, _posX, _posY])
+		);
+
+		gCMDStack.push(...cmdVec);
+		return cmdVec;
+	}
+
+
 	static DrawImage(_img:string|HTMLImageElement,_posX:number,_posY:number,_width:number=0,_height:number=0){
 		var cmdVec=new Array<CH5Cmd>();
 		if(_width!=0 && _height!=0)

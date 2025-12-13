@@ -50,6 +50,8 @@ import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
 import { CConsol } from "../basic/CConsol.js";
+import { CLocation } from "../canvas/subject/CLocation.js";
+import { CFont, CFontOption } from "../util/CFont.js";
 
 
 var gModal : CModalFlex;
@@ -511,7 +513,7 @@ export function DevTool(_atl: CAtelier)
 
         
         if(IsFocusInput())  return;
-        if (e.key === "Control")    ctrlPressed = true;
+       
 
         if(e.key=="Delete")
         {
@@ -520,7 +522,7 @@ export function DevTool(_atl: CAtelier)
         
 
         // ✅ Ctrl + C → Subject 복사
-        if (ctrlPressed && e.key.toLowerCase() === "c") 
+        if (e.ctrlKey && e.key.toLowerCase() === "c") 
         {
             if (gLeftSelect instanceof CSubject) {
                 navigator.clipboard.writeText(gLeftSelect.ToStr());
@@ -530,7 +532,7 @@ export function DevTool(_atl: CAtelier)
         }
 
         // ✅ Ctrl + V → Subject 붙여넣기
-        if (ctrlPressed && e.key.toLowerCase() === "v") 
+        if (e.ctrlKey && e.key.toLowerCase() === "v") 
         {
             if (!(gLeftSelect instanceof CCanvas)) {
                 //CAlert.Info("Paste Target Canvas Select!");
@@ -561,12 +563,20 @@ export function DevTool(_atl: CAtelier)
         }
     });
 
-    gModal.mBody.addEventListener("keyup", (e) => {
-        if (e.key === "Control")    ctrlPressed = false;
+    // window.addEventListener("keydown", (e) => {
+    //     if (e.key === "Control")    ctrlPressed = true;
+    // });
+    window.addEventListener("keyup", (e) => {
+        //if (e.key === "Control")    ctrlPressed = false;
 
         if (e.key === "F6")
         {
             gAtl.Brush().SetPause(!gAtl.Brush().IsPause());
+        }
+        if(e.key === "l" && e.ctrlKey)
+        {
+            DevToolLeftPush();
+            //alert("test");
         }
     });
 
@@ -575,12 +585,168 @@ export function DevTool(_atl: CAtelier)
 
 function DevToolRender()
 {
-    if(gLeftSelect==null || gLeftSelect instanceof CSubject==false)   return;
+    let color=new CColor();
+    color.w=SDF.eColorModel.RGBAdd;
+    let alpha=new CAlpha();
+    let FunRenSub=(_sub : CSubject,_font=false)=>{
 
-    let subject=gLeftSelect;
-    let ptArr=subject.FindComps(CPaint);
-    let clArr=subject.FindComps(CCollider);
+        if(_font)
+        {
+            gAtl.Frame().Dev().SetDepthTest(true);
+            gAtl.Frame().Dev().SetLine(false);
 
+            var fr = CFont.TextToTexName(gAtl.Frame().Ren(),_sub.Key(),new CFontOption(32,"white","black",2));
+            color.x=1;
+            color.y=1;
+            color.z=1;
+            color.w=SDF.eColorModel.None;
+            
+            
+            wmat.mF32A[0]=fr.mRXSize/100;
+            wmat.mF32A[5]=fr.mRYSize/100;
+            // wmat.mF32A[0]=1;
+            // wmat.mF32A[5]=1;
+            wmat.mF32A[10]=1;
+
+            wmat.xyz=CMath.V3AddV3(_sub.GetPos(),new CVec3(fr.mRXSize*0.5,fr.mRYSize*0.5));
+            //wmat.xyz=_sub.GetPos();
+
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,[fr.mKey]);
+            render.SendGPU(shader,wMatSA);
+            render.MeshDrawNodeRender(shader,meshDrawBox);
+
+
+            gAtl.Frame().Dev().SetDepthTest(false);
+            gAtl.Frame().Dev().SetLine(true);
+            render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
+        }
+        
+
+        let ptArr=_sub.FindComps(CPaint);
+        let clArr=_sub.FindComps(CCollider);
+        
+        for(let pt of ptArr)
+        {
+            if(pt.GetOwner()==null || pt.GetOwner().IsEnable()==false) continue;
+            color.x=1;
+            color.y=0;
+            color.z=0;
+            let bound=pt.GetBoundFMat();
+            bound.mMax;
+            bound.mMin;
+            const min = bound.mMin;
+            const max = bound.mMax;
+
+            // 중심 위치 = (min + max) * 0.5
+            const center = new CVec3(
+                (min.x + max.x) * 0.5,
+                (min.y + max.y) * 0.5,
+                (min.z + max.z) * 0.5
+            );
+            const boxSize = 200; // 기준 박스 사이즈 (-100~100)
+            // 스케일 = (max - min) * 0.5
+            const scale = new CVec3(
+                (max.x - min.x) /boxSize,
+                (max.y - min.y) /boxSize,
+                (max.z - min.z) /boxSize
+            );
+            wmat.xyz=center;
+            wmat.mF32A[0]=scale.x;
+            wmat.mF32A[5]=scale.y;
+            wmat.mF32A[10]=scale.z;
+
+
+
+            
+
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.MeshDrawNodeRender(shader,meshDrawBox);
+
+            if(pt instanceof CPaint2D)
+            {
+
+
+                if(pt.mYSort)
+                {
+                    color.x=0;
+                    color.y=1;
+                    color.z=0;
+                    wmat.xyz=CMath.V3AddV3(pt.GetHalf(),subject.GetPos());
+                    wmat.y+=pt.mYSortOrigin;
+                    wmat.mF32A[0]=0.02;
+                    wmat.mF32A[5]=0.02;
+                    wmat.mF32A[10]=0.02;
+
+                    render.SendGPU(shader,color,"colorModel");
+                    render.SendGPU(shader,alpha,"alphaModel");
+                    MatToMat12Fun(wmat);
+                    render.SendGPU(shader,wMatSA);
+                    render.MeshDrawNodeRender(shader,meshDrawBox);
+                }
+                
+
+            }
+        }
+
+
+        color.x=0;
+        color.y=0;
+        color.z=1;
+        color.w=SDF.eColorModel.RGBAdd;
+
+
+        for(let pt of clArr)
+        {
+            if(pt.GetOwner()==null || pt.IsEnable()==false || pt.GetLayer()=="") continue;
+            let bound=pt.GetBoundGJK();
+
+
+
+        
+            const min = bound.mMin;
+            const max = bound.mMax;
+
+            // 중심 위치 = (min + max) * 0.5
+            const center = new CVec3(
+                (min.x + max.x) * 0.5,
+                (min.y + max.y) * 0.5,
+                (min.z + max.z) * 0.5
+            );
+            const boxSize = 200; // 기준 박스 사이즈 (-100~100)
+            // 스케일 = (max - min) * 0.5
+            const scale = new CVec3(
+                (max.x - min.x) /boxSize,
+                (max.y - min.y) /boxSize,
+                (max.z - min.z) /boxSize
+            );
+            wmat.xyz=center;
+            wmat.mF32A[0]=scale.x;
+            wmat.mF32A[5]=scale.y;
+            wmat.mF32A[10]=scale.z;
+
+
+            
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
+
+            if(pt.GetBound().GetType()==CBound.eType.Sphere)
+                render.MeshDrawNodeRender(shader,meshDrawSphere);
+            else
+                render.MeshDrawNodeRender(shader,meshDrawBox);
+        }
+    };
+    
+
+    let subject=gLeftSelect as CSubject;
     const render=gAtl.Frame().Ren();
     let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCA") as CShader;
     
@@ -606,12 +772,9 @@ function DevToolRender()
     render.SendGPU(shader,gAtl.Brush().GetCamDev().GetViewMat(),"viewMat");
     render.SendGPU(shader,gAtl.Brush().GetCamDev().GetProjMat(),"projectMat");
     render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
-
-    //ResetBoxXYZ(subject);
-    let color=new CColor();
     
-    color.w=SDF.eColorModel.RGBAdd;
-    let alpha=new CAlpha();
+
+    
     let wmat=new CMat();
     let wMatSA=new CShaderAttr("worldMat",wmat);
     //if(CWASM.IsWASM())wMatSA.mType=12;
@@ -620,15 +783,38 @@ function DevToolRender()
         //_mat.mF32A[7]=_mat.mF32A[13];
         //_mat.mF32A[11]=_mat.mF32A[14];
     };
+
+
+    if(gLastCanvas!=null)
+    {
+        gAtl.Frame().Dev().SetDepthTest(false);
+        gAtl.Frame().Dev().SetLine(true);
+        let canvas=gLastCanvas as CCanvas;
+        for(let [key,value] of canvas.GetSubMap())
+        {
+            if(value instanceof CLocation)   
+            {
+
+                
+                FunRenSub(value,true);
+                
+            }
+        }
+        gAtl.Frame().Dev().SetLine(false);
+        gAtl.Frame().Dev().SetDepthTest(true);
+    }
+
+    if(gLeftSelect==null || gLeftSelect instanceof CSubject==false)   return;
+
+
+
+
+
     let pos=subject.GetMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
     gAtl.Frame().Dev().SetLine(true);
     {
-        
 
-        
-        
-        
         if(gAtl.Brush().GetCamDev().IsOrthographic())
         {
             color.x=1;
@@ -712,127 +898,16 @@ function DevToolRender()
     gAtl.Frame().Dev().SetLine(true);
     //gAtl.Frame().Dev().SetDepthTest(true);
     
-    for(let pt of ptArr)
-    {
-        if(pt.GetOwner()==null || pt.GetOwner().IsEnable()==false) continue;
-        color.x=1;
-        color.y=0;
-        color.z=0;
-        let bound=pt.GetBoundFMat();
-        bound.mMax;
-        bound.mMin;
-        const min = bound.mMin;
-        const max = bound.mMax;
-
-        // 중심 위치 = (min + max) * 0.5
-        const center = new CVec3(
-            (min.x + max.x) * 0.5,
-            (min.y + max.y) * 0.5,
-            (min.z + max.z) * 0.5
-        );
-        const boxSize = 200; // 기준 박스 사이즈 (-100~100)
-        // 스케일 = (max - min) * 0.5
-        const scale = new CVec3(
-            (max.x - min.x) /boxSize,
-            (max.y - min.y) /boxSize,
-            (max.z - min.z) /boxSize
-        );
-        wmat.xyz=center;
-        wmat.mF32A[0]=scale.x;
-        wmat.mF32A[5]=scale.y;
-        wmat.mF32A[10]=scale.z;
-
-
-
-        
-
-        render.SendGPU(shader,color,"colorModel");
-        render.SendGPU(shader,alpha,"alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader,wMatSA);
-        render.MeshDrawNodeRender(shader,meshDrawBox);
-
-        if(pt instanceof CPaint2D)
-        {
-
-
-            if(pt.mYSort)
-            {
-                color.x=0;
-                color.y=1;
-                color.z=0;
-                wmat.xyz=CMath.V3AddV3(pt.GetHalf(),subject.GetPos());
-                wmat.y+=pt.mYSortOrigin;
-                wmat.mF32A[0]=0.02;
-                wmat.mF32A[5]=0.02;
-                wmat.mF32A[10]=0.02;
-
-                render.SendGPU(shader,color,"colorModel");
-                render.SendGPU(shader,alpha,"alphaModel");
-                MatToMat12Fun(wmat);
-                render.SendGPU(shader,wMatSA);
-                render.MeshDrawNodeRender(shader,meshDrawBox);
-            }
-            
-
-        }
-    }
-
-
-    color.x=0;
-    color.y=0;
-    color.z=1;
-    color.w=SDF.eColorModel.RGBAdd;
-
-
-    for(let pt of clArr)
-    {
-        if(pt.GetOwner()==null || pt.IsEnable()==false || pt.GetLayer()=="") continue;
-        let bound=pt.GetBoundGJK();
-
-
-
-       
-        const min = bound.mMin;
-        const max = bound.mMax;
-
-        // 중심 위치 = (min + max) * 0.5
-        const center = new CVec3(
-            (min.x + max.x) * 0.5,
-            (min.y + max.y) * 0.5,
-            (min.z + max.z) * 0.5
-        );
-        const boxSize = 200; // 기준 박스 사이즈 (-100~100)
-        // 스케일 = (max - min) * 0.5
-        const scale = new CVec3(
-            (max.x - min.x) /boxSize,
-            (max.y - min.y) /boxSize,
-            (max.z - min.z) /boxSize
-        );
-        wmat.xyz=center;
-        wmat.mF32A[0]=scale.x;
-        wmat.mF32A[5]=scale.y;
-        wmat.mF32A[10]=scale.z;
-
-
-        
-        render.SendGPU(shader,color,"colorModel");
-        render.SendGPU(shader,alpha,"alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader,wMatSA);
-        render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
-
-        if(pt.GetBound().GetType()==CBound.eType.Sphere)
-            render.MeshDrawNodeRender(shader,meshDrawSphere);
-        else
-            render.MeshDrawNodeRender(shader,meshDrawBox);
-    }
-
+    
+    FunRenSub(subject);
 
 
 
     gAtl.Frame().Dev().SetLine(false);
     gAtl.Frame().Dev().SetDepthTest(true);
+
+
+    
 
 
 }
@@ -1191,11 +1266,6 @@ function DevToolUpdate(_delay)
         CInput.eDragState.None==gAtl.Frame().Input().DragState())
     {
 
-        
-        
-
-
-
         let ray=gAtl.Brush().GetCamDev().GetRay(gAtl.Frame().Input().Mouse().x,gAtl.Frame().Input().Mouse().y);
         if(gAtl.Brush().GetCamDev().IsOrthographic() && ray.GetDirect().z<-0.9)//2D는 가림 문제로 하드코딩
             ray.GetOriginal().z+=1000;
@@ -1344,7 +1414,7 @@ function DevToolUpdate(_delay)
         LeftSelect(null);
     }
     //=====================================================================================================
-
+    
     if(gUpdateTime>0)
     {
         gUpdateTime-=_delay;
@@ -1601,7 +1671,7 @@ function DevToolLeftPush()
         // input + datalist 포함한 div 생성
         const div = CDOM.DataToDom(`
             <div>
-                <label class="form-label">Enter or choose a type to add:</label>
+                <label class="form-label">${gLeftSelect.Key()}-Enter or choose a type to add:</label>
                 <input class="form-control" list="${datalistId}" id="DevToolLeftAdd_Input" placeholder="Type name...">
                 ${datalistHtml}
             </div>
@@ -1637,6 +1707,7 @@ function DevToolLeftPush()
                     gLeftSelect.PushChild(cls);
             }
             confirm.Close(); // ✅ 닫기 추가
+  
         };
 
         const confirm = CConfirm.List(div, [onPush, () => {}], ["Push", "Cancel"]);
@@ -1649,27 +1720,10 @@ function DevToolLeftPush()
                 onPush(); // ✅ Push 함수 호출
             }
         });
+        CDOM.ID("DevToolLeftAdd_Input").focus();
 
-        // let confirm=CConfirm.List(div,[()=>{
-        //     let value=CDOM.IDValue("DevToolLeftAdd_Input");
-        //     let cls=CClass.New(value);
-        //     if(cls==null)
-        //         CAlert.E("class not def");
-        //     else
-        //     {
-        //         let item=LeftNewItem(cls);
-        //         let bdiv=CDOM.ID(gLeftSelect.ObjHash()+"_ul");
-        //         bdiv.append(CDomFactory.DataToDom(item));
-        //         LeftModifyItem(gLeftSelect.ObjHash());
 
-        //         if(gLeftSelect instanceof CCanvas)
-        //             gLeftSelect.Push(cls);
-        //         else if(gLeftSelect instanceof CSubject)
-        //             gLeftSelect.PushChilde(cls);
-        //     }
-
-            
-        // },()=>{}],["Push","Cancel"])
+        
     }
     else if(gLeftSelect instanceof CBrush)
     {

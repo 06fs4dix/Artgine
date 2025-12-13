@@ -118,11 +118,12 @@ var weightBakeIndex : number;
 
 var time : number = Attribute(0,"time");
 
-var waterDeep : CVec2 = new CVec2(0.0,256.0);
+var waterDeep : CVec3 = new CVec3(0.0,256.0,2000.0);
 var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
 var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
 var causticMap : number = 5.0;
-var causticFlowDir : CVec2 = new CVec2(1.0, 0.0);
+var causticFlowDir : CVec2 = new CVec2(0.0, 0.0);
+var causticFlowFreq : number = 1.0;
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
@@ -456,10 +457,13 @@ function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, 
 
 function SampleNormalMapToCaustic(_map : number, _uv : CVec2) : CVec4
 {
-	var N : CVec3 = Sam2DToColor(_map, _uv).rgb;
-	N = V3Nor(V3SubV3(V3MulFloat(N, 2.0), new CVec3(1.0, 1.0, 1.0)));
-	var L : CVec3 = V3Nor(new CVec3(0.0, 1.0, 0.0));
-	var b : number = clamp(V3Dot(N, L), 0.0, 1.0);
+	var N : CVec3 = V3Nor(MappingTexToV3(Sam2DToColor(_map, _uv).rgb));
+	var L : CVec3 = new CVec3(0.0, 1.0, 0.0);
+	var NdotL : number = V3Dot(N, L);
+	var frequency : number = 1.0 - causticFlowFreq;
+	var threshold : number = 0.4 * frequency * frequency;
+	var amp : number = 1.0 / (1.0 - threshold - 0.05);
+	var b : number = clamp((NdotL - threshold) * amp, 0.0, 1.0);
 	return new CVec4(b, b, b, 1.0);
 }
 
@@ -480,15 +484,9 @@ function Caustics(_map : number, _world : CVec3, _flow : CVec3) : CVec3
 {
 	var split : number = 1.0 / 500.0;
 	var worldToUV : CVec3 = V3MulFloat(_world, split);
-	var uv : CVec2 = new CVec2(worldToUV.x, worldToUV.z);
-
-	var uv1 : CVec2 = V2AddV2(V2MulV2(uv, new CVec2( 1.0,  1.0)), V2MulFloat(_flow.xy, _flow.z));
-	var uv2 : CVec2 = V2AddV2(V2MulV2(uv, new CVec2(-1.0, -1.0)), V2MulFloat(_flow.xy, _flow.z * 0.75));
-
-	var tex1 : CVec3 = SampleCaustics(_map, uv1, split);
-	var tex2 : CVec3 = SampleCaustics(_map, uv2, split);
-
-	return V3Min(tex1, tex2);
+	var uv : CVec2 = V2AddV2(new CVec2(worldToUV.x, worldToUV.z), V2MulFloat(_flow.xy, _flow.z));
+	var tex : CVec3 = SampleCaustics(_map, uv, split);
+	return tex;
 }
 
 function ps_main()
@@ -557,30 +555,18 @@ function ps_main()
 
 	out_color=L_cor;
 
-	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, time]);
+	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, causticFlowFreq, time]);
 	if(V2Len(causticFlowDir) > 0.0) {
 		out_color.rgb = V3AddV3(
 			out_color.rgb, 
-			// Caustics(
-			// 	causticMap, 
-			// 	world.xyz, 
-			// 	new CVec3(
-			// 		-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
-			// 		causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
-			// 		V2Len(causticFlowDir) * time * 0.03
-			// 	)
-			// )
-			V3MulFloat(
-				Caustics(
-					causticMap, 
-					world.xyz, 
-					new CVec3(
-						-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
-						causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
-						V2Len(causticFlowDir) * time * 0.03
-					)
-				),
-				0.5   // <<< 여기서 강도 줄이기
+			Caustics(
+				causticMap, 
+				world.xyz, 
+				new CVec3(
+					-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
+					causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
+					V2Len(causticFlowDir) * time * 0.03
+				)
 			)
 		);
 		out_color.rgb = SaturateV3(out_color.rgb);

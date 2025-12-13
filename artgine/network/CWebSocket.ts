@@ -52,6 +52,7 @@ export class CWebSocket
 		this.mError=CEvent.ToCEvent(_error);
 		this.mReceive=CEvent.ToCEvent(_receive);
 	}
+	//success true
 	Connect()
 	{
 		return new Promise<boolean>((resolve, reject)=>

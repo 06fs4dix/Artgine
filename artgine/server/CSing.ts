@@ -801,19 +801,21 @@ export class CSing
 
         if(CSing.PrivateKey()!=null)
         {
-            CSing.GetEvent(CSing.eEvent.State).Call();
-            let _info=await CSing.PrivateInfo(CSing.PrivateKey());
-            if(_info._email=="")
-            {
-                //ModifyFun(CSing.PrivateKey());
-                setTimeout(() => {
-                    CSing.GetEvent(CSing.eEvent.Insert).Call();    
-                }, 100);
+            setTimeout(async () => {
+                CSing.GetEvent(CSing.eEvent.State).Call();
+                let _info=await CSing.PrivateInfo(CSing.PrivateKey());
+                if(_info._email=="")
+                {
+                    //ModifyFun(CSing.PrivateKey());
+                    
+                    CSing.GetEvent(CSing.eEvent.Insert).Call();        
+                }
+                    
+                else
+                    main.html[1].hidden=false;
                 
-            }
-                
-            else
-                main.html[1].hidden=false;
+            }, 100);
+            
                     
             
             

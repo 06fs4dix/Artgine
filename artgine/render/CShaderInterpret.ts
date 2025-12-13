@@ -350,6 +350,13 @@ export class CShaderInterpretGL extends CShaderInterpret
 		const vfCount=new Array(CVertexFormat.eIdentifier.Count).fill(0);
 
 		for(const funKey of _useFun) {
+
+			// if(funKey=="SimplifiedFresnelSchlick")
+			// {
+			// 	CConsol.Log("SimplifiedFresnelSchlick");
+			// }
+
+
 			const fun = this.mFunction.get(funKey);
 
 			let tempStr = "";
@@ -1293,6 +1300,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 	}
 };
 import CShaderInterpret_imple from "../render_imple/CShaderInterpret.js";
+import { CConsol } from "../basic/CConsol.js"
 CShaderInterpret_imple();
 
 

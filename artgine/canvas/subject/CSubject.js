@@ -17,7 +17,6 @@ import { CFile } from "../../system/CFile.js";
 import { CComponent } from "../component/CComponent.js";
 import { CRouteMsg } from "../CRouteMsg.js";
 import { CPaint } from "../component/paint/CPaint.js";
-import { CConsol } from "../../basic/CConsol.js";
 var g_offCObjHD = 0;
 export class CSubject extends CObject {
     mKey;
@@ -203,7 +202,6 @@ export class CSubject extends CObject {
     GetFrame() { return this.mFrame; }
     Start() { }
     SetFrame(_frame) {
-        CConsol.Log(this.mKey + " / " + (_frame != null));
         if (this.mFrame != null && _frame != null)
             return;
         if (this.mFrame != null)
@@ -628,6 +626,12 @@ export class CSubject extends CObject {
         for (let i = 0; i < this.mChild.length; ++i) {
             this.mChild[i].PatchTrackDefault();
         }
+    }
+    CaptureTextureToDataURL() {
+        let pt = this.FindComp(CPaint);
+        if (pt == null)
+            return "";
+        return pt.CaptureTextureToDataURL();
     }
 }
 ;

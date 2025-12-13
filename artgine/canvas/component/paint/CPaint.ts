@@ -37,6 +37,8 @@ import { CComponent } from "../CComponent.js"
 import { CJSON } from "../../../basic/CJSON.js"
 import { CWASM } from "../../../basic/CWASM.js"
 import { CBoundWorld, CBoundWorldPaint } from "../CBoundWorld.js"
+import { CFrame } from "../../../util/CFrame.js"
+import { CH5Canvas } from "../../../render/CH5Canvas.js"
 
 
 export class CRenPaint
@@ -1267,6 +1269,42 @@ export class CPaint extends CComponent implements IMat
 			this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
 		if(this.mTextureKey.length>0)
 			this.SetTexture(this.mTextureKey);
+	}
+	CaptureTextureToDataURL() : string
+	{
+		if(this.mTextureKey.length==0 || this.GetOwner().GetFrame()==null)	return "";
+
+		let tex=this.GetOwner().GetFrame().Res().Find(this.mTextureKey[0]) as CTexture;
+		
+		let codi=this.GetLeftTopRightBottom(this.GetOwner().GetFrame());
+		CH5Canvas.Init(codi.z-codi.x,codi.w-codi.y);
+		let cmd=CH5Canvas.DrawBuf(tex.GetBuf()[0],0,0,tex.GetWidth(),tex.GetHeight(),codi);
+		CH5Canvas.Draw(cmd);
+
+		let durl=CH5Canvas.GetDataURL();
+		//CAlert.Info(`<img src='${durl}' />`);
+		return durl;
+	}
+	GetLeftTopRightBottom(_frame : CFrame) 
+	{
+		const tex = _frame.Res().Find(this.mTextureKey[0]) as CTexture;
+		if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return null;
+		const imgW = tex.GetWidth();
+		const imgH = tex.GetHeight();
+
+		const uv = this.mTexCodi;
+
+
+		const gMargin=1;
+		const startX = Math.round((this.mTexCodi.z) * imgW);
+		const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y) * imgH);
+		
+		const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x) * imgW);
+		const endY = Math.round((1 - this.mTexCodi.w) * imgH);
+		
+		return new CVec4(startX, startY, endX, endY);
+
+
 	}
 }
 

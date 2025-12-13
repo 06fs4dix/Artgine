@@ -1,9 +1,11 @@
 import { CAlert } from "../basic/CAlert.js";
 import { CBound } from "../geometry/CBound.js";
 import { CPoolGeo } from "../geometry/CPoolGeo.js";
+import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
 import { CTexture } from "../render/CTexture.js";
+import { CH5Canvas } from "./CH5Canvas.js";
 export class CImgPro {
     static Square(_w, _h, _color) {
         var tex = new CTexture();
@@ -165,5 +167,163 @@ export class CImgPro {
         }
         CPoolGeo.RecycleV4(v4);
         return L_tex;
+    }
+    static ExtractColorPalette(_img, _size = new CVec2(64, 64), _diffType = "LightWeight") {
+        if (_img.GetBuf().length == 0 && _img.mReadPixelEvent != null) {
+            _img.mReadPixelEvent.Call(_img);
+        }
+        const buf = _img.GetBuf()[0];
+        if (!buf) {
+            CAlert.E("CImgPro::ExtractColorPalette() : No texture buffer");
+            return null;
+        }
+        let pixels;
+        if (buf instanceof Image) {
+            CH5Canvas.Init(_img.GetWidth(), _img.GetHeight());
+            CH5Canvas.DrawImage(buf, 0, 0);
+            pixels = CH5Canvas.GetNewTex().GetBuf()[0];
+        }
+        else {
+            pixels = buf;
+        }
+        function RGBToR(_rgb) {
+            return (_rgb & 0x0000FF) >> 0;
+        }
+        function RGBToG(_rgb) {
+            return (_rgb & 0x00FF00) >> 8;
+        }
+        function RGBToB(_rgb) {
+            return (_rgb & 0xFF0000) >> 16;
+        }
+        function rgbToRGB(_r, _g, _b) {
+            return (_r << 0) | (_g << 8) | (_b << 16);
+        }
+        function Linearize(_val) {
+            _val /= 255.0;
+            if (_val <= 0.04045) {
+                return _val / 12.92;
+            }
+            else {
+                return Math.pow((_val + 0.055) / 1.055, 2.4);
+            }
+        }
+        function F(_t) {
+            if (_t > 0.008856) {
+                return Math.pow(_t, 1 / 3);
+            }
+            else {
+                return (7.787 * _t) + (16 / 116);
+            }
+        }
+        function RGBToLab(_r, _g, _b) {
+            const R = Linearize(_r);
+            const G = Linearize(_g);
+            const B = Linearize(_b);
+            let X = R * 0.4124564 + G * 0.3575761 + B * 0.1804375;
+            let Y = R * 0.2126729 + G * 0.7151522 + B * 0.0721750;
+            let Z = R * 0.0193339 + G * 0.1191920 + B * 0.9503041;
+            const Xn = 0.95047;
+            const Yn = 1.00000;
+            const Zn = 1.08883;
+            X /= Xn;
+            Y /= Yn;
+            Z /= Zn;
+            const fx = F(X);
+            const fy = F(Y);
+            const fz = F(Z);
+            const L = (116 * fy) - 16;
+            const a = 500 * (fx - fy);
+            const b = 200 * (fy - fz);
+            return [L, a, b];
+        }
+        const colorSet = new Set();
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i + 0];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const rgb = rgbToRGB(r, g, b);
+            colorSet.add(rgb);
+        }
+        const colorArr = Array.from(colorSet);
+        let cellSize = 0;
+        const outPixelNum = _size.x * _size.y;
+        let low = 1, high = Math.ceil(Math.cbrt(outPixelNum));
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            const midCubed = mid * mid * mid;
+            if (midCubed <= outPixelNum) {
+                cellSize = mid;
+                low = mid + 1;
+            }
+            else {
+                high = mid - 1;
+            }
+        }
+        function CellToColor(_cellIndex) {
+            return Math.round(255 / (cellSize - 1) * _cellIndex);
+        }
+        function Diff(_rgb, _r, _g, _b) {
+            const r = RGBToR(_rgb);
+            const g = RGBToG(_rgb);
+            const b = RGBToB(_rgb);
+            if (_diffType == "RGB") {
+                const deltaR = r - _r;
+                const deltaG = g - _g;
+                const deltaB = b - _b;
+                return deltaR * deltaR + deltaG * deltaG + deltaB * deltaB;
+            }
+            if (_diffType == "LightWeight") {
+                const lumaR = 0.299, lumaG = 0.587, lumaB = 0.114;
+                const lumaWeight = 0.75;
+                const luma1 = r * lumaR + g * lumaG + b * lumaB;
+                const luma2 = _r * lumaR + _g * lumaG + _b * lumaB;
+                const lumaDelta = luma1 - luma2;
+                const deltaR = RGBToR(_rgb) - _r;
+                const deltaG = RGBToG(_rgb) - _g;
+                const deltaB = RGBToB(_rgb) - _b;
+                return (deltaR * deltaR * lumaR + deltaG * deltaG * lumaG + deltaB * deltaB * lumaB) * lumaWeight + lumaDelta * lumaDelta;
+            }
+            if (_diffType == "CIE76") {
+                const [l1, a1, b1] = RGBToLab(r, g, b);
+                const [l2, a2, b2] = RGBToLab(_r, _g, _b);
+                const deltaL = l1 - l2;
+                const deltaA = a1 - a2;
+                const deltaB = b1 - b2;
+                return deltaL * deltaL + deltaA * deltaA + deltaB * deltaB;
+            }
+        }
+        function Mapping(_r, _g, _b) {
+            const index = _r + _g * cellSize + _b * cellSize * cellSize;
+            return new CVec2(Math.floor(index / _size.x), (_size.y - 1) - (index % _size.x));
+        }
+        const outColors = new Uint8Array(_size.x * _size.y * 4);
+        for (let bCell = 0; bCell < cellSize; bCell++) {
+            for (let gCell = 0; gCell < cellSize; gCell++) {
+                for (let rCell = 0; rCell < cellSize; rCell++) {
+                    let closestIndex = 0;
+                    let closest = Diff(colorArr[0], CellToColor(rCell), CellToColor(gCell), CellToColor(bCell));
+                    for (let i = 0; i < colorArr.length; i++) {
+                        const diff = Diff(colorArr[i], CellToColor(rCell), CellToColor(gCell), CellToColor(bCell));
+                        if (diff < closest) {
+                            closest = diff;
+                            closestIndex = i;
+                        }
+                    }
+                    const uv = Mapping(rCell, gCell, bCell);
+                    const index = uv.x + uv.y * _size.x;
+                    outColors[index * 4 + 0] = RGBToR(colorArr[closestIndex]);
+                    outColors[index * 4 + 1] = RGBToG(colorArr[closestIndex]);
+                    outColors[index * 4 + 2] = RGBToB(colorArr[closestIndex]);
+                    outColors[index * 4 + 3] = 255.0;
+                }
+            }
+        }
+        const out = new CTexture();
+        out.SetFilter(CTexture.eFilter.Neaest);
+        out.SetWrap(CTexture.eWrap.Clamp);
+        out.SetMipMap(CTexture.eMipmap.None);
+        out.SetSize(_size.x, _size.y);
+        out.SetBuf(outColors);
+        return out;
     }
 }

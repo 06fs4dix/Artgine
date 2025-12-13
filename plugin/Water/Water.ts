@@ -57,12 +57,12 @@ const PresetDeepColorMap : Record<ePreset, CVec3> = {
     [ePreset.Muddy]:        new CVec3(0.10, 0.05, 0.03),
 };
 
-const PresetDeepValMap : Record<ePreset, CVec2> = {
-    [ePreset.Emerald]:      new CVec2(0.0, 50.0),
-    [ePreset.Green]:        new CVec2(0.00, 30.0),
-    [ePreset.Caribbean]:    new CVec2(0.00, 100.0),
-    [ePreset.NorthSea]:     new CVec2(0.00, 35.0),
-    [ePreset.Muddy]:        new CVec2(0.00, 10.0),
+const PresetDeepValMap : Record<ePreset, CVec3> = {
+    [ePreset.Emerald]:      new CVec3(0, 50,  2000),
+    [ePreset.Green]:        new CVec3(0, 30,  2000),
+    [ePreset.Caribbean]:    new CVec3(0, 100, 2000),
+    [ePreset.NorthSea]:     new CVec3(0, 35,  2000),
+    [ePreset.Muddy]:        new CVec3(0, 10,  2000),
 };
 
 export class CWater extends CSubject
@@ -70,9 +70,19 @@ export class CWater extends CSubject
     static ePreset = ePreset;
 
     mPaint : CPaint3D;
-    
     mReflector : CReflector;   // 반사 텍스쳐 굽는 컴포넌트
     mRefractor : CRefractor;   // 굴절 텍스쳐 굽는 컴포넌트
+    mEnvMap : CEnvMap;
+
+    // 물 색상
+    mDeepColor : CVec3 = new CVec3();
+    mShallowColor : CVec3 = new CVec3();
+    mWaterDeep : CVec3 = new CVec3(0,255,2000); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 물 속이 보이는 최대 거리
+
+    // 코스틱
+    mCausticTexture : string = null;
+    mCausticFlowDir : CVec2 = new CVec2(0, 0);
+    mCausticFlowFrequency : CVec1 = new CVec1(1);  // x : 코스틱 빈도([0, 1])
 
     constructor() {
         super();
@@ -81,10 +91,11 @@ export class CWater extends CSubject
         this.mPaint.PushRenderPass(new CRenderPass(gWaterShader));
         this.mPaint.PushTag("water");
         this.mPaint.SetTexture([]);
-
+        this.mPaint.PushCShaderAttr(new CShaderAttr("deepColor", this.mDeepColor));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("shallowColor", this.mShallowColor));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("waterDeep", this.mWaterDeep));
         this.PushComp(this.mPaint);
         
-        this.AddRefractor();
         this.Preset(ePreset.Emerald);
     }
 
@@ -92,77 +103,109 @@ export class CWater extends CSubject
         return this.mPaint;
     }
 
-    AddCaustics(_caustic : string, _flow : CVec2 = new CVec2(1, 0)) {
-        const loaderOption = new CLoaderOption();
-        loaderOption.mWrap = CTexture.eWrap.Repeat;
-        CFrame.Main().Load().Exe(_caustic, loaderOption);
-
-        if(this.mRefractor == null) {
-            this.AddRefractor();
-        }
-        this.mRefractor.mCausticTexture = _caustic;
-        this.mRefractor.mCausticFlowDir.Import(_flow);
+    SetWaterDeep(_deepHeight : number,_farDistance : number, _deepColor : CVec3, _shallowColor : CVec3) {
+        if(_deepHeight!=null) this.mWaterDeep.y = _deepHeight;
+        if(_farDistance!=null) this.mWaterDeep.z = _farDistance;
+        if(_deepColor!=null)    this.mDeepColor.Import(_deepColor);
+        if(_shallowColor!=null)    this.mShallowColor.Import(_shallowColor);
     }
 
-    AddRefractor() {
-        if(this.mRefractor != null) return;
+    NormalFlow(_flow : CVec2, _normalTex1 : string = null, _normalTex2 : string = null) {        
+        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
 
-        this.mRefractor = new CRefractor("refractor_" + CUniqueID.Get());
-        this.PushComp(this.mRefractor);
+        if(_normalTex1 != null && _normalTex2 != null) {
+            this.mPaint.PushTag("normalMap");
+            this.mPaint.PushCShaderAttr(new CShaderAttr("normal1Map", 3.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(3.0, _normalTex1));
+            this.mPaint.PushCShaderAttr(new CShaderAttr("normal2Map", 4.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(4.0, _normalTex2));
+        }
+        else {
+            this.mPaint.RemoveTag("normalMap");
+        }
+    }
 
-        this.mPaint.PushCShaderAttr(new CShaderAttr("refractionMap", 2.0));
-        this.mPaint.PushCShaderAttr(new CShaderAttr(2.0, this.mRefractor.GetTex()));
+    AddRefractor(_texture : string = undefined, _flow : CVec2 = new CVec2(0, 0)) {
+        // reflector 사용
+        if(_texture == undefined) {
+            if(this.mRefractor != null) return;
+
+            this.mRefractor = new CRefractor();
+            this.PushComp(this.mRefractor);
+
+            // shaderAttr 포인터로 생성
+            this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency, this.mCausticTexture);
+            this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mShallowColor, this.mDeepColor);
+
+            this.mPaint.PushTag("UseRefractTex");
+            this.mPaint.PushCShaderAttr(new CShaderAttr("refractionMap", 2.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(2.0, this.mRefractor.GetTex()));
+            return;
+        }
+
+        // texture 사용
+        else {
+            this.RemoveRefractor();
+
+            this.mPaint.PushTag("UseWaterTex");
+            this.mPaint.PushCShaderAttr(new CShaderAttr("texflowDir", _flow));
+            this.mPaint.SetTexture([_texture]);
+        }
     }
     RemoveRefractor() {
         if(this.mRefractor == null) return;
 
+        this.mPaint.RemoveTag("UseRefractTex");
         this.mRefractor.Destroy();
         this.mRefractor = null;
     }
-    UseTexAsRefract(_texture : string, _flow : CVec2 = new CVec2(0, 0)) {
-        this.RemoveRefractor();
 
-        this.mPaint.PushTag("UseWaterTex");
-        this.mPaint.PushCShaderAttr(new CShaderAttr("texflowDir", _flow));
-        this.mPaint.SetTexture([_texture]);
+    AddCaustics(_caustic : string, _flow : CVec2 = new CVec2(0, 0), _frequency : number = 1.0) {
+        this.mCausticFlowDir.Import(_flow);
+        this.mCausticFlowFrequency.x = _frequency;
+        this.mCausticTexture = _caustic;
+
+        if(this.mRefractor == null) {
+            this.AddRefractor();
+        }
+        this.mRefractor.SetCausticTexture(this.mCausticTexture);    // string을 포인터로 넘길 방법이 없음
     }
 
-    AddReflector() {
-        if(this.mReflector != null) return;
+    AddReflector(_texture : string = undefined) {
+        // reflector 사용
+        if(_texture == undefined) {
+            if(this.mReflector != null) return;
 
-        this.mReflector = new CReflector("reflector_" + CUniqueID.Get());
-        this.PushComp(this.mReflector);
+            this.mReflector = new CReflector();
+            this.PushComp(this.mReflector);
 
-        this.mPaint.PushCShaderAttr(new CShaderAttr(1.0, this.mReflector.GetTex()));
+            this.mPaint.PushTag("UseWaterReflect");
+            this.mPaint.PushCShaderAttr(new CShaderAttr("reflectionMap", 1.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(1.0, this.mReflector.GetTex()));
+            return;
+        }
 
-        this.mPaint.PushTag("UseWaterReflect");
+        // cubemap 사용
+        else {
+            this.RemoveReflector();
+
+            this.mPaint.PushTag("UseCubeTex");
+            this.mPaint.PushCShaderAttr(new CShaderAttr("reflectionMap", 0.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(0.0, _texture));
+        }
     }
     RemoveReflector() {
         if(this.mReflector == null) return;
 
+        this.mPaint.RemoveTag("UseWaterReflect");
         this.mReflector.Destroy();
         this.mReflector = null;
     }
 
-    NormalFlow(_flow : CVec2, _normalTex0 : string, _normalTex1 : string) {
-        this.mPaint.PushTag("normalMap");
-        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
-        
-        const loaderOption = new CLoaderOption();
-        loaderOption.mWrap = CTexture.eWrap.Repeat;
-        CFrame.Main().Load().Exe(_normalTex0, loaderOption);
-        CFrame.Main().Load().Exe(_normalTex1, loaderOption);
-
-        this.mPaint.PushCShaderAttr(new CShaderAttr(3.0, _normalTex0));
-        this.mPaint.PushCShaderAttr(new CShaderAttr(4.0, _normalTex1));
-    }
-
     Preset(_type : ePreset) {
-        if(this.mRefractor != null) {
-            this.mRefractor.mShallowColor.Import(PresetShallowColorMap[_type]);
-            this.mRefractor.mDeepColor.Import(PresetDeepColorMap[_type]);
-            this.mRefractor.mWaterDeep.Import(PresetDeepValMap[_type]);
-        }
+        this.mShallowColor.Import(PresetShallowColorMap[_type]);
+        this.mDeepColor.Import(PresetDeepColorMap[_type]);
+        this.mWaterDeep.Import(PresetDeepValMap[_type]);
     }
 
     EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
@@ -184,9 +227,37 @@ export class CReflector extends CBrushComp
     mSize : number = 512;
     mCycle : number = 0;
 
-    Update(_update: CUpdate): boolean|any {
-        super.Update(_update);
-        if(this.mBruch != null) this.UpdateBrush(_update);
+    constructor() {
+        super("reflector_" + CUniqueID.Get());
+
+        // 오브젝트용 RP
+        {
+            const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
+            rp.mCopy = false;
+            rp.mPriority = CRenderPass.ePriority.Normal - 2;
+            rp.mRenderTarget = this.GetTex();
+            rp.mCamera = this.mTexKey;
+            rp.PushOr(new CCondition("class","==","CPaint3D"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            this.PushRPAuto(rp);
+        }
+
+        // 스카이박스용 RP
+        {
+            const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
+            rp.mCopy = false;
+            rp.mPriority=CRenderPass.ePriority.Normal - 1;
+            rp.mCullFace=CRenderPass.eCull.CW;
+            rp.mRenderTarget = this.GetTex();
+            rp.mCamera = this.mTexKey;
+            rp.PushOr(new CCondition("class","==","CPaintCube"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.PushAnd(new CCondition("mTag[sky]"));
+            this.PushRPAuto(rp);
+
+            rp.mClearColor = false;
+            rp.mClearDepth = false;
+        }
     }
 
     private V3Reflect(_vec : CVec3, _normal : CVec3) {
@@ -198,50 +269,21 @@ export class CReflector extends CBrushComp
         );
     }
 
-    Destroy(): void {
-        super.Destroy();
-
-        if(this.mWrite.length == 0) {
-            for(const rp of this.mWrite) {
-                const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.RemoveAutoRP(rpKey);
-            }
-        }
+    Update(_update: CUpdate): boolean|any {
+        super.Update(_update);
+        if(this.mBruch != null) this.UpdateBrush(_update);
     }
 
     UpdateBrush(_update : CUpdate) {
         const fw = this.GetOwner().GetFrame();
-        if(this.mWrite.length == 0) {
-            let rp = new CRPAuto(fw.Pal().Sl3D().mKey);
-            rp.mCopy = false;
-            rp.mPriority=CRenderPass.ePriority.Normal - 2;
-            rp.mRenderTarget = this.GetTex();
-            rp.mCamera = this.mTexKey;
-            rp.PushOr(new CCondition("class","==","CPaint3D"));
-            rp.PushAnd(new CCondition("mTag[water]","==",false));
-            this.PushRPAuto(rp);
 
-            rp = new CRPAuto(fw.Pal().SlCube().mKey);
-            rp.mCopy = false;
-            rp.mPriority=CRenderPass.ePriority.Normal - 1;
-            rp.mClearColor = false;
-            rp.mClearDepth = false;
-            rp.mCullFace=CRenderPass.eCull.CW;
-            rp.mRenderTarget = this.GetTex();
-            rp.mCamera = this.mTexKey;
-            rp.PushOr(new CCondition("class","==","CPaintCube"));
-            rp.PushAnd(new CCondition("mTag[water]","==",false));
-            rp.PushAnd(new CCondition("mTag[sky]"));
-            this.PushRPAuto(rp);
-
-            for(const rp of this.mWrite) {
-                const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.SetAutoRP(rpKey, rp);
-            }
-        }
-
+        // ---------------------------------------------------------
+        // 1. 텍스처 생성
+        // ---------------------------------------------------------
         let tex = fw.Res().Find(this.GetTex()) as CTexture;
-        if(tex == null) {
+
+        // 텍스쳐 없으면 생성
+        if(!tex) {
             fw.Ren().BuildRenderTarget(
                 [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)],
                 new CVec2(this.mSize, this.mSize), 
@@ -250,35 +292,66 @@ export class CReflector extends CBrushComp
             tex = fw.Res().Find(this.GetTex()) as CTexture;
             tex.SetAutoResize(false);
         }
-        // 중간에 mSize가 변경됨
+
+        // 사이즈 변경 시 재생성
         if(tex.GetWidth() != this.mSize) {
             tex.SetSize(this.mSize, this.mSize);
             fw.Ren().BuildTexture(tex);
         }
 
-        const cam = this.mBruch.GetCam3D();
-        const pos = this.GetOwner().GetMat().xyz;
-        const normal = CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 0, 1), CMath.QutToMat(CMath.MatDecomposeRot(this.GetOwner().GetMat()))));
-        const view = CMath.V3SubV3(pos, cam.GetEye());
-        const realUp = CMath.V3Cross(cam.GetView(), cam.GetCross());
-
-        const virtualCamEye = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(view, normal), -1), pos);
-        const virtualCamLook = CMath.V3AddV3(this.V3Reflect(cam.GetView(), normal), virtualCamEye);
-        const virtualCamUp = this.V3Reflect(realUp, normal);
-
-        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
-        virtualCam.SetFar(cam.GetFar());
-        virtualCam.Init(virtualCamEye, virtualCamLook, virtualCamUp);
-        if(cam.mOrthographic)
-            virtualCam.ResetOrthographic();
-        else 
-            virtualCam.ResetPerspective();
-
+        // ---------------------------------------------------------
+        // 2. 렌더 패스 설정
+        // ---------------------------------------------------------
         for(const rp of this.mWrite) {
+            const rpKey = this.mTexKey + rp.mShader;
+            // 등록된 RP가 없다면 등록
+            if(!this.mBruch.AutoRP().has(rpKey)) {
+                this.mBruch.SetAutoRP(rpKey, rp);
+            }
+            // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
                 this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
             }
+        }
+
+        // ---------------------------------------------------------
+        // 3. 가상 카메라 동기화
+        // ---------------------------------------------------------
+        const mainCam = this.mBruch.GetCam3D();
+        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
+
+        const wMat = this.GetOwner().GetMat();
+        const pos = wMat.xyz;
+        const rot = CMath.QutToMat(CMath.MatDecomposeRot(wMat));
+        const normal = CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 0, 1), rot));
+        const view = CMath.V3SubV3(pos, mainCam.GetEye());
+        const realUp = CMath.V3Cross(mainCam.GetView(), mainCam.GetCross());
+
+        const eye = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(view, normal), -1), pos);
+        const look = CMath.V3AddV3(this.V3Reflect(mainCam.GetView(), normal), eye);
+        const up = this.V3Reflect(realUp, normal);
+
+        if(virtualCam.Init(eye, look, up))
+        {
+            virtualCam.SetFar(mainCam.GetFar());
+            virtualCam.SetFov(mainCam.mFov);
+            if(mainCam.mOrthographic)
+                virtualCam.ResetOrthographic();
+            else 
+                virtualCam.ResetPerspective();
+        }
+    }
+
+    Destroy(): void {
+        super.Destroy();
+
+        if(this.mWrite.length > 0) {
+            for(const rp of this.mWrite) {
+                const rpKey = this.mTexKey + rp.mShader;
+                this.mBruch.RemoveAutoRP(rpKey);
+            }
+            this.mWrite.length = 0;
         }
     }
 }
@@ -287,52 +360,27 @@ export class CRefractor extends CBrushComp
 {
     mSize : number = 512;
     mCycle : number = 0;
-    mWaterDeep : CVec2 = new CVec2(0,1000);
-    mDeepColor : CVec3 = new CVec3(0,0.01,0.1);
-    mShallowColor : CVec3 = new CVec3(0.00, 0.55, 0.35);
-    mCausticTexture : string = null;
-    mCausticFlowDir : CVec2 = new CVec2(0.0, 0.0);
 
-    Update(_update: CUpdate): boolean|any {
-        super.Update(_update);
-        if(this.mBruch != null) this.UpdateBrush(_update);
-    }
+    constructor() {
+        super("refractor_" + CUniqueID.Get());
 
-    Destroy(): void {
-        super.Destroy();
-
-        if(this.mWrite.length == 0) {
-            for(const rp of this.mWrite) {
-                const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.RemoveAutoRP(rpKey);
-            }
-        }
-    }
-
-    UpdateBrush(_update : CUpdate) {
-        const fw = this.GetOwner().GetFrame();
-        if(this.mWrite.length == 0) {
-            let rp = new CRPAuto(fw.Pal().Sl3D().mKey);
+        // 오브젝트용 RP
+        {
+            const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
             rp.mCopy = false;
-            rp.mTag.add("waterRefract");
-            rp.mBlend = [CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
             rp.mPriority = CRenderPass.ePriority.Normal - 2;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaint3D"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
-            rp.mShaderAttr.push(new CShaderAttr("waterDeep", this.mWaterDeep));
-            rp.mShaderAttr.push(new CShaderAttr("shallowColor", this.mShallowColor));
-            rp.mShaderAttr.push(new CShaderAttr("deepColor", this.mDeepColor));
-            rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", this.mCausticFlowDir));
-            rp.mShaderAttr.push(new CShaderAttr("causticMap", 5.0));
             this.PushRPAuto(rp);
+        }
 
-            rp = new CRPAuto(fw.Pal().SlCube().mKey);
+        // 스카이박스용 RP
+        {
+            const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
             rp.mCopy = false;
             rp.mPriority=CRenderPass.ePriority.Normal - 1;
-            rp.mClearColor = false;
-            rp.mClearDepth = false;
             rp.mCullFace=CRenderPass.eCull.CW;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
@@ -341,23 +389,53 @@ export class CRefractor extends CBrushComp
             rp.PushAnd(new CCondition("mTag[sky]"));
             this.PushRPAuto(rp);
 
-            for(const rp of this.mWrite) {
-                const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.SetAutoRP(rpKey, rp);
-            }
+            rp.mClearColor = false;
+            rp.mClearDepth = false;
         }
-        if(this.mCausticTexture != null) {
-            if(this.mWrite[0].mShaderAttr.length <= 5) {
-                this.mWrite[0].mShaderAttr.push(new CShaderAttr(5.0, this.mCausticTexture));
-            }
-            if(this.mWrite[0].mShaderAttr[5].mKey != this.mCausticTexture) {
-                this.mWrite[0].mShaderAttr[5].mKey = this.mCausticTexture;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
-            }
-        }
+    }
 
+    AddWaterDeep(_waterDeep : CVec3, _shallowColor : CVec3, _deepColor : CVec3)
+    {
+        const rp = this.mWrite[0];
+        rp.mTag.add("waterRefract");
+        rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
+        rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
+        rp.mShaderAttr.push(new CShaderAttr("deepColor", _deepColor));
+    }
+    AddCaustics(_flow : CVec2, _freq : CVec1, _caustic : string)
+    {
+        const rp = this.mWrite[0];
+        rp.mTag.add("waterRefract");
+        rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
+        rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
+        rp.mShaderAttr.push(new CShaderAttr("causticMap", 5.0));
+        this.SetCausticTexture(_caustic);
+    }
+    SetCausticTexture(_caustic : string)
+    {
+        const rp = this.mWrite[0];
+        let shaderAttr = rp.mShaderAttr.find(attr => attr.mEach == 5.0);
+        if(shaderAttr)
+            shaderAttr.mKey = _caustic;
+        else
+            rp.mShaderAttr.push(new CShaderAttr(5.0, _caustic));
+    }
+
+    Update(_update: CUpdate): boolean|any {
+        super.Update(_update);
+        if(this.mBruch != null) this.UpdateBrush(_update);
+    }
+
+    UpdateBrush(_update : CUpdate) {
+        const fw = this.GetOwner().GetFrame();
+
+        // ---------------------------------------------------------
+        // 1. 텍스처 생성
+        // ---------------------------------------------------------
         let tex = fw.Res().Find(this.GetTex()) as CTexture;
-        if(tex == null) {
+
+        // 텍스쳐 없으면 생성
+        if(!tex) {
             fw.Ren().BuildRenderTarget(
                 [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)],
                 new CVec2(this.mSize, this.mSize), 
@@ -366,35 +444,54 @@ export class CRefractor extends CBrushComp
             tex = fw.Res().Find(this.GetTex()) as CTexture;
             tex.SetAutoResize(false);
         }
-        // 중간에 mSize가 변경됨
+
+        // 사이즈 변경 시 재생성
         if(tex.GetWidth() != this.mSize) {
             tex.SetSize(this.mSize, this.mSize);
             fw.Ren().BuildTexture(tex);
         }
-        
-        const cam = this.mBruch.GetCam3D();
-        
 
-        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
-        virtualCam.SetFar(cam.GetFar());
-        if(virtualCam.Init(cam.GetEye(), cam.GetLook()))
-        {
-            if(cam.mOrthographic)
-                virtualCam.ResetOrthographic();
-            else 
-                virtualCam.ResetPerspective();
-        }
-
+        // ---------------------------------------------------------
+        // 2. 렌더 패스 설정
+        // ---------------------------------------------------------
         for(const rp of this.mWrite) {
+            const rpKey = this.mTexKey + rp.mShader;
+            // 등록된 RP가 없다면 등록
+            if(!this.mBruch.AutoRP().has(rpKey)) {
+                this.mBruch.SetAutoRP(rpKey, rp);
+            }
+            // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
                 this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
             }
-            if(rp.mShaderAttr.length > 0 && rp.mShaderAttr[0].mData.x != this.mWaterDeep.x) {
-                rp.mShaderAttr[0].mData.x = this.mWaterDeep.x;
-                rp.mShaderAttr[0].mData.y = this.mWaterDeep.y;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+        }
+
+        // ---------------------------------------------------------
+        // 3. 가상 카메라 동기화
+        // ---------------------------------------------------------
+        const mainCam = this.mBruch.GetCam3D();
+        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
+        if(virtualCam.Init(mainCam.GetEye(), mainCam.GetLook()))
+        {
+            virtualCam.SetFar(mainCam.GetFar());
+            virtualCam.SetFov(mainCam.mFov);
+            if(mainCam.mOrthographic)
+                virtualCam.ResetOrthographic();
+            else
+                virtualCam.ResetPerspective();
+        }
+    }
+    
+    Destroy(): void {
+        super.Destroy();
+
+        if(this.mWrite.length > 0) {
+            for(const rp of this.mWrite) {
+                const rpKey = this.mTexKey + rp.mShader;
+                this.mBruch.RemoveAutoRP(rpKey);
             }
+            this.mWrite.length = 0;
         }
     }
 }

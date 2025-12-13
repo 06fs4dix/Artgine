@@ -1,30 +1,25 @@
+import { CUpdate } from "../../basic/Basic.js";
+import { CUniqueID } from "../../basic/CUniqueID.js";
 import { CMath } from "../../geometry/CMath.js";
 import { CVec2 } from "../../geometry/CVec2.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
 import { CTexture, CTextureInfo } from "../../render/CTexture.js";
+import { CFrame } from "../../util/CFrame.js";
 import { CCondition } from "../../util/CStateMachine.js";
 import { CRPAuto } from "../CRPMgr.js";
 import { CBrushComp } from "./CBrushComp.js";
 export default class CEnvMap extends CBrushComp {
     mSize = 512;
     mCycle = 0;
-    SetCycle(_cycle) {
+    constructor(_cycle) {
+        super("envMap_" + CUniqueID.Get());
         this.mCycle = _cycle;
-    }
-    Update(_update) {
-        super.Update(_update);
-        if (this.mBruch != null)
-            this.UpdateBrush(_update);
-    }
-    UpdateBrush(_update) {
-        const fw = this.GetOwner().GetFrame();
-        if (this.mWrite.length == 0) {
-            for (let i = 0; i < 6; i++) {
-                let rp = new CRPAuto(fw.Pal().Sl3D().mKey);
+        for (let i = 0; i < 6; i++) {
+            {
+                const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
                 rp.mCopy = false;
                 rp.mPriority = CRenderPass.ePriority.Normal - i * 2 - 2;
-                rp.mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ZERO, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
                 rp.mCullFace = CRenderPass.eCull.CW;
                 rp.mRenderTarget = this.GetTex();
                 rp.mRenderTargetUse.add(i);
@@ -32,12 +27,11 @@ export default class CEnvMap extends CBrushComp {
                 rp.PushOr(new CCondition("class", "==", "CPaint3D"));
                 rp.PushAnd(new CCondition("mTag[water]", "==", false));
                 this.PushRPAuto(rp);
-                rp = new CRPAuto(fw.Pal().SlCube().mKey);
+            }
+            {
+                const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
                 rp.mCopy = false;
                 rp.mPriority = CRenderPass.ePriority.Normal - i * 2 - 1;
-                rp.mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ZERO, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
-                rp.mClearColor = false;
-                rp.mClearDepth = false;
                 rp.mCullFace = CRenderPass.eCull.CCW;
                 rp.mRenderTarget = this.GetTex();
                 rp.mRenderTargetUse.add(i);
@@ -46,14 +40,20 @@ export default class CEnvMap extends CBrushComp {
                 rp.PushAnd(new CCondition("mTag[water]", "==", false));
                 rp.PushAnd(new CCondition("mTag[sky]"));
                 this.PushRPAuto(rp);
-            }
-            for (const rp of this.mWrite) {
-                const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
-                this.mBruch.SetAutoRP(rpKey, rp);
+                rp.mClearColor = false;
+                rp.mClearDepth = false;
             }
         }
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.mBruch != null)
+            this.UpdateBrush(_update);
+    }
+    UpdateBrush(_update) {
+        const fw = this.GetOwner().GetFrame();
         let tex = fw.Res().Find(this.GetTex());
-        if (tex == null) {
+        if (!tex) {
             fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Cube, CTexture.eFormat.RGBA8, 1)], new CVec2(this.mSize, this.mSize), this.GetTex());
             tex = fw.Res().Find(this.GetTex());
             tex.SetAutoResize(false);
@@ -62,6 +62,16 @@ export default class CEnvMap extends CBrushComp {
             tex.SetSize(this.mSize, this.mSize);
             fw.Ren().BuildTexture(tex);
         }
+        for (const rp of this.mWrite) {
+            const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
+            if (!this.mBruch.AutoRP().has(rpKey)) {
+                this.mBruch.SetAutoRP(rpKey, rp);
+            }
+            if (rp.mCycle != this.mCycle) {
+                rp.mCycle = this.mCycle;
+                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+            }
+        }
         const pos = this.GetOwner().GetMat().xyz;
         const camDirList = [
             new CVec3(1, 0, 0), new CVec3(-1, 0, 0), new CVec3(0, -1, 0),
@@ -69,16 +79,25 @@ export default class CEnvMap extends CBrushComp {
         ];
         for (let i = 0; i < 6; i++) {
             const camDir = camDirList[i];
-            const cam = this.mBruch.GetCamera(this.mTexKey + i);
-            cam.Init(pos, CMath.V3AddV3(pos, camDir));
-            cam.SetFov(Math.PI * 0.5);
-            cam.SetSize(this.mSize, this.mSize);
-            cam.mRCS = false;
-            cam.ResetPerspective();
+            const virtualCam = this.mBruch.GetCamera(this.mTexKey + i);
+            const eye = pos;
+            const look = CMath.V3AddV3(pos, camDir);
+            if (virtualCam.Init(eye, look)) {
+                virtualCam.SetFov(Math.PI * 0.5);
+                virtualCam.SetSize(this.mSize, this.mSize);
+                virtualCam.mRCS = false;
+                virtualCam.ResetPerspective();
+            }
         }
-        for (const rp of this.mWrite) {
-            if (rp.mCycle != this.mCycle)
-                rp.mCycle = this.mCycle;
+    }
+    Destroy() {
+        super.Destroy();
+        if (this.mWrite.length > 0) {
+            for (const rp of this.mWrite) {
+                const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
+                this.mBruch.RemoveAutoRP(rpKey);
+            }
+            this.mWrite.length = 0;
         }
     }
 }

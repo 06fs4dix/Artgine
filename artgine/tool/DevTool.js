@@ -40,6 +40,8 @@ import { CShaderAttr } from "../render/CShaderAttr.js";
 import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
+import { CLocation } from "../canvas/subject/CLocation.js";
+import { CFont, CFontOption } from "../util/CFont.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -343,19 +345,17 @@ export function DevTool(_atl) {
     gModal.mBody.addEventListener("keydown", (e) => {
         if (IsFocusInput())
             return;
-        if (e.key === "Control")
-            ctrlPressed = true;
         if (e.key == "Delete") {
             DevToolLeftRemove();
         }
-        if (ctrlPressed && e.key.toLowerCase() === "c") {
+        if (e.ctrlKey && e.key.toLowerCase() === "c") {
             if (gLeftSelect instanceof CSubject) {
                 navigator.clipboard.writeText(gLeftSelect.ToStr());
                 CAlert.Info("Copy!");
                 e.preventDefault();
             }
         }
-        if (ctrlPressed && e.key.toLowerCase() === "v") {
+        if (e.ctrlKey && e.key.toLowerCase() === "v") {
             if (!(gLeftSelect instanceof CCanvas)) {
                 e.preventDefault();
                 return;
@@ -380,20 +380,114 @@ export function DevTool(_atl) {
             e.preventDefault();
         }
     });
-    gModal.mBody.addEventListener("keyup", (e) => {
-        if (e.key === "Control")
-            ctrlPressed = false;
+    window.addEventListener("keyup", (e) => {
         if (e.key === "F6") {
             gAtl.Brush().SetPause(!gAtl.Brush().IsPause());
+        }
+        if (e.key === "l" && e.ctrlKey) {
+            DevToolLeftPush();
         }
     });
 }
 function DevToolRender() {
-    if (gLeftSelect == null || gLeftSelect instanceof CSubject == false)
-        return;
+    let color = new CColor();
+    color.w = SDF.eColorModel.RGBAdd;
+    let alpha = new CAlpha();
+    let FunRenSub = (_sub, _font = false) => {
+        if (_font) {
+            gAtl.Frame().Dev().SetDepthTest(true);
+            gAtl.Frame().Dev().SetLine(false);
+            var fr = CFont.TextToTexName(gAtl.Frame().Ren(), _sub.Key(), new CFontOption(32, "white", "black", 2));
+            color.x = 1;
+            color.y = 1;
+            color.z = 1;
+            color.w = SDF.eColorModel.None;
+            wmat.mF32A[0] = fr.mRXSize / 100;
+            wmat.mF32A[5] = fr.mRYSize / 100;
+            wmat.mF32A[10] = 1;
+            wmat.xyz = CMath.V3AddV3(_sub.GetPos(), new CVec3(fr.mRXSize * 0.5, fr.mRYSize * 0.5));
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, [fr.mKey]);
+            render.SendGPU(shader, wMatSA);
+            render.MeshDrawNodeRender(shader, meshDrawBox);
+            gAtl.Frame().Dev().SetDepthTest(false);
+            gAtl.Frame().Dev().SetLine(true);
+            render.SendGPU(shader, [gAtl.Frame().Pal().GetBlackTex()]);
+        }
+        let ptArr = _sub.FindComps(CPaint);
+        let clArr = _sub.FindComps(CCollider);
+        for (let pt of ptArr) {
+            if (pt.GetOwner() == null || pt.GetOwner().IsEnable() == false)
+                continue;
+            color.x = 1;
+            color.y = 0;
+            color.z = 0;
+            let bound = pt.GetBoundFMat();
+            bound.mMax;
+            bound.mMin;
+            const min = bound.mMin;
+            const max = bound.mMax;
+            const center = new CVec3((min.x + max.x) * 0.5, (min.y + max.y) * 0.5, (min.z + max.z) * 0.5);
+            const boxSize = 200;
+            const scale = new CVec3((max.x - min.x) / boxSize, (max.y - min.y) / boxSize, (max.z - min.z) / boxSize);
+            wmat.xyz = center;
+            wmat.mF32A[0] = scale.x;
+            wmat.mF32A[5] = scale.y;
+            wmat.mF32A[10] = scale.z;
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, wMatSA);
+            render.MeshDrawNodeRender(shader, meshDrawBox);
+            if (pt instanceof CPaint2D) {
+                if (pt.mYSort) {
+                    color.x = 0;
+                    color.y = 1;
+                    color.z = 0;
+                    wmat.xyz = CMath.V3AddV3(pt.GetHalf(), subject.GetPos());
+                    wmat.y += pt.mYSortOrigin;
+                    wmat.mF32A[0] = 0.02;
+                    wmat.mF32A[5] = 0.02;
+                    wmat.mF32A[10] = 0.02;
+                    render.SendGPU(shader, color, "colorModel");
+                    render.SendGPU(shader, alpha, "alphaModel");
+                    MatToMat12Fun(wmat);
+                    render.SendGPU(shader, wMatSA);
+                    render.MeshDrawNodeRender(shader, meshDrawBox);
+                }
+            }
+        }
+        color.x = 0;
+        color.y = 0;
+        color.z = 1;
+        color.w = SDF.eColorModel.RGBAdd;
+        for (let pt of clArr) {
+            if (pt.GetOwner() == null || pt.IsEnable() == false || pt.GetLayer() == "")
+                continue;
+            let bound = pt.GetBoundGJK();
+            const min = bound.mMin;
+            const max = bound.mMax;
+            const center = new CVec3((min.x + max.x) * 0.5, (min.y + max.y) * 0.5, (min.z + max.z) * 0.5);
+            const boxSize = 200;
+            const scale = new CVec3((max.x - min.x) / boxSize, (max.y - min.y) / boxSize, (max.z - min.z) / boxSize);
+            wmat.xyz = center;
+            wmat.mF32A[0] = scale.x;
+            wmat.mF32A[5] = scale.y;
+            wmat.mF32A[10] = scale.z;
+            render.SendGPU(shader, color, "colorModel");
+            render.SendGPU(shader, alpha, "alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader, wMatSA);
+            render.SendGPU(shader, [gAtl.Frame().Pal().GetBlackTex()]);
+            if (pt.GetBound().GetType() == CBound.eType.Sphere)
+                render.MeshDrawNodeRender(shader, meshDrawSphere);
+            else
+                render.MeshDrawNodeRender(shader, meshDrawBox);
+        }
+    };
     let subject = gLeftSelect;
-    let ptArr = subject.FindComps(CPaint);
-    let clArr = subject.FindComps(CCollider);
     const render = gAtl.Frame().Ren();
     let shader = gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCA");
     let meshDrawBox = gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh() + "Dev");
@@ -414,13 +508,24 @@ function DevToolRender() {
     render.SendGPU(shader, gAtl.Brush().GetCamDev().GetViewMat(), "viewMat");
     render.SendGPU(shader, gAtl.Brush().GetCamDev().GetProjMat(), "projectMat");
     render.SendGPU(shader, [gAtl.Frame().Pal().GetBlackTex()]);
-    let color = new CColor();
-    color.w = SDF.eColorModel.RGBAdd;
-    let alpha = new CAlpha();
     let wmat = new CMat();
     let wMatSA = new CShaderAttr("worldMat", wmat);
     let MatToMat12Fun = (_mat) => {
     };
+    if (gLastCanvas != null) {
+        gAtl.Frame().Dev().SetDepthTest(false);
+        gAtl.Frame().Dev().SetLine(true);
+        let canvas = gLastCanvas;
+        for (let [key, value] of canvas.GetSubMap()) {
+            if (value instanceof CLocation) {
+                FunRenSub(value, true);
+            }
+        }
+        gAtl.Frame().Dev().SetLine(false);
+        gAtl.Frame().Dev().SetDepthTest(true);
+    }
+    if (gLeftSelect == null || gLeftSelect instanceof CSubject == false)
+        return;
     let pos = subject.GetMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
     gAtl.Frame().Dev().SetLine(true);
@@ -491,74 +596,7 @@ function DevToolRender() {
         }
     }
     gAtl.Frame().Dev().SetLine(true);
-    for (let pt of ptArr) {
-        if (pt.GetOwner() == null || pt.GetOwner().IsEnable() == false)
-            continue;
-        color.x = 1;
-        color.y = 0;
-        color.z = 0;
-        let bound = pt.GetBoundFMat();
-        bound.mMax;
-        bound.mMin;
-        const min = bound.mMin;
-        const max = bound.mMax;
-        const center = new CVec3((min.x + max.x) * 0.5, (min.y + max.y) * 0.5, (min.z + max.z) * 0.5);
-        const boxSize = 200;
-        const scale = new CVec3((max.x - min.x) / boxSize, (max.y - min.y) / boxSize, (max.z - min.z) / boxSize);
-        wmat.xyz = center;
-        wmat.mF32A[0] = scale.x;
-        wmat.mF32A[5] = scale.y;
-        wmat.mF32A[10] = scale.z;
-        render.SendGPU(shader, color, "colorModel");
-        render.SendGPU(shader, alpha, "alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader, wMatSA);
-        render.MeshDrawNodeRender(shader, meshDrawBox);
-        if (pt instanceof CPaint2D) {
-            if (pt.mYSort) {
-                color.x = 0;
-                color.y = 1;
-                color.z = 0;
-                wmat.xyz = CMath.V3AddV3(pt.GetHalf(), subject.GetPos());
-                wmat.y += pt.mYSortOrigin;
-                wmat.mF32A[0] = 0.02;
-                wmat.mF32A[5] = 0.02;
-                wmat.mF32A[10] = 0.02;
-                render.SendGPU(shader, color, "colorModel");
-                render.SendGPU(shader, alpha, "alphaModel");
-                MatToMat12Fun(wmat);
-                render.SendGPU(shader, wMatSA);
-                render.MeshDrawNodeRender(shader, meshDrawBox);
-            }
-        }
-    }
-    color.x = 0;
-    color.y = 0;
-    color.z = 1;
-    color.w = SDF.eColorModel.RGBAdd;
-    for (let pt of clArr) {
-        if (pt.GetOwner() == null || pt.IsEnable() == false || pt.GetLayer() == "")
-            continue;
-        let bound = pt.GetBoundGJK();
-        const min = bound.mMin;
-        const max = bound.mMax;
-        const center = new CVec3((min.x + max.x) * 0.5, (min.y + max.y) * 0.5, (min.z + max.z) * 0.5);
-        const boxSize = 200;
-        const scale = new CVec3((max.x - min.x) / boxSize, (max.y - min.y) / boxSize, (max.z - min.z) / boxSize);
-        wmat.xyz = center;
-        wmat.mF32A[0] = scale.x;
-        wmat.mF32A[5] = scale.y;
-        wmat.mF32A[10] = scale.z;
-        render.SendGPU(shader, color, "colorModel");
-        render.SendGPU(shader, alpha, "alphaModel");
-        MatToMat12Fun(wmat);
-        render.SendGPU(shader, wMatSA);
-        render.SendGPU(shader, [gAtl.Frame().Pal().GetBlackTex()]);
-        if (pt.GetBound().GetType() == CBound.eType.Sphere)
-            render.MeshDrawNodeRender(shader, meshDrawSphere);
-        else
-            render.MeshDrawNodeRender(shader, meshDrawBox);
-    }
+    FunRenSub(subject);
     gAtl.Frame().Dev().SetLine(false);
     gAtl.Frame().Dev().SetDepthTest(true);
 }
@@ -1076,7 +1114,7 @@ function DevToolLeftPush() {
         datalistHtml += `</datalist>`;
         const div = CDOM.DataToDom(`
             <div>
-                <label class="form-label">Enter or choose a type to add:</label>
+                <label class="form-label">${gLeftSelect.Key()}-Enter or choose a type to add:</label>
                 <input class="form-control" list="${datalistId}" id="DevToolLeftAdd_Input" placeholder="Type name...">
                 ${datalistHtml}
             </div>
@@ -1107,6 +1145,7 @@ function DevToolLeftPush() {
                 onPush();
             }
         });
+        CDOM.ID("DevToolLeftAdd_Input").focus();
     }
     else if (gLeftSelect instanceof CBrush) {
         CConfirm.List("Camere Push?", [() => {

@@ -7,7 +7,6 @@ import { CObject } from "../basic/CObject.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CVec2 } from "../geometry/CVec2.js";
-import { CVec4 } from "../geometry/CVec4.js";
 import { CFile } from "../system/CFile.js";
 import { CUtilWeb } from "./CUtilWeb.js";
 export class CModalBackGround extends CModal {
@@ -643,17 +642,20 @@ export class CModalFlex extends CModal {
     }
 }
 export class CBlackboardModal extends CModal {
-    constructor(_blackboard, _img = [], LeftTopRightBottom = []) {
+    constructor(_blackboard) {
         super();
-        this.SetHeader("블랙보드 리스트");
+        this.SetHeader("BlackBoard Unit(Ctrl Drag->ProxyMode");
         this.SetTitle(CModal.eTitle.TextClose);
         this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
         this.SetSize(600, 400);
         const container = document.createElement("div");
         container.className = "d-flex flex-wrap justify-content-start p-2";
         _blackboard.forEach((key, i) => {
-            const imgPath = _img[i];
-            const tex = LeftTopRightBottom[i];
+            const bb = CBlackBoard.Find(key);
+            if (!bb) {
+                return;
+            }
+            const durl = bb.CaptureTextureToDataURL();
             const box = document.createElement("div");
             box.className = "position-relative m-1 border rounded";
             box.style.width = "64px";
@@ -662,48 +664,20 @@ export class CBlackboardModal extends CModal {
             box.style.overflow = "hidden";
             box.setAttribute("draggable", "true");
             box.addEventListener("dragstart", (event) => {
-                event.dataTransfer.setData('text', key);
-                CObject.SetDrag("CObject", CBlackBoard.Find(key));
+                if (!event.dataTransfer)
+                    return;
+                event.dataTransfer.setData("text", key);
+                CObject.SetDrag("CObject", bb);
             });
-            if (imgPath && tex instanceof CVec4) {
-                const img = new Image();
-                img.src = imgPath;
-                img.onload = () => {
-                    const cutW = tex.z - tex.x;
-                    const cutH = tex.w - tex.y;
-                    const scaleX = 64 / cutW;
-                    const scaleY = 64 / cutH;
-                    const clipper = document.createElement("div");
-                    clipper.style.position = "relative";
-                    clipper.style.width = "64px";
-                    clipper.style.height = "64px";
-                    clipper.style.overflow = "hidden";
-                    img.style.position = "absolute";
-                    img.style.left = `-${tex.x * scaleX}px`;
-                    img.style.top = `-${tex.y * scaleY}px`;
-                    img.style.width = `${img.width * scaleX}px`;
-                    img.style.height = `${img.height * scaleY}px`;
-                    img.style.pointerEvents = "none";
-                    img.draggable = false;
-                    clipper.appendChild(img);
-                    box.appendChild(clipper);
-                    const label = document.createElement("div");
-                    label.className = "position-absolute top-50 start-50 translate-middle text-white text-center fw-bold";
-                    label.style.textShadow = `
-                        -1px -1px 2px black,
-                        1px -1px 2px black,
-                        -1px 1px 2px black,
-                        1px 1px 2px black`;
-                    label.innerText = key;
-                    label.draggable = false;
-                    box.appendChild(label);
-                };
-            }
-            else {
-                box.classList.add("bg-secondary", "text-white", "d-flex", "align-items-center", "justify-content-center");
-                box.style.fontWeight = "bold";
-                box.innerText = key;
-            }
+            const img = document.createElement("img");
+            img.src = durl;
+            img.alt = key;
+            img.style.width = "100%";
+            img.style.height = "100%";
+            img.style.objectFit = "cover";
+            img.draggable = false;
+            img.style.pointerEvents = "none";
+            box.appendChild(img);
             container.appendChild(box);
         });
         this.SetBody(container);

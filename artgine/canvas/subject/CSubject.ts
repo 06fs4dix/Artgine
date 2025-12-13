@@ -324,7 +324,7 @@ export class CSubject extends CObject implements IFile , IMat
 	{
 
 
-		CConsol.Log(this.mKey+" / "+(_frame!=null));
+		//CConsol.Log(this.mKey+" / "+(_frame!=null));
 		if(this.mFrame!=null && _frame!=null)
 			return;
 		if(this.mFrame!=null)
@@ -977,6 +977,12 @@ export class CSubject extends CObject implements IFile , IMat
 		}
 	}
 	
-	
+	CaptureTextureToDataURL() : string
+	{
+		let pt=this.FindComp(CPaint);
+		if(pt==null)	return "";
+
+		return pt.CaptureTextureToDataURL();
+	}
 };
 CSubject_imple();
