@@ -1,10 +1,11 @@
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";

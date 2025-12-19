@@ -1,5 +1,5 @@
 //Version
-const version='mi8vige2_15';
+const version='mjcwy21m_34';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -26,7 +26,7 @@ gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 CPlugin.PushPath('ShadowPlane','https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/');
@@ -44,35 +44,55 @@ gAtl.Brush().GetCam2D().Set2DZoom(1.5);
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
 
 // === vinfo==3 위치에 랜덤 조형물 배치 (Village) ===
-import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCIndex.js";
+
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
-import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
+
 import { CBGAttachButton, CBlackboardModal, CLoadingBack, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+
 import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
-import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
-import { CVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CVoxel.js";
-import { CPaintVoxel } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaintVoxel.js";
+
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
+
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
-import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
+
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
-import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
-import { CDayCycle, CLightPlanet } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLightPlanet.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+
+
+import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
+import { CSing, CSingOption } from "https://06fs4dix.github.io/Artgine/artgine/server/CSing.js";
+
+import { CSocketIO } from "https://06fs4dix.github.io/Artgine/artgine/network/CSocketIO.js";
+import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
+import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
+import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCIndex.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
+import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CRPMgr.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCondition.js";
+import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSurface.js";
+import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
+import { CUI, CUIPicture } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CUI.js";
+import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUniqueID.js";
+import { PacketWorld } from "https://06fs4dix.github.io/Artgine/artgine/server/PacketWorld.js";
+import { PacketVillage } from "./Server/PacketVillage.js";
+
+
 //Real.Clear();
 
 // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
@@ -128,44 +148,31 @@ import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/compon
 }
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     let ba: string[] = [];
-    let ta: string[] = [];
-    let ca: CVec4[] = [];
+  
 
     for (let [key, value] of CBlackBoard.Map()) {
         if (value instanceof CSubject) {
             ba.push(key);
-
-            let pt2d = value.FindComp(CPaint2D);
-            const texName = pt2d.GetTexture()[0];
-            ta.push(texName);
-            ca.push(pt2d.GetLeftTopRightBottom(gAtl.Frame()));
         }
     }
 
-    new CBlackboardModal(ba, ta, ca);
+    new CBlackboardModal(ba);
 }));
-Real.PushSub(new CUser()).SetPos(new CVec3(5200,6500));
+
 Real.PushSub(new CNPC("Dante","Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6600,6400));
 Real.PushSub(new CNPC("Miles","Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200,9200));
 Real.PushSub(new CNPC("Poppy","Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000,8000));
 
 
-CSysAuth.Confirm(true).then(async (_enable)=>{
-    
-    if(_enable==false)  return;
-    let audio=new CAudioTag("Res/sound/TownTheme.mp3");
-    audio.Volume(0.5);
-    audio.Play();
-
-
-});
 
 
 
 
 
-let lightAM7RP=new CRPMgr();
-let rp=lightAM7RP.PushRP(new CRPAuto());
+let rpPlug=new CCanvasPluginRPMgr(null);
+Real.PushPlugin(rpPlug);
+let AM7RP=new CRPMgr();
+let rp=AM7RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
 rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 //rp.PushInPaint(CPaint2D);
@@ -174,23 +181,40 @@ rp.mShader=gAtl.Frame().Pal().Sl2DKey();
 rp.mTag.add("light");
 
 
-rp=lightAM7RP.PushRP(new CRPAuto());
+rp=AM7RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag.add("light");
-Real.SetRPMgr(lightAM7RP);
+//rpPlug.SetRPMgr(AM7RP);
+//Real.SetRPMgr(AM7RP);
 
 // let voxel=Main.Find("BackGround") as CVoxel;
 // voxel.mLight=true;
 // voxel.mUpdateRes=true;
 
-let lightPM11RP=new CRPMgr();
+let PM1RP=new CRPMgr();
+rp=PM1RP.PushRP(new CRPAuto());
+rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
+rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
+
+rp.mShader=gAtl.Frame().Pal().Sl2DKey();
+
+
+rp=PM1RP.PushRP(new CRPAuto());
+rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
+rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
+
+//Real.SetRPMgr(PM1RP);
+rpPlug.SetRPMgr(PM1RP);
+
+
+let PM11RP=new CRPMgr();
 
 
 let emissiveTex=new CTexture();
 emissiveTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
-let emissiveTexKey=lightPM11RP.PushTex("Bloom/emissiveTex.tex",emissiveTex);
-rp=lightPM11RP.PushRP(new CRPAuto());
+let emissiveTexKey=PM11RP.PushTex("Bloom/emissiveTex.tex",emissiveTex);
+rp=PM11RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
 rp.PushAnd(new CCondition({"s":"mTag[bloom]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
@@ -201,8 +225,8 @@ rp.mTag.add("mask");
 
 let basiceTex=new CTexture();
 basiceTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)]);
-let basiceTexKey=lightPM11RP.PushTex("Bloom/basiceTex.tex",basiceTex);
-rp=lightPM11RP.PushRP(new CRPAuto());
+let basiceTexKey=PM11RP.PushTex("Bloom/basiceTex.tex",basiceTex);
+rp=PM11RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaint2D"}));
 rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]","v":0}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
@@ -210,14 +234,14 @@ rp.mTag.add("light");
 rp.mRenderTarget=basiceTexKey;
 
 
-rp=lightPM11RP.PushRP(new CRPAuto());
+rp=PM11RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
 rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
 rp.mTag.add("light");
 rp.mRenderTarget=basiceTexKey;
 
 
-rp=lightPM11RP.PushRP(new CRPAuto());
+rp=PM11RP.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition({"s":"class","v":"CShadowPlane"}));
 rp.PushAnd(new CCondition({"s":"mTag[shadowPlane]"}));
 rp.mShader=gAtl.Frame().Pal().Sl2DKey();
@@ -225,7 +249,7 @@ rp.mRenderTarget=basiceTexKey;
 
 
 
-let sufBloom=lightPM11RP.PushSuf(new CSurfaceBloom()) as CSurfaceBloom;
+let sufBloom=PM11RP.PushSuf(new CSurfaceBloom()) as CSurfaceBloom;
 let srp=sufBloom.GetRP();
 srp.mShader=gAtl.Frame().Pal().Sl2DKey();
 srp.mTag.add("blit");
@@ -239,7 +263,7 @@ sufBloom.m_softThreshold = 1.0;//임계 부근이 점진적으로 섞여 더 자
 // sufBloom.m_highPassFrequency = 1.0;//코드상 1.0이면 모든 mip 기여 허용, 값이 작아질수록 큰 mip(멀리 퍼지는 부분) 기여가 빠르게 줄어듭니다. 즉 멀리 퍼지게 하려면 1.0 유지가 유리
 // sufBloom.Refresh();
 
-let sufLast=lightPM11RP.PushSuf(new CSurface());
+let sufLast=PM11RP.PushSuf(new CSurface());
 srp=sufLast.GetRP();
 sufLast.SetUseRT(false);
 
@@ -253,7 +277,6 @@ srp.mShaderAttr.push(new CShaderAttr("opacity",1,1));
 
 
 
-//Real.SetRPMgr(null);
 
 
 let Option_btn=new CBGAttachButton("Test",101,new CVec2(320,120));
@@ -267,7 +290,8 @@ Option_btn.SetContent(`
 
 function AM7()
 {
-    Real.SetRPMgr(lightAM7RP);
+    //Real.SetRPMgr(AM7RP);
+    rpPlug.SetRPMgr(AM7RP);
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
 
@@ -289,7 +313,8 @@ window["AM7"]=AM7;
 
 function PM1()
 {
-    Real.SetRPMgr(null);
+    //Real.SetRPMgr(PM1RP);
+    rpPlug.SetRPMgr(PM1RP);
     //Real.SetRPMgr(lightAM7RP);
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
@@ -314,7 +339,8 @@ window["PM1"]=PM1;
 
 function PM11()
 {
-    Real.SetRPMgr(lightPM11RP);
+    //Real.SetRPMgr(PM11RP);
+    rpPlug.SetRPMgr(PM11RP);
     let Direct=Main.Find("Direct");
     let PointList=Main.Find("PointList");
 
@@ -343,10 +369,21 @@ function PM11()
 window["PM11"]=PM11;
 
 
-new CMDViewer("README.md");
+
 PM1();
 
+let audioEnable= await CSysAuth.Confirm(true);
+if(audioEnable)
+{
+    let audio=new CAudioTag("Res/sound/TownTheme.mp3");
+    audio.Volume(0.5);
+    audio.Play();
+}
+    
 
+
+
+new CMDViewer("README.md");
 
 // Main.Find("Direct").Destroy();
 
@@ -358,6 +395,170 @@ PM1();
 // lp.Push(new CDayCycle(new CVec3(-1,1),new CColor(1,0.5,0.5)));
 // lp.Push(new CDayCycle(new CVec3(1,0),new CColor(0,0,0)));
 // lp.Push(new CDayCycle(new CVec3(-1,0),new CColor(0,0,0)));
+
+let miniMapTex=gAtl.Frame().Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)],new CVec2(512,512));
+
+
+rp=PM1RP.PushRP(new CRPAuto());
+rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
+rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
+rp.mRenderTarget=miniMapTex;
+//Real.SetRPMgr(PM1RP);
+rpPlug.SetRPMgr(PM1RP);
+
+
+let uipic=Main.PushSub(new CUIPicture());
+uipic.Init(miniMapTex);
+uipic.SetSize(128,128);
+uipic.SetAnchorX(CUI.eAnchor.Min,10);
+uipic.SetAnchorY(CUI.eAnchor.Max,10);
+uipic.GetPt().SetColorVFX(0,new CVec4(25,50,0,SDF.eColorVFX.Scanline))
+
+
+
+CSing.On(CSing.eEvent.State,()=>{
+    if(CSing.PrivateKey()!=null)
+    {
+        loginModal.Close();
+        
+    }
+        
+});
+
+
+
+
+
+
+let loginModal : CModal;
+if(gPF.mServer=="local")
+{
+    let user=Real.PushSub(new CUser());
+    user.SetPos(new CVec3(5200,6500));
+    user.PushChild(new CPad()).mSave=false;
+    // let pt=user.FindComp(CPaint);
+    // let durl=pt.CaptureTextureToDataURL();
+    // CAlert.Info(`<img src='${durl}' />`);
+}
+else
+{
+   
+    Real.Clear();
+    let option=new CSingOption();
+    let html=await CSing.InitForm(option);
+    let uniqueKey="";
+    let camcon=gAtl.Brush().GetCam2D().GetCamCon() as CCamCon2DFollow;
+    camcon.SetPos(new CVec3(5200,6500));
+
+    loginModal=new CModal();
+    loginModal.SetHeader("Info")
+    loginModal.SetTitle(CModal.eTitle.Text);
+    loginModal.SetBody(html);
+    loginModal.SetZIndex(CModal.eSort.Top);
+    loginModal.Open(CModal.ePos.Center);
+
+    let socket=new CSocketIO(false,"world");
+    if(await socket.Connect())
+    {
+        let ConnectAck=PacketWorld.WorldConnect(CSing.PrivateKey(),CUniqueID.Get());
+        socket.Send(ConnectAck.Data());
+    }
+
+    // socket.On(PacketZone.eHeader.WorldInfo,(_stream : CStream)=>{
+    //     let ConnectReq=PacketZone.WorldConnectReq(_stream);
+    //     uniqueKey=ConnectReq.uniqueKey;
+    //     CConsol.Log("Connect Success : " +uniqueKey);
+    //     socket.Send(PacketZone.ZoneInfoAck(uniqueKey));
+    //     ;
+    // });    
+    socket.On(PacketWorld.eHeader.WorldInfo,(_stream : CStream)=>{
+        let WorldInfo=PacketWorld.WorldInfo(_stream);
+        let pad=Real.PushSub(new CPad());
+        let lastDir=new CVec3();
+        pad["Update"]=(_update : CUpdate)=>{
+            let dir = pad.GetDir();
+
+            if (dir.Equals(lastDir)==false)
+            {
+                lastDir.Import(dir);
+
+                let UserPad=PacketVillage.UserPad(uniqueKey,dir,new CVec3());
+                socket.Send(UserPad);
+            }
+        };
+        uniqueKey=WorldInfo.uniqueKey;
+
+        //for(let i=0;i<ZoneInfoReq._key.length;++i)
+        let stream=new CStream(WorldInfo.dataList);
+        while(stream.IsEnd()==false)
+        {
+            let user=Real.PushSub(new CUser());
+            user.SetKey(stream.GetString());
+            user.SetPos(stream.GetIStream(new CVec3()));
+            stream.GetString()
+        }
+        CConsol.Log(_stream.Data());
+
+        
+    });    
+    socket.On(PacketWorld.eHeader.WorldPushUser,(_stream : CStream)=>{
+        let WorldPushUser=PacketWorld.WorldPushUser(_stream);
+        let stream=new CStream(WorldPushUser.data);
+        let uk=stream.GetString();
+        let pos=stream.GetIStream(new CVec3());
+        let nick=stream.GetString();
+
+
+        let user=Real.Find(WorldPushUser.uniqueKey) as CUser;
+        if(user==null)
+        {
+            let user=Real.PushSub(new CUser());
+            user.SetKey(uk);
+            user.SetPos(pos);
+        }
+    });
+    socket.On(PacketVillage.eHeader.UserPad,(_stream : CStream)=>{
+        let UserPad=PacketVillage.UserPad(_stream);
+        let user=Real.Find(UserPad.uniqueKey) as CUser;
+        user.mRB.Clear();
+        user.SetPos(UserPad.pos);
+        if(UserPad.dir.IsZero()==false)
+        {
+            user.mRB.Push(new CForce("move",UserPad.dir,100));
+        }
+    });
+    socket.On(PacketWorld.eHeader.WorldRemoveUser,(_stream : CStream)=>{
+        let UserClose=PacketWorld.WorldRemoveUser(_stream);
+        let user=Real.Find(UserClose.uniqueKey) as CUser;
+        user.Destroy();
+    }); 
+    gAtl.Frame().PushEvent(CEvent.eType.Update,(_update : CUpdate)=>{
+
+        if(uniqueKey=="")   return;
+        let user=Real.Find(uniqueKey) as CUser;
+        if(user==null)  return;
+        let camcon=gAtl.Brush().GetCam2D().GetCamCon() as CCamCon2DFollow;
+        camcon.SetPos(user.GetPos());
+    });
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

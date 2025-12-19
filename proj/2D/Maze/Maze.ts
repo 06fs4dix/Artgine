@@ -1,5 +1,5 @@
 //Version
-const version='min8gomh_5';
+const version='mjcwy21m_9';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -28,7 +28,7 @@ gPF.mWASM = false;
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
@@ -39,22 +39,22 @@ var Main = gAtl.Canvas('Main.json');
 
 //EntryPoint
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CNavigation.js";
+
 import { CBGAttachButton, CBGFadeEffect } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CNaviMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CNavigationMgr.js";
+
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CAlpha, CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+
 import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CRay } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CRay.js";
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
+
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
@@ -570,6 +570,8 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 });
+
+
 
 
 

@@ -1,15 +1,14 @@
-import { CUpdate } from "../../../artgine/basic/Basic.js";
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CComponent } from "../../../artgine/canvas/component/CComponent.js";
-import { CForce } from "../../../artgine/canvas/component/CForce.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CPad } from "../../../artgine/canvas/subject/CPad.js";
-import { CMath } from "../../../artgine/geometry/CMath.js";
-import { CPlane } from "../../../artgine/geometry/CPlane.js";
-import { CPlaneInside } from "../../../artgine/geometry/CPlaneInside.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CComponent.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
+import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
+import { CPlane } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CPlane.js";
+import { CPlaneInside } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CPlaneInside.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 
 export class CMoveComp extends CBehavior
 {

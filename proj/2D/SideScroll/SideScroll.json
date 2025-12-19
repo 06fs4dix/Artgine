@@ -1,7 +1,7 @@
 {
   "preference": {
-    "mTargetWidth": 0,
-    "mTargetHeight": 0,
+    "mTargetWidth": 600,
+    "mTargetHeight": 800,
     "mRenderer": "GL",
     "m32fDepth": false,
     "mTexture16f": false,

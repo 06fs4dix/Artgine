@@ -1,9 +1,9 @@
 //Version
-const version='migpsz03_29';
-import "../../../artgine/artgine.js"
+const version='mjcwy21m_16';
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
-import {CClass} from "../../../artgine/basic/CClass.js";
+import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { BackGround } from "./BackGround.js";
 CClass.Push(BackGround);
 import { CBulletComp } from "./CBulletComp.js";
@@ -19,7 +19,7 @@ CClass.Push(CUserComp);
 import { RoomSystem } from "./RoomSystem.js";
 CClass.Push(RoomSystem);
 //Atelier
-import {CPreferences} from "../../../artgine/basic/CPreferences.js";
+import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 600;
 gPF.mTargetHeight = 800;
@@ -34,11 +34,11 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = false;
+gPF.mGitHub = true;
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
-import {CPlugin} from "../../../artgine/util/CPlugin.js";
+import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json','Res.json','UI.json'],"");
@@ -48,38 +48,40 @@ var UI = gAtl.Canvas('UI.json');
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-import {CObject} from "../../../artgine/basic/CObject.js"
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint2D } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CTexture, CTextureInfo } from "../../../artgine/render/CTexture.js";
-import { CFrame } from "../../../artgine/util/CFrame.js";
-import { CVec4 } from "../../../artgine/geometry/CVec4.js";
-import { CLoaderOption } from "../../../artgine/util/CLoader.js";
-import { CBGAttachButton, CModalChat, CModalEvent } from "../../../artgine/util/CModalUtil.js";
-import { CPacRoom, CRoomClient } from "../../../artgine/server/CRoomClient.js";
-import { CStream } from "../../../artgine/basic/CStream.js";
-import { CUIButtonImg } from "../../../artgine/canvas/subject/CUI.js";
-import { CBlackBoard } from "../../../artgine/basic/CBlackBoard.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CShaderAttr } from "../../../artgine/render/CShaderAttr.js";
-import { CVec1 } from "../../../artgine/geometry/CVec1.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import { CRigidBody } from "../../../artgine/canvas/component/CRigidBody.js";
-import { CForce } from "../../../artgine/canvas/component/CForce.js";
-import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
-import { CEvent } from "../../../artgine/basic/CEvent.js";
-import { CPool } from "../../../artgine/basic/CPool.js";
-import { CRPAuto, CRPMgr } from "../../../artgine/canvas/CRPMgr.js";
-import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
-import { CSurface } from "../../../artgine/canvas/subject/CSurface.js";
-import { CSurfaceBloom } from "../../../plugin/Bloom/Bloom.js";
-import { CConsol } from "../../../artgine/basic/CConsol.js";
-import { CConfirm, CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
-import { CCondition } from "../../../artgine/util/CStateMachine.js";
-import { CTimer } from "../../../artgine/system/CTimer.js";
-import { CScore } from "../../../artgine/server/CScore.js";
-import { CDOM } from "../../../artgine/basic/CDOM.js";
+import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
+import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
+import { CBGAttachButton, CModalChat, CModalEvent } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CPacRoom, CRoomClient } from "https://06fs4dix.github.io/Artgine/artgine/server/CRoomClient.js";
+import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
+import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
+import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
+
+import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
+import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
+import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
+import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
+import { CConfirm, CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
+import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
+import { CScore } from "https://06fs4dix.github.io/Artgine/artgine/server/CScore.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import { CCanvasPluginSocket } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginSocket.js";
+import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CRPMgr.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCondition.js";
+import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSurface.js";
+import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
 
 
 gAtl.Brush().GetCam2D().SetSize(600,800);
@@ -224,12 +226,16 @@ CPool.On("Monster",()=>{
 socket.On(CPacShooting.eHeader.MonCreate,async (_stream : CStream)=>{
     let packet=CPacShooting.MonCreate(_stream);
     let mon=await CPool.Product<CSubject>("Monster");
-    //mon.Reset();
+    if(mon.GetFrame()!=null)
+    {
+        CConsol.Log(packet.monKey);
+    }   
     mon.SetKey(packet.monKey);
     mon.SetPos(packet.pos);
     mon.FindComp(CProComp).SetHP(5+packet.type*5);
+    
     Main.PushSub(mon);
-    //CConsol.Log(packet.monKey);
+    //
 });
 socket.On(CPacShooting.eHeader.Effect,(stream : CStream)=>{
     let packet=CPacShooting.Effect(stream);
@@ -273,7 +279,7 @@ socket.Connect().then(()=>{
     }
         
         
-    Main.SetWebSocket(socket);
+    Main.PushPlugin(new CCanvasPluginSocket(socket));
 
 });
 
@@ -346,10 +352,10 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Bloom", async () => {
     srp.mShaderAttr.push(new CShaderAttr("blend", 1, CRenderPass.eBlend.LinearDodge));
     srp.mShaderAttr.push(new CShaderAttr("opacity",1,1));
 
-    Main.SetRPMgr(BloomRPM);
+    Main.PushPlugin(new CCanvasPluginRPMgr(BloomRPM));
 }));
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Basic", async () => {
-    Main.SetRPMgr(null);
+    Main.RemovePlugin(CCanvasPluginRPMgr);
 }));
 
 
@@ -362,6 +368,18 @@ Option_btn.SetContent(`
     블룸,기본 설정 가능
 </div>`);
 if(gPF.mServer=="webServer")    CScore.Read("Shooting");
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

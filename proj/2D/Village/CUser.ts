@@ -1,17 +1,17 @@
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CSMComp.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
+import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
 import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CSMComp.js";
 
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
@@ -44,7 +44,7 @@ export class CUser extends CSubject
         this.mPT.mAutoLoad.mFilter=CTexture.eFilter.Neaest;
         this.mPT.SetYSort(true);
         this.mPT.SetYSortOrigin(-50);
-        this.PushChild(new CPad()).mSave=false;
+        //this.PushChild(new CPad()).mSave=false;
         this.mRB=this.PushComp(new CRigidBody());
         this.mRB.mSave=false;
         

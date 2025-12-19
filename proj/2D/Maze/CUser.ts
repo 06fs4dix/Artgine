@@ -1,24 +1,25 @@
 
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
+import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CNavigation.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
+import { CRayMouse } from "https://06fs4dix.github.io/Artgine/artgine/app/CRayMouse.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
 import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
-import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
-import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CNavigation.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CRayMouse } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRayMouse.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CH5Canvas } from "https://06fs4dix.github.io/Artgine/artgine/render/CH5Canvas.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";

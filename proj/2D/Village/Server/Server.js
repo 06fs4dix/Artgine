@@ -1,0 +1,11 @@
+import { CServerMain } from "https://06fs4dix.github.io/Artgine/artgine/network/CServerMain.js";
+import { CBoardServer } from "https://06fs4dix.github.io/Artgine/artgine/server/CBoardServer.js";
+import { COAuthServer } from "https://06fs4dix.github.io/Artgine/artgine/server/COAuthServer.js";
+import { CSingServer } from "https://06fs4dix.github.io/Artgine/artgine/server/CSingServer.js";
+import { CVillageWorld } from "./CVillageWorld.js";
+new CBoardServer().SetServerMain(CServerMain.Main());
+new CSingServer().SetServerMain(CServerMain.Main());
+new COAuthServer().SetServerMain(CServerMain.Main());
+let zoneServer = new CVillageWorld();
+zoneServer.SetServerMain(CServerMain.Main());
+zoneServer.UpdateLoop();
