@@ -41,6 +41,7 @@ import {
 	V3Min,
 	V2Len,
 	SaturateV3,
+	V4Dot,
 } from "./Shader"
 import {
 	SDF
@@ -61,6 +62,7 @@ import {
 	jitter,
 	calcParallaxShadow
 } from "./Shadow";
+import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
 
 //uniform
 var colorModel : CVec4=Null();
@@ -118,7 +120,7 @@ var weightBakeIndex : number;
 
 var time : number = Attribute(0,"time");
 
-var waterDeep : CVec3 = new CVec3(0.0,256.0,2000.0);
+var waterDeep : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
 var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
 var causticMap : number = 5.0;
@@ -480,13 +482,40 @@ function SampleCaustics(_map : number, _uv : CVec2, _split : number) : CVec3
 	return new CVec3(r, g, b);
 }
 
-function Caustics(_map : number, _world : CVec3, _flow : CVec3) : CVec3
+function Caustics(_color : CVec3, _map : number, _world : CVec3, _flowDir : CVec2) : CVec3
 {
+	if(V2Len(_flowDir) == 0.0) return _color;
+
+	var flow : CVec3 = new CVec3(
+		-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
+		causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
+		V2Len(causticFlowDir) * time * 0.03
+	);
 	var split : number = 1.0 / 500.0;
 	var worldToUV : CVec3 = V3MulFloat(_world, split);
-	var uv : CVec2 = V2AddV2(new CVec2(worldToUV.x, worldToUV.z), V2MulFloat(_flow.xy, _flow.z));
+	var uv : CVec2 = V2AddV2(new CVec2(worldToUV.x, worldToUV.z), V2MulFloat(flow.xy, flow.z));
 	var tex : CVec3 = SampleCaustics(_map, uv, split);
-	return tex;
+	_color = V3AddV3(_color, tex);
+	return SaturateV3(_color);
+}
+
+function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
+{
+	var heightDiff : number = waterDeep.x - _world.y;
+	// if(heightDiff < 0.0) return _color;
+	
+	// foam mask
+	if(heightDiff < waterDeep.w) {
+		_color = V3Mix(new CVec3(0.8, 0.8, 0.8), shallowColor, 0.1);
+	}
+	else {
+		var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
+		_color = V3Mix(deepColor, V3MulV3(_color, shallowColor), depthBlend);
+		var distanceBlend : number = 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, _world.xyz)) / waterDeep.z);
+		_color = V3Mix(deepColor, _color, distanceBlend);
+	}
+
+	return _color;
 }
 
 function ps_main()
@@ -512,20 +541,26 @@ function ps_main()
 	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
 	uv = uvh.xy;
 
-	world.xyz -= V3MulFloat(
+	world.xyz = V3SubV3(world.xyz, V3MulFloat(
 		V3Nor(V3SubV3(camPos, world.xyz)), 
 		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
 			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
 			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
 		)
-	);
+	));
 	BranchEnd();
+
+	var normal : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
 
 
 	var L_cor : CVec4=Sam2DToColor(to_ref.x, uv);
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchEnd();
+
+	BranchBegin("decal","decal",[decalParam, decalInvWorldMat]);
+	L_cor=DecalCac(L_cor, world);
 	BranchEnd();
 
 	BranchBegin("vfx","VFX",[colorVFX,time]);
@@ -541,7 +576,7 @@ function ps_main()
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
 
-	dseMat = LightCac3D(camPos, to_worldPos, L_cor, GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount), shadow, 
+	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, 
 		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
 
 
@@ -555,31 +590,17 @@ function ps_main()
 
 	out_color=L_cor;
 
-	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, causticFlowFreq, time]);
-	if(V2Len(causticFlowDir) > 0.0) {
-		out_color.rgb = V3AddV3(
-			out_color.rgb, 
-			Caustics(
-				causticMap, 
-				world.xyz, 
-				new CVec3(
-					-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
-					causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
-					V2Len(causticFlowDir) * time * 0.03
-				)
-			)
-		);
-		out_color.rgb = SaturateV3(out_color.rgb);
-	}
-	if(waterDeep.x > world.y) {
-		out_color.rgb = V3Mix(
-			deepColor, 
-			V3MulV3(out_color.rgb, shallowColor),
-			1.0 - SaturateFloat((waterDeep.x - world.y) / waterDeep.y)
-		);
-	}
+	BranchBegin("waterReflect","waterReflect",[waterDeep]);
+	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
+	BranchEnd();
+
+	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, causticFlowFreq, camPos, time]);
+	if(world.y > waterDeep.x+10.0) discard;	// 물 높이보다 낮은 것만 랜더링
+	out_color.rgb = Caustics(out_color.rgb, causticMap, world.xyz, causticFlowDir);
+	out_color.rgb = WaterProcessing(out_color.rgb, world);
 	BranchEnd();
 }
+
 
 function ps_main_gBuffer() {
 	
@@ -793,13 +814,13 @@ function ps_main_shadow_read()
 	uv = uvh.xy;
 
 
-	world.xyz -= V3MulFloat(
+	world.xyz = V3SubV3(world.xyz, V3MulFloat(
 		V3Nor(V3SubV3(camPos, world.xyz)), 
 		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
 			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
 			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
 		)
-	);
+	));
 
 	worldNormal = Sam2DToColor(to_ref.y, uv);
 	worldNormal.xyz = MappingTexToV3(worldNormal.xyz);
@@ -876,7 +897,7 @@ function ps_main_bake() {
 	if ( L_cor.a < alphaCut ) discard;
 	BranchEnd();
 
-	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref);
+	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
 
 	//shadow
 	var shadow : number=-1.0;

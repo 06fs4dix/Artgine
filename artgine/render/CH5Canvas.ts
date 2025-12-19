@@ -1,5 +1,6 @@
 import {CObject} from "../basic/CObject.js";
 import {CString} from "../basic/CString.js";
+import { CUtil } from "../basic/CUtil.js";
 import {CVec2} from "../geometry/CVec2.js";
 import { CVec4 } from "../geometry/CVec4.js";
 import {CTexture} from "./CTexture.js";
@@ -75,14 +76,23 @@ export class CH5Cmd extends CObject
 	}
 }
 
-var gCanvas=document.createElement("canvas");
-gCanvas.width=32;
-gCanvas.height=32;
-var gCTX=gCanvas.getContext('2d', { willReadFrequently: true });
+var gCanvas : HTMLCanvasElement=null;
+var gCTX : CanvasRenderingContext2D=null;
 var gPara=new Array(9);
 var gLinear = true;
 var gExp = true;
 var gCMDStack=new Array<CH5Cmd>();
+
+if(CUtil.IsNode()==false)
+{
+	gCanvas=document.createElement("canvas");
+	gCanvas.width=32;
+	gCanvas.height=32;
+	gCTX=gCanvas.getContext('2d', { willReadFrequently: true });
+}
+
+
+
 
 
 export class CH5Canvas

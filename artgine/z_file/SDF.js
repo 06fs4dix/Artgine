@@ -77,6 +77,8 @@ export class SDF {
         Noise: 5,
         Scanline: 7,
         OverWrite: 8,
+        ColorPalette: 9,
+        Blur: 10,
     };
     static eBlend = {
         LinearDodge: 1,

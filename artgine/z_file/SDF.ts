@@ -99,6 +99,9 @@ export class SDF {
 		Scanline:7,//선 개수 x, 속도 y %줄내려옴
 		OverWrite:8,//선택된 텍스쳐 컬러로 덮어쓰기 U,V 반복률,어떤 텍스쳐 알파에서 추출할지
 		//Crop:8,//선택된 택스쳐 영역으로 보이게 하기
+		ColorPalette:9,//x팔레트텍스쳐인덱스, 컬러 팔레트에서 색상 양자화
+		Blur:10,//x블러타입 y블러횟수
+
 	}
 	static eBlend=
 	{

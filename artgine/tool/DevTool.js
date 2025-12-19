@@ -7,9 +7,6 @@ import { CMDViewer, CModalFlex, CMonacoViewer } from "../util/CModalUtil.js";
 import { CObject } from "../basic/CObject.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
-import { CBrush } from "../canvas/CBrush.js";
-import { CCanvas } from "../canvas/CCanvas.js";
-import { CSubject } from "../canvas/subject/CSubject.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CCamera } from "../render/CCamera.js";
 import { CWebView } from "../system/CWebView.js";
@@ -17,14 +14,10 @@ import { CBase64File } from "../util/CBase64File.js";
 import { CLoaderOption } from "../util/CLoader.js";
 import { CMesh } from "../render/CMesh.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../util/CCamCon.js";
-import { CPaint } from "../canvas/component/paint/CPaint.js";
-import { CCollider } from "../canvas/component/CCollider.js";
-import { CAlpha, CColor } from "../canvas/component/CColor.js";
 import { CTexture } from "../render/CTexture.js";
 import { CMeshDrawNode } from "../render/CMeshDrawNode.js";
 import { SDF } from "../z_file/SDF.js";
 import { CMat } from "../geometry/CMat.js";
-import { CPaint2D } from "../canvas/component/paint/CPaint2D.js";
 import { CInput } from "../system/CInput.js";
 import { CMath } from "../geometry/CMath.js";
 import { CUtilMath } from "../geometry/CUtilMath.js";
@@ -37,11 +30,19 @@ import { CScript } from "../util/CScript.js";
 import { CChecker } from "../util/CChecker.js";
 import { CLan } from "../basic/CLan.js";
 import { CShaderAttr } from "../render/CShaderAttr.js";
-import { CRigidBody } from "../canvas/component/CRigidBody.js";
 import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
-import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
-import { CLocation } from "../canvas/subject/CLocation.js";
 import { CFont, CFontOption } from "../util/CFont.js";
+import { CCanvas } from "../app/canvas/CCanvas.js";
+import { CSubject } from "../app/subject/CSubject.js";
+import { CRigidBody } from "../app/component/CRigidBody.js";
+import { CPaint } from "../app/component/paint/CPaint.js";
+import { CCollider } from "../app/component/CCollider.js";
+import { CPaint2D } from "../app/component/paint/CPaint2D.js";
+import { CLocation } from "../app/subject/CLocation.js";
+import { CPaint3D } from "../app/component/paint/CPaint3D.js";
+import { CBrush } from "../app/canvas/CBrush.js";
+import { CColor } from "../render/CColor.js";
+import { CAlpha } from "../render/CAlpha.js";
 var gModal;
 var gAtl;
 var gLeftItem = new Map();
@@ -1167,7 +1168,8 @@ function DevToolLeftPush() {
             }, () => { }], ["Push", "Cancel"]);
     }
 }
-window["DevToolLeftPush"] = DevToolLeftPush;
+if (CUtil.IsNode() == false)
+    window["DevToolLeftPush"] = DevToolLeftPush;
 function DevToolLeftRemove(_destry = true) {
     if (_destry == false) { }
     else if (gLeftSelect instanceof CSubject)
@@ -1192,7 +1194,8 @@ function DevToolLeftRemove(_destry = true) {
     rightPanel.innerHTML = "";
     gLeftSelect = null;
 }
-window["DevToolLeftRemove"] = DevToolLeftRemove;
+if (CUtil.IsNode() == false)
+    window["DevToolLeftRemove"] = DevToolLeftRemove;
 function DevToolGiftSwap(_obj) {
     for (let can of gAtl.mCanvasMap.values()) {
         let parent = can.FindParent(_obj);

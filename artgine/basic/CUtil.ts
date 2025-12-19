@@ -7,10 +7,7 @@ export class CUtil
             process.versions != null &&
             process.versions.node != null);
     }
-	static IsWeb() 
-    {
-        return typeof navigator != 'undefined';
-    }
+
 	
 	static IsMobile()
 	{
@@ -92,7 +89,7 @@ export class CUtil
 		}
 		
 		// 웹 브라우저 환경
-		if (CUtil.IsWeb()) 
+		if (CUtil.IsNode()==false) 
 		{
 			// navigator.language에서 언어 코드 추출
 			const language = navigator.language || navigator.languages?.[0] || 'en';

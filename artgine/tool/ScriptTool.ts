@@ -1,10 +1,7 @@
 import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CUtil } from "../basic/CUtil.js";
-import { CAtelier } from "../canvas/CAtelier.js";
-import { CSubject } from "../canvas/subject/CSubject.js";
-import { CPaint2D, CPaintHTML } from "../canvas/component/paint/CPaint2D.js";
-import { CPaintTrail } from "../canvas/component/paint/CPaintTrail.js";
+
 import { CCamCon2DFreeMove } from "../util/CCamCon.js";
 import { CModalFlex } from "../util/CModalUtil.js";
 import { CScript } from "../util/CScript.js";
@@ -12,7 +9,13 @@ import { CUtilWeb } from "../util/CUtilWeb.js";
 import { CChecker } from "../util/CChecker.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
-import { CColor } from "../canvas/component/CColor.js";
+import { CAtelier } from "../app/CAtelier.js";
+import { CSubject } from "../app/subject/CSubject.js";
+import { CPaint2D, CPaintHTML } from "../app/component/paint/CPaint2D.js";
+import { CPaintTrail } from "../app/component/paint/CPaintTrail.js";
+import { CColor } from "../render/CColor.js";
+
+
 
 var gModal: CModalFlex;
 var gAtl: CAtelier;

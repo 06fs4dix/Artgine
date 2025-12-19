@@ -1,15 +1,14 @@
+
+import { CLight } from "../../artgine/app/component/CLight.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
+import { CPaint2D, CPaintHTML } from "../../artgine/app/component/paint/CPaint2D.js";
+import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CConsol } from "../../artgine/basic/CConsol.js";
 import { CObject, CPointer } from "../../artgine/basic/CObject.js";
 import { CUtilObj } from "../../artgine/basic/CUtilObj.js";
-import { CAlpha, CColor } from "../../artgine/canvas/component/CColor.js";
-import { CLight } from "../../artgine/canvas/component/CLight.js";
-import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
-import { CPaint2D, CPaintHTML } from "../../artgine/canvas/component/paint/CPaint2D.js";
-import { CPaint3D } from "../../artgine/canvas/component/paint/CPaint3D.js";
-import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
-import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
+
 import { CBound } from "../../artgine/geometry/CBound.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
@@ -18,7 +17,9 @@ import { CVec1 } from "../../artgine/geometry/CVec1.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
 import { CVec4 } from "../../artgine/geometry/CVec4.js";
+import { CAlpha } from "../../artgine/render/CAlpha.js";
 import { CCamera } from "../../artgine/render/CCamera.js";
+import { CColor } from "../../artgine/render/CColor.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShader } from "../../artgine/render/CShader.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";

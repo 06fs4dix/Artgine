@@ -27,6 +27,8 @@ import { CUniform } from "./CUniform.js";
 import {CUtilRender} from "./CUtilRender.js";
 import { CModal } from "../basic/CModal.js";
 import { CUtilWeb } from "../util/CUtilWeb.js";
+import { CDOM } from "../basic/CDOM.js";
+
 export class CTexUse
 {
 	mSum=0;
@@ -334,7 +336,4 @@ export class CRendererGL extends CRenderer
 	
 }
 import CRenderer_imple from "../render_imple/CRenderer.js";
-
-
-
 CRenderer_imple();

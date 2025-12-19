@@ -1,9 +1,8 @@
-import SIMDModule from "../wasm/WASM_SIMD.js";
-import NoSIMDModule from "../wasm/WASM_NoSIMD.js";
 import {CAlert} from "./CAlert.js";
 import {CArray} from "./CArray.js";
 import {CConsol} from "./CConsol.js";
 import { CPath } from "./CPath.js";
+import { CUtil } from "./CUtil.js";
 
 var g_F32A2=new CArray<Float32Array>();
 var g_F32A3=new CArray<Float32Array>();
@@ -15,6 +14,22 @@ var gWASM=null;
 var gThread=true;
 var gSimd=false;
 var gDummy : any;
+
+
+type EmscriptenFactory = (module: any) => Promise<any> | any;
+
+
+async function LoadWasmFactory(_useSimd: boolean): Promise<EmscriptenFactory> {
+  if (_useSimd) {
+    const m: any = await import("../wasm/WASM_SIMD.js");
+    return (m.default ?? m) as EmscriptenFactory;
+  } else {
+    const m: any = await import("../wasm/WASM_NoSIMD.js");
+    return (m.default ?? m) as EmscriptenFactory;
+  }
+}
+
+
 export class CWASM
 {
     static SetThread(_enable)
@@ -24,6 +39,7 @@ export class CWASM
     static GetThread()  {   return gThread;    }
     static async Init(_simd : boolean,_path : string)
     {
+        if(CUtil.IsNode())  return;
         if(_simd)
         {
             if (typeof WebAssembly === "object" && typeof WebAssembly.FeatureDetect === "function") 
@@ -45,8 +61,11 @@ export class CWASM
         if(gWASM==null)
         {
             gWASM={};
-            if(gSimd)   await SIMDModule(gWASM);
-            else   await NoSIMDModule(gWASM);
+            const factory = await LoadWasmFactory(gSimd);
+            await factory(gWASM);
+
+            // if(gSimd)   await SIMDModule(gWASM);
+            // else   await NoSIMDModule(gWASM);
 
          
             const encoder = new TextEncoder();

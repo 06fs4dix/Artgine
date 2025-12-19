@@ -286,14 +286,12 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
                 var kS_ibl : CVec3 = FresnelSchlickRoughness(NdotV, F0, roughness);
                 var kD_ibl : CVec3 = V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), kS_ibl), 1.0 - metalic);
 
-                
-
                 //diffuse
                 var maxLod : number=SamCubeMaxLod(0.0);
                 
                 
                  // ---- Ambient Diffuse (IBL) ----
-                var cubeD : CVec3 = SamCubeLodToColor(0.0,normal, maxLod*0.5).xyz;
+                var cubeD : CVec3 = SamCubeLodToColor(0.0,normal, maxLod*0.7).xyz;
                 var ambientLight :CVec3 = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl),cubeD),ambient_color);
                 ambientLight = V3MulFloat(ambientLight, ao);                        // AO
                 DAll=V3AddV3(ambientLight,DAll);

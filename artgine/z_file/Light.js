@@ -198,7 +198,7 @@ export function LightCac3D(campos, position, albedo, normal, shadow, roughness, 
                 var kS_ibl = FresnelSchlickRoughness(NdotV, F0, roughness);
                 var kD_ibl = V3MulFloat(V3SubV3(new CVec3(1.0, 1.0, 1.0), kS_ibl), 1.0 - metalic);
                 var maxLod = SamCubeMaxLod(0.0);
-                var cubeD = SamCubeLodToColor(0.0, normal, maxLod * 0.5).xyz;
+                var cubeD = SamCubeLodToColor(0.0, normal, maxLod * 0.7).xyz;
                 var ambientLight = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl), cubeD), ambient_color);
                 ambientLight = V3MulFloat(ambientLight, ao);
                 DAll = V3AddV3(ambientLight, DAll);

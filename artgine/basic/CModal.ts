@@ -5,7 +5,7 @@ import {CDOM} from "./CDOM.js";
 import {CEvent} from "./CEvent.js";
 import {CJSON} from "./CJSON.js";
 import { CString } from "./CString.js";
-
+import { CUniqueID } from "./CUniqueID.js";
 export class CDrop
 {
 	// static eType={
@@ -662,5 +662,4 @@ export namespace CConfirm
 }
 
 import CModal_imple from "../basic_impl/CModal.js";
-import { CUniqueID } from "./CUniqueID.js";
 CModal_imple();

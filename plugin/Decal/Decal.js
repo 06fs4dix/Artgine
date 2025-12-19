@@ -1,5 +1,5 @@
-import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
-import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
+import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CUtilMath } from "../../artgine/geometry/CUtilMath.js";

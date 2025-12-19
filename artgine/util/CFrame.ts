@@ -31,36 +31,91 @@ import { CString } from "../basic/CString.js"
 import { CRollBack } from "./CRollBack.js"
 import { CSysAuth } from "../system/CSysAuth.js"
 import { CUtilWeb } from "./CUtilWeb.js"
-import { CGeometryInfo } from "../canvas/component/CGeometryComp.js"
 import { CDOM } from "../basic/CDOM.js"
+import { CUtil } from "../basic/CUtil.js"
 
-const invisibleButton = document.createElement("div");
-invisibleButton.style.position = "absolute";
-invisibleButton.style.top = "0";
-invisibleButton.style.left = "0";
-invisibleButton.style.width = "32px";
-invisibleButton.style.height = "32px";
-invisibleButton.style.opacity = "0"; // 보이지 않지만
-invisibleButton.style.zIndex = "9999";
-invisibleButton.style.pointerEvents = "auto"; // 반드시 있어야 클릭 됨
-invisibleButton.style.background = "transparent"; // 안전하게
-document.body.appendChild(invisibleButton);
 
 let gConsolChat : CModalChat=null;
 var gFocus=null;
-// var gWASM : any={};
-// await initModule(gWASM);
-// let path=CPath.PHPC();
+function WebInit()
+{
+
+	const invisibleButton = CDOM.TagToDom("div");
+	invisibleButton.style.position = "absolute";
+	invisibleButton.style.top = "0";
+	invisibleButton.style.left = "0";
+	invisibleButton.style.width = "32px";
+	invisibleButton.style.height = "32px";
+	invisibleButton.style.opacity = "0"; // 보이지 않지만
+	invisibleButton.style.zIndex = "9999";
+	invisibleButton.style.pointerEvents = "auto"; // 반드시 있어야 클릭 됨
+	invisibleButton.style.background = "transparent"; // 안전하게
+	//document.body.appendChild(invisibleButton);
+	invisibleButton.addEventListener("dblclick", () => {
+		if(gConsolChat==null)
+		{
+			CConsolModalInit();
+		}
+		else
+			gConsolChat.Show();
+
+		while(CConsol.GetLogQue().IsEmpty()==false)
+			gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(),"gray");
+	});
+	
+	window.addEventListener('error', function (event) 
+	{
+		if(event.message.indexOf("ResizeObserver")!=-1 )	return;
+
+		if(gConsolChat==null && gMainFramework==null)
+			CConsolModalInit();
+		
+		CConsol.Log("📄 filename: " + event.filename);     // 예: Light.js
+		CConsol.Log("📌 lineno/colno: " + event.lineno+"/"+event.colno);             // 예: 25
+		//CConsol.Log("📍 colno: " + );              // 예: 1
+
+		if (event.error) {
+			CConsol.Log("💬 message: " + event.error.message); // 예: Cannot read properties of null
+			CConsol.Log("🧵 stack:\n" + event.error.stack);    // 전체 호출 위치 (Light.js:25:1 포함)
+		} else {
+			CConsol.Log("⚠️ message: " + event.message);
+		}
+	});
+	window.addEventListener("unhandledrejection", function (event) {
+		if(gConsolChat==null && gMainFramework==null)
+			CConsolModalInit();
+		//console.log("🔥 처리 안 된 Promise 에러");
+		CConsol.Log("💬 reason:"+event.reason); // Error, string 등
+	});
+
+	document.addEventListener("freeze", () => {
+		if(CFrame.Main()==null)	return;
+		CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
+
+		
+	});
+	document.addEventListener("resume", () => {
+		if(CFrame.Main()==null)	return;
+		CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
+	});
+	document.addEventListener("visibilitychange", () => {
+		if(CFrame.Main()==null)	return;
+		if (document.hidden) {
+			CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
+		} else {
+			CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
+		}
+	});
+}
+if(CUtil.IsNode()==false)	WebInit();
+
+	
+	
+	
 
 
 
-// const encoder = new TextEncoder();
-// const encoded = encoder.encode(path);  // path = "http://.../"
-// const ptr = gWASM._malloc(encoded.length + 1);
-// gWASM.HEAPU8.set(encoded, ptr);
-// gWASM.HEAPU8[ptr + encoded.length] = 0; // null 종료
-// gWASM._Init(ptr);
-// gWASM._free(ptr);
+
 function CConsolModalInit()
 {
 	gConsolChat=new CModalChat("ConsolChat",false);
@@ -85,30 +140,7 @@ function CConsolModalInit()
 	while(CConsol.GetLogQue().IsEmpty()==false)
 		gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(),"gray");
 }
-window.addEventListener('error', function (event) 
-{
-	if(event.message.indexOf("ResizeObserver")!=-1 )	return;
 
-	if(gConsolChat==null && gMainFramework==null)
-		CConsolModalInit();
-	
-    CConsol.Log("📄 filename: " + event.filename);     // 예: Light.js
-    CConsol.Log("📌 lineno/colno: " + event.lineno+"/"+event.colno);             // 예: 25
-    //CConsol.Log("📍 colno: " + );              // 예: 1
-
-    if (event.error) {
-        CConsol.Log("💬 message: " + event.error.message); // 예: Cannot read properties of null
-        CConsol.Log("🧵 stack:\n" + event.error.stack);    // 전체 호출 위치 (Light.js:25:1 포함)
-    } else {
-        CConsol.Log("⚠️ message: " + event.message);
-    }
-});
-window.addEventListener("unhandledrejection", function (event) {
-	if(gConsolChat==null && gMainFramework==null)
-		CConsolModalInit();
-    //console.log("🔥 처리 안 된 Promise 에러");
-    CConsol.Log("💬 reason:"+event.reason); // Error, string 등
-});
 
 CConsol.SetLogEvent((_msg,_color)=>{
 	if(gConsolChat!=null && gConsolChat.IsShow())
@@ -119,38 +151,7 @@ CConsol.SetLogEvent((_msg,_color)=>{
 
 	return false;
 });
-invisibleButton.addEventListener("dblclick", () => {
-	if(gConsolChat==null)
-	{
-		CConsolModalInit();
-	}
-	else
-    	gConsolChat.Show();
 
-	while(CConsol.GetLogQue().IsEmpty()==false)
-		gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(),"gray");
-	
-	
-});
-
-document.addEventListener("freeze", () => {
-	if(CFrame.Main()==null)	return;
-	CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
-
-	
-});
-document.addEventListener("resume", () => {
-	if(CFrame.Main()==null)	return;
-	CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
-});
-document.addEventListener("visibilitychange", () => {
-	if(CFrame.Main()==null)	return;
-	if (document.hidden) {
-		CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
-	} else {
-		CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
-	}
-});
 
 
 var g_offset=0;
@@ -222,15 +223,20 @@ export class CFrame
 	{
 		this.m_offset=g_offset++;
 		this.mPreferences=_pf;
-		
+		if(CUtil.IsNode())	
+		{
+			CAlert.E("Not Support!");
+			return;
+		}
+			
 		
 		var canDummy=_htmlObj;
 		if(typeof _htmlObj == "string")
 		{
-			canDummy=document.getElementById(_htmlObj) as HTMLCanvasElement;
+			canDummy=CDOM.ID(_htmlObj) as HTMLCanvasElement;
 			if(canDummy==null)
 			{
-				canDummy=document.createElement("canvas");
+				canDummy=CDOM.TagToDom("canvas");
 				canDummy.width=640;
 				canDummy.height=480;
 				if(_htmlObj=="")

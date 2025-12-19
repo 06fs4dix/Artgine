@@ -30,7 +30,7 @@ var normalRange = 1.0;
 var texflowDir = new CVec2(1.0, 0.0);
 var shallowColor = new CVec3(0.0, 0.0, 0.0);
 var deepColor = new CVec3(0.0, 0.1, 0.5);
-var waterDeep = new CVec3(0.0, 256.0, 2000.0);
+var waterDeep = new CVec4(0.0, 256.0, 2000.0, 5.0);
 Build("3DWater", ["water"], vs_main_water, [
     worldMat,
     viewMat, projectMat, skin, sam2DCount,
@@ -132,10 +132,8 @@ function ps_main_water() {
     BranchEnd();
     if (refractType < -0.5) {
         refractColor = new CVec4(shallowColor, 1.0);
-        refractType = 2.0;
-    }
-    if (refractType > 0.5) {
         refractColor.rgb = V3Mix(deepColor, refractColor.rgb, 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, world)) / waterDeep.z));
+        refractType = 2.0;
     }
     var reflectColor;
     var reflectType = -1.0;

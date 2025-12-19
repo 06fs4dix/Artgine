@@ -1,5 +1,6 @@
 import { CJSON } from "./CJSON.js";
 import { CLan } from "./CLan.js";
+import { CUtil } from "./CUtil.js";
 function CLanChk(element) {
     let clanAttr = element.getAttribute("data-CLan");
     if (clanAttr != null) {
@@ -30,6 +31,8 @@ export class CDOM {
         return gArtgineBodyHTML;
     }
     static PaintDiv() {
+        if (CUtil.IsNode())
+            return null;
         if (gArtginePaintHTML == null) {
             gArtginePaintHTML = document.createElement("div");
             document.body.append(gArtginePaintHTML);
@@ -171,7 +174,11 @@ export class CDOM {
                 each0.innerHTML = data;
         }
     }
-    static ID(_id, _doc = document) {
+    static ID(_id, _doc = null) {
+        if (CUtil.IsNode())
+            return null;
+        if (_doc == null)
+            _doc = document;
         return _doc.getElementById(_id);
     }
     static IDInput(_id) {

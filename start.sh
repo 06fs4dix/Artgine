@@ -24,5 +24,5 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-echo "Start... App/Start.js"
-node App/Start.js 
+echo "Start... desktop/Start.js"
+node desktop/Start.js 

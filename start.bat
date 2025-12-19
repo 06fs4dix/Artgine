@@ -8,6 +8,6 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b
 )
 
-echo Start... App/Start.js
-node App\Start.js
+echo Start... desktop/Start.js
+node desktop/Start.js
 pause

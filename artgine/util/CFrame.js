@@ -32,19 +32,72 @@ import { CRollBack } from "./CRollBack.js";
 import { CSysAuth } from "../system/CSysAuth.js";
 import { CUtilWeb } from "./CUtilWeb.js";
 import { CDOM } from "../basic/CDOM.js";
-const invisibleButton = document.createElement("div");
-invisibleButton.style.position = "absolute";
-invisibleButton.style.top = "0";
-invisibleButton.style.left = "0";
-invisibleButton.style.width = "32px";
-invisibleButton.style.height = "32px";
-invisibleButton.style.opacity = "0";
-invisibleButton.style.zIndex = "9999";
-invisibleButton.style.pointerEvents = "auto";
-invisibleButton.style.background = "transparent";
-document.body.appendChild(invisibleButton);
+import { CUtil } from "../basic/CUtil.js";
 let gConsolChat = null;
 var gFocus = null;
+function WebInit() {
+    const invisibleButton = CDOM.TagToDom("div");
+    invisibleButton.style.position = "absolute";
+    invisibleButton.style.top = "0";
+    invisibleButton.style.left = "0";
+    invisibleButton.style.width = "32px";
+    invisibleButton.style.height = "32px";
+    invisibleButton.style.opacity = "0";
+    invisibleButton.style.zIndex = "9999";
+    invisibleButton.style.pointerEvents = "auto";
+    invisibleButton.style.background = "transparent";
+    invisibleButton.addEventListener("dblclick", () => {
+        if (gConsolChat == null) {
+            CConsolModalInit();
+        }
+        else
+            gConsolChat.Show();
+        while (CConsol.GetLogQue().IsEmpty() == false)
+            gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(), "gray");
+    });
+    window.addEventListener('error', function (event) {
+        if (event.message.indexOf("ResizeObserver") != -1)
+            return;
+        if (gConsolChat == null && gMainFramework == null)
+            CConsolModalInit();
+        CConsol.Log("📄 filename: " + event.filename);
+        CConsol.Log("📌 lineno/colno: " + event.lineno + "/" + event.colno);
+        if (event.error) {
+            CConsol.Log("💬 message: " + event.error.message);
+            CConsol.Log("🧵 stack:\n" + event.error.stack);
+        }
+        else {
+            CConsol.Log("⚠️ message: " + event.message);
+        }
+    });
+    window.addEventListener("unhandledrejection", function (event) {
+        if (gConsolChat == null && gMainFramework == null)
+            CConsolModalInit();
+        CConsol.Log("💬 reason:" + event.reason);
+    });
+    document.addEventListener("freeze", () => {
+        if (CFrame.Main() == null)
+            return;
+        CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
+    });
+    document.addEventListener("resume", () => {
+        if (CFrame.Main() == null)
+            return;
+        CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
+    });
+    document.addEventListener("visibilitychange", () => {
+        if (CFrame.Main() == null)
+            return;
+        if (document.hidden) {
+            CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
+        }
+        else {
+            CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
+        }
+    });
+}
+if (CUtil.IsNode() == false)
+    WebInit();
 function CConsolModalInit() {
     gConsolChat = new CModalChat("ConsolChat", false);
     gConsolChat.SetCloseToHide(true);
@@ -66,26 +119,6 @@ function CConsolModalInit() {
     while (CConsol.GetLogQue().IsEmpty() == false)
         gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(), "gray");
 }
-window.addEventListener('error', function (event) {
-    if (event.message.indexOf("ResizeObserver") != -1)
-        return;
-    if (gConsolChat == null && gMainFramework == null)
-        CConsolModalInit();
-    CConsol.Log("📄 filename: " + event.filename);
-    CConsol.Log("📌 lineno/colno: " + event.lineno + "/" + event.colno);
-    if (event.error) {
-        CConsol.Log("💬 message: " + event.error.message);
-        CConsol.Log("🧵 stack:\n" + event.error.stack);
-    }
-    else {
-        CConsol.Log("⚠️ message: " + event.message);
-    }
-});
-window.addEventListener("unhandledrejection", function (event) {
-    if (gConsolChat == null && gMainFramework == null)
-        CConsolModalInit();
-    CConsol.Log("💬 reason:" + event.reason);
-});
 CConsol.SetLogEvent((_msg, _color) => {
     if (gConsolChat != null && gConsolChat.IsShow()) {
         gConsolChat.ChatAdd(_msg, _color);
@@ -93,35 +126,6 @@ CConsol.SetLogEvent((_msg, _color) => {
     else
         return true;
     return false;
-});
-invisibleButton.addEventListener("dblclick", () => {
-    if (gConsolChat == null) {
-        CConsolModalInit();
-    }
-    else
-        gConsolChat.Show();
-    while (CConsol.GetLogQue().IsEmpty() == false)
-        gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(), "gray");
-});
-document.addEventListener("freeze", () => {
-    if (CFrame.Main() == null)
-        return;
-    CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
-});
-document.addEventListener("resume", () => {
-    if (CFrame.Main() == null)
-        return;
-    CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
-});
-document.addEventListener("visibilitychange", () => {
-    if (CFrame.Main() == null)
-        return;
-    if (document.hidden) {
-        CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
-    }
-    else {
-        CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
-    }
 });
 var g_offset = 0;
 export class CFrame {
@@ -170,11 +174,15 @@ export class CFrame {
     constructor(_pf, _htmlObj = "") {
         this.m_offset = g_offset++;
         this.mPreferences = _pf;
+        if (CUtil.IsNode()) {
+            CAlert.E("Not Support!");
+            return;
+        }
         var canDummy = _htmlObj;
         if (typeof _htmlObj == "string") {
-            canDummy = document.getElementById(_htmlObj);
+            canDummy = CDOM.ID(_htmlObj);
             if (canDummy == null) {
-                canDummy = document.createElement("canvas");
+                canDummy = CDOM.TagToDom("canvas");
                 canDummy.width = 640;
                 canDummy.height = 480;
                 if (_htmlObj == "")

@@ -1,5 +1,6 @@
 import { CObject } from "../basic/CObject.js";
 import { CString } from "../basic/CString.js";
+import { CUtil } from "../basic/CUtil.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CTexture } from "./CTexture.js";
 export class CH5CMDList extends CObject {
@@ -55,14 +56,18 @@ export class CH5Cmd extends CObject {
         return str;
     }
 }
-var gCanvas = document.createElement("canvas");
-gCanvas.width = 32;
-gCanvas.height = 32;
-var gCTX = gCanvas.getContext('2d', { willReadFrequently: true });
+var gCanvas = null;
+var gCTX = null;
 var gPara = new Array(9);
 var gLinear = true;
 var gExp = true;
 var gCMDStack = new Array();
+if (CUtil.IsNode() == false) {
+    gCanvas = document.createElement("canvas");
+    gCanvas.width = 32;
+    gCanvas.height = 32;
+    gCTX = gCanvas.getContext('2d', { willReadFrequently: true });
+}
 export class CH5Canvas {
     static Cmd(_name, _para) { return new CH5Cmd(_name, _para); }
     static FillRoundRect(left, top, right, bottom, round = 2 * Math.PI) {

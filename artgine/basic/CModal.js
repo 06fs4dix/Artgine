@@ -2,6 +2,7 @@ import { CClass } from "./CClass.js";
 import { CDOM } from "./CDOM.js";
 import { CEvent } from "./CEvent.js";
 import { CString } from "./CString.js";
+import { CUniqueID } from "./CUniqueID.js";
 export class CDrop {
     mFiles;
     mPaths;
@@ -500,5 +501,4 @@ export class CConfirm extends CModal {
     })(eConfirm = CConfirm.eConfirm || (CConfirm.eConfirm = {}));
 })(CConfirm || (CConfirm = {}));
 import CModal_imple from "../basic_impl/CModal.js";
-import { CUniqueID } from "./CUniqueID.js";
 CModal_imple();

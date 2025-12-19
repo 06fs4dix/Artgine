@@ -1,5 +1,6 @@
 import {CJSON} from "./CJSON.js";
 import {CLan} from "./CLan.js";
+import { CUtil } from "./CUtil.js";
 
 
 function CLanChk(element)
@@ -45,6 +46,7 @@ export class CDOM
     }
     static PaintDiv()
     {
+        if(CUtil.IsNode())  return null;
         if(gArtginePaintHTML==null)
         {
             gArtginePaintHTML=document.createElement("div");
@@ -279,8 +281,12 @@ export class CDOM
         }
     }
 
-    static ID(_id : string,_doc=document) : HTMLElement
+    static ID(_id : string,_doc=null) : HTMLElement
 	{
+        if(CUtil.IsNode()) return null;
+        
+        if(_doc==null)  _doc=document;
+
 		return _doc.getElementById(_id);
 	}
 	static IDInput(_id : string) : HTMLInputElement

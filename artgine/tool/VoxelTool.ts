@@ -5,13 +5,6 @@ import { CModalFlex } from "../util/CModalUtil.js";
 import { CPointer } from "../basic/CObject.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
-import { CAtelier } from "../canvas/CAtelier.js";
-import { CCIndex } from "../canvas/CCIndex.js";
-import { CColor } from "../canvas/component/CColor.js";
-import { CPaint } from "../canvas/component/paint/CPaint.js";
-import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
-import { CSubject } from "../canvas/subject/CSubject.js";
-import { CVoxel, CVTile, CVTileMold, CVTileRole, CVTileSurface, CVTileSurfacePattern } from "../canvas/subject/CVoxel.js";
 import { CMat } from "../geometry/CMat.js";
 import { CMath } from "../geometry/CMath.js";
 import { CVec3 } from "../geometry/CVec3.js";
@@ -27,6 +20,13 @@ import { CRollBack, CRollBackInfo } from "../util/CRollBack.js";
 import { CArray } from "../basic/CArray.js";
 import { CString } from "../basic/CString.js";
 import { CBound } from "../geometry/CBound.js";
+import { CAtelier } from "../app/CAtelier.js";
+import { CVoxel, CVTile, CVTileMold, CVTileRole, CVTileSurface, CVTileSurfacePattern } from "../app/subject/CVoxel.js";
+import { CSubject } from "../app/subject/CSubject.js";
+import { CCIndex } from "../app/canvas/CCIndex.js";
+
+import { CPaint3D } from "../app/component/paint/CPaint3D.js";
+import { CColor } from "../render/CColor.js";
 
 var gModal: CModalFlex;
 var gAtl: CAtelier;

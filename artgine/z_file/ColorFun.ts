@@ -4,32 +4,30 @@ import {
     CMat, CVec2, CVec3, CVec4, Sam2DSize, Sam2DToColor, SaturateV4, 
     V2Abs, V2AddV2, V2DivV2, V2Floor, V2MulFloat, V2MulV2, V2SubV2, 
     V3AddV3, V3Clamp, V3Dot, V3Floor, V3Max, V3Min, V3Mod, V3MulFloat, V3MulV3, V3Step, V3SubV3, 
-    V4Abs, V4AddV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulV4, V4Pow, V4Step, V4SubV4
+    V4Abs, V4AddV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulV4, V4Pow, V4Step, V4SubV4,
+    step,
+    V3Abs,
+    V3Fract,
+    V4Mix,
+    V3Mix,
+    SaturateV3,
+    floor,
+    screenPos,
+    V4DivV4
 } from "./Shader";
 
-function HSVF(_k : number,_s : number,_v : number) : number {
-	return _v - _v * _s * max(min(min(_k, 4.0 - _k), 1.0), 0.0);
-}
 export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
 	var result : CVec2 = new CVec2(0.0,0.0);
-	// if(_reverse.x>0.5)
-	// 	result.x = (1.0-_uv.x)*_texCodi.x+_texCodi.z;
-	// else
-	// 	result.x = _uv.x*_texCodi.x+_texCodi.z;
-	// if(_reverse.y>0.5)
-	// 	result.y = (1.0-_uv.y)*_texCodi.y+_texCodi.w;
-	// else
-	// 	result.y = _uv.y*_texCodi.y+_texCodi.w;
 
     result.x = _uv.x*_texCodi.x+_texCodi.z;
     result.y = _uv.y*_texCodi.y+_texCodi.w;
 
-
-	if(result.x<0.0) 
-		result.x=result.x*-1.0;
-	if(result.y<0.0) 
-		result.y=result.y*-1.0;
-	return result;
+    // 음수인지에 대한 if문 제거하고 abs로 대체(똑같은 역할 함)
+    // if(result.x<0.0) 
+	// 	result.x=result.x*-1.0;
+	// if(result.y<0.0) 
+	// 	result.y=result.y*-1.0;
+    return V2Abs(result);
 }
 // 코딩된(to_uv.xy) 좌표를 원본 uv(0..1)로 복원
 export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4): CVec2 {
@@ -39,84 +37,137 @@ export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4): CVec2 {
 
     // GetTexCodiedUV에서 음수면 부호를 뒤집는(abs 유사) 보정이 있어 정보가 애매해질 수 있음.
     // 일반적으로 coded는 양수일 테니 그대로 사용, 혹시 음수면 대칭 복원 시도.
-    var cx :number= _coded.x; if (cx < 0.0) cx = -cx;
-    var cy :number= _coded.y; if (cy < 0.0) cy = -cy;
+    var cx :number= abs(_coded.x); // if (cx < 0.0) cx = -cx;
+    var cy :number= abs(_coded.y); // if (cy < 0.0) cy = -cy;
 
     // 오프셋 제거 후 스케일 역변환
     var u :number= (cx - _texCodi.z) / sx;
     var v :number= (cy - _texCodi.w) / sy;
 
- 
     // 필요 시 범위 정리
     // u = clamp(u, 0.0, 1.0);
     // v = clamp(v, 0.0, 1.0);
 
     return new CVec2(u, v);
 }
-export function HSVToRGB(_vec3 : CVec3) : CVec3
-{
-    var hk : number = mod(5.0 + _vec3.x * 6.0, 6.0);
-    var sk : number = mod(3.0 + _vec3.x * 6.0, 6.0);
-    var vk : number = mod(1.0 + _vec3.x * 6.0, 6.0);
 
-    return new CVec3(HSVF(hk,_vec3.y,_vec3.z), HSVF(sk,_vec3.y,_vec3.z), HSVF(vk,_vec3.y,_vec3.z));
+// hsv <-> rgb
+// GPU 고려가 안되어있어 수정
+export function HSVToRGB(_vec3 : CVec3) : CVec3 {
+    var K : CVec4 = new CVec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    var p : CVec3 = V3Abs(
+        V3SubV3(
+            V3MulFloat(V3Fract(V3AddV3(new CVec3(_vec3.x, _vec3.x, _vec3.x), K.xyz)), 6.0), 
+            new CVec3(K.w,K.w,K.w)
+        )
+    );
+    return V3MulFloat(
+        V3Mix(
+            new CVec3(K.x,K.x,K.x), 
+            V3Clamp(V3SubV3(p, new CVec3(K.x,K.x,K.x)), 0.0, 1.0), 
+            _vec3.y
+        ), 
+        _vec3.z
+    );
 }
-
-export function RGBToHSV(_vec3 : CVec3) : CVec3
-{
-    var cmax : number = max(_vec3.x, max(_vec3.y, _vec3.z));
-    var cmin : number = min(_vec3.x, min(_vec3.y, _vec3.z));
-    var delta : number = cmax - cmin;
-    var h : number = 0.0;
-    if(delta > 0.0) {
-        if(cmax == _vec3.x) {
-            h = mod((_vec3.y - _vec3.z) / delta, 6.0);
-        } 
-        else if(cmax == _vec3.y) {
-            h = (_vec3.z - _vec3.x) / delta + 2.0;
-        }
-        else {
-            h = (_vec3.x - _vec3.y) / delta + 4.0;
-        }
-        h /= 6.0;
-    }
-    var s : number = (cmax == 0.0) ? 0.0 : (delta / cmax);
-    var v : number = cmax;
-    return new CVec3(h, s, v);
+export function RGBToHSV(_vec3 : CVec3) : CVec3 {
+    var K : CVec4 = new CVec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);
+    var p : CVec4 = V4Mix(
+        new CVec4(new CVec2(_vec3.z, _vec3.y), new CVec2(K.w, K.z)), 
+        new CVec4(new CVec2(_vec3.y, _vec3.z), new CVec2(K.x, K.y)),
+        step(_vec3.z, _vec3.y)
+    );
+    var q : CVec4 = V4Mix(
+        new CVec4(new CVec3(p.x, p.y, p.w), _vec3.x),
+        new CVec4(_vec3.x, new CVec3(p.y, p.z, p.x)),
+        step(p.x, _vec3.x)
+    );
+    var d : number = q.x - min(q.w, q.y);
+    var e : number = 1.0e-10;
+    return new CVec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
+// function HSVF(_k : number,_s : number,_v : number) : number {
+// 	return _v - _v * _s * clamp(min(_k, 4.0 - _k), 0.0, 1.0);
+// }
+// export function HSVToRGB(_vec3 : CVec3) : CVec3 {
+//     var hk : number = mod(5.0 + _vec3.x * 6.0, 6.0);
+//     var sk : number = mod(3.0 + _vec3.x * 6.0, 6.0);
+//     var vk : number = mod(1.0 + _vec3.x * 6.0, 6.0);
+//     return new CVec3(HSVF(hk,_vec3.y,_vec3.z), HSVF(sk,_vec3.y,_vec3.z), HSVF(vk,_vec3.y,_vec3.z));
+// }
+// export function RGBToHSV(_vec3 : CVec3) : CVec3 {
+//     var cmax : number = max(_vec3.x, max(_vec3.y, _vec3.z));
+//     var cmin : number = min(_vec3.x, min(_vec3.y, _vec3.z));
+//     var delta : number = cmax - cmin;
+//     var h : number = 0.0;
+//     if(delta > 0.0) {
+//         if(cmax == _vec3.x) {
+//             h = mod((_vec3.y - _vec3.z) / delta, 6.0);
+//         } 
+//         else if(cmax == _vec3.y) {
+//             h = (_vec3.z - _vec3.x) / delta + 2.0;
+//         }
+//         else {
+//             h = (_vec3.x - _vec3.y) / delta + 4.0;
+//         }
+//         h /= 6.0;
+//     }
+//     var s : number = (cmax == 0.0) ? 0.0 : (delta / cmax);
+//     var v : number = cmax;
+//     return new CVec3(h, s, v);
+// }
 
-function HSLF(_k : number, _a : number, _v : number) : number {
-    return _v - _a * max(-1.0, min(_k - 3.0, min(9.0 - _k, 1.0)));
-}
-
+// hsl <-> rgb
 export function HSLToRGB(_vec3 : CVec3) : CVec3
 {
-    var hk : number = mod(0.0 + _vec3.x * 12.0, 12.0);
-    var sk : number = mod(8.0 + _vec3.x * 12.0, 12.0);
-    var lk : number = mod(4.0 + _vec3.x * 12.0, 12.0);
-    var a : number = _vec3.y * min(_vec3.z, 1.0 - _vec3.z);
-    return new CVec3(HSLF(hk, a, _vec3.z), HSLF(sk, a, _vec3.z), HSLF(lk, a, _vec3.z));
+    var RGB : CVec3 = SaturateV3(new CVec3(
+       abs(_vec3.x * 6.0 - 3.0) - 1.0,
+       2.0 - abs(_vec3.x * 6.0 - 2.0),
+       2.0 - abs(_vec3.x * 6.0 - 4.0) 
+    ));
+    var C : number = (1.0 - abs(2.0 * _vec3.z - 1.0)) * _vec3.y;
+    return V3MulFloat(V3SubV3(RGB, new CVec3(0.5,0.5,0.5)), C * _vec3.z);
 }
-
 export function RGBToHSL(_vec3 : CVec3) : CVec3
 {
-    var cmax : number = max(_vec3.x, max(_vec3.y, _vec3.z));
-    var cmin : number = min(_vec3.x, min(_vec3.y, _vec3.z));
-    var delta : number = cmax - cmin;
-    var h : number = 0.0;
-    var s : number = 0.0;
-    var l : number = (cmax + cmin) / 2.0;
-    if(delta > 0.0) {
-        s = (l > 0.5) ? (delta / (2.0 - cmax - cmin)) : (delta / (cmax + cmin));
-        if(cmax == _vec3.x) {
-            h = (_vec3.y - _vec3.z) / delta + ((_vec3.y < _vec3.z) ? 6.0 : 0.0);
-        } else {
-            h = (cmax == _vec3.y) ? ((_vec3.z - _vec3.x) / delta + 2.0) : ((_vec3.x - _vec3.y) / delta + 4.0);
-        }
-        h /= 6.0;
-    }
-    return new CVec3(h, s, l);
+    var P : CVec4 = (_vec3.y < _vec3.z) ? new CVec4(new CVec2(_vec3.z,_vec3.y),-1.0,2.0/3.0) : new CVec4(new CVec2(_vec3.y,_vec3.z),0.0,-1.0/3.0);
+    var Q : CVec4 = (_vec3.x < P.x) ? new CVec4(new CVec3(P.x,P.y,P.w),_vec3.x) : new CVec4(_vec3.x,new CVec3(P.y,P.z,P.x));
+    var C : number = Q.x-min(Q.w,Q.y);
+    var H : number = abs((Q.w-Q.y) / (6.0*C+1e-10)+Q.z);
+    var L : number = Q.x - C * 0.5;
+    var S : number = C / (1.0 - abs(L * 2.0 - 1.0) + 1e-10);
+    return new CVec3(H, S, L);
 }
+// function HSLF(_k : number, _a : number, _v : number) : number {
+//     return _v - _a * max(-1.0, min(_k - 3.0, min(9.0 - _k, 1.0)));
+// }
+// export function HSLToRGB(_vec3 : CVec3) : CVec3
+// {
+//     var hk : number = mod(0.0 + _vec3.x * 12.0, 12.0);
+//     var sk : number = mod(8.0 + _vec3.x * 12.0, 12.0);
+//     var lk : number = mod(4.0 + _vec3.x * 12.0, 12.0);
+//     var a : number = _vec3.y * min(_vec3.z, 1.0 - _vec3.z);
+//     return new CVec3(HSLF(hk, a, _vec3.z), HSLF(sk, a, _vec3.z), HSLF(lk, a, _vec3.z));
+// }
+// export function RGBToHSL(_vec3 : CVec3) : CVec3
+// {
+//     var cmax : number = max(_vec3.x, max(_vec3.y, _vec3.z));
+//     var cmin : number = min(_vec3.x, min(_vec3.y, _vec3.z));
+//     var delta : number = cmax - cmin;
+//     var h : number = 0.0;
+//     var s : number = 0.0;
+//     var l : number = (cmax + cmin) / 2.0;
+//     if(delta > 0.0) {
+//         s = (l > 0.5) ? (delta / (2.0 - cmax - cmin)) : (delta / (cmax + cmin));
+//         if(cmax == _vec3.x) {
+//             h = (_vec3.y - _vec3.z) / delta + ((_vec3.y < _vec3.z) ? 6.0 : 0.0);
+//         } else {
+//             h = (cmax == _vec3.y) ? ((_vec3.z - _vec3.x) / delta + 2.0) : ((_vec3.x - _vec3.y) / delta + 4.0);
+//         }
+//         h /= 6.0;
+//     }
+//     return new CVec3(h, s, l);
+// }
 
 export function CAModelCac(_rgba : CVec4, _cModel : CVec4, _aModel : CVec2) : CVec4 {
     var rgb : CVec3;
@@ -316,6 +367,134 @@ function AddScanLine(_c : CVec4, _uv : CVec2, _time : number, _count : number, _
     return _c;
 }
 
+function DitherMatrix4x4(_p : CVec2) : number
+{
+    var x : number = floor(mod(_p.x, 4.0));
+    var y : number = floor(mod(_p.y, 4.0));
+
+    // Bayer Matrix (B4)
+    //  0  8  2 10
+    // 12  4 14  6
+    //  3 11  1  9
+    // 15  7 13  5
+    if(y < 0.5) {
+        if(x < 0.5) return 0.0 / 16.0;
+        if(x < 1.5) return 8.0 / 16.0;
+        if(x < 2.5) return 2.0 / 16.0;
+        if(x < 3.5) return 10.0 / 16.0;
+    }
+    else if(y < 1.5) {
+        if(x < 0.5) return 12.0 / 16.0;
+        if(x < 1.5) return 4.0 / 16.0;
+        if(x < 2.5) return 14.0 / 16.0;
+        if(x < 3.5) return 6.0 / 16.0;
+    }
+    else if(y < 2.5) {
+        if(x < 0.5) return 3.0 / 16.0;
+        if(x < 1.5) return 11.0 / 16.0;
+        if(x < 2.5) return 1.0 / 16.0;
+        if(x < 3.5) return 9.0 / 16.0;
+    }
+    else if(y < 3.5) {
+        if(x < 0.5) return 15.0 / 16.0;
+        if(x < 1.5) return 7.0 / 16.0;
+        if(x < 2.5) return 13.0 / 16.0;
+        if(x < 3.5) return 5.0 / 16.0;
+    }
+    return 0.0;
+}
+
+function MapToPaletteUV(_color : CVec3, _cellSize : number) : CVec2
+{
+    var palSize : CVec2 = Sam2DSize(1.0);
+
+    _color = V3Clamp(_color, 0.0, 0.9999);
+    var mappedColor : CVec3 = V3Floor(V3MulFloat(_color, _cellSize));
+
+    var mappedIndex : number = mappedColor.x + mappedColor.y * _cellSize + mappedColor.z * _cellSize * _cellSize;
+    return new CVec2(
+        floor(mappedIndex / palSize.x) / palSize.x, 
+        mod(mappedIndex, palSize.y) / palSize.y
+    );
+}
+
+function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {
+    var uv : CVec2 = V2AddV2(_uv, V2MulV2(_f, _texScale));
+    return Sam2DToColor(0.0, uv);
+}
+
+function Blur(_color : CVec4, _uv : CVec2, _renderType : number, _renderCount : number) : CVec4 {
+    var all : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+
+    var fx : number = max(-_renderCount, -32.0);    // 최대 32번만 반복가능
+    var fy : number = max(-_renderCount, -32.0);
+    var count : number = 0.0;
+    var texScale : CVec2 = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+
+    //전체 블러
+    if(_renderType < 0.5) {
+        for(var y = 0; y < 64; y++) {
+            for(var x = 0; x < 64; x++) {
+                if(fx <= _renderCount && fy <= _renderCount) {
+                    var color : CVec4 = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
+                    if(color.a > 0.01) {
+                        all = V4AddV4(all, color);
+                        count += 1.0;
+                    }
+                } else
+                    break;
+                fx += 1.0;
+            }
+            fx = -_renderCount;
+            fy += 1.0;
+        }
+        if(count > 0.01) {
+            all = V4DivV4(all, new CVec4(count,count,count,count));
+            all = SaturateV4(all);
+        }
+    }
+    //x 블러
+    else if(_renderType < 1.1) {
+        fy = 0.0;
+        for(var x = 0; x <= 64; x++) {
+            if(fx <= _renderCount && fy <= _renderCount) {
+                var color : CVec4 = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
+                if(color.a > 0.01) {
+                    all = V4AddV4(all, color);
+                    count += 1.0;
+                }
+            } else
+                break;
+            fx += 1.0;
+        }
+        if(count > 0.01) {
+            all = V4DivV4(all, new CVec4(count,count,count,count));
+            all = SaturateV4(all);
+        }
+    }
+    //y 블러
+    else if(_renderType < 2.1) {
+        fx = 0.0;
+        for(var y = 0; y < 64; y++) {
+            if(fx<=_renderCount && fy <=_renderCount) {
+                var color : CVec4 = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
+                if(color.a > 0.01) {
+                    all = V4AddV4(all, color);
+                    count += 1.0;
+                }
+            } else
+                break;
+            fy += 1.0;
+        }
+        if(count > 0.01) {
+            all = V4DivV4(all, new CVec4(count,count,count,count));
+            all = SaturateV4(all);
+        }
+    }
+
+    return all;
+}
+
 export function ColorVFX(_color : CVec4,_uv : CVec2,_ruv : CVec2, _value : CMat,_time : number) : CVec4
 {
 
@@ -375,17 +554,36 @@ export function ColorVFX(_color : CVec4,_uv : CVec2,_ruv : CVec2, _value : CMat,
         {
             _color = AddScanLine(_color, _uv, _time, _value[i].x, _value[i].y);
         }
-        else if(_value[i].w<SDF.eColorVFX.OverWrite+0.5)
-        {
-            //var ruv : CVec2=GetTexDecodedUV(_uv,);
-            var target:CVec4=Sam2DToColor(_value[i].z,new CVec2(_ruv.x*_value[i].x,_ruv.y*_value[i].y));
-            if(_color.a>0.01)
-            {
-                _color.rgb=target.rgb;
-            }
-            // _color.r=1.0;
-            // _color.b=0.0;
+        // else if(_value[i].w<SDF.eColorVFX.OverWrite+0.5)
+        // {
+        //     //var ruv : CVec2=GetTexDecodedUV(_uv,);
+        //     var target:CVec4=Sam2DToColor(_value[i].z,new CVec2(_ruv.x*_value[i].x,_ruv.y*_value[i].y));
+        //     if(_color.a>0.01)
+        //     {
+        //         _color.rgb=target.rgb;
+        //     }
+        //     // _color.r=1.0;
+        //     // _color.b=0.0;
             
+        // }
+        //팔레트스왑 x 팔레트텍스쳐인덱스 y 디더링 정도
+        else if(_value[i].w<SDF.eColorVFX.ColorPalette+0.5)
+        {
+            var palSize : CVec2 = Sam2DSize(_value[i].x);
+            var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+            
+            var ditherStrength : number = (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[i].y;
+            _color.rgb = V3AddV3(_color.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+            
+            var palUV : CVec2 = MapToPaletteUV(_color.rgb, cellSize);
+            _color = Sam2DToColor(_value[i].x, palUV);
+
+        }
+        //x 블러타입, y 블러카운트
+        else if(_value[i].w<SDF.eColorVFX.Blur+0.5)
+        {
+            _color = Blur(_color, _uv, _value[i].x, _value[i].y);
+
         }
     }
 	

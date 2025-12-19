@@ -11,6 +11,7 @@ import { CFrame } from "./CFrame.js"
 import { CUtilRender } from "../render/CUtilRender.js"
 import { CUtil } from "../basic/CUtil.js"
 import { CLoaderOption } from "./CLoader.js"
+import { CVec3 } from "../geometry/CVec3.js"
 
 var gNoneImg="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";
 
@@ -136,8 +137,8 @@ export class CPalette
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100),this.GetBlackTex());
 		_fw.Res().Push(this.GetBoxMesh(), mesh);
 	
-		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32),this.GetBlackTex());
-		//mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(100, 8),this.GetBlackTex());
+		//mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32),this.GetBlackTex());
+		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(100,100,100),16,16,100,100),this.GetBlackTex());
 		_fw.Res().Push(this.GetSphereMesh(), mesh);
 
 		

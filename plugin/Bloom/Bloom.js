@@ -1,5 +1,5 @@
+import { CSurface } from "../../artgine/app/subject/CSurface.js";
 import { CClass } from "../../artgine/basic/CClass.js";
-import { CSurface } from "../../artgine/canvas/subject/CSurface.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";

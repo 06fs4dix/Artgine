@@ -488,8 +488,10 @@ export class CMath {
         CPoolGeo.RecycleMat(sMat);
         return dst;
     }
-    static MatTranslation(pa_vec) {
-        var pa_out = new CMat();
+    static MatTranslation(pa_vec, _mat = null) {
+        var pa_out = _mat;
+        if (pa_out == null)
+            pa_out = new CMat();
         if (pa_vec.IsZero() == false)
             pa_out.SetUnit(false);
         pa_out.mF32A[0] = 1;
@@ -510,10 +512,13 @@ export class CMath {
         pa_out.mF32A[15] = 1;
         return pa_out;
     }
-    static MatRotation(pa_rot) {
+    static MatRotation(pa_rot, _mat = null) {
+        var pa_out = _mat;
+        if (pa_out == null)
+            pa_out = new CMat();
         let v4 = CPoolGeo.ProductV4();
         CMath.EulerToQut(pa_rot, v4);
-        var pa_out = CMath.QutToMat(v4);
+        CMath.QutToMat(v4, pa_out);
         CPoolGeo.RecycleV4(v4);
         pa_out.SetUnit(false);
         return pa_out;

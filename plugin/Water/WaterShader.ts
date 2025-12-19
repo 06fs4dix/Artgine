@@ -1,7 +1,13 @@
 import { CAModelCac, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
-import { HashIQ1D, HashIQ2D, NoiseFBM, NoisePerlin2D, NoiseRand2D } from "../../artgine/z_file/Noise";
-import { abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, cos, CVec2, CVec3, CVec4, dFdx, dFdy, floor, fract, MappingTexToV3, MatTypeToMat, max, min, mix, mod, Normal3, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, Sam2DMat, Sam2DToColor, SamCubeToColor, SaturateFloat, sign, sin, step, TexOff3, ToV2, ToV3, ToV4, TransposeMat3, UV2, V2AddV2, V2Dot, V2Fract, V2Len, V2Mod, V2MulFloat, V2MulV2, V2Nor, V2SubV2, V3AddV3, V3Cross, V3Dot, V3Len, V3Max, V3Min, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V3ToMat3, V4Mix, V4MulFloat, V4MulMatCoordi, Vertex3 } from "../../artgine/z_file/Shader";
+import { NoiseFBM } from "../../artgine/z_file/Noise";
+import { 
+    abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
+    MatTypeToMat, max, min, mix, mod, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, 
+    Sam2DToColor, SamCubeToColor, SaturateFloat, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
+    V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, 
+    V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi, Vertex3 
+} from "../../artgine/z_file/Shader";
 
 // out
 var out_position : OutPosition=Null();
@@ -44,7 +50,7 @@ var normalRange : number = 1.0;
 var texflowDir : CVec2 = new CVec2(1.0, 0.0);
 var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
 var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
-var waterDeep : CVec3 = new CVec3(0.0,256.0,2000.0);
+var waterDeep : CVec4 = new CVec4(0.0,256.0,2000.0, 5.0);
 
 // var cubeMapPos : CVec3 = new CVec3(0.0, 0.0, 0.0);
 // var cubeMapSize : CVec3 = new CVec3(0.0, 0.0, 0.0);
@@ -203,18 +209,15 @@ function ps_main_water()
     // 2. refractor 랜더타겟
     BranchBegin("UseRefractTex","UseRefractTex",[refractMap]);
     refractColor = Sam2DToColor(refractMap, screenUV);
+    // refractColor.rgb = V3Mix(deepColor, refractColor.rgb, 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, world)) / waterDeep.z));
     refractType = 1.0;
     BranchEnd();
     
     // 3. shallowColor 사용
     if(refractType < -0.5) {
         refractColor = new CVec4(shallowColor, 1.0);
-        refractType = 2.0;
-    }
-
-    // 물 텍스쳐가 아니면 카메라 거리로 블렌딩
-    if(refractType > 0.5) {
         refractColor.rgb = V3Mix(deepColor, refractColor.rgb, 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, world)) / waterDeep.z));
+        refractType = 2.0;
     }
 
     // ---------------------------------------------------------

@@ -4,9 +4,6 @@ export class CUtil {
             process.versions != null &&
             process.versions.node != null);
     }
-    static IsWeb() {
-        return typeof navigator != 'undefined';
-    }
     static IsMobile() {
         var filter = "win16|win32|win64|mac|macintel";
         if (navigator.platform) {
@@ -61,7 +58,7 @@ export class CUtil {
                 process.env.LC_ALL?.split('_')[0]?.toLowerCase() ||
                 'en';
         }
-        if (CUtil.IsWeb()) {
+        if (CUtil.IsNode() == false) {
             const language = navigator.language || navigator.languages?.[0] || 'en';
             return language.split('-')[0].toLowerCase();
         }

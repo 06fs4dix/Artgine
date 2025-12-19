@@ -1,4 +1,5 @@
 
+import { CSubject } from "../app/subject/CSubject.js";
 import { CUpdate } from "../basic/Basic.js";
 import { Bootstrap } from "../basic/Bootstrap.js";
 import { CBlackBoard } from "../basic/CBlackBoard.js";
@@ -11,7 +12,7 @@ import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
-import { CSubject } from "../canvas/subject/CSubject.js";
+
 
 import {CVec2} from "../geometry/CVec2.js";
 import { CVec4 } from "../geometry/CVec4.js";

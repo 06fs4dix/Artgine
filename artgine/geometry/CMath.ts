@@ -783,9 +783,11 @@ export class CMath
 	
 	// 	return  dst;
 	// }
-	static MatTranslation(pa_vec : CVec3)
+	static MatTranslation(pa_vec : CVec3, _mat : CMat=null) : CMat
 	{
-		var pa_out=new CMat();
+		var pa_out=_mat;
+		if(pa_out == null)
+			pa_out = new CMat();
 		if(pa_vec.IsZero()==false)
 			pa_out.SetUnit(false);
 		pa_out.mF32A[0] = 1; pa_out.mF32A[1] = 0; pa_out.mF32A[2] = 0; pa_out.mF32A[3] = 0;
@@ -795,11 +797,14 @@ export class CMath
 	
 		return pa_out;
 	}
-	static MatRotation(pa_rot : CVec3)
+	static MatRotation(pa_rot : CVec3, _mat : CMat=null) : CMat
 	{
+		var pa_out : CMat = _mat;
+		if(pa_out == null)
+			pa_out = new CMat();
 		let v4=CPoolGeo.ProductV4();
 		CMath.EulerToQut(pa_rot,v4);
-		var pa_out = CMath.QutToMat(v4);
+		CMath.QutToMat(v4, pa_out);
 		CPoolGeo.RecycleV4(v4);
 		pa_out.SetUnit(false);
 		return pa_out;

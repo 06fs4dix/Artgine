@@ -2,7 +2,7 @@
   "name": "webcontent",
   "version": "1.0.0",
   "type": "module",
-  "main": "App/App.js",
+  "main": "desktop/Main.js",
   "build": {
     "appId": "com.Artgine",
     "productName": "Artgine",
@@ -19,9 +19,8 @@
     }
   },
   "scripts": {
-    "start": "node App/Start.js",
-    "start_web": "node App/WebStart.js",
-    "package": "cmd /c package.bat",
+    "start": "node desktop/Start.js",
+    "start_web": "node desktop/WebStart.js",
     "artgine_class": "node script/gen_class_push.js",
     "artgine_packet": "node script/gen_packet.js"
   },

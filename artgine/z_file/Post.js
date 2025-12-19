@@ -1,9 +1,11 @@
+import { ColorVFX } from "./ColorFun";
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
-import { Attribute, BranchBegin, BranchEnd, Build, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Clamp, V3DivV3, V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, V4SubV4, abs, clamp, discard, floor, fract, max, min, mod, pow, screenPos, sign, sin, smoothstep } from "./Shader";
+import { Attribute, BranchBegin, BranchEnd, Build, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2AddV2, V2DivV2, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3MulFloat, V4AddV4, V4DivV4, V4MulFloat, V4MulMatCoordi, V4MulV4, V4SubV4, clamp, discard, max, pow } from "./Shader";
 var worldMat = Null();
 var viewMat = Null();
 var projectMat = Null();
+var colorVFX = Null();
 var to_uv = new CVec2(0.0, 0.0);
 var to_worldPos = new CVec3(0.0, 0.0, 0.0);
 var out_position = new CVec4(0.0, 0.0, 0.0, 0.0);
@@ -81,41 +83,6 @@ Build("Artgine/Shader/PostLightMulti", ["lightMulti"], vs_main, [
     time,
     diffuse, position, normal, specular, shadow
 ], [out_position, to_uv], ps_main_light_MultiTex, [out_color, out_specular, out_emissive]);
-Build("Artgine/Shader/PostDistort", ["distort"], vs_main, [
-    worldMat, viewMat, projectMat,
-    time,
-    distortDistance
-], [out_position, to_uv], ps_main_distort, [out_color]);
-Build("Artgine/Shader/PostAberrate", ["aberrate"], vs_main, [
-    worldMat, viewMat, projectMat,
-    time,
-    abrBaseStr, abrAddedStr
-], [out_position, to_uv], ps_main_aberrate, [out_color]);
-Build("Artgine/Shader/PostPixel", ["pixel"], vs_main, [
-    worldMat, viewMat, projectMat,
-    pixelSize
-], [out_position, to_uv], ps_main_pixel, [out_color]);
-Build("Artgine/Shader/PostNoise", ["noise"], vs_main_modelPos, [
-    worldMat, viewMat, projectMat,
-    time,
-    noiseSpeed, noiseIntensity
-], [out_position, to_uv, to_worldPos], ps_main_noise, [out_color]);
-Build("Artgine/Shader/PostTVBorder", ["tvBorder"], vs_main_modelPos, [
-    worldMat, viewMat, projectMat,
-    borderIntensity, borderThickness
-], [out_position, to_uv, to_worldPos], ps_main_tvBorderLight, [out_color]);
-Build("Artgine/Shader/PostScanLine", ["scanline"], vs_main_modelPos, [
-    worldMat, viewMat, projectMat,
-    scanLineThickness, scanLineDensity, scanLineIntensity
-], [out_position, to_uv, to_worldPos], ps_main_scanLine, [out_color]);
-Build("Artgine/Shader/PostFXAA", ["fxaa"], vs_main, [
-    worldMat, viewMat, projectMat,
-    span_max, reduce_mul, reduce_min, subpix_shift
-], [out_position, to_uv], ps_main_fxaa, [out_color]);
-Build("Artgine/Shader/PostGamma", ["gamma"], vs_main, [
-    worldMat, viewMat, projectMat,
-    gamma, brightness, toneMappingFactor, colorCorrection, exposure, contrast
-], [out_position, to_uv], ps_main_gamma, [out_color]);
 Build("Artgine/Shader/PostExpandBakedLight", ["bake"], vs_main, [
     worldMat, viewMat, projectMat,
 ], [out_position, to_uv], ps_main_ExpandBakedLight, [out_color]);
@@ -128,24 +95,12 @@ Build("Artgine/Shader/PostUpSample", ["sample", "up"], vs_main, [
     worldMat, viewMat, projectMat,
     blendFactor
 ], [out_position, to_uv], ps_main_UpSample, [out_color]);
-Build("Artgine/Shader/PostColorPalatte", ["palette"], vs_main, [
-    worldMat, viewMat, projectMat
-], [out_position, to_uv], ps_main_ColorPalette, [out_color]);
-function GetTexCodiedUV(_uv, _texCodi) {
-    var result = new CVec2(_uv.x * _texCodi.x + _texCodi.z, _uv.y * _texCodi.y + _texCodi.w);
-    if (result.x < 0.0)
-        result.x = result.x * -1.0;
-    if (result.y < 0.0)
-        result.y = result.y * -1.0;
-    return result;
-}
+Build("Artgine/Shader/PostVFX", ["vfx"], vs_main, [
+    worldMat, viewMat, projectMat,
+    colorVFX, time
+], [out_position, to_uv], ps_main_vfx, [out_color]);
 function vs_main(f3_ver, f2_uv) {
     to_uv = f2_uv;
-    out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
-}
-function vs_main_modelPos(f3_ver, f2_uv) {
-    to_uv = f2_uv;
-    to_worldPos = f3_ver;
     out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
 }
 function ps_main_blend() {
@@ -347,172 +302,6 @@ function ps_main_light_MultiTex() {
     out_emissive.rgb = dseMat[2];
     out_emissive.w = L_cor.w;
 }
-function GetDistortedUV(_uv, _distance, _t) {
-    var line = max(0.0, sin(_uv.y * 3.8 + _t * 1.4) * sin(_uv.y * 0.6 + _t * 2.3));
-    var horDis = sin(_uv.y * 2.0 + _t) + sin(_uv.y * 50.0 + _t * 5.7) * 0.3 +
-        sin(_uv.y * 500.0 + _t * 20.0) * 0.1;
-    horDis *= _distance.x * line;
-    var verDis = sin(_uv.y * 2.5 + 5.1 + _t * 1.4) *
-        sign(sin(_uv.y * 3.6 + _t * 2.4));
-    verDis *= _distance.y * line;
-    return V2AddV2(_uv, new CVec2(horDis, verDis));
-}
-function GetAberratedColor(_texOff, _uv, _t, _baseStr, _addedStr) {
-    var line = max(0.0, sin(_uv.y * 3.8 + _t * 1.4) * sin(_uv.y * 0.6 + _t * 2.3));
-    var aberration_strength = (0.1 + line) * _addedStr + _baseStr;
-    return SaturateV3(new CVec3(Sam2DToColor(_texOff, new CVec2(_uv.x - aberration_strength, _uv.y)).r, Sam2DToColor(_texOff, _uv).g, Sam2DToColor(_texOff, new CVec2(_uv.x + aberration_strength, _uv.y)).b));
-}
-function GetPixelatedUV(_texSize, _pixelSize, _uv) {
-    var d = V2DivV2(_pixelSize, _texSize);
-    return V2MulV2(d, V2AddV2(V2Floor(V2DivV2(_uv, d)), new CVec2(0.5, 0.5)));
-}
-function permute(_x) {
-    var x = V4MulV4(_x, V4AddV4(V4MulFloat(_x, 34.0), new CVec4(10.0, 10.0, 10.0, 10.0)));
-    return V4Mod(x, 289.0);
-}
-function taylorInvSqrt(_r) {
-    return CMath.V4SubV4(new CVec4(1.79284291400159, 1.79284291400159, 1.79284291400159, 1.79284291400159), CMath.V4MulFloat(_r, 0.85373472095314));
-}
-function SNoise(_v) {
-    var C = new CVec2(1.0 / 6.0, 1.0 / 3.0);
-    var D = new CVec4(0.0, 0.5, 1.0, 2.0);
-    var dotVal = V3Dot(_v, new CVec3(C.y, C.y, C.y));
-    var i = V3Floor(CMath.V3AddV3(_v, new CVec3(dotVal, dotVal, dotVal)));
-    dotVal = V3Dot(i, new CVec3(C.x, C.x, C.x));
-    var x0 = V3AddV3(CMath.V3SubV3(_v, i), new CVec3(dotVal, dotVal, dotVal));
-    var g = V3Step(new CVec3(x0.y, x0.z, x0.x), x0);
-    var l = CMath.V3SubV3(new CVec3(1.0, 1.0, 1.0), g);
-    var i1 = V3Min(g, new CVec3(l.z, l.x, l.y));
-    var i2 = V3Max(g, new CVec3(l.z, l.x, l.y));
-    var x1 = V3AddV3(CMath.V3SubV3(x0, i1), new CVec3(C.x));
-    var x2 = V3AddV3(CMath.V3SubV3(x0, i2), new CVec3(C.y));
-    var x3 = CMath.V3SubV3(x0, new CVec3(D.y));
-    i = V3Mod(i, 289.0);
-    var p = permute(new CVec4(i.z, i.z + i1.z, i.z + i2.z, i.z + 1.0));
-    p = permute(new CVec4(p.x + i.y, p.y + i.y + i1.y, p.z + i.y + i2.y, p.w + i.y + 1.0));
-    p = permute(new CVec4(p.x + i.x, p.y + i.x + i1.x, p.z + i.x + i2.x, p.w + i.x + 1.0));
-    var n_ = 1.0 / 7.0;
-    var ns = CMath.V3MulFloat(new CVec3(D.w, D.y, D.z), n_);
-    ns = CMath.V3SubV3(ns, new CVec3(D.x, D.z, D.x));
-    var floor_p = V4Floor(V4MulFloat(p, ns.z * ns.z));
-    var j = V4SubV4(p, V4MulFloat(floor_p, 49.0));
-    var x_ = V4Floor(CMath.V4MulFloat(j, ns.z));
-    var y_ = V4Floor(CMath.V4SubV4(j, CMath.V4MulFloat(x_, 7.0)));
-    var x = CMath.V4AddV4(CMath.V4MulFloat(x_, ns.x), new CVec4(ns.y));
-    var y = CMath.V4AddV4(CMath.V4MulFloat(y_, ns.x), new CVec4(ns.y));
-    var h = CMath.V4SubV4(CMath.V4SubV4(new CVec4(1.0, 1.0, 1.0, 1.0), V4Abs(x)), V4Abs(y));
-    var b0 = new CVec4(x.x, x.y, y.x, y.y);
-    var b1 = new CVec4(x.z, x.w, y.z, y.w);
-    var s0 = CMath.V4AddV4(CMath.V4MulFloat(V4Floor(b0), 2.0), new CVec4(1.0, 1.0, 1.0, 1.0));
-    var s1 = CMath.V4AddV4(CMath.V4MulFloat(V4Floor(b1), 2.0), new CVec4(1.0, 1.0, 1.0, 1.0));
-    var sh = CMath.V4MulFloat(V4Step(h, new CVec4(0.0, 0.0, 0.0, 0.0)), -1.0);
-    var a0 = CMath.V4AddV4(new CVec4(b0.x, b0.z, b0.y, b0.w), new CVec4(s0.x * sh.x, s0.z * sh.x, s0.y * sh.y, s0.w * sh.y));
-    var a1 = CMath.V4AddV4(new CVec4(b1.x, b1.z, b1.y, b1.w), new CVec4(s1.x * sh.z, s1.z * sh.z, s1.y * sh.w, s1.w * sh.w));
-    var p0 = new CVec3(a0.x, a0.y, h.x);
-    var p1 = new CVec3(a0.z, a0.w, h.y);
-    var p2 = new CVec3(a1.x, a1.y, h.z);
-    var p3 = new CVec3(a1.z, a1.w, h.w);
-    var norm = taylorInvSqrt(new CVec4(V3Dot(p0, p0), V3Dot(p1, p1), V3Dot(p2, p2), V3Dot(p3, p3)));
-    p0 = CMath.V3MulFloat(p0, norm.x);
-    p1 = CMath.V3MulFloat(p1, norm.y);
-    p2 = CMath.V3MulFloat(p2, norm.z);
-    p3 = CMath.V3MulFloat(p3, norm.w);
-    var mix = V4SubV4(new CVec4(0.5, 0.5, 0.5, 0.5), new CVec4(V3Dot(x0, x0), V3Dot(x1, x1), V3Dot(x2, x2), V3Dot(x3, x3)));
-    mix = V4Max(mix, new CVec4(0.0, 0.0, 0.0, 0.0));
-    mix = V4Pow(mix, 4.0);
-    var noise = new CVec4(V3Dot(p0, x0), V3Dot(p1, x1), V3Dot(p2, x2), V3Dot(p3, x3));
-    return 105.0 * V4Dot(mix, noise);
-}
-function TimedNoise(_m, _t) {
-    return SNoise(new CVec3(_m.x * 500.0, _m.y * 500.0, _t));
-}
-function AddScanLine(_m, _c) {
-    var t = 10.0 + _m.y / 10.0 * scanLineDensity;
-    var distToFloor = fract(t);
-    var distToCeil = 1.0 - distToFloor;
-    var distToNearestInt = min(distToCeil, distToFloor);
-    var intensity = 1.0 - smoothstep(0.0, scanLineThickness, distToNearestInt);
-    var factor = max(0.0, 1.0 - intensity * scanLineIntensity);
-    return CMath.V4MulFloat(_c, factor);
-}
-function AddNoise(_m, _c, _t) {
-    var t = _t * noiseSpeed;
-    var factor1 = 1.0 - TimedNoise(_m, t) * noiseIntensity;
-    var baseColor = new CVec3(TimedNoise(_m, t), TimedNoise(_m, t * 2.0), TimedNoise(_m, t * 3.0));
-    baseColor = CMath.V3MulFloat(baseColor, 0.1 * noiseIntensity);
-    baseColor = CMath.V3AddV3(baseColor, CMath.V3MulFloat(_c.rgb, factor1));
-    return new CVec4(baseColor, _c.w * factor1 + 0.1 * noiseIntensity);
-}
-function AddBorder(_m, _c) {
-    var distToBorderVec = V2Abs(V2SubV2(V2Abs(_m.xy), new CVec2(5.0, 5.0)));
-    var distToBorder = min(distToBorderVec.x, distToBorderVec.y);
-    var f = 1.0 - smoothstep(0.0, borderThickness, distToBorder);
-    return V4AddV4(_c, V4MulFloat(new CVec4(f, f, f, 1.0), borderIntensity));
-}
-function ps_main_distort() {
-    var image_uv = GetDistortedUV(to_uv, distortDistance, time);
-    out_color = Sam2DToColor(0.0, image_uv);
-}
-function ps_main_aberrate() {
-    out_color = new CVec4(GetAberratedColor(0.0, to_uv, time, abrBaseStr, abrAddedStr), 1.0);
-}
-function ps_main_pixel() {
-    out_color = Sam2DToColor(0.0, GetPixelatedUV(Sam2DSize(0.0), pixelSize, to_uv));
-}
-function ps_main_noise() {
-    out_color = AddNoise(to_worldPos, Sam2DToColor(0.0, to_uv), time);
-}
-function ps_main_tvBorderLight() {
-    out_color = AddBorder(to_worldPos, Sam2DToColor(0.0, to_uv));
-}
-function ps_main_scanLine() {
-    out_color = AddScanLine(to_worldPos, Sam2DToColor(0.0, to_uv));
-}
-function GetFxaaColor(_uv, _tex, _rcpFrame) {
-    var rgbNW = Sam2DToColor(_tex, new CVec2(_uv.z, _uv.w)).xyz;
-    var rgbNE = Sam2DToColor(_tex, new CVec2(_uv.z + _rcpFrame.x, _uv.w)).xyz;
-    var rgbSW = Sam2DToColor(_tex, new CVec2(_uv.z, _uv.w + _rcpFrame.y)).xyz;
-    var rgbSE = Sam2DToColor(_tex, new CVec2(_uv.z + _rcpFrame.x, _uv.w + _rcpFrame.y)).xyz;
-    var rgbM = Sam2DToColor(_tex, new CVec2(_uv.x, _uv.y)).xyz;
-    var lumen = new CVec3(0.299, 0.587, 0.114);
-    var lumeNW = V3Dot(rgbNW, lumen);
-    var lumeNE = V3Dot(rgbNE, lumen);
-    var lumeSW = V3Dot(rgbSW, lumen);
-    var lumeSE = V3Dot(rgbSE, lumen);
-    var lumeM = V3Dot(rgbM, lumen);
-    var lumeMin = min(lumeM, min(min(lumeNW, lumeNE), min(lumeSW, lumeSE)));
-    var lumeMax = max(lumeM, max(max(lumeNW, lumeNE), max(lumeSW, lumeSE)));
-    var dir = new CVec2(0.0, 0.0);
-    dir.x = -((lumeNW + lumeNE) - (lumeSW + lumeSE));
-    dir.y = ((lumeNW + lumeSW) - (lumeNE + lumeSE));
-    var dirReduce = max((lumeNW + lumeNE + lumeSW + lumeSE) * (0.25 * reduce_mul), reduce_min);
-    var rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
-    dir = V2MulV2(V2Min(new CVec2(span_max, span_max), V2Max(new CVec2(-span_max, -span_max), V2MulFloat(dir, rcpDirMin))), _rcpFrame);
-    var rgbA = V3MulFloat(V3AddV3(Sam2DToColor(_tex, V2AddV2(new CVec2(_uv.x, _uv.y), V2MulFloat(dir, 1.0 / 3.0 - 0.5))).xyz, Sam2DToColor(_tex, V2AddV2(new CVec2(_uv.x, _uv.y), V2MulFloat(dir, 2.0 / 3.0 - 0.5))).xyz), 0.5);
-    var rgbB = V3MulV3(V3MulFloat(rgbA, 0.5), V3MulFloat(V3AddV3(Sam2DToColor(_tex, V2AddV2(new CVec2(_uv.x, _uv.y), V2MulFloat(dir, -0.5))).xyz, Sam2DToColor(_tex, V2AddV2(new CVec2(_uv.x, _uv.y), V2MulFloat(dir, 0.5))).xyz), 0.25));
-    var lumeB = V3Dot(rgbB, lumen);
-    if ((lumeB < lumeMin) || (lumeB > lumeMax))
-        return rgbA;
-    return rgbB;
-}
-function ps_main_fxaa() {
-    var texSize = Sam2DSize(0.0);
-    var rcpFrame = V2DivV2(new CVec2(1.0, 1.0), texSize);
-    var uv = new CVec4(to_uv, V2SubV2(to_uv, V2MulFloat(rcpFrame, (0.5 + subpix_shift))));
-    out_color.rgb = GetFxaaColor(uv, 0.0, rcpFrame);
-    out_color.w = 1.0;
-}
-function ps_main_gamma() {
-    var L_cor = Sam2DToColor(0.0, to_uv);
-    L_cor.rgb = V3MulFloat(L_cor.rgb, brightness);
-    L_cor.rgb = V3PowV3(L_cor.rgb, colorCorrection);
-    var Mapped_cor = V3DivV3(L_cor.rgb, V3AddV3(L_cor.rgb, new CVec3(1.0, 1.0, 1.0)));
-    L_cor.rgb = V3Mix(L_cor.rgb, Mapped_cor, toneMappingFactor);
-    L_cor.rgb = V3SubV3(new CVec3(1.0, 1.0, 1.0), V3Exp(V3MulFloat(L_cor.rgb, -1.0 * exposure)));
-    L_cor.rgb = V3AddV3(V3MulFloat(V3SubV3(L_cor.rgb, new CVec3(0.5, 0.5, 0.5)), contrast), new CVec3(0.5, 0.5, 0.5));
-    out_color.rgb = V3Pow(L_cor.rgb, 1.0 / gamma);
-    out_color.a = L_cor.a;
-}
 function ps_main_ExpandBakedLight() {
     var L_cor = Sam2DToColor(0.0, to_uv);
     if (L_cor.x >= 0.01 || L_cor.y >= 0.01 || L_cor.z >= 0.01 || L_cor.w >= 0.01) {
@@ -623,87 +412,7 @@ function ps_main_UpSample() {
     out_color.rgb = col;
     out_color.w = blendFactor;
 }
-function DitherMatrix4x4(_p) {
-    var x = floor(mod(_p.x, 4.0));
-    var y = floor(mod(_p.y, 4.0));
-    if (y < 0.5) {
-        if (x < 0.5)
-            return 0.0 / 16.0;
-        if (x < 1.5)
-            return 8.0 / 16.0;
-        if (x < 2.5)
-            return 2.0 / 16.0;
-        if (x < 3.5)
-            return 10.0 / 16.0;
-    }
-    else if (y < 1.5) {
-        if (x < 0.5)
-            return 12.0 / 16.0;
-        if (x < 1.5)
-            return 4.0 / 16.0;
-        if (x < 2.5)
-            return 14.0 / 16.0;
-        if (x < 3.5)
-            return 6.0 / 16.0;
-    }
-    else if (y < 2.5) {
-        if (x < 0.5)
-            return 3.0 / 16.0;
-        if (x < 1.5)
-            return 11.0 / 16.0;
-        if (x < 2.5)
-            return 1.0 / 16.0;
-        if (x < 3.5)
-            return 9.0 / 16.0;
-    }
-    else if (y < 3.5) {
-        if (x < 0.5)
-            return 15.0 / 16.0;
-        if (x < 1.5)
-            return 7.0 / 16.0;
-        if (x < 2.5)
-            return 13.0 / 16.0;
-        if (x < 3.5)
-            return 5.0 / 16.0;
-    }
-    return 0.0;
-}
-function MapToPaletteUV(_color, _cellSize) {
-    var palSize = Sam2DSize(1.0);
-    _color = V3Clamp(_color, 0.0, 0.9999);
-    var mappedColor = V3Floor(V3MulFloat(_color, _cellSize));
-    var mappedIndex = mappedColor.x + mappedColor.y * _cellSize + mappedColor.z * _cellSize * _cellSize;
-    return new CVec2(floor(mappedIndex / palSize.x) / palSize.x, mod(mappedIndex, palSize.y) / palSize.y);
-}
-function ps_main_ColorPalette() {
+function ps_main_vfx() {
     var src = Sam2DToColor(0.0, to_uv);
-    var palSize = Sam2DSize(1.0);
-    var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
-    BranchBegin("dither", "dither", []);
-    src.rgb = V3AddV3(src.rgb, V3MulFloat(new CVec3(1.0, 1.0, 1.0), (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0)));
-    BranchEnd();
-    var test;
-    BranchBegin("test", "test", []);
-    if (to_uv.x < 0.2 && to_uv.y < 0.2) {
-        if (cellSize < 1.5) {
-            test = floor(to_uv.x * 5.0 * 64.0) * 64.0 + floor(to_uv.y * 5.0 * 64.0);
-            out_color.b = floor(test / (16.0 * 16.0)) / 16.0;
-            test = floor(mod(test, (16.0 * 16.0)));
-            out_color.g = floor(test / 16.0) / 16.0;
-            out_color.r = floor(mod(test, 16.0)) / 16.0;
-            out_color.a = 1.0;
-        }
-        else {
-            out_color = Sam2DToColor(1.0, new CVec2(to_uv.x * 5.0, to_uv.y * 5.0));
-        }
-        return;
-    }
-    BranchEnd();
-    if (cellSize < 1.5) {
-        out_color = src;
-        return;
-    }
-    var paletteUV = MapToPaletteUV(src.rgb, cellSize);
-    var final = Sam2DToColor(1.0, paletteUV);
-    out_color = new CVec4(final.rgb, 1.0);
+    out_color = ColorVFX(src, to_uv, to_uv, colorVFX, time);
 }

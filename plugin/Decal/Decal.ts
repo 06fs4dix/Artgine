@@ -1,7 +1,7 @@
+import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CTree } from "../../artgine/basic/CTree.js";
-import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
-import { CPaint3D } from "../../artgine/canvas/component/paint/CPaint3D.js";
-import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
+
 import { CBound } from "../../artgine/geometry/CBound.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";

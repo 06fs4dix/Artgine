@@ -1,4 +1,10 @@
 
+import { CAtelier } from "../app/CAtelier.js";
+import { CAniFlow } from "../app/component/CAniFlow.js";
+import { CAnimation, CClip, CClipBase64, CClipCoodi, CClipImg, CClipMesh } from "../app/component/CAnimation.js";
+import { CPaint2D, CPaintHTML } from "../app/component/paint/CPaint2D.js";
+import { CPaint3D } from "../app/component/paint/CPaint3D.js";
+import { CSubject } from "../app/subject/CSubject.js";
 import { CAlert } from "../basic/CAlert.js";
 import { CClass } from "../basic/CClass.js";
 import { CConsol } from "../basic/CConsol.js";
@@ -9,13 +15,6 @@ import { CDrop, CModal } from "../basic/CModal.js";
 import { CObject, CObjectEditerBtn } from "../basic/CObject.js";
 import { CString } from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
-import { CAtelier } from "../canvas/CAtelier.js";
-import { CAniFlow } from "../canvas/component/CAniFlow.js";
-import { CAnimation, CClip, CClipBase64, CClipCoodi, CClipImg, CClipMesh } from "../canvas/component/CAnimation.js";
-import { CPaint } from "../canvas/component/paint/CPaint.js";
-import { CPaint2D, CPaintHTML } from "../canvas/component/paint/CPaint2D.js";
-import { CPaint3D } from "../canvas/component/paint/CPaint3D.js";
-import { CSubject } from "../canvas/subject/CSubject.js";
 import { CBound } from "../geometry/CBound.js";
 import { CMath } from "../geometry/CMath.js";
 import { CVec2 } from "../geometry/CVec2.js";

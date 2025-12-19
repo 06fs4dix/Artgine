@@ -5,6 +5,7 @@ import { CH5Canvas } from "./CH5Canvas.js";
 import { CTexture, CTextureInfo } from "./CTexture.js";
 import { CModal } from "../basic/CModal.js";
 import { CUtilWeb } from "../util/CUtilWeb.js";
+import { CDOM } from "../basic/CDOM.js";
 export class CTexUse {
     mSum = 0;
     mSingle = 0;

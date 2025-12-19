@@ -1,11 +1,11 @@
+import { CBrush } from "../app/canvas/CBrush.js";
+import { CCanvas } from "../app/canvas/CCanvas.js";
+import { CPaint2D, CPaintHTML } from "../app/component/paint/CPaint2D.js";
+import { CSubject } from "../app/subject/CSubject.js";
 import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CModal } from "../basic/CModal.js";
 import { CPreferences } from "../basic/CPreferences.js";
-import { CBrush } from "../canvas/CBrush.js";
-import { CCanvas } from "../canvas/CCanvas.js";
-import { CPaint2D, CPaintHTML } from "../canvas/component/paint/CPaint2D.js";
-import { CSubject } from "../canvas/subject/CSubject.js";
 import { CVec2 } from "../geometry/CVec2.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";

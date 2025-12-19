@@ -1,86 +1,46 @@
 import { SDF } from "./SDF";
-import { abs, clamp, max, min, mod, pow, sign, sin, smoothstep, CVec2, CVec3, CVec4, Sam2DSize, Sam2DToColor, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Clamp, V3Dot, V3Floor, V3Max, V3Min, V3Mod, V3MulFloat, V3MulV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulV4, V4Pow, V4Step, V4SubV4 } from "./Shader";
-function HSVF(_k, _s, _v) {
-    return _v - _v * _s * max(min(min(_k, 4.0 - _k), 1.0), 0.0);
-}
+import { abs, clamp, max, min, mod, pow, sign, sin, smoothstep, CVec2, CVec3, CVec4, Sam2DSize, Sam2DToColor, SaturateV4, V2Abs, V2AddV2, V2DivV2, V2Floor, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Clamp, V3Dot, V3Floor, V3Max, V3Min, V3Mod, V3MulFloat, V3MulV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulV4, V4Pow, V4Step, V4SubV4, step, V3Abs, V3Fract, V4Mix, V3Mix, SaturateV3, floor, screenPos, V4DivV4 } from "./Shader";
 export function GetTexCodiedUV(_uv, _texCodi) {
     var result = new CVec2(0.0, 0.0);
     result.x = _uv.x * _texCodi.x + _texCodi.z;
     result.y = _uv.y * _texCodi.y + _texCodi.w;
-    if (result.x < 0.0)
-        result.x = result.x * -1.0;
-    if (result.y < 0.0)
-        result.y = result.y * -1.0;
-    return result;
+    return V2Abs(result);
 }
 export function GetTexDecodedUV(_coded, _texCodi) {
     var sx = (_texCodi.x == 0.0) ? 1.0 : _texCodi.x;
     var sy = (_texCodi.y == 0.0) ? 1.0 : _texCodi.y;
-    var cx = _coded.x;
-    if (cx < 0.0)
-        cx = -cx;
-    var cy = _coded.y;
-    if (cy < 0.0)
-        cy = -cy;
+    var cx = abs(_coded.x);
+    var cy = abs(_coded.y);
     var u = (cx - _texCodi.z) / sx;
     var v = (cy - _texCodi.w) / sy;
     return new CVec2(u, v);
 }
 export function HSVToRGB(_vec3) {
-    var hk = mod(5.0 + _vec3.x * 6.0, 6.0);
-    var sk = mod(3.0 + _vec3.x * 6.0, 6.0);
-    var vk = mod(1.0 + _vec3.x * 6.0, 6.0);
-    return new CVec3(HSVF(hk, _vec3.y, _vec3.z), HSVF(sk, _vec3.y, _vec3.z), HSVF(vk, _vec3.y, _vec3.z));
+    var K = new CVec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    var p = V3Abs(V3SubV3(V3MulFloat(V3Fract(V3AddV3(new CVec3(_vec3.x, _vec3.x, _vec3.x), K.xyz)), 6.0), new CVec3(K.w, K.w, K.w)));
+    return V3MulFloat(V3Mix(new CVec3(K.x, K.x, K.x), V3Clamp(V3SubV3(p, new CVec3(K.x, K.x, K.x)), 0.0, 1.0), _vec3.y), _vec3.z);
 }
 export function RGBToHSV(_vec3) {
-    var cmax = max(_vec3.x, max(_vec3.y, _vec3.z));
-    var cmin = min(_vec3.x, min(_vec3.y, _vec3.z));
-    var delta = cmax - cmin;
-    var h = 0.0;
-    if (delta > 0.0) {
-        if (cmax == _vec3.x) {
-            h = mod((_vec3.y - _vec3.z) / delta, 6.0);
-        }
-        else if (cmax == _vec3.y) {
-            h = (_vec3.z - _vec3.x) / delta + 2.0;
-        }
-        else {
-            h = (_vec3.x - _vec3.y) / delta + 4.0;
-        }
-        h /= 6.0;
-    }
-    var s = (cmax == 0.0) ? 0.0 : (delta / cmax);
-    var v = cmax;
-    return new CVec3(h, s, v);
-}
-function HSLF(_k, _a, _v) {
-    return _v - _a * max(-1.0, min(_k - 3.0, min(9.0 - _k, 1.0)));
+    var K = new CVec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    var p = V4Mix(new CVec4(new CVec2(_vec3.z, _vec3.y), new CVec2(K.w, K.z)), new CVec4(new CVec2(_vec3.y, _vec3.z), new CVec2(K.x, K.y)), step(_vec3.z, _vec3.y));
+    var q = V4Mix(new CVec4(new CVec3(p.x, p.y, p.w), _vec3.x), new CVec4(_vec3.x, new CVec3(p.y, p.z, p.x)), step(p.x, _vec3.x));
+    var d = q.x - min(q.w, q.y);
+    var e = 1.0e-10;
+    return new CVec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
 export function HSLToRGB(_vec3) {
-    var hk = mod(0.0 + _vec3.x * 12.0, 12.0);
-    var sk = mod(8.0 + _vec3.x * 12.0, 12.0);
-    var lk = mod(4.0 + _vec3.x * 12.0, 12.0);
-    var a = _vec3.y * min(_vec3.z, 1.0 - _vec3.z);
-    return new CVec3(HSLF(hk, a, _vec3.z), HSLF(sk, a, _vec3.z), HSLF(lk, a, _vec3.z));
+    var RGB = SaturateV3(new CVec3(abs(_vec3.x * 6.0 - 3.0) - 1.0, 2.0 - abs(_vec3.x * 6.0 - 2.0), 2.0 - abs(_vec3.x * 6.0 - 4.0)));
+    var C = (1.0 - abs(2.0 * _vec3.z - 1.0)) * _vec3.y;
+    return V3MulFloat(V3SubV3(RGB, new CVec3(0.5, 0.5, 0.5)), C * _vec3.z);
 }
 export function RGBToHSL(_vec3) {
-    var cmax = max(_vec3.x, max(_vec3.y, _vec3.z));
-    var cmin = min(_vec3.x, min(_vec3.y, _vec3.z));
-    var delta = cmax - cmin;
-    var h = 0.0;
-    var s = 0.0;
-    var l = (cmax + cmin) / 2.0;
-    if (delta > 0.0) {
-        s = (l > 0.5) ? (delta / (2.0 - cmax - cmin)) : (delta / (cmax + cmin));
-        if (cmax == _vec3.x) {
-            h = (_vec3.y - _vec3.z) / delta + ((_vec3.y < _vec3.z) ? 6.0 : 0.0);
-        }
-        else {
-            h = (cmax == _vec3.y) ? ((_vec3.z - _vec3.x) / delta + 2.0) : ((_vec3.x - _vec3.y) / delta + 4.0);
-        }
-        h /= 6.0;
-    }
-    return new CVec3(h, s, l);
+    var P = (_vec3.y < _vec3.z) ? new CVec4(new CVec2(_vec3.z, _vec3.y), -1.0, 2.0 / 3.0) : new CVec4(new CVec2(_vec3.y, _vec3.z), 0.0, -1.0 / 3.0);
+    var Q = (_vec3.x < P.x) ? new CVec4(new CVec3(P.x, P.y, P.w), _vec3.x) : new CVec4(_vec3.x, new CVec3(P.y, P.z, P.x));
+    var C = Q.x - min(Q.w, Q.y);
+    var H = abs((Q.w - Q.y) / (6.0 * C + 1e-10) + Q.z);
+    var L = Q.x - C * 0.5;
+    var S = C / (1.0 - abs(L * 2.0 - 1.0) + 1e-10);
+    return new CVec3(H, S, L);
 }
 export function CAModelCac(_rgba, _cModel, _aModel) {
     var rgb;
@@ -228,6 +188,130 @@ function AddScanLine(_c, _uv, _time, _count, _lineSpeed) {
     _c = V4MulV4(_c, sLine);
     return _c;
 }
+function DitherMatrix4x4(_p) {
+    var x = floor(mod(_p.x, 4.0));
+    var y = floor(mod(_p.y, 4.0));
+    if (y < 0.5) {
+        if (x < 0.5)
+            return 0.0 / 16.0;
+        if (x < 1.5)
+            return 8.0 / 16.0;
+        if (x < 2.5)
+            return 2.0 / 16.0;
+        if (x < 3.5)
+            return 10.0 / 16.0;
+    }
+    else if (y < 1.5) {
+        if (x < 0.5)
+            return 12.0 / 16.0;
+        if (x < 1.5)
+            return 4.0 / 16.0;
+        if (x < 2.5)
+            return 14.0 / 16.0;
+        if (x < 3.5)
+            return 6.0 / 16.0;
+    }
+    else if (y < 2.5) {
+        if (x < 0.5)
+            return 3.0 / 16.0;
+        if (x < 1.5)
+            return 11.0 / 16.0;
+        if (x < 2.5)
+            return 1.0 / 16.0;
+        if (x < 3.5)
+            return 9.0 / 16.0;
+    }
+    else if (y < 3.5) {
+        if (x < 0.5)
+            return 15.0 / 16.0;
+        if (x < 1.5)
+            return 7.0 / 16.0;
+        if (x < 2.5)
+            return 13.0 / 16.0;
+        if (x < 3.5)
+            return 5.0 / 16.0;
+    }
+    return 0.0;
+}
+function MapToPaletteUV(_color, _cellSize) {
+    var palSize = Sam2DSize(1.0);
+    _color = V3Clamp(_color, 0.0, 0.9999);
+    var mappedColor = V3Floor(V3MulFloat(_color, _cellSize));
+    var mappedIndex = mappedColor.x + mappedColor.y * _cellSize + mappedColor.z * _cellSize * _cellSize;
+    return new CVec2(floor(mappedIndex / palSize.x) / palSize.x, mod(mappedIndex, palSize.y) / palSize.y);
+}
+function GetBlurColor(_uv, _f, _texScale) {
+    var uv = V2AddV2(_uv, V2MulV2(_f, _texScale));
+    return Sam2DToColor(0.0, uv);
+}
+function Blur(_color, _uv, _renderType, _renderCount) {
+    var all = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var fx = max(-_renderCount, -32.0);
+    var fy = max(-_renderCount, -32.0);
+    var count = 0.0;
+    var texScale = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+    if (_renderType < 0.5) {
+        for (var y = 0; y < 64; y++) {
+            for (var x = 0; x < 64; x++) {
+                if (fx <= _renderCount && fy <= _renderCount) {
+                    var color = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
+                    if (color.a > 0.01) {
+                        all = V4AddV4(all, color);
+                        count += 1.0;
+                    }
+                }
+                else
+                    break;
+                fx += 1.0;
+            }
+            fx = -_renderCount;
+            fy += 1.0;
+        }
+        if (count > 0.01) {
+            all = V4DivV4(all, new CVec4(count, count, count, count));
+            all = SaturateV4(all);
+        }
+    }
+    else if (_renderType < 1.1) {
+        fy = 0.0;
+        for (var x = 0; x <= 64; x++) {
+            if (fx <= _renderCount && fy <= _renderCount) {
+                var color = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
+                if (color.a > 0.01) {
+                    all = V4AddV4(all, color);
+                    count += 1.0;
+                }
+            }
+            else
+                break;
+            fx += 1.0;
+        }
+        if (count > 0.01) {
+            all = V4DivV4(all, new CVec4(count, count, count, count));
+            all = SaturateV4(all);
+        }
+    }
+    else if (_renderType < 2.1) {
+        fx = 0.0;
+        for (var y = 0; y < 64; y++) {
+            if (fx <= _renderCount && fy <= _renderCount) {
+                var color = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
+                if (color.a > 0.01) {
+                    all = V4AddV4(all, color);
+                    count += 1.0;
+                }
+            }
+            else
+                break;
+            fy += 1.0;
+        }
+        if (count > 0.01) {
+            all = V4DivV4(all, new CVec4(count, count, count, count));
+            all = SaturateV4(all);
+        }
+    }
+    return all;
+}
 export function ColorVFX(_color, _uv, _ruv, _value, _time) {
     for (var i = 0; i < 4; ++i) {
         if (_value[i].w < SDF.eColorVFX.None + 0.5) {
@@ -266,11 +350,16 @@ export function ColorVFX(_color, _uv, _ruv, _value, _time) {
         else if (_value[i].w < SDF.eColorVFX.Scanline + 0.5) {
             _color = AddScanLine(_color, _uv, _time, _value[i].x, _value[i].y);
         }
-        else if (_value[i].w < SDF.eColorVFX.OverWrite + 0.5) {
-            var target = Sam2DToColor(_value[i].z, new CVec2(_ruv.x * _value[i].x, _ruv.y * _value[i].y));
-            if (_color.a > 0.01) {
-                _color.rgb = target.rgb;
-            }
+        else if (_value[i].w < SDF.eColorVFX.ColorPalette + 0.5) {
+            var palSize = Sam2DSize(_value[i].x);
+            var cellSize = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+            var ditherStrength = (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[i].y;
+            _color.rgb = V3AddV3(_color.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+            var palUV = MapToPaletteUV(_color.rgb, cellSize);
+            _color = Sam2DToColor(_value[i].x, palUV);
+        }
+        else if (_value[i].w < SDF.eColorVFX.Blur + 0.5) {
+            _color = Blur(_color, _uv, _value[i].x, _value[i].y);
         }
     }
     return _color;

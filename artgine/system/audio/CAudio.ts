@@ -3,7 +3,6 @@ import {CFile} from "../CFile.js";
 import {CRes} from "../CRes.js";
 export let gContext : AudioContext=null;
 export let gDecodeMap : Map<string, AudioBuffer>=null;
-
 export let gCompressor : DynamicsCompressorNode = null;
 
 function InitAudio()

@@ -9,14 +9,12 @@
 	그리고 프리오리티 순서도 다시 정렬해줘야함.
 */
 
+import { CSurface } from "../../artgine/app/subject/CSurface.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CJSON } from "../../artgine/basic/CJSON.js";
 import { CObject, CPointer } from "../../artgine/basic/CObject.js";
-import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
-import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
-import { CPaintSurface } from "../../artgine/canvas/component/paint/CPaintSurface.js";
-import { CSurface } from "../../artgine/canvas/subject/CSurface.js";
+
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";

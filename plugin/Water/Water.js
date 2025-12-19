@@ -1,20 +1,21 @@
+import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
+import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
+import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
+import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
-import { CBrushComp } from "../../artgine/canvas/component/CBrushComp.js";
-import { CPaint3D } from "../../artgine/canvas/component/paint/CPaint3D.js";
-import { CRPAuto } from "../../artgine/canvas/CRPMgr.js";
-import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec1 } from "../../artgine/geometry/CVec1.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
+import { CVec4 } from "../../artgine/geometry/CVec4.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../artgine/render/CTexture.js";
+import { CCondition } from "../../artgine/util/CCondition.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
-import { CCondition } from "../../artgine/util/CStateMachine.js";
 let gWaterShader = "";
 CPlugin.PushEvent(CEvent.eType.Load, () => {
     gWaterShader = CPlugin.FindPath("Water") + "WaterShader.ts";
@@ -44,11 +45,11 @@ const PresetDeepColorMap = {
     [ePreset.Muddy]: new CVec3(0.10, 0.05, 0.03),
 };
 const PresetDeepValMap = {
-    [ePreset.Emerald]: new CVec3(0, 50, 2000),
-    [ePreset.Green]: new CVec3(0, 30, 2000),
-    [ePreset.Caribbean]: new CVec3(0, 100, 2000),
-    [ePreset.NorthSea]: new CVec3(0, 35, 2000),
-    [ePreset.Muddy]: new CVec3(0, 10, 2000),
+    [ePreset.Emerald]: new CVec4(10, 50, 2000, 10),
+    [ePreset.Green]: new CVec4(10, 30, 2000, 10),
+    [ePreset.Caribbean]: new CVec4(10, 100, 2000, 10),
+    [ePreset.NorthSea]: new CVec4(10, 35, 2000, 10),
+    [ePreset.Muddy]: new CVec4(10, 10, 2000, 10),
 };
 export class CWater extends CSubject {
     static ePreset = ePreset;
@@ -58,7 +59,7 @@ export class CWater extends CSubject {
     mEnvMap;
     mDeepColor = new CVec3();
     mShallowColor = new CVec3();
-    mWaterDeep = new CVec3(0, 255, 2000);
+    mWaterDeep = new CVec4(10, 255, 2000, 5);
     mCausticTexture = null;
     mCausticFlowDir = new CVec2(0, 0);
     mCausticFlowFrequency = new CVec1(1);
@@ -142,6 +143,7 @@ export class CWater extends CSubject {
                 return;
             this.mReflector = new CReflector();
             this.PushComp(this.mReflector);
+            this.mReflector.AddWaterDeep(this.mWaterDeep);
             this.mPaint.PushTag("UseWaterReflect");
             this.mPaint.PushCShaderAttr(new CShaderAttr("reflectionMap", 1.0));
             this.mPaint.PushCShaderAttr(new CShaderAttr(1.0, this.mReflector.GetTex()));
@@ -207,6 +209,11 @@ export class CReflector extends CBrushComp {
             rp.mClearColor = false;
             rp.mClearDepth = false;
         }
+    }
+    AddWaterDeep(_waterDeep) {
+        const rp = this.mWrite[0];
+        rp.mTag.add("waterReflect");
+        rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
     }
     V3Reflect(_vec, _normal) {
         const dotProduct = CMath.V3Dot(_vec, _normal);
