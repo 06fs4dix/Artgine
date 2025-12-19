@@ -1,5 +1,5 @@
 //Version
-const version='miop4npb_4';
+const version='mjcwa2up_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -23,7 +23,7 @@ gPF.mWASM = false;
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 CPlugin.PushPath('ShadowPlane','https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/');
@@ -37,39 +37,48 @@ var Main = gAtl.Canvas('Main.json');
 //EntryPoint
 
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
+
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
+
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
-import { CPaint3D,  CPaintCube, CPaintMeshMerge } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+
+
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
+
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
-import { CDayCycle, CLightPlanet } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLightPlanet.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
-import { CAnimation, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
+
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
+
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CCamCon3DThirdPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CPad.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
+
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { off } from "process";
 import { CPaint3DDecal } from "https://06fs4dix.github.io/Artgine/plugin/Decal/Decal.js";
-import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
+
 import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
+import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CRPMgr.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCondition.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint3D.js";
+import { CDayCycle, CLightPlanet } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLightPlanet.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint.js";
+import { CAnimation, CClipMesh } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
 let PCF=new CVec1(0.0);
 var bias : number = 5;
 var normalBias : number = 4;
@@ -103,7 +112,7 @@ rp.mTag.add("light");
 
 
 
-Main.SetRPMgr(forward);
+Main.PushPlugin(new CCanvasPluginRPMgr(forward));
 //Main.SetRPMgr(null);
 
 
@@ -373,21 +382,23 @@ chsub.Update=(_update : CUpdate)=>{
 
 
 
-gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
+// gAtl.Frame().PushEvent(CEvent.eType.Update,()=>{
 
-    if(gAtl.Frame().Input().KeyUp(CInput.eKey.F))
-    {
-        let m=gAtl.Frame().Input().Mouse();
-        let ray=gAtl.Brush().GetCam3D().GetRay(m.x,m.y);
-        let ground=Main.Find("Ground");
-        let pt=ground.FindComp(CPaint);
-        let sub=new CSubject();
-        sub.PushComp(new CPaint3DDecal([gAtl.Frame().Pal().GetNoneTex()],pt.GetBound().mPos.Array(),pt.GetFMat(),ray,new CVec3(50,50,200)));
+//     if(gAtl.Frame().Input().KeyUp(CInput.eKey.F))
+//     {
+//         let m=gAtl.Frame().Input().Mouse();
+//         let ray=gAtl.Brush().GetCam3D().GetRay(m.x,m.y);
+//         let ground=Main.Find("Ground");
+//         let pt=ground.FindComp(CPaint);
+//         let sub=new CSubject();
+//         sub.PushComp(new CPaint3DDecal([gAtl.Frame().Pal().GetNoneTex()],pt.GetBound().mPos.Array(),pt.GetFMat(),ray,new CVec3(50,50,200)));
 
-        Main.PushSub(sub);
+//         Main.PushSub(sub);
 
-    }
-});
+//     }
+// });
+
+
 
 
 

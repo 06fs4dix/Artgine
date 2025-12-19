@@ -1,12 +1,12 @@
 //Version
-const version='mffeu6vk_11';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
+const version='mj9evty0_5';
+import "../../../artgine/artgine.js"
 
 //Class
-import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import {CClass} from "../../../artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import {CPreferences} from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,25 +21,25 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
+gPF.mGitHub = false;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
-import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
-import { CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
+import {CObject} from "../../../artgine/basic/CObject.js"
+import { CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
+import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CLight } from "../../../artgine/app/component/CLight.js";
+import { CPaint3D, CPaintCube } from "../../../artgine/app/component/paint/CPaint3D.js";
+
 var Main=gAtl.NewCanvas("Main");
 Main.SetCameraKey(gAtl.Brush().GetCam3D().Key());
 gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
@@ -49,7 +49,7 @@ gAtl.Brush().GetCam3D().Init(new CVec3(1000,500,0),new CVec3());
 
 var texKey=["Res/skybox/right.jpg","Res/skybox/left.jpg","Res/skybox/bottom.jpg","Res/skybox/top.jpg","Res/skybox/front.jpg","Res/skybox/back.jpg"];
 var texList=[];
-await gAtl.Frame().Load().Load(texKey);
+await gAtl.Frame().Load().Exe(texKey);
 for(let i=0;i<texKey.length;++i)
 {
     let tex=gAtl.Frame().Res().Find(texKey[i]);
@@ -81,28 +81,7 @@ sub.PushComp(new CPaintCube(cubeTex));
 sub=Main.PushSub(new CSubject());
 sub.SetSca(new CVec3(10,10,10));
 let ptcube=sub.PushComp(new CPaintCube(cubeTex));
-ptcube.Sky(true,true,false,true,true);
-
-//ptcube.Sky();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ptcube.Sky(true,true,true,true,false);
 
 
 

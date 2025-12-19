@@ -1,5 +1,5 @@
 //Version
-const version='mi2flz3d_56';
+const version='mice4l4h_69';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,7 +20,7 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
-gPF.mServer = 'local';
+gPF.mServer = 'webServer';
 gPF.mGitHub = false;
 
 import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
@@ -75,6 +75,9 @@ CAlert.Info("f3로 개발모드에서 라이팅 위치와 값을 수정해 보�
 // `;
 // CScript.Build("test",await CUtilWeb.TSToJS(await CUtilWeb.TSImport(source,false)));
 // new CMonacoViewer(source,"test.ts");
+
+
+
 
 
 

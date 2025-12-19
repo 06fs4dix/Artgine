@@ -1,5 +1,5 @@
 //Version
-const version='miop4npb_10';
+const version='mjcwa2up_28';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -23,7 +23,7 @@ gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
@@ -35,32 +35,43 @@ var Main = gAtl.Canvas('Main.json');
 //EntryPoint
 
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
+
 import { CCamCon3DThirdPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CRPMgr.js";
+
 import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
-import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CLight.js";
+
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
 import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
-import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSurface.js";
+
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CAnimation, CClip, CClipMesh, CClipPRS } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAnimation.js";
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CAniFlow.js";
+
+
 import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 import { CBGAttachButton, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
+
 import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
-import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CStateMachine.js";
+
+
 import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
-import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
+import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CRPMgr.js";
+import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSurface.js";
+import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint3D.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint.js";
+import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
+import { CAnimation, CClipPRS } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
+import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCondition.js";
+
+
 
 
 
@@ -314,7 +325,8 @@ rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 //=============================================
-
+let rpPlug=new CCanvasPluginRPMgr(null);
+Main.PushPlugin(rpPlug);
 
 
 let camcon=new CCamCon3DThirdPerson(gAtl.Frame().Input());
@@ -325,6 +337,7 @@ let back=Main.PushSub(new CSubject());
 let pt=back.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
 pt.SetTexture(["Res/teapot/1zflt0j.jpg","Res/teapot/1zflt0j_NRM.jpg","Res/teapot/1zflt0j_lig.jpg"]);
 pt.PushTag(CPaint.eTag.Shadow);
+//pt.AddDecal(new CVec4(1,0,0,1),new CVec3(),new CVec3(),new CVec3(100,100,100));
 back.SetSca(new CVec3(10,0.01,10));
 
 
@@ -342,7 +355,7 @@ pt2.PushTag(CPaint.eTag.Shadow);
 
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal","ShadowPlane",()=>{
     Main.Clear();
-    Main.SetRPMgr(null);
+    rpPlug.SetRPMgr(null);
     gAtl.Brush().ClearRen();
     //Main.ClearBatch();
     //gAtl.Brush().ClearRen();
@@ -385,7 +398,7 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal","Forward",()=>{
     Main.Clear();
     //Main.ClearBatch();
     //gAtl.Brush().ClearRen();
-    Main.SetRPMgr(forward);
+    rpPlug.SetRPMgr(forward);
 
     let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
@@ -447,7 +460,7 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredSingle(HafeLambert+Ph
     Main.Clear();
     Main.ClearBatch();
     gAtl.Brush().ClearRen();
-    Main.SetRPMgr(DeferredSingle);
+    rpPlug.SetRPMgr(DeferredSingle);
 
     let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
@@ -487,7 +500,7 @@ CModal.PushTitleBar(new CModalTitleBar("Deferred","DeferredMulti(None+CookTorran
 Main.Clear();
     Main.ClearBatch();
     gAtl.Brush().ClearRen();
-    Main.SetRPMgr(DeferredMulti);
+    rpPlug.SetRPMgr(DeferredMulti);
 
     let L=Main.PushSub(new CSubject());
     L.SetPos(new CVec3(0,1,0));
@@ -501,18 +514,18 @@ Main.Clear();
     L.PushComp(lig);
 
 
-    L=Main.PushSub(new CSubject());
-    L.SetPos(new CVec3(500,200,0));
-    L.SetSca(0.1);
-    let ani=new CAnimation([new CClipPRS(0,10,[new CVec3(0,500,0),new CVec3(500,500,0),new CVec3(500,500,500),new CVec3(0,500,0)],CClipPRS.eType.Pos)]);    
-    L.PushComp(new CAniFlow(ani));
-    let ptl=L.PushComp(new CPaint3D());
-    ptl.SetColorModel(new CColor(1,0.2,0.2,CColor.eModel.RGBAdd));
+    // L=Main.PushSub(new CSubject());
+    // L.SetPos(new CVec3(-500,500,-500));
+    // L.SetSca(0.1);
+    // let ani=new CAnimation([new CClipPRS(0,10,[new CVec3(-500,500,-500),new CVec3(500,500,500)],CClipPRS.eType.Pos)]);    
+    // L.PushComp(new CAniFlow(ani));
+    // let ptl=L.PushComp(new CPaint3D());
+    // ptl.SetColorModel(new CColor(1,0.2,0.2,CColor.eModel.RGBAdd));
     
-    lig=new CLight();
-    lig.SetPoint(1000,500);
-    lig.SetColor(new CVec3(3,0.2,0.2));
-    L.PushComp(lig);
+    // lig=new CLight();
+    // lig.SetPoint(1000,500);
+    // lig.SetColor(new CVec3(3,0.2,0.2));
+    // L.PushComp(lig);
 
 
     let back=Main.PushSub(new CSubject());
@@ -524,10 +537,50 @@ Main.Clear();
     back.SetSca(new CVec3(10,0.01,10));
 
 
-    let teapot=Main.PushSub(new CSubject());
-    let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-    pt2.PushTag(CPaint.eTag.Light);
-    pt2.PushTag(CPaint.eTag.Shadow);
+
+
+
+    for(let x=-1;x<=1;x+=1)
+    for(let z=-1;z<=1;z+=1)
+    {
+        let teapot=Main.PushSub(new CSubject());
+        let pt2=teapot.PushComp(new CPaint3D(gAtl.Frame().Pal().GetSphereMesh()));
+        pt2.SetColorModel(new CColor(1,1,1,CColor.eModel.RGBAdd));
+        //pt2.SetTexture(["Res/teapot/1zflt0j.jpg"]);
+        pt2.PushTag(CPaint.eTag.Light);
+        pt2.PushTag(CPaint.eTag.Shadow);
+        pt2.SetMaterial((x+1)*0.5,(z+1)*0.5);
+        teapot.SetPos(new CVec3(x*500,100,z*500));
+    }
+    
+
+    // teapot=Main.PushSub(new CSubject());
+    // teapot.SetPos(new CVec3(500,0,0))
+    // pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+    // pt2.SetMaterial(0.1,0.9);
+    // pt2.PushTag(CPaint.eTag.Light);
+    // pt2.PushTag(CPaint.eTag.Shadow);
+
+    // teapot=Main.PushSub(new CSubject());
+    // teapot.SetPos(new CVec3(-500,0,0))
+    // pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+    // pt2.SetMaterial(0.1,0.1);
+    // pt2.PushTag(CPaint.eTag.Light);
+    // pt2.PushTag(CPaint.eTag.Shadow);
+
+    // teapot=Main.PushSub(new CSubject());
+    // teapot.SetPos(new CVec3(0,0,500))
+    // pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+    // pt2.SetMaterial(0.9,0.1);
+    // pt2.PushTag(CPaint.eTag.Light);
+    // pt2.PushTag(CPaint.eTag.Shadow);
+
+    // teapot=Main.PushSub(new CSubject());
+    // teapot.SetPos(new CVec3(0,0,-500))
+    // pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
+    // pt2.SetMaterial(0.9,0.9);
+    // pt2.PushTag(CPaint.eTag.Light);
+    // pt2.PushTag(CPaint.eTag.Shadow);
 
 
     let skybox=Main.PushSub(new CSubject());
@@ -584,6 +637,23 @@ let Help=new CBGAttachButton("DevToolModal",101,new CVec2(320,320));
 //gAtl.Frame().Win().HtmlPush(Option_btn);
 Help.SetTitleText("Help");
 Help.SetContent(await CUtilWeb.MDReader("README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

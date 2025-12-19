@@ -62,9 +62,9 @@
 			});
 		}</script>
 <script type='text/javascript' src='../../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
-<link rel='manifest' href='./Skybox.webmanifest'/>
+<link rel='manifest' href='./Voxel.webmanifest'/>
 <script>
-let SERVER_BASE='http://localhost:8050/Artgine/proj/Tutorial/Skybox/Skybox.html';
+let SERVER_BASE='http://localhost:8050/Artgine/proj/3D/Voxel/Voxel.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
@@ -77,11 +77,6 @@ if (location.protocol == 'file:' && isElectron==false){
 
 <!--Manifest-->
 <!--EntryPoint-->
-<script>
-let deferredPrompt;
-window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredPrompt = event;
-});
-</script>
-<script type='module' src='Skybox.js'></script>
+<script type='module' src='Voxel.js'></script>
+
+
