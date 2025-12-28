@@ -133,13 +133,16 @@ export class CPalette
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0,0,1,CUtilRender.Mesh2DSize / 2.0)),this.GetBlackTex());
 		_fw.Res().Push(this.GetPlaneMesh(), mesh);
 		this.mMCI2D=mesh.meshTree.mData.ci;
+		CUtilRender.MeshBoundUpdate(mesh);
 		
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100),this.GetBlackTex());
 		_fw.Res().Push(this.GetBoxMesh(), mesh);
+		CUtilRender.MeshBoundUpdate(mesh);
 	
 		//mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32),this.GetBlackTex());
 		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(100,100,100),16,16,100,100),this.GetBlackTex());
 		_fw.Res().Push(this.GetSphereMesh(), mesh);
+		CUtilRender.MeshBoundUpdate(mesh);
 
 		
 		

@@ -66,7 +66,7 @@ export class CBound extends CObject
 			select.onchange=(_event)=>{
 				var ct=_event.currentTarget as HTMLSelectElement;
 				_pointer.Set(valArr[ct.selectedIndex]);
-				_input.value=valArr[ct.selectedIndex]+"";
+				(_input as HTMLInputElement).value=valArr[ct.selectedIndex]+"";
 				if (_pointer.target instanceof CObject)
 					_pointer.target.EditChange(_pointer,false);
 			};

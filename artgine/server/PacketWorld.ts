@@ -57,13 +57,13 @@ export class PacketWorld {
         return new CStream().Push("ZoneConnect").Push(uniqueKey).Push(nick);
     }
 
-    static ZoneReady(zone: string, offset: number): CStream;
-    static ZoneReady(_stream: CStream): {zone: string, offset: number};
-    static ZoneReady(zone: string | CStream, offset: number | null = null): any {
+    static ZoneReady(zone: string, key: string): CStream;
+    static ZoneReady(_stream: CStream): {zone: string, key: string};
+    static ZoneReady(zone: string | CStream, key: string | null = null): any {
         if (zone instanceof CStream) {
-            return zone.GetPacket("zone", "offset");
+            return zone.GetPacket("zone", "key");
         }
-        return new CStream().Push("ZoneReady").Push(zone).Push(offset);
+        return new CStream().Push("ZoneReady").Push(zone).Push(key);
     }
 
     static ZoneJoinUser(uniqueKey: string, state: number): CStream;

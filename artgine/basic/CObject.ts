@@ -378,6 +378,11 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			return true;
 		return false;
 	}
+	//어레이거나 오브젝트이다
+	GetProxy()
+	{
+		return this["mProxy"];
+	}
 	IsBlackBoard()
 	{
 		return this["mBlackboard"];

@@ -17,8 +17,9 @@ import {
 	MatTypeToMat,
 } from "./Shader"
 import {
-	CAModelCac, ColorVFX, GetTexCodiedUV,
-	GetTexDecodedUV
+	CAModelCac, VFXDown2, GetTexCodiedUV,
+	GetTexDecodedUV,
+	VFX
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -48,7 +49,6 @@ var texCodi : CVec4=Null();
 
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
-var colorVFX : CMat=Null();
 var alphaCut : number=0.1;
 
 var out_position : OutPosition=Null();
@@ -310,16 +310,24 @@ function ps_main()
 	}
 	BranchEnd();
 
-    var L_cor : CVec4=Sam2DToColor(0.0,to_uv.xy);
+    var L_cor : CVec4;
+	
+
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(to_uv.xy,VFX,time);
+	BranchDefault();
+	L_cor=Sam2DToColor(0.0,to_uv.xy);
+	BranchEnd();
+
 	L_cor.a *= to_uv.z;
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv.xy,GetTexDecodedUV(to_uv.xy,texCodi),colorVFX,time);
-	BranchEnd();
+	
+	
 
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if ( L_cor.a <= alphaCut ) discard;

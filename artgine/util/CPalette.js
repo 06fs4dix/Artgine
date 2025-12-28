@@ -89,10 +89,13 @@ export class CPalette {
         var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetPlane(new CVec4(0, 0, 1, CUtilRender.Mesh2DSize / 2.0)), this.GetBlackTex());
         _fw.Res().Push(this.GetPlaneMesh(), mesh);
         this.mMCI2D = mesh.meshTree.mData.ci;
+        CUtilRender.MeshBoundUpdate(mesh);
         var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100), this.GetBlackTex());
         _fw.Res().Push(this.GetBoxMesh(), mesh);
+        CUtilRender.MeshBoundUpdate(mesh);
         mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(100, 100, 100), 16, 16, 100, 100), this.GetBlackTex());
         _fw.Res().Push(this.GetSphereMesh(), mesh);
+        CUtilRender.MeshBoundUpdate(mesh);
         _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA32F, 6)], new CVec2(2048, 2048), this.GetShadowWriteTex());
         let stex = _fw.Res().Find(this.GetShadowWriteTex());
     }

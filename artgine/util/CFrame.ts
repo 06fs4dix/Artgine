@@ -50,7 +50,7 @@ function WebInit()
 	invisibleButton.style.zIndex = "9999";
 	invisibleButton.style.pointerEvents = "auto"; // 반드시 있어야 클릭 됨
 	invisibleButton.style.background = "transparent"; // 안전하게
-	//document.body.appendChild(invisibleButton);
+	document.body.appendChild(invisibleButton);
 	invisibleButton.addEventListener("dblclick", () => {
 		if(gConsolChat==null)
 		{
@@ -225,7 +225,7 @@ export class CFrame
 		this.mPreferences=_pf;
 		if(CUtil.IsNode())	
 		{
-			CAlert.E("Not Support!");
+			//CAlert.E("Not Support!");
 			return;
 		}
 			

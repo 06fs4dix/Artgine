@@ -222,7 +222,9 @@ export class CShadowPlane extends CPaint2D
         
         this.PushTag("wind");
         //this.PushTag("zDepth");
-        
+        this.mBound.InitBound(0);
+        this.mBW.mBound.InitBound(0);
+        this.mBW.mRadian=0;
 
         //this.mWindInfluence.x = pt.mWindInfluence instanceof CVec1 ? pt.mWindInfluence.x : pt.mWindInfluence;
         

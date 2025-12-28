@@ -3,6 +3,7 @@ import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3
 import { NoiseFBM } from "../../artgine/z_file/Noise";
 import { 
     abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
+    Exp, 
     MatTypeToMat, max, min, mix, mod, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, 
     Sam2DToColor, SamCubeToColor, SaturateFloat, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
     V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, 
@@ -179,7 +180,11 @@ function ps_main_water()
         BranchDefault();
         normalTS = ProceduralFlowNormal(flow);
         BranchEnd();
-        normalDist = V3MulFloat(normalTS, 0.1 * flowLen);
+
+        var deltaDist : number = max(0.0, V3Len(V3SubV3(camPos, world)) - waterDeep.z * 0.5);   // 카메라 거리 - 최대 가시거리 / 2
+        var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / waterDeep.z);                    // 선형적인 감소 피하기 위해 1 / 1 + a로 계산
+        normalDist = V3MulFloat(normalTS, 0.1 * flowLen * to_screenUV.z * fallOff);
+        // to_screenUV.z를 여기에 곱해주면 화면이 매우 가까울 때의 아티팩트를 해결할 수 있다고 하는데 잘 모르겠음
     }
     var normalWS : CVec3 = V3Nor(new CVec3(normalTS.x * normalRange, max(normalTS.y * 0.72, 0.18), normalTS.z * normalRange));
 
@@ -259,7 +264,8 @@ function ps_main_water()
     
     // 반사 색상이 존재함
     else {
-        var fresnel : number = mix(pow(1.0 - max(V3Dot(view, normalWS), 0.0), 5.0), 1.0, 0.02);
+        var theta : number =  max(V3Dot(view, normalWS), 0.0);
+        var fresnel : number = 0.02 + 0.98 * pow(1.0 - theta, 5.0);
         L_cor = new CVec4(V3Mix(refractColor.xyz, reflectColor.rgb, fresnel), 1.0);
     }
 

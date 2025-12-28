@@ -5,7 +5,8 @@ import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CVec4 } from "../../geometry/CVec4.js";
 import { CAlpha } from "../../render/CAlpha.js";
-import { CColor, CColorVFX } from "../../render/CColor.js";
+import { CColor } from "../../render/CColor.js";
+import { CVFX } from "../../render/CVFX.js";
 import { CBase64File } from "../../util/CBase64File.js";
 import { CCurve } from "../../util/CCurve.js";
 import { SDF } from "../../z_file/SDF.js";
@@ -63,7 +64,7 @@ export class CClipColorAlpha extends CClip {
             this.mSTAlpha = _a;
             this.mEDAlpha = _b;
         }
-        else if (_b instanceof CColorVFX) {
+        else if (_b instanceof CVFX) {
             this.mSTColorVFX = _a;
             this.mEDColorVFX = _b;
         }
@@ -77,7 +78,7 @@ export class CClipColorAlpha extends CClip {
             this.mSTAlpha = _c;
             this.mEDAlpha = _d;
         }
-        if (_f instanceof CColorVFX) {
+        if (_f instanceof CVFX) {
             this.mSTColorVFX = _e;
             this.mEDColorVFX = _f;
         }
@@ -98,10 +99,10 @@ export class CClipColorAlpha extends CClip {
             this.mEDAlpha.y = SDF.eAlphaModel.None;
         }
         if (this.mSTColorVFX == null) {
-            this.mSTColorVFX = new CColorVFX();
+            this.mSTColorVFX = new CVFX();
         }
         if (this.mEDColorVFX == null) {
-            this.mEDColorVFX = new CColorVFX();
+            this.mEDColorVFX = new CVFX();
         }
     }
     EditForm(_pointer, _div, _input) {
@@ -109,7 +110,7 @@ export class CClipColorAlpha extends CClip {
             let btn = CDOM.TagToDom("button");
             btn.innerText = "생성";
             btn.onclick = () => {
-                this.mSTColorVFX = new CColorVFX();
+                this.mSTColorVFX = new CVFX();
                 this.EditRefresh();
             };
             _div.append(btn);
@@ -118,7 +119,7 @@ export class CClipColorAlpha extends CClip {
             let btn = CDOM.TagToDom("button");
             btn.innerText = "생성";
             btn.onclick = () => {
-                this.mEDColorVFX = new CColorVFX();
+                this.mEDColorVFX = new CVFX();
                 this.EditRefresh();
             };
             _div.append(btn);

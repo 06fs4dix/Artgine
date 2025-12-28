@@ -1,7 +1,7 @@
 import { CAModelCac, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
 import { NoiseFBM } from "../../artgine/z_file/Noise";
-import { abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CVec2, CVec3, CVec4, dFdx, dFdy, MatTypeToMat, max, min, mix, mod, Null, pow, reflect, Sam2D0ToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, V2AddV2, V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
+import { abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CVec2, CVec3, CVec4, dFdx, dFdy, MatTypeToMat, max, min, mod, Null, pow, reflect, Sam2D0ToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, V2AddV2, V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
 var out_position = Null();
 var out_color = Null();
 var to_uv = Null();
@@ -110,7 +110,9 @@ function ps_main_water() {
         BranchDefault();
         normalTS = ProceduralFlowNormal(flow);
         BranchEnd();
-        normalDist = V3MulFloat(normalTS, 0.1 * flowLen);
+        var deltaDist = max(0.0, V3Len(V3SubV3(camPos, world)) - waterDeep.z * 0.5);
+        var fallOff = 1.0 / (1.0 + deltaDist * 10.0 / waterDeep.z);
+        normalDist = V3MulFloat(normalTS, 0.1 * flowLen * to_screenUV.z * fallOff);
     }
     var normalWS = V3Nor(new CVec3(normalTS.x * normalRange, max(normalTS.y * 0.72, 0.18), normalTS.z * normalRange));
     var screenUV = V2AddV2(to_screenUV.xy, new CVec2(normalDist.x, normalDist.z));
@@ -156,7 +158,8 @@ function ps_main_water() {
         L_cor = new CVec4(refractColor.rgb, 1.0);
     }
     else {
-        var fresnel = mix(pow(1.0 - max(V3Dot(view, normalWS), 0.0), 5.0), 1.0, 0.02);
+        var theta = max(V3Dot(view, normalWS), 0.0);
+        var fresnel = 0.02 + 0.98 * pow(1.0 - theta, 5.0);
         L_cor = new CVec4(V3Mix(refractColor.xyz, reflectColor.rgb, fresnel), 1.0);
     }
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);

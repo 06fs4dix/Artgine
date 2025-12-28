@@ -1,8 +1,7 @@
 import { 
-    CMat, CVec2, CVec3, CVec4, 
-    Null, 
-    Sam2DToColor,
-    V3AddV3, V3MulFloat, V4MulFloat, V4MulMatCoordi 
+    CMat, CVec2, CVec4, 
+    Sam2DToColor, Null, 
+    V3AddV3, V3MulFloat, V4MulFloat, V4MulMatCoordi
 } from "./Shader";
 
 export var decalParam: CVec4=Null(); // 데칼텍스쳐인덱스x
@@ -14,19 +13,26 @@ export function DecalCac(_color : CVec4, _worldPos : CVec4) : CVec4
     var decalLocalPos : CVec4 = V4MulMatCoordi(_worldPos, decalInvWorldMat);
     decalLocalPos = V4MulFloat(decalLocalPos, 1.0 / decalLocalPos.w);
 
-    // 데칼 UV 계산
-    var decalUV : CVec3 = V3AddV3(V3MulFloat(decalLocalPos.xyz, 0.5), new CVec3(0.5, 0.5, 0.5));
-
     // 범위 검사
-    if(decalUV.x < 0.0 || decalUV.x > 1.0 || decalUV.y < 0.0 || decalUV.y > 1.0 || decalUV.z < 0.0 || decalUV.z > 1.0)
+    if(
+        decalLocalPos.x <= -1.0 || 
+        decalLocalPos.x >= +1.0 || 
+        decalLocalPos.y <= -1.0 || 
+        decalLocalPos.y >= +1.0 || 
+        decalLocalPos.z <= -1.0 || 
+        decalLocalPos.z >= +1.0
+    )
     {
         return _color;
     }
+
+    // 데칼 UV 계산
+    var decalUV : CVec2 = new CVec2(decalLocalPos.x * -0.5 + 0.5, decalLocalPos.y * 0.5 + 0.5);
     
     // 데칼 텍스쳐 샘플링
     var decalColor : CVec4 = decalParam;
     if(decalParam.w > 9.5) {
-       decalColor = Sam2DToColor(decalParam.x, new CVec2(1.0 - decalUV.x, 1.0 - decalUV.z));
+       decalColor = Sam2DToColor(decalParam.x, decalUV);
     }
 
     // 블렌딩

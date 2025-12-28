@@ -34,10 +34,12 @@ import { CBoundWorld, CBoundWorldPaint } from "../CBoundWorld.js"
 import { CFrame } from "../../../util/CFrame.js"
 import { CH5Canvas } from "../../../render/CH5Canvas.js"
 import { CRPAuto } from "../../canvas/CRPMgr.js"
-import { CColor, CColorVFX } from "../../../render/CColor.js"
+import { CColor } from "../../../render/CColor.js"
 import { CAlpha } from "../../../render/CAlpha.js"
 import { CPoolGeo } from "../../../geometry/CPoolGeo.js"
 import { CRay } from "../../../geometry/CRay.js"
+import { CVFX } from "../../../render/CVFX.js"
+import { CUtil } from "../../../basic/CUtil.js"
 
 
 export class CRenPaint
@@ -105,7 +107,7 @@ export class CPaint extends CComponent implements IMat
 	protected mShaderAttrMap=new Map<string,CShaderAttr>();
 	protected mColorModel  : CColor;
 	protected mAlphaModel  : CAlpha;
-	protected mColorVFX  : CColorVFX;
+	protected mVFX  : CVFX;
 	protected mTexCodi : CVec4;
 
 	public mAutoRPUpdate=true;
@@ -151,7 +153,7 @@ export class CPaint extends CComponent implements IMat
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
 		
 		
-		this.mColorVFX=null;
+		this.mVFX=null;
 		
 		//this.mBW.m
 		//this.mBoundFMatC=new CVec3(0,0,0);
@@ -233,8 +235,8 @@ export class CPaint extends CComponent implements IMat
 		this.mBound.SetType(CBound.eType.Box);
 		this.mBW.mBound.Reset();
 		this.mBW.mRadian=0;
-		this.mShaderAttrMap.delete("mColorVFX");
-		this.mColorVFX=null;
+		this.mShaderAttrMap.delete("mVFX");
+		this.mVFX=null;
 		this.mTag.clear();
 		this.mInit=false;
 		this.PushTag("alphaCut");
@@ -248,7 +250,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		if(_type==CObject.eShould.Editer && this.IsProxy()==false)
 		{
-			if(_member=="mColorModel" || _member=="mAlphaModel" || _member=="mColorVFX" )
+			if(_member=="mColorModel" || _member=="mAlphaModel" || _member=="mVFX" )
 					return true;
 		}
 
@@ -261,7 +263,7 @@ export class CPaint extends CComponent implements IMat
 			_member=="mDefaultAttr" || _member=="mBatchMap" || _member=="mBatchLastArr" || _member=="mBatchLastVF" || 
 			_member=="mBoundFMat" || _member=="mBoundFMatC" || _member=="mBoundFMatR" || _member=="mBound" ||
 			_member=="mAutoRPUpdate" || _member=="mCamCullUpdate" || _member=="mBW" ||
-			_member=="mColorModel" || _member=="mAlphaModel" || _member=="mColorVFX" )
+			_member=="mColorModel" || _member=="mAlphaModel" || _member=="mVFX" )
 				return false;
 		// if(_type==CObject.eShould.Proxy)
 		// {
@@ -307,13 +309,13 @@ export class CPaint extends CComponent implements IMat
 	}
 	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
-		if(_pointer.member=="mColorVFX" && this.mColorVFX==null)
+		if(_pointer.member=="mVFX" && this.mVFX==null)
 		{
 			let btn=CDOM.TagToDom("button");
 			btn.innerText="생성";
 			btn.onclick=()=>{
-				this.mShaderAttrMap.set("colorVFX",new CShaderAttr("colorVFX",new CColorVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
-				this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
+				this.mShaderAttrMap.set("VFX",new CShaderAttr("VFX",new CVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
+				this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 				this.PushTag("vfx");
 				this.ClearBatch();
 				this.EditRefresh();
@@ -480,8 +482,8 @@ export class CPaint extends CComponent implements IMat
 			this.PushTag("CAModel");
 
 
-		if(this.mShaderAttrMap.get("colorVFX")!=null)
-			this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
+		if(this.mShaderAttrMap.get("VFX")!=null)
+			this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 
 		
 		//this.m_alphaCut=this.m_shaderAttrMap.get("alphaCut");
@@ -587,7 +589,7 @@ export class CPaint extends CComponent implements IMat
 				this.PushTag("CAModel");
 				this.ClearCRPAuto();
 			}
-			else if(_pointer.IsRef(this.mColorVFX))
+			else if(_pointer.IsRef(this.mVFX))
 			{
 				this.PushTag("vfx");
 				
@@ -818,40 +820,45 @@ export class CPaint extends CComponent implements IMat
 	}
 	
 	
-	SetColorVFX(_offset : number,_v : CVec4);
-	SetColorVFX(_vfx : CColorVFX);
-	SetColorVFX(_a : any,_b : any=null)
+	SetVFX(_offset : number,_para : Array<number>,_type:number);
+	SetVFX(_vfx : CVFX);
+	SetVFX(_a : any,_b : any=null,_c=null)
 	{
-		if(this.mColorVFX==null)
+		if(this.mVFX==null)
 		{
-			this.mShaderAttrMap.set("colorVFX",new CShaderAttr("colorVFX",new CColorVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
-			this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
+			this.mShaderAttrMap.set("VFX",new CShaderAttr("VFX",new CVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
+			this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 			this.PushTag("vfx");
 			this.ClearBatch();
 		}
-		if(_a instanceof CColorVFX)
+		if(_a instanceof CVFX)
 		{
-			this.mColorVFX.Import(_a);
+			this.mVFX.Import(_a);
 		}
 		else
 		{
-			let cv=this.mColorVFX;
-			cv.SetV4(_a,_b);
+			let cv=this.mVFX;
+			if(_a!=0)	_a=2;
+
+			for(let i=0;i<_b.length;++i)
+				cv.mF32A[_a*8+i]=_b[i];
+			cv.mF32A[_a*8+7]=_c;
+			
 		}
 		this.PushTag("vfx");
 	}
-	GetColorVFX(_offset : number)
-	{
-		if(this.mColorVFX==null)
-		{
-			this.mShaderAttrMap.set("colorVFX",new CShaderAttr("colorVFX",new CColorVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
-			this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
-			this.PushTag("vfx");
-			this.ClearBatch();
-		}
-		let cv=this.mColorVFX;
-		return cv.GetV4(_offset);
-	}
+	// GetColorVFX(_offset : number)
+	// {
+	// 	if(this.mColorVFX==null)
+	// 	{
+	// 		this.mShaderAttrMap.set("colorVFX",new CShaderAttr("colorVFX",new CColorVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
+	// 		this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
+	// 		this.PushTag("vfx");
+	// 		this.ClearBatch();
+	// 	}
+	// 	let cv=this.mColorVFX;
+	// 	return cv.GetV4(_offset);
+	// }
 	
 	GetRGBA() : CVec4
 	{
@@ -1144,7 +1151,7 @@ export class CPaint extends CComponent implements IMat
 		}
 		
 		//let texList=new Array();
-		if(this.mAutoLoad!=null && this.mOwner!=null && this.mOwner.GetFrame()!=null)
+		if(this.mAutoLoad!=null && this.mOwner!=null && this.mOwner.GetFrame()!=null && CUtil.IsNode()==false)
 		{
 			for(let i=0;i<this.mTextureKey.length;++i)
 			{
@@ -1264,8 +1271,8 @@ export class CPaint extends CComponent implements IMat
 		
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
-		if(this.mShaderAttrMap.get("colorVFX")!=null)
-			this.mColorVFX=this.mShaderAttrMap.get("colorVFX").mData;
+		if(this.mShaderAttrMap.get("VFX")!=null)
+			this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 		if(this.mTextureKey.length>0)
 			this.SetTexture(this.mTextureKey);
 	}
@@ -1307,7 +1314,7 @@ export class CPaint extends CComponent implements IMat
 	}
 
 	// sca(1,1,1)인 박스를 lMat으로 옮긴다고 가정함
-	AddDecal(_decal : string|CVec4, _ray : CRay, _size : CVec3, _imageRot : number = 0) {
+	AddDecal(_decal : string|CVec4, _pos : CVec3, _size : CVec3, _dir : CVec3 = new CVec3(0, 1, 0), _imageRot : number = 0) {
 		// shaderAttr 구성
 		let DecalMat=this.FindCShaderAttr("decalInvWorldMat");
 		let DecalParam=this.FindCShaderAttr("decalParam");
@@ -1320,74 +1327,52 @@ export class CPaint extends CComponent implements IMat
 			this.PushCShaderAttr(DecalParam);
 		}
 		
-		// decalMatrix 구성
-		const pos = CMath.V3AddV3(_ray.GetOriginal(), CMath.V3MulFloat(_ray.GetDirect(), _size.y * 0.5));
-		const sca = _size;
-		const rot = CMath.FromToRotation(new CVec3(0, -1, 0), CMath.V3Nor(_ray.GetDirect()));
+		// 데칼 위치 / 스케일 / 로테이션
+		const zAxis = CMath.V3Nor(_dir);
+		let up = new CVec3(0, 1, 0);
+		if(Math.abs(CMath.V3Dot(zAxis, up)) > 1-1e-8) {
+			up = new CVec3(0, 0, -1);
+		}
+		const xAxis = CMath.V3Nor(CMath.V3Cross(up, zAxis));
+		const yAxis = CMath.V3Nor(CMath.V3Cross(zAxis, xAxis));
 
-		const tempMat1 = CPoolGeo.ProductMat();
-		const cosTheta = Math.cos(_imageRot);
-		const sinTheta = Math.sin(_imageRot);
+		const cosT = Math.cos(_imageRot);
+		const sinT = Math.sin(_imageRot);
 
-		CMath.QutToMat(rot, tempMat1);
+		const rx = CMath.V3Nor(new CVec3(xAxis.x * cosT + yAxis.x * sinT, xAxis.y * cosT + yAxis.y * sinT, xAxis.z * cosT + yAxis.z * sinT));
+		const ry = CMath.V3Nor(new CVec3(yAxis.x * cosT - xAxis.x * sinT, yAxis.y * cosT - xAxis.y * sinT, yAxis.z * cosT - xAxis.z * sinT));
 
-		const r0x = tempMat1.F32A()[0];
-		const r0y = tempMat1.F32A()[1];
-		const r0z = tempMat1.F32A()[2];
+		// 데칼 월드 행렬
+		DecalMat.mData.mF32A[0] = rx.x * _size.x; DecalMat.mData.mF32A[4] = ry.x * _size.y; DecalMat.mData.mF32A[8] = zAxis.x * _size.z;
+		DecalMat.mData.mF32A[1] = rx.y * _size.x; DecalMat.mData.mF32A[5] = ry.y * _size.y; DecalMat.mData.mF32A[9] = zAxis.y * _size.z;
+		DecalMat.mData.mF32A[2] = rx.z * _size.x; DecalMat.mData.mF32A[6] = ry.z * _size.y; DecalMat.mData.mF32A[10] = zAxis.z * _size.z;
+		DecalMat.mData.mF32A[3] = 0; 			  DecalMat.mData.mF32A[7] = 0; 				DecalMat.mData.mF32A[11] = 0;
 
-		const r1x = tempMat1.F32A()[4];
-		const r1y = tempMat1.F32A()[5];
-		const r1z = tempMat1.F32A()[6];
+		DecalMat.mData.mF32A[12] = _pos.x;
+		DecalMat.mData.mF32A[13] = _pos.y;
+		DecalMat.mData.mF32A[14] = _pos.z;
+		DecalMat.mData.mF32A[15] = 1.0;
 
-		const r2x = tempMat1.F32A()[8];
-		const r2y = tempMat1.F32A()[9];
-		const r2z = tempMat1.F32A()[10];
-
-		tempMat1.F32A()[0] = r0x * cosTheta + r2x * sinTheta;
-		tempMat1.F32A()[1] = r0y * cosTheta + r2y * sinTheta;
-		tempMat1.F32A()[2] = r0z * cosTheta + r2z * sinTheta;
-
-		tempMat1.F32A()[4] = r1x;
-		tempMat1.F32A()[5] = r1y;
-		tempMat1.F32A()[6] = r1z;
-
-		tempMat1.F32A()[8] = -r0x * sinTheta + r2x * cosTheta;
-		tempMat1.F32A()[9] = -r0y * sinTheta + r2y * cosTheta;
-		tempMat1.F32A()[10] = -r0z * sinTheta + r2z * cosTheta;
-		
-		tempMat1.F32A()[0] *= sca.x;
-		tempMat1.F32A()[1] *= sca.x;
-		tempMat1.F32A()[2] *= sca.x;
-
-		tempMat1.F32A()[4] *= sca.y;
-		tempMat1.F32A()[5] *= sca.y;
-		tempMat1.F32A()[6] *= sca.y;
-
-		tempMat1.F32A()[8] *= sca.z;
-		tempMat1.F32A()[9] *= sca.z;
-		tempMat1.F32A()[10] *= sca.z;
-
-		tempMat1.F32A()[12] = pos.x;
-		tempMat1.F32A()[13] = pos.y;
-		tempMat1.F32A()[14] = pos.z;
-
-		CMath.MatInvert(tempMat1, DecalMat.mData);
-
-		CPoolGeo.RecycleMat(tempMat1);
+		// 데칼 월드 역행렬
+		CMath.MatInvert(DecalMat.mData, DecalMat.mData);
 
 		// 텍스쳐 또는 컬러값
 		if(typeof _decal == "string") {
-			DecalParam.mData.x = 4.0;
-			DecalParam.mData.w = 10.0;
+			DecalParam.mData.x = 4;
+			DecalParam.mData.w = 10;
 			let DecalTex=this.FindCShaderAttr(4);
-			this.PushCShaderAttr(new CShaderAttr(4.0, _decal));
+			if(DecalTex==null) {
+				DecalTex=new CShaderAttr(4, _decal);
+				this.PushCShaderAttr(DecalTex);
+			}
+			DecalTex.mKey = _decal;
 		}
 		else {
 			DecalParam.mData.Import(_decal);
 		}
 
-		if(!this.GetTag().has("decal"))
-			this.PushTag("decal");
+		// 태그 설정
+		this.PushTag("decal");
 	}
 	RemoveDecal() {
 		if(this.GetTag().has("decal"))

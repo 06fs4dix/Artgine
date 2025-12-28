@@ -8,7 +8,8 @@ import {CVec2} from "../../geometry/CVec2.js";
 import {CVec3} from "../../geometry/CVec3.js";
 import {CVec4} from "../../geometry/CVec4.js";
 import { CAlpha } from "../../render/CAlpha.js";
-import { CColor, CColorVFX } from "../../render/CColor.js";
+import { CColor } from "../../render/CColor.js";
+import { CVFX } from "../../render/CVFX.js";
 import {CBase64File} from "../../util/CBase64File.js";
 import {CCurve} from "../../util/CCurve.js";
 import { SDF } from "../../z_file/SDF.js";
@@ -93,8 +94,8 @@ export class CClipColorAlpha extends CClip
 	public mEDColor : CColor;
 	public mSTAlpha : CAlpha;
 	public mEDAlpha : CAlpha;
-	public mSTColorVFX : CColorVFX;
-	public mEDColorVFX : CColorVFX;
+	public mSTColorVFX : CVFX;
+	public mEDColorVFX : CVFX;
 
 	public mCurve=new CCurve();
 
@@ -102,13 +103,13 @@ export class CClipColorAlpha extends CClip
 	constructor(_time : number,_delay : number,_stRGBA:CVec4,_edRGBA:CVec4);
 	//새로운 생성자
 	//stColor기준으로 계산함(stColor가 HSV면 edColor가 다른 스페이스에 있어도 HSV기준으로 계산)
-	constructor(_time : number,_delay : number,_stCol:CColor,_edCol:CColor,_stA:CAlpha,_edA:CAlpha,_stVFX:CColorVFX,_edVFX:CColorVFX);
+	constructor(_time : number,_delay : number,_stCol:CColor,_edCol:CColor,_stA:CAlpha,_edA:CAlpha,_stVFX:CVFX,_edVFX:CVFX);
 	constructor(_time : number,_delay : number,_st:CColor,_ed:CColor);
 	constructor(_time : number,_delay : number,_st:CAlpha,_ed:CAlpha);
-	constructor(_time : number,_delay : number,_st:CColorVFX,_ed:CColorVFX);
+	constructor(_time : number,_delay : number,_st:CVFX,_ed:CVFX);
 
 
-	constructor(_time : number,_delay : number,_a : CVec4|CColor|CAlpha|CColorVFX,_b: CVec4|CColor|CAlpha|CColorVFX,_c=null,_d=null,_e=null,_f=null)
+	constructor(_time : number,_delay : number,_a : CVec4|CColor|CAlpha|CVFX,_b: CVec4|CColor|CAlpha|CVFX,_c=null,_d=null,_e=null,_f=null)
 	{
 		super(_time,_delay);
 
@@ -126,7 +127,7 @@ export class CClipColorAlpha extends CClip
 			this.mEDAlpha = _b;
 			
 		}
-		else if(_b instanceof CColorVFX) 
+		else if(_b instanceof CVFX) 
 		{
 			
 			this.mSTColorVFX = _a as any;
@@ -146,7 +147,7 @@ export class CClipColorAlpha extends CClip
 			this.mSTAlpha = _c as any;
 			this.mEDAlpha = _d;
 		}
-		if(_f instanceof CColorVFX) 
+		if(_f instanceof CVFX) 
 		{
 			this.mSTColorVFX = _e as any;
 			this.mEDColorVFX = _f;
@@ -175,11 +176,11 @@ export class CClipColorAlpha extends CClip
 		}
 		if(this.mSTColorVFX==null)
 		{
-			this.mSTColorVFX=new CColorVFX();
+			this.mSTColorVFX=new CVFX();
 		}
 		if(this.mEDColorVFX==null)
 		{
-			this.mEDColorVFX=new CColorVFX();
+			this.mEDColorVFX=new CVFX();
 		}
 		
 		
@@ -192,7 +193,7 @@ export class CClipColorAlpha extends CClip
 			let btn=CDOM.TagToDom("button");
 			btn.innerText="생성";
 			btn.onclick=()=>{
-				this.mSTColorVFX = new CColorVFX();
+				this.mSTColorVFX = new CVFX();
 				this.EditRefresh();
 			};
 			_div.append(btn);
@@ -202,7 +203,7 @@ export class CClipColorAlpha extends CClip
 			let btn=CDOM.TagToDom("button");
 			btn.innerText="생성";
 			btn.onclick=()=>{
-				this.mEDColorVFX = new CColorVFX();
+				this.mEDColorVFX = new CVFX();
 				this.EditRefresh();
 			};
 			_div.append(btn);

@@ -1,4 +1,4 @@
-import { ColorVFX } from "./ColorFun";
+import { VFXDown2, VFX } from "./ColorFun";
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -16,7 +16,7 @@ var worldMat : CMat=Null();
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 
-var colorVFX : CMat=Null();
+
 
 //varying
 var to_uv : ToV2 = new CVec2(0.0, 0.0);
@@ -189,7 +189,7 @@ Build("Artgine/Shader/PostUpSample",["sample", "up"],
 Build("Artgine/Shader/PostVFX",["vfx"],
     vs_main, [
         worldMat,viewMat,projectMat,
-        colorVFX, time
+        VFX, time
     ],[out_position,to_uv],
     ps_main_vfx,[out_color]);
 
@@ -641,6 +641,5 @@ function ps_main_UpSample() {
 
 function ps_main_vfx()
 {
-    var src : CVec4 = Sam2DToColor(0.0, to_uv);
-    out_color = ColorVFX(src, to_uv, to_uv, colorVFX, time);
+    out_color = VFXDown2(to_uv, VFX, time);
 }

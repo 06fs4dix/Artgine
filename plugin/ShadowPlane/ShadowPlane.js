@@ -177,6 +177,9 @@ export class CShadowPlane extends CPaint2D {
         this.PushTag("shadowPlane");
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
         this.PushTag("wind");
+        this.mBound.InitBound(0);
+        this.mBW.mBound.InitBound(0);
+        this.mBW.mRadian = 0;
     }
     StartChk() {
         if (this.mStartChk == true) {

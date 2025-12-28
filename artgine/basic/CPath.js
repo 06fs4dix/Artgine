@@ -17,7 +17,6 @@ export class CPath {
         Context: "Context",
         Route: "Route",
         Endpoint: "Endpoint",
-        Resources: "Resources",
     };
     static Origin() {
         return location.origin;
@@ -33,18 +32,12 @@ export class CPath {
             g_root = CPath.Join(CPath.eUrl.Protocol + CPath.eUrl.Host + CPath.eUrl.Port + CPath.eUrl.Context);
         return g_root;
     }
-    static PHPR() {
-        if (g_root == null)
-            g_root = CPath.Join(CPath.eUrl.Protocol + CPath.eUrl.Host + CPath.eUrl.Port + CPath.eUrl.Resources);
-        return g_root;
-    }
     static PHPCR() {
         return CPath.Join(CPath.eUrl.Protocol + CPath.eUrl.Host + CPath.eUrl.Port + CPath.eUrl.Context + CPath.eUrl.Route);
     }
     static Join(_type) {
-        var str = "";
+        let str = "";
         if (CUtil.IsNode()) {
-            let str = "";
             let dir = __dirname.replace(/\\/g, "/");
             let parts = dir.split("/");
             let idx = 0;
@@ -56,10 +49,6 @@ export class CPath {
                 }
                 else
                     idx = parts.map(p => p.toLowerCase()).lastIndexOf("artgine");
-                str += parts.slice(0, idx).join("/") + "/";
-            }
-            else if (_type.includes(CPath.eUrl.Resources)) {
-                idx = parts.map(p => p.toLowerCase()).lastIndexOf("artgine");
                 str += parts.slice(0, idx).join("/") + "/";
             }
             return str;

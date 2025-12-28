@@ -40,11 +40,11 @@ export class PacketWorld {
         }
         return new CStream().Push("ZoneConnect").Push(uniqueKey).Push(nick);
     }
-    static ZoneReady(zone, offset = null) {
+    static ZoneReady(zone, key = null) {
         if (zone instanceof CStream) {
-            return zone.GetPacket("zone", "offset");
+            return zone.GetPacket("zone", "key");
         }
-        return new CStream().Push("ZoneReady").Push(zone).Push(offset);
+        return new CStream().Push("ZoneReady").Push(zone).Push(key);
     }
     static ZoneJoinUser(uniqueKey, state = null) {
         if (uniqueKey instanceof CStream) {

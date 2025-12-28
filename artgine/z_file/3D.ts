@@ -47,8 +47,9 @@ import {
 	SDF
 } from "./SDF";
 import { 
-	CAModelCac, ColorVFX,
-	GetTexCodiedUV
+	CAModelCac, VFXDown2,
+	GetTexCodiedUV,
+	VFX
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -75,7 +76,7 @@ var sam2DCount : number=Null();
 var material: CVec4 = new CVec4(0.0,0.0,0.0,1.0);
 
 var alphaCut : number = 0.1;
-var colorVFX : CMat=Null();
+
 
 //mat
 var worldMat : CMat=Null();
@@ -501,7 +502,7 @@ function Caustics(_color : CVec3, _map : number, _world : CVec3, _flowDir : CVec
 
 function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
 {
-	var heightDiff : number = waterDeep.x - _world.y;
+	var heightDiff : number = abs(waterDeep.x - _world.y);
 	// if(heightDiff < 0.0) return _color;
 	
 	// foam mask
@@ -510,7 +511,7 @@ function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
 	}
 	else {
 		var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
-		_color = V3Mix(deepColor, V3MulV3(_color, shallowColor), depthBlend);
+		_color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);	// 색상이 물 색상과 크게 다르면 곱셈으로 했을 때 이상한 값이 나옴
 		var distanceBlend : number = 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, _world.xyz)) / waterDeep.z);
 		_color = V3Mix(deepColor, _color, distanceBlend);
 	}
@@ -553,7 +554,14 @@ function ps_main()
 	var normal : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
 
 
-	var L_cor : CVec4=Sam2DToColor(to_ref.x, uv);
+	var L_cor : CVec4;
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(uv,VFX,time);
+	BranchDefault();
+	L_cor=Sam2DToColor(to_ref.x, uv);
+	BranchEnd();
+
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
@@ -563,9 +571,7 @@ function ps_main()
 	L_cor=DecalCac(L_cor, world);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,uv,uv,colorVFX,time);
-	BranchEnd();
+	
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) discard;
 	BranchEnd();
@@ -595,7 +601,7 @@ function ps_main()
 	BranchEnd();
 
 	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, causticFlowFreq, camPos, time]);
-	if(world.y > waterDeep.x+10.0) discard;	// 물 높이보다 낮은 것만 랜더링
+	if(world.y > waterDeep.x + waterDeep.w) discard;	// (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
 	out_color.rgb = Caustics(out_color.rgb, causticMap, world.xyz, causticFlowDir);
 	out_color.rgb = WaterProcessing(out_color.rgb, world);
 	BranchEnd();
@@ -614,18 +620,23 @@ function ps_main_gBuffer() {
 	BranchEnd();
 
 	var L_cor : CVec4;
+	
+
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(uv,VFX,time);
+	BranchDefault();
 	if(sam2DCount == 1.0)
 		L_cor = Sam2DToColor(0.0, uv);
 	else
 		L_cor = Sam2DToColor(to_ref.x, uv);
+	BranchEnd();
+	
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,uv,uv,colorVFX,time);
-	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) discard;
@@ -661,18 +672,21 @@ function ps_main_gBuffer_multi() {
 	BranchEnd();
 
 	var L_cor : CVec4;
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(uv,VFX,time);
+	BranchDefault();
 	if(sam2DCount == 1.0)
 		L_cor = Sam2DToColor(0.0, uv);
 	else
 		L_cor = Sam2DToColor(to_ref.x, uv);
+	BranchEnd();
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,uv,uv,colorVFX,time);
-	BranchEnd();
+	
 
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) discard;
@@ -739,15 +753,18 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 }
 function ps_main_shadow_write() 
 {
-	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
+	var L_cor : CVec4;
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(to_uv,VFX,time);
+	BranchDefault();
+	L_cor = Sam2DToColor(0.0, to_uv);
+	BranchEnd();
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv,to_uv,colorVFX,time);
-	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) 	discard;
@@ -847,15 +864,18 @@ function ps_main_shadow_read()
 
 	BranchEnd();
 
-	var L_cor : CVec4 = Sam2DToColor(0.0, uv);
+	var L_cor : CVec4;
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(uv,VFX,time);
+	BranchDefault();
+	L_cor = Sam2DToColor(0.0, uv);
+	BranchEnd();
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv,to_uv,colorVFX,time);
-	BranchEnd();
 
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if(L_cor.a < alphaCut) 	discard;
@@ -883,15 +903,19 @@ function ps_main_bake() {
 	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
 	BranchEnd();
 
-	var L_cor : CVec4 = Sam2DToColor(to_ref.x,uv);
+	var L_cor : CVec4;
+
+	BranchBegin("vfx","VFX",[VFX,time]);
+	L_cor=VFXDown2(uv,VFX,time);
+	BranchDefault();
+	L_cor = Sam2DToColor(to_ref.x, uv);
+	BranchEnd();
 
 	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
 	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	BranchEnd();
 
-	BranchBegin("vfx","VFX",[colorVFX,time]);
-	L_cor=ColorVFX(L_cor,to_uv,to_uv,colorVFX,time);
-	BranchEnd();
+	
 
 	BranchBegin("alphaCut","A",[alphaCut]);
 	if ( L_cor.a < alphaCut ) discard;

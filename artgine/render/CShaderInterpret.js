@@ -249,6 +249,8 @@ export class CShaderInterpretGL extends CShaderInterpret {
         let funStr = "";
         const vfCount = new Array(CVertexFormat.eIdentifier.Count).fill(0);
         for (const funKey of _useFun) {
+            if (_addedFun.indexOf(funKey) != -1)
+                continue;
             const fun = this.mFunction.get(funKey);
             let tempStr = "";
             switch (fun.mReturn) {
@@ -299,7 +301,7 @@ export class CShaderInterpretGL extends CShaderInterpret {
             }
             tempStr += "){" + fun.mLine + "}";
             let arrFun = [];
-            _addedFun.push(..._useFun);
+            _addedFun.push(funKey);
             for (let usedFun of fun.mUseFun) {
                 if (_addedFun.indexOf(usedFun) == -1) {
                     arrFun.push(usedFun);

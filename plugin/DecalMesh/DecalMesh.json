@@ -3,7 +3,7 @@
 		"artgine":1
     },
     "version":1,
-    "text":"평면에 쉐도우를 그리는 컴포넌트",
+    "text":"DecalMesh",
     "include":true
 
 }

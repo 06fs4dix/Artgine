@@ -12,6 +12,7 @@ import { URLPatterns } from "../network/CServerMain.js";
 import { CServerSocker } from "../network/CServerSocket.js";
 import { CTimer } from "../system/CTimer.js";
 import { PacketWorld } from "./PacketWorld.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
 class CZoneUser {
     constructor(ws, _pk) {
         this.mWebSocket = ws;
@@ -23,7 +24,7 @@ class CZoneUser {
     mPrivateKey = null;
     mZoneWorker = null;
     mWebSocket;
-    mZoneKey = "";
+    mZone = "";
     GetPK() { return this.mPrivateKey; }
     GetUK() { return this.mUniqueKey; }
     GetWS() { return null; }
@@ -42,14 +43,14 @@ export class CZoneWorker {
         Exit: 3,
         Already: 4,
     };
-    constructor(_worker, _offset) {
+    constructor(_worker, _key) {
         this.mWorker = _worker;
-        this.mOffset = _offset;
+        this.mKey = _key;
     }
     mWorker;
-    mOffset;
     mState = CZoneWorker.eState.Init;
     mUserMap = new Map();
+    mZone = "";
     mKey = "";
     Send(_stream) {
         this.mWorker.postMessage(_stream.Data());
@@ -57,12 +58,15 @@ export class CZoneWorker {
 }
 export class CZone {
     mZone = "";
-    mOffset = 0;
+    mKey = "";
     mUserMax = 1024;
     mUserSet = new Set();
     mParentPort;
+    mFrameTime = 0;
+    mFrameCount = 0;
     constructor(_pp) {
         this.mParentPort = _pp;
+        this.mKey = CUniqueID.GetHash();
     }
     PushUser(_key) {
         if (this.mUserSet.has(_key)) {
@@ -87,7 +91,13 @@ export class CZone {
         }, 1);
     }
     Update(_update) {
-        CConsol.Log(this.constructor.name + " / " + _update.DeltaTime());
+        this.mFrameTime += _update.DeltaTime();
+        this.mFrameCount++;
+        if (this.mFrameTime > 1) {
+            CConsol.Log(this.constructor.name + " / " + this.mFrameCount);
+            this.mFrameTime = 0;
+            this.mFrameCount = 0;
+        }
     }
     ThreadMessage(parentPort, message) {
     }
@@ -119,7 +129,7 @@ let CWorldServer = class CWorldServer extends CServerSocker {
             return;
         let ju = this.mJoinUser[0];
         for (let [key, zone] of this.mZoneMap) {
-            if (zone.mState == CZoneWorker.eState.Ready && zone.mKey == ju.mZoneKey) {
+            if (zone.mState == CZoneWorker.eState.Ready && zone.mZone == ju.mZone) {
                 zone.Send(PacketWorld.ZoneConnect(ju.GetUK(), ju.mNick));
                 break;
             }
@@ -147,7 +157,7 @@ let CWorldServer = class CWorldServer extends CServerSocker {
                 return;
             let ConnectAck = PacketWorld.WorldConnect(stream);
             let zu = new CZoneUser(ws, ConnectAck.privateKey);
-            zu.mZoneKey = this.UserSelectZone(ConnectAck.privateKey);
+            zu.mZone = this.UserSelectZone(ConnectAck.privateKey);
             zu.mNick = ConnectAck.nick;
             this.mJoinUser.push(zu);
             this.mUserMap.set(ws, zu);
@@ -177,7 +187,7 @@ let CWorldServer = class CWorldServer extends CServerSocker {
         }
         else if (header == PacketWorld.eHeader.ZoneReady) {
             let ZoneInit = PacketWorld.ZoneReady(stream);
-            let zone = this.mZoneMap.get(ZoneInit.offset);
+            let zone = this.mZoneMap.get(ZoneInit.key);
             zone.mState = CZoneWorker.eState.Ready;
         }
         else if (header == PacketWorld.eHeader.ZoneRelay) {

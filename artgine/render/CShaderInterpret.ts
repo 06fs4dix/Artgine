@@ -351,6 +351,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 
 		for(const funKey of _useFun) {
 
+			if(_addedFun.indexOf(funKey)!=-1)	continue;
 			// if(funKey=="SimplifiedFresnelSchlick")
 			// {
 			// 	CConsol.Log("SimplifiedFresnelSchlick");
@@ -390,22 +391,40 @@ export class CShaderInterpretGL extends CShaderInterpret
 				var vf=this.VFPasing(fun.mPara[i],vfCount);
 				switch(vf.eachCount)
 				{
-					case 1:tempStr+="float";break;
+					case 1:
+						//지우지 마라. 인테져 대응 임시 코드
+						// if(vf.text.indexOf("Integer")!=-1)
+						// 	tempStr+="int";
+						// else
+							tempStr+="float";
+					break;
 					case 2:tempStr+="vec2";break;
 					case 3:tempStr+="vec3";break;
 					case 4:tempStr+="vec4";break;
 					case 16:tempStr+="mat4";break;
 				}
+				
+				
 				tempStr+=" "+vf.text;
 			}
 			tempStr+="){" + fun.mLine+"}";
 
 			let arrFun = [];
-			_addedFun.push(..._useFun);
+			_addedFun.push(funKey);
 			for(let usedFun of fun.mUseFun) {
 				if(_addedFun.indexOf(usedFun) == -1) {
 					arrFun.push(usedFun);
 				}
+				// else
+				// {
+				// 	if(_useFun instanceof Array &&_useFun.indexOf(usedFun)!=-1)
+				// 	{
+				// 		_useFun.splice(_useFun.indexOf(usedFun),1);
+				// 		arrFun.push(usedFun);
+				// 		//_addedFun.splice(_addedFun.indexOf(usedFun));
+				// 	}
+				// 	//CConsol.Log(usedFun);
+				// }
 			}
 			funStr += this.AttachFun(arrFun, _addedFun);
 			funStr += tempStr;

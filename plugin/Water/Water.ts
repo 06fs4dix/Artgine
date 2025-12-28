@@ -71,12 +71,11 @@ export class CWater extends CSubject
     mPaint : CPaint3D;
     mReflector : CReflector;   // 반사 텍스쳐 굽는 컴포넌트
     mRefractor : CRefractor;   // 굴절 텍스쳐 굽는 컴포넌트
-    mEnvMap : CEnvMap;
 
     // 물 색상
     mDeepColor : CVec3 = new CVec3();
     mShallowColor : CVec3 = new CVec3();
-    mWaterDeep : CVec3 = new CVec4(10,255,2000,5); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 물 속이 보이는 최대 거리, w : 코스틱이 생기는 최대 깊이
+    mWaterDeep : CVec4 = new CVec4(10,255,2000,10); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 물 속이 보이는 최대 거리, w : 커품이 생기는 최대 깊이
 
     // 코스틱
     mCausticTexture : string = null;
@@ -100,6 +99,15 @@ export class CWater extends CSubject
 
     GetPT() {
         return this.mPaint;
+    }
+
+    Update(_update: CUpdate): void {
+        super.Update(_update);
+
+        // 물 깊이 자동 변경
+        if(this.mUpdateMat == CUpdate.eType.Updated) {
+            this.mWaterDeep.x = this.GetPos().y;
+        }
     }
 
     SetWaterDeep(_deepHeight : number,_farDistance : number, _deepColor : CVec3, _shallowColor : CVec3) {
@@ -261,7 +269,7 @@ export class CReflector extends CBrushComp
         }
     }
 
-    AddWaterDeep(_waterDeep : CVec3)
+    AddWaterDeep(_waterDeep : CVec4)
     {
         const rp = this.mWrite[0];
         rp.mTag.add("waterReflect");
@@ -402,7 +410,7 @@ export class CRefractor extends CBrushComp
         }
     }
 
-    AddWaterDeep(_waterDeep : CVec3, _shallowColor : CVec3, _deepColor : CVec3)
+    AddWaterDeep(_waterDeep : CVec4, _shallowColor : CVec3, _deepColor : CVec3)
     {
         const rp = this.mWrite[0];
         rp.mTag.add("waterRefract");

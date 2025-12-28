@@ -56,10 +56,9 @@ export class CWater extends CSubject {
     mPaint;
     mReflector;
     mRefractor;
-    mEnvMap;
     mDeepColor = new CVec3();
     mShallowColor = new CVec3();
-    mWaterDeep = new CVec4(10, 255, 2000, 5);
+    mWaterDeep = new CVec4(10, 255, 2000, 10);
     mCausticTexture = null;
     mCausticFlowDir = new CVec2(0, 0);
     mCausticFlowFrequency = new CVec1(1);
@@ -77,6 +76,12 @@ export class CWater extends CSubject {
     }
     GetPT() {
         return this.mPaint;
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.mUpdateMat == CUpdate.eType.Updated) {
+            this.mWaterDeep.x = this.GetPos().y;
+        }
     }
     SetWaterDeep(_deepHeight, _farDistance, _deepColor, _shallowColor) {
         if (_deepHeight != null)

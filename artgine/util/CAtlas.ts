@@ -653,7 +653,6 @@ export class CAtlas extends CObject {
 			const img = new Image();
 			img.crossOrigin = "Anonymous";
 			img.addEventListener('load', async (_event) => {
-				CConsol.Log("pro");
 				//rect 없는 경우 생성
 				if (this.m_rect == null) {
 					this.m_rect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);

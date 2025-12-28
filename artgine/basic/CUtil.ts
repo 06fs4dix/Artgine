@@ -1,4 +1,3 @@
-
 export class CUtil
 {
     static IsNode() 

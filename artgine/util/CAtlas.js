@@ -12,7 +12,6 @@ import { CObject } from "../basic/CObject.js";
 import { CClass } from "../basic/CClass.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CUtilRender } from "../render/CUtilRender.js";
-import { CConsol } from "../basic/CConsol.js";
 let g_atlJBox;
 export class CAtlas extends CObject {
     mTexCodi = new Array();
@@ -545,7 +544,6 @@ export class CAtlas extends CObject {
             const img = new Image();
             img.crossOrigin = "Anonymous";
             img.addEventListener('load', async (_event) => {
-                CConsol.Log("pro");
                 if (this.m_rect == null) {
                     this.m_rect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);
                     for (let codi of this.mTexCodi) {

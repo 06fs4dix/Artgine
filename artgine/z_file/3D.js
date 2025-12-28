@@ -1,6 +1,6 @@
-import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, MatMix, Sam2D0ToColor, MatTypeToMat, min, abs, max, dFdy, V3Len, length, dFdx, V3MulV3, V3Mix, V3SubV3, SaturateFloat, V2AddV2, V2Len, SaturateV3, } from "./Shader";
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, MatMix, Sam2D0ToColor, MatTypeToMat, min, abs, max, dFdy, V3Len, length, dFdx, V3Mix, V3SubV3, SaturateFloat, V2AddV2, V2Len, SaturateV3, } from "./Shader";
 import { SDF } from "./SDF";
-import { CAModelCac, ColorVFX, GetTexCodiedUV } from "./ColorFun";
+import { CAModelCac, VFXDown2, GetTexCodiedUV, VFX } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, jitter, calcParallaxShadow } from "./Shadow";
@@ -13,7 +13,6 @@ var parallaxNormal = Attribute(0, "canvas");
 var sam2DCount = Null();
 var material = new CVec4(0.0, 0.0, 0.0, 1.0);
 var alphaCut = 0.1;
-var colorVFX = Null();
 var worldMat = Null();
 var worldMatShort = Null();
 var worldMatType = 16.0;
@@ -278,13 +277,13 @@ function Caustics(_color, _map, _world, _flowDir) {
     return SaturateV3(_color);
 }
 function WaterProcessing(_color, _world) {
-    var heightDiff = waterDeep.x - _world.y;
+    var heightDiff = abs(waterDeep.x - _world.y);
     if (heightDiff < waterDeep.w) {
         _color = V3Mix(new CVec3(0.8, 0.8, 0.8), shallowColor, 0.1);
     }
     else {
         var depthBlend = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
-        _color = V3Mix(deepColor, V3MulV3(_color, shallowColor), depthBlend);
+        _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
         var distanceBlend = 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, _world.xyz)) / waterDeep.z);
         _color = V3Mix(deepColor, _color, distanceBlend);
     }
@@ -308,15 +307,17 @@ function ps_main() {
     world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz)))));
     BranchEnd();
     var normal = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
-    var L_cor = Sam2DToColor(to_ref.x, uv);
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
     BranchEnd();
     BranchBegin("decal", "decal", [decalParam, decalInvWorldMat]);
     L_cor = DecalCac(L_cor, world);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -339,7 +340,7 @@ function ps_main() {
         discard;
     BranchEnd();
     BranchBegin("waterRefract", "waterRefract", [waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, causticFlowFreq, camPos, time]);
-    if (world.y > waterDeep.x + 10.0)
+    if (world.y > waterDeep.x + waterDeep.w)
         discard;
     out_color.rgb = Caustics(out_color.rgb, causticMap, world.xyz, causticFlowDir);
     out_color.rgb = WaterProcessing(out_color.rgb, world);
@@ -351,15 +352,16 @@ function ps_main_gBuffer() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
     BranchEnd();
     var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
     if (sam2DCount == 1.0)
         L_cor = Sam2DToColor(0.0, uv);
     else
         L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -386,15 +388,16 @@ function ps_main_gBuffer_multi() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
     BranchEnd();
     var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
     if (sam2DCount == 1.0)
         L_cor = Sam2DToColor(0.0, uv);
     else
         L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, uv, uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -445,12 +448,14 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
     out_position = P;
 }
 function ps_main_shadow_write() {
-    var L_cor = Sam2DToColor(0.0, to_uv);
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(to_uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(0.0, to_uv);
+    BranchEnd();
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -521,12 +526,14 @@ function ps_main_shadow_read() {
     if (pAll < 0.0)
         pAll = 0.0;
     BranchEnd();
-    var L_cor = Sam2DToColor(0.0, uv);
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(0.0, uv);
+    BranchEnd();
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)
@@ -549,12 +556,14 @@ function ps_main_bake() {
     BranchBegin("parallax", "P", [parallaxNormal, camPos]);
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
     BranchEnd();
-    var L_cor = Sam2DToColor(to_ref.x, uv);
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv, to_uv, colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a < alphaCut)

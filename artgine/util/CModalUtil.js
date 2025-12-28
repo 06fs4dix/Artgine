@@ -644,9 +644,9 @@ export class CModalFlex extends CModal {
 export class CBlackboardModal extends CModal {
     constructor(_blackboard) {
         super();
-        this.SetHeader("BlackBoard Unit(Ctrl Drag->ProxyMode");
+        this.SetHeader("<div id='bbm_div'>BlackBoard Unit [<font color='red'>X</font>]Ctrl : ProxyMode</div>");
         this.SetTitle(CModal.eTitle.TextClose);
-        this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 1);
+        this.SetZIndex(CModal.eSort.Manual, CModal.eSort.Auto + 10);
         this.SetSize(600, 400);
         const container = document.createElement("div");
         container.className = "d-flex flex-wrap justify-content-start p-2";
@@ -662,6 +662,7 @@ export class CBlackboardModal extends CModal {
             box.style.height = "64px";
             box.style.cursor = "grab";
             box.style.overflow = "hidden";
+            box.title = key;
             box.setAttribute("draggable", "true");
             box.addEventListener("dragstart", (event) => {
                 if (!event.dataTransfer)
@@ -682,6 +683,14 @@ export class CBlackboardModal extends CModal {
         });
         this.SetBody(container);
         this.Open();
+        window.addEventListener("keydown", (e) => {
+            if (e.ctrlKey == true)
+                CDOM.ID("bbm_div").innerHTML = "BlackBoard Unit [<font color='green'>O</font>]Ctrl : ProxyMode";
+        });
+        window.addEventListener("keyup", (e) => {
+            if (e.ctrlKey == false)
+                CDOM.ID("bbm_div").innerHTML = "BlackBoard Unit [<font color='red'>X</font>]Ctrl : ProxyMode";
+        });
     }
 }
 export class CMonacoViewer extends CModal {

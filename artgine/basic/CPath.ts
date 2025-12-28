@@ -43,7 +43,7 @@ export class CPath
 		Context:"Context",
 		Route:"Route",
 		Endpoint:"Endpoint",
-		Resources:"Resources",//일렉트론 전용
+		//Resources:"Resources",//일렉트론 전용
 	}
 	static Origin()
 	{
@@ -63,12 +63,12 @@ export class CPath
 			g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context);
 		return g_root;
 	}
-	static PHPR()
-	{
-		if(g_root==null)
-			g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Resources);
-		return g_root;
-	}
+	// static PHPR()
+	// {
+	// 	if(g_root==null)
+	// 		g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Resources);
+	// 	return g_root;
+	// }
 	static PHPCR()
 	{
 		return CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context+CPath.eUrl.Route);
@@ -76,9 +76,11 @@ export class CPath
 	static Join(_type)
 	{
 		
-		var str="";
+		let str="";
 		if (CUtil.IsNode()) {
-			let str = "";
+			
+
+			
 			let dir = __dirname.replace(/\\/g, "/");
 			let parts = dir.split("/");
 			let idx=0;
@@ -97,16 +99,13 @@ export class CPath
 				
 
 				str += parts.slice(0, idx).join("/") + "/"; // ← 여기서 lib 포함하지 않음
-
-				
 			}
-			else if (_type.includes(CPath.eUrl.Resources)) 
-			{
-				idx = parts.map(p => p.toLowerCase()).lastIndexOf("artgine");
-				str += parts.slice(0, idx).join("/") + "/"; // ← 여기서 lib 포함하지 않음
-			}
-			
 			return str;
+
+
+			
+			// return str;
+			
 		}
 
 

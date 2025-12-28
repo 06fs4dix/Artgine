@@ -535,6 +535,8 @@ function DevToolRender() {
             color.x = 1;
             color.y = 1;
             color.z = 0;
+            alpha.x = 0.5;
+            alpha.y = CAlpha.eModel.Mul;
             wmat.xyz = pos;
             wmat.mF32A[0] = gBoundTick / 100;
             wmat.mF32A[5] = gBoundTick / 100;
@@ -547,6 +549,8 @@ function DevToolRender() {
             render.SendGPU(shader, wMatSA);
             render.MeshDrawNodeRender(shader, meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
+            alpha.x = 0.5;
+            alpha.y = CAlpha.eModel.Mul;
         }
         else {
             color.x = 1;

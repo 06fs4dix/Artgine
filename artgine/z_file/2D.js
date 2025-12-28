@@ -1,5 +1,5 @@
 import { Build, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, max, min, MatTypeToMat, } from "./Shader";
-import { CAModelCac, ColorVFX, GetTexCodiedUV, GetTexDecodedUV } from "./ColorFun";
+import { CAModelCac, VFXDown2, GetTexCodiedUV, VFX } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
@@ -13,7 +13,6 @@ var billboardMat = Null();
 var texCodi = Null();
 var colorModel = Null();
 var alphaModel = Null();
-var colorVFX = Null();
 var alphaCut = 0.1;
 var out_position = Null();
 var out_color = Null();
@@ -188,13 +187,15 @@ function ps_main() {
         shadow = shadowTex.x;
     }
     BranchEnd();
-    var L_cor = Sam2DToColor(0.0, to_uv.xy);
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, time]);
+    L_cor = VFXDown2(to_uv.xy, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(0.0, to_uv.xy);
+    BranchEnd();
     L_cor.a *= to_uv.z;
     BranchBegin("CAModel", "CA", [colorModel, alphaModel]);
     L_cor = CAModelCac(L_cor, colorModel, alphaModel);
-    BranchEnd();
-    BranchBegin("vfx", "VFX", [colorVFX, time]);
-    L_cor = ColorVFX(L_cor, to_uv.xy, GetTexDecodedUV(to_uv.xy, texCodi), colorVFX, time);
     BranchEnd();
     BranchBegin("alphaCut", "A", [alphaCut]);
     if (L_cor.a <= alphaCut)

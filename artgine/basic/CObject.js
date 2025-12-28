@@ -241,6 +241,9 @@ export class CObject {
             return true;
         return false;
     }
+    GetProxy() {
+        return this["mProxy"];
+    }
     IsBlackBoard() {
         return this["mBlackboard"];
     }

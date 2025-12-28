@@ -46,6 +46,7 @@ function WebInit() {
     invisibleButton.style.zIndex = "9999";
     invisibleButton.style.pointerEvents = "auto";
     invisibleButton.style.background = "transparent";
+    document.body.appendChild(invisibleButton);
     invisibleButton.addEventListener("dblclick", () => {
         if (gConsolChat == null) {
             CConsolModalInit();
@@ -175,7 +176,6 @@ export class CFrame {
         this.m_offset = g_offset++;
         this.mPreferences = _pf;
         if (CUtil.IsNode()) {
-            CAlert.E("Not Support!");
             return;
         }
         var canDummy = _htmlObj;

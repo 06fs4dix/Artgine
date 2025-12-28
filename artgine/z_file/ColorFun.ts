@@ -13,7 +13,10 @@ import {
     SaturateV3,
     floor,
     screenPos,
-    V4DivV4
+    V4DivV4,
+    int,
+    FloatToInt,
+    Null
 } from "./Shader";
 
 export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
@@ -86,36 +89,7 @@ export function RGBToHSV(_vec3 : CVec3) : CVec3 {
     var e : number = 1.0e-10;
     return new CVec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
-// function HSVF(_k : number,_s : number,_v : number) : number {
-// 	return _v - _v * _s * clamp(min(_k, 4.0 - _k), 0.0, 1.0);
-// }
-// export function HSVToRGB(_vec3 : CVec3) : CVec3 {
-//     var hk : number = mod(5.0 + _vec3.x * 6.0, 6.0);
-//     var sk : number = mod(3.0 + _vec3.x * 6.0, 6.0);
-//     var vk : number = mod(1.0 + _vec3.x * 6.0, 6.0);
-//     return new CVec3(HSVF(hk,_vec3.y,_vec3.z), HSVF(sk,_vec3.y,_vec3.z), HSVF(vk,_vec3.y,_vec3.z));
-// }
-// export function RGBToHSV(_vec3 : CVec3) : CVec3 {
-//     var cmax : number = max(_vec3.x, max(_vec3.y, _vec3.z));
-//     var cmin : number = min(_vec3.x, min(_vec3.y, _vec3.z));
-//     var delta : number = cmax - cmin;
-//     var h : number = 0.0;
-//     if(delta > 0.0) {
-//         if(cmax == _vec3.x) {
-//             h = mod((_vec3.y - _vec3.z) / delta, 6.0);
-//         } 
-//         else if(cmax == _vec3.y) {
-//             h = (_vec3.z - _vec3.x) / delta + 2.0;
-//         }
-//         else {
-//             h = (_vec3.x - _vec3.y) / delta + 4.0;
-//         }
-//         h /= 6.0;
-//     }
-//     var s : number = (cmax == 0.0) ? 0.0 : (delta / cmax);
-//     var v : number = cmax;
-//     return new CVec3(h, s, v);
-// }
+
 
 // hsl <-> rgb
 export function HSLToRGB(_vec3 : CVec3) : CVec3
@@ -418,174 +392,268 @@ function MapToPaletteUV(_color : CVec3, _cellSize : number) : CVec2
     );
 }
 
-function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {
-    var uv : CVec2 = V2AddV2(_uv, V2MulV2(_f, _texScale));
-    return Sam2DToColor(0.0, uv);
-}
-
-function Blur(_color : CVec4, _uv : CVec2, _renderType : number, _renderCount : number) : CVec4 {
-    var all : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
-
-    var fx : number = max(-_renderCount, -32.0);    // 최대 32번만 반복가능
-    var fy : number = max(-_renderCount, -32.0);
-    var count : number = 0.0;
-    var texScale : CVec2 = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
-
-    //전체 블러
-    if(_renderType < 0.5) {
-        for(var y = 0; y < 64; y++) {
-            for(var x = 0; x < 64; x++) {
-                if(fx <= _renderCount && fy <= _renderCount) {
-                    var color : CVec4 = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
-                    if(color.a > 0.01) {
-                        all = V4AddV4(all, color);
-                        count += 1.0;
-                    }
-                } else
-                    break;
-                fx += 1.0;
-            }
-            fx = -_renderCount;
-            fy += 1.0;
-        }
-        if(count > 0.01) {
-            all = V4DivV4(all, new CVec4(count,count,count,count));
-            all = SaturateV4(all);
-        }
-    }
-    //x 블러
-    else if(_renderType < 1.1) {
-        fy = 0.0;
-        for(var x = 0; x <= 64; x++) {
-            if(fx <= _renderCount && fy <= _renderCount) {
-                var color : CVec4 = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
-                if(color.a > 0.01) {
-                    all = V4AddV4(all, color);
-                    count += 1.0;
-                }
-            } else
-                break;
-            fx += 1.0;
-        }
-        if(count > 0.01) {
-            all = V4DivV4(all, new CVec4(count,count,count,count));
-            all = SaturateV4(all);
-        }
-    }
-    //y 블러
-    else if(_renderType < 2.1) {
-        fx = 0.0;
-        for(var y = 0; y < 64; y++) {
-            if(fx<=_renderCount && fy <=_renderCount) {
-                var color : CVec4 = GetBlurColor(_uv, new CVec2(fx, fy), texScale);
-                if(color.a > 0.01) {
-                    all = V4AddV4(all, color);
-                    count += 1.0;
-                }
-            } else
-                break;
-            fy += 1.0;
-        }
-        if(count > 0.01) {
-            all = V4DivV4(all, new CVec4(count,count,count,count));
-            all = SaturateV4(all);
-        }
-    }
-
-    return all;
-}
-
-export function ColorVFX(_color : CVec4,_uv : CVec2,_ruv : CVec2, _value : CMat,_time : number) : CVec4
+export var VFX : CMat=Null();
+//offset 키워드가 있으면 int로
+function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
 {
-
-    for(var i=0;i<4;++i)
+    var outColor : CVec4=new CVec4(0.0,0.0,0.0,0.0);
+    if(_value[1].w<SDF.eColorVFX.None+0.5)
+    {     
+        outColor = Sam2DToColor(0.0, _uv);
+    }
+    //왜곡 xy 간격
+    else if(_value[1].w<SDF.eColorVFX.Distort+0.5)
     {
-        if(_value[i].w<SDF.eColorVFX.None+0.5){    return _color;  }
-        //왜곡 xy 간격
-        else if(_value[i].w<SDF.eColorVFX.Distort+0.5)
-        {
-            var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(_value[i].x, _value[i].y), _time);
-            _color = Sam2DToColor(0.0, distortedUV);
-        }
-        //카메라 이탈 x 기본 강도 y 랜덤 강도
-        else if(_value[i].w<SDF.eColorVFX.Aberrate+0.5)
-        {
-            _color = GetAberratedColor(0.0, _uv, _time, _value[i].x, _value[i].y);
-        }
-        //아웃라인xyz : rgb
-        else if(_value[i].w<SDF.eColorVFX.Outline+0.5)
-        {
-            if(_color.a<=0.0)
-            {
-                var size:CVec2=Sam2DSize(0.0);
-                size.x=1.0/size.x;
-                size.y=1.0/size.y;
+        var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(_value[0].x, _value[0].y), _time);
+               
+        outColor = Sam2DToColor(0.0, distortedUV);
+    }
+    else if(_value[1].w<SDF.eColorVFX.Aberrate+0.5)
+    {
+        outColor = GetAberratedColor(0.0, _uv, _time, _value[0].x, _value[0].y);
+    }
+     //아웃라인xyz : rgb
+    else if(_value[1].w<SDF.eColorVFX.Outline+0.5)
+    {
+        
+        var org:CVec4=Sam2DToColor(0.0,_uv);
 
-                var lc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x-size.x,_uv.y));
-                var rc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x+size.x,_uv.y));
-                var tc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x,_uv.y-size.y));
-                var bc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x,_uv.y+size.y));
-                if(lc.a>0.0 || rc.a>0.0 || tc.a>0.0 || bc.a>0.0)
+        if(org.a<=0.99)
+        {
+            var size:CVec2=Sam2DSize(0.0);
+            size.x=1.0/size.x;
+            size.y=1.0/size.y;
+
+            var lc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x-size.x,_uv.y));
+            var rc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x+size.x,_uv.y));
+            var tc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x,_uv.y-size.y));
+            var bc:CVec4=Sam2DToColor(0.0,new CVec2(_uv.x,_uv.y+size.y));
+            if(lc.a>0.0 || rc.a>0.0 || tc.a>0.0 || bc.a>0.0)
+            {
+                outColor=new CVec4(_value[0].xyz,1.0);
+            }
+            else
+                outColor = org;
+        }
+        else 
+            outColor = org;
+    
+        
+    }
+    else if(_value[1].w<SDF.eColorVFX.Pixel+0.5)
+    {
+        var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(_value[0].x, _value[0].y), _uv);
+        outColor = Sam2DToColor(0.0, pixelatedUV);
+    }
+    else if(_value[1].w<SDF.eColorVFX.Noise+0.5)
+    {
+        var texSize : CVec2 = Sam2DSize(0.0);
+        var fragCoord : CVec2 = V2Floor(V2DivV2(V2MulV2(_uv, texSize), new CVec2(_value[0].z, _value[0].z)));
+        outColor = Sam2DToColor(0.0, _uv);
+        outColor = AddNoise(fragCoord, outColor, _time, _value[0].x, _value[0].y);
+    }
+    else if(_value[1].w<SDF.eColorVFX.Scanline+0.5)
+    {
+        outColor = Sam2DToColor(0.0, _uv);
+        outColor = AddScanLine(outColor, _uv, _time, _value[0].x, _value[0].y);
+    }
+    else if(_value[1].w<SDF.eColorVFX.ColorPalette+0.5)
+    {
+        outColor = Sam2DToColor(0.0, _uv);
+        var palSize : CVec2 = Sam2DSize(_value[0].x);
+        var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+        
+        var ditherStrength : number = (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[0].y;
+        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+        
+        var palUV : CVec2 = MapToPaletteUV(outColor.rgb, cellSize);
+        outColor = Sam2DToColor(_value[0].x, palUV);
+    }
+    else if(_value[1].w<SDF.eColorVFX.Blur+0.5)
+    {
+        var fx : number = max(-_value[0].x*0.5, -2.0);    
+        var fy : number = max(-_value[0].y*0.5, -2.0);
+
+
+        var count : number = 0.0;
+        var loopX : int;
+        var loopY : int;
+        loopX.dummy=FloatToInt(_value[0].x);
+        loopY.dummy=FloatToInt(_value[0].y);
+        var texScale : CVec2 = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+
+        for(var y = 0; y < 4; y++) 
+        {
+            if(y<loopY.dummy)
+            {
+                for(var x = 0; x < 4; x++) 
                 {
-                    _color=new CVec4(_value[i].xyz,1.0);
+                    if(x<loopX.dummy)
+                    {
+                        
+                        var uv : CVec2 = V2AddV2(_uv, V2MulV2(new CVec2(fx, fy), texScale));
+                        var bout : CVec4 = Sam2DToColor(0.0, uv);
+
+                        outColor = V4AddV4(outColor, bout);
+                        count += 1.0;
+                    } 
+                    else   break;
+                    
+                    fx += 1.0;
                 }
+                fx = -_value[0].x*0.5;
+                fy += 1.0;
+            }
+            else    break;
+        }
+        if(count > 0.01) {
+            outColor = V4DivV4(outColor, new CVec4(count,count,count,count));
+            outColor = SaturateV4(outColor);
+        }
+
+    }
+    
+    return outColor;
+}
+export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
+{
+    var outColor : CVec4=new CVec4(0.0,0.0,0.0,0.0);
+    if(_value[3].w<SDF.eColorVFX.None+0.5)
+    {     
+        outColor=VFXDown0(_uv,_value,_time);
+    }
+    //왜곡 xy 간격
+    else if(_value[3].w<SDF.eColorVFX.Distort+0.5)
+    {
+        var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(_value[2].x, _value[2].y), _time);
+        
+        outColor=VFXDown0(distortedUV,_value,_time);
+        
+    }
+    else if(_value[3].w<SDF.eColorVFX.Aberrate+0.5)
+    {
+        var line : number = max(0.0, sin(_uv.y * 3.8 + _time * 1.4) * sin(_uv.y * 0.6 + _time * 2.3));
+        var aberration_strength : number = (0.1 + line) * _value[2].y + _value[2].x;
+        var r : CVec4 = VFXDown0(new CVec2(_uv.x - aberration_strength, _uv.y),_value,_time);
+        var g : CVec4 = VFXDown0(_uv,_value,_time);
+        var b : CVec4 = VFXDown0(new CVec2(_uv.x + aberration_strength, _uv.y),_value,_time);
+        outColor= SaturateV4(new CVec4(r.r,g.g,b.b,max(r.a, max(g.a, b.a))));
+    }
+     //아웃라인xyz : rgb
+    else if(_value[3].w<SDF.eColorVFX.Outline+0.5)
+    {
+       
+        var org:CVec4=VFXDown0(new CVec2(_uv.x,_uv.y),_value,_time);
+
+        if(org.a<=0.99)
+        {
+            var size:CVec2=Sam2DSize(0.0);
+            size.x=1.0/size.x;
+            size.y=1.0/size.y;
+
+            var lc:CVec4=VFXDown0(new CVec2(_uv.x-size.x,_uv.y),_value,_time);
+            var rc:CVec4=VFXDown0(new CVec2(_uv.x+size.x,_uv.y),_value,_time);
+            var tc:CVec4=VFXDown0(new CVec2(_uv.x,_uv.y-size.y),_value,_time);
+            var bc:CVec4=VFXDown0(new CVec2(_uv.x,_uv.y+size.y),_value,_time);
+            if(lc.a>0.0 || rc.a>0.0 || tc.a>0.0 || bc.a>0.0)
+            {
+                outColor=new CVec4(_value[2].xyz,1.0);
             }
         }
-        //픽셀화 xy 픽셀사이즈
-        else if(_value[i].w<SDF.eColorVFX.Pixel+0.5)
-        {
-            var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(_value[i].x, _value[i].y), _uv);
-            _color = Sam2DToColor(0.0, pixelatedUV);
-        }
-        //티비노이즈 x 속도 y 강도 z 픽셀사이즈
-        else if(_value[i].w<SDF.eColorVFX.Noise+0.5)
-        {
-            var texSize : CVec2 = Sam2DSize(0.0);
-            var fragCoord : CVec2 = V2Floor(V2DivV2(V2MulV2(_uv, texSize), new CVec2(_value[i].z, _value[i].z)));
-            _color = AddNoise(fragCoord, _color, _time, _value[i].x, _value[i].y);
-        }
-        // //티비보더 x 강도 y 두께
-        // else if(_value[i].w<SDF.eColorVFX.BorderLight+0.5)
-        // {
-        //     _color = AddBorder(_mpos, _color, _value[i].x, _value[i].y);
-        // }
-        //스캔라인 x 두께 y 밀도 z 강도
-        else if(_value[i].w<SDF.eColorVFX.Scanline+0.5)
-        {
-            _color = AddScanLine(_color, _uv, _time, _value[i].x, _value[i].y);
-        }
-        // else if(_value[i].w<SDF.eColorVFX.OverWrite+0.5)
-        // {
-        //     //var ruv : CVec2=GetTexDecodedUV(_uv,);
-        //     var target:CVec4=Sam2DToColor(_value[i].z,new CVec2(_ruv.x*_value[i].x,_ruv.y*_value[i].y));
-        //     if(_color.a>0.01)
-        //     {
-        //         _color.rgb=target.rgb;
-        //     }
-        //     // _color.r=1.0;
-        //     // _color.b=0.0;
-            
-        // }
-        //팔레트스왑 x 팔레트텍스쳐인덱스 y 디더링 정도
-        else if(_value[i].w<SDF.eColorVFX.ColorPalette+0.5)
-        {
-            var palSize : CVec2 = Sam2DSize(_value[i].x);
-            var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
-            
-            var ditherStrength : number = (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[i].y;
-            _color.rgb = V3AddV3(_color.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
-            
-            var palUV : CVec2 = MapToPaletteUV(_color.rgb, cellSize);
-            _color = Sam2DToColor(_value[i].x, palUV);
-
-        }
-        //x 블러타입, y 블러카운트
-        else if(_value[i].w<SDF.eColorVFX.Blur+0.5)
-        {
-            _color = Blur(_color, _uv, _value[i].x, _value[i].y);
-
-        }
+         else 
+            outColor = org;
     }
-	
-	return _color;
+    else if(_value[3].w<SDF.eColorVFX.Pixel+0.5)
+    {
+        var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(_value[2].x, _value[2].y), _uv);
+        outColor=VFXDown0(pixelatedUV,_value,_time);
+    }
+    else if(_value[3].w<SDF.eColorVFX.Noise+0.5)
+    {
+        var texSize : CVec2 = Sam2DSize(0.0);
+        var fragCoord : CVec2 = V2Floor(V2DivV2(V2MulV2(_uv, texSize), new CVec2(_value[2].z, _value[2].z)));
+        outColor = VFXDown0(_uv,_value,_time);
+
+        var t : number = _time * _value[2].x;
+        var m : CVec3 = new CVec3(fragCoord, 0.0);
+        var factor1 : number = 1.0 - TimedNoise(m, t) * _value[2].y;
+        var baseColor : CVec3 = new CVec3(
+            TimedNoise(m, t),
+            TimedNoise(m, t * 2.0),
+            TimedNoise(m, t * 3.0)
+        );
+        baseColor = V3MulFloat(baseColor, 0.1 * _value[2].y);
+        baseColor = V3AddV3(baseColor, V3MulFloat(outColor.rgb, factor1 * (outColor.w * factor1 + 0.1 * _value[2].y)));
+        outColor= new CVec4(baseColor, outColor.w);
+    }
+    else if(_value[3].w<SDF.eColorVFX.Scanline+0.5)
+    {
+        outColor = VFXDown0(_uv,_value,_time);
+        
+
+        var scanline : number = sin(UV_Curve(_uv).y * _value[2].x * 3.14 * 2.0 + _time * _value[2].y);
+        scanline = (scanline * 0.5 + 0.5) * 0.9 + 0.1;
+        scanline = pow(scanline, 0.25);
+        var sLine : CVec4 = new CVec4(new CVec3(scanline, scanline, scanline), 1.0);
+        outColor = V4MulV4(outColor, sLine);
+    }
+    else if(_value[3].w<SDF.eColorVFX.ColorPalette+0.5)
+    {
+        outColor = VFXDown0(_uv,_value,_time);
+        var palSize : CVec2 = Sam2DSize(_value[2].x);
+        var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
+        
+        var ditherStrength : number = (DitherMatrix4x4(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[2].y;
+        outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
+        
+        var palUV : CVec2 = MapToPaletteUV(outColor.rgb, cellSize);
+        outColor = Sam2DToColor(_value[2].x, palUV);
+    }
+    else if(_value[3].w<SDF.eColorVFX.Blur+0.5)
+    {
+
+        var fx : number = max(-_value[2].x*0.5, -2.0);    
+        var fy : number = max(-_value[2].y*0.5, -2.0);
+
+
+        var count : number = 0.0;
+        var loopX : int;
+        var loopY : int;
+        loopX.dummy=FloatToInt(_value[2].x);
+        loopY.dummy=FloatToInt(_value[2].y);
+        var texScale : CVec2 = V2DivV2(new CVec2(1.0, 1.0), Sam2DSize(0.0));
+
+        for(var y = 0; y < 4; y++) 
+        {
+            if(y<loopY.dummy)
+            {
+                for(var x = 0; x < 4; x++) 
+                {
+                    if(x<loopX.dummy)
+                    {
+                        
+                        var uv : CVec2 = V2AddV2(_uv, V2MulV2(new CVec2(fx, fy), texScale));
+                        var bout : CVec4 = VFXDown0(uv,_value,_time);
+
+                        outColor = V4AddV4(outColor, bout);
+                        count += 1.0;
+                    } 
+                    else   break;
+                    
+                    fx += 1.0;
+                }
+                fx = -_value[2].x*0.5;
+                fy += 1.0;
+            }
+            else    break;
+        }
+        if(count > 0.01) {
+            outColor = V4DivV4(outColor, new CVec4(count,count,count,count));
+            outColor = SaturateV4(outColor);
+        }
+    
+
+    }
+    return outColor;
 }
+
