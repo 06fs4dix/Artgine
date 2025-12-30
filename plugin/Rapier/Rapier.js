@@ -1,12 +1,12 @@
+import { CCollider } from "../../artgine/app/component/CCollider.js";
+import { CComponent } from "../../artgine/app/component/CComponent.js";
+import { CRigidBody } from "../../artgine/app/component/CRigidBody.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
+import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CArray } from "../../artgine/basic/CArray.js";
 import { CClass } from "../../artgine/basic/CClass.js";
-import { CCollider } from "../../artgine/canvas/component/CCollider.js";
-import { CComponent } from "../../artgine/canvas/component/CComponent.js";
-import { CRigidBody } from "../../artgine/canvas/component/CRigidBody.js";
-import { CPaint } from "../../artgine/canvas/component/paint/CPaint.js";
-import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
 import { CBound } from "../../artgine/geometry/CBound.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";

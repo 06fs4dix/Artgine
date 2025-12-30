@@ -1,4 +1,4 @@
-const version = 'mffeu6vk_9';
+const version = 'mjsmx63w_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -16,7 +16,7 @@ gPF.mWASM = true;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
-import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 import { CPlugin } from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 CPlugin.PushPath('Rapier', 'https://06fs4dix.github.io/Artgine/plugin/Rapier/');
 import "https://06fs4dix.github.io/Artgine/plugin/Rapier/Rapier.js";
@@ -25,22 +25,22 @@ gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'], "");
 var Main = gAtl.Canvas('Main.json');
 import { CPool } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPool.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CCollider.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CRigidBody.js";
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CBehavior.js";
-import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CForce.js";
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
 import { CRapier, CRapierCollider, CRapierRigidBody } from "https://06fs4dix.github.io/Artgine/plugin/Rapier/Rapier.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
+import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint3D.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
 var gPushMode = false;
 class CControl extends CBehavior {
     mCollision = CUpdate.eType.Not;
@@ -58,7 +58,7 @@ class CControl extends CBehavior {
     Start() {
         this.NewForce();
     }
-    Update(_delay) {
+    Update(_update) {
         if (this.mCollision == CUpdate.eType.Updated) {
             this.mCollision = CUpdate.eType.Already;
             if (gPushMode)
@@ -86,7 +86,7 @@ class CControl extends CBehavior {
             }
         }
         else
-            this.mSleep -= _delay;
+            this.mSleep -= _update.DeltaMil();
     }
     NewForce() {
         this.GetOwner().FindComp(CRigidBody).Push(new CForce("move", CMath.V3Nor(new CVec3(Math.random() - 0.5, Math.random() - 0.5)), 200));
@@ -135,9 +135,9 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, (_delay) => {
 });
 async function Init() {
     Main.Clear();
-    const pushCheckbox = CUtil.IDInput('pushCheckbox');
-    const countInput = CUtil.IDInput('countInput');
-    const typeSelect = CUtil.IDInput('typeSelect');
+    const pushCheckbox = CDOM.IDInput('pushCheckbox');
+    const countInput = CDOM.IDInput('countInput');
+    const typeSelect = CDOM.IDInput('typeSelect');
     gPushMode = pushCheckbox.checked;
     let count = Number(countInput.value);
     for (let i = 0; i < count; ++i) {
@@ -188,12 +188,13 @@ async function Init() {
             }
             let sub = await CPool.Product(type);
             sub.SetPos(new CVec3(Math.random() * 1000 - 500, Math.random() * 1000 - 500));
+            let col = sub.FindComp(CCollider);
             if (gPushMode == false) {
-                sub.FindComp(CCollider).SetEvent(CCollider.eEvent.Trigger);
+                col.SetEvent(CCollider.eEvent.Trigger);
             }
             else {
-                sub.FindComp(CCollider).SetEvent(CCollider.eEvent.Collision);
-                sub.FindComp(CCollider).SetRestitution(0.5);
+                col.SetEvent(CCollider.eEvent.Collision);
+                col.SetRestitution(0.5);
             }
             Main.PushSub(sub);
         }
@@ -234,10 +235,10 @@ option.SetContent(`
 
     
 `);
-const pushCheckbox = CUtil.IDInput('pushCheckbox');
-const rapierCheckbox = CUtil.IDInput('rapierCheckbox');
-const countInput = CUtil.IDInput('countInput');
-const typeSelect = CUtil.IDInput('typeSelect');
+const pushCheckbox = CDOM.IDInput('pushCheckbox');
+const rapierCheckbox = CDOM.IDInput('rapierCheckbox');
+const countInput = CDOM.IDInput('countInput');
+const typeSelect = CDOM.IDInput('typeSelect');
 pushCheckbox.addEventListener('change', () => {
     Init();
 });
