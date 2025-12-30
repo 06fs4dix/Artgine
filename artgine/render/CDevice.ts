@@ -200,8 +200,7 @@ export class CDeviceGL extends CDevice
 			ext = this.GL().getExtension('OES_texture_float_linear');
 			if (!ext) {	    CAlert.W("no OES_texture_float_linear");		}
 		}
-		this.GL().getExtension('EXT_float_blend');
-	
+		
 		
 		
 		

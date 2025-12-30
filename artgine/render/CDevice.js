@@ -131,7 +131,6 @@ export class CDeviceGL extends CDevice {
                 CAlert.W("no OES_texture_float_linear");
             }
         }
-        this.GL().getExtension('EXT_float_blend');
         CRenderPass.eBlend.FUNC_ADD = this.GL().FUNC_ADD;
         CRenderPass.eBlend.FUNC_SUBTRACT = this.GL().FUNC_SUBTRACT;
         CRenderPass.eBlend.FUNC_REVERSE_SUBTRACT = this.GL().FUNC_REVERSE_SUBTRACT;
