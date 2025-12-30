@@ -17,7 +17,7 @@ export class CPreferences extends CObject
     public mTop=0;
     public mLeft=0;
 
-    public mRenderer=CPreferences.eRenderer.Null;
+    public mRenderer=CPreferences.eRenderer.GL;
     //뎁스맵을 32비트로 변경해줌. 정밀도가 올라가지만 속도가 느려짐
     public m32fDepth=false;
     

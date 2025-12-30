@@ -56,7 +56,7 @@ export class CShader extends CObject {
     mVF;
     mUniform;
     mDefault;
-    mComplie = false;
+    mComplie = 0;
     constructor() {
         super();
         this.mKey = "";

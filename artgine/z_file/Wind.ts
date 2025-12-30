@@ -1,4 +1,4 @@
-import { NoisePerlin2D } from "./Noise";
+import { NoisePerlin2 } from "./Noise";
 import { SDF } from "./SDF";
 import { abs, clamp, CVec2, CVec3, CVec4, FloatToInt, MappingTexToV3, max, mix, Sam2DToV4, Sam2DV4, 
     smoothstep, 
@@ -85,9 +85,9 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
         //     NoisePerlin2D(new CVec2(V3Dot(_objPos, speedFactor) / -wave, speedFactor.z * freq * _time))
         // );
         var noise : CVec3 = new CVec3(
-            NoisePerlin2D(new CVec2(_objPos.x / -wave, speedFactor.x * freq * _time)),
-            NoisePerlin2D(new CVec2(_objPos.y / -wave, speedFactor.y * freq * _time)),
-            NoisePerlin2D(new CVec2(_objPos.z / -wave, speedFactor.z * freq * _time))
+            NoisePerlin2(new CVec2(_objPos.x / -wave, speedFactor.x * freq * _time)),
+            NoisePerlin2(new CVec2(_objPos.y / -wave, speedFactor.y * freq * _time)),
+            NoisePerlin2(new CVec2(_objPos.z / -wave, speedFactor.z * freq * _time))
         );
 
         // 0 ~ 1 범위에서 -0.75 ~ 1.0 범위로 변환

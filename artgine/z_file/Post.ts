@@ -1,4 +1,4 @@
-import { VFXDown2, VFX } from "./ColorFun";
+import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5 } from "./ColorFun";
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -189,7 +189,7 @@ Build("Artgine/Shader/PostUpSample",["sample", "up"],
 Build("Artgine/Shader/PostVFX",["vfx"],
     vs_main, [
         worldMat,viewMat,projectMat,
-        VFX, time
+        VFX, time,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5
     ],[out_position,to_uv],
     ps_main_vfx,[out_color]);
 

@@ -97,9 +97,18 @@ export class SDF {
 		Noise:5,//속도x,강도y,픽셀사이즈z   %노이즈
 		//BorderLight:6,//강도x,두께y
 		Scanline:7,//선 개수 x, 속도 y %줄내려옴
-		ColorPalette:8,//x팔레트텍스쳐인덱스, 컬러 팔레트에서 색상 양자화
+		LookUpTable:8,//x팔레트텍스쳐인덱스, 컬러 팔레트에서 색상 양자화
 		Blur:9,//x블러타입(0만 지원함) y블러횟수
 
+	}
+	static eLookUpTable=
+	{
+		LUT0:534,
+		LUT1:535,
+		LUT2:536,
+		LUT3:537,
+		LUT4:538,
+		LUT5:539,
 	}
 	static eBlend=
 	{

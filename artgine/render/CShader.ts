@@ -81,7 +81,7 @@ export class CShader extends CObject
 	public mVF : Array<CVertexFormat>;
 	public mUniform : Map<string,CUniform>;
 	public mDefault : Array<CShaderAttr>;
-	public mComplie : boolean=false;
+	public mComplie : number=0;//0컴파일 안됌, -1 대기 1 완료 2 에러
 	//public m_uniData : Function=null;
 
 	constructor()

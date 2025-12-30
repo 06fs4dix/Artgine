@@ -109,6 +109,9 @@ export class CBrush extends CObject {
     mRenInfoMap = new Map();
     mUpdateShadow = true;
     mUpdateLight = true;
+    mUpdateLUT = false;
+    mLUT = [new Float32Array(32 * 32), new Float32Array(32 * 32), new Float32Array(32 * 32),
+        new Float32Array(32 * 32), new Float32Array(32 * 32), new Float32Array(32 * 32)];
     IsShould(_member, _type) {
         if (_member == "mCameraMap")
             return true;

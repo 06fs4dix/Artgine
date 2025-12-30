@@ -272,7 +272,8 @@ export class CTexture extends CObject
 
 	SetBuf(_buf : HTMLImageElement);
 	SetBuf(_buf : ArrayBuffer);
-	SetBuf(_buf : ArrayBuffer);
+	SetBuf(_buf : Uint8Array);
+	SetBuf(_buf : Float32Array);
 	SetBuf(_buf : HTMLVideoElement);
 	SetBuf(_buf : any)
 	{

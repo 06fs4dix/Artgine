@@ -1,4 +1,4 @@
-import { VFXDown2, VFX } from "./ColorFun";
+import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5 } from "./ColorFun";
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
 import { Attribute, BranchBegin, BranchEnd, Build, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, MappingTexToV3, Null, Sam2D0ToColor, Sam2DSize, Sam2DToColor, SaturateV3, SaturateV4, V2AddV2, V2DivV2, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3MulFloat, V4AddV4, V4DivV4, V4MulFloat, V4MulMatCoordi, V4MulV4, V4SubV4, clamp, discard, max, pow } from "./Shader";
@@ -96,7 +96,7 @@ Build("Artgine/Shader/PostUpSample", ["sample", "up"], vs_main, [
 ], [out_position, to_uv], ps_main_UpSample, [out_color]);
 Build("Artgine/Shader/PostVFX", ["vfx"], vs_main, [
     worldMat, viewMat, projectMat,
-    VFX, time
+    VFX, time, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5
 ], [out_position, to_uv], ps_main_vfx, [out_color]);
 function vs_main(f3_ver, f2_uv) {
     to_uv = f2_uv;

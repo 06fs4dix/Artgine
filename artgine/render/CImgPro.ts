@@ -383,7 +383,7 @@ export class CImgPro
 			const index = _r + _g * cellSize + _b * cellSize * cellSize;
 			return new CVec2(
 				Math.floor(index / _size.x),
-				(_size.y - 1) - (index % _size.x)	// y flip
+				(index % _size.x)	// y flip
 			);
 		}
 
@@ -395,7 +395,7 @@ export class CImgPro
 					let closestIndex = 0;
 					let closest = Diff(colorArr[0], CellToColor(rCell), CellToColor(gCell), CellToColor(bCell));
 
-					for(let i = 0; i < colorArr.length; i++) {
+					for(let i = 1; i < colorArr.length; i++) {
 						const diff = Diff(colorArr[i], CellToColor(rCell), CellToColor(gCell), CellToColor(bCell));
 						if(diff < closest) {
 							closest = diff;

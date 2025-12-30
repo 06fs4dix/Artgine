@@ -35,14 +35,14 @@ export function RenderQueTool(_brush) {
 var g_fw = null;
 var g_brush = null;
 var g_can = null;
-function Open() {
+async function Open() {
     let pf = new CPreferences();
     g_fw = new CFrame(pf, "renderOrderCanvas");
     g_fw.PushEvent(CEvent.eType.Load, new CEvent(Load));
     g_fw.PushEvent(CEvent.eType.Init, new CEvent(Init));
     g_fw.PushEvent(CEvent.eType.Update, new CEvent(Update));
     g_fw.PushEvent(CEvent.eType.Render, new CEvent(Render));
-    g_fw.Process();
+    await g_fw.Process();
 }
 function Close() {
     if (g_fw) {

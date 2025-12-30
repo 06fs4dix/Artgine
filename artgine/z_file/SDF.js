@@ -76,8 +76,16 @@ export class SDF {
         Pixel: 4,
         Noise: 5,
         Scanline: 7,
-        ColorPalette: 8,
+        LookUpTable: 8,
         Blur: 9,
+    };
+    static eLookUpTable = {
+        LUT0: 534,
+        LUT1: 535,
+        LUT2: 536,
+        LUT3: 537,
+        LUT4: 538,
+        LUT5: 539,
     };
     static eBlend = {
         LinearDodge: 1,

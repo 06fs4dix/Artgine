@@ -549,6 +549,33 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// str += "	return pa_val*pa_mat;\n";
 		// str += "}\n";
 
+		//hash
+		str += "float Hash11(float _p)\n";
+		str += "{\n";
+		str += "	_p = fract(_p * 0.1031);\n";
+		str += "	_p *= _p * 33.33;\n";
+		str += "	_p *= _p + _p;\n";
+		str += "	return fract(_p);\n";
+		str += "}\n";
+		str += "float Hash12(vec2 _p)\n";
+		str += "{\n";
+		str += "	vec3 p3 = fract(_p.xyx * 0.1031);\n";
+		str += "	p3 += dot(p3, p3.yzx + 33.33);\n";
+		str += "	return fract((p3.x + p3.y) * p3.z);\n";
+		str += "}\n";
+		str += "float Hash13(vec3 _p)\n";
+		str += "{\n";
+		str += "	_p = fract(_p * 0.1031);\n";
+		str += "	_p += dot(_p, _p.zyx + 33.33);\n";
+		str += "	return fract((_p.x + _p.y) * _p.z);\n";
+		str += "}\n";
+		str += "float Hash14(vec4 _p)\n";
+		str += "{\n";
+		str += "	_p = fract(_p * vec4(0.1031, 0.1030, 0.0973, 0.1099));\n";
+		str += "	_p += dot(_p, _p.wzxy + 33.33);\n";
+		str += "	return fract((_p.x + _p.y) * (_p.z + _p.w));\n";
+		str += "}\n";
+
 		//mat4
 		str += "mat4 FloatMulMat(float pa_val,mat4 pa_mat)\n";
 		str += "{\n";
@@ -615,6 +642,10 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "vec2 V2Exp(vec2 _a)\n";
 		str += "{\n";
 		str += "	return exp(_a);\n";
+		str += "}\n";
+		str += "vec2 V2Fract(vec2 _a)\n";
+		str += "{\n";
+		str += "	return fract(_a);\n";
 		str += "}\n";
 
 		//v3
@@ -700,9 +731,13 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	return normalize(_a);\n";
 		str += "}\n";
-		str += "vec4 V3Exp(vec4 _a)\n";
+		str += "vec4 V4Exp(vec4 _a)\n";
 		str += "{\n";
 		str += "	return exp(_a);\n";
+		str += "}\n";
+		str += "vec4 V4Fract(vec4 _a)\n";
+		str += "{\n";
+		str += "	return fract(_a);\n";
 		str += "}\n";
 
 		//js Math func
@@ -845,6 +880,11 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	val0.x = pow(val0.x, val1);\n";
 		str += "	val0.y = pow(val0.y, val1);\n";
+		str += "	return val0;\n";
+		str += "}\n";
+		str += "vec2 V2Mix(vec2 val0,vec2 val1,float fac)\n";
+		str += "{\n";
+		str += "	val0 = mix(val0, val1, fac);\n";
 		str += "	return val0;\n";
 		str += "}\n";
 

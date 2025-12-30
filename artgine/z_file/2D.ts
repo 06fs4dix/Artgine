@@ -19,7 +19,13 @@ import {
 import {
 	CAModelCac, VFXDown2, GetTexCodiedUV,
 	GetTexDecodedUV,
-	VFX
+	VFX,
+	LUT0,
+	LUT1,
+	LUT2,
+	LUT3,
+	LUT4,
+	LUT5
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -29,7 +35,7 @@ import {
 	LightCac2D
 } from "./Light";
 import { shadowOn } from "./Shadow";
-import { NoisePerlin2D } from "./Noise";
+import { NoisePerlin2 } from "./Noise";
 import { 
 	GetWind, windCount, windDir, windInfluence, windInfo, windPos 
 } from "./Wind";
@@ -314,7 +320,7 @@ function ps_main()
 	
 
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(to_uv.xy,VFX,time);
 	BranchDefault();
 	L_cor=Sam2DToColor(0.0,to_uv.xy);

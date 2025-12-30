@@ -26,6 +26,7 @@ sam2DCount
 */
 
 
+
 export class ToV1{uniOff;}
 export class ToV2 {
     x;y;xy;
@@ -43,8 +44,8 @@ export class ToV3 {
     constructor(_x:CVec2|CVec3|number,_y? : CVec2|number,_z? : number){this.x=_x;this.y=_y;this.z=_z;  }
 }
 export class ToV4{
-    x;y;z;w;r;g;b;a;xy:CVec2;
-    xyz : CVec3;rgb : CVec3;
+    x;y;z;w;r;g;b;a;xy:CVec2;xz:CVec2;xw:CVec2;yz:CVec2;zx:CVec2;wx:CVec2;
+    xyz : CVec3;rgb : CVec3;yzw : CVec3;
     notUsedCVec4Param;
     constructor(_x : number, _y : number, _z : number, _w : number);
     constructor(_x : number, _y : CVec3);
@@ -75,8 +76,8 @@ export class CVec3 {
     constructor(_x:CVec2|CVec3|number,_y? : CVec2|number,_z? : number){this.x=_x;this.y=_y;this.z=_z;  }
 }
 export class CVec4{
-    x;y;z;w;r;g;b;a;xy:CVec2;
-    xyz : CVec3;rgb : CVec3;
+    x;y;z;w;r;g;b;a;xy:CVec2;xz:CVec2;xw:CVec2;yz:CVec2;zx:CVec2;wx:CVec2;
+    xyz : CVec3;rgb : CVec3;yzw : CVec3;
     notUsedCVec4Param;
     constructor(_x : number, _y : number, _z : number, _w : number);
     constructor(_x : number, _y : CVec3);
@@ -261,6 +262,12 @@ export function V4Nor(_a : CVec4) : CVec4{    return new CVec4(0,0,0,0);}
 export function V4Fract(_a : CVec4) : CVec4 { return new CVec4(0,0,0,0);}
 export function V4Mix(_a : CVec4, _b : CVec4, _c : number) : CVec4 { return new CVec4(0,0,0,0);}
 
+//hash
+export function Hash11(_p : number) : number {return 0;}
+export function Hash12(_p : CVec2) : number {return 0;}
+export function Hash13(_p : CVec3) : number {return 0;}
+export function Hash14(_p : CVec4) : number {return 0;}
+
 //js Math func
 //number
 export function max(_a : number,_b : number) : number{    return 0;}
@@ -291,7 +298,7 @@ export function mix(_a : number, _b : number, _c : number) : number { return 0; 
 export function clamp(_a : number, _b : number, _c : number) : number { return 0; }
 export function Exp2(_a : number) : number { return 0; }
 export function random(_uv : CVec2) : number { return 0; }
-
+export function sqrt(_a : number) : number {return 0;}
 
 //V2
 export function V2Max(_a : CVec2,_b : CVec2) : CVec2{    return new CVec2(0, 0);}

@@ -22,10 +22,10 @@ var gDesc = [];
 gDesc[SDF.eColorVFX.Distort] = MakeDesc(["Strength_X", "Strength_Y"], [0, 0], [0.5, 0.5], [0.02, 0.02], [0.05, 0.05]);
 gDesc[SDF.eColorVFX.Aberrate] = MakeDesc(["Base_Strength", "Added_Strength"], [0, 0], [0.1, 0.1], [0.01, 0.01], [0.1, 0.05]);
 gDesc[SDF.eColorVFX.Outline] = MakeDesc(["R", "G", "B"], [0, 0, 0], [1, 1, 1], [0.1, 0.1, 0.1], [1, 0, 0]);
-gDesc[SDF.eColorVFX.Pixel] = MakeDesc(["Size_X", "Size_Y"], [0, 0], [10, 10], [1, 1], [2, 2]);
+gDesc[SDF.eColorVFX.Pixel] = MakeDesc(["Size_X", "Size_Y"], [0, 0], [32, 32], [1, 1], [2, 2]);
 gDesc[SDF.eColorVFX.Noise] = MakeDesc(["Speed", "Strength", "Size"], [0, 0, 0], [10, 0.5, 10], [0.1, 0.05, 0.1], [4, 0.25, 1]);
 gDesc[SDF.eColorVFX.Scanline] = MakeDesc(["NumOfLines", "Speed"], [0, 0], [50, 10], [5, 1], [25, 5]);
-gDesc[SDF.eColorVFX.ColorPalette] = MakeDesc(["Index", "Dither"], [0, 0], [10, 1], [1, 0.05], [1, 0]);
+gDesc[SDF.eColorVFX.LookUpTable] = MakeDesc(["Index", "Dither"], [SDF.eLookUpTable.LUT0, 0], [SDF.eLookUpTable.LUT5, 1], [1, 0.05], [SDF.eLookUpTable.LUT0, 0]);
 gDesc[SDF.eColorVFX.Blur] = MakeDesc(["Type", "Count"], [1, 1], [4, 4], [1, 1], [2, 2]);
 for (const [text, val] of Object.entries(SDF.eColorVFX)) {
     if (typeof val !== "number")

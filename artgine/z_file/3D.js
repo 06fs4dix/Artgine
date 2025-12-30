@@ -1,6 +1,6 @@
 import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, MatMix, Sam2D0ToColor, MatTypeToMat, min, abs, max, dFdy, V3Len, length, dFdx, V3Mix, V3SubV3, SaturateFloat, V2AddV2, V2Len, SaturateV3, } from "./Shader";
 import { SDF } from "./SDF";
-import { CAModelCac, VFXDown2, GetTexCodiedUV, VFX } from "./ColorFun";
+import { CAModelCac, VFXDown2, GetTexCodiedUV, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5 } from "./ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, jitter, calcParallaxShadow } from "./Shadow";
@@ -308,7 +308,7 @@ function ps_main() {
     BranchEnd();
     var normal = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(uv, VFX, time);
     BranchDefault();
     L_cor = Sam2DToColor(to_ref.x, uv);
@@ -352,7 +352,7 @@ function ps_main_gBuffer() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
     BranchEnd();
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(uv, VFX, time);
     BranchDefault();
     if (sam2DCount == 1.0)
@@ -388,7 +388,7 @@ function ps_main_gBuffer_multi() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
     BranchEnd();
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(uv, VFX, time);
     BranchDefault();
     if (sam2DCount == 1.0)
@@ -449,7 +449,7 @@ function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
 }
 function ps_main_shadow_write() {
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(to_uv, VFX, time);
     BranchDefault();
     L_cor = Sam2DToColor(0.0, to_uv);
@@ -527,7 +527,7 @@ function ps_main_shadow_read() {
         pAll = 0.0;
     BranchEnd();
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(uv, VFX, time);
     BranchDefault();
     L_cor = Sam2DToColor(0.0, uv);
@@ -557,7 +557,7 @@ function ps_main_bake() {
     uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
     BranchEnd();
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(uv, VFX, time);
     BranchDefault();
     L_cor = Sam2DToColor(to_ref.x, uv);

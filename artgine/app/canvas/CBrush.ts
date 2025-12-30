@@ -143,7 +143,9 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	public mRenInfoMap=new Map<string,CRenInfo>();
 	mUpdateShadow=true;
 	mUpdateLight=true;
-	
+	mUpdateLUT=false;
+	public mLUT=[new Float32Array(32*32),new Float32Array(32*32),new Float32Array(32*32),
+		new Float32Array(32*32),new Float32Array(32*32),new Float32Array(32*32)];
 
 	
 	override IsShould(_member: string, _type: CObject.eShould): boolean 

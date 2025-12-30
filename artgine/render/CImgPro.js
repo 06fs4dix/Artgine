@@ -294,7 +294,7 @@ export class CImgPro {
         }
         function Mapping(_r, _g, _b) {
             const index = _r + _g * cellSize + _b * cellSize * cellSize;
-            return new CVec2(Math.floor(index / _size.x), (_size.y - 1) - (index % _size.x));
+            return new CVec2(Math.floor(index / _size.x), (index % _size.x));
         }
         const outColors = new Uint8Array(_size.x * _size.y * 4);
         for (let bCell = 0; bCell < cellSize; bCell++) {
@@ -302,7 +302,7 @@ export class CImgPro {
                 for (let rCell = 0; rCell < cellSize; rCell++) {
                     let closestIndex = 0;
                     let closest = Diff(colorArr[0], CellToColor(rCell), CellToColor(gCell), CellToColor(bCell));
-                    for (let i = 0; i < colorArr.length; i++) {
+                    for (let i = 1; i < colorArr.length; i++) {
                         const diff = Diff(colorArr[i], CellToColor(rCell), CellToColor(gCell), CellToColor(bCell));
                         if (diff < closest) {
                             closest = diff;

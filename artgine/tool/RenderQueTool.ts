@@ -47,8 +47,9 @@ var g_can: CCanvas = null;
 
 
 
-function Open() {
+async function Open() {
     let pf = new CPreferences();
+    
     // pf.m_width = 1350;
     // pf.m_height = 550;
 
@@ -62,7 +63,7 @@ function Open() {
     //CWebUtil.ID("RenPriority_Btn").onclick = (e) => {UpdateRenPriorityGraph()};
     //CWebUtil.ID("RenInfo_Btn").onclick = (e) => {UpdateRenInfoGraph()};
 
-    g_fw.Process();
+    await g_fw.Process();
 }
 
 function Close() {

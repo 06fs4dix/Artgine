@@ -26,8 +26,14 @@ export class ToV4 {
     b;
     a;
     xy;
+    xz;
+    xw;
+    yz;
+    zx;
+    wx;
     xyz;
     rgb;
+    yzw;
     notUsedCVec4Param;
     constructor(_x = null, _y, _z, _w) { this.x = _x; this.y = _y; }
 }
@@ -61,8 +67,14 @@ export class CVec4 {
     b;
     a;
     xy;
+    xz;
+    xw;
+    yz;
+    zx;
+    wx;
     xyz;
     rgb;
+    yzw;
     notUsedCVec4Param;
     constructor(_x = null, _y, _z, _w) { this.x = _x; this.y = _y; }
 }
@@ -259,6 +271,10 @@ export function V4Dot(_a, _b) { return 0; }
 export function V4Nor(_a) { return new CVec4(0, 0, 0, 0); }
 export function V4Fract(_a) { return new CVec4(0, 0, 0, 0); }
 export function V4Mix(_a, _b, _c) { return new CVec4(0, 0, 0, 0); }
+export function Hash11(_p) { return 0; }
+export function Hash12(_p) { return 0; }
+export function Hash13(_p) { return 0; }
+export function Hash14(_p) { return 0; }
 export function max(_a, _b) { return 0; }
 export function min(_a, _b) { return 0; }
 export function abs(_a) { return 0; }
@@ -287,6 +303,7 @@ export function mix(_a, _b, _c) { return 0; }
 export function clamp(_a, _b, _c) { return 0; }
 export function Exp2(_a) { return 0; }
 export function random(_uv) { return 0; }
+export function sqrt(_a) { return 0; }
 export function V2Max(_a, _b) { return new CVec2(0, 0); }
 export function V2Min(_a, _b) { return new CVec2(0, 0); }
 export function V2Abs(_a) { return new CVec2(0, 0); }

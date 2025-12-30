@@ -49,7 +49,13 @@ import {
 import { 
 	CAModelCac, VFXDown2,
 	GetTexCodiedUV,
-	VFX
+	VFX,
+	LUT0,
+	LUT1,
+	LUT2,
+	LUT3,
+	LUT4,
+	LUT5
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -185,16 +191,6 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 	ps_main_shadow_read,[out_color]
 );
 
-// Build("3DShadowReadPa", ["shadowRead","parallax"], 
-// 	vs_main_shadow_read_pa, [
-// 		worldMat,viewMat,projectMat,skin,weightArrMat,alphaCut,
-// 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
-// 		shadowCount,shadowPointProj,shadowReadList,
-// 		shadowRate,PCF,texture16f,bias,normalBias,dotCac,
-// 		ligDir,ligCol,ligCount,parallaxNormal, camPos,
-// 	], [out_position,to_uv,to_normal,to_worldPos,to_binormal,to_tangent,to_ref],
-// 	ps_main_shadow_read_pa,[out_color]
-// );
 
 //baking
 Build("Artgine/Shader/3DBake", ["bake"], 
@@ -556,7 +552,7 @@ function ps_main()
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(uv,VFX,time);
 	BranchDefault();
 	L_cor=Sam2DToColor(to_ref.x, uv);
@@ -623,7 +619,7 @@ function ps_main_gBuffer() {
 	
 
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(uv,VFX,time);
 	BranchDefault();
 	if(sam2DCount == 1.0)
@@ -673,7 +669,7 @@ function ps_main_gBuffer_multi() {
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(uv,VFX,time);
 	BranchDefault();
 	if(sam2DCount == 1.0)
@@ -755,7 +751,7 @@ function ps_main_shadow_write()
 {
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(to_uv,VFX,time);
 	BranchDefault();
 	L_cor = Sam2DToColor(0.0, to_uv);
@@ -866,7 +862,7 @@ function ps_main_shadow_read()
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(uv,VFX,time);
 	BranchDefault();
 	L_cor = Sam2DToColor(0.0, uv);
@@ -905,7 +901,7 @@ function ps_main_bake() {
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,time]);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
 	L_cor=VFXDown2(uv,VFX,time);
 	BranchDefault();
 	L_cor = Sam2DToColor(to_ref.x, uv);

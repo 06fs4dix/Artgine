@@ -31,7 +31,57 @@ if(CUtil.IsNode())
 	__dirname = path.dirname(__filename);
 	
 }
+// export class CPath2
+// {
+// 	mData="";
+// 	constructor(_defaultPath=null,_type : Array<string>=[CPath2.eType.Context])
+// 	{
+// 		if(_defaultPath!=null)
+// 		{
+// 			this.mData=_defaultPath;
+// 		}
+// 		else if(CUtil.IsNode())
+// 		{
+// 			this.mData=__dirname;
+// 		}
+// 		else
+// 		{
+// 			this.mData=location.origin+location.pathname
+// 		}
+// 		this.mData = this.mData.replace(/\\/g, "/");
+// 	}
+// 	//http://sample.com:8000/Artgine/proj/Home/Home.html
+// 	static eType=
+// 	{
+// 		Protocol:"Protocol",//http://
+// 		Host:"Host",//sample.com
+// 		Port:"Port",//8000
+// 		Context:"Context",//Artgine
+// 		Route:"Route",//proj/Home
+// 		Endpoint:"Endpoint",//Home.html
+// 	}
 	
+// 	Sub()
+// 	{
+
+// 	}
+// 	Get()
+// 	{
+
+// 	}
+
+
+// 	//PHPC
+// 	Root()
+// 	{
+
+// 	}
+// 	//PHPCR
+// 	Content()
+// 	{
+
+// 	}
+// }	
 
 export class CPath
 {

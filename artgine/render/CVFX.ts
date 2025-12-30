@@ -57,7 +57,7 @@ gDesc[SDF.eColorVFX.Outline] = MakeDesc(
 );
 gDesc[SDF.eColorVFX.Pixel] = MakeDesc(
     ["Size_X", "Size_Y"],
-    [0, 0], [10, 10],
+    [0, 0], [32, 32],
     [1, 1],
     [2, 2]
 );
@@ -73,11 +73,11 @@ gDesc[SDF.eColorVFX.Scanline] = MakeDesc(
     [5, 1],
     [25, 5]
 );
-gDesc[SDF.eColorVFX.ColorPalette] = MakeDesc(
+gDesc[SDF.eColorVFX.LookUpTable] = MakeDesc(
     ["Index", "Dither"],
-    [0, 0], [10, 1],
+    [SDF.eLookUpTable.LUT0, 0], [SDF.eLookUpTable.LUT5, 1],
     [1, 0.05],
-    [1, 0]
+    [SDF.eLookUpTable.LUT0, 0]
 );
 gDesc[SDF.eColorVFX.Blur] = MakeDesc(
     ["Type", "Count"],

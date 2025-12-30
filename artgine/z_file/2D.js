@@ -1,5 +1,5 @@
 import { Build, CVec3, CVec4, CMat3, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, MappingTexToV3, max, min, MatTypeToMat, } from "./Shader";
-import { CAModelCac, VFXDown2, GetTexCodiedUV, VFX } from "./ColorFun";
+import { CAModelCac, VFXDown2, GetTexCodiedUV, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5 } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { shadowOn } from "./Shadow";
 import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
@@ -188,7 +188,7 @@ function ps_main() {
     }
     BranchEnd();
     var L_cor;
-    BranchBegin("vfx", "VFX", [VFX, time]);
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
     L_cor = VFXDown2(to_uv.xy, VFX, time);
     BranchDefault();
     L_cor = Sam2DToColor(0.0, to_uv.xy);

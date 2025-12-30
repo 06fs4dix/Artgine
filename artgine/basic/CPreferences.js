@@ -11,7 +11,7 @@ export class CPreferences extends CObject {
     mTargetHeight = 0;
     mTop = 0;
     mLeft = 0;
-    mRenderer = CPreferences.eRenderer.Null;
+    mRenderer = CPreferences.eRenderer.GL;
     m32fDepth = false;
     mTexture16f = false;
     mAnti = true;
