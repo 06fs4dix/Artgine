@@ -1,6 +1,6 @@
+import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUniqueID.js";
 import { CWorldServer, CZoneWorker } from "https://06fs4dix.github.io/Artgine/artgine/server/CWorldServer.js";
 import { Worker } from "worker_threads";
-var gZOffset = 0;
 export class CVillageWorld extends CWorldServer {
     ReadyZone() {
         let create = true;
@@ -10,23 +10,23 @@ export class CVillageWorld extends CWorldServer {
             }
         }
         if (create) {
+            let zKey = CUniqueID.GetHash();
             let czName = "zone" + "/" + "CVillageZone";
             let worker = new Worker(new URL("./" + czName + ".js", import.meta.url), {
                 workerData: {
                     zone: "CVillageZone",
-                    offset: gZOffset,
+                    key: zKey,
                 }
             });
-            let zw = new CZoneWorker(worker, gZOffset);
-            zw.mKey = "CVillageZone";
-            this.mZoneMap.set(gZOffset, zw);
+            let zw = new CZoneWorker(worker, zKey);
+            zw.mZone = "CVillageZone";
+            this.mZoneMap.set(zKey, zw);
             worker.on('message', (msg) => {
                 this.ThreadMessage(zw, msg);
             });
             worker.on('exit', (code) => {
                 console.log('[main] worker exit code:', code);
             });
-            gZOffset++;
         }
     }
     UserSelectZone(_privateKey) {

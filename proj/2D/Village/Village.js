@@ -1,4 +1,4 @@
-const version = 'mjcwy21m_34';
+const version = 'mjsmax7p_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -36,7 +36,6 @@ import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CBGAttachButton, CBlackboardModal, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
-import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
@@ -241,7 +240,7 @@ uipic.Init(miniMapTex);
 uipic.SetSize(128, 128);
 uipic.SetAnchorX(CUI.eAnchor.Min, 10);
 uipic.SetAnchorY(CUI.eAnchor.Max, 10);
-uipic.GetPt().SetColorVFX(0, new CVec4(25, 50, 0, SDF.eColorVFX.Scanline));
+uipic.GetPt().SetVFX(0, [25, 50, 0], SDF.eColorVFX.Scanline);
 CSing.On(CSing.eEvent.State, () => {
     if (CSing.PrivateKey() != null) {
         loginModal.Close();
@@ -286,19 +285,29 @@ else {
         uniqueKey = WorldInfo.uniqueKey;
         let stream = new CStream(WorldInfo.dataList);
         while (stream.IsEnd() == false) {
-            let user = Real.PushSub(new CUser());
-            user.SetKey(stream.GetString());
-            user.SetPos(stream.GetIStream(new CVec3()));
-            stream.GetString();
+            let type = stream.GetString();
+            let nick = stream.GetString();
+            if (type == "user") {
+                let user = Real.PushSub(new CUser());
+                user.SetKey(stream.GetString());
+                user.SetPos(stream.GetIStream(new CVec3()));
+            }
+            else {
+                const obj = CBlackBoard.Find(type).ExportProxy();
+                obj.SetKey(stream.GetString());
+                obj.SetPos(stream.GetIStream(new CVec3()));
+                obj.SetSave(false);
+                Real.PushSub(obj);
+            }
         }
         CConsol.Log(_stream.Data());
     });
     socket.On(PacketWorld.eHeader.WorldPushUser, (_stream) => {
         let WorldPushUser = PacketWorld.WorldPushUser(_stream);
         let stream = new CStream(WorldPushUser.data);
+        let nick = stream.GetString();
         let uk = stream.GetString();
         let pos = stream.GetIStream(new CVec3());
-        let nick = stream.GetString();
         let user = Real.Find(WorldPushUser.uniqueKey);
         if (user == null) {
             let user = Real.PushSub(new CUser());
@@ -312,7 +321,7 @@ else {
         user.mRB.Clear();
         user.SetPos(UserPad.pos);
         if (UserPad.dir.IsZero() == false) {
-            user.mRB.Push(new CForce("move", UserPad.dir, 100));
+            user.mRB.Push(new CForce("move", UserPad.dir, 200));
         }
     });
     socket.On(PacketWorld.eHeader.WorldRemoveUser, (_stream) => {

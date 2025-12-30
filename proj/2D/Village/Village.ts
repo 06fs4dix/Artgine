@@ -1,5 +1,5 @@
 //Version
-const version='mjcwy21m_34';
+const version='mjsmax7p_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -412,7 +412,7 @@ uipic.Init(miniMapTex);
 uipic.SetSize(128,128);
 uipic.SetAnchorX(CUI.eAnchor.Min,10);
 uipic.SetAnchorY(CUI.eAnchor.Max,10);
-uipic.GetPt().SetColorVFX(0,new CVec4(25,50,0,SDF.eColorVFX.Scanline))
+uipic.GetPt().SetVFX(0,[25,50,0],SDF.eColorVFX.Scanline)
 
 
 
@@ -428,7 +428,7 @@ CSing.On(CSing.eEvent.State,()=>{
 
 
 
-
+//Real.Clear();
 
 let loginModal : CModal;
 if(gPF.mServer=="local")
@@ -492,10 +492,26 @@ else
         let stream=new CStream(WorldInfo.dataList);
         while(stream.IsEnd()==false)
         {
-            let user=Real.PushSub(new CUser());
-            user.SetKey(stream.GetString());
-            user.SetPos(stream.GetIStream(new CVec3()));
-            stream.GetString()
+            let type=stream.GetString();
+            let nick=stream.GetString();
+            if(type=="user")
+            {
+                let user=Real.PushSub(new CUser());
+                user.SetKey(stream.GetString());
+                user.SetPos(stream.GetIStream(new CVec3()));
+                
+            }
+            else
+            {
+                const obj = CBlackBoard.Find(type).ExportProxy() as CSubject;
+                obj.SetKey(stream.GetString());
+                obj.SetPos(stream.GetIStream(new CVec3()));
+                obj.SetSave(false);
+                Real.PushSub(obj);
+                
+            }
+
+            
         }
         CConsol.Log(_stream.Data());
 
@@ -504,9 +520,11 @@ else
     socket.On(PacketWorld.eHeader.WorldPushUser,(_stream : CStream)=>{
         let WorldPushUser=PacketWorld.WorldPushUser(_stream);
         let stream=new CStream(WorldPushUser.data);
+
+        let nick=stream.GetString();
         let uk=stream.GetString();
         let pos=stream.GetIStream(new CVec3());
-        let nick=stream.GetString();
+        
 
 
         let user=Real.Find(WorldPushUser.uniqueKey) as CUser;
@@ -524,7 +542,7 @@ else
         user.SetPos(UserPad.pos);
         if(UserPad.dir.IsZero()==false)
         {
-            user.mRB.Push(new CForce("move",UserPad.dir,100));
+            user.mRB.Push(new CForce("move",UserPad.dir,200));
         }
     });
     socket.On(PacketWorld.eHeader.WorldRemoveUser,(_stream : CStream)=>{
@@ -542,24 +560,6 @@ else
     });
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
