@@ -1,6 +1,7 @@
 import { CAModelCac, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
-import { NoiseFBM } from "../../artgine/z_file/Noise";
+import { NoiseValue3FBMRest } from "../../artgine/z_file/Noise";
+
 import { 
     abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
     Exp, 
@@ -131,8 +132,8 @@ function ProceduralFlowNormal(_flow : CVec3) : CVec3
     var freq : number = 40.0;
     var amp : number = 20.0;
 
-    var h0 : number = amp * NoiseFBM(new CVec3(V2MulFloat(uv0, freq), 0.0), 0.5);
-    var h1 : number = amp * NoiseFBM(new CVec3(V2MulFloat(uv1, freq), 0.5), 0.5);
+    var h0 : number = amp * NoiseValue3FBMRest(new CVec3(V2MulFloat(uv0, freq), 0.0), 0.5);
+    var h1 : number = amp * NoiseValue3FBMRest(new CVec3(V2MulFloat(uv1, freq), 0.5), 0.5);
 
     var normal0 : CVec3 = V3Nor(new CVec3(dFdx(h0), 1.0, dFdy(h0)));
     var normal1 : CVec3 = V3Nor(new CVec3(dFdx(h1), 1.0, dFdy(h1)));

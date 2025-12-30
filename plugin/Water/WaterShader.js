@@ -1,6 +1,6 @@
 import { CAModelCac, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
-import { NoiseFBM } from "../../artgine/z_file/Noise";
+import { NoiseValue3FBMRest } from "../../artgine/z_file/Noise";
 import { abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CVec2, CVec3, CVec4, dFdx, dFdy, MatTypeToMat, max, min, mod, Null, pow, reflect, Sam2D0ToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, V2AddV2, V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
 var out_position = Null();
 var out_color = Null();
@@ -80,8 +80,8 @@ function ProceduralFlowNormal(_flow) {
     var uv1 = V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z + halfCycle, cycle)));
     var freq = 40.0;
     var amp = 20.0;
-    var h0 = amp * NoiseFBM(new CVec3(V2MulFloat(uv0, freq), 0.0), 0.5);
-    var h1 = amp * NoiseFBM(new CVec3(V2MulFloat(uv1, freq), 0.5), 0.5);
+    var h0 = amp * NoiseValue3FBMRest(new CVec3(V2MulFloat(uv0, freq), 0.0), 0.5);
+    var h1 = amp * NoiseValue3FBMRest(new CVec3(V2MulFloat(uv1, freq), 0.5), 0.5);
     var normal0 = V3Nor(new CVec3(dFdx(h0), 1.0, dFdy(h0)));
     var normal1 = V3Nor(new CVec3(dFdx(h1), 1.0, dFdy(h1)));
     return V3Nor(V3Mix(normal0, normal1, abs((mod(_flow.z, cycle) / cycle - 0.5) * 2.0)));

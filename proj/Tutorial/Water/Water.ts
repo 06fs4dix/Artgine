@@ -1,5 +1,5 @@
 //Version
-const version='mjcwa2up_33';
+const version='mjsn76zm_9';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -196,6 +196,7 @@ water.NormalFlow(new CVec2(1, 0), "Res/Water0.jpg", "Res/Water1.jpg");
 water.AddReflector();
 water.AddRefractor();
 water.AddCaustics("Res/Water0.jpg");
+//water.SetWaterDeep(100000,100000,new CVec3(1.0,1.0,1.0),new CVec3(1.0,1.0,1.0));
 //water.AddCaustics("Res/caustics.png");
 //water.GetPT().PushTag(CPaint.eTag.Light);
 
@@ -303,7 +304,7 @@ function ResetWater()
         water.SetPos(new CVec3(0, 10, 0));
         
         water.AddRefractor();
-        water.SetWaterDeep(50,3000,new CVec3(0.0,0.01,0.1),new CVec3(0.1,0.3,0.6));
+        water.SetWaterDeep(50,3000,new CVec3(0.0,0.05,0.2),new CVec3(0.1,0.3,0.6));
         
         
 
@@ -320,7 +321,8 @@ function ResetWater()
         
         water.GetPT().SetTexCodi(new CVec4(10,10,10));
         water.AddRefractor();
-        water.SetWaterDeep(10,10000,new CVec3(0.1,0.1,0.01),new CVec3(0.5,0.5,0.1));
+        //water.AddReflector()
+        water.SetWaterDeep(30,10000,new CVec3(0.1,0.1,0.01),new CVec3(0.5,0.5,0.1));
         
 
         water.NormalFlow(new CVec2(5, 1), "Res/Water0.jpg", "Res/Water1.jpg");
@@ -330,35 +332,6 @@ function ResetWater()
 
 }
 window["ResetWater"]=ResetWater;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

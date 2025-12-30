@@ -1,4 +1,4 @@
-const version = 'mjcwa2up_33';
+const version = 'mjsn76zm_9';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -190,7 +190,7 @@ function ResetWater() {
         water.SetSca(new CVec3(1000, 1000, 1000));
         water.SetPos(new CVec3(0, 10, 0));
         water.AddRefractor();
-        water.SetWaterDeep(50, 3000, new CVec3(0.0, 0.01, 0.1), new CVec3(0.1, 0.3, 0.6));
+        water.SetWaterDeep(50, 3000, new CVec3(0.0, 0.05, 0.2), new CVec3(0.1, 0.3, 0.6));
         water.NormalFlow(new CVec2(0.2, 0.2), "Res/Water0.jpg", "Res/Water1.jpg");
     }
     else if ("RealMuddy" == water_sel) {
@@ -201,7 +201,7 @@ function ResetWater() {
         water.SetPos(new CVec3(0, 10, 0));
         water.GetPT().SetTexCodi(new CVec4(10, 10, 10));
         water.AddRefractor();
-        water.SetWaterDeep(10, 10000, new CVec3(0.1, 0.1, 0.01), new CVec3(0.5, 0.5, 0.1));
+        water.SetWaterDeep(30, 10000, new CVec3(0.1, 0.1, 0.01), new CVec3(0.5, 0.5, 0.1));
         water.NormalFlow(new CVec2(5, 1), "Res/Water0.jpg", "Res/Water1.jpg");
     }
 }
