@@ -50,12 +50,12 @@ export class CPalette {
         gSlCubeKey = "Artgine/Cube.sl";
         gSlVoxelKey = "Artgine/Voxel.sl";
         gSlTerrainKey = "Artgine/Terrain.sl";
-        gLUT[0] = upFolder + "artgine/z_file/lut/apollo.png";
-        gLUT[1] = upFolder + "artgine/z_file/lut/blessing.png";
-        gLUT[2] = upFolder + "artgine/z_file/lut/borkfest.png";
-        gLUT[3] = upFolder + "artgine/z_file/lut/flatter.png";
-        gLUT[4] = upFolder + "artgine/z_file/lut/pokemon.png";
-        gLUT[5] = upFolder + "artgine/z_file/lut/twilight.png";
+        gLUT[0] = upFolder + "artgine/z_file/LUT/apollo.png";
+        gLUT[1] = upFolder + "artgine/z_file/LUT/blessing.png";
+        gLUT[2] = upFolder + "artgine/z_file/LUT/borkfest.png";
+        gLUT[3] = upFolder + "artgine/z_file/LUT/flatter.png";
+        gLUT[4] = upFolder + "artgine/z_file/LUT/pokemon.png";
+        gLUT[5] = upFolder + "artgine/z_file/LUT/twilight.png";
         for (let i = 0; i < 6; ++i)
             await _fw.Load().Exe(gLUT[i]);
         await _fw.Load().Exe(Sl2DKey);
