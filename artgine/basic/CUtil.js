@@ -1,8 +1,12 @@
+var gNode = null;
 export class CUtil {
     static IsNode() {
-        return (typeof process !== 'undefined' &&
-            process.versions != null &&
-            process.versions.node != null);
+        if (gNode == null) {
+            gNode = (typeof process !== 'undefined' &&
+                process.versions != null &&
+                process.versions.node != null);
+        }
+        return gNode;
     }
     static IsMobile() {
         var filter = "win16|win32|win64|mac|macintel";

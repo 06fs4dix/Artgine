@@ -1,4 +1,4 @@
-const version = 'mjsmax7p_4';
+const version = 'mjsopv7q_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -45,7 +45,6 @@ import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
-import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CSing, CSingOption } from "https://06fs4dix.github.io/Artgine/artgine/server/CSing.js";
 import { CSocketIO } from "https://06fs4dix.github.io/Artgine/artgine/network/CSocketIO.js";
 import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
@@ -56,7 +55,6 @@ import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/
 import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCondition.js";
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSurface.js";
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
-import { CUI, CUIPicture } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CUI.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
@@ -229,18 +227,6 @@ if (audioEnable) {
     audio.Play();
 }
 new CMDViewer("README.md");
-let miniMapTex = gAtl.Frame().Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8)], new CVec2(512, 512));
-rp = PM1RP.PushRP(new CRPAuto());
-rp.PushAnd(new CCondition({ "s": "class", "v": "CPaintVoxel" }));
-rp.mShader = gAtl.Frame().Pal().SlVoxelKey();
-rp.mRenderTarget = miniMapTex;
-rpPlug.SetRPMgr(PM1RP);
-let uipic = Main.PushSub(new CUIPicture());
-uipic.Init(miniMapTex);
-uipic.SetSize(128, 128);
-uipic.SetAnchorX(CUI.eAnchor.Min, 10);
-uipic.SetAnchorY(CUI.eAnchor.Max, 10);
-uipic.GetPt().SetVFX(0, [25, 50, 0], SDF.eColorVFX.Scanline);
 CSing.On(CSing.eEvent.State, () => {
     if (CSing.PrivateKey() != null) {
         loginModal.Close();

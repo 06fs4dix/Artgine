@@ -1,10 +1,16 @@
+
+var gNode=null;
 export class CUtil
 {
     static IsNode() 
     {
-        return (typeof process !== 'undefined' &&
+		if(gNode==null)
+		{
+			gNode=(typeof process !== 'undefined' &&
             process.versions != null &&
             process.versions.node != null);
+		}
+        return gNode;
     }
 
 	

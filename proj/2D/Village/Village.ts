@@ -1,5 +1,5 @@
 //Version
-const version='mjsmax7p_4';
+const version='mjsopv7q_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -396,23 +396,26 @@ new CMDViewer("README.md");
 // lp.Push(new CDayCycle(new CVec3(1,0),new CColor(0,0,0)));
 // lp.Push(new CDayCycle(new CVec3(-1,0),new CColor(0,0,0)));
 
-let miniMapTex=gAtl.Frame().Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)],new CVec2(512,512));
 
 
-rp=PM1RP.PushRP(new CRPAuto());
-rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
-rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
-rp.mRenderTarget=miniMapTex;
-//Real.SetRPMgr(PM1RP);
-rpPlug.SetRPMgr(PM1RP);
+//이 부분은 미니맵 샘플이다! 지우지마!!!!!!!!!!!!!!!!!!
+//let miniMapTex=gAtl.Frame().Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)],new CVec2(512,512));
 
 
-let uipic=Main.PushSub(new CUIPicture());
-uipic.Init(miniMapTex);
-uipic.SetSize(128,128);
-uipic.SetAnchorX(CUI.eAnchor.Min,10);
-uipic.SetAnchorY(CUI.eAnchor.Max,10);
-uipic.GetPt().SetVFX(0,[25,50,0],SDF.eColorVFX.Scanline)
+// rp=PM1RP.PushRP(new CRPAuto());
+// rp.PushAnd(new CCondition({"s":"class","v":"CPaintVoxel"}));
+// rp.mShader=gAtl.Frame().Pal().SlVoxelKey();
+// rp.mRenderTarget=miniMapTex;
+// //Real.SetRPMgr(PM1RP);
+// rpPlug.SetRPMgr(PM1RP);
+
+
+// let uipic=Main.PushSub(new CUIPicture());
+// uipic.Init(miniMapTex);
+// uipic.SetSize(128,128);
+// uipic.SetAnchorX(CUI.eAnchor.Min,10);
+// uipic.SetAnchorY(CUI.eAnchor.Max,10);
+// uipic.GetPt().SetVFX(0,[25,50,0],SDF.eColorVFX.Scanline)
 
 
 
@@ -560,6 +563,11 @@ else
     });
 
 }
+
+
+
+
+
 
 
 
