@@ -90,16 +90,19 @@ export class CUtilMath {
     }
     static CameraLookAtLH(eyeVec, lookVec, upVec, viewMat = new CMat()) {
         viewMat.SetUnit(false);
-        var Zaxis = CMath.V3SubV3(lookVec, eyeVec);
-        Zaxis = CMath.V3Nor(Zaxis);
-        var Xaxis = new CVec3();
-        Xaxis = CMath.V3Cross(upVec, Zaxis);
+        let Zaxis = CPoolGeo.ProductV3();
+        CMath.V3SubV3(lookVec, eyeVec, Zaxis);
+        CMath.V3Nor(Zaxis, Zaxis);
+        let Xaxis = CPoolGeo.ProductV3();
+        CMath.V3Cross(upVec, Zaxis, Xaxis);
         if (Xaxis.IsZero()) {
-            Xaxis = new CVec3(1, 0, 0);
+            Xaxis.mF32A[0] = 1;
+            Xaxis.mF32A[1] = 0;
+            Xaxis.mF32A[2] = 0;
         }
-        Xaxis = CMath.V3Nor(Xaxis);
-        var Yaxis = new CVec3();
-        Yaxis = CMath.V3Cross(Zaxis, Xaxis);
+        CMath.V3Nor(Xaxis, Xaxis);
+        let Yaxis = CPoolGeo.ProductV3();
+        Yaxis = CMath.V3Cross(Zaxis, Xaxis, Yaxis);
         viewMat.mF32A[0] = Xaxis.x;
         viewMat.mF32A[1] = Yaxis.x;
         viewMat.mF32A[2] = Zaxis.x;
@@ -116,20 +119,26 @@ export class CUtilMath {
         viewMat.mF32A[13] = -CMath.V3Dot(Yaxis, eyeVec);
         viewMat.mF32A[14] = -CMath.V3Dot(Zaxis, eyeVec);
         viewMat.mF32A[15] = 1;
+        CPoolGeo.RecycleV3(Xaxis);
+        CPoolGeo.RecycleV3(Yaxis);
+        CPoolGeo.RecycleV3(Zaxis);
         return viewMat;
     }
     static CameraLookAtRH(eyeVec, lookVec, upVec, viewMat = new CMat()) {
         viewMat.SetUnit(false);
-        var Zaxis = CMath.V3SubV3(eyeVec, lookVec);
-        Zaxis = CMath.V3Nor(Zaxis);
-        var Xaxis = new CVec3();
-        Xaxis = CMath.V3Cross(upVec, Zaxis);
+        let Zaxis = CPoolGeo.ProductV3();
+        CMath.V3SubV3(eyeVec, lookVec, Zaxis);
+        CMath.V3Nor(Zaxis, Zaxis);
+        let Xaxis = CPoolGeo.ProductV3();
+        CMath.V3Cross(upVec, Zaxis, Xaxis);
         if (Xaxis.IsZero()) {
-            Xaxis = new CVec3(1, 0, 0);
+            Xaxis.mF32A[0] = 1;
+            Xaxis.mF32A[1] = 0;
+            Xaxis.mF32A[2] = 0;
         }
-        Xaxis = CMath.V3Nor(Xaxis);
-        var Yaxis = new CVec3();
-        Yaxis = CMath.V3Cross(Zaxis, Xaxis);
+        CMath.V3Nor(Xaxis, Xaxis);
+        let Yaxis = CPoolGeo.ProductV3();
+        Yaxis = CMath.V3Cross(Zaxis, Xaxis, Yaxis);
         viewMat.mF32A[0] = Xaxis.x;
         viewMat.mF32A[1] = Yaxis.x;
         viewMat.mF32A[2] = Zaxis.x;
@@ -146,6 +155,9 @@ export class CUtilMath {
         viewMat.mF32A[13] = -CMath.V3Dot(Yaxis, eyeVec);
         viewMat.mF32A[14] = -CMath.V3Dot(Zaxis, eyeVec);
         viewMat.mF32A[15] = 1;
+        CPoolGeo.RecycleV3(Xaxis);
+        CPoolGeo.RecycleV3(Yaxis);
+        CPoolGeo.RecycleV3(Zaxis);
         return viewMat;
     }
     static RayTriangleIS(pa_one, pa_two, pa_three, pa_ray, pa_ccw = true) {
@@ -269,7 +281,9 @@ export class CUtilMath {
                 pIntersect[i] = candidatePlane[i];
             }
         }
-        pa_ray.SetPosition(new CVec3(pIntersect[0], pIntersect[1], pIntersect[2]));
+        pa_ray.mVec3List[1].mF32A[0] = pIntersect[0];
+        pa_ray.mVec3List[1].mF32A[1] = pIntersect[1];
+        pa_ray.mVec3List[1].mF32A[2] = pIntersect[2];
         return true;
     }
     static RaySphereIS(pa_center, pa_radian, pa_ray) {

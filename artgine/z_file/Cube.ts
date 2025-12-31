@@ -210,6 +210,11 @@ function Cloud(_viewDir : CVec3) : CVec4 {
     color *= yBlend;
     alpha *= yBlend;
 
+
+    // if(V3Len(V3SubV3(intersection.xyz,new CVec3(0.0,1000.0,0.0)))<500.0)
+    //     return new CVec4(1.0, 1.0, 1.0, 1.0);
+
+
     return new CVec4(color, color, color, alpha);
 }
 

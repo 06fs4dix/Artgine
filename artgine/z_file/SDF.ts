@@ -110,6 +110,18 @@ export class SDF {
 		LUT4:538,
 		LUT5:539,
 	}
+	static eNoise=
+	{
+		
+		Gaussian:0,//랜덤 
+		//(128*128)*32=256
+		Perlin:1792,//구름 느낌,연기 연속적인 부드러운 느낌
+		Voronoi:1536,//가뭄에 땅갈라짐.거북이 등
+		Curl:1280,//선 중심으로 슬라이스 됌
+		FBM:1024//
+
+		
+	}
 	static eBlend=
 	{
 		LinearDodge :1,//a+b 덧셈

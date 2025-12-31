@@ -220,7 +220,7 @@ export class CCamera extends CObject
 		var inMat = CMath.MatInvert(this.GetViewMat());
 		var rote = CMath.MatDecomposeRotMat(inMat, true, true, true);
 	
-		var rot = CMath.MatRotation(new CVec3(0, 0, 0));
+		var rot = CMath.MatRotation(CVec3.Vec3(0, 0, 0));
 		CMath.MatMul(rot, rote,this.mBillboardMat);
 	}
 	ResetPerspective() : void
@@ -503,7 +503,8 @@ export class CCamera extends CObject
 		var right = width;
 		var bottom = height;
 
-		var L_vec=new CVec3();
+		//var L_vec=new CVec3();
+		var L_vec=CPoolGeo.ProductV3();
 		if(this.mRCS)
 			L_vec.z = -1.0;
 		else
@@ -533,19 +534,27 @@ export class CCamera extends CObject
 
 			L_vec.x = ((((_x - left)* 2.0) / right - 1.0) - this.mProjMat.mF32A[8]) / this.mProjMat.mF32A[0];//클리피과 뷰포트는 안빼버렸음
 			L_vec.y = ((((_y - top)* 2.0) / bottom - 1.0) - this.mProjMat.mF32A[9]) / this.mProjMat.mF32A[5];
-			//L_vec.z = -1.0;
-
-			//var L_d = L_vec.toCopy();
-			var L_o = L_vec.Export();
-			L_o.z = 0;
+			
+			let L_o=CPoolGeo.ProductV3();
+			L_o.mF32A[0]=L_vec.mF32A[0];
+			L_o.mF32A[1]=L_vec.mF32A[1];
+			L_o.mF32A[2]=0;
+			//var L_o = L_vec.Export();
+			//L_o.z = 0;
 			
 		
 			let L_mi=CMath.MatInvert(this.mViewMat);
 
-			ray.SetDirect(CMath.V3MulMatCoordi(L_vec, L_mi));
-			ray.SetOriginal(CMath.V3MulMatCoordi(L_o, L_mi));
-			ray.SetDirect(CMath.V3SubV3(ray.GetDirect(),ray.GetOriginal()));
+			
+			//ray.SetDirect(CMath.V3MulMatCoordi(L_vec, L_mi));
+			//ray.SetOriginal(CMath.V3MulMatCoordi(L_o, L_mi));
+			CMath.V3MulMatCoordi(L_vec, L_mi,ray.mVec3List[0]);
+			CMath.V3MulMatCoordi(L_o, L_mi,ray.mVec3List[2]);
+			CMath.V3SubV3(ray.mVec3List[0],ray.GetOriginal(),ray.mVec3List[0]);
+			CPoolGeo.RecycleV3(L_o);
+			//ray.SetDirect(CMath.V3SubV3(ray.mVec3List[0],ray.GetOriginal(),ray.mVec3List[0]));
 		}
+		CPoolGeo.RecycleV3(L_vec);
 
 		return ray;
 	}

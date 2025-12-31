@@ -87,6 +87,13 @@ export class SDF {
         LUT4: 538,
         LUT5: 539,
     };
+    static eNoise = {
+        Gaussian: 0,
+        Perlin: 1792,
+        Voronoi: 1536,
+        Curl: 1280,
+        FBM: 1024
+    };
     static eBlend = {
         LinearDodge: 1,
         Multiply: 2,

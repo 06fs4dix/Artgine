@@ -14,17 +14,34 @@ export class COctreeData {
     constructor() {
     }
 }
+let gOctreePool = [];
+let gOCCount = 0;
 export class COctree {
+    mPool;
     mCenter;
     mHalf;
     mChild = null;
     mData = null;
     mMax = new CVec3();
     mBound;
-    constructor(_center, _half) {
+    constructor(_center, _half, _pool = null) {
         this.mCenter = _center;
         this.mHalf = _half;
         this.mBound = new CBound();
+        this.mPool = _pool;
+    }
+    New(_center, _half) {
+        if (this.mPool == null)
+            return new COctree(_center, _half);
+        let oc = this.mPool.New(COctree);
+        oc.mCenter = _center;
+        oc.mHalf = _half;
+        oc.mPool = this.mPool;
+        oc.mChild = null;
+        oc.mData = null;
+        this.mBound.Reset();
+        this.mMax.Zero();
+        return oc;
     }
     ContainingPoint(point) {
         return 0;
@@ -67,6 +84,7 @@ export class COctreeMgr {
     mOCDMap = new Map();
     mBound;
     mUpdate = 0;
+    mPool = new CArray;
     constructor(_wasm = null) {
         this.mBound = new CBound();
         this.mBound.mMin.x = -100;

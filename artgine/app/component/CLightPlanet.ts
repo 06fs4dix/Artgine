@@ -116,7 +116,11 @@ export class CLightPlanet extends CLight
             this.mTempColor.z=CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.z,this.mDCArr[fOff].mEmission.z,t);
             this.mTempColor.w=this.mDCArr[fOff].mEmission.w;
 
-            this.mColor.xyz=this.mTempColor.ToRGBA().xyz;
+            let color=this.mTempColor.ToRGBA();
+            this.mColor.mF32A[0]=color.mF32A[0];
+            this.mColor.mF32A[1]=color.mF32A[1];
+            this.mColor.mF32A[2]=color.mF32A[2];
+            //this.mColor.xyz=this.mTempColor.ToRGBA().xyz;
             this.mDirPos.w=-1;
             //this.mColor.Import(this.mDCArr[maxOff].mEmission);
             

@@ -189,20 +189,17 @@ export class CPalette
 			}
 			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eLookUpTable.LUT0+j,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),1,fa);
 		}
-		
-
-		// for(let i=0;i<CDevice.GetProperty(CDevice.eProperty.Sam2DSize);++i)
-		// {
-			
-		// 	fa[i*4+0]=255.0;
-		// 	fa[i*4+1]=255.0;
-		// 	fa[i*4+2]=255.0;
-		// 	fa[i*4+3]=255.0;
-		// }
-		// _fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eLookUpTable.Apollo,4,1,fa);
+		fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*128*4);
+		for(let i=0;i<tex.GetWidth()*tex.GetHeight();++i)
+		{
+			fa[i*4+0]=0;
+			fa[i*4+1]=0;
+			fa[i*4+2]=0;
+			fa[i*4+3]=0;
+		}
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Gaussian_Perlin_Voronoi_Curl,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),128,fa);
 
 		
-		//
 
 
 	}

@@ -360,6 +360,24 @@ export var LUT2: Sam2DV4=new Sam2DV4(11, 536);
 export var LUT3: Sam2DV4=new Sam2DV4(11, 537);
 export var LUT4: Sam2DV4=new Sam2DV4(11, 538);
 export var LUT5: Sam2DV4=new Sam2DV4(11, 539);
+
+// function NoiseGet(_uv : CVec2,_frame : number,_type : number) : CVec4
+// {
+//     var outColor : CVec4;
+//     if(_type<1)
+//     {
+//         //실시간
+        
+//     }
+//     else if(_type>SDF.eNoise.Perlin-0.5)
+//     {
+//         var off : number=_uv.x+_uv.y*128.0+_frame*128*128;
+//         var offX=mod(off,2048.0);
+//         var offY=floor(off/2048.0);
+//         Sam2DToV4(new CVec2(11,SDF.eNoise.Perlin+offY),offX);
+//     }
+//     return outColor;
+// }
 //offset 키워드가 있으면 int로
 function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
 {

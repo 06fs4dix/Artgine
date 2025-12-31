@@ -6,6 +6,7 @@ import {CMath} from "./CMath.js";
 import {CPlane} from "./CPlane.js";
 import {CPlaneInside} from "./CPlaneInside.js";
 import {CPoolGeo} from "./CPoolGeo.js";
+import { CRay } from "./CRay.js";
 import {CVec3} from "./CVec3.js";
 import {CVec4} from "./CVec4.js";
 const RayBoxRIGHT = 0;
@@ -85,19 +86,22 @@ export class CUtilMath
     {
         
         viewMat.SetUnit(false);
-        var Zaxis = CMath.V3SubV3(lookVec, eyeVec);
-        Zaxis=CMath.V3Nor(Zaxis);
-        var Xaxis=new CVec3();
-        Xaxis=CMath.V3Cross(upVec, Zaxis);
+        
+        let Zaxis=CPoolGeo.ProductV3();
+        CMath.V3SubV3(lookVec,eyeVec,Zaxis);
+        CMath.V3Nor(Zaxis,Zaxis);
+
+        let Xaxis=CPoolGeo.ProductV3();
+        CMath.V3Cross(upVec, Zaxis,Xaxis);
         if (Xaxis.IsZero())
         {
-            Xaxis=new CVec3(1,0,0);
+            Xaxis.mF32A[0]=1;Xaxis.mF32A[1]=0;Xaxis.mF32A[2]=0;
         }
-        
-            //CMsg.E("CameraLookAtLH error");//카메라 위치를 바꿔라!
-        Xaxis=CMath.V3Nor(Xaxis);
-        var Yaxis=new CVec3();
-        Yaxis=CMath.V3Cross(Zaxis, Xaxis);
+        CMath.V3Nor(Xaxis,Xaxis);
+
+        let Yaxis=CPoolGeo.ProductV3();
+        Yaxis=CMath.V3Cross(Zaxis, Xaxis,Yaxis);
+
         viewMat.mF32A[0] = Xaxis.x; viewMat.mF32A[1] = Yaxis.x; viewMat.mF32A[2] = Zaxis.x; viewMat.mF32A[3] = 0;
         viewMat.mF32A[4] = Xaxis.y; viewMat.mF32A[5] = Yaxis.y; viewMat.mF32A[6] = Zaxis.y; viewMat.mF32A[7] = 0;
         viewMat.mF32A[8] = Xaxis.z; viewMat.mF32A[9] = Yaxis.z; viewMat.mF32A[10] = Zaxis.z; viewMat.mF32A[11] = 0;
@@ -107,25 +111,28 @@ export class CUtilMath
         viewMat.mF32A[14] = -CMath.V3Dot(Zaxis, eyeVec);
         viewMat.mF32A[15] = 1;
     
+        CPoolGeo.RecycleV3(Xaxis);
+        CPoolGeo.RecycleV3(Yaxis);
+        CPoolGeo.RecycleV3(Zaxis);
+
         return viewMat;
     }
     static CameraLookAtRH(eyeVec : CVec3,lookVec : CVec3,upVec : CVec3,viewMat=new CMat())	//뷰행렬생성
     {
         
         viewMat.SetUnit(false);
-        var Zaxis = CMath.V3SubV3(eyeVec,lookVec);
-        Zaxis=CMath.V3Nor(Zaxis);
-        var Xaxis=new CVec3();
-        Xaxis=CMath.V3Cross(upVec, Zaxis);
+        let Zaxis=CPoolGeo.ProductV3();
+        CMath.V3SubV3(eyeVec,lookVec,Zaxis);
+        CMath.V3Nor(Zaxis,Zaxis);
+        let Xaxis=CPoolGeo.ProductV3();
+        CMath.V3Cross(upVec, Zaxis,Xaxis);
         if (Xaxis.IsZero())
         {
-            Xaxis=new CVec3(1,0,0);
+            Xaxis.mF32A[0]=1;Xaxis.mF32A[1]=0;Xaxis.mF32A[2]=0;
         }
-        
-            //CMsg.E("CameraLookAtLH error");//카메라 위치를 바꿔라!
-        Xaxis=CMath.V3Nor(Xaxis);
-        var Yaxis=new CVec3();
-        Yaxis=CMath.V3Cross(Zaxis, Xaxis);
+        CMath.V3Nor(Xaxis,Xaxis);
+        let Yaxis=CPoolGeo.ProductV3();
+        Yaxis=CMath.V3Cross(Zaxis, Xaxis,Yaxis);
         viewMat.mF32A[0] = Xaxis.x; viewMat.mF32A[1] = Yaxis.x; viewMat.mF32A[2] = Zaxis.x; viewMat.mF32A[3] = 0;
         viewMat.mF32A[4] = Xaxis.y; viewMat.mF32A[5] = Yaxis.y; viewMat.mF32A[6] = Zaxis.y; viewMat.mF32A[7] = 0;
         viewMat.mF32A[8] = Xaxis.z; viewMat.mF32A[9] = Yaxis.z; viewMat.mF32A[10] = Zaxis.z; viewMat.mF32A[11] = 0;
@@ -135,6 +142,9 @@ export class CUtilMath
         viewMat.mF32A[14] = -CMath.V3Dot(Zaxis, eyeVec);
         viewMat.mF32A[15] = 1;
     
+        CPoolGeo.RecycleV3(Xaxis);
+        CPoolGeo.RecycleV3(Yaxis);
+        CPoolGeo.RecycleV3(Zaxis);
         return viewMat;
     }
     static RayTriangleIS(pa_one : CVec3,pa_two : CVec3,pa_three : CVec3, pa_ray,pa_ccw=true)//IS -> Intersection
@@ -207,7 +217,7 @@ export class CUtilMath
         
         return true;
     }
-    static RayBoxIS(_min,_max,pa_ray)
+    static RayBoxIS(_min : CVec3,_max : CVec3,pa_ray : CRay)
     {
         var inside = true;
         var quadrant = [0,0,0];
@@ -324,7 +334,10 @@ export class CUtilMath
                 pIntersect[i] = candidatePlane[i];
             }
         }
-        pa_ray.SetPosition(new CVec3(pIntersect[0], pIntersect[1], pIntersect[2]));
+        pa_ray.mVec3List[1].mF32A[0]=pIntersect[0];
+        pa_ray.mVec3List[1].mF32A[1]=pIntersect[1];
+        pa_ray.mVec3List[1].mF32A[2]=pIntersect[2];
+        //pa_ray.SetPosition(new CVec3(pIntersect[0], pIntersect[1], pIntersect[2]));
         return true;
     }
     static RaySphereIS(pa_center, pa_radian,pa_ray)

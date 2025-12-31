@@ -381,13 +381,16 @@ export class CPaint2D extends CPaint
 		}
 		else
 		{
+			let pos=CPoolGeo.ProductV3();
+			pos.mF32A[0]=this.GetFMat().mF32A[12];
+			pos.mF32A[1]=this.GetFMat().mF32A[13];
+			pos.mF32A[2]=this.GetFMat().mF32A[14];
+			//let pos = this.GetFMat().xyz;
 			
-			let pos = this.GetFMat().xyz;
-			let v=new CVec3();
+			let v=CPoolGeo.ProductV3();
 			for(let i=0;i<4;++i)
 			{
 				CMath.V3AddV3(this.mPosList[i], pos, v);
-				//this.mBound.InitBound(this.mPosList[i]);
 				this.mTMat.SetV3(i,v);
 			}
 			
@@ -396,6 +399,8 @@ export class CPaint2D extends CPaint
 			this.mTMat.mF32A[7]=1;
 			this.mTMat.mF32A[11]=1;
 			this.mTMat.mF32A[15]=1;
+			CPoolGeo.RecycleV3(pos);
+			CPoolGeo.RecycleV3(v);
 
 		
 		}//else

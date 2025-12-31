@@ -213,6 +213,9 @@ export class CShadowPlane extends CPaint2D {
             this.mUpdateLight = true;
             this.mUpdateShadow = true;
         }
+        if (_pointer.IsRef(this.mTextureKey) && _pointer.IsRef(this.mTexCodi)) {
+            this.mUpdateShadow = true;
+        }
     }
     Update(_update) {
         if (this.mPT == null || this.mPT.Key() != this.mPTKey) {
@@ -287,10 +290,10 @@ export class CShadowPlane extends CPaint2D {
         if (this.mPT instanceof CPaint2D) {
             const pt = this.mPT;
             const lig = this.mLIG;
-            this.SetTexture(pt.GetTexture());
-            this.SetTexCodi(pt.GetTexCodi());
             if (this.mUpdateShadow == false && pt.IsUpdateFMat() == false && lig.mUpdate == 0)
                 return;
+            this.SetTexture(pt.GetTexture());
+            this.SetTexCodi(pt.GetTexCodi());
             this.mUpdateShadow = false;
             const fBound = pt.GetBoundFMat();
             const p1 = new CVec3(fBound.mMin.x, fBound.mMin.y);

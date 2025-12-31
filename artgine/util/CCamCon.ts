@@ -510,7 +510,7 @@ export class CCamCon2DFollow extends CCamCon2D
 
         //카메라 초기화
         let look = this.m_tempVec3;
-        CMath.V3AddV3(smoothedPos, new CVec3(0, 0, -1), look);
+        CMath.V3AddV3(smoothedPos, CVec3.Vec3(0, 0, -1), look);
         this.mCamera.Init(smoothedPos, look);
         CPoolGeo.RecycleV3(smoothedPos);
         //카메라 업데이트

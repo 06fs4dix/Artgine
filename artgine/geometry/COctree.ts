@@ -23,8 +23,11 @@ export class COctreeData
   
     }
 }
+let gOctreePool : Array<COctree>=[];
+let gOCCount=0;
 export class COctree 
 {
+    mPool : CArray<COctree>;
 	mCenter : CVec3;
 	mHalf : CVec3;
 	mChild : Array<COctree> = null;
@@ -34,13 +37,29 @@ export class COctree
     //m_preCollusion=true;
 
     //복사로 사용한다 위험한데 최적화
-    constructor(_center:CVec3, _half:CVec3) {
+    constructor(_center:CVec3, _half:CVec3,_pool=null) 
+    {
         // this.mCenter.Import(_center);
         // this.mHalf.Import(_half);
         this.mCenter=_center;
         this.mHalf=_half;
         this.mBound=new CBound();
+        this.mPool=_pool;
+    }
+    New(_center:CVec3, _half:CVec3)
+    {
+        if(this.mPool==null)
+            return new COctree(_center,_half);
+        let oc=this.mPool.New(COctree) as COctree;
+        oc.mCenter=_center;
+        oc.mHalf=_half;
+        oc.mPool=this.mPool;
+        oc.mChild=null;
+        oc.mData=null;
+        this.mBound.Reset();
+        this.mMax.Zero();
 
+        return oc;
     }
     ContainingPoint(point : CVec3) : number
     {
@@ -139,7 +158,7 @@ export class COctreeMgr
     mOCDMap=new Map<any,COctreeData>();
     mBound : CBound;
     mUpdate=0;
- 
+    mPool =new CArray<COctree>;
 
 
     constructor(_wasm=null)

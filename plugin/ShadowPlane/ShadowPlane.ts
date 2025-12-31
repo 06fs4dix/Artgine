@@ -303,6 +303,10 @@ export class CShadowPlane extends CPaint2D
 			this.mUpdateLight=true;
             this.mUpdateShadow=true;
 		}
+        if(_pointer.IsRef(this.mTextureKey) && _pointer.IsRef(this.mTexCodi))
+		{
+			this.mUpdateShadow=true;
+		}
     }
     Update(_update : CUpdate): void 
     {
@@ -421,12 +425,12 @@ export class CShadowPlane extends CPaint2D
             const lig = this.mLIG;
 
             
-            this.SetTexture(pt.GetTexture());
-            this.SetTexCodi(pt.GetTexCodi());
+            
 
             if(this.mUpdateShadow==false && pt.IsUpdateFMat()==false && lig.mUpdate==0)   return;
             
-
+            this.SetTexture(pt.GetTexture());
+            this.SetTexCodi(pt.GetTexCodi());
             
             this.mUpdateShadow=false;
 
