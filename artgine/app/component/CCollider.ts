@@ -79,7 +79,7 @@ export class CCollider extends CGeometryComp
 	public mOneWayArc : number=-1;
 
 	public mGI : CGeometryInfo=null;
-	public mGJK : CGJK_EPA= null;
+	public mGJK : CGJK_EPA= new CGJK_EPA();
 	//public mGJKShape : CGJKShape=null;
 	//public mBoundGJK :CBound =null;
 	//public mCenterGJK=new CVec3();
@@ -295,6 +295,7 @@ export class CCollider extends CGeometryComp
 	InitBound(_paint : CPaint);
 	InitBound(_paint : any)
 	{
+		this.mBW.mRadian=0;
 		if(_paint instanceof CBound)
 		{
 			this.mBound.Import(_paint);
@@ -320,7 +321,8 @@ export class CCollider extends CGeometryComp
 			
 		}
 	
-		this.mGJK=new CGJK_EPA();
+		
+		//this.mGJK=new CGJK_EPA();
 		//this.mGJKShape=CGJKSphere.NewCBound(this.mBound,this.m2D);
 		
 		this.mUpdateMat=CUpdate.eType.Updated;

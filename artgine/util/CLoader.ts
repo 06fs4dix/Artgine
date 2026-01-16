@@ -36,10 +36,9 @@ export class CLoaderOption extends CObject
 	public mWrap=CTexture.eWrap.Clamp;
 	public mMipMap=CTexture.eMipmap.GL;
 	public mColorTex=false;
-	//public mBufCopy=false;
 	public mAlphaCut=0x09;
 	mCache=null;//버퍼 등록용
-	mAtlas=false;
+	mGPU=true;
 	
 	
 	public mInch=false;
@@ -364,7 +363,7 @@ export class CLoader
 		tex.SetSize(1,1);
 		tex.CreateBuf();
 		
-		if( this.mRender!=null)	this.mRender.BuildTexture(tex);
+		if( this.mRender!=null && _option.mGPU)	this.mRender.BuildTexture(tex);
 		
 		var pos=_file.lastIndexOf(".")+1;
 		var ext=_file.substr(pos,_file.length-pos).toLowerCase();
@@ -377,7 +376,7 @@ export class CLoader
 		if(typeof _buffer!="string")
 			par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
 		await par.Load(_file)
-		if(par.GetResult()!=null)
+		if(par.GetResult()!=null && _option.mGPU)
 		{
 			par.GetResult().SetFilter(_option.mFilter);
 			par.GetResult().SetWrap(_option.mWrap);

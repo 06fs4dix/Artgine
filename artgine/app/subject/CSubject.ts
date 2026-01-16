@@ -163,7 +163,7 @@ export class CSubject extends CObject implements IFile , IMat
 		}
 	}
 	
-	Icon() : string
+	override Icon() : string
 	{	
 		if(this.IsProxy())
 			return "bi bi-crosshair";
@@ -199,7 +199,7 @@ export class CSubject extends CObject implements IFile , IMat
 		return this;
 		//this.PRSReset();
 	}
-	Call(_function: string, _para: Array<any>): void {
+	override Call(_function: string, _para: Array<any>): void {
 		//super.Call(_function,_para);
 		//this.Message(_function,_para);
 		var cm=new CRouteMsg(_function);
@@ -392,7 +392,7 @@ export class CSubject extends CObject implements IFile , IMat
 		return this.mEnable && this.mPEnable && this.mReset==false;	 
 	}
 	
-	SetKey(_key) 
+	override SetKey(_key) 
 	{
 		
 		if(this.mKey==_key)
@@ -917,7 +917,7 @@ export class CSubject extends CObject implements IFile , IMat
 		confirm.Open();
 
 	}
-	public Export(_copy=true,_resetKey=true): this 
+	public override Export(_copy=true,_resetKey=true): this 
 	{
 		
 		let target=super.Export(_copy,_resetKey);
@@ -942,7 +942,7 @@ export class CSubject extends CObject implements IFile , IMat
 
 	}
 	
-	public PatchStreamUpdate(_stream: CStream,_path : Array<string>) 
+	public override PatchStreamUpdate(_stream: CStream,_path : Array<string>) 
 	{
 		super.PatchStreamUpdate(_stream,_path)
 
@@ -960,13 +960,13 @@ export class CSubject extends CObject implements IFile , IMat
 			_path.pop();
 		}
 	}
-	public PatchStreamRead(_stream: CStream, _key: string): void {
+	public override PatchStreamRead(_stream: CStream, _key: string): void {
 		super.PatchStreamRead(_stream,_key);
 		if(_key=="mPos")	this.PRSReset();
 
 	}
 	//전체 트레킹 된다. 이러면 느려짐
-	public PatchTrackDefault()
+	public override PatchTrackDefault()
 	{
 		for(let i=0;i<this.mComArr.length;++i)
 		{

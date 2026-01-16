@@ -1,6 +1,7 @@
 
 import { CUpdate } from "../basic/Basic.js";
 import { Bootstrap } from "../basic/Bootstrap.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CEvent } from "../basic/CEvent.js";
 import {CModal} from "../basic/CModal.js";
 import {CUniqueID} from "../basic/CUniqueID.js";
@@ -16,7 +17,9 @@ enum ePlacement {
     Bottom,
     Left,
     Right,
-    Auto
+    Auto,
+    Mouse
+
 };
 const GetAttachPosition = (() => {
     const mirrorDiv = document.createElement('div');
@@ -92,7 +95,17 @@ const GetAttachPosition = (() => {
 })();
 
 
+var gLastClick : CTooltip=null;
+document.addEventListener("pointerdown", (e)=>{
+     const t = e.target as Node | null;
+    if(gLastClick==null)    return;
 
+    if(gLastClick.mTrigger==CTooltip.eTrigger.Click && gLastClick.mCard.contains(t)==false)
+    {
+        gLastClick.Hide(0);
+        gLastClick=null;
+    }
+}, true);
 export class CTooltip extends CModal
 {
     private static arrowStyleAdded : boolean = false;
@@ -134,6 +147,8 @@ export class CTooltip extends CModal
         this.mAttach = _attach;
 
         //this.CreateTooltipElement(_content, _theme);
+        this.mBodyStyle="card-body p-0 overflow-auto";
+
         this.SetTitle(CModal.eTitle.None);
         
         this.SetBody(`
@@ -155,7 +170,35 @@ export class CTooltip extends CModal
 
         if (this.mAttach instanceof HTMLElement)
         {
-            if (this.mTrigger === eTrigger.Hover) 
+            if (this.mTrigger === eTrigger.Click || (CUtil.IsMobile() && this.mTrigger === eTrigger.Hover)) 
+            {
+                this.mClickHandler = () => {
+                    
+                    if(gLastClick!=null && gLastClick!=this)
+                        gLastClick.Hide();
+
+                    if(this.IsShow()==false)
+                    {
+                        gLastClick=this;
+                        this.Show();
+                    }
+                        
+                    else
+                    {
+                        this.Hide();
+                        gLastClick=null;
+                    }
+                        
+
+                    //this.Show();
+                    
+                };
+                this.mBlurHandler = () => this.Hide();
+                
+                this.mAttach.addEventListener("click", this.mClickHandler);
+                this.mAttach.addEventListener("blur", this.mBlurHandler);
+            }
+            else if (this.mTrigger === eTrigger.Hover) 
             {
                 this.mMouseOverHandler = () => this.Show();
                 this.mMouseLeaveHandler = () => this.Hide();
@@ -163,14 +206,7 @@ export class CTooltip extends CModal
                 this.mAttach.addEventListener("mouseover", this.mMouseOverHandler);
                 this.mAttach.addEventListener("mouseleave", this.mMouseLeaveHandler);
             } 
-            else if (this.mTrigger === eTrigger.Click) 
-            {
-                this.mClickHandler = () => this.Show();
-                this.mBlurHandler = () => this.Hide();
-                
-                this.mAttach.addEventListener("click", this.mClickHandler);
-                this.mAttach.addEventListener("blur", this.mBlurHandler);
-            }
+            
 
             const observer = new MutationObserver((mutationsList) => 
             {
@@ -188,7 +224,7 @@ export class CTooltip extends CModal
                 subtree: true
             });
         }
-
+        //const arrowEl = this.mCard.querySelector("[data-popper-arrow]") as HTMLElement;
         this.mPopper = window["Popper"].createPopper(target, this.mCard, {
             placement: CTooltip.GetPlacementString(this.mPlacement),
             modifiers: [
@@ -209,7 +245,9 @@ export class CTooltip extends CModal
                     options: {
                         gpuAcceleration: false
                     }
-                }
+                },
+                //{ name: "arrow", options: { element: this.mHeader, padding: 6 } },
+
             ]
         });
     }
@@ -347,7 +385,7 @@ export class CTooltip extends CModal
     }
 
     
-
+    
    
 
     protected RemoveEventListeners(): void {

@@ -23,7 +23,7 @@ export class CPreferences extends CObject
     
     //public m_async=false;
     public mTexture16f=false;
-    public mAnti=true;
+    public mAnti=false;
     public mBatchPool=true;
     public mXR=false;
     public mDeveloper=true;
@@ -34,6 +34,8 @@ export class CPreferences extends CObject
     public mServer="local";
     public mGitHub=false;
     public mCanvas="";
+    public mParallelShader=true;
+
 
     
     //static CMat12=true;

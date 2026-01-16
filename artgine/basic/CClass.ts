@@ -136,7 +136,8 @@ export class CClass
             if(CUtil.IsNode()==false)   window[_key] = _val;
             gClassMap.set(_key, _val);
         }
-        else {
+        else if(_key.name!=null)
+        {
             if(CUtil.IsNode()==false) window[_key.name] = _key;
             gClassMap.set(_key.name, _key);
         }

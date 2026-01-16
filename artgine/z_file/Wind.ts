@@ -1,14 +1,12 @@
-import { NoisePerlin2 } from "./Noise";
+import { NoiseGet, NoisePerlin2 } from "./Noise";
 import { SDF } from "./SDF";
-import { abs, clamp, CVec2, CVec3, CVec4, FloatToInt, MappingTexToV3, max, mix, Sam2DToV4, Sam2DV4, 
-    smoothstep, 
-    step,  
-    V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
+import { clamp, CVec2, CVec3, CVec4, FloatToInt, mix, Sam2DToV4, Sam2DV4, 
+    smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 
 export var windInfluence : number = 0.0;
-export var windDir : Sam2DV4 = new Sam2DV4(11,500);
-export var windPos : Sam2DV4 = new Sam2DV4(11,501);
-export var windInfo : Sam2DV4 = new Sam2DV4(11,502);
+export var windDir : Sam2DV4 = new Sam2DV4(11,287);
+export var windPos : Sam2DV4 = new Sam2DV4(11,288);
+export var windInfo : Sam2DV4 = new Sam2DV4(11,289);
 export var windCount : number = 0.0;
 
 export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
@@ -84,13 +82,21 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
         //     NoisePerlin2D(new CVec2(V3Dot(_objPos, speedFactor) / -wave, speedFactor.y * freq * _time)),
         //     NoisePerlin2D(new CVec2(V3Dot(_objPos, speedFactor) / -wave, speedFactor.z * freq * _time))
         // );
+        // var noise : CVec3 = new CVec3(
+        //     NoisePerlin2(new CVec2(_objPos.x / -wave, speedFactor.x * freq * _time)),
+        //     NoisePerlin2(new CVec2(_objPos.y / -wave, speedFactor.y * freq * _time)),
+        //     NoisePerlin2(new CVec2(_objPos.z / -wave, speedFactor.z * freq * _time))
+        // );
+        var windScale : number = -1.0 / wave;
+        var timed : CVec3 = V3MulFloat(speedFactor, _time * freq * 0.5);    // 스케일이 작아져서 속도 비슷하게 맞추기 위해 0.5 곱해줌
         var noise : CVec3 = new CVec3(
-            NoisePerlin2(new CVec2(_objPos.x / -wave, speedFactor.x * freq * _time)),
-            NoisePerlin2(new CVec2(_objPos.y / -wave, speedFactor.y * freq * _time)),
-            NoisePerlin2(new CVec2(_objPos.z / -wave, speedFactor.z * freq * _time))
+            NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.x, 0.0), SDF.eNoise.Perlin),
+            NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.y, 0.0), SDF.eNoise.Perlin),
+            NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.z, 0.0), SDF.eNoise.Perlin)
         );
 
-        // 0 ~ 1 범위에서 -0.75 ~ 1.0 범위로 변환
+
+        // 0 ~ 1 범위에서 range 범위로 변환
         noise = V3AddV3(V3MulFloat(noise, range.y - range.x), new CVec3(range.x, range.x, range.x));
 
         // if(_2d>0.5) 
@@ -121,7 +127,7 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
 
 export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _time : number) : CVec4 
 {
-	if(_skin > 0.5 && _weight.x+_weight.y+_weight.z+_weight.w>0.0)
+	// if(_skin > 0.5 && _weight.x+_weight.y+_weight.z+_weight.w>0.0)
 	{
 		if(windInfluence > 0.01) {
 			var wind : CVec3 = GetWind(_worldPos.xyz, new CVec3(100.0, 100.0, 100.0), _time);

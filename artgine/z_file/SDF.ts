@@ -78,12 +78,7 @@ export class SDF {
 		HSL:4,
 		None:5,
 	}
-	static eAlphaModel=
-	{
-		Add:0,
-		Mul:1,
-		None:2,	
-	}
+	
 	static eColorVFX=
 	{
 		None:0,
@@ -103,27 +98,30 @@ export class SDF {
 	}
 	static eLookUpTable=
 	{
-		LUT0:534,
-		LUT1:535,
-		LUT2:536,
-		LUT3:537,
-		LUT4:538,
-		LUT5:539,
+		LUT0:280,
+		LUT1:281,
+		LUT2:282,
+		LUT3:283,
+		LUT4:284,
+		LUT5:285,
 	}
 	static eNoise=
 	{
 		
 		Gaussian:0,//랜덤 
 		//(128*128)*32=256
-		Perlin:1792,//구름 느낌,연기 연속적인 부드러운 느낌
-		Voronoi:1536,//가뭄에 땅갈라짐.거북이 등
-		Curl:1280,//선 중심으로 슬라이스 됌
-		FBM:1024//
-
+		Perlin:768,//구름 느낌,연기 연속적인 부드러운 느낌
+		Voronoi:512,//가뭄에 땅갈라짐.거북이 등
 		
+		Billow:1,
+		Ridged:2,
+		DomainWarp:3,
+		FBM:4,
+		Simplex:5,
 	}
 	static eBlend=
 	{
+		Null :0,
 		LinearDodge :1,//a+b 덧셈
 		Multiply:2,//a*b 곱셈
 		LerpPer:3,//(a*percent)+(b*percent) 퍼센트 기준 lerp

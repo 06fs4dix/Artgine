@@ -1,12 +1,13 @@
-import { CAModelCac, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
+import {  ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
-import { NoiseValue3FBMRest } from "../../artgine/z_file/Noise";
+import { NoiseGet, NoiseGetLinear } from "../../artgine/z_file/Noise";
+import { SDF } from "../../artgine/z_file/SDF";
 
 import { 
     abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
-    Exp, 
     MatTypeToMat, max, min, mix, mod, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, 
     Sam2DToColor, SamCubeToColor, SaturateFloat, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
+    V2Dot, 
     V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, 
     V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi, Vertex3 
 } from "../../artgine/z_file/Shader";
@@ -28,6 +29,8 @@ var worldMatType : number=16.0;
 
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
+var waterViewMat : CMat=Null();
+var waterProjectMat : CMat=Null();
 var material: CVec4 = new CVec4(0.0,0.0,0.0,1.0);
 
 var colorModel : CVec4=Null();
@@ -46,7 +49,7 @@ var refractMap : number = 2.0;
 var normal1Map : number = 3.0;
 var normal2Map : number = 4.0;
 
-var normalflowDir : CVec2 = new CVec2(0.0, 0.0);
+var normalflowDir : CVec2 = new CVec2(1.0, 0.0);
 var normalRange : number = 1.0;
 
 var texflowDir : CVec2 = new CVec2(1.0, 0.0);
@@ -54,20 +57,31 @@ var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
 var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
 var waterDeep : CVec4 = new CVec4(0.0,256.0,2000.0, 5.0);
 
+
+var waterTop : number=-1.0;
+
 // var cubeMapPos : CVec3 = new CVec3(0.0, 0.0, 0.0);
 // var cubeMapSize : CVec3 = new CVec3(0.0, 0.0, 0.0);
 
 //water
-Build("3DWater", ["water"], 
+Build("Water3D", ["water","3D"], 
     vs_main_water, [
         worldMat,
         viewMat, projectMat, skin, sam2DCount,
         camPos, time,
         normalRange,
         normalflowDir,texflowDir,
-        shallowColor, deepColor, waterDeep
+        shallowColor, deepColor, waterDeep,
     ], [out_position,to_uv,to_worldPos,to_projPos,to_ref],
     ps_main_water,[out_color]
+);
+
+Build("Water2D",["water","2D"],
+    vs_main,[
+        worldMat,viewMat,projectMat,waterTop,time,
+        waterViewMat,waterProjectMat
+    ],[out_position,to_uv,to_projPos],
+    ps_main,[out_color]
 );
 
 function ProjToScreenPos(_pos : CVec4) : CVec4
@@ -114,11 +128,41 @@ function NormalFlow(_flow : CVec3) : CVec3
 
     var normalColor : CVec4 = V4Mix(
         Sam2DToColor(normal1Map, V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z, cycle)))),
-        Sam2DToColor(normal2Map, V2AddV2(V2MulV2(to_uv, new CVec2(1.2, 0.8)), V2MulFloat(_flow.xy, mod(_flow.z + halfCycle, cycle)))),
+        Sam2DToColor(normal2Map, V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z + halfCycle, cycle)))),
         abs((mod(_flow.z, cycle) / cycle - 0.5) * 2.0)
     );
     return V3Nor(new CVec3(normalColor.r * 2.0 - 1.0, normalColor.b * 2.0 - 1.0, normalColor.g * 2.0 - 1.0));
 }
+
+// function GetWaterHeight(_uvw : CVec3, _type : number) : number
+// {
+//     var offset : number = NoiseGetLinear(V3MulFloat(_uvw, 0.5), SDF.eNoise.Perlin);
+//     _uvw = new CVec3(_uvw.x + offset * 0.1, _uvw.y + offset * 0.1, 0.0);
+//     var h : number = NoiseGetLinear(_uvw, _type);
+//     var uvw2 : CVec3 = V3AddV3(V3MulFloat(_uvw, 2.13), new CVec3(12.34, 56.78, 0.0));
+//     uvw2 = new CVec3(uvw2.x * 0.88294759285 - uvw2.y * 0.46947156278, uvw2.x * 0.46947156278 + uvw2.y * 0.88294759285, uvw2.z);
+//     h += 0.5 * NoiseGetLinear(uvw2, _type);
+//     return h;
+// }
+
+function GetWaterHeight(_uvw : CVec3, _type : number) : number
+{    
+    // 노이즈값을 uvw로 더해서 사용함(domain warp)
+    var offset : number = NoiseGet(V3MulFloat(_uvw, 0.5), SDF.eNoise.Perlin);
+    _uvw = new CVec3(_uvw.x + offset * 0.1, _uvw.y + offset * 0.1, 0.0);
+
+    // 높이값으로 사용할 메인 레이어
+    var h : number = NoiseGet(_uvw, _type);
+
+    // 회전된 uvw로 두번째 높이값 노이즈 레이어 쌓음
+    var uvw2 : CVec3 = V3AddV3(V3MulFloat(_uvw, 2.13), new CVec3(12.34, 56.78, 0.0));
+    uvw2 = new CVec3(uvw2.x * 0.88294759285 - uvw2.y * 0.46947156278, uvw2.x * 0.46947156278 + uvw2.y * 0.88294759285, uvw2.z);
+    h += 0.5 * NoiseGet(uvw2, _type);
+
+    // 높이값 리턴
+    return h;
+}
+
 // 노말맵 사용하지 않고 절차적으로 생성
 function ProceduralFlowNormal(_flow : CVec3) : CVec3
 {
@@ -128,17 +172,35 @@ function ProceduralFlowNormal(_flow : CVec3) : CVec3
     var uv0 : CVec2 = V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z, cycle)));
     var uv1 : CVec2 = V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z + halfCycle, cycle)));
 
-    // 결과에 핵심적인 파라미터
-    var freq : number = 40.0;
-    var amp : number = 20.0;
+    var uvScale : number = 1.0;
+    var heightScale : number = 8.0;
 
-    var h0 : number = amp * NoiseValue3FBMRest(new CVec3(V2MulFloat(uv0, freq), 0.0), 0.5);
-    var h1 : number = amp * NoiseValue3FBMRest(new CVec3(V2MulFloat(uv1, freq), 0.5), 0.5);
+    uv0 = V2MulFloat(uv0, uvScale);
+    uv1 = V2MulFloat(uv1, uvScale);   
 
-    var normal0 : CVec3 = V3Nor(new CVec3(dFdx(h0), 1.0, dFdy(h0)));
-    var normal1 : CVec3 = V3Nor(new CVec3(dFdx(h1), 1.0, dFdy(h1)));
+    var eps : number = 1.0 / 64.0;
+    var deltaU : CVec2 = new CVec2(eps, 0.0);
+    var deltaV : CVec2 = new CVec2(0.0, eps);
 
-    return V3Nor(V3Mix(normal0, normal1,abs((mod(_flow.z, cycle) / cycle - 0.5) * 2.0)));
+    // dFdx, dFdy로 하면 고정된 노이즈 맵의 크기를 동적으로 변경해야 하는데 linear가 안되서 매우 어려워서
+    // 1-2 픽셀 옆의 값을 무조건 가져오도록 deltaUV를 사용해서 높이끼리의 차이를 구함
+
+    // 노말 2개 * 높이 3개 * 높이계산중 노이즈 샘플링 3회 = 픽셀 당 샘플링 18회
+    // 줄이려면 domain warp / 높이 레이어 없애면 6회까지 줄일 수 있음
+    // 가까이 있는 픽셀의 높이값 정확도를 포기하고 dFdxy를 사용하면 2회도 가능
+    
+    var h0 : number = GetWaterHeight(new CVec3(uv0, 0.0), SDF.eNoise.Perlin);
+    var h0U : number = GetWaterHeight(new CVec3(V2AddV2(uv0, deltaU), 0.0), SDF.eNoise.Perlin);
+    var h0V : number = GetWaterHeight(new CVec3(V2AddV2(uv0, deltaV), 0.0), SDF.eNoise.Perlin);
+
+    var h1 : number = GetWaterHeight(new CVec3(uv1, 0.5), SDF.eNoise.Perlin);
+    var h1U : number = GetWaterHeight(new CVec3(V2AddV2(uv1, deltaU), 0.5), SDF.eNoise.Perlin);
+    var h1V : number = GetWaterHeight(new CVec3(V2AddV2(uv1, deltaV), 0.5), SDF.eNoise.Perlin);
+
+    var normal0 : CVec3 = V3Nor(new CVec3(heightScale * (h0 - h0U), 1.0, heightScale * (h0 - h0V)));
+    var normal1 : CVec3 = V3Nor(new CVec3(heightScale * (h1 - h1U), 1.0, heightScale * (h1 - h1V)));
+
+    return V3Nor(V3Mix(normal0, normal1, abs((mod(_flow.z, cycle) / cycle - 0.5) * 2.0)));
 }
 
 function CorrectedReflect(_view : CVec3, _normal : CVec3, _boxPos : CVec3, _boxSize : CVec3) : CVec3
@@ -273,8 +335,11 @@ function ps_main_water()
     // ---------------------------------------------------------
     // 컬러 모델 합성
     // ---------------------------------------------------------
-    BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-    L_cor = CAModelCac(L_cor,colorModel,alphaModel);
+    // BranchBegin("CAModel","CA",[colorModel,alphaModel]);
+    // L_cor = colorModel(L_cor,colorModel,alphaModel);
+    // BranchEnd();
+    BranchBegin("colorModel","CM",[colorModel]);
+    L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
     BranchEnd();
 
     // ---------------------------------------------------------
@@ -287,6 +352,94 @@ function ps_main_water()
     dseMat = LightCac3D(camPos, to_worldPos, L_cor, normalWS, -1.0, lmaterial.y, lmaterial.x, lmaterial.z, new CVec3(0.0, 0.0, 0.0));
     L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
     BranchEnd();
+
+    out_color = L_cor;
+}
+
+
+
+
+function vs_main(f3_ver : Vertex3,f2_uv : UV2)
+{
+    to_uv.xy=f2_uv;
+    var P : CVec4 = new CVec4(f3_ver, 1.0);
+    var wMat : CMat;
+    BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
+    wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
+    BranchDefault();
+    wMat=worldMat;
+    BranchEnd();
+    
+    P = V4MulMatCoordi(P, wMat);
+    P=V4MulMatCoordi(P,viewMat);
+    out_position=V4MulMatCoordi(P, projectMat);
+    to_projPos = ProjToScreenPos(out_position);
+    P = new CVec4(f3_ver, 1.0);
+    P = V4MulMatCoordi(P, wMat);
+    P=V4MulMatCoordi(P,waterViewMat);
+    P=V4MulMatCoordi(P,waterProjectMat);
+
+    to_projPos = ProjToScreenPos(P);
+}
+function ps_main()
+{
+   
+    // 화면 UV (0~1 가정)
+    var uv : CVec2 = new CVec2(to_projPos.x / to_projPos.w, to_projPos.y / to_projPos.w);
+    // uv.x*=0.5;
+    // uv.y*=0.5;
+
+    // var L_cor : CVec4 = Sam2DToColor(0.0, uv);
+    // out_color = L_cor;
+
+    // 물 사각형의 세로 스케일(uv.y 변화량 / to_uv.y 변화량)
+    var scaleY : number = dFdy(uv.y) / dFdy(to_uv.y);
+
+    // to_uv.y=0 위치의 screen y, to_uv.y=1 위치의 screen y
+    var y0 : number = uv.y - to_uv.y * scaleY;
+    var y1 : number = y0 + scaleY;
+
+    // 물 "윗변"
+    var waterTopY : number;
+    if(waterTop < 0.0) waterTopY = max(y0, y1);
+    else               waterTopY = min(y0, y1);
+
+    // 수면(윗변) 기준 미러
+    var srcUV : CVec2 = new CVec2(uv.x, 2.0 * waterTopY - uv.y);
+   
+    // "경계에서 아래로" 진행되는 v 값 만들기
+    // waterTop 부호에 따라 위쪽이 to_uv.y=0 또는 1일 수 있어서 보정
+    var vFromTop : number;
+    if(waterTop < 0.0) vFromTop = 1.0 - to_uv.y;
+    else               vFromTop = to_uv.y;
+
+    // 0~0.1 사이에서 0->1로 커지는 페이드
+    var startV : number = 0.05;
+    var fade : number = vFromTop / max(startV, 1e-6);
+    fade = min(max(fade, 0.0), 1.0);
+
+    // 더 "점진적"으로 만들고 싶으면(선택): 부드러운 곡선
+    // (smoothstep이 있으면 fade = smoothstep(0.0, 1.0, fade)로 바꿔도 됨)
+    fade = fade * fade * (3.0 - 2.0 * fade);
+
+    // 노이즈
+    var noise : number = NoiseGet(new CVec3(to_uv.x, to_uv.y+time*0.1, time), SDF.eNoise.FBM);
+
+    // 만약 NoiseGet이 0~1 이면 흔들림이 한쪽으로만 밀림 -> 아래 한 줄 켜
+    noise = noise * 2.0 - 1.0;
+
+    // 기존 0.005 강도에 fade만 곱해주기
+    srcUV.x += noise * (0.005 * fade);
+
+    var L_cor : CVec4 = Sam2DToColor(0.0, srcUV);
+
+
+    // noise = NoiseGet(new CVec3(uv.x+time*0.1, uv.y+time*0.1, time), SDF.eNoise.Voronoi);
+    // if(noise>0.9)
+    // {
+    //     L_cor.rgb=V3Mix(L_cor.rgb,new CVec3(0.8,0.8,0.8),1.0);
+    // }
+    //L_cor.rgb=new CVec3(noise,noise,noise);
 
     out_color = L_cor;
 }

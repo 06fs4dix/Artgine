@@ -1,13 +1,16 @@
 
 import {CAlert} from "../basic/CAlert.js";
 import {CBound} from "../geometry/CBound.js";
+import { CMath } from "../geometry/CMath.js";
 import {CPoolGeo} from "../geometry/CPoolGeo.js";
 
 import {CVec2} from "../geometry/CVec2.js";
 import {CVec3} from "../geometry/CVec3.js";
 import {CVec4} from "../geometry/CVec4.js";
-import {CTexture} from "../render/CTexture.js"
+import {CTexture, CTextureInfo} from "../render/CTexture.js"
+import { SDF } from "../z_file/SDF.js";
 import { CH5Canvas } from "./CH5Canvas.js";
+import { CUtilRender } from "./CUtilRender.js";
 
 export class CImgPro
 {
@@ -420,6 +423,311 @@ export class CImgPro
 		out.SetMipMap(CTexture.eMipmap.None);
 		out.SetSize(_size.x, _size.y);
 		out.SetBuf(outColors);
+		return out;
+	}
+	static CreateNoiseTexture(_type : number, _zVal : number = 0, _size : CVec2 = new CVec2(128, 128)) {
+		// seamless로 만들기 위해 자를 부분만큼 더 크게 만듬
+		var blendInc : number = 0.5;	// 이 값을 더 높이면 seamless 오류가 줄어듬
+		var skirtWidth : number = Math.max(1, Math.floor(_size.x * blendInc));
+		var skirtHeight : number = Math.max(1, Math.floor(_size.y * blendInc));
+		var srcWidth : number = _size.x + skirtWidth;
+		var srcHeight : number = _size.y + skirtHeight;
+		
+		// 노이즈 값을 [-1, 1] 범위로 나온다고 가정하고 [0, 1] 범위로 변경
+		var prevBuffer = new Uint8Array(srcWidth * srcHeight * 4);
+		var idx = 0;
+		for(var y = 0; y < srcHeight; y++) {
+			for(var x = 0; x < srcWidth; x++) {
+				switch(_type) {
+					case SDF.eNoise.Gaussian:
+						prevBuffer[idx * 4 + 0] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 0), y * (2.76434 ** 0), _zVal * (2.76434 ** 0)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 1] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 1), y * (2.76434 ** 1), _zVal * (2.76434 ** 1)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 2] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 2), y * (2.76434 ** 2), _zVal * (2.76434 ** 2)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 3] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 3), y * (2.76434 ** 3), _zVal * (2.76434 ** 3)) * 0.5 + 0.5) * 255.0;
+						break;
+					case SDF.eNoise.Perlin:
+						prevBuffer[idx * 4 + 0] = (CUtilRender.NoisePerlin(x * (2.76434 ** 0), y * (2.76434 ** 0), _zVal * (2.76434 ** 0)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 1] = (CUtilRender.NoisePerlin(x * (2.76434 ** 1), y * (2.76434 ** 1), _zVal * (2.76434 ** 1)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 2] = (CUtilRender.NoisePerlin(x * (2.76434 ** 2), y * (2.76434 ** 2), _zVal * (2.76434 ** 2)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 3] = (CUtilRender.NoisePerlin(x * (2.76434 ** 3), y * (2.76434 ** 3), _zVal * (2.76434 ** 3)) * 0.5 + 0.5) * 255.0;
+						break;
+					case SDF.eNoise.Voronoi:
+						prevBuffer[idx * 4 + 0] = (CUtilRender.NoiseCellular(x * (2.76434 ** 0), y * (2.76434 ** 0), _zVal * (2.76434 ** 0)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 1] = (CUtilRender.NoiseCellular(x * (2.76434 ** 1), y * (2.76434 ** 1), _zVal * (2.76434 ** 1)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 2] = (CUtilRender.NoiseCellular(x * (2.76434 ** 2), y * (2.76434 ** 2), _zVal * (2.76434 ** 2)) * 0.5 + 0.5) * 255.0;
+						// prevBuffer[idx * 4 + 3] = (CUtilRender.NoiseCellular(x * (2.76434 ** 3), y * (2.76434 ** 3), _zVal * (2.76434 ** 3)) * 0.5 + 0.5) * 255.0;
+						break;
+				}
+				idx++;
+			}
+		}
+
+		// seamless로 만들기 위해 포스트 프로세싱
+		var buffer = new Uint8Array(_size.x * _size.y * 4);
+		var halfWidth : number = Math.floor(_size.x * 0.5);
+		var halfHeight : number = Math.floor(_size.y * 0.5);
+		var skirtEdgeX : number = halfWidth + skirtWidth;
+		var skirtEdgeY : number = halfHeight + skirtHeight;
+
+		enum AltModulo {
+			DEFAULT,
+			ALT_X,
+			ALT_Y,
+			ALT_XY
+		};
+
+		// 인덱스 계산 편하게 하려고 만듬
+		class ImgBuf {
+			mBuf : Uint8Array;
+			mWidth : number;
+			mHeight : number;
+			mOffsetX : number;
+			mOffsetY : number;
+			mAltWidth : number;
+			mAltHeight : number;
+
+			constructor(_buf : Uint8Array, _width : number, _height : number, _offsetX : number, _offsetY : number, _altWidth : number, _altHeight : number) {
+				this.mBuf = _buf;
+				this.mWidth = _width;
+				this.mHeight = _height;
+				this.mOffsetX = _offsetX;
+				this.mOffsetY = _offsetY;
+				this.mAltWidth = _altWidth;
+				this.mAltHeight = _altHeight;
+			}
+			
+			Get(_x : number, _y : number, _mode : AltModulo,_rVal=new CVec4()) {
+				const index = this.CalcIndex(_x, _y, _mode);
+				_rVal.mF32A[0]=this.mBuf[index * 4 + 0];
+				_rVal.mF32A[1]=this.mBuf[index * 4 + 1];
+				_rVal.mF32A[2]=this.mBuf[index * 4 + 2];
+				_rVal.mF32A[3]=this.mBuf[index * 4 + 3];
+				return _rVal;
+			}
+
+			Set(_x : number, _y : number,_mode : AltModulo,_val : number|CVec2|CVec3|CVec4) {
+				const index = this.CalcIndex(_x, _y, _mode);
+				if(typeof _val == "number") {
+					this.mBuf[index * 4 + 0] = _val;
+				}
+				else if(_val instanceof CVec2) {
+					this.mBuf[index * 4 + 0] = _val.x;
+					this.mBuf[index * 4 + 1] = _val.y;
+				}
+				else if(_val instanceof CVec3) {
+					this.mBuf[index * 4 + 0] = _val.x;
+					this.mBuf[index * 4 + 1] = _val.y;
+					this.mBuf[index * 4 + 2] = _val.z;
+				}
+				else {
+					this.mBuf[index * 4 + 0] = _val.x;
+					this.mBuf[index * 4 + 1] = _val.y;
+					this.mBuf[index * 4 + 2] = _val.z;
+					this.mBuf[index * 4 + 3] = _val.w;
+				}
+			}
+
+			private CalcIndex(_x : number, _y : number, _mode : AltModulo) {
+				let x, y;
+				switch(_mode) {
+					case AltModulo.ALT_XY:
+						x = (_x + this.mOffsetX) % this.mAltWidth;
+						y = (_y + this.mOffsetY) % this.mAltHeight;
+						break;
+					case AltModulo.ALT_X:
+						x = (_x + this.mOffsetX) % this.mAltWidth;
+						y = (_y + this.mOffsetY) % this.mHeight;
+						break;
+					case AltModulo.ALT_Y:
+						x = (_x + this.mOffsetX) % this.mWidth;
+						y = (_y + this.mOffsetY) % this.mAltHeight;
+						break;
+					default:
+						x = (_x + this.mOffsetX) % this.mWidth;
+						y = (_y + this.mOffsetY) % this.mHeight;
+						break;
+				}
+				return x + y * this.mWidth;
+			}
+		}
+		function Smoothstep(_from : number, _to : number, _s : number) {
+			var s = CMath.Clamp((_s - _from) / (_to - _from), 0.0, 1.0);
+			return s * s * (3 - 2 * s);
+		}
+		function AlphaBlend(_bg : CVec4, _fg : CVec4, _alpha : number,out=new CVec4()) {
+			var alpha = _alpha + 1;
+			var invAlpha = 256 - _alpha;
+
+			
+			out.x = (alpha * _fg.x + invAlpha * _bg.x) >> 8;
+			out.y = (alpha * _fg.y + invAlpha * _bg.y) >> 8;
+			out.z = (alpha * _fg.z + invAlpha * _bg.z) >> 8;
+			out.w = (alpha * _fg.w + invAlpha * _bg.w) >> 8;
+
+			return out;
+		}
+		
+		//ImgBuf(버퍼, 버퍼의 가로크기, 버퍼의 세로크기, 중점X, 중점Y, 옮길 버퍼의 가로크기, 옮길 버퍼의 세로크기)
+		var rd_src = new ImgBuf(prevBuffer, srcWidth, srcHeight, halfWidth, halfHeight, _size.x, _size.y);
+		var rd_dest = new ImgBuf(buffer, _size.x, _size.y, 0, 0, 0, 0);
+		var v4d0=new CVec4();
+		var v4d1=new CVec4();
+		var v4d2=new CVec4();
+
+		// 중점을 기준으로 사분면을 반대쪽에 넣어줌
+		for(var y = 0; y < _size.y; y++) {
+			for(var x = 0; x < _size.x; x++) {
+				rd_dest.Set(x, y,AltModulo.DEFAULT,rd_src.Get(x, y, AltModulo.ALT_XY,v4d0));
+			}
+		}
+
+		// 가로로 알파블렌딩
+		for (var x = halfWidth; x < skirtEdgeX; x++) {
+			var alpha = Math.floor(255 * (1 - Smoothstep(0.1, 0.9, (x - halfWidth) / skirtWidth)));
+			for (var y = 0; y < _size.y; y++) {
+				if (y == halfHeight) {
+					y = skirtEdgeY - 1;
+				} 
+				else {
+					rd_dest.Set(x, y,AltModulo.DEFAULT,AlphaBlend(rd_dest.Get(x, y,AltModulo.DEFAULT,v4d0), rd_src.Get(x, y, AltModulo.ALT_Y,v4d1), alpha,v4d2));
+				}
+			}
+		}
+
+		// 세로로 알파블렌딩
+		for (var y = halfHeight; y < skirtEdgeY; y++) {
+			var alpha = Math.floor(255 * (1 - Smoothstep(0.1, 0.9, (y - halfHeight) / skirtHeight)));
+			for (var x = 0; x < _size.x; x++) {
+				if (x == halfWidth) {
+					x = skirtEdgeX - 1;
+				}
+				else {
+					rd_dest.Set(x, y,AltModulo.DEFAULT,AlphaBlend(rd_dest.Get(x, y,AltModulo.DEFAULT,v4d0), rd_src.Get(x, y, AltModulo.ALT_X,v4d1), alpha,v4d2));
+				}
+			}
+		}
+
+		// 중앙 부분 채우기
+		for (var y = halfHeight; y < skirtEdgeY; y++) {
+			for (var x = halfWidth; x < skirtEdgeX; x++) {
+				var xpos : number = Math.floor(255 * (1 - Smoothstep(0.1, 0.9, (x - halfWidth) / skirtWidth)));
+				var ypos : number = Math.floor(255 * (1 - Smoothstep(0.1, 0.9, (y - halfHeight) / skirtHeight)));
+
+				var topBlend : CVec4 = AlphaBlend(rd_src.Get(x, y, AltModulo.ALT_X,v4d0), rd_src.Get(x, y,AltModulo.DEFAULT,v4d1), xpos,v4d2);
+				var botBlend : CVec4 = AlphaBlend(rd_src.Get(x, y, AltModulo.ALT_XY,v4d0), rd_src.Get(x, y, AltModulo.ALT_Y,v4d1), xpos,v4d2);
+				rd_dest.Set(x, y,AltModulo.DEFAULT,AlphaBlend(botBlend, topBlend, ypos));
+			}
+		}
+
+		const out = new CTexture();
+		out.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)]);
+		out.SetFilter(CTexture.eFilter.Neaest);
+		out.SetWrap(CTexture.eWrap.Repeat);
+		out.SetMipMap(CTexture.eMipmap.GL);
+		out.SetSize(_size.x, _size.y);
+		out.SetBuf(buffer);
+		return out;
+	}
+	static Create3DNoiseTexture(_type : number, _size : CVec3 = new CVec3(128, 128, 128)) {
+		var blendInc : number = 0.5;	// 이 값을 더 높이면 seamless 오류가 줄어듬
+		var skirtDepth : number = Math.max(1, Math.floor(_size.z * blendInc));
+		var srcDepth : number = _size.z + skirtDepth;
+
+		const src : CTexture[] = [];
+		for(let z = 0; z < srcDepth; z++) {
+			const tex = this.CreateNoiseTexture(_type, z, new CVec2(_size.x, _size.y));
+			src.push(tex);
+		}
+
+		// seamless로 만들기 위해 포스트 프로세싱
+		const out : CTexture[] = new Array(_size.z);
+		var halfDepth : number = Math.floor(_size.z * 0.5);
+		var skirtEdgeZ : number = halfDepth + skirtDepth;
+
+		function Smoothstep(_from : number, _to : number, _s : number) {
+			var s = CMath.Clamp((_s - _from) / (_to - _from), 0.0, 1.0);
+			return s * s * (3 - 2 * s);
+		}
+
+		// 중점을 기준으로 사분면을 반대쪽에 넣어줌
+		for(var i = 0; i < halfDepth; i++) {
+			const tex = src[i];
+			src[i] = src[i + halfDepth];
+			src[i + halfDepth] = tex;
+			out[i] = src[i];
+			out[i + halfDepth] = src[i + halfDepth];
+		}
+		
+		for(var z = halfDepth; z < skirtEdgeZ; z++) {
+			var alpha = Math.floor(255 * (1 - Smoothstep(0.1, 0.9, (z - halfDepth) / skirtDepth)));
+			var a = alpha + 1;
+			var invA = 256 - alpha;
+
+			var img = src[z % _size.z];
+			var skirt = src[(z - halfDepth) + _size.z];
+
+			var buffer = new Uint8Array(img.GetWidth() * img.GetHeight() * 4);
+
+			for(var i = 0; i < img.GetWidth() * img.GetHeight() * 4; i++) {
+				var fg = skirt.GetBuf()[0][i];
+				var bg = img.GetBuf()[0][i];
+
+				buffer[i] = (a * fg + invA * bg) >> 8;
+			}
+
+			const tex = new CTexture();
+			tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)]);
+			tex.SetFilter(CTexture.eFilter.Neaest);
+			tex.SetWrap(CTexture.eWrap.Repeat);
+			tex.SetMipMap(CTexture.eMipmap.GL);
+			tex.SetSize(_size.x, _size.y);
+			tex.SetBuf(buffer);
+
+			out[z % _size.z] = tex;
+		}
+
+		// 노멀라이징(0-1 범위로 바꿔줌), 몇몇 노이즈는 계산 특성상 중앙에 몰려서 노멀라이즈 안하면 범위가 좁을 수 있음
+		var minValX : number = 10000;
+		var maxValX : number = -10000;
+		// var minValY : number = 10000;
+		// var maxValY : number = -10000;
+		// var minValZ : number = 10000;
+		// var maxValZ : number = -10000;
+		// var minValW : number = 10000;
+		// var maxValW : number = -10000;
+		for(var z = 0; z < _size.z; z++) {
+			var idx : number = 0;
+			for(var y = 0; y < _size.y; y++) {
+				for(var x = 0; x < _size.x; x++) {
+					if(minValX > out[z].GetBuf()[0][idx * 4 + 0]) minValX = out[z].GetBuf()[0][idx * 4 + 0];
+					if(maxValX < out[z].GetBuf()[0][idx * 4 + 0]) maxValX = out[z].GetBuf()[0][idx * 4 + 0];
+					// if(minValY > out[z].GetBuf()[0][idx * 4 + 1]) minValY = out[z].GetBuf()[0][idx * 4 + 1];
+					// if(maxValY < out[z].GetBuf()[0][idx * 4 + 1]) maxValY = out[z].GetBuf()[0][idx * 4 + 1];
+					// if(minValZ > out[z].GetBuf()[0][idx * 4 + 2]) minValZ = out[z].GetBuf()[0][idx * 4 + 2];
+					// if(maxValZ < out[z].GetBuf()[0][idx * 4 + 2]) maxValZ = out[z].GetBuf()[0][idx * 4 + 2];
+					// if(minValW > out[z].GetBuf()[0][idx * 4 + 3]) minValW = out[z].GetBuf()[0][idx * 4 + 3];
+					// if(maxValW < out[z].GetBuf()[0][idx * 4 + 3]) maxValW = out[z].GetBuf()[0][idx * 4 + 3];
+					idx++;
+				}
+			}
+		}
+		for(var z = 0; z < _size.z; z++) {
+			var idx : number = 0;
+			for(var y = 0; y < _size.y; y++) {
+				for(var x = 0; x < _size.x; x++) {
+					if(maxValX == minValX) out[z].GetBuf()[0][idx * 4 + 0] = 0;
+					else out[z].GetBuf()[0][idx * 4 + 0] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 0] - minValX) / (maxValX - minValX) * 255, 0, 255);
+					// if(maxValY == minValY) out[z].GetBuf()[0][idx * 4 + 0] = 0;
+					// else out[z].GetBuf()[0][idx * 4 + 1] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 1] - minValY) / (maxValY - minValY) * 255, 0, 255);
+					// if(maxValZ == minValZ) out[z].GetBuf()[0][idx * 4 + 0] = 0;
+					// else out[z].GetBuf()[0][idx * 4 + 2] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 2] - minValZ) / (maxValZ - minValZ) * 255, 0, 255);
+					// if(maxValW == minValW) out[z].GetBuf()[0][idx * 4 + 0] = 0;
+					// else out[z].GetBuf()[0][idx * 4 + 3] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 3] - minValW) / (maxValW - minValW) * 255, 0, 255);
+					idx++;
+				}
+			}
+		}
+
 		return out;
 	}
 }

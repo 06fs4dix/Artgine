@@ -147,7 +147,7 @@ export class CPaint extends CComponent implements IMat
 		this.mTexCodi=new CVec4(1,1,0,0);
 		this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mShaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None)));
-		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(0,SDF.eAlphaModel.None)));
+		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(0)));
 		//this.m_shaderAttrMap.set("CVLS",new CShaderAttr("CVLS",new CVec4(0,0,0,0,this)));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
@@ -169,7 +169,7 @@ export class CPaint extends CComponent implements IMat
 		this.mBound=new CBound();
 		this.mBound.NewWASM();
 
-		this.PushTag("alphaCut");
+		//this.PushTag("alphaCut");
 		if(gPosDummy.Ptr()==null)
 			gPosDummy.NewWASM();
 		
@@ -239,7 +239,7 @@ export class CPaint extends CComponent implements IMat
 		this.mVFX=null;
 		this.mTag.clear();
 		this.mInit=false;
-		this.PushTag("alphaCut");
+		//this.PushTag("alphaCut");
 		this.mBatchMap.clear();
 
 	}
@@ -250,7 +250,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		if(_type==CObject.eShould.Editer && this.IsProxy()==false)
 		{
-			if(_member=="mColorModel" || _member=="mAlphaModel" || _member=="mVFX" )
+			if(_member=="mColorModel" || _member=="mAlphaModel" || _member=="mVFX" || _member=="mBound")
 					return true;
 		}
 
@@ -390,10 +390,9 @@ export class CPaint extends CComponent implements IMat
 		this.mMaterial.z=metalric;
 		this.mMaterial.w=emissive;
 	}
-	AlphaState()
+	IsAlphaState()
 	{
-		if(this.mAlphaTex || (this.mAlphaModel.y==CAlpha.eModel.Add && this.mAlphaModel.x!=0) || 
-						(this.mAlphaModel.y==CAlpha.eModel.Mul && this.mAlphaModel.x!=1))
+		if(this.mAlphaTex || (this.GetTag().has("alphaModel") && this.mAlphaModel.x!=1))
 			return true;
 		return false;
 	}
@@ -468,23 +467,22 @@ export class CPaint extends CComponent implements IMat
 	Refresh()
 	{
 		
-		//this.m_shaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None,this)));
-		//this.m_shaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(0,SDF.eAlphaModel.None,this)));
-		
+	
 		if(this.mShaderAttrMap.get("texCodi")==null)		
 			this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
 
 		if(this.mColorModel.mModel!=SDF.eColorModel.None)
-			this.PushTag("CAModel");
-		if(this.mColorModel.mModel!=SDF.eAlphaModel.None)
-			this.PushTag("CAModel");
+			this.PushTag("colorModel");
+
+
 
 
 		if(this.mShaderAttrMap.get("VFX")!=null)
 			this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 
+		
 		
 		//this.m_alphaCut=this.m_shaderAttrMap.get("alphaCut");
 		
@@ -559,10 +557,14 @@ export class CPaint extends CComponent implements IMat
 			this.ClearCRPAuto();
 			//this.WTRefresh();
 		}
-		else if(_pointer.member=="mColorModel" || _pointer.member=="mAlphaModel")
+		else if(_pointer.member=="mColorModel")
 		{
-			this.PushTag("CAModel");
-			//this.BatchClear();
+			this.PushTag("colorModel");
+			this.ClearCRPAuto();
+		}
+		else if(_pointer.member=="mAlphaModel")
+		{
+			this.PushTag("alphaModel");
 			this.ClearCRPAuto();
 		}
 		else if(_child)
@@ -580,13 +582,12 @@ export class CPaint extends CComponent implements IMat
 			}
 			else if(_pointer.IsRef(this.mAlphaModel))
 			{
-				
-				this.PushTag("CAModel");
+				this.PushTag("alphaModel");
 				this.ClearCRPAuto();
 			}
 			else if(_pointer.IsRef(this.mColorModel))
 			{
-				this.PushTag("CAModel");
+				this.PushTag("colorModel");
 				this.ClearCRPAuto();
 			}
 			else if(_pointer.IsRef(this.mVFX))
@@ -617,8 +618,6 @@ export class CPaint extends CComponent implements IMat
 			this.mRenPT.push(null);
 			//return true;
 		}
-			
-		//return false;
 	}
 	ClearCRPAuto()
 	{
@@ -784,18 +783,19 @@ export class CPaint extends CComponent implements IMat
 		return null;
 	}
 	// SetRGBA(r : number,g : number,b : number,a : number);
-	SetRGBA(_rgba : CVec4)
-	{
-		this.mColorModel.mF32A[0]=_rgba.mF32A[0];
-		this.mColorModel.mF32A[1]=_rgba.mF32A[1];
-		this.mColorModel.mF32A[2]=_rgba.mF32A[2];
-		this.mColorModel.mF32A[3]=SDF.eColorModel.RGBAdd;
-		this.mAlphaModel.mF32A[0]=_rgba.mF32A[3];
-		this.mAlphaModel.mF32A[1]=SDF.eAlphaModel.Add;
-		if(this.mTag.has("CAModel")==false)
-			this.ClearBatch();
-		this.PushTag("CAModel");
-	}
+	// SetRGBA(_rgba : CVec4)
+	// {
+	// 	this.mColorModel.mF32A[0]=_rgba.mF32A[0];
+	// 	this.mColorModel.mF32A[1]=_rgba.mF32A[1];
+	// 	this.mColorModel.mF32A[2]=_rgba.mF32A[2];
+	// 	this.mColorModel.mF32A[3]=SDF.eColorModel.RGBAdd;
+	// 	this.mAlphaModel.mF32A[0]=_rgba.mF32A[3];
+	// 	this.mAlphaModel.mF32A[1]=SDF.eAlphaModel.Add;
+	// 	if(this.mTag.has("ColorModel")==false)
+	// 		this.ClearBatch();
+
+	// 	this.PushTag("ColorModel");
+	// }
 	SetColorModel(_color : CColor)
 	{
 		this.mColorModel.mF32A[0]=_color.mF32A[0];
@@ -803,20 +803,20 @@ export class CPaint extends CComponent implements IMat
 		this.mColorModel.mF32A[2]=_color.mF32A[2];
 		this.mColorModel.mF32A[3]=_color.mF32A[3];
 
-		if(this.mTag.has("CAModel")==false)
+		if(this.mTag.has("colorModel")==false)
 			this.ClearBatch();
-		this.PushTag("CAModel");
+		this.PushTag("colorModel");
 	}
 	SetAlphaModel(_alpha : CAlpha)
 	{
-		let as=this.AlphaState();
+		let as=this.IsAlphaState();
 		this.mAlphaModel.mF32A[0]=_alpha.mF32A[0];
 		this.mAlphaModel.mF32A[1]=_alpha.mF32A[1];
-		if(as!=this.AlphaState())
+		if(as!=this.IsAlphaState())
 			this.ClearCRPAuto();
-		if(this.mTag.has("CAModel")==false)
+		if(this.mTag.has("alphaModel")==false)
 			this.ClearBatch();
-		this.PushTag("CAModel");
+		this.PushTag("alphaModel");
 	}
 	
 	
@@ -969,7 +969,13 @@ export class CPaint extends CComponent implements IMat
 	}
 	Start()
 	{
-		
+		// //임시 코드
+		// if(this.mTag.has("CAModel"))
+		// {
+		// 	this.PushTag("colorModel");
+		// 	this.PushTag("alphaModel");
+		// }
+
 		this.ClearCRPAuto();
 		//this.InitPaint();
 		

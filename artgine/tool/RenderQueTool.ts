@@ -49,6 +49,7 @@ var g_can: CCanvas = null;
 
 async function Open() {
     let pf = new CPreferences();
+    pf.mParallelShader=false;
     
     // pf.m_width = 1350;
     // pf.m_height = 550;

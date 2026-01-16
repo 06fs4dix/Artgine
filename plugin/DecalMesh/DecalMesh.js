@@ -1,5 +1,6 @@
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
+import { CClass } from "../../artgine/basic/CClass.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec1 } from "../../artgine/geometry/CVec1.js";
@@ -257,3 +258,4 @@ export class CPaint3DDecalMesh extends CPaint {
         }
     }
 }
+CClass.Push(CPaint3DDecalMesh);

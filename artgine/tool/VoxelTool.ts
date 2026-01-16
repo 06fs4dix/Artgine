@@ -27,6 +27,7 @@ import { CCIndex } from "../app/canvas/CCIndex.js";
 
 import { CPaint3D } from "../app/component/paint/CPaint3D.js";
 import { CColor } from "../render/CColor.js";
+import { CAlpha } from "../render/CAlpha.js";
 
 var gModal: CModalFlex;
 var gAtl: CAtelier;
@@ -1128,7 +1129,9 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
 			pt.SetLMat(mat);
 
 			gCurser.PushComp(pt);
-            pt.SetRGBA(new CVec4(1,0,0,-0.5));
+            
+            pt.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBAdd));
+            pt.SetAlphaModel(new CAlpha(0.5));
 			// if(_texture.length > index && _texture[index] != null) {
 			// 	if(_texture[index] instanceof CVec3) {
 			// 		pt.SetTexture([]);
@@ -1151,7 +1154,9 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
 		mat.xyz=new CVec3(200 * (_xSize),0,0);
 		pt.SetLMat(mat);
 		gCurser.PushComp(pt);
-		pt.SetRGBA(new CVec4(0,0,1,-0.6));
+        pt.SetColorModel(new CColor(0,0,1,CColor.eModel.RGBAdd));
+        pt.SetAlphaModel(new CAlpha(0.6));
+		
 
 		pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
 		mat=new CMat();
@@ -1159,7 +1164,9 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
 		mat.xyz=new CVec3(0,200,0);
 		pt.SetLMat(mat);
 		gCurser.PushComp(pt);
-		pt.SetRGBA(new CVec4(0,1,0,-0.6));
+        pt.SetColorModel(new CColor(0,1,0,CColor.eModel.RGBAdd));
+        pt.SetAlphaModel(new CAlpha(0.6));
+		//pt.SetRGBA(new CVec4(0,1,0,-0.6));
 	}
 	else
 	{
@@ -1182,7 +1189,9 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
 			// 	pt.SetTexture(gAtl.Frame().Pal().GetBlackTex());
 			// 	pt.SetRGBA(new CVec4(1,0,0,-0.5));
 			// }
-            pt.SetRGBA(new CVec4(1,0,0,-0.5));
+            //pt.SetRGBA(new CVec4(1,0,0,-0.5));
+            pt.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBAdd));
+        pt.SetAlphaModel(new CAlpha(0.5));
 		}
 
 		let pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
@@ -1191,7 +1200,9 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
 		mat.xyz=new CVec3(200 * (_xSize),0,0)
 		pt.SetLMat(mat);
 		gCurser.PushComp(pt);
-		pt.SetRGBA(new CVec4(0,0,1,-0.6));
+		//pt.SetRGBA(new CVec4(0,0,1,-0.6));
+        pt.SetColorModel(new CColor(0,0,1,CColor.eModel.RGBAdd));
+        pt.SetAlphaModel(new CAlpha(0.6));
 
 		pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
 		mat=new CMat();
@@ -1199,7 +1210,9 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
 		mat.xyz=new CVec3(0,0,200 * (_ySize));
 		pt.SetLMat(mat);
 		gCurser.PushComp(pt);
-		pt.SetRGBA(new CVec4(0,1,0,-0.6));
+		//pt.SetRGBA(new CVec4(0,1,0,-0.6));
+        pt.SetColorModel(new CColor(0,1,0,CColor.eModel.RGBAdd));
+        pt.SetAlphaModel(new CAlpha(0.6));
 	}
 	
 	gCurser.SetSca(new CVec3(0.55,0.55,0.55));
@@ -1235,7 +1248,9 @@ function SelectMapRefresh()
         mat.mF32A[10]=sca;
         mat.xyz=CMath.V3AddV3(index.M2Pos(gVoxelTar.mSize),gVoxelTar.GetPos());
         let pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
-        pt.SetRGBA(new CVec4(0,1,0,-0.5));
+        //pt.SetRGBA(new CVec4(0,1,0,-0.5));
+        pt.SetColorModel(new CColor(0,1,0,CColor.eModel.RGBAdd));
+        pt.SetAlphaModel(new CAlpha(0.5));
         pt.SetLMat(mat);
         gPress.PushComp(pt);
     

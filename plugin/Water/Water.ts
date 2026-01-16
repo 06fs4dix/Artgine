@@ -1,17 +1,21 @@
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
 import CEnvMap from "../../artgine/app/component/CEnvMap.js";
+import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
+import { CClass } from "../../artgine/basic/CClass.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
 import { CPointer } from "../../artgine/basic/CObject.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
+import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec1 } from "../../artgine/geometry/CVec1.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
 import { CVec4 } from "../../artgine/geometry/CVec4.js";
+import { CCamera } from "../../artgine/render/CCamera.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../artgine/render/CTexture.js";
@@ -31,49 +35,15 @@ CPlugin.PushEvent(CEvent.eType.Load,()=>{
 });
 
 
-
-enum ePreset {
-    Emerald,
-    Green,
-    Caribbean,
-    NorthSea,
-    Muddy
-};
-
-const PresetShallowColorMap : Record<ePreset, CVec3> = {
-    [ePreset.Emerald]:      new CVec3(0.00, 0.55, 0.35),
-    [ePreset.Green]:        new CVec3(0.20, 0.60, 0.05),
-    [ePreset.Caribbean]:    new CVec3(0.30, 0.85, 0.95),
-    [ePreset.NorthSea]:     new CVec3(0.10, 0.40, 0.50),
-    [ePreset.Muddy]:        new CVec3(0.40, 0.25, 0.15),
-};
-
-const PresetDeepColorMap : Record<ePreset, CVec3> = {
-    [ePreset.Emerald]:      new CVec3(0.00, 0.15, 0.25),
-    [ePreset.Green]:        new CVec3(0.05, 0.10, 0.08),
-    [ePreset.Caribbean]:    new CVec3(0.00, 0.10, 0.40),
-    [ePreset.NorthSea]:     new CVec3(0.03, 0.08, 0.15),
-    [ePreset.Muddy]:        new CVec3(0.10, 0.05, 0.03),
-};
-
-const PresetDeepValMap : Record<ePreset, CVec4> = {
-    [ePreset.Emerald]:      new CVec4(10, 50,  2000, 10),
-    [ePreset.Green]:        new CVec4(10, 30,  2000, 10),
-    [ePreset.Caribbean]:    new CVec4(10, 100, 2000, 10),
-    [ePreset.NorthSea]:     new CVec4(10, 35,  2000, 10),
-    [ePreset.Muddy]:        new CVec4(10, 10,  2000, 10),
-};
-
-export class CWater extends CSubject
+export class CWater3D extends CSubject
 {
-    static ePreset = ePreset;
 
     mPaint : CPaint3D;
-    mReflector : CReflector;   // 반사 텍스쳐 굽는 컴포넌트
-    mRefractor : CRefractor;   // 굴절 텍스쳐 굽는 컴포넌트
+    mReflector : CReflector3D;   // 반사 텍스쳐 굽는 컴포넌트
+    mRefractor : CRefractor3D;   // 굴절 텍스쳐 굽는 컴포넌트
 
     // 물 색상
-    mDeepColor : CVec3 = new CVec3();
+    mDeepColor : CVec3 = new CVec3(0.1,0.2,0.4);
     mShallowColor : CVec3 = new CVec3();
     mWaterDeep : CVec4 = new CVec4(10,255,2000,10); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 물 속이 보이는 최대 거리, w : 커품이 생기는 최대 깊이
 
@@ -88,13 +58,13 @@ export class CWater extends CSubject
         this.mPaint = new CPaint3D(CFrame.Main().Pal().GetPlaneMesh());
         this.mPaint.PushRenderPass(new CRenderPass(gWaterShader));
         this.mPaint.PushTag("water");
+        this.mPaint.PushTag("3D");
         this.mPaint.SetTexture([]);
         this.mPaint.PushCShaderAttr(new CShaderAttr("deepColor", this.mDeepColor));
         this.mPaint.PushCShaderAttr(new CShaderAttr("shallowColor", this.mShallowColor));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterDeep", this.mWaterDeep));
         this.PushComp(this.mPaint);
         
-        this.Preset(ePreset.Emerald);
     }
 
     GetPT() {
@@ -137,7 +107,7 @@ export class CWater extends CSubject
         if(_texture == undefined) {
             if(this.mRefractor != null) return;
 
-            this.mRefractor = new CRefractor();
+            this.mRefractor = new CRefractor3D();
             this.PushComp(this.mRefractor);
 
             // shaderAttr 포인터로 생성
@@ -183,7 +153,7 @@ export class CWater extends CSubject
         if(_texture == undefined) {
             if(this.mReflector != null) return;
 
-            this.mReflector = new CReflector();
+            this.mReflector = new CReflector3D();
             this.PushComp(this.mReflector);
 
             this.mReflector.AddWaterDeep(this.mWaterDeep);
@@ -211,27 +181,10 @@ export class CWater extends CSubject
         this.mReflector = null;
     }
 
-    Preset(_type : ePreset) {
-        this.mShallowColor.Import(PresetShallowColorMap[_type]);
-        this.mDeepColor.Import(PresetDeepColorMap[_type]);
-        this.mWaterDeep.Import(PresetDeepValMap[_type]);
-    }
-
-    EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
-        super.EditHTMLInit(_div, _pointer);
-
-        for(const p of Object.keys(ePreset).filter(key=>isNaN(Number(key)))) {
-            var button = document.createElement("button");
-            button.innerText = p;
-            button.onclick=()=>{
-                this.Preset(ePreset[p as keyof typeof ePreset]);
-            };
-            _div.append(button);
-        }
-    }
+    
 }
 
-export class CReflector extends CBrushComp
+export class CReflector3D extends CBrushComp
 {
     mSize : number = 512;
     mCycle : number = 0;
@@ -372,7 +325,7 @@ export class CReflector extends CBrushComp
     }
 }
 
-export class CRefractor extends CBrushComp
+export class CRefractor3D extends CBrushComp
 {
     mSize : number = 512;
     mCycle : number = 0;
@@ -621,3 +574,209 @@ export class CRefractor extends CBrushComp
         normal strength
         fade distance
 */
+export class  CPaint2DWater extends CPaint2D
+{
+
+}
+export class CWater2D extends CSubject
+{
+
+    mPaint : CPaint2DWater;
+    mReflector : CReflector2D;   // 반사 텍스쳐 굽는 컴포넌트
+    constructor()
+    {
+        super();
+        
+
+
+        this.mReflector=new CReflector2D();
+        this.PushComp(this.mReflector);
+
+
+        //this.mPaint = new CPaint2D(CFrame.Main().Pal().GetBlackTex());
+        this.mPaint = new CPaint2DWater(this.mReflector.GetTex(),new CVec2(1,1));
+        this.mPaint.PushRenderPass(new CRenderPass(gWaterShader));
+        this.mPaint.PushTag("water");
+        this.mPaint.PushTag("2D");
+        this.PushComp(this.mPaint);
+
+    }
+    NormalFlow(_flow : CVec2, _normalTex1 : string = null, _normalTex2 : string = null) {        
+        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
+
+        if(_normalTex1 != null && _normalTex2 != null) {
+            this.mPaint.PushTag("normalMap");
+            this.mPaint.PushCShaderAttr(new CShaderAttr("normal1Map", 3.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(3.0, _normalTex1));
+            this.mPaint.PushCShaderAttr(new CShaderAttr("normal2Map", 4.0));
+            this.mPaint.PushCShaderAttr(new CShaderAttr(4.0, _normalTex2));
+        }
+        else {
+            this.mPaint.RemoveTag("normalMap");
+        }
+    }
+    Update(_update: CUpdate): void {
+        super.Update(_update);
+
+        if(this.mPaint.FindCShaderAttr("waterViewMat")==null && this.mReflector.mWaterCam!=null)
+        {
+            this.mPaint.PushCShaderAttr(new CShaderAttr("waterViewMat", this.mReflector.mWaterCam.GetViewMat()));
+            this.mPaint.PushCShaderAttr(new CShaderAttr("waterProjectMat", this.mReflector.mWaterCam.GetProjMat()));
+        }
+        
+    }
+}
+export class CReflector2D extends CBrushComp
+{
+    mSize : number = 512;
+    mCycle : number = 0;
+    mWaterCam : CCamera;
+
+    constructor() {
+        super("reflector_" + CUniqueID.Get());
+
+        // 오브젝트용 RP
+        {
+            let rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
+            rp.mCamera="WaterCam";
+            rp.mPriority = CRenderPass.ePriority.Normal - 2;
+            rp.mRenderTarget = this.GetTex();
+            rp.PushOr(new CCondition("class","==","CPaint2D"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.SetKey("water2dCPaint2D");
+            this.PushRPAuto(rp);
+
+            rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
+            rp.mCamera="WaterCam";
+            rp.mPriority = CRenderPass.ePriority.Normal - 2;
+            rp.mRenderTarget = this.GetTex();
+            rp.PushOr(new CCondition("class","==","CPaintVoxel"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.mShader="Artgine/Voxel.sl";
+            rp.SetKey("water2dCPaintVoxel");
+            this.PushRPAuto(rp);
+
+            rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
+            rp.mPriority = CRenderPass.ePriority.Normal;
+            //rp.mCopy = false;
+            //rp.mCamera="WaterCam";
+            rp.SetKey("rp1");
+            rp.PushOr(new CCondition("class","==","CPaint2D"));
+            //rp.PushOr(new CCondition("class","==","CPaintVoxel"));
+            //rp.PushOr(new CCondition("class","==","CShadowPlane"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            this.PushRPAuto(rp);
+
+            rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
+            //rp.mCopy = false;
+            rp.mCamera="WaterCam";
+            // rp.mShaderAttr.push(new CShaderAttr("waterViewMat", new CMat()));
+            // rp.mShaderAttr.push(new CShaderAttr("waterProjectMat", new CMat()));
+            rp.mPriority = CRenderPass.ePriority.Normal - 1;
+            rp.mRenderTarget = this.GetTex();
+            rp.mSortRevers=true;
+            rp.mCullFace = CRenderPass.eCull.None;
+            //rp.PushOr(new CCondition("class","==","CPaint2D"));
+            rp.PushOr(new CCondition("class","==","CShadowPlane"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            rp.SetKey("rp2");
+            this.PushRPAuto(rp);
+
+            //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
+            
+            
+
+            rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
+            rp.mPriority = CRenderPass.ePriority.AlphaAuto;
+            //rp.mCopy = false;
+            //rp.mCamera="WaterCam";
+            rp.SetKey("rp3");
+            rp.mSortRevers=true;
+            rp.mCullFace = CRenderPass.eCull.None;
+            //rp.PushOr(new CCondition("class","==","CPaint2D"));
+            rp.PushOr(new CCondition("class","==","CShadowPlane"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            this.PushRPAuto(rp);
+        }
+    }
+    Update(_update: CUpdate): boolean|any {
+        super.Update(_update);
+        if(this.mBruch != null) this.UpdateBrush(_update);
+    }
+    
+    UpdateBrush(_update : CUpdate) {
+        const fw = this.GetOwner().GetFrame();
+
+        // ---------------------------------------------------------
+        // 1. 텍스처 생성
+        // ---------------------------------------------------------
+        let tex = fw.Res().Find(this.GetTex()) as CTexture;
+
+        // 텍스쳐 없으면 생성
+        if(!tex) {
+            fw.Ren().BuildRenderTarget(
+                [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)],
+                null, 
+                this.GetTex()
+            );
+            tex = fw.Res().Find(this.GetTex()) as CTexture;
+            //tex.SetAutoResize(true);
+        }
+        // // 사이즈 변경 시 재생성
+        // if(tex.GetWidth() != this.mSize) {
+        //     tex.SetSize(this.mSize, this.mSize);
+        //     fw.Ren().BuildTexture(tex);
+        // }
+      
+    
+        const mainCam = this.mBruch.GetCam2D();
+        this.mWaterCam = this.mBruch.GetCamera("WaterCam");
+        if(this.mWaterCam.Init(mainCam.GetEye(), mainCam.GetLook()))
+        {
+            this.mWaterCam.SetFar(mainCam.GetFar());
+            this.mWaterCam.SetFov(mainCam.mFov);
+            //this.mWaterCam.SetSize(1920,1017);
+            //virtualCam.SetViewPort(mainCam.GetViewPort());
+            this.mWaterCam.Set2DZoom(2.0*mainCam.GetZoom());
+           
+            this.mWaterCam.ResetOrthographic();
+           
+        }
+
+        for(const rp of this.mWrite) {
+            
+            // if(rp.mShaderAttr.length>0)
+            // {
+            //     rp.mShaderAttr[0].mData=mainCam.GetViewMat();
+            //     rp.mShaderAttr[1].mData=mainCam.GetProjMat();
+            // }
+            
+            // 등록된 RP가 없다면 등록
+            if(!this.mBruch.AutoRP().has(rp.Key())) {
+                this.mBruch.SetAutoRP(rp.Key(), rp);
+            }
+            // // 사이클 변경 시 업데이트
+            // if(rp.mCycle != this.mCycle) {
+            //     rp.mCycle = this.mCycle;
+            //     this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+            // }
+        }
+
+
+    }
+
+    Destroy(): void {
+        super.Destroy();
+
+        if(this.mWrite.length > 0) {
+            for(const rp of this.mWrite) {
+                this.mBruch.RemoveAutoRP(rp.Key());
+            }
+            this.mWrite.length = 0;
+            this.mBruch.ClearRen();
+        }
+    }
+}
+
+CClass.Push(CWater3D);
+CClass.Push(CWater2D);

@@ -72,7 +72,7 @@ export class CPaint3D extends CPaint
 		//this.m_texture=new Array();
 		
 	}
-	SetOwner(_obj :CSubject)
+	override SetOwner(_obj :CSubject)
 	{
 		super.SetOwner(_obj);
 		this.InitMesh(this.mMesh);
@@ -88,7 +88,7 @@ export class CPaint3D extends CPaint
 		this.PushTag("parallax");
 		this.PushCShaderAttr(new CShaderAttr("parallaxNormal", new CVec1(0.05)));
 	}
-	EditDrop(_object: CObject): void 
+	override EditDrop(_object: CObject): void 
 	{
 		if(_object instanceof CMesh)
 		{
@@ -147,7 +147,7 @@ export class CPaint3D extends CPaint
 			return false;
 		return super.IsShould(_member,_type);
 	}
-	InitChk()
+	override InitChk()
 	{
 		super.InitChk();
 		if(this.mTree == null)
@@ -161,7 +161,7 @@ export class CPaint3D extends CPaint
 
 		
 	}
-	EmptyRPChk()
+	override EmptyRPChk()
 	{
 		if(this.mTree==null || this.mRenderPass.length==0)
 		{
@@ -207,7 +207,7 @@ export class CPaint3D extends CPaint
 		//this.m_material=new Array();
 		//this.m_emissive=new Array();
 	}
-	Prefab(_owner : CSubject)
+	override Prefab(_owner : CSubject)
 	{
 		super.Prefab(_owner);
 		if(this.mAutoLoad!=null)
@@ -351,7 +351,7 @@ export class CPaint3D extends CPaint
 		return true;
 	}
 	
-	Update(_update : CUpdate): void 
+	override Update(_update : CUpdate): void 
 	{
 		super.Update(_update);
 		
@@ -445,7 +445,7 @@ export class CPaint3D extends CPaint
 		}
 	}
 	
-	Render(_vf : CShader)
+	override Render(_vf : CShader)
 	{
 		
 		
@@ -604,11 +604,11 @@ export class CPaintCube extends CPaint3D
 		super();
 		this.mTextureKey[0]=_cubeTex;
 	}
-	InitChk()
+	override InitChk()
 	{
-		this.mLMat.mF32A[0]=100;
-		this.mLMat.mF32A[5]=100;
-		this.mLMat.mF32A[10]=100;
+		// this.mLMat.mF32A[0]=100;
+		// this.mLMat.mF32A[5]=100;
+		// this.mLMat.mF32A[10]=100;
 		
 		this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
 		this.mRenderPass[0]=new CRenderPass(this.GetOwner().GetFrame().Pal().SlCubeKey());
@@ -653,11 +653,11 @@ export class CPaintMeshMerge extends CPaint
 	mHash="";
 	public mCenterPos=false;
 	public mTargetScale=0;
-	IsShould(_member: string, _type: CObject.eShould): boolean {
+	override IsShould(_member: string, _type: CObject.eShould): boolean {
 		if(_member=="mMeshDataNode")	return false;
 		return super.IsShould(_member,_type);
 	}
-	InitChk(): void 
+	override InitChk(): void 
 	{
 		super.InitChk();	
 		
@@ -681,7 +681,7 @@ export class CPaintMeshMerge extends CPaint
 	// Update(_delay: any): void {
 	// 	super.Update(_delay);
 	// }
-	Start(): void {
+	override Start(): void {
 		this.mMeshDataNode.ci=new CMeshCreateInfo();
 		this.mBound.Reset();
 		this.mBound.SetType(CBound.eType.Box);
@@ -696,7 +696,7 @@ export class CPaintMeshMerge extends CPaint
 		}
 		this.mHash=CHash.HashCode(this.mHash)+"";
 	}
-	Render(_vf: CShader): void {
+	override Render(_vf: CShader): void {
 		
 		
 
@@ -865,7 +865,7 @@ export class CPaintMeshMerge extends CPaint
 		
 	}
 	
-	EmptyRPChk()
+	override EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)
 		{

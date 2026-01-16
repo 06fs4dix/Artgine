@@ -1,5 +1,6 @@
 import { CBlackBoard } from "../basic/CBlackBoard.js";
 import { CConsol } from "../basic/CConsol.js";
+import { CDOM } from "../basic/CDOM.js";
 import { CLan } from "../basic/CLan.js";
 import { CObject } from "../basic/CObject.js";
 import { CPath } from "../basic/CPath.js"

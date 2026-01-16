@@ -28,6 +28,20 @@ export class CBoundWorld
         this.mBound.Reset();
         this.mBound.mType=_LBound.mType;
 
+        if(_LBound.mType==CBound.eType.Sphere)
+        {
+            this.mCenter.Zero();
+            this.mSize.x=CMath.Max(Math.abs(_LBound.mMin.x),Math.abs(_LBound.mMax.x));
+            this.mSize.y=CMath.Max(Math.abs(_LBound.mMin.y),Math.abs(_LBound.mMax.y));
+            this.mSize.z=CMath.Max(Math.abs(_LBound.mMin.z),Math.abs(_LBound.mMax.z));
+            this.mSize.x=this.mSize.y=this.mSize.z=CMath.Max(CMath.Max(this.mSize.x,this.mSize.y),this.mSize.z);
+            
+
+            this.mBound.InitBound(this.mSize.x);
+
+            return;
+        }
+
         this.mCenter.x=_LBound.mMin.x;this.mCenter.y=_LBound.mMin.y;this.mCenter.z=_LBound.mMin.z;
         if(_WMat!=null)
             this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat,this.mSize));

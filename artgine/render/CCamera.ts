@@ -253,20 +253,20 @@ export class CCamera extends CObject
 		//this.m_screenWidthBase=true;
 		if(this.mRCS)
 		{
-			this.mViewMat=CUtilMath.CameraLookAtRH(eye,look,this.mUp);
+			CUtilMath.CameraLookAtRH(eye,look,this.mUp,this.mViewMat);
 			if(this.mScreenWidthBase)
-				this.mProjMat=CUtilMath.CameraPerspectiveFovRH(this.mFov, width / height,this.mProjNear,this.mProjFar,true);
+				CUtilMath.CameraPerspectiveFovRH(this.mFov, width / height,this.mProjNear,this.mProjFar,true,this.mProjMat);
 			else
-				this.mProjMat=CUtilMath.CameraPerspectiveFovRH(this.mFov, height/width,this.mProjNear,this.mProjFar,false);
+				CUtilMath.CameraPerspectiveFovRH(this.mFov, height/width,this.mProjNear,this.mProjFar,false,this.mProjMat);
 				//this.m_projMat=CMath.CameraPerspectiveRH(1,height/ width,this.m_projectNear,this.m_projectFar);
 		}
 		else
 		{
-			this.mViewMat=CUtilMath.CameraLookAtLH(eye,look,this.mUp);
+			CUtilMath.CameraLookAtLH(eye,look,this.mUp,this.mViewMat);
 			if(this.mScreenWidthBase)
-				this.mProjMat=CUtilMath.CameraPerspectiveFovLH(this.mFov, width / height,this.mProjNear,this.mProjFar,true);
+				CUtilMath.CameraPerspectiveFovLH(this.mFov, width / height,this.mProjNear,this.mProjFar,true,this.mProjMat);
 			else
-				this.mProjMat=CUtilMath.CameraPerspectiveFovLH(this.mFov, height / width,this.mProjNear,this.mProjFar,false);
+				CUtilMath.CameraPerspectiveFovLH(this.mFov, height / width,this.mProjNear,this.mProjFar,false,this.mProjMat);
 		}
 		
 		this.mOrthographic=false;
@@ -342,13 +342,13 @@ export class CCamera extends CObject
 
 		if(this.mRCS)
 		{
-			this.mViewMat=CUtilMath.CameraLookAtRH(eye,look,this.mUp);
-			this.mProjMat=CUtilMath.CameraOrthoRH(width,height, this.mProjNear, this.mProjFar);
+			CUtilMath.CameraLookAtRH(eye,look,this.mUp,this.mViewMat);
+			CUtilMath.CameraOrthoRH(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
 		}
 		else
 		{
-			this.mViewMat=CUtilMath.CameraLookAtLH(eye,look,this.mUp);
-			this.mProjMat=CUtilMath.CameraOrthoLH(width,height, this.mProjNear, this.mProjFar);
+			CUtilMath.CameraLookAtLH(eye,look,this.mUp,this.mViewMat);
+			CUtilMath.CameraOrthoLH(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
 		}
 		//this.m_VPMat=CMath.MatMul(this.m_viewMat,this.m_projMat);
 		this.mOrthographic=true;

@@ -86,7 +86,8 @@ export class CShaderInterpret
 	public mKeyMap=new Map<string,string>();
 	public mString : string;
 	
-	 
+	mVFDummy=new CVertexFormat();
+	mFile="";
 	public mFunction =new  Map<string,CShaderFun>();
 
 	public mCallStack=new Array<string>;
@@ -154,8 +155,8 @@ export class CShaderInterpret
 	
 	protected CutTypeName(_string : string)
 	{
-		_string=CString.ReplaceAll(_string," ","");
-		_string=CString.ReplaceAll(_string,"	","");
+		//_string=CString.ReplaceAll(_string," ","");
+		//_string=CString.ReplaceAll(_string,"	","");
 		
 			
 		var type="";
@@ -179,7 +180,7 @@ export class CShaderInterpret
 		if(key!=null)	return key;
 		return _key;
 	}
-	VFPasing(_str : string,_vfCount : Array<number>) : CVertexFormat
+	VFPasing(_str : string,_vfCount : Array<number>,vf : CVertexFormat=new CVertexFormat()) : CVertexFormat
 	{
 		return null;
 	}
@@ -340,7 +341,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		CAlert.E("error!");
 		return "Null";
 	}
-	AttachFun(_useFun : Array<string>, _addedFun : Array<string> = null)
+	AttachFun(_useFun : Array<string>, _functionMap : Map<string, CShaderFun>,_addedFun : Array<string> = null)
 	{
 		if(_addedFun === null) {
 			_addedFun = [];
@@ -358,7 +359,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 			// }
 
 
-			const fun = this.mFunction.get(funKey);
+			const fun = _functionMap.get(funKey);
 
 			let tempStr = "";
 			switch(fun.mReturn) {
@@ -388,7 +389,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 			{
 				if(i!=0)
 				tempStr+=",";
-				var vf=this.VFPasing(fun.mPara[i],vfCount);
+				var vf=this.VFPasing(fun.mPara[i],vfCount,this.mVFDummy);
 				switch(vf.eachCount)
 				{
 					case 1:
@@ -426,7 +427,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 				// 	//CConsol.Log(usedFun);
 				// }
 			}
-			funStr += this.AttachFun(arrFun, _addedFun);
+			funStr += this.AttachFun(arrFun, _functionMap,_addedFun);
 			funStr += tempStr;
 		}
 

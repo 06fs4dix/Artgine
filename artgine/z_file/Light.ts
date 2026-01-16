@@ -13,8 +13,8 @@ export var ligStep2 : number=SDF.eLightStep2.Emissive;
 export var ligStep3 : number=0;
 
 //LUT
-export var ligDir: Sam2DV4=new Sam2DV4(11, 503);
-export var ligCol: Sam2DV4=new Sam2DV4(11, 504);
+export var ligDir: Sam2DV4=new Sam2DV4(11,250);
+export var ligCol: Sam2DV4=new Sam2DV4(11,251);
 
 export var envCube : number = -1;
 export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4

@@ -1,5 +1,7 @@
+import { Bootstrap } from "../basic/Bootstrap.js";
 import {CConsol} from "../basic/CConsol.js";
 import {CDOM} from "../basic/CDOM.js";
+import { CEvent } from "../basic/CEvent.js";
 import {CJSON} from "../basic/CJSON.js";
 import { CConfirm } from "../basic/CModal.js";
 import { CObject } from "../basic/CObject.js";
@@ -8,7 +10,7 @@ import {CUniqueID} from "../basic/CUniqueID.js";
 import { CUtil } from "../basic/CUtil.js";
 
 
-export class CHtmlBarItem extends CObject 
+export class CHTMLBarItem extends CObject 
 {
 	public m_parent : string;
 	public m_title : string;
@@ -27,12 +29,12 @@ export class CHtmlBarItem extends CObject
 		return false;
 	}
 
-	Icon(): string {
+	override Icon(): string {
 		return "bi-bookmark-plus-fill";
 	}
 }
 
-export class CHtmlBarTrunk extends CHtmlBarItem
+export class CHTMLBarTrunk extends CHTMLBarItem
 {
     constructor(_content : string, _parent : string = "", _key? : string) {
         super(_content, _parent, _key);
@@ -40,24 +42,24 @@ export class CHtmlBarTrunk extends CHtmlBarItem
 
     public CreateLeaf(_content : string, _target : Function|string, _prefab? : boolean) {
         return _prefab
-            ? new CHtmlBarLeaf(_content, this.Key(), _target as string, _prefab)
-            : new CHtmlBarLeaf(_content, this.Key(), _target as Function);
+            ? new CHTMLBarLeaf(_content, this.Key(), _target as string, _prefab)
+            : new CHTMLBarLeaf(_content, this.Key(), _target as Function);
     }
 
-    public CreateTrunk(_content : string) : CHtmlBarTrunk {
-		return new CHtmlBarTrunk(_content, this.Key());
+    public CreateTrunk(_content : string) : CHTMLBarTrunk {
+		return new CHTMLBarTrunk(_content, this.Key());
 	}
 
-	IsLeaf() : boolean {
+	override IsLeaf() : boolean {
 		return false;
 	}
 
-    Icon() : string {
+    override Icon() : string {
         return "";
     }
 }
 
-export class CHtmlBarLeaf extends CHtmlBarItem
+export class CHTMLBarLeaf extends CHTMLBarItem
 {
 	public m_target : Function|string;
 	public m_isPrefab : boolean;
@@ -68,11 +70,11 @@ export class CHtmlBarLeaf extends CHtmlBarItem
         this.m_isPrefab = _prefab;
     }
 
-    IsLeaf() : boolean {
+    override IsLeaf() : boolean {
         return true;
     }
 
-    Icon(): string {
+    override Icon(): string {
         return (this.m_target instanceof Function) ? "bi-bookmark" :
                (this.m_isPrefab) ? "bi-bookmark-check-fill" :
                "bi-bookmark-plus-fill";
@@ -80,23 +82,23 @@ export class CHtmlBarLeaf extends CHtmlBarItem
     }
 }
 
-export class CHtmlBarTree extends CObject
+export class CHTMLBarTree extends CObject
 {
-	public m_root = new CTree<CHtmlBarItem>();
+	public m_root = new CTree<CHTMLBarItem>();
 
 	public CreateTrunk(_content: string, _key: string, _parent?: string) {
         const parent = _parent || "";  // 기본값 설정
-        this.Push(new CHtmlBarTrunk(_content, parent, _key));
+        this.Push(new CHTMLBarTrunk(_content, parent, _key));
     }
     
     public CreateLeaf(_content: string, _parent: string, _target: Function | string, _prefab: boolean = false) {
         const isFunction = _target instanceof Function;
-        this.Push(new CHtmlBarLeaf(_content, _parent, _target, !isFunction && _prefab));
+        this.Push(new CHTMLBarLeaf(_content, _parent, _target, !isFunction && _prefab));
     }
 
     override ImportCJSON(_json: CJSON) 
 	{
-        let items : CHtmlBarItem[] = [];
+        let items : CHTMLBarItem[] = [];
         let nodes = [this.m_root];
         while(nodes.length > 0) {
             let node = nodes.shift();
@@ -126,8 +128,8 @@ export class CHtmlBarTree extends CObject
 
     override ExportCJSON()
 	{
-        let items: Array<CHtmlBarItem> = [];
-        let funcItems: Array<CTree<CHtmlBarItem>> = [];
+        let items: Array<CHTMLBarItem> = [];
+        let funcItems: Array<CTree<CHTMLBarItem>> = [];
         let nodes = [this.m_root];
 
         while (nodes.length) {
@@ -148,7 +150,7 @@ export class CHtmlBarTree extends CObject
         return json;
     }
 
-	Push(_item : CHtmlBarItem)
+	Push(_item : CHTMLBarItem)
 	{
 		// 동일한 키가 이미 등록된 경우
 		if(this.m_root.Find(_item.Key()) != null) {
@@ -167,19 +169,19 @@ export class CHtmlBarTree extends CObject
 		if (CDOM.ID(this.RootID())?.innerHTML) this.Refresh();
 	}
 
-	Hide(_item: CHtmlBarItem | string) {
-		const item = (_item instanceof CHtmlBarItem) ? _item : this.m_root.Find(_item).mData;
+	Hide(_item: CHTMLBarItem | string) {
+		const item = (_item instanceof CHTMLBarItem) ? _item : this.m_root.Find(_item).mData;
 		item.m_hidden = true;
 		this.Refresh();
 	}
 
-	Expose(_item: CHtmlBarItem | string) {
-		const item = (_item instanceof CHtmlBarItem) ? _item : this.m_root.Find(_item).mData;
+	Expose(_item: CHTMLBarItem | string) {
+		const item = (_item instanceof CHTMLBarItem) ? _item : this.m_root.Find(_item).mData;
 		item.m_hidden = false;
 		this.Refresh();
 	}
 
-	Find(_key : string) : CTree<CHtmlBarItem> 
+	Find(_key : string) : CTree<CHTMLBarItem> 
 	{
 		return this.m_root.Find(_key);
 	}
@@ -198,14 +200,14 @@ export class CHtmlBarTree extends CObject
 	Activate(e) {
 		let obj = e.target.id ? e.target : e.target.parentElement;
 		let node = this.m_root.Find(this.MakeKey(obj.id));
-		if(node.mData instanceof CHtmlBarLeaf) {
+		if(node.mData instanceof CHTMLBarLeaf) {
 			if (node.mData.m_target instanceof Function) {
 				node.mData.m_target();
 			}
 		}
 	}
 
-	private AskDelete(_node : CTree<CHtmlBarItem>) 
+	private AskDelete(_node : CTree<CHTMLBarItem>) 
 	{
 		let confirm=new CConfirm();
 		confirm.SetBody("삭제하시겠습니까?");
@@ -247,7 +249,7 @@ export class CHtmlBarTree extends CObject
 		const navArr: any[] = [];
 		let root = this.m_root.mChild;
 	
-		const createNavItem = (root: CTree<CHtmlBarItem>) => ({
+		const createNavItem = (root: CTree<CHTMLBarItem>) => ({
 			"<>": "li", "class": "nav-item", "hidden": root.mData.m_hidden ? " " : null, "html": [
 				{
 					"<>": "a", "class": "nav-link", "id": this.MakeID(root.mData.Key(), "barNav"),
@@ -263,7 +265,7 @@ export class CHtmlBarTree extends CObject
 			]
 		});
 	
-		const createDropdown = (root: CTree<CHtmlBarItem>) => ({
+		const createDropdown = (root: CTree<CHTMLBarItem>) => ({
 			"<>": "li", "class": "nav-item dropdown", "hidden": root.mData.m_hidden ? " " : null, "html": [
 				{
 					"<>": "a", "class": "nav-link dropdown-toggle", "id": this.MakeID(root.mData.Key(), "barNav"),
@@ -318,8 +320,8 @@ export class CHtmlBarTree extends CObject
 		};
 	}
 
-	private RefreshTrunk(_tree: CTree<CHtmlBarItem>): Array<any> {
-		const createItem = (data: CHtmlBarItem, isLeaf: boolean, key: string) => {			
+	private RefreshTrunk(_tree: CTree<CHTMLBarItem>): Array<any> {
+		const createItem = (data: CHTMLBarItem, isLeaf: boolean, key: string) => {			
 			const commonAttrs = {
 				"class": isLeaf ? "dropdown-item" : "dropdown dropend",
 				"hidden": data.m_hidden ? " " : null
@@ -395,4 +397,190 @@ export class CHtmlBarTree extends CObject
 	
 		return DropdownArr;
 	}
+}
+
+export class CHTMLDropdown 
+{
+  mParentID: string;
+  mID: string;
+  mText: string;
+  mThema: Bootstrap;
+  mEvent: CEvent; // ✅ 추가
+
+  constructor(
+    _parentID: string,
+    _id: string,
+    _text: string = _id,
+    _thema: Bootstrap = Bootstrap.eColor.success,
+	_event: any=null, // ✅ 추가
+  ) {
+    this.mParentID = _parentID ?? "";
+    this.mID = _id ?? "";
+    this.mText = _text ?? "";
+    this.mEvent = CEvent.ToCEvent(_event); // ✅ 저장
+    this.mThema = _thema ?? Bootstrap.eColor.success;
+  }
+
+  static DirClass(_dir: "left" | "right" | "top"): string {
+    if (_dir === "left") return "dropstart"; // BS5
+    if (_dir === "right") return "dropend";
+    return "dropup";
+  }
+
+  static BtnClass(_theme: Bootstrap, _extra: string = ""): string {
+    if (_theme === Bootstrap.eColor.transparent) {
+      return `btn btn-link ${_extra}`.trim();
+    }
+    return `btn btn-${_theme} ${_extra}`.trim();
+  }
+
+  static Attach(_barArr: Array<CHTMLDropdown>, _dir: "left" | "right" | "top") {
+    const MIN_W = 80;
+    const MAX_W = 80;
+
+    const src = _barArr ?? [];
+    const dirClass = CHTMLDropdown.DirClass(_dir);
+
+    const nodeIdSet = new Set<string>();
+    const parentIdSet = new Set<string>();
+
+    for (const b of src) {
+      if (b.mID) nodeIdSet.add(b.mID);
+      if (b.mParentID && b.mParentID !== "root") parentIdSet.add(b.mParentID);
+    }
+
+    const arr: Array<CHTMLDropdown> = src.slice();
+    for (const pid of parentIdSet) {
+      if (!nodeIdSet.has(pid)) {
+        // ✅ 자동 생성되는 부모는 이벤트가 없으니 "빈 이벤트"가 필요
+        // 프로젝트에 Empty 이벤트 생성법이 없으면, 여기만 너 방식으로 바꿔줘.
+        const emptyEvent = new CEvent(); // <-- 너 CEvent 생성자에 맞게 수정 필요할 수 있음
+        arr.push(new CHTMLDropdown("root", pid, pid, Bootstrap.eColor.success,emptyEvent));
+        nodeIdSet.add(pid);
+      }
+    }
+
+    const nodesByParent = new Map<string, Array<CHTMLDropdown>>();
+    for (const b of arr) {
+      const p = b.mParentID ?? "";
+      if (!nodesByParent.has(p)) nodesByParent.set(p, []);
+      nodesByParent.get(p)!.push(b);
+    }
+
+    const hasChildren = (id: string) =>
+      nodesByParent.has(id) && (nodesByParent.get(id)!.length > 0);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "d-flex flex-column";
+    wrapper.style.pointerEvents = "auto";
+
+    const applyMinMax = (el: HTMLElement) => {
+      el.style.minWidth = `${MIN_W}px`;
+      el.style.maxWidth = `${MAX_W}px`;
+    };
+
+    const safeCall = (ev?: CEvent) => {
+      // ev가 null/undefined일 가능성 대비
+      if (ev && typeof (ev as any).Call === "function") ev.Call();
+    };
+
+    const buildMenu = (parentID: string): HTMLElement => {
+      const menu = document.createElement("ul");
+      menu.className = "dropdown-menu";
+      menu.setAttribute("role", "menu");
+
+      const children = nodesByParent.get(parentID) ?? [];
+      for (const bar of children) {
+        const li = document.createElement("li");
+        const childExist = hasChildren(bar.mID);
+
+        if (!childExist) {
+          const a = document.createElement("a");
+          a.className = "dropdown-item";
+          a.href = "#";
+          if (bar.mID) a.id = bar.mID;
+
+          // leaf만 innerHTML
+          a.innerHTML = bar.mText;
+
+          // ✅ 클릭 이벤트 연결
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            safeCall(bar.mEvent);
+          });
+
+          li.appendChild(a);
+        } else {
+          li.className = dirClass;
+
+          const a = document.createElement("a");
+          a.className = "dropdown-item dropdown-toggle";
+          a.href = "#";
+          a.setAttribute("data-bs-toggle", "dropdown");
+          a.setAttribute("aria-expanded", "false");
+          if (bar.mID) a.id = bar.mID;
+
+          a.textContent = bar.mText;
+
+          // ✅ 부모(서브메뉴 토글)는 기본은 "펼치기"만 하도록 이벤트는 걸지 않음
+          // 이벤트도 같이 원하면 여기에서 safeCall(bar.mEvent) 추가 가능
+
+          li.appendChild(a);
+          li.appendChild(buildMenu(bar.mID));
+        }
+
+        menu.appendChild(li);
+      }
+
+      return menu;
+    };
+
+    const topBars = nodesByParent.get("root") ?? [];
+    for (const bar of topBars) {
+      const childExist = hasChildren(bar.mID);
+
+      if (!childExist) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `${CHTMLDropdown.BtnClass(bar.mThema)} p-1`;
+        if (bar.mID) btn.id = bar.mID;
+
+        btn.textContent = bar.mText;
+
+        // ✅ 클릭 이벤트 연결
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          safeCall(bar.mEvent);
+        });
+
+        applyMinMax(btn);
+        wrapper.appendChild(btn);
+      } else {
+        const dd = document.createElement("div");
+        dd.className = `dropdown ${dirClass}`;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `${CHTMLDropdown.BtnClass(bar.mThema)} dropdown-toggle p-1`;
+        btn.setAttribute("data-bs-toggle", "dropdown");
+        btn.setAttribute("aria-expanded", "false");
+        if (bar.mID) btn.id = bar.mID;
+
+        btn.textContent = bar.mText;
+
+        // ✅ 드랍다운 토글은 기본은 열기만(이벤트는 leaf에서)
+        // 토글 클릭 시에도 호출 원하면 아래 주석 해제
+        // btn.addEventListener("click", () => safeCall(bar.mEvent));
+
+        applyMinMax(btn);
+        dd.appendChild(btn);
+        dd.appendChild(buildMenu(bar.mID));
+
+        wrapper.appendChild(dd);
+      }
+    }
+
+    return wrapper;
+  }
 }

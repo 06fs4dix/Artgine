@@ -255,6 +255,7 @@ export class CLight extends CBrushComp
 		let ShadowUpdate=false;
 		if (this.mTexKey!=null)
 		{
+			let ShadowView=this.mBruch.GetShadowView();
 			if(this.mColor.IsZero())
 				this.mShadowOff=true;
 			else
@@ -304,7 +305,7 @@ export class CLight extends CBrushComp
 					// CConsol.Log(seye);
 					// CConsol.Log(slook);
 					
-					
+					let ShadowView=this.mBruch.GetShadowView();
 					if(scam0.Init(seye,slook,sup))	
 					{
 						scam0.mWidth=width*2;
@@ -315,8 +316,8 @@ export class CLight extends CBrushComp
 						ShadowUpdate=true;
 						this.mBruch.mUpdateShadow=true;
 					}
-					this.mBruch.mShadowView[0].set(scam0.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
-					this.mBruch.mShadowView[1].set(scam0.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[0].set(scam0.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[1].set(scam0.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
 					
 					scam0.Update(_update);
 					
@@ -340,8 +341,8 @@ export class CLight extends CBrushComp
 						ShadowUpdate=true;
 						this.mBruch.mUpdateShadow=true;
 					}
-					this.mBruch.mShadowView[2].set(scam1.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
-					this.mBruch.mShadowView[3].set(scam1.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[2].set(scam1.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[3].set(scam1.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
 					
 					scam1.Update(_update);
 					
@@ -362,8 +363,8 @@ export class CLight extends CBrushComp
 						ShadowUpdate=true;
 						this.mBruch.mUpdateShadow=true;
 					}
-					this.mBruch.mShadowView[4].set(scam2.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
-					this.mBruch.mShadowView[5].set(scam2.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[4].set(scam2.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[5].set(scam2.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
 					
 					scam2.Update(_update);
 						
@@ -448,20 +449,20 @@ export class CLight extends CBrushComp
 
 					
 				}
-				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+0]=maxVal.x;
-				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+1]=maxVal.y;
-				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+2]=maxVal.z;
-				this.mBruch.mShadowView[7][this.mBruch.mShadowCount*4+3]=maxVal.w;
+				ShadowView[7][this.mBruch.mShadowCount*4+0]=maxVal.x;
+				ShadowView[7][this.mBruch.mShadowCount*4+1]=maxVal.y;
+				ShadowView[7][this.mBruch.mShadowCount*4+2]=maxVal.z;
+				ShadowView[7][this.mBruch.mShadowCount*4+3]=maxVal.w;
 			}
 			else
 			{
-				this.mBruch.mShadowView[0].fill(0,0,16);
-				this.mBruch.mShadowView[1].fill(0,0,16);
-				this.mBruch.mShadowView[2].fill(0,0,16);
-				this.mBruch.mShadowView[3].fill(0,0,16);
-				this.mBruch.mShadowView[4].fill(0,0,16);
-				this.mBruch.mShadowView[5].fill(0,0,16);
-				this.mBruch.mShadowView[6].fill(0,0,16);
+				ShadowView[0].fill(0,0,16);
+				ShadowView[1].fill(0,0,16);
+				ShadowView[2].fill(0,0,16);
+				ShadowView[3].fill(0,0,16);
+				ShadowView[4].fill(0,0,16);
+				ShadowView[5].fill(0,0,16);
+				ShadowView[6].fill(0,0,16);
 			}
 
 			

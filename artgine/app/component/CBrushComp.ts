@@ -3,8 +3,9 @@
 
 import { CUpdate } from "../../basic/Basic.js";
 import { CObject } from "../../basic/CObject.js";
-import {CBrush} from "../CBrush.js";
-import { CRPAuto } from "../CRPMgr.js";
+import { CBrush } from "../canvas/CBrush.js";
+import { CRPAuto } from "../canvas/CRPMgr.js";
+
 import { CSubject } from "../subject/CSubject.js";
 import {CComponent} from "./CComponent.js";
 import { CPaint3D } from "./paint/CPaint3D.js";

@@ -2,17 +2,17 @@ import { ligDir } from "./Light";
 import { abs, CMat, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
     sin, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 
-export var shadowNearCasV0: Sam2DMat=new Sam2DMat(11,505);
-export var shadowFarCasP0: Sam2DMat=new Sam2DMat(11,509);
-export var shadowTopCasV1: Sam2DMat=new Sam2DMat(11,513);
-export var shadowBottomCasP1: Sam2DMat=new Sam2DMat(11,517);
-export var shadowLeftCasV2: Sam2DMat=new Sam2DMat(11,521);
-export var shadowRightCasP2: Sam2DMat=new Sam2DMat(11,525);
-export var shadowPointProj: Sam2DMat=new Sam2DMat(11,529);
+export var shadowNearCasV0: Sam2DMat=new Sam2DMat(11,252);
+export var shadowFarCasP0: Sam2DMat=new Sam2DMat(11,256);
+export var shadowTopCasV1: Sam2DMat=new Sam2DMat(11,260);
+export var shadowBottomCasP1: Sam2DMat=new Sam2DMat(11,264);
+export var shadowLeftCasV2: Sam2DMat=new Sam2DMat(11,268);
+export var shadowRightCasP2: Sam2DMat=new Sam2DMat(11,272);
+export var shadowPointProj: Sam2DMat=new Sam2DMat(11,276);
 
 //shadow uniform
 export var shadowOn : number = -1.0;
-export var shadowReadList: Sam2DV4=new Sam2DV4(11,533);
+export var shadowReadList: Sam2DV4=new Sam2DV4(11,280);
 
 //uniform
 export var texture16f : number =0;

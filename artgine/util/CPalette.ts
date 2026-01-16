@@ -16,6 +16,7 @@ import { CImgPro } from "../render/CImgPro.js"
 import { SDF } from "../z_file/SDF.js"
 import { CDevice } from "../render/CDevice.js"
 import { CConsol } from "../basic/CConsol.js"
+import { CString } from "../basic/CString.js"
 
 var gNoneImg="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";
 
@@ -29,7 +30,7 @@ var gNoneTex;
 
 
 var gLUT=[];
-
+var gNoise=[];
 export class CPalette
 {
 	public mMCI2D=new CMeshCreateInfo();
@@ -85,11 +86,37 @@ export class CPalette
 		gLUT[4]=upFolder+"artgine/z_file/LUT/pokemon.png";
 		gLUT[5]=upFolder+"artgine/z_file/LUT/twilight.png";
 
+		let option=new CLoaderOption();
+		option.mGPU=false;
 		for(let i=0;i<6;++i)
-			await _fw.Load().Exe(gLUT[i]);
-		//
+			await _fw.Load().Exe(gLUT[i],option);
+		
+
 
 		//console.time("A");
+		for(let i=0;i<6;++i)
+		{
+			let tex=_fw.Res().Find(gLUT[i]) as CTexture;
+			_fw.Res().Remove(gLUT[i]);
+			gLUT[i]=CString.ReplaceAll(gLUT[i],upFolder+"artgine","Artgine");
+			_fw.Res().Push(gLUT[i],tex);
+			
+		}
+			
+		gNoise[0]=upFolder+"artgine/z_file/Noise/perlin128.png";
+		gNoise[1]=upFolder+"artgine/z_file/Noise/voronoi128.png";
+
+		for(let i=0;i<2;++i)
+			await _fw.Load().Exe(gNoise[i],option);
+
+		for(let i=0;i<2;++i)
+		{
+			let tex=_fw.Res().Find(gNoise[i]) as CTexture;
+			_fw.Res().Remove(gNoise[i]);
+			gNoise[i]=CString.ReplaceAll(gNoise[i],upFolder+"artgine","Artgine");
+			tex.SetKey(gNoise[i]);
+			_fw.Res().Push(gNoise[i],tex);
+		}
 
 
 		await _fw.Load().Exe(Sl2DKey);
@@ -170,8 +197,8 @@ export class CPalette
 		//this.mMCI2D= CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
 		
 		
-		//_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(1024, 1024),this.GetShadowWriteTex());
-		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,6)],new CVec2(2048, 2048),this.GetShadowWriteTex());
+		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(1024, 1024),this.GetShadowWriteTex());
+		//_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,6)],new CVec2(2048, 2048),this.GetShadowWriteTex());
 		let stex=_fw.Res().Find(this.GetShadowWriteTex()) as CTexture;
 
 
@@ -188,19 +215,93 @@ export class CPalette
 
 			}
 			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eLookUpTable.LUT0+j,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),1,fa);
+			_fw.Res().Remove(gLUT[j]);
 		}
-		fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*128*4);
-		for(let i=0;i<tex.GetWidth()*tex.GetHeight();++i)
+
+
+
+		fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*8*4);
+		tex = _fw.Res().Find(gNoise[0]);
+		for(let z = 0; z < 32; z++)
 		{
-			fa[i*4+0]=0;
-			fa[i*4+1]=0;
-			fa[i*4+2]=0;
-			fa[i*4+3]=0;
+			for(let y = 0; y < 128; y++) 
+			{
+				for(let x = 0; x < 128; x++) 
+				{
+					for(let k = 0; k < 4; k++) 
+					{
+						let realz = z*4+k;
+						let w = (realz % 16) * 128 + x;
+						let h = Math.floor(realz / 16) * 128 + y;
+						let bufOff = h * 2048 + w;
+
+						let i = 128 * y + x;
+						let faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
+						
+						fa[faOff * 4 + k] = tex.GetBuf()[0][bufOff * 4 + 0] / 0xFF;
+					}
+				}
+			}
+			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Perlin+z*8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Gaussian_Perlin_Voronoi_Curl,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),128,fa);
 
+		// Voronoi
+		tex = _fw.Res().Find(gNoise[1]);
+		for(let z = 0; z < 32; z++)
+		{
+			for(let y = 0; y < 128; y++) 
+			{
+				for(let x = 0; x < 128; x++) 
+				{
+					for(let k = 0; k < 4; k++) 
+					{
+						let realz = z*4+k;
+						let w = (realz % 16) * 128 + x;
+						let h = Math.floor(realz / 16) * 128 + y;
+						let bufOff = h * 2048 + w;
+
+						let i = 128 * y + x;
+						let faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
+						
+						fa[faOff * 4 + k] = tex.GetBuf()[0][bufOff * 4 + 0] / 0xFF;
+					}
+				}
+			}
+			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Voronoi+z*8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
+		}
 		
-
+		//실시간 생성
+		//fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*8*4);
+		// Perlin
+		// let texs = CImgPro.Create3DNoiseTexture(SDF.eNoise.Perlin, new CVec3(128,128,128));
+		// for(let j = 0; j < 32; j++) {
+		// 	tex = texs[j];
+		// 	for(let i=0;i<tex.GetWidth()*tex.GetHeight();++i) {
+		// 		var faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
+		// 		fa[faOff*4+0]=texs[j*4+0].GetBuf()[0][i*4+0]/0xFF;
+		// 		fa[faOff*4+1]=texs[j*4+1].GetBuf()[0][i*4+0]/0xFF;
+		// 		fa[faOff*4+2]=texs[j*4+2].GetBuf()[0][i*4+0]/0xFF;
+		// 		fa[faOff*4+3]=texs[j*4+3].GetBuf()[0][i*4+0]/0xFF;
+		// 	}
+		// 	_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Perlin + j * 8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
+		// }
+		
+		// // Voronoi
+		// texs = CImgPro.Create3DNoiseTexture(SDF.eNoise.Voronoi, new CVec3(128,128,128));
+		// for(let j = 0; j < 32; j++) {
+		// 	tex = texs[j];
+		// 	for(let i=0;i<tex.GetWidth()*tex.GetHeight();++i) {
+		// 		var faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
+		// 		fa[faOff*4+0]=texs[j*4+0].GetBuf()[0][i*4+0]/0xFF;
+		// 		fa[faOff*4+1]=texs[j*4+1].GetBuf()[0][i*4+0]/0xFF;
+		// 		fa[faOff*4+2]=texs[j*4+2].GetBuf()[0][i*4+0]/0xFF;
+		// 		fa[faOff*4+3]=texs[j*4+3].GetBuf()[0][i*4+0]/0xFF;
+		// 	}
+		// 	_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Voronoi + j * 8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
+		// }
+		
+		
+		
 
 	}
 	

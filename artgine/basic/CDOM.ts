@@ -53,7 +53,7 @@ export class CDOM
             document.body.append(gArtginePaintHTML);
             
             gArtginePaintHTML.style.position="fixed";
-            gArtginePaintHTML.style.zIndex="1001";
+            gArtginePaintHTML.style.zIndex="500";
             gArtginePaintHTML.style.pointerEvents="none";
         }
         

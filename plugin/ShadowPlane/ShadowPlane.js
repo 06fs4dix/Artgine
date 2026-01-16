@@ -173,7 +173,7 @@ export class CShadowPlane extends CPaint2D {
         this.mLIGKeys = _ligKeys;
         this.PushCShaderAttr(new CShaderAttr("alphaCut", 0.001));
         this.SetColorModel(new CColor(0, 0, 0, CColor.eModel.RGBMul));
-        this.SetAlphaModel(new CAlpha(this.mShadowAlpha, CAlpha.eModel.Mul));
+        this.SetAlphaModel(new CAlpha(this.mShadowAlpha));
         this.PushTag("shadowPlane");
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
         this.PushTag("wind");
@@ -189,11 +189,14 @@ export class CShadowPlane extends CPaint2D {
         return super.StartChk();
     }
     EmptyRPChk() {
+        let empty = this.mRenderPass.length == 0;
         super.EmptyRPChk();
-        for (let rp of this.mRenderPass) {
-            rp.mPriority = CRenderPass.ePriority.AlphaAuto;
-            rp.mSortRevers = true;
-            rp.mCullFace = CRenderPass.eCull.None;
+        if (empty) {
+            for (let rp of this.mRenderPass) {
+                rp.mPriority = CRenderPass.ePriority.AlphaAuto;
+                rp.mSortRevers = true;
+                rp.mCullFace = CRenderPass.eCull.None;
+            }
         }
     }
     IsShould(_member, _type) {
@@ -353,7 +356,7 @@ export class CShadowPlane extends CPaint2D {
             }
             this.SetPosList([p1Far, p2Far, p1, p2]);
             this.SetLMat(lmat);
-            this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
+            this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha));
         }
         else if (this.mPT instanceof CPaint3D) {
             const pt = this.mPT;
@@ -373,7 +376,7 @@ export class CShadowPlane extends CPaint2D {
             this.SetPosList(points);
             this.mUpdateLMat = true;
             this.CaptureShadow();
-            this.SetAlphaModel(new CAlpha(this.mShadowAlpha, CAlpha.eModel.Mul));
+            this.SetAlphaModel(new CAlpha(this.mShadowAlpha));
         }
     }
     CaptureShadow() {
@@ -407,7 +410,7 @@ export class CShadowPlane extends CPaint2D {
         tempRP.mBlend[5] = CRenderPass.eBlend.ZERO;
         const beforeRP = fw.Dev().ChangeRenderPass(tempRP);
         fw.Ren().Begin(tex);
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinCA").mKey);
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkin").mKey);
         fw.Ren().UseShader(vf);
         fw.Ren().SendGPU(vf, new CMat(), "worldMat");
         fw.Ren().SendGPU(vf, cam.GetViewMat(), "viewMat");

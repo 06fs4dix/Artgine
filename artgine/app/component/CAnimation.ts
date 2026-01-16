@@ -136,9 +136,9 @@ export class CClipColorAlpha extends CClip
 		else if(_a instanceof CVec4 && _b instanceof CVec4) 
 		{
 			this.mSTColor = new CColor(_a.x,_a.y,_a.z,SDF.eColorModel.RGBAdd);
-			this.mSTAlpha = new CAlpha(_a.w,SDF.eAlphaModel.Add);
+			this.mSTAlpha = new CAlpha(_a.w);
 			this.mEDColor = new CColor(_b.x,_b.y,_b.z,SDF.eColorModel.RGBAdd);
-			this.mEDAlpha = new CAlpha(_b.w,SDF.eAlphaModel.Add);
+			this.mEDAlpha = new CAlpha(_b.w);
 			
 		}
 
@@ -166,13 +166,11 @@ export class CClipColorAlpha extends CClip
 		if(this.mSTAlpha==null)
 		{
 			this.mSTAlpha = new CAlpha();
-			this.mSTAlpha.y=SDF.eAlphaModel.None;
-
+	
 		}
 		if(this.mEDAlpha==null)
 		{
 			this.mEDAlpha = new CAlpha();
-			this.mEDAlpha.y=SDF.eAlphaModel.None;
 		}
 		if(this.mSTColorVFX==null)
 		{

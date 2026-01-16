@@ -1,12 +1,1 @@
-import { CBound } from "../../geometry/CBound.js";
-import { CCollider } from "../component/CCollider.js";
-import { CSubject } from "./CSubject.js";
-export class CLocation extends CSubject {
-    constructor() {
-        super();
-        let bound = new CBound();
-        bound.InitBound(100);
-        let cl = this.PushComp(new CCollider(bound));
-        cl.SetLayer("location");
-    }
-}
+import{CBound as o}from"../../geometry/CBound.js";import{CCollider as t}from"../component/CCollider.js";import{CSubject as e}from"./CSubject.js";export class CLocation extends e{constructor(){super();let e=new o;e.InitBound(100),this.PushComp(new t(e)).SetLayer("location")}}

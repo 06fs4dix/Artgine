@@ -1,14 +1,15 @@
-import { CUpdate } from "../../basic/Basic.js";
-import { CTree } from "../../basic/CTree.js";
-import { CMat, IMat } from "../../geometry/CMat.js";
-import { CMath } from "../../geometry/CMath.js";
-import { CVec3 } from "../../geometry/CVec3.js";
-import { CVec4 } from "../../geometry/CVec4.js";
-import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
-import { CResolver, CResolverAttach, CResolverIKFABR, CResolverIKLook } from "../../render/CResolver.js";
-import { CSubject } from "../subject/CSubject.js";
-import { CComponent } from "./CComponent.js";
-import { CPaint3D } from "./paint/CPaint3D.js";
+import { CComponent } from "../../artgine/app/component/CComponent.js";
+import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
+import { CSubject } from "../../artgine/app/subject/CSubject.js";
+import { CClass } from "../../artgine/basic/CClass.js";
+import { CTree } from "../../artgine/basic/CTree.js";
+import { IMat } from "../../artgine/geometry/CMat.js";
+import { CMath } from "../../artgine/geometry/CMath.js";
+import { CVec3 } from "../../artgine/geometry/CVec3.js";
+import { CVec4 } from "../../artgine/geometry/CVec4.js";
+import { CMeshCopyNode } from "../../artgine/render/CMeshCopyNode.js";
+import { CResolver, CResolverAttach, CResolverIKFABR, CResolverIKLook } from "../../artgine/render/CResolver.js";
+
 
 class CResolverComp extends CComponent
 {
@@ -60,7 +61,7 @@ class CResolverComp extends CComponent
         this.m_resolver.SolveIK();
     }
 }
-
+//특정 위치에 붙이기
 export class CAttacher extends CResolverComp
 {
     m_resolver : CResolverAttach = undefined;
@@ -126,7 +127,7 @@ export class CAttacher extends CResolverComp
         this.m_resolver.m_mixSca.Import(_mix);
     }
 }
-
+//바라보기
 export class CLookAtIK extends CResolverComp
 {
     m_resolver : CResolverIKLook = undefined;
@@ -137,7 +138,7 @@ export class CLookAtIK extends CResolverComp
         this.m_resolver = new CResolverIKLook(null, _target);
     }
 }
-
+//역계산 특정 위치로 계단 등에 사용함
 export class CAimIK extends CResolverComp
 {
     m_resolver : CResolverIKFABR = undefined;
@@ -147,17 +148,23 @@ export class CAimIK extends CResolverComp
 
         this.m_resolver = new CResolverIKFABR(null, _target, _boneNum);
     }
-
+    //어느 방향으로 꺽일지(포지션 정보만 사용)
     SetPole(_pole : IMat) {
         this.m_resolver.m_pole = _pole;
     }
+    //몇번 반복할지
     SetIteration(_iter : number) {
         this.m_resolver.m_iteration = _iter;
     }
+    //0~1 목표위치와 얼만큼 동일하면 끝낼지 정도. 0이면 모든 이터레이터를 다 소모해버린다
     SetTolerance(_tol : number) {
         this.m_resolver.m_tolerance = _tol;
     }
+    //기존 위치랑 얼만큼 믹스할지임.
     SetMix(_mix : number) {
         this.m_resolver.m_mix = _mix;
     }
 }
+CClass.Push(CAttacher);
+CClass.Push(CLookAtIK);
+CClass.Push(CAimIK);

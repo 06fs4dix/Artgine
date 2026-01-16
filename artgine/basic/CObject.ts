@@ -912,9 +912,9 @@ export class CBlackBoardRef<T> extends CObject {
         return CBlackBoard.Find(this.mKey) as T;
     }
 
-    Icon() { return "bi bi-link"; }
+    override Icon() { return "bi bi-link"; }
 
-    EditDrop(_object: CObject): void 
+    override EditDrop(_object: CObject): void 
 	{
         if (CBlackBoard.Find(_object.Key()) != null) 
 		{

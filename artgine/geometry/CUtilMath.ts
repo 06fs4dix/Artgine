@@ -16,11 +16,11 @@ const d_EPSILON = 1e-6;
 export class CUtilMath
 {
     
-    static CameraPerspectiveFovLH(fov, aspect, znear, zfar,_width) 
+    static CameraPerspectiveFovLH(fov, aspect, znear, zfar,_width,result=new CMat()) 
     {
         var yScale = (1.0 / Math.tan(fov * 0.5));
         var q = zfar / (zfar - znear);
-        var result = new CMat();
+  
         result.SetUnit(false);
         if(_width)
         {
@@ -37,11 +37,11 @@ export class CUtilMath
         result.mF32A[14] = -q * znear;
         return result;
     }
-    static CameraPerspectiveFovRH(fov, aspect, znear, zfar,_width) 
+    static CameraPerspectiveFovRH(fov, aspect, znear, zfar,_width,result=new CMat()) 
     {
         var yScale = (1.0 / Math.tan(fov * 0.5));
         var q = zfar / (znear-zfar);
-        var result = new CMat();
+        //var result = new CMat();
         result.SetUnit(false);
         if(_width)
         {
@@ -60,27 +60,27 @@ export class CUtilMath
         return result;
     }
 
-    static CameraOrthoLH(width, height, zn, zf)	//직교투영
+    static CameraOrthoLH(width, height, zn, zf,result=new CMat())	//직교투영
     {
-        var projMat=new CMat();
-        projMat.SetUnit(false);
-        projMat.mF32A[0] = 2 / width; projMat.mF32A[1] = 0; projMat.mF32A[2] = 0; projMat.mF32A[3] = 0;
-        projMat.mF32A[4] = 0; projMat.mF32A[5] = 2 / height; projMat.mF32A[6] = 0; projMat.mF32A[7] = 0;
-        projMat.mF32A[8] = 0; projMat.mF32A[9] = 0; projMat.mF32A[10] = 1 / (zf - zn); projMat.mF32A[11] = 0;
-        projMat.mF32A[12] = 0; projMat.mF32A[13] = 0; projMat.mF32A[14] = -zn / (zf - zn); projMat.mF32A[15] = 1;
+        //var projMat=new CMat();
+        result.SetUnit(false);
+        result.mF32A[0] = 2 / width; result.mF32A[1] = 0; result.mF32A[2] = 0; result.mF32A[3] = 0;
+        result.mF32A[4] = 0; result.mF32A[5] = 2 / height; result.mF32A[6] = 0; result.mF32A[7] = 0;
+        result.mF32A[8] = 0; result.mF32A[9] = 0; result.mF32A[10] = 1 / (zf - zn); result.mF32A[11] = 0;
+        result.mF32A[12] = 0; result.mF32A[13] = 0; result.mF32A[14] = -zn / (zf - zn); result.mF32A[15] = 1;
     
-        return projMat;
+        return result;
     }
-    static CameraOrthoRH(width, height, zn, zf)	//직교투영
+    static CameraOrthoRH(width, height, zn, zf,result=new CMat())	//직교투영
     {
-        var projMat=new CMat();
-        projMat.SetUnit(false);
-        projMat.mF32A[0] = 2 / width; projMat.mF32A[1] = 0; projMat.mF32A[2] = 0; projMat.mF32A[3] = 0;
-        projMat.mF32A[4] = 0; projMat.mF32A[5] = 2 / height; projMat.mF32A[6] = 0; projMat.mF32A[7] = 0;
-        projMat.mF32A[8] = 0; projMat.mF32A[9] = 0; projMat.mF32A[10] = 1 / (zn - zf); projMat.mF32A[11] = 0;
-        projMat.mF32A[12] = 0; projMat.mF32A[13] = 0; projMat.mF32A[14] = zn / (zn - zf); projMat.mF32A[15] = 1;
+        
+        result.SetUnit(false);
+        result.mF32A[0] = 2 / width; result.mF32A[1] = 0; result.mF32A[2] = 0; result.mF32A[3] = 0;
+        result.mF32A[4] = 0; result.mF32A[5] = 2 / height; result.mF32A[6] = 0; result.mF32A[7] = 0;
+        result.mF32A[8] = 0; result.mF32A[9] = 0; result.mF32A[10] = 1 / (zn - zf); result.mF32A[11] = 0;
+        result.mF32A[12] = 0; result.mF32A[13] = 0; result.mF32A[14] = zn / (zn - zf); result.mF32A[15] = 1;
     
-        return projMat;
+        return result;
     }
     static CameraLookAtLH(eyeVec : CVec3,lookVec : CVec3,upVec : CVec3,viewMat=new CMat())	//뷰행렬생성
     {
@@ -638,71 +638,136 @@ export class CUtilMath
         RF_axis.z=t2.z;
     }
     //https://threejs.org/examples/webgl_math_obb.html
-	static ColSphereBox(_posA : CVec3, _radiusA : number,_boundB : CBound,_matB : CMat)
-	{
-		let xAxis = new CVec3();
-		let yAxis = new CVec3();
-		let zAxis = new CVec3();
-		//박스의 로컬 좌표계의 축을 구함
-		xAxis.mF32A[0] = _matB.mF32A[0];
-		xAxis.mF32A[1] = _matB.mF32A[1];
-		xAxis.mF32A[2] = _matB.mF32A[2];
-		yAxis.mF32A[0] = _matB.mF32A[4];
-		yAxis.mF32A[1] = _matB.mF32A[5];
-		yAxis.mF32A[2] = _matB.mF32A[6];
-		zAxis.mF32A[0] = _matB.mF32A[8];
-		zAxis.mF32A[1] = _matB.mF32A[9];
-		zAxis.mF32A[2] = _matB.mF32A[10];
-		//박스의 스케일
-		let scaX = CMath.V3Len(xAxis);
-		let scaY = CMath.V3Len(yAxis);
-		let scaZ = CMath.V3Len(zAxis);
-		//박스의 로컬 좌표계의 축을 정규화
-		CMath.V3Nor(xAxis, xAxis);
-		CMath.V3Nor(yAxis, yAxis);
-		CMath.V3Nor(zAxis, zAxis);
-		//박스의 중심
-        let center=_boundB.GetCenter();
-        center.x+=_matB.mF32A[12];
-        center.y+=_matB.mF32A[13];
-        center.z+=_matB.mF32A[14];
-		//new CVec3(_matB.mF32A[12], _matB.mF32A[13], _matB.mF32A[14]);
-		//구의 중심과 박스의 중심 사이의 벡터
-		let vec = new CVec3();
-		CMath.V3SubV3(_posA, center, vec);
-		//박스의 크기의 절반
-		let halfSize = new CVec3();
-		_boundB.GetSize(halfSize);
-		CMath.V3MulV3(halfSize, new CVec3(0.5 * scaX, 0.5 * scaY, 0.5 * scaZ), halfSize);
-		//구의 중심과 박스의 중심 사이의 벡터를 박스의 로컬 좌표계로 변환
-		let x = CMath.Max(CMath.Min(CMath.V3Dot(vec, xAxis), halfSize.mF32A[0]), -halfSize.mF32A[0]);
-		let y = CMath.Max(CMath.Min(CMath.V3Dot(vec, yAxis), halfSize.mF32A[1]), -halfSize.mF32A[1]);
-		let z = CMath.Max(CMath.Min(CMath.V3Dot(vec, zAxis), halfSize.mF32A[2]), -halfSize.mF32A[2]);
-		//박스의 로컬 좌표계에서 구의 중심으로 가는 가장 가까운 점
-		let closestPoint = center;
-		CMath.V3AddV3(closestPoint, CMath.V3MulFloat(xAxis, x), closestPoint);
-		CMath.V3AddV3(closestPoint, CMath.V3MulFloat(yAxis, y), closestPoint);
-		CMath.V3AddV3(closestPoint, CMath.V3MulFloat(zAxis, z), closestPoint);
-		//가장 가까운 점과 구의 중심 사이의 거리의 제곱
-		CMath.V3SubV3(_posA, closestPoint, vec);
-			//가장 가까운 점과 구의 중심 사이의 거리
-		let distance = CMath.V3Len(vec);
-		if(distance >= _radiusA) {
-			return null;
-		}
-		//침투 깊이
-		let penetrationDepth = _radiusA - distance;
-		//충돌 법선
-		let collisionNormal = CMath.V3SubV3(_posA, closestPoint);
-		//만약 충돌 법선의 길이가 0이면 박스의 중심과 구의 중심이 같음
-		if(collisionNormal.IsZero()) {
-			collisionNormal = xAxis;
-		}
-		CMath.V3Nor(collisionNormal, collisionNormal);
-		//충돌 해결을 위한 벡터
-		let resultVec = CMath.V3MulFloat(collisionNormal, penetrationDepth);
-		return resultVec;
-	}
+    static ColSphereBox(_posA: CVec3, _radiusA: number, _boundB: CBound, _matB: CMat)
+    {
+        // box axes (world)
+        let xAxis = new CVec3(_matB.mF32A[0], _matB.mF32A[1], _matB.mF32A[2]);
+        let yAxis = new CVec3(_matB.mF32A[4], _matB.mF32A[5], _matB.mF32A[6]);
+        let zAxis = new CVec3(_matB.mF32A[8], _matB.mF32A[9], _matB.mF32A[10]);
+
+        // scales
+        let scaX = CMath.V3Len(xAxis);
+        let scaY = CMath.V3Len(yAxis);
+        let scaZ = CMath.V3Len(zAxis);
+
+        // normalize axes
+        CMath.V3Nor(xAxis, xAxis);
+        CMath.V3Nor(yAxis, yAxis);
+        CMath.V3Nor(zAxis, zAxis);
+
+        // world center = mat * localCenter  (중요!)
+        let localCenter = _boundB.GetCenter();
+        let center = new CVec3();
+        CMath.V3MulMatCoordi(localCenter, _matB, center);
+
+        // half extents in world-axis units (local halfsize * scale)
+        let halfSize = new CVec3();
+        _boundB.GetSize(halfSize);              // size = max-min (local)
+        halfSize.x *= 0.5 * scaX;
+        halfSize.y *= 0.5 * scaY;
+        halfSize.z *= 0.5 * scaZ;
+
+        // vector from center to sphere
+        let d = new CVec3();
+        CMath.V3SubV3(_posA, center, d);
+
+        // clamp in OBB local axis space
+        let cx = CMath.Max(CMath.Min(CMath.V3Dot(d, xAxis), halfSize.x), -halfSize.x);
+        let cy = CMath.Max(CMath.Min(CMath.V3Dot(d, yAxis), halfSize.y), -halfSize.y);
+        let cz = CMath.Max(CMath.Min(CMath.V3Dot(d, zAxis), halfSize.z), -halfSize.z);
+
+        // closest point (copy center!)
+        let closestPoint = new CVec3(center.x, center.y, center.z);
+        CMath.V3AddV3(closestPoint, CMath.V3MulFloat(xAxis, cx), closestPoint);
+        CMath.V3AddV3(closestPoint, CMath.V3MulFloat(yAxis, cy), closestPoint);
+        CMath.V3AddV3(closestPoint, CMath.V3MulFloat(zAxis, cz), closestPoint);
+
+        // distance
+        let v = new CVec3();
+        CMath.V3SubV3(_posA, closestPoint, v);
+        let dist = CMath.V3Len(v);
+
+        if (dist >= _radiusA) return null;
+
+        let penetration = _radiusA - dist;
+
+        // normal (sphere center - closest)
+        let n = new CVec3();
+        CMath.V3SubV3(_posA, closestPoint, n);
+        if (n.IsZero()) {
+            // sphere center exactly on box (rare). choose any axis
+            n.x = xAxis.x; n.y = xAxis.y; n.z = xAxis.z;
+        }
+        CMath.V3Nor(n, n);
+
+        return CMath.V3MulFloat(n, penetration);
+    }
+
+	// static ColSphereBox(_posA : CVec3, _radiusA : number,_boundB : CBound,_matB : CMat)
+	// {
+	// 	let xAxis = new CVec3();
+	// 	let yAxis = new CVec3();
+	// 	let zAxis = new CVec3();
+	// 	//박스의 로컬 좌표계의 축을 구함
+	// 	xAxis.mF32A[0] = _matB.mF32A[0];
+	// 	xAxis.mF32A[1] = _matB.mF32A[1];
+	// 	xAxis.mF32A[2] = _matB.mF32A[2];
+	// 	yAxis.mF32A[0] = _matB.mF32A[4];
+	// 	yAxis.mF32A[1] = _matB.mF32A[5];
+	// 	yAxis.mF32A[2] = _matB.mF32A[6];
+	// 	zAxis.mF32A[0] = _matB.mF32A[8];
+	// 	zAxis.mF32A[1] = _matB.mF32A[9];
+	// 	zAxis.mF32A[2] = _matB.mF32A[10];
+	// 	//박스의 스케일
+	// 	let scaX = CMath.V3Len(xAxis);
+	// 	let scaY = CMath.V3Len(yAxis);
+	// 	let scaZ = CMath.V3Len(zAxis);
+	// 	//박스의 로컬 좌표계의 축을 정규화
+	// 	CMath.V3Nor(xAxis, xAxis);
+	// 	CMath.V3Nor(yAxis, yAxis);
+	// 	CMath.V3Nor(zAxis, zAxis);
+	// 	//박스의 중심
+    //     let center=_boundB.GetCenter();
+    //     center.x+=_matB.mF32A[12];
+    //     center.y+=_matB.mF32A[13];
+    //     center.z+=_matB.mF32A[14];
+	// 	//new CVec3(_matB.mF32A[12], _matB.mF32A[13], _matB.mF32A[14]);
+	// 	//구의 중심과 박스의 중심 사이의 벡터
+	// 	let vec = new CVec3();
+	// 	CMath.V3SubV3(_posA, center, vec);
+	// 	//박스의 크기의 절반
+	// 	let halfSize = new CVec3();
+	// 	_boundB.GetSize(halfSize);
+	// 	CMath.V3MulV3(halfSize, new CVec3(0.5 * scaX, 0.5 * scaY, 0.5 * scaZ), halfSize);
+	// 	//구의 중심과 박스의 중심 사이의 벡터를 박스의 로컬 좌표계로 변환
+	// 	let x = CMath.Max(CMath.Min(CMath.V3Dot(vec, xAxis), halfSize.mF32A[0]), -halfSize.mF32A[0]);
+	// 	let y = CMath.Max(CMath.Min(CMath.V3Dot(vec, yAxis), halfSize.mF32A[1]), -halfSize.mF32A[1]);
+	// 	let z = CMath.Max(CMath.Min(CMath.V3Dot(vec, zAxis), halfSize.mF32A[2]), -halfSize.mF32A[2]);
+	// 	//박스의 로컬 좌표계에서 구의 중심으로 가는 가장 가까운 점
+	// 	let closestPoint = center;
+	// 	CMath.V3AddV3(closestPoint, CMath.V3MulFloat(xAxis, x), closestPoint);
+	// 	CMath.V3AddV3(closestPoint, CMath.V3MulFloat(yAxis, y), closestPoint);
+	// 	CMath.V3AddV3(closestPoint, CMath.V3MulFloat(zAxis, z), closestPoint);
+	// 	//가장 가까운 점과 구의 중심 사이의 거리의 제곱
+	// 	CMath.V3SubV3(_posA, closestPoint, vec);
+	// 		//가장 가까운 점과 구의 중심 사이의 거리
+	// 	let distance = CMath.V3Len(vec);
+	// 	if(distance >= _radiusA) {
+	// 		return null;
+	// 	}
+	// 	//침투 깊이
+	// 	let penetrationDepth = _radiusA - distance;
+	// 	//충돌 법선
+	// 	let collisionNormal = CMath.V3SubV3(_posA, closestPoint);
+	// 	//만약 충돌 법선의 길이가 0이면 박스의 중심과 구의 중심이 같음
+	// 	if(collisionNormal.IsZero()) {
+	// 		collisionNormal = xAxis;
+	// 	}
+	// 	CMath.V3Nor(collisionNormal, collisionNormal);
+	// 	//충돌 해결을 위한 벡터
+	// 	let resultVec = CMath.V3MulFloat(collisionNormal, penetrationDepth);
+	// 	return resultVec;
+	// }
 	
 	// static ColBoxBoxOBB(_boundA : CBound,_matA : CMat,_boundB : CBound,_matB : CMat,_push : CVec3=null)
 	// {

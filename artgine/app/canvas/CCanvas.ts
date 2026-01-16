@@ -139,7 +139,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	IsPause(): boolean {
 		return this.mPause;
 	}
-	Icon(){		return "bi bi-aspect-ratio";	}
+	override Icon(){		return "bi bi-aspect-ratio";	}
 
 	PushPlugin(_plugin : CCanvasPlugin)
 	{
@@ -291,7 +291,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 						
 
 
-					if(pt.AlphaState()==false)
+					if(pt.IsAlphaState()==false)
 					{
 						renPri.mDistanceList.Push(renPt);
 					}
@@ -348,7 +348,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	
 
 	
-	EditHTMLInit(_div: HTMLDivElement): void {
+	override EditHTMLInit(_div: HTMLDivElement): void {
 		super.EditHTMLInit(_div);
 		var div=_div;
 		if(window["CH5HelperTool"]!=null)
@@ -952,7 +952,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	GetGI()	{	return this.mGI;	}
 	
 	
-	PatchTrackDefault()
+	override PatchTrackDefault()
 	{
 		this.PatchTrack("mSubMap");
 	}

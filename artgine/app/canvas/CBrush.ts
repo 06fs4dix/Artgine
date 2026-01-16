@@ -62,8 +62,8 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 		this.mLightDir = new Float32Array(4*size);
 		this.mLightColor = new Float32Array(4*size);
 		this.mLightCount=0;
-		for(var i=0;i<8;++i)
-			this.mShadowView.push(new Float32Array(4*size));
+		// for(var i=0;i<8;++i)
+		// 	this.mShadowView.push(new Float32Array(4*size));
 		this.mWindDir = new Float32Array(4*size);
 		this.mWindPos = new Float32Array(4*size);
 		this.mWindInfo = new Float32Array(4*size);
@@ -122,7 +122,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	];
         
         
-	public mShadowView=new Array<Float32Array>();
+	protected mShadowView : Array<Float32Array>=new Array<Float32Array>();
 	//public m_shadowCamera=new Map<string,CCamera>();
 	public mShadowCount=0;
 
@@ -141,13 +141,23 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	public mPause=false;
 	public mRenPriMap=new Map<number,CRenPriority>();
 	public mRenInfoMap=new Map<string,CRenInfo>();
-	mUpdateShadow=true;
-	mUpdateLight=true;
+	mUpdateShadow=false;
+	mUpdateLight=false;
 	mUpdateLUT=false;
 	public mLUT=[new Float32Array(32*32),new Float32Array(32*32),new Float32Array(32*32),
 		new Float32Array(32*32),new Float32Array(32*32),new Float32Array(32*32)];
 
-	
+	GetShadowView()
+	{
+		if(this.mShadowView.length==0)
+		{
+			var size=CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
+			for(var i=0;i<8;++i)
+				this.mShadowView.push(new Float32Array(4*size));
+		}
+			
+		return	this.mShadowView;
+	}
 	override IsShould(_member: string, _type: CObject.eShould): boolean 
 	{
 		if(_member=="mCameraMap")

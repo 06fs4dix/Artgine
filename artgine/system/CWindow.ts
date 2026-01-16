@@ -143,6 +143,8 @@ export class CWindow
 		{
 			
 			var touches = event.changedTouches; 
+
+			CConsol.Log("touches : "+touches.length);
 			for(var i=0;i<touches.length;++i)
 			{
 				const target = touches[i].target as HTMLElement;
@@ -150,7 +152,7 @@ export class CWindow
 				const offsetY = Math.trunc(this.mPF.mHeight-(touches[i].pageY - target.offsetTop));     
 				
 				this.mInput.TouchRefrash(OutXChk(offsetX),OutYChk(offsetY),true);
-				//alert("touchstart1");
+				
 				
 			}
 			
@@ -270,6 +272,7 @@ export class CWindow
 
 import CWindow_imple from "../system_imple/CWindow.js";
 import { CUpdate } from "../basic/Basic.js";
+import { CConsol } from "../basic/CConsol.js";
 
 
 CWindow_imple();

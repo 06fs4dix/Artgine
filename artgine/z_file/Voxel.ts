@@ -1,4 +1,5 @@
-import { CAModelCac } from "./ColorFun";
+
+import { AlphaModalFun } from "./ColorFun";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -27,7 +28,6 @@ var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
-var alphaCut : number=0.1;
 
 var out_position : OutPosition=Null();
 var out_color : OutColor=Null();
@@ -348,11 +348,11 @@ function ps_main()
 		L_cor=Sam2DToColor(0.0,to_uv.xy);
 	}
 	L_cor.rgb=V3MulFloat(L_cor.rgb,light);
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if ( L_cor.a <= alphaCut ) discard;
+	
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
 
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	var DSE : CMat3=new CMat3(0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,ambientColor]);
 	DSE =LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0),ambientColor);
@@ -435,12 +435,14 @@ function ps_main_shadow_write()
 	{
 		L_cor=Sam2DToColor(0.0,to_uv.xy);	
 	}
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
-	
-    
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) 	discard;
+
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
+
+    
+
 	out_color=to_viewPos;
 }
 
@@ -494,12 +496,12 @@ function ps_main_shadow_read()
 		L_cor.rgb=V3MulFloat(L_cor.rgb,to_uv.z);
 		
 	}
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
 	
-    
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) 	discard;
+
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 
 	var all : number=0.0;
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {

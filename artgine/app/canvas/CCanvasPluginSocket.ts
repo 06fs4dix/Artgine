@@ -15,7 +15,7 @@ export class CCanvasPluginSocket extends CCanvasPlugin
 		this.mSocket=_socket;
 		
 	}
-	SetCanvas(_canvas : CCanvas)
+	override SetCanvas(_canvas : CCanvas)
 	{
 		super.SetCanvas(_canvas);
 		if(this.mSocket instanceof CRoomClient)
@@ -49,7 +49,7 @@ export class CCanvasPluginSocket extends CCanvasPlugin
 			this.mCanvas.PatchTrackDefault();
 		}
 	}
-	Exe()
+	override Exe()
 	{
 		if(this.mSocket!=null)
 		{

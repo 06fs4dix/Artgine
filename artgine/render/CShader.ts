@@ -68,11 +68,19 @@ export class CVertexFormat extends CObject
 
 
 //=============================================================================
+
+
 export class CShader extends CObject
 {
 	public mInsCount=1;
+	public mVP : string=null;
 	public mVS : string=null;
 	public mPS : string=null;
+	mBuildFun : any=null;
+	mVSFun : any=null;
+	mPSFun : any=null;
+	mBranchUse : any=null;
+	mFunction : any=null;
 	public mKey : string;
 	public mProgram : any;
 	public mTag : Set<string>;

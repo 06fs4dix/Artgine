@@ -132,9 +132,28 @@ export class CString
 		return rVal;
 		
 	}
-	static ReplaceAll(_str : string,searchStr : string,replaceStr : string)
-	{
-		return _str.split(searchStr).join(replaceStr);
+	// static ReplaceAll(_str : string,searchStr : string,replaceStr : string)
+	// {
+	// 	return _str.split(searchStr).join(replaceStr);
+	// }
+	static ReplaceAll(str, searchStr, replaceStr) {
+		if (searchStr === "") return str;
+
+		const first = str.indexOf(searchStr);
+		if (first < 0) return str;
+
+		const parts = [];
+		const sLen = searchStr.length;
+		let pos = 0;
+		let idx = first;
+
+		while (idx !== -1) {
+			parts.push(str.slice(pos, idx), replaceStr);
+			pos = idx + sLen;
+			idx = str.indexOf(searchStr, pos);
+		}
+		parts.push(str.slice(pos));
+		return parts.join("");
 	}
 	static ExtCut(_str : string)
 	{

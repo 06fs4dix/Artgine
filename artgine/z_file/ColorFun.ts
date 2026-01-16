@@ -1,4 +1,4 @@
-import { BayerFilter } from "./Noise";
+import { BayerFilter, NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
 import { 
     abs, clamp, max, min, mod, pow, sign, sin, smoothstep,
@@ -19,20 +19,22 @@ import {
     FloatToInt,
     Null,
     Sam2DToV4,
-    Sam2DV4
+    Sam2DV4,
+    mix,
+    discard
 } from "./Shader";
 
 export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
-	var result : CVec2 = new CVec2(0.0,0.0);
+    var result : CVec2 = new CVec2(0.0,0.0);
 
     result.x = _uv.x*_texCodi.x+_texCodi.z;
     result.y = _uv.y*_texCodi.y+_texCodi.w;
 
     // 음수인지에 대한 if문 제거하고 abs로 대체(똑같은 역할 함)
     // if(result.x<0.0) 
-	// 	result.x=result.x*-1.0;
-	// if(result.y<0.0) 
-	// 	result.y=result.y*-1.0;
+    // 	result.x=result.x*-1.0;
+    // if(result.y<0.0) 
+    // 	result.y=result.y*-1.0;
     return V2Abs(result);
 }
 // 코딩된(to_uv.xy) 좌표를 원본 uv(0..1)로 복원
@@ -146,43 +148,43 @@ export function RGBToHSL(_vec3 : CVec3) : CVec3
 //     return new CVec3(h, s, l);
 // }
 
-export function CAModelCac(_rgba : CVec4, _cModel : CVec4, _aModel : CVec2) : CVec4 {
+export function ColorModalFun(_rgb : CVec3, _colorModel : CVec4) : CVec3 {
     var rgb : CVec3;
-    if(_cModel.a < SDF.eColorModel.RGBAdd + 0.5)
-        rgb = V3AddV3(_rgba.rgb, _cModel.rgb);
-    else if(_cModel.a < SDF.eColorModel.RGBMul + 0.5)
-        rgb = V3MulV3(_rgba.rgb, _cModel.rgb);
-    else if(_cModel.a < SDF.eColorModel.HSVBaseHSPercent + 0.5)
+    if(_colorModel.a < SDF.eColorModel.RGBAdd + 0.5)
+        rgb = V3AddV3(_rgb, _colorModel.rgb);
+    else if(_colorModel.a < SDF.eColorModel.RGBMul + 0.5)
+        rgb = V3MulV3(_rgb, _colorModel.rgb);
+    else if(_colorModel.a < SDF.eColorModel.HSVBaseHSPercent + 0.5)
     {
-        var hsv : CVec3=RGBToHSV(_rgba.rgb);
-        hsv.y=_cModel.y;
-        hsv.x=_cModel.x;
+        var hsv : CVec3=RGBToHSV(_rgb);
+        hsv.y=_colorModel.y;
+        hsv.x=_colorModel.x;
 
         rgb =HSVToRGB(hsv);
-        rgb.x = _rgba.x*(1.0-_cModel.z)+ rgb.x*_cModel.z;
-        rgb.y = _rgba.y*(1.0-_cModel.z)+ rgb.y*_cModel.z;
-        rgb.z = _rgba.z*(1.0-_cModel.z)+ rgb.z*_cModel.z;
+        rgb.x = _rgb.x*(1.0-_colorModel.z)+ rgb.x*_colorModel.z;
+        rgb.y = _rgb.y*(1.0-_colorModel.z)+ rgb.y*_colorModel.z;
+        rgb.z = _rgb.z*(1.0-_colorModel.z)+ rgb.z*_colorModel.z;
     }
-    else if(_cModel.a < SDF.eColorModel.HSV + 0.5)
-        rgb = HSVToRGB(_cModel.rgb);    
-    else if(_cModel.a < SDF.eColorModel.HSL + 0.5)
-        rgb = HSLToRGB(_cModel.rgb);
+    else if(_colorModel.a < SDF.eColorModel.HSV + 0.5)
+        rgb = HSVToRGB(_colorModel.rgb);    
+    else if(_colorModel.a < SDF.eColorModel.HSL + 0.5)
+        rgb = HSLToRGB(_colorModel.rgb);
     else
-        rgb = _rgba.rgb;
+        rgb = _rgb;
     rgb = V3Clamp(rgb, 0.0, 1.0);
 
-    var a : number;
-    if(_aModel.y < SDF.eAlphaModel.Add + 0.5)
-        a = _rgba.a + _aModel.x;
-    else if(_aModel.y < SDF.eAlphaModel.Mul + 0.5)
-        a = _rgba.a * _aModel.x;
-    else
-        a = _rgba.a;
-    a = clamp(a, 0.0, 1.0);
     
-    return new CVec4(rgb, a);
+    
+    return rgb;
 }
-
+export function AlphaModalFun(_a : number,_alphaModel : CVec2) : number
+{
+    var a : number = _a * _alphaModel.x;
+    a = clamp(a, 0.0, 1.0);
+    if ( a <= _alphaModel.y ) a=0.0;
+    
+    return a;
+}
 function GetDistortedUV(_uv : CVec2, _distance : CVec2, _t : number) : CVec2 {
     var line : number = max(0.0, sin(_uv.y * 3.8 + _t * 1.4) * sin(_uv.y * 0.6 + _t * 2.3));
     var horDis : number = sin(_uv.y * 2.0 + _t) + sin(_uv.y * 50.0 + _t * 5.7) * 0.3 +
@@ -354,12 +356,12 @@ function MapToPaletteIndex(_color : CVec3, _cellSize : number,_palSize : CVec2) 
 }
 
 export var VFX : CMat=Null();
-export var LUT0: Sam2DV4=new Sam2DV4(11, 534);
-export var LUT1: Sam2DV4=new Sam2DV4(11, 535);
-export var LUT2: Sam2DV4=new Sam2DV4(11, 536);
-export var LUT3: Sam2DV4=new Sam2DV4(11, 537);
-export var LUT4: Sam2DV4=new Sam2DV4(11, 538);
-export var LUT5: Sam2DV4=new Sam2DV4(11, 539);
+export var LUT0: Sam2DV4=new Sam2DV4(11, 281);
+export var LUT1: Sam2DV4=new Sam2DV4(11, 282);
+export var LUT2: Sam2DV4=new Sam2DV4(11, 283);
+export var LUT3: Sam2DV4=new Sam2DV4(11, 284);
+export var LUT4: Sam2DV4=new Sam2DV4(11, 285);
+export var LUT5: Sam2DV4=new Sam2DV4(11, 286);
 
 // function NoiseGet(_uv : CVec2,_frame : number,_type : number) : CVec4
 // {
@@ -556,21 +558,71 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     }
     else if(_value[3].w<SDF.eColorVFX.Noise+0.5)
     {
-        var texSize : CVec2 = Sam2DSize(0.0);
-        var fragCoord : CVec2 = V2Floor(V2DivV2(V2MulV2(_uv, texSize), new CVec2(_value[2].z, _value[2].z)));
+        
         outColor = VFXDown0(_uv,_value,_time);
 
+        var scaledUV : CVec2 = V2DivV2(_uv, new CVec2(_value[2].z, _value[2].z));
         var t : number = _time * _value[2].x;
-        var m : CVec3 = new CVec3(fragCoord, 0.0);
-        var factor1 : number = 1.0 - TimedNoise(m, t) * _value[2].y;
-        var baseColor : CVec3 = new CVec3(
-            TimedNoise(m, t),
-            TimedNoise(m, t * 2.0),
-            TimedNoise(m, t * 3.0)
-        );
-        baseColor = V3MulFloat(baseColor, 0.1 * _value[2].y);
-        baseColor = V3AddV3(baseColor, V3MulFloat(outColor.rgb, factor1 * (outColor.w * factor1 + 0.1 * _value[2].y)));
-        outColor= new CVec4(baseColor, outColor.w);
+        var baseColor : CVec4;
+        baseColor.r = NoiseGet(new CVec3(scaledUV, t), _value[3].x);
+        //scaledUV = V2MulFloat(scaledUV, 2.76434);
+        t*=1.17;
+        baseColor.g = NoiseGet(new CVec3(scaledUV, t), _value[3].x);
+        //scaledUV = V2MulFloat(scaledUV, 2.76434);
+        t*=0.913;
+        baseColor.b = NoiseGet(new CVec3(scaledUV, t), _value[3].x);
+        //scaledUV = V2MulFloat(scaledUV, 2.76434);
+        t*=0.79;
+        baseColor.a = NoiseGet(new CVec3(scaledUV, t), _value[3].x);
+
+        
+        //그레이
+        if(_value[2].w<0.5)
+        {
+            t=mix(1.0,baseColor.r,_value[2].y);
+            outColor.r=outColor.r*t;
+            outColor.g=outColor.g*t;
+            outColor.b=outColor.b*t;
+        }
+        else if(_value[2].w<1.5)//R
+        {
+            t=mix(1.0,baseColor.r,_value[2].y);
+            outColor.r=outColor.r*t;
+        }
+        else if(_value[2].w<2.5)//G
+        {
+            t=mix(1.0,baseColor.r,_value[2].y);
+            outColor.g=outColor.g*t;
+        }
+        else if(_value[2].w<3.5)//B
+        {
+            t=mix(1.0,baseColor.r,_value[2].y);
+            outColor.b=outColor.b*t;
+        }
+        else if(_value[2].w<4.5)//A
+        {
+            t=mix(1.0,baseColor.r,_value[2].y);
+            outColor.a=outColor.a*t;
+        }
+        else if(_value[2].w<5.5)//RGB
+        {
+            baseColor=V4Mix(new CVec4(1.0,1.0,1.0,1.0),baseColor,_value[2].y);
+            outColor.r=outColor.r*baseColor.r;
+            outColor.g=outColor.g*baseColor.g;
+            outColor.b=outColor.b*baseColor.b;
+        }
+        else
+        {
+            baseColor=V4Mix(new CVec4(1.0,1.0,1.0,1.0),baseColor,_value[2].y);
+            outColor.r=outColor.r*baseColor.r;
+            outColor.g=outColor.g*baseColor.g;
+            outColor.b=outColor.b*baseColor.b;
+            outColor.a=outColor.a*baseColor.a;
+        }
+
+        outColor.rgb=SaturateV3(outColor.rgb);
+        
+        //outColor = V4Mix(baseColor,outColor,_value[2].y);
     }
     else if(_value[3].w<SDF.eColorVFX.Scanline+0.5)
     {
@@ -645,3 +697,77 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     return outColor;
 }
 
+
+
+//=============================================================
+export var TexOffBlendFactor : CMat=Null();
+export function TexOffBlendFactorFun(_color : CVec4,_uv : CVec2,_obo : CMat) : CVec4
+{
+    for(var i = 0; i < 4; i++) 
+    {
+        var tCol : CVec4 = Sam2DToColor(_obo[i].x, _uv);
+        var op : number=_obo[i].z;
+
+        if(SDF.eBlend.Null>_obo[i].y-0.5) 
+        {
+            _color=_color;
+        }
+        else if(SDF.eBlend.LinearDodge>_obo[i].y-0.5)
+        {
+            // org + tar * per
+            _color = V4AddV4(_color,V4MulFloat(tCol,op));
+        }
+        else if(SDF.eBlend.Multiply>_obo[i].y-0.5)
+        {
+            // org * ( tar*per + (1-per) )
+            _color = V4MulV4(
+                _color,
+                V4AddV4(
+                    V4MulFloat(tCol,op),
+                    V4SubV4(new CVec4(1.0,1.0,1.0,1.0),new CVec4(op,op,op,op))
+                )
+            );
+        }
+        else if(SDF.eBlend.LerpPer>_obo[i].y-0.5)
+        {
+            // org + (tar - org) * per
+            var diff : CVec4 = V4SubV4(tCol, _color);
+            _color = V4AddV4(_color, V4MulFloat(diff, op));
+        }
+        else if(SDF.eBlend.LerpAlpha>_obo[i].y-0.5)
+        {
+            // rgb: org.rgb*(1-org.a) + tar.rgb*tar.a, a=1
+            var invOrgA : number = 1.0 - _color.a;
+            var srcA :number   = tCol.a;
+            _color = new CVec4(
+                _color.r * invOrgA + tCol.r * srcA,
+                _color.g * invOrgA + tCol.g * srcA,
+                _color.b * invOrgA + tCol.b * srcA,
+                1.0
+            );
+        }
+        else if(SDF.eBlend.Darken>_obo[i].y-0.5)
+        {
+            var so : number = _color.r + _color.g + _color.b;
+            var st : number = tCol.r + tCol.g + tCol.b;
+            _color = so < st ? _color : tCol;
+        }
+        else if(SDF.eBlend.Lighten>_obo[i].y-0.5)
+        {
+            var so : number= _color.r + _color.g + _color.b;
+            var st : number= tCol.r + tCol.g + tCol.b;
+            _color = so > st ? _color : tCol;
+        }
+        else if(SDF.eBlend.Tar>_obo[i].y-0.5)
+        {
+            _color = tCol;
+        }
+        else if(SDF.eBlend.DarkCut>_obo[i].y-0.5)
+        {
+            var so : number = _color.r + _color.g + _color.b;
+            _color = so < 2.5  ? new CVec4(0.0, 0.0, 0.0, 0.0): tCol;
+        }
+    }
+
+    return _color;
+}

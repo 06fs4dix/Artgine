@@ -46,7 +46,7 @@ export class COctree
         this.mBound=new CBound();
         this.mPool=_pool;
     }
-    New(_center:CVec3, _half:CVec3)
+    NewChild(_center:CVec3, _half:CVec3)
     {
         if(this.mPool==null)
             return new COctree(_center,_half);
@@ -56,8 +56,8 @@ export class COctree
         oc.mPool=this.mPool;
         oc.mChild=null;
         oc.mData=null;
-        this.mBound.Reset();
-        this.mMax.Zero();
+        oc.mBound.Reset();
+        oc.mMax.Zero();
 
         return oc;
     }

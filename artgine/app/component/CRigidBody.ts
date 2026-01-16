@@ -54,7 +54,7 @@ export class CRigidBody extends CGeometryComp
 	mFreezePos = new Array<boolean>(false,false,false);
 	mStartPos : CVec3 = null;
 
-	Icon(){		return "bi bi-person-walking";	}
+	override Icon(){		return "bi bi-person-walking";	}
 	SetGravity(_scale : number) {this.mGravity = _scale;}
 	GetGravity(){return this.mGravity;}
 	// SetRestitution(_restitution:number=0.5) {this.mRestitution = _restitution;}
@@ -72,10 +72,10 @@ export class CRigidBody extends CGeometryComp
 		this.mSysc=CComponent.eSysn.Wind;
 		
 	}
-	Start(): void {
+	override Start(): void {
 		this.mStartPos=this.GetOwner().GetPos().Export();
 	}
-	EditChange(_pointer : CPointer)
+	override EditChange(_pointer : CPointer)
 	{
 		if(_pointer.member=="mGravity")
 		{
@@ -100,7 +100,7 @@ export class CRigidBody extends CGeometryComp
 		return super.IsShould(_member,_type);
 	}
 	//IsMove()	{		return this.m_move;	}
-	Update(_update: CUpdate) {
+	override Update(_update: CUpdate) {
 		if(this.mGI!=null)	this.mGI.mFixedComp.Push(this);
 	}
 	GetMoveQue()	{	return this.mForceArr;	}
@@ -111,7 +111,7 @@ export class CRigidBody extends CGeometryComp
 	// Start(): void {
 	// 	this.mStartPos = this.GetOwner().GetPos().Export();
 	// }
-	Fixed(_update : CUpdate)
+	override Fixed(_update : CUpdate)
 	{
 	
 
@@ -243,7 +243,7 @@ export class CRigidBody extends CGeometryComp
 	}
 	//리지드 바디는 포지션 패치를 수동으로 한다.
 	//데드레커닝 처리해야함
-	public PatchStreamUpdate(_stream: CStream, _path: Array<string>): void 
+	public override PatchStreamUpdate(_stream: CStream, _path: Array<string>): void 
 	{
 		//상위 pos 갱신
 		if(this.IsPatchUpdate("mForceArr"))
@@ -251,7 +251,7 @@ export class CRigidBody extends CGeometryComp
 		super.PatchStreamUpdate(_stream,_path)
 	
 	}
-	PatchTrackDefault()
+	override PatchTrackDefault()
 	{
 		this.PatchTrack("mForceArr");
 	}

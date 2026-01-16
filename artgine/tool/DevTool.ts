@@ -637,10 +637,11 @@ function DevToolRender()
             color.y=0;
             color.z=0;
             let bound=pt.GetBoundFMat();
-            bound.mMax;
-            bound.mMin;
-            const min = bound.mMin;
-            const max = bound.mMax;
+            let LMatPos=pt.GetMat().xyz;
+            
+            let min = CMath.V3SubV3(bound.mMin,LMatPos);
+            let max = CMath.V3SubV3(bound.mMax,LMatPos);
+            
 
             // 중심 위치 = (min + max) * 0.5
             const center = new CVec3(
@@ -703,10 +704,10 @@ function DevToolRender()
         color.w=SDF.eColorModel.RGBAdd;
 
 
-        for(let pt of clArr)
+        for(let cl of clArr)
         {
-            if(pt.GetOwner()==null || pt.IsEnable()==false || pt.GetLayer()=="") continue;
-            let bound=pt.GetBoundGJK();
+            if(cl.GetOwner()==null || cl.IsEnable()==false || cl.GetLayer()=="") continue;
+            let bound=cl.GetBoundGJK();
 
 
 
@@ -740,7 +741,7 @@ function DevToolRender()
             render.SendGPU(shader,wMatSA);
             render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
 
-            if(pt.GetBound().GetType()==CBound.eType.Sphere)
+            if(cl.GetBound().GetType()==CBound.eType.Sphere)
                 render.MeshDrawNodeRender(shader,meshDrawSphere);
             else
                 render.MeshDrawNodeRender(shader,meshDrawBox);
@@ -750,7 +751,7 @@ function DevToolRender()
 
     let subject=gLeftSelect as CSubject;
     const render=gAtl.Frame().Ren();
-    let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCA") as CShader;
+    let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCMAM") as CShader;
     
     let meshDrawBox=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
     if(meshDrawBox==null)
@@ -823,7 +824,7 @@ function DevToolRender()
             color.y=1;
             color.z=0;
             alpha.x=0.5;
-            alpha.y=CAlpha.eModel.Mul;
+            
             wmat.xyz=pos;
                     
             
@@ -839,7 +840,6 @@ function DevToolRender()
             render.MeshDrawNodeRender(shader,meshDrawBox);
             gAtl.Frame().Dev().SetLine(true);
             alpha.x=0.5;
-            alpha.y=CAlpha.eModel.Mul;
         }
         else
         {
@@ -1706,11 +1706,16 @@ function DevToolLeftPush()
 
                 // });
                 LeftModifyItem(gLeftSelect.ObjHash());
-
+                
                 if (gLeftSelect instanceof CCanvas)
                     gLeftSelect.PushSub(cls);
                 else if (gLeftSelect instanceof CSubject)
                     gLeftSelect.PushChild(cls);
+
+                setTimeout(() => {
+                    LeftSelect(cls);
+                }, 500);
+                //
             }
             confirm.Close(); // ✅ 닫기 추가
   

@@ -1,4 +1,4 @@
-import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5 } from "./ColorFun";
+import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor } from "./ColorFun";
 import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -45,6 +45,7 @@ var renType : number=Null();
 const TexMax = 12;
 var blend : Array<number> = new Array(TexMax);
 var opacity : Array<number> = new Array(TexMax);
+
 
 //tex offset
 var diffuse : sampler2D = 0.0;
@@ -125,7 +126,7 @@ var blendFactor : number=Null();
 //Blend
 Build("Artgine/Shader/PostBlend",["blend"],
     vs_main,[
-        worldMat,viewMat,projectMat,blend,opacity
+        worldMat,viewMat,projectMat,TexOffBlendFactor
     ],[out_position,to_uv],
     ps_main_blend,[out_color]);
 //Blur
@@ -198,77 +199,14 @@ function vs_main(f3_ver : Vertex3, f2_uv : UV2) {
     out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
 }
 
+
 function ps_main_blend() {
     var all : CVec4 = Sam2DToColor(0.0, to_uv);
-    for(var i = 0; i < TexMax; i++) {
-        if(blend[i] != 0.0) {
-            var tCol : CVec4 = Sam2DToColor(IntToFloat(i + 1), to_uv);
-            var op : number=opacity[i];
-            if(SDF.eBlend.LinearDodge<=blend[i]+0.5)
-            {
-                // org + tar * per
-                all = V4AddV4(all,V4MulFloat(tCol,op));
-            }
-            else if(SDF.eBlend.Multiply<=blend[i]+0.5)
-            {
-                // org * ( tar*per + (1-per) )
-                all = V4MulV4(
-                    all,
-                    V4AddV4(
-                        V4MulFloat(tCol,op),
-                        V4SubV4(new CVec4(1.0,1.0,1.0,1.0),new CVec4(op,op,op,op))
-                    )
-                );
-            }
-            else if(SDF.eBlend.LerpPer<=blend[i]+0.5)
-            {
-                // org + (tar - org) * per
-                var diff : CVec4 = V4SubV4(tCol, all);
-                all = V4AddV4(all, V4MulFloat(diff, op));
-            }
-            else if(SDF.eBlend.LerpAlpha<=blend[i]+0.5)
-            {
-                // rgb: org.rgb*(1-org.a) + tar.rgb*tar.a, a=1
-                var invOrgA : number = 1.0 - all.a;
-                var srcA :number   = tCol.a;
-                all = new CVec4(
-                    all.r * invOrgA + tCol.r * srcA,
-                    all.g * invOrgA + tCol.g * srcA,
-                    all.b * invOrgA + tCol.b * srcA,
-                    1.0
-                );
-            }
-            else if(SDF.eBlend.Darken<=blend[i]+0.5)
-            {
-                var so : number = all.r + all.g + all.b;
-                var st : number = tCol.r + tCol.g + tCol.b;
-                all = so < st ? all : tCol;
-            }
-            else if(SDF.eBlend.Lighten<=blend[i]+0.5)
-            {
-                var so : number= all.r + all.g + all.b;
-                var st : number= tCol.r + tCol.g + tCol.b;
-                all = so > st ? all : tCol;
-            }
-            else if(SDF.eBlend.Tar<=blend[i]+0.5)
-            {
-                all = tCol;
-            }
-            else if(SDF.eBlend.DarkCut<=blend[i]+0.5)
-            {
-                var so : number = all.r + all.g + all.b;
-                all = so < 2.5  ? new CVec4(0.0, 0.0, 0.0, 0.0): tCol;
-            }
-            
-        } 
-        else 
-        {
-            break;
-        }
-        all.rgb = SaturateV3(all.rgb);
-        all.a = 1.0;
-    }
-    out_color = all;
+
+
+    out_color=TexOffBlendFactorFun(all,to_uv,TexOffBlendFactor);
+    //out_color=new CVec4(1.0,1.0,1.0,1.0);
+    
 }
 
 function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {

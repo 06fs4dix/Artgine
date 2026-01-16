@@ -1,44 +1,30 @@
 import { 
 	Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,
-	ToV1, ToV2, ToV4, UV2, Vertex3,
+	ToV3, ToV4, UV2, Vertex3, Attribute, Null,
 	LWVPMul, discard, screenPos,
 	Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize,
+	max, min,
 	V2MulFloat, V2DivV2,
-	V3AddV3, V3Len, V3MulFloat, V3SubV3,
+	V3AddV3, V3Len, V3MulFloat, V3SubV3, V3Cross, V3Nor,
 	V4MulMatCoordi, 
 	BranchBegin, BranchEnd, BranchDefault,
-	Attribute, Null,
-	MappingTexToV3,Mat34ToMat,
-	ToV3,
-	max,
-	min,
-	CMat12,
-	CMat43,
-	MatTypeToMat,
-} from "./Shader"
+	MappingTexToV3, MatTypeToMat,
+} from "./Shader";
 import {
-	CAModelCac, VFXDown2, GetTexCodiedUV,
-	GetTexDecodedUV,
-	VFX,
-	LUT0,
-	LUT1,
-	LUT2,
-	LUT3,
-	LUT4,
-	LUT5
+	VFX, VFXDown2, GetTexCodiedUV,
+	LUT0, LUT1, LUT2, LUT3, LUT4, LUT5,
+	ColorModalFun, AlphaModalFun
 } from "./ColorFun";
 import {
 	ambientColor,
-	ligCol,
-	ligCount,
-	ligDir,
+	ligCol, ligDir, ligCount,
 	LightCac2D
 } from "./Light";
 import { shadowOn } from "./Shadow";
-import { NoisePerlin2 } from "./Noise";
 import { 
 	GetWind, windCount, windDir, windInfluence, windInfo, windPos 
 } from "./Wind";
+import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
 
 var worldMat : CMat=Null();
 var worldMatShort : CVec4=Null();
@@ -55,14 +41,12 @@ var texCodi : CVec4=Null();
 
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
-var alphaCut : number=0.1;
 
 var out_position : OutPosition=Null();
 var out_color : OutColor=Null();
 
 var to_uv : ToV3=Null();
 var to_worldPos : ToV4=Null();
-
 
 var time : number=Attribute(0,"time");
 var mask: number=1.0;
@@ -145,9 +129,9 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 function ps_main_simple()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if ( L_cor.a <= alphaCut ) discard;
-	BranchEnd();
+	// BranchBegin("alphaCut","A",[alphaCut]);
+	// if ( L_cor.a <= alphaCut ) discard;
+	// BranchEnd();
 	out_color=L_cor;
 }
 
@@ -160,68 +144,94 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 	BranchEnd();
 	to_uv.z=1.0;
 
-	var rpos : CVec4=new CVec4(f3_ver.xyz,1.0);	
-
-	
-	//left bot
-	if(f2_uv.x<0.5 && f2_uv.y<0.5)
-	{
-		rpos.xyz=worldMat[2].xyz;
-		if(worldMat[2].w<0.5)
-			to_uv.z=0.0;
-	}
-	//left top
-	else if(f2_uv.x<0.5 && f2_uv.y>0.5)
-	{
-		rpos.xyz=worldMat[0].xyz;
-		if(worldMat[0].w<0.5)
-			to_uv.z=0.0;
-	}
-	//right bot
-	else if(f2_uv.x>0.5 && f2_uv.y<0.5)
-	{
-		rpos.xyz=worldMat[3].xyz;
-		if(worldMat[3].w<0.5)
-			to_uv.z=0.0;
-	}
-	//right top
-	else
-	{
-		rpos.xyz=worldMat[1].xyz;
-		if(worldMat[1].w<0.5)
-			to_uv.z=0.0;
-	}
+	var rpos : CVec4=new CVec4(f3_ver,1.0);	// 이거빼니까 랜더링이 안됨. 뭐지?
 	var size : CVec3;
-	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
-	if(f2_uv.y > 0.5 && windInfluence > 0.01) {
-		//왼쪽 버텍스와 오른쪽 버텍스가 같은 크기만큼 움직이게 하기 위해서 둘의 사이값 사용
-		//rpos.xyz = V3AddV3(rpos.xyz, GetWind(V3MulFloat(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), 0.5), time));
-
-		size = new CVec3(
-			max(worldMat[0].x, worldMat[1].x) - min(worldMat[2].x, worldMat[3].x), 
-			max(worldMat[1].y, worldMat[3].y) - min(worldMat[0].y, worldMat[2].y),
-			0.0
-		);
-		//왼쪽 버텍스와 오른쪽 버텍스가 같은 크기만큼 움직이게 하기 위해서 둘의 사이값 사용
-		rpos.xyz = V3AddV3(
-			rpos.xyz, GetWind(V3MulFloat(V3AddV3(worldMat[2].xyz, worldMat[3].xyz), 0.5), size,time)
-		);
+	var mid : CVec3;
+	var nor : CVec3;
+	BranchBegin("billboard","B",[billboard,billboardMat]);
+	if(billboard>0.5)
+	{
+		if(billboard<1.5)
+		{
+			nor = V3Nor(V3Cross(new CVec3(-viewMat[0][2],-viewMat[1][2],-viewMat[2][2]), V3SubV3(worldMat[0].xyz, worldMat[1].xyz)));
+			if(f2_uv.x<0.5 && f2_uv.y<0.5) {	// left bot
+				rpos.xyz=V3SubV3(V3AddV3(worldMat[1].xyz,worldMat[3].xyz),V3MulFloat(nor,worldMat[2].x*0.5));
+				if(worldMat[2].w<0.5) to_uv.z=0.0;
+			}
+			else if(f2_uv.x<0.5 && f2_uv.y>0.5) {	// left top
+				rpos.xyz=V3SubV3(V3AddV3(worldMat[0].xyz,worldMat[3].xyz),V3MulFloat(nor,worldMat[2].x*0.5));
+				if(worldMat[0].w<0.5) to_uv.z=0.0;
+			}
+			else if(f2_uv.x>0.5 && f2_uv.y<0.5) {	// right bot
+				rpos.xyz=V3AddV3(V3AddV3(worldMat[1].xyz,worldMat[3].xyz),V3MulFloat(nor,worldMat[2].x*0.5));
+				if(worldMat[3].w<0.5) to_uv.z=0.0;
+			}
+			else {	// right top
+				rpos.xyz=V3AddV3(V3AddV3(worldMat[0].xyz,worldMat[3].xyz),V3MulFloat(nor,worldMat[2].x*0.5));
+				if(worldMat[1].w<0.5) to_uv.z=0.0;
+			}
+			mid = V3MulFloat(V3AddV3(worldMat[0].xyz, worldMat[1].xyz),0.5);
+			size = new CVec3(worldMat[2].xy, 0.0);
+		}
+		else if(billboard<2.5)
+		{
+			if(f2_uv.x<0.5 && f2_uv.y<0.5) {	//left bot
+				rpos.xyz = worldMat[2].xyz;
+				if(worldMat[2].w < 0.5) to_uv.z=0.0;
+			}
+			else if(f2_uv.x<0.5 && f2_uv.y>0.5) {	//left top
+				rpos.xyz = worldMat[0].xyz;
+				if(worldMat[0].w < 0.5) to_uv.z=0.0;
+			}
+			else if(f2_uv.x>0.5 && f2_uv.y<0.5) {	//right bot
+				rpos.xyz = worldMat[3].xyz;
+				if(worldMat[3].w < 0.5) to_uv.z=0.0;
+			}
+			else {	//right top
+				rpos.xyz = worldMat[1].xyz;
+				if(worldMat[1].w < 0.5) to_uv.z=0.0;
+			}
+			mid = V3MulFloat(V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz),0.25);
+			size = new CVec3(
+				max(worldMat[0].x, worldMat[1].x) - min(worldMat[2].x, worldMat[3].x), 
+				max(worldMat[1].y, worldMat[3].y) - min(worldMat[0].y, worldMat[2].y),
+				0.0
+			);
+			rpos.xyz = V3SubV3(rpos.xyz, mid);
+			rpos = V4MulMatCoordi(rpos, billboardMat);
+			rpos.xyz = V3AddV3(rpos.xyz, mid);
+		}
 	}
+	BranchDefault();
+	if(f2_uv.x<0.5 && f2_uv.y<0.5) {	//left bot
+		rpos.xyz = worldMat[2].xyz;
+		if(worldMat[2].w < 0.5) to_uv.z=0.0;
+	}
+	else if(f2_uv.x<0.5 && f2_uv.y>0.5) {	//left top
+		rpos.xyz = worldMat[0].xyz;
+		if(worldMat[0].w < 0.5) to_uv.z=0.0;
+	}
+	else if(f2_uv.x>0.5 && f2_uv.y<0.5) {	//right bot
+		rpos.xyz = worldMat[3].xyz;
+		if(worldMat[3].w < 0.5) to_uv.z=0.0;
+	}
+	else {	//right top
+		rpos.xyz = worldMat[1].xyz;
+		if(worldMat[1].w < 0.5) to_uv.z=0.0;
+	}
+	mid = V3MulFloat(V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz),0.25);
+	size = new CVec3(
+		max(worldMat[0].x, worldMat[1].x) - min(worldMat[2].x, worldMat[3].x), 
+		max(worldMat[1].y, worldMat[3].y) - min(worldMat[0].y, worldMat[2].y),
+		0.0
+	);
 	BranchEnd();
 
-	// var center : CVec3 = new CVec3(0.0,0.0,0.0);
-	// BranchBegin("billboard","B",[billboard,billboardMat]);
-	// if(billboard>0.5)
-	// {
-	// 	center = V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz);
-	// 	center = V3MulFloat(center, 0.25);
-		
-	// 	//world pos를 빼줘서 원하는 위치에서 로테이션, 스케일 함
-	// 	rpos.xyz = V3SubV3(rpos.xyz, center);
-	// 	rpos = V4MulMatCoordi(rpos, billboardMat);
-	// 	rpos.xyz = V3AddV3(rpos.xyz, center);
-	// }
-	// BranchEnd();
+	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
+	if(f2_uv.y > 0.5 && windInfluence > 0.01) {
+		rpos.xyz = V3AddV3(rpos.xyz, GetWind(mid, size, time));
+	}
+	BranchEnd();
 
 	to_worldPos=rpos;
 	rpos=V4MulMatCoordi(rpos,viewMat);
@@ -299,6 +309,20 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	P = V4MulMatCoordi(P, wMat);
 	BranchEnd();
 
+	var size : CVec3;
+	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
+	if(f2_uv.y > 0.5 && windInfluence > 0.01) {
+		// mci 기본 사이즈 10
+		size = new CVec3(
+			V3Len(wMat[0].xyz) * 10.0,
+			V3Len(wMat[1].xyz) * 10.0,
+			0.0
+		);
+
+		P.xyz = V3AddV3(P.xyz, GetWind(P.xyz, size, time));
+	}
+	BranchEnd();
+
 	to_worldPos=P;
 	P=V4MulMatCoordi(P,viewMat);
 	out_position=V4MulMatCoordi(P, projectMat);
@@ -328,15 +352,18 @@ function ps_main()
 
 	L_cor.a *= to_uv.z;
 
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
-	
-	
 
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if ( L_cor.a <= alphaCut ) discard;
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
+	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
+
+	BranchBegin("decal","decal",[decalParam, decalInvWorldMat]);
+	L_cor=DecalCac(L_cor, to_worldPos);
 	BranchEnd();
 	
 
@@ -365,12 +392,16 @@ function ps_main()
 function ps_main_mask()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if ( L_cor.a <= alphaCut ) discard;
+
+
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	//if ( L_cor.a <= 0.01 ) discard;
 	L_cor.a=mask;
 	out_color=L_cor;
 }

@@ -268,7 +268,6 @@ export class CPaint2D extends CPaint
 	}
 	Update(_update : CUpdate)
 	{
-		
 		super.Update(_update);
 		
 		
@@ -289,75 +288,57 @@ export class CPaint2D extends CPaint
 		
 		//if(this.mUpdateFMat == false) return;
 
-		
-		if(this.mTag.has("billboard"))
+		if(this.mTag.has("billboard") && this.mPosList == null)
 		{
+			if(this.mRenPT.length == 0) return;
+
 			let pos=CPoolGeo.ProductV3();
-			let nor=CPoolGeo.ProductV3();
-			let st=CPoolGeo.ProductV3();
-			let ed=CPoolGeo.ProductV3();
+			let vec=CPoolGeo.ProductV3();
 			pos.mF32A[0]=this.GetFMat().mF32A[12];
 			pos.mF32A[1]=this.GetFMat().mF32A[13];
 			pos.mF32A[2]=this.GetFMat().mF32A[14];
-			
-			
-			CMath.V3SubV3(pos,this.mBeforePos,st);
+
+			// 포지션 0이면 업데이트 중단
 			if(pos.IsZero())	
 			{
 				CPoolGeo.RecycleV3(pos);
-				CPoolGeo.RecycleV3(nor);
-				CPoolGeo.RecycleV3(st);
-				CPoolGeo.RecycleV3(ed);
+				CPoolGeo.RecycleV3(vec);
 
 				return;
 			}
-				
 
-			var len=CMath.V3Len(st);
+			// pos와 mBeforePos만 CPU 업데이트, 나머지 계산은 GPU로 이전
+			CMath.V3SubV3(pos,this.mBeforePos,vec);
+			var len=CMath.V3Len(vec);
+
+			// 거리가 사이즈보다 크면 사이즈 크기로 리사이즈
 			if(len>this.mSize.y)
 			{
-				CMath.V3Nor(st,nor);
-				CMath.V3AddV3(pos,CMath.V3MulFloat(nor,-this.mSize.y),this.mBeforePos);
+				CMath.V3AddV3(pos,CMath.V3MulFloat(vec,-this.mSize.y/len,vec),this.mBeforePos);
 			}
-				
 
-			if(len<0.001)
+			// 거리가 너무 가까우면 사이즈 0으로 줄임
+			else if(len<0.001)
 			{
 				this.mBeforePos.Import(pos);
 			}
+
+			// 멈춰있다면 서서히 lerp
 			else if(this.mStopPos.Equals(pos))
 			{
-				CMath.V3AddV3(CMath.V3MulFloat(pos,_update.DeltaTime()*this.mRemoveSpeed),
-					CMath.V3MulFloat(this.mBeforePos,1-_update.DeltaMil()*this.mRemoveSpeed),this.mBeforePos);
-			}	
-			
+				CMath.V3AddV3(
+					CMath.V3MulFloat(pos,_update.DeltaTime()*this.mRemoveSpeed),
+					CMath.V3MulFloat(this.mBeforePos,1-_update.DeltaTime()*this.mRemoveSpeed),
+					this.mBeforePos
+				);
+			}
 			this.mStopPos.Import(pos);
-			
 
-			//let L_nor=new CVec3();
-			//let st=new CVec3(), ed=new CVec3();
-		
-	
-			st.Import(pos);
-			CMath.V3AddV3(this.mPos,st,st);
-			ed.Import(this.mBeforePos);
-			CMath.V3AddV3(this.mPos,ed,ed);
-			let v=new CVec3();
-			
-			CMath.V3Cross(this.mRenPT[0].mCam.GetView(),CMath.V3Nor(CMath.V3SubV3(st, this.mBeforePos)),nor);
-			CMath.V3SubV3(st, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
-			//this.mBound.InitBound(v);
-			this.mTMat.SetV3(0,v);
-			CMath.V3AddV3(st, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
-			//this.mBound.InitBound(v);
-			this.mTMat.SetV3(1,v);
-			CMath.V3SubV3(ed, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
-			//this.mBound.InitBound(v);
-			this.mTMat.SetV3(2,v);
-			CMath.V3AddV3(ed, CMath.V3MulFloat(nor, (this.mSize.x / 2)),v);
-			//this.mBound.InitBound(v);
-			this.mTMat.SetV3(3,v);
-
+			this.mTMat.SetV3(0,pos);
+			this.mTMat.SetV3(1,this.mBeforePos);
+			this.mTMat.mF32A[8] = this.mSize.x;
+			this.mTMat.mF32A[9] = this.mSize.y;
+			this.mTMat.SetV3(3,this.mPos);
 
 			if(this.mLastHide)
 			{
@@ -374,13 +355,16 @@ export class CPaint2D extends CPaint
 				this.mTMat.mF32A[15]=1;
 			}
 			CPoolGeo.RecycleV3(pos);
-			CPoolGeo.RecycleV3(nor);
-			CPoolGeo.RecycleV3(st);
-			CPoolGeo.RecycleV3(ed);
+			CPoolGeo.RecycleV3(vec);
 			
 		}
 		else
 		{
+			if(this.mTag.has("billboard") && this.mShaderAttrMap.get("billboard").mData.mF32A[0] != 2.0) {
+				this.mShaderAttrMap.get("billboard").mData.mF32A[0] = 2.0;
+				this.ClearCRPAuto();
+			}
+
 			let pos=CPoolGeo.ProductV3();
 			pos.mF32A[0]=this.GetFMat().mF32A[12];
 			pos.mF32A[1]=this.GetFMat().mF32A[13];
@@ -525,6 +509,8 @@ export class CPaint2D extends CPaint
 
 
 		this.mBound.MatCoordi(this.mLMat);
+		// this.mBound.mMax=CMath.V3SubV3(this.mBound.mMax,this.mPos);
+		// this.mBound.mMin=CMath.V3SubV3(this.mBound.mMin,this.mPos);
 		//this.mBound.mMin=CMath.V3MulMatCoordi(this.mBound.mMin,this.mLMat);
 		//this.mBound.mMax=CMath.V3MulMatCoordi(this.mBound.mMax,this.mLMat);
 		this.mBound.mMax.z=this.mBound.GetOutRadius();
@@ -785,7 +771,7 @@ export class CPaint2D extends CPaint
 	}
 	Wind(_influence: number) 
 	{
-		this.Tail()
+		this.Tail();
 
 		this.PushTag("wind");
 		this.mLastHide=false;
@@ -1108,7 +1094,12 @@ export class CPaintHTML extends CPaint2D
 		}
 		
 	
-		
+		// let winX=this.mRenPT[0].mCam.mWidth;
+		// let winY=this.mRenPT[0].mCam.mHeight;
+		// if(winX==0)	winX=this.mOwner.GetFrame().PF().mWidth;
+		// if(winY==0)	winY=this.mOwner.GetFrame().PF().mHeight;
+		// winX/=this.mOwner.GetFrame().PF().mWidth;
+		// winY/=this.mOwner.GetFrame().PF().mHeight;
 		
 		pos=CMath.V3MulMatCoordi(pos,this.mRenPT[0].mCam.GetViewMat());
 		pos=CMath.V3MulMatCoordi(pos,this.mRenPT[0].mCam.GetProjMat());

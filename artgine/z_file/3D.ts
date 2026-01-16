@@ -42,12 +42,14 @@ import {
 	V2Len,
 	SaturateV3,
 	V4Dot,
+	V3Cross,
+	
 } from "./Shader"
 import {
 	SDF
 } from "./SDF";
 import { 
-	CAModelCac, VFXDown2,
+	VFXDown2,
 	GetTexCodiedUV,
 	VFX,
 	LUT0,
@@ -55,7 +57,9 @@ import {
 	LUT2,
 	LUT3,
 	LUT4,
-	LUT5
+	LUT5,
+	ColorModalFun,
+	AlphaModalFun
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -75,13 +79,13 @@ import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
 var texCodi : CVec4=Null();
-
+var screenSize : CVec2;
 var skin : number=Null();
 var parallaxNormal : number=Attribute(0,"canvas");
 var sam2DCount : number=Null();
 var material: CVec4 = new CVec4(0.0,0.0,0.0,1.0);
 
-var alphaCut : number = 0.1;
+//var alphaCut : number = 0.1;
 
 
 //mat
@@ -136,8 +140,9 @@ var causticFlowFreq : number = 1.0;
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
-	vs_main,[worldMat,
-		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,sam2DCount],
+	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,sam2DCount,
+		screenSize
+	],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
@@ -192,14 +197,6 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 );
 
 
-//baking
-Build("Artgine/Shader/3DBake", ["bake"], 
-	vs_main_bake, [
-		worldMat,
-		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex], 
-		[out_position,to_uv,to_normal,to_worldPos,to_tangent,to_binormal,to_ref],
-	ps_main_bake,[out_color]
-);
 
 function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 {
@@ -217,13 +214,15 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 function ps_main_simple()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv);
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a <= alphaCut) discard;
+
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 	out_color=L_cor;
 }
 
@@ -321,7 +320,7 @@ function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CV
 }
 
 function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndexI4,
-	f3_nor : Normal3,f4_tan : Tangent4,f3_bi : Binormal3,f3_ref : TexOff3)
+	f3_nor : Normal3,f4_tan : Tangent4,f3_ref : TexOff3)
 {
 	
 	//to_uv=f2_uv;
@@ -369,18 +368,40 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	BranchEnd();
 	out_position=P;
 
-	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
-	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
+
+	// 노말 변환 매트릭스 선택을 공통화
+	var nMat3 : CMat3;
 	if(f3_ref.y > 0.0) {
-		to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
+		nMat3 = Mat4ToMat3(woweMat);
 	} else {
-		to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+		nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
 	}
+
+	// N, T를 같은 규칙으로 월드 변환
+	to_normal  = V3Nor(V3MulMat3Normal(f3_nor,     nMat3).xyz);
+	to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
+
+	// (권장) T를 N에 대해 직교화해서 보간/스케일 오차 줄이기
+	// T = normalize(T - N * dot(N,T));
+	to_tangent = V3Nor(
+		V3SubV3(
+			to_tangent,
+			V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))
+		)
+	);
+
+	// 바이노말은 cross로 재구성 (+ handedness = f4_tan.w)
+	to_binormal = V3Nor(
+		V3MulFloat(
+			V3Cross(to_normal, to_tangent),
+			f4_tan.w
+		)
+	);
 		
 	to_ref=f3_ref;
 }
 
-function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, f4_we : Weight4, f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) {
+function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, f4_we : Weight4, f3_nor : Normal3, f4_tan : Tangent4, f3_ref : TexOff3) {
 	BranchBegin("codi","C",[texCodi]);
 	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
 	BranchDefault();
@@ -395,13 +416,42 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 	BranchEnd();
 	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 
-	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
-	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
+	// to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
+	// to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
+	// if(f3_ref.y > 0.0) {
+	// 	to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
+	// } else {
+	// 	to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+	// }
+
+	// 노말 변환 매트릭스 선택을 공통화
+	var nMat3 : CMat3;
 	if(f3_ref.y > 0.0) {
-		to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
+		nMat3 = Mat4ToMat3(woweMat);
 	} else {
-		to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+		nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
 	}
+
+	// N, T를 같은 규칙으로 월드 변환
+	to_normal  = V3Nor(V3MulMat3Normal(f3_nor,     nMat3).xyz);
+	to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
+
+	// (권장) T를 N에 대해 직교화해서 보간/스케일 오차 줄이기
+	// T = normalize(T - N * dot(N,T));
+	to_tangent = V3Nor(
+		V3SubV3(
+			to_tangent,
+			V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))
+		)
+	);
+
+	// 바이노말은 cross로 재구성 (+ handedness = f4_tan.w)
+	to_binormal = V3Nor(
+		V3MulFloat(
+			V3Cross(to_normal, to_tangent),
+			f4_tan.w
+		)
+	);
 
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
@@ -418,41 +468,6 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 	out_position = V4MulMatCoordi(P, projectMat);
 }
 
-function vs_main_bake(f3_ver : Vertex3, f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2, f2_sha : Shadow2, f3_nor : Normal3, f4_tan : Tangent4, f3_bi : Binormal3, f3_ref : TexOff3) {
-	BranchBegin("codi","C",[texCodi]);
-	to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
-	BranchDefault();
-	to_uv.xy=f2_uv;
-	BranchEnd();
-
-	var clip_space_pos : CVec2 = V2SubV2(V2MulFloat(f2_sha, 2.0), new CVec2(1.0, 1.0));
-	out_position = new CVec4(clip_space_pos, 0.0, 1.0);
-
-	var wMat : CMat;
-	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
-	wMat=MatTypeToMat(worldMatType,worldMatShort,worldMat);
-	BranchDefault();
-	wMat=worldMat;
-	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
-	var P : CVec4 = new CVec4(f3_ver, 1.0);
-	P = V4MulMatCoordi(P, woweMat);
-
-	BranchBegin("wind","W",[windInfluence, windDir, windPos, windInfo, windCount, time]);
-	//P = ApplyWind(P, skin, f4_we, time);
-	BranchEnd();
-
-	to_worldPos=P;
-	to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
-	to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
-	if(f3_ref.y > 0.0) {
-		to_normal=V3Nor(V3MulMat3Normal(f3_nor,Mat4ToMat3(woweMat)).xyz);
-	} else {
-		to_normal = V3Nor(V3MulMat3Normal(f3_nor,TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
-	}
-	
-	to_ref=f3_ref;
-}
 
 function SampleNormalMapToCaustic(_map : number, _uv : CVec2) : CVec4
 {
@@ -520,10 +535,17 @@ function ps_main()
 	var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 	var shadow : number=-1.0;
 	
+	var uvScreen : CVec2;
 	BranchBegin("shadow","S",[shadowOn]);
 	if(shadowOn>0.5)
 	{
-		shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
+		// shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
+		// shadow = shadowTex.x;
+
+		//uvScreen = V2DivV2(screenPos.xy, screenSize.xy); // 0~1
+		uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
+	
+		shadowTex = Sam2DToColor(shadowOn, uvScreen);  // <- 여기! 절대 size 곱하지 말기
 		shadow = shadowTex.x;
 	}
 	BranchEnd();
@@ -559,18 +581,22 @@ function ps_main()
 	BranchEnd();
 
 
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
+
+
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
+	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 
 	BranchBegin("decal","decal",[decalParam, decalInvWorldMat]);
 	L_cor=DecalCac(L_cor, world);
 	BranchEnd();
 
 	
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) discard;
-	BranchEnd();
+	
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
@@ -629,14 +655,15 @@ function ps_main_gBuffer() {
 	BranchEnd();
 	
 
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
 
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) discard;
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 
 	//position
 	if(outputType < SDF.eGBuf.Position + 0.5) {
@@ -678,15 +705,15 @@ function ps_main_gBuffer_multi() {
 		L_cor = Sam2DToColor(to_ref.x, uv);
 	BranchEnd();
 
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
-	
 
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) discard;
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 
 	//position
 	out_pos = new CVec4(to_viewPos.xyz, 1.0);
@@ -757,14 +784,15 @@ function ps_main_shadow_write()
 	L_cor = Sam2DToColor(0.0, to_uv);
 	BranchEnd();
 
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
 
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) 	discard;
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 	
 
 	out_color = to_viewPos;
@@ -868,14 +896,15 @@ function ps_main_shadow_read()
 	L_cor = Sam2DToColor(0.0, uv);
 	BranchEnd();
 
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
+	BranchBegin("colorModel","CM",[colorModel]);
+	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
 
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if(L_cor.a < alphaCut) 	discard;
+	BranchBegin("alphaModel","AM",[alphaModel]);
+	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
+	if ( L_cor.a <= 0.01 ) discard;
 	
 
 	var all : number=0.0;
@@ -891,66 +920,4 @@ function ps_main_shadow_read()
 	all = min(all, pAll);
 
 	out_color = new CVec4(all, all,all, 1.0);
-}
-
-function ps_main_bake() {
-	var uv : CVec2 = to_uv;
-	BranchBegin("parallax","P",[parallaxNormal,camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
-	BranchEnd();
-
-	var L_cor : CVec4;
-
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(uv,VFX,time);
-	BranchDefault();
-	L_cor = Sam2DToColor(to_ref.x, uv);
-	BranchEnd();
-
-	BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-	L_cor=CAModelCac(L_cor,colorModel,alphaModel);
-	BranchEnd();
-
-	
-
-	BranchBegin("alphaCut","A",[alphaCut]);
-	if ( L_cor.a < alphaCut ) discard;
-	BranchEnd();
-
-	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
-
-	//shadow
-	var shadow : number=-1.0;
-	var i : number = 0.0;
-	BranchBegin("shadow","S",[shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList,ligDir,shadowRate,texture16f,bias,normalBias,PCF,jitter]);
-	if(shadowCount > 0.5) {
-		shadow = 0.0;
-		for(; i < shadowCount; i++) {
-			shadow+=calcShadow(Sam2DToV4(shadowReadList, i), i, N, to_worldPos);
-		}
-		shadow/=shadowCount;
-		if(shadow<0.0) shadow=0.0;
-		
-
-	}
-	BranchEnd();
-	
-
-	var dseMat : CMat3=new CMat3(0);
-	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
-	if(to_ref.z > 0.5 && material.w > 0.5) {
-		dseMat = LightCac3D(camPos, to_worldPos, L_cor, N, shadow, Sam2DToColor(to_ref.z,uv).x, Sam2DToColor(to_ref.z,uv).y, Sam2DToColor(to_ref.z,uv).z, ambientColor);
-	}
-	else {
-		dseMat = LightCac3D(camPos, to_worldPos, L_cor, N, shadow, material.x, material.y, material.z, ambientColor);
-	}
-	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
-	BranchDefault();
-	if(shadow > -0.5) {
-		L_cor.rgb = V3MulFloat(L_cor.rgb,shadow);
-	}
-	BranchEnd();
-	
-
-	out_color = L_cor;
 }

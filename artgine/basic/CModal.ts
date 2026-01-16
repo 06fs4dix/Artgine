@@ -64,6 +64,7 @@ export class CModal implements IAutoUpdate , IListener
     mCard : HTMLDivElement=null;
     mHeader : HTMLDivElement=null;
     mBody : HTMLDivElement=null;
+    mBodyStyle="card-body p-2 overflow-auto";
     mFooter : HTMLElement=null;
     mOverlayDiv : HTMLDivElement=null;
     mBodyClose=false;
@@ -603,7 +604,7 @@ export class CConfirm extends CModal
         }
     }
 
-    Open(_startPos: number = CModal.ePos.Center): void {
+    override Open(_startPos: number = CModal.ePos.Center): void {
         this.mResize=false;
         this.mLimitPush=true;
         this.SetFooter("");

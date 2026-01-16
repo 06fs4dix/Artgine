@@ -1,6 +1,1 @@
-export class CExporter {
-    buffer = null;
-    GetResult() {
-        return this.buffer;
-    }
-}
+export class CExporter{buffer=null;GetResult(){return this.buffer}}

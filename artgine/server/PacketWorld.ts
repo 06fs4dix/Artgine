@@ -11,12 +11,12 @@ export class PacketWorld {
         "ZoneJoinUser": "ZoneJoinUser",
         "ZoneRelay": "ZoneRelay",
     };
-
-    static WorldConnect(privateKey: string, nick: string): CStream;
-    static WorldConnect(_stream: CStream): {privateKey: string, nick: string};
-    static WorldConnect(privateKey: string | CStream, nick: string | null = null): any {
+    //link는 안넣어도됌
+    static WorldConnect(privateKey: string, nick: string,link: string): CStream;
+    static WorldConnect(_stream: CStream): {privateKey: string, nick: string,link:string};
+    static WorldConnect(privateKey: string | CStream, nick: string| null=null,link:string | null = null): any {
         if (privateKey instanceof CStream) {
-            return privateKey.GetPacket("privateKey", "nick");
+            return privateKey.GetPacket("privateKey", "nick","link");
         }
         return new CStream().Push("WorldConnect").Push(privateKey).Push(nick);
     }

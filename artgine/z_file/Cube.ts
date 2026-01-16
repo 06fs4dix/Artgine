@@ -1,9 +1,10 @@
 import { ligCol, ligCount, ligDir } from "./Light";
-import { BayerFilter, NoiseValue3, NoiseValue3FBM, NoiseValue3FBMRest } from "./Noise";
+import { BayerFilter, NoiseGet, NoiseGetLinear } from "./Noise";
+import { SDF } from "./SDF";
 import {
     Build, CMat, CVec3, CVec4, Mat4ToMat3, OutColor, OutPosition,
     V3Nor, Vertex3, V4MulMatCoordi, Mat3ToMat4, V3MulFloat,
-    V3MulV3, acos, V3Dot, V3SubV3, cos, V3AddV3, V3Mix, smoothstep, sin,
+    V3MulV3, acos, V3Dot, cos, V3AddV3, V3Mix, smoothstep, sin,
     mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, 
     pow, abs, floor, SaturateFloat, 
     Sam2DToV4, FloatToInt, Exp, LWVPMul, 
@@ -14,18 +15,19 @@ import {
     BranchBegin,
     int,
     BranchDefault,
-    V2Dot,
     screenPos,
     IntToFloat,
-    V2Floor,
-    V2AddV2,
     step,
     sqrt,
-    min,
     Hash12,
     Hash11,
+    V3SubV3,
     mix,
-    V2Mod
+    V2MulFloat,
+    V3Cross,
+    min,
+    V2AddV2,
+    Hash13,
 } from "./Shader"
 
 var worldMat: CMat=Null();
@@ -53,22 +55,24 @@ var starBaseCol: CVec3 = new CVec3(0.5, 0.5, 0.5);
 
 // 구름 밀도 (0.0: 맑음, 1.0: 매우 흐림)
 var cloud : number = 0.4;
-// 구름 레이어의 두께 (높을수록 구름이 두껍게 보임)
-var cloudHeight : number = 10.0;
-// 구름 이동 속도 (높을수록 빠르게 움직임)
-var cloudSpeed : CVec3 = new CVec3(0.0, 0.0, 5.0);
-// 구름 레이마칭 단계 수 (높을수록 품질이 좋지만 성능 저하)
-var cloudStep : number = 16.0;
-// 구름이 존재할 수 있는 최대 반지름 (클수록 구름이 멀리 보임)
-var cloudPlanetRadius : number = 700.0;
-// 구름이 어디서 시작해서 어디부터 완전히 나올지 -1~1
+var cloudStart : number = 15000.0;
+var cloudHeight : number = 10000.0;
+var cloudSpeed : CVec3 = new CVec3(0.0, 0.0, 500.0);
+var cloudStep : number = 12.0;
+var cloudPlanetRadius : number = 6300000.0;
 var cloudHorizon : CVec2 = new CVec2(0.0,0.2);
-// 구름이 보이는 최대 거리
-var cloudMaxDistance : number = 150000.0;
+var cloudMaxDistance : number = 1500000.0;
 
+// 기존 구름 파라미터
+// var cloud : number = 0.4;
+// var cloudHeight : number = 100.0;
+// var cloudSpeed : CVec3 = new CVec3(0.0, 0.0, 5.0);
+// var cloudStep : number = 8.0;
+// var cloudPlanetRadius : number = 700.0;
+// var cloudHorizon : CVec2 = new CVec2(0.0,0.2);
+// var cloudMaxDistance : number = 50000.0;
 
 var aurora : number = 1.0;
-var auroraSpeed : number = 0.6;
 var auroraColor : CVec3 = new CVec3(2.15, -0.5, 1.2);
 var auroraHeight : number = 0.0;
 var auroraCut : number = 0.0;
@@ -124,64 +128,97 @@ function vs_main_camBased(f3_ver: Vertex3) {
 //cloud
 
 // 밀도 계산
-function CloudDensity(_pos : CVec3) : number {
-    var adjustedWindDir : CVec3 = new CVec3(cloudSpeed.x, -cloudSpeed.y, cloudSpeed.z);
-    _pos = V3AddV3(_pos, V3MulFloat(adjustedWindDir, time));
-
-    // const
-    var softness : number = 0.05;               // 구름 경계면의 부드러운 정도
-    var meterToNoise : number = 0.0212242;      // pos가 meter 단위여서 노이즈맵의 단위로 바꾸기 위한 값, 클수록 구름이 작아지고, 작을수록 구름이 커짐
-    var p : CVec3 = V3MulFloat(_pos, meterToNoise);
-
-    var baseNoise : number = NoiseValue3(p);
-    if(baseNoise > 0.6) {
-        return 0.0;
-    }
+function CloudDensity(_pos : CVec3, _cloudHeight : number) : number {
+    var movedPos : CVec3 = V3AddV3(_pos, V3MulFloat(cloudSpeed, time));
     
-    var noiseFBM : number = NoiseValue3FBMRest(p, baseNoise);
-    var dens : number = noiseFBM * smoothstep(cloud + softness, cloud, noiseFBM);
-    return SaturateFloat(dens);
+    var p : CVec3 = V3MulFloat(movedPos, -0.00001);
+    var largeWeather : number = NoiseGet(new CVec3(p.x,p.z,0.0), SDF.eNoise.Voronoi);
+    largeWeather = clamp((largeWeather - mix(0.55, 0.05, cloud)) * 3.0, 0.0, 2.0);
+
+    p = V3MulFloat(movedPos, 0.00004);
+    var weather : number = largeWeather * NoiseGet(new CVec3(p.x,p.z,0.5), SDF.eNoise.Voronoi);
+    weather *= smoothstep(0.0, 0.5, _cloudHeight) * smoothstep(1.0, 0.5, _cloudHeight);   // 구름 상하단 삭제
+
+    var shape : number = pow(weather, 0.3 + 1.5 * _cloudHeight);
+    if(shape <= 0.0) return 0.0;
+
+    p = V3MulFloat(movedPos, -0.0001);
+    var detail : number = NoiseGet(p, SDF.eNoise.FBM);
+
+    var dens : number = shape - detail * 0.7;
+
+    // p = V3MulFloat(movedPos, -0.0005);
+    // dens= max(0.0, dens-0.2*NoiseGet(p, SDF.eNoise.FBM));
+
+    return largeWeather * 0.2 * min(1.0, 5.0 * dens);
 }
 
 // 결과값) xyz : 충돌지점, w : 충돌했는지 여부
-function RaySphereIntersection(_rayOrg : CVec3, _rayDir : CVec3, _sphereRadius : number, _maxIntersectionDist : number) : CVec4
+function RaySphereIntersection(_org : CVec3, _dir : CVec3, _sphereRad : number, _maxIntersectionDist : number) : CVec4
 {
-    var b : number = 2.0 * V3Dot(_rayDir, _rayOrg);
-    var c : number = V3Dot(_rayOrg, _rayOrg) - _sphereRadius * _sphereRadius;
+    var b : number = 2.0 * V3Dot(_dir, _org);
+    var c : number = V3Dot(_org, _org) - _sphereRad * _sphereRad;
     var disc : number = b * b - 4.0 * c;
     if(disc < 0.0) return new CVec4(0.0, 0.0, 0.0, 0.0);
 
-    var squareRoot : number = sqrt(disc);
-    var t1 : number = (-b - squareRoot) * 0.5;
-    var t2 : number = (-b + squareRoot) * 0.5;
-    var tMax : number = max(t1, t2);
-    if(tMax < 0.0) return new CVec4(0.0, 0.0, 0.0, 0.0);
+    var q : number = (-b + ((b < 0.0) ? -sqrt(disc) : sqrt(disc))) / 2.0;
+    var t0 : number = q;
+    var t1 : number = c / q;
+    if(t0 > t1) {
+        var temp : number = t0;
+        t0 = t1;
+        t1 = temp;
+    }
+    if(t1 < 0.0) return new CVec4(0.0, 0.0, 0.0, 0.0);
+    var tMax : number = (t0 < 0.0 ? t1 : t0);
 
-    var intersectPoint : CVec3 = V3AddV3(_rayOrg, V3MulFloat(_rayDir, tMax));
-
-    if(tMax > _maxIntersectionDist) return new CVec4(intersectPoint, 0.0);
+    var intersectPoint : CVec3 = V3AddV3(_org, V3MulFloat(_dir, tMax));
+    // if(tMax > _maxIntersectionDist) return new CVec4(intersectPoint, 0.0);
     return new CVec4(intersectPoint, 1.0);
 }
 
 function Cloud(_viewDir : CVec3) : CVec4 {
-    var cameraPos : CVec3 = new CVec3(0.0, 1.0, 0.0);
+    var cameraPos : CVec3 = V3AddV3(camPos, new CVec3(0.0, cloudPlanetRadius - cloudStart, 0.0));
 
     // yBlend
     var yBlend : number = smoothstep(cloudHorizon.x, cloudHorizon.y, _viewDir.y);
     if(yBlend < 0.01) return new CVec4(0.0, 0.0, 0.0, 0.0);
     yBlend = yBlend * yBlend;
 
-    var intersection : CVec4 = RaySphereIntersection(cameraPos, _viewDir, cloudPlanetRadius, cloudMaxDistance);
-    if(intersection.w < 0.5) return new CVec4(0.0, 0.0, 0.0, 0.0);
+    var innerIntersection : CVec4 = RaySphereIntersection(cameraPos, _viewDir, cloudPlanetRadius, cloudMaxDistance);
+    if(innerIntersection.w < 0.5) return new CVec4(0.0, 0.0, 0.0, 0.0);
+
+    var outerIntersection : CVec4 = RaySphereIntersection(cameraPos, _viewDir, cloudPlanetRadius + cloudHeight, cloudMaxDistance);
+    if(outerIntersection.w < 0.5) return new CVec4(0.0, 0.0, 0.0, 0.0);
 
     // 레이마칭 변수
     var sampleCount : number = cloudStep;
-    var raymarchStepSize : number = cloudHeight / sampleCount;
+    var raymarchStepSize : number = V3Len(V3SubV3(outerIntersection.xyz, innerIntersection.xyz)) / sampleCount;
     var raymarchStepVector : CVec3 = V3MulFloat(_viewDir, raymarchStepSize);
 
     // 디더링
-    var ditherVal : number = BayerFilter(screenPos.xy);
-    var posInCloudVolume : CVec3 = V3AddV3(intersection.xyz, V3MulFloat(raymarchStepVector, ditherVal));
+
+    // var fakeFrame : number = floor(time * 60.0); // 60fps 가정. 숫자는 대충이어도 됨
+
+    // var pix : CVec2 = new CVec2(floor(screenPos.x), floor(screenPos.y));
+    // // pix.x += fakeFrame * 13.0;
+    // // pix.y += fakeFrame * 17.0;
+
+    // var n : number = Hash12(pix);
+    // var jitter : number = (n - 0.5) * 0.2;
+
+    // var posInCloudVolume : CVec3 =    V3AddV3(innerIntersection.xyz, V3MulFloat(raymarchStepVector, jitter));
+
+    var p3 : CVec3 = innerIntersection.xyz;
+    p3 = V3MulFloat(p3, 13.0);          // 스케일은 환경에 맞게(너무 크면 고주파)
+    var n : number = Hash13(p3);        // 3D 해시(0~1)
+
+    var jitter : number = (n - 0.5) * 0.12;
+    var posInCloudVolume : CVec3 =    V3AddV3(innerIntersection.xyz, V3MulFloat(raymarchStepVector, jitter));
+
+    //var ditherVal : number = BayerFilter(screenPos.xy);
+    //var posInCloudVolume : CVec3 = V3AddV3(innerIntersection.xyz, V3MulFloat(raymarchStepVector, ditherVal));
+    // var posInCloudVolume : CVec3 = innerIntersection.xyz;
 
     // 축적 변수
     var transmitance : number = 1.0;
@@ -189,64 +226,59 @@ function Cloud(_viewDir : CVec3) : CVec4 {
     var alpha : number = 0.0;
 
     for(var i = 0; i < FloatToInt(sampleCount); i++) {
-        // 베이스 밀도 샘플링(가벼움)
-        var dens : number = CloudDensity(posInCloudVolume);
+        var curHeight : number = V3Len(V3SubV3(posInCloudVolume, innerIntersection.xyz));
+        var heightFactor : number = SaturateFloat(curHeight / cloudHeight);
+        var dens : number = CloudDensity(posInCloudVolume, heightFactor);
 
-        if(dens > 0.01) {
-            var lightSample : number = dens * raymarchStepSize;
-
-            // 투과율 계산, 1.442695는 Exp와 Exp2의 차이
-            var transmitance_i : number = Exp(-lightSample);
-            transmitance *= transmitance_i;
-
-            color += transmitance * dens * raymarchStepSize;
-            alpha += (1.0 - transmitance_i) * (1.0 - alpha);
+        if(dens > 0.0) {
+            var fakeShading : number = mix(0.7, 1.0, heightFactor);
+            var denseShading : number = SaturateFloat(1.0 - dens * 0.5);
+            
+            var opacity : number = Exp(-dens * raymarchStepSize);
+            color += transmitance * (1.0 - opacity) * fakeShading * denseShading;
+            transmitance *= opacity;
+            if(transmitance < 0.1) break;
         }
-
-        if(transmitance < 0.01) break;
         posInCloudVolume = V3AddV3(posInCloudVolume, raymarchStepVector);
     }
+
+    alpha = 1.0 - transmitance;
 
     color *= yBlend;
     alpha *= yBlend;
 
-
-    // if(V3Len(V3SubV3(intersection.xyz,new CVec3(0.0,1000.0,0.0)))<500.0)
-    //     return new CVec4(1.0, 1.0, 1.0, 1.0);
-
-
     return new CVec4(color, color, color, alpha);
 }
 
+
 /************************************************************************************************/
-//TriNoise 텍스쳐 사용하면 더 빠름
-function Aurora(_viewDir : CVec3, _height : number, _cut : number, _color : CVec3, _steps : number) : CVec4 {
+function Aurora(_viewDir : CVec3) : CVec4 {
     var col : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
-    var eye : CVec3 = new CVec3(0.0, 0.0, _height);
+    var eye : CVec3 = new CVec3(0.0, 0.0, auroraHeight);
     
     var avgCol : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
     eye = V3MulFloat(eye, 1e-5);
     var mt : number = 10.0;
 
     var i : number = 0.0;
-    for(; i < _steps; i++) {
+    for(; i < auroraStep; i++) {
         var of : number = 0.006 * Hash12(_viewDir.xy) * smoothstep(0.0, 15.0, i*mt);
         var pt : number = ((0.8 + pow(i*mt, 1.4) * 0.001) - eye.y) / (_viewDir.y * 2.0 + 0.4);
         pt -= of;
         var bpos : CVec3 = V3AddV3(eye, V3MulFloat(_viewDir, pt));
         var p : CVec2 = new CVec2(bpos.z, bpos.x);
-        var rzt : number = NoiseValue3FBM(new CVec3(p, 0.06 * time));
+        var rzt : number = NoiseGet(new CVec3(p, 0.06 * time), SDF.eNoise.Perlin);
         var col2 : CVec4 = new CVec4(0.0,0.0,0.0,rzt);
         col2.rgb = V3MulFloat(new CVec3(
-            sin(1.0-_color.x + (i*mt) * 0.053) * 0.5*mt,
-            sin(1.0-_color.y + (i*mt) * 0.053) * 0.5*mt,
-            sin(1.0-_color.z + (i*mt) * 0.053) * 0.5*mt
+            sin(1.0-auroraColor.x + (i*mt) * 0.053) * 0.5*mt,
+            sin(1.0-auroraColor.y + (i*mt) * 0.053) * 0.5*mt,
+            sin(1.0-auroraColor.z + (i*mt) * 0.053) * 0.5*mt
         ), rzt);
         avgCol = V4Mix(avgCol, col2, 0.5);
         col = V4AddV4(col, V4MulFloat(avgCol, Exp2(-i *mt* 0.065 - 2.5) * smoothstep(0.0, 5.0, i*mt)));
     }
 
-    return V4MulFloat(col, clamp(_viewDir.y * 15.0 - _cut, 0.0, 1.0) * 2.8);
+    return V4MulFloat(col, clamp(_viewDir.y * 15.0 - auroraCut, 0.0, 1.0) * 2.8);
 }
 
 /************************************************************************************************/
@@ -486,14 +518,13 @@ function ps_main() {
     value.xyz = Stars(fragDir, starCount, starSize, starBaseCol, starRandCol);
     finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, star));
     BranchEnd();
-
     
     BranchBegin("aurora","A",[aurora, auroraHeight, auroraCut, auroraColor, auroraStep]);
-    value = Aurora(fragDir, auroraHeight, auroraCut, auroraColor, auroraStep);
+    value = Aurora(fragDir);
     finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), V3MulFloat(value.rgb, aurora));
     BranchEnd();
 
-    BranchBegin("cloud","C",[cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetRadius, cloudHorizon, cloudMaxDistance]);
+    BranchBegin("cloud","C",[cloud, cloudHeight, cloudSpeed, cloudStep, cloudPlanetRadius, cloudHorizon, cloudMaxDistance, cloudStart]);
     value = Cloud(fragDir);
     finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), value.rgb);
     BranchEnd();

@@ -64,7 +64,7 @@ export class CRenderer
 		this.mPF=_PF;
 
 		this.mUniToSam2d=new CTexture();
-		this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DSize),CDevice.GetProperty(CDevice.eProperty.Sam2DSize));
+		this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DSize),CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/2);
 		this.mUniToSam2d.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
 		this.mUniToSam2d.CreateBuf();
 		this.BuildTexture(this.mUniToSam2d);

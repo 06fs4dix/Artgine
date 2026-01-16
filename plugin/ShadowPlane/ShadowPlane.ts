@@ -1,4 +1,5 @@
 
+import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CLight } from "../../artgine/app/component/CLight.js";
 import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CPaint2D, CPaintHTML } from "../../artgine/app/component/paint/CPaint2D.js";
@@ -216,7 +217,7 @@ export class CShadowPlane extends CPaint2D
 
         this.PushCShaderAttr(new CShaderAttr("alphaCut", 0.001));
         this.SetColorModel(new CColor(0,0,0,CColor.eModel.RGBMul));
-        this.SetAlphaModel(new CAlpha(this.mShadowAlpha,CAlpha.eModel.Mul));
+        this.SetAlphaModel(new CAlpha(this.mShadowAlpha));
         this.PushTag("shadowPlane");
         this.SetPosList([new CVec3(), new CVec3(), new CVec3(), new CVec3()]);
         
@@ -243,16 +244,32 @@ export class CShadowPlane extends CPaint2D
     }
     EmptyRPChk()
 	{
-        super.EmptyRPChk();
-        for(let rp of this.mRenderPass)
-        {
-            rp.mPriority=CRenderPass.ePriority.AlphaAuto;
-            //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
-            rp.mSortRevers=true;
-            rp.mCullFace = CRenderPass.eCull.None;
-        }
+        let empty=this.mRenderPass.length==0;
         
+        super.EmptyRPChk();
+        if(empty)
+        {
+            for(let rp of this.mRenderPass)
+            {
+                rp.mPriority=CRenderPass.ePriority.AlphaAuto;
+                //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
+                rp.mSortRevers=true;
+                rp.mCullFace = CRenderPass.eCull.None;
+            }
+        }
 	}
+
+   
+    // PushCRPAuto(_rpc : CRPAuto)
+    // {
+    //     super.PushCRPAuto(_rpc);
+    //     if(_rpc.mCopy)
+    //     {
+    //         _rpc.mPriority=CRenderPass.ePriority.AlphaAuto;
+    //         _rpc.mSortRevers=true;
+    //         _rpc.mCullFace = CRenderPass.eCull.None;
+    //     }
+    // }
 
     // SetOwner(_obj: CSubject): void {
     //     super.SetOwner(_obj);
@@ -511,7 +528,7 @@ export class CShadowPlane extends CPaint2D
 
             this.SetPosList([p1Far,p2Far,p1,p2]);
             this.SetLMat(lmat);
-            this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha, CAlpha.eModel.Mul));
+            this.SetAlphaModel(new CAlpha(alpha * this.mShadowAlpha));
             
         }
         else if(this.mPT instanceof CPaint3D) 
@@ -545,7 +562,7 @@ export class CShadowPlane extends CPaint2D
 
             this.CaptureShadow();
 
-            this.SetAlphaModel(new CAlpha(this.mShadowAlpha, CAlpha.eModel.Mul));
+            this.SetAlphaModel(new CAlpha(this.mShadowAlpha));
         }
     }
 
@@ -599,7 +616,7 @@ export class CShadowPlane extends CPaint2D
         //fw.Dev().SetClearColor(true, new CVec4(0.5,0.5,0.5,0));
         fw.Ren().Begin(tex);
         
-        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkinCA").mKey) as CShader;
+        const vf = fw.Res().Find(fw.Pal().Sl3D().GetShader("Artgine/Shader/3DSkin").mKey) as CShader;
 
         fw.Ren().UseShader(vf);
 
@@ -616,7 +633,6 @@ export class CShadowPlane extends CPaint2D
         }
 
         fw.Ren().SendGPU(vf,[fw.Pal().GetBlackTex()]);
-        //fw.Ren().SendGPU(vf,new CVec2(0.5,CAlpha.eModel.Mul),"alphaModel");
         
 
         let nodeOff = 0;

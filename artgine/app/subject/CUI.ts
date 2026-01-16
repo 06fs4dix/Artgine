@@ -11,6 +11,8 @@ import {CMath} from "../../geometry/CMath.js";
 import {CVec2} from "../../geometry/CVec2.js";
 import {CVec3} from "../../geometry/CVec3.js";
 import {CVec4} from "../../geometry/CVec4.js";
+import { CAlpha } from "../../render/CAlpha.js";
+import { CColor } from "../../render/CColor.js";
 import {CRenderPass} from "../../render/CRenderPass.js";
 import {CFont,  CFontOption } from "../../util/CFont.js";
 import { CFrame } from "../../util/CFrame.js";
@@ -449,7 +451,10 @@ export class CUI extends CSubject
 		this.mRGBA=_RGBA;
 
 		if(this.mUIPT!=null)
-			this.mUIPT.SetRGBA(_RGBA);
+		{
+			this.mUIPT.SetColorModel(new CColor(_RGBA.x,_RGBA.y,_RGBA.z,CColor.eModel.RGBAdd));
+			this.mUIPT.SetAlphaModel(new CAlpha(_RGBA.w));
+		}
 	}
 	// SetTexture(_tex)
 	// {
@@ -505,26 +510,21 @@ export class CUI extends CSubject
         
 		var width = cam.mWidth;
 		var height = cam.mHeight;
-		if(width == 0) {
-			width = this.mFrame.PF().mWidth;
-		}
-		if(height == 0) {
-			height = this.mFrame.PF().mHeight;
-		}
-        var ww = width * 0.5 * this.mAnchorXType*cam.mZoom; 
-        var wh = height * 0.5 * this.mAnchorYType*cam.mZoom;
-		// else
-		// {
-			
-		// }
-        
-        pos.x = ww - this.mAnchorXLen * this.mAnchorXType * this.mSca.x + (bound.mMax.x * this.mSca.x) * (-this.mAnchorXType) + cam.GetEye().x;
-        pos.y = wh - this.mAnchorYLen * this.mAnchorYType * this.mSca.y + (bound.mMax.y * this.mSca.y) * (-this.mAnchorYType) + cam.GetEye().y;
-		if(this.mAnchorXType==CUI.eAnchor.Center)	pos.x+=this.mAnchorXLen;
-		if(this.mAnchorYType==CUI.eAnchor.Center)	pos.y+=this.mAnchorYLen;
+	
+		width = this.mFrame.PF().mWidth;
+		height = this.mFrame.PF().mHeight;
+       
 
-        
-        this.SetPos(pos);
+		let sizeX=(bound.mMax.x * this.mSca.x);
+		let sizeY=(bound.mMax.y * this.mSca.y);
+		pos.x=sizeX * -this.mAnchorXType+this.mAnchorXLen * -this.mAnchorXType;
+		pos.y=sizeY * -this.mAnchorYType+this.mAnchorYLen * -this.mAnchorYType;
+		if(this.mAnchorXType>0)	pos.x+=width;
+		if(this.mAnchorYType>0)	pos.y+=height;
+		
+		pos=cam.ScreenToWorld2DPoint(pos.x,pos.y);
+		
+        super.SetPos(pos,true);
         this.mUpdateAnchor = false;
 	}
 	SetPos(_pos: CVec3, _reset=true): void
@@ -645,7 +645,7 @@ export class CUI extends CSubject
 						let aDist=CMath.V3Distance(this.mPick.ray.GetPosition(),this.GetPos());
 						let bDist=CMath.V3Distance(gUIPDepth[i].mLastPickMouse.ray.GetPosition(),gUIPDepth[i].GetPos());
 
-						CConsol.Log(this.Key()+" : "+aDist+" "+gUIPDepth[i].Key()+" : "+bDist);
+						//CConsol.Log(this.Key()+" : "+aDist+" "+gUIPDepth[i].Key()+" : "+bDist);
 						if(aDist>bDist)
 						{
 							push=false;
@@ -850,7 +850,7 @@ export class CUIPicture extends CUI
 			this.mDebugMode.length=0;
 			this.mUIPT.SetTexture(this.mTextureKey);
 			this.mUIPT.SetSize(this.mSize);
-			if(this.mRGBA!=null)	this.mUIPT.SetRGBA(this.mRGBA);
+			if(this.mRGBA!=null)	this.SetRGBA(this.mRGBA);
 			this.SetPivot(this.mPivot);
 			if(this.mUICL != null) {
 				this.mUICL.SetPickMouse(false);
@@ -918,7 +918,7 @@ export class CUIButtonImg extends CUI
 				this.mDebugMode.length=0;
 				this.mUIPT.SetSize(this.mSize);
 				this.mUIPT.SetTexture(this.mNormal);
-				if(this.mRGBA!=null)	this.mUIPT.SetRGBA(this.mRGBA);
+				if(this.mRGBA!=null)	this.SetRGBA(this.mRGBA);
 				this.SetPivot(this.mPivot);
 			}
 			
@@ -969,16 +969,16 @@ export class CUIButtonImg extends CUI
 export class CUIButtonRGBA extends CUI
 {
 	public mNormal="";
-	public mNormalRGBA=new CVec4();
-	public mOverRGBA=new CVec4();
-	public mPressRGBA=new CVec4();
+	public mNormalRGBA=new CVec4(0,0,0,1);
+	public mOverRGBA=new CVec4(0,0,0,1);
+	public mPressRGBA=new CVec4(0,0,0,1);
 	
 	constructor()
 	{
 		super();
 		
 	}
-	Init(_normal : string, _over : CVec4=new CVec4(-0.2, -0.2, -0.2, 0), _press : CVec4=new CVec4(0.2, 0.2, 0.2, 0))
+	Init(_normal : string, _over : CVec4=new CVec4(-0.2, -0.2, -0.2, 1), _press : CVec4=new CVec4(0.2, 0.2, 0.2, 1))
 	{
 		this.mUpdate=true;
 		this.mNormal = _normal;
@@ -1002,7 +1002,7 @@ export class CUIButtonRGBA extends CUI
 			this.mDebugMode.length=0;
 			this.mUIPT.SetSize(this.mSize);
 			this.mUIPT.SetTexture(this.mNormal);
-			if(this.mRGBA!=null)	this.mUIPT.SetRGBA(this.mRGBA);
+			if(this.mRGBA!=null)	this.SetRGBA(this.mRGBA);
 			this.SetPivot(this.mPivot);
 			this.mUpdate=false;
 		}
@@ -1084,9 +1084,9 @@ export class CUIProgressBar extends CUI
 			//this.m_uiPt.Sort2D(this.m_zValue+1);
 
 			if(redOn)
-				this.mUIPT.SetRGBA(new CVec4(1,0,0,0));
+				this.SetRGBA(new CVec4(1,0,0,0));
 			else if(this.mRGBA)
-				this.mUIPT.SetRGBA(this.mRGBA);
+				this.SetRGBA(this.mRGBA);
 
 			this.PushComp(this.mUIPT);
 		}
@@ -1164,7 +1164,7 @@ export class CUIProgressBar extends CUI
 				
 
 			this.mUIPT.SetSize(this.mSize);
-			if(this.mRGBA!=null) this.mUIPT.SetRGBA(this.mRGBA);
+			if(this.mRGBA!=null) this.SetRGBA(this.mRGBA);
 			this.SetBarVal(this.mVal);
 			//this.m_uiPt.Sort2D(this.m_zValue);
 			//this.m_ptBack.Sort2D(this.m_zValue);

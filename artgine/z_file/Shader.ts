@@ -171,7 +171,6 @@ export var sam2D=0;
 export var gl_Position : CVec4;
 export var discard=0;
 export var screenPos : CVec4;
-
 //glsl func
 export function Build(_key,_tag : Array<{name : string, tag : string, assign : string}|string>,
     _vs : Function,_attribute : Array<any>,_VsToPs :  Array<any>,//_vsOut :  Array<any>,
