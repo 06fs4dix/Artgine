@@ -141,7 +141,7 @@ export class CPaint2D extends CPaint
 		this.mShaderAttrMap.set("billboard",new CShaderAttr("billboard",new CVec1(0)));
 		this.PushTag("codi");
 	}
-	Reset()
+	override Reset()
 	{
 		super.Reset();
 		this.mPivot.Zero();
@@ -174,7 +174,7 @@ export class CPaint2D extends CPaint
 		this.ClearBatch();
 		this.PushTag("normalMap");
 	}
-	EditDrop(_object: CObject): void 
+	override EditDrop(_object: CObject): void 
 	{
 		if(_object instanceof CTexture)
 		{
@@ -195,7 +195,7 @@ export class CPaint2D extends CPaint
 			_body.append(btn);
 		}
 	}
-	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
 		
 		super.EditHTMLInit(_div,_pointer);
 
@@ -257,7 +257,7 @@ export class CPaint2D extends CPaint
 	{
 		this.mYSortOrigin = _origin;
 	}
-	InitChk()
+	override InitChk()
 	{
 		super.InitChk();
 
@@ -266,7 +266,7 @@ export class CPaint2D extends CPaint
 			this.mInit=false;
 
 	}
-	Update(_update : CUpdate)
+	override Update(_update : CUpdate)
 	{
 		super.Update(_update);
 		
@@ -395,7 +395,7 @@ export class CPaint2D extends CPaint
 	}
 	
 
-	Prefab(_owner : CSubject)
+	override Prefab(_owner : CSubject)
 	{
 		super.Prefab(_owner);
 		this.SizeCac();
@@ -426,7 +426,7 @@ export class CPaint2D extends CPaint
 		}
 	}
 	
-	EmptyRPChk()
+	override EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)
 		{
@@ -443,6 +443,11 @@ export class CPaint2D extends CPaint
 		{
 			this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
 		}
+		// if(rp.mCullFace==null)
+		// {
+
+		// }
+			//rp.mCullFace = CRenderPass.eCull.None;
 	}
 
 	//Wind() {this.PushTag("wind"); }
@@ -553,7 +558,7 @@ export class CPaint2D extends CPaint
 	{
 		return null;
 	}
-	Start(): void {
+	override Start(): void {
 		super.Start();
 
 		this.PRSReset();
@@ -573,7 +578,7 @@ export class CPaint2D extends CPaint
 		
 	}
 	//left,top,right,bottom
-	GetLeftTopRightBottom(_frame : CFrame) 
+	override GetLeftTopRightBottom(_frame : CFrame) 
 	{
 		const tex = _frame.Res().Find(this.mTextureKey[0]) as CTexture;
 		if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return null;
@@ -600,7 +605,7 @@ export class CPaint2D extends CPaint
 
 
 	}
-	Render(_vf : CShader)
+	override Render(_vf : CShader)
 	{
 
 		
@@ -651,11 +656,11 @@ export class CPaint2D extends CPaint
 		
 	}
 	
-	SetTexCodi(_uv : CVec4) : void;
-	SetTexCodi(_uv : CVec4,_margin : number) : void;
-	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
-	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
-	SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
+	override SetTexCodi(_uv : CVec4) : void;
+	override SetTexCodi(_uv : CVec4,_margin : number) : void;
+	override SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
+	override SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
+	override SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
 	{
 		if(this.PushTag("codi"))
 			this.ClearBatch();
@@ -969,18 +974,18 @@ export class CPaintHTML extends CPaint2D
 		}
 			
 	}
-	StartChk(): boolean {
+	override StartChk(): boolean {
 		super.StartChk();
 
 		this.mStartChk=false;
 		return true;
 	}
-	SetEnable(_val: boolean)
+	override SetEnable(_val: boolean)
 	{
 		super.SetEnable(_val);
 		this.mElement.hidden=!_val;
 	}
-	SetPos(_pos : CVec3)
+	override SetPos(_pos : CVec3)
 	{
 		this.mPos=_pos.Export();
 		this.mUpdateFMat=true;
@@ -992,7 +997,7 @@ export class CPaintHTML extends CPaint2D
 	// 	this.mElement=_html as HTMLElement;
 	// 	this.mAttach=false;	
 	// }
-	UpdateRenPt()
+	override UpdateRenPt()
 	{
 		for(let i=0;i<this.mRenPT.length;++i)
 		{
@@ -1001,7 +1006,7 @@ export class CPaintHTML extends CPaint2D
 			ren.mDistance=0x7FFFFE00;
 		}
 	}
-	SetSize(_size: CVec2): void {
+	override SetSize(_size: CVec2): void {
 		this.mSize=_size;
 		this.mUpdateFMat=true;
 		this.mAttach=false;	
@@ -1015,7 +1020,7 @@ export class CPaintHTML extends CPaint2D
 	// 	if(this.GetOwner()==null)	return;
 	// 	this.mElement.hidden=!this.GetOwner().IsEnable();
 	// }
-	EmptyRPChk()
+	override EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)
 		{
@@ -1029,7 +1034,7 @@ export class CPaintHTML extends CPaint2D
 			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
 		}
 	}
-	Update(_delay)
+	override Update(_delay)
 	{
 		if(this.mRenPT.length==0 || this.mElement==null)	return;
 		if(this.mRenPT[0].mCam.mUpdateMat!=0 || this.mOwner.mUpdateMat!=0 || this.mOwner.GetFrame().Win().IsResize() || this.mUpdateFMat==true){}

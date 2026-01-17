@@ -1,15 +1,15 @@
-import { CAniFlow } from "../../../artgine/app/component/CAniFlow.js";
-import CBehavior from "../../../artgine/app/component/CBehavior.js";
-import { CCollider } from "../../../artgine/app/component/CCollider.js";
-import { CForce } from "../../../artgine/app/component/CForce.js";
-import { CRigidBody } from "../../../artgine/app/component/CRigidBody.js";
-import { CPaint2D } from "../../../artgine/app/component/paint/CPaint2D.js";
-import { CSubject } from "../../../artgine/app/subject/CSubject.js";
-import { CVec2 } from "../../../artgine/geometry/CVec2.js";
-import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CVec4 } from "../../../artgine/geometry/CVec4.js";
-import { CTexture } from "../../../artgine/render/CTexture.js";
-import { CLoaderOption } from "../../../artgine/util/CLoader.js";
+import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
+import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
+import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
 export class BackGround extends CSubject {
     mMoon = null;
     Start() {

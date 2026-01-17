@@ -234,7 +234,7 @@ export class CRenderPass extends CObject
 		
 		this.mCP=null;
 	}
-	Key()
+	override Key()
 	{
 		if(this.mKey=="")
 			this.Reset();
@@ -243,7 +243,7 @@ export class CRenderPass extends CObject
 	}
 
 	
-	EditForm(_pointer: CPointer, _body: HTMLDivElement, _input: HTMLElement): void {
+	override EditForm(_pointer: CPointer, _body: HTMLDivElement, _input: HTMLElement): void {
 		super.EditForm(_pointer,_body,_input);
 		if(_pointer.member=="mDepthTest")
 			CUtilObj.NullEdit(_pointer,_body,_input,false);

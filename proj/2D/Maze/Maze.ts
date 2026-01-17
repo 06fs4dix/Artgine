@@ -1,5 +1,5 @@
 //Version
-const version='mjcwy21m_9';
+const version='mkibvyk6_18';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -66,6 +66,13 @@ import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/aud
 import { CWindow } from "https://06fs4dix.github.io/Artgine/artgine/system/CWindow.js";
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
+import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CNavigation.js";
+import { CNaviMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CNavigationMgr.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
+import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
+import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 
 
 
@@ -132,7 +139,7 @@ let FindPath=(_target : CSubject,_end : CVec3)=>
             pt.SetColorModel(new CColor(1,0,0,SDF.eColorModel.RGBAdd));
         else
             pt.SetColorModel(new CColor(0,0,0.5,SDF.eColorModel.RGBAdd));
-        pt.SetAlphaModel(new CAlpha(0.5,SDF.eAlphaModel.Mul));
+        pt.SetAlphaModel(new CAlpha(0.5));
         tileList.push(C);
      
     }
@@ -570,6 +577,12 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 });
+
+
+
+
+
+
 
 
 

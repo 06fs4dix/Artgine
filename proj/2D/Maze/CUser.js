@@ -153,8 +153,8 @@ export default class CUser extends CBehavior {
             ch.SetPos(this.m_lastPos);
             this.GetOwner().PushChild(ch);
             let ani = new CAnimation();
-            ani.Push(new CClipColorAlpha(0, 1000 * 15, new CVec4(-1, -1, 1, -0.5), new CVec4(-1, -1, 1, -1)));
-            ani.Push(new CClipDestroy(1000 * 15));
+            ani.Push(new CClipColorAlpha(0, 15, new CVec4(-1, -1, 1, 0.5), new CVec4(-1, -1, 1, 0)));
+            ani.Push(new CClipDestroy(15));
             ch.PushComp(new CAniFlow(ani));
             this.m_footTime = 0;
         }

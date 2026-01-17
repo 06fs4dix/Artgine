@@ -71,7 +71,7 @@ export class CSubject extends CObject implements IFile , IMat
 
 
 	protected mUpdateRS : number = CUpdate.eType.Updated;
-	protected mUpdateMat : number = CUpdate.eType.Updated;
+	mUpdateMat : number = CUpdate.eType.Updated;
 	mUpdateComp=true;
 	mReset=false;
 
