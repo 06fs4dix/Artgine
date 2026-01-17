@@ -1,12 +1,12 @@
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
-import { CUIText } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CUI.js";
-import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
-import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CPlaneInside } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CPlaneInside.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CCollider } from "../../../artgine/app/component/CCollider.js";
+import { CPad } from "../../../artgine/app/subject/CPad.js";
+import { CUIText } from "../../../artgine/app/subject/CUI.js";
+import { CUpdate } from "../../../artgine/basic/Basic.js";
+import { CAlert } from "../../../artgine/basic/CAlert.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CPlaneInside } from "../../../artgine/geometry/CPlaneInside.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import {CProComp} from "./CProComp.js";
 
@@ -20,7 +20,7 @@ export class CUserComp extends CProComp
     //         return true;
     //     return super.MemberHide(_member,_form);
     // }
-    Start()
+    override Start()
     {
         this.mSpeed=300;
         super.Start();
@@ -32,7 +32,8 @@ export class CUserComp extends CProComp
         //     pad.SetPadScale(1.5);
         // }
     }
-    Update(_update : CUpdate): void {
+    override Update(_update : CUpdate): void 
+    {
         super.Update(_update);
 
         if(this.mPad==null)
@@ -66,7 +67,7 @@ export class CUserComp extends CProComp
 
         //CAlert.Info("[Die!]");
     }
-    CameraOut(_pArr: Array<CPlaneInside>): void {
+    override CameraOut(_pArr: Array<CPlaneInside>): void {
         
     }
 }

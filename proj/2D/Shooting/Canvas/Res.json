@@ -1230,7 +1230,7 @@
                         "class": "CPad",
                         "mKey": "pad",
                         "mEnable": true,
-                        "mPMatMul": true,
+                        "mPMatMul": false,
                         "mSelect": true,
                         "mComArr": [
                         ],

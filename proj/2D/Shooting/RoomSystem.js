@@ -1,6 +1,6 @@
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
-import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CBlackBoardRef } from "../../../artgine/basic/CObject.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 export class RoomSystem extends CSubject {
     mMon = new CBlackBoardRef("Monster");

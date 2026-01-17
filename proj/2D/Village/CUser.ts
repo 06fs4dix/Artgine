@@ -1,5 +1,5 @@
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation, CClipColorAlpha, CClipCoodi, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
@@ -11,15 +11,18 @@ import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
+import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
 import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
+import { CRandom } from "https://06fs4dix.github.io/Artgine/artgine/util/CRandom.js";
 import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 
@@ -37,7 +40,7 @@ export class CUser extends CSubject
         super();
         
     }
-    Start()
+    override Start()
     {
         this.mPT=this.PushComp(new CPaint2D("Res/Actor/Villager5/SeparateAnim/Walk.png",new CVec2(100,100)));
         this.mPT.mSave=false;
@@ -55,6 +58,11 @@ export class CUser extends CSubject
         this.mCL.PushCollisionLayer("object");
         this.mCL.PushCollisionLayer("player");
         this.mCL.SetRestitution(1);
+
+        let itemCL=this.PushComp(new CCollider(this.mPT));
+        itemCL.SetLayer("player");
+        itemCL.PushCollisionLayer("item");
+        itemCL.SetEvent(CCollider.eEvent.Trigger);
         
         this.PushComp(new CShadowPlane());
         
@@ -177,7 +185,7 @@ export class CUser extends CSubject
     {
         this.mAF.ResetAni(this.mAniMap.get("MoveDown"));
     }
-    Update(_update : CUpdate): void 
+    override Update(_update : CUpdate): void 
     {
         super.Update(_update);
         if(this.FindChild(CPad)==null)  return;
@@ -187,17 +195,28 @@ export class CUser extends CSubject
 
         if (dir.IsZero()==false)
         {
-            if(this.mBDir.Equals(dir)==false)
+            if(this.mBDir.Equals(dir)==false && this.GetFrame().PF().mServer=="local")
                 this.mRB.Push(new CForce("move", dir, 400));
             CScript.Action([this],()=>{
                 let audio=new CAudioBuf("Res/sound/jute-dh-steps/stepdirt_2.wav");
                 audio.Volume(0.5);
                 audio.Play();
+                let smoke=new CSubject();
+                smoke.PushComp(new CPaint2D("Res/smoke.png",new CVec2(100,100)));
+                smoke.mPMatMul=false;
+                //smoke.SetPos(CMath.V3AddV3(this.GetPos(),new CVec3(CRandom.MinMax(-50,50),CRandom.MinMax(-50,50),0)));
+                smoke.SetPos(CMath.V3AddV3(this.GetPos(),new CVec3(CRandom.MinMax(-30,30),-50,0)));
+                let ani=new CAnimation();
+                ani.Push(new CClipColorAlpha(0,1,new CVec4(1,1,1,0.4),new CVec4(1,1,1,0)));
+                ani.Push(new CClipDestroy(1));
+                smoke.PushComp(new CAniFlow(ani));
+                this.PushChild(smoke);
             },0,0.3);
         }
         else
         {
-            this.mRB.Remove("move");
+            if(this.GetFrame().PF().mServer=="local")
+                this.mRB.Remove("move");
             this.mBDir.Zero();
         }
         let camcon=this.m2DCam.Ref().GetCamCon() as CCamCon2DFollow;

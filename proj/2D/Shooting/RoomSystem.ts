@@ -1,10 +1,10 @@
-import { CCanvas } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvas.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
-import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
-import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
-import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
-import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUniqueID.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import { CCanvas } from "../../../artgine/app/canvas/CCanvas.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CUpdate } from "../../../artgine/basic/Basic.js";
+import { CConsol } from "../../../artgine/basic/CConsol.js";
+import { CBlackBoardRef } from "../../../artgine/basic/CObject.js";
+import { CUniqueID } from "../../../artgine/basic/CUniqueID.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CPacShooting } from "./CPacShooting.js";
 import { CProComp } from "./CProComp.js";
 
@@ -24,10 +24,11 @@ export class RoomSystem extends CSubject {
     mMonKey=0;
     mLevel=1;
     mLTime=10;
-    Start() { }
+    override Start() { }
 
-    Update(_update : CUpdate): void 
+    override Update(_update : CUpdate): void 
     {
+        
         let ResetFun=()=>{
             this.mTime=0;
             this.mState=-1;

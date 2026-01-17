@@ -191,10 +191,12 @@ export class CShadowPlane extends CPaint2D {
     EmptyRPChk() {
         let empty = this.mRenderPass.length == 0;
         super.EmptyRPChk();
-        if (empty) {
-            for (let rp of this.mRenderPass) {
+        for (let rp of this.mRenderPass) {
+            if (empty) {
                 rp.mPriority = CRenderPass.ePriority.AlphaAuto;
                 rp.mSortRevers = true;
+            }
+            else if (rp.mCullFace == null) {
                 rp.mCullFace = CRenderPass.eCull.None;
             }
         }

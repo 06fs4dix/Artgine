@@ -1,12 +1,13 @@
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
-import { CComponent } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CComponent.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
-import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
-import { CPlane } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CPlane.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import CBehavior from "../../../artgine/app/component/CBehavior.js";
+import { CCollider } from "../../../artgine/app/component/CCollider.js";
+import { CComponent } from "../../../artgine/app/component/CComponent.js";
+import { CForce } from "../../../artgine/app/component/CForce.js";
+import { CRigidBody } from "../../../artgine/app/component/CRigidBody.js";
+import { CPad } from "../../../artgine/app/subject/CPad.js";
+import { CMath } from "../../../artgine/geometry/CMath.js";
+import { CPlane } from "../../../artgine/geometry/CPlane.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CPacShooting } from "./CPacShooting.js";
 export class CMoveComp extends CBehavior {
     constructor() {
         super();
@@ -43,6 +44,7 @@ export class CMoveComp extends CBehavior {
                 if (dir.IsZero() == false)
                     this.m_rb.Push(new CForce("move", dir, 400));
                 this.m_lastDir.Import(dir);
+                this.GetOwner().PushPac(CPacShooting.Pos(this.GetOwner().Key(), "test", this.GetOwner().GetPos(), dir));
             }
         }
     }

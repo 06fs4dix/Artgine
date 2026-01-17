@@ -30,6 +30,8 @@
     "summernote": false
   },
   "dependencies": {
-    "ShadowPlane": 1
+    "Inventory": 1,
+    "ShadowPlane": 1,
+    "Water": 1
   }
 }

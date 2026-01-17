@@ -232,7 +232,7 @@ export class CShadowPlane extends CPaint2D
     }
 
     //강제로 이상한 RP지우기
-    StartChk(): boolean 
+    override StartChk(): boolean 
     {
         if(this.mStartChk==true)
         {
@@ -242,21 +242,28 @@ export class CShadowPlane extends CPaint2D
         return super.StartChk();
         
     }
-    EmptyRPChk()
+    override EmptyRPChk()
 	{
         let empty=this.mRenderPass.length==0;
         
         super.EmptyRPChk();
-        if(empty)
+       
+        for(let rp of this.mRenderPass)
         {
-            for(let rp of this.mRenderPass)
+            if(empty)
             {
                 rp.mPriority=CRenderPass.ePriority.AlphaAuto;
-                //rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
                 rp.mSortRevers=true;
+            }
+            else if(rp.mCullFace==null)
+            {
                 rp.mCullFace = CRenderPass.eCull.None;
             }
+            
+            
         }
+        
+
 	}
 
    
@@ -325,7 +332,7 @@ export class CShadowPlane extends CPaint2D
 			this.mUpdateShadow=true;
 		}
     }
-    Update(_update : CUpdate): void 
+    override Update(_update : CUpdate): void 
     {
         
         if(this.mPT==null || this.mPT.Key()!=this.mPTKey)
