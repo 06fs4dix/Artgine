@@ -35,43 +35,43 @@ var g_offCObjHD = 0;
 //2.sysn처리(함수 호출)
 export class CSubject extends CObject implements IFile , IMat
 {
-	public mKey : string;
-	public mDestroy : boolean;
-	public mEnable : boolean;
-	public mPMatMul=true;
-	public mSelect=true;
+	protected mKey : string;
+	protected mDestroy : boolean;
+	protected mEnable : boolean;
+	protected mPMatMul=true;
+	protected mSelect=true;
 
-	public mComArr : Array<CComponent>;
-	public mPTArr : Array<CComponent>=null;
-	public mPushArr : Array<CComponent>=new Array<CComponent>();
-	public mPushLock=false;
+	protected mComArr : Array<CComponent>;
+	protected mPTArr : Array<CComponent>=null;
+	protected mPushArr : Array<CComponent>=new Array<CComponent>();
+	protected mPushLock=false;
 	
 	
-	public mChild : Array<CSubject>;
-	public mPMat : CMat;
-	public mPos : CVec3;
-	public mRot : CVec3;
-	public mSca : CVec3;
-	public mWMat : CMat;
+	protected mChild : Array<CSubject>;
+	protected mPMat : CMat;
+	protected mPos : CVec3;
+	protected mRot : CVec3;
+	protected mSca : CVec3;
+	protected mWMat : CMat;
 	
 	//public m_addPos : CVec3;
 	//public m_refresh : boolean;
 	
 	
-	public mKeyChange : string;
-	public mPEnable : boolean;
+	protected mKeyChange : string;
+	protected mPEnable : boolean;
 	
-	public mSpeed : number;
+	protected mSpeed : number;
 	//public m_power : number;
 	protected mFrame : CFrame=null;
 	
-	public mBroMsg = new CArray<CRouteMsg>();
-	public mInMsg = new CArray<CRouteMsg>();
-	public mOutMsg = new CArray<CRouteMsg>();
+	protected mBroMsg = new CArray<CRouteMsg>();
+	protected mInMsg = new CArray<CRouteMsg>();
+	protected mOutMsg = new CArray<CRouteMsg>();
 
 
-	public mUpdateRS : number = CUpdate.eType.Updated;
-	public mUpdateMat : number = CUpdate.eType.Updated;
+	protected mUpdateRS : number = CUpdate.eType.Updated;
+	protected mUpdateMat : number = CUpdate.eType.Updated;
 	mUpdateComp=true;
 	mReset=false;
 
@@ -827,7 +827,7 @@ export class CSubject extends CObject implements IFile , IMat
 	GetSca() { return this.mSca; };
 
 	//리지드 바디가 있어서. 무한정 호출해는 문제가 있어서 추가함
-	SetPos(_pos : CVec3,_reset=true,_patch=true)
+	SetPos(_pos : CVec3,_reset=true)//,_patch=true)
 	{
 		if(_pos.Equals(this.mPos))	return;
 		this.mPos.Import(_pos);
@@ -837,8 +837,8 @@ export class CSubject extends CObject implements IFile , IMat
 		
 		if(_reset)
 			this.PRSReset(false);
-		if(_patch)
-			this.PatchExe("mPos");
+		// if(_patch)
+		// 	this.PatchExe("mPos");
 	}
 	SetRot(_rot : CVec3|CVec4,_reset=true)
 	{
@@ -942,44 +942,44 @@ export class CSubject extends CObject implements IFile , IMat
 
 	}
 	
-	public override PatchStreamUpdate(_stream: CStream,_path : Array<string>) 
-	{
-		super.PatchStreamUpdate(_stream,_path)
+	// public override PatchStreamUpdate(_stream: CStream,_path : Array<string>) 
+	// {
+	// 	super.PatchStreamUpdate(_stream,_path)
 
-		for(let i=0;i<this.mComArr.length;++i)
-		{
-			_path.push("mComArr["+i+"]");
-			this.mComArr[i].PatchStreamUpdate(_stream,_path);
-			_path.pop();
+	// 	for(let i=0;i<this.mComArr.length;++i)
+	// 	{
+	// 		_path.push("mComArr["+i+"]");
+	// 		this.mComArr[i].PatchStreamUpdate(_stream,_path);
+	// 		_path.pop();
 			
-		}
-		for(let i=0;i<this.mChild.length;++i)
-		{
-			_path.push("mChild["+i+"]");
-			this.mChild[i].PatchStreamUpdate(_stream,_path);
-			_path.pop();
-		}
-	}
-	public override PatchStreamRead(_stream: CStream, _key: string): void {
-		super.PatchStreamRead(_stream,_key);
-		if(_key=="mPos")	this.PRSReset();
+	// 	}
+	// 	for(let i=0;i<this.mChild.length;++i)
+	// 	{
+	// 		_path.push("mChild["+i+"]");
+	// 		this.mChild[i].PatchStreamUpdate(_stream,_path);
+	// 		_path.pop();
+	// 	}
+	// }
+	// public override PatchStreamRead(_stream: CStream, _key: string): void {
+	// 	super.PatchStreamRead(_stream,_key);
+	// 	if(_key=="mPos")	this.PRSReset();
 
-	}
-	//전체 트레킹 된다. 이러면 느려짐
-	public override PatchTrackDefault()
-	{
-		for(let i=0;i<this.mComArr.length;++i)
-		{
+	// }
+	// //전체 트레킹 된다. 이러면 느려짐
+	// public override PatchTrackDefault()
+	// {
+	// 	for(let i=0;i<this.mComArr.length;++i)
+	// 	{
 			
-			this.mComArr[i].PatchTrackDefault();
+	// 		this.mComArr[i].PatchTrackDefault();
 			
 			
-		}
-		for(let i=0;i<this.mChild.length;++i)
-		{
-			this.mChild[i].PatchTrackDefault();	
-		}
-	}
+	// 	}
+	// 	for(let i=0;i<this.mChild.length;++i)
+	// 	{
+	// 		this.mChild[i].PatchTrackDefault();	
+	// 	}
+	// }
 	
 	CaptureTextureToDataURL() : string
 	{

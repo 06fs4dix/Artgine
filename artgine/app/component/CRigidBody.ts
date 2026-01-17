@@ -136,7 +136,7 @@ export class CRigidBody extends CGeometryComp
 		}
 		else if(move instanceof CForce)
 		{
-			this.PatchExe("mForceArr");
+			//this.PatchExe("mForceArr");
 			if(duplication==false)
 			{
 				for (var i = 0; i < this.mForceArr.length; ++i)
@@ -171,7 +171,7 @@ export class CRigidBody extends CGeometryComp
 	}
 	Remove(_key)
 	{
-		this.PatchExe("mForceArr");
+		//this.PatchExe("mForceArr");
 		for (var i = 0; i < this.mForceArr.length; ++i)
 		{
 			if (this.mForceArr[i].mKey==(_key+""))
@@ -197,7 +197,7 @@ export class CRigidBody extends CGeometryComp
 	}
 	Clear()
 	{
-		this.PatchExe("mForceArr");
+		//this.PatchExe("mForceArr");
 		this.mForceArr=new Array();
 		this.mStopover=null;
 		this.mForceGravity=null;
@@ -243,18 +243,18 @@ export class CRigidBody extends CGeometryComp
 	}
 	//리지드 바디는 포지션 패치를 수동으로 한다.
 	//데드레커닝 처리해야함
-	public override PatchStreamUpdate(_stream: CStream, _path: Array<string>): void 
-	{
-		//상위 pos 갱신
-		if(this.IsPatchUpdate("mForceArr"))
-			this.GetOwner().PatchStreamWrite(_stream,CString.PathArrToFullPath(_path,-1),"mPos");
-		super.PatchStreamUpdate(_stream,_path)
+	// public override PatchStreamUpdate(_stream: CStream, _path: Array<string>): void 
+	// {
+	// 	//상위 pos 갱신
+	// 	if(this.IsPatchUpdate("mForceArr"))
+	// 		this.GetOwner().PatchStreamWrite(_stream,CString.PathArrToFullPath(_path,-1),"mPos");
+	// 	super.PatchStreamUpdate(_stream,_path)
 	
-	}
-	override PatchTrackDefault()
-	{
-		this.PatchTrack("mForceArr");
-	}
+	// }
+	// override PatchTrackDefault()
+	// {
+	// 	this.PatchTrack("mForceArr");
+	// }
 
 }
 

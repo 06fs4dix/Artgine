@@ -229,7 +229,7 @@ export function main(_data : Array<any>)
             gScriptMap.set(this.mKey, null);//강제로 널해서 작동안되게
         }
     }
-    EditHTMLInit(_div : HTMLDivElement)
+    override EditHTMLInit(_div : HTMLDivElement)
 	{
 		super.EditHTMLInit(_div);
 		var button=document.createElement("button");

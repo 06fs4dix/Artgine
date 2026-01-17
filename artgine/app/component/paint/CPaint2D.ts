@@ -1119,7 +1119,7 @@ export class CPaintHTML extends CPaint2D
 		
 	}
 
-	Destroy(): void 
+	override Destroy(): void 
 	{
 		super.Destroy();
 		if(this.mElement!=null)

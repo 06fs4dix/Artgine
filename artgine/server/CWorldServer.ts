@@ -104,13 +104,15 @@ export class CZone
             update.mFixedCount=1;
             this.Update(update);
             
-        },1);
+        },10);
     }
     Update(_update : CUpdate)
     {
 
         this.mFrameTime+=_update.DeltaTime();
         this.mFrameCount++;
+        //CConsol.Log(" DeltaTime "+_update.DeltaTime());
+
         if(this.mFrameTime>1)
         {
             CConsol.Log(this.constructor.name+" / "+this.mFrameCount);

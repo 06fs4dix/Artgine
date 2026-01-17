@@ -64,7 +64,7 @@ export class CPad extends CSubject
         super();
         
         this.SetKey("pad");
-        
+        this.mPMatMul=false;
             
     }
     SetPadScale(_val)
@@ -110,10 +110,7 @@ export class CPad extends CSubject
         }
         return CEvent.eType.Null;
     }
-    SetPMat(_mat : CMat)
-    {
-        
-    }
+   
     Stick(_type : eStickType,_move)
     {
         this.mStickType=_type;
@@ -331,7 +328,7 @@ export class CPad extends CSubject
     {
         this.mPadType=_type;
     }
-    SubjectUpdate(_update: CUpdate): void 
+    override SubjectUpdate(_update: CUpdate): void 
     {
         super.SubjectUpdate(_update);
 
@@ -474,7 +471,7 @@ export class CPad extends CSubject
             this.Button(CPad.eButtonType.Alphabet_Rectangle,2);
         }
     }
-    SetFrame(_fw : CFrame): void {
+    override SetFrame(_fw : CFrame): void {
         super.SetFrame(_fw);
         if(_fw!=null)
         {

@@ -952,10 +952,10 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	GetGI()	{	return this.mGI;	}
 	
 	
-	override PatchTrackDefault()
-	{
-		this.PatchTrack("mSubMap");
-	}
+	// override PatchTrackDefault()
+	// {
+	// 	this.PatchTrack("mSubMap");
+	// }
 
 }
 

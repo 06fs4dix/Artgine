@@ -501,7 +501,7 @@ export class CUI extends CSubject
         if (this.mAnchorXType == CUI.eAnchor.Null || this.mAnchorYType == CUI.eAnchor.Null || this.mUIPT==null)
             return;
         
-        var pos = this.GetPos().Export();
+        var pos = new CVec3();//this.GetPos().Export();
         var bound = this.mUIPT.GetBound().Export();
         if (bound.GetType() == CBound.eType.Null)
             return;
@@ -527,12 +527,12 @@ export class CUI extends CSubject
         super.SetPos(pos,true);
         this.mUpdateAnchor = false;
 	}
-	SetPos(_pos: CVec3, _reset=true): void
+	override SetPos(_pos: CVec3, _reset=true): void
 	{
 		super.SetPos(_pos,_reset);
 		this.mUpdateAnchor=true;
 	}
-	SubjectUpdate(_delay)
+	override SubjectUpdate(_delay)
 	{
 		super.SubjectUpdate(_delay);
 
