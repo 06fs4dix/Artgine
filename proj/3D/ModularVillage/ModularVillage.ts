@@ -1,5 +1,5 @@
 //Version
-const version='mjcwa2up_2';
+const version='mkictey2_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -13,7 +13,7 @@ gPF.mTargetHeight = 0;
 gPF.mRenderer = "GL";
 gPF.m32fDepth = false;
 gPF.mTexture16f = false;
-gPF.mAnti = true;
+gPF.mAnti = false;
 gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
@@ -59,9 +59,6 @@ import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/C
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CCamCon3DThirdPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 
-import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
-import { off } from "process";
-import { CPaint3DDecal } from "https://06fs4dix.github.io/Artgine/plugin/Decal/Decal.js";
 
 import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
@@ -84,7 +81,9 @@ var bias : number = 5;
 var normalBias : number = 4;
 var shadowRate=0.7;
 let forward=new CRPMgr();
-let texKey=forward.PushTex("shadowread.tex",new CTexture());
+let rtex=new CTexture();
+rtex.SetSize(512,512);
+let texKey=forward.PushTex("shadowread.tex",rtex);
 let rp=forward.PushRP(new CRPAuto());
 rp.PushOr(new CCondition("class","==","CPaint3D"));
 rp.PushOr(new CCondition("class","==","CPaintMeshMerge"));
@@ -115,6 +114,28 @@ rp.mTag.add("light");
 Main.PushPlugin(new CCanvasPluginRPMgr(forward));
 //Main.SetRPMgr(null);
 
+
+Main.Find("Ground").Destroy();
+// Main.Find("Prop_Barrel_2").Destroy();
+// Main.Find("Prop_Barrel_1").Destroy();
+// Main.Find("Prop_Well_1").Destroy();
+
+// Main.Find("Stucco_Prop_Support_Pillar_1").Destroy();
+// Main.Find("Prop_Lamp_Street").Destroy();
+
+// Main.Find("Prop_Crate_1").Destroy();
+
+
+
+let gsub=Main.PushSub(new CSubject());
+let gpt=gsub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+gpt.PushTag(CPaint.eTag.Shadow);
+gpt.PushTag(CPaint.eTag.Light);
+gpt.SetColorModel(new CColor(1,1,1,CColor.eModel.RGBAdd));
+gsub.SetSca(new CVec3(50,0.1,50));
+let gcl=gsub.PushComp(new CCollider(gpt));
+gcl.SetLayer("ground");
+//Main.Find("Prop_Well_1").Destroy();
 
 
 
@@ -215,13 +236,11 @@ lp.Push(new CDayCycle(new CVec3(0,-1,0),new CColor(0,0,0)));
 //await gAtl.Frame().Load().Exe("blocky_short/blocky_short.FBX");
 
 
-//chsub.PushComp(new CPaint3D("character_man/character_man.FBX"));
+
 let chsub=Main.PushSub(new CSubject());
 chsub.SetKey("User");
-//let pt3=chsub.PushComp(new CPaint3D("Res/blocky/blocky.FBX",true,100));
-//pt3.SetLMat(CMath.MatScale(new CVec3(50,50,50)))
-//chsub.SetSca(10);
-//let pt3=chsub.PushComp(new CPaint3D("character_test/character_test.FBX",true,100));
+//chsub.SetEnable(false);
+
 let ptRes="Res/blocky/blocky.FBX";
 let aniRes="Res/blocky/blocky.FBX";
 let pt3=chsub.PushComp(new CPaint3D(ptRes,true,100));
@@ -239,7 +258,8 @@ let rb=chsub.PushComp(new CRigidBody());
 rb.SetGravity(1);
 let aniStand=new CAnimation();
 let cm=aniStand.Push(new CClipMesh(0,1,2500,4500,aniRes));
-//cm.mBake=true;
+cm.mBake=true;
+
 //aniStand.Push(new CClipMesh(0,2,500,2500,"blocky_short/blocky_short.FBX"));
 let aniWalk=new CAnimation();
 cm=aniWalk.Push(new CClipMesh(0,1.5,0,2000,aniRes));
@@ -397,51 +417,6 @@ chsub.Update=(_update : CUpdate)=>{
 
 //     }
 // });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

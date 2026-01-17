@@ -5,7 +5,7 @@
     "mRenderer": "GL",
     "m32fDepth": false,
     "mTexture16f": false,
-    "mAnti": true,
+    "mAnti": false,
     "mBatchPool": true,
     "mXR": false,
     "mDeveloper": true,
