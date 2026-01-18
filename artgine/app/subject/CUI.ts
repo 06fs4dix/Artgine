@@ -515,10 +515,13 @@ export class CUI extends CSubject
 		height = this.mFrame.PF().mHeight;
        
 
-		let sizeX=(bound.mMax.x * this.mSca.x);
-		let sizeY=(bound.mMax.y * this.mSca.y);
+		let zoom=(1/cam.mZoom);
+		let sizeX=(bound.mMax.x * this.mSca.x)*zoom;
+		let sizeY=(bound.mMax.y * this.mSca.y)*zoom;
 		pos.x=sizeX * -this.mAnchorXType+this.mAnchorXLen * -this.mAnchorXType;
 		pos.y=sizeY * -this.mAnchorYType+this.mAnchorYLen * -this.mAnchorYType;
+		//pos.x*=zoom;
+		//pos.y*=zoom;
 		if(this.mAnchorXType>0)	pos.x+=width;
 		if(this.mAnchorYType>0)	pos.y+=height;
 		
