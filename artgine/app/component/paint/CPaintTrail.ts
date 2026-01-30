@@ -111,7 +111,7 @@ export class CPaintTrail extends CPaint
 		this.mCanTex=CPaintTrail.eCanTex.Arrow;
 		this.mRepeat=true;
 	}
-	InitChk()
+	override InitChk()
 	{
 		super.InitChk();
 		
@@ -216,7 +216,7 @@ export class CPaintTrail extends CPaint
 		if(this.mNormal!=null)
 			this.mNorList.push(CMath.V3MulMatNormal(this.mNormal,this.mOwner.GetMat()));
 	}
-	EmptyRPChk()
+	override EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)
 		{
@@ -224,7 +224,7 @@ export class CPaintTrail extends CPaint
 			this.mRenderPass=[rp];
 		}
 	}
-	GetDrawMesh(_meshKey : string,_shader : CShader)
+	override GetDrawMesh(_meshKey : string,_shader : CShader)
 	{
 		var drawMesh = this.mOwner.GetFrame().Res().Find(this.mVCount+_meshKey+ _shader.mKey);
 		if (drawMesh == null)
@@ -259,10 +259,11 @@ export class CPaintTrail extends CPaint
 	}
 
 
-	Update(_update : CUpdate)
+	override Update(_update : CUpdate)
 	{
-		this.Camera();
+		
 		super.Update(_update);
+		this.Camera();
 		
 		if(this.mStaticPos)
 		{
@@ -514,6 +515,7 @@ export class CPaintTrail extends CPaint
 		this.mBW.mRadian=0;
 		this.mBound.Reset();
 		this.mBound.SetType(CBound.eType.Box);
+		this.mUpdateLMat=true;
 
 		if(this.mStaticPos)
 		{
@@ -688,7 +690,7 @@ export class CPaintTrail extends CPaint
 	}
 
 
-	Render(_vf : CShader)
+	override Render(_vf : CShader)
 	{
 
 		var barr=this.RenderBatch(_vf,1);

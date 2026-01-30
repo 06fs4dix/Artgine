@@ -29,10 +29,7 @@ import { CMath } from "../../geometry/CMath.js";
 import { CRay } from "../../geometry/CRay.js";
 import { CCollider } from "../component/CCollider.js";
 import { CBrushComp } from "../component/CBrushComp.js";
-import { CWebSocket } from "../../network/CWebSocket.js";
-import { CRoomClient } from "../../server/CRoomClient.js";
-import { CString } from "../../basic/CString.js";
-import { CConsol } from "../../basic/CConsol.js";
+
 
 
 
@@ -70,7 +67,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	protected mGI : CGeometryInfo= null;
 
 	
-	public mPacArr=new CArray<CStream>();
+	public mPacketArr=new CArray<CStream>();
 	
 	private mSubMap = new Map<string,CSubject>();
 	protected mAttachCanvas = new Array<CBlackBoardRef<CCanvas>>();
@@ -194,13 +191,13 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	// GetRPMgr() {
 	// 	return this.mRPMgr;
 	// }
-	PushPac(_pac : CStream)
+	PushPacket(_pac : CStream)
 	{
-		this.mPacArr.Push(_pac);
+		this.mPacketArr.Push(_pac);
 	}
-	GetPac(_swap=null)
+	GetPacketArr(_swap=null)
 	{
-		return this.mPacArr;
+		return this.mPacketArr;
 	}
 	RenderOrder()	{	return new CArray();}
 	PTUpdate(_ptList : Array<CPaint>)

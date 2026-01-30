@@ -4,20 +4,6 @@ import { CClass } from "../basic/CClass.js";
 
 export class CRouteMsg
 {
-	// static Product()
-	// {	
-	// 	if(gComMsgPool.length>0)
-	// 	{
-	// 		//g_comMsgPool.splice(0,1);
-	// 		return gComMsgPool.splice(0,1)[0];
-	// 	}
-		
-	// 	return new Array<CRouteMsg>();
-	// }
-	// static Recycle(_arr : Array<CRouteMsg>)
-	// {
-	// 	gComMsgPool.push(_arr);
-	// }
 	//외부
 	/*
 		"" : 현재 캔버스/서브젝트 들  

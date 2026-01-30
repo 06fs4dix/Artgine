@@ -159,29 +159,29 @@ export class CRDBMS extends CORM
             }
         }
     }
-    async Insert(_collection: string, _data: Array<CORMField>) 
+    override async Insert(_collection: string, _data: Array<CORMField>) 
     {
         return null;
     }
 
 
-    async Update(_collection: string, _condition: Array<CORMCondition>, _data: Array<CORMField>) {
+    override async Update(_collection: string, _condition: Array<CORMCondition>, _data: Array<CORMField>) {
         return null;
     }
     
    // 오버로드 선언
-    async Select(_collection: string,_condition: Array<CORMCondition>,_projection: [],_limit: CORMOption): Promise<object[]>;
-    async Select<K extends string>(_collection: string,_condition: Array<CORMCondition>,_projection: [K, ...K[]],_limit: CORMOption): Promise<{ [P in K]: any }[]>;
-    async Select(_collection: string,_condition: Array<CORMCondition>,_projection: string[],_limit: CORMOption): Promise<object[]> 
+    override async Select(_collection: string,_condition: Array<CORMCondition>,_projection: [],_limit: CORMOption): Promise<object[]>;
+    override async Select<K extends string>(_collection: string,_condition: Array<CORMCondition>,_projection: [K, ...K[]],_limit: CORMOption): Promise<{ [P in K]: any }[]>;
+    override async Select(_collection: string,_condition: Array<CORMCondition>,_projection: string[],_limit: CORMOption): Promise<object[]> 
     {
        return null;
     }
 
-    async Delete(_collection: string, _condition: Array<CORMCondition>) {
+    override async Delete(_collection: string, _condition: Array<CORMCondition>) {
         return null;
     }
 
-    async Close() {
+    override async Close() {
         
     }
 
@@ -193,7 +193,7 @@ export class CRDBMS extends CORM
     // }
     
 
-    async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String=null) 
+    override async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String=null) 
     {
         const cols = _data.map(f => {
             const type = typeof f.mValue === 'number' ? (Number.isInteger(f.mValue) ? 'INT' : 'DOUBLE') : 'VARCHAR(255)';

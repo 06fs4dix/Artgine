@@ -244,6 +244,7 @@ export class CPalette
 			}
 			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Perlin+z*8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
 		}
+		_fw.Res().Remove(gNoise[0]);
 
 		// Voronoi
 		tex = _fw.Res().Find(gNoise[1]);
@@ -269,6 +270,7 @@ export class CPalette
 			}
 			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Voronoi+z*8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
 		}
+		_fw.Res().Remove(gNoise[1]);
 		
 		//실시간 생성
 		//fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*8*4);

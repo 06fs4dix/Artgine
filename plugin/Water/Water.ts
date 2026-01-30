@@ -71,7 +71,7 @@ export class CWater3D extends CSubject
         return this.mPaint;
     }
 
-    Update(_update: CUpdate): void {
+    override Update(_update: CUpdate): void {
         super.Update(_update);
 
         // 물 깊이 자동 변경
@@ -209,9 +209,10 @@ export class CReflector3D extends CBrushComp
             const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
             rp.mCopy = false;
             rp.mPriority=CRenderPass.ePriority.Normal - 1;
-            rp.mCullFace=CRenderPass.eCull.CW;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
+            rp.mCullFace=CRenderPass.eCull.None;
+            rp.mCullFrustum=false;
             rp.PushOr(new CCondition("class","==","CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             rp.PushAnd(new CCondition("mTag[sky]"));
@@ -238,7 +239,7 @@ export class CReflector3D extends CBrushComp
         );
     }
 
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -312,7 +313,7 @@ export class CReflector3D extends CBrushComp
         }
     }
 
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {
@@ -350,9 +351,10 @@ export class CRefractor3D extends CBrushComp
             const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
             rp.mCopy = false;
             rp.mPriority=CRenderPass.ePriority.Normal - 1;
-            rp.mCullFace=CRenderPass.eCull.CW;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
+            rp.mCullFace=CRenderPass.eCull.CW;
+            rp.mCullFrustum=false;
             rp.PushOr(new CCondition("class","==","CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             rp.PushAnd(new CCondition("mTag[sky]"));
@@ -390,7 +392,7 @@ export class CRefractor3D extends CBrushComp
             rp.mShaderAttr.push(new CShaderAttr(5.0, _caustic));
     }
 
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -452,7 +454,7 @@ export class CRefractor3D extends CBrushComp
         }
     }
     
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {
@@ -615,7 +617,7 @@ export class CWater2D extends CSubject
             this.mPaint.RemoveTag("normalMap");
         }
     }
-    Update(_update: CUpdate): void {
+    override Update(_update: CUpdate): void {
         super.Update(_update);
 
         if(this.mPaint.FindCShaderAttr("waterViewMat")==null && this.mReflector.mWaterCam!=null)
@@ -699,7 +701,7 @@ export class CReflector2D extends CBrushComp
             this.PushRPAuto(rp);
         }
     }
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -765,7 +767,7 @@ export class CReflector2D extends CBrushComp
 
     }
 
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {

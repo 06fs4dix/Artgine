@@ -21,7 +21,11 @@ enum ePlacement {
     Mouse
 
 };
-const GetAttachPosition = (() => {
+var GetAttachPosition = null;
+var gLastClick : CTooltip=null;
+if(CUtil.IsNode()==false)
+{
+    GetAttachPosition=(() => {
     const mirrorDiv = document.createElement('div');
     const markerSpan = document.createElement('span');
 
@@ -95,7 +99,7 @@ const GetAttachPosition = (() => {
 })();
 
 
-var gLastClick : CTooltip=null;
+
 document.addEventListener("pointerdown", (e)=>{
      const t = e.target as Node | null;
     if(gLastClick==null)    return;
@@ -106,6 +110,9 @@ document.addEventListener("pointerdown", (e)=>{
         gLastClick=null;
     }
 }, true);
+}
+
+
 export class CTooltip extends CModal
 {
     private static arrowStyleAdded : boolean = false;
@@ -145,6 +152,9 @@ export class CTooltip extends CModal
         this.mTrigger = _trigger;
         this.mPlacement = _placement;
         this.mAttach = _attach;
+        this.On(CEvent.eType.Click,()=>{
+            CTooltip.LastTooltipHide();
+        });
 
         //this.CreateTooltipElement(_content, _theme);
         this.mBodyStyle="card-body p-0 overflow-auto";
@@ -193,7 +203,7 @@ export class CTooltip extends CModal
                     //this.Show();
                     
                 };
-                this.mBlurHandler = () => this.Hide();
+                //this.mBlurHandler = () => this.Hide();
                 
                 this.mAttach.addEventListener("click", this.mClickHandler);
                 this.mAttach.addEventListener("blur", this.mBlurHandler);
@@ -251,8 +261,17 @@ export class CTooltip extends CModal
             ]
         });
     }
+    static LastTooltipHide()
+    {
+        if(gLastClick!=null)
+        {
+            gLastClick.Hide();
+            gLastClick=null;
+        }
+        
+    }
 
-    public Update(_update : CUpdate): void 
+    public override Update(_update : CUpdate): void 
     {
         if(this.mRefDummy && this.mAttach instanceof HTMLTextAreaElement) {
             let pos = GetAttachPosition(this.mAttach);
@@ -296,7 +315,7 @@ export class CTooltip extends CModal
     {
         return window["Popper"] != null;
     }
-    public Show() {
+    public override Show() {
         super.Show();
         if(this.mPopper) {
             if(this.mRefDummy && this.mAttach instanceof HTMLTextAreaElement) {
@@ -308,7 +327,7 @@ export class CTooltip extends CModal
         }
     }
 
-    public Hide(_animationTime : number = 300) {
+    public override Hide(_animationTime : number = 300) {
         super.Hide(_animationTime);
         if(!(this.mAttach instanceof HTMLElement)) {
             this.Destroy();
@@ -457,7 +476,7 @@ export class CTooltipList extends CTooltip
         this.SetupKeyboardEvents();
     }
 
-    public Hide(_animationTime : number = 300): void {
+    public override Hide(_animationTime : number = 300): void {
         super.Hide(_animationTime);
         this.m_curIndex = -1;
 
@@ -600,7 +619,7 @@ export class CTooltipList extends CTooltip
         listItems[this.m_curIndex].scrollIntoView({ block: "nearest" });
     }
 
-    protected RemoveEventListeners(): void {
+    protected override RemoveEventListeners(): void {
         super.RemoveEventListeners();
         
         if (!(this.mAttach instanceof HTMLElement)) return;
@@ -750,7 +769,7 @@ export class CTooltipListAuto extends CTooltipList
         };
     }
 
-    protected Select(_pair: [string, string]): void {
+    protected override Select(_pair: [string, string]): void {
         if (!_pair) return;
 
         _pair[0] += ".";
@@ -764,7 +783,7 @@ export class CTooltipListAuto extends CTooltipList
         super.Select(_pair);
     }
 
-    public Destroy(): void {
+    public override Destroy(): void {
         super.Destroy();
         this.RemoveTextInputEvents();
     }

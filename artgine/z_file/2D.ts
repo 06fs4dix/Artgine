@@ -401,7 +401,8 @@ function ps_main_mask()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	//if ( L_cor.a <= 0.01 ) discard;
+	if ( L_cor.a <= 0.01 ) discard;
+	
 	L_cor.a=mask;
 	out_color=L_cor;
 }

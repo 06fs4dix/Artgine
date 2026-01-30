@@ -134,8 +134,11 @@ export class CStream
 			return "";
 		return value.mData;
 	}
-	public GetIStream<T>(_stream : T)
+	public GetIStream<T extends IStream>(_stream : T=null)
 	{
+		if(_stream==null)
+			_stream=CClass.New(this.GetName(true));
+		
 		(_stream as IStream).Deserial(this);
 		return _stream;
 	}
@@ -172,46 +175,7 @@ export class CStream
 	}
 	
 	public GetMember(_val : IStream){	}
-	//header,data,data....
-	// public GetPacket<K extends readonly string[]>(_member: K): { [P in K[number]]: any } 
-	// {
-	// 	let packet = {} as { [P in K[number]]: any };
-	// 	for(let m of _member)
-	// 	{
-	// 		if(this.m_data.charAt(this.m_off) == 'o')
-	// 		{
-				
-	// 			var off=this.m_off;
-	// 			var className=this.GetName();
-	// 			this.m_off=off;
-	// 			//var stream=_object.NewMember(className);
-	// 			//if(stream==null)
-	// 			let stream=ClassFinder.Find(className);
-	// 			stream.Deserial(this);
-	// 			packet[m]=stream;
-	// 		}
-	// 		else if(this.m_data.charAt(this.m_off) == 'n')
-	// 		{
-	// 			packet[m]=this.GetFloat();
-	// 		}
-	// 		else if(this.m_data.charAt(this.m_off) == 's')
-	// 		{
-	// 			packet[m]=this.GetString();
-	// 		}
-	// 		else if(this.m_data.charAt(this.m_off) == 'e')
-	// 		{
-	// 			packet[m]=this.GetString();
-	// 		}
-	// 		else if(this.m_data.charAt(this.m_off) == 'a')
-	// 		{
-	// 			var darr=new Array();
-	// 			this.GetArray(darr);
-	// 			packet[m]=(darr);
-	// 		}	
-	// 	}
-
-	// 	return packet;
-	// }
+	
 	public GetPacketParser<K extends readonly string[]>(_member: K): { [P in K[number]]: any } {
 		let packet = {} as { [P in K[number]]: any };
 		return packet;
@@ -227,4 +191,5 @@ export class CStream
 
 
 import CStream_imple from "../basic_impl/CStream.js";
+import { CClass } from "./CClass.js";
 CStream_imple();

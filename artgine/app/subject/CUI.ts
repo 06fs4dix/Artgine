@@ -51,8 +51,11 @@ export class CUI extends CSubject
 	public mPressPos :CVec3=new CVec3();
 	mFirstRayMs : CRayMouse=null;
 	mPressTraking=false;
-	mOverlay=false;
+	//mOverlay=false;
 	mBoundScale=1;
+	mDbClick=0;
+	mDbTime=0;
+	mDbOn=false;
 	//mSkipZTest : boolean = false;
 	
 	//public m_hotkey=-1;
@@ -69,7 +72,7 @@ export class CUI extends CSubject
 	public mClickEvent=new CEvent();
 	public mPressEvent=new CEvent();
 	
-	public mCamResize=false;
+	public mCamZoomResize=false;//
 
 	public mAnchorXType=CUI.eAnchor.Null;
 	public mAnchorYType=CUI.eAnchor.Null;
@@ -84,149 +87,7 @@ export class CUI extends CSubject
 
 	static ToolMode(_enable){	gToolMode=_enable;}
 	static SetMainFrame(_frame)	{	gMainFrame=_frame;	}
-	// static MainUpdate()
-	// {
-	// 	// gPickList.Sort((a, b) => {
-	// 	// 	return a.z-b.z;
-	// 	// });
-
-	// 	let uiList=new Array<{ui:CUI,pick:CRayMouse,z:number}>;
-
-	// 	let bestUI: {ui:CUI,pick:CRayMouse,z:number} = null;
-	// 	let bestZ = -Infinity;
-	// 	let bestDist = Infinity;
-
-	// 	for (let i = 0; i < gPickList.Size(); ++i)
-	// 	{
-	// 		const it = gPickList.Find(i);   // it.ui, it.z 가 있다고 가정
-	// 		const ui = it.ui as CUI;
-
-	// 		if (ui == null) continue;
-
-
-	// 		// 오버레이는 무조건 넣기
-	// 		if (ui.mOverlay === true)
-	// 		{
-	// 			uiList.push(it);
-	// 			continue;
-	// 		}
-	// 		// z가 더 크면 교체
-	// 		if (it.z > bestZ)
-	// 		{
-	// 			bestZ = it.z;
-	// 			bestUI = it;
-	// 			bestDist = CMath.V3Distance(ui.GetPos(), it.pick.ray.GetPosition());
-	// 		}
-	// 		// z가 같으면 더 가까운 걸 선택
-	// 		else if (it.z == bestZ)
-	// 		{
-	// 			const dist = CMath.V3Distance(ui.GetPos(), it.pick.ray.GetPosition());
-	// 			if (dist < bestDist)
-	// 			{
-	// 				bestUI = it;
-	// 				bestDist = dist;
-	// 			}
-	// 		}
-
-			
-	// 	}
-
-
-	// 	if (bestUI != null && uiList.indexOf(bestUI) === -1)
-	// 		uiList.push(bestUI);
-		
-
-	// 	for(let it of uiList)
-	// 	{
-	// 		var pressChk = false;
-	// 		it.ui.mPressPos=null;
-			
-			
-	// 		let ev=CEvent.eType.Null;
-			
-				
-				
-	// 		if(it.pick.mouse.press)
-	// 		{
-				
-	// 			ev=CEvent.eType.Press;
-	// 			if(it.ui.mFirstRayMs==null)
-	// 			{
-	// 				it.ui.mFirstRayMs=it.pick.Export();
-	// 				let ctr=CMath.V3SubV3(it.ui.mFirstRayMs.ray.GetPosition(),it.ui.GetPos());
-	// 				it.ui.mFirstRayMs.ray.SetOriginal(ctr);
-	// 			}
-					
-	// 		}
-	// 		else
-	// 			ev=CEvent.eType.Pick;
-
-
-			
-
-			
-	// 		if(it.ui.mLastPickMouse!=null && it.u==null)
-	// 		{
-	// 			let m=this.mFrame.Input().GetMouseKey(this.mLastPickMouse.mouse.key);
-	// 			if(m!=null && m.press && this.mPressTraking && this.mFirstRayMs!=null)
-	// 			{
-	// 				ev=CEvent.eType.Press;
-	// 				this.mLastPickMouse.mouse.Import(m);
-	// 				this.mPick=this.mLastPickMouse;
-	// 				//
-	// 			}
-	// 			else
-	// 			{
-	// 				for(let i=0;i<gUIPDepth.length;++i)
-	// 				{
-	// 					if(gUIPDepth[i]==this)
-	// 					{
-	// 						gUIPDepth.splice(i,1);
-	// 						break;
-	// 					}
-	// 				}
-	// 			}
-
-			
-	// 		}
-			
-	// 		if(this.mLastEvent==CEvent.eType.Press && ev==CEvent.eType.Pick)
-	// 		{
-	// 			this.mLastEvent=CEvent.eType.Click;
-	// 			this.mClickEvent.Call(this);
-	// 		}
-	// 		else
-	// 			this.mLastEvent=ev;
-
-	// 		if(this.mFirstRayMs!=null && ev==CEvent.eType.Null)
-	// 		{
-	// 			this.mFirstRayMs=null;
-	// 		}
-				
-	// 		if(ev==CEvent.eType.Press)
-	// 		{	
-	// 			this.mPressEvent.Call(this);
-	// 			var mx=this.mPick.mouse.x-this.mFirstRayMs.mouse.x;
-	// 			var my=this.mPick.mouse.y-this.mFirstRayMs.mouse.y;
-				
-	// 			let ctr=this.mFirstRayMs.ray.GetOriginal();
-				
-				
-				
-
-	// 			this.mPressPos=new CVec3(mx+ctr.x,my+ctr.y);
-
-
-	// 		}
-			
-
-
-	// 		this.mLastPickMouse=this.mPick;
-	// 		this.mPick=null;
-	// 	}
-		
-
-	// }
+	
 
 
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -238,7 +99,7 @@ export class CUI extends CSubject
 		return super.IsShould(_member,_type);
 	}
 	
-	public ImportCJSON(_json: CJSON) 
+	public override ImportCJSON(_json: CJSON) 
 	{
 		var wt=super.ImportCJSON(_json);
 		//this.m_update=false;
@@ -265,7 +126,7 @@ export class CUI extends CSubject
 
 		return wt;
 	}
-	public Export(_copy=true,_resetKey=true): this 
+	public override Export(_copy=true,_resetKey=true): this 
 	{
 		var wt=super.Export(_copy,_resetKey);
 
@@ -283,9 +144,9 @@ export class CUI extends CSubject
 	{
 		super();
 	}
-	SetCamResize(_enable : boolean)
+	SetCamZoomResize(_enable : boolean)
 	{
-		this.mCamResize=_enable;
+		this.mCamZoomResize=_enable;
 	}
 	SetPressTraking(_enable : boolean)
 	{
@@ -317,7 +178,7 @@ export class CUI extends CSubject
 		this.mUpdateAnchor=true;
 		//this.m_camResize=true;
 	}
-	SetEnable(_show)
+	override SetEnable(_show)
 	{
 		super.SetEnable(_show);
 		//this.SetEnable(_show);
@@ -516,17 +377,25 @@ export class CUI extends CSubject
        
 
 		let zoom=(1/cam.mZoom);
-		let sizeX=(bound.mMax.x * this.mSca.x)*zoom;
-		let sizeY=(bound.mMax.y * this.mSca.y)*zoom;
+		let sizeX=Math.round((bound.mMax.x * this.mSca.x)*zoom);
+		let sizeY=Math.round((bound.mMax.y * this.mSca.y)*zoom);
 		pos.x=sizeX * -this.mAnchorXType+this.mAnchorXLen * -this.mAnchorXType;
 		pos.y=sizeY * -this.mAnchorYType+this.mAnchorYLen * -this.mAnchorYType;
 		//pos.x*=zoom;
 		//pos.y*=zoom;
 		if(this.mAnchorXType>0)	pos.x+=width;
 		if(this.mAnchorYType>0)	pos.y+=height;
-		
+
+		// // 소수점 제거하여 픽셀 정렬 (떨림 방지)
+		// pos.x = Math.round(pos.x);
+		// pos.y = Math.round(pos.y);
+
 		pos=cam.ScreenToWorld2DPoint(pos.x,pos.y);
-		
+
+		// ScreenToWorld2DPoint 후에도 소수점 제거
+		pos.x = Math.trunc(pos.x);
+		pos.y = Math.trunc(pos.y);
+
         super.SetPos(pos,true);
         this.mUpdateAnchor = false;
 	}
@@ -535,9 +404,9 @@ export class CUI extends CSubject
 		super.SetPos(_pos,_reset);
 		this.mUpdateAnchor=true;
 	}
-	override SubjectUpdate(_delay)
+	override SubjectUpdate(_update : CUpdate)
 	{
-		super.SubjectUpdate(_delay);
+		super.SubjectUpdate(_update);
 
 		if(this.mDebugMode!=null)
 		{
@@ -574,7 +443,7 @@ export class CUI extends CSubject
 		if(this.mUIPT.mRenPT.length>0)
 		{
 			let cam = this.mUIPT.mRenPT[0].mCam;
-			if(this.mCamResize && Math.abs(cam.mZoom-this.mSca.x)>0.001)
+			if(this.mCamZoomResize && Math.abs(cam.mZoom-this.mSca.x)>0.001)
 			{
 				
 				this.SetSca(new CVec3(cam.mZoom,cam.mZoom,cam.mZoom));
@@ -632,6 +501,13 @@ export class CUI extends CSubject
 			let aDepth=this.GetPt().GetRenderPass()[0].mPriority+this.GetPt().GetFMat().z;
 			for(let i=0;i<gUIPDepth.length;++i)
 			{
+				if(gUIPDepth[i]!=this && gUIPDepth[i].mPressTraking)
+				{
+					push=false;
+					ev=CEvent.eType.Null;
+					this.mPick=null;
+					break;
+				}
 				
 				if(gUIPDepth[i]==this)
 				{
@@ -648,7 +524,7 @@ export class CUI extends CSubject
 						let aDist=CMath.V3Distance(this.mPick.ray.GetPosition(),this.GetPos());
 						let bDist=CMath.V3Distance(gUIPDepth[i].mLastPickMouse.ray.GetPosition(),gUIPDepth[i].GetPos());
 
-						//CConsol.Log(this.Key()+" : "+aDist+" "+gUIPDepth[i].Key()+" : "+bDist);
+						CConsol.Log(this.Key()+" : "+aDist+" "+gUIPDepth[i].Key()+" : "+bDist);
 						if(aDist>bDist)
 						{
 							push=false;
@@ -707,11 +583,61 @@ export class CUI extends CSubject
 			// 	}
 			// }
 		}
-		
-		if(this.mLastEvent==CEvent.eType.Press && ev==CEvent.eType.Pick)
+		if(this.mDbOn)
 		{
-			this.mLastEvent=CEvent.eType.Click;
-			this.mClickEvent.Call(this);
+			this.mDbTime-=_update.DeltaTime();
+			if(this.mDbTime<=0)
+			{
+				this.mLastEvent=CEvent.eType.Click;
+				this.mClickEvent.Call(this);
+				this.mDbTime=0;
+				this.mDbOn=false;
+				//CConsol.Log("Click");
+			}
+		}
+		if(this.mLastEvent==CEvent.eType.Press)
+		{
+			
+			if(ev==CEvent.eType.Pick)
+			{
+				if(this.mDbClick!=0)
+				{
+					if(this.mDbOn==false)
+					{
+						this.mDbOn=true;
+						this.mDbTime=this.mDbClick;
+						this.mLastEvent=CEvent.eType.Null;
+					}
+					else
+					{
+						
+						if(this.mDbTime>0)
+						{
+							this.mLastEvent=CEvent.eType.DoubleClick;
+							this.mClickEvent.Call(this);
+							this.mDbTime=0;
+							this.mDbOn=false;
+							//CConsol.Log("DoubleClick");
+						}
+					}
+					
+
+				}
+				else
+				{
+					this.mLastEvent=CEvent.eType.Click;
+					this.mClickEvent.Call(this);
+					//CConsol.Log("Click");
+				}
+			}
+			else if(ev==CEvent.eType.Null && this.mPressTraking)
+			{
+				this.mLastEvent=CEvent.eType.Click;
+				this.mClickEvent.Call(this);
+			}
+			
+
+			
 		}
 		else
 			this.mLastEvent=ev;
@@ -777,7 +703,7 @@ export class CUIText extends CUI
 		}
 		this.mUpdate=true;
 	}
-	SubjectUpdate(_delay: any): void 
+	override SubjectUpdate(_delay: any): void 
 	{
 		
 		if (this.mUpdate && this.mText!=null)
@@ -810,12 +736,12 @@ export class CUIText extends CUI
 		super.SubjectUpdate(_delay);
 		if(this.mUpdate) this.mUpdate=false;
 	}
-	public Export(_copy=true,_resetKey=true) 
+	public override Export(_copy=true,_resetKey=true) 
 	{
 		this.mUIPT.SetTexture("");
 		return super.Export(_copy,_resetKey);
 	}
-	SetFrame(_fw: CFrame): void {
+	override SetFrame(_fw: CFrame): void {
 		if(_fw!=null && this.mText!=null)
 			CFont.TextToTexName(_fw.Ren(),this.mText,this.mFontOption);
 		super.SetFrame(_fw);
@@ -845,7 +771,7 @@ export class CUIPicture extends CUI
 			this.PushComp(this.mUIPT);
 		}
 	}
-	SubjectUpdate(_delay: any): void 
+	override SubjectUpdate(_delay: any): void 
 	{
 		
 		if (this.mUpdate && this.mTextureKey!=null)
@@ -911,7 +837,7 @@ export class CUIButtonImg extends CUI
 			this.PushComp(this.mUIPT);
 		}
 	}
-	SubjectUpdate(_delay)
+	override SubjectUpdate(_delay)
 	{
 		
 		if (this.mUpdate)
@@ -960,7 +886,7 @@ export class CUIButtonImg extends CUI
 
 
 	}
-	SetFrame(_fw: CFrame): void {
+	override SetFrame(_fw: CFrame): void {
 		super.SetFrame(_fw);
 		if(this.mFrame!=null)
 		{
@@ -997,7 +923,7 @@ export class CUIButtonRGBA extends CUI
 			this.PushComp(this.mUIPT);
 		}
 	}
-	SubjectUpdate(_delay)
+	override SubjectUpdate(_delay)
 	{
 		
 		if (this.mUpdate)
@@ -1052,7 +978,7 @@ export class CUIProgressBar extends CUI
 		super();
 		
 	}
-	public ImportCJSON(_json: CJSON) 
+	public override ImportCJSON(_json: CJSON) 
 	{
 		let result = super.ImportCJSON(_json);
 		let ptVec = result.FindComps(CPaint2D);
@@ -1143,7 +1069,7 @@ export class CUIProgressBar extends CUI
 		if(!this.mFrame) return;
 		this.SetSize(_xLen, this.mFrame.PF().mHeight);
 	}
-	SubjectUpdate(_delay: any): void 
+	override SubjectUpdate(_delay: any): void 
 	{
 		
 		if (this.mUpdate)
@@ -1210,7 +1136,7 @@ export class CUiHTML extends CUI
 			this.PushComp(this.mUIPT);
 		}
 	}
-	Update(_update: CUpdate): void {
+	override Update(_update: CUpdate): void {
 		super.Update(_update);
 
 		if (this.mUICL == null || this.mCLInit) 

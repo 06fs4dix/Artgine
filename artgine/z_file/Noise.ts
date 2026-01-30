@@ -1,29 +1,12 @@
 import { SDF } from "./SDF";
 import { 
-    CMat, CVec2, CVec3, CVec4, 
-    abs, floor, fract, mix, mod,
-    V2AddV2, V2Mod, V2MulFloat, V2MulV2, V2SubV2,
-    V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3,
+    CMat, CVec2, CVec3, CVec4, CMat3,
+    abs, floor, mix, mod,
+    V2Mod,
+    V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3, V3MulMat3Normal, V3Dot, V3SubV3, V3Step, V3Min, V3Max, V3Mod,
+    V4MulV4, V4SubV4, V4AddV4, V4MulFloat, V4Floor, V4Abs, V4Step, V4Max, V4Dot, V4Mod,
     Sam2DToV4, FloatToInt,
     Hash13,
-    CMat3,
-    V3MulMat3Normal,
-    V3Dot,
-    V3SubV3,
-    V3Step,
-    V3Min,
-    V3Max,
-    V4MulV4,
-    V4SubV4,
-    V4AddV4,
-    V4MulFloat,
-    V4Floor,
-    V4Abs,
-    V4Step,
-    V4Max,
-    V4Dot,
-    V4Mod,
-    V3Mod,
 } from "./Shader";
 
 // 디더링용 베이어 필터
@@ -55,12 +38,6 @@ export function NoiseValue3(_v : CVec3) : number
                         Hash13(V3AddV3(p,new CVec3(1,0,1))),f.x),
                    mix( Hash13(V3AddV3(p,new CVec3(0,1,1))), 
                         Hash13(V3AddV3(p,new CVec3(1,1,1))),f.x),f.y),f.z);
-}
-
-// 심플렉스 노이즈 함수
-function Permute(_x : CVec4) : CVec4
-{
-    return V4Mod(V4MulV4(V4AddV4(V4MulFloat(_x, 34.0), new CVec4(1.0,1.0,1.0,1.0)),_x), 289.0);
 }
 
 function NoiseSimplex3(_v : CVec3) : number
@@ -140,16 +117,111 @@ function NoiseSimplex3(_v : CVec3) : number
 
 function SampleNoise(_uvw : CVec3, _type : number) : number
 {
-    // uv 조금씩 다르게 적용
-    var xi : number = mod(floor(_uvw.x * 128.0), 128.0);
-    var yi : number = mod(floor(_uvw.y * 128.0), 128.0);
-    var zi : number = mod(floor(_uvw.z * 128.0), 128.0);
-    var offX : number = xi + mod(yi, 16.0) * 128.0;
-    var offY : number = floor(yi / 16.0) + floor(zi / 4.0) * 8.0;
+    var size : number = 128.0;
+    var coord : CVec3 = V3Mod(V3MulFloat(_uvw, size), size);
+    var i0 : CVec3 = V3Floor(coord);
+    
+    var offX : number = i0.x + mod(i0.y, 16.0) * 128.0;
+    var offY : number = floor(i0.y / 16.0) + floor(i0.z / 4.0) * 8.0;
     var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
-    var zMod4 : number = mod(zi, 4.0);
+    var zMod4 : number = mod(i0.z, 4.0);
+
     return zMod4 < 0.5 ? v4.x : (zMod4 < 1.5 ? v4.y : (zMod4 < 2.5 ? v4.z : v4.w));
 }
+// function SampleNoiseLinear(_uvw : CVec3, _type : number) : number
+// {
+//     var size : number = 128.0;
+//     var coord : CVec3 = V3Mod(V3MulFloat(_uvw, size), size);
+//     var i0 : CVec3 = V3Floor(coord);
+
+//     // tri-linear 방식
+//     var f : CVec3 = V3SubV3(coord, i0);
+//     var i1 : CVec3 = V3Mod(V3AddV3(i0, new CVec3(1.0, 1.0, 1.0)), 128.0);
+//     var zMod4_0 : number = mod(i0.z, 4.0);
+
+//     // 하단 샘플 1
+//     var offX_000 : number = i0.x + mod(i0.y, 16.0) * 128.0;
+//     var offY_000 : number = floor(i0.y / 16.0) + floor(i0.z / 4.0) * 8.0;
+//     var v4_000 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_000), offX_000);
+//     var sample_000 : number = zMod4_0 < 0.5 ? v4_000.x : (zMod4_0 < 1.5 ? v4_000.y : (zMod4_0 < 2.5 ? v4_000.z : v4_000.w));
+
+//     // 하단 샘플 2
+//     var offX_100 : number = i1.x + mod(i0.y, 16.0) * 128.0;
+//     var offY_100 : number = floor(i0.y / 16.0) + floor(i0.z / 4.0) * 8.0;
+//     var v4_100 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_100), offX_100);
+//     var sample_100 : number = zMod4_0 < 0.5 ? v4_100.x : (zMod4_0 < 1.5 ? v4_100.y : (zMod4_0 < 2.5 ? v4_100.z : v4_100.w));
+
+//     // 하단 샘플 3
+//     var offX_010 : number = i0.x + mod(i1.y, 16.0) * 128.0;
+//     var offY_010 : number = floor(i1.y / 16.0) + floor(i0.z / 4.0) * 8.0;
+//     var v4_010 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_010), offX_010);
+//     var sample_010 : number = zMod4_0 < 0.5 ? v4_010.x : (zMod4_0 < 1.5 ? v4_010.y : (zMod4_0 < 2.5 ? v4_010.z : v4_010.w));
+
+//     // 하단 샘플 4
+//     var offX_110 : number = i1.x + mod(i1.y, 16.0) * 128.0;
+//     var offY_110 : number = floor(i1.y / 16.0) + floor(i0.z / 4.0) * 8.0;
+//     var v4_110 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_110), offX_110);
+//     var sample_110 : number = zMod4_0 < 0.5 ? v4_110.x : (zMod4_0 < 1.5 ? v4_110.y : (zMod4_0 < 2.5 ? v4_110.z : v4_110.w));
+
+//     // 하단 샘플
+//     var sample_00 : number = mix(sample_000, sample_100, f.x);
+//     var sample_10 : number = mix(sample_010, sample_110, f.x);
+//     var sample_0 : number = mix(sample_00, sample_10, f.y);
+
+//     var sample_001 : number;
+//     var sample_101 : number;
+//     var sample_011 : number;
+//     var sample_111 : number;
+
+//     if(zMod4_0 > 2.5) {
+//         // 상하단 샘플이 다른 픽셀에 들어있음
+        
+//         // 상단 샘플 1
+//         var offX_001 : number = i0.x + mod(i0.y, 16.0) * 128.0;
+//         var offY_001 : number = floor(i0.y / 16.0) + floor(i1.z / 4.0) * 8.0;
+//         var v4_001 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_001), offX_001);
+//         sample_001 = v4_001.x;
+
+//         // 상단 샘플 2
+//         var offX_101 : number = i1.x + mod(i0.y, 16.0) * 128.0;
+//         var offY_101 : number = floor(i0.y / 16.0) + floor(i1.z / 4.0) * 8.0;
+//         var v4_101 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_101), offX_101);
+//         sample_101 = v4_101.x;
+
+//         // 상단 샘플 3
+//         var offX_011 : number = i0.x + mod(i1.y, 16.0) * 128.0;
+//         var offY_011 : number = floor(i1.y / 16.0) + floor(i1.z / 4.0) * 8.0;
+//         var v4_011 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_011), offX_011);
+//         sample_011 = v4_011.x;
+        
+//         // 상단 샘플 4
+//         var offX_111 : number = i1.x + mod(i1.y, 16.0) * 128.0;
+//         var offY_111 : number = floor(i1.y / 16.0) + floor(i1.z / 4.0) * 8.0;
+//         var v4_111 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY_111), offX_111);
+//         sample_111 = v4_111.x;
+//     }
+//     else {
+//         // 상하단 샘플이 같은 픽셀에 들어있음
+//         // 상단 샘플 1
+//         sample_001 = zMod4_0 < 0.5 ? v4_000.y : (zMod4_0 < 1.5 ? v4_000.z : v4_000.w);
+
+//         // 상단 샘플 2
+//         sample_101 = zMod4_0 < 0.5 ? v4_100.y : (zMod4_0 < 1.5 ? v4_100.z : v4_100.w);
+
+//         // 상단 샘플 3
+//         sample_011 = zMod4_0 < 0.5 ? v4_010.y : (zMod4_0 < 1.5 ? v4_010.z : v4_010.w);
+        
+//         // 상단 샘플 4
+//         sample_111 = zMod4_0 < 0.5 ? v4_110.y : (zMod4_0 < 1.5 ? v4_110.z : v4_110.w);
+//     }
+
+//     // 상단 샘플
+//     var sample_01 : number = mix(sample_001, sample_101, f.x);
+//     var sample_11 : number = mix(sample_011, sample_111, f.x);
+//     var sample_1 : number = mix(sample_01, sample_11, f.y);
+
+//     return mix(sample_0, sample_1, f.z);
+// }
 
 export function NoiseGet(_uvw : CVec3, _type : number) : number
 {
@@ -216,33 +288,23 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
         var zi : number = _uvw.z * 128.0;
         return NoiseSimplex3(new CVec3(xi, yi, zi));
     }
+    // else if(_type<SDF.eNoise.FBMLinear+0.5)
+    // {
+    //     // 회전 FBM
+    //     var matVec1 : CVec3 = new CVec3(0.0, 0.8, 0.6);
+    //     var matVec2 : CVec3 = new CVec3(-0.8, 0.36, -0.48);
+    //     var matVec3 : CVec3 = new CVec3(-0.6, -0.48, 0.64);
+    //     var mat : CMat3 = new CMat3(matVec1, matVec2, matVec3);
+
+    //     var fbm : number;
+    //     fbm += 0.500 * SampleNoiseLinear(_uvw, SDF.eNoise.Perlin); _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
+    //     fbm += 0.250 * SampleNoiseLinear(_uvw, SDF.eNoise.Perlin); _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
+    //     fbm += 0.125 * SampleNoiseLinear(_uvw, SDF.eNoise.Perlin);
+    //     return fbm;
+    // }
+    // else if(_type<SDF.eNoise.PerlinLinear+0.5)
+    // {
+    //     return SampleNoiseLinear(_uvw, SDF.eNoise.Perlin);
+    // }
     return 1.0;
-}
-
-// linear mix라서 z축은 믹싱 안됨
-// bilinear 구현하면 z축도 믹싱 가능(성능은 모르겠음)
-export function NoiseGetLinear(_uvw : CVec3, _type : number) : number
-{
-    var textureSize : number = 128.0;
-
-    var st: CVec2 = V2MulFloat(_uvw.xy, textureSize);
-
-    var i: CVec2 = new CVec2(floor(st.x), floor(st.y));
-    var f: CVec2 = new CVec2(fract(st.x), fract(st.y));
-
-    var u: CVec2 = V2MulV2(V2MulV2(f, f), V2SubV2(new CVec2(3.0, 3.0), V2MulFloat(f, 2.0)));
-
-    var invSize: number = 1.0 / textureSize;
-    var uv_00: CVec3 = new CVec3(V2MulFloat(i, invSize), _uvw.z);
-    var uv_10: CVec3 = new CVec3(V2MulFloat(V2AddV2(i, new CVec2(1.0, 0.0)), invSize), _uvw.z);
-    var uv_01: CVec3 = new CVec3(V2MulFloat(V2AddV2(i, new CVec2(0.0, 1.0)), invSize), _uvw.z);
-    var uv_11: CVec3 = new CVec3(V2MulFloat(V2AddV2(i, new CVec2(1.0, 1.0)), invSize), _uvw.z);
-
-    var a: number = NoiseGet(uv_00, _type);
-    var b: number = NoiseGet(uv_10, _type);
-    var c: number = NoiseGet(uv_01, _type);
-    var d: number = NoiseGet(uv_11, _type);
-
-    // X축 믹스 -> Y축 믹스 (Bilinear Interpolation)
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }

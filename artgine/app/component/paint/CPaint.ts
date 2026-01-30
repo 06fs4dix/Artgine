@@ -179,13 +179,15 @@ export class CPaint extends CComponent implements IMat
 		this.mWorldMatType=_type;
 		this.PushTag("worldType");
 	}
-	SetEnable(_val: boolean): void {
+	override SetEnable(_val: boolean): void {
+		
 		super.SetEnable(_val);
-		this.ClearCRPAuto();
+		if(this.mEnable!=_val)
+			this.ClearCRPAuto();
 	}
 	GetColorModel(){	return this.mColorModel;	}
 	GetAlphaModel(){	return this.mAlphaModel;	}
-	Icon(){		return "bi bi-paint-bucket";	}
+	override Icon(){		return "bi bi-paint-bucket";	}
 	RegistHeap(_F32A : Float32Array)
 	{
 		//this.m_heap.Push(_F32A);
@@ -201,7 +203,7 @@ export class CPaint extends CComponent implements IMat
 	// {
 	// 	return null;
 	// }
-	Destroy(): void {
+	override Destroy(): void {
 
 		if(this.GetRecycleType()!=null)
 		{
@@ -223,7 +225,7 @@ export class CPaint extends CComponent implements IMat
 		this.ClearBatch();
 		
 	}
-	Reset()
+	override Reset()
 	{
 		super.Reset();
 		this.mFMat.Unit();
@@ -376,7 +378,7 @@ export class CPaint extends CComponent implements IMat
 		
 	}
 	
-	SetOwner(_obj :CSubject)
+	override SetOwner(_obj :CSubject)
 	{
 		super.SetOwner(_obj);
 		this.ClearCRPAuto();
@@ -956,7 +958,7 @@ export class CPaint extends CComponent implements IMat
 		//this.mBoundFMatR*=1.5;
 	}
 
-	Prefab(_owner : CSubject)
+	override Prefab(_owner : CSubject)
 	{
 		if(this.mAutoLoad!=null)
 		{
@@ -967,7 +969,7 @@ export class CPaint extends CComponent implements IMat
 			}
 		}
 	}
-	Start()
+	override Start()
 	{
 		// //임시 코드
 		// if(this.mTag.has("CAModel"))
@@ -980,7 +982,7 @@ export class CPaint extends CComponent implements IMat
 		//this.InitPaint();
 		
 	}
-	StartChk(): boolean 
+	override StartChk(): boolean 
 	{
 		this.InitChk();
 		if(this.mStartChk==true && this.mInit==true)
@@ -992,7 +994,7 @@ export class CPaint extends CComponent implements IMat
 		return false;
 			
 	}
-	Update(_update : CUpdate)
+	override Update(_update : CUpdate)
 	{
 		
 		

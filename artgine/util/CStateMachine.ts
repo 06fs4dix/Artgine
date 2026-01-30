@@ -3,7 +3,8 @@ import { CArray } from "../basic/CArray.js";
 import { CClass } from "../basic/CClass.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CObject } from "../basic/CObject.js";
-import { CAction, CCondition } from "./CCondition.js";
+import { CAction } from "./CAction.js";
+import { CCondition } from "./CCondition.js";
 import { CSamplerTimer } from "./CSampler.js";
 
 
@@ -30,7 +31,7 @@ export class CSMP extends CObject
     mAnd =new Array<CCondition>;
     mOr =new Array<CCondition>;
     mExcute=new Array<CAction>;
-    ImportCJSON(_json: CJSON): this {
+    override ImportCJSON(_json: CJSON): this {
         let json=_json.mDocument;
         let and=json["mAnd"]==null?json["and"]:json["mAnd"];
         if(and!=null)
@@ -101,11 +102,13 @@ export class CStateMachine extends CObject
 {
     mPattern=new Array<CSMP>;
     mState=new CObject();
-    mExcuteList=new CArray<CAction>();
-    mExcuteLock : CAction=null;
-    mUpdateOffset=0;
+    private mExcuteList=new CArray<CAction>();
+    private mExcuteSet=new Set<CAction>();
+    private mExcuteLock : CAction=null;
+    
     //mExcuteData=new Map<>
 
+    SetState(_state : CObject){ this.mState=_state; }
     GetState(){ return this.mState; }
     PushPattern(_p : CSMP|Object|Array<Object>)
     {
@@ -145,18 +148,28 @@ export class CStateMachine extends CObject
     PatternUpdate()
     {
         if(this.mExcuteList.Size()!=0)  return;
-        this.mUpdateOffset++;
+
         for(let pat of this.mPattern)
         {
             
             if(pat.IsCondition(this.mState))
             {
                 for(let ac of pat.mExcute)
+                {
                     this.mExcuteList.Push(ac);
+                    this.mExcuteSet.delete(ac);
+                }
+                    
+                
             }
         }
+        for(let action of this.mExcuteSet)
+        {
+            action.Reset();
+        }
+        this.mExcuteSet.clear();
     }
-    async ExcuteListUpdate(_target,_delay,_async=false)
+    async ExcuteListUpdate(_target,_async=false)
     {
         if(this.mExcuteLock!=null)  return;
 
@@ -165,11 +178,13 @@ export class CStateMachine extends CObject
             this.mExcuteLock=this.mExcuteList.Find(i);
             if(_async)
             {
-                await this.mExcuteLock.Excute(_target,_delay,this.mUpdateOffset,_async)
+                await this.mExcuteLock.Excute(_target,_async)
             }
             else
-                this.mExcuteLock.Excute(_target,_delay,this.mUpdateOffset);
+                this.mExcuteLock.Excute(_target);
+            this.mExcuteSet.add(this.mExcuteLock);
         }
+        
         this.mExcuteList.Clear();
         this.mExcuteLock=null;
     }

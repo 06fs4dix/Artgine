@@ -68,6 +68,7 @@ export class CRenderer
 		this.mUniToSam2d.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
 		this.mUniToSam2d.CreateBuf();
 		this.BuildTexture(this.mUniToSam2d);
+		this.mUniToSam2d.GetBuf().length=0;
 		this.mRes.Push(this.mUniToSam2dKey,this.mUniToSam2d);
 	}
 	SInter()	{	return this.mShaderInterpret;	}
@@ -203,34 +204,32 @@ export class CRendererGL extends CRenderer
 	public mXRSize=new CVec2();
 
 	//x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
-	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
+	override SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
 	{
 
 	}
-	TexBindReset()
+	override TexBindReset()
 	{
 		
 	}
-	BlitDepth(_read : CTexture,_draw : CTexture=null)
+	override BlitDepth(_read : CTexture,_draw : CTexture=null)
 	{
 		
 	}
-	BlitColor(_read : CTexture,_draw : CTexture=null)
+	override BlitColor(_read : CTexture,_draw : CTexture=null)
 	{
 		
 	}
-	Begin(_tex : CTexture=null,_2d=false,_rtUse:Set<number>=null,_rtLevel=0)
+	override Begin(_tex : CTexture=null,_2d=false,_rtUse:Set<number>=null,_rtLevel=0)
 	{	
 		
 		return false;	
 	}
-	End(_tex : CTexture=null,_rtLevel=0)
+	override End(_tex : CTexture=null,_rtLevel=0)
 	{
 		
 	}
-	GetMainFrameTex() {
-		return this.mMainFrameTex;
-	}
+	override GetMainFrameTex() {		return this.mMainFrameTex;	}
 	SetXR(_frame,_eye)
 	{
 		this.mXRFrame=_frame;
@@ -245,7 +244,7 @@ export class CRendererGL extends CRenderer
 		
 	}
 	//Texture==========================================================================
-	async BuildTexture(pa_tex : CTexture)
+	override async BuildTexture(pa_tex : CTexture)
 	{
 		
 	}
@@ -292,16 +291,16 @@ export class CRendererGL extends CRenderer
 	{
 
 	}
-	BuildMeshAutoFix(mesh : CMesh,_drawTree : CTree<CMeshDrawNode>,_vf : CShader)
+	override BuildMeshAutoFix(mesh : CMesh,_drawTree : CTree<CMeshDrawNode>,_vf : CShader)
 	{
 		
 	}
-	BuildMeshDrawNodeAutoFix(_meshDraw : CMeshDrawNode,_vf : CShader,_info : CMeshCreateInfo)
+	override BuildMeshDrawNodeAutoFix(_meshDraw : CMeshDrawNode,_vf : CShader,_info : CMeshCreateInfo)
 	{
 	
 	}
 	//shader===================================================================================================
-	ShaderComplie(_shader : CShader)
+	override ShaderComplie(_shader : CShader)
 	{
 		
 	}
@@ -315,21 +314,21 @@ export class CRendererGL extends CRenderer
 		
 	}
 
-	SendGPU(_vf : CShader,_value : any,_keyOff : any=null,_eachAttach=null,_off=null)
+	override SendGPU(_vf : CShader,_value : any,_keyOff : any=null,_eachAttach=null,_off=null)
 	{
 		
 		
 	}
 
-	VertexArrayBind(_vf : CShader,_meshDraw : CMeshDrawNode)
+	override VertexArrayBind(_vf : CShader,_meshDraw : CMeshDrawNode)
     {
 		
     }
-	MeshDrawNodeRender(_vf : CShader,_mesh : CMeshDrawNode,_insCount : number=0,_bind=true)
+	override MeshDrawNodeRender(_vf : CShader,_mesh : CMeshDrawNode,_insCount : number=0,_bind=true)
 	{
 		
 	}
-	UseShader(_vf : CShader)
+	override UseShader(_vf : CShader)
 	{
 		return false;
 	}

@@ -1,13 +1,18 @@
+import { IListener } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
+import { CConsol } from "../../artgine/basic/CConsol.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
+import { CEvent } from "../../artgine/basic/CEvent.js";
 import { CModal } from "../../artgine/basic/CModal.js";
+import { CObject } from "../../artgine/basic/CObject.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
 import { CTooltip } from "../../artgine/util/CTooltip.js";
 
-export class CInventory
+export class CInventory extends CObject
 {
     constructor(_itemKey)
     {
+        super();
         this.mKey=CUniqueID.Get();
         this.mItemKey=_itemKey;
         this.mDate=new Date().getTime();
@@ -17,13 +22,18 @@ export class CInventory
     mAmount=1;
     mItemKey="";
     mDate : number;
+    override Export(_copy: boolean=true, _resetKey: boolean=true): this {
+        let data=super.Export();
+        if(_resetKey)   data.mKey=CUniqueID.Get();
+        return data;
+    }
 }
 
-export class CItem
+export class CItem extends CObject
 {
     constructor(_img,_title,_context)
     {
-        //this.mKey=_key;
+        super();
         this.mImg=_img;
         this.mTitle=_title;
         this.mContext=_context;
@@ -32,39 +42,62 @@ export class CItem
     mImg="";
     mTitle="";
     mContext="";
+    mType="";
 }
 
 
 
 
+var gMoveInvenEvent : CEvent=new CEvent();
+export function RegisterMoveInvenViewEvent(_event : CEvent){  gMoveInvenEvent=_event;}
 
-
-export class CInvenMgr
+export class CInvenMgr extends CObject implements IListener
 {
+    On(_key: any, _event: any, _target: any=null) {
+        this.mEventMap.set(_key,CEvent.ToCEvent(_event));
+    }
+    Off(_key: any, _target: any) {
+        throw new Error("Method not implemented.");
+    }
+    GetEvent(_key: any, _target: any=null) {
+        return this.mEventMap.get(_key);
+    }
     mInvenArr = new Array<CInventory>();
+    mEventMap=new Map<string,CEvent>();
 
     GetInvenArr()   {   return this.mInvenArr;  }
-    Push(_inven: CInventory)
+    override IsShould(_member: string, _type: CObject.eShould): boolean {
+        if(_member=="mEventMap")    return false;
+
+        return super.IsShould(_member,_type);
+    }
+    Push(_inven: CInventory,_overlap=true)
     {
         if (_inven == null) return null;
 
-        for (let inven of this.mInvenArr)
+        if(_overlap)
         {
-            if (inven.mItemKey === _inven.mItemKey)
+            for (let inven of this.mInvenArr)
             {
-                inven.mAmount += _inven.mAmount;
-                return inven;
+                if (inven.mItemKey === _inven.mItemKey)
+                {
+                    inven.mAmount += _inven.mAmount;
+                    return inven;
+                }
             }
         }
+        
 
         this.mInvenArr.push(_inven);
+        
+        CEvent.ToCEvent(this.GetEvent("Push")).Call(_inven,this.mInvenArr.length-2);
         return _inven;
     }
-
+   
     // _amount > 0 : 있으면 추가, 없으면 생성 후 추가. 성공 시 "넣어진 인벤" 리턴
     // _amount < 0 : 있으면 차감, 부족하면 null. 성공 시 "빠진 수량"을 담은 새 CInven 리턴
     // _ amount ==0 : 같은 itemKey찾기
-    Find(_itemKey: string, _amount: number=0)
+    FindItem(_itemKey: string, _amount: number=0)
     {
         if (_amount === 0)
         {
@@ -114,6 +147,18 @@ export class CInvenMgr
         return null;
     }
 
+    FindInven(_key: string)
+    {
+        for (let i = 0; i < this.mInvenArr.length; ++i)
+        {
+            if (this.mInvenArr[i].mKey === _key)
+            {
+                return this.mInvenArr[i];
+            }
+        }
+        return null;
+    }
+
     // inven key가 같으면 제거하고 리턴, 없으면 null
     Remove(_key: string)
     {
@@ -123,23 +168,58 @@ export class CInvenMgr
             {
                 const removed = this.mInvenArr[i];
                 this.mInvenArr.splice(i, 1);
+                CEvent.ToCEvent(this.GetEvent("Remove")).Call(removed);
                 return removed;
             }
         }
         return null;
     }
+    Swap(_DragKey : string,_DropKey : string)
+    {
+        let Drag=this.FindInven(_DragKey);
+        let Drop=this.FindInven(_DropKey);
+        if(Drag==null || Drop==null)  return;
+
+        if (Drag.mItemKey == Drop.mItemKey)
+        {
+            Drop.mAmount+=Drag.mAmount;
+            this.Remove(_DragKey);
+        }
+        else
+        {
+            let DragIndex=0;
+            let DropIndex=0;
+            for (let i = 0; i < this.mInvenArr.length; ++i)
+            {
+                if (this.mInvenArr[i].mKey === Drag.mKey)       DragIndex=i;
+            }
+            for (let i = 0; i < this.mInvenArr.length; ++i)
+            {
+                if (this.mInvenArr[i].mKey === Drop.mKey)       DropIndex=i;
+            }
+            this.mInvenArr[DragIndex]=Drop;
+            this.mInvenArr[DropIndex]=Drag;
+        }
+        
+    }
+    Event
 }
 export class CItemMgr
 {
     mItemMap=new Map<string,CItem>();
-    Push(_key : string,_item : CItem);
-    Push(_item : CItem)
-    Push(_a : any,_b : any=null)
+    Push<T extends CItem>(_key : string,_item : T): T;
+    Push<T extends CItem>(_item : T): T
+    Push<T extends CItem>(_a : any,_b : any=null) : T
     {
         if(_b==null)
+        {
             this.mItemMap.set(CUniqueID.Get(),_a);
+            return _a;
+        }
+            
         else
             this.mItemMap.set(_a,_b);
+        return _b;
     }
     Find(_key : string)
     {
@@ -152,31 +232,24 @@ export class CInvenViewer extends CModal
     mToolTipArr=new Array<CTooltip>();
     //mInvenArr : Array<CInventory>=[];
     //mItemArr : Array<CItem>=[];
-    mInvenMgr : CInvenMgr=null;
+
+    
+    mBagInvenMgr : CInvenMgr=null;
+    //mWearInvenMgr : CInvenMgr=null;
     mItemMgr : CItemMgr=null;
     mGrid=false;
     mInvenSortType=0;
+    
     //mItemMap = new Map<string, CItem>();
-    mTitleHTMLFun=(_inven : CInventory,_item : CItem)=>{
+    mTitleHTMLFun=(_inven : CInventory,_item : CItem,_viewer : CInvenViewer)=>{
 
         return _item.mTitle+" ["+_inven.mAmount+"]";
     };
-    mContentHTMLFun : any=(_inven : CInventory,_item : CItem)=>{
+    mContentHTMLFun : any=(_inven : CInventory,_item : CItem,_viewer : CInvenViewer)=>{
 
         return "<span>"+_item.mContext+"</span>";
     };
-    // mSortFun = (_a: CInventory, _b: CInventory) => {
-    //     const ta = this.mItemMap.get(_a.mItemKey)?.mTitle ?? "";
-    //     const tb = this.mItemMap.get(_b.mItemKey)?.mTitle ?? "";
-
-    //     const dir = this.mInvenSortType < 0 ? -1 : 1;
-
-    //     let c = ta.localeCompare(tb, "ko");
-    //     if (c !== 0) return c * dir;
-
-    //     c = (_a.mKey ?? "").localeCompare(_b.mKey ?? "");
-    //     return c * dir;
-    // };
+    
     mSortFun = (_a: CInventory, _b: CInventory) => {
         // sortType:
         //  ±1 : 시간(mDate)
@@ -227,9 +300,14 @@ export class CInvenViewer extends CModal
         return keyA.localeCompare(keyB) * dir;
     };
    
-    constructor()
+    constructor(_bagInvenMgr : CInvenMgr, _itemMgr : CItemMgr, _grid=false,_sort=1)
     {
         super();
+        this.mGrid=_grid;
+        this.mBagInvenMgr=_bagInvenMgr;
+        this.mItemMgr=_itemMgr;
+        this.mInvenSortType=_sort;
+
         this.SetTitle(CModal.eTitle.TextFullClose);
         this.SetCloseToHide(true);
 
@@ -282,23 +360,27 @@ export class CInvenViewer extends CModal
         this.Open();
         
         CDOM.ID(`${key}_viewer_list`).addEventListener("click",()=>{
-            this.Reset(this.mInvenMgr,this.mItemMgr,false,this.mSort);
+            this.mGrid=false;
+            this.Reset();
         });
         CDOM.ID(`${key}_viewer_grid`).addEventListener("click",()=>{
-            this.Reset(this.mInvenMgr,this.mItemMgr,true,this.mSort);
+            this.mGrid=true;
+            this.Reset();
         });
 
         CDOM.ID(`${key}_sort_acq`).addEventListener("click",()=>{
             let sortType = 1;
             if (Math.abs(this.mInvenSortType) === 1) sortType = -this.mInvenSortType;
-            this.Reset(this.mInvenMgr,this.mItemMgr,this.mGrid,sortType);
+            this.mInvenSortType=sortType;
+            this.Reset();
         });
         CDOM.ID(`${key}_sort_title`).addEventListener("click",()=>{
 
             let sortType = 2;
             if (Math.abs(this.mInvenSortType) === 2) sortType = -this.mInvenSortType;
 
-            this.Reset(this.mInvenMgr,this.mItemMgr,this.mGrid,sortType);
+            this.mInvenSortType=sortType;
+            this.Reset();
         });
         CDOM.ID(`${key}_search`).addEventListener("keyup",()=>{
             let value=CDOM.IDValue(`${key}_search`);
@@ -323,13 +405,10 @@ export class CInvenViewer extends CModal
         // const key=this.Key();
         // CDOM.IDValue(`${key}_search`,"");
     }
-    Reset(_invenMgr : CInvenMgr, _itemMgr : CItemMgr, _grid=false,_sort=1)
+    Reset()
     {
-        this.mGrid=_grid;
-        this.mInvenMgr=_invenMgr;
-        this.mItemMgr=_itemMgr;
-        this.mInvenSortType=_sort;
-        let InvetArr=[...this.mInvenMgr.GetInvenArr()];
+        
+        let InvetArr=[...this.mBagInvenMgr.GetInvenArr()];
         
 
         
@@ -342,8 +421,20 @@ export class CInvenViewer extends CModal
         {
             tooltip.Close();
         }
+        this.mToolTipArr.length=0;
       
-        if(_grid)
+        let DropEvent=(e: DragEvent)=>{
+            e.preventDefault();
+            const dropKey = (e.currentTarget as HTMLElement).id;
+            const pickKey = e.dataTransfer?.getData("text/plain") ?? "";
+            gMoveInvenEvent.Call(this.mBagInvenMgr.FindInven(pickKey),this.mBagInvenMgr.FindInven(dropKey));
+        };
+        let DragStartEvent=(e: DragEvent)=>{
+            const key = (e.currentTarget as HTMLElement).id;
+            e.dataTransfer.setData("text/plain", key);
+        };
+        
+        if(this.mGrid)
         {
             // ✅ 컨테이너에만 grid 적용 (칸 수는 폭에 따라 자동 증가/감소)
             // 셀 크기만 줄이고 싶으면 80px만 바꾸면 됨 (예: 64/72/96)
@@ -353,8 +444,10 @@ export class CInvenViewer extends CModal
                 "tag": "div",
                 "class": "p-0",
                 "style": `display:grid;grid-template-columns:repeat(auto-fill, ${cell}px);justify-content:start;`,
+                "id":this.mKey+"_inven",
                 "html": []
             };
+            
 
             for (let inven of InvetArr)
             {
@@ -367,6 +460,9 @@ export class CInvenViewer extends CModal
                     "type": "button",
                     "id": inven.mKey,
                     "class": "btn p-0 border bg-body rounded-2 overflow-hidden viewer_search",
+                    "draggable":true,
+                    "ondrop":DropEvent,
+                    "ondragstart":DragStartEvent,
                     "html": [
                         {
                             "tag": "div",
@@ -386,7 +482,7 @@ export class CInvenViewer extends CModal
                                             "tag": "div",
                                             "class": "small text-truncate w-100",
                                             "style": "font-size:.75rem;",
-                                            "text": " " + this.mTitleHTMLFun(inven, item)
+                                            "text": " " + this.mTitleHTMLFun(inven, item,this)
                                         }
                                     ]
                                 }
@@ -403,15 +499,16 @@ export class CInvenViewer extends CModal
         }
         else
         {
-            let body = {"tag":"ul","class":"list-group","html":[]};
+            let body = {"tag":"ul","class":"list-group","id":this.mKey+"_inven","html":[]};
 
             for(let inven of InvetArr)
             {
                 let item=this.mItemMgr.Find(inven.mItemKey);
-                let invenDiv={"tag":"li","class":"list-group-item viewer_search","id":inven.mKey,
+                let invenDiv={"tag":"li","class":"list-group-item viewer_search","draggable":true,"id":inven.mKey,
+                "ondrop":DropEvent,"ondragstart":DragStartEvent,
                 "html":[
                     {"tag":"img","src":item.mImg},
-                    {"tag":"span","html":" "+this.mTitleHTMLFun(inven,item)}
+                    {"tag":"span","html":" "+this.mTitleHTMLFun(inven,item,this)}
                 ]};
                 body.html.push(invenDiv);
 
@@ -433,8 +530,8 @@ export class CInvenViewer extends CModal
             "html":[
                 {"tag":"img","src":item.mImg,"class":"card-img-top d-block mx-auto pt-2","style": "width:32px;height:32px;object-fit:contain;"},
                 {"tag":"div","class":"card-body","html":[
-                    {"tag":"h5","class":"card-title","html":this.mTitleHTMLFun(inven,item)},
-                    {"tag":"p","class":"card-text","html":this.mContentHTMLFun(inven,item)}
+                    {"tag":"h5","class":"card-title","html":this.mTitleHTMLFun(inven,item,this)},
+                    {"tag":"p","class":"card-text","html":this.mContentHTMLFun(inven,item,this)}
                 ]}
             ]};
 
@@ -443,5 +540,7 @@ export class CInvenViewer extends CModal
     }
 }
 
+CClass.Push(CInventory);
+CClass.Push(CItem);
 CClass.Push(CItemMgr);
 CClass.Push(CInvenMgr);

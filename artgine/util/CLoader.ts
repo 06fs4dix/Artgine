@@ -45,7 +45,7 @@ export class CLoaderOption extends CObject
 	//public simplify=100;
 	
 	
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 		if(_pointer.member == "mMipMap") 
 		{
 			let textArr = [], valArr = [];

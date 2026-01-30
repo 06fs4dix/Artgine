@@ -25,7 +25,7 @@ export class CTextureInfo extends CObject
 	mFormat;
 	mCount;
 	
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 
 		
 	
@@ -90,7 +90,7 @@ export class CTexture extends CObject
 	{
 		super();
 	}
-	Icon(){		return "bi bi-image";	}
+	override Icon(){		return "bi bi-image";	}
 	LoaderOption() : string
 	{
 		return JSON.stringify({wrap:this.mWrap,filter:this.mFilter,mipMap:this.mMipMap});
@@ -197,7 +197,7 @@ export class CTexture extends CObject
 		}));
 		
 	}
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 		if(_pointer.member == "mMipMap") 
 		{
 			let textArr = [], valArr = [];

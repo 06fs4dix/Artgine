@@ -124,7 +124,7 @@ export class CAtlas extends CObject {
 		}
 		return CH5Canvas.GetNewTex();
 	}
-	EditHTMLInit(_div: HTMLDivElement): void {
+	override EditHTMLInit(_div: HTMLDivElement): void {
 		super.EditHTMLInit(_div);
 		// let inputElement = document.createElement('input');
 		// inputElement.type = 'file';

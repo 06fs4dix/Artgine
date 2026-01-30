@@ -150,6 +150,8 @@ export class COctree
 
     }
 }
+export type COctreeInsideHandler = (_ocData : COctreeData) => void;
+
 export class COctreeMgr
 {
 
@@ -234,7 +236,7 @@ export class COctreeMgr
         
         
     }
-    InsideBoxData(_bmin:CVec3, _bmax:CVec3, _results:Function,_data : any)
+    InsideBoxData(_bmin:CVec3, _bmax:CVec3, _results:COctreeInsideHandler,_data : any)
     {
         let odata=this.mOCDMap.get(_data);
         if(odata==null) return;
@@ -245,7 +247,7 @@ export class COctreeMgr
         }
         this.mOctree.InsideBox(_bmin, _bmax, _results,odata);
     }
-    InsideBox(_bmin:CVec3, _bmax:CVec3, _results:Function)
+    InsideBox(_bmin:CVec3, _bmax:CVec3, _results:COctreeInsideHandler)
     {
         this.mOctree.InsideBox(_bmin, _bmax, _results);
     }

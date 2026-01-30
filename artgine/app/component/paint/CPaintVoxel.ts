@@ -1,4 +1,5 @@
 import { CObject } from "../../../basic/CObject.js";
+import { CUtil } from "../../../basic/CUtil.js";
 import {CBound} from "../../../geometry/CBound.js";
 import {CVec2} from "../../../geometry/CVec2.js";
 import {CVec3} from "../../../geometry/CVec3.js";
@@ -79,7 +80,7 @@ export class CPaintVoxel extends CPaint
 	// 	//Start에 있어야 하지 않나?
 		
 	// }
-	EmptyRPChk()
+	override EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)
 		{
@@ -88,7 +89,8 @@ export class CPaintVoxel extends CPaint
 			this.mRenderPass=[rp];
 		}
 	}
-	Start(): void {
+	override Start(): void {
+		if(CUtil.IsNode())	return;
 		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],this.mMCI);
 	}
 	//6면이 한세트로 들어있어야 한다.
@@ -123,6 +125,8 @@ export class CPaintVoxel extends CPaint
 	}
 	Build(_arr : Array<CVoxPlane>)
 	{
+		if(CUtil.IsNode())	return;
+
 		var pbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Position)[0].bufF;
 		var ubuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.UV)[0].bufF;
 		var cbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Color)[0].bufF;
@@ -178,7 +182,7 @@ export class CPaintVoxel extends CPaint
 			this.mMCI);
 		
 	}
-	Render(_vf : CShader)
+	override Render(_vf : CShader)
 	{
 		this.mOwner.GetFrame().BMgr().BatchOn();
 		this.Common(_vf);
@@ -189,7 +193,7 @@ export class CPaintVoxel extends CPaint
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
 		this.mOwner.GetFrame().BMgr().BatchOff();
 	}
-	ClearCRPAuto(): void {
+	override ClearCRPAuto(): void {
 		super.ClearCRPAuto();
 	}
 }

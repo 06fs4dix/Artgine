@@ -411,7 +411,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 		return true;
     }
 
-	EditRefresh(_pt : CPointer=null)
+	protected EditRefresh(_pt : CPointer=null)
 	{
 		if(this["mObjectDiv"]!=null)
 		{
@@ -425,11 +425,11 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 		}
 		this.EditRefreshEx();	
 	}
-	EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+	protected EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 		this.EditFormEx(_pointer,_body,_input);
 	}
-	EditFormEx(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+	protected EditFormEx(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 
 	}
@@ -486,15 +486,15 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 
 	}
 	//자신에 객체에 변화가 있을때
-	EditChange(_pointer : CPointer,_child : boolean)
+	protected EditChange(_pointer : CPointer,_child : boolean)
 	{
 		
 	}
-	EditChangeEx(_pointer : CPointer,_child : boolean)
+	protected EditChangeEx(_pointer : CPointer,_child : boolean)
 	{
 
 	}
-	EditDrop(_object : CObject)
+	protected EditDrop(_object : CObject)
 	{
 		if(this.constructor.name==_object.constructor.name)
 		{
@@ -512,11 +512,11 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 
 	}
 
-	EditRefreshEx()
+	protected EditRefreshEx()
 	{
 
 	}
-	EditHTMLInit(_div: HTMLDivElement, _pointer: CPointer = null)
+	protected EditHTMLInit(_div: HTMLDivElement, _pointer: CPointer = null)
 	{
 		
 	}
@@ -554,6 +554,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	}
 	static NewImportCJSON(_cjson : CJSON,_newObj=null)
 	{
+		
 		if(_cjson.GetStr("class")!=null)
 		{
 			if(_newObj==null)

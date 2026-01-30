@@ -78,7 +78,6 @@ export class CCollider extends CGeometryComp
 	public mOneWayDir : CVec3=new CVec3();
 	public mOneWayArc : number=-1;
 
-	public mGI : CGeometryInfo=null;
 	public mGJK : CGJK_EPA= new CGJK_EPA();
 	//public mGJKShape : CGJKShape=null;
 	//public mBoundGJK :CBound =null;
@@ -124,7 +123,7 @@ export class CCollider extends CGeometryComp
 		
 
 	// }
-	Icon(){		return "bi bi-sign-railroad";	}
+	override Icon(){		return "bi bi-sign-railroad";	}
 	RegistHeap(_F32A : Float32Array)
 	{
 		//this.m_heap.Push(_F32A);
@@ -218,7 +217,7 @@ export class CCollider extends CGeometryComp
 		
 		return colList;
 	}
-	Update(_update: CUpdate) {
+	override Update(_update: CUpdate) {
 		if(this.mGI!=null)	this.mGI.mFixedComp.Push(this);
 
 		if(this.GetOwner().mUpdateRS!=CUpdate.eType.Not || this.mBW.mRadian==0)
@@ -226,7 +225,7 @@ export class CCollider extends CGeometryComp
 			this.mBW.Init(this.mBound,this.mOwner.GetMat());
 		}
 	}
-	BuildGI()
+	override BuildGI()
 	{
 		
 
@@ -242,7 +241,7 @@ export class CCollider extends CGeometryComp
 	{
 		return this.mBW.mWBound;
 	}
-	Prefab(_owner : CSubject)
+	override Prefab(_owner : CSubject)
 	{
 		if(this.mPaintLoad!=null)
 		{
@@ -255,12 +254,12 @@ export class CCollider extends CGeometryComp
 			}
 		}
 	}
-	Start(): void {
+	override Start(): void {
 		super.Start();
 		this.mBW.Init(this.mBound,this.GetOwner().GetMat());
 		this.mBW.UpdateMat(this.GetOwner().GetMat());
 	}
-	StartChk()
+	override StartChk()
 	{
 		let start=super.StartChk();
 		if(this.mPaintLoad!=null)
@@ -284,7 +283,7 @@ export class CCollider extends CGeometryComp
 		
 		return start;
 	}
-	SetOwner(_obj: any): void {
+	override SetOwner(_obj: any): void {
 		super.SetOwner(_obj);
 		if(this.mPaintLoad==null)
 			this.InitBound(this.mBound);
@@ -359,7 +358,7 @@ export class CCollider extends CGeometryComp
 	GetStairs()	{	return this.mStairs;	}
 	SetStairs(_stairs:boolean){ this.mStairs = _stairs;}
 	
-	Fixed(_update : CUpdate)
+	override Fixed(_update : CUpdate)
 	{
 		
 		

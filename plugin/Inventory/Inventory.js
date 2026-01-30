@@ -1,10 +1,13 @@
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
+import { CEvent } from "../../artgine/basic/CEvent.js";
 import { CModal } from "../../artgine/basic/CModal.js";
+import { CObject } from "../../artgine/basic/CObject.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
 import { CTooltip } from "../../artgine/util/CTooltip.js";
-export class CInventory {
+export class CInventory extends CObject {
     constructor(_itemKey) {
+        super();
         this.mKey = CUniqueID.Get();
         this.mItemKey = _itemKey;
         this.mDate = new Date().getTime();
@@ -13,9 +16,16 @@ export class CInventory {
     mAmount = 1;
     mItemKey = "";
     mDate;
+    Export(_copy = true, _resetKey = true) {
+        let data = super.Export();
+        if (_resetKey)
+            data.mKey = CUniqueID.Get();
+        return data;
+    }
 }
-export class CItem {
+export class CItem extends CObject {
     constructor(_img, _title, _context) {
+        super();
         this.mImg = _img;
         this.mTitle = _title;
         this.mContext = _context;
@@ -23,23 +33,44 @@ export class CItem {
     mImg = "";
     mTitle = "";
     mContext = "";
+    mType = "";
 }
-export class CInvenMgr {
+var gMoveInvenEvent = new CEvent();
+export function RegisterMoveInvenViewEvent(_event) { gMoveInvenEvent = _event; }
+export class CInvenMgr extends CObject {
+    On(_key, _event, _target = null) {
+        this.mEventMap.set(_key, CEvent.ToCEvent(_event));
+    }
+    Off(_key, _target) {
+        throw new Error("Method not implemented.");
+    }
+    GetEvent(_key, _target = null) {
+        return this.mEventMap.get(_key);
+    }
     mInvenArr = new Array();
+    mEventMap = new Map();
     GetInvenArr() { return this.mInvenArr; }
-    Push(_inven) {
+    IsShould(_member, _type) {
+        if (_member == "mEventMap")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    Push(_inven, _overlap = true) {
         if (_inven == null)
             return null;
-        for (let inven of this.mInvenArr) {
-            if (inven.mItemKey === _inven.mItemKey) {
-                inven.mAmount += _inven.mAmount;
-                return inven;
+        if (_overlap) {
+            for (let inven of this.mInvenArr) {
+                if (inven.mItemKey === _inven.mItemKey) {
+                    inven.mAmount += _inven.mAmount;
+                    return inven;
+                }
             }
         }
         this.mInvenArr.push(_inven);
+        CEvent.ToCEvent(this.GetEvent("Push")).Call(_inven, this.mInvenArr.length - 2);
         return _inven;
     }
-    Find(_itemKey, _amount = 0) {
+    FindItem(_itemKey, _amount = 0) {
         if (_amount === 0) {
             for (let inven of this.mInvenArr)
                 if (inven.mItemKey === _itemKey)
@@ -74,24 +105,61 @@ export class CInvenMgr {
         }
         return null;
     }
+    FindInven(_key) {
+        for (let i = 0; i < this.mInvenArr.length; ++i) {
+            if (this.mInvenArr[i].mKey === _key) {
+                return this.mInvenArr[i];
+            }
+        }
+        return null;
+    }
     Remove(_key) {
         for (let i = 0; i < this.mInvenArr.length; ++i) {
             if (this.mInvenArr[i].mKey === _key) {
                 const removed = this.mInvenArr[i];
                 this.mInvenArr.splice(i, 1);
+                CEvent.ToCEvent(this.GetEvent("Remove")).Call(removed);
                 return removed;
             }
         }
         return null;
     }
+    Swap(_DragKey, _DropKey) {
+        let Drag = this.FindInven(_DragKey);
+        let Drop = this.FindInven(_DropKey);
+        if (Drag == null || Drop == null)
+            return;
+        if (Drag.mItemKey == Drop.mItemKey) {
+            Drop.mAmount += Drag.mAmount;
+            this.Remove(_DragKey);
+        }
+        else {
+            let DragIndex = 0;
+            let DropIndex = 0;
+            for (let i = 0; i < this.mInvenArr.length; ++i) {
+                if (this.mInvenArr[i].mKey === Drag.mKey)
+                    DragIndex = i;
+            }
+            for (let i = 0; i < this.mInvenArr.length; ++i) {
+                if (this.mInvenArr[i].mKey === Drop.mKey)
+                    DropIndex = i;
+            }
+            this.mInvenArr[DragIndex] = Drop;
+            this.mInvenArr[DropIndex] = Drag;
+        }
+    }
+    Event;
 }
 export class CItemMgr {
     mItemMap = new Map();
     Push(_a, _b = null) {
-        if (_b == null)
+        if (_b == null) {
             this.mItemMap.set(CUniqueID.Get(), _a);
+            return _a;
+        }
         else
             this.mItemMap.set(_a, _b);
+        return _b;
     }
     Find(_key) {
         return this.mItemMap.get(_key);
@@ -99,14 +167,14 @@ export class CItemMgr {
 }
 export class CInvenViewer extends CModal {
     mToolTipArr = new Array();
-    mInvenMgr = null;
+    mBagInvenMgr = null;
     mItemMgr = null;
     mGrid = false;
     mInvenSortType = 0;
-    mTitleHTMLFun = (_inven, _item) => {
+    mTitleHTMLFun = (_inven, _item, _viewer) => {
         return _item.mTitle + " [" + _inven.mAmount + "]";
     };
-    mContentHTMLFun = (_inven, _item) => {
+    mContentHTMLFun = (_inven, _item, _viewer) => {
         return "<span>" + _item.mContext + "</span>";
     };
     mSortFun = (_a, _b) => {
@@ -146,8 +214,12 @@ export class CInvenViewer extends CModal {
             return c * dir;
         return keyA.localeCompare(keyB) * dir;
     };
-    constructor() {
+    constructor(_bagInvenMgr, _itemMgr, _grid = false, _sort = 1) {
         super();
+        this.mGrid = _grid;
+        this.mBagInvenMgr = _bagInvenMgr;
+        this.mItemMgr = _itemMgr;
+        this.mInvenSortType = _sort;
         this.SetTitle(CModal.eTitle.TextFullClose);
         this.SetCloseToHide(true);
         const key = this.Key();
@@ -197,22 +269,26 @@ export class CInvenViewer extends CModal {
         this.Hide();
         this.Open();
         CDOM.ID(`${key}_viewer_list`).addEventListener("click", () => {
-            this.Reset(this.mInvenMgr, this.mItemMgr, false, this.mSort);
+            this.mGrid = false;
+            this.Reset();
         });
         CDOM.ID(`${key}_viewer_grid`).addEventListener("click", () => {
-            this.Reset(this.mInvenMgr, this.mItemMgr, true, this.mSort);
+            this.mGrid = true;
+            this.Reset();
         });
         CDOM.ID(`${key}_sort_acq`).addEventListener("click", () => {
             let sortType = 1;
             if (Math.abs(this.mInvenSortType) === 1)
                 sortType = -this.mInvenSortType;
-            this.Reset(this.mInvenMgr, this.mItemMgr, this.mGrid, sortType);
+            this.mInvenSortType = sortType;
+            this.Reset();
         });
         CDOM.ID(`${key}_sort_title`).addEventListener("click", () => {
             let sortType = 2;
             if (Math.abs(this.mInvenSortType) === 2)
                 sortType = -this.mInvenSortType;
-            this.Reset(this.mInvenMgr, this.mItemMgr, this.mGrid, sortType);
+            this.mInvenSortType = sortType;
+            this.Reset();
         });
         CDOM.ID(`${key}_search`).addEventListener("keyup", () => {
             let value = CDOM.IDValue(`${key}_search`);
@@ -231,22 +307,30 @@ export class CInvenViewer extends CModal {
     Open(_startPos) {
         super.Open(_startPos);
     }
-    Reset(_invenMgr, _itemMgr, _grid = false, _sort = 1) {
-        this.mGrid = _grid;
-        this.mInvenMgr = _invenMgr;
-        this.mItemMgr = _itemMgr;
-        this.mInvenSortType = _sort;
-        let InvetArr = [...this.mInvenMgr.GetInvenArr()];
+    Reset() {
+        let InvetArr = [...this.mBagInvenMgr.GetInvenArr()];
         InvetArr.sort(this.mSortFun);
         for (let tooltip of this.mToolTipArr) {
             tooltip.Close();
         }
-        if (_grid) {
+        this.mToolTipArr.length = 0;
+        let DropEvent = (e) => {
+            e.preventDefault();
+            const dropKey = e.currentTarget.id;
+            const pickKey = e.dataTransfer?.getData("text/plain") ?? "";
+            gMoveInvenEvent.Call(this.mBagInvenMgr.FindInven(pickKey), this.mBagInvenMgr.FindInven(dropKey));
+        };
+        let DragStartEvent = (e) => {
+            const key = e.currentTarget.id;
+            e.dataTransfer.setData("text/plain", key);
+        };
+        if (this.mGrid) {
             const cell = 79.5;
             let body = {
                 "tag": "div",
                 "class": "p-0",
                 "style": `display:grid;grid-template-columns:repeat(auto-fill, ${cell}px);justify-content:start;`,
+                "id": this.mKey + "_inven",
                 "html": []
             };
             for (let inven of InvetArr) {
@@ -258,6 +342,9 @@ export class CInvenViewer extends CModal {
                     "type": "button",
                     "id": inven.mKey,
                     "class": "btn p-0 border bg-body rounded-2 overflow-hidden viewer_search",
+                    "draggable": true,
+                    "ondrop": DropEvent,
+                    "ondragstart": DragStartEvent,
                     "html": [
                         {
                             "tag": "div",
@@ -277,7 +364,7 @@ export class CInvenViewer extends CModal {
                                             "tag": "div",
                                             "class": "small text-truncate w-100",
                                             "style": "font-size:.75rem;",
-                                            "text": " " + this.mTitleHTMLFun(inven, item)
+                                            "text": " " + this.mTitleHTMLFun(inven, item, this)
                                         }
                                     ]
                                 }
@@ -290,13 +377,14 @@ export class CInvenViewer extends CModal {
             this.SetBody(body);
         }
         else {
-            let body = { "tag": "ul", "class": "list-group", "html": [] };
+            let body = { "tag": "ul", "class": "list-group", "id": this.mKey + "_inven", "html": [] };
             for (let inven of InvetArr) {
                 let item = this.mItemMgr.Find(inven.mItemKey);
-                let invenDiv = { "tag": "li", "class": "list-group-item viewer_search", "id": inven.mKey,
+                let invenDiv = { "tag": "li", "class": "list-group-item viewer_search", "draggable": true, "id": inven.mKey,
+                    "ondrop": DropEvent, "ondragstart": DragStartEvent,
                     "html": [
                         { "tag": "img", "src": item.mImg },
-                        { "tag": "span", "html": " " + this.mTitleHTMLFun(inven, item) }
+                        { "tag": "span", "html": " " + this.mTitleHTMLFun(inven, item, this) }
                     ] };
                 body.html.push(invenDiv);
             }
@@ -310,13 +398,15 @@ export class CInvenViewer extends CModal {
                 "html": [
                     { "tag": "img", "src": item.mImg, "class": "card-img-top d-block mx-auto pt-2", "style": "width:32px;height:32px;object-fit:contain;" },
                     { "tag": "div", "class": "card-body", "html": [
-                            { "tag": "h5", "class": "card-title", "html": this.mTitleHTMLFun(inven, item) },
-                            { "tag": "p", "class": "card-text", "html": this.mContentHTMLFun(inven, item) }
+                            { "tag": "h5", "class": "card-title", "html": this.mTitleHTMLFun(inven, item, this) },
+                            { "tag": "p", "class": "card-text", "html": this.mContentHTMLFun(inven, item, this) }
                         ] }
                 ] };
             this.mToolTipArr.push(new CTooltip(CDOM.DataToDom(card), CDOM.ID(inven.mKey), CTooltip.eTrigger.Click, CTooltip.ePlacement.Bottom));
         }
     }
 }
+CClass.Push(CInventory);
+CClass.Push(CItem);
 CClass.Push(CItemMgr);
 CClass.Push(CInvenMgr);

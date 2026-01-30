@@ -118,6 +118,9 @@ export class SDF {
 		DomainWarp:3,
 		FBM:4,
 		Simplex:5,
+
+		FBMLinear:6,
+		PerlinLinear:7,
 	}
 	static eBlend=
 	{

@@ -10,6 +10,7 @@ import {CVec3} from "../../geometry/CVec3.js";
 import {CH5Canvas} from "../../render/CH5Canvas.js";
 import {CInput} from "../../system/CInput.js";
 import { CFrame } from "../../util/CFrame.js";
+import { CPaintHTML } from "../component/paint/CPaint2D.js";
 import {CSubject} from "./CSubject.js";
 import {CUI,  CUIButtonRGBA, CUiHTML as CUIHTML } from "./CUI.js";
 
@@ -50,6 +51,11 @@ export class CPad extends CSubject
     mButton : Array<CUI>=new Array();
     mButtonInput =Array<string>();
     mLockPos : CVec3=new CVec3();
+    mPacketSend=false;
+    // mPacketDir=new CVec3();
+    // mPacketButtonInput=new Array<string>();
+    // mPacketButtonDir=new Array<CVec3>();
+    
 
     mDir : CVec3=new CVec3();
     mPadType : ePadType=CPad.ePadType.Basic;
@@ -66,6 +72,131 @@ export class CPad extends CSubject
         this.SetKey("pad");
         this.mPMatMul=false;
             
+    }
+    SetButtonImg(_off : number,_img : string=null)
+    {
+        let element = (this.mButton[_off].GetPt() as CPaintHTML).GetElement();
+        let button = element;
+
+        // element가 button이 아니면 자식에서 button을 찾음
+        if(element.tagName !== 'BUTTON') {
+            button = element.querySelector('button');
+        }
+
+        if(button) {
+            if(_img == null || _img == '') {
+                // 기존 버튼으로 복원 (인덱스 번호 표시)
+                button.innerHTML = `${_off}`;
+                button.style.backgroundImage = '';
+                button.style.backgroundSize = '';
+                button.style.backgroundPosition = '';
+                button.style.backgroundRepeat = '';
+            } else {
+                // 이미지를 배경으로 설정 (더 깔끔함)
+                button.innerHTML = '';
+                button.style.backgroundImage = `url('${_img}')`;
+                button.style.backgroundSize = '70% 70%';  // 이미지를 버튼 크기의 70%로 (여백 확보)
+                button.style.backgroundPosition = 'center';
+                button.style.backgroundRepeat = 'no-repeat';
+            }
+        }
+    }
+    SetButtonCoolTime(_off : number,_time : number)
+    {
+        if(_off >= this.mButton.length) return;
+
+        let element = (this.mButton[_off].GetPt() as CPaintHTML).GetElement();
+        let button = element;
+
+        // element가 button이 아니면 자식에서 button을 찾음
+        if(element.tagName !== 'BUTTON') {
+            button = element.querySelector('button');
+        }
+
+        if(!button) return;
+
+        // 기존 쿨타임 오버레이 제거
+        const existingOverlay = button.querySelector('.cooltime-overlay');
+        if(existingOverlay) {
+            existingOverlay.remove();
+        }
+
+        // 쿨타임 오버레이 생성
+        const overlay = document.createElement('div');
+        overlay.className = 'cooltime-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: conic-gradient(
+                rgba(0, 0, 0, 0.7) 0deg,
+                rgba(0, 0, 0, 0.7) 0deg,
+                transparent 0deg
+            );
+            z-index: 10;
+        `;
+
+        // 남은 시간 텍스트
+        const timeText = document.createElement('div');
+        timeText.className = 'cooltime-text';
+        timeText.style.cssText = `
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 0 0 4px black;
+            z-index: 11;
+        `;
+        overlay.appendChild(timeText);
+
+        // button에 relative position 추가 (오버레이 위치 기준)
+        if(getComputedStyle(button).position === 'static') {
+            button.style.position = 'relative';
+        }
+
+        button.appendChild(overlay);
+
+        // 버튼 비활성화
+        button.style.filter = 'brightness(0.6)';
+        (button as HTMLButtonElement).disabled = true;
+
+        // 애니메이션
+        const startTime = performance.now();
+        const duration = _time * 1000; // 초를 밀리초로 변환
+
+        const animate = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const remaining = Math.max(0, duration - elapsed);
+            const progress = remaining / duration;
+
+            if(remaining > 0) {
+                // 남은 시간 표시 (소수점 1자리)
+                timeText.textContent = (remaining / 1000).toFixed(1);
+
+                // 원형 프로그레스 업데이트 (360도 * 진행률)
+                const degrees = 360 * progress;
+                overlay.style.background = `conic-gradient(
+                    rgba(0, 0, 0, 0.7) 0deg,
+                    rgba(0, 0, 0, 0.7) ${degrees}deg,
+                    transparent ${degrees}deg
+                )`;
+
+                requestAnimationFrame(animate);
+            } else {
+                // 쿨타임 종료
+                overlay.remove();
+                button.style.filter = '';
+                (button as HTMLButtonElement).disabled = false;
+            }
+        };
+
+        requestAnimationFrame(animate);
     }
     SetPadScale(_val)
     {
@@ -110,6 +241,12 @@ export class CPad extends CSubject
         }
         return CEvent.eType.Null;
     }
+    GetButtonPos(_off)    
+    {
+        let pos=this.mButton[_off].GetPressPos();
+        if(pos==null)   pos=CVec3.Vec3(0,0,0);
+        return pos;
+    }
    
     Stick(_type : eStickType,_move)
     {
@@ -137,7 +274,7 @@ export class CPad extends CSubject
             if(this.FindChilds("PadStickCrossUP").length==0)
             {
                 let btn = new CUIButtonRGBA();
-                btn.SetCamResize(true);
+                btn.SetCamZoomResize(true);
                 btn.Init("Pad/PadStickCrossUP.tex");
                 btn.SetKey("PadStickCrossUP");
                 btn.SetAnchorX(CUI.eAnchor.Min,30+50*this.mPadScale);
@@ -170,7 +307,7 @@ export class CPad extends CSubject
             if(this.FindChilds("PadStickCrossDown").length==0)
             {
                 let btn = new CUIButtonRGBA();
-                btn.SetCamResize(true);
+                btn.SetCamZoomResize(true);
                 btn.Init("Pad/PadStickCrossDown.tex");
                 btn.SetKey("PadStickCrossDown");
                 btn.SetAnchorX(CUI.eAnchor.Min,30+50*this.mPadScale);
@@ -202,7 +339,7 @@ export class CPad extends CSubject
             if(this.FindChilds("PadStickCrossLeft").length==0)
             {
                 let btn = new CUIButtonRGBA();
-                btn.SetCamResize(true);
+                btn.SetCamZoomResize(true);
                 btn.Init("Pad/PadStickCrossLeft.tex");
                 btn.SetKey("PadStickCrossLeft");
                 btn.SetAnchorX(CUI.eAnchor.Min,30);
@@ -232,7 +369,7 @@ export class CPad extends CSubject
             if(this.FindChilds("PadStickCrossRight").length==0)
             {
                 let btn = new CUIButtonRGBA();
-                btn.SetCamResize(true);
+                btn.SetCamZoomResize(true);
                 btn.Init("Pad/PadStickCrossRight.tex");
                 btn.SetKey("PadStickCrossRight");
                 btn.SetAnchorX(CUI.eAnchor.Min,30+100*this.mPadScale);
@@ -252,7 +389,7 @@ export class CPad extends CSubject
             if(this.FindChilds("PadStickCircle").length==0)
             {
                 let btn = new CUIHTML();
-                btn.SetCamResize(true);
+                btn.SetCamZoomResize(true);
                 btn.Init(`  
     <button class="btn btn-secondary rounded-circle">
       <span class="position-absolute top-0 start-50 translate-middle-x fw-bold">↑</span>
@@ -298,22 +435,26 @@ export class CPad extends CSubject
                     
 
                     let btn = new CUIHTML();
-                    btn.SetCamResize(true);
+                    btn.SetCamZoomResize(true);
                     btn.Init(`
                         <button class="btn btn-outline-danger rounded-circle fw-bold p-0">${i}</button>
                         `
                         ,new CVec2(50*this.mPadScale,50*this.mPadScale));
                     btn.SetKey(ch5key);
-                    btn.SetAnchorX(CUI.eAnchor.Max,20);
-                    btn.SetAnchorY(CUI.eAnchor.Min,40+i*60*this.mPadScale);
+                    // btn.SetAnchorX(CUI.eAnchor.Max,20);
+                    // btn.SetAnchorY(CUI.eAnchor.Min,40+i*60*this.mPadScale);
+                    //btn.mBoundScale=2;
+                    btn.SetAnchorX(CUI.eAnchor.Max,50);
+                    btn.SetAnchorY(CUI.eAnchor.Min,100+i*100*this.mPadScale);
                     btn.SetHover(true);
-                    btn.mBoundScale=2;
+                    btn.SetPressTraking(true);
+                    
                     
                     
                     
                     this.PushChild(btn);
                     this.mButton.push(btn);
-                    
+                    this.mButtonInput.push(CEvent.eType.Null);
                 }
                 
             }
@@ -440,6 +581,9 @@ export class CPad extends CSubject
             
             if(this.mDir.IsZero()==false)
                 CMath.V3Nor(this.mDir,this.mDir);
+
+
+            //if()
 
             return;
         }

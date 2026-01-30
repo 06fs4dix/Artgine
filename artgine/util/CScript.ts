@@ -138,58 +138,18 @@ export class CScript extends CObject
         }
         
     }
-    static Action(_data : Array<any>,_event :  ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,count=0,delay=0,start=0,end=0)
-    {
-        if(_data[0]["mTemp"]==null)_data[0]["mTemp"]={mRun:0};
-
-        
-        let run=_data[0]["mTemp"]["mRun"];
-        let timer : CTimer;
-        if(_data[0]["mTemp"]["mTimer"+run]==null)
-        {
-            _data[0]["mTemp"]["mTimer"+run]=new CTimer();
-            _data[0]["mTemp"]["mCount"+run]=0;
-            _data[0]["mTemp"]["mTime"+run]=0;
-            _data[0]["mTemp"]["mDelay"+run]=0;
-        }
-        timer=_data[0]["mTemp"]["mTimer"+run];
-        let t=timer.Delay();
-        _data[0]["mTemp"]["mDelay"+run]=_data[0]["mTemp"]["mDelay"+run]+t;
-        _data[0]["mTemp"]["mTime"+run]=_data[0]["mTemp"]["mTime"+run]+t;
-
-        if(count!=0 && _data[0]["mTemp"]["mCount"+run]>count)   return;
-        if(delay!=0 && _data[0]["mTemp"]["mDelay"+run]<delay)   return;
-        if(_data[0]["mTemp"]["mTime"+run]<start)   return;
-        if(end!=0 && _data[0]["mTemp"]["mTime"+run]>end)   return;
-        
-        _data[0]["mTemp"]["mDelay"+run]=0;
-        _data[0]["mTemp"]["mCount"+run]=_data[0]["mTemp"]["mCount"+run]+1;
-        
-        
-        if(_event instanceof CEvent)
-            _event.Call();
-        else
-            _event();
-        
-    }
-
-    static Value(_data : Array<any>,_key : string,_val=0,_off=0)
-    {
-        if(_data[_off][_key]==null) return 0;
-        _data[_off][_key]=_val;
-        return _data[_off][_key];
-    }
+    
     //import {CModal} from "artgine/basic/CModal.js"
     mSource=`
 import {CScript} from "artgine/util/CScript.js"
-export function main(_data : Array<any>)
+export function main(_data : any)
 {   
     return null;
 }
 `;
     mActiveFun="main";
     mKey="";
-    mData=[{}];
+    //mData={};
     mGitHub=false;
     //mMoudle=null;
     async Exe()
@@ -209,12 +169,12 @@ export function main(_data : Array<any>)
             if(moudle[this.mActiveFun]==null)   return;
 
         }
-        if(this.mData[0]["mTemp"]==null)    this.mData[0]["mTemp"]={};
+        // if(this.mData["mTemp"]==null)    this.mData["mTemp"]={};
             
         
-        this.mData[0]["mTemp"]["mRun"]=0;
+        // this.mData["mTemp"]["mRun"]=0;
         try {
-            let next=moudle[this.mActiveFun](this.mData);
+            let next=moudle[this.mActiveFun](this);
             if(next!=null)
                 this.mActiveFun=next;
         } catch (error) {

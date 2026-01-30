@@ -159,9 +159,10 @@ export class CReflector3D extends CBrushComp {
             const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
             rp.mCopy = false;
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
-            rp.mCullFace = CRenderPass.eCull.CW;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
+            rp.mCullFace = CRenderPass.eCull.None;
+            rp.mCullFrustum = false;
             rp.PushOr(new CCondition("class", "==", "CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
             rp.PushAnd(new CCondition("mTag[sky]"));
@@ -256,9 +257,10 @@ export class CRefractor3D extends CBrushComp {
             const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
             rp.mCopy = false;
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
-            rp.mCullFace = CRenderPass.eCull.CW;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
+            rp.mCullFace = CRenderPass.eCull.CW;
+            rp.mCullFrustum = false;
             rp.PushOr(new CCondition("class", "==", "CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
             rp.PushAnd(new CCondition("mTag[sky]"));

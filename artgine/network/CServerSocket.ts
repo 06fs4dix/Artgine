@@ -66,7 +66,7 @@ export class CServerSocker extends CServer
         });
 
     }
-    Destroy(): void {
+    override Destroy(): void {
         CConsol.Log("[CServerSocker] Destroy", CConsol.eColor.red);
     
         // 모든 클라이언트 소켓 종료

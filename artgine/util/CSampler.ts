@@ -5,6 +5,7 @@ import { CFloat32 } from "../geometry/CFloat32.js";
 import { CMath } from "../geometry/CMath.js";
 import { CVec1 } from "../geometry/CVec1.js";
 import { CVec3 } from "../geometry/CVec3.js";
+import { CTimer } from "../system/CTimer.js";
 
 
 export class CSampler<T> extends CObject
@@ -47,7 +48,7 @@ export class CSamplerMinMax<T> extends CSampler<T>
 		
 		this.mLinear=_linear;
 	}
-	Excute(_target : any=null) : T
+	override Excute(_target : any=null) : T
 	{
 		if(_target==null || typeof _target=="number")
 			_target=CClass.New(this.mMin);
@@ -101,7 +102,7 @@ export class CSamplerList<T> extends CSampler<T>
 			this.mCount+=each0;
 		}
 	}
-	Excute() : T
+	override Excute() : T
 	{
 		if(this.mList == null || this.mRate.length === 0)
 			return null;
@@ -135,7 +136,7 @@ export class CSamplerDir extends CSampler<CVec3>
 		this.mPitch=_pitch;
 		this.mRoll=_roll;
 	}
-	Excute() : CVec3
+	override Excute() : CVec3
 	{
 		var pran=this.mPitch*2*Math.random()-this.mPitch;
 		var rran=this.mRoll*2*Math.random()-this.mRoll;
@@ -148,43 +149,89 @@ export class CSamplerTimer<T> extends CSampler<T>
 {
 	mDelay=0;
     mCount=1;
-    mBegin=0;
+    mStart=0;
     mEnd=0;
 
-    mTimeAll=0;
-    mTimeDelay=0;
-	mExcute=0;
-    mUpdate=0;
+    // mTimeAll=0;
+    // mTimeDelay=0;
+	// mExcute=0;
+    // mUpdate=0;
 	constructor(_actionValue : T)
 	{
 		super(_actionValue);
 	}
 
-	Excute(_delay : number,_update=1) : T
+	override Excute(_dataTarget : any=null,_run="") : T
 	{
-		//업데이트 오프셋이 차이남
-		if(_update-1!=this.mUpdate)
+		if(_dataTarget==null)	_dataTarget=this;
+		if(CSamplerTimer.Update(_dataTarget,this.mCount,this.mDelay,this.mStart,this.mEnd,_run)==false)
 		{
-			this.mTimeAll=0;
-			this.mExcute=0;
-			this.mTimeDelay=0;
-		}
-		this.mUpdate=_update;
-
-		if(this.mTimeAll<this.mBegin || (this.mCount!=0 && this.mCount<=this.mExcute) || 
-			(this.mEnd!=0 && this.mEnd<this.mTimeAll) || (0<this.mTimeDelay))  
-		{
-			this.mTimeAll+=_delay;
-			this.mTimeDelay-=_delay;
 			if(typeof this.mDefault!="undefined")	return false as any;
 			return null;
 		}
 		
-
-		this.mTimeAll+=_delay;
-		this.mTimeDelay=this.mDelay;
-		this.mExcute++;
-
 		return this.mDefault;
+	}
+
+
+	//실시간 호출해줘야 갱신된다
+    static Update(_dataTarget : any,count=0,delay=0,start=0,end=0,_run="") : boolean
+    {
+		
+        if(_dataTarget["mTemp"]==null)_dataTarget["mTemp"]={};
+
+        
+        //let run=_dataTarget["mTemp"]["mRun"];
+        let timer : CTimer;
+        if(_dataTarget["mTemp"]["mTimer"+_run]==null)
+        {
+            _dataTarget["mTemp"]["mTimer"+_run]=new CTimer();
+            _dataTarget["mTemp"]["mCount"+_run]=0;
+            _dataTarget["mTemp"]["mTime"+_run]=0;
+            _dataTarget["mTemp"]["mDelay"+_run]=0;
+        }
+        timer=_dataTarget["mTemp"]["mTimer"+_run];
+        let t=timer.Delay();
+        _dataTarget["mTemp"]["mDelay"+_run]=_dataTarget["mTemp"]["mDelay"+_run]+t;
+        _dataTarget["mTemp"]["mTime"+_run]=_dataTarget["mTemp"]["mTime"+_run]+t;
+
+        if(count!=0 && _dataTarget["mTemp"]["mCount"+_run]>count)   
+		{
+			_dataTarget["mTemp"]["mEnd"+_run]=true;
+			return false;
+		}
+			
+        if(delay!=0 && _dataTarget["mTemp"]["mDelay"+_run]<delay)   return false;
+        if(_dataTarget["mTemp"]["mTime"+_run]<start)   return false;
+        if(end!=0 && _dataTarget["mTemp"]["mTime"+_run]>end)   
+		{
+			_dataTarget["mTemp"]["mEnd"+_run]=true;
+			return false;
+		}
+			
+        
+        _dataTarget["mTemp"]["mDelay"+_run]=0;
+        _dataTarget["mTemp"]["mCount"+_run]=_dataTarget["mTemp"]["mCount"+_run]+1;
+        
+        
+       return true;
+        
+    }
+	static Reset(_dataTarget : any,_run="")
+	{
+		//if(_dataTarget["mTemp"]==null)return;
+		if(_dataTarget["mTemp"]["mTimer"+_run]!=null)
+        {
+			(_dataTarget["mTemp"]["mTimer"+_run] as CTimer).Delay();
+            _dataTarget["mTemp"]["mCount"+_run]=0;
+            _dataTarget["mTemp"]["mTime"+_run]=0;
+            _dataTarget["mTemp"]["mDelay"+_run]=0;
+			_dataTarget["mTemp"]["mEnd"+_run]=false;
+        }
+	}
+	static IsEnd(_dataTarget : any,_run="")
+	{
+		if(_dataTarget["mTemp"]==null)	return false;
+		return _dataTarget["mTemp"]["mEnd"+_run]==true;
 	}
 }

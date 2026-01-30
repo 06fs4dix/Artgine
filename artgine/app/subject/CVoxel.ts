@@ -183,7 +183,7 @@ export class CVTile extends CVTileSurfacePattern
 		super();
 		//this.mKey=CUniqueID.GetHash();
 	}
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 		super.EditForm(_pointer, _div, _input);
 		if(_pointer.member == "mCollider") {
 			let textArr = [], valArr = [];
@@ -257,7 +257,7 @@ export class  CColliderVoxel extends CCollider
 			
 		return super.IsShould(_member,_type);
 	}
-	CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
+	override CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
     {
 		return false;
     }
@@ -298,7 +298,8 @@ export class CVoxel extends CSubject
     {
         super();
 		this.ResetInfo(new CVec3(8,8,8),100,true);
-		this.mAtlas.Push("test.png",CUtil.Base64ToArray("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABuSURBVDhPlY9RDoAwCEM9iJ/e/2aeARmtZGEw8aU/0r7EHfITCvd5IficCdUQ/DQXYK0SQWPj/J4LVSg0HSwpKKEO4WgWlDDysDa+BXYvrV/iwug+GjNlCKGrshOqo5IIKJT0Ht+AT2e9U+gi8gD5Qf9Q2ZUDNwAAAABJRU5ErkJggg=="));
+		if(CUtil.IsNode()==false)
+			this.mAtlas.Push("test.png",CUtil.Base64ToArray("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABuSURBVDhPlY9RDoAwCEM9iJ/e/2aeARmtZGEw8aU/0r7EHfITCvd5IficCdUQ/DQXYK0SQWPj/J4LVSg0HSwpKKEO4WgWlDDysDa+BXYvrV/iwug+GjNlCKGrshOqo5IIKJT0Ht+AT2e9U+gi8gD5Qf9Q2ZUDNwAAAABJRU5ErkJggg=="));
 		this.mColliderEvent.fill(0);
 		//this.m_colliderType=new Array(256);
 
@@ -318,7 +319,7 @@ export class CVoxel extends CSubject
 		this.mColliderEvent[_tile.mVInfo]=_tile.mCollider;
 		this.mTileArr.push(_tile);
 	}
-	EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 		super.EditForm(_pointer,_body,_input);
 		if(_pointer.member=="mAtlas")
@@ -331,7 +332,7 @@ export class CVoxel extends CSubject
 		}
 
 	}
-	EditChange(_pointer : CPointer,_child : boolean)
+	override EditChange(_pointer : CPointer,_child : boolean)
 	{
 		super.EditChange(_pointer,_child);
 		if(_child==false)	return;
@@ -348,7 +349,7 @@ export class CVoxel extends CSubject
 		}
 	}
 
-	EditHTMLInit(_div: HTMLDivElement): void {
+	override EditHTMLInit(_div: HTMLDivElement): void {
 		super.EditHTMLInit(_div);
 		var button=document.createElement("button");
 		button.innerText="VoxelTool";
@@ -359,7 +360,7 @@ export class CVoxel extends CSubject
 	}
 	
 
-	SubjectUpdate(_update : CUpdate): void {
+	override SubjectUpdate(_update : CUpdate): void {
 		super.SubjectUpdate(_update);
 		if(this.mAtlas.mBase64.mData == null) {
 			return;
@@ -511,7 +512,7 @@ export class CVoxel extends CSubject
 		return null;
 
 	}
-	public Export(_copy?: boolean, _resetKey?: boolean): this 
+	public override Export(_copy?: boolean, _resetKey?: boolean): this 
 	{
 		var copy=super.Export(_copy,_resetKey);
 		copy.DetachComp(CPaintVoxel);
@@ -534,7 +535,7 @@ export class CVoxel extends CSubject
 		this.mKey=dkey;
 
 	}
-	public ExportJSON(): { class: string; } {
+	public override ExportJSON(): { class: string; } {
 		let ptVoxel = this.DetachComp(CPaintVoxel);
 		let col = this.DetachComp(CColliderVoxel);
 		let navi = this.DetachComp(CNavigation);
@@ -566,7 +567,7 @@ export class CVoxel extends CSubject
 		
 		return result;
 	}
-	Reset(): void {
+	override Reset(): void {
 		super.Reset();
 		this.mPaint=null;
 		this.mPlane.length=0;

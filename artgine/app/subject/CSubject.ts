@@ -35,19 +35,19 @@ var g_offCObjHD = 0;
 //2.sysn처리(함수 호출)
 export class CSubject extends CObject implements IFile , IMat
 {
-	protected mKey : string;
+	mKey : string;
 	protected mDestroy : boolean;
 	protected mEnable : boolean;
 	protected mPMatMul=true;
-	protected mSelect=true;
+	mSelect=true;
 
-	protected mComArr : Array<CComponent>;
-	protected mPTArr : Array<CComponent>=null;
+	mComArr : Array<CComponent>;
+	mPTArr : Array<CComponent>=null;
 	protected mPushArr : Array<CComponent>=new Array<CComponent>();
 	protected mPushLock=false;
 	
 	
-	protected mChild : Array<CSubject>;
+	mChild : Array<CSubject>;
 	protected mPMat : CMat;
 	protected mPos : CVec3;
 	protected mRot : CVec3;
@@ -67,10 +67,10 @@ export class CSubject extends CObject implements IFile , IMat
 	
 	protected mBroMsg = new CArray<CRouteMsg>();
 	protected mInMsg = new CArray<CRouteMsg>();
-	protected mOutMsg = new CArray<CRouteMsg>();
+	mOutMsg = new CArray<CRouteMsg>();
 
 
-	protected mUpdateRS : number = CUpdate.eType.Updated;
+	mUpdateRS : number = CUpdate.eType.Updated;
 	mUpdateMat : number = CUpdate.eType.Updated;
 	mUpdateComp=true;
 	mReset=false;
@@ -193,8 +193,15 @@ export class CSubject extends CObject implements IFile , IMat
 		this.mFrame=null;
 		this.SetFrame(fw);
 
-		
-
+		if(CUtil.IsNode())
+		{
+			for(let comp of this.mComArr)
+			{
+				if(comp instanceof CPaint)
+					comp.Destroy();
+			}
+		}
+		//this.PRSReset();
 		
 		return this;
 		//this.PRSReset();
@@ -448,9 +455,9 @@ export class CSubject extends CObject implements IFile , IMat
 		this.mOutMsg.Push(msg);
 		return msg;
 	}
-	PushPac(_stream : CStream)
+	PushPacket(_stream : CStream)
 	{
-		var msg=this.NewOutMsg("PushPac");
+		var msg=this.NewOutMsg("PushPacket");
 		msg.mMsgData[0]=_stream;
 		msg.mInter="canvas";
 	}
@@ -538,6 +545,7 @@ export class CSubject extends CObject implements IFile , IMat
 	//GetOffset() { return this.m_offset; }
 	
 	//==================================================================
+	SetPMatMul(_enable : boolean)	{	this.mPMatMul=_enable;	}
 	SetPMat(_mat : CMat) { this.mPMat = _mat;	 }//toCopy해야 안전한데 성능상...
 
 	
@@ -548,7 +556,7 @@ export class CSubject extends CObject implements IFile , IMat
 		else if(_obj instanceof CComponent)
 			return this.PushComp(_obj) as T;
 		else if(_obj instanceof CStream)
-			return this.PushPac(_obj) as T;
+			return this.PushPacket(_obj) as T;
 		return null;
 	}
 	PushChild<T extends  CSubject>(_obj : T)
@@ -992,4 +1000,5 @@ export class CSubject extends CObject implements IFile , IMat
 
 
 import CSubject_imple from "../../app_imple/subject/CSubject.js"
+import { CUtil } from "../../basic/CUtil.js"
 CSubject_imple();

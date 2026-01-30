@@ -234,6 +234,16 @@ export class CBound extends CObject
 
 		
 	}
+	AddPos(_pos : CVec3)
+	{
+		this.mMin.x+=_pos.x;
+		this.mMin.y+=_pos.y;
+		this.mMin.z+=_pos.z;
+
+		this.mMax.x+=_pos.x;
+		this.mMax.y+=_pos.y;
+		this.mMax.z+=_pos.z;
+	}
 	// GetRadiusLen()
 	// {
 	// 	var L_cen = new CVec3();

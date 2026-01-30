@@ -8,6 +8,7 @@ import { CNaviMgr } from "../canvas/CNavigationMgr.js";
 import { CRayMouse } from "../CRayMouse.js";
 import { CComponent } from "./CComponent.js";
 
+
 export class CGeometryInfo implements IAutoFixed
 {
     //public m_ray = new Array<CRayMouse>();
@@ -63,7 +64,7 @@ export class CGeometryComp extends CComponent
         if(_member=="mGI")   return false;
         return super.IsShould(_member,_type);
     }
-    StartChk(): boolean
+    override StartChk(): boolean
     {
         if(this.mStartChk==true && this.mGI!=null)
 		{

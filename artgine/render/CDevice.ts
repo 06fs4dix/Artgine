@@ -15,6 +15,7 @@ export class CDevice
 	mClearColor=true;
 	mClearDepth=true;
     mStaticRP=new CRenderPass();
+	
 
     public m_pf : CPreferences=null;
 
@@ -138,6 +139,7 @@ export class CDevice
 export class CDeviceGL extends CDevice
 {
 	public mGL : RenderingContext;
+	mKHR_parallel_shader_compile : any=0;
 	constructor(_pf : CPreferences,_handle : HTMLCanvasElement)
 	{
 		super(_pf,_handle);

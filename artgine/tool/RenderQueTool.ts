@@ -78,11 +78,11 @@ function Close() {
 }
 
 async function Load() {
-    await g_fw.Pal().Load(g_fw);
+    //await g_fw.Pal().Load(g_fw);
 }
 
 function Init() {
-    g_fw.Pal().Init(g_fw);
+    //g_fw.Pal().Init(g_fw);
     g_brush = new CBrush(g_fw);
     g_brush.InitCamera();
     g_can = new CCanvas(g_fw, g_brush,null);

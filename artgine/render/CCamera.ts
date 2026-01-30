@@ -113,12 +113,12 @@ export class CCamera extends CObject
 		this.mPlane.NewWASM();
 	
 	}
-	IsShould(_member: string, _type: CObject.eShould): boolean 
+	override IsShould(_member: string, _type: CObject.eShould): boolean 
 	{
 		let should = [
 			"mView", "mCross",
-			"mViewMat", "mProjMat", "mPF", "mBillboad", 
-			"mPlane", "mUpdateMat", "mViewMatComp", "mReset",
+			"mViewMat", "mProjMat", "mPF",
+			"mPlane", "mUpdateMat", "mViewMatComp", "mReset","mBillboardMat",
 			"mShakeMagnitude", "mShakeDuration", "mShakeDamping", "mShakeDistance",
 			"mRCS"
 		];
@@ -208,6 +208,8 @@ export class CCamera extends CObject
 	}
 	BillboardSet()
 	{
+		if(this.GetView().IsZero())	return;
+		
 		if(this.GetView().y>0.99 || this.GetView().y<-0.99)
 		{
 			this.mBillboardMat=new CMat();
@@ -355,7 +357,7 @@ export class CCamera extends CObject
 		this.ViewAndCrossVector3Set();
 		this.BillboardSet();
 		this.PlaneSet();
-		this.mReset=false;
+		this.mReset=true;
 		//this.mUpdateMat=CState.eUpdate.Updated;
 	}
 	ViewAndCrossVector3Set() : void

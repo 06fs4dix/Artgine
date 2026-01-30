@@ -386,7 +386,8 @@ export class CModal implements IAutoUpdate , IListener
             }
             else {
                 setTimeout(() => {
-                    this.mCard.style.display = "none";
+                    if(this.mCard!=null)
+                        this.mCard.style.display = "none";
                 }, _animationTime); // 애니메이션 후 숨김
             }
         }

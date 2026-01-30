@@ -38,7 +38,7 @@ export class CSurfaceDownSample extends CSurface
 		this.GetRP().mDepthTest = false;
 	}
 
-	SetFrame(_fw: CFrame): void {
+	override SetFrame(_fw: CFrame): void {
 		super.SetFrame(_fw);
 
 		if(_fw != null) {
@@ -88,7 +88,7 @@ export class CSurfaceUpSample extends CSurface
 		this.GetRP().mClearColor = false;
 	}
 
-	SetFrame(_fw: CFrame): void {
+	override SetFrame(_fw: CFrame): void {
 		super.SetFrame(_fw);
 
 		if(_fw != null) {
@@ -226,7 +226,7 @@ export class CSurfaceBloom extends CSurface
 		upSampleSurf.GetPaint().SetTexture(mipTex[1]);
 		this.PushChild(upSampleSurf);
 	}
-	GetTexKey()
+	override GetTexKey()
 	{
 		return (this.mChild[this.mChild.length-1] as CSurface).GetTexKey();
 	}
@@ -339,7 +339,7 @@ export class CSurfaceBloom extends CSurface
 		(this.mChild[this.mChild.length-1] as CSurfaceUpSample).GetPaint().SetTexture(mipTex[1]);
 		(this.mChild[this.mChild.length-1] as CSurfaceUpSample).GetRP().mRenderTarget=mipTex[0];
 	}
-	EditChange(_pointer: CPointer, _child: boolean): void {
+	override EditChange(_pointer: CPointer, _child: boolean): void {
 		super.EditChange(_pointer,_child);
 		if(_child==true)	return;
 		
@@ -354,16 +354,16 @@ export class CSurfaceBloom extends CSurface
 
 		
 	}
-	Update(_update : CUpdate): void {
+	override Update(_update : CUpdate): void {
 		// srcResolution과 aspect는 더 이상 필요하지 않음
 		// Sam2DSize(0.0)를 사용하여 쉐이더 내에서 동적으로 텍스처 크기를 가져옴
 	}
-	public Export(_copy?: boolean, _resetKey?: boolean): this {
+	override Export(_copy?: boolean, _resetKey?: boolean): this {
 		const watch = super.Export(_copy, _resetKey);
 		watch.Refresh();
 		return watch;
 	}
-	ImportCJSON(_json: CJSON)
+	override ImportCJSON(_json: CJSON)
     {
 		const watch = super.ImportCJSON(_json);
 		watch.Refresh();

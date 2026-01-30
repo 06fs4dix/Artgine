@@ -1,4 +1,5 @@
 import { IListener } from "../basic/Basic.js";
+import { CConsol } from "../basic/CConsol.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CStream} from "../basic/CStream.js";
 import {CWebSocket} from "./CWebSocket.js";
@@ -9,6 +10,7 @@ export type CStreamHandler = (_stream: CStream) => void;
 export class CSocketIO extends CWebSocket implements IListener
 {
     mEvent : Array<CEvent|CStreamHandler>;
+    mPing=0;
     constructor(_local : boolean,_path,_event : Array<CEvent<CStreamHandler>|CStreamHandler>=[])
     {
         let addr="local";
@@ -40,6 +42,18 @@ export class CSocketIO extends CWebSocket implements IListener
             }
         });
         this.mEvent=_event;
+        setInterval(()=>{
+            let stream=new CStream();
+            stream.Push("Ping");
+            stream.Push(performance.now());
+            this.Send(stream);
+        },5000);
+        this.mEvent["Ping"] = new CEvent((_stream: CStream) => {
+            let b=_stream.GetFloat();
+            let e=performance.now();
+            this.mPing=e-b;
+            CConsol.Log(`[Ping] : ${this.mPing.toFixed(3)}ms`);
+        });
         
     }
     Off(_key: any, _target: any=null) {
