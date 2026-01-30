@@ -1,1 +1,362 @@
-import{ligCol as e,ligCount as r,ligDir as n}from"./Light";import{BayerFilter as w,NoiseGet as y}from"./Noise";import{SDF as i}from"./SDF";import{Build as x,CMat as a,CVec3 as o,CVec4 as v,Mat4ToMat3 as f,V3Nor as t,V4MulMatCoordi as u,Mat3ToMat4 as z,V3MulFloat as m,V3MulV3 as b,acos as g,V3Dot as s,V3AddV3 as c,V3Mix as l,smoothstep as d,sin as N,mod as S,V3Max as h,V3Len as p,SamCubeToColor as P,max as k,fract as A,CVec2 as C,pow as F,abs as B,floor as L,Sam2DToV4 as M,FloatToInt as j,Exp as D,LWVPMul as O,Attribute as T,Null as V,BranchEnd as q,BranchBegin as E,BranchDefault as G,screenPos as H,sqrt as I,V3SubV3 as J,min as K,Hash13 as Q,SaturateV3 as R,Sam2DToColor as U,V3Abs as W,V3Pow as X,V3Floor as Y,V3DivV3 as Z}from"./Shader";var $=V(),_=V(),ee=V(),re=V(),ne=V(),we=V(),ye=T(0,"time"),ie=new a(1,.95,.9,.85,.8,.75,.7,.65,.6,.55,.5,.45,.4,.35,.3,.25),xe=new a(.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95),ae=new a(.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85),oe=1e4,ve=new o(0,0,0),fe=15e5,te=5e5,ue=35e-5,ze=5e5,me=15e5,be=5e5,ge=new o(2.15,-.5,1.2),se=V(),ce=new a(.4,.35,.3,.25,.2,.15,.1,.08,.06,.05,.04,.03,.02,.015,.01,.005),le=new a(.6,.55,.5,.45,.4,.35,.3,.25,.2,.15,.1,.08,.06,.04,.02,.01),de=new a(.9,.85,.8,.75,.7,.65,.6,.55,.5,.45,.4,.35,.3,.25,.2,.15);function Ne(e,r,n){var w=J(e,n.xyz),y=s(w,w),i=new o(s(r,r),2*s(r,w),y-n.w*n.w),x=i.y*i.y-4*i.x*i.z;if(x>=0){var a=I(x);return new o((-i.y-a)/(2*i.x),(-i.y+a)/(2*i.x),1)}return new o(0,0,0)}function Se(){var x,a,f,u,z,O,T,V=t(we),I=0,$=new o(0,0,0);E("table","T",[ce,le,de]),a=s(V,new o(0,1,0)),u=L(14*(f=.5*(1-a))),z=new o(ce[j(L(u/4))][j(S(u,4))],le[j(L(u/4))][j(S(u,4))],de[j(L(u/4))][j(S(u,4))]),T=new o(ce[j(L((O=u+1)/4))][j(S(O,4))],le[j(L(O/4))][j(S(O,4))],de[j(L(O/4))][j(S(O,4))]),I=A(14*f),$=l(z,T,I),G(),$=P(0,we).xyz,I=-1,q();var _,ee,re,Se,he,pe=new o(0,0,0),Pe=new o(0,0,0),ke=new o(0,0,0),Ae=-1,Ce=0,Fe=0,Be=0;for(E("light","L",[n,e,r,ie,xe,ae]),he.dummy=0;he.dummy<3&&!(he.dummy>=j(r));he.dummy++)(_=M(n,he)).w>1.5||(re=t(_.xyz),Be<.5&&_.w>-1.5&&(Be=1,a=s(re,V),u=L(14*(f=.5*(1-a))),z=new o(ie[j(L(u/4))][j(S(u,4))],xe[j(L(u/4))][j(S(u,4))],ae[j(L(u/4))][j(S(u,4))]),T=new o(ie[j(L((O=u+1)/4))][j(S(O,4))],xe[j(L(O/4))][j(S(O,4))],ae[j(L(O/4))][j(S(O,4))]),I=A(14*f),ke=l(z,T,I),Ae=(1-B(s(re,new o(0,1,0))))*(1-f)),ee=M(e,he),Ce=g(s(re,V)),Fe=p(ee.rgb),Se=m(ee.rgb,1.73/k(Fe,1e-7)),Se=m(Se,.02/k(Ce,1e-8)),Pe=h(Pe,Se),pe=c(pe,Se));$=I<0?b($,l(new o(1,1,1),ke,Ae)):l($,ke,Ae),$=h(c($,m(pe,.2)),Pe),q(),E("star","S",[1,80]),x.rgb=function(e){var r=W(e);r=X(r,4),r=m(r,1/(r.x+r.y+r.z));var n=new C(4*e.x,4*e.z),w=new C(4*e.z,4*e.y),y=new C(4*e.x,4*e.y),i=U(2,n).rgb,x=U(2,w).rgb,a=U(2,y).rgb,v=c(c(m(x,r.x),m(i,r.y)),m(a,r.z));if(.299*v.x+.587*v.y+.114*v.z<.1)return new o(0,0,0);var f=Q(m(Y(m(e,80)),.25/80));return m(v,.35*N(ye*(2+4*f)+6.2831*f)+.65)}(V),$=c($,m(x.xyz,1)),$=R($),q(),E("aurora","A",[1,15e3,ze,63e5,10,me,be,1e5,ge]),x=function(e){var r=d(0,.2,e.y);if(r<.01)return new v(0,0,0,0);r*=r;var n,w,x=se,a=e,f=new o(0,-63e5,0),t=6315e3,u=Ne(x,a,new v(f,t));if(u.z>.5){var z=Ne(x,a,new v(f,6815e3));if(z.z>.5){var b=u.x>0&&u.y>0?K(u.x,u.y):k(u.x,u.y),g=z.x>0&&z.y>0?K(z.x,z.y):k(z.x,z.y);z.x>0&&z.y>0&&(b=k(0,K(u.x,u.y))),n=K(g,b),w=k(g,b)}else n=u.x,w=u.y}if(n=k(0,n),(w=k(0,w))<=n||n>me)return new v(0,0,0,0);var s=K(be,w-n);w=n+s;for(var l=m(e,s/10),N=c(x,m(e,n)),S=new o(0,0,0),h=0,P=new o(0,0,0),A=1e-5,C=0;C<j(10);C++){var F=c(N,m(l,.5)),B=(p(J(F,f))-t)/ze;if(!(B<0||B>1)){d(0,.2,B),d(.7,1,B),S.x=F.x*A,S.y=F.y*A,S.z=F.z*A;var L=y(S,i.eNoise.Perlin),M=new o(S.x+.3*L,.05*S.y,S.z+.3*L),D=y(M,i.eNoise.Perlin),O=y(m(M,2),i.eNoise.Voronoi),T=d(.3,.7,D*(1-O));T>.01&&(P=c(P,m(ge,T*h)),h+=T)}}return P=Z(P,c(P,new o(1,1,1))),new v(P,1-h)}(V),$=c(m($,1-x.w),m(x.rgb,1)),q(),E("cloud","C",[15e3,oe,63e5,ve,16,8,fe,te,1e5,ue,.001,.1,.3,1]),x=function(e,r,n){var x=d(0,.2,e.y);if(x<.01)return new v(0,0,0,0);x*=x;var a,f,t=se,u=e,z=new o(0,-63e5,0),b=6315e3,g=Ne(t,u,new v(z,b));if(g.z>.5){var s=Ne(t,u,new v(z,6325e3));if(s.z>.5){var l=g.x>0&&g.y>0?K(g.x,g.y):k(g.x,g.y),N=s.x>0&&s.y>0?K(s.x,s.y):k(s.x,s.y);s.x>0&&s.y>0&&(l=k(0,K(g.x,g.y))),a=K(N,l),f=k(N,l)}else a=g.x,f=g.y}if(a=k(0,a),(f=k(0,f))<=a||a>fe)return new v(0,0,0,0);var S,h=K(te,f-a),P=F((f=a+h)/a,1/16),A=15e3/9,C=m(r,A),B=m(ve,.015*-ye),L=w(H.xy);S=a*F(P,.5+L);for(var M=new o(0,0,0),O=1,T=new o(0,0,0),V=1e-5,q=ue,E=0;E<j(16);E++){var G=c(t,m(u,S)),I=S*P,Q=I-S,R=(p(J(G,z))-b)/oe;if(!(R<0||R>1)){var U;M.x=G.x*V+B.x,M.y=G.y*V+B.y,M.z=G.z*V+B.z,U=y(M,R<.3?i.eNoise.FBM:i.eNoise.Perlin);var W=d(.45,.65,U);if((W*=x)>.001){for(var X=0,Y=c(G,m(C,.5)),$=0;$<j(8);$++){Y=c(Y,C);var _,ee=(p(J(Y,z))-b)/oe;ee<0||ee>1||(M.x=Y.x*V+B.x,M.y=Y.y*V+B.y,M.z=Y.z*V+B.z,_=y(M,ee<.3?i.eNoise.FBM:i.eNoise.Perlin),X+=d(.45,.65,_)*A)}var re=D(-X*q),ne=c(m(new o(1,1,1),.1),m(n,.9*re));if(T=c(T,m(ne,O*(.001*W)*Q)),(O*=D(-W*q*Q))<.05)break}S=I}}var we=1-O;return T=Z(T,c(T,new o(1,1,1))),new v(T,we)}(V,re,ee.rgb),$=c(m($,1-x.w),m(x.rgb,x.w)),q(),ne.rgb=$,ne.a=1}x("Artgine/Shader/CubeObject",[],function(e){we=e,re=O(e,$,_,ee)},[$,_,ee],[re,we],Se,[ne]),x("Artgine/Shader/CubeSky",["sky"],function(e){we=e;var r=new v(e,1),n=u(r,z(f(_)));n=u(n,ee),re=new v(n.x,n.y,n.w,n.w)},[$,_,ee,ye,se],[re,we],Se,[ne]);
+import { ligCol, ligCount, ligDir } from "./Light";
+import { BayerFilter, NoiseGet } from "./Noise";
+import { SDF } from "./SDF";
+import { Build, CMat, CVec3, CVec4, Mat4ToMat3, V3Nor, V4MulMatCoordi, Mat3ToMat4, V3MulFloat, V3MulV3, acos, V3Dot, V3AddV3, V3Mix, smoothstep, sin, mod, V3Max, V3Len, SamCubeToColor, max, fract, CVec2, pow, abs, floor, Sam2DToV4, FloatToInt, Exp, LWVPMul, Attribute, Null, BranchEnd, BranchBegin, BranchDefault, screenPos, sqrt, V3SubV3, min, Hash13, SaturateV3, Sam2DToColor, V3Abs, V3Pow, V3Floor, V3DivV3, } from "./Shader";
+var worldMat = Null();
+var viewMat = Null();
+var projectMat = Null();
+var out_position = Null();
+var out_color = Null();
+var to_uvw = Null();
+var time = Attribute(0, "time");
+var sunColorRTable = new CMat(1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25);
+var sunColorGTable = new CMat(0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95);
+var sunColorBTable = new CMat(0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85);
+var star = 1.0;
+var starSize = 80.0;
+var cloudStart = 15000.0;
+var cloudHeight = 10000.0;
+var cloudPlanetRadius = 6300000.0;
+var cloudSpeed = new CVec3(1.0, 0.0, 0.0);
+var cloudStep = 16.0;
+var cloudLightStep = 8.0;
+var cloudStartMaxDistance = 1500000.0;
+var cloudTracingMaxDistance = 500000.0;
+var cloudScale = 100000.0;
+var cloudExtinction = 0.00035;
+var cloudScatter = 0.001;
+var cloudAmbient = 0.1;
+var cloudDetailRange = 0.3;
+var cloudDither = 1.0;
+var aurora = 1.0;
+var auroraStart = 15000.0;
+var auroraHeight = 500000.0;
+var auroraPlanetRadius = 6300000.0;
+var auroraStep = 10.0;
+var auroraStartMaxDistance = 1500000.0;
+var auroraTracingMaxDistance = 500000.0;
+var auroraScale = 100000.0;
+var auroraColor = new CVec3(2.15, -0.5, 1.2);
+var camPos = Null();
+var SkyColorRTable = new CMat(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.015, 0.01, 0.005);
+var SkyColorGTable = new CMat(0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01);
+var SkyColorBTable = new CMat(0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15);
+Build("Artgine/Shader/CubeObject", [], vs_main, [worldMat, viewMat, projectMat], [out_position, to_uvw], ps_main, [out_color]);
+Build("Artgine/Shader/CubeSky", ["sky"], vs_main_camBased, [worldMat, viewMat, projectMat, time, camPos], [out_position, to_uvw], ps_main, [out_color]);
+function vs_main(f3_ver) {
+    to_uvw = f3_ver;
+    out_position = LWVPMul(f3_ver, worldMat, viewMat, projectMat);
+}
+function vs_main_camBased(f3_ver) {
+    to_uvw = f3_ver;
+    var v4 = new CVec4(f3_ver, 1.0);
+    var P = V4MulMatCoordi(v4, Mat3ToMat4(Mat4ToMat3(viewMat)));
+    P = V4MulMatCoordi(P, projectMat);
+    out_position = new CVec4(P.x, P.y, P.w, P.w);
+}
+function RaySphereIntersection(_rayOrg, _rayDir, _sphere) {
+    var localPos = V3SubV3(_rayOrg, _sphere.xyz);
+    var localPosSqrt = V3Dot(localPos, localPos);
+    var quadCoef = new CVec3(V3Dot(_rayDir, _rayDir), 2.0 * V3Dot(_rayDir, localPos), localPosSqrt - _sphere.w * _sphere.w);
+    var disc = quadCoef.y * quadCoef.y - 4.0 * quadCoef.x * quadCoef.z;
+    if (disc >= 0.0) {
+        var sqrtDisc = sqrt(disc);
+        return new CVec3((-quadCoef.y - sqrtDisc) / (2.0 * quadCoef.x), (-quadCoef.y + sqrtDisc) / (2.0 * quadCoef.x), 1.0);
+    }
+    return new CVec3(0.0, 0.0, 0.0);
+}
+function Cloud(_viewDir, _sunDir, _sunCol) {
+    var yBlend = smoothstep(0.0, 0.2, _viewDir.y);
+    if (yBlend < 0.01)
+        return new CVec4(0.0, 0.0, 0.0, 0.0);
+    yBlend = yBlend * yBlend;
+    var rayOrg = camPos;
+    var rayDir = _viewDir;
+    var planetRadius = cloudPlanetRadius;
+    var planetCenter = new CVec3(0.0, -planetRadius, 0.0);
+    var bottomRadius = planetRadius + cloudStart;
+    var topRadius = bottomRadius + cloudHeight;
+    var tMin;
+    var tMax;
+    var tTop = RaySphereIntersection(rayOrg, rayDir, new CVec4(planetCenter, bottomRadius));
+    if (tTop.z > 0.5) {
+        var tBot = RaySphereIntersection(rayOrg, rayDir, new CVec4(planetCenter, topRadius));
+        if (tBot.z > 0.5) {
+            var tempTop = (tTop.x > 0.0 && tTop.y > 0.0) ? min(tTop.x, tTop.y) : max(tTop.x, tTop.y);
+            var tempBot = (tBot.x > 0.0 && tBot.y > 0.0) ? min(tBot.x, tBot.y) : max(tBot.x, tBot.y);
+            if (tBot.x > 0.0 && tBot.y > 0.0) {
+                tempTop = max(0.0, min(tTop.x, tTop.y));
+            }
+            tMin = min(tempBot, tempTop);
+            tMax = max(tempBot, tempTop);
+        }
+        else {
+            tMin = tTop.x;
+            tMax = tTop.y;
+        }
+    }
+    tMin = max(0.0, tMin);
+    tMax = max(0.0, tMax);
+    var startMaxDistance = cloudStartMaxDistance;
+    if (tMax <= tMin || tMin > startMaxDistance) {
+        return new CVec4(0.0, 0.0, 0.0, 0.0);
+    }
+    var traceMaxDistance = cloudTracingMaxDistance;
+    var marchingDistance = min(traceMaxDistance, tMax - tMin);
+    tMax = tMin + marchingDistance;
+    var ratio = tMax / tMin;
+    var logStepRatio = pow(ratio, 1.0 / cloudStep);
+    var lightDir = _sunDir;
+    var shadowLen = cloudHeight * 1.5;
+    var lightStepSize = shadowLen / (1.0 + cloudLightStep);
+    var lightStepVector = V3MulFloat(lightDir, lightStepSize);
+    var windScale = 0.015;
+    var wind = V3MulFloat(cloudSpeed, -time * windScale);
+    var curDist;
+    if (cloudDither > 0.5) {
+        var dither = BayerFilter(screenPos.xy);
+        curDist = tMin * pow(logStepRatio, 0.5 + dither);
+    }
+    else {
+        curDist = tMin * pow(logStepRatio, 0.5);
+    }
+    var p = new CVec3(0.0, 0.0, 0.0);
+    var T = 1.0;
+    var acc = new CVec3(0.0, 0.0, 0.0);
+    var noiseScale = 1.0 / cloudScale;
+    var thresh0 = 0.45;
+    var thresh1 = 0.65;
+    var extinction = cloudExtinction;
+    var gg = cloudScatter * cloudScatter;
+    var scatterK = cloudScatter;
+    var ambient = cloudAmbient;
+    for (var i = 0; i < FloatToInt(cloudStep); i++) {
+        var samplePos = V3AddV3(rayOrg, V3MulFloat(rayDir, curDist));
+        var nextDist = curDist * logStepRatio;
+        var stepLength = nextDist - curDist;
+        var cloudY = V3Len(V3SubV3(samplePos, planetCenter)) - bottomRadius;
+        var cloudYNorm = cloudY / cloudHeight;
+        if (cloudYNorm < 0.0 || cloudYNorm > 1.0) {
+            continue;
+        }
+        p.x = samplePos.x * noiseScale + wind.x;
+        p.y = samplePos.y * noiseScale + wind.y;
+        p.z = samplePos.z * noiseScale + wind.z;
+        var noise;
+        if (cloudYNorm < cloudDetailRange)
+            noise = NoiseGet(p, SDF.eNoise.FBM);
+        else
+            noise = NoiseGet(p, SDF.eNoise.Perlin);
+        var density = smoothstep(thresh0, thresh1, noise);
+        density *= yBlend;
+        if (density > 0.001) {
+            var tauL = 0.0;
+            var poslight = V3AddV3(samplePos, V3MulFloat(lightStepVector, 0.5));
+            for (var j = 0; j < FloatToInt(cloudLightStep); j++) {
+                poslight = V3AddV3(poslight, lightStepVector);
+                var ligCloudY = V3Len(V3SubV3(poslight, planetCenter)) - bottomRadius;
+                var ligCloudYNorm = ligCloudY / cloudHeight;
+                if (ligCloudYNorm < 0.0 || ligCloudYNorm > 1.0)
+                    continue;
+                p.x = poslight.x * noiseScale + wind.x;
+                p.y = poslight.y * noiseScale + wind.y;
+                p.z = poslight.z * noiseScale + wind.z;
+                var nL;
+                if (ligCloudYNorm < cloudDetailRange)
+                    nL = NoiseGet(p, SDF.eNoise.FBM);
+                else
+                    nL = NoiseGet(p, SDF.eNoise.Perlin);
+                var dL = smoothstep(thresh0, thresh1, nL);
+                tauL += dL * lightStepSize;
+            }
+            var lightT = Exp(-tauL * extinction);
+            var lit = V3AddV3(V3MulFloat(new CVec3(1.0, 1.0, 1.0), ambient), V3MulFloat(_sunCol, lightT * (1.0 - ambient)));
+            acc = V3AddV3(acc, V3MulFloat(lit, T * (density * scatterK) * stepLength));
+            T *= Exp(-density * extinction * stepLength);
+            if (T < 0.05)
+                break;
+        }
+        curDist = nextDist;
+    }
+    var alpha = 1.0 - T;
+    acc = V3DivV3(acc, V3AddV3(acc, new CVec3(1.0, 1.0, 1.0)));
+    return new CVec4(acc, alpha);
+}
+function Aurora(_viewDir) {
+    var yBlend = smoothstep(0.0, 0.2, _viewDir.y);
+    if (yBlend < 0.01)
+        return new CVec4(0.0, 0.0, 0.0, 0.0);
+    yBlend = yBlend * yBlend;
+    var rayOrg = camPos;
+    var rayDir = _viewDir;
+    var planetRadius = auroraPlanetRadius;
+    var planetCenter = new CVec3(0.0, -planetRadius, 0.0);
+    var bottomRadius = planetRadius + auroraStart;
+    var topRadius = bottomRadius + auroraHeight;
+    var tMin;
+    var tMax;
+    var tTop = RaySphereIntersection(rayOrg, rayDir, new CVec4(planetCenter, bottomRadius));
+    if (tTop.z > 0.5) {
+        var tBot = RaySphereIntersection(rayOrg, rayDir, new CVec4(planetCenter, topRadius));
+        if (tBot.z > 0.5) {
+            var tempTop = (tTop.x > 0.0 && tTop.y > 0.0) ? min(tTop.x, tTop.y) : max(tTop.x, tTop.y);
+            var tempBot = (tBot.x > 0.0 && tBot.y > 0.0) ? min(tBot.x, tBot.y) : max(tBot.x, tBot.y);
+            if (tBot.x > 0.0 && tBot.y > 0.0) {
+                tempTop = max(0.0, min(tTop.x, tTop.y));
+            }
+            tMin = min(tempBot, tempTop);
+            tMax = max(tempBot, tempTop);
+        }
+        else {
+            tMin = tTop.x;
+            tMax = tTop.y;
+        }
+    }
+    tMin = max(0.0, tMin);
+    tMax = max(0.0, tMax);
+    var startMaxDistance = auroraStartMaxDistance;
+    if (tMax <= tMin || tMin > startMaxDistance) {
+        return new CVec4(0.0, 0.0, 0.0, 0.0);
+    }
+    var traceMaxDistance = auroraTracingMaxDistance;
+    var marchingDistance = min(traceMaxDistance, tMax - tMin);
+    tMax = tMin + marchingDistance;
+    var raymarchStepSize = marchingDistance / auroraStep;
+    var raymarchStepVector = V3MulFloat(_viewDir, raymarchStepSize);
+    var curPos = V3AddV3(rayOrg, V3MulFloat(_viewDir, tMin));
+    var p = new CVec3(0.0, 0.0, 0.0);
+    var thresh0 = 0.3;
+    var thresh1 = 0.7;
+    var T = 0.0;
+    var acc = new CVec3(0.0, 0.0, 0.0);
+    var noiseScale = 1.0 / auroraScale;
+    for (var i = 0; i < FloatToInt(auroraStep); i++) {
+        var samplePos = V3AddV3(curPos, V3MulFloat(raymarchStepVector, 0.5));
+        var altitude = V3Len(V3SubV3(samplePos, planetCenter)) - bottomRadius;
+        var altitudeNorm = altitude / auroraHeight;
+        if (altitudeNorm < 0.0 || altitudeNorm > 1.0) {
+            continue;
+        }
+        var edgeFade = smoothstep(0.0, 0.2, altitudeNorm) * (1.0 - smoothstep(0.7, 1.0, altitudeNorm));
+        p.x = samplePos.x * noiseScale;
+        p.y = samplePos.y * noiseScale;
+        p.z = samplePos.z * noiseScale;
+        var warp = NoiseGet(p, SDF.eNoise.Perlin);
+        var pWarped = new CVec3(p.x + warp * 0.3, p.y * 0.05, p.z + warp * 0.3);
+        var n1 = NoiseGet(pWarped, SDF.eNoise.Perlin);
+        var n2 = NoiseGet(V3MulFloat(pWarped, 2.0), SDF.eNoise.Voronoi);
+        var density = smoothstep(thresh0, thresh1, n1 * (1.0 - n2));
+        if (density > 0.01) {
+            acc = V3AddV3(acc, V3MulFloat(auroraColor, density * T));
+            T += density;
+        }
+    }
+    acc = V3DivV3(acc, V3AddV3(acc, new CVec3(1.0, 1.0, 1.0)));
+    var alpha = 1.0 - T;
+    return new CVec4(acc, alpha);
+}
+function Stars(_viewDir) {
+    var weights = V3Abs(_viewDir);
+    weights = V3Pow(weights, 4.0);
+    weights = V3MulFloat(weights, 1.0 / (weights.x + weights.y + weights.z));
+    var uvY = new CVec2(_viewDir.x * 4.0, _viewDir.z * 4.0);
+    var uvX = new CVec2(_viewDir.z * 4.0, _viewDir.y * 4.0);
+    var uvZ = new CVec2(_viewDir.x * 4.0, _viewDir.y * 4.0);
+    var colY = Sam2DToColor(2.0, uvY).rgb;
+    var colX = Sam2DToColor(2.0, uvX).rgb;
+    var colZ = Sam2DToColor(2.0, uvZ).rgb;
+    var col = V3AddV3(V3AddV3(V3MulFloat(colX, weights.x), V3MulFloat(colY, weights.y)), V3MulFloat(colZ, weights.z));
+    var lightIntensity = col.x * 0.299 + col.y * 0.587 + col.z * 0.114;
+    if (lightIntensity < 0.1)
+        return new CVec3(0.0, 0.0, 0.0);
+    var starID = Hash13(V3MulFloat(V3Floor(V3MulFloat(_viewDir, starSize)), 0.25 / starSize));
+    return V3MulFloat(col, sin(time * (2.0 + starID * 4.0) + starID * 6.2831) * 0.35 + 0.65);
+}
+function ps_main() {
+    var fragDir = V3Nor(to_uvw);
+    var value;
+    var dir_cos;
+    var dir_deg;
+    var curIndex;
+    var curColor;
+    var nextIndex;
+    var nextColor;
+    var t = 0.0;
+    var finalColor = new CVec3(0.0, 0.0, 0.0);
+    BranchBegin("table", "T", [SkyColorRTable, SkyColorGTable, SkyColorBTable]);
+    dir_cos = V3Dot(fragDir, new CVec3(0.0, 1.0, 0.0));
+    dir_deg = (1.0 - dir_cos) * 0.5;
+    curIndex = floor(dir_deg * 14.0);
+    curColor = new CVec3(SkyColorRTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))], SkyColorGTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))], SkyColorBTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))]);
+    nextIndex = curIndex + 1.0;
+    nextColor = new CVec3(SkyColorRTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))], SkyColorGTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))], SkyColorBTable[FloatToInt(floor(nextIndex / 4.0))][FloatToInt(mod(nextIndex, 4.0))]);
+    t = fract(dir_deg * 14.0);
+    finalColor = V3Mix(curColor, nextColor, t);
+    BranchDefault();
+    finalColor = SamCubeToColor(0.0, to_uvw).xyz;
+    t = -1.0;
+    BranchEnd();
+    var ligSum = new CVec3(0.0, 0.0, 0.0);
+    var ligMax = new CVec3(0.0, 0.0, 0.0);
+    var sunsetCol = new CVec3(0.0, 0.0, 0.0);
+    var sunsetBlend = -1.0;
+    var lDir;
+    var lCol;
+    var dir;
+    var angle = 0.0;
+    var intensity = 0.0;
+    var col;
+    var i;
+    var sunPass = 0.0;
+    var sun_deg = 1.0;
+    BranchBegin("light", "L", [ligDir, ligCol, ligCount, sunColorRTable, sunColorGTable, sunColorBTable]);
+    for (i.dummy = 0; i.dummy < 3; i.dummy++) {
+        if (i.dummy >= FloatToInt(ligCount))
+            break;
+        lDir = Sam2DToV4(ligDir, i);
+        if (lDir.w > 1.5)
+            continue;
+        dir = V3Nor(lDir.xyz);
+        if (sunPass < 0.5 && lDir.w > -1.5) {
+            sunPass = 1.0;
+            dir_cos = V3Dot(dir, fragDir);
+            dir_deg = (1.0 - dir_cos) * 0.5;
+            curIndex = floor(dir_deg * 14.0);
+            curColor = new CVec3(sunColorRTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))], sunColorGTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))], sunColorBTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))]);
+            nextIndex = curIndex + 1.0;
+            nextColor = new CVec3(sunColorRTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))], sunColorGTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))], sunColorBTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))]);
+            t = fract(dir_deg * 14.0);
+            sunsetCol = V3Mix(curColor, nextColor, t);
+            sun_deg = 1.0 - abs(V3Dot(dir, new CVec3(0.0, 1.0, 0.0)));
+            sunsetBlend = sun_deg * (1.0 - dir_deg);
+        }
+        lCol = Sam2DToV4(ligCol, i);
+        angle = acos(V3Dot(dir, fragDir));
+        intensity = V3Len(lCol.rgb);
+        col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
+        col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
+        ligMax = V3Max(ligMax, col);
+        ligSum = V3AddV3(ligSum, col);
+    }
+    if (t < 0.0)
+        finalColor = V3MulV3(finalColor, V3Mix(new CVec3(1.0, 1.0, 1.0), sunsetCol, sunsetBlend));
+    else
+        finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend);
+    finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSum, 0.2)), ligMax);
+    BranchEnd();
+    BranchBegin("star", "S", [star, starSize]);
+    value.rgb = Stars(fragDir);
+    finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, star));
+    finalColor = SaturateV3(finalColor);
+    BranchEnd();
+    BranchBegin("aurora", "A", [aurora, auroraStart, auroraHeight, auroraPlanetRadius, auroraStep, auroraStartMaxDistance, auroraTracingMaxDistance, auroraScale, auroraColor]);
+    value = Aurora(fragDir);
+    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), V3MulFloat(value.rgb, aurora));
+    BranchEnd();
+    BranchBegin("cloud", "C", [cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudStartMaxDistance, cloudTracingMaxDistance, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudDetailRange, cloudDither]);
+    value = Cloud(fragDir, dir, lCol.rgb);
+    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), V3MulFloat(value.rgb, value.w));
+    BranchEnd();
+    out_color.rgb = finalColor;
+    out_color.a = 1.0;
+}

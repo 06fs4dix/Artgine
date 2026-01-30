@@ -1,1 +1,300 @@
-import{Build as x,CVec3 as y,CVec4 as z,CMat3 as r,Attribute as a,Null as n,LWVPMul as e,discard as o,screenPos as i,Sam2D0ToColor as w,Sam2DToColor as l,Sam2DToV4 as t,Sam2DV4 as d,Sam2DSize as m,max as c,min as f,V2MulFloat as g,V2DivV2 as h,V3AddV3 as p,V3Len as b,V3MulFloat as v,V3SubV3 as u,V3Cross as M,V3Nor as S,V4MulMatCoordi as A,BranchBegin as D,BranchEnd as T,BranchDefault as C,MappingTexToV3 as W,MatTypeToMat as s}from"./Shader";import{VFX as B,VFXDown2 as k,GetTexCodiedUV as F,LUT0 as L,LUT1 as N,LUT2 as P,LUT3 as V,LUT4 as X,LUT5 as Z,ColorModalFun as j,AlphaModalFun as q}from"./ColorFun";import{ambientColor as E,ligCol as G,ligDir as H,ligCount as I,LightCac2D as J}from"./Light";import{shadowOn as K}from"./Shadow";import{GetWind as O,windCount as Q,windDir as R,windInfluence as U,windInfo as Y,windPos as $}from"./Wind";import{DecalCac as _,decalInvWorldMat as xx,decalParam as yx}from"./Decal";var zx=n(),rx=n(),ax=n(),nx=n(),ex=n(),ox=n(),ix=n(),wx=n(),lx=n(),tx=n(),dx=n(),mx=n(),cx=n(),fx=a(0,"time"),gx=n(),hx=new d(11),px=n();function bx(x,r){D("codi","C",[ix]),mx.xy=F(r,ix),C(),mx.xy=r,T(),mx.z=1;var a,n,e=new z(x,1),o=0,i=0,w=0;D("worldType","WT",[0,rx]),s(0,rx,zx),C(),a=zx,T(),D("billboard","B",[ex,ox]),ex>.5?(o=b(a[0].xyz),i=b(a[1].xyz),w=b(a[2].xyz),e.x*=o,e.y*=i,e.z*=w,(e=A(e,ox)).x+=a[3].x,e.y+=a[3].y,e.z+=a[3].z):e=A(e,a),C(),e=A(e,a),T(),D("wind","W",[R,$,Y,Q,U,fx]),r.y>.5&&U>.01&&(n=new y(10*b(a[0].xyz),10*b(a[1].xyz),0),e.xyz=p(e.xyz,O(e.xyz,n,fx))),T(),cx=e,e=A(e,ax),tx=A(e,nx)}function vx(){new z(0,0,0,0);var x,a=-1;D("shadow","S",[K]),K>.5&&(a=l(K,h(i.xy,m(K))).x),T(),D("vfx","VFX",[B,L,N,P,V,X,Z,fx]),x=k(mx.xy,B,fx),C(),x=l(0,mx.xy),T(),x.a*=mx.z,D("colorModel","CM",[wx]),x.rgb=j(x.rgb,wx),T(),D("alphaModel","AM",[lx]),x.a=q(x.a,lx),T(),x.a,D("decal","decal",[yx,xx]),x=_(x,cx),T();var n=new y(0,0,0);D("normalMap","N",[px]),px>1&&(n=l(1,mx.xy).xyz,n=W(n)),T();var e=new r(0);D("light","L",[H,G,I,E]),e=J(cx,x,n,E),x.rgb=e[0],T(),a>-.5&&(x.rgb=v(x.rgb,a)),dx=x}x("Artgine/Shader/2DPlane",[],bx,[zx,ax,nx],[tx,mx,cx],vx,[dx]),x("Artgine/Shader/2DTail",["tail"],function(x,r){D("codi","C",[ix]),mx.xy=F(r,ix),C(),mx.xy=r,T(),mx.z=1;var a,n,e,o=new z(x,1);D("billboard","B",[ex,ox]),ex>.5&&(ex<1.5?(e=S(M(new y(-ax[0][2],-ax[1][2],-ax[2][2]),u(zx[0].xyz,zx[1].xyz))),r.x<.5&&r.y<.5?(o.xyz=u(p(zx[1].xyz,zx[3].xyz),v(e,.5*zx[2].x)),zx[2].w<.5&&(mx.z=0)):r.x<.5&&r.y>.5?(o.xyz=u(p(zx[0].xyz,zx[3].xyz),v(e,.5*zx[2].x)),zx[0].w<.5&&(mx.z=0)):r.x>.5&&r.y<.5?(o.xyz=p(p(zx[1].xyz,zx[3].xyz),v(e,.5*zx[2].x)),zx[3].w<.5&&(mx.z=0)):(o.xyz=p(p(zx[0].xyz,zx[3].xyz),v(e,.5*zx[2].x)),zx[1].w<.5&&(mx.z=0)),n=v(p(zx[0].xyz,zx[1].xyz),.5),a=new y(zx[2].xy,0)):ex<2.5&&(r.x<.5&&r.y<.5?(o.xyz=zx[2].xyz,zx[2].w<.5&&(mx.z=0)):r.x<.5&&r.y>.5?(o.xyz=zx[0].xyz,zx[0].w<.5&&(mx.z=0)):r.x>.5&&r.y<.5?(o.xyz=zx[3].xyz,zx[3].w<.5&&(mx.z=0)):(o.xyz=zx[1].xyz,zx[1].w<.5&&(mx.z=0)),n=v(p(p(p(zx[0].xyz,zx[1].xyz),zx[2].xyz),zx[3].xyz),.25),a=new y(c(zx[0].x,zx[1].x)-f(zx[2].x,zx[3].x),c(zx[1].y,zx[3].y)-f(zx[0].y,zx[2].y),0),o.xyz=u(o.xyz,n),(o=A(o,ox)).xyz=p(o.xyz,n))),C(),r.x<.5&&r.y<.5?(o.xyz=zx[2].xyz,zx[2].w<.5&&(mx.z=0)):r.x<.5&&r.y>.5?(o.xyz=zx[0].xyz,zx[0].w<.5&&(mx.z=0)):r.x>.5&&r.y<.5?(o.xyz=zx[3].xyz,zx[3].w<.5&&(mx.z=0)):(o.xyz=zx[1].xyz,zx[1].w<.5&&(mx.z=0)),n=v(p(p(p(zx[0].xyz,zx[1].xyz),zx[2].xyz),zx[3].xyz),.25),a=new y(c(zx[0].x,zx[1].x)-f(zx[2].x,zx[3].x),c(zx[1].y,zx[3].y)-f(zx[0].y,zx[2].y),0),T(),D("wind","W",[R,$,Y,Q,U,fx]),r.y>.5&&U>.01&&(o.xyz=p(o.xyz,O(n,a,fx))),T(),cx=o,o=A(o,ax),o=A(o,nx),D("zDepth","Z",[0,.001]),o.z+=0,T(),tx=o},[zx,ax,nx],[tx,mx,cx],vx,[dx]),x("Artgine/Shader/2DTrail",["trail"],function(x){var r=t(hx,x.z);mx=new y(r.w*ix.x,x.y,1),r.w>1?mx.z=0:mx.z=gx<.5?1:r.w;var a=new z(r.xyz,1);cx=a,a=A(a,ax),a=A(a,nx),tx=a},[zx,ax,nx,hx,gx,ix],[tx,mx,cx],vx,[dx]),x("Artgine/Shader/2DSimple",["simple"],function(x,z){var r;mx=new y(z,1),D("worldType","WT",[0,rx]),s(0,rx,zx),C(),r=zx,T(),tx=e(x,r,ax,nx)},[zx,ax,nx],[tx,mx],function(){var x=w(mx.xy);dx=x},[dx]),x("Artgine/Shader/2DMask",["mask"],bx,[zx,ax,nx,1],[tx,mx,cx],function(){var x=w(mx.xy);D("colorModel","CM",[wx]),x.rgb=j(x.rgb,wx),T(),D("alphaModel","AM",[lx]),x.a=q(x.a,lx),T(),x.a,x.a=1,dx=x},[dx]),x("Artgine/Shader/2DBlit",["blit"],function(x,r){tx=new z(g(x.xy,.2),0,1),mx=new y(r,1)},[],[tx,mx],function(){dx=w(mx.xy)},[dx]);
+import { Build, CVec3, CVec4, CMat3, Attribute, Null, LWVPMul, discard, screenPos, Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize, max, min, V2MulFloat, V2DivV2, V3AddV3, V3Len, V3MulFloat, V3SubV3, V3Cross, V3Nor, V4MulMatCoordi, BranchBegin, BranchEnd, BranchDefault, MappingTexToV3, MatTypeToMat, } from "./Shader";
+import { VFX, VFXDown2, GetTexCodiedUV, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun } from "./ColorFun";
+import { ambientColor, ligCol, ligDir, ligCount, LightCac2D } from "./Light";
+import { shadowOn } from "./Shadow";
+import { GetWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
+import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
+var worldMat = Null();
+var worldMatShort = Null();
+var worldMatType = 0.0;
+var viewMat = Null();
+var projectMat = Null();
+var billboard = Null();
+var billboardMat = Null();
+var texCodi = Null();
+var colorModel = Null();
+var alphaModel = Null();
+var out_position = Null();
+var out_color = Null();
+var to_uv = Null();
+var to_worldPos = Null();
+var time = Attribute(0, "time");
+var mask = 1.0;
+var lastHide = Null();
+var trailPos = new Sam2DV4(11);
+var zDepth = 0.0;
+var zDepthBias = 0.001;
+var sam2DCount = Null();
+Build("Artgine/Shader/2DPlane", [], vs_main, [
+    worldMat,
+    viewMat, projectMat,
+], [
+    out_position, to_uv, to_worldPos
+], ps_main, [out_color]);
+Build("Artgine/Shader/2DTail", ["tail"], vs_main_tail, [
+    worldMat, viewMat, projectMat,
+], [
+    out_position, to_uv, to_worldPos
+], ps_main, [out_color]);
+Build("Artgine/Shader/2DTrail", ["trail"], vs_main_trail, [
+    worldMat, viewMat, projectMat, trailPos, lastHide, texCodi,
+], [
+    out_position, to_uv, to_worldPos
+], ps_main, [out_color]);
+Build("Artgine/Shader/2DSimple", ["simple"], vs_main_simple, [
+    worldMat,
+    viewMat, projectMat
+], [
+    out_position, to_uv
+], ps_main_simple, [out_color]);
+Build("Artgine/Shader/2DMask", ["mask"], vs_main, [
+    worldMat,
+    viewMat, projectMat, mask
+], [
+    out_position, to_uv, to_worldPos
+], ps_main_mask, [out_color]);
+Build("Artgine/Shader/2DBlit", ["blit"], vs_main_blit, [], [
+    out_position, to_uv
+], ps_main_blit, [out_color]);
+function vs_main_blit(f3_ver, f2_uv) {
+    out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
+    to_uv = new CVec3(f2_uv, 1.0);
+}
+function ps_main_blit() {
+    out_color = Sam2D0ToColor(to_uv.xy);
+}
+function vs_main_simple(f3_ver, f2_uv) {
+    to_uv = new CVec3(f2_uv, 1.0);
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    out_position = LWVPMul(f3_ver, wMat, viewMat, projectMat);
+}
+function ps_main_simple() {
+    var L_cor = Sam2D0ToColor(to_uv.xy);
+    out_color = L_cor;
+}
+function vs_main_tail(f3_ver, f2_uv) {
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    to_uv.z = 1.0;
+    var rpos = new CVec4(f3_ver, 1.0);
+    var size;
+    var mid;
+    var nor;
+    BranchBegin("billboard", "B", [billboard, billboardMat]);
+    if (billboard > 0.5) {
+        if (billboard < 1.5) {
+            nor = V3Nor(V3Cross(new CVec3(-viewMat[0][2], -viewMat[1][2], -viewMat[2][2]), V3SubV3(worldMat[0].xyz, worldMat[1].xyz)));
+            if (f2_uv.x < 0.5 && f2_uv.y < 0.5) {
+                rpos.xyz = V3SubV3(V3AddV3(worldMat[1].xyz, worldMat[3].xyz), V3MulFloat(nor, worldMat[2].x * 0.5));
+                if (worldMat[2].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            else if (f2_uv.x < 0.5 && f2_uv.y > 0.5) {
+                rpos.xyz = V3SubV3(V3AddV3(worldMat[0].xyz, worldMat[3].xyz), V3MulFloat(nor, worldMat[2].x * 0.5));
+                if (worldMat[0].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            else if (f2_uv.x > 0.5 && f2_uv.y < 0.5) {
+                rpos.xyz = V3AddV3(V3AddV3(worldMat[1].xyz, worldMat[3].xyz), V3MulFloat(nor, worldMat[2].x * 0.5));
+                if (worldMat[3].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            else {
+                rpos.xyz = V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[3].xyz), V3MulFloat(nor, worldMat[2].x * 0.5));
+                if (worldMat[1].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            mid = V3MulFloat(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), 0.5);
+            size = new CVec3(worldMat[2].xy, 0.0);
+        }
+        else if (billboard < 2.5) {
+            if (f2_uv.x < 0.5 && f2_uv.y < 0.5) {
+                rpos.xyz = worldMat[2].xyz;
+                if (worldMat[2].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            else if (f2_uv.x < 0.5 && f2_uv.y > 0.5) {
+                rpos.xyz = worldMat[0].xyz;
+                if (worldMat[0].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            else if (f2_uv.x > 0.5 && f2_uv.y < 0.5) {
+                rpos.xyz = worldMat[3].xyz;
+                if (worldMat[3].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            else {
+                rpos.xyz = worldMat[1].xyz;
+                if (worldMat[1].w < 0.5)
+                    to_uv.z = 0.0;
+            }
+            mid = V3MulFloat(V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz), 0.25);
+            size = new CVec3(max(worldMat[0].x, worldMat[1].x) - min(worldMat[2].x, worldMat[3].x), max(worldMat[1].y, worldMat[3].y) - min(worldMat[0].y, worldMat[2].y), 0.0);
+            rpos.xyz = V3SubV3(rpos.xyz, mid);
+            rpos = V4MulMatCoordi(rpos, billboardMat);
+            rpos.xyz = V3AddV3(rpos.xyz, mid);
+        }
+    }
+    BranchDefault();
+    if (f2_uv.x < 0.5 && f2_uv.y < 0.5) {
+        rpos.xyz = worldMat[2].xyz;
+        if (worldMat[2].w < 0.5)
+            to_uv.z = 0.0;
+    }
+    else if (f2_uv.x < 0.5 && f2_uv.y > 0.5) {
+        rpos.xyz = worldMat[0].xyz;
+        if (worldMat[0].w < 0.5)
+            to_uv.z = 0.0;
+    }
+    else if (f2_uv.x > 0.5 && f2_uv.y < 0.5) {
+        rpos.xyz = worldMat[3].xyz;
+        if (worldMat[3].w < 0.5)
+            to_uv.z = 0.0;
+    }
+    else {
+        rpos.xyz = worldMat[1].xyz;
+        if (worldMat[1].w < 0.5)
+            to_uv.z = 0.0;
+    }
+    mid = V3MulFloat(V3AddV3(V3AddV3(V3AddV3(worldMat[0].xyz, worldMat[1].xyz), worldMat[2].xyz), worldMat[3].xyz), 0.25);
+    size = new CVec3(max(worldMat[0].x, worldMat[1].x) - min(worldMat[2].x, worldMat[3].x), max(worldMat[1].y, worldMat[3].y) - min(worldMat[0].y, worldMat[2].y), 0.0);
+    BranchEnd();
+    BranchBegin("wind", "W", [windDir, windPos, windInfo, windCount, windInfluence, time]);
+    if (f2_uv.y > 0.5 && windInfluence > 0.01) {
+        rpos.xyz = V3AddV3(rpos.xyz, GetWind(mid, size, time));
+    }
+    BranchEnd();
+    to_worldPos = rpos;
+    rpos = V4MulMatCoordi(rpos, viewMat);
+    rpos = V4MulMatCoordi(rpos, projectMat);
+    BranchBegin("zDepth", "Z", [zDepth, zDepthBias]);
+    rpos.z += zDepth * zDepthBias;
+    BranchEnd();
+    out_position = rpos;
+}
+function vs_main_trail(f3_ver) {
+    var tpos = Sam2DToV4(trailPos, f3_ver.z);
+    to_uv = new CVec3(tpos.w * texCodi.x, f3_ver.y, 1.0);
+    if (tpos.w > 1.0)
+        to_uv.z = 0.0;
+    else if (lastHide < 0.5)
+        to_uv.z = 1.0;
+    else
+        to_uv.z = tpos.w;
+    var rpos = new CVec4(tpos.xyz, 1.0);
+    to_worldPos = rpos;
+    rpos = V4MulMatCoordi(rpos, viewMat);
+    rpos = V4MulMatCoordi(rpos, projectMat);
+    out_position = rpos;
+}
+function vs_main(f3_ver, f2_uv) {
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    to_uv.z = 1.0;
+    var P = new CVec4(f3_ver, 1.0);
+    var scaleX = 0.0;
+    var scaleY = 0.0;
+    var scaleZ = 0.0;
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    BranchBegin("billboard", "B", [billboard, billboardMat]);
+    if (billboard > 0.5) {
+        scaleX = V3Len(wMat[0].xyz);
+        scaleY = V3Len(wMat[1].xyz);
+        scaleZ = V3Len(wMat[2].xyz);
+        P.x *= scaleX;
+        P.y *= scaleY;
+        P.z *= scaleZ;
+        P = V4MulMatCoordi(P, billboardMat);
+        P.x += wMat[3].x;
+        P.y += wMat[3].y;
+        P.z += wMat[3].z;
+    }
+    else
+        P = V4MulMatCoordi(P, wMat);
+    BranchDefault();
+    P = V4MulMatCoordi(P, wMat);
+    BranchEnd();
+    var size;
+    BranchBegin("wind", "W", [windDir, windPos, windInfo, windCount, windInfluence, time]);
+    if (f2_uv.y > 0.5 && windInfluence > 0.01) {
+        size = new CVec3(V3Len(wMat[0].xyz) * 10.0, V3Len(wMat[1].xyz) * 10.0, 0.0);
+        P.xyz = V3AddV3(P.xyz, GetWind(P.xyz, size, time));
+    }
+    BranchEnd();
+    to_worldPos = P;
+    P = V4MulMatCoordi(P, viewMat);
+    out_position = V4MulMatCoordi(P, projectMat);
+}
+function ps_main() {
+    var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var shadow = -1.0;
+    BranchBegin("shadow", "S", [shadowOn]);
+    if (shadowOn > 0.5) {
+        shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
+        shadow = shadowTex.x;
+    }
+    BranchEnd();
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
+    L_cor = VFXDown2(to_uv.xy, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(0.0, to_uv.xy);
+    BranchEnd();
+    L_cor.a *= to_uv.z;
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    BranchBegin("decal", "decal", [decalParam, decalInvWorldMat]);
+    L_cor = DecalCac(L_cor, to_worldPos);
+    BranchEnd();
+    var normal = new CVec3(0.0, 0.0, 0.0);
+    BranchBegin("normalMap", "N", [sam2DCount]);
+    if (sam2DCount > 1.0) {
+        normal = Sam2DToColor(1.0, to_uv.xy).xyz;
+        normal = MappingTexToV3(normal);
+    }
+    BranchEnd();
+    var DSE = new CMat3(0);
+    BranchBegin("light", "L", [ligDir, ligCol, ligCount, ambientColor]);
+    DSE = LightCac2D(to_worldPos, L_cor, normal, ambientColor);
+    L_cor.rgb = DSE[0];
+    BranchEnd();
+    if (shadow > -0.5) {
+        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);
+    }
+    out_color = L_cor;
+}
+function ps_main_mask() {
+    var L_cor = Sam2D0ToColor(to_uv.xy);
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    L_cor.a = mask;
+    out_color = L_cor;
+}

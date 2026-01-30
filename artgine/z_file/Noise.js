@@ -1,1 +1,126 @@
-import{SDF as e}from"./SDF";import{CMat as n,CVec2 as w,CVec3 as r,CVec4 as i,CMat3 as x,abs as y,floor as o,mix as z,mod as s,V2Mod as t,V3AddV3 as N,V3Floor as u,V3Fract as a,V3MulFloat as l,V3MulV3 as f,V3MulMat3Normal as v,V3Dot as P,V3SubV3 as p,V3Step as m,V3Min as c,V3Max as V,V3Mod as d,V4MulV4 as B,V4SubV4 as F,V4AddV4 as S,V4MulFloat as D,V4Floor as G,V4Abs as g,V4Step as h,V4Max as M,V4Dot as R,V4Mod as W,Sam2DToV4 as b,FloatToInt as j,Hash13 as k}from"./Shader";export function BayerFilter(e){var w=t(e.xy,4),r=.0625;return new n(0,.75,3*r,15*r,.5,4*r,11*r,7*r,2*r,14*r,1*r,13*r,10*r,6*r,9*r,5*r)[j(w.x)][j(w.y)]}export function NoiseValue3(e){var n=u(e),w=a(e);return w=f(f(w,w),new r(3-2*w.x,3-2*w.y,3-2*w.z)),z(z(z(k(N(n,new r(0,0,0))),k(N(n,new r(1,0,0))),w.x),z(k(N(n,new r(0,1,0))),k(N(n,new r(1,1,0))),w.x),w.y),z(z(k(N(n,new r(0,0,1))),k(N(n,new r(1,0,1))),w.x),z(k(N(n,new r(0,1,1))),k(N(n,new r(1,1,1))),w.x),w.y),w.z)}function q(e,n){var r=d(l(e,128),128),i=u(r),x=i.x+128*s(i.y,16),y=o(i.y/16)+8*o(i.z/4),z=b(new w(11,n+y),x),t=s(i.z,4);return t<.5?z.x:t<1.5?z.y:t<2.5?z.z:z.w}export function NoiseGet(n,o){if(o<e.eNoise.Gaussian+.5){var z=128*n.x,s=128*n.y,t=128*n.z;return NoiseValue3(new r(z,s,t))}if(o>e.eNoise.Perlin-.5)return q(n,e.eNoise.Perlin);if(o>e.eNoise.Voronoi-.5)return q(n,e.eNoise.Voronoi);if(o<e.eNoise.Billow+.5)return y(2*q(n,e.eNoise.Perlin)-1);if(o<e.eNoise.Ridged+.5)return 1-y(2*q(n,e.eNoise.Perlin)-1);if(o<e.eNoise.DomainWarp+.5){var a=n,f=q(a,e.eNoise.Perlin),b=q(a=N(n,new r(5.2,1.3,.1)),e.eNoise.Perlin),j=q(a=N(n,new r(3.1,9.2,5.5)),e.eNoise.Perlin);return q(a=N(n,l(new r(f,b,j),.2)),e.eNoise.Perlin)}if(o<e.eNoise.FBM+.5){var k,A=new r(0,.8,.6),C=new r(-.8,.36,-.48),E=new r(-.6,-.48,.64),H=new x(A,C,E);return k+=.5*q(n,e.eNoise.Perlin),(k+=.25*q(n=l(v(n,H),2.76434),e.eNoise.Perlin))+.125*q(n=l(v(n,H),2.76434),e.eNoise.Perlin)}return o<e.eNoise.Simplex+.5?(z=128*n.x,s=128*n.y,t=128*n.z,function(e){var n=new w(1/6,1/3),x=new i(0,.5,1,2),y=P(e,new r(n.y,n.y,n.y)),o=u(N(e,new r(y,y,y)));y=P(o,new r(n.x,n.x,n.x));var z=N(p(e,o),new r(y,y,y)),s=m(new r(z.y,z.z,z.x),z.xyz),t=p(new r(1,1,1),s),a=c(s.xyz,new r(t.z,t.x,t.y)),f=V(s.xyz,new r(t.z,t.x,t.y)),v=N(p(z,a),new r(n.x,n.x,n.x)),b=N(p(z,f),new r(2*n.x,2*n.x,2*n.x)),j=N(p(z,new r(1,1,1)),new r(3*n.x,3*n.x,3*n.x));o=d(o,289);var k=new i(o.z,o.z+a.z,o.z+f.z,o.z+1);k=W(B(S(D(k,34),new i(1,1,1,1)),k),289),k=S(k,new i(o.y,o.y+a.y,o.y+f.y,o.y+1)),k=W(B(S(D(k,34),new i(1,1,1,1)),k),289),k=S(k,new i(o.x,o.x+a.x,o.x+f.x,o.x+1)),k=W(B(S(D(k,34),new i(1,1,1,1)),k),289);var q=1/7,A=new r(q*x.w-x.x,q*x.y-x.z,q*x.z-x.x),C=F(k,D(G(D(k,A.z*A.z)),49)),E=G(D(C,A.z)),H=G(F(C,D(E,7))),I=S(D(E,A.x),new i(A.y,A.y,A.y,A.y)),J=S(D(H,A.x),new i(A.y,A.y,A.y,A.y)),K=F(F(new i(1,1,1,1),g(I)),g(J)),L=new i(I.xy,J.xy),O=new i(I.z,I.w,J.z,J.w),Q=S(D(G(L),2),new i(1,1,1,1)),T=S(D(G(O),2),new i(1,1,1,1)),U=D(h(K,new i(0,0,0,0)),-1),X=S(new i(L.x,L.z,L.y,L.w),B(new i(Q.x,Q.z,Q.y,Q.w),new i(U.x,U.x,U.y,U.y))),Y=S(new i(O.x,O.z,O.y,O.w),B(new i(T.x,T.z,T.y,T.w),new i(U.z,U.z,U.w,U.w))),Z=new r(X.xy,K.x),$=new r(X.z,X.w,K.y),_=new r(Y.xy,K.z),ee=new r(Y.z,Y.w,K.w),ne=new i(P(Z,Z),P($,$),P(_,_),P(ee,ee));ne=F(new i(1.79284291400159,1.79284291400159,1.79284291400159,1.79284291400159),D(ne,.85373472095314)),Z=l(Z,ne.x),$=l($,ne.y),_=l(_,ne.z),ee=l(ee,ne.w);var we=M(new i(.6-P(z,z),.6-P(v,v),.6-P(b,b),.6-P(j,j)),new i(0,0,0,0));return we=B(we,we),we=B(we,we),42*R(we,new i(P(Z,z),P($,v),P(_,b),P(ee,j)))}(new r(z,s,t))):1}
+import { SDF } from "./SDF";
+import { CMat, CVec2, CVec3, CVec4, CMat3, abs, floor, mix, mod, V2Mod, V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3, V3MulMat3Normal, V3Dot, V3SubV3, V3Step, V3Min, V3Max, V3Mod, V4MulV4, V4SubV4, V4AddV4, V4MulFloat, V4Floor, V4Abs, V4Step, V4Max, V4Dot, V4Mod, Sam2DToV4, FloatToInt, Hash13, } from "./Shader";
+export function BayerFilter(_coord) {
+    var uv = V2Mod(_coord.xy, 4.0);
+    var f = 0.0625;
+    var bayerMat = new CMat(0.0 * f, 12.0 * f, 3.0 * f, 15.0 * f, 8.0 * f, 4.0 * f, 11.0 * f, 7.0 * f, 2.0 * f, 14.0 * f, 1.0 * f, 13.0 * f, 10.0 * f, 6.0 * f, 9.0 * f, 5.0 * f);
+    return bayerMat[FloatToInt(uv.x)][FloatToInt(uv.y)];
+}
+export function NoiseValue3(_v) {
+    var p = V3Floor(_v);
+    var f = V3Fract(_v);
+    f = V3MulV3(V3MulV3(f, f), new CVec3(3.0 - 2.0 * f.x, 3.0 - 2.0 * f.y, 3.0 - 2.0 * f.z));
+    return mix(mix(mix(Hash13(V3AddV3(p, new CVec3(0, 0, 0))), Hash13(V3AddV3(p, new CVec3(1, 0, 0))), f.x), mix(Hash13(V3AddV3(p, new CVec3(0, 1, 0))), Hash13(V3AddV3(p, new CVec3(1, 1, 0))), f.x), f.y), mix(mix(Hash13(V3AddV3(p, new CVec3(0, 0, 1))), Hash13(V3AddV3(p, new CVec3(1, 0, 1))), f.x), mix(Hash13(V3AddV3(p, new CVec3(0, 1, 1))), Hash13(V3AddV3(p, new CVec3(1, 1, 1))), f.x), f.y), f.z);
+}
+function NoiseSimplex3(_v) {
+    var C = new CVec2(1.0 / 6.0, 1.0 / 3.0);
+    var D = new CVec4(0.0, 0.5, 1.0, 2.0);
+    var dotVal = V3Dot(_v, new CVec3(C.y, C.y, C.y));
+    var i = V3Floor(V3AddV3(_v, new CVec3(dotVal, dotVal, dotVal)));
+    dotVal = V3Dot(i, new CVec3(C.x, C.x, C.x));
+    var x0 = V3AddV3(V3SubV3(_v, i), new CVec3(dotVal, dotVal, dotVal));
+    var g = V3Step(new CVec3(x0.y, x0.z, x0.x), x0.xyz);
+    var l = V3SubV3(new CVec3(1.0, 1.0, 1.0), g);
+    var i1 = V3Min(g.xyz, new CVec3(l.z, l.x, l.y));
+    var i2 = V3Max(g.xyz, new CVec3(l.z, l.x, l.y));
+    var x1 = V3AddV3(V3SubV3(x0, i1), new CVec3(C.x, C.x, C.x));
+    var x2 = V3AddV3(V3SubV3(x0, i2), new CVec3(C.x * 2.0, C.x * 2.0, C.x * 2.0));
+    var x3 = V3AddV3(V3SubV3(x0, new CVec3(1.0, 1.0, 1.0)), new CVec3(C.x * 3.0, C.x * 3.0, C.x * 3.0));
+    i = V3Mod(i, 289.0);
+    var p = new CVec4(i.z, i.z + i1.z, i.z + i2.z, i.z + 1.0);
+    p = V4Mod(V4MulV4(V4AddV4(V4MulFloat(p, 34.0), new CVec4(1.0, 1.0, 1.0, 1.0)), p), 289.0);
+    p = V4AddV4(p, new CVec4(i.y, i.y + i1.y, i.y + i2.y, i.y + 1.0));
+    p = V4Mod(V4MulV4(V4AddV4(V4MulFloat(p, 34.0), new CVec4(1.0, 1.0, 1.0, 1.0)), p), 289.0);
+    p = V4AddV4(p, new CVec4(i.x, i.x + i1.x, i.x + i2.x, i.x + 1.0));
+    p = V4Mod(V4MulV4(V4AddV4(V4MulFloat(p, 34.0), new CVec4(1.0, 1.0, 1.0, 1.0)), p), 289.0);
+    var n_ = 1.0 / 7.0;
+    var ns = new CVec3(n_ * D.w - D.x, n_ * D.y - D.z, n_ * D.z - D.x);
+    var j = V4SubV4(p, V4MulFloat(V4Floor(V4MulFloat(p, ns.z * ns.z)), 49.0));
+    var x_ = V4Floor(V4MulFloat(j, ns.z));
+    var y_ = V4Floor(V4SubV4(j, V4MulFloat(x_, 7.0)));
+    var x = V4AddV4(V4MulFloat(x_, ns.x), new CVec4(ns.y, ns.y, ns.y, ns.y));
+    var y = V4AddV4(V4MulFloat(y_, ns.x), new CVec4(ns.y, ns.y, ns.y, ns.y));
+    var h = V4SubV4(V4SubV4(new CVec4(1.0, 1.0, 1.0, 1.0), V4Abs(x)), V4Abs(y));
+    var b0 = new CVec4(x.xy, y.xy);
+    var b1 = new CVec4(x.z, x.w, y.z, y.w);
+    var s0 = V4AddV4(V4MulFloat(V4Floor(b0), 2.0), new CVec4(1.0, 1.0, 1.0, 1.0));
+    var s1 = V4AddV4(V4MulFloat(V4Floor(b1), 2.0), new CVec4(1.0, 1.0, 1.0, 1.0));
+    var sh = V4MulFloat(V4Step(h, new CVec4(0.0, 0.0, 0.0, 0.0)), -1.0);
+    var a0 = V4AddV4(new CVec4(b0.x, b0.z, b0.y, b0.w), V4MulV4(new CVec4(s0.x, s0.z, s0.y, s0.w), new CVec4(sh.x, sh.x, sh.y, sh.y)));
+    var a1 = V4AddV4(new CVec4(b1.x, b1.z, b1.y, b1.w), V4MulV4(new CVec4(s1.x, s1.z, s1.y, s1.w), new CVec4(sh.z, sh.z, sh.w, sh.w)));
+    var p0 = new CVec3(a0.xy, h.x);
+    var p1 = new CVec3(a0.z, a0.w, h.y);
+    var p2 = new CVec3(a1.xy, h.z);
+    var p3 = new CVec3(a1.z, a1.w, h.w);
+    var norm = new CVec4(V3Dot(p0, p0), V3Dot(p1, p1), V3Dot(p2, p2), V3Dot(p3, p3));
+    norm = V4SubV4(new CVec4(1.79284291400159, 1.79284291400159, 1.79284291400159, 1.79284291400159), V4MulFloat(norm, 0.85373472095314));
+    p0 = V3MulFloat(p0, norm.x);
+    p1 = V3MulFloat(p1, norm.y);
+    p2 = V3MulFloat(p2, norm.z);
+    p3 = V3MulFloat(p3, norm.w);
+    var m = V4Max(new CVec4(0.6 - V3Dot(x0, x0), 0.6 - V3Dot(x1, x1), 0.6 - V3Dot(x2, x2), 0.6 - V3Dot(x3, x3)), new CVec4(0.0, 0.0, 0.0, 0.0));
+    m = V4MulV4(m, m);
+    m = V4MulV4(m, m);
+    return 42.0 * V4Dot(m, new CVec4(V3Dot(p0, x0), V3Dot(p1, x1), V3Dot(p2, x2), V3Dot(p3, x3)));
+}
+function SampleNoise(_uvw, _type) {
+    var size = 128.0;
+    var coord = V3Mod(V3MulFloat(_uvw, size), size);
+    var i0 = V3Floor(coord);
+    var offX = i0.x + mod(i0.y, 16.0) * 128.0;
+    var offY = floor(i0.y / 16.0) + floor(i0.z / 4.0) * 8.0;
+    var v4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
+    var zMod4 = mod(i0.z, 4.0);
+    return zMod4 < 0.5 ? v4.x : (zMod4 < 1.5 ? v4.y : (zMod4 < 2.5 ? v4.z : v4.w));
+}
+export function NoiseGet(_uvw, _type) {
+    if (_type < SDF.eNoise.Gaussian + 0.5) {
+        var xi = _uvw.x * 128.0;
+        var yi = _uvw.y * 128.0;
+        var zi = _uvw.z * 128.0;
+        return NoiseValue3(new CVec3(xi, yi, zi));
+    }
+    else if (_type > SDF.eNoise.Perlin - 0.5) {
+        return SampleNoise(_uvw, SDF.eNoise.Perlin);
+    }
+    else if (_type > SDF.eNoise.Voronoi - 0.5) {
+        return SampleNoise(_uvw, SDF.eNoise.Voronoi);
+    }
+    else if (_type < SDF.eNoise.Billow + 0.5) {
+        return abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
+    }
+    else if (_type < SDF.eNoise.Ridged + 0.5) {
+        return 1.0 - abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
+    }
+    else if (_type < SDF.eNoise.DomainWarp + 0.5) {
+        var uvw = _uvw;
+        var qx = SampleNoise(uvw, SDF.eNoise.Perlin);
+        uvw = V3AddV3(_uvw, new CVec3(5.2, 1.3, 0.1));
+        var qy = SampleNoise(uvw, SDF.eNoise.Perlin);
+        uvw = V3AddV3(_uvw, new CVec3(3.1, 9.2, 5.5));
+        var qz = SampleNoise(uvw, SDF.eNoise.Perlin);
+        var warpStrength = 0.2;
+        uvw = V3AddV3(_uvw, V3MulFloat(new CVec3(qx, qy, qz), warpStrength));
+        return SampleNoise(uvw, SDF.eNoise.Perlin);
+    }
+    else if (_type < SDF.eNoise.FBM + 0.5) {
+        var matVec1 = new CVec3(0.0, 0.8, 0.6);
+        var matVec2 = new CVec3(-0.8, 0.36, -0.48);
+        var matVec3 = new CVec3(-0.6, -0.48, 0.64);
+        var mat = new CMat3(matVec1, matVec2, matVec3);
+        var fbm;
+        fbm += 0.500 * SampleNoise(_uvw, SDF.eNoise.Perlin);
+        _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
+        fbm += 0.250 * SampleNoise(_uvw, SDF.eNoise.Perlin);
+        _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
+        fbm += 0.125 * SampleNoise(_uvw, SDF.eNoise.Perlin);
+        return fbm;
+    }
+    else if (_type < SDF.eNoise.Simplex + 0.5) {
+        var xi = _uvw.x * 128.0;
+        var yi = _uvw.y * 128.0;
+        var zi = _uvw.z * 128.0;
+        return NoiseSimplex3(new CVec3(xi, yi, zi));
+    }
+    return 1.0;
+}

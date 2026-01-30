@@ -1,1 +1,85 @@
-import{NoiseGet as n}from"./Noise";import{SDF as e}from"./SDF";import{clamp as r,CVec2 as i,CVec3 as o,FloatToInt as w,mix as x,Sam2DToV4 as t,Sam2DV4 as f,smoothstep as d,step as a,V3AddV3 as v,V3Dot as y,V3Len as p,V3MulFloat as u,V3MulV3 as z,V3Nor as l,V3SubV3 as c}from"./Shader";export var windInfluence=0;export var windDir=new f(11,287);export var windPos=new f(11,288);export var windInfo=new f(11,289);export var windCount=0;export function GetWind(f,m,s){if(windCount<.5)return new o(0,0,0);for(var I=new o(0,0,0),P=0;P<e.TexSizeMax&&!(P>=w(windCount));P++){var N=t(windDir,P),C=t(windPos,P),D=t(windInfo,P),S=N.w*windInfluence/1e4;if(!(S<.01)){var W=N.xyz,G=C.xyz,h=D.x,A=D.y,F=D.z,M=D.w,T=c(f,G),b=p(T),g=new i(-.5,1),j=h+A<.1?0:1,k=y(W,W)<.01?1:0;if(j>.5){if(A<b)continue;k>.5&&(W=T);var q=d(0,h,b)*(1-d(h,A,b));g.y=q,g.x=.5*-q}if(!(y(W,W)<.01)){var B;W=l(W),B=k>.5?new o(1,1,1):W;var E=-1/M,H=u(B,s*F*.5),J=new o(n(new o(y(f,B)*E,H.x,0),e.eNoise.Perlin),n(new o(y(f,B)*E,H.y,0),e.eNoise.Perlin),n(new o(y(f,B)*E,H.z,0),e.eNoise.Perlin));J=v(u(J,g.y-g.x),new o(g.x,g.x,g.x));var K=z(J,W),L=u(m,S);C.w>.5&&(K.x=r(1*K.x,-1,1),K.y=r(K.y*x(1,1,a(0,K.y)),-1,1)),I=v(I,z(K,L))}}}return I}export function ApplyWind(n,e,r,i){if(windInfluence>.01){var w=GetWind(n.xyz,new o(100,100,100),i);n.x+=w.x,n.y+=w.y,n.z+=w.z}return n}
+import { NoiseGet } from "./Noise";
+import { SDF } from "./SDF";
+import { clamp, CVec2, CVec3, FloatToInt, mix, Sam2DToV4, Sam2DV4, smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
+export var windInfluence = 0.0;
+export var windDir = new Sam2DV4(11, 287);
+export var windPos = new Sam2DV4(11, 288);
+export var windInfo = new Sam2DV4(11, 289);
+export var windCount = 0.0;
+export function GetWind(_objPos, _size, _time) {
+    if (windCount < 0.5) {
+        return new CVec3(0.0, 0.0, 0.0);
+    }
+    var wind = new CVec3(0.0, 0.0, 0.0);
+    for (var i = 0; i < SDF.TexSizeMax; i++) {
+        if (i >= FloatToInt(windCount))
+            break;
+        var wDir = Sam2DToV4(windDir, i);
+        var wPos = Sam2DToV4(windPos, i);
+        var wInfo = Sam2DToV4(windInfo, i);
+        var pow = wDir.w * windInfluence / (100.0 * 100.0);
+        if (pow < 0.01) {
+            continue;
+        }
+        var dir = wDir.xyz;
+        var pos = wPos.xyz;
+        var inner = wInfo.x;
+        var outer = wInfo.y;
+        var freq = wInfo.z;
+        var wave = wInfo.w;
+        var w2oVec = V3SubV3(_objPos, pos);
+        var dist = V3Len(w2oVec);
+        var range = new CVec2(-0.5, 1.0);
+        var hasRange = inner + outer < 0.1 ? 0.0 : 1.0;
+        var needCalcDir = V3Dot(dir, dir) < 0.01 ? 1.0 : 0.0;
+        if (hasRange > 0.5) {
+            if (outer < dist) {
+                continue;
+            }
+            if (needCalcDir > 0.5) {
+                dir = w2oVec;
+            }
+            var wRatio = smoothstep(0.0, inner, dist) * (1.0 - smoothstep(inner, outer, dist));
+            range.y = wRatio;
+            range.x = -wRatio * 0.5;
+        }
+        if (V3Dot(dir, dir) < 0.01) {
+            continue;
+        }
+        dir = V3Nor(dir);
+        var speedFactor;
+        if (needCalcDir > 0.5) {
+            speedFactor = new CVec3(1.0, 1.0, 1.0);
+        }
+        else {
+            speedFactor = dir;
+        }
+        var windScale = -1.0 / wave;
+        var timed = V3MulFloat(speedFactor, _time * freq * 0.5);
+        var noise = new CVec3(NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.x, 0.0), SDF.eNoise.Perlin), NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.y, 0.0), SDF.eNoise.Perlin), NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.z, 0.0), SDF.eNoise.Perlin));
+        noise = V3AddV3(V3MulFloat(noise, range.y - range.x), new CVec3(range.x, range.x, range.x));
+        var windResult = V3MulV3(noise, dir);
+        var windPower = V3MulFloat(_size, pow);
+        var useWeight = wPos.w;
+        if (useWeight > 0.5) {
+            var upWeight = 1.0;
+            var downWeight = 1.0;
+            var verticalWeight = 1.0;
+            windResult.x = clamp(windResult.x * verticalWeight, -1.0, 1.0);
+            windResult.y = clamp(windResult.y * mix(downWeight, upWeight, step(0.0, windResult.y)), -1.0, 1.0);
+        }
+        wind = V3AddV3(wind, V3MulV3(windResult, windPower));
+    }
+    return wind;
+}
+export function ApplyWind(_worldPos, _skin, _weight, _time) {
+    {
+        if (windInfluence > 0.01) {
+            var wind = GetWind(_worldPos.xyz, new CVec3(100.0, 100.0, 100.0), _time);
+            _worldPos.x += wind.x;
+            _worldPos.y += wind.y;
+            _worldPos.z += wind.z;
+        }
+    }
+    return _worldPos;
+}
