@@ -131,7 +131,7 @@ export class CBoundWorld
 }
 export class CBoundWorldPaint extends CBoundWorld
 {
-    Init(_LBound : CBound,_WMat : CMat)
+    override Init(_LBound : CBound,_WMat : CMat)
     {
         super.Init(_LBound,_WMat);
         this.mRadian=this.mBound.GetOutRadius();
@@ -145,12 +145,12 @@ export class CBoundWorldCollider extends CBoundWorld
     mIMat : CMat=new CMat();
 	mWBound : CBound=new CBound();
     dirPoint : CVec3=new CVec3();
-    Init(_LBound : CBound,_WMat : CMat)
+    override Init(_LBound : CBound,_WMat : CMat)
     {
         super.Init(_LBound,_WMat);
         this.mRadian=this.mBound.GetInRadius();
     }
-    UpdateMat(_mat : CMat)
+    override UpdateMat(_mat : CMat)
     {
         super.UpdateMat(_mat);
         this.mMat.Import(_mat);

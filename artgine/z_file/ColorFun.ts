@@ -356,12 +356,12 @@ function MapToPaletteIndex(_color : CVec3, _cellSize : number,_palSize : CVec2) 
 }
 
 export var VFX : CMat=Null();
-export var LUT0: Sam2DV4=new Sam2DV4(11, 281);
-export var LUT1: Sam2DV4=new Sam2DV4(11, 282);
-export var LUT2: Sam2DV4=new Sam2DV4(11, 283);
-export var LUT3: Sam2DV4=new Sam2DV4(11, 284);
-export var LUT4: Sam2DV4=new Sam2DV4(11, 285);
-export var LUT5: Sam2DV4=new Sam2DV4(11, 286);
+export var LUT0: Sam2DV4=new Sam2DV4(11, 159);
+export var LUT1: Sam2DV4=new Sam2DV4(11, 160);
+export var LUT2: Sam2DV4=new Sam2DV4(11, 161);
+export var LUT3: Sam2DV4=new Sam2DV4(11, 162);
+export var LUT4: Sam2DV4=new Sam2DV4(11, 163);
+export var LUT5: Sam2DV4=new Sam2DV4(11, 164);
 
 // function NoiseGet(_uv : CVec2,_frame : number,_type : number) : CVec4
 // {

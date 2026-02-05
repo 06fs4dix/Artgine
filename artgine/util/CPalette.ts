@@ -103,13 +103,14 @@ export class CPalette
 			
 		}
 			
-		gNoise[0]=upFolder+"artgine/z_file/Noise/perlin128.png";
-		gNoise[1]=upFolder+"artgine/z_file/Noise/voronoi128.png";
+		gNoise[0]=upFolder+"artgine/z_file/Noise/perlin96.png";
+		gNoise[1]=upFolder+"artgine/z_file/Noise/voronoi96.png";
+		gNoise[2]=upFolder+"artgine/z_file/Noise/cloud96.png";
 
-		for(let i=0;i<2;++i)
+		for(let i=0;i<gNoise.length;++i)
 			await _fw.Load().Exe(gNoise[i],option);
 
-		for(let i=0;i<2;++i)
+		for(let i=0;i<gNoise.length;++i)
 		{
 			let tex=_fw.Res().Find(gNoise[i]) as CTexture;
 			_fw.Res().Remove(gNoise[i]);
@@ -185,6 +186,10 @@ export class CPalette
 		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100),this.GetBlackTex());
 		_fw.Res().Push(this.GetBoxMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
+
+		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetDevBox(100),this.GetBlackTex());
+		_fw.Res().Push(this.GetDevBoxMesh(), mesh);
+		CUtilRender.MeshBoundUpdate(mesh);
 	
 		//mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32),this.GetBlackTex());
 		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(100,100,100),16,16,100,100),this.GetBlackTex());
@@ -219,91 +224,112 @@ export class CPalette
 		}
 
 
-
-		fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*8*4);
+		// Perlin - 2048x256 통짜 버퍼, 128x128 타일을 RGBA 채널에 순차 저장
+		fa = new Float32Array(2048 * 256 * 4);
 		tex = _fw.Res().Find(gNoise[0]);
-		for(let z = 0; z < 32; z++)
-		{
-			for(let y = 0; y < 128; y++) 
-			{
-				for(let x = 0; x < 128; x++) 
-				{
-					for(let k = 0; k < 4; k++) 
-					{
-						let realz = z*4+k;
-						let w = (realz % 16) * 128 + x;
-						let h = Math.floor(realz / 16) * 128 + y;
-						let bufOff = h * 2048 + w;
 
-						let i = 128 * y + x;
-						let faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
-						
-						fa[faOff * 4 + k] = tex.GetBuf()[0][bufOff * 4 + 0] / 0xFF;
-					}
+		/*
+		원본 이미지 (perlin128.png): 2048 x 1024
+		-128x128 타일이 가로 16개, 세로 8개 = 총 128개 슬라이스
+
+		출력 버퍼: 2048 x 256
+		-128x128 타일이 가로 16개, 세로 2개 = 총 32개 타일
+		-각 타일에 RGB로 3개 슬라이스 저장 → 32 × 3 = 96개
+		*/
+		
+		for(let dstY = 0; dstY < 256; dstY++)
+		{
+			for(let dstX = 0; dstX < 2048; dstX++)
+			{
+				let tileX = Math.floor(dstX / 128);
+				let tileY = Math.floor(dstY / 128);
+				let tileIndex = tileY * 16 + tileX;  // 0-31
+				
+				let localX = dstX % 128;
+				let localY = dstY % 128;
+				let dstIndex = (dstY * 2048 + dstX) * 4;
+				
+				for(let k = 0; k < 4; k++)  // RGBA
+				{
+					let sliceIndex = (tileIndex * 3 + k) % 96;  // 3칸씩 진행, 96으로 wrap
+					
+					let srcTileX = sliceIndex % 16;
+					let srcTileY = Math.floor(sliceIndex / 16);
+					
+					let srcX = srcTileX * 128 + localX;
+					let srcY = srcTileY * 128 + localY;
+					let srcIndex = (srcY * 2048 + srcX) * 4;
+					
+					fa[dstIndex + k] = tex.GetBuf()[0][srcIndex] / 0xFF;
 				}
 			}
-			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Perlin+z*8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
 		}
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Perlin, 2048, 256, fa);
 		_fw.Res().Remove(gNoise[0]);
-
+		
 		// Voronoi
 		tex = _fw.Res().Find(gNoise[1]);
-		for(let z = 0; z < 32; z++)
+		for(let dstY = 0; dstY < 256; dstY++)
 		{
-			for(let y = 0; y < 128; y++) 
+			for(let dstX = 0; dstX < 2048; dstX++)
 			{
-				for(let x = 0; x < 128; x++) 
+				let tileX = Math.floor(dstX / 128);
+				let tileY = Math.floor(dstY / 128);
+				let tileIndex = tileY * 16 + tileX;  // 0-31
+				
+				let localX = dstX % 128;
+				let localY = dstY % 128;
+				let dstIndex = (dstY * 2048 + dstX) * 4;
+				
+				for(let k = 0; k < 4; k++)  // RGBA
 				{
-					for(let k = 0; k < 4; k++) 
-					{
-						let realz = z*4+k;
-						let w = (realz % 16) * 128 + x;
-						let h = Math.floor(realz / 16) * 128 + y;
-						let bufOff = h * 2048 + w;
-
-						let i = 128 * y + x;
-						let faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
-						
-						fa[faOff * 4 + k] = tex.GetBuf()[0][bufOff * 4 + 0] / 0xFF;
-					}
+					let sliceIndex = (tileIndex * 3 + k) % 96;  // 3칸씩 진행, 96으로 wrap
+					
+					let srcTileX = sliceIndex % 16;
+					let srcTileY = Math.floor(sliceIndex / 16);
+					
+					let srcX = srcTileX * 128 + localX;
+					let srcY = srcTileY * 128 + localY;
+					let srcIndex = (srcY * 2048 + srcX) * 4;
+					
+					fa[dstIndex + k] = tex.GetBuf()[0][srcIndex] / 0xFF;
 				}
 			}
-			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Voronoi+z*8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
 		}
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Voronoi, 2048, 256, fa);
 		_fw.Res().Remove(gNoise[1]);
-		
-		//실시간 생성
-		//fa=new Float32Array(CDevice.GetProperty(CDevice.eProperty.Sam2DSize)*8*4);
-		// Perlin
-		// let texs = CImgPro.Create3DNoiseTexture(SDF.eNoise.Perlin, new CVec3(128,128,128));
-		// for(let j = 0; j < 32; j++) {
-		// 	tex = texs[j];
-		// 	for(let i=0;i<tex.GetWidth()*tex.GetHeight();++i) {
-		// 		var faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
-		// 		fa[faOff*4+0]=texs[j*4+0].GetBuf()[0][i*4+0]/0xFF;
-		// 		fa[faOff*4+1]=texs[j*4+1].GetBuf()[0][i*4+0]/0xFF;
-		// 		fa[faOff*4+2]=texs[j*4+2].GetBuf()[0][i*4+0]/0xFF;
-		// 		fa[faOff*4+3]=texs[j*4+3].GetBuf()[0][i*4+0]/0xFF;
-		// 	}
-		// 	_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Perlin + j * 8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
-		// }
-		
-		// // Voronoi
-		// texs = CImgPro.Create3DNoiseTexture(SDF.eNoise.Voronoi, new CVec3(128,128,128));
-		// for(let j = 0; j < 32; j++) {
-		// 	tex = texs[j];
-		// 	for(let i=0;i<tex.GetWidth()*tex.GetHeight();++i) {
-		// 		var faOff = (7 - Math.floor(i / 2048)) * 2048 + i % 2048;
-		// 		fa[faOff*4+0]=texs[j*4+0].GetBuf()[0][i*4+0]/0xFF;
-		// 		fa[faOff*4+1]=texs[j*4+1].GetBuf()[0][i*4+0]/0xFF;
-		// 		fa[faOff*4+2]=texs[j*4+2].GetBuf()[0][i*4+0]/0xFF;
-		// 		fa[faOff*4+3]=texs[j*4+3].GetBuf()[0][i*4+0]/0xFF;
-		// 	}
-		// 	_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eNoise.Voronoi + j * 8,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),8,fa);
-		// }
-		
-		
-		
+
+		// Cloud
+		tex = _fw.Res().Find(gNoise[2]);
+		for(let dstY = 0; dstY < 256; dstY++)
+		{
+			for(let dstX = 0; dstX < 2048; dstX++)
+			{
+				let tileX = Math.floor(dstX / 128);
+				let tileY = Math.floor(dstY / 128);
+				let tileIndex = tileY * 16 + tileX;  // 0-31
+				
+				let localX = dstX % 128;
+				let localY = dstY % 128;
+				let dstIndex = (dstY * 2048 + dstX) * 4;
+				
+				for(let k = 0; k < 4; k++)  // RGBA
+				{
+					let sliceIndex = (tileIndex * 3 + k) % 96;  // 3칸씩 진행, 96으로 wrap
+					
+					let srcTileX = sliceIndex % 16;
+					let srcTileY = Math.floor(sliceIndex / 16);
+					
+					let srcX = srcTileX * 128 + localX;
+					let srcY = srcTileY * 128 + localY;
+					let srcIndex = (srcY * 2048 + srcX) * 4;
+					
+					fa[dstIndex + k] = tex.GetBuf()[0][srcIndex] / 0xFF;
+				}
+			}
+		}
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Cloud, 2048, 256, fa);
+		_fw.Res().Remove(gNoise[2]);
 
 	}
 	
@@ -345,6 +371,10 @@ export class CPalette
 	GetBoxMesh()
 	{
 		return "Artgine/box.mesh";
+	}
+	GetDevBoxMesh()
+	{
+		return "Artgine/devBox.mesh";
 	}
 	GetSphereMesh()
 	{

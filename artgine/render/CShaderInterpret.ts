@@ -296,7 +296,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 	{
 		
 	}
-	async Exe(_fileName : string,_source : string)
+	override async Exe(_fileName : string,_source : string)
 	{
 		this.Init();
 		await super.Exe(_fileName,_source);
@@ -304,7 +304,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 	}
 	
 	
-	Compare(_keyword : string,_off) : number
+	override Compare(_keyword : string,_off) : number
 	{
 		return 0;
 	}
@@ -314,13 +314,13 @@ export class CShaderInterpretGL extends CShaderInterpret
 	}
 
 	
-	Build()
+	override Build()
 	{
 		
 		
 
 	}
-	DataTypeAddCount(_eachCount)
+	override DataTypeAddCount(_eachCount)
 	{
 		
 		switch (_eachCount)
@@ -353,9 +353,9 @@ export class CShaderInterpretGL extends CShaderInterpret
 		for(const funKey of _useFun) {
 
 			if(_addedFun.indexOf(funKey)!=-1)	continue;
-			// if(funKey=="SimplifiedFresnelSchlick")
+			// if(funKey=="BayerFilter")
 			// {
-			// 	CConsol.Log("SimplifiedFresnelSchlick");
+			// 	CConsol.Log("BayerFilter");
 			// }
 
 
@@ -1318,22 +1318,52 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// let sammax4=CDevice.GetProperty(CDevice.eProperty.Sam2DWriteY)/4;
 		// let sammax16=CDevice.GetProperty(CDevice.eProperty.Sam2DWriteY)/16;
 		//textureSize(sam2D[" + j + "],0);
+
+
+
 		str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
+		str += "	ivec2 ts;\n";
+		str += "	vec2 uv;\n";
 		str += "	if(_uni.x-0.5<=0.0) {";
-		str += "		return texelFetch(sam2D[0],ivec2(int(_off),int(_uni.y)),0);";
+		str += "		ts = textureSize(sam2D[0],0);";
+		str += "		uv = vec2((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y));";
+		str += "		return texture(sam2D[0],uv);";
 		str += "	}\n";
 		for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
 		{
 			str += "	else if(_uni.x-0.5<=" + j + ".0) {";
-			str += "		return texelFetch(sam2D["+j+"],ivec2(int(_off),int(_uni.y)),0);";
+			str += "		ts = textureSize(sam2D["+j+"],0);";
+			str += "		uv = vec2((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y));";
+			str += "		return texture(sam2D["+j+"],uv);";
 			str += "	}\n";
 		}
-		str += "	return texelFetch(sam2D[0],ivec2(0.0,0.0),0);\n";
+		str += "	return texture(sam2D[0],vec2(0.0,0.0));";
 		str += "}\n";
 
 		str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
 		str += "	return Sam2DToV4(_uni,float(_off));\n";
 		str += "}\n";
+		
+
+		
+	
+		
+		// str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
+		// str += "	if(_uni.x-0.5<=0.0) {";
+		// str += "		return texelFetch(sam2D[0],ivec2(int(_off),int(_uni.y)),0);";
+		// str += "	}\n";
+		// for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
+		// {
+		// 	str += "	else if(_uni.x-0.5<=" + j + ".0) {";
+		// 	str += "		return texelFetch(sam2D["+j+"],ivec2(int(_off),int(_uni.y)),0);";
+		// 	str += "	}\n";
+		// }
+		// str += "	return texelFetch(sam2D[0],ivec2(0.0,0.0),0);\n";
+		// str += "}\n";
+
+		// str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
+		// str += "	return Sam2DToV4(_uni,float(_off));\n";
+		// str += "}\n";
 		
 
 		

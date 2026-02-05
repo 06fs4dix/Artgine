@@ -488,13 +488,21 @@ ipcMain.handle("NewPage", async (_event, _json) => {
 		</script>
 		`;
     }
-    let pos = bHTML.indexOf("<!--Include-->");
+    let pos = 0;
+    if (_json.appJSON.github == true) {
+        IStr += "<script type='module'>\n";
+        IStr += CUtil.ArrayToString(buf);
+        IStr += "</script>\n";
+        buf = await CFile.Load(savePath + ".js");
+    }
+    else {
+        IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
+    }
+    pos = bHTML.indexOf("<!--Include-->");
     bHTML = CString.InsertAt(bHTML, pos + 14, IStr);
     if (oHTML != "") {
         pos = bHTML.indexOf("<!--EntryPoint-->");
         bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
-        if (oHTML.indexOf(projectName + ".js") == -1)
-            bHTML += "<script type='module' src='" + projectName + ".js'></script>\n";
         bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
     }
     if (oMF != "") {

@@ -65,7 +65,7 @@ export class CSubject extends CObject implements IFile , IMat
 	//public m_power : number;
 	protected mFrame : CFrame=null;
 	
-	protected mBroMsg = new CArray<CRouteMsg>();
+	mBroMsg = new CArray<CRouteMsg>();
 	protected mInMsg = new CArray<CRouteMsg>();
 	mOutMsg = new CArray<CRouteMsg>();
 

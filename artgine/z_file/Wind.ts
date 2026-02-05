@@ -1,12 +1,12 @@
-import { NoiseGet, NoisePerlin2 } from "./Noise";
+import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
 import { clamp, CVec2, CVec3, CVec4, FloatToInt, mix, Sam2DToV4, Sam2DV4, 
     smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 
 export var windInfluence : number = 0.0;
-export var windDir : Sam2DV4 = new Sam2DV4(11,287);
-export var windPos : Sam2DV4 = new Sam2DV4(11,288);
-export var windInfo : Sam2DV4 = new Sam2DV4(11,289);
+export var windDir : Sam2DV4 = new Sam2DV4(11,165);
+export var windPos : Sam2DV4 = new Sam2DV4(11,166);
+export var windInfo : Sam2DV4 = new Sam2DV4(11,167);
 export var windCount : number = 0.0;
 
 export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3

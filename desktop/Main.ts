@@ -549,6 +549,8 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		ChromeStartCreate();
 	}
 
+	
+
 	//이건 사용자가 직접 만든거다
 	if(oHTML!="" && oHTML.indexOf("EntryPoint")==-1)
 	{
@@ -707,9 +709,28 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		</script>
 		`;
 	}
+	let pos=0;
+	
 	
 
-	let pos=bHTML.indexOf("<!--Include-->");
+	if(_json.appJSON.github==true)
+	{
+		IStr+="<script type='module'>\n";
+		IStr+=CUtil.ArrayToString(buf);
+		IStr+="</script>\n";
+		buf=await CFile.Load(savePath+".js");
+		
+
+
+	}
+	else
+	{
+		IStr+="<script type='module' src='"+projectName+".js'></script>\n";
+	}
+	
+
+
+	pos=bHTML.indexOf("<!--Include-->");
 	bHTML=CString.InsertAt(bHTML,pos+14,IStr);
 
 	if(oHTML!="")
@@ -717,8 +738,8 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		pos=bHTML.indexOf("<!--EntryPoint-->");
 		bHTML=bHTML.substring(0,bHTML.indexOf("<!--EntryPoint-->")+17);
 		//모듈이 포함 안되어 있으면 강제로 넣음
-		if(oHTML.indexOf(projectName+".js")==-1)
-			bHTML+="<script type='module' src='"+projectName+".js'></script>\n";
+		// if(oHTML.indexOf(projectName+".js")==-1)
+		// 	bHTML+="<script type='module' src='"+projectName+".js'></script>\n";
 		bHTML=CString.InsertAt(bHTML,pos+17,oHTML.substring(oHTML.indexOf("<!--EntryPoint-->")+17,oHTML.length));
 	}
 

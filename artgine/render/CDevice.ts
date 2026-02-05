@@ -254,7 +254,7 @@ export class CDeviceGL extends CDevice
 
 	}
 	
-	async Init()
+	override async Init()
 	{
 		
 		this.GL().frontFace(this.GL().CCW);
@@ -296,19 +296,19 @@ export class CDeviceGL extends CDevice
 	}
 	
 	
-	GetHandle()
+	override GetHandle()
 	{
 	    return this.mGL;
 	}
 
-	GL()	:  WebGL2RenderingContext
+	override GL()	:  WebGL2RenderingContext
 	{
 	    return this.mGL as WebGL2RenderingContext;
 	}
-	DrawType()	{	return this.mDrawType;	}
+	override DrawType()	{	return this.mDrawType;	}
 
 	
-	ViewPort(_x : number,_y : number,_w : number,_h : number)
+	override ViewPort(_x : number,_y : number,_w : number,_h : number)
 	{
 		if(this.mViewportArr[0]!=_x || this.mViewportArr[1]!=_y || this.mViewportArr[2]!=_w || this.mViewportArr[3]!=_h)
 		{
@@ -321,7 +321,7 @@ export class CDeviceGL extends CDevice
 		
 	}
 	
-	SetBlend(_data : Array<number>)
+	override SetBlend(_data : Array<number>)
 	{
 		for(var i=0;i<_data.length;++i)
 		{
@@ -332,7 +332,7 @@ export class CDeviceGL extends CDevice
 		this.GL().blendEquationSeparate( _data[0], _data[1] );
 		this.GL().blendFuncSeparate(_data[2],_data[3],_data[4],_data[5]);
 	}
-	SetCullFace(_enable : number)
+	override SetCullFace(_enable : number)
 	{
 		this.mStaticRP.mCullFace=_enable;
 		if (_enable!=0)
@@ -349,7 +349,7 @@ export class CDeviceGL extends CDevice
 			this.GL().disable(this.GL().CULL_FACE);
 		}
 	}
-	SetDepthTest(_enable)
+	override SetDepthTest(_enable)
 	{
 		this.mStaticRP.mDepthTest=_enable;
 		if (_enable)
@@ -368,7 +368,7 @@ export class CDeviceGL extends CDevice
 			//this.GL().disable(this.GL().DEPTH_TEST);
 		}
 	}
-	SetAlpha(_enable)
+	override SetAlpha(_enable)
 	{
 		this.mStaticRP.mAlpha=_enable;
 		if (_enable)
@@ -384,7 +384,7 @@ export class CDeviceGL extends CDevice
 			//this.GL().disable(this.GL().ALPHA_TEST);
 		}
 	}
-	SetDepthWrite(_enable)
+	override SetDepthWrite(_enable)
 	{
 		this.mStaticRP.mDepthWrite=_enable;
 		if (_enable)
@@ -396,7 +396,7 @@ export class CDeviceGL extends CDevice
 			this.GL().depthMask(false);
 		}
 	}
-	SetLine(_enable)
+	override SetLine(_enable)
 	{
 		this.mStaticRP.mLine=_enable;
 		if(_enable==false)

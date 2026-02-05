@@ -85,17 +85,52 @@ function GetAllTSFiles(dir, fileList = []) {
 }
 function ExtractExportedClassNames(fileContent) {
     let defaultExport;
-    const namedExports = [];
-    const defaultMatch = fileContent.match(/export\s+default\s+class\s+(\w+)/);
-    if (defaultMatch)
-        defaultExport = defaultMatch[1];
-    const exportMatches = [...fileContent.matchAll(/export\s+class\s+(\w+)/g)];
-    for (const match of exportMatches) {
-        if (!defaultExport || match[1] !== defaultExport) {
-            namedExports.push(match[1]);
+    const namedSet = new Set();
+    const add = (name) => {
+        if (!name)
+            return;
+        if (name === "default")
+            return;
+        if (defaultExport && name === defaultExport)
+            return;
+        namedSet.add(name);
+    };
+    {
+        const m = fileContent.match(/export\s+default\s+class\s+([A-Za-z_$][\w$]*)/);
+        if (m)
+            defaultExport = m[1];
+    }
+    {
+        const m = fileContent.match(/export\s+default\s+(?:async\s+)?function(?:\s*\*)?\s+([A-Za-z_$][\w$]*)/);
+        if (m)
+            defaultExport = m[1];
+    }
+    for (const m of fileContent.matchAll(/export\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g)) {
+        add(m[1]);
+    }
+    for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:async\s+)?function(?:\s*\*)?\s+([A-Za-z_$][\w$]*)/g)) {
+        add(m[1]);
+    }
+    for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:const|let|var)\s+([^;]+);/g)) {
+        const decl = m[1];
+        for (const id of decl.matchAll(/([A-Za-z_$][\w$]*)\s*(?=\s*[:=,}\]]|$)/g)) {
+            add(id[1]);
         }
     }
-    return { defaultExport, namedExports };
+    for (const m of fileContent.matchAll(/export\s+(type\s+)?{\s*([^}]+)\s*}(?:\s*from\s*["'][^"']+["'])?/g)) {
+        if (m[1])
+            continue;
+        const body = m[2];
+        const parts = body.split(",").map(s => s.trim()).filter(Boolean);
+        for (const p of parts) {
+            const asM = p.match(/^(.+?)\s+as\s+(.+)$/);
+            const exportedName = asM ? asM[2].trim() : p.trim();
+            if (exportedName.startsWith("type "))
+                continue;
+            add(exportedName);
+        }
+    }
+    return { defaultExport, namedExports: [...namedSet] };
 }
 export function GenerateCClassPushes(rootDir, _pass = "") {
     const tsFiles = GetAllTSFiles(rootDir);

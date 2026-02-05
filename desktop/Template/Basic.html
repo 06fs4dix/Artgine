@@ -40,7 +40,13 @@
             }
         });
     }
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+    });
 </script>
+
 <!--Include-->
 <!--Manifest-->
 <!--EntryPoint-->

@@ -68,7 +68,7 @@ export class CLight extends CBrushComp
 		this.mSysc=CComponent.eSysn.Light;
 		
 	}
-	Icon(){		return "bi bi-lightbulb";	}
+	override Icon(){		return "bi bi-lightbulb";	}
 
 	override EditChange(_pointer : CPointer,_child : boolean)
 	{
@@ -82,7 +82,7 @@ export class CLight extends CBrushComp
 			}
 		}
 	}
-	EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLInputElement)
+	override EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLInputElement)
 	{
 		super.EditForm(_pointer,_body,_input);
 		if(_pointer.member=="mShadowKey")
@@ -168,8 +168,8 @@ export class CLight extends CBrushComp
 		}
 	}
 	DirPosV4()	{	return this.mDirPos;	}
-	GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
-	Update(_update : CUpdate) : boolean|any
+	override GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
+	override Update(_update : CUpdate) : boolean|any
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
 			this.mUpdate = CUpdate.eType.Not;
@@ -564,10 +564,10 @@ export class CLight extends CBrushComp
     // {
 	// 	this.mBruch=_brush;
     // }
-	ImportCJSON(_json: CJSON): this {
+	override ImportCJSON(_json: CJSON): this {
 		return super.ImportCJSON(_json);
 	}
-	Destroy(): void {
+	override Destroy(): void {
 		super.Destroy();
 		
 		if(Math.abs(this.mDirPos.w)>0.5 && this.mBruch!=null)

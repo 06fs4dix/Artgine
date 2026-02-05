@@ -107,23 +107,93 @@ function GetAllTSFiles(dir: string, fileList: string[] = []): string[] {
     return fileList;
 }
 //==============================================================
+// function ExtractExportedClassNames(fileContent: string): { defaultExport?: string; namedExports: string[] } {
+//     let defaultExport: string | undefined;
+//     const namedExports: string[] = [];
+
+//     const defaultMatch = fileContent.match(/export\s+default\s+class\s+(\w+)/);
+//     if (defaultMatch) defaultExport = defaultMatch[1];
+
+//     const exportMatches = [...fileContent.matchAll(/export\s+class\s+(\w+)/g)];
+//     for (const match of exportMatches) {
+//         // default로 이미 추출된 것은 중복 방지
+//         if (!defaultExport || match[1] !== defaultExport) {
+//             namedExports.push(match[1]);
+//         }
+//     }
+
+//     return { defaultExport, namedExports };
+// }
+
+//==============================================================
+// export class 뿐 아니라 export function / export const|let|var / export { ... } 도 추출
 function ExtractExportedClassNames(fileContent: string): { defaultExport?: string; namedExports: string[] } {
     let defaultExport: string | undefined;
-    const namedExports: string[] = [];
+    const namedSet = new Set<string>();
 
-    const defaultMatch = fileContent.match(/export\s+default\s+class\s+(\w+)/);
-    if (defaultMatch) defaultExport = defaultMatch[1];
+    const add = (name?: string) => {
+        if (!name) return;
+        if (name === "default") return;
+        if (defaultExport && name === defaultExport) return;
+        namedSet.add(name);
+    };
 
-    const exportMatches = [...fileContent.matchAll(/export\s+class\s+(\w+)/g)];
-    for (const match of exportMatches) {
-        // default로 이미 추출된 것은 중복 방지
-        if (!defaultExport || match[1] !== defaultExport) {
-            namedExports.push(match[1]);
+    // 1) export default class Name
+    {
+        const m = fileContent.match(/export\s+default\s+class\s+([A-Za-z_$][\w$]*)/);
+        if (m) defaultExport = m[1];
+    }
+
+    // 2) export default function Name  (이름 있는 경우만)
+    {
+        const m = fileContent.match(/export\s+default\s+(?:async\s+)?function(?:\s*\*)?\s+([A-Za-z_$][\w$]*)/);
+        if (m) defaultExport = m[1];
+    }
+
+    // 3) export class Name
+    for (const m of fileContent.matchAll(/export\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g)) {
+        add(m[1]);
+    }
+
+    // 4) export function Name / export async function Name / export function* Name
+    //    (declare는 런타임에 없어질 수 있으니 제외)
+    for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:async\s+)?function(?:\s*\*)?\s+([A-Za-z_$][\w$]*)/g)) {
+        add(m[1]);
+    }
+
+    // 5) export const/let/var ...
+    //    (declare는 제외, 여러 변수 선언/디스트럭처링도 대충 커버)
+    for (const m of fileContent.matchAll(/export\s+(?!declare\b)(?:const|let|var)\s+([^;]+);/g)) {
+        const decl = m[1];
+
+        // decl 안에서 식별자 후보들을 뽑음 (타입 어노테이션(:), 할당(=), 구분자(,), 닫힘(} ]) 등을 기준)
+        for (const id of decl.matchAll(/([A-Za-z_$][\w$]*)\s*(?=\s*[:=,}\]]|$)/g)) {
+            add(id[1]);
         }
     }
 
-    return { defaultExport, namedExports };
+    // 6) export { a, b as c } (type export는 제외)
+    for (const m of fileContent.matchAll(/export\s+(type\s+)?{\s*([^}]+)\s*}(?:\s*from\s*["'][^"']+["'])?/g)) {
+        if (m[1]) continue; // export type { ... } 는 런타임 export 아님
+
+        const body = m[2];
+        const parts = body.split(",").map(s => s.trim()).filter(Boolean);
+
+        for (const p of parts) {
+            // 예: "foo as bar", "default as Foo"
+            const asM = p.match(/^(.+?)\s+as\s+(.+)$/);
+            const exportedName = asM ? asM[2].trim() : p.trim();
+
+            // export { type Foo } 같은 케이스 방어
+            if (exportedName.startsWith("type ")) continue;
+
+            add(exportedName);
+        }
+    }
+
+    return { defaultExport, namedExports: [...namedSet] };
 }
+
 export function GenerateCClassPushes(rootDir: string, _pass: string = ""): string {
     const tsFiles = GetAllTSFiles(rootDir);
     const lines: string[] = [];

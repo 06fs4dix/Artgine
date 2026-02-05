@@ -707,13 +707,13 @@ function DevToolRender()
         for(let cl of clArr)
         {
             if(cl.GetOwner()==null || cl.IsEnable()==false || cl.GetLayer()=="") continue;
-            let bound=cl.GetBoundGJK();
+            let bound=cl.GetBW();
 
 
 
         
-            const min = bound.mMin;
-            const max = bound.mMax;
+            const min = bound.mWBound.mMin;
+            const max = bound.mWBound.mMax;
 
             // 중심 위치 = (min + max) * 0.5
             const center = new CVec3(
@@ -753,13 +753,13 @@ function DevToolRender()
     const render=gAtl.Frame().Ren();
     let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCMAM") as CShader;
     
-    let meshDrawBox=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()+"Dev") as CMeshDrawNode;
+    let meshDrawBox=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetDevBoxMesh()+"Dev") as CMeshDrawNode;
     if(meshDrawBox==null)
     {
-        let mesh=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetBoxMesh()) as CMesh;
+        let mesh=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetDevBoxMesh()) as CMesh;
         meshDrawBox=new CMeshDrawNode();
 		gAtl.Frame().Ren().BuildMeshDrawNodeAutoFix(meshDrawBox, shader,mesh.meshTree.mData.ci);
-        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetBoxMesh()+"Dev",meshDrawBox);
+        gAtl.Frame().Res().Push(gAtl.Frame().Pal().GetDevBoxMesh()+"Dev",meshDrawBox);
     }
     let meshDrawSphere=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetSphereMesh()+"Dev") as CMeshDrawNode;
     if(meshDrawSphere==null)
@@ -1378,9 +1378,9 @@ function DevToolUpdate(_delay)
                 for(let cl of clArr)
                 {
                     if(selectSub==subject)  continue;
-                    let bound=cl.GetBoundGJK();
+                    let bound=cl.GetBW();
 
-                    if(bound.GetType()!= CBound.eType.Null && CUtilMath.RayBoxIS(bound.mMin,bound.mMax, ray))
+                    if(bound.mWBound.GetType()!= CBound.eType.Null && CUtilMath.RayBoxIS(bound.mWBound.mMin,bound.mWBound.mMax, ray))
                     {
                         //CMath.V3MulMatCoordi(t1.GetPosition(), cl.mGJKShape.GetMatrix(),ray.mVec3List[1]);
 
@@ -1390,7 +1390,7 @@ function DevToolUpdate(_delay)
                             bselectSub=selectSub;
                             selectLen=len;
                             selectSub=subject;
-                            gSelectBound=bound;
+                            gSelectBound=bound.mWBound;
                             
                             break;
                         }

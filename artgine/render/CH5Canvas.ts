@@ -335,7 +335,7 @@ export class CH5Canvas
 
 
 	
-	static async Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
+	static Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
 	{
 		if(_pVec==null)
 			_pVec=gCMDStack;
@@ -409,7 +409,7 @@ export class CH5Canvas
 							let CH=[];
 							CH.push(...funcDr);
 							let e = CH5Canvas.Draw(CH);
-							errorcount += await e;
+							errorcount += e;
 						}
 					}catch{
 						errorcount++;

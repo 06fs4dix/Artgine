@@ -119,7 +119,7 @@ export class CColor extends CVec4
         _div.append(select);
     }
 
-    EditChange(_pointer : CPointer,_child : boolean): void {
+    override EditChange(_pointer : CPointer,_child : boolean): void {
         super.EditChange(_pointer,_child);
         if(_pointer.member == "mF32A" && _pointer.key == 3) {
             this.EditRefresh();

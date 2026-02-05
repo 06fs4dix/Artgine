@@ -237,9 +237,9 @@ export class CCollider extends CGeometryComp
 
 
 	}
-	GetBoundGJK()
+	GetBW()
 	{
-		return this.mBW.mWBound;
+		return this.mBW;
 	}
 	override Prefab(_owner : CSubject)
 	{

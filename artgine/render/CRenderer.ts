@@ -66,7 +66,10 @@ export class CRenderer
 		this.mUniToSam2d=new CTexture();
 		this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DSize),CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/2);
 		this.mUniToSam2d.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
+		this.mUniToSam2d.SetFilter(CTexture.eFilter.Linear);
+		this.mUniToSam2d.SetMipMap(CTexture.eMipmap.None);
 		this.mUniToSam2d.CreateBuf();
+		this.mUniToSam2d.mReadPixelEvent=new CEvent(this.ReadPixel,this);
 		this.BuildTexture(this.mUniToSam2d);
 		this.mUniToSam2d.GetBuf().length=0;
 		this.mRes.Push(this.mUniToSam2dKey,this.mUniToSam2d);
@@ -97,6 +100,7 @@ export class CRenderer
 	ReleaseTexture(pa_tex : CTexture)
 	{
 	}
+	ReadPixel(_tex : CTexture){	}
 	
 	BuildRenderTarget() : string
 	BuildRenderTarget(_info : Array<CTextureInfo>) : string
@@ -252,7 +256,7 @@ export class CRendererGL extends CRenderer
 	{
 		
 	}
-	ReadPixel(_tex : CTexture)
+	override ReadPixel(_tex : CTexture)
 	{
 		
 	}

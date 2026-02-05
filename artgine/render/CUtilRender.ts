@@ -1190,7 +1190,7 @@ export class CUtilRender
 		//CFramework.MMgr().MeshCreateModify(mesh, CPalette.GetVfSimple());
 		return mesh;
 	}
-	static GetBox(_size, _normalCenter = true) {
+	static GetDevBox(_size, _normalCenter = true) {
 		var rVal = new CMeshCreateInfo();
 		var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
 		var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
@@ -1415,6 +1415,183 @@ export class CUtilRender
 
 
 		rVal.indexCount = 6 * 7 + 1;
+
+		return rVal;
+	}
+	static GetBox(_size, _normalCenter = true) {
+		var rVal = new CMeshCreateInfo();
+		var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
+		var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
+		var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
+		var texb = rVal.Create(CVertexFormat.eIdentifier.TexOff);
+
+		posb.bufF.Push(new CVec3(-_size, _size, -_size));
+		posb.bufF.Push(new CVec3(_size, _size, -_size));
+		posb.bufF.Push(new CVec3(_size, _size, _size));
+		posb.bufF.Push(new CVec3(-_size, _size, _size));
+
+
+		posb.bufF.Push(new CVec3(-_size, -_size, -_size));//4
+		posb.bufF.Push(new CVec3(_size, -_size, -_size));
+		posb.bufF.Push(new CVec3(_size, -_size, _size));
+		posb.bufF.Push(new CVec3(-_size, -_size, _size));
+
+
+		posb.bufF.Push(new CVec3(-_size, -_size, _size));//8
+		posb.bufF.Push(new CVec3(-_size, -_size, -_size));
+		posb.bufF.Push(new CVec3(-_size, _size, -_size));
+		posb.bufF.Push(new CVec3(-_size, _size, _size));
+
+
+		posb.bufF.Push(new CVec3(_size, -_size, _size));//12
+		posb.bufF.Push(new CVec3(_size, -_size, -_size));
+		posb.bufF.Push(new CVec3(_size, _size, -_size));
+		posb.bufF.Push(new CVec3(_size, _size, _size));
+
+		posb.bufF.Push(new CVec3(-_size, -_size, -_size));//16
+		posb.bufF.Push(new CVec3(_size, -_size, -_size));
+		posb.bufF.Push(new CVec3(_size, _size, -_size));
+		posb.bufF.Push(new CVec3(-_size, _size, -_size));
+
+		posb.bufF.Push(new CVec3(-_size, -_size, _size));//20
+		posb.bufF.Push(new CVec3(_size, -_size, _size));
+		posb.bufF.Push(new CVec3(_size, _size, _size));
+		posb.bufF.Push(new CVec3(-_size, _size, _size));
+
+
+
+
+		for (var i = 0; i < posb.bufF.Size(3); ++i) 
+		{
+			rVal.bound.InitBound(posb.bufF.V3(i));
+			norb.bufF.Push(CMath.V3Nor(posb.bufF.V3(i)));
+			texb.bufF.Push(new CVec3(0, 1, 2));
+		}
+		if (_normalCenter) {
+			norb.bufF.V3(0, new CVec3(0, 1, 0));
+			norb.bufF.V3(1, new CVec3(0, 1, 0));
+			norb.bufF.V3(2, new CVec3(0, 1, 0));
+			norb.bufF.V3(3, new CVec3(0, 1, 0));
+
+			norb.bufF.V3(4, new CVec3(0, -1, 0));
+			norb.bufF.V3(5, new CVec3(0, -1, 0));
+			norb.bufF.V3(6, new CVec3(0, -1, 0));
+			norb.bufF.V3(7, new CVec3(0, -1, 0));
+
+			norb.bufF.V3(8, new CVec3(-1, 0, 0));
+			norb.bufF.V3(9, new CVec3(-1, 0, 0));
+			norb.bufF.V3(10, new CVec3(-1, 0, 0));
+			norb.bufF.V3(11, new CVec3(-1, 0, 0));
+
+			norb.bufF.V3(12, new CVec3(1, 0, 0));
+			norb.bufF.V3(13, new CVec3(1, 0, 0));
+			norb.bufF.V3(14, new CVec3(1, 0, 0));
+			norb.bufF.V3(15, new CVec3(1, 0, 0));
+
+			norb.bufF.V3(16, new CVec3(0, 0, -1));
+			norb.bufF.V3(17, new CVec3(0, 0, -1));
+			norb.bufF.V3(18, new CVec3(0, 0, -1));
+			norb.bufF.V3(19, new CVec3(0, 0, -1));
+
+			norb.bufF.V3(20, new CVec3(0, 0, 1));
+			norb.bufF.V3(21, new CVec3(0, 0, 1));
+			norb.bufF.V3(22, new CVec3(0, 0, 1));
+			norb.bufF.V3(23, new CVec3(0, 0, 1));
+		}
+
+
+		uvb.bufF.Push(new CVec2(0, 1));
+		uvb.bufF.Push(new CVec2(1, 1));
+		uvb.bufF.Push(new CVec2(1, 0));
+		uvb.bufF.Push(new CVec2(0, 0));
+
+		uvb.bufF.Push(new CVec2(0, 0));
+		uvb.bufF.Push(new CVec2(1, 0));
+		uvb.bufF.Push(new CVec2(1, 1));
+		uvb.bufF.Push(new CVec2(0, 1));
+
+		uvb.bufF.Push(new CVec2(1, 0));
+		uvb.bufF.Push(new CVec2(0, 0));
+		uvb.bufF.Push(new CVec2(0, 1));
+		uvb.bufF.Push(new CVec2(1, 1));
+
+		uvb.bufF.Push(new CVec2(0, 0));
+		uvb.bufF.Push(new CVec2(1, 0));
+		uvb.bufF.Push(new CVec2(1, 1));
+		uvb.bufF.Push(new CVec2(0, 1));
+
+		uvb.bufF.Push(new CVec2(1, 0));
+		uvb.bufF.Push(new CVec2(0, 0));
+		uvb.bufF.Push(new CVec2(0, 1));
+		uvb.bufF.Push(new CVec2(1, 1));
+
+		uvb.bufF.Push(new CVec2(0, 0));
+		uvb.bufF.Push(new CVec2(1, 0));
+		uvb.bufF.Push(new CVec2(1, 1));
+		uvb.bufF.Push(new CVec2(0, 1));
+
+		rVal.vertexCount = 24;
+
+
+		rVal.index.push(3);
+		rVal.index.push(2);
+		rVal.index.push(1);
+
+		rVal.index.push(1);//top
+		rVal.index.push(0);
+		rVal.index.push(3);
+
+
+
+		rVal.index.push(11);
+		rVal.index.push(10);
+		rVal.index.push(9);
+
+		rVal.index.push(9);//front
+		rVal.index.push(8);
+		rVal.index.push(11);
+
+		rVal.index.push(22);//left
+		rVal.index.push(23);
+		rVal.index.push(20);
+
+
+		rVal.index.push(20);
+		rVal.index.push(21);
+		rVal.index.push(22);
+
+
+		rVal.index.push(6);
+		rVal.index.push(7);
+		rVal.index.push(4);
+
+
+		rVal.index.push(4);//bottom
+		rVal.index.push(5);
+		rVal.index.push(6);
+
+		rVal.index.push(17);//
+		rVal.index.push(16);
+		rVal.index.push(19);
+
+		rVal.index.push(19);
+		rVal.index.push(18);
+		rVal.index.push(17);
+
+
+		rVal.index.push(12);//back
+		rVal.index.push(13);
+		rVal.index.push(14);
+
+
+		rVal.index.push(14);
+		rVal.index.push(15);
+		rVal.index.push(12);
+
+
+
+
+		rVal.indexCount = 6 * 6;
 
 		return rVal;
 	}
@@ -2108,6 +2285,8 @@ export class CUtilRender
 			}
 			xPrimed += this.PrimeX;
 		}
+
+		// return 1.0 - distance0;
 
 		// distance0 리턴함
 		distance0 = Math.sqrt(distance0);

@@ -16,18 +16,7 @@ export class CDayCycle extends CObject
 
     mEmission=new CColor();
     mDirection=new CVec3();
-    constructor(_dir : CVec3,_emission : CColor,
-        _skyTable : Array<CMat>=[
-            new CMat([0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.015, 0.01, 0.005]),
-            new CMat([0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]),
-            new CMat([0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15]),
-        ],
-        
-        _sunTable : Array<CMat>=[
-            new CMat([1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25]),
-            new CMat([0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]),
-            new CMat([0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85]),
-        ])
+    constructor(_dir : CVec3,_emission : CColor,_skyTable : Array<CMat>=null,_sunTable : Array<CMat>=null,_emissionSum=1)
     {
         super();
         if(_dir!=null)
@@ -35,7 +24,40 @@ export class CDayCycle extends CObject
             this.mDirection=CMath.V3Nor(_dir);
             this.mEmission=_emission;
         }
+        if(_skyTable==null)
+        {
+            _skyTable=[
+                new CMat([0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.015, 0.01, 0.005]),
+                new CMat([0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]),
+                new CMat([0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15]),
+            ];
+        }
+        if(_sunTable==null)
+        {
+            _sunTable=[
+                new CMat([1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25]),
+                new CMat([0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]),
+                new CMat([0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85]),
+            ];
+        }
+         // emission 색상의 평균값 계산 (0~1 범위)
+        const emissionAvg = (_emission.x + _emission.y + _emission.z) / 3.0;
         
+        // 최종 factor 계산 (emission이 (0,0,0)이면 0, (1,1,1)이면 _emissionSum)
+        const factor = emissionAvg * _emissionSum;
+
+        // skyTable의 모든 값에 factor 곱하기
+        for(let i = 0; i < 3; i++) {
+            for(let j = 0; j < _skyTable[i].mF32A.length; j++) {
+                _skyTable[i].mF32A[j] *= factor;
+            }
+        }
+        for(let i = 0; i < 3; i++) {
+            for(let j = 0; j < _skyTable[i].mF32A.length; j++) {
+                _sunTable[i].mF32A[j] *= factor;
+            }
+        }
+
         this.mSkyTable=_skyTable;
         this.mSunTable=_sunTable;
     }
@@ -53,7 +75,7 @@ export class CLightPlanet extends CLight
     {
         this.mDCArr.push(_dc);
     }
-    Update(_update : CUpdate) {
+    override Update(_update : CUpdate) {
 
         if(this.mBruch!=null && this.mDCArr.length!=0)
         {

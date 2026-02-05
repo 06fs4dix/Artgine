@@ -112,15 +112,13 @@ export class SDF {
 		//(128*128)*32=256
 		Perlin:768,//구름 느낌,연기 연속적인 부드러운 느낌
 		Voronoi:512,//가뭄에 땅갈라짐.거북이 등
+		Cloud:256,
 		
 		Billow:1,
 		Ridged:2,
 		DomainWarp:3,
 		FBM:4,
 		Simplex:5,
-
-		FBMLinear:6,
-		PerlinLinear:7,
 	}
 	static eBlend=
 	{
