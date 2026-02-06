@@ -815,7 +815,6 @@ export class CSubject extends CObject implements IFile , IMat
 				this.mComArr.splice(i,0,_com);
 				return _com;
 			}
-				
 		}
 		this.mComArr.push(_com);
 

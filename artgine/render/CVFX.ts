@@ -63,8 +63,10 @@ gDesc[SDF.eColorVFX.Pixel] = MakeDesc(
 );
 gDesc[SDF.eColorVFX.Noise] = MakeDesc(
     ["Speed", "Blend Ratio", "Size","Blend Mode","Type"],
-    [0, 0, 0,["Gray","Red","Green","Blue","Alpha","Color","Color+Alpha"],["Gaussian","Perlin","Voronoi","Billow","Ridged","DomainWarp","FBM"]], 
-    [8, 1, 4,[0,1,2,3,4,5,6],[SDF.eNoise.Gaussian,SDF.eNoise.Perlin,SDF.eNoise.Voronoi,SDF.eNoise.Billow,SDF.eNoise.Ridged,SDF.eNoise.DomainWarp,SDF.eNoise.FBM]],
+    [0, 0, 0,["Gray","Red","Green","Blue","Alpha","Color","Color+Alpha"],
+    ["Gaussian","Perlin","Voronoi","Billow","Ridged","DomainWarp","FBM","Blue"]], 
+    [8, 1, 4,[0,1,2,3,4,5,6],[SDF.eNoise.Gaussian,SDF.eNoise.Perlin,SDF.eNoise.Voronoi,
+        SDF.eNoise.Billow,SDF.eNoise.Ridged,SDF.eNoise.DomainWarp,SDF.eNoise.FBM,SDF.eNoise.Blue]],
     [0.1, 0.05, 0.05,1,1],
     [4, 1, 1,0,SDF.eNoise.Gaussian]
 );
@@ -109,7 +111,7 @@ export class CVFX extends CMat
         }
         return super.IsShould(_member,_type);
     }
-    EditHTMLInit(_div: HTMLDivElement): void {
+    override EditHTMLInit(_div: HTMLDivElement): void {
         super.EditHTMLInit(_div);
 
         _div.innerHTML = "";

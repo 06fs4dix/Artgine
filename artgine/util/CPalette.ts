@@ -106,6 +106,7 @@ export class CPalette
 		gNoise[0]=upFolder+"artgine/z_file/Noise/perlin96.png";
 		gNoise[1]=upFolder+"artgine/z_file/Noise/voronoi96.png";
 		gNoise[2]=upFolder+"artgine/z_file/Noise/cloud96.png";
+		gNoise[3]=upFolder+"artgine/z_file/Noise/blue64.png";
 
 		for(let i=0;i<gNoise.length;++i)
 			await _fw.Load().Exe(gNoise[i],option);
@@ -330,6 +331,30 @@ export class CPalette
 		}
 		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Cloud, 2048, 256, fa);
 		_fw.Res().Remove(gNoise[2]);
+
+		// Blue Noise
+		fa = new Float32Array(2048 * 1 * 4);
+		tex = _fw.Res().Find(gNoise[3]);
+		for(let y = 0; y < 64; y++)
+		{
+			for(let x = 0; x < 64; x++)
+			{
+				let index = y * 64 + x;
+				let isX = true;
+				if(index >= 2048) {
+					isX = false;
+				}
+				let srcIndex = index * 4;
+				let dstIndex = (index % 2048) * 4;
+				
+				if(isX) fa[dstIndex + 0] = tex.GetBuf()[0][srcIndex] / 0xFF;
+				else fa[dstIndex + 1] = tex.GetBuf()[0][srcIndex] / 0xFF;
+			}
+		}
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Blue, 2048, 1, fa);
+		_fw.Res().Remove(gNoise[3]);
+
+
 
 	}
 	

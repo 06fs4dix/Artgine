@@ -1,6 +1,6 @@
 import { HSVToRGB, RGBToHSV } from "./ColorFun";
 import { ligCol, ligCount, ligDir } from "./Light";
-import { BayerFilter, NoiseGet } from "./Noise";
+import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
 import {
     Build, CMat, CVec3, CVec4, Mat4ToMat3, OutColor, OutPosition,
@@ -231,7 +231,7 @@ function Cloud(_viewDir : CVec3, _sunDir : CVec3, _sunCol : CVec3) : CVec4
     var rayMarchStep : number = marchingDistance / cloudStep;
     var rayMarchT : number = tMin + rayMarchStep * 0.5;
     if(cloudDither > 0.5) {
-        rayMarchT += rayMarchStep * BayerFilter(screenPos.xy);
+        rayMarchT += rayMarchStep * NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Gaussian);
     }
 
     // ✅ 라이트(태양) 마칭: 거리/스텝은 뷰길이와 분리
@@ -363,7 +363,7 @@ function Aurora(_viewDir : CVec3) : CVec4
     var raymarchStepVector : CVec3 = V3MulFloat(rayDir, raymarchStepSize);
 
     var curPos : CVec3 = V3AddV3(rayOrg, V3MulFloat(_viewDir, tNear));
-    curPos = V3AddV3(curPos, V3MulFloat(raymarchStepVector, 0.5 + BayerFilter(screenPos.xy)));
+    curPos = V3AddV3(curPos, V3MulFloat(raymarchStepVector, 0.5 + NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue)));
 
     var hsvBot : CVec3 = RGBToHSV(auroraColorBot);
     var hsvMid : CVec3 = RGBToHSV(auroraColorMid);
@@ -654,6 +654,7 @@ function ps_main() {
     BranchBegin("aurora","A",[aurora, auroraSpeed, auroraColorBot, auroraColorMid, auroraColorTop, auroraOffset, auroraDistort, auroraSmoothness, auroraMin, auroraMax, auroraStep]);
     value = Aurora(fragDir);
     finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), value.rgb);
+    finalColor = SaturateV3(finalColor);
     BranchEnd();
 
     BranchBegin("cloud","C",[cloudCoverage, cloudDither, cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudLightDistance]);

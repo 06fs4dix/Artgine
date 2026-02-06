@@ -474,8 +474,10 @@ export class CUI extends CSubject
 
 
 
-		var pressChk = false;
+		
+		let lastPressPos=this.mPressPos;
 		this.mPressPos=null;
+		
 		
 		
 		let ev=CEvent.eType.Null;
@@ -592,6 +594,7 @@ export class CUI extends CSubject
 				this.mClickEvent.Call(this);
 				this.mDbTime=0;
 				this.mDbOn=false;
+				this.mPressPos=lastPressPos;
 				//CConsol.Log("Click");
 			}
 		}
@@ -626,6 +629,7 @@ export class CUI extends CSubject
 				else
 				{
 					this.mLastEvent=CEvent.eType.Click;
+					this.mPressPos=lastPressPos;
 					this.mClickEvent.Call(this);
 					//CConsol.Log("Click");
 				}
@@ -633,6 +637,7 @@ export class CUI extends CSubject
 			else if(ev==CEvent.eType.Null && this.mPressTraking)
 			{
 				this.mLastEvent=CEvent.eType.Click;
+				this.mPressPos=lastPressPos;
 				this.mClickEvent.Call(this);
 			}
 			

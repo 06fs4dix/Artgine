@@ -181,9 +181,10 @@ export class CPaint extends CComponent implements IMat
 	}
 	override SetEnable(_val: boolean): void {
 		
-		super.SetEnable(_val);
 		if(this.mEnable!=_val)
 			this.ClearCRPAuto();
+		super.SetEnable(_val);
+		
 	}
 	GetColorModel(){	return this.mColorModel;	}
 	GetAlphaModel(){	return this.mAlphaModel;	}

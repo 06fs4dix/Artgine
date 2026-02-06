@@ -3,9 +3,12 @@ import { CClass } from "../../artgine/basic/CClass.js";
 import { CConsol } from "../../artgine/basic/CConsol.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
-import { CModal } from "../../artgine/basic/CModal.js";
-import { CObject } from "../../artgine/basic/CObject.js";
+import { CJSON } from "../../artgine/basic/CJSON.js";
+import { CConfirm, CModal } from "../../artgine/basic/CModal.js";
+import { CObject, CPointer } from "../../artgine/basic/CObject.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
+import { CFile } from "../../artgine/system/CFile.js";
+import { IFile } from "../../artgine/system/System.js";
 import { CTooltip } from "../../artgine/util/CTooltip.js";
 
 export class CInventory extends CObject
@@ -38,7 +41,6 @@ export class CItem extends CObject
         this.mTitle=_title;
         this.mContext=_context;
     }
-    //mKey="";
     mImg="";
     mTitle="";
     mContext="";
@@ -204,17 +206,28 @@ export class CInvenMgr extends CObject implements IListener
     }
     Event
 }
-export class CItemMgr
+export class CItemMgr extends CObject implements IFile
 {
+    async LoadJSON(_file=null)
+    {
+        let buf=await CFile.Load(_file);
+        if(buf==null)	return true;
+        this.ImportCJSON(new CJSON(buf));
+        return false;
+    }
+    async SaveJSON(_file=null)
+    {
+        CFile.Save(this.ToStr(),_file);
+    }
     mItemMap=new Map<string,CItem>();
     Push<T extends CItem>(_key : string,_item : T): T;
     Push<T extends CItem>(_item : T): T
     Push<T extends CItem>(_a : any,_b : any=null) : T
     {
-        if(_b==null)
+        if(_a instanceof CItem)
         {
-            this.mItemMap.set(CUniqueID.Get(),_a);
-            return _a;
+            this.mItemMap.set(_a.Key(),_a);
+            return _a as T;
         }
             
         else
@@ -225,9 +238,29 @@ export class CItemMgr
     {
         return this.mItemMap.get(_key);
     }
+    protected override EditChange(_pointer: CPointer, _child: boolean): void {
+        super.EditChange(_pointer,_child);
+
+        if(_pointer.member=="mKey")
+        {
+            let itemArr=[];
+            for(let item of this.mItemMap.values())
+            {
+                itemArr.push(item);
+            }
+            this.mItemMap.clear();
+            for(let item of itemArr)
+            {
+                this.Push(item);
+            }
+            this.EditRefresh();
+            //CConsol.Log("test");
+        }
+    }
+    
 }
 
-export class CInvenViewer extends CModal
+export class CInvenViewer extends CModal 
 {
     mToolTipArr=new Array<CTooltip>();
     //mInvenArr : Array<CInventory>=[];

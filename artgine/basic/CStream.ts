@@ -2,11 +2,9 @@ import {CJSON} from "./CJSON.js";
 import { IStream } from "./Basic.js";
 export class CStreamValue
 {
-
 	public mData="";
 	public mType='0';
 };
-
 export class CStream
 {
 	private mData : string;
@@ -116,6 +114,11 @@ export class CStream
 		if (value.mType == '0')
 			return 0;
 		return Number(value.mData);
+	}
+	public GetValue()
+	{
+
+		
 	}
 	public GetBool()
 	{

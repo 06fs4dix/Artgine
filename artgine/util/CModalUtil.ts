@@ -216,7 +216,7 @@ export class CLoadingBack extends CModalBackGround
         }
     }
 
-    public Close(): void
+    public override Close(): void
     {
         this.StopProgressUpdate();
         super.Close();
@@ -341,7 +341,7 @@ export class CModalEvent extends CModalBackGround
         });
         
     }
-    Update(_update : CUpdate): void 
+    override Update(_update : CUpdate): void 
     {
         if(this.mLast!="")
             this.mLast="";
@@ -402,7 +402,7 @@ export class CModalFrameView extends CModalBackGround
         
     }
 
-    public Update(_update : CUpdate) : void
+    public override Update(_update : CUpdate) : void
     {
         this.mFrameTime += _update.DeltaTime();
         this.mFrame++;
@@ -488,7 +488,7 @@ export class CModalChat extends CModal
         this.SetSize(320,320);
 
     }
-    Open(_startPos?: number): void {
+    override Open(_startPos?: number): void {
         super.Open(_startPos);
         //this.m_body.className="card-body p-2 overflow-auto";
         //this.m_body.className="card-body pt-1 pl-2 pr2 pb-2 overflow-auto";
@@ -631,7 +631,7 @@ export class CFileViewer extends CModal
       
         
     }
-    Open(_startPos?: number): void 
+    override Open(_startPos?: number): void 
     {
 
         super.Open(_startPos);
@@ -714,7 +714,7 @@ export class CModalFlex extends CModal
         return this.m_flex[_off];
     }
     
-    Open(_startPos = CModal.ePos.Random) {
+    override Open(_startPos = CModal.ePos.Random) {
         super.Open(_startPos);
         
        
@@ -825,7 +825,7 @@ export class CModalFlex extends CModal
             document.removeEventListener("mouseup", onMouseUp);
         };
     }
-    FullSwitch(_enable : boolean=null)
+    override FullSwitch(_enable : boolean=null)
     {
         
         let size=new Array<number>();

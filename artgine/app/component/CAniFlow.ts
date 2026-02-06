@@ -32,7 +32,7 @@ export class CAniFlow extends CComponent
 		this.mPaintOff=0;
 		this.ResetAni(_ani);
 	}
-	Icon(){		return "bi bi-recycle";	}
+	override Icon(){		return "bi bi-recycle";	}
 	SetInter(_max)
 	{
 		this.mInterMax=_max;
@@ -59,6 +59,7 @@ export class CAniFlow extends CComponent
 	ResetAni(_ani : string);
 	ResetAni(_ani : CBlackBoardRef<CAnimation>);
 	ResetAni(_ani : CAnimation);
+	ResetAni(_ani : string|CAnimation);
 	ResetAni(_ani=null,_key=null)
 	{
 		if(_key!=null)
@@ -92,7 +93,7 @@ export class CAniFlow extends CComponent
 		//	this.Update(1);
 	}
 	SetSpeed(_speed : number)	{	this.mSpeed=_speed;}
-	Update(_update : CUpdate)
+	override Update(_update : CUpdate)
 	{
 		
 		
@@ -106,7 +107,7 @@ export class CAniFlow extends CComponent
 
 		return super.IsShould(_member,_type);
 	}
-	EditForm(_pointer : CPointer,_div : HTMLDivElement,_input : HTMLInputElement)
+	override EditForm(_pointer : CPointer,_div : HTMLDivElement,_input : HTMLInputElement)
 	{
 		super.EditForm(_pointer,_div,_input);
 		if(_pointer.member=="mAni" )
@@ -121,7 +122,7 @@ export class CAniFlow extends CComponent
 			_div.append(btn);
 		}
 	}
-	EditHTMLInit(_div : HTMLDivElement)
+	override EditHTMLInit(_div : HTMLDivElement)
 	{
 		super.EditHTMLInit(_div);
 		if(this.mAni==null)

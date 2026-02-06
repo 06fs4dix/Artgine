@@ -240,6 +240,58 @@ export class CH5Canvas
 		gCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
+
+	static FillTriangle(_x1: number, _y1: number, _x2: number, _y2: number, _x3: number, _y3: number) {
+		var cmdVec=[
+			CH5Canvas.Cmd("beginPath",[]), 
+			CH5Canvas.Cmd("moveTo",[_x1, _y1]),
+			CH5Canvas.Cmd("lineTo",[_x2, _y2]),
+			CH5Canvas.Cmd("lineTo",[_x3, _y3]),
+			CH5Canvas.Cmd("closePath",[]),
+			CH5Canvas.Cmd("fill", []),
+		];
+		gCMDStack.push(...cmdVec);
+		return cmdVec;	
+	}
+
+	static StrokeTriangle(_x1: number, _y1: number, _x2: number, _y2: number, _x3: number, _y3: number, _lineWidth: number = 1) {
+		var cmdVec=[
+			CH5Canvas.Cmd("beginPath",[]), 
+			CH5Canvas.Cmd("moveTo",[_x1, _y1]),
+			CH5Canvas.Cmd("lineTo",[_x2, _y2]),
+			CH5Canvas.Cmd("lineTo",[_x3, _y3]),
+			CH5Canvas.Cmd("closePath",[]),
+			CH5Canvas.Cmd("lineWidth", _lineWidth),
+			CH5Canvas.Cmd("stroke", []),
+		];
+		gCMDStack.push(...cmdVec);
+		return cmdVec;	
+	}
+
+	static FillArc(_centerX: number, _centerY: number, _radius: number, _startAngle: number, _endAngle: number) {
+		var cmdVec=[
+			CH5Canvas.Cmd("beginPath",[]), 
+			CH5Canvas.Cmd("moveTo",[_centerX, _centerY]),
+			CH5Canvas.Cmd("arc",[_centerX, _centerY, _radius, _startAngle, _endAngle]),
+			CH5Canvas.Cmd("closePath",[]),
+			CH5Canvas.Cmd("fill", []),
+		];
+		gCMDStack.push(...cmdVec);
+		return cmdVec;	
+	}
+
+	static StrokeArc(_centerX: number, _centerY: number, _radius: number, _startAngle: number, _endAngle: number, _lineWidth: number = 1) {
+		var cmdVec=[
+			CH5Canvas.Cmd("beginPath",[]), 
+			CH5Canvas.Cmd("moveTo",[_centerX, _centerY]),
+			CH5Canvas.Cmd("arc",[_centerX, _centerY, _radius, _startAngle, _endAngle]),
+			CH5Canvas.Cmd("closePath",[]),
+			CH5Canvas.Cmd("lineWidth", _lineWidth),
+			CH5Canvas.Cmd("stroke", []),
+		];
+		gCMDStack.push(...cmdVec);
+		return cmdVec;	
+	}
 	static DrawBuf(
 		_buf   : Uint8Array,
 		_posX  : number,

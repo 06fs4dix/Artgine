@@ -1,4 +1,4 @@
-import { BayerFilter, NoiseGet } from "./Noise";
+import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
 import { 
     abs, clamp, max, min, mod, pow, sign, sin, smoothstep,
@@ -450,7 +450,7 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
         var palSize : CVec2 = new CVec2(32.0,32.0);
         var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
         
-        var ditherStrength : number = (BayerFilter(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[0].y;
+        var ditherStrength : number = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * _value[0].y;
         outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
         var palIndex : number = MapToPaletteIndex(outColor.rgb, cellSize,palSize);
         
@@ -558,7 +558,6 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     }
     else if(_value[3].w<SDF.eColorVFX.Noise+0.5)
     {
-        
         outColor = VFXDown0(_uv,_value,_time);
 
         var scaledUV : CVec2 = V2DivV2(_uv, new CVec2(_value[2].z, _value[2].z));
@@ -641,7 +640,7 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
         var palSize : CVec2 = new CVec2(32.0,32.0);
         var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
         
-        var ditherStrength : number = (BayerFilter(screenPos.xy) - 0.5) / (cellSize - 1.0) * _value[2].y;
+        var ditherStrength : number = (NoiseGet(new CVec3(screenPos.xy, 0.0), SDF.eNoise.Blue) - 0.5) / (cellSize - 1.0) * _value[2].y;
         outColor.rgb = V3AddV3(outColor.rgb, new CVec3(ditherStrength, ditherStrength, ditherStrength));
         var palIndex : number = MapToPaletteIndex(outColor.rgb, cellSize,palSize);
         

@@ -1,9 +1,11 @@
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
+import { CJSON } from "../../artgine/basic/CJSON.js";
 import { CModal } from "../../artgine/basic/CModal.js";
 import { CObject } from "../../artgine/basic/CObject.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
+import { CFile } from "../../artgine/system/CFile.js";
 import { CTooltip } from "../../artgine/util/CTooltip.js";
 export class CInventory extends CObject {
     constructor(_itemKey) {
@@ -150,11 +152,21 @@ export class CInvenMgr extends CObject {
     }
     Event;
 }
-export class CItemMgr {
+export class CItemMgr extends CObject {
+    async LoadJSON(_file = null) {
+        let buf = await CFile.Load(_file);
+        if (buf == null)
+            return true;
+        this.ImportCJSON(new CJSON(buf));
+        return false;
+    }
+    async SaveJSON(_file = null) {
+        CFile.Save(this.ToStr(), _file);
+    }
     mItemMap = new Map();
     Push(_a, _b = null) {
-        if (_b == null) {
-            this.mItemMap.set(CUniqueID.Get(), _a);
+        if (_a instanceof CItem) {
+            this.mItemMap.set(_a.Key(), _a);
             return _a;
         }
         else
@@ -163,6 +175,20 @@ export class CItemMgr {
     }
     Find(_key) {
         return this.mItemMap.get(_key);
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.member == "mKey") {
+            let itemArr = [];
+            for (let item of this.mItemMap.values()) {
+                itemArr.push(item);
+            }
+            this.mItemMap.clear();
+            for (let item of itemArr) {
+                this.Push(item);
+            }
+            this.EditRefresh();
+        }
     }
 }
 export class CInvenViewer extends CModal {

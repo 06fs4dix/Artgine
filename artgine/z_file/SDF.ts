@@ -98,12 +98,12 @@ export class SDF {
 	}
 	static eLookUpTable=
 	{
-		LUT0:280,
-		LUT1:281,
-		LUT2:282,
-		LUT3:283,
-		LUT4:284,
-		LUT5:285,
+		LUT0:159,
+		LUT1:160,
+		LUT2:161,
+		LUT3:162,
+		LUT4:163,
+		LUT5:164,
 	}
 	static eNoise=
 	{
@@ -113,6 +113,7 @@ export class SDF {
 		Perlin:768,//구름 느낌,연기 연속적인 부드러운 느낌
 		Voronoi:512,//가뭄에 땅갈라짐.거북이 등
 		Cloud:256,
+		Blue:255,
 		
 		Billow:1,
 		Ridged:2,

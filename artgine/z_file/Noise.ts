@@ -9,21 +9,8 @@ import {
     Hash13,
     clamp,
     V2MulFloat,
+    V2Floor,
 } from "./Shader";
-
-// 디더링용 베이어 필터
-export function BayerFilter(_coord : CVec2) : number
-{
-    var uv : CVec2 = V2Mod(_coord.xy, 4.0);
-    var f : number = 0.0625;
-    var bayerMat : CMat = new CMat(
-        0.0*f, 12.0*f,  3.0*f, 15.0*f,
-        8.0*f,  4.0*f, 11.0*f,  7.0*f,
-        2.0*f, 14.0*f,  1.0*f, 13.0*f,
-        10.0*f, 6.0*f,  9.0*f,  5.0*f 
-    );
-    return bayerMat[FloatToInt(uv.x)][FloatToInt(uv.y)];
-}
 
 // 밸류 노이즈 함수
 export function NoiseValue3(_v : CVec3) : number
@@ -169,14 +156,8 @@ function SampleNoise(_uvw : CVec3, _type : number) : number
 
 export function NoiseGet(_uvw : CVec3, _type : number) : number
 {
-    if(_type<SDF.eNoise.Gaussian+0.5)
-    {
-        var xi : number = _uvw.x * 128.0;
-        var yi : number = _uvw.y * 128.0;
-        var zi : number = _uvw.z * 128.0;
-        return NoiseValue3(new CVec3(xi, yi, zi));
-    }
-    else if(_type>SDF.eNoise.Perlin-0.5)
+    // 텍스쳐 샘플링
+    if(_type>SDF.eNoise.Perlin-0.5)
     {
         return SampleNoise(_uvw, SDF.eNoise.Perlin);
     }
@@ -184,9 +165,28 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
     {
         return SampleNoise(_uvw, SDF.eNoise.Voronoi);
     }
-    else if(_type<SDF.eNoise.Cloud+0.5)
+    else if(_type>SDF.eNoise.Cloud-0.5)
     {
         return SampleNoise(_uvw, SDF.eNoise.Cloud);
+    }
+    else if(_type>SDF.eNoise.Blue-0.5)
+    {
+        var coord : CVec2 = V2Floor(V2Mod(_uvw.xy, 64.0));
+        var index : number = coord.y * 64.0 + coord.x;
+        var modIndex : number = mod(index, 2048.0);
+        var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type), modIndex);
+        if(index < 2048.0)
+            return v4.x;
+        else
+            return v4.y;
+    }
+    // 절차적 생성
+    else if(_type<SDF.eNoise.Gaussian+0.5)
+    {
+        var xi : number = _uvw.x * 128.0;
+        var yi : number = _uvw.y * 128.0;
+        var zi : number = _uvw.z * 128.0;
+        return NoiseValue3(new CVec3(xi, yi, zi));
     }
     else if(_type<SDF.eNoise.Billow+0.5)
     {
