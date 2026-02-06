@@ -48,7 +48,7 @@ export class CUserComp extends CProComp
         this.mShotTime-=_update.DeltaMil();
         if(this.mPad.IsEnable() && this.mPad.GetButtonEvent(0)==CEvent.eType.Press && this.mShotTime<=0)
         {
-            this.GetOwner().PushPac(CPacShooting.UserShot(this.GetOwner().GetPos()));
+            this.GetOwner().PushPacket(CPacShooting.UserShot(this.GetOwner().GetPos()));
             this.mShotTime=200;
         }
         
@@ -61,8 +61,8 @@ export class CUserComp extends CProComp
         this.GetOwner().PushChild(uit);
     }
     override Collision(_org: CCollider, _size: number, _tar: Array<CCollider>, _push: Array<CVec3>): void {
-        this.GetOwner().PushPac(CPacShooting.Dead(this.GetOwner().Key()));
-        this.GetOwner().PushPac(CPacShooting.Effect("Flash",this.GetOwner().GetPos(),new CVec2(50,50)));
+        this.GetOwner().PushPacket(CPacShooting.Dead(this.GetOwner().Key()));
+        this.GetOwner().PushPacket(CPacShooting.Effect("Flash",this.GetOwner().GetPos(),new CVec2(50,50)));
         this.GetOwner().Destroy();
 
         //CAlert.Info("[Die!]");

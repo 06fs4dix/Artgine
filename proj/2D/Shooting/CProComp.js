@@ -52,7 +52,7 @@ export class CProComp extends CBehavior {
             return;
         if (this.mHP <= 0) {
             this.GetOwner().Destroy();
-            this.GetOwner().PushPac(CPacShooting.Effect("Explosion", this.GetOwner().GetPos(), this.mPT.GetSize()));
+            this.GetOwner().PushPacket(CPacShooting.Effect("Explosion", this.GetOwner().GetPos(), this.mPT.GetSize()));
         }
     }
 }

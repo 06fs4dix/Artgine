@@ -63,7 +63,7 @@ export class CMoveComp extends CBehavior
                     this.m_rb.Push(new CForce("move",dir,400));
 
                 this.m_lastDir.Import(dir);
-                this.GetOwner().PushPac(CPacShooting.Pos(this.GetOwner().Key(),"test",this.GetOwner().GetPos(),dir));
+                this.GetOwner().PushPacket(CPacShooting.Pos(this.GetOwner().Key(),"test",this.GetOwner().GetPos(),dir));
             }
                 
             

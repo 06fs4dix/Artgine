@@ -1,4 +1,4 @@
-const version = 'mkibvyk6_18';
+const version = 'mlaw6pum_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";

@@ -28,7 +28,7 @@ export class CBulletComp extends CBehavior {
     Collision(_org, _size, _tar, _push) {
         let pro = _tar[0].GetOwner().FindComp(CProComp);
         pro.SetHP(pro.GetHP() - 10);
-        this.GetOwner().PushPac(CPacShooting.Effect("Flash", this.GetOwner().GetPos(), new CVec2(25, 25)));
+        this.GetOwner().PushPacket(CPacShooting.Effect("Flash", this.GetOwner().GetPos(), new CVec2(25, 25)));
         this.GetOwner().Destroy();
     }
 }

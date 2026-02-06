@@ -19,6 +19,7 @@ import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4
 import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
+import { CAction } from "https://06fs4dix.github.io/Artgine/artgine/util/CAction.js";
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
 import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
@@ -195,15 +196,15 @@ export class CUser extends CSubject
 
         if (dir.IsZero()==false)
         {
-            if(this.mBDir.Equals(dir)==false && this.GetFrame().PF().mServer=="local")
+            if(this.mBDir.Equals(dir)==false)
                 this.mRB.Push(new CForce("move", dir, 400));
-            CScript.Action([this],()=>{
+            CAction.Excute(this,()=>{
                 let audio=new CAudioBuf("Res/sound/jute-dh-steps/stepdirt_2.wav");
                 audio.Volume(0.5);
                 audio.Play();
                 let smoke=new CSubject();
                 smoke.PushComp(new CPaint2D("Res/smoke.png",new CVec2(100,100)));
-                smoke.mPMatMul=false;
+                smoke.SetPMatMul(false);
                 //smoke.SetPos(CMath.V3AddV3(this.GetPos(),new CVec3(CRandom.MinMax(-50,50),CRandom.MinMax(-50,50),0)));
                 smoke.SetPos(CMath.V3AddV3(this.GetPos(),new CVec3(CRandom.MinMax(-30,30),-50,0)));
                 let ani=new CAnimation();

@@ -1,5 +1,5 @@
 //Version
-const version='mkibvyk6_13';
+const version='mlaw6pum_17';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -55,7 +55,6 @@ import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.j
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
 import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
 import { CBGAttachButton, CModalChat, CModalEvent } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CPacRoom, CRoomClient } from "https://06fs4dix.github.io/Artgine/artgine/server/CRoomClient.js";
 import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
@@ -83,6 +82,8 @@ import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCon
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSurface.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
+import { CSignalingClient } from "https://06fs4dix.github.io/Artgine/artgine/server/signaling/CSignalingClient.js";
+import { PacketSN } from "https://06fs4dix.github.io/Artgine/artgine/server/signaling/PacketSN.js";
 
 
 gAtl.Brush().GetCam2D().SetSize(600,800);
@@ -103,29 +104,29 @@ gStartBtn.SetBody(`
 let gRoomKey="";
 let gSuk="";
 let gNick="";
-let socket=new CRoomClient(gPF.mServer=="local");
+let socket=new CSignalingClient(gPF.mServer=="local");
 let gOwner=false;
 let gTimer=new CTimer();
 
 
-socket.On(CRoomClient.eEvent.RoomConnect,(_stream : CStream)=>{
-    let packet=CPacRoom.GetRoomConnect(_stream);
+socket.On(PacketSN.eHeader.RoomConnectReq,(_stream : CStream)=>{
+    let RoomConnectReq=PacketSN.RoomConnectReq(_stream);
     let userBB=CBlackBoard.Find<CSubject>("User");
     let user=userBB.Export(true,true);
-    user.SetKey(packet.suk);
-    user.FindComp(CUserComp).SetNick(packet.nick);
+    user.SetKey(RoomConnectReq.userKey);
+    user.FindComp(CUserComp).SetNick(RoomConnectReq.nick);
     Main.PushSub(user);
-    if(packet.suk==socket.GetSuk())
+    if(RoomConnectReq.userKey==socket.GetOwnerKey())
     {
-        gRoomKey=packet.roomKey;
-        gSuk=packet.suk;
-        gNick=packet.nick;
+        gRoomKey=RoomConnectReq.roomKey;
+        gSuk=RoomConnectReq.userKey;
+        gNick=RoomConnectReq.nick;
         //user.PatchTrackDefault();//패치할 오브젝트만 선택함
     }
     else
         user.FindChild("pad").SetEnable(false);
     //방장은 최초접속자라서 룸 권한을 가진다
-    if(packet.owner==1)
+    if(RoomConnectReq.owner==1)
     {
         gOwner=true;
     }
@@ -141,10 +142,10 @@ socket.On(CRoomClient.eEvent.RoomConnect,(_stream : CStream)=>{
         dStream.Push(gNick);
         dStream.Push(pos);
         dStream.Push(new CVec3());
-        socket.Send(CPacRoom.SetSUKSend([packet.suk],dStream));
+        socket.Send(PacketSN.SendDataUserKey([RoomConnectReq.userKey],dStream));
     }
 });
-socket.On(CRoomClient.eEvent.RoomClose,(_stream : CStream)=>{
+socket.On(PacketSN.eHeader.RoomClose,(_stream : CStream)=>{
     if(gOwner)
     {
         Main.PushSub(new RoomSystem());
@@ -153,9 +154,9 @@ socket.On(CRoomClient.eEvent.RoomClose,(_stream : CStream)=>{
     gTimer.Delay();
 
 });
-socket.On(CRoomClient.eEvent.RoomDisConnect,(_stream : CStream)=>{
-    let packet=CPacRoom.GetRoomDisConnect(_stream);
-    Main.Find(packet.suk).Destroy();
+socket.On(PacketSN.eHeader.RoomDisConnect,(_stream : CStream)=>{
+    let RoomDisConnect=PacketSN.RoomDisConnect(_stream);
+    Main.Find(RoomDisConnect.userKey).Destroy();
 
 });
 socket.On(CPacShooting.eHeader.Dead,(_stream : CStream)=>{
@@ -267,15 +268,16 @@ socket.Connect().then(()=>{
     if(socket.mAddrPortPath=="local")
     {
         gStartBtn.SetChangeEvent(()=>{
-            socket.Send(new CStream().Push("RoomConnect").Push(1).Push(socket.GetSuk()).Push("User").Push("").Data());
-            socket.Send(CPacRoom.SetRoomClose(gRoomKey));
+            //socket.Send(new CStream().Push("RoomConnect").Push(1).Push(socket.GetUserKey()).Push("User").Push("").Data());
+            socket.Send(PacketSN.RoomConnectReq(1,socket.GetOwnerKey(),"User",""));
+            socket.Send(PacketSN.RoomClose(gRoomKey));
         });
     }
     else
     {
-        socket.Send(CPacRoom.SetRoomConnect("User"+Math.trunc(Math.random()*100),"Shooting",2));
+        socket.Send(PacketSN.RoomConnectAck("User"+Math.trunc(Math.random()*100),"Shooting",2));
         gStartBtn.SetChangeEvent(()=>{
-            socket.Send(CPacRoom.SetRoomClose(gRoomKey));
+            socket.Send(PacketSN.RoomClose(gRoomKey));
         });
     }
         
@@ -290,7 +292,7 @@ chat.Open();
 chat.SetSize(gAtl.PF().mWidth*0.4,gAtl.PF().mHeight*0.2);
 chat.ChatAdd("스타트를 누르기전까지 기다립니다.");
 chat.On(CEvent.eType.Chat,(msg)=>{
-    socket.Send(CPacRoom.SetBroadcasting("Chat",gNick+" : "+msg));
+    socket.Send(PacketSN.SendData("Chat",gNick+" : "+msg));
 });
 socket.On("Chat",(_stream : CStream)=>{
     chat.ChatAdd(_stream.GetString());
@@ -370,22 +372,6 @@ Option_btn.SetContent(`
     블룸,기본 설정 가능
 </div>`);
 if(gPF.mServer=="webServer")    CScore.Read("Shooting");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

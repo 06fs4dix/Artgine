@@ -81,7 +81,7 @@ export class CProComp extends CBehavior
         if(this.mHP<=0)
         {
             this.GetOwner().Destroy();
-            this.GetOwner().PushPac(CPacShooting.Effect("Explosion",this.GetOwner().GetPos(),this.mPT.GetSize()));
+            this.GetOwner().PushPacket(CPacShooting.Effect("Explosion",this.GetOwner().GetPos(),this.mPT.GetSize()));
         }
         // let dir=this.m_rb.MoveDir("move");
         // let angle=CMath.V3TwoAngle(new CVec3(0,1,0),dir);

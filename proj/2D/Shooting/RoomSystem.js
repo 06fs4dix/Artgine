@@ -41,7 +41,7 @@ export class RoomSystem extends CSubject {
                         continue;
                     let key = this.mMonKey + "mon";
                     this.mMonKey++;
-                    this.PushPac(CPacShooting.MonCreate(key, new CVec3(i * 32, 500), this.mLevel));
+                    this.PushPacket(CPacShooting.MonCreate(key, new CVec3(i * 32, 500), this.mLevel));
                 }
                 this.mTime = 2;
             }
@@ -60,7 +60,7 @@ export class RoomSystem extends CSubject {
                     let key = this.mMonKey + "mon";
                     this.mMonKey++;
                     logStr += " " + key;
-                    this.PushPac(CPacShooting.MonCreate(key, new CVec3((this.mState + i) * 32, 500), this.mLevel));
+                    this.PushPacket(CPacShooting.MonCreate(key, new CVec3((this.mState + i) * 32, 500), this.mLevel));
                 }
                 this.mTime = 0.5;
                 this.mCCount++;

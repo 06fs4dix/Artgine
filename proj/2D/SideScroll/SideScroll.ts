@@ -1,5 +1,5 @@
 //Version
-const version='ml0woaog_7';
+const version='mlaw6pum_26';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -285,6 +285,8 @@ function BlockChk()
 }
 
 if(gPF.mServer=="webServer")    CScore.Read("SideScroll");
+
+
 
 
 

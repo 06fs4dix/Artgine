@@ -15,13 +15,13 @@ export class CBulletComp extends CBehavior
 {
     m_rb : CRigidBody=null;
     m_pt : CPaint2D=null;
-    Start()
+    override Start()
     {
         this.m_pt=this.GetOwner().FindComp(CPaint2D);
         //this.m_pt.PushTag()
         this.m_rb=this.GetOwner().FindComp(CRigidBody);
     }
-    Update(_update : CUpdate): void 
+    override Update(_update : CUpdate): void 
     {
         let dir=this.m_rb.MoveDir();
         let angle=CMath.V3TwoAngle(new CVec3(1,0,0),dir);
@@ -29,7 +29,7 @@ export class CBulletComp extends CBehavior
 
 
     }
-    CameraOut(_pArr : Array<CPlaneInside>)
+    override CameraOut(_pArr : Array<CPlaneInside>)
     {
         for(var each0 of _pArr)
         {
@@ -39,12 +39,12 @@ export class CBulletComp extends CBehavior
             }
         }
     }
-    Collision(_org : CCollider,_size : number,_tar : Array<CCollider>,_push : Array<CVec3>)
+    override Collision(_org : CCollider,_size : number,_tar : Array<CCollider>,_push : Array<CVec3>)
     {
         let pro=_tar[0].GetOwner().FindComp(CProComp);
         pro.SetHP(pro.GetHP()-10);
 
-        this.GetOwner().PushPac(CPacShooting.Effect("Flash",this.GetOwner().GetPos(),new CVec2(25,25)));
+        this.GetOwner().PushPacket(CPacShooting.Effect("Flash",this.GetOwner().GetPos(),new CVec2(25,25)));
         this.GetOwner().Destroy();
     }
 }

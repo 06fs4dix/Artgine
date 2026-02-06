@@ -1,14 +1,8 @@
-const version = 'mkibvyk6_4';
+const version = 'mlax7pl6_12';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
 CClass.Push(CNPC);
-import { CAbilityVillager, CItemVillager, CSubjectInven, VillagerContentHTMLFun, gItemMgr } from "./Content/Item.js";
-CClass.Push(CAbilityVillager);
-CClass.Push(CItemVillager);
-CClass.Push(CSubjectInven);
-CClass.Push(VillagerContentHTMLFun);
-CClass.Push(gItemMgr);
 import { CUser } from "./CUser.js";
 CClass.Push(CUser);
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
@@ -52,12 +46,8 @@ import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSys
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
-import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
 import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
-import { CSing, CSingOption } from "https://06fs4dix.github.io/Artgine/artgine/server/CSing.js";
-import { CSocketIO } from "https://06fs4dix.github.io/Artgine/artgine/network/CSocketIO.js";
-import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
 import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCIndex.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
@@ -66,13 +56,7 @@ import { CCondition } from "https://06fs4dix.github.io/Artgine/artgine/util/CCon
 import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSurface.js";
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUniqueID.js";
-import { PacketWorld } from "https://06fs4dix.github.io/Artgine/artgine/server/PacketWorld.js";
-import { PacketVillage } from "./Server/PacketVillage.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
-import { CInvenMgr, CInventory, CInvenViewer } from "https://06fs4dix.github.io/Artgine/plugin/Inventory/Inventory.js";
 import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHtmlBar.js";
 import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 {
@@ -232,141 +216,12 @@ if (audioEnable) {
     audio.Play();
 }
 new CMDViewer("README.md");
-CSing.On(CSing.eEvent.State, () => {
-    if (CSing.PrivateKey() != null) {
-        loginModal.Close();
-    }
-});
-let loginModal;
-if (gPF.mServer == "local") {
-    let user = Real.PushSub(new CUser());
-    user.SetPos(new CVec3(5200, 6500));
-    user.PushChild(new CPad()).mSave = false;
-}
-else {
-    Real.Clear();
-    let option = new CSingOption();
-    let html = await CSing.InitForm(option);
-    let uniqueKey = "";
-    let camcon = gAtl.Brush().GetCam2D().GetCamCon();
-    camcon.SetPos(new CVec3(5200, 6500));
-    loginModal = new CModal();
-    loginModal.SetHeader("Info");
-    loginModal.SetTitle(CModal.eTitle.Text);
-    loginModal.SetBody(html);
-    loginModal.SetZIndex(CModal.eSort.Top);
-    loginModal.Open(CModal.ePos.Center);
-    let socket = new CSocketIO(false, "world");
-    if (await socket.Connect()) {
-        let ConnectAck = PacketWorld.WorldConnect(CSing.PrivateKey(), CUniqueID.Get(), "");
-        socket.Send(ConnectAck.Data());
-    }
-    socket.On(PacketWorld.eHeader.WorldInfo, (_stream) => {
-        let WorldInfo = PacketWorld.WorldInfo(_stream);
-        uniqueKey = WorldInfo.uniqueKey;
-        let stream = new CStream(WorldInfo.dataList);
-        while (stream.IsEnd() == false) {
-            let type = stream.GetString();
-            let nick = stream.GetString();
-            if (type == "user") {
-                let user = Real.PushSub(new CUser());
-                user.SetKey(stream.GetString());
-                user.SetPos(stream.GetIStream(new CVec3()));
-            }
-            else {
-                const obj = CBlackBoard.Find(type).ExportProxy();
-                obj.SetKey(stream.GetString());
-                obj.SetPos(stream.GetIStream(new CVec3()));
-                obj.SetSave(false);
-                Real.PushSub(obj);
-            }
-        }
-        CConsol.Log(_stream.Data());
-    });
-    socket.On(PacketWorld.eHeader.WorldPushUser, (_stream) => {
-        let WorldPushUser = PacketWorld.WorldPushUser(_stream);
-        let stream = new CStream(WorldPushUser.data);
-        let nick = stream.GetString();
-        let uk = stream.GetString();
-        let pos = stream.GetIStream(new CVec3());
-        let user = Real.Find(WorldPushUser.uniqueKey);
-        if (user == null) {
-            let user = Real.PushSub(new CUser());
-            user.SetKey(uk);
-            user.SetPos(pos);
-            if (WorldPushUser.uniqueKey == uniqueKey) {
-                let pad = user.PushChild(new CPad());
-                let lastDir = new CVec3();
-                pad["Update"] = (_update) => {
-                    let dir = pad.GetDir();
-                    if (dir.Equals(lastDir) == false) {
-                        lastDir.Import(dir);
-                        let UserPad = PacketVillage.UserPad(uniqueKey, dir, new CVec3());
-                        socket.Send(UserPad);
-                    }
-                };
-                user["Trigger"] = (_org, _size, _tar) => {
-                    if (pad.GetButtonEvent(0) == CEvent.eType.Click) {
-                        let subInvent = _tar[0].GetOwner();
-                        subInvent.Destroy();
-                        gIMgr.Push(subInvent.mInven);
-                        gViewer.Reset(gIMgr, gItemMgr, true);
-                    }
-                };
-            }
-        }
-    });
-    socket.On(PacketVillage.eHeader.UserPad, (_stream) => {
-        let UserPad = PacketVillage.UserPad(_stream);
-        let user = Real.Find(UserPad.uniqueKey);
-        user.mRB.Clear();
-        user.SetPos(UserPad.pos);
-        if (UserPad.dir.IsZero() == false) {
-            user.mRB.Push(new CForce("move", UserPad.dir, 200));
-        }
-    });
-    socket.On(PacketWorld.eHeader.WorldRemoveUser, (_stream) => {
-        let UserClose = PacketWorld.WorldRemoveUser(_stream);
-        let user = Real.Find(UserClose.uniqueKey);
-        user.Destroy();
-    });
-    gAtl.Frame().PushEvent(CEvent.eType.Update, (_update) => {
-        if (uniqueKey == "")
-            return;
-        let user = Real.Find(uniqueKey);
-        if (user == null)
-            return;
-        let camcon = gAtl.Brush().GetCam2D().GetCamCon();
-        camcon.SetPos(user.GetPos());
-    });
-}
-let gIMgr = new CInvenMgr();
-gIMgr.Push(new CInventory("test0"));
-gIMgr.Push(new CInventory("test0"));
-gIMgr.Push(new CInventory("test0"));
-gIMgr.Push(new CInventory("test0"));
-gIMgr.Push(new CInventory("test0"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test3"));
-gIMgr.Push(new CInventory("test2"));
-gIMgr.Push(new CInventory("test1"));
-let gViewer = new CInvenViewer();
-gViewer.mContentHTMLFun = VillagerContentHTMLFun;
-gViewer.Reset(gIMgr, gItemMgr, true);
+let user = Real.PushSub(new CUser());
+user.SetPos(new CVec3(5200, 6500));
+user.PushChild(new CPad()).mSave = false;
 let mg = new CModalBackGround("barRoot");
 let arr = [];
 arr.push(new CHTMLDropdown("root", "OptionBar", "Option", Bootstrap.eColor.warning));
-arr.push(new CHTMLDropdown("root", "ItemBar", "Inven", Bootstrap.eColor.success, () => { gViewer.Open(); }));
 arr.push(new CHTMLDropdown("OptionBar", "OptionAM7", `<div onclick="AM7()">AM7</div>`, Bootstrap.eColor.light));
 arr.push(new CHTMLDropdown("OptionBar", "OptionPM1", `<div onclick="PM1()">PM1</div>`, Bootstrap.eColor.light));
 arr.push(new CHTMLDropdown("OptionBar", "OptionPM11", `<div onclick="PM11()">PM11</div>`, Bootstrap.eColor.light));
@@ -374,5 +229,3 @@ const dummy = CHTMLDropdown.Attach(arr, "left");
 let rightDiv = CDOM.DataToDom(`<div class="position-fixed top-0 end-0" style="z-index:2000;"></div>`);
 rightDiv.append(dummy);
 mg.SetBody(rightDiv);
-let item = Real.PushSub(new CSubjectInven(new CInventory("test0")));
-item.SetPos(new CVec3(5000, 5200));
