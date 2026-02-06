@@ -1,1 +1,16 @@
-import{CScript as t}from"../../util/CScript.js";import{CComponent as i}from"./CComponent.js";export class CScriptComp extends i{mScript=new t;constructor(){super(),this.mScript.mKey=this.Key()}Update(t){super.Update(t),this.mScript.mKey=this.Key(),this.mScript.mData[0]=this.GetOwner(),this.mScript.mGitHub=this.GetOwner().GetFrame().PF().mGitHub,this.mScript.Exe()}Icon(){return"bi bi-pc"}}
+import { CScript } from "../../util/CScript.js";
+import { CComponent } from "./CComponent.js";
+export class CScriptComp extends CComponent {
+    mScript = new CScript();
+    constructor() {
+        super();
+        this.mScript.mKey = this.Key();
+    }
+    Update(_update) {
+        super.Update(_update);
+        this.mScript.mKey = this.Key();
+        this.mScript.mGitHub = this.GetOwner().GetFrame().PF().mGitHub;
+        this.mScript.Exe();
+    }
+    Icon() { return "bi bi-pc"; }
+}

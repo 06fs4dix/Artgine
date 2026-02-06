@@ -13,12 +13,12 @@ export class CScriptComp extends CComponent
         //this.mScript.mData[0]=this;
 
     }
-    Update(_update : CUpdate): void {
+    override Update(_update : CUpdate): void {
         super.Update(_update);
         this.mScript.mKey=this.Key();
-        this.mScript.mData[0]=this.GetOwner();
+        //this.mScript.mData[0]=this.GetOwner();
         this.mScript.mGitHub=this.GetOwner().GetFrame().PF().mGitHub;
         this.mScript.Exe();
     }
-    Icon(){		return "bi bi-pc";	}
+    override Icon(){		return "bi bi-pc";	}
 }
