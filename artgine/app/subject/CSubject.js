@@ -1,1 +1,618 @@
-import{CUpdate as t}from"../../basic/Basic.js";import{CArray as e}from"../../basic/CArray.js";import{CClass as s}from"../../basic/CClass.js";import{CJSON as r}from"../../basic/CJSON.js";import{CConfirm as m}from"../../basic/CModal.js";import{CObject as i}from"../../basic/CObject.js";import{CStream as h}from"../../basic/CStream.js";import{CUniqueID as o}from"../../basic/CUniqueID.js";import{CUtilObj as a}from"../../basic/CUtilObj.js";import{CBound as n}from"../../geometry/CBound.js";import{CMat as l}from"../../geometry/CMat.js";import{CMath as u}from"../../geometry/CMath.js";import{CVec3 as C}from"../../geometry/CVec3.js";import{CVec4 as p}from"../../geometry/CVec4.js";import{CFile as f}from"../../system/CFile.js";import{CComponent as P}from"../component/CComponent.js";import{CRouteMsg as d}from"../CRouteMsg.js";import{CPaint as y}from"../component/paint/CPaint.js";export class CSubject extends i{mKey;mDestroy;mEnable;mPMatMul=!0;mSelect=!0;mComArr;mPTArr=null;mPushArr=new Array;mPushLock=!1;mChild;mPMat;mPos;mRot;mSca;mWMat;mKeyChange;mPEnable;mSpeed;mFrame=null;mBroMsg=new e;mInMsg=new e;mOutMsg=new e;mUpdateRS=t.eType.Updated;mUpdateMat=t.eType.Updated;mUpdateComp=!0;mReset=!1;mSave=!0;SetSave(t){this.mSave=t}constructor(t=new Array){super(),this.mComArr=t,this.mChild=new Array,this.mPMat=null,this.mPos=new C,this.mRot=new C,this.mSca=new C(1,1,1),this.mWMat=new l(null),this.mWMat.NewWASM(),this.mKey=o.GetHash(),this.mKeyChange="",this.mDestroy=!1,this.mEnable=!0,this.mPEnable=!0,this.mSelect=!0,this.mSpeed=1,this.mInMsg.Push(new d("dummy")),this.mInMsg.Clear()}IsDestroy(){return this.mDestroy||this.mReset}Reset(){this.mReset=!1;for(let t of this.mChild)t.Reset();for(let t of this.mComArr)t.mStartChk=!0,t.ClearMsg();if(this.UpdateComp(),this.mPTArr){for(let t of this.mPTArr)t.ClearCRPAuto();this.mPTArr.length=0,this.mPTArr=null}else{let t=this.FindComps(y,!0);for(let e of t)e.ClearCRPAuto()}this.mFrame=null,this.mDestroy=!1,this.mInMsg.Clear(),this.mOutMsg.Clear(),this.mUpdateRS=t.eType.Updated,this.mUpdateMat=t.eType.Updated,this.mPushLock=!1,this.mPushArr.length=0;for(let t of this.mComArr)t.ClearMsg()}Icon(){return this.IsProxy()?"bi bi-crosshair":"bi bi-box"}RegistHeap(t){}ImportCJSON(t){var e=this.mKey,s=this.mFrame;if(this.Reset(),super.ImportCJSON(t),this.mKey!=e&&(this.mKeyChange="keySwap"),this.mFrame=null,this.SetFrame(s),A.IsNode())for(let t of this.mComArr)t instanceof y&&t.Destroy();return this}Call(t,e){var s=new d(t);s.mMsgData=e,this.mInMsg.Push(s)}UpdateComp(){this.mUpdateComp=!0}IsShould(t,e){if(e==i.eShould.Editer){if("mPEnable"==t||"mPMat"==t)return!1;if("mDestroy"==t)return!0}return"mFrame"!=t&&"mKeyChange"!=t&&"mInMsg"!=t&&"mOutMsg"!=t&&"mBroMsg"!=t&&"mPushArr"!=t&&"mPushLock"!=t&&"mUpdateComp"!=t&&"mDestroy"!=t&&"mPTArr"!=t&&"mCLArr"!=t&&"mUpdateMat"!=t&&(e!=i.eShould.Proxy||"mPos"!=t&&"mRot"!=t&&"mSca"!=t&&"mWMat"!=t&&"mPMat"!=t&&"mKey"!=t&&"mEnable"!=t&&"mPEnable"!=t)&&super.IsShould(t,e)}EditForm(t,e,r){"mComArr"==t.member&&a.ArrayAddDataList(t,e,r,s.ExtendsList(P,!0),!1,!0),"mChild"==t.member&&a.ArrayAddDataList(t,e,r,s.ExtendsList(CSubject,!0),!1,!0)}EditChange(t,e){if(super.EditChange(t,e),"mKey"==t.member)this.mKeyChange="keySwap";else if("mDestroy"==t.member)this.mDestroy=!1,this.Destroy();else if("mComArr"==t.member){if(this.UpdateComp(),1==t.state){let e=this.mComArr[t.key];e.SetOwner(this),"CCollider"==e.constructor.name&&this.mPTArr.length>0&&e.InitBound(this.mPTArr[0]),this.SortComponent()}-1==t.state&&this.mComArr[t.key].Destroy(),this.mPTArr&&(this.mPTArr.length=0),this.mPTArr=null}else if("mChild"==t.member){if(1==t.state){let e=this.mChild[t.key];this.mChild.splice(t.key,1),this.PushChild(e)}}else e&&(t.IsRef(this.mPos)||t.IsRef(this.mRot)||t.IsRef(this.mSca)?this.PRSReset():"mEnable"==t.member&&this.SetEnable(this.mEnable))}GetFrame(){return this.mFrame}Start(){}SetFrame(t){if(null==this.mFrame||null==t){null!=this.mFrame&&this.Reset(),this.mFrame=t,this.UpdateComp();for(let t of this.mComArr)t.SetOwner(this);for(let e of this.mChild)e.SetFrame(t)}}KeyChange(){return this.mKeyChange}ClearKeyChange(){this.mKeyChange=""}SetEnable(e){if(this.mEnable=e,this.mUpdateRS=t.eType.Updated,this.mUpdateMat=t.eType.Updated,this.SetChildShow(e),null!=this.mPTArr)for(let t of this.mPTArr)t.ClearCRPAuto();null!=this.mPTArr&&(this.mPTArr.length=0,this.mPTArr=null)}SetChildShow(t){for(let e of this.mChild)e.mPEnable=t,e.SetChildShow(t&&this.mEnable)}IsEnable(){return this.mEnable&&this.mPEnable&&0==this.mReset}SetKey(t){this.mKey!=t&&(this.mKeyChange="keySwap",this.mKey=t+"")}GetSpeed(){return this.mSpeed}SetSpeed(t){this.mSpeed=t}GetBound(){var t=new n;return t.mMin.x=0,t.mMin.y=0,t.mMin.z=0,t.mMax.x=0,t.mMax.y=0,t.mMax.z=0,t}SubjectUpdate(t){for(var e=0;e<this.mChild.length;++e)this.mChild[e].IsDestroy()&&(this.mChild.splice(e,1),this.mPTArr&&(this.mPTArr.length=0),e--)}Update(t){}NewInMsg(t){let e=new d(t);return this.mInMsg.Push(e),e}NewOutMsg(t){let e=new d(t);return this.mOutMsg.Push(e),e}PushPacket(t){var e=this.NewOutMsg("PushPacket");e.mMsgData[0]=t,e.mInter="canvas"}RouteMsg(t){}RootMsgUpdate(t){}RouteMsgUpdate(t){}GetCPaintVec(t=new Array){if(null==this.mPTArr||0==this.mPTArr.length){null!=t&&(this.mPTArr=t),null==this.mPTArr&&(this.mPTArr=new Array);for(let t of this.mComArr)t.IsDestroy()||t.GetSysc()==P.eSysn.Paint&&this.mPTArr.push(t);for(let t of this.mChild)t.GetCPaintVec(this.mPTArr)}return this.mPTArr}SortComponent(){this.mComArr.sort((t,e)=>t.mSysc-e.mSysc)}Destroy(){if(this.UpdateComp(),null==this.GetRecycleType()){if(!this.mDestroy){this.mDestroy=!0,this.mPTArr=null;for(var t=0;t<this.mComArr.length;++t)this.mComArr[t].Destroy();for(t=0;t<this.mChild.length;++t)this.mChild[t].Destroy();this.mWMat.ReleaseWASM()}}else this.mReset=!0}SetPMatMul(t){this.mPMatMul=t}SetPMat(t){this.mPMat=t}Push(t){return t instanceof CSubject?this.PushChild(t):t instanceof P?this.PushComp(t):t instanceof h?this.PushPacket(t):null}PushChild(t){return this.mChild.push(t),this.mPMatMul&&t.SetPMat(this.mWMat),t.mPEnable=this.IsEnable(),t.PRSReset(),null!=this.mFrame&&t.SetFrame(this.mFrame),this.mPTArr&&(this.mPTArr.length=0),this.mPTArr=null,t}DetachChild(t){let e=null;for(var s=0;s<this.mChild.length;++s)if(this.mChild[s].Key()==t){e=this.mChild[s],this.mChild.splice(s,1);break}if(null==e)return null;if(this.mPTArr){for(let t of this.mPTArr)t.ClearBatch();this.mPTArr.length=0,this.mPTArr=null}return e.mPMat=null,e}DetachComp(t){let e=null;for(var s=0;s<this.mComArr.length;++s)if("string"==typeof t){if(this.mComArr[s].Key()==t){e=this.mComArr[s],this.mComArr.splice(s,1);break}}else if(this.mComArr[s]instanceof t){e=this.mComArr[s],this.mComArr.splice(s,1);break}if(null==e)return null;if(this.mPTArr){for(let t of this.mPTArr)t.ClearBatch();this.mPTArr.length=0,this.mPTArr=null}return e}FindComp(t,e=!1,s=new Array){let r=this.FindComps(t,e,s);return 0==r.length?null:r[0]}FindComps(t,e=!1,s=new Array){for(let e of this.mComArr)e.IsDestroy()||("string"==typeof t?e.Key()==t&&s.push(e):"number"==typeof t?e.GetSysc()==t&&s.push(e):e instanceof t&&s.push(e));if(e)for(let r of this.mChild)r.FindComps(t,e,s);if(this.mPushLock)for(let e of this.mPushArr)e.IsDestroy()||("string"==typeof t?e.Key()==t&&s.push(e):"number"==typeof t?e.GetSysc()==t&&s.push(e):e instanceof t&&s.push(e));return s}FindChild(t,e=!1){const s=this.FindChilds(t,e);return 0===s.length?null:s[0]}FindChilds(t,e=!1){var s=new Array;for(let r of this.mChild)if(!r.IsDestroy()&&("string"==typeof t?r.Key()==t&&s.push(r):r instanceof t&&s.push(r),e)){let e=r.FindChilds(t,!0);e.length>0&&(s=s.concat(e))}return s}PushComp(t){if(this.UpdateComp(),t instanceof Array){for(let e of t)this.PushComp(e);return t}if(null!=this.mFrame&&null==t.GetOwner()){t.SetOwner(this);var e=new d("PushComp");e.mInter="canvas",e.mMsgData.push(this),e.mMsgData.push(t),this.mOutMsg.Push(e)}if(this.mPushLock)return this.mPushArr.push(t),t;this.mPTArr&&(this.mPTArr.length=0),this.mPTArr=null;for(var s=0;s<this.mComArr.length;++s)if(this.mComArr[s].mSysc>t.mSysc)return this.mComArr.splice(s,0,t),t;return this.mComArr.push(t),t}GetMat(){return this.mWMat}SetMat(t){this.SetPMat(t),this.PRSReset()}GetPos(){return this.mPos}GetRot(){return this.mRot}GetSca(){return this.mSca}SetPos(t,e=!0){t.Equals(this.mPos)||(this.mPos.Import(t),e&&this.PRSReset(!1))}SetRot(t,e=!0){t.Equals(this.mRot)||(t instanceof p?this.mRot.Import(u.QutToEuler(t)):this.mRot.Import(t),e&&this.PRSReset(!0))}SetSca(t,e=!0){if("number"==typeof t)this.mSca.mF32A[0]=t,this.mSca.mF32A[1]=t,this.mSca.mF32A[2]=t;else{if(t.Equals(this.mSca))return;this.mSca.Import(t)}e&&this.PRSReset(!0)}PRSReset(t=!0){}RemoveComps(t){var e=this.FindComps(t);for(var s of e)s.Destroy();this.mPTArr&&(this.mPTArr.length=0),this.mPTArr=null,this.UpdateComp()}async LoadJSON(t=null){let e=await f.Load(t);return null==e||(this.ImportCJSON(new r(e)),!1)}async SaveJSON(t=null){let e=new m;e.SetBody("Save Type Click"),e.SetConfirm(m.eConfirm.YesNo,[()=>{f.Save(this.ToStr(),t)},async()=>{var e=new CSubject;e.Import(this),f.Save(e.ToStr(),t)}],["this","CSubject"]),e.Open()}Export(t=!0,e=!0){let s=super.Export(t,e);return s.SetFrame(null),e&&null==this.mPMat?s.SetKey(o.GetHash()):s.SetKey(this.Key()),s}Prefab(t){for(var e of(this.mFrame=t,this.mComArr))e.Prefab(this)}CaptureTextureToDataURL(){let t=this.FindComp(y);return null==t?"":t.CaptureTextureToDataURL()}}import S from"../../app_imple/subject/CSubject.js";import{CUtil as A}from"../../basic/CUtil.js";S();
+import { CUpdate } from "../../basic/Basic.js";
+import { CArray } from "../../basic/CArray.js";
+import { CClass } from "../../basic/CClass.js";
+import { CJSON } from "../../basic/CJSON.js";
+import { CConfirm } from "../../basic/CModal.js";
+import { CObject } from "../../basic/CObject.js";
+import { CStream } from "../../basic/CStream.js";
+import { CUniqueID } from "../../basic/CUniqueID.js";
+import { CUtilObj } from "../../basic/CUtilObj.js";
+import { CBound } from "../../geometry/CBound.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CVec4 } from "../../geometry/CVec4.js";
+import { CFile } from "../../system/CFile.js";
+import { CComponent } from "../component/CComponent.js";
+import { CRouteMsg } from "../CRouteMsg.js";
+import { CPaint } from "../component/paint/CPaint.js";
+var g_offCObjHD = 0;
+export class CSubject extends CObject {
+    mKey;
+    mDestroy;
+    mEnable;
+    mPMatMul = true;
+    mSelect = true;
+    mComArr;
+    mPTArr = null;
+    mPushArr = new Array();
+    mPushLock = false;
+    mChild;
+    mPMat;
+    mPos;
+    mRot;
+    mSca;
+    mWMat;
+    mKeyChange;
+    mPEnable;
+    mSpeed;
+    mFrame = null;
+    mBroMsg = new CArray();
+    mInMsg = new CArray();
+    mOutMsg = new CArray();
+    mUpdateRS = CUpdate.eType.Updated;
+    mUpdateMat = CUpdate.eType.Updated;
+    mUpdateComp = true;
+    mReset = false;
+    mSave = true;
+    SetSave(_enable) {
+        this.mSave = _enable;
+    }
+    constructor(_comArr = new Array()) {
+        super();
+        this.mComArr = _comArr;
+        this.mChild = new Array();
+        this.mPMat = null;
+        this.mPos = new CVec3();
+        this.mRot = new CVec3();
+        this.mSca = new CVec3(1, 1, 1);
+        this.mWMat = new CMat(null);
+        this.mWMat.NewWASM();
+        this.mKey = CUniqueID.GetHash();
+        this.mKeyChange = "";
+        this.mDestroy = false;
+        this.mEnable = true;
+        this.mPEnable = true;
+        this.mSelect = true;
+        this.mSpeed = 1.0;
+        this.mInMsg.Push(new CRouteMsg("dummy"));
+        this.mInMsg.Clear();
+    }
+    IsDestroy() { return this.mDestroy || this.mReset; }
+    Reset() {
+        this.mReset = false;
+        for (let each0 of this.mChild) {
+            each0.Reset();
+        }
+        for (let each0 of this.mComArr) {
+            each0.mStartChk = true;
+            each0.ClearMsg();
+        }
+        this.UpdateComp();
+        if (this.mPTArr) {
+            for (let pt of this.mPTArr) {
+                pt.ClearCRPAuto();
+            }
+            this.mPTArr.length = 0;
+            this.mPTArr = null;
+        }
+        else {
+            let pVec = this.FindComps(CPaint, true);
+            for (let pt of pVec) {
+                pt.ClearCRPAuto();
+            }
+        }
+        this.mFrame = null;
+        this.mDestroy = false;
+        this.mInMsg.Clear();
+        this.mOutMsg.Clear();
+        this.mUpdateRS = CUpdate.eType.Updated;
+        this.mUpdateMat = CUpdate.eType.Updated;
+        this.mPushLock = false;
+        this.mPushArr.length = 0;
+        for (let com of this.mComArr) {
+            com.ClearMsg();
+        }
+    }
+    Icon() {
+        if (this.IsProxy())
+            return "bi bi-crosshair";
+        return "bi bi-box";
+    }
+    RegistHeap(_F32A) {
+    }
+    ImportCJSON(_json) {
+        var key = this.mKey;
+        var fw = this.mFrame;
+        this.Reset();
+        super.ImportCJSON(_json);
+        if (this.mKey != key)
+            this.mKeyChange = "keySwap";
+        this.mFrame = null;
+        this.SetFrame(fw);
+        if (CUtil.IsNode()) {
+            for (let comp of this.mComArr) {
+                if (comp instanceof CPaint)
+                    comp.Destroy();
+            }
+        }
+        return this;
+    }
+    Call(_function, _para) {
+        var cm = new CRouteMsg(_function);
+        cm.mMsgData = _para;
+        this.mInMsg.Push(cm);
+    }
+    UpdateComp() {
+        this.mUpdateComp = true;
+    }
+    IsShould(_member, _type) {
+        if (_type == CObject.eShould.Editer) {
+            if (_member == "mPEnable" || _member == "mPMat")
+                return false;
+            if (_member == "mDestroy")
+                return true;
+        }
+        if (_member == "mFrame" || _member == "mKeyChange" || _member == "mInMsg" || _member == "mOutMsg" || _member == "mBroMsg" ||
+            _member == "mPushArr" || _member == "mPushLock" || _member == "mUpdateComp" ||
+            _member == "mDestroy" || _member == "mPTArr" ||
+            _member == "mCLArr" || _member == "mUpdateMat")
+            return false;
+        if (_type == CObject.eShould.Proxy) {
+            if (_member == "mPos" || _member == "mRot" || _member == "mSca" || _member == "mWMat" || _member == "mPMat" ||
+                _member == "mKey" || _member == "mEnable" || _member == "mPEnable")
+                return false;
+        }
+        return super.IsShould(_member, _type);
+    }
+    EditForm(_pointer, _body, _input) {
+        if (_pointer.member == "mComArr")
+            CUtilObj.ArrayAddDataList(_pointer, _body, _input, CClass.ExtendsList(CComponent, true), false, true);
+        if (_pointer.member == "mChild")
+            CUtilObj.ArrayAddDataList(_pointer, _body, _input, CClass.ExtendsList(CSubject, true), false, true);
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.member == "mKey") {
+            this.mKeyChange = "keySwap";
+        }
+        else if (_pointer.member == "mDestroy") {
+            this.mDestroy = false;
+            this.Destroy();
+        }
+        else if (_pointer.member == "mComArr") {
+            this.UpdateComp();
+            if (_pointer.state == 1) {
+                let com = this.mComArr[_pointer.key];
+                com.SetOwner(this);
+                if (com.constructor.name == "CCollider" && this.mPTArr.length > 0) {
+                    com["InitBound"](this.mPTArr[0]);
+                }
+                this.SortComponent();
+            }
+            if (_pointer.state == -1) {
+                let com = this.mComArr[_pointer.key];
+                com.Destroy();
+            }
+            if (this.mPTArr)
+                this.mPTArr.length = 0;
+            this.mPTArr = null;
+        }
+        else if (_pointer.member == "mChild") {
+            if (_pointer.state == 1) {
+                let ch = this.mChild[_pointer.key];
+                this.mChild.splice(_pointer.key, 1);
+                this.PushChild(ch);
+            }
+        }
+        else if (_child) {
+            if (_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) || _pointer.IsRef(this.mSca)) {
+                this.WMatUpdate();
+            }
+            else if (_pointer.member == "mEnable") {
+                this.SetEnable(this.mEnable);
+            }
+        }
+    }
+    GetFrame() { return this.mFrame; }
+    Start() { }
+    SetFrame(_frame) {
+        if (this.mFrame != null && _frame != null)
+            return;
+        if (this.mFrame != null)
+            this.Reset();
+        this.mFrame = _frame;
+        this.UpdateComp();
+        {
+            for (let each0 of this.mComArr) {
+                each0.SetOwner(this);
+            }
+        }
+        for (let each0 of this.mChild) {
+            each0.SetFrame(_frame);
+        }
+    }
+    KeyChange() { return this.mKeyChange; }
+    ClearKeyChange() { this.mKeyChange = ""; }
+    SetEnable(_enable) {
+        this.mEnable = _enable;
+        this.mUpdateRS = CUpdate.eType.Updated;
+        this.mUpdateMat = CUpdate.eType.Updated;
+        this.SetChildShow(_enable);
+        if (this.mPTArr != null) {
+            for (let pt of this.mPTArr) {
+                pt.ClearCRPAuto();
+            }
+        }
+        if (this.mPTArr != null) {
+            this.mPTArr.length = 0;
+            this.mPTArr = null;
+        }
+    }
+    SetChildShow(_enable) {
+        for (let each0 of this.mChild) {
+            each0.mPEnable = _enable;
+            each0.SetChildShow(_enable && this.mEnable);
+        }
+    }
+    IsEnable() {
+        return this.mEnable && this.mPEnable && this.mReset == false;
+    }
+    SetKey(_key) {
+        if (this.mKey == _key)
+            return;
+        this.mKeyChange = "keySwap";
+        this.mKey = _key + "";
+    }
+    GetSpeed() { return this.mSpeed; }
+    ;
+    SetSpeed(_speed) { this.mSpeed = _speed; }
+    GetBound() {
+        var dummy = new CBound();
+        dummy.mMin.x = 0;
+        dummy.mMin.y = 0;
+        dummy.mMin.z = 0;
+        dummy.mMax.x = 0;
+        dummy.mMax.y = 0;
+        dummy.mMax.z = 0;
+        return dummy;
+    }
+    SubjectUpdate(_update) {
+        for (var i = 0; i < this.mChild.length; ++i) {
+            if (this.mChild[i].IsDestroy()) {
+                this.mChild.splice(i, 1);
+                if (this.mPTArr)
+                    this.mPTArr.length = 0;
+                i--;
+                continue;
+            }
+        }
+    }
+    Update(_update) { }
+    ;
+    NewInMsg(_name) {
+        let msg = new CRouteMsg(_name);
+        this.mInMsg.Push(msg);
+        return msg;
+    }
+    NewOutMsg(_name) {
+        let msg = new CRouteMsg(_name);
+        this.mOutMsg.Push(msg);
+        return msg;
+    }
+    PushPacket(_stream) {
+        var msg = this.NewOutMsg("PushPacket");
+        msg.mMsgData[0] = _stream;
+        msg.mInter = "canvas";
+    }
+    RouteMsg(_msg) {
+    }
+    RootMsgUpdate(_update) {
+    }
+    RouteMsgUpdate(_update) {
+    }
+    GetCPaintVec(_vec = new Array) {
+        if (this.mPTArr == null || this.mPTArr.length == 0) {
+            if (_vec != null)
+                this.mPTArr = _vec;
+            if (this.mPTArr == null)
+                this.mPTArr = new Array();
+            for (let each0 of this.mComArr) {
+                if (each0.IsDestroy())
+                    continue;
+                if (each0.GetSysc() == CComponent.eSysn.Paint)
+                    this.mPTArr.push(each0);
+            }
+            for (let each0 of this.mChild) {
+                each0.GetCPaintVec(this.mPTArr);
+            }
+        }
+        return this.mPTArr;
+    }
+    SortComponent() {
+        this.mComArr.sort((a, b) => {
+            return a.mSysc - b.mSysc;
+        });
+    }
+    Destroy() {
+        this.UpdateComp();
+        if (this.GetRecycleType() != null) {
+            this.mReset = true;
+            return;
+        }
+        if (this.mDestroy)
+            return;
+        this.mDestroy = true;
+        this.mPTArr = null;
+        for (var i = 0; i < this.mComArr.length; ++i) {
+            this.mComArr[i].Destroy();
+        }
+        for (var i = 0; i < this.mChild.length; ++i) {
+            this.mChild[i].Destroy();
+        }
+        this.mWMat.ReleaseWASM();
+    }
+    SetPMatMul(_enable) { this.mPMatMul = _enable; }
+    SetPMat(_mat) { this.mPMat = _mat; }
+    Push(_obj) {
+        if (_obj instanceof CSubject)
+            return this.PushChild(_obj);
+        else if (_obj instanceof CComponent)
+            return this.PushComp(_obj);
+        else if (_obj instanceof CStream)
+            return this.PushPacket(_obj);
+        return null;
+    }
+    PushChild(_obj) {
+        this.mChild.push(_obj);
+        if (this.mPMatMul)
+            _obj.SetPMat(this.mWMat);
+        _obj.mPEnable = this.IsEnable();
+        _obj.WMatUpdate();
+        if (this.mFrame != null)
+            _obj.SetFrame(this.mFrame);
+        if (this.mPTArr)
+            this.mPTArr.length = 0;
+        this.mPTArr = null;
+        return _obj;
+    }
+    DetachChild(_key) {
+        let child = null;
+        for (var i = 0; i < this.mChild.length; ++i) {
+            if (this.mChild[i].Key() == _key) {
+                child = this.mChild[i];
+                this.mChild.splice(i, 1);
+                break;
+            }
+        }
+        if (child == null)
+            return null;
+        if (this.mPTArr) {
+            for (let pt of this.mPTArr) {
+                pt.ClearBatch();
+            }
+            this.mPTArr.length = 0;
+            this.mPTArr = null;
+        }
+        child.mPMat = null;
+        return child;
+    }
+    DetachComp(_type) {
+        let com = null;
+        for (var i = 0; i < this.mComArr.length; ++i) {
+            if (typeof _type == "string") {
+                if (this.mComArr[i].Key() == _type) {
+                    com = this.mComArr[i];
+                    this.mComArr.splice(i, 1);
+                    break;
+                }
+            }
+            else if (this.mComArr[i] instanceof _type) {
+                com = this.mComArr[i];
+                this.mComArr.splice(i, 1);
+                break;
+            }
+        }
+        if (com == null)
+            return null;
+        if (this.mPTArr) {
+            for (let pt of this.mPTArr) {
+                pt.ClearBatch();
+            }
+            this.mPTArr.length = 0;
+            this.mPTArr = null;
+        }
+        return com;
+    }
+    FindComp(_type, _child = false, vec = new Array()) {
+        let cList = this.FindComps(_type, _child, vec);
+        if (cList.length == 0)
+            return null;
+        return cList[0];
+    }
+    FindComps(_type, _child = false, vec = new Array()) {
+        for (let each0 of this.mComArr) {
+            if (each0.IsDestroy())
+                continue;
+            if (typeof _type == "string") {
+                if (each0.Key() == _type)
+                    vec.push(each0);
+            }
+            else if (typeof _type == "number") {
+                if (each0.GetSysc() == _type)
+                    vec.push(each0);
+            }
+            else if (each0 instanceof _type)
+                vec.push(each0);
+        }
+        if (_child) {
+            for (let each0 of this.mChild) {
+                each0.FindComps(_type, _child, vec);
+            }
+        }
+        if (this.mPushLock) {
+            for (let each0 of this.mPushArr) {
+                if (each0.IsDestroy())
+                    continue;
+                if (typeof _type == "string") {
+                    if (each0.Key() == _type)
+                        vec.push(each0);
+                }
+                else if (typeof _type == "number") {
+                    if (each0.GetSysc() == _type)
+                        vec.push(each0);
+                }
+                else if (each0 instanceof _type)
+                    vec.push(each0);
+            }
+        }
+        return vec;
+    }
+    FindChild(_key, _child = false) {
+        const cList = this.FindChilds(_key, _child);
+        if (cList.length === 0)
+            return null;
+        return cList[0];
+    }
+    FindChilds(_key, _child = false) {
+        var vec = new Array();
+        for (let each0 of this.mChild) {
+            if (each0.IsDestroy())
+                continue;
+            if (typeof _key == "string") {
+                if (each0.Key() == _key)
+                    vec.push(each0);
+            }
+            else if (each0 instanceof _key)
+                vec.push(each0);
+            if (_child) {
+                let chvec = each0.FindChilds(_key, true);
+                if (chvec.length > 0)
+                    vec = vec.concat(chvec);
+            }
+        }
+        return vec;
+    }
+    PushComp(_com) {
+        this.UpdateComp();
+        if (_com instanceof Array) {
+            for (let each4 of _com) {
+                this.PushComp(each4);
+            }
+            return _com;
+        }
+        if (this.mFrame != null && _com.GetOwner() == null) {
+            _com.SetOwner(this);
+            var cm = new CRouteMsg("PushComp");
+            cm.mInter = "canvas";
+            cm.mMsgData.push(this);
+            cm.mMsgData.push(_com);
+            this.mOutMsg.Push(cm);
+        }
+        if (this.mPushLock) {
+            this.mPushArr.push(_com);
+            return _com;
+        }
+        if (this.mPTArr)
+            this.mPTArr.length = 0;
+        this.mPTArr = null;
+        for (var i = 0; i < this.mComArr.length; ++i) {
+            if (this.mComArr[i].mSysc > _com.mSysc) {
+                this.mComArr.splice(i, 0, _com);
+                return _com;
+            }
+        }
+        this.mComArr.push(_com);
+        return _com;
+    }
+    GetMat() { return this.mWMat; }
+    SetMat(_mat) {
+        this.SetPMat(_mat);
+        this.WMatUpdate();
+    }
+    GetPos() { return this.mPos; }
+    GetRot() { return this.mRot; }
+    ;
+    GetSca() { return this.mSca; }
+    ;
+    SetPos(_pos, _reset = true) {
+        if (_pos.Equals(this.mPos))
+            return;
+        this.mPos.Import(_pos);
+        if (_reset)
+            this.WMatUpdate(false);
+    }
+    SetRot(_rot, _reset = true) {
+        if (_rot.Equals(this.mRot))
+            return;
+        if (_rot instanceof CVec4)
+            this.mRot.Import(CMath.QutToEuler(_rot));
+        else
+            this.mRot.Import(_rot);
+        if (_reset)
+            this.WMatUpdate(true);
+    }
+    SetSca(_sca, _reset = true) {
+        if (typeof _sca == "number") {
+            this.mSca.mF32A[0] = _sca;
+            this.mSca.mF32A[1] = _sca;
+            this.mSca.mF32A[2] = _sca;
+        }
+        else {
+            if (_sca.Equals(this.mSca))
+                return;
+            this.mSca.Import(_sca);
+        }
+        if (_reset)
+            this.WMatUpdate(true);
+    }
+    WMatUpdate(_rsUpdate = true) {
+    }
+    RemoveComps(_type) {
+        var vec = this.FindComps(_type);
+        for (var each0 of vec) {
+            each0.Destroy();
+        }
+        if (this.mPTArr)
+            this.mPTArr.length = 0;
+        this.mPTArr = null;
+        this.UpdateComp();
+    }
+    async LoadJSON(_file = null) {
+        let buf = await CFile.Load(_file);
+        if (buf == null)
+            return true;
+        this.ImportCJSON(new CJSON(buf));
+        return false;
+    }
+    async SaveJSON(_file = null) {
+        let confirm = new CConfirm();
+        confirm.SetBody("Save Type Click");
+        confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+            () => {
+                CFile.Save(this.ToStr(), _file);
+            },
+            async () => {
+                var sub = new CSubject();
+                sub.Import(this);
+                CFile.Save(sub.ToStr(), _file);
+            },
+        ], ["this", "CSubject"]);
+        confirm.Open();
+    }
+    Export(_copy = true, _resetKey = true) {
+        let target = super.Export(_copy, _resetKey);
+        target.SetFrame(null);
+        if (_resetKey && this.mPMat == null)
+            target.SetKey(CUniqueID.GetHash());
+        else
+            target.SetKey(this.Key());
+        return target;
+    }
+    Prefab(_fw) {
+        this.mFrame = _fw;
+        for (var each0 of this.mComArr) {
+            each0.Prefab(this);
+        }
+    }
+    CaptureTextureToDataURL() {
+        let pt = this.FindComp(CPaint);
+        if (pt == null)
+            return "";
+        return pt.CaptureTextureToDataURL();
+    }
+}
+;
+import CSubject_imple from "../../app_imple/subject/CSubject.js";
+import { CUtil } from "../../basic/CUtil.js";
+CSubject_imple();

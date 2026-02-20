@@ -319,7 +319,7 @@ export class CSubject extends CObject implements IFile , IMat
 		{
 			if(_pointer.IsRef(this.mPos) || _pointer.IsRef(this.mRot) || _pointer.IsRef(this.mSca))
 			{
-				this.PRSReset();	
+				this.WMatUpdate();	
 			}
 			else if(_pointer.member=="mEnable")
 			{
@@ -565,7 +565,7 @@ export class CSubject extends CObject implements IFile , IMat
 		this.mChild.push(_obj);
 		if(this.mPMatMul)	_obj.SetPMat(this.mWMat);
 		_obj.mPEnable=this.IsEnable();
-		_obj.PRSReset();
+		_obj.WMatUpdate();
 		
 		if(this.mFrame!=null)
 			_obj.SetFrame(this.mFrame);
@@ -827,7 +827,7 @@ export class CSubject extends CObject implements IFile , IMat
 	SetMat(_mat)
 	{	
 		this.SetPMat(_mat);
-		this.PRSReset();
+		this.WMatUpdate();
 	}
 	GetPos() { return this.mPos; }
 	GetRot() { return this.mRot; };
@@ -843,7 +843,7 @@ export class CSubject extends CObject implements IFile , IMat
 		
 		
 		if(_reset)
-			this.PRSReset(false);
+			this.WMatUpdate(false);
 		// if(_patch)
 		// 	this.PatchExe("mPos");
 	}
@@ -856,7 +856,7 @@ export class CSubject extends CObject implements IFile , IMat
 		else
 			this.mRot.Import(_rot);
 		if(_reset)
-			this.PRSReset(true);
+			this.WMatUpdate(true);
 	}
 	SetSca(_sca : CVec3|number,_reset=true)
 	{
@@ -874,9 +874,9 @@ export class CSubject extends CObject implements IFile , IMat
 		}
 		
 		if(_reset)
-			this.PRSReset(true);
+			this.WMatUpdate(true);
 	}
-	PRSReset(_rsUpdate=true)
+	WMatUpdate(_rsUpdate=true)
 	{
 		
 	}
