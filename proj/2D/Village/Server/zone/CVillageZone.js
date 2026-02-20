@@ -1,21 +1,21 @@
 import { parentPort, workerData } from "worker_threads";
-import { CStream } from "https://06fs4dix.github.io/Artgine/artgine/basic/CStream.js";
-import { CGeometryInfo } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CGeometryComp.js";
-import { CCanvas } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvas.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
-import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
-import { CZone } from "https://06fs4dix.github.io/Artgine/artgine/server/CWorldServer.js";
-import { PacketWorld } from "https://06fs4dix.github.io/Artgine/artgine/server/PacketWorld.js";
+import { CStream } from "../../../../../artgine/basic/CStream.js";
+import { CGeometryInfo } from "../../../../../artgine/app/component/CGeometryComp.js";
+import { CCanvas } from "../../../../../artgine/app/canvas/CCanvas.js";
+import { CSubject } from "../../../../../artgine/app/subject/CSubject.js";
+import { CVec3 } from "../../../../../artgine/geometry/CVec3.js";
+import { CRigidBody } from "../../../../../artgine/app/component/CRigidBody.js";
+import { CForce } from "../../../../../artgine/app/component/CForce.js";
+import { CZone } from "../../../../../artgine/server/CWorldServer.js";
+import { PacketWorld } from "../../../../../artgine/server/PacketWorld.js";
 import { PacketVillage } from "../PacketVillage.js";
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
-import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
-import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
-import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
-import { CString } from "https://06fs4dix.github.io/Artgine/artgine/basic/CString.js";
+import "../../../../../artgine/artgine.js";
+import CBehavior from "../../../../../artgine/app/component/CBehavior.js";
+import { CCollider } from "../../../../../artgine/app/component/CCollider.js";
+import { CBound } from "../../../../../artgine/geometry/CBound.js";
+import { CFrame } from "../../../../../artgine/util/CFrame.js";
+import { CPreferences } from "../../../../../artgine/basic/CPreferences.js";
+import { CString } from "../../../../../artgine/basic/CString.js";
 class CVilComp extends CBehavior {
     Collision(_org, _size, _tar, _push) {
         this.GetOwner().FindComp(CRigidBody);

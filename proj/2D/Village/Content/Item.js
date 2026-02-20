@@ -1,11 +1,11 @@
-import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
-import { CItem, CItemMgr } from "https://06fs4dix.github.io/Artgine/plugin/Inventory/Inventory.js";
+import { CAniFlow } from "../../../../artgine/app/component/CAniFlow.js";
+import { CAnimation, CClipColorAlpha } from "../../../../artgine/app/component/CAnimation.js";
+import { CCollider } from "../../../../artgine/app/component/CCollider.js";
+import { CPaint2D } from "../../../../artgine/app/component/paint/CPaint2D.js";
+import { CSubject } from "../../../../artgine/app/subject/CSubject.js";
+import { CVec2 } from "../../../../artgine/geometry/CVec2.js";
+import { CColor } from "../../../../artgine/render/CColor.js";
+import { CItem, CItemMgr } from "../../../../plugin/Inventory/Inventory.js";
 export class CAbilityVillager {
     mH = 0;
     mS = 0;

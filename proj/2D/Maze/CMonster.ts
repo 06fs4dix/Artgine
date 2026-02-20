@@ -1,6 +1,6 @@
 
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation, CClipColor, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
@@ -11,6 +11,7 @@ import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CH5Canvas } from "https://06fs4dix.github.io/Artgine/artgine/render/CH5Canvas.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CCurve } from "https://06fs4dix.github.io/Artgine/artgine/util/CCurve.js";
@@ -28,7 +29,7 @@ export default class CMonster extends CBehavior
         this.m_rp=_rp;
         this.m_monType=_monType;
     }
-    Start(): void {
+    override Start(): void {
         let sub=this.GetOwner();
         
         CH5Canvas.Init(128,128);
@@ -73,10 +74,10 @@ export default class CMonster extends CBehavior
         let rb=sub.PushComp(new CRigidBody());
         //rb.SetRestitution(2);
     }
-    Trigger(_org: CCollider, _size: number, _tar: Array<CCollider>): void {
+    override Trigger(_org: CCollider, _size: number, _tar: Array<CCollider>): void {
         this.m_enemy=_tar[0];
     }
-    Collision(_org: CCollider, _size: number, _tar: Array<CCollider>, _push: Array<CVec3>): void {
+    override Collision(_org: CCollider, _size: number, _tar: Array<CCollider>, _push: Array<CVec3>): void {
 
         if(_tar[0].GetLayer()!="user")  return;
 
@@ -88,7 +89,7 @@ export default class CMonster extends CBehavior
         //this.GetOwner().GetComp(CPaint2D).SetColorModel(new CColor(1,0,0,SDF.eColorModel.RGBAdd));
 
         let ani=new CAnimation();
-        let clip=ani.Push(new CClipColorAlpha(0,4000,new CVec4(0,0,0,0),new CVec4(1,1,1,0)));
+        let clip=ani.Push(new CClipColor(0,4000,new CColor(0,0,0,CColor.eModel.RGBAdd),new CColor(1,1,1,CColor.eModel.RGBAdd)));
         clip.mCurve.mType=CCurve.eType.LinearCoodi;
         clip.mCurve.mPosArr.push(new CVec2(0.15,1));
         clip.mCurve.mPosArr.push(new CVec2(0.3,0));
@@ -102,7 +103,7 @@ export default class CMonster extends CBehavior
         this.GetOwner().PushComp(new CAniFlow(ani));
 
     }
-    Update(_delay: any): void {
+    override Update(_delay: any): void {
         if(this.m_time>200)
         {
             this.m_time=0;

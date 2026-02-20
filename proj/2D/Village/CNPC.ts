@@ -121,7 +121,7 @@ export class CNPC extends CSubject
         return dialogues[this.mDialogueIndex];
     }
 
-    Start()
+    override Start()
     {
         this.mPT=this.PushComp(new CPaint2D(this.mBaseImage,new CVec2(100,100)));
         this.mPT.mSave=false;
@@ -145,7 +145,7 @@ export class CNPC extends CSubject
         let sm = this.PushComp(new CSMComp());
         sm.GetSM().PushPattern([
             {
-                "and":[{"s":"Last"+CVec3.eDir.Null,"o":"==","v":1}],
+                "and":[{"s":CVec3.eDir.Null,"o":"==","v":1}],
                 "exe":[{"t":"Message","a":"StandLeft"}]
             },
             {
@@ -165,19 +165,19 @@ export class CNPC extends CSubject
                 "exe":[{"t":"Message","a":"MoveDown"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Left,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Left,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandLeft"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Right,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Right,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandRight"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Up,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Up,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandUp"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Down,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Down,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandDown"}]
             },
         ]);

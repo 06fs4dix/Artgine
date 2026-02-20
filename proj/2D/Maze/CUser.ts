@@ -1,6 +1,6 @@
 
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation, CClipAlpha, CClipColor, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
@@ -18,6 +18,7 @@ import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CH5Canvas } from "https://06fs4dix.github.io/Artgine/artgine/render/CH5Canvas.js";
@@ -39,7 +40,7 @@ export default class CUser extends CBehavior
     m_camMode=0;
     
     //m_shakeTime=0;
-    Start(): void {
+    override Start(): void {
 
         let sub=this.GetOwner();
 
@@ -108,7 +109,7 @@ export default class CUser extends CBehavior
 
         
     }
-    PickMouse(_rayMouse : CRayMouse)
+    override PickMouse(_rayMouse : CRayMouse)
     {
         let mouse=this.GetOwner().GetFrame().Input().Mouse();
         let cam=CBlackBoard.Find("2D") as CCamera;
@@ -144,7 +145,7 @@ export default class CUser extends CBehavior
         }
 
     }
-    async Update(_update: CUpdate): Promise<void> {
+    override async Update(_update: CUpdate): Promise<void> {
         super.Update(_update);
 
         let cam=CBlackBoard.Find("2D") as CCamera;
@@ -203,7 +204,7 @@ export default class CUser extends CBehavior
             let ptb=this.GetOwner().FindComp(CPaint2D);
 
             let ch=new CSubject();
-            ch.mPMatMul=false;
+            ch.SetPMatMul(false);
             let pt=ch.PushComp(await CPool.Product(CPaint2D));
             pt.SetTexture(ptb.GetTexture()[0]);
             pt.SetSize(ptb.GetSize());
@@ -213,7 +214,9 @@ export default class CUser extends CBehavior
             ch.SetPos(this.m_lastPos);
             this.GetOwner().PushChild(ch);
             let ani=new CAnimation();
-            ani.Push(new CClipColorAlpha(0,15,new CVec4(-1,-1,1,0.5),new CVec4(-1,-1,1,0)));
+            //ani.Push(new CClipColorAlpha(0,15,new CVec4(-1,-1,1,0.5),new CVec4(-1,-1,1,0)));
+            ani.Push(new CClipColor(0,15,new CColor(-1,-1,1,CColor.eModel.RGBAdd),new CColor(-1,-1,1,CColor.eModel.RGBAdd)));
+            ani.Push(new CClipAlpha(0,15,new CAlpha(0.5),new CAlpha(0)));
             ani.Push(new CClipDestroy(15));
             ch.PushComp(new CAniFlow(ani));
             this.m_footTime=0;
@@ -230,7 +233,7 @@ export default class CUser extends CBehavior
         }
 
     }
-    Collision(_org : CCollider,_size : number,_tar : Array<CCollider>,_push : Array<CVec3>)
+    override Collision(_org : CCollider,_size : number,_tar : Array<CCollider>,_push : Array<CVec3>)
     {
         let audio=new CAudioBuf("Hit_Hurt.mp3");
         audio.SetRemove(true);
@@ -242,19 +245,22 @@ export default class CUser extends CBehavior
         
 
         let ch=new CSubject();
-        ch.mPMatMul=false;
-        let ptb=this.GetOwner().FindComp(CPaint2D);
-        let pt=ch.PushComp(new CPaint2D(ptb.GetTexture()[0],ptb.GetSize())) as CPaint2D;
-        pt.SetColorModel(new CColor(0,0,1,SDF.eColorModel.RGBMul));
-        ch.SetPos(this.m_lastPos);
-        this.GetOwner().PushChild(ch);
-        let ani=new CAnimation();
-        ani.Push(new CClipColorAlpha(0,1000*10,new CVec4(1,-1,-1,-0.5),new CVec4(1,-1,-1,-1)));
-        ani.Push(new CClipDestroy(1000*10));
-        ch.PushComp(new CAniFlow(ani));
+        ch.SetPMatMul(false);
+        
+        // let ptb=this.GetOwner().FindComp(CPaint2D);
+        // let pt=ch.PushComp(new CPaint2D(ptb.GetTexture()[0],ptb.GetSize())) as CPaint2D;
+        // pt.SetColorModel(new CColor(0,0,1,SDF.eColorModel.RGBMul));
+        // ch.SetPos(this.m_lastPos);
+        // this.GetOwner().PushChild(ch);
+        // let ani=new CAnimation();
+        // //ani.Push(new CClipColorAlpha(0,1000*10,new CVec4(1,-1,-1,-0.5),new CVec4(1,-1,-1,-1)));
+        // ani.Push(new CClipColor(0,10,new CColor(1,-1,-1,CColor.eModel.RGBAdd),new CColor(1,-1,-1,CColor.eModel.RGBAdd)));
+        // //ani.Push(new CClipAlpha(0,10,new CAlpha(0.5),new CAlpha(0)));
+        // ani.Push(new CClipDestroy(1000*10));
+        // ch.PushComp(new CAniFlow(ani));
 
     }
-    Trigger(_org : CCollider,_size : number,_tar : Array<CCollider>)
+    override Trigger(_org : CCollider,_size : number,_tar : Array<CCollider>)
     {
         if(this.m_move==false)
         {

@@ -1,5 +1,5 @@
-import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUniqueID.js";
-import { CWorldServer, CZoneWorker } from "https://06fs4dix.github.io/Artgine/artgine/server/CWorldServer.js";
+import { CUniqueID } from "../../../../artgine/basic/CUniqueID.js";
+import { CWorldServer, CZoneWorker } from "../../../../artgine/server/CWorldServer.js";
 import { Worker } from "worker_threads";
 export class CVillageWorld extends CWorldServer {
     ReadyZone() {

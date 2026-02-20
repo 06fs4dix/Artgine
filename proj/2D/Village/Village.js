@@ -1,4 +1,4 @@
-const version = 'mlax7pl6_12';
+const version = 'mluvqq4j_19';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";

@@ -1,5 +1,5 @@
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation, CClipAlpha, CClipColor, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
@@ -13,7 +13,7 @@ import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBou
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CH5Canvas } from "https://06fs4dix.github.io/Artgine/artgine/render/CH5Canvas.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
@@ -145,7 +145,7 @@ export default class CUser extends CBehavior {
             this.m_lastPos.Import(this.GetOwner().GetPos());
             let ptb = this.GetOwner().FindComp(CPaint2D);
             let ch = new CSubject();
-            ch.mPMatMul = false;
+            ch.SetPMatMul(false);
             let pt = ch.PushComp(await CPool.Product(CPaint2D));
             pt.SetTexture(ptb.GetTexture()[0]);
             pt.SetSize(ptb.GetSize());
@@ -153,7 +153,8 @@ export default class CUser extends CBehavior {
             ch.SetPos(this.m_lastPos);
             this.GetOwner().PushChild(ch);
             let ani = new CAnimation();
-            ani.Push(new CClipColorAlpha(0, 15, new CVec4(-1, -1, 1, 0.5), new CVec4(-1, -1, 1, 0)));
+            ani.Push(new CClipColor(0, 15, new CColor(-1, -1, 1, CColor.eModel.RGBAdd), new CColor(-1, -1, 1, CColor.eModel.RGBAdd)));
+            ani.Push(new CClipAlpha(0, 15, new CAlpha(0.5), new CAlpha(0)));
             ani.Push(new CClipDestroy(15));
             ch.PushComp(new CAniFlow(ani));
             this.m_footTime = 0;
@@ -173,16 +174,7 @@ export default class CUser extends CBehavior {
         this.m_ready = false;
         new CCoroutine(this.ReadyMouse, this).Start();
         let ch = new CSubject();
-        ch.mPMatMul = false;
-        let ptb = this.GetOwner().FindComp(CPaint2D);
-        let pt = ch.PushComp(new CPaint2D(ptb.GetTexture()[0], ptb.GetSize()));
-        pt.SetColorModel(new CColor(0, 0, 1, SDF.eColorModel.RGBMul));
-        ch.SetPos(this.m_lastPos);
-        this.GetOwner().PushChild(ch);
-        let ani = new CAnimation();
-        ani.Push(new CClipColorAlpha(0, 1000 * 10, new CVec4(1, -1, -1, -0.5), new CVec4(1, -1, -1, -1)));
-        ani.Push(new CClipDestroy(1000 * 10));
-        ch.PushComp(new CAniFlow(ani));
+        ch.SetPMatMul(false);
     }
     Trigger(_org, _size, _tar) {
         if (this.m_move == false) {

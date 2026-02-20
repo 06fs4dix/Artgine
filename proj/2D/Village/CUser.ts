@@ -1,5 +1,5 @@
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipCoodi, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation,  CClipAlpha,  CClipCoodi, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
@@ -16,7 +16,9 @@ import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CCamera } from "https://06fs4dix.github.io/Artgine/artgine/render/CCamera.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CAction } from "https://06fs4dix.github.io/Artgine/artgine/util/CAction.js";
@@ -69,9 +71,10 @@ export class CUser extends CSubject
         
         let sm = this.PushComp(new CSMComp());
 
+        
         sm.GetSM().PushPattern([
             {
-                "and":[{"s":"Last"+CVec3.eDir.Null,"o":"==","v":1}],
+                "and":[{"s":CVec3.eDir.Null,"o":"==","v":1}],
                 "exe":[{"t":"Message","a":"ResetAnimation","p":["StandLeft"]}]
             },
             {
@@ -91,19 +94,19 @@ export class CUser extends CSubject
                 "exe":[{"t":"Message","a":"MoveDown"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Left,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Left,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandLeft"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Right,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Right,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandRight"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Up,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Up,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandUp"}]
             },
             {
-                "and":[{"s":"Last"+CVec3.eDir.Down,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
+                "and":[{"s":CVec3.eDir.Down,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
                 "exe":[{"t":"Message","a":"StandDown"}]
             },
         ]);
@@ -203,12 +206,13 @@ export class CUser extends CSubject
                 audio.Volume(0.5);
                 audio.Play();
                 let smoke=new CSubject();
-                smoke.PushComp(new CPaint2D("Res/smoke.png",new CVec2(100,100)));
+                let pt=smoke.PushComp(new CPaint2D("Res/smoke.png",new CVec2(100,100)));
+                pt.SetColorModel(new CColor(1,1,1,CColor.eModel.RGBAdd));
                 smoke.SetPMatMul(false);
                 //smoke.SetPos(CMath.V3AddV3(this.GetPos(),new CVec3(CRandom.MinMax(-50,50),CRandom.MinMax(-50,50),0)));
                 smoke.SetPos(CMath.V3AddV3(this.GetPos(),new CVec3(CRandom.MinMax(-30,30),-50,0)));
                 let ani=new CAnimation();
-                ani.Push(new CClipColorAlpha(0,1,new CVec4(1,1,1,0.4),new CVec4(1,1,1,0)));
+                ani.Push(new CClipAlpha(0,1,new CAlpha(0.4),new CAlpha(0)));
                 ani.Push(new CClipDestroy(1));
                 smoke.PushComp(new CAniFlow(ani));
                 this.PushChild(smoke);

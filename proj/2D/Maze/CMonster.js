@@ -1,5 +1,5 @@
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipColorAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation, CClipColor, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
@@ -9,7 +9,7 @@ import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBou
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CH5Canvas } from "https://06fs4dix.github.io/Artgine/artgine/render/CH5Canvas.js";
 import { CCurve } from "https://06fs4dix.github.io/Artgine/artgine/util/CCurve.js";
 export default class CMonster extends CBehavior {
@@ -64,7 +64,7 @@ export default class CMonster extends CBehavior {
         this.GetOwner().FindComp(CRigidBody).Clear();
         this.GetOwner().RemoveComps(CAniFlow);
         let ani = new CAnimation();
-        let clip = ani.Push(new CClipColorAlpha(0, 4000, new CVec4(0, 0, 0, 0), new CVec4(1, 1, 1, 0)));
+        let clip = ani.Push(new CClipColor(0, 4000, new CColor(0, 0, 0, CColor.eModel.RGBAdd), new CColor(1, 1, 1, CColor.eModel.RGBAdd)));
         clip.mCurve.mType = CCurve.eType.LinearCoodi;
         clip.mCurve.mPosArr.push(new CVec2(0.15, 1));
         clip.mCurve.mPosArr.push(new CVec2(0.3, 0));

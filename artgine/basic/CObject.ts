@@ -732,7 +732,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			else 	
 			{
 				if(typeof key == "number") key=key+"";
-				if(t?.[key]==null)	t = t?.["mTemp"][key];
+				if(t?.[key]==null && t?.["mTemp"]!=null)	t = t?.["mTemp"][key];
 				else	t = t?.[key];
 				
 			}
