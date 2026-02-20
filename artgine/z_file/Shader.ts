@@ -88,6 +88,8 @@ export class CVec4{
     constructor(_x : CVec4);
     constructor(_x : CVec4|CVec3|CVec2|number=null ,_y? : CVec3|CVec2|number,_z? : CVec2|number,_w? : number){this.x=_x;this.y=_y;}
 }
+export class Array16{};
+
 export class CMat{
     constructor(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15);
     constructor(_x,);
@@ -171,6 +173,7 @@ export var sam2D=0;
 export var gl_Position : CVec4;
 export var discard=0;
 export var screenPos : CVec4;
+
 //glsl func
 export function Build(_key,_tag : Array<{name : string, tag : string, assign : string}|string>,
     _vs : Function,_attribute : Array<any>,_VsToPs :  Array<any>,//_vsOut :  Array<any>,

@@ -75,13 +75,13 @@ var starLayer2ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6
 var starLayer3ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6, 1.0,1.2,1.0,  0.25, 0.30, 15.0, 1.0);
 
 // cloud
-var cloudCoverage : number = 0.85;//구름 비율
+var cloudCoverage : number = 0.5;//구름 비율
 var cloudStart : number = 15000.0;//구름 시작점
 var cloudHeight : number = 10000.0;//구름 높이
 var cloudLightDistance : number = 10000.0;//빛 최대 도달 거리
 
 var cloudPlanetRadius : number = 6300000.0;//행성 크기
-var cloudSpeed : CVec3 = new CVec3(0.0, 0.0, 0.0);
+var cloudSpeed : CVec3 = new CVec3(1.0, 0.0, 0.0);
 
 var cloudStep : number = 32.0;//구름 샘플링 수
 var cloudLightStep : number = 4.0;//빛 샘플링 수(가는 방향)
@@ -113,9 +113,18 @@ var camPos : CVec3=Null();
 
 
 //진짜 파란 하늘 - 지평선은 밝고 천정은 적당히 어둡게 조정
-var SkyColorRTable: CMat = new CMat(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.015, 0.01, 0.005);
-var SkyColorGTable: CMat = new CMat(0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01);
-var SkyColorBTable: CMat = new CMat(0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15);
+var SkyColorRTable: CMat = new CMat(0.22, 0.24, 0.27, 0.30,
+    0.35, 0.45, 0.60, 0.78,
+    0.90, 0.88, 0.85, 0.82,
+    0.80, 0.78, 0.76, 0.75);
+var SkyColorGTable: CMat = new CMat(0.50, 0.53, 0.56, 0.60,
+    0.68, 0.78, 0.88, 0.96,
+    1.00, 0.98, 0.96, 0.94,
+    0.92, 0.90, 0.88, 0.87);
+var SkyColorBTable: CMat = new CMat(0.92, 0.94, 0.96, 0.98,
+    1.00, 1.00, 1.00, 1.00,
+    1.00, 0.99, 0.98, 0.97,
+    0.96, 0.95, 0.94, 0.93);
 
 
 
@@ -280,7 +289,7 @@ function Cloud(_viewDir : CVec3, _sunDir : CVec3, _sunCol : CVec3) : CVec4
 
         // 구름이 존재하는지에 대한 FBM이 아닌 노이즈값을 먼저 돌려보고 
         // FBM은 이후에 밀도를 깎는 용도로만 사용하면 퍼포먼스 오를 듯
-        var noise : number = NoiseGet(p, SDF.eNoise.Cloud);
+        var noise : number = NoiseGet(p, SDF.eNoise.PerlinFBM3);
         
         // 연속 밀도(0..1)
         var density : number = noise;//smoothstep(thresh0, thresh1, noise);
@@ -305,7 +314,7 @@ function Cloud(_viewDir : CVec3, _sunDir : CVec3, _sunCol : CVec3) : CVec4
                 p.y = (poslight.y - cloudStart) * noiseScale + wind.y;
                 p.z = poslight.z * noiseScale + wind.z;
                 
-                var nL : number = NoiseGet(p, SDF.eNoise.Cloud);
+                var nL : number = NoiseGet(p, SDF.eNoise.PerlinFBM3);
                 var dL : number = ((nL - cloudCoverage) / (1.0 - cloudCoverage));
                 dL *= yBlend;
                 
@@ -402,8 +411,8 @@ function Aurora(_viewDir : CVec3) : CVec4
             p1.z + 2.0 * auroraOffset
         );
 
-        var n1 : number = NoiseGet(p1, SDF.eNoise.Voronoi);
-        var n2 : number = NoiseGet(p2, SDF.eNoise.Voronoi);
+        var n1 : number = NoiseGet(p1, SDF.eNoise.PerlinNormal);
+        var n2 : number = NoiseGet(p2, SDF.eNoise.PerlinNormal);
 
         var interpolatedNoise : number = smoothstep(-auroraSmoothness, auroraSmoothness, n1 - n2);
 
@@ -574,6 +583,7 @@ function ps_main() {
     var intensity : number=0.0;
     var col       : CVec3;
     var i : int;
+    var sunIntensity : number;
 
     var sunPass : number =  0.0;
     var sun_deg : number =  1.0;
@@ -585,6 +595,11 @@ function ps_main() {
         lDir = Sam2DToV4(ligDir, i);
         if(lDir.w>1.5) continue;
         dir = V3Nor(lDir.xyz);
+
+        //일반 광원 색상 누적
+        lCol = Sam2DToV4(ligCol, i);
+        angle = acos(V3Dot(dir, fragDir));
+        intensity  = V3Len(lCol.rgb);
 
         //태양 설정
         if(sunPass < 0.5 && lDir.w > -1.5) {
@@ -618,12 +633,8 @@ function ps_main() {
             
             sunsetBlend=sun_deg*(1.0-dir_deg);
             
+            sunIntensity = intensity;
         }
-
-        //일반 광원 색상 누적
-        lCol = Sam2DToV4(ligCol, i);
-        angle = acos(V3Dot(dir, fragDir));
-        intensity  = V3Len(lCol.rgb);
         
         col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
@@ -642,10 +653,10 @@ function ps_main() {
     BranchEnd();
 
     BranchBegin("star","S",[starLayer1ColorTable, starLayer2ColorTable, starLayer3ColorTable]);
-    if(intensity<0.99)
+    if(sunIntensity<0.99)
     {
         value.rgb = Star(fragDir);
-        finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, SaturateFloat(1.0 - intensity)));
+        finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, SaturateFloat(1.0 - sunIntensity)));
         finalColor = SaturateV3(finalColor);
     }
     

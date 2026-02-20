@@ -13,7 +13,7 @@ export class CForce extends CObject
 
 	public mCurve=new CCurve();
 	public mTime=0
-	public mDelay=0xffffffff;
+	public mDelay=0xffffffff;//얼만큼 작동할지.자동 삭제는 아니다!
 	public mDMulVBegin : CVec3;
 	public mDMulVEnd : CVec3;
 	

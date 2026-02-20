@@ -95,7 +95,7 @@ export class CVec3 extends CFloat32
 	// 	// mF32A 등 기존 배열 에디터 완전 숨김
 	// 	_body.hidden=true;
 	// }
-	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
 		//super.EditHTMLInit(_div,_pointer);
 		_div.innerHTML="";
 		const self = this;

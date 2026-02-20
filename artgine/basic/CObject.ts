@@ -395,21 +395,84 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			if(this.IsShould(_member,CObject.eShould.Proxy)==true) //&& this[_member] instanceof Array ==false)
 				return false;
 		}
-
-        if(_type==CObject.eShould.Patch)
-        {
-            if(this["mPatch"]!=null && this["mPatch"].has(_member))
-                return true;
-			else
-				return false;
-        }
-        //이건 안보여준다
-        else if(_member.indexOf('mObject')!=-1 || _member=='class' || _member=="mProxy" || _member=="mPatchUpdate" ||
-			_member=="mRecycleType" || _member=="mRecycle" ||  _member=="mTemp"
+		if(_type==CObject.eShould.Watch)	return false;
+        if(_member.indexOf('mObject')!=-1 || _member=='class' || _member=="mProxy" || //_member=="mPatchUpdate" ||
+			_member=="mRecycleType" || _member=="mRecycle" ||  _member=="mTemp" || _member=="mWatch"
 		)
 			return false;
 		return true;
     }
+	// SetWatch(_event: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>, _set = true, _get = false): void
+	// {
+	// 	const watch = CEvent.ToCEvent(_event);
+
+	// 	for (const member in this)
+	// 	{
+	// 		if (!this.IsShould(member, CObject.eShould.Watch)) continue;
+
+	// 		// 이미 감시 중인 멤버 skip
+	// 		const desc = Object.getOwnPropertyDescriptor(this, member);
+	// 		if (desc && typeof desc.get === "function") continue;
+
+	// 		let val = this[member];
+
+	// 		Object.defineProperty(this, member, {
+	// 			configurable: true,
+	// 			enumerable: true,
+	// 			get: () => {
+	// 				if (_get) watch.Call(member);
+	// 				return val;
+	// 			},
+	// 			set: (newVal) => {
+	// 				val = newVal;
+	// 				if (_set) watch.Call(member);
+	// 			}
+	// 		});
+	// 	}
+	// }
+	Watch(_event: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>, _set = true, _get = false): void
+	{
+		const watch = CEvent.ToCEvent(_event);
+
+		for (const member in this)
+		{
+			if (!this.IsShould(member, CObject.eShould.Watch)) continue;
+
+			const desc = Object.getOwnPropertyDescriptor(this, member);
+			if (desc && typeof desc.get === "function") continue;
+
+			let val = this[member];
+
+			if (Array.isArray(val))
+				val = this.WatchArray(val, member, watch, _set) as any;
+
+			Object.defineProperty(this, member, {
+				configurable: true,
+				enumerable: true,
+				get: () => {
+					if (_get) watch.Call(member);
+					return val;
+				},
+				set: (newVal) => {
+					val = Array.isArray(newVal)
+						? this.WatchArray(newVal, member, watch, _set)
+						: newVal;
+					if (_set) watch.Call(member);
+				}
+			});
+		}
+	}
+
+	private WatchArray(arr: any[], member: string, watch: any, _set: boolean): any[]
+	{
+		return new Proxy(arr, {
+			set: (target, index, value) => {
+				target[index] = value;
+				if (_set)	watch.Call(member);
+				return true;
+			}
+		}) as any[];
+	}
 
 	protected EditRefresh(_pt : CPointer=null)
 	{
@@ -432,6 +495,10 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	protected EditFormEx(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 
+	}
+	Temp()
+	{
+		return this["mTemp"];
 	}
 	EditInit(_pointer : CPointer=null) : HTMLElement
 	{
@@ -486,7 +553,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 
 	}
 	//자신에 객체에 변화가 있을때
-	protected EditChange(_pointer : CPointer,_child : boolean)
+	EditChange(_pointer : CPointer,_child : boolean)
 	{
 		
 	}
@@ -662,7 +729,13 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 				else	t = t[mm][Number(inStr)];
 				
 			} 
-			else 	t = t?.[key];
+			else 	
+			{
+				if(typeof key == "number") key=key+"";
+				if(t?.[key]==null)	t = t?.["mTemp"][key];
+				else	t = t?.[key];
+				
+			}
 
 			
 			if (t == null) break;
@@ -842,46 +915,6 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 }
 
 
-// export class CBlackBoardRef<T> extends CObject
-// {
-//     mKey : string;
-// 	mTemplate;
-// 	constructor(_key : any="")
-// 	{
-// 		super();
-// 		if(typeof _key =="string")
-// 			this.mKey=_key;
-// 		else
-// 		{
-// 			this.mTemplate=_key.name;
-// 			this.mKey="";
-
-// 		}
-		
-// 	}
-// 	override IsShould(_member: string, _type: CObject.eShould): boolean {
-// 		if(_member=="mTemplate")return false;
-
-// 		return super.IsShould(_member,_type);
-// 	}
-// 	Ref(_ref : string=null) : T
-// 	{
-// 		if(_ref!=null)	
-// 			this.mKey=_ref;
-// 		return CBlackBoard.Find(this.mKey);
-// 	}
-	
-// 	Icon() { return "bi bi-link"; }
-// 	EditDrop(_object: CObject): void 
-// 	{
-// 		if(CBlackBoard.Find(_object.Key())!=null)
-// 	    {
-// 	        this.mKey=_object.Key();
-// 	        this.EditRefresh();
-// 	    }
-// 	}
-	
-// }
 export class CBlackBoardRef<T> extends CObject {
     mKey: string = "";
     mTemplate: string;
@@ -933,7 +966,7 @@ export namespace CObject {
 	 export enum eShould {
 		Data = "D",
 		Editer = "E",
-		Patch = "P",
+		Watch = "W",
 		Proxy = "X"
 	}
 }
@@ -969,4 +1002,5 @@ gObjectEditerBtn.push(new CObjectEditerBtn("LoadJSON","Load",(_target)=>{
 
 import CObject_imple from "../basic_impl/CObject.js";
 import { CConsol } from "./CConsol.js";
+import { CEvent } from "./CEvent.js";
 CObject_imple();

@@ -324,6 +324,33 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
     return new CMat3(DAll, SAll, emAll);
 }
 
+export function GetSunInfo() : CMat3
+{
+    for(var i=0;i<SDF.TexSizeMax;++i)
+	{
+		if(i >= FloatToInt(ligCount)) break;
+		var dir : CVec4 = Sam2DToV4(ligDir,i);
+		var col : CVec4 = Sam2DToV4(ligCol,i);
+
+		//lDir가 0이면 라이트 아님
+		if(abs(dir.w) <= 0.5) continue;
+
+		var isPointLight : number = dir.w>1.1 ? 1.0 : 0.0;
+		if(isPointLight < 0.5) {
+            return new CMat3(
+                dir.xyz,
+                col.xyz,
+                new CVec3(0.0, 0.0, 0.0)
+            );
+		}
+	}
+    return new CMat3(
+        new CVec3(0.0, 1.0, 0.0),
+        new CVec3(0.0, 0.0, 0.0),
+        new CVec3(0.0, 0.0, 0.0)
+    );
+}
+
 export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,ambientColor : CVec3) : CMat3
 {
     

@@ -5,6 +5,8 @@ import {CModal} from "../basic/CModal.js";
 import {CObject,CPointer } from "./CObject.js";
 import {CUtil} from "./CUtil.js";
 import { CClass } from "./CClass.js";
+import { CDOM } from "./CDOM.js";
+import { CAlert } from "./CAlert.js";
 
 
 var jsummer=null;
@@ -167,67 +169,7 @@ export class CUtilObj
 		
 		return select;
 	}
-	// static DataList(_pointer : CPointer,_th : HTMLInputElement,_text : Array<string>,_value : Array<any>,_hidden=true,_changeFun : Function=null)
-	// {
-	// 	_th.hidden = _hidden;
-
-	// 	// datalist 요소 생성
-	// 	const dataListId = "datalist_" + Math.random().toString(36).substr(2, 9);
-	// 	const dataList = document.createElement("datalist");
-	// 	dataList.id = dataListId;
-
-	// 	for (let i = 0; i < _text.length; ++i) {
-	// 		const option = document.createElement("option");
-	// 		option.value = _text[i];
-	// 		dataList.appendChild(option);
-	// 	}
-
-	// 	// input 설정
-	// 	_th.setAttribute("list", dataListId);
-	// 	_th.className = "form-control";
-	// 	_th.value = _pointer.Get() + "";
-
-	// 	// [input + button] wrapper
-	// 	const wrapper = document.createElement("div");
-	// 	wrapper.className = "input-group";
-
-	// 	// Add 버튼 생성
-	// 	const addBtn = document.createElement("button");
-	// 	addBtn.className = "btn btn-outline-primary";
-	// 	addBtn.type = "button";
-	// 	addBtn.innerText = "+";
-
-	// 	// 이벤트 함수
-	// 	const applyValue = () => {
-	// 		const value = _th.value;
-	// 		_pointer.Set(value);
-	// 		if (_changeFun) _changeFun();
-	// 		if (_pointer.target instanceof CObject)
-	// 			_pointer.target.EditChange(_pointer);
-	// 	};
-
-	// 	// 버튼 클릭 시
-	// 	addBtn.addEventListener("click", applyValue);
-
-	// 	// 엔터 입력 시
-	// 	_th.addEventListener("keydown", (e) => {
-	// 		if (e.key === "Enter") {
-	// 			e.preventDefault();
-	// 			applyValue();
-	// 		}
-	// 	});
-
-	// 	// 조립
-	// 	wrapper.appendChild(_th);
-	// 	wrapper.appendChild(addBtn);
-
-	// 	// 리턴용 fragment
-	// 	const container = document.createElement("div");
-	// 	container.appendChild(wrapper);
-	// 	container.appendChild(dataList);
-
-	// 	return container;
-	// }
+	
 	static Summernote(_pointer : CPointer,_th : HTMLInputElement)
 	{
 		_th.onclick=()=>{
@@ -279,7 +221,7 @@ export class CUtilObj
 		
 	}
 	
-	static ArrayAddSelectList(_pointer : CPointer,_body : HTMLElement,_iHtml : HTMLElement,_valueList : Array<any>,_textArea=false)
+	static ArrayAddSelectList(_pointer : CPointer,_body : HTMLElement,_input : HTMLElement,_valueList : Array<any>,_textArea=false)
 	{
 		var cadiv=document.createElement("div");
 		
@@ -340,7 +282,7 @@ export class CUtilObj
 				_pointer.target.EditChange(_pointer,false);
 				_pointer.key=null;
 
-				CObject.EditArrayItem(_iHtml,_pointer);
+				CObject.EditArrayItem(_input,_pointer);
 			};
 			cadiv.append(button);
 			
@@ -398,7 +340,7 @@ export class CUtilObj
 			};
 		}
 	}
-	static ArrayAddDataList(_pointer : CPointer,_aHtml : HTMLElement,_iHtml : HTMLElement,_valueList : Array<any>,_textArea=false,_class=false)
+	static ArrayAddDataList(_pointer : CPointer,_body : HTMLElement,_input : HTMLElement,_valueList : Array<any>,_textArea=false,_class=false)
 	{
 		const container = document.createElement("div");
 		const inputGroup = document.createElement("div");
@@ -456,7 +398,7 @@ export class CUtilObj
 				_pointer.target.EditChange(_pointer,false);
 				_pointer.key = null;
 
-				CObject.EditArrayItem(_iHtml, _pointer);
+				CObject.EditArrayItem(_input, _pointer);
 				input.value = ""; // clear
 			}
 		};
@@ -475,7 +417,7 @@ export class CUtilObj
 		container.appendChild(inputGroup);
 		container.appendChild(datalist);
 
-		_aHtml.append(container);
+		_body.append(container);
 
 		// 텍스트 에어리어 추가
 		if (
@@ -495,7 +437,7 @@ export class CUtilObj
 			textarea.rows = 1;
 			textarea.className = "form-control mt-2";
 			textarea.placeholder = "ex:1,2,true,...";
-			_aHtml.append(textarea);
+			_body.append(textarea);
 
 			textarea.addEventListener("change", (e) => {
 				_pointer.Get().length = 0;
@@ -513,6 +455,62 @@ export class CUtilObj
 				_pointer.target.EditRefresh();
 			});
 		}
+	}
+	static MapAdd(_pointer : CPointer,_body : HTMLElement,_input : HTMLElement,_valueList : Array<string>,_pushFun=null)
+	{
+		var subList=new Array();
+		for(let subName of _valueList) {
+			subList.push({
+				"<>":"option", 
+				"text":subName,
+				"value":subName
+			});
+		}
+		let listKey=_pointer.target.ObjHash()+_pointer.member;
+		let ukey=CUniqueID.GetHash();
+		var pushDiv={"<>":"div","class":"row","html":[
+			{"<>":"div","class":"col-8","html":[
+				{"<>":"input","type":"text","class":"form-control","id":ukey+"subPush","placeholder":"Input...",
+					"list":listKey+"_list","onkeydown":(e)=>{
+						if (e.key === "Enter") 
+						{
+							e.preventDefault();
+							let sel=e.target.value;
+							let newObj =CClass.New(sel);
+							if(newObj==null)
+							{
+								CAlert.E("unknow class");
+								return;
+							}
+							if(_pushFun!=null)	_pushFun(newObj);
+							else _pointer.Get().set(CUniqueID.GetHash(),newObj);
+							_pointer.target.EditRefresh();
+							e.target.value="";
+						}
+					}
+				},
+				{"<>":"datalist","id":listKey+"_list","html":subList}
+			]},
+			{"<>":"div","class":"col-4","html":[
+				{"<>":"button","type":"button","class":"btn btn-primary","text":"Add",
+					"onclick":()=>{
+						let sel=CDOM.IDValue(ukey+"subPush");
+						let newObj =CClass.New(sel);
+						if(newObj==null)
+						{
+							CAlert.E("unknow class");
+							return;
+						}
+						//_pointer.Get().set(CUniqueID.GetHash(),newObj);
+						if(_pushFun!=null)	_pushFun(newObj);
+						else _pointer.Get().set(CUniqueID.GetHash(),newObj);
+						_pointer.target.EditRefresh();
+					}
+				}
+			]},
+		]};
+		
+		_input.prepend(CDOM.DataToDom(pushDiv));
 	}
 
 }

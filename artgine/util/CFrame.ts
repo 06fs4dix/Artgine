@@ -750,6 +750,9 @@ export class CFrame
 		var subWDelay=0;
 		
 
+		//let timerTest=new CTimer();
+        //let addTime=0;
+
 		this.mMainProcess=async ()=>{
 			//CConsol.Log("m_mainProcess");
 			//this.m_heap.Clear();
@@ -757,6 +760,8 @@ export class CFrame
 			
 			this.mUpdate.mDeltaTime=timer.Delay();
 			//this.mUpdate.mDeltaTime=0.2;
+
+			
 
 			const maxTime=0.03;
 			const maxCount=30;
@@ -785,6 +790,10 @@ export class CFrame
 					this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime;
 				}
 			}
+
+			//addTime+=this.mUpdate.mFixedTime*this.mUpdate.mFixedCount;
+            //CConsol.Log("addTime : "+addTime+" time : "+timerTest.Delay(false));
+
 			//CConsol.Log(this.mUpdate.mDeltaTime+" + "+this.mUpdate.mFixedCount+"/"+this.mUpdate.mFixedTime);
 			
 			

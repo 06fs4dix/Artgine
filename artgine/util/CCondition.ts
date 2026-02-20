@@ -16,6 +16,10 @@ export class CCondition extends CObject
         this.mValue=_value==null?1:_value;
 
         if(_state==null)    {}
+        else if(typeof _state=="number")
+        {
+            this.mState=_state+"";
+        }
         else if(typeof _state=="string")
         {
             this.mState=_state;
@@ -61,6 +65,8 @@ export class CCondition extends CObject
     override ImportCJSON(_json: CJSON): this {
         let json=_json.mDocument;
         this.mState=json["mState"]==null?json["s"]:json["mState"];
+        if(typeof this.mState=="number")
+            this.mState=this.mState+"";
         this.mOperator=json["mOperator"]==null?json["o"]:json["mOperator"];
         if(this.mOperator==null)    this.mOperator="==";
         this.mValue=json["mValue"]==null?json["v"]:json["mValue"];

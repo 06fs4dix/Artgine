@@ -27,10 +27,11 @@ export class CWater3D extends CSubject {
     mPaint;
     mReflector;
     mRefractor;
+    mWaterHeight = new CVec1(1.0);
     mDeepColor = new CVec3(0.1, 0.2, 0.4);
     mShallowColor = new CVec3();
-    mWaterDeep = new CVec4(10, 255, 2000, 10);
-    mCausticTexture = null;
+    mWaterDeep = new CVec4(10, 255, 10);
+    mWaterUnderFadeDist = new CVec2(0, 4000);
     mCausticFlowDir = new CVec2(0, 0);
     mCausticFlowFrequency = new CVec1(1);
     constructor() {
@@ -43,6 +44,8 @@ export class CWater3D extends CSubject {
         this.mPaint.PushCShaderAttr(new CShaderAttr("deepColor", this.mDeepColor));
         this.mPaint.PushCShaderAttr(new CShaderAttr("shallowColor", this.mShallowColor));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterDeep", this.mWaterDeep));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("waterHeight", this.mWaterHeight));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("waterUnderFadeDist", this.mWaterUnderFadeDist));
         this.PushComp(this.mPaint);
     }
     GetPT() {
@@ -54,28 +57,20 @@ export class CWater3D extends CSubject {
             this.mWaterDeep.x = this.GetPos().y;
         }
     }
-    SetWaterDeep(_deepHeight, _farDistance, _deepColor, _shallowColor) {
+    SetWaterDeep(_deepHeight, _nearDistance, _farDistance, _deepColor, _shallowColor) {
         if (_deepHeight != null)
             this.mWaterDeep.y = _deepHeight;
+        if (_nearDistance != null)
+            this.mWaterUnderFadeDist.x = _nearDistance;
         if (_farDistance != null)
-            this.mWaterDeep.z = _farDistance;
+            this.mWaterUnderFadeDist.y = _farDistance;
         if (_deepColor != null)
             this.mDeepColor.Import(_deepColor);
         if (_shallowColor != null)
             this.mShallowColor.Import(_shallowColor);
     }
-    NormalFlow(_flow, _normalTex1 = null, _normalTex2 = null) {
+    NormalFlow(_flow) {
         this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
-        if (_normalTex1 != null && _normalTex2 != null) {
-            this.mPaint.PushTag("normalMap");
-            this.mPaint.PushCShaderAttr(new CShaderAttr("normal1Map", 3.0));
-            this.mPaint.PushCShaderAttr(new CShaderAttr(3.0, _normalTex1));
-            this.mPaint.PushCShaderAttr(new CShaderAttr("normal2Map", 4.0));
-            this.mPaint.PushCShaderAttr(new CShaderAttr(4.0, _normalTex2));
-        }
-        else {
-            this.mPaint.RemoveTag("normalMap");
-        }
     }
     AddRefractor(_texture = undefined, _flow = new CVec2(0, 0)) {
         if (_texture == undefined) {
@@ -83,8 +78,8 @@ export class CWater3D extends CSubject {
                 return;
             this.mRefractor = new CRefractor3D();
             this.PushComp(this.mRefractor);
-            this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency, this.mCausticTexture);
-            this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mShallowColor, this.mDeepColor);
+            this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency);
+            this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mWaterUnderFadeDist, this.mShallowColor, this.mDeepColor, this.mWaterHeight);
             this.mPaint.PushTag("UseRefractTex");
             this.mPaint.PushCShaderAttr(new CShaderAttr("refractionMap", 2.0));
             this.mPaint.PushCShaderAttr(new CShaderAttr(2.0, this.mRefractor.GetTex()));
@@ -104,14 +99,12 @@ export class CWater3D extends CSubject {
         this.mRefractor.Destroy();
         this.mRefractor = null;
     }
-    AddCaustics(_caustic, _flow = new CVec2(0, 0), _frequency = 1.0) {
+    AddCaustics(_flow = new CVec2(0, 0), _frequency = 1.0) {
         this.mCausticFlowDir.Import(_flow);
         this.mCausticFlowFrequency.x = _frequency;
-        this.mCausticTexture = _caustic;
         if (this.mRefractor == null) {
             this.AddRefractor();
         }
-        this.mRefractor.SetCausticTexture(this.mCausticTexture);
     }
     AddReflector(_texture = undefined) {
         if (_texture == undefined) {
@@ -166,6 +159,9 @@ export class CReflector3D extends CBrushComp {
             rp.PushOr(new CCondition("class", "==", "CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
             rp.PushAnd(new CCondition("mTag[sky]"));
+            rp.mShaderAttr.push(new CShaderAttr("cloudStep", 8));
+            rp.mShaderAttr.push(new CShaderAttr("cloudLightStep", 2));
+            rp.mShaderAttr.push(new CShaderAttr("cloudDither", 1));
             this.PushRPAuto(rp);
             rp.mClearColor = false;
             rp.mClearDepth = false;
@@ -269,28 +265,20 @@ export class CRefractor3D extends CBrushComp {
             rp.mClearDepth = false;
         }
     }
-    AddWaterDeep(_waterDeep, _shallowColor, _deepColor) {
+    AddWaterDeep(_waterDeep, _waterDist, _shallowColor, _deepColor, _waterHeight) {
         const rp = this.mWrite[0];
         rp.mTag.add("waterRefract");
         rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
+        rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
         rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
         rp.mShaderAttr.push(new CShaderAttr("deepColor", _deepColor));
+        rp.mShaderAttr.push(new CShaderAttr("waterHeight", _waterHeight));
     }
-    AddCaustics(_flow, _freq, _caustic) {
+    AddCaustics(_flow, _freq) {
         const rp = this.mWrite[0];
         rp.mTag.add("waterRefract");
         rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
         rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
-        rp.mShaderAttr.push(new CShaderAttr("causticMap", 5.0));
-        this.SetCausticTexture(_caustic);
-    }
-    SetCausticTexture(_caustic) {
-        const rp = this.mWrite[0];
-        let shaderAttr = rp.mShaderAttr.find(attr => attr.mEach == 5.0);
-        if (shaderAttr)
-            shaderAttr.mKey = _caustic;
-        else
-            rp.mShaderAttr.push(new CShaderAttr(5.0, _caustic));
     }
     Update(_update) {
         super.Update(_update);

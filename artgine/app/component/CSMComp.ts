@@ -16,7 +16,7 @@ import { CRigidBody } from "./CRigidBody.js";
 
 export class CSMComp extends CComponent
 {
-    mSM=new CStateMachine;
+    mSM=new CStateMachine(this);
     mNameSet=new Set<string>();
     mLastDir : number =null;
     override Update(_update : CUpdate): void 
@@ -69,7 +69,7 @@ export class CSMComp extends CComponent
                 
                     
             }
-            else if(com instanceof CAniFlow)
+            else if(com instanceof CAniFlow && com.mAni!=null)
             {
                 this.mNameSet.add(com.mAni.Key()+(com.IsEnd()?"Stop":"Play"));
             }
@@ -79,32 +79,33 @@ export class CSMComp extends CComponent
         {
             switch(this.mLastDir)
             {
-                case 0:this.mNameSet.add("Last"+CVec3.eDir.Left);break;
-                case 1:this.mNameSet.add("Last"+CVec3.eDir.Right);break;
-                case 2:this.mNameSet.add("Last"+CVec3.eDir.Up);break;
-                case 3:this.mNameSet.add("Last"+CVec3.eDir.Down);break;
-                case 4:this.mNameSet.add("Last"+CVec3.eDir.Front);break;
-                case 5:this.mNameSet.add("Last"+CVec3.eDir.Back);break;
+                case 0:this.mNameSet.add(""+CVec3.eDir.Left);break;
+                case 1:this.mNameSet.add(""+CVec3.eDir.Right);break;
+                case 2:this.mNameSet.add(""+CVec3.eDir.Up);break;
+                case 3:this.mNameSet.add(""+CVec3.eDir.Down);break;
+                case 4:this.mNameSet.add(""+CVec3.eDir.Front);break;
+                case 5:this.mNameSet.add(""+CVec3.eDir.Back);break;
             }
         }
         else
-            this.mNameSet.add("Last"+CVec3.eDir.Null);
+            this.mNameSet.add(""+CVec3.eDir.Null);
 
         for(let name of this.mNameSet)
         {
-            this.mSM.GetState()[name]=1;
+            this.mSM.SetStateValue(name,1);
         }
         if(this.mNameSet.size==0)
-            this.mSM.GetState()["Default"]=1;
+            this.mSM.SetStateValue("Default",1);
+            
         
         this.mSM.PatternUpdate();
         this.mSM.ExcuteListUpdate(this.GetOwner());
         for(let name of this.mNameSet)
         {
-            this.mSM.GetState()[name]=0;
+            this.mSM.SetStateValue(name,0);
         }
         if(this.mNameSet.size==0)
-            this.mSM.GetState()["Default"]=0;
+            this.mSM.SetStateValue("Default",0);
         this.mNameSet.clear();
         //this.mLastDir=null;
     }

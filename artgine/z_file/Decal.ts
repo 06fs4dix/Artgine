@@ -15,19 +15,19 @@ export function DecalCac(_color : CVec4, _worldPos : CVec4) : CVec4
 
     // 범위 검사
     if(
-        decalLocalPos.x <= -1.0 || 
-        decalLocalPos.x >= +1.0 || 
-        decalLocalPos.y <= -1.0 || 
-        decalLocalPos.y >= +1.0 || 
-        decalLocalPos.z <= -1.0 || 
-        decalLocalPos.z >= +1.0
+        decalLocalPos.x <= -0.5 || 
+        decalLocalPos.x >= +0.5 || 
+        decalLocalPos.y <= -0.5 || 
+        decalLocalPos.y >= +0.5 || 
+        decalLocalPos.z <= -0.5 || 
+        decalLocalPos.z >= +0.5
     )
     {
         return _color;
     }
 
     // 데칼 UV 계산
-    var decalUV : CVec2 = new CVec2(decalLocalPos.x * -0.5 + 0.5, decalLocalPos.y * 0.5 + 0.5);
+    var decalUV : CVec2 = new CVec2(decalLocalPos.x * -1.0 + 0.5, decalLocalPos.y * 1.0 + 0.5);
     
     // 데칼 텍스쳐 샘플링
     var decalColor : CVec4 = decalParam;

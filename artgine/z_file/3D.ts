@@ -43,6 +43,8 @@ import {
 	SaturateV3,
 	V4Dot,
 	V3Cross,
+	V2Nor,
+	smoothstep,
 	
 } from "./Shader"
 import {
@@ -63,7 +65,7 @@ import {
 } from "./ColorFun";
 import {
 	ambientColor,
-	envCube,GetMaterial,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
+	envCube,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -74,7 +76,10 @@ import {
 	calcParallaxShadow
 } from "./Shadow";
 import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
+import { NoiseNormalGet } from "./Noise";
 
+
+var screenDepth : number;
 //uniform
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
@@ -134,9 +139,10 @@ var time : number = Attribute(0,"time");
 var waterDeep : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
 var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
-var causticMap : number = 5.0;
 var causticFlowDir : CVec2 = new CVec2(0.0, 0.0);
 var causticFlowFreq : number = 1.0;
+var waterHeight : number = 1.0;
+var waterUnderFadeDist : CVec2 = new CVec2(2000.0, 3000.0);
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
@@ -468,45 +474,61 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 	out_position = V4MulMatCoordi(P, projectMat);
 }
 
-
-function SampleNormalMapToCaustic(_map : number, _uv : CVec2) : CVec4
+function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _max2 : number) : number
 {
-	var N : CVec3 = V3Nor(MappingTexToV3(Sam2DToColor(_map, _uv).rgb));
-	var L : CVec3 = new CVec3(0.0, 1.0, 0.0);
-	var NdotL : number = V3Dot(N, L);
-	var frequency : number = 1.0 - causticFlowFreq;
-	var threshold : number = 0.4 * frequency * frequency;
-	var amp : number = 1.0 / (1.0 - threshold - 0.05);
-	var b : number = clamp((NdotL - threshold) * amp, 0.0, 1.0);
-	return new CVec4(b, b, b, 1.0);
+    return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
 }
 
-function SampleCaustics(_map : number, _uv : CVec2, _split : number) : CVec3
+function SampleNormalMapToCaustic(_uvw : CVec3, _ligCol : CVec3) : CVec3
 {
-	var uv1 : CVec2 = V2AddV2(_uv, new CVec2( _split,  _split));
-	var uv2 : CVec2 = V2AddV2(_uv, new CVec2( _split, -_split));
-	var uv3 : CVec2 = V2AddV2(_uv, new CVec2(-_split, -_split));
+	var normal : CVec3 = NoiseNormalGet(_uvw, SDF.eNoise.PerlinNormal);
+	normal = V3Nor(new CVec3(normal.x/10.0,normal.y,normal.z/10.0));
+	var L : CVec3 = new CVec3(0.0, 1.0, 0.0);
+	var NdotL : number = max(0.0, V3Dot(normal, L));
+	var curRange : number = 0.0001 * causticFlowFreq;
+	var threshold : number = 1.0 - curRange;
+	var b : number = clamp(Remap(NdotL, threshold, 1.0, 0.0, 0.2), 0.0, 1.0);
+	return V3MulFloat(_ligCol, b);
+}
 
-	var r : number = SampleNormalMapToCaustic(_map, uv1).r;
-	var g : number = SampleNormalMapToCaustic(_map, uv2).g;
-	var b : number = SampleNormalMapToCaustic(_map, uv3).b;
+function SampleCaustics(_uvw : CVec3, _split : number, _ligDir : CVec3, _ligCol : CVec3) : CVec3
+{
+	var angleWeight : number = clamp(1.0 / (_ligDir.y + 0.1), 1.0, 5.0);
+    var dynamicSplit : number = _split * angleWeight;
+
+	var xzLen : number = V2Len(new CVec2(_ligDir.x, _ligDir.z));
+	var offsetDir : CVec2 = (xzLen < 0.0001) ? new CVec2(1.0, 1.0) : new CVec2(_ligDir.x / xzLen, _ligDir.z / xzLen);
+
+	var uvw1 : CVec3 = new CVec3(V2AddV2(_uvw.xy, V2MulFloat(offsetDir, dynamicSplit)), _uvw.z);
+	var uvw2 : CVec3 = new CVec3(_uvw.xy, _uvw.z);
+	var uvw3 : CVec3 = new CVec3(V2AddV2(_uvw.xy, V2MulFloat(offsetDir, -dynamicSplit)), _uvw.z);
+
+	var r : number = SampleNormalMapToCaustic(uvw1, _ligCol).x;
+	var g : number = SampleNormalMapToCaustic(uvw2, _ligCol).y;
+	var b : number = SampleNormalMapToCaustic(uvw3, _ligCol).z;
 
 	return new CVec3(r, g, b);
 }
 
-function Caustics(_color : CVec3, _map : number, _world : CVec3, _flowDir : CVec2) : CVec3
+function Caustics(_color : CVec3, _world : CVec3, _flowDir : CVec2, _ligDir : CVec3, _ligCol : CVec3) : CVec3
 {
 	if(V2Len(_flowDir) == 0.0) return _color;
 
 	var flow : CVec3 = new CVec3(
 		-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
 		causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), 
-		V2Len(causticFlowDir) * time * 0.03
+		V2Len(causticFlowDir) * time * 0.1
 	);
-	var split : number = 1.0 / 500.0;
+	var split : number = 1.0 / 1000.0;
 	var worldToUV : CVec3 = V3MulFloat(_world, split);
-	var uv : CVec2 = V2AddV2(new CVec2(worldToUV.x, worldToUV.z), V2MulFloat(flow.xy, flow.z));
-	var tex : CVec3 = SampleCaustics(_map, uv, split);
+	
+	var L : CVec3 = V3Nor(_ligDir);
+	var refractOffset : CVec2 = new CVec2(L.x, L.z);
+	refractOffset = V2MulFloat(refractOffset, -0.2);
+
+	var uvw : CVec3 = new CVec3(V2AddV2(new CVec2(worldToUV.x + refractOffset.x, worldToUV.z + refractOffset.y), V2MulFloat(flow.xy, flow.z)), flow.z * 3.0);
+	var tex : CVec3 = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
+
 	_color = V3AddV3(_color, tex);
 	return SaturateV3(_color);
 }
@@ -514,17 +536,18 @@ function Caustics(_color : CVec3, _map : number, _world : CVec3, _flowDir : CVec
 function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
 {
 	var heightDiff : number = abs(waterDeep.x - _world.y);
-	// if(heightDiff < 0.0) return _color;
-	
+
+	var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
+	_color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);	// 색상이 물 색상과 크게 다르면 곱셈으로 했을 때 이상한 값이 나옴
+	var dist : number = V3Len(V3SubV3(camPos, _world.xyz));
+	var t : number = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
+	_color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+
 	// foam mask
-	if(heightDiff < waterDeep.w) {
-		_color = V3Mix(new CVec3(0.8, 0.8, 0.8), shallowColor, 0.1);
-	}
-	else {
-		var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
-		_color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);	// 색상이 물 색상과 크게 다르면 곱셈으로 했을 때 이상한 값이 나옴
-		var distanceBlend : number = 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, _world.xyz)) / waterDeep.z);
-		_color = V3Mix(deepColor, _color, distanceBlend);
+	if(heightDiff < min(waterDeep.z, waterDeep.z * waterHeight)) {
+		var foam : CVec3 = new CVec3(0.6, 0.6, 0.6);
+		_color = V3AddV3(_color, V3MulFloat(foam, 0.35));
+		_color = V3Mix(_color, foam, 0.4);
 	}
 
 	return _color;
@@ -553,6 +576,7 @@ function ps_main()
 
 	
 	var world : CVec4 = to_worldPos;
+	var camDir : CVec3;
 
 	var uv : CVec2 = to_uv;
 	var uvh : CVec3;
@@ -567,6 +591,13 @@ function ps_main()
 			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
 		)
 	));
+
+	// depth offset 적용
+	screenDepth = screenPos.z;
+	if(parallaxNormal > 0.0001) {
+		screenDepth = clamp((1.0 + ((screenPos.z * 2.0 - 1.0) - 1.0) * V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])))) * 0.5 + 0.5, 0.0, 1.0);
+	}
+
 	BranchEnd();
 
 	var normal : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
@@ -599,14 +630,19 @@ function ps_main()
 	
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
+	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
+	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
 
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
 
+	dseMat = GetSunInfo();
+	sunDir = dseMat[0];
+	sunCol = dseMat[1];
+
 	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, 
 		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
-
 
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchDefault();
@@ -622,9 +658,9 @@ function ps_main()
 	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
 	BranchEnd();
 
-	BranchBegin("waterRefract","waterRefract",[waterDeep, shallowColor, deepColor, causticMap, causticFlowDir, causticFlowFreq, camPos, time]);
-	if(world.y > waterDeep.x + waterDeep.w) discard;	// (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
-	out_color.rgb = Caustics(out_color.rgb, causticMap, world.xyz, causticFlowDir);
+	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
+	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
+	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
 	out_color.rgb = WaterProcessing(out_color.rgb, world);
 	BranchEnd();
 }

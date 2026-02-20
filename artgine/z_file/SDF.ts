@@ -89,7 +89,7 @@ export class SDF {
 		Outline:3,//color xyz   %외각선
 		Pixel:4,//픽셀사이즈xy   %픽셀화
 		//image Process
-		Noise:5,//속도x,강도y,픽셀사이즈z   %노이즈
+		Noise:5,//타입x,속도y,강도z,반복횟수w   %노이즈
 		//BorderLight:6,//강도x,두께y
 		Scanline:7,//선 개수 x, 속도 y %줄내려옴
 		LookUpTable:8,//x팔레트텍스쳐인덱스, 컬러 팔레트에서 색상 양자화
@@ -107,19 +107,23 @@ export class SDF {
 	}
 	static eNoise=
 	{
-		
+		// 절차적 생성
 		Gaussian:0,//랜덤 
-		//(128*128)*32=256
+		Simplex:1,//펄린 대체
+
+		// 텍스쳐 샘플링 후처리
+		PerlinBillow:10,
+		PerlinRidged:11,
+		PerlinDomainWarp:12,
+		PerlinFBM:13,
+
+		// 텍스쳐 샘플링
+		//(128*128)xy*32frame=2048*256
 		Perlin:768,//구름 느낌,연기 연속적인 부드러운 느낌
-		Voronoi:512,//가뭄에 땅갈라짐.거북이 등
-		Cloud:256,
+		PerlinNormal:512,//가뭄에 땅갈라짐.거북이 등
+		PerlinFBM3:256,
 		Blue:255,
-		
-		Billow:1,
-		Ridged:2,
-		DomainWarp:3,
-		FBM:4,
-		Simplex:5,
+
 	}
 	static eBlend=
 	{

@@ -101,15 +101,34 @@ export class CSMP extends CObject
 export class CStateMachine extends CObject
 {
     mPattern=new Array<CSMP>;
-    mState=new CObject();
+    mState : CObject;
     private mExcuteList=new CArray<CAction>();
     private mExcuteSet=new Set<CAction>();
     private mExcuteLock : CAction=null;
     
-    //mExcuteData=new Map<>
-
+    constructor(_state=new CObject())
+    {
+        super();
+        this.mState=_state;
+    }
+    override IsShould(_member: string, _type: CObject.eShould): boolean {
+        if(_member=="mState" || _member=="mExcuteList" || _member=="mExcuteSet" || _member=="mExcuteLock")
+            return false;
+        return super.IsShould(_member,_type);
+    }
     SetState(_state : CObject){ this.mState=_state; }
-    GetState(){ return this.mState; }
+    //GetState(){ return this.mState; }
+    SetStateValue(_key : string,_value,_temp=true)
+    {
+        if(_temp)
+        {
+            if(this.mState["mTemp"]==null)this.mState["mTemp"]={};
+            this.mState["mTemp"][_key]=_value;
+        }
+            
+        else
+            this.mState[_key]=_value;
+    }
     PushPattern(_p : CSMP|Object|Array<Object>)
     {
         if(_p instanceof CSMP)

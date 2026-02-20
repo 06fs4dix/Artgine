@@ -94,6 +94,13 @@ export class CRigidBody extends CGeometryComp
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
+		if(_type==CObject.eShould.Watch)
+		{
+			if(_member=="mForceArr")	return true;
+			else return false;
+		}
+		
+
 		if(_member=="mForceGravity")
 			return true;
 			
@@ -101,10 +108,10 @@ export class CRigidBody extends CGeometryComp
 	}
 	//IsMove()	{		return this.m_move;	}
 	override Update(_update: CUpdate) {
-		if(this.mGI!=null)	this.mGI.mFixedComp.Push(this);
+		if(this.GetGI()!=null)	this.GetGI().mFixedComp.Push(this);
 	}
-	GetMoveQue()	{	return this.mForceArr;	}
-	GetMoveQueGravity(){
+	GetForceArr()	{	return this.mForceArr;	}
+	GetForceArrGravity(){
 		for(let each1 of this.mForceArr) if(each1.mKey==CPhysics.GravityKey) return each1;
 		return null;
 	}
@@ -119,11 +126,13 @@ export class CRigidBody extends CGeometryComp
 	deltacount = 0;
 
 	
-	Push(move : CStopover);
-	Push(move : CForce);
-	Push(move : Array<CForce>);
- 	Push(move,duplication=false)
+	Push(move : CStopover) : CStopover;
+	Push(move : CForce) : CForce;
+	Push(move : CForce,duplication) : CForce;
+	Push(move : Array<CForce>) : Array<CForce>;
+ 	Push(move,duplication=false) : any
 	{
+		//CConsol.Log("Push");
 		if(move==null)
 			return;
 		if(move instanceof Array)
@@ -133,6 +142,7 @@ export class CRigidBody extends CGeometryComp
 			{
 				this.Push(move[i]);
 			}
+			
 		}
 		else if(move instanceof CForce)
 		{
@@ -144,7 +154,7 @@ export class CRigidBody extends CGeometryComp
 					if (this.mForceArr[i].mKey==move.mKey)
 					{
 						this.mForceArr[i].Import(move);
-						return;
+						return this.mForceArr[i];
 					}
 				}
 			}
@@ -160,17 +170,19 @@ export class CRigidBody extends CGeometryComp
 
 			for (let i = 0; i < this.mForceArr.length; ++i)
 			{
-				if (this.mForceArr[i].mKey=="path")
+				if (this.mForceArr[i].mKey==this.mStopover.mKey)
 				{
 					this.mForceArr.splice(i,1);
 					break;
 				}
 			}
 		}
+		return move;
 		
 	}
 	Remove(_key)
 	{
+		//CConsol.Log("Remove");
 		//this.PatchExe("mForceArr");
 		for (var i = 0; i < this.mForceArr.length; ++i)
 		{
@@ -260,4 +272,5 @@ export class CRigidBody extends CGeometryComp
 
 
 import CRigidBody_imple from "../../app_imple/component/CRigidBody.js";
+import { CConsol } from "../../basic/CConsol.js"
 CRigidBody_imple();

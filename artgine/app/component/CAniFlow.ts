@@ -1,7 +1,7 @@
 
 
 import {CComponent} from "../component/CComponent.js"
-import {CAnimation,CClip,CClipImg,CClipVideo,CClipCoodi, CClipDestroy,CClipPRS, CClipMesh, CClipColorAlpha, CClipShaderAttr, CClipForce} from "../component/CAnimation.js"
+import {CAnimation,CClip,CClipImg,CClipVideo,CClipCoodi, CClipDestroy,CClipPRS, CClipMesh,  CClipShaderAttr, CClipForce} from "../component/CAnimation.js"
 import { CBlackBoardRef, CObject, CPointer } from "../../basic/CObject.js";
 import { CUpdate } from "../../basic/Basic.js";
 

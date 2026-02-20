@@ -103,8 +103,8 @@ export class CPalette
 			
 		}
 			
-		gNoise[0]=upFolder+"artgine/z_file/Noise/perlin96.png";
-		gNoise[1]=upFolder+"artgine/z_file/Noise/voronoi96.png";
+		gNoise[0]=upFolder+"artgine/z_file/Noise/perlin128.png";
+		gNoise[1]=upFolder+"artgine/z_file/Noise/water128.png";
 		gNoise[2]=upFolder+"artgine/z_file/Noise/cloud96.png";
 		gNoise[3]=upFolder+"artgine/z_file/Noise/blue64.png";
 
@@ -224,112 +224,44 @@ export class CPalette
 			_fw.Res().Remove(gLUT[j]);
 		}
 
-
-		// Perlin - 2048x256 통짜 버퍼, 128x128 타일을 RGBA 채널에 순차 저장
+		// Perlin
 		fa = new Float32Array(2048 * 256 * 4);
 		tex = _fw.Res().Find(gNoise[0]);
-
-		/*
-		원본 이미지 (perlin128.png): 2048 x 1024
-		-128x128 타일이 가로 16개, 세로 8개 = 총 128개 슬라이스
-
-		출력 버퍼: 2048 x 256
-		-128x128 타일이 가로 16개, 세로 2개 = 총 32개 타일
-		-각 타일에 RGB로 3개 슬라이스 저장 → 32 × 3 = 96개
-		*/
-		
-		for(let dstY = 0; dstY < 256; dstY++)
-		{
-			for(let dstX = 0; dstX < 2048; dstX++)
-			{
-				let tileX = Math.floor(dstX / 128);
-				let tileY = Math.floor(dstY / 128);
-				let tileIndex = tileY * 16 + tileX;  // 0-31
-				
-				let localX = dstX % 128;
-				let localY = dstY % 128;
-				let dstIndex = (dstY * 2048 + dstX) * 4;
-				
-				for(let k = 0; k < 4; k++)  // RGBA
-				{
-					let sliceIndex = (tileIndex * 3 + k) % 96;  // 3칸씩 진행, 96으로 wrap
-					
-					let srcTileX = sliceIndex % 16;
-					let srcTileY = Math.floor(sliceIndex / 16);
-					
-					let srcX = srcTileX * 128 + localX;
-					let srcY = srcTileY * 128 + localY;
-					let srcIndex = (srcY * 2048 + srcX) * 4;
-					
-					fa[dstIndex + k] = tex.GetBuf()[0][srcIndex] / 0xFF;
+		for(let dstY = 0; dstY < 256; dstY++) {
+			for(let dstX = 0; dstX < 2048; dstX++) {
+				for(let k = 0; k < 4; k++) {
+					const idx = (dstY * 2048 + dstX) * 4 + k;
+					fa[idx] = tex.GetBuf()[0][idx] / 0xFF;
 				}
 			}
 		}
 		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Perlin, 2048, 256, fa);
 		_fw.Res().Remove(gNoise[0]);
-		
-		// Voronoi
+
+		// Water
 		tex = _fw.Res().Find(gNoise[1]);
-		for(let dstY = 0; dstY < 256; dstY++)
-		{
-			for(let dstX = 0; dstX < 2048; dstX++)
-			{
-				let tileX = Math.floor(dstX / 128);
-				let tileY = Math.floor(dstY / 128);
-				let tileIndex = tileY * 16 + tileX;  // 0-31
-				
-				let localX = dstX % 128;
-				let localY = dstY % 128;
-				let dstIndex = (dstY * 2048 + dstX) * 4;
-				
-				for(let k = 0; k < 4; k++)  // RGBA
-				{
-					let sliceIndex = (tileIndex * 3 + k) % 96;  // 3칸씩 진행, 96으로 wrap
-					
-					let srcTileX = sliceIndex % 16;
-					let srcTileY = Math.floor(sliceIndex / 16);
-					
-					let srcX = srcTileX * 128 + localX;
-					let srcY = srcTileY * 128 + localY;
-					let srcIndex = (srcY * 2048 + srcX) * 4;
-					
-					fa[dstIndex + k] = tex.GetBuf()[0][srcIndex] / 0xFF;
+		for(let dstY = 0; dstY < 256; dstY++) {
+			for(let dstX = 0; dstX < 2048; dstX++) {
+				for(let k = 0; k < 4; k++) {
+					const idx = (dstY * 2048 + dstX) * 4 + k;
+					fa[idx] = tex.GetBuf()[0][idx] / 0xFF;
 				}
 			}
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Voronoi, 2048, 256, fa);
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.PerlinNormal, 2048, 256, fa);
 		_fw.Res().Remove(gNoise[1]);
 
 		// Cloud
 		tex = _fw.Res().Find(gNoise[2]);
-		for(let dstY = 0; dstY < 256; dstY++)
-		{
-			for(let dstX = 0; dstX < 2048; dstX++)
-			{
-				let tileX = Math.floor(dstX / 128);
-				let tileY = Math.floor(dstY / 128);
-				let tileIndex = tileY * 16 + tileX;  // 0-31
-				
-				let localX = dstX % 128;
-				let localY = dstY % 128;
-				let dstIndex = (dstY * 2048 + dstX) * 4;
-				
-				for(let k = 0; k < 4; k++)  // RGBA
-				{
-					let sliceIndex = (tileIndex * 3 + k) % 96;  // 3칸씩 진행, 96으로 wrap
-					
-					let srcTileX = sliceIndex % 16;
-					let srcTileY = Math.floor(sliceIndex / 16);
-					
-					let srcX = srcTileX * 128 + localX;
-					let srcY = srcTileY * 128 + localY;
-					let srcIndex = (srcY * 2048 + srcX) * 4;
-					
-					fa[dstIndex + k] = tex.GetBuf()[0][srcIndex] / 0xFF;
+		for(let dstY = 0; dstY < 256; dstY++) {
+			for(let dstX = 0; dstX < 2048; dstX++) {
+				for(let k = 0; k < 4; k++) {
+					const idx = (dstY * 2048 + dstX) * 4 + k;
+					fa[idx] = tex.GetBuf()[0][idx] / 0xFF;
 				}
 			}
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Cloud, 2048, 256, fa);
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.PerlinFBM3, 2048, 256, fa);
 		_fw.Res().Remove(gNoise[2]);
 
 		// Blue Noise

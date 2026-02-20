@@ -32,7 +32,7 @@ export class CInventory extends CObject
     }
 }
 
-export class CItem extends CObject
+export class CItemInfo extends CObject
 {
     constructor(_img,_title,_context)
     {
@@ -219,12 +219,12 @@ export class CItemMgr extends CObject implements IFile
     {
         CFile.Save(this.ToStr(),_file);
     }
-    mItemMap=new Map<string,CItem>();
-    Push<T extends CItem>(_key : string,_item : T): T;
-    Push<T extends CItem>(_item : T): T
-    Push<T extends CItem>(_a : any,_b : any=null) : T
+    mItemMap=new Map<string,CItemInfo>();
+    Push<T extends CItemInfo>(_key : string,_item : T): T;
+    Push<T extends CItemInfo>(_item : T): T
+    Push<T extends CItemInfo>(_a : any,_b : any=null) : T
     {
-        if(_a instanceof CItem)
+        if(_a instanceof CItemInfo)
         {
             this.mItemMap.set(_a.Key(),_a);
             return _a as T;
@@ -274,11 +274,11 @@ export class CInvenViewer extends CModal
     mInvenSortType=0;
     
     //mItemMap = new Map<string, CItem>();
-    mTitleHTMLFun=(_inven : CInventory,_item : CItem,_viewer : CInvenViewer)=>{
+    mTitleHTMLFun=(_inven : CInventory,_item : CItemInfo,_viewer : CInvenViewer)=>{
 
         return _item.mTitle+" ["+_inven.mAmount+"]";
     };
-    mContentHTMLFun : any=(_inven : CInventory,_item : CItem,_viewer : CInvenViewer)=>{
+    mContentHTMLFun : any=(_inven : CInventory,_item : CItemInfo,_viewer : CInvenViewer)=>{
 
         return "<span>"+_item.mContext+"</span>";
     };
@@ -574,6 +574,6 @@ export class CInvenViewer extends CModal
 }
 
 CClass.Push(CInventory);
-CClass.Push(CItem);
+CClass.Push(CItemInfo);
 CClass.Push(CItemMgr);
 CClass.Push(CInvenMgr);

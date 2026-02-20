@@ -410,56 +410,20 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		}
 		else if(_pointer.refArr[_pointer.refArr.length-1]==this.mSubMap)
 		{
-			var subList=new Array();
-			for(let subName of CClass.ExtendsList(CSubject,true)) {
-				subList.push({
-					"<>":"option", 
-					"text":subName,
-					"value":subName
-				});
-			}
-			let ukey=CUniqueID.GetHash();
-			var pushDiv={"<>":"div","class":"row","html":[
-				{"<>":"div","class":"col-8","html":[
-					//{"<>":"select","class":"form-select","id":ukey+"subPush","html":subList}
-					{"<>":"input","type":"text","class":"form-control","id":ukey+"subPush","placeholder":"CSubject",
-						"list":this.ObjHash()+"CSubjcet_list","onkeydown":(e)=>{
-							if (e.key === "Enter") 
-							{
-								e.preventDefault();
-								let sel=e.target.value;
-								let newObj  : CSubject=CClass.New(sel);
-								this.PushSub(newObj);
-								this.EditRefresh();
-								e.target.value="";
-							}
-						}
-					},
-					{"<>":"datalist","id":this.ObjHash()+"CSubjcet_list","html":subList}
-				]},
-				{"<>":"div","class":"col-4","html":[
-					{"<>":"button","type":"button","class":"btn btn-primary","text":"Add",
-						"onclick":()=>{
-							let sel=CDOM.IDValue(ukey+"subPush");
-							let newObj  : CSubject=CClass.New(sel);
-							this.PushSub(newObj);
-							this.EditRefresh();
-							//CDOM.ID("m_obj_title").click();//??????????????????
-						}
-					}
-				]},
-			]};
-			
-			_input.prepend(CDOM.DataToDom(pushDiv));
+			CUtilObj.MapAdd(_pointer,_body,_input,CClass.ExtendsList(CSubject,true),(_obj)=>{
+				this.PushSub(_obj,false);
+			});
 		}
 		if(_pointer.refArr[_pointer.refArr.length-1]==this.mResMap)
 		{
+
+			
+
 			let ukey=CUniqueID.GetHash();
 			var watchList=new Array();
 			for(let wName of CClass.ExtendsList(CObject,true)) {
 				watchList.push({
 					"<>":"option", 
-					//"text":subName.constructor.name,
 					"value":wName
 				});
 			}
@@ -851,7 +815,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 		}
 		return null;
 	}
-	PushSub<T extends CSubject>(_obj : T)
+	PushSub<T extends CSubject>(_obj : T,_que=true)
 	{
 		let key=(_obj as CSubject).Key();
 		let obj=this.Find(key) as CSubject;
@@ -872,14 +836,17 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				
 		}
 		obj=_obj as CSubject;
-		//this.m_obj.set(obj.Key(),obj);
+		//
 		
 
 		obj.ClearKeyChange();
 		if(obj.GetFrame()==null)
 			obj.SetFrame(this.mFrame);
 		
-		this.mPushSub.Push(obj);
+		if(_que==false)
+			this.mSubMap.set(obj.Key(),obj);
+		else
+			this.mPushSub.Push(obj);
 
 		return _obj as T;		
 	}

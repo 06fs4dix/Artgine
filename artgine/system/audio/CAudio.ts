@@ -163,7 +163,7 @@ export class CAudioTag extends CAudio
 	{
 		this.m_tag.currentTime=0;
 	}
-	async Play()
+	override async Play()
 	{
 		if(this.m_source!=null)
 		{
@@ -180,13 +180,13 @@ export class CAudioTag extends CAudio
 		super.Play();
 		this.m_tag.play();
 	}
-	Stop()
+	override Stop()
 	{
 		//this.m_tag[0].stop();
 		this.m_tag.pause();
 		this.m_tag.currentTime = 0;
 	}
-	IsPlay()
+	override IsPlay()
 	{
 		if (this.m_tag.duration > 0 && !this.m_tag.paused) 
 			return true; 
@@ -196,7 +196,7 @@ export class CAudioTag extends CAudio
 	{
 		this.m_tag.loop=_enable;
 	}
-	Volume(_val)
+	override Volume(_val)
 	{
 		this.m_tag.volume=_val;
 	}
@@ -204,7 +204,7 @@ export class CAudioTag extends CAudio
 	{
 		this.m_tag.pause();
 	}
-	Export()
+	override Export()
 	{
 		return new CAudioTag(this.m_key,this.m_tag.id,this.m_target);
 	}
@@ -235,7 +235,7 @@ export class CAudioBuf extends CAudio
 		
 	}
 
-	async Play()
+	override async Play()
 	{
 		var key=this.m_keyArr[parseInt((Math.random()*this.m_keyArr.length)+"")];
 		var decBuf=gDecodeMap.get(key);
@@ -286,13 +286,13 @@ export class CAudioBuf extends CAudio
 		
 		
 	}
-	Stop()
+	override Stop()
 	{
 		if(this.m_source!=null)
 			this.m_source.stop();
 		this.m_state=2;
 	}
-	Volume(_val)
+	override Volume(_val)
 	{
 		//this.m_volume=_val;
 		this.mGain.gain.value=_val;
@@ -303,12 +303,12 @@ export class CAudioBuf extends CAudio
 			return true; 
 		return false;
 	}
-	Destroy(): void {
+	override Destroy(): void {
 		super.Destroy();
 		this.m_source.disconnect();
 		this.m_source=null;
 	}
-	Export()
+	override Export()
 	{
 		return new CAudioBuf(this.m_keyArr);
 	}

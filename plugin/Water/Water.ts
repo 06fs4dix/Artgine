@@ -42,13 +42,16 @@ export class CWater3D extends CSubject
     mReflector : CReflector3D;   // 반사 텍스쳐 굽는 컴포넌트
     mRefractor : CRefractor3D;   // 굴절 텍스쳐 굽는 컴포넌트
 
+    // 물 높이
+    mWaterHeight : CVec1 = new CVec1(1.0);
+
     // 물 색상
     mDeepColor : CVec3 = new CVec3(0.1,0.2,0.4);
     mShallowColor : CVec3 = new CVec3();
-    mWaterDeep : CVec4 = new CVec4(10,255,2000,10); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 물 속이 보이는 최대 거리, w : 커품이 생기는 최대 깊이
+    mWaterDeep : CVec4 = new CVec4(10,255,10); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 커품이 생기는 최대 깊이
+    mWaterUnderFadeDist : CVec2 = new CVec2(0, 4000); // x : 물 속이 전부 보이는 최대 거리, y : 물 속이 전혀 보이지 않는 최소 거리
 
     // 코스틱
-    mCausticTexture : string = null;
     mCausticFlowDir : CVec2 = new CVec2(0, 0);
     mCausticFlowFrequency : CVec1 = new CVec1(1);  // x : 코스틱 빈도([0, 1])
 
@@ -63,6 +66,8 @@ export class CWater3D extends CSubject
         this.mPaint.PushCShaderAttr(new CShaderAttr("deepColor", this.mDeepColor));
         this.mPaint.PushCShaderAttr(new CShaderAttr("shallowColor", this.mShallowColor));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterDeep", this.mWaterDeep));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("waterHeight", this.mWaterHeight));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("waterUnderFadeDist", this.mWaterUnderFadeDist));
         this.PushComp(this.mPaint);
         
     }
@@ -71,7 +76,7 @@ export class CWater3D extends CSubject
         return this.mPaint;
     }
 
-    override Update(_update: CUpdate): void {
+    Update(_update: CUpdate): void {
         super.Update(_update);
 
         // 물 깊이 자동 변경
@@ -80,26 +85,16 @@ export class CWater3D extends CSubject
         }
     }
 
-    SetWaterDeep(_deepHeight : number,_farDistance : number, _deepColor : CVec3, _shallowColor : CVec3) {
+    SetWaterDeep(_deepHeight : number,_nearDistance : number, _farDistance : number, _deepColor : CVec3, _shallowColor : CVec3) {
         if(_deepHeight!=null) this.mWaterDeep.y = _deepHeight;
-        if(_farDistance!=null) this.mWaterDeep.z = _farDistance;
+        if(_nearDistance!=null) this.mWaterUnderFadeDist.x = _nearDistance;
+        if(_farDistance!=null) this.mWaterUnderFadeDist.y = _farDistance;
         if(_deepColor!=null)    this.mDeepColor.Import(_deepColor);
         if(_shallowColor!=null)    this.mShallowColor.Import(_shallowColor);
     }
 
-    NormalFlow(_flow : CVec2, _normalTex1 : string = null, _normalTex2 : string = null) {        
+    NormalFlow(_flow : CVec2) {        
         this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
-
-        if(_normalTex1 != null && _normalTex2 != null) {
-            this.mPaint.PushTag("normalMap");
-            this.mPaint.PushCShaderAttr(new CShaderAttr("normal1Map", 3.0));
-            this.mPaint.PushCShaderAttr(new CShaderAttr(3.0, _normalTex1));
-            this.mPaint.PushCShaderAttr(new CShaderAttr("normal2Map", 4.0));
-            this.mPaint.PushCShaderAttr(new CShaderAttr(4.0, _normalTex2));
-        }
-        else {
-            this.mPaint.RemoveTag("normalMap");
-        }
     }
 
     AddRefractor(_texture : string = undefined, _flow : CVec2 = new CVec2(0, 0)) {
@@ -111,8 +106,8 @@ export class CWater3D extends CSubject
             this.PushComp(this.mRefractor);
 
             // shaderAttr 포인터로 생성
-            this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency, this.mCausticTexture);
-            this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mShallowColor, this.mDeepColor);
+            this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency);
+            this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mWaterUnderFadeDist, this.mShallowColor, this.mDeepColor, this.mWaterHeight);
 
             this.mPaint.PushTag("UseRefractTex");
             this.mPaint.PushCShaderAttr(new CShaderAttr("refractionMap", 2.0));
@@ -137,15 +132,13 @@ export class CWater3D extends CSubject
         this.mRefractor = null;
     }
 
-    AddCaustics(_caustic : string, _flow : CVec2 = new CVec2(0, 0), _frequency : number = 1.0) {
+    AddCaustics(_flow : CVec2 = new CVec2(0, 0), _frequency : number = 1.0) {
         this.mCausticFlowDir.Import(_flow);
         this.mCausticFlowFrequency.x = _frequency;
-        this.mCausticTexture = _caustic;
 
         if(this.mRefractor == null) {
             this.AddRefractor();
         }
-        this.mRefractor.SetCausticTexture(this.mCausticTexture);    // string을 포인터로 넘길 방법이 없음
     }
 
     AddReflector(_texture : string = undefined) {
@@ -216,6 +209,9 @@ export class CReflector3D extends CBrushComp
             rp.PushOr(new CCondition("class","==","CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             rp.PushAnd(new CCondition("mTag[sky]"));
+            rp.mShaderAttr.push(new CShaderAttr("cloudStep", 8));
+            rp.mShaderAttr.push(new CShaderAttr("cloudLightStep", 2));
+            rp.mShaderAttr.push(new CShaderAttr("cloudDither", 1));
             this.PushRPAuto(rp);
 
             rp.mClearColor = false;
@@ -239,7 +235,7 @@ export class CReflector3D extends CBrushComp
         );
     }
 
-    override Update(_update: CUpdate): boolean|any {
+    Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -313,7 +309,7 @@ export class CReflector3D extends CBrushComp
         }
     }
 
-    override Destroy(): void {
+    Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {
@@ -365,34 +361,25 @@ export class CRefractor3D extends CBrushComp
         }
     }
 
-    AddWaterDeep(_waterDeep : CVec4, _shallowColor : CVec3, _deepColor : CVec3)
+    AddWaterDeep(_waterDeep : CVec4, _waterDist : CVec2, _shallowColor : CVec3, _deepColor : CVec3, _waterHeight : CVec1)
     {
         const rp = this.mWrite[0];
         rp.mTag.add("waterRefract");
         rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
+        rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
         rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
         rp.mShaderAttr.push(new CShaderAttr("deepColor", _deepColor));
+        rp.mShaderAttr.push(new CShaderAttr("waterHeight", _waterHeight));
     }
-    AddCaustics(_flow : CVec2, _freq : CVec1, _caustic : string)
+    AddCaustics(_flow : CVec2, _freq : CVec1)
     {
         const rp = this.mWrite[0];
         rp.mTag.add("waterRefract");
         rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
         rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
-        rp.mShaderAttr.push(new CShaderAttr("causticMap", 5.0));
-        this.SetCausticTexture(_caustic);
-    }
-    SetCausticTexture(_caustic : string)
-    {
-        const rp = this.mWrite[0];
-        let shaderAttr = rp.mShaderAttr.find(attr => attr.mEach == 5.0);
-        if(shaderAttr)
-            shaderAttr.mKey = _caustic;
-        else
-            rp.mShaderAttr.push(new CShaderAttr(5.0, _caustic));
     }
 
-    override Update(_update: CUpdate): boolean|any {
+    Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -454,7 +441,7 @@ export class CRefractor3D extends CBrushComp
         }
     }
     
-    override Destroy(): void {
+    Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {
@@ -617,7 +604,7 @@ export class CWater2D extends CSubject
             this.mPaint.RemoveTag("normalMap");
         }
     }
-    override Update(_update: CUpdate): void {
+    Update(_update: CUpdate): void {
         super.Update(_update);
 
         if(this.mPaint.FindCShaderAttr("waterViewMat")==null && this.mReflector.mWaterCam!=null)
@@ -701,7 +688,7 @@ export class CReflector2D extends CBrushComp
             this.PushRPAuto(rp);
         }
     }
-    override Update(_update: CUpdate): boolean|any {
+    Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -767,7 +754,7 @@ export class CReflector2D extends CBrushComp
 
     }
 
-    override Destroy(): void {
+    Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {

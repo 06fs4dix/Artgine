@@ -489,22 +489,6 @@ ipcMain.handle("NewPage", async (_event, _json) => {
 		`;
     }
     let pos = 0;
-    if (_json.appJSON.github == true) {
-        IStr += "<script type='module'>\n";
-        IStr += CUtil.ArrayToString(buf);
-        IStr += "</script>\n";
-        buf = await CFile.Load(savePath + ".js");
-    }
-    else {
-        IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
-    }
-    pos = bHTML.indexOf("<!--Include-->");
-    bHTML = CString.InsertAt(bHTML, pos + 14, IStr);
-    if (oHTML != "") {
-        pos = bHTML.indexOf("<!--EntryPoint-->");
-        bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
-        bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
-    }
     if (oMF != "") {
         bMF = JSON.stringify(oMF);
     }
@@ -583,7 +567,6 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     BackUp(CPath.PHPC() + _json.projectPath + "/BackUp", CPath.PHPC() + _json.projectPath + "/Canvas");
     await CFile.Save(bSW, CPath.PHPC() + _json.projectPath + "/ServiceWorker.js");
     await CFile.Save(bMF, savePath + ".webmanifest");
-    await CFile.Save(bHTML, savePath + ".html");
     await CFile.Save(bTS, savePath + ".ts");
     await CFile.Save(_json.projetJSON, savePath + ".json");
     let waitTS = await WaitForBuild(savePath + ".ts");
@@ -597,6 +580,23 @@ ipcMain.handle("NewPage", async (_event, _json) => {
         });
         return "error";
     }
+    if (_json.appJSON.github == true) {
+        buf = await CFile.Load(savePath + ".js");
+        IStr += "<script type='module'>\n";
+        IStr += CUtil.ArrayToString(buf);
+        IStr += "</script>\n";
+    }
+    else {
+        IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
+    }
+    pos = bHTML.indexOf("<!--Include-->");
+    bHTML = CString.InsertAt(bHTML, pos + 14, IStr);
+    if (oHTML != "") {
+        pos = bHTML.indexOf("<!--EntryPoint-->");
+        bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
+        bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
+    }
+    await CFile.Save(bHTML, savePath + ".html");
     let appChange = false;
     if (gAppJSON.program !== _json.appJSON.program)
         appChange = true;

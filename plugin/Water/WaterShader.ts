@@ -1,12 +1,12 @@
 import {  ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
-import { NoiseGet, NoiseGetLinear } from "../../artgine/z_file/Noise";
+import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
 
 import { 
-    abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
+    abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
     MatTypeToMat, max, min, mix, mod, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, 
-    Sam2DToColor, SamCubeToColor, SaturateFloat, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
+    Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
     V2Dot, 
     V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, 
     V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi, Vertex3 
@@ -55,8 +55,10 @@ var normalRange : number = 1.0;
 var texflowDir : CVec2 = new CVec2(1.0, 0.0);
 var shallowColor : CVec3 = new CVec3(0.0,0.0,0.0);
 var deepColor    : CVec3 = new CVec3(0.0,0.1,0.5);
-var waterDeep : CVec4 = new CVec4(0.0,256.0,2000.0, 5.0);
+var waterDeep : CVec4 = new CVec4(0.0,256.0,5.0,0.0);
+var waterUnderFadeDist : CVec2 = new CVec2(2000.0, 3000.0);
 
+var waterHeight : number = 1.0;
 
 var waterTop : number=-1.0;
 
@@ -71,7 +73,8 @@ Build("Water3D", ["water","3D"],
         camPos, time,
         normalRange,
         normalflowDir,texflowDir,
-        shallowColor, deepColor, waterDeep,
+        shallowColor, deepColor, waterDeep, waterHeight,
+        waterUnderFadeDist
     ], [out_position,to_uv,to_worldPos,to_projPos,to_ref],
     ps_main_water,[out_color]
 );
@@ -120,106 +123,18 @@ function vs_main_water(f3_ver : Vertex3, f2_uv : UV2, f3_ref : TexOff3)
     to_projPos = ProjToScreenPos(out_position);
 }
 
+function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _max2 : number) : number
+{
+    return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
+}
+
 // 노말맵 2개 사용하는 버전(성능 가장 좋음)
-function NormalFlow(_flow : CVec3) : CVec3
+function NormalFlow(_uv : CVec2, _flow : CVec3) : CVec3
 {
-    var halfCycle : number = 0.075;
-    var cycle : number = halfCycle * 2.0;
+    var normal : CVec3 = NoiseNormalGet(new CVec3(V2AddV2(_uv, V2MulFloat(_flow.xy, _flow.z)), _flow.z * 3.0), SDF.eNoise.PerlinNormal);
+    normal = V3Nor(new CVec3(normal.x*waterHeight/10.0,normal.y,normal.z*waterHeight/10.0));
 
-    var normalColor : CVec4 = V4Mix(
-        Sam2DToColor(normal1Map, V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z, cycle)))),
-        Sam2DToColor(normal2Map, V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z + halfCycle, cycle)))),
-        abs((mod(_flow.z, cycle) / cycle - 0.5) * 2.0)
-    );
-    return V3Nor(new CVec3(normalColor.r * 2.0 - 1.0, normalColor.b * 2.0 - 1.0, normalColor.g * 2.0 - 1.0));
-}
-
-// function GetWaterHeight(_uvw : CVec3, _type : number) : number
-// {
-//     var offset : number = NoiseGetLinear(V3MulFloat(_uvw, 0.5), SDF.eNoise.Perlin);
-//     _uvw = new CVec3(_uvw.x + offset * 0.1, _uvw.y + offset * 0.1, 0.0);
-//     var h : number = NoiseGetLinear(_uvw, _type);
-//     var uvw2 : CVec3 = V3AddV3(V3MulFloat(_uvw, 2.13), new CVec3(12.34, 56.78, 0.0));
-//     uvw2 = new CVec3(uvw2.x * 0.88294759285 - uvw2.y * 0.46947156278, uvw2.x * 0.46947156278 + uvw2.y * 0.88294759285, uvw2.z);
-//     h += 0.5 * NoiseGetLinear(uvw2, _type);
-//     return h;
-// }
-
-function GetWaterHeight(_uvw : CVec3, _type : number) : number
-{    
-    // 노이즈값을 uvw로 더해서 사용함(domain warp)
-    var offset : number = NoiseGet(V3MulFloat(_uvw, 0.5), SDF.eNoise.Perlin);
-    _uvw = new CVec3(_uvw.x + offset * 0.1, _uvw.y + offset * 0.1, 0.0);
-
-    // 높이값으로 사용할 메인 레이어
-    var h : number = NoiseGet(_uvw, _type);
-
-    // 회전된 uvw로 두번째 높이값 노이즈 레이어 쌓음
-    var uvw2 : CVec3 = V3AddV3(V3MulFloat(_uvw, 2.13), new CVec3(12.34, 56.78, 0.0));
-    uvw2 = new CVec3(uvw2.x * 0.88294759285 - uvw2.y * 0.46947156278, uvw2.x * 0.46947156278 + uvw2.y * 0.88294759285, uvw2.z);
-    h += 0.5 * NoiseGet(uvw2, _type);
-
-    // 높이값 리턴
-    return h;
-}
-
-// 노말맵 사용하지 않고 절차적으로 생성
-function ProceduralFlowNormal(_flow : CVec3) : CVec3
-{
-    var halfCycle : number = 0.075;
-    var cycle : number = halfCycle * 2.0;
-
-    var uv0 : CVec2 = V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z, cycle)));
-    var uv1 : CVec2 = V2AddV2(to_uv, V2MulFloat(_flow.xy, mod(_flow.z + halfCycle, cycle)));
-
-    var uvScale : number = 1.0;
-    var heightScale : number = 8.0;
-
-    uv0 = V2MulFloat(uv0, uvScale);
-    uv1 = V2MulFloat(uv1, uvScale);   
-
-    var eps : number = 1.0 / 64.0;
-    var deltaU : CVec2 = new CVec2(eps, 0.0);
-    var deltaV : CVec2 = new CVec2(0.0, eps);
-
-    // dFdx, dFdy로 하면 고정된 노이즈 맵의 크기를 동적으로 변경해야 하는데 linear가 안되서 매우 어려워서
-    // 1-2 픽셀 옆의 값을 무조건 가져오도록 deltaUV를 사용해서 높이끼리의 차이를 구함
-
-    // 노말 2개 * 높이 3개 * 높이계산중 노이즈 샘플링 3회 = 픽셀 당 샘플링 18회
-    // 줄이려면 domain warp / 높이 레이어 없애면 6회까지 줄일 수 있음
-    // 가까이 있는 픽셀의 높이값 정확도를 포기하고 dFdxy를 사용하면 2회도 가능
-    
-    var h0 : number = GetWaterHeight(new CVec3(uv0, 0.0), SDF.eNoise.Perlin);
-    var h0U : number = GetWaterHeight(new CVec3(V2AddV2(uv0, deltaU), 0.0), SDF.eNoise.Perlin);
-    var h0V : number = GetWaterHeight(new CVec3(V2AddV2(uv0, deltaV), 0.0), SDF.eNoise.Perlin);
-
-    var h1 : number = GetWaterHeight(new CVec3(uv1, 0.5), SDF.eNoise.Perlin);
-    var h1U : number = GetWaterHeight(new CVec3(V2AddV2(uv1, deltaU), 0.5), SDF.eNoise.Perlin);
-    var h1V : number = GetWaterHeight(new CVec3(V2AddV2(uv1, deltaV), 0.5), SDF.eNoise.Perlin);
-
-    var normal0 : CVec3 = V3Nor(new CVec3(heightScale * (h0 - h0U), 1.0, heightScale * (h0 - h0V)));
-    var normal1 : CVec3 = V3Nor(new CVec3(heightScale * (h1 - h1U), 1.0, heightScale * (h1 - h1V)));
-
-    return V3Nor(V3Mix(normal0, normal1, abs((mod(_flow.z, cycle) / cycle - 0.5) * 2.0)));
-}
-
-function CorrectedReflect(_view : CVec3, _normal : CVec3, _boxPos : CVec3, _boxSize : CVec3) : CVec3
-{
-    var rayDir : CVec3 = V3Nor(reflect(_view, _normal));
-    var invDir : CVec3 = new CVec3(1.0 / rayDir.x, 1.0 / rayDir.y, 1.0 / rayDir.z);
-    var rbmax : CVec3 = V3MulV3(V3SubV3(V3MulFloat(V3SubV3(_boxSize, _boxPos),  0.5), to_worldPos.xyz), invDir);
-    var rbmin : CVec3 = V3MulV3(V3SubV3(V3MulFloat(V3SubV3(_boxSize, _boxPos), -0.5), to_worldPos.xyz), invDir);
-
-    var rbminmax : CVec3 = new CVec3(
-        rayDir.x > 0.0 ? rbmax.x : rbmin.x,
-        rayDir.y > 0.0 ? rbmax.y : rbmin.y,
-        rayDir.z > 0.0 ? rbmax.z : rbmin.z
-    );
-    
-    var correction : number = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
-    var intersection : CVec3 = V3AddV3(to_worldPos.xyz, V3MulFloat(rayDir, correction));
-
-    return V3SubV3(intersection, _boxPos);
+    return normal;
 }
 
 function ps_main_water()
@@ -230,7 +145,7 @@ function ps_main_water()
     var view : CVec3 = V3Nor(V3SubV3(camPos, world));
 
     var flowLen : number = V2Len(normalflowDir);
-    var flow : CVec3 = new CVec3(-normalflowDir.x / max(flowLen, 1e-6), normalflowDir.y / max(flowLen, 1e-6), flowLen * time * 0.03);
+    var flow : CVec3 = new CVec3(-normalflowDir.x / max(flowLen, 1e-6), normalflowDir.y / max(flowLen, 1e-6), flowLen * time * 0.1);
 
     // ---------------------------------------------------------
     // 노말 플로우
@@ -238,14 +153,10 @@ function ps_main_water()
     var normalTS : CVec3 = new CVec3(0.0, 1.0, 0.0);
     var normalDist : CVec3 = new CVec3(0.0, 0.0, 0.0);
     if(flowLen > 0.0) {
-        BranchBegin("normalMap","N0",[normal1Map, normal2Map]);
-        normalTS = NormalFlow(flow);
-        BranchDefault();
-        normalTS = ProceduralFlowNormal(flow);
-        BranchEnd();
+        normalTS = NormalFlow(to_uv, flow);
 
-        var deltaDist : number = max(0.0, V3Len(V3SubV3(camPos, world)) - waterDeep.z * 0.5);   // 카메라 거리 - 최대 가시거리 / 2
-        var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / waterDeep.z);                    // 선형적인 감소 피하기 위해 1 / 1 + a로 계산
+        var deltaDist : number = max(0.0, V3Len(V3SubV3(camPos, world)) - 6000.0);  // 카메라 거리 - 최대 가시거리 / 2
+        var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);             // 선형적인 감소 피하기 위해 1 / 1 + a로 계산
         normalDist = V3MulFloat(normalTS, 0.1 * flowLen * to_screenUV.z * fallOff);
         // to_screenUV.z를 여기에 곱해주면 화면이 매우 가까울 때의 아티팩트를 해결할 수 있다고 하는데 잘 모르겠음
     }
@@ -277,14 +188,15 @@ function ps_main_water()
     // 2. refractor 랜더타겟
     BranchBegin("UseRefractTex","UseRefractTex",[refractMap]);
     refractColor = Sam2DToColor(refractMap, screenUV);
-    // refractColor.rgb = V3Mix(deepColor, refractColor.rgb, 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, world)) / waterDeep.z));
     refractType = 1.0;
     BranchEnd();
     
     // 3. shallowColor 사용
     if(refractType < -0.5) {
         refractColor = new CVec4(shallowColor, 1.0);
-        refractColor.rgb = V3Mix(deepColor, refractColor.rgb, 1.0 - SaturateFloat(V3Len(V3SubV3(camPos, world)) / waterDeep.z));
+        var dist : number = V3Len(V3SubV3(camPos, world));
+        var distanceBlend : number = 1.0 - SaturateFloat(Remap(dist, waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8));
+        refractColor.rgb = V3Mix(deepColor, refractColor.rgb, distanceBlend);
         refractType = 2.0;
     }
 
@@ -319,6 +231,10 @@ function ps_main_water()
     // 반사 + 굴절 합성
     // ---------------------------------------------------------
     var L_cor : CVec4;
+    var fresnel : number = 0.02 + 0.98 * pow(1.0 - clamp(V3Dot(view, normalWS), 0.0, 1.0), 5.0);
+
+    var facingWeight : number = clamp(V3Dot(view, normalWS) * 10.0, 0.0, 1.0);  // 반대쪽 면은 굴절만 나오도록 적용, 반대쪽면과 붙어있는 부분 조금 제거
+    fresnel *= facingWeight;
 
     // 반사 색상이 없음
     if(reflectType > 1.5) {
@@ -327,8 +243,6 @@ function ps_main_water()
     
     // 반사 색상이 존재함
     else {
-        var theta : number =  max(V3Dot(view, normalWS), 0.0);
-        var fresnel : number = 0.02 + 0.98 * pow(1.0 - theta, 5.0);
         L_cor = new CVec4(V3Mix(refractColor.xyz, reflectColor.rgb, fresnel), 1.0);
     }
 
@@ -423,7 +337,7 @@ function ps_main()
     fade = fade * fade * (3.0 - 2.0 * fade);
 
     // 노이즈
-    var noise : number = NoiseGet(new CVec3(to_uv.x, to_uv.y+time*0.1, time), SDF.eNoise.FBM);
+    var noise : number = NoiseGet(new CVec3(to_uv.x, to_uv.y+time*0.1, time), SDF.eNoise.PerlinFBM);
 
     // 만약 NoiseGet이 0~1 이면 흔들림이 한쪽으로만 밀림 -> 아래 한 줄 켜
     noise = noise * 2.0 - 1.0;

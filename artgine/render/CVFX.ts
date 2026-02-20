@@ -11,21 +11,18 @@ class Description
     Max=new Array<number|Array<number>>();
     Step=new Array<number>();
     Value=new Array<number>();
+    Use=new Array<boolean>();  // 슬롯별 사용 가능 여부 [slot0, slot1, slot2] / 비어있으면 모든 슬롯 허용
 }
 
 // 기존 CDescription(_xDesc/_xMin/_xDefault...) 형태를
 // Description(Name/Text/Min/Max/Step/Value 배열) 형태로 변경.
-// 예) _xDesc  -> Text[0]
-//     _xMin   -> Min[0]
-//     _xMax   -> Max[0]
-//     _xStep  -> Step[0]
-//     _xDefault -> Value[0]
 function MakeDesc(
     _text: Array<string> = [],
     _min: Array<number|Array<string>> = [],
     _max: Array<number|Array<number>> = [],
     _step: Array<number> = [],
-    _value: Array<number> = []
+    _value: Array<number> = [],
+    _use: Array<boolean> = []   // 비어있으면 모든 슬롯 허용
 ): Description {
     const d = new Description();
     d.Text = _text;
@@ -33,6 +30,7 @@ function MakeDesc(
     d.Max = _max;
     d.Step = _step;
     d.Value = _value;
+    d.Use = _use;
     return d;
 }
 
@@ -42,51 +40,57 @@ gDesc[SDF.eColorVFX.Distort] = MakeDesc(
     [0, 0], [0.5, 0.5],
     [0.02, 0.02],
     [0.05, 0.05]
+    // Use 미지정 → 모든 슬롯 허용
 );
 gDesc[SDF.eColorVFX.Aberrate] = MakeDesc(
     ["Base_Strength", "Added_Strength"],
     [0, 0], [0.1, 0.1],
     [0.01, 0.01],
-    [0.1, 0.05]
+    [0.1, 0.05],
+    [true, false, false]
 );
 gDesc[SDF.eColorVFX.Outline] = MakeDesc(
     ["R", "G", "B"],
     [0, 0, 0], [1, 1, 1],
     [0.1, 0.1, 0.1],
-    [1, 0, 0]
+    [1, 0, 0],
+    [true, false, false]  // 슬롯 0만 허용 (이웃 픽셀 접근 필요)
 );
 gDesc[SDF.eColorVFX.Pixel] = MakeDesc(
     ["Size_X", "Size_Y"],
     [0, 0], [32, 32],
     [1, 1],
     [2, 2]
+    // Use 미지정 → 모든 슬롯 허용
 );
 gDesc[SDF.eColorVFX.Noise] = MakeDesc(
-    ["Speed", "Blend Ratio", "Size","Blend Mode","Type"],
-    [0, 0, 0,["Gray","Red","Green","Blue","Alpha","Color","Color+Alpha"],
-    ["Gaussian","Perlin","Voronoi","Billow","Ridged","DomainWarp","FBM","Blue"]], 
-    [8, 1, 4,[0,1,2,3,4,5,6],[SDF.eNoise.Gaussian,SDF.eNoise.Perlin,SDF.eNoise.Voronoi,
-        SDF.eNoise.Billow,SDF.eNoise.Ridged,SDF.eNoise.DomainWarp,SDF.eNoise.FBM,SDF.eNoise.Blue]],
-    [0.1, 0.05, 0.05,1,1],
-    [4, 1, 1,0,SDF.eNoise.Gaussian]
+    ["Type", "Speed", "Mix Ratio", "Repeat"],
+    [["Perlin", "PerlinFBM_Cloud", "Perlin Normal", "Blue", "Gaussian"], 0, 0, 0.2], 
+    [[0, 1, 2, 3, 4], 16, 1, 8],
+    [1, 0.1, 0.05, 0.1],
+    [0, 8, 0.5, 1],
+    [true, false, false]
 );
 gDesc[SDF.eColorVFX.Scanline] = MakeDesc(
     ["NumOfLines", "Speed"],
-    [0, 0], [50, 10],
+    [0, 0], [100, 50],
     [5, 1],
     [25, 5]
+    // Use 미지정 → 모든 슬롯 허용
 );
 gDesc[SDF.eColorVFX.LookUpTable] = MakeDesc(
     ["Index", "Dither"],
     [SDF.eLookUpTable.LUT0, 0], [SDF.eLookUpTable.LUT5, 1],
     [1, 0.05],
     [SDF.eLookUpTable.LUT0, 0]
+    // Use 미지정 → 모든 슬롯 허용
 );
 gDesc[SDF.eColorVFX.Blur] = MakeDesc(
     ["Type", "Count"],
     [1, 1], [4, 4],
     [1, 1],
-    [2, 2]
+    [2, 2],
+    [true, false, false]
 );
 
 // enum은 (숫자->문자, 문자->숫자) 역매핑이 섞여서 들어오니 숫자 항목만 처리
@@ -96,13 +100,28 @@ for(const [text, val] of Object.entries(SDF.eColorVFX)) {
     gDesc[val].Name = text;
 }
 
+// ─── 슬롯 레이아웃 ────────────────────────────────────────────────
+// Float32Array[16] 를 5 floats × 3 슬롯으로 사용 (마지막 1개는 여분)
+//
+//  슬롯 0: index  0..4  → [effectID, param0, param1, param2, param3]
+//  슬롯 1: index  5..9  → [effectID, param0, param1, param2, param3]
+//  슬롯 2: index 10..14 → [effectID, param0, param1, param2, param3]
+//
+// effectID 위치: slot * 5        (= 0, 5, 10)
+// paramN 위치:   slot * 5 + 1 + N
+// 슬롯당 최대 파라미터 수: 4
+// ─────────────────────────────────────────────────────────────────
+
+const SLOT_SIZE    = 5;
+const MAX_PARAMS   = 4;  // param0..3
+const USED_SLOTS   = [0, 1, 2] as const;
+
 export class CVFX extends CMat
 {
     constructor(_F32A : Float32Array|Array<number>=null)
     {
         super([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
     }
-    
 
     override IsShould(_member: string, _type: CObject.eShould) 
     {
@@ -111,24 +130,22 @@ export class CVFX extends CMat
         }
         return super.IsShould(_member,_type);
     }
+
     override EditHTMLInit(_div: HTMLDivElement): void {
         super.EditHTMLInit(_div);
 
         _div.innerHTML = "";
 
-        // enum은 (숫자->문자, 문자->숫자) 역매핑이 섞여서 들어오니 숫자 항목만 뽑음
+        // enum에서 숫자 항목만 추출·정렬
         const vfxList : {name:string, val:number}[] = [];
         for(const [k, v] of Object.entries(SDF.eColorVFX)) {
             if(typeof v === "number") vfxList.push({name:k, val:v});
         }
         vfxList.sort((a,b)=>a.val-b.val);
 
-        // 슬롯은 0,2만 사용하고(0,1) / (2,3)을 한 묶음(=8 floats)으로 사용
-        const USED_SLOTS = [0, 2] as const;
-
         const uid = CUniqueID.GetHash();
 
-        // ---- 숫자 표시(부동소수 오차 제거) ----
+        // ── 헬퍼 ──────────────────────────────────────────────────
         const prettyNumber = (v:number, maxDecimals:number = 6) => {
             if(!isFinite(v)) return String(v);
             const n = Number(v.toFixed(maxDecimals));
@@ -137,7 +154,6 @@ export class CVFX extends CMat
 
         const stepDecimals = (step:number) => {
             if(!isFinite(step) || step <= 0) return 0;
-            // 0.01, 0.05 같은 일반 케이스는 문자열 기반이 가장 안정적
             const s = step.toString();
             const ePos = s.indexOf("e-");
             if(ePos >= 0) {
@@ -158,28 +174,28 @@ export class CVFX extends CMat
         };
 
         const formatByStep = (v:number, step:number) => {
-            const dec = stepDecimals(step);
-            return prettyNumber(snapToStep(v, step), dec);
+            return prettyNumber(snapToStep(v, step), stepDecimals(step));
         };
 
-        const getEffectVal = (slot:number) => Number(this.mF32A[(slot + 1) * 4 + 3] || 0);
+        // ── 슬롯 접근자 ───────────────────────────────────────────
+        // effectID: slot * SLOT_SIZE
+        const getEffectVal  = (slot:number) =>
+            Number(this.mF32A[slot * SLOT_SIZE] || 0);
 
-        // paramIndex: 0..6 (총 7개). slot vec4(xyzw) + 다음 vec4(xyz)를 사용. (type은 다음 vec4.w)
-        const paramToIndex = (slot:number, paramIndex:number) => {
-            // param0..3 -> slot.xyzw
-            if(paramIndex <= 3) return slot * 4 + paramIndex;
-            // param4..6 -> (slot+1).xyz  (type은 (slot+1).w)
-            return (slot + 1) * 4 + (paramIndex - 4);
-        };
-        const getParam = (slot:number, paramIndex:number) => Number(this.mF32A[paramToIndex(slot, paramIndex)] || 0);
+        // paramIndex 0..3: slot * SLOT_SIZE + 1 + paramIndex
+        const paramToIndex  = (slot:number, paramIndex:number) =>
+            slot * SLOT_SIZE + 1 + paramIndex;
+
+        const getParam = (slot:number, paramIndex:number) =>
+            Number(this.mF32A[paramToIndex(slot, paramIndex)] || 0);
+
         const setParam = (slot:number, paramIndex:number, v:number) => {
             this.mF32A[paramToIndex(slot, paramIndex)] = v;
         };
 
         const resetEffect = (slot:number) => {
-            const base = slot * 4;
-            // 8 floats(두 vec4) 모두 초기화
-            for(let i=0;i<8;i++) this.mF32A[base + i] = 0;
+            const base = slot * SLOT_SIZE;
+            for(let i = 0; i < SLOT_SIZE; i++) this.mF32A[base + i] = 0;
         };
 
         const isUsedInOtherSlot = (val:number, selfSlot:number) => {
@@ -191,18 +207,23 @@ export class CVFX extends CMat
             return false;
         };
 
+        // Use 배열이 비어있으면 모든 슬롯 허용, 아니면 해당 슬롯 인덱스 확인
+        const isAllowedInSlot = (val:number, slot:number) => {
+            if(val === 0) return true;
+            const use = gDesc[val]?.Use;
+            if(!use || use.length === 0) return true;
+            return use[slot] === true;
+        };
+
+        // ── UI 빌더 ───────────────────────────────────────────────
         const root = document.createElement("div");
         root.className = "d-flex flex-column gap-2";
         _div.appendChild(root);
 
         const makeRange = (
-            slot:number,
-            paramIndex:number,
+            slot:number, paramIndex:number,
             descKey:string,
-            min:number,
-            max:number,
-            step:number,
-            value:number
+            min:number, max:number, step:number, value:number
         ) => {
             const wrap = document.createElement("div");
             wrap.className = "mb-2";
@@ -214,12 +235,12 @@ export class CVFX extends CMat
             wrap.appendChild(lab);
 
             const input = document.createElement("input");
-            input.type = "range";
+            input.type  = "range";
             input.className = "form-range";
-            input.id = `${uid}_s${slot}_p${paramIndex}`;
-            input.min = String(min);
-            input.max = String(max);
-            input.step = String(step);
+            input.id    = `${uid}_s${slot}_p${paramIndex}`;
+            input.min   = String(min);
+            input.max   = String(max);
+            input.step  = String(step);
             input.value = String(snapToStep(value, step));
             input.addEventListener("input", () => {
                 const vRaw = Number(input.value);
@@ -227,6 +248,8 @@ export class CVFX extends CMat
                 if(v !== vRaw) input.value = String(v);
                 setParam(slot, paramIndex, v);
                 lab.textContent = `${descKey} : ${formatByStep(v, step)}`;
+            });
+            input.addEventListener("change", () => {
                 this.EditRefresh();
             });
             wrap.appendChild(input);
@@ -234,12 +257,9 @@ export class CVFX extends CMat
         };
 
         const makeSelectParam = (
-            slot:number,
-            paramIndex:number,
+            slot:number, paramIndex:number,
             descKey:string,
-            names:string[],
-            values:number[],
-            value:number
+            names:string[], values:number[], value:number
         ) => {
             const wrap = document.createElement("div");
             wrap.className = "mb-2";
@@ -250,8 +270,7 @@ export class CVFX extends CMat
 
             const getTextByValue = (v:number) => {
                 const idx = values.findIndex(it => it === v);
-                if(idx >= 0) return names[idx] ?? String(v);
-                return `Custom (${prettyNumber(v)})`;
+                return idx >= 0 ? (names[idx] ?? String(v)) : `Custom (${prettyNumber(v)})`;
             };
 
             lab.textContent = `${descKey} : ${getTextByValue(value)}`;
@@ -261,9 +280,6 @@ export class CVFX extends CMat
             sel.className = "form-select form-select-sm";
             sel.id = `${uid}_s${slot}_p${paramIndex}`;
 
-            const n = Math.min(names.length, values.length);
-
-            // 현재 값이 옵션에 없으면 "Custom" 옵션을 추가해서 값이 바뀌지 않게 유지
             if(values.findIndex(it => it === value) < 0) {
                 const opt = document.createElement("option");
                 opt.value = String(value);
@@ -271,7 +287,8 @@ export class CVFX extends CMat
                 sel.appendChild(opt);
             }
 
-            for(let i=0;i<n;i++) {
+            const n = Math.min(names.length, values.length);
+            for(let i = 0; i < n; i++) {
                 const opt = document.createElement("option");
                 opt.value = String(values[i]);
                 opt.textContent = names[i];
@@ -279,7 +296,6 @@ export class CVFX extends CMat
             }
 
             sel.value = String(value);
-
             sel.addEventListener("change", () => {
                 const v = Number(sel.value);
                 setParam(slot, paramIndex, v);
@@ -290,6 +306,7 @@ export class CVFX extends CMat
             return wrap;
         };
 
+        // ── 슬롯 블록 렌더링 ──────────────────────────────────────
         for(const slot of USED_SLOTS) {
             const curVal = getEffectVal(slot);
 
@@ -320,7 +337,7 @@ export class CVFX extends CMat
                 const opt = document.createElement("option");
                 opt.value = String(it.val);
                 opt.textContent = it.name;
-                if(isUsedInOtherSlot(it.val, slot)) opt.disabled = true;
+                if(isUsedInOtherSlot(it.val, slot) || !isAllowedInSlot(it.val, slot)) opt.disabled = true;
                 select.appendChild(opt);
             }
 
@@ -329,21 +346,18 @@ export class CVFX extends CMat
             select.onchange = () => {
                 const nv = Number(select.value) || 0;
 
-                // effect id는 (slot+1).w(두번째 vec4)에 저장
-                this.mF32A[(slot + 1) * 4 + 3] = nv;
+                // effectID는 슬롯의 첫 번째 float에 저장
+                this.mF32A[slot * SLOT_SIZE] = nv;
 
                 if(nv === 0) {
                     resetEffect(slot);
                 } else {
                     const d = gDesc[nv];
-
-                    // 기본값 세팅(최대 7개 파라메터)
-                    for(let pi=0; pi<=6; pi++) {
+                    // 기본값 세팅 (최대 MAX_PARAMS개)
+                    for(let pi = 0; pi < MAX_PARAMS; pi++) {
                         const dv = d?.Value?.[pi];
                         setParam(slot, pi, (typeof dv === "number") ? dv : 0);
                     }
-
-                    // 두 번째 vec4의 w(=paramIndex 6)은 setParam에서 처리됨.
                 }
 
                 this.EditRefresh();
@@ -351,41 +365,36 @@ export class CVFX extends CMat
 
             header.appendChild(select);
 
-            // 선택된 효과의 현재값을 슬라이더로 노출
+            // 선택된 효과의 파라미터 슬라이더 노출
             if(curVal !== 0) {
                 const d = gDesc[curVal];
                 const controls = document.createElement("div");
                 controls.className = "mt-2";
                 block.appendChild(controls);
 
-                // Text 길이만큼만 노출(최대 7개)
-                const textCount = Math.min(d?.Text?.length ?? 0, 7);
-                
-                for(let i=0; i<textCount; i++) {
+                // 슬롯당 최대 MAX_PARAMS(4)개까지만 노출
+                const textCount = Math.min(d?.Text?.length ?? 0, MAX_PARAMS);
+
+                for(let i = 0; i < textCount; i++) {
                     const label = d.Text[i];
                     if(!label) continue;
 
                     const minItem = d?.Min?.[i];
                     const maxItem = d?.Max?.[i];
 
-                    // select 모드: Min[i] = string[] (표시 이름), Max[i] = number[] (실제 값)
                     if(Array.isArray(minItem) && Array.isArray(maxItem)) {
                         controls.appendChild(makeSelectParam(
-                            slot,
-                            i,
-                            label,
+                            slot, i, label,
                             minItem as string[],
                             maxItem as number[],
                             getParam(slot, i)
                         ));
                     } else {
                         controls.appendChild(makeRange(
-                            slot,
-                            i,
-                            label,
+                            slot, i, label,
                             (typeof minItem === "number") ? minItem : 0,
                             (typeof maxItem === "number") ? maxItem : 1,
-                            (typeof (d as any).Step?.[i] === "number") ? (d as any).Step[i] : 0.01,
+                            (typeof d?.Step?.[i] === "number") ? d.Step[i] : 0.01,
                             getParam(slot, i)
                         ));
                     }

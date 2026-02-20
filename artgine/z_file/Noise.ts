@@ -1,18 +1,18 @@
 import { SDF } from "./SDF";
 import { 
-    CMat, CVec2, CVec3, CVec4, CMat3,
+    CVec2, CVec3, CVec4, CMat3,
     abs, floor, mix, mod,
-    V2Mod,
-    V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3, V3MulMat3Normal, V3Dot, V3SubV3, V3Step, V3Min, V3Max, V3Mod,
+    V2Mod, V2MulFloat, V2Floor,
+    V3AddV3, V3Floor, V3Fract, V3MulFloat, V3MulV3, V3MulMat3Normal, V3Dot, V3SubV3, V3Step, V3Min, V3Max, V3Mod, V3Nor,
     V4MulV4, V4SubV4, V4AddV4, V4MulFloat, V4Floor, V4Abs, V4Step, V4Max, V4Dot, V4Mod,
-    Sam2DToV4, FloatToInt,
+    Sam2DToV4,
     Hash13,
-    clamp,
-    V2MulFloat,
-    V2Floor,
+    sqrt,
+    V2Dot,
+    max,
 } from "./Shader";
 
-// 밸류 노이즈 함수
+// 밸류 노이즈 함수 : 완전 랜덤
 export function NoiseValue3(_v : CVec3) : number
 {
     var p : CVec3 = V3Floor(_v);
@@ -29,6 +29,7 @@ export function NoiseValue3(_v : CVec3) : number
                         Hash13(V3AddV3(p,new CVec3(1,1,1))),f.x),f.y),f.z);
 }
 
+// 심플렉스 노이즈 함수 : 펄린 노이즈 대체용
 function NoiseSimplex3(_v : CVec3) : number
 { 
     var C : CVec2 = new CVec2(1.0/6.0, 1.0/3.0);
@@ -123,11 +124,66 @@ function NoiseSimplex3(_v : CVec3) : number
 //     return zMod4 < 0.5 ? v4.x : (zMod4 < 1.5 ? v4.y : (zMod4 < 2.5 ? v4.z : v4.w));
 // }
 
-function SampleNoise(_uvw : CVec3, _type : number) : number
+export function SampleNoise(_uvw : CVec3, _type : number) : number
 {
-    var size : number = 126.0;
     var coord : CVec3 = new CVec3(
-        V2Mod(V2MulFloat(_uvw.xy, size), size),
+        V2Mod(V2MulFloat(_uvw.xy, 126.0), 126.0),
+        mod(_uvw.z * 128.0, 128.0)
+    );
+    
+    coord.x = coord.x + 1.0;
+    coord.y = coord.y + 1.0;
+    
+    var tileIndex : number = floor(coord.z / 4.0);   // 0-31
+    var tileX : number = mod(tileIndex, 16.0);       // 0-15
+    var tileY : number = floor(tileIndex / 16.0);    // 0-1
+    
+    var offX : number = tileX * 128.0 + coord.x;
+    var offY : number = tileY * 128.0 + coord.y;
+    
+    var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
+    
+    var zMod4 : number = mod(coord.z, 4.0);
+    
+    if(zMod4 < 0.5) return v4.x;
+    else if(zMod4 < 1.5) return v4.y;
+    else if(zMod4 < 2.5) return v4.z;
+    else return v4.w;
+}
+
+export function SampleNoiseVec2(_uvw : CVec3, _type : number) : CVec2
+{
+    var coord : CVec3 = new CVec3(
+        V2Mod(V2MulFloat(_uvw.xy, 126.0), 126.0),
+        mod(_uvw.z * 64.0, 64.0)
+    );
+    
+    coord.x = coord.x + 1.0;
+    coord.y = coord.y + 1.0;
+    
+    var tileIndex : number = floor(coord.z / 2.0);   // 0-31
+    var tileX : number = mod(tileIndex, 16.0);       // 0-15
+    var tileY : number = floor(tileIndex / 16.0);    // 0-1
+    
+    var offX : number = tileX * 128.0 + coord.x;
+    var offY : number = tileY * 128.0 + coord.y;
+    
+    var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
+    
+    var zMod4 : number = mod(coord.z, 2.0);
+    
+    if(zMod4 < 0.5) {
+        return new CVec2(v4.x, v4.y);
+    }
+    else {
+        return new CVec2(v4.z, v4.w);
+    }
+}
+
+function SampleNoiseFrameLinear(_uvw : CVec3, _type : number) : number
+{
+    var coord : CVec3 = new CVec3(
+        V2Mod(V2MulFloat(_uvw.xy, 126.0), 126.0),
         mod(_uvw.z * 96.0, 96.0)
     );
     
@@ -154,6 +210,17 @@ function SampleNoise(_uvw : CVec3, _type : number) : number
         return mix(v4.z, v4.w, zMod4 - 2.0);
 }
 
+export function NoiseNormalGet(_uvw : CVec3, _type : number) : CVec3
+{
+    if(_type>SDF.eNoise.PerlinNormal-0.5)
+    {
+        var noise : CVec2 = SampleNoiseVec2(_uvw, SDF.eNoise.PerlinNormal);
+        return V3Nor(new CVec3(noise.x * 2.0 - 1.0, 1.0, noise.y * 2.0 - 1.0));
+
+    }
+    return new CVec3(0.0, 1.0, 0.0);
+}
+
 export function NoiseGet(_uvw : CVec3, _type : number) : number
 {
     // 텍스쳐 샘플링
@@ -161,13 +228,13 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
     {
         return SampleNoise(_uvw, SDF.eNoise.Perlin);
     }
-    else if(_type>SDF.eNoise.Voronoi-0.5)
+    // else if(_type>SDF.eNoise.PerlinNormal-0.5)
+    // {
+    //     return SampleNoise(_uvw, SDF.eNoise.PerlinNormal);
+    // }
+    else if(_type>SDF.eNoise.PerlinFBM3-0.5)
     {
-        return SampleNoise(_uvw, SDF.eNoise.Voronoi);
-    }
-    else if(_type>SDF.eNoise.Cloud-0.5)
-    {
-        return SampleNoise(_uvw, SDF.eNoise.Cloud);
+        return SampleNoiseFrameLinear(_uvw, SDF.eNoise.PerlinFBM3);
     }
     else if(_type>SDF.eNoise.Blue-0.5)
     {
@@ -180,6 +247,7 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
         else
             return v4.y;
     }
+
     // 절차적 생성
     else if(_type<SDF.eNoise.Gaussian+0.5)
     {
@@ -188,15 +256,24 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
         var zi : number = _uvw.z * 128.0;
         return NoiseValue3(new CVec3(xi, yi, zi));
     }
-    else if(_type<SDF.eNoise.Billow+0.5)
+    else if(_type<SDF.eNoise.Simplex+0.5)
+    {
+        var xi : number = _uvw.x * 128.0;
+        var yi : number = _uvw.y * 128.0;
+        var zi : number = _uvw.z * 128.0;
+        return NoiseSimplex3(new CVec3(xi, yi, zi));
+    }
+    
+    // 텍스쳐 샘플링 후처리
+    else if(_type<SDF.eNoise.PerlinBillow+0.5)
     {
         return abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
     }
-    else if(_type<SDF.eNoise.Ridged+0.5)
+    else if(_type<SDF.eNoise.PerlinRidged+0.5)
     {
         return 1.0 - abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
     }
-    else if(_type<SDF.eNoise.DomainWarp+0.5)
+    else if(_type<SDF.eNoise.PerlinDomainWarp+0.5)
     {
         // qx
         var uvw : CVec3 = _uvw;
@@ -215,7 +292,7 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
         uvw = V3AddV3(_uvw, V3MulFloat(new CVec3(qx, qy, qz), warpStrength));
         return SampleNoise(uvw, SDF.eNoise.Perlin);
     }
-    else if(_type<SDF.eNoise.FBM+0.5)
+    else if(_type<SDF.eNoise.PerlinFBM+0.5)
     {
         // 회전 FBM
         var matVec1 : CVec3 = new CVec3(0.0, 0.8, 0.6);
@@ -228,13 +305,6 @@ export function NoiseGet(_uvw : CVec3, _type : number) : number
         fbm += 0.250 * SampleNoise(_uvw, SDF.eNoise.Perlin); _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
         fbm += 0.125 * SampleNoise(_uvw, SDF.eNoise.Perlin);
         return fbm;
-    }
-    else if(_type<SDF.eNoise.Simplex+0.5)
-    {
-        var xi : number = _uvw.x * 128.0;
-        var yi : number = _uvw.y * 128.0;
-        var zi : number = _uvw.z * 128.0;
-        return NoiseSimplex3(new CVec3(xi, yi, zi));
     }
     
     return 1.0;

@@ -12,10 +12,12 @@ export class CStopover extends CObject
 		this.mPos=_dest;
 		this.mVelocity=_velocity;
 	}
+	mKey="path";
 	mPos=new Array<CVec3>;
 	mCurve=new CCurve();
 	mBezier=false;
 	mTime=0;
 	mDelay=0;
 	mVelocity=0;
+	mCorrection=false;//오차가 생긴 포지션을 강제 보정한다.
 }

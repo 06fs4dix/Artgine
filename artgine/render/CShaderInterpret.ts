@@ -247,6 +247,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		this.mKeyMap.set("CVec4","vec4");
 		this.mKeyMap.set("CMat3","mat3");
 		this.mKeyMap.set("CMat","mat4");
+		this.mKeyMap.set("Array16","float");
 		this.mKeyMap.set("CMat43","mat3x4");
 		this.mKeyMap.set("CMat42","mat2x4");
 		this.mKeyMap.set("number","float");
@@ -259,6 +260,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		this.mKeyMap.set("out_position","gl_position");
 		this.mKeyMap.set("UniToSam2D","float");
 		this.mKeyMap.set("screenPos", "gl_FragCoord");
+		this.mKeyMap.set("screenDepth", "gl_FragDepth");
 		this.mKeyMap.set("int","int");
 		//if(CWASM.IsWASM())
 		//this.mKeyMap.set("CMat12","mat4x3");

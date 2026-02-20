@@ -207,7 +207,7 @@ export class CBound extends CObject
 		}
 		return _copy;
 	}
-	GetRandom(_x,_y,_z)
+	GetRandom(_x=true,_y=true,_z=true)
 	{
 		let pos=new CVec3();
 		let size=this.GetSize();

@@ -83,133 +83,184 @@ export class CClipCoodi extends CClip
 
 
 // input: h in [0,1] and s,v in [0,1] - output: r,g,b in [0,1]
-export class CClipColorAlpha extends CClip
+// export class CClipColorAlpha extends CClip
+// {
+// 	// static eSpace={
+// 	// 	RGBA:0,
+// 	// 	HSV:1,
+// 	// 	HSL:2,
+// 	// };
+// 	public mSTColor : CColor;
+// 	public mEDColor : CColor;
+// 	public mSTAlpha : CAlpha;
+// 	public mEDAlpha : CAlpha;
+// 	public mSTColorVFX : CVFX;
+// 	public mEDColorVFX : CVFX;
+
+// 	public mCurve=new CCurve();
+
+// 	//기존 생성자
+// 	constructor(_time : number,_delay : number,_stRGBA:CVec4,_edRGBA:CVec4);
+// 	//새로운 생성자
+// 	//stColor기준으로 계산함(stColor가 HSV면 edColor가 다른 스페이스에 있어도 HSV기준으로 계산)
+// 	constructor(_time : number,_delay : number,_stCol:CColor,_edCol:CColor,_stA:CAlpha,_edA:CAlpha,_stVFX:CVFX,_edVFX:CVFX);
+// 	constructor(_time : number,_delay : number,_st:CColor,_ed:CColor);
+// 	constructor(_time : number,_delay : number,_st:CAlpha,_ed:CAlpha);
+// 	constructor(_time : number,_delay : number,_st:CVFX,_ed:CVFX);
+
+
+// 	constructor(_time : number,_delay : number,_a : CVec4|CColor|CAlpha|CVFX,_b: CVec4|CColor|CAlpha|CVFX,_c=null,_d=null,_e=null,_f=null)
+// 	{
+// 		super(_time,_delay);
+
+// 		//새로운 생성자
+		
+// 		if(_b instanceof CColor) 
+// 		{
+// 			this.mSTColor = _a as any;
+// 			this.mEDColor = _b;
+			
+// 		}
+// 		else if(_b instanceof CAlpha) 
+// 		{
+// 			this.mSTAlpha = _a as any;
+// 			this.mEDAlpha = _b;
+			
+// 		}
+// 		else if(_b instanceof CVFX) 
+// 		{
+			
+// 			this.mSTColorVFX = _a as any;
+// 			this.mEDColorVFX = _b;
+// 		}
+// 		else if(_a instanceof CVec4 && _b instanceof CVec4) 
+// 		{
+// 			this.mSTColor = new CColor(_a.x,_a.y,_a.z,SDF.eColorModel.RGBAdd);
+// 			this.mSTAlpha = new CAlpha(_a.w);
+// 			this.mEDColor = new CColor(_b.x,_b.y,_b.z,SDF.eColorModel.RGBAdd);
+// 			this.mEDAlpha = new CAlpha(_b.w);
+			
+// 		}
+
+// 		if(_d instanceof CAlpha) 
+// 		{
+// 			this.mSTAlpha = _c as any;
+// 			this.mEDAlpha = _d;
+// 		}
+// 		if(_f instanceof CVFX) 
+// 		{
+// 			this.mSTColorVFX = _e as any;
+// 			this.mEDColorVFX = _f;
+// 		}
+// 		if(this.mSTColor==null)
+// 		{
+// 			this.mSTColor = new CColor();
+// 			this.mSTColor.w=SDF.eColorModel.None;
+	
+// 		}
+// 		if(this.mEDColor==null)
+// 		{
+// 			this.mEDColor = new CColor();
+// 			this.mEDColor.w=SDF.eColorModel.None;
+// 		}
+// 		if(this.mSTAlpha==null)
+// 		{
+// 			this.mSTAlpha = new CAlpha();
+	
+// 		}
+// 		if(this.mEDAlpha==null)
+// 		{
+// 			this.mEDAlpha = new CAlpha();
+// 		}
+// 		if(this.mSTColorVFX==null)
+// 		{
+// 			this.mSTColorVFX=new CVFX();
+// 		}
+// 		if(this.mEDColorVFX==null)
+// 		{
+// 			this.mEDColorVFX=new CVFX();
+// 		}
+		
+		
+		
+// 	}
+
+// 	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+// 		if(_pointer.member=="mSTColorVFX" && this.mSTColorVFX==null)
+// 		{
+// 			let btn=CDOM.TagToDom("button");
+// 			btn.innerText="생성";
+// 			btn.onclick=()=>{
+// 				this.mSTColorVFX = new CVFX();
+// 				this.EditRefresh();
+// 			};
+// 			_div.append(btn);
+// 		}
+// 		if(_pointer.member=="m_edColorVFX" && this.mEDColorVFX==null)
+// 		{
+// 			let btn=CDOM.TagToDom("button");
+// 			btn.innerText="생성";
+// 			btn.onclick=()=>{
+// 				this.mEDColorVFX = new CVFX();
+// 				this.EditRefresh();
+// 			};
+// 			_div.append(btn);
+// 		}
+// 	}
+
+	
+	
+// };
+export class CClipColor extends CClip
 {
-	// static eSpace={
-	// 	RGBA:0,
-	// 	HSV:1,
-	// 	HSL:2,
-	// };
+
 	public mSTColor : CColor;
 	public mEDColor : CColor;
-	public mSTAlpha : CAlpha;
-	public mEDAlpha : CAlpha;
-	public mSTColorVFX : CVFX;
-	public mEDColorVFX : CVFX;
 
 	public mCurve=new CCurve();
 
-	//기존 생성자
-	constructor(_time : number,_delay : number,_stRGBA:CVec4,_edRGBA:CVec4);
-	//새로운 생성자
-	//stColor기준으로 계산함(stColor가 HSV면 edColor가 다른 스페이스에 있어도 HSV기준으로 계산)
-	constructor(_time : number,_delay : number,_stCol:CColor,_edCol:CColor,_stA:CAlpha,_edA:CAlpha,_stVFX:CVFX,_edVFX:CVFX);
-	constructor(_time : number,_delay : number,_st:CColor,_ed:CColor);
-	constructor(_time : number,_delay : number,_st:CAlpha,_ed:CAlpha);
-	constructor(_time : number,_delay : number,_st:CVFX,_ed:CVFX);
-
-
-	constructor(_time : number,_delay : number,_a : CVec4|CColor|CAlpha|CVFX,_b: CVec4|CColor|CAlpha|CVFX,_c=null,_d=null,_e=null,_f=null)
+	
+	constructor(_time : number,_delay : number,_st:CColor=new CColor,_ed:CColor=new CColor)
 	{
 		super(_time,_delay);
 
-		//새로운 생성자
-		
-		if(_b instanceof CColor) 
-		{
-			this.mSTColor = _a as any;
-			this.mEDColor = _b;
-			
-		}
-		else if(_b instanceof CAlpha) 
-		{
-			this.mSTAlpha = _a as any;
-			this.mEDAlpha = _b;
-			
-		}
-		else if(_b instanceof CVFX) 
-		{
-			
-			this.mSTColorVFX = _a as any;
-			this.mEDColorVFX = _b;
-		}
-		else if(_a instanceof CVec4 && _b instanceof CVec4) 
-		{
-			this.mSTColor = new CColor(_a.x,_a.y,_a.z,SDF.eColorModel.RGBAdd);
-			this.mSTAlpha = new CAlpha(_a.w);
-			this.mEDColor = new CColor(_b.x,_b.y,_b.z,SDF.eColorModel.RGBAdd);
-			this.mEDAlpha = new CAlpha(_b.w);
-			
-		}
-
-		if(_d instanceof CAlpha) 
-		{
-			this.mSTAlpha = _c as any;
-			this.mEDAlpha = _d;
-		}
-		if(_f instanceof CVFX) 
-		{
-			this.mSTColorVFX = _e as any;
-			this.mEDColorVFX = _f;
-		}
-		if(this.mSTColor==null)
-		{
-			this.mSTColor = new CColor();
-			this.mSTColor.w=SDF.eColorModel.None;
-	
-		}
-		if(this.mEDColor==null)
-		{
-			this.mEDColor = new CColor();
-			this.mEDColor.w=SDF.eColorModel.None;
-		}
-		if(this.mSTAlpha==null)
-		{
-			this.mSTAlpha = new CAlpha();
-	
-		}
-		if(this.mEDAlpha==null)
-		{
-			this.mEDAlpha = new CAlpha();
-		}
-		if(this.mSTColorVFX==null)
-		{
-			this.mSTColorVFX=new CVFX();
-		}
-		if(this.mEDColorVFX==null)
-		{
-			this.mEDColorVFX=new CVFX();
-		}
-		
-		
-		
+		this.mSTColor = _st as any;
+		this.mEDColor = _ed;
 	}
+};
+export class CClipAlpha extends CClip
+{
 
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
-		if(_pointer.member=="mSTColorVFX" && this.mSTColorVFX==null)
-		{
-			let btn=CDOM.TagToDom("button");
-			btn.innerText="생성";
-			btn.onclick=()=>{
-				this.mSTColorVFX = new CVFX();
-				this.EditRefresh();
-			};
-			_div.append(btn);
-		}
-		if(_pointer.member=="m_edColorVFX" && this.mEDColorVFX==null)
-		{
-			let btn=CDOM.TagToDom("button");
-			btn.innerText="생성";
-			btn.onclick=()=>{
-				this.mEDColorVFX = new CVFX();
-				this.EditRefresh();
-			};
-			_div.append(btn);
-		}
+	public mSTAlpha : CAlpha;
+	public mEDAlpha : CAlpha;
+
+	public mCurve=new CCurve();
+
+	
+	constructor(_time : number,_delay : number,_st:CAlpha=new CAlpha,_ed:CAlpha=new CAlpha)
+	{
+		super(_time,_delay);
+
+		this.mSTAlpha = _st;
+		this.mEDAlpha = _ed;
 	}
+};
+export class CClipVFX extends CClip
+{
+
+	public mSTVFX : CVFX;
+	public mEDVFX : CVFX;
+
+	public mCurve=new CCurve();
 
 	
-	
+	constructor(_time : number,_delay : number,_st:CVFX=new CVFX,_ed:CVFX=new CVFX)
+	{
+		super(_time,_delay);
+
+		this.mSTVFX = _st;
+		this.mEDVFX = _ed;
+	}
 };
 
 export class CClipPRS extends CClip
@@ -339,9 +390,11 @@ export class CClipMesh extends CClip
 };
 export class CClipDestroy extends CClip
 {	
-	constructor(_time : number)
+	mSubject=true;
+	constructor(_time : number,_subject=true)
 	{
 		super(_time,1);
+		this.mSubject=_subject;
 	}
 	
 };
@@ -504,7 +557,7 @@ export class CAnimation extends CObject
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,CClass.ExtendsList(CClip));
 
 	}
-	EditHTMLInit(_div : HTMLDivElement)
+	override EditHTMLInit(_div : HTMLDivElement)
 	{
 		super.EditHTMLInit(_div);
 		if(window["AniTool"]!=null)
@@ -519,7 +572,7 @@ export class CAnimation extends CObject
 		}
 		
 	}
-	Icon(){	
+	override Icon(){	
 	
 		return "bi bi-fast-forward-circle";	
 	}

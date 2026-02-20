@@ -32,6 +32,10 @@ async function LoadWasmFactory(_useSimd: boolean): Promise<EmscriptenFactory> {
 
 export class CWASM
 {
+    static Obfuscation()
+    {
+        
+    }
     static SetThread(_enable)
     {
         gThread=_enable;

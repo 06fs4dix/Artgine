@@ -24,7 +24,6 @@ import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
 import { CClip } from "../../../artgine/canvas/component/CAnimation.js";
 import { CClipImg } from "../../../artgine/canvas/component/CAnimation.js";
 import { CClipCoodi } from "../../../artgine/canvas/component/CAnimation.js";
-import { CClipColorAlpha } from "../../../artgine/canvas/component/CAnimation.js";
 import { CClipPRS } from "../../../artgine/canvas/component/CAnimation.js";
 import { CClipMesh } from "../../../artgine/canvas/component/CAnimation.js";
 import { CClipDestroy } from "../../../artgine/canvas/component/CAnimation.js";

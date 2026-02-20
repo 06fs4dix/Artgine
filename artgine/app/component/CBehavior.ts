@@ -10,10 +10,10 @@ import {CComponent} from "./CComponent.js";
 
 export default class CBehavior extends CComponent
 {
-    Start(): void {
+    override Start(): void {
         
     }
-    Update(_update : CUpdate): void 
+    override Update(_update : CUpdate): void 
     {
         
     }

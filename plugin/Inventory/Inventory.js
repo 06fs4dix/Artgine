@@ -25,7 +25,7 @@ export class CInventory extends CObject {
         return data;
     }
 }
-export class CItem extends CObject {
+export class CItemInfo extends CObject {
     constructor(_img, _title, _context) {
         super();
         this.mImg = _img;
@@ -165,7 +165,7 @@ export class CItemMgr extends CObject {
     }
     mItemMap = new Map();
     Push(_a, _b = null) {
-        if (_a instanceof CItem) {
+        if (_a instanceof CItemInfo) {
             this.mItemMap.set(_a.Key(), _a);
             return _a;
         }
@@ -433,6 +433,6 @@ export class CInvenViewer extends CModal {
     }
 }
 CClass.Push(CInventory);
-CClass.Push(CItem);
+CClass.Push(CItemInfo);
 CClass.Push(CItemMgr);
 CClass.Push(CInvenMgr);
