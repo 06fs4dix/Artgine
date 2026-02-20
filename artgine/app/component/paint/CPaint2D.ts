@@ -135,7 +135,7 @@ export class CPaint2D extends CPaint
 		//if(_size!=null)
 			this.mBound.mType=CBound.eType.Box;
 		
-		this.PRSReset();
+		this.MatUpdate();
 		
 		
 		this.mShaderAttrMap.set("billboard",new CShaderAttr("billboard",new CVec1(0)));
@@ -410,7 +410,7 @@ export class CPaint2D extends CPaint
 			{
 				if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return;
 				this.SetSize(new CVec2(tex.GetWidth(),tex.GetHeight()));
-				this.PRSReset();
+				this.MatUpdate();
 				this.EditRefresh();
 			}
 			else if(tex instanceof CAtlas)
@@ -463,7 +463,7 @@ export class CPaint2D extends CPaint
 				this.SetYSort(this.mYSort);
 			}
 				
-			this.PRSReset();
+			this.MatUpdate();
 		}
 		else if(_pointer.IsRef(this.mWindInfluence))
 		{
@@ -474,7 +474,7 @@ export class CPaint2D extends CPaint
 			if(_pointer.IsRef(this.mPos) ||
 			_pointer.IsRef(this.mSize) || _pointer.IsRef(this.mPivot))
 			{
-				this.PRSReset();	
+				this.MatUpdate();	
 			}
 		}
 	}
@@ -482,7 +482,7 @@ export class CPaint2D extends CPaint
 	
 
 	
-	PRSReset()
+	MatUpdate()
 	{
 		if(this.mSize==null)
 			return;
@@ -561,7 +561,7 @@ export class CPaint2D extends CPaint
 	override Start(): void {
 		super.Start();
 
-		this.PRSReset();
+		this.MatUpdate();
 		if(this.mPosList!=null)
 		{
 			this.mBound.Reset();
@@ -717,7 +717,7 @@ export class CPaint2D extends CPaint
 	SetPivot(_pivot : CVec3)
 	{
 		this.mPivot = _pivot;
-		this.PRSReset();
+		this.MatUpdate();
 	}
 	SetSize(_size : CVec2)
 	{
@@ -731,12 +731,12 @@ export class CPaint2D extends CPaint
 		}
 		else
 			this.mSize.Import(_size);
-		this.PRSReset();
+		this.MatUpdate();
 	}
 	SetPos(_pos : CVec3)
 	{
 		this.mPos = _pos;
-		this.PRSReset();
+		this.MatUpdate();
 	}
 	// SetRot(_rot : CVec3|CVec4)
 	// {
@@ -754,7 +754,7 @@ export class CPaint2D extends CPaint
 
 		if(_y)	this.mRevers.y=-1;
 		else	this.mRevers.y=1;
-		this.PRSReset();
+		this.MatUpdate();
 		
 		
 		
@@ -1045,7 +1045,7 @@ export class CPaintHTML extends CPaint2D
 		else return;
 
 		//if(this.GetOwner().IsDestroy())this.mElement.remove();
-		this.PRSReset();
+		this.MatUpdate();
 		this.CacBound();
 		
 		this.mUpdateFMat=false;

@@ -66,7 +66,7 @@ export class CAttacher extends CResolverComp {
             return;
         CMath.MatMul(this.m_targetBone.mData.pst, this.m_p3d.GetFMat(), this.m_targetTemp.mData.pst);
         this.m_resolver.m_target = this.m_targetTemp.mData;
-        this.m_sourceTemp.mData.PRSReset();
+        this.m_sourceTemp.mData.MatUpdate();
         this.m_resolver.m_source = this.m_sourceTemp;
         this.m_resolver.SolveIK();
         this.m_target.SetMat(this.m_sourceTemp.mData.pst);

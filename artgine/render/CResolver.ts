@@ -40,13 +40,13 @@ export class CResolver extends CObject
             _bone.mData.pos.Import(_pos);
             _bone.mData.sca.Import(_sca);
             _bone.mData.rot.Import(_rot);
-            _bone.mData.PRSReset();
+            _bone.mData.MatUpdate();
         }
     }
     protected ApplyToChild(_bone : CTree<CMeshCopyNode>, _excludeBones : CTree<CMeshCopyNode>[] = []) {
         if(!_bone) return;
         if(_bone.mParent && !_excludeBones.includes(_bone)) {
-            _bone.mData.PRSReset();
+            _bone.mData.MatUpdate();
             _bone.mData.pst = CMath.MatMul(_bone.mData.pst, _bone.mParent.mData.pst);
         }
         if(_bone.mColleague) this.ApplyToChild(_bone.mColleague, _excludeBones);

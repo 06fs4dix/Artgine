@@ -96,7 +96,7 @@ export class CAttacher extends CResolverComp
         this.m_resolver.m_target = this.m_targetTemp.mData;
 
         // find target bone
-        this.m_sourceTemp.mData.PRSReset();
+        this.m_sourceTemp.mData.MatUpdate();
         this.m_resolver.m_source = this.m_sourceTemp;
 
         // resolve

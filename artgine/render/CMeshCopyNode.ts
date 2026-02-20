@@ -50,7 +50,7 @@ export class CMeshCopyNode implements IMat
 		//this.materialOff=new Array();
 		this.FMatAtt=false;
 	}
-	PRSReset()
+	MatUpdate()
 	{
 		var sm=CPoolGeo.ProductMat();
 		var rm=CPoolGeo.ProductMat();

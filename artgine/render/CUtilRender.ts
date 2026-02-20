@@ -2070,7 +2070,7 @@ export class CUtilRender
 			mpi.sca=_node.mData.sca;
 			CMeshTreeUpdate.TreeUpdateMeshAni(pst,_st,_end,_node.mData,_node.mData,mpi,_mat);
 
-			mpi.PRSReset();
+			mpi.MatUpdate();
 			mpi.pst = CMath.MatMul(mpi.pst, _mat);
 
 			//CConsol.Log(_node.mKey+" "+mpi.pst.ToStr());
