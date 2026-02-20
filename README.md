@@ -4,23 +4,20 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 > Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-ko.md)**
 
 ## Examples
+
+**3D**
+[Water](https://06fs4dix.github.io/Artgine/proj/Tutorial/Water/Water.html) : Water
+
+[ModularVillage](https://06fs4dix.github.io/Artgine/proj/3D/ModularVillage/ModularVillage.html) : Village
+
+[Voxel](https://06fs4dix.github.io/Artgine/proj/3D/Voxel/Voxel.html) : Voxel
 **2D**
 
 [Village](https://06fs4dix.github.io/Artgine/proj/2D/Village/Village.html) : Village 
 
 [Maze](https://06fs4dix.github.io/Artgine/proj/2D/Maze/Maze.html) : Maze
 
-[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : Shooting
 
-[Up](https://06fs4dix.github.io/Artgine/proj/2D/SideScroll/SideScroll.html) : Up
-
-**3D**
-
-[ModularVillage](https://06fs4dix.github.io/Artgine/proj/3D/ModularVillage/ModularVillage.html) : Village
-
-[Voxel](https://06fs4dix.github.io/Artgine/proj/3D/Voxel/Voxel.html) : Voxel
-
-[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : Box visual viewer
 
 <details>
   <summary>More examples</summary>
@@ -33,7 +30,13 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 [Map](https://06fs4dix.github.io/Artgine/proj/3D/Map/Map.html): Track 3D objects from a 2D map.  
 
-[Water](https://06fs4dix.github.io/Artgine/proj/Tutorial/Water/Water.html) : Water
+[BoxShow](https://06fs4dix.github.io/Artgine/proj/3D/BoxShow/BoxShow.html) : Box visual viewer
+
+[Shooting](https://06fs4dix.github.io/Artgine/proj/2D/Shooting/Shooting.html) : Shooting
+
+[Up](https://06fs4dix.github.io/Artgine/proj/2D/SideScroll/SideScroll.html) : Up
+
+[Skybox](https://06fs4dix.github.io/Artgine/proj/Tutorial/Skybox/Skybox.html) : Skybox
 
 </details>
 
