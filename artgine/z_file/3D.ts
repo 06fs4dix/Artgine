@@ -654,11 +654,10 @@ function ps_main()
 
 	out_color=L_cor;
 
-	BranchBegin("waterReflect","waterReflect",[waterDeep]);
-	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
-	BranchEnd();
+	
 
 	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
+	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
 	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
 	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
 	out_color.rgb = WaterProcessing(out_color.rgb, world);
