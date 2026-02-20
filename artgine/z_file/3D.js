@@ -1,1 +1,556 @@
-import{Build as e,CMat as r,CVec2 as a,CVec3 as n,CVec4 as y,CMat3 as x,InverseMat3 as o,LWVPMul as w,discard as z,screenPos as i,MappingV3ToTex as f,Mat4ToMat3 as l,MatAdd as t,MatMul as v,FloatMulMat as d,TransposeMat3 as u,Sam2DToColor as c,Sam2DToMat as g,Sam2DToV4 as p,Sam2DMat as M,V2SubV2 as h,V2MulFloat as m,V2DivV2 as b,V3AddV3 as S,V3Dot as s,V3Nor as C,V3MulFloat as A,V3MulMat3Normal as W,V3ToMat3 as B,V4MulMatCoordi as T,ParallaxNormal as D,FloatToInt as F,IntToFloat as P,MappingTexToV3 as G,BranchBegin as V,BranchEnd as X,BranchDefault as k,Attribute as N,Null as R,clamp as L,floor as E,MatMix as Z,Sam2D0ToColor as j,MatTypeToMat as q,min as H,abs as I,max as J,dFdy as K,V3Len as O,length as Q,dFdx as U,V3Mix as Y,V3SubV3 as $,SaturateFloat as _,V2AddV2 as ee,V2Len as re,SaturateV3 as ae,V3Cross as ne,smoothstep as ye}from"./Shader";import{SDF as xe}from"./SDF";import{VFXDown2 as oe,GetTexCodiedUV as we,VFX as ze,LUT0 as ie,LUT1 as fe,LUT2 as le,LUT3 as te,LUT4 as ve,LUT5 as de,ColorModalFun as ue,AlphaModalFun as ce}from"./ColorFun";import{ambientColor as ge,envCube as pe,GetMaterial as Me,GetSunInfo as he,ligCol as me,ligCount as be,ligDir as Se,LightCac3D as se,ligStep0 as Ce,ligStep1 as Ae,ligStep2 as We,ligStep3 as Be}from"./Light";import{ApplyWind as Te,windCount as De,windDir as Fe,windInfluence as Pe,windInfo as Ge,windPos as Ve}from"./Wind";import{bias as Xe,calcShadow as ke,normalBias as Ne,PCF as Re,shadowCount as Le,shadowOn as Ee,shadowBottomCasP1 as Ze,shadowFarCasP0 as je,shadowLeftCasV2 as qe,shadowNearCasV0 as He,shadowRightCasP2 as Ie,shadowTopCasV1 as Je,shadowPointProj as Ke,shadowRate as Oe,shadowReadList as Qe,shadowWrite as Ue,texture16f as Ye,jitter as $e,calcParallaxShadow as _e}from"./Shadow";import{DecalCac as er,decalInvWorldMat as rr,decalParam as ar}from"./Decal";import{NoiseNormalGet as nr}from"./Noise";var yr,xr,or=R(),wr=R(),zr=R(),ir=R(),fr=N(0,"canvas"),lr=R(),tr=new y(0,0,0,1),vr=R(),dr=R(),ur=16,cr=R(),gr=R(),pr=R(),Mr=R(),hr=R(),mr=R(),br=R(),Sr=R(),sr=R(),Cr=R(),Ar=R(),Wr=R(),Br=R(),Tr=R(),Dr=R(),Fr=R(),Pr=(new a(1,1),new M(11,10)),Gr=N(0,"time"),Vr=new y(0,0,0,0),Xr=new n(0,0,0),kr=new n(0,.1,.5),Nr=new a(0,0),Rr=new a(2e3,3e3);function Lr(e,r,n,y,x,o,w){var z=o;if(w>.5&&y.x+y.y+y.z+y.w>0)if(w<xe.eSkin.Bone+.5&&e.x>0){var i=d(y.x,g(e,x.x));i=t(d(y.y,g(e,x.y)),i),i=t(d(y.z,g(e,x.z)),i),i=t(d(y.w,g(e,x.w)),i),z=v(i,z)}else if(w<xe.eSkin.Bake+.5&&n>-.5){var f=E(n),l=f+1,u=d(y.x,g(new a(r,f),x.x));u=t(d(y.y,g(new a(r,f),x.y)),u),u=t(d(y.z,g(new a(r,f),x.z)),u),u=t(d(y.w,g(new a(r,f),x.w)),u);var c=d(y.x,g(new a(r,l),x.x));c=t(d(y.y,g(new a(r,l),x.y)),c),c=t(d(y.z,g(new a(r,l),x.z)),c),c=t(d(y.w,g(new a(r,l),x.w)),c),i=Z(u,c,n-f),z=v(i,z)}return z}function Er(e,r,a,y,x,o,w){var z=new n(e,0);if(fr>1e-4){var i=u(B(r,a,y));z=D(W(o,i).xyz,W(x.xyz,i).xyz,w.y,e,fr)}return z}function Zr(e,r,a,y,x,o){var w=y;if(br.y>.5&&o>1.5){var z=B(r,a,y);w=c(br.y,e).xyz,(w=G(w)).y=-w.y,w=s(w,new n(0,0,1))>.999?y:C(W(w,z).xyz)}return w}function jr(e,r,a,n,x,w,z){var i;V("codi","C",[zr]),pr.xy=we(r,zr),k(),pr.xy=r,X(),br=z,V("worldType","WT",[ur,dr]),q(ur,dr,vr),k(),i=vr,X();var f,t=Lr(Pr,9,xr,n,a,i,ir);f=z.y>0?l(t):u(o(l(t))),Mr=C(W(x,f).xyz),mr=C(W(w.xyz,f).xyz),mr=C($(mr,A(Mr,s(Mr,mr)))),hr=C(A(ne(Mr,mr),w.w));var v=new y(e,1);v=T(v,t),V("wind","W",[Pe,Fe,Ve,Ge,De,Gr]),v=Te(v,ir,n,Gr),X(),Sr=v,v=T(v,cr),sr=v,Cr=T(v,gr)}function qr(e,r){var a=nr(e,xe.eNoise.PerlinNormal);a=C(new n(a.x/10,a.y,a.z/10));var y=new n(0,1,0),x=J(0,s(a,y)),o=L(0+(x-.9999)/(1-.9999)*.2,0,1);return A(r,o)}e("Artgine/Shader/3DSkin",[],function(e,r,a,n,x,w,z){var i;V("codi","C",[zr]),pr.xy=we(r,zr),k(),pr.xy=r,X(),V("worldType","WT",[ur,dr]),q(ur,dr,vr),k(),i=vr,X();var f,t=Lr(Pr,9,xr,a,n,i,ir),v=new y(e,1);v=T(v,t),V("wind","W",[Pe,Fe,Ve,Ge,De,Gr]),v=Te(v,ir,a,Gr),X(),Sr=v,v=T(v,cr),v=T(v,gr),V("zDepth","Z",[0,.001]),v.z+=0,X(),Cr=v,f=z.y>0?l(t):u(o(l(t))),Mr=C(W(x,f).xyz),mr=C(W(w.xyz,f).xyz),mr=C($(mr,A(Mr,s(Mr,mr)))),hr=C(A(ne(Mr,mr),w.w)),br=z},[vr,cr,gr,ir,Pr,9,xr,lr,yr],[Cr,pr,Mr,hr,mr,br,Sr],function(){new y(0,0,0,0);var e,r=-1;V("shadow","S",[Ee]),Ee>.5&&(e=b(h(i.xy,new a(.5,.5)),yr.xy),r=c(Ee,e).x),X();var o,w,z=Sr;V("parallax","P",[fr,Fr]),o=(w=Er(pr,mr,hr,Mr,Sr,Fr,br)).xy,z.xyz=$(z.xyz,A(C($(Fr,z.xyz)),O(new n(h(w.xy,pr),fr*w.z))/J(Q(I(U(pr)))/Q(U(z.xyz)),Q(I(K(pr)))/Q(K(z.xyz))))),i.z,fr>1e-4&&L(.5*(1+(2*i.z-1-1)*s($(Sr.xyz,Fr),C(new n(cr[0][2],cr[1][2],cr[2][2])))/s($(z.xyz,Fr),C(new n(cr[0][2],cr[1][2],cr[2][2]))))+.5,0,1),X();var f,l=Zr(o,mr,hr,Mr,0,lr);V("vfx","VFX",[ze,ie,fe,le,te,ve,de,Gr]),f=oe(o,ze,Gr),k(),f=c(br.x,o),X(),V("colorModel","CM",[or]),f.rgb=ue(f.rgb,or),X(),V("alphaModel","AM",[wr]),f.a=ce(f.a,wr),X(),f.a,V("decal","decal",[ar,rr]),f=er(f,z),X();var t=new x(0),v=new y(1,1,1,1),d=new n(0,1,0),u=new n(1,1,1);V("light","L",[Se,me,be,Fr,tr,Ce,Ae,We,Be,pe,ge]),v=Me(tr,c(br.z,o),lr),d=(t=he())[0],u=t[1],t=se(Fr,Sr,f,l,r,v.y,v.x,v.z,ge),f.rgb=S(t[0],t[1]),k(),r>-.5&&(f.rgb=A(f.rgb,r)),X(),Ar=f,V("waterRefract","waterRefract",[Vr,Rr,Xr,kr,Nr,1,1,Fr,Gr]),z.y,Vr.x,z.y,Vr.x,Vr.z,Ar.rgb=function(e,r,y,x,o){if(0==re(Nr))return e;var w=new n(-Nr.x/J(re(Nr),1e-6),Nr.y/J(re(Nr),1e-6),re(Nr)*Gr*.1),z=A(r,.001),i=C(x),f=new a(i.x,i.z);f=m(f,-.2);var l=function(e,r,y,x){var o=1/128*L(1/(y.y+.1),1,5),w=re(new a(y.x,y.z)),z=w<1e-4?new a(1,1):new a(y.x/w,y.z/w),i=new n(ee(e.xy,m(z,o)),e.z),f=new n(e.xy,e.z),l=new n(ee(e.xy,m(z,-o)),e.z),t=qr(i,x).x,v=qr(f,x).y,d=qr(l,x).z;return new n(t,v,d)}(new n(ee(new a(z.x+f.x,z.z+f.y),m(w.xy,w.z)),3*w.z),0,i,o);return e=S(e,l),ae(e)}(Ar.rgb,z.xyz,0,d,u),Ar.rgb=function(e,r){var a=I(Vr.x-r.y),y=1-_(a/Vr.y);e=Y(kr,Y(e,Xr,.1),y);var x=O($(Fr,r.xyz)),o=ye(Rr.x,Rr.y,x);if(e=Y(kr,e,.6*(1-o)),a<H(Vr.z,1*Vr.z)){var w=new n(.6,.6,.6);e=S(e,A(w,.35)),e=Y(e,w,.4)}return e}(Ar.rgb,z),X()},[Ar]),e("Artgine/Shader/3DSimple",["simple"],function(e,r){var a;pr=r,V("worldType","WT",[ur,dr]),q(ur,dr,vr),k(),a=vr,X(),Cr=w(e,a,cr,gr)},[vr,cr,gr],[Cr,pr],function(){var e=j(pr);V("colorModel","CM",[or]),e.rgb=ue(e.rgb,or),X(),V("alphaModel","AM",[wr]),e.a=ce(e.a,wr),X(),e.a,Ar=e},[Ar]),e("Artgine/Shader/3DGBuffer",["gBuf"],jr,[vr,cr,gr,ir,Pr,9,xr,lr,tr,Dr],[Cr,pr,Mr,hr,mr,br,Sr,sr],function(){var e,r;if(V("parallax","P",[fr,Fr]),e=Er(pr,mr,hr,Mr,Sr,Fr,br).xy,X(),V("vfx","VFX",[ze,ie,fe,le,te,ve,de,Gr]),r=oe(e,ze,Gr),k(),r=c(1==lr?0:br.x,e),X(),V("colorModel","CM",[or]),r.rgb=ue(r.rgb,or),X(),V("alphaModel","AM",[wr]),r.a=ce(r.a,wr),X(),r.a,Dr<xe.eGBuf.Position+.5)Ar=new y(sr.xyz,.5);else if(Dr<xe.eGBuf.Normal+.5){var a=Zr(e,mr,hr,Mr,0,lr);Ar=new y(f(a),1)}else if(Dr<xe.eGBuf.Albedo+.5)Ar=r;else if(Dr<xe.eGBuf.SpeculerPowEmissive+.5){var n=Me(tr,c(br.z,e),lr);Ar=n}},[Ar]),e("Artgine/Shader/3DGBufferMulti",["gBufMulti"],jr,[vr,cr,gr,ir,Pr,9,xr,lr,tr],[Cr,pr,Mr,hr,mr,br,Sr,sr],function(){var e,r;V("parallax","P",[fr,Fr]),e=Er(pr,mr,hr,Mr,Sr,Fr,br).xy,X(),V("vfx","VFX",[ze,ie,fe,le,te,ve,de,Gr]),r=oe(e,ze,Gr),k(),r=c(1==lr?0:br.x,e),X(),V("colorModel","CM",[or]),r.rgb=ue(r.rgb,or),X(),V("alphaModel","AM",[wr]),r.a=ce(r.a,wr),X(),r.a,Wr=new y(sr.xyz,1);var a=Zr(e,mr,hr,Mr,0,lr);Br=new y(f(a),1),Ar=r;var n=Me(tr,c(br.z,e),lr);Tr=n},[Ar,Wr,Br,Tr]),e("Artgine/Shader/3DShadowWrite",["shadowWrite"],function(e,a,n,x){var o;V("codi","C",[zr]),pr.xy=we(x,zr),k(),pr.xy=x,X(),V("worldType","WT",[ur,dr]),q(ur,dr,vr),k(),o=vr,X();var w=Lr(Pr,9,xr,n,a,o,ir),z=new r(0),i=new r(0);Ue.x<xe.eShadow.Cas0+.5?(z=g(He,Ue.y),i=g(je,Ue.y)):Ue.x<xe.eShadow.Cas1+.5?(z=g(Je,Ue.y),i=g(Ze,Ue.y)):Ue.x<xe.eShadow.Cas2+.5&&(z=g(qe,Ue.y),i=g(Ie,Ue.y));var f=new y(e,1);f=T(f,w),V("wind","W",[Pe,Fe,Ve,Ge,De,Gr]),f=Te(f,ir,n,Gr),X(),f=T(f,z),sr=f,f=T(f,i),Cr=f},[vr,cr,gr,ir,Pr,9,xr,He,je,Je,Ze,qe,Ie,Ue,Le,Ke,Qe,$e],[Cr,pr,sr],function(){var e;V("vfx","VFX",[ze,ie,fe,le,te,ve,de,Gr]),e=oe(pr,ze,Gr),k(),e=c(0,pr),X(),V("colorModel","CM",[or]),e.rgb=ue(e.rgb,or),X(),V("alphaModel","AM",[wr]),e.a=ce(e.a,wr),X(),e.a,Ar=sr},[Ar]),e("Artgine/Shader/3DShadowRead",["shadowRead"],function(e,r,a,n,x,w,z,i){var f;V("worldType","WT",[ur,dr]),q(ur,dr,vr),k(),f=vr,X();var t=Lr(Pr,9,xr,a,r,f,ir),v=new y(e,1);v=T(v,t),V("wind","W",[Pe,Fe,Ve,Ge,De,Gr]),v=Te(v,ir,a,Gr),X(),Sr=v,Mr=C(W(x,u(o(l(t)))).xyz),V("codi","C",[zr]),pr.xy=we(n,zr),k(),pr.xy=n,X(),mr=C(W(w.xyz,l(t)).xyz),hr=C(W(z,l(t)).xyz),Mr=i.y>0?C(W(x,l(t)).xyz):C(W(x,u(o(l(t)))).xyz),br=i,v=T(v,cr),Cr=T(v,gr)},[vr,cr,gr,ir,Pr,9,xr,He,je,Je,Ze,qe,Ie,Ue,Le,Ke,Qe,Oe,Re,Ye,Xe,Ne,$e,Se,me,be],[Cr,pr,Mr,Sr,hr,mr,br],function(){var e,r,a,x,o,w=Sr,z=1;V("parallax","P",[fr,Fr]),e=(r=Er(pr,mr,hr,Mr,w,Fr,br)).xy,w.xyz=$(w.xyz,A(C($(Fr,w.xyz)),O(new n(h(r.xy,pr),fr*r.z))/J(Q(I(U(pr)))/Q(U(w.xyz)),Q(I(K(pr)))/Q(K(w.xyz))))),(x=c(br.y,e)).xyz=G(x.xyz),x.y=-x.y,z=0;for(var i=0;i<F(Le);i++)(a=p(Se,p(Qe,i).x)).w<1.5&&(a.xyz=W(C(a.xyz),u(B(mr,hr,Mr))).xyz,s(x.xyz,a.xyz)>0?z+=_e(br.y,e,a.xyz,fr):z+=1);(z/=Le)<0&&(z=0),X(),V("vfx","VFX",[ze,ie,fe,le,te,ve,de,Gr]),o=oe(e,ze,Gr),k(),o=c(0,e),X(),V("colorModel","CM",[or]),o.rgb=ue(o.rgb,or),X(),V("alphaModel","AM",[wr]),o.a=ce(o.a,wr),X(),o.a;var f=0;for(i=0;i<F(Le);i++){var l=p(Qe,i);f+=ke(l,P(i),Mr,w)}(f/=Le)<0&&(f=0),f=H(f,z),Ar=new y(f,f,f,1)},[Ar]);
+import { Build, CMat, CVec2, CVec3, CVec4, CMat3, InverseMat3, LWVPMul, discard, screenPos, MappingV3ToTex, Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, V2SubV2, V2MulFloat, V2DivV2, V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V4MulMatCoordi, ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, BranchBegin, BranchEnd, BranchDefault, Attribute, Null, clamp, floor, MatMix, Sam2D0ToColor, MatTypeToMat, min, abs, max, dFdy, V3Len, length, dFdx, V3Mix, V3SubV3, SaturateFloat, V2AddV2, V2Len, SaturateV3, V3Cross, smoothstep, } from "./Shader";
+import { SDF } from "./SDF";
+import { VFXDown2, GetTexCodiedUV, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, ColorModalFun, AlphaModalFun } from "./ColorFun";
+import { ambientColor, envCube, GetMaterial, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
+import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
+import { bias, calcShadow, normalBias, PCF, shadowCount, shadowOn, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, jitter, calcParallaxShadow } from "./Shadow";
+import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
+import { NoiseNormalGet } from "./Noise";
+var screenDepth;
+var colorModel = Null();
+var alphaModel = Null();
+var texCodi = Null();
+var screenSize;
+var skin = Null();
+var parallaxNormal = Attribute(0, "canvas");
+var sam2DCount = Null();
+var material = new CVec4(0.0, 0.0, 0.0, 1.0);
+var worldMat = Null();
+var worldMatShort = Null();
+var worldMatType = 16.0;
+var viewMat = Null();
+var projectMat = Null();
+var zDepth = 0.0;
+var zDepthBias = 0.001;
+var to_uv = Null();
+var to_normal = Null();
+var to_binormal = Null();
+var to_tangent = Null();
+var to_ref = Null();
+var to_worldPos = Null();
+var to_viewPos = Null();
+var out_position = Null();
+var out_color = Null();
+var out_pos = Null();
+var out_nor = Null();
+var out_spc = Null();
+var outputType = Null();
+var camPos = Null();
+var depthMap = 0.0;
+var screenResolution = new CVec2(1.0, 1.0);
+var weightArrMat = new Sam2DMat(11, 10);
+var weightBakeMat = 9.0;
+var weightBakeIndex;
+var time = Attribute(0, "time");
+var waterDeep = new CVec4(0.0, 0.0, 0.0, 0.0);
+var shallowColor = new CVec3(0.0, 0.0, 0.0);
+var deepColor = new CVec3(0.0, 0.1, 0.5);
+var causticFlowDir = new CVec2(0.0, 0.0);
+var causticFlowFreq = 1.0;
+var waterHeight = 1.0;
+var waterUnderFadeDist = new CVec2(2000.0, 3000.0);
+Build("Artgine/Shader/3DSkin", [], vs_main, [worldMat, viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex, sam2DCount,
+    screenSize
+], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos], ps_main, [out_color]);
+Build("Artgine/Shader/3DSimple", ["simple"], vs_main_simple, [worldMat,
+    viewMat, projectMat], [out_position, to_uv], ps_main_simple, [out_color]);
+Build("Artgine/Shader/3DGBuffer", ["gBuf"], vs_main_gBuffer, [
+    worldMat,
+    viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
+    sam2DCount, material, outputType,
+], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer, [out_color]);
+Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], vs_main_gBuffer, [
+    worldMat,
+    viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
+    sam2DCount, material,
+], [out_position, to_uv, to_normal, to_binormal, to_tangent, to_ref, to_worldPos, to_viewPos], ps_main_gBuffer_multi, [out_color, out_pos, out_nor, out_spc]);
+Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
+    worldMat,
+    viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
+    shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
+    shadowCount, shadowPointProj, shadowReadList, jitter
+], [out_position, to_uv, to_viewPos], ps_main_shadow_write, [out_color]);
+Build("Artgine/Shader/3DShadowRead", ["shadowRead"], vs_main_shadow_read, [
+    worldMat,
+    viewMat, projectMat, skin, weightArrMat, weightBakeMat, weightBakeIndex,
+    shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite,
+    shadowCount, shadowPointProj, shadowReadList,
+    shadowRate, PCF, texture16f, bias, normalBias, jitter,
+    ligDir, ligCol, ligCount,
+], [out_position, to_uv, to_normal, to_worldPos, to_binormal, to_tangent, to_ref], ps_main_shadow_read, [out_color]);
+function vs_main_simple(f3_ver, f2_uv) {
+    to_uv = f2_uv;
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    out_position = LWVPMul(f3_ver, wMat, viewMat, projectMat);
+}
+function ps_main_simple() {
+    var L_cor = Sam2D0ToColor(to_uv);
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    out_color = L_cor;
+}
+function GetWorldWeightMat(_weightArrMat, _weightBakeArrMat, _index, _weight, _weightIndex, _worldMat, _skin) {
+    var woweMat = _worldMat;
+    if (_skin > 0.5 && _weight.x + _weight.y + _weight.z + _weight.w > 0.0) {
+        if (_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x > 0.0) {
+            var weightMat = FloatMulMat(_weight.x, Sam2DToMat(_weightArrMat, _weightIndex.x));
+            weightMat = MatAdd(FloatMulMat(_weight.y, Sam2DToMat(_weightArrMat, _weightIndex.y)), weightMat);
+            weightMat = MatAdd(FloatMulMat(_weight.z, Sam2DToMat(_weightArrMat, _weightIndex.z)), weightMat);
+            weightMat = MatAdd(FloatMulMat(_weight.w, Sam2DToMat(_weightArrMat, _weightIndex.w)), weightMat);
+            woweMat = MatMul(weightMat, woweMat);
+        }
+        else if (_skin < SDF.eSkin.Bake + 0.5 && _index > -0.5) {
+            var st = floor(_index);
+            var ed = st + 1.0;
+            var weightSTMat = FloatMulMat(_weight.x, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.x));
+            weightSTMat = MatAdd(FloatMulMat(_weight.y, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.y)), weightSTMat);
+            weightSTMat = MatAdd(FloatMulMat(_weight.z, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.z)), weightSTMat);
+            weightSTMat = MatAdd(FloatMulMat(_weight.w, Sam2DToMat(new CVec2(_weightBakeArrMat, st), _weightIndex.w)), weightSTMat);
+            var weightEDMat = FloatMulMat(_weight.x, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.x));
+            weightEDMat = MatAdd(FloatMulMat(_weight.y, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.y)), weightEDMat);
+            weightEDMat = MatAdd(FloatMulMat(_weight.z, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.z)), weightEDMat);
+            weightEDMat = MatAdd(FloatMulMat(_weight.w, Sam2DToMat(new CVec2(_weightBakeArrMat, ed), _weightIndex.w)), weightEDMat);
+            var weightMat = MatMix(weightSTMat, weightEDMat, _index - st);
+            woweMat = MatMul(weightMat, woweMat);
+        }
+    }
+    return woweMat;
+}
+function GetParallaxMappedUV(_uv, _tan, _bi, _nor, _wor, _camPos, _texOff) {
+    var uvh = new CVec3(_uv, 0.0);
+    if (parallaxNormal > 0.0001) {
+        var TBN = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
+        uvh = ParallaxNormal(V3MulMat3Normal(_camPos, TBN).xyz, V3MulMat3Normal(_wor.xyz, TBN).xyz, _texOff.y, _uv, parallaxNormal);
+    }
+    return uvh;
+}
+function GetTangentSpaceNormal(_uv, _tan, _bi, _nor, _texOff, sam2DCount) {
+    var N = _nor;
+    if (to_ref.y > 0.5 && sam2DCount > 1.5) {
+        var TBN = V3ToMat3(_tan, _bi, _nor);
+        N = Sam2DToColor(to_ref.y, _uv).xyz;
+        N = MappingTexToV3(N);
+        N.y = -N.y;
+        if (V3Dot(N, new CVec3(0, 0, 1)) > 0.999)
+            N = _nor;
+        else
+            N = V3Nor(V3MulMat3Normal(N, TBN).xyz);
+    }
+    return N;
+}
+function vs_main(f3_ver, f2_uv, f4_we, f4_wi, f3_nor, f4_tan, f3_ref) {
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
+    var P = new CVec4(f3_ver, 1.0);
+    P = V4MulMatCoordi(P, woweMat);
+    BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
+    P = ApplyWind(P, skin, f4_we, time);
+    BranchEnd();
+    to_worldPos = P;
+    P = V4MulMatCoordi(P, viewMat);
+    P = V4MulMatCoordi(P, projectMat);
+    ;
+    BranchBegin("zDepth", "Z", [zDepth, zDepthBias]);
+    P.z += zDepth * zDepthBias;
+    BranchEnd();
+    out_position = P;
+    var nMat3;
+    if (f3_ref.y > 0.0) {
+        nMat3 = Mat4ToMat3(woweMat);
+    }
+    else {
+        nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
+    }
+    to_normal = V3Nor(V3MulMat3Normal(f3_nor, nMat3).xyz);
+    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
+    to_tangent = V3Nor(V3SubV3(to_tangent, V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
+    to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent), f4_tan.w));
+    to_ref = f3_ref;
+}
+function vs_main_gBuffer(f3_ver, f2_uv, f4_wi, f4_we, f3_nor, f4_tan, f3_ref) {
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    to_ref = f3_ref;
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
+    var nMat3;
+    if (f3_ref.y > 0.0) {
+        nMat3 = Mat4ToMat3(woweMat);
+    }
+    else {
+        nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
+    }
+    to_normal = V3Nor(V3MulMat3Normal(f3_nor, nMat3).xyz);
+    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
+    to_tangent = V3Nor(V3SubV3(to_tangent, V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
+    to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent), f4_tan.w));
+    var P = new CVec4(f3_ver, 1.0);
+    P = V4MulMatCoordi(P, woweMat);
+    BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
+    P = ApplyWind(P, skin, f4_we, time);
+    BranchEnd();
+    to_worldPos = P;
+    P = V4MulMatCoordi(P, viewMat);
+    to_viewPos = P;
+    out_position = V4MulMatCoordi(P, projectMat);
+}
+function Remap(_val, _min1, _max1, _min2, _max2) {
+    return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
+}
+function SampleNormalMapToCaustic(_uvw, _ligCol) {
+    var normal = NoiseNormalGet(_uvw, SDF.eNoise.PerlinNormal);
+    normal = V3Nor(new CVec3(normal.x / 10.0, normal.y, normal.z / 10.0));
+    var L = new CVec3(0.0, 1.0, 0.0);
+    var NdotL = max(0.0, V3Dot(normal, L));
+    var curRange = 0.0001 * causticFlowFreq;
+    var threshold = 1.0 - curRange;
+    var b = clamp(Remap(NdotL, threshold, 1.0, 0.0, 0.2), 0.0, 1.0);
+    return V3MulFloat(_ligCol, b);
+}
+function SampleCaustics(_uvw, _split, _ligDir, _ligCol) {
+    var angleWeight = clamp(1.0 / (_ligDir.y + 0.1), 1.0, 5.0);
+    var dynamicSplit = _split * angleWeight;
+    var xzLen = V2Len(new CVec2(_ligDir.x, _ligDir.z));
+    var offsetDir = (xzLen < 0.0001) ? new CVec2(1.0, 1.0) : new CVec2(_ligDir.x / xzLen, _ligDir.z / xzLen);
+    var uvw1 = new CVec3(V2AddV2(_uvw.xy, V2MulFloat(offsetDir, dynamicSplit)), _uvw.z);
+    var uvw2 = new CVec3(_uvw.xy, _uvw.z);
+    var uvw3 = new CVec3(V2AddV2(_uvw.xy, V2MulFloat(offsetDir, -dynamicSplit)), _uvw.z);
+    var r = SampleNormalMapToCaustic(uvw1, _ligCol).x;
+    var g = SampleNormalMapToCaustic(uvw2, _ligCol).y;
+    var b = SampleNormalMapToCaustic(uvw3, _ligCol).z;
+    return new CVec3(r, g, b);
+}
+function Caustics(_color, _world, _flowDir, _ligDir, _ligCol) {
+    if (V2Len(_flowDir) == 0.0)
+        return _color;
+    var flow = new CVec3(-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), V2Len(causticFlowDir) * time * 0.1);
+    var split = 1.0 / 1000.0;
+    var worldToUV = V3MulFloat(_world, split);
+    var L = V3Nor(_ligDir);
+    var refractOffset = new CVec2(L.x, L.z);
+    refractOffset = V2MulFloat(refractOffset, -0.2);
+    var uvw = new CVec3(V2AddV2(new CVec2(worldToUV.x + refractOffset.x, worldToUV.z + refractOffset.y), V2MulFloat(flow.xy, flow.z)), flow.z * 3.0);
+    var tex = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
+    _color = V3AddV3(_color, tex);
+    return SaturateV3(_color);
+}
+function WaterProcessing(_color, _world) {
+    var heightDiff = abs(waterDeep.x - _world.y);
+    var depthBlend = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
+    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+    var dist = V3Len(V3SubV3(camPos, _world.xyz));
+    var t = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
+    _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+    if (heightDiff < min(waterDeep.z, waterDeep.z * waterHeight)) {
+        var foam = new CVec3(0.6, 0.6, 0.6);
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.35));
+        _color = V3Mix(_color, foam, 0.4);
+    }
+    return _color;
+}
+function ps_main() {
+    var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var shadow = -1.0;
+    var uvScreen;
+    BranchBegin("shadow", "S", [shadowOn]);
+    if (shadowOn > 0.5) {
+        uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
+        shadowTex = Sam2DToColor(shadowOn, uvScreen);
+        shadow = shadowTex.x;
+    }
+    BranchEnd();
+    var world = to_worldPos;
+    var camDir;
+    var uv = to_uv;
+    var uvh;
+    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+    uv = uvh.xy;
+    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz)))));
+    screenDepth = screenPos.z;
+    if (parallaxNormal > 0.0001) {
+        screenDepth = clamp((1.0 + ((screenPos.z * 2.0 - 1.0) - 1.0) * V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])))) * 0.5 + 0.5, 0.0, 1.0);
+    }
+    BranchEnd();
+    var normal = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    BranchBegin("decal", "decal", [decalParam, decalInvWorldMat]);
+    L_cor = DecalCac(L_cor, world);
+    BranchEnd();
+    var dseMat = new CMat3(0);
+    var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
+    var sunDir = new CVec3(0.0, 1.0, 0.0);
+    var sunCol = new CVec3(1.0, 1.0, 1.0);
+    BranchBegin("light", "L", [ligDir, ligCol, ligCount, camPos, material, ligStep0, ligStep1, ligStep2, ligStep3, envCube, ambientColor]);
+    lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
+    dseMat = GetSunInfo();
+    sunDir = dseMat[0];
+    sunCol = dseMat[1];
+    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
+    L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
+    BranchDefault();
+    if (shadow > -0.5) {
+        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);
+    }
+    BranchEnd();
+    out_color = L_cor;
+    BranchBegin("waterRefract", "waterRefract", [waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
+    if (world.y <= waterDeep.x)
+        discard;
+    if (world.y > waterDeep.x + waterDeep.z)
+        discard;
+    out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
+    out_color.rgb = WaterProcessing(out_color.rgb, world);
+    BranchEnd();
+}
+function ps_main_gBuffer() {
+    var uv = to_uv;
+    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
+    BranchEnd();
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    if (sam2DCount == 1.0)
+        L_cor = Sam2DToColor(0.0, uv);
+    else
+        L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    if (outputType < SDF.eGBuf.Position + 0.5) {
+        out_color = new CVec4(to_viewPos.xyz, 0.5);
+    }
+    else if (outputType < SDF.eGBuf.Normal + 0.5) {
+        var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+        out_color = new CVec4(MappingV3ToTex(N), 1.0);
+    }
+    else if (outputType < SDF.eGBuf.Albedo + 0.5) {
+        out_color = L_cor;
+    }
+    else if (outputType < SDF.eGBuf.SpeculerPowEmissive + 0.5) {
+        var lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
+        out_color = lmaterial;
+    }
+}
+function ps_main_gBuffer_multi() {
+    var uv = to_uv;
+    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
+    BranchEnd();
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    if (sam2DCount == 1.0)
+        L_cor = Sam2DToColor(0.0, uv);
+    else
+        L_cor = Sam2DToColor(to_ref.x, uv);
+    BranchEnd();
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    out_pos = new CVec4(to_viewPos.xyz, 1.0);
+    var N = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+    out_nor = new CVec4(MappingV3ToTex(N), 1.0);
+    out_color = L_cor;
+    var lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
+    out_spc = lmaterial;
+}
+function vs_main_shadow_write(f3_ver, f4_wi, f4_we, f2_uv) {
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
+    var svm = new CMat(0);
+    var spm = new CMat(0);
+    if (shadowWrite.x < SDF.eShadow.Cas0 + 0.5) {
+        svm = Sam2DToMat(shadowNearCasV0, shadowWrite.y);
+        spm = Sam2DToMat(shadowFarCasP0, shadowWrite.y);
+    }
+    else if (shadowWrite.x < SDF.eShadow.Cas1 + 0.5) {
+        svm = Sam2DToMat(shadowTopCasV1, shadowWrite.y);
+        spm = Sam2DToMat(shadowBottomCasP1, shadowWrite.y);
+    }
+    else if (shadowWrite.x < SDF.eShadow.Cas2 + 0.5) {
+        svm = Sam2DToMat(shadowLeftCasV2, shadowWrite.y);
+        spm = Sam2DToMat(shadowRightCasP2, shadowWrite.y);
+    }
+    var P = new CVec4(f3_ver, 1.0);
+    P = V4MulMatCoordi(P, woweMat);
+    BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
+    P = ApplyWind(P, skin, f4_we, time);
+    BranchEnd();
+    P = V4MulMatCoordi(P, svm);
+    to_viewPos = P;
+    P = V4MulMatCoordi(P, spm);
+    out_position = P;
+}
+function ps_main_shadow_write() {
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
+    L_cor = VFXDown2(to_uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(0.0, to_uv);
+    BranchEnd();
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    out_color = to_viewPos;
+}
+function vs_main_shadow_read(f3_ver, f4_wi, f4_we, f2_uv, f3_nor, f4_tan, f3_bi, f3_ref) {
+    var wMat;
+    BranchBegin("worldType", "WT", [worldMatType, worldMatShort]);
+    wMat = MatTypeToMat(worldMatType, worldMatShort, worldMat);
+    BranchDefault();
+    wMat = worldMat;
+    BranchEnd();
+    var woweMat = GetWorldWeightMat(weightArrMat, weightBakeMat, weightBakeIndex, f4_we, f4_wi, wMat, skin);
+    var P = new CVec4(f3_ver, 1.0);
+    P = V4MulMatCoordi(P, woweMat);
+    BranchBegin("wind", "W", [windInfluence, windDir, windPos, windInfo, windCount, time]);
+    P = ApplyWind(P, skin, f4_we, time);
+    BranchEnd();
+    to_worldPos = P;
+    to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+    BranchBegin("codi", "C", [texCodi]);
+    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);
+    BranchDefault();
+    to_uv.xy = f2_uv;
+    BranchEnd();
+    to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, Mat4ToMat3(woweMat)).xyz);
+    to_binormal = V3Nor(V3MulMat3Normal(f3_bi, Mat4ToMat3(woweMat)).xyz);
+    if (f3_ref.y > 0.0) {
+        to_normal = V3Nor(V3MulMat3Normal(f3_nor, Mat4ToMat3(woweMat)).xyz);
+    }
+    else {
+        to_normal = V3Nor(V3MulMat3Normal(f3_nor, TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)))).xyz);
+    }
+    to_ref = f3_ref;
+    P = V4MulMatCoordi(P, viewMat);
+    out_position = V4MulMatCoordi(P, projectMat);
+}
+function ps_main_shadow_read() {
+    var world = to_worldPos;
+    var uv = to_uv;
+    var uvh;
+    var pAll = 1.0;
+    var worldLigDir;
+    var worldNormal;
+    BranchBegin("parallax", "P", [parallaxNormal, camPos]);
+    uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, world, camPos, to_ref);
+    uv = uvh.xy;
+    world.xyz = V3SubV3(world.xyz, V3MulFloat(V3Nor(V3SubV3(camPos, world.xyz)), V3Len(new CVec3(V2SubV2(uvh.xy, to_uv), parallaxNormal * uvh.z)) / max(length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)), length(abs(dFdy(to_uv))) / length(dFdy(world.xyz)))));
+    worldNormal = Sam2DToColor(to_ref.y, uv);
+    worldNormal.xyz = MappingTexToV3(worldNormal.xyz);
+    worldNormal.y = -worldNormal.y;
+    pAll = 0.0;
+    for (var i = 0; i < FloatToInt(shadowCount); i++) {
+        worldLigDir = Sam2DToV4(ligDir, Sam2DToV4(shadowReadList, i).x);
+        if (worldLigDir.w < 1.5) {
+            worldLigDir.xyz = V3MulMat3Normal(V3Nor(worldLigDir.xyz), TransposeMat3(V3ToMat3(to_tangent, to_binormal, to_normal))).xyz;
+            if (V3Dot(worldNormal.xyz, worldLigDir.xyz) > 0.0) {
+                pAll += calcParallaxShadow(to_ref.y, uv, worldLigDir.xyz, parallaxNormal);
+            }
+            else {
+                pAll += 1.0;
+            }
+        }
+    }
+    pAll /= shadowCount;
+    if (pAll < 0.0)
+        pAll = 0.0;
+    BranchEnd();
+    var L_cor;
+    BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time]);
+    L_cor = VFXDown2(uv, VFX, time);
+    BranchDefault();
+    L_cor = Sam2DToColor(0.0, uv);
+    BranchEnd();
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    var all = 0.0;
+    for (var i = 0; i < FloatToInt(shadowCount); i++) {
+        var shadowRead = Sam2DToV4(shadowReadList, i);
+        var sVal = calcShadow(shadowRead, IntToFloat(i), to_normal, world);
+        all += sVal;
+    }
+    all /= shadowCount;
+    if (all < 0.0)
+        all = 0.0;
+    all = min(all, pAll);
+    out_color = new CVec4(all, all, all, 1.0);
+}

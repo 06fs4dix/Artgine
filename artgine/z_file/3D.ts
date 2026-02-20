@@ -65,7 +65,7 @@ import {
 } from "./ColorFun";
 import {
 	ambientColor,
-	envCube,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
+	envCube,GetMaterial,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -522,7 +522,7 @@ function Caustics(_color : CVec3, _world : CVec3, _flowDir : CVec2, _ligDir : CV
 	var split : number = 1.0 / 1000.0;
 	var worldToUV : CVec3 = V3MulFloat(_world, split);
 	
-	var L : CVec3 = V3Nor(_ligDir);
+	var L : CVec3 = new CVec3(0,1,0);
 	var refractOffset : CVec2 = new CVec2(L.x, L.z);
 	refractOffset = V2MulFloat(refractOffset, -0.2);
 
@@ -630,16 +630,13 @@ function ps_main()
 	
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
-	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
-	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
+	
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
 
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
 
-	dseMat = GetSunInfo();
-	sunDir = dseMat[0];
-	sunCol = dseMat[1];
+	
 
 	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, 
 		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
@@ -659,7 +656,7 @@ function ps_main()
 	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
 	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
 	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
-	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
+	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir,new CVec3(0,1,0),new CVec3(1,1,1));
 	out_color.rgb = WaterProcessing(out_color.rgb, world);
 	BranchEnd();
 }
