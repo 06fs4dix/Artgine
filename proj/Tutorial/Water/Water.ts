@@ -1,5 +1,5 @@
 //Version
-const version='mluwqugn_4';
+const version='mlux01ec_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -616,6 +616,8 @@ window["ResetWater"]=ResetWater;
 
 
 new CModalFrameView();
+
+
 
 
 
