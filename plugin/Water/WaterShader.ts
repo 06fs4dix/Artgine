@@ -9,7 +9,7 @@ import {
     Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
     V2Dot, 
     V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, 
-    V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4Mix, V4MulFloat, V4MulMatCoordi, Vertex3 
+    V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4AddV4, V4Mix, V4MulFloat, V4MulMatCoordi, V4MulV4, Vertex3 
 } from "../../artgine/z_file/Shader";
 
 // out
@@ -129,10 +129,40 @@ function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _m
 }
 
 // 노말맵 2개 사용하는 버전(성능 가장 좋음)
-function NormalFlow(_uv : CVec2, _flow : CVec3) : CVec3
+function NormalFlow(_uv : CVec2, _timedWindDir : CVec2) : CVec3
 {
-    var normal : CVec3 = NoiseNormalGet(new CVec3(V2AddV2(_uv, V2MulFloat(_flow.xy, _flow.z)), _flow.z * 3.0), SDF.eNoise.PerlinNormal);
-    normal = V3Nor(new CVec3(normal.x*waterHeight/10.0,normal.y,normal.z*waterHeight/10.0));
+    var waveIntensity : CVec4 = new CVec4(3.0, 2.0, 10.0, 10.0);
+
+    var animSpeed : number = 0.5;
+
+    var texCoordA : CVec3 = new CVec3(_uv.x * 1.6 + _timedWindDir.x * 0.16, _uv.y * 1.6 + _timedWindDir.y * 0.16, time * animSpeed * 1.0);
+    var texCoordB : CVec3 = new CVec3(_uv.x * 0.8 + _timedWindDir.x * 0.04, _uv.y * 0.8 + _timedWindDir.y * 0.04, time * animSpeed * 0.8);
+    var texCoordC : CVec3 = new CVec3(_uv.x * 0.5 + _timedWindDir.x * 0.01, _uv.y * 0.5 + _timedWindDir.y * 0.01, time * animSpeed * 0.5);
+    // var texCoordD : CVec3 = new CVec3(_uv.x * 0.3 + _timedWindDir.x * 0.008, _uv.y * 0.3 + _timedWindDir.y * 0.008, time * animSpeed * 0.3);
+
+    var normal : CVec3 = new CVec3(0.0, 1.0, 0.0);
+    var tempNormal : CVec3;
+    tempNormal = NoiseNormalGet(texCoordA, SDF.eNoise.PerlinNormal);
+    tempNormal = new CVec3(tempNormal.x*waterHeight/10.0,tempNormal.y,tempNormal.z*waterHeight/10.0);
+    normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.x));
+
+    tempNormal = NoiseNormalGet(texCoordB, SDF.eNoise.PerlinNormal);
+    tempNormal = new CVec3(tempNormal.x*waterHeight/10.0,tempNormal.y,tempNormal.z*waterHeight/10.0);
+    normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.y));
+
+    tempNormal = NoiseNormalGet(texCoordC, SDF.eNoise.PerlinNormal);
+    tempNormal = new CVec3(tempNormal.x*waterHeight/10.0,tempNormal.y,tempNormal.z*waterHeight/10.0);
+    normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.z));
+
+    // tempNormal = NoiseNormalGet(texCoordD, SDF.eNoise.PerlinNormal);
+    // tempNormal = new CVec3(tempNormal.x*waterHeight/10.0,tempNormal.y,tempNormal.z*waterHeight/10.0);
+    // normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.w));
+
+    normal.y = 1.0;
+    normal = V3Nor(V3Mix(new CVec3(0.0, 1.0, 0.0), normal, 0.5));
+
+    // var normal : CVec3 = NoiseNormalGet(new CVec3(V2AddV2(_uv, V2MulFloat(_timedWindDir, 0.1)), V2Len(_timedWindDir) * 0.3), SDF.eNoise.PerlinNormal);
+    // normal = V3Nor(new CVec3(normal.x*waterHeight/10.0,normal.y,normal.z*waterHeight/10.0));
 
     return normal;
 }
@@ -144,20 +174,17 @@ function ps_main_water()
     var world : CVec3 = V3MulFloat(to_worldPos.xyz, 1.0 / to_worldPos.w);
     var view : CVec3 = V3Nor(V3SubV3(camPos, world));
 
-    var flowLen : number = V2Len(normalflowDir);
-    var flow : CVec3 = new CVec3(-normalflowDir.x / max(flowLen, 1e-6), normalflowDir.y / max(flowLen, 1e-6), flowLen * time * 0.1);
-
     // ---------------------------------------------------------
     // 노말 플로우
     // ---------------------------------------------------------
     var normalTS : CVec3 = new CVec3(0.0, 1.0, 0.0);
     var normalDist : CVec3 = new CVec3(0.0, 0.0, 0.0);
-    if(flowLen > 0.0) {
-        normalTS = NormalFlow(to_uv, flow);
+    if(V2Len(normalflowDir) > 0.0) {
+        normalTS = NormalFlow(to_uv, V2MulFloat(new CVec2(-normalflowDir.x, normalflowDir.y), time));
 
         var deltaDist : number = max(0.0, V3Len(V3SubV3(camPos, world)) - 6000.0);  // 카메라 거리 - 최대 가시거리 / 2
         var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);             // 선형적인 감소 피하기 위해 1 / 1 + a로 계산
-        normalDist = V3MulFloat(normalTS, 0.1 * flowLen * to_screenUV.z * fallOff);
+        normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * to_screenUV.z * fallOff);
         // to_screenUV.z를 여기에 곱해주면 화면이 매우 가까울 때의 아티팩트를 해결할 수 있다고 하는데 잘 모르겠음
     }
     var normalWS : CVec3 = V3Nor(new CVec3(normalTS.x * normalRange, max(normalTS.y * 0.72, 0.18), normalTS.z * normalRange));
@@ -177,9 +204,7 @@ function ps_main_water()
 
     // 1. 물 텍스쳐
     BranchBegin("UseWaterTex","UseWaterTex",[]);
-    flowLen = V2Len(texflowDir);
-    flow = new CVec3(-texflowDir.x / max(flowLen, 1e-6), texflowDir.y / max(flowLen, 1e-6), flowLen * time * 0.03);
-    uv = V2AddV2(uv, V2MulFloat(flow.xy, flow.z));
+    uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
     uv = V2Mod(uv, 1.0);
     refractColor = Sam2D0ToColor(uv);
     refractType = 0.0;

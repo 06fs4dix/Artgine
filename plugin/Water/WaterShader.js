@@ -81,24 +81,38 @@ function vs_main_water(f3_ver, f2_uv, f3_ref) {
 function Remap(_val, _min1, _max1, _min2, _max2) {
     return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
 }
-function NormalFlow(_uv, _flow) {
-    var normal = NoiseNormalGet(new CVec3(V2AddV2(_uv, V2MulFloat(_flow.xy, _flow.z)), _flow.z * 3.0), SDF.eNoise.PerlinNormal);
-    normal = V3Nor(new CVec3(normal.x * waterHeight / 10.0, normal.y, normal.z * waterHeight / 10.0));
+function NormalFlow(_uv, _timedWindDir) {
+    var waveIntensity = new CVec4(3.0, 2.0, 10.0, 10.0);
+    var animSpeed = 0.5;
+    var texCoordA = new CVec3(_uv.x * 1.6 + _timedWindDir.x * 0.16, _uv.y * 1.6 + _timedWindDir.y * 0.16, time * animSpeed * 1.0);
+    var texCoordB = new CVec3(_uv.x * 0.8 + _timedWindDir.x * 0.04, _uv.y * 0.8 + _timedWindDir.y * 0.04, time * animSpeed * 0.8);
+    var texCoordC = new CVec3(_uv.x * 0.5 + _timedWindDir.x * 0.01, _uv.y * 0.5 + _timedWindDir.y * 0.01, time * animSpeed * 0.5);
+    var normal = new CVec3(0.0, 1.0, 0.0);
+    var tempNormal;
+    tempNormal = NoiseNormalGet(texCoordA, SDF.eNoise.PerlinNormal);
+    tempNormal = new CVec3(tempNormal.x * waterHeight / 10.0, tempNormal.y, tempNormal.z * waterHeight / 10.0);
+    normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.x));
+    tempNormal = NoiseNormalGet(texCoordB, SDF.eNoise.PerlinNormal);
+    tempNormal = new CVec3(tempNormal.x * waterHeight / 10.0, tempNormal.y, tempNormal.z * waterHeight / 10.0);
+    normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.y));
+    tempNormal = NoiseNormalGet(texCoordC, SDF.eNoise.PerlinNormal);
+    tempNormal = new CVec3(tempNormal.x * waterHeight / 10.0, tempNormal.y, tempNormal.z * waterHeight / 10.0);
+    normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.z));
+    normal.y = 1.0;
+    normal = V3Nor(V3Mix(new CVec3(0.0, 1.0, 0.0), normal, 0.5));
     return normal;
 }
 function ps_main_water() {
     var to_screenUV = V3MulFloat(to_projPos.xyz, 1.0 / to_projPos.w);
     var world = V3MulFloat(to_worldPos.xyz, 1.0 / to_worldPos.w);
     var view = V3Nor(V3SubV3(camPos, world));
-    var flowLen = V2Len(normalflowDir);
-    var flow = new CVec3(-normalflowDir.x / max(flowLen, 1e-6), normalflowDir.y / max(flowLen, 1e-6), flowLen * time * 0.1);
     var normalTS = new CVec3(0.0, 1.0, 0.0);
     var normalDist = new CVec3(0.0, 0.0, 0.0);
-    if (flowLen > 0.0) {
-        normalTS = NormalFlow(to_uv, flow);
+    if (V2Len(normalflowDir) > 0.0) {
+        normalTS = NormalFlow(to_uv, V2MulFloat(new CVec2(-normalflowDir.x, normalflowDir.y), time));
         var deltaDist = max(0.0, V3Len(V3SubV3(camPos, world)) - 6000.0);
         var fallOff = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);
-        normalDist = V3MulFloat(normalTS, 0.1 * flowLen * to_screenUV.z * fallOff);
+        normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * to_screenUV.z * fallOff);
     }
     var normalWS = V3Nor(new CVec3(normalTS.x * normalRange, max(normalTS.y * 0.72, 0.18), normalTS.z * normalRange));
     var screenUV = V2AddV2(to_screenUV.xy, new CVec2(normalDist.x, normalDist.z));
@@ -107,9 +121,7 @@ function ps_main_water() {
     var refractColor;
     var refractType = -1.0;
     BranchBegin("UseWaterTex", "UseWaterTex", []);
-    flowLen = V2Len(texflowDir);
-    flow = new CVec3(-texflowDir.x / max(flowLen, 1e-6), texflowDir.y / max(flowLen, 1e-6), flowLen * time * 0.03);
-    uv = V2AddV2(uv, V2MulFloat(flow.xy, flow.z));
+    uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
     uv = V2Mod(uv, 1.0);
     refractColor = Sam2D0ToColor(uv);
     refractType = 0.0;

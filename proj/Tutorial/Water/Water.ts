@@ -1,5 +1,5 @@
 //Version
-const version='mjsn76zm_9';
+const version='mluwqugn_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -36,17 +36,17 @@ await gAtl.Init([],"");
 //EntryPoint
 
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import {CWater} from "https://06fs4dix.github.io/Artgine/plugin/Water/Water.js";
+import {CWater3D} from "https://06fs4dix.github.io/Artgine/plugin/Water/Water.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
+import { CTexture, CTextureInfo } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
+import { CBGAttachButton, CModalFrameView } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
 import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CRPMgr.js";
@@ -57,13 +57,24 @@ import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine
 import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint.js";
 import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
+import { CImgPro } from "https://06fs4dix.github.io/Artgine/artgine/render/CImgPro.js";
+import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
+import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
+import { CUtilRender } from "https://06fs4dix.github.io/Artgine/artgine/render/CUtilRender.js";
+import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
 var Main=gAtl.NewCanvas("Main");
 Main.SetCameraKey("3D");
+gAtl.Brush().GetCam3D().SetEye(new CVec3(2500, 1000, -500));
+gAtl.Brush().GetCam3D().SetLook(new CVec3(2900, 950, -650));
 gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
-
 
 Main.ClearBatch();
 gAtl.Brush().ClearRen();
+
+/****************************************************************************************/
+// RP
+/****************************************************************************************/
+
 
 let PCF=new CVec1(1.0);
 var bias : number = 10;
@@ -103,8 +114,14 @@ rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
 rp.mShader=gAtl.Frame().Pal().Sl3DKey();
 Main.PushPlugin(new CCanvasPluginRPMgr(forward))
 
+/****************************************************************************************/
+// RP
+/****************************************************************************************/
 
 
+/****************************************************************************************/
+// Object
+/****************************************************************************************/
 
 let L=Main.PushSub(new CSubject());
 L.SetPos(new CVec3(0,1,0));
@@ -116,41 +133,60 @@ lig.SetColor(new CVec3(1,1,1));
 lig.mShadowDistance=shadowDistance;
 lig.mDigit=digit;
 L.PushComp(lig);
-//let ani=new CAnimation([new CClipPRS(0,10,[new CVec3(0,100,0),new CVec3(100,100,0),new CVec3(100,100,100),new CVec3(0,100,0)],CClipPRS.eType.Pos)]);    
-//L.PushComp(new CAniFlow(ani));
 
-// let op=new CLoaderOption();
-// op.mWrap=CTexture.eWrap.Repeat;
 let back=Main.PushSub(new CSubject());
+back.SetKey("plane");
+back.SetSca(new CVec3(500,0.01,500));
 let pt=back.PushComp(new CPaint3D("Res/plane/plane.FBX"));
 pt.mAutoLoad.mMipMap=CTexture.eMipmap.None;
-pt.mAutoLoad.mWrap=CTexture.eWrap.Repeat;;
-//pt.SetTexCodi(new CVec4(2,2,0,0));
-//pt.SetTexture(["Res/teapot/rocks.jpg","Res/teapot/rocks_NM_height.tga","Res/teapot/rocks_spec.tga"]);
-// pt.Shadow();
+pt.mAutoLoad.mWrap=CTexture.eWrap.Repeat;
 pt.PushTag(CPaint.eTag.Light);
 pt.PushTag(CPaint.eTag.Parallax);
 pt.PushTag(CPaint.eTag.Shadow);
 pt.PushTag(CPaint.eTag.ShadowReadOnly);
 pt.PushCShaderAttr(new CShaderAttr("parallaxNormal",0.1));
-pt.SetTexCodi(new CVec4(10,10,0,0));
-back.SetSca(new CVec3(100,0.01,100));
+pt.SetTexCodi(new CVec4(50,50,0,0));
 
+// let mountain = Main.PushSub(new CSubject());
+// mountain.SetKey("mountain");
+// mountain.SetSca(new CVec3(15,15,15));
+// pt = mountain.PushComp(new CPaint3D("Res/mountain/mountain.glb"));
+// pt.SetMaterial(0.8);
+// pt.PushTag(CPaint.eTag.Light);
+// pt.PushTag(CPaint.eTag.Shadow);
 
+// let rock1 = Main.PushSub(new CSubject());
+// rock1.SetKey("rock1");
+// rock1.SetSca(new CVec3(10,15,10));
+// rock1.SetPos(new CVec3(12000,-2500,-7500));
+// pt = rock1.PushComp(new CPaint3D("Res/mountain/rock.glb"));
+// pt.SetMaterial(0.8);
+// pt.PushTag(CPaint.eTag.Light);
+// pt.PushTag(CPaint.eTag.Shadow);
 
+// let rock2 = Main.PushSub(new CSubject());
+// rock2.SetKey("rock2");
+// rock2.SetSca(new CVec3(10,15,10));
+// rock2.SetRot(new CVec3(0, Math.PI, 0));
+// rock2.SetPos(new CVec3(12000,-2500,1000));
+// pt = rock2.PushComp(new CPaint3D("Res/mountain/rock.glb"));
+// pt.SetMaterial(0.8);
+// pt.PushTag(CPaint.eTag.Light);
+// pt.PushTag(CPaint.eTag.Shadow);
 
 let box = Main.PushSub(new CSubject());
+box.SetKey("box");
+box.SetPos(new CVec3(0, 3500, 0));
 box.PushComp(new CPaint3D());
 
-
-// water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-// water.SetSca(new CVec3(100, 100, 100));
-// water.SetPos(new CVec3(0, 10, 0));
-// water.NormalFlow(new CVec2(1, 0), "Res/Water0.jpg", "Res/Water1.jpg");
-// water.Preset(CWater.ePreset.Caribbean);
+/****************************************************************************************/
+// Object
+/****************************************************************************************/
 
 
-
+/****************************************************************************************/
+// Sky
+/****************************************************************************************/
 
 var skyTexKey=["Res/skybox/right.jpg","Res/skybox/left.jpg","Res/skybox/bottom.jpg","Res/skybox/top.jpg","Res/skybox/front.jpg","Res/skybox/back.jpg"];
 var skyTexList=[];
@@ -163,21 +199,18 @@ for(let i=0;i<skyTexKey.length;++i)
 let cubeTex=gAtl.Frame().Ren().BuildCubeMap(skyTexList,true,"cube.tex");
 
 let sub=Main.PushSub(new CSubject());
+sub.SetKey("sky");
 let ptCube = sub.PushComp(new CPaintCube(cubeTex));
-ptCube.Sky();
+ptCube.Sky(true, true, true, true);
+
+/****************************************************************************************/
+// Sky
+/****************************************************************************************/
 
 
-
-// let teapot=Main.PushSub(new CSubject());
-// teapot.SetPos(new CVec3(0,100,0));
-// let pt2=teapot.PushComp(new CPaint3D("Res/teapot/teapot.FBX"));
-// pt2.PushTag(CPaint.eTag.Light);
-// pt2.PushTag(CPaint.eTag.Shadow);
-
-
-
-
-
+/****************************************************************************************/
+// Water
+/****************************************************************************************/
 
 const loaderOpt = new CLoaderOption();
 loaderOpt.mWrap = CTexture.eWrap.Repeat;
@@ -185,25 +218,27 @@ CFrame.Main().Load().Exe("Res/Water0.jpg", loaderOpt);
 CFrame.Main().Load().Exe("Res/Water1.jpg", loaderOpt);
 
 
-let water = Main.PushSub(new CWater());
+let water = Main.PushSub(new CWater3D());
 water.SetKey("water");
 water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-water.SetSca(new CVec3(1000, 1000, 1000));
-water.SetPos(new CVec3(0, 10, 0));
-//water.Preset(CWater.ePreset.Caribbean);
+water.SetSca(new CVec3(5000, 5000, 5000));
+water.SetPos(new CVec3(0, 100, 0));
+
+
 water.GetPT().SetTexCodi(new CVec4(10,10,0,0));
-water.NormalFlow(new CVec2(1, 0), "Res/Water0.jpg", "Res/Water1.jpg");
+water.NormalFlow(new CVec2(1, 0));
 water.AddReflector();
 water.AddRefractor();
-water.AddCaustics("Res/Water0.jpg");
-//water.SetWaterDeep(100000,100000,new CVec3(1.0,1.0,1.0),new CVec3(1.0,1.0,1.0));
-//water.AddCaustics("Res/caustics.png");
+water.AddCaustics(new CVec2(1, 0));
+//water.SetWaterDeep(100000,0,100000,new CVec3(1.0,1.0,1.0),new CVec3(1.0,1.0,1.0));
+
 //water.GetPT().PushTag(CPaint.eTag.Light);
 
-// water.UseWaterTexture("Res/clear-sea-water-512x512.png", 1);
-// water.m_paint.SetAlphaModel(new CAlpha(0.8, CAlpha.eModel.Mul));
+// water.m_paint.SetAlphaModel(new CAlpha(0.8));
 
-
+/****************************************************************************************/
+// Object
+/****************************************************************************************/
 
 
 
@@ -215,9 +250,12 @@ Option_btn.SetContent(`
     <select class="form-select form-select-sm" id='water_sel' onchange="ResetWater()">
         <option value="FakeTexFlow" selected>FakeTexFlow</option>
         <option value="FakeTex">FakeTex</option>
-        <option value="RealClear">RealClear</option>
-        <option value="RealDeep">RealDeep</option>
-        <option value="RealMuddy">RealMuddy</option>
+
+        <option value="DarkOcean">DarkOcean</option>
+        <option value="EastSea">EastSea</option>
+        <option value="Maldive">Maldive</option>
+        <option value="Muddy">Muddy</option>
+        <option value="SouthEastSea">SouthEastSea</option>
     </select>
     <br>
 
@@ -235,103 +273,371 @@ function ResetWater()
     Main.Find("water").Destroy();
     gAtl.Brush().ClearRen();
 
+    L.SetPos(new CVec3(0,1,0));
+    lig.SetDirect();
+    lig.SetColor(new CVec3(1, 1, 1));
+
+    let water = Main.PushSub(new CWater3D());
+    water.SetKey("water");
+    water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
+    water.SetSca(new CVec3(5000, 5000, 5000));
+    water.SetPos(new CVec3(0, 100, 0));
+
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 10));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0.1));
+    ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
+
+    ptCube.PushCShaderAttr(new CShaderAttr("SkyColorRTable", new CMat([
+        0.22, 0.24, 0.27, 0.30,
+        0.35, 0.45, 0.60, 0.78,
+        0.90, 0.88, 0.85, 0.82,
+        0.80, 0.78, 0.76, 0.75
+    ])));
+    ptCube.PushCShaderAttr(new CShaderAttr("SkyColorGTable", new CMat([
+        0.50, 0.53, 0.56, 0.60,
+        0.68, 0.78, 0.88, 0.96,
+        1.00, 0.98, 0.96, 0.94,
+        0.92, 0.90, 0.88, 0.87
+    ])));
+    ptCube.PushCShaderAttr(new CShaderAttr("SkyColorBTable", new CMat([
+        0.92, 0.94, 0.96, 0.98,
+        1.00, 1.00, 1.00, 1.00,
+        1.00, 0.99, 0.98, 0.97,
+        0.96, 0.95, 0.94, 0.93
+    ])));
+
     if("FakeTexFlow"==water_sel)
     {
-        
-
-        let water = Main.PushSub(new CWater());
-        water.SetKey("water");
-        water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-        water.SetSca(new CVec3(100, 100, 100));
-        water.SetPos(new CVec3(0, 10, 0));
-        water.SetSca(new CVec3(1000, 1000, 1000));
+        // water   
         water.GetPT().SetTexCodi(new CVec4(15,15,0,0));
-        
-
-        water.NormalFlow(new CVec2(1, 0), "Res/Water0.jpg", "Res/Water1.jpg");
+        water.NormalFlow(new CVec2(1, 0));
         //water.mRefractor.mWaterDeep.z=10000;
         //water.UseDepth();
         //water.GetPT().PushTag(CPaint.eTag.Light);
 
         water.AddReflector();
         water.AddRefractor("Res/clear-sea-water-512x512.png");
-        water.GetPT().SetAlphaModel(new CAlpha(0.8, CAlpha.eModel.Mul));
+        water.GetPT().SetAlphaModel(new CAlpha(0.8));
         water.GetPT().PushTag(CPaint.eTag.Light);
     }
     else if("FakeTex"==water_sel)
     {
-        let water = Main.PushSub(new CWater());
-        water.SetKey("water");
-        water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-        water.SetSca(new CVec3(1000, 1000, 1000));
-        water.SetPos(new CVec3(0, 10, 0));
+        // water 
         
-
         //water.NormalFlow(new CVec2(1, 0),null,null);
         //water.UseDepth();
         //water.GetPT().PushTag(CPaint.eTag.Light);
 
         water.AddRefractor("Res/clear-sea-water-512x512.png",new CVec2(1,0));
-        water.GetPT().SetAlphaModel(new CAlpha(0.8, CAlpha.eModel.Mul));
+        water.GetPT().SetAlphaModel(new CAlpha(0.8));
     }
-    else if("RealClear"==water_sel)
+
+
+    else if(water_sel == "DarkOcean")
     {
-        let water = Main.PushSub(new CWater());
-        water.SetKey("water");
-        water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-        water.SetSca(new CVec3(1000, 1000, 1000));
-        water.SetPos(new CVec3(0, 10, 0));
-        water.GetPT().SetTexCodi(new CVec4(15,15,0,0));
-        
-
-        water.GetPT().PushTag(CPaint.eTag.Light);
-        water.AddReflector();
-        water.AddRefractor();
-        water.SetWaterDeep(1000,4000,null,new CVec3(0.6,0.88,1));
-        water.AddCaustics("Res/Water0.jpg",new CVec2(1,0),0.5);
-        water.NormalFlow(new CVec2(1, 0), "Res/Water0.jpg", "Res/Water1.jpg");
-        //water.GetPT().SetTexCodi(new CVec4(0.1,0.1,0,0));
-
-
-
-    }
-    else if("RealDeep"==water_sel)
-    {
-             let water = Main.PushSub(new CWater());
-        water.SetKey("water");
-        water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-        water.SetSca(new CVec3(1000, 1000, 1000));
-        water.SetPos(new CVec3(0, 10, 0));
-        
-        water.AddRefractor();
-        water.SetWaterDeep(50,3000,new CVec3(0.0,0.05,0.2),new CVec3(0.1,0.3,0.6));
-        
-        
-
-        water.NormalFlow(new CVec2(0.2, 0.2), "Res/Water0.jpg", "Res/Water1.jpg");
-        
-    }
-    else if("RealMuddy"==water_sel)
-    {
-             let water = Main.PushSub(new CWater());
-        water.SetKey("water");
-        water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
-        water.SetSca(new CVec3(1000, 1000, 1000));
-        water.SetPos(new CVec3(0, 10, 0));
-        
+        // water
         water.GetPT().SetTexCodi(new CVec4(10,10,10));
         water.AddRefractor();
-        //water.AddReflector()
-        water.SetWaterDeep(30,10000,new CVec3(0.1,0.1,0.01),new CVec3(0.5,0.5,0.1));
+        water.AddReflector();
+        water.SetWaterDeep(40,0,4000,new CVec3(0.05,0.15,0.35),new CVec3(0.2,0.5,0.65));
         
+        water.NormalFlow(new CVec2(2, 0.5));
 
-        water.NormalFlow(new CVec2(5, 1), "Res/Water0.jpg", "Res/Water1.jpg");
+        water.GetPT().PushTag(CPaint.eTag.Light);
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 3));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0.1));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorRTable", new CMat([
+            0.01, 0.01, 0.015, 0.02,
+            0.025, 0.03, 0.035, 0.04,
+            0.035, 0.03, 0.025, 0.02,
+            0.01, 0.005, 0.00, 0.00 
+        ])));
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorGTable", new CMat([
+            0.02, 0.025, 0.03, 0.035,
+            0.04, 0.045, 0.05, 0.055,
+            0.05, 0.04, 0.03, 0.02,
+            0.01, 0.005, 0.00, 0.00 
+        ])));
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorBTable", new CMat([
+            0.07, 0.09, 0.11, 0.12,
+            0.14, 0.15, 0.16, 0.17,
+            0.15, 0.12, 0.09, 0.06,
+            0.04, 0.02, 0.01, 0.005 
+        ])));
+
+        L.SetPos(new CVec3(1,0.15,-0.4));
+        lig.SetDirect(-2);
+        lig.SetColor(new CVec3(0.96, 0.92, 0.84));
+    }
+    else if(water_sel == "EastSea")
+    {
+        // water
+        water.GetPT().SetTexCodi(new CVec4(10,10,10));
+        water.AddRefractor();
+        water.AddReflector();
+        water.SetWaterDeep(40,0,4000,new CVec3(0.05,0.15,0.35),new CVec3(0.2,0.5,0.65));
+        
+        water.NormalFlow(new CVec2(1, 0));
+
+        water.GetPT().PushTag(CPaint.eTag.Light);
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 3));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0.1));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorRTable", new CMat([
+            0.02, 0.02, 0.03, 0.04,
+            0.05, 0.06, 0.07, 0.08,
+            0.07, 0.06, 0.05, 0.04,
+            0.02, 0.01, 0.00, 0.00 
+        ])));
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorGTable", new CMat([
+            0.04, 0.05, 0.06, 0.07,
+            0.08, 0.09, 0.10, 0.11,
+            0.10, 0.08, 0.06, 0.04,
+            0.02, 0.01, 0.00, 0.00 
+        ])));
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorBTable", new CMat([
+            0.15, 0.18, 0.22, 0.25,
+            0.28, 0.30, 0.32, 0.35,
+            0.30, 0.25, 0.18, 0.12,
+            0.08, 0.05, 0.02, 0.01 
+        ])));
+
+        L.SetPos(new CVec3(1,0.15,-0.4));
+        lig.SetColor(new CVec3(1.0, 0.5, 0.5));
+    }
+    else if(water_sel == "Maldive")
+    {
+        // water
+        water.GetPT().SetTexCodi(new CVec4(32, 32, 8));
+        water.AddRefractor();
+        water.AddReflector();
+        water.AddCaustics(new CVec2(1, 0), 0.5);
+        water.SetWaterDeep(500, -5000, 1000000, new CVec3(0.25, 0.88, 0.82), new CVec3(0.0, 0.19, 0.47));
+        water.mWaterHeight.x = 10;
+
+        water.NormalFlow(new CVec2(1, 0));
+
+        water.GetPT().PushTag(CPaint.eTag.Light);
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 40000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 10));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0.1));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorRTable", new CMat([
+            0.15, 0.20, 0.25, 0.35, 
+            0.45, 0.55, 0.65, 0.75, 
+            0.82, 0.88, 0.92, 0.95, 
+            0.98, 0.99, 1.00, 1.00 
+        ])));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorGTable", new CMat([
+            0.55, 0.62, 0.70, 0.78, 
+            0.85, 0.90, 0.94, 0.97, 
+            0.98, 0.99, 1.00, 1.00, 
+            1.00, 1.00, 1.00, 1.00 
+        ])));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorBTable", new CMat([
+            0.95, 0.97, 0.99, 1.00, 
+            1.00, 1.00, 1.00, 1.00, 
+            1.00, 1.00, 1.00, 1.00, 
+            1.00, 1.00, 1.00, 1.00 
+        ])));
+
+    }
+    else if(water_sel == "Muddy")
+    {
+        // water
+        water.GetPT().SetTexCodi(new CVec4(32, 32, 6));
+        water.AddRefractor();
+        water.GetPT().SetMaterial(1);
+        water.SetWaterDeep(0, -2000, 10000, new CVec3(0.18, 0.1, 0.02), new CVec3(0.42, 0.3, 0.08));
+        water.mWaterDeep.z = 0;
+        water.mWaterHeight.x = 10;
+
+        water.NormalFlow(new CVec2(2, 0.5));
+
+        water.GetPT().PushTag(CPaint.eTag.Light);
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.2));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 40000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 20000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 1));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorRTable", new CMat([
+            0.15, 0.16, 0.18, 0.20,
+            0.22, 0.25, 0.28, 0.30,
+            0.25, 0.20, 0.15, 0.10,
+            0.05, 0.03, 0.02, 0.01 
+        ])));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorGTable", new CMat([
+            0.18, 0.19, 0.21, 0.23, 
+            0.25, 0.28, 0.31, 0.33, 
+            0.28, 0.22, 0.16, 0.11, 
+            0.06, 0.04, 0.02, 0.01 
+        ])));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorBTable", new CMat([
+            0.22, 0.23, 0.25, 0.27,
+            0.30, 0.33, 0.36, 0.38, 
+            0.35, 0.28, 0.20, 0.15, 
+            0.10, 0.07, 0.04, 0.02
+        ])));
         
     }
+    else if(water_sel == "SouthEastSea")
+    {
+        // water
+        water.GetPT().SetTexCodi(new CVec4(10, 10, 10));
+        water.AddRefractor();
+        water.AddReflector();
+        water.AddCaustics(new CVec2(2, 0), 1.2);
+        water.SetWaterDeep(120, 0, 8000, new CVec3(0.0, 0.29, 0.39), new CVec3(0.25, 0.88, 0.82));
 
+        water.NormalFlow(new CVec2(2, 0));
+
+        water.GetPT().PushTag(CPaint.eTag.Light);
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.75));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 5000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 3));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0.1));
+        ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorRTable", new CMat([
+            0.00, 0.00, 0.00, 0.01,
+            0.05, 0.15, 0.30, 0.45,
+            0.45, 0.35, 0.25, 0.15,
+            0.08, 0.04, 0.01, 0.00 
+        ])));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorGTable", new CMat([
+            0.05, 0.10, 0.15, 0.25,
+            0.40, 0.60, 0.75, 0.88,
+            0.88, 0.75, 0.60, 0.45,
+            0.35, 0.25, 0.18, 0.12 
+        ])));
+
+        ptCube.PushCShaderAttr(new CShaderAttr("SkyColorBTable", new CMat([
+            0.10, 0.20, 0.30, 0.45,
+            0.65, 0.80, 0.90, 0.98,
+            0.98, 1.00, 1.00, 0.95,
+            0.85, 0.75, 0.65, 0.55 
+        ])));
+
+        lig.SetColor(new CVec3(1.0, 0.92, 0.75));
+    }
 
 }
 window["ResetWater"]=ResetWater;
+
+
+
+
+
+
+
+
+
+
+
+
+new CModalFrameView();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
