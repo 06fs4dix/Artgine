@@ -1,5 +1,5 @@
 //Version
-const version='mlux01ec_4';
+const version='mlviwvcb_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -86,33 +86,32 @@ var digit=1;
 var shadowRate=0.7;
 
 //========================
-let forward=new CRPMgr();
-let texKey=forward.PushTex("shadowread.tex",new CTexture());
-//let texKey=forward.PushTex("shadowread.tex",new CTexture());
-let rp=forward.PushRP(new CRPAuto());
-rp.PushAnd(new CCondition("class","==","CPaint3D"));
-rp.PushAnd(new CCondition("mTag[water]","==",false));
-rp.mPriority=CRenderPass.ePriority.BackGround+1;
+// let forward=new CRPMgr();
+// let texKey=forward.PushTex("shadowread.tex",new CTexture());
+// let rp=forward.PushRP(new CRPAuto());
+// rp.PushAnd(new CCondition("class","==","CPaint3D"));
+// rp.PushAnd(new CCondition("mTag[water]","==",false));
+// rp.mPriority=CRenderPass.ePriority.BackGround+1;
 
-rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
-rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
-rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
-rp.mShaderAttr.push(new CShaderAttr("bias",bias));
-rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
+// rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
+// rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
+// rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
+// rp.mShaderAttr.push(new CShaderAttr("bias",bias));
+// rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
 
-rp.mShader=gAtl.Frame().Pal().Sl3DKey();
-rp.mRenderTarget="shadowread.tex";
-//rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
-rp.mTag.add("shadowRead");
+// rp.mShader=gAtl.Frame().Pal().Sl3DKey();
+// rp.mRenderTarget="shadowread.tex";
+// //rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
+// rp.mTag.add("shadowRead");
 
-rp=forward.PushRP(new CRPAuto());
-rp.PushAnd(new CCondition("class","==","CPaint3D"));
-rp.PushAnd(new CCondition("mTag[water]","==",false));
-rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
-//rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
-rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
-rp.mShader=gAtl.Frame().Pal().Sl3DKey();
-Main.PushPlugin(new CCanvasPluginRPMgr(forward))
+// rp=forward.PushRP(new CRPAuto());
+// rp.PushAnd(new CCondition("class","==","CPaint3D"));
+// rp.PushAnd(new CCondition("mTag[water]","==",false));
+// rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
+// //rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
+// rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
+// rp.mShader=gAtl.Frame().Pal().Sl3DKey();
+// Main.PushPlugin(new CCanvasPluginRPMgr(forward))
 
 /****************************************************************************************/
 // RP
@@ -616,6 +615,15 @@ window["ResetWater"]=ResetWater;
 
 
 new CModalFrameView();
+
+
+
+
+
+
+
+
+
 
 
 
