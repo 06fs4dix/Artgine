@@ -172,8 +172,7 @@ export class CUser extends CSubject {
             }, 0, 0.3);
         }
         else {
-            if (this.GetFrame().PF().mServer == "local")
-                this.mRB.Remove("move");
+            this.mRB.Remove("move");
             this.mBDir.Zero();
         }
         let camcon = this.m2DCam.Ref().GetCamCon();

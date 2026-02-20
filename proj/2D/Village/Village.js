@@ -1,4 +1,4 @@
-const version = 'mluvqq4j_19';
+const version = 'mlvhfpn9_12';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -57,8 +57,8 @@ import { CSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/subject
 import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
-import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHtmlBar.js";
 import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
+import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHTMLBar.js";
 {
     const backVoxel = Main.Find("BackGround");
     if (backVoxel) {

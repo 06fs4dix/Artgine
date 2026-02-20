@@ -1,5 +1,5 @@
 //Version
-const version='mluvqq4j_19';
+const version='mlvhfpn9_12';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -96,11 +96,10 @@ import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUni
 
 
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
-import { CInvenMgr, CInventory, CInvenViewer, CItem } from "https://06fs4dix.github.io/Artgine/plugin/Inventory/Inventory.js";
-import { CHTMLBarItem, CHTMLBarTree, CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHtmlBar.js";
 import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHTMLBar.js";
 
 
 //Real.Clear();
@@ -444,6 +443,11 @@ const dummy = CHTMLDropdown.Attach(arr, "left");
 let rightDiv=CDOM.DataToDom(`<div class="position-fixed top-0 end-0" style="z-index:2000;"></div>`);
 rightDiv.append(dummy);
 mg.SetBody(rightDiv);
+
+
+
+
+
 
 
 
