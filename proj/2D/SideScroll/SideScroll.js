@@ -1,4 +1,4 @@
-const version = 'mlaw6pum_26';
+const version = 'mluvqq4j_47';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -130,9 +130,9 @@ let beforeCamY = 0;
 mary.Update = (_update) => {
     let dir = pad.GetDir();
     if (dir.y < 0)
-        sm.GetSM().GetState()["Down"] = 1;
+        sm.GetSM().SetStateValue("Down", 1);
     else
-        sm.GetSM().GetState()["Down"] = 0;
+        sm.GetSM().SetStateValue("Down", 0);
     if (dir.x > 0)
         rb.Push(new CForce("move", new CVec3(1, 0, 0), 200));
     else if (dir.x < 0)

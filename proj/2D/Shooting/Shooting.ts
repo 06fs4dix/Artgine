@@ -1,5 +1,5 @@
 //Version
-const version='mlaw6pum_17';
+const version='mluvqq4j_52';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -372,6 +372,13 @@ Option_btn.SetContent(`
     블룸,기본 설정 가능
 </div>`);
 if(gPF.mServer=="webServer")    CScore.Read("Shooting");
+
+
+
+
+
+
+
 
 
 

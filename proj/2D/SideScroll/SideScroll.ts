@@ -1,5 +1,5 @@
 //Version
-const version='mlaw6pum_26';
+const version='mluvqq4j_47';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -176,9 +176,9 @@ mary.Update = (_update : CUpdate) => {
     let dir = pad.GetDir();
 
     if (dir.y < 0)
-        sm.GetSM().GetState()["Down"]=1;
+        sm.GetSM().SetStateValue("Down",1);
     else
-        sm.GetSM().GetState()["Down"]=0;
+        sm.GetSM().SetStateValue("Down",0);
 
 
     if (dir.x > 0)
@@ -285,45 +285,6 @@ function BlockChk()
 }
 
 if(gPF.mServer=="webServer")    CScore.Read("SideScroll");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
