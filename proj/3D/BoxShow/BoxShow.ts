@@ -1,5 +1,5 @@
 //Version
-const version='mf7fleec_1';
+const version='mluxeja3_10';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -23,7 +23,7 @@ gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
 import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
@@ -36,12 +36,10 @@ await gAtl.Init([],"");
 import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
 
 // Main 캔버스 새로 생성
-import {CCanvas} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CCanvas.js";
-import {CSubject} from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
+
 import {CVec3} from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import {CVec4} from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import {CPaint3D} from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import {CColor} from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
+
 
 // Main 캔버스 새로 생성
 var Main = gAtl.NewCanvas("Main");
@@ -65,6 +63,10 @@ import {CInput} from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.j
 import {CEvent} from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint3D.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 
 // 박스 파도 설정 (변수로 변경하여 수정 가능하게)
 var WAVE_GRID_SIZE = 50; // 25x25 격자 (더 많은 박스)
@@ -156,7 +158,7 @@ function createWave() {
         let colorR = 0.3 + (x / WAVE_GRID_SIZE) * 0.7;
         let colorG = 0.3 + (z / WAVE_GRID_SIZE) * 0.7;
         let colorB = 0.5 + Math.sin((x + z) * 0.3) * 0.5;
-        paint3D.SetRGBA(new CVec4(colorR, colorG, colorB, 1.0));
+        paint3D.SetColorModel(new CColor(colorR, colorG, colorB, CColor.eModel.RGBAdd));
         
         // 박스의 높이에 따른 색상 정보를 저장 (나중에 동적으로 변경하기 위해)
         (boxSubject as any).mHeightColorData = {
@@ -387,7 +389,7 @@ function setupWaveControls() {
             return;
         }
         
-        const modalDiv = CUtil.ID(Option_btn.Key() + "_div");
+        const modalDiv = CDOM.ID(Option_btn.Key() + "_div");
         if (!modalDiv) {
             console.error('모달 div를 찾을 수 없습니다.');
             return;
@@ -592,6 +594,19 @@ Option_btn.mModal.Show = function() {
 Option_btn.mModal.GetBody().addEventListener('DOMContentLoaded', function() {
     setTimeout(setupWaveControls, 500);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-const version = 'mf7fleec_1';
+const version = 'mluxeja3_10';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -16,15 +16,12 @@ gPF.mWASM = true;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = true;
-import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
 var Main = gAtl.NewCanvas("Main");
 console.log("Main 캔버스가 성공적으로 생성되었습니다.");
 import { CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
@@ -35,6 +32,10 @@ import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath
 import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
 import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
+import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint3D.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
+import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 var WAVE_GRID_SIZE = 50;
 var WAVE_SPACING = 40;
 var WAVE_AMPLITUDE = 10.0;
@@ -115,7 +116,7 @@ function createWave() {
             let colorR = 0.3 + (x / WAVE_GRID_SIZE) * 0.7;
             let colorG = 0.3 + (z / WAVE_GRID_SIZE) * 0.7;
             let colorB = 0.5 + Math.sin((x + z) * 0.3) * 0.5;
-            paint3D.SetRGBA(new CVec4(colorR, colorG, colorB, 1.0));
+            paint3D.SetColorModel(new CColor(colorR, colorG, colorB, CColor.eModel.RGBAdd));
             boxSubject.mHeightColorData = {
                 paint3D: paint3D,
                 baseColor: new CVec4(colorR, colorG, colorB, 1.0)
@@ -279,7 +280,7 @@ function setupWaveControls() {
             console.error('CUtil을 찾을 수 없습니다.');
             return;
         }
-        const modalDiv = CUtil.ID(Option_btn.Key() + "_div");
+        const modalDiv = CDOM.ID(Option_btn.Key() + "_div");
         if (!modalDiv) {
             console.error('모달 div를 찾을 수 없습니다.');
             return;
