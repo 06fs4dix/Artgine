@@ -286,7 +286,10 @@ export class CPaint3D extends CPaint
 			CAlert.W(_mesh+"skin bone max!"+CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/4+"->"+this.mMeshRes.skin.length);
 		}
 		if(this.mMeshRes.skin.length>0)
+		{
 			this.mSkinType=SDF.eSkin.Bone;
+			this.PushTag("weightMat");
+		}
 		else
 			this.mSkinType=SDF.eSkin.None;
 		

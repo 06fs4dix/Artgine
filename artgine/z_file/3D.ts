@@ -65,7 +65,7 @@ import {
 } from "./ColorFun";
 import {
 	ambientColor,
-	envCube,GetMaterial,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
+	envCube,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -146,7 +146,7 @@ var waterUnderFadeDist : CVec2 = new CVec2(2000.0, 3000.0);
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
-	vs_main,[worldMat,viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,sam2DCount,
+	vs_main,[worldMat,viewMat,projectMat,skin,sam2DCount,
 		screenSize
 	],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
@@ -164,7 +164,7 @@ Build("Artgine/Shader/3DSimple",["simple"],
 Build("Artgine/Shader/3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
 		worldMat,
-		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		viewMat,projectMat,skin,
 		sam2DCount,material,outputType,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer,[out_color]
@@ -173,7 +173,7 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"],
 Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], 
 	vs_main_gBuffer, [
 		worldMat,
-		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		viewMat,projectMat,skin,
 		sam2DCount,material,
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer_multi,[out_color, out_pos, out_nor, out_spc]
@@ -183,7 +183,7 @@ Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"],
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
 		worldMat,
-		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		viewMat,projectMat,skin,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,jitter
 	], [out_position,to_uv,to_viewPos],
@@ -193,7 +193,7 @@ Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"],
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
 		worldMat,
-		viewMat,projectMat,skin,weightArrMat,weightBakeMat,weightBakeIndex,
+		viewMat,projectMat,skin,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
@@ -346,10 +346,12 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	BranchEnd();
 
 	
+	var woweMat : CMat = wMat;
+	BranchBegin("weightMat","WG",[weightArrMat,weightBakeMat,weightBakeIndex]);
+	woweMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	BranchEnd();
 
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
-	//var woweMat : CMat = wMat;
-	//var woweMat : CMat = wMat;
+	
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
 
@@ -403,7 +405,12 @@ function vs_main_gBuffer(f3_ver : Vertex3, f2_uv : UV2, f4_wi  : WeightIndexI4, 
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+
+	var woweMat : CMat = wMat;
+	BranchBegin("weightMat","WG",[weightArrMat,weightBakeMat,weightBakeIndex]);
+	woweMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	BranchEnd();
+	//var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 
 	// to_tangent=V3Nor(V3MulMat3Normal(f4_tan.xyz,Mat4ToMat3(woweMat)).xyz);
 	// to_binormal=V3Nor(V3MulMat3Normal(f3_bi,Mat4ToMat3(woweMat)).xyz);
@@ -613,12 +620,15 @@ function ps_main()
 	
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
-	
+	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
+	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
 
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
-
+	dseMat = GetSunInfo();
+	sunDir = dseMat[0];
+	sunCol = dseMat[1];
 	
 
 	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, 
@@ -636,12 +646,23 @@ function ps_main()
 
 	
 
-	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
+	BranchBegin("waterReflect","waterReflect",[waterDeep]);
 	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
+	BranchEnd();
+
+	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
 	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
-	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir,new CVec3(0,1,0),new CVec3(1,1,1));
+	//out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
+	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir,sunDir,sunCol);
 	out_color.rgb = WaterProcessing(out_color.rgb, world);
 	BranchEnd();
+
+	// BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
+	// if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
+	// if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
+	// out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir,new CVec3(0,1,0),new CVec3(1,1,1));
+	// out_color.rgb = WaterProcessing(out_color.rgb, world);
+	// BranchEnd();
 }
 
 
@@ -756,7 +777,12 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	//var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+
+	var woweMat : CMat = wMat;
+	BranchBegin("weightMat","WG",[weightArrMat,weightBakeMat,weightBakeIndex]);
+	woweMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	BranchEnd();
 
 	var svm : CMat=new CMat(0);
 	var spm : CMat=new CMat(0);
@@ -820,7 +846,11 @@ function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Wei
 	BranchDefault();
 	wMat=worldMat;
 	BranchEnd();
-	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	//var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	var woweMat : CMat = wMat;
+	BranchBegin("weightMat","WG",[weightArrMat,weightBakeMat,weightBakeIndex]);
+	woweMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	BranchEnd();
 	
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
