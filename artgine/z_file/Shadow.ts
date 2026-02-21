@@ -1,6 +1,6 @@
 import { ligDir } from "./Light";
 import { abs, CMat, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
-    sin, step, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+    sin, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 
 export var shadowNearCasV0: Sam2DMat=new Sam2DMat(11,130);
 export var shadowFarCasP0: Sam2DMat=new Sam2DMat(11,134);
@@ -66,7 +66,7 @@ function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
     var h : CVec2 = Hash22(fragCoord);
     return new CVec2((h.x - 0.5)*_strength, (h.y - 0.5)*_strength);
 }
-function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number) : number
+function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number) : CVec2
 {
     var f16Chk : number=1.0;
     if(texture16f>0.0)	f16Chk=4.0;
@@ -79,14 +79,11 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
     var sVal : number = 0.0;
-    var pcfWeight : number = 1.0;
-    if(PCF < 1.5)       pcfWeight = 1.0;
-    else if(PCF < 2.5)  pcfWeight = 0.111111;//1.0 / 9.0;
-    else if(PCF < 3.5)  pcfWeight = 0.04;//25
-    else if(PCF < 4.5)  pcfWeight = 0.020408;//49
-    else pcfWeight = 0.0123456;//1.0 / 81.0;
+    var count : number = 0.0;
 
     var x : number = -PCF;
+    var depthChk : number=0.0;
+
     var jitterValue : CVec2;
     
     
@@ -114,14 +111,14 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
 
             if(_read.y>-0.5 && uv0N.x>0.0 && uv0N.y>0.0 && uv0N.x<1.0 && uv0N.y<1.0)
             {
-                
                 var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv0N);
                 var depth : number = shadowParam.z;			
 
                 if(shadowParam.w==0.0)    sVal+=1.0;
-                sVal += (_uvZ0.z + _biasAll*f16Chk) >= depth ? pcfWeight : 0.0;
-              
-            
+                else sVal += (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
+                count += 1.0;
+                
+
                 
             }
             else if(_read.z>-0.5 && uv1N.x>0.0 && uv1N.y>0.0 && uv1N.x<1.0 && uv1N.y<1.0)
@@ -130,9 +127,11 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 var depth : number = shadowParam.z;			
 
                 if(shadowParam.w==0.0)    sVal+=1.0;
-                else sVal += (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? pcfWeight : 0.0;
+                else sVal += (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : 0.0;
 
+                count += 1.0;
                 
+                //if(shadowParam.w==0.0)    sVal+=1.0;
             }
             else if(_read.w>-0.5 && uv2N.x>0.0 && uv2N.y>0.0 && uv2N.x<1.0 && uv2N.y<1.0)
             {
@@ -140,15 +139,16 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 var depth : number = shadowParam.z;			
         
                 if(shadowParam.w==0.0)    sVal+=1.0;
-                else sVal += (_uvZ2.z + _biasAll *f16Chk*4.0) >= depth ? pcfWeight : 0.0;
+                else sVal += (_uvZ2.z + _biasAll *f16Chk*4.0) >= depth ? 1.0 : 0.0;
 
-                
+                count += 1.0;
             }
         }
     }
 
-    return sVal;
+    return new CVec2(sVal, count);
 }
+
 
 function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DMat, _projMatOff : Sam2DMat, _offsetScale : number, _normalOffset : CVec3, _worldPos : CVec4, _index : number) : CVec3
 {
@@ -189,12 +189,22 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
  
     var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, 1.0, normalOffset, _worldPos, _index);
     var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 1.0, normalOffset, _worldPos, _index);
-    //var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);
-    var uvZ2 : CVec3;
+    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);
 
-    var sVal : number = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll);
+    var sVal_count : CVec2 = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll);
     // var sVal_count : CVec2 = ApplyJitteredPCF(uvZ0, uvZ1, uvZ2, _read, biasAll, _worldPos);
 
+    var sVal : number = sVal_count.x;
+    var count : number = sVal_count.y;
+
+    if(count >= 0.1)
+    {
+        sVal /= count;
+    }
+    else
+    {
+        sVal=1.0;
+    }
 
     
 
