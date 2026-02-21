@@ -13,6 +13,7 @@ import {
 	Null,
 	BranchBegin,
 	BranchEnd,
+	BranchDefault,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
@@ -504,15 +505,27 @@ function ps_main_shadow_read()
 	if ( L_cor.a <= 0.01 ) discard;
 
 	var all : number=0.0;
-	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		var shadowRead : CVec4=Sam2DToV4(shadowReadList,i);
-		var sVal : number = calcShadow(shadowRead, IntToFloat(i),to_normal,to_worldPos);
+	var shadowRead : CVec4;
+	var sVal : number;
+	BranchBegin("shadowMulti","SDM",[alphaModel]);
+	for(var i = 0; i < FloatToInt(shadowCount); i++) 
+	{
+		shadowRead =Sam2DToV4(shadowReadList,i);
+		sVal  = calcShadow(shadowRead, IntToFloat(i),to_normal,to_worldPos);
 		all+=sVal;
 		//all=all-(1.0-sVal);
 		
 	}
 	all/=shadowCount;
 	if(all<0.0)all=0.0;
+	BranchDefault();
+	shadowRead =Sam2DToV4(shadowReadList,0.0);
+	all = calcShadow(shadowRead, 0.0,to_normal,to_worldPos);
+	BranchEnd();
+	
+
+	
+	
 	out_color = new CVec4(all,all,all,1.0);
 
 	

@@ -940,13 +940,23 @@ function ps_main_shadow_read()
 	
 
 	var all : number=0.0;
+	var shadowRead : CVec4;
+	var sVal : number;
+	BranchBegin("shadowMulti","SDM",[alphaModel]);
+	
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		var shadowRead : CVec4=Sam2DToV4(shadowReadList,i);
-		var sVal : number = calcShadow(shadowRead, IntToFloat(i), to_normal, world);
+		shadowRead =Sam2DToV4(shadowReadList,i);
+		sVal  = calcShadow(shadowRead, IntToFloat(i), to_normal, world);
 		all+=sVal;
 	}
 	all/=shadowCount;
 	if(all<0.0)all=0.0;
+	BranchDefault();
+	shadowRead =Sam2DToV4(shadowReadList,0.0);
+	all  = calcShadow(shadowRead, 0.0, to_normal, world);
+	BranchEnd();
+	
+	
 
 	// parallax self shadow 곱해줌
 	all = min(all, pAll);

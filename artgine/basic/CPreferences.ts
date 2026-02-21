@@ -34,7 +34,7 @@ export class CPreferences extends CObject
     public mServer="local";
     public mGitHub=false;
     public mCanvas="";
-    public mParallelShader=false;
+    public mParallelShader=true;
 
 
     
