@@ -345,16 +345,10 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	wMat=worldMat;
 	BranchEnd();
 
-	//var wMat : CMat=Mat34ToMat(worldMat43);
-	//var wMat : CMat=worldMat;
-	// var wMat : CMat;
-	// BranchBegin("wasm","WASM",[worldMat43]);
-	// wMat=Mat34ToMat(worldMat43);
-	// BranchDefault();
-	// wMat=worldMat;
-	// BranchEnd();
+	
 
 	var woweMat : CMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
+	//var woweMat : CMat = wMat;
 	//var woweMat : CMat = wMat;
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
@@ -377,32 +371,21 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 
 	// 노말 변환 매트릭스 선택을 공통화
 	var nMat3 : CMat3;
-	if(f3_ref.y > 0.0) {
-		nMat3 = Mat4ToMat3(woweMat);
-	} else {
-		nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
-	}
+	if(f3_ref.y > 0.0)	nMat3 = Mat4ToMat3(woweMat);
+	else nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
+	
 
 	// N, T를 같은 규칙으로 월드 변환
 	to_normal  = V3Nor(V3MulMat3Normal(f3_nor,     nMat3).xyz);
 	to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
 
 	// (권장) T를 N에 대해 직교화해서 보간/스케일 오차 줄이기
-	// T = normalize(T - N * dot(N,T));
-	to_tangent = V3Nor(
-		V3SubV3(
-			to_tangent,
-			V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))
-		)
-	);
+	// xyz스케일이 다른경우+픽셀에서 다시 노말라이즈 해서 사용할경우 필요 없음+스킨 매트릭스로 인해 틀어질경우
+	// T = normalize(T - N * dot(N,T)); 
+	to_tangent = V3Nor(V3SubV3(to_tangent,V3MulFloat(to_normal, V3Dot(to_normal, to_tangent))));
 
 	// 바이노말은 cross로 재구성 (+ handedness = f4_tan.w)
-	to_binormal = V3Nor(
-		V3MulFloat(
-			V3Cross(to_normal, to_tangent),
-			f4_tan.w
-		)
-	);
+	to_binormal = V3Nor(V3MulFloat(V3Cross(to_normal, to_tangent),f4_tan.w));
 		
 	to_ref=f3_ref;
 }
