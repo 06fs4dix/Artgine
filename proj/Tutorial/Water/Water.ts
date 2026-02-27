@@ -1,5 +1,5 @@
 //Version
-const version='mlviwvcb_4';
+const version='mm5izx2d_9';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -62,6 +62,7 @@ import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CUtilRender } from "https://06fs4dix.github.io/Artgine/artgine/render/CUtilRender.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
+import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 var Main=gAtl.NewCanvas("Main");
 Main.SetCameraKey("3D");
 gAtl.Brush().GetCam3D().SetEye(new CVec3(2500, 1000, -500));
@@ -77,41 +78,42 @@ gAtl.Brush().ClearRen();
 
 
 let PCF=new CVec1(1.0);
-var bias : number = 10;
-var normalBias : number = 5;
 var bias : number = 5;
-var normalBias : number = 0;
-var shadowDistance=0.4;
+var normalBias : number = 1;
+var shadowDistance=0.7;
 var digit=1;
-var shadowRate=0.7;
+var shadowRate=0.3;
+var jitter=1;
 
 //========================
-// let forward=new CRPMgr();
-// let texKey=forward.PushTex("shadowread.tex",new CTexture());
-// let rp=forward.PushRP(new CRPAuto());
-// rp.PushAnd(new CCondition("class","==","CPaint3D"));
-// rp.PushAnd(new CCondition("mTag[water]","==",false));
-// rp.mPriority=CRenderPass.ePriority.BackGround+1;
+let forward=new CRPMgr();
+let texKey=forward.PushTex("shadowread.tex",new CTexture());
+//let texKey=forward.PushTex("shadowread.tex",new CTexture());
+let rp=forward.PushRP(new CRPAuto());
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("mTag[shadow]","==",true));
+rp.mPriority=CRenderPass.ePriority.BackGround+1;
 
-// rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
-// rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
-// rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
-// rp.mShaderAttr.push(new CShaderAttr("bias",bias));
-// rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
+rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
+rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
+rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
+rp.mShaderAttr.push(new CShaderAttr("bias",bias));
+rp.mShaderAttr.push(new CShaderAttr("normalBias",normalBias));
+rp.mShaderAttr.push(new CShaderAttr("jitter",jitter));
 
-// rp.mShader=gAtl.Frame().Pal().Sl3DKey();
-// rp.mRenderTarget="shadowread.tex";
-// //rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
-// rp.mTag.add("shadowRead");
+rp.mShader=gAtl.Frame().Pal().Sl3DKey();
+rp.mRenderTarget="shadowread.tex";
+//rp.mRenderTarget=gAtl.Frame().Pal().GetShadowReadTex();
+rp.mTag.add("shadowRead");
 
-// rp=forward.PushRP(new CRPAuto());
-// rp.PushAnd(new CCondition("class","==","CPaint3D"));
-// rp.PushAnd(new CCondition("mTag[water]","==",false));
-// rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
-// //rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
-// rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
-// rp.mShader=gAtl.Frame().Pal().Sl3DKey();
-// Main.PushPlugin(new CCanvasPluginRPMgr(forward))
+rp=forward.PushRP(new CRPAuto());
+rp.PushAnd(new CCondition("class","==","CPaint3D"));
+rp.PushAnd(new CCondition("mTag[water]","==",false));
+rp.mShaderAttr.push(new CShaderAttr(7,"shadowread.tex"));
+//rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
+rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(7)));
+rp.mShader=gAtl.Frame().Pal().Sl3DKey();
+Main.PushPlugin(new CCanvasPluginRPMgr(forward))
 
 /****************************************************************************************/
 // RP
@@ -126,7 +128,7 @@ let L=Main.PushSub(new CSubject());
 L.SetPos(new CVec3(0,1,0));
 
 let lig=new CLight();
-lig.SetShadow("test",0);
+lig.SetShadow("test",0,1000/60);
 lig.SetDirect();
 lig.SetColor(new CVec3(1,1,1));
 lig.mShadowDistance=shadowDistance;
@@ -150,25 +152,32 @@ pt.SetTexCodi(new CVec4(50,50,0,0));
 // mountain.SetKey("mountain");
 // mountain.SetSca(new CVec3(15,15,15));
 // pt = mountain.PushComp(new CPaint3D("Res/mountain/mountain.glb"));
+// pt.mAutoLoad.mTexBufRaw = true;
 // pt.SetMaterial(0.8);
 // pt.PushTag(CPaint.eTag.Light);
 // pt.PushTag(CPaint.eTag.Shadow);
 
 // let rock1 = Main.PushSub(new CSubject());
 // rock1.SetKey("rock1");
-// rock1.SetSca(new CVec3(10,15,10));
+// rock1.SetSca(new CVec3(10,40,10));
 // rock1.SetPos(new CVec3(12000,-2500,-7500));
-// pt = rock1.PushComp(new CPaint3D("Res/mountain/rock.glb"));
+// // pt = rock1.PushComp(new CPaint3D("Res/mountain/rock.glb"));
+// pt = rock1.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+// pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
+// pt.mAutoLoad.mTexBufRaw = true;
 // pt.SetMaterial(0.8);
 // pt.PushTag(CPaint.eTag.Light);
 // pt.PushTag(CPaint.eTag.Shadow);
 
 // let rock2 = Main.PushSub(new CSubject());
 // rock2.SetKey("rock2");
-// rock2.SetSca(new CVec3(10,15,10));
+// rock2.SetSca(new CVec3(10,40,10));
 // rock2.SetRot(new CVec3(0, Math.PI, 0));
 // rock2.SetPos(new CVec3(12000,-2500,1000));
-// pt = rock2.PushComp(new CPaint3D("Res/mountain/rock.glb"));
+// // pt = rock2.PushComp(new CPaint3D("Res/mountain/rock.glb"));
+// pt = rock2.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+// pt.SetTexture(gAtl.Frame().Pal().GetNoneTex());
+// pt.mAutoLoad.mTexBufRaw = true;
 // pt.SetMaterial(0.8);
 // pt.PushTag(CPaint.eTag.Light);
 // pt.PushTag(CPaint.eTag.Shadow);
@@ -201,6 +210,19 @@ let sub=Main.PushSub(new CSubject());
 sub.SetKey("sky");
 let ptCube = sub.PushComp(new CPaintCube(cubeTex));
 ptCube.Sky(true, true, true, true);
+ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudLightDistance", 10000));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudPlanetRadius", 6300000));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudSpeed", new CVec3(1,0,0)));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudStep", 32));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudLightStep", 4));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudScale", 100000));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudExtinction", 3.5));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudScatter", 3));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudAmbient", 0.1));
+ptCube.PushCShaderAttr(new CShaderAttr("cloudDither", 0));
 
 /****************************************************************************************/
 // Sky
@@ -223,6 +245,10 @@ water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
 water.SetSca(new CVec3(5000, 5000, 5000));
 water.SetPos(new CVec3(0, 100, 0));
 
+water.GetPT().PushCShaderAttr(new CShaderAttr("waterTest", 0.0));
+
+water.Light();
+//water.Shadow("shadowread.tex");
 
 water.GetPT().SetTexCodi(new CVec4(10,10,0,0));
 water.NormalFlow(new CVec2(1, 0));
@@ -250,11 +276,11 @@ Option_btn.SetContent(`
         <option value="FakeTexFlow" selected>FakeTexFlow</option>
         <option value="FakeTex">FakeTex</option>
 
-        <option value="DarkOcean">DarkOcean</option>
-        <option value="EastSea">EastSea</option>
-        <option value="Maldive">Maldive</option>
-        <option value="Muddy">Muddy</option>
-        <option value="SouthEastSea">SouthEastSea</option>
+        <option value="DarkOcean">어두운 바다</option>
+        <option value="EastSea">동해 바다</option>
+        <option value="Maldive">몰디브</option>
+        <option value="Muddy">진흙탕</option>
+        <option value="SouthEastSea">푸켓 동남아 바다</option>
     </select>
     <br>
 
@@ -342,19 +368,20 @@ function ResetWater()
     }
 
 
+
+
     else if(water_sel == "DarkOcean")
     {
         // water
-        water.GetPT().SetTexCodi(new CVec4(10,10,10));
+        water.GetPT().SetTexCodi(new CVec4(128,128,10));
         water.AddRefractor();
         water.AddReflector();
         water.SetWaterDeep(40,0,4000,new CVec3(0.05,0.15,0.35),new CVec3(0.2,0.5,0.65));
         
         water.NormalFlow(new CVec2(2, 0.5));
 
-        water.GetPT().PushTag(CPaint.eTag.Light);
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+        water.Light();
+        water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
@@ -396,16 +423,15 @@ function ResetWater()
     else if(water_sel == "EastSea")
     {
         // water
-        water.GetPT().SetTexCodi(new CVec4(10,10,10));
+        water.GetPT().SetTexCodi(new CVec4(128,128,10));
         water.AddRefractor();
         water.AddReflector();
         water.SetWaterDeep(40,0,4000,new CVec3(0.05,0.15,0.35),new CVec3(0.2,0.5,0.65));
         
         water.NormalFlow(new CVec2(1, 0));
 
-        water.GetPT().PushTag(CPaint.eTag.Light);
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+        water.Light();
+        water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
@@ -446,7 +472,7 @@ function ResetWater()
     else if(water_sel == "Maldive")
     {
         // water
-        water.GetPT().SetTexCodi(new CVec4(32, 32, 8));
+        water.GetPT().SetTexCodi(new CVec4(64, 64, 8));
         water.AddRefractor();
         water.AddReflector();
         water.AddCaustics(new CVec2(1, 0), 0.5);
@@ -455,9 +481,8 @@ function ResetWater()
 
         water.NormalFlow(new CVec2(1, 0));
 
-        water.GetPT().PushTag(CPaint.eTag.Light);
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+        water.Light();
+        water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 40000));
@@ -498,18 +523,16 @@ function ResetWater()
     else if(water_sel == "Muddy")
     {
         // water
-        water.GetPT().SetTexCodi(new CVec4(32, 32, 6));
+        water.GetPT().SetTexCodi(new CVec4(64, 64, 6));
         water.AddRefractor();
-        water.GetPT().SetMaterial(1);
-        water.SetWaterDeep(0, -2000, 10000, new CVec3(0.18, 0.1, 0.02), new CVec3(0.42, 0.3, 0.08));
+        water.SetWaterDeep(150, -2000, 10000, new CVec3(0.18, 0.1, 0.02), new CVec3(0.42, 0.3, 0.08));
         water.mWaterDeep.z = 0;
         water.mWaterHeight.x = 10;
 
         water.NormalFlow(new CVec2(2, 0.5));
 
-        water.GetPT().PushTag(CPaint.eTag.Light);
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+        water.Light();
+        water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.2));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 40000));
@@ -550,7 +573,7 @@ function ResetWater()
     else if(water_sel == "SouthEastSea")
     {
         // water
-        water.GetPT().SetTexCodi(new CVec4(10, 10, 10));
+        water.GetPT().SetTexCodi(new CVec4(32, 32, 10));
         water.AddRefractor();
         water.AddReflector();
         water.AddCaustics(new CVec2(2, 0), 1.2);
@@ -558,9 +581,8 @@ function ResetWater()
 
         water.NormalFlow(new CVec2(2, 0));
 
-        water.GetPT().PushTag(CPaint.eTag.Light);
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
-        water.GetPT().PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+        water.Light();
+        water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.75));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
@@ -615,12 +637,6 @@ window["ResetWater"]=ResetWater;
 
 
 new CModalFrameView();
-
-
-
-
-
-
 
 
 
