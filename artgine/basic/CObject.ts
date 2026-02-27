@@ -430,7 +430,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	// 		});
 	// 	}
 	// }
-	Watch(_event: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>, _set = true, _get = false): void
+	Watch(_event: ((...args: any[]) => any) | CEvent<(...args: any[]) => any>): void
 	{
 		const watch = CEvent.ToCEvent(_event);
 
@@ -444,31 +444,28 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			let val = this[member];
 
 			if (Array.isArray(val))
-				val = this.WatchArray(val, member, watch, _set) as any;
+				val = this.WatchArray(val, member, watch) as any;
 
 			Object.defineProperty(this, member, {
 				configurable: true,
 				enumerable: true,
-				get: () => {
-					if (_get) watch.Call(member);
-					return val;
-				},
+				get: () => {return val;},
 				set: (newVal) => {
 					val = Array.isArray(newVal)
-						? this.WatchArray(newVal, member, watch, _set)
+						? this.WatchArray(newVal, member, watch)
 						: newVal;
-					if (_set) watch.Call(member);
+					watch.Call(member);
 				}
 			});
 		}
 	}
 
-	private WatchArray(arr: any[], member: string, watch: any, _set: boolean): any[]
+	private WatchArray(arr: any[], member: string, watch: any): any[]
 	{
 		return new Proxy(arr, {
 			set: (target, index, value) => {
 				target[index] = value;
-				if (_set)	watch.Call(member);
+				watch.Call(member);
 				return true;
 			}
 		}) as any[];

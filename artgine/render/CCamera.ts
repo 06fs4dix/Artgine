@@ -473,7 +473,7 @@ export class CCamera extends CObject
 		CMath.V3AddV3(this.mLook, L_temp,this.mLook);
 		this.mReset=true;
 	}
-	GetRay(_x : number,_y : number)
+	GetRay(_worldX : number,_worldY : number)
 	{
 		var width=this.mWidth;
 		var height=this.mHeight;
@@ -492,13 +492,13 @@ export class CCamera extends CObject
 
 		if(this.mViewPort==null)
 		{
-			_x=_x*(width/this.mPF.mWidth);
-			_y=_y*(height/this.mPF.mHeight);
+			_worldX=_worldX*(width/this.mPF.mWidth);
+			_worldY=_worldY*(height/this.mPF.mHeight);
 		}
 		else
 		{
-			_x=_x*(width/this.mViewPort.z);
-			_y=_y*(height/this.mViewPort.w);
+			_worldX=_worldX*(width/this.mViewPort.z);
+			_worldY=_worldY*(height/this.mViewPort.w);
 		}
 		//윈도우 프로그래밍에서 타이틀바 때문에 이렇게 했는데 나중에 참고해라!
 		
@@ -514,8 +514,8 @@ export class CCamera extends CObject
 				
 		if (this.mOrthographic == false)
 		{
-			L_vec.x = ((((_x - left)* 2.0) / right - 1.0) - this.mProjMat.mF32A[8]) / this.mProjMat.mF32A[0];//클리피과 뷰포트는 안빼버렸음
-			L_vec.y = ((((_y - top)* 2.0) / bottom - 1.0) - this.mProjMat.mF32A[9]) / this.mProjMat.mF32A[5];
+			L_vec.x = ((((_worldX - left)* 2.0) / right - 1.0) - this.mProjMat.mF32A[8]) / this.mProjMat.mF32A[0];//클리피과 뷰포트는 안빼버렸음
+			L_vec.y = ((((_worldY - top)* 2.0) / bottom - 1.0) - this.mProjMat.mF32A[9]) / this.mProjMat.mF32A[5];
 			
 
 			let L_inView=CMath.MatInvert(this.mViewMat);
@@ -534,8 +534,8 @@ export class CCamera extends CObject
 			//직교
 
 
-			L_vec.x = ((((_x - left)* 2.0) / right - 1.0) - this.mProjMat.mF32A[8]) / this.mProjMat.mF32A[0];//클리피과 뷰포트는 안빼버렸음
-			L_vec.y = ((((_y - top)* 2.0) / bottom - 1.0) - this.mProjMat.mF32A[9]) / this.mProjMat.mF32A[5];
+			L_vec.x = ((((_worldX - left)* 2.0) / right - 1.0) - this.mProjMat.mF32A[8]) / this.mProjMat.mF32A[0];//클리피과 뷰포트는 안빼버렸음
+			L_vec.y = ((((_worldY - top)* 2.0) / bottom - 1.0) - this.mProjMat.mF32A[9]) / this.mProjMat.mF32A[5];
 			
 			let L_o=CPoolGeo.ProductV3();
 			L_o.mF32A[0]=L_vec.mF32A[0];
@@ -782,7 +782,7 @@ export class CCamera extends CObject
 			_body.append(select);
 		}
 	}
-	Icon(){	
+	override Icon(){	
 		
 		return "bi bi-camera";	
 	}

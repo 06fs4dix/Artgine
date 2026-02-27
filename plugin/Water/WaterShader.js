@@ -2,7 +2,8 @@ import { ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
 import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
-import { Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CVec2, CVec3, CVec4, dFdy, MatTypeToMat, max, min, Null, pow, reflect, Sam2D0ToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, V2AddV2, V2Len, V2Mod, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
+import { Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CVec2, CVec3, CVec4, dFdy, MatTypeToMat, max, min, Null, pow, reflect, Sam2D0ToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, V2AddV2, V2Len, V2Mod, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
+import { shadowOn } from "../../artgine/z_file/Shadow";
 var out_position = Null();
 var out_color = Null();
 var to_uv = Null();
@@ -82,7 +83,7 @@ function Remap(_val, _min1, _max1, _min2, _max2) {
     return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
 }
 function NormalFlow(_uv, _timedWindDir) {
-    var waveIntensity = new CVec4(3.0, 2.0, 10.0, 10.0);
+    var waveIntensity = new CVec4(3.0, 2.0, 1.5, 1.0);
     var animSpeed = 0.5;
     var texCoordA = new CVec3(_uv.x * 1.6 + _timedWindDir.x * 0.16, _uv.y * 1.6 + _timedWindDir.y * 0.16, time * animSpeed * 1.0);
     var texCoordB = new CVec3(_uv.x * 0.8 + _timedWindDir.x * 0.04, _uv.y * 0.8 + _timedWindDir.y * 0.04, time * animSpeed * 0.8);
@@ -98,8 +99,7 @@ function NormalFlow(_uv, _timedWindDir) {
     tempNormal = NoiseNormalGet(texCoordC, SDF.eNoise.PerlinNormal);
     tempNormal = new CVec3(tempNormal.x * waterHeight / 10.0, tempNormal.y, tempNormal.z * waterHeight / 10.0);
     normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.z));
-    normal.y = 1.0;
-    normal = V3Nor(V3Mix(new CVec3(0.0, 1.0, 0.0), normal, 0.5));
+    normal = V3Nor(new CVec3(normal.x * normalRange, max(normal.y, 0.1), normal.z * normalRange));
     return normal;
 }
 function ps_main_water() {
@@ -114,14 +114,14 @@ function ps_main_water() {
         var fallOff = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);
         normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * to_screenUV.z * fallOff);
     }
-    var normalWS = V3Nor(new CVec3(normalTS.x * normalRange, max(normalTS.y * 0.72, 0.18), normalTS.z * normalRange));
+    var normalWS = normalTS;
     var screenUV = V2AddV2(to_screenUV.xy, new CVec2(normalDist.x, normalDist.z));
     var uv = V2AddV2(to_uv, new CVec2(normalDist.x, normalDist.z));
     var uvw;
     var refractColor;
     var refractType = -1.0;
     BranchBegin("UseWaterTex", "UseWaterTex", []);
-    uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
+    uv = V2AddV2(to_uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
     uv = V2Mod(uv, 1.0);
     refractColor = Sam2D0ToColor(uv);
     refractType = 0.0;
@@ -148,30 +148,43 @@ function ps_main_water() {
     BranchEnd();
     BranchBegin("UseWaterReflect", "UseWaterReflect", [reflectMap]);
     reflectColor = Sam2DToColor(reflectMap, new CVec2(1.0 - screenUV.x, screenUV.y));
+    reflectColor.rgb = V3MulV3(reflectColor.rgb, new CVec3(0.9, 0.95, 1.0));
     reflectType = 1.0;
     BranchEnd();
     if (reflectType < -0.5) {
         reflectType = 2.0;
     }
+    var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var shadow = -1.0;
+    BranchBegin("shadow", "S", [shadowOn]);
+    if (shadowOn > 0.5) {
+        shadowTex = Sam2DToColor(shadowOn, screenUV);
+        shadow = shadowTex.x;
+    }
+    BranchEnd();
     var L_cor;
-    var fresnel = 0.02 + 0.98 * pow(1.0 - clamp(V3Dot(view, normalWS), 0.0, 1.0), 5.0);
-    var facingWeight = clamp(V3Dot(view, normalWS) * 10.0, 0.0, 1.0);
+    var dotRes = clamp(V3Dot(view, normalWS), 0.0, 1.0);
+    var fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dotRes, 0.0, 1.0), 5.0);
+    var facingWeight = smoothstep(0.0, 0.15, dotRes);
     fresnel *= facingWeight;
     if (reflectType > 1.5) {
         L_cor = new CVec4(refractColor.rgb, 1.0);
     }
     else {
-        L_cor = new CVec4(V3Mix(refractColor.xyz, reflectColor.rgb, fresnel), 1.0);
+        L_cor = new CVec4(V3Mix(refractColor.rgb, reflectColor.rgb, fresnel), 1.0);
     }
-    BranchBegin("colorModel", "CM", [colorModel]);
-    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
-    BranchEnd();
     var dseMat;
     var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
     BranchBegin("light", "L", [ligDir, ligCol, ligCount, material, camPos, ligStep0, ligStep1, ligStep2, ligStep3, envCube, ambientColor]);
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normalWS, -1.0, lmaterial.y, lmaterial.x, lmaterial.z, new CVec3(0.0, 0.0, 0.0));
-    L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
+    dseMat = LightCac3D(camPos, to_worldPos, reflectColor, normalWS, shadow, lmaterial.y, lmaterial.x, lmaterial.z, new CVec3(0.0, 0.0, 0.0));
+    L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);
+    if (shadow > -0.5) {
+        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);
+    }
+    BranchEnd();
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
     BranchEnd();
     out_color = L_cor;
 }

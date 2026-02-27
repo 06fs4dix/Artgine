@@ -1,1 +1,1 @@
-import{CObject as e}from"../../basic/CObject.js";import{CCurve as r}from"../../util/CCurve.js";export class CStopover extends e{constructor(e,r){super(),this.mPos=e,this.mVelocity=r}mKey="path";mPos=new Array;mCurve=new r;mBezier=!1;mTime=0;mDelay=0;mVelocity=0;mCorrection=!1}
+import{CObject as e}from"../../basic/CObject.js";import{CVec3 as o}from"../../geometry/CVec3.js";export class CStopover extends e{constructor(e,o){super(),this.mPos=e,this.mVelocity=o}mKey="path";mPos=new Array;mVelocity=0;mIndex=0;mDir=new o}

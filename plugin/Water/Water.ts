@@ -1,6 +1,7 @@
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
 import CEnvMap from "../../artgine/app/component/CEnvMap.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CSubject } from "../../artgine/app/subject/CSubject.js";
@@ -23,6 +24,7 @@ import { CCondition } from "../../artgine/util/CCondition.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CLoaderOption } from "../../artgine/util/CLoader.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
+import { SDF } from "../../artgine/z_file/SDF.js";
 
 
 
@@ -76,13 +78,29 @@ export class CWater3D extends CSubject
         return this.mPaint;
     }
 
-    Update(_update: CUpdate): void {
+    override Update(_update: CUpdate): void {
         super.Update(_update);
 
         // 물 깊이 자동 변경
         if(this.mUpdateMat == CUpdate.eType.Updated) {
             this.mWaterDeep.x = this.GetPos().y;
         }
+    }
+
+    Light() {
+        this.mPaint.PushTag(CPaint.eTag.Light);
+        this.mPaint.PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+    }
+
+    Shadow(_shadowReadTex : string) {
+        this.mPaint.PushTag(CPaint.eTag.Shadow);
+        this.mPaint.PushTag(CPaint.eTag.ShadowReadOnly);
+        //this.mPaint.PushCShaderAttr(new CShaderAttr(7, _shadowReadTex));
+        this.mPaint.PushCShaderAttr(new CShaderAttr(7,"shadowread.tex"));
+        
+        //this.mPaint.PushCShaderAttr(new CShaderAttr(7, "Artgine/none.png"));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("shadowOn",new CVec1(7)));
     }
 
     SetWaterDeep(_deepHeight : number,_nearDistance : number, _farDistance : number, _deepColor : CVec3, _shallowColor : CVec3) {
@@ -235,7 +253,7 @@ export class CReflector3D extends CBrushComp
         );
     }
 
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -309,7 +327,7 @@ export class CReflector3D extends CBrushComp
         }
     }
 
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {
@@ -379,7 +397,7 @@ export class CRefractor3D extends CBrushComp
         rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
     }
 
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -441,7 +459,7 @@ export class CRefractor3D extends CBrushComp
         }
     }
     
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {
@@ -604,7 +622,7 @@ export class CWater2D extends CSubject
             this.mPaint.RemoveTag("normalMap");
         }
     }
-    Update(_update: CUpdate): void {
+    override Update(_update: CUpdate): void {
         super.Update(_update);
 
         if(this.mPaint.FindCShaderAttr("waterViewMat")==null && this.mReflector.mWaterCam!=null)
@@ -688,7 +706,7 @@ export class CReflector2D extends CBrushComp
             this.PushRPAuto(rp);
         }
     }
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBruch != null) this.UpdateBrush(_update);
     }
@@ -754,7 +772,7 @@ export class CReflector2D extends CBrushComp
 
     }
 
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
         if(this.mWrite.length > 0) {

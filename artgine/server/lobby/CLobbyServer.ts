@@ -124,7 +124,7 @@ export class CRoom
 
         if(this.mFrameTime>1)
         {
-            CConsol.Log(this.constructor.name+" / "+this.mFrameCount);
+            //CConsol.Log(this.constructor.name+" / "+this.mFrameCount);
             this.mFrameTime=0;
             this.mFrameCount=0;
             

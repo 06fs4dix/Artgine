@@ -823,7 +823,7 @@ export class CPaint extends CComponent implements IMat
 	}
 	
 	
-	SetVFX(_offset : number,_para : Array<number>,_type:number);
+	SetVFX(_slot : number,_type:number,_para : Array<number>);
 	SetVFX(_vfx : CVFX);
 	SetVFX(_a : any,_b : any=null,_c=null)
 	{
@@ -841,11 +841,11 @@ export class CPaint extends CComponent implements IMat
 		else
 		{
 			let cv=this.mVFX;
-			if(_a!=0)	_a=2;
+			
 
-			for(let i=0;i<_b.length;++i)
-				cv.mF32A[_a*8+i]=_b[i];
-			cv.mF32A[_a*8+7]=_c;
+			for(let i=0;i<_c.length;++i)
+				cv.mF32A[_a*5+i+1]=_c[i];
+			cv.mF32A[_a*5]=_b;
 			
 		}
 		this.PushTag("vfx");

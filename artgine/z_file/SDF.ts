@@ -79,7 +79,7 @@ export class SDF {
 		None:5,
 	}
 	
-	static eColorVFX=
+	static eVFX=
 	{
 		None:0,
 		//UV

@@ -132,7 +132,7 @@ export class CRigidBody extends CGeometryComp
 	Push(move : Array<CForce>) : Array<CForce>;
  	Push(move,duplication=false) : any
 	{
-		//CConsol.Log("Push");
+		CConsol.Log("RB-Push");
 		if(move==null)
 			return;
 		if(move instanceof Array)
@@ -173,7 +173,7 @@ export class CRigidBody extends CGeometryComp
 				if (this.mForceArr[i].mKey==this.mStopover.mKey)
 				{
 					this.mForceArr.splice(i,1);
-					break;
+					i--;
 				}
 			}
 		}
@@ -196,7 +196,7 @@ export class CRigidBody extends CGeometryComp
 		}
 		
 	}
-	IsEmptyForce(_key)
+	IsEmptyForce(_key : string)
 	{
 		for (var i = 0; i < this.mForceArr.length; ++i)
 		{

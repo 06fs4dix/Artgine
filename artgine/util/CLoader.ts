@@ -39,6 +39,7 @@ export class CLoaderOption extends CObject
 	public mAlphaCut=0x09;
 	mCache=null;//버퍼 등록용
 	mGPU=true;
+	mTexBufRaw=false;
 	
 	
 	public mInch=false;
@@ -438,7 +439,7 @@ export class CLoader
 		var par :CParser=null;
 		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex);
 		else if(ext=="obj") 	par = new CParserOBJ();
-		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex);
+		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex,_option.mTexBufRaw);
 		
 		
 
@@ -467,29 +468,23 @@ export class CLoader
 		let texMap=new Map<string,ArrayBuffer>();
 		for (let i = 0; i < mesh.texture.length; i++)
 		{
-			// if(mesh.texture[i] instanceof CTexture)
-			// {
-			// 	let tex=mesh.texture[i] as CTexture;
-			// 	tex.SetFilter(option.mFilter);
-			// 	tex.SetWrap(option.mWrap);
-			// 	tex.SetMipMap(option.mMipMap);
-			// 	if( this.mRender!=null)	
-			// 	{
-			// 		this.mRender.BuildTexture(tex);
-			// 	}
-			// 	let key=path+CUniqueID.GetHash(16)+".tex";
-			// 	tex.SetKey(key);
-			// 	mesh.texture[i]=key;
-			// 	this.mRes.Push(key,tex);
-			// }
-			// else 
+			if(mesh.texture[i] as any instanceof Uint8Array)
+			{
+				
+				let buf = mesh.texture[i] as any;
+				let newName = path+CUniqueID.GetHash() + ".png";
+				mesh.texture[i] = newName;
+				this.mLoadSet.add(newName);
+				texMap.set(newName,buf);
+			}
+			else 
 			{
 				let texStr=(mesh.texture[i] as string);
 				if(texStr.indexOf("base64:")!=-1)
 				{
 					
 					let base64Header = "base64:";
-					var base64data = texStr.substring(base64Header.length);
+					let base64data = texStr.substring(base64Header.length);
 					let newName = path+(CHash.SHA256(base64data).substr(0, 16)) + ".png";
 					mesh.texture[i] = newName;
 					this.mLoadSet.add(newName);

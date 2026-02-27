@@ -69,7 +69,7 @@ export class CInvenMgr extends CObject {
             }
         }
         this.mInvenArr.push(_inven);
-        CEvent.ToCEvent(this.GetEvent("Push")).Call(_inven, this.mInvenArr.length - 2);
+        CEvent.ToCEvent(this.GetEvent("Push")).Call(_inven, this.mInvenArr.length - 1);
         return _inven;
     }
     FindItem(_itemKey, _amount = 0) {
@@ -150,7 +150,6 @@ export class CInvenMgr extends CObject {
             this.mInvenArr[DropIndex] = Drag;
         }
     }
-    Event;
 }
 export class CItemMgr extends CObject {
     async LoadJSON(_file = null) {

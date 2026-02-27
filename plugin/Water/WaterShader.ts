@@ -6,11 +6,13 @@ import { SDF } from "../../artgine/z_file/SDF";
 import { 
     abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
     MatTypeToMat, max, min, mix, mod, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, 
-    Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
+    Sam2DToColor, SamCubeToColor, SaturateFloat, screenPos, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
+    V2DivV2, 
     V2Dot, 
-    V2Len, V2Mod, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3Len, V3Mix, 
+    V2Len, V2Mod, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Dot, V3Len, V3Mix, 
     V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4AddV4, V4Mix, V4MulFloat, V4MulMatCoordi, V4MulV4, Vertex3 
 } from "../../artgine/z_file/Shader";
+import { shadowOn } from "../../artgine/z_file/Shadow";
 
 // out
 var out_position : OutPosition=Null();
@@ -131,7 +133,8 @@ function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _m
 // 노말맵 2개 사용하는 버전(성능 가장 좋음)
 function NormalFlow(_uv : CVec2, _timedWindDir : CVec2) : CVec3
 {
-    var waveIntensity : CVec4 = new CVec4(3.0, 2.0, 10.0, 10.0);
+    //var waveIntensity : CVec4 = new CVec4(3.0, 2.0, 10.0, 10.0);
+    var waveIntensity : CVec4 = new CVec4(3.0, 2.0, 1.5, 1.0);
 
     var animSpeed : number = 0.5;
 
@@ -158,8 +161,10 @@ function NormalFlow(_uv : CVec2, _timedWindDir : CVec2) : CVec3
     // tempNormal = new CVec3(tempNormal.x*waterHeight/10.0,tempNormal.y,tempNormal.z*waterHeight/10.0);
     // normal = V3AddV3(normal, V3MulFloat(tempNormal, waveIntensity.w));
 
-    normal.y = 1.0;
-    normal = V3Nor(V3Mix(new CVec3(0.0, 1.0, 0.0), normal, 0.5));
+    // normal.y = 1.0;
+    // normal = V3Nor(V3Mix(new CVec3(0.0, 1.0, 0.0), normal, 0.5));
+
+    normal = V3Nor(new CVec3(normal.x * normalRange, max(normal.y, 0.1), normal.z * normalRange));
 
     // var normal : CVec3 = NoiseNormalGet(new CVec3(V2AddV2(_uv, V2MulFloat(_timedWindDir, 0.1)), V2Len(_timedWindDir) * 0.3), SDF.eNoise.PerlinNormal);
     // normal = V3Nor(new CVec3(normal.x*waterHeight/10.0,normal.y,normal.z*waterHeight/10.0));
@@ -182,12 +187,13 @@ function ps_main_water()
     if(V2Len(normalflowDir) > 0.0) {
         normalTS = NormalFlow(to_uv, V2MulFloat(new CVec2(-normalflowDir.x, normalflowDir.y), time));
 
+        // 화면에서 멀수록 픽셀 수가 적어지는데 움직이는 정도는 같아서 줄여줌
         var deltaDist : number = max(0.0, V3Len(V3SubV3(camPos, world)) - 6000.0);  // 카메라 거리 - 최대 가시거리 / 2
         var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);             // 선형적인 감소 피하기 위해 1 / 1 + a로 계산
         normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * to_screenUV.z * fallOff);
         // to_screenUV.z를 여기에 곱해주면 화면이 매우 가까울 때의 아티팩트를 해결할 수 있다고 하는데 잘 모르겠음
     }
-    var normalWS : CVec3 = V3Nor(new CVec3(normalTS.x * normalRange, max(normalTS.y * 0.72, 0.18), normalTS.z * normalRange));
+    var normalWS : CVec3 = normalTS;
 
     // ---------------------------------------------------------
     // UV 애니메이션
@@ -204,7 +210,7 @@ function ps_main_water()
 
     // 1. 물 텍스쳐
     BranchBegin("UseWaterTex","UseWaterTex",[]);
-    uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
+    uv = V2AddV2(to_uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
     uv = V2Mod(uv, 1.0);
     refractColor = Sam2D0ToColor(uv);
     refractType = 0.0;
@@ -244,6 +250,7 @@ function ps_main_water()
     // 2. reflector 랜더타겟
     BranchBegin("UseWaterReflect","UseWaterReflect",[reflectMap]);
     reflectColor = Sam2DToColor(reflectMap, new CVec2(1.0 - screenUV.x, screenUV.y));
+    reflectColor.rgb = V3MulV3(reflectColor.rgb, new CVec3(0.9, 0.95, 1.0));    //  물 색상 조금 섞어줌(반사 색상 좀 이상한 경우 많아서 넣음)
     reflectType = 1.0;
     BranchEnd();
 
@@ -253,12 +260,28 @@ function ps_main_water()
     }
 
     // ---------------------------------------------------------
+    // 그림자
+    // ---------------------------------------------------------
+    var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+    var shadow : number=-1.0;
+
+    BranchBegin("shadow","S",[shadowOn]);
+    if(shadowOn>0.5)
+    {
+        shadowTex = Sam2DToColor(shadowOn, screenUV);  // <- 여기! 절대 size 곱하지 말기
+        shadow = shadowTex.x;
+    }
+    BranchEnd();
+
+    // ---------------------------------------------------------
     // 반사 + 굴절 합성
     // ---------------------------------------------------------
     var L_cor : CVec4;
-    var fresnel : number = 0.02 + 0.98 * pow(1.0 - clamp(V3Dot(view, normalWS), 0.0, 1.0), 5.0);
+    var dotRes : number = clamp(V3Dot(view, normalWS), 0.0, 1.0);
+    var fresnel : number = 0.02 + 0.98 * pow(1.0 - clamp(dotRes, 0.0, 1.0), 5.0);
 
-    var facingWeight : number = clamp(V3Dot(view, normalWS) * 10.0, 0.0, 1.0);  // 반대쪽 면은 굴절만 나오도록 적용, 반대쪽면과 붙어있는 부분 조금 제거
+    //var facingWeight : number = clamp(dotRes * 10.0, 0.0, 1.0);  // 반대쪽 면은 굴절만 나오도록 적용, 반대쪽면과 붙어있는 부분 조금 제거
+    var facingWeight : number = smoothstep(0.0, 0.15, dotRes);
     fresnel *= facingWeight;
 
     // 반사 색상이 없음
@@ -268,18 +291,8 @@ function ps_main_water()
     
     // 반사 색상이 존재함
     else {
-        L_cor = new CVec4(V3Mix(refractColor.xyz, reflectColor.rgb, fresnel), 1.0);
+        L_cor = new CVec4(V3Mix(refractColor.rgb, reflectColor.rgb, fresnel), 1.0);
     }
-
-    // ---------------------------------------------------------
-    // 컬러 모델 합성
-    // ---------------------------------------------------------
-    // BranchBegin("CAModel","CA",[colorModel,alphaModel]);
-    // L_cor = colorModel(L_cor,colorModel,alphaModel);
-    // BranchEnd();
-    BranchBegin("colorModel","CM",[colorModel]);
-    L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
-    BranchEnd();
 
     // ---------------------------------------------------------
     // 라이팅
@@ -288,8 +301,18 @@ function ps_main_water()
     var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
     BranchBegin("light","L",[ligDir,ligCol,ligCount,material,camPos,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normalWS, -1.0, lmaterial.y, lmaterial.x, lmaterial.z, new CVec3(0.0, 0.0, 0.0));
-    L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
+    dseMat = LightCac3D(camPos, to_worldPos, reflectColor, normalWS, shadow, lmaterial.y, lmaterial.x, lmaterial.z, new CVec3(0.0, 0.0, 0.0));
+    L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);    // 반사만 적용
+    if(shadow > -0.5) { // 그림자
+        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);
+    }
+    BranchEnd();
+
+    // ---------------------------------------------------------
+    // 컬러 모델 합성
+    // ---------------------------------------------------------
+    BranchBegin("colorModel","CM",[colorModel]);
+    L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
     BranchEnd();
 
     out_color = L_cor;

@@ -300,7 +300,7 @@ export class CLight extends CBrushComp
 					slook.x = Math.round(slook.x/this.mDigit)*this.mDigit;
 					slook.y = Math.round(slook.y/this.mDigit)*this.mDigit;
 					slook.z = Math.round(slook.z/this.mDigit)*this.mDigit;
-					seye=CMath.V3AddV3(slook,CMath.V3MulFloat(dir,n*2));
+					seye=CMath.V3AddV3(slook,CMath.V3MulFloat(dir,width*4));
 					// CConsol.Log("cam0");
 					// CConsol.Log(seye);
 					// CConsol.Log(slook);
@@ -327,7 +327,7 @@ export class CLight extends CBrushComp
 					slook.x = Math.round(slook.x/this.mDigit)*this.mDigit;
 					slook.y = Math.round(slook.y/this.mDigit)*this.mDigit;
 					slook.z = Math.round(slook.z/this.mDigit)*this.mDigit;
-					seye=CMath.V3AddV3(slook,CMath.V3MulFloat(dir,n*4));
+					seye=CMath.V3AddV3(slook,CMath.V3MulFloat(dir,width*16));
 					
 					// CConsol.Log("cam1");
 					// CConsol.Log(seye);
@@ -351,7 +351,7 @@ export class CLight extends CBrushComp
 					slook.x = Math.round(slook.x/this.mDigit)*this.mDigit;
 					slook.y = Math.round(slook.y/this.mDigit)*this.mDigit;
 					slook.z = Math.round(slook.z/this.mDigit)*this.mDigit;
-					seye=CMath.V3AddV3(slook,CMath.V3MulFloat(dir,n*8));
+					seye=CMath.V3AddV3(slook,CMath.V3MulFloat(dir,width*25));
 					
 
 					

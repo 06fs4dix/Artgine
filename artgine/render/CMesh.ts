@@ -63,6 +63,7 @@ export class CMesh extends CObject
 	
 	
 	public texture : Array<string>;
+	
 
 	
 	public skin : Array<CMeshSkin>;
@@ -80,6 +81,7 @@ export class CMesh extends CObject
 	
 		//this.material=new Array();//메터리얼 텍스처 한세트이다
 		this.texture=new Array();//사용법은 메쉬에서 메터리얼 텍스처 번호를 참조해서 불러오기 때문이다
+		//this.textureBuf=null;
 		//this.weightName=new Array();
 		//this.weightMat=new Array();
 		this.aniMap=new Map<string,CMeshAniInfo>();
@@ -88,6 +90,6 @@ export class CMesh extends CObject
 		this.ik = new Map<string, CMeshIK>;
 		this.attacher = new Map<string, CMeshAttacher>;
 	}
-	Icon(){		return "bi bi-globe";	}
+	override Icon(){		return "bi bi-globe";	}
 }
 

@@ -566,7 +566,6 @@ function ps_main()
 
 	
 	var world : CVec4 = to_worldPos;
-	var camDir : CVec3;
 
 	var uv : CVec2 = to_uv;
 	var uvh : CVec3;
@@ -923,8 +922,8 @@ function ps_main_shadow_read()
 			if(V3Dot(worldNormal.xyz, worldLigDir.xyz) > 0.0) {
 				pAll += calcParallaxShadow(to_ref.y, uv, worldLigDir.xyz, parallaxNormal);
 			}
-			else {
-				pAll += 1.0;
+			else {	// 빛 방향과 반대면임
+				pAll += shadowRate;	
 			}
 		}
 	}

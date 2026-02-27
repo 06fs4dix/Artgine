@@ -12,17 +12,19 @@ export default class CParserGLTF extends CParser
     public mInch : boolean = false;
     mTexMap=new Map<any,number>();
     mColorTex : boolean;
+    mTexBufRaw:boolean;
 
-    constructor(_inch : boolean,_colorTex=false)
+    constructor(_inch : boolean,_colorTex=false,_texBufRaw=false)
     {
         super();
         this.mInch = _inch;
         this.mColorTex=_colorTex;
+        this.mTexBufRaw=_texBufRaw;
     }
-    GetResult() {
+    override GetResult() {
         return this.mMesh;
     }
-    async Load(_fileName : string) 
+    override async Load(_fileName : string) 
     {
        return null;
     }
@@ -34,7 +36,7 @@ export default class CParserGLTF extends CParser
     {
         return null;
     }
-    async ParseCJSON(_fileName : string, _json : CJSON) 
+    async ParseCJSON(_fileName : string, _json : CJSON,glbResources: Record<string, Uint8Array>) 
     {
 
     }

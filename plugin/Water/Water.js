@@ -1,5 +1,6 @@
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
+import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
 import { CSubject } from "../../artgine/app/subject/CSubject.js";
@@ -18,6 +19,7 @@ import { CTexture, CTextureInfo } from "../../artgine/render/CTexture.js";
 import { CCondition } from "../../artgine/util/CCondition.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
+import { SDF } from "../../artgine/z_file/SDF.js";
 let gWaterShader = "";
 CPlugin.PushEvent(CEvent.eType.Load, () => {
     gWaterShader = CPlugin.FindPath("Water") + "WaterShader.ts";
@@ -56,6 +58,17 @@ export class CWater3D extends CSubject {
         if (this.mUpdateMat == CUpdate.eType.Updated) {
             this.mWaterDeep.x = this.GetPos().y;
         }
+    }
+    Light() {
+        this.mPaint.PushTag(CPaint.eTag.Light);
+        this.mPaint.PushCShaderAttr(new CShaderAttr("ligStep0", SDF.eLightStep0.HafeLambert));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("ligStep1", SDF.eLightStep1.BlinnPhong));
+    }
+    Shadow(_shadowReadTex) {
+        this.mPaint.PushTag(CPaint.eTag.Shadow);
+        this.mPaint.PushTag(CPaint.eTag.ShadowReadOnly);
+        this.mPaint.PushCShaderAttr(new CShaderAttr(7, "shadowread.tex"));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("shadowOn", new CVec1(7)));
     }
     SetWaterDeep(_deepHeight, _nearDistance, _farDistance, _deepColor, _shallowColor) {
         if (_deepHeight != null)

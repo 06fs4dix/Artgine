@@ -379,13 +379,13 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
     var type : number = _value[0].x;
 
     var outColor : CVec4=Sam2DToColor(0.0, _uv);
-    if(type<SDF.eColorVFX.Distort+0.5)
+    if(type<SDF.eVFX.Distort+0.5)
     {
         var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
                
         outColor = Sam2DToColor(0.0, distortedUV);
     }
-    else if(type<SDF.eColorVFX.Aberrate+0.5)
+    else if(type<SDF.eVFX.Aberrate+0.5)
     {
         var line : number = max(0.0, sin(_uv.y * 3.8 + _time * 1.4) * sin(_uv.y * 0.6 + _time * 2.3));
         var aberration_strength : number = (0.1 + line) * para.y + para.x;
@@ -395,7 +395,7 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
         outColor= SaturateV4(new CVec4(r.r,g.g,b.b,max(r.a, max(g.a, b.a))));
     }
      //아웃라인xyz : rgb
-    else if(type<SDF.eColorVFX.Outline+0.5)
+    else if(type<SDF.eVFX.Outline+0.5)
     {
         
         var org:CVec4=Sam2DToColor(0.0,_uv);
@@ -422,38 +422,38 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
     
         
     }
-    else if(type<SDF.eColorVFX.Pixel+0.5)
+    else if(type<SDF.eVFX.Pixel+0.5)
     {
         var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
         outColor = Sam2DToColor(0.0, pixelatedUV);
     }
-    else if(type<SDF.eColorVFX.Noise+0.5)
+    else if(type<SDF.eVFX.Noise+0.5)
     {
         var noiseColor : CVec3 = new CVec3(0.0, 0.0, 0.0);
         var frame : number = _time * para.y / 60.0;
 
         // grayscale 펄린
-        if(para.x < 0.5)
+        if(para.x > SDF.eNoise.Perlin-0.5)
         {
             noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.Perlin);
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
+        // RGB 펄린 노말
+        else if(para.x > SDF.eNoise.PerlinNormal-0.5)
+        {
+            var noise : CVec2 = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinNormal);
+            noiseColor.xyz = new CVec3(noise.x, sqrt(1.0 - V2Dot(noise, noise)), noise.y);
+        }
         // grayscale 클라우드
-        else if(para.x < 1.5)
+        else if(para.x > SDF.eNoise.PerlinFBM3-0.5)
         {
             noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinFBM3);
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
-        // RGB 펄린 노말
-        else if(para.x < 2.5)
-        {
-            var noise : CVec2 = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinNormal);
-            noiseColor.xyz = new CVec3(noise.x, sqrt(1.0 - V2Dot(noise, noise)), noise.y);
-        }
         // 블루 노이즈
-        else if(para.x < 3.5)
+        else if(para.x > SDF.eNoise.Blue-0.5)
         {
             var coord : CVec2 = V2Floor(V2Mod(V2MulFloat(V2AddV2(_uv, new CVec2(frame, frame)), para.w * 64.0), 64.0));
             var index : number = coord.y * 64.0 + coord.x;
@@ -465,7 +465,7 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
             noiseColor.z = noiseColor.x;
         }
         // 가우시안
-        else if(para.x < 4.5)
+        else if(para.x<SDF.eNoise.Gaussian+0.5)
         {
             var xi : number = _uv.x * para.w * 128.0;
             var yi : number = _uv.y * para.w * 128.0;
@@ -478,11 +478,11 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
         //outColor = V4Mix(noiseColor, outColor, 1.0 - para.z);
 
     }
-    else if(type<SDF.eColorVFX.Scanline+0.5)
+    else if(type<SDF.eVFX.Scanline+0.5)
     {
         outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
     }
-    else if(type<SDF.eColorVFX.LookUpTable+0.5)
+    else if(type<SDF.eVFX.LookUpTable+0.5)
     {
         var palSize : CVec2 = new CVec2(32.0,32.0);
         var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));
@@ -494,7 +494,7 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
 
         outColor=Sam2DToV4(new CVec2(11,para.x),palIndex);
     }
-    else if(type<SDF.eColorVFX.Blur+0.5)
+    else if(type<SDF.eVFX.Blur+0.5)
     {
         outColor=new CVec4(0.0,0.0,0.0,0.0);
         var fx : number = max(-para.x*0.5, -2.0);    
@@ -547,14 +547,14 @@ export function VFXDown1(_uv : CVec2, _value : CMat,_time : number) : CVec4
     var type : number = _value[1].y;
 
     var outColor : CVec4=VFXDown0(_uv,_value,_time);
-    if(type<SDF.eColorVFX.Distort+0.5)
+    if(type<SDF.eVFX.Distort+0.5)
     {
         var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
         
         outColor=VFXDown0(distortedUV,_value,_time);
         
     }
-    // else if(type<SDF.eColorVFX.Aberrate+0.5)
+    // else if(type<SDF.eVFX.Aberrate+0.5)
     // {
     //     var line : number = max(0.0, sin(_uv.y * 3.8 + _time * 1.4) * sin(_uv.y * 0.6 + _time * 2.3));
     //     var aberration_strength : number = (0.1 + line) * para.y + para.x;
@@ -564,7 +564,7 @@ export function VFXDown1(_uv : CVec2, _value : CMat,_time : number) : CVec4
     //     outColor= SaturateV4(new CVec4(r.r,g.g,b.b,max(r.a, max(g.a, b.a))));
     // }
     //  //아웃라인xyz : rgb
-    // else if(type<SDF.eColorVFX.Outline+0.5)
+    // else if(type<SDF.eVFX.Outline+0.5)
     // {
        
     //     var org:CVec4=VFXDown0(new CVec2(_uv.x,_uv.y),_value,_time);
@@ -587,17 +587,17 @@ export function VFXDown1(_uv : CVec2, _value : CMat,_time : number) : CVec4
     //      else 
     //         outColor = org;
     // }
-    else if(type<SDF.eColorVFX.Pixel+0.5)
+    else if(type<SDF.eVFX.Pixel+0.5)
     {
         var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
         outColor=VFXDown0(pixelatedUV,_value,_time);
     }
-    else if(type<SDF.eColorVFX.Scanline+0.5)
+    else if(type<SDF.eVFX.Scanline+0.5)
     {
         
         outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
     }
-    else if(type<SDF.eColorVFX.LookUpTable+0.5)
+    else if(type<SDF.eVFX.LookUpTable+0.5)
     {
         
         var palSize : CVec2 = new CVec2(32.0,32.0);
@@ -621,14 +621,14 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     var type : number = _value[2].z;
 
     var outColor : CVec4=VFXDown1(_uv,_value,_time);
-    if(type<SDF.eColorVFX.Distort+0.5)
+    if(type<SDF.eVFX.Distort+0.5)
     {
         var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
         
         outColor=VFXDown1(distortedUV,_value,_time);
         
     }
-    // else if(type<SDF.eColorVFX.Aberrate+0.5)
+    // else if(type<SDF.eVFX.Aberrate+0.5)
     // {
     //     var line : number = max(0.0, sin(_uv.y * 3.8 + _time * 1.4) * sin(_uv.y * 0.6 + _time * 2.3));
     //     var aberration_strength : number = (0.1 + line) * para.y + para.x;
@@ -638,7 +638,7 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     //     outColor= SaturateV4(new CVec4(r.r,g.g,b.b,max(r.a, max(g.a, b.a))));
     // }
     //  //아웃라인xyz : rgb
-    // else if(type<SDF.eColorVFX.Outline+0.5)
+    // else if(type<SDF.eVFX.Outline+0.5)
     // {
        
     //     var org:CVec4=VFXDown1(new CVec2(_uv.x,_uv.y),_value,_time);
@@ -661,16 +661,16 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     //      else 
     //         outColor = org;
     // }
-    else if(type<SDF.eColorVFX.Pixel+0.5)
+    else if(type<SDF.eVFX.Pixel+0.5)
     {
         var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
         outColor=VFXDown1(pixelatedUV,_value,_time);
     }
-    else if(type<SDF.eColorVFX.Scanline+0.5)
+    else if(type<SDF.eVFX.Scanline+0.5)
     {
         outColor = AddScanLine(outColor, _uv, _time, para.x, para.y);
     }
-    else if(type<SDF.eColorVFX.LookUpTable+0.5)
+    else if(type<SDF.eVFX.LookUpTable+0.5)
     {
         var palSize : CVec2 = new CVec2(32.0,32.0);
         var cellSize : number = floor(pow(palSize.x * palSize.y, 1.0 / 3.0));

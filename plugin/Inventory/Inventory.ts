@@ -92,7 +92,7 @@ export class CInvenMgr extends CObject implements IListener
 
         this.mInvenArr.push(_inven);
         
-        CEvent.ToCEvent(this.GetEvent("Push")).Call(_inven,this.mInvenArr.length-2);
+        CEvent.ToCEvent(this.GetEvent("Push")).Call(_inven,this.mInvenArr.length-1);
         return _inven;
     }
    
@@ -204,7 +204,7 @@ export class CInvenMgr extends CObject implements IListener
         }
         
     }
-    Event
+
 }
 export class CItemMgr extends CObject implements IFile
 {
@@ -238,7 +238,7 @@ export class CItemMgr extends CObject implements IFile
     {
         return this.mItemMap.get(_key);
     }
-    protected override EditChange(_pointer: CPointer, _child: boolean): void {
+    override EditChange(_pointer: CPointer, _child: boolean): void {
         super.EditChange(_pointer,_child);
 
         if(_pointer.member=="mKey")

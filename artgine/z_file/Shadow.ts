@@ -86,7 +86,6 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
 
     var jitterValue : CVec2;
     
-    
     for(; x <= PCF + 0.5; x += 1.0) 
     {
         var y : number = -PCF;
@@ -114,12 +113,23 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv0N);
                 var depth : number = shadowParam.z;			
 
-                if(shadowParam.w==0.0)    sVal+=1.0;
-                else sVal += (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
-                count += 1.0;
-                
+                var shadowVal : number;
+                if(shadowParam.w==0.0)    shadowVal=1.0;
+                else shadowVal = (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
 
-                
+                // PCF 1일때만 적용
+                // 큰 오브젝트 등이 0번 영역에서 컬링되는 경우때문에
+                // csm 1번 영역에서 가져옴
+                if(abs(x) < 0.5 && abs(y) < 0.5 && shadowVal >= 0.99) {
+                    var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv1N);
+                    var depth : number = shadowParam.z;			
+
+                    if(shadowParam.w==0.0)    shadowVal=1.0;
+                    else shadowVal = (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : -PCF*(PCF+4.0)-3.0;
+                }
+
+                sVal += shadowVal;
+                count += 1.0;
             }
             else if(_read.z>-0.5 && uv1N.x>0.0 && uv1N.y>0.0 && uv1N.x<1.0 && uv1N.y<1.0)
             {
@@ -212,7 +222,7 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
     return sVal * (1.0-shadowRate) + shadowRate;
 }
 
-export function calcParallaxShadow(_index : number, _uv : CVec2, _ligDir : CVec3, _heightScale : number) : number {    
+export function calcParallaxShadow(_index : number, _uv : CVec2, _ligDir : CVec3, _heightScale : number) : number {
     var minLayers : number = 4.0;
     var maxLayers : number = 16.0;
     var numLayers : number = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), _ligDir)));
@@ -222,7 +232,7 @@ export function calcParallaxShadow(_index : number, _uv : CVec2, _ligDir : CVec3
     var currentLayerDepth : number = currentDepthMapValue;
 
     var layerDepth : number = 1.0 / numLayers;
-    var P : CVec2 = V2MulFloat(V2DivFloat(_ligDir.xy, _ligDir.z),_heightScale);
+    var P : CVec2 = V2MulFloat(V2DivFloat(_ligDir.xy, _ligDir.z + 0.2),_heightScale);   // 페이크 viewDir 적용
     var deltaTexCoords : CVec2 = V2DivFloat(P, numLayers);
 
     // 반대로 레이마칭
