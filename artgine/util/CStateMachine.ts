@@ -12,7 +12,7 @@ import { CSamplerTimer } from "./CSampler.js";
 //pattern
 export class CSMP extends CObject
 {
-    constructor(_and : CCondition|Array<CCondition>,_ex : CAction|Array<CAction>)
+    constructor(_and : CCondition|Array<CCondition>=null,_ex : CAction|Array<CAction>=null)
     {
         super();
         if(_and==null){}

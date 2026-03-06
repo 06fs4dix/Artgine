@@ -222,27 +222,110 @@ export class CUtilWeb {
 
 
 	}
-	static async TSToJS(_source) {
-		const patchImportPaths = (code) => {
+	// static async TSToJS(_source) {
+	// 	const patchImportPaths = (code) => {
+	// 		return code.replace(
+	// 			/from\s+['"]((?:https?:\/\/|file:\/\/)[^'"]+)['"]/g,
+	// 			(match, path) => {
+	// 				// 이미 .js/.ts/.json/.mjs 가 붙어 있으면 그대로 반환
+	// 				if (/\.(js|ts|json|mjs)$/.test(path)) {
+	// 					return match;
+	// 				}
+	// 				// 경로 부분만 .js 확장자 추가
+	// 				return match.replace(path, `${path}.js`);
+	// 			}
+	// 		);
+	// 	};
+
+	// 	// 1. typescript.js가 로드되어 있는지 확인
+	// 	if (window["ts"]==null || window["ts"].transpileModule==null) 
+	// 	{
+	// 		if (!gTSLoaded) {
+	// 			gTSLoaded = true;
+
+	// 			await new Promise((resolve, reject) => {
+	// 				const script = document.createElement("script");
+	// 				script.src = CPath.PHPC() + "artgine/external/legacy/typescript.js";
+	// 				script.onload = resolve;
+	// 				script.onerror = reject;
+	// 				document.head.appendChild(script);
+	// 			});
+	// 		} else {
+	// 			// 로딩 중인 경우 잠깐 기다리기
+	// 			//await new Promise(r => setTimeout(r, 100));
+	// 			await CChecker.Exe(async ()=>{
+	// 				if(window["ts"]!=null && window["ts"].transpileModule!=null)
+	// 					return false;
+	// 				return true;
+	// 			});
+	// 		}
+	// 	}
+
+	// 	// 2. ts → js 변환
+	// 	const jsCode = window["ts"].transpileModule(_source, {
+	// 		compilerOptions: { 
+	// 			module: window["ts"].ModuleKind.ESNext,
+	// 			target: window["ts"].ScriptTarget.ES2020,           // 또는 ES2015 이상으로 올리기
+	// 			downlevelIteration: true,              // ★ 중요
+	// 			lib: ["es2015", "dom"]                 // Map/Iterator 타입 인식
+	// 		}
+	// 	}).outputText;
+
+	// 	// 3. import 경로 확장자 자동 패치
+	// 	return patchImportPaths(jsCode);
+	// }
+	static async TSToJS(_source: string): Promise<string> {
+		const patchImportPaths = (code: string) => {
 			return code.replace(
-				/from\s+['"]((?:https?:\/\/|file:\/\/)[^'"]+)['"]/g,
+				/from\s+['"]([^'"]+)['"]/g,
 				(match, path) => {
-					// 이미 .js/.ts/.json/.mjs 가 붙어 있으면 그대로 반환
+					// 이미 확장자가 있으면 그대로
 					if (/\.(js|ts|json|mjs)$/.test(path)) {
 						return match;
 					}
-					// 경로 부분만 .js 확장자 추가
-					return match.replace(path, `${path}.js`);
+
+					// Windows 절대경로 (E:/... 형태) → file:///E:/...js 로 변환
+					if (/^[A-Za-z]:[\\/]/.test(path)) {
+						const fixedPath = `file:///${path.replace(/\\/g, '/')}.js`;
+						return match.replace(path, fixedPath);
+					}
+
+					// 기존: http/https/file:// 경로에 .js 추가
+					if (/^(https?:\/\/|file:\/\/)/.test(path)) {
+						return match.replace(path, `${path}.js`);
+					}
+
+					return match;
 				}
 			);
 		};
 
-		// 1. typescript.js가 로드되어 있는지 확인
-		if (window["ts"]==null || window["ts"].transpileModule==null) 
-		{
+		const transpileOptions = {
+			compilerOptions: {
+				module: 99,  // ESNext
+				target: 7,   // ES2020
+				downlevelIteration: true,
+				lib: ["es2015", "dom"]
+			}
+		};
+
+		// Node.js 환경
+		if (CUtil.IsNode()) {
+			const ts = (await import('typescript')).default;
+			const jsCode = ts.transpileModule(_source, {
+				compilerOptions: {
+					module: ts.ModuleKind.ESNext,
+					target: ts.ScriptTarget.ES2020,
+					downlevelIteration: true,
+				}
+			}).outputText;
+			return patchImportPaths(jsCode);
+		}
+
+		// 브라우저 환경 - typescript.js 로드 확인
+		if (window["ts"] == null || window["ts"].transpileModule == null) {
 			if (!gTSLoaded) {
 				gTSLoaded = true;
-
 				await new Promise((resolve, reject) => {
 					const script = document.createElement("script");
 					script.src = CPath.PHPC() + "artgine/external/legacy/typescript.js";
@@ -251,27 +334,23 @@ export class CUtilWeb {
 					document.head.appendChild(script);
 				});
 			} else {
-				// 로딩 중인 경우 잠깐 기다리기
-				//await new Promise(r => setTimeout(r, 100));
-				await CChecker.Exe(async ()=>{
-					if(window["ts"]!=null && window["ts"].transpileModule!=null)
+				await CChecker.Exe(async () => {
+					if (window["ts"] != null && window["ts"].transpileModule != null)
 						return false;
 					return true;
 				});
 			}
 		}
 
-		// 2. ts → js 변환
 		const jsCode = window["ts"].transpileModule(_source, {
-			compilerOptions: { 
+			compilerOptions: {
 				module: window["ts"].ModuleKind.ESNext,
-				target: window["ts"].ScriptTarget.ES2020,           // 또는 ES2015 이상으로 올리기
-				downlevelIteration: true,              // ★ 중요
-				lib: ["es2015", "dom"]                 // Map/Iterator 타입 인식
+				target: window["ts"].ScriptTarget.ES2020,
+				downlevelIteration: true,
+				lib: ["es2015", "dom"]
 			}
 		}).outputText;
 
-		// 3. import 경로 확장자 자동 패치
 		return patchImportPaths(jsCode);
 	}
 	static async MDReader(_urlOrText : string) {

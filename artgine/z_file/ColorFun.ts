@@ -1,4 +1,4 @@
-import { NoiseGet, NoiseNormalGet, NoiseValue3, SampleNoise, SampleNoiseVec2 } from "./Noise";
+import { NoiseGet, NoiseValue3, SampleNoise, SampleNoiseVec2 } from "./Noise";
 import { SDF } from "./SDF";
 import { 
     abs, clamp, max, min, mod, pow, sign, sin, smoothstep,
@@ -21,11 +21,14 @@ import {
     Sam2DToV4,
     Sam2DV4,
     mix,
-    discard,
-    Array16,
     sqrt,
     V2Dot,
-    V2Mod
+    V2Mod,
+    V4MulMatCoordi,
+    V3Nor,
+    V3Cross,
+    cos,
+    InverseMat3
 } from "./Shader";
 
 export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
@@ -355,25 +358,11 @@ export var LUT3: Sam2DV4=new Sam2DV4(11, 162);
 export var LUT4: Sam2DV4=new Sam2DV4(11, 163);
 export var LUT5: Sam2DV4=new Sam2DV4(11, 164);
 
-// function NoiseGet(_uv : CVec2,_frame : number,_type : number) : CVec4
-// {
-//     var outColor : CVec4;
-//     if(_type<1)
-//     {
-//         //실시간
-        
-//     }
-//     else if(_type>SDF.eNoise.Perlin-0.5)
-//     {
-//         var off : number=_uv.x+_uv.y*128.0+_frame*128*128;
-//         var offX=mod(off,2048.0);
-//         var offY=floor(off/2048.0);
-//         Sam2DToV4(new CVec2(11,SDF.eNoise.Perlin+offY),offX);
-//     }
-//     return outColor;
-// }
+export var vfxMat0: CMat=Null();
+export var vfxMat1: CMat=Null();
+
 //offset 키워드가 있으면 int로
-function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
+function VFXDown0(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) : CVec4
 {
     var para : CVec4 = new CVec4(_value[0].y, _value[0].z, _value[0].w, _value[1].x);
     var type : number = _value[0].x;
@@ -537,21 +526,70 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number) : CVec4
         }
 
     }
-   
+    else if(type<SDF.eVFX.Decal+0.5 || type<SDF.eVFX.DecalTexture+0.5)
+    {
+        outColor = Sam2DToColor(0.0, _uv);
+
+        var decalDir : CVec3 = new CVec3(vfxMat0[0][0], vfxMat0[0][1], vfxMat0[0][2]);
+        var decalRot : number = vfxMat0[0][3];
+        var decalSca : CVec3 = new CVec3(vfxMat0[1][0], vfxMat0[1][1], vfxMat0[1][2]);
+        var decalPos : CVec3 = new CVec3(vfxMat0[1][3], vfxMat0[2][0], vfxMat0[2][1]);
+
+        var zAxis : CVec3 = V3Nor(decalDir);
+        var up : CVec3 = abs(zAxis.y) > 1.0-1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
+        var xAxis : CVec3 = V3Cross(up, zAxis);
+        var yAxis : CVec3 = V3Cross(zAxis, xAxis);
+
+        var rx : CVec3 = xAxis;
+        var ry : CVec3 = yAxis;
+        if(abs(decalRot) > 1e-8) {
+            var cosT : number = cos(decalRot);
+            var sinT : number = sin(decalRot);
+            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
+            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+        }
+
+        var decalMat : CMat = new CMat(
+            rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0,
+            ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0,
+            zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        );
+        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
+        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
+        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
+
+        var decalUV : CVec4 = V4MulMatCoordi(_worldPos, decalMat);
+        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
+
+        // 데칼 범위 내에 있음
+        if(decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5)
+        {
+            var decalColor : CVec4 = para;
+            if(type>SDF.eVFX.Decal+0.5) {
+                decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+            }
+            outColor = new CVec4(
+                V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                outColor.a
+            );
+        }
+    }
     
     return outColor;
 }
-export function VFXDown1(_uv : CVec2, _value : CMat,_time : number) : CVec4
+export function VFXDown1(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) : CVec4
 {
     var para : CVec4 = new CVec4(_value[1].z, _value[1].w, _value[2].x, _value[2].y);
     var type : number = _value[1].y;
 
-    var outColor : CVec4=VFXDown0(_uv,_value,_time);
+    var outColor : CVec4=VFXDown0(_uv,_value,_time,_worldPos);
     if(type<SDF.eVFX.Distort+0.5)
     {
         var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
         
-        outColor=VFXDown0(distortedUV,_value,_time);
+        outColor=VFXDown0(distortedUV,_value,_time,_worldPos);
         
     }
     // else if(type<SDF.eVFX.Aberrate+0.5)
@@ -590,7 +628,7 @@ export function VFXDown1(_uv : CVec2, _value : CMat,_time : number) : CVec4
     else if(type<SDF.eVFX.Pixel+0.5)
     {
         var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
-        outColor=VFXDown0(pixelatedUV,_value,_time);
+        outColor=VFXDown0(pixelatedUV,_value,_time,_worldPos);
     }
     else if(type<SDF.eVFX.Scanline+0.5)
     {
@@ -611,21 +649,69 @@ export function VFXDown1(_uv : CVec2, _value : CMat,_time : number) : CVec4
         outColor=Sam2DToV4(new CVec2(11,para.x),palIndex);
         
     }
+    else if(type<SDF.eVFX.Decal+0.5 || type<SDF.eVFX.DecalTexture+0.5)
+    {
+        var decalDir : CVec3 = new CVec3(vfxMat0[2][2], vfxMat0[2][3], vfxMat0[3][0]);
+        var decalRot : number = vfxMat0[3][1];
+        var decalSca : CVec3 = new CVec3(vfxMat0[3][2], vfxMat0[3][3], vfxMat1[0][0]);
+        var decalPos : CVec3 = new CVec3(vfxMat1[0][1], vfxMat1[0][2], vfxMat1[0][3]);
+
+        var zAxis : CVec3 = V3Nor(decalDir);
+        var up : CVec3 = abs(zAxis.y) > 1.0-1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
+        var xAxis : CVec3 = V3Cross(up, zAxis);
+        var yAxis : CVec3 = V3Cross(zAxis, xAxis);
+
+        var rx : CVec3 = xAxis;
+        var ry : CVec3 = yAxis;
+        if(decalRot > 1e-8) {
+            var cosT : number = cos(decalRot);
+            var sinT : number = sin(decalRot);
+            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
+            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+        }
+
+        var decalMat : CMat = new CMat(
+            rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0,
+            ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0,
+            zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        );
+        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
+        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
+        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
+
+        var decalUV : CVec4 = V4MulMatCoordi(_worldPos, decalMat);
+        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
+
+        // 데칼 범위 내에 있음
+        if(decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5)
+        {
+            var decalColor : CVec4 = para;
+            if(type>SDF.eVFX.Decal+0.5) {
+                decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+            }
+            outColor = new CVec4(
+                V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                outColor.a
+            );
+        }
+    }
    
     return outColor;
 }
 
-export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
+export function VFXDown2(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) : CVec4
 {
     var para : CVec4 = new CVec4(_value[2].w, _value[3].x, _value[3].y, _value[3].z);
     var type : number = _value[2].z;
 
-    var outColor : CVec4=VFXDown1(_uv,_value,_time);
+    var outColor : CVec4=VFXDown1(_uv,_value,_time,_worldPos);
     if(type<SDF.eVFX.Distort+0.5)
     {
         var distortedUV : CVec2 = GetDistortedUV(_uv, new CVec2(para.x, para.y), _time);
         
-        outColor=VFXDown1(distortedUV,_value,_time);
+        outColor=VFXDown1(distortedUV,_value,_time,_worldPos);
         
     }
     // else if(type<SDF.eVFX.Aberrate+0.5)
@@ -664,7 +750,7 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
     else if(type<SDF.eVFX.Pixel+0.5)
     {
         var pixelatedUV : CVec2 = GetPixelatedUV(Sam2DSize(0.0), new CVec2(para.x, para.y), _uv);
-        outColor=VFXDown1(pixelatedUV,_value,_time);
+        outColor=VFXDown1(pixelatedUV,_value,_time,_worldPos);
     }
     else if(type<SDF.eVFX.Scanline+0.5)
     {
@@ -683,7 +769,55 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number) : CVec4
         outColor=Sam2DToV4(new CVec2(11,para.x),palIndex);
         
     }
-   
+    else if(type<SDF.eVFX.Decal+0.5 || type<SDF.eVFX.DecalTexture+0.5)
+    {
+        var decalDir : CVec3 = new CVec3(vfxMat1[1][0], vfxMat1[1][1], vfxMat1[1][2]);
+        var decalRot : number = vfxMat1[1][3];
+        var decalSca : CVec3 = new CVec3(vfxMat1[2][0], vfxMat1[2][1], vfxMat1[2][2]);
+        var decalPos : CVec3 = new CVec3(vfxMat1[2][3], vfxMat1[3][0], vfxMat1[3][1]);
+
+        var zAxis : CVec3 = V3Nor(decalDir);
+        var up : CVec3 = abs(zAxis.y) > 1.0-1e-8 ? new CVec3(0.0, 0.0, -1.0) : new CVec3(0.0, 1.0, 0.0);
+        var xAxis : CVec3 = V3Cross(up, zAxis);
+        var yAxis : CVec3 = V3Cross(zAxis, xAxis);
+
+        var rx : CVec3 = xAxis;
+        var ry : CVec3 = yAxis;
+        if(decalRot > 1e-8) {
+            var cosT : number = cos(decalRot);
+            var sinT : number = sin(decalRot);
+            rx = V3Nor(V3AddV3(V3MulFloat(xAxis, cosT), V3MulFloat(yAxis, sinT)));
+            ry = V3Nor(V3SubV3(V3MulFloat(yAxis, cosT), V3MulFloat(xAxis, sinT)));
+        }
+
+        var decalMat : CMat = new CMat(
+            rx.x / decalSca.x, rx.y / decalSca.x, rx.z / decalSca.x, 0.0,
+            ry.x / decalSca.y, ry.y / decalSca.y, ry.z / decalSca.y, 0.0,
+            zAxis.x / decalSca.z, zAxis.y / decalSca.z, zAxis.z / decalSca.z, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        );
+        decalMat[3][0] = -(decalPos.x * decalMat[0][0] + decalPos.y * decalMat[0][1] + decalPos.z * decalMat[0][2]);
+        decalMat[3][1] = -(decalPos.x * decalMat[1][0] + decalPos.y * decalMat[1][1] + decalPos.z * decalMat[1][2]);
+        decalMat[3][2] = -(decalPos.x * decalMat[2][0] + decalPos.y * decalMat[2][1] + decalPos.z * decalMat[2][2]);
+
+        var decalUV : CVec4 = V4MulMatCoordi(_worldPos, decalMat);
+        decalUV = V4MulFloat(decalUV, 1.0 / decalUV.w);
+
+        // 데칼 범위 내에 있음
+        if(decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5)
+        {
+            var decalColor : CVec4 = para;
+            if(type>SDF.eVFX.Decal+0.5) {
+                decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+            }
+            outColor = new CVec4(
+                V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                outColor.a
+            );
+        }
+    }
+    
     return outColor;
 }
 

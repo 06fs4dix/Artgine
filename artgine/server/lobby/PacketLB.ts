@@ -11,10 +11,12 @@ export class PacketLB {
         "L2RURoomRemoveUser": "L2RURoomRemoveUser",
         "R2LRoomReady": "R2LRoomReady",
         "R2USend": "R2USend",
+        "R2RSend": "R2RSend",
         "R2USave": "R2USave"
     };
 
     static U2LLobbyConnect(privateKey: string, nick: string, project: string): CStream;
+    static U2LLobbyConnect(privateKey: string, nick: string, project: string,_stream:CStream): CStream;
     static U2LLobbyConnect(_stream: CStream): {privateKey: string, nick: string, project: string};
     static U2LLobbyConnect(privateKey: string | CStream, nick: string | null = null, project: string | null = null,_stream=new CStream()): any {
         if (privateKey instanceof CStream) {
@@ -25,6 +27,7 @@ export class PacketLB {
     }
 
     static L2ULobbyConnectError(code: string, msg: string): CStream;
+    static L2ULobbyConnectError(code: string, msg: string,_stream:CStream): CStream;
     static L2ULobbyConnectError(_stream: CStream): {code: string, msg: string};
     static L2ULobbyConnectError(code: string | CStream, msg: string | null = null,_stream=new CStream()): any {
         if (code instanceof CStream) {
@@ -35,6 +38,7 @@ export class PacketLB {
     }
 
     static L2RRoomConnect(userKey: string, nick: string, privateKey: string): CStream;
+    static L2RRoomConnect(userKey: string, nick: string, privateKey: string,_stream:CStream): CStream;
     static L2RRoomConnect(_stream: CStream): {userKey: string, nick: string, privateKey: string};
     static L2RRoomConnect(userKey: string | CStream, nick: string | null = null, privateKey: string | null = null,_stream=new CStream()): any {
         if (userKey instanceof CStream) {
@@ -45,6 +49,7 @@ export class PacketLB {
     }
 
     static R2LUserConnect(userKey: string, state: number): CStream;
+    static R2LUserConnect(userKey: string, state: number,_stream:CStream): CStream;
     static R2LUserConnect(_stream: CStream): {userKey: string, state: number};
     static R2LUserConnect(userKey: string | CStream, state: number | null = null,_stream=new CStream()): any {
         if (userKey instanceof CStream) {
@@ -55,6 +60,7 @@ export class PacketLB {
     }
 
     static R2URoomInfo(userKey: string, data: string): CStream;
+    static R2URoomInfo(userKey: string, data: string,_stream:CStream): CStream;
     static R2URoomInfo(_stream: CStream): {userKey: string, data: string};
     static R2URoomInfo(userKey: string | CStream, data: string | null = null,_stream=new CStream()): any {
         if (userKey instanceof CStream) {
@@ -65,6 +71,7 @@ export class PacketLB {
     }
 
     static R2URoomPushUser(userKey: string, data: string): CStream;
+    static R2URoomPushUser(userKey: string, data: string,_stream:CStream): CStream;
     static R2URoomPushUser(_stream: CStream): {userKey: string, data: string};
     static R2URoomPushUser(userKey: string | CStream, data: string | null = null,_stream=new CStream()): any {
         if (userKey instanceof CStream) {
@@ -75,6 +82,7 @@ export class PacketLB {
     }
 
     static L2RURoomRemoveUser(userKey: string): CStream;
+    static L2RURoomRemoveUser(userKey: string,_stream:CStream): CStream;
     static L2RURoomRemoveUser(_stream: CStream): {userKey: string};
     static L2RURoomRemoveUser(userKey: string | CStream,_stream=new CStream()): any {
         if (userKey instanceof CStream) {
@@ -85,6 +93,7 @@ export class PacketLB {
     }
 
     static R2LRoomReady(key: string): CStream;
+    static R2LRoomReady(key: string,_stream:CStream): CStream;
     static R2LRoomReady(_stream: CStream): {key: string};
     static R2LRoomReady(key: string | CStream,_stream=new CStream()): any {
         if (key instanceof CStream) {
@@ -95,6 +104,7 @@ export class PacketLB {
     }
 
     static R2USend(userKeyList: Array<string>, block: string, data: string): CStream;
+    static R2USend(userKeyList: Array<string>, block: string, data: string,_stream:CStream): CStream;
     static R2USend(_stream: CStream): {userKeyList: Array<string>, block: string, data: string};
     static R2USend(userKeyList: Array<string> | CStream, block: string | null = null, data: string | null = null,_stream=new CStream()): any {
         if (userKeyList instanceof CStream) {
@@ -104,7 +114,19 @@ export class PacketLB {
         return _stream;
     }
 
+    static R2RSend(data: string): CStream;
+    static R2RSend(data: string,_stream:CStream): CStream;
+    static R2RSend(_stream: CStream): {data: string};
+    static R2RSend(data: string | CStream,_stream=new CStream()): any {
+        if (data instanceof CStream) {
+            return data.GetPacket("data");
+        }
+        _stream.Push("R2RSend").Push(data);
+        return _stream;
+    }
+
     static R2USave(userKey: string, data: string): CStream;
+    static R2USave(userKey: string, data: string,_stream:CStream): CStream;
     static R2USave(_stream: CStream): {userKey: string, data: string};
     static R2USave(userKey: string | CStream, data: string | null = null,_stream=new CStream()): any {
         if (userKey instanceof CStream) {
@@ -154,6 +176,9 @@ var PacketLB_JSON={
     "R2USend": {
         "userKeyList": "Array<string>",
         "block": "string",
+        "data": "string",
+    },
+    "R2RSend": {
         "data": "string",
     },
     "R2USave": {

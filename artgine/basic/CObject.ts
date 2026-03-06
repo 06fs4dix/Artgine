@@ -723,6 +723,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 				let mm=key.substring(0,asOff);
 
 				if(t[mm] instanceof Set)	t = t[mm].has(inStr);
+				else if(t[mm] instanceof Map)	t = t[mm].get(inStr);
 				else	t = t[mm][Number(inStr)];
 				
 			} 

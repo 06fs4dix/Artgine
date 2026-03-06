@@ -1,5 +1,6 @@
 
-import { AlphaModalFun } from "./ColorFun";
+import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2 } from "./ColorFun";
+import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
 import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -14,6 +15,11 @@ import {
 	BranchBegin,
 	BranchEnd,
 	BranchDefault,
+	ToV2,
+	UV2,
+	V4MulFloat,
+	V4Mix,
+	Attribute,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
@@ -42,6 +48,8 @@ var to_normal : ToV3=Null();
 var shadowReadList: Sam2DV4=new Sam2DV4(11);
 var shadowOn : number = -1.0;
 var sun : number=1.0;
+
+var time : number=Attribute(0,"time");
 
 Build("Artgine/Shader/Voxel",[],
 	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun],[out_position,to_uv,to_worldPos],
@@ -314,8 +322,6 @@ function vs_main(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 		
 	else
 		to_uv.w=light;
-	
-
 
 	P=V4MulMatCoordi(P,worldMat);
 	to_worldPos=P;
@@ -331,6 +337,7 @@ function ps_main()
 {
 	var L_cor : CVec4=new CVec4(0.0,0.0,0.0,1.0);
 	var light : number =to_uv.w;
+	
 	//렌더링 패스
 	if(to_uv.w>1.5)
 	{
@@ -346,8 +353,16 @@ function ps_main()
 	}
 	else
 	{
+		BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+		L_cor=VFXDown2(to_uv.xy,VFX,time,to_worldPos);
+		BranchDefault();
 		L_cor=Sam2DToColor(0.0,to_uv.xy);
+		BranchEnd();
 	}
+
+
+
+
 	L_cor.rgb=V3MulFloat(L_cor.rgb,light);
 	
 	BranchBegin("alphaModel","AM",[alphaModel]);
@@ -360,8 +375,6 @@ function ps_main()
 	L_cor.rgb=DSE[0];
 	BranchEnd();
     
-	
-
 
 	var shadow : number = 1.0;
 	if(shadowOn > 0.5) {
@@ -374,9 +387,8 @@ function ps_main()
 	}
 	L_cor.xyz=V3MulFloat(L_cor.xyz,shadow);
 
+
 	out_color=L_cor;
-
-
 
 
 	//out_color=new CVec4(1.0,1.0,1.0,1.0);

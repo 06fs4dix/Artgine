@@ -8,7 +8,7 @@ import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
 import { CFile } from "../../artgine/system/CFile.js";
 import { CTooltip } from "../../artgine/util/CTooltip.js";
 export class CInventory extends CObject {
-    constructor(_itemKey) {
+    constructor(_itemKey, _amount = 1) {
         super();
         this.mKey = CUniqueID.Get();
         this.mItemKey = _itemKey;
@@ -86,7 +86,7 @@ export class CInvenMgr extends CObject {
                     return inven;
                 }
             }
-            const created = new CInventory(_itemKey);
+            const created = CClass.New(this.mInvenArr[0], [_itemKey]);
             created.mAmount = _amount;
             this.mInvenArr.push(created);
             return created;
@@ -125,6 +125,13 @@ export class CInvenMgr extends CObject {
             }
         }
         return null;
+    }
+    Clear() {
+        for (let i = 0; i < this.mInvenArr.length; ++i) {
+            const removed = this.mInvenArr[i];
+            this.mInvenArr.splice(i, 1);
+            CEvent.ToCEvent(this.GetEvent("Remove")).Call(removed);
+        }
     }
     Swap(_DragKey, _DropKey) {
         let Drag = this.FindInven(_DragKey);
@@ -405,6 +412,8 @@ export class CInvenViewer extends CModal {
             let body = { "tag": "ul", "class": "list-group", "id": this.mKey + "_inven", "html": [] };
             for (let inven of InvetArr) {
                 let item = this.mItemMgr.Find(inven.mItemKey);
+                if (!item)
+                    continue;
                 let invenDiv = { "tag": "li", "class": "list-group-item viewer_search", "draggable": true, "id": inven.mKey,
                     "ondrop": DropEvent, "ondragstart": DragStartEvent,
                     "html": [
@@ -419,6 +428,8 @@ export class CInvenViewer extends CModal {
         const CARD_MAX_W = 240;
         for (let inven of InvetArr) {
             let item = this.mItemMgr.Find(inven.mItemKey);
+            if (!item)
+                continue;
             let card = { "tag": "div", "class": "card", "style": `min-width:${CARD_MIN_W}px;max-width:${CARD_MAX_W}px;`,
                 "html": [
                     { "tag": "img", "src": item.mImg, "class": "card-img-top d-block mx-auto pt-2", "style": "width:32px;height:32px;object-fit:contain;" },

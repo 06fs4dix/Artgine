@@ -199,7 +199,7 @@ export async function InitDevToolScriptViewer(_github)
 
     if(json.script=="")
     {
-        let buf=await CFile.Load(CPath.PHPC()+"App/Template/RuntimeScript.ts")
+        let buf=await CFile.Load(CPath.PHPC()+"desktop/Template/RuntimeScript.ts")
         json.script=CUtil.ArrayToString(buf);
     }
     

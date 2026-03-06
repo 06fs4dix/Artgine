@@ -1119,7 +1119,7 @@ export class CUIProgressBar extends CUI
 	}
 	
 }
-export class CUiHTML extends CUI
+export class CUIHTML extends CUI
 {
 	mHTML : string | CJSON;
 	mHover=false;

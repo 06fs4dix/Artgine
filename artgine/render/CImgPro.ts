@@ -22,7 +22,7 @@ export class CImgPro
 		var tex=new CTexture();
 		tex.SetSize(_w, _h);
 		tex.CreateBuf();
-		var buf = tex.GetBuf();
+		var buf = tex.GetBuf()[0];
 		var size=4*_w*_h;
 		for (var i = 0; i < size; i+=4)
 		{
@@ -425,40 +425,68 @@ export class CImgPro
 		out.SetBuf(outColors);
 		return out;
 	}
-	static CreateNoiseTexture(_type : number, _zVal : number = 0, _size : CVec2 = new CVec2(128, 128)) {
+	static CreateNoiseTexture(_type : number, _zVal : number = 0, _size : CVec2 = new CVec2(128, 128), _normalMap : boolean = false) {
 		// seamless로 만들기 위해 자를 부분만큼 더 크게 만듬
-		var blendInc : number = 0.5;	// 이 값을 더 높이면 seamless 오류가 줄어듬
+		var blendInc : number = 0.2;	// 이 값을 더 높이면 seamless 오류가 줄어듬
 		var skirtWidth : number = Math.max(1, Math.floor(_size.x * blendInc));
 		var skirtHeight : number = Math.max(1, Math.floor(_size.y * blendInc));
 		var srcWidth : number = _size.x + skirtWidth;
 		var srcHeight : number = _size.y + skirtHeight;
+
+		function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _max2 : number) {
+			return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
+		}
+		var NoiseFunc = null;
+		switch(_type) {
+			case SDF.eNoise.Perlin:
+				NoiseFunc = CUtilRender.NoisePerlin.bind(CUtilRender);
+				break;
+			case SDF.eNoise.PerlinNormal:
+				NoiseFunc = CUtilRender.NoiseCellular.bind(CUtilRender);
+				break;
+		}
+		if(NoiseFunc == null) {
+			return null;
+		}
 		
 		// 노이즈 값을 [-1, 1] 범위로 나온다고 가정하고 [0, 1] 범위로 변경
 		var prevBuffer = new Uint8Array(srcWidth * srcHeight * 4);
 		var idx = 0;
 		for(var y = 0; y < srcHeight; y++) {
 			for(var x = 0; x < srcWidth; x++) {
-				switch(_type) {
-					case SDF.eNoise.Gaussian:
-						prevBuffer[idx * 4 + 0] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 0), y * (2.76434 ** 0), _zVal * (2.76434 ** 0)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 1] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 1), y * (2.76434 ** 1), _zVal * (2.76434 ** 1)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 2] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 2), y * (2.76434 ** 2), _zVal * (2.76434 ** 2)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 3] = (CUtilRender.NoiseSimplex(x * (2.76434 ** 3), y * (2.76434 ** 3), _zVal * (2.76434 ** 3)) * 0.5 + 0.5) * 255.0;
-						break;
-					case SDF.eNoise.Perlin:
-						prevBuffer[idx * 4 + 0] = (CUtilRender.NoisePerlin(x * (2.76434 ** 0), y * (2.76434 ** 0), _zVal * (2.76434 ** 0)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 1] = (CUtilRender.NoisePerlin(x * (2.76434 ** 1), y * (2.76434 ** 1), _zVal * (2.76434 ** 1)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 2] = (CUtilRender.NoisePerlin(x * (2.76434 ** 2), y * (2.76434 ** 2), _zVal * (2.76434 ** 2)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 3] = (CUtilRender.NoisePerlin(x * (2.76434 ** 3), y * (2.76434 ** 3), _zVal * (2.76434 ** 3)) * 0.5 + 0.5) * 255.0;
-						break;
-					case SDF.eNoise.Voronoi:
-						prevBuffer[idx * 4 + 0] = (CUtilRender.NoiseCellular(x * (2.76434 ** 0), y * (2.76434 ** 0), _zVal * (2.76434 ** 0)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 1] = (CUtilRender.NoiseCellular(x * (2.76434 ** 1), y * (2.76434 ** 1), _zVal * (2.76434 ** 1)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 2] = (CUtilRender.NoiseCellular(x * (2.76434 ** 2), y * (2.76434 ** 2), _zVal * (2.76434 ** 2)) * 0.5 + 0.5) * 255.0;
-						// prevBuffer[idx * 4 + 3] = (CUtilRender.NoiseCellular(x * (2.76434 ** 3), y * (2.76434 ** 3), _zVal * (2.76434 ** 3)) * 0.5 + 0.5) * 255.0;
-						break;
-				}
+				prevBuffer[idx * 4 + 0] = Math.round(Remap(NoiseFunc(x, y, _zVal), -1, 1, 0, 1) * 255.0);
+				prevBuffer[idx * 4 + 3] = 255;
 				idx++;
+			}
+		}
+
+		if(_normalMap) {
+			for(var ty = 0; ty < _size.y; ty++) {
+				let py = ty + 1;
+				if(py >= _size.y) {
+					py -= _size.y;
+				}
+
+				for(let tx = 0; tx < _size.x; tx++) {
+					let px = tx + 1;
+					if(px >= _size.x) {
+						px -= _size.x;
+					}
+
+					var here = buffer[(ty * _size.x + tx) * 4 + 0];
+					var to_right = buffer[(ty * _size.x + px) * 4 + 0];
+					var above = buffer[(py * _size.x + tx) * 4 + 0];
+					var up = new CVec3(0, (here - above) * 8.0, 1);
+					var across = new CVec3(1, (to_right - here) * 8.0, 0);
+
+					var normal = CMath.V3Cross(across, up);
+					CMath.V3Nor(normal, normal);
+
+					buffer[(ty * _size.x + tx) * 4 + 0] = Math.round(127.5 + normal.x * 127.5);
+					buffer[(ty * _size.x + tx) * 4 + 1] = Math.round(127.5 + normal.y * 127.5);
+					buffer[(ty * _size.x + tx) * 4 + 2] = Math.round(127.5 + normal.z * 127.5);
+					buffer[(ty * _size.x + tx) * 4 + 3] = 255;
+				}
 			}
 		}
 
@@ -531,20 +559,20 @@ export class CImgPro
 				let x, y;
 				switch(_mode) {
 					case AltModulo.ALT_XY:
-						x = (_x + this.mOffsetX) % this.mAltWidth;
-						y = (_y + this.mOffsetY) % this.mAltHeight;
+						x = ((_x + this.mOffsetX) % this.mAltWidth + this.mAltWidth) % this.mAltWidth;
+						y = ((_y + this.mOffsetY) % this.mAltHeight + this.mAltHeight) % this.mAltHeight;
 						break;
 					case AltModulo.ALT_X:
-						x = (_x + this.mOffsetX) % this.mAltWidth;
-						y = (_y + this.mOffsetY) % this.mHeight;
+						x = ((_x + this.mOffsetX) % this.mAltWidth + this.mAltWidth) % this.mAltWidth;
+						y = ((_y + this.mOffsetY) % this.mHeight + this.mHeight) % this.mHeight;
 						break;
 					case AltModulo.ALT_Y:
-						x = (_x + this.mOffsetX) % this.mWidth;
-						y = (_y + this.mOffsetY) % this.mAltHeight;
+						x = ((_x + this.mOffsetX) % this.mWidth + this.mWidth) % this.mWidth;
+						y = ((_y + this.mOffsetY) % this.mAltHeight + this.mAltHeight) % this.mAltHeight;
 						break;
 					default:
-						x = (_x + this.mOffsetX) % this.mWidth;
-						y = (_y + this.mOffsetY) % this.mHeight;
+						x = ((_x + this.mOffsetX) % this.mWidth + this.mWidth) % this.mWidth;
+						y = ((_y + this.mOffsetY) % this.mHeight + this.mHeight) % this.mHeight;
 						break;
 				}
 				return x + y * this.mWidth;
@@ -555,14 +583,14 @@ export class CImgPro
 			return s * s * (3 - 2 * s);
 		}
 		function AlphaBlend(_bg : CVec4, _fg : CVec4, _alpha : number,out=new CVec4()) {
-			var alpha = _alpha + 1;
-			var invAlpha = 256 - _alpha;
+			var alpha = _alpha;
+			var invAlpha = 255 - _alpha;
 
 			
-			out.x = (alpha * _fg.x + invAlpha * _bg.x) >> 8;
-			out.y = (alpha * _fg.y + invAlpha * _bg.y) >> 8;
-			out.z = (alpha * _fg.z + invAlpha * _bg.z) >> 8;
-			out.w = (alpha * _fg.w + invAlpha * _bg.w) >> 8;
+			out.x = (alpha * _fg.x + invAlpha * _bg.x) / 255;
+			out.y = (alpha * _fg.y + invAlpha * _bg.y) / 255;
+			out.z = (alpha * _fg.z + invAlpha * _bg.z) / 255;
+			out.w = (alpha * _fg.w + invAlpha * _bg.w) / 255;
 
 			return out;
 		}
@@ -573,6 +601,7 @@ export class CImgPro
 		var v4d0=new CVec4();
 		var v4d1=new CVec4();
 		var v4d2=new CVec4();
+		var v4d3=new CVec4();
 
 		// 중점을 기준으로 사분면을 반대쪽에 넣어줌
 		for(var y = 0; y < _size.y; y++) {
@@ -614,7 +643,7 @@ export class CImgPro
 				var ypos : number = Math.floor(255 * (1 - Smoothstep(0.1, 0.9, (y - halfHeight) / skirtHeight)));
 
 				var topBlend : CVec4 = AlphaBlend(rd_src.Get(x, y, AltModulo.ALT_X,v4d0), rd_src.Get(x, y,AltModulo.DEFAULT,v4d1), xpos,v4d2);
-				var botBlend : CVec4 = AlphaBlend(rd_src.Get(x, y, AltModulo.ALT_XY,v4d0), rd_src.Get(x, y, AltModulo.ALT_Y,v4d1), xpos,v4d2);
+				var botBlend : CVec4 = AlphaBlend(rd_src.Get(x, y, AltModulo.ALT_XY,v4d0), rd_src.Get(x, y, AltModulo.ALT_Y,v4d1), xpos,v4d3);
 				rd_dest.Set(x, y,AltModulo.DEFAULT,AlphaBlend(botBlend, topBlend, ypos));
 			}
 		}
@@ -628,14 +657,14 @@ export class CImgPro
 		out.SetBuf(buffer);
 		return out;
 	}
-	static Create3DNoiseTexture(_type : number, _size : CVec3 = new CVec3(128, 128, 128)) {
-		var blendInc : number = 0.5;	// 이 값을 더 높이면 seamless 오류가 줄어듬
+	static Create3DNoiseTexture(_type : number, _size : CVec3 = new CVec3(128, 128, 128), _normalMap : boolean = false) {
+		var blendInc : number = 0.2;	// 이 값을 더 높이면 seamless 오류가 줄어듬
 		var skirtDepth : number = Math.max(1, Math.floor(_size.z * blendInc));
 		var srcDepth : number = _size.z + skirtDepth;
 
 		const src : CTexture[] = [];
 		for(let z = 0; z < srcDepth; z++) {
-			const tex = this.CreateNoiseTexture(_type, z, new CVec2(_size.x, _size.y));
+			const tex = this.CreateNoiseTexture(_type, z, new CVec2(_size.x, _size.y), _normalMap);
 			src.push(tex);
 		}
 
@@ -689,24 +718,12 @@ export class CImgPro
 		// 노멀라이징(0-1 범위로 바꿔줌), 몇몇 노이즈는 계산 특성상 중앙에 몰려서 노멀라이즈 안하면 범위가 좁을 수 있음
 		var minValX : number = 10000;
 		var maxValX : number = -10000;
-		// var minValY : number = 10000;
-		// var maxValY : number = -10000;
-		// var minValZ : number = 10000;
-		// var maxValZ : number = -10000;
-		// var minValW : number = 10000;
-		// var maxValW : number = -10000;
 		for(var z = 0; z < _size.z; z++) {
 			var idx : number = 0;
 			for(var y = 0; y < _size.y; y++) {
 				for(var x = 0; x < _size.x; x++) {
 					if(minValX > out[z].GetBuf()[0][idx * 4 + 0]) minValX = out[z].GetBuf()[0][idx * 4 + 0];
 					if(maxValX < out[z].GetBuf()[0][idx * 4 + 0]) maxValX = out[z].GetBuf()[0][idx * 4 + 0];
-					// if(minValY > out[z].GetBuf()[0][idx * 4 + 1]) minValY = out[z].GetBuf()[0][idx * 4 + 1];
-					// if(maxValY < out[z].GetBuf()[0][idx * 4 + 1]) maxValY = out[z].GetBuf()[0][idx * 4 + 1];
-					// if(minValZ > out[z].GetBuf()[0][idx * 4 + 2]) minValZ = out[z].GetBuf()[0][idx * 4 + 2];
-					// if(maxValZ < out[z].GetBuf()[0][idx * 4 + 2]) maxValZ = out[z].GetBuf()[0][idx * 4 + 2];
-					// if(minValW > out[z].GetBuf()[0][idx * 4 + 3]) minValW = out[z].GetBuf()[0][idx * 4 + 3];
-					// if(maxValW < out[z].GetBuf()[0][idx * 4 + 3]) maxValW = out[z].GetBuf()[0][idx * 4 + 3];
 					idx++;
 				}
 			}
@@ -717,17 +734,119 @@ export class CImgPro
 				for(var x = 0; x < _size.x; x++) {
 					if(maxValX == minValX) out[z].GetBuf()[0][idx * 4 + 0] = 0;
 					else out[z].GetBuf()[0][idx * 4 + 0] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 0] - minValX) / (maxValX - minValX) * 255, 0, 255);
-					// if(maxValY == minValY) out[z].GetBuf()[0][idx * 4 + 0] = 0;
-					// else out[z].GetBuf()[0][idx * 4 + 1] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 1] - minValY) / (maxValY - minValY) * 255, 0, 255);
-					// if(maxValZ == minValZ) out[z].GetBuf()[0][idx * 4 + 0] = 0;
-					// else out[z].GetBuf()[0][idx * 4 + 2] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 2] - minValZ) / (maxValZ - minValZ) * 255, 0, 255);
-					// if(maxValW == minValW) out[z].GetBuf()[0][idx * 4 + 0] = 0;
-					// else out[z].GetBuf()[0][idx * 4 + 3] = CMath.Clamp((out[z].GetBuf()[0][idx * 4 + 3] - minValW) / (maxValW - minValW) * 255, 0, 255);
 					idx++;
 				}
 			}
 		}
 
 		return out;
+	}
+	/*
+		_targetTex : 색상이 그려질 텍스쳐
+		_boundary : _targetTex가 차지하는 전체 영역
+		_pos : 브러시가 찍힐 중심 좌표
+		_size : 브러시 크기
+		_channel : RGBA 중 어떤 채널에 값을 쓸지 결정하는 마스크
+		_addedVal : 텍스쳐에 있던 값에 더해지는 변수(0 - 255)
+		_brushTex : (선택) 특정 텍스쳐를 브러시 모양으로 사용할지 결정, 없으면 사각형 사용
+
+		xy / xz 중 어떤 것을 사용할지 어떻게 추가할까?
+		현재는 무조건 xy만 사용
+	*/
+	static DrawBrush(_targetTex : CTexture, _boundary : CBound, _pos : CVec3, _size : CVec2, _channel : CVec4, _addedVal : number, _brushTex : CTexture = null)
+	{
+		// 버퍼 있는지 검증
+		const targetBuf = _targetTex.GetBuf()[0] as Uint8Array;
+		if(!targetBuf) return;
+
+		// 리맵 함수
+		function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _max2 : number) {
+			return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
+		}
+
+		// 텍스쳐 정보
+		const texWidth = _targetTex.GetWidth();
+		const texHeight = _targetTex.GetHeight();
+		const boundSize = _boundary.GetSize();
+
+		// 월드 좌표 => UV 좌표
+		const centerUV = new CVec2(
+			Remap(_pos.x, _boundary.mMin.x, _boundary.mMax.x, 0, 1),
+			Remap(_pos.y, _boundary.mMin.y, _boundary.mMax.y, 0, 1)
+		);
+
+		// 월드 사이즈 => UV 사이즈
+		const sizeUV = new CVec2(
+			_size.x / boundSize.x,
+			_size.y / boundSize.y
+		);
+
+		// UV => 픽셀 좌표
+		const centerPixel = new CVec2(
+			Math.floor(centerUV.x * texWidth),
+			Math.floor(centerUV.y * texHeight)
+		);
+
+		// 브러시 픽셀 크기(최소 1)
+		const brushSizePixel = new CVec2(
+			Math.max(1, Math.floor(sizeUV.x * texWidth)),
+			Math.max(1, Math.floor(sizeUV.y * texHeight))
+		);
+
+		// 브러시 절반 크기
+		const halfBrushSize = new CVec2(
+			Math.floor(brushSizePixel.x / 2),
+			Math.floor(brushSizePixel.y / 2)
+		);
+
+		// 그려질 픽셀 범위
+		const xRangePixel = new CVec2(
+			Math.max(0, centerPixel.x - halfBrushSize.x),
+			Math.min(_targetTex.GetWidth() - 1, centerPixel.x + halfBrushSize.x)
+		);
+		const yRangePixel = new CVec2(
+			Math.max(0, centerPixel.y - halfBrushSize.y),
+			Math.min(_targetTex.GetHeight() - 1, centerPixel.y + halfBrushSize.y)
+		);
+
+		const activeChannels: number[] = [];
+		if (_channel.x !== 0) activeChannels.push(0);
+		if (_channel.y !== 0) activeChannels.push(1);
+		if (_channel.z !== 0) activeChannels.push(2);
+		if (_channel.w !== 0) activeChannels.push(3);
+
+		if (activeChannels.length === 0) return;
+
+		// 픽셀 영역 순회
+		for(let ty = yRangePixel.x; ty <= yRangePixel.y; ty++) {
+			for(let tx = xRangePixel.x; tx <= xRangePixel.y; tx++) {
+				// 이 샘플의 UV값
+				const uv = new CVec2(
+					(tx - (centerPixel.x - halfBrushSize.x)) / brushSizePixel.x,
+					(ty - (centerPixel.y - halfBrushSize.y)) / brushSizePixel.y
+				);
+
+				// 텍스쳐 바깥 영역인지 확인
+				if (uv.x < 0 || uv.x >= 1 || uv.y < 0 || uv.y >= 1) continue;
+
+				// 브러시 텍스쳐 있으면 적용
+				if(_brushTex) {
+					// targetTex의 UV => _brushTex의 UV
+					const brushUV = new CVec2(
+						Math.floor(uv.x * _brushTex.GetWidth()),
+						(_brushTex.GetHeight() - 1) - Math.floor(uv.y * _brushTex.GetHeight())
+					);
+					const brushIndex = (brushUV.y * _brushTex.GetWidth() + brushUV.x) * 4 + 3;
+					const brushAlpha = _brushTex.GetBuf()[0][brushIndex] / 0xFF;
+					if(brushAlpha <= 0) continue;
+				}
+
+				const targetIdx = (((texHeight - 1) - ty) * texWidth + tx) * 4;
+				for(const channelIdx of activeChannels) {
+					const newValue = targetBuf[targetIdx + channelIdx] + _addedVal;
+					targetBuf[targetIdx + channelIdx] = CMath.Clamp(newValue, 0, 255);
+				}
+			}
+		}
 	}
 }

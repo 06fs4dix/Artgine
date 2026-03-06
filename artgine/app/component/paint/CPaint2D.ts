@@ -807,10 +807,6 @@ export class CPaint2D extends CPaint
 		}
 			
 	}
-	override AddDecal(_decal: string | CVec4, _pos: CVec3, _size: CVec3, _dir?: CVec3, _imageRot?: number): void {
-		_pos.z = this.GetFMat().z ?? 0;
-		super.AddDecal(_decal, _pos, _size, _dir, _imageRot);
-	}
 	// CacBound()
 	// {
 	// 	if(this.mTag.has("tail") && this.mSize!=null)

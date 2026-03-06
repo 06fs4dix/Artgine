@@ -40,6 +40,7 @@ import { CPoolGeo } from "../../../geometry/CPoolGeo.js"
 import { CRay } from "../../../geometry/CRay.js"
 import { CVFX } from "../../../render/CVFX.js"
 import { CUtil } from "../../../basic/CUtil.js"
+import { CChecker } from "../../../util/CChecker.js"
 
 
 export class CRenPaint
@@ -541,6 +542,8 @@ export class CPaint extends CComponent implements IMat
 
 	// 	return super.ImportCJSON(_json);
 	// }
+
+	
 	
 	override EditChange(_pointer : CPointer,_child : boolean)
 	{
@@ -597,6 +600,28 @@ export class CPaint extends CComponent implements IMat
 			{
 				this.PushTag("vfx");
 				
+				let NeedVFXMat0 = (this.mVFX.mF32A[0] == SDF.eVFX.Decal || this.mVFX.mF32A[0] == SDF.eVFX.DecalTexture || this.mVFX.mF32A[5] == SDF.eVFX.Decal || this.mVFX.mF32A[5] == SDF.eVFX.DecalTexture);
+				let NeedVFXMat1 = (this.mVFX.mF32A[5] == SDF.eVFX.Decal || this.mVFX.mF32A[5] == SDF.eVFX.DecalTexture || this.mVFX.mF32A[10] == SDF.eVFX.Decal || this.mVFX.mF32A[10] == SDF.eVFX.DecalTexture);
+
+				let vfxMat0 = NeedVFXMat0 
+					? (this.FindCShaderAttr("vfxMat0") || (this.PushCShaderAttr(new CShaderAttr("vfxMat0", new CMat())), (this.FindCShaderAttr("vfxMat0").mData.mF32A as Float32Array).fill(0), this.FindCShaderAttr("vfxMat0"))) 
+					: (this.mShaderAttrMap.delete("vfxMat0"), null);
+				let vfxMat1 = NeedVFXMat1 
+					? (this.FindCShaderAttr("vfxMat1") || (this.PushCShaderAttr(new CShaderAttr("vfxMat1", new CMat())), (this.FindCShaderAttr("vfxMat1").mData.mF32A as Float32Array).fill(0), this.FindCShaderAttr("vfxMat1"))) 
+					: (this.mShaderAttrMap.delete("vfxMat1"), null);
+
+				if ((this.mVFX.mF32A[0] == SDF.eVFX.Decal || this.mVFX.mF32A[0] == SDF.eVFX.DecalTexture) && vfxMat0?.mData.mF32A.subarray(0, 10).every(v => v === 0)) {
+					this.ResetDecal(0);
+				}
+				if ((this.mVFX.mF32A[5] == SDF.eVFX.Decal || this.mVFX.mF32A[5] == SDF.eVFX.DecalTexture) && 
+					vfxMat0?.mData.mF32A.subarray(10, 16).every(v => v === 0) && 
+					vfxMat1?.mData.mF32A.subarray(0, 4).every(v => v === 0)) {
+					this.ResetDecal(1);
+				}
+				if ((this.mVFX.mF32A[10] == SDF.eVFX.Decal || this.mVFX.mF32A[10] == SDF.eVFX.DecalTexture) && vfxMat1?.mData.mF32A.subarray(4, 14).every(v => v === 0)) {
+					this.ResetDecal(2);
+				}
+
 			}
 		}
 	}
@@ -1322,70 +1347,76 @@ export class CPaint extends CComponent implements IMat
 
 	}
 
-	// sca(1,1,1)인 박스를 lMat으로 옮긴다고 가정함
-	AddDecal(_decal : string|CVec4, _pos : CVec3, _size : CVec3, _dir : CVec3 = new CVec3(0, 1, 0), _imageRot : number = 0) {
-		// shaderAttr 구성
-		let DecalMat=this.FindCShaderAttr("decalInvWorldMat");
-		let DecalParam=this.FindCShaderAttr("decalParam");
-		if(DecalMat==null) {
-			DecalMat=new CShaderAttr("decalInvWorldMat", new CMat());
-			this.PushCShaderAttr(DecalMat);
-		}
-		if(DecalParam==null) {
-			DecalParam=new CShaderAttr("decalParam", new CVec4());
-			this.PushCShaderAttr(DecalParam);
-		}
-		
-		// 데칼 위치 / 스케일 / 로테이션
-		const zAxis = CMath.V3Nor(_dir);
-		let up = new CVec3(0, 1, 0);
-		if(Math.abs(CMath.V3Dot(zAxis, up)) > 1-1e-8) {
-			up = new CVec3(0, 0, -1);
-		}
-		const xAxis = CMath.V3Nor(CMath.V3Cross(up, zAxis));
-		const yAxis = CMath.V3Nor(CMath.V3Cross(zAxis, xAxis));
-
-		const cosT = Math.cos(_imageRot);
-		const sinT = Math.sin(_imageRot);
-
-		const rx = CMath.V3Nor(new CVec3(xAxis.x * cosT + yAxis.x * sinT, xAxis.y * cosT + yAxis.y * sinT, xAxis.z * cosT + yAxis.z * sinT));
-		const ry = CMath.V3Nor(new CVec3(yAxis.x * cosT - xAxis.x * sinT, yAxis.y * cosT - xAxis.y * sinT, yAxis.z * cosT - xAxis.z * sinT));
-
-		// 데칼 월드 행렬
-		DecalMat.mData.mF32A[0] = rx.x * _size.x; DecalMat.mData.mF32A[4] = ry.x * _size.y; DecalMat.mData.mF32A[8] = zAxis.x * _size.z;
-		DecalMat.mData.mF32A[1] = rx.y * _size.x; DecalMat.mData.mF32A[5] = ry.y * _size.y; DecalMat.mData.mF32A[9] = zAxis.y * _size.z;
-		DecalMat.mData.mF32A[2] = rx.z * _size.x; DecalMat.mData.mF32A[6] = ry.z * _size.y; DecalMat.mData.mF32A[10] = zAxis.z * _size.z;
-		DecalMat.mData.mF32A[3] = 0; 			  DecalMat.mData.mF32A[7] = 0; 				DecalMat.mData.mF32A[11] = 0;
-
-		DecalMat.mData.mF32A[12] = _pos.x;
-		DecalMat.mData.mF32A[13] = _pos.y;
-		DecalMat.mData.mF32A[14] = _pos.z;
-		DecalMat.mData.mF32A[15] = 1.0;
-
-		// 데칼 월드 역행렬
-		CMath.MatInvert(DecalMat.mData, DecalMat.mData);
-
-		// 텍스쳐 또는 컬러값
-		if(typeof _decal == "string") {
-			DecalParam.mData.x = 4;
-			DecalParam.mData.w = 10;
-			let DecalTex=this.FindCShaderAttr(4);
-			if(DecalTex==null) {
-				DecalTex=new CShaderAttr(4, _decal);
-				this.PushCShaderAttr(DecalTex);
+	// _slot은 몇번째에 넣을지에 대한 값임 vfx에서 0번, 1번, 2번 중 하나
+	// 파라미터를 넣지 않으면 pos는 페인트의 센터, 크기는 페인트의 전체 크기로 설정됨
+	ResetDecal(_slot : number, _pos : CVec3 = null, _size : CVec3 = null, _dir : CVec3 = new CVec3(0, 0, -1), _imageRot : number = 0)
+	{
+		// 바운드 설정되기 이전에 들어오면 설정될때까지 지연
+		CChecker.Exe(async ()=>{
+			if(this.mBW.mBound.mType!=CBound.eType.Null)
+				return false;
+			return true;
+		}).then(() => {
+			if(_pos == null) {
+				_pos = this.mBW.mBound.GetCenter();
+				CMath.V3AddV3(_pos, this.GetFMat().xyz, _pos);
 			}
-			DecalTex.mKey = _decal;
-		}
-		else {
-			DecalParam.mData.Import(_decal);
-		}
+			if(_size == null) {
+				_size = this.mBW.mBound.GetSize();
+				_size.x = Math.max(_size.x, 1);
+				_size.y = Math.max(_size.y, 1);
+				_size.z = Math.max(_size.z, 1);
+			}
 
-		// 태그 설정
-		this.PushTag("decal");
-	}
-	RemoveDecal() {
-		if(this.GetTag().has("decal"))
-			this.RemoveTag("decal");
+			// vfx 없으면 생성
+			if(this.mVFX==null) {
+				this.mShaderAttrMap.set("VFX",new CShaderAttr("VFX",new CVFX([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])));
+				this.mVFX=this.mShaderAttrMap.get("VFX").mData;
+				this.PushTag("vfx");
+				this.ClearBatch();
+			}
+
+			// 몇 번 째 데칼인지 선택
+			if(_slot == 0)
+			{
+				let vfxMat0 = this.FindCShaderAttr("vfxMat0");
+				if(vfxMat0 == null) this.PushCShaderAttr(vfxMat0 = new CShaderAttr("vfxMat0", new CMat()));
+
+				if(vfxMat0) {
+					vfxMat0.mData.mF32A[0] = _dir.x;	vfxMat0.mData.mF32A[4] = _size.x;	vfxMat0.mData.mF32A[7] = _pos.x;
+					vfxMat0.mData.mF32A[1] = _dir.y;	vfxMat0.mData.mF32A[5] = _size.y;	vfxMat0.mData.mF32A[8] = _pos.y;
+					vfxMat0.mData.mF32A[2] = _dir.z;	vfxMat0.mData.mF32A[6] = _size.z;	vfxMat0.mData.mF32A[9] = _pos.z;
+					vfxMat0.mData.mF32A[3] = _imageRot;	
+				}
+			}
+			else if(_slot == 1)
+			{
+				let vfxMat0 = this.FindCShaderAttr("vfxMat0");
+				if(vfxMat0 == null) this.PushCShaderAttr(vfxMat0 = new CShaderAttr("vfxMat0", new CMat()));
+
+				let vfxMat1 = this.FindCShaderAttr("vfxMat1");
+				if(vfxMat1 == null) this.PushCShaderAttr(vfxMat1 = new CShaderAttr("vfxMat1", new CMat()));
+
+				if(vfxMat0 && vfxMat1) {
+					vfxMat0.mData.mF32A[10] = _dir.x;	vfxMat0.mData.mF32A[14] = _size.x;	vfxMat1.mData.mF32A[1] = _pos.x;
+					vfxMat0.mData.mF32A[11] = _dir.y;	vfxMat0.mData.mF32A[15] = _size.y;	vfxMat1.mData.mF32A[2] = _pos.y;
+					vfxMat0.mData.mF32A[12] = _dir.z;	vfxMat1.mData.mF32A[0] = _size.z;	vfxMat1.mData.mF32A[3] = _pos.z;
+					vfxMat0.mData.mF32A[13] = _imageRot;
+				}
+			}
+			else
+			{
+				let vfxMat1 = this.FindCShaderAttr("vfxMat1");
+				if(vfxMat1 == null) this.PushCShaderAttr(vfxMat1 = new CShaderAttr("vfxMat1", new CMat()));
+
+				if(vfxMat1) {
+					vfxMat1.mData.mF32A[4] = _dir.x;	vfxMat1.mData.mF32A[8] = _size.x;	vfxMat1.mData.mF32A[11] = _pos.x;
+					vfxMat1.mData.mF32A[5] = _dir.y;	vfxMat1.mData.mF32A[9] = _size.y;	vfxMat1.mData.mF32A[12] = _pos.y;
+					vfxMat1.mData.mF32A[6] = _dir.z;	vfxMat1.mData.mF32A[10] = _size.z;	vfxMat1.mData.mF32A[13] = _pos.z;
+					vfxMat1.mData.mF32A[7] = _imageRot;
+				}
+			}
+		});
 	}
 }
 

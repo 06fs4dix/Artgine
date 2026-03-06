@@ -51,7 +51,7 @@ var refractMap : number = 2.0;
 var normal1Map : number = 3.0;
 var normal2Map : number = 4.0;
 
-var normalflowDir : CVec2 = new CVec2(1.0, 0.0);
+var normalflowDir : CVec2 = new CVec2(0.0, 0.0);
 var normalRange : number = 1.0;
 
 var texflowDir : CVec2 = new CVec2(1.0, 0.0);
@@ -210,7 +210,7 @@ function ps_main_water()
 
     // 1. 물 텍스쳐
     BranchBegin("UseWaterTex","UseWaterTex",[]);
-    uv = V2AddV2(to_uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
+    uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
     uv = V2Mod(uv, 1.0);
     refractColor = Sam2D0ToColor(uv);
     refractType = 0.0;

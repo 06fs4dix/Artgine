@@ -195,11 +195,7 @@ export class CSamplerTimer<T> extends CSampler<T>
         _dataTarget["mTemp"]["mDelay"+_run]=_dataTarget["mTemp"]["mDelay"+_run]+t;
         _dataTarget["mTemp"]["mTime"+_run]=_dataTarget["mTemp"]["mTime"+_run]+t;
 
-        if(count!=0 && _dataTarget["mTemp"]["mCount"+_run]>count)   
-		{
-			_dataTarget["mTemp"]["mEnd"+_run]=true;
-			return false;
-		}
+        
 			
         if(delay!=0 && _dataTarget["mTemp"]["mDelay"+_run]<delay)   return false;
         if(_dataTarget["mTemp"]["mTime"+_run]<start)   return false;
@@ -212,6 +208,12 @@ export class CSamplerTimer<T> extends CSampler<T>
         
         _dataTarget["mTemp"]["mDelay"+_run]=0;
         _dataTarget["mTemp"]["mCount"+_run]=_dataTarget["mTemp"]["mCount"+_run]+1;
+
+		if(count!=0 && _dataTarget["mTemp"]["mCount"+_run]>count)   
+		{
+			_dataTarget["mTemp"]["mEnd"+_run]=true;
+			return false;
+		}
         
         
        return true;

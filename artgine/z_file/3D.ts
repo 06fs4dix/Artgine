@@ -61,7 +61,9 @@ import {
 	LUT4,
 	LUT5,
 	ColorModalFun,
-	AlphaModalFun
+	AlphaModalFun,
+	vfxMat0,
+	vfxMat1
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -75,7 +77,6 @@ import {
 	jitter,
 	calcParallaxShadow
 } from "./Shadow";
-import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
 import { NoiseNormalGet } from "./Noise";
 
 
@@ -594,8 +595,8 @@ function ps_main()
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(uv,VFX,time);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+	L_cor=VFXDown2(uv,VFX,time,world);
 	BranchDefault();
 	L_cor=Sam2DToColor(to_ref.x, uv);
 	BranchEnd();
@@ -610,10 +611,6 @@ function ps_main()
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
 	if ( L_cor.a <= 0.01 ) discard;
-
-	BranchBegin("decal","decal",[decalParam, decalInvWorldMat]);
-	L_cor=DecalCac(L_cor, world);
-	BranchEnd();
 
 	
 	
@@ -680,8 +677,8 @@ function ps_main_gBuffer() {
 	
 
 
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(uv,VFX,time);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+	L_cor=VFXDown2(uv,VFX,time,to_worldPos);
 	BranchDefault();
 	if(sam2DCount == 1.0)
 		L_cor = Sam2DToColor(0.0, uv);
@@ -731,8 +728,8 @@ function ps_main_gBuffer_multi() {
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(uv,VFX,time);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+	L_cor=VFXDown2(uv,VFX,time,to_worldPos);
 	BranchDefault();
 	if(sam2DCount == 1.0)
 		L_cor = Sam2DToColor(0.0, uv);
@@ -818,15 +815,16 @@ function ps_main_shadow_write()
 {
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(to_uv,VFX,time);
-	BranchDefault();
+	// BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+	// L_cor=VFXDown2(to_uv,VFX,time,new CVec4(0.0,0.0,0.0,0.0));
+	// BranchDefault();
+	// L_cor = Sam2DToColor(0.0, to_uv);
+	// BranchEnd();
 	L_cor = Sam2DToColor(0.0, to_uv);
-	BranchEnd();
 
-	BranchBegin("colorModel","CM",[colorModel]);
-	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
-	BranchEnd();
+	// BranchBegin("colorModel","CM",[colorModel]);
+	// L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
+	// BranchEnd();
 
 
 	BranchBegin("alphaModel","AM",[alphaModel]);
@@ -934,8 +932,8 @@ function ps_main_shadow_read()
 
 	var L_cor : CVec4;
 
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(uv,VFX,time);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+	L_cor=VFXDown2(uv,VFX,time,world);
 	BranchDefault();
 	L_cor = Sam2DToColor(0.0, uv);
 	BranchEnd();

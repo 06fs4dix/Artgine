@@ -12,7 +12,7 @@ import {CInput} from "../../system/CInput.js";
 import { CFrame } from "../../util/CFrame.js";
 import { CPaintHTML } from "../component/paint/CPaint2D.js";
 import {CSubject} from "./CSubject.js";
-import {CUI,  CUIButtonRGBA, CUiHTML as CUIHTML } from "./CUI.js";
+import {CUI,  CUIButtonRGBA, CUIHTML as CUIHTML } from "./CUI.js";
 
 
 

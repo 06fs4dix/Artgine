@@ -29,7 +29,7 @@ var reflectMap = 1.0;
 var refractMap = 2.0;
 var normal1Map = 3.0;
 var normal2Map = 4.0;
-var normalflowDir = new CVec2(1.0, 0.0);
+var normalflowDir = new CVec2(0.0, 0.0);
 var normalRange = 1.0;
 var texflowDir = new CVec2(1.0, 0.0);
 var shallowColor = new CVec3(0.0, 0.0, 0.0);
@@ -121,7 +121,7 @@ function ps_main_water() {
     var refractColor;
     var refractType = -1.0;
     BranchBegin("UseWaterTex", "UseWaterTex", []);
-    uv = V2AddV2(to_uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
+    uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
     uv = V2Mod(uv, 1.0);
     refractColor = Sam2D0ToColor(uv);
     refractType = 0.0;

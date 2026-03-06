@@ -13,7 +13,9 @@ import {
 import {
 	VFX, VFXDown2, GetTexCodiedUV,
 	LUT0, LUT1, LUT2, LUT3, LUT4, LUT5,
-	ColorModalFun, AlphaModalFun
+	ColorModalFun, AlphaModalFun,
+	vfxMat0,
+	vfxMat1
 } from "./ColorFun";
 import {
 	ambientColor,
@@ -341,11 +343,9 @@ function ps_main()
 	BranchEnd();
 
     var L_cor : CVec4;
-	
 
-
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time]);
-	L_cor=VFXDown2(to_uv.xy,VFX,time);
+	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
+	L_cor=VFXDown2(to_uv.xy,VFX,time,to_worldPos);
 	BranchDefault();
 	L_cor=Sam2DToColor(0.0,to_uv.xy);
 	BranchEnd();
@@ -362,10 +362,7 @@ function ps_main()
 	BranchEnd();
 	if ( L_cor.a <= 0.01 ) discard;
 
-	BranchBegin("decal","decal",[decalParam, decalInvWorldMat]);
-	L_cor=DecalCac(L_cor, to_worldPos);
-	BranchEnd();
-	
+
 
 	var normal : CVec3=new CVec3(0.0,0.0,0.0);
 	

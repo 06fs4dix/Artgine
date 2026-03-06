@@ -13,7 +13,7 @@ import { CTooltip } from "../../artgine/util/CTooltip.js";
 
 export class CInventory extends CObject
 {
-    constructor(_itemKey)
+    constructor(_itemKey : string,_amount:number=1)
     {
         super();
         this.mKey=CUniqueID.Get();
@@ -53,7 +53,7 @@ export class CItemInfo extends CObject
 var gMoveInvenEvent : CEvent=new CEvent();
 export function RegisterMoveInvenViewEvent(_event : CEvent){  gMoveInvenEvent=_event;}
 
-export class CInvenMgr extends CObject implements IListener
+export class CInvenMgr<Type extends CInventory> extends CObject implements IListener
 {
     On(_key: any, _event: any, _target: any=null) {
         this.mEventMap.set(_key,CEvent.ToCEvent(_event));
@@ -64,7 +64,7 @@ export class CInvenMgr extends CObject implements IListener
     GetEvent(_key: any, _target: any=null) {
         return this.mEventMap.get(_key);
     }
-    mInvenArr = new Array<CInventory>();
+    mInvenArr = new Array<Type>();
     mEventMap=new Map<string,CEvent>();
 
     GetInvenArr()   {   return this.mInvenArr;  }
@@ -73,7 +73,7 @@ export class CInvenMgr extends CObject implements IListener
 
         return super.IsShould(_member,_type);
     }
-    Push(_inven: CInventory,_overlap=true)
+    Push(_inven: Type,_overlap=true)
     {
         if (_inven == null) return null;
 
@@ -120,7 +120,7 @@ export class CInvenMgr extends CObject implements IListener
                 }
             }
 
-            const created = new CInventory(_itemKey);
+            const created = CClass.New(this.mInvenArr[0],[_itemKey]);
             created.mAmount = _amount;
             this.mInvenArr.push(created);
             return created;
@@ -176,6 +176,17 @@ export class CInvenMgr extends CObject implements IListener
         }
         return null;
     }
+    Clear()
+    {
+        for (let i = 0; i < this.mInvenArr.length; ++i)
+        {
+            
+            const removed = this.mInvenArr[i];
+            this.mInvenArr.splice(i, 1);
+            CEvent.ToCEvent(this.GetEvent("Remove")).Call(removed);
+   
+        }
+    }
     Swap(_DragKey : string,_DropKey : string)
     {
         let Drag=this.FindInven(_DragKey);
@@ -206,7 +217,7 @@ export class CInvenMgr extends CObject implements IListener
     }
 
 }
-export class CItemMgr extends CObject implements IFile
+export class CItemMgr<Type extends CItemInfo> extends CObject implements IFile
 {
     async LoadJSON(_file=null)
     {
@@ -219,14 +230,14 @@ export class CItemMgr extends CObject implements IFile
     {
         CFile.Save(this.ToStr(),_file);
     }
-    mItemMap=new Map<string,CItemInfo>();
-    Push<T extends CItemInfo>(_key : string,_item : T): T;
-    Push<T extends CItemInfo>(_item : T): T
-    Push<T extends CItemInfo>(_a : any,_b : any=null) : T
+    mItemMap=new Map<string,Type>();
+    Push<T extends Type>(_key : string,_item : T): T;
+    Push<T extends Type>(_item : T): T
+    Push<T extends Type>(_a : any,_b : any=null) : T
     {
         if(_a instanceof CItemInfo)
         {
-            this.mItemMap.set(_a.Key(),_a);
+            this.mItemMap.set(_a.Key(),_a as any);
             return _a as T;
         }
             
@@ -267,9 +278,9 @@ export class CInvenViewer extends CModal
     //mItemArr : Array<CItem>=[];
 
     
-    mBagInvenMgr : CInvenMgr=null;
+    mBagInvenMgr : CInvenMgr<CInventory>=null;
     //mWearInvenMgr : CInvenMgr=null;
-    mItemMgr : CItemMgr=null;
+    mItemMgr : CItemMgr<CItemInfo>=null;
     mGrid=false;
     mInvenSortType=0;
     
@@ -333,7 +344,7 @@ export class CInvenViewer extends CModal
         return keyA.localeCompare(keyB) * dir;
     };
    
-    constructor(_bagInvenMgr : CInvenMgr, _itemMgr : CItemMgr, _grid=false,_sort=1)
+    constructor(_bagInvenMgr : CInvenMgr<CInventory>, _itemMgr : CItemMgr<CItemInfo>, _grid=false,_sort=1)
     {
         super();
         this.mGrid=_grid;
@@ -537,6 +548,7 @@ export class CInvenViewer extends CModal
             for(let inven of InvetArr)
             {
                 let item=this.mItemMgr.Find(inven.mItemKey);
+                if (!item) continue;
                 let invenDiv={"tag":"li","class":"list-group-item viewer_search","draggable":true,"id":inven.mKey,
                 "ondrop":DropEvent,"ondragstart":DragStartEvent,
                 "html":[
@@ -559,6 +571,7 @@ export class CInvenViewer extends CModal
         for(let inven of InvetArr)
         {
             let item=this.mItemMgr.Find(inven.mItemKey);
+            if (!item) continue;
             let card={"tag":"div","class":"card","style":`min-width:${CARD_MIN_W}px;max-width:${CARD_MAX_W}px;`,
             "html":[
                 {"tag":"img","src":item.mImg,"class":"card-img-top d-block mx-auto pt-2","style": "width:32px;height:32px;object-fit:contain;"},

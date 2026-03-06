@@ -11,6 +11,7 @@ export class CSocketIO extends CWebSocket implements IListener
 {
     mEvent : Array<CEvent|CStreamHandler>;
     mPing=0;
+    mLog=true;
     constructor(_local : boolean,_path,_event : Array<CEvent<CStreamHandler>|CStreamHandler>=[])
     {
         let addr="local";
@@ -32,6 +33,7 @@ export class CSocketIO extends CWebSocket implements IListener
             let header=stream.GetString();
             if(this.mEvent[header]!=null)
             {
+                if(this.mLog)   CConsol.Log("Event : "+header);
                 this.mEvent[header].Call(stream);
             }
 
@@ -52,7 +54,7 @@ export class CSocketIO extends CWebSocket implements IListener
             let b=_stream.GetFloat();
             let e=performance.now();
             this.mPing=e-b;
-            CConsol.Log(`[Ping] : ${this.mPing.toFixed(3)}ms`);
+            if(this.mLog)   CConsol.Log(`[Ping] : ${this.mPing.toFixed(3)}ms`);
         });
         
     }

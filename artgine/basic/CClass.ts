@@ -10,7 +10,7 @@ export class CClass
         }
         var list = new Array();
         for (var each0 of gClassMap.values()) {
-            if (!(each0.constructor && each0.constructor !== Object)) {
+            if (!(each0.constructor && each0.constructor !== Object) || each0.prototype==null) {
                 continue;
             }
             if (each0.prototype.constructor.name == _type.name) 

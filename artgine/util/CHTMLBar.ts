@@ -496,7 +496,8 @@ export class CHTMLDropdown
 
         if (!childExist) {
           const a = document.createElement("a");
-          a.className = "dropdown-item";
+          //a.className = `dropdown-item btn btn-${bar.mThema} w-100 text-start`;
+		  a.className = "dropdown-item";
           a.href = "#";
           if (bar.mID) a.id = bar.mID;
 
@@ -505,10 +506,12 @@ export class CHTMLDropdown
 
           // ✅ 클릭 이벤트 연결
           a.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            safeCall(bar.mEvent);
-          });
+			e.preventDefault();
+			document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(toggle => {
+				window["bootstrap"]?.Dropdown.getInstance(toggle)?.hide();
+			});
+			safeCall(bar.mEvent);
+		});
 
           li.appendChild(a);
         } else {

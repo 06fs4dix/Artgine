@@ -1,4 +1,4 @@
-import { CObject } from "../basic/CObject.js";
+import { CObject, CPointer } from "../basic/CObject.js";
 import { CUniqueID } from "../basic/CUniqueID.js";
 import { CMat } from "../geometry/CMat.js";
 import { SDF } from "../z_file/SDF.js";
@@ -70,7 +70,7 @@ export class CVFX extends CMat
         return super.IsShould(_member,_type);
     }
 
-    override EditHTMLInit(_div: HTMLDivElement): void {
+    override EditHTMLInit(_div: HTMLDivElement, _pointer: CPointer = null): void {
         super.EditHTMLInit(_div);
 
         _div.innerHTML = "";
@@ -137,6 +137,7 @@ export class CVFX extends CMat
             for(let i = 0; i < SLOT_SIZE; i++) this.mF32A[base + i] = 0;
         };
 
+        /*
         const isUsedInOtherSlot = (val:number, selfSlot:number) => {
             if(val === 0) return false;
             for(const s of USED_SLOTS) {
@@ -145,6 +146,7 @@ export class CVFX extends CMat
             }
             return false;
         };
+        */
 
         // Use 배열이 비어있으면 모든 슬롯 허용, 아니면 해당 슬롯 인덱스 확인
         const isAllowedInSlot = (val:number, slot:number) => {
@@ -189,7 +191,8 @@ export class CVFX extends CMat
                 lab.textContent = `${descKey} : ${formatByStep(v, step)}`;
             });
             input.addEventListener("change", () => {
-                this.EditRefresh();
+                this.EditRefresh(_pointer);
+                this.EditChange(_pointer,false);
             });
             wrap.appendChild(input);
             return wrap;
@@ -239,7 +242,8 @@ export class CVFX extends CMat
                 const v = Number(sel.value);
                 setParam(slot, paramIndex, v);
                 lab.textContent = `${descKey} : ${getTextByValue(v)}`;
-                this.EditRefresh();
+                this.EditRefresh(_pointer);
+                this.EditChange(_pointer,false);
             });
             wrap.appendChild(sel);
             return wrap;
@@ -276,7 +280,7 @@ export class CVFX extends CMat
                 const opt = document.createElement("option");
                 opt.value = String(it.val);
                 opt.textContent = it.name;
-                if(isUsedInOtherSlot(it.val, slot) || !isAllowedInSlot(it.val, slot)) opt.disabled = true;
+                if(/*isUsedInOtherSlot(it.val, slot) ||*/ !isAllowedInSlot(it.val, slot)) opt.disabled = true;
                 select.appendChild(opt);
             }
 
@@ -299,7 +303,8 @@ export class CVFX extends CMat
                     }
                 }
 
-                this.EditRefresh();
+                this.EditRefresh(_pointer);
+                this.EditChange(_pointer,false);
             };
 
             header.appendChild(select);
@@ -399,6 +404,20 @@ CVFX.lDesc[SDF.eVFX.Blur] = MakeDesc(
     [1, 1],
     [2, 2],
     [true, false, false]
+);
+CVFX.lDesc[SDF.eVFX.Decal] = MakeDesc(
+    ["R", "G", "B", "A"],
+    [0, 0, 0, 0], [1, 1, 1, 1],
+    [0.1, 0.1, 0.1, 0.1],
+    [1, 1, 1, 1],
+    // Use 미지정 → 모든 슬롯 허용
+);
+CVFX.lDesc[SDF.eVFX.DecalTexture] = MakeDesc(
+    ["TexOff", "Blend"],
+    [0, 0], [9, 1],
+    [1, 0.1],
+    [0, 1],
+    // Use 미지정 → 모든 슬롯 허용
 );
 
 // enum은 (숫자->문자, 문자->숫자) 역매핑이 섞여서 들어오니 숫자 항목만 처리

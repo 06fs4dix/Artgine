@@ -132,7 +132,7 @@ export class CRigidBody extends CGeometryComp
 	Push(move : Array<CForce>) : Array<CForce>;
  	Push(move,duplication=false) : any
 	{
-		CConsol.Log("RB-Push");
+		//CConsol.Log("RB-Push");
 		if(move==null)
 			return;
 		if(move instanceof Array)

@@ -95,6 +95,9 @@ export class SDF {
 		LookUpTable:8,//x팔레트텍스쳐인덱스, 컬러 팔레트에서 색상 양자화
 		Blur:9,//x블러타입(0만 지원함) y블러횟수
 
+		Decal:10,//rgba : 색상
+		DecalTexture:11,//r : 텍스쳐 인덱스, g : 블렌드 비율
+
 	}
 	static eLookUpTable=
 	{
