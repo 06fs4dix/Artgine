@@ -13,6 +13,18 @@ const RayBoxRIGHT = 0;
 const RayBoxLEFT = 1;
 const RayBoxMIDDLE = 2;
 const d_EPSILON = 1e-6;
+
+
+const _rbi_quadrant      = new CVec3();
+const _rbi_maxT          = new CVec3();
+const _rbi_candidatePlane= new CVec3();
+const _rbi_pOrigin       = new CVec3();
+const _rbi_pBoxMin       = new CVec3();
+const _rbi_pBoxMax       = new CVec3();
+const _rbi_pIntersect    = new CVec3();
+
+
+
 export class CUtilMath
 {
     
@@ -217,129 +229,358 @@ export class CUtilMath
         
         return true;
     }
-    static RayBoxIS(_min : CVec3,_max : CVec3,pa_ray : CRay)
+
+    static RayBoxIS(_min: CVec3, _max: CVec3, pa_ray: CRay)
     {
-        var inside = true;
-        var quadrant = [0,0,0];
-        var i;
-        var whichPlane;
-        var maxT = [0,0,0];
-        var candidatePlane = [0,0,0];
-        
-        var vecList=pa_ray.GetVecList();
-        var pOrigin = [ vecList[2].x ,vecList[2].y ,vecList[2].z ];
-        var pBoxMin = [ _min.x,_min.y,_min.z ];
-        var pBoxMax = [ _max.x,_max.y,_max.z ];
-        
-        if(pBoxMin[0]>pBoxMax[0])
+        const quadrant      = _rbi_quadrant;
+        const maxT          = _rbi_maxT;
+        const candidatePlane= _rbi_candidatePlane;
+        const pIntersect    = _rbi_pIntersect;
+
+        const vecList = pa_ray.GetVecList();
+        const pOrigin = _rbi_pOrigin;
+        const pBoxMin = _rbi_pBoxMin;
+        const pBoxMax = _rbi_pBoxMax;
+
+        pOrigin.Import(vecList[2]);
+        pBoxMin.Import(_min);
+        pBoxMax.Import(_max);
+
+        const dir = vecList[0];
+
+        if (pBoxMin.mF32A[0] > pBoxMax.mF32A[0]) { pBoxMin.mF32A[0] = _max.mF32A[0]; pBoxMax.mF32A[0] = _min.mF32A[0]; }
+        if (pBoxMin.mF32A[1] > pBoxMax.mF32A[1]) { pBoxMin.mF32A[1] = _max.mF32A[1]; pBoxMax.mF32A[1] = _min.mF32A[1]; }
+        if (pBoxMin.mF32A[2] > pBoxMax.mF32A[2]) { pBoxMin.mF32A[2] = _max.mF32A[2]; pBoxMax.mF32A[2] = _min.mF32A[2]; }
+
+        let inside = true;
+        for (let i = 0; i < 3; ++i)
         {
-            pBoxMin[0]=_max.x;
-            pBoxMax[0]=_min.x;
-        }
-        if(pBoxMin[1]>pBoxMax[1])
-        {
-            pBoxMin[1]=_max.y;
-            pBoxMax[1]=_min.y;
-        }
-        if(pBoxMin[2]>pBoxMax[2])
-        {
-            pBoxMin[2]=_max.z;
-            pBoxMax[2]=_min.z;
-        }
-        
-        var pDir = [ vecList[0].x ,vecList[0].y ,vecList[0].z ];
-        var pIntersect = [ 0 ,0 ,0 ];
-    
-        //박스 1개의 축씩 넘는지 안인지 체크한다
-        //켄디데이타에 최소,최대 거리를 넣는다
-        for (i = 0; i < 3; ++i)
-        {
-            if (pOrigin[i] < pBoxMin[i])
+            if (pOrigin.mF32A[i] < pBoxMin.mF32A[i])
             {
-                quadrant[i] = RayBoxLEFT;
-                candidatePlane[i] = pBoxMin[i];
+                quadrant.mF32A[i]      = RayBoxLEFT;
+                candidatePlane.mF32A[i]= pBoxMin.mF32A[i];
                 inside = false;
             }
-            else if (pOrigin[i] > pBoxMax[i])
+            else if (pOrigin.mF32A[i] > pBoxMax.mF32A[i])
             {
-                quadrant[i] = RayBoxRIGHT;
-                candidatePlane[i] = pBoxMax[i];
+                quadrant.mF32A[i]      = RayBoxRIGHT;
+                candidatePlane.mF32A[i]= pBoxMax.mF32A[i];
                 inside = false;
             }
             else
             {
-                quadrant[i] = RayBoxMIDDLE;
+                quadrant.mF32A[i] = RayBoxMIDDLE;
             }
         }
-    
-        //셋다 안이면 내부이다
+
         if (inside)
         {
-            //충돌지점은 자신으로 표현
-            pa_ray.SetPosition(new CVec3(pOrigin[0], pOrigin[1], pOrigin[2]));
-    
-            //*t = 0.0f;
+            pa_ray.mVec3List[1].mF32A[0] = pOrigin.mF32A[0];
+            pa_ray.mVec3List[1].mF32A[1] = pOrigin.mF32A[1];
+            pa_ray.mVec3List[1].mF32A[2] = pOrigin.mF32A[2];
             return true;
         }
-    
-    
-        // Calculate T distances to candidate planes
-        for (i = 0; i < 3; i++)
+
+        for (let i = 0; i < 3; i++)
         {
-            //중심이아니였음 그리고 너무 작은수는 패스
-            if (quadrant[i] != RayBoxMIDDLE
-                && (pDir[i] > d_EPSILON || pDir[i] < -d_EPSILON))
-            {
-                //(맥시멈-현재위치)/기울기
-                maxT[i] = (candidatePlane[i] - pOrigin[i]) / pDir[i];
-            }
-            //아니면 직각이기때문에 -1
+            if (quadrant.mF32A[i] !== RayBoxMIDDLE
+                && (dir.mF32A[i] > d_EPSILON || dir.mF32A[i] < -d_EPSILON))
+                maxT.mF32A[i] = (candidatePlane.mF32A[i] - pOrigin.mF32A[i]) / dir.mF32A[i];
             else
+                maxT.mF32A[i] = -1.0;
+        }
+
+        let whichPlane = 0;
+        if (maxT.mF32A[1] > maxT.mF32A[0]) whichPlane = 1;
+        if (maxT.mF32A[2] > maxT.mF32A[whichPlane]) whichPlane = 2;
+
+        if (maxT.mF32A[whichPlane] < 0.0) return false;
+
+        for (let i = 0; i < 3; i++)
+        {
+            if (whichPlane !== i)
             {
-                maxT[i] = -1.0;
-            }
-        }
-    
-        //가장 큰값 찾고
-        whichPlane = 0;
-        for (i = 1; i < 3; i++)
-        {
-            if (maxT[whichPlane] < maxT[i])
-                whichPlane = i;
-        }
-    
-        // 0보다 작으면 충돌 아닌상황
-        if (maxT[whichPlane] < 0.0)
-        {
-            return false;
-        }
-    
-    
-        for (i = 0; i < 3; i++)
-        {
-            //가장 큰값이 아닌경우
-            if (whichPlane != i)
-            {
-                //충돌지점 구하고
-                pIntersect[i] = pOrigin[i] + maxT[whichPlane] * pDir[i];
-                //민,맥스랑 비교후 넘어가는 경우도 패스
-                if (pIntersect[i] < pBoxMin[i] || pIntersect[i] > pBoxMax[i])
-                {
+                pIntersect.mF32A[i] = pOrigin.mF32A[i] + maxT.mF32A[whichPlane] * dir.mF32A[i];
+                if (pIntersect.mF32A[i] < pBoxMin.mF32A[i] || pIntersect.mF32A[i] > pBoxMax.mF32A[i])
                     return false;
-                }
             }
             else
             {
-                //
-                pIntersect[i] = candidatePlane[i];
+                pIntersect.mF32A[i] = candidatePlane.mF32A[i];
             }
         }
-        pa_ray.mVec3List[1].mF32A[0]=pIntersect[0];
-        pa_ray.mVec3List[1].mF32A[1]=pIntersect[1];
-        pa_ray.mVec3List[1].mF32A[2]=pIntersect[2];
-        //pa_ray.SetPosition(new CVec3(pIntersect[0], pIntersect[1], pIntersect[2]));
+
+        pa_ray.mVec3List[1].mF32A[0] = pIntersect.mF32A[0];
+        pa_ray.mVec3List[1].mF32A[1] = pIntersect.mF32A[1];
+        pa_ray.mVec3List[1].mF32A[2] = pIntersect.mF32A[2];
         return true;
     }
+    // static RayBoxIS(_min : CVec3,_max : CVec3,pa_ray : CRay)
+    // {
+    //     let inside = true;
+    //     let quadrant = [0,0,0];
+    //     let i;
+    //     let whichPlane;
+    //     let maxT = [0,0,0];
+    //     let candidatePlane = [0,0,0];
+        
+    //     let vecList=pa_ray.GetVecList();
+    //     let pOrigin = [ vecList[2].x ,vecList[2].y ,vecList[2].z ];
+    //     let pBoxMin = [ _min.x,_min.y,_min.z ];
+    //     let pBoxMax = [ _max.x,_max.y,_max.z ];
+        
+    //     if(pBoxMin[0]>pBoxMax[0])
+    //     {
+    //         pBoxMin[0]=_max.x;
+    //         pBoxMax[0]=_min.x;
+    //     }
+    //     if(pBoxMin[1]>pBoxMax[1])
+    //     {
+    //         pBoxMin[1]=_max.y;
+    //         pBoxMax[1]=_min.y;
+    //     }
+    //     if(pBoxMin[2]>pBoxMax[2])
+    //     {
+    //         pBoxMin[2]=_max.z;
+    //         pBoxMax[2]=_min.z;
+    //     }
+        
+    //     var pDir = [ vecList[0].x ,vecList[0].y ,vecList[0].z ];
+    //     var pIntersect = [ 0 ,0 ,0 ];
+    
+    //     //박스 1개의 축씩 넘는지 안인지 체크한다
+    //     //켄디데이타에 최소,최대 거리를 넣는다
+    //     for (i = 0; i < 3; ++i)
+    //     {
+    //         if (pOrigin[i] < pBoxMin[i])
+    //         {
+    //             quadrant[i] = RayBoxLEFT;
+    //             candidatePlane[i] = pBoxMin[i];
+    //             inside = false;
+    //         }
+    //         else if (pOrigin[i] > pBoxMax[i])
+    //         {
+    //             quadrant[i] = RayBoxRIGHT;
+    //             candidatePlane[i] = pBoxMax[i];
+    //             inside = false;
+    //         }
+    //         else
+    //         {
+    //             quadrant[i] = RayBoxMIDDLE;
+    //         }
+    //     }
+    
+    //     //셋다 안이면 내부이다
+    //     if (inside)
+    //     {
+    //         //충돌지점은 자신으로 표현
+    //         pa_ray.SetPosition(new CVec3(pOrigin[0], pOrigin[1], pOrigin[2]));
+    
+    //         //*t = 0.0f;
+    //         return true;
+    //     }
+    
+    
+    //     // Calculate T distances to candidate planes
+    //     for (i = 0; i < 3; i++)
+    //     {
+    //         //중심이아니였음 그리고 너무 작은수는 패스
+    //         if (quadrant[i] != RayBoxMIDDLE
+    //             && (pDir[i] > d_EPSILON || pDir[i] < -d_EPSILON))
+    //         {
+    //             //(맥시멈-현재위치)/기울기
+    //             maxT[i] = (candidatePlane[i] - pOrigin[i]) / pDir[i];
+    //         }
+    //         //아니면 직각이기때문에 -1
+    //         else
+    //         {
+    //             maxT[i] = -1.0;
+    //         }
+    //     }
+    
+    //     //가장 큰값 찾고
+    //     whichPlane = 0;
+    //     for (i = 1; i < 3; i++)
+    //     {
+    //         if (maxT[whichPlane] < maxT[i])
+    //             whichPlane = i;
+    //     }
+    
+    //     // 0보다 작으면 충돌 아닌상황
+    //     if (maxT[whichPlane] < 0.0)
+    //     {
+    //         return false;
+    //     }
+    
+    
+    //     for (i = 0; i < 3; i++)
+    //     {
+    //         //가장 큰값이 아닌경우
+    //         if (whichPlane != i)
+    //         {
+    //             //충돌지점 구하고
+    //             pIntersect[i] = pOrigin[i] + maxT[whichPlane] * pDir[i];
+    //             //민,맥스랑 비교후 넘어가는 경우도 패스
+    //             if (pIntersect[i] < pBoxMin[i] || pIntersect[i] > pBoxMax[i])
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         else
+    //         {
+    //             //
+    //             pIntersect[i] = candidatePlane[i];
+    //         }
+    //     }
+    //     pa_ray.mVec3List[1].mF32A[0]=pIntersect[0];
+    //     pa_ray.mVec3List[1].mF32A[1]=pIntersect[1];
+    //     pa_ray.mVec3List[1].mF32A[2]=pIntersect[2];
+    //     //pa_ray.SetPosition(new CVec3(pIntersect[0], pIntersect[1], pIntersect[2]));
+    //     return true;
+    // }
+    // static RayBoxIS(_min : CVec3,_max : CVec3,pa_ray : CRay)
+    // {
+    //     let inside = true;
+    //     let quadrant = CPoolGeo.ProductV3();
+    //     let i;
+    //     let whichPlane;
+    //     let maxT = CPoolGeo.ProductV3();
+    //     let candidatePlane = CPoolGeo.ProductV3();
+        
+    //     let vecList=pa_ray.GetVecList();
+    //     let pOrigin=CPoolGeo.ProductV3();
+    //     let pBoxMin=CPoolGeo.ProductV3();
+    //     let pBoxMax=CPoolGeo.ProductV3();
+    //     pOrigin.Import(vecList[2]);
+    //     pBoxMin.Import(_min);
+    //     pBoxMax.Import(_max);
+    //     let RecycleFun=()=>{
+    //         CPoolGeo.RecycleV3(quadrant);
+    //         CPoolGeo.RecycleV3(maxT);
+    //         CPoolGeo.RecycleV3(candidatePlane);
+    //         CPoolGeo.RecycleV3(pOrigin);
+    //         CPoolGeo.RecycleV3(pBoxMin);
+    //         CPoolGeo.RecycleV3(pBoxMax);
+    //     };
+    //     // let pOrigin = [ vecList[2].x ,vecList[2].y ,vecList[2].z ];
+    //     // let pBoxMin = [ _min.x,_min.y,_min.z ];
+    //     // let pBoxMax = [ _max.x,_max.y,_max.z ];
+        
+    //     if(pBoxMin.mF32A[0]>pBoxMax.mF32A[0])
+    //     {
+    //         pBoxMin.mF32A[0]=_max.x;
+    //         pBoxMax.mF32A[0]=_min.x;
+    //     }
+    //     if(pBoxMin.mF32A[1]>pBoxMax.mF32A[1])
+    //     {
+    //         pBoxMin.mF32A[1]=_max.y;
+    //         pBoxMax.mF32A[1]=_min.y;
+    //     }
+    //     if(pBoxMin.mF32A[2]>pBoxMax.mF32A[2])
+    //     {
+    //         pBoxMin.mF32A[2]=_max.z;
+    //         pBoxMax.mF32A[2]=_min.z;
+    //     }
+        
+    //     var pDir = [ vecList[0].x ,vecList[0].y ,vecList[0].z ];
+    //     var pIntersect = [ 0 ,0 ,0 ];
+    
+    //     //박스 1개의 축씩 넘는지 안인지 체크한다
+    //     //켄디데이타에 최소,최대 거리를 넣는다
+    //     for (i = 0; i < 3; ++i)
+    //     {
+    //         if (pOrigin.mF32A[i] < pBoxMin.mF32A[i])
+    //         {
+    //             quadrant.mF32A[i] = RayBoxLEFT;
+    //             candidatePlane.mF32A[i] = pBoxMin.mF32A[i];
+    //             inside = false;
+    //         }
+    //         else if (pOrigin.mF32A[i] > pBoxMax.mF32A[i])
+    //         {
+    //             quadrant.mF32A[i] = RayBoxRIGHT;
+    //             candidatePlane.mF32A[i] = pBoxMax.mF32A[i];
+    //             inside = false;
+    //         }
+    //         else
+    //         {
+    //             quadrant.mF32A[i] = RayBoxMIDDLE;
+    //         }
+    //     }
+    
+    //     //셋다 안이면 내부이다
+    //     if (inside)
+    //     {
+    //         //충돌지점은 자신으로 표현
+    //         pa_ray.SetPosition(new CVec3(pOrigin.mF32A[0], pOrigin.mF32A[1], pOrigin.mF32A[2]));
+    
+    //         //*t = 0.0f;
+    //         RecycleFun();
+    //         return true;
+    //     }
+    
+    
+    //     // Calculate T distances to candidate planes
+    //     for (i = 0; i < 3; i++)
+    //     {
+    //         //중심이아니였음 그리고 너무 작은수는 패스
+    //         if (quadrant.mF32A[i] != RayBoxMIDDLE
+    //             && (pDir[i] > d_EPSILON || pDir[i] < -d_EPSILON))
+    //         {
+    //             //(맥시멈-현재위치)/기울기
+    //             maxT.mF32A[i] = (candidatePlane.mF32A[i] - pOrigin.mF32A[i]) / pDir[i];
+    //         }
+    //         //아니면 직각이기때문에 -1
+    //         else
+    //         {
+    //             maxT.mF32A[i] = -1.0;
+    //         }
+    //     }
+    
+    //     //가장 큰값 찾고
+    //     whichPlane = 0;
+    //     for (i = 1; i < 3; i++)
+    //     {
+    //         if (maxT.mF32A[whichPlane] < maxT.mF32A[i])
+    //             whichPlane = i;
+    //     }
+    
+    //     // 0보다 작으면 충돌 아닌상황
+    //     if (maxT.mF32A[whichPlane] < 0.0)
+    //     {
+    //         RecycleFun();
+    //         return false;
+    //     }
+    
+    
+    //     for (i = 0; i < 3; i++)
+    //     {
+    //         //가장 큰값이 아닌경우
+    //         if (whichPlane != i)
+    //         {
+    //             //충돌지점 구하고
+    //             pIntersect[i] = pOrigin.mF32A[i] + maxT.mF32A[whichPlane] * pDir[i];
+    //             //민,맥스랑 비교후 넘어가는 경우도 패스
+    //             if (pIntersect[i] < pBoxMin.mF32A[i] || pIntersect[i] > pBoxMax.mF32A[i])
+    //             {
+    //                 RecycleFun();
+    //                 return false;
+    //             }
+    //         }
+    //         else
+    //         {
+    //             //
+    //             pIntersect[i] = candidatePlane.mF32A[i];
+    //         }
+    //     }
+    //     pa_ray.mVec3List[1].mF32A[0]=pIntersect[0];
+    //     pa_ray.mVec3List[1].mF32A[1]=pIntersect[1];
+    //     pa_ray.mVec3List[1].mF32A[2]=pIntersect[2];
+    //     //pa_ray.SetPosition(new CVec3(pIntersect[0], pIntersect[1], pIntersect[2]));
+
+    //     RecycleFun();
+
+    //     return true;
+    // }
     static RaySphereIS(pa_center, pa_radian,pa_ray)
     {
         var l = CMath.V3SubV3(pa_center, pa_ray.GetOriginal());

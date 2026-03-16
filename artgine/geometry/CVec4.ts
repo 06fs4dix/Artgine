@@ -41,6 +41,7 @@ export class CVec4 extends CFloat32
 	get z(){	return this.mF32A[2];	}
 	set w(_val : number)	{		this.mF32A[3]=_val;	}
 	get w(){	return this.mF32A[3];	}
+	
 	get xyz(){	return new CVec3(this.mF32A[0],this.mF32A[1],this.mF32A[2]);	}
 	set xyz(_val : CVec3)	{		this.mF32A[0]=_val.mF32A[0];this.mF32A[1]=_val.mF32A[1];this.mF32A[2]=_val.mF32A[2];	}
 
@@ -54,7 +55,7 @@ export class CVec4 extends CFloat32
 
 		return gVec4;
 	}
-	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
 			//super.EditHTMLInit(_div,_pointer);
 			_div.innerHTML="";
 			const self = this;

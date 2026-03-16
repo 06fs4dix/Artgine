@@ -489,7 +489,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 		this.EditFormEx(_pointer,_body,_input);
 	}
-	protected EditFormEx(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+	EditFormEx(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 
 	}
@@ -554,7 +554,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 		
 	}
-	protected EditChangeEx(_pointer : CPointer,_child : boolean)
+	EditChangeEx(_pointer : CPointer,_child : boolean)
 	{
 
 	}

@@ -44,7 +44,7 @@ export class CAtlas extends CObject {
 		super();
 		this.SetKey(_path + CUniqueID.GetHash() + ".atl");
 	}
-	IsShould(_member: string, _type: CObject.eShould) {
+	override IsShould(_member: string, _type: CObject.eShould) {
 		if (_member == "mTex" && _type != CObject.eShould.Editer) return false;
 		if (_member == "mCreate" || _member == "mBase64Map") return false;
 
@@ -349,7 +349,8 @@ export class CAtlas extends CObject {
 				}
 			}
 
-			for (let i = 0; i < this.mTexCodi.length; i++) {
+			for (let i = 0; i < this.mTexCodi.length; i++) 
+			{
 				let codi = this.mTexCodi[i];
 				if (codi == null) {
 					continue;
@@ -364,6 +365,22 @@ export class CAtlas extends CObject {
 					imgDiv.style.backgroundImage = "url(" + slicedBase64Img + ")";
 					imgDiv.style.backgroundBlendMode = "multiply";
 					imgDiv.style.border = "1px solid red";
+					imgDiv.style.position = "relative";
+
+					let label = document.createElement("span");
+					label.textContent = String(i);
+					label.style.cssText = `
+						position: absolute;
+						bottom: 2px;
+						right: 3px;
+						font-size: 10px;
+						font-weight: bold;
+						color: white;
+						text-shadow: 0 0 3px #000, 0 0 3px #000;
+						pointer-events: none;
+						line-height: 1;
+					`;
+					imgDiv.appendChild(label);
 
 					let width = codi.z - codi.x;
 					let height = codi.w - codi.y;
@@ -641,217 +658,183 @@ export class CAtlas extends CObject {
 	}
 
 
-	private m_rect: AtlasMaxRects;
+	private m_rect: AtlasMaxRects | null = null;
+	// ─── 공통 내부 함수 ───────────────────────────────────────────────
+	private async PushTexTiles(_imgTex: CTexture, _codi: Array<CVec4>): Promise<number> {
+		const imgTexBuf = _imgTex.GetBuf()[0] as Uint8Array;
+
+		// rect 없는 경우 생성
+		if (this.m_rect == null) {
+			this.m_rect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);
+			for (let codi of this.mTexCodi) {
+				if (codi == null) continue;
+				const w = codi.z - codi.x;
+				const h = codi.w - codi.y;
+				// Insert(베스트핏) → MarkUsed(실제좌표)로 교체
+				// 패딩 포함한 실제 점유 영역을 정확히 마킹
+				this.m_rect.MarkUsed(
+					codi.x - this.mPadding,
+					codi.y - this.mPadding,
+					w + this.mPadding * 2,
+					h + this.mPadding * 2
+				);
+			}
+			this.mWidth = this.m_rect.mWidth;
+			this.mHeight = this.m_rect.mHeight;
+		}
+
+		// 아틀라스 텍스쳐 버퍼 생성
+		let atlTex: CTexture = null;
+		if (this.mBase64.mData != null) {
+			await this.CreateTex();
+			atlTex = this.GetTex();
+		} else {
+			atlTex = new CTexture();
+			atlTex.SetSize(128, 128);
+			atlTex.CreateBuf();
+		}
+		let atlTexBuf = atlTex.GetBuf()[0] as Uint8Array;
+
+		for (let k = 0; k < _codi.length; ++k) {
+			const codi = _codi[k];
+			const w = codi.z - codi.x;
+			const h = codi.w - codi.y;
+			if (w == 0 || h == 0) continue;
+
+			const paddedW = w + this.mPadding * 2;
+			const paddedH = h + this.mPadding * 2;
+
+			let insertRect = this.m_rect.Insert(paddedW, paddedH);
+			if (insertRect == null) {
+				const newW = CUtilRender.CloseToExp(this.mWidth + paddedW);
+				const newH = CUtilRender.CloseToExp(this.mHeight + paddedH);
+				const higherOne = Math.max(newW, newH);
+
+				let newTex = await this.RebuildRect(higherOne, higherOne, atlTex);
+				atlTex = newTex;
+				atlTexBuf = newTex.GetBuf()[0] as Uint8Array;
+
+				insertRect = this.m_rect.Insert(paddedW, paddedH);
+			}
+
+			// 삭제된 슬롯 재사용
+			let texCodiIdx = this.mTexCodi.indexOf(null);
+			if (texCodiIdx != -1) {
+				this.mTexCodi[texCodiIdx] =
+					new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding);
+			} else {
+				this.mTexCodi.push(new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding));
+			}
+
+			const srcX = codi.x;
+			const srcY = codi.y;
+			const dstX = insertRect.x + this.mPadding;
+			const dstY = insertRect.y + this.mPadding;
+
+			for (let y = 0; y < h; y++) {
+				const src = (srcX + (srcY + y) * _imgTex.GetWidth()) * 4;
+				const dst = (dstX + (dstY + y) * atlTex.GetWidth()) * 4;
+				atlTexBuf.set(imgTexBuf.subarray(src, src + 4 * w), dst);
+			}
+			// 상하좌우 패딩
+			for (let x = 0; x < w; x++) {
+				const from  = ((dstX + x) + (dstY)         * atlTex.GetWidth()) * 4;
+				const fromB = ((dstX + x) + (dstY + h - 1) * atlTex.GetWidth()) * 4;
+				for (let pc = 0; pc < this.mPadding; ++pc) {
+					atlTexBuf.set(atlTexBuf.subarray(from,  from  + 4), ((dstX + x) + (dstY - pc - 1)  * atlTex.GetWidth()) * 4);
+					atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), ((dstX + x) + (dstY + h + pc)  * atlTex.GetWidth()) * 4);
+				}
+			}
+			for (let y = -this.mPadding; y < h + this.mPadding; y++) {
+				const from  = ((dstX)         + (dstY + y) * atlTex.GetWidth()) * 4;
+				const fromB = ((dstX + w - 1) + (dstY + y) * atlTex.GetWidth()) * 4;
+				for (let pc = 0; pc < this.mPadding; ++pc) {
+					atlTexBuf.set(atlTexBuf.subarray(from,  from  + 4), ((dstX - pc - 1) + (dstY + y) * atlTex.GetWidth()) * 4);
+					atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), ((dstX + w + pc) + (dstY + y) * atlTex.GetWidth()) * 4);
+				}
+			}
+		}
+
+		var targa = new CTARGA(atlTexBuf as unknown as ArrayBuffer);
+		this.mWidth  = targa.imageWidth  = atlTex.GetWidth();
+		this.mHeight = targa.imageHeight = atlTex.GetHeight();
+		this.mBase64.mData = targa.GetResult();
+		this.mBase64.mExt  = "tga";
+		this.mBase64.RefreshHash();
+		this.mTex = null;
+
+		return this.mTexCodi.length - 1;
+	}
+
+	// ─── Push (기존) ─────────────────────────────────────────────────
 	Push(_texName: string, _buf: ArrayBuffer = null, _codi = new Array<CVec4>()) {
 		return new Promise((resolve, reject) => {
 			if (_buf != null) {
-
 				let blob = new Blob([_buf], { type: "image/" + CString.ExtCut(_texName).ext });
 				_texName = window.URL.createObjectURL(blob);
 			}
-
 			const img = new Image();
 			img.crossOrigin = "Anonymous";
 			img.addEventListener('load', async (_event) => {
-				//rect 없는 경우 생성
-				if (this.m_rect == null) {
-					this.m_rect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);
-					for (let codi of this.mTexCodi) {
-						const w = codi.z - codi.x + 1;
-						const h = codi.w - codi.y + 1;
-						this.m_rect.Insert(w, h);
-					}
-					this.mWidth = this.m_rect.mWidth;
-					this.mHeight = this.m_rect.mHeight;
-				}
+				const img = _event.currentTarget as HTMLImageElement;
+				CH5Canvas.Init(img.width, img.height);
+				CH5Canvas.Draw(CH5Canvas.DrawImage(img, 0, 0, img.width, img.height));
+				const imgTex = CH5Canvas.GetNewTex();
 
-				//이미지 버퍼 생성
+				if (_codi.length == 0)
+					_codi.push(new CVec4(0, 0, img.width, img.height));
+
+				resolve(await this.PushTexTiles(imgTex, _codi));
+			});
+			img.src = _texName;
+		});
+	}
+
+	// ─── PushSizeCut (신규) ──────────────────────────────────────────
+	PushSizeCut(_texName: string, _size: CVec2) {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			img.crossOrigin = "Anonymous";
+			img.addEventListener('load', async (_event) => {
 				const img = _event.currentTarget as HTMLImageElement;
 				CH5Canvas.Init(img.width, img.height);
 				CH5Canvas.Draw(CH5Canvas.DrawImage(img, 0, 0, img.width, img.height));
 				const imgTex = CH5Canvas.GetNewTex();
 				const imgTexBuf = imgTex.GetBuf()[0] as Uint8Array;
 
-				//codi 없는 경우 전체 이미지 사용
-				if (_codi.length == 0)
-					_codi.push(new CVec4(0, 0, img.width, img.height));
+				const cols = Math.floor(img.width  / _size.x);
+				const rows = Math.floor(img.height / _size.y);
+				const codi: CVec4[] = [];
 
-				//아틀라스 텍스쳐 버퍼 생성
-				let atlTex: CTexture = null;
-				if (this.mBase64.mData != null) {
-					await this.CreateTex();
-					atlTex = this.GetTex();
-				}
-				else {
-					atlTex = new CTexture();
-					atlTex.SetSize(128, 128);
-					atlTex.CreateBuf();
-				}
-				let atlTexBuf = atlTex.GetBuf()[0] as Uint8Array;
+				for (let row = 0; row < rows; row++) {
+					for (let col = 0; col < cols; col++) {
+						const sx = col * _size.x;
+						const sy = row * _size.y;
+						const w  = _size.x;
+						const h  = _size.y;
 
-				for (let k = 0; k < _codi.length; ++k) {
-					const codi = _codi[k];
-					const w = codi.z - codi.x;
-					const h = codi.w - codi.y;
-					if (w == 0 || h == 0) continue;
-
-					const paddedW = w + this.mPadding * 2;
-					const paddedH = h + this.mPadding * 2;
-
-					let insertRect = this.m_rect.Insert(paddedW, paddedH);
-					if (insertRect == null) {
-						const newW = CUtilRender.CloseToExp(this.mWidth + paddedW);
-						const newH = CUtilRender.CloseToExp(this.mHeight + paddedH);
-						const higherOne = Math.max(newW, newH);
-
-						let newTex = await this.RebuildRect(higherOne, higherOne, atlTex);
-
-
-						atlTex = newTex;
-						atlTexBuf = newTex.GetBuf()[0] as Uint8Array;
-
-						insertRect = this.m_rect.Insert(paddedW, paddedH);
-					}
-
-					//앞에 삭제된 texCodi공간이 있으면 그곳에 넣어줌
-					let texCodiIdx = this.mTexCodi.indexOf(null);
-					if (texCodiIdx != -1) {
-						this.mTexCodi[texCodiIdx] =
-							new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding);
-					}
-					else {
-						this.mTexCodi.push(new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding));
-					}
-
-					const srcX = codi.x;
-					const srcY = codi.y;
-					const dstX = insertRect.x + this.mPadding;
-					const dstY = insertRect.y + this.mPadding;
-
-					for (let y = 0; y < h; y++) {
-						const src = (srcX + (srcY + y) * imgTex.GetWidth()) * 4;
-						const dst = (dstX + (dstY + y) * atlTex.GetWidth()) * 4;
-						atlTexBuf.set(imgTexBuf.subarray(src, src + 4 * w), dst);
-					}
-					//상하좌우에 패딩 넣음
-					for (let x = 0; x < w; x++) {
-						//top
-						const from = ((dstX + x) + (dstY) * atlTex.GetWidth()) * 4;
-						for (let pc = 0; pc < this.mPadding; ++pc) {
-							const to = ((dstX + x) + (dstY - pc - 1) * atlTex.GetWidth()) * 4;
-							atlTexBuf.set(atlTexBuf.subarray(from, from + 4), to);
+						// 알파가 전부 0이면 스킵
+						let hasPixel = false;
+						outer: for (let y = 0; y < h; y++) {
+							for (let x = 0; x < w; x++) {
+								if (imgTexBuf[((sy + y) * imgTex.GetWidth() + (sx + x)) * 4 + 3] !== 0) {
+									hasPixel = true;
+									break outer;
+								}
+							}
 						}
+						if (!hasPixel) continue;
 
-
-						//bot
-						const fromB = ((dstX + x) + (dstY + h - 1) * atlTex.GetWidth()) * 4;
-						for (let pc = 0; pc < this.mPadding; ++pc) {
-							const toB = ((dstX + x) + (dstY + h + pc) * atlTex.GetWidth()) * 4;
-							atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), toB);
-						}
-
-					}
-
-					for (let y = -this.mPadding; y < h + this.mPadding; y++) {
-						//left
-						const from = ((dstX) + (dstY + y) * atlTex.GetWidth()) * 4;
-						for (let pc = 0; pc < this.mPadding; ++pc) {
-							const to = ((dstX - pc - 1) + (dstY + y) * atlTex.GetWidth()) * 4;
-							atlTexBuf.set(atlTexBuf.subarray(from, from + 4), to);
-						}
-
-
-						//right
-						const fromB = ((dstX + w - 1) + (dstY + y) * atlTex.GetWidth()) * 4;
-						for (let pc = 0; pc < this.mPadding; ++pc) {
-							const toB = ((dstX + w + pc) + (dstY + y) * atlTex.GetWidth()) * 4;
-							atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), toB);
-						}
-
+						codi.push(new CVec4(sx, sy, sx + w, sy + h));
 					}
 				}
 
-
-				var targa = new CTARGA(atlTexBuf);
-				this.mWidth = targa.imageWidth = atlTex.GetWidth();
-				this.mHeight = targa.imageHeight = atlTex.GetHeight();
-				this.mBase64.mData = targa.GetResult();
-				this.mBase64.mExt = "tga";
-				this.mBase64.RefreshHash();
-				this.mTex = null;
-
-				resolve(true);
-			});//load
-
-
+				resolve(await this.PushTexTiles(imgTex, codi));
+			});
 			img.src = _texName;
 		});
 	}
-
-	// private async RebuildRect(_w : number, _h : number,_beforeTex : CTexture=null) : Promise<CTexture> {
-	// 	this.m_rect = new AtlasMaxRects(_w, _h);
-	// 	let newTexCodi = [];
-	// 	for(let oldTexCodi of this.mTexCodi) {
-	// 		if(oldTexCodi == null) {
-	// 			newTexCodi.push(null);
-	// 			continue;
-	// 		}
-	// 		const w = oldTexCodi.z - oldTexCodi.x;
-	// 		const h = oldTexCodi.w - oldTexCodi.y;
-	// 		let rect = this.m_rect.Insert(w + this.mPadding*2, h + this.mPadding*2);
-	// 		newTexCodi.push(new CVec4(rect.x + this.mPadding, rect.y + this.mPadding, rect.x + w+this.mPadding, rect.y + h+this.mPadding));
-	// 	}
-
-	// 	const newTex = new CTexture();
-	// 	newTex.SetSize(_w, _h);
-	// 	newTex.CreateBuf();
-	// 	const newBuf = newTex.GetBuf()[0] as Uint8Array;
-
-	// 	let oldTex : CTexture=null;
-	// 	if(_beforeTex!=null) 
-	// 	{
-	// 		let oldWidth = _beforeTex.GetWidth();
-	// 		let oldHeight = _beforeTex.GetHeight();
-	// 		let oldTexBuf = _beforeTex.GetBuf()[0] as Uint8Array;
-
-	// 		for (let y = 0; y < oldHeight; y++) {
-	// 			const srcStart = y * oldWidth * 4;
-	// 			const dstStart = y * _w * 4;
-	// 			const rowLength = oldWidth * 4;
-
-	// 			newBuf.set(oldTexBuf.subarray(srcStart, srcStart + rowLength), dstStart);
-	// 		}
-
-
-	// 	}
-	// 	else if(this.mBase64.mData!=null) 
-	// 	{
-	// 		await this.CreateTex();
-	// 		oldTex= this.GetTex();
-	// 		let oldTexBuf=oldTex.GetBuf()[0] as Uint8Array;
-
-	// 		for(let codiIdx = 0; codiIdx < this.mTexCodi.length; codiIdx++) {
-	// 			let oldCodi = this.mTexCodi[codiIdx];
-	// 			let newCodi = newTexCodi[codiIdx];
-	// 			if(oldCodi == null) continue;
-	// 			if(newCodi == null) continue;
-	// 			const oldCodiW = oldCodi.z - oldCodi.x;
-	// 			const oldCodiH = oldCodi.w - oldCodi.y;
-
-	// 			for(let y = -this.mPadding; y < oldCodiH+this.mPadding; y++) {
-	// 				let src = ((oldCodi.y + y) * this.mWidth + (oldCodi.x - this.mPadding)) * 4;
-	// 				let dst = ((newCodi.y + y) * _w + (newCodi.x - this.mPadding)) * 4;
-	// 				newBuf.set(oldTexBuf.subarray(src, src + (oldCodiW + this.mPadding*2) * 4), dst);
-	// 			}
-	// 		}
-	// 	}
-
-
-	// 	this.mTexCodi = newTexCodi;
-	// 	this.mWidth=_w;
-	// 	this.mHeight=_h;
-	// 	return newTex;
-	// }
+	
 
 	private async RebuildRect(_w: number, _h: number, _beforeTex: CTexture = null): Promise<CTexture> {
 		this.m_rect = new AtlasMaxRects(_w, _h);
@@ -1023,7 +1006,10 @@ class AtlasMaxRects {
 
 		return new CVec2(bestNode.x, bestNode.y);
 	}
-
+	MarkUsed(x: number, y: number, w: number, h: number): void {
+		this.SplitFreeRectangles(new CVec4(x, y, w, h));
+		this.PruneFreeRectangles();
+	}
 	/**
 		* 적합한 빈 공간을 찾는 함수
 		* @param w 삽입할 이미지의 너비

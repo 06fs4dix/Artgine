@@ -2582,6 +2582,7 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 						let we=web.bufF.V4(mdd.ci.index[i+j]);
 						let wi=wib.bufF.V4(mdd.ci.index[i+j]);
 						
+						if(wi.x>_skinMat.length)	wi.x=_skinMat.length-1;
 
 						CMath.MatMulFloat(_skinMat[wi.x],we.x,dmat);
 						CMath.MatAdd(mat,dmat,mat);
@@ -2624,7 +2625,9 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 					let we=web.bufF.V4(i);
 					let wi=wib.bufF.V4(i);
 					
-
+					if(wi.x>_skinMat.length)	wi.x=_skinMat.length-1;
+					
+						
 					CMath.MatMulFloat(_skinMat[wi.x],we.x,dmat);
 					CMath.MatAdd(mat,dmat,mat);
 					CMath.MatMulFloat(_skinMat[wi.y],we.y,dmat);

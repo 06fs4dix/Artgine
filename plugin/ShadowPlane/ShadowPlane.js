@@ -344,7 +344,7 @@ export class CShadowPlane extends CPaint2D {
             CMath.V3SubV3(p1Far, posOffset, p1Far);
             CMath.V3SubV3(p2Far, posOffset, p2Far);
             const lmat = pt.GetMat().Export();
-            lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
+            lmat.z -= CPaint2D.YSortZShift * 2.0 / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
             this.mAutoLoad.Import(pt.mAutoLoad);
             if (pt.GetTag().has("wind") && pt instanceof CPaint2D) {
                 if (this.mTag.has("wind") == false)

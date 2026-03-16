@@ -514,7 +514,7 @@ export class CShadowPlane extends CPaint2D
             CMath.V3SubV3(p2Far, posOffset, p2Far);
 
             const lmat = pt.GetMat().Export();
-            lmat.z -= CPaint2D.mYSortZShift * 2.0 / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
+            lmat.z -= CPaint2D.YSortZShift * 2.0 / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);   // z fighting 막기 위해 조금 뒤로 보냄
 
             
            

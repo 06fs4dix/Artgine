@@ -227,7 +227,7 @@ export class COctreeMgr
     }
     
 
-    Find(_st: CVec3, _ed: CVec3, _bound: CBound,_layerPass = null,_size = 100,_loopCount=10000) : Array<CVec3>
+    Find(_st: CVec3, _ed: CVec3, _bound: CBound,_layerPass = null,_path : Array<CVec3>,_size = 100,_loopScale=1) : boolean
     {
         
         return null;

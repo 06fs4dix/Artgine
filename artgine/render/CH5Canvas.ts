@@ -99,6 +99,16 @@ export class CH5Canvas
 {
 	static Cmd(_name : string,_para : any)	{	return new CH5Cmd(_name,_para);	}
 	
+    static AddCmd(_cmdVec : CH5Cmd | Array<CH5Cmd>)
+    {
+        if(_cmdVec instanceof Array) {
+            gCMDStack.push(..._cmdVec);
+        }
+        else {
+            gCMDStack.push(_cmdVec);
+        }
+        return _cmdVec;
+    }
 	static FillRoundRect(left, top, right, bottom, round=2 * Math.PI)
 	{
 		var cmdVec=[

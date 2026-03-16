@@ -15,16 +15,15 @@ export class CColor extends CVec4
     static eModel=SDF.eColorModel;
 
     GetString() {
-        if(this.mF32A[3] == SDF.eColorModel.RGBAdd || this.mF32A[3] == SDF.eColorModel.RGBMul) {
-            return `rgb(${Math.round(255*this.mF32A[0])},${Math.round(255*this.mF32A[1])},${Math.round(255*this.mF32A[2])})`;
-        }
-        else if(this.mF32A[3] == SDF.eColorModel.HSV || this.mF32A[3] == SDF.eColorModel.HSVBaseHSPercent) {
+        
+        if(this.mF32A[3] == SDF.eColorModel.HSV || this.mF32A[3] == SDF.eColorModel.HSVBaseHSPercent) {
             return `hsv(${Math.round(360*this.mF32A[0])},${Math.round(100*this.mF32A[1])},${Math.round(100*this.mF32A[2])})`;
         }
         else if(this.mF32A[3] == SDF.eColorModel.HSL) {
             return `hsl(${Math.round(360*this.mF32A[0])},${Math.round(100*this.mF32A[1])},${Math.round(100*this.mF32A[2])})`;
         }
-        return "";
+
+        return `rgb(${Math.round(255*this.mF32A[0])},${Math.round(255*this.mF32A[1])},${Math.round(255*this.mF32A[2])})`;
     }
     static Color(_r : number=0, _g : number=0, _b : number=0, _model : number = SDF.eColorModel.None)
     {
@@ -46,6 +45,27 @@ export class CColor extends CVec4
         
 
         return this;
+    }
+    ToUInt(): number {
+        const r = Math.max(0, Math.min(255, Math.round(this.mF32A[0] * 255)));
+        const g = Math.max(0, Math.min(255, Math.round(this.mF32A[1] * 255)));
+        const b = Math.max(0, Math.min(255, Math.round(this.mF32A[2] * 255)));
+        return (r << 16) | (g << 8) | b;
+    }
+    HexToColor(_hex: string | number) 
+    {
+        let val: number;
+
+        if (typeof _hex === 'number') {
+            val = _hex;
+        } else {
+            // '#ffffff' or '0xffffff'
+            val = parseInt(_hex.replace('#', '0x'));
+        }
+
+        this.mF32A[0] = ((val >> 16) & 0xFF) / 255;
+        this.mF32A[1] = ((val >> 8)  & 0xFF) / 255;
+        this.mF32A[2] = ( val        & 0xFF) / 255;
     }
     override EditHTMLInit(_div: HTMLDivElement,_pointer : CPointer=null): void {
         super.EditHTMLInit(_div,_pointer);

@@ -12,6 +12,7 @@ export class CInventory extends CObject {
         super();
         this.mKey = CUniqueID.Get();
         this.mItemKey = _itemKey;
+        this.mAmount = _amount;
         this.mDate = new Date().getTime();
     }
     mKey = "";
@@ -127,7 +128,7 @@ export class CInvenMgr extends CObject {
         return null;
     }
     Clear() {
-        for (let i = 0; i < this.mInvenArr.length; ++i) {
+        for (let i = this.mInvenArr.length - 1; i >= 0; --i) {
             const removed = this.mInvenArr[i];
             this.mInvenArr.splice(i, 1);
             CEvent.ToCEvent(this.GetEvent("Remove")).Call(removed);

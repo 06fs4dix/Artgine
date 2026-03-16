@@ -84,6 +84,7 @@ export class CTexture extends CObject
 	public mVideo=false;
 	public mFrame=false;//webgpu용이다
 	public mReadPixelEvent : CEvent=null;
+	public mModifyEvent : CEvent=null;
 
 	
 	constructor()
@@ -187,14 +188,35 @@ export class CTexture extends CObject
 		}
 		
 		
-		_div.prepend(CDOM.DataToDom({
-			'<>':'button',"class":"btn btn-primary btn-sm" ,style:"width:100%;",'text':'Refresh', 'onclick':(e) => {
-				this.mUpdate.clear();
-				if(this.mReadPixelEvent!=null)
-					this.mReadPixelEvent.Call(this);
-				this.EditRefresh();
-			}
-		}));
+		_div.prepend(CDOM.DataToDom(
+			{"tag":"div","class":"row","html":[
+				{"tag":"div","class":"col","html":[
+					{
+						'<>':'button',"class":"btn btn-primary btn-sm" ,style:"width:100%;",'text':'Refresh', 'onclick':(e) => {
+							this.mUpdate.clear();
+							if(this.mReadPixelEvent!=null)
+								this.mReadPixelEvent.Call(this);
+							this.EditRefresh();
+						}
+					}
+				]},
+				{"tag":"div","class":"col","html":[
+					{
+						'<>':'button',"class":"btn btn-danger btn-sm" ,style:"width:100%;",'text':'Modify', 'onclick':(e) => {
+							this.mUpdate.clear();
+							if(this.mModifyEvent!=null)
+								this.mModifyEvent.Call(this);
+							else
+								CAlert.Info("CLoader를 이용한 텍스쳐 아님");
+							this.EditRefresh();
+						}
+					}
+				]}
+			]},
+
+
+			
+		));
 		
 	}
 	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {

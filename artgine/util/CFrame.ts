@@ -716,16 +716,21 @@ export class CFrame
 	async Process()
 	{
 		this.Load().mLoadSet.add("load");
-		new CLoadingBack("MainLoading", ()=>{
 
-			//init씬 확인용
-			let size=this.Load().mLoadSet.size+(this.mInit?1:0);
+		if(CFrame.Sub()==null)
+		{
+			new CLoadingBack("MainLoading", ()=>{
 
-			if(this.Load().mLoadSet.size==0 && this.mInit)
-				this.mInit=false;
+				//init씬 확인용
+				let size=this.Load().mLoadSet.size+(this.mInit?1:0);
 
-			return size;
-		});
+				if(this.Load().mLoadSet.size==0 && this.mInit)
+					this.mInit=false;
+
+				return size;
+			});
+		}
+		
 
 
 		if(this.mDevice)	await this.mDevice.Init();

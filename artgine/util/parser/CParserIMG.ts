@@ -11,10 +11,10 @@ export class CParserIMG extends CParser {
     {
         super();
     }
-    GetResult(): CTexture {
+    override GetResult(): CTexture {
         return this.mResult;
     }
-    Load(pa_fileName: string): Promise<any> {
+    override Load(pa_fileName: string): Promise<any> {
         return new Promise(async (resolve, reject) => {
             const pos = pa_fileName.lastIndexOf(".") + 1;
             const ext = pa_fileName.substr(pos).toLowerCase();

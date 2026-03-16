@@ -528,8 +528,6 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) 
     }
     else if(type<SDF.eVFX.Decal+0.5 || type<SDF.eVFX.DecalTexture+0.5)
     {
-        outColor = Sam2DToColor(0.0, _uv);
-
         var decalDir : CVec3 = new CVec3(vfxMat0[0][0], vfxMat0[0][1], vfxMat0[0][2]);
         var decalRot : number = vfxMat0[0][3];
         var decalSca : CVec3 = new CVec3(vfxMat0[1][0], vfxMat0[1][1], vfxMat0[1][2]);
@@ -565,15 +563,27 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) 
         // 데칼 범위 내에 있음
         if(decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5)
         {
-            var decalColor : CVec4 = para;
-            if(type>SDF.eVFX.Decal+0.5) {
-                decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
-                decalColor.a *= para.y;
+            if(type<SDF.eVFX.Decal+0.5) {
+                var decalColor : CVec4 = para;
+                outColor = new CVec4(
+                    V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                    outColor.a
+                );
             }
-            outColor = new CVec4(
-                V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
-                outColor.a
-            );
+            else if(type<SDF.eVFX.DecalTexture+0.5) {
+                var decalColor : CVec4 = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+                outColor = new CVec4(
+                    V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                    outColor.a
+                );
+                if(para.z > 0.5 && decalColor.a > 0.001) {
+                    outColor.r = 1.0 - outColor.r;
+                    outColor.g = 1.0 - outColor.g;
+                    outColor.b = 1.0 - outColor.b;
+                }
+            }
+            
         }
     }
     
@@ -686,15 +696,26 @@ export function VFXDown1(_uv : CVec2, _value : CMat,_time : number, _worldPos : 
         // 데칼 범위 내에 있음
         if(decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5)
         {
-            var decalColor : CVec4 = para;
-            if(type>SDF.eVFX.Decal+0.5) {
-                decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
-                decalColor.a *= para.y;
+            if(type<SDF.eVFX.Decal+0.5) {
+                var decalColor : CVec4 = para;
+                outColor = new CVec4(
+                    V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                    outColor.a
+                );
             }
-            outColor = new CVec4(
-                V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
-                outColor.a
-            );
+            else if(type<SDF.eVFX.DecalTexture+0.5) {
+                var decalColor : CVec4 = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+                outColor = new CVec4(
+                    V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                    outColor.a
+                );
+                if(para.z > 0.5 && decalColor.a > 0.001) {
+                    outColor.r = 1.0 - outColor.r;
+                    outColor.g = 1.0 - outColor.g;
+                    outColor.b = 1.0 - outColor.b;
+                }
+            }
         }
     }
    
@@ -806,15 +827,26 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number, _worldPos : 
         // 데칼 범위 내에 있음
         if(decalUV.x >= -0.5 && decalUV.x <= 0.5 && decalUV.y >= -0.5 && decalUV.y <= 0.5 && decalUV.z >= -0.5 && decalUV.z <= 0.5)
         {
-            var decalColor : CVec4 = para;
-            if(type>SDF.eVFX.Decal+0.5) {
-                decalColor = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
-                decalColor.a *= para.y;
+            if(type<SDF.eVFX.Decal+0.5) {
+                var decalColor : CVec4 = para;
+                outColor = new CVec4(
+                    V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                    outColor.a
+                );
             }
-            outColor = new CVec4(
-                V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
-                outColor.a
-            );
+            else if(type<SDF.eVFX.DecalTexture+0.5) {
+                var decalColor : CVec4 = Sam2DToColor(para.x, new CVec2(decalUV.x * -1.0 + 0.5, decalUV.y * 1.0 + 0.5));
+                decalColor.a *= para.y;
+                outColor = new CVec4(
+                    V3Mix(outColor.rgb, decalColor.rgb, outColor.a * decalColor.a),
+                    outColor.a
+                );
+                if(para.z > 0.5 && decalColor.a > 0.001) {
+                    outColor.r = 1.0 - outColor.r;
+                    outColor.g = 1.0 - outColor.g;
+                    outColor.b = 1.0 - outColor.b;
+                }
+            }
         }
     }
     

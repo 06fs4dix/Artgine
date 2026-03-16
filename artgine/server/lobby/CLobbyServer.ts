@@ -124,7 +124,7 @@ export class CRoom
 
         if(this.mFrameTime>1)
         {
-            //CConsol.Log(this.constructor.name+" / "+this.mFrameCount);
+            CConsol.Log(this.constructor.name+" / "+this.mFrameCount);
             this.mFrameTime=0;
             this.mFrameCount=0;
             
@@ -138,9 +138,12 @@ export class CRoom
         
     }
 
-    Send(_stream : CStream)
+    Send(_stream : CStream|string)
     {
-        this.mParentPort.postMessage(_stream.Data());
+        if(typeof _stream =="string")
+            this.mParentPort.postMessage(_stream);
+        else
+            this.mParentPort.postMessage(_stream.Data());
     }
 }
 

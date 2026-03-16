@@ -26,6 +26,9 @@ import { CConsol } from "../basic/CConsol.js"
 import { CParserOBJ } from "./parser/CParserOBJ.js"
 import CParserSpine from "./parser/CParserSpine.js"
 import { CUniqueID } from "../basic/CUniqueID.js"
+import { CEvent } from "../basic/CEvent.js"
+import { CClass } from "../basic/CClass.js"
+import { CVec3 } from "../geometry/CVec3.js"
 //https://github.com/JordiRos/GLGif
 //gif animation은 이걸로
 
@@ -392,6 +395,11 @@ export class CLoader
 		this.mLoadSet.delete(_file);
 		tex=par.GetResult();
 		tex.SetKey(_file);
+		tex.mModifyEvent=new CEvent(async ()=>{
+			await CClass.CallAsync(null,"BufferTool",[tex.GetBuf()[0],new CVec3(tex.GetWidth(),tex.GetHeight(),1),true]);
+			this.mRender.BuildTexture(tex);
+			
+		});
 		this.mRes.Push(_file,par.GetResult());
 			
 	}

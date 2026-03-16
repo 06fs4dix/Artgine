@@ -148,6 +148,8 @@ export class CBoundWorldCollider extends CBoundWorld
     override Init(_LBound : CBound,_WMat : CMat)
     {
         super.Init(_LBound,_WMat);
+        //충돌체만 인라디안이다. 이건 박스 충돌과 맞추기 위해서다.
+        //그래서 x,y,z다른 형태일 경우 문제가 발생한다
         this.mRadian=this.mBound.GetInRadius();
     }
     override UpdateMat(_mat : CMat)

@@ -51,7 +51,7 @@ export class CCondition extends CObject
     Excute(_state : CObject)
     {
         let st=_state.Get(this.mState) as any;
-       
+        if(st==null && typeof this.mValue =="number")   st=0;
         if(this.mOperator=="==")    return st==this.mValue;
         if(this.mOperator=="!=")    return st!=this.mValue;
         if(this.mOperator=="<=")    return st<=this.mValue;

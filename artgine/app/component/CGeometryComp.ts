@@ -58,7 +58,7 @@ export class CGeometryComp extends CComponent
         this.mSysc=CComponent.eSysn.CamComp;
     }
     mCanKey="";
-    private mGI : CGeometryInfo=null;
+    protected mGI : CGeometryInfo=null;
 
     GetGI() {   return this.mGI;    }
     override IsShould(_member: string, _type: CObject.eShould): boolean {

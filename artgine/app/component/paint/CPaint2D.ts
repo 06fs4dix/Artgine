@@ -3,6 +3,7 @@ import { CUpdate } from "../../../basic/Basic.js";
 import { CAlert } from "../../../basic/CAlert.js";
 import { CClass } from "../../../basic/CClass.js";
 import { CDOM } from "../../../basic/CDOM.js";
+import { CHash } from "../../../basic/CHash.js";
 import { CObject, CPointer } from "../../../basic/CObject.js";
 import { CUtil } from "../../../basic/CUtil.js";
 import { CWASM } from "../../../basic/CWASM.js";
@@ -15,9 +16,11 @@ import {CVec2} from "../../../geometry/CVec2.js";
 import {CVec3} from "../../../geometry/CVec3.js";
 import {CVec4} from "../../../geometry/CVec4.js";
 import { CMesh } from "../../../render/CMesh.js";
+import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
+import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
 import {CRenderPass} from "../../../render/CRenderPass.js";
 
-import {CShader} from "../../../render/CShader.js";
+import {CShader, CVertexFormat} from "../../../render/CShader.js";
 import {CShaderAttr} from "../../../render/CShaderAttr.js";
 import {CTexture} from "../../../render/CTexture.js";
 import { CUtilRender } from "../../../render/CUtilRender.js";
@@ -61,9 +64,9 @@ export class CPaint2D extends CPaint
 	public mYSortOrigin : number = 0;
 
 	//2d y-sort 공용
-	public static mYSortRange : CVec2 = new CVec2(-10000, 10000);
+	public static YSortRange : CVec2 = new CVec2(-10000, 10000);
 	//0~100까지 Z값 나옴
-	public static mYSortZShift : number = 100;
+	public static YSortZShift : number = 100;
 	
 	//m_mat34=new Float32Array(12);
 
@@ -276,8 +279,8 @@ export class CPaint2D extends CPaint
 			if(this.mYSort == true)
 			{
 				const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
-				let yRatio = (CPaint2D.mYSortRange.y - yVal) / (CPaint2D.mYSortRange.y - CPaint2D.mYSortRange.x);
-				this.mFMat.mF32A[14] += yRatio * CPaint2D.mYSortZShift;
+				let yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
+				this.mFMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
 			}
 		}
 		else	return;
@@ -807,6 +810,9 @@ export class CPaint2D extends CPaint
 		}
 			
 	}
+	override ResetDecal(_slot: number, _pos: CVec3 = null, _size: CVec3 = null, _dir: CVec3 = new CVec3(0, 0, -1), _imageRot: number = 0): void {
+		super.ResetDecal(_slot, _pos, _size, _dir, _imageRot);
+	}
 	// CacBound()
 	// {
 	// 	if(this.mTag.has("tail") && this.mSize!=null)
@@ -1129,5 +1135,225 @@ export class CPaintHTML extends CPaint2D
 		super.Destroy();
 		if(this.mElement!=null)
 			this.mElement.remove();
+	}
+}
+
+// 한가지 텍스쳐만 사용( 셰이더 공유하기 위함 )
+export class CPaint2DMerge extends CPaint
+{
+	mMatList : Array<CMat>;
+    mCodiList : Array<CVec4>;
+    mTexSize : CVec2=null;
+
+	mMeshDataNode : CMeshDataNode;
+	mHash : string;
+
+	mYSort : boolean = false;
+	mWindInfluence : CVec1 = new CVec1(0.0);
+
+	constructor(_texture : CFontRef|string, _matList : Array<CMat>, _codiList : Array<CVec4> = [])
+	{
+		super();
+
+		this.mMatList = _matList;
+		this.mCodiList=_codiList;
+		if(_texture!=null)
+		{
+			if(_texture instanceof CFontRef)
+				this.SetTexture(_texture.mKey);
+			else
+				this.SetTexture(_texture);
+		}
+	}
+
+    override InitChk()
+	{
+		super.InitChk();
+		
+		if(this.mTexSize==null)
+		{
+			if(this.mOwner!=null && this.mTextureKey.length>0)
+			{
+				var tex=this.mOwner.GetFrame().Res().Find(this.mTextureKey[0]);
+				if(tex==null)
+				{
+					this.mInit=false;
+					return;
+				}
+				else if(tex instanceof CTexture)
+				{
+					if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return;
+					this.mTexSize=new CVec2(tex.GetWidth(),tex.GetHeight());
+					
+				}
+				else
+				{
+					CAlert.E("나올수 없다!");
+				}
+				
+			}
+		}
+		
+
+	}
+
+	override Start(): void {
+		this.mMeshDataNode = new CMeshDataNode();
+		this.mMeshDataNode.ci = new CMeshCreateInfo();
+
+		this.mBound.Reset();
+		this.mBound.SetType(CBound.eType.Box);
+
+		this.mHash = "";
+		this.Merge();
+	}
+
+	override Render(_vf: CShader): void {
+		var barr=this.RenderBatch(_vf,1);
+		if(barr==null)	return;
+
+		this.mOwner.GetFrame().BMgr().BatchOn();
+		this.Common(_vf);
+
+		let wsa=new CShaderAttr("worldMat", this.GetFMat());
+		switch(this.mWorldMatType)
+		{
+			case CMat.eType.Short2D:	wsa.mKey="worldMatShort";	break;
+		}
+		wsa.mType=this.mWorldMatType;
+		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType",new CVec1(this.mWorldMatType)));
+		this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
+
+		if(_vf.mUniform.get("windInfluence")!=null)
+			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
+		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
+		var dm=this.GetDrawMesh("Artgine/DM/2DM"+this.mHash,_vf,this.mMeshDataNode.ci);
+		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
+
+		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
+	}
+
+	Wind(_influence: number) 
+	{
+		this.PushTag("wind");
+		this.mWindInfluence.x = _influence;
+	}
+
+	SetYSort(_enable : boolean) {
+		this.mYSort = _enable;
+	}
+
+	Merge() {
+        let GetTexCodiedUV=(_uv : CVec2, _texCodi : CVec4) : CVec2 =>{
+			let result : CVec2 = new CVec2(0.0,0.0);
+		
+			result.x = _uv.x*_texCodi.x+_texCodi.z;
+			result.y = _uv.y*_texCodi.y+_texCodi.w;
+		
+			result.x=Math.abs(result.x);
+			result.y=Math.abs(result.y);
+			return result;
+		}
+
+		let posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+		let uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+		let norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+		if(posb.length == 0) {
+			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);
+			posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+		}
+		if(uvb.length == 0) {
+			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.UV);
+			uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+		}
+		if(norb.length == 0) {
+			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Normal);
+			norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+		}
+
+		const rtDir = new CVec3(0.5, 0.5, 0);
+		const lbDir = new CVec3(-0.5, -0.5, 0);
+		const ltDir = new CVec3(-0.5, 0.5, 0);
+		const rbDir = new CVec3(0.5, -0.5, 0);
+
+        const uv0 = new CVec2(0, 0);
+        const uv1 = new CVec2(1, 0);
+        const uv2 = new CVec2(1, 1);
+        const uv3 = new CVec2(0, 1);
+
+		const nor = new CVec3(0, 0, 1);
+
+		for(let i = posb[0].bufF.Size(3); i < this.mMatList.length; i++)
+		{
+			const pMat = this.mMatList[i];
+			if(this.mYSort) {
+				const ySortOrigin = -0.5 * (pMat.mF32A[1] + pMat.mF32A[5]) + 1;
+				const yVal = pMat.mF32A[13] + ySortOrigin;
+				const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
+				pMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
+			}
+			this.mHash+=pMat.ToStr();
+
+            // posb
+			const lb = CMath.V3MulMatCoordi(lbDir, pMat);
+			const rb = CMath.V3MulMatCoordi(rbDir, pMat);
+			const rt = CMath.V3MulMatCoordi(rtDir, pMat);
+			const lt = CMath.V3MulMatCoordi(ltDir, pMat);
+			posb[0].bufF.Push(lb);
+			posb[0].bufF.Push(rb);
+			posb[0].bufF.Push(rt);
+			posb[0].bufF.Push(lt);
+			this.mBound.InitBound(lb);
+			this.mBound.InitBound(rb);
+			this.mBound.InitBound(rt);
+			this.mBound.InitBound(lt);
+
+            // uvb
+            const codi = this.mCodiList[i] ?? new CVec4(1, 1, 0, 0);
+			uvb[0].bufF.Push(GetTexCodiedUV(uv0, codi));
+			uvb[0].bufF.Push(GetTexCodiedUV(uv1, codi));
+			uvb[0].bufF.Push(GetTexCodiedUV(uv2, codi));
+			uvb[0].bufF.Push(GetTexCodiedUV(uv3, codi));
+
+            // norb
+			const rotatedNor = CMath.V3MulMatNormal(nor, pMat);
+			norb[0].bufF.Push(rotatedNor);
+			norb[0].bufF.Push(rotatedNor);
+			norb[0].bufF.Push(rotatedNor);
+			norb[0].bufF.Push(rotatedNor);
+
+			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 0);
+			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 1);
+			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 2);
+			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 2);
+			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 3);
+			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 0);
+
+			this.mMeshDataNode.ci.vertexCount += 4;
+			this.mMeshDataNode.ci.indexCount += 6;
+		}
+
+		this.mBound.mMin.z -= 0.5;
+		this.mBound.mMax.z += 0.5;
+
+		this.mHash = CHash.HashCode(this.mHash) + "";
+	}
+
+	override EmptyRPChk(): void {
+		if(this.mRenderPass.length==0)
+		{
+			var rp=new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().mKey);
+			//2D에 경우 컬링 뒷면을 신경쓰는 경우가 없으므로 꺼버렸다.
+			rp.mCullFace = CRenderPass.eCull.None;
+			this.mRenderPass=[rp];
+		}
+		else if(this.mRenderPass[0].mShader=="")
+		{
+			this.mRenderPass[0].mShader=this.mOwner.GetFrame().Pal().Sl2D().mKey;
+		}
+		if(this.mTextureKey.length==0)
+		{
+			this.SetTexture(this.GetOwner().GetFrame().Pal().GetBlackTex());
+		}
 	}
 }

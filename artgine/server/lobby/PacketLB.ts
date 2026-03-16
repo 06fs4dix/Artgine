@@ -10,7 +10,8 @@ export class PacketLB {
         "R2URoomPushUser": "R2URoomPushUser",
         "L2RURoomRemoveUser": "L2RURoomRemoveUser",
         "R2LRoomReady": "R2LRoomReady",
-        "R2USend": "R2USend",
+        "R2UListSend": "R2UListSend",
+        "R2UAllSend": "R2UAllSend",
         "R2RSend": "R2RSend",
         "R2USave": "R2USave"
     };
@@ -103,14 +104,25 @@ export class PacketLB {
         return _stream;
     }
 
-    static R2USend(userKeyList: Array<string>, block: string, data: string): CStream;
-    static R2USend(userKeyList: Array<string>, block: string, data: string,_stream:CStream): CStream;
-    static R2USend(_stream: CStream): {userKeyList: Array<string>, block: string, data: string};
-    static R2USend(userKeyList: Array<string> | CStream, block: string | null = null, data: string | null = null,_stream=new CStream()): any {
+    static R2UListSend(userKeyList: Array<string>, data: string): CStream;
+    static R2UListSend(userKeyList: Array<string>, data: string,_stream:CStream): CStream;
+    static R2UListSend(_stream: CStream): {userKeyList: Array<string>, data: string};
+    static R2UListSend(userKeyList: Array<string> | CStream, data: string | null = null,_stream=new CStream()): any {
         if (userKeyList instanceof CStream) {
-            return userKeyList.GetPacket("userKeyList", "block", "data");
+            return userKeyList.GetPacket("userKeyList", "data");
         }
-        _stream.Push("R2USend").Push(userKeyList).Push(block).Push(data);
+        _stream.Push("R2UListSend").Push(userKeyList).Push(data);
+        return _stream;
+    }
+
+    static R2UAllSend(data: string): CStream;
+    static R2UAllSend(data: string,_stream:CStream): CStream;
+    static R2UAllSend(_stream: CStream): {data: string};
+    static R2UAllSend(data: string | CStream,_stream=new CStream()): any {
+        if (data instanceof CStream) {
+            return data.GetPacket("data");
+        }
+        _stream.Push("R2UAllSend").Push(data);
         return _stream;
     }
 
@@ -173,9 +185,11 @@ var PacketLB_JSON={
     "R2LRoomReady": {
         "key": "string",
     },
-    "R2USend": {
+    "R2UListSend": {
         "userKeyList": "Array<string>",
-        "block": "string",
+        "data": "string",
+    },
+    "R2UAllSend": {
         "data": "string",
     },
     "R2RSend": {

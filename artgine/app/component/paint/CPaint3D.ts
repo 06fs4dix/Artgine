@@ -640,7 +640,7 @@ export class CPaintCube extends CPaint3D
 	}
 }
 //static mesh only
-export class CPaintMeshMerge extends CPaint
+export class CPaint3DMerge extends CPaint
 {
 	constructor(_meshList : Array<string>,_matList : Array<CMat>,_centerPos=false,_targetScale=0)
 	{

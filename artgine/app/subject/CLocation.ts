@@ -21,6 +21,7 @@ export class CLocation extends CSubject
     //     this.Start();
     //     this.mCL=this.FindComp(CCollider);
     // }
+    
     override IsShould(_member: string, _type: CObject.eShould): boolean {
 
         if(_member=="mCL")  return false;
