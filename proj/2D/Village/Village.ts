@@ -1,5 +1,5 @@
 //Version
-const version='mlvhfpn9_12';
+const version='mmt51223_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -100,61 +100,77 @@ import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Boot
 import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHTMLBar.js";
+import { CImgPro } from "https://06fs4dix.github.io/Artgine/artgine/render/CImgPro.js";
+import { MapTool } from "https://06fs4dix.github.io/Artgine/artgine/tool/MapTool.js";
+import { CSampler, CSamplerMinMax } from "https://06fs4dix.github.io/Artgine/artgine/util/CSampler.js";
 
 
-//Real.Clear();
+// //Real.Clear();
 
-// === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
-{
-    const backVoxel = Main.Find("BackGround") as any;
-    if (backVoxel) {
-        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
-        // 블랙보드에서 직접 가져오기
-        const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
+// let gTex=CImgPro.Square(1024,1024,new CVec4(0,0,1,1));
+// //MapTool(null,gTex);
 
-        const width = backVoxel.mCount?.x || 0;
-        const height = backVoxel.mCount?.y || 0;
-        const tileSize = backVoxel.mSize || 200;
 
-        const placed = new Set<string>();
-        const minDist = 2; // 최소 거리(칸 단위)
-        const placeProb = 0.1; // 10% 확률
 
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = new CCIndex(x, y, 0);
-                const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
-                if (vinfo === 3 && Math.random() < placeProb) {
-                    // 주변에 이미 배치된 조형물이 있는지 체크
-                    let overlap = false;
-                    for (let dy = -minDist; dy <= minDist; dy++) {
-                        for (let dx = -minDist; dx <= minDist; dx++) {
-                            if (dx === 0 && dy === 0) continue;
-                            const key = (x + dx) + ',' + (y + dy);
-                            if (placed.has(key)) {
-                                overlap = true;
-                                break;
-                            }
-                        }
-                        if (overlap) break;
-                    }
-                    if (overlap) continue;
+// gAtl.Frame().Res().Push("sample.tex",gTex);
+// let map=new CMap();
+// map.SetTexture("sample.tex");
+// let density=map.PushDensity(new CDensity2D(0,0,100,"Res/item/food/apple.png",new CSampler(new CVec2(100,100))));
+// density.mWind=100;
+// density.mYSort=true;
+// Main.PushSub(map);
 
-                    // 배치
-                    const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
-                    if (deco) {
-                        //const obj = deco.Export() as CSubject;
-                        const obj = deco.ExportProxy() as CSubject;
-                        obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
-                        obj.SetSave(false);
-                        Real.PushSub(obj);
-                        placed.add(x + ',' + y);
-                    }
-                }
-            }
-        }
-    }
-}
+// // === Maze 방식: vinfo==3 위치에 CSubject + 랜덤 조형물 배치 (블랙보드에서 직접 가져오기) ===
+// {
+//     const backVoxel = Main.Find("BackGround") as any;
+//     if (backVoxel) {
+//         const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
+//         // 블랙보드에서 직접 가져오기
+//         const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
+
+//         const width = backVoxel.mCount?.x || 0;
+//         const height = backVoxel.mCount?.y || 0;
+//         const tileSize = backVoxel.mSize || 200;
+
+//         const placed = new Set<string>();
+//         const minDist = 2; // 최소 거리(칸 단위)
+//         const placeProb = 0.1; // 10% 확률
+
+//         for (let y = 0; y < height; y++) {
+//             for (let x = 0; x < width; x++) {
+//                 const idx = new CCIndex(x, y, 0);
+//                 const vinfo = backVoxel.GetVInfo ? backVoxel.GetVInfo(idx) : 0;
+//                 if (vinfo === 3 && Math.random() < placeProb) {
+//                     // 주변에 이미 배치된 조형물이 있는지 체크
+//                     let overlap = false;
+//                     for (let dy = -minDist; dy <= minDist; dy++) {
+//                         for (let dx = -minDist; dx <= minDist; dx++) {
+//                             if (dx === 0 && dy === 0) continue;
+//                             const key = (x + dx) + ',' + (y + dy);
+//                             if (placed.has(key)) {
+//                                 overlap = true;
+//                                 break;
+//                             }
+//                         }
+//                         if (overlap) break;
+//                     }
+//                     if (overlap) continue;
+
+//                     // 배치
+//                     const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
+//                     if (deco) {
+//                         //const obj = deco.Export() as CSubject;
+//                         const obj = deco.ExportProxy() as CSubject;
+//                         obj.SetPos(new CVec3(x * tileSize, y * tileSize, 0));
+//                         obj.SetSave(false);
+//                         Real.PushSub(obj);
+//                         placed.add(x + ',' + y);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     let ba: string[] = [];
   
@@ -443,6 +459,71 @@ const dummy = CHTMLDropdown.Attach(arr, "left");
 let rightDiv=CDOM.DataToDom(`<div class="position-fixed top-0 end-0" style="z-index:2000;"></div>`);
 rightDiv.append(dummy);
 mg.SetBody(rightDiv);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
