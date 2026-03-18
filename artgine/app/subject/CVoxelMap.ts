@@ -40,31 +40,6 @@ import { CCIndex } from "../canvas/CCIndex.js";
 import { CMapBuf, IMapLabel, IMapSchema } from "./CMapBuf.js";
 
 
-/*						
-
-CVTileSurface : 타일 표면 정보
-CVTileSurface 표면 정보
-		                                 		   8	   4	   0
-		0000 	0000 	0000 	0000 	0000 	0000 	0000 	0000
-		           |1bit
-		0 : tex  1 : col
-
-		|---4bit|--3bit     
-		torch   sun
-										|-|-------------------------
-									    2bit revers 14bit atloff
-										|--------------------------|
-						r				g				b
-						|-----------	|-----------	|-----------
-
-CVTileSurfacePattern : 표면에 패턴들
-CVTile : 타일 
-ㄴ충돌체인지,어떤 패턴인지,v정보
-
-CVTileRole : 타일 색이 들어오면 주변값을 보고 나에 색상을 정한다
-
-*/
-
 
 
 
@@ -90,37 +65,37 @@ export class CCIndexPick extends CCIndex
 
 
 
-export class  CColliderVoxel extends CCollider
-{
-	constructor(_voxel : CVoxelMap)
-	{
-		super();
-		if(_voxel==null)	return;
+// export class  CColliderVoxel extends CCollider
+// {
+// 	constructor(_voxel : CVoxelMap)
+// 	{
+// 		super();
+// 		if(_voxel==null)	return;
 
-		this.mVoxel=_voxel;
+// 		this.mVoxel=_voxel;
 
 		
-        this.mBound.mMax.x=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.x;
-		this.mBound.mMax.y=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.y;
-		this.mBound.mMax.z=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.z;
-        this.mBound.mMin.Zero();
-		this.mBound.mType=CBound.eType.Voxel;
-	}
-	mVoxel : CVoxelMap;
-	mResults=new CArray<CCIndex>();
-	mBoundDummy=new CBound();
-	override IsShould(_member: string, _type: CObject.eShould) 
-	{
-		if(_member=="mVoxel" || _member=="mResults" || _member=="mBoundDummy" )
-			return false;
+//         this.mBound.mMax.x=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.x;
+// 		this.mBound.mMax.y=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.y;
+// 		this.mBound.mMax.z=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.z;
+//         this.mBound.mMin.Zero();
+// 		this.mBound.mType=CBound.eType.Voxel;
+// 	}
+// 	mVoxel : CVoxelMap;
+// 	mResults=new CArray<CCIndex>();
+// 	mBoundDummy=new CBound();
+// 	override IsShould(_member: string, _type: CObject.eShould) 
+// 	{
+// 		if(_member=="mVoxel" || _member=="mResults" || _member=="mBoundDummy" )
+// 			return false;
 			
-		return super.IsShould(_member,_type);
-	}
-	override CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
-    {
-		return false;
-    }
-}
+// 		return super.IsShould(_member,_type);
+// 	}
+// 	override CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
+//     {
+// 		return false;
+//     }
+// }
 
 /*
 기존 복셀 위치 정보
@@ -236,17 +211,17 @@ export class  CColliderVoxel extends CCollider
 export class CVTile extends CObject implements IMapLabel
 {
 	mLabel="";
-	mCollider : number = CCollider.eEvent.None;
+	mColliderLayer : string = "";
 	mColor : number=0;
 	mAtlas : number=0;
 	//mPattern=new Array<CVTileSurface>();
 	
-	constructor(_color : number,_atlas : number,_collider : number=CCollider.eEvent.None,_label : string="")
+	constructor(_color : number,_atlas : number,_collider : string="",_label : string="")
 	{
 		super();
 		this.mColor=_color;
 		this.mAtlas=_atlas;
-		this.mCollider=_collider;
+		this.mColliderLayer=_collider;
 		this.mLabel=_label;
 		//this.mKey=CUniqueID.GetHash();
 	}
@@ -356,6 +331,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mTileRoleArr =new Array<CVTileRole>();
 	mTileMoldArr = new Array<CVTileMold>();
     mPaint : CPaintVoxel=null;
+	mColliderArr = Array<CCollider>();
     mPlane : Array<CVoxPlane>=new Array<CVoxPlane>();//임시 버퍼
     //mCount=new CVec3();
     //mSize=0;
@@ -367,7 +343,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mLayer =new Array<CBlackBoardRef<CVoxelMap>>();
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" )	return false;
+		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mColliderArr")	return false;
 
 		return super.IsShould(_member,_type);
 	}
@@ -407,11 +383,19 @@ export class CVoxelMap extends CSubject implements IMapSchema
 
 		this.mPlane.length=0;
 		this.RemoveComps(CPaintVoxel);
-		this.RemoveComps(CColliderVoxel);
+		this.RemoveComps(CCollider);
 		this.RemoveComps(CNavigation);
 		this.mBuf.Reset(_count,_size);
 
 		this.mUpdateRes=true;
+
+		if(_count.z==1 && this.mPos.z==0)
+		{
+			let pos=this.mPos.Export();
+			pos.z=-101;
+			this.SetPos(pos);
+		}
+		
 		
 	}
 	
@@ -451,7 +435,10 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	GetTexCodi(_color : number,_texCodi : CVec4)
 	{
 		let tile = this.mTileMap.get(_color);//this.mTileArr.find(t => t.mColor == _color);
-		this.mAtlas.GetTexCodi(tile.mAtlas,_texCodi);
+		if(tile==null)
+			this.mAtlas.GetTexCodi(0,_texCodi);
+		else
+			this.mAtlas.GetTexCodi(tile.mAtlas,_texCodi);
 	}
 	GetLight(_index : CCIndex,_dir : CCIndex,_light : CVec2)
 	{
@@ -632,12 +619,18 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		};
 		_div.append(button);
 	}
-
+	override SetPos(_pos : CVec3,_reset=true)
+	{
+		super.SetPos(_pos,_reset);
+		this.RemoveComps(CPaintVoxel);
+		this.RemoveComps(CCollider);
+		this.RemoveComps(CNavigation);
+	}
 	public override Export(_copy?: boolean, _resetKey?: boolean): this 
 	{
 		var copy=super.Export(_copy,_resetKey);
 		copy.DetachComp(CPaintVoxel);
-		copy.DetachComp(CColliderVoxel);
+		copy.DetachComp(CCollider);
 		copy.DetachComp(CNavigation);
 		// copy.ResetOctree();
 		return copy;
@@ -650,7 +643,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		let dkey=this.mKey;
 		super.Import(_target);
 		this.DetachComp(CPaintVoxel);
-		this.DetachComp(CColliderVoxel);
+		this.DetachComp(CCollider);
 		this.DetachComp(CNavigation);
 		this.mFrame=dfw;
 		this.mKey=dkey;
@@ -658,7 +651,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	}
 	public override ExportJSON(): { class: string; } {
 		let ptVoxel = this.DetachComp(CPaintVoxel);
-		let col = this.DetachComp(CColliderVoxel);
+		let col = this.DetachComp(CCollider);
 		let navi = this.DetachComp(CNavigation);
 		let json = super.ExportJSON();
 		if(ptVoxel) this.PushComp(ptVoxel);

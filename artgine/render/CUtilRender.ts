@@ -974,10 +974,10 @@ export class CUtilRender
 		posb.bufF.Push(mcro);
 		posb.bufF.Push(dir);
 		posb.bufF.Push(cro);
-		rVal.bound.InitBound(mdir);
-		rVal.bound.InitBound(mcro);
-		rVal.bound.InitBound(dir);
-		rVal.bound.InitBound(cro);
+		rVal.bound.InitBound(mdir,true);
+		rVal.bound.InitBound(mcro,true);
+		rVal.bound.InitBound(dir,true);
+		rVal.bound.InitBound(cro,true);
 		// posb.bufF.Push(mdir);
 		// posb.bufF.Push(dir);
 
@@ -1235,7 +1235,7 @@ export class CUtilRender
 
 		for (var i = 0; i < posb.bufF.Size(3); ++i) 
 		{
-			rVal.bound.InitBound(posb.bufF.V3(i));
+			rVal.bound.InitBound(posb.bufF.V3(i),true);
 			norb.bufF.Push(CMath.V3Nor(posb.bufF.V3(i)));
 			texb.bufF.Push(new CVec3(0, 1, 2));
 		}
@@ -1463,7 +1463,7 @@ export class CUtilRender
 
 		for (var i = 0; i < posb.bufF.Size(3); ++i) 
 		{
-			rVal.bound.InitBound(posb.bufF.V3(i));
+			rVal.bound.InitBound(posb.bufF.V3(i),true);
 			norb.bufF.Push(CMath.V3Nor(posb.bufF.V3(i)));
 			texb.bufF.Push(new CVec3(0, 1, 2));
 		}
@@ -1604,7 +1604,7 @@ export class CUtilRender
 		var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
 		MakeSphere2(posb.bufF, uvb.bufF, norb.bufF, _size, _count, _count);
 		for (var i = 0; i < posb.bufF.Size(3); ++i) 
-			rVal.bound.InitBound(posb.bufF.V3(i));
+			rVal.bound.InitBound(posb.bufF.V3(i),true);
 		
 
 		rVal.vertexCount = posb.bufF.Size(3);
@@ -1629,7 +1629,7 @@ export class CUtilRender
 		var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
 		MakeSphere(posb.bufF, uvb.bufF, norb.bufF, rVal.index, _size, _vCount, _hCount, _vSize, _hSize);
 		for (var i = 0; i < posb.bufF.Size(3); ++i) 
-			rVal.bound.InitBound(posb.bufF.V3(i));
+			rVal.bound.InitBound(posb.bufF.V3(i),true);
 		rVal.vertexCount = posb.bufF.Size(3);
 		rVal.indexCount = rVal.index.length;
 
@@ -2601,7 +2601,7 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 						
 					if(mat.IsZero()==false)
 					{
-						mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat));	
+						mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat),true);	
 					}
 				}
 			}
@@ -2645,7 +2645,7 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 					
 				if(mat.IsZero()==false)
 				{
-					mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat));	
+					mdd.ci.bound.InitBound(CMath.V3MulMatCoordi(pos,mat),true);	
 				}
 				
 				

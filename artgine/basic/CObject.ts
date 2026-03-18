@@ -485,7 +485,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 		}
 		this.EditRefreshEx();	
 	}
-	protected EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
+	EditForm(_pointer : CPointer,_body : HTMLDivElement,_input : HTMLElement)
 	{
 		this.EditFormEx(_pointer,_body,_input);
 	}

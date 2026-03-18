@@ -1,6 +1,6 @@
 import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
-import { clamp, CVec2, CVec3, CVec4, FloatToInt, mix, Sam2DToV4, Sam2DV4, 
+import { clamp, CVec2, CVec3, CVec4, FloatToInt, max, mix, Sam2DToV4, Sam2DV4, 
     smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 
 export var windInfluence : number = 0.0;
@@ -127,10 +127,12 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
 
 export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _time : number) : CVec4 
 {
-	// if(_skin > 0.5 && _weight.x+_weight.y+_weight.z+_weight.w>0.0)
+	if(_skin > 0.5)
 	{
 		if(windInfluence > 0.01) {
-			var wind : CVec3 = GetWind(_worldPos.xyz, new CVec3(100.0, 100.0, 100.0), _time);
+            var mainWeight : number = _weight.x > 0.5 ? _weight.x : _weight.y;
+            var windSize : number = 100.0 * max(0.0, 2.0 * mainWeight - 1.0);
+			var wind : CVec3 = GetWind(_worldPos.xyz, new CVec3(windSize, windSize, windSize), _time);
 			_worldPos.x += wind.x;
 			_worldPos.y += wind.y;
 			_worldPos.z += wind.z;

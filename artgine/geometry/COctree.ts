@@ -14,6 +14,7 @@ export class COctreeData
     mMax : CVec3 = new CVec3();
     mCol=new CArray<COctreeData>();
     mUpdate=0;
+    mStatic=false;
     
 
     constructor() {
@@ -123,20 +124,28 @@ export type COctreeInsideHandler = (_ocData : COctreeData) => void;
 export class COctreeMgr
 {
 
-    mOctree : COctree;
+    mDynamic : COctree;
+    mStatic : COctree;
+    mStaticUpdate=true;
+    mStaticBuild=false;
 
     mOCDMap=new Map<any,COctreeData>();
-    mBound : CBound;
+    mOCSMap=new Map<any,COctreeData>();
+    mDBound : CBound;
+    mSBound : CBound;
     mUpdate=0;
     mPool =new CArray<COctree>;
 
 
     constructor(_wasm=null)
     {
-        this.mBound = new CBound();
-        this.mBound.mMin.x=-100;this.mBound.mMin.y=-100;this.mBound.mMin.z=-100;
-        this.mBound.mMax.x=100;this.mBound.mMax.y=100;this.mBound.mMax.z=100;
-        this.mOctree=null;
+        this.mDBound = new CBound();
+        this.mDBound.mMin.x=-100;this.mDBound.mMin.y=-100;this.mDBound.mMin.z=-100;
+        this.mDBound.mMax.x=100;this.mDBound.mMax.y=100;this.mDBound.mMax.z=100;
+        this.mSBound = new CBound();
+        this.mSBound.mMin.x=-100;this.mSBound.mMin.y=-100;this.mSBound.mMin.z=-100;
+        this.mSBound.mMax.x=100;this.mSBound.mMax.y=100;this.mSBound.mMax.z=100;
+        this.mDynamic=null;
 
     }
     
@@ -148,14 +157,14 @@ export class COctreeMgr
         let bList=new Array<CBound>();
 
         let que=new Array<COctree>();
-        if(this.mOctree.mChild==null)
+        if(this.mDynamic.mChild==null)
         {
             return bList;
         }
-        for(let i=0;i<this.mOctree.mChild.length;++i)
+        for(let i=0;i<this.mDynamic.mChild.length;++i)
         {
-            if(this.mOctree.mChild[i]!=null)
-                que.push(this.mOctree.mChild[i]);
+            if(this.mDynamic.mChild[i]!=null)
+                que.push(this.mDynamic.mChild[i]);
         }
 
         
@@ -183,8 +192,8 @@ export class COctreeMgr
         
 
     }
-    
-    Insert(_center : CVec3, _size : CVec3, _data : any,_min : CVec3=null,_max : CVec3=null) 
+  
+    Insert(_center : CVec3, _size : CVec3, _data : any,_min : CVec3=null,_max : CVec3=null,_static=false) 
     {
 
     }
@@ -192,15 +201,15 @@ export class COctreeMgr
     InsideRay(_ray : CRay, _RayLength : number, _boundary : number, results : Function)
     {
        
-        this.mOctree.InsideRay(_ray, _RayLength,_boundary,results);
+        this.mDynamic.InsideRay(_ray, _RayLength,_boundary,results);
         
-        
+        if(this.mStatic!=null) this.mStatic.InsideRay(_ray, _RayLength,_boundary,results);
     }
 
     InsidePlane(_bplane : CPlane, _results : Function)
     {
        
-        this.mOctree.InsidePlane(_bplane, _results);  
+        this.mDynamic.InsidePlane(_bplane, _results);  
         
         
     }
@@ -209,22 +218,20 @@ export class COctreeMgr
         let odata=this.mOCDMap.get(_data);
         if(odata==null) return;
 
+        //이전 충돌검사에서 정보가 있으면 그걸 보낸다
         for(let i=0;i<odata.mCol.Size();++i)
         {
             _results(odata.mCol.Find(i));
         }
-        this.mOctree.InsideBox(_bmin, _bmax, _results,odata);
+        this.mDynamic.InsideBox(_bmin, _bmax, _results,odata);
+        if(this.mStatic!=null)       this.mStatic.InsideBox(_bmin, _bmax, _results);
     }
     InsideBox(_bmin:CVec3, _bmax:CVec3, _results:COctreeInsideHandler)
     {
-        this.mOctree.InsideBox(_bmin, _bmax, _results);
+        this.mDynamic.InsideBox(_bmin, _bmax, _results);
+        if(this.mStatic!=null)       this.mStatic.InsideBox(_bmin, _bmax, _results);
     }
-    InsideBoxArr(_bmin:CVec3, _bmax:CVec3, _results:CArray<any>)
-    {
-        this.mOctree.InsideBox(_bmin, _bmax, (_ocData : COctreeData)=>{
-            _results.Push(_ocData.mData);
-        });
-    }
+ 
     
 
     Find(_st: CVec3, _ed: CVec3, _bound: CBound,_layerPass = null,_path : Array<CVec3>,_size = 100,_loopScale=1) : boolean
@@ -234,25 +241,33 @@ export class COctreeMgr
     }
     CorrectPosition(_pos: CVec3, _boundary: number, _size: number, _layerPass = null): CVec3
     {
-        const pMin = CMath.V3AddV3(_pos, new CVec3(-_boundary, -_boundary, -_boundary));
-        const pMax = CMath.V3AddV3(_pos, new CVec3(_boundary, _boundary, _boundary));
+        
 
-        let nearestDist = Infinity;
-        let nearestCenter: CVec3 = null;
+        
 
-        this.InsideBox(pMin, pMax, (ocData: COctreeData) => {
-            if(_layerPass != null && _layerPass(ocData) == true) return;
-            const dist = CMath.V3Distance(_pos, ocData.mCenter);
-            if(dist < nearestDist) {
-                nearestDist = dist;
-                nearestCenter = ocData.mCenter;
+        for(let i=0;i<8;++i)
+        {
+            const pMin = CMath.V3AddV3(_pos, new CVec3(-_boundary, -_boundary, -_boundary));
+            const pMax = CMath.V3AddV3(_pos, new CVec3(_boundary, _boundary, _boundary));
+            let nearestDist = Infinity;
+            let nearestCenter: CVec3 = null;
+            this.InsideBox(pMin, pMax, (ocData: COctreeData) => {
+                if(_layerPass != null && _layerPass(ocData) == true) return;
+                const dist = CMath.V3Distance(_pos, ocData.mCenter);
+                if(dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestCenter = ocData.mCenter;
+                }
+            });
+
+            if(nearestCenter != null) {
+                const pushDir = CMath.V3Nor(CMath.V3SubV3(_pos, nearestCenter));
+                _pos=CMath.V3AddV3(_pos, CMath.V3MulFloat(pushDir, _size));
             }
-        });
-
-        if(nearestCenter != null) {
-            const pushDir = CMath.V3Nor(CMath.V3SubV3(_pos, nearestCenter));
-            return CMath.V3AddV3(_pos, CMath.V3MulFloat(pushDir, _size));
+            else
+                break;
         }
+        
         return _pos;
     }
     

@@ -51,11 +51,13 @@ export class CCollider extends CGeometryComp
 	{
 		None:0,
 		Trigger:1,
-		Collision:2
+		Collision:2,
+		Static:3,
 	};
 	public mPaintLoad =null;
 	public mBound =new  CBound;
 	public mLayer  = "";
+	//mStatic=false;
 
 
 	public mPickRay = new Set<string>();
@@ -64,13 +66,12 @@ export class CCollider extends CGeometryComp
 
 	public mCollision = new Set<string>();
 	public mPushVec=new CVec3();
-	//public m_cameraOut = false;
+	
 	
 	public mElevator=false;//엘리베이터인지
 	public mStairs=false;//계단인지
 	public mEvent=CCollider.eEvent.Collision;
-	// public mDynamic=true;//static은 충돌 이벤트를 처리하지 않는다.
-	// public mTrigger=false;
+	
 
 	//점프해서 한쪽 방향에서 올라가는용. 2D게임에서 사용
 	//특정 방향으로 설정시 그방향이랑 동일한 값일시 밀어내기 무시
@@ -79,10 +80,6 @@ export class CCollider extends CGeometryComp
 	public mOneWayArc : number=-1;
 
 	public mGJK : CGJK_EPA= new CGJK_EPA();
-	//public mGJKShape : CGJKShape=null;
-	//public mBoundGJK :CBound =null;
-	//public mCenterGJK=new CVec3();
-	//public mSizeGJK=new CVec3();
 	mBW=new CBoundWorldCollider();
 
 	public m2D : boolean;
@@ -90,7 +87,6 @@ export class CCollider extends CGeometryComp
 	mColTarget =new CArray<CCollider>();
 	mColPush =new CArray<CVec3>();
 	mColPair=new Map<CCollider,CVec3>();
-	//mBoundType=CBound.eType.Null;
 
 	constructor();
 	constructor(_paint : CBound);
@@ -218,10 +214,31 @@ export class CCollider extends CGeometryComp
 		return colList;
 	}
 	override Update(_update: CUpdate) {
-		if(this.mGI!=null)	this.mGI.mFixedComp.Push(this);
+		if(this.mGI!=null)	
+		{
+			//this.mGI.mFixedComp.Push(this);
 
+			if(this.mEvent!=CCollider.eEvent.Static || this.mGI.mOctree.mStaticBuild)	
+			{	
+				this.mGI.mFixedComp.Push(this);
+			}
+		}
+			
+		if(this.mEvent==CCollider.eEvent.Static && (this.GetOwner().mUpdateMat!=CUpdate.eType.Not || this.mUpdateMat!=CUpdate.eType.Not))	
+		{
+			if(this.mGI.mOctree.mStaticBuild==false)
+			{
+				this.mGI.mOctree.mStaticUpdate=true;
+				this.mBW.Init(this.mBound,this.mOwner.GetMat());
+			}
+			
+		}
+			
+		
 		if(this.GetOwner().mUpdateRS!=CUpdate.eType.Not || this.mBW.mRadian==0)
 		{
+			
+
 			this.mBW.Init(this.mBound,this.mOwner.GetMat());
 		}
 	}
@@ -233,7 +250,8 @@ export class CCollider extends CGeometryComp
 
 		if(this.IsEnable()==false || this.GetLayer()=="" || this.GetOwner().IsEnable()==false) return;
 
-		this.mGI.mOctree.Insert(this.mBW.mPos, this.mBW.mSize,this,this.mBW.mWBound.mMin,this.mBW.mWBound.mMax);
+		
+		this.mGI.mOctree.Insert(this.mBW.mPos, this.mBW.mSize,this,this.mBW.mWBound.mMin,this.mBW.mWBound.mMax,this.mEvent==CCollider.eEvent.Static);
 
 
 	}
@@ -329,12 +347,14 @@ export class CCollider extends CGeometryComp
 			this.UpdateMat();
 	}
 	
-	//SetDamping(_damping:number){this.m_damping = _damping;}
-	//SetDynamic(_dynamic:boolean){this.mDynamic = _dynamic;}
-	//GetDynamic(){	return this.mDynamic;	}
-	SetEvent(_event)
+	
+	SetEvent(_event : number)
 	{
+		if(this.mGI!=null && (this.mEvent==CCollider.eEvent.Static || _event==CCollider.eEvent.Static))
+			this.mGI.mOctree.mStaticUpdate=true;
+		
 		this.mEvent=_event;
+		
 	}
 	
 	SetLayer(_key : string)	
@@ -343,17 +363,10 @@ export class CCollider extends CGeometryComp
 		this.mUpdateMat=CUpdate.eType.Updated;
 	}
 	GetLayer()	: string	{	return this.mLayer;	}
-	// Bound2DInit(_size)
-	// {
-	// 	this.mBound.mMin = CMath.V3MulFloat(new CVec3(_size.x/2, _size.y/2, 1), -1);
-	// 	this.mBound.mMax = new CVec3(_size.x/2, _size.y/2, 1);
-	// 	this.BoxType();
-		
-	// }
+	
 	GetElevator()	{	return this.mElevator;	}
 	SetElevator(_elevator:boolean){ this.mElevator = _elevator;}
-	// GetTrigger()	{	return this.mTrigger;	}
-	// SetTrigger(_enable:boolean){ this.mTrigger = _enable;}
+	
 
 	GetStairs()	{	return this.mStairs;	}
 	SetStairs(_stairs:boolean){ this.mStairs = _stairs;}
@@ -363,43 +376,12 @@ export class CCollider extends CGeometryComp
 		
 		
 	}
-	//GetCUD() { return this.m_update;	};
+	
 	SetBoundType(_type)
 	{
 		this.mBound.SetType(_type);
 		this.mBW.mBound.SetType(_type);
-		// if(this.mBound.GetType()!=CBound.eType.Null)
-		// {
-		// 	this.mGJKShape=CGJKSphere.NewCBound(this.mBound,this.m2D);
-		// 	this.mUpdateMat=CUpdate.eType.Updated;
-		// 	this.ResetBoundGJK();
-		// }
 	}
-	// BoxType() 
-	// {
-	// 	//this.mBound.SetType(CBound.eType.Box); 
-	// 	this.mBoundType=CBound.eType.Box;
-	// 	this.mGJKShape=CGJKSphere.NewCBound(this.mBound,this.m2D);
-		
-	// 	this.mUpdateMat=CState.eUpdate.Updated;
-	// 	this.ResetBoundGJK();
-	// }
-	// SphereType()
-	// {
-	// 	this.mBound.SetType(CBound.eType.Sphere); 
-	// 	this.mGJKShape=CGJKSphere.NewCBound(this.mBound,this.m2D);
-		
-	// 	this.mUpdateMat=CState.eUpdate.Updated;
-	// 	this.ResetBoundGJK();
-	// }
-	// PolytopeType() 
-	// {
-	// 	this.mBound.SetType(CBound.eType.Polytope); 
-	// 	this.mGJKShape=CGJKSphere.NewCBound(this.mBound,this.m2D);
-		
-	// 	this.mUpdateMat=CState.eUpdate.Updated;
-	// 	this.ResetBoundGJK();
-	// }
 	
 	
 	PushCollisionLayer(_val : string|string[]) :void
@@ -452,123 +434,12 @@ export class CCollider extends CGeometryComp
 	{
 		return this.mCollision; 
 	}
-	//GetPickMouse() { return this.m_pickMouse; }
-	//GetPickCamera() { return this.m_pickCamera; }
+
 	GetBound()
 	{
 		return this.mBound;	
 	}
-	// GetWBound()
-	// {
-	// 	if(this.mLayer=="")
-	// 		this.ResetBoundGJK(false);
-		
-	// 	return this.mBoundGJK;	
-	// }
-	// ResetBoundGJK(_layerChk=true)
-	// {
-		
-		
-	// 	//레이어가 없으면 충돌갱신 안함
-	// 	if(this.mLayer=="" && _layerChk)	return;
-		
-
-	// 	let dPos=CPoolGeo.ProductV3();
-	// 	let oPos=CPoolGeo.ProductV3();
-	// 	if(this.mGJKShape instanceof CGJKSphere)
-	// 	{
-	// 		let r=(this.mGJKShape as CGJKSphere).GetRadian();
-	// 		this.mCenterGJK.mF32A[0]=this.mGJKShape.GetMatrix().mF32A[12];
-	// 		this.mCenterGJK.mF32A[1]=this.mGJKShape.GetMatrix().mF32A[13];
-	// 		this.mCenterGJK.mF32A[2]=this.mGJKShape.GetMatrix().mF32A[14];
-	// 		this.mSizeGJK.mF32A[0]=r;
-	// 		this.mSizeGJK.mF32A[1]=r;
-	// 		this.mSizeGJK.mF32A[2]=r;
-
-	// 		this.mBoundGJK.mMax.mF32A[0]=this.mCenterGJK.mF32A[0]+r;
-	// 		this.mBoundGJK.mMax.mF32A[1]=this.mCenterGJK.mF32A[1]+r;
-	// 		this.mBoundGJK.mMax.mF32A[2]=this.mCenterGJK.mF32A[2]+r;
-
-	// 		this.mBoundGJK.mMin.mF32A[0]=this.mCenterGJK.mF32A[0]-r;
-	// 		this.mBoundGJK.mMin.mF32A[1]=this.mCenterGJK.mF32A[1]-r;
-	// 		this.mBoundGJK.mMin.mF32A[2]=this.mCenterGJK.mF32A[2]-r;
-
-			
-	// 	}
-	// 	else if(this.mGJKShape.GetMatrix().IsRotScaUnit())
-	// 	{
-	// 		this.mCenterGJK.mF32A[0]=this.mGJKShape.GetMatrix().mF32A[12];
-	// 		this.mCenterGJK.mF32A[1]=this.mGJKShape.GetMatrix().mF32A[13];
-	// 		this.mCenterGJK.mF32A[2]=this.mGJKShape.GetMatrix().mF32A[14];
-			
-	// 		CMath.V3AddV3(this.GetBound().mMin,this.mCenterGJK,this.mBoundGJK.mMin);
-	// 		CMath.V3AddV3(this.GetBound().mMax,this.mCenterGJK,this.mBoundGJK.mMax);
-	// 		this.mBoundGJK.GetSize(this.mSizeGJK);
-			
-			
-	// 	}
-	// 	else
-	// 	{
-			
-	// 		this.mBoundGJK.mMin.mF32A[0]=100000;this.mBoundGJK.mMin.mF32A[1]=100000;this.mBoundGJK.mMin.mF32A[2]=100000;
-	// 		this.mBoundGJK.mMax.mF32A[0]=-100000;this.mBoundGJK.mMax.mF32A[1]=-100000;this.mBoundGJK.mMax.mF32A[2]=-100000;
-
-	// 		dPos.x=this.GetBound().mMin.x;dPos.y=this.GetBound().mMin.y;dPos.z=this.GetBound().mMin.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMin.x;dPos.y=this.GetBound().mMin.y;dPos.z=this.GetBound().mMax.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMin.x;dPos.y=this.GetBound().mMax.y;dPos.z=this.GetBound().mMin.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMin.x;dPos.y=this.GetBound().mMax.y;dPos.z=this.GetBound().mMax.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMax.x;dPos.y=this.GetBound().mMin.y;dPos.z=this.GetBound().mMin.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMax.x;dPos.y=this.GetBound().mMin.y;dPos.z=this.GetBound().mMax.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMax.x;dPos.y=this.GetBound().mMax.y;dPos.z=this.GetBound().mMin.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-			
-
-			
-	// 		dPos.x=this.GetBound().mMax.x;dPos.y=this.GetBound().mMax.y;dPos.z=this.GetBound().mMax.z;
-	// 		this.mBoundGJK.InitBound(CMath.V3MulMatCoordi(dPos, this.mGJKShape.GetMatrix(),oPos));
-
-	// 		this.mBoundGJK.GetCenter(this.mCenterGJK);
-	// 		this.mBoundGJK.GetSize(this.mSizeGJK);
-			
-	// 	}
-		
-		
-		
-	// 	CPoolGeo.RecycleV3(oPos);
-	// 	CPoolGeo.RecycleV3(dPos);
-
-       
-	// 	this.mBoundGJK.mType = CBound.eType.Box;
-		
-	// }
-	// GetBoundGJK()
-	// {
-	// 	return this.mBoundGJK;	
-	// }
+	
 
 	
 	CollisionChk( _co : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
@@ -837,4 +708,5 @@ export class CCollider extends CGeometryComp
 	
 }
 import CCollider_imple from "../../app_imple/component/CCollider.js";
+import { CEvent } from "../../basic/CEvent.js";
 CCollider_imple();

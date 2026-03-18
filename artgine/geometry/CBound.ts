@@ -109,8 +109,9 @@ export class CBound extends CObject
 	InitBound(_vInfo : number) : void;
 	InitBound(_vInfo : Array<CVec3>) : void;
 	InitBound(_vInfo : CVec3) : void;
+	InitBound(_vInfo : CVec3,_push : boolean) : void;
 	InitBound(_vInfo : CBound) : void;
-	InitBound(_vInfo : any) : void
+	InitBound(_vInfo : any,_push=false) : void
 	{
 		if(typeof _vInfo == "number" )
 		{
@@ -150,7 +151,8 @@ export class CBound extends CObject
 		else
 		{
 			//if(this.GetType()==CBound.eType.Polytope)
-			this.mPos.Push(_vInfo);
+			if(_push)	this.mPos.Push(_vInfo);
+			
 			this.ResetBoxMinMax(_vInfo);
 		}	
 	}

@@ -170,17 +170,17 @@ export class CMat extends CFloat32
 		this.mUnit=_target["mUnit"];
 	}
 
-	NewWASM(): void {
+	override NewWASM(): void {
 		super.NewWASM();
 		this.mUnit=false;
 		this.Unit();
 	}
-	F32A()	: Float32Array
+	override F32A()	: Float32Array
 	{
 
 		return this.mF32A;
 	}
-	Ptr() : number
+	override Ptr() : number
 	{
 	
 		return this.mF32A["ptr"];
@@ -206,7 +206,7 @@ export class CMat extends CFloat32
 class CMatRef extends CMat
 {
 	mRef=new Array<CMat>;
-	F32A()	: Float32Array
+	override F32A()	: Float32Array
 	{
 		// if(this.mRef.length>0)
 		// {
