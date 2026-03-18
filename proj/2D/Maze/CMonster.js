@@ -43,6 +43,7 @@ export default class CMonster extends CBehavior {
         let cl = sub.PushComp(new CCollider(pt));
         cl.SetLayer("mon");
         cl.PushCollisionLayer(["block", "user"]);
+        cl.SetRestitution(2);
         let bound = new CBound();
         bound.mMin = new CVec3(-300, -300, -300);
         bound.mMax = new CVec3(300, 300, 300);
@@ -60,11 +61,11 @@ export default class CMonster extends CBehavior {
     Collision(_org, _size, _tar, _push) {
         if (_tar[0].GetLayer() != "user")
             return;
-        this.m_time = -4000;
+        this.m_time = -4;
         this.GetOwner().FindComp(CRigidBody).Clear();
         this.GetOwner().RemoveComps(CAniFlow);
         let ani = new CAnimation();
-        let clip = ani.Push(new CClipColor(0, 4000, new CColor(0, 0, 0, CColor.eModel.RGBAdd), new CColor(1, 1, 1, CColor.eModel.RGBAdd)));
+        let clip = ani.Push(new CClipColor(0, 4, new CColor(0, 0, 0, CColor.eModel.RGBAdd), new CColor(1, 1, 1, CColor.eModel.RGBAdd)));
         clip.mCurve.mType = CCurve.eType.LinearCoodi;
         clip.mCurve.mPosArr.push(new CVec2(0.15, 1));
         clip.mCurve.mPosArr.push(new CVec2(0.3, 0));
@@ -73,11 +74,11 @@ export default class CMonster extends CBehavior {
         clip.mCurve.mPosArr.push(new CVec2(0.75, 1));
         clip.mCurve.mPosArr.push(new CVec2(0.9, 0));
         clip.mCurve.mPosArr.push(new CVec2(1, 0));
-        ani.Push(new CClipDestroy(4000));
+        ani.Push(new CClipDestroy(4, false));
         this.GetOwner().PushComp(new CAniFlow(ani));
     }
-    Update(_delay) {
-        if (this.m_time > 200) {
+    Update(_update) {
+        if (this.m_time > 0.2) {
             this.m_time = 0;
             this.GetOwner().FindComp(CRigidBody).Clear();
             if (this.m_enemy != null) {
@@ -86,7 +87,7 @@ export default class CMonster extends CBehavior {
                 this.GetOwner().FindComp(CRigidBody).Push(new CForce("move", dir, 50));
             }
         }
-        this.m_time += _delay;
+        this.m_time += _update.DeltaTime();
         this.m_enemy = null;
     }
 }

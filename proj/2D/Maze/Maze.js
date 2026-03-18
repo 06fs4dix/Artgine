@@ -1,4 +1,4 @@
-const version = 'mluvqq4j_40';
+const version = 'mmw1mic3_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import CMonster from "./CMonster.js";
@@ -32,7 +32,6 @@ import { CBGAttachButton, CBGFadeEffect } from "https://06fs4dix.github.io/Artgi
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CBlackBoard } from "https://06fs4dix.github.io/Artgine/artgine/basic/CBlackBoard.js";
 import { CRay } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CRay.js";
 import { CConsol } from "https://06fs4dix.github.io/Artgine/artgine/basic/CConsol.js";
@@ -46,14 +45,15 @@ import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput
 import { CSysAuth } from "https://06fs4dix.github.io/Artgine/artgine/system/CSysAuth.js";
 import { CAudioTag } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CWindow } from "https://06fs4dix.github.io/Artgine/artgine/system/CWindow.js";
+import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CNavigation } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CNavigation.js";
 import { CNaviMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CNavigationMgr.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
-import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { CStopover } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CStopover.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
 CNavigation.Normal = 50;
 CNavigation.Small = 10;
 var g_camMode = 0;
@@ -65,28 +65,20 @@ let FindPath = (_target, _end) => {
     for (let each0 of tileList) {
         each0.Destroy();
     }
-    let bound = _target.FindComp(CNavigation).mBound;
+    let bound = new CBound();
+    bound.InitBound(16);
     console.time();
-    let path = Main.GetGI().mNavi.PathAll(_target.GetPos(), _end, bound, true);
+    let path = [];
+    Main.GetGI().mOctree.Find(_target.GetPos(), _end, bound, (_ocData) => {
+        let cl = _ocData.mData;
+        if (cl.GetLayer() == "block")
+            return false;
+        return true;
+    }, path, 8);
     console.timeEnd();
-    for (var i = 0; i < path.length; ++i) {
-        let C = Main.PushSub(new CSubject());
-        C.SetPos(CMath.V3AddV3(path[i], new CVec3(0, 0, 2)));
-        C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex(), new CVec2(20, 20)));
-        tileList.push(C);
-    }
-    for (var y = 0; y < 20; ++y)
-        for (var x = 0; x < 20; ++x) {
-            let C = Main.PushSub(new CSubject());
-            C.SetPos(new CVec3(x * CNavigation.Normal + CNavigation.Normal * 0.5, y * CNavigation.Normal + CNavigation.Normal * 0.5, 1));
-            let pt = C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetBlackTex(), new CVec2(CNavigation.Normal * 0.9, CNavigation.Normal * 0.9)));
-            if (Main.GetGI().mNavi.R().mKeyN[x + y * 100] != 0)
-                pt.SetColorModel(new CColor(1, 0, 0, SDF.eColorModel.RGBAdd));
-            else
-                pt.SetColorModel(new CColor(0, 0, 0.5, SDF.eColorModel.RGBAdd));
-            pt.SetAlphaModel(new CAlpha(0.5));
-            tileList.push(C);
-        }
+    let so = new CStopover(path, 500);
+    _target.FindComp(CRigidBody).Clear();
+    _target.FindComp(CRigidBody).Push(so);
 };
 CBlackBoard.Push("FindPath", FindPath);
 let size = 100;

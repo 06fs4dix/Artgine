@@ -1,5 +1,5 @@
 //Version
-const version='mluvqq4j_40';
+const version='mmw1mic3_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -73,6 +73,9 @@ import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/compone
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
 import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+import { COctreeData } from "https://06fs4dix.github.io/Artgine/artgine/geometry/COctree.js";
+import { CStopover } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CStopover.js";
+import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
 
 
 
@@ -94,24 +97,34 @@ let FindPath=(_target : CSubject,_end : CVec3)=>
     {
         each0.Destroy();
     }
-    let bound=_target.FindComp(CNavigation).mBound;
+    let bound=new CBound();
+    bound.InitBound(16);
     console.time();
-    let path=Main.GetGI().mNavi.PathAll(_target.GetPos(),_end,bound,true);
+    //let path=Main.GetGI().mNavi.PathAll(_target.GetPos(),_end,bound,true);
     // let pass=new Set<number>();
     // let path=Main.GetGI().m_navi.Path(_target.GetPos(),_end,bound,pass,true);
+    let path=[];
+    Main.GetGI().mOctree.Find(_target.GetPos(),_end,bound,(_ocData : COctreeData)=>{
+        let cl=_ocData.mData as CCollider;
+        if(cl.GetLayer()=="block")  return false;
+
+        
+        return true;
+    },path,8);
     console.timeEnd();
 
-    // let so=new CStopover(path,100);
-    // _target.GetComp(CRigidBody).Push(so);
+    let so=new CStopover(path,500);
+    _target.FindComp(CRigidBody).Clear();
+    _target.FindComp(CRigidBody).Push(so);
 
 
-    for(var i=0;i<path.length;++i)
-    {
-        let C=Main.PushSub(new CSubject());
-        C.SetPos(CMath.V3AddV3(path[i],new CVec3(0,0,2)));
-        C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex(),new CVec2(20,20))) as CPaint2D;
-        tileList.push(C);
-    }
+    // for(var i=0;i<path.length;++i)
+    // {
+    //     let C=Main.PushSub(new CSubject());
+    //     C.SetPos(CMath.V3AddV3(path[i],new CVec3(0,0,2)));
+    //     C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex(),new CVec2(20,20))) as CPaint2D;
+    //     tileList.push(C);
+    // }
 
     // for(var y=0;y<10*5;++y)
     // for(var x=0;x<10*5;++x)
@@ -128,21 +141,21 @@ let FindPath=(_target : CSubject,_end : CVec3)=>
         
     // }
 
-    for(var y=0;y<20;++y)
-    for(var x=0;x<20;++x)
-    {
-        let C=Main.PushSub(new CSubject());
-        C.SetPos(new CVec3(x*CNavigation.Normal+CNavigation.Normal*0.5,y*CNavigation.Normal+CNavigation.Normal*0.5,1));
+    // for(var y=0;y<20;++y)
+    // for(var x=0;x<20;++x)
+    // {
+    //     let C=Main.PushSub(new CSubject());
+    //     C.SetPos(new CVec3(x*CNavigation.Normal+CNavigation.Normal*0.5,y*CNavigation.Normal+CNavigation.Normal*0.5,1));
     
-        let pt=C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetBlackTex(),new CVec2(CNavigation.Normal*0.9,CNavigation.Normal*0.9))) as CPaint2D;
-        if(Main.GetGI().mNavi.R().mKeyN[x+y*100]!=0)
-            pt.SetColorModel(new CColor(1,0,0,SDF.eColorModel.RGBAdd));
-        else
-            pt.SetColorModel(new CColor(0,0,0.5,SDF.eColorModel.RGBAdd));
-        pt.SetAlphaModel(new CAlpha(0.5));
-        tileList.push(C);
+    //     let pt=C.PushComp(new CPaint2D(gAtl.Frame().Pal().GetBlackTex(),new CVec2(CNavigation.Normal*0.9,CNavigation.Normal*0.9))) as CPaint2D;
+    //     if(Main.GetGI().mNavi.R().mKeyN[x+y*100]!=0)
+    //         pt.SetColorModel(new CColor(1,0,0,SDF.eColorModel.RGBAdd));
+    //     else
+    //         pt.SetColorModel(new CColor(0,0,0.5,SDF.eColorModel.RGBAdd));
+    //     pt.SetAlphaModel(new CAlpha(0.5));
+    //     tileList.push(C);
      
-    }
+    // }
 };
 CBlackBoard.Push("FindPath",FindPath);
 
@@ -577,6 +590,18 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -27,6 +27,7 @@ export default class CStage
         
         CStage.mazeSize.x+=2;
         CStage.mazeSize.y+=2;
+        
         yield CCoroutine.eState.Stop;
         CStage.mazeSize.x+=2;
         CStage.mazeSize.y+=2;

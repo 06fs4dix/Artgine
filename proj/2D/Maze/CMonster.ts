@@ -6,6 +6,7 @@ import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/compon
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CBound } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CBound.js";
 import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
@@ -60,6 +61,7 @@ export default class CMonster extends CBehavior
         let cl=sub.PushComp(new CCollider(pt)) as CCollider;
         cl.SetLayer("mon");
         cl.PushCollisionLayer(["block","user"]);
+        cl.SetRestitution(2);
     
         let bound=new CBound();
         bound.mMin=new CVec3(-300,-300,-300);
@@ -81,7 +83,7 @@ export default class CMonster extends CBehavior
 
         if(_tar[0].GetLayer()!="user")  return;
 
-        this.m_time=-4000;
+        this.m_time=-4;
         this.GetOwner().FindComp(CRigidBody).Clear();
 
         
@@ -89,7 +91,7 @@ export default class CMonster extends CBehavior
         //this.GetOwner().GetComp(CPaint2D).SetColorModel(new CColor(1,0,0,SDF.eColorModel.RGBAdd));
 
         let ani=new CAnimation();
-        let clip=ani.Push(new CClipColor(0,4000,new CColor(0,0,0,CColor.eModel.RGBAdd),new CColor(1,1,1,CColor.eModel.RGBAdd)));
+        let clip=ani.Push(new CClipColor(0,4,new CColor(0,0,0,CColor.eModel.RGBAdd),new CColor(1,1,1,CColor.eModel.RGBAdd)));
         clip.mCurve.mType=CCurve.eType.LinearCoodi;
         clip.mCurve.mPosArr.push(new CVec2(0.15,1));
         clip.mCurve.mPosArr.push(new CVec2(0.3,0));
@@ -98,13 +100,13 @@ export default class CMonster extends CBehavior
         clip.mCurve.mPosArr.push(new CVec2(0.75,1));
         clip.mCurve.mPosArr.push(new CVec2(0.9,0));
         clip.mCurve.mPosArr.push(new CVec2(1,0));
-        ani.Push(new CClipDestroy(4000));
+        ani.Push(new CClipDestroy(4,false));
         //ani.mRemove=true;
         this.GetOwner().PushComp(new CAniFlow(ani));
 
     }
-    override Update(_delay: any): void {
-        if(this.m_time>200)
+    override Update(_update: CUpdate): void {
+        if(this.m_time>0.2)
         {
             this.m_time=0;
             this.GetOwner().FindComp(CRigidBody).Clear();
@@ -118,7 +120,7 @@ export default class CMonster extends CBehavior
                 this.GetOwner().FindComp(CRigidBody).Push(new CForce("move",dir,50));
             }
         }
-        this.m_time+=_delay;
+        this.m_time+=_update.DeltaTime();
         this.m_enemy=null;
     }
 }
