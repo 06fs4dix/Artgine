@@ -15,12 +15,14 @@ export class CUpdate
 	mDeltaTime;
 	mFixedTime;
 	mFixedCount;
+	mOffset=0;
 
 
 	DeltaTime()	{	return this.mDeltaTime;	}
 	DeltaMil()	{	return this.mDeltaTime*1000;	}
 	FixedTime()	{	return this.mFixedTime;	}
 	FixedCount()	{	return this.mFixedCount;	}
+	Offset()	{	return this.mOffset;	}
 }
 
 export interface IListener

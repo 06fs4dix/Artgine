@@ -764,6 +764,7 @@ export class CFrame
 			if(this.mMainProcess==null)	return;
 			
 			this.mUpdate.mDeltaTime=timer.Delay();
+			this.mUpdate.mOffset++;
 			//this.mUpdate.mDeltaTime=0.2;
 
 			

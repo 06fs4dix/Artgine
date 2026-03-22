@@ -98,8 +98,8 @@ export class CSMComp extends CComponent
             this.mSM.SetStateValue("Default",1);
             
         
-        this.mSM.PatternUpdate();
-        this.mSM.ExcuteListUpdate(this.GetOwner());
+        
+        this.mSM.Update(_update,this.GetOwner());
         for(let name of this.mNameSet)
         {
             this.mSM.SetStateValue(name,0);

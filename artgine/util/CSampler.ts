@@ -1,4 +1,5 @@
 
+import { CUpdate } from "../basic/Basic.js";
 import { CClass } from "../basic/CClass.js";
 import {CObject} from "../basic/CObject.js";
 import { CFloat32 } from "../geometry/CFloat32.js";
@@ -161,10 +162,10 @@ export class CSamplerTimer<T> extends CSampler<T>
 		super(_actionValue);
 	}
 
-	override Excute(_dataTarget : any=null,_run="") : T
+	override Excute(_dataTarget : any=null,_run="",_update :CUpdate=null) : T
 	{
 		if(_dataTarget==null)	_dataTarget=this;
-		if(CSamplerTimer.Update(_dataTarget,this.mCount,this.mDelay,this.mStart,this.mEnd,_run)==false)
+		if(CSamplerTimer.Update(_dataTarget,this.mCount,this.mDelay,this.mStart,this.mEnd,_run,_update)==false)
 		{
 			if(typeof this.mDefault!="undefined")	return false as any;
 			return null;
@@ -175,11 +176,12 @@ export class CSamplerTimer<T> extends CSampler<T>
 
 
 	//실시간 호출해줘야 갱신된다
-    static Update(_dataTarget : any,count=0,delay=0,start=0,end=0,_run="") : boolean
+    static Update(_dataTarget : any,count=0,delay=0,start=0,end=0,_run="",_update : CUpdate=null) : boolean
     {
 		
         if(_dataTarget["mTemp"]==null)_dataTarget["mTemp"]={};
 
+		let offset=_update!=null?_update.Offset():0;
         
         //let run=_dataTarget["mTemp"]["mRun"];
         let timer : CTimer;
@@ -189,7 +191,18 @@ export class CSamplerTimer<T> extends CSampler<T>
             _dataTarget["mTemp"]["mCount"+_run]=0;
             _dataTarget["mTemp"]["mTime"+_run]=0;
             _dataTarget["mTemp"]["mDelay"+_run]=0;
+			
         }
+		else if(_dataTarget["mTemp"]["mOffset"+_run]+1<offset)
+		{
+			(_dataTarget["mTemp"]["mTimer"+_run] as CTimer).Delay();
+            _dataTarget["mTemp"]["mCount"+_run]=0;
+            _dataTarget["mTemp"]["mTime"+_run]=0;
+            _dataTarget["mTemp"]["mDelay"+_run]=0;
+			_dataTarget["mTemp"]["mEnd"+_run]=false;
+		}
+		_dataTarget["mTemp"]["mOffset"+_run]=offset;
+
         timer=_dataTarget["mTemp"]["mTimer"+_run];
         let t=timer.Delay();
         _dataTarget["mTemp"]["mDelay"+_run]=_dataTarget["mTemp"]["mDelay"+_run]+t;
@@ -219,18 +232,18 @@ export class CSamplerTimer<T> extends CSampler<T>
        return true;
         
     }
-	static Reset(_dataTarget : any,_run="")
-	{
-		//if(_dataTarget["mTemp"]==null)return;
-		if(_dataTarget["mTemp"]["mTimer"+_run]!=null)
-        {
-			(_dataTarget["mTemp"]["mTimer"+_run] as CTimer).Delay();
-            _dataTarget["mTemp"]["mCount"+_run]=0;
-            _dataTarget["mTemp"]["mTime"+_run]=0;
-            _dataTarget["mTemp"]["mDelay"+_run]=0;
-			_dataTarget["mTemp"]["mEnd"+_run]=false;
-        }
-	}
+	// static Reset(_dataTarget : any,_run="")
+	// {
+	// 	//if(_dataTarget["mTemp"]==null)return;
+	// 	if(_dataTarget["mTemp"]["mTimer"+_run]!=null)
+    //     {
+	// 		(_dataTarget["mTemp"]["mTimer"+_run] as CTimer).Delay();
+    //         _dataTarget["mTemp"]["mCount"+_run]=0;
+    //         _dataTarget["mTemp"]["mTime"+_run]=0;
+    //         _dataTarget["mTemp"]["mDelay"+_run]=0;
+	// 		_dataTarget["mTemp"]["mEnd"+_run]=false;
+    //     }
+	// }
 	static IsEnd(_dataTarget : any,_run="")
 	{
 		if(_dataTarget["mTemp"]==null)	return false;

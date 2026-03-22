@@ -103,14 +103,15 @@ export class CRoom
     UpdateLoop()
     {
         let timer=new CTimer();
-        
+        let update=new CUpdate();
         setInterval(()=>{
             
-            let update=new CUpdate();
+            
             
             update.mFixedTime=update.mDeltaTime=timer.Delay();
             
             update.mFixedCount=1;
+            update.mOffset++;
             this.Update(update);
             
         },10);

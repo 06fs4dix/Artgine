@@ -1,4 +1,5 @@
 import { CRouteMsg } from "../app/CRouteMsg.js";
+import { CUpdate } from "../basic/Basic.js";
 import { CArray } from "../basic/CArray.js";
 import { CClass } from "../basic/CClass.js";
 import { CJSON } from "../basic/CJSON.js";
@@ -164,10 +165,9 @@ export class CStateMachine extends CObject
         
     }
 
-    PatternUpdate()
+  
+    async Update(_update : CUpdate,_target)
     {
-        if(this.mExcuteList.Size()!=0)  return;
-
         for(let pat of this.mPattern)
         {
             
@@ -175,36 +175,11 @@ export class CStateMachine extends CObject
             {
                 for(let ac of pat.mExcute)
                 {
-                    this.mExcuteList.Push(ac);
-                    this.mExcuteSet.delete(ac);
+                    ac.Excute(_target,false,null,null,"",_update);
                 }
                     
                 
             }
         }
-        for(let action of this.mExcuteSet)
-        {
-            action.Reset();
-        }
-        this.mExcuteSet.clear();
-    }
-    async ExcuteListUpdate(_target,_async=false)
-    {
-        if(this.mExcuteLock!=null)  return;
-
-        for(let i=0;i<this.mExcuteList.Size();++i)
-        {
-            this.mExcuteLock=this.mExcuteList.Find(i);
-            if(_async)
-            {
-                await this.mExcuteLock.Excute(_target,_async)
-            }
-            else
-                this.mExcuteLock.Excute(_target);
-            this.mExcuteSet.add(this.mExcuteLock);
-        }
-        
-        this.mExcuteList.Clear();
-        this.mExcuteLock=null;
     }
 }

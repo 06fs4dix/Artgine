@@ -1,4 +1,5 @@
 import { CRouteMsg } from "../app/CRouteMsg.js";
+import { CUpdate } from "../basic/Basic.js";
 import { CClass } from "../basic/CClass.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CJSON } from "../basic/CJSON.js";
@@ -42,18 +43,18 @@ export class CAction extends CObject
                 _event(_temp);
         }
     }
-    static Reset(_temp)
+    // static Reset(_temp)
+    // {
+    //     CSamplerTimer.Reset(_temp);
+    // }
+    async Excute(_actionTarget,_async=false,_parameter : Array<any>=null,_tempTarget=null,_run="",_update : CUpdate=null)
     {
-        CSamplerTimer.Reset(_temp);
-    }
-    async Excute(_target,_async=false,_parameter : Array<any>=null,_temp=null,_run="")
-    {
-        if(_temp==null) this.mTemp=this;
-        else    this.mTemp=_temp;
+        if(_tempTarget==null) this.mTemp=this;
+        else    this.mTemp=_tempTarget;
         
         this.mRun=_run;
 
-        if(this.mSamplerTimer.Excute(this.mTemp,this.mRun)==false)    return;
+        if(this.mSamplerTimer.Excute(this.mTemp,this.mRun,_update)==false)    return;
        
         
              
@@ -67,20 +68,20 @@ export class CAction extends CObject
         else if(this.mType==CAction.eType.Function)
         {
             if(_async)
-                return await CClass.CallAsync(_target,this.mAction ,_parameter);    
+                return await CClass.CallAsync(_actionTarget,this.mAction ,_parameter);    
             else
-                CClass.Call(_target,this.mAction as string,_parameter);
+                CClass.Call(_actionTarget,this.mAction as string,_parameter);
         }
         else if(this.mType==CAction.eType.Listener)
         {
             if(_async)
-                return await _target.GetEvent(this.mAction).CallAsync(_parameter);
+                return await _actionTarget.GetEvent(this.mAction).CallAsync(_parameter);
             else
-                _target.GetEvent(this.mAction).Call(_parameter);
+                _actionTarget.GetEvent(this.mAction).Call(_parameter);
         }
         else if(this.mType==CAction.eType.Message)
         {
-            let mag=_target.NewInMsg(this.mAction) as CRouteMsg;
+            let mag=_actionTarget.NewInMsg(this.mAction) as CRouteMsg;
             mag.mMsgData=_parameter;
         }
         //else if(this.mType==CAction.eType.Message)
@@ -99,11 +100,11 @@ export class CAction extends CObject
         if(json["mEnd"]!=null)    this.mSamplerTimer.mEnd=json["mEnd"]==null?json["e"]:json["mEnd"];
         return this;
     }
-    Reset()
-    {
-        if(this.mTemp==null)    return;
-        CSamplerTimer.Reset(this.mTemp,this.mRun);
-    }
+    // Reset()
+    // {
+    //     if(this.mTemp==null)    return;
+    //     CSamplerTimer.Reset(this.mTemp,this.mRun);
+    // }
     IsEnd()
     {
         if(this.mTemp==null)    return false;

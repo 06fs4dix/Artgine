@@ -196,16 +196,16 @@ export class CRigidBody extends CGeometryComp
 		}
 		
 	}
-	IsEmptyForce(_key : string)
+	Find(_key : string)
 	{
 		for (var i = 0; i < this.mForceArr.length; ++i)
 		{
 			if (this.mForceArr[i].mKey==_key)
 			{
-				return false;
+				return this.mForceArr[i];
 			}
 		}
-		return true;
+		return null;
 	}
 	Clear()
 	{

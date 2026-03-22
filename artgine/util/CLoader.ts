@@ -163,6 +163,11 @@ export class CLoader
 		{
 			await this.JSLoad(_file);
 		}
+		else if(ext=="csv")
+		{
+			await this.CSVLoad(_file,_buffer);
+			this.mLoadSet.delete(_file);
+		}
 		else if(ext=="zip")
 		{
 			if(window["JSZip"] ==null)
@@ -598,6 +603,29 @@ export class CLoader
 			this.mRes.Push(_file,jData);
 	}
 
+	private async CSVLoad(_file: string, _buffer: ArrayBuffer)
+	{
+		let arr = [];
+		let str = CUtil.ArrayToString(_buffer);
+
+		const lines = str.split(/\r?\n/);
+		const headers = lines[0].split(",").map(h => h.trim());
+
+		for (let i = 1; i < lines.length; i++)
+		{
+			const line = lines[i].trim();
+			if (!line) continue;
+
+			const values = line.split(",");
+			const row: Record<string, string> = {};
+			for (let j = 0; j < headers.length; j++)
+				row[headers[j]] = values[j]?.trim() ?? "";
+
+			arr.push(row);
+		}
+
+		this.mRes.Push(_file, arr);
+	}
 
 	//동적 로드인데 버퍼로는 안되고 파일명으로만 가능
 	private async JSLoad(_file : string)

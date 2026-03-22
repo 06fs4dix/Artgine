@@ -495,6 +495,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	}
 	Temp()
 	{
+		if(this["mTemp"]==null)	this["mTemp"]={};
 		return this["mTemp"];
 	}
 	EditInit(_pointer : CPointer=null) : HTMLElement
