@@ -1,5 +1,5 @@
 //Version
-const version='mm5izx2d_9';
+const version='mn93bkma_4';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -148,14 +148,14 @@ pt.PushTag(CPaint.eTag.ShadowReadOnly);
 pt.PushCShaderAttr(new CShaderAttr("parallaxNormal",0.1));
 pt.SetTexCodi(new CVec4(50,50,0,0));
 
-// let mountain = Main.PushSub(new CSubject());
-// mountain.SetKey("mountain");
-// mountain.SetSca(new CVec3(15,15,15));
-// pt = mountain.PushComp(new CPaint3D("Res/mountain/mountain.glb"));
-// pt.mAutoLoad.mTexBufRaw = true;
-// pt.SetMaterial(0.8);
-// pt.PushTag(CPaint.eTag.Light);
-// pt.PushTag(CPaint.eTag.Shadow);
+let mountain = Main.PushSub(new CSubject());
+mountain.SetKey("mountain");
+mountain.SetSca(new CVec3(15,15,15));
+pt = mountain.PushComp(new CPaint3D("Res/mountain/mountain.glb"));
+pt.mAutoLoad.mTexBufRaw = true;
+pt.SetMaterial(0.8);
+pt.PushTag(CPaint.eTag.Light);
+pt.PushTag(CPaint.eTag.Shadow);
 
 // let rock1 = Main.PushSub(new CSubject());
 // rock1.SetKey("rock1");
@@ -209,7 +209,7 @@ let cubeTex=gAtl.Frame().Ren().BuildCubeMap(skyTexList,true,"cube.tex");
 let sub=Main.PushSub(new CSubject());
 sub.SetKey("sky");
 let ptCube = sub.PushComp(new CPaintCube(cubeTex));
-ptCube.Sky(true, true, true, true);
+ptCube.Sky(true, true, true, true,true);
 ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
 ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
 ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
@@ -381,7 +381,7 @@ function ResetWater()
         water.NormalFlow(new CVec2(2, 0.5));
 
         water.Light();
-        water.Shadow("shadowread.tex");
+        //water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
@@ -431,7 +431,7 @@ function ResetWater()
         water.NormalFlow(new CVec2(1, 0));
 
         water.Light();
-        water.Shadow("shadowread.tex");
+        //water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
@@ -482,7 +482,7 @@ function ResetWater()
         water.NormalFlow(new CVec2(1, 0));
 
         water.Light();
-        water.Shadow("shadowread.tex");
+        //water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 40000));
@@ -532,7 +532,7 @@ function ResetWater()
         water.NormalFlow(new CVec2(2, 0.5));
 
         water.Light();
-        water.Shadow("shadowread.tex");
+        //water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.2));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 40000));
@@ -582,7 +582,7 @@ function ResetWater()
         water.NormalFlow(new CVec2(2, 0));
 
         water.Light();
-        water.Shadow("shadowread.tex");
+        //water.Shadow("shadowread.tex");
 
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.75));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
@@ -637,6 +637,34 @@ window["ResetWater"]=ResetWater;
 
 
 new CModalFrameView();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

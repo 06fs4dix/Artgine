@@ -70,9 +70,26 @@ var sunColorBTable: CMat = new CMat(0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 
 // 14 : 별 최대 사이즈 0-0.5
 // 15 : 별 반짝이는 속도
 // 16 : 별 밀도
-var starLayer1ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6, 1.0,1.2,1.0,  0.15, 0.20, 5.0, 4.0);
-var starLayer2ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6, 1.0,1.2,1.0,  0.20, 0.25, 5.0, 2.0);
-var starLayer3ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6, 1.0,1.2,1.0,  0.25, 0.30, 15.0, 1.0);
+var starLayer1ColorTable: CMat = new CMat(1.0,0.9,0.7,  1.0,1.0,0.9,  0.8,0.9,1.0,  0.7,0.8,1.0,  0.02, 0.07, 5.0, 2.0);
+var starLayer2ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6, 1.0,1.2,1.0,  0.20, 0.25, 5.0, 0.0);
+var starLayer3ColorTable: CMat = new CMat(1.6,0.0,0.0, 1.2,1.0,1.0,  0.0,0.0,1.6, 1.0,1.2,1.0,  0.25, 0.30, 15.0, 0.0);
+
+// Range1: G/K형 (황백~주황)  Range2: A/B형 (백색~청백)
+// var starLayer1ColorTable: CMat = new CMat(
+//     1.0,0.9,0.7,  1.0,1.0,0.9,    // Range1: 황백 ~ 따뜻한 흰색
+//     1.0,1.0,1.0,  0.8,0.9,1.0,    // Range2: 흰색 ~ 청백
+//     0.15, 0.20, 10.0, 3.0          // 속도↑ 밀도↓
+// );
+// var starLayer2ColorTable: CMat = new CMat(
+//     1.0,0.75,0.45, 1.0,0.95,0.75, // Range1: 주황 ~ 황백 (K형)
+//     1.0,1.0,1.0,   0.75,0.88,1.0, // Range2: 흰색 ~ 청백 (B형)
+//     0.20, 0.25, 10.0, 1.5          // 속도↑ 밀도↓
+// );
+// var starLayer3ColorTable: CMat = new CMat(
+//     1.0,0.55,0.25, 1.0,0.85,0.6,  // Range1: 적주황 ~ 주황 (M/K형 거성)
+//     0.8,0.9,1.0,   0.65,0.78,1.0, // Range2: 청백 ~ 청색 (O/B형)
+//     0.25, 0.30, 20.0, 0.5          // 속도↑, density 0→0.5 (큰 별 소량)
+// );
 
 // cloud
 var cloudCoverage : number = 0.5;//구름 비율
@@ -95,16 +112,17 @@ var cloudDither : number = 0.0;
 
 
 //aurora
-var aurora : number = 1.0;
-var auroraSpeed : number = 0.1;
-var auroraColorBot : CVec3 = new CVec3(1.0, 0.0, 0.0);
+var aurora : number = 0.2;
+var auroraSpeed : number = 0.01;
+var auroraScale : number = 0.00003;
+var auroraColorBot : CVec3 = new CVec3(1.0, 1.0, 0.0);
 var auroraColorMid : CVec3 = new CVec3(0.0, 1.0, 0.0);
-var auroraColorTop : CVec3 = new CVec3(0.0, 0.0, 1.0);
+var auroraColorTop : CVec3 = new CVec3(0.0, 1.0, 0.5);
 var auroraOffset : number = 0.1;
 var auroraDistort : number = 1.0;
 var auroraSmoothness : number = 0.3;
-var auroraMin : CVec3 = new CVec3(-10000.0, 10000.0, -10000.0);
-var auroraMax : CVec3 = new CVec3(10000.0, 15000.0, 10000.0);
+var auroraMin : CVec3 = new CVec3(-20000.0, 10000.0, -20000.0);
+var auroraMax : CVec3 = new CVec3(20000.0, 15000.0, 20000.0);
 var auroraStep : number = 20.0;
 
 var camPos : CVec3=Null();
@@ -382,8 +400,8 @@ function Aurora(_viewDir : CVec3) : CVec4
     var Tr : number = 1.0;
     var result : CVec3 = new CVec3(0.0,0.0,0.0);   // view transmittance
 
-    var scaleX : number = (auroraMax.x - auroraMin.x) * 0.0001;
-    var scaleZ : number = (auroraMax.z - auroraMin.z) * 0.0001;
+    var scaleX : number = (auroraMax.x - auroraMin.x) * auroraScale;
+    var scaleZ : number = (auroraMax.z - auroraMin.z) * auroraScale;
     var invBoxSize : CVec3 = new CVec3(1.0 / (auroraMax.x - auroraMin.x), 1.0 / (auroraMax.y - auroraMin.y), 1.0 / (auroraMax.z - auroraMin.z));
     var timeOffset : number = time * auroraSpeed;
     var invHeight : number = 1.0 / (auroraMax.y - auroraMin.y);
@@ -467,9 +485,10 @@ function Aurora(_viewDir : CVec3) : CVec4
 
 /************************************************************************************************/
 //star
-
 function StarLayer(_viewDir : CVec3, _colorTable : CMat) : CVec3
 {
+    if(_colorTable[3][3] <= 0.0) return new CVec3(0.0, 0.0, 0.0);
+
     var scale : number = 40.0 * _colorTable[3][3];
     var density : number = 0.04 * _colorTable[3][3];
 
@@ -491,13 +510,13 @@ function StarLayer(_viewDir : CVec3, _colorTable : CMat) : CVec3
     var phase : number = h * 6.2831;
     var speed : number = mix(0.2, 1.2, h);
     var twinkle : number = sin(time * _colorTable[3][2] * speed + phase);
-    twinkle = mix(0.5, 1.0, twinkle * 0.5 + 0.5);
+    var twinkle2 : number = sin(time * _colorTable[3][2] * speed * 1.73 + phase * 2.39);
+    twinkle = mix(0.75, 1.0, (twinkle * 0.5 + 0.5) * 0.6 + (twinkle2 * 0.5 + 0.5) * 0.4);
 
     var core : number = smoothstep(s, 0.0, d);
-    var glow : number = Exp(-d * 18.0);
-    return V3MulFloat(color, twinkle * (core + glow * 0.4));
+    var glow : number = Exp(-d * 25.0);  // 80→25
+    return V3MulFloat(color, twinkle * (core * 8.0 + glow * 4.0));
 }
-
 function Star(_viewDir : CVec3) : CVec3
 {
     var core : CVec3 = new CVec3(0.0, 0.0, 0.0);
@@ -572,8 +591,11 @@ function ps_main() {
 
 
     
-    var ligSum      : CVec3  = new CVec3(0.0, 0.0, 0.0);
-    var ligMax      : CVec3  = new CVec3(0.0, 0.0, 0.0);
+    // ── light branch 변수 선언 ─────────────────────────────────
+    var ligSumSun   : CVec3  = new CVec3(0.0, 0.0, 0.0);  // 태양 디스크
+    var ligMaxSun   : CVec3  = new CVec3(0.0, 0.0, 0.0);
+    var ligSumNight : CVec3  = new CVec3(0.0, 0.0, 0.0);  // 달/기타 디스크
+    var ligMaxNight : CVec3  = new CVec3(0.0, 0.0, 0.0);
     var sunsetCol   : CVec3  = new CVec3(0.0, 0.0, 0.0);
     var sunsetBlend : number = -1.0;
     var lDir : CVec4;
@@ -585,8 +607,10 @@ function ps_main() {
     var i : int;
     var sunIntensity : number;
 
-    var sunPass : number =  0.0;
-    var sun_deg : number =  1.0;
+    var sunPass   : number = 0.0;
+    var sun_deg   : number = 1.0;
+    var isSunDisc : number = 0.0;   // ← 추가: 현재 이터레이션이 태양인지 표시
+
     BranchBegin("light","L",[ligDir, ligCol, ligCount,sunColorRTable,sunColorGTable,sunColorBTable]);
     for(i.dummy = 0; i.dummy < 3; i.dummy++) 
     {
@@ -596,16 +620,16 @@ function ps_main() {
         if(lDir.w>1.5) continue;
         dir = V3Nor(lDir.xyz);
 
-        //일반 광원 색상 누적
         lCol = Sam2DToV4(ligCol, i);
         angle = acos(V3Dot(dir, fragDir));
         intensity  = V3Len(lCol.rgb);
 
-        //태양 설정
-        if(sunPass < 0.5 && lDir.w > -1.5) {
-            sunPass = 1.0;
+        isSunDisc = 0.0;   // ← 리셋
 
-            //내가 바라보는 픽셀이랑 라이트랑 같으면 최대 컬러 가져옴
+        if(sunPass < 0.5 && lDir.w > -1.5) {
+            sunPass  = 1.0;
+            isSunDisc = 1.0;   // ← 태양으로 마킹
+
             dir_cos  = V3Dot(dir, fragDir);
             dir_deg = (1.0 - dir_cos) * 0.5;
 
@@ -615,7 +639,6 @@ function ps_main() {
                 sunColorGTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))],
                 sunColorBTable[FloatToInt(floor(curIndex / 4.0))][FloatToInt(mod(curIndex, 4.0))]
             );
-
             nextIndex = curIndex + 1.0;
             nextColor = new CVec3(
                 sunColorRTable[FloatToInt(floor((nextIndex) / 4.0))][FloatToInt(mod(nextIndex, 4.0))],
@@ -625,55 +648,69 @@ function ps_main() {
 
             t = fract(dir_deg * 14.0);
             sunsetCol = V3Mix(curColor, nextColor, t);
-
-            //하늘방향에서 태양이 내려오면 파장이 길어져서 빨개진다.
-            //위아래일때 0이고 옆면일때 1이다
             sun_deg = 1.0-abs(V3Dot(dir, new CVec3(0.0, 1.0, 0.0)));
-            
-            
-            sunsetBlend=sun_deg*(1.0-dir_deg);
-            
+            sunsetBlend = sun_deg*(1.0-dir_deg);
             sunIntensity = intensity;
         }
         
         col = V3MulFloat(lCol.rgb, 1.73 / max(intensity, 1e-7));
         col = V3MulFloat(col, 0.02 / max(angle, 1e-8));
 
-        ligMax = V3Max(ligMax, col);
-        ligSum = V3AddV3(ligSum, col);
+        // ── 태양/달 디스크를 분리 누적 ─────────────────────────
+        if(isSunDisc > 0.5) {
+            ligMaxSun = V3Max(ligMaxSun, col);
+            ligSumSun = V3AddV3(ligSumSun, col);
+        } else {
+            ligMaxNight = V3Max(ligMaxNight, col);
+            ligSumNight = V3AddV3(ligSumNight, col);
+        }
     }
     
-    //finalColor = V3Mix(finalColor,sunsetCol,sunsetBlend);
     if(t<0.0)
         finalColor = V3MulV3(finalColor, V3Mix(new CVec3(1.0, 1.0, 1.0), sunsetCol, sunsetBlend));
     else
         finalColor = V3Mix(finalColor, sunsetCol, sunsetBlend);
 
-    finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSum, 0.2)), ligMax);
+    // 태양 디스크는 구름 앞 — 그대로 적용
+    finalColor = V3Max(V3AddV3(finalColor, V3MulFloat(ligSumSun, 0.2)), ligMaxSun);
     BranchEnd();
 
+
+    // ── 1. Cloud 먼저 ──────────────────────────────────────────
+    var cloudAlpha : number = 0.0;
+    BranchBegin("cloud","C",[cloudCoverage, cloudDither, cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudLightDistance]);
+    value = Cloud(fragDir, dir, lCol.rgb);
+    cloudAlpha = value.w;
+    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - cloudAlpha)), V3MulFloat(value.rgb, cloudAlpha));
+    BranchEnd();
+
+   var nightVisMoon : number = SaturateFloat(1.0 - cloudAlpha);        // 달: 선형, 부드럽게
+    var nightVis     : number = SaturateFloat(1.0 - cloudAlpha * 1.5);  // 별/오로라: 기존 유지
+
+    // ── 2. 달 디스크 ────────────────────────────────────────────
+    finalColor = V3Max(
+        V3AddV3(finalColor, V3MulFloat(V3MulFloat(ligSumNight, 0.2), nightVisMoon)),
+        V3Mix(finalColor, ligMaxNight, nightVisMoon)
+    );
+  
+
+    // ── 3. 별 — 구름 뒤, cloudAlpha 마스킹 ────────────────────
     BranchBegin("star","S",[starLayer1ColorTable, starLayer2ColorTable, starLayer3ColorTable]);
     if(sunIntensity<0.99)
     {
         value.rgb = Star(fragDir);
-        finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, SaturateFloat(1.0 - sunIntensity)));
+        finalColor = V3AddV3(finalColor, V3MulFloat(value.xyz, SaturateFloat(1.0 - sunIntensity) * nightVis));
         finalColor = SaturateV3(finalColor);
     }
-    
     BranchEnd();
 
-    BranchBegin("aurora","A",[aurora, auroraSpeed, auroraColorBot, auroraColorMid, auroraColorTop, auroraOffset, auroraDistort, auroraSmoothness, auroraMin, auroraMax, auroraStep]);
+    // ── 4. 오로라 — 구름 뒤, cloudAlpha 마스킹 ────────────────
+    BranchBegin("aurora","A",[aurora, auroraSpeed, auroraColorBot, auroraColorMid, auroraColorTop, auroraOffset, auroraDistort, auroraSmoothness, auroraMin, auroraMax, auroraStep,auroraScale]);
     value = Aurora(fragDir);
-    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)), value.rgb);
+    finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis));
     finalColor = SaturateV3(finalColor);
     BranchEnd();
 
-    BranchBegin("cloud","C",[cloudCoverage, cloudDither, cloudStart, cloudHeight, cloudPlanetRadius, cloudSpeed, cloudStep, cloudLightStep, cloudScale, cloudExtinction, cloudScatter, cloudAmbient, cloudLightDistance]);
-    value = Cloud(fragDir, dir, lCol.rgb);
-    finalColor = V3AddV3(V3MulFloat(finalColor, (1.0 - value.w)),V3MulFloat(value.rgb, value.w));
-    BranchEnd();
-
     out_color.rgb = finalColor;
-    //out_color.rgb = new CVec3(1.0,1.0,1.0);
     out_color.a = 1.0;
 }
