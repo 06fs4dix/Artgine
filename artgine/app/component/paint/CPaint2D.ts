@@ -269,21 +269,27 @@ export class CPaint2D extends CPaint
 			this.mInit=false;
 
 	}
+	override FMatUpdate()
+	{
+		super.FMatUpdate();
+		if(this.mYSort == true)
+		{
+			const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
+			let yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
+			this.mFMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
+			this.mBW.mPos.mF32A[2]+=yRatio * CPaint2D.YSortZShift;
+		}
+	}
 	override Update(_update : CUpdate)
 	{
 		super.Update(_update);
 		
 		
-		if(this.mUpdateFMat == true)
+		if(this.mUpdateFMat == false)
 		{
-			if(this.mYSort == true)
-			{
-				const yVal = this.mFMat.mF32A[13] + this.mYSortOrigin;
-				let yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
-				this.mFMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
-			}
+			return;
 		}
-		else	return;
+		
 
 		
 		if(this.mTag.has("tail")==false || _update.DeltaTime()>1)	return;
@@ -309,7 +315,8 @@ export class CPaint2D extends CPaint
 
 				return;
 			}
-
+			if(this.mBeforePos.IsZero())
+				this.mBeforePos.Import(pos);
 			// pos와 mBeforePos만 CPU 업데이트, 나머지 계산은 GPU로 이전
 			CMath.V3SubV3(pos,this.mBeforePos,vec);
 			var len=CMath.V3Len(vec);
@@ -517,15 +524,10 @@ export class CPaint2D extends CPaint
 
 
 		this.mBound.MatCoordi(this.mLMat);
-		// this.mBound.mMax=CMath.V3SubV3(this.mBound.mMax,this.mPos);
-		// this.mBound.mMin=CMath.V3SubV3(this.mBound.mMin,this.mPos);
-		//this.mBound.mMin=CMath.V3MulMatCoordi(this.mBound.mMin,this.mLMat);
-		//this.mBound.mMax=CMath.V3MulMatCoordi(this.mBound.mMax,this.mLMat);
+
 		this.mBound.mMax.z=this.mBound.GetOutRadius();
 		this.mBound.mMin.z=-this.mBound.mMax.z;
-		//this.mBound.mMax.z=1000;
-		//this.mBound.mMin.z=-1000;
-		
+	
 
 
 		this.mBW.mRadian=0;
@@ -1047,8 +1049,8 @@ export class CPaintHTML extends CPaint2D
 		else return;
 
 		//if(this.GetOwner().IsDestroy())this.mElement.remove();
-		this.MatUpdate();
-		this.CacBound();
+		//this.MatUpdate();
+		//this.CacBound();
 		
 		this.mUpdateFMat=false;
 		

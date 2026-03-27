@@ -2,7 +2,7 @@ import { ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
 import { ambientColor, envCube, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
 import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
-import { Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CVec2, CVec3, CVec4, dFdy, MatTypeToMat, max, min, Null, pow, reflect, Sam2D0ToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, V2AddV2, V2Len, V2Mod, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
+import { Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CVec2, CVec3, CVec4, dFdy, MatTypeToMat, max, min, Null, pow, reflect, Sam2DTileToColor, Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, V2AddV2, V2Len, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
 import { shadowOn } from "../../artgine/z_file/Shadow";
 var out_position = Null();
 var out_color = Null();
@@ -122,8 +122,7 @@ function ps_main_water() {
     var refractType = -1.0;
     BranchBegin("UseWaterTex", "UseWaterTex", []);
     uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
-    uv = V2Mod(uv, 1.0);
-    refractColor = Sam2D0ToColor(uv);
+    refractColor = Sam2DTileToColor(0.0, uv);
     refractType = 0.0;
     BranchEnd();
     BranchBegin("UseRefractTex", "UseRefractTex", [refractMap]);

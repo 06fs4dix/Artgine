@@ -35,35 +35,20 @@ export class CFile
 				{
 					if (_name.startsWith("http:") || _name.startsWith("https:")) 
 					{
-						const https = await import('https');
-						const http = await import('http');
-						const client = _name.startsWith("https:") ? https : http;
-	
-						client.get(_name, (res) => 
-						{
-							if (res.statusCode !== 200) {
-								CAlert.E(`HTTP error ${res.statusCode} for ${_name}`);
-								resolve(null);
-								return;
-							}
-							const chunks: Buffer[] = [];
-							res.on("data", (chunk) => chunks.push(chunk));
-							res.on("end", () => {
-								const buffer = Buffer.concat(chunks);
-								resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
-							});
-						}).on("error", (err) => {
-							CAlert.E("HTTP request error: " + err.message);
+						const response = await fetch(_name);
+						if (!response.ok) {
+							CAlert.E(`HTTP error ${response.status} for ${_name}`);
 							resolve(null);
-						});
-						
+							return;
+						}
+						resolve(await response.arrayBuffer());
 					}
 					else
 					{
 						const fs = await import('fs/promises');
 						//CConsol.Log("CFile.Load : "+_name);
 						const data = await fs.readFile(_name);
-						resolve(data.buffer); // Node에서는 Buffer → ArrayBuffer
+						resolve(data.buffer as any); // Node에서는 Buffer → ArrayBuffer
 					}				
 				} 
 				catch (err) {

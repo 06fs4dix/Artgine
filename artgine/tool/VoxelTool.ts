@@ -39,6 +39,7 @@ export function VoxelTool(_voxel : CVoxelMap)
 {
     gVoxelOrg=_voxel;
     gVoxelTar=_voxel.Export();
+    gVoxelTar.mToolMode=true;
 
     CRollBack.On("Voxel",(_data : CArray<{index:CCIndex,VInfo:number}>)=>{
         for(let info of _data.mArray)
@@ -348,7 +349,7 @@ async function VoxelToolTileArrModifyReset()
 
 
     TileAdd_btn.onclick=()=>{
-        let tile=new CVTile(0,0,0);
+        let tile=new CVTile(0,0);
         
         while(true)
         {

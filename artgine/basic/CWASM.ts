@@ -1,6 +1,5 @@
-import {CAlert} from "./CAlert.js";
+//import {CAlert} from "./CAlert.js";
 import {CArray} from "./CArray.js";
-import {CConsol} from "./CConsol.js";
 import { CPath } from "./CPath.js";
 import { CUtil } from "./CUtil.js";
 
@@ -17,7 +16,10 @@ var gDummy : any;
 
 
 type EmscriptenFactory = (module: any) => Promise<any> | any;
-
+var gReadyResolve: () => void = null;
+var gReadyPromise: Promise<void> = new Promise<void>((resolve) => {
+    gReadyResolve = resolve;
+});
 
 async function LoadWasmFactory(_useSimd: boolean): Promise<EmscriptenFactory> {
   if (_useSimd) {
@@ -43,7 +45,7 @@ export class CWASM
     static GetThread()  {   return gThread;    }
     static async Init(_simd : boolean,_path : string)
     {
-        if(CUtil.IsNode())  return;
+        //if(CUtil.IsNode())  return;
         if(_simd)
         {
             if (typeof WebAssembly === "object" && typeof WebAssembly.FeatureDetect === "function") 
@@ -64,14 +66,17 @@ export class CWASM
         
         if(gWASM==null)
         {
+            if (CUtil.IsNode()) {
+                gReadyResolve();  // ← 추가
+                return;
+                // const xhr2 = await import('xhr2');
+                // (globalThis as any).XMLHttpRequest = xhr2.default ?? xhr2;
+            }
+
             gWASM={};
             const factory = await LoadWasmFactory(gSimd);
             await factory(gWASM);
 
-            // if(gSimd)   await SIMDModule(gWASM);
-            // else   await NoSIMDModule(gWASM);
-
-         
             const encoder = new TextEncoder();
             const encoded = encoder.encode(_path); 
             let ptr = gWASM._malloc(encoded.length + 1);
@@ -81,10 +86,7 @@ export class CWASM
             gWASM._free(ptr);
 
             gDummy = gWASM._malloc(4);
-            
-            
-
-            
+            gReadyResolve();  // ← 추가
         }
     }
     static IsWASM()
@@ -95,16 +97,7 @@ export class CWASM
     {
         return gWASM._malloc(_size);
     }
-    // static Module()
-    // {
-    //     return gWASM;
-    // }
-    // static IsEnable()
-    // {
-    //     return g_wasm!=null;
-    // }
 
-    
     static Free(){}
  
     static NewI32A(_size) : Int32Array
@@ -138,14 +131,10 @@ export class CWASM
 
     static NewF32A(_size) : Float32Array
     {
-        //return new Float32Array(_size);
         if(CWASM.IsWASM()==false)
         {
             return new Float32Array(_size);
         }
-            
-
-        
 
         var numBytes=_size*4;
         var ptr=gWASM._malloc(numBytes);
@@ -174,7 +163,8 @@ export class CWASM
             case 64:    g_F32A16.Push(_F32A);    break;
             case 96:    g_F32A24.Push(_F32A);    break;
             default:
-                CAlert.E("f32a error");
+                
+                console.log("f32a error");
                 break;
         }
         
@@ -207,40 +197,85 @@ export class CWASM
     }
     static Checker(_data : number)
     {
-        
         gWASM.HEAPU32[gDummy/4]=_data;
-        
         gWASM.HEAPU8[gDummy + 4] = 0;
         return gWASM._Checker(gDummy);
     }
-    // static OctreeInit(_mgrKey : number, _center : number, _half : number) {
-    //     gWASM._OctreeInit(_mgrKey, _center, _half);
-    // }
-    // static OctreeBuild(_mgrKey : number,_depth) {
-    //     gWASM._OctreeBuild(_mgrKey,_depth);
-    // }
-    // static OctreeInsert(_mgrKey : number, _id : number, _center : number, _size : number,_layer : string) {
-    //     gWASM._OctreeInsert(_mgrKey, _id, _center, _size,_layer);
-    // }
-    // static OctreeInsideRay(_mgrKey : number, _dir : number, _pos : number, _org : number, _results : number) {
-    //     gWASM._OctreeInsideRay(_mgrKey, _dir, _pos, _org, _results);
-    // }
-    // static OctreeInsidePlane(_mgrKey : number, _plane : number, _results : number) {
-    //     gWASM._OctreeInsidePlane(_mgrKey, _plane, _results);
-    // }
-    // static OctreeInsideBox(_mgrKey : number, _bmin : number, _bmax : number, _results : number) {
-    //     gWASM._OctreeInsideBox(_mgrKey, _bmin, _bmax, _results);
-    // }
-    // static OctreeGetBound(_mgrKey : number,) : string{
-    //     //var test=g_wasm.UTF8ToString(g_wasm._OctreeGetBound(_mgrKey));
-    //     return gWASM.UTF8ToString(gWASM._OctreeGetBound(_mgrKey));
-    // }
-    // static OctreeAllInsideBoxCac(_mgrKey : number) {
-    //     gWASM._OctreeAllInsideBoxCac(_mgrKey);
-    // }
-    // static OctreeAllInsideBoxResult(_mgrKey : number,_pool : number, _results : number) {
-    //     gWASM._OctreeAllInsideBoxResult(_mgrKey,_pool,_results);
-    // }
-    
-    
+
+   
+    static SourceExcute(_filename: string, _encoded: string): string
+    {
+        const BASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const ALEN = 62, KLEN = 16;
+
+        // 1. FNV-1a 32bit
+        let h = 0x811c9dc5;
+        for (let i = 0; i < _filename.length; i++) {
+            h ^= _filename.charCodeAt(i);
+            h = (h * 0x01000193) >>> 0;
+        }
+
+        // 2. Fisher-Yates shuffle
+        const arr = BASE.split('');
+        let seed = h;
+        for (let i = ALEN - 1; i > 0; i--) {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            const j = seed % (i + 1);
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        const alph = arr.join('');
+
+        // 3. XOR 키 파생
+        let xorKey = '';
+        for (let i = 0; i < KLEN; i++) {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            xorKey += alph[seed % ALEN];
+        }
+
+        // 4. XOR 디코딩
+        let r = '';
+        for (let i = 0; i < _encoded.length; i += 2) {
+            const b = alph.indexOf(_encoded[i]) * 62 + alph.indexOf(_encoded[i + 1]);
+            r += String.fromCharCode(b ^ xorKey.charCodeAt((i / 2) % KLEN));
+        }
+        return r;
+        //  if (gWASM == null) {
+        //     await gReadyPromise;  // Init() 완료까지 대기
+        // }
+
+        // const encoder = new TextEncoder();
+
+        // // filename → WASM 메모리
+        // const fnBytes = encoder.encode(_filename);
+        // const fnPtr   = gWASM._malloc(fnBytes.length + 1);
+        // gWASM.HEAPU8.set(fnBytes, fnPtr);
+        // gWASM.HEAPU8[fnPtr + fnBytes.length] = 0;
+
+        // // encoded → WASM 메모리
+        // const encBytes = encoder.encode(_encoded);
+        // const encPtr   = gWASM._malloc(encBytes.length + 1);
+        // gWASM.HEAPU8.set(encBytes, encPtr);
+        // gWASM.HEAPU8[encPtr + encBytes.length] = 0;
+
+        // // WASM 함수 호출
+        // const resultPtr: number = gWASM._SourceExcute(fnPtr, encPtr);
+
+        // // 임시 버퍼 해제
+        // gWASM._free(fnPtr);
+        // gWASM._free(encPtr);
+
+        // if (resultPtr === 0)
+        // {
+        //     console.log("CWASM.SourceExcute: decode failed (null ptr)");
+        //     return null;
+        // }
+
+        // // 결과 문자열 읽기
+        // const result: string = gWASM.UTF8ToString(resultPtr);
+
+        // // WASM에서 malloc한 결과 버퍼 해제 (Checker.h의 SourceFree 호출)
+        // gWASM._SourceFree(resultPtr);
+
+        // return result;
+    }
 }

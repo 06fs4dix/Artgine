@@ -75,7 +75,7 @@ export class CCamera extends CObject
 
 	//shake Camera
 	public mCamShake : ICamShake = null;
-
+	mShadow=false;
 
 
 	//이제 이건 
@@ -120,7 +120,7 @@ export class CCamera extends CObject
 			"mViewMat", "mProjMat", "mPF",
 			"mPlane", "mUpdateMat", "mViewMatComp", "mReset","mBillboardMat",
 			"mShakeMagnitude", "mShakeDuration", "mShakeDamping", "mShakeDistance",
-			"mRCS"
+			"mRCS","mShadow"
 		];
 		if(should.indexOf(_member) != -1) 
 			return false;

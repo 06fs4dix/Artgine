@@ -78,10 +78,12 @@ export class CRoom
     mParentPort : MessagePort;
     mFrameTime=0;
     mFrameCount=0;
-    constructor(_pp : MessagePort)
+    constructor(_pp : MessagePort,_link="",_key=null)
     {
         this.mParentPort=_pp;
-        this.mKey=CUniqueID.GetHash();
+        this.mLink=_link;
+        if(_key==null)  this.mKey=CUniqueID.GetHash();
+        else this.mKey=_key;
     }
     PushUser(_key)
     {
@@ -116,6 +118,10 @@ export class CRoom
             
         },10);
     }
+    async Init()
+    {
+
+    }
     Update(_update : CUpdate)
     {
 
@@ -125,7 +131,7 @@ export class CRoom
 
         if(this.mFrameTime>1)
         {
-            CConsol.Log(this.constructor.name+" / "+this.mFrameCount);
+            CConsol.Log(this.mKey+" : "+this.constructor.name+" / "+this.mFrameCount);
             this.mFrameTime=0;
             this.mFrameCount=0;
             

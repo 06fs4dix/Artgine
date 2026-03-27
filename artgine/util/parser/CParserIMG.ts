@@ -21,21 +21,8 @@ export class CParserIMG extends CParser {
 
             let url: string | null = null;
             if (this.mBuffer == null) {
-                // if (CWebView.IsWebView() == CWebView.eType.Electron) 
-                // {
-                //     try {
-                //         const response = await fetch(pa_fileName);
-                //         const blob = await response.blob();
-                //         url = URL.createObjectURL(blob);
-                //     } catch (e) {
-                //         reject(new Error("Electron fetch failed: " + e));
-                //         return;
-                //     }
-                // } 
-                // else 
-                {
-                    url = pa_fileName;
-                }
+                url = pa_fileName;
+                
             } else {
                 const blob = new Blob([this.mBuffer], { type: "image/" + ext });
                 url = window.URL.createObjectURL(blob);

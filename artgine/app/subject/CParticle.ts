@@ -38,7 +38,7 @@ export class CParticleShape extends CObject
 		
 	}
 	//생성될 최초 위치
-	public LineUp(_time : number,_objList : Array<CSubject>)
+	public LineUp(_objList : Array<CSubject>)
 	{
 		this.TargetPos(_objList);
 	}
@@ -66,9 +66,9 @@ export class CParticleShapeOut extends CParticleShape
 	public mMovementKey="CParticleShapeOut";
 	public mCurve=new CCurve();
 	
-	public LineUp(_time : number,_objList : Array<CSubject>)
+	public override LineUp(_objList : Array<CSubject>)
 	{
-		super.LineUp(_time,_objList);
+		super.LineUp(_objList);
 		for(var each0 of _objList)
 		{
 			var rb=each0.FindComp(CRigidBody);
@@ -133,7 +133,7 @@ export class CParticleTexBuf extends CParticleShapeOut
 		this.mWidth=_width;
 		this.mHeight=_height;
 	}
-	public LineUp(_time : number,_objList : Array<CSubject>)
+	public override LineUp(_objList : Array<CSubject>)
 	{
 		if(this.mBuf==null)
 		{
@@ -142,7 +142,7 @@ export class CParticleTexBuf extends CParticleShapeOut
 			return;
 		}
 		
-		super.LineUp(_time,_objList);
+		super.LineUp(_objList);
 		
 		for(var each0 of _objList)
 		{
@@ -186,10 +186,10 @@ export class CParticle extends CSubject
 			return false;
 		return super.IsShould(_member,_type);
 	}
-	private m_cTime=0;
 	constructor()
 	{
 		super();
+		this.mTimer.mCount=0xfffffff;
 		this.mTimer.mDelay=0.1;
 		this.mTimer.mEnd=1*60*60;
 
@@ -207,11 +207,11 @@ export class CParticle extends CSubject
 		this.mShape=_shape;
 	}
 
-	SubjectUpdate(_update : CUpdate)
+	override SubjectUpdate(_update : CUpdate)
 	{
 		super.SubjectUpdate(_update);
-		
-		if(this.mTimer.Excute(_update.DeltaTime())==false || this.mSample==null)	return;
+		if(this.mTimer.IsEndReset() && this.mChild.length==0)	this.Destroy();
+		if(this.mTimer.Excute()==false || this.mSample==null)	return;
 			
 		
 		
@@ -234,7 +234,7 @@ export class CParticle extends CSubject
 				objArr.push(obj);
 			}
 		}
-		this.mShape.LineUp(this.mTimer.mTimeAll,objArr);
+		this.mShape.LineUp(objArr);
 		
 		
 	}

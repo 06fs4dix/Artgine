@@ -18,7 +18,7 @@ export class CScore
         let modal=new CModal("RankModal");
         modal.SetHeader("Rank")
         modal.SetTitle(CModal.eTitle.Text);
-        modal.SetSize(480,640);
+        modal.SetSize(320,480);
 
         // HTML 이스케이프 (간단)
         const esc = (s?: string) => {

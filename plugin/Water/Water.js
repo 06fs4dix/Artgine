@@ -412,7 +412,6 @@ export class CReflector2D extends CBrushComp {
             rp.mCamera = "WaterCam";
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
-            rp.mSortRevers = true;
             rp.mCullFace = CRenderPass.eCull.None;
             rp.PushOr(new CCondition("class", "==", "CShadowPlane"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
@@ -421,7 +420,6 @@ export class CReflector2D extends CBrushComp {
             rp = new CRPAuto(CFrame.Main().Pal().Sl2D().mKey);
             rp.mPriority = CRenderPass.ePriority.AlphaAuto;
             rp.SetKey("rp3");
-            rp.mSortRevers = true;
             rp.mCullFace = CRenderPass.eCull.None;
             rp.PushOr(new CCondition("class", "==", "CShadowPlane"));
             rp.PushAnd(new CCondition("mTag[water]", "==", false));

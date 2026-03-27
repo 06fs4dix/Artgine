@@ -357,7 +357,7 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	P = V4MulMatCoordi(P, woweMat);
 
 	BranchBegin("wind","W",[windInfluence, windDir, windPos, windInfo, windCount, time]);
-	P = ApplyWind(P, skin, f4_we, time);
+	P = ApplyWind(P, skin, f4_we, f4_wi, time);
 	BranchEnd();
 	
 	to_worldPos=P;

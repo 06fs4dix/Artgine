@@ -121,7 +121,7 @@ export class CCurve extends CObject
 		return val;
 	}
 
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 		//super.EditForm(_pointer,_div,_input);
 		if(_pointer.member == "mType") {
 			let textArr = [], valArr = [];

@@ -41,6 +41,7 @@ export class CSubject extends CObject implements IFile , IMat
 	protected mPMatMul=true;
 	mSelect=true;
 
+	mComEnableArr : Array<CComponent>;
 	mComArr : Array<CComponent>;
 	mPTArr : Array<CComponent>=null;
 	protected mPushArr : Array<CComponent>=new Array<CComponent>();
@@ -86,12 +87,14 @@ export class CSubject extends CObject implements IFile , IMat
 	{
 		super();
 		this.mComArr=_comArr;
+		this.mComEnableArr=new Array<CComponent>();
 		//this.mCLArr=new CArray<CComponent>();
 		this.mChild=new Array();
 		this.mPMat=null;
 		this.mPos = new CVec3();
 		this.mRot = new CVec3();
 		this.mSca = new CVec3(1, 1, 1);
+		
 		//this.m_addPos = new CVec3();
 		
 		this.mWMat = new CMat(null);
@@ -228,6 +231,7 @@ export class CSubject extends CObject implements IFile , IMat
 	UpdateComp()
 	{
 		this.mUpdateComp=true;
+		this.mComEnableArr.length=0;
 		//this.mCLArr.Clear();
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -245,7 +249,7 @@ export class CSubject extends CObject implements IFile , IMat
 		}
 		
 		if(_member=="mFrame" || _member=="mKeyChange" || _member=="mInMsg" || _member=="mOutMsg" || _member=="mBroMsg" || 
-			_member=="mPushArr" || _member=="mPushLock" ||_member=="mUpdateComp" ||
+			_member=="mPushArr" || _member=="mPushLock" || _member=="mUpdateComp" || _member=="mComEnableArr" || 
 			_member=="mDestroy" || _member=="mPTArr" || 
 			_member=="mCLArr" || _member=="mUpdateMat")
 			return false;
@@ -402,7 +406,7 @@ export class CSubject extends CObject implements IFile , IMat
 	override SetKey(_key) 
 	{
 		
-		if(this.mKey==_key)
+		if(this.mKey==_key || _key==null)
 			return;
 		//let bb=this.IsBlackBoard() && this.IsProxy()==false;
 		//if(bb)	this.SetBlackBoard(false);

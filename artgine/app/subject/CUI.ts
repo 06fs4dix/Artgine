@@ -14,6 +14,7 @@ import {CVec4} from "../../geometry/CVec4.js";
 import { CAlpha } from "../../render/CAlpha.js";
 import { CColor } from "../../render/CColor.js";
 import {CRenderPass} from "../../render/CRenderPass.js";
+import { CInput } from "../../system/CInput.js";
 import {CFont,  CFontOption } from "../../util/CFont.js";
 import { CFrame } from "../../util/CFrame.js";
 
@@ -457,20 +458,6 @@ export class CUI extends CSubject
 		
 
 		this.UpdateAnchor();
-		// if(gMainFrame==this.GetFrame())	
-		// {
-		// 	this.mLastEvent=this.mEvent;
-		// 	this.mEvent=null;
-
-		// 	if(this.mPick!=null)
-		// 	{
-		// 		//this.mLastPickMouse=this.mPick;
-				
-		// 		gPickList.Push({ui:this,pick:this.mPick,z:this.GetPt().GetFMat().z});
-		// 		this.mPick=null;
-		// 	}
-		// 	return;//갱신해줄 메인 프레임이 있으면 작업 안함
-		// }
 
 
 
@@ -499,18 +486,19 @@ export class CUI extends CSubject
 			}
 			else
 				ev=CEvent.eType.Pick;
+			
 			let push=true;
 			let aDepth=this.GetPt().GetRenderPass()[0].mPriority+this.GetPt().GetFMat().z;
 			for(let i=0;i<gUIPDepth.length;++i)
 			{
-				if(gUIPDepth[i]!=this && gUIPDepth[i].mPressTraking)
+				if(gUIPDepth[i]!=this && gUIPDepth[i].mLastPickMouse.mouse.key==this.mPick.mouse.key)
 				{
 					push=false;
 					ev=CEvent.eType.Null;
 					this.mPick=null;
 					break;
 				}
-				
+				//이미 있으면 패스
 				if(gUIPDepth[i]==this)
 				{
 					push=false;
@@ -518,15 +506,17 @@ export class CUI extends CSubject
 				}
 
 				let bDepth=gUIPDepth[i].GetPt().GetRenderPass()[0].mPriority+gUIPDepth[i].GetPt().GetFMat().z;
-				
+				//마우스가 같은걸 가리키고 있다면
 				if(gUIPDepth[i].mLastPickMouse.mouse.key==this.mPick.mouse.key)
 				{
+					//같은 뎁스일때
 					if(aDepth==bDepth)
 					{
 						let aDist=CMath.V3Distance(this.mPick.ray.GetPosition(),this.GetPos());
 						let bDist=CMath.V3Distance(gUIPDepth[i].mLastPickMouse.ray.GetPosition(),gUIPDepth[i].GetPos());
 
-						CConsol.Log(this.Key()+" : "+aDist+" "+gUIPDepth[i].Key()+" : "+bDist);
+						//CConsol.Log(this.Key()+" : "+aDist+" "+gUIPDepth[i].Key()+" : "+bDist);
+						//더 가까운거를 선택
 						if(aDist>bDist)
 						{
 							push=false;
@@ -536,7 +526,7 @@ export class CUI extends CSubject
 						}
 						
 					}
-
+					//뎁스가 높은걸 선택
 					if(bDepth<aDepth)
 						gUIPDepth[i].mLastEvent=CEvent.eType.Null;
 					else
@@ -545,6 +535,7 @@ export class CUI extends CSubject
 				}
 				
 			}
+			//처음이란 이야기 넣고봄
 			if(push)
 			{
 				gUIPDepth.push(this);
@@ -552,15 +543,18 @@ export class CUI extends CSubject
 			
 
 		}
+
+		//마지막 눌렀던거랑 현재 피킹중이아니면
+		//누르고 포지션 조정중 모드라는 이야기
 		if(this.mLastPickMouse!=null && this.mPick==null)
 		{
 			let m=this.mFrame.Input().GetMouseKey(this.mLastPickMouse.mouse.key);
+			//마우스키가 없으면 끝.누르고 있어야하고,트레킹 모드고,첫 누름유지
 			if(m!=null && m.press && this.mPressTraking && this.mFirstRayMs!=null)
 			{
 				ev=CEvent.eType.Press;
 				this.mLastPickMouse.mouse.Import(m);
 				this.mPick=this.mLastPickMouse;
-				//
 			}
 			else
 			{
@@ -573,17 +567,6 @@ export class CUI extends CSubject
 					}
 				}
 			}
-
-			// if(this.mSkipZTest) {
-			// 	for(let i=0;i<gUIPDepth.length;++i)
-			// 	{
-			// 		if(gUIPDepth[i]==this)
-			// 		{
-			// 			gUIPDepth.splice(i,1);
-			// 			break;
-			// 		}
-			// 	}
-			// }
 		}
 		if(this.mDbOn)
 		{
@@ -631,7 +614,7 @@ export class CUI extends CSubject
 					this.mLastEvent=CEvent.eType.Click;
 					this.mPressPos=lastPressPos;
 					this.mClickEvent.Call(this);
-					//CConsol.Log("Click");
+					//CConsol.Log("Click"+this.Key());
 				}
 			}
 			else if(ev==CEvent.eType.Null && this.mPressTraking)
@@ -654,6 +637,7 @@ export class CUI extends CSubject
 			
 		if(ev==CEvent.eType.Press)
 		{	
+			this.GetFrame().Input().SetUI(this);
 			this.mPressEvent.Call(this);
 			var mx=this.mPick.mouse.x-this.mFirstRayMs.mouse.x;
 			var my=this.mPick.mouse.y-this.mFirstRayMs.mouse.y;
@@ -667,7 +651,7 @@ export class CUI extends CSubject
 
 
 		}
-		
+	
 
 
 		this.mLastPickMouse=this.mPick;

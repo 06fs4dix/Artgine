@@ -31,15 +31,15 @@ export class CRenPriority
     mDistanceList=new CArray<CRenPaint>();
 	mRAlphaList=new CArray<CRenPaint>();
     mPriority : number=0;
-    static CompareDistance(a : CRenPaint,b : CRenPaint)
-    {
-        return (b.mDistance+b.mTexHash)-(a.mDistance+a.mTexHash);
-    }
+    // static CompareDistance(a : CRenPaint,b : CRenPaint)
+    // {
+    //     return (b.mDistance+b.mTexHash)-(a.mDistance+a.mTexHash);
+    // }
 
-    static CompareAlpha(a : CRenPaint,b : CRenPaint)
-    {
-        return (b.mAlpha+b.mDistance)-(a.mAlpha+a.mDistance);
-    }
+    // static CompareAlpha(a : CRenPaint,b : CRenPaint)
+    // {
+    //     return (b.mAlpha+b.mDistance)-(a.mAlpha+a.mDistance);
+    // }
 	static CompareNormal(a : CRenPaint,b : CRenPaint)
     {
         return (a.mDistance+a.mTexHash)-(b.mDistance+b.mTexHash);
@@ -315,7 +315,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 		}
 
 	}
-	Icon(): string {
+	override Icon(): string {
 		return "bi-brush";
 	}
 }

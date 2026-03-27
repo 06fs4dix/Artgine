@@ -321,6 +321,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	// 	Collision:1,
 	// 	Trigger:2,
 	// };
+	mToolMode=false;
     mAtlas : CAtlas=new CAtlas("Voxel/");
     
 	
@@ -332,6 +333,8 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mTileMoldArr = new Array<CVTileMold>();
     mPaint : CPaintVoxel=null;
 	mColliderArr = Array<CCollider>();
+	mPaintArr=new Array<CPaintVoxel>();
+	mDiv=16;
     mPlane : Array<CVoxPlane>=new Array<CVoxPlane>();//임시 버퍼
     //mCount=new CVec3();
     //mSize=0;
@@ -343,7 +346,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mLayer =new Array<CBlackBoardRef<CVoxelMap>>();
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mColliderArr")	return false;
+		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mColliderArr" || _member=="mComArr")	return false;
 
 		return super.IsShould(_member,_type);
 	}
@@ -382,9 +385,13 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	{
 
 		this.mPlane.length=0;
-		this.RemoveComps(CPaintVoxel);
-		this.RemoveComps(CCollider);
-		this.RemoveComps(CNavigation);
+		// this.RemoveComps(CPaintVoxel);
+		// this.RemoveComps(CCollider);
+		// this.RemoveComps(CNavigation);
+		this.mComArr.length=0;
+		this.mComEnableArr.length=0;
+		this.mPTArr=null;
+		
 		this.mBuf.Reset(_count,_size);
 
 		this.mUpdateRes=true;
@@ -401,15 +408,43 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	
 	RefreshModify()
 	{
-		let pArr=new Array<CVoxPlane>();
+		let cntX=Math.ceil(this.mBuf.mCount.x/this.mDiv);
+		let cntY=Math.ceil(this.mBuf.mCount.y/this.mDiv);
+
+		// 영향받는 청크 인덱스 수집
+		let dirtyChunks=new Set<number>();
 		for(let m of this.mUpdateModify)
 		{
 			this.PlaneRefresh(m);
-			var loff=m.x*6+m.y*this.mBuf.mCount.x*6+m.z*this.mBuf.mCount.y*this.mBuf.mCount.z*6;
-			for(let i=0;i<6;++i)
-				pArr.push(this.mPlane[loff+i]);
+			let cx=Math.floor(m.x/this.mDiv);
+			let cy=Math.floor(m.y/this.mDiv);
+			let cz=Math.floor(m.z/this.mDiv);
+			dirtyChunks.add(cx+cy*cntX+cz*cntX*cntY);
 		}
-		this.mPaint.Rebuild(pArr);
+
+		// 청크별로 plane 수집 후 Rebuild
+		for(let pi of dirtyChunks)
+		{
+			let paint=this.mPaintArr[pi];
+			if(paint==null) continue;
+
+			let cz=Math.floor(pi/(cntX*cntY));
+			let cy=Math.floor((pi%(cntX*cntY))/cntX);
+			let cx=pi%cntX;
+
+			let chunkPlanes=new Array<CVoxPlane>();
+			let x0=cx*this.mDiv, x1=Math.min(x0+this.mDiv,this.mBuf.mCount.x);
+			let y0=cy*this.mDiv, y1=Math.min(y0+this.mDiv,this.mBuf.mCount.y);
+			let z0=cz*this.mDiv, z1=Math.min(z0+this.mDiv,this.mBuf.mCount.z);
+			for(let z=z0;z<z1;++z)
+			for(let y=y0;y<y1;++y)
+			for(let x=x0;x<x1;++x)
+			{
+				let loff=x*6+y*this.mBuf.mCount.x*6+z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;
+				for(let j=0;j<6;++j) chunkPlanes.push(this.mPlane[loff+j]);
+			}
+			paint.Rebuild(chunkPlanes);
+		}
 		this.mUpdateModify.clear();
 	}
 	PlaneRefresh(_index : CCIndex)
@@ -606,6 +641,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		button.innerText="VoxelTool";
 		button.onclick=()=>{
 			window["VoxelTool"](this);
+			
 		};
 		_div.append(button);
 
@@ -626,53 +662,53 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		this.RemoveComps(CCollider);
 		this.RemoveComps(CNavigation);
 	}
-	public override Export(_copy?: boolean, _resetKey?: boolean): this 
-	{
-		var copy=super.Export(_copy,_resetKey);
-		copy.DetachComp(CPaintVoxel);
-		copy.DetachComp(CCollider);
-		copy.DetachComp(CNavigation);
-		// copy.ResetOctree();
-		return copy;
-	}
-	override Import(_target : CObject)
-	{
-		this.ResetInfo((_target as this).mBuf.mCount,(_target as this).mBuf.mSize);
+	// public override Export(_copy?: boolean, _resetKey?: boolean): this 
+	// {
+	// 	var copy=super.Export(_copy,_resetKey);
+	// 	copy.DetachComp(CPaintVoxel);
+	// 	copy.DetachComp(CCollider);
+	// 	copy.DetachComp(CNavigation);
+	// 	// copy.ResetOctree();
+	// 	return copy;
+	// }
+	// override Import(_target : CObject)
+	// {
+	// 	this.ResetInfo((_target as this).mBuf.mCount,(_target as this).mBuf.mSize);
 
-		let dfw=this.mFrame;
-		let dkey=this.mKey;
-		super.Import(_target);
-		this.DetachComp(CPaintVoxel);
-		this.DetachComp(CCollider);
-		this.DetachComp(CNavigation);
-		this.mFrame=dfw;
-		this.mKey=dkey;
+	// 	let dfw=this.mFrame;
+	// 	let dkey=this.mKey;
+	// 	super.Import(_target);
+	// 	this.DetachComp(CPaintVoxel);
+	// 	this.DetachComp(CCollider);
+	// 	this.DetachComp(CNavigation);
+	// 	this.mFrame=dfw;
+	// 	this.mKey=dkey;
 
-	}
-	public override ExportJSON(): { class: string; } {
-		let ptVoxel = this.DetachComp(CPaintVoxel);
-		let col = this.DetachComp(CCollider);
-		let navi = this.DetachComp(CNavigation);
-		let json = super.ExportJSON();
-		if(ptVoxel) this.PushComp(ptVoxel);
-		if(col) this.PushComp(col);
-		if(navi) this.PushComp(navi);
-		return json;
-	}
+	// }
+	// public override ExportJSON(): { class: string; } {
+	// 	let ptVoxel = this.DetachComp(CPaintVoxel);
+	// 	let col = this.DetachComp(CCollider);
+	// 	let navi = this.DetachComp(CNavigation);
+	// 	let json = super.ExportJSON();
+	// 	if(ptVoxel) this.PushComp(ptVoxel);
+	// 	if(col) this.PushComp(col);
+	// 	if(navi) this.PushComp(navi);
+	// 	return json;
+	// }
 
-	override ImportCJSON(_json: CJSON) 
-	{
-		this.mAtlas=new CAtlas();
+	// override ImportCJSON(_json: CJSON) 
+	// {
+	// 	this.mAtlas=new CAtlas();
 	
-		let result = super.ImportCJSON(_json);
+	// 	let result = super.ImportCJSON(_json);
 
 
 
-		this.mUpdateRes=true;
-		this.mUpdateModify=new Set<CCIndex>();
+	// 	this.mUpdateRes=true;
+	// 	this.mUpdateModify=new Set<CCIndex>();
 		
-		return result;
-	}
+	// 	return result;
+	// }
 	static Sun=5;
 	static Torch=10;
 	// 25~27비트 값 추출 

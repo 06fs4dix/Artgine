@@ -1150,6 +1150,47 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// str += "vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n";
 		// str += "return vec4(c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y),c.a);		}\n";
 
+        
+        str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
+		str += "	ivec2 ts;\n";
+		str += "	vec2 uv;\n";
+		str += "	if(_uni.x-0.5<=0.0) {";
+		str += "		ts = textureSize(sam2D[0],0);";
+		str += "		uv = vec2((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y));";
+		str += "		return texture(sam2D[0],uv);";
+		str += "	}\n";
+		for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
+		{
+			str += "	else if(_uni.x-0.5<=" + j + ".0) {";
+			str += "		ts = textureSize(sam2D["+j+"],0);";
+			str += "		uv = vec2((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y));";
+			str += "		return texture(sam2D["+j+"],uv);";
+			str += "	}\n";
+		}
+		str += "	return texture(sam2D[0],vec2(0.0,0.0));";
+		str += "}\n";
+
+		str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
+		str += "	return Sam2DToV4(_uni,float(_off));\n";
+		str += "}\n";
+
+        str += "mat4 Sam2DToMat(vec2 _uni,float _off) {\n";
+		str += "return mat4(\n";
+		str += "Sam2DToV4(_uni,_off*4.0+0.0),\n";
+		str += "Sam2DToV4(_uni,_off*4.0+1.0),\n";
+		str += "Sam2DToV4(_uni,_off*4.0+2.0),\n";
+		str += "Sam2DToV4(_uni,_off*4.0+3.0)\n";
+		str += ");}\n";
+
+
+		str += "mat4 MatMix(mat4 _a, mat4 _b, float _t) {\n";
+		str += "return mat4(\n";
+		str += "mix(_a[0], _b[0], _t),\n";
+		str += "mix(_a[1], _b[1], _t),\n";
+		str += "mix(_a[2], _b[2], _t),\n";
+		str += "mix(_a[3], _b[3], _t)\n";
+		str += ");}\n";
+		
 		return str;
 	}
 	
@@ -1236,6 +1277,15 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return texture(sam2D[0],_uv);\n";
 		str += "}\n";
 		
+        str += "vec4 Sam2DGradToColor(float _off,vec2 _uv,vec2 _dx,vec2 _dy)\n";
+		str += "{\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
+		{
+			str += "	if(_off-0.5<=" + j + ".0)\n";
+			str += "		return textureGrad(sam2D[" + j + "],_uv,_dx,_dy);\n";
+		}
+		str += "	return vec4(0,0,0,1);\n";
+		str += "}\n";
 
 		str += "vec4 Sam2DArrToColor(float _off,vec3 _uv)\n";
 		str += "{\n";
@@ -1321,33 +1371,45 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// let sammax16=CDevice.GetProperty(CDevice.eProperty.Sam2DWriteY)/16;
 		//textureSize(sam2D[" + j + "],0);
 
-
-
-		str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
-		str += "	ivec2 ts;\n";
-		str += "	vec2 uv;\n";
-		str += "	if(_uni.x-0.5<=0.0) {";
-		str += "		ts = textureSize(sam2D[0],0);";
-		str += "		uv = vec2((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y));";
-		str += "		return texture(sam2D[0],uv);";
-		str += "	}\n";
-		for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
-		{
-			str += "	else if(_uni.x-0.5<=" + j + ".0) {";
-			str += "		ts = textureSize(sam2D["+j+"],0);";
-			str += "		uv = vec2((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y));";
-			str += "		return texture(sam2D["+j+"],uv);";
-			str += "	}\n";
-		}
-		str += "	return texture(sam2D[0],vec2(0.0,0.0));";
+        str += "vec4 Sam2DTileToColor(float _off,vec2 _uv)\n";
+		str += "{\n";
+        str += "    const float BLEND = 0.1;\n";
+        str += "    const vec2 CS_TABLE[4] = vec2[4](\n";
+        str += "        vec2( 1.0,  0.0),\n";
+        str += "        vec2( 0.0,  1.0),\n";
+        str += "        vec2(-1.0,  0.0),\n";
+        str += "        vec2( 0.0, -1.0) \n";
+        str += "    );\n";
+        str += "    vec2 iUV = floor(_uv);\n";
+        str += "    vec2 fUV = fract(_uv);\n";
+        str += "    vec2 f05 = fUV - 0.5;\n";
+        str += "    vec2 ddx = dFdx(_uv);\n";
+        str += "    vec2 ddy = dFdy(_uv);\n";
+        str += "    vec2 cs = CS_TABLE[int(4.0 * Hash12(iUV))];\n";
+        str += "    mat2 rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "    vec4 col = Sam2DGradToColor(_off,0.5+rot*f05,rot*ddx,rot*ddy);\n";
+        str += "    vec2 w = smoothstep(0.5 - BLEND, 0.5, abs(f05));\n";
+        str += "    vec2 off = sign(f05);\n";
+        str += "    if(w.x > 0.0) {\n";
+        str += "        cs = CS_TABLE[int(4.0 * Hash12(iUV+vec2(off.x,0.0)))];\n";
+        str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "        vec2 d = f05 - vec2(off.x, 0.0);\n";
+        str += `		col = mix(col, Sam2DGradToColor(_off,0.5+rot*d,rot*ddx,rot*ddy), w.x*0.5);\n`;
+        str += "    }\n";
+        str += "    if(w.y > 0.0) {\n";
+        str += "        cs = CS_TABLE[int(4.0 * Hash12(iUV+vec2(0.0,off.y)))];\n";
+        str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "        vec2 d = f05 - vec2(0.0, off.y);\n";
+        str += `		col = mix(col, Sam2DGradToColor(_off,0.5+rot*d,rot*ddx,rot*ddy), w.y*0.5);\n`;
+        str += "    }\n";
+        str += "    if(w.x > 0.0 && w.y > 0.0) {\n";
+        str += "        cs = CS_TABLE[int(4.0 * Hash12(iUV+off))];\n";
+        str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "        vec2 d = f05 - off;\n";
+        str += `		col = mix(col, Sam2DGradToColor(_off,0.5+rot*d,rot*ddx,rot*ddy), w.x*w.y*0.5);\n`;
+        str += "    }\n";
+        str += "    return col;\n";
 		str += "}\n";
-
-		str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
-		str += "	return Sam2DToV4(_uni,float(_off));\n";
-		str += "}\n";
-		
-
-		
 	
 		
 		// str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
@@ -1368,22 +1430,8 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// str += "}\n";
 		
 
-		
-		str += "mat4 Sam2DToMat(vec2 _uni,float _off) {\n";
-		str += "return mat4(\n";
-		str += "Sam2DToV4(_uni,_off*4.0+0.0),\n";
-		str += "Sam2DToV4(_uni,_off*4.0+1.0),\n";
-		str += "Sam2DToV4(_uni,_off*4.0+2.0),\n";
-		str += "Sam2DToV4(_uni,_off*4.0+3.0)\n";
-		str += ");}\n";
 
-		str += "mat4 MatMix(mat4 _a, mat4 _b, float _t) {\n";
-		str += "return mat4(\n";
-		str += "mix(_a[0], _b[0], _t),\n";
-		str += "mix(_a[1], _b[1], _t),\n";
-		str += "mix(_a[2], _b[2], _t),\n";
-		str += "mix(_a[3], _b[3], _t)\n";
-		str += ");}\n";
+		
 		// str += "mat4 Sam2DToMat(vec2 _uni,int _off) {\n";
 		// str += "	return Sam2DToMat(_uni,float(_off));\n";
 		// str += "}\n";

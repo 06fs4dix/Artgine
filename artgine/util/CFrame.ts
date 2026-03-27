@@ -420,6 +420,9 @@ export class CFrame
 			else if(this.mPreferences.mRenderer==CPreferences.eRenderer.GL)
 			{
 				this.mDevice=new CDeviceGL(this.mPreferences,canDummy);
+				//this.mDevice.BenchmarkScore();
+				
+				
 				this.mRenderer=new CRendererGL(this.mDevice,new CShaderInterpretGL(),this.mRes,this.mPreferences);
 				this.mBatchMgr=new CBatchMgrGL(this.mRenderer);
 				//this.m_shaderInterpret=new CShaderInterpretGL();

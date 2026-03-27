@@ -173,6 +173,11 @@ export class CSamplerTimer<T> extends CSampler<T>
 		
 		return this.mDefault;
 	}
+	IsEndReset(_dataTarget : any=null,_run="")
+	{
+		if(_dataTarget==null)	_dataTarget=this;
+		return CSamplerTimer.IsEndReset(_dataTarget,_run);
+	}
 
 
 	//실시간 호출해줘야 갱신된다
@@ -215,6 +220,7 @@ export class CSamplerTimer<T> extends CSampler<T>
         if(end!=0 && _dataTarget["mTemp"]["mTime"+_run]>end)   
 		{
 			_dataTarget["mTemp"]["mEnd"+_run]=true;
+			//_dataTarget["mTemp"]["mOffset"+_run]=0;
 			return false;
 		}
 			
@@ -225,6 +231,7 @@ export class CSamplerTimer<T> extends CSampler<T>
 		if(count!=0 && _dataTarget["mTemp"]["mCount"+_run]>count)   
 		{
 			_dataTarget["mTemp"]["mEnd"+_run]=true;
+			//_dataTarget["mTemp"]["mOffset"+_run]=0;
 			return false;
 		}
         
@@ -244,9 +251,17 @@ export class CSamplerTimer<T> extends CSampler<T>
 	// 		_dataTarget["mTemp"]["mEnd"+_run]=false;
     //     }
 	// }
-	static IsEnd(_dataTarget : any,_run="")
+	static IsEndReset(_dataTarget : any,_run="")
 	{
+		
 		if(_dataTarget["mTemp"]==null)	return false;
-		return _dataTarget["mTemp"]["mEnd"+_run]==true;
+
+		if(_dataTarget["mTemp"]["mEnd"+_run]==true)
+		{
+			_dataTarget["mTemp"]["mOffset"+_run]=0;
+			return true;
+		}
+		
+		return false;
 	}
 }

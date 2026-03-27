@@ -159,6 +159,8 @@ export class TexOff1{dummy;}
 export class Sam2DV4{constructor(_x,_y=-1){}x;y;}
 export class Sam2DMat{constructor(_x,_y=-1){}x;y;}
 
+
+
 export class sampler2D{}
 export class sampler2DArray{}
 export class sampler2DCube{}
@@ -196,6 +198,7 @@ export function Sam2DToMat(_uni : Sam2DMat,_off : number|any) : CMat{    return 
 export function Sam2DSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function Sam2DArrSize(_off : number) : CVec3 { return new CVec3(0,0,0);}
 export function SamCubeMaxLod(_off : number) : number { return 0;}
+export function Sam2DTileToColor(_number,_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
 
 export function ParallaxNormal(TangentViewPos : CVec3,TangentFragPos : CVec3,_index:number,_uv:CVec2,height_scale:number) : CVec3{    return new CVec3(0,0,0);}
 

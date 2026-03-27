@@ -148,7 +148,7 @@ export class CPaint extends CComponent implements IMat
 		this.mTexCodi=new CVec4(1,1,0,0);
 		this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mShaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None)));
-		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(0)));
+		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(1)));
 		//this.m_shaderAttrMap.set("CVLS",new CShaderAttr("CVLS",new CVec4(0,0,0,0,this)));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
@@ -420,28 +420,40 @@ export class CPaint extends CComponent implements IMat
 				// pos.mF32A[2]=this.mFMat.mF32A[14]+this.mBoundFMatC.mF32A[2];
 			
 				
-				if(this.mRenderPass[i].mZEarly)
+				if(this.mRenderPass[i].mPaintSort!=CRenderPass.ePaintSort.None)
 				{
-					let eye=ren.mCam.GetEye();
+					//let eye=ren.mCam.GetEye();
 					
 
-					//한축 정렬 되면
-					//2D란 의미다. 
-					if(cam.GetView().z<-0.98) 
-					{
-						//리니어일경우 주변 퍼짐으로 반대로 정렬한다.
-						if(this.mAutoLoad.mFilter==CTexture.eFilter.Linear)
-							ren.mDistance = -(eye.z - this.mFMat.z);
-						else
-							ren.mDistance = eye.z - this.mFMat.z;
+					// //한축 정렬 되면
+					// //2D란 의미다. 
+					// if(cam.GetView().z<-0.98) 
+					// {
+					// 	//20260327 잠시 빼봄
+					// 	//리니어일경우 주변 퍼짐으로 반대로 정렬한다.
+					// 	if(this.mAutoLoad.mFilter==CTexture.eFilter.Linear)
+					// 		ren.mDistance = -(eye.z - this.mFMat.z);
+					// 	else
+					// 		ren.mDistance = eye.z - this.mFMat.z;
 
-					}
-					else 
-					{
+					// }
+					// else 
+					// {
 						
-						ren.mDistance = CMath.V3Distance(eye, this.mBW.mPos);
+					// 	ren.mDistance = CMath.V3Distance(eye, this.mBW.mPos);
 						
-					}
+					// }
+
+					// if(ren.mCam.IsOrthographic())
+					// {
+
+					// }
+					let eye = ren.mCam.GetEye();
+					let view=ren.mCam.GetView();
+					gPosDummy.x = this.mBW.mPos.x - eye.x;
+					gPosDummy.y = this.mBW.mPos.y - eye.y;
+					gPosDummy.z = this.mBW.mPos.z - eye.z;
+					ren.mDistance = CMath.V3Dot(gPosDummy, view);
 					ren.mDistance=Math.trunc(ren.mDistance*128)<<9;
 					
 				}
@@ -898,90 +910,18 @@ export class CPaint extends CComponent implements IMat
 	GetMat() {	return this.mLMat;	};
 	SetLMat(_mat : CMat)	{	this.mLMat.Import(_mat);	this.mUpdateLMat=true;}
 	
-	CacBound()
+	FMatUpdate()
 	{
+		CMath.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat,true);
 		if(this.GetOwner().mUpdateRS!=CUpdate.eType.Not || this.mBW.mRadian==0)
 		{
 			if(this.mTag.has("tail"))
 				this.mBW.Init(this.mBound,null);
 			else
 				this.mBW.Init(this.mBound,this.mOwner.GetMat());
-			
 		}
 
-		
-		// if(this.mTag.has("tail"))
-		// {
-
-		// 	this.mBoundFMat.mMin.mF32A[0]=this.mBound.mMin.mF32A[0];
-		// 	this.mBoundFMat.mMin.mF32A[1]=this.mBound.mMin.mF32A[1];
-		// 	this.mBoundFMat.mMin.mF32A[2]=this.mBound.mMin.mF32A[2];
-		// 	this.mBoundFMat.mMax.mF32A[0]=this.mBound.mMax.mF32A[0];
-		// 	this.mBoundFMat.mMax.mF32A[1]=this.mBound.mMax.mF32A[1];
-		// 	this.mBoundFMat.mMax.mF32A[2]=this.mBound.mMax.mF32A[2];
-
-			
-
-		
-
-		// 	this.mBoundFMat.GetCenter(this.mBoundFMatC);
-			
-		// 	// this.mBoundFMatC.mF32A[0]+=this.mFMat.mF32A[12];
-		// 	// this.mBoundFMatC.mF32A[1]+=this.mFMat.mF32A[13];
-		// 	// this.mBoundFMatC.mF32A[2]+=this.mFMat.mF32A[14];
-			
-
-			
-		// 	var maxX = Math.abs(this.mBoundFMat.mMax.mF32A[0] - this.mBoundFMatC.mF32A[0]);
-		// 	var maxY = Math.abs(this.mBoundFMat.mMax.mF32A[1] - this.mBoundFMatC.mF32A[1]);
-		// 	var maxZ = Math.abs(this.mBoundFMat.mMax.mF32A[2] - this.mBoundFMatC.mF32A[2]);
-
-		// 	var maxAll=CMath.Max(CMath.Max(maxX, maxY), maxZ);
-		// 	this.mBoundFMatR=maxAll;
-		// }
-		// else if(this.mFMat.Ptr()==null)
-		// {
-			
-		// 	this.mBoundFMat.mMin.mF32A[0]=this.mBound.mMin.mF32A[0]*this.mFMat.mF32A[0];
-		// 	this.mBoundFMat.mMin.mF32A[1]=this.mBound.mMin.mF32A[1]*this.mFMat.mF32A[5];
-		// 	this.mBoundFMat.mMin.mF32A[2]=this.mBound.mMin.mF32A[2]*this.mFMat.mF32A[10];
-		// 	this.mBoundFMat.mMax.mF32A[0]=this.mBound.mMax.mF32A[0]*this.mFMat.mF32A[0];
-		// 	this.mBoundFMat.mMax.mF32A[1]=this.mBound.mMax.mF32A[1]*this.mFMat.mF32A[5];
-		// 	this.mBoundFMat.mMax.mF32A[2]=this.mBound.mMax.mF32A[2]*this.mFMat.mF32A[10];
-			
-			
-			
-
-		// 	// this.mBoundFMat.mMin.mF32A[0]+=this.mFMat.mF32A[12];
-		// 	// this.mBoundFMat.mMin.mF32A[1]+=this.mFMat.mF32A[13];
-		// 	// this.mBoundFMat.mMin.mF32A[2]+=this.mFMat.mF32A[14];
-
-		// 	// this.mBoundFMat.mMax.mF32A[0]+=this.mFMat.mF32A[12];
-		// 	// this.mBoundFMat.mMax.mF32A[1]+=this.mFMat.mF32A[13];
-		// 	// this.mBoundFMat.mMax.mF32A[2]+=this.mFMat.mF32A[14];
-
-			
-			
-
-
-		// 	this.mBoundFMat.GetCenter(this.mBoundFMatC);
-
-			
-		// 	var maxX = Math.abs(this.mBoundFMat.mMax.mF32A[0] - this.mBoundFMatC.mF32A[0]);
-		// 	var maxY = Math.abs(this.mBoundFMat.mMax.mF32A[1] - this.mBoundFMatC.mF32A[1]);
-		// 	var maxZ = Math.abs(this.mBoundFMat.mMax.mF32A[2] - this.mBoundFMatC.mF32A[2]);
-
-		// 	var maxAll=CMath.Max(CMath.Max(maxX, maxY), maxZ);
-		// 	this.mBoundFMatR=maxAll;
-		// }
-		// else
-		// {
-		
-		// 	this.mBoundFMatR=CWASM.BoundMulMat(this.mBoundFMat.mMin.Ptr(),this.mBoundFMat.mMax.Ptr(),this.mBound.mMin.Ptr(),this.mBound.mMax.Ptr(),
-		// 	this.mFMat.Ptr(),this.mBoundFMatC.Ptr());
-		// }
-	
-		//this.mBoundFMatR*=1.5;
+		this.mBW.UpdateMat(this.mOwner.GetMat());
 	}
 
 	override Prefab(_owner : CSubject)
@@ -1027,18 +967,13 @@ export class CPaint extends CComponent implements IMat
 		if(this.mUpdateFMat)	this.mUpdateFMat=false;
 		if(this.mUpdateLMat || this.mOwner.mUpdateMat!=0)// || this.mBoundFMatR==0)
 		{
-			
-			CMath.MatMul(this.mLMat,this.mOwner.GetMat(),this.mFMat,true);
-			//this.mFMat.mF32A[12]=this.mOwner.GetMat()[12]+this.mLMat.mF32A[12]*;
-			//this.mLMat.IsUnit()
-			this.CacBound();
-			this.mBW.UpdateMat(this.mOwner.GetMat());
-
+			this.FMatUpdate();
 			this.mUpdateFMat=true;
+			this.mUpdateLMat=false;
 		}
 		this.UpdateRenPt();
 
-		this.mUpdateLMat=false;
+		
 	}
 	SetFMat(_fmat)
 	{

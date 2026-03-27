@@ -14,6 +14,7 @@ import { CFile } from "../system/CFile.js";
 import { CInput } from "../system/CInput.js";
 import { CMouse } from "../system/CMouse.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../util/CCamCon.js";
+import { CChecker } from "../util/CChecker.js";
 import { CFrame } from "../util/CFrame.js";
 import { CLoaderOption } from "../util/CLoader.js";
 import { CModalFlex } from "../util/CModalUtil.js";
@@ -41,19 +42,29 @@ var gBrushColor : CVec4;
 var gBrushColorChannel : CVec4;
 var gBrushInvert : number;
 
+// 스포이드 모드
+var gEyedropperMode : boolean;
+
+// 배경 이미지
+var gBgImg : string;
+var gBgTexBlendRatio : number;
+var gOrgBufImg : Uint32Array | Uint8Array;
+
 // 브러시 텍스쳐 선택기
 var gPRESETS : Array<CTexture>;
 var gSelectedTexIndex : number;
 
 
 
-export function BufferTool(_buffer : Uint32Array | Uint8Array, _size : CVec3, _alphaUse = false) : Promise<void>
+export function BufferTool(_buffer : Uint32Array | Uint8Array, _size : CVec3, _alphaUse = false, _bufferImg : Uint32Array | Uint8Array = null) : Promise<void>
 {
     gOrgBuf       = _buffer;
     gOrgWidth     = _size.x;
     gOrgHeight    = _size.y;
     gOrgDepth     = _size.z;
     gOrgAlphaUse  = _alphaUse;
+    gOrgBufImg    = _bufferImg;
+    gBgImg = "check.tex";
 
     return new Promise<void>(resolve => {
         gModal = new CModalFlex([0.7, 0.3], "BufferTool");
@@ -81,6 +92,38 @@ export function BufferTool(_buffer : Uint32Array | Uint8Array, _size : CVec3, _a
     let rightHTML=CDOM.DataToDom(`
         <div class="card border-secondary p-2 w-100 brush-panel">
 
+            <!-- 스포이드 -->
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <button id="eyedropperBtn" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                    <span>💧</span><span>스포이드</span>
+                </button>
+                <span id="eyedropperStatus" class="text-secondary" style="font-size:0.72rem;"></span>
+            </div>
+
+            <hr class="border-secondary my-2">
+            <br>
+
+            <!-- 배경 이미지 -->
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <button id="bgImgBtn" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                    <span>배경 이미지 변경</span>
+                </button>
+                <span id="bgImgStatus" class="text-secondary" style="font-size:0.72rem;"></span>
+            </div>
+
+            <div class="row g-1 align-items-center mb-2">
+                <div class="col-4 text-secondary">배경 블렌드 비율</div>
+                <div class="col-6">
+                    <input type="range" id="blendRange" class="form-range" min="0" max="1" value="1" step="0.1">
+                </div>
+                <div class="col-2">
+                    <input type="number" id="blendNum" class="form-control form-control-sm text-center p-0" min="0" max="1" value="1" step="0.1">
+                </div>
+            </div>
+
+            <hr class="border-secondary my-2">
+            <br>
+
             <!-- Draw Type 선택 -->
             <div class="mb-3">
                 <label for="brushDrawTypeSelect" class="form-label">그리기 타입</label>
@@ -97,7 +140,7 @@ export function BufferTool(_buffer : Uint32Array | Uint8Array, _size : CVec3, _a
                     <div class="d-flex gap-2">
 
                         <!-- 왼쪽: 프리뷰 -->
-                        <div class="preview-box bg-black border border-secondary rounded overflow-hidden flex-shrink-0">
+                        <div class="preview-box checker-bg border border-secondary rounded overflow-hidden flex-shrink-0">
                             <canvas id="previewCanvas" style="width:100%;height:100%;display:block;"></canvas>
                         </div>
 
@@ -166,6 +209,13 @@ export function BufferTool(_buffer : Uint32Array | Uint8Array, _size : CVec3, _a
                                 <div class="col-2"><input type="number" id="aNum" class="form-control form-control-sm text-center p-0" min="0" max="255" value="255"></div>
                             </div>
 
+                            <!-- HEX 표시 -->
+                            <div class="d-flex align-items-center gap-1 mt-1">
+                            <span class="text-secondary" style="font-size:0.72rem;">HEX</span>
+                            <input type="text" id="hexInput" class="form-control form-control-sm p-0 px-1 text-center"
+                                    maxlength="9" value="#FFFFFFFF" style="font-size:0.72rem; font-family:monospace;">
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -206,6 +256,28 @@ export function BufferTool(_buffer : Uint32Array | Uint8Array, _size : CVec3, _a
 
             input[type=number]::-webkit-inner-spin-button { display: none; }
             input[type=number] { -moz-appearance: textfield; }
+
+            .checker-bg {
+                background-image:
+                    linear-gradient(45deg, #555 25%, transparent 25%),
+                    linear-gradient(-45deg, #555 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #555 75%),
+                    linear-gradient(-45deg, transparent 75%, #555 75%);
+                background-size: 10px 10px;
+                background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+                background-color: #333;
+            }
+
+            #colorPreviewBox {
+                background-image:
+                    linear-gradient(45deg, #555 25%, transparent 25%),
+                    linear-gradient(-45deg, #555 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #555 75%),
+                    linear-gradient(-45deg, transparent 75%, #555 75%);
+                background-size: 10px 10px;
+                background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+                background-color: #333;
+            }
         </style>
     `);
     rightPanel.append(rightHTML);
@@ -290,11 +362,49 @@ function BufferInit()
 
     gTexSub = new CSubject();
 
+    // _bufferImg가 있으면 배경 이미지로 변환
+    if(gOrgBufImg != null) {
+        const bgTex = CImgPro.Square(gOrgWidth, texHeight, new CVec4(1, 1, 1, 1));
+        const bgDst = bgTex.GetBuf()[0];
+        if(gOrgBufImg instanceof Uint32Array) {
+            if(gOrgDepth > 1) {
+                for(let z = 0; z < gOrgDepth; z++) {
+                    for(let y = 0; y < gOrgHeight; y++) {
+                        for(let x = 0; x < gOrgWidth; x++) {
+                            const v  = gOrgBufImg[x + y * gOrgWidth + z * gOrgWidth * gOrgHeight];
+                            const di = ((y * gOrgDepth + z) * gOrgWidth + x) * 4;
+                            bgDst[di + 0] = (v >>> 24) & 0xFF;
+                            bgDst[di + 1] = (v >>> 16) & 0xFF;
+                            bgDst[di + 2] = (v >>>  8) & 0xFF;
+                            bgDst[di + 3] = gOrgAlphaUse ? ((v >>> 0) & 0xFF) : 0xFF;
+                        }
+                    }
+                }
+            } else {
+                for(let y = 0; y < gOrgHeight; y++) {
+                    const sy = (gOrgHeight - 1 - y);
+                    for(let x = 0; x < gOrgWidth; x++) {
+                        const v  = gOrgBufImg[x + sy * gOrgWidth];
+                        const di = (x + y * gOrgWidth) * 4;
+                        bgDst[di + 0] = (v >>> 24) & 0xFF;
+                        bgDst[di + 1] = (v >>> 16) & 0xFF;
+                        bgDst[di + 2] = (v >>>  8) & 0xFF;
+                        bgDst[di + 3] = gOrgAlphaUse ? ((v >>> 0) & 0xFF) : 0xFF;
+                    }
+                }
+            }
+        } else {
+            bgDst.set(gOrgBufImg);
+        }
+        gAtl.Frame().Ren().BuildTexture(bgTex);
+        gAtl.Frame().Res().Push("bufImg.tex", bgTex);
+        gBgImg = "bufImg.tex";
+    }
+
     // gOrgPaint 없으므로 항상 기본 CPaint2D 사용
     gTarPaint = gTexSub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex(), new CVec2(gOrgWidth, texHeight)));
-    gTarPaint.SetTexture(["check.tex", "tile.tex", ""]);
+    gTarPaint.SetTexture([gBgImg, "tile.tex", ""]);
     gTarPaint.ResetDecal(0);
-    gTarPaint.SetVFX(0, SDF.eVFX.DecalTexture, [gTarPaint.GetTexture().length - 2, 1, 0]);
 
     gAtl.Canvas("Buf").PushSub(gTexSub);
     gAtl.Frame().Dev().SetClearColor(true, new CVec4(0, 0, 0, 1));
@@ -355,6 +465,7 @@ function BufferClose()
     gOrgBuf      = null;
     gOrgDepth    = null;
     gOrgAlphaUse = null;
+    gOrgBufImg   = null;
 }
 
 var prevMouse : CMouse;
@@ -364,54 +475,100 @@ function BufferUpdate()
     let pos   = gAtl.Brush().GetCam2D().ScreenToWorld2DPoint(mouse.x, mouse.y);
 
     // 브러시 데칼
-    if(gTarPaint.GetTexture()[gTarPaint.GetTexture().length - 1] != gPRESETS[gSelectedTexIndex].Key())
+    if(gEyedropperMode)
     {
-        if(gAtl.Frame().Res().Find(gPRESETS[gSelectedTexIndex].Key()) == null) {
-            gAtl.Frame().Ren().BuildTexture(gPRESETS[gSelectedTexIndex]);
-            gAtl.Frame().Res().Push(gPRESETS[gSelectedTexIndex].Key(), gPRESETS[gSelectedTexIndex]);
-        }
-        gTarPaint.SetTexture(["check.tex", "tile.tex", gPRESETS[gSelectedTexIndex].Key()]);
+        gTarPaint.SetVFX(1, SDF.eVFX.None, [0, 0, 0, 0]);
     }
-    gTarPaint.SetVFX(1, SDF.eVFX.DecalTexture, [gTarPaint.GetTexture().length - 1, 1 - 0.5 * gBrushInvert, gBrushInvert]);
-    gTarPaint.ResetDecal(1, pos, new CVec3(gBrushSize, gBrushSize, 1000));
+    else
+    {
+        if(
+            gTarPaint.GetTexture()[0] != gBgImg ||
+            gTarPaint.GetTexture()[gTarPaint.GetTexture().length - 1] != gPRESETS[gSelectedTexIndex].Key()
+        )
+        {
+            if(gAtl.Frame().Res().Find(gPRESETS[gSelectedTexIndex].Key()) == null) {
+                gAtl.Frame().Ren().BuildTexture(gPRESETS[gSelectedTexIndex]);
+                gAtl.Frame().Res().Push(gPRESETS[gSelectedTexIndex].Key(), gPRESETS[gSelectedTexIndex]);
+            }
+            gTarPaint.SetTexture([gBgImg, "tile.tex", gPRESETS[gSelectedTexIndex].Key()]);
+        }
+        gTarPaint.SetVFX(0, SDF.eVFX.DecalTexture, [gTarPaint.GetTexture().length - 2, gBgTexBlendRatio, 0]);
+        gTarPaint.SetVFX(1, SDF.eVFX.DecalTexture, [gTarPaint.GetTexture().length - 1, 1 - 0.5 * gBrushInvert, gBrushInvert]);
+        gTarPaint.ResetDecal(1, pos, new CVec3(gBrushSize, gBrushSize, 1000));
+    }
+
 
     if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton))
     {
-        let strength = 0;
+        if(gEyedropperMode)
+        {
+            // 한 프레임에 한 번만 추출 (prevMouse 활용)
+            if(prevMouse == null) {
+                prevMouse = mouse.Export();
 
-        if(prevMouse == null) {
-            strength = 1;
+                // gTarTex 버퍼에서 픽셀 직접 읽기
+                const buf = gTarTex.GetBuf()[0];
+                if(buf != null) {
+                    const fmat = gTarPaint.GetBoundFMat();
+                    // world pos → texture pixel 좌표 변환
+                    const texW = gTarTex.GetWidth();
+                    const texH = gTarTex.GetHeight();
+
+                    // CPaint2D 의 bound는 [-0.5, 0.5] 정규화 → pixel 좌표
+                    const u = (pos.x / fmat.GetSize().x + 0.5);
+                    const v = (pos.y / fmat.GetSize().y + 0.5);
+                    const px = Math.floor(u * texW);
+                    const py = texH - 1 - Math.floor(v * texH);
+
+                    if(px >= 0 && px < texW && py >= 0 && py < texH) {
+                        const idx = (py * texW + px) * 4;
+                        gBrushColor.x = buf[idx + 0]; // R
+                        gBrushColor.y = buf[idx + 1]; // G
+                        gBrushColor.z = buf[idx + 2]; // B
+                        gBrushColor.w = buf[idx + 3]; // A
+                        UpdateColorPreview();
+                    }
+                }
+            }
         }
-        else {
-            const dx = prevMouse.x - mouse.x;
-            const dy = prevMouse.y - mouse.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            if(distance > 10) {
+        else
+        {
+            let strength = 0;
+
+            if(prevMouse == null) {
                 strength = 1;
             }
-        }
-
-        // 마우스 움직이고 있을 때만 그리기
-        if(strength > 0) {
-            prevMouse = mouse.Export();
-
-            // 텍스쳐 찍기( 각각 RGBA )
-            if(gBrushColorChannel.x > 0.5) {
-                CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 0, gBrushColor.x * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
-            }
-            if(gBrushColorChannel.y > 0.5) {
-                CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 1, gBrushColor.y * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
-            }
-            if(gBrushColorChannel.z > 0.5) {
-                CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 2, gBrushColor.z * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
-            }
-            if(gBrushColorChannel.w > 0.5) {
-                CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 3, gBrushColor.w * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
+            else {
+                const dx = prevMouse.x - mouse.x;
+                const dy = prevMouse.y - mouse.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if(distance > 10) {
+                    strength = 1;
+                }
             }
 
-            // 업데이트
-            gAtl.Frame().Ren().BuildTexture(gTarTex);
-        }
+            // 마우스 움직이고 있을 때만 그리기
+            if(strength > 0) {
+                prevMouse = mouse.Export();
+
+                // 텍스쳐 찍기( 각각 RGBA )
+                if(gBrushColorChannel.x > 0.5) {
+                    CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 0, gBrushColor.x * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
+                }
+                if(gBrushColorChannel.y > 0.5) {
+                    CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 1, gBrushColor.y * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
+                }
+                if(gBrushColorChannel.z > 0.5) {
+                    CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 2, gBrushColor.z * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
+                }
+                if(gBrushColorChannel.w > 0.5) {
+                    CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 3, gBrushColor.w * strength, gBrushDrawType, gPRESETS[gSelectedTexIndex]);
+                }
+
+                // 업데이트
+                gAtl.Frame().Ren().BuildTexture(gTarTex);
+            }
+        } // end else (draw mode)
     }
     else {
         prevMouse = null;
@@ -436,6 +593,8 @@ function PanelInit()
         gBrushColor        = new CVec4(255, 255, 255, 255);
         gBrushColorChannel = new CVec4(1, 1, 1, 1);
         gBrushInvert = 1;
+        gEyedropperMode = false;
+        gBgTexBlendRatio = 1;
 
         // 테스트용 기본 브러시
         const DRAW_FNS = [
@@ -455,7 +614,7 @@ function PanelInit()
 
         // 마스크로만 사용할거여서 BuildTexture는 하지 않음
         gPRESETS = DRAW_FNS.map(({ label, fn }) => {
-            CH5Canvas.Init(BAKE_SIZE, BAKE_SIZE);
+            CH5Canvas.Init(BAKE_SIZE, BAKE_SIZE, false, false);
             fn(BAKE_SIZE);
             CH5Canvas.Draw();
             const tex = CH5Canvas.GetNewTex();
@@ -504,13 +663,9 @@ function PanelInit()
             const cx = cw / 2, cy = ch / 2;
             const ctx = previewCanvas.getContext('2d');
 
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, cw, ch);
+            ctx.clearRect(0, 0, cw, ch);
 
             ctx.save();
-            ctx.beginPath();
-            ctx.arc(cx, cy, clipSize, 0, Math.PI * 2);
-            ctx.clip();
             ctx.translate(cx - clipSize, cy - clipSize);
             DrawPreview(ctx, preset, clipSize * 2, clipSize * 2, opacity);
             ctx.restore();
@@ -598,116 +753,113 @@ function PanelInit()
 
     // 컬러 인풋 업데이트
     {
-        const nativeColorPicker = document.getElementById('nativeColorPicker') as HTMLInputElement;
-        function ToHex2(n) {
-            return n.toString(16).toUpperCase().padStart(2, '0');
-        }
-        function UpdateColorPreview() {
-            const r = gBrushColor.x * gBrushColorChannel.x;
-            const g = gBrushColor.y * gBrushColorChannel.y;
-            const b = gBrushColor.z * gBrushColorChannel.z;
-            nativeColorPicker.value = `#${ToHex2(r)}${ToHex2(g)}${ToHex2(b)}`;
-        }
-
         // R 채널 이벤트
-        {
-            const rCheck      = document.getElementById('rCheck') as HTMLInputElement;
-            const rColorRange = document.getElementById('rRange') as HTMLInputElement;
-            const rColorNum   = document.getElementById('rNum') as HTMLInputElement;
-            const SetBrushColorR = val => {
-                val = Math.min(+rColorRange.max, Math.max(+rColorRange.min, +val));
-                gBrushColor.x = val; rColorRange.value = val; rColorNum.value = val;
-                UpdateColorPreview();
-            };
-            rColorRange.addEventListener('input', () => SetBrushColorR(rColorRange.value));
-            rColorNum.addEventListener('input',   () => SetBrushColorR(rColorNum.value));
-            rColorNum.addEventListener('keydown', e => {
-                if(e.key === 'ArrowUp')   SetBrushColorR(gBrushColor.x + 1);
-                if(e.key === 'ArrowDown') SetBrushColorR(gBrushColor.x - 1);
-            });
-            rCheck.addEventListener('change', () => {
-                gBrushColorChannel.x = rCheck.checked ? 1 : 0;
-                rColorRange.disabled = !rCheck.checked;
-                rColorNum.disabled   = !rCheck.checked;
-                UpdateColorPreview();
-            });
-            SetBrushColorR(gBrushColor.x);
-        }
+        const rCheck      = document.getElementById('rCheck') as HTMLInputElement;
+        const rColorRange = document.getElementById('rRange') as HTMLInputElement;
+        const rColorNum   = document.getElementById('rNum') as HTMLInputElement;
+        const SetBrushColorR = val => {
+            val = Math.min(+rColorRange.max, Math.max(+rColorRange.min, +val));
+            gBrushColor.x = val; rColorRange.value = val; rColorNum.value = val;
+            UpdateColorPreview();
+        };
+        rColorRange.addEventListener('input', () => SetBrushColorR(rColorRange.value));
+        rColorNum.addEventListener('input',   () => SetBrushColorR(rColorNum.value));
+        rColorNum.addEventListener('keydown', e => {
+            if(e.key === 'ArrowUp')   SetBrushColorR(gBrushColor.x + 1);
+            if(e.key === 'ArrowDown') SetBrushColorR(gBrushColor.x - 1);
+        });
+        rCheck.addEventListener('change', () => {
+            gBrushColorChannel.x = rCheck.checked ? 1 : 0;
+            rColorRange.disabled = !rCheck.checked;
+            rColorNum.disabled   = !rCheck.checked;
+            UpdateColorPreview();
+        });
+        SetBrushColorR(gBrushColor.x);
 
         // G 채널 이벤트
-        {
-            const gCheck      = document.getElementById('gCheck') as HTMLInputElement;
-            const gColorRange = document.getElementById('gRange') as HTMLInputElement;
-            const gColorNum   = document.getElementById('gNum') as HTMLInputElement;
-            const SetBrushColorG = val => {
-                val = Math.min(+gColorRange.max, Math.max(+gColorRange.min, +val));
-                gBrushColor.y = val; gColorRange.value = val; gColorNum.value = val;
-                UpdateColorPreview();
-            };
-            gColorRange.addEventListener('input', () => SetBrushColorG(gColorRange.value));
-            gColorNum.addEventListener('input',   () => SetBrushColorG(gColorNum.value));
-            gColorNum.addEventListener('keydown', e => {
-                if(e.key === 'ArrowUp')   SetBrushColorG(gBrushColor.y + 1);
-                if(e.key === 'ArrowDown') SetBrushColorG(gBrushColor.y - 1);
-            });
-            gCheck.addEventListener('change', () => {
-                gBrushColorChannel.y = gCheck.checked ? 1 : 0;
-                gColorRange.disabled = !gCheck.checked;
-                gColorNum.disabled   = !gCheck.checked;
-                UpdateColorPreview();
-            });
-            SetBrushColorG(gBrushColor.y);
-        }
+        const gCheck      = document.getElementById('gCheck') as HTMLInputElement;
+        const gColorRange = document.getElementById('gRange') as HTMLInputElement;
+        const gColorNum   = document.getElementById('gNum') as HTMLInputElement;
+        const SetBrushColorG = val => {
+            val = Math.min(+gColorRange.max, Math.max(+gColorRange.min, +val));
+            gBrushColor.y = val; gColorRange.value = val; gColorNum.value = val;
+            UpdateColorPreview();
+        };
+        gColorRange.addEventListener('input', () => SetBrushColorG(gColorRange.value));
+        gColorNum.addEventListener('input',   () => SetBrushColorG(gColorNum.value));
+        gColorNum.addEventListener('keydown', e => {
+            if(e.key === 'ArrowUp')   SetBrushColorG(gBrushColor.y + 1);
+            if(e.key === 'ArrowDown') SetBrushColorG(gBrushColor.y - 1);
+        });
+        gCheck.addEventListener('change', () => {
+            gBrushColorChannel.y = gCheck.checked ? 1 : 0;
+            gColorRange.disabled = !gCheck.checked;
+            gColorNum.disabled   = !gCheck.checked;
+            UpdateColorPreview();
+        });
+        SetBrushColorG(gBrushColor.y);
 
         // B 채널 이벤트
-        {
-            const bCheck      = document.getElementById('bCheck') as HTMLInputElement;
-            const bColorRange = document.getElementById('bRange') as HTMLInputElement;
-            const bColorNum   = document.getElementById('bNum') as HTMLInputElement;
-            const SetBrushColorB = val => {
-                val = Math.min(+bColorRange.max, Math.max(+bColorRange.min, +val));
-                gBrushColor.z = val; bColorRange.value = val; bColorNum.value = val;
-                UpdateColorPreview();
-            };
-            bColorRange.addEventListener('input', () => SetBrushColorB(bColorRange.value));
-            bColorNum.addEventListener('input',   () => SetBrushColorB(bColorNum.value));
-            bColorNum.addEventListener('keydown', e => {
-                if(e.key === 'ArrowUp')   SetBrushColorB(gBrushColor.z + 1);
-                if(e.key === 'ArrowDown') SetBrushColorB(gBrushColor.z - 1);
-            });
-            bCheck.addEventListener('change', () => {
-                gBrushColorChannel.z = bCheck.checked ? 1 : 0;
-                bColorRange.disabled = !bCheck.checked;
-                bColorNum.disabled   = !bCheck.checked;
-                UpdateColorPreview();
-            });
-            SetBrushColorB(gBrushColor.z);
-        }
+        const bCheck      = document.getElementById('bCheck') as HTMLInputElement;
+        const bColorRange = document.getElementById('bRange') as HTMLInputElement;
+        const bColorNum   = document.getElementById('bNum') as HTMLInputElement;
+        const SetBrushColorB = val => {
+            val = Math.min(+bColorRange.max, Math.max(+bColorRange.min, +val));
+            gBrushColor.z = val; bColorRange.value = val; bColorNum.value = val;
+            UpdateColorPreview();
+        };
+        bColorRange.addEventListener('input', () => SetBrushColorB(bColorRange.value));
+        bColorNum.addEventListener('input',   () => SetBrushColorB(bColorNum.value));
+        bColorNum.addEventListener('keydown', e => {
+            if(e.key === 'ArrowUp')   SetBrushColorB(gBrushColor.z + 1);
+            if(e.key === 'ArrowDown') SetBrushColorB(gBrushColor.z - 1);
+        });
+        bCheck.addEventListener('change', () => {
+            gBrushColorChannel.z = bCheck.checked ? 1 : 0;
+            bColorRange.disabled = !bCheck.checked;
+            bColorNum.disabled   = !bCheck.checked;
+            UpdateColorPreview();
+        });
+        SetBrushColorB(gBrushColor.z);
 
         // A 채널 이벤트
-        {
-            const aCheck      = document.getElementById('aCheck') as HTMLInputElement;
-            const aColorRange = document.getElementById('aRange') as HTMLInputElement;
-            const aColorNum   = document.getElementById('aNum') as HTMLInputElement;
-            const SetBrushColorA = val => {
-                val = Math.min(+aColorRange.max, Math.max(+aColorRange.min, +val));
-                gBrushColor.w = val; aColorRange.value = val; aColorNum.value = val;
-                UpdateColorPreview();
-            };
-            aColorRange.addEventListener('input', () => SetBrushColorA(aColorRange.value));
-            aColorNum.addEventListener('input',   () => SetBrushColorA(aColorNum.value));
-            aColorNum.addEventListener('keydown', e => {
-                if(e.key === 'ArrowUp')   SetBrushColorA(gBrushColor.w + 1);
-                if(e.key === 'ArrowDown') SetBrushColorA(gBrushColor.w - 1);
-            });
-            aCheck.addEventListener('change', () => {
-                gBrushColorChannel.w = aCheck.checked ? 1 : 0;
-                aColorRange.disabled = !aCheck.checked;
-                aColorNum.disabled   = !aCheck.checked;
-                UpdateColorPreview();
-            });
-            SetBrushColorA(gBrushColor.w);
-        }
+        const aCheck      = document.getElementById('aCheck') as HTMLInputElement;
+        const aColorRange = document.getElementById('aRange') as HTMLInputElement;
+        const aColorNum   = document.getElementById('aNum') as HTMLInputElement;
+        const SetBrushColorA = val => {
+            val = Math.min(+aColorRange.max, Math.max(+aColorRange.min, +val));
+            gBrushColor.w = val; aColorRange.value = val; aColorNum.value = val;
+            UpdateColorPreview();
+        };
+        aColorRange.addEventListener('input', () => SetBrushColorA(aColorRange.value));
+        aColorNum.addEventListener('input',   () => SetBrushColorA(aColorNum.value));
+        aColorNum.addEventListener('keydown', e => {
+            if(e.key === 'ArrowUp')   SetBrushColorA(gBrushColor.w + 1);
+            if(e.key === 'ArrowDown') SetBrushColorA(gBrushColor.w - 1);
+        });
+        aCheck.addEventListener('change', () => {
+            gBrushColorChannel.w = aCheck.checked ? 1 : 0;
+            aColorRange.disabled = !aCheck.checked;
+            aColorNum.disabled   = !aCheck.checked;
+            UpdateColorPreview();
+        });
+        SetBrushColorA(gBrushColor.w);
+
+        // hex
+        const hexInput = document.getElementById('hexInput') as HTMLInputElement;
+        hexInput.addEventListener('change', () => {
+            const hex = hexInput.value.trim().replace(/^#/, '');
+            if (!/^[0-9a-fA-F]{6,8}$/.test(hex)) { UpdateColorPreview(); return; }
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            const a = hex.length === 8 ? parseInt(hex.slice(6, 8), 16) : 255;
+            SetBrushColorR(r);
+            SetBrushColorG(g);
+            SetBrushColorB(b);
+            SetBrushColorA(a);
+            UpdateColorPreview();
+        });
     }
 
     // 그리기 타입 셀렉트 업데이트
@@ -717,4 +869,83 @@ function PanelInit()
             gBrushDrawType = +brushDrawTypeSelect.value;
         });
     }
+
+    // 스포이드 버튼
+    {
+        const eyedropperBtn    = document.getElementById('eyedropperBtn')    as HTMLButtonElement;
+        const eyedropperStatus = document.getElementById('eyedropperStatus') as HTMLSpanElement;
+
+        function SetEyedropperMode(active: boolean) {
+            gEyedropperMode = active;
+            if(active) {
+                eyedropperBtn.classList.replace('btn-outline-secondary', 'btn-warning');
+                eyedropperStatus.textContent = '활성 — 캔버스 클릭으로 색상 추출';
+            } else {
+                eyedropperBtn.classList.replace('btn-warning', 'btn-outline-secondary');
+                eyedropperStatus.textContent = '';
+            }
+        }
+
+        eyedropperBtn.addEventListener('click', () => {
+            SetEyedropperMode(!gEyedropperMode);
+        });
+    }
+
+    // 배경 이미지
+    {
+        function SetBgImg(_buffer) {
+            let index = 0, file = "";
+            while(true) {
+                file = `bgImg${index++}`;
+                if(gAtl.Frame().Res().Find(file) == null) break;
+            }
+            gAtl.Frame().Load().TextureLoad(file,_buffer,null).then(() => {
+                gBgImg = file;
+            });
+        }
+
+        const bgImgBtn = document.getElementById('bgImgBtn') as HTMLButtonElement;
+        bgImgBtn.addEventListener('click', () => {
+            CFile.Load().then(buffer => {
+                if(gAtl.Frame().IsInit() == false) {
+                    CChecker.Exe(async () => {
+                        if(gAtl.Frame().IsInit()) return false;
+                        return true;
+                    }).then(() => SetBgImg(buffer));
+                    return;
+                }
+                SetBgImg(buffer);
+            });
+        });
+
+        const blendRange = document.getElementById('blendRange') as HTMLInputElement;
+        const blendNum   = document.getElementById('blendNum') as HTMLInputElement;
+        const SetBlend = val => {
+            val = Math.min(+blendRange.max, Math.max(+blendRange.min, +val));
+            gBgTexBlendRatio = val; blendRange.value = val; blendNum.value = val;
+            UpdateColorPreview();
+        };
+        blendRange.addEventListener('input', () => SetBlend(blendRange.value));
+        blendNum.addEventListener('input',   () => SetBlend(blendNum.value));
+        blendNum.addEventListener('keydown', e => {
+            if(e.key === 'ArrowUp')   SetBlend(gBgTexBlendRatio + 0.1);
+            if(e.key === 'ArrowDown') SetBlend(gBgTexBlendRatio - 0.1);
+        });
+        SetBlend(gBgTexBlendRatio);
+    }
+}
+
+function UpdateColorPreview()
+{
+    const hexInput = document.getElementById('hexInput') as HTMLInputElement;
+    const nativeColorPicker = document.getElementById('nativeColorPicker') as HTMLInputElement;
+    function ToHex2(n) {
+        return n.toString(16).toUpperCase().padStart(2, '0');
+    }
+    const r = gBrushColor.x * gBrushColorChannel.x;
+    const g = gBrushColor.y * gBrushColorChannel.y;
+    const b = gBrushColor.z * gBrushColorChannel.z;
+    const a = gBrushColor.w * gBrushColorChannel.w;
+    hexInput.value = `#${ToHex2(r)}${ToHex2(g)}${ToHex2(b)}${ToHex2(a)}`;
+    nativeColorPicker.value = `#${ToHex2(r)}${ToHex2(g)}${ToHex2(b)}`;
 }

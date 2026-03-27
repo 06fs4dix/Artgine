@@ -125,9 +125,10 @@ export class CRenderPass extends CObject
 		ONE_MINUS_CONSTANT_ALPHA:32772,
 		SRC_ALPHA_SATURATE:776,
 	}
-	static eAlphaSort={
-		Normal:0,
-		Revers:1,
+	static ePaintSort={
+		None:0,
+		Normal:1,
+		Revers:-1,
 	};
 	public mDepthTest : boolean=null;
 	public mDepthWrite : boolean=null;
@@ -153,8 +154,11 @@ export class CRenderPass extends CObject
 	public mBlitRead="";
 	
 	public mLine=null;
-	public mSortRevers=false;
-	public mZEarly=true;
+	//public mCullDistance=null;
+	// public mSortRevers=false;
+	// public mZEarly=true;
+	//거리당 알파는 내림차순(멀리 있는거 부터), 논알파는 오름차순(가까이 있는거 부터)
+	public mPaintSort=CRenderPass.ePaintSort.Normal;
 	
 	public mBlend=[CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
 	public mTag=new Set<string>();

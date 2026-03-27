@@ -138,7 +138,11 @@ export class CComponent extends CObject
 		if(this.IsDestroy())	return false;
 		return this.mEnable;	
 	}
-	SetEnable(_val : boolean)	{	this.mEnable=_val;	}
+	SetEnable(_val : boolean)	
+	{	
+		this.mEnable=_val;	
+		if(this.mOwner!=null)		this.mOwner.UpdateComp();
+	}
 	//ClassEqual(_type)	{	return false;	}
 	IsDestroy()	
 	{	

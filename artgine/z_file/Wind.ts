@@ -75,18 +75,7 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
             speedFactor = dir;
         }
         
-        // noise는 반드시 -1 ~ 1사이로 나와야 함, 그 이상 나오는 계산이면 nor필요
-        // NoisePerlin2D 파라미터는 0 ~ 1범위임, 1 넘어가면 반복됨, 1.1은 0.1과 같은 값이 나옴
-        // var noise : CVec3 = new CVec3(
-        //     NoisePerlin2D(new CVec2(V3Dot(_objPos, speedFactor) / -wave, speedFactor.x * freq * _time)),
-        //     NoisePerlin2D(new CVec2(V3Dot(_objPos, speedFactor) / -wave, speedFactor.y * freq * _time)),
-        //     NoisePerlin2D(new CVec2(V3Dot(_objPos, speedFactor) / -wave, speedFactor.z * freq * _time))
-        // );
-        // var noise : CVec3 = new CVec3(
-        //     NoisePerlin2(new CVec2(_objPos.x / -wave, speedFactor.x * freq * _time)),
-        //     NoisePerlin2(new CVec2(_objPos.y / -wave, speedFactor.y * freq * _time)),
-        //     NoisePerlin2(new CVec2(_objPos.z / -wave, speedFactor.z * freq * _time))
-        // );
+      
         var windScale : number = -1.0 / wave;
         var timed : CVec3 = V3MulFloat(speedFactor, _time * freq * 0.5);    // 스케일이 작아져서 속도 비슷하게 맞추기 위해 0.5 곱해줌
         var noise : CVec3 = new CVec3(
@@ -94,6 +83,14 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
             NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.y, 0.0), SDF.eNoise.Perlin),
             NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.z, 0.0), SDF.eNoise.Perlin)
         );
+
+        // var windScale : number = -1.0 / wave;
+        // var timed : CVec3 = V3MulFloat(speedFactor, _time * freq * 0.5);    // 스케일이 작아져서 속도 비슷하게 맞추기 위해 0.5 곱해줌
+        // var noise : CVec3 = new CVec3(
+        //     NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale, timed.x, 0.0), SDF.eNoise.Perlin),
+        //     NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale + 3.7, timed.y, 0.0), SDF.eNoise.Perlin),
+        //     NoiseGet(new CVec3(V3Dot(_objPos, speedFactor) * windScale + 7.3, timed.z, 0.0), SDF.eNoise.Perlin)
+        // );
 
 
         // 0 ~ 1 범위에서 range 범위로 변환
@@ -125,18 +122,35 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
     return wind;
 }
 
-export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _time : number) : CVec4 
+// export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _weightIndex : CVec4, _time : number) : CVec4 
+// {
+//     if(windInfluence > 0.01) {
+//         var mainWeight : number = max(_weight.x, max(_weight.y, max(_weight.z, _weight.w)));
+//         if(mainWeight > 0.5) {
+//             var windSize : number = 100.0 * max(0.0, 2.0 * mainWeight - 1.0);
+//             var wind : CVec3 = GetWind(_worldPos.xyz, new CVec3(windSize, windSize, windSize), _time);
+//             _worldPos.x += wind.x;
+//             _worldPos.y += wind.y;
+//             _worldPos.z += wind.z;
+//         }
+//     }
+// 	return _worldPos;
+// }
+export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _weightIndex : CVec4, _time : number) : CVec4 
 {
-	if(_skin > 0.5)
-	{
-		if(windInfluence > 0.01) {
-            var mainWeight : number = _weight.x > 0.5 ? _weight.x : _weight.y;
+    if(windInfluence > 0.01) {
+        var mainWeight : number = max(_weight.x, max(_weight.y, max(_weight.z, _weight.w)));
+        if(mainWeight > 0.5) {
             var windSize : number = 100.0 * max(0.0, 2.0 * mainWeight - 1.0);
-			var wind : CVec3 = GetWind(_worldPos.xyz, new CVec3(windSize, windSize, windSize), _time);
-			_worldPos.x += wind.x;
-			_worldPos.y += wind.y;
-			_worldPos.z += wind.z;
-		}
-	}
+            var wind : CVec3 = GetWind(_worldPos.xyz, new CVec3(windSize, windSize, windSize), _time);
+            _worldPos.x += wind.x;
+            _worldPos.y += wind.y;
+            _worldPos.z += wind.z;
+
+            // ✅ 호(arc) 효과: XZ 이동량이 클수록 Y가 내려감
+            var arcDown : number = wind.x * wind.x + wind.z * wind.z;
+            _worldPos.y -= arcDown * 0.01;  // 계수는 튜닝
+        }
+    }
 	return _worldPos;
 }

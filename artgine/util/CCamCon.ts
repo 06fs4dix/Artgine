@@ -125,7 +125,7 @@ export class CCamCon extends CObject implements ICamCon
 		this.mMovX=0;
 		this.mMovY=0;
 
-        if(this.mLock==false)
+        if(this.mLock==false && this.mInput.GetUI()==null)
         {
             if(this.mInput.KeyDown(this.mRotKey) || this.mInput.KeyDown(this.mPosKey))
             {
@@ -346,7 +346,7 @@ export class CCamCon extends CObject implements ICamCon
 
 class CCamCon3D extends CCamCon
 {
-    InitCamera(_cam: CCamera): void {
+    override InitCamera(_cam: CCamera): void {
         super.InitCamera(_cam);
         
     }
@@ -354,7 +354,7 @@ class CCamCon3D extends CCamCon
 
 export class CCamCon3DFirstPerson extends CCamCon3D
 {
-    Update(_update : CUpdate): void
+    override Update(_update : CUpdate): void
     {
         super.Update(_update);
         if(this.mReset==false) return;
@@ -393,7 +393,7 @@ export class CCamCon3DThirdPerson extends CCamCon3D
     SetZoom(_zoom : number) {
         this.mSZoom = _zoom;
     }
-    Update(_update : CUpdate): void
+    override Update(_update : CUpdate): void
     {
         super.Update(_update);
 
@@ -421,7 +421,7 @@ export class CCamCon3DThirdPerson extends CCamCon3D
 
 class CCamCon2D extends CCamCon
 {
-    InitCamera(_cam: CCamera): void {
+    override InitCamera(_cam: CCamera): void {
         if(_cam.mOrthographic==false) { 
             CAlert.E("not orthographic cam!");
         }
@@ -439,7 +439,7 @@ class CCamCon2D extends CCamCon
 
 export class CCamCon2DFreeMove extends CCamCon2D
 {
-    Update(_update : CUpdate): void
+    override Update(_update : CUpdate): void
     {
         super.Update(_update);
         if(this.mReset==false) return;
@@ -489,7 +489,7 @@ export class CCamCon2DFollow extends CCamCon2D
         
         return super.IsShould(_member, _type);
     }
-    Update(_update : CUpdate): void
+    override Update(_update : CUpdate): void
     {
         super.Update(_update);
 

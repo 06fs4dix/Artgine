@@ -681,7 +681,7 @@ export class CReflector2D extends CBrushComp
             // rp.mShaderAttr.push(new CShaderAttr("waterProjectMat", new CMat()));
             rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
-            rp.mSortRevers=true;
+            //rp.mSortRevers=true;
             rp.mCullFace = CRenderPass.eCull.None;
             //rp.PushOr(new CCondition("class","==","CPaint2D"));
             rp.PushOr(new CCondition("class","==","CShadowPlane"));
@@ -698,7 +698,7 @@ export class CReflector2D extends CBrushComp
             //rp.mCopy = false;
             //rp.mCamera="WaterCam";
             rp.SetKey("rp3");
-            rp.mSortRevers=true;
+            //rp.mSortRevers=true;
             rp.mCullFace = CRenderPass.eCull.None;
             //rp.PushOr(new CCondition("class","==","CPaint2D"));
             rp.PushOr(new CCondition("class","==","CShadowPlane"));

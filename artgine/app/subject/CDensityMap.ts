@@ -54,6 +54,7 @@ export class CDensityInfo extends CObject implements IMapLabel
     mSca : CSampler<CVec3>=null;
     mRot : CSampler<CVec3>=null;
     mColliderLayer : string=null;
+    mPaintTag=new Array<string>();
     mRes="";
 }
 export class CDensityInfo2D extends CDensityInfo
@@ -79,18 +80,18 @@ export class CDensityMap extends CSubject
 {
     mBuf : CMapBuf=new CMapBuf();
     mDensityArr =new Array<CDensityInfo>();
-    mDiv : number = 2;  // 청크 분할 수 (1=단일, 2=2×2=4청크, 4=4×4=16청크)
+    mDiv : number = 64;  // 청크 분할 수 (1=단일, 2=2×2=4청크, 4=4×4=16청크)
 
     PushDensityInfo<T extends CDensityInfo>(_density : T)
     {
         this.mDensityArr.push(_density);
         return _density;
     }
+
     override Update(_update : CUpdate)
     {
         if(this.FindComp(CPaint) != null) return;
 
-        // 리소스 로드 체크
         for(let density of this.mDensityArr)
         {
             if(this.GetFrame().Res().Find(density.mRes)==null)
@@ -103,11 +104,6 @@ export class CDensityMap extends CSubject
         const worldW = this.mBuf.mCount.x * this.mBuf.mSize;
         const worldH = this.mBuf.mCount.y * this.mBuf.mSize;
 
-        const div       = Math.max(1, this.mDiv);
-        const chunkW    = worldW / div;
-        const chunkH    = worldH / div;
-        const chunkCount = div * div;
-
         for(let density of this.mDensityArr)
         {
             const cellW = density.mSize.x;
@@ -117,12 +113,17 @@ export class CDensityMap extends CSubject
             const countX = Math.floor(worldW / cellW);
             const countY = Math.floor(worldH / cellH);
 
+            // CVoxelMap 방식: mDiv = 청크당 cell 수
+            const div    = Math.max(1, this.mDiv);
+            const cntX   = Math.ceil(countX / div);
+            const cntY   = Math.ceil(countY / div);
+            const chunkCount = cntX * cntY;
+
             const targetRGB = (density.mColor & 0xFFFFFF00) >>> 0;
 
-            // 청크별 배열
-            const matLists  : CMat[][]    = Array.from({length: chunkCount}, () => []);
-            const codiLists : CVec4[][]   = Array.from({length: chunkCount}, () => []);
-            const meshLists : string[][]  = Array.from({length: chunkCount}, () => []);
+            const matLists  : CMat[][]   = Array.from({length: chunkCount}, () => []);
+            const codiLists : CVec4[][]  = Array.from({length: chunkCount}, () => []);
+            const meshLists : string[][] = Array.from({length: chunkCount}, () => []);
 
             let scale    = CPoolGeo.ProductV3();
             let rotation = CPoolGeo.ProductV3();
@@ -144,29 +145,51 @@ export class CDensityMap extends CSubject
             {
                 for(let cy = 0; cy < countY; cy++)
                 {
-                    // 셀 중심 월드 좌표
                     const worldX = (cx + 0.5) * cellW;
                     const worldY = (cy + 0.5) * cellH;
 
-                    // 버퍼 인덱스 변환
-                    const bx = Math.floor(worldX / this.mBuf.mSize);
-                    const by = Math.floor(worldY / this.mBuf.mSize);
+                    // const bx = Math.floor(worldX / this.mBuf.mSize);
+                    // const by = Math.floor(worldY / this.mBuf.mSize);
 
-                    const idx = new CCIndex(bx, by, 0);
-                    if(this.mBuf.IndexOut(idx)) continue;
+                    // const idx = new CCIndex(bx, by, 0);
+                    // if(this.mBuf.IndexOut(idx)) continue;
 
-                    const rgb = this.mBuf.RGB(idx) as number;
-                    if(rgb !== targetRGB) continue;
+                    // const rgb = this.mBuf.RGB(idx) as number;
+                    // if(rgb !== targetRGB) continue;
 
-                    // 청크 인덱스 결정
-                    const chunkX   = Math.min(Math.floor(worldX / chunkW), div - 1);
-                    const chunkY   = Math.min(Math.floor(worldY / chunkH), div - 1);
-                    const chunkIdx = chunkX + chunkY * div;
+                    // 변경: 셀이 커버하는 픽셀 범위 전체 체크
+                    const bx0 = Math.floor((cx * cellW) / this.mBuf.mSize);
+                    const by0 = Math.floor((cy * cellH) / this.mBuf.mSize);
 
-                    let pos = new CVec3(worldX, worldY, 0);
+                    // const bx1 = Math.min(Math.ceil(((cx+1) * cellW) / this.mBuf.mSize), this.mBuf.mCount.x - 1);
+                    // const by1 = Math.min(Math.ceil(((cy+1) * cellH) / this.mBuf.mSize), this.mBuf.mCount.y - 1);
+
+
+                    // 올바른 - -1 해야 셀 경계 안쪽까지만 포함
+                    const bx1 = Math.min(Math.ceil(((cx+1) * cellW) / this.mBuf.mSize) - 1, this.mBuf.mCount.x - 1);
+                    const by1 = Math.min(Math.ceil(((cy+1) * cellH) / this.mBuf.mSize) - 1, this.mBuf.mCount.y - 1);
+
+                    let found = false;
+                    for(let by=by0; by<=by1 && !found; by++)
+                    for(let bx=bx0; bx<=bx1 && !found; bx++)
+                    {
+                        const idx = new CCIndex(bx, by, 0);
+                        if(this.mBuf.IndexOut(idx)) continue;
+                        if((this.mBuf.RGB(idx) as number) === targetRGB) found = true;
+                    }
+                    if(!found) continue;
+
+                    // CVoxelMap과 동일: cell 인덱스 기반 청크 결정
+                    const chunkX   = Math.min(Math.floor(cx / div), cntX - 1);
+                    const chunkY   = Math.min(Math.floor(cy / div), cntY - 1);
+                    const chunkIdx = chunkX + chunkY * cntX;
+
+                    let pos = new CVec3();
 
                     if(density instanceof CDensityInfo2D)
                     {
+                        pos.x=worldX;
+                        pos.y=worldY;
                         let SamScale = new CVec3(1,1,1);
                         if(density.mSca != null) SamScale = density.mSca.Excute();
                         let rot = new CVec3();
@@ -184,6 +207,8 @@ export class CDensityMap extends CSubject
                     }
                     else
                     {
+                        pos.x=worldX;
+                        pos.z=worldY;
                         let rot = new CVec3();
                         if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Excute(), pos);
                         if(density.mSca != null) scale.Import(density.mSca.Excute());
@@ -208,7 +233,7 @@ export class CDensityMap extends CSubject
 
                     if(density.mColliderLayer != null)
                     {
-                        const mList  = matLists[chunkIdx];
+                        const mList   = matLists[chunkIdx];
                         const lastMat = mList[mList.length - 1];
 
                         let cl = new CCollider();
@@ -227,25 +252,30 @@ export class CDensityMap extends CSubject
             CPoolGeo.RecycleV3(scale);
             CPoolGeo.RecycleV3(rotation);
 
-            // 청크별 컴포넌트 생성
+            let ptMerge : CPaint;
             for(let ci = 0; ci < chunkCount; ci++)
             {
                 if(matLists[ci].length == 0) continue;
 
                 if(density instanceof CDensityInfo2D)
                 {
-                    const ptMerge = new CPaint2DMerge(density.mRes, matLists[ci], codiLists[ci]);
-                    ptMerge.SetYSort(density.mYSort);
-                    if(density.mWind > 0) ptMerge.Wind(density.mWind);
-                    this.PushComp(ptMerge);
+                    const ptMerge2D = new CPaint2DMerge(density.mRes, matLists[ci], codiLists[ci]);
+                    ptMerge2D.SetYSort(density.mYSort);
+                    if(density.mWind > 0) ptMerge2D.Wind(density.mWind);
+                    this.PushComp(ptMerge2D);
+                    ptMerge=ptMerge2D;
                 }
                 else
                 {
-                    const ptMerge = new CPaint3DMerge(meshLists[ci], matLists[ci]);
-                    this.PushComp(ptMerge);
+                    const ptMerge3D = new CPaint3DMerge(meshLists[ci], matLists[ci]);
+                    if(density.mWind > 0) ptMerge3D.Wind(density.mWind);
+                    this.PushComp(ptMerge3D);
+                    ptMerge=ptMerge3D;
                 }
+                for(let tag of density.mPaintTag)
+                    ptMerge.PushTag(tag);
             }
-        }
+        }//density
     }
     override SetPos(_pos : CVec3,_reset=true)
     {

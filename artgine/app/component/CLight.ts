@@ -269,7 +269,9 @@ export class CLight extends CBrushComp
 					let scam0=this.mBruch.GetCamera(this.mTexKey+0);
 					let scam1=this.mBruch.GetCamera(this.mTexKey+1);
 					let scam2=this.mBruch.GetCamera(this.mTexKey+2);
-					
+					scam0.mShadow=true;
+					scam1.mShadow=true;
+					scam2.mShadow=true;
 					
 					let cam=this.mBruch.GetCam3D();
 					var width=2000*this.mShadowDistance;

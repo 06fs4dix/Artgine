@@ -288,16 +288,16 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 						
 
 
-					if(pt.IsAlphaState()==false)
+					if(pt.IsAlphaState()==true || (cam.IsOrthographic() && cam.mShadow==false))
 					{
-						renPri.mDistanceList.Push(renPt);
-					}
-					else
-					{
-						if(rp.mSortRevers)
+						if(rp.mPaintSort==CRenderPass.ePaintSort.Revers)
 							renPri.mRAlphaList.Push(renPt);
 						else
 							renPri.mAlphaList.Push(renPt);
+					}
+					else
+					{
+						renPri.mDistanceList.Push(renPt);
 					}
 					
 						
@@ -928,4 +928,5 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 
 import CCanvas_imple from "../../app_imple/canvas/CCanvas.js";
+import { CRenderPass } from "../../render/CRenderPass.js";
 CCanvas_imple();

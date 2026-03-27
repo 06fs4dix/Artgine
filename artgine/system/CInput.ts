@@ -128,6 +128,8 @@ export class CInput
 	public mDragState=CInput.eDragState.None;
 	public mRay : Array<CRay>=new Array();
 	public mFocus=true;
+	public mUIB=null;
+	public mUIA=null;
 	public mPadAxes = [new CVec3(), new CVec3()];
 	public mDragBox : HTMLDivElement=null;
 	public mHandle : HTMLElement=null;
@@ -181,6 +183,16 @@ export class CInput
 	SetFocus(_focus : boolean){	
 		if(this.mFocus!=_focus)
 			this.mFocus=_focus;	
+	}
+	SetUI(_obj)
+	{	
+		if(this.mUIB!=null)	this.mUIB=_obj;	
+	}
+	GetUI()	{
+		if(this.mUIB!=null)	return this.mUIB;	
+		if(this.mUIA!=null)	return this.mUIA;	
+
+		return null;
 	}
 	SetRay(_rayArray : Array<CRay>)	{	this.mRay=_rayArray;}
 	Ray()	{	return this.mRay;	}

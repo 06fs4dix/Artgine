@@ -176,12 +176,7 @@ export class CPaint3D extends CPaint
 			}
 			if(sChk)
 				this.mRenderPass.push(new CRPAuto(this.mOwner.GetFrame().Pal().Sl3D().mKey));
-		}
-		// if(this.mMesh=="")
-		// {
-		// 	this.mMesh=this.GetOwner().GetFrame().Pal().GetBoxMesh();
-		// }
-			
+		}	
 	}
 	//SetPivot(_pivot)	{	this.m_pivot=_pivot;	}
 	SetWeightMat(_off,_tar : CMat)
@@ -653,9 +648,12 @@ export class CPaint3DMerge extends CPaint
 	mMeshList : Array<string>;
 	mMatList : Array<CMat>;
 	mMeshDataNode=new CMeshDataNode();
+    mWeightMat : Float32Array;
+    mWeightMatArr : CMat[] = [];
 	mHash="";
 	public mCenterPos=false;
 	public mTargetScale=0;
+    mWindInfluence : CVec1 = new CVec1(0.0);
 	override IsShould(_member: string, _type: CObject.eShould): boolean {
 		if(_member=="mMeshDataNode")	return false;
 		return super.IsShould(_member,_type);
@@ -694,7 +692,9 @@ export class CPaint3DMerge extends CPaint
 			let mesh=this.GetOwner().GetFrame().Res().Find(this.mMeshList[i]) as CMesh;
 			this.mHash+=this.mMeshList[i];
 			this.mHash+=this.mMatList[i].ToStr();
-			this.Merge(this.mMatList[i],mesh,mesh.meshTree,this.mMeshDataNode.ci,this.mBound);
+
+            const calcSkinMat = this.SkinCalc(new CMat(), mesh, mesh.meshTree);
+            this.Merge(this.mMatList[i], mesh, mesh.meshTree, this.mMeshDataNode.ci, this.mBound, calcSkinMat);
 
 		}
 		this.mHash=CHash.HashCode(this.mHash)+"";
@@ -712,41 +712,91 @@ export class CPaint3DMerge extends CPaint
 		this.mOwner.GetFrame().BMgr().BatchOn();
 		this.Common(_vf);
 
-		
-		let wsa=new CShaderAttr("worldMat", this.mLMat);
+        let wsa=new CShaderAttr("worldMat", this.GetFMat());
+		switch(this.mWorldMatType)
+		{
+			case CMat.eType.Short2D:	wsa.mKey="worldMatShort";	break;
+		}
+		wsa.mType=this.mWorldMatType;
+		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("worldMatType",new CVec1(this.mWorldMatType)));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
 		if (_vf.mUniform.get("material") != null)
 		{
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("material", this.mMaterial));
 		}
+        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("weightArrMat",16,this.mWeightMat));
+        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("skin", SDF.eSkin.None));
+        if(_vf.mUniform.get("windInfluence")!=null)
+			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
 		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.mHash,_vf,this.mMeshDataNode.ci);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
 		barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
 	}
-	Merge(_PMat : CMat,_mesh : CMesh,_node : CTree<CMeshDataNode>,_ci : CMeshCreateInfo,_bound : CBound)
-	{
-		let LMat=CMath.MatScale(_node.mData.sca);
-		CMath.MatMul(LMat,CMath.MatRotation(_node.mData.rot),LMat);
-		LMat.SetV3(3,_node.mData.pos);
-		let LPMat=CMath.MatMul(LMat,_PMat);
-		if(_node.mData.ci!=null)
-		{
-			//let bound=new CBound();
-			let tvb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position);
-			let tub=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.UV);
-			let tnb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
-			let ttb=_node.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
 
+    Wind(_influence: number) 
+	{
+		this.PushTag("wind");
+		this.mWindInfluence.x = _influence;
+	}
+    SkinCalc(_PMat : CMat,_tMesh : CMesh,_tNode : CTree<CMeshDataNode>,_skinMatList : CMat[] = new Array(_tMesh.skin.length))
+    {
+        // 복사할 메시의 로컬 매트릭스 LMat
+		let LMat=CMath.MatScale(_tNode.mData.sca);
+		if(_tNode.mData.rot.w >= 100000)    // euler
+            CMath.MatMul(LMat,CMath.MatRotation(_tNode.mData.rot),LMat);
+        else
+            CMath.MatMul(LMat,CMath.QutToMat(_tNode.mData.rot),LMat);
+		LMat.SetV3(3,_tNode.mData.pos);
+
+        let LPMat=CMath.MatMul(LMat,_PMat);
+
+        for(let i = 0; i < _tMesh.skin.length; i++)
+        {
+            if(_tNode.mData.IsSkinKey(_tMesh.skin[i].key)) {
+                _skinMatList[i] = CMath.MatMul(_tMesh.skin[i].mat, LPMat);
+            }
+        }
+        if(_tNode.mColleague!=null)
+			this.SkinCalc(_PMat,_tMesh,_tNode.mColleague,_skinMatList);
+		if(_tNode.mChild!=null)
+			this.SkinCalc(LPMat,_tMesh,_tNode.mChild,_skinMatList);
+
+        return _skinMatList;
+    }
+	Merge(_PMat : CMat,_tMesh : CMesh,_tNode : CTree<CMeshDataNode>,_oCI : CMeshCreateInfo,_bound : CBound,_skinMatList : CMat[])
+	{
+        // 복사할 메시의 로컬 매트릭스 LMat
+		let LMat=CMath.MatScale(_tNode.mData.sca);
+		if(_tNode.mData.rot.w >= 100000)    // euler
+            CMath.MatMul(LMat,CMath.MatRotation(_tNode.mData.rot),LMat);
+        else
+            CMath.MatMul(LMat,CMath.QutToMat(_tNode.mData.rot),LMat);
+		LMat.SetV3(3,_tNode.mData.pos);
+
+        // 월드 매트릭스 PMat을 곱해 FMat처럼 사용
+		let LPMat=CMath.MatMul(LMat,_PMat);
+
+        // 메시가 존재함
+		if(_tNode.mData.ci!=null)
+		{
+            // 복사할 메시의 정점 정보
+			let tvb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Position);
+			let tub=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.UV);
+			let tnb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+			let ttb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            let tweb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight);
+            let twib=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+
+            // 텍스쳐 복사
 			let texOff=[];
-			for(let tex of _mesh.texture)
+            for(let ttexOff of _tNode.mData.textureOff)
 			{
-				
 				let push=true;
 				for(let i=0;i<this.mTextureKey.length;++i)
 				{
-					if(this.mTextureKey[i]==tex)
+					if(this.mTextureKey[i]==_tMesh.texture[ttexOff])
 					{
 						push=false;
 						texOff.push(i);
@@ -756,41 +806,49 @@ export class CPaint3DMerge extends CPaint
 				if(push)
 				{
 					texOff.push(this.mTextureKey.length);
-					this.mTextureKey.push(tex);
-				}	
-				
+					this.mTextureKey.push(_tMesh.texture[ttexOff]);
+				}
 			}
 			
-
-			
-
-
-			let ovb=_ci.GetVFType(CVertexFormat.eIdentifier.Position);
-			let oub=_ci.GetVFType(CVertexFormat.eIdentifier.UV);
-			let onb=_ci.GetVFType(CVertexFormat.eIdentifier.Normal);
-			let otb=_ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            // 복사받을 메시의 정점 정보
+			let ovb=_oCI.GetVFType(CVertexFormat.eIdentifier.Position);
+			let oub=_oCI.GetVFType(CVertexFormat.eIdentifier.UV);
+			let onb=_oCI.GetVFType(CVertexFormat.eIdentifier.Normal);
+			let otb=_oCI.GetVFType(CVertexFormat.eIdentifier.TexOff);
+            let oweb=_oCI.GetVFType(CVertexFormat.eIdentifier.Weight);
+            let owib=_oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
 			if(ovb.length==0)
 			{
-				_ci.Create(CVertexFormat.eIdentifier.Position);
-				ovb=_ci.GetVFType(CVertexFormat.eIdentifier.Position);
+				_oCI.Create(CVertexFormat.eIdentifier.Position);
+				ovb=_oCI.GetVFType(CVertexFormat.eIdentifier.Position);
 			}
 			if(oub.length==0)
 			{
-				_ci.Create(CVertexFormat.eIdentifier.UV);
-				oub=_ci.GetVFType(CVertexFormat.eIdentifier.UV);
+				_oCI.Create(CVertexFormat.eIdentifier.UV);
+				oub=_oCI.GetVFType(CVertexFormat.eIdentifier.UV);
 			}
 			if(onb.length==0)
 			{
-				_ci.Create(CVertexFormat.eIdentifier.Normal);
-				onb=_ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+				_oCI.Create(CVertexFormat.eIdentifier.Normal);
+				onb=_oCI.GetVFType(CVertexFormat.eIdentifier.Normal);
 			}
 			if(otb.length==0)
 			{
-				_ci.Create(CVertexFormat.eIdentifier.TexOff);
-				otb=_ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
+				_oCI.Create(CVertexFormat.eIdentifier.TexOff);
+				otb=_oCI.GetVFType(CVertexFormat.eIdentifier.TexOff);
+			}
+            if(oweb.length==0)
+			{
+				_oCI.Create(CVertexFormat.eIdentifier.Weight);
+				oweb=_oCI.GetVFType(CVertexFormat.eIdentifier.Weight);
+			}
+            if(owib.length==0)
+			{
+				_oCI.Create(CVertexFormat.eIdentifier.WeightIndex);
+				owib=_oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
 			}
 
-
+            // 버텍스 복사
 			for(let i=0;i<tvb[0].bufF.Size(3);++i)
 			{
 				let v=tvb[0].bufF.V3(i);
@@ -798,76 +856,110 @@ export class CPaint3DMerge extends CPaint
 				let n=tnb[0].bufF.V3(i);
 				let t=ttb[0].bufF.V3(i);
 
-				//bound.InitBound(v);
-
-				//v=CMath.V3MulMatCoordi(v,LPMat);
-				//_bound.InitBound(v);
+                // 정점 포지션
 				ovb[0].bufF.Push(v);
 				oub[0].bufF.Push(u);
 				onb[0].bufF.Push(n);
+
+                // 텍스쳐 오프셋
 				let toff=new CVec3(-1,-1,-1);
 				if(t.x!=-1)	toff.x=texOff[t.x];
 				if(t.y!=-1)	toff.y=texOff[t.y];
 				if(t.z!=-1)	toff.z=texOff[t.z];
 				otb[0].bufF.Push(toff);
-			}
-			let mat=new CMat();
-			
-			if(this.mTargetScale!=0)
-			{
-				let size=_node.mData.ci.bound.GetSize();
-				let maxSize=CMath.Max(CMath.Max(size.x,size.y),size.z);
-				mat.mF32A[0]=this.mTargetScale/maxSize;
-				mat.mF32A[5]=this.mTargetScale/maxSize;
-				mat.mF32A[10]=this.mTargetScale/maxSize;
-			}
-			if(this.mCenterPos)
-			{
-				let center=_node.mData.ci.bound.GetCenter();
-				mat.mF32A[12]=center.x*mat.mF32A[0];
-				mat.mF32A[13]=center.y*mat.mF32A[5];
-				mat.mF32A[14]=center.z*mat.mF32A[10];
-				//mat.SetV3(3,CMath.V3MulFloat(bound.GetCenter(),-1))
-			}
-				
-			mat.UnitCheck();
-			LPMat=CMath.MatMul(mat,LPMat);
-			let tempv=new CVec3();
 
-			for(let i=_ci.vertexCount;i<ovb[0].bufF.Size(3);++i)
-			{
-				let v=ovb[0].bufF.V3(i);
-			
-				CMath.V3MulMatCoordi(v,LPMat,tempv);
-				//_bound.InitBound(tempv);
-				ovb[0].bufF.X3(i,tempv.x);
-				ovb[0].bufF.Y3(i,tempv.y);
-				ovb[0].bufF.Z3(i,tempv.z);
+                // we 있으면 복사
+                if(tweb.length > 0) {
+                    let we=tweb[0].bufF.V4(i);
+                    let wi=twib[0].bufF.V4(i);
+
+                    oweb[0].bufF.Push(we);
+                    owib[0].bufF.Push(wi);
+                }
+
+                // we 없으면 새로 생성
+                else {
+                    oweb[0].bufF.Push(new CVec4(0, 0, 0, 0));
+                    owib[0].bufF.Push(new CVec4(0, 0, 0, 0));
+                }
 			}
-			
-			
-			let tiv=_node.mData.ci.index;
+
+            // mTargetScale, mCenterPos 추가된 매트릭스
+            let mat=new CMat();
+            if(this.mTargetScale!=0)
+            {
+                let size=_tNode.mData.ci.bound.GetSize();
+                let maxSize=CMath.Max(CMath.Max(size.x,size.y),size.z);
+                mat.mF32A[0]=this.mTargetScale/maxSize;
+                mat.mF32A[5]=this.mTargetScale/maxSize;
+                mat.mF32A[10]=this.mTargetScale/maxSize;
+            }
+            if(this.mCenterPos)
+            {
+                let center=_tNode.mData.ci.bound.GetCenter();
+                mat.mF32A[12]=center.x*mat.mF32A[0];
+                mat.mF32A[13]=center.y*mat.mF32A[5];
+                mat.mF32A[14]=center.z*mat.mF32A[10];
+            }
+            mat.UnitCheck();
+            LPMat=CMath.MatMul(mat,LPMat);
+
+            // skin mat 적용
+            if(tweb.length > 0) {
+                let tempv=new CVec3();
+                for(let i=0;i<tvb[0].bufF.Size(3);++i)
+                {
+                    let we=tweb[0].bufF.V4(i);
+                    let wi=twib[0].bufF.V4(i);
+                    let v=ovb[0].bufF.V3(_oCI.vertexCount + i);
+
+                    if(we.x+we.y+we.z+we.w>0.0)
+                    {
+                        var SkinMat = CMath.MatMulFloat(_skinMatList[wi.x], we.x);
+                        SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[wi.y], we.y), SkinMat);
+                        SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[wi.z], we.z), SkinMat);
+                        SkinMat = CMath.MatAdd(CMath.MatMulFloat(_skinMatList[wi.w], we.w), SkinMat);
+
+                        CMath.V3MulMatCoordi(v,SkinMat,tempv);
+                        ovb[0].bufF.X3(_oCI.vertexCount + i,tempv.x);
+                        ovb[0].bufF.Y3(_oCI.vertexCount + i,tempv.y);
+                        ovb[0].bufF.Z3(_oCI.vertexCount + i,tempv.z);
+                    }
+                }
+            }
+            
+            // 추가된 버텍스에 매트릭스 적용
+            let tempv=new CVec3();
+            for(let i=_oCI.vertexCount;i<ovb[0].bufF.Size(3);++i)
+            {
+                let v=ovb[0].bufF.V3(i);
+            
+                CMath.V3MulMatCoordi(v,LPMat,tempv);
+                ovb[0].bufF.X3(i,tempv.x);
+                ovb[0].bufF.Y3(i,tempv.y);
+                ovb[0].bufF.Z3(i,tempv.z);
+            }
+
+			// 인덱스 복사
+			let tiv=_tNode.mData.ci.index;
 			for(let i=0;i<tiv.length;++i)
 			{
-				//CMath.V3MulMatCoordi(v,LPMat,tempv);
-				_bound.InitBound(ovb[0].bufF.V3(tiv[i]+_ci.vertexCount));
-				
-				
-				_ci.index.push(tiv[i]+_ci.vertexCount);
+                _bound.InitBound(ovb[0].bufF.V3(tiv[i]+_oCI.vertexCount));
+				_oCI.index.push(tiv[i]+_oCI.vertexCount);
 			}
-			_ci.vertexCount+=_node.mData.ci.vertexCount;
-			_ci.indexCount+=_node.mData.ci.indexCount;
+
+            // 버텍스 카운트, 인덱스 카운트에 추가된 수량만큼 추가
+			_oCI.vertexCount+=_tNode.mData.ci.vertexCount;
+			_oCI.indexCount+=_tNode.mData.ci.indexCount;
 
 		}
-		if(_node.mColleague!=null)
-			this.Merge(_PMat,_mesh,_node.mColleague,_ci,_bound);
-		if(_node.mChild!=null)
-			this.Merge(LPMat,_mesh,_node.mChild,_ci,_bound);
-		
-
+		if(_tNode.mColleague!=null)
+			this.Merge(_PMat,_tMesh,_tNode.mColleague,_oCI,_bound,_skinMatList);
+		if(_tNode.mChild!=null)
+			this.Merge(LPMat,_tMesh,_tNode.mChild,_oCI,_bound,_skinMatList);
 		
 	}
-	
+    
 	override EmptyRPChk()
 	{
 		if(this.mRenderPass.length==0)

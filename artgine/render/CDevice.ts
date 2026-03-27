@@ -134,6 +134,10 @@ export class CDevice
 
         HalfFloat:9,
 	}
+	//2060 Super : BenchmarkScore: 142  ALU:89ms  FILL:81ms  GEO:27ms
+	//se2 : BenchmarkScore: 8  ALU:1837ms  FILL:1141ms  GEO:191ms
+	//1050 ti : BenchmarkScore: 55  ALU:270ms  FILL:175ms  GEO:51ms
+	async BenchmarkScore() : Promise<number>{	return null;	}
     
 }
 export class CDeviceGL extends CDevice
@@ -405,6 +409,153 @@ export class CDeviceGL extends CDevice
 			//this.m_drawType=this.GL().LINES;
 			this.mDrawType=this.GL().LINE_STRIP;
 			//this.m_drawType=this.GL().LINE_LOOP;
+	}
+	// ── 실측 벤치마크 ────────────────────────────────────────────────
+	// gl.finish()로 GPU 완료를 동기화해서 실제 처리량을 측정한다.
+	// 각 테스트는 고정 workload를 반복하고 경과 ms를 읽는다.
+	// 점수 = workload / ms → 상한 없음, 빠를수록 높다.
+	private _BenchMakeProgram(_vs : string, _fs : string) : WebGLProgram
+	{
+		const gl=this.GL();
+		const vs=gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vs,_vs);	gl.compileShader(vs);
+		const fs=gl.createShader(gl.FRAGMENT_SHADER);
+		gl.shaderSource(fs,_fs);	gl.compileShader(fs);
+		const prog=gl.createProgram();
+		gl.attachShader(prog,vs);	gl.attachShader(prog,fs);
+		gl.linkProgram(prog);
+		gl.deleteShader(vs);		gl.deleteShader(fs);
+		return prog;
+	}
+ 
+	private _syncBuf=new Uint8Array(4);
+	// N회 측정 후 최솟값 — OS 스케줄링/thermal 간섭 제거
+	private _BenchRun(_draws : number, _runs : number, _drawFn : ()=>void) : number
+	{
+		const gl=this.GL();
+		// warmup: GPU clock 안정화
+		for(let i=0;i<10;i++) _drawFn();
+		gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,this._syncBuf);
+
+		let best=Infinity;
+		for(let r=0;r<_runs;r++)
+		{
+			const t0=performance.now();
+			for(let i=0;i<_draws;i++) _drawFn();
+			gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,this._syncBuf);
+			const ms=performance.now()-t0;
+			if(ms<best) best=ms;
+		}
+		return Math.max(best, 0.1);
+	}
+
+	override async BenchmarkScore() : Promise<number>
+	{
+		const gl=this.GL();
+		const prevW=(gl.canvas as HTMLCanvasElement).width;
+		const prevH=(gl.canvas as HTMLCanvasElement).height;
+
+		const quadVerts=new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+		const buf=gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+		gl.bufferData(gl.ARRAY_BUFFER,quadVerts,gl.STATIC_DRAW);
+		const quadVS=`attribute vec2 p; void main(){ gl_Position=vec4(p,0.0,1.0); }`;
+
+		// ── Test 1: Shader ALU ─────────────────────────────────────
+		(gl.canvas as HTMLCanvasElement).width=2048;
+		(gl.canvas as HTMLCanvasElement).height=2048;
+		gl.viewport(0,0,2048,2048);
+		const aluProg=this._BenchMakeProgram(quadVS,`
+			precision highp float;
+			uniform float t;
+			void main(){
+				vec2 uv=gl_FragCoord.xy/2048.0;
+				vec3 c=vec3(0.0);
+				for(int i=0;i<256;i++){
+					float f=float(i)*0.049+t;
+					c+=vec3(sin(uv.x*f+t),cos(uv.y*f-t),sin(f*uv.x*uv.y));
+				}
+				gl_FragColor=vec4(c/256.0*0.5+0.5,1.0);
+			}
+		`);
+		gl.useProgram(aluProg);
+		const aluP=gl.getAttribLocation(aluProg,'p');
+		gl.enableVertexAttribArray(aluP);
+		gl.vertexAttribPointer(aluP,2,gl.FLOAT,false,0,0);
+		const aluT=gl.getUniformLocation(aluProg,'t');
+		let t=0;
+		const aluMs=this._BenchRun(20,5,()=>{ gl.uniform1f(aluT,t+=0.01); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); });
+
+		// ── Test 2: Fill Rate ──────────────────────────────────────
+		(gl.canvas as HTMLCanvasElement).width=2048;
+		(gl.canvas as HTMLCanvasElement).height=2048;
+		gl.viewport(0,0,2048,2048);
+		const fillProg=this._BenchMakeProgram(quadVS,`
+			precision mediump float;
+			uniform float t;
+			void main(){ gl_FragColor=vec4(0.5+t*0.0001,0.5,0.5,0.02); }
+		`);
+		gl.useProgram(fillProg);
+		const fillP=gl.getAttribLocation(fillProg,'p');
+		gl.enableVertexAttribArray(fillP);
+		gl.vertexAttribPointer(fillP,2,gl.FLOAT,false,0,0);
+		const fillT=gl.getUniformLocation(fillProg,'t');
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+		const fillMs=this._BenchRun(10,5,()=>{
+			gl.uniform1f(fillT,t+=0.01);
+			for(let i=0;i<128;i++) gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+		});
+		gl.disable(gl.BLEND);
+
+		// ── Test 3: Geometry ───────────────────────────────────────
+		(gl.canvas as HTMLCanvasElement).width=512;
+		(gl.canvas as HTMLCanvasElement).height=512;
+		gl.viewport(0,0,512,512);
+		const VTXN=524288;
+		const geoVS=`
+			attribute float idx;
+			uniform float t;
+			void main(){
+				float a=idx*6.2831853*7.3+t;
+				float r=fract(idx*0.618)*0.95;
+				gl_Position=vec4(cos(a)*r,sin(a)*r,0.0,1.0);
+				gl_PointSize=1.0;
+			}
+		`;
+		const geoProg=this._BenchMakeProgram(geoVS,`precision lowp float; void main(){ gl_FragColor=vec4(1.0); }`);
+		const geoBuf=gl.createBuffer();
+		const idxArr=new Float32Array(VTXN);
+		for(let i=0;i<VTXN;i++) idxArr[i]=i/VTXN;
+		gl.bindBuffer(gl.ARRAY_BUFFER,geoBuf);
+		gl.bufferData(gl.ARRAY_BUFFER,idxArr,gl.STATIC_DRAW);
+		gl.useProgram(geoProg);
+		const geoP=gl.getAttribLocation(geoProg,'idx');
+		gl.enableVertexAttribArray(geoP);
+		gl.vertexAttribPointer(geoP,1,gl.FLOAT,false,0,0);
+		const geoT=gl.getUniformLocation(geoProg,'t');
+		const geoMs=this._BenchRun(50,5,()=>{ gl.uniform1f(geoT,t+=0.01); gl.drawArrays(gl.POINTS,0,VTXN); });
+
+		// ── 점수 ───────────────────────────────────────────────────
+		// 10000 / 가중평균ms — 빠를수록 높음, 선형 비례
+		const score=Math.round(10000 / (aluMs*0.4 + fillMs*0.35 + geoMs*0.25));
+
+		CAlert.W(`BenchmarkScore: ${score}  ALU:${aluMs.toFixed(0)}ms  FILL:${fillMs.toFixed(0)}ms  GEO:${geoMs.toFixed(0)}ms`);
+
+		// ── 정리 ───────────────────────────────────────────────────
+		gl.deleteBuffer(buf);
+		gl.deleteBuffer(geoBuf);
+		gl.deleteProgram(aluProg);
+		gl.deleteProgram(fillProg);
+		gl.deleteProgram(geoProg);
+		gl.bindBuffer(gl.ARRAY_BUFFER,null);
+		gl.useProgram(null);
+
+		(gl.canvas as HTMLCanvasElement).width=prevW;
+		(gl.canvas as HTMLCanvasElement).height=prevH;
+		gl.viewport(0,0,prevW,prevH);
+
+		return score;
 	}
 	
 }

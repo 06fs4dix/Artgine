@@ -4,13 +4,12 @@ import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
 
 import { 
-    abs, Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CMat, CMat3, CVec2, CVec3, CVec4, dFdx, dFdy, 
-    MatTypeToMat, max, min, mix, mod, Null, OutColor, OutPosition, pow, reflect, Sam2D0ToColor, 
-    Sam2DToColor, SamCubeToColor, SaturateFloat, screenPos, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
-    V2DivV2, 
-    V2Dot, 
-    V2Len, V2Mod, V2MulFloat, V2MulV2, V2SubV2, V3AddV3, V3Dot, V3Len, V3Mix, 
-    V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4AddV4, V4Mix, V4MulFloat, V4MulMatCoordi, V4MulV4, Vertex3 
+    Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CMat, CMat3, CVec2, CVec3, CVec4, dFdy, 
+    MatTypeToMat, max, min, Null, OutColor, OutPosition, pow, reflect, 
+    Sam2DTileToColor, 
+    Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
+    V2Len, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, 
+    V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi, Vertex3 
 } from "../../artgine/z_file/Shader";
 import { shadowOn } from "../../artgine/z_file/Shadow";
 
@@ -211,8 +210,7 @@ function ps_main_water()
     // 1. 물 텍스쳐
     BranchBegin("UseWaterTex","UseWaterTex",[]);
     uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
-    uv = V2Mod(uv, 1.0);
-    refractColor = Sam2D0ToColor(uv);
+    refractColor = Sam2DTileToColor(0.0, uv);
     refractType = 0.0;
     BranchEnd();
 

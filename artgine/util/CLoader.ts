@@ -112,7 +112,7 @@ export class CLoader
 	// {
 	// 	this.mRes.Set(_file,_data);
 	// }
-	async LoadSwitch(_file,_buffer : ArrayBuffer,_option : CLoaderOption)
+	async LoadSwitch(_file : string,_buffer : ArrayBuffer,_option : CLoaderOption)
 	{
 		if(_option!=null &&_option.mCache!=null)
 		{
@@ -250,6 +250,11 @@ export class CLoader
 				resolve("");
 			});
 		}
+		else if(_file.indexOf("docs.google.com")!=-1)
+		{
+			await this.CSVLoad(_file,_buffer);
+			this.mLoadSet.delete(_file);
+		}
 		else
 			CAlert.E(_file+"미지원");
 	}
@@ -347,6 +352,7 @@ export class CLoader
 			
 			await this.JSLoad(_file);
 		}
+	
 		
 		let buf= await CFile.Load(_file);
 		if(buf==null)
@@ -619,7 +625,11 @@ export class CLoader
 			const values = line.split(",");
 			const row: Record<string, string> = {};
 			for (let j = 0; j < headers.length; j++)
+			{
 				row[headers[j]] = values[j]?.trim() ?? "";
+				row[j] = values[j]?.trim() ?? "";
+			}
+				
 
 			arr.push(row);
 		}

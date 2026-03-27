@@ -1,3 +1,4 @@
+import { CAlert } from "../../basic/CAlert.js";
 import { CObject } from "../../basic/CObject.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CTexture } from "../../render/CTexture.js";
@@ -55,7 +56,12 @@ export class CMapBuf extends CObject
         const is2D = (width == this.mCount.x && height == this.mCount.y);
         const is3D = (width == this.mCount.x && height == this.mCount.y * this.mCount.z);
 
-        if (!is2D && !is3D) return;
+        if (!is2D && !is3D) 
+        {
+            CAlert.E("size diffent!");
+            return;
+        }
+            
 
         if (is2D)
         {

@@ -253,7 +253,9 @@ export class CShadowPlane extends CPaint2D
             if(empty)
             {
                 rp.mPriority=CRenderPass.ePriority.AlphaAuto;
-                rp.mSortRevers=true;
+                //rp.mSortRevers=true;
+                //if(this.mLIG.IsPointLight()==false)
+                    rp.mPaintSort=CRenderPass.ePaintSort.Revers;
             }
             else if(rp.mCullFace==null)
             {

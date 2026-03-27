@@ -105,9 +105,9 @@ export class CAction extends CObject
     //     if(this.mTemp==null)    return;
     //     CSamplerTimer.Reset(this.mTemp,this.mRun);
     // }
-    IsEnd()
+    IsEndReset()
     {
         if(this.mTemp==null)    return false;
-        return CSamplerTimer.IsEnd(this.mTemp,this.mRun);
+        return CSamplerTimer.IsEndReset(this.mTemp,this.mRun);
     }
 }
