@@ -1,5 +1,5 @@
 //Version
-const version='mlviwvcb_11';
+const version='mn9iqkvq_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -76,6 +76,10 @@ import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/compone
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
+import { CDensityInfo2D, CDensityInfo3D, CDensityMap } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CDensityMap.js";
+
+
+
 let PCF=new CVec1(0.0);
 var bias : number = 5;
 var normalBias : number = 4;
@@ -83,10 +87,21 @@ var shadowRate=0.7;
 let forward=new CRPMgr();
 let rtex=new CTexture();
 rtex.SetSize(512,512);
+
+if(await gAtl.Frame().Dev().BenchmarkScore()>60)
+{
+    rtex.SetSize(2048,2048);
+    PCF=new CVec1(2.0);
+    bias  = 20;
+    normalBias  = 10;
+    
+}
+
+
 let texKey=forward.PushTex("shadowread.tex",rtex);
 let rp=forward.PushRP(new CRPAuto());
 rp.PushOr(new CCondition("class","==","CPaint3D"));
-rp.PushOr(new CCondition("class","==","CPaintMeshMerge"));
+rp.PushOr(new CCondition("class","==","CPaint3DMerge"));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
@@ -101,7 +116,7 @@ rp.mTag.add("shadowRead");
 
 rp=forward.PushRP(new CRPAuto());
 rp.PushOr(new CCondition("class","==","CPaint3D"));
-rp.PushOr(new CCondition("class","==","CPaintMeshMerge"));
+rp.PushOr(new CCondition("class","==","CPaint3DMerge"));
 rp.mShaderAttr.push(new CShaderAttr(10,"shadowread.tex"));
 //rp.mShaderAttr.push(new CShaderAttr(7,gAtl.Frame().Pal().GetShadowReadTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowOn",new CVec1(10)));
@@ -124,17 +139,24 @@ Main.Find("Ground").Destroy();
 // Main.Find("Prop_Lamp_Street").Destroy();
 
 // Main.Find("Prop_Crate_1").Destroy();
+let densityMap=new CDensityMap();
+densityMap.mDiv=8;
+densityMap.mBuf.Reset(new CVec3(32,32,1),100);
+let info=densityMap.PushDensityInfo(new CDensityInfo3D(0,new CVec3(100,100,100),"Res/ModularVillage/Cobblestone_Dirt_Transition_1.obj"));
+info.mColliderLayer="ground";
+info.mPaintTag.push(CPaint.eTag.Shadow);
+info.mPaintTag.push(CPaint.eTag.Light);
+Main.PushSub(densityMap);
 
 
-
-let gsub=Main.PushSub(new CSubject());
-let gpt=gsub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-gpt.PushTag(CPaint.eTag.Shadow);
-gpt.PushTag(CPaint.eTag.Light);
-gpt.SetColorModel(new CColor(1,1,1,CColor.eModel.RGBAdd));
-gsub.SetSca(new CVec3(50,0.1,50));
-let gcl=gsub.PushComp(new CCollider(gpt));
-gcl.SetLayer("ground");
+// let gsub=Main.PushSub(new CSubject());
+// let gpt=gsub.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
+// gpt.PushTag(CPaint.eTag.Shadow);
+// gpt.PushTag(CPaint.eTag.Light);
+// gpt.SetColorModel(new CColor(1,1,1,CColor.eModel.RGBAdd));
+// gsub.SetSca(new CVec3(50,0.1,50));
+// let gcl=gsub.PushComp(new CCollider(gpt));
+// gcl.SetLayer("ground");
 //Main.Find("Prop_Well_1").Destroy();
 
 
@@ -417,6 +439,42 @@ chsub.Update=(_update : CUpdate)=>{
 
 //     }
 // });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
