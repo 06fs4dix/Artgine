@@ -1,4 +1,4 @@
-const version = 'mn9iqkvq_2';
+const version = 'mn9zmy49_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -102,14 +102,6 @@ pt.PushTag(CPaint.eTag.Shadow);
 pt.PushTag(CPaint.eTag.ShadowReadOnly);
 pt.PushCShaderAttr(new CShaderAttr("parallaxNormal", 0.1));
 pt.SetTexCodi(new CVec4(50, 50, 0, 0));
-let mountain = Main.PushSub(new CSubject());
-mountain.SetKey("mountain");
-mountain.SetSca(new CVec3(15, 15, 15));
-pt = mountain.PushComp(new CPaint3D("Res/mountain/mountain.glb"));
-pt.mAutoLoad.mTexBufRaw = true;
-pt.SetMaterial(0.8);
-pt.PushTag(CPaint.eTag.Light);
-pt.PushTag(CPaint.eTag.Shadow);
 let box = Main.PushSub(new CSubject());
 box.SetKey("box");
 box.SetPos(new CVec3(0, 3500, 0));
@@ -186,6 +178,7 @@ function ResetWater() {
     water.SetRot(new CVec3(-Math.PI / 2, 0, 0));
     water.SetSca(new CVec3(5000, 5000, 5000));
     water.SetPos(new CVec3(0, 100, 0));
+    ptCube.PushCShaderAttr(new CShaderAttr("aurora", 0.0));
     ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
     ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
     ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));
@@ -236,6 +229,7 @@ function ResetWater() {
         water.SetWaterDeep(40, 0, 4000, new CVec3(0.05, 0.15, 0.35), new CVec3(0.2, 0.5, 0.65));
         water.NormalFlow(new CVec2(2, 0.5));
         water.Light();
+        ptCube.PushCShaderAttr(new CShaderAttr("aurora", 0.2));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudCoverage", 0.7));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudStart", 15000));
         ptCube.PushCShaderAttr(new CShaderAttr("cloudHeight", 10000));

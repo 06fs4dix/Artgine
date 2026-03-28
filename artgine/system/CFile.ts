@@ -94,7 +94,7 @@ export class CFile
 					const oReq = new XMLHttpRequest();
 					oReq.onload = (e) => {
 						if (oReq.status !== 200) {
-							CAlert.W("XHR 로딩 오류: " + oReq.status);
+							CAlert.W(_name+"XHR 로딩 오류: " + oReq.status);
 							resolve(null);
 						} else {
 							resolve(oReq.response);
