@@ -185,8 +185,13 @@ export class CDeviceGL extends CDevice
 			let ext = this.GL().getExtension('EXT_color_buffer_half_float');
 			if (!ext)
 			{	 
-					CAlert.W("no EXT_color_buffer_half_float");	
+					
 					g_property.set(CDevice.eProperty.HalfFloat,0);	
+					let ext = this.GL().getExtension('EXT_color_buffer_float');
+					if (!ext) 
+						CAlert.W("no EXT_color_buffer_half_float");	
+					ext = this.GL().getExtension('OES_texture_float_linear');
+					if (!ext) {	    CAlert.W("no OES_texture_float_linear");	}
 			}
 			
 			

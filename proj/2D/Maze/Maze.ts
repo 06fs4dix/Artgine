@@ -1,5 +1,5 @@
 //Version
-const version='mmw1mic3_7';
+const version='mn9vjd50_13';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -590,6 +590,11 @@ CSysAuth.Confirm(true).then(async (_enable)=>{
 
 
 });
+
+
+
+
+
 
 
 
