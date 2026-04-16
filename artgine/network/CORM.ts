@@ -43,32 +43,9 @@ export class CORMOption {
 }
 
 
-export class CORM implements IRecycle
+export class CORM extends CObject
 {
-    Recycle() 
-    {
-        if(this["mRecycleType"]!=null)
-        {
-            this["mRecycle"]=true;
-            CPool.Recycle(this);
-        }
-    }
-    GetRecycleType(): string {
-        return this["mRecycleType"];
-    }
-    SetRecycleType(_type: string) 
-    {
-        if(_type!=this["mRecycleType"])
-            this["mRecycleType"]=_type;
-        this["mRecycle"]=false;
-    }
-    //리사이클 등록되어 있는지
-    IsRecycle() 
-    {
-        if(this["mRecycleType"]==null)
-            return false;
-        return this["mRecycle"];
-    }
+    
     mFileDB = true;
     mAuth: CAuthInfo;
     mDatabase = "";
@@ -214,4 +191,5 @@ export class CRDBMS extends CORM
 
 
 import CORM_imple from "../network_imple/CORM.js";
+import { CObject } from "../basic/CObject.js";
 CORM_imple();

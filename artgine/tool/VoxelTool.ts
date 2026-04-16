@@ -39,6 +39,7 @@ export function VoxelTool(_voxel : CVoxelMap)
 {
     gVoxelOrg=_voxel;
     gVoxelTar=_voxel.Export();
+    //gVoxelTar.mDiv=Math.max(gVoxelTar.mBuf.mCount.x,gVoxelTar.mBuf.mCount.y,gVoxelTar.mBuf.mCount.z);
     gVoxelTar.mToolMode=true;
 
     CRollBack.On("Voxel",(_data : CArray<{index:CCIndex,VInfo:number}>)=>{
@@ -762,7 +763,7 @@ async function VoxelAtlasCodiDiv(_atlas : number, _width : number = 200, _vinfo?
     
     let imgsrc="";
     
-    let codi=gVoxelTar.mAtlas.mTexCodi[_atlas];
+    let codi=gVoxelTar.mAtlas.mTexel[_atlas];
     imgsrc=await gVoxelTar.mAtlas.GetImgURL(_atlas);
     
    

@@ -181,6 +181,9 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 		
 		this.EditRefresh();
 	}
+
+	//Export는 3가지가 있다.
+	//Export : 단순 복사, Export(C)JSON : 출력용 ExportProxy : 타겟 참조형
 	static Export(obj,_copy : boolean,_resetKey : boolean)
 	{
 		return null;
@@ -471,7 +474,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 		}) as any[];
 	}
 
-	protected EditRefresh(_pt : CPointer=null)
+	public EditRefresh(_pt : CPointer=null)
 	{
 		if(this["mObjectDiv"]!=null)
 		{
@@ -600,12 +603,15 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 			this["mRecycle"]=true;
 			CPool.Recycle(this);
 		}
+		
 	}
 	GetRecycleType(): string {
 		return this["mRecycleType"];
 	}
-	SetRecycleType(_type: string) 
+	ExeRecycle(_type: string) 
 	{
+		if(this.IsRecycle()==true)	this.Recycle();
+
 		if(_type!=this["mRecycleType"])
 			this["mRecycleType"]=_type;
 		this["mRecycle"]=false;
@@ -615,7 +621,7 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 		if(this["mRecycleType"]==null)
 			return false;
-		return this["mRecycle"];
+		return this["mRecycle"]==true;
 	}
 	static NewImportCJSON(_cjson : CJSON,_newObj=null)
 	{

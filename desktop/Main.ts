@@ -21,6 +21,7 @@ import {CString} from '../artgine/basic/CString.js';
 import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
+import { CCmdRouter } from '../artgine/network/CCmdRouter.js';
 
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +30,7 @@ const __dirname = path.dirname(__filename);
 let gMainWindow: BrowserWindow | null = null;
 var gWebServer : CServerMain=null;
 var gRunPage=false;
+
 
 //CConsol.Log("__dirname : "+__dirname);
 //CConsol.Log("CPath.PHPC() : "+CPath.PHPC());
@@ -99,6 +101,7 @@ async function RunServer()
 
 	
 		gWebServer=new CServerMain(Number(port),pathname,gAppJSON.projectPath);
+		//new CCmdRouter().SetServerMain(gWebServer);
 		
 		if(await gWebServer.Init())
 		{
@@ -609,11 +612,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	{
 		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/excel/xlsx.mini.min.js'></script>\n";
 	}
-	if(_json.projetJSON.includes["lzstring"])
-	{
-		IStr+="<script src='"+upFolder+"artgine/external/legacy/lz-string-master/libs/base64-string.js'></script>\n";
-		IStr+="<script src='"+upFolder+"artgine/external/legacy/lz-string-master/libs/lz-string.min.js'></script>\n";
-	}
+	
 	if(_json.projetJSON.includes["firebase"])
 	{
 		IStr+="<script src='https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js'></script>\n";

@@ -381,7 +381,7 @@ CVFX.lDesc[SDF.eVFX.Noise] = MakeDesc(
     [["Perlin", "Perlin Normal", "PerlinFBM_Cloud", "Blue", "Gaussian"], 0, 0, 0.2], 
     [[SDF.eNoise.Perlin, SDF.eNoise.PerlinNormal, SDF.eNoise.PerlinFBM3, SDF.eNoise.Blue, SDF.eNoise.Gaussian], 16, 1, 32],
     [1, 0.1, 0.05, 0.1],
-    [0, 8, 0.5, 1],
+    [1, 8, 0.5, 1],
     [true, false, false]
 );
 CVFX.lDesc[SDF.eVFX.Scanline] = MakeDesc(
@@ -393,9 +393,9 @@ CVFX.lDesc[SDF.eVFX.Scanline] = MakeDesc(
 );
 CVFX.lDesc[SDF.eVFX.LookUpTable] = MakeDesc(
     ["Index", "Dither"],
-    [SDF.eLookUpTable.LUT0, 0], [SDF.eLookUpTable.LUT5, 1],
+    [SDF.eUni.V4LookUpTable0, 0], [SDF.eUni.V4LookUpTable5, 1],
     [1, 0.05],
-    [SDF.eLookUpTable.LUT0, 0]
+    [SDF.eUni.V4LookUpTable0, 0]
     // Use 미지정 → 모든 슬롯 허용
 );
 CVFX.lDesc[SDF.eVFX.Blur] = MakeDesc(

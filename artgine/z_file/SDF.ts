@@ -53,8 +53,6 @@ export class SDF {
 		None:0,
 		Bone:1,
 		Bake:2,
-		// Grass:2,
-		// Tree:3,
 	};
 	static eEnvCube=
 	{
@@ -77,6 +75,7 @@ export class SDF {
 		HSV:3,
 		HSL:4,
 		None:5,
+		Unpack:6,
 	}
 	
 	static eVFX=
@@ -99,20 +98,11 @@ export class SDF {
 		DecalTexture:11,//r : 텍스쳐 인덱스, g : 블렌드 비율
 
 	}
-	static eLookUpTable=
-	{
-		LUT0:159,
-		LUT1:160,
-		LUT2:161,
-		LUT3:162,
-		LUT4:163,
-		LUT5:164,
-	}
+	
 	static eNoise=
 	{
-		// 절차적 생성
-		Gaussian:0,//랜덤 
-		Simplex:1,//펄린 대체
+		
+		
 
 		// 텍스쳐 샘플링 후처리
 		PerlinBillow:10,
@@ -120,12 +110,16 @@ export class SDF {
 		PerlinDomainWarp:12,
 		PerlinFBM:13,
 
+
+		Gaussian:20,//랜덤 
+		Simplex:21,//펄린 대체
+
 		// 텍스쳐 샘플링
 		//(128*128)xy*32frame=2048*256
-		Perlin:768,//구름 느낌,연기 연속적인 부드러운 느낌
-		PerlinNormal:512,//가뭄에 땅갈라짐.거북이 등
-		PerlinFBM3:256,
-		Blue:255,
+		Perlin:1,//구름 느낌,연기 연속적인 부드러운 느낌
+		PerlinNormal:2,//가뭄에 땅갈라짐.거북이 등
+		PerlinFBM3:3,
+		Blue:4,
 
 	}
 	static eBlend=
@@ -141,5 +135,46 @@ export class SDF {
 		Tar:8,
 		DarkCut : 9,//0보다 크면 무조건 0
 		
+	}
+	//Arr하나에 크기는 
+	//2048*256
+	//몇번 샘플 슬롯,yoff 시작(max256),몇번 어레이
+	static eUni=
+	{
+		MatSkin:10,//512계 사용함2048
+		V4LookUpTable0:14,//6개 사용함 여유 30개
+		V4LookUpTable1:15,
+		V4LookUpTable2:16,
+		V4LookUpTable3:17,
+		V4LookUpTable4:18,
+		V4LookUpTable5:19,
+		V4WindDir:30,
+		V4WindPos:31,
+		V4WindInfo:32,
+		V4LightColor:33,
+		V4LightDir:34,
+		MatShadowNearCasV0:40,
+		MatShadowFarCasP0:44,
+		MatShadowTopCasV1:48,
+		MatShadowBottomCasP1:52,
+		MatShadowLeftCasV2:56,
+		MatShadowRightCasP2:60,
+		MatShadowPointProj:64,
+		V4ShadowReadList:68,
+
+
+		SlotShadow:2,//512계 사용함2048
+		SlotUni:2,//512계 사용함2048
+
+	}
+	static eTexSlot=
+	{
+		
+
+		ArrShadowWrite:2.0,
+		ArrUni:1.0,
+		SingleShadowRead:10.0,
+		
+
 	}
 }

@@ -11,7 +11,7 @@ CPool.On("CLocalDB",async ()=>{
 	return CLocalDB;
 },"Product");
 
-let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 let con=new Array<CORMCondition>();
 let option=new CORMOption();
 option.mLimitOffset=0;
@@ -44,7 +44,7 @@ export class CBoardServer extends CServerRouter
 			var limitCount=_json.GetInt("limitCount");
 			
 			
-			let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+			let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 			let con=new Array<CORMCondition>();
 			con.push(new CORMCondition("_category", "==", category));
 			let option=new CORMOption();
@@ -61,7 +61,7 @@ export class CBoardServer extends CServerRouter
         });
         this.On("/CBoard/ListCount",async (_json : CJSON, _req: Request, _res: Response)=>{
             var category=_json.GetStr("category");
-			let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+			let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 			let con=new Array<CORMCondition>();
 			con.push(new CORMCondition("_category", "==", category));
 		
@@ -73,7 +73,7 @@ export class CBoardServer extends CServerRouter
         });
         this.On("/CBoard/Delete",async (_json : CJSON, _req: Request, _res: Response)=>{
             var offset=_json.GetStr("offset");
-			let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+			let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 			let con=new Array<CORMCondition>();
 			con.push(new CORMCondition("_offset", "==", offset));
 			sql.Delete("board", con);
@@ -82,7 +82,7 @@ export class CBoardServer extends CServerRouter
         this.On("/CBoard/Read",async (_json : CJSON, _req: Request, _res: Response)=>{
             var offset=_json.GetInt("offset");
 			
-			let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+			let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 			let con=new Array<CORMCondition>();
 			con.push(new CORMCondition("_offset", "==", offset));
 			
@@ -106,7 +106,7 @@ export class CBoardServer extends CServerRouter
 			data.push(new CORMField("_nick",nick));
 			data.push(new CORMField("_content",content));
 			
-			let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+			let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 			if(offset=="-1")
 			{
 				await sql.Insert("board", data);
@@ -122,7 +122,7 @@ export class CBoardServer extends CServerRouter
         });
         this.On("/CBoard/Modify",async (_json : CJSON, _req: Request, _res: Response)=>{
             var offset=_json.GetInt("offset");
-			let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+			let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 			let con=new Array<CORMCondition>();
 			con.push(new CORMCondition("_offset", "==", offset));
 			

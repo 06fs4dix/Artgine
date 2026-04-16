@@ -1011,12 +1011,13 @@ export class CUtilRender
 
 		rVal.vertexCount = 4;
 
-		rVal.index.push(0);
-		rVal.index.push(1);
-		rVal.index.push(2);
-		rVal.index.push(2);
-		rVal.index.push(3);
-		rVal.index.push(0);
+		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+		inb.bufI.push(0);
+		inb.bufI.push(1);
+		inb.bufI.push(2);
+		inb.bufI.push(2);
+		inb.bufI.push(3);
+		inb.bufI.push(0);
 		rVal.indexCount = 6;
 
 		return rVal;
@@ -1273,36 +1274,6 @@ export class CUtilRender
 
 
 
-		// uvb.bufF.Push(new CVec2(0, 0));
-		// uvb.bufF.Push(new CVec2(1, 0));
-		// uvb.bufF.Push(new CVec2(1, 1));
-		// uvb.bufF.Push(new CVec2(0, 1));
-
-		// uvb.bufF.Push(new CVec2(0, 1));
-		// uvb.bufF.Push(new CVec2(1, 1));
-		// uvb.bufF.Push(new CVec2(1, 0));
-		// uvb.bufF.Push(new CVec2(0, 0));
-
-		// uvb.bufF.Push(new CVec2(1, 1));
-		// uvb.bufF.Push(new CVec2(0, 1));
-		// uvb.bufF.Push(new CVec2(0, 0));
-		// uvb.bufF.Push(new CVec2(1, 0));
-
-		// uvb.bufF.Push(new CVec2(0, 1));
-		// uvb.bufF.Push(new CVec2(1, 1));
-		// uvb.bufF.Push(new CVec2(1, 0));
-		// uvb.bufF.Push(new CVec2(0, 0));
-
-		// uvb.bufF.Push(new CVec2(1, 1));
-		// uvb.bufF.Push(new CVec2(0, 1));
-		// uvb.bufF.Push(new CVec2(0, 0));
-		// uvb.bufF.Push(new CVec2(1, 0));
-
-		// uvb.bufF.Push(new CVec2(0, 1));
-		// uvb.bufF.Push(new CVec2(1, 1));
-		// uvb.bufF.Push(new CVec2(1, 0));
-		// uvb.bufF.Push(new CVec2(0, 0));
-
 		uvb.bufF.Push(new CVec2(0, 1));
 		uvb.bufF.Push(new CVec2(1, 1));
 		uvb.bufF.Push(new CVec2(1, 0));
@@ -1332,74 +1303,110 @@ export class CUtilRender
 		uvb.bufF.Push(new CVec2(1, 0));
 		uvb.bufF.Push(new CVec2(1, 1));
 		uvb.bufF.Push(new CVec2(0, 1));
+
+		// // 상단면
+		// uvb.bufF.Push(new CVec2(0, 0));
+		// uvb.bufF.Push(new CVec2(1, 0));
+		// uvb.bufF.Push(new CVec2(1, 1));
+		// uvb.bufF.Push(new CVec2(0, 1));
+
+		// // 하단면
+		// uvb.bufF.Push(new CVec2(0, 1));
+		// uvb.bufF.Push(new CVec2(1, 1));
+		// uvb.bufF.Push(new CVec2(1, 0));
+		// uvb.bufF.Push(new CVec2(0, 0));
+
+		// // 왼면
+		// uvb.bufF.Push(new CVec2(1, 1));
+		// uvb.bufF.Push(new CVec2(0, 1));
+		// uvb.bufF.Push(new CVec2(0, 0));
+		// uvb.bufF.Push(new CVec2(1, 0));
+
+		// // 오른면
+		// uvb.bufF.Push(new CVec2(0, 1));
+		// uvb.bufF.Push(new CVec2(1, 1));
+		// uvb.bufF.Push(new CVec2(1, 0));
+		// uvb.bufF.Push(new CVec2(0, 0));
+
+		// // 뒷면
+		// uvb.bufF.Push(new CVec2(1, 1));
+		// uvb.bufF.Push(new CVec2(0, 1));
+		// uvb.bufF.Push(new CVec2(0, 0));
+		// uvb.bufF.Push(new CVec2(1, 0));
+
+		// // 앞면
+		// uvb.bufF.Push(new CVec2(0, 1));
+		// uvb.bufF.Push(new CVec2(1, 1));
+		// uvb.bufF.Push(new CVec2(1, 0));
+		// uvb.bufF.Push(new CVec2(0, 0));
 
 		rVal.vertexCount = 24;
 
+		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+		inb.bufI.push(3);
+		inb.bufI.push(2);
+		inb.bufI.push(1);
 
-		rVal.index.push(3);
-		rVal.index.push(2);
-		rVal.index.push(1);
-
-		rVal.index.push(1);//top
-		rVal.index.push(0);
-		rVal.index.push(3);
-
-
-
-		rVal.index.push(11);
-		rVal.index.push(10);
-		rVal.index.push(9);
-
-		rVal.index.push(9);//front
-		rVal.index.push(8);
-		rVal.index.push(11);
-
-		rVal.index.push(22);//left
-		rVal.index.push(23);
-		rVal.index.push(20);
+		inb.bufI.push(1);//top
+		inb.bufI.push(0);
+		inb.bufI.push(3);
 
 
-		rVal.index.push(20);
-		rVal.index.push(21);
-		rVal.index.push(22);
+
+		inb.bufI.push(11);
+		inb.bufI.push(10);
+		inb.bufI.push(9);
+
+		inb.bufI.push(9);//front
+		inb.bufI.push(8);
+		inb.bufI.push(11);
+
+		inb.bufI.push(22);//left
+		inb.bufI.push(23);
+		inb.bufI.push(20);
 
 
-		rVal.index.push(6);
-		rVal.index.push(7);
-		rVal.index.push(4);
+		inb.bufI.push(20);
+		inb.bufI.push(21);
+		inb.bufI.push(22);
+
+
+		inb.bufI.push(6);
+		inb.bufI.push(7);
+		inb.bufI.push(4);
 
 
 
 		//
-		rVal.index.push(4);//bottom
-		rVal.index.push(5);
-		rVal.index.push(6);
+		inb.bufI.push(4);//bottom
+		inb.bufI.push(5);
+		inb.bufI.push(6);
 
-		rVal.index.push(6);
-		rVal.index.push(7);
-		rVal.index.push(4);
+		inb.bufI.push(6);
+		inb.bufI.push(7);
+		inb.bufI.push(4);
 
-		rVal.index.push(17);//
-		rVal.index.push(16);
-		rVal.index.push(19);
+		inb.bufI.push(17);//
+		inb.bufI.push(16);
+		inb.bufI.push(19);
 
-		rVal.index.push(19);
-		rVal.index.push(18);
-		rVal.index.push(17);
-
-
-		rVal.index.push(12);//back
-		rVal.index.push(13);
-		rVal.index.push(14);
+		inb.bufI.push(19);
+		inb.bufI.push(18);
+		inb.bufI.push(17);
 
 
-		rVal.index.push(14);
-		rVal.index.push(15);
-		rVal.index.push(12);
+		inb.bufI.push(12);//back
+		inb.bufI.push(13);
+		inb.bufI.push(14);
 
-		rVal.index.push(6);
-		rVal.index.push(7);
-		rVal.index.push(3);
+
+		inb.bufI.push(14);
+		inb.bufI.push(15);
+		inb.bufI.push(12);
+
+		inb.bufI.push(6);
+		inb.bufI.push(7);
+		inb.bufI.push(3);
 		// rVal.index.push(6);
 		// rVal.index.push(2);
 		// rVal.index.push(3);
@@ -1533,60 +1540,61 @@ export class CUtilRender
 		rVal.vertexCount = 24;
 
 
-		rVal.index.push(3);
-		rVal.index.push(2);
-		rVal.index.push(1);
+		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+		inb.bufI.push(3);
+		inb.bufI.push(2);
+		inb.bufI.push(1);
 
-		rVal.index.push(1);//top
-		rVal.index.push(0);
-		rVal.index.push(3);
-
-
-
-		rVal.index.push(11);
-		rVal.index.push(10);
-		rVal.index.push(9);
-
-		rVal.index.push(9);//front
-		rVal.index.push(8);
-		rVal.index.push(11);
-
-		rVal.index.push(22);//left
-		rVal.index.push(23);
-		rVal.index.push(20);
+		inb.bufI.push(1);//top
+		inb.bufI.push(0);
+		inb.bufI.push(3);
 
 
-		rVal.index.push(20);
-		rVal.index.push(21);
-		rVal.index.push(22);
+
+		inb.bufI.push(11);
+		inb.bufI.push(10);
+		inb.bufI.push(9);
+
+		inb.bufI.push(9);//front
+		inb.bufI.push(8);
+		inb.bufI.push(11);
+
+		inb.bufI.push(22);//left
+		inb.bufI.push(23);
+		inb.bufI.push(20);
 
 
-		rVal.index.push(6);
-		rVal.index.push(7);
-		rVal.index.push(4);
+		inb.bufI.push(20);
+		inb.bufI.push(21);
+		inb.bufI.push(22);
 
 
-		rVal.index.push(4);//bottom
-		rVal.index.push(5);
-		rVal.index.push(6);
-
-		rVal.index.push(17);//
-		rVal.index.push(16);
-		rVal.index.push(19);
-
-		rVal.index.push(19);
-		rVal.index.push(18);
-		rVal.index.push(17);
+		inb.bufI.push(6);
+		inb.bufI.push(7);
+		inb.bufI.push(4);
 
 
-		rVal.index.push(12);//back
-		rVal.index.push(13);
-		rVal.index.push(14);
+		inb.bufI.push(4);//bottom
+		inb.bufI.push(5);
+		inb.bufI.push(6);
+
+		inb.bufI.push(17);//
+		inb.bufI.push(16);
+		inb.bufI.push(19);
+
+		inb.bufI.push(19);
+		inb.bufI.push(18);
+		inb.bufI.push(17);
 
 
-		rVal.index.push(14);
-		rVal.index.push(15);
-		rVal.index.push(12);
+		inb.bufI.push(12);//back
+		inb.bufI.push(13);
+		inb.bufI.push(14);
+
+
+		inb.bufI.push(14);
+		inb.bufI.push(15);
+		inb.bufI.push(12);
 
 
 
@@ -1608,7 +1616,7 @@ export class CUtilRender
 		
 
 		rVal.vertexCount = posb.bufF.Size(3);
-		rVal.indexCount = rVal.index.length;
+		rVal.indexCount = 0;
 
 		return rVal;
 	}
@@ -1627,11 +1635,12 @@ export class CUtilRender
 		var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
 		var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
 		var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
-		MakeSphere(posb.bufF, uvb.bufF, norb.bufF, rVal.index, _size, _vCount, _hCount, _vSize, _hSize);
+		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+		MakeSphere(posb.bufF, uvb.bufF, norb.bufF, inb.bufI, _size, _vCount, _hCount, _vSize, _hSize);
 		for (var i = 0; i < posb.bufF.Size(3); ++i) 
 			rVal.bound.InitBound(posb.bufF.V3(i),true);
 		rVal.vertexCount = posb.bufF.Size(3);
-		rVal.indexCount = rVal.index.length;
+		rVal.indexCount = inb.bufI.length;
 
 		return rVal;
 	}
@@ -1645,31 +1654,34 @@ export class CUtilRender
 
 		posb.bufF.Resize((2 * (_count + 1)) * 3);
 		rVal.vertexCount = 2 * (_count + 1);
-		rVal.index = new Array(12 * _count);
+
+		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+		
+		//inb.bufI = new Array(12 * _count);
 
 		for (var i = 0; i < _count + 1; ++i) {
 			posb.bufF.V3(i * 2 + 0, 1 - i / _count, 0, i * 2 + 0);
 			posb.bufF.V3(i * 2 + 1, 1 - i / _count, 1, i * 2 + 1);
 		}
 		for (var i = 0; i < _count - 1; ++i) {
-			rVal.index[i * 4 * 3 + 0] = 0 + i * 2;
-			rVal.index[i * 4 * 3 + 1] = 1 + i * 2;
-			rVal.index[i * 4 * 3 + 2] = 2 + i * 2;
+			inb.bufI[i * 4 * 3 + 0] = 0 + i * 2;
+			inb.bufI[i * 4 * 3 + 1] = 1 + i * 2;
+			inb.bufI[i * 4 * 3 + 2] = 2 + i * 2;
 
-			rVal.index[i * 4 * 3 + 3] = 2 + i * 2;
-			rVal.index[i * 4 * 3 + 4] = 3 + i * 2;
-			rVal.index[i * 4 * 3 + 5] = 1 + i * 2;
+			inb.bufI[i * 4 * 3 + 3] = 2 + i * 2;
+			inb.bufI[i * 4 * 3 + 4] = 3 + i * 2;
+			inb.bufI[i * 4 * 3 + 5] = 1 + i * 2;
 
 
-			rVal.index[i * 4 * 3 + 6] = 2 + i * 2;
-			rVal.index[i * 4 * 3 + 7] = 1 + i * 2;
-			rVal.index[i * 4 * 3 + 8] = 0 + i * 2;
+			inb.bufI[i * 4 * 3 + 6] = 2 + i * 2;
+			inb.bufI[i * 4 * 3 + 7] = 1 + i * 2;
+			inb.bufI[i * 4 * 3 + 8] = 0 + i * 2;
 
-			rVal.index[i * 4 * 3 + 9] = 1 + i * 2;
-			rVal.index[i * 4 * 3 + 10] = 3 + i * 2;
-			rVal.index[i * 4 * 3 + 11] = 2 + i * 2;
+			inb.bufI[i * 4 * 3 + 9] = 1 + i * 2;
+			inb.bufI[i * 4 * 3 + 10] = 3 + i * 2;
+			inb.bufI[i * 4 * 3 + 11] = 2 + i * 2;
 		}
-		rVal.indexCount = rVal.index.length;
+		rVal.indexCount = inb.bufI.length;
 		return rVal;
 	}
 	// static GetTail(_count) {
@@ -1736,49 +1748,52 @@ export class CUtilRender
 	// 	return nmci;
 	// }
 
-	static GetTerrain(_count: number, _size: number) {
 
-		var count = _count + 1;
-		var rVal = new CMeshCreateInfo();
-		var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
-		var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);
+    // 위에거랑 다른거 없는데 혹시 몰라서 따로 만듬
+    // 사이즈는 셰이더에서 조절하도록 1사이즈로 만듬(-0.5 ~ 0.5)
+    static GetTerrain(_cellCount : CVec2, _skirtHeight : number) {
+        var vSize = new CVec2(_cellCount.x + 1, _cellCount.y + 1);
+        var skirt = _skirtHeight != 0 ? 1 : 0;
+
+        var rVal = new CMeshCreateInfo();
+        var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
+		var norb = rVal.Create(CVertexFormat.eIdentifier.Normal);   // 테셀레이션 없어서 노말맵 필수인데 필요할까
 		var uvb = rVal.Create(CVertexFormat.eIdentifier.UV);
-		posb.bufF.Resize((count * count) * 3);
-		norb.bufF.Resize((count * count) * 3);
 
-		uvb.bufF.Resize((count * count) * 3);
-		//rVal.color.Resize((count*count));
-		rVal.vertexCount = count * count;
+        posb.bufF.Resize(((vSize.x + 2 * skirt) * (vSize.y + 2 * skirt)) * 3);
+		norb.bufF.Resize(((vSize.x + 2 * skirt) * (vSize.y + 2 * skirt)) * 3);
+		uvb.bufF.Resize(((vSize.x + 2 * skirt) * (vSize.y + 2 * skirt)) * 2);
+        rVal.vertexCount = (vSize.x + 2 * skirt) * (vSize.y + 2 * skirt);
 
+        var i = 0;
+        for(let z = -skirt; z < vSize.y + skirt; z++)
+        for(let x = -skirt; x < vSize.x + skirt; x++) {
+            if(x == -skirt || x == vSize.x + skirt - 1 || z == -skirt || z == vSize.y + skirt - 1) {
+                posb.bufF.V3(i, CMath.Clamp(-0.5 + x / (vSize.x - 1), -0.5, 0.5), -_skirtHeight, CMath.Clamp(-0.5 + z / (vSize.y - 1), -0.5, 0.5));
+            }
+            else {
+                posb.bufF.V3(i, -0.5 + x / (vSize.x - 1), 0.0, -0.5 + z / (vSize.y - 1));
+            }
+            norb.bufF.V3(i, 0, 1, 0);
+            uvb.bufF.V2(i, x / (vSize.x - 1), z / (vSize.y - 1));
+            i++;
+        }
 
-		var i = 0;
-		for (var z = 0; z < count; ++z) {
-			for (var x = 0; x < count; ++x) {
-				posb.bufF.V3(i, x * _size, 0, z * _size);
-				norb.bufF.V3(i, 0, 1, 0);
-				uvb.bufF.V2(i, x / (count - 1.0), z / (count - 1.0));
-				i++;
-			}
-		}
+		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+        for(let z = 0; z < vSize.y + 2 * skirt - 1; z++)
+        for(let x = 0; x < vSize.x + 2 * skirt - 1; x++) {
+            const lt = (z + 0) * (vSize.x + 2 * skirt) + (x + 0);
+            const rt = (z + 0) * (vSize.x + 2 * skirt) + (x + 1);
+            const lb = (z + 1) * (vSize.x + 2 * skirt) + (x + 0);
+            const rb = (z + 1) * (vSize.x + 2 * skirt) + (x + 1);
 
-		for (var z = 0; z < count - 1; ++z) {
-			for (var x = 0; x < count - 1; ++x) {
-				rVal.index.push((z + 0) * count + x + 0);
+            inb.bufI.push(rt, lt, lb);
+            inb.bufI.push(lb, rb, rt);
+        }
+        rVal.indexCount = inb.bufI.length;
 
-				rVal.index.push((z + 1) * count + x + 0);
-				rVal.index.push((z + 0) * count + x + 1);
-
-
-				rVal.index.push((z + 0) * count + x + 1);
-				rVal.index.push((z + 1) * count + x + 0);
-				rVal.index.push((z + 1) * count + x + 1);
-			}
-		}
-		rVal.indexCount = rVal.index.length;
-
-
-		return rVal;
-	}
+        return rVal;
+    }
 	//기존꺼인데 절대 지우지마라!!!20250925  어떻게 될지 모름
 	// static RebuildNormals(_ci : CMeshCreateInfo) {
 	// 	const vertex = _ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
@@ -1921,21 +1936,22 @@ export class CUtilRender
 			}
 		}
 
+		var inb = _ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
 		// 인덱스 리맵 + 중복 삼각형/퇴화 제거
 		const newIndex: number[] = [];
-		for (let f = 0; f < _ci.index.length; f += 3) {
-			const a = mapOldToNew[_ci.index[f + 0]];
-			const b = mapOldToNew[_ci.index[f + 1]];
-			const c = mapOldToNew[_ci.index[f + 2]];
+		for (let f = 0; f < inb.bufI.length; f += 3) {
+			const a = mapOldToNew[inb.bufI[f + 0]];
+			const b = mapOldToNew[inb.bufI[f + 1]];
+			const c = mapOldToNew[inb.bufI[f + 2]];
 			if (a === b || b === c || c === a) continue;        // 퇴화 삼각형 스킵
 			newIndex.push(a, b, c);
 		}
 
 		// 교체
-		_ci.index = newIndex;
+		inb.bufI = newIndex;
 		for (let b = 0; b < _ci.vertex.length; ++b) _ci.vertex[b].bufF = outBufs[b];
 		_ci.vertexCount = outPos.Size(3);
-		_ci.indexCount = _ci.index.length;
+		_ci.indexCount = inb.bufI.length;
 	}
 	/*
 		angleDeg=10° → 중앙 주변이 하드 스플릿되어 별무늬/광택 꼬임이 사라짐.
@@ -1980,8 +1996,9 @@ export class CUtilRender
 		const accNormals: CVec3[] = new Array(vertCount);
 		for (let i = 0; i < vertCount; ++i) accNormals[i] = new CVec3(0, 0, 0);
 
-		for (let f = 0; f < _ci.index.length; f += 3) {
-			const i0 = _ci.index[f], i1 = _ci.index[f + 1], i2 = _ci.index[f + 2];
+		var inb = _ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
+		for (let f = 0; f < inb.bufI.length; f += 3) {
+			const i0 = inb.bufI[f], i1 = inb.bufI[f + 1], i2 = inb.bufI[f + 2];
 			const p0 = posBuf.V3(i0), p1 = posBuf.V3(i1), p2 = posBuf.V3(i2);
 			const e1 = CMath.V3SubV3(p1, p0);
 			const e2 = CMath.V3SubV3(p2, p0);
@@ -2561,6 +2578,7 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 		let posb=mdd.ci.GetVFType(CVertexFormat.eIdentifier.Position)[0];
 		let web=mdd.ci.GetVFType(CVertexFormat.eIdentifier.Weight)[0];
 		let wib=mdd.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex)[0];
+		var inb = mdd.ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
 		if(mdd.ci.indexCount>0)
 		{
 			
@@ -2571,7 +2589,7 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 
 				for(let j=0;j<3;++j)
 				{
-					let pos=posb.bufF.V3(mdd.ci.index[i+j]);
+					let pos=posb.bufF.V3(inb.bufI[i+j]);
 					if(web!=null && _skinMat.length>0)
 					{
 						
@@ -2579,8 +2597,8 @@ function MeshNodeBoundUpdate(_skinMat : Array<CMat>,_node : CMeshPaint)
 						//let wmat=new CMat();
 						mat.Zero();
 						mat.SetUnit(false);
-						let we=web.bufF.V4(mdd.ci.index[i+j]);
-						let wi=wib.bufF.V4(mdd.ci.index[i+j]);
+						let we=web.bufF.V4(inb.bufI[i+j]);
+						let wi=wib.bufF.V4(inb.bufI[i+j]);
 						
 						if(wi.x>_skinMat.length)	wi.x=_skinMat.length-1;
 

@@ -217,14 +217,20 @@ export class CVTile extends CObject implements IMapLabel
 	//mPattern=new Array<CVTileSurface>();
 	
 	constructor(_color : number,_atlas : number,_collider : string="",_label : string="")
-	{
-		super();
-		this.mColor=_color;
-		this.mAtlas=_atlas;
-		this.mColliderLayer=_collider;
-		this.mLabel=_label;
-		//this.mKey=CUniqueID.GetHash();
-	}
+    {
+        super();
+        if(_color == null || _color <= 0) {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            this.mColor = ((r << 24) | (g << 16) | (b << 8) | 0x00) >>> 0;
+        } else {
+            this.mColor = (_color & 0xFFFFFF00) >>> 0;
+        }
+        this.mAtlas=_atlas;
+        this.mColliderLayer=_collider;
+        this.mLabel=_label;
+    }
 	Label(): string {
 		return this.mLabel;
 	}
@@ -331,7 +337,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mTileMap =new Map<number,CVTile>();
 	mTileRoleArr =new Array<CVTileRole>();
 	mTileMoldArr = new Array<CVTileMold>();
-    mPaint : CPaintVoxel=null;
+    //mPaint : CPaintVoxel=null;
 	mColliderArr = Array<CCollider>();
 	mPaintArr=new Array<CPaintVoxel>();
 	mDiv=16;
@@ -363,16 +369,19 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	MapLog(): string {
 		let json={};
 		json["countX"]=this.mBuf.mCount.x;
-		json["countY"]=this.mBuf.mCount.x;
-		json["countZ"]=this.mBuf.mCount.x;
+		json["countY"]=this.mBuf.mCount.y;
+		json["countZ"]=this.mBuf.mCount.z;
 		json["size"]=this.mBuf.mSize;
 
 		json["labelArr"]=new Array();
 
+		// let test=CColor.HexToRGB(this.mTileMap.get(65280).Color(),true);
+		// CConsol.Log(test.ToHex())
+
 		let size=new CVec3(this.mBuf.mSize,this.mBuf.mSize,this.mBuf.mSize);
 		for(let tile of this.mTileMap.values())
 		{
-			json["labelArr"].push({"label":tile.Label(),"color":tile.Color(),"sizeX":size.x,"sizeY":size.x,"sizeZ":size.x});
+			json["labelArr"].push({"label":tile.Label(),"color":CColor.HexToRGB(tile.Color(),true).ToHex(),"sizeX":size.x,"sizeY":size.y,"sizeZ":size.z});
 		}
 
 		return JSON.stringify(json);
@@ -385,11 +394,9 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	{
 
 		this.mPlane.length=0;
-		// this.RemoveComps(CPaintVoxel);
-		// this.RemoveComps(CCollider);
-		// this.RemoveComps(CNavigation);
 		this.mComArr.length=0;
 		this.mComEnableArr.length=0;
+		this.mPaintArr.length=0;
 		this.mPTArr=null;
 		
 		this.mBuf.Reset(_count,_size);
@@ -407,46 +414,52 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	}
 	
 	RefreshModify()
-	{
-		let cntX=Math.ceil(this.mBuf.mCount.x/this.mDiv);
-		let cntY=Math.ceil(this.mBuf.mCount.y/this.mDiv);
+{
+    let cntX=Math.ceil(this.mBuf.mCount.x/this.mDiv);
+    let cntY=Math.ceil(this.mBuf.mCount.y/this.mDiv);
 
-		// 영향받는 청크 인덱스 수집
-		let dirtyChunks=new Set<number>();
-		for(let m of this.mUpdateModify)
-		{
-			this.PlaneRefresh(m);
-			let cx=Math.floor(m.x/this.mDiv);
-			let cy=Math.floor(m.y/this.mDiv);
-			let cz=Math.floor(m.z/this.mDiv);
-			dirtyChunks.add(cx+cy*cntX+cz*cntX*cntY);
-		}
+    let chunkMap=new Map<number, Array<CCIndex>>();
+    for(let m of this.mUpdateModify)
+    {
+        this.PlaneRefresh(m);
+        let cx=Math.floor(m.x/this.mDiv);
+        let cy=Math.floor(m.y/this.mDiv);
+        let cz=Math.floor(m.z/this.mDiv);
+        let pi=cx+cy*cntX+cz*cntX*cntY;
+        if(!chunkMap.has(pi)) chunkMap.set(pi,[]);
+        chunkMap.get(pi).push(m);
+    }
 
-		// 청크별로 plane 수집 후 Rebuild
-		for(let pi of dirtyChunks)
-		{
-			let paint=this.mPaintArr[pi];
-			if(paint==null) continue;
+    for(let [pi,cells] of chunkMap)
+    {
+        let paint=this.mPaintArr[pi];
+        if(paint==null) continue;
 
-			let cz=Math.floor(pi/(cntX*cntY));
-			let cy=Math.floor((pi%(cntX*cntY))/cntX);
-			let cx=pi%cntX;
+        let cz=Math.floor(pi/(cntX*cntY));
+        let cy=Math.floor((pi%(cntX*cntY))/cntX);
+        let cx=pi%cntX;
+        let x0=cx*this.mDiv, y0=cy*this.mDiv, z0=cz*this.mDiv;
+        let chunkW=Math.min(this.mDiv, this.mBuf.mCount.x-x0);
+        let chunkH=Math.min(this.mDiv, this.mBuf.mCount.y-y0);
 
-			let chunkPlanes=new Array<CVoxPlane>();
-			let x0=cx*this.mDiv, x1=Math.min(x0+this.mDiv,this.mBuf.mCount.x);
-			let y0=cy*this.mDiv, y1=Math.min(y0+this.mDiv,this.mBuf.mCount.y);
-			let z0=cz*this.mDiv, z1=Math.min(z0+this.mDiv,this.mBuf.mCount.z);
-			for(let z=z0;z<z1;++z)
-			for(let y=y0;y<y1;++y)
-			for(let x=x0;x<x1;++x)
-			{
-				let loff=x*6+y*this.mBuf.mCount.x*6+z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;
-				for(let j=0;j<6;++j) chunkPlanes.push(this.mPlane[loff+j]);
-			}
-			paint.Rebuild(chunkPlanes);
-		}
-		this.mUpdateModify.clear();
-	}
+        let chunkPlanes=new Array<CVoxPlane>();
+        for(let m of cells)
+        {
+            let lx=m.x-x0, ly=m.y-y0, lz=m.z-z0;
+            let localBase=(lx + ly*chunkW + lz*chunkW*chunkH)*6;
+            let globalBase=m.x*6 + m.y*this.mBuf.mCount.x*6
+                                  + m.z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;
+            for(let j=0;j<6;++j)
+            {
+                let plane=this.mPlane[globalBase+j];
+                plane.mOff=localBase+j; // 청크 로컬로 교정
+                chunkPlanes.push(plane);
+            }
+        }
+        paint.Rebuild(chunkPlanes);
+    }
+    this.mUpdateModify.clear();
+}
 	PlaneRefresh(_index : CCIndex)
 	{
 		
@@ -471,9 +484,9 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	{
 		let tile = this.mTileMap.get(_color);//this.mTileArr.find(t => t.mColor == _color);
 		if(tile==null)
-			this.mAtlas.GetTexCodi(0,_texCodi);
+			this.mAtlas.GetUV(0,_texCodi);
 		else
-			this.mAtlas.GetTexCodi(tile.mAtlas,_texCodi);
+			this.mAtlas.GetUV(tile.mAtlas,_texCodi);
 	}
 	GetLight(_index : CCIndex,_dir : CCIndex,_light : CVec2)
 	{
@@ -512,13 +525,13 @@ export class CVoxelMap extends CSubject implements IMapSchema
     }
 	override Update(_update : CUpdate): void {
 		
-		if(this.mAtlas.mBase64.mData == null) {
-			return;
-		}
+		// if(this.mAtlas.mBase64.mData == null) {
+		// 	return;
+		// }
 
 		if(this.mUpdateRes)
 			this.RefreshRes();
-		if(this.mPaint && this.mPaint.mMD.vGBufEx && this.mUpdateModify.size>0)
+		if(this.mUpdateModify.size>0)
 			this.RefreshModify();
 	}
 	PickBox(_ray : CRay) : CCIndexPick
@@ -648,7 +661,14 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		var button=document.createElement("button");
 		button.innerText="BufferTool";
 		button.onclick=()=>{
-			window["BufferTool"](this.mBuf.mBuffer,this.mBuf.mCount).then(()=>{
+			window["BufferTool"](this.mBuf.GetBuf(),this.mBuf.mCount,Array.from(this.mTileMap.values()),null,false,true).then(()=>{
+
+				this.mPlane.length=0;
+				this.mComArr.length=0;
+				this.mComEnableArr.length=0;
+				this.mPaintArr.length=0;
+				this.mPTArr=null;
+
 				this.mUpdateRes=true;
 				//this.RemoveComps(CPaint2DMerge);
 			});
@@ -662,6 +682,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		this.RemoveComps(CCollider);
 		this.RemoveComps(CNavigation);
 	}
+
 	// public override Export(_copy?: boolean, _resetKey?: boolean): this 
 	// {
 	// 	var copy=super.Export(_copy,_resetKey);
@@ -670,6 +691,10 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	// 	copy.DetachComp(CNavigation);
 	// 	// copy.ResetOctree();
 	// 	return copy;
+	// }
+	// override Import(_target : CObject)
+	// {
+	// 	super.Import(_target);
 	// }
 	// override Import(_target : CObject)
 	// {
@@ -737,4 +762,6 @@ export class CVoxelMap extends CSubject implements IMapSchema
 }
 
 import CVoxel_imple from "../../app_imple/subject/CVoxelMap.js";
+import { CColor } from "../../render/CColor.js";
+import { CConsol } from "../../basic/CConsol.js";
 CVoxel_imple();

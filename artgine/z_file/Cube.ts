@@ -616,11 +616,11 @@ function ps_main() {
     {
         if(i.dummy >= FloatToInt(ligCount)) break;
 
-        lDir = Sam2DToV4(ligDir, i);
+        lDir = Sam2DToV4(ligDir, IntToFloat(i));
         if(lDir.w>1.5) continue;
         dir = V3Nor(lDir.xyz);
 
-        lCol = Sam2DToV4(ligCol, i);
+        lCol = Sam2DToV4(ligCol, IntToFloat(i));
         angle = acos(V3Dot(dir, fragDir));
         intensity  = V3Len(lCol.rgb);
 

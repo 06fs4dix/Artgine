@@ -62,26 +62,26 @@ export class CWind extends CBrushComp
         //if(this.mBruch.mDoubleChk.has(this))	return;
 		//this.mBruch.mDoubleChk.add(this);
         
-        if(this.mBruch.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DSize))
+        if(this.mBrush.mWindCount>CDevice.GetProperty(CDevice.eProperty.Sam2DSize))
             return;
 
-        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 0] = this.mDir.x;
-        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 1] = this.mDir.y;
-        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 2] = this.mDir.z;
-        this.mBruch.mWindDir[this.mBruch.mWindCount * 4 + 3] = this.mPower;
+        this.mBrush.mWindDir[this.mBrush.mWindCount * 4 + 0] = this.mDir.x;
+        this.mBrush.mWindDir[this.mBrush.mWindCount * 4 + 1] = this.mDir.y;
+        this.mBrush.mWindDir[this.mBrush.mWindCount * 4 + 2] = this.mDir.z;
+        this.mBrush.mWindDir[this.mBrush.mWindCount * 4 + 3] = this.mPower;
 
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 0] = this.GetOwner().GetMat().x;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 1] = this.GetOwner().GetMat().y;
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 2] = this.GetOwner().GetMat().z;
+        this.mBrush.mWindPos[this.mBrush.mWindCount * 4 + 0] = this.GetOwner().GetMat().x;
+        this.mBrush.mWindPos[this.mBrush.mWindCount * 4 + 1] = this.GetOwner().GetMat().y;
+        this.mBrush.mWindPos[this.mBrush.mWindCount * 4 + 2] = this.GetOwner().GetMat().z;
         //아마도 이후에 noise texture offset을 넣으면 좋을듯함
-        this.mBruch.mWindPos[this.mBruch.mWindCount * 4 + 3] = this.mUseWeight ? 1.0 : 0.0;
+        this.mBrush.mWindPos[this.mBrush.mWindCount * 4 + 3] = this.mUseWeight ? 1.0 : 0.0;
 
-        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 0] = this.mInnerRadius;
-        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 1] = this.mOuterRadius;
-        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 2] = this.mFrequency;
-        this.mBruch.mWindInfo[this.mBruch.mWindCount * 4 + 3] = this.mWaveLength;
+        this.mBrush.mWindInfo[this.mBrush.mWindCount * 4 + 0] = this.mInnerRadius;
+        this.mBrush.mWindInfo[this.mBrush.mWindCount * 4 + 1] = this.mOuterRadius;
+        this.mBrush.mWindInfo[this.mBrush.mWindCount * 4 + 2] = this.mFrequency;
+        this.mBrush.mWindInfo[this.mBrush.mWindCount * 4 + 3] = this.mWaveLength;
 
-        this.mBruch.mWindCount++;
+        this.mBrush.mWindCount++;
         return false;
 	}
     

@@ -83,7 +83,7 @@ export interface IRecycle
 {
     Recycle();
     GetRecycleType() : string;
-    SetRecycleType(_type : string);
+    ExeRecycle(_type : string);
     IsRecycle();
 }
 // export interface IDrop

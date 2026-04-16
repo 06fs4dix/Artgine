@@ -12,7 +12,7 @@ import { CH5Canvas } from "../../../render/CH5Canvas.js";
 import { CIndexBuffer } from "../../../render/CIndexBuffer.js";
 import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
 import { CRenderPass } from "../../../render/CRenderPass.js";
-import { CShader } from "../../../render/CShader.js";
+import { CShader, CVertexFormat } from "../../../render/CShader.js";
 import { CShaderAttr } from "../../../render/CShaderAttr.js";
 import { CTexture } from "../../../render/CTexture.js";
 import { CUtilRender } from "../../../render/CUtilRender.js";
@@ -46,13 +46,13 @@ export class CPaintTrail extends CPaint
 	public mLen : number = 100;
 	public mEGFar:number = 1; //곡선 거리 배수
 
-	public mStartTime=1000*60*60;//언제까지 생성할껀지
-	public mEndTime=1000;//언제부터 제거할껀지
+	public mStartTime=60*60;//언제까지 생성할껀지
+	public mEndTime=1;//언제부터 제거할껀지
 	//public m_removeTime=100;//몇초당 제거할껀지
 	public mLastHide=true;
 	public mLastSmall=false;
 	public mStaticPos=false;
-	public mRepeat=false;
+	
 	//public m_line=false;
 	
 	public mVCount=32;//버텍스 곗수 많을수록 곡선이 좋음
@@ -104,12 +104,12 @@ export class CPaintTrail extends CPaint
 	{
 		this.mCanTex=CPaintTrail.eCanTex.Line;
 		this.mCanTexOption=[_width,_dash];
-		this.mRepeat=true;
+		
 	}
 	Arrow(_width=8)
 	{
 		this.mCanTex=CPaintTrail.eCanTex.Arrow;
-		this.mRepeat=true;
+		
 	}
 	override InitChk()
 	{
@@ -144,6 +144,7 @@ export class CPaintTrail extends CPaint
 				cmdArr.push(CH5Canvas.Cmd("stroke",[]));
 				
 	
+
 				CH5Canvas.Draw(cmdArr);
                 let tex=CH5Canvas.GetNewTex();
 				this.mOwner.GetFrame().Ren().BuildTexture(tex);
@@ -207,11 +208,11 @@ export class CPaintTrail extends CPaint
 			this.mTextureKey[0]=texKey;
 		}
 
-		if(this.mStaticPos==false)
-		{
-			var pos=this.mOwner.GetMat().xyz;
-			this.mPosList.push(pos);
-		}
+		// if(this.mStaticPos==false)
+		// {
+		// 	var pos=this.mOwner.GetMat().xyz;
+		// 	this.mPosList.push(pos);
+		// }
 		
 		if(this.mNormal!=null)
 			this.mNorList.push(CMath.V3MulMatNormal(this.mNormal,this.mOwner.GetMat()));
@@ -231,17 +232,17 @@ export class CPaintTrail extends CPaint
 		{
 			drawMesh=new CMeshDrawNode();
 			var info = CUtilRender.GetTrail(this.mVCount);
-			var indexBuf=new CIndexBuffer();
-			indexBuf.CreateBuf16(info.index.length);
-			var sho = indexBuf.GetUInt16();
+			//var indexBuf=new CIndexBuffer();
+			//indexBuf.CreateBuf16(info.GetVFType(CVertexFormat.eIdentifier.Index)[0].bufI.length);
+			// var sho = indexBuf.GetUInt16();
 		
-			for (var i = 0; i < info.index.length; ++i)
-			{
-				sho[i]=info.index[i];
-			}
+			// for (var i = 0; i < info.index.length; ++i)
+			// {
+			// 	sho[i]=info.index[i];
+			// }
 			
 			this.mOwner.GetFrame().Ren().BuildMeshDrawNode(drawMesh, info,_shader);
-			indexBuf.Delete();
+			//indexBuf.Delete();
 			this.mOwner.GetFrame().Res().Push(this.mVCount+_meshKey + _shader.mKey,drawMesh);
 		}
 		
@@ -265,19 +266,22 @@ export class CPaintTrail extends CPaint
 		super.Update(_update);
 		this.Camera();
 		
-		if(this.mStaticPos)
+		if(this.mStaticPos)	return;
+		
+		if(_update.DeltaTime()>1)	return;
+
+		if(this.mPosList.length == 0)
 		{
+			this.mPosList.push(this.mOwner.GetMat().xyz);
 			return;
 		}
-		if(_update.DeltaMil()>1000)
-			return;
-
+		
 		var pos=this.mOwner.GetMat().xyz;
 		let size=(this.mLen / 2);
 
-		this.mSumTime+=_update.DeltaMil();
+		this.mSumTime+=_update.DeltaTime();
 		if(this.mStartTime>0){
-			this.mStartTime-=_update.DeltaMil();
+			this.mStartTime-=_update.DeltaTime();
 			//시작 지점
 			if(this.mVList.length==0){
 				if(this.mPosList[this.mPosList.length-1].Equals(pos) == false){
@@ -285,12 +289,12 @@ export class CPaintTrail extends CPaint
 					this.mVList.push(CMath.V3Nor(nvec));
 					this.mPosList.push(pos);
 					this.mPCnt.push(1);
-					this.mTCnt.push(_update.DeltaMil());
+					this.mTCnt.push(_update.DeltaTime());
 					this.mLastLinelen+=CMath.V3Len(CMath.V3SubV3(pos,this.mPosList[this.mPosList.length-1]));
 					this.mLastVec=CMath.V3Nor(nvec);
 				}
 				else{
-					this.mSumTime-=_update.DeltaMil();
+					this.mSumTime-=_update.DeltaTime();
 				}
 			}
 			else{
@@ -310,7 +314,7 @@ export class CPaintTrail extends CPaint
 						this.mPosList.push(pos);
 						this.mVList.push(nowvec);
 						this.mPCnt.push(1);
-						this.mTCnt.push(_update.DeltaMil());
+						this.mTCnt.push(_update.DeltaTime());
 
 						this.mLastLinelen+=CMath.V3Len(nvec);
 
@@ -339,7 +343,7 @@ export class CPaintTrail extends CPaint
 							this.mVList.push(CMath.V3Nor(CMath.V3SubV3(pos,this.mPosList[this.mPosList.length-1])));
 							this.mPosList.push(pos);
 							this.mPCnt.push(1);
-							this.mTCnt.push(_update.DeltaMil());
+							this.mTCnt.push(_update.DeltaTime());
 							
 							this.mInCurve=true;
 						}
@@ -353,7 +357,7 @@ export class CPaintTrail extends CPaint
 							for(let i=0;i<edCnt;i++){
 								this.mPosList.push(pos);
 								this.mPCnt.push(1);
-								this.mTCnt.push(_update.DeltaMil()/edCnt);
+								this.mTCnt.push(_update.DeltaTime()/edCnt);
 								this.mVList.push((CUtilMath.Bezier(vArr, i/(edCnt-1), 0, 0)));
 							}
 							this.mLastLinelen=0;
@@ -404,7 +408,7 @@ export class CPaintTrail extends CPaint
 					this.mVList.push(CMath.V3Nor(CMath.V3SubV3(pos,this.mPosList[this.mPosList.length-1])));
 					this.mPosList.push(pos);
 					this.mPCnt.push(1);
-					this.mTCnt.push(_update.DeltaMil());
+					this.mTCnt.push(_update.DeltaTime());
 	
 					if(success>0){
 						this.mInCurve=false;
@@ -503,6 +507,7 @@ export class CPaintTrail extends CPaint
 	Camera()
 	{
 		var L_nor:CVec3=null;
+		
 		var st=new CVec3(),ed=new CVec3();
 		var sto=0;
 		
@@ -528,10 +533,10 @@ export class CPaintTrail extends CPaint
 				st = CUtilMath.WeightVec3(this.mPosList, i / this.mVCount);
 				ed = CUtilMath.WeightVec3(this.mPosList, (i + 1) / this.mVCount);
 				
-				if(this.mRepeat)
-				{
-					texLen+=CMath.V3Distance(st,ed);
-				}
+				// if(this.mRepeat)
+				// {
+				// 	texLen+=CMath.V3Distance(st,ed);
+				// }
 				
 				
 				if (this.mNormal==null && this.mRenPT.length!=0)
@@ -665,13 +670,20 @@ export class CPaintTrail extends CPaint
 				else{
 					var vs=this.mOut.V4((this.mPosList.length-1)*2+0);
 					var ve=this.mOut.V4((this.mPosList.length-1)*2+1);
-					vs.w=2;
-					ve.w=2;
+					// vs.w=2;
+					// ve.w=2;
 					this.mOut.V4(i * 2, vs);
 					this.mOut.V4(i * 2+1, ve);
 				}
 			}
 		}
+		this.mBound.mMin.x-=this.mLen*2;
+		this.mBound.mMin.y-=this.mLen*2;
+		this.mBound.mMin.z-=this.mLen*2;
+
+		this.mBound.mMax.x+=this.mLen*2;
+		this.mBound.mMax.y+=this.mLen*2;
+		this.mBound.mMax.z+=this.mLen*2;
 		
 
 		
@@ -679,8 +691,8 @@ export class CPaintTrail extends CPaint
 
         CPoolGeo.RecycleV3(t0);
         CPoolGeo.RecycleV3(t1);
-		if(this.mRepeat)
-			this.mTexCodi.x=texLen/64;
+		// if(this.mRepeat)
+		// 	this.mTexCodi.x=texLen/64;
 		
 	}
 	SetLastHide(_enabel : boolean)
@@ -701,7 +713,7 @@ export class CPaintTrail extends CPaint
 		super.Common(_vf);
 
 		//let meshDraw=this.m_owner.GetFW().Res().Find("line"+this.m_vCount+".meshDraw");
-		//this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi",this.mTexCodi));
+		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("texCodi",this.mTexCodi));
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("trailPos",4,this.mOut.GetArray()));
 		if(this.mLastHide)
             this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("lastHide",new CVec1(1.0)));
@@ -721,7 +733,3 @@ export class CPaintTrail extends CPaint
 		this.mPosList=_array;
 	}
 }
-
-
-
-

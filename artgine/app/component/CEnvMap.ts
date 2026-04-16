@@ -58,7 +58,7 @@ export default class CEnvMap extends CBrushComp
 
     Update(_update: CUpdate): boolean|any {
         super.Update(_update);
-        if(this.mBruch != null) this.UpdateBrush(_update);
+        if(this.mBrush != null) this.UpdateBrush(_update);
     }
 
     UpdateBrush(_update : CUpdate) {
@@ -92,13 +92,13 @@ export default class CEnvMap extends CBrushComp
         for(const rp of this.mWrite) {
             const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
             // 등록된 RP가 없다면 등록
-            if(!this.mBruch.AutoRP().has(rpKey)) {
-                this.mBruch.SetAutoRP(rpKey, rp);
+            if(!this.mBrush.AutoRP().has(rpKey)) {
+                this.mBrush.SetAutoRP(rpKey, rp);
             }
             // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
             }
         }
 
@@ -113,7 +113,7 @@ export default class CEnvMap extends CBrushComp
 
         for(let i = 0; i < 6; i++) {
             const camDir = camDirList[i];
-            const virtualCam = this.mBruch.GetCamera(this.mTexKey+i);
+            const virtualCam = this.mBrush.GetCamera(this.mTexKey+i);
 
             const eye = pos;
             const look = CMath.V3AddV3(pos, camDir);
@@ -134,7 +134,7 @@ export default class CEnvMap extends CBrushComp
         if(this.mWrite.length > 0) {
             for(const rp of this.mWrite) {
                 const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
-                this.mBruch.RemoveAutoRP(rpKey);
+                this.mBrush.RemoveAutoRP(rpKey);
             }
             this.mWrite.length = 0;
         }

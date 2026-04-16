@@ -1,4 +1,5 @@
 
+import { CBrush } from "../../artgine/app/canvas/CBrush.js";
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CLight } from "../../artgine/app/component/CLight.js";
 import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
@@ -200,20 +201,25 @@ export class CShadowPlane extends CPaint2D
 
     //private
     private mPTKey : string;
-    private mLIGKeys : string[];
+    //private mLIGKeys : string[];
 
     private mPT : CPaint;
-    private mLIG : CLight;
-    private mLIGSet : Set<CLight> = new Set();
+    // private mLIG : CLight;
+    // private mLIGSet : Set<CLight> = new Set();
+
+    //mLight=0;
+    mLightDir : CVec4=new CVec4();
+    mLightCol : CVec4=new CVec4();
+
     mUpdateLight=true;
     mUpdateShadow=true;
-
+    mBrush : CBrush;
     mCenter=new CVec3();
 
-     constructor(_ptKey : string = null, _ligKeys : string[] = []) {
+     constructor(_ptKey : string = null) {
         super();
         this.mPTKey = _ptKey;
-        this.mLIGKeys = _ligKeys;
+        //this.mLIGKeys = _ligKeys;
 
         this.PushCShaderAttr(new CShaderAttr("alphaCut", 0.001));
         this.SetColorModel(new CColor(0,0,0,CColor.eModel.RGBMul));
@@ -231,17 +237,30 @@ export class CShadowPlane extends CPaint2D
         
     }
 
+    RecvGetBrush(_brush : CBrush) 
+    {
+        this.mBrush=_brush;
+    }
     //강제로 이상한 RP지우기
     override StartChk(): boolean 
     {
-        if(this.mStartChk==true)
+        if(this.mStartChk==true && this.mBrush==null)
         {
             this.mRenderPass.length=0;
+
+            var cm=this.ProductMsg("SendGetBrush");
+            cm.mInter="canvas";
+            cm.mMsgData[0]=this;
+
+            return false;
+
+
         }
         this.mSize=new CVec2(1,1);
         return super.StartChk();
         
     }
+    
     override EmptyRPChk()
 	{
         let empty=this.mRenderPass.length==0;
@@ -269,51 +288,10 @@ export class CShadowPlane extends CPaint2D
 	}
 
    
-    // PushCRPAuto(_rpc : CRPAuto)
-    // {
-    //     super.PushCRPAuto(_rpc);
-    //     if(_rpc.mCopy)
-    //     {
-    //         _rpc.mPriority=CRenderPass.ePriority.AlphaAuto;
-    //         _rpc.mSortRevers=true;
-    //         _rpc.mCullFace = CRenderPass.eCull.None;
-    //     }
-    // }
-
-    // SetOwner(_obj: CSubject): void {
-    //     super.SetOwner(_obj);
-    //     if(_obj.GetFrame()==null)   return;
-    //     let rp=this.PushRenderPass(new CRenderPass(_obj.GetFrame().Pal().Sl2DKey())) as CRenderPass;
-    //     rp.mPriority=CRenderPass.ePriority.AlphaAuto;
-    //     rp.mSort=CRenderPass.eSort.ReversAlphaGroup;
-    //     rp.mCullFace = CRenderPass.eCull.None;
-    //     //rp.mAlpha=false;
-
-    //     //rp.mDepthTest=false;
-    //     //rp.mDepthWrite=false;
-    //     // rp.mBlend=[
-    //     //     CRenderPass.eBlend.FUNC_MIN,   // 색 방정식 = MIN (Darken)
-    //     //     CRenderPass.eBlend.FUNC_ADD,   // 알파는 아무거나(미사용이면 상관없음)
-    //     //     CRenderPass.eBlend.ONE,        // MIN/MAX에서는 factor들은 무시됨
-    //     //     CRenderPass.eBlend.ONE,
-    //     //     CRenderPass.eBlend.ONE,
-    //     //     CRenderPass.eBlend.ONE
-    //     // ];
-    //     // rp.mBlend=[
-    //     //     CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,
-    //     //     CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA
-    //     // ];
-    //     // rp.mBlend=[
-    //     //     CRenderPass.eBlend.FUNC_MIN,CRenderPass.eBlend.FUNC_ADD,
-    //     //     CRenderPass.eBlend.SRC_ALPHA,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,
-    //     //     CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_COLOR
-    //     // ];
-        
-    // }
     override IsShould(_member: string, _type: CObject.eShould) 
     {
         const hide = [
-            "mPT", "mLIG", "mLIGSet", "mUpdateLight","mUpdateShadow"
+            "mPT", "mLIG", "mLIGSet", "mUpdateLight","mUpdateShadow","mBrush"
         ];
         if(hide.includes(_member)) return false;
         return super.IsShould(_member, _type);
@@ -365,67 +343,113 @@ export class CShadowPlane extends CPaint2D
         }  
         if(this.mPT==null) return;
 
-        //light
-        for(let lig of this.mLIGSet) {
-            if(!lig.GetOwner() || lig.GetOwner().GetFrame() == null || lig.IsDestroy() || lig.IsEnable()==false || lig.IsColorZero()) 
-            {
-                if(this.mLIG==lig)  this.mLIG=null;
-                this.mLIGSet.delete(lig);
-                this.mUpdateLight=true;
-            }
-        }
+        // //light
+        // for(let lig of this.mLIGSet) {
+        //     if(!lig.GetOwner() || lig.GetOwner().GetFrame() == null || lig.IsDestroy() || lig.IsEnable()==false || lig.IsColorZero()) 
+        //     {
+        //         if(this.mLIG==lig)  this.mLIG=null;
+        //         this.mLIGSet.delete(lig);
+        //         this.mUpdateLight=true;
+        //     }
+        // }
         
-        if(this.mUpdateLight)
-        {
-            this.mUpdateLight=false;
+        // if(this.mUpdateLight)
+        // {
+        //     this.mUpdateLight=false;
             
 
-            const center = this.GetPaintCenter();
-            //let pick: Array<{ light: CLight; dist: number }>=[];
+        //     const center = this.GetPaintCenter();
+        //     //let pick: Array<{ light: CLight; dist: number }>=[];
 
-            let minLen=Number.MAX_SAFE_INTEGER;
+        //     let minLen=Number.MAX_SAFE_INTEGER;
 
-            if(this.mLIG!=null)
-            {
-                if(this.mLIG.IsPointLight())
-                    minLen = CMath.V3Distance(this.mLIG.DirPosV4(), center);
-                else
-                    minLen=0;
+        //     if(this.mLIG!=null)
+        //     {
+        //         if(this.mLIG.IsPointLight())
+        //             minLen = CMath.V3Distance(this.mLIG.DirPosV4(), center);
+        //         else
+        //             minLen=0;
                     
-            }
+        //     }
             
 
 
-            for(let lig of this.mLIGSet) 
-            {
-                //if(lig.IsEnable()==false || lig.IsColorZero())    continue;
-                if(this.mLIGKeys.length>0)
-                {
-                     if(this.mLIGKeys.includes(lig.Key()) || this.mLIGKeys.includes(lig.GetOwner().Key())){}
-                     else   continue;
-                }
-                let len=0;
-                if(lig.IsPointLight())
-                {
-                    len = CMath.V3Distance(lig.DirPosV4(), center);
-                }
-                if(minLen>len)
-                {
-                    if(this.mLIG!=lig)  
-                    {
-                        this.ClearBatch();
-                        this.mUpdateShadow=true;
-                    }
+        //     for(let lig of this.mLIGSet) 
+        //     {
+        //         //if(lig.IsEnable()==false || lig.IsColorZero())    continue;
+        //         if(this.mLIGKeys.length>0)
+        //         {
+        //              if(this.mLIGKeys.includes(lig.Key()) || this.mLIGKeys.includes(lig.GetOwner().Key())){}
+        //              else   continue;
+        //         }
+        //         let len=0;
+        //         if(lig.IsPointLight())
+        //         {
+        //             len = CMath.V3Distance(lig.DirPosV4(), center);
+        //         }
+        //         if(minLen>len)
+        //         {
+        //             if(this.mLIG!=lig)  
+        //             {
+        //                 this.ClearBatch();
+        //                 this.mUpdateShadow=true;
+        //             }
                         
                     
-                    this.mLIG=lig;
-                    minLen=len;
-                }
+        //             this.mLIG=lig;
+        //             minLen=len;
+        //         }
                 
 
+        //     }
+        // }
+        // if(this.mLIG==null) return;
+        let lightOff=-1;
+
+        // this.mLightDir=null;
+        // this.mLightCol=null;
+
+        const center = this.GetPaintCenter();
+        let pick: Array<{ light: CLight; dist: number }>=[];
+        let minLen=Number.MAX_SAFE_INTEGER;
+        let pos=new CVec3();
+        for(let i=0;i<this.mBrush.mLightCount;++i)
+        {
+            
+            
+             let len=10000000;
+            if(this.mBrush.mLightDir[i*4+3]> 0.5)//point
+            {
+                pos.mF32A[0]=this.mBrush.mLightDir[i*4+0];
+                pos.mF32A[1]=this.mBrush.mLightDir[i*4+1];
+                pos.mF32A[2]=this.mBrush.mLightDir[i*4+2];
+                len = CMath.V3Distance(pos, center);
+
+                if(len>this.mBrush.mLightDir[i*4+3])    continue;
+            }
+          
+            if(minLen>len)
+            {
+                lightOff=i;
+                minLen=len;
+            }
+            
+        }
+        if(lightOff==-1) return;
+
+        if(this.mBrush.mLightDir[lightOff*4+0]!=this.mLightDir.x || this.mBrush.mLightDir[lightOff*4+1]!=this.mLightDir.y ||
+            this.mBrush.mLightDir[lightOff*4+2]!=this.mLightDir.z)
+        {
+            this.ClearBatch();
+            this.mUpdateShadow=true;
+            for(let i=0;i<4;++i)
+            {
+                this.mLightDir.mF32A[i]=this.mBrush.mLightDir[lightOff*4+i];
+                this.mLightCol.mF32A[i]=this.mBrush.mLightColor[lightOff*4+i];
             }
         }
-        if(this.mLIG==null) return;
+        //this.mLightDir=this.mBrush.mLightDir.slice(lightOff,4);
+        
 
         // for(let rp of this.GetRenderPass()) {
         //     if(rp.mSort != CRenderPass.eSort.ReversAlphaGroup) {
@@ -438,27 +462,24 @@ export class CShadowPlane extends CPaint2D
     }
     private UpdateShadow() 
     {
-        // if(this.mLIG.GetColor().IsZero() && this.mEnable==true)
-        //     this.SetEnable(false);
-        // else if(this.mEnable==false)
-        //     this.SetEnable(true);
-        
+        if(this.mUpdateShadow==false && this.mPT.IsUpdateFMat()==false)   return;
+            this.mUpdateShadow = false;
 
         if(this.mPT instanceof CPaint2D) 
         {
             //this.PushTag("zDepth");
             const pt = this.mPT as CPaint2D;
-            const lig = this.mLIG;
+            //const lig = this.mLIG;
 
             
             
 
-            if(this.mUpdateShadow==false && pt.IsUpdateFMat()==false && lig.mUpdate==0)   return;
+        
             
             this.SetTexture(pt.GetTexture());
             this.SetTexCodi(pt.GetTexCodi());
             
-            this.mUpdateShadow=false;
+          
 
             const fBound = pt.GetBoundFMat();
             
@@ -474,13 +495,13 @@ export class CShadowPlane extends CPaint2D
 
             let height : number;
             let alpha : number;
-            if(lig.IsPointLight()) 
+            if(this.mLightDir.w>0.5) 
             {
-                if(this.mLIG!=null)
-                    dir=CMath.V3Nor(CMath.V3SubV3(c, this.mLIG.DirPosV4()));
-                const inner = lig.GetInRadius();
-                const outer = lig.GetOutRadius();
-                const dist = CMath.V3Distance(c, lig.DirPosV4());
+                //if(this.mLIG!=null)
+                dir=CMath.V3Nor(CMath.V3SubV3(c, this.mLightDir));
+                const inner = this.mLightCol.w;
+                const outer = this.mLightDir.w;
+                const dist = CMath.V3Distance(c, this.mLightDir);
                 
                 alpha = LightFalloff(dist, inner, outer);
 
@@ -492,14 +513,14 @@ export class CShadowPlane extends CPaint2D
                 }
             }
             else {
-                if(this.mLIG!=null)
-                    dir=CMath.V3Nor(this.mLIG.DirPosV4());
-                alpha = Math.max(Math.max(lig.GetColor().x,lig.GetColor().y),lig.GetColor().z);
+                
+                dir=CMath.V3Nor(this.mLightDir);
+                alpha = Math.max(Math.max(this.mLightCol.x,this.mLightCol.y),this.mLightCol.z);
                 height = fBound.GetSize().y * this.mShadowLen;
             }
 
             //alpha
-            if(lig.IsColorZero()) alpha=0;
+            if(this.mLightCol.x==0 && this.mLightCol.y==0&& this.mLightCol.z==0) alpha=0;
             
             let dot=CMath.V3Dot(new CVec3(0,1,0),dir);
             dot*=0.1;
@@ -544,16 +565,15 @@ export class CShadowPlane extends CPaint2D
         {
             
             const pt = this.mPT as CPaint3D;
-            const lig = this.mLIG;
+            //const lig = this.mLIG;
 
             
             
 
-            if(this.mUpdateShadow==false && pt.IsUpdateFMat()==false && lig.mUpdate==0)   return;
-            this.mUpdateShadow = false;
+            
 
             this.PushTag("zDepth");
-            const ligDir = CMath.V3Nor(lig.DirPosV4());
+            const ligDir = CMath.V3Nor(this.mLightDir);
             
             const fBound = this.mPT.GetBoundFMat();
             const fCenter = fBound.GetCenter();
@@ -579,7 +599,7 @@ export class CShadowPlane extends CPaint2D
     //중심축을 제대로 못잡는다
     private CaptureShadow() {
         const pt = this.mPT as CPaint3D;
-        const lig = this.mLIG;
+        
 
         const fw = this.GetOwner().GetFrame();
 
@@ -684,13 +704,13 @@ export class CShadowPlane extends CPaint2D
             return this.mPT.GetBoundFMat().GetCenter();
         }
     }
-    SetLight(_light: CLight): void {
-        if(this.mLIGSet.has(_light)==false)
-        {
-            this.mLIGSet.add(_light);
-            this.mUpdateLight=true;
-        }   
-    }
+    // SetLight(_light: CLight): void {
+    //     if(this.mLIGSet.has(_light)==false)
+    //     {
+    //         this.mLIGSet.add(_light);
+    //         this.mUpdateLight=true;
+    //     }   
+    // }
     
 }
 CClass.Push(CShadowPlane);

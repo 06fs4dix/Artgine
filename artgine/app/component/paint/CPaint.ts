@@ -42,7 +42,7 @@ import { CVFX } from "../../../render/CVFX.js"
 import { CUtil } from "../../../basic/CUtil.js"
 import { CChecker } from "../../../util/CChecker.js"
 
-
+var gMargin=1.0;;
 export class CRenPaint
 {
     public mRenInfoKey : string = null;
@@ -109,7 +109,7 @@ export class CPaint extends CComponent implements IMat
 	protected mColorModel  : CColor;
 	protected mAlphaModel  : CAlpha;
 	protected mVFX  : CVFX;
-	protected mTexCodi : CVec4;
+	protected mTexCodi : CVec4;//xy size,zw 시작 위치!
 
 	public mAutoRPUpdate=true;
 	public mCamCullUpdate=true;
@@ -194,12 +194,38 @@ export class CPaint extends CComponent implements IMat
 	{
 		//this.m_heap.Push(_F32A);
 	}
-	SetTexCodi(_codi : CVec4) : void
+	SetTexCodi(_uv : CVec4) : void;
+	SetTexCodi(_uv : CVec4,_margin : number) : void;
+	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
+	SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
+	SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
 	{
 		if(this.PushTag("codi"))
 			this.ClearBatch();
-	
-		this.mTexCodi.Import(_codi);
+		if(_stX==null)
+		{
+			this.mTexCodi.x=1-_stY;
+			this.mTexCodi.y=1-_stY;
+			this.mTexCodi.z=_stY*0.5;
+			this.mTexCodi.w=_stY*0.5;
+		}
+		else if(_stX instanceof CVec4)
+		{
+			//this.mTexCodi.Import(_stX);
+			if(_stY==null)	_stY=0;
+			this.mTexCodi.x=_stX.x-_stY;
+			this.mTexCodi.y=_stX.y-_stY;
+			this.mTexCodi.z=_stX.z+_stY*0.5;
+			this.mTexCodi.w=_stX.w+_stY*0.5;
+		}
+		else
+		{
+			this.mTexCodi.x = (_edX - _stX) / _imgW-_margin/_imgW;
+			this.mTexCodi.y = (_edY - _stY) / _imgH-_margin/_imgH;
+
+			this.mTexCodi.z = (_stX) / _imgW+(_margin*0.5)/_imgW;
+			this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(_margin*0.5)/_imgH;
+		}
 	}
 	// GetMesh() : string
 	// {
@@ -415,39 +441,10 @@ export class CPaint extends CComponent implements IMat
 			{
 				let cam=ren.mCam;
 				let plane=ren.mCam.GetPlane();
-				// pos.mF32A[0]=this.mFMat.mF32A[12]+this.mBoundFMatC.mF32A[0];
-				// pos.mF32A[1]=this.mFMat.mF32A[13]+this.mBoundFMatC.mF32A[1];
-				// pos.mF32A[2]=this.mFMat.mF32A[14]+this.mBoundFMatC.mF32A[2];
-			
-				
+	
 				if(this.mRenderPass[i].mPaintSort!=CRenderPass.ePaintSort.None)
 				{
-					//let eye=ren.mCam.GetEye();
-					
-
-					// //한축 정렬 되면
-					// //2D란 의미다. 
-					// if(cam.GetView().z<-0.98) 
-					// {
-					// 	//20260327 잠시 빼봄
-					// 	//리니어일경우 주변 퍼짐으로 반대로 정렬한다.
-					// 	if(this.mAutoLoad.mFilter==CTexture.eFilter.Linear)
-					// 		ren.mDistance = -(eye.z - this.mFMat.z);
-					// 	else
-					// 		ren.mDistance = eye.z - this.mFMat.z;
-
-					// }
-					// else 
-					// {
-						
-					// 	ren.mDistance = CMath.V3Distance(eye, this.mBW.mPos);
-						
-					// }
-
-					// if(ren.mCam.IsOrthographic())
-					// {
-
-					// }
+				
 					let eye = ren.mCam.GetEye();
 					let view=ren.mCam.GetView();
 					gPosDummy.x = this.mBW.mPos.x - eye.x;
@@ -1269,13 +1266,19 @@ export class CPaint extends CComponent implements IMat
 
 		const uv = this.mTexCodi;
 
-
-		const gMargin=1;
-		const startX = Math.round((this.mTexCodi.z) * imgW);
-		const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y) * imgH);
+		// // 역변환: tex = (left, top, right, bottom) in px
+		// const width = uv.x * imgW;
+		// const height = uv.y * imgH;
+		// const left = uv.z * imgW;
+		// const top = (1 - uv.w - uv.y) * imgH;
+		// const right = left + width;
+		// const bottom = top + height;
 		
-		const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x) * imgW);
-		const endY = Math.round((1 - this.mTexCodi.w) * imgH);
+		const startX = Math.round((this.mTexCodi.z - (gMargin*0.5)/imgW) * imgW);
+		const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y - (gMargin*0.5)/imgH) * imgH);
+		
+		const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x + gMargin/imgW) * imgW);
+		const endY = Math.round((1 - this.mTexCodi.w + gMargin/imgH) * imgH);
 		
 		return new CVec4(startX, startY, endX, endY);
 

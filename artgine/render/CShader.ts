@@ -11,17 +11,20 @@ export class CVertexFormat extends CObject
 {
 	static eIdentifier=
 	{
-		Position:0,
-		UV:1,
-		Normal:3,
-		Weight:4,
-		WeightIndex:5,
+		Position:0,//V3
+		UV:1,//V2
+		Normal:3,//V3
+		Weight:4,//V4
+		WeightIndex:5,//V4
 		Color:6,
-		TexOff:7,
+		TexOff:7,//V3
 		Tangent:8,
 		Binormal:9,
 		Instance:10,
 		Shadow:11,
+		Index:12,
+		Compress:13,
+
 
 		VertexIndex:20,
 		UVIndex:21,

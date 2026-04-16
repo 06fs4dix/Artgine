@@ -33,6 +33,8 @@ import { CSysAuth } from "../system/CSysAuth.js"
 import { CUtilWeb } from "./CUtilWeb.js"
 import { CDOM } from "../basic/CDOM.js"
 import { CUtil } from "../basic/CUtil.js"
+import { CUtilObj } from "../basic/CUtilObj.js"
+import { CPool } from "../basic/CPool.js"
 
 
 let gConsolChat : CModalChat=null;
@@ -135,6 +137,11 @@ function CConsolModalInit()
 				["size"].some(word => msg.includes(word)))
 		{
 			gConsolChat.ChatAdd("pf width : " + CFrame.Main().PF().mWidth + " height : " + CFrame.Main().PF().mHeight,"#00cc00");
+		}
+		else if(["res"].some(word => msg.includes(word)))
+		{
+			let modal=CUtilObj.ShowModal(CFrame.Main().Res(),"Resource");
+			modal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
 		}
 	});
 	while(CConsol.GetLogQue().IsEmpty()==false)
@@ -576,6 +583,8 @@ export class CFrame
 	
 		if(CFrame.Main()==this)
 		{
+			CPool.Update();
+
 			let mList=CModal.GetModalList();
 			let conFocus=true;
 			for(let m of mList)
@@ -744,6 +753,7 @@ export class CFrame
 		await CWASM.Init(this.mPreferences.mWASM,path);
 		if ('serviceWorker' in navigator && navigator.serviceWorker.controller) await CPWA.IsOnline();
 		//CConsol.Log(3);
+		
 		if(CPlugin.sEventVec.length>0 && gMainFramework==this)
 		{
 			for(let event of CPlugin.sEventVec)

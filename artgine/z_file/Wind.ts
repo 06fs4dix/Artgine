@@ -1,12 +1,12 @@
 import { NoiseGet } from "./Noise";
 import { SDF } from "./SDF";
-import { clamp, CVec2, CVec3, CVec4, FloatToInt, max, mix, Sam2DToV4, Sam2DV4, 
+import { clamp, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, max, mix, Sam2DArrToV4, Sam2DArrV4, Sam2DToV4, Sam2DV4, 
     smoothstep, step, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulV3, V3Nor, V3SubV3 } from "./Shader";
 
 export var windInfluence : number = 0.0;
-export var windDir : Sam2DV4 = new Sam2DV4(11,165);
-export var windPos : Sam2DV4 = new Sam2DV4(11,166);
-export var windInfo : Sam2DV4 = new Sam2DV4(11,167);
+export var windDir : Sam2DArrV4 = new Sam2DArrV4(1,SDF.eUni.V4WindDir);
+export var windPos : Sam2DArrV4 = new Sam2DArrV4(1,SDF.eUni.V4WindPos);
+export var windInfo : Sam2DArrV4 = new Sam2DArrV4(1,SDF.eUni.V4WindInfo);
 export var windCount : number = 0.0;
 
 export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
@@ -20,9 +20,9 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
         if(i >= FloatToInt(windCount))
             break;
 
-        var wDir : CVec4 = Sam2DToV4(windDir, i);
-        var wPos : CVec4 = Sam2DToV4(windPos, i);
-        var wInfo : CVec4 = Sam2DToV4(windInfo, i);
+        var wDir : CVec4 = Sam2DArrToV4(windDir, IntToFloat(i));
+        var wPos : CVec4 = Sam2DArrToV4(windPos, IntToFloat(i));
+        var wInfo : CVec4 = Sam2DArrToV4(windInfo, IntToFloat(i));
 
         var pow : number = wDir.w * windInfluence / (100.0 * 100.0);
         if(pow < 0.01) {
@@ -136,7 +136,7 @@ export function GetWind(_objPos : CVec3, _size : CVec3, _time : number) : CVec3
 //     }
 // 	return _worldPos;
 // }
-export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _weightIndex : CVec4, _time : number) : CVec4 
+export function ApplyWind(_worldPos : CVec4, _skin : number, _weight : CVec4, _time : number) : CVec4 
 {
     if(windInfluence > 0.01) {
         var mainWeight : number = max(_weight.x, max(_weight.y, max(_weight.z, _weight.w)));

@@ -261,7 +261,7 @@ export class COAuthServer extends CServerRouter
             str+="</script>\n";
             return str;
         }
-        let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+        let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
         var chk=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", user.m_id,"and"),
                 new CORMCondition("_lock", "==", 0,"and")], null, null);
 

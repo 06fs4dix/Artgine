@@ -22,7 +22,7 @@ CPool.On("CLocalDB",async ()=>{
     await CLocalDB.Init();
     return CLocalDB;
 },"Product");
-let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 let con=new Array<CORMCondition>();
 let option=new CORMOption();
 option.mLimitOffset=0;
@@ -59,7 +59,7 @@ export class CSingServer extends CServerRouter
         // });
         
         this.On("/Sing/SingIn",async (_json : CJSON, _req: Request, _res: Response)=>{
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             var privateKey=_json.GetStr("privateKey");
             var chk=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey,"and"),
                 new CORMCondition("_lock", "==", 0,"and")], null, null);
@@ -70,7 +70,7 @@ export class CSingServer extends CServerRouter
             return "0";
         });
         this.On("/Sing/FireBase",async (_json : CJSON, _req: Request, _res: Response)=>{
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             var publicKey=CUniqueID.Get();
             var privateKey=_json.GetStr("privateKey");
             sql.Insert("user_list", [new CORMField("_privateKey",privateKey),new CORMField("_email",""),
@@ -79,7 +79,7 @@ export class CSingServer extends CServerRouter
             CPool.Recycle(sql);
         });
         this.On("/Sing/Join",async (_json : CJSON, _req: Request, _res: Response)=>{
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             var privateKey=_json.GetStr("privateKey");
             var newPrivateKey=_json.GetStr("newPrivateKey");
             var nick=_json.GetStr("nick");
@@ -198,7 +198,7 @@ export class CSingServer extends CServerRouter
                 let ranKey=this.mFindPWMap.get(_json.GetStr("email"));
                 if(ranKey!=_json.GetStr("value"))
                     return "-1";
-                let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+                let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
                 var privateKey=await sql.Select("user_list", [new CORMCondition("_email", "==", _json.GetStr("email"),"or")], ["_privateKey"], option);
                 if(privateKey[0]._privateKey=="")
                     return "-2";
@@ -211,7 +211,7 @@ export class CSingServer extends CServerRouter
             let option=new CORMOption();
             option.mOrderBy="_offset";
             option.mLimit=1;
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             let jsonArr=await sql.Select("user_list", [new CORMCondition("_privateKey", "==", _json.GetStr("key"),"and"),new CORMCondition("_lock", "==", 0,"and")], 
                     ["_publicKey","_id","_nick","_email","_loginType"], option);
             
@@ -228,7 +228,7 @@ export class CSingServer extends CServerRouter
             let option=new CORMOption();
             option.mOrderBy="_offset";
             option.mLimit=1;
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             let jsonArr=await sql.Select("user_list", [new CORMCondition("_publicKey", "==", _json.GetStr("key"),"and"),new CORMCondition("_lock", "==", 0,"and")], 
                     ["_publicKey","_nick"], option);
 
@@ -239,7 +239,7 @@ export class CSingServer extends CServerRouter
             return JSON.stringify(jsonArr);
         });
         this.On("/Sing/TagArr",async (_json : CJSON, _req: Request, _res: Response)=>{
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             var tagArr=_json.GetArray("tagArr");
             var publicKey=_json.GetStr("publicKey");
             let json=new CJSON("{}");
@@ -258,7 +258,7 @@ export class CSingServer extends CServerRouter
             option.mOrderBy="_offset";
             option.mLimit=1;
             
-            let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+            let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
             var tag=_json.GetStr("tag");
             var publicKey=_json.GetStr("publicKey");
             //let json=new CJSON("{}");

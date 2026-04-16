@@ -78,7 +78,7 @@ export class CLightPlanet extends CLight
     }
     override Update(_update : CUpdate) {
 
-        if(this.mBruch!=null && this.mDCArr.length!=0)
+        if(this.mBrush!=null && this.mDCArr.length!=0)
         {
             let fOff = -1, sOff = -1;
             let fVal = -2, sVal = -2; // dot의 최소 가능값(-1)보다 더 작게 시작
@@ -119,8 +119,8 @@ export class CLightPlanet extends CLight
 
             for(let i=0;i<3;++i)
             {
-                this.mBruch.mSkyTable[i].Import(this.mDCArr[fOff].mSkyTable[i]);
-                this.mBruch.mSunTable[i].Import(this.mDCArr[fOff].mSunTable[i]);
+                this.mBrush.mSkyTable[i].Import(this.mDCArr[fOff].mSkyTable[i]);
+                this.mBrush.mSunTable[i].Import(this.mDCArr[fOff].mSunTable[i]);
             }
             // fVal, sVal ∈ [-1, 1], fVal ≥ sVal
             const eps = 1e-6;
@@ -139,7 +139,7 @@ export class CLightPlanet extends CLight
             this.mTempColor.z=CMath.FloatInterpolate(this.mDCArr[sOff].mEmission.z,this.mDCArr[fOff].mEmission.z,t);
             this.mTempColor.w=this.mDCArr[fOff].mEmission.w;
 
-            let color=this.mTempColor.ToRGBA();
+            let color=this.mTempColor.ToRGB();
             this.mColor.mF32A[0]=color.mF32A[0];
             this.mColor.mF32A[1]=color.mF32A[1];
             this.mColor.mF32A[2]=color.mF32A[2];

@@ -74,7 +74,7 @@ export class CSubject extends CObject implements IFile , IMat
 	mUpdateRS : number = CUpdate.eType.Updated;
 	mUpdateMat : number = CUpdate.eType.Updated;
 	mUpdateComp=true;
-	mReset=false;
+	//mReset=false;
 
 	mSave=true;
 	//public m_updateRS : boolean=true;
@@ -116,20 +116,94 @@ export class CSubject extends CObject implements IFile , IMat
 	
 		
 	}
-	IsDestroy()	{ return this.mDestroy || this.mReset; }
+	IsDestroy()	{ return this.mDestroy || this.IsRecycle(); }
+	// override ExeRecycle(_type : string)
+	// {
+	// 	if(this.IsRecycle()==true)	this.Recycle();
+	// 	super.ExeRecycle(_type);
+		
+		
+	// }
+	override Recycle(): void {
+		if(this.GetRecycleType()!=null && this.IsRecycle()==false)
+		{
+			super.Recycle();
+			let pVec = this.FindComps(CPaint, true);
+			
+			for(let pt of pVec as Array<CPaint>)
+			{
+				pt.ClearCRPAuto();
+				
+				for(let i=0;i<this.mPTArr.length;++i)
+				{
+					if(this.mPTArr[i]==pt)
+					{
+						this.mPTArr.splice(i,1);
+						break;
+					}
+				}
+			}
+			this.mPTArr = null;
+			
+			return;
+		}
+		//CConsol.Log("RecycleA : "+this.Key());
+		this.mPos.Zero();
+		this.mRot.Zero();
+		this.mSca.x=1;this.mSca.y=1;this.mSca.z=1;
+		this.MatUpdate();
+		for(let each0 of this.mChild)
+		{
+			each0.Recycle();
+		}
+		for(let each0 of this.mComArr)
+		{
+			each0.Recycle();
+		}
+		this.UpdateComp();
+		// if(this.mPTArr)
+		// {
+		// 	for(let pt of this.mPTArr as Array<CPaint>)
+		// 	{
+		// 		pt.ClearCRPAuto();
+		// 	}
+		// 	this.mPTArr.length=0;
+		// 	this.mPTArr = null;
+		// }
+		// else
+		// {
+		// 	let pVec=this.FindComps(CPaint,true);
+		// 	for(let pt of pVec as Array<CPaint>)
+		// 	{
+		// 		pt.ClearCRPAuto();
+		// 	}
+		// }
+		
+		this.mFrame=null;
+		this.mDestroy=false;
+		this.mInMsg.Clear();
+		this.mOutMsg.Clear();
+		//this.mCLArr.Clear();
+		this.mUpdateRS=CUpdate.eType.Updated;
+		this.mUpdateMat = CUpdate.eType.Updated;
+		this.mPushLock=false;
+		this.mPushArr.length=0;
+
+		// for(let com of this.mComArr)
+		// {
+		// 	com.ClearMsg();
+		// }
+	}
 	Reset()
 	{
-		this.mReset=false;
+		//this.mReset=false;
 		for(let each0 of this.mChild)
 		{
 			each0.Reset();
 		}
 		for(let each0 of this.mComArr)
 		{
-			//each0.Reset();
-			each0.mStartChk=true;
-			//each0.mComMsgLen=0;
-			each0.ClearMsg();
+			each0.Reset();
 		}
 		this.UpdateComp();
 		if(this.mPTArr)
@@ -400,7 +474,7 @@ export class CSubject extends CObject implements IFile , IMat
 	
 	IsEnable() 
 	{
-		return this.mEnable && this.mPEnable && this.mReset==false;	 
+		return this.mEnable && this.mPEnable && this.IsRecycle()==false;	 
 	}
 	
 	override SetKey(_key) 
@@ -519,10 +593,8 @@ export class CSubject extends CObject implements IFile , IMat
 		//
 		if(this.GetRecycleType()!=null)
 		{
-			// this.Reset();
-			// this.Recycle();
-			this.mReset=true;
 			
+			this.Recycle();
 			return;
 		}
 

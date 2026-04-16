@@ -6,7 +6,7 @@ import { CParser } from "./CParser.js";
 
 export class CParserIMG extends CParser {
     mAlphaCut = 0;
-    //mTest=true;
+    mAlphaBleed = true;  // ← 추가
     constructor() 
     {
         super();
@@ -60,22 +60,47 @@ export class CParserIMG extends CParser {
                 }
 
                 // (기존 동작 보존) AlphaCut 적용 전 상태에서만 블리드 수행
-                if (hasOpaque && hasZeroAlpha) {
+                if (hasOpaque && hasZeroAlpha && this.mAlphaBleed) {
                     alphaBleedRGBA(buf, w, h, /*iters=*/2);
                 }
 
-                // AlphaCut + 알파 플래그(기존 로직 유지)
-                for (let i = 3; i < buf.length; i += 4) {
-                    const a = buf[i];
-                    if (a !== 0 && a !== 255) {
-                        if (a <= this.mAlphaCut) {
-                            buf[i] = 0;
+                // // AlphaCut + 알파 플래그(기존 로직 유지)
+                // for (let i = 3; i < buf.length; i += 4) {
+                //     const a = buf[i];
+                //     if (a !== 0 && a !== 255) {
+                //         if (a <= this.mAlphaCut) {
+                //             buf[i] = 0;
+                //         } else {
+                //             tex.SetAlpha(true);
+                //         }
+                //     }
+                // }
+                // tex.GetBuf()[0] = buf;
+
+                // 변경 - AlphaCut + YFlip 동시 처리
+                const flipped = new Uint8Array(buf.length);
+                for (let y = 0; y < h; y++) {
+                    const row = y * w * 4;
+                    for (let x = 0; x < w; x++) {
+                        const si = row + x * 4;
+                        const di = row + x * 4;
+                        flipped[di]   = buf[si];
+                        flipped[di+1] = buf[si+1];
+                        flipped[di+2] = buf[si+2];
+                        const a = buf[si+3];
+                        if (a !== 0 && a !== 255) {
+                            if (a <= this.mAlphaCut) {
+                                flipped[di+3] = 0;
+                            } else {
+                                tex.SetAlpha(true);
+                                flipped[di+3] = a;
+                            }
                         } else {
-                            tex.SetAlpha(true);
+                            flipped[di+3] = a;
                         }
                     }
                 }
-                tex.GetBuf()[0] = buf;
+                tex.GetBuf()[0] = flipped;
                 //tex.GetBuf()[0]=img;
                 resolve(""); // ✅ 처리 끝나면 반환
             };

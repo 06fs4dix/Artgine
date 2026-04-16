@@ -76,6 +76,7 @@ export class CString
 		_str=CString.ReplaceAll(_str," ","");
 		_str=CString.ReplaceAll(_str,"	","");
 		_str=CString.ReplaceAll(_str,"\r","");
+		_str=CString.ReplaceAll(_str,"\n","");
 		
 		let st=_str.indexOf("(");
 		let ed=_str.lastIndexOf(")");

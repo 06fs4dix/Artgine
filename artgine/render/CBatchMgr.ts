@@ -280,7 +280,7 @@ export class CBatchMgrGL extends CBatchMgr
 	}
    
 
-    BatchExcute(_vf : CShader)
+    override BatchExcute(_vf : CShader)
 	{
 		
 	}

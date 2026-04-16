@@ -28,7 +28,10 @@ import {
     V3Nor,
     V3Cross,
     cos,
-    InverseMat3
+    InverseMat3,
+    Sam2DArrV4,
+    Sam2DArrToV4,
+    fract
 } from "./Shader";
 
 export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
@@ -64,6 +67,41 @@ export function GetTexDecodedUV(_coded: CVec2, _texCodi: CVec4): CVec2 {
     // v = clamp(v, 0.0, 1.0);
 
     return new CVec2(u, v);
+}
+
+// Pack / Unpack
+export function PackGrayToRG(_v : number): CVec2 {
+    if(_v <= 0.0) return new CVec2(0.0, 0.0);
+    if(_v >= 1.0) return new CVec2(1.0, 1.0);
+    var rf : number; var gf : number;
+    rf = _v * 256.0; gf = fract(rf);
+    return new CVec2(floor(rf) / 255.0, gf);
+}
+export function PackGrayToRGB(_v : number): CVec3 {
+    if(_v <= 0.0) return new CVec3(0.0, 0.0, 0.0);
+    if(_v >= 1.0) return new CVec3(1.0, 1.0, 1.0);
+    var rf : number; var gf : number; var bf : number;
+    gf = _v * 256.0 * 256.0; bf = fract(gf);
+    rf = floor(gf) / 256.0; gf = fract(rf);
+    return new CVec3(floor(rf) / 255.0, gf * 256.0 / 255.0, bf);
+}
+export function PackGrayToRGBA(_v : number): CVec4 {
+    if(_v <= 0.0) return new CVec4(0.0, 0.0, 0.0, 0.0);
+    if(_v >= 1.0) return new CVec4(1.0, 1.0, 1.0, 1.0);
+    var rf : number; var gf : number; var bf : number; var af : number;
+    bf = _v * 256.0 * 256.0 * 256.0; af = fract(bf);
+    gf = floor(bf) / 256.0; bf = fract(gf);
+    rf = floor(gf) / 256.0; gf = fract(rf);
+    return new CVec4(floor(rf) / 255.0, gf * 256.0 / 255.0, bf * 256.0 / 255.0, af);
+}
+export function UnpackRGToGray(_v: CVec2): number {
+    return _v.x * 255.0 / 256.0 + _v.y * 1.0 / 256.0;
+}
+export function UnpackRGBToGray(_v: CVec3): number {
+    return _v.x * 255.0 / 256.0 + _v.y * 255.0 / (256.0 * 256.0) + _v.z * 1.0 / (256.0 * 256.0);
+}
+export function UnpackRGBAToGray(_v: CVec4): number {
+    return _v.x * 255.0 / 256.0 + _v.y * 255.0 / (256.0 * 256.0) + _v.z * 255.0 / (256.0 * 256.0 * 256.0) + _v.w * 1.0 / (256.0 * 256.0 * 256.0);
 }
 
 // hsv <-> rgb
@@ -124,36 +162,6 @@ export function RGBToHSL(_vec3 : CVec3) : CVec3
     var S : number = C / (1.0 - abs(L * 2.0 - 1.0) + 1e-10);
     return new CVec3(H, S, L);
 }
-// function HSLF(_k : number, _a : number, _v : number) : number {
-//     return _v - _a * max(-1.0, min(_k - 3.0, min(9.0 - _k, 1.0)));
-// }
-// export function HSLToRGB(_vec3 : CVec3) : CVec3
-// {
-//     var hk : number = mod(0.0 + _vec3.x * 12.0, 12.0);
-//     var sk : number = mod(8.0 + _vec3.x * 12.0, 12.0);
-//     var lk : number = mod(4.0 + _vec3.x * 12.0, 12.0);
-//     var a : number = _vec3.y * min(_vec3.z, 1.0 - _vec3.z);
-//     return new CVec3(HSLF(hk, a, _vec3.z), HSLF(sk, a, _vec3.z), HSLF(lk, a, _vec3.z));
-// }
-// export function RGBToHSL(_vec3 : CVec3) : CVec3
-// {
-//     var cmax : number = max(_vec3.x, max(_vec3.y, _vec3.z));
-//     var cmin : number = min(_vec3.x, min(_vec3.y, _vec3.z));
-//     var delta : number = cmax - cmin;
-//     var h : number = 0.0;
-//     var s : number = 0.0;
-//     var l : number = (cmax + cmin) / 2.0;
-//     if(delta > 0.0) {
-//         s = (l > 0.5) ? (delta / (2.0 - cmax - cmin)) : (delta / (cmax + cmin));
-//         if(cmax == _vec3.x) {
-//             h = (_vec3.y - _vec3.z) / delta + ((_vec3.y < _vec3.z) ? 6.0 : 0.0);
-//         } else {
-//             h = (cmax == _vec3.y) ? ((_vec3.z - _vec3.x) / delta + 2.0) : ((_vec3.x - _vec3.y) / delta + 4.0);
-//         }
-//         h /= 6.0;
-//     }
-//     return new CVec3(h, s, l);
-// }
 
 export function ColorModalFun(_rgb : CVec3, _colorModel : CVec4) : CVec3 {
     var rgb : CVec3;
@@ -176,6 +184,25 @@ export function ColorModalFun(_rgb : CVec3, _colorModel : CVec4) : CVec3 {
         rgb = HSVToRGB(_colorModel.rgb);    
     else if(_colorModel.a < SDF.eColorModel.HSL + 0.5)
         rgb = HSLToRGB(_colorModel.rgb);
+    else if(_colorModel.a < SDF.eColorModel.Unpack + 0.5)
+    {
+        var count : number = _colorModel.x + _colorModel.y + _colorModel.z;
+
+        if(count > 0.5) {
+
+        }
+        else if(count > 1.5) {
+
+        }
+        else if(count > 2.5) {
+            
+        }
+
+        var gray : number = UnpackRGToGray(_rgb.xy);
+        rgb.x = gray;
+        rgb.y = gray;
+        rgb.z = gray;
+    }
     else
         rgb = _rgb;
     rgb = V3Clamp(rgb, 0.0, 1.0);
@@ -208,114 +235,6 @@ function GetDistortedUV(_uv : CVec2, _distance : CVec2, _t : number) : CVec2 {
 function GetPixelatedUV(_texSize : CVec2, _pixelSize : CVec2, _uv : CVec2) : CVec2 {
     var d : CVec2 = V2DivV2(_pixelSize, _texSize);
     return V2MulV2(d, V2AddV2(V2Floor(V2DivV2(_uv, d)), new CVec2(0.5,0.5)));
-}
-
-function permute(_x : CVec4) : CVec4 {
-    var x : CVec4 = V4MulV4(_x, V4AddV4(V4MulFloat(_x, 34.0), new CVec4(10.0,10.0,10.0,10.0)));
-    return V4Mod(x, 289.0);
-}
-
-function taylorInvSqrt(_r : CVec4) : CVec4 {
-    return V4SubV4(new CVec4(1.79284291400159,1.79284291400159,1.79284291400159,1.79284291400159), V4MulFloat(_r, 0.85373472095314));
-}
-
-function SNoise(_v : CVec3) : number {
-    var C : CVec2 = new CVec2(1.0 / 6.0, 1.0 / 3.0);
-    var D : CVec4 = new CVec4(0.0,0.5,1.0,2.0);
-
-    //first corner
-    var dotVal : number = V3Dot(_v, new CVec3(C.y,C.y,C.y));
-    var i : CVec3 = V3Floor(V3AddV3(_v, new CVec3(dotVal,dotVal,dotVal)));
-    dotVal = V3Dot(i, new CVec3(C.x,C.x,C.x));
-    var x0 : CVec3 = V3AddV3(V3SubV3(_v, i), new CVec3(dotVal,dotVal,dotVal));
-
-    //other corner
-    var g : CVec3 = V3Step(new CVec3(x0.y, x0.z, x0.x), x0);
-    var l : CVec3 = V3SubV3(new CVec3(1.0,1.0,1.0), g);
-    var i1 : CVec3 = V3Min(g, new CVec3(l.z, l.x, l.y));
-    var i2 : CVec3 = V3Max(g, new CVec3(l.z, l.x, l.y));
-    var x1 : CVec3 = V3AddV3(V3SubV3(x0, i1), new CVec3(C.x));
-    var x2 : CVec3 = V3AddV3(V3SubV3(x0, i2), new CVec3(C.y));
-    var x3 : CVec3 = V3SubV3(x0, new CVec3(D.y));
-    
-    //permutation
-    i = V3Mod(i, 289.0);
-    var p : CVec4 = permute(
-        new CVec4(i.z,i.z + i1.z,i.z + i2.z,i.z + 1.0)
-    );
-    p = permute(
-        new CVec4(p.x + i.y, p.y + i.y + i1.y, p.z + i.y + i2.y, p.w + i.y + 1.0)
-    );
-    p = permute(
-        new CVec4(p.x + i.x, p.y + i.x + i1.x, p.z + i.x + i2.x, p.w + i.x + 1.0)
-    );
-
-    //gradient
-    var n_ : number = 1.0 / 7.0;
-    var ns : CVec3 = V3MulFloat(new CVec3(D.w, D.y, D.z), n_);
-    ns = V3SubV3(ns, new CVec3(D.x, D.z, D.x));
-    var floor_p : CVec4 = V4Floor(V4MulFloat(p, ns.z * ns.z));
-    var j : CVec4 = V4SubV4(p, V4MulFloat(floor_p, 49.0));
-    var x_ : CVec4 = V4Floor(V4MulFloat(j, ns.z));
-    var y_ : CVec4 = V4Floor(V4SubV4(j, V4MulFloat(x_, 7.0)));
-
-    var x : CVec4 = V4AddV4(V4MulFloat(x_, ns.x), new CVec4(ns.y));
-    var y : CVec4 = V4AddV4(V4MulFloat(y_, ns.x), new CVec4(ns.y));
-    var h : CVec4 = V4SubV4(V4SubV4(new CVec4(1.0,1.0,1.0,1.0), V4Abs(x)), V4Abs(y));
-
-    var b0 : CVec4 = new CVec4(x.x, x.y, y.x, y.y);
-    var b1 : CVec4 = new CVec4(x.z, x.w, y.z, y.w);
-
-    var s0 : CVec4 = V4AddV4(V4MulFloat(V4Floor(b0), 2.0), new CVec4(1.0,1.0,1.0,1.0));
-    var s1 : CVec4 = V4AddV4(V4MulFloat(V4Floor(b1), 2.0), new CVec4(1.0,1.0,1.0,1.0));
-    var sh : CVec4 = V4MulFloat(V4Step(h, new CVec4(0.0,0.0,0.0,0.0)), -1.0);
-
-    var a0 : CVec4 = V4AddV4(new CVec4(b0.x,b0.z,b0.y,b0.w), new CVec4(s0.x * sh.x, s0.z*sh.x,s0.y*sh.y,s0.w*sh.y));
-    var a1 : CVec4 = V4AddV4(new CVec4(b1.x,b1.z,b1.y,b1.w), new CVec4(s1.x*sh.z,s1.z*sh.z,s1.y*sh.w,s1.w*sh.w));
-
-    var p0 : CVec3 = new CVec3(a0.x,a0.y,h.x);
-    var p1 : CVec3 = new CVec3(a0.z,a0.w,h.y);
-    var p2 : CVec3 = new CVec3(a1.x,a1.y,h.z);
-    var p3 : CVec3 = new CVec3(a1.z,a1.w,h.w);
-
-    //normalize gradient
-    var norm : CVec4 = taylorInvSqrt(new CVec4(V3Dot(p0, p0), V3Dot(p1, p1), V3Dot(p2, p2), V3Dot(p3, p3)));
-    p0 = V3MulFloat(p0, norm.x);
-    p1 = V3MulFloat(p1, norm.y);
-    p2 = V3MulFloat(p2, norm.z);
-    p3 = V3MulFloat(p3, norm.w);
-
-    //mix final noise
-    var mix : CVec4 = V4SubV4(new CVec4(0.5,0.5,0.5,0.5), new CVec4(V3Dot(x0, x0), V3Dot(x1, x1), V3Dot(x2, x2),  V3Dot(x3, x3)));
-    mix = V4Max(mix, new CVec4(0.0,0.0,0.0,0.0));
-    mix = V4Pow(mix, 4.0);
-    var noise : CVec4 = new CVec4(V3Dot(p0, x0), V3Dot(p1, x1), V3Dot(p2, x2), V3Dot(p3, x3));
-    return 105.0 * V4Dot(mix, noise);
-}
-
-function TimedNoise(_m : CVec3, _t : number) : number {
-    return SNoise(new CVec3(_m.x * 500.0, _m.y * 500.0, _t));
-}
-
-function AddNoise(_randomSeed : CVec2, _col : CVec4, _time : number, _speed : number, _intensity : number) : CVec4 {
-    var t : number = _time * _speed;
-    var m : CVec3 = new CVec3(_randomSeed, 0.0);
-    var factor1 : number = 1.0 - TimedNoise(m, t) * _intensity;
-    var baseColor : CVec3 = new CVec3(
-        TimedNoise(m, t),
-        TimedNoise(m, t * 2.0),
-        TimedNoise(m, t * 3.0)
-    );
-    baseColor = V3MulFloat(baseColor, 0.1 * _intensity);
-    baseColor = V3AddV3(baseColor, V3MulFloat(_col.rgb, factor1 * (_col.w * factor1 + 0.1 * _intensity)));
-    return new CVec4(baseColor, _col.w);
-}
-
-function AddBorder(_m : CVec3, _c : CVec4, _intensity : number, _thickness : number) : CVec4 {
-    var distToBorderVec : CVec2 = V2Abs(V2SubV2(V2Abs(_m.xy), new CVec2(5.0,5.0)));
-    var distToBorder : number = min(distToBorderVec.x, distToBorderVec.y);
-    var f : number = 1.0 - smoothstep(0.0, _thickness, distToBorder);
-    return V4AddV4(_c, V4MulFloat(new CVec4(f,f,f,1.0), _intensity));
 }
 
 function UV_Curve(_uv : CVec2) : CVec2
@@ -351,12 +270,12 @@ function MapToPaletteIndex(_color : CVec3, _cellSize : number,_palSize : CVec2) 
 }
 
 export var VFX : CMat=Null();
-export var LUT0: Sam2DV4=new Sam2DV4(11, 159);
-export var LUT1: Sam2DV4=new Sam2DV4(11, 160);
-export var LUT2: Sam2DV4=new Sam2DV4(11, 161);
-export var LUT3: Sam2DV4=new Sam2DV4(11, 162);
-export var LUT4: Sam2DV4=new Sam2DV4(11, 163);
-export var LUT5: Sam2DV4=new Sam2DV4(11, 164);
+export var LUT0: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LookUpTable0);
+export var LUT1: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LookUpTable1);
+export var LUT2: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LookUpTable2);
+export var LUT3: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LookUpTable3);
+export var LUT4: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LookUpTable4);
+export var LUT5: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LookUpTable5);
 
 export var vfxMat0: CMat=Null();
 export var vfxMat1: CMat=Null();
@@ -421,40 +340,8 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) 
         var noiseColor : CVec3 = new CVec3(0.0, 0.0, 0.0);
         var frame : number = _time * para.y / 60.0;
 
-        // grayscale 펄린
-        if(para.x > SDF.eNoise.Perlin-0.5)
-        {
-            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.Perlin);
-            noiseColor.y = noiseColor.x;
-            noiseColor.z = noiseColor.x;
-        }
-        // RGB 펄린 노말
-        else if(para.x > SDF.eNoise.PerlinNormal-0.5)
-        {
-            var noise : CVec2 = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinNormal);
-            noiseColor.xyz = new CVec3(noise.x, sqrt(1.0 - V2Dot(noise, noise)), noise.y);
-        }
-        // grayscale 클라우드
-        else if(para.x > SDF.eNoise.PerlinFBM3-0.5)
-        {
-            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinFBM3);
-            noiseColor.y = noiseColor.x;
-            noiseColor.z = noiseColor.x;
-        }
-        // 블루 노이즈
-        else if(para.x > SDF.eNoise.Blue-0.5)
-        {
-            var coord : CVec2 = V2Floor(V2Mod(V2MulFloat(V2AddV2(_uv, new CVec2(frame, frame)), para.w * 64.0), 64.0));
-            var index : number = coord.y * 64.0 + coord.x;
-            var modIndex : number = mod(index, 2048.0);
-            var v4 : CVec4 = Sam2DToV4(new CVec2(11, SDF.eNoise.Blue), modIndex);
-
-            noiseColor.x = index < 2048.0 ? v4.x : v4.y;
-            noiseColor.y = noiseColor.x;
-            noiseColor.z = noiseColor.x;
-        }
-        // 가우시안
-        else if(para.x<SDF.eNoise.Gaussian+0.5)
+        // 가우시안 (20)
+        if(para.x > SDF.eNoise.Gaussian - 0.5)
         {
             var xi : number = _uv.x * para.w * 128.0;
             var yi : number = _uv.y * para.w * 128.0;
@@ -463,9 +350,38 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) 
             noiseColor.y = noiseColor.x;
             noiseColor.z = noiseColor.x;
         }
-        outColor.rgb=V3MulV3(outColor.rgb,V3Mix(noiseColor,new CVec3(1,1,1),1.0 - para.z));
-        //outColor = V4Mix(noiseColor, outColor, 1.0 - para.z);
-
+        // 블루 노이즈 (4)
+        else if(para.x > SDF.eNoise.Blue - 0.5)
+        {
+            var coord : CVec2 = V2Floor(V2Mod(V2MulFloat(V2AddV2(_uv, new CVec2(frame, frame)), para.w * 64.0), 64.0));
+            var index : number = coord.y * 64.0 + coord.x;
+            var modIndex : number = mod(index, 2048.0);
+            var v4 : CVec4 = Sam2DToV4(new CVec2(11, SDF.eNoise.Blue), modIndex);
+            noiseColor.x = index < 2048.0 ? v4.x : v4.y;
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        // grayscale 클라우드 (3)
+        else if(para.x > SDF.eNoise.PerlinFBM3 - 0.5)
+        {
+            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinFBM3);
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        // RGB 펄린 노말 (2)
+        else if(para.x > SDF.eNoise.PerlinNormal - 0.5)
+        {
+            var noise : CVec2 = SampleNoiseVec2(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.PerlinNormal);
+            noiseColor.xyz = new CVec3(noise.x, sqrt(1.0 - V2Dot(noise, noise)), noise.y);
+        }
+        // grayscale 펄린 (1)
+        else
+        {
+            noiseColor.x = SampleNoise(new CVec3(V2MulFloat(_uv, para.w), frame), SDF.eNoise.Perlin);
+            noiseColor.y = noiseColor.x;
+            noiseColor.z = noiseColor.x;
+        }
+        outColor.rgb = V3MulV3(outColor.rgb, V3Mix(noiseColor, new CVec3(1,1,1), 1.0 - para.z));
     }
     else if(type<SDF.eVFX.Scanline+0.5)
     {
@@ -481,7 +397,7 @@ function VFXDown0(_uv : CVec2, _value : CMat,_time : number, _worldPos : CVec4) 
         var palIndex : number = MapToPaletteIndex(outColor.rgb, cellSize,palSize);
         
 
-        outColor=Sam2DToV4(new CVec2(11,para.x),palIndex);
+        outColor=Sam2DArrToV4(new CVec3(1.0,para.x,0.0),palIndex);
     }
     else if(type<SDF.eVFX.Blur+0.5)
     {

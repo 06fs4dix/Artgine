@@ -10,7 +10,7 @@ export class CBase64File extends CObject
 	public mExt : string="";//ext
 	public mHash : string="";//sha256
 	public mOption=new CLoaderOption;
-	public mData : ArrayBuffer=null;
+	public mData : ArrayBufferLike=null;
 
 	RefreshHash() {
 		this.mHash = CHash.SHA256(CUtil.ArrayToString(this.mData));
@@ -20,7 +20,7 @@ export class CBase64File extends CObject
 		return this.mHash+"."+this.mExt;
 	}
 	
-	EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
+	override EditForm(_pointer: CPointer, _div: HTMLDivElement, _input: HTMLInputElement): void {
 		if(_pointer.member == "mData" && _input!=null) 
 		{
 			//m_data는 안보여줌
@@ -28,7 +28,7 @@ export class CBase64File extends CObject
 		}
 	}
 
-	public ExportJSON(): { class: string; } {
+	public override ExportJSON(): { class: string; } {
 		let result = super.ExportJSON();
 		result["mData"] = CUtil.ArrayToBase64(this.mData);
 		return result;

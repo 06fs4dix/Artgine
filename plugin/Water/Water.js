@@ -191,7 +191,7 @@ export class CReflector3D extends CBrushComp {
     }
     Update(_update) {
         super.Update(_update);
-        if (this.mBruch != null)
+        if (this.mBrush != null)
             this.UpdateBrush(_update);
     }
     UpdateBrush(_update) {
@@ -208,16 +208,16 @@ export class CReflector3D extends CBrushComp {
         }
         for (const rp of this.mWrite) {
             const rpKey = this.mTexKey + rp.mShader;
-            if (!this.mBruch.AutoRP().has(rpKey)) {
-                this.mBruch.SetAutoRP(rpKey, rp);
+            if (!this.mBrush.AutoRP().has(rpKey)) {
+                this.mBrush.SetAutoRP(rpKey, rp);
             }
             if (rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
             }
         }
-        const mainCam = this.mBruch.GetCam3D();
-        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
+        const mainCam = this.mBrush.GetCam3D();
+        const virtualCam = this.mBrush.GetCamera(this.mTexKey);
         const wMat = this.GetOwner().GetMat();
         const pos = wMat.xyz;
         const rot = CMath.QutToMat(CMath.MatDecomposeRot(wMat));
@@ -241,7 +241,7 @@ export class CReflector3D extends CBrushComp {
         if (this.mWrite.length > 0) {
             for (const rp of this.mWrite) {
                 const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.RemoveAutoRP(rpKey);
+                this.mBrush.RemoveAutoRP(rpKey);
             }
             this.mWrite.length = 0;
         }
@@ -295,7 +295,7 @@ export class CRefractor3D extends CBrushComp {
     }
     Update(_update) {
         super.Update(_update);
-        if (this.mBruch != null)
+        if (this.mBrush != null)
             this.UpdateBrush(_update);
     }
     UpdateBrush(_update) {
@@ -312,16 +312,16 @@ export class CRefractor3D extends CBrushComp {
         }
         for (const rp of this.mWrite) {
             const rpKey = this.mTexKey + rp.mShader;
-            if (!this.mBruch.AutoRP().has(rpKey)) {
-                this.mBruch.SetAutoRP(rpKey, rp);
+            if (!this.mBrush.AutoRP().has(rpKey)) {
+                this.mBrush.SetAutoRP(rpKey, rp);
             }
             if (rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
             }
         }
-        const mainCam = this.mBruch.GetCam3D();
-        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
+        const mainCam = this.mBrush.GetCam3D();
+        const virtualCam = this.mBrush.GetCamera(this.mTexKey);
         if (virtualCam.Init(mainCam.GetEye(), mainCam.GetLook())) {
             virtualCam.SetFar(mainCam.GetFar());
             virtualCam.SetFov(mainCam.mFov);
@@ -336,7 +336,7 @@ export class CRefractor3D extends CBrushComp {
         if (this.mWrite.length > 0) {
             for (const rp of this.mWrite) {
                 const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.RemoveAutoRP(rpKey);
+                this.mBrush.RemoveAutoRP(rpKey);
             }
             this.mWrite.length = 0;
         }
@@ -428,7 +428,7 @@ export class CReflector2D extends CBrushComp {
     }
     Update(_update) {
         super.Update(_update);
-        if (this.mBruch != null)
+        if (this.mBrush != null)
             this.UpdateBrush(_update);
     }
     UpdateBrush(_update) {
@@ -438,8 +438,8 @@ export class CReflector2D extends CBrushComp {
             fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)], null, this.GetTex());
             tex = fw.Res().Find(this.GetTex());
         }
-        const mainCam = this.mBruch.GetCam2D();
-        this.mWaterCam = this.mBruch.GetCamera("WaterCam");
+        const mainCam = this.mBrush.GetCam2D();
+        this.mWaterCam = this.mBrush.GetCamera("WaterCam");
         if (this.mWaterCam.Init(mainCam.GetEye(), mainCam.GetLook())) {
             this.mWaterCam.SetFar(mainCam.GetFar());
             this.mWaterCam.SetFov(mainCam.mFov);
@@ -447,8 +447,8 @@ export class CReflector2D extends CBrushComp {
             this.mWaterCam.ResetOrthographic();
         }
         for (const rp of this.mWrite) {
-            if (!this.mBruch.AutoRP().has(rp.Key())) {
-                this.mBruch.SetAutoRP(rp.Key(), rp);
+            if (!this.mBrush.AutoRP().has(rp.Key())) {
+                this.mBrush.SetAutoRP(rp.Key(), rp);
             }
         }
     }
@@ -456,10 +456,10 @@ export class CReflector2D extends CBrushComp {
         super.Destroy();
         if (this.mWrite.length > 0) {
             for (const rp of this.mWrite) {
-                this.mBruch.RemoveAutoRP(rp.Key());
+                this.mBrush.RemoveAutoRP(rp.Key());
             }
             this.mWrite.length = 0;
-            this.mBruch.ClearRen();
+            this.mBrush.ClearRen();
         }
     }
 }

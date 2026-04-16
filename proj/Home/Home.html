@@ -40,7 +40,13 @@
             }
         });
     }
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+    });
 </script>
+
 <!--Include--><script type='text/javascript' src='../../artgine/external/legacy/pako-master/dist/pako.min.js'></script>
 <script type='text/javascript' src='../../artgine/external/legacy/jszip.min.js'></script>
 <script type='text/javascript' src='../../artgine/external/legacy/screenfull/screenfull.min.js'></script>
@@ -70,76 +76,77 @@ let SERVER_BASE='http://localhost:8050/Artgine/proj/Home/Home.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
-	alert('Local Start Redirection!');
 	const target = new URL(page, SERVER_BASE).toString();
 	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	alert('Local Start Redirection!');
 	location.replace(target);
-	}).catch(() => {    alert('WebServer Start! [npm run start_web]');  });
+	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
 }</script>
+<script type='module' src='Home.js'></script>
 
 <!--Manifest-->
 <!--EntryPoint-->
-<script>
-    let deferredPrompt;
-    window.addEventListener("beforeinstallprompt", (event) => {
-        event.preventDefault();
-        deferredPrompt = event;
 
-        // document.getElementById("install-btn").style.display = "block";
-
-        // document.getElementById("install-btn").addEventListener("click", () => {
-        //     deferredPrompt.prompt();
-        //     deferredPrompt.userChoice.then((choiceResult) => {
-        //         if (choiceResult.outcome === "accepted") {
-        //             console.log("User accepted the install prompt");
-        //         } else {
-        //             console.log("User dismissed the install prompt");
-        //         }
-        //         deferredPrompt = null;
-        //     });
-        // });
-    });
-</script>
 <!-- 탭 네비게이션 -->
-<div class="container vh-100 d-flex flex-column p-0 pb-4" >
+<div class="container vh-100 d-flex flex-column p-0">
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button"
-            role="tab" aria-controls="main" aria-selected="true" data-en="Main">메인</button>
+            role="tab" aria-controls="main" aria-selected="true" data-en="Main"><i class="bi bi-house-fill"></i> Home</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab"
-            aria-controls="board" aria-selected="false" data-en="Board">보드</button>
+            aria-controls="board" aria-selected="false" data-en="Board"><i class="bi bi-kanban-fill"></i> Board</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab"
-            aria-controls="file" aria-selected="false" data-en="File">파일</button>
+            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="cmd-tab" data-bs-toggle="tab" data-bs-target="#cmd-panel" type="button" role="tab"
+            aria-controls="cmd-panel" aria-selected="false" data-en="CMD"><i class="bi bi-terminal-fill"></i> Terminal</button>
     </li>
     <!-- 로그인 버튼 (오른쪽 정렬) -->
     <li class="nav-item ms-auto" role="presentation">
-        <button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button" >
+        <button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button">
             Login
         </button>
     </li>
 </ul>
 
-<!-- 탭 콘텐츠 (남은 영역 전부 차지) -->
-<div class="tab-content flex-fill overflow-auto" id="myTabContent">
-    <div class="tab-pane h-100 show active" id="main" role="tabpanel" aria-labelledby="main-tab">
+<!-- 탭 콘텐츠 -->
+<div class="tab-content flex-fill overflow-hidden" id="myTabContent">
+    <div class="tab-pane h-100 show active" id="main" role="tabpanel" aria-labelledby="main-tab" style="overflow-y:auto;">
         <div class="text-center" data-en="Welcome.">
             환영합니다.
         </div>
     </div>
-    <div class="tab-pane h-100 " id="board" role="tabpanel" aria-labelledby="board-tab" style="overflow-x: hidden;">
-        
+    <div class="tab-pane h-100" id="board" role="tabpanel" aria-labelledby="board-tab" style="overflow-x: hidden;">
     </div>
-    <div class="tab-pane h-100" id="file" role="tabpanel" aria-labelledby="file-tab">
+    <div class="tab-pane h-100" id="file" role="tabpanel" aria-labelledby="file-tab" style="overflow-y:auto;">
         <div id='Menu_div'></div>
-	    <div id='File_div'></div>
+        <div id='File_div'></div>
         <br>
     </div>
+    <div class="tab-pane h-100 d-flex flex-column" id="cmd-panel" role="tabpanel" aria-labelledby="cmd-tab" style="background:#1a1a1a;overflow:hidden;">
+    </div>
 </div>
 </div>
-
+<!-- 마지막 탭 복원 -->
+<script>
+    const TAB_KEY = 'lastActiveTab';
+    const savedTab = localStorage.getItem(TAB_KEY);
+    if (savedTab) {
+        const tabEl = document.querySelector(`[data-bs-target="${savedTab}"]`);
+        if (tabEl) {
+            new bootstrap.Tab(tabEl).show();
+        }
+    }
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(el => {
+        el.addEventListener('shown.bs.tab', e => {
+            localStorage.setItem(TAB_KEY, e.target.getAttribute('data-bs-target'));
+        });
+    });
+</script>
 <script type="server" src="Server.js"></script>
 <script type='module' src='Home.js'></script>

@@ -54,6 +54,7 @@ import { CPaint3D } from "../app/component/paint/CPaint3D.js";
 import { CBrush } from "../app/canvas/CBrush.js";
 import { CColor } from "../render/CColor.js";
 import { CAlpha } from "../render/CAlpha.js";
+import { CRenderPass } from "../render/CRenderPass.js";
 
 
 var gModal : CModalFlex;
@@ -595,7 +596,7 @@ function DevToolRender()
         if(_font)
         {
             gAtl.Frame().Dev().SetDepthTest(true);
-            gAtl.Frame().Dev().SetLine(false);
+            gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
 
             var fr = CFont.TextToTexName(gAtl.Frame().Ren(),_sub.Key(),new CFontOption(32,"white","black",2));
             color.x=1;
@@ -622,7 +623,7 @@ function DevToolRender()
 
 
             gAtl.Frame().Dev().SetDepthTest(false);
-            gAtl.Frame().Dev().SetLine(true);
+            gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
             render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
         }
         
@@ -791,7 +792,7 @@ function DevToolRender()
     if(gLastCanvas!=null)
     {
         gAtl.Frame().Dev().SetDepthTest(false);
-        gAtl.Frame().Dev().SetLine(true);
+        gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
         let canvas=gLastCanvas as CCanvas;
         for(let [key,value] of canvas.GetSubMap())
         {
@@ -803,7 +804,7 @@ function DevToolRender()
                 
             }
         }
-        gAtl.Frame().Dev().SetLine(false);
+        gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
         gAtl.Frame().Dev().SetDepthTest(true);
     }
 
@@ -815,7 +816,7 @@ function DevToolRender()
 
     let pos=subject.GetMat().xyz;
     gAtl.Frame().Dev().SetDepthTest(false);
-    gAtl.Frame().Dev().SetLine(true);
+    gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
     {
 
         if(gAtl.Brush().GetCamDev().IsOrthographic())
@@ -832,13 +833,13 @@ function DevToolRender()
             wmat.mF32A[5]=gBoundTick/100;
             wmat.mF32A[10]=gBoundTick/1000;
             
-            if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
+            if(gDragBound==1)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
             render.MeshDrawNodeRender(shader,meshDrawBox);
-            gAtl.Frame().Dev().SetLine(true);
+            gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
             alpha.x=0.5;
         }
         else
@@ -854,13 +855,13 @@ function DevToolRender()
             wmat.mF32A[5]=gBoundTick/1000;
             wmat.mF32A[10]=gBoundTick/1000;
             
-            if(gDragBound==1)gAtl.Frame().Dev().SetLine(false);
+            if(gDragBound==1)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
             render.MeshDrawNodeRender(shader,meshDrawBox);
-            gAtl.Frame().Dev().SetLine(true);
+            gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
             
             color.x=0;
             color.y=1;
@@ -871,13 +872,13 @@ function DevToolRender()
             wmat.mF32A[5]=gBoundTick/100;
             wmat.mF32A[10]=gBoundTick/1000;
 
-            if(gDragBound==2)gAtl.Frame().Dev().SetLine(false);
+            if(gDragBound==2)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
             render.MeshDrawNodeRender(shader,meshDrawBox);
-            gAtl.Frame().Dev().SetLine(true);
+            gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
 
             color.x=0;
             color.y=0;
@@ -890,18 +891,18 @@ function DevToolRender()
             wmat.mF32A[5]=gBoundTick/1000;
             wmat.mF32A[10]=gBoundTick/100;
 
-            if(gDragBound==3)gAtl.Frame().Dev().SetLine(false);
+            if(gDragBound==3)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
             render.SendGPU(shader,alpha,"alphaModel");
             MatToMat12Fun(wmat);
             render.SendGPU(shader,wMatSA);
             render.MeshDrawNodeRender(shader,meshDrawBox);
-            gAtl.Frame().Dev().SetLine(true);
+            gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
         }
         
     }
     
-    gAtl.Frame().Dev().SetLine(true);
+    gAtl.Frame().Dev().SetLine(CRenderPass.eLine.LINE_STRIP);
     //gAtl.Frame().Dev().SetDepthTest(true);
     
     
@@ -909,7 +910,7 @@ function DevToolRender()
 
 
 
-    gAtl.Frame().Dev().SetLine(false);
+    gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
     gAtl.Frame().Dev().SetDepthTest(true);
 
 

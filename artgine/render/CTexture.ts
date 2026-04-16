@@ -1,7 +1,3 @@
-
-
-
-
 import {CH5Canvas} from "./CH5Canvas.js";
 import {CEvent} from "../basic/CEvent.js";
 
@@ -10,6 +6,8 @@ import {CDOM} from "../basic/CDOM.js";
 import {CObject,  CPointer } from "../basic/CObject.js";
 import {CUtilObj} from "../basic/CUtilObj.js";
 import {CAlert} from "../basic/CAlert.js";
+import { CJSON } from "../basic/CJSON.js";
+import { CUtil } from "../basic/CUtil.js";
 
 
 export class CTextureInfo extends CObject
@@ -56,14 +54,15 @@ export class CTexture extends CObject
 {
 	
 	
-	private mWidth : number = 0;
-	private mHeight : number = 0;
-	private mBuffer : Array<any> = new Array<any>;
-	private mGBuffer : Array<any> = new Array<any>;
+	protected mWidth : number = 0;
+	protected mHeight : number = 0;
+	protected mBuffer : Array<any> = new Array<any>;
+	protected mGBuffer : Array<any> = new Array<any>;
 	private mMipMap : number = CTexture.eMipmap.None;
 	private mWrap : number = CTexture.eWrap.Clamp;
 	private mFilter : number = CTexture.eFilter.Neaest;
 	private mInfo : Array<CTextureInfo> = [new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)];
+	private mYFlip=true;
 	//리사이즈시 화면 비율을 유지하려고 필요한 변수
 	//화면 100사이즈에 50으로 만들면 50으로 화면이 줄면 25로 유지하려고 존재함
 	private mRWidth : number=0;
@@ -101,12 +100,14 @@ export class CTexture extends CObject
 	BindFrame(_ena)	{	this.mFrame=_ena;	}
 	override IsShould(_member: string, _type: CObject.eShould): boolean 
 	{
-		if(_member == "mBuffer" || _member == "mGBuffer" || _member == "mFrameBuf" || _member == "mDepthBuf" || 
-			_member == "mColorBuf" || _member == "mReadPixelEvent" || _member == "mAntiBuf" || _member == "mRemoveBuf" || 
-			_member == "mUpdate" || _member == "mVideo" || _member == "mFrame") 
+		if(_member == "mGBuffer" || _member == "mFrameBuf" || _member == "mDepthBuf" || 
+			_member == "mColorBuf" || _member == "mAntiBuf" || _member == "mRemoveBuf" || 
+			_member == "mUpdate" || _member == "mVideo" || _member == "mFrame" ||
+			_member == "mReadPixelEvent" || _member == "mModifyEvent" ) 
 		{
 			return false;
 		}
+		
 		return super.IsShould(_member,_type);
 	}
 	
@@ -203,12 +204,18 @@ export class CTexture extends CObject
 				{"tag":"div","class":"col","html":[
 					{
 						'<>':'button',"class":"btn btn-danger btn-sm" ,style:"width:100%;",'text':'Modify', 'onclick':(e) => {
-							this.mUpdate.clear();
 							if(this.mModifyEvent!=null)
-								this.mModifyEvent.Call(this);
+							{
+								this.mModifyEvent.CallAsync(this).then(()=>{
+									this.mUpdate.clear();
+									this.mGBuffer.length=0;
+									this.EditRefresh();	
+								});
+							}
 							else
 								CAlert.Info("CLoader를 이용한 텍스쳐 아님");
-							this.EditRefresh();
+
+							
 						}
 					}
 				]}
@@ -290,6 +297,11 @@ export class CTexture extends CObject
 		this.mDepthBuf=null;
 		
 	}
+	SetYFlip(_enable : boolean)
+	{
+		this.mYFlip=_enable;
+	}
+	GetYFlip()	{	return this.mYFlip;	}
 	GetAnti()	{	return this.mAnti;	}
 
 	SetBuf(_buf : HTMLImageElement);
@@ -308,13 +320,25 @@ export class CTexture extends CObject
 	}
 	GetGBuf()	{	return this.mGBuffer;	}
 	SetGBuf(_gbuf)	{	this.mGBuffer=_gbuf;	}
-	GetBuf() { return this.mBuffer; }
+	GetBuf() {
+		for(let i=0;i<this.mBuffer.length;++i)
+		{
+			if(typeof this.mBuffer[i]==="string")
+			{
+				if(this.mInfo[i].mFormat==CTexture.eFormat.RGBA8)
+					this.mBuffer[i]=new Uint8Array(CUtil.LZBase64ToArray(this.mBuffer[i]));
+				else
+					this.mBuffer[i]=new Float32Array(CUtil.LZBase64ToArray(this.mBuffer[i]));
+			}
+		}
+		return this.mBuffer;
+	}
 	GetAlpha()	{	return this.mAlpha;	}
 	SetAlpha(_a)	{	this.mAlpha=_a;	}
 	
 	SetFilter(_option) {this.mFilter= _option;this.mUpdate.clear(); }
 	SetWrap(_option) { this.mWrap = _option;this.mUpdate.clear(); }
-	SetMipMap(_option) { this.mMipMap = _option; }
+	SetMipMap(_option) { this.mMipMap = _option;this.mUpdate.clear(); }
 	GetWrap() { return this.mWrap;	 }
 	GetFilter() { return this.mFilter; }
 	GetWidth() { return this.mWidth; }
@@ -344,6 +368,36 @@ export class CTexture extends CObject
 	}
 	SetAutoResize(_resize) {
 		this.mAutoResize = _resize;
+	}
+	override ExportCJSON(): CJSON {
+		let cjson=super.ExportCJSON();
+
+		let arr=[];
+		for(let buf of this.GetBuf())
+		{
+			arr.push(CUtil.ArrayToLZBase64(buf.buffer));
+		}
+		cjson.Set("mBuffer",JSON.stringify(arr));
+		return cjson;
+	}
+	override ImportCJSON(_json: CJSON): this {
+		let arrStr=_json.GetStr("mBuffer");
+		if(arrStr==null)
+		{
+			super.ImportCJSON(_json);
+			return this;
+		}
+		let arrBuf=JSON.parse(arrStr);
+
+		_json.Set("mBuffer",[]);
+		super.ImportCJSON(_json);
+		this.mBuffer.length=0;
+		for(let i=0;i<arrBuf.length;++i)
+		{
+			this.mBuffer.push(arrBuf[i]); // 문자열 그대로 저장, GetBuf()에서 lazy decode
+		}
+
+		return this;
 	}
 }
 

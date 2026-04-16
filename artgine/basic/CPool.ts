@@ -1,17 +1,20 @@
 import {CEvent} from "../basic/CEvent.js";
 import {CQueue} from "../basic/CQueue.js";
-import { IListener } from "./Basic.js";
+import { IListener, IRecycle } from "./Basic.js";
+import { CArray } from "./CArray.js";
 import {CClass} from "./CClass.js";
 
 
 
-export interface IRecycle
-{
-    Recycle();
-    GetRecycleType() : string;
-    SetRecycleType(_type : string);
-    IsRecycle();
-}
+/*
+순환 구조
+*ExeRecycle로 재사용 등록
+*Destroy시 Recycle자신에 호출
+*재사용 직적 ExeRecycle다시 호출됌
+ㄴ내부적으로 자식들 Recycle호출
+
+
+*/
 export type RecycleHandler = (_irecyc: IRecycle) => void;
 export type ProductHandler = () => IRecycle;
 
@@ -29,6 +32,7 @@ export class CPool
     static sSpace=new Map<string,CQueue<any>>();
     static sProductEvent = new Array<CEvent>();
     static sRecycleEvent = new Array<CEvent>();
+    static sRecysleList=new CArray<IRecycle>();
 
     constructor()
     {
@@ -53,67 +57,100 @@ export class CPool
         //CPool.sRecycleEvent[_typeName]
     }
 
-    //static Product<T>(type: string|object,_destructor : any=null): T | null 
-    //static Product<T extends object>(type: new () => T,_para: Array<any>): T | null;
-    static Product<T extends object>(type: new () => T,_destructor: any): T | null;
-    static Product<T extends object>(type: new () => T): T | null;
-    static Product<T>(type: string) : T;
-    static Product<T>(type: string,_destructor: any) : T;
-    static async Product<T>(type: string|object,_destructor : any=null): Promise<T | null> 
-    {
-        let _typeName: string;
+  
+    // 공통 로직 추출
+    private static _Setup<T>(p: any, _typeName: string, _destructor: any): T {
+        if (p.GetRecycleType() == null)
+            p.ExeRecycle(_typeName);
+        else
+            p.ExeRecycle(p.GetRecycleType());
 
-        if (typeof type === "function") {
-            _typeName = type.name;
-        } else if (typeof type === "object") {
-            _typeName = (type as Object).constructor?.name ?? "Unknown";
-        } else if (typeof type === "string") {
-            _typeName = type;
-        } else {
-            throw new Error("Invalid type input to CPool.Product");
-        }
+        if (CPool.sRecycleEvent[_typeName] != null)
+            CPool.sRecycleEvent[_typeName].Call(p);
 
-        let p = null;
-        let que = CPool.sSpace.get(_typeName);
+        if (_destructor != null && _destructor instanceof Array == false)
+            gDestructorRegistry.register(_destructor, p);
+
+        return p as T;
+    }
+
+    static Product<T>(type: new () => T, _destructor?: any): T | null;
+    static Product<T>(type: string, _destructor?: any): T;
+    static Product<T>(type: string | object, _destructor: any = null): T | null {
+        const _typeName = CPool._ResolveName(type);
+        const que = CPool.sSpace.get(_typeName);
+
+        let p: any;
         if (que == null || que.IsEmpty()) {
-            if (CPool.sProductEvent[_typeName] == null) 
-            {
-
-                p = CClass.New(_typeName,_destructor);
+            if (CPool.sProductEvent[_typeName] == null) {
+                p = CClass.New(_typeName);
                 if (p == null) return null;
-                p.SetRecycleType(p.constructor.name);
             } else {
-                p = await CPool.sProductEvent[_typeName].CallAsync();
+                p = CPool.sProductEvent[_typeName].Call(); // ← sync
             }
         } else {
             p = que.Dequeue();
-            if (CPool.sRecycleEvent[_typeName] != null)
-                CPool.sRecycleEvent[_typeName].CallAsync(p);
         }
-        if(p.GetRecycleType()==null)
-            p.SetRecycleType(_typeName);
-        else    
-            p.SetRecycleType(p.GetRecycleType());
-        if(_destructor!=null && _destructor instanceof Array==false)
-            gDestructorRegistry.register(_destructor, p)
 
-        return p as T;
+        return CPool._Setup<T>(p, _typeName, _destructor);
+    }
+
+    static async ProductAsync<T>(type: string | object, _destructor: any = null): Promise<T | null> {
+        const _typeName = CPool._ResolveName(type);
+        const que = CPool.sSpace.get(_typeName);
+
+        let p: any;
+        if (que == null || que.IsEmpty()) {
+            if (CPool.sProductEvent[_typeName] == null) {
+                p = CClass.New(_typeName);
+                if (p == null) return null;
+            } else {
+                p = await CPool.sProductEvent[_typeName].CallAsync(); // ← async
+            }
+        } else {
+            p = que.Dequeue();
+        }
+
+        return CPool._Setup<T>(p, _typeName, _destructor);
+    }
+
+    private static _ResolveName(type: string | object): string {
+        if (typeof type === "function") return (type as Function).name;
+        if (typeof type === "object") return (type as Object).constructor?.name ?? "Unknown";
+        return type as string;
     }
     //수동 회수. 서브젝트는 자동 회수다
     static Recycle(_obj : IRecycle)
     {
         if(_obj.Recycle==null)  return;
         
-        let type=_obj.GetRecycleType();
-        if(type==null)    return;
-        let que=CPool.sSpace.get(type);
-
-        if(que==null)
+        CPool.sRecysleList.Push(_obj);
+        
+        //너무 많이 생기면 강제로 업데이트
+        if(CPool.sRecysleList.Size()>10000)
         {
-            que=new CQueue();
-            CPool.sSpace.set(type,que);
+            let dummy=CPool.sRecysleList;
+            CPool.sRecysleList=new CArray();
+            CPool.sRecysleList.Clear();
+            setTimeout(() => {
+                for(let i=0;i<dummy.Size();++i)
+                {
+                    let _obj=dummy.Find(i);
+                    
+                
+                    let type=_obj.GetRecycleType();
+                    if(type==null)    continue;
+                    let que=CPool.sSpace.get(type);
+
+                    if(que==null)
+                    {
+                        que=new CQueue();
+                        CPool.sSpace.set(type,que);
+                    }
+                    que.Enqueue(_obj);
+                }
+            }, 1);
         }
-        que.Enqueue(_obj);
     }
     static Pooling(_type,_count=1)
     {
@@ -129,6 +166,27 @@ export class CPool
         {
             que.Enqueue(CPool.sProductEvent[_type].Call());
         }
+    }
+    static Update()
+    {
+        for(let i=0;i<CPool.sRecysleList.Size();++i)
+        {
+            let _obj=CPool.sRecysleList.Find(i);
+            
+        
+            let type=_obj.GetRecycleType();
+            if(type==null)    continue;
+            let que=CPool.sSpace.get(type);
+
+            if(que==null)
+            {
+                que=new CQueue();
+                CPool.sSpace.set(type,que);
+            }
+            que.Enqueue(_obj);
+        }
+        CPool.sRecysleList.Clear();
+        
     }
 }
 const gCheckStatic: IListener = CPool;

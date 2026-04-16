@@ -10,6 +10,8 @@ import { CObject } from "../../basic/CObject.js";
 import { CUniqueID } from "../../basic/CUniqueID.js";
 import { CUpdate } from "../../basic/Basic.js";
 import { CSampler, CSamplerList, CSamplerMinMax, CSamplerTimer } from "../../util/CSampler.js";
+import { CPool } from "../../basic/CPool.js";
+import { CConsol } from "../../basic/CConsol.js";
 
 
 export class CParticleShape extends CObject
@@ -171,13 +173,9 @@ export class CParticleTexBuf extends CParticleShapeOut
 export class CParticle extends CSubject
 {
 
-	public mSample : CSamplerList<CSubject>=null;
+	public mSample : CSamplerList<CSubject|string>=null;
 	public mCreateCount=new CSampler(5);//생성 곗수
 	public mTimer=new CSamplerTimer(true);
-	// public mCreateTime=100;//생성 주기
-	// public mStartTime=0;//언제부터 시작
-	// public mEndTime=1000*60*60;//언제까지 생성
-	//private mTime=0;
 	public mShape =new CParticleShape();
 
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -194,10 +192,7 @@ export class CParticle extends CSubject
 		this.mTimer.mEnd=1*60*60;
 
 	}
-	// SetCrateTime(_time)
-	// {
-	// 	this.mCreateTime=_time;
-	// }
+
 	SetCrateCount(_count : CSampler<number>)
 	{
 		this.mCreateCount=_count;
@@ -207,7 +202,7 @@ export class CParticle extends CSubject
 		this.mShape=_shape;
 	}
 
-	override SubjectUpdate(_update : CUpdate)
+	override async SubjectUpdate(_update : CUpdate)
 	{
 		super.SubjectUpdate(_update);
 		if(this.mTimer.IsEndReset() && this.mChild.length==0)	this.Destroy();
@@ -220,19 +215,25 @@ export class CParticle extends CSubject
 		for(var i=0;i<count;++i)
 		{
 			let sub=this.mSample.Excute();
-			if(sub!=null)
+			if(sub==null){}
+			else if(sub instanceof CSubject)
 			{
-				var obj=new CSubject();
-				
-
-
-				
-				obj.Import(sub);
+				var obj=sub.Export();
 				obj.SetKey(CUniqueID.GetHash());
 				
 				this.PushChild(obj);
 				objArr.push(obj);
 			}
+			else if(typeof sub =="string")
+			{
+				var obj=CPool.Product(sub) as CSubject;
+				//CConsol.Log("Product : "+obj.Key());
+				//obj.SetKey(CUniqueID.GetHash());
+				
+				this.PushChild(obj);
+				objArr.push(obj);
+			}
+			
 		}
 		this.mShape.LineUp(objArr);
 		

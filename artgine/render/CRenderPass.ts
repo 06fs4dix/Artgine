@@ -130,6 +130,12 @@ export class CRenderPass extends CObject
 		Normal:1,
 		Revers:-1,
 	};
+	static eLine={
+		TRIANGLES:4,
+		LINE_STRIP:3,
+		LINE_LOOP:2,
+	};
+
 	public mDepthTest : boolean=null;
 	public mDepthWrite : boolean=null;
 	public mAlpha : boolean=null;

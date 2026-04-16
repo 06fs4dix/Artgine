@@ -1119,37 +1119,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	return reflect(-_lightDir, _normal);\n";
 		str += "}\n";
-		// str += "vec3 WNormalToTNormal(vec3 vec)\n";
-		// str += "{\n";
-		// str += "	return 0.5*vec+0.5;\n";
-		// str += "}\n";
-		// str += "vec4 WNormalToTNormal(vec4 vec)\n";
-		// str += "{\n";
-		// str += "	return 0.5*vec+0.5;\n";
-		// str += "}\n";
-		// str += "vec4 TNormalToWNormal(vec4 tex)\n";
-		// str += "{\n";
-		// str += "	return 2.0*tex-1.0;\n";
-		// str += "}\n";
-		// str += "vec3 TNormalToWNormal(vec3 tex)\n";
-		// str += "{\n";
-		// str += "	vec3 N= 2.0*tex-1.0;N.y=-N.y;\n";
-		// str += "	return N;\n";
-		// str += "}\n";
-	
-		//color convert
-		// str += "vec4 RGBAToHSVA(vec4 c)		{\n";
-		// str += "vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);\n";
-		// str += "vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));\n";
-		// str += "vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));\n";
-		// str += "float d = q.x - min(q.w, q.y);\n";
-		// str += "float e = 1.0e-10;\n";
-		// str += "return vec4(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x,c.a);	}\n";
-		// str += "vec4 HSVAToRGBA(vec4 c)		{\n";
-		// str += "vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\n";
-		// str += "vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n";
-		// str += "return vec4(c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y),c.a);		}\n";
-
+		
         
         str += "vec4 Sam2DToV4(vec2 _uni,float _off) {\n";
 		str += "	ivec2 ts;\n";
@@ -1170,9 +1140,6 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return texture(sam2D[0],vec2(0.0,0.0));";
 		str += "}\n";
 
-		str += "vec4 Sam2DToV4(vec2 _uni,int _off) {\n";
-		str += "	return Sam2DToV4(_uni,float(_off));\n";
-		str += "}\n";
 
         str += "mat4 Sam2DToMat(vec2 _uni,float _off) {\n";
 		str += "return mat4(\n";
@@ -1183,6 +1150,34 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += ");}\n";
 
 
+		str += "vec4 Sam2DArrToV4(vec3 _uni,float _off) {\n";
+		str += "	ivec3 ts;\n";
+		str += "	vec3 uv;\n";
+		str += "	if(_uni.x-0.5<=0.0) {";
+		str += "		ts = textureSize(sam2DArr[0],0);";
+		str += "		uv = vec3((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y), _uni.z);";
+		str += "		return texture(sam2DArr[0],uv);";
+		str += "	}\n";
+		for (var j = 1; j < CDevice.GetProperty(CDevice.eProperty.Sam2DArrMax); ++j)
+		{
+			str += "	else if(_uni.x-0.5<=" + j + ".0) {";
+			str += "		ts = textureSize(sam2DArr["+j+"],0);";
+			str += "		uv = vec3((float(_off)+0.5)/float(ts.x), (float(_uni.y)+0.5)/float(ts.y), _uni.z);";
+			str += "		return texture(sam2DArr["+j+"],uv);";
+			str += "	}\n";
+		}
+		str += "	return texture(sam2DArr[0],vec3(0.0,0.0,0.0));";
+		str += "}\n";
+
+		str += "mat4 Sam2DArrToMat(vec3 _uni,float _off) {\n";
+		str += "return mat4(\n";
+		str += "Sam2DArrToV4(_uni,_off*4.0+0.0),\n";
+		str += "Sam2DArrToV4(_uni,_off*4.0+1.0),\n";
+		str += "Sam2DArrToV4(_uni,_off*4.0+2.0),\n";
+		str += "Sam2DArrToV4(_uni,_off*4.0+3.0)\n";
+		str += ");}\n";
+			
+
 		str += "mat4 MatMix(mat4 _a, mat4 _b, float _t) {\n";
 		str += "return mat4(\n";
 		str += "mix(_a[0], _b[0], _t),\n";
@@ -1190,18 +1185,30 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "mix(_a[2], _b[2], _t),\n";
 		str += "mix(_a[3], _b[3], _t)\n";
 		str += ");}\n";
-		
-		return str;
-	}
-	
-	PSFun()
-	{
-		var str="";
 
-		//ps
-		//if(this.m_device.PF().m_renderer==Df.Render.GL2)
-		//{
-		str += "vec2 Sam2DSize(float _off)\n";
+		str += "vec4 Sam2DToColor(float _off,vec2 _uv)\n";
+		str += "{\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
+		{
+			str += "	if(_off-0.5<=" + j + ".0)\n";
+			str += "		return texture(sam2D[" + j + "],_uv);\n";
+			
+		}
+		str += "	return vec4(0,0,0,1);\n";
+		str += "}\n";
+
+		str += "vec4 Sam2DLodToColor(float _off,vec2 _uv,float _lod)\n";
+		str += "{\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
+		{
+			str += "	if(_off-0.5<=" + j + ".0)\n";
+			str += "		return textureLod(sam2D[" + j + "],_uv,_lod);\n";
+			
+		}
+		str += "	return vec4(0,0,0,1);\n";
+		str += "}\n";
+
+        str += "vec2 Sam2DSize(float _off)\n";
 		str += "{\n";
 		str += "	ivec2 ts;\n";
 		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
@@ -1215,6 +1222,17 @@ export class CShaderInterpretGL extends CShaderInterpret
 		}
 		str += "	return vec2(float(ts.x),float(ts.y));\n";
 		str += "}\n";
+		
+		return str;
+	}
+	
+	PSFun()
+	{
+		var str="";
+
+		//ps
+		//if(this.m_device.PF().m_renderer==Df.Render.GL2)
+		//{
 
 		str += "float SamCubeMaxLod(float _off)\n";
 		str += "{\n";
@@ -1257,21 +1275,9 @@ export class CShaderInterpretGL extends CShaderInterpret
 		
 		
 		
-		str += "vec4 Sam2DToColor(float _off,vec2 _uv)\n";
-		str += "{\n";
-		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DMax); ++j)
-		{
-			str += "	if(_off-0.5<=" + j + ".0)\n";
-			str += "		return texture(sam2D[" + j + "],_uv);\n";
-			
-		}
-		str += "	return vec4(0,0,0,1);\n";
-		str += "}\n";
+	
 
-		// str += "vec4 Sam2DToColor(int _off,vec2 _uv)\n";
-		// str += "{\n";
-		// str += "	return Sam2DToColor(float(_off),_uv);\n";
-		// str += "}\n";
+		
 		str += "vec4 Sam2D0ToColor(vec2 _uv)\n";
 		str += "{\n";
 		str += "	return texture(sam2D[0],_uv);\n";

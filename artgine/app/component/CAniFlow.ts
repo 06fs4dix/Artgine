@@ -30,7 +30,7 @@ export class CAniFlow extends CComponent
 		super();
 		this.mSysc=CComponent.eSysn.AniFlow;
 		this.mPaintOff=0;
-		this.ResetAni(_ani);
+		this.SetAni(_ani);
 	}
 	override Icon(){		return "bi bi-recycle";	}
 	SetInter(_max)
@@ -55,12 +55,16 @@ export class CAniFlow extends CComponent
 		this.mLoopCount=0;
 		this.mFClip=[];
 	}
-	ResetAni();
-	ResetAni(_ani : string);
-	ResetAni(_ani : CBlackBoardRef<CAnimation>);
-	ResetAni(_ani : CAnimation);
-	ResetAni(_ani : string|CAnimation);
-	ResetAni(_ani=null,_key=null)
+	override Recycle(): void {
+		super.Recycle();
+		this.ResetTime();
+	}
+	SetAni();
+	SetAni(_ani : string);
+	SetAni(_ani : CBlackBoardRef<CAnimation>);
+	SetAni(_ani : CAnimation);
+	SetAni(_ani : string|CAnimation);
+	SetAni(_ani=null,_key=null)
 	{
 		if(_key!=null)
 		{
@@ -82,7 +86,7 @@ export class CAniFlow extends CComponent
 		}
 		
 		this.ResetTime();
-		this.mFClip=new Array<CClip>();
+		//this.mFClip=new Array<CClip>();
 		
 	
 		

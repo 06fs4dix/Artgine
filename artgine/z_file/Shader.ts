@@ -156,8 +156,11 @@ export class TexOff3 extends CVec3{}
 export class Shadow2 extends CVec2{}
 
 export class TexOff1{dummy;}
-export class Sam2DV4{constructor(_x,_y=-1){}x;y;}
-export class Sam2DMat{constructor(_x,_y=-1){}x;y;}
+export class Sam2DV4{constructor(_bindOff,_bufOff=-1){}x;y;}
+export class Sam2DMat{constructor(_bindOff,_bufOff=-1){}x;y;}
+
+export class Sam2DArrV4{constructor(_bindOff,_bufOff=-1,_arrOff=0){}x;y;z;}
+export class Sam2DArrMat{constructor(_bindOff,_bufOff=-1,_arrOff=0){}x;y;z;}
 
 
 
@@ -190,11 +193,14 @@ export function VLWVPMul(_vertex : CVec3, _l : CMat, _w : CMat, _v : CMat, _p : 
 //ps func
 export function Sam2D0ToColor(_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DToColor(_number,_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
+export function Sam2DLodToColor(_number,_uv : CVec2,_lod : number) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DArrToColor(_number,_uv : CVec3) : CVec4{    return new CVec4(0,0,0,0);}
 export function SamCubeToColor(_number,_uv : CVec3) : CVec4{    return new CVec4(0,0,0,0);}
-export function SamCubeLodToColor(_number,_uv : CVec3,_lod : float) : CVec4{    return new CVec4(0,0,0,0);}
+export function SamCubeLodToColor(_number,_uv : CVec3,_lod : number) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DToV4(_uni : Sam2DV4,_off : number|any) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DToMat(_uni : Sam2DMat,_off : number|any) : CMat{    return new CVec4(0,0,0,0);}
+export function Sam2DArrToV4(_uni : Sam2DArrV4,_off : number|any) : CVec4{    return new CVec4(0,0,0,0);}
+export function Sam2DArrToMat(_uni : Sam2DArrMat,_off : number|any) : CMat{    return new CVec4(0,0,0,0);}
 export function Sam2DSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function Sam2DArrSize(_off : number) : CVec3 { return new CVec3(0,0,0);}
 export function SamCubeMaxLod(_off : number) : number { return 0;}

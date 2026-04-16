@@ -173,22 +173,22 @@ export class CLight extends CBrushComp
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
 			this.mUpdate = CUpdate.eType.Not;
-			this.mBruch.mUpdateLight=true;
+			this.mBrush.mUpdateLight=true;
 		}
 		else if(this.mUpdate == CUpdate.eType.Updated) {			
 			this.mUpdate = CUpdate.eType.Already;
-			this.mBruch.mUpdateLight=true;
+			this.mBrush.mUpdateLight=true;
 		}
 
 		//라이트 메세지
-		var cm=this.ProductMsg("SetLight");
-		cm.mChild = true;
-		cm.mInter="";
-		cm.mMsgData[0]=this;
+		// var cm=this.ProductMsg("SetLight");
+		// cm.mChild = true;
+		// cm.mInter="";
+		// cm.mMsgData[0]=this;
 
 		if(this.GetOwner().mUpdateMat !=0 || this.mUpdate==CUpdate.eType.Updated)
 		{
-			this.mBruch.mUpdateLight=true;
+			this.mBrush.mUpdateLight=true;
 			var pos=this.GetOwner().GetMat().xyz;
 			
 
@@ -215,7 +215,7 @@ export class CLight extends CBrushComp
 		
 		
 		super.Update(_update);
-		if(this.mBruch!=null)	this.UpdateBaush(_update);
+		if(this.mBrush!=null)	this.UpdateBaush(_update);
 
 	}
 	UpdateBaush(_update : CUpdate)
@@ -227,7 +227,7 @@ export class CLight extends CBrushComp
 		//this.mBruch.mDoubleChk.add(this);
 
 		if(this.mWrite.length == 0) {
-			let fw = this.mBruch.mFrame;
+			let fw = this.mBrush.mFrame;
 
 			let srp=new CRPAuto(fw.Pal().Sl3D().mKey);
 			srp.mCopy=false;
@@ -255,7 +255,7 @@ export class CLight extends CBrushComp
 		let ShadowUpdate=false;
 		if (this.mTexKey!=null)
 		{
-			let ShadowView=this.mBruch.GetShadowView();
+			let ShadowView=this.mBrush.GetShadowView();
 			if(this.mColor.IsZero())
 				this.mShadowOff=true;
 			else
@@ -266,14 +266,14 @@ export class CLight extends CBrushComp
 			{
 				if(!this.mShadowOff) 
 				{
-					let scam0=this.mBruch.GetCamera(this.mTexKey+0);
-					let scam1=this.mBruch.GetCamera(this.mTexKey+1);
-					let scam2=this.mBruch.GetCamera(this.mTexKey+2);
+					let scam0=this.mBrush.GetCamera(this.mTexKey+0);
+					let scam1=this.mBrush.GetCamera(this.mTexKey+1);
+					let scam2=this.mBrush.GetCamera(this.mTexKey+2);
 					scam0.mShadow=true;
 					scam1.mShadow=true;
 					scam2.mShadow=true;
 					
-					let cam=this.mBruch.GetCam3D();
+					let cam=this.mBrush.GetCam3D();
 					var width=2000*this.mShadowDistance;
 					var height=2000*this.mShadowDistance;
 					let eye=cam.GetEye().Export();
@@ -307,7 +307,7 @@ export class CLight extends CBrushComp
 					// CConsol.Log(seye);
 					// CConsol.Log(slook);
 					
-					let ShadowView=this.mBruch.GetShadowView();
+					let ShadowView=this.mBrush.GetShadowView();
 					if(scam0.Init(seye,slook,sup))	
 					{
 						scam0.mWidth=width*2;
@@ -316,10 +316,10 @@ export class CLight extends CBrushComp
 						scam0.ResetOrthographic();
 						//this.mUpdate = CUpdate.eType.Updated;
 						ShadowUpdate=true;
-						this.mBruch.mUpdateShadow=true;
+						this.mBrush.mUpdateShadow=true;
 					}
-					ShadowView[0].set(scam0.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
-					ShadowView[1].set(scam0.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[0].set(scam0.GetViewMat().F32A(),this.mBrush.mShadowCount*16);
+					ShadowView[1].set(scam0.GetProjMat().F32A(),this.mBrush.mShadowCount*16);
 					
 					scam0.Update(_update);
 					
@@ -341,10 +341,10 @@ export class CLight extends CBrushComp
 						scam1.mHeight=height*8;
 						scam1.ResetOrthographic();
 						ShadowUpdate=true;
-						this.mBruch.mUpdateShadow=true;
+						this.mBrush.mUpdateShadow=true;
 					}
-					ShadowView[2].set(scam1.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
-					ShadowView[3].set(scam1.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[2].set(scam1.GetViewMat().F32A(),this.mBrush.mShadowCount*16);
+					ShadowView[3].set(scam1.GetProjMat().F32A(),this.mBrush.mShadowCount*16);
 					
 					scam1.Update(_update);
 					
@@ -363,23 +363,23 @@ export class CLight extends CBrushComp
 						scam2.mHeight=height*16;
 						scam2.ResetOrthographic();
 						ShadowUpdate=true;
-						this.mBruch.mUpdateShadow=true;
+						this.mBrush.mUpdateShadow=true;
 					}
-					ShadowView[4].set(scam2.GetViewMat().F32A(),this.mBruch.mShadowCount*16);
-					ShadowView[5].set(scam2.GetProjMat().F32A(),this.mBruch.mShadowCount*16);
+					ShadowView[4].set(scam2.GetViewMat().F32A(),this.mBrush.mShadowCount*16);
+					ShadowView[5].set(scam2.GetProjMat().F32A(),this.mBrush.mShadowCount*16);
 					
 					scam2.Update(_update);
 						
 				} 
 				
-				let maxVal : CVec4=this.mBruch.mShadowRead.get(this.mBruch.mShadowCount);
+				let maxVal : CVec4=this.mBrush.mShadowRead.get(this.mBrush.mShadowCount);
 				if(maxVal==null)
 				{
-					maxVal=new CVec4(this.mBruch.mLightCount,-1,-1,-1);
+					maxVal=new CVec4(this.mBrush.mLightCount,-1,-1,-1);
 				}
 				else
 				{
-					maxVal.x = this.mBruch.mLightCount;
+					maxVal.x = this.mBrush.mLightCount;
 				}
 				for(var i=0;i<this.mCascadeCycle.length;++i)
 				{
@@ -390,30 +390,30 @@ export class CLight extends CBrushComp
 						if(rp.mTag.has("shadowWrite")==false)	continue;
 
 						var srpKey=this.mTexKey+rp.mShader+i;
-						var srp : CRPAuto=this.mBruch.GetAutoRP(srpKey);
+						var srp : CRPAuto=this.mBrush.GetAutoRP(srpKey);
 						if(srp==null)
 						{
 							srp=rp.Export();
 							srp.mTag.add("shadowWrite");
-							this.mBruch.SetAutoRP(srpKey,srp);
+							this.mBrush.SetAutoRP(srpKey,srp);
 							var fw=this.GetOwner().GetFrame();
 							var tex=fw.Res().Find(this.GetTex()) as CTexture;
-							if(tex.GetInfo()[0].mCount<(this.mBruch.mShadowCount+1)*6)
+							if(tex.GetInfo()[0].mCount<(this.mBrush.mShadowCount+1)*6)
 							{
 								fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,
-									(this.mBruch.mShadowCount+1)*6)],new CVec2(fw.PF().mWidth, fw.PF().mHeight),fw.Pal().GetShadowWriteTex());	
+									(this.mBrush.mShadowCount+1)*6)],new CVec2(fw.PF().mWidth, fw.PF().mHeight),fw.Pal().GetShadowWriteTex());	
 							}
-							srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,this.mBruch.mShadowCount,this.mBruch.mShadowCount*6+i)));
+							srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,this.mBrush.mShadowCount,this.mBrush.mShadowCount*6+i)));
 						}
 						srp.mRenderTarget=this.GetTex();
-						srp.mRenderTargetUse=new Set<number>([this.mBruch.mShadowCount*6+i]);
+						srp.mRenderTargetUse=new Set<number>([this.mBrush.mShadowCount*6+i]);
 						srp.mCamera=this.mTexKey+i;
 						//"shadowWrite"->[0]
-						if(srp.mShaderAttr[0].mData.y != this.mBruch.mShadowCount) {
+						if(srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
 							srp.mShaderAttr[0].mData.x=i;
-							srp.mShaderAttr[0].mData.y=this.mBruch.mShadowCount;
-							srp.mShaderAttr[0].mData.z=this.mBruch.mShadowCount*6+i;
-							this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+							srp.mShaderAttr[0].mData.y=this.mBrush.mShadowCount;
+							srp.mShaderAttr[0].mData.z=this.mBrush.mShadowCount*6+i;
+							this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
 						}
 
 						//그림자 꺼지면 랜더링 안하고 싶음
@@ -437,24 +437,24 @@ export class CLight extends CBrushComp
 						//각 케스케이드 영역이 어떤 어레이 사용중인지
 						if(i<0.5)
 						{
-							maxVal.y=this.mBruch.mShadowCount*6+i;
+							maxVal.y=this.mBrush.mShadowCount*6+i;
 							maxVal.z=-1;
 							maxVal.w=-1;
 						}
 						else if(i<1.5)
-							maxVal.z=this.mBruch.mShadowCount*6+i;
+							maxVal.z=this.mBrush.mShadowCount*6+i;
 						else
-							maxVal.w=this.mBruch.mShadowCount*6+i;
+							maxVal.w=this.mBrush.mShadowCount*6+i;
 						
 					}
 					//this.mBruch.mShadowRead.set(this.mBruch.mShadowCount,maxVal);
 
 					
 				}
-				ShadowView[7][this.mBruch.mShadowCount*4+0]=maxVal.x;
-				ShadowView[7][this.mBruch.mShadowCount*4+1]=maxVal.y;
-				ShadowView[7][this.mBruch.mShadowCount*4+2]=maxVal.z;
-				ShadowView[7][this.mBruch.mShadowCount*4+3]=maxVal.w;
+				ShadowView[7][this.mBrush.mShadowCount*4+0]=maxVal.x;
+				ShadowView[7][this.mBrush.mShadowCount*4+1]=maxVal.y;
+				ShadowView[7][this.mBrush.mShadowCount*4+2]=maxVal.z;
+				ShadowView[7][this.mBrush.mShadowCount*4+3]=maxVal.w;
 			}
 			else
 			{
@@ -470,26 +470,26 @@ export class CLight extends CBrushComp
 			
 
 			if(!this.mShadowOff)
-				this.mBruch.mShadowCount++;
+				this.mBrush.mShadowCount++;
 
 			
 		}//m_key
 
 
 
-		if(this.mBruch.mLightCount>CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/4)
+		if(this.mBrush.mLightCount>CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/4)
 			return;
 		
-		this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 0] = this.mDirPos.x;
-		this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 1] = this.mDirPos.y;
-		this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 2] = this.mDirPos.z;
-		this.mBruch.mLightDir[this.mBruch.mLightCount * 4 + 3] = this.mDirPos.w;
+		this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 0] = this.mDirPos.x;
+		this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 1] = this.mDirPos.y;
+		this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 2] = this.mDirPos.z;
+		this.mBrush.mLightDir[this.mBrush.mLightCount * 4 + 3] = this.mDirPos.w;
 
-		this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 0] = this.mColor.x;
-		this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 1] = this.mColor.y;
-		this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 2] = this.mColor.z;
-		this.mBruch.mLightColor[this.mBruch.mLightCount * 4 + 3] = this.mColor.w;
-		this.mBruch.mLightCount++;
+		this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 0] = this.mColor.x;
+		this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 1] = this.mColor.y;
+		this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 2] = this.mColor.z;
+		this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 3] = this.mColor.w;
+		this.mBrush.mLightCount++;
 	}
 	SetDirectPos(_dir : CVec3)
 	{
@@ -572,14 +572,14 @@ export class CLight extends CBrushComp
 	override Destroy(): void {
 		super.Destroy();
 		
-		if(Math.abs(this.mDirPos.w)>0.5 && this.mBruch!=null)
+		if(Math.abs(this.mDirPos.w)>0.5 && this.mBrush!=null)
 		{
-			this.mBruch.mUpdateLight=true;
-			this.mBruch.mUpdateShadow=true;
-			this.mBruch.mCameraMap.delete(this.mTexKey+0);
-			this.mBruch.mCameraMap.delete(this.mTexKey+1);
-			this.mBruch.mCameraMap.delete(this.mTexKey+2);
-			this.mBruch.ClearRen();
+			this.mBrush.mUpdateLight=true;
+			this.mBrush.mUpdateShadow=true;
+			this.mBrush.mCameraMap.delete(this.mTexKey+0);
+			this.mBrush.mCameraMap.delete(this.mTexKey+1);
+			this.mBrush.mCameraMap.delete(this.mTexKey+2);
+			this.mBrush.ClearRen();
 			
 			
 			for(var i=0;i<this.mCascadeCycle.length;++i)
@@ -589,7 +589,7 @@ export class CLight extends CBrushComp
 				{
 					if(rp.mTag.has("shadowWrite")==false)	continue;
 					var srpKey=this.mTexKey+rp.mShader+i;
-					this.mBruch.RemoveAutoRP(srpKey);
+					this.mBrush.RemoveAutoRP(srpKey);
 
 				}
 				

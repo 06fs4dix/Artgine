@@ -10,7 +10,7 @@ CPool.On("CLocalDB",async ()=>{
     await CLocalDB.Init();
     return CLocalDB;
 },"Product");
-let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
 let con=new Array<CORMCondition>();
 let option=new CORMOption();
 option.mLimitOffset=0;
@@ -42,7 +42,7 @@ constructor()
         
         
         
-        let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+        let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
         let con=new Array<CORMCondition>();
         con.push(new CORMCondition("_project", "==", project));
         let option=new CORMOption();
@@ -65,7 +65,7 @@ constructor()
         
         
         
-        let sql=await CPool.Product("CLocalDB")  as CRDBMS;
+        let sql=await CPool.ProductAsync("CLocalDB")  as CRDBMS;
         let fa=new Array<CORMField>();
         fa.push(new CORMField("_project",project));
         fa.push(new CORMField("_nick",nick));

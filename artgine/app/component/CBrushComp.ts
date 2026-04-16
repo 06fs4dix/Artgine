@@ -25,7 +25,7 @@ export class CBrushComp extends CComponent
     public mRead : string=null;//텍스쳐 사용하는 페인트들 골라냄 태그를 넣어라
     public mReadLen=10000;
     public mLayer=0;
-    mBruch : CBrush=null;
+    mBrush : CBrush=null;
 
     override IsShould(_member: string, _type: CObject.eShould): boolean {
         if(_member=="mBruch")   return false;
@@ -37,8 +37,8 @@ export class CBrushComp extends CComponent
     {
         this.mWrite.push(_write);
     }
-    StartChk(): boolean {
-        if(this.mStartChk==true && this.mBruch!=null)
+    override StartChk(): boolean {
+        if(this.mStartChk==true && this.mBrush!=null)
 		{
 			this.mStartChk=false;
 			return true;
@@ -54,7 +54,7 @@ export class CBrushComp extends CComponent
     // SetOwner(_obj: any): void {
     //     super.SetOwner(_obj);
     // }
-    Update(_update : CUpdate): boolean 
+    override Update(_update : CUpdate): boolean 
     {
         //브러시 정보는 캔버스에 있어서 받으려고 처리
         //CC->Can->Light,Env
@@ -80,7 +80,7 @@ export class CBrushComp extends CComponent
     
     RecvGetBrush(_brush : CBrush) 
     {
-        this.mBruch=_brush;
+        this.mBrush=_brush;
     }
    
 }

@@ -6,6 +6,8 @@ import {CMat} from "../geometry/CMat.js";
 import {CObject, CPointer} from "../basic/CObject.js";
 import { CUtilObj } from "../basic/CUtilObj.js";
 import { CDOM } from "../basic/CDOM.js";
+import { CAlert } from "../basic/CAlert.js";
+import { SDF } from "../z_file/SDF.js";
 
 
 
@@ -91,7 +93,21 @@ export class CShaderAttr extends CObject
 						let fa=new Float32Array(this.mData.length);
 						for(let i=0;i<this.mData.length;++i)
 						{
-							fa[i]=this.mData[i];
+							if(typeof this.mData[i] =="string")
+							{
+								const parts = this.mData[i].split(".");
+								// parts = ["SDF", "eUni", "SkinMat"]
+								let val: any = { SDF };
+								for(const p of parts)
+									val = val?.[p];
+								
+								if(typeof val === "number")
+									fa[i] = val;
+								else
+									CAlert.E("SDF resolve error: " + this.mData[i]);
+							}
+							else
+								fa[i]=this.mData[i];
 						}
 						this.mData=fa;
 					}
@@ -120,7 +136,7 @@ export class CShaderAttr extends CObject
 			}
 		}
 	}
-	EditForm(_pointer: CPointer, _body: HTMLDivElement, _input: HTMLElement): void 
+	override EditForm(_pointer: CPointer, _body: HTMLDivElement, _input: HTMLElement): void 
 	{
 		super.EditForm(_pointer,_body,_input);
 		if(_pointer.member=="mData" && this.mType==-2)
@@ -155,7 +171,7 @@ export class CShaderAttr extends CObject
 
 		return str;
 	}
-	EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+	override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
 		//super.EditHTMLInit(_div,_pointer);
 		let KeyInputFun=()=>{
 			const keyRow = CDOM.DataToDom({

@@ -75,7 +75,7 @@ export class CPaint3D extends CPaint
 	override SetOwner(_obj :CSubject)
 	{
 		super.SetOwner(_obj);
-		this.InitMesh(this.mMesh);
+		this.BuildMesh(this.mMesh);
 	}
 	Bake() {		this.PushTag("bake");	}
 	//Shadow()	{		this.PushTag("shadow");	}
@@ -152,7 +152,7 @@ export class CPaint3D extends CPaint
 		super.InitChk();
 		if(this.mTree == null)
 		{
-			if(this.InitMesh(this.mMesh)==false)
+			if(this.BuildMesh(this.mMesh)==false)
 				this.mInit=false;
 			
 		}
@@ -219,7 +219,7 @@ export class CPaint3D extends CPaint
 			
 		}
 	}
-	private InitMesh(_mesh)
+	private BuildMesh(_mesh)
 	{
 		this.mTexLoad=false;
 		if(this.mOwner.GetFrame()==null)	return false;
@@ -729,6 +729,10 @@ export class CPaint3DMerge extends CPaint
         if(_vf.mUniform.get("windInfluence")!=null)
 			this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("windInfluence", this.mWindInfluence));
 		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
+		// if(this.mMeshDataNode==null)
+		// {
+
+		// }
 		var dm=this.GetDrawMesh("Artgine/DM/3DM"+this.mHash,_vf,this.mMeshDataNode.ci);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
@@ -788,6 +792,7 @@ export class CPaint3DMerge extends CPaint
 			let ttb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.TexOff);
             let tweb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Weight);
             let twib=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+			let tinb=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Index);
 
             // 텍스쳐 복사
 			let texOff=[];
@@ -817,6 +822,7 @@ export class CPaint3DMerge extends CPaint
 			let otb=_oCI.GetVFType(CVertexFormat.eIdentifier.TexOff);
             let oweb=_oCI.GetVFType(CVertexFormat.eIdentifier.Weight);
             let owib=_oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+			let oinb=_oCI.GetVFType(CVertexFormat.eIdentifier.Index);
 			if(ovb.length==0)
 			{
 				_oCI.Create(CVertexFormat.eIdentifier.Position);
@@ -846,6 +852,11 @@ export class CPaint3DMerge extends CPaint
 			{
 				_oCI.Create(CVertexFormat.eIdentifier.WeightIndex);
 				owib=_oCI.GetVFType(CVertexFormat.eIdentifier.WeightIndex);
+			}
+			if(oinb.length==0)
+			{
+				_oCI.Create(CVertexFormat.eIdentifier.Index);
+				oinb=_oCI.GetVFType(CVertexFormat.eIdentifier.Index);
 			}
 
             // 버텍스 복사
@@ -941,11 +952,11 @@ export class CPaint3DMerge extends CPaint
             }
 
 			// 인덱스 복사
-			let tiv=_tNode.mData.ci.index;
-			for(let i=0;i<tiv.length;++i)
+			//let tiv=_tNode.mData.ci.GetVFType(CVertexFormat.eIdentifier.Index)[0];
+			for(let i=0;i<tinb[0].bufI.length;++i)
 			{
-                _bound.InitBound(ovb[0].bufF.V3(tiv[i]+_oCI.vertexCount));
-				_oCI.index.push(tiv[i]+_oCI.vertexCount);
+                _bound.InitBound(ovb[0].bufF.V3(tinb[0].bufI[i]+_oCI.vertexCount));
+				oinb[0].bufI.push(tinb[0].bufI[i]+_oCI.vertexCount);
 			}
 
             // 버텍스 카운트, 인덱스 카운트에 추가된 수량만큼 추가

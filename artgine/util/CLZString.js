@@ -1,1 +1,0 @@
-import{CAlert as r}from"../basic/CAlert.js";export class CLZString{constructor(){}static CompressBase64(s){return void 0===window.LZString&&r.E("압축 헤더를 선업하세요!"),window.LZString.compressToBase64(s)}static DecompressBase64(s){return void 0===window.LZString&&r.E("압축 헤더를 선업하세요!"),window.LZString.decompressFromBase64(s)}}

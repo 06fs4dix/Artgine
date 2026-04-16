@@ -20,13 +20,15 @@ import {
 	V4MulFloat,
 	V4Mix,
 	Attribute,
+	Sam2DArrToV4,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, 
 	shadowPointProj, shadowRightCasP2, shadowTopCasV1,
 	calcShadow,
-	jitter, 
+	jitter,
+	shadowReadList, 
 } from "./Shadow";
 
 var size : number=100;
@@ -45,7 +47,7 @@ var to_shadowBias : ToV1=Null();
 var to_worldPos : ToV4=Null();
 var to_normal : ToV3=Null();
 
-var shadowReadList: Sam2DV4=new Sam2DV4(11);
+
 var shadowOn : number = -1.0;
 var sun : number=1.0;
 
@@ -522,7 +524,7 @@ function ps_main_shadow_read()
 	BranchBegin("shadowMulti","SDM",[alphaModel]);
 	for(var i = 0; i < FloatToInt(shadowCount); i++) 
 	{
-		shadowRead =Sam2DToV4(shadowReadList,i);
+		shadowRead =Sam2DArrToV4(shadowReadList,IntToFloat(i));
 		sVal  = calcShadow(shadowRead, IntToFloat(i),to_normal,to_worldPos);
 		all+=sVal;
 		//all=all-(1.0-sVal);
@@ -531,7 +533,7 @@ function ps_main_shadow_read()
 	all/=shadowCount;
 	if(all<0.0)all=0.0;
 	BranchDefault();
-	shadowRead =Sam2DToV4(shadowReadList,0.0);
+	shadowRead =Sam2DArrToV4(shadowReadList,0.0);
 	all = calcShadow(shadowRead, 0.0,to_normal,to_worldPos);
 	BranchEnd();
 	

@@ -1,18 +1,19 @@
 import { ligDir } from "./Light";
-import { abs, CMat, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrSize, Sam2DArrToColor, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
+import { SDF } from "./SDF";
+import { abs, CMat, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrV4, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
     sin, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 
-export var shadowNearCasV0: Sam2DMat=new Sam2DMat(11,130);
-export var shadowFarCasP0: Sam2DMat=new Sam2DMat(11,134);
-export var shadowTopCasV1: Sam2DMat=new Sam2DMat(11,138);
-export var shadowBottomCasP1: Sam2DMat=new Sam2DMat(11,142);
-export var shadowLeftCasV2: Sam2DMat=new Sam2DMat(11,146);
-export var shadowRightCasP2: Sam2DMat=new Sam2DMat(11,150);
-export var shadowPointProj: Sam2DMat=new Sam2DMat(11,154);
+export var shadowNearCasV0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNearCasV0);
+export var shadowFarCasP0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowFarCasP0);
+export var shadowTopCasV1: Sam2DArrMat=new Sam2DArrMat(SDF.eUni.MatShadowTopCasV1);
+export var shadowBottomCasP1: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowBottomCasP1);
+export var shadowLeftCasV2: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowLeftCasV2);
+export var shadowRightCasP2: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowRightCasP2);
+export var shadowPointProj: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowPointProj);
 
 //shadow uniform
 export var shadowOn : number = -1.0;
-export var shadowReadList: Sam2DV4=new Sam2DV4(11,158);
+export var shadowReadList: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4ShadowReadList);
 
 //uniform
 export var texture16f : number =0;
@@ -75,7 +76,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     
 
 
-    var texSize : CVec3 = Sam2DArrSize(0.0);
+    var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
     var sVal : number = 0.0;
@@ -110,7 +111,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
 
             if(_read.y>-0.5 && uv0N.x>0.0 && uv0N.y>0.0 && uv0N.x<1.0 && uv0N.y<1.0)
             {
-                var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv0N);
+                var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv0N);
                 var depth : number = shadowParam.z;			
 
                 var shadowVal : number;
@@ -121,7 +122,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 // 큰 오브젝트 등이 0번 영역에서 컬링되는 경우때문에
                 // csm 1번 영역에서 가져옴
                 if(abs(x) < 0.5 && abs(y) < 0.5 && shadowVal >= 0.99) {
-                    var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv1N);
+                    var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
                     var depth : number = shadowParam.z;			
 
                     if(shadowParam.w==0.0)    shadowVal=1.0;
@@ -133,7 +134,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
             }
             else if(_read.z>-0.5 && uv1N.x>0.0 && uv1N.y>0.0 && uv1N.x<1.0 && uv1N.y<1.0)
             {
-                var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv1N);
+                var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
                 var depth : number = shadowParam.z;			
 
                 if(shadowParam.w==0.0)    sVal+=1.0;
@@ -145,7 +146,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
             }
             else if(_read.w>-0.5 && uv2N.x>0.0 && uv2N.y>0.0 && uv2N.x<1.0 && uv2N.y<1.0)
             {
-                var shadowParam : CVec4 = Sam2DArrToColor(0.0, uv2N);
+                var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
                 var depth : number = shadowParam.z;			
         
                 if(shadowParam.w==0.0)    sVal+=1.0;
@@ -160,14 +161,14 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
 }
 
 
-function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DMat, _projMatOff : Sam2DMat, _offsetScale : number, _normalOffset : CVec3, _worldPos : CVec4, _index : number) : CVec3
+function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _offsetScale : number, _normalOffset : CVec3, _worldPos : CVec4, _index : number) : CVec3
 {
     if(_isActive < -0.5) {
         return new CVec3(0.0, 0.0, 0.0);
     }
     
-    var svm : CMat = Sam2DToMat(_viewMatOff, _index);
-    var spm : CMat = Sam2DToMat(_projMatOff, _index);
+    var svm : CMat = Sam2DArrToMat(_viewMatOff, _index);
+    var spm : CMat = Sam2DArrToMat(_projMatOff, _index);
 
     // 월드 위치에 노말 오프셋 적용
     var world : CVec4 = new CVec4(V3AddV3(_worldPos.xyz, V3MulFloat(_normalOffset, _offsetScale)), _worldPos.w);

@@ -1,4 +1,3 @@
-
 import {CAlert} from "../basic/CAlert.js";
 import {CBound} from "../geometry/CBound.js";
 import { CMath } from "../geometry/CMath.js";
@@ -964,11 +963,11 @@ export class CImgPro
 					falloff = 1.0 - dist;
 				}
 
-				const targetIdx = (((texHeight - 1) - ty) * texWidth + tx) * 4;
+				const targetIdx = ((texHeight - 1 - ty) * texWidth + tx) * 4;
 
                 // 텍스쳐 모드: stampTex를 마스크로 컬러값 쓰기
                 const sx = Math.floor(uv.x * stampTex.GetWidth());
-                const sy = (stampTex.GetHeight() - 1) - Math.floor(uv.y * stampTex.GetHeight());
+                const sy = Math.floor(uv.y * stampTex.GetHeight());
                 const stampIdx = (sy * stampTex.GetWidth() + sx) * 4;
 
                 for(const ch of activeChannels) {

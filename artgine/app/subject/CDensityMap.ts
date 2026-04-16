@@ -14,6 +14,7 @@ import { CUtilMath } from "../../geometry/CUtilMath.js";
 import { CVec2 } from "../../geometry/CVec2.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CVec4 } from "../../geometry/CVec4.js";
+import { CColor } from "../../render/CColor.js";
 import { CMesh } from "../../render/CMesh.js";
 import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
@@ -25,7 +26,7 @@ import { CCollider } from "../component/CCollider.js";
 import { CPaint } from "../component/paint/CPaint.js";
 import { CPaint2DMerge } from "../component/paint/CPaint2D.js";
 import { CPaint3DMerge } from "../component/paint/CPaint3D.js";
-import { CMapBuf, IMapLabel } from "./CMapBuf.js";
+import { CMapBuf, IMapLabel, IMapSchema } from "./CMapBuf.js";
 import { CSubject } from "./CSubject.js";
 
 export class CDensityInfo extends CObject implements IMapLabel
@@ -33,7 +34,14 @@ export class CDensityInfo extends CObject implements IMapLabel
     constructor(_color : number,_size : CVec3)
     {
         super();
-        this.mColor=_color;
+        if(_color == null || _color <= 0) {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            this.mColor = ((r << 24) | (g << 16) | (b << 8) | 0x00) >>> 0;
+        } else {
+            this.mColor = (_color & 0xFFFFFF00) >>> 0;
+        }
         this.mSize=_size;
     }
     Label(): string {
@@ -76,21 +84,51 @@ export class CDensityInfo3D extends CDensityInfo
         this.mRes=_mesh;
     }
 }
-export class CDensityMap extends CSubject
+export class CDensityMap extends CSubject implements IMapSchema
 {
+    
     mBuf : CMapBuf=new CMapBuf();
     mDensityArr =new Array<CDensityInfo>();
-    mDiv : number = 64;  // 청크 분할 수 (1=단일, 2=2×2=4청크, 4=4×4=16청크)
+    mDiv : number = 100; 
+    mUpdate=true;
 
+    override IsShould(_member: string, _type: CObject.eShould): boolean {
+
+        if(_member=="mUpdate")    return false;
+        return super.IsShould(_member,_type);
+    }
+    MapLog(): string {
+        let json={};
+		json["countX"]=this.mBuf.mCount.x;
+		json["countY"]=this.mBuf.mCount.y;
+		json["countZ"]=this.mBuf.mCount.z;
+		json["size"]=this.mBuf.mSize;
+
+		json["labelArr"]=new Array();
+
+        
+		let size=new CVec3(this.mBuf.mSize,this.mBuf.mSize,this.mBuf.mSize);
+		for(let tile of this.mDensityArr)
+		{
+			json["labelArr"].push({"label":tile.Label(),"color":CColor.HexToRGB(tile.Color(),true).ToHex(),"sizeX":size.x,"sizeY":size.y,"sizeZ":size.z});
+		}
+
+		return JSON.stringify(json);
+    }
     PushDensityInfo<T extends CDensityInfo>(_density : T)
     {
         this.mDensityArr.push(_density);
         return _density;
     }
+    override Push<T>(_obj: T): T {
+        if(_obj instanceof CDensityInfo)
+            this.PushDensityInfo(_obj);
+        return super.Push(_obj);
+    }
 
     override Update(_update : CUpdate)
     {
-        if(this.FindComp(CPaint) != null) return;
+        if(this.mUpdate==false) return;
 
         for(let density of this.mDensityArr)
         {
@@ -148,36 +186,26 @@ export class CDensityMap extends CSubject
                     const worldX = (cx + 0.5) * cellW;
                     const worldY = (cy + 0.5) * cellH;
 
-                    // const bx = Math.floor(worldX / this.mBuf.mSize);
-                    // const by = Math.floor(worldY / this.mBuf.mSize);
+                                    
+                    const eps = 0.01;
+                    const checkPoints : [number,number][] = [
+                        [worldX,                        worldY                       ], // 중심
+                        [cx * cellW + eps,              cy * cellH + eps             ], // 좌상
+                        [(cx+1) * cellW - eps,          cy * cellH + eps             ], // 우상
+                        [cx * cellW + eps,              (cy+1) * cellH - eps         ], // 좌하
+                        [(cx+1) * cellW - eps,          (cy+1) * cellH - eps         ], // 우하
+                    ];
 
-                    // const idx = new CCIndex(bx, by, 0);
-                    // if(this.mBuf.IndexOut(idx)) continue;
-
-                    // const rgb = this.mBuf.RGB(idx) as number;
-                    // if(rgb !== targetRGB) continue;
-
-                    // 변경: 셀이 커버하는 픽셀 범위 전체 체크
-                    const bx0 = Math.floor((cx * cellW) / this.mBuf.mSize);
-                    const by0 = Math.floor((cy * cellH) / this.mBuf.mSize);
-
-                    // const bx1 = Math.min(Math.ceil(((cx+1) * cellW) / this.mBuf.mSize), this.mBuf.mCount.x - 1);
-                    // const by1 = Math.min(Math.ceil(((cy+1) * cellH) / this.mBuf.mSize), this.mBuf.mCount.y - 1);
-
-
-                    // 올바른 - -1 해야 셀 경계 안쪽까지만 포함
-                    const bx1 = Math.min(Math.ceil(((cx+1) * cellW) / this.mBuf.mSize) - 1, this.mBuf.mCount.x - 1);
-                    const by1 = Math.min(Math.ceil(((cy+1) * cellH) / this.mBuf.mSize) - 1, this.mBuf.mCount.y - 1);
-
-                    let found = false;
-                    for(let by=by0; by<=by1 && !found; by++)
-                    for(let bx=bx0; bx<=bx1 && !found; bx++)
+                    let anyMatch = false;
+                    for(const [wx, wy] of checkPoints)
                     {
+                        const bx = Math.floor(wx / this.mBuf.mSize);
+                        const by = Math.floor(wy / this.mBuf.mSize);
                         const idx = new CCIndex(bx, by, 0);
                         if(this.mBuf.IndexOut(idx)) continue;
-                        if((this.mBuf.RGB(idx) as number) === targetRGB) found = true;
+                        if((this.mBuf.RGB(idx) as number) === targetRGB) { anyMatch = true; break; }
                     }
-                    if(!found) continue;
+                    if(!anyMatch) continue;
 
                     // CVoxelMap과 동일: cell 인덱스 기반 청크 결정
                     const chunkX   = Math.min(Math.floor(cx / div), cntX - 1);
@@ -276,10 +304,12 @@ export class CDensityMap extends CSubject
                     ptMerge.PushTag(tag);
             }
         }//density
+        this.mUpdate=false;
     }
     override SetPos(_pos : CVec3,_reset=true)
     {
         super.SetPos(_pos,_reset);
+        this.mUpdate=true;
         this.RemoveComps(CPaint2DMerge);
         this.RemoveComps(CPaint3DMerge);
         this.RemoveComps(CCollider);
@@ -289,8 +319,9 @@ export class CDensityMap extends CSubject
         var button=document.createElement("button");
         button.innerText="BufferTool";
         button.onclick=()=>{
-            window["BufferTool"](this.mBuf.mBuffer,this.mBuf.mCount).then(()=>{
-                this.RemoveComps(CPaint2DMerge);
+            window["BufferTool"](this.mBuf.mBuffer,this.mBuf.mCount,this.mDensityArr,this.mBuf.mSize,false,true).then(()=>{
+                this.SetPos(this.GetPos());
+
             });
         };
         _div.append(button);

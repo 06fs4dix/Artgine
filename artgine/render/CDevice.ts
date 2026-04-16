@@ -1,4 +1,5 @@
 import {CAlert} from "../basic/CAlert.js";
+import { CConsol } from "../basic/CConsol.js";
 import {CPreferences} from "../basic/CPreferences.js";
 import {CUtil} from "../basic/CUtil.js";
 import {CVec4} from "../geometry/CVec4.js";
@@ -53,7 +54,7 @@ export class CDevice
 	SetDepthWrite(_enable){}
 	SetDepthTest(_enable){}
 	SetBlend(_data : Array<number>){}
-	SetLine(_enable){}
+	SetLine(_type : number|boolean){}
 	ViewPort(_x : number,_y : number,_w : number,_h : number){}
 	//렌더링 중에는 rp가 안변한다고 생각하고 이렇게 처리
 	//멀티 스레딩 상황에서는 문제가 될수 있다!
@@ -132,7 +133,10 @@ export class CDevice
 		//Sam2DWriteX:7,
 		//Sam2DWriteY:8,
 
-        HalfFloat:9,
+        //HalfFloat:9,
+		FloatTex16:10,
+		FloatTex32:11,
+		
 	}
 	//2060 Super : BenchmarkScore: 142  ALU:89ms  FILL:81ms  GEO:27ms
 	//se2 : BenchmarkScore: 8  ALU:1837ms  FILL:1141ms  GEO:191ms
@@ -169,7 +173,7 @@ export class CDeviceGL extends CDevice
 		}
 		
 		
-		this.GL().pixelStorei(this.GL().UNPACK_FLIP_Y_WEBGL, true);
+		//this.GL().pixelStorei(this.GL().UNPACK_FLIP_Y_WEBGL, true);
 		if (!this.mGL)
 		{	
 			CAlert.E("초기화 실패.(하드웨어 가속을 켜주세요!");
@@ -178,42 +182,27 @@ export class CDeviceGL extends CDevice
 		
 		this.mDrawType=this.GL().TRIANGLES;
 		
-		g_property.set(CDevice.eProperty.HalfFloat,1);
-		if(CUtil.IsMobile())
-		{
-			
-			let ext = this.GL().getExtension('EXT_color_buffer_half_float');
-			if (!ext)
-			{	 
-					
-					g_property.set(CDevice.eProperty.HalfFloat,0);	
-					let ext = this.GL().getExtension('EXT_color_buffer_float');
-					if (!ext) 
-						CAlert.W("no EXT_color_buffer_half_float");	
-					ext = this.GL().getExtension('OES_texture_float_linear');
-					if (!ext) {	    CAlert.W("no OES_texture_float_linear");	}
-			}
-			
-			
+		//g_property.set(CDevice.eProperty.HalfFloat,1);
+
+		let ext = this.GL().getExtension('EXT_color_buffer_float');
+		if (ext!=null) 	g_property.set(CDevice.eProperty.FloatTex32,1);
+		else {
+			g_property.set(CDevice.eProperty.FloatTex32,0);
+			{	    CAlert.W("no EXT_color_buffer_float");		}
 		}
-		else
-		{
-			let ext = this.GL().getExtension('EXT_color_buffer_float');
-			if (!ext) 
-			{
-				CAlert.W("no EXT_color_buffer_float");		
-				g_property.set(CDevice.eProperty.HalfFloat,0);
-			}
-			
-				
-			
-			//이거 지워도 될거 같은데 일단 넣어둠
-			ext = this.GL().getExtension('OES_texture_float_linear');
-			if (!ext) {	    CAlert.W("no OES_texture_float_linear");		}
+
+		ext = this.GL().getExtension('EXT_color_buffer_half_float');
+		if (ext!=null) 	g_property.set(CDevice.eProperty.FloatTex16,1);
+		else {
+			g_property.set(CDevice.eProperty.FloatTex16,0);
+			{	    CAlert.W("no EXT_color_buffer_half_float");		}
 		}
+		if(CUtil.IsSafari())	this.m_pf.mTexture16f=true;
+
 		
-		
-		
+
+		ext = this.GL().getExtension('OES_texture_float_linear');
+		if (ext!=null) {	    CAlert.W("no OES_texture_float_linear");		}
 		
 		
 		CRenderPass.eBlend.FUNC_ADD=this.GL().FUNC_ADD;
@@ -245,20 +234,22 @@ export class CDeviceGL extends CDevice
 		var TexLay=this.GL().getParameter(this.GL().MAX_ARRAY_TEXTURE_LAYERS);
 		var TexSize=this.GL().getParameter(this.GL().MAX_TEXTURE_SIZE);
 		
-		g_property.set(CDevice.eProperty.Sam2DMax,12);
-		g_property.set(CDevice.eProperty.Sam2DArrMax,1);
-		g_property.set(CDevice.eProperty.SamCubeMax,3);
+		g_property.set(CDevice.eProperty.Sam2DMax,11);
+		g_property.set(CDevice.eProperty.Sam2DArrMax,3);
+		g_property.set(CDevice.eProperty.SamCubeMax,2);
 		g_property.set(CDevice.eProperty.Sam2dArrLayerMax,TexLay);
-		//g_property.set(CDevice.eProperty.TexSize,TexSize/2);
+		
 		g_property.set(CDevice.eProperty.VertexUniform,1024);
 		g_property.set(CDevice.eProperty.PixelUniform,1024);
-		g_property.set(CDevice.eProperty.Sam2DSize,TexSize/2/4);
-		//g_property.set(CDevice.eProperty.Sam2DWriteY,TexSize/2/4);
+		//g_property.set(CDevice.eProperty.Sam2DSize,TexSize/2/4);
+		g_property.set(CDevice.eProperty.Sam2DSize,2048);
+		
 		
 		
 		this.mStaticRP.mCullFace=CRenderPass.eCull.CCW;
 		
-		
+		CConsol.Log(`MAX_VERTEX_UNIFORM_VECTORS : ${max_v_uniforms} MAX_FRAGMENT_UNIFORM_VECTORS : ${max_f_uniforms} 
+			MAX_TEXTURE_IMAGE_UNITS : ${texture_units} MAX_ARRAY_TEXTURE_LAYERS : ${TexLay} MAX_TEXTURE_SIZE : ${TexSize}`);
 		
 
 	}
@@ -405,15 +396,16 @@ export class CDeviceGL extends CDevice
 			this.GL().depthMask(false);
 		}
 	}
-	override SetLine(_enable)
+	override SetLine(_type : number)
 	{
-		this.mStaticRP.mLine=_enable;
-		if(_enable==false)
+
+		this.mStaticRP.mLine=_type;
+		if(_type==null)
 			this.mDrawType=this.GL().TRIANGLES;
 		else
-			//this.m_drawType=this.GL().LINES;
-			this.mDrawType=this.GL().LINE_STRIP;
-			//this.m_drawType=this.GL().LINE_LOOP;
+			this.mDrawType=_type;
+		
+			
 	}
 	// ── 실측 벤치마크 ────────────────────────────────────────────────
 	// gl.finish()로 GPU 완료를 동기화해서 실제 처리량을 측정한다.

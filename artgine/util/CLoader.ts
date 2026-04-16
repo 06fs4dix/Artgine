@@ -40,6 +40,7 @@ export class CLoaderOption extends CObject
 	public mMipMap=CTexture.eMipmap.GL;
 	public mColorTex=false;
 	public mAlphaCut=0x09;
+	public mAlphaBleed =true;
 	mCache=null;//버퍼 등록용
 	mGPU=true;
 	mTexBufRaw=false;
@@ -90,7 +91,7 @@ export class CLoader
 	public mLoadSet=new Set();
 	public mRender : CRenderer=null;
 	public mRes : CRes=null;
-	constructor(_renderer : CRenderer,_res : CRes)
+	constructor(_renderer : CRenderer=null,_res : CRes=null)
 	{
 		this.mRender=_renderer;
 		this.mRes=_res;
@@ -112,7 +113,7 @@ export class CLoader
 	// {
 	// 	this.mRes.Set(_file,_data);
 	// }
-	async LoadSwitch(_file : string,_buffer : ArrayBuffer,_option : CLoaderOption)
+	async LoadSwitch(_file : string,_buffer : ArrayBufferLike,_option : CLoaderOption)
 	{
 		if(_option!=null &&_option.mCache!=null)
 		{
@@ -124,6 +125,7 @@ export class CLoader
 		var ext=_file.substr(pos,_file.length-pos).toLowerCase();
 		if(ext=="png" || ext=="jpg" || ext=="jpeg" || ext=="tga" || ext=="gif")
 		{
+			
 			return await this.TextureLoad(_file,_buffer,_option);
 		}
 		else if(ext=="ts")
@@ -131,49 +133,55 @@ export class CLoader
 			
 			await this.ShaderLoad(_file,_buffer);
 			this.mLoadSet.delete(_file);
+			return true;
 			
 		}
 		else if(ext=="mp3" || ext=="ogg")
 		{
-			this.SoundLoad(_file,_buffer);
 			this.mLoadSet.delete(_file);
+			return this.SoundLoad(_file,_buffer);
+			
 		}
 		else if(ext=="mp4" || ext=="webm")
 		{
 			
 			this.VideoLoad(_file,_buffer);
-			
+			return true;
 		
 		}
 		else if(ext=="fbx" || ext=="gltf" || ext=="glb" || ext=="obj")
 		{
 			
-			await this.MeshLoad(_file,_buffer,_option);
 			this.mLoadSet.delete(_file);
+			return await this.MeshLoad(_file,_buffer,_option);
+			
 			
 		}
 		else if(ext=="json")
 		{
 		
-			await this.JSONLoad(_file,_buffer,_option);
 			this.mLoadSet.delete(_file);
+			return await this.JSONLoad(_file,_buffer,_option);
+			
 			
 		}
 		else if(ext=="js")
 		{
 			await this.JSLoad(_file);
+			return true;
 		}
 		else if(ext=="csv")
 		{
-			await this.CSVLoad(_file,_buffer);
 			this.mLoadSet.delete(_file);
+			return await this.CSVLoad(_file,_buffer);
+			
 		}
 		else if(ext=="zip")
 		{
 			if(window["JSZip"] ==null)
 			{
 				CAlert.E("JSZip not define!");
-				return;
+				return false;
 			}
 			var rootPath="";
 			var spos=_file.lastIndexOf("/");
@@ -227,80 +235,38 @@ export class CLoader
 					});
 				}
 			});
-			this.mRes.Push(fileName,flieList);
 			this.mLoadSet.delete(_file);
+			if(this.mRes!=null)			this.mRes.Push(fileName,flieList);
+			return flieList;
 			
 			
 		}
-		// else if(ext=="ts")
-		// {
-		// 	return new Promise((resolve, reject) => {
-		// 		this.mRes.Push(_file,_buffer);
-		// 		this.mLoadSet.delete(_file);
-		// 		resolve("");
-		// 	});
-		// }
 		else if(ext=="bin" || ext=="mtl")
 		{
 			return new Promise((resolve, reject) => {
-				this.mRes.Push(_file,_buffer);
+				if(this.mRes!=null)	this.mRes.Push(_file,_buffer);
 				
 				
 				this.mLoadSet.delete(_file);
-				resolve("");
+				resolve(_buffer);
 			});
 		}
 		else if(_file.indexOf("docs.google.com")!=-1)
 		{
-			await this.CSVLoad(_file,_buffer);
 			this.mLoadSet.delete(_file);
+			return await this.CSVLoad(_file,_buffer);
+			
 		}
-		else
-			CAlert.E(_file+"미지원");
-	}
-	// static async LoadToBase64(_file : string)
-	// {
-	// 	return new Promise<string>((resolve, reject)=>{
-	// 		var oReq = new XMLHttpRequest();
-	// 		oReq["fileName"]=_file;
-	// 		oReq.onload = (e)=> 
-	// 		{
-	// 			if (oReq.status != 200) 
-	// 				alert("XMLHttpRequest error code" + oReq.status);
-			    
-				
-	// 			resolve(CUtil.ArrayToBase64(oReq.response));
-	// 		}
-	// 		oReq.open("GET", _file);
-	// 		oReq.responseType = "arraybuffer";
-	// 		oReq.send();
-	// 	});
-	// }
-	// async LoadBuffer(_file : string) : Promise<any>
-	// {
-	// 	return new Promise((resolve, reject)=>{
-	// 		var oReq = new XMLHttpRequest();
-	// 		oReq["fileName"]=_file;
-	// 		oReq.onload = (e)=> 
-	// 		{
-	// 			if (oReq.status != 200) 
-	// 			{
-	// 				alert("XMLHttpRequest error code" + oReq.status);
-	// 				resolve("");
-	// 			}
+		
+		CAlert.E(_file+"미지원");
 
-	// 			resolve(oReq.response);
-	// 		}
-	// 		oReq.open("GET", _file);
-	// 		oReq.responseType = "arraybuffer";
-	// 		oReq.send();
-	// 	});
-	// }
-	//async Load(_asset : CAsset);
-	async Exe(_file : Array<string>) : Promise<boolean>
-	async Exe(_file : string) : Promise<boolean>
-	async Exe(_file : string,_option : CLoaderOption) : Promise<boolean>
-	async Exe(_file : any,_option : CLoaderOption=null) : Promise<boolean>
+		return false;
+	}
+	
+	async Exe(_file : Array<string>) : Promise<any>
+	async Exe(_file : string) : Promise<any>
+	async Exe(_file : string,_option : CLoaderOption) : Promise<any>
+	async Exe(_file : any,_option : CLoaderOption=null) : Promise<any>
 	{
 		if(_file=="")	return true;
 		
@@ -313,17 +279,20 @@ export class CLoader
 			}
 			parr=await Promise.all(parr);
 			
-			return parr.includes(true);
+			return parr.includes(false)==true?null:true;//실패가 있으면 최종 실패다
 		}
 			
-		if (null!= this.mRes.Find(_file))
-			return false;
+		let res=this.mRes.Find(_file);
+		if (null!= res)	return res;
+
+		//로딩중이라면
 		if(this.mLoadSet.has(_file))
 		{
+			//될때까지 기다려 준다
 			await CChecker.Exe(async ()=>{
 
-				if (null!= this.mRes.Find(_file))
-					return false;
+				let res2=this.mRes.Find(_file);
+				if (null!= res2)	return false;
 				return true;
 			});
 		}
@@ -335,22 +304,23 @@ export class CLoader
 
 		if (ext=="png" || ext=="jpg" || ext=="jpeg")
 		{
-			await this.TextureLoad(_file, _file, _option);	
+			return await this.TextureLoad(_file, _file, _option);	
 		}
 		else if (ext=="mp4")
 		{
 			this.VideoLoad(_file,null);
-			
+			return true;
 		}
 		else if (ext=="tex" || ext=="rgba" || ext=="mesh")
 		{
 			this.mLoadSet.delete(_file);
-			return false;
+			return true;
 		}
 		else if (ext=="js" || ext=="jsm")
 		{
 			
 			await this.JSLoad(_file);
+			return true;
 		}
 	
 		
@@ -358,18 +328,15 @@ export class CLoader
 		if(buf==null)
 		{
 			this.mLoadSet.delete(_file);
-			return true;
+			return false;
 		}
-		await this.LoadSwitch(_file,buf,_option);
-		
-		return false;
-		
-
+		return await this.LoadSwitch(_file,buf,_option);
 	}
 	async TextureLoad(_file,_buffer,_option : CLoaderOption)
 	{	
 		if(_option==null)	_option=new CLoaderOption();
-			
+		
+		
 		let tex=new CTexture();
 
 		tex.SetFilter(_option.mFilter);
@@ -388,6 +355,7 @@ export class CLoader
 		else 	par = new CParserTGA();
 	
 		par.mAlphaCut=_option.mAlphaCut;
+		par.mAlphaBleed=_option.mAlphaBleed;
 		if(typeof _buffer!="string")
 			par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
 		await par.Load(_file)
@@ -403,21 +371,25 @@ export class CLoader
 			}
 		}
 		
-		this.mLoadSet.delete(_file);
+		
 		tex=par.GetResult();
 		tex.SetKey(_file);
 		tex.mModifyEvent=new CEvent(async ()=>{
 			await CClass.CallAsync(null,"BufferTool",[tex.GetBuf()[0],new CVec3(tex.GetWidth(),tex.GetHeight(),1),true]);
-			this.mRender.BuildTexture(tex);
+		
 			
 		});
-		this.mRes.Push(_file,par.GetResult());
-			
+
+		let result=par.GetResult();
+		if(this.mRes!=null)	this.mRes.Push(_file,result);
+
+		this.mLoadSet.delete(_file);
+		return result;
 	}
 	
-	private async ShaderLoad(_file : string,_buffer : ArrayBuffer)
+	private async ShaderLoad(_file : string,_buffer : ArrayBufferLike)
 	{
-		if( this.mRender==null)	return;
+		if( this.mRender==null)	return null;
 		
 		var text = '';
 		var bytes = new Uint8Array( _buffer );
@@ -440,15 +412,12 @@ export class CLoader
 		}
 		for(var each01 of sl.mShader)
 		{
-			
-			
-			
 			this.mRes.Push(basePath+each01.mKey,each01);
 		}
-
+		return sl;
 		
 	}
-	private async MeshLoad(_file : string,_buffer : ArrayBuffer,_option : CLoaderOption)
+	private async MeshLoad(_file : string,_buffer : ArrayBufferLike,_option : CLoaderOption)
 	{
 		_option = _option ?? new CLoaderOption();
 		var pos=_file.lastIndexOf(".")+1;
@@ -468,12 +437,11 @@ export class CLoader
 
 
 		
-
-		this.mRes.Push(_file,mesh);
+		if(this.mRes!=null)	this.mRes.Push(_file,mesh);
 
 		await this.MeshTexLoad(_file,mesh,_option);
 	
-
+		return mesh;
 	}
 	async MeshTexLoad(_file : string,mesh : CMesh,_option : CLoaderOption)
 	{
@@ -532,7 +500,7 @@ export class CLoader
 			await this.LoadSwitch(key, value, option);
 		}
 	}
-	private VideoLoad(_file : string,_buffer : ArrayBuffer)
+	private VideoLoad(_file : string,_buffer : ArrayBufferLike)
 	{
 		this.mLoadSet.delete(_file);
 		var video = document.createElement('video');
@@ -551,7 +519,7 @@ export class CLoader
 		}
 		else
 		{
-			let blob = new Blob([_buffer], { type: "video/"+ext });
+			let blob = new Blob([_buffer as ArrayBuffer], { type: "video/"+ext });
 			url = window.URL.createObjectURL(blob);
 		}
 		
@@ -562,54 +530,43 @@ export class CLoader
 		this.mRender.BuildVideo(video,_file);
 		
 	}
-	private SoundLoad(_file : string,_buffer : ArrayBuffer)
+	private SoundLoad(_file : string,_buffer : ArrayBufferLike)
 	{
-		this.mRes.Push(_file,_buffer);
+		if(this.mRes!=null)	this.mRes.Push(_file,_buffer);
+
+		return _buffer;
 	}
 	//리소스에도 저장되고,file window에도 등록됌
-	private async JSONLoad(_file : string,_buffer : ArrayBuffer,_option : CLoaderOption)
+	private async JSONLoad(_file : string,_buffer : ArrayBufferLike,_option : CLoaderOption)
 	{
-		var str=CUtil.ArrayToString(_buffer);
-		var jData=new CJSON(str);
+		let str=CUtil.ArrayToString(_buffer);
+		let jData=new CJSON(str);
 
 		if(jData.Get("skeleton")!=null)
 		{
-			var par :CParserSpine=new CParserSpine();
+			let par :CParserSpine=new CParserSpine();
 			par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
 			await par.Load(_file);
-			var mesh : CMesh = par.GetResult();
-			this.mRes.Push(_file,mesh);
-
+			let mesh : CMesh = par.GetResult();
+			if(this.mRes!=null)			this.mRes.Push(_file,mesh);
 			await this.MeshTexLoad(_file,mesh,_option);
-			//let texMap=new Map<string,ArrayBuffer>();
-			// for (let i = 0; i < mesh.texture.length; i++)
-			// {
-			// 	if(mesh.texture[i].indexOf("base64:")!=-1)
-			// 	{
-			// 		let tex=mesh.texture[i];
-			// 		let base64Header = "base64:";
-			// 		var base64data = tex.substring(base64Header.length);
-			// 		let newName = CHash.SHA256(base64data) + ".png";
-			// 		mesh.texture[i] = newName;
-			// 		this.mLoadSet.add(newName);
-			// 		//texMap.set(newName,CUtil.Base64ToArray(base64data));
-			// 		await this.LoadSwitch(newName, CUtil.Base64ToArray(base64data), _option);
-
-				
-			// 	}
-			// 	else
-			// 		await this.Exe(mesh.texture[i],_option);
-			// }
-			// for(let [key,value] of texMap)		
-			// {
-			// 	await this.LoadSwitch(key, value, _option);
-			// }
+			return mesh;
 		}
-		else
-			this.mRes.Push(_file,jData);
+		else if(jData.GetStr("class")!=null)
+		{
+			let obj=CClass.New(jData.GetStr("class")) as CObject;
+			obj.ImportCJSON(jData);
+			if(this.mRes!=null)			this.mRes.Push(_file,obj);
+
+			return obj;
+		}
+		
+		if(this.mRes!=null)	this.mRes.Push(_file,jData);
+
+		return jData;
 	}
 
-	private async CSVLoad(_file: string, _buffer: ArrayBuffer)
+	private async CSVLoad(_file: string, _buffer: ArrayBufferLike)
 	{
 		let arr = [];
 		let str = CUtil.ArrayToString(_buffer);
@@ -634,7 +591,8 @@ export class CLoader
 			arr.push(row);
 		}
 
-		this.mRes.Push(_file, arr);
+		if(this.mRes!=null)		this.mRes.Push(_file, arr);
+		return arr;
 	}
 
 	//동적 로드인데 버퍼로는 안되고 파일명으로만 가능

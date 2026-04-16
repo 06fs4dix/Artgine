@@ -34,6 +34,7 @@ var gNoise=[];
 export class CPalette
 {
 	public mMCI2D=new CMeshCreateInfo();
+	public mTerrain=new CMeshCreateInfo();
 
 	public mSL3D : CShaderList=null;
 	public mSL2D : CShaderList=null;
@@ -196,6 +197,12 @@ export class CPalette
 		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(100,100,100),16,16,100,100),this.GetBlackTex());
 		_fw.Res().Push(this.GetSphereMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
+		
+		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetTerrain(new CVec2(64, 64), 0),this.GetBlackTex());
+		this.mTerrain=mesh.meshTree.mData.ci;
+		CUtilRender.MeshBoundUpdate(mesh);
+        this.mTerrain.bound.mMin.y = 0;
+        this.mTerrain.bound.mMax.y = 10000;
 
 		
 		
@@ -220,7 +227,7 @@ export class CPalette
 				fa[i*4+3]=tex.GetBuf()[0][i*4+3]/0xff;
 
 			}
-			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,11,0,SDF.eLookUpTable.LUT0+j,CDevice.GetProperty(CDevice.eProperty.Sam2DSize),1,fa);
+			_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2dArr,0,SDF.eUni.V4LookUpTable0+j,32*32,1,fa);
 			_fw.Res().Remove(gLUT[j]);
 		}
 
@@ -235,7 +242,7 @@ export class CPalette
 				}
 			}
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Perlin, 2048, 256, fa);
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2dArr,  0, 0, 2048, 256, fa,SDF.eNoise.Perlin);
 		_fw.Res().Remove(gNoise[0]);
 
 		// Water
@@ -248,7 +255,8 @@ export class CPalette
 				}
 			}
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.PerlinNormal, 2048, 256, fa);
+		//_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,  0, SDF.eNoise.PerlinNormal, 2048, 256, fa);
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2dArr,  0, 0, 2048, 256, fa,SDF.eNoise.PerlinNormal);
 		_fw.Res().Remove(gNoise[1]);
 
 		// Cloud
@@ -261,7 +269,8 @@ export class CPalette
 				}
 			}
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.PerlinFBM3, 2048, 256, fa);
+		//_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,  0, SDF.eNoise.PerlinFBM3, 2048, 256, fa);
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2dArr,  0, 0, 2048, 256, fa,SDF.eNoise.PerlinFBM3);
 		_fw.Res().Remove(gNoise[2]);
 
 		// Blue Noise
@@ -283,7 +292,8 @@ export class CPalette
 				else fa[dstIndex + 1] = tex.GetBuf()[0][srcIndex] / 0xFF;
 			}
 		}
-		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d, 11, 0, SDF.eNoise.Blue, 2048, 1, fa);
+		//_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2d,  0, SDF.eNoise.Blue, 2048, 1, fa);
+		_fw.Ren().RebuildTexture(_fw.Ren().mUniToSam2dArr,  0, 0, 2048, 1, fa,SDF.eNoise.Blue);
 		_fw.Res().Remove(gNoise[3]);
 
 
@@ -314,6 +324,11 @@ export class CPalette
 	{
 		return this.mMCI2D;
 	}
+	
+	Terrain()
+    {
+        return this.mTerrain;
+    }
 	
 
 	GetNoneTex()

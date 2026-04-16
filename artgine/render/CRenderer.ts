@@ -47,10 +47,13 @@ export class CRenderer
 	mTexUse=new CTexUse();
 	mTexBind=new Array<number>();
 
-	public mUniToSam2d : CTexture;
-	public mUniToSam2dKey="Artgine/uniToSam2dKey";
+	// public mUniToSam2d : CTexture;
+	// public mUniToSam2dKey="Artgine/uniToSam2dKey";
 	public mUniTexLastOff=-1;
 	//mUniWriteSet=new Set<number>();
+
+	public mUniToSam2dArr : CTexture;
+	public mUniToSam2dArrKey="Artgine/uniToSam2dArrKey";
 
 	
 	public mMainFrameTex : CTexture;
@@ -63,16 +66,30 @@ export class CRenderer
 		this.mRes=_Res;
 		this.mPF=_PF;
 
-		this.mUniToSam2d=new CTexture();
-		this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DSize),CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/2);
-		this.mUniToSam2d.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
-		this.mUniToSam2d.SetFilter(CTexture.eFilter.Linear);
-		this.mUniToSam2d.SetMipMap(CTexture.eMipmap.None);
-		this.mUniToSam2d.CreateBuf();
-		this.mUniToSam2d.mReadPixelEvent=new CEvent(this.ReadPixel,this);
-		this.BuildTexture(this.mUniToSam2d);
-		this.mUniToSam2d.GetBuf().length=0;
-		this.mRes.Push(this.mUniToSam2dKey,this.mUniToSam2d);
+		// this.mUniToSam2d=new CTexture();
+		// //this.mUniToSam2d.SetSize(CDevice.GetProperty(CDevice.eProperty.Sam2DSize),CDevice.GetProperty(CDevice.eProperty.Sam2DSize)/2);
+		// this.mUniToSam2d.SetSize(2048,1024);
+		// this.mUniToSam2d.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
+		// this.mUniToSam2d.SetFilter(CTexture.eFilter.Linear);
+		// this.mUniToSam2d.SetMipMap(CTexture.eMipmap.None);
+		// this.mUniToSam2d.CreateBuf();
+		// this.mUniToSam2d.mReadPixelEvent=new CEvent(this.ReadPixel,this);
+		// this.BuildTexture(this.mUniToSam2d);
+		// this.mUniToSam2d.GetBuf().length=0;
+		// this.mRes.Push(this.mUniToSam2dKey,this.mUniToSam2d);
+
+
+
+		this.mUniToSam2dArr=new CTexture();
+		this.mUniToSam2dArr.SetSize(2048,256);
+		this.mUniToSam2dArr.PushInfo([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,5)]);
+		this.mUniToSam2dArr.SetFilter(CTexture.eFilter.Linear);
+		this.mUniToSam2dArr.SetMipMap(CTexture.eMipmap.None);
+		this.mUniToSam2dArr.CreateBuf();
+		this.mUniToSam2dArr.mReadPixelEvent=new CEvent(this.ReadPixel,this);
+		this.BuildTexture(this.mUniToSam2dArr);
+		this.mUniToSam2dArr.GetBuf().length=0;
+		this.mRes.Push(this.mUniToSam2dArrKey,this.mUniToSam2dArr);
 	}
 	SInter()	{	return this.mShaderInterpret;	}
     async BuildH5CMDList(_ch5json:CH5CMDList)
@@ -119,7 +136,9 @@ export class CRenderer
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z 	뒤
 	*/
 	BuildCubeMap(_texList : Array<CTexture>,_mipmap=true,_key=null)	: string{	return null;	}
-	RebuildTexture(_tex : CTexture,_active :number,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView)
+
+	//텍스쳐,등록할 샘플러 슬롯,시작점xy,버퍼사이즈xy,버퍼,어레이일 경우 몇번째
+	RebuildTexture(_tex : CTexture,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView,_arrOff=0)
 	{
 
 	}
@@ -180,7 +199,7 @@ export class CRenderer
 		this.mTexUse.mCube=0;
 	}
    //x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
-	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
+	SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array)
 	{
 
 	}
@@ -208,7 +227,7 @@ export class CRendererGL extends CRenderer
 	public mXRSize=new CVec2();
 
 	//x:어떤 텍스쳐,y:uv(u)시작 위치,z:몇개 사용중인지
-	override SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array,_count=null)
+	override SetUniToSam2D(_vf : CShader,_key : string,_buf : Float32Array)
 	{
 
 	}
@@ -268,7 +287,7 @@ export class CRendererGL extends CRenderer
 	{	
 		return "";
 	}
-	override RebuildTexture(_tex : CTexture,_active :number,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView)
+	override RebuildTexture(_tex : CTexture,_xOff : number,_yOff : number,_width : number,_height : number,_fa : ArrayBufferView,_arrOff=0)
 	{
 		
 	}

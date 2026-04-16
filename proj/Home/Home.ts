@@ -1,5 +1,5 @@
 //Version
-const version='mfeoxpxp_13';
+const version='mo18uv2t_2';
 import "../../artgine/artgine.js"
 
 //Class
@@ -23,7 +23,7 @@ gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
 
-import {CAtelier} from "../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../artgine/app/CAtelier.js";
 
 import {CPlugin} from "../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
@@ -40,12 +40,12 @@ import {CBoard} from "../../artgine/server/CBoard.js";
 import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
 import { CStorage } from "../../artgine/system/CStorage.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
-import { CDomFactory } from "../../artgine/basic/CDOMFactory.js";
+import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
-import { CFileViewer } from "../../artgine/util/CModalUtil.js";
+import { CFileViewer, CMDViewer } from "../../artgine/util/CModalUtil.js";
 import { CFile } from "../../artgine/system/CFile.js";
-
+import { CWebSocket } from '../../artgine/network/CWebSocket.js';
 
 // let mdModal=new CModal("test");
 // mdModal.SetBody();
@@ -59,19 +59,20 @@ if(gPF.mServer!="webServer")
 
 //CStorage.Set("privateKey",null);
 
+CUtilWeb.Parameter("")
 let option=new CSingOption();
 option.mFindPWBtn="pass";
 CSing.On(CSing.eEvent.State,()=>{
     if(CSing.PrivateKey()==null)
-        CUtil.ID("login-btn").innerText="Login";
+        CDOM.ID("login-btn").innerText="Login";
     else
-        CUtil.ID("login-btn").innerText="Logout";
+        CDOM.ID("login-btn").innerText="Logout";
 });
 CSing.On(CSing.eEvent.Init,()=>{
     if(CSing.PrivateKey()==null)
-        CUtil.ID("login-btn").innerText="Login";
+        CDOM.ID("login-btn").innerText="Login";
     else
-        CUtil.ID("login-btn").innerText="Logout";
+        CDOM.ID("login-btn").innerText="Logout";
 });
 CSing.On(CSing.eEvent.JoinInit,()=>{
     loginModal.SetPosition(CModal.ePos.Center);
@@ -90,19 +91,37 @@ loginModal.SetCloseToHide(true);
 loginModal.SetSize(320,640);
 
 
-CUtil.ID("login-btn").addEventListener("click",()=>{
+CDOM.ID("login-btn").addEventListener("click",()=>{
     loginModal.Open();
 });
 let bClient=null;
-CUtil.ID("board-tab").onclick=()=>{
+CDOM.ID("board-tab").onclick=()=>{
     if(bClient==null)
     {
-        bClient=new CBoard(CUtil.ID("board"),"")
+        bClient=new CBoard(CDOM.ID("board"),"")
         bClient.List(0,5);
     }
     
 };
+// CMD 탭
+let cmdInited = false;
 
+CDOM.ID("cmd-tab").addEventListener("shown.bs.tab", () => {
+    if (cmdInited) return;
+    cmdInited = true;
+
+    const panel = CDOM.ID("cmd-panel");
+    const iframe = document.createElement('iframe');
+    iframe.src = '/cmd';
+    iframe.style.cssText = 'width:100%;border:none;display:block;flex:1;min-height:0;';
+    panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+    panel.appendChild(iframe);
+
+});
+
+if (CDOM.ID("cmd-panel").classList.contains("active")) {
+    CDOM.ID("cmd-tab").dispatchEvent(new Event("shown.bs.tab", { bubbles: true }));
+}
 //==================================================================================================================
 var g_contentJBox=new CModal("content_modal");
 g_contentJBox.SetCloseToHide(true);
@@ -150,8 +169,9 @@ var folderList={"<>":"ul","class":"list-group","html":[]};
 var fileList={"<>":"ul","class":"list-group","html":[]};
 function DirListRefresh()
 {
-    CUtil.ID("File_div").innerHTML="";
-    CUtil.ID("Delete_div").innerHTML="";
+    
+    CDOM.ID("File_div").innerHTML="";
+    CDOM.ID("Delete_div").innerHTML="";
     folderList={"<>":"ul","class":"list-group","html":[]};
     fileList={"<>":"ul","class":"list-group","html":[]};
 
@@ -182,17 +202,48 @@ function DirListRefresh()
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
                 "html":"<i class='bi bi-folder-fill'>"+fl.name,"onclick":()=>{
-                FolderCD(window["g_path"]+fl.name+"/");
+                let soundAddType=CDOM.IDValue("soundAddType");
+                if(soundAddType=="1")
+                {
+                    let p2: any = {path:window["g_path"]+fl.name+"/",admin:admin};
+                    if(gRootPath) p2.gRootPath = gRootPath;
+                    if(gDown)     p2.gDown = gDown;
+                    CFecth.Exe("File/List",p2,"json").then((data : {"list","root","path","down"})=>{
+                        //CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
+                        CAlert.Info(window["g_path"]+fl.name+"추가");
+                        
+
+                        for(let fl2 of data.list as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
+                        {
+                            if(fl.name==fl2.name)   continue;
+                            
+                            if(fl2.ext=="mp3" || fl.ext=="ogg")
+                            {
+                                if(SoundListDupChk(window["g_down"]+window["g_path"]+fl.name+"/"+fl2.name)==false)
+                                {
+                                    g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name+"/"+fl2.name);
+                                    g_soundList.name.push(fl2.name);
+                                }
+                                
+                                
+                            }
+                        }
+                        SoundListRefresh();
+                        SoundPlay(0);
+                    });
+                }
+                else
+                    FolderCD(window["g_path"]+fl.name+"/");
             }});
         }       
         else if(fl.ext=="png" || fl.ext=="jpg" || fl.ext=="jpeg" || fl.ext=="bmp")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
                 "html":"<i class='bi bi-folder-image'>"+fl.name,"onclick":(e)=>{
-                CUtil.ID("ImageModalSrc").hidden=false;
-                (CUtil.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
-                CUtil.ID("VideoModalSrc").hidden=true;
-                CUtil.ID("FileModalSrc").hidden=true;
+                CDOM.ID("ImageModalSrc").hidden=false;
+                (CDOM.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
+                CDOM.ID("VideoModalSrc").hidden=true;
+                CDOM.ID("FileModalSrc").hidden=true;
                 //g_openList.add(fl.name);
                 fl.open=true;
                 RefreshOpen();
@@ -219,11 +270,15 @@ function DirListRefresh()
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
                 "html":"<i class='bi bi-folder-music'>"+fl.name,"onclick":()=>{
                 //g_soundList.fullPath.push();
-
-                if((CUtil.ID("soundAddChk") as HTMLInputElement).checked)
+                let soundAddType=CDOM.IDValue("soundAddType");
+                if(soundAddType=="1")
                 {
-                    g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
-                    g_soundList.name.push(fl.name);
+                    if(SoundListDupChk(window["g_down"]+window["g_path"]+fl.name)==false)
+                    {
+                        g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
+                        g_soundList.name.push(fl.name);
+                    }
+                    
                     CAlert.Info(fl.name+" 추가");
                 }
                 else
@@ -241,8 +296,12 @@ function DirListRefresh()
                         
                         if(fl2.ext=="mp3" || fl.ext=="ogg")
                         {
-                            g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl2.name);
-                            g_soundList.name.push(fl2.name);
+                            if(SoundListDupChk(window["g_down"]+window["g_path"]+fl2.name)==false)
+                            {
+                                g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl2.name);
+                                g_soundList.name.push(fl2.name);
+                            }
+                            
                             
                         }
                     }
@@ -261,10 +320,10 @@ function DirListRefresh()
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
                 "html":"<i class='bi bi-folder-play'>"+fl.name,"onclick":()=>{
                 
-                CUtil.ID("ImageModalSrc").hidden=true;
-                (CUtil.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
-                CUtil.ID("VideoModalSrc").hidden=false;
-                CUtil.ID("FileModalSrc").hidden=true;
+                CDOM.ID("ImageModalSrc").hidden=true;
+                (CDOM.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
+                CDOM.ID("VideoModalSrc").hidden=false;
+                CDOM.ID("FileModalSrc").hidden=true;
                 fl.open=true;
                 RefreshOpen();
                 g_contentJBox.Show();
@@ -295,15 +354,67 @@ function DirListRefresh()
                 oReq.send();
             }});
         }
+        else if(fl.ext=="html")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-file-earmark-code'>"+fl.name,"onclick":()=>{
+                let confirm=new CConfirm();
+                confirm.SetBody("HTML 파일을 어떻게 열까요?");
+                confirm.SetConfirm(CConfirm.eConfirm.YesNo,[
+                    ()=>{ window.open(window["g_down"]+window["g_path"]+fl.name, "_blank"); },
+                    ()=>{
+                        let viewer = new CFileViewer([window["g_down"]+window["g_path"]+fl.name], async (filePath, bufStr) => {
+                            const fileName = filePath.split('/').pop();
+                            const dirPath = window["g_root"] + window["g_path"];
+                            const base64 = btoa(unescape(encodeURIComponent(bufStr)));
+                            CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
+                                CAlert.Info('저장 완료');
+                            }).catch((e) => {
+                                CAlert.E('저장 실패: ' + e.message);
+                            });
+                        });
+                        viewer.Open();
+                    },
+                ],["새 창","파일뷰어"])
+                confirm.Open();
+            }});
+        }
+        else if(fl.ext=="ts" || fl.ext=="js" || fl.ext=="txt" || fl.ext=="json")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-file-code'>"+fl.name,"onclick":()=>{
+                                
+                
+                let viewer = new CFileViewer([window["g_down"]+window["g_path"]+fl.name], async (filePath, bufStr) => {
+                    const fileName = filePath.split('/').pop();
+                    const dirPath = window["g_root"] + window["g_path"];
+                    const base64 = btoa(unescape(encodeURIComponent(bufStr)));
+                    console.log('Upload →', { path: dirPath, name: [fileName] }); // ← 확인용
+                    CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
+                        CAlert.Info('저장 완료');
+                    }).catch((e) => {
+                        CAlert.E('저장 실패: ' + e.message);
+                    });
+                });
+                viewer.Open();
+            }});
+        }
+        else if(fl.ext=="md")
+        {
+            folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
+                "html":"<i class='bi bi-file-earmark-text'>"+fl.name,"onclick":(e)=>{
+                new CMDViewer(window["g_down"]+window["g_path"]+fl.name);
+            }});
+        }
         else
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
                 "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
                 
-                CUtil.ID("ImageModalSrc").hidden=true;
-                (CUtil.ID("FileModalSrc") as HTMLLinkElement).href=window["g_down"]+window["g_path"]+fl.name;
-                CUtil.ID("VideoModalSrc").hidden=true;
-                CUtil.ID("FileModalSrc").hidden=false;
+                CDOM.ID("ImageModalSrc").hidden=true;
+                (CDOM.ID("FileModalSrc") as HTMLLinkElement).href=window["g_down"]+window["g_path"]+fl.name;
+                CDOM.ID("VideoModalSrc").hidden=true;
+                CDOM.ID("FileModalSrc").hidden=false;
 
                 g_contentJBox.Show();
             
@@ -320,11 +431,14 @@ function DirListRefresh()
 
     }
 
-    CUtil.ID("File_div").append(CDomFactory.DataToDom(folderList));
-    CUtil.ID("Delete_div").append(CDomFactory.DataToDom(fileList));
+    CDOM.ID("File_div").append(CDOM.DataToDom(folderList));
+    CDOM.ID("Delete_div").append(CDOM.DataToDom(fileList));
 }
+
 let path=CUtilWeb.Parameter("path");
 let admin=CUtilWeb.Parameter("admin");
+let gRootPath=CUtilWeb.Parameter("gRootPath");
+let gDown=CUtilWeb.Parameter("gDown");
 
 if(admin!="admin") admin="admin";
 
@@ -335,8 +449,11 @@ if(window["g_dirList"]!=null)
     DirListRefresh();
 }
 
+let fetchParam: any = {path:path,admin:admin};
+if(gRootPath) fetchParam.gRootPath = gRootPath;
+if(gDown)     fetchParam.gDown = gDown;
 
-CFecth.Exe("File/List",{path:path,admin:admin},"json").then((data : {"list","root","path","down"})=>{
+CFecth.Exe("File/List",fetchParam,"json").then((data : {"list","root","path","down"})=>{
     CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
     window["g_dirList"]=data.list;
     window["g_root"]=data.root;
@@ -344,7 +461,6 @@ CFecth.Exe("File/List",{path:path,admin:admin},"json").then((data : {"list","roo
     window["g_down"]=data.down;
     DirListRefresh();
 });
-
 
 
 
@@ -363,41 +479,27 @@ window["FolderCD"]=FolderCD;
 var g_fun="";
 var g_data="";
 var g_option="";
+// 변경 후
 function Redirection(_multi : boolean)
 {
-	var form = CUtil.ID("ThisPage") as HTMLFormElement;
-	form.setAttribute("charset", "UTF-8");
-	form.setAttribute("method", "Post");  //Post 방식
-    // if(_multi)
-    //     form.setAttribute("enctype", "multipart/form-data");
+    var form = CDOM.ID("ThisPage") as HTMLFormElement;
+    form.setAttribute("charset", "UTF-8");
+    form.setAttribute("method", "Post");
+    form.setAttribute("action", CPath.PHPC()+"File/Redirection");
 
+    CDOM.IDValue("fun",g_fun);
+    CDOM.IDValue("data",g_data);
+    CDOM.IDValue("option",g_option);
+    CDOM.IDValue("admin",admin);
+    CDOM.IDValue("path",encodeURIComponent(window["g_path"]));
+    CDOM.IDValue("gRootPath", gRootPath ?? "");
+    CDOM.IDValue("gDown", gDown ?? "");
     
-	form.setAttribute("action", CPath.PHPC()+"File/Redirection");
-	
-	
-
-    CUtil.IDValue("fun",g_fun);
-    CUtil.IDValue("data",g_data);
-    CUtil.IDValue("option",g_option);
-    CUtil.IDValue("admin",admin);
-    CUtil.IDValue("path",encodeURIComponent(window["g_path"]));
-	
-	form.submit();
-
-    // let admin = "";
-    // if (CUtilWeb.Parameter("admin") != null) {
-	// 	admin += "&admin=admin";
-	// }
-    // CUtilWeb.PageCall(window.location.origin+window.location.pathname,[],[],false);
-    
-
+    form.submit();
 }
 window["Redirection"]=Redirection;
 
 //var pageAction=CWebUtil.Parameter("pageAction","");
-
-
-
 
 
 
@@ -412,41 +514,61 @@ var g_menuList={"<>":"div","html":[
             g_musicJBox.Show();
             g_musicJBox.SetPosition(CModal.ePos.Center);
         }},
-        {"<>":"button","type":"button","class":"btn btn-secondary","style":"margin: 4px;","text":"전곡 추가","onclick":SoundAllAdd},
+        
         
         {"<>":"button","type":"button","class":"btn btn-warning","style":"margin: 4px;","text":"폴더 생성","onclick":()=>{CreateFolder();}},
         {"<>":"button","type":"button","class":"btn btn-danger","style":"margin: 4px;","text":"삭제","onclick":()=>{g_deleteJBox.Show();}},
+        {"<>":"button","type":"button","class":"btn btn-secondary","style":"margin: 4px;","text":"권한","onclick":()=>{AuthRequest();}},
         {"<>":"input","type":"file","multiple":"multiple","id":"uploadBtn","name":"uploadBtn","text":"업로드"},
-        {"<>":"div","class":"form-group form-check d-inline-block","html":[
-            {"<>":"input","type":"checkbox","class":"form-check-input","id":"soundAddChk"},
-            {"<>":"label","class":"form-check-label","for":"soundAddChk","text":"음악 추가"}
+        {"<>":"select","class":"form-select form-select-sm d-inline-block","id":"soundAddType","style":"width:128px;","html":[
+            {"<>":"option","value":"0","text":"전체 추가"},
+            {"<>":"option","value":"1","text":"개별 추가(폴더 가능)"},
         ]},
-        {"<>":"div","class":"form-group form-check d-inline-block","html":[
-            {"<>":"input","type":"checkbox","class":"form-check-input","id":"adjustingChk"},
-            {"<>":"label","class":"form-check-label","for":"adjustingChk","text":"볼륨 조절"}
-        ]},
+        
         {"<>":"input","type":"hidden","id":"fun","name":"fun"},
         {"<>":"input","type":"hidden","id":"data","name":"data"},
         {"<>":"input","type":"hidden","id":"option","name":"option"},
         {"<>":"input","type":"hidden","id":"path","name":"path"},
         {"<>":"input","type":"hidden","id":"admin","name":"admin"},
+        {"<>":"input","type":"hidden","id":"gRootPath","name":"gRootPath"},
+        {"<>":"input","type":"hidden","id":"gDown","name":"gDown"},
         
         //{"<>":"label","class":"custom-file-label","for":"uploadBtn","text":"업로드"}
     ]},
 ]};
 
-CUtil.ID("Menu_div").append(CDomFactory.DataToDom(g_menuList));
+CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
 
-
+function AuthRequest()
+{
+    let confirm = new CConfirm();
+    confirm.SetBody('관리자 암호를 입력하세요!<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+        () => {
+            const pw = CDOM.IDValue("AuthPassword");
+            CFecth.Exe("File/Auth", { password: pw }, "json").then((res: { ok: boolean, msg?: string }) => {
+                if (res.ok)
+                    CAlert.Info("권한 획득 성공");
+                else
+                    CAlert.E("암호가 틀렸습니다: " + (res.msg ?? ""));
+            }).catch(() => {
+                CAlert.E("서버 오류");
+            });
+        },
+        () => {},
+    ], ["확인", "취소"]);
+    confirm.Open();
+}
+window["AuthRequest"] = AuthRequest;
 function CreateFolder()
 {
-    CAlert.E("막아둠");return;
+  
     let confirm=new CConfirm();
     confirm.SetBody('생성할 폴더명을 입력하세요!<br><input type="text" id="CreateFolder" class="form-control form-control-sm" value="새 폴더">');
     confirm.SetConfirm(CConfirm.eConfirm.YesNo,[
     ()=> {
         g_fun="CreateFolder";
-			g_data=window["g_path"]+CUtil.IDValue("CreateFolder");
+			g_data=window["g_path"]+CDOM.IDValue("CreateFolder");
 			Redirection(false);
         
     },
@@ -463,7 +585,7 @@ function CreateFolder()
 	// 	confirm : function () 
 	// 	{
 	// 		g_fun="CreateFolder";
-	// 		g_data=window["g_path"]+CUtil.IDValue("CreateFolder");
+	// 		g_data=window["g_path"]+CDOM.IDValue("CreateFolder");
 	// 		Redirection(false);
 	// 	},
 	// 	cancel : function () {
@@ -474,7 +596,6 @@ function CreateFolder()
 window["CreateFolder"]=CreateFolder;
 function Delete(_file)
 {
-    CAlert.E("막아둠");return;
     g_fun="Delete";
     g_data=window["g_path"]+_file;
     Redirection(false);
@@ -505,9 +626,8 @@ window["Delete"]=Delete;
 // window["Upload"]=Upload;
 
 
-CUtil.ID("uploadBtn").onchange=async (e)=>{
+CDOM.ID("uploadBtn").onchange=async (e)=>{
 
-    CAlert.E("막아둠");return;
     var fi=e.target as HTMLInputElement;
     let json={data:[],name:[],path:window["g_root"]+window["g_path"]};
     for(let i=0;i<fi.files.length;++i)
@@ -521,28 +641,29 @@ CUtil.ID("uploadBtn").onchange=async (e)=>{
     });
     
 };
-function SoundAllAdd()
-{
-    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
-    {
-        if(fl.ext=="mp3" || fl.ext=="ogg")
-        {
-            g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
-            g_soundList.name.push(fl.name);
+// function SoundAllAdd()
+// {
+//     for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
+//     {
+//         if(fl.ext=="mp3" || fl.ext=="ogg")
+//         {
+//             g_soundList.fullPath.push(window["g_down"]+window["g_path"]+fl.name);
+//             g_soundList.name.push(fl.name);
             
-        }
-    }
-    CAlert.Info("전곡 추가");
-    SoundListSave();
-}
-window["SoundAllAdd"]=SoundAllAdd;
-
+//         }
+//     }
+//     CAlert.Info("전곡 추가");
+//     SoundListSave();
+// }
+// window["SoundAllAdd"]=SoundAllAdd;
+let gRamdomList=[];
 function SoundListRefresh()
 {
+    gRamdomList=[];
     if(g_soundList==null)   return;
 
     var musicStr="";
-    CUtil.ID("SoundList").innerHTML="";
+    CDOM.ID("SoundList").innerHTML="";
 
     
 
@@ -558,7 +679,7 @@ function SoundListRefresh()
             "</font><i class='bi bi-file-earmark-x float-right' onclick='SoundDelete("+i+")'></i></li>";
 		musicStr+="</ul>";
     }
-    CUtil.ID("SoundList").innerHTML=musicStr;
+    CDOM.ID("SoundList").innerHTML=musicStr;
 }
 window["SoundListRefresh"]=SoundListRefresh;
 SoundListRefresh();
@@ -571,76 +692,6 @@ function SoundListSave()
 window["SoundListSave"]=SoundListSave;
 
 
-let isAdjusting = false;
-const audioElement = document.getElementById('MAudio') as HTMLAudioElement;
-audioElement.crossOrigin = "anonymous";
-let audioContext =null;
-let sourceNode = null;
-let gainNode = null;
-let analyserNode = null;
-
-
-// RMS 기반 볼륨 조정
-let currentGain = 1.0;
-let previousGain = 1.0; // 직전 Gain 저장용
-
-function getFixedGainFromRMS(rms) {
-    if (rms < 0.005) return 2.0;
-    if (rms < 0.01)  return lerp(rms, 0.005, 0.01, 2.0, 6.0);
-    if (rms < 0.05)  return lerp(rms, 0.01, 0.05, 6.0, 2.0);
-    if (rms < 0.1)   return lerp(rms, 0.05, 0.1, 2.0, 1.0);
-    
-    return 1.0;
-}
-
-function lerp(x, x0, x1, y0, y1) {
-    const t = (x - x0) / (x1 - x0);
-    return y0 + (y1 - y0) * t;
-}
-
-// 🎧 볼륨 조정
-function autoAdjustVolume() {
-    const buffer = new Uint8Array(analyserNode.fftSize);
-    analyserNode.getByteTimeDomainData(buffer);
-
-    let sum = 0;
-    for (let i = 0; i < buffer.length; i++) {
-        const normalized = (buffer[i] - 128) / 128;
-        sum += normalized * normalized;
-    }
-
-    const rms = Math.sqrt(sum / buffer.length);
-    const targetGain = getFixedGainFromRMS(rms);
-
-    // ✅ 변화량 제한 - 방향에 따라 다르게
-    const delta = targetGain - previousGain;
-    const isIncreasing = delta > 0;
-
-    const maxDeltaUp = 0.008;   // 올라갈 때 (천천히)
-    const maxDeltaDown = 0.1;  // 내려갈 때 (빠르게)
-
-    const maxDelta = isIncreasing ? maxDeltaUp : maxDeltaDown;
-    const limitedDelta = Math.max(Math.min(delta, maxDelta), -maxDelta);
-
-    const adjustedGain = previousGain + limitedDelta;
-
-    // 🎯 적용 및 저장
-    gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
-    previousGain = adjustedGain;
-
-    console.log(`RMS: ${rms.toFixed(4)} TargetGain: ${targetGain.toFixed(2)} FinalGain: ${adjustedGain.toFixed(2)}`);
-
-    if (isAdjusting) setTimeout(autoAdjustVolume, 30); // 30ms마다 조절
-}
-// 🎵 시작 함수
-function startAutoGain() {
-    if (!isAdjusting) {
-        isAdjusting = true;
-        autoAdjustVolume();
-    }
-}
-
-
 var g_lastPlay=0;
 function SoundPlay(_off)
 {
@@ -648,17 +699,18 @@ function SoundPlay(_off)
     var MAudio=document.getElementById('MAudio') as HTMLAudioElement;
     if(_off==-1)
     {
-        CUtil.ID("Sound"+g_lastPlay).className="list-group-item list-group-item-action";
+        CDOM.ID("Sound"+g_lastPlay).className="list-group-item list-group-item-action";
 		g_lastPlay=0;
 		
         
     }
 	else
 	{
-        CUtil.ID("Sound"+g_lastPlay).className="list-group-item list-group-item-action";
+        CDOM.ID("Sound"+g_lastPlay).className="list-group-item list-group-item-action";
 		g_lastPlay=_off;
 		MAudio.src=g_soundList.fullPath[_off];
-        CUtil.ID("Sound"+_off).className="list-group-item list-group-item-action list-group-item-dark";
+        MAudio.load();
+        CDOM.ID("Sound"+_off).className="list-group-item list-group-item-action list-group-item-dark";
 	}
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -673,42 +725,7 @@ function SoundPlay(_off)
         navigator.mediaSession.setActionHandler("nexttrack", () => SoundEnd());
         navigator.mediaSession.setActionHandler("previoustrack", () => SoundEnd());
     }
-	if(CUtil.IDInput("adjustingChk").checked==false)
-    {
-        MAudio.play();
-    }
-    else
-    {
-        if(audioContext==null)
-        {
-            audioContext = new AudioContext();
-
-            // <audio> 태그를 Web Audio에 연결
-            sourceNode = audioContext.createMediaElementSource(audioElement);
-            gainNode = audioContext.createGain();
-            analyserNode = audioContext.createAnalyser();
-            analyserNode.fftSize = 2048;
-
-            sourceNode.connect(analyserNode);
-            analyserNode.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-        }
-        isAdjusting=false;
-        if (audioContext.state === 'suspended') {
-            audioContext.resume().then(() => {
-                MAudio.play();
-                startAutoGain();
-                
-            });
-        } else {
-            MAudio.play();
-            startAutoGain(); // ⬅️ 여기서 초기 세팅 포함
-            
-        }
-    }
-    
-    
-	
+    MAudio.play().catch(e => console.warn("SoundPlay failed:", e));
 }
 window["SoundPlay"]=SoundPlay;
 function SoundDelete(_off)
@@ -723,12 +740,33 @@ function SoundDelete(_off)
 }
 window["SoundDelete"]=SoundDelete;
 
+
 function SoundEnd()
 {
-    isAdjusting = false;
-    if((CUtil.ID("SoundRandom_chk") as HTMLInputElement).checked)
+    if((CDOM.ID("SoundRandom_chk") as HTMLInputElement).checked)
     {
-        SoundPlay(Math.trunc(Math.random()*g_soundList.fullPath.length));
+        while(g_soundList.fullPath.length>0)
+        {
+            if(gRamdomList.length==0)
+            {
+                gRamdomList=[...g_soundList.fullPath];
+            }
+
+            let sel=Math.trunc(Math.random()*gRamdomList.length);
+
+            let selKey=gRamdomList.splice(sel,1)[0];
+            for(let i=0;i<g_soundList.fullPath.length;++i)
+            {
+                if(g_soundList.fullPath[i]==selKey)
+                {
+                    SoundPlay(i);
+                    return;
+                }
+            }
+        }
+        
+
+        //SoundPlay(Math.trunc(Math.random()*g_soundList.fullPath.length));
     }
     else
     {
@@ -743,6 +781,7 @@ function SoundEnd()
 window["SoundEnd"]=SoundEnd;
 function SoundAllDelate()
 {
+    gRamdomList=[];
     g_soundList.fullPath=[];
     g_soundList.name=[];
     SoundListSave();
@@ -767,7 +806,17 @@ window["SoundAllDelate"]=SoundAllDelate;
 // 	SoundListSave();
 // }
 // window["SoundShuffle"]=SoundShuffle;
+function SoundListDupChk(_soundKey : string)
+{
+    for(let each0 of g_soundList.fullPath)
+    {
+        if(each0==_soundKey)    return true;
+    }
 
+    return false;
+   
+}
+window["SoundListPush"]=SoundListDupChk;
 function SoundPlayListSave()
 {
     let confirm=new CConfirm();
@@ -776,7 +825,7 @@ function SoundPlayListSave()
     ()=> {
         g_fun="SoundPlayListSave";
 			g_data=JSON.stringify(g_soundList);
-            g_option=CUtil.IDValue("soundListSave");
+            g_option=CDOM.IDValue("soundListSave");
 			Redirection(false);
         
     },
@@ -796,7 +845,7 @@ function SoundPlayListSave()
 			
 	// 		g_fun="SoundPlayListSave";
 	// 		g_data=JSON.stringify(g_soundList);
-    //         g_option=CUtil.IDValue("soundListSave");
+    //         g_option=CDOM.IDValue("soundListSave");
 	// 		Redirection(false);
 	// 	},
 	// 	cancel : function () {
@@ -856,11 +905,11 @@ function RefreshOpen()
         if(fl.index==null)  continue;
         if(fl.open==false)
         {
-            CUtil.ID("fl"+fl.index).className="list-group-item list-group-item-action";
+            CDOM.ID("fl"+fl.index).className="list-group-item list-group-item-action";
         }
         else
         {
-            CUtil.ID("fl"+fl.index).className="list-group-item list-group-item-action list-group-item-secondary";
+            CDOM.ID("fl"+fl.index).className="list-group-item list-group-item-action list-group-item-secondary";
         }
     }
 }
@@ -871,21 +920,21 @@ function NextPhoto()
     {
         if(fl.open==false)
         {
-            CUtil.ID("fl"+fl.index).className="list-group-item list-group-item-action list-group-item-secondary";
+            CDOM.ID("fl"+fl.index).className="list-group-item list-group-item-action list-group-item-secondary";
             fl.open=true;
             if(fl.ext=="png" || fl.ext=="jpg" || fl.ext=="jpeg" || fl.ext=="bmp")
             {
-                CUtil.ID("ImageModalSrc").hidden=false;
-                (CUtil.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
-                CUtil.ID("VideoModalSrc").hidden=true;
-                CUtil.ID("FileModalSrc").hidden=true;
+                CDOM.ID("ImageModalSrc").hidden=false;
+                (CDOM.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
+                CDOM.ID("VideoModalSrc").hidden=true;
+                CDOM.ID("FileModalSrc").hidden=true;
             }
             else if(fl.ext=="mp4" || fl.ext=="mov" || fl.ext=="avi")
             {
-                CUtil.ID("ImageModalSrc").hidden=true;
-                (CUtil.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
-                CUtil.ID("VideoModalSrc").hidden=false;
-                CUtil.ID("FileModalSrc").hidden=true;
+                CDOM.ID("ImageModalSrc").hidden=true;
+                (CDOM.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
+                CDOM.ID("VideoModalSrc").hidden=false;
+                CDOM.ID("FileModalSrc").hidden=true;
             }
             return;
         }
@@ -899,18 +948,58 @@ window["NextPhoto"]=NextPhoto;
 
 
 
-
-
 let lan=CUtil.Language();
 let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
     if(buf==null || lan=="en")  lan="";
     else lan="-"+lan;
-    CUtil.ID("main").innerHTML="";
-    CUtil.ID("main").append(await CUtilWeb.MDReader("../../README"+lan+".md"));
+    CDOM.ID("main").innerHTML="";
+    CDOM.ID("main").append(await CUtilWeb.MDReader("../../README"+lan+".md"));
 });
 
-// CUtil.ID("main").innerHTML="";
-//     CUtil.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+// CDOM.ID("main").innerHTML="";
+//     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

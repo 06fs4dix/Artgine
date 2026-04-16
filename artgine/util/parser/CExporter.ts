@@ -1,8 +1,8 @@
 
 export class CExporter
 {
-	buffer : ArrayBuffer=null;
-	GetResult() : ArrayBuffer
+	buffer : ArrayBufferLike=null;
+	GetResult() : ArrayBufferLike
 	{
 		return this.buffer;
 	}

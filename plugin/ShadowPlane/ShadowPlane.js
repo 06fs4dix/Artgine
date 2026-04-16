@@ -10,6 +10,7 @@ import { CPoolGeo } from "../../artgine/geometry/CPoolGeo.js";
 import { CVec1 } from "../../artgine/geometry/CVec1.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
+import { CVec4 } from "../../artgine/geometry/CVec4.js";
 import { CAlpha } from "../../artgine/render/CAlpha.js";
 import { CCamera } from "../../artgine/render/CCamera.js";
 import { CColor } from "../../artgine/render/CColor.js";
@@ -160,17 +161,16 @@ export class CShadowPlane extends CPaint2D {
     mShadowLen = 1;
     mShadowAlpha = 0.5;
     mPTKey;
-    mLIGKeys;
     mPT;
-    mLIG;
-    mLIGSet = new Set();
+    mLightDir = new CVec4();
+    mLightCol = new CVec4();
     mUpdateLight = true;
     mUpdateShadow = true;
+    mBrush;
     mCenter = new CVec3();
-    constructor(_ptKey = null, _ligKeys = []) {
+    constructor(_ptKey = null) {
         super();
         this.mPTKey = _ptKey;
-        this.mLIGKeys = _ligKeys;
         this.PushCShaderAttr(new CShaderAttr("alphaCut", 0.001));
         this.SetColorModel(new CColor(0, 0, 0, CColor.eModel.RGBMul));
         this.SetAlphaModel(new CAlpha(this.mShadowAlpha));
@@ -181,9 +181,16 @@ export class CShadowPlane extends CPaint2D {
         this.mBW.mBound.InitBound(0);
         this.mBW.mRadian = 0;
     }
+    RecvGetBrush(_brush) {
+        this.mBrush = _brush;
+    }
     StartChk() {
-        if (this.mStartChk == true) {
+        if (this.mStartChk == true && this.mBrush == null) {
             this.mRenderPass.length = 0;
+            var cm = this.ProductMsg("SendGetBrush");
+            cm.mInter = "canvas";
+            cm.mMsgData[0] = this;
+            return false;
         }
         this.mSize = new CVec2(1, 1);
         return super.StartChk();
@@ -203,7 +210,7 @@ export class CShadowPlane extends CPaint2D {
     }
     IsShould(_member, _type) {
         const hide = [
-            "mPT", "mLIG", "mLIGSet", "mUpdateLight", "mUpdateShadow"
+            "mPT", "mLIG", "mLIGSet", "mUpdateLight", "mUpdateShadow", "mBrush"
         ];
         if (hide.includes(_member))
             return false;
@@ -248,58 +255,48 @@ export class CShadowPlane extends CPaint2D {
         }
         if (this.mPT == null)
             return;
-        for (let lig of this.mLIGSet) {
-            if (!lig.GetOwner() || lig.GetOwner().GetFrame() == null || lig.IsDestroy() || lig.IsEnable() == false || lig.IsColorZero()) {
-                if (this.mLIG == lig)
-                    this.mLIG = null;
-                this.mLIGSet.delete(lig);
-                this.mUpdateLight = true;
+        let lightOff = -1;
+        const center = this.GetPaintCenter();
+        let pick = [];
+        let minLen = Number.MAX_SAFE_INTEGER;
+        let pos = new CVec3();
+        for (let i = 0; i < this.mBrush.mLightCount; ++i) {
+            let len = 10000000;
+            if (this.mBrush.mLightDir[i * 4 + 3] > 0.5) {
+                pos.mF32A[0] = this.mBrush.mLightDir[i * 4 + 0];
+                pos.mF32A[1] = this.mBrush.mLightDir[i * 4 + 1];
+                pos.mF32A[2] = this.mBrush.mLightDir[i * 4 + 2];
+                len = CMath.V3Distance(pos, center);
+                if (len > this.mBrush.mLightDir[i * 4 + 3])
+                    continue;
+            }
+            if (minLen > len) {
+                lightOff = i;
+                minLen = len;
             }
         }
-        if (this.mUpdateLight) {
-            this.mUpdateLight = false;
-            const center = this.GetPaintCenter();
-            let minLen = Number.MAX_SAFE_INTEGER;
-            if (this.mLIG != null) {
-                if (this.mLIG.IsPointLight())
-                    minLen = CMath.V3Distance(this.mLIG.DirPosV4(), center);
-                else
-                    minLen = 0;
-            }
-            for (let lig of this.mLIGSet) {
-                if (this.mLIGKeys.length > 0) {
-                    if (this.mLIGKeys.includes(lig.Key()) || this.mLIGKeys.includes(lig.GetOwner().Key())) { }
-                    else
-                        continue;
-                }
-                let len = 0;
-                if (lig.IsPointLight()) {
-                    len = CMath.V3Distance(lig.DirPosV4(), center);
-                }
-                if (minLen > len) {
-                    if (this.mLIG != lig) {
-                        this.ClearBatch();
-                        this.mUpdateShadow = true;
-                    }
-                    this.mLIG = lig;
-                    minLen = len;
-                }
-            }
-        }
-        if (this.mLIG == null)
+        if (lightOff == -1)
             return;
+        if (this.mBrush.mLightDir[lightOff * 4 + 0] != this.mLightDir.x || this.mBrush.mLightDir[lightOff * 4 + 1] != this.mLightDir.y ||
+            this.mBrush.mLightDir[lightOff * 4 + 2] != this.mLightDir.z) {
+            this.ClearBatch();
+            this.mUpdateShadow = true;
+            for (let i = 0; i < 4; ++i) {
+                this.mLightDir.mF32A[i] = this.mBrush.mLightDir[lightOff * 4 + i];
+                this.mLightCol.mF32A[i] = this.mBrush.mLightColor[lightOff * 4 + i];
+            }
+        }
         this.UpdateShadow();
         super.Update(_update);
     }
     UpdateShadow() {
+        if (this.mUpdateShadow == false && this.mPT.IsUpdateFMat() == false)
+            return;
+        this.mUpdateShadow = false;
         if (this.mPT instanceof CPaint2D) {
             const pt = this.mPT;
-            const lig = this.mLIG;
-            if (this.mUpdateShadow == false && pt.IsUpdateFMat() == false && lig.mUpdate == 0)
-                return;
             this.SetTexture(pt.GetTexture());
             this.SetTexCodi(pt.GetTexCodi());
-            this.mUpdateShadow = false;
             const fBound = pt.GetBoundFMat();
             const p1 = new CVec3(fBound.mMin.x, fBound.mMin.y);
             const p2 = new CVec3(fBound.mMax.x, fBound.mMin.y);
@@ -309,12 +306,11 @@ export class CShadowPlane extends CPaint2D {
             const c = fBound.GetCenter();
             let height;
             let alpha;
-            if (lig.IsPointLight()) {
-                if (this.mLIG != null)
-                    dir = CMath.V3Nor(CMath.V3SubV3(c, this.mLIG.DirPosV4()));
-                const inner = lig.GetInRadius();
-                const outer = lig.GetOutRadius();
-                const dist = CMath.V3Distance(c, lig.DirPosV4());
+            if (this.mLightDir.w > 0.5) {
+                dir = CMath.V3Nor(CMath.V3SubV3(c, this.mLightDir));
+                const inner = this.mLightCol.w;
+                const outer = this.mLightDir.w;
+                const dist = CMath.V3Distance(c, this.mLightDir);
                 alpha = LightFalloff(dist, inner, outer);
                 if (this.mShadowLen == 0) {
                     height = (outer - dist);
@@ -324,12 +320,11 @@ export class CShadowPlane extends CPaint2D {
                 }
             }
             else {
-                if (this.mLIG != null)
-                    dir = CMath.V3Nor(this.mLIG.DirPosV4());
-                alpha = Math.max(Math.max(lig.GetColor().x, lig.GetColor().y), lig.GetColor().z);
+                dir = CMath.V3Nor(this.mLightDir);
+                alpha = Math.max(Math.max(this.mLightCol.x, this.mLightCol.y), this.mLightCol.z);
                 height = fBound.GetSize().y * this.mShadowLen;
             }
-            if (lig.IsColorZero())
+            if (this.mLightCol.x == 0 && this.mLightCol.y == 0 && this.mLightCol.z == 0)
                 alpha = 0;
             let dot = CMath.V3Dot(new CVec3(0, 1, 0), dir);
             dot *= 0.1;
@@ -362,12 +357,8 @@ export class CShadowPlane extends CPaint2D {
         }
         else if (this.mPT instanceof CPaint3D) {
             const pt = this.mPT;
-            const lig = this.mLIG;
-            if (this.mUpdateShadow == false && pt.IsUpdateFMat() == false && lig.mUpdate == 0)
-                return;
-            this.mUpdateShadow = false;
             this.PushTag("zDepth");
-            const ligDir = CMath.V3Nor(lig.DirPosV4());
+            const ligDir = CMath.V3Nor(this.mLightDir);
             const fBound = this.mPT.GetBoundFMat();
             const fCenter = fBound.GetCenter();
             const floorDist = ((5 + this.mShadowLen) - fCenter.y) / ligDir.y;
@@ -383,7 +374,6 @@ export class CShadowPlane extends CPaint2D {
     }
     CaptureShadow() {
         const pt = this.mPT;
-        const lig = this.mLIG;
         const fw = this.GetOwner().GetFrame();
         const bound = pt.GetBound().Export();
         const center = bound.GetCenter();
@@ -462,12 +452,6 @@ export class CShadowPlane extends CPaint2D {
         }
         else {
             return this.mPT.GetBoundFMat().GetCenter();
-        }
-    }
-    SetLight(_light) {
-        if (this.mLIGSet.has(_light) == false) {
-            this.mLIGSet.add(_light);
-            this.mUpdateLight = true;
         }
     }
 }

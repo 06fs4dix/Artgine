@@ -9,6 +9,9 @@ import {
 	V4MulMatCoordi, 
 	BranchBegin, BranchEnd, BranchDefault,
 	MappingTexToV3, MatTypeToMat,
+    V2Abs,
+	Sam2DArrV4,
+	Sam2DArrToV4,
 } from "./Shader";
 import {
 	VFX, VFXDown2, GetTexCodiedUV,
@@ -53,7 +56,7 @@ var to_worldPos : ToV4=Null();
 var time : number=Attribute(0,"time");
 var mask: number=1.0;
 var lastHide : number=Null();
-var trailPos: Sam2DV4=new Sam2DV4(11);
+var trailPos: Sam2DArrV4=new Sam2DArrV4(1);
 
 //depthmap
 var zDepth : number=0.0;
@@ -245,16 +248,22 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 }
 function vs_main_trail(f3_ver : Vertex3)
 {
-	var tpos : CVec4=Sam2DToV4(trailPos,f3_ver.z);
-	to_uv = new CVec3(tpos.w*texCodi.x,f3_ver.y,1.0);
+	var tpos : CVec4=Sam2DArrToV4(trailPos,f3_ver.z);
+
+	var rawUV : CVec2 = new CVec2(tpos.w, f3_ver.y);
+
+	BranchBegin("codi","C",[texCodi]);
+	to_uv.xy = GetTexCodiedUV(rawUV, texCodi);
+	BranchDefault();
+	to_uv.xy = rawUV;
+	BranchEnd();
+
 	if(tpos.w>1.0)
 		to_uv.z = 0.0;
 	else if(lastHide<0.5)
 		to_uv.z = 1.0;
 	else
 		to_uv.z = tpos.w;
-
-	
 
 	var rpos : CVec4=new CVec4(tpos.xyz,1.0);
 	to_worldPos=rpos;
@@ -266,14 +275,16 @@ function vs_main_trail(f3_ver : Vertex3)
 
 function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 {
+    var uv : CVec2 = f2_uv;
 	BranchBegin("codi","C",[texCodi]);
-    to_uv.xy = GetTexCodiedUV(f2_uv, texCodi);	
+    to_uv.xy = GetTexCodiedUV(V2Abs(f2_uv), texCodi);	
 	BranchDefault();
-	to_uv.xy=f2_uv;
+	to_uv.xy=V2Abs(f2_uv);
 	BranchEnd();
 	to_uv.z=1.0;
-	
-	
+
+    // codi 적용된 상태로 메시를 새로 만든 페인트를 위해 음수이면 0으로 변환
+	uv = new CVec2(f2_uv.x < 0.0 ? 0.0 : 1.0, f2_uv.y < 0.0 ? 0.0 : 1.0);
 
 
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
@@ -289,6 +300,12 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	wMat=worldMat;
 	BranchEnd();
 	
+
+	// var testShadow : CMat;
+	// testShadow[0] = new CVec4(1.0,  0.0,  0.0, 0.0);  // x 그대로
+	// testShadow[1] = new CVec4(0.0,  0.1,  0.0, 0.0);  // y 납작 (scaleY=0.1)
+	// testShadow[2] = new CVec4(0.0,  0.0,  1.0, 0.0);  // z 그대로
+	// testShadow[3] = new CVec4(0.0,  0.0,  0.0, 1.0);  // w
 	
 	BranchBegin("billboard","B",[billboard,billboardMat]);
 	if(billboard>0.5)
@@ -310,10 +327,10 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	BranchDefault();
 	P = V4MulMatCoordi(P, wMat);
 	BranchEnd();
-
+	
 	var size : CVec3;
 	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
-	if(f2_uv.y > 0.5 && windInfluence > 0.01) {
+	if(uv.y > 0.5 && windInfluence > 0.01) {
 		// mci 기본 사이즈 10
 		size = new CVec3(
 			V3Len(wMat[0].xyz) * 10.0,

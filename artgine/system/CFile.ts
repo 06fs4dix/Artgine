@@ -3,7 +3,7 @@ import {CObject} from "../basic/CObject.js";
 import {CUtil} from "../basic/CUtil.js";
 
 
-var gCaacheMap=new Map<string,ArrayBuffer>();
+var gCaacheMap=new Map<string,ArrayBufferLike>();
 
 
 let gFsPromises: typeof import('fs/promises') = null;
@@ -16,11 +16,15 @@ async function EnsureNodeModules() {
 
 export class CFile
 {
-	static PushCache(_key : string,_data : ArrayBuffer)
+	static PushCache(_key : string,_data : ArrayBufferLike)
 	{
 		gCaacheMap.set(_key,_data);
 	}
-    static async Load(_name : string=null,_modal=false) : Promise<ArrayBuffer>
+	static DeleteCache(_key : string)
+	{
+		gCaacheMap.delete(_key);
+	}
+    static async Load(_name : string=null,_modal=false) : Promise<ArrayBufferLike>
     {
 		let cbuf=gCaacheMap.get(_name);
 		if(cbuf!=null)	return cbuf;
@@ -30,7 +34,7 @@ export class CFile
 
 		if(CUtil.IsNode())
 		{
-			return new Promise<ArrayBuffer>(async (resolve, reject) => {
+			return new Promise<ArrayBufferLike>(async (resolve, reject) => {
 				try 
 				{
 					if (_name.startsWith("http:") || _name.startsWith("https:")) 
@@ -103,7 +107,7 @@ export class CFile
 					oReq.onerror=()=>{
 						resolve(null);
 					};
-					oReq.open("GET", _name);
+					oReq.open("GET", _name + "?t=" + Date.now());
 					oReq.responseType = "arraybuffer";
 					oReq.send();
 				}
@@ -283,9 +287,17 @@ export class CFile
 	
 			let type : string = extToMimes[ext] || "text/plain";
 			
-			if (_buf instanceof ArrayBuffer) 
+			if (ArrayBuffer.isView(_buf) || _buf instanceof ArrayBuffer)
 			{
-				CAlert.E("not def ArrayBuffer");
+				const ab = _buf instanceof ArrayBuffer ? _buf : _buf.buffer;
+				const blob = new Blob([ab as ArrayBuffer], { type: "application/octet-stream" });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement("a");
+				a.href = url;
+				a.download = "dump.bin";
+				a.click();
+				URL.revokeObjectURL(url);
+				return;
 			}
 			else if (_buf instanceof CObject) {
 				_fileName=_buf.constructor.name+_fileName+".json";

@@ -1,5 +1,5 @@
 import { CVec4 } from "../geometry/CVec4.js"
-import { CTexture } from "../render/CTexture.js"
+import { CTexture, CTextureInfo } from "../render/CTexture.js"
 import { CH5Canvas } from "../render/CH5Canvas.js"
 import { CBase64File } from "./CBase64File.js"
 import { CMath } from "../geometry/CMath.js"
@@ -16,6 +16,10 @@ import { CUtilObj } from "../basic/CUtilObj.js"
 import { CUtil } from "../basic/CUtil.js"
 import { CUtilRender } from "../render/CUtilRender.js"
 import { CConsol } from "../basic/CConsol.js"
+import { CAlert } from "../basic/CAlert.js"
+import { IFile } from "../system/System.js"
+import { CFile } from "../system/CFile.js"
+import { CAnimation, CClipBase64, CClipCoodi, CClipImg } from "../app/component/CAnimation.js"
 
 
 let g_atlJBox: CModal;
@@ -29,101 +33,120 @@ let g_atlJBox: CModal;
 // 	closeOnClick: 'body'
 // });
 
-export class CAtlas extends CObject {
-	public mTexCodi = new Array<CVec4>();
-	mWidth = 0;
-	mHeight = 0;
+export class CAtlas extends CTexture implements IFile
+{
+	public mTexel = new Array<CVec4>();
+
+	//mBuf : Uint8Array=null;
 	mPadding = 1;
-	public mBase64 = new CBase64File();
-	mTex: CTexture = null;
-	mTexFilter = CTexture.eFilter.Neaest;
-	mTexMipMap = CTexture.eMipmap.GL;
+	//public mBase64 = new CBase64File();
+	// mTex: CTexture = null;
+	// mTexFilter = CTexture.eFilter.Neaest;
+	// mTexMipMap = CTexture.eMipmap.GL;
 	mCreate = false;
-	mBase64Map = new Map<number, string>();
+	mUrlMap = new Map<number, string>();
 	constructor(_path = "") {
 		super();
 		this.SetKey(_path + CUniqueID.GetHash() + ".atl");
 	}
+	async LoadJSON(_file : string=null)
+	{
+		let buf=await CFile.Load(_file);
+		if(buf==null)
+			return true;
+		this.ImportCJSON(new CJSON(buf));
+		return false;
+	}
+	async SaveJSON(_file : string=null)
+	{
+		CFile.Save(this,_file+".json");
+	}
 	override IsShould(_member: string, _type: CObject.eShould) {
 		if (_member == "mTex" && _type != CObject.eShould.Editer) return false;
-		if (_member == "mCreate" || _member == "mBase64Map") return false;
+		if (_member == "mCreate" || _member == "mUrlMap" || _member == "mRect") return false;
 
 		return super.IsShould(_member, _type);
 	}
-	async CreateTex() {
-		if (this.mCreate) {
-			while (this.mTex == null) {
-				await setTimeout(() => { }, 100);
-			}
-			return;
-		}
+	// async CreateTex() {
+	// 	 if (this.mTex != null) return;  // ← 이미 있으면 바로 리턴
+	// 	if (this.mCreate) {
+	// 		while (this.mTex == null) {
+	// 			await setTimeout(() => { }, 100);
+	// 		}
+	// 		return;
+	// 	}
 
-		if (this.mBase64.mData == null) return;
-		this.mCreate = true;
-		var par = new CParserTGA();
-		par.SetBuffer(new Uint8Array(this.mBase64.mData), this.mBase64.mData.byteLength);
-		await par.Load("test");
-		this.mTex = par.GetResult() as CTexture;
-		this.mTex.SetFilter(this.mTexFilter);
-		this.mTex.SetMipMap(this.mTexMipMap);
-		this.mCreate = false;
-	}
-	GetTex() {
-		return this.mTex;
-	}
+	// 	if (this.mBase64.mData == null) return;
+	// 	this.mCreate = true;
+	// 	var par = new CParserTGA();
+	// 	par.SetBuffer(new Uint8Array(this.mBase64.mData), this.mBase64.mData.byteLength);
+	// 	await par.Load("test");
+	// 	this.mTex = par.GetResult() as CTexture;
+	// 	this.mTex.SetFilter(this.mTexFilter);
+	// 	this.mTex.SetMipMap(this.mTexMipMap);
+	// 	this.mCreate = false;
+	// }
+	// GetTex() {
+	// 	return this.mTex;
+	// }
 	async GetImgURL(_index: number = -1) {
-		await this.CreateTex();
-		let tex = this.GetTex();
-		if (!tex) return "";
-		let url = this.mBase64Map.get(_index);
+		//await this.CreateTex();
+		
+		let url = this.mUrlMap.get(_index);
 		if (url != null) return url;
 
-		let codi = this.mTexCodi[_index];
+		const buf = this.GetBuf()[0];
+		const texW = this.mWidth;
+		const texH = this.mHeight;
+		let codi = this.mTexel[_index];
+
 		if (_index == -1) {
-			CH5Canvas.Init(tex.GetWidth(), tex.GetHeight());
-			CH5Canvas.PushImgData(tex.GetBuf()[0], 0, 0);
+			CH5Canvas.Init(texW, texH);
+			CH5Canvas.PushImgData(buf, 0, 0);
 		}
 		else if (codi == null) {
 			CH5Canvas.Init(1, 1);
-			CH5Canvas.Draw([
-				CH5Canvas.Cmd("fillStyle", "black"),
-				...CH5Canvas.FillRect(0, 0, 1, 1)
-			]);
+			CH5Canvas.Draw([CH5Canvas.Cmd("fillStyle", "black"), ...CH5Canvas.FillRect(0,0,1,1)]);
 		}
 		else {
 			let w = codi.z - codi.x;
 			let h = codi.w - codi.y;
 			CH5Canvas.Init(w, h);
-			CH5Canvas.PushSlicedImgData(tex.GetBuf()[0], tex.GetWidth(), codi.x, codi.y, w, h);
+			const sliced = new Uint8Array(w * h * 4);
+			for (let y = 0; y < h; y++) {
+				const srcOff = (codi.x + (codi.y + y) * texW) * 4;
+				sliced.set(buf.subarray(srcOff, srcOff + w * 4), y * w * 4);
+			}
+			CH5Canvas.PushImgData(sliced, 0, 0);
 		}
 		url = CH5Canvas.GetDataURL();
-		this.mBase64Map.set(_index, url);
+		this.mUrlMap.set(_index, url);
 		return url;
 	}
-	async GetImgTexture(_index: number = -1) {
-		await this.CreateTex();
-		let tex = this.GetTex();
-		if (!tex) return null;
-		let codi = this.mTexCodi[_index];
-		if (_index == -1) {
-			CH5Canvas.Init(tex.GetWidth(), tex.GetHeight());
-			CH5Canvas.PushImgData(tex.GetBuf()[0], 0, 0);
-		}
-		else if (codi == null) {
-			CH5Canvas.Init(1, 1);
-			CH5Canvas.Draw([
-				CH5Canvas.Cmd("fillStyle", "black"),
-				...CH5Canvas.FillRect(0, 0, 1, 1)
-			]);
-		}
-		else {
-			let w = codi.z - codi.x;
-			let h = codi.w - codi.y;
-			CH5Canvas.Init(w, h);
-			CH5Canvas.PushSlicedImgData(tex.GetBuf()[0], tex.GetWidth(), codi.x, codi.y, w, h);
-		}
-		return CH5Canvas.GetNewTex();
-	}
+	// async GetImgTexture(_index: number = -1) {
+	// 	await this.CreateTex();
+	// 	let tex = this.GetTex();
+	// 	if (!tex) return null;
+	// 	let codi = this.mTexel[_index];
+	// 	if (_index == -1) {
+	// 		CH5Canvas.Init(tex.GetWidth(), tex.GetHeight());
+	// 		CH5Canvas.PushImgData(tex.GetBuf()[0], 0, 0);
+	// 	}
+	// 	else if (codi == null) {
+	// 		CH5Canvas.Init(1, 1);
+	// 		CH5Canvas.Draw([
+	// 			CH5Canvas.Cmd("fillStyle", "black"),
+	// 			...CH5Canvas.FillRect(0, 0, 1, 1)
+	// 		]);
+	// 	}
+	// 	else {
+	// 		let w = codi.z - codi.x;
+	// 		let h = codi.w - codi.y;
+	// 		CH5Canvas.Init(w, h);
+	// 		CH5Canvas.PushSlicedImgData(tex.GetBuf()[0], tex.GetWidth(), codi.x, codi.y, w, h);
+	// 	}
+	// 	return CH5Canvas.GetNewTex();
+	// }
 	override EditHTMLInit(_div: HTMLDivElement): void {
 		super.EditHTMLInit(_div);
 		// let inputElement = document.createElement('input');
@@ -173,8 +196,8 @@ export class CAtlas extends CObject {
 		}));
 		_div.append(CDOM.DataToDom({
 			"<>": "button", "text": "Reload Texture", "onclick": () => {
-				this.mTex = null;
-				this.CreateTex();
+				this.mGBuffer=new Array<any>();
+				//this.CreateTex();
 			}
 		}));
 	}
@@ -196,7 +219,7 @@ export class CAtlas extends CObject {
 			_div.append(CUtilObj.Select(_pointer, _input, textArr, valArr));
 		}
 	}
-	async ModifyModal(_clickEvent: Function = null, _remove: boolean = false) {
+	async ModifyModal(_clickEvent: Function = null) {
 
 		//파일 인풋 이벤트
 		let AtlasPush = (e) => {
@@ -206,70 +229,15 @@ export class CAtlas extends CObject {
 					reader.onload = async (evt) => {
 						if (evt.target.readyState == FileReader.DONE) {
 							await this.Push("file", evt.target.result as ArrayBuffer);
-							this.ModifyModal(_clickEvent, clickToRemove);
+							this.ModifyModal(_clickEvent);
 						}
 					};
 					reader.readAsArrayBuffer(file);
 				}
 			}
 		};
-		//클릭 시 이벤트
-		let mainOnClick = (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			for (let i = 0; i < this.mTexCodi.length; ++i) {
-				let codi = this.mTexCodi[i];
-				if (codi == null) {
-					continue;
-				}
-				if (codi.x <= e.offsetX && codi.z >= e.offsetX && codi.y <= e.offsetY && codi.w >= e.offsetY) {
-					if (_clickEvent != null) {
-						_clickEvent(i);
-						if (g_atlJBox) g_atlJBox.Close();
-						return;
-					}
-					if (clickToRemove) {
-						this.RemoveTexCodi(i);
-						this.ModifyModal(_clickEvent, clickToRemove);
-						return;
-					}
-				}
-			}
-			if (_clickEvent != null) {
-				_clickEvent(-1);
-				if (g_atlJBox) g_atlJBox.Close();
-			}
-		};
-		//마우스 무브 이벤트
-		let curIndex = -1;
-		let mainOnMouseMove = (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			let index = curIndex;
-			let notInside = true;
-			for (let i = 0; i < this.mTexCodi.length; ++i) {
-				let codi = this.mTexCodi[i];
-				if (codi == null) {
-					continue;
-				}
-				if (codi.x <= e.offsetX && codi.z >= e.offsetX && codi.y <= e.offsetY && codi.w >= e.offsetY) {
-					notInside = false;
-					index = i;
-					break;
-				}
-			}
 
-			if (notInside == false && index != curIndex) {
-				drawImgOnCanvas(index);
-				curIndex = index;
-			}
-			else if (notInside == true && curIndex != -1) {
-				drawImgOnCanvas();
-				curIndex = -1;
-			}
-		};
-
-		//카드
+		// ── Card 탭 ──────────────────────────────────────────────────────
 		let cardMain = {
 			"<>": "div", "html": [
 				{ "<>": "div", "id": "atlCan_card", "style": "width:100%;" }
@@ -299,12 +267,10 @@ export class CAtlas extends CObject {
 
 			let maxWidth = 6;
 
-			//height 100인 경우 들어갈 div
 			let height100_childNum = 0;
 			let height100_oneRemainDiv: HTMLDivElement = null;
 			let height100_Div = create100Div();
 
-			//height 200인 경우 들어갈 div
 			let height200_childNum = 0;
 			let height200_Div = create200Div();
 
@@ -318,7 +284,6 @@ export class CAtlas extends CObject {
 			imgDiv.style.backgroundColor = "white";
 			imgDiv.style.backgroundBlendMode = "multiply";
 			imgDiv.style.border = "1px solid red";
-
 			imgDiv.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -327,20 +292,14 @@ export class CAtlas extends CObject {
 					if (g_atlJBox) g_atlJBox.Close();
 				}
 			};
-			imgDiv.onmouseenter = (e) => {
-				imgDiv.style.backgroundColor = "#8888FF";
-			};
-			imgDiv.onmouseleave = (e) => {
-				imgDiv.style.backgroundColor = "white";
-			};
-
+			imgDiv.onmouseenter = () => { imgDiv.style.backgroundColor = "#8888FF"; };
+			imgDiv.onmouseleave = () => { imgDiv.style.backgroundColor = "white"; };
 			imgDiv.style.width = "calc(100% / 6)";
 			imgDiv.style.height = "100px";
 			if (height100_oneRemainDiv) {
 				height100_oneRemainDiv.appendChild(imgDiv);
 				height100_oneRemainDiv = null;
-			}
-			else {
+			} else {
 				height100_childNum++;
 				height100_Div.appendChild(imgDiv);
 				if (height100_childNum >= maxWidth) {
@@ -349,12 +308,9 @@ export class CAtlas extends CObject {
 				}
 			}
 
-			for (let i = 0; i < this.mTexCodi.length; i++) 
-			{
-				let codi = this.mTexCodi[i];
-				if (codi == null) {
-					continue;
-				}
+			for (let i = 0; i < this.mTexel.length; i++) {
+				let codi = this.mTexel[i];
+				if (codi == null) continue;
 				this.GetImgURL(i).then(slicedBase64Img => {
 					let imgDiv = document.createElement("div");
 					imgDiv.style.overflow = "hidden";
@@ -366,6 +322,7 @@ export class CAtlas extends CObject {
 					imgDiv.style.backgroundBlendMode = "multiply";
 					imgDiv.style.border = "1px solid red";
 					imgDiv.style.position = "relative";
+					imgDiv.dataset.atlIdx = String(i);
 
 					let label = document.createElement("span");
 					label.textContent = String(i);
@@ -392,60 +349,54 @@ export class CAtlas extends CObject {
 						if (_clickEvent != null) {
 							_clickEvent(i);
 							if (g_atlJBox) g_atlJBox.Close();
+						} else {
+							// Manual 탭으로 전환
+							const manualTabLink = document.querySelector('a[href="#vManualStyle_tab"]') as HTMLElement;
+							if (manualTabLink) manualTabLink.click();
+							// drawManual 호출 후 select 값 세팅
+							drawManual();
+							setTimeout(() => {
+								const select = CDOM.ID("atlCan_manual")?.querySelector("select") as HTMLSelectElement;
+								if (select) {
+									select.value = String(i);
+									select.dispatchEvent(new Event("change"));
+								}
+							}, 0);
 						}
-						if (clickToRemove) {
-							this.RemoveTexCodi(i);
-							this.ModifyModal(_clickEvent, clickToRemove);
-						}
 					};
-					imgDiv.onmouseenter = (e) => {
-						imgDiv.style.backgroundColor = "#8888FF";
-					};
-					imgDiv.onmouseleave = (e) => {
-						imgDiv.style.backgroundColor = "";
-					};
+					imgDiv.onmouseenter = () => { imgDiv.style.backgroundColor = "#8888FF"; };
+					imgDiv.onmouseleave = () => { imgDiv.style.backgroundColor = ""; };
 
-					//width가 height보다 큼
 					if (aspect > 1) {
 						imgDiv.style.width = "calc(100% / 6)";
 						imgDiv.style.height = "100px";
-
 						if (height100_childNum > maxWidth - 2) {
 							height100_oneRemainDiv = height100_Div;
 							height100_Div = create100Div();
 							height100_childNum = 0;
 						}
-
 						height100_childNum += 2;
 						height100_Div.appendChild(imgDiv);
 						if (height100_childNum >= maxWidth) {
 							height100_childNum = 0;
 							height100_Div = create100Div();
 						}
-					}
-
-					//height가 width보다 큼
-					else if (aspect < 1) {
+					} else if (aspect < 1) {
 						imgDiv.style.width = "calc(100% / 6)";
 						imgDiv.style.height = "200px";
-
 						height200_childNum++;
 						height200_Div.appendChild(imgDiv);
 						if (height200_childNum >= maxWidth) {
 							height200_childNum = 0;
 							height200_Div = create200Div();
 						}
-					}
-
-					//width height가 같음
-					else {
+					} else {
 						imgDiv.style.width = "calc(100% / 6)";
 						imgDiv.style.height = "100px";
 						if (height100_oneRemainDiv) {
 							height100_oneRemainDiv.appendChild(imgDiv);
 							height100_oneRemainDiv = null;
-						}
-						else {
+						} else {
 							height100_childNum++;
 							height100_Div.appendChild(imgDiv);
 							if (height100_childNum >= maxWidth) {
@@ -458,62 +409,194 @@ export class CAtlas extends CObject {
 			}
 		};
 
-		//캔버스
-		let canvMain = {
-			"<>": "div", "html": [
-				{ "<>": "canvas", "id": "atlCan_can", "width": this.mWidth, "height": this.mHeight, "style": "border: 1px solid red;", "onclick": mainOnClick, "onmousemove": mainOnMouseMove },
-			]
-		};
-		let drawImgOnCanvas = async (_index = -1) => {
-			let fontSize = 16;
-			let canvas = CDOM.ID("atlCan_can") as HTMLCanvasElement;
-			let ctx = canvas.getContext("2d");
-			let adjustFontSize = (_text: string, _maxWidth: number, _maxHeight: number) => {
-				let textWidth, textHeight;
-				do {
-					ctx.font = "bold " + fontSize + "px arial";
-					textWidth = ctx.measureText(_text).width;
-					textHeight = fontSize;
-					if (textWidth > _maxWidth || textHeight > _maxHeight) {
-						fontSize--;
-					}
-				} while (textWidth > _maxWidth || textHeight > _maxHeight)
-				return fontSize;
-			};
-			let img = new Image();
-			img.onload = () => {
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
-				ctx.drawImage(img, 0, 0);
-				for (let i = 0; i < this.mTexCodi.length; ++i) {
-					let codi = this.mTexCodi[i];
-					if (codi == null) {
-						continue;
-					}
-					let text = i + "";
-					fontSize = 20;
-					adjustFontSize(text, codi.z - codi.x, codi.w - codi.y);
-					ctx.fillStyle = "#FF0000";
-					ctx.font = "bold " + fontSize + "px arial";
-					let width = ctx.measureText(text).width;
-					ctx.fillText(text, codi.x + (codi.z - codi.x) * 0.5 - width * 0.5, codi.y + (codi.w - codi.y) * 0.5 + fontSize * 0.5);
+		// ── Manual 탭 ─────────────────────────────────────────────────────
+		let manualMain = { "<>": "div", "html": [{ "<>": "div", "id": "atlCan_manual", "style": "width:100%;padding:8px;" }] };
+		let drawManual = () => {
+			let div = CDOM.ID("atlCan_manual");
+			if (!div) return;
+			div.innerHTML = "";
 
-					//아웃라인 추가
-					if (i == _index) {
-						ctx.fillStyle = "#0000FF44";
-						ctx.fillRect(codi.x, codi.y, codi.z - codi.x, codi.w - codi.y);
-					}
-				}
+			let select = document.createElement("select");
+			select.className = "form-select";
+			select.style.marginBottom = "8px";
+			for (let i = 0; i < this.mTexel.length; i++) {
+				if (this.mTexel[i] == null) continue;
+				let opt = document.createElement("option");
+				opt.value = String(i);
+				opt.textContent = String(i);
+				select.appendChild(opt);
+			}
+			div.appendChild(select);
+
+			let inputs: HTMLInputElement[] = [];
+			let keys = ["X", "Y", "Z", "W"];
+
+			let refreshInputs = (i: number) => {
+				let codi = this.mTexel[i];
+				if (!codi) return;
+				inputs[0].value = String(codi.x);
+				inputs[1].value = String(codi.y);
+				inputs[2].value = String(codi.z);
+				inputs[3].value = String(codi.w);
 			};
-			let base64Img = await this.GetImgURL();
-			img.src = base64Img;
+
+			let getCurIdx = () => Number(select.value);
+
+			let setters = [
+				(v: number) => { if (this.mTexel[getCurIdx()]) this.mTexel[getCurIdx()].x = v; },
+				(v: number) => { if (this.mTexel[getCurIdx()]) this.mTexel[getCurIdx()].y = v; },
+				(v: number) => { if (this.mTexel[getCurIdx()]) this.mTexel[getCurIdx()].z = v; },
+				(v: number) => { if (this.mTexel[getCurIdx()]) this.mTexel[getCurIdx()].w = v; },
+			];
+
+			for (let k = 0; k < 4; k++) {
+				let row = document.createElement("div");
+				row.style.cssText = "display:flex;align-items:center;margin-bottom:4px;gap:6px;";
+				let lbl = document.createElement("span");
+				lbl.textContent = keys[k];
+				lbl.style.cssText = "width:24px;font-weight:bold;";
+				let inp = document.createElement("input");
+				inp.type = "number";
+				inp.className = "form-control form-control-sm";
+				inp.style.width = "80px";
+				const ki = k;
+				inp.onchange = () => { setters[ki](Number(inp.value)); this.mUrlMap?.clear(); };
+				inputs.push(inp);
+				row.appendChild(lbl);
+				row.appendChild(inp);
+				div.appendChild(row);
+			}
+
+			select.onchange = () => refreshInputs(getCurIdx());
+			if (select.options.length > 0) refreshInputs(getCurIdx());
+
+			let delBtn = document.createElement("button");
+			delBtn.className = "btn btn-sm btn-danger";
+			delBtn.textContent = "Delete";
+			delBtn.style.marginTop = "8px";
+			delBtn.onclick = () => {
+				const idx = getCurIdx();
+				this.RemoveTexCodi(idx);
+				this.ModifyModal(_clickEvent);
+			};
+			div.appendChild(delBtn);
+
+			let gotoBtn = document.createElement("button");
+			gotoBtn.className = "btn btn-sm btn-secondary";
+			gotoBtn.textContent = "Go to Card";
+			gotoBtn.style.cssText = "margin-top:8px;margin-left:6px;";
+			gotoBtn.onclick = () => {
+				const idx = getCurIdx();
+				const cardTabLink = document.querySelector('a[href="#vCardStyle_tab"]') as HTMLElement;
+				if (cardTabLink) cardTabLink.click();
+				drawImgOnCard();
+				setTimeout(() => {
+					const target = CDOM.ID("atlCan_card")?.querySelector(`[data-atl-idx="${idx}"]`) as HTMLElement;
+					if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+				}, 50);
+			};
+			div.appendChild(gotoBtn);
 		};
 
-		//탭
-		let clickToRemove = _remove;
-		let prevCanvTab = CDOM.ID("vCanvStyle_tab");
-		let prevActiveTabIndex = (prevCanvTab != null && prevCanvTab.classList.contains("active")) ? 1 : 0;
+		// ── Info 탭 ───────────────────────────────────────────────────────
+		let infoMain = { "<>": "div", "html": [{ "<>": "div", "id": "atlCan_info", "style": "width:100%;padding:8px;" }] };
+		let drawInfo = async () => {
+			let div = CDOM.ID("atlCan_info");
+			if (!div) return;
+			div.innerHTML = "";
+
+			// 전체 이미지
+			let url = await this.GetImgURL(-1);
+			let img = document.createElement("img");
+			img.src = url;
+			img.style.cssText = "max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin-bottom:8px;display:block;";
+			div.appendChild(img);
+
+			// JSON 배열
+			let arr = this.mTexel
+				.map((c, i) => c == null ? null : { index: i, x: c.x, y: c.y, z: c.z, w: c.w, width: c.z - c.x, height: c.w - c.y })
+				.filter(v => v != null);
+
+			let textarea = document.createElement("textarea");
+			textarea.value = JSON.stringify(arr, null, 2);
+			textarea.style.cssText = "width:100%;height:200px;font-size:11px;font-family:monospace;resize:vertical;";
+			div.appendChild(textarea);
+
+			let btn = document.createElement("button");
+			btn.className = "btn btn-sm btn-secondary";
+			btn.textContent = "Copy";
+			btn.style.marginTop = "4px";
+			btn.onclick = () => {
+				textarea.select();
+				document.execCommand("copy");
+				btn.textContent = "Copied!";
+				setTimeout(() => btn.textContent = "Copy", 1500);
+			};
+			div.appendChild(btn);
+		};
+
+		// ── 탭 구조 ───────────────────────────────────────────────────────
 		let prevDiv = CDOM.ID("CAtlas_Div");
 		let st = prevDiv == null ? 0 : prevDiv.scrollTop;
+
+		let cardTabHtml: any[] = [
+			cardMain,
+			{ "<>": "input", "type": "file", "multiple": "multiple", "onchange": AtlasPush },
+			{
+				"<>": "button", "type": "button", "class": "btn btn-primary float-right", "text": "PushMode", "onclick": () => {
+					let ani = CClass.New("CAnimation");
+					window["AniTool"](ani, null);
+					window["AniToolAtlasEvent"](this,false,() => {
+						this.ModifyModal(_clickEvent);
+					});
+				}
+			},
+			{
+				"<>": "button", "type": "button", "class": "btn btn-primary float-right", "text": "CodiMode", "onclick": () => {
+					let ani = CClass.New("CAnimation") as CAnimation;
+
+					// 1. 텍스쳐 버퍼 0번째 확보
+					const srcBuf = this.GetBuf()[0] as Uint8Array;
+					const texW   = this.mWidth;
+					const texH   = this.mHeight;
+
+					// 2. CTARGA로 TGA ArrayBuffer 생성
+					//    Uint8Array가 슬라이스 뷰일 수 있으므로 byteOffset 기준으로 정확히 잘라냄
+					const cleanBuf = srcBuf.buffer.slice(
+						srcBuf.byteOffset,
+						srcBuf.byteOffset + srcBuf.byteLength
+					);
+					const tga    = new CTARGA(cleanBuf as ArrayBuffer, texW, texH, false);
+					const tgaBuf = tga.GetResult() as ArrayBuffer;
+
+					// 3. CBase64File에 TGA 버퍼 세팅
+					const b64File   = new CBase64File();
+					b64File.mExt    = "tga";
+					b64File.mData   = tgaBuf;
+					b64File.mOption.mFilter=CTexture.eFilter.Neaest;
+					b64File.RefreshHash();
+
+					// 4. CClipBase64 — 텍스쳐 클립 (time=0 한 번만)
+					ani.Push(new CClipBase64(0, b64File));
+
+					ani.Push(new CClipImg(0,0,b64File.FileName()));
+
+					// 5. CClipCoodi — 각 texel마다 프레임 클립
+					for (let i = 0; i < this.mTexel.length; i++) {
+						const codi = this.mTexel[i];
+						if (codi == null) continue;
+						// time=i(틱), delay=1, stX/stY/edX/edY
+						ani.Push(new CClipCoodi(i, 1, codi.x, codi.y, codi.z, codi.w));
+					}
+
+					window["AniTool"](ani, null);
+					window["AniToolAtlasEvent"](this, true, () => {
+						this.mUrlMap.clear();
+						this.ModifyModal(_clickEvent);
+					});
+				}
+			},
+		];
 		let tabs: any = {
 			"<>": "div", "html": [
 				{
@@ -524,176 +607,151 @@ export class CAtlas extends CObject {
 									"<>": "ul", "class": "nav nav-tabs", "html": [
 										{
 											"<>": "li", "class": "nav-item", "html": [
-												{ "<>": "a", "class": "nav-link" + (prevActiveTabIndex == 0 ? " active" : ""), "data-bs-toggle": "tab", "href": "#vCardStyle_tab", "text": "Card", "onclick": () => { drawImgOnCard(); } },
+												{ "<>": "a", "class": "nav-link active", "data-bs-toggle": "tab", "href": "#vCardStyle_tab", "text": "Card", "onclick": () => { drawImgOnCard(); } },
 											]
 										},
 										{
 											"<>": "li", "class": "nav-item", "html": [
-												{ "<>": "a", "class": "nav-link" + (prevActiveTabIndex == 1 ? " active" : ""), "data-bs-toggle": "tab", "href": "#vCanvStyle_tab", "text": "Canv", "onclick": () => { drawImgOnCanvas(); } }
+												{ "<>": "a", "class": "nav-link", "data-bs-toggle": "tab", "href": "#vManualStyle_tab", "text": "Manual", "onclick": () => { drawManual(); } }
 											]
-										}
+										},
+										{
+											"<>": "li", "class": "nav-item", "html": [
+												{ "<>": "a", "class": "nav-link", "data-bs-toggle": "tab", "href": "#vInfoStyle_tab", "text": "Info", "onclick": () => { drawInfo(); } }
+											]
+										},
 									]
 								},
 								{
 									"<>": "div", "class": "tab-content", "html": [
-										{ "<>": "div", "class": "tab-pane fade" + (prevActiveTabIndex == 0 ? " show active" : ""), "id": "vCardStyle_tab", "html": [cardMain] },
-										{ "<>": "div", "class": "tab-pane fade" + (prevActiveTabIndex == 1 ? " show active" : ""), "id": "vCanvStyle_tab", "html": [canvMain] }
+										{ "<>": "div", "class": "tab-pane fade show active", "id": "vCardStyle_tab", "html": cardTabHtml },
+										{ "<>": "div", "class": "tab-pane fade", "id": "vManualStyle_tab", "html": [manualMain] },
+										{ "<>": "div", "class": "tab-pane fade", "id": "vInfoStyle_tab", "html": [infoMain] },
 									]
 								}
 							]
 						},
 					]
 				},
-				{ "<>": "input", "type": "file", "multiple": "multiple", "onchange": AtlasPush },
-				{
-					"<>": "button", "type": "button", "class": "btn btn-primary float-right", "text": "AniEditer", "onclick": () => {
-						let ani = CClass.New("CAnimation");
-						window["AniTool"](ani, null);
-						window["AniToolAtlasEvent"](this, () => {
-							this.ModifyModal(_clickEvent, clickToRemove);
-						});
-					}
-				},
 			]
 		};
-		if (_clickEvent == null) {
-			tabs.html.push(
-				{
-					"<>": "button", "type": "button", "class": "btn float-right " + (_remove ? "btn-danger" : "btn-primary"), "text": "Delete",
-					"onclick": (e) => {
-						if (e.target.classList.contains("btn-primary")) {
-							e.target.classList.remove("btn-primary");
-							e.target.classList.add("btn-danger");
-							clickToRemove = true;
-						}
-						else {
-							e.target.classList.remove("btn-danger");
-							e.target.classList.add("btn-primary");
-							clickToRemove = false;
-						}
-					}
-				});
-		}
+
 		if (g_atlJBox) g_atlJBox.Close();
 		g_atlJBox = new CModal();
 		g_atlJBox.SetTitle(CModal.eTitle.TextClose);
 		g_atlJBox.SetSize(640, 480);
 		g_atlJBox.SetBody("<div id='atl_div'></div>");
 		g_atlJBox.SetResize(true);
-		// g_atlJBox.SetBodyClose(true);
 		g_atlJBox.Open();
 		CDOM.ID("atl_div").append(CDOM.DataToDom(tabs));
-		// g_atlJBox.setContent(CDomFactory.DataToDom(tabs));
 
-		if (prevActiveTabIndex == 0) {
-			drawImgOnCard();
-		}
-		else if (prevActiveTabIndex == 1) {
-			drawImgOnCanvas();
-		}
-
+		drawImgOnCard();
 		CDOM.ID("CAtlas_Div").scrollTop = st;
 	}
 
 
 
 	async RemoveTexCodi(_off: number) {
-		if (this.mBase64.mData == null) return;
+		
 
-		this.mTexCodi[_off] = null;
-		let tex = await this.RebuildRect(this.mWidth, this.mHeight);
+		this.mTexel[_off] = null;
+		this.RebuildRect(this.mWidth, this.mHeight);
 
-		var targa = new CTARGA(tex.GetBuf()[0]);
-		this.mWidth = targa.imageWidth = tex.GetWidth();
-		this.mHeight = targa.imageHeight = tex.GetHeight();
-		this.mBase64.mData = targa.GetResult();
-		this.mBase64.mExt = "tga";
-		this.mBase64.RefreshHash();
-		this.mTex = null;
+		
 
 		this.EditRefresh();
 	}
-	GetTexCodi(_off: number, _texCodi: CVec4) {
-		if (this.mTexCodi[_off] == null) {
+	GetUV(_off: number, _texCodi: CVec4=new CVec4()) {
+		if (this.mTexel[_off] == null) {
 			_texCodi.x = 0;
 			_texCodi.y = 0;
 			_texCodi.z = 1 / this.mWidth;
 			_texCodi.w = 1 / this.mHeight;
-			return;
+			return _texCodi;
 		}
 
-		_texCodi.x = this.mTexCodi[_off].x / this.mWidth;
-		_texCodi.y = (this.mHeight - this.mTexCodi[_off].y) / this.mHeight;
-		_texCodi.z = this.mTexCodi[_off].z / this.mWidth;
-		_texCodi.w = (this.mHeight - this.mTexCodi[_off].w) / this.mHeight;
+		_texCodi.x = this.mTexel[_off].x / this.mWidth;
+		_texCodi.y = 1-this.mTexel[_off].y / this.mHeight;
+		_texCodi.z = this.mTexel[_off].z / this.mWidth;
+		_texCodi.w = 1-this.mTexel[_off].w / this.mHeight;
 
+		return _texCodi;
+
+	}
+	GetTexel(_off: number, _texCodi: CVec4=new CVec4()) {
+		
+
+		_texCodi.x = this.mTexel[_off].x;
+		_texCodi.y = this.mTexel[_off].y;
+		_texCodi.z = this.mTexel[_off].z;
+		_texCodi.w = this.mTexel[_off].w;
+
+		return _texCodi;
 
 	}
 
-	static s_atlasLoadMap: Map<string, CBase64File> = new Map();
-	override ImportCJSON(_json: CJSON) {
-		let base64: CBase64File = null;
-		//if(_json instanceof CJSON) 
-		{
-			if (CAtlas.s_atlasLoadMap.has(_json.GetStr("m_key"))) {
-				base64 = CAtlas.s_atlasLoadMap.get(_json.GetStr("m_key"));
-				_json.Set("m_base64", null);
-			}
-		}
-		// else {
-		// 	if(CAtlas.s_atlasLoadMap.has(_json["m_key"])) {
-		// 		base64 = CAtlas.s_atlasLoadMap.get(_json["m_key"]);
-		// 		_json["m_base64"] = null;
-		// 	}
-		// }
-		let result = super.ImportCJSON(_json);
-		if (base64 == null) {
-			CAtlas.s_atlasLoadMap.set(result.Key(), this.mBase64);
-		}
-		else {
-			(result as CAtlas).mBase64 = base64;
-			this.mBase64 = base64;
-		}
-		return result;
-	}
+	//static s_atlasLoadMap: Map<string, CBase64File> = new Map();
+	// override ImportCJSON(_json: CJSON) {
+	// 	let base64: CBase64File = null;
+	// 	//if(_json instanceof CJSON) 
+	// 	// {
+	// 	// 	if (CAtlas.s_atlasLoadMap.has(_json.GetStr("m_key"))) {
+	// 	// 		base64 = CAtlas.s_atlasLoadMap.get(_json.GetStr("m_key"));
+	// 	// 		_json.Set("m_base64", null);
+	// 	// 	}
+	// 	// }
+	// 	if(_json.Get("mTexCodi")!=null)
+	// 	{
+	// 		_json.Set("mTexel", _json.Get("mTexCodi"));
+	// 	}
+	
+	// 	let result = super.ImportCJSON(_json);
+	// 	if (base64 == null) {
+	// 		CAtlas.s_atlasLoadMap.set(result.Key(), this.mBase64);
+	// 	}
+	// 	else {
+	// 		(result as CAtlas).mBase64 = base64;
+	// 		this.mBase64 = base64;
+	// 	}
+	// 	return result;
+	// }
 
 
-	private m_rect: AtlasMaxRects | null = null;
+	private mRect: AtlasMaxRects | null = null;
 	// ─── 공통 내부 함수 ───────────────────────────────────────────────
 	private async PushTexTiles(_imgTex: CTexture, _codi: Array<CVec4>): Promise<number> {
 		const imgTexBuf = _imgTex.GetBuf()[0] as Uint8Array;
 
 		// rect 없는 경우 생성
-		if (this.m_rect == null) {
-			this.m_rect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);
-			for (let codi of this.mTexCodi) {
+		if (this.mRect == null) {
+			this.mRect = new AtlasMaxRects(this.mWidth == 0 ? 128 : this.mWidth, this.mHeight == 0 ? 128 : this.mHeight);
+			for (let codi of this.mTexel) {
 				if (codi == null) continue;
 				const w = codi.z - codi.x;
 				const h = codi.w - codi.y;
 				// Insert(베스트핏) → MarkUsed(실제좌표)로 교체
 				// 패딩 포함한 실제 점유 영역을 정확히 마킹
-				this.m_rect.MarkUsed(
+				this.mRect.MarkUsed(
 					codi.x - this.mPadding,
 					codi.y - this.mPadding,
 					w + this.mPadding * 2,
 					h + this.mPadding * 2
 				);
 			}
-			this.mWidth = this.m_rect.mWidth;
-			this.mHeight = this.m_rect.mHeight;
+			this.mWidth = this.mRect.mWidth;
+			this.mHeight = this.mRect.mHeight;
 		}
 
 		// 아틀라스 텍스쳐 버퍼 생성
-		let atlTex: CTexture = null;
-		if (this.mBase64.mData != null) {
-			await this.CreateTex();
-			atlTex = this.GetTex();
-		} else {
-			atlTex = new CTexture();
-			atlTex.SetSize(128, 128);
-			atlTex.CreateBuf();
+		if (this.mBuffer.length==0) {
+		
+			this.mWidth=this.mRect.mWidth;
+			this.mHeight=this.mRect.mHeight;
+			this.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)]);
+			this.CreateBuf();
+
 		}
-		let atlTexBuf = atlTex.GetBuf()[0] as Uint8Array;
+		let atlTexBuf = this.GetBuf()[0] as Uint8Array;
 
 		for (let k = 0; k < _codi.length; ++k) {
 			const codi = _codi[k];
@@ -704,26 +762,25 @@ export class CAtlas extends CObject {
 			const paddedW = w + this.mPadding * 2;
 			const paddedH = h + this.mPadding * 2;
 
-			let insertRect = this.m_rect.Insert(paddedW, paddedH);
+			let insertRect = this.mRect.Insert(paddedW, paddedH);
 			if (insertRect == null) {
 				const newW = CUtilRender.CloseToExp(this.mWidth + paddedW);
 				const newH = CUtilRender.CloseToExp(this.mHeight + paddedH);
 				const higherOne = Math.max(newW, newH);
 
-				let newTex = await this.RebuildRect(higherOne, higherOne, atlTex);
-				atlTex = newTex;
-				atlTexBuf = newTex.GetBuf()[0] as Uint8Array;
-
-				insertRect = this.m_rect.Insert(paddedW, paddedH);
+				this.RebuildRect(higherOne, higherOne);
+				
+				atlTexBuf = this.GetBuf()[0] as Uint8Array;
+				insertRect = this.mRect.Insert(paddedW, paddedH);
 			}
 
 			// 삭제된 슬롯 재사용
-			let texCodiIdx = this.mTexCodi.indexOf(null);
+			let texCodiIdx = this.mTexel.indexOf(null);
 			if (texCodiIdx != -1) {
-				this.mTexCodi[texCodiIdx] =
+				this.mTexel[texCodiIdx] =
 					new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding);
 			} else {
-				this.mTexCodi.push(new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding));
+				this.mTexel.push(new CVec4(insertRect.x + this.mPadding, insertRect.y + this.mPadding, insertRect.x + w + this.mPadding, insertRect.y + h + this.mPadding));
 			}
 
 			const srcX = codi.x;
@@ -733,44 +790,38 @@ export class CAtlas extends CObject {
 
 			for (let y = 0; y < h; y++) {
 				const src = (srcX + (srcY + y) * _imgTex.GetWidth()) * 4;
-				const dst = (dstX + (dstY + y) * atlTex.GetWidth()) * 4;
+				const dst = (dstX + (dstY + y) * this.mWidth) * 4;
 				atlTexBuf.set(imgTexBuf.subarray(src, src + 4 * w), dst);
 			}
 			// 상하좌우 패딩
 			for (let x = 0; x < w; x++) {
-				const from  = ((dstX + x) + (dstY)         * atlTex.GetWidth()) * 4;
-				const fromB = ((dstX + x) + (dstY + h - 1) * atlTex.GetWidth()) * 4;
+				const from  = ((dstX + x) + (dstY)         * this.mWidth) * 4;
+				const fromB = ((dstX + x) + (dstY + h - 1) * this.mWidth) * 4;
 				for (let pc = 0; pc < this.mPadding; ++pc) {
-					atlTexBuf.set(atlTexBuf.subarray(from,  from  + 4), ((dstX + x) + (dstY - pc - 1)  * atlTex.GetWidth()) * 4);
-					atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), ((dstX + x) + (dstY + h + pc)  * atlTex.GetWidth()) * 4);
+					atlTexBuf.set(atlTexBuf.subarray(from,  from  + 4), ((dstX + x) + (dstY - pc - 1)  * this.mWidth) * 4);
+					atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), ((dstX + x) + (dstY + h + pc)  * this.mWidth) * 4);
 				}
 			}
 			for (let y = -this.mPadding; y < h + this.mPadding; y++) {
-				const from  = ((dstX)         + (dstY + y) * atlTex.GetWidth()) * 4;
-				const fromB = ((dstX + w - 1) + (dstY + y) * atlTex.GetWidth()) * 4;
+				const from  = ((dstX)         + (dstY + y) * this.mWidth) * 4;
+				const fromB = ((dstX + w - 1) + (dstY + y) * this.mWidth) * 4;
 				for (let pc = 0; pc < this.mPadding; ++pc) {
-					atlTexBuf.set(atlTexBuf.subarray(from,  from  + 4), ((dstX - pc - 1) + (dstY + y) * atlTex.GetWidth()) * 4);
-					atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), ((dstX + w + pc) + (dstY + y) * atlTex.GetWidth()) * 4);
+					atlTexBuf.set(atlTexBuf.subarray(from,  from  + 4), ((dstX - pc - 1) + (dstY + y) * this.mWidth) * 4);
+					atlTexBuf.set(atlTexBuf.subarray(fromB, fromB + 4), ((dstX + w + pc) + (dstY + y) * this.mWidth) * 4);
 				}
 			}
 		}
 
-		var targa = new CTARGA(atlTexBuf as unknown as ArrayBuffer);
-		this.mWidth  = targa.imageWidth  = atlTex.GetWidth();
-		this.mHeight = targa.imageHeight = atlTex.GetHeight();
-		this.mBase64.mData = targa.GetResult();
-		this.mBase64.mExt  = "tga";
-		this.mBase64.RefreshHash();
-		this.mTex = null;
+		
 
-		return this.mTexCodi.length - 1;
+		return this.mTexel.length - 1;
 	}
 
 	// ─── Push (기존) ─────────────────────────────────────────────────
-	Push(_texName: string, _buf: ArrayBuffer = null, _codi = new Array<CVec4>()) {
+	Push(_texName: string, _buf: ArrayBufferLike = null, _codi = new Array<CVec4>()) {
 		return new Promise((resolve, reject) => {
 			if (_buf != null) {
-				let blob = new Blob([_buf], { type: "image/" + CString.ExtCut(_texName).ext });
+				let blob = new Blob([_buf as ArrayBuffer], { type: "image/" + CString.ExtCut(_texName).ext });
 				_texName = window.URL.createObjectURL(blob);
 			}
 			const img = new Image();
@@ -785,6 +836,202 @@ export class CAtlas extends CObject {
 					_codi.push(new CVec4(0, 0, img.width, img.height));
 
 				resolve(await this.PushTexTiles(imgTex, _codi));
+			});
+			img.src = _texName;
+		});
+	}
+	PushAutoCut(
+		_texName  : string,
+		_alphaMin : number = 1,
+		_minSize  : number = 4,
+		_seamGrad : number = 20,
+		_seamAlpha: number = 0.65,
+	): Promise<number> {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			img.crossOrigin = "Anonymous";
+			img.addEventListener('load', async (_event) => {
+				const img = _event.currentTarget as HTMLImageElement;
+				CH5Canvas.Init(img.width, img.height);
+				CH5Canvas.Draw(CH5Canvas.DrawImage(img, 0, 0, img.width, img.height));
+				const imgTex = CH5Canvas.GetNewTex();
+				const imgBuf = imgTex.GetBuf()[0] as Uint8Array;
+				const W = imgTex.GetWidth();
+				const H = imgTex.GetHeight();
+
+				// ── Phase 1: 플러드필 ────────────────────────────────────────
+				const step = new Int32Array(W * H);
+				let count = 0;
+				const stk: number[] = [];
+
+				for (let sy = 0; sy < H; sy++) {
+					for (let sx = 0; sx < W; sx++) {
+						if (step[sy * W + sx] !== 0) continue;
+						if (imgBuf[(sy * W + sx) * 4 + 3] < _alphaMin) continue;
+						count++;
+						stk.push(sx, sy);
+						while (stk.length > 0) {
+							const y = stk.pop()!, x = stk.pop()!;
+							if (x < 0 || x >= W || y < 0 || y >= H) continue;
+							if (step[y * W + x] !== 0) continue;
+							if (imgBuf[(y * W + x) * 4 + 3] < _alphaMin) continue;
+							step[y * W + x] = count;
+							stk.push(x + 1, y,  x - 1, y,  x, y + 1,  x, y - 1);
+						}
+					}
+				}
+
+				// ── Phase 2: 인덱스별 bbox ───────────────────────────────────
+				const bboxes = new Array<[number, number, number, number]>(count + 1);
+				for (let i = 1; i <= count; i++) bboxes[i] = [W, H, 0, 0];
+
+				for (let y = 0; y < H; y++) {
+					for (let x = 0; x < W; x++) {
+						const s = step[y * W + x];
+						if (s === 0) continue;
+						const b = bboxes[s];
+						if (x     < b[0]) b[0] = x;
+						if (y     < b[1]) b[1] = y;
+						if (x + 1 > b[2]) b[2] = x + 1;
+						if (y + 1 > b[3]) b[3] = y + 1;
+					}
+				}
+
+				// ── seam helpers ─────────────────────────────────────────────
+				const makeProfile = (
+					s: number, x0: number, y0: number, x1: number, y1: number,
+					axis: 'r' | 'c'
+				) => {
+					const n    = axis === 'r' ? y1 - y0 : x1 - x0;
+					const gray = new Float32Array(n).fill(-1);
+					const cnt  = new Uint32Array(n);
+					for (let i = 0; i < n; i++) {
+						let sum = 0, c = 0;
+						const lo = axis === 'r' ? x0 : y0;
+						const hi = axis === 'r' ? x1 : y1;
+						for (let j = lo; j < hi; j++) {
+							const px = axis === 'r' ? j      : i + x0;
+							const py = axis === 'r' ? i + y0 : j;
+							if (step[py * W + px] !== s) continue;
+							const b = (py * W + px) * 4;
+							sum += imgBuf[b] * 0.299 + imgBuf[b+1] * 0.587 + imgBuf[b+2] * 0.114;
+							c++;
+						}
+						cnt[i] = c;
+						if (c > 0) gray[i] = sum / c;
+					}
+					return { gray, cnt };
+				};
+
+				const findSeams = (
+					gray: Float32Array, cnt: Uint32Array,
+					offset: number, winR = 4
+				): number[] => {
+					const res: number[] = [];
+					for (let i = 1; i < gray.length - 1; i++) {
+						if ((gray[i] < 0) !== (gray[i-1] < 0)) { res.push(offset + i); continue; }
+						if (gray[i] < 0) continue;
+						if (Math.abs(gray[i] - gray[i-1]) < _seamGrad) continue;
+						let sm = 0, n = 0;
+						for (let d = -winR; d <= winR; d++) {
+							if (d === 0 || i+d < 0 || i+d >= cnt.length) continue;
+							sm += cnt[i+d]; n++;
+						}
+						const avg = n > 0 ? sm / n : 0;
+						if (avg > 0 && cnt[i] < avg * _seamAlpha) res.push(offset + i);
+					}
+					return res;
+				};
+
+				const splitPts = (pts: number[], lo: number, hi: number): [number, number][] => {
+					const sorted = [...new Set(pts)].sort((a, b) => a - b);
+					const res: [number, number][] = [];
+					let prev = lo;
+					for (const p of sorted) {
+						if (p > prev && p < hi) { res.push([prev, p]); prev = p; }
+					}
+					res.push([prev, hi]);
+					return res;
+				};
+
+				const alphaEdge = (
+					s: number, x0: number, y0: number, x1: number, y1: number
+				): CVec4 | null => {
+					let lx = x1, rx = x0, ty = y1, by = y0;
+					for (let y = y0; y < y1; y++) {
+						for (let x = x0; x < x1; x++) {
+							if (step[y * W + x] !== s) continue;
+							if (x     < lx) lx = x;
+							if (x + 1 > rx) rx = x + 1;
+							if (y     < ty) ty = y;
+							if (y + 1 > by) by = y + 1;
+						}
+					}
+					if (rx - lx < _minSize || by - ty < _minSize) return null;
+					return new CVec4(lx, ty, rx, by);
+				};
+
+				// ── Phase 3: seam 분리 + maskedBuf → PushTexTiles ────────────
+				const maskedTex = new CTexture();
+				maskedTex.SetSize(W, H);
+				maskedTex.CreateBuf();
+				const maskedBuf = maskedTex.GetBuf()[0] as Uint8Array;
+
+				let lastIndex = -1;
+
+				for (let s = 1; s <= count; s++) {
+					const [bx0, by0, bx1, by1] = bboxes[s];
+					if (bx1 - bx0 < _minSize || by1 - by0 < _minSize) continue;
+
+					// seam 탐지
+					const { gray: rg, cnt: rc } = makeProfile(s, bx0, by0, bx1, by1, 'r');
+					const rowSeamList = findSeams(rg, rc, by0);
+					const { gray: cg, cnt: cc } = makeProfile(s, bx0, by0, bx1, by1, 'c');
+					const colSeamList = findSeams(cg, cc, bx0);
+
+					const rowSeams = new Set(rowSeamList);
+					const colSeams = new Set(colSeamList);
+
+					// maskedBuf 쓰기 (seam ±1px 공유)
+					for (let y = by0; y < by1; y++) {
+						const nearRow = rowSeams.has(y) || rowSeams.has(y + 1);
+						for (let x = bx0; x < bx1; x++) {
+							const idx = (y * W + x) * 4;
+							if (imgBuf[idx + 3] < _alphaMin) continue;
+							const nearCol = colSeams.has(x) || colSeams.has(x + 1);
+							if (nearRow || nearCol || step[y * W + x] === s) {
+								maskedBuf[idx    ] = imgBuf[idx    ];
+								maskedBuf[idx + 1] = imgBuf[idx + 1];
+								maskedBuf[idx + 2] = imgBuf[idx + 2];
+								maskedBuf[idx + 3] = imgBuf[idx + 3];
+							}
+						}
+					}
+
+					// seam으로 분할된 sub-box 수집
+					const boxes: CVec4[] = [];
+					for (const [ry0, ry1] of splitPts(rowSeamList, by0, by1)) {
+						for (const [cx0, cx1] of splitPts(colSeamList, bx0, bx1)) {
+							const box = alphaEdge(s, cx0, ry0, cx1, ry1);
+							if (!box) continue;
+							if (cx0 !== bx0) box.x = Math.max(bx0, box.x - 1);
+							if (cx1 !== bx1) box.z = Math.min(bx1, box.z + 1);
+							if (ry0 !== by0) box.y = Math.max(by0, box.y - 1);
+							if (ry1 !== by1) box.w = Math.min(by1, box.w + 1);
+							boxes.push(box);
+						}
+					}
+
+					if (boxes.length > 0)
+						lastIndex = await this.PushTexTiles(maskedTex, boxes);
+
+					// maskedBuf 초기화
+					for (let y = by0; y < by1; y++)
+						for (let x = bx0; x < bx1; x++)
+							maskedBuf[(y * W + x) * 4 + 3] = 0;
+				}
+
+				resolve(lastIndex);
 			});
 			img.src = _texName;
 		});
@@ -836,41 +1083,30 @@ export class CAtlas extends CObject {
 	}
 	
 
-	private async RebuildRect(_w: number, _h: number, _beforeTex: CTexture = null): Promise<CTexture> {
-		this.m_rect = new AtlasMaxRects(_w, _h);
+	private async RebuildRect(_w: number, _h: number) {
+		this.mRect = new AtlasMaxRects(_w, _h);
 
 		// 1) 새 좌표 계산
 		const newTexCodi: CVec4[] = [];
-		for (let oldTexCodi of this.mTexCodi) {
+		for (let oldTexCodi of this.mTexel) {
 			if (oldTexCodi == null) { newTexCodi.push(null as any); continue; }
 			const w = oldTexCodi.z - oldTexCodi.x;
 			const h = oldTexCodi.w - oldTexCodi.y;
-			const r = this.m_rect.Insert(w + this.mPadding * 2, h + this.mPadding * 2);
+			const r = this.mRect.Insert(w + this.mPadding * 2, h + this.mPadding * 2);
 			newTexCodi.push(new CVec4(r.x + this.mPadding, r.y + this.mPadding, r.x + w + this.mPadding, r.y + h + this.mPadding));
 		}
 
 		// 2) 새 버퍼 준비
-		const newTex = new CTexture();
-		newTex.SetSize(_w, _h);
-		newTex.CreateBuf();
-		const newBuf = newTex.GetBuf()[0] as Uint8Array;
+		// const newTex = new CTexture();
+		// newTex.SetSize(_w, _h);
+		// newTex.CreateBuf();
+		const newBuf = new Uint8Array(_w*_h*4);
 
 		// 2-1) 소스(구 아틀라스) 버퍼/폭/높이 확보
-		let srcBuf: Uint8Array | null = null;
-		let srcW = 0, srcH = 0;
+		let srcBuf: Uint8Array | null = this.GetBuf()[0] as Uint8Array;
+		let srcW = this.mWidth, srcH = this.mHeight;
 
-		if (_beforeTex != null) {
-			srcW = _beforeTex.GetWidth();
-			srcH = _beforeTex.GetHeight();
-			srcBuf = _beforeTex.GetBuf()[0] as Uint8Array;
-		} else if (this.mBase64.mData != null) {
-			await this.CreateTex(); // 현 아틀라스 로드
-			const oldTex = this.GetTex();
-			srcW = this.mWidth;
-			srcH = this.mHeight;
-			srcBuf = oldTex.GetBuf()[0] as Uint8Array;
-		}
-
+		
 		// 3) 안전 블릿 함수 (함수 내부 로컬로 둬도 됨)
 		const blitSafe = (
 			sBuf: Uint8Array, sW: number, sH: number,
@@ -899,8 +1135,8 @@ export class CAtlas extends CObject {
 
 		// 4) 타일별로 패딩 포함 복사 (source→new)
 		if (srcBuf) {
-			for (let i = 0; i < this.mTexCodi.length; i++) {
-				const oldC = this.mTexCodi[i];
+			for (let i = 0; i < this.mTexel.length; i++) {
+				const oldC = this.mTexel[i];
 				const newC = newTexCodi[i];
 				if (!oldC || !newC) continue;
 
@@ -921,14 +1157,21 @@ export class CAtlas extends CObject {
 		// (srcBuf가 없으면 newBuf는 이미 0으로 초기화됨)
 
 		// 5) 최종 상태 반영
-		this.mTexCodi = newTexCodi;
+		this.mTexel = newTexCodi;
 		this.mWidth = _w;
 		this.mHeight = _h;
+		this.GetBuf()[0] =newBuf;
 
-		// 썸네일/잘라내기 캐시가 있다면 무효화(있으면)
-		if ((this as any).mBase64Map?.clear) (this as any).mBase64Map.clear();
-
-		return newTex;
+		
+		this.mUrlMap.clear();
+		this.mGBuffer=new Array<any>();
+		//return newTex;
+	}
+	override ImportCJSON(_target): this {
+        return super.ImportCJSON(_target);
+    }
+	override ExportCJSON(): CJSON {
+		return super.ExportCJSON();
 	}
 
 }

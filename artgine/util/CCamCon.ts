@@ -1,6 +1,3 @@
-
-
-
 import { CUpdate } from "../basic/Basic.js";
 import {CAlert} from "../basic/CAlert.js";
 import { CConsol } from "../basic/CConsol.js";
@@ -110,7 +107,10 @@ export class CCamCon extends CObject implements ICamCon
         if(this.mCamera==null || this.mInput==null) return;
         if(this.mPause) return;
         var mosVec = this.mInput.Mouse();
-        const move=10;
+        // [FIX] dt 클램프를 상단에서 한 번만 계산 — 전 블록에서 공유
+        const dt = Math.min(Math.max(_update.DeltaTime(), 1 / 240), 1 / 10);
+        // [FIX] 고정값 10 → dt 기반. 초당 600단위 = 60fps 기준 동일한 10/frame
+        const move = 600 * dt;
 
 
 		this.mRotX=0;
@@ -300,34 +300,28 @@ export class CCamCon extends CObject implements ICamCon
             }
             
         }
-        //CConsol.Log(this.mRotX+"/"+this.mRotY);
-        // if(_update.DeltaTime()<0.02)
-        // {
-        //     const t = Math.max(0, _update.DeltaTime()*50); // ms -> sec
-
-        
-        //     this.mRotXCur+=this.mRotX;
-        //     this.mRotYCur+=this.mRotY;
-        //     this.mRotXCur=this.mRotX=this.mRotXCur*0.5*t;
-        //     this.mRotYCur=this.mRotY=this.mRotYCur*0.5*t;
-        //     if(this.mRotYCur>0.001 && this.mRotYCur>0.001)
-        //         this.mReset=true;
-        // }
-        if (_update.DeltaTime() <= 0.05)                      // [수정] 0.02 → 0.10 (프레임 드랍 구간에서도 동작)
+        // 관성 감쇠:
+        // - 드래그 중 (mRotX/Y != 0): mRotXCur에 직접 대입 → 누적 없이 픽셀 델타 그대로 추적
+        // - 드래그 후 (mRotX/Y == 0): 지수 감쇠로 부드럽게 멈춤
+        // 기존 += 누적 구조는 드래그 중에도 값이 쌓여 가속/미끄러짐 유발
         {
-            // 프레임레이트 독립 감쇠로 교체
-            const dt = Math.min(Math.max(_update.DeltaTime(), 1/240), 1/10); // [추가] 스파이크 클램프
-            const halfLife = 0.08;                              // [추가] 감쇠 하프라이프(튜닝 포인트)
-            const t = Math.pow(0.5, dt / halfLife);            // [수정] 선형(Δt*50) → 지수 감쇠
+            const halfLife = 0.05;                          // 감쇠 속도 (낮을수록 빠르게 멈춤)
+            const t = Math.pow(0.5, dt / halfLife);        // 프레임 독립 지수 감쇠
 
-            this.mRotXCur += this.mRotX;                        // (유지)
-            this.mRotYCur += this.mRotY;                        // (유지)
+            if (this.mRotX !== 0) {
+                this.mRotXCur = this.mRotX;                // 드래그 중: 직접 대입 (누적 X)
+            } else {
+                this.mRotXCur *= t;                        // 드래그 후: 감쇠
+                this.mRotX = this.mRotXCur;
+            }
 
-            // 기존의 0.5 계수는 유지하되, 프레임 독립 t와 곱셈만 교체
-            this.mRotXCur = this.mRotX = this.mRotXCur * 0.5 * t; // (형태 유지, 핵심만 교체)
-            this.mRotYCur = this.mRotY = this.mRotYCur * 0.5 * t; // (형태 유지, 핵심만 교체)
+            if (this.mRotY !== 0) {
+                this.mRotYCur = this.mRotY;                // 드래그 중: 직접 대입 (누적 X)
+            } else {
+                this.mRotYCur *= t;                        // 드래그 후: 감쇠
+                this.mRotY = this.mRotYCur;
+            }
 
-            // [수정] 오타 및 의미 수정: X/Y 중 하나라도 임계 초과 시 리셋
             if (Math.abs(this.mRotXCur) > 0.001 || Math.abs(this.mRotYCur) > 0.001) {
                 this.mReset = true;
             }
@@ -403,8 +397,13 @@ export class CCamCon3DThirdPerson extends CCamCon3D
         if(!this.mPos)
             this.mPos = this.mCamera.GetEye().Export();
 
-        let rotX=this.mRotY* _update.DeltaTime()* this.mRotSensitivity;
-        let rotY=this.mRotX* _update.DeltaTime()* this.mRotSensitivity;
+        // [FIX] 마우스 픽셀 델타(mRotX/Y)는 물리적 이동거리에 비례하므로 이미 프레임 독립적
+        // 마우스 픽셀 델타는 물리적 이동량에 비례 → 이미 프레임 독립적.
+        // dt를 곱하면 고FPS일수록 느려지는 역효과 발생 (픽셀 내재 dt와 이중 반영).
+        // → FirstPerson과 동일한 고정 스케일 상수(0.005) 사용, dt 제거
+        const MOUSE_SCALE = 0.005;
+        let rotX = this.mRotY * MOUSE_SCALE * this.mRotSensitivity;
+        let rotY = this.mRotX * MOUSE_SCALE * this.mRotSensitivity;
 
         if (this.mZoom!=0)
             this.mSZoom=this.mSZoom-this.mZoom* this.mZoomSensitivity;

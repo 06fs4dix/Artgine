@@ -255,7 +255,7 @@ export class CReflector3D extends CBrushComp
 
     override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
-        if(this.mBruch != null) this.UpdateBrush(_update);
+        if(this.mBrush != null) this.UpdateBrush(_update);
     }
 
     UpdateBrush(_update : CUpdate) {
@@ -289,21 +289,21 @@ export class CReflector3D extends CBrushComp
         for(const rp of this.mWrite) {
             const rpKey = this.mTexKey + rp.mShader;
             // 등록된 RP가 없다면 등록
-            if(!this.mBruch.AutoRP().has(rpKey)) {
-                this.mBruch.SetAutoRP(rpKey, rp);
+            if(!this.mBrush.AutoRP().has(rpKey)) {
+                this.mBrush.SetAutoRP(rpKey, rp);
             }
             // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
             }
         }
 
         // ---------------------------------------------------------
         // 3. 가상 카메라 동기화
         // ---------------------------------------------------------
-        const mainCam = this.mBruch.GetCam3D();
-        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
+        const mainCam = this.mBrush.GetCam3D();
+        const virtualCam = this.mBrush.GetCamera(this.mTexKey);
 
         const wMat = this.GetOwner().GetMat();
         const pos = wMat.xyz;
@@ -333,7 +333,7 @@ export class CReflector3D extends CBrushComp
         if(this.mWrite.length > 0) {
             for(const rp of this.mWrite) {
                 const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.RemoveAutoRP(rpKey);
+                this.mBrush.RemoveAutoRP(rpKey);
             }
             this.mWrite.length = 0;
         }
@@ -399,7 +399,7 @@ export class CRefractor3D extends CBrushComp
 
     override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
-        if(this.mBruch != null) this.UpdateBrush(_update);
+        if(this.mBrush != null) this.UpdateBrush(_update);
     }
 
     UpdateBrush(_update : CUpdate) {
@@ -433,21 +433,21 @@ export class CRefractor3D extends CBrushComp
         for(const rp of this.mWrite) {
             const rpKey = this.mTexKey + rp.mShader;
             // 등록된 RP가 없다면 등록
-            if(!this.mBruch.AutoRP().has(rpKey)) {
-                this.mBruch.SetAutoRP(rpKey, rp);
+            if(!this.mBrush.AutoRP().has(rpKey)) {
+                this.mBrush.SetAutoRP(rpKey, rp);
             }
             // 사이클 변경 시 업데이트
             if(rp.mCycle != this.mCycle) {
                 rp.mCycle = this.mCycle;
-                this.mBruch.mAutoRPUpdate = CUpdate.eType.Updated;
+                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
             }
         }
 
         // ---------------------------------------------------------
         // 3. 가상 카메라 동기화
         // ---------------------------------------------------------
-        const mainCam = this.mBruch.GetCam3D();
-        const virtualCam = this.mBruch.GetCamera(this.mTexKey);
+        const mainCam = this.mBrush.GetCam3D();
+        const virtualCam = this.mBrush.GetCamera(this.mTexKey);
         if(virtualCam.Init(mainCam.GetEye(), mainCam.GetLook()))
         {
             virtualCam.SetFar(mainCam.GetFar());
@@ -465,7 +465,7 @@ export class CRefractor3D extends CBrushComp
         if(this.mWrite.length > 0) {
             for(const rp of this.mWrite) {
                 const rpKey = this.mTexKey + rp.mShader;
-                this.mBruch.RemoveAutoRP(rpKey);
+                this.mBrush.RemoveAutoRP(rpKey);
             }
             this.mWrite.length = 0;
         }
@@ -708,7 +708,7 @@ export class CReflector2D extends CBrushComp
     }
     override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
-        if(this.mBruch != null) this.UpdateBrush(_update);
+        if(this.mBrush != null) this.UpdateBrush(_update);
     }
     
     UpdateBrush(_update : CUpdate) {
@@ -736,8 +736,8 @@ export class CReflector2D extends CBrushComp
         // }
       
     
-        const mainCam = this.mBruch.GetCam2D();
-        this.mWaterCam = this.mBruch.GetCamera("WaterCam");
+        const mainCam = this.mBrush.GetCam2D();
+        this.mWaterCam = this.mBrush.GetCamera("WaterCam");
         if(this.mWaterCam.Init(mainCam.GetEye(), mainCam.GetLook()))
         {
             this.mWaterCam.SetFar(mainCam.GetFar());
@@ -759,8 +759,8 @@ export class CReflector2D extends CBrushComp
             // }
             
             // 등록된 RP가 없다면 등록
-            if(!this.mBruch.AutoRP().has(rp.Key())) {
-                this.mBruch.SetAutoRP(rp.Key(), rp);
+            if(!this.mBrush.AutoRP().has(rp.Key())) {
+                this.mBrush.SetAutoRP(rp.Key(), rp);
             }
             // // 사이클 변경 시 업데이트
             // if(rp.mCycle != this.mCycle) {
@@ -777,10 +777,10 @@ export class CReflector2D extends CBrushComp
 
         if(this.mWrite.length > 0) {
             for(const rp of this.mWrite) {
-                this.mBruch.RemoveAutoRP(rp.Key());
+                this.mBrush.RemoveAutoRP(rp.Key());
             }
             this.mWrite.length = 0;
-            this.mBruch.ClearRen();
+            this.mBrush.ClearRen();
         }
     }
 }

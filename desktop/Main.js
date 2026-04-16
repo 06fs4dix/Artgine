@@ -423,10 +423,6 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     if (_json.projetJSON.includes["excel"]) {
         IStr += "<script type='text/javascript' src='" + upFolder + "artgine/external/legacy/excel/xlsx.mini.min.js'></script>\n";
     }
-    if (_json.projetJSON.includes["lzstring"]) {
-        IStr += "<script src='" + upFolder + "artgine/external/legacy/lz-string-master/libs/base64-string.js'></script>\n";
-        IStr += "<script src='" + upFolder + "artgine/external/legacy/lz-string-master/libs/lz-string.min.js'></script>\n";
-    }
     if (_json.projetJSON.includes["firebase"]) {
         IStr += "<script src='https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js'></script>\n";
         IStr += "<script src='https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js'></script>\n";

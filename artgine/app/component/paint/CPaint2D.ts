@@ -48,7 +48,7 @@ Tail
 
 
 */
-var gMargin=1.0;;
+
 export class CPaint2D extends CPaint
 {
 	protected mSize : CVec2;
@@ -426,8 +426,8 @@ export class CPaint2D extends CPaint
 			else if(tex instanceof CAtlas)
 			{
 				if(this.mTexCodi.x != 1 || this.mTexCodi.y != 1 || this.mTexCodi.z != 0 || this.mTexCodi.w != 0) {
-					let width = Math.round(tex.mWidth * this.mTexCodi.x);
-					let height = Math.round(tex.mHeight * this.mTexCodi.y);
+					let width = Math.round(tex.GetWidth() * this.mTexCodi.x);
+					let height = Math.round(tex.GetHeight() * this.mTexCodi.y);
 					this.SetSize(new CVec2(width, height));
 					this.EditRefresh();
 				}
@@ -582,34 +582,34 @@ export class CPaint2D extends CPaint
 		}
 		
 	}
-	//left,top,right,bottom
-	override GetLeftTopRightBottom(_frame : CFrame) 
-	{
-		const tex = _frame.Res().Find(this.mTextureKey[0]) as CTexture;
-		if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return null;
-		const imgW = tex.GetWidth();
-		const imgH = tex.GetHeight();
+	// //left,top,right,bottom
+	// override GetLeftTopRightBottom(_frame : CFrame) 
+	// {
+	// 	const tex = _frame.Res().Find(this.mTextureKey[0]) as CTexture;
+	// 	if(tex==null || (tex.GetWidth()==1 && tex.GetHeight()==1))	return null;
+	// 	const imgW = tex.GetWidth();
+	// 	const imgH = tex.GetHeight();
 
-		const uv = this.mTexCodi;
+	// 	const uv = this.mTexCodi;
 
-		// // 역변환: tex = (left, top, right, bottom) in px
-		// const width = uv.x * imgW;
-		// const height = uv.y * imgH;
-		// const left = uv.z * imgW;
-		// const top = (1 - uv.w - uv.y) * imgH;
-		// const right = left + width;
-		// const bottom = top + height;
+	// 	// // 역변환: tex = (left, top, right, bottom) in px
+	// 	// const width = uv.x * imgW;
+	// 	// const height = uv.y * imgH;
+	// 	// const left = uv.z * imgW;
+	// 	// const top = (1 - uv.w - uv.y) * imgH;
+	// 	// const right = left + width;
+	// 	// const bottom = top + height;
 		
-		const startX = Math.round((this.mTexCodi.z - (gMargin*0.5)/imgW) * imgW);
-		const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y - (gMargin*0.5)/imgH) * imgH);
+	// 	const startX = Math.round((this.mTexCodi.z - (gMargin*0.5)/imgW) * imgW);
+	// 	const startY = Math.round((1 - this.mTexCodi.w - this.mTexCodi.y - (gMargin*0.5)/imgH) * imgH);
 		
-		const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x + gMargin/imgW) * imgW);
-		const endY = Math.round((1 - this.mTexCodi.w + gMargin/imgH) * imgH);
+	// 	const endX = Math.round((this.mTexCodi.z + this.mTexCodi.x + gMargin/imgW) * imgW);
+	// 	const endY = Math.round((1 - this.mTexCodi.w + gMargin/imgH) * imgH);
 		
-		return new CVec4(startX, startY, endX, endY);
+	// 	return new CVec4(startX, startY, endX, endY);
 
 
-	}
+	// }
 	override Render(_vf : CShader)
 	{
 
@@ -661,39 +661,39 @@ export class CPaint2D extends CPaint
 		
 	}
 	
-	override SetTexCodi(_uv : CVec4) : void;
-	override SetTexCodi(_uv : CVec4,_margin : number) : void;
-	override SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
-	override SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
-	override SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
-	{
-		if(this.PushTag("codi"))
-			this.ClearBatch();
-		if(_stX==null)
-		{
-			this.mTexCodi.x=1-_stY;
-			this.mTexCodi.y=1-_stY;
-			this.mTexCodi.z=_stY*0.5;
-			this.mTexCodi.w=_stY*0.5;
-		}
-		else if(_stX instanceof CVec4)
-		{
-			//this.mTexCodi.Import(_stX);
-			if(_stY==null)	_stY=0;
-			this.mTexCodi.x=_stX.x-_stY;
-			this.mTexCodi.y=_stX.y-_stY;
-			this.mTexCodi.z=_stX.z+_stY*0.5;
-			this.mTexCodi.w=_stX.w+_stY*0.5;
-		}
-		else
-		{
-			this.mTexCodi.x = (_edX - _stX) / _imgW-_margin/_imgW;
-			this.mTexCodi.y = (_edY - _stY) / _imgH-_margin/_imgH;
+	// override SetTexCodi(_uv : CVec4) : void;
+	// override SetTexCodi(_uv : CVec4,_margin : number) : void;
+	// override SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number) : void;
+	// override SetTexCodi(_stX : number,_stY : number,_edX : number,_edY : number,_imgW : number,_imgH : number,_margin : number) : void;
+	// override SetTexCodi(_stX : any,_stY =null,_edX =null,_edY =null,_imgW =null,_imgH =null,_margin=gMargin)
+	// {
+	// 	if(this.PushTag("codi"))
+	// 		this.ClearBatch();
+	// 	if(_stX==null)
+	// 	{
+	// 		this.mTexCodi.x=1-_stY;
+	// 		this.mTexCodi.y=1-_stY;
+	// 		this.mTexCodi.z=_stY*0.5;
+	// 		this.mTexCodi.w=_stY*0.5;
+	// 	}
+	// 	else if(_stX instanceof CVec4)
+	// 	{
+	// 		//this.mTexCodi.Import(_stX);
+	// 		if(_stY==null)	_stY=0;
+	// 		this.mTexCodi.x=_stX.x-_stY;
+	// 		this.mTexCodi.y=_stX.y-_stY;
+	// 		this.mTexCodi.z=_stX.z+_stY*0.5;
+	// 		this.mTexCodi.w=_stX.w+_stY*0.5;
+	// 	}
+	// 	else
+	// 	{
+	// 		this.mTexCodi.x = (_edX - _stX) / _imgW-_margin/_imgW;
+	// 		this.mTexCodi.y = (_edY - _stY) / _imgH-_margin/_imgH;
 
-			this.mTexCodi.z = (_stX) / _imgW+(_margin*0.5)/_imgW;
-			this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(_margin*0.5)/_imgH;
-		}
-	}
+	// 		this.mTexCodi.z = (_stX) / _imgW+(_margin*0.5)/_imgW;
+	// 		this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(_margin*0.5)/_imgH;
+	// 	}
+	// }
 
 	// // 텍스처 사이즈를 이용해서 절대좌표 구하기 (보정값 반영)
 	// AbsoluteCoordsFromTexCodi(_imgW : number, _imgH : number) : CVec4
@@ -1045,7 +1045,7 @@ export class CPaintHTML extends CPaint2D
 	override Update(_delay)
 	{
 		if(this.mRenPT.length==0 || this.mElement==null)	return;
-		if(this.mRenPT[0].mCam.mUpdateMat!=0 || this.mOwner.mUpdateMat!=0 || this.mOwner.GetFrame().Win().IsResize() || this.mUpdateFMat==true){}
+		if(this.mRenPT[0].mCam.mUpdateMat!=0 || this.mOwner.mUpdateMat!=0 || this.mOwner.GetFrame().Win().IsResize() || this.mUpdateFMat==true || this.mElement.clientWidth!=this.mOrgSize.x){}
 		else return;
 
 		//if(this.GetOwner().IsDestroy())this.mElement.remove();
@@ -1188,6 +1188,10 @@ export class CPaint2DMerge extends CPaint
 					this.mTexSize=new CVec2(tex.GetWidth(),tex.GetHeight());
 					
 				}
+				else if(tex instanceof CAtlas)
+				{
+					this.mTexSize=new CVec2(tex.GetWidth(),tex.GetHeight());
+				}
 				else
 				{
 					CAlert.E("나올수 없다!");
@@ -1260,6 +1264,7 @@ export class CPaint2DMerge extends CPaint
 		let posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
 		let uvb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.UV);
 		let norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+		let inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
 		if(posb.length == 0) {
 			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);
 			posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
@@ -1271,6 +1276,10 @@ export class CPaint2DMerge extends CPaint
 		if(norb.length == 0) {
 			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Normal);
 			norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
+		}
+		if(inb.length == 0) {
+			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Index);
+			inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
 		}
 
 		const rtDir = new CVec3(0.5, 0.5, 0);
@@ -1311,11 +1320,49 @@ export class CPaint2DMerge extends CPaint
 			this.mBound.InitBound(lt);
 
             // uvb
-            const codi = this.mCodiList[i] ?? new CVec4(1, 1, 0, 0);
-			uvb[0].bufF.Push(GetTexCodiedUV(uv0, codi));
-			uvb[0].bufF.Push(GetTexCodiedUV(uv1, codi));
-			uvb[0].bufF.Push(GetTexCodiedUV(uv2, codi));
-			uvb[0].bufF.Push(GetTexCodiedUV(uv3, codi));
+            let codi  : CVec4=new CVec4(1, 1, 0, 0);;;
+			if(this.mCodiList[i]!=null)
+			{
+
+                codi.x = (this.mCodiList[i].z - this.mCodiList[i].x) / this.mTexSize.x;
+				codi.y = (this.mCodiList[i].w - this.mCodiList[i].y) / this.mTexSize.y;
+
+
+				codi.z = this.mCodiList[i].x / this.mTexSize.x;
+				codi.w = 1-(this.mCodiList[i].y / this.mTexSize.x)-codi.y;
+
+				//codi.y = (this.mCodiList[i].w - this.mCodiList[i].y - gMargin) / this.mTexSize.y;
+
+				// codi.z = (this.mCodiList[i].x + gMargin * 0.5) / this.mTexSize.x;
+				// codi.w = 1-(this.mCodiList[i].y + gMargin * 0.5) / this.mTexSize.y;
+
+				// this.mTexCodi.x = (_edX - _stX) / _imgW-_margin/_imgW;
+				// this.mTexCodi.y = (_edY - _stY) / _imgH-_margin/_imgH;
+
+				// this.mTexCodi.z = (_stX) / _imgW+(_margin*0.5)/_imgW;
+				// this.mTexCodi.w = 1-(_stY / _imgH)-this.mTexCodi.y-(_margin*0.5)/_imgH;
+
+			}
+		
+            let uvLB = GetTexCodiedUV(uv0, codi);
+            let uvRB = GetTexCodiedUV(uv1, codi);
+            let uvRT = GetTexCodiedUV(uv2, codi);
+            let uvLT = GetTexCodiedUV(uv3, codi);
+
+            // L과 B만 음수로 변환
+            uvLB.x = -uvLB.x;
+            uvLB.y = -uvLB.y;
+            uvRB.x =  uvRB.x;
+            uvRB.y = -uvRB.y;
+            uvRT.x =  uvRT.x;
+            uvRT.y =  uvRT.y;
+            uvLT.x = -uvLT.x;
+            uvLT.y =  uvLT.y;
+			
+			uvb[0].bufF.Push(uvLB);
+			uvb[0].bufF.Push(uvRB);
+			uvb[0].bufF.Push(uvRT);
+			uvb[0].bufF.Push(uvLT);
 
             // norb
 			const rotatedNor = CMath.V3MulMatNormal(nor, pMat);
@@ -1324,12 +1371,12 @@ export class CPaint2DMerge extends CPaint
 			norb[0].bufF.Push(rotatedNor);
 			norb[0].bufF.Push(rotatedNor);
 
-			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 0);
-			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 1);
-			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 2);
-			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 2);
-			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 3);
-			this.mMeshDataNode.ci.index.push(this.mMeshDataNode.ci.vertexCount + 0);
+			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 0);
+			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 1);
+			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 2);
+			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 2);
+			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 3);
+			inb[0].bufI.push(this.mMeshDataNode.ci.vertexCount + 0);
 
 			this.mMeshDataNode.ci.vertexCount += 4;
 			this.mMeshDataNode.ci.indexCount += 6;

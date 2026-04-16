@@ -133,6 +133,17 @@ export class CComponent extends CObject
 		this.mComMsgLen=0;
 		this.mOwner=null;
 	}
+	override Recycle()
+	{
+		if(this.GetRecycleType()!=null && this.IsRecycle()==false)
+		{
+			super.Recycle();
+			return;
+		}
+		
+		this.mStartChk=true;
+		this.mComMsgLen=0;
+	}
 	IsEnable()	
 	{	
 		if(this.IsDestroy())	return false;
@@ -173,12 +184,20 @@ export class CComponent extends CObject
 		
 		if(this.mDestroy)
 			return;
+
+		if(this.GetRecycleType()!=null)
+		{
+			this.Recycle();
+			return;
+		}
+			
+
 		this.mDestroy = true;
 		this.mEnable=false; 
 		this.mStartChk=true;
 		this.ClearMsg();
 		this.mComMsg=null;
-		this.Recycle();
+		
 		  
 	}
 	//프리팹 상태에서 호출됌

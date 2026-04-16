@@ -10,6 +10,7 @@ import {
     sqrt,
     V2Dot,
     max,
+    Sam2DArrToV4,
 } from "./Shader";
 
 // 밸류 노이즈 함수 : 완전 랜덤
@@ -141,7 +142,7 @@ export function SampleNoise(_uvw : CVec3, _type : number) : number
     var offX : number = tileX * 128.0 + coord.x;
     var offY : number = tileY * 128.0 + coord.y;
     
-    var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
+    var v4 : CVec4 = Sam2DArrToV4(new CVec3(1, offY,_type), offX);
     
     var zMod4 : number = mod(coord.z, 4.0);
     
@@ -150,7 +151,7 @@ export function SampleNoise(_uvw : CVec3, _type : number) : number
     else if(zMod4 < 2.5) return v4.z;
     else return v4.w;
 }
-
+//벡터2
 export function SampleNoiseVec2(_uvw : CVec3, _type : number) : CVec2
 {
     var coord : CVec3 = new CVec3(
@@ -168,7 +169,7 @@ export function SampleNoiseVec2(_uvw : CVec3, _type : number) : CVec2
     var offX : number = tileX * 128.0 + coord.x;
     var offY : number = tileY * 128.0 + coord.y;
     
-    var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
+    var v4 : CVec4 = Sam2DArrToV4(new CVec3(1,offY,_type), offX);
     
     var zMod4 : number = mod(coord.z, 2.0);
     
@@ -179,8 +180,8 @@ export function SampleNoiseVec2(_uvw : CVec3, _type : number) : CVec2
         return new CVec2(v4.z, v4.w);
     }
 }
-
-function SampleNoiseFrameLinear(_uvw : CVec3, _type : number) : number
+//보간 처리
+function SampleNoiseLinear(_uvw : CVec3, _type : number) : number
 {
     var coord : CVec3 = new CVec3(
         V2Mod(V2MulFloat(_uvw.xy, 126.0), 126.0),
@@ -197,7 +198,7 @@ function SampleNoiseFrameLinear(_uvw : CVec3, _type : number) : number
     var offX : number = tileX * 128.0 + coord.x;
     var offY : number = tileY * 128.0 + coord.y;
     
-    var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type + offY), offX);
+    var v4 : CVec4 = Sam2DArrToV4(new CVec3(1,offY,_type), offX);
     
     var zMod4 : number = mod(coord.z, 3.0);
     
@@ -220,92 +221,70 @@ export function NoiseNormalGet(_uvw : CVec3, _type : number) : CVec3
     }
     return new CVec3(0.0, 1.0, 0.0);
 }
-
 export function NoiseGet(_uvw : CVec3, _type : number) : number
 {
-    // 텍스쳐 샘플링
-    if(_type>SDF.eNoise.Perlin-0.5)
+    // 절차적 생성 (20~21)
+    if(_type > SDF.eNoise.Simplex - 0.5)             // > 20.5
     {
-        return SampleNoise(_uvw, SDF.eNoise.Perlin);
+        return NoiseSimplex3(new CVec3(_uvw.x*128.0, _uvw.y*128.0, _uvw.z*128.0));
     }
-    // else if(_type>SDF.eNoise.PerlinNormal-0.5)
-    // {
-    //     return SampleNoise(_uvw, SDF.eNoise.PerlinNormal);
-    // }
-    else if(_type>SDF.eNoise.PerlinFBM3-0.5)
+    else if(_type > SDF.eNoise.Gaussian - 0.5)       // > 19.5
     {
-        return SampleNoiseFrameLinear(_uvw, SDF.eNoise.PerlinFBM3);
-    }
-    else if(_type>SDF.eNoise.Blue-0.5)
-    {
-        var coord : CVec2 = V2Floor(V2Mod(_uvw.xy, 64.0));
-        var index : number = coord.y * 64.0 + coord.x;
-        var modIndex : number = mod(index, 2048.0);
-        var v4 : CVec4 = Sam2DToV4(new CVec2(11, _type), modIndex);
-        if(index < 2048.0)
-            return v4.x;
-        else
-            return v4.y;
+        return NoiseValue3(new CVec3(_uvw.x*128.0, _uvw.y*128.0, _uvw.z*128.0));
     }
 
-    // 절차적 생성
-    else if(_type<SDF.eNoise.Gaussian+0.5)
+    // 텍스쳐 샘플링 후처리 (10~13)
+    else if(_type > SDF.eNoise.PerlinFBM - 0.5)      // > 12.5
     {
-        var xi : number = _uvw.x * 128.0;
-        var yi : number = _uvw.y * 128.0;
-        var zi : number = _uvw.z * 128.0;
-        return NoiseValue3(new CVec3(xi, yi, zi));
-    }
-    else if(_type<SDF.eNoise.Simplex+0.5)
-    {
-        var xi : number = _uvw.x * 128.0;
-        var yi : number = _uvw.y * 128.0;
-        var zi : number = _uvw.z * 128.0;
-        return NoiseSimplex3(new CVec3(xi, yi, zi));
-    }
-    
-    // 텍스쳐 샘플링 후처리
-    else if(_type<SDF.eNoise.PerlinBillow+0.5)
-    {
-        return abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
-    }
-    else if(_type<SDF.eNoise.PerlinRidged+0.5)
-    {
-        return 1.0 - abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
-    }
-    else if(_type<SDF.eNoise.PerlinDomainWarp+0.5)
-    {
-        // qx
-        var uvw : CVec3 = _uvw;
-        var qx : number = SampleNoise(uvw, SDF.eNoise.Perlin);
-
-        // qy
-        uvw = V3AddV3(_uvw, new CVec3(5.2, 1.3, 0.1));
-        var qy : number = SampleNoise(uvw, SDF.eNoise.Perlin);
-
-        // qz
-        uvw = V3AddV3(_uvw, new CVec3(3.1, 9.2, 5.5));
-        var qz : number = SampleNoise(uvw, SDF.eNoise.Perlin);
-
-        // result
-        var warpStrength : number = 0.2;
-        uvw = V3AddV3(_uvw, V3MulFloat(new CVec3(qx, qy, qz), warpStrength));
-        return SampleNoise(uvw, SDF.eNoise.Perlin);
-    }
-    else if(_type<SDF.eNoise.PerlinFBM+0.5)
-    {
-        // 회전 FBM
         var matVec1 : CVec3 = new CVec3(0.0, 0.8, 0.6);
         var matVec2 : CVec3 = new CVec3(-0.8, 0.36, -0.48);
         var matVec3 : CVec3 = new CVec3(-0.6, -0.48, 0.64);
         var mat : CMat3 = new CMat3(matVec1, matVec2, matVec3);
-
-        var fbm : number;
+        var fbm : number = 0.0;
         fbm += 0.500 * SampleNoise(_uvw, SDF.eNoise.Perlin); _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
         fbm += 0.250 * SampleNoise(_uvw, SDF.eNoise.Perlin); _uvw = V3MulFloat(V3MulMat3Normal(_uvw, mat), 2.76434);
         fbm += 0.125 * SampleNoise(_uvw, SDF.eNoise.Perlin);
         return fbm;
     }
-    
-    return 1.0;
+    else if(_type > SDF.eNoise.PerlinDomainWarp - 0.5) // > 11.5
+    {
+        var uvw : CVec3 = _uvw;
+        var qx : number = SampleNoise(uvw, SDF.eNoise.Perlin);
+        uvw = V3AddV3(_uvw, new CVec3(5.2, 1.3, 0.1));
+        var qy : number = SampleNoise(uvw, SDF.eNoise.Perlin);
+        uvw = V3AddV3(_uvw, new CVec3(3.1, 9.2, 5.5));
+        var qz : number = SampleNoise(uvw, SDF.eNoise.Perlin);
+        uvw = V3AddV3(_uvw, V3MulFloat(new CVec3(qx, qy, qz), 0.2));
+        return SampleNoise(uvw, SDF.eNoise.Perlin);
+    }
+    else if(_type > SDF.eNoise.PerlinRidged - 0.5)   // > 10.5
+    {
+        return 1.0 - abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
+    }
+    else if(_type > SDF.eNoise.PerlinBillow - 0.5)   // > 9.5
+    {
+        return abs(SampleNoise(_uvw, SDF.eNoise.Perlin) * 2.0 - 1.0);
+    }
+
+    // 텍스쳐 샘플링 (1~4)
+    else if(_type > SDF.eNoise.Blue - 0.5)           // > 3.5
+    {
+        var coord : CVec2 = V2Floor(V2Mod(_uvw.xy, 64.0));
+        var index : number = coord.y * 64.0 + coord.x;
+        var modIndex : number = mod(index, 2048.0);
+        var v4 : CVec4 = Sam2DArrToV4(new CVec3(1, _type, SDF.eNoise.Blue), modIndex);
+        return index < 2048.0 ? v4.x : v4.y;
+    }
+    else if(_type > SDF.eNoise.PerlinFBM3 - 0.5)     // > 2.5
+    {
+        return SampleNoiseLinear(_uvw, SDF.eNoise.PerlinFBM3);
+    }
+    else if(_type > SDF.eNoise.PerlinNormal - 0.5)   // > 1.5
+    {
+        return SampleNoise(_uvw, SDF.eNoise.PerlinNormal);
+    }
+    else                                               // Perlin=1
+    {
+        return SampleNoise(_uvw, SDF.eNoise.Perlin);
+    }
 }

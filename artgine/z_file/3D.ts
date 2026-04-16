@@ -45,6 +45,9 @@ import {
 	V3Cross,
 	V2Nor,
 	smoothstep,
+	Sam2DArrMat,
+	Sam2DArrToMat,
+	Sam2DArrToV4,
 	
 } from "./Shader"
 import {
@@ -130,8 +133,8 @@ var camPos: CVec3=Null();
 var depthMap : number = 0.0;
 var screenResolution : CVec2=new CVec2(1.0, 1.0);
 
-//LUT
-var weightArrMat: Sam2DMat = new Sam2DMat(11,10);
+
+var weightArrMat: Sam2DArrMat = new Sam2DArrMat(1,SDF.eUni.MatSkin);
 var weightBakeMat: number = 9.0;
 var weightBakeIndex : number;
 
@@ -233,7 +236,56 @@ function ps_main_simple()
 	out_color=L_cor;
 }
 
-function GetWorldWeightMat(_weightArrMat : Sam2DMat,_weightBakeArrMat : number,_index : number, 
+// function GetWorldWeightMat(_weightArrMat : Sam2DMat,_weightBakeArrMat : number,_index : number, 
+// 	_weight : CVec4, _weightIndex : CVec4, _worldMat : CMat, _skin : number) : CMat 
+// {
+// 	var woweMat : CMat = _worldMat;
+
+// 	if(_skin > 0.5 && _weight.x+_weight.y+_weight.z+_weight.w>0.0)
+// 	{
+// 		if(_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x>0.0)
+// 		{
+// 			var weightMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(_weightArrMat,_weightIndex.x));
+// 			weightMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(_weightArrMat,_weightIndex.y)),weightMat);
+// 			weightMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(_weightArrMat,_weightIndex.z)),weightMat);
+// 			weightMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(_weightArrMat,_weightIndex.w)),weightMat);
+// 			woweMat = MatMul(weightMat,woweMat);
+			
+// 		}
+// 		else if(_skin < SDF.eSkin.Bake + 0.5 && _index>-0.5)
+// 		{
+// 			var st : number=floor(_index);
+// 			var ed : number=st+1.0;
+
+			
+// 			var weightSTMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.x));
+// 			weightSTMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.y)),weightSTMat);
+// 			weightSTMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.z)),weightSTMat);
+// 			weightSTMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(new CVec2(_weightBakeArrMat,st),_weightIndex.w)),weightSTMat);
+
+
+// 			var weightEDMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.x));
+// 			weightEDMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.y)),weightEDMat);
+// 			weightEDMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.z)),weightEDMat);
+// 			weightEDMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(new CVec2(_weightBakeArrMat,ed),_weightIndex.w)),weightEDMat);
+
+
+// 			// var weightSTMat:CMat = Sam2DToMat(new CVec2(9.0,0.0),0.0);
+// 			// woweMat = MatMul(weightSTMat,woweMat);
+// 			//woweMat = weightSTMat;
+// 			var weightMat:CMat = MatMix(weightSTMat, weightEDMat, _index-st);
+// 			woweMat = MatMul(weightMat,woweMat);
+			
+// 		}
+		
+		
+		
+// 	}
+
+// 	return woweMat;
+// }
+
+function GetWorldWeightMat(_weightArrMat : Sam2DArrMat,_weightBakeArrMat : number,_index : number, 
 	_weight : CVec4, _weightIndex : CVec4, _worldMat : CMat, _skin : number) : CMat 
 {
 	var woweMat : CMat = _worldMat;
@@ -242,10 +294,10 @@ function GetWorldWeightMat(_weightArrMat : Sam2DMat,_weightBakeArrMat : number,_
 	{
 		if(_skin < SDF.eSkin.Bone + 0.5 && _weightArrMat.x>0.0)
 		{
-			var weightMat:CMat = FloatMulMat(_weight.x,Sam2DToMat(_weightArrMat,_weightIndex.x));
-			weightMat = MatAdd(FloatMulMat(_weight.y,Sam2DToMat(_weightArrMat,_weightIndex.y)),weightMat);
-			weightMat = MatAdd(FloatMulMat(_weight.z,Sam2DToMat(_weightArrMat,_weightIndex.z)),weightMat);
-			weightMat = MatAdd(FloatMulMat(_weight.w,Sam2DToMat(_weightArrMat,_weightIndex.w)),weightMat);
+			var weightMat:CMat = FloatMulMat(_weight.x,Sam2DArrToMat(_weightArrMat,_weightIndex.x));
+			weightMat = MatAdd(FloatMulMat(_weight.y,Sam2DArrToMat(_weightArrMat,_weightIndex.y)),weightMat);
+			weightMat = MatAdd(FloatMulMat(_weight.z,Sam2DArrToMat(_weightArrMat,_weightIndex.z)),weightMat);
+			weightMat = MatAdd(FloatMulMat(_weight.w,Sam2DArrToMat(_weightArrMat,_weightIndex.w)),weightMat);
 			woweMat = MatMul(weightMat,woweMat);
 			
 		}
@@ -281,6 +333,7 @@ function GetWorldWeightMat(_weightArrMat : Sam2DMat,_weightBakeArrMat : number,_
 
 	return woweMat;
 }
+
 
 
 
@@ -357,7 +410,7 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	P = V4MulMatCoordi(P, woweMat);
 
 	BranchBegin("wind","W",[windInfluence, windDir, windPos, windInfo, windCount, time]);
-	P = ApplyWind(P, skin, f4_we, f4_wi, time);
+	P = ApplyWind(P, skin, f4_we, time);
 	BranchEnd();
 	
 	to_worldPos=P;
@@ -556,13 +609,17 @@ function ps_main()
 		// shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
 		// shadow = shadowTex.x;
 
-		//uvScreen = V2DivV2(screenPos.xy, screenSize.xy); // 0~1
+		//uvScreen = V2DivV2(gl_FragCoord.xy, new CVec2(1920,1017)); // 0~1
 		uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
 	
-		shadowTex = Sam2DToColor(shadowOn, uvScreen);  // <- 여기! 절대 size 곱하지 말기
+		shadowTex = Sam2DToColor(10.0, uvScreen);  // <- 여기! 절대 size 곱하지 말기
 		shadow = shadowTex.x;
+		
 	}
 	BranchEnd();
+
+	// out_color=new CVec4(shadowTex.x,shadowTex.y,shadowTex.z,1.0);
+	// return;
 
 
 	
@@ -785,18 +842,18 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	
 	if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
 	{
-		svm =Sam2DToMat(shadowNearCasV0,shadowWrite.y);
-		spm =Sam2DToMat(shadowFarCasP0,shadowWrite.y);
+		svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+		spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
 	}
 	else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
 	{
-		svm =Sam2DToMat(shadowTopCasV1,shadowWrite.y);
-		spm =Sam2DToMat(shadowBottomCasP1,shadowWrite.y);
+		svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+		spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
 	}
 	else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
 	{
-		svm =Sam2DToMat(shadowLeftCasV2,shadowWrite.y);
-		spm =Sam2DToMat(shadowRightCasP2,shadowWrite.y);
+		svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+		spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
 	}
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
@@ -911,7 +968,7 @@ function ps_main_shadow_read()
 
 	pAll = 0.0;
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		worldLigDir = Sam2DToV4(ligDir, Sam2DToV4(shadowReadList,i).x);
+		worldLigDir = Sam2DArrToV4(ligDir, Sam2DArrToV4(shadowReadList,IntToFloat(i)).x);
 
 		// 디렉셔널 라이팅이고, 라이팅을 받는 영역임
 		if(worldLigDir.w < 1.5) {
@@ -955,14 +1012,14 @@ function ps_main_shadow_read()
 	BranchBegin("shadowMulti","SDM",[alphaModel]);
 	
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		shadowRead =Sam2DToV4(shadowReadList,i);
+		shadowRead =Sam2DArrToV4(shadowReadList,i);
 		sVal  = calcShadow(shadowRead, IntToFloat(i), to_normal, world);
 		all+=sVal;
 	}
 	all/=shadowCount;
 	if(all<0.0)all=0.0;
 	BranchDefault();
-	shadowRead =Sam2DToV4(shadowReadList,0.0);
+	shadowRead =Sam2DArrToV4(shadowReadList,0.0);
 	all  = calcShadow(shadowRead, 0.0, to_normal, world);
 	BranchEnd();
 	

@@ -1,3 +1,5 @@
+import { CLZ4, CLZString } from "./LZ.js";
+
 
 var gNode=null;
 export class CUtil
@@ -12,7 +14,12 @@ export class CUtil
 		}
         return gNode;
     }
-
+	static IsSafari()
+	{
+		if (CUtil.IsNode()) return false;
+		const ua = navigator.userAgent;
+		return /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua);
+	}
 	
 	static IsMobile()
 	{
@@ -69,11 +76,11 @@ export class CUtil
 	    
 	    return bytes.buffer;
 	}
-	static ArrayToBase64(_arrayBuffer : ArrayBuffer)
+	static ArrayToBase64(_arrayBuffer : ArrayBufferLike)
 	{
 		return btoa(new Uint8Array(_arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
 	}
-	static ArrayToString(_arrayBuffer : ArrayBuffer)
+	static ArrayToString(_arrayBuffer : ArrayBufferLike)
 	{
 		var enc = new TextDecoder("utf-8");		
 		return enc.decode(new Uint8Array(_arrayBuffer));
@@ -104,6 +111,32 @@ export class CUtil
 		// 기본값
 		return 'en';
 
+	}
+
+	static ArrayToLZBase64(_arrayBuffer: ArrayBufferLike): string
+	{
+		const b64 = CUtil.ArrayToBase64(_arrayBuffer);
+		return CLZString.compressToBase64(b64);
+	}
+
+	static LZBase64ToArray(_lzBase64: string): ArrayBuffer
+	{
+		const b64 = CLZString.decompressFromBase64(_lzBase64);
+		if (b64 == null) throw new Error("압축 해제 실패");
+		return CUtil.Base64ToArray(b64);
+	}
+
+	private static readonly _lz4 = new CLZ4();
+
+	static ArrayToLZ4(_arrayBuffer: ArrayBufferLike, _level: number = 6): Uint8Array
+	{
+		return CUtil._lz4.compress(new Uint8Array(_arrayBuffer), _level);
+	}
+	static LZ4ToArray(_lz4: Uint8Array, _originalSize?: number): ArrayBufferLike
+	{
+		const result = CUtil._lz4.decompress(_lz4, _originalSize);
+		if (result == null) throw new Error("압축 해제 실패");
+		return result.buffer;
 	}
 }
 

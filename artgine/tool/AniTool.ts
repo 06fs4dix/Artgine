@@ -34,10 +34,12 @@ import { CModalFlex } from "../util/CModalUtil.js";
 
 
 var gAtlas : CAtlas=null;
+var gAtlasPush=false;
 var gCloseEvent : CEvent=null;
-export function AniToolAtlasEvent(_atl : CAtlas,_event)
+export function AniToolAtlasEvent(_atl : CAtlas,_push : boolean,_event)
 {
     gAtlas=_atl;
+    gAtlasPush=_push;
     gCloseEvent=CEvent.ToCEvent(_event);
 }
 var gTexcodiPaint : CPaint2D=null;
@@ -332,10 +334,11 @@ export function AniTool(_ani: CAnimation, _basicTex=null,_basicMesh=null) {
         gImg = null;
         if(gAtlas!=null)
         {
-            let buf : ArrayBuffer=null;
+            let buf : ArrayBufferLike=null;
             let file="";
             let codiArr=new Array<CVec4>();
-                
+            
+            
             for(let clip of gAni.mClip)
             {
                 if(clip instanceof CClipBase64)
@@ -352,7 +355,11 @@ export function AniTool(_ani: CAnimation, _basicTex=null,_basicMesh=null) {
                     codiArr.push(new CVec4(clip.mSTX,clip.mSTY,clip.mEDX,clip.mEDY));
                 }
             }
-            if(file!="")
+            if(gAtlasPush==true)
+            {
+                gAtlas.mTexel=codiArr;
+            }
+            else if(file!="")
                 await gAtlas.Push(file,buf,codiArr);
             
             
@@ -484,6 +491,29 @@ function AniToolUpdate(_delay) {
     if (gAtl.Frame().Input().KeyDown(CInput.eKey.LButton)) {
         if (gMode == 4 || gMode == 2) {
             gAtl.Frame().Input().SetDragBox(true);
+        }
+        // mode 0: 기본 - CClipCoodi 클릭시 카드로 스크롤
+        else if (gMode == 0) {
+            let mouse = gAtl.Frame().Input().Mouse();
+            const cam = gAtl.Brush().GetCam2D();
+            let ray = cam.GetRay(mouse.x, mouse.y);
+            let world = CMath.V3AddV3(ray.GetOriginal(), CMath.V3MulFloat(ray.GetDirect(), -ray.GetOriginal().z / ray.GetDirect().z));
+            world.x = Math.trunc(world.x);
+            world.y = Math.trunc(world.y);
+
+            for (let i = 0; i < gAni.mClip.length; ++i) {
+                let clip = gAni.mClip[i];
+                if (clip instanceof CClipCoodi) {
+                    if (clip.mSTX < world.x && world.x < clip.mEDX && clip.mSTY < -world.y && -world.y < clip.mEDY) {
+                        const listTab = CDOM.ID("list-tab") as HTMLElement;
+                        if (listTab) listTab.click();
+                        setTimeout(() => {
+                            CDOM.ID(`aniClipCard_${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }, 50);
+                        break;
+                    }
+                }
+            }
         }
         else if (gMode == 1) {
             let mouse = gAtl.Frame().Input().Mouse();
@@ -668,7 +698,7 @@ function AniToolRangeInit() {
 
     let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
     ClipSub.SetKey("Range");
-    let pt = ClipSub.PushComp(new CPaintHTML(CDOM.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'></div>`),
+    let pt = ClipSub.PushComp(new CPaintHTML(CDOM.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;pointer-events:none;user-select:none;'></div>`),
         new CVec2(EDX_num - STX_num, EDY_num - STY_num), CDOM.ID("AniToolLeft_div")));
     pt.SetPivot(new CVec3(1, -1, 1));
     ClipSub.SetPos(new CVec3(STX_num, -STY_num));
@@ -746,11 +776,15 @@ async function AniToolSubjectInit() {
         else if (clip instanceof CClipCoodi) {
             let ClipSub = gAtl.Canvas("AniTool").PushSub(new CSubject());
             ClipSub.SetKey(i);
-            let pt = ClipSub.PushComp(new CPaintHTML(CDOM.DataToDom(`<div class='border border-primary' style='color:red;font-size: x-small;'>${i}</div>`),
-                new CVec2(clip.mEDX - clip.mSTX, clip.mEDY - clip.mSTY), CDOM.ID("AniToolLeft_div")));
+
+
+           
+
+            let pt = ClipSub.PushComp(new CPaintHTML(CDOM.DataToDom(`<div class='border border-primary' style='color:red;font-size:x-small;overflow:hidden;line-height:1;pointer-events:none;user-select:none;'><span style='display:inline-block;text-shadow:0 0 2px #000,0 0 2px #000;'>${i}</span></div>`),
+                new CVec2(clip.mEDX - clip.mSTX+2, clip.mEDY - clip.mSTY+2), CDOM.ID("AniToolLeft_div")));
             //pt.SetPivot(new CVec3(1,-1,1));
             //ClipSub.SetPos(new CVec3(clip.mSTX,(clip.mSTY)));   
-            ClipSub.SetPos(new CVec3(clip.mSTX + pt.GetSize().x * 0.5, -(clip.mSTY + pt.GetSize().y * 0.5)));
+            ClipSub.SetPos(new CVec3(clip.mSTX + pt.GetSize().x * 0.5-1, -(clip.mSTY + pt.GetSize().y * 0.5-1)));
         }
         else if (clip instanceof CClipBase64) {
             let cb64 = clip as CClipBase64;

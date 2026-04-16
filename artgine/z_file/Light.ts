@@ -1,5 +1,5 @@
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, IntToFloat, max, min, pow, reflect, Sam2DMat, 
+import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, IntToFloat, max, min, pow, reflect, Sam2DArrToV4, Sam2DArrV4, Sam2DMat, 
     Sam2DToV4, Sam2DV4, SamCubeLodToColor, SamCubeMaxLod, SaturateV3,  V2AddV2, V2MulFloat, V3AddV3, 
     V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
 
@@ -13,8 +13,8 @@ export var ligStep2 : number=SDF.eLightStep2.Emissive;
 export var ligStep3 : number=0;
 
 //LUT
-export var ligDir: Sam2DV4=new Sam2DV4(11,128);
-export var ligCol: Sam2DV4=new Sam2DV4(11,129);
+export var ligDir: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightDir);
+export var ligCol: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightColor);
 
 export var envCube : number = -1;
 export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4
@@ -106,8 +106,8 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
     for(var i=0;i<SDF.TexSizeMax;++i)
     {
         if(i >= FloatToInt(ligCount)) break;
-        var lDir : CVec4=Sam2DToV4(ligDir,i);
-        var lCol : CVec4=Sam2DToV4(ligCol,i);
+        var lDir : CVec4=Sam2DArrToV4(ligDir,IntToFloat(i));
+        var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
 
         //lDir가 0이면 라이트 아님
         if(abs(lDir.w) <= 0.5) continue;
@@ -329,8 +329,8 @@ export function GetSunInfo() : CMat3
     for(var i=0;i<SDF.TexSizeMax;++i)
 	{
 		if(i >= FloatToInt(ligCount)) break;
-		var dir : CVec4 = Sam2DToV4(ligDir,i);
-		var col : CVec4 = Sam2DToV4(ligCol,i);
+		var dir : CVec4 = Sam2DArrToV4(ligDir,IntToFloat(i));
+		var col : CVec4 = Sam2DArrToV4(ligCol,IntToFloat(i));
 
 		//lDir가 0이면 라이트 아님
 		if(abs(dir.w) <= 0.5) continue;
@@ -367,8 +367,8 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,ambient
     for(var i=0;i<SDF.TexSizeMax;++i)
     {
         if(i >= FloatToInt(ligCount)) break;
-        var lDir : CVec4=Sam2DToV4(ligDir,i);
-        var lCol : CVec4=Sam2DToV4(ligCol,i);
+        var lDir : CVec4=Sam2DArrToV4(ligDir,IntToFloat(i));
+        var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
 
         //라이팅 아니어서 스킵
         if(abs(lDir.w) <= 0.5) continue;
