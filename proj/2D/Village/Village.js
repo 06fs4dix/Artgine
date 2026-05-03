@@ -1,4 +1,4 @@
-const version = 'mmt51223_7';
+const version = 'mopwertg_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
 import { CNPC } from "./CNPC.js";
@@ -48,6 +48,7 @@ import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
 import { CSurfaceBloom } from "https://06fs4dix.github.io/Artgine/plugin/Bloom/Bloom.js";
 import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
+import { CCIndex } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCIndex.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
 import { CRPAuto, CRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CRPMgr.js";
@@ -58,6 +59,55 @@ import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPa
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
 import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
 import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHTMLBar.js";
+{
+    const backVoxel = Main.Find("BackGround");
+    if (backVoxel) {
+        const decoNames = ["Prefab/LTree", "Prefab/MTree", "Prefab/Flower1", "Prefab/Flower2"];
+        const decoObjs = decoNames.map(name => CBlackBoard.Find(name)).filter(obj => obj && obj.Export);
+        const width = backVoxel.mBuf.mCount?.x || 0;
+        const height = backVoxel.mBuf.mCount?.y || 0;
+        const tileSize = backVoxel.mBuf.mSize || 200;
+        const placed = new Set();
+        const minDist = 2;
+        const placeProb = 0.1;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let pos = new CVec3(x * tileSize, y * tileSize, 0);
+                if (pos.x < 1000 || pos.x > 15000 || pos.y < 1000 || pos.y > 15000)
+                    continue;
+                const idx = new CCIndex(x, y, 0);
+                const vinfo = backVoxel.mBuf.RGB(idx);
+                if ((vinfo == 0x0000ff00 || vinfo == 0x00001000 || vinfo == 0x00002000 || vinfo == 0x00003000 || vinfo == 0x00004000)
+                    && Math.random() < placeProb) {
+                    let overlap = false;
+                    for (let dy = -minDist; dy <= minDist; dy++) {
+                        for (let dx = -minDist; dx <= minDist; dx++) {
+                            if (dx === 0 && dy === 0)
+                                continue;
+                            const key = (x + dx) + ',' + (y + dy);
+                            if (placed.has(key)) {
+                                overlap = true;
+                                break;
+                            }
+                        }
+                        if (overlap)
+                            break;
+                    }
+                    if (overlap)
+                        continue;
+                    const deco = decoObjs[Math.floor(Math.random() * decoObjs.length)];
+                    if (deco) {
+                        const obj = deco.ExportProxy();
+                        obj.SetPos(pos);
+                        obj.SetSave(false);
+                        Real.PushSub(obj);
+                        placed.add(x + ',' + y);
+                    }
+                }
+            }
+        }
+    }
+}
 CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     let ba = [];
     for (let [key, value] of CBlackBoard.Map()) {

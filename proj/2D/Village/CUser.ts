@@ -72,7 +72,7 @@ export class CUser extends CSubject
         let sm = this.PushComp(new CSMComp());
 
         
-        sm.GetSM().PushPattern([
+        sm.GetSM().PushRole([
             {
                 "and":[{"s":CVec3.eDir.Null,"o":"==","v":1}],
                 "exe":[{"t":"Message","a":"ResetAnimation","p":["StandLeft"]}]
@@ -155,39 +155,39 @@ export class CUser extends CSubject
     }
     ResetAnimation(_key)
     {
-        this.mAF.ResetAni(this.mAniMap.get(_key));
+        this.mAF.SetAni(this.mAniMap.get(_key));
     }
     StandLeft()
     {
-        this.mAF.ResetAni(this.mAniMap.get("StandLeft"));
+        this.mAF.SetAni(this.mAniMap.get("StandLeft"));
     }
     StandRight()
     {
-        this.mAF.ResetAni(this.mAniMap.get("StandRight"));
+        this.mAF.SetAni(this.mAniMap.get("StandRight"));
     }
     StandUp()
     {
-        this.mAF.ResetAni(this.mAniMap.get("StandUp"));
+        this.mAF.SetAni(this.mAniMap.get("StandUp"));
     }
     StandDown()
     {
-        this.mAF.ResetAni(this.mAniMap.get("StandDown"));
+        this.mAF.SetAni(this.mAniMap.get("StandDown"));
     }
     MoveLeft()
     {
-        this.mAF.ResetAni(this.mAniMap.get("MoveLeft"));
+        this.mAF.SetAni(this.mAniMap.get("MoveLeft"));
     }
     MoveRight()
     {
-        this.mAF.ResetAni(this.mAniMap.get("MoveRight"));
+        this.mAF.SetAni(this.mAniMap.get("MoveRight"));
     }
     MoveUp()
     {
-        this.mAF.ResetAni(this.mAniMap.get("MoveUp"));
+        this.mAF.SetAni(this.mAniMap.get("MoveUp"));
     }
     MoveDown()
     {
-        this.mAF.ResetAni(this.mAniMap.get("MoveDown"));
+        this.mAF.SetAni(this.mAniMap.get("MoveDown"));
     }
     override Update(_update : CUpdate): void 
     {

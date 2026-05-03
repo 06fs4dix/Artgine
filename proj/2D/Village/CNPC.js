@@ -112,7 +112,7 @@ export class CNPC extends CSubject {
         this.mCL.SetRestitution(0);
         this.PushComp(new CShadowPlane());
         let sm = this.PushComp(new CSMComp());
-        sm.GetSM().PushPattern([
+        sm.GetSM().PushRole([
             {
                 "and": [{ "s": CVec3.eDir.Null, "o": "==", "v": 1 }],
                 "exe": [{ "t": "Message", "a": "StandLeft" }]
@@ -185,28 +185,28 @@ export class CNPC extends CSubject {
         co.Start();
     }
     StandLeft() {
-        this.mAF.ResetAni(this.mAniMap.get("StandLeft"));
+        this.mAF.SetAni(this.mAniMap.get("StandLeft"));
     }
     StandRight() {
-        this.mAF.ResetAni(this.mAniMap.get("StandRight"));
+        this.mAF.SetAni(this.mAniMap.get("StandRight"));
     }
     StandUp() {
-        this.mAF.ResetAni(this.mAniMap.get("StandUp"));
+        this.mAF.SetAni(this.mAniMap.get("StandUp"));
     }
     StandDown() {
-        this.mAF.ResetAni(this.mAniMap.get("StandDown"));
+        this.mAF.SetAni(this.mAniMap.get("StandDown"));
     }
     MoveLeft() {
-        this.mAF.ResetAni(this.mAniMap.get("MoveLeft"));
+        this.mAF.SetAni(this.mAniMap.get("MoveLeft"));
     }
     MoveRight() {
-        this.mAF.ResetAni(this.mAniMap.get("MoveRight"));
+        this.mAF.SetAni(this.mAniMap.get("MoveRight"));
     }
     MoveUp() {
-        this.mAF.ResetAni(this.mAniMap.get("MoveUp"));
+        this.mAF.SetAni(this.mAniMap.get("MoveUp"));
     }
     MoveDown() {
-        this.mAF.ResetAni(this.mAniMap.get("MoveDown"));
+        this.mAF.SetAni(this.mAniMap.get("MoveDown"));
     }
     PickMouse(_rayMouse) {
         if (this.GetFrame().Input().KeyUp(CInput.eKey.LButton)) {
