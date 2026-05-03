@@ -144,7 +144,7 @@ export class CWindow
 			
 			var touches = event.changedTouches; 
 
-			CConsol.Log("touches : "+touches.length);
+			//CConsol.Log("touches : "+touches.length);
 			for(var i=0;i<touches.length;++i)
 			{
 				const target = touches[i].target as HTMLElement;

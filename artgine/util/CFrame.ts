@@ -778,7 +778,18 @@ export class CFrame
 			
 			this.mUpdate.mDeltaTime=timer.Delay();
 			this.mUpdate.mOffset++;
-			//this.mUpdate.mDeltaTime=0.2;
+			
+
+
+			const DEBUG_THRESHOLD = 5.0; // 1초 이상 멈췄다면 디버깅이나 탭 전환으로 판단
+			const NORMAL_FRAME_TIME = 0.0166; // 복귀 시 사용할 기본 프레임 시간 (약 60fps)
+
+			if (this.mUpdate.mDeltaTime > DEBUG_THRESHOLD && this.mPreferences.mDeveloper) 
+			{
+				// 디버깅 등으로 멈춰있다가 풀린 경우
+				this.mUpdate.mDeltaTime = NORMAL_FRAME_TIME; 
+				CAlert.W(`[Debug Detected] 시간 보정 발생: ${NORMAL_FRAME_TIME}s로 강제 설정`);
+			}
 
 			
 
@@ -810,16 +821,6 @@ export class CFrame
 				}
 			}
 
-			//addTime+=this.mUpdate.mFixedTime*this.mUpdate.mFixedCount;
-            //CConsol.Log("addTime : "+addTime+" time : "+timerTest.Delay(false));
-
-			//CConsol.Log(this.mUpdate.mDeltaTime+" + "+this.mUpdate.mFixedCount+"/"+this.mUpdate.mFixedTime);
-			
-			
-
-			// if(time>1000)
-			// 	time=1;
-			//subWDelay+=time;
 			this.Update(this.mUpdate);
 
 			

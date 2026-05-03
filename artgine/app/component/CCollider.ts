@@ -293,12 +293,7 @@ export class CCollider extends CGeometryComp
 			
 
 
-		if(this.mBound.GetType()==CBound.eType.Voxel)
-		{
-			this.mUpdateMat=CUpdate.eType.Not;
-			return true;
-		}
-		
+	
 		return start;
 	}
 	override SetOwner(_obj: any): void {
@@ -444,136 +439,7 @@ export class CCollider extends CGeometryComp
 	
 	CollisionChk( _co : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
 	{
-		let push : CVec3=null;
-
-		push=this.mColPair.get(_co);
-		if(push)	
-		{
-			if(_colTarget!=null)	_colTarget.Push(_co);
-			if(_colPush!=null)	_colPush.Push(CMath.V3MulFloat(push,-1));
-			return true;
-		}
-				
-		//옥트리에서 회전이 없을시 AABB테스트만 해도 되니까 이렇게
-		if(this.mBound.GetType()==_co.mBound.GetType() && this.mEvent==CCollider.eEvent.Trigger && 
-			this.mBW.mMat.IsRotUnit() && _co.mBW.mMat.IsRotUnit())
-		{
-			if(_colTarget!=null)	_colTarget.Push(_co);
-			if(_colPush!=null) _colPush.Push(this.mPushVec);
-			return true;
-		}
-		else if(this.mBound.GetType()==CBound.eType.Sphere && _co.mBound.GetType()==CBound.eType.Sphere)
-		{
-
-			// let aCen=CPoolGeo.ProductV3();
-			// let bCen=CPoolGeo.ProductV3();
-			const aRadius = this.mBW.mRadian;
-			// aCen.mF32A[0]=this.mGJKShape.GetMatrix().mF32A[12];
-			// aCen.mF32A[1]=this.mGJKShape.GetMatrix().mF32A[13];
-			// aCen.mF32A[2]=this.mGJKShape.GetMatrix().mF32A[14];
-			const bRadius = _co.mBW.mRadian;
-			// bCen.mF32A[0]=_co.mGJKShape.GetMatrix().mF32A[12];
-			// bCen.mF32A[1]=_co.mGJKShape.GetMatrix().mF32A[13];
-			// bCen.mF32A[2]=_co.mGJKShape.GetMatrix().mF32A[14];
-
-			var dir=CMath.V3SubV3(this.mBW.mPos, _co.mBW.mPos);
-			// CPoolGeo.RecycleV3(aCen);
-			// CPoolGeo.RecycleV3(bCen);
-			
-			var vlen = CMath.V3Len(dir);
-			if (vlen <= aRadius + bRadius)
-			{
-				//if(this.mDynamic==false)	return this.mPushVec;
-				CMath.V3Nor(dir,dir);
-				vlen = aRadius + bRadius - vlen;
-				if (vlen < 0.01)
-					vlen = 0.0;
-				else
-					vlen += 0.01;
-				push=CMath.V3MulFloat(dir, -vlen);
-			}
-			else
-				return false;
-		}
-		else if(this.mBound.GetType()==CBound.eType.Box && _co.mBound.GetType()==CBound.eType.Box)
-		{
-			if(this.mBW.mMat.IsRotUnit()==false || _co.mBW.mMat.IsRotUnit()==false)
-				push=CUtilMath.ColBoxBoxOBB(this.mBound,this.mBW.mMat,_co.mBound,_co.mBW.mMat);
-			else
-				push=CUtilMath.ColBoxBoxAABB(this.mBound,this.mBW.mMat,_co.mBound,_co.mBW.mMat);
-		}
 		
-		else if(this.mBound.GetType()==CBound.eType.Sphere && _co.mBound.GetType()==CBound.eType.Box)
-		{
-			
-			push=CUtilMath.ColSphereBox(this.mBW.mPos,this.mBW.mRadian,_co.mBound,_co.mBW.mMat);
-			if(push!=null)
-			push=CMath.V3MulFloat(push,-1);
-		}
-		
-		else if(_co.mBound.GetType()==CBound.eType.Sphere && this.mBound.GetType()==CBound.eType.Box)
-		{
-			
-			push=CUtilMath.ColSphereBox(_co.mBW.mPos,_co.mBW.mRadian,this.mBound,this.mBW.mMat);
-		}
-		else if(this.mGJK.Intersect(this.mBW,_co.mBW))
-		//if(this.mGJK.Intersect(this.mBW,_co.mBW))
-		{
-			push=this.mGJK.EPA(this.mBW,_co.mBW);
-		
-			var ocen=this.mBW.mPos;
-			var tcen=_co.mBW.mPos;
-			var cen=CMath.V3SubV3(ocen,tcen);
-			if(_co.GetBound().mMax.Equals(this.GetBound().mMax) &&
-				_co.GetBound().mMin.Equals(this.GetBound().mMin) && CMath.V3Len(push)<0.000001)
-			{
-				if(cen.IsZero())
-				{
-					push.x=Math.random()-0.5;
-					push.y=Math.random()-0.5;
-					push.z=Math.random()-0.5;
-					
-				}
-				else
-					push=CCollider.PushingSphere(this.mBW.mWBound,_co.mBW.mWBound);
-					
-				
-			}
-			else
-			{
-				if(push.x > 0 &&  ocen.x > tcen.x) push.x = -push.x;
-				else if(push.x < 0 && ocen.x < tcen.x) push.x = -push.x;
-				if(push.y > 0 && ocen.y > tcen.y) push.y = -push.y;
-				else if(push.y < 0 && ocen.y < tcen.y) push.y = -push.y;
-				if(push.z > 0 && ocen.z > tcen.z) push.z = -push.z;
-				else if(push.z < 0 && ocen.z < tcen.z) push.z = -push.z;
-				
-
-				
-			}
-
-		}
-		
-
-
-		if(push!=null)
-		{
-			if(Math.abs(push.x)<CPhysics.CutMinPushValue)	push.x=0;
-			if(Math.abs(push.y)<CPhysics.CutMinPushValue)	push.y=0;
-			if(Math.abs(push.z)<CPhysics.CutMinPushValue)	push.z=0;
-			if(push.IsZero())
-				return false;
-			_co.mColPair.set(this,push);
-
-			if(_colTarget!=null) _colTarget.Push(_co);
-			if(_colPush!=null) _colPush.Push(push);
-
-			return true;
-		}
-
-		
-
-
 		return false;
 	}
 	

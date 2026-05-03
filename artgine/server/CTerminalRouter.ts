@@ -1,12 +1,14 @@
 import { spawn } from 'child_process';
 import { StringDecoder } from 'string_decoder';
 import iconv from 'iconv-lite';
+import * as https from 'https'; // 다운로드를 위해 추가
 import * as path from 'path';
 import * as fs from 'fs';
 import { CServerRouter } from '../network/CServerRouter.js';
 import { CServerMain } from '../network/CServerMain.js';
 import { CUniqueID } from '../basic/CUniqueID.js';
 import { CConsol } from '../basic/CConsol.js';
+import { CFile } from '../system/CFile.js';
 
 /*
 claude : 
@@ -41,6 +43,51 @@ function pushHistory(text: string, color: string) {
     if (gHistory.length > MAX_HISTORY) gHistory.shift();
 }
 
+// [ADDED] ttyd 바이너리 정보 및 다운로드 경로 설정
+const TTYD_VERSION = "1.7.7"; // 고정 버전 사용 또는 필요시 업데이트
+const BIN_DIR = path.resolve(process.cwd(), 'artgine', 'external', 'bin');
+
+function getTtydFileName() {
+    if (IS_WIN) return 'ttyd.win32.exe';
+    if (process.platform === 'darwin') return 'ttyd.macos';
+    if (process.arch === 'arm64') return 'ttyd.aarch64';
+    return 'ttyd.x86_64';
+}
+const TTYD_FILENAME = getTtydFileName();
+const TTYD_PATH = path.join(BIN_DIR, TTYD_FILENAME);
+async function ensureTtydPath(): Promise<string | null> {
+    const fileName = getTtydFileName();
+    const fullPath = path.join(BIN_DIR, fileName);
+
+    // 1. 이미 파일이 존재하는지 확인 (fs는 기본 모듈이므로 직접 사용)
+    if (fs.existsSync(fullPath)) {
+        return fullPath;
+    }
+
+    // 2. 폴더가 없으면 생성 (CFile 활용)
+    await CFile.FolderCreate(BIN_DIR);
+
+    // 3. GitHub에서 다운로드 (CFile.Load 활용)
+    const downloadUrl = `https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/${fileName}`;
+    console.log(`[TTYD] Downloading binary from: ${downloadUrl}`);
+    
+    // CFile.Load는 URL인 경우 fetch를 통해 ArrayBuffer를 반환합니다.
+    const data = await CFile.Load(downloadUrl); 
+
+    if (data) {
+        // 4. 파일 저장 (CFile.Save 활용)
+        await CFile.Save(data, fullPath);
+        
+        // 5. 실행 권한 부여 (POSIX 환경)
+        if (process.platform !== 'win32') {
+            fs.chmodSync(fullPath, 0o755);
+        }
+        console.log(`[TTYD] Download and save complete: ${fullPath}`);
+        return fullPath;
+    }
+
+    return null;
+}
 function spawnCmd(cmd: string) {
     if (IS_WIN) {
         return spawn('cmd', ['/c', `chcp 65001 >nul && ${cmd}`], {
@@ -64,52 +111,48 @@ function genToken(): string {
 let gTtydProc: ReturnType<typeof spawn> | null = null;
 // [MODIFIED] 'gemini' 타입 추가
 let gTtydMode: 'cmd' | 'claude' | 'gemini' | null = null;
+async function startTtyd(mode: 'cmd' | 'claude' | 'gemini') {
+    if (gTtydMode === mode && gTtydProc) return;
 
-// [MODIFIED] 'gemini' 타입 파라미터 추가
-function startTtyd(mode: 'cmd' | 'claude' | 'gemini') {
-    if (gTtydMode === mode && gTtydProc) return; // 같은 모드 이미 실행 중
-
-    // 다른 모드 실행 중이면 종료
     if (gTtydProc) {
         try { gTtydProc.kill(); } catch {}
         gTtydProc = null;
         gTtydMode = null;
     }
 
-    const ttydPath = path.resolve(process.cwd(), 'ttyd.win32.exe');
-    if (!fs.existsSync(ttydPath)) {
-        console.warn('[TTYD] ttyd.exe not found in', process.cwd());
+    // [변경] ttyd 경로를 동적으로 확보
+    const ttydPath = await ensureTtydPath();
+    if (!ttydPath) {
+        console.error('[TTYD] Failed to ensure ttyd executable.');
         return;
     }
 
-    // [MODIFIED] gemini 실행 인자 분기 추가 (npx gemini로 실행)
     let args: string[] = [];
+    const shellCmd = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
+    const shellArg = process.platform === 'win32' ? (mode === 'gemini' ? '/c' : '/k') : '-c';
+
     if (mode === 'claude') {
-        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', 'cmd.exe', '/k', 'claude'];
-        //args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', 'cmd.exe', '/k', 'claude'];
+        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', shellCmd, shellArg, 'claude'];
     } else if (mode === 'gemini') {
-        // 윈도우 환경에서 npx를 안전하게 실행하기 위해 cmd.exe /c 를 사용합니다.
-        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', 'cmd.exe', '/c', 'npx', 'gemini'];
+        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', shellCmd, shellArg, 'npx', 'gemini'];
     } else {
-        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', 'cmd.exe', '/k'];
+        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', shellCmd];
     }
 
-    const ttyd = spawn(ttydPath, args, { detached: false, stdio: 'ignore', cwd: currentCwd }); // cwd 추가로 현재 작업 폴더 유지
+    const ttyd = spawn(TTYD_PATH, args, { detached: false, stdio: 'ignore', cwd: currentCwd });
+    
     ttyd.on('error', (e) => console.error('[TTYD ERROR]', e));
     ttyd.on('exit', (code) => {
         console.log(`ttyd(${mode}) exited with code`, code);
         gTtydProc = null;
         gTtydMode = null;
     });
-    console.log(`[TTYD] started (${mode}) on port 7681`);
-    const kill = () => { try { ttyd.kill(); } catch {} };
-    process.on('exit', kill);
-    process.on('SIGINT', () => { kill(); process.exit(); });
-    process.on('SIGTERM', () => { kill(); process.exit(); });
+
+    console.log(`[TTYD] started (${mode}) on port 7681 using ${TTYD_PATH}`);
     gTtydProc = ttyd;
     gTtydMode = mode;
+    return true;
 }
-
 export class CTerminalRouter extends CServerRouter {
     override Connect() {
         const app = CServerMain.Main().GetApp();
@@ -134,18 +177,19 @@ export class CTerminalRouter extends CServerRouter {
             }
             next();
         };
-        app.get('/cmd/start-ttyd', checkToken, (req, res) => {
-            startTtyd('cmd');
-            setTimeout(() => res.json({ ok: true }), 500);
+        app.get('/cmd/start-ttyd', checkToken, async (req, res) => {
+            const ok = await startTtyd('cmd');
+            res.json({ ok });
         });
-        app.get('/cmd/start-ttyd-claude', checkToken, (req, res) => {
-            startTtyd('claude');
-            setTimeout(() => res.json({ ok: true }), 500);
+
+        app.get('/cmd/start-ttyd-claude', checkToken, async (req, res) => {
+            const ok = await startTtyd('claude');
+            res.json({ ok });
         });
-        // [ADDED] Gemini ttyd 시작 API 엔드포인트 추가
-        app.get('/cmd/start-ttyd-gemini', checkToken, (req, res) => {
-            startTtyd('gemini');
-            setTimeout(() => res.json({ ok: true }), 500);
+
+        app.get('/cmd/start-ttyd-gemini', checkToken, async (req, res) => {
+            const ok = await startTtyd('gemini');
+            res.json({ ok });
         });
 
         app.post('/cmd/auth', checkBrute, (req, res) => {
@@ -175,6 +219,7 @@ export class CTerminalRouter extends CServerRouter {
 <title>CMD Terminal</title>
 <link rel="stylesheet" href="/Artgine/artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
 <script src="/Artgine/artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js"><\/script>
+<script src="/Artgine/artgine/external/legacy/screenfull/screenfull.min.js"><\/script>
 <style>
 html{height:-webkit-fill-available;}
 html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
@@ -187,7 +232,8 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
 <div class="d-flex align-items-center gap-2 px-3 py-1 bg-black border-bottom border-secondary" style="flex-shrink:0;">
   <span class="text-secondary small font-monospace" id="cmd-cwd" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
   <button class="btn btn-outline-info btn-sm ms-auto me-1" data-bs-toggle="modal" data-bs-target="#helpModal">HELP</button>
-  <button class="btn btn-outline-secondary btn-sm" onclick="clearOut()">CLEAR</button>
+  <button class="btn btn-outline-secondary btn-sm me-1" onclick="clearOut()">CLEAR</button>
+  <button class="btn btn-outline-warning btn-sm" id="btn-fullscreen" onclick="toggleFullscreen()">⛶ FULL</button>
 </div>
 
 <div class="modal fade" id="helpModal" tabindex="-1">
@@ -347,6 +393,16 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
   });
 
   inp.focus();
+
+  function toggleFullscreen(){
+    if(!screenfull.isEnabled) return;
+    screenfull.toggle();
+  }
+  if(screenfull.isEnabled){
+    screenfull.on('change', () => {
+      document.getElementById('btn-fullscreen').textContent = screenfull.isFullscreen ? '✕ EXIT' : '⛶ FULL';
+    });
+  }
 <\/script>
 </body>
 </html>`);

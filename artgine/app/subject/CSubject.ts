@@ -18,12 +18,11 @@ import { IFile } from "../../system/System.js"
 import { CFrame } from "../../util/CFrame.js"
 import { CComponent } from "../component/CComponent.js"
 
-import { CNavigation } from "../component/CNavigation.js"
 import { CRouteMsg } from "../CRouteMsg.js"
 import { CPaint } from "../component/paint/CPaint.js"
-import { CCollider } from "../component/CCollider.js"
-import { CConsol } from "../../basic/CConsol.js"
 
+import { CUtil } from "../../basic/CUtil.js"
+import { IProvider } from "../../util/CRole.js"
 
 
 
@@ -33,7 +32,7 @@ var g_offCObjHD = 0;
 //3번에 sysn가 돌고, 
 //1.updateMsg(인아웃 메세지 or 업데이트할 컴포넌트 정리)
 //2.sysn처리(함수 호출)
-export class CSubject extends CObject implements IFile , IMat
+export class CSubject extends CObject implements IFile , IMat , IProvider
 {
 	mKey : string;
 	protected mDestroy : boolean;
@@ -115,6 +114,12 @@ export class CSubject extends CObject implements IFile , IMat
 		this.mInMsg.Clear();
 	
 		
+	}
+	Provider(_type : string,_state : Array<string>) {
+		for(let com of this.mComArr)
+		{
+			com.Provider(_type,_state);
+		}
 	}
 	IsDestroy()	{ return this.mDestroy || this.IsRecycle(); }
 	// override ExeRecycle(_type : string)
@@ -1075,5 +1080,4 @@ export class CSubject extends CObject implements IFile , IMat
 
 
 import CSubject_imple from "../../app_imple/subject/CSubject.js"
-import { CUtil } from "../../basic/CUtil.js"
 CSubject_imple();

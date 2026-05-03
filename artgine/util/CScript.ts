@@ -263,10 +263,7 @@ export function main(_data : any)
             if(moudle[this.mActiveFun]==null)   return;
 
         }
-        // if(this.mData["mTemp"]==null)    this.mData["mTemp"]={};
-            
-        
-        // this.mData["mTemp"]["mRun"]=0;
+      
         try {
             let next=moudle[this.mActiveFun](_parameter==null?this:_parameter);
             if(next!=null)

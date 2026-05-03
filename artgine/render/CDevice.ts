@@ -28,7 +28,7 @@ export class CDevice
 		this.mStaticRP.mDepthWrite=true;
 		this.mStaticRP.mAlpha=true;
 		this.mStaticRP.mCullFace=CRenderPass.eCull.CCW;
-		this.mStaticRP.mLine=false;
+		this.mStaticRP.mLine=CRenderPass.eLine.TRIANGLES;
 		this.mStaticRP.mBlend=[CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.FUNC_ADD,CRenderPass.eBlend.SRC_ALPHA,
             CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA,CRenderPass.eBlend.ONE,CRenderPass.eBlend.ONE_MINUS_SRC_ALPHA];
 	}

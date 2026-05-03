@@ -1646,22 +1646,15 @@ export class CUtilRender
 	}
 	static GetTrail(_count) {
 		_count = parseInt(_count + "");
-
-
 		var rVal = new CMeshCreateInfo();
 		var posb = rVal.Create(CVertexFormat.eIdentifier.Position);
-
-
-		posb.bufF.Resize((2 * (_count + 1)) * 3);
-		rVal.vertexCount = 2 * (_count + 1);
-
+		posb.bufF.Resize(2 * _count * 2);
+		rVal.vertexCount = 2 * _count;
 		var inb = rVal.Create(CVertexFormat.eIdentifier.Index);
 		
-		//inb.bufI = new Array(12 * _count);
-
-		for (var i = 0; i < _count + 1; ++i) {
-			posb.bufF.V3(i * 2 + 0, 1 - i / _count, 0, i * 2 + 0);
-			posb.bufF.V3(i * 2 + 1, 1 - i / _count, 1, i * 2 + 1);
+		for (var i = 0; i < _count; ++i) {
+			posb.bufF.V2(i * 2 + 0, i * 2 + 0,  1);
+			posb.bufF.V2(i * 2 + 1, i * 2 + 1, -1);
 		}
 		for (var i = 0; i < _count - 1; ++i) {
 			inb.bufI[i * 4 * 3 + 0] = 0 + i * 2;
@@ -1672,11 +1665,10 @@ export class CUtilRender
 			inb.bufI[i * 4 * 3 + 4] = 3 + i * 2;
 			inb.bufI[i * 4 * 3 + 5] = 1 + i * 2;
 
-
 			inb.bufI[i * 4 * 3 + 6] = 2 + i * 2;
 			inb.bufI[i * 4 * 3 + 7] = 1 + i * 2;
 			inb.bufI[i * 4 * 3 + 8] = 0 + i * 2;
-
+			
 			inb.bufI[i * 4 * 3 + 9] = 1 + i * 2;
 			inb.bufI[i * 4 * 3 + 10] = 3 + i * 2;
 			inb.bufI[i * 4 * 3 + 11] = 2 + i * 2;

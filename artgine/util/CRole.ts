@@ -11,7 +11,7 @@ import { CSamplerTimer } from "./CSampler.js";
 
 
 //pattern
-export class CSMP extends CObject
+export class CRole extends CObject
 {
     constructor(_and : CCondition|Array<CCondition>=null,_ex : CAction|Array<CAction>=null)
     {
@@ -23,15 +23,15 @@ export class CSMP extends CObject
             this.mAnd.push(_and);    
         if(_ex==null){}
         else if(_ex instanceof Array)
-            this.mExcute=_ex;
+            this.mExecute=_ex;
         else
-            this.mExcute.push(_ex);    
+            this.mExecute.push(_ex);    
 
     }
     mPriority : number=10000;
     mAnd =new Array<CCondition>;
     mOr =new Array<CCondition>;
-    mExcute=new Array<CAction>;
+    mExecute=new Array<CAction>;
     override ImportCJSON(_json: CJSON): this {
         let json=_json.mDocument;
         let and=json["mAnd"]==null?json["and"]:json["mAnd"];
@@ -66,99 +66,101 @@ export class CSMP extends CObject
             {
                 let sma=new CAction(null,null);
                 sma.ImportJSON(ac);
-                this.mExcute.push(sma);
+                this.mExecute.push(sma);
             }
         }
         return this;
     }
     IsCondition(_state : CObject)
     {
-        let excute=true;
+        let execute=true;
         for(let con of this.mAnd)
         {
             if(con.Excute(_state)==false)  
             {
-                excute=false;
+                execute=false;
                 break;
             }
                 
         }
-        if(excute==false)   return false;
+        if(execute==false)   return false;
 
-        excute=this.mOr.length==0;
+        execute=this.mOr.length==0;
         for(let con of this.mOr)
         {
             if(con.Excute(_state)==true)
             {
-                excute=true;
+                execute=true;
                 break;
             }
         }
 
-        return excute;
+        return execute;
     }
 }
-
-export class CStateMachine extends CObject
+//특정 상태를 변경하는 인터페이스 문자열로 값을 0/1로 사용됌 rigidBody/force/move1 이런식
+export interface IProvider
 {
-    mPattern=new Array<CSMP>;
-    mState : CObject;
-    private mExcuteList=new CArray<CAction>();
-    private mExcuteSet=new Set<CAction>();
-    private mExcuteLock : CAction=null;
+    Provider(_type : string,_state : Array<string>);
+}
+export class CRoleMgr extends CObject
+{
+    mRoleArr=new Array<CRole>;
+    mType="";
+    mStateArr=new Array<string>;
+    
+    private mExecuteList=new CArray<CAction>();
+    private mExecuteSet=new Set<CAction>();
+    private mExecuteLock : CAction=null;
     
     constructor(_state=new CObject())
     {
         super();
-        this.mState=_state;
+        
     }
     override IsShould(_member: string, _type: CObject.eShould): boolean {
-        if(_member=="mState" || _member=="mExcuteList" || _member=="mExcuteSet" || _member=="mExcuteLock")
+        if(_member=="mExecuteList" || _member=="mExecuteSet" || _member=="mExecuteLock")
             return false;
         return super.IsShould(_member,_type);
     }
-    SetState(_state : CObject){ this.mState=_state; }
-    //GetState(){ return this.mState; }
+    
+    GetType(){  return this.mType;  }
     SetStateValue(_key : string,_value,_temp=true)
     {
         if(_temp)
-        {
-            if(this.mState["mTemp"]==null)this.mState["mTemp"]={};
-            this.mState["mTemp"][_key]=_value;
-        }
-            
+            this.Temp(_key,_value)
         else
-            this.mState[_key]=_value;
+            this[_key]=_value;
     }
-    PushPattern(_p : CSMP|Object|Array<Object>)
+    PushRole(_p : CRole|Object|Array<Object>)
     {
-        if(_p instanceof CSMP)
+        if(_p instanceof CRole)
         {
-            for(let i=0;i<this.mPattern.length;++i)
+            for(let i=0;i<this.mRoleArr.length;++i)
             {
-                if(this.mPattern[i].mPriority<_p.mPriority)
+                if(this.mRoleArr[i].mPriority<_p.mPriority)
                 {
-                    this.mPattern.splice(i,0,_p);
+                    this.mRoleArr.splice(i,0,_p);
                     break;
                 }
             }
-            this.mPattern.push(_p);
+            this.mRoleArr.push(_p);
         }
         else if(_p instanceof Array)
         {
             for(let json of _p)
             {
-                let p=new CSMP([],null);
+                let p=new CRole([],null);
                 p.ImportJSON(json);
-                this.PushPattern(p);
+                this.PushRole(p);
                 //this.mPattern.push(p);
             }
         }
         else//json
         {
-            let p=new CSMP([],null);
+            let p=new CRole([],null);
             p.ImportJSON(_p);
-            this.PushPattern(p);
+            this.PushRole(p);
             //this.mPattern.push(p);
 
         }
@@ -166,20 +168,32 @@ export class CStateMachine extends CObject
     }
 
   
-    async Update(_update : CUpdate,_target)
+    async Update(_update : CUpdate,_target : IProvider)
     {
-        for(let pat of this.mPattern)
+        let stateArr=[];
+        _target.Provider(this.mType,this.mStateArr);
+
+        for(let key of this.mStateArr)
+        {
+            this.Temp(key,1);
+        }
+        
+
+        for(let pat of this.mRoleArr)
         {
             
-            if(pat.IsCondition(this.mState))
+            if(pat.IsCondition(this))
             {
-                for(let ac of pat.mExcute)
+                for(let ac of pat.mExecute)
                 {
                     ac.Excute(_target,false,null,null,"",_update);
                 }
-                    
-                
             }
         }
+        for(let key of this.mStateArr)
+        {
+            this.Temp(key,0);
+        }
+        this.mStateArr.length=0;
     }
 }

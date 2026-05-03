@@ -44,7 +44,7 @@ export class CRPMgr extends CObject implements IFile
 
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
-		if(_member == "mCanvas") {
+		if(_member == "mFrame") {
 			return false;
 		}
 		return super.IsShould(_member, _type);

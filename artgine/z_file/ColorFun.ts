@@ -184,24 +184,54 @@ export function ColorModalFun(_rgb : CVec3, _colorModel : CVec4) : CVec3 {
         rgb = HSVToRGB(_colorModel.rgb);    
     else if(_colorModel.a < SDF.eColorModel.HSL + 0.5)
         rgb = HSLToRGB(_colorModel.rgb);
+    else if(_colorModel.a < SDF.eColorModel.None + 0.5)
+        rgb = _rgb;
     else if(_colorModel.a < SDF.eColorModel.Unpack + 0.5)
     {
-        var count : number = _colorModel.x + _colorModel.y + _colorModel.z;
+        var stop0 : CVec3 = new CVec3(0.0, 0.0, 0.5);
+        var stop1 : CVec3 = new CVec3(0.0, 0.5, 1.0);
+        var stop2 : CVec3 = new CVec3(0.94, 0.94, 0.25);
+        var stop3 : CVec3 = new CVec3(0.13, 0.55, 0.13);
+        var stop4 : CVec3 = new CVec3(0.55, 0.27, 0.07);
+        var stop5 : CVec3 = new CVec3(1.0, 1.0, 1.0);
 
-        if(count > 0.5) {
-
+        var stopT0 : number = 0.0;
+        var stopT1 : number = 0.2;
+        var stopT2 : number = 0.25;
+        var stopT3 : number = 0.5;
+        var stopT4 : number = 0.8;
+        var stopT5 : number = 1.0;
+        
+        var gray : number = _rgb.x;//UnpackRGToGray(_rgb.xy);
+        var col0 : CVec3;
+        var col1 : CVec3;
+        var range : number;
+        if(gray < stopT1) {
+            col0 = stop0;
+            col1 = stop1;
+            range = (gray - stopT0) / (stopT1 - stopT0);
         }
-        else if(count > 1.5) {
-
+        else if(gray < stopT2) {
+            col0 = stop1;
+            col1 = stop2;
+            range = (gray - stopT1) / (stopT2 - stopT1);
         }
-        else if(count > 2.5) {
-            
+        else if(gray < stopT3) {
+            col0 = stop2;
+            col1 = stop3;
+            range = (gray - stopT2) / (stopT3 - stopT2);
         }
-
-        var gray : number = UnpackRGToGray(_rgb.xy);
-        rgb.x = gray;
-        rgb.y = gray;
-        rgb.z = gray;
+        else if(gray < stopT4) {
+            col0 = stop3;
+            col1 = stop4;
+            range = (gray - stopT3) / (stopT4 - stopT3);
+        }
+        else {
+            col0 = stop4;
+            col1 = stop5;
+            range = (gray - stopT4) / (stopT5 - stopT4);
+        }
+        rgb = V3Mix(col0, col1, range);
     }
     else
         rgb = _rgb;

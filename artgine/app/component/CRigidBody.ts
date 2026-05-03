@@ -53,6 +53,7 @@ export class CRigidBody extends CGeometryComp
 	//m_update=Df.UpdateState.Not;
 	mFreezePos = new Array<boolean>(false,false,false);
 	mStartPos : CVec3 = null;
+	mLastDir
 
 	override Icon(){		return "bi bi-person-walking";	}
 	SetGravity(_scale : number) {this.mGravity = _scale;}
@@ -91,6 +92,51 @@ export class CRigidBody extends CGeometryComp
 	IsFall()
 	{
 		return this.mFall;
+	}
+	override Provider(_type: string, _state : Array<string>): void 
+	{
+		for(let f of this.mForceArr)
+		{
+			_state.push("/rigidBody/force/"+f.Key());
+			
+			if(f.Key()=="g")    continue;
+			
+			let dirDot=[0,0,0,0,0,0];
+
+			//CConsol.Log(com.MoveDir());
+			dirDot[0]=CMath.V3Dot(CVec3.Left(),f.mDirection);
+			dirDot[1]=CMath.V3Dot(CVec3.Right(),f.mDirection);
+			dirDot[2]=CMath.V3Dot(CVec3.Up(),f.mDirection);
+			dirDot[3]=CMath.V3Dot(CVec3.Down(),f.mDirection);
+			dirDot[4]=CMath.V3Dot(CVec3.Front(),f.mDirection);
+			dirDot[5]=CMath.V3Dot(CVec3.Back(),f.mDirection);
+
+			let select=-1;
+			let selectMax=0;
+			for(let i=0;i<6;++i)
+			{
+				if(dirDot[i]>selectMax)
+				{
+					selectMax=dirDot[i];
+					select=i;
+				}
+			}
+			this.mLastDir=select;
+			switch(select)
+			{
+				case 0:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Left);break;
+				case 1:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Right);break;
+				case 2:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Up);break;
+				case 3:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Down);break;
+				case 4:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Front);break;
+				case 5:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Back);break;
+			}
+			
+			
+		}
+		if(this.IsJump()) _state.push("/rigidBody/force/Jump");
+		if(this.IsFall()) _state.push("/rigidBody/force/Fall");
+	
 	}
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{

@@ -10,10 +10,9 @@ import { CVec3 } from "../geometry/CVec3.js";
 import { CVec4 } from "../geometry/CVec4.js";
 import { CH5Canvas } from "../render/CH5Canvas.js";
 import { CImgPro } from "../render/CImgPro.js";
-import { CTexture } from "../render/CTexture.js";
+import { CTexture, CTextureInfo } from "../render/CTexture.js";
 import { CFile } from "../system/CFile.js";
 import { CInput } from "../system/CInput.js";
-import { CMouse } from "../system/CMouse.js";
 import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../util/CCamCon.js";
 import { CChecker } from "../util/CChecker.js";
 import { CLoaderOption } from "../util/CLoader.js";
@@ -233,10 +232,10 @@ export function BufferTool(_buffer : Uint32Array | Uint8Array, _count : CVec3,_l
                         <div class="row g-1 align-items-center mb-2">
                             <div class="col-4 text-secondary">강도</div>
                             <div class="col-6">
-                                <input type="range" id="strengthRange" class="form-range" min="0" max="1" value="1" step="0.1">
+                                <input type="range" id="strengthRange" class="form-range" min="-1" max="1" value="1" step="0.1">
                             </div>
                             <div class="col-2">
-                                <input type="number" id="strengthNum" class="form-control form-control-sm text-center p-0" min="0" max="1" value="1" step="0.1">
+                                <input type="number" id="strengthNum" class="form-control form-control-sm text-center p-0" min="-1" max="1" value="1" step="0.1">
                             </div>
                         </div>
 
@@ -333,8 +332,23 @@ function BufferInit()
     // texHeight: 2D=Y, 3D=Y*Z
     const texHeight = gOrgDepth > 1 ? gOrgHeight * gOrgDepth : gOrgHeight;
 
-    gTarTex = CImgPro.Square(gOrgWidth, texHeight, new CVec4(1, 1, 1, 1));
+    gTarTex=new CTexture();
+    gTarTex.SetSize(gOrgWidth, texHeight);
+    gTarTex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA32F)]);
+    gTarTex.CreateBuf();
+
     const dst = gTarTex.GetBuf()[0];
+    var size=4*gOrgWidth*texHeight;
+
+    for (var i = 0; i < size; i+=4){
+        dst[i + 0] = 1;
+        dst[i + 1] = 1;
+        dst[i + 2] = 1;
+        dst[i + 3] = 1;
+    }
+
+    const inv255 = 1.0 / 255.0;
+
     if(gOrgBuf instanceof Uint32Array) {
         if(gOrgDepth > 1) {
             // 3D: buf[x + y*X + z*X*Y] → dst[((y*Z + z)*X + x)*4]
@@ -343,10 +357,10 @@ function BufferInit()
                     for(let x = 0; x < gOrgWidth; x++) {
                         const v  = gOrgBuf[x + y * gOrgWidth + z * gOrgWidth * gOrgHeight];
                         const di = ((y * gOrgDepth + z) * gOrgWidth + x) * 4;
-                        dst[di + 0] = (v >>> 24) & 0xFF; // R
-                        dst[di + 1] = (v >>> 16) & 0xFF; // G
-                        dst[di + 2] = (v >>>  8) & 0xFF; // B
-                        dst[di + 3] = gOrgAlphaUse ? ((v >>> 0) & 0xFF) : 0xFF; // A
+                        dst[di + 0] = ((v >>> 24) & 0xFF) * inv255; // R
+                        dst[di + 1] = ((v >>> 16) & 0xFF) * inv255; // G
+                        dst[di + 2] = ((v >>>  8) & 0xFF) * inv255; // B
+                        dst[di + 3] = gOrgAlphaUse ? ((v >>> 0) & 0xFF) * inv255 : 1.0; // A
                     }
                 }
             }
@@ -357,23 +371,25 @@ function BufferInit()
                     const v     = gOrgBuf[x + y * gOrgWidth];
                     const dstY  = gOrgYFlip ? (gOrgHeight - 1 - y) : y;
                     const di    = (x + dstY * gOrgWidth) * 4;
-                    dst[di + 0] = (v >>> 24) & 0xFF;
-                    dst[di + 1] = (v >>> 16) & 0xFF;
-                    dst[di + 2] = (v >>>  8) & 0xFF;
-                    dst[di + 3] = gOrgAlphaUse ? ((v >>> 0) & 0xFF) : 0xFF;
+                    dst[di + 0] = ((v >>> 24) & 0xFF) * inv255;
+                    dst[di + 1] = ((v >>> 16) & 0xFF) * inv255;
+                    dst[di + 2] = ((v >>>  8) & 0xFF) * inv255;
+                    dst[di + 3] = gOrgAlphaUse ? ((v >>> 0) & 0xFF) * inv255 : 1.0;
                 }
             }
         }
     } else {
         // Uint8Array
-        if(gOrgYFlip) {
-            for(let y = 0; y < gOrgHeight; y++) {
-                const srcRow = gOrgBuf.subarray(y * gOrgWidth * 4, (y + 1) * gOrgWidth * 4);
-                const dstOff = (gOrgHeight - 1 - y) * gOrgWidth * 4;
-                dst.set(srcRow, dstOff);
+        for(let y = 0; y < gOrgHeight; y++) {
+            for(let x = 0; x < gOrgWidth; x++) {
+                const dstY  = gOrgYFlip ? (gOrgHeight - 1 - y) : y;
+                const si = (x + y * gOrgWidth) * 4;
+                const di    = (x + dstY * gOrgWidth) * 4;
+                dst[di + 0] = gOrgBuf[si + 0] * inv255;
+                dst[di + 1] = gOrgBuf[si + 1] * inv255;
+                dst[di + 2] = gOrgBuf[si + 2] * inv255;
+                dst[di + 3] = gOrgBuf[si + 3] * inv255;
             }
-        } else {
-            dst.set(gOrgBuf);
         }
     }
 
@@ -424,6 +440,29 @@ function BufferClose()
 {
     if(gTarTex != null && gTarTex.GetBuf()[0] != null) {
         const src = gTarTex.GetBuf()[0];
+        if(gBrushAddIndex == 3)
+        {
+            // R을 RG로 변환
+            const src = gTarTex.GetBuf()[0];
+            for(let y = 0; y < gOrgHeight; y++) {
+                for(let x = 0; x < gOrgWidth; x++) {
+                    const si = (x + y * gOrgWidth) * 4;
+                    
+                    const r = CMath.Clamp(src[si + 0], 0.0, 1.0);
+                    const ri = r * 256.0;
+                    const rf = Math.floor(ri);
+                    const g = ri - rf;
+                    
+                    src[si + 0] = rf / 255.0;
+                    src[si + 1] = g;
+                }
+            }
+        }
+        
+        const clamp255 = (_v : number) => {
+            _v = _v * 255.0;
+            return CMath.Clamp(_v + 0.5, 0, 255);
+        };
         if(gOrgBuf instanceof Uint32Array) {
             if(gOrgDepth > 1) {
                 // 3D: dst[((y*Z + z)*X + x)*4] → buf[x + y*X + z*X*Y]
@@ -432,13 +471,18 @@ function BufferClose()
                         for(let x = 0; x < gOrgWidth; x++) {
                             const si = ((y * gOrgDepth + z) * gOrgWidth + x) * 4;
                             const bi = x + y * gOrgWidth + z * gOrgWidth * gOrgHeight;
-                            const a = gOrgAlphaUse ? src[si + 3] : (gOrgBuf[bi] & 0xFF);
-                            gOrgBuf[bi] = (
-                                (src[si + 0] << 24) |
-                                (src[si + 1] << 16) |
-                                (src[si + 2] <<  8) |
-                                a
-                            ) >>> 0;
+                            const r = clamp255(src[si + 0]);
+                            const g = clamp255(src[si + 1]);
+                            const b = clamp255(src[si + 2]);
+                            const a = gOrgAlphaUse
+                                ? clamp255(src[si + 3])
+                                : (gOrgBuf[bi] & 0xFF);
+
+                            gOrgBuf[bi] =
+                                (r << 24) |
+                                (g << 16) |
+                                (b << 8)  |
+                                a;
                         }
                     }
                 }
@@ -448,26 +492,36 @@ function BufferClose()
                         const srcY = gOrgYFlip ? (gOrgHeight - 1 - y) : y;
                         const si   = (x + srcY * gOrgWidth) * 4;
                         const bi   = x + y * gOrgWidth;
-                        const a    = gOrgAlphaUse ? src[si + 3] : (gOrgBuf[bi] & 0xFF);
-                        gOrgBuf[bi] = (
-                            (src[si + 0] << 24) |
-                            (src[si + 1] << 16) |
-                            (src[si + 2] <<  8) |
-                            a
-                        ) >>> 0;
+                        const r = clamp255(src[si + 0]);
+                        const g = clamp255(src[si + 1]);
+                        const b = clamp255(src[si + 2]);
+                        const a = gOrgAlphaUse
+                            ? clamp255(src[si + 3])
+                            : (gOrgBuf[bi] & 0xFF);
+
+                        gOrgBuf[bi] =
+                            (r << 24) |
+                            (g << 16) |
+                            (b << 8)  |
+                            a;
                     }
                 }
             }
         } else {
             // Uint8Array
-            if(gOrgYFlip) {
-                for(let y = 0; y < gOrgHeight; y++) {
-                    const srcRow = src.subarray((gOrgHeight - 1 - y) * gOrgWidth * 4, (gOrgHeight - y) * gOrgWidth * 4);
-                    (gOrgBuf as Uint8Array).set(srcRow, y * gOrgWidth * 4);
+            for(let y = 0; y < gOrgHeight; y++) {
+                for(let x = 0; x < gOrgWidth; x++) {
+                    const srcY  = gOrgYFlip ? (gOrgHeight - 1 - y) : y;
+                    const si = (x + srcY * gOrgWidth) * 4;
+                    const di = (x + y * gOrgWidth) * 4;
+                    
+                    gOrgBuf[di + 0] = clamp255(src[si + 0]);
+                    gOrgBuf[di + 1] = clamp255(src[si + 1]);
+                    gOrgBuf[di + 2] = clamp255(src[si + 2]);
+                    gOrgBuf[di + 3] = clamp255(src[si + 3]);
                 }
-            } else {
-                gOrgBuf.set(src);
             }
+
         }
     }
 
@@ -485,7 +539,8 @@ function BufferClose()
     CRollBack.Off("Buffer");
     CRollBack.Claear();
 }
-var prevMouse : CMouse;
+var prevMouse : CVec3;
+var carryDist : number = 0;
 var prevSnapPos : CVec2 = null;
 var gRoll : CRollBackInfo = null;
 
@@ -512,10 +567,29 @@ function BufferUpdate()
     {
         gTarPaint.SetVFX(1, SDF.eVFX.None, [0, 0, 0, 0]);
     }
+    else if(gBrushDrawType == 1 && gBrushAddIndex == 3)
+    {
+        if(
+            gTarPaint.GetTexture()[0] != "tile.tex" ||
+            gTarPaint.GetTexture()[1] != gBgImg ||
+            gTarPaint.GetTexture()[2] != curPresets[gPresetIndex].Key()
+        )
+        {
+            if(gAtl.Frame().Res().Find(curPresets[gPresetIndex].Key()) == null) {
+                gAtl.Frame().Ren().BuildTexture(curPresets[gPresetIndex]);
+                gAtl.Frame().Res().Push(curPresets[gPresetIndex].Key(), curPresets[gPresetIndex]);
+            }
+            gTarPaint.SetTexture(["tile.tex", gBgImg, curPresets[gPresetIndex].Key()]);
+        }
+        gTarPaint.SetVFX(0, SDF.eVFX.DecalTexture, [1, 0, 0]);
+        gTarPaint.SetVFX(1, SDF.eVFX.DecalTexture, [2, 1 - 0.5 * gBrushInvert, gBrushInvert]);
+        gTarPaint.ResetDecal(1, pos, new CVec3(gBrushSize, gBrushSize, 1000));
+    }
     else
     {
         if(
             gTarPaint.GetTexture()[0] != gBgImg ||
+            gTarPaint.GetTexture()[1] != "tile.tex" ||
             gTarPaint.GetTexture()[gTarPaint.GetTexture().length - 1] != curPresets[gPresetIndex].Key()
         )
         {
@@ -525,14 +599,18 @@ function BufferUpdate()
             }
             gTarPaint.SetTexture([gBgImg, "tile.tex", curPresets[gPresetIndex].Key()]);
         }
-        gTarPaint.SetVFX(0, SDF.eVFX.DecalTexture, [gTarPaint.GetTexture().length - 2, gBgTexBlendRatio, 0]);
-        gTarPaint.SetVFX(1, SDF.eVFX.DecalTexture, [gTarPaint.GetTexture().length - 1, 1 - 0.5 * gBrushInvert, gBrushInvert]);
+        gTarPaint.SetVFX(0, SDF.eVFX.DecalTexture, [1, gBgTexBlendRatio, 0]);
+        gTarPaint.SetVFX(1, SDF.eVFX.DecalTexture, [2, 1 - 0.5 * gBrushInvert, gBrushInvert]);
         gTarPaint.ResetDecal(1, pos, new CVec3(gBrushSize, gBrushSize, 1000));
     }
 
-    // ── LButton 최초 press 시 스냅샷 ────────────────────────────────────────
+    // ── LButton 최초 press ──────────────────────────────────────────────────
     if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton, true))
     {
+        prevMouse   = null;
+        prevSnapPos = null;
+        carryDist   = 0;
+
         if(!gEyedropperMode) {
             const buf = gTarTex.GetBuf()[0];
             gRoll = new CRollBackInfo("Buffer", buf.slice());
@@ -542,81 +620,82 @@ function BufferUpdate()
     // ── LButton 입력 처리 ───────────────────────────────────────────────────
     if(gAtl.Frame().Input().KeyDown(CInput.eKey.LButton))
     {
+        // ── 스포이드 ──────────────────────────────────────────────────────────
         if(gEyedropperMode)
         {
-            if(prevMouse == null) {
-                prevMouse = mouse.Export();
-
-                const buf = gTarTex.GetBuf()[0];
-                if(buf != null) {
-                    const fmat = gTarPaint.GetBoundFMat();
-                    const texW = gTarTex.GetWidth();
-                    const texH = gTarTex.GetHeight();
-
-                    const u  = (pos.x / fmat.GetSize().x + 0.5);
-                    const v  = (pos.y / fmat.GetSize().y + 0.5);
-                    const px = Math.floor(u * texW);
-                    const py = Math.floor(v * texH);
-
-                    if(px >= 0 && px < texW && py >= 0 && py < texH) {
-                        const idx = (py * texW + px) * 4;
-                        gBrushColor.x = buf[idx + 0];
-                        gBrushColor.y = buf[idx + 1];
-                        gBrushColor.z = buf[idx + 2];
-                        gBrushColor.w = buf[idx + 3];
-                        UpdateColorPreview();
-                    }
+           const buf = gTarTex.GetBuf()[0];
+            if(buf != null) {
+                const fmat = gTarPaint.GetBoundFMat();
+                const texW = gTarTex.GetWidth();
+                const texH = gTarTex.GetHeight();
+                const u  = pos.x / fmat.GetSize().x + 0.5;
+                const v  = pos.y / fmat.GetSize().y + 0.5;
+                const px = Math.floor(u * texW);
+                const py = Math.floor(v * texH);
+                if(px >= 0 && px < texW && py >= 0 && py < texH) {
+                    const idx = (py * texW + px) * 4;
+                    gBrushColor.x = buf[idx + 0];
+                    gBrushColor.y = buf[idx + 1];
+                    gBrushColor.z = buf[idx + 2];
+                    gBrushColor.w = buf[idx + 3];
+                    UpdateColorPreview();
                 }
             }
         }
-        else
+        // ── Shift 스냅 그리기 ─────────────────────────────────────────────────
+        else if(shiftHeld)
         {
-            if(shiftHeld) {
-                // 스냅 모드: 이전 스냅 좌표와 다를 때만 찍기
-                if(prevSnapPos == null || prevSnapPos.x !== pos.x || prevSnapPos.y !== pos.y) {
-                    prevSnapPos = new CVec2(pos.x, pos.y);
-                    
-                    Draw(pos);
-                }
-            } else {
-                prevSnapPos = null;
-                if(prevMouse == null) {
-                    prevMouse = mouse.Export();
+            if(prevSnapPos == null || prevSnapPos.x !== pos.x || prevSnapPos.y !== pos.y) {
+                prevSnapPos = new CVec2(pos.x, pos.y);
+                prevMouse   = null; // 스냅→일반 전환 시 stale 위치 방지
+                carryDist   = 0;
+                Draw(pos);
+            }
+        }
+        else {
+            prevSnapPos = null;
 
-                    Draw(pos);
-                } 
-                else {
-                    const prevPos = gAtl.Brush().GetCam2D().ScreenToWorld2DPoint(prevMouse.x, prevMouse.y);
+            if(prevMouse == null) {
+                // 첫 점: 현재 위치에 바로 찍고 기록
+                Draw(pos);
+                prevMouse = pos;
+            }
+            else {
+                const dx   = pos.x - prevMouse.x;
+                const dy   = pos.y - prevMouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const step = Math.max(1, gBrushSize * 0.25);
 
-                    const dx = pos.x - prevPos.x;
-                    const dy = pos.y - prevPos.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    const moveThresh = Math.max(1, gBrushSize * 0.25);
-                    if(dist > moveThresh) {
-                        prevMouse = mouse.Export();
-
-                        const steps = Math.floor(dist / moveThresh);
-                        for(let i = 1; i <= steps; i++) {
-                            const ratio = i / steps;
-                            const interX = prevPos.x + dx * ratio;
-                            const interY = prevPos.y + dy * ratio;
-                            Draw(new CVec3(interX, interY, pos.z));
-                        }
+                if(dist > 0.0001) {
+                    // carryDist만큼 앞당긴 지점부터 step 간격으로 찍기
+                    let t = (step - carryDist) / dist;
+                    while(t <= 1.0) {
+                        Draw(new CVec3(prevMouse.x + dx * t, prevMouse.y + dy * t, pos.z));
+                        t += step / dist;
                     }
+                    carryDist = (1.0 - (t - step / dist)) * dist % step;
+                    prevMouse = pos;
                 }
             }
+
         }
     }
     else
     {
-        // ── LButton 뗄 때 롤백 Push ─────────────────────────────────────────
+        // ── LButton 뗄 때 ────────────────────────────────────────────────────
         if(gRoll != null) {
             CRollBack.Push(gRoll);
             gRoll = null;
         }
         prevMouse   = null;
         prevSnapPos = null;
+
+        carryDist   = 0;
+    }
+
+    if(gTexDirty) {
+        gAtl.Frame().Ren().BuildTexture(gTarTex);
+        gTexDirty = false;
     }
 
     // // ── Ctrl+Z ──────────────────────────────────────────────────────────────
@@ -626,6 +705,8 @@ function BufferUpdate()
     //     CRollBack.Exe();
     // }
 }
+
+var gTexDirty : boolean = false;
 function Draw(pos : CVec3)
 {
     // Set
@@ -638,17 +719,14 @@ function Draw(pos : CVec3)
     // Add
     else if(gBrushDrawType == 1) {
         if(gBrushAddIndex == 3) {
-            // RGBA로 처리하는데 A와 B는 제외하기 위해서 65536을 왼쪽으로 16 쉬프트함
-            const gray = Math.round((256 * 256 - 1) * gBrushColorStrength);
-            const r = (gray >> 8 & 0xFF);
-            const g = gray & 0xFF;
-            CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 4, ((r << 24) | (g << 16) | (255 << 8) | 255) >>> 0, gBrushDrawType, curPresets[gPresetIndex]);
+            var strength = (8 * 256 + 64) / (256 * 256);
+            CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 0, gBrushColorStrength * strength, 3, curPresets[gPresetIndex]);
         }
         else {
-            if(gBrushColorChannel.x > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 0, 255 * gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
-            if(gBrushColorChannel.y > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 1, 255 * gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
-            if(gBrushColorChannel.z > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 2, 255 * gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
-            if(gBrushColorChannel.w > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 3, 255 * gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
+            if(gBrushColorChannel.x > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 0, gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
+            if(gBrushColorChannel.y > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 1, gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
+            if(gBrushColorChannel.z > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 2, gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
+            if(gBrushColorChannel.w > 0.5) CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 3, gBrushColorStrength, gBrushDrawType, curPresets[gPresetIndex]);
         }
     }
     // Del
@@ -656,10 +734,10 @@ function Draw(pos : CVec3)
         CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 0, 0, 0, curPresets[gPresetIndex]);
         CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 1, 0, 0, curPresets[gPresetIndex]);
         CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 2, 0, 0, curPresets[gPresetIndex]);
-        CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 3, 255, 0, curPresets[gPresetIndex]);
+        CImgPro.DrawBrush(gTarTex, gTarPaint.GetBoundFMat(), pos, new CVec2(gBrushSize, gBrushSize), 3, 1, 0, curPresets[gPresetIndex]);
     }
 
-    gAtl.Frame().Ren().BuildTexture(gTarTex);
+    gTexDirty = true;
 }
 
 // --------------------------------------------------------------------- //
@@ -669,7 +747,7 @@ function Draw(pos : CVec3)
 function PanelInit()
 {
     // 기본 브러시 크기(곡선 있어서 클수록 정확해짐)
-    const BAKE_SIZE = 128;
+    const BAKE_SIZE = 1024;
 
     // 기본값
     gBrushSize      = 25;
@@ -896,13 +974,32 @@ function PanelInit()
         strengthRange.addEventListener('input', () => SetStrength(strengthRange.value));
         strengthNum.addEventListener('input',   () => SetStrength(strengthNum.value));
         strengthNum.addEventListener('keydown', e => {
-            if(e.key === 'ArrowUp')   SetStrength(gBgTexBlendRatio + 0.1);
-            if(e.key === 'ArrowDown') SetStrength(gBgTexBlendRatio - 0.1);
+            if(e.key === 'ArrowUp')   SetStrength(gBrushColorStrength + 1);
+            if(e.key === 'ArrowDown') SetStrength(gBrushColorStrength - 1);
         });
-        SetStrength(gBgTexBlendRatio);
+        SetStrength(gBrushColorStrength);
 
         const addColorSelect = document.getElementById('AddColorSelect') as HTMLSelectElement;
         addColorSelect.addEventListener('change', () => {
+            if(gBrushAddIndex == 3)
+            {
+                // R을 RG로 변환
+                const src = gTarTex.GetBuf()[0];
+                for(let y = 0; y < gOrgHeight; y++) {
+                    for(let x = 0; x < gOrgWidth; x++) {
+                        const si = (x + y * gOrgWidth) * 4;
+                        
+                        const r = src[si + 0];
+                        const ri = r * 256.0;
+                        const rf = Math.floor(ri);
+                        const g = ri - rf;
+                        
+                        src[si + 0] = rf / 255.0;
+                        src[si + 1] = g;
+                    }
+                }
+            }
+
             gBrushAddIndex = +addColorSelect.value;
 
             gTarPaint.SetColorModel(new CColor(0.0, 0.0, 0.0, CColor.eModel.None));
@@ -934,6 +1031,19 @@ function PanelInit()
                 gBrushColorChannel.z = 0;
                 gBrushColorChannel.w = 0;
                 gTarPaint.SetColorModel(new CColor(1.0, 1.0, 0.0, CColor.eModel.Unpack));
+
+                // RG를 R로 변환
+                const src = gTarTex.GetBuf()[0];
+                for(let y = 0; y < gOrgHeight; y++) {
+                    for(let x = 0; x < gOrgWidth; x++) {
+                        const si = (x + y * gOrgWidth) * 4;
+                        
+                        const r = src[si + 0];
+                        const g = src[si + 1];
+                        
+                        src[si + 0] = r * 255.0 / 256.0 + g * 1.0 / 256.0;
+                    }
+                }
             }
         });
     }
@@ -944,6 +1054,7 @@ function PanelInit()
         const tabColorAdd = document.getElementById('tabColorAdd') as HTMLDivElement;
         const tabColorDel = document.getElementById('tabColorDel') as HTMLDivElement;
 
+        const addColorSelect = document.getElementById('AddColorSelect') as HTMLSelectElement;
         const brushDrawTypeSelect = document.getElementById('brushDrawTypeSelect') as HTMLSelectElement;
         brushDrawTypeSelect.addEventListener('change', () => {
             gBrushDrawType = +brushDrawTypeSelect.value;
@@ -951,6 +1062,9 @@ function PanelInit()
             tabColorSet.style.display = "none";
             tabColorAdd.style.display = "none";
             tabColorDel.style.display = "none";
+
+            addColorSelect.selectedIndex = 0;
+            addColorSelect.dispatchEvent(new Event('change'));
 
             // Set
             if(gBrushDrawType == 0) {

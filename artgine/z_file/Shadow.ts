@@ -1,11 +1,10 @@
-import { ligDir } from "./Light";
 import { SDF } from "./SDF";
-import { abs, CMat, cos, CVec2, CVec3, CVec4, fract, mix, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrV4, Sam2DMat, Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DV4, screenPos, ShadowPosToUv, 
-    sin, V2AddV2, V2DivFloat, V2Dot, V2Fract, V2MulFloat, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
+import { abs, clamp, CMat, CVec2, CVec3, CVec4, fract, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrV4, Sam2DToColor, screenPos, ShadowPosToUv, 
+    sin, sqrt, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3AddV3, V3Dot, V3MulFloat, V3Nor, V4MulMatCoordi } from "./Shader";
 
 export var shadowNearCasV0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNearCasV0);
 export var shadowFarCasP0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowFarCasP0);
-export var shadowTopCasV1: Sam2DArrMat=new Sam2DArrMat(SDF.eUni.MatShadowTopCasV1);
+export var shadowTopCasV1: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowTopCasV1);
 export var shadowBottomCasP1: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowBottomCasP1);
 export var shadowLeftCasV2: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowLeftCasV2);
 export var shadowRightCasP2: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowRightCasP2);
@@ -33,21 +32,6 @@ export var normalBias : number = 1.0;
 export var PCF : number = 2.0;
 export var jitter : number = 0.0;
 
-// function UVHash(p : CVec2) : number
-// {
-//     p = V2Fract(new CVec2(123.34*p.x, 456.21*p.y));
-//     let p2 = V2Dot(p,new CVec2(p.x + 45.32,p.y + 45.32));
-    
-//     return fract((p.x+p2) * (p.y+p2));
-// }
-// function randomJitter(fragCoord: CVec2) : CVec2
-// {
-//     var r1 : number = UVHash(fragCoord);
-//     var r2 : number = UVHash(new CVec2(fragCoord.x + 13.37,fragCoord.y+13.37));
-//     // -0.5 ~ 0.5 사이로 변환
-//     return new CVec2(r1 - 0.5, r2 - 0.5);
-// }
-
 // 2D 해시 → 2D 난수 (0~1) 생성
 function Hash22(p : CVec2) : CVec2
 {
@@ -67,158 +51,128 @@ function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
     var h : CVec2 = Hash22(fragCoord);
     return new CVec2((h.x - 0.5)*_strength, (h.y - 0.5)*_strength);
 }
-function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number) : CVec2
+function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number, _world : CVec4) : number
 {
-    var f16Chk : number=1.0;
-    if(texture16f>0.0)	f16Chk=4.0;
-
-
-    
-
+    var f16Chk : number = 1.0;
+    if(texture16f > 0.0) f16Chk = 4.0;
 
     var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
-    var sVal : number = 0.0;
-    var count : number = 0.0;
+    // ★ cascade 선택은 중심 UV로만 판정 (PCF 횟수 무관)
+    var cas0Valid : number = (_read.y > -0.5 && _uvZ0.x > 0.0 && _uvZ0.y > 0.0 && _uvZ0.x < 1.0 && _uvZ0.y < 1.0) ? 1.0 : 0.0;
+    var cas1Valid : number = (_read.z > -0.5 && _uvZ1.x > 0.0 && _uvZ1.y > 0.0 && _uvZ1.x < 1.0 && _uvZ1.y < 1.0) ? 1.0 : 0.0;
+    var cas2Valid : number = (_read.w > -0.5 && _uvZ2.x > 0.0 && _uvZ2.y > 0.0 && _uvZ2.x < 1.0 && _uvZ2.y < 1.0) ? 1.0 : 0.0;
+
+    var blendEdge : number = 0.1;
+    var edgeX : number = min(_uvZ0.x, 1.0 - _uvZ0.x);
+    var edgeY : number = min(_uvZ0.y, 1.0 - _uvZ0.y);
+    var blend0 : number = (cas0Valid > 0.5) ? clamp(min(edgeX, edgeY) / blendEdge, 0.0, 1.0) : 0.0;
+
+    var sVal0 : number = 0.0;
+    var sVal1 : number = 0.0;
+    var sVal2 : number = 0.0;
 
     var x : number = -PCF;
-    var depthChk : number=0.0;
-
-    var jitterValue : CVec2;
-    
-    for(; x <= PCF + 0.5; x += 1.0) 
+    for(; x <= PCF + 0.5; x += 1.0)
     {
         var y : number = -PCF;
-        for(; y <= PCF + 0.5; y += 1.0) 
+        for(; y <= PCF + 0.5; y += 1.0)
         {
-            
-            
-            if(jitter>0.01)
+            var uv0N : CVec3 = new CVec3(_uvZ0.x + x * texScale.x, _uvZ0.y + y * texScale.y, _read.y);
+            var uv1N : CVec3 = new CVec3(_uvZ1.x + x * texScale.x, _uvZ1.y + y * texScale.y, _read.z);
+            var uv2N : CVec3 = new CVec3(_uvZ2.x + x * texScale.x, _uvZ2.y + y * texScale.y, _read.w);
+
+            if(jitter > 0.01)
             {
-                jitterValue=randomJitter(new CVec2(x+screenPos.x, y+screenPos.y),jitter);
-                //x+=jitterValue.x;
-                //y+=jitterValue.y;
+                var jitterVal : CVec2 = V2MulV2(randomJitter(new CVec2(x + _world.x, y + _world.y), jitter), texScale);
+                uv0N.xy = V2AddV2(uv0N.xy, jitterVal);
             }
 
-            var uv0N : CVec3 = new CVec3(_uvZ0.x + (x+jitterValue.x) * texScale.x, _uvZ0.y + (y+jitterValue.y) * texScale.y,_read.y);
-            var uv1N : CVec3 = new CVec3(_uvZ1.x + x * texScale.x, _uvZ1.y + y * texScale.y,_read.z);
-            var uv2N : CVec3 = new CVec3(_uvZ2.x + x * texScale.x, _uvZ2.y + y * texScale.y,_read.w);
-
-
-            //uv0N.x -= texScale.x;
-            //uv0N.y -= texScale.y * 0.5;
-
-            if(_read.y>-0.5 && uv0N.x>0.0 && uv0N.y>0.0 && uv0N.x<1.0 && uv0N.y<1.0)
+            // ★ 개별 샘플 범위 벗어나면 1.0(빛)으로 처리 — cascade 선택엔 영향 없음
+            if(cas0Valid > 0.5)
             {
-                var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv0N);
-                var depth : number = shadowParam.z;			
-
-                var shadowVal : number;
-                if(shadowParam.w==0.0)    shadowVal=1.0;
-                else shadowVal = (_uvZ0.z + _biasAll*f16Chk) >= depth ? 1.0 : 0.0;
-
-                // PCF 1일때만 적용
-                // 큰 오브젝트 등이 0번 영역에서 컬링되는 경우때문에
-                // csm 1번 영역에서 가져옴
-                if(abs(x) < 0.5 && abs(y) < 0.5 && shadowVal >= 0.99) {
-                    var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                    var depth : number = shadowParam.z;			
-
-                    if(shadowParam.w==0.0)    shadowVal=1.0;
-                    else shadowVal = (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : -PCF*(PCF+4.0)-3.0;
+                if(uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0)
+                {
+                    var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv0N);
+                    sVal0 += (sp0.w == 0.0) ? 0.0 : ((_uvZ0.z + _biasAll * f16Chk) >= sp0.z ? 0.0 : 1.0);
                 }
-
-                sVal += shadowVal;
-                count += 1.0;
+                // else: 범위 밖 샘플은 0.0(빛) 기여 — sVal0 증가 없음
             }
-            else if(_read.z>-0.5 && uv1N.x>0.0 && uv1N.y>0.0 && uv1N.x<1.0 && uv1N.y<1.0)
+
+            if(cas1Valid > 0.5)
             {
-                var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                var depth : number = shadowParam.z;			
-
-                if(shadowParam.w==0.0)    sVal+=1.0;
-                else sVal += (_uvZ1.z + _biasAll *f16Chk*2.0) >= depth ? 1.0 : 0.0;
-
-                count += 1.0;
-                
-                //if(shadowParam.w==0.0)    sVal+=1.0;
+                if(uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0)
+                {
+                    var sp1 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
+                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll * f16Chk) >= sp1.z ? 0.0 : 1.0);
+                }
             }
-            else if(_read.w>-0.5 && uv2N.x>0.0 && uv2N.y>0.0 && uv2N.x<1.0 && uv2N.y<1.0)
-            {
-                var shadowParam : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
-                var depth : number = shadowParam.z;			
-        
-                if(shadowParam.w==0.0)    sVal+=1.0;
-                else sVal += (_uvZ2.z + _biasAll *f16Chk*4.0) >= depth ? 1.0 : 0.0;
 
-                count += 1.0;
+            if(cas2Valid > 0.5)
+            {
+                if(uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0)
+                {
+                    var sp2 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
+                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll * f16Chk) >= sp2.z ? 0.0 : 1.0);
+                }
             }
         }
     }
 
-    return new CVec2(sVal, count);
-}
+    var gridCount : number = (2.0 * PCF + 1.0) * (2.0 * PCF + 1.0);
+    var res0 : number = 1.0 - sVal0 / gridCount;
+    var res1 : number = 1.0 - sVal1 / gridCount;
+    var res2 : number = 1.0 - sVal2 / gridCount;
 
+
+    if(cas0Valid > 0.5 && cas1Valid > 0.5) return mix(res1, res0, blend0);
+    if(cas0Valid > 0.5)                    return res0;
+    if(cas1Valid > 0.5)                    return res1;
+    if(cas2Valid > 0.5)                    return res2;
+    return 1.0;
+}
+function GetLightDir(_viewMatOff : Sam2DArrMat, _index : number) : CVec3
+{
+    var svm : CMat = Sam2DArrToMat(_viewMatOff, _index);
+    return V3Nor(new CVec3(svm[0][2], svm[1][2], svm[2][2]));
+}
 
 function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _offsetScale : number, _normalOffset : CVec3, _worldPos : CVec4, _index : number) : CVec3
 {
-    if(_isActive < -0.5) {
-        return new CVec3(0.0, 0.0, 0.0);
-    }
+    if(_isActive < -0.5) return new CVec3(0.0, 0.0, 0.0);
     
     var svm : CMat = Sam2DArrToMat(_viewMatOff, _index);
     var spm : CMat = Sam2DArrToMat(_projMatOff, _index);
 
-    // 월드 위치에 노말 오프셋 적용
     var world : CVec4 = new CVec4(V3AddV3(_worldPos.xyz, V3MulFloat(_normalOffset, _offsetScale)), _worldPos.w);
-    
-    // 뷰 공간 변환
     var viewPos : CVec4 = V4MulMatCoordi(world, svm);
-    
-    // 그림자맵 공간 변환
     var shadowPos : CVec4 = V4MulMatCoordi(viewPos, spm);
     
     // 결과 저장
     return new CVec3(ShadowPosToUv(shadowPos).xy, viewPos.z);
 }
 
-export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPos : CVec4) : number {
-    
-    
+export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPos : CVec4) : number
+{
+    // 빛 방향에 따른 바이어스 증감
+    var ligDir : CVec3 = GetLightDir(shadowNearCasV0, _index);
+    var NdotL : number = max(V3Dot(_nor, ligDir), 0.05);
+    var tanTheta : number = sqrt(1.0 - NdotL * NdotL) / NdotL;
 
-
-  
     // 노말 오프셋 계산 (셀프 섀도잉 방지)
-    var normalScale : number = normalBias;
-    
+    var normalScale : number = normalBias * (1.0 + clamp(tanTheta, 0.0, 4.0));
     var normalOffset : CVec3 = V3MulFloat(V3Nor(_nor), normalScale);
 
     // 바이어스 계산 (셀프 섀도잉 방지)
-    var biasAll : number = bias;
+    var biasAll : number = bias * (1.0 + clamp(tanTheta * 0.5, 0.0, 2.0));
 
- 
     var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, 1.0, normalOffset, _worldPos, _index);
     var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 1.0, normalOffset, _worldPos, _index);
     var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);
 
-    var sVal_count : CVec2 = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll);
-    // var sVal_count : CVec2 = ApplyJitteredPCF(uvZ0, uvZ1, uvZ2, _read, biasAll, _worldPos);
-
-    var sVal : number = sVal_count.x;
-    var count : number = sVal_count.y;
-
-    if(count >= 0.1)
-    {
-        sVal /= count;
-    }
-    else
-    {
-        sVal=1.0;
-    }
-
+    var sVal : number = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll, _worldPos);
     
-
     //최소 그림자 강도 적용
     return sVal * (1.0-shadowRate) + shadowRate;
 }

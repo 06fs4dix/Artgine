@@ -193,8 +193,10 @@ export function VLWVPMul(_vertex : CVec3, _l : CMat, _w : CMat, _v : CMat, _p : 
 //ps func
 export function Sam2D0ToColor(_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DToColor(_number,_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
+export function Sam2DGradToColor(_number,_uv : CVec2,_dx : CVec2,_dy : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DLodToColor(_number,_uv : CVec2,_lod : number) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DArrToColor(_number,_uv : CVec3) : CVec4{    return new CVec4(0,0,0,0);}
+export function Sam2DArrGradToColor(_number,_uv : CVec3) : CVec4{    return new CVec4(0,0,0,0);}
 export function SamCubeToColor(_number,_uv : CVec3) : CVec4{    return new CVec4(0,0,0,0);}
 export function SamCubeLodToColor(_number,_uv : CVec3,_lod : number) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DToV4(_uni : Sam2DV4,_off : number|any) : CVec4{    return new CVec4(0,0,0,0);}
@@ -205,6 +207,7 @@ export function Sam2DSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function Sam2DArrSize(_off : number) : CVec3 { return new CVec3(0,0,0);}
 export function SamCubeMaxLod(_off : number) : number { return 0;}
 export function Sam2DTileToColor(_number,_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
+export function Sam2DArrTileToColor(_number,_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
 
 export function ParallaxNormal(TangentViewPos : CVec3,TangentFragPos : CVec3,_index:number,_uv:CVec2,height_scale:number) : CVec3{    return new CVec3(0,0,0);}
 

@@ -496,10 +496,24 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 	{
 
 	}
-	Temp()
-	{
-		if(this["mTemp"]==null)	this["mTemp"]={};
-		return this["mTemp"];
+	private static lKeyCache = new Map<string, string>();
+
+	private static ToTempKey(_key: string): string {
+		if (_key[0] !== "/") return _key;
+		let cached = CObject.lKeyCache.get(_key);
+		if (cached != null) return cached;
+		let result = "/" + _key.slice(1).split("/").map(s =>
+			s.length > 1 && s[0] !== s[0].toLowerCase() ? s[1].toLowerCase() + s.slice(2) : s
+		).join("/");
+		CObject.lKeyCache.set(_key, result);
+		return result;
+	}
+
+	Temp(_key: string, _value = null) {
+		_key = CObject.ToTempKey(_key);
+		if (this["mTemp"] == null) this["mTemp"] = {};
+		if (_value != null) this["mTemp"][_key] = _value;
+		return this["mTemp"][_key];
 	}
 	EditInit(_pointer : CPointer=null) : HTMLElement
 	{
@@ -827,87 +841,6 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
     }
 
 
-    // //업데이트할 멤버를 쓴다
-    // public PatchStreamWrite(_stream: CStream,_fullPath :string,_member)
-	// {
-	// 	_stream.Push(_fullPath+"."+_member);
-	// 	_stream.Push(this[_member]);
-	// }
-	// public PatchStreamUpdate(_stream  : CStream,_path : Array<string>)
-	// {
-	// 	if(this["mPatchUpdate"]==null || this["mPatchUpdate"].size==0)	return;
-
-	// 	for(let key of this["mPatchUpdate"])
-	// 	{
-	// 		this.PatchStreamWrite(_stream,CString.PathArrToFullPath(_path),key);
-	// 	}
-
-	// 	this["mPatchUpdate"].clear();
-	// 	return;
-	// }
-    // //이건 내부용이다 호출 금지
-	// public PatchStreamRead(_stream  : CStream,_member : string)
-	// {
-	// 	//let data=null;
-	// 	if(typeof this[_member]=="number")
-	// 		this[_member]=_stream.GetFloat();
-	// 	else if(typeof this[_member]=="string")
-	// 		this[_member]=_stream.GetString();
-	// 	else if(typeof this[_member]=="boolean")
-	// 		this[_member]=_stream.GetBool();
-	// 	else if(this[_member] instanceof Array)
-	// 	{
-	// 		this[_member]=new Array<any>();
-	// 		_stream.GetArray(this[_member]);
-	// 	}
-	// 	else if(this[_member] instanceof Map)
-	// 	{
-	// 		this[_member]=new Map<any,any>();
-	// 		_stream.GetMap(this[_member]);
-	// 	}
-	// 	else if(this[_member] instanceof CObject)
-	// 	{
-	// 		this[_member]=CClass.New(this[_member]);
-	// 		_stream.GetIStream(this[_member]);
-			
-	// 	}
-	// }
-	
-	// protected IsPatchUpdate(_member)
-	// {
-	// 	if(this["mPatchUpdate"]==null)
-	// 		return false;
-
-	// 	return this["mPatchUpdate"].has(_member);
-	// }
-    // //지정되어 있는 클래스에 트레킹 목록에서 패치 등록한다
-	// public PatchTrackDefault()
-	// {
-
-	// }
-    // //이건 수동으로 활성화. 특정 멤버에 값변화를 감시한다
-    // //활성화 안되면 업데이트도 무시된다
-    // //멤버를 지정하면 된다.
-	// public PatchTrack(_fullPath : string)
-	// {
-	// 	let pathArr=_fullPath.split(".");
-	// 	let target=CString.FullPathArrToLastTarget(this,pathArr);
-	// 	if(target["mPatch"]==null)
-	// 	{
-	// 		target["mPatch"]=new Set();
-	// 	}
-	// 	target["mPatch"].add(pathArr[pathArr.length-1]);
-	// }
-    // //업데이트 되었다고 강제로 알림
-    // public PatchExe(_member)
-	// {
-	// 	if(this.IsShould(_member,CObject.eShould.Patch)==false)	return;
-		
-	// 	if(this["mPatchUpdate"]==null)
-	// 		this["mPatchUpdate"]=new Set();
-
-	// 	this["mPatchUpdate"].add(_member);
-	// }       
 	static PushEditerBtn(_obj : CObjectEditerBtn)
 	{
 		gObjectEditerBtn.push(_obj);

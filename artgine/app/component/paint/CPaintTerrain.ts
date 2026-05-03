@@ -1,119 +1,112 @@
 import { CUpdate } from "../../../basic/Basic.js";
-import { CAlert } from "../../../basic/CAlert.js";
-import {CArray} from "../../../basic/CArray.js";
-import { CConsol } from "../../../basic/CConsol.js";
-import { CHash } from "../../../basic/CHash.js";
-import { CObject, CPointer } from "../../../basic/CObject.js";
-import {CString} from "../../../basic/CString.js";
-import {CTree} from "../../../basic/CTree.js";
-import { CBound } from "../../../geometry/CBound.js";
 import {CMat} from "../../../geometry/CMat.js";
-import {CMath} from "../../../geometry/CMath.js";
-import { CRay } from "../../../geometry/CRay.js";
-import { CUtilMath } from "../../../geometry/CUtilMath.js";
 import {CVec1} from "../../../geometry/CVec1.js";
-import { CVec2 } from "../../../geometry/CVec2.js";
-import { CVec3 } from "../../../geometry/CVec3.js";
+import {CVec3} from "../../../geometry/CVec3.js";
 import { CVec4 } from "../../../geometry/CVec4.js";
-import { CBatch } from "../../../render/CBatchMgr.js";
-import { CColor } from "../../../render/CColor.js";
-import {CDevice} from "../../../render/CDevice.js";
-import {CMesh} from "../../../render/CMesh.js";
-import { CMeshCopyNode } from "../../../render/CMeshCopyNode.js";
-import { CMeshCreateInfo } from "../../../render/CMeshCreateInfo.js";
-import { CMeshDataNode } from "../../../render/CMeshDataNode.js";
-import { CMeshDrawNode } from "../../../render/CMeshDrawNode.js";
-import {CMeshPaint} from "../../../render/CMeshPaint.js";
-import {CMeshTreeUpdate} from "../../../render/CMeshTreeUpdate.js";
-import { CRenderPass } from "../../../render/CRenderPass.js";
-
-import {CShader, CVertexFormat} from "../../../render/CShader.js";
+import {CShader} from "../../../render/CShader.js";
 import {CShaderAttr} from "../../../render/CShaderAttr.js";
-import { CTexture } from "../../../render/CTexture.js";
-import { CUtilRender } from "../../../render/CUtilRender.js";
-import { SDF } from "../../../z_file/SDF.js";
-import { CBrush } from "../../canvas/CBrush.js";
-import { CRPAuto } from "../../canvas/CRPMgr.js";
-import {CSubject} from "../../subject/CSubject.js";
-import {CBrushComp} from "../CBrushComp.js";
+import {CRPAuto} from "../../canvas/CRPMgr.js";
 import {CPaint} from "./CPaint.js";
-
-
 
 export class CPaintTerrain extends CPaint
 {
-    mLevel : number;
+    mLevel : CVec1;
+    mLevelRepeatCount : CVec1; // 현재 레벨이 몇회 반복중인지
+
     mCellSize : CVec1;
+    mCellScale : CVec1;
     mCellIndex : CVec3;
+    mCellScaledSize : CVec1;
+
+    mDefaultHeight : CVec1;
 
     mSplatMapTexCodi : CMat;
 
     mTerrainOffset : CVec3;
-    mTerrainSize : CVec3;
-
-    mLevelRepeatCount : CVec1; // 현재 레벨이 몇회 반복중인지
+    mTerrainSize : CVec1;
+    mTerrainHeight : CVec1;
     
-    constructor(_texture : string[], _terrainOffset : CVec3, _terrainSize : CVec3, _level : number, _levelRepeat : number, _cellSize : number, _index : CVec3, _splatTexCodi : CMat)
+    constructor(_texture : string[], _terrainOffset : CVec3, _terrainSize : number, _terrainHeight : number, _level : number, _levelRepeat : number, _cellSize : number, _cellIndex : CVec3, _cellScale : number, _defaultHeight : number, _splatTexCodi : CMat)
     {
         super();
 
-        this.mAutoLoad.mWrap=CTexture.eWrap.Repeat;
-        this.mAutoLoad.mMipMap=CTexture.eMipmap.GL;
-
         this.SetTexture(_texture);
-        this.mLevel = _level;
+        this.mTerrainOffset = _terrainOffset;
+        this.mTerrainSize = new CVec1(_terrainSize);
+        this.mTerrainHeight = new CVec1(_terrainHeight);
+        this.mLevel = new CVec1(_level);
         this.mLevelRepeatCount = new CVec1(_levelRepeat);
         this.mCellSize = new CVec1(_cellSize);
-        this.mTerrainOffset = _terrainOffset;
-        this.mTerrainSize = _terrainSize;
-        this.mCellIndex = _index;
-        this.mSplatMapTexCodi = _splatTexCodi;
+        this.mCellScale = new CVec1(_cellScale);
+        this.mCellScaledSize = new CVec1(_cellSize * _cellScale);
 
-        
-        this.PushTag("bilinear");
-        // this.PushTag("triplanar");
+        this.mDefaultHeight = new CVec1(_defaultHeight);
+
+        this.mCellIndex = _cellIndex;
+        this.mSplatMapTexCodi = _splatTexCodi;
 
         this.PushCShaderAttr(new CShaderAttr("terrainOffset", this.mTerrainOffset));
         this.PushCShaderAttr(new CShaderAttr("terrainSize", this.mTerrainSize));
-        this.PushCShaderAttr(new CShaderAttr("cellSize", this.mCellSize));
+        this.PushCShaderAttr(new CShaderAttr("terrainHeight", this.mTerrainHeight));
         this.PushCShaderAttr(new CShaderAttr("level", this.mLevel));
         this.PushCShaderAttr(new CShaderAttr("levelRepeat", this.mLevelRepeatCount));
+        this.PushCShaderAttr(new CShaderAttr("cellSize", this.mCellScaledSize));
         this.PushCShaderAttr(new CShaderAttr("splatMatTexCodi", this.mSplatMapTexCodi));
     }
 
-    override Start(): void {
+    override Start(): void 
+    {
         super.Start();
-
         this.MatUpdate();
     }
 
-    MatUpdate()
+    MatUpdate(_camPos = new CVec3())
     {
         this.mBound.mMin.x = -0.5;
-        this.mBound.mMin.y = -0.5;
+        this.mBound.mMin.y = 0.0;
         this.mBound.mMin.z = -0.5;
 
         this.mBound.mMax.x = 0.5;
-        this.mBound.mMax.y = 0.5;
+        this.mBound.mMax.y = 1.0;
         this.mBound.mMax.z = 0.5;
 
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
 
-        this.mLMat.mF32A[ 0] = this.mCellSize.x * cellCount;
-        this.mLMat.mF32A[ 5] = this.mTerrainSize.y;
-        this.mLMat.mF32A[10] = this.mCellSize.x * cellCount;
-        this.mLMat.mF32A[12] = this.mCellIndex.x * this.mLMat.mF32A[ 0];
-        this.mLMat.mF32A[14] = this.mCellIndex.z * this.mLMat.mF32A[10];
+        this.mLMat.mF32A[ 0] = this.mCellScaledSize.x * cellCount;
+        this.mLMat.mF32A[ 5] = this.mTerrainHeight.x;
+        this.mLMat.mF32A[10] = this.mCellScaledSize.x * cellCount;
+        this.mLMat.mF32A[12] = _camPos.x + this.mCellIndex.x * this.mLMat.mF32A[ 0];
+        this.mLMat.mF32A[14] = _camPos.z + this.mCellIndex.z * this.mLMat.mF32A[10];
         this.mLMat.UnitCheck();
 
         this.mBound.MatCoordi(this.mLMat);
 
-        this.mBound.mMin.y = 0.0;
-        this.mBound.mMax.y = this.mTerrainSize.y;
-
         this.mBW.mRadian=0; // 업데이트용인가?
 
         this.UpdateLMat();
+    }
+
+    Update(_update: CUpdate): void 
+    {
+        super.Update(_update);
+
+        for(let renPt of this.mRenPT)
+        {
+            if(renPt.mCam.mShadow == true) continue;
+            const cam = renPt.mCam;
+            if(cam.mUpdateMat == CUpdate.eType.Updated)
+            {
+                // 카메라 높이에 따른 스케일 변경
+                const heightStep : number = Math.floor(Math.log2(cam.GetEye().y / this.mDefaultHeight.x));
+                const curScale : number = this.mCellSize.x * this.mCellScale.x * Math.max(1, Math.pow(2, heightStep)); // 1보다는 작지 않게 설정
+                if(this.mCellScaledSize.x != curScale) {   // 스케일 변화 있을 때만 업데이트
+                    this.mCellScaledSize.x = curScale;
+                }
+
+                // 카메라 이동에 따른 메시 중점 변경
+                this.MatUpdate(cam.GetEye());
+            }
+        }
     }
 
     override Render(_vf: CShader): void {
@@ -134,6 +127,13 @@ export class CPaintTerrain extends CPaint
 
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("cellCount",new CVec3(cellCount, 0, cellCount)));
+
+        // 그림자의 renPt가 아니라 현재 카메라 넣어줌
+        for(let renPt of this.mRenPT) {
+            if(renPt.mCam.mShadow == true) break;
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("camCanv",renPt.mCam.GetEye()));
+            break;
+        }
 
         this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         var dm=this.GetDrawMesh("Artgine/DM/GeoClipmap",_vf,this.mOwner.GetFrame().Pal().Terrain());

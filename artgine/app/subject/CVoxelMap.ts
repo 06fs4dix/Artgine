@@ -24,7 +24,7 @@ import { CBlackBoardRef, CObject, CPointer } from "../../basic/CObject.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CClass } from "../../basic/CClass.js";
-import {CNavigation} from "../component/CNavigation.js";
+
 import { CFrame } from "../../util/CFrame.js";
 import { CPoolGeo } from "../../geometry/CPoolGeo.js";
 import { CUtilMath } from "../../geometry/CUtilMath.js";
@@ -65,37 +65,6 @@ export class CCIndexPick extends CCIndex
 
 
 
-// export class  CColliderVoxel extends CCollider
-// {
-// 	constructor(_voxel : CVoxelMap)
-// 	{
-// 		super();
-// 		if(_voxel==null)	return;
-
-// 		this.mVoxel=_voxel;
-
-		
-//         this.mBound.mMax.x=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.x;
-// 		this.mBound.mMax.y=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.y;
-// 		this.mBound.mMax.z=this.mVoxel.mBuf.mSize*this.mVoxel.mBuf.mCount.z;
-//         this.mBound.mMin.Zero();
-// 		this.mBound.mType=CBound.eType.Voxel;
-// 	}
-// 	mVoxel : CVoxelMap;
-// 	mResults=new CArray<CCIndex>();
-// 	mBoundDummy=new CBound();
-// 	override IsShould(_member: string, _type: CObject.eShould) 
-// 	{
-// 		if(_member=="mVoxel" || _member=="mResults" || _member=="mBoundDummy" )
-// 			return false;
-			
-// 		return super.IsShould(_member,_type);
-// 	}
-// 	override CollisionChk(_tar : CCollider,_colTarget : CArray<CCollider>,_colPush : CArray<CVec3>) : boolean
-//     {
-// 		return false;
-//     }
-// }
 
 /*
 기존 복셀 위치 정보
@@ -680,7 +649,7 @@ export class CVoxelMap extends CSubject implements IMapSchema
 		super.SetPos(_pos,_reset);
 		this.RemoveComps(CPaintVoxel);
 		this.RemoveComps(CCollider);
-		this.RemoveComps(CNavigation);
+		
 	}
 
 	// public override Export(_copy?: boolean, _resetKey?: boolean): this 

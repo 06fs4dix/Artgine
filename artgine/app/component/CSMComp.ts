@@ -6,7 +6,7 @@ import { CEvent } from "../../basic/CEvent.js";
 import { CObject } from "../../basic/CObject.js";
 import { CMath } from "../../geometry/CMath.js";
 import { CVec3 } from "../../geometry/CVec3.js";
-import { CStateMachine } from "../../util/CStateMachine.js";
+import { CRoleMgr } from "../../util/CRole.js";
 import { CRouteMsg } from "../CRouteMsg.js";
 import { CAniFlow } from "./CAniFlow.js";
 import { CAnimation } from "./CAnimation.js";
@@ -16,7 +16,7 @@ import { CRigidBody } from "./CRigidBody.js";
 
 export class CSMComp extends CComponent
 {
-    mSM=new CStateMachine(this);
+    mSM=new CRoleMgr(this);
     mNameSet=new Set<string>();
     mLastDir : number =null;
     override Update(_update : CUpdate): void 

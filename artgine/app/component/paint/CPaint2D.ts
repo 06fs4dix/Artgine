@@ -53,6 +53,7 @@ export class CPaint2D extends CPaint
 {
 	protected mSize : CVec2;
 	protected mPos : CVec3;
+	protected mSca : CVec2;
 	protected mPivot : CVec3;
 	
 	//protected mRot : CVec4;
@@ -118,6 +119,7 @@ export class CPaint2D extends CPaint
 		
 		this.mPivot=new CVec3();
 		this.mPos=new CVec3();
+		this.mSca=new CVec2(1,1)
 		
 		
 		
@@ -506,8 +508,8 @@ export class CPaint2D extends CPaint
 		this.mBound.mMax.y = CUtilRender.Mesh2DSize * 0.5;
 		this.mBound.mMax.z = 0.5;
 		
-		var bSca = this.GetScale();
-		var lpos=this.mPos.Export();
+		let bSca = this.GetScale();
+		let lpos=this.mPos.Export();
 		lpos.x += this.mBound.mMax.x*bSca.x*this.mPivot.x;
 		lpos.y += this.mBound.mMax.y*bSca.y*this.mPivot.y;
 		
@@ -544,7 +546,7 @@ export class CPaint2D extends CPaint
 	}
 	GetScale()
 	{
-		return new CVec3(this.mSize.x / CUtilRender.Mesh2DSize*this.mRevers.x, this.mSize.y / CUtilRender.Mesh2DSize*this.mRevers.y, 1);
+		return new CVec3(this.mSize.x / CUtilRender.Mesh2DSize*this.mRevers.x*this.mSca.x, this.mSize.y / CUtilRender.Mesh2DSize*this.mRevers.y*this.mSca.y, 1);
 	}
 	
 	GetSize() 
@@ -741,6 +743,12 @@ export class CPaint2D extends CPaint
 	SetPos(_pos : CVec3)
 	{
 		this.mPos = _pos;
+		this.MatUpdate();
+	}
+	SetSca(_sca : CVec2)
+	{
+		if(this.mSca.Equals(_sca))	return;
+		this.mSca = _sca;
 		this.MatUpdate();
 	}
 	// SetRot(_rot : CVec3|CVec4)

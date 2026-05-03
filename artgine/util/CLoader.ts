@@ -29,6 +29,7 @@ import { CUniqueID } from "../basic/CUniqueID.js"
 import { CEvent } from "../basic/CEvent.js"
 import { CClass } from "../basic/CClass.js"
 import { CVec3 } from "../geometry/CVec3.js"
+import { CParserULPC, CULPC } from "./parser/CParserULPC.js"
 //https://github.com/JordiRos/GLGif
 //gif animation은 이걸로
 
@@ -311,6 +312,13 @@ export class CLoader
 			this.VideoLoad(_file,null);
 			return true;
 		}
+		else if (ext=="ulpc")
+		{
+			this.mLoadSet.delete(_file);
+			let jsonFile = _file.replace(/\.ulpc$/i, ".json");
+			await this.Exe(jsonFile, _option);	
+			return this.mRes.Find(_file);
+		}
 		else if (ext=="tex" || ext=="rgba" || ext=="mesh")
 		{
 			this.mLoadSet.delete(_file);
@@ -551,6 +559,26 @@ export class CLoader
 			if(this.mRes!=null)			this.mRes.Push(_file,mesh);
 			await this.MeshTexLoad(_file,mesh,_option);
 			return mesh;
+		}
+		else if(jData.GetStr("bodyType")!=null || jData.Get("selections")!=null)
+		{
+			let par :CParserULPC=new CParserULPC();
+			par.SetBuffer(new Uint8Array(_buffer),_buffer.byteLength);
+			// par.mResBase=jData.GetStr("resBase")
+			// if(par.mResBase==null)	return null;
+
+			await par.Load(_file);
+			let ulpc : CULPC = par.GetResult();
+			
+			if(this.mRes!=null)
+			{
+				this.mRes.Push(_file,ulpc);
+				ulpc.SetKey(_file);
+				let textureFile = _file.replace(/\.json$/i, ".ulpc"); 
+				this.mRes.Push(textureFile, ulpc.mTexture);
+			}
+			
+			return ulpc;
 		}
 		else if(jData.GetStr("class")!=null)
 		{

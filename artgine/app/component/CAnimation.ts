@@ -67,17 +67,17 @@ export class CClipCoodi extends CClip
 	public mSTY : number;
 	public mEDX : number;
 	public mEDY : number;
-	public mResize=false;//코디에 맞게 SetSize다시 맞춰줌 128,128 인걸 100,100 이면 이걸로 변경, 바운딩은 변경이 없다
+	public m2DScale : CVec2;
 	//public test=new CVec3();
 	
-	constructor(_time : number,_delay : number,_stX : number=0, _stY : number=0,_edX : number=0,_edY : number=0,_resize=false)
+	constructor(_time : number,_delay : number,_stX : number=0, _stY : number=0,_edX : number=0,_edY : number=0,_2DScale=new CVec2(1,1))
 	{
 		super(_time,_delay);
 		this.mSTX = _stX;
 		this.mSTY = _stY;
 		this.mEDX = _edX;
 		this.mEDY = _edY;
-		this.mResize=_resize;
+		this.m2DScale=_2DScale;
 	}
 };
 

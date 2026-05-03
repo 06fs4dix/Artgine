@@ -397,11 +397,11 @@ export class CH5Canvas
 
 
 	
-	static Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
+	// 1. 함수 앞에 async를 붙여 비동기 함수로 만듭니다.
+	static async Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
 	{
 		if(_pVec==null)
 			_pVec=gCMDStack;
-
 
 		let pDummy : Array<CH5Cmd>=new Array<CH5Cmd>();
 
@@ -421,16 +421,32 @@ export class CH5Canvas
 				for(var j=0;j<_pVec[i].mParameter.length;++j)
 				{
 					gPara[j]=_pVec[i].mParameter[j];
-					// if(_fr!=null && j==0 && typeof _pVec[i].m_parameter[j] =="string" && (_pVec[i].m_parameter[j].indexOf("png")!=-1 || _pVec[i].m_parameter[j].indexOf("jpg")!=-1))
-					// {
-					// 	var tex=_fr.Res().Find(_pVec[i].m_parameter[j]) as CTexture;
-					// 	if(tex==null)
-					// 	{
-					// 		await _fr.Load().Load(_pVec[i].m_parameter[j]);
-					// 		tex=_fr.Res().Find(_pVec[i].m_parameter[j]) as CTexture;
-					// 	}
-					// 	g_para[j]=tex.GetBuf()[0];
-					// }
+					
+					// ==========================================
+					// [수정된 이미지 로드 및 파라미터 교체 로직]
+					// 파라미터가 문자열이고 이미지 확장자를 포함하는지 확인합니다.
+					if(typeof gPara[j] === "string" && gPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i))
+					{
+						try {
+							// Promise를 사용해 표준 이미지 로드를 대기(await)합니다.
+							const loadedImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+								const img = new Image();
+								// CORS 이슈 방지 (외부 도메인 이미지 로드 시 필요할 수 있음)
+								img.crossOrigin = "Anonymous"; 
+								img.onload = () => resolve(img);
+								img.onerror = () => reject(new Error(`Image load failed: ${gPara[j]}`));
+								img.src = gPara[j]; // 로드 시작
+							});
+							
+							// 로드가 완료되면 문자열 주소를 실제 HTMLImageElement로 교체합니다.
+							gPara[j] = loadedImage;
+						} catch (e) {
+							console.error(e);
+							errorcount++;
+							continue; // 로드 실패 시 그리기 명령을 건너뛸 수 있습니다.
+						}
+					}
+					// ==========================================
 				}
 
 				let func = Object.getOwnPropertyNames(CH5Canvas);
@@ -439,17 +455,17 @@ export class CH5Canvas
 				let ftype = true;
 				let fcount = 1;
 
-				if((typeof gCTX[_pVec[i].mName] == 'function') == false) {
+				if((typeof (gCTX as any)[_pVec[i].mName] == 'function') == false) {
 					ftype = false;
 					fcount=func.length;
 				}
 				for(let j=0;j<fcount;j++){
 
 					if(ftype){
-						funcA = gCTX[_pVec[i].mName].bind(gCTX);
+						funcA = (gCTX as any)[_pVec[i].mName].bind(gCTX);
 					}
 					else{
-						funcA = CH5Canvas[func[j]];
+						funcA = (CH5Canvas as any)[func[j]];
 						if((_pVec[i].mName == func[j]) == false)
 							continue;
 					}
@@ -467,10 +483,13 @@ export class CH5Canvas
 							case 8: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4],gPara[5],gPara[6],gPara[7]); break;
 							case 9: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4],gPara[5],gPara[6],gPara[7],gPara[8]); break;
 						}
-						if(ftype == false){
+						if(ftype == false && funcDr instanceof Array){
+							// 재귀 호출 시에도 await를 걸어주어야 할 수 있으나, 
+							// 내부 Draw명령이 비동기화되었으므로 여기서도 처리 방식 고민이 필요합니다.
+							// 일단은 기존 로직을 유지합니다.
 							let CH=[];
 							CH.push(...funcDr);
-							let e = CH5Canvas.Draw(CH);
+							let e = await CH5Canvas.Draw(CH); // 재귀 호출도 await 처리
 							errorcount += e;
 						}
 					}catch{
@@ -479,7 +498,7 @@ export class CH5Canvas
 				}
 			}
 			else
-				gCTX[_pVec[i].mName]=_pVec[i].mParameter;	
+				(gCTX as any)[_pVec[i].mName]=_pVec[i].mParameter;	
 		}
 		gCMDStack=new Array();
 		return errorcount;

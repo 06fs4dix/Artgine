@@ -96,7 +96,7 @@ export class CFloat32 extends CObject
 		let str="";
 		for (let i = 0; i < this.mF32A.length; ++i) 
 		{
-			str+=this.mF32A[0];
+			str+=this.mF32A[i]+",";
 		}
 			
 		return str;

@@ -107,7 +107,9 @@ export class CFile
 					oReq.onerror=()=>{
 						resolve(null);
 					};
-					oReq.open("GET", _name + "?t=" + Date.now());
+					//PWA에서 캐시 문제가 생겨서 삭제하지마
+					//oReq.open("GET", _name + "?t=" + Date.now());
+					oReq.open("GET", _name);
 					oReq.responseType = "arraybuffer";
 					oReq.send();
 				}

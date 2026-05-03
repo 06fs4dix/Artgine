@@ -198,7 +198,7 @@ export class CPalette
 		_fw.Res().Push(this.GetSphereMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
 		
-		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetTerrain(new CVec2(64, 64), 0),this.GetBlackTex());
+		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetTerrain(new CVec2(128, 128), 0),this.GetBlackTex());
 		this.mTerrain=mesh.meshTree.mData.ci;
 		CUtilRender.MeshBoundUpdate(mesh);
         this.mTerrain.bound.mMin.y = 0;

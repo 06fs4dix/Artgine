@@ -56,6 +56,12 @@ export class CVec3 extends CFloat32
         "Front":4,
         "Back":5,
 
+		"North":0,
+        "South":1,
+        "West":2,
+        "East":3,
+        
+
 		// "LastUp":10,
         // "LastDown":11,
         // "LastLeft":12,

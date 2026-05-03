@@ -12,7 +12,7 @@ class CCTEnterExit
     tick : number;
 }
 
-export default class CBehavior extends CComponent
+export class CBehavior extends CComponent
 {
     private mCTMap = new Map<CCollider, CCTEnterExit>();
     private mTick: number = 1;

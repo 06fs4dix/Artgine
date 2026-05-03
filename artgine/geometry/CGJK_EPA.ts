@@ -45,7 +45,7 @@ export class CGJKShape extends CObject
 		{
         case CBound.eType.Polytope:
             return new CGJKPolytope(_bound.mPos);
-        case CBound.eType.Box:case CBound.eType.Voxel:
+        case CBound.eType.Box:
             return new CGJKBox(_bound.mMin, _bound.mMax);
         case CBound.eType.Sphere:
             {

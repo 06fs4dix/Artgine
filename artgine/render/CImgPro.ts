@@ -857,7 +857,7 @@ export class CImgPro
 	/*
 		_targetTex : 색상이 그려질 텍스쳐
 		_boundary : _targetTex가 차지하는 전체 영역
-		_pos : 브러시가 찍힐 중심 좌표
+		_center : 브러시가 찍힐 중심 좌표
 		_size : 브러시 크기
 		_channel : 쓸 채널 (0=R, 1=G, 2=B, 3=A, 4=RGBA)
 		_value : number(0-255) 또는 CTexture(스탬프 소스)
@@ -867,119 +867,120 @@ export class CImgPro
 		        1 : 사각형, 값 더하기
 		        2 : 원형, 중심 최대 → 가장자리 0 (Linear falloff)
 	*/
-	static DrawBrush(_targetTex : CTexture, _boundary : CBound, _pos : CVec3, _size : CVec2, _channel : number, _value : number, _type : number, _brush : CTexture)
+	static DrawBrush(_targetTex : CTexture, _boundary : CBound, _center : CVec3, _brushSize : CVec2, _channel : number, _brushStrength : number, _type : number, _brushTex : CTexture)
 	{
-		// 버퍼 있는지 검증
-		if(_targetTex.GetBuf().length == 0) {
-			_targetTex.CreateBuf();
-		}
+        // 타겟 버퍼
+		if(_targetTex.GetBuf().length == 0) _targetTex.CreateBuf();
 		const targetBuf = _targetTex.GetBuf()[0] as Uint8Array;
 
-		// 리맵 함수
-		function Remap(_val : number, _min1 : number, _max1 : number, _min2 : number, _max2 : number) {
-			return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
-		}
+        // 현재 월드에 있는 pos, size를 텍스쳐 좌표로 변환
+        const bound : CVec3 = _boundary.GetSize();
+        const invBoundX = 1.0 / bound.x;
+        const invBoundY = 1.0 / bound.y;
+        const center : CVec2 = new CVec2(
+            Math.floor((_center.x - _boundary.mMin.x) * invBoundX * _targetTex.GetWidth()),
+            Math.floor((_center.y - _boundary.mMin.y) * invBoundY * _targetTex.GetHeight()),
+        );
+        const brushSize : CVec2 = new CVec2(
+            Math.floor(_brushSize.x * 0.5 * invBoundX * _targetTex.GetWidth()),
+            Math.floor(_brushSize.y * 0.5 * invBoundY * _targetTex.GetHeight())
+        );
 
-		// 텍스쳐 정보
-		const texWidth = _targetTex.GetWidth();
-		const texHeight = _targetTex.GetHeight();
-		const boundSize = _boundary.GetSize();
-
-		// 월드 좌표 => UV 좌표
-		const centerUV = new CVec2(
-			Remap(_pos.x, _boundary.mMin.x, _boundary.mMax.x, 0, 1),
-			Remap(_pos.y, _boundary.mMin.y, _boundary.mMax.y, 0, 1)
-		);
-
-		// 월드 사이즈 => UV 사이즈
-		const sizeUV = new CVec2(
-			_size.x / boundSize.x,
-			_size.y / boundSize.y
-		);
-
-		// UV => 픽셀 좌표
-		const centerPixel = new CVec2(
-			Math.floor(centerUV.x * texWidth),
-			Math.floor(centerUV.y * texHeight)
-		);
-
-		// 브러시 픽셀 크기(최소 1)
-		const brushSizePixel = new CVec2(
-			Math.max(1, Math.floor(sizeUV.x * texWidth)),
-			Math.max(1, Math.floor(sizeUV.y * texHeight))
-		);
-
-		// 브러시 절반 크기
-		const halfBrushSize = new CVec2(
-			Math.floor(brushSizePixel.x / 2),
-			Math.floor(brushSizePixel.y / 2)
-		);
-
-		// 그려질 픽셀 범위
-		const xRangePixel = new CVec2(
-			Math.max(0, centerPixel.x - halfBrushSize.x),
-			Math.min(texWidth - 1, centerPixel.x + halfBrushSize.x)
-		);
-		const yRangePixel = new CVec2(
-			Math.max(0, centerPixel.y - halfBrushSize.y),
-			Math.min(texHeight - 1, centerPixel.y + halfBrushSize.y)
-		);
+        // 브러시가 영향을 미칠 영역 계산
+        const minX = CMath.Clamp(center.x - brushSize.x, 0, _targetTex.GetWidth());
+        const minY = CMath.Clamp(center.y - brushSize.y, 0, _targetTex.GetHeight());
+        const maxX = CMath.Clamp(center.x + brushSize.x, 0, _targetTex.GetWidth());
+        const maxY = CMath.Clamp(center.y + brushSize.y, 0, _targetTex.GetHeight());
 
 		// 활성 채널 목록
-		const activeChannels: number[] = _channel === 4 ? [0, 1, 2, 3] : [_channel];
+        const color : CVec4 = new CVec4();
+		const activeChannels: number[] = [];
+        if(_channel == 4) {
+            activeChannels.push(0, 1, 2, 3);
+            color.mF32A[0] = (_brushStrength >>> 24) & 0xFF;
+            color.mF32A[1] = (_brushStrength >>> 16) & 0xFF;
+            color.mF32A[2] = (_brushStrength >>> 8) & 0xFF;
+            color.mF32A[3] = _brushStrength & 0xFF;
+        }
+        else {
+            activeChannels.push(_channel);
+            color.mF32A[_channel] = _brushStrength;
+        }
 
-		// channel=4, number값 → 채널별 분리 [R, G, B, A]
-		const perChannelVals: number[] | null =
-			(_channel === 4)
-				? [(_value >>> 24) & 0xFF, (_value >>> 16) & 0xFF, (_value >>> 8) & 0xFF, _value & 0xFF]
-				: null;
+        // 브러시 버퍼
+        if(_brushTex.GetBuf().length == 0) _brushTex.CreateBuf();
+        const brushBuf = _brushTex.GetBuf()[0] as Uint8Array;
+        const GetPixelConst = (_x : number, _y : number) => {
+            _x = CMath.Clamp(_x, 0, _brushTex.GetWidth() - 1);
+            _y = CMath.Clamp(_y, 0, _brushTex.GetHeight() - 1);
+            return brushBuf[(_y * _brushTex.GetWidth() + _x) * 4 + 3];
+        }
 
-		// 채널 인덱스별 number값 반환
-		function GetNumVal(ch : number) : number {
-			return perChannelVals ? perChannelVals[ch] : (_value as number);
-		}
+        // 브러시 버퍼에서 샘플링하는 함수
+        var SampleBrushTex = (_uv : CVec2) => {
+            const texXY = new CVec2(
+                _uv.x * _brushTex.GetWidth() - 0.5,
+                _uv.y * _brushTex.GetHeight() - 0.5
+            );
 
-		const stampTex : CTexture = _brush;
-		const stampBuf : Uint8Array = stampTex.GetBuf()[0];
+            const x0 = Math.floor(texXY.x);
+            const y0 = Math.floor(texXY.y);
+            const x1 = x0 + 1;
+            const y1 = y0 + 1;
+
+            const fx = texXY.x - x0;
+            const fy = texXY.y - y0;
+            
+            const c00 = GetPixelConst(x0, y0);
+            const c10 = GetPixelConst(x1, y0);
+            const c01 = GetPixelConst(x0, y1);
+            const c11 = GetPixelConst(x1, y1);
+
+            const tx0 = c00 + fx * (c10 - c00);
+            const tx1 = c01 + fx * (c11 - c01);
+
+            return tx0 + fy * (tx1 - tx0);
+        }
 
 		// 픽셀 영역 순회
-		for(let ty = yRangePixel.x; ty <= yRangePixel.y; ty++) {
-			for(let tx = xRangePixel.x; tx <= xRangePixel.y; tx++) {
-				// 브러시 내 UV (0~1)
-				const uv = new CVec2(
-					(tx - (centerPixel.x - halfBrushSize.x)) / brushSizePixel.x,
-					(ty - (centerPixel.y - halfBrushSize.y)) / brushSizePixel.y
-				);
+		for(let ty = minY; ty <= maxY; ty++)
+        for(let tx = minX; tx <= maxX; tx++)
+        {
+            const dx = tx - center.x;
+            const dy = ty - center.y;
 
-				if (uv.x < 0 || uv.x >= 1 || uv.y < 0 || uv.y >= 1) continue;
+            // 브러시 내 UV
+            const brushUV = new CVec2(
+                dx / brushSize.x * 0.5 + 0.5,
+                dy / brushSize.y * 0.5 + 0.5
+            );
 
-				// Type 2: 타원 거리 → Linear falloff, 원 바깥 스킵
-				let falloff = 1.0;
-				if (_type === 2) {
-					const dx = (uv.x - 0.5) * 2.0; // -1 ~ 1
-					const dy = (uv.y - 0.5) * 2.0;
-					const dist = Math.sqrt(dx * dx + dy * dy); // 0=중심, 1=가장자리
-					if (dist >= 1.0) continue;
-					falloff = 1.0 - dist;
-				}
+            if (brushUV.x < 0 || brushUV.x >= 1 || brushUV.y < 0 || brushUV.y >= 1) continue;
 
-				const targetIdx = ((texHeight - 1 - ty) * texWidth + tx) * 4;
+            // Type 2: 타원 거리 → Linear falloff, 원 바깥 스킵
+            let falloff = 1.0;
+            if (_type === 2) {
+                const dx = (brushUV.x - 0.5) * 2.0; // -1 ~ 1
+                const dy = (brushUV.y - 0.5) * 2.0;
+                const dist = Math.sqrt(dx * dx + dy * dy); // 0=중심, 1=가장자리
+                if (dist >= 1.0) continue;
+                falloff = 1.0 - dist;
+            }
 
-                // 텍스쳐 모드: stampTex를 마스크로 컬러값 쓰기
-                const sx = Math.floor(uv.x * stampTex.GetWidth());
-                const sy = Math.floor(uv.y * stampTex.GetHeight());
-                const stampIdx = (sy * stampTex.GetWidth() + sx) * 4;
+            const targetIdx = ((_targetTex.GetHeight() - 1 - ty) * _targetTex.GetWidth() + tx) * 4;
 
-                for(const ch of activeChannels) {
-                    const mask = stampBuf[stampIdx + 3] / 255;
-                    const srcVal = Math.round(GetNumVal(ch) * falloff);
-                    if (_type === 0 || _type === 2) { // type 0
-                        if(mask > 0) targetBuf[targetIdx + ch] = CMath.FloatInterpolate(0, srcVal, mask);
-                    } else { // type 1
-                        targetBuf[targetIdx + ch] = CMath.FloatInterpolate(targetBuf[targetIdx + ch], CMath.Clamp(targetBuf[targetIdx + ch] + srcVal, 0, 255), mask);
-                    }
+            // 텍스쳐 모드: stampTex를 마스크로 컬러값 쓰기
+            const mask = SampleBrushTex(brushUV) / 255;
+            if(mask <= 0) continue;
+            
+            for(const ch of activeChannels) {
+                const srcVal = color.mF32A[ch] * falloff;
+                if (_type === 0 || _type === 2) { // type 0
+                    if(mask > 0) targetBuf[targetIdx + ch] = CMath.FloatInterpolate(0, srcVal, mask);
+                } else { // type 1
+                    targetBuf[targetIdx + ch] = CMath.FloatInterpolate(targetBuf[targetIdx + ch], CMath.Clamp(targetBuf[targetIdx + ch] + srcVal, 0, 255), mask);
                 }
-			}
-		}
+            }
+        }
 	}
 }

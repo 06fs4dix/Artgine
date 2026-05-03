@@ -4,10 +4,12 @@ import { CObject } from "../../basic/CObject.js";
 import {CString} from "../../basic/CString.js";
 import { CFile } from "../../system/CFile.js";
 import { IFile } from "../../system/System.js";
+import { IProvider } from "../../util/CRole.js";
+
 import {CRouteMsg} from "../CRouteMsg.js";
 import {CSubject} from "../subject/CSubject.js";
 
-export class CComponent extends CObject
+export class CComponent extends CObject implements IProvider
 {
 	protected mEnable : boolean;
 	public mSave : boolean;
@@ -31,6 +33,7 @@ export class CComponent extends CObject
 		
 
 	}
+	Provider(_type : string,_state : Array<string>) {	}
 
 	GetSysc(){	return this.mSysc;	}
 	IsStart()
@@ -213,15 +216,16 @@ export namespace CComponent
 	export enum eSysn{
 		First=0,
 		Collider=100,
-		AniFlow=200,
 		Light=201,
 		IK=300,
 		CamComp=401,
-		Paint=402,
+		
 
 		RigidBody=500,
 		Wind=501,
 		WorkFlow=600,
 		Event=601,
+		AniFlow=800,
+		Paint=900,
 	};
 }

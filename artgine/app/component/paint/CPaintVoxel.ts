@@ -134,7 +134,7 @@ export class CPaintVoxel extends CPaint
 		pbuf.Resize(_arr.length*6*4);
 		ubuf.Resize(_arr.length*6*4);
 		cbuf.Resize(_arr.length*6*2);
-		this.mBound.SetType(CBound.eType.Voxel);
+		this.mBound.SetType(CBound.eType.Box);
 
 
 

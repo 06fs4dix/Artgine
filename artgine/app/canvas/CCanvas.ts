@@ -43,12 +43,19 @@ export class CPairStrStr
     constructor(t, r) { this.first = t, this.second = r; }
 }
 
-export class CCanvasPlugin
+export class CCanvasPlugin extends CObject
 {
 	mCanvas : CCanvas;
 	mDestroy=false;
 	constructor()
 	{
+		super();
+	}
+	override IsShould(_member: string, _type: CObject.eShould): boolean {
+
+		if(_member=="mCanvas" || _member=="mCanvas")
+			return false;
+		return super.IsShould(_member,_type);
 	}
 	Exe(){};
 	SetCanvas(_canvas : CCanvas)
@@ -576,6 +583,11 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 			//this.mResMap.set(key,new Proxy(value,ProxyHandle));
 			this.mResMap.set(key,CObject.ProxyTree(value));
 			
+		}
+
+		for(let plugin of this.mPlugin)
+		{
+			plugin.mCanvas=this;
 		}
 		// const rpMgr = this.mRPMgr;
 		// this.mRPMgr = null;

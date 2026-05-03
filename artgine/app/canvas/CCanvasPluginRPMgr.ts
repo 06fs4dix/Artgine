@@ -35,7 +35,7 @@ export class CCanvasPluginRPMgr extends CCanvasPlugin
 		else
 			this.mChangeRPMgr=_rpMgr;
 	}
-	Exe()
+	override Exe()
 	{
 		if(this.mChangeRPMgr!=null)
 		{
@@ -79,7 +79,7 @@ export class CCanvasPluginRPMgr extends CCanvasPlugin
 			this.mChangeRPMgr=null;
 		}
 	};
-	Destroy()
+	override Destroy()
 	{
 		super.Destroy();
 		this.SetRPMgr(null);

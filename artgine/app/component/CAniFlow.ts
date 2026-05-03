@@ -59,6 +59,10 @@ export class CAniFlow extends CComponent
 		super.Recycle();
 		this.ResetTime();
 	}
+	override Provider(_type: string, _state : Array<string>): void 
+	{
+		_state.push("/aniFlow/"+this.mAni.Key()+(this.IsEnd()?"Stop":"Play"));
+	}
 	SetAni();
 	SetAni(_ani : string);
 	SetAni(_ani : CBlackBoardRef<CAnimation>);
@@ -82,6 +86,7 @@ export class CAniFlow extends CComponent
 		}
 		else if(_ani!=null)
 		{
+			if(this.mAni==_ani)	return;
 			this.mAni=_ani;
 		}
 		

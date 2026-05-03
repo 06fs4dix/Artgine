@@ -41,6 +41,7 @@ import { CRay } from "../../../geometry/CRay.js"
 import { CVFX } from "../../../render/CVFX.js"
 import { CUtil } from "../../../basic/CUtil.js"
 import { CChecker } from "../../../util/CChecker.js"
+import { CConsol } from "../../../basic/CConsol.js"
 
 var gMargin=1.0;;
 export class CRenPaint
@@ -307,6 +308,7 @@ export class CPaint extends CComponent implements IMat
 	{
 		for(let ren of this.mRenPT)
 		{
+			
 			if(ren!=null)
 			{
 				ren.mDistance=0x7FFFFF00;
@@ -318,6 +320,7 @@ export class CPaint extends CComponent implements IMat
 		this.mRenPT=[];
 		for(let key of this.mBatchMap.keys())
 		{
+			//CConsol.Log(this.mRenderPass[i].ObjHash());
 			this.mBatchMap.set(key,null);
 		}
 		this.mCamCullUpdate=true;
@@ -463,13 +466,13 @@ export class CPaint extends CComponent implements IMat
 			
 				//let camOff=_cam.Offset();
 				//강제로 모든 오브젝트는 컬링을 처리하게 함
-				if(CUtilMath.PlaneSphereInside(plane,this.mBW.mPos,this.mBW.mRadian,null) || this.mRenderPass[i].mCullFrustum==false)
-					ren.mShow=0;
-				else
-				{
-					ren.mShow=1;
-					ren.mDistance=0x7FFFFE00;
-				}
+				// if(CUtilMath.PlaneSphereInside(plane,this.mBW.mPos,this.mBW.mRadian,null) || this.mRenderPass[i].mCullFrustum==false)
+				// 	ren.mShow=0;
+				// else
+				// {
+				// 	ren.mShow=1;
+				// 	ren.mDistance=0x7FFFFE00;
+				// }
 					
 			}
 		}
@@ -663,6 +666,7 @@ export class CPaint extends CComponent implements IMat
 		{
 			if(this.mRenderPass[i] instanceof CRPAuto)
 			{
+				//CConsol.Log(this.mRenderPass[i].ObjHash());
 				this.mRenderPass.splice(i,1);
 				i--;
 			}

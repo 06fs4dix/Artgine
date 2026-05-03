@@ -12,6 +12,7 @@ import {
     V2Abs,
 	Sam2DArrV4,
 	Sam2DArrToV4,
+	Vertex2,
 } from "./Shader";
 import {
 	VFX, VFXDown2, GetTexCodiedUV,
@@ -246,11 +247,10 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 	BranchEnd();
 	out_position=rpos;
 }
-function vs_main_trail(f3_ver : Vertex3)
+function vs_main_trail(f2_ver : Vertex2)
 {
-	var tpos : CVec4=Sam2DArrToV4(trailPos,f3_ver.z);
-
-	var rawUV : CVec2 = new CVec2(tpos.w, f3_ver.y);
+    var tpos : CVec4=Sam2DArrToV4(trailPos, f2_ver.x);
+    var rawUV : CVec2 = new CVec2(1.0-tpos.w,(f2_ver.y + 1.0) * 0.5);
 
 	BranchBegin("codi","C",[texCodi]);
 	to_uv.xy = GetTexCodiedUV(rawUV, texCodi);
@@ -258,9 +258,7 @@ function vs_main_trail(f3_ver : Vertex3)
 	to_uv.xy = rawUV;
 	BranchEnd();
 
-	if(tpos.w>1.0)
-		to_uv.z = 0.0;
-	else if(lastHide<0.5)
+	if(lastHide<0.5)
 		to_uv.z = 1.0;
 	else
 		to_uv.z = tpos.w;

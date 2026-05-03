@@ -1304,6 +1304,17 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "	return vec4(0,0,0,1);\n";
 		str += "}\n";
 
+        str += "vec4 Sam2DArrGradToColor(float _off,vec3 _uv,vec2 _dx,vec2 _dy)\n";
+		str += "{\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.Sam2DArrMax); ++j)
+		{
+			str += "	if(_off-0.5<=" + j + ".0)\n";
+			str += "		return textureGrad(sam2DArr[" + j + "],_uv,_dx,_dy);\n";
+			
+		}
+		str += "	return vec4(0,0,0,1);\n";
+		str += "}\n";
+
 		// str += "vec4 Sam2DArrToColor(int _off,vec3 _uv)\n";
 		// str += "{\n";
 		// str += "	return Sam2DArrToColor(float(_off),_uv);\n";
@@ -1413,6 +1424,46 @@ export class CShaderInterpretGL extends CShaderInterpret
         str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
         str += "        vec2 d = f05 - off;\n";
         str += `		col = mix(col, Sam2DGradToColor(_off,0.5+rot*d,rot*ddx,rot*ddy), w.x*w.y*0.5);\n`;
+        str += "    }\n";
+        str += "    return col;\n";
+		str += "}\n";
+
+        str += "vec4 Sam2DArrTileToColor(float _off,vec3 _uvw)\n";
+		str += "{\n";
+        str += "    const float BLEND = 0.1;\n";
+        str += "    const vec2 CS_TABLE[4] = vec2[4](\n";
+        str += "        vec2( 1.0,  0.0),\n";
+        str += "        vec2( 0.0,  1.0),\n";
+        str += "        vec2(-1.0,  0.0),\n";
+        str += "        vec2( 0.0, -1.0) \n";
+        str += "    );\n";
+        str += "    vec2 iUV = floor(_uvw.xy);\n";
+        str += "    vec2 fUV = fract(_uvw.xy);\n";
+        str += "    vec2 f05 = fUV - 0.5;\n";
+        str += "    vec2 ddx = dFdx(_uvw.xy);\n";
+        str += "    vec2 ddy = dFdy(_uvw.xy);\n";
+        str += "    vec2 cs = CS_TABLE[int(4.0 * Hash12(iUV))];\n";
+        str += "    mat2 rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "    vec4 col = Sam2DArrGradToColor(_off,vec3(0.5+rot*f05,_uvw.z),rot*ddx,rot*ddy);\n";
+        str += "    vec2 w = smoothstep(0.5 - BLEND, 0.5, abs(f05));\n";
+        str += "    vec2 off = sign(f05);\n";
+        str += "    if(w.x > 0.0) {\n";
+        str += "        cs = CS_TABLE[int(4.0 * Hash12(iUV+vec2(off.x,0.0)))];\n";
+        str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "        vec2 d = f05 - vec2(off.x, 0.0);\n";
+        str += `		col = mix(col, Sam2DArrGradToColor(_off,vec3(0.5+rot*d,_uvw.z),rot*ddx,rot*ddy), w.x*0.5);\n`;
+        str += "    }\n";
+        str += "    if(w.y > 0.0) {\n";
+        str += "        cs = CS_TABLE[int(4.0 * Hash12(iUV+vec2(0.0,off.y)))];\n";
+        str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "        vec2 d = f05 - vec2(0.0, off.y);\n";
+        str += `		col = mix(col, Sam2DArrGradToColor(_off,vec3(0.5+rot*d,_uvw.z),rot*ddx,rot*ddy), w.y*0.5);\n`;
+        str += "    }\n";
+        str += "    if(w.x > 0.0 && w.y > 0.0) {\n";
+        str += "        cs = CS_TABLE[int(4.0 * Hash12(iUV+off))];\n";
+        str += "        rot = mat2(cs.x,-cs.y,cs.y,cs.x);\n";
+        str += "        vec2 d = f05 - off;\n";
+        str += `		col = mix(col, Sam2DArrGradToColor(_off,vec3(0.5+rot*d,_uvw.z),rot*ddx,rot*ddy), w.x*w.y*0.5);\n`;
         str += "    }\n";
         str += "    return col;\n";
 		str += "}\n";
