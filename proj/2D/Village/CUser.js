@@ -1,5 +1,5 @@
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipAlpha, CClipCoodi, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
+import { CAnimation, CClipAlpha, CClipDestroy } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
@@ -13,7 +13,6 @@ import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
 import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CAudioBuf } from "https://06fs4dix.github.io/Artgine/artgine/system/audio/CAudio.js";
 import { CAction } from "https://06fs4dix.github.io/Artgine/artgine/util/CAction.js";
 import { CRandom } from "https://06fs4dix.github.io/Artgine/artgine/util/CRandom.js";
@@ -25,16 +24,19 @@ export class CUser extends CSubject {
     mCL;
     mBDir = new CVec3();
     m2DCam = new CBlackBoardRef("2D");
-    mAniMap = new Map();
+    mUlpc = null;
+    mLoaded = false;
+    mState = "idle";
+    mDir = CVec3.eDir.Down;
     constructor() {
         super();
     }
     Start() {
-        this.mPT = this.PushComp(new CPaint2D("Res/Actor/Villager5/SeparateAnim/Walk.png", new CVec2(100, 100)));
+        this.GetFrame().Load().Exe("Res/ulpc/User.json");
+        this.mPT = this.PushComp(new CPaint2D(null, new CVec2(128, 128)));
         this.mPT.mSave = false;
-        this.mPT.mAutoLoad.mFilter = CTexture.eFilter.Neaest;
+        this.mPT.SetAutoLoad(false);
         this.mPT.SetYSort(true);
-        this.mPT.SetYSortOrigin(-50);
         this.mRB = this.PushComp(new CRigidBody());
         this.mRB.mSave = false;
         this.mSave = false;
@@ -49,105 +51,74 @@ export class CUser extends CSubject {
         itemCL.PushCollisionLayer("item");
         itemCL.SetEvent(CCollider.eEvent.Trigger);
         this.PushComp(new CShadowPlane());
+        this.mAF = this.PushComp(new CAniFlow());
+        this.mAF.mSave = false;
         let sm = this.PushComp(new CSMComp());
         sm.GetSM().PushRole([
             {
-                "and": [{ "s": CVec3.eDir.Null, "o": "==", "v": 1 }],
+                "and": [{ "s": "/rigidBody/force/" + CVec3.eDir.Null, "o": "==", "v": 1 }],
                 "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["StandLeft"] }]
             },
             {
-                "and": [{ "s": "move" + CVec3.eDir.Left, "o": "==", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "MoveLeft" }]
+                "and": [{ "s": "/rigidBody/force/move" + CVec3.eDir.Left, "o": "==", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["MoveLeft"] }]
             },
             {
-                "and": [{ "s": "move" + CVec3.eDir.Right, "o": "==", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "MoveRight" }]
+                "and": [{ "s": "/rigidBody/force/move" + CVec3.eDir.Right, "o": "==", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["MoveRight"] }]
             },
             {
-                "and": [{ "s": "move" + CVec3.eDir.Up, "o": "==", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "MoveUp" }]
+                "and": [{ "s": "/rigidBody/force/move" + CVec3.eDir.Up, "o": "==", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["MoveUp"] }]
             },
             {
-                "and": [{ "s": "move" + CVec3.eDir.Down, "o": "==", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "MoveDown" }]
+                "and": [{ "s": "/rigidBody/force/move" + CVec3.eDir.Down, "o": "==", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["MoveDown"] }]
             },
             {
-                "and": [{ "s": CVec3.eDir.Left, "o": "==", "v": 1 }, { "s": "move", "o": "!=", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "StandLeft" }]
+                "and": [{ "s": "/rigidBody/force/" + CVec3.eDir.Left, "o": "==", "v": 1 }, { "s": "/rigidBody/force/move", "o": "!=", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["StandLeft"] }]
             },
             {
-                "and": [{ "s": CVec3.eDir.Right, "o": "==", "v": 1 }, { "s": "move", "o": "!=", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "StandRight" }]
+                "and": [{ "s": "/rigidBody/force/" + CVec3.eDir.Right, "o": "==", "v": 1 }, { "s": "/rigidBody/force/move", "o": "!=", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["StandRight"] }]
             },
             {
-                "and": [{ "s": CVec3.eDir.Up, "o": "==", "v": 1 }, { "s": "move", "o": "!=", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "StandUp" }]
+                "and": [{ "s": "/rigidBody/force/" + CVec3.eDir.Up, "o": "==", "v": 1 }, { "s": "/rigidBody/force/move", "o": "!=", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["StandUp"] }]
             },
             {
-                "and": [{ "s": CVec3.eDir.Down, "o": "==", "v": 1 }, { "s": "move", "o": "!=", "v": 1 }],
-                "exe": [{ "t": "Message", "a": "StandDown" }]
+                "and": [{ "s": "/rigidBody/force/" + CVec3.eDir.Down, "o": "==", "v": 1 }, { "s": "/rigidBody/force/move", "o": "!=", "v": 1 }],
+                "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["StandDown"] }]
             },
         ]);
-        let ani = new CAnimation();
-        ani.Push(new CClipCoodi(0, 0, 0, 0, 16, 16));
-        this.mAniMap.set("StandDown", ani);
-        ani = new CAnimation();
-        ani.Push(new CClipCoodi(0, 0, 1 * 16, 0, 2 * 16, 16));
-        this.mAniMap.set("StandUp", ani);
-        ani = new CAnimation();
-        ani.Push(new CClipCoodi(0, 0, 2 * 16, 0, 3 * 16, 16));
-        this.mAniMap.set("StandLeft", ani);
-        ani = new CAnimation();
-        ani.Push(new CClipCoodi(0, 0, 3 * 16, 0, 4 * 16, 16));
-        this.mAniMap.set("StandRight", ani);
-        let tick = 0.1;
-        ani = new CAnimation();
-        for (let i = 0; i < 4; ++i)
-            ani.Push(new CClipCoodi(i * tick, tick, 0, i * 16, 16, (1 + i) * 16));
-        this.mAniMap.set("MoveDown", ani);
-        ani = new CAnimation();
-        for (let i = 0; i < 4; ++i)
-            ani.Push(new CClipCoodi(i * tick, tick, 1 * 16, i * 16, 2 * 16, (1 + i) * 16));
-        this.mAniMap.set("MoveUp", ani);
-        ani = new CAnimation();
-        for (let i = 0; i < 4; ++i)
-            ani.Push(new CClipCoodi(i * tick, tick, 2 * 16, i * 16, 3 * 16, (1 + i) * 16));
-        this.mAniMap.set("MoveLeft", ani);
-        ani = new CAnimation();
-        for (let i = 0; i < 4; ++i)
-            ani.Push(new CClipCoodi(i * tick, tick, 3 * 16, i * 16, 4 * 16, (1 + i) * 16));
-        this.mAniMap.set("MoveRight", ani);
-        this.mAF = this.PushComp(new CAniFlow(ani));
-        this.mAF.mSave = false;
     }
     ResetAnimation(_key) {
-        this.mAF.SetAni(this.mAniMap.get(_key));
-    }
-    StandLeft() {
-        this.mAF.SetAni(this.mAniMap.get("StandLeft"));
-    }
-    StandRight() {
-        this.mAF.SetAni(this.mAniMap.get("StandRight"));
-    }
-    StandUp() {
-        this.mAF.SetAni(this.mAniMap.get("StandUp"));
-    }
-    StandDown() {
-        this.mAF.SetAni(this.mAniMap.get("StandDown"));
-    }
-    MoveLeft() {
-        this.mAF.SetAni(this.mAniMap.get("MoveLeft"));
-    }
-    MoveRight() {
-        this.mAF.SetAni(this.mAniMap.get("MoveRight"));
-    }
-    MoveUp() {
-        this.mAF.SetAni(this.mAniMap.get("MoveUp"));
-    }
-    MoveDown() {
-        this.mAF.SetAni(this.mAniMap.get("MoveDown"));
+        const isMove = _key.startsWith("Move");
+        this.mState = isMove ? "walk" : "idle";
+        if (_key.endsWith("Down"))
+            this.mDir = CVec3.eDir.Down;
+        else if (_key.endsWith("Up"))
+            this.mDir = CVec3.eDir.Up;
+        else if (_key.endsWith("Left"))
+            this.mDir = CVec3.eDir.Left;
+        else if (_key.endsWith("Right"))
+            this.mDir = CVec3.eDir.Right;
     }
     Update(_update) {
+        if (!this.mLoaded) {
+            const culpc = this.GetFrame().Res().Find("Res/ulpc/User.json");
+            if (culpc) {
+                this.mPT.SetTexture(culpc.GetTexName());
+                this.mUlpc = culpc;
+                this.mLoaded = true;
+            }
+        }
+        if (this.mLoaded) {
+            const ani = this.mUlpc.GetAni(this.mState, this.mDir);
+            if (ani)
+                this.mAF.SetAni(ani);
+        }
         super.Update(_update);
         if (this.FindChild(CPad) == null)
             return;

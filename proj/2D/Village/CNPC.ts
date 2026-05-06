@@ -1,51 +1,48 @@
 import { CAniFlow } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAniFlow.js";
-import { CAnimation, CClipCoodi } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CAnimation.js";
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
-import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CSMComp.js";
 import { CPaint2D, CPaintHTML } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
 import { CRayMouse } from "https://06fs4dix.github.io/Artgine/artgine/app/CRayMouse.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
+import { CUpdate } from "https://06fs4dix.github.io/Artgine/artgine/basic/Basic.js";
 import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
 import { CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
-import { CBlackBoardRef } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
 import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
 import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
 import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
 import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
+import { CULPC } from "https://06fs4dix.github.io/Artgine/artgine/util/parser/CParserULPC.js";
 import { CShadowPlane } from "https://06fs4dix.github.io/Artgine/plugin/ShadowPlane/ShadowPlane.js";
 
 
 export class CNPC extends CSubject
 {
-    mRB : CRigidBody;
-    mAF : CAniFlow;
-    mPT : CPaint2D;
-    mCL : CCollider;
-    mBDir : CVec3=new CVec3();
-    mAniMap=new Map<string,CAnimation>();
-    mBaseImage="";
-    mName="";
-    
+    mRB:  CRigidBody | null = null;
+    mAF:  CAniFlow   | null = null;
+    mPT:  CPaint2D   | null = null;
+    mCL:  CCollider  | null = null;
+    mName = "";
+
+    private mCulpc:  CULPC  | null = null;
+    private mState:  string = "idle";
+    private mDir:    number = CVec3.eDir.Down;
+    private mLoaded  = false;
+
     // 대화 관련 속성들
     private mDialogueIndex: number = 0;
-    private mLastTalkTime: number = 0;
-    private mTalkCount: number = 0;
-    
+    private mLastTalkTime:  number = 0;
+    private mTalkCount:     number = 0;
+
     // NPC별 대화 데이터
     private mDialogueData: Map<string, string[]> = new Map();
-    
-    constructor(_name,_baseImg : string)
+
+    constructor(_name: string)
     {
         super();
-        this.mBaseImage=_baseImg;
-        this.mName=_name;
-        
-        // 각 NPC별 고유한 대화 데이터 초기화
+        this.mName = _name;
         this.InitializeDialogueData();
     }
-    
+
     // NPC별 대화 데이터 초기화
     private InitializeDialogueData()
     {
@@ -62,7 +59,7 @@ export class CNPC extends CSubject
             "전투에서 가장 중요한 것은 기술이 아니라 마음가짐이야.",
             "내가 여기 있는 한 마을은 안전할 거야. 믿어도 좋아."
         ]);
-        
+
         // Miles - 상인/친근한 성격
         this.mDialogueData.set("Miles", [
             "어서오세요! 오늘도 좋은 물건 많이 팔고 있어요~",
@@ -76,7 +73,7 @@ export class CNPC extends CSubject
             "마을 경제가 좋아져야 모두가 행복해져요. 제가 노력하고 있어요!",
             "오늘도 좋은 하루 되세요! 언제든지 들러주세요~"
         ]);
-        
+
         // Poppy - 마법사/신비로운 성격
         this.mDialogueData.set("Poppy", [
             "어서오세요, 신비로운 여행자여... 마법의 세계에 오신 것을 환영합니다.",
@@ -91,22 +88,20 @@ export class CNPC extends CSubject
             "신비로운 여정을 떠나고 싶으시다면, 제가 도와드릴 수 있어요..."
         ]);
     }
-    
+
     // 대화 선택 로직
     private GetDialogue(): string
     {
         const dialogues = this.mDialogueData.get(this.mName);
         if (!dialogues) return "안녕하세요...";
-        
+
         const currentTime = Date.now();
-        
-        // 시간 기반 대화 변화 (같은 대화가 너무 자주 반복되지 않도록)
-        if (currentTime - this.mLastTalkTime > 5000) { // 5초 이상 지났으면
+
+        if (currentTime - this.mLastTalkTime > 5000) {
             this.mDialogueIndex = (this.mDialogueIndex + 1) % dialogues.length;
-            this.mLastTalkTime = currentTime;
+            this.mLastTalkTime  = currentTime;
         }
-        
-        // 대화 횟수에 따른 특별한 대화
+
         this.mTalkCount++;
         if (this.mTalkCount === 1) {
             return `어서오세요, ${this.mName}입니다! ${dialogues[this.mDialogueIndex]}`;
@@ -117,168 +112,80 @@ export class CNPC extends CSubject
         } else if (this.mTalkCount % 10 === 0) {
             return `정말 오랜 친구가 되었네요! ${dialogues[this.mDialogueIndex]}`;
         }
-        
+
         return dialogues[this.mDialogueIndex];
     }
 
     override Start()
     {
-        this.mPT=this.PushComp(new CPaint2D(this.mBaseImage,new CVec2(100,100)));
-        this.mPT.mSave=false;
-        this.mPT.mAutoLoad.mFilter=CTexture.eFilter.Neaest;
+        this.GetFrame().Load().Exe("Res/ulpc/"+this.mName+".json");
+
+        this.mPT = this.PushComp(new CPaint2D(null, new CVec2(64, 64)));
+        this.mPT.mSave = false;
+        this.mPT.SetAutoLoad(false);
         this.mPT.SetYSort(true);
-        this.mPT.SetYSortOrigin(-50);
-        this.mRB=this.PushComp(new CRigidBody());
-        this.mRB.mSave=false;
-        
-        this.mSave=false;
-        this.mCL=this.PushComp(new CCollider(this.mPT));
-        this.mCL.mSave=false;
+        //this.mPT.SetYSortOrigin(-64);
+
+        const flow     = this.PushComp(new CAniFlow());
+        flow.mSave     = false;
+        flow.mPaintOff = 0;
+        this.mAF       = flow;
+
+        this.mRB       = this.PushComp(new CRigidBody());
+        this.mRB.mSave = false;
+
+        this.mSave = false;
+
+        this.mCL = this.PushComp(new CCollider(this.mPT));
+        this.mCL.mSave = false;
         this.mCL.SetLayer("player");
         this.mCL.PushCollisionLayer("object");
         this.mCL.PushCollisionLayer("player");
         this.mCL.SetPickMouse(true);
         this.mCL.SetRestitution(0);
-        
+
         this.PushComp(new CShadowPlane());
-        
-        let sm = this.PushComp(new CSMComp());
-        sm.GetSM().PushRole([
-            {
-                "and":[{"s":CVec3.eDir.Null,"o":"==","v":1}],
-                "exe":[{"t":"Message","a":"StandLeft"}]
-            },
-            {
-                "and":[{"s":"move"+CVec3.eDir.Left,"o":"==","v":1}],
-                "exe":[{"t":"Message","a":"MoveLeft"}]
-            },
-            {
-                "and":[{"s":"move"+CVec3.eDir.Right,"o":"==","v":1}],
-                "exe":[{"t":"Message","a":"MoveRight"}]
-            },
-            {
-                "and":[{"s":"move"+CVec3.eDir.Up,"o":"==","v":1}],
-                "exe":[{"t":"Message","a":"MoveUp"}]
-            },
-            {
-                "and":[{"s":"move"+CVec3.eDir.Down,"o":"==","v":1}],
-                "exe":[{"t":"Message","a":"MoveDown"}]
-            },
-            {
-                "and":[{"s":CVec3.eDir.Left,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
-                "exe":[{"t":"Message","a":"StandLeft"}]
-            },
-            {
-                "and":[{"s":CVec3.eDir.Right,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
-                "exe":[{"t":"Message","a":"StandRight"}]
-            },
-            {
-                "and":[{"s":CVec3.eDir.Up,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
-                "exe":[{"t":"Message","a":"StandUp"}]
-            },
-            {
-                "and":[{"s":CVec3.eDir.Down,"o":"==","v":1},{"s":"move","o":"!=","v":1}],
-                "exe":[{"t":"Message","a":"StandDown"}]
-            },
-        ]);
 
-
-        let ani=new CAnimation();
-        ani.Push(new CClipCoodi(0,0,0,0,16,16));
-        this.mAniMap.set("StandDown",ani);
-
-        ani=new CAnimation();
-        ani.Push(new CClipCoodi(0,0,1*16,0,2*16,16));
-        this.mAniMap.set("StandUp",ani);
-
-        ani=new CAnimation();
-        ani.Push(new CClipCoodi(0,0,2*16,0,3*16,16));
-        this.mAniMap.set("StandLeft",ani);
-
-        ani=new CAnimation();
-        ani.Push(new CClipCoodi(0,0,3*16,0,4*16,16));
-        this.mAniMap.set("StandRight",ani);
-
-
-        let tick=0.1;
-
-        ani=new CAnimation();
-        for(let i=0;i<4;++i)    ani.Push(new CClipCoodi(i*tick,tick,0,i*16,16,(1+i)*16));
-        this.mAniMap.set("MoveDown",ani);
-
-        ani=new CAnimation();
-        for(let i=0;i<4;++i)    ani.Push(new CClipCoodi(i*tick,tick,1*16,i*16,2*16,(1+i)*16));
-        this.mAniMap.set("MoveUp",ani);
-
-        ani=new CAnimation();
-        for(let i=0;i<4;++i)    ani.Push(new CClipCoodi(i*tick,tick,2*16,i*16,3*16,(1+i)*16));
-        this.mAniMap.set("MoveLeft",ani);
-
-        ani=new CAnimation();
-        for(let i=0;i<4;++i)    ani.Push(new CClipCoodi(i*tick,tick,3*16,i*16,4*16,(1+i)*16));
-        this.mAniMap.set("MoveRight",ani);
-
-        
-
-        this.mAF=this.PushComp(new CAniFlow(ani));
-        this.mAF.mSave=false;
-     
-        let co=new CCoroutine(this.AutoChat,this);
+        let co = new CCoroutine(this.AutoChat, this);
         co.Start();
     }
-    StandLeft()
+
+    override Update(_update: CUpdate)
     {
-        this.mAF.SetAni(this.mAniMap.get("StandLeft"));
+        if (!this.mLoaded) {
+            const culpc = this.GetFrame().Res().Find("Res/ulpc/"+this.mName+".json") as CULPC;
+            if (culpc) {
+                this.mPT.SetTexture(culpc.GetTexName());
+                this.mCulpc  = culpc;
+                this.mLoaded = true;
+            }
+        }
+
+        if (this.mLoaded) {
+            const ani = this.mCulpc.GetAni(this.mState, this.mDir);
+            if (ani) this.mAF.SetAni(ani);
+        }
+
+        super.Update(_update);
     }
-    StandRight()
+
+    PickMouse(_rayMouse: CRayMouse)
     {
-        this.mAF.SetAni(this.mAniMap.get("StandRight"));
-    }
-    StandUp()
-    {
-        this.mAF.SetAni(this.mAniMap.get("StandUp"));
-    }
-    StandDown()
-    {
-        this.mAF.SetAni(this.mAniMap.get("StandDown"));
-    }
-    MoveLeft()
-    {
-        this.mAF.SetAni(this.mAniMap.get("MoveLeft"));
-    }
-    MoveRight()
-    {
-        this.mAF.SetAni(this.mAniMap.get("MoveRight"));
-    }
-    MoveUp()
-    {
-        this.mAF.SetAni(this.mAniMap.get("MoveUp"));
-    }
-    MoveDown()
-    {
-        this.mAF.SetAni(this.mAniMap.get("MoveDown"));
-    }
-    PickMouse(_rayMouse : CRayMouse)
-    {
-        if(this.GetFrame().Input().KeyUp(CInput.eKey.LButton))
+        if (this.GetFrame().Input().KeyUp(CInput.eKey.LButton))
         {
-            // 모달창 생성
             let modal = new CModal("NPCModal");
             modal.SetTitle(CModal.eTitle.TextFullClose);
             modal.SetHeader(this.mName);
-            
-            // 각 NPC별 고유한 대화 표시
-            const dialogue = this.GetDialogue();
-            modal.SetBody(dialogue);
+            modal.SetBody(this.GetDialogue());
             modal.SetSize(400, 300);
             modal.Open();
         }
-        
     }
-    mLastChat : CPaintHTML;
+
+    mLastChat: CPaintHTML;
     *AutoChat()
     {
-        const raw = this.GetDialogue(); // ex) "<div>안녕! 자동 대화 테스트</div>"
+        const raw = this.GetDialogue();
         const bubble = `
         <div class="card border-0 shadow-sm bg-white rounded-4">
             <div class="card-body py-2 px-3 text-body d-inline-block text-wrap"
@@ -286,16 +193,15 @@ export class CNPC extends CSubject
             ${raw}
             </div>
         </div>
-        
         `;
 
         this.mLastChat = new CPaintHTML(CDOM.DataToDom(bubble));
-        this.mLastChat.SetPivot(new CVec3(0,1,0));
-        this.mLastChat.SetPos(new CVec3(0,30,0))
+        this.mLastChat.SetPivot(new CVec3(0, 1, 0));
+        this.mLastChat.SetPos(new CVec3(0, 30, 0));
         this.PushComp(this.mLastChat);
-        yield CCoroutine.Wait(1000*5);
+        yield CCoroutine.Wait(1000 * 5);
         this.mLastChat.Destroy();
-        yield CCoroutine.Wait(1000*2);
+        yield CCoroutine.Wait(1000 * 2);
         return CCoroutine.eState.Loop;
     }
 

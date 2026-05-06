@@ -1,5 +1,5 @@
 //Version
-const version='mopwertg_2';
+const version='mou2nb1k_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -97,8 +97,7 @@ import { CUniqueID } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUni
 
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
 import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
-import CBehavior from "https://06fs4dix.github.io/Artgine/artgine/app/component/CBehavior.js";
-import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
+
 import { CHTMLDropdown } from "https://06fs4dix.github.io/Artgine/artgine/util/CHTMLBar.js";
 import { CVoxelMap } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CVoxelMap.js";
 import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
@@ -187,9 +186,9 @@ CModal.PushTitleBar(new CModalTitleBar("DevToolModal", "Unit", async () => {
     new CBlackboardModal(ba);
 }));
 
-Real.PushSub(new CNPC("Dante","Res/Actor/Villager2/SeparateAnim/Walk.png")).SetPos(new CVec3(6600,6400));
-Real.PushSub(new CNPC("Miles","Res/Actor/Villager3/SeparateAnim/Walk.png")).SetPos(new CVec3(6200,9200));
-Real.PushSub(new CNPC("Poppy","Res/Actor/Villager4/SeparateAnim/Walk.png")).SetPos(new CVec3(11000,8000));
+Real.PushSub(new CNPC("Dante")).SetPos(new CVec3(6600,6400));
+Real.PushSub(new CNPC("Miles")).SetPos(new CVec3(6200,9200));
+Real.PushSub(new CNPC("Poppy")).SetPos(new CVec3(11000,8000));
 
 
 
@@ -462,6 +461,20 @@ const dummy = CHTMLDropdown.Attach(arr, "left");
 let rightDiv=CDOM.DataToDom(`<div class="position-fixed top-0 end-0" style="z-index:2000;"></div>`);
 rightDiv.append(dummy);
 mg.SetBody(rightDiv);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
