@@ -299,12 +299,6 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	BranchEnd();
 	
 
-	// var testShadow : CMat;
-	// testShadow[0] = new CVec4(1.0,  0.0,  0.0, 0.0);  // x 그대로
-	// testShadow[1] = new CVec4(0.0,  0.1,  0.0, 0.0);  // y 납작 (scaleY=0.1)
-	// testShadow[2] = new CVec4(0.0,  0.0,  1.0, 0.0);  // z 그대로
-	// testShadow[3] = new CVec4(0.0,  0.0,  0.0, 1.0);  // w
-	
 	BranchBegin("billboard","B",[billboard,billboardMat]);
 	if(billboard>0.5)
 	{

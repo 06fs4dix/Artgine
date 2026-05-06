@@ -128,10 +128,10 @@ export class CULPC extends CObject
     // 단일 상태에 대한 검색 로직
     private _FindAniByState(state: string, dir: number, beforeDir: number): CAnimation | null
     {
-        let value = this.mAniMap.get(state + dir);
+        let value = this.mAniMap.get(state + "_" + dir);
         if (value != null) return value;
 
-        value = this.mAniMap.get(state + beforeDir);
+        value = this.mAniMap.get(state + "_" + beforeDir);
         if (value != null) return value;
 
         for (const [key, val] of this.mAniMap) {
@@ -219,7 +219,8 @@ export class CParserULPC extends CParser {
         const json    = JSON.parse(new TextDecoder().decode(this.mBuffer));
         const resBase = this.mResBase || gResPath || json.mresBase || "./";
         const absRoot = new URL(resBase, location.href).toString();
-        const absBase = absRoot.replace(/\/$/, "") + "/" + (json.resBase ?? "spritesheets");
+        const rootSlash = absRoot.endsWith('/') ? absRoot : absRoot + '/';
+        const absBase = new URL(json.resBase ?? "spritesheets", rootSlash).toString().replace(/\/$/, "");
         const result  = new CULPC();
 
         let specs: AnimClipSpec[];
@@ -234,6 +235,7 @@ export class CParserULPC extends CParser {
 
         this._buildAnimMap(specs, result);
         result.mTexture = CH5Canvas.GetNewTex();
+        result.mTexture.SetMipMap(CTexture.eMipmap.GL);
         this.mResult = result;
     }
 
@@ -498,15 +500,20 @@ export class CParserULPC extends CParser {
             dirArr:     number[];
             matGroups:  MatGroup[];
             fullPath:   string;
+            base64?:    string;
         }
 
         const rawEntries: NEntry[] = [];
         for (let si = 0; si < (json.selections as any[]).length; si++) {
             const sel     = json.selections[si];
             const recolors: Record<string, any> = sel.recolors ?? {};
-            for (const fp of (sel.files as string[])) {
-                const e = this._parseNEntry(fp, recolors, si);
-                if (e) rawEntries.push(e as NEntry);
+            const files: string[] = sel.files ?? [];
+            const base64s: string[] = sel.base64s ?? [];
+            for (let fi = 0; fi < files.length; fi++) {
+                const e = this._parseNEntry(files[fi], recolors, si) as NEntry;
+                if (!e) continue;
+                if (base64s[fi]) e.base64 = base64s[fi];
+                rawEntries.push(e);
             }
         }
 
@@ -583,8 +590,9 @@ export class CParserULPC extends CParser {
         // ── 6. 전체 애니메이션 드로잉 ─────────────────────────────────────
         for (const [anim, { y: dstY, dirs, frameCount, frameSize: maxFS }] of animYMap) {
             for (const e of byAnim.get(anim)!) {
-                const url    = absBase + '/' + this._encodeNPath(e.fullPath);
-                const img    = await this._loadImg(url);
+                const rawPath = this._encodeNPath(e.fullPath);
+                const url    = /^https?:\/\//i.test(e.fullPath) ? rawPath : absBase + '/' + rawPath;
+                const img    = await this._loadImg(e.base64 ?? url);
                 if (!img) continue;
                 const rc     = await this._applyNRecolor(img, e.matGroups);
                 const offset = (maxFS - e.frameSize) / 2;

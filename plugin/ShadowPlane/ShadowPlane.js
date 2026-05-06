@@ -255,6 +255,9 @@ export class CShadowPlane extends CPaint2D {
         }
         if (this.mPT == null)
             return;
+        if (this.mPT.GetTexture()[0] != this.GetTexture()[0]) {
+            this.mUpdateShadow = true;
+        }
         let lightOff = -1;
         const center = this.GetPaintCenter();
         let pick = [];

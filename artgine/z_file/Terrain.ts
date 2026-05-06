@@ -9,7 +9,12 @@ import {
 	V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor, V2DivFloat,
     V3Abs, V3DivFloat, V3AddV3, V3Pow, V3Dot, V3Nor, V3SubV3, V3Mix,
     V4AddV4, V4Mix, V4MulFloat,
-    BranchBegin, BranchEnd, BranchDefault
+    BranchBegin, BranchEnd, BranchDefault,
+    MappingTexToV3,
+    V3MulFloat,
+    V3MulV3,
+    ceil,
+    Sam2DArrToColor
 } from "./Shader";
 import { bias, calcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
 
@@ -145,59 +150,27 @@ function UnpackNormal(_rg : CVec2) : CVec3
     return V3Nor(normal);
 }
 
-function TriplanarTexture(_texOff : number, _texCodi : CVec4, _triPos : CVec3, _triNormal : CVec3) : CVec4
+function SampleSplatmap(_splatBlend : CVec4, _uv : CVec2, _off : number) : CVec4
 {
-    var samp : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
-    var textureCodi : CVec4 = new CVec4(V2DivFloat(_texCodi.xy, terrainSize), new CVec2(_texCodi.z, _texCodi.w));    
-
-    if(_triNormal.y > 0.0) {
-        var uv : CVec2 = V2AddV2(V2MulV2(new CVec2(_triPos.x, -_triPos.z), textureCodi.xy), new CVec2(textureCodi.z, textureCodi.w));
-        samp = V4AddV4(samp, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(uv, _texOff)), _triNormal.y));
-    }
-    if(_triNormal.z > 0.0) {
-        var uv : CVec2 = V2AddV2(V2MulV2(new CVec2(_triPos.x, _triPos.y), textureCodi.xy), new CVec2(textureCodi.z, textureCodi.w));
-        samp = V4AddV4(samp, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(uv, _texOff)), _triNormal.z));
-    }
-    if(_triNormal.x > 0.0) {
-        var uv : CVec2 = V2AddV2(V2MulV2(new CVec2(-_triPos.y, -_triPos.z), textureCodi.xy), new CVec2(textureCodi.z, textureCodi.w));
-        samp = V4AddV4(samp, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(uv, _texOff)), _triNormal.x));
-    }
-    return samp;
-}
-
-function SampleSplatmap(_triPos : CVec3, _triNormal : CVec3) : CVec4
-{
-    _triPos = V3SubV3(_triPos, terrainOffset);
-    var splat : CVec4 = Sam2DToColor(splatSampler2D, to_uv);
-    var splatBlend : CVec4 = new CVec4(1.0, splat.x, splat.y, splat.z);  // 이 부분 변경해서 블렌딩 비율 조절 가능
-
     var L_cor : CVec4;
-    if(splatBlend.x > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(0.0, splatMatTexCodi[0], _triPos, _triNormal), splatBlend.x);
-    if(splatBlend.y > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(1.0, splatMatTexCodi[1], _triPos, _triNormal), splatBlend.y);
-    if(splatBlend.z > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(2.0, splatMatTexCodi[2], _triPos, _triNormal), splatBlend.z);
-    if(splatBlend.w > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(3.0, splatMatTexCodi[3], _triPos, _triNormal), splatBlend.w);
+    if(_splatBlend.x > 0.0)
+        L_cor = V4Mix(L_cor, Sam2DArrToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, splatMatTexCodi[0].xy), splatMatTexCodi[0].zw), _off + 0.0)), _splatBlend.x);
+    if(_splatBlend.y > 0.0)
+        L_cor = V4Mix(L_cor, Sam2DArrToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, splatMatTexCodi[1].xy), splatMatTexCodi[1].zw), _off + 1.0)), _splatBlend.y);
+    if(_splatBlend.z > 0.0)
+        L_cor = V4Mix(L_cor, Sam2DArrToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, splatMatTexCodi[2].xy), splatMatTexCodi[2].zw), _off + 2.0)), _splatBlend.z);
+    if(_splatBlend.w > 0.0)
+        L_cor = V4Mix(L_cor, Sam2DArrToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, splatMatTexCodi[3].xy), splatMatTexCodi[3].zw), _off + 3.0)), _splatBlend.w);
     return L_cor;
 }
 
-function SampleSplatRoughnessmap(_triPos : CVec3, _triNormal : CVec3) : CVec4
+// RNM 방식
+// http://wiki.polycount.com/wiki/Normal_map
+function CombineNormals(_base : CVec3, _detail : CVec3) : CVec3
 {
-    var splat : CVec4 = Sam2DToColor(splatSampler2D, to_uv);
-    var splatBlend : CVec4 = new CVec4(1.0, splat.x, splat.y, splat.z);  // 이 부분 변경해서 블렌딩 비율 조절 가능
-
-    var L_cor : CVec4;
-    if(splatBlend.x > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(4.0, splatMatTexCodi[0], _triPos, _triNormal), splatBlend.x);
-    if(splatBlend.y > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(5.0, splatMatTexCodi[1], _triPos, _triNormal), splatBlend.y);
-    if(splatBlend.z > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(6.0, splatMatTexCodi[2], _triPos, _triNormal), splatBlend.z);
-    if(splatBlend.w > 0.0)
-        L_cor = V4Mix(L_cor, TriplanarTexture(7.0, splatMatTexCodi[3], _triPos, _triNormal), splatBlend.w);
-    return L_cor;
+    _base = V3AddV3(_base, new CVec3(0.0, 1.0, 0.0));
+    _detail = V3MulV3(_detail, new CVec3(-1.0, 1.0, -1.0));
+    return V3Nor(V3SubV3(V3MulFloat(_base, V3Dot(_base, _detail) / _base.y), _detail));
 }
 //-----------------------------------------------------------------------------------------------------
 // ------------- ps
@@ -211,12 +184,12 @@ function vs_main(f3_ver : Vertex3)
     // 현재 LOD 포지션
     var curPos : CVec4 = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
     curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
-    curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+    curPos.z = ceil(curPos.z / worldCellSize) * worldCellSize;
 
     // 다음 (LOD + 1) 포지션
     var nextPos : CVec4 = curPos;
     nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
-    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = ceil(nextPos.z / pWorldCellSize) * pWorldCellSize;
     
     // LOD 믹싱된 포지션
     var morphAlpha : number = GetMorphLerpK(curPos, camPos);
@@ -245,6 +218,12 @@ function vs_main(f3_ver : Vertex3)
     // 터레인 외곽에 구멍 뚫리는거 방지
     morphPos.x = clamp(morphPos.x, terrainOffset.x, terrainOffset.x + terrainSize);
     morphPos.z = clamp(morphPos.z, terrainOffset.z, terrainOffset.z + terrainSize);
+    if(
+        morphPos.x <= terrainOffset.x || terrainOffset.x + terrainSize <= morphPos.x ||
+        morphPos.z <= terrainOffset.z || terrainOffset.z + terrainSize <= morphPos.z
+    ) {
+        morphPos.y = terrainOffset.y;
+    }
 
     to_worldPos = morphPos;
     to_uv = WorldToUV(morphPos, terrainOffset, terrainSize);
@@ -254,8 +233,6 @@ function vs_main(f3_ver : Vertex3)
 }
 function ps_main()
 {
-    var normal : CVec3 = V3Nor(to_normal);
-
     var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
     var shadow : number=-1.0;
     var uvScreen : CVec2;
@@ -265,13 +242,16 @@ function ps_main()
     shadow = shadowTex.x;
     BranchEnd();
 
-    var triNormal : CVec3 = new CVec3(0.0, 1.0, 0.0);
-    BranchBegin("triplanar","tri",[]);
-    triNormal = V3Pow(V3Abs(normal), 150.0);
-    triNormal = V3DivFloat(triNormal, V3Dot(triNormal, new CVec3(1.0, 1.0, 1.0)));
-    BranchEnd();
+    var splat : CVec4 = Sam2DToColor(splatSampler2D, to_uv);
+    var splatBlend : CVec4 = new CVec4(1.0, splat.x, splat.y, splat.z);  // 이 부분 변경해서 블렌딩 비율 조절 가능
 
-    var L_cor : CVec4 = SampleSplatmap(to_worldPos.xyz, triNormal);
+    var L_cor : CVec4 = SampleSplatmap(splatBlend, to_uv, 0.0);
+
+    var splatNormal : CVec3 = MappingTexToV3(V3Nor(SampleSplatmap(splatBlend, to_uv, 8.0).xyz));
+    var temp : number = splatNormal.z;
+    splatNormal.z = splatNormal.y;
+    splatNormal.y = temp;
+    var normal : CVec3 = CombineNormals(V3Nor(to_normal), splatNormal);
 
     BranchBegin("colorModel","CM",[colorModel]);
     L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
@@ -284,7 +264,7 @@ function ps_main()
     var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
     BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
-    lmaterial = SampleSplatRoughnessmap(to_worldPos.xyz, triNormal); // material 텍스쳐에서 가져옴
+    lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0); // material 텍스쳐에서 가져옴
     dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
     L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchEnd();
@@ -318,12 +298,12 @@ function vs_main_shadow_write(f3_ver : Vertex3)
     // 현재 LOD 포지션
     var curPos : CVec4 = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
     curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
-    curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+    curPos.z = ceil(curPos.z / worldCellSize) * worldCellSize;
 
     // 다음 (LOD + 1) 포지션
     var nextPos : CVec4 = curPos;
     nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
-    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = ceil(nextPos.z / pWorldCellSize) * pWorldCellSize;
 
     // 믹싱된 포지션
     var morphAlpha : number = GetMorphLerpK(curPos, camCanv);
@@ -349,6 +329,12 @@ function vs_main_shadow_write(f3_ver : Vertex3)
     // 터레인 외곽에 구멍 뚫리는거 방지
     morphPos.x = clamp(morphPos.x, terrainOffset.x, terrainOffset.x + terrainSize);
     morphPos.z = clamp(morphPos.z, terrainOffset.z, terrainOffset.z + terrainSize);
+    if(
+        morphPos.x <= terrainOffset.x || terrainOffset.x + terrainSize <= morphPos.x ||
+        morphPos.z <= terrainOffset.z || terrainOffset.z + terrainSize <= morphPos.z
+    ) {
+        morphPos.y = terrainOffset.y;
+    }
 
     to_viewPos = V4MulMatCoordi(morphPos, svm);
     out_position = V4MulMatCoordi(to_viewPos, spm);
@@ -367,12 +353,12 @@ function vs_main_shadow_read(f3_ver : Vertex3)
     // 현재 LOD 포지션
     var curPos : CVec4 = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
     curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
-    curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+    curPos.z = ceil(curPos.z / worldCellSize) * worldCellSize;
 
     // 다음 (LOD + 1) 포지션
     var nextPos : CVec4 = curPos;
     nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
-    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = ceil(nextPos.z / pWorldCellSize) * pWorldCellSize;
 
     // 믹싱된 포지션
     var morphAlpha : number = GetMorphLerpK(curPos, camPos);
@@ -401,6 +387,12 @@ function vs_main_shadow_read(f3_ver : Vertex3)
     // 터레인 외곽에 구멍 뚫리는거 방지
     morphPos.x = clamp(morphPos.x, terrainOffset.x, terrainOffset.x + terrainSize);
     morphPos.z = clamp(morphPos.z, terrainOffset.z, terrainOffset.z + terrainSize);
+    if(
+        morphPos.x <= terrainOffset.x || terrainOffset.x + terrainSize <= morphPos.x ||
+        morphPos.z <= terrainOffset.z || terrainOffset.z + terrainSize <= morphPos.z
+    ) {
+        morphPos.y = terrainOffset.y;
+    }
 
     to_worldPos = morphPos;
     to_uv = WorldToUV(morphPos, terrainOffset, terrainSize);
@@ -411,7 +403,14 @@ function vs_main_shadow_read(f3_ver : Vertex3)
 
 function ps_main_shadow_read() 
 {
-    var normal : CVec3 = V3Nor(to_normal);
+    var splat : CVec4 = Sam2DToColor(splatSampler2D, to_uv);
+    var splatBlend : CVec4 = new CVec4(1.0, splat.x, splat.y, splat.z);  // 이 부분 변경해서 블렌딩 비율 조절 가능    
+
+    var splatNormal : CVec3 = MappingTexToV3(V3Nor(SampleSplatmap(splatBlend, to_uv, 8.0).xyz));
+    var temp : number = splatNormal.z;
+    splatNormal.z = splatNormal.y;
+    splatNormal.y = temp;
+    var normal : CVec3 = CombineNormals(V3Nor(to_normal), splatNormal);
 
     var all : number=0.0;
     var shadowRead : CVec4;

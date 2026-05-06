@@ -88,8 +88,6 @@ export class CPaintTerrain extends CPaint
 
     Update(_update: CUpdate): void 
     {
-        super.Update(_update);
-
         for(let renPt of this.mRenPT)
         {
             if(renPt.mCam.mShadow == true) continue;
@@ -107,6 +105,8 @@ export class CPaintTerrain extends CPaint
                 this.MatUpdate(cam.GetEye());
             }
         }
+
+        super.Update(_update);
     }
 
     override Render(_vf: CShader): void {

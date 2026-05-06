@@ -1,5 +1,6 @@
 export class CChecker 
 {
+	//false하면 끝난다
 	static Exe(_checkFun: () => Promise<boolean>, _time = 500): Promise<void> 
 	{
 		return new Promise((resolve, reject) => 

@@ -53,7 +53,7 @@ export class CRigidBody extends CGeometryComp
 	//m_update=Df.UpdateState.Not;
 	mFreezePos = new Array<boolean>(false,false,false);
 	mStartPos : CVec3 = null;
-	mLastDir
+	mLastDir =CVec3.eDir.Null;
 
 	override Icon(){		return "bi bi-person-walking";	}
 	SetGravity(_scale : number) {this.mGravity = _scale;}
@@ -95,6 +95,7 @@ export class CRigidBody extends CGeometryComp
 	}
 	override Provider(_type: string, _state : Array<string>): void 
 	{
+		//let lastDir=-1;
 		for(let f of this.mForceArr)
 		{
 			_state.push("/rigidBody/force/"+f.Key());
@@ -104,12 +105,13 @@ export class CRigidBody extends CGeometryComp
 			let dirDot=[0,0,0,0,0,0];
 
 			//CConsol.Log(com.MoveDir());
-			dirDot[0]=CMath.V3Dot(CVec3.Left(),f.mDirection);
-			dirDot[1]=CMath.V3Dot(CVec3.Right(),f.mDirection);
-			dirDot[2]=CMath.V3Dot(CVec3.Up(),f.mDirection);
-			dirDot[3]=CMath.V3Dot(CVec3.Down(),f.mDirection);
-			dirDot[4]=CMath.V3Dot(CVec3.Front(),f.mDirection);
-			dirDot[5]=CMath.V3Dot(CVec3.Back(),f.mDirection);
+			
+			dirDot[CVec3.eDir.Up]=CMath.V3Dot(CVec3.Up(),f.mDirection);
+			dirDot[CVec3.eDir.Down]=CMath.V3Dot(CVec3.Down(),f.mDirection);
+			dirDot[CVec3.eDir.Left]=CMath.V3Dot(CVec3.Left(),f.mDirection);
+			dirDot[CVec3.eDir.Right]=CMath.V3Dot(CVec3.Right(),f.mDirection);
+			dirDot[CVec3.eDir.Front]=CMath.V3Dot(CVec3.Front(),f.mDirection);
+			dirDot[CVec3.eDir.Back]=CMath.V3Dot(CVec3.Back(),f.mDirection);
 
 			let select=-1;
 			let selectMax=0;
@@ -121,19 +123,23 @@ export class CRigidBody extends CGeometryComp
 					select=i;
 				}
 			}
-			this.mLastDir=select;
-			switch(select)
-			{
-				case 0:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Left);break;
-				case 1:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Right);break;
-				case 2:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Up);break;
-				case 3:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Down);break;
-				case 4:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Front);break;
-				case 5:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Back);break;
-			}
+			if(select!=-1)	this.mLastDir=select;
 			
+			_state.push("/rigidBody/force/"+f.mKey+select);
+
+			// switch(select)
+			// {
+			// 	case CVec3.eDir.Left:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Left);break;
+			// 	case CVec3.eDir.Right:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Right);break;
+			// 	case CVec3.eDir.Up:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Up);break;
+			// 	case CVec3.eDir.Down:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Down);break;
+			// 	case CVec3.eDir.Front:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Front);break;
+			// 	case CVec3.eDir.Back:_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Back);break;
+			// }
+			//if(lastDir==-1)	_state.push("/rigidBody/force/"+f.mKey+CVec3.eDir.Back);break;
 			
 		}
+		_state.push("/rigidBody/force/"+this.mLastDir);
 		if(this.IsJump()) _state.push("/rigidBody/force/Jump");
 		if(this.IsFall()) _state.push("/rigidBody/force/Fall");
 	
@@ -149,6 +155,9 @@ export class CRigidBody extends CGeometryComp
 
 		if(_member=="mForceGravity")
 			return true;
+
+		if(_member=="mLastDir")
+			return false;
 			
 		return super.IsShould(_member,_type);
 	}

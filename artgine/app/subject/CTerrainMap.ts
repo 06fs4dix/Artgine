@@ -40,7 +40,7 @@ export class CTerrainMap extends CSubject
     mCellSize : number = 4;             // 가장 작은 셀의 크기
     
     // splat texture
-    mTexture : string[] = new Array();
+    mTexture : (CVec4|string)[] = new Array();
     mTexCodi : CMat = new CMat([
         32, 32, 0, 0,
         32, 32, 0, 0,
@@ -70,7 +70,7 @@ export class CTerrainMap extends CSubject
     SetLevel(_level : Array<number>) {
         this.mLevel = _level;
     }
-    SetSplat(_splatTexs : string[], _splatTexCodi : CMat) {
+    SetSplat(_splatTexs : (CVec4|string)[], _splatTexCodi : CMat) {
         this.mTexture = [..._splatTexs];
         this.mTexCodi.Import(_splatTexCodi);
     }
@@ -169,8 +169,8 @@ export class CTerrainMap extends CSubject
         {
             this.mSplatArrayTexture="splatArray.tex";
             const tex=new CTexture();
-            tex.SetSize(1024, 1024);
-            tex.PushInfo([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA8,8)]);
+            tex.SetSize(this.mSplatBuf.mCount.x, this.mSplatBuf.mCount.y);
+            tex.PushInfo([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA8,12)]);
             tex.SetFilter(CTexture.eFilter.Linear);
             tex.SetMipMap(CTexture.eMipmap.GL);
             tex.SetWrap(CTexture.eWrap.Repeat);
@@ -184,11 +184,12 @@ export class CTerrainMap extends CSubject
             // 스플렛 어레이에 넣을 텍스쳐 로드 확인
             let texAllLoaded = true;
             for(let i = 0; i < this.mTexture.length; i++) {
-                if(this.mTexture[i] != null && this.mTexture[i] != "") {
-                    if(this.GetFrame().Res().Find(this.mTexture[i])==null)
+                const texKey = this.mTexture[i];
+                if(texKey != null && texKey != "" && typeof(texKey) == "string") {
+                    if(this.GetFrame().Res().Find(texKey)==null)
                         texAllLoaded = false;
-                    if(this.GetFrame().Load().IsLoad(this.mTexture[i])==false)
-                        this.GetFrame().Load().Exe(this.mTexture[i]);
+                    if(this.GetFrame().Load().IsLoad(texKey)==false)
+                        this.GetFrame().Load().Exe(texKey);
                 }
             }
             if(texAllLoaded == false) return;
@@ -197,11 +198,34 @@ export class CTerrainMap extends CSubject
             const splatArrayTex : CTexture = this.GetFrame().Res().Find(this.mSplatArrayTexture);
             splatArrayTex.CreateBuf();
             const splatArrayTexBuf = splatArrayTex.GetBuf()[0] as Uint8Array;
-            for(let i = 0; i < 8; i++) {
-                const tex = this.GetFrame().Res().Find(this.mTexture[i]) as CTexture;
+            for(let i = 0; i < 12; i++) {
+                let defaultCol : CVec4 = new CVec4();
+                if(0 <= i && i < 4) {
+                    // 컬러값이라 검은색
+                    defaultCol.w = 1;
+                }
+                else if(4 <= i && i < 8) {
+                    // 메테리얼 값
+                    defaultCol.x = 1;
+                    defaultCol.w = 1;
+                }
+                else {
+                    // 노말 값(0, 1, 0)
+                    defaultCol.x = 0.5;
+                    defaultCol.y = 0.5;
+                    defaultCol.z = 1;
+                }
+                let texKeyOrCol = this.mTexture[i];
+                let tex = null;
+                if(texKeyOrCol instanceof CVec4) {
+                    defaultCol = texKeyOrCol;
+                }
+                else {
+                    tex = this.GetFrame().Res().Find(texKeyOrCol) as CTexture;
+                }
                 let reducedTex : CTexture = tex != null ?
                     CImgPro.SqurEnlargedReduced(tex.GetWidth(), tex.GetHeight(), tex.GetBuf()[0], splatArrayTex.GetWidth() / tex.GetWidth(), splatArrayTex.GetHeight() / tex.GetHeight(), 4) :
-                    CImgPro.Square(splatArrayTex.GetWidth(), splatArrayTex.GetHeight(), new CVec4(1, 0, 0, 1));
+                    CImgPro.Square(splatArrayTex.GetWidth(), splatArrayTex.GetHeight(), defaultCol);
                 splatArrayTexBuf.set(reducedTex.GetBuf()[0], splatArrayTex.GetWidth() * splatArrayTex.GetHeight() * 4 * i);
             }
             this.GetFrame().Ren().BuildTexture(splatArrayTex);  // 밉맵때문에 리빌드쓰면 안됨(밉맵에 적용 안됨)
@@ -289,7 +313,7 @@ export class CColliderTerrain extends CCollider
 
         this.SetEvent(CCollider.eEvent.Static);
     }
-    override IsShould(_member: string, _type: CObject.eShould): boolean {
+    IsShould(_member: string, _type: CObject.eShould): boolean {
         if(_member == "mTerrain")
             return false;
         return super.IsShould(_member, _type);
@@ -444,7 +468,7 @@ export class CColliderTerrain extends CCollider
             CMath.V3MulFloat(ac, vc * denom)
         ));
     }
-    override CollisionChk(_co: CCollider, _colTarget: CArray<CCollider>, _colPush: CArray<CVec3>): boolean 
+    CollisionChk(_co: CCollider, _colTarget: CArray<CCollider>, _colPush: CArray<CVec3>): boolean 
     {
         let push : CVec3=null;
 

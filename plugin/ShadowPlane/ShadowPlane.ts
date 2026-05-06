@@ -343,71 +343,14 @@ export class CShadowPlane extends CPaint2D
         }  
         if(this.mPT==null) return;
 
-        // //light
-        // for(let lig of this.mLIGSet) {
-        //     if(!lig.GetOwner() || lig.GetOwner().GetFrame() == null || lig.IsDestroy() || lig.IsEnable()==false || lig.IsColorZero()) 
-        //     {
-        //         if(this.mLIG==lig)  this.mLIG=null;
-        //         this.mLIGSet.delete(lig);
-        //         this.mUpdateLight=true;
-        //     }
-        // }
-        
-        // if(this.mUpdateLight)
-        // {
-        //     this.mUpdateLight=false;
-            
+        if(this.mPT.GetTexture()[0]!=this.GetTexture()[0])
+        {
+            this.mUpdateShadow=true;
+        }
 
-        //     const center = this.GetPaintCenter();
-        //     //let pick: Array<{ light: CLight; dist: number }>=[];
-
-        //     let minLen=Number.MAX_SAFE_INTEGER;
-
-        //     if(this.mLIG!=null)
-        //     {
-        //         if(this.mLIG.IsPointLight())
-        //             minLen = CMath.V3Distance(this.mLIG.DirPosV4(), center);
-        //         else
-        //             minLen=0;
-                    
-        //     }
-            
-
-
-        //     for(let lig of this.mLIGSet) 
-        //     {
-        //         //if(lig.IsEnable()==false || lig.IsColorZero())    continue;
-        //         if(this.mLIGKeys.length>0)
-        //         {
-        //              if(this.mLIGKeys.includes(lig.Key()) || this.mLIGKeys.includes(lig.GetOwner().Key())){}
-        //              else   continue;
-        //         }
-        //         let len=0;
-        //         if(lig.IsPointLight())
-        //         {
-        //             len = CMath.V3Distance(lig.DirPosV4(), center);
-        //         }
-        //         if(minLen>len)
-        //         {
-        //             if(this.mLIG!=lig)  
-        //             {
-        //                 this.ClearBatch();
-        //                 this.mUpdateShadow=true;
-        //             }
-                        
-                    
-        //             this.mLIG=lig;
-        //             minLen=len;
-        //         }
-                
-
-        //     }
-        // }
-        // if(this.mLIG==null) return;
         let lightOff=-1;
 
-        // this.mLightDir=null;
-        // this.mLightCol=null;
+   
 
         const center = this.GetPaintCenter();
         let pick: Array<{ light: CLight; dist: number }>=[];
@@ -460,6 +403,11 @@ export class CShadowPlane extends CPaint2D
         super.Update(_update);
 
     }
+    // override UpdateLMat()
+    // {
+    //     super.UpdateLMat();
+    //     this.mUpdateShadow=true;
+    // }
     private UpdateShadow() 
     {
         if(this.mUpdateShadow==false && this.mPT.IsUpdateFMat()==false)   return;

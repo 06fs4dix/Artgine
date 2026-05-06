@@ -721,6 +721,13 @@ export class CObject implements IMember,IRecycle,IStream,ICJSON
 
 
 		if(_member=="class")	return this.constructor.name as T;
+
+		// if(_member[0]=="/")
+		// {
+		// 	this.Temp("")
+		// 	return;
+		// }
+
 		
 		let t: any = this;
 		const path = Array.isArray(_member) ? _member : _member.split(".");

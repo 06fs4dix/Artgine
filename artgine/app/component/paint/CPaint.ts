@@ -1139,16 +1139,36 @@ export class CPaint extends CComponent implements IMat
 				}
 				if(tex==null)	this.mInit=false;
 
-				if(this.mOwner.GetFrame().Load().IsLoad(texKey)==false)
+				if(this.mOwner.GetFrame().Load().LoadSet().has(texKey)==true)
+				{
+					CChecker.Exe(async ()=>{
+
+						if(this.mOwner.GetFrame().Load().LoadSet().has(texKey)==false)
+						{
+							//this.mUpdateFMat=true;
+							this.UpdateLMat();
+							//this.ClearBatch();
+							return false;
+						}
+							
+						return true;
+					})
+					
+				}
+				else if(this.mOwner.GetFrame().Load().IsLoad(texKey)==false)
 				{
 					
-					this.mOwner.GetFrame().Load().Exe(texKey,this.mAutoLoad);
+					this.mOwner.GetFrame().Load().Exe(texKey,this.mAutoLoad).then(()=>{
+						this.UpdateLMat();
+						// this.ClearBatch();
+					});
 				}
 					
 			}
 		}
 		if(change)
 		{
+			
 			for(let each0 of this.mBatchMap.values())
 			{
 				if(each0!=null)

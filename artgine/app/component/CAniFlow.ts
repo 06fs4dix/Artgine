@@ -61,7 +61,8 @@ export class CAniFlow extends CComponent
 	}
 	override Provider(_type: string, _state : Array<string>): void 
 	{
-		_state.push("/aniFlow/"+this.mAni.Key()+(this.IsEnd()?"Stop":"Play"));
+		if(this.mAni!=null)
+			_state.push("/aniFlow/"+this.mAni.Key()+(this.IsEnd()?"Stop":"Play"));
 	}
 	SetAni();
 	SetAni(_ani : string);

@@ -343,7 +343,7 @@ export class CShaderInterpretGL extends CShaderInterpret
 		CAlert.E("error!");
 		return "Null";
 	}
-	AttachFun(_useFun : Array<string>, _functionMap : Map<string, CShaderFun>,_addedFun : Array<string> = null)
+	AttachFun(_useFun : Set<string>, _functionMap : Map<string, CShaderFun>,_addedFun : Array<string> = null)
 	{
 		if(_addedFun === null) {
 			_addedFun = [];
@@ -412,22 +412,13 @@ export class CShaderInterpretGL extends CShaderInterpret
 			}
 			tempStr+="){" + fun.mLine+"}";
 
-			let arrFun = [];
+			let arrFun = new Set<string>;
 			_addedFun.push(funKey);
 			for(let usedFun of fun.mUseFun) {
 				if(_addedFun.indexOf(usedFun) == -1) {
-					arrFun.push(usedFun);
+					arrFun.add(usedFun);
 				}
-				// else
-				// {
-				// 	if(_useFun instanceof Array &&_useFun.indexOf(usedFun)!=-1)
-				// 	{
-				// 		_useFun.splice(_useFun.indexOf(usedFun),1);
-				// 		arrFun.push(usedFun);
-				// 		//_addedFun.splice(_addedFun.indexOf(usedFun));
-				// 	}
-				// 	//CConsol.Log(usedFun);
-				// }
+			
 			}
 			funStr += this.AttachFun(arrFun, _functionMap,_addedFun);
 			funStr += tempStr;

@@ -113,7 +113,7 @@ export class CRoleMgr extends CObject
     private mExecuteSet=new Set<CAction>();
     private mExecuteLock : CAction=null;
     
-    constructor(_state=new CObject())
+    constructor()
     {
         super();
         
