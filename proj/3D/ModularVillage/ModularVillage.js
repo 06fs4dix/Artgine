@@ -1,4 +1,4 @@
-const version = 'mn9iqkvq_7';
+const version = 'mp4216w1_12';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -49,6 +49,7 @@ import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPa
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
 import { CDensityInfo3D, CDensityMap } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CDensityMap.js";
+import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
 let PCF = new CVec1(0.0);
 var bias = 5;
 var normalBias = 4;
@@ -56,18 +57,19 @@ var shadowRate = 0.7;
 let forward = new CRPMgr();
 let rtex = new CTexture();
 rtex.SetSize(512, 512);
-if (await gAtl.Frame().Dev().BenchmarkScore() > 60) {
+if (await gAtl.Frame().Dev().BenchmarkScore() > 100) {
     rtex.SetSize(2048, 2048);
     PCF = new CVec1(2.0);
     bias = 20;
     normalBias = 10;
+    CAlert.Info("고사양");
 }
 let texKey = forward.PushTex("shadowread.tex", rtex);
 let rp = forward.PushRP(new CRPAuto());
 rp.PushOr(new CCondition("class", "==", "CPaint3D"));
 rp.PushOr(new CCondition("class", "==", "CPaint3DMerge"));
 rp.mPriority = CRenderPass.ePriority.BackGround + 1;
-rp.mShaderAttr.push(new CShaderAttr(0, gAtl.Frame().Pal().GetShadowWriteTex()));
+rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate", shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF", PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias", bias));
@@ -79,17 +81,18 @@ rp.mTag.add("shadowRead");
 rp = forward.PushRP(new CRPAuto());
 rp.PushOr(new CCondition("class", "==", "CPaint3D"));
 rp.PushOr(new CCondition("class", "==", "CPaint3DMerge"));
-rp.mShaderAttr.push(new CShaderAttr(10, "shadowread.tex"));
-rp.mShaderAttr.push(new CShaderAttr("shadowOn", new CVec1(10)));
+rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, "shadowread.tex"));
+rp.mShaderAttr.push(new CShaderAttr("shadowOn", new CVec1(SDF.eTexSlot.SingleShadowRead)));
 rp.mShader = gAtl.Frame().Pal().Sl3DKey();
 rp.mShaderAttr.push(new CShaderAttr("ligStep1", new CVec1(SDF.eLightStep1.None)));
 rp.mTag.add("light");
 Main.PushPlugin(new CCanvasPluginRPMgr(forward));
 Main.Find("Ground").Destroy();
 let densityMap = new CDensityMap();
-densityMap.mDiv = 8;
+densityMap.mDiv = 16;
 densityMap.mBuf.Reset(new CVec3(32, 32, 1), 100);
 let info = densityMap.PushDensityInfo(new CDensityInfo3D(0, new CVec3(100, 100, 100), "Res/ModularVillage/Cobblestone_Dirt_Transition_1.obj"));
+info.mColor = 0;
 info.mColliderLayer = "ground";
 info.mPaintTag.push(CPaint.eTag.Shadow);
 info.mPaintTag.push(CPaint.eTag.Light);
@@ -131,10 +134,8 @@ let rb = chsub.PushComp(new CRigidBody());
 rb.SetGravity(1);
 let aniStand = new CAnimation();
 let cm = aniStand.Push(new CClipMesh(0, 1, 2500, 4500, aniRes));
-cm.mBake = true;
 let aniWalk = new CAnimation();
 cm = aniWalk.Push(new CClipMesh(0, 1.5, 0, 2000, aniRes));
-cm.mBake = true;
 let af = chsub.PushComp(new CAniFlow(aniWalk));
 let camCon = new CCamCon3DThirdPerson(gAtl.Frame().Input());
 gAtl.Brush().GetCam3D().SetCamCon(camCon);
@@ -184,11 +185,11 @@ chsub.Update = (_update) => {
         }
         chsub.SetRot(new CVec3(0, angle, 0));
         if (af.GetAni() != aniWalk)
-            af.ResetAni(aniWalk);
+            af.SetAni(aniWalk);
     }
     else {
         if (af.GetAni() != aniStand)
-            af.ResetAni(aniStand);
+            af.SetAni(aniStand);
     }
     if (pad.GetButtonEvent(0) == CEvent.eType.Click) {
         var jump = new CForce("jump");
