@@ -155,7 +155,7 @@ export class CNPC extends CSubject
         if (!this.mLoaded) {
             const culpc = this.GetFrame().Res().Find("Res/ulpc/"+this.mName+".json") as CULPC;
             if (culpc) {
-                this.mPT.SetTexture(culpc.GetTexName());
+                this.mPT.SetTexture(culpc.mTexture.Key());
                 this.mCulpc  = culpc;
                 this.mLoaded = true;
             }

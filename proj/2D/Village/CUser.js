@@ -3,7 +3,7 @@ import { CAnimation, CClipAlpha, CClipDestroy } from "https://06fs4dix.github.io
 import { CCollider } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CCollider.js";
 import { CForce } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CForce.js";
 import { CRigidBody } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRigidBody.js";
-import { CSMComp } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CSMComp.js";
+import { CRoleComp } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CRoleComp.js";
 import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint2D.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
 import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
@@ -53,8 +53,8 @@ export class CUser extends CSubject {
         this.PushComp(new CShadowPlane());
         this.mAF = this.PushComp(new CAniFlow());
         this.mAF.mSave = false;
-        let sm = this.PushComp(new CSMComp());
-        sm.GetSM().PushRole([
+        let sm = this.PushComp(new CRoleComp());
+        sm.GetRoleMgr().PushRole([
             {
                 "and": [{ "s": "/rigidBody/force/" + CVec3.eDir.Null, "o": "==", "v": 1 }],
                 "exe": [{ "t": "Message", "a": "ResetAnimation", "p": ["StandLeft"] }]
@@ -109,7 +109,7 @@ export class CUser extends CSubject {
         if (!this.mLoaded) {
             const culpc = this.GetFrame().Res().Find("Res/ulpc/User.json");
             if (culpc) {
-                this.mPT.SetTexture(culpc.GetTexName());
+                this.mPT.SetTexture(culpc.mTexture.Key());
                 this.mUlpc = culpc;
                 this.mLoaded = true;
             }

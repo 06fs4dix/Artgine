@@ -1,5 +1,5 @@
 //Version
-const version='mou2nb1k_2';
+const version='mp4216w1_23';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -461,6 +461,11 @@ const dummy = CHTMLDropdown.Attach(arr, "left");
 let rightDiv=CDOM.DataToDom(`<div class="position-fixed top-0 end-0" style="z-index:2000;"></div>`);
 rightDiv.append(dummy);
 mg.SetBody(rightDiv);
+
+
+
+
+
 
 
 
