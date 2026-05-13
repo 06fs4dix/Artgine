@@ -576,7 +576,8 @@ export class CLoader
 			
 			if(this.mRes!=null)
 			{
-				this.mRes.Push(ulpc.Key(),ulpc);
+				this.mRes.Push(_file,ulpc);
+				//this.mRes.Push(ulpc.Key(),ulpc);
 				//ulpc.SetKey(_file);
 				//let textureFile = _file.replace(/\.json$/i, ".ulpc"); 
 				this.mRes.Push(ulpc.mTexture.Key(), ulpc.mTexture);

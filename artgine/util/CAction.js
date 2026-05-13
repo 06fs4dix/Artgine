@@ -1,1 +1,82 @@
-import{CClass as t}from"../basic/CClass.js";import{CEvent as e}from"../basic/CEvent.js";import{CObject as m}from"../basic/CObject.js";import{CSamplerTimer as i}from"./CSampler.js";export class CAction extends m{constructor(t,e,m=[]){super(),this.mAction=e,this.mParameter=m??[],this.mType=t}static eType={Function:"Function",Listener:"Listener",Message:"Message",Event:"Event"};mType="Function";mAction="";mParameter=new Array;mSamplerTimer=new i(!0);mTemp=null;mRun="";static Excute(t,m,n=0,s=0,l=0,r=0){i.Update(t,n,s,l,r)&&(m instanceof e?m.Call(t):m(t))}async Excute(e,m=!1,i=null,n=null,s="",l=null){if(this.mTemp=n??this,this.mRun=s,0!=this.mSamplerTimer.Excute(this.mTemp,this.mRun,l))if(null==i&&(i=this.mParameter),"string"!=typeof this.mAction)this.mAction.Call(i);else if(this.mType==CAction.eType.Function){if(m)return await t.CallAsync(e,this.mAction,i);t.Call(e,this.mAction,i)}else if(this.mType==CAction.eType.Listener){if(m)return await e.GetEvent(this.mAction).CallAsync(i);e.GetEvent(this.mAction).Call(i)}else this.mType==CAction.eType.Message&&(e.NewInMsg(this.mAction).mMsgData=i)}ImportCJSON(t){let e=t.mDocument;return this.mType=null==e.mType?e.t:e.mType,this.mAction=null==e.mAction?e.a:e.mAction,this.mParameter=null==e.mParameter?e.p:e.mParameter,null!=e.mDelay&&(this.mSamplerTimer.mDelay=null==e.mDelay?e.d:e.mDelay),null!=e.mCount&&(this.mSamplerTimer.mCount=null==e.mCount?e.c:e.mCount),null!=e.mBegin&&(this.mSamplerTimer.mStart=null==e.mBegin?e.b:e.mBegin),null!=e.mEnd&&(this.mSamplerTimer.mEnd=null==e.mEnd?e.e:e.mEnd),this}IsEndReset(){return null!=this.mTemp&&i.IsEndReset(this.mTemp,this.mRun)}}
+import { CClass } from "../basic/CClass.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CObject } from "../basic/CObject.js";
+import { CSamplerTimer } from "./CSampler.js";
+export class CAction extends CObject {
+    constructor(_type, _action, _para = []) {
+        super();
+        this.mAction = _action;
+        this.mParameter = _para == null ? [] : _para;
+        this.mType = _type;
+    }
+    static eType = {
+        "Function": "Function",
+        "Listener": "Listener",
+        "Message": "Message",
+        "Event": "Event",
+    };
+    mType = "Function";
+    mAction = "";
+    mParameter = new Array();
+    mSamplerTimer = new CSamplerTimer(true);
+    mTemp = null;
+    mRun = "";
+    static Excute(_temp, _event, count = 0, delay = 0, start = 0, _end = 0) {
+        if (CSamplerTimer.Update(_temp, count, delay, start, _end)) {
+            if (_event instanceof CEvent)
+                _event.Call(_temp);
+            else
+                _event(_temp);
+        }
+    }
+    async Excute(_actionTarget, _async = false, _parameter = null, _tempTarget = null, _run = "", _update = null) {
+        if (_tempTarget == null)
+            this.mTemp = this;
+        else
+            this.mTemp = _tempTarget;
+        this.mRun = _run;
+        if (this.mSamplerTimer.Excute(this.mTemp, this.mRun, _update) == false)
+            return;
+        if (_parameter == null)
+            _parameter = this.mParameter;
+        if (typeof this.mAction != "string") {
+            this.mAction.Call(_parameter);
+        }
+        else if (this.mType == CAction.eType.Function) {
+            if (_async)
+                return await CClass.CallAsync(_actionTarget, this.mAction, _parameter);
+            else
+                CClass.Call(_actionTarget, this.mAction, _parameter);
+        }
+        else if (this.mType == CAction.eType.Listener) {
+            if (_async)
+                return await _actionTarget.GetEvent(this.mAction).CallAsync(_parameter);
+            else
+                _actionTarget.GetEvent(this.mAction).Call(_parameter);
+        }
+        else if (this.mType == CAction.eType.Message) {
+            let mag = _actionTarget.NewInMsg(this.mAction);
+            mag.mMsgData = _parameter;
+        }
+    }
+    ImportCJSON(_json) {
+        let json = _json.mDocument;
+        this.mType = json["mType"] == null ? json["t"] : json["mType"];
+        this.mAction = json["mAction"] == null ? json["a"] : json["mAction"];
+        this.mParameter = json["mParameter"] == null ? json["p"] : json["mParameter"];
+        if (json["mDelay"] != null)
+            this.mSamplerTimer.mDelay = json["mDelay"] == null ? json["d"] : json["mDelay"];
+        if (json["mCount"] != null)
+            this.mSamplerTimer.mCount = json["mCount"] == null ? json["c"] : json["mCount"];
+        if (json["mBegin"] != null)
+            this.mSamplerTimer.mStart = json["mBegin"] == null ? json["b"] : json["mBegin"];
+        if (json["mEnd"] != null)
+            this.mSamplerTimer.mEnd = json["mEnd"] == null ? json["e"] : json["mEnd"];
+        return this;
+    }
+    IsEndReset() {
+        if (this.mTemp == null)
+            return false;
+        return CSamplerTimer.IsEndReset(this.mTemp, this.mRun);
+    }
+}

@@ -1,1 +1,174 @@
-import{CClass as m}from"../basic/CClass.js";import{CObject as e}from"../basic/CObject.js";import{CMath as t}from"../geometry/CMath.js";import{CVec1 as r}from"../geometry/CVec1.js";import{CVec3 as l}from"../geometry/CVec3.js";import{CTimer as s}from"../system/CTimer.js";export class CSampler extends e{mDefault=null;constructor(m=null){super(),this.mDefault=m}Excute(m=null){return this.mDefault}}export class CSamplerMinMax extends CSampler{mLinear;mMin;mMax;constructor(m,e,t=!1){super(),"number"==typeof m&&"number"==typeof e?(this.mMin=new r(m),this.mMax=new r(e)):(this.mMin=m,this.mMax=e),this.mLinear=t}Excute(e=null){null!=e&&"number"!=typeof e||(e=m.New(this.mMin));let l=Math.random();for(let m=0;m<e.mF32A.length;++m)0==this.mLinear&&(l=Math.random()),e.mF32A[m]=t.FloatInterpolate(this.mMin.mF32A[m],this.mMax.mF32A[m],l);return e instanceof r?e.mF32A[0]:e}}export class CSamplerList extends CSampler{mCount=0;mRate=new Array;mList=new Array;constructor(m,e=null){if(super(),null!=m){if(null==e)for(var t of(e=new Array,m))e.push(1);else if(m.length>e.length)for(var r=0;r<m.length-e.length;++r)e.push(1);this.mList=m,this.mRate=e;for(let m of this.mRate)this.mCount+=m}}Excute(){if(null==this.mList||0===this.mRate.length)return null;let m=Math.random(),e=0;for(let t=0;t<this.mRate.length;++t)if(e+=this.mRate[t]/this.mCount,m<=e)return this.mList[t];return this.mList[this.mList.length-1]}}export class CSamplerDir extends CSampler{mDir;mPitch;mRoll;constructor(m,e,t){super(),this.mDir=m,this.mPitch=e,this.mRoll=t}Excute(){var m=2*this.mPitch*Math.random()-this.mPitch,e=2*this.mRoll*Math.random()-this.mRoll,r=t.MatRotation(new l(m,e,0));return t.V3MulMatNormal(this.mDir,r)}}export class CSamplerTimer extends CSampler{mDelay=0;mCount=1;mStart=0;mEnd=0;constructor(m){super(m)}Excute(m=null,e="",t=null){return null==m&&(m=this),0==CSamplerTimer.Update(m,this.mCount,this.mDelay,this.mStart,this.mEnd,e,t)?void 0===this.mDefault&&null:this.mDefault}IsEndReset(m=null,e=""){return null==m&&(m=this),CSamplerTimer.IsEndReset(m,e)}static Update(m,e=0,t=0,r=0,l=0,n="",i=null){null==m.mTemp&&(m.mTemp={});let a,u=null!=i?i.Offset():0;null==m.mTemp["mTimer"+n]?(m.mTemp["mTimer"+n]=new s,m.mTemp["mCount"+n]=0,m.mTemp["mTime"+n]=0,m.mTemp["mDelay"+n]=0):m.mTemp["mOffset"+n]+1<u&&(m.mTemp["mTimer"+n].Delay(),m.mTemp["mCount"+n]=0,m.mTemp["mTime"+n]=0,m.mTemp["mDelay"+n]=0,m.mTemp["mEnd"+n]=!1),m.mTemp["mOffset"+n]=u,a=m.mTemp["mTimer"+n];let o=a.Delay();return m.mTemp["mDelay"+n]=m.mTemp["mDelay"+n]+o,m.mTemp["mTime"+n]=m.mTemp["mTime"+n]+o,!(0!=t&&m.mTemp["mDelay"+n]<t||m.mTemp["mTime"+n]<r||(0!=l&&m.mTemp["mTime"+n]>l?(m.mTemp["mEnd"+n]=!0,1):(m.mTemp["mDelay"+n]=0,m.mTemp["mCount"+n]=m.mTemp["mCount"+n]+1,0!=e&&m.mTemp["mCount"+n]>e&&(m.mTemp["mEnd"+n]=!0,1))))}static IsEndReset(m,e=""){return null!=m.mTemp&&1==m.mTemp["mEnd"+e]&&(m.mTemp["mOffset"+e]=0,!0)}}
+import { CClass } from "../basic/CClass.js";
+import { CObject } from "../basic/CObject.js";
+import { CMath } from "../geometry/CMath.js";
+import { CVec1 } from "../geometry/CVec1.js";
+import { CVec3 } from "../geometry/CVec3.js";
+import { CTimer } from "../system/CTimer.js";
+export class CSampler extends CObject {
+    mDefault = null;
+    constructor(_default = null) {
+        super();
+        this.mDefault = _default;
+    }
+    Excute(_target = null) {
+        return this.mDefault;
+    }
+}
+export class CSamplerMinMax extends CSampler {
+    mLinear;
+    mMin;
+    mMax;
+    constructor(_min, _max, _linear = false) {
+        super();
+        if (typeof _min == "number" && typeof _max == "number") {
+            this.mMin = new CVec1(_min);
+            this.mMax = new CVec1(_max);
+        }
+        else {
+            this.mMin = _min;
+            this.mMax = _max;
+        }
+        this.mLinear = _linear;
+    }
+    Excute(_target = null) {
+        if (_target == null || typeof _target == "number")
+            _target = CClass.New(this.mMin);
+        let ran = Math.random();
+        for (let i = 0; i < _target.mF32A.length; ++i) {
+            if (this.mLinear == false)
+                ran = Math.random();
+            _target.mF32A[i] = CMath.FloatInterpolate(this.mMin.mF32A[i], this.mMax.mF32A[i], ran);
+        }
+        if (_target instanceof CVec1)
+            return _target.mF32A[0];
+        return _target;
+    }
+}
+export class CSamplerList extends CSampler {
+    mCount = 0;
+    mRate = new Array();
+    mList = new Array();
+    constructor(_list, _rate = null) {
+        super();
+        if (_list == null)
+            return;
+        if (_rate == null) {
+            _rate = new Array();
+            for (var each0 of _list) {
+                _rate.push(1);
+            }
+        }
+        else if (_list.length > _rate.length) {
+            for (var i = 0; i < _list.length - _rate.length; ++i) {
+                _rate.push(1);
+            }
+        }
+        this.mList = _list;
+        this.mRate = _rate;
+        for (let each0 of this.mRate) {
+            this.mCount += each0;
+        }
+    }
+    Excute() {
+        if (this.mList == null || this.mRate.length === 0)
+            return null;
+        let ran = Math.random();
+        let accum = 0;
+        for (let i = 0; i < this.mRate.length; ++i) {
+            accum += this.mRate[i] / this.mCount;
+            if (ran <= accum) {
+                return this.mList[i];
+            }
+        }
+        return this.mList[this.mList.length - 1];
+    }
+}
+export class CSamplerDir extends CSampler {
+    mDir;
+    mPitch;
+    mRoll;
+    constructor(_dir, _pitch, _roll) {
+        super();
+        this.mDir = _dir;
+        this.mPitch = _pitch;
+        this.mRoll = _roll;
+    }
+    Excute() {
+        var pran = this.mPitch * 2 * Math.random() - this.mPitch;
+        var rran = this.mRoll * 2 * Math.random() - this.mRoll;
+        var mat = CMath.MatRotation(new CVec3(pran, rran, 0));
+        return CMath.V3MulMatNormal(this.mDir, mat);
+    }
+}
+export class CSamplerTimer extends CSampler {
+    mDelay = 0;
+    mCount = 1;
+    mStart = 0;
+    mEnd = 0;
+    constructor(_actionValue) {
+        super(_actionValue);
+    }
+    Excute(_dataTarget = null, _run = "", _update = null) {
+        if (_dataTarget == null)
+            _dataTarget = this;
+        if (CSamplerTimer.Update(_dataTarget, this.mCount, this.mDelay, this.mStart, this.mEnd, _run, _update) == false) {
+            if (typeof this.mDefault != "undefined")
+                return false;
+            return null;
+        }
+        return this.mDefault;
+    }
+    IsEndReset(_dataTarget = null, _run = "") {
+        if (_dataTarget == null)
+            _dataTarget = this;
+        return CSamplerTimer.IsEndReset(_dataTarget, _run);
+    }
+    static Update(_dataTarget, count = 0, delay = 0, start = 0, end = 0, _run = "", _update = null) {
+        if (_dataTarget["mTemp"] == null)
+            _dataTarget["mTemp"] = {};
+        let offset = _update != null ? _update.Offset() : 0;
+        let timer;
+        if (_dataTarget["mTemp"]["mTimer" + _run] == null) {
+            _dataTarget["mTemp"]["mTimer" + _run] = new CTimer();
+            _dataTarget["mTemp"]["mCount" + _run] = 0;
+            _dataTarget["mTemp"]["mTime" + _run] = 0;
+            _dataTarget["mTemp"]["mDelay" + _run] = 0;
+        }
+        else if (_dataTarget["mTemp"]["mOffset" + _run] + 1 < offset) {
+            _dataTarget["mTemp"]["mTimer" + _run].Delay();
+            _dataTarget["mTemp"]["mCount" + _run] = 0;
+            _dataTarget["mTemp"]["mTime" + _run] = 0;
+            _dataTarget["mTemp"]["mDelay" + _run] = 0;
+            _dataTarget["mTemp"]["mEnd" + _run] = false;
+        }
+        _dataTarget["mTemp"]["mOffset" + _run] = offset;
+        timer = _dataTarget["mTemp"]["mTimer" + _run];
+        let t = timer.Delay();
+        _dataTarget["mTemp"]["mDelay" + _run] = _dataTarget["mTemp"]["mDelay" + _run] + t;
+        _dataTarget["mTemp"]["mTime" + _run] = _dataTarget["mTemp"]["mTime" + _run] + t;
+        if (delay != 0 && _dataTarget["mTemp"]["mDelay" + _run] < delay)
+            return false;
+        if (_dataTarget["mTemp"]["mTime" + _run] < start)
+            return false;
+        if (end != 0 && _dataTarget["mTemp"]["mTime" + _run] > end) {
+            _dataTarget["mTemp"]["mEnd" + _run] = true;
+            return false;
+        }
+        _dataTarget["mTemp"]["mDelay" + _run] = 0;
+        _dataTarget["mTemp"]["mCount" + _run] = _dataTarget["mTemp"]["mCount" + _run] + 1;
+        if (count != 0 && _dataTarget["mTemp"]["mCount" + _run] > count) {
+            _dataTarget["mTemp"]["mEnd" + _run] = true;
+            return false;
+        }
+        return true;
+    }
+    static IsEndReset(_dataTarget, _run = "") {
+        if (_dataTarget["mTemp"] == null)
+            return false;
+        if (_dataTarget["mTemp"]["mEnd" + _run] == true) {
+            _dataTarget["mTemp"]["mOffset" + _run] = 0;
+            return true;
+        }
+        return false;
+    }
+}

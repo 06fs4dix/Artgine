@@ -1,1 +1,19 @@
-export class CChecker{static Exe(t,e=500){return new Promise((s,c)=>{const a=async()=>{try{0==await t()?s():setTimeout(a,e)}catch(t){c(t)}};setTimeout(a,e)})}}
+export class CChecker {
+    static Exe(_checkFun, _time = 500) {
+        return new Promise((resolve, reject) => {
+            const dummy = async () => {
+                try {
+                    const result = await _checkFun();
+                    if (result == false)
+                        resolve();
+                    else
+                        setTimeout(dummy, _time);
+                }
+                catch (err) {
+                    reject(err);
+                }
+            };
+            setTimeout(dummy, _time);
+        });
+    }
+}

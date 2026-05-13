@@ -1,1 +1,732 @@
-import{CAnimation as e,CClipCoodi as t,CClipImg as s}from"../../../artgine/app/component/CAnimation.js";import{CH5CanvasInst as n}from"../../../artgine/render/CH5Canvas.js";import{CTexture as a}from"../../../artgine/render/CTexture.js";import{CParser as r}from"../../../artgine/util/parser/CParser.js";import{CVec2 as o}from"../../../artgine/geometry/CVec2.js";import{CObject as i}from"../../basic/CObject.js";const l={spellcast:{f:7},thrust:{f:8},walk:{f:9},slash:{f:6},shoot:{f:13},hurt:{f:6},climb:{f:6},idle:{f:2},jump:{f:5},sit:{f:3},emote:{f:3},run:{f:8},combat_idle:{f:2},backslash:{f:13},halfslash:{f:6}},c=new Set(["hurt","climb"]);function f(e,t){return e&&!Array.isArray(e)&&"object"==typeof e?e[t]??(c.has(t)?[1]:[0,2,1,3]):c.has(t)?[1]:[0,2,1,3]}const m=["spellcast","thrust","walk","slash","shoot","hurt","climb","idle","jump","sit","emote","run","combat_idle","backslash","halfslash"],u={cloth:{version:"ulpc",base:"white"},body:{version:"ulpc",base:"light"},metal:{version:"ulpc",base:"steel"},hair:{version:"ulpc",base:"orange"},eye:{version:"ulpc",base:"blue"},all:{version:"lpcr",base:"white"}},h={clothes:["cloth"],torso:["cloth"],shoulders:["cloth","metal"],body:["body"],head:["body"],expression:["body"],face:["body"],hair:["hair"],eyes:["eye"]},d=["cloth","body","metal","hair","eye"];export class CULPC extends i{static eState={walk:"walk",slash:"slash",thrush:"thrush",idle:"idle"};mAniMap=new Map;mTexture=null;static AniGroups=[["walk","move"],["slash","thrush","attack"],["idle","basic"]];static FallbackMap=CULPC._CreateBidirectionalMap(CULPC.AniGroups);static _CreateBidirectionalMap(e){const t={};for(const s of e)for(const e of s)t[e]=s.filter(t=>t!==e);return t}_FindAniByState(e,t,s){let n=this.mAniMap.get(e+"_"+t);if(null!=n)return n;if(n=this.mAniMap.get(e+"_"+s),null!=n)return n;for(const[t,s]of this.mAniMap)if(t.startsWith(e))return s;return null}GetAni(e,t,s=0){let n=this._FindAniByState(e,t,s);if(null!=n)return n;const a=CULPC.FallbackMap[e];if(null!=a)for(const e of a)if(n=this._FindAniByState(e,t,s),null!=n)return n;for(const e of this.mAniMap.values())return e;return null}}var p=null;export class CParserULPC extends r{mResBase=null;mFrameDelay=.125;mAnimFilter=null;constructor(e=null){super(),this.mAnimFilter=e}static SetGlobalResBase(e){p=e}static sPaletteCache=new Map;GetResult(){return this.mResult}async Load(e){this.mBuffer||await this.Open(e);const t=JSON.parse((new TextDecoder).decode(this.mBuffer)),s=Array.isArray(t)?t.reduce((e,t)=>{for(const[s,n]of Object.entries(t))Array.isArray(n)?e[s]=[...e[s]??[],...n]:s in e||(e[s]=n);return e},{}):t,r=this.mResBase||p||s.mresBase||"./",o=new URL(r,location.href).toString(),i=o.endsWith("/")?o:o+"/",l=new URL(s.resBase??"spritesheets",i).toString().replace(/\/$/,""),c=new CULPC,f=new n;let m,u=e.replace(/\.json$/i,".ulpc");if(Array.isArray(s.selections))m=await this._buildV3(s,l,f);else{const e=o.replace(/\/$/,"")+"/palette_definitions/";m=await this._buildV2(s,l,e,f)}this._buildAnimMap(m,c,u),c.mTexture=f.GetNewTex(),c.mTexture.SetMipMap(a.eMipmap.GL),this.mResult=c,c.SetKey(this.mFileName),c.mTexture.SetKey(u)}_buildAnimMap(n,a,r){for(const i of n){const n=new e,l=1!==i.scale?new o(i.scale,i.scale):void 0;n.Push(new s(0,0,r));for(let e=i.frameStart;e<i.frameCount;e++){const s=e*i.frameSize,a=i.yOffset;n.Push(new t(-1,this.mFrameDelay,s,a,s+i.frameSize,a+i.frameSize,l))}a.mAniMap.set(i.key,n)}}async _buildV2(e,t,s,n){const a=[...e.layers??[]].sort((e,t)=>e.zPos-t.zPos),r=e.sizeBase??64,o=[],i=new Set;for(const e of a){if((e.size??64)<=r)continue;const t=e.supportedAnimations??[];for(const s of t){if(i.has(s))continue;const t=this._extractBaseAnim(s);if(!t)continue;i.add(s);const n=f(e.dir,s);o.push({animName:s,baseAnim:t,frameSize:e.size,cols:e.frame,dirArr:n,yOffset:0,idleYOffset:0})}}const c=new Map;let u=0;for(const e of m){const t=a.find(t=>(t.size??64)<=r&&(t.supportedAnimations??[]).includes(e));if(!t)continue;const s=f(t.dir,e);c.set(e,{y:u,dirs:s}),u+=s.length*r}const h=c.get("idle")?.dirs??[0,2,1,3],d=l.idle.f;let p=832,g=u;for(const e of o)e.yOffset=g,e.cols*e.frameSize>p&&(p=e.cols*e.frameSize),g+=e.dirArr.length*e.frameSize,e.idleYOffset=g,d*e.frameSize>p&&(p=d*e.frameSize),g+=h.length*e.frameSize;n.Init(p,g,!1,!1),await n.Draw();const _=n.GetContext();_.imageSmoothingEnabled=!1;const w=[];for(const[e,{y:n}]of c)for(const r of a){const a=r.supportedAnimations??[];if(a.some(e=>i.has(e)))continue;if(a.length>0&&!a.includes(e)){if("idle"!==e)continue;const s=["walk","hurt",...a].find(e=>a.includes(e)&&void 0!==l[e]);if(!s)continue;const o=t+"/"+this._swapAnim(r.fileName,s);w.push({url:o,layer:r,dstY:n});continue}const o=t+"/"+this._swapAnim(r.fileName,e),c=await this._loadAndRecolor(o,r,s);c&&_.drawImage(c,0,n)}for(const{url:e,layer:t,dstY:n}of w){const a=await this._loadAndRecolor(e,t,s);if(a)for(let e=0;e<h.length;e++){const t=e*r,s=n+e*r;for(let e=0;e<d;e++)_.drawImage(a,0,t,r,r,e*r,s,r,r)}}for(const e of o){const{animName:n,baseAnim:o,frameSize:i,cols:l,dirArr:c,yOffset:f}=e,m=(i-r)/2,u=n.includes("_reverse");for(const e of a){const a=e.supportedAnimations??[];let h=null;if(a.includes(n)&&(h=await this._loadAndRecolor(t+"/"+e.fileName,e,s)),h)for(let e=0;e<c.length;e++)for(let t=0;t<l;t++)_.drawImage(h,t*i,e*i,i,i,t*i,f+e*i,i,i);else if(0===a.length||a.includes(o)){const n=await this._loadAndRecolor(t+"/"+this._swapAnim(e.fileName,o),e,s);if(!n)continue;for(let e=0;e<c.length;e++)for(let t=0;t<l;t++){const s=u?l-1-t:t;_.drawImage(n,s*r,e*r,r,r,t*i+m,f+e*i+m,r,r)}}}}for(const e of o){const{animName:n,baseAnim:o,frameSize:l,idleYOffset:c}=e,f=(l-r)/2;for(const e of a){const a=e.supportedAnimations??[],m=a.includes(n);if(!a.some(e=>i.has(e)&&e!==n))if(m){const r=a.find(e=>i.has(e))??n,f=t+"/"+e.fileName.replace(`/${r}/`,`/${o}/`),m=await this._loadAndRecolor(f,e,s);if(!m)continue;for(let e=0;e<h.length;e++)for(let t=0;t<d;t++)_.drawImage(m,0,e*l,l,l,t*l,c+e*l,l,l)}else if(0===a.length||a.includes(o)){const n=0===a.length||a.includes("idle"),i=n?"idle":o,m=t+"/"+this._swapAnim(e.fileName,i),u=await this._loadAndRecolor(m,e,s);if(!u)continue;for(let e=0;e<h.length;e++)for(let t=0;t<d;t++){const s=n?t:0;_.drawImage(u,s*r,e*r,r,r,t*l+f,c+e*l+f,r,r)}}}}const b=[];for(const[e,{y:t,dirs:s}]of c){const n="walk"===e?1:0;for(let a=0;a<s.length;a++){const o=s.length>1?`${e}_${s[a]}`:e;b.push({key:o,yOffset:t+a*r,frameSize:r,frameCount:l[e].f,frameStart:n,scale:1})}}for(const e of o){const{animName:t,baseAnim:s,frameSize:n,cols:a,dirArr:o,yOffset:i,idleYOffset:l}=e,c=n/r,f="walk"===s?1:0;for(let e=0;e<o.length;e++){const s=o.length>1?`${t}_${o[e]}`:t;b.push({key:s,yOffset:i+e*n,frameSize:n,frameCount:a,frameStart:f,scale:c})}for(let e=0;e<h.length;e++)b.push({key:`idle_${h[e]}`,yOffset:l+e*n,frameSize:n,frameCount:d,frameStart:0,scale:c})}return b}async _buildV3(e,t,s){const n=[];for(let t=0;t<e.selections.length;t++){const s=e.selections[t],a=s.recolors??{},r=s.files??[],o=s.base64s??[];for(let e=0;e<r.length;e++){const s=this._parseNEntry(r[e],a,t);s&&(o[e]&&(s.base64=o[e]),n.push(s))}}const a=new Map;for(const t of n){const s=t.matGroups[0],n=s.material&&s.version?`${s.material}.${s.version}`:"default",r=`${t.selIdx}|${t.animName}|${t.zPos}|${n}`;if(a.has(r)){const o=a.get(r).matGroups[0],i=e.selections[t.selIdx];if("variant.v1"===n){const e=i?.recolors?.["variant.v1"]?.color??null;s.fileColor===e&&o.fileColor!==e&&a.set(r,t)}else if(s.material&&u[s.material]){const e=u[s.material].base;s.fileColor===e&&o.fileColor!==e&&a.set(r,t)}}else a.set(r,t)}const r=new Set;for(const e of a.keys())e.endsWith("|default")||r.add(e.substring(0,e.lastIndexOf("|")));const o=[];for(const[e,t]of a){if(e.endsWith("|default")){const t=e.substring(0,e.lastIndexOf("|"));if(r.has(t))continue}o.push(t)}const i=new Map;for(const e of o)"all"!==e.animName&&(i.has(e.animName)||i.set(e.animName,[]),i.get(e.animName).push(e));for(const e of i.values())e.sort((e,t)=>e.zPos-t.zPos);if(this.mAnimFilter){const e=new Set(this.mAnimFilter);for(const t of i.keys())e.has(t)||i.delete(t)}const l=new Map;let c=0,f=0;for(const[e,t]of i){const s=t[0].dirArr,n=Math.min(...t.map(e=>e.frameCount)),a=Math.max(...t.map(e=>e.frameCount)),r=Math.min(...t.map(e=>e.frameSize)),o=Math.max(...t.map(e=>e.frameSize));l.set(e,{y:c,dirs:s,frameCount:n,frameSize:o,minFS:r}),f=Math.max(f,a*o),c+=s.length*o}s.Init(f||1,c||1,!1,!1),await s.Draw();const m=s.GetContext();m.imageSmoothingEnabled=!1;for(const[e,{y:s,dirs:n,frameCount:a,frameSize:r}]of l)for(const a of i.get(e)){const e=this._encodeNPath(a.fullPath),o=/^https?:\/\//i.test(a.fullPath)?e:t+"/"+e,i=await this._loadImg(a.base64??o);if(!i)continue;const l=await this._applyNRecolor(i,a.matGroups),c=(r-a.frameSize)/2;for(let e=0;e<n.length;e++){const t=s+e*r;for(let s=0;s<a.frameCount;s++)m.drawImage(l,s*a.frameSize,e*a.frameSize,a.frameSize,a.frameSize,s*r+c,t+c,a.frameSize,a.frameSize)}}const h=[];for(const[e,{y:t,dirs:s,frameCount:n,frameSize:a,minFS:r}]of l){const o=a/r;for(let r=0;r<s.length;r++){const i=s.length>1?`${e}_${s[r]}`:e;h.push({key:i,yOffset:t+r*a,frameSize:a,frameCount:n,frameStart:0,scale:o})}}return h}async _loadAndRecolor(e,t,s){const n=t.recolors??null;if(!n||0===Object.keys(n).length)return this._loadImg(e);const a=await this._loadImg(e);if(a)return await this._applyRecolors(a,n,s)??a;const r=Object.values(n)[0];if(r){const t=this._toVariantUrl(e,r);if(t!==e)return this._loadImg(t)}return null}_toVariantUrl(e,t){return t?e.replace(/\/([^/]+)\.png$/i,`/$1/${t}.png`):e}_parseRecolorKey(e){const t=e.split(".");return 3===t.length?{material:t[0],version:t[1],color:t[2]}:2===t.length?{material:t[0],version:null,color:t[1]}:{material:null,version:null,color:t[0]}}async _applyRecolors(e,t,s){let n=e,a=!1;for(const[e,r]of Object.entries(t)){const t=this._parseRecolorKey(r),o=t.material??h[e]?.[0]??"cloth",i=t.version??u[o]?.version,l=await this._fetchPalette(o,s,i);if(!l)continue;const c=l[t.color];if(!c)continue;const f=[...t.material?[t.material]:[],...h[e]??[],...d].filter((e,t,s)=>s.indexOf(e)===t);for(const e of f){const r=u[e]?.version,i=await this._fetchPalette(e,s,r);if(!i)continue;const l=u[e]?.base??"white";if(e===o&&l===t.color)continue;const f=i[l];if(!f)continue;const m=this._swapPalette(n,f,c);this._hasChanged(n,m)&&(n=m,a=!0)}}return a?n:null}async _fetchPalette(e,t,s){const n=u[e],a=s??n?.version;if(!a)return null;const r=`${e}_${a}`;if(CParserULPC.sPaletteCache.has(r))return CParserULPC.sPaletteCache.get(r);const o=`${t}${e}/${e}_${a}.json`;try{const e=await fetch(o);if(!e.ok)return null;const t=await e.json();return CParserULPC.sPaletteCache.set(r,t),t}catch{return null}}_swapPalette(e,t,s){const n=e instanceof HTMLCanvasElement?e.width:e.naturalWidth,a=e instanceof HTMLCanvasElement?e.height:e.naturalHeight,r=document.createElement("canvas");r.width=n,r.height=a;const o=r.getContext("2d");o.imageSmoothingEnabled=!1,o.drawImage(e,0,0);const i=o.getImageData(0,0,n,a),l=i.data,c=[];for(let e=0;e<t.length&&e<s.length;e++){const n=this._hexToRgb(t[e]),a=this._hexToRgb(s[e]);n&&a&&c.push({sr:n.r,sg:n.g,sb:n.b,dr:a.r,dg:a.g,db:a.b})}for(let e=0;e<l.length;e+=4){if(0===l[e+3])continue;const t=l[e],s=l[e+1],n=l[e+2];for(const a of c)if(Math.abs(t-a.sr)<=1&&Math.abs(s-a.sg)<=1&&Math.abs(n-a.sb)<=1){l[e]=a.dr,l[e+1]=a.dg,l[e+2]=a.db;break}}return o.putImageData(i,0,0),r}_hasChanged(e,t){const s=t.width,n=t.height,a=document.createElement("canvas").getContext("2d"),r=t.getContext("2d");a.canvas.width=s,a.canvas.height=n,a.drawImage(e,0,0);const o=a.getImageData(0,0,s,n).data,i=r.getImageData(0,0,s,n).data;for(let e=0;e<o.length;e++)if(o[e]!==i[e])return!0;return!1}_hexToRgb(e){const t=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(e);return t?{r:parseInt(t[1],16),g:parseInt(t[2],16),b:parseInt(t[3],16)}:null}_swapAnim(e,t){const s=e.split("/"),n=s[s.length-1].replace(".png","");if(void 0!==l[n])s[s.length-1]=t+".png";else for(let e=s.length-2;e>=0;e--)if(void 0!==l[s[e]]){s[e]=t;break}return s.join("/")}_extractBaseAnim(e){const t=e.split("_");for(let e=1;e<=t.length;e++){const s=t.slice(0,e).join("_");if(void 0!==l[s])return s}return null}_loadImg(e){return new Promise(t=>{const s=new Image;s.crossOrigin="Anonymous",s.onload=()=>t(s),s.onerror=()=>t(null),s.src=e})}_encodeNPath(e){return e.split("/").map(e=>e.replace(/\[/g,"%5B").replace(/\]/g,"%5D")).join("/")}_parseNEntry(e,t,s){const n=e.split("/"),a=n.findIndex(e=>/^a\[/.test(e));if(a<0)return null;const r=n[a].match(/^a\[(.+?)\](?:_(\d+))?$/);if(!r)return null;const o=r[1],i=void 0!==r[2]?parseInt(r[2],10):0,l=n[a+1];if(!l?.startsWith("z"))return null;const c=parseInt(l.slice(1),10),f=n[a+2];if(!f)return null;const m=this._parseNFilename(f,t);return m?(m.dirArr=this._parseDirsStr(m._dirs??null),{selIdx:s,animName:o,yOffset:i,zPos:c,...m,fullPath:e}):null}_parseNFilename(e,t){const s=e.replace(/\.png$/i,"").split("_");if(s.length<2)return null;const n=[...s],a=n.pop();if(!/^[0-3]+$/.test(a))return null;const r=a,o=parseInt(n.pop(),10),i=parseInt(n.pop(),10);return isNaN(o)||isNaN(i)||0===n.length?null:{matGroups:this._parsePaletteGroups(n,t),frameSize:i,frameCount:o,_dirs:r,dirArr:[]}}_parseDirsStr(e){return e&&/^[0-3]+$/.test(e)?e.split("").map(Number):[]}_parsePaletteGroups(e,t){const s=[];let n=null;for(const a of e){const e=(a.match(/\./g)||[]).length;if(e>=2){n&&s.push(n);const e=a.split("."),r=e[0],o=e[1],i=e.slice(2).join("."),l=t[`${r}.${o}`]??null;n={material:r,version:o,fileColor:i,baseHex:l?.base??null,recolorHex:l?.recolor??null}}else 0===e&&n&&(n.fileColor+="_"+a)}return n&&s.push(n),0===s.length&&s.push({material:null,version:null,fileColor:e.join("_"),baseHex:null,recolorHex:null}),s}async _applyNRecolor(e,t){let s=e;for(const e of t)e.baseHex&&e.recolorHex&&(s=this._swapPalette(s,e.baseHex,e.recolorHex));return s}}
+import { CAnimation, CClipCoodi, CClipImg } from "../../../artgine/app/component/CAnimation.js";
+import { CH5CanvasInst } from "../../../artgine/render/CH5Canvas.js";
+import { CTexture } from "../../../artgine/render/CTexture.js";
+import { CParser } from "../../../artgine/util/parser/CParser.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CObject } from "../../basic/CObject.js";
+const ANIMS = {
+    spellcast: { f: 7 },
+    thrust: { f: 8 },
+    walk: { f: 9 },
+    slash: { f: 6 },
+    shoot: { f: 13 },
+    hurt: { f: 6 },
+    climb: { f: 6 },
+    idle: { f: 2 },
+    jump: { f: 5 },
+    sit: { f: 3 },
+    emote: { f: 3 },
+    run: { f: 8 },
+    combat_idle: { f: 2 },
+    backslash: { f: 13 },
+    halfslash: { f: 6 },
+};
+const ANIM_YOFFSETS = {
+    spellcast: 0, thrust: 256, walk: 512, slash: 768,
+    shoot: 1024, hurt: 1280, climb: 1344, idle: 1408,
+    jump: 1664, sit: 1920, emote: 2176, run: 2432,
+    combat_idle: 2688, backslash: 2944, halfslash: 3200,
+};
+const ONE_DIR_ANIMS = new Set(['hurt', 'climb']);
+function getDirArr(dir, animName) {
+    if (dir && !Array.isArray(dir) && typeof dir === 'object') {
+        return dir[animName] ?? (ONE_DIR_ANIMS.has(animName) ? [1] : [0, 2, 1, 3]);
+    }
+    return ONE_DIR_ANIMS.has(animName) ? [1] : [0, 2, 1, 3];
+}
+const ANIM_ORDER = [
+    'spellcast', 'thrust', 'walk', 'slash', 'shoot', 'hurt', 'climb',
+    'idle', 'jump', 'sit', 'emote', 'run', 'combat_idle', 'backslash', 'halfslash',
+];
+const COMPOSITE_W = 832;
+const FRAME_SIZE = 64;
+const PALETTE_META = {
+    cloth: { version: "ulpc", base: "white" },
+    body: { version: "ulpc", base: "light" },
+    metal: { version: "ulpc", base: "steel" },
+    hair: { version: "ulpc", base: "orange" },
+    eye: { version: "ulpc", base: "blue" },
+    all: { version: "lpcr", base: "white" },
+};
+const TYPE_MATERIAL = {
+    clothes: ["cloth"],
+    torso: ["cloth"],
+    shoulders: ["cloth", "metal"],
+    body: ["body"],
+    head: ["body"],
+    expression: ["body"],
+    face: ["body"],
+    hair: ["hair"],
+    eyes: ["eye"],
+};
+const PALETTE_FALLBACK_ORDER = ["cloth", "body", "metal", "hair", "eye"];
+export class CULPC extends CObject {
+    static eState = {
+        "walk": "walk",
+        "slash": "slash",
+        "thrush": "thrush",
+        "idle": "idle"
+    };
+    mAniMap = new Map();
+    mTexture = null;
+    static AniGroups = [
+        ["walk", "move"],
+        ["slash", "thrush", "attack"],
+        ["idle", "basic"]
+    ];
+    static FallbackMap = CULPC._CreateBidirectionalMap(CULPC.AniGroups);
+    static _CreateBidirectionalMap(groups) {
+        const map = {};
+        for (const group of groups) {
+            for (const state of group) {
+                map[state] = group.filter(s => s !== state);
+            }
+        }
+        return map;
+    }
+    _FindAniByState(state, dir, beforeDir) {
+        let value = this.mAniMap.get(state + "_" + dir);
+        if (value != null)
+            return value;
+        value = this.mAniMap.get(state + "_" + beforeDir);
+        if (value != null)
+            return value;
+        for (const [key, val] of this.mAniMap) {
+            if (key.startsWith(state))
+                return val;
+        }
+        return null;
+    }
+    GetAni(_state, _dir, _beforeDir = 0) {
+        let ani = this._FindAniByState(_state, _dir, _beforeDir);
+        if (ani != null)
+            return ani;
+        const fallbackStates = CULPC.FallbackMap[_state];
+        if (fallbackStates != null) {
+            for (const fallbackState of fallbackStates) {
+                ani = this._FindAniByState(fallbackState, _dir, _beforeDir);
+                if (ani != null)
+                    return ani;
+            }
+        }
+        for (const val of this.mAniMap.values()) {
+            return val;
+        }
+        return null;
+    }
+}
+var gResPath = null;
+export class CParserULPC extends CParser {
+    mResBase = null;
+    mFrameDelay = 0.125;
+    mAnimFilter = null;
+    constructor(animKeys = null) {
+        super();
+        this.mAnimFilter = animKeys;
+    }
+    static SetGlobalResBase(_path) {
+        gResPath = _path;
+    }
+    static sPaletteCache = new Map();
+    GetResult() { return this.mResult; }
+    async Load(pa_fileName) {
+        if (!this.mBuffer)
+            await this.Open(pa_fileName);
+        const rawJson = JSON.parse(new TextDecoder().decode(this.mBuffer));
+        const json = Array.isArray(rawJson)
+            ? rawJson.reduce((merged, obj) => {
+                for (const [k, v] of Object.entries(obj)) {
+                    if (Array.isArray(v))
+                        merged[k] = [...(merged[k] ?? []), ...v];
+                    else if (!(k in merged))
+                        merged[k] = v;
+                }
+                return merged;
+            }, {})
+            : rawJson;
+        const resBase = this.mResBase || gResPath || json.mresBase || "./";
+        const absRoot = new URL(resBase, location.href).toString();
+        const rootSlash = absRoot.endsWith('/') ? absRoot : absRoot + '/';
+        const absBase = new URL(json.resBase ?? "spritesheets", rootSlash).toString().replace(/\/$/, "");
+        const result = new CULPC();
+        const cv = new CH5CanvasInst();
+        let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
+        let specs;
+        if (Array.isArray(json.selections)) {
+            specs = await this._buildV3(json, absBase, cv);
+        }
+        else {
+            const paletteBase = absRoot.replace(/\/$/, "") + "/palette_definitions/";
+            specs = await this._buildV2(json, absBase, paletteBase, cv);
+        }
+        this._buildAnimMap(specs, result, textureFile);
+        result.mTexture = cv.GetNewTex();
+        result.mTexture.SetMipMap(CTexture.eMipmap.GL);
+        this.mResult = result;
+        result.SetKey(this.mFileName);
+        result.mTexture.SetKey(textureFile);
+    }
+    _buildAnimMap(specs, result, textureFile) {
+        for (const s of specs) {
+            const cAnim = new CAnimation();
+            const scaleVec = s.scale !== 1 ? new CVec2(s.scale, s.scale) : undefined;
+            cAnim.Push(new CClipImg(0, 0, textureFile));
+            for (let f = s.frameStart; f < s.frameCount; f++) {
+                const stX = f * s.frameSize;
+                const stY = s.yOffset;
+                cAnim.Push(new CClipCoodi(-1, this.mFrameDelay, stX, stY, stX + s.frameSize, stY + s.frameSize, scaleVec));
+            }
+            result.mAniMap.set(s.key, cAnim);
+        }
+    }
+    async _buildV2(json, absBase, paletteBase, cv) {
+        const layers = [...(json.layers ?? [])].sort((a, b) => a.zPos - b.zPos);
+        const sizeBase = json.sizeBase ?? FRAME_SIZE;
+        const oversizeSections = [];
+        const seenAnim = new Set();
+        for (const layer of layers) {
+            if ((layer.size ?? FRAME_SIZE) <= sizeBase)
+                continue;
+            const supported = layer.supportedAnimations ?? [];
+            for (const animName of supported) {
+                if (seenAnim.has(animName))
+                    continue;
+                const baseAnim = this._extractBaseAnim(animName);
+                if (!baseAnim)
+                    continue;
+                seenAnim.add(animName);
+                const dirArr = getDirArr(layer.dir, animName);
+                oversizeSections.push({
+                    animName, baseAnim,
+                    frameSize: layer.size,
+                    cols: layer.frame,
+                    dirArr,
+                    yOffset: 0, idleYOffset: 0,
+                });
+            }
+        }
+        const animYMap = new Map();
+        let stackY = 0;
+        for (const animName of ANIM_ORDER) {
+            const supportingLayer = layers.find(l => (l.size ?? FRAME_SIZE) <= sizeBase &&
+                (l.supportedAnimations ?? []).includes(animName));
+            if (!supportingLayer)
+                continue;
+            const dirs = getDirArr(supportingLayer.dir, animName);
+            animYMap.set(animName, { y: stackY, dirs });
+            stackY += dirs.length * sizeBase;
+        }
+        const idleDirs = animYMap.get("idle")?.dirs ?? [0, 2, 1, 3];
+        const idleF = ANIMS["idle"].f;
+        let canvasW = COMPOSITE_W;
+        let canvasH = stackY;
+        for (const sec of oversizeSections) {
+            sec.yOffset = canvasH;
+            if (sec.cols * sec.frameSize > canvasW)
+                canvasW = sec.cols * sec.frameSize;
+            canvasH += sec.dirArr.length * sec.frameSize;
+            sec.idleYOffset = canvasH;
+            if (idleF * sec.frameSize > canvasW)
+                canvasW = idleF * sec.frameSize;
+            canvasH += idleDirs.length * sec.frameSize;
+        }
+        cv.Init(canvasW, canvasH, false, false);
+        await cv.Draw();
+        const ctx = cv.GetContext();
+        ctx.imageSmoothingEnabled = false;
+        const pendingFallbacks = [];
+        for (const [animName, { y: dstY }] of animYMap) {
+            for (const layer of layers) {
+                const supported = layer.supportedAnimations ?? [];
+                const isOversize = supported.some(a => seenAnim.has(a));
+                if (isOversize)
+                    continue;
+                if (supported.length > 0 && !supported.includes(animName)) {
+                    if (animName !== "idle")
+                        continue;
+                    const fallback = ["walk", "hurt", ...supported]
+                        .find(a => supported.includes(a) && ANIMS[a] !== undefined);
+                    if (!fallback)
+                        continue;
+                    const url = absBase + "/" + this._swapAnim(layer.fileName, fallback);
+                    pendingFallbacks.push({ url, layer, dstY });
+                    continue;
+                }
+                const url = absBase + "/" + this._swapAnim(layer.fileName, animName);
+                const img = await this._loadAndRecolor(url, layer, paletteBase);
+                if (img)
+                    ctx.drawImage(img, 0, dstY);
+            }
+        }
+        for (const { url, layer, dstY } of pendingFallbacks) {
+            const img = await this._loadAndRecolor(url, layer, paletteBase);
+            if (!img)
+                continue;
+            for (let d = 0; d < idleDirs.length; d++) {
+                const srcY = d * sizeBase;
+                const rowY = dstY + d * sizeBase;
+                for (let f = 0; f < idleF; f++) {
+                    ctx.drawImage(img, 0, srcY, sizeBase, sizeBase, f * sizeBase, rowY, sizeBase, sizeBase);
+                }
+            }
+        }
+        for (const sec of oversizeSections) {
+            const { animName, baseAnim, frameSize, cols, dirArr, yOffset } = sec;
+            const offset = (frameSize - sizeBase) / 2;
+            const reversed = animName.includes('_reverse');
+            for (const layer of layers) {
+                const supported = layer.supportedAnimations ?? [];
+                let oversizeImg = null;
+                if (supported.includes(animName)) {
+                    oversizeImg = await this._loadAndRecolor(absBase + "/" + layer.fileName, layer, paletteBase);
+                }
+                if (oversizeImg) {
+                    for (let d = 0; d < dirArr.length; d++)
+                        for (let f = 0; f < cols; f++)
+                            ctx.drawImage(oversizeImg, f * frameSize, d * frameSize, frameSize, frameSize, f * frameSize, yOffset + d * frameSize, frameSize, frameSize);
+                }
+                else if (supported.length === 0 || supported.includes(baseAnim)) {
+                    const stdImg = await this._loadAndRecolor(absBase + "/" + this._swapAnim(layer.fileName, baseAnim), layer, paletteBase);
+                    if (!stdImg)
+                        continue;
+                    for (let d = 0; d < dirArr.length; d++)
+                        for (let f = 0; f < cols; f++) {
+                            const srcF = reversed ? (cols - 1 - f) : f;
+                            ctx.drawImage(stdImg, srcF * sizeBase, d * sizeBase, sizeBase, sizeBase, f * frameSize + offset, yOffset + d * frameSize + offset, sizeBase, sizeBase);
+                        }
+                }
+            }
+        }
+        for (const sec of oversizeSections) {
+            const { animName, baseAnim, frameSize, idleYOffset } = sec;
+            const offset = (frameSize - sizeBase) / 2;
+            for (const layer of layers) {
+                const supported = layer.supportedAnimations ?? [];
+                const isOversizeForThis = supported.includes(animName);
+                const isOversizeForOther = supported.some(a => seenAnim.has(a) && a !== animName);
+                if (isOversizeForOther)
+                    continue;
+                if (isOversizeForThis) {
+                    const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
+                    const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
+                    const img = await this._loadAndRecolor(walkUrl, layer, paletteBase);
+                    if (!img)
+                        continue;
+                    for (let d = 0; d < idleDirs.length; d++)
+                        for (let f = 0; f < idleF; f++)
+                            ctx.drawImage(img, 0, d * frameSize, frameSize, frameSize, f * frameSize, idleYOffset + d * frameSize, frameSize, frameSize);
+                }
+                else if (supported.length === 0 || supported.includes(baseAnim)) {
+                    const canUseIdle = supported.length === 0 || supported.includes("idle");
+                    const srcAnim = canUseIdle ? "idle" : baseAnim;
+                    const srcUrl = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
+                    const img = await this._loadAndRecolor(srcUrl, layer, paletteBase);
+                    if (!img)
+                        continue;
+                    for (let d = 0; d < idleDirs.length; d++)
+                        for (let f = 0; f < idleF; f++) {
+                            const srcF = canUseIdle ? f : 0;
+                            ctx.drawImage(img, srcF * sizeBase, d * sizeBase, sizeBase, sizeBase, f * frameSize + offset, idleYOffset + d * frameSize + offset, sizeBase, sizeBase);
+                        }
+                }
+            }
+        }
+        const specs = [];
+        for (const [animName, { y: dstY, dirs }] of animYMap) {
+            const fStart = animName === "walk" ? 1 : 0;
+            for (let d = 0; d < dirs.length; d++) {
+                const key = dirs.length > 1 ? `${animName}_${dirs[d]}` : animName;
+                specs.push({ key, yOffset: dstY + d * sizeBase, frameSize: sizeBase,
+                    frameCount: ANIMS[animName].f, frameStart: fStart, scale: 1 });
+            }
+        }
+        for (const sec of oversizeSections) {
+            const { animName, baseAnim, frameSize, cols, dirArr, yOffset, idleYOffset } = sec;
+            const scale = frameSize / sizeBase;
+            const fStart = baseAnim === "walk" ? 1 : 0;
+            for (let d = 0; d < dirArr.length; d++) {
+                const key = dirArr.length > 1 ? `${animName}_${dirArr[d]}` : animName;
+                specs.push({ key, yOffset: yOffset + d * frameSize,
+                    frameSize, frameCount: cols, frameStart: fStart, scale });
+            }
+            for (let d = 0; d < idleDirs.length; d++) {
+                specs.push({ key: `idle_${idleDirs[d]}`, yOffset: idleYOffset + d * frameSize,
+                    frameSize, frameCount: idleF, frameStart: 0, scale });
+            }
+        }
+        return specs;
+    }
+    async _buildV3(json, absBase, cv) {
+        const rawEntries = [];
+        for (let si = 0; si < json.selections.length; si++) {
+            const sel = json.selections[si];
+            const recolors = sel.recolors ?? {};
+            const files = sel.files ?? [];
+            const base64s = sel.base64s ?? [];
+            for (let fi = 0; fi < files.length; fi++) {
+                const e = this._parseNEntry(files[fi], recolors, si);
+                if (!e)
+                    continue;
+                if (base64s[fi])
+                    e.base64 = base64s[fi];
+                rawEntries.push(e);
+            }
+        }
+        const preferred = new Map();
+        for (const e of rawEntries) {
+            const g0 = e.matGroups[0];
+            const matKey = g0.material && g0.version ? `${g0.material}.${g0.version}` : 'default';
+            const key = `${e.selIdx}|${e.animName}|${e.zPos}|${matKey}`;
+            if (!preferred.has(key)) {
+                preferred.set(key, e);
+            }
+            else {
+                const curG0 = preferred.get(key).matGroups[0];
+                const selObj = json.selections[e.selIdx];
+                if (matKey === 'variant.v1') {
+                    const want = selObj?.recolors?.['variant.v1']?.color ?? null;
+                    if (g0.fileColor === want && curG0.fileColor !== want)
+                        preferred.set(key, e);
+                }
+                else if (g0.material && PALETTE_META[g0.material]) {
+                    const want = PALETTE_META[g0.material].base;
+                    if (g0.fileColor === want && curG0.fileColor !== want)
+                        preferred.set(key, e);
+                }
+            }
+        }
+        const hasRecolor = new Set();
+        for (const key of preferred.keys()) {
+            if (!key.endsWith('|default')) {
+                hasRecolor.add(key.substring(0, key.lastIndexOf('|')));
+            }
+        }
+        const entries = [];
+        for (const [key, e] of preferred) {
+            if (key.endsWith('|default')) {
+                const pos = key.substring(0, key.lastIndexOf('|'));
+                if (hasRecolor.has(pos))
+                    continue;
+            }
+            entries.push(e);
+        }
+        const byAnim = new Map();
+        for (const e of entries) {
+            if (e.animName === 'all')
+                continue;
+            if (!byAnim.has(e.animName))
+                byAnim.set(e.animName, []);
+            byAnim.get(e.animName).push(e);
+        }
+        for (const arr of byAnim.values())
+            arr.sort((a, b) => a.zPos - b.zPos);
+        if (this.mAnimFilter) {
+            const allowed = new Set(this.mAnimFilter);
+            for (const key of byAnim.keys()) {
+                if (!allowed.has(key))
+                    byAnim.delete(key);
+            }
+        }
+        const animYMap = new Map();
+        let canvasH = 0, canvasW = 0;
+        for (const [anim, arr] of byAnim) {
+            const dirs = arr[0].dirArr;
+            const minFC = Math.min(...arr.map(e => e.frameCount));
+            const maxFC = Math.max(...arr.map(e => e.frameCount));
+            const minFS = Math.min(...arr.map(e => e.frameSize));
+            const maxFS = Math.max(...arr.map(e => e.frameSize));
+            animYMap.set(anim, { y: canvasH, dirs, frameCount: minFC, frameSize: maxFS, minFS });
+            canvasW = Math.max(canvasW, maxFC * maxFS);
+            canvasH += dirs.length * maxFS;
+        }
+        cv.Init(canvasW || 1, canvasH || 1, false, false);
+        await cv.Draw();
+        const ctx = cv.GetContext();
+        ctx.imageSmoothingEnabled = false;
+        for (const [anim, { y: dstY, dirs, frameCount, frameSize: maxFS }] of animYMap) {
+            for (const e of byAnim.get(anim)) {
+                const rawPath = this._encodeNPath(e.fullPath);
+                const url = /^https?:\/\//i.test(e.fullPath) ? rawPath : absBase + '/' + rawPath;
+                const img = await this._loadImg(e.base64 ?? url);
+                if (!img)
+                    continue;
+                const rc = await this._applyNRecolor(img, e.matGroups);
+                const offset = (maxFS - e.frameSize) / 2;
+                for (let d = 0; d < dirs.length; d++) {
+                    const rowY = dstY + d * maxFS;
+                    for (let f = 0; f < e.frameCount; f++)
+                        ctx.drawImage(rc, f * e.frameSize, d * e.frameSize, e.frameSize, e.frameSize, f * maxFS + offset, rowY + offset, e.frameSize, e.frameSize);
+                }
+            }
+        }
+        const specs = [];
+        for (const [anim, { y: dstY, dirs, frameCount, frameSize: maxFS, minFS }] of animYMap) {
+            const scale = maxFS / minFS;
+            for (let d = 0; d < dirs.length; d++) {
+                const key = dirs.length > 1 ? `${anim}_${dirs[d]}` : anim;
+                specs.push({ key, yOffset: dstY + d * maxFS, frameSize: maxFS,
+                    frameCount, frameStart: 0, scale });
+            }
+        }
+        return specs;
+    }
+    async _loadAndRecolor(url, layer, paletteBase) {
+        const recolors = layer.recolors ?? null;
+        if (!recolors || Object.keys(recolors).length === 0) {
+            return this._loadImg(url);
+        }
+        const img = await this._loadImg(url);
+        if (img) {
+            const swapped = await this._applyRecolors(img, recolors, paletteBase);
+            return swapped ?? img;
+        }
+        const firstColor = Object.values(recolors)[0];
+        if (firstColor) {
+            const variantUrl = this._toVariantUrl(url, firstColor);
+            if (variantUrl !== url)
+                return this._loadImg(variantUrl);
+        }
+        return null;
+    }
+    _toVariantUrl(url, colorName) {
+        if (!colorName)
+            return url;
+        return url.replace(/\/([^/]+)\.png$/i, `/$1/${colorName}.png`);
+    }
+    _parseRecolorKey(key) {
+        const parts = key.split('.');
+        if (parts.length === 3)
+            return { material: parts[0], version: parts[1], color: parts[2] };
+        if (parts.length === 2)
+            return { material: parts[0], version: null, color: parts[1] };
+        return { material: null, version: null, color: parts[0] };
+    }
+    async _applyRecolors(img, recolors, paletteBase) {
+        let current = img;
+        let changed = false;
+        for (const [typeName, targetColor] of Object.entries(recolors)) {
+            const parsed = this._parseRecolorKey(targetColor);
+            const tgtMaterial = parsed.material ?? (TYPE_MATERIAL[typeName]?.[0] ?? "cloth");
+            const tgtVersion = parsed.version ?? PALETTE_META[tgtMaterial]?.version;
+            const tgtPalette = await this._fetchPalette(tgtMaterial, paletteBase, tgtVersion);
+            if (!tgtPalette)
+                continue;
+            const dstColors = tgtPalette[parsed.color];
+            if (!dstColors)
+                continue;
+            const srcCandidates = [
+                ...(parsed.material ? [parsed.material] : []),
+                ...(TYPE_MATERIAL[typeName] ?? []),
+                ...PALETTE_FALLBACK_ORDER,
+            ].filter((m, i, arr) => arr.indexOf(m) === i);
+            for (const srcMaterial of srcCandidates) {
+                const srcVersion = PALETTE_META[srcMaterial]?.version;
+                const srcPalette = await this._fetchPalette(srcMaterial, paletteBase, srcVersion);
+                if (!srcPalette)
+                    continue;
+                const srcBase = PALETTE_META[srcMaterial]?.base ?? "white";
+                if (srcMaterial === tgtMaterial && srcBase === parsed.color)
+                    continue;
+                const srcColors = srcPalette[srcBase];
+                if (!srcColors)
+                    continue;
+                const result = this._swapPalette(current, srcColors, dstColors);
+                if (this._hasChanged(current, result)) {
+                    current = result;
+                    changed = true;
+                }
+            }
+        }
+        return changed ? current : null;
+    }
+    async _fetchPalette(material, paletteBase, version) {
+        const meta = PALETTE_META[material];
+        const ver = version ?? meta?.version;
+        if (!ver)
+            return null;
+        const cacheKey = `${material}_${ver}`;
+        if (CParserULPC.sPaletteCache.has(cacheKey))
+            return CParserULPC.sPaletteCache.get(cacheKey);
+        const url = `${paletteBase}${material}/${material}_${ver}.json`;
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok)
+                return null;
+            const data = await resp.json();
+            CParserULPC.sPaletteCache.set(cacheKey, data);
+            return data;
+        }
+        catch {
+            return null;
+        }
+    }
+    _swapPalette(src, srcColors, dstColors) {
+        const w = src instanceof HTMLCanvasElement ? src.width : src.naturalWidth;
+        const h = src instanceof HTMLCanvasElement ? src.height : src.naturalHeight;
+        const tmp = document.createElement("canvas");
+        tmp.width = w;
+        tmp.height = h;
+        const tmpCtx = tmp.getContext("2d");
+        tmpCtx.imageSmoothingEnabled = false;
+        tmpCtx.drawImage(src, 0, 0);
+        const imgData = tmpCtx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+        const pairs = [];
+        for (let i = 0; i < srcColors.length && i < dstColors.length; i++) {
+            const s = this._hexToRgb(srcColors[i]);
+            const d = this._hexToRgb(dstColors[i]);
+            if (s && d)
+                pairs.push({ sr: s.r, sg: s.g, sb: s.b, dr: d.r, dg: d.g, db: d.b });
+        }
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0)
+                continue;
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            for (const p of pairs) {
+                if (Math.abs(r - p.sr) <= 1 && Math.abs(g - p.sg) <= 1 && Math.abs(b - p.sb) <= 1) {
+                    data[i] = p.dr;
+                    data[i + 1] = p.dg;
+                    data[i + 2] = p.db;
+                    break;
+                }
+            }
+        }
+        tmpCtx.putImageData(imgData, 0, 0);
+        return tmp;
+    }
+    _hasChanged(before, after) {
+        const w = after.width, h = after.height;
+        const ctxA = document.createElement("canvas").getContext("2d");
+        const ctxB = after.getContext("2d");
+        ctxA.canvas.width = w;
+        ctxA.canvas.height = h;
+        ctxA.drawImage(before, 0, 0);
+        const dA = ctxA.getImageData(0, 0, w, h).data;
+        const dB = ctxB.getImageData(0, 0, w, h).data;
+        for (let i = 0; i < dA.length; i++)
+            if (dA[i] !== dB[i])
+                return true;
+        return false;
+    }
+    _hexToRgb(hex) {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : null;
+    }
+    _swapAnim(filePath, anim) {
+        const parts = filePath.split('/');
+        const lastNoExt = parts[parts.length - 1].replace('.png', '');
+        if (ANIMS[lastNoExt] !== undefined) {
+            parts[parts.length - 1] = anim + '.png';
+        }
+        else {
+            for (let i = parts.length - 2; i >= 0; i--) {
+                if (ANIMS[parts[i]] !== undefined) {
+                    parts[i] = anim;
+                    break;
+                }
+            }
+        }
+        return parts.join('/');
+    }
+    _extractBaseAnim(animName) {
+        const parts = animName.split('_');
+        for (let i = 1; i <= parts.length; i++) {
+            const candidate = parts.slice(0, i).join('_');
+            if (ANIMS[candidate] !== undefined)
+                return candidate;
+        }
+        return null;
+    }
+    _loadImg(url) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
+    }
+    _encodeNPath(path) {
+        return path.split('/').map(seg => seg.replace(/\[/g, '%5B').replace(/\]/g, '%5D')).join('/');
+    }
+    _parseNEntry(filePath, recolors, selIdx) {
+        const segs = filePath.split('/');
+        const aIdx = segs.findIndex(s => /^a\[/.test(s));
+        if (aIdx < 0)
+            return null;
+        const am = segs[aIdx].match(/^a\[(.+?)\](?:_(\d+))?$/);
+        if (!am)
+            return null;
+        const animName = am[1];
+        const yOffset = am[2] !== undefined ? parseInt(am[2], 10) : 0;
+        const zSeg = segs[aIdx + 1];
+        if (!zSeg?.startsWith('z'))
+            return null;
+        const zPos = parseInt(zSeg.slice(1), 10);
+        const fname = segs[aIdx + 2];
+        if (!fname)
+            return null;
+        const parsed = this._parseNFilename(fname, recolors);
+        if (!parsed)
+            return null;
+        parsed.dirArr = this._parseDirsStr(parsed._dirs ?? null);
+        return { selIdx, animName, yOffset, zPos, ...parsed, fullPath: filePath };
+    }
+    _parseNFilename(fname, recolors) {
+        const noext = fname.replace(/\.png$/i, '');
+        const tokens = noext.split('_');
+        if (tokens.length < 2)
+            return null;
+        const t = [...tokens];
+        const dirsStr = t.pop();
+        if (!/^[0-3]+$/.test(dirsStr))
+            return null;
+        const dirs = dirsStr;
+        const frameCount = parseInt(t.pop(), 10);
+        const frameSize = parseInt(t.pop(), 10);
+        if (isNaN(frameCount) || isNaN(frameSize) || t.length === 0)
+            return null;
+        const matGroups = this._parsePaletteGroups(t, recolors);
+        return { matGroups, frameSize, frameCount, _dirs: dirs, dirArr: [] };
+    }
+    _parseDirsStr(dirs) {
+        if (dirs && /^[0-3]+$/.test(dirs))
+            return dirs.split('').map(Number);
+        return [];
+    }
+    _parsePaletteGroups(tokens, recolors) {
+        const groups = [];
+        let cur = null;
+        for (const tok of tokens) {
+            const dots = (tok.match(/\./g) || []).length;
+            if (dots >= 2) {
+                if (cur)
+                    groups.push(cur);
+                const parts = tok.split('.');
+                const material = parts[0];
+                const version = parts[1];
+                const fileColor = parts.slice(2).join('.');
+                const matKey = `${material}.${version}`;
+                const rc = recolors[matKey] ?? null;
+                cur = { material, version, fileColor, baseHex: rc?.base ?? null, recolorHex: rc?.recolor ?? null };
+            }
+            else if (dots === 0 && cur) {
+                cur.fileColor += '_' + tok;
+            }
+        }
+        if (cur)
+            groups.push(cur);
+        if (groups.length === 0)
+            groups.push({ material: null, version: null, fileColor: tokens.join('_'), baseHex: null, recolorHex: null });
+        return groups;
+    }
+    async _applyNRecolor(img, matGroups) {
+        let current = img;
+        for (const g of matGroups) {
+            if (!g.baseHex || !g.recolorHex)
+                continue;
+            current = this._swapPalette(current, g.baseHex, g.recolorHex);
+        }
+        return current;
+    }
+}

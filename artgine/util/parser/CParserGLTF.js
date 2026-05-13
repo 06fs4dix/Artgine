@@ -1,1 +1,30 @@
-import{CMesh as e}from"../../render/CMesh.js";import{CParser as r}from"./CParser.js";export default class s extends r{mMesh=new e;mInch=!1;mTexMap=new Map;mColorTex;mTexBufRaw;constructor(e,r=!1,s=!1){super(),this.mInch=e,this.mColorTex=r,this.mTexBufRaw=s}GetResult(){return this.mMesh}async Load(e){return null}async CreateMesh(e,r){}CreateMeshDataNode(e,r,s){return null}async ParseCJSON(e,r,s){}}import t from"../../util_imple/parser/CParserGLTF.js";t();
+import { CMesh } from "../../render/CMesh.js";
+import { CParser } from "./CParser.js";
+export default class CParserGLTF extends CParser {
+    mMesh = new CMesh();
+    mInch = false;
+    mTexMap = new Map();
+    mColorTex;
+    mTexBufRaw;
+    constructor(_inch, _colorTex = false, _texBufRaw = false) {
+        super();
+        this.mInch = _inch;
+        this.mColorTex = _colorTex;
+        this.mTexBufRaw = _texBufRaw;
+    }
+    GetResult() {
+        return this.mMesh;
+    }
+    async Load(_fileName) {
+        return null;
+    }
+    async CreateMesh(_root, gltfDir) {
+    }
+    CreateMeshDataNode(_root, _node, _tree) {
+        return null;
+    }
+    async ParseCJSON(_fileName, _json, glbResources) {
+    }
+}
+import CParserGLTF_imple from "../../util_imple/parser/CParserGLTF.js";
+CParserGLTF_imple();

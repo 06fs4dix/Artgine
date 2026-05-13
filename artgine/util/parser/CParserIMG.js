@@ -1,1 +1,236 @@
-import{CH5Canvas as t}from"../../render/CH5Canvas.js";import{CTexture as e}from"../../render/CTexture.js";import{CParser as o}from"./CParser.js";export class CParserIMG extends o{mAlphaCut=0;mAlphaBleed=!0;constructor(){super()}GetResult(){return this.mResult}Load(o){return new Promise(async(s,l)=>{const i=o.lastIndexOf(".")+1,f=o.substr(i).toLowerCase();let c=null;if(null==this.mBuffer)c=o;else{const t=new Blob([this.mBuffer],{type:"image/"+f});c=window.URL.createObjectURL(t)}const a=new Image;a.crossOrigin="Anonymous",a.onload=o=>{const l=new e,i=o.currentTarget;l.SetSize(i.width,i.height),l.SetBuf(i),this.mResult=l,t.Init(i.width,i.height),t.Draw(t.DrawImage(i,0,0,i.width,i.height));const f=t.GetContext().getImageData(0,0,i.width,i.height),c=i.width,a=i.height,h=f.data,u=new Uint8Array(h.length);u.set(h);let m=!1,w=!1;for(let t=3;t<u.length&&(0===u[t]?w=!0:m=!0,!m||!w);t+=4);m&&w&&this.mAlphaBleed&&function(t,e,o,s=2){for(let r=0;r<o;r++){let o=!1,n=0,s=0,l=0;for(let i=0;i<e;i++){const f=r*e+i<<2,c=t[f+3];if(o)c>0&&(n=t[f],s=t[f+1],l=t[f+2]);else if(c>0){o=!0,n=t[f],s=t[f+1],l=t[f+2];for(let o=0;o<i;o++){const i=r*e+o<<2;0===t[i+3]&&(t[i]=n,t[i+1]=s,t[i+2]=l)}}}o=!1;for(let i=e-1;i>=0;i--){const f=r*e+i<<2,c=t[f+3];if(o)c>0&&(n=t[f],s=t[f+1],l=t[f+2]);else if(c>0){o=!0,n=t[f],s=t[f+1],l=t[f+2];for(let o=e-1;o>i;o--){const i=r*e+o<<2;0===t[i+3]&&(t[i]=n,t[i+1]=s,t[i+2]=l)}}}}for(let r=0;r<e;r++){let n=!1,s=0,l=0,i=0;for(let f=0;f<o;f++){const o=f*e+r<<2,c=t[o+3];if(n)c>0&&(s=t[o],l=t[o+1],i=t[o+2]);else if(c>0){n=!0,s=t[o],l=t[o+1],i=t[o+2];for(let o=0;o<f;o++){const n=o*e+r<<2;0===t[n+3]&&(t[n]=s,t[n+1]=l,t[n+2]=i)}}}n=!1;for(let f=o-1;f>=0;f--){const c=f*e+r<<2,a=t[c+3];if(n)a>0&&(s=t[c],l=t[c+1],i=t[c+2]);else if(a>0){n=!0,s=t[c],l=t[c+1],i=t[c+2];for(let n=o-1;n>f;n--){const o=n*e+r<<2;0===t[o+3]&&(t[o]=s,t[o+1]=l,t[o+2]=i)}}}}if(!(s<=0))for(let s=0;s<o;s++)for(let l=0;l<e;l++){const i=s*e+l<<2;if(0!==t[i+3])continue;let f=0,c=0,a=0,h=0;for(let i=0;i<8;i++){const u=l+r[i],m=s+n[i];if(u<0||u>=e||m<0||m>=o)continue;const w=m*e+u<<2;t[w+3]>0&&(f+=t[w],c+=t[w+1],a+=t[w+2],h++)}h>0&&(t[i]=f/h|0,t[i+1]=c/h|0,t[i+2]=a/h|0)}}(u,c,a,2);const d=new Uint8Array(u.length);for(let t=0;t<a;t++){const e=t*c*4;for(let t=0;t<c;t++){const o=e+4*t,r=e+4*t;d[r]=u[o],d[r+1]=u[o+1],d[r+2]=u[o+2];const n=u[o+3];0!==n&&255!==n?n<=this.mAlphaCut?d[r+3]=0:(l.SetAlpha(!0),d[r+3]=n):d[r+3]=n}}l.GetBuf()[0]=d,s("")},a.onerror=t=>{s("")},a.src=c})}}const r=[-1,1,0,0,-1,1,-1,1],n=[0,0,-1,1,-1,-1,1,1];
+import { CH5Canvas } from "../../render/CH5Canvas.js";
+import { CTexture } from "../../render/CTexture.js";
+import { CParser } from "./CParser.js";
+export class CParserIMG extends CParser {
+    mAlphaCut = 0;
+    mAlphaBleed = true;
+    constructor() {
+        super();
+    }
+    GetResult() {
+        return this.mResult;
+    }
+    Load(pa_fileName) {
+        return new Promise(async (resolve, reject) => {
+            const pos = pa_fileName.lastIndexOf(".") + 1;
+            const ext = pa_fileName.substr(pos).toLowerCase();
+            let url = null;
+            if (this.mBuffer == null) {
+                url = pa_fileName;
+            }
+            else {
+                const blob = new Blob([this.mBuffer], { type: "image/" + ext });
+                url = window.URL.createObjectURL(blob);
+            }
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = (_event) => {
+                const tex = new CTexture();
+                const image = _event.currentTarget;
+                tex.SetSize(image.width, image.height);
+                tex.SetBuf(image);
+                this.mResult = tex;
+                CH5Canvas.Init(image.width, image.height);
+                CH5Canvas.Draw(CH5Canvas.DrawImage(image, 0, 0, image.width, image.height));
+                const imgData = CH5Canvas.GetContext().getImageData(0, 0, image.width, image.height);
+                const w = image.width;
+                const h = image.height;
+                const src = imgData.data;
+                const buf = new Uint8Array(src.length);
+                buf.set(src);
+                let hasOpaque = false;
+                let hasZeroAlpha = false;
+                for (let i = 3; i < buf.length; i += 4) {
+                    const a = buf[i];
+                    if (a === 0)
+                        hasZeroAlpha = true;
+                    else
+                        hasOpaque = true;
+                    if (hasOpaque && hasZeroAlpha)
+                        break;
+                }
+                if (hasOpaque && hasZeroAlpha && this.mAlphaBleed) {
+                    alphaBleedRGBA(buf, w, h, 2);
+                }
+                const flipped = new Uint8Array(buf.length);
+                for (let y = 0; y < h; y++) {
+                    const row = y * w * 4;
+                    for (let x = 0; x < w; x++) {
+                        const si = row + x * 4;
+                        const di = row + x * 4;
+                        flipped[di] = buf[si];
+                        flipped[di + 1] = buf[si + 1];
+                        flipped[di + 2] = buf[si + 2];
+                        const a = buf[si + 3];
+                        if (a !== 0 && a !== 255) {
+                            if (a <= this.mAlphaCut) {
+                                flipped[di + 3] = 0;
+                            }
+                            else {
+                                tex.SetAlpha(true);
+                                flipped[di + 3] = a;
+                            }
+                        }
+                        else {
+                            flipped[di + 3] = a;
+                        }
+                    }
+                }
+                tex.GetBuf()[0] = flipped;
+                resolve("");
+            };
+            img.onerror = (e) => {
+                resolve("");
+            };
+            img.src = url;
+        });
+    }
+}
+const _alphaBleedNeighbors8Dx = [-1, 1, 0, 0, -1, 1, -1, 1];
+const _alphaBleedNeighbors8Dy = [0, 0, -1, 1, -1, -1, 1, 1];
+function alphaBleedRGBA(data, w, h, iters = 2) {
+    for (let y = 0; y < h; y++) {
+        let found = false, r = 0, g = 0, b = 0;
+        for (let x = 0; x < w; x++) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let xx = 0; xx < x; xx++) {
+                        const ii = ((y * w + xx) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+        found = false;
+        for (let x = w - 1; x >= 0; x--) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let xx = w - 1; xx > x; xx--) {
+                        const ii = ((y * w + xx) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+    }
+    for (let x = 0; x < w; x++) {
+        let found = false, r = 0, g = 0, b = 0;
+        for (let y = 0; y < h; y++) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let yy = 0; yy < y; yy++) {
+                        const ii = ((yy * w + x) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+        found = false;
+        for (let y = h - 1; y >= 0; y--) {
+            const i = ((y * w + x) << 2);
+            const a = data[i + 3];
+            if (!found) {
+                if (a > 0) {
+                    found = true;
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                    for (let yy = h - 1; yy > y; yy--) {
+                        const ii = ((yy * w + x) << 2);
+                        if (data[ii + 3] === 0) {
+                            data[ii] = r;
+                            data[ii + 1] = g;
+                            data[ii + 2] = b;
+                        }
+                    }
+                }
+            }
+            else {
+                if (a > 0) {
+                    r = data[i];
+                    g = data[i + 1];
+                    b = data[i + 2];
+                }
+            }
+        }
+    }
+    if (iters <= 0)
+        return;
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const i = ((y * w + x) << 2);
+            if (data[i + 3] !== 0)
+                continue;
+            let rr = 0, gg = 0, bb = 0, cc = 0;
+            for (let n = 0; n < 8; n++) {
+                const nx = x + _alphaBleedNeighbors8Dx[n];
+                const ny = y + _alphaBleedNeighbors8Dy[n];
+                if (nx < 0 || nx >= w || ny < 0 || ny >= h)
+                    continue;
+                const j = ((ny * w + nx) << 2);
+                if (data[j + 3] > 0) {
+                    rr += data[j];
+                    gg += data[j + 1];
+                    bb += data[j + 2];
+                    cc++;
+                }
+            }
+            if (cc > 0) {
+                data[i] = (rr / cc) | 0;
+                data[i + 1] = (gg / cc) | 0;
+                data[i + 2] = (bb / cc) | 0;
+            }
+        }
+    }
+}
