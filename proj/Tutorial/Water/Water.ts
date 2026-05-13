@@ -1,5 +1,5 @@
 //Version
-const version='mn9zmy49_2';
+const version='mp4216w1_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -94,7 +94,7 @@ rp.PushAnd(new CCondition("class","==","CPaint3D"));
 rp.PushAnd(new CCondition("mTag[shadow]","==",true));
 rp.mPriority=CRenderPass.ePriority.BackGround+1;
 
-rp.mShaderAttr.push(new CShaderAttr(0,gAtl.Frame().Pal().GetShadowWriteTex()));
+rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite,gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate",shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF",PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias",bias));
@@ -640,6 +640,33 @@ window["ResetWater"]=ResetWater;
 
 
 new CModalFrameView();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

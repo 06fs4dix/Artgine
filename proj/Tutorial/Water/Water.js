@@ -1,4 +1,4 @@
-const version = 'mn9zmy49_2';
+const version = 'mp4216w1_2';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -44,6 +44,7 @@ import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine
 import { CPaint } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint.js";
 import { CAlpha } from "https://06fs4dix.github.io/Artgine/artgine/render/CAlpha.js";
 import { CCanvasPluginRPMgr } from "https://06fs4dix.github.io/Artgine/artgine/app/canvas/CCanvasPluginRPMgr.js";
+import { SDF } from "https://06fs4dix.github.io/Artgine/artgine/z_file/SDF.js";
 import { CMat } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMat.js";
 var Main = gAtl.NewCanvas("Main");
 Main.SetCameraKey("3D");
@@ -65,7 +66,7 @@ let rp = forward.PushRP(new CRPAuto());
 rp.PushAnd(new CCondition("class", "==", "CPaint3D"));
 rp.PushAnd(new CCondition("mTag[shadow]", "==", true));
 rp.mPriority = CRenderPass.ePriority.BackGround + 1;
-rp.mShaderAttr.push(new CShaderAttr(0, gAtl.Frame().Pal().GetShadowWriteTex()));
+rp.mShaderAttr.push(new CShaderAttr(SDF.eTexSlot.ArrShadowWrite, gAtl.Frame().Pal().GetShadowWriteTex()));
 rp.mShaderAttr.push(new CShaderAttr("shadowRate", shadowRate));
 rp.mShaderAttr.push(new CShaderAttr("PCF", PCF));
 rp.mShaderAttr.push(new CShaderAttr("bias", bias));
