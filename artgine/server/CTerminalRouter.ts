@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import { StringDecoder } from 'string_decoder';
 import iconv from 'iconv-lite';
 import * as https from 'https'; // 다운로드를 위해 추가
+import * as http from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CServerRouter } from '../network/CServerRouter.js';
@@ -32,6 +33,7 @@ const IS_WIN = process.platform === 'win32';
 let currentCwd = process.cwd();
 const MAX_HISTORY = 500;
 const PASSWORD = CUniqueID.GetHash();
+//const PASSWORD = 'ttyd';
 
 CConsol.Log("CTerminalRouter PW: "+PASSWORD);
 const gHistory: {text: string, color: string}[] = [];
@@ -231,7 +233,8 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
 <body class="d-flex flex-column" style="height:100%;background:#1a1a1a;color:#d4d4d4;">
 <div class="d-flex align-items-center gap-2 px-3 py-1 bg-black border-bottom border-secondary" style="flex-shrink:0;">
   <span class="text-secondary small font-monospace" id="cmd-cwd" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-  <button class="btn btn-outline-info btn-sm ms-auto me-1" data-bs-toggle="modal" data-bs-target="#helpModal">HELP</button>
+  <button class="btn btn-outline-success btn-sm ms-auto me-1" onclick="runClaude()">CLAUDE</button>
+  <button class="btn btn-outline-info btn-sm me-1" data-bs-toggle="modal" data-bs-target="#helpModal">HELP</button>
   <button class="btn btn-outline-secondary btn-sm me-1" onclick="clearOut()">CLEAR</button>
   <button class="btn btn-outline-warning btn-sm" id="btn-fullscreen" onclick="toggleFullscreen()">⛶ FULL</button>
 </div>
@@ -279,7 +282,23 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
   const ttydFrame=document.getElementById('ttyd-frame');
 
   out.scrollTop=out.scrollHeight;
-  sysLine('[system] 암호를 입력하세요');
+  const _preauth = new URLSearchParams(location.search).get('preauth');
+  if(_preauth){
+    sysLine('[system] 자동 로그인 중...');
+    fetch('/cmd/run',{method:'POST',headers:{'Content-Type':'application/json','x-cmd-token':_preauth},body:JSON.stringify({cmd:'cd'})})
+      .then(r=>{
+        if(r.ok) return r.json().then(j=>{
+          authed=true; authToken=_preauth;
+          inp.type='text'; inp.placeholder='명령어 입력...';
+          sysLine('[system] 자동 로그인 완료');
+          if(j.out) cwdEl.textContent=j.out.trim();
+        });
+        localStorage.removeItem('cmd_token');
+        sysLine('[system] 토큰 만료. 암호를 입력하세요');
+      }).catch(()=>{ sysLine('[system] 암호를 입력하세요'); });
+  } else {
+    sysLine('[system] 암호를 입력하세요');
+  }
 
   function line(text, color='#d4d4d4'){
     const d=document.createElement('div');
@@ -306,6 +325,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
             inp.type='text';
             inp.placeholder='명령어 입력...';
             sysLine('[system] 인증 완료');
+            localStorage.setItem('cmd_token', authToken);
             fetch('/cmd/run',{method:'POST',headers:{'Content-Type':'application/json','x-cmd-token':authToken},body:JSON.stringify({cmd:'cd'})})
               .then(r=>r.json()).then(j=>{if(j.out)cwdEl.textContent=j.out.trim();}).catch(()=>{});
           } else {
@@ -325,7 +345,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
             .then(j => {
                 if(j.ok) {
                     const serverHost = window.location.hostname;
-                    ttydFrame.src='http://'+serverHost+':7681';
+                    ttydFrame.src='/cmd/terminal-proxy';
                     ttydFrame.style.display = 'block';
                     setTimeout(() => ttydFrame.focus(), 300);
                 }
@@ -334,18 +354,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
         return;
     }
     else if(cmd.toLowerCase() === 'claude'){
-        sysLine('[system] Claude 터미널을 시작하는 중...');
-        fetch('/cmd/start-ttyd-claude?token=' + authToken)
-            .then(r => r.json())
-            .then(j => {
-                if(j.ok) {
-                    const serverHost = window.location.hostname;
-                    ttydFrame.src = 'http://' + serverHost + ':7681';
-                    ttydFrame.style.display = 'block';
-                    setTimeout(() => ttydFrame.focus(), 300);
-                }
-            })
-            .catch(() => sysLine('[ERR] Claude 실행 실패', '#ff4d6d'));
+        runClaude();
         return;
     }
     // [ADDED] 클라이언트에서 gemini 입력 시 처리 로직
@@ -356,7 +365,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
             .then(j => {
                 if(j.ok) {
                     const serverHost = window.location.hostname;
-                    ttydFrame.src = 'http://' + serverHost + ':7681';
+                    ttydFrame.src='/cmd/terminal-proxy';
                     ttydFrame.style.display = 'block';
                     setTimeout(() => ttydFrame.focus(), 300);
                 }
@@ -394,6 +403,22 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
 
   inp.focus();
 
+  function runClaude(){
+    if(!authed){ sysLine('[system] 먼저 인증이 필요합니다'); return; }
+    sysLine('[system] Claude 터미널을 시작하는 중...');
+    fetch('/cmd/start-ttyd-claude?token=' + authToken)
+      .then(r => r.json())
+      .then(j => {
+        if(j.ok) {
+          const serverHost = window.location.hostname;
+          ttydFrame.src='/cmd/terminal-proxy';
+          ttydFrame.style.display = 'block';
+          setTimeout(() => ttydFrame.focus(), 300);
+        }
+      })
+      .catch(() => sysLine('[ERR] Claude 실행 실패', '#ff4d6d'));
+  }
+
   function toggleFullscreen(){
     if(!screenfull.isEnabled) return;
     screenfull.toggle();
@@ -406,6 +431,219 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
 <\/script>
 </body>
 </html>`);
+        });
+
+        app.get('/cmd/terminal-proxy', (_req, res) => {
+            let retries = 10;
+            function attempt() {
+            const proxyReq = http.request(
+                { hostname: 'localhost', port: 7681, path: '/', method: 'GET',
+                  headers: { 'Accept-Encoding': 'identity' } },
+                (proxyRes) => {
+                    let body = '';
+                    proxyRes.setEncoding('utf8');
+                    proxyRes.on('data', (chunk: string) => { body += chunk; });
+                    proxyRes.on('end', () => {
+                        // ttyd는 WebSocket URL을 [protocol, host, pathname, "/ws", search] 로 조합함.
+                        // proxy 경유 시 pathname이 /cmd/terminal-proxy 로 오염되므로 URL 전체를 강제 교체.
+                        //
+                        // Safari IME 문제 근본 원인:
+                        //   - xterm.js는 keydown(keyCode=229)을 자체 차단하지만
+                        //   - Safari가 keypress 이벤트로 개별 자모를 추가 전송함
+                        //   - 해결: WebSocket.prototype.send를 인터셉트해 IME 조합 중 서버 전송 자체를 차단
+                        //   - ttyd 프로토콜: '0'+데이터 = 터미널 입력, compositionend 후 조합 완성문자는 허용
+                        const inject = [
+                            '<script>',
+                            '(function(){',
+                            // [Diagnostic Log Overlay] iPhone Safari 디버깅용 화면 로그
+                            // 'var _logEl=null;',
+                            // 'function _initLog(){',
+                            // 'if(_logEl)return;',
+                            // '_logEl=document.createElement("div");',
+                            // '_logEl.style.cssText="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.85);color:#0f0;font:10px/1.2 monospace;padding:4px;z-index:99999;white-space:pre-wrap;word-break:break-all;";',
+                            // 'var btn=document.createElement("button");',
+                            // 'btn.textContent="X";',
+                            // 'btn.style.cssText="position:fixed;bottom:0;right:0;z-index:100000;background:#900;color:#fff;border:none;padding:4px 8px;font-size:14px;";',
+                            // 'btn.onclick=function(){_logEl.remove();btn.remove();_logEl=null;};',
+                            // 'document.body.appendChild(_logEl);',
+                            // 'document.body.appendChild(btn);',
+                            // '}',
+                            // 'var _logs=[];',
+                            'function _log(msg){}',
+                            'function _hex(c){return c.charCodeAt(0).toString(16).padStart(4,"0");}',
+                            'function _show(s){',
+                            'if(typeof s!=="string")return"<non-string>";',
+                            'return Array.from(s).map(function(c){var x=c.charCodeAt(0);return(x>=32&&x<127)?c:"["+_hex(c)+"]";}).join("");',
+                            '}',
+                            // 'window.addEventListener("DOMContentLoaded",_initLog);',
+                            // Log all relevant events
+                            // 'document.addEventListener("keydown",function(e){_log("KEYDOWN key="+e.key+" code="+e.keyCode+" comp="+e.isComposing);},true);',
+                            // 'document.addEventListener("keypress",function(e){_log("KEYPRESS key="+e.key+" charCode="+e.charCode);},true);',
+                            // 'document.addEventListener("input",function(e){_log("INPUT type="+e.inputType+" data="+_show(e.data||"")+" comp="+e.isComposing);},true);',
+                            // 'document.addEventListener("compositionstart",function(e){_log("COMP-START data="+_show(e.data||""));},true);',
+                            // 'document.addEventListener("compositionupdate",function(e){_log("COMP-UPDATE data="+_show(e.data||""));},true);',
+                            // 'document.addEventListener("compositionend",function(e){_log("COMP-END data="+_show(e.data||""));},true);',
+                            // Log WebSocket.send to see actual transmitted data
+                            // 'var _origSendLog=WebSocket.prototype.send;',
+                            // 'WebSocket.prototype.send=function(data){',
+                            // 'try{',
+                            // 'var info="WS-SEND ";',
+                            // 'if(typeof data==="string"){info+="str len="+data.length+" data="+_show(data);}',
+                            // 'else if(data instanceof Uint8Array){var t="";for(var i=0;i<Math.min(data.length,30);i++)t+=data[i].toString(16).padStart(2,"0")+" ";info+="u8 len="+data.length+" bytes="+t;',
+                            // 'try{info+=" text="+_show(new TextDecoder().decode(data.subarray(1)));}catch(e){}}',
+                            // 'else if(data instanceof ArrayBuffer){info+="ab len="+data.byteLength;',
+                            // 'try{info+=" text="+_show(new TextDecoder().decode(new Uint8Array(data).subarray(1)));}catch(e){}}',
+                            // 'else if(data instanceof Blob){info+="blob size="+data.size;}',
+                            // 'else{info+="unknown:"+(typeof data);}',
+                            // '_log(info);',
+                            // '}catch(e){_log("WS-SEND ERR:"+e.message);}',
+                            // 'return _origSendLog.call(this,data);',
+                            // '};',
+                            // [iOS Safari Korean IME Fix - 실측 데이터 기반]
+                            // 실제 iPhone 로그 분석 결과:
+                            //   KEYPRESS ㅣ(jamo) → WS-SEND ㅣ(jamo 바로 전송) ← 이게 터미널에 잘못 표시됨
+                            //   → INPUT deleteContentBackward × N (IME가 이전 조합 자모 삭제)
+                            //   → INPUT insertText "녀"/"녕" (조합 완성된 음절) ← xterm.js가 무시함
+                            // 해결: jamo WS-SEND 차단 + deleteContentBackward→BS, insertText→음절 직접 전송
+                            'var _enc=new TextEncoder(),_dec=new TextDecoder();',
+                            'function _isJamo(s){if(!s||s.length!==1)return false;var x=s.charCodeAt(0);return x>=0x3131&&x<=0x318F;}',
+                            'function _decode(data){',
+                            'if(typeof data==="string"){if(data.length<2||data.charCodeAt(0)!==48)return null;return{type:"str",text:data.slice(1)};}',
+                            'var u8=null;',
+                            'if(data instanceof Uint8Array)u8=data;',
+                            'else if(data instanceof ArrayBuffer)u8=new Uint8Array(data);',
+                            'else return null;',
+                            'if(u8.length<2||u8[0]!==48)return null;',
+                            'try{return{type:data instanceof ArrayBuffer?"ab":"u8",text:_dec.decode(u8.subarray(1))};}catch(e){return null;}',
+                            '}',
+                            'function _encode(type,text){',
+                            'if(type==="str")return"0"+text;',
+                            'var bytes=_enc.encode(text);',
+                            'var out=new Uint8Array(bytes.length+1);',
+                            'out[0]=48;out.set(bytes,1);',
+                            'return type==="ab"?out.buffer:out;',
+                            '}',
+                            // [Common-Prefix Diff + Cheonjiin 음절 commit 감지]
+                            //   필터링: Jamo Block (U+1100-U+11FF) AND Compat Jamo (U+3130-U+318F) 모두 제거
+                            //   추적: _lastFiltered = 현재 활성 조합 영역에 표시 중인 텍스트
+                            //         _prevHasComp = 직전 insertText에 jamo 포함됐는지 (= composing 상태였는지)
+                            //   알고리즘:
+                            //     CASE A (committed → new composing):
+                            //       prev에 jamo 없음(완성된 음절) && 현재 jamo 있음(composing) && filtered가 더 짧음
+                            //       → 이전 음절은 commit된 것 (DEL 없이 보존). _lastFiltered 리셋.
+                            //     CASE B (composing → new different syllable):
+                            //       prev에 jamo 있음(composing) && 현재 jamo 없음(단일 음절) && 공통 prefix 없음
+                            //       → 이전 composing의 syllable은 commit, 새 음절은 append. DEL 없이 추가.
+                            //     일반 케이스: common-prefix diff (이전 - common만큼 DEL, 새로운 부분 insert)
+                            //   INPUT delete: IME 내부 동작이므로 무시
+                            //   1초 idle 시 추적 리셋
+                            'var _pSock=null,_pType="u8";',
+                            'var _origSend=WebSocket.prototype.send;',
+                            'var _lastFiltered="";',
+                            'var _prevHasComp=false;',
+                            'var _lastInsT=0;',
+                            'WebSocket.prototype.send=function(data){',
+                            'var d=_decode(data);',
+                            'if(d){',
+                            'if(/[\\u1100-\\u11FF\\u3130-\\u318F]/.test(d.text)){',
+                            '_pSock=this;_pType=d.type;',
+                            '_log("BLOCK jamo="+_show(d.text));',
+                            'return;',
+                            '}',
+                            // 비-jamo 데이터가 keypress 등으로 전송될 때, _lastFiltered 동기화가 어긋남 → 리셋
+                            'if(!/[\\uAC00-\\uD7A3]/.test(d.text)){',
+                            '_lastFiltered="";_prevHasComp=false;',
+                            '}',
+                            '}',
+                            'return _origSend.call(this,data);',
+                            '};',
+                            'document.addEventListener("input",function(e){',
+                            'if(e.inputType==="deleteContentBackward"){',
+                            'e.stopImmediatePropagation();',
+                            'return;',
+                            '}',
+                            'if(e.inputType==="insertText"&&e.data){',
+                            'var now=Date.now();',
+                            'if(now-_lastInsT>1000){_lastFiltered="";_prevHasComp=false;}',
+                            '_lastInsT=now;',
+                            'if(/^\\s+$/.test(e.data)){',
+                            '_log("IGNORE whitespace artifact");',
+                            'e.stopImmediatePropagation();',
+                            'return;',
+                            '}',
+                            'var filtered=e.data.replace(/[\\u1100-\\u11FF\\u3130-\\u318F]/g,"");',
+                            'var hasComp=/[\\u1100-\\u11FF\\u3130-\\u318F]/.test(e.data);',
+                            // CASE 1: filtered 길이 < _lastFiltered 길이
+                            //   → 앞쪽 (length 차이만큼)의 음절은 iPhone IME에서 commit됨 (active 영역에서 제거)
+                            //   → 마지막 (curr.length)개 음절만 active이고, 그 영역만 diff 적용 (committed 음절은 보존)
+                            'if(filtered.length<_lastFiltered.length){',
+                            'var commCnt=_lastFiltered.length-filtered.length;',
+                            'var still=_lastFiltered.slice(commCnt);',
+                            'var cp1=0;',
+                            'while(cp1<still.length&&cp1<filtered.length&&still[cp1]===filtered[cp1])cp1++;',
+                            'var toDel1=still.length-cp1;',
+                            'var toSend1=filtered.slice(cp1);',
+                            'for(var i=0;i<toDel1;i++)_origSend.call(_pSock,_encode(_pType,"\\x7f"));',
+                            'if(toDel1)_log("→ "+toDel1+" DEL ("+commCnt+" committed)");',
+                            'if(toSend1){_log("→ send="+_show(toSend1));_origSend.call(_pSock,_encode(_pType,toSend1));}',
+                            '_lastFiltered=filtered;_prevHasComp=hasComp;',
+                            'e.stopImmediatePropagation();',
+                            'return;',
+                            '}',
+                            'var cp=0;',
+                            'while(cp<_lastFiltered.length&&cp<filtered.length&&_lastFiltered[cp]===filtered[cp])cp++;',
+                            // CASE B: composing → 다른 단일 음절 (composing 결과 음절이 commit, 새 음절 append)
+                            'if(_prevHasComp&&!hasComp&&filtered&&_lastFiltered&&cp===0){',
+                            '_log("CASE B: composing done → append");',
+                            '_origSend.call(_pSock,_encode(_pType,filtered));',
+                            '_lastFiltered=filtered;_prevHasComp=false;',
+                            'e.stopImmediatePropagation();',
+                            'return;',
+                            '}',
+                            // 일반 diff
+                            'var toDel=_lastFiltered.length-cp;',
+                            'var toSend=filtered.slice(cp);',
+                            'for(var i=0;i<toDel;i++)_origSend.call(_pSock,_encode(_pType,"\\x7f"));',
+                            'if(toDel)_log("→ "+toDel+" DEL");',
+                            'if(toSend){_log("→ send="+_show(toSend));_origSend.call(_pSock,_encode(_pType,toSend));}',
+                            '_lastFiltered=filtered;_prevHasComp=hasComp;',
+                            'e.stopImmediatePropagation();',
+                            '}',
+                            '},true);',
+                            // [WS URL Fix] pathname 오염 포함 전체 URL을 ttyd 포트(7681)/ws 로 강제 교체
+                            'var _W=window.WebSocket;',
+                            'function _PW(u,p){',
+                            'if(typeof u==="string"){',
+                            'var pr=window.location.protocol==="https:"?"wss:":"ws:";',
+                            'u=pr+"//"+window.location.hostname+":7681/ws"+window.location.search;}',
+                            'return p?new _W(u,p):new _W(u);}',
+                            '_PW.prototype=_W.prototype;',
+                            '_PW.CONNECTING=0;_PW.OPEN=1;_PW.CLOSING=2;_PW.CLOSED=3;',
+                            'window.WebSocket=_PW;',
+                            '})();',
+                            '</script>'
+                        ].join('\n');
+                        const patched = body.includes('</head>')
+                            ? body.replace('</head>', inject + '</head>')
+                            : inject + body;
+                        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                        res.setHeader('Pragma', 'no-cache');
+                        res.setHeader('Expires', '0');
+                        res.end(patched);
+                    });
+                }
+            );
+            proxyReq.on('error', () => {
+                if (retries-- > 0) {
+                    setTimeout(attempt, 500); // 500ms 간격으로 최대 10회(5초) 재시도
+                } else {
+                    res.status(503).send('<p>ttyd failed to start.</p>');
+                }
+            });
+            proxyReq.end();
+            } // end attempt
+            attempt();
         });
 
         app.get('/cmd/stream', checkToken, (req, res) => {

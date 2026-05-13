@@ -887,10 +887,10 @@ export class CImgPro
         );
 
         // 브러시가 영향을 미칠 영역 계산
-        const minX = CMath.Clamp(center.x - brushSize.x, 0, _targetTex.GetWidth());
-        const minY = CMath.Clamp(center.y - brushSize.y, 0, _targetTex.GetHeight());
-        const maxX = CMath.Clamp(center.x + brushSize.x, 0, _targetTex.GetWidth());
-        const maxY = CMath.Clamp(center.y + brushSize.y, 0, _targetTex.GetHeight());
+        const minX = CMath.Clamp(center.x - brushSize.x, 0, _targetTex.GetWidth() - 1);
+        const minY = CMath.Clamp(center.y - brushSize.y, 0, _targetTex.GetHeight() - 1);
+        const maxX = CMath.Clamp(center.x + brushSize.x, 0, _targetTex.GetWidth() - 1);
+        const maxY = CMath.Clamp(center.y + brushSize.y, 0, _targetTex.GetHeight() - 1);
 
 		// 활성 채널 목록
         const color : CVec4 = new CVec4();

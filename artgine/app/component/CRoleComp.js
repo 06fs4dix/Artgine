@@ -1,0 +1,1 @@
+import{CRoleMgr as e}from"../../util/CRole.js";import{CComponent as t}from"./CComponent.js";export class CRoleComp extends t{mRoleMgr=new e;Update(e){super.Update(e),this.mRoleMgr.Update(e,this.GetOwner())}GetRoleMgr(){return this.mRoleMgr}}

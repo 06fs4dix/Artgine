@@ -108,21 +108,17 @@ export class CRoleMgr extends CObject
     mRoleArr=new Array<CRole>;
     mType="";
     mStateArr=new Array<string>;
-    
-    private mExecuteList=new CArray<CAction>();
-    private mExecuteSet=new Set<CAction>();
-    private mExecuteLock : CAction=null;
-    
+
     constructor()
     {
         super();
         
     }
-    override IsShould(_member: string, _type: CObject.eShould): boolean {
-        if(_member=="mExecuteList" || _member=="mExecuteSet" || _member=="mExecuteLock")
-            return false;
-        return super.IsShould(_member,_type);
-    }
+    // override IsShould(_member: string, _type: CObject.eShould): boolean {
+    //     if(_member=="mExecuteList" || _member=="mExecuteSet" || _member=="mExecuteLock")
+    //         return false;
+    //     return super.IsShould(_member,_type);
+    // }
     
     GetType(){  return this.mType;  }
     SetStateValue(_key : string,_value,_temp=true)

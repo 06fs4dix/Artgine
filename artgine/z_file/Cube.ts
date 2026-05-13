@@ -43,6 +43,7 @@ import {
     V3Clamp,
     V3Min,
     V2Len,
+    Sam2DArrToV4,
 } from "./Shader"
 
 var worldMat: CMat=Null();
@@ -114,15 +115,15 @@ var cloudDither : number = 0.0;
 //aurora
 var aurora : number = 0.2;
 var auroraSpeed : number = 0.01;
-var auroraScale : number = 0.00003;
+var auroraScale : number = 0.000001;
 var auroraColorBot : CVec3 = new CVec3(1.0, 1.0, 0.0);
 var auroraColorMid : CVec3 = new CVec3(0.0, 1.0, 0.0);
 var auroraColorTop : CVec3 = new CVec3(0.0, 1.0, 0.5);
 var auroraOffset : number = 0.1;
 var auroraDistort : number = 1.0;
 var auroraSmoothness : number = 0.3;
-var auroraMin : CVec3 = new CVec3(-20000.0, 10000.0, -20000.0);
-var auroraMax : CVec3 = new CVec3(20000.0, 15000.0, 20000.0);
+var auroraMin : CVec3 = new CVec3(-20000.0, 15000.0, -20000.0);
+var auroraMax : CVec3 = new CVec3(20000.0, 25000.0, 20000.0);
 var auroraStep : number = 20.0;
 
 var camPos : CVec3=Null();
@@ -411,26 +412,28 @@ function Aurora(_viewDir : CVec3) : CVec4
     {
         var samplePos : CVec3 = curPos;
 
-        var p : CVec3;
-        p.x = (samplePos.x - auroraMin.x) * invBoxSize.x;
-        p.z = (samplePos.z - auroraMin.z) * invBoxSize.z;
+        var p : CVec3 = new CVec3(
+            (samplePos.x - auroraMin.x) * invBoxSize.x,
+            0.0,
+            (samplePos.z - auroraMin.z) * invBoxSize.z
+        );
 
         var noiseP : number = NoiseGet(p, SDF.eNoise.Perlin);
         var uvDistort : number = noiseP * auroraDistort * 0.5;
 
         var p1 : CVec3 = new CVec3(
             p.x * scaleX + timeOffset + uvDistort,
-            0.0,
-            p.z * scaleZ + timeOffset + uvDistort - auroraOffset
+            p.z * scaleZ + timeOffset + uvDistort - auroraOffset,
+            0.0
         );
         var p2 : CVec3 = new CVec3(
-            p1.x + 0.5,
-            0.0,
-            p1.z + 2.0 * auroraOffset
+            p1.x,
+            p1.y + 2.0 * auroraOffset,
+            0.0
         );
 
-        var n1 : number = NoiseGet(p1, SDF.eNoise.PerlinNormal);
-        var n2 : number = NoiseGet(p2, SDF.eNoise.PerlinNormal);
+        var n1 : number = NoiseGet(p1, SDF.eNoise.Perlin);
+        var n2 : number = NoiseGet(p2, SDF.eNoise.Perlin);
 
         var interpolatedNoise : number = smoothstep(-auroraSmoothness, auroraSmoothness, n1 - n2);
 
@@ -616,11 +619,11 @@ function ps_main() {
     {
         if(i.dummy >= FloatToInt(ligCount)) break;
 
-        lDir = Sam2DToV4(ligDir, IntToFloat(i));
+        lDir = Sam2DArrToV4(ligDir, IntToFloat(i));
         if(lDir.w>1.5) continue;
         dir = V3Nor(lDir.xyz);
 
-        lCol = Sam2DToV4(ligCol, IntToFloat(i));
+        lCol = Sam2DArrToV4(ligCol, IntToFloat(i));
         angle = acos(V3Dot(dir, fragDir));
         intensity  = V3Len(lCol.rgb);
 
@@ -706,9 +709,13 @@ function ps_main() {
 
     // ── 4. 오로라 — 구름 뒤, cloudAlpha 마스킹 ────────────────
     BranchBegin("aurora","A",[aurora, auroraSpeed, auroraColorBot, auroraColorMid, auroraColorTop, auroraOffset, auroraDistort, auroraSmoothness, auroraMin, auroraMax, auroraStep,auroraScale]);
-    value = Aurora(fragDir);
-    finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis));
-    finalColor = SaturateV3(finalColor);
+    if(sunIntensity<0.99)
+    {
+        value = Aurora(fragDir);
+        finalColor = V3AddV3(finalColor, V3MulFloat(value.rgb, nightVis));
+        finalColor = SaturateV3(finalColor);
+    }
+    
     BranchEnd();
 
     out_color.rgb = finalColor;

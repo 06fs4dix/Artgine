@@ -139,8 +139,9 @@ export class CLoader
 		}
 		else if(ext=="mp3" || ext=="ogg")
 		{
+			let r=this.SoundLoad(_file,_buffer);;
 			this.mLoadSet.delete(_file);
-			return this.SoundLoad(_file,_buffer);
+			return r;
 			
 		}
 		else if(ext=="mp4" || ext=="webm")
@@ -152,17 +153,19 @@ export class CLoader
 		}
 		else if(ext=="fbx" || ext=="gltf" || ext=="glb" || ext=="obj")
 		{
-			
+			let r=await this.MeshLoad(_file,_buffer,_option);;
 			this.mLoadSet.delete(_file);
-			return await this.MeshLoad(_file,_buffer,_option);
+			
+			return r;
 			
 			
 		}
 		else if(ext=="json")
 		{
 		
+			let r=await this.JSONLoad(_file,_buffer,_option);
 			this.mLoadSet.delete(_file);
-			return await this.JSONLoad(_file,_buffer,_option);
+			return r;
 			
 			
 		}
@@ -173,8 +176,9 @@ export class CLoader
 		}
 		else if(ext=="csv")
 		{
+			let r=await this.CSVLoad(_file,_buffer);
 			this.mLoadSet.delete(_file);
-			return await this.CSVLoad(_file,_buffer);
+			return r;
 			
 		}
 		else if(ext=="zip")
@@ -572,10 +576,10 @@ export class CLoader
 			
 			if(this.mRes!=null)
 			{
-				this.mRes.Push(_file,ulpc);
-				ulpc.SetKey(_file);
-				let textureFile = _file.replace(/\.json$/i, ".ulpc"); 
-				this.mRes.Push(textureFile, ulpc.mTexture);
+				this.mRes.Push(ulpc.Key(),ulpc);
+				//ulpc.SetKey(_file);
+				//let textureFile = _file.replace(/\.json$/i, ".ulpc"); 
+				this.mRes.Push(ulpc.mTexture.Key(), ulpc.mTexture);
 			}
 			
 			return ulpc;

@@ -648,7 +648,7 @@ export class CFileViewer extends CModal
         };
         let LoadFile=(_file)=>{
             //this.mLoadEvent.Call();
-            CFile.Load(_file).then((_buf : ArrayBuffer)=>{
+            CFile.Load(_file,false,true).then((_buf : ArrayBuffer)=>{
                 let source=CUtil.ArrayToString(_buf);
                 let info=CString.ExtCut(_file);
                 if(info.ext=="ts")    
@@ -1109,4 +1109,385 @@ export class CMDViewer extends CModal
 
     }
 
+}
+
+/**
+ * CSV / Excel(.xlsx) 파일을 시트 형태로 보여주는 모달
+ * - CSV  : 단일 테이블로 렌더링
+ * - xlsx : 시트별 Bootstrap 5 탭(nav-tabs)으로 렌더링
+ *
+ * 사용 예)
+ *   new CSheetViewer(['data/score.csv']).Open();
+ *   new CSheetViewer(['data/report.xlsx']).Open();
+ *
+ * xlsx 지원을 위해 HTML에 아래 태그가 있어야 합니다.
+ *   <script src=".../artgine/external/legacy/excel/xlsx.mini.min.js"></script>
+ */
+export class CSheetViewer extends CModal
+{
+    mFiles: string[];
+    mSaveEvent: CEvent;
+    mCurrentFile: string = '';
+    mSheetNames: string[] = [];
+
+    constructor(_file: string[], _saveEvent: ((...args: any[]) => any) | CEvent<(...args: any[]) => any> = null)
+    {
+        super();
+        this.mFiles = _file;
+        this.mSaveEvent = CEvent.ToCEvent(_saveEvent);
+        this.SetTitle(CModal.eTitle.TextFullClose);
+        this.SetResize(true);
+        this.SetSize("75%", "65%");
+
+        const id = this.Key();
+        const options = _file.map(item => `<option value="${item}">${item}</option>`).join('');
+
+        this.SetHeader(`
+            <div class="row align-items-center g-2">
+                <div class="col">
+                    <select id="${id}_select" class="form-select form-select-sm">${options}</select>
+                </div>
+                <div class="col-auto">
+                    <button id="${id}_load" class="btn btn-sm btn-primary">Load</button>
+                </div>
+                <div class="col-auto">
+                    <button id="${id}_save" class="btn btn-sm btn-success">Save</button>
+                </div>
+            </div>`);
+
+        this.SetBody(`<div id="${id}_body" class="h-100 overflow-auto"></div>`);
+    }
+
+    override Open(_startPos: CModal.ePos = CModal.ePos.Random): void
+    {
+        super.Open(_startPos);
+        const id = this.Key();
+
+        if (this.mSaveEvent.IsCall() === false)
+            CDOM.ID(id + '_save').hidden = true;
+
+        const LoadFile = async (_file: string) =>
+        {
+            this.mCurrentFile = _file;
+            const body = CDOM.ID(`${id}_body`);
+            body.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center h-100">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="text-muted small">Loading...</div>
+                    </div>
+                </div>`;
+
+            const buf = await CFile.Load(_file,false,true);
+            if (!buf)
+            {
+                body.innerHTML = `<div class="alert alert-warning m-3">파일을 불러올 수 없습니다.</div>`;
+                return;
+            }
+
+            const info = CString.ExtCut(_file);
+            if (info.ext === 'csv')
+                this.RenderCSV(body, buf);
+            else if (info.ext === 'xlsx' || info.ext === 'xls')
+                this.RenderXLSX(body, buf);
+            else
+                body.innerHTML = `<div class="alert alert-secondary m-3">지원하지 않는 파일 형식입니다: .${info.ext}</div>`;
+        };
+
+        LoadFile(this.mFiles[0]);
+
+        CDOM.ID(`${id}_load`)?.addEventListener('click', () =>
+        {
+            LoadFile(CDOM.IDValue(`${id}_select`));
+        });
+
+        CDOM.ID(`${id}_save`)?.addEventListener('click', () =>
+        {
+            if (!this.mCurrentFile) return;
+            const body = CDOM.ID(`${id}_body`);
+            const info = CString.ExtCut(this.mCurrentFile);
+
+            if (info.ext === 'csv')
+            {
+                const table = body.querySelector('table') as HTMLElement;
+                const rows = this.ReadTableDOM(table);
+                const csvStr = this.SerializeCSV(rows);
+                const base64 = btoa(unescape(encodeURIComponent(csvStr)));
+                this.mSaveEvent.Call(this.mCurrentFile, base64);
+            }
+            else if (info.ext === 'xlsx' || info.ext === 'xls')
+            {
+                const XLSX = (window as any)['XLSX'];
+                if (!XLSX) return;
+                const uid = this.Key();
+                const wb = XLSX.utils.book_new();
+                this.mSheetNames.forEach((name, i) =>
+                {
+                    const pane = CDOM.ID(`${uid}_pane_${i}`);
+                    const table = pane?.querySelector('table') as HTMLElement;
+                    const rows = this.ReadTableDOM(table);
+                    const ws = XLSX.utils.aoa_to_sheet(rows);
+                    XLSX.utils.book_append_sheet(wb, ws, name);
+                });
+                const base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+                this.mSaveEvent.Call(this.mCurrentFile, base64);
+            }
+        });
+    }
+
+    private RenderCSV(container: HTMLElement, buf: ArrayBufferLike): void
+    {
+        const str = CUtil.ArrayToString(buf as any);
+        const lines = str.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length === 0)
+        {
+            container.innerHTML = `<div class="p-3 text-muted">데이터가 없습니다.</div>`;
+            return;
+        }
+        const rows = lines.map(l => this.ParseCSVLine(l));
+        container.innerHTML = `<div class="overflow-auto h-100">${this.BuildTable(rows)}</div>`;
+        this.AttachEditMode(container);
+    }
+
+    private RenderXLSX(container: HTMLElement, buf: ArrayBufferLike): void
+    {
+        const XLSX = (window as any)['XLSX'];
+        if (!XLSX)
+        {
+            container.innerHTML = `<div class="alert alert-danger m-3">
+                xlsx 라이브러리가 로드되지 않았습니다.<br>
+                <small>HTML에 xlsx.mini.min.js 스크립트를 추가해주세요.</small>
+            </div>`;
+            return;
+        }
+
+        const wb = XLSX.read(new Uint8Array(buf as ArrayBuffer), { type: 'array' });
+        const sheetNames: string[] = wb.SheetNames;
+        if (sheetNames.length === 0)
+        {
+            container.innerHTML = `<div class="p-3 text-muted">시트가 없습니다.</div>`;
+            return;
+        }
+
+        this.mSheetNames = sheetNames;
+        const uid = this.Key();
+
+        const tabsHtml = sheetNames.map((name, i) =>
+            `<li class="nav-item" role="presentation">
+                <button class="nav-link${i === 0 ? ' active' : ''}"
+                    id="${uid}_tab_${i}" type="button" role="tab"
+                    data-sheet-idx="${i}">
+                    ${this.EscapeHtml(name)}
+                </button>
+            </li>`
+        ).join('');
+
+        const pagesHtml = sheetNames.map((name, i) =>
+        {
+            const sheet = wb.Sheets[name];
+            const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            return `<div class="tab-pane${i === 0 ? ' show active' : ''} overflow-auto"
+                        style="height:100%"
+                        id="${uid}_pane_${i}" role="tabpanel">
+                ${this.BuildTable(rows)}
+            </div>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="d-flex flex-column h-100">
+                <ul class="nav nav-tabs flex-shrink-0 px-1 pt-1 flex-wrap" role="tablist">
+                    ${tabsHtml}
+                </ul>
+                <div class="tab-content flex-grow-1 overflow-hidden position-relative">
+                    ${pagesHtml}
+                </div>
+            </div>`;
+
+        container.querySelectorAll<HTMLElement>('.nav-link[data-sheet-idx]').forEach(btn =>
+        {
+            btn.addEventListener('click', () =>
+            {
+                const idx = parseInt(btn.dataset.sheetIdx);
+                container.querySelectorAll('.nav-link[data-sheet-idx]').forEach(b => b.classList.remove('active'));
+                container.querySelectorAll<HTMLElement>(`[id^="${uid}_pane_"]`).forEach(p =>
+                {
+                    p.classList.remove('show', 'active');
+                });
+                btn.classList.add('active');
+                const pane = CDOM.ID(`${uid}_pane_${idx}`);
+                if (pane) pane.classList.add('show', 'active');
+            });
+        });
+        this.AttachEditMode(container);
+    }
+
+    /** DOM 테이블 → 2D 배열 (헤더 포함) */
+    private ReadTableDOM(table: HTMLElement): string[][]
+    {
+        const rows: string[][] = [];
+        table?.querySelectorAll('tr').forEach(tr =>
+        {
+            const row: string[] = [];
+            tr.querySelectorAll('th, td').forEach(cell => row.push(cell.textContent ?? ''));
+            rows.push(row);
+        });
+
+        // 각 행의 뒤쪽 빈 셀 제거
+        const trimmedRows = rows.map(row =>
+        {
+            let last = row.length - 1;
+            while (last >= 0 && row[last].trim() === '') last--;
+            return row.slice(0, last + 1);
+        });
+
+        // 뒤쪽 빈 행 제거
+        let lastRow = trimmedRows.length - 1;
+        while (lastRow >= 0 && trimmedRows[lastRow].every(c => c.trim() === '')) lastRow--;
+        return trimmedRows.slice(0, lastRow + 1);
+    }
+
+    /** 2D 배열 → RFC 4180 CSV 문자열 */
+    private SerializeCSV(rows: string[][]): string
+    {
+        return rows.map(row =>
+            row.map(cell =>
+            {
+                if (cell.includes(',') || cell.includes('"') || cell.includes('\n'))
+                    return '"' + cell.replace(/"/g, '""') + '"';
+                return cell;
+            }).join(',')
+        ).join('\r\n');
+    }
+
+    /** RFC 4180 호환 CSV 한 줄 파싱 */
+    private ParseCSVLine(line: string): string[]
+    {
+        const result: string[] = [];
+        let cur = '';
+        let inQuote = false;
+        for (let i = 0; i < line.length; i++)
+        {
+            const ch = line[i];
+            if (ch === '"')
+            {
+                if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+                else inQuote = !inQuote;
+            }
+            else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
+            else cur += ch;
+        }
+        result.push(cur);
+        return result;
+    }
+
+    /** rows[0] = 헤더, rows[1..] = 데이터 */
+    private BuildTable(rows: any[][]): string
+    {
+        if (!rows || rows.length === 0)
+            return `<div class="p-3 text-muted">데이터가 없습니다.</div>`;
+
+        const EXTRA_COLS = 5;
+        const EXTRA_ROWS = 10;
+        const colCount = Math.max(...rows.map(r => r.length));
+        const totalCols = colCount + EXTRA_COLS;
+
+        // 각 열의 최대 문자 길이 계산
+        const maxLens: number[] = new Array(colCount).fill(0);
+        for (const row of rows)
+            for (let c = 0; c < row.length; c++)
+            {
+                const len = String(row[c] ?? '').length;
+                if (len > maxLens[c]) maxLens[c] = len;
+            }
+
+        // 문자 길이 → 픽셀, 빈 확장 열은 80px 고정
+        const widths = [
+            ...maxLens.map(l => Math.max(40, l * 8 + 16)),
+            ...new Array(EXTRA_COLS).fill(80)
+        ];
+        const colsHtml = widths.map(w => `<col style="width:${w}px">`).join('');
+
+        const extraTh = new Array(EXTRA_COLS).fill(`<th class="px-2"></th>`).join('');
+        const extraTd = new Array(EXTRA_COLS).fill(`<td class="px-2"></td>`).join('');
+
+        let html = `<table class="table table-sm table-bordered table-hover table-striped mb-0"
+            style="font-size:0.85em;white-space:nowrap;table-layout:fixed;width:auto">
+            <colgroup>${colsHtml}</colgroup>
+            <thead class="table-dark sticky-top">
+                <tr>${rows[0].map(c => `<th class="px-2">${this.EscapeHtml(String(c ?? ''))}</th>`).join('')}${extraTh}</tr>
+            </thead>
+            <tbody>`;
+
+        for (let i = 1; i < rows.length; i++)
+            html += `<tr>${rows[i].map((c: any) => `<td class="px-2">${this.EscapeHtml(String(c ?? ''))}</td>`).join('')}${extraTd}</tr>`;
+
+        // 빈 확장 행
+        const emptyRow = `<tr>${new Array(totalCols).fill(`<td class="px-2"></td>`).join('')}</tr>`;
+        html += emptyRow.repeat(EXTRA_ROWS);
+
+        html += `</tbody></table>`;
+        return html;
+    }
+
+    /** tbody/thead 셀 더블클릭 → 인라인 편집 */
+    private AttachEditMode(container: HTMLElement): void
+    {
+        container.addEventListener('dblclick', (e) =>
+        {
+            const td = (e.target as HTMLElement).closest('td, th');
+            if (!td) return;
+
+            const original = td.textContent ?? '';
+            let committed = false;
+
+            td.innerHTML = '';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control form-control-sm p-0 px-1 border-0';
+            input.style.cssText = 'width:100%;min-width:60px;font-size:inherit;';
+            input.value = original;
+            td.appendChild(input);
+            input.focus();
+            input.select();
+
+            const commit = () =>
+            {
+                if (committed) return;
+                committed = true;
+                td.innerHTML = this.EscapeHtml(input.value);
+            };
+            const cancel = () =>
+            {
+                if (committed) return;
+                committed = true;
+                td.innerHTML = this.EscapeHtml(original);
+            };
+
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', (ke) =>
+            {
+                if (ke.key === 'Enter')  { ke.preventDefault(); commit(); }
+                if (ke.key === 'Escape') { ke.preventDefault(); cancel(); input.blur(); }
+                if (ke.key === 'Tab')
+                {
+                    ke.preventDefault();
+                    commit();
+                    const cells = Array.from(td.closest('table')?.querySelectorAll('td, th') ?? []);
+                    const next = cells[cells.indexOf(td as HTMLElement) + (ke.shiftKey ? -1 : 1)] as HTMLElement;
+                    if (next) next.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+                }
+            });
+        });
+    }
+
+    private EscapeHtml(str: string): string
+    {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
 }

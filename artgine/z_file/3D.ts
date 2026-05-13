@@ -425,13 +425,12 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f4_we: Weight4,f4_wi : WeightIndex
 	out_position=P;
 
 
-	// 노말 변환 매트릭스 선택을 공통화
+	// normal map 있을 때: N과 T를 같은 raw 행렬로 변환 → TBN 공간 일관성 유지
+	// normal map 없을 때: N을 inv-transpose로 변환 → 기하 노말 정확도 우선
 	var nMat3 : CMat3;
 	if(f3_ref.y > 0.0)	nMat3 = Mat4ToMat3(woweMat);
 	else nMat3 = TransposeMat3(InverseMat3(Mat4ToMat3(woweMat)));
-	
 
-	// N, T를 같은 규칙으로 월드 변환
 	to_normal  = V3Nor(V3MulMat3Normal(f3_nor,     nMat3).xyz);
 	to_tangent = V3Nor(V3MulMat3Normal(f4_tan.xyz, nMat3).xyz);
 
@@ -603,7 +602,7 @@ function ps_main()
 		//uvScreen = V2DivV2(gl_FragCoord.xy, new CVec2(1920,1017)); // 0~1
 		uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
 	
-		shadowTex = Sam2DToColor(10.0, uvScreen);  // <- 여기! 절대 size 곱하지 말기
+		shadowTex = Sam2DToColor(shadowOn, uvScreen);  // <- 여기! 절대 size 곱하지 말기
 		shadow = shadowTex.x;
 		
 	}
@@ -618,6 +617,7 @@ function ps_main()
 
 	var uv : CVec2 = to_uv;
 	var uvh : CVec3;
+	var ratio : number;
 	BranchBegin("parallax","P",[parallaxNormal, camPos]);
 	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
 	uv = uvh.xy;
@@ -633,7 +633,10 @@ function ps_main()
 	// depth offset 적용
 	screenDepth = screenPos.z;
 	if(parallaxNormal > 0.0001) {
-		screenDepth = clamp((1.0 + ((screenPos.z * 2.0 - 1.0) - 1.0) * V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])))) * 0.5 + 0.5, 0.0, 1.0);
+		ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
+		screenDepth = SDF.ClipControl > 0
+			? clamp(1.0 + (screenPos.z - 1.0) * ratio, 0.0, 1.0)
+			: clamp((1.0 + ((screenPos.z * 2.0 - 1.0) - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
 	}
 
 	BranchEnd();

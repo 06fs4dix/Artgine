@@ -96,11 +96,8 @@ export class CWater3D extends CSubject
     Shadow(_shadowReadTex : string) {
         this.mPaint.PushTag(CPaint.eTag.Shadow);
         this.mPaint.PushTag(CPaint.eTag.ShadowReadOnly);
-        //this.mPaint.PushCShaderAttr(new CShaderAttr(7, _shadowReadTex));
-        this.mPaint.PushCShaderAttr(new CShaderAttr(7,"shadowread.tex"));
-        
-        //this.mPaint.PushCShaderAttr(new CShaderAttr(7, "Artgine/none.png"));
-        this.mPaint.PushCShaderAttr(new CShaderAttr("shadowOn",new CVec1(7)));
+        this.mPaint.PushCShaderAttr(new CShaderAttr(SDF.eTexSlot.SingleShadowRead, _shadowReadTex));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("shadowOn",new CVec1(1)));
     }
 
     SetWaterDeep(_deepHeight : number,_nearDistance : number, _farDistance : number, _deepColor : CVec3, _shallowColor : CVec3) {
@@ -207,10 +204,22 @@ export class CReflector3D extends CBrushComp
         {
             const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
             rp.mCopy = false;
-            rp.mPriority = CRenderPass.ePriority.Normal - 2;
+            rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaint3D"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            this.PushRPAuto(rp);
+        }
+
+        // 터레인 RP
+        {
+            const rp = new CRPAuto(CFrame.Main().Pal().SlTerrain().mKey);
+            rp.mCopy = false;
+            rp.mPriority = CRenderPass.ePriority.Normal - 1;
+            rp.mRenderTarget = this.GetTex();
+            rp.mCamera = this.mTexKey;
+            rp.PushOr(new CCondition("class","==","CPaintTerrain"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             this.PushRPAuto(rp);
         }
@@ -227,21 +236,16 @@ export class CReflector3D extends CBrushComp
             rp.PushOr(new CCondition("class","==","CPaintCube"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             rp.PushAnd(new CCondition("mTag[sky]"));
-            rp.mShaderAttr.push(new CShaderAttr("cloudStep", 8));
-            rp.mShaderAttr.push(new CShaderAttr("cloudLightStep", 2));
-            rp.mShaderAttr.push(new CShaderAttr("cloudDither", 1));
             this.PushRPAuto(rp);
-
-            rp.mClearColor = false;
-            rp.mClearDepth = false;
         }
     }
 
     AddWaterDeep(_waterDeep : CVec4)
     {
-        const rp = this.mWrite[0];
-        rp.mTag.add("waterReflect");
-        rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
+        for(let rp of this.mWrite) {
+            rp.mTag.add("waterReflect");
+            rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
+        }
     }
 
     private V3Reflect(_vec : CVec3, _normal : CVec3) {
@@ -303,27 +307,29 @@ export class CReflector3D extends CBrushComp
         // 3. 가상 카메라 동기화
         // ---------------------------------------------------------
         const mainCam = this.mBrush.GetCam3D();
-        const virtualCam = this.mBrush.GetCamera(this.mTexKey);
+        if(mainCam.mUpdateMat == CUpdate.eType.Updated) {
+            const virtualCam = this.mBrush.GetCamera(this.mTexKey);
 
-        const wMat = this.GetOwner().GetMat();
-        const pos = wMat.xyz;
-        const rot = CMath.QutToMat(CMath.MatDecomposeRot(wMat));
-        const normal = CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 0, 1), rot));
-        const view = CMath.V3SubV3(pos, mainCam.GetEye());
-        const realUp = CMath.V3Cross(mainCam.GetView(), mainCam.GetCross());
+            const wMat = this.GetOwner().GetMat();
+            const pos = wMat.xyz;
+            const rot = CMath.QutToMat(CMath.MatDecomposeRot(wMat));
+            const normal = CMath.V3Nor(CMath.V3MulMatNormal(new CVec3(0, 0, 1), rot));
+            const view = CMath.V3SubV3(pos, mainCam.GetEye());
+            const realUp = CMath.V3Cross(mainCam.GetView(), mainCam.GetCross());
 
-        const eye = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(view, normal), -1), pos);
-        const look = CMath.V3AddV3(this.V3Reflect(mainCam.GetView(), normal), eye);
-        const up = this.V3Reflect(realUp, normal);
+            const eye = CMath.V3AddV3(CMath.V3MulFloat(this.V3Reflect(view, normal), -1), pos);
+            const look = CMath.V3AddV3(this.V3Reflect(mainCam.GetView(), normal), eye);
+            const up = this.V3Reflect(realUp, normal);
 
-        if(virtualCam.Init(eye, look, up))
-        {
-            virtualCam.SetFar(mainCam.GetFar());
-            virtualCam.SetFov(mainCam.mFov);
-            if(mainCam.mOrthographic)
-                virtualCam.ResetOrthographic();
-            else 
-                virtualCam.ResetPerspective();
+            if(virtualCam.Init(eye, look, up))
+            {
+                virtualCam.SetFar(mainCam.GetFar());
+                virtualCam.SetFov(mainCam.mFov);
+                if(mainCam.mOrthographic)
+                    virtualCam.ResetOrthographic();
+                else 
+                    virtualCam.ResetPerspective();
+            }
         }
     }
 
@@ -352,10 +358,22 @@ export class CRefractor3D extends CBrushComp
         {
             const rp = new CRPAuto(CFrame.Main().Pal().Sl3D().mKey);
             rp.mCopy = false;
-            rp.mPriority = CRenderPass.ePriority.Normal - 2;
+            rp.mPriority = CRenderPass.ePriority.Normal - 1;
             rp.mRenderTarget = this.GetTex();
             rp.mCamera = this.mTexKey;
             rp.PushOr(new CCondition("class","==","CPaint3D"));
+            rp.PushAnd(new CCondition("mTag[water]","==",false));
+            this.PushRPAuto(rp);
+        }
+
+        // 터레인 RP
+        {
+            const rp = new CRPAuto(CFrame.Main().Pal().SlTerrain().mKey);
+            rp.mCopy = false;
+            rp.mPriority = CRenderPass.ePriority.Normal - 1;
+            rp.mRenderTarget = this.GetTex();
+            rp.mCamera = this.mTexKey;
+            rp.PushOr(new CCondition("class","==","CPaintTerrain"));
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             this.PushRPAuto(rp);
         }
@@ -373,28 +391,27 @@ export class CRefractor3D extends CBrushComp
             rp.PushAnd(new CCondition("mTag[water]","==",false));
             rp.PushAnd(new CCondition("mTag[sky]"));
             this.PushRPAuto(rp);
-
-            rp.mClearColor = false;
-            rp.mClearDepth = false;
         }
     }
 
     AddWaterDeep(_waterDeep : CVec4, _waterDist : CVec2, _shallowColor : CVec3, _deepColor : CVec3, _waterHeight : CVec1)
     {
-        const rp = this.mWrite[0];
-        rp.mTag.add("waterRefract");
-        rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
-        rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
-        rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
-        rp.mShaderAttr.push(new CShaderAttr("deepColor", _deepColor));
-        rp.mShaderAttr.push(new CShaderAttr("waterHeight", _waterHeight));
+        for(let rp of this.mWrite) {
+            rp.mTag.add("waterRefract");
+            rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
+            rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
+            rp.mShaderAttr.push(new CShaderAttr("shallowColor", _shallowColor));
+            rp.mShaderAttr.push(new CShaderAttr("deepColor", _deepColor));
+            rp.mShaderAttr.push(new CShaderAttr("waterHeight", _waterHeight));
+        }
     }
     AddCaustics(_flow : CVec2, _freq : CVec1)
     {
-        const rp = this.mWrite[0];
-        rp.mTag.add("waterRefract");
-        rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
-        rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
+        for(let rp of this.mWrite) {
+            rp.mTag.add("waterRefract");
+            rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
+            rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
+        }
     }
 
     override Update(_update: CUpdate): boolean|any {
@@ -447,15 +464,18 @@ export class CRefractor3D extends CBrushComp
         // 3. 가상 카메라 동기화
         // ---------------------------------------------------------
         const mainCam = this.mBrush.GetCam3D();
-        const virtualCam = this.mBrush.GetCamera(this.mTexKey);
-        if(virtualCam.Init(mainCam.GetEye(), mainCam.GetLook()))
+        if(mainCam.mUpdateMat == CUpdate.eType.Updated) 
         {
-            virtualCam.SetFar(mainCam.GetFar());
-            virtualCam.SetFov(mainCam.mFov);
-            if(mainCam.mOrthographic)
-                virtualCam.ResetOrthographic();
-            else
-                virtualCam.ResetPerspective();
+            const virtualCam = this.mBrush.GetCamera(this.mTexKey);
+            if(virtualCam.Init(mainCam.GetEye(), mainCam.GetLook()))
+            {
+                virtualCam.SetFar(mainCam.GetFar());
+                virtualCam.SetFov(mainCam.mFov);
+                if(mainCam.mOrthographic)
+                    virtualCam.ResetOrthographic();
+                else
+                    virtualCam.ResetPerspective();
+            }
         }
     }
     

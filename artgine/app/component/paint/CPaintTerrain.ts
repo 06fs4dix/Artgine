@@ -1,8 +1,7 @@
-import { CUpdate } from "../../../basic/Basic.js";
+import {CUpdate} from "../../../basic/Basic.js";
 import {CMat} from "../../../geometry/CMat.js";
 import {CVec1} from "../../../geometry/CVec1.js";
 import {CVec3} from "../../../geometry/CVec3.js";
-import { CVec4 } from "../../../geometry/CVec4.js";
 import {CShader} from "../../../render/CShader.js";
 import {CShaderAttr} from "../../../render/CShaderAttr.js";
 import {CRPAuto} from "../../canvas/CRPMgr.js";
@@ -10,48 +9,57 @@ import {CPaint} from "./CPaint.js";
 
 export class CPaintTerrain extends CPaint
 {
+    mTerrainOffset : CVec3;
+    mTerrainHeight : CVec1;
+
     mLevel : CVec1;
     mLevelRepeatCount : CVec1; // 현재 레벨이 몇회 반복중인지
+    mLevelScale : CVec1;       // 현재 레벨의 사이즈가 최소 셀사이즈보다 몇 배 큰지
 
     mCellSize : CVec1;
-    mCellScale : CVec1;
     mCellIndex : CVec3;
-    mCellScaledSize : CVec1;
-
-    mDefaultHeight : CVec1;
 
     mSplatMapTexCodi : CMat;
 
-    mTerrainOffset : CVec3;
-    mTerrainSize : CVec1;
-    mTerrainHeight : CVec1;
+    mHeightScale : CVec1;
+    mDefaultHeight : CVec1;
     
-    constructor(_texture : string[], _terrainOffset : CVec3, _terrainSize : number, _terrainHeight : number, _level : number, _levelRepeat : number, _cellSize : number, _cellIndex : CVec3, _cellScale : number, _defaultHeight : number, _splatTexCodi : CMat)
-    {
+    constructor(
+        _texture : string[],
+        _terrainOffset : CVec3, _terrainHeight : number, 
+        _level : number, _levelRepeat : number, _levelScale : number,
+        _cellSize : number, _cellIndex : CVec3, _splatTexCodi : CMat,
+        _defaultHeight : number,
+    ) {
         super();
 
         this.SetTexture(_texture);
+
         this.mTerrainOffset = _terrainOffset;
-        this.mTerrainSize = new CVec1(_terrainSize);
         this.mTerrainHeight = new CVec1(_terrainHeight);
+
         this.mLevel = new CVec1(_level);
         this.mLevelRepeatCount = new CVec1(_levelRepeat);
+        this.mLevelScale = new CVec1(_levelScale);
+
         this.mCellSize = new CVec1(_cellSize);
-        this.mCellScale = new CVec1(_cellScale);
-        this.mCellScaledSize = new CVec1(_cellSize * _cellScale);
-
-        this.mDefaultHeight = new CVec1(_defaultHeight);
-
         this.mCellIndex = _cellIndex;
+        
         this.mSplatMapTexCodi = _splatTexCodi;
 
+        this.mHeightScale = new CVec1(1);
+        this.mDefaultHeight = new CVec1(_defaultHeight);
+
         this.PushCShaderAttr(new CShaderAttr("terrainOffset", this.mTerrainOffset));
-        this.PushCShaderAttr(new CShaderAttr("terrainSize", this.mTerrainSize));
         this.PushCShaderAttr(new CShaderAttr("terrainHeight", this.mTerrainHeight));
+
         this.PushCShaderAttr(new CShaderAttr("level", this.mLevel));
         this.PushCShaderAttr(new CShaderAttr("levelRepeat", this.mLevelRepeatCount));
-        this.PushCShaderAttr(new CShaderAttr("cellSize", this.mCellScaledSize));
+        this.PushCShaderAttr(new CShaderAttr("levelScale", this.mLevelScale));
+
+        this.PushCShaderAttr(new CShaderAttr("cellSize", this.mCellSize));
         this.PushCShaderAttr(new CShaderAttr("splatMatTexCodi", this.mSplatMapTexCodi));
+        this.PushCShaderAttr(new CShaderAttr("heightScale", this.mHeightScale));
     }
 
     override Start(): void 
@@ -72,9 +80,9 @@ export class CPaintTerrain extends CPaint
 
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
 
-        this.mLMat.mF32A[ 0] = this.mCellScaledSize.x * cellCount;
+        this.mLMat.mF32A[ 0] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
         this.mLMat.mF32A[ 5] = this.mTerrainHeight.x;
-        this.mLMat.mF32A[10] = this.mCellScaledSize.x * cellCount;
+        this.mLMat.mF32A[10] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
         this.mLMat.mF32A[12] = _camPos.x + this.mCellIndex.x * this.mLMat.mF32A[ 0];
         this.mLMat.mF32A[14] = _camPos.z + this.mCellIndex.z * this.mLMat.mF32A[10];
         this.mLMat.UnitCheck();
@@ -86,7 +94,7 @@ export class CPaintTerrain extends CPaint
         this.UpdateLMat();
     }
 
-    Update(_update: CUpdate): void 
+    override Update(_update: CUpdate): void 
     {
         for(let renPt of this.mRenPT)
         {
@@ -95,11 +103,7 @@ export class CPaintTerrain extends CPaint
             if(cam.mUpdateMat == CUpdate.eType.Updated)
             {
                 // 카메라 높이에 따른 스케일 변경
-                const heightStep : number = Math.floor(Math.log2(cam.GetEye().y / this.mDefaultHeight.x));
-                const curScale : number = this.mCellSize.x * this.mCellScale.x * Math.max(1, Math.pow(2, heightStep)); // 1보다는 작지 않게 설정
-                if(this.mCellScaledSize.x != curScale) {   // 스케일 변화 있을 때만 업데이트
-                    this.mCellScaledSize.x = curScale;
-                }
+                this.mHeightScale.x = Math.max(1, Math.pow(2, Math.floor(Math.log2(cam.GetEye().y / this.mDefaultHeight.x))));
 
                 // 카메라 이동에 따른 메시 중점 변경
                 this.MatUpdate(cam.GetEye());
@@ -126,17 +130,17 @@ export class CPaintTerrain extends CPaint
         this.mOwner.GetFrame().BMgr().SetBatchSA(wsa);
 
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
-        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("cellCount",new CVec3(cellCount, 0, cellCount)));
+        this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("cellCount",new CVec1(cellCount)));
 
         // 그림자의 renPt가 아니라 현재 카메라 넣어줌
         for(let renPt of this.mRenPT) {
-            if(renPt.mCam.mShadow == true) break;
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("camCanv",renPt.mCam.GetEye()));
+            if(renPt.mCam.mShadow == true) continue;
+            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("camMain",renPt.mCam.GetEye()));
             break;
         }
 
         this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
-        var dm=this.GetDrawMesh("Artgine/DM/GeoClipmap",_vf,this.mOwner.GetFrame().Pal().Terrain());
+        var dm=this.GetDrawMesh("Artgine/DM/GeoClipmap" + cellCount,_vf,this.mOwner.GetFrame().Pal().Terrain());
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(dm);
 
         barr[0]=this.mOwner.GetFrame().BMgr().BatchOff();
@@ -145,9 +149,7 @@ export class CPaintTerrain extends CPaint
     override EmptyRPChk(): void {
         if(this.mRenderPass.length==0)
         {
-            const rp = new CRPAuto(this.mOwner.GetFrame().Pal().SlTerrainKey());
-            //this.PushTag("geoclip");
-            this.mRenderPass=[rp];
+            this.mRenderPass=[new CRPAuto(this.mOwner.GetFrame().Pal().SlTerrainKey())];
         }
     }
 }

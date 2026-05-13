@@ -37,7 +37,6 @@ export class CTerrainMap extends CSubject
     mDefaultHeight : number = 1024; // 카메라의 기본 높이, 이 높이보다 2^n배 높아질 때 셀의 크기가 2^n배로 커짐
 
     mLevel = new Array<number>(0);      // 해당 레벨이 몇번 반복할지
-    mCellSize : number = 4;             // 가장 작은 셀의 크기
     
     // splat texture
     mTexture : (CVec4|string)[] = new Array();
@@ -49,7 +48,7 @@ export class CTerrainMap extends CSubject
     ]);
 
     // 페인트 태그
-    mTag : Array<string> = [];  // ["bilinear", "triplanar"]
+    mTag : Set<string> = new Set();  // ["bilinear", "triplanar"]
     
     mTestMode : boolean = false;    // 라인 드로잉과 색상 추가
     mCollider : CColliderTerrain;
@@ -57,6 +56,7 @@ export class CTerrainMap extends CSubject
     constructor() 
     {
         super();
+
         this.mHeightBuf.Reset(new CVec3(1024,1024,1),10);
         this.mSplatBuf.Reset(new CVec3(1024,1024,1),10);
         this.mSplatBuf.mBuffer.fill(0x000000FF);
@@ -65,11 +65,13 @@ export class CTerrainMap extends CSubject
     ClearAll() {
         this.mHeightTexture = null;
         this.mSplatTexture = null;
+        this.mSplatArrayTexture = null;
         this.RemoveComps(CPaintTerrain);
     }
     SetLevel(_level : Array<number>) {
         this.mLevel = _level;
     }
+    //xy : 반복 패턴(음수시 타일링 회전 미적용),zw : 텍스쳐 시작 위치
     SetSplat(_splatTexs : (CVec4|string)[], _splatTexCodi : CMat) {
         this.mTexture = [..._splatTexs];
         this.mTexCodi.Import(_splatTexCodi);
@@ -109,11 +111,12 @@ export class CTerrainMap extends CSubject
         }
         else {
             for(const pt of this.FindComps(CPaintTerrain)) {
-                pt.mTerrainSize.x = this.mHeightBuf.mSize * this.mHeightBuf.mCount.x;
                 pt.mTerrainHeight.x = this.mTerrainHeight;
+                pt.mCellSize.x = this.mHeightBuf.mSize;
+                pt.mDefaultHeight.x = this.mDefaultHeight;
                 pt.MatUpdate();
-                this.mUpdateMat = CUpdate.eType.Updated;
             }
+            this.mUpdateMat = CUpdate.eType.Already;
         }
     }
     override Update(_update: CUpdate): void 
@@ -216,7 +219,7 @@ export class CTerrainMap extends CSubject
                     defaultCol.z = 1;
                 }
                 let texKeyOrCol = this.mTexture[i];
-                let tex = null;
+                let tex : CTexture = null;
                 if(texKeyOrCol instanceof CVec4) {
                     defaultCol = texKeyOrCol;
                 }
@@ -226,7 +229,23 @@ export class CTerrainMap extends CSubject
                 let reducedTex : CTexture = tex != null ?
                     CImgPro.SqurEnlargedReduced(tex.GetWidth(), tex.GetHeight(), tex.GetBuf()[0], splatArrayTex.GetWidth() / tex.GetWidth(), splatArrayTex.GetHeight() / tex.GetHeight(), 4) :
                     CImgPro.Square(splatArrayTex.GetWidth(), splatArrayTex.GetHeight(), defaultCol);
-                splatArrayTexBuf.set(reducedTex.GetBuf()[0], splatArrayTex.GetWidth() * splatArrayTex.GetHeight() * 4 * i);
+                if(tex != null && tex.GetYFlip() == true) {
+                    const off = splatArrayTex.GetWidth() * splatArrayTex.GetHeight() * 4 * i;
+                    for(let y = 0; y < reducedTex.GetHeight(); y++)
+                    for(let x = 0; x < reducedTex.GetWidth(); x++)
+                    {
+                        const flippedY = (reducedTex.GetHeight() - 1) - y;
+                        const flippedIdx = (flippedY * splatArrayTex.GetWidth() + x) * 4;
+                        const idx = (y * splatArrayTex.GetWidth() + x) * 4;
+                        splatArrayTexBuf[off + idx + 0] = reducedTex.GetBuf()[0][flippedIdx + 0];
+                        splatArrayTexBuf[off + idx + 1] = reducedTex.GetBuf()[0][flippedIdx + 1];
+                        splatArrayTexBuf[off + idx + 2] = reducedTex.GetBuf()[0][flippedIdx + 2];
+                        splatArrayTexBuf[off + idx + 3] = reducedTex.GetBuf()[0][flippedIdx + 3];
+                    }
+                }
+                else {
+                    splatArrayTexBuf.set(reducedTex.GetBuf()[0], splatArrayTex.GetWidth() * splatArrayTex.GetHeight() * 4 * i);
+                }
             }
             this.GetFrame().Ren().BuildTexture(splatArrayTex);  // 밉맵때문에 리빌드쓰면 안됨(밉맵에 적용 안됨)
 
@@ -239,52 +258,48 @@ export class CTerrainMap extends CSubject
             textureList.push(this.mSplatTexture);       // 1
             textureList.push(this.mHeightTexture);      // 2
 
-            // 중앙에 위치한 페인트 4개
-            for(let row = 0; row < 2; row++)
-            for(let col = 0; col < 2; col++)
-            {
-                const level = 0;
-                const levelRepeat = 1;
+            const PushPaintTerrain = (_level : number, _levelRepeatCount : number, _levelScale : number, _cellIndex : CVec3) => {
                 const pt = this.PushComp(new CPaintTerrain(
                     textureList, 
-                    this.GetPos(), this.mHeightBuf.mSize * this.mHeightBuf.mCount.x, this.mTerrainHeight, 
-                    level, levelRepeat, 
-                    this.mCellSize, new CVec3(row - 0.5, 0, col - 0.5), 1, this.mDefaultHeight,
-                    this.mTexCodi
+                    this.GetPos(), this.mTerrainHeight, 
+                    _level, _levelRepeatCount, _levelScale,
+                    this.mHeightBuf.mSize, _cellIndex, this.mTexCodi,
+                    this.mDefaultHeight
                 ));
                 for(let tag of this.mTag) {
                     pt.PushTag(tag);
                 }
+                return pt;
+            };
+
+            // 중앙에 위치한 페인트 4개
+            for(let row = 0; row < 2; row++)
+            for(let col = 0; col < 2; col++)
+            {
+                PushPaintTerrain(0, 1, 1, new CVec3(row - 0.5, 0, col - 0.5));
             }
 
             // 외곽 페인트 ( 한 라인에 12개 )
-            let scale = 1;
+            let levelScale = 1;
             for(let level = 0; level < this.mLevel.length; level++)
             {
-                const levelRepeat = this.mLevel[level];
-                for(let repeat = 0; repeat < levelRepeat; repeat++)
+                const levelRepeatCount = this.mLevel[level];
+                for(let repeat = 0; repeat < levelRepeatCount; repeat++)
                 {
                     const max = 4 + repeat * 2;
                     const center = 1.5 + repeat;
-                    for(let row = 0; row < max; row++)
-                    for(let col = 0; col < max; col++)
+                    const limit = max - 1;
+                    for(let i = 0; i < max; i++)
                     {
-                        if(row == 0 || row == max - 1 || col == 0 || col == max - 1)
-                        {
-                            const pt = this.PushComp(new CPaintTerrain(
-                                textureList, 
-                                this.GetPos(), this.mHeightBuf.mSize * this.mHeightBuf.mCount.x, this.mTerrainHeight, 
-                                level, levelRepeat, 
-                                this.mCellSize, new CVec3(row - center, 0, col - center), scale, this.mDefaultHeight,
-                                this.mTexCodi
-                            ));
-                            for(let tag of this.mTag) {
-                                pt.PushTag(tag);
-                            }
+                        PushPaintTerrain(level, levelRepeatCount, levelScale, new CVec3(0 - center, 0, i - center));
+                        PushPaintTerrain(level, levelRepeatCount, levelScale, new CVec3(limit - center, 0, i - center));
+                        if(i > 0 && i < limit) {
+                            PushPaintTerrain(level, levelRepeatCount, levelScale, new CVec3(i - center, 0, 0 - center));
+                            PushPaintTerrain(level, levelRepeatCount, levelScale, new CVec3(i - center, 0, limit - center));
                         }
                     }
                 }
-                scale *= 2 + (levelRepeat - 1);
+                levelScale *= levelRepeatCount + 1;
             }
         }
     }
@@ -300,6 +315,25 @@ export class CColliderTerrain extends CCollider
 
         this.mTerrain = _terrain;
 
+        this.MatUpdate();
+
+        this.SetEvent(CCollider.eEvent.Static);
+    }
+    IsShould(_member: string, _type: CObject.eShould): boolean {
+        if(_member == "mTerrain")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    Update(_update: CUpdate): void {
+        if(this.GetOwner().mUpdateMat!=CUpdate.eType.Not)
+        {
+            this.MatUpdate();
+        }
+
+        super.Update(_update);
+    }
+    MatUpdate()
+    {
         this.mBound.Reset();
         this.mBound.mMin.x = 0;
         this.mBound.mMin.y = 0;
@@ -310,39 +344,7 @@ export class CColliderTerrain extends CCollider
         this.mBound.mMax.z = this.mTerrain.mHeightBuf.mCount.y * this.mTerrain.mHeightBuf.mSize;
         
         this.mBound.SetType(CBound.eType.Box);
-
-        this.SetEvent(CCollider.eEvent.Static);
     }
-    IsShould(_member: string, _type: CObject.eShould): boolean {
-        if(_member == "mTerrain")
-            return false;
-        return super.IsShould(_member, _type);
-    }
-    override Update(_update: CUpdate) {
-		if(this.mGI!=null)	
-		{
-
-			if(this.mEvent!=CCollider.eEvent.Static || this.mGI.mOctree.mStaticBuild)	
-			{	
-				this.mGI.mFixedComp.Push(this);
-			}
-		}
-			
-		if(this.mEvent==CCollider.eEvent.Static && (this.GetOwner().mUpdateMat!=CUpdate.eType.Not || this.mUpdateMat!=CUpdate.eType.Not))	
-		{
-			if(this.mGI.mOctree.mStaticBuild==false)
-			{
-				this.mGI.mOctree.mStaticUpdate=true;
-				this.mBW.Init(this.mBound,this.mOwner.GetMat());
-			}
-			
-		}
-		
-		if(this.GetOwner().mUpdateRS!=CUpdate.eType.Not || this.mBW.mRadian==0)
-		{
-			this.mBW.Init(this.mBound,this.mOwner.GetMat());
-		}
-	}
     GetHeightTerrain(_x : number, _z : number)
     {
         const terrainSize = this.mTerrain.mHeightBuf.mCount.x * this.mTerrain.mHeightBuf.mSize;

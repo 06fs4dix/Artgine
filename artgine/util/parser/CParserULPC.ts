@@ -1,5 +1,5 @@
-import { CAnimation, CClipCoodi } from "../../../artgine/app/component/CAnimation.js";
-import { CH5Canvas } from "../../../artgine/render/CH5Canvas.js";
+import { CAnimation, CClipCoodi, CClipImg } from "../../../artgine/app/component/CAnimation.js";
+import { CH5CanvasInst } from "../../../artgine/render/CH5Canvas.js";
 import { CTexture } from "../../../artgine/render/CTexture.js";
 import { CParser } from "../../../artgine/util/parser/CParser.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
@@ -94,6 +94,12 @@ interface AnimClipSpec {
 }
 export class CULPC extends CObject
 {
+    static eState={
+        "walk":"walk",
+        "slash":"slash",
+        "thrush":"thrush",
+        "idle":"idle"
+    };
     mAniMap = new Map<string, CAnimation>();
     mTexture: CTexture | null = null;
 
@@ -119,11 +125,7 @@ export class CULPC extends CObject
         return map;
     }
 
-    GetTexName()
-    {
-        let textureFile = this.Key().replace(/\.json$/i, ".ulpc");
-        return textureFile;
-    }
+    
 
     // 단일 상태에 대한 검색 로직
     private _FindAniByState(state: string, dir: number, beforeDir: number): CAnimation | null
@@ -204,6 +206,12 @@ export class CParserULPC extends CParser {
 
     mResBase:    string = null;
     mFrameDelay: number = 0.125;
+    private mAnimFilter: string[] | null = null;
+
+    constructor(animKeys: string[] | null = null) {
+        super();
+        this.mAnimFilter = animKeys;
+    }
 
     static SetGlobalResBase(_path : string)
     {
@@ -216,35 +224,53 @@ export class CParserULPC extends CParser {
     override async Load(pa_fileName: string): Promise<void> {
         if (!this.mBuffer) await this.Open(pa_fileName);
 
-        const json    = JSON.parse(new TextDecoder().decode(this.mBuffer));
+        const rawJson = JSON.parse(new TextDecoder().decode(this.mBuffer));
+        const json    = Array.isArray(rawJson)
+            ? rawJson.reduce((merged: Record<string, any>, obj: Record<string, any>) => {
+                for (const [k, v] of Object.entries(obj)) {
+                    if (Array.isArray(v)) merged[k] = [...(merged[k] ?? []), ...v];
+                    else if (!(k in merged))  merged[k] = v;
+                }
+                return merged;
+            }, {} as Record<string, any>)
+            : rawJson;
         const resBase = this.mResBase || gResPath || json.mresBase || "./";
         const absRoot = new URL(resBase, location.href).toString();
         const rootSlash = absRoot.endsWith('/') ? absRoot : absRoot + '/';
         const absBase = new URL(json.resBase ?? "spritesheets", rootSlash).toString().replace(/\/$/, "");
         const result  = new CULPC();
+        const cv      = new CH5CanvasInst();
+        let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
+        
 
         let specs: AnimClipSpec[];
         if (Array.isArray(json.selections)) {
             // V3: selections[] 기반 (ulpc_selection.json)
-            specs = await this._buildV3(json, absBase);
+            specs = await this._buildV3(json, absBase, cv);
         } else {
             // V2: layers[] 기반 (sample.json)
             const paletteBase = absRoot.replace(/\/$/, "") + "/palette_definitions/";
-            specs = await this._buildV2(json, absBase, paletteBase);
+            specs = await this._buildV2(json, absBase, paletteBase, cv);
         }
 
-        this._buildAnimMap(specs, result);
-        result.mTexture = CH5Canvas.GetNewTex();
+        this._buildAnimMap(specs, result, textureFile);
+        result.mTexture = cv.GetNewTex();
         result.mTexture.SetMipMap(CTexture.eMipmap.GL);
         this.mResult = result;
+        result.SetKey(this.mFileName);
+        
+        result.mTexture.SetKey(textureFile);
+
+        
     }
 
     // ── 공통: AnimClipSpec[] → CAnimation 맵 ─────────────────────────────
 
-    private _buildAnimMap(specs: AnimClipSpec[], result: CULPC): void {
+    private _buildAnimMap(specs: AnimClipSpec[], result: CULPC, textureFile: string): void {
         for (const s of specs) {
             const cAnim    = new CAnimation();
             const scaleVec = s.scale !== 1 ? new CVec2(s.scale, s.scale) : undefined;
+            cAnim.Push(new CClipImg(0, 0, textureFile));
             for (let f = s.frameStart; f < s.frameCount; f++) {
                 const stX = f * s.frameSize;
                 const stY = s.yOffset;
@@ -261,7 +287,7 @@ export class CParserULPC extends CParser {
     // 오버사이즈(128/192px)는 표준 섹션 아래에 별도 영역으로 추가됨.
     // ══════════════════════════════════════════════════════════════════════
 
-    private async _buildV2(json: any, absBase: string, paletteBase: string): Promise<AnimClipSpec[]> {
+    private async _buildV2(json: any, absBase: string, paletteBase: string, cv: CH5CanvasInst): Promise<AnimClipSpec[]> {
         const layers   = [...((json.layers ?? []) as any[])].sort((a, b) => a.zPos - b.zPos);
         const sizeBase: number = json.sizeBase ?? FRAME_SIZE;
 
@@ -323,9 +349,9 @@ export class CParserULPC extends CParser {
         }
 
         // ── 4. 캔버스 초기화 ─────────────────────────────────────────────
-        CH5Canvas.Init(canvasW, canvasH, false, false);
-        await CH5Canvas.Draw();
-        const ctx = CH5Canvas.GetContext();
+        cv.Init(canvasW, canvasH, false, false);
+        await cv.Draw();
+        const ctx = cv.GetContext();
         ctx.imageSmoothingEnabled = false;
 
         // ── 5. 표준 섹션 드로잉 ──────────────────────────────────────────
@@ -480,7 +506,7 @@ export class CParserULPC extends CParser {
     // 레이어 frameSize < 행 높이인 경우 중심 정렬(offset)로 합성.
     // ══════════════════════════════════════════════════════════════════════
 
-    private async _buildV3(json: any, absBase: string): Promise<AnimClipSpec[]> {
+    private async _buildV3(json: any, absBase: string, cv: CH5CanvasInst): Promise<AnimClipSpec[]> {
 
         // ── 1. 모든 파일 엔트리 파싱 ───────────────────────────────────────
         interface MatGroup {
@@ -565,6 +591,14 @@ export class CParserULPC extends CParser {
         }
         for (const arr of byAnim.values()) arr.sort((a, b) => a.zPos - b.zPos);
 
+        if (this.mAnimFilter) {
+            const allowed = new Set(this.mAnimFilter);
+            for (const key of byAnim.keys()) {
+                if (!allowed.has(key)) byAnim.delete(key);
+            }
+        }
+
+
         // ── 3. animYMap 빌드: 파싱 순서대로, 행 높이 = 해당 애니의 최대 frameSize ──
         interface AInfo { y: number; dirs: number[]; frameCount: number; frameSize: number; minFS: number; }
         const animYMap = new Map<string, AInfo>();
@@ -582,9 +616,9 @@ export class CParserULPC extends CParser {
         }
 
         // ── 4. 캔버스 초기화 ──────────────────────────────────────────────
-        CH5Canvas.Init(canvasW || 1, canvasH || 1, false, false);
-        await CH5Canvas.Draw();
-        const ctx = CH5Canvas.GetContext();
+        cv.Init(canvasW || 1, canvasH || 1, false, false);
+        await cv.Draw();
+        const ctx = cv.GetContext();
         ctx.imageSmoothingEnabled = false;
 
         // ── 6. 전체 애니메이션 드로잉 ─────────────────────────────────────
@@ -617,6 +651,9 @@ export class CParserULPC extends CParser {
                     frameCount, frameStart: 0, scale });
             }
         }
+
+
+        
         return specs;
     }
 

@@ -24,10 +24,10 @@ export class CFile
 	{
 		gCaacheMap.delete(_key);
 	}
-    static async Load(_name : string=null,_modal=false) : Promise<ArrayBufferLike>
+    static async Load(_name : string=null,_modal=false,_noCache=false) : Promise<ArrayBufferLike>
     {
 		let cbuf=gCaacheMap.get(_name);
-		if(cbuf!=null)	return cbuf;
+		if(cbuf!=null && !_noCache)	return cbuf;
 
 
 
@@ -39,7 +39,7 @@ export class CFile
 				{
 					if (_name.startsWith("http:") || _name.startsWith("https:")) 
 					{
-						const response = await fetch(_name);
+						const response = await fetch(_noCache ? _name+"?t="+Date.now() : _name);
 						if (!response.ok) {
 							CAlert.E(`HTTP error ${response.status} for ${_name}`);
 							resolve(null);
@@ -109,7 +109,7 @@ export class CFile
 					};
 					//PWA에서 캐시 문제가 생겨서 삭제하지마
 					//oReq.open("GET", _name + "?t=" + Date.now());
-					oReq.open("GET", _name);
+					oReq.open("GET", _noCache ? _name+"?t="+Date.now() : _name);
 					oReq.responseType = "arraybuffer";
 					oReq.send();
 				}

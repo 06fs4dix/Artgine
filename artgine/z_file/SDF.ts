@@ -2,6 +2,10 @@ export class SDF {
     
 	static WriteDataTex=11;
 	static TexSizeMax=2048;
+
+	static FloatTex16=0;
+	static ClipControl=0;
+
 	static eLightStep0=
 	{
 		None:0,

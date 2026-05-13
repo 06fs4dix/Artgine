@@ -3,6 +3,7 @@ import { CJSON } from "../../basic/CJSON.js";
 import { CObject } from "../../basic/CObject.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CVec3 } from "../../geometry/CVec3.js";
+import { CImgPro } from "../../render/CImgPro.js";
 import { CTexture } from "../../render/CTexture.js";
 import { CCIndex } from "../canvas/CCIndex.js";
 
@@ -55,30 +56,22 @@ export class CMapBuf extends CObject
         let width = _tex.GetWidth();
         let height = _tex.GetHeight();
 
-        // 사이즈 검증
-        const is2D = (width == this.mCount.x && height == this.mCount.y);
-        const is3D = (width == this.mCount.x && height == this.mCount.y * this.mCount.z);
+        const isTarget3D = this.mCount.z > 1;
+        const targetW = this.mCount.x;
+        const targetH = isTarget3D ? this.mCount.y * this.mCount.z : this.mCount.y;
 
-        if (!is2D && !is3D) 
+        // 사이즈가 다르면 리사이즈 후 복사
+        if (width != targetW || height != targetH)
         {
-            CAlert.E("size diffent!");
-            return;
+            const resized = CImgPro.SqurEnlargedReduced(width, height, buf, targetW / width, targetH / height, 4);
+            buf = resized.GetBuf()[0] as Uint8Array;
+            width = targetW;
+            height = targetH;
         }
-            
 
         const mbuf = this.GetBuf();
-        if (is2D)
+        if (!isTarget3D)
         {
-            // for (let y = 0; y < this.mCount.y; ++y)
-            // {
-            //     for (let x = 0; x < this.mCount.x; ++x)
-            //     {
-            //         const pi = (y * width + x) * 4;
-            //         const rgb = ((buf[pi] << 24) | (buf[pi+1] << 16) | (buf[pi+2] << 8)) >>> 0;
-            //         const bi = x + y * this.mCount.x;
-            //         mbuf[bi] = (rgb | (mbuf[bi] & 0xFF)) >>> 0;
-            //     }
-            // }
             for (let y = 0; y < this.mCount.y; ++y)
             {
                 for (let x = 0; x < this.mCount.x; ++x)
@@ -91,7 +84,7 @@ export class CMapBuf extends CObject
                 }
             }
         }
-        else // is3D
+        else // 3D
         {
             for (let z = 0; z < this.mCount.z; ++z)
             {

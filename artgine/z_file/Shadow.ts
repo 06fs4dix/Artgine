@@ -53,9 +53,8 @@ function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
 }
 function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number, _world : CVec4) : number
 {
-    var f16Chk : number = 1.0;
-    if(texture16f > 0.0) f16Chk = 4.0;
-
+    var f16Bias : number = SDF.FloatTex16 > 0 ? abs(_uvZ0.z) * (2.0 / 1024.0) : 0.0;
+    
     var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
@@ -95,7 +94,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0)
                 {
                     var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv0N);
-                    sVal0 += (sp0.w == 0.0) ? 0.0 : ((_uvZ0.z + _biasAll * f16Chk) >= sp0.z ? 0.0 : 1.0);
+                    sVal0 += (sp0.w == 0.0) ? 0.0 : ((_uvZ0.z + _biasAll + f16Bias) >= sp0.z ? 0.0 : 1.0);
                 }
                 // else: 범위 밖 샘플은 0.0(빛) 기여 — sVal0 증가 없음
             }
@@ -105,7 +104,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0)
                 {
                     var sp1 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll * f16Chk) >= sp1.z ? 0.0 : 1.0);
+                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll*4.0 + f16Bias) >= sp1.z ? 0.0 : 1.0);
                 }
             }
 
@@ -114,7 +113,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0)
                 {
                     var sp2 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
-                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll * f16Chk) >= sp2.z ? 0.0 : 1.0);
+                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll*16.0 + f16Bias) >= sp2.z ? 0.0 : 1.0);
                 }
             }
         }

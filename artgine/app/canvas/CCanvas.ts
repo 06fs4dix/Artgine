@@ -76,15 +76,15 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	
 	public mPacketArr=new CArray<CStream>();
 	
-	private mSubMap = new Map<string,CSubject>();
+	public mSubMap = new Map<string,CSubject>();
 	protected mAttachCanvas = new Array<CBlackBoardRef<CCanvas>>();
 	
 	
-	private mBroMsg=new Array<CRouteMsg>();
-	private mBroLen=0;
+	public mBroMsg=new Array<CRouteMsg>();
+	public mBroLen=0;
 
 
-	private mResMap = new Map<string, any>();
+	public mResMap = new Map<string, any>();
 	private mCameraKey="2D";
 
 

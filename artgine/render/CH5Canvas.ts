@@ -76,233 +76,229 @@ export class CH5Cmd extends CObject
 	}
 }
 
-var gCanvas : HTMLCanvasElement=null;
-var gCTX : CanvasRenderingContext2D=null;
-var gPara=new Array(9);
-var gLinear = true;
-var gExp = true;
-var gCMDStack=new Array<CH5Cmd>();
-
-if(CUtil.IsNode()==false)
+export class CH5CanvasInst
 {
-	gCanvas=document.createElement("canvas");
-	gCanvas.width=32;
-	gCanvas.height=32;
-	gCTX=gCanvas.getContext('2d', { willReadFrequently: true });
-}
+	private mCanvas: HTMLCanvasElement = null;
+	private mCTX: CanvasRenderingContext2D = null;
+	private mPara = new Array(9);
+	private mLinear = true;
+	private mExp = true;
+	private mCMDStack = new Array<CH5Cmd>();
 
-
-
-
-
-export class CH5Canvas
-{
-	static Cmd(_name : string,_para : any)	{	return new CH5Cmd(_name,_para);	}
+	constructor() {
+		if (CUtil.IsNode() == false) {
+			this.mCanvas = document.createElement("canvas");
+			this.mCanvas.width = 32;
+			this.mCanvas.height = 32;
+			this.mCTX = this.mCanvas.getContext('2d', { willReadFrequently: true });
+		}
+	}
+	Cmd(_name : string,_para : any)	{	return new CH5Cmd(_name,_para);	}
 	
-    static AddCmd(_cmdVec : CH5Cmd | Array<CH5Cmd>)
+    AddCmd(_cmdVec : CH5Cmd | Array<CH5Cmd>)
     {
         if(_cmdVec instanceof Array) {
-            gCMDStack.push(..._cmdVec);
+            this.mCMDStack.push(..._cmdVec);
         }
         else {
-            gCMDStack.push(_cmdVec);
+            this.mCMDStack.push(_cmdVec);
         }
         return _cmdVec;
     }
-	static FillRoundRect(left, top, right, bottom, round=2 * Math.PI)
+	FillRoundRect(left, top, right, bottom, round=2 * Math.PI)
 	{
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]),
-			CH5Canvas.Cmd("moveTo",[left+round,top]),
-			CH5Canvas.Cmd("arcTo",[left+right,top,left+right,top+bottom,round]),
-			CH5Canvas.Cmd("arcTo",[left+right,top+bottom,left,top+bottom,round]),
-			CH5Canvas.Cmd("arcTo",[left,top+bottom,left,top,round]),
-			CH5Canvas.Cmd("arcTo",[left,top,left+right,top,round]),
-			CH5Canvas.Cmd("fill",[]),
+			this.Cmd("beginPath",[]),
+			this.Cmd("moveTo",[left+round,top]),
+			this.Cmd("arcTo",[left+right,top,left+right,top+bottom,round]),
+			this.Cmd("arcTo",[left+right,top+bottom,left,top+bottom,round]),
+			this.Cmd("arcTo",[left,top+bottom,left,top,round]),
+			this.Cmd("arcTo",[left,top,left+right,top,round]),
+			this.Cmd("fill",[]),
 			
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 
 		return cmdVec;		
 	}
-	static StrokeRect(x, y, width, height)
+	StrokeRect(x, y, width, height)
 	{
 		var cmdVec=[
-			CH5Canvas.Cmd("strokeRect",[x,y,width,height]),	
+			this.Cmd("strokeRect",[x,y,width,height]),	
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
-	static FillRect(x, y, width, height)
+	FillRect(x, y, width, height)
 	{
 		var cmdVec=[
-			CH5Canvas.Cmd("fillRect",[x,y,width,height]),	
+			this.Cmd("fillRect",[x,y,width,height]),	
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
 	//시작X,시작Y,끝X,끝Y,라운드할 크기,라인
-	static StrokeRoundRect(left, top, right, bottom, round=2*Math.PI,line=2)
+	StrokeRoundRect(left, top, right, bottom, round=2*Math.PI,line=2)
 	{
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]),
-			CH5Canvas.Cmd("moveTo",[left+round,top]),
-			CH5Canvas.Cmd("arcTo",[left+right,top,left+right,top+bottom,round]),
-			CH5Canvas.Cmd("arcTo",[left+right,top+bottom,left,top+bottom,round]),
-			CH5Canvas.Cmd("arcTo",[left,top+bottom,left,top,round]),
-			CH5Canvas.Cmd("arcTo",[left,top,left+right,top,round]),
-			CH5Canvas.Cmd("lineWidth",line),
-			CH5Canvas.Cmd("stroke",[]),
+			this.Cmd("beginPath",[]),
+			this.Cmd("moveTo",[left+round,top]),
+			this.Cmd("arcTo",[left+right,top,left+right,top+bottom,round]),
+			this.Cmd("arcTo",[left+right,top+bottom,left,top+bottom,round]),
+			this.Cmd("arcTo",[left,top+bottom,left,top,round]),
+			this.Cmd("arcTo",[left,top,left+right,top,round]),
+			this.Cmd("lineWidth",line),
+			this.Cmd("stroke",[]),
 			
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;		
 	}
-	static StrokeStyle(_style : string)
+	StrokeStyle(_style : string)
 	{
-		let cmdVec=[CH5Canvas.Cmd("strokeStyle",_style)];
-		gCMDStack.push(...cmdVec);
+		let cmdVec=[this.Cmd("strokeStyle",_style)];
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 	}
-	static FillStyle(_style : string)
+	FillStyle(_style : string)
 	{
-		let cmdVec=[CH5Canvas.Cmd("fillStyle",_style)];
-		gCMDStack.push(...cmdVec);
+		let cmdVec=[this.Cmd("fillStyle",_style)];
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 	}
-	static LineWidth(size : number)
+	LineWidth(size : number)
 	{
-		let cmdVec=[CH5Canvas.Cmd("lineWidth",size)];
-		gCMDStack.push(...cmdVec);
-		return cmdVec;
-
-		
-	}
-	static StrokeText(_x,_y,_text,_size,_lineWidth)
-	{
-		
-		gCTX.font="bold "+_size+"px arial";
-		var xSize=gCTX.measureText(_text).width;
-		
-		let cmdVec=[CH5Canvas.Cmd("font","bold "+_size+"px arial"),CH5Canvas.Cmd("lineWidth",_lineWidth),
-			CH5Canvas.Cmd("strokeText",[_text,_x-xSize*0.5,_y+_size*0.32])];
-		gCMDStack.push(...cmdVec);
+		let cmdVec=[this.Cmd("lineWidth",size)];
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 
+		
 	}
-	static FillText(_x,_y,_text,_size)
+	StrokeText(_x,_y,_text,_size,_lineWidth)
 	{
-		gCTX.font="bold "+_size+"px arial";
-		var xSize=gCTX.measureText(_text).width;
-		let cmdVec=[CH5Canvas.Cmd("font","bold "+_size+"px arial"),CH5Canvas.Cmd("fillText",[_text,_x-xSize*0.5,_y+_size*0.32])];
-		gCMDStack.push(...cmdVec);
+		
+		this.mCTX.font="bold "+_size+"px arial";
+		var xSize=this.mCTX.measureText(_text).width;
+		
+		let cmdVec=[this.Cmd("font","bold "+_size+"px arial"),this.Cmd("lineWidth",_lineWidth),
+			this.Cmd("strokeText",[_text,_x-xSize*0.5,_y+_size*0.32])];
+		this.mCMDStack.push(...cmdVec);
+		return cmdVec;
+
+	}
+	FillText(_x,_y,_text,_size)
+	{
+		this.mCTX.font="bold "+_size+"px arial";
+		var xSize=this.mCTX.measureText(_text).width;
+		let cmdVec=[this.Cmd("font","bold "+_size+"px arial"),this.Cmd("fillText",[_text,_x-xSize*0.5,_y+_size*0.32])];
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 
 
 		return [];
 	}
 	//선형 그래디언트
-	static FillLinearGradient(stx, sty, edx, edy,color : Array<{per,color}>)
+	FillLinearGradient(stx, sty, edx, edy,color : Array<{per,color}>)
 	{
 		var cmdList=[];
-		var gra = gCTX.createLinearGradient(stx,sty,edx,edy);
+		var gra = this.mCTX.createLinearGradient(stx,sty,edx,edy);
 		for(var each0 of color)
 		{
 			gra.addColorStop(each0.per,each0.color);
 		}
-		let cmdVec=[CH5Canvas.Cmd("fillStyle",gra)];
-		gCMDStack.push(...cmdVec);
+		let cmdVec=[this.Cmd("fillStyle",gra)];
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 		
 
 	}
 	//원형 그래디언트
-	static FillRadialGradient(stx, sty, edx, edy,_stRad,_edRad,color : Array<{per,color}>)
+	FillRadialGradient(stx, sty, edx, edy,_stRad,_edRad,color : Array<{per,color}>)
 	{
 		var cmdList=[];
-		var gra = gCTX.createRadialGradient(stx,sty,_stRad,edx,edy,_edRad);
+		var gra = this.mCTX.createRadialGradient(stx,sty,_stRad,edx,edy,_edRad);
 		for(var each0 of color)
 		{
 			gra.addColorStop(each0.per,each0.color);
 		}
-		let cmdVec=[CH5Canvas.Cmd("fillStyle",gra)];
-		gCMDStack.push(...cmdVec);
+		let cmdVec=[this.Cmd("fillStyle",gra)];
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 
 	}
-	static FillCircle(_centerX : number, _centerY : number, _radius : number, _startAngle : number = 0, _endAngle : number = 2 * Math.PI) {
+	FillCircle(_centerX : number, _centerY : number, _radius : number, _startAngle : number = 0, _endAngle : number = 2 * Math.PI) {
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]), 
-            CH5Canvas.Cmd("arc",[_centerX,_centerY,_radius,_startAngle,_endAngle]),
-            CH5Canvas.Cmd("fill", []),
+			this.Cmd("beginPath",[]), 
+            this.Cmd("arc",[_centerX,_centerY,_radius,_startAngle,_endAngle]),
+            this.Cmd("fill", []),
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
 
-	static StrokeCircle(_centerX : number, _centerY : number, _radius : number, _lineLength : number, _startAngle : number = 0, _endAngle : number = 2 * Math.PI) {
+	StrokeCircle(_centerX : number, _centerY : number, _radius : number, _lineLength : number, _startAngle : number = 0, _endAngle : number = 2 * Math.PI) {
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]), 
-            CH5Canvas.Cmd("arc",[_centerX,_centerY,_radius,_startAngle,_endAngle]),
-            CH5Canvas.Cmd("lineWidth",_lineLength),
-            CH5Canvas.Cmd("stroke",[]),
+			this.Cmd("beginPath",[]), 
+            this.Cmd("arc",[_centerX,_centerY,_radius,_startAngle,_endAngle]),
+            this.Cmd("lineWidth",_lineLength),
+            this.Cmd("stroke",[]),
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
 
-	static FillTriangle(_x1: number, _y1: number, _x2: number, _y2: number, _x3: number, _y3: number) {
+	FillTriangle(_x1: number, _y1: number, _x2: number, _y2: number, _x3: number, _y3: number) {
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]), 
-			CH5Canvas.Cmd("moveTo",[_x1, _y1]),
-			CH5Canvas.Cmd("lineTo",[_x2, _y2]),
-			CH5Canvas.Cmd("lineTo",[_x3, _y3]),
-			CH5Canvas.Cmd("closePath",[]),
-			CH5Canvas.Cmd("fill", []),
+			this.Cmd("beginPath",[]), 
+			this.Cmd("moveTo",[_x1, _y1]),
+			this.Cmd("lineTo",[_x2, _y2]),
+			this.Cmd("lineTo",[_x3, _y3]),
+			this.Cmd("closePath",[]),
+			this.Cmd("fill", []),
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
 
-	static StrokeTriangle(_x1: number, _y1: number, _x2: number, _y2: number, _x3: number, _y3: number, _lineWidth: number = 1) {
+	StrokeTriangle(_x1: number, _y1: number, _x2: number, _y2: number, _x3: number, _y3: number, _lineWidth: number = 1) {
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]), 
-			CH5Canvas.Cmd("moveTo",[_x1, _y1]),
-			CH5Canvas.Cmd("lineTo",[_x2, _y2]),
-			CH5Canvas.Cmd("lineTo",[_x3, _y3]),
-			CH5Canvas.Cmd("closePath",[]),
-			CH5Canvas.Cmd("lineWidth", _lineWidth),
-			CH5Canvas.Cmd("stroke", []),
+			this.Cmd("beginPath",[]), 
+			this.Cmd("moveTo",[_x1, _y1]),
+			this.Cmd("lineTo",[_x2, _y2]),
+			this.Cmd("lineTo",[_x3, _y3]),
+			this.Cmd("closePath",[]),
+			this.Cmd("lineWidth", _lineWidth),
+			this.Cmd("stroke", []),
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
 
-	static FillArc(_centerX: number, _centerY: number, _radius: number, _startAngle: number, _endAngle: number) {
+	FillArc(_centerX: number, _centerY: number, _radius: number, _startAngle: number, _endAngle: number) {
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]), 
-			CH5Canvas.Cmd("moveTo",[_centerX, _centerY]),
-			CH5Canvas.Cmd("arc",[_centerX, _centerY, _radius, _startAngle, _endAngle]),
-			CH5Canvas.Cmd("closePath",[]),
-			CH5Canvas.Cmd("fill", []),
+			this.Cmd("beginPath",[]), 
+			this.Cmd("moveTo",[_centerX, _centerY]),
+			this.Cmd("arc",[_centerX, _centerY, _radius, _startAngle, _endAngle]),
+			this.Cmd("closePath",[]),
+			this.Cmd("fill", []),
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
 
-	static StrokeArc(_centerX: number, _centerY: number, _radius: number, _startAngle: number, _endAngle: number, _lineWidth: number = 1) {
+	StrokeArc(_centerX: number, _centerY: number, _radius: number, _startAngle: number, _endAngle: number, _lineWidth: number = 1) {
 		var cmdVec=[
-			CH5Canvas.Cmd("beginPath",[]), 
-			CH5Canvas.Cmd("moveTo",[_centerX, _centerY]),
-			CH5Canvas.Cmd("arc",[_centerX, _centerY, _radius, _startAngle, _endAngle]),
-			CH5Canvas.Cmd("closePath",[]),
-			CH5Canvas.Cmd("lineWidth", _lineWidth),
-			CH5Canvas.Cmd("stroke", []),
+			this.Cmd("beginPath",[]), 
+			this.Cmd("moveTo",[_centerX, _centerY]),
+			this.Cmd("arc",[_centerX, _centerY, _radius, _startAngle, _endAngle]),
+			this.Cmd("closePath",[]),
+			this.Cmd("lineWidth", _lineWidth),
+			this.Cmd("stroke", []),
 		];
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;	
 	}
-	static DrawBuf(
+	DrawBuf(
 		_buf   : Uint8Array,
 		_posX  : number,
 		_posY  : number,
@@ -322,10 +318,10 @@ export class CH5Canvas
 			const imgData = new ImageData(data, _width, _height);
 
 			cmdVec.push(
-				CH5Canvas.Cmd("putImageData", [imgData, _posX, _posY])
+				this.Cmd("putImageData", [imgData, _posX, _posY])
 			);
 
-			gCMDStack.push(...cmdVec);
+			this.mCMDStack.push(...cmdVec);
 			return cmdVec;
 		}
 
@@ -365,43 +361,43 @@ export class CH5Canvas
 
 		// 목적지 위치는 _posX, _posY (소스의 left/top 은 "어디서 잘랐는지" 정보일 뿐)
 		cmdVec.push(
-			CH5Canvas.Cmd("putImageData", [imgData, _posX, _posY])
+			this.Cmd("putImageData", [imgData, _posX, _posY])
 		);
 
-		gCMDStack.push(...cmdVec);
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 	}
 
 
-	static DrawImage(_img:string|HTMLImageElement,_posX:number,_posY:number,_width:number=0,_height:number=0){
+	DrawImage(_img:string|HTMLImageElement,_posX:number,_posY:number,_width:number=0,_height:number=0){
 		var cmdVec=new Array<CH5Cmd>();
 		if(_width!=0 && _height!=0)
-			cmdVec.push(CH5Canvas.Cmd("drawImage",[_img,_posX,_posY,_width,_height]));
+			cmdVec.push(this.Cmd("drawImage",[_img,_posX,_posY,_width,_height]));
 		else
-			cmdVec.push(CH5Canvas.Cmd("drawImage",[_img,_posX,_posY]));
-		gCMDStack.push(...cmdVec);
+			cmdVec.push(this.Cmd("drawImage",[_img,_posX,_posY]));
+		this.mCMDStack.push(...cmdVec);
 		return cmdVec;
 	}
 
 	
-	static Init(w,h,_linear:boolean=true,_exp:boolean=true)
+	Init(w,h,_linear:boolean=true,_exp:boolean=true)
 	{
-		gCanvas.width=w;
-		gCanvas.height=h;
-		gCTX.clearRect(0,0,w,h);
-		//gCTX.imageSmoothingEnabled = false;
-		//gCTX.globalCompositeOperation = "copy"; // 블렌딩/프리멀티 영향 없이 픽셀 복사
-		gLinear=_linear;
-		gExp=_exp;
+		this.mCanvas.width=w;
+		this.mCanvas.height=h;
+		this.mCTX.clearRect(0,0,w,h);
+		//this.mCTX.imageSmoothingEnabled = false;
+		//this.mCTX.globalCompositeOperation = "copy"; // 블렌딩/프리멀티 영향 없이 픽셀 복사
+		this.mLinear=_linear;
+		this.mExp=_exp;
 	}
 
 
 	
 	// 1. 함수 앞에 async를 붙여 비동기 함수로 만듭니다.
-	static async Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
+	async Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
 	{
 		if(_pVec==null)
-			_pVec=gCMDStack;
+			_pVec=this.mCMDStack;
 
 		let pDummy : Array<CH5Cmd>=new Array<CH5Cmd>();
 
@@ -420,12 +416,12 @@ export class CH5Canvas
 			{
 				for(var j=0;j<_pVec[i].mParameter.length;++j)
 				{
-					gPara[j]=_pVec[i].mParameter[j];
+					this.mPara[j]=_pVec[i].mParameter[j];
 					
 					// ==========================================
 					// [수정된 이미지 로드 및 파라미터 교체 로직]
 					// 파라미터가 문자열이고 이미지 확장자를 포함하는지 확인합니다.
-					if(typeof gPara[j] === "string" && gPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i))
+					if(typeof this.mPara[j] === "string" && this.mPara[j].match(/\.(png|jpg|jpeg|gif|webp)/i))
 					{
 						try {
 							// Promise를 사용해 표준 이미지 로드를 대기(await)합니다.
@@ -434,12 +430,12 @@ export class CH5Canvas
 								// CORS 이슈 방지 (외부 도메인 이미지 로드 시 필요할 수 있음)
 								img.crossOrigin = "Anonymous"; 
 								img.onload = () => resolve(img);
-								img.onerror = () => reject(new Error(`Image load failed: ${gPara[j]}`));
-								img.src = gPara[j]; // 로드 시작
+								img.onerror = () => reject(new Error(`Image load failed: ${this.mPara[j]}`));
+								img.src = this.mPara[j]; // 로드 시작
 							});
 							
 							// 로드가 완료되면 문자열 주소를 실제 HTMLImageElement로 교체합니다.
-							gPara[j] = loadedImage;
+							this.mPara[j] = loadedImage;
 						} catch (e) {
 							console.error(e);
 							errorcount++;
@@ -449,23 +445,23 @@ export class CH5Canvas
 					// ==========================================
 				}
 
-				let func = Object.getOwnPropertyNames(CH5Canvas);
+				let func = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
 				let funcA = null;
 				let funcDr=null;
 				let ftype = true;
 				let fcount = 1;
 
-				if((typeof (gCTX as any)[_pVec[i].mName] == 'function') == false) {
+				if((typeof (this.mCTX as any)[_pVec[i].mName] == 'function') == false) {
 					ftype = false;
 					fcount=func.length;
 				}
 				for(let j=0;j<fcount;j++){
 
 					if(ftype){
-						funcA = (gCTX as any)[_pVec[i].mName].bind(gCTX);
+						funcA = (this.mCTX as any)[_pVec[i].mName].bind(this.mCTX);
 					}
 					else{
-						funcA = (CH5Canvas as any)[func[j]];
+						funcA = (this as any)[func[j]];
 						if((_pVec[i].mName == func[j]) == false)
 							continue;
 					}
@@ -473,15 +469,15 @@ export class CH5Canvas
 						switch(_pVec[i].mParameter.length)
 						{
 							case 0: funcDr = funcA(); break;
-							case 1: funcDr = funcA(gPara[0]); break;
-							case 2: funcDr = funcA(gPara[0],gPara[1]); break;
-							case 3:	funcDr = funcA(gPara[0],gPara[1],gPara[2]); break;
-							case 4: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3]); break;
-							case 5: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4]); break;
-							case 6: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4],gPara[5]); break;
-							case 7: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4],gPara[5],gPara[6]); break;
-							case 8: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4],gPara[5],gPara[6],gPara[7]); break;
-							case 9: funcDr = funcA(gPara[0],gPara[1],gPara[2],gPara[3],gPara[4],gPara[5],gPara[6],gPara[7],gPara[8]); break;
+							case 1: funcDr = funcA(this.mPara[0]); break;
+							case 2: funcDr = funcA(this.mPara[0],this.mPara[1]); break;
+							case 3:	funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2]); break;
+							case 4: funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2],this.mPara[3]); break;
+							case 5: funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2],this.mPara[3],this.mPara[4]); break;
+							case 6: funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2],this.mPara[3],this.mPara[4],this.mPara[5]); break;
+							case 7: funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2],this.mPara[3],this.mPara[4],this.mPara[5],this.mPara[6]); break;
+							case 8: funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2],this.mPara[3],this.mPara[4],this.mPara[5],this.mPara[6],this.mPara[7]); break;
+							case 9: funcDr = funcA(this.mPara[0],this.mPara[1],this.mPara[2],this.mPara[3],this.mPara[4],this.mPara[5],this.mPara[6],this.mPara[7],this.mPara[8]); break;
 						}
 						if(ftype == false && funcDr instanceof Array){
 							// 재귀 호출 시에도 await를 걸어주어야 할 수 있으나, 
@@ -489,7 +485,7 @@ export class CH5Canvas
 							// 일단은 기존 로직을 유지합니다.
 							let CH=[];
 							CH.push(...funcDr);
-							let e = await CH5Canvas.Draw(CH); // 재귀 호출도 await 처리
+							let e = await this.Draw(CH); // 재귀 호출도 await 처리
 							errorcount += e;
 						}
 					}catch{
@@ -498,32 +494,32 @@ export class CH5Canvas
 				}
 			}
 			else
-				(gCTX as any)[_pVec[i].mName]=_pVec[i].mParameter;	
+				(this.mCTX as any)[_pVec[i].mName]=_pVec[i].mParameter;	
 		}
-		gCMDStack=new Array();
+		this.mCMDStack=new Array();
 		return errorcount;
 	}
-	static GetDataURL()
+	GetDataURL()
 	{
-		return gCanvas.toDataURL();
+		return this.mCanvas.toDataURL();
 	}
 	
-	static GetNewTex()
+	GetNewTex()
 	{
 		var tex=new CTexture();
-		tex.SetFilter(gLinear?CTexture.eFilter.Linear:CTexture.eFilter.Neaest);
+		tex.SetFilter(this.mLinear?CTexture.eFilter.Linear:CTexture.eFilter.Neaest);
 		tex.SetWrap(CTexture.eWrap.Clamp);
 		
 		//생길수 없는 버그다!!
-		if(gCanvas.width==0 || gCanvas.height==0)
+		if(this.mCanvas.width==0 || this.mCanvas.height==0)
 			return null;
-		const imageData = gCTX.getImageData(0, 0, gCanvas.width, gCanvas.height);
+		const imageData = this.mCTX.getImageData(0, 0, this.mCanvas.width, this.mCanvas.height);
     	
 		
-		if(gExp)
+		if(this.mExp)
     		tex.SetMipMap(CTexture.eMipmap.GL);
 
-    	tex.SetSize(gCanvas.width,gCanvas.height);
+    	tex.SetSize(this.mCanvas.width,this.mCanvas.height);
 		tex.CreateBuf();
     	var buf = tex.GetBuf()[0];
     	var size=tex.GetWidth() * tex.GetHeight() * 4
@@ -534,24 +530,24 @@ export class CH5Canvas
     	}
     	return tex;
 	}
-	static PushImgData(_buf: Uint8Array,_posX:number,_posY:number,_bufWidth:number=0,_bufHeight:number=0)
+	PushImgData(_buf: Uint8Array,_posX:number,_posY:number,_bufWidth:number=0,_bufHeight:number=0)
 	{
-		if(_bufWidth == 0) _bufWidth = gCanvas.width;
-		if(_bufHeight == 0) _bufHeight = gCanvas.height;
+		if(_bufWidth == 0) _bufWidth = this.mCanvas.width;
+		if(_bufHeight == 0) _bufHeight = this.mCanvas.height;
 		//const imageData = g_ctx.getImageData(0, 0, g_canvas.width, g_canvas.height);
-		const imageData = gCTX.getImageData(0, 0, _bufWidth, _bufHeight);
+		const imageData = this.mCTX.getImageData(0, 0, _bufWidth, _bufHeight);
 		for(var i=0;i<_buf.length;++i)
     	{
     		imageData.data[i]=_buf[i];
     	}
-		gCTX.putImageData(imageData,_posX,_posY);
+		this.mCTX.putImageData(imageData,_posX,_posY);
 
 	}
-	static PushSlicedImgData(_buf : Uint8Array, _bufW : number, _bufX : number, _bufY : number, _w : number, _h : number)
+	PushSlicedImgData(_buf : Uint8Array, _bufW : number, _bufX : number, _bufY : number, _w : number, _h : number)
 	{
-		if(_w == 0) _w = gCanvas.width;
-		if(_h == 0) _h = gCanvas.height;
-		const imageData = gCTX.getImageData(0, 0, _w, _h);
+		if(_w == 0) _w = this.mCanvas.width;
+		if(_h == 0) _h = this.mCanvas.height;
+		const imageData = this.mCTX.getImageData(0, 0, _w, _h);
 		for(var y=0;y<_h;++y)
     	{
 			for(var x = 0; x < _w; x++) 
@@ -561,12 +557,12 @@ export class CH5Canvas
 				}
 			}
     	}
-		gCTX.putImageData(imageData,0,0);
+		this.mCTX.putImageData(imageData,0,0);
 	}
 	// static CreateTex(_ch5json:CCH5CMDList)
 	// {
 	// 	CH5Canvas.CreateCanvas(_ch5json.m_size.x,_ch5json.m_size.y);
-	// 	CH5Canvas.Draw(_ch5json.m_cmd);
+	// 	this.Draw(_ch5json.m_cmd);
 	// 	//_fr.Res().Set(_ch5json.m_key+".tex",CH5Canvas.GetTex());
 		
 	// }
@@ -576,7 +572,7 @@ export class CH5Canvas
 	// 	_fw.Ren().TMgr().Create(tex);
     // 	_fw.Res().Set(_key,tex);
 	// }
-	static DrawWithCH5File(_cmdList : CH5CMDList) {
+	DrawWithCH5File(_cmdList : CH5CMDList) {
 		let cmdVec = [];
 		for(let cmd of _cmdList.mCMD) {
 			const params = [...cmd.mParameter];
@@ -586,7 +582,7 @@ export class CH5Canvas
 					params[i] = JSON.parse(param);
 				}
 			}
-			let funcCmdVec = CH5Canvas[cmd.mName](...params);
+			let funcCmdVec = (this as any)[cmd.mName](...params);
 			if(funcCmdVec == null) {
 				continue;
 			}
@@ -597,10 +593,10 @@ export class CH5Canvas
 				cmdVec.push(funcCmdVec);
 			}
 		}
-		CH5Canvas.Draw(cmdVec);
+		this.Draw(cmdVec);
 	}
 
-	static DrawWithString(_str : string) {
+	DrawWithString(_str : string) {
 		let funcArr : Array<string> = new Array<string>();
 		let nowPos=-1;
 		while(true){
@@ -610,7 +606,7 @@ export class CH5Canvas
 			let funcNameEndPos = _str.indexOf('(', nowPos);
 			let funcName = _str.slice(nowPos, funcNameEndPos);
 	
-			if(CH5Canvas[funcName]) {
+			if((this as any)[funcName]) {
 				funcNameEndPos = _str.indexOf(')', nowPos) + 1;
 				funcArr.push(_str.slice(nowPos, funcNameEndPos));
 			}
@@ -646,7 +642,7 @@ export class CH5Canvas
 		//변수 개수 다르면 알려줌
 		for(let analyzedFunc of analyzedFuncArr) {
 			let params = analyzedFunc.parameter;
-			let [nonDefaultParamCount, defaultParamCount] = CountParamCount(CH5Canvas[analyzedFunc.function].toString());
+			let [nonDefaultParamCount, defaultParamCount] = CountParamCount((this as any)[analyzedFunc.function].toString());
 	
 			if(params.length < nonDefaultParamCount) {
 				console.error(analyzedFunc.function + "의 파라미터 수가 " + (nonDefaultParamCount - params.length) + "개 모자랍니다.");
@@ -685,7 +681,7 @@ export class CH5Canvas
 			for(let param of analyzedFunc.parameter) {
 				params.push(param);
 			}
-			let funcCmdVec = CH5Canvas[analyzedFunc.function](...params);
+			let funcCmdVec = (this as any)[analyzedFunc.function](...params);
 			if(funcCmdVec == null) {
 				continue;
 			}
@@ -697,9 +693,9 @@ export class CH5Canvas
 			}
 		}
 
-		CH5Canvas.Draw(cmdVec);
+		this.Draw(cmdVec);
 	}
-	static StringToCmdList(_str : string) {
+	StringToCmdList(_str : string) {
 		let size = new CVec2(256, 128);
 		let arr = [];
 	
@@ -712,7 +708,7 @@ export class CH5Canvas
 			let funcNameEndPos = _str.indexOf('(', nowPos);
 			let funcName = _str.slice(nowPos, funcNameEndPos);
 	
-			if(CH5Canvas[funcName]) {
+			if((this as any)[funcName]) {
 				funcNameEndPos = _str.indexOf(')', nowPos) + 1;
 				funcArr.push(_str.slice(nowPos, funcNameEndPos));
 			}
@@ -748,7 +744,7 @@ export class CH5Canvas
 		//변수 개수 다르면 알려줌
 		for(let analyzedFunc of analyzedFuncArr) {
 			let params = analyzedFunc.parameter;
-			let [nonDefaultParamCount, defaultParamCount] = CountParamCount(CH5Canvas[analyzedFunc.function].toString());
+			let [nonDefaultParamCount, defaultParamCount] = CountParamCount((this as any)[analyzedFunc.function].toString());
 	
 			if(params.length < nonDefaultParamCount) {
 				console.error(analyzedFunc.function + "의 파라미터 수가 " + (nonDefaultParamCount - params.length) + "개 모자랍니다.");
@@ -791,7 +787,9 @@ export class CH5Canvas
 	}
 	
 
-	static GetContext()	{	return gCTX;	}
-	static GetCanvas()	{	return gCanvas;	}
+	GetContext()	{	return this.mCTX;	}
+	GetCanvas()	{	return this.mCanvas;	}
 
 }
+
+export const CH5Canvas = new CH5CanvasInst();

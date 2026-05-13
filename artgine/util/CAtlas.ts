@@ -4,7 +4,7 @@ import { CH5Canvas } from "../render/CH5Canvas.js"
 import { CBase64File } from "./CBase64File.js"
 import { CMath } from "../geometry/CMath.js"
 import { CString } from "../basic/CString.js"
-import { CParserTGA, CTARGA } from "./parser/CParserTGA.js"
+
 import { CUniqueID } from "../basic/CUniqueID.js"
 import { CJSON } from "../basic/CJSON.js"
 import { CModal } from "../basic/CModal.js"
@@ -20,6 +20,7 @@ import { CAlert } from "../basic/CAlert.js"
 import { IFile } from "../system/System.js"
 import { CFile } from "../system/CFile.js"
 import { CAnimation, CClipBase64, CClipCoodi, CClipImg } from "../app/component/CAnimation.js"
+import { CTarga } from "../render/CTarga.js"
 
 
 let g_atlJBox: CModal;
@@ -566,7 +567,7 @@ export class CAtlas extends CTexture implements IFile
 						srcBuf.byteOffset,
 						srcBuf.byteOffset + srcBuf.byteLength
 					);
-					const tga    = new CTARGA(cleanBuf as ArrayBuffer, texW, texH, false);
+					const tga    = new CTarga(cleanBuf as ArrayBuffer, texW, texH, false);
 					const tgaBuf = tga.GetResult() as ArrayBuffer;
 
 					// 3. CBase64File에 TGA 버퍼 세팅

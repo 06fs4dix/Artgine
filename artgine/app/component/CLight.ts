@@ -252,12 +252,17 @@ export class CLight extends CBrushComp
 					let seye : CVec3;
 					let sup=new CVec3(0,1,0);
 
-                    function AutoDigitSnapping(_slook, _orthoHalfWidth) {
+                    const AutoDigitSnapping = (_slook, _orthoHalfWidth) => {
                         let Zaxis = dir;
                         let Xaxis = CMath.V3Nor(CMath.V3Cross(sup, Zaxis));
                         let Yaxis = CMath.V3Cross(Zaxis, Xaxis);
 
-                        const shadowResolution = 1024;  // 실제 shadowWrite 텍스쳐 크기 넣어야 하는데 Res에서 Find함수 쓰니까 에러남
+                        if(this.GetOwner() == null) return;
+
+                        const fw=this.GetOwner().GetFrame();
+                        const tex = fw.Res().Find(this.GetTex()) as CTexture;
+
+                        const shadowResolution = tex.GetWidth();  // 실제 shadowWrite 텍스쳐 크기 넣어야 하는데 Res에서 Find함수 쓰니까 에러남
                         const texelSize = (_orthoHalfWidth * 2) / shadowResolution;
 
                         const originLS_x = _slook.x * Xaxis.x + _slook.y * Xaxis.y + _slook.z * Xaxis.z;

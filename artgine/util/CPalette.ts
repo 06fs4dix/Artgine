@@ -198,7 +198,7 @@ export class CPalette
 		_fw.Res().Push(this.GetSphereMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
 		
-		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetTerrain(new CVec2(128, 128), 0),this.GetBlackTex());
+		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetTerrain(new CVec2(64, 64), 0),this.GetBlackTex());
 		this.mTerrain=mesh.meshTree.mData.ci;
 		CUtilRender.MeshBoundUpdate(mesh);
         this.mTerrain.bound.mMin.y = 0;
@@ -210,7 +210,7 @@ export class CPalette
 		//this.mMCI2D= CUtilRender.GetPlane(new CVec4(0, 0, 1, half));
 		
 		//if(_fw.Dev().BenchmarkScore())
-		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(1024, 1024),this.GetShadowWriteTex());
+		_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,1)],new CVec2(512, 512),this.GetShadowWriteTex());
 		//_fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,6)],new CVec2(2048, 2048),this.GetShadowWriteTex());
 		let stex=_fw.Res().Find(this.GetShadowWriteTex()) as CTexture;
 

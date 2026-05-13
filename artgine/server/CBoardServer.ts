@@ -51,6 +51,7 @@ export class CBoardServer extends CServerRouter
 			option.mLimitOffset=limitOffset;
 			option.mLimit=limitCount;
 			option.mOrderBy="_offset";
+			option.mASC=false;
 			
 			let data=await sql.Select("board", con, ["_offset","_nick","_subject","_datetime"], option);
 			let jsonStr=JSON.stringify(data);

@@ -136,6 +136,8 @@ export class CDevice
         //HalfFloat:9,
 		FloatTex16:10,
 		FloatTex32:11,
+
+		ClipControl:12,
 		
 	}
 	//2060 Super : BenchmarkScore: 142  ALU:89ms  FILL:81ms  GEO:27ms
@@ -184,7 +186,7 @@ export class CDeviceGL extends CDevice
 		
 		//g_property.set(CDevice.eProperty.HalfFloat,1);
 
-		let ext = this.GL().getExtension('EXT_color_buffer_float');
+		let ext : any = this.GL().getExtension('EXT_color_buffer_float');
 		if (ext!=null) 	g_property.set(CDevice.eProperty.FloatTex32,1);
 		else {
 			g_property.set(CDevice.eProperty.FloatTex32,0);
@@ -199,8 +201,19 @@ export class CDeviceGL extends CDevice
 		}
 		if(CUtil.IsSafari())	this.m_pf.mTexture16f=true;
 
-		
-
+        ext = this.GL().getExtension('EXT_clip_control');
+		if (ext!=null) 
+		{
+			g_property.set(CDevice.eProperty.ClipControl,1);
+			ext.clipControlEXT(ext.LOWER_LEFT_EXT, ext.ZERO_TO_ONE_EXT);
+		}
+			
+        else 
+		{
+			g_property.set(CDevice.eProperty.ClipControl,0);
+            CAlert.W("no EXT_clip_control");		
+        }
+        
 		ext = this.GL().getExtension('OES_texture_float_linear');
 		if (ext!=null) {	    CAlert.W("no OES_texture_float_linear");		}
 		

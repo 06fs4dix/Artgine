@@ -8,6 +8,7 @@ import {CUtilObj} from "../basic/CUtilObj.js";
 import {CAlert} from "../basic/CAlert.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CUtil } from "../basic/CUtil.js";
+import { CTarga } from "./CTarga.js";
 
 
 export class CTextureInfo extends CObject
@@ -182,7 +183,27 @@ export class CTexture extends CObject
 					// 	}
 					// });
 					// jbox.open();
-				}
+				}, "ondragstart":(e) => {
+                    const width = this.mWidth;
+                    const height = this.mHeight;
+
+                    const pos = this.Key().lastIndexOf(".") + 1;
+                    const name = this.Key().substring(0, pos - 1);
+                    const fileName = `${name}.tga`;
+
+                    const tga = new CTarga(buf, width, height, false);
+                    const tgaBuf = new Uint8Array(tga.GetResult());
+
+                    // ArrayBuffer → binary string → base64
+                    let binary = '';
+                    for (let i = 0; i < tgaBuf.length; i++) {
+                        binary += String.fromCharCode(tgaBuf[i]);
+                    }
+                    const base64 = btoa(binary);
+
+                    const downloadData = `image/tga:${fileName}:data:application/octet-stream;base64,${base64}`;
+                    e.dataTransfer.setData('DownloadURL', downloadData);
+                }
 			};
 			_div.prepend(CDOM.DataToDom(img));
 			//break;

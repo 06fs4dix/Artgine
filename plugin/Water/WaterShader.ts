@@ -6,7 +6,6 @@ import { SDF } from "../../artgine/z_file/SDF";
 import { 
     Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CMat, CMat3, CVec2, CVec3, CVec4, dFdy, 
     MatTypeToMat, max, min, Null, OutColor, OutPosition, pow, reflect, 
-    Sam2DTileToColor, 
     Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, TexOff3, ToV2, ToV3, ToV4, UV2, V2AddV2, 
     V2Len, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, 
     V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi, Vertex3 
@@ -210,7 +209,7 @@ function ps_main_water()
     // 1. 물 텍스쳐
     BranchBegin("UseWaterTex","UseWaterTex",[]);
     uv = V2AddV2(uv, V2MulFloat(new CVec2(-texflowDir.x, texflowDir.y), time * 0.03));
-    refractColor = Sam2DTileToColor(0.0, uv);
+    refractColor = Sam2DToColor(0.0, uv);
     refractType = 0.0;
     BranchEnd();
 
@@ -266,7 +265,7 @@ function ps_main_water()
     BranchBegin("shadow","S",[shadowOn]);
     if(shadowOn>0.5)
     {
-        shadowTex = Sam2DToColor(shadowOn, screenUV);  // <- 여기! 절대 size 곱하지 말기
+        shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, screenUV);  // <- 여기! 절대 size 곱하지 말기
         shadow = shadowTex.x;
     }
     BranchEnd();
