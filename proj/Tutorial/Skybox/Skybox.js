@@ -1,4 +1,4 @@
-const version = 'mluxeja3_5';
+const version = 'mp4216w1_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
 import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -50,7 +50,7 @@ ligSub.SetPos(new CVec3(1, 0, 0));
 let sub = Main.PushSub(new CSubject());
 sub.SetSca(new CVec3(100, 100, 100));
 let ptcube = sub.PushComp(new CPaintCube(""));
-ptcube.Sky(true, true, true, true, false);
+ptcube.Sky(true, true, true, true, true);
 let cloudCoverageSA = new CShaderAttr("cloudCoverage", new CVec1(0.5));
 ptcube.PushCShaderAttr(cloudCoverageSA);
 let cloudStartSA = new CShaderAttr("cloudStart", new CVec1(15000.0));

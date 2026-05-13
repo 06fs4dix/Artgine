@@ -1,5 +1,5 @@
 //Version
-const version='mluxeja3_5';
+const version='mp4216w1_7';
 import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
 
 //Class
@@ -101,7 +101,7 @@ ligSub.SetPos(new CVec3(1,0,0));
 let sub=Main.PushSub(new CSubject());
 sub.SetSca(new CVec3(100,100,100));
 let ptcube=sub.PushComp(new CPaintCube(""));
-ptcube.Sky(true,true,true,true,false);
+ptcube.Sky(true,true,true,true,true);
 
 let cloudCoverageSA = new CShaderAttr("cloudCoverage", new CVec1(0.5));
 ptcube.PushCShaderAttr(cloudCoverageSA);
@@ -564,6 +564,13 @@ function updateCloudParams()
 window["updateCloudParams"] = updateCloudParams;
 
 new CModalFrameView();
+
+
+
+
+
+
+
 
 
 
