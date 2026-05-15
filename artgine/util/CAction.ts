@@ -4,7 +4,7 @@ import { CClass } from "../basic/CClass.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CObject } from "../basic/CObject.js";
-import { CSamplerTimer } from "./CSampler.js";
+import { CSchedule } from "./CSchedule.js";
 
 //action
 export class CAction extends CObject
@@ -29,13 +29,13 @@ export class CAction extends CObject
     mType : string="Function";
     mAction : string|CEvent="";
     mParameter : Array<any>=new Array<any>();
-    mSamplerTimer=new CSamplerTimer(true);
+    mSamplerTimer=new CSchedule();
     mTemp=null;
     mRun="";
  
     static Excute(_temp,_event :  ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,count=0,delay=0,start=0,_end=0)
     {
-        if(CSamplerTimer.Update(_temp,count,delay,start,_end))
+        if(CSchedule.Update(_temp,count,delay,start,_end))
         {
             if(_event instanceof CEvent)
                 _event.Call(_temp);
@@ -54,7 +54,7 @@ export class CAction extends CObject
         
         this.mRun=_run;
 
-        if(this.mSamplerTimer.Excute(this.mTemp,this.mRun,_update)==false)    return;
+        if(this.mSamplerTimer.Execute(this.mTemp,this.mRun,_update)==false)    return;
        
         
              
@@ -108,6 +108,6 @@ export class CAction extends CObject
     IsEndReset()
     {
         if(this.mTemp==null)    return false;
-        return CSamplerTimer.IsEndReset(this.mTemp,this.mRun);
+        return CSchedule.IsEndReset(this.mTemp,this.mRun);
     }
 }

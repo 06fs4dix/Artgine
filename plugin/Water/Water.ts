@@ -1,6 +1,5 @@
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CBrushComp } from "../../artgine/app/component/CBrushComp.js";
-import CEnvMap from "../../artgine/app/component/CEnvMap.js";
 import { CPaint } from "../../artgine/app/component/paint/CPaint.js";
 import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CPaint3D } from "../../artgine/app/component/paint/CPaint3D.js";
@@ -8,21 +7,21 @@ import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { CUpdate } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
-import { CPointer } from "../../artgine/basic/CObject.js";
 import { CUniqueID } from "../../artgine/basic/CUniqueID.js";
-import { CMat } from "../../artgine/geometry/CMat.js";
 import { CMath } from "../../artgine/geometry/CMath.js";
 import { CVec1 } from "../../artgine/geometry/CVec1.js";
 import { CVec2 } from "../../artgine/geometry/CVec2.js";
 import { CVec3 } from "../../artgine/geometry/CVec3.js";
 import { CVec4 } from "../../artgine/geometry/CVec4.js";
 import { CCamera } from "../../artgine/render/CCamera.js";
+import { CMeshCreateInfo } from "../../artgine/render/CMeshCreateInfo.js";
 import { CRenderPass } from "../../artgine/render/CRenderPass.js";
+import { CVertexFormat } from "../../artgine/render/CShader.js";
 import { CShaderAttr } from "../../artgine/render/CShaderAttr.js";
 import { CTexture, CTextureInfo } from "../../artgine/render/CTexture.js";
+import { CUtilRender } from "../../artgine/render/CUtilRender.js";
 import { CCondition } from "../../artgine/util/CCondition.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
-import { CLoaderOption } from "../../artgine/util/CLoader.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
 import { SDF } from "../../artgine/z_file/SDF.js";
 
@@ -39,7 +38,6 @@ CPlugin.PushEvent(CEvent.eType.Load,()=>{
 
 export class CWater3D extends CSubject
 {
-
     mPaint : CPaint3D;
     mReflector : CReflector3D;   // 반사 텍스쳐 굽는 컴포넌트
     mRefractor : CRefractor3D;   // 굴절 텍스쳐 굽는 컴포넌트
@@ -84,6 +82,101 @@ export class CWater3D extends CSubject
         // 물 깊이 자동 변경
         if(this.mUpdateMat == CUpdate.eType.Updated) {
             this.mWaterDeep.x = this.GetPos().y;
+        }
+
+        const renPt = this.mPaint.mRenPT[0];
+        if(renPt != null)
+        {
+            // worldSize 5000, near 1, far 100000 기준을 메시 크기 1로 잡고 계산함
+            const cam = renPt.mCam;
+            const accuracy = (cam.mProjFar ?? 100000) / (cam.mProjNear ?? 1);
+            const worldSizeX = Math.abs(this.GetSca().x);
+            const worldSizeY = Math.abs(this.GetSca().y);
+            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000), 1, 100);
+            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000), 1, 100);
+            const waterMeshKey = `waterMesh${scaleX}:${scaleY}`;
+            if(this.GetFrame().Res().Find(waterMeshKey) == null)
+            {
+                const rVal = new CMeshCreateInfo();
+                const size = CUtilRender.Mesh2DSize / 2.0
+                const nor = new CVec3(0, 0, 1);
+                
+                let dir = new CVec3(1 - CMath.Abs(nor.x), 1 - CMath.Abs(nor.y), 1 - CMath.Abs(nor.z));
+                let mdir = CMath.V3MulFloat(dir, -1);
+                let cro = CMath.V3Cross(nor, dir);
+                let mcro = CMath.V3MulFloat(cro, -1);
+        
+                mdir = CMath.V3MulFloat(mdir, size);
+                cro  = CMath.V3MulFloat(cro,  size);
+                mcro = CMath.V3MulFloat(mcro, size);
+                dir  = CMath.V3MulFloat(dir,  size);
+
+                
+                rVal.bound.InitBound(mdir,true);
+                rVal.bound.InitBound(mcro,true);
+                rVal.bound.InitBound(dir,true);
+                rVal.bound.InitBound(cro,true);
+
+                const GetUV = (x, y) => {
+                    return new CVec2(x / scaleX, y / scaleY);
+                };
+
+                const GetPoint = (uv) => {
+                    const left = CMath.V3Interpolate(mdir, cro, uv.y);
+                    const right = CMath.V3Interpolate(mcro, dir, uv.y);
+                    return CMath.V3Interpolate(left, right, uv.x);
+                };
+
+                const posb = rVal.Create(CVertexFormat.eIdentifier.Position);
+                const uvb  = rVal.Create(CVertexFormat.eIdentifier.UV);
+                const norb  = rVal.Create(CVertexFormat.eIdentifier.Normal);
+                const inb = rVal.Create(CVertexFormat.eIdentifier.Index);
+
+                let vIndex = 0;
+                for(let y = 0; y < scaleY; y++)
+                for(let x = 0; x < scaleX; x++)
+                {
+                    const uv0 = GetUV(x + 0, y + 0);
+                    const uv1 = GetUV(x + 1, y + 0);
+                    const uv2 = GetUV(x + 1, y + 1);
+                    const uv3 = GetUV(x + 0, y + 1);
+
+                    posb.bufF.Push(GetPoint(uv0));
+                    posb.bufF.Push(GetPoint(uv1));
+                    posb.bufF.Push(GetPoint(uv2));
+                    posb.bufF.Push(GetPoint(uv3));
+
+                    uvb.bufF.Push(uv0);
+                    uvb.bufF.Push(uv1);
+                    uvb.bufF.Push(uv2);
+                    uvb.bufF.Push(uv3);
+
+                    norb.bufF.Push(nor);
+                    norb.bufF.Push(nor);
+                    norb.bufF.Push(nor);
+                    norb.bufF.Push(nor);
+
+                    inb.bufI.push(vIndex + 0);
+                    inb.bufI.push(vIndex + 1);
+                    inb.bufI.push(vIndex + 2);
+                    inb.bufI.push(vIndex + 2);
+                    inb.bufI.push(vIndex + 3);
+                    inb.bufI.push(vIndex + 0);
+
+                    vIndex += 4;
+                }
+
+                rVal.vertexCount = posb.bufF.Size(3);
+                rVal.indexCount = inb.bufI.length;
+
+                const mesh = CUtilRender.CMeshCreateInfoToCMesh(rVal, this.GetFrame().Pal().GetBlackTex());
+                this.GetFrame().Res().Push(waterMeshKey, mesh);
+                CUtilRender.MeshBoundUpdate(mesh);
+            }
+            if(this.mPaint.GetMesh() != waterMeshKey) 
+            {
+                this.mPaint.SetMesh(waterMeshKey);
+            }
         }
     }
 

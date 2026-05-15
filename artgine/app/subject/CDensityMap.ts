@@ -19,7 +19,7 @@ import { CMesh } from "../../render/CMesh.js";
 import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
 
-import { CSampler, CSamplerMinMax } from "../../util/CSampler.js";
+import { CSampler, CSampMinMax } from "../../util/CSampler.js";
 
 import { CCIndex } from "../canvas/CCIndex.js";
 import { CCollider } from "../component/CCollider.js";
@@ -219,11 +219,11 @@ export class CDensityMap extends CSubject implements IMapSchema
                         pos.x=worldX;
                         pos.y=worldY;
                         let SamScale = new CVec3(1,1,1);
-                        if(density.mSca != null) SamScale = density.mSca.Excute();
+                        if(density.mSca != null) SamScale = density.mSca.Execute();
                         let rot = new CVec3();
-                        if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Excute(), pos);
+                        if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Execute(), pos);
                         CMath.V3MulV3(density.mSize, SamScale, scale);
-                        if(density.mRot != null) rot = density.mRot.Excute();
+                        if(density.mRot != null) rot = density.mRot.Execute();
 
                         const scaMat = CMath.MatScale(scale);
                         const rotMat = CMath.MatRotation(rot);
@@ -231,17 +231,17 @@ export class CDensityMap extends CSubject implements IMapSchema
                         mat.SetV3(3, pos);
                         matLists[chunkIdx].push(mat);
 
-                        if(density.mCodi != null) codiLists[chunkIdx].push(density.mCodi.Excute());
+                        if(density.mCodi != null) codiLists[chunkIdx].push(density.mCodi.Execute());
                     }
                     else
                     {
                         pos.x=worldX;
                         pos.z=worldY;
                         let rot = new CVec3();
-                        if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Excute(), pos);
-                        if(density.mSca != null) scale.Import(density.mSca.Excute());
+                        if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Execute(), pos);
+                        if(density.mSca != null) scale.Import(density.mSca.Execute());
                         else { scale.x=1; scale.y=1; scale.z=1; }
-                        if(density.mRot != null) rot = density.mRot.Excute();
+                        if(density.mRot != null) rot = density.mRot.Execute();
 
                         CMath.V3AddV3(pos, CMath.V3MulFloat(bound.GetCenter(), -1), pos);
 

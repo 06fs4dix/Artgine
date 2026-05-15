@@ -98,7 +98,11 @@ export class CULPC extends CObject
         "walk":"walk",
         "slash":"slash",
         "thrush":"thrush",
-        "idle":"idle"
+        "idle":"idle",
+        "shoot":"shoot",
+        
+        "spellcast":"spellcast"
+        
     };
     mAniMap = new Map<string, CAnimation>();
     mTexture: CTexture | null = null;
@@ -106,7 +110,7 @@ export class CULPC extends CObject
     // 1. 연관된 애니메이션들을 '그룹'으로 묶어줍니다.
     static AniGroups: string[][] = [
         ["walk", "move"],         // 이동 계열
-        ["slash", "thrush", "attack"],   // 공격 계열
+        ["slash", "thrush", "attack","spellcast","shoot"],   // 공격 계열
         ["idle", "basic"]                // 대기 계열
     ];
 
@@ -208,6 +212,8 @@ export class CParserULPC extends CParser {
     mFrameDelay: number = 0.125;
     private mAnimFilter: string[] | null = null;
 
+    private mTempNRecolorCache = new Map<string, HTMLImageElement | HTMLCanvasElement>();
+
     constructor(animKeys: string[] | null = null) {
         super();
         this.mAnimFilter = animKeys;
@@ -218,50 +224,54 @@ export class CParserULPC extends CParser {
         gResPath=_path;
     }
     private static sPaletteCache = new Map<string, Record<string, string[]>>();
+    private static sRecolorCache = new Map<string, CanvasImageSource>();
 
     override GetResult(): CULPC { return this.mResult as CULPC; }
 
     override async Load(pa_fileName: string): Promise<void> {
-        if (!this.mBuffer) await this.Open(pa_fileName);
+        try {
+            if (!this.mBuffer) await this.Open(pa_fileName);
 
-        const rawJson = JSON.parse(new TextDecoder().decode(this.mBuffer));
-        const json    = Array.isArray(rawJson)
-            ? rawJson.reduce((merged: Record<string, any>, obj: Record<string, any>) => {
-                for (const [k, v] of Object.entries(obj)) {
-                    if (Array.isArray(v)) merged[k] = [...(merged[k] ?? []), ...v];
-                    else if (!(k in merged))  merged[k] = v;
-                }
-                return merged;
-            }, {} as Record<string, any>)
-            : rawJson;
-        const resBase = this.mResBase || gResPath || json.mresBase || "./";
-        const absRoot = new URL(resBase, location.href).toString();
-        const rootSlash = absRoot.endsWith('/') ? absRoot : absRoot + '/';
-        const absBase = new URL(json.resBase ?? "spritesheets", rootSlash).toString().replace(/\/$/, "");
-        const result  = new CULPC();
-        const cv      = new CH5CanvasInst();
-        let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
-        
+            const rawJson = JSON.parse(new TextDecoder().decode(this.mBuffer));
+            const json    = Array.isArray(rawJson)
+                ? rawJson.reduce((merged: Record<string, any>, obj: Record<string, any>) => {
+                    for (const [k, v] of Object.entries(obj)) {
+                        if (Array.isArray(v)) merged[k] = [...(merged[k] ?? []), ...v];
+                        else if (!(k in merged))  merged[k] = v;
+                    }
+                    return merged;
+                }, {} as Record<string, any>)
+                : rawJson;
+            const resBase = this.mResBase || gResPath || json.mresBase || "./";
+            const absRoot = new URL(resBase, location.href).toString();
+            const rootSlash = absRoot.endsWith('/') ? absRoot : absRoot + '/';
+            const absBase = new URL(json.resBase ?? "spritesheets", rootSlash).toString().replace(/\/$/, "");
+            const result  = new CULPC();
+            const cv      = new CH5CanvasInst();
+            let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
+            
 
-        let specs: AnimClipSpec[];
-        if (Array.isArray(json.selections)) {
-            // V3: selections[] 기반 (ulpc_selection.json)
-            specs = await this._buildV3(json, absBase, cv);
-        } else {
-            // V2: layers[] 기반 (sample.json)
-            const paletteBase = absRoot.replace(/\/$/, "") + "/palette_definitions/";
-            specs = await this._buildV2(json, absBase, paletteBase, cv);
+            let specs: AnimClipSpec[];
+            if (Array.isArray(json.selections)) {
+                // V3: selections[] 기반 (ulpc_selection.json)
+                specs = await this._buildV3(json, absBase, cv);
+            } else {
+                // V2: layers[] 기반 (sample.json)
+                const paletteBase = absRoot.replace(/\/$/, "") + "/palette_definitions/";
+                specs = await this._buildV2(json, absBase, paletteBase, cv);
+            }
+
+            this._buildAnimMap(specs, result, textureFile);
+            result.mTexture = cv.GetNewTex();
+            result.mTexture.SetMipMap(CTexture.eMipmap.GL);
+            this.mResult = result;
+            result.SetKey(this.mFileName);
+            
+            result.mTexture.SetKey(textureFile);
+        } finally {
+            // 파싱이 끝나면 임시 캐시를 비워줍니다.
+            this.mTempNRecolorCache.clear();
         }
-
-        this._buildAnimMap(specs, result, textureFile);
-        result.mTexture = cv.GetNewTex();
-        result.mTexture.SetMipMap(CTexture.eMipmap.GL);
-        this.mResult = result;
-        result.SetKey(this.mFileName);
-        
-        result.mTexture.SetKey(textureFile);
-
-        
     }
 
     // ── 공통: AnimClipSpec[] → CAnimation 맵 ─────────────────────────────
@@ -354,7 +364,99 @@ export class CParserULPC extends CParser {
         const ctx = cv.GetContext();
         ctx.imageSmoothingEnabled = false;
 
-        // ── 5. 표준 섹션 드로잉 ──────────────────────────────────────────
+        // ── 5. 이미지 로드 및 리컬러링 병렬 처리 ────────────────────────────
+        // V2 로직에서도 모든 조합에 대해 미리 로드/리컬러링을 병렬로 수행
+        const loadTasks: Promise<{ key: string; img: CanvasImageSource | null }>[] = [];
+        const taskKeys = new Set<string>();
+
+        // 표준 애니메이션용 작업 수집
+        for (const [animName, { y: dstY }] of animYMap) {
+            for (const layer of layers) {
+                const supported: string[] = layer.supportedAnimations ?? [];
+                const isOversize = supported.some(a => seenAnim.has(a));
+                if (isOversize) continue;
+
+                let url: string;
+                if (supported.length > 0 && !supported.includes(animName)) {
+                    if (animName !== "idle") continue;
+                    const fallback = ["walk", "hurt", ...supported]
+                        .find(a => supported.includes(a) && ANIMS[a] !== undefined);
+                    if (!fallback) continue;
+                    url = absBase + "/" + this._swapAnim(layer.fileName, fallback);
+                } else {
+                    url = absBase + "/" + this._swapAnim(layer.fileName, animName);
+                }
+
+                const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
+                if (!taskKeys.has(taskKey)) {
+                    taskKeys.add(taskKey);
+                    loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
+                }
+            }
+        }
+
+        // 오버사이즈용 작업 수집
+        for (const sec of oversizeSections) {
+            const { animName, baseAnim } = sec;
+            for (const layer of layers) {
+                const supported: string[] = layer.supportedAnimations ?? [];
+                
+                // 정식 지원
+                if (supported.includes(animName)) {
+                    const url = absBase + "/" + layer.fileName;
+                    const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
+                    if (!taskKeys.has(taskKey)) {
+                        taskKeys.add(taskKey);
+                        loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
+                    }
+                }
+                
+                // Fallback (baseAnim 사용)
+                if (supported.length === 0 || supported.includes(baseAnim)) {
+                    const url = absBase + "/" + this._swapAnim(layer.fileName, baseAnim);
+                    const taskKey = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
+                    if (!taskKeys.has(taskKey)) {
+                        taskKeys.add(taskKey);
+                        loadTasks.push(this._loadAndRecolor(url, layer, paletteBase).then(img => ({ key: taskKey, img })));
+                    }
+                }
+
+                // Idle Fallback
+                const isOversizeForOther = supported.some(a => seenAnim.has(a) && a !== animName);
+                if (!isOversizeForOther) {
+                    const isOversizeForThis = supported.includes(animName);
+                    if (isOversizeForThis) {
+                        const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
+                        const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
+                        const taskKey = `${walkUrl}|${JSON.stringify(layer.recolors ?? {})}`;
+                        if (!taskKeys.has(taskKey)) {
+                            taskKeys.add(taskKey);
+                            loadTasks.push(this._loadAndRecolor(walkUrl, layer, paletteBase).then(img => ({ key: taskKey, img })));
+                        }
+                    } else if (supported.length === 0 || supported.includes(baseAnim)) {
+                        const canUseIdle = supported.length === 0 || supported.includes("idle");
+                        const srcAnim    = canUseIdle ? "idle" : baseAnim;
+                        const srcUrl     = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
+                        const taskKey = `${srcUrl}|${JSON.stringify(layer.recolors ?? {})}`;
+                        if (!taskKeys.has(taskKey)) {
+                            taskKeys.add(taskKey);
+                            loadTasks.push(this._loadAndRecolor(srcUrl, layer, paletteBase).then(img => ({ key: taskKey, img })));
+                        }
+                    }
+                }
+            }
+        }
+
+        const results = await Promise.all(loadTasks);
+        const imgCache = new Map<string, CanvasImageSource | null>();
+        for (const res of results) imgCache.set(res.key, res.img);
+
+        const getCachedImg = (url: string, layer: any) => {
+            const key = `${url}|${JSON.stringify(layer.recolors ?? {})}`;
+            return imgCache.get(key) ?? null;
+        };
+
+        // ── 6. 표준 섹션 드로잉 ──────────────────────────────────────────
         const pendingFallbacks: { url: string; layer: any; dstY: number }[] = [];
 
         for (const [animName, { y: dstY }] of animYMap) {
@@ -374,14 +476,14 @@ export class CParserULPC extends CParser {
                 }
 
                 const url = absBase + "/" + this._swapAnim(layer.fileName, animName);
-                const img = await this._loadAndRecolor(url, layer, paletteBase);
-                if (img) ctx.drawImage(img as CanvasImageSource, 0, dstY);
+                const img = getCachedImg(url, layer);
+                if (img) ctx.drawImage(img, 0, dstY);
             }
         }
 
         // ── 5.5. idle fallback: frame-0 spread ───────────────────────────
         for (const { url, layer, dstY } of pendingFallbacks) {
-            const img = await this._loadAndRecolor(url, layer, paletteBase);
+            const img = getCachedImg(url, layer);
             if (!img) continue;
             for (let d = 0; d < idleDirs.length; d++) {
                 const srcY = d * sizeBase;
@@ -404,7 +506,7 @@ export class CParserULPC extends CParser {
                 let oversizeImg: CanvasImageSource | null = null;
 
                 if (supported.includes(animName)) {
-                    oversizeImg = await this._loadAndRecolor(absBase + "/" + layer.fileName, layer, paletteBase);
+                    oversizeImg = getCachedImg(absBase + "/" + layer.fileName, layer);
                 }
 
                 if (oversizeImg) {
@@ -414,8 +516,8 @@ export class CParserULPC extends CParser {
                                 f * frameSize, d * frameSize, frameSize, frameSize,
                                 f * frameSize, yOffset + d * frameSize, frameSize, frameSize);
                 } else if (supported.length === 0 || supported.includes(baseAnim)) {
-                    const stdImg = await this._loadAndRecolor(
-                        absBase + "/" + this._swapAnim(layer.fileName, baseAnim), layer, paletteBase);
+                    const url = absBase + "/" + this._swapAnim(layer.fileName, baseAnim);
+                    const stdImg = getCachedImg(url, layer);
                     if (!stdImg) continue;
                     for (let d = 0; d < dirArr.length; d++)
                         for (let f = 0; f < cols; f++) {
@@ -443,7 +545,7 @@ export class CParserULPC extends CParser {
                 if (isOversizeForThis) {
                     const oversizeAnim = supported.find(a => seenAnim.has(a)) ?? animName;
                     const walkUrl = absBase + "/" + layer.fileName.replace(`/${oversizeAnim}/`, `/${baseAnim}/`);
-                    const img = await this._loadAndRecolor(walkUrl, layer, paletteBase);
+                    const img = getCachedImg(walkUrl, layer);
                     if (!img) continue;
                     for (let d = 0; d < idleDirs.length; d++)
                         for (let f = 0; f < idleF; f++)
@@ -454,7 +556,7 @@ export class CParserULPC extends CParser {
                     const canUseIdle = supported.length === 0 || supported.includes("idle");
                     const srcAnim    = canUseIdle ? "idle" : baseAnim;
                     const srcUrl     = absBase + "/" + this._swapAnim(layer.fileName, srcAnim);
-                    const img = await this._loadAndRecolor(srcUrl, layer, paletteBase);
+                    const img = getCachedImg(srcUrl, layer);
                     if (!img) continue;
                     for (let d = 0; d < idleDirs.length; d++)
                         for (let f = 0; f < idleF; f++) {
@@ -544,7 +646,6 @@ export class CParserULPC extends CParser {
         }
 
         // ── 1-b. 중복 제거: (selIdx, animName, zPos, matKey)당 최적 파일 1개 ──
-        // variant.v1 → 선택된 color 파일만, 일반 material → PALETTE_META base 파일 우선
         const preferred = new Map<string, NEntry>();
         for (const e of rawEntries) {
             const g0     = e.matGroups[0] as MatGroup;
@@ -566,7 +667,6 @@ export class CParserULPC extends CParser {
             }
         }
 
-        // default 파일: 같은 위치에 recolor 파일이 있으면 제외
         const hasRecolor = new Set<string>();
         for (const key of preferred.keys()) {
             if (!key.endsWith('|default')) {
@@ -621,24 +721,35 @@ export class CParserULPC extends CParser {
         const ctx = cv.GetContext();
         ctx.imageSmoothingEnabled = false;
 
-        // ── 6. 전체 애니메이션 드로잉 ─────────────────────────────────────
-        for (const [anim, { y: dstY, dirs, frameCount, frameSize: maxFS }] of animYMap) {
+        // ── 5. 이미지 로드 및 리컬러링 병렬 처리 (최적화 핵심) ────────────────
+        // 모든 엔트리에 대해 병렬 처리를 위한 프로미스 생성
+        const processTasks = entries.map(async (e) => {
+            const rawPath = this._encodeNPath(e.fullPath);
+            const url    = /^https?:\/\//i.test(e.fullPath) ? rawPath : absBase + '/' + rawPath;
+            const img    = await this._loadImg(e.base64 ?? url);
+            if (!img) return { entry: e, img: null };
+            const rc     = await this._applyNRecolor(img, e.matGroups);
+            return { entry: e, img: rc };
+        });
+
+        const results = await Promise.all(processTasks);
+        const imgMap = new Map<NEntry, CanvasImageSource | HTMLImageElement | null>();
+        for (const res of results) imgMap.set(res.entry, res.img);
+
+        // ── 6. 전체 애니메이션 드로잉 (순서 유지) ───────────────────────────
+        for (const [anim, { y: dstY, dirs, frameSize: maxFS }] of animYMap) {
             for (const e of byAnim.get(anim)!) {
-                const rawPath = this._encodeNPath(e.fullPath);
-                const url    = /^https?:\/\//i.test(e.fullPath) ? rawPath : absBase + '/' + rawPath;
-                const img    = await this._loadImg(e.base64 ?? url);
+                const img = imgMap.get(e);
                 if (!img) continue;
-                const rc     = await this._applyNRecolor(img, e.matGroups);
                 const offset = (maxFS - e.frameSize) / 2;
                 for (let d = 0; d < dirs.length; d++) {
                     const rowY = dstY + d * maxFS;
                     for (let f = 0; f < e.frameCount; f++)
-                        ctx.drawImage(rc as CanvasImageSource,
+                        ctx.drawImage(img as CanvasImageSource,
                             f * e.frameSize, d * e.frameSize, e.frameSize, e.frameSize,
                             f * maxFS + offset, rowY + offset, e.frameSize, e.frameSize);
                 }
             }
-
         }
 
         // ── 7. AnimClipSpec 수집 ──────────────────────────────────────────
@@ -652,8 +763,6 @@ export class CParserULPC extends CParser {
             }
         }
 
-
-        
         return specs;
     }
 
@@ -666,20 +775,32 @@ export class CParserULPC extends CParser {
     ): Promise<CanvasImageSource | null> {
         const recolors: Record<string, string> | null = layer.recolors ?? null;
 
+        const recolorKey = JSON.stringify(recolors || {});
+        const cacheKey = `${url}|${recolorKey}|${paletteBase}`;
+        if (CParserULPC.sRecolorCache.has(cacheKey)) return CParserULPC.sRecolorCache.get(cacheKey)!;
+
         if (!recolors || Object.keys(recolors).length === 0) {
-            return this._loadImg(url);
+            const img = await this._loadImg(url);
+            if (img) CParserULPC.sRecolorCache.set(cacheKey, img);
+            return img;
         }
 
         const img = await this._loadImg(url);
         if (img) {
             const swapped = await this._applyRecolors(img, recolors, paletteBase);
-            return swapped ?? img;
+            const res = swapped ?? img;
+            CParserULPC.sRecolorCache.set(cacheKey, res);
+            return res;
         }
 
         const firstColor = Object.values(recolors)[0];
         if (firstColor) {
             const variantUrl = this._toVariantUrl(url, firstColor);
-            if (variantUrl !== url) return this._loadImg(variantUrl);
+            if (variantUrl !== url) {
+                const res = await this._loadImg(variantUrl);
+                if (res) CParserULPC.sRecolorCache.set(cacheKey, res);
+                return res;
+            }
         }
 
         return null;
@@ -731,7 +852,12 @@ export class CParserULPC extends CParser {
                 if (!srcColors) continue;
 
                 const result = this._swapPalette(current, srcColors, dstColors);
-                if (this._hasChanged(current, result)) { current = result; changed = true; }
+                if (result) { 
+                    current = result; 
+                    changed = true; 
+                    // Break since we found a matching source material and applied it
+                    break;
+                }
             }
         }
 
@@ -762,57 +888,73 @@ export class CParserULPC extends CParser {
         src: HTMLImageElement | HTMLCanvasElement,
         srcColors: string[],
         dstColors: string[]
-    ): HTMLCanvasElement {
+    ): HTMLCanvasElement | null {
         const w = src instanceof HTMLCanvasElement ? src.width  : (src as HTMLImageElement).naturalWidth;
         const h = src instanceof HTMLCanvasElement ? src.height : (src as HTMLImageElement).naturalHeight;
+        if (w === 0 || h === 0) return null;
+
+        const colorMap = this._get32BitColorMap(srcColors, dstColors);
+        if (colorMap.size === 0) return null;
+
         const tmp = document.createElement("canvas");
         tmp.width = w; tmp.height = h;
-        const tmpCtx = tmp.getContext("2d");
+        const tmpCtx = tmp.getContext("2d")!;
         tmpCtx.imageSmoothingEnabled = false;
         tmpCtx.drawImage(src as CanvasImageSource, 0, 0);
+        
         const imgData = tmpCtx.getImageData(0, 0, w, h);
-        const data    = imgData.data;
+        const data = new Uint32Array(imgData.data.buffer);
+        let changed = false;
 
-        const pairs: Array<{ sr: number; sg: number; sb: number; dr: number; dg: number; db: number }> = [];
-        for (let i = 0; i < srcColors.length && i < dstColors.length; i++) {
-            const s = this._hexToRgb(srcColors[i]);
-            const d = this._hexToRgb(dstColors[i]);
-            if (s && d) pairs.push({ sr: s.r, sg: s.g, sb: s.b, dr: d.r, dg: d.g, db: d.b });
-        }
-
-        for (let i = 0; i < data.length; i += 4) {
-            if (data[i + 3] === 0) continue;
-            const r = data[i], g = data[i + 1], b = data[i + 2];
-            for (const p of pairs) {
-                if (Math.abs(r - p.sr) <= 1 && Math.abs(g - p.sg) <= 1 && Math.abs(b - p.sb) <= 1) {
-                    data[i] = p.dr; data[i + 1] = p.dg; data[i + 2] = p.db;
-                    break;
-                }
+        for (let i = 0; i < data.length; i++) {
+            const pixel = data[i];
+            if ((pixel & 0xFF000000) === 0) continue; // Skip transparent
+            
+            const replaced = colorMap.get(pixel);
+            if (replaced !== undefined && replaced !== pixel) {
+                data[i] = replaced;
+                changed = true;
             }
         }
+
+        if (!changed) return null;
 
         tmpCtx.putImageData(imgData, 0, 0);
         return tmp;
     }
 
-    private _hasChanged(
-        before: HTMLImageElement | HTMLCanvasElement,
-        after: HTMLCanvasElement
-    ): boolean {
-        const w = after.width, h = after.height;
-        const ctxA = document.createElement("canvas").getContext("2d");
-        const ctxB = after.getContext("2d");
-        ctxA.canvas.width = w; ctxA.canvas.height = h;
-        ctxA.drawImage(before as CanvasImageSource, 0, 0);
-        const dA = ctxA.getImageData(0, 0, w, h).data;
-        const dB = ctxB.getImageData(0, 0, w, h).data;
-        for (let i = 0; i < dA.length; i++) if (dA[i] !== dB[i]) return true;
-        return false;
-    }
-
     private _hexToRgb(hex: string): { r: number; g: number; b: number } | null {
         const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : null;
+    }
+
+    private static sColorMapCache = new Map<string, Map<number, number>>();
+    private _get32BitColorMap(srcColors: string[], dstColors: string[]): Map<number, number> {
+        const key = srcColors.join(',') + '|' + dstColors.join(',');
+        if (CParserULPC.sColorMapCache.has(key)) return CParserULPC.sColorMapCache.get(key)!;
+
+        const map = new Map<number, number>();
+        for (let i = 0; i < srcColors.length && i < dstColors.length; i++) {
+            const s = this._hexToRgb(srcColors[i]);
+            const d = this._hexToRgb(dstColors[i]);
+            if (!s || !d) continue;
+
+            const dst32 = (255 << 24) | (d.b << 16) | (d.g << 8) | d.r;
+            // Populate +/- 1 tolerance (3x3x3 = 27 entries per color)
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dg = -1; dg <= 1; dg++) {
+                    for (let db = -1; db <= 1; db++) {
+                        const r = Math.max(0, Math.min(255, s.r + dr));
+                        const g = Math.max(0, Math.min(255, s.g + dg));
+                        const b = Math.max(0, Math.min(255, s.b + db));
+                        const src32 = (255 << 24) | (b << 16) | (g << 8) | r;
+                        map.set(src32, dst32);
+                    }
+                }
+            }
+        }
+        CParserULPC.sColorMapCache.set(key, map);
+        return map;
     }
 
     // ── 유틸 ──────────────────────────────────────────────────────────────
@@ -936,13 +1078,20 @@ export class CParserULPC extends CParser {
         img: HTMLImageElement,
         matGroups: any[],
     ): Promise<HTMLImageElement | HTMLCanvasElement> {
+        // 이미지 소스(URL 또는 base64)와 matGroups 조합으로 캐시 키 생성
+        const matKey = JSON.stringify(matGroups);
+        const cacheKey = `${img.src}|${matKey}`;
+        if (this.mTempNRecolorCache.has(cacheKey)) return this.mTempNRecolorCache.get(cacheKey)!;
+
         let current: HTMLImageElement | HTMLCanvasElement = img;
 
         for (const g of matGroups) {
             if (!g.baseHex || !g.recolorHex) continue;
-            current = this._swapPalette(current, g.baseHex, g.recolorHex);
+            const res = this._swapPalette(current, g.baseHex, g.recolorHex);
+            if (res) current = res;
         }
 
+        this.mTempNRecolorCache.set(cacheKey, current);
         return current;
     }
 }

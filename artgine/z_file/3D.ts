@@ -544,9 +544,9 @@ function SampleCaustics(_uvw : CVec3, _split : number, _ligDir : CVec3, _ligCol 
 	return new CVec3(r, g, b);
 }
 
-function Caustics(_color : CVec3, _world : CVec3, _flowDir : CVec2, _ligDir : CVec3, _ligCol : CVec3) : CVec3
+function Caustics(_world : CVec3, _flowDir : CVec2, _ligDir : CVec3, _ligCol : CVec3) : CVec3
 {
-	if(V2Len(_flowDir) == 0.0) return _color;
+	if(V2Len(_flowDir) == 0.0) return new CVec3(0.0, 0.0, 0.0);
 
 	var flow : CVec3 = new CVec3(
 		-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
@@ -563,28 +563,39 @@ function Caustics(_color : CVec3, _world : CVec3, _flowDir : CVec2, _ligDir : CV
 	var uvw : CVec3 = new CVec3(V2AddV2(new CVec2(worldToUV.x + refractOffset.x, worldToUV.z + refractOffset.y), V2MulFloat(flow.xy, flow.z)), flow.z * 3.0);
 	var tex : CVec3 = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
 
-	_color = V3AddV3(_color, tex);
-	return SaturateV3(_color);
+	return SaturateV3(tex);
 }
 
-function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
+function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CVec3
 {
-	var heightDiff : number = abs(waterDeep.x - _world.y);
+    var heightDiff : number = abs(waterDeep.x - _world.y);
 
-	var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
-	_color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);	// 색상이 물 색상과 크게 다르면 곱셈으로 했을 때 이상한 값이 나옴
-	var dist : number = V3Len(V3SubV3(camPos, _world.xyz));
-	var t : number = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
-	_color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+    var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
+    var dist : number = V3Len(V3SubV3(camPos, _world.xyz));
+    var t : number = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
+    var luma : number = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);   // 바닥 색상이 너무 약하면 물리적으로는 맞는데 시각적으로 이상해 보여서 곱해줌
 
-	// foam mask
-	if(heightDiff < min(waterDeep.z, waterDeep.z * waterHeight)) {
-		var foam : CVec3 = new CVec3(0.6, 0.6, 0.6);
-		_color = V3AddV3(_color, V3MulFloat(foam, 0.35));
-		_color = V3Mix(_color, foam, 0.4);
-	}
+    var foamThreshold : number = min(waterDeep.z, waterDeep.z * waterHeight);
+    var foamMask : number = 0.0;
+    if(heightDiff < foamThreshold) {
+        foamMask = 1.0;
+    }
 
-	return _color;
+    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+
+    _caustics = V3MulFloat(_caustics, depthBlend * luma * (1.0 - foamMask));
+    _color = V3AddV3(_color, _caustics);
+    
+    _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+
+    // foam mask
+    if(foamMask > 0.0) {
+        var foam : CVec3 = new CVec3(0.6, 0.6, 0.6);
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.35));
+        _color = V3Mix(_color, foam, 0.4);
+    }
+
+    return _color;
 }
 
 function ps_main()
@@ -602,7 +613,7 @@ function ps_main()
 		//uvScreen = V2DivV2(gl_FragCoord.xy, new CVec2(1920,1017)); // 0~1
 		uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
 	
-		shadowTex = Sam2DToColor(shadowOn, uvScreen);  // <- 여기! 절대 size 곱하지 말기
+		shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
 		shadow = shadowTex.x;
 		
 	}
@@ -697,11 +708,12 @@ function ps_main()
 	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
 	BranchEnd();
 
+    var caustics : CVec3;
 	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
 	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
 	//out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
-	out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir,sunDir,sunCol);
-	out_color.rgb = WaterProcessing(out_color.rgb, world);
+	caustics = Caustics(world.xyz, causticFlowDir,sunDir,sunCol);
+	out_color.rgb = WaterProcessing(out_color.rgb, caustics, world);
 	BranchEnd();
 
 	// BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);

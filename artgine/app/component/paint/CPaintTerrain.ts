@@ -2,6 +2,7 @@ import {CUpdate} from "../../../basic/Basic.js";
 import {CMat} from "../../../geometry/CMat.js";
 import {CVec1} from "../../../geometry/CVec1.js";
 import {CVec3} from "../../../geometry/CVec3.js";
+import { CCamera } from "../../../render/CCamera.js";
 import {CShader} from "../../../render/CShader.js";
 import {CShaderAttr} from "../../../render/CShaderAttr.js";
 import {CRPAuto} from "../../canvas/CRPMgr.js";
@@ -23,6 +24,8 @@ export class CPaintTerrain extends CPaint
 
     mHeightScale : CVec1;
     mDefaultHeight : CVec1;
+
+    mCameraMain : CCamera;
     
     constructor(
         _texture : string[],
@@ -65,10 +68,21 @@ export class CPaintTerrain extends CPaint
     override Start(): void 
     {
         super.Start();
+
+        // 캔버스에 이벤트로 카메라 가져옴
+        var cm = this.ProductMsg("SendGetCamera");
+        cm.mInter="canvas";
+        cm.mMsgData[0]=this;
+    }
+
+    RecvGetCamera(_cam : CCamera)
+    {
+        this.mCameraMain = _cam;
+        this.PushCShaderAttr(new CShaderAttr("camMain", this.mCameraMain.GetEye()));
         this.MatUpdate();
     }
 
-    MatUpdate(_camPos = new CVec3())
+    MatUpdate()
     {
         this.mBound.mMin.x = -0.5;
         this.mBound.mMin.y = 0.0;
@@ -78,13 +92,17 @@ export class CPaintTerrain extends CPaint
         this.mBound.mMax.y = 1.0;
         this.mBound.mMax.z = 0.5;
 
+        // 카메라 높이에 따른 스케일 변경
+        const r = this.mCameraMain.GetEye().y / this.mDefaultHeight.x;
+        this.mHeightScale.x = r < 1 ? 1 : Math.pow(2, Math.floor(Math.log2(r)));
+
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
 
         this.mLMat.mF32A[ 0] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
         this.mLMat.mF32A[ 5] = this.mTerrainHeight.x;
         this.mLMat.mF32A[10] = this.mCellSize.x * this.mLevelScale.x * this.mHeightScale.x * cellCount;
-        this.mLMat.mF32A[12] = _camPos.x + this.mCellIndex.x * this.mLMat.mF32A[ 0];
-        this.mLMat.mF32A[14] = _camPos.z + this.mCellIndex.z * this.mLMat.mF32A[10];
+        this.mLMat.mF32A[12] = this.mCameraMain.GetEye().x + this.mCellIndex.x * this.mLMat.mF32A[ 0];
+        this.mLMat.mF32A[14] = this.mCameraMain.GetEye().z + this.mCellIndex.z * this.mLMat.mF32A[10];
         this.mLMat.UnitCheck();
 
         this.mBound.MatCoordi(this.mLMat);
@@ -96,17 +114,11 @@ export class CPaintTerrain extends CPaint
 
     override Update(_update: CUpdate): void 
     {
-        for(let renPt of this.mRenPT)
+        if(this.mCameraMain != null) 
         {
-            if(renPt.mCam.mShadow == true) continue;
-            const cam = renPt.mCam;
-            if(cam.mUpdateMat == CUpdate.eType.Updated)
+            if(this.mCameraMain.mUpdateMat == CUpdate.eType.Updated)
             {
-                // 카메라 높이에 따른 스케일 변경
-                this.mHeightScale.x = Math.max(1, Math.pow(2, Math.floor(Math.log2(cam.GetEye().y / this.mDefaultHeight.x))));
-
-                // 카메라 이동에 따른 메시 중점 변경
-                this.MatUpdate(cam.GetEye());
+                this.MatUpdate();
             }
         }
 
@@ -131,13 +143,6 @@ export class CPaintTerrain extends CPaint
 
         const cellCount = Math.round(Math.sqrt(this.GetOwner().GetFrame().Pal().Terrain().vertexCount)) - 1;
         this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("cellCount",new CVec1(cellCount)));
-
-        // 그림자의 renPt가 아니라 현재 카메라 넣어줌
-        for(let renPt of this.mRenPT) {
-            if(renPt.mCam.mShadow == true) continue;
-            this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("camMain",renPt.mCam.GetEye()));
-            break;
-        }
 
         this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
         var dm=this.GetDrawMesh("Artgine/DM/GeoClipmap" + cellCount,_vf,this.mOwner.GetFrame().Pal().Terrain());

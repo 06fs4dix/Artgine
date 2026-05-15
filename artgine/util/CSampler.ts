@@ -8,7 +8,6 @@ import { CVec1 } from "../geometry/CVec1.js";
 import { CVec3 } from "../geometry/CVec3.js";
 import { CTimer } from "../system/CTimer.js";
 
-
 export class CSampler<T> extends CObject
 {
 	protected mDefault : T=null;
@@ -17,12 +16,12 @@ export class CSampler<T> extends CObject
 		super();
 		this.mDefault=_default;
 	}
-	Excute(_target=null)	
+	Execute(_target=null)	
 	{
 		return this.mDefault;
 	}
 }
-export class CSamplerMinMax<T> extends CSampler<T>
+export class CSampMinMax<T> extends CSampler<T>
 {
 	
 	public mLinear : boolean;
@@ -49,7 +48,7 @@ export class CSamplerMinMax<T> extends CSampler<T>
 		
 		this.mLinear=_linear;
 	}
-	override Excute(_target : any=null) : T
+	override Execute(_target : any=null) : T
 	{
 		if(_target==null || typeof _target=="number")
 			_target=CClass.New(this.mMin);
@@ -70,7 +69,7 @@ export class CSamplerMinMax<T> extends CSampler<T>
 	}
 	
 }
-export class CSamplerList<T> extends CSampler<T> 
+export class CSampList<T> extends CSampler<T> 
 {
 	private mCount=0;
 	private mRate =new Array<number>();
@@ -103,7 +102,7 @@ export class CSamplerList<T> extends CSampler<T>
 			this.mCount+=each0;
 		}
 	}
-	override Excute() : T
+	override Execute() : T
 	{
 		if(this.mList == null || this.mRate.length === 0)
 			return null;
@@ -124,7 +123,35 @@ export class CSamplerList<T> extends CSampler<T>
 		return this.mList[this.mList.length - 1] as T;
 	}
 }
-export class CSamplerDir extends CSampler<CVec3>
+
+export class CSampCountDown<T> extends CSampler<T> 
+{
+	private mTimes = new Array<number>();
+	private mList = new Array<T>();
+	private mTimer = new CTimer();
+	private mTime = 0;
+	constructor(_times : Array<number>, _list : Array<T>)
+	{
+		super();
+		this.mTimes = _times;
+		this.mList = _list;
+	}
+	override Execute() : T
+	{
+		if(this.mTimes == null || this.mList == null) return null;
+		
+		this.mTime += this.mTimer.Delay();
+		for(let i=0; i<this.mTimes.length; ++i)
+		{
+			if(this.mTime <= this.mTimes[i])
+			{
+				return this.mList[i];
+			}
+		}
+		return null;
+	}
+}
+export class CSampDir extends CSampler<CVec3>
 {
 	public mDir : CVec3;
 	public mPitch : number;
@@ -137,131 +164,12 @@ export class CSamplerDir extends CSampler<CVec3>
 		this.mPitch=_pitch;
 		this.mRoll=_roll;
 	}
-	override Excute() : CVec3
+	override Execute() : CVec3
 	{
 		var pran=this.mPitch*2*Math.random()-this.mPitch;
 		var rran=this.mRoll*2*Math.random()-this.mRoll;
 		
 		var mat=CMath.MatRotation(new CVec3(pran,rran,0));
 		return CMath.V3MulMatNormal(this.mDir,mat);
-	}
-}
-export class CSamplerTimer<T> extends CSampler<T>
-{
-	mDelay=0;
-    mCount=1;
-    mStart=0;
-    mEnd=0;
-
-    // mTimeAll=0;
-    // mTimeDelay=0;
-	// mExcute=0;
-    // mUpdate=0;
-	constructor(_actionValue : T)
-	{
-		super(_actionValue);
-	}
-
-	override Excute(_dataTarget : any=null,_run="",_update :CUpdate=null) : T
-	{
-		if(_dataTarget==null)	_dataTarget=this;
-		if(CSamplerTimer.Update(_dataTarget,this.mCount,this.mDelay,this.mStart,this.mEnd,_run,_update)==false)
-		{
-			if(typeof this.mDefault!="undefined")	return false as any;
-			return null;
-		}
-		
-		return this.mDefault;
-	}
-	IsEndReset(_dataTarget : any=null,_run="")
-	{
-		if(_dataTarget==null)	_dataTarget=this;
-		return CSamplerTimer.IsEndReset(_dataTarget,_run);
-	}
-
-
-	//실시간 호출해줘야 갱신된다
-    static Update(_dataTarget : any,count=0,delay=0,start=0,end=0,_run="",_update : CUpdate=null) : boolean
-    {
-		
-        if(_dataTarget["mTemp"]==null)_dataTarget["mTemp"]={};
-
-		let offset=_update!=null?_update.Offset():0;
-        
-        //let run=_dataTarget["mTemp"]["mRun"];
-        let timer : CTimer;
-        if(_dataTarget["mTemp"]["mTimer"+_run]==null)
-        {
-            _dataTarget["mTemp"]["mTimer"+_run]=new CTimer();
-            _dataTarget["mTemp"]["mCount"+_run]=0;
-            _dataTarget["mTemp"]["mTime"+_run]=0;
-            _dataTarget["mTemp"]["mDelay"+_run]=0;
-			
-        }
-		else if(_dataTarget["mTemp"]["mOffset"+_run]+1<offset)
-		{
-			(_dataTarget["mTemp"]["mTimer"+_run] as CTimer).Delay();
-            _dataTarget["mTemp"]["mCount"+_run]=0;
-            _dataTarget["mTemp"]["mTime"+_run]=0;
-            _dataTarget["mTemp"]["mDelay"+_run]=0;
-			_dataTarget["mTemp"]["mEnd"+_run]=false;
-		}
-		_dataTarget["mTemp"]["mOffset"+_run]=offset;
-
-        timer=_dataTarget["mTemp"]["mTimer"+_run];
-        let t=timer.Delay();
-        _dataTarget["mTemp"]["mDelay"+_run]=_dataTarget["mTemp"]["mDelay"+_run]+t;
-        _dataTarget["mTemp"]["mTime"+_run]=_dataTarget["mTemp"]["mTime"+_run]+t;
-
-        
-			
-        if(delay!=0 && _dataTarget["mTemp"]["mDelay"+_run]<delay)   return false;
-        if(_dataTarget["mTemp"]["mTime"+_run]<start)   return false;
-        if(end!=0 && _dataTarget["mTemp"]["mTime"+_run]>end)   
-		{
-			_dataTarget["mTemp"]["mEnd"+_run]=true;
-			//_dataTarget["mTemp"]["mOffset"+_run]=0;
-			return false;
-		}
-			
-        
-        _dataTarget["mTemp"]["mDelay"+_run]=0;
-        _dataTarget["mTemp"]["mCount"+_run]=_dataTarget["mTemp"]["mCount"+_run]+1;
-
-		if(count!=0 && _dataTarget["mTemp"]["mCount"+_run]>count)   
-		{
-			_dataTarget["mTemp"]["mEnd"+_run]=true;
-			//_dataTarget["mTemp"]["mOffset"+_run]=0;
-			return false;
-		}
-        
-        
-       return true;
-        
-    }
-	// static Reset(_dataTarget : any,_run="")
-	// {
-	// 	//if(_dataTarget["mTemp"]==null)return;
-	// 	if(_dataTarget["mTemp"]["mTimer"+_run]!=null)
-    //     {
-	// 		(_dataTarget["mTemp"]["mTimer"+_run] as CTimer).Delay();
-    //         _dataTarget["mTemp"]["mCount"+_run]=0;
-    //         _dataTarget["mTemp"]["mTime"+_run]=0;
-    //         _dataTarget["mTemp"]["mDelay"+_run]=0;
-	// 		_dataTarget["mTemp"]["mEnd"+_run]=false;
-    //     }
-	// }
-	static IsEndReset(_dataTarget : any,_run="")
-	{
-		
-		if(_dataTarget["mTemp"]==null)	return false;
-
-		if(_dataTarget["mTemp"]["mEnd"+_run]==true)
-		{
-			_dataTarget["mTemp"]["mOffset"+_run]=0;
-			return true;
-		}
-		
-		return false;
 	}
 }

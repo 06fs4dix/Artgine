@@ -1447,7 +1447,7 @@ export class CShaderInterpretGL extends CShaderInterpret
         str += "    vec2 ddx = dFdx(_uvw.xy)*flipSign;\n";
         str += "    vec2 ddy = dFdy(_uvw.xy)*flipSign;\n";
         str += "    vec4 s = Sam2DArrGradToColor(_off,vec3(tiledUV,_uvw.z),ddx,ddy);\n";
-        str += "    vec2 n = (s.xy*2.0-1.0)*flipSign;\n";
+        str += "    vec2 n = s.xy*2.0-1.0;\n";
         str += "    return vec4(n*0.5+0.5,s.z,s.w);\n";
 		str += "}\n";
 	

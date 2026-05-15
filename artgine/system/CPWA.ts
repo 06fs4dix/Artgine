@@ -37,15 +37,29 @@ export class CPWA
     {
         navigator.serviceWorker.controller.postMessage(_msg);
     }
-    static Install() {
+    static Install() : string {
+        const UA = navigator.userAgent;
+        const isIOS = /iPhone|iPad|iPod/i.test(UA);
+        const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
+
+        if(isIOS) {
+            return "iOS는 PWA 자동 설치를 지원하지 않습니다.\nSafari에서 공유 버튼(□↑) → '홈 화면에 추가'를 눌러주세요.";
+        }
+
+        if(!isHTTPS) {
+            return "HTTP 환경에서는 PWA 설치가 불가능합니다.\n브라우저 메뉴(⋮) → '홈 화면에 추가'를 눌러주세요.";
+        }
+
+        if(CPWA.IsInstalled()) {
+            return "이미 앱이 설치되어 있습니다.";
+        }
+
         if(g_deferredPrompt == null) {
-            console.log("이미 앱이 설치되어 있거나 앱을 설치할 수 없습니다.");
-            return;
+            return "앱을 설치할 수 없습니다.\n브라우저 메뉴(⋮) → '홈 화면에 추가'를 눌러주세요.";
         }
 
         if(navigator.userActivation.isActive == false) {
-            console.log("PWA 설치에 유저 제스쳐가 필요합니다.");
-            return;
+            return "PWA 설치에 유저 제스쳐가 필요합니다.";
         }
 
         g_deferredPrompt.prompt();
@@ -58,6 +72,7 @@ export class CPWA
                 console.log("앱 설치를 취소했습니다.");
             }
         });
+        return null;
     }
 
     static IsInstalled() {

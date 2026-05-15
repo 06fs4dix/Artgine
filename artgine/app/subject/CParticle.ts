@@ -9,7 +9,8 @@ import {CCurve} from "../../util/CCurve.js";
 import { CObject } from "../../basic/CObject.js";
 import { CUniqueID } from "../../basic/CUniqueID.js";
 import { CUpdate } from "../../basic/Basic.js";
-import { CSampler, CSamplerList, CSamplerMinMax, CSamplerTimer } from "../../util/CSampler.js";
+import { CSampler, CSampList, CSampMinMax } from "../../util/CSampler.js";
+import { CSchedule } from "../../util/CSchedule.js";
 import { CPool } from "../../basic/CPool.js";
 import { CConsol } from "../../basic/CConsol.js";
 
@@ -61,9 +62,9 @@ export class CParticleShape extends CObject
 //위치에서 밖으로
 export class CParticleShapeOut extends CParticleShape
 {
-	public mDir=new CSamplerMinMax<CVec3>(new CVec3(-1,-1,-1),new CVec3(1,1,1));
+	public mDir=new CSampMinMax<CVec3>(new CVec3(-1,-1,-1),new CVec3(1,1,1));
 	public mPos=new CSampler(new CVec3());
-	public mSca=new CSamplerMinMax<number>(1,1);
+	public mSca=new CSampMinMax<number>(1,1);
 	public mSpeed=new CSampler<number>(100);//속도
 	public mMovementKey="CParticleShapeOut";
 	public mCurve=new CCurve();
@@ -79,15 +80,15 @@ export class CParticleShapeOut extends CParticleShape
 				rb=new CRigidBody();
 				each0.PushComp(rb);
 			}
-			let force=new CForce(this.mMovementKey,this.mDir.Excute(),this.mSpeed.Excute());
+			let force=new CForce(this.mMovementKey,this.mDir.Execute(),this.mSpeed.Execute());
 			force.SetCurve(this.mCurve);
 			rb.Push(force);
 
-			let sca=this.mSca.Excute();
+			let sca=this.mSca.Execute();
 			each0.SetSca(new CVec3(sca,sca,sca));
 			
 			
-			var pos=this.mPos.Excute();
+			var pos=this.mPos.Execute();
 			if(pos.IsZero()==false)
 				each0.SetPos(CMath.V3AddV3(each0.GetPos(),pos));
 		}
@@ -173,9 +174,9 @@ export class CParticleTexBuf extends CParticleShapeOut
 export class CParticle extends CSubject
 {
 
-	public mSample : CSamplerList<CSubject|string>=null;
+	public mSample : CSampList<CSubject|string>=null;
 	public mCreateCount=new CSampler(5);//생성 곗수
-	public mTimer=new CSamplerTimer(true);
+	public mTimer=new CSchedule();
 	public mShape =new CParticleShape();
 
 	override IsShould(_member: string, _type: CObject.eShould) 
@@ -206,15 +207,15 @@ export class CParticle extends CSubject
 	{
 		super.SubjectUpdate(_update);
 		if(this.mTimer.IsEndReset() && this.mChild.length==0)	this.Destroy();
-		if(this.mTimer.Excute()==false || this.mSample==null)	return;
+		if(this.mTimer.Execute()==false || this.mSample==null)	return;
 			
 		
 		
-		let count=this.mCreateCount.Excute();
+		let count=this.mCreateCount.Execute();
 		var objArr=new Array<CSubject>();
 		for(var i=0;i<count;++i)
 		{
-			let sub=this.mSample.Excute();
+			let sub=this.mSample.Execute();
 			if(sub==null){}
 			else if(sub instanceof CSubject)
 			{

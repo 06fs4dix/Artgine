@@ -1,10 +1,5 @@
-import { CRouteMsg } from "../app/CRouteMsg.js";
-import { CClass } from "../basic/CClass.js";
-import { CEvent } from "../basic/CEvent.js";
 import { CJSON } from "../basic/CJSON.js";
 import { CObject } from "../basic/CObject.js";
-import { CTimer } from "../system/CTimer.js";
-import { CSamplerTimer } from "./CSampler.js";
 
 //condition
 export class CCondition extends CObject

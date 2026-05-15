@@ -1,14 +1,1 @@
-import { CAlert } from "../basic/CAlert.js";
-export class CZLib {
-    static DeCompress(pa_org, pa_tar = null) {
-        if (window["pako"] == null) {
-            CAlert.Error("pako zlib not define!");
-            return;
-        }
-        var rval = window["pako"].inflate(pa_org);
-        if (pa_tar != null) {
-            pa_tar.fill(rval, 0, rval.length);
-        }
-        return rval;
-    }
-}
+import{CAlert as l}from"../basic/CAlert.js";export class CZLib{static DeCompress(i,o=null){if(null!=window.pako){var r=window.pako.inflate(i);return null!=o&&o.fill(r,0,r.length),r}l.Error("pako zlib not define!")}}

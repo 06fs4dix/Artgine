@@ -12,19 +12,37 @@ import { CAniFlow } from "./CAniFlow.js";
 import { CAnimation } from "./CAnimation.js";
 import { CComponent } from "./CComponent.js";
 import { CRigidBody } from "./CRigidBody.js";
+import { CSampCountDown } from "../../util/CSampler.js";
 
 
 export class CRoleComp extends CComponent
 {
-    mRoleMgr=new CRoleMgr();
-    override Update(_update : CUpdate): void 
+    mRoleMgr = new CRoleMgr();
+    private mCountDownList = new Array<CSampCountDown<string>>();
+
+    override Update(_update: CUpdate): void 
     {
         super.Update(_update);
-        
-        
-        this.mRoleMgr.Update(_update,this.GetOwner());
-
+        this.mRoleMgr.Update(_update, this.GetOwner());
     }
-    GetRoleMgr() {   return this.mRoleMgr;    }
+
+    GetRoleMgr() { return this.mRoleMgr; }
+
+    PushCountDown(_time: number, _value: string): void
+    {
+        this.mCountDownList.push(new CSampCountDown<string>([_time], [_value]));
+    }
+
+    override Provider(_type: string, _state: Array<string>): void
+    {
+        for(let i = this.mCountDownList.length - 1; i >= 0; i--)
+        {
+            let result = this.mCountDownList[i].Execute();
+            if(result == null)
+                this.mCountDownList.splice(i, 1);
+            else
+                _state.push(result);
+        }
+    }
 }
 

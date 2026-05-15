@@ -925,6 +925,10 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 	{
 		_camcomp.RecvGetGeometryInfo(this.mGI,this.Key());
 	}
+    SendGetCamera(_paint : CPaintTerrain)
+    {
+        _paint.RecvGetCamera(this.GetCam());
+    }
 	GetGI()	{	return this.mGI;	}
 	
 	
@@ -941,4 +945,5 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 
 import CCanvas_imple from "../../app_imple/canvas/CCanvas.js";
 import { CRenderPass } from "../../render/CRenderPass.js";
+import { CPaintTerrain } from "../component/paint/CPaintTerrain.js";
 CCanvas_imple();

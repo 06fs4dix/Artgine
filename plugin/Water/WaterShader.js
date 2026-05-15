@@ -110,9 +110,10 @@ function ps_main_water() {
     var normalDist = new CVec3(0.0, 0.0, 0.0);
     if (V2Len(normalflowDir) > 0.0) {
         normalTS = NormalFlow(to_uv, V2MulFloat(new CVec2(-normalflowDir.x, normalflowDir.y), time));
-        var deltaDist = max(0.0, V3Len(V3SubV3(camPos, world)) - 6000.0);
+        var dist = V3Len(V3SubV3(camPos, world));
+        var deltaDist = max(0.0, dist - 6000.0);
         var fallOff = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);
-        normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * to_screenUV.z * fallOff);
+        normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * fallOff);
     }
     var normalWS = normalTS;
     var screenUV = V2AddV2(to_screenUV.xy, new CVec2(normalDist.x, normalDist.z));

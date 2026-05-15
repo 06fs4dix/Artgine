@@ -185,11 +185,10 @@ function ps_main_water()
     if(V2Len(normalflowDir) > 0.0) {
         normalTS = NormalFlow(to_uv, V2MulFloat(new CVec2(-normalflowDir.x, normalflowDir.y), time));
 
-        // 화면에서 멀수록 픽셀 수가 적어지는데 움직이는 정도는 같아서 줄여줌
-        var deltaDist : number = max(0.0, V3Len(V3SubV3(camPos, world)) - 6000.0);  // 카메라 거리 - 최대 가시거리 / 2
-        var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);             // 선형적인 감소 피하기 위해 1 / 1 + a로 계산
-        normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * to_screenUV.z * fallOff);
-        // to_screenUV.z를 여기에 곱해주면 화면이 매우 가까울 때의 아티팩트를 해결할 수 있다고 하는데 잘 모르겠음
+        var dist : number = V3Len(V3SubV3(camPos, world));
+        var deltaDist : number = max(0.0, dist - 6000.0);
+        var fallOff : number = 1.0 / (1.0 + deltaDist * 10.0 / 6000.0);
+        normalDist = V3MulFloat(normalTS, 0.1 * V2Len(normalflowDir) * fallOff);
     }
     var normalWS : CVec3 = normalTS;
 

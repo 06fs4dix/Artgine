@@ -3,6 +3,7 @@ import { StringDecoder } from 'string_decoder';
 import iconv from 'iconv-lite';
 import * as https from 'https'; // 다운로드를 위해 추가
 import * as http from 'http';
+import * as net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CServerRouter } from '../network/CServerRouter.js';
@@ -114,7 +115,7 @@ let gTtydProc: ReturnType<typeof spawn> | null = null;
 // [MODIFIED] 'gemini' 타입 추가
 let gTtydMode: 'cmd' | 'claude' | 'gemini' | null = null;
 async function startTtyd(mode: 'cmd' | 'claude' | 'gemini') {
-    if (gTtydMode === mode && gTtydProc) return;
+    if (gTtydMode === mode && gTtydProc) return true;
 
     if (gTtydProc) {
         try { gTtydProc.kill(); } catch {}
@@ -134,11 +135,11 @@ async function startTtyd(mode: 'cmd' | 'claude' | 'gemini') {
     const shellArg = process.platform === 'win32' ? (mode === 'gemini' ? '/c' : '/k') : '-c';
 
     if (mode === 'claude') {
-        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', shellCmd, shellArg, 'claude'];
+        args = ['-p', '7681', '-i', '127.0.0.1', '--writable', shellCmd, shellArg, 'claude'];
     } else if (mode === 'gemini') {
-        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', shellCmd, shellArg, 'npx', 'gemini'];
+        args = ['-p', '7681', '-i', '127.0.0.1', '--writable', shellCmd, shellArg, 'npx', 'gemini'];
     } else {
-        args = ['-p', '7681', '-i', '0.0.0.0', '-o', '--writable', shellCmd];
+        args = ['-p', '7681', '-i', '127.0.0.1', '--writable', shellCmd];
     }
 
     const ttyd = spawn(TTYD_PATH, args, { detached: false, stdio: 'ignore', cwd: currentCwd });
@@ -194,6 +195,53 @@ export class CTerminalRouter extends CServerRouter {
             res.json({ ok });
         });
 
+        const server = CServerMain.Main().GetServer();
+        if (server) {
+            server.on('upgrade', (req: any, socket: any, head: Buffer) => {
+                const urlObj = new URL(req.url!, 'http://localhost');
+                if (urlObj.pathname !== '/cmd/ttyd-ws') return;
+
+                const token = urlObj.searchParams.get('token');
+                if (!gAuthedTokens.has(token!)) {
+                    socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+                    socket.destroy();
+                    return;
+                }
+
+                const proxy = net.connect(7681, '127.0.0.1', () => {
+                    const h = req.headers;
+                    let reqHeaders = 'GET /ws HTTP/1.1\r\n';
+                    reqHeaders += 'Host: localhost:7681\r\n';
+                    reqHeaders += 'Upgrade: websocket\r\n';
+                    reqHeaders += 'Connection: Upgrade\r\n';
+                    if (h['sec-websocket-key'])        reqHeaders += `Sec-WebSocket-Key: ${h['sec-websocket-key']}\r\n`;
+                    if (h['sec-websocket-version'])    reqHeaders += `Sec-WebSocket-Version: ${h['sec-websocket-version']}\r\n`;
+                    if (h['sec-websocket-extensions']) reqHeaders += `Sec-WebSocket-Extensions: ${h['sec-websocket-extensions']}\r\n`;
+                    if (h['sec-websocket-protocol'])   reqHeaders += `Sec-WebSocket-Protocol: ${h['sec-websocket-protocol']}\r\n`;
+                    reqHeaders += '\r\n';
+                    proxy.write(reqHeaders);
+                    if (head && head.length) proxy.write(head);
+                    socket.setNoDelay(true);
+                    proxy.setNoDelay(true);
+                    socket.pipe(proxy);
+                    proxy.pipe(socket);
+                });
+                proxy.on('error', (e) => { console.error('[TTYD WS PROXY ERROR]', e); try { socket.destroy(); } catch {} });
+                socket.on('error', (e) => { console.error('[TTYD WS SOCKET ERROR]', e); try { proxy.destroy(); } catch {} });
+            });
+        }
+
+        const killTtyd = () => {
+            if (gTtydProc) {
+                try { gTtydProc.kill(); } catch {}
+                gTtydProc = null;
+                gTtydMode = null;
+            }
+        };
+        process.on('exit', killTtyd);
+        process.on('SIGINT', () => { killTtyd(); process.exit(0); });
+        process.on('SIGTERM', () => { killTtyd(); process.exit(0); });
+
         app.post('/cmd/auth', checkBrute, (req, res) => {
             const ip = req.ip || req.connection.remoteAddress;
             const now = Date.now();
@@ -234,6 +282,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
 <div class="d-flex align-items-center gap-2 px-3 py-1 bg-black border-bottom border-secondary" style="flex-shrink:0;">
   <span class="text-secondary small font-monospace" id="cmd-cwd" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
   <button class="btn btn-outline-success btn-sm ms-auto me-1" onclick="runClaude()">CLAUDE</button>
+  <button class="btn btn-outline-primary btn-sm me-1" onclick="runGemini()">GEMINI</button>
   <button class="btn btn-outline-info btn-sm me-1" data-bs-toggle="modal" data-bs-target="#helpModal">HELP</button>
   <button class="btn btn-outline-secondary btn-sm me-1" onclick="clearOut()">CLEAR</button>
   <button class="btn btn-outline-warning btn-sm" id="btn-fullscreen" onclick="toggleFullscreen()">⛶ FULL</button>
@@ -345,7 +394,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
             .then(j => {
                 if(j.ok) {
                     const serverHost = window.location.hostname;
-                    ttydFrame.src='/cmd/terminal-proxy';
+                    ttydFrame.src='/cmd/terminal-proxy?token=' + authToken;
                     ttydFrame.style.display = 'block';
                     setTimeout(() => ttydFrame.focus(), 300);
                 }
@@ -365,7 +414,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
             .then(j => {
                 if(j.ok) {
                     const serverHost = window.location.hostname;
-                    ttydFrame.src='/cmd/terminal-proxy';
+                    ttydFrame.src='/cmd/terminal-proxy?token=' + authToken;
                     ttydFrame.style.display = 'block';
                     setTimeout(() => ttydFrame.focus(), 300);
                 }
@@ -411,12 +460,28 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
       .then(j => {
         if(j.ok) {
           const serverHost = window.location.hostname;
-          ttydFrame.src='/cmd/terminal-proxy';
+          ttydFrame.src='/cmd/terminal-proxy?token=' + authToken;
           ttydFrame.style.display = 'block';
           setTimeout(() => ttydFrame.focus(), 300);
         }
       })
       .catch(() => sysLine('[ERR] Claude 실행 실패', '#ff4d6d'));
+  }
+
+  function runGemini(){
+    if(!authed){ sysLine('[system] 먼저 인증이 필요합니다'); return; }
+    sysLine('[system] Gemini CLI 터미널을 시작하는 중...');
+    fetch('/cmd/start-ttyd-gemini?token=' + authToken)
+      .then(r => r.json())
+      .then(j => {
+        if(j.ok) {
+          const serverHost = window.location.hostname;
+          ttydFrame.src='/cmd/terminal-proxy?token=' + authToken;
+          ttydFrame.style.display = 'block';
+          setTimeout(() => ttydFrame.focus(), 300);
+        }
+      })
+      .catch(() => sysLine('[ERR] Gemini 실행 실패', '#ff4d6d'));
   }
 
   function toggleFullscreen(){
@@ -615,7 +680,7 @@ html,body{height:100%;margin:0;padding:0;background:#1a1a1a;overflow:hidden;}
                             'function _PW(u,p){',
                             'if(typeof u==="string"){',
                             'var pr=window.location.protocol==="https:"?"wss:":"ws:";',
-                            'u=pr+"//"+window.location.hostname+":7681/ws"+window.location.search;}',
+                            'u=pr+"//"+window.location.hostname+":"+window.location.port+"/cmd/ttyd-ws"+window.location.search;}',
                             'return p?new _W(u,p):new _W(u);}',
                             '_PW.prototype=_W.prototype;',
                             '_PW.CONNECTING=0;_PW.OPEN=1;_PW.CLOSING=2;_PW.CLOSED=3;',

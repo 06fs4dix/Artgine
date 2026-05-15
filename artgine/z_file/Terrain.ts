@@ -18,6 +18,7 @@ import {
     abs,
     V3Len,
     min,
+    V2Mix,
 } from "./Shader";
 import { bias, calcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
 
@@ -201,19 +202,19 @@ function SampleSplatmapNormal(_splatBlend : CVec4, _uv : CVec2, _off : number) :
     var L_cor : CVec4;
     var blendAlpha : number = 1.0;
     if(blendAlpha > 0.0 && _splatBlend.w > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0,splatMatTexCodi[3].x)*0.5, step(0.0,splatMatTexCodi[3].y)*0.5), blendAlpha);
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0,splatMatTexCodi[3].x)*0.5, step(0.0,splatMatTexCodi[3].y)*0.5), blendAlpha);
         blendAlpha -= _splatBlend.w;
     }
     if(blendAlpha > 0.0 && _splatBlend.z > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0,splatMatTexCodi[2].x)*0.5, step(0.0,splatMatTexCodi[2].y)*0.5), blendAlpha);
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0,splatMatTexCodi[2].x)*0.5, step(0.0,splatMatTexCodi[2].y)*0.5), blendAlpha);
         blendAlpha -= _splatBlend.z;
     }
     if(blendAlpha > 0.0 && _splatBlend.y > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0,splatMatTexCodi[1].x)*0.5, step(0.0,splatMatTexCodi[1].y)*0.5), blendAlpha);
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0,splatMatTexCodi[1].x)*0.5, step(0.0,splatMatTexCodi[1].y)*0.5), blendAlpha);
         blendAlpha -= _splatBlend.y;
     }
     if(blendAlpha > 0.0 && _splatBlend.x > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0,splatMatTexCodi[0].x)*0.5, step(0.0,splatMatTexCodi[0].y)*0.5), blendAlpha);
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0,splatMatTexCodi[0].x)*0.5, step(0.0,splatMatTexCodi[0].y)*0.5), blendAlpha);
         blendAlpha -= _splatBlend.x;
     }
     return L_cor;
@@ -270,9 +271,9 @@ function SampleCaustics(_uvw : CVec3, _split : number, _ligDir : CVec3, _ligCol 
     return new CVec3(r, g, b);
 }
 
-function Caustics(_color : CVec3, _world : CVec3, _flowDir : CVec2, _ligDir : CVec3, _ligCol : CVec3) : CVec3
+function Caustics(_world : CVec3, _flowDir : CVec2, _ligDir : CVec3, _ligCol : CVec3) : CVec3
 {
-    if(V2Len(_flowDir) == 0.0) return _color;
+    if(V2Len(_flowDir) == 0.0) return new CVec3(0.0, 0.0, 0.0);
 
     var flow : CVec3 = new CVec3(
         -causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), 
@@ -289,25 +290,33 @@ function Caustics(_color : CVec3, _world : CVec3, _flowDir : CVec2, _ligDir : CV
     var uvw : CVec3 = new CVec3(V2AddV2(new CVec2(worldToUV.x + refractOffset.x, worldToUV.z + refractOffset.y), V2MulFloat(flow.xy, flow.z)), flow.z * 3.0);
     var tex : CVec3 = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
 
-    _color = V3AddV3(_color, tex);
-    return SaturateV3(_color);
+    return SaturateV3(tex);
 }
-//-----------------------------------------------------------------------------------------------------
-// ------------- water
-//-----------------------------------------------------------------------------------------------------
 
-function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
+function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CVec3
 {
     var heightDiff : number = abs(waterDeep.x - _world.y);
 
     var depthBlend : number = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
-    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);	// 색상이 물 색상과 크게 다르면 곱셈으로 했을 때 이상한 값이 나옴
     var dist : number = V3Len(V3SubV3(camPos, _world.xyz));
     var t : number = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
+    var luma : number = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);   // 바닥 색상이 너무 약하면 물리적으로는 맞는데 시각적으로 이상해 보여서 곱해줌
+
+    var foamThreshold : number = min(waterDeep.z, waterDeep.z * waterHeight);
+    var foamMask : number = 0.0;
+    if(heightDiff < foamThreshold) {
+        foamMask = 1.0;
+    }
+
+    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+
+    _caustics = V3MulFloat(_caustics, depthBlend * luma * (1.0 - foamMask));
+    _color = V3AddV3(_color, _caustics);
+    
     _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
 
     // foam mask
-    if(heightDiff < min(waterDeep.z, waterDeep.z * waterHeight)) {
+    if(foamMask > 0.0) {
         var foam : CVec3 = new CVec3(0.6, 0.6, 0.6);
         _color = V3AddV3(_color, V3MulFloat(foam, 0.35));
         _color = V3Mix(_color, foam, 0.4);
@@ -315,6 +324,10 @@ function WaterProcessing(_color : CVec3, _world : CVec4) : CVec3
 
     return _color;
 }
+
+//-----------------------------------------------------------------------------------------------------
+// ------------- water
+//-----------------------------------------------------------------------------------------------------
 
 
 
@@ -330,55 +343,48 @@ function vs_main(f3_ver : Vertex3)
     var curPos : CVec4 = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
     curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
     curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+
+    // 다음 (LOD + 1) 포지션
+    var nextPos : CVec4 = curPos;
+    nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+
     var curUV : CVec2 = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
-    // var curSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, curUV, 0.0);
-    var curSample : CVec4 = Sam2DLodToColor(heightSampler2D, curUV, 0.0);
+    var nextUV : CVec2 = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
+
+    var curSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, curUV, 0.0);
+    var nextSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, nextUV, 0.0);
+
     curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
+    nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
+
     var curNor : CVec3 = UnpackNormal(new CVec2(curSample.z, curSample.w));
+    var nextNor : CVec3 = UnpackNormal(new CVec2(nextSample.z, nextSample.w));
 
-    // 최종
-    var normal : CVec3 = curNor;
-    var morphPos : CVec4 = curPos;
-
+    // LOD 모핑
     var morphAlpha : number = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
-    if(morphAlpha > 0.0)
-    {
-        // 다음 (LOD + 1) 포지션
-        var nextPos : CVec4 = curPos;
-        nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
-        nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
-        var nextUV : CVec2 = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
-        // var nextSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, nextUV, 0.0);
-        var nextSample : CVec4 = Sam2DLodToColor(heightSampler2D, nextUV, 0.0);
-        nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
-        var nextNor : CVec3 = UnpackNormal(new CVec2(nextSample.z, nextSample.w));
+    to_worldPos = V4Mix(curPos, nextPos, morphAlpha);
+    to_worldPos.y = f3_ver.y * terrainSize.y; // LOD seam 메꾸기 위한 메시 스커트
+    to_worldPos.y += mix(curPos.y, nextPos.y, morphAlpha);
 
-        // LOD 모핑
-        morphPos = V4Mix(curPos, nextPos, morphAlpha);
-        morphPos.y = f3_ver.y * terrainSize.y; // LOD seam 메꾸기 위한 메시 스커트
-        morphPos.y += mix(curPos.y, nextPos.y, morphAlpha);
+    to_normal = V3Mix(curNor, nextNor, morphAlpha);
+    to_normal.y = sqrt(1.0 - SaturateFloat(to_normal.x * to_normal.x + to_normal.z * to_normal.z));
 
-        normal = V3Mix(curNor, nextNor, morphAlpha);
-        normal.y = sqrt(1.0 - SaturateFloat(normal.x * normal.x + normal.z * normal.z));
-    }
+    to_uv = V2Mix(curUV, nextUV, morphAlpha);
 
     // 터레인 외곽에 구멍 뚫리는거 방지
     var terrainMin : CVec3 = terrainOffset;
     var terrainMax : CVec3 = V3AddV3(terrainOffset, terrainSize);
     if(
-        morphPos.x < terrainMin.x || terrainMax.x < morphPos.x ||
-        morphPos.z < terrainMin.z || terrainMax.z < morphPos.z
+        to_worldPos.x < terrainMin.x || terrainMax.x < to_worldPos.x ||
+        to_worldPos.z < terrainMin.z || terrainMax.z < to_worldPos.z
     ) {
-        morphPos.y = terrainMin.y;
+        to_worldPos.y = terrainMin.y;
     }
-    morphPos.x = clamp(morphPos.x, terrainMin.x, terrainMax.x);
-    morphPos.z = clamp(morphPos.z, terrainMin.z, terrainMax.z);
+    to_worldPos.x = clamp(to_worldPos.x, terrainMin.x, terrainMax.x);
+    to_worldPos.z = clamp(to_worldPos.z, terrainMin.z, terrainMax.z);
 
-    to_worldPos = morphPos;
-    out_position = V4MulMatCoordi(V4MulMatCoordi(morphPos, viewMat), projectMat);
-
-    to_uv = WorldToUV(morphPos, terrainOffset, terrainSize);
-    to_normal = normal;
+    out_position = V4MulMatCoordi(V4MulMatCoordi(to_worldPos, viewMat), projectMat);
 }
 function ps_main()
 {
@@ -386,10 +392,12 @@ function ps_main()
     var shadow : number=-1.0;
     var uvScreen : CVec2;
    
-    BranchBegin("shadow","S",[screenSize]);
-    uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
-    shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
-    shadow = shadowTex.x;
+    BranchBegin("shadow","S",[screenSize,shadowOn]);
+    if(shadowOn>0.5) {
+        uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
+        shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
+        shadow = shadowTex.x;
+    }
     BranchEnd();
 
     var splat : CVec4 = Sam2DToColor(splatSampler2D, to_uv);
@@ -427,10 +435,11 @@ function ps_main()
     if(to_worldPos.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
     BranchEnd();
 
+    var caustics : CVec3;
     BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
     if(to_worldPos.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
-    out_color.rgb = Caustics(out_color.rgb, to_worldPos.xyz, causticFlowDir,sunDir,sunCol);
-    out_color.rgb = WaterProcessing(out_color.rgb, to_worldPos);
+    caustics = Caustics(to_worldPos.xyz, causticFlowDir, sunDir, sunCol);
+    out_color.rgb = WaterProcessing(out_color.rgb, caustics, to_worldPos);
     BranchEnd();
 }
 
@@ -464,45 +473,42 @@ function vs_main_shadow_write(f3_ver : Vertex3)
     var curPos : CVec4 = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
     curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
     curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+
+    // 다음 (LOD + 1) 포지션
+    var nextPos : CVec4 = curPos;
+    nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+
     var curUV : CVec2 = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
-    // var curSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, curUV, 0.0);
-    var curSample : CVec4 = Sam2DLodToColor(heightSampler2D, curUV, 0.0);
+    var nextUV : CVec2 = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
+
+    var curSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, curUV, 0.0);
+    var nextSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, nextUV, 0.0);
+
     curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
+    nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
 
-    // 최종
-    var morphPos : CVec4 = curPos;
-
+    // LOD 모핑
     var morphAlpha : number = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
-    if(morphAlpha > 0.0)
-    {
-        // 다음 (LOD + 1) 포지션
-        var nextPos : CVec4 = curPos;
-        nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
-        nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
-        var nextUV : CVec2 = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
-        // var nextSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, nextUV, 0.0);
-        var nextSample : CVec4 = Sam2DLodToColor(heightSampler2D, nextUV, 0.0);
-        nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
+    var worldPos : CVec4 = V4Mix(curPos, nextPos, morphAlpha);
+    worldPos.y = f3_ver.y * terrainSize.y; // LOD seam 메꾸기 위한 메시 스커트
+    worldPos.y += mix(curPos.y, nextPos.y, morphAlpha);
 
-        // LOD 모핑
-        morphPos = V4Mix(curPos, nextPos, morphAlpha);
-        morphPos.y = f3_ver.y * terrainSize.y; // LOD seam 메꾸기 위한 메시 스커트
-        morphPos.y += mix(curPos.y, nextPos.y, morphAlpha);
-    }
+    to_uv = V2Mix(curUV, nextUV, morphAlpha);
 
     // 터레인 외곽에 구멍 뚫리는거 방지
     var terrainMin : CVec3 = terrainOffset;
     var terrainMax : CVec3 = V3AddV3(terrainOffset, terrainSize);
     if(
-        morphPos.x < terrainMin.x || terrainMax.x < morphPos.x ||
-        morphPos.z < terrainMin.z || terrainMax.z < morphPos.z
+        worldPos.x < terrainMin.x || terrainMax.x < worldPos.x ||
+        worldPos.z < terrainMin.z || terrainMax.z < worldPos.z
     ) {
-        morphPos.y = terrainMin.y;
+        worldPos.y = terrainMin.y;
     }
-    morphPos.x = clamp(morphPos.x, terrainMin.x, terrainMax.x);
-    morphPos.z = clamp(morphPos.z, terrainMin.z, terrainMax.z);
+    worldPos.x = clamp(worldPos.x, terrainMin.x, terrainMax.x);
+    worldPos.z = clamp(worldPos.z, terrainMin.z, terrainMax.z);
 
-    to_viewPos = V4MulMatCoordi(morphPos, svm);
+    to_viewPos = V4MulMatCoordi(worldPos, svm);
     out_position = V4MulMatCoordi(to_viewPos, spm);
 }
 
@@ -523,66 +529,46 @@ function vs_main_shadow_read(f3_ver : Vertex3)
     var curPos : CVec4 = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
     curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
     curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+
+    // 다음 (LOD + 1) 포지션
+    var nextPos : CVec4 = curPos;
+    nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+
     var curUV : CVec2 = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
-    // var curSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, curUV, 0.0);
-    var curSample : CVec4 = Sam2DLodToColor(heightSampler2D, curUV, 0.0);
+    var nextUV : CVec2 = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
+
+    var curSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, curUV, 0.0);
+    var nextSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, nextUV, 0.0);
+
     curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
-    var curNor : CVec3 = UnpackNormal(new CVec2(curSample.z, curSample.w));
+    nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
 
-    // 최종
-    var normal : CVec3 = curNor;
-    var morphPos : CVec4 = curPos;
-
+    // LOD 모핑
     var morphAlpha : number = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
-    if(morphAlpha > 0.0)
-    {
-        // 다음 (LOD + 1) 포지션
-        var nextPos : CVec4 = curPos;
-        nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
-        nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
-        var nextUV : CVec2 = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
-        // var nextSample : CVec4 = Sam2DLODBilinearToColor(heightSampler2D, nextUV, 0.0);
-        var nextSample : CVec4 = Sam2DLodToColor(heightSampler2D, nextUV, 0.0);
-        nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
-        var nextNor : CVec3 = UnpackNormal(new CVec2(nextSample.z, nextSample.w));
+    to_worldPos = V4Mix(curPos, nextPos, morphAlpha);
+    to_worldPos.y = f3_ver.y * terrainSize.y; // LOD seam 메꾸기 위한 메시 스커트
+    to_worldPos.y += mix(curPos.y, nextPos.y, morphAlpha);
 
-        // LOD 모핑
-        morphPos = V4Mix(curPos, nextPos, morphAlpha);
-        morphPos.y = f3_ver.y * terrainSize.y; // LOD seam 메꾸기 위한 메시 스커트
-        morphPos.y += mix(curPos.y, nextPos.y, morphAlpha);
-
-        normal = V3Mix(curNor, nextNor, morphAlpha);
-        normal.y = sqrt(1.0 - SaturateFloat(normal.x * normal.x + normal.z * normal.z));
-    }
+    to_uv = V2Mix(curUV, nextUV, morphAlpha);
 
     // 터레인 외곽에 구멍 뚫리는거 방지
     var terrainMin : CVec3 = terrainOffset;
     var terrainMax : CVec3 = V3AddV3(terrainOffset, terrainSize);
     if(
-        morphPos.x < terrainMin.x || terrainMax.x < morphPos.x ||
-        morphPos.z < terrainMin.z || terrainMax.z < morphPos.z
+        to_worldPos.x < terrainMin.x || terrainMax.x < to_worldPos.x ||
+        to_worldPos.z < terrainMin.z || terrainMax.z < to_worldPos.z
     ) {
-        morphPos.y = terrainMin.y;
+        to_worldPos.y = terrainMin.y;
     }
-    morphPos.x = clamp(morphPos.x, terrainMin.x, terrainMax.x);
-    morphPos.z = clamp(morphPos.z, terrainMin.z, terrainMax.z);
+    to_worldPos.x = clamp(to_worldPos.x, terrainMin.x, terrainMax.x);
+    to_worldPos.z = clamp(to_worldPos.z, terrainMin.z, terrainMax.z);
 
-    to_worldPos = morphPos;
-    to_uv = WorldToUV(morphPos, terrainOffset, terrainSize);
-    to_normal = normal;
-
-    out_position = V4MulMatCoordi(V4MulMatCoordi(morphPos, viewMat), projectMat);
+    out_position = V4MulMatCoordi(V4MulMatCoordi(to_worldPos, viewMat), projectMat);
 }
 
 function ps_main_shadow_read() 
 {
-    var splat : CVec4 = Sam2DToColor(splatSampler2D, to_uv);
-    //var splatBlend : CVec4 = new CVec4(1.0, splat.x, splat.y, splat.z);  // 이 부분 변경해서 블렌딩 비율 조절 가능    
-
-    // var normal : CVec3;
-    // normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
-    // normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
-
     var all : number=0.0;
     var shadowRead : CVec4;
     var sVal : number;

@@ -215,7 +215,7 @@ export class CDeviceGL extends CDevice
         }
         
 		ext = this.GL().getExtension('OES_texture_float_linear');
-		if (ext!=null) {	    CAlert.W("no OES_texture_float_linear");		}
+		if (ext==null) {	    CAlert.W("no OES_texture_float_linear");		}
 		
 		
 		CRenderPass.eBlend.FUNC_ADD=this.GL().FUNC_ADD;
@@ -553,6 +553,9 @@ export class CDeviceGL extends CDevice
 		CAlert.W(`BenchmarkScore: ${score}  ALU:${aluMs.toFixed(0)}ms  FILL:${fillMs.toFixed(0)}ms  GEO:${geoMs.toFixed(0)}ms`);
 
 		// ── 정리 ───────────────────────────────────────────────────
+		gl.disableVertexAttribArray(aluP);
+		gl.disableVertexAttribArray(fillP);
+		gl.disableVertexAttribArray(geoP);
 		gl.deleteBuffer(buf);
 		gl.deleteBuffer(geoBuf);
 		gl.deleteProgram(aluProg);

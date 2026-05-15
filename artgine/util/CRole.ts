@@ -1,13 +1,10 @@
-import { CRouteMsg } from "../app/CRouteMsg.js";
+
 import { CUpdate } from "../basic/Basic.js";
-import { CArray } from "../basic/CArray.js";
-import { CClass } from "../basic/CClass.js";
+
 import { CJSON } from "../basic/CJSON.js";
 import { CObject } from "../basic/CObject.js";
 import { CAction } from "./CAction.js";
 import { CCondition } from "./CCondition.js";
-import { CSamplerTimer } from "./CSampler.js";
-
 
 
 //pattern
