@@ -20,9 +20,9 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mCanvas = "";
 gPF.mWASM = false;
-gPF.mServer = 'local';
+gPF.mServer = 'webServer';
 gPF.mGitHub = true;
-gPF.mVersion = "mp6zcg65_6";
+gPF.mVersion = "mp6zcg65_12";
 
 import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
 
@@ -36,6 +36,8 @@ await gAtl.Init([],"");
 import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
 import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
 import { CParserULPC } from "https://06fs4dix.github.io/Artgine/artgine/util/parser/CParserULPC.js";
+import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
+import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
 
 let Main = gAtl.NewCanvas("Main");
 Main.SetCameraKey("2D");
@@ -45,8 +47,13 @@ gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
 //CParserULPC.SetGlobalResBase("../../../big/NEW_ULPC");
 
 const hero = new ULPCChar();
-//hero.Setup("sample.json");
-hero.Setup("ulpc_selection.json");
+const jsonParam = CUtilWeb.Parameter('json');
+if (jsonParam) {
+    hero.SetupFromData(CUtil.Base64ToString(jsonParam));
+} else {
+    //hero.Setup("sample.json");
+    hero.Setup("ulpc_selection.json");
+}
 hero.PushChild(new CPad()).mSave = false;
 Main.PushSub(hero);
 
@@ -89,6 +96,9 @@ guide.textContent = [
     '(키 누르는 동안 재생)',
 ].join('\n');
 document.body.appendChild(guide);
+
+
+
 
 
 
