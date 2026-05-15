@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover' />
+<style>
+    :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+    }
+</style>
+<script>
+    const loadingCard = document.createElement('div');
+    loadingCard.id = "MainLoading";
+    loadingCard.style.position = "fixed";
+    loadingCard.style.top = "0";
+    loadingCard.style.left = "0";
+    loadingCard.style.width = "100vw";
+    loadingCard.style.height = "100vh";
+    loadingCard.style.maxWidth = "none";
+    loadingCard.style.maxHeight = "none";
+    loadingCard.style.margin = "0";
+    loadingCard.style.borderRadius = "0";
+    loadingCard.style.zIndex = "9999";
+    loadingCard.style.pointerEvents = "auto";
+    loadingCard.style.backgroundColor = "#212529"; // Bootstrap dark 색상
+    loadingCard.style.display = "flex";
+    loadingCard.style.alignItems = "center";
+    loadingCard.style.justifyContent = "center";
+    loadingCard.style.color = "white";
+    loadingCard.style.fontSize = "32px";
+    
+    loadingCard.innerHTML = `
+        <div style="text-align: center;"><div>Initialization...</div></div>
+    `;
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('readystatechange', function() {
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                if (document.body)  document.body.appendChild(loadingCard);
+            }
+        });
+    }
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+    });
+</script>
+
+<!--Include--><script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/pako-master/dist/pako.min.js'></script>
+<script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/jszip.min.js'></script>
+<script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/screenfull/screenfull.min.js'></script>
+<script src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/popper/poper.min.js'></script>
+<link rel='stylesheet' href='https://06fs4dix.github.io/Artgine/artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+<script src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+<link rel='stylesheet' href='https://06fs4dix.github.io/Artgine/artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+<script>function BootstrapSearchList(searchId, listId) {
+			const input = document.getElementById(searchId);
+			const listItems = document.querySelectorAll(`#${listId} li`);
+		
+			input.addEventListener('keyup', function () {
+				const value = input.value.toLowerCase();
+		
+				listItems.forEach(item => {
+					const text = item.textContent.toLowerCase();
+					item.style.display = text.includes(value) ? '' : 'none';
+				});
+			});
+		}</script>
+<script type='text/javascript' src='https://06fs4dix.github.io/Artgine/artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
+<link rel='manifest' href='./ULPC.webmanifest'/>
+<script>
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Tutorial/ULPC/ULPC.html';
+const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
+if (location.protocol == 'file:' && isElectron==false){
+	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
+	const target = new URL(page, SERVER_BASE).toString();
+	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	alert('Local Start Redirection!');
+	location.replace(target);
+	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
+}</script>
+<script type='module'>
+import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
+import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import { ULPCChar } from "./ULPCChar.js";
+CClass.Push(ULPCChar);
+import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+var gPF = new CPreferences();
+gPF.mTargetWidth = 0;
+gPF.mTargetHeight = 0;
+gPF.mRenderer = "GL";
+gPF.m32fDepth = false;
+gPF.mTexture16f = false;
+gPF.mAnti = true;
+gPF.mBatchPool = true;
+gPF.mXR = false;
+gPF.mDeveloper = true;
+gPF.mIAuto = true;
+gPF.mCanvas = "";
+gPF.mWASM = false;
+gPF.mServer = 'local';
+gPF.mGitHub = true;
+gPF.mVersion = "mp6zcg65_6";
+import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
+var gAtl = new CAtelier();
+gAtl.mPF = gPF;
+await gAtl.Init([], "");
+import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
+import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
+let Main = gAtl.NewCanvas("Main");
+Main.SetCameraKey("2D");
+gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
+const hero = new ULPCChar();
+hero.Setup("ulpc_selection.json");
+hero.PushChild(new CPad()).mSave = false;
+Main.PushSub(hero);
+const KEY_ANIM = {
+    '1': 'slash', '2': 'thrust', '3': 'spellcast', '4': 'shoot',
+    '5': 'backslash', '6': 'halfslash', '7': 'run', '8': 'emote',
+    '9': 'jump', '0': 'sit', 'h': 'hurt', 'c': 'climb',
+    'g': 'combat_idle',
+};
+window.addEventListener('keydown', (e) => {
+    const anim = KEY_ANIM[e.key.toLowerCase()];
+    if (anim) {
+        hero.mState = anim;
+        hero.mLockState = true;
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if (KEY_ANIM[e.key.toLowerCase()]) {
+        hero.mLockState = false;
+        hero.mState = 'idle';
+    }
+});
+const guide = document.createElement('div');
+guide.style.cssText = [
+    'position:fixed', 'top:12px', 'left:12px',
+    'background:rgba(0,0,0,0.55)', 'color:#fff',
+    'font:13px/1.6 monospace', 'padding:10px 14px',
+    'border-radius:8px', 'pointer-events:none', 'z-index:9000',
+    'white-space:pre',
+].join(';');
+guide.textContent = [
+    '방향키  walk',
+    '─────────────',
+    '1  slash      2  thrust',
+    '3  spellcast  4  shoot',
+    '5  backslash  6  halfslash',
+    '7  run        8  emote',
+    '9  jump       0  sit',
+    'H  hurt       C  climb',
+    'G  combat_idle',
+    '',
+    '(키 누르는 동안 재생)',
+].join('\n');
+document.body.appendChild(guide);
+</script>
+
+<!--Manifest-->
+<!--EntryPoint-->

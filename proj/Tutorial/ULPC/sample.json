@@ -1,0 +1,753 @@
+{
+  "version": 3,
+  "bodyType": "male",
+  "sizeBase": 64,
+  "resBase": "spritesheets",
+  "selections": {
+    "body": {
+      "itemId": "body",
+      "subId": null,
+      "variant": "",
+      "recolor": "light",
+      "name": "Body Color (light)"
+    },
+    "head": {
+      "itemId": "heads_human_male",
+      "subId": null,
+      "variant": "",
+      "recolor": "light",
+      "name": "Human Male (light)"
+    },
+    "expression": {
+      "itemId": "face_neutral",
+      "subId": null,
+      "variant": "",
+      "recolor": "light",
+      "name": "Neutral (light)"
+    },
+    "weapon": {
+      "itemId": "weapon_polearm_dragonspear",
+      "subId": null,
+      "variant": "light",
+      "recolor": "",
+      "name": "Dragon spear (light)"
+    },
+    "shoulders": {
+      "itemId": "shoulders_legion",
+      "subId": null,
+      "variant": "",
+      "recolor": "all.lpcr.azure",
+      "name": "Legion (lpcr azure)"
+    },
+    "clothes": {
+      "itemId": "torso_clothes_longsleeve2_cardigan",
+      "subId": null,
+      "variant": "",
+      "recolor": "walnut",
+      "name": "Cardigan (walnut)"
+    }
+  },
+  "selectedAnimation": "walk",
+  "showTransparencyGrid": true,
+  "applyTransparencyMask": false,
+  "matchBodyColorEnabled": true,
+  "compactDisplay": false,
+  "enabledLicenses": {
+    "CC0": true,
+    "CC-BY-SA": true,
+    "CC-BY": true,
+    "OGA-BY": true,
+    "GPL": true
+  },
+  "enabledAnimations": {
+    "spellcast": false,
+    "thrust": false,
+    "walk": false,
+    "slash": false,
+    "shoot": false,
+    "hurt": false,
+    "climb": false,
+    "idle": false,
+    "jump": false,
+    "sit": false,
+    "emote": false,
+    "run": false,
+    "watering": false,
+    "combat": false,
+    "1h_slash": false,
+    "1h_backslash": false,
+    "1h_halfslash": false
+  },
+  "layers": [
+    {
+      "itemId": "body",
+      "name": "Body Color (light)",
+      "variant": "",
+      "recolors": {
+        "body": "light"
+      },
+      "zPos": 10,
+      "layerNum": 1,
+      "yPos": 0,
+      "isCustom": false,
+      "needsRecolor": false,
+      "fileName": "body/bodies/male/spellcast.png",
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ],
+      "frame": 13,
+      "dir": {
+        "spellcast": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "thrust": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "walk": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "slash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "shoot": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "hurt": [
+          1
+        ],
+        "climb": [
+          1
+        ],
+        "idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "jump": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "sit": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "emote": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "run": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "combat_idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "backslash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "halfslash": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 64
+    },
+    {
+      "itemId": "torso_clothes_longsleeve2_cardigan",
+      "name": "Cardigan (walnut)",
+      "variant": "",
+      "recolors": {
+        "clothes": "walnut"
+      },
+      "zPos": 35,
+      "layerNum": 1,
+      "yPos": 0,
+      "isCustom": false,
+      "needsRecolor": false,
+      "fileName": "torso/clothes/longsleeve/longsleeve2_cardigan/male/spellcast.png",
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ],
+      "frame": 13,
+      "dir": {
+        "spellcast": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "thrust": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "walk": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "slash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "shoot": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "hurt": [
+          1
+        ],
+        "climb": [
+          1
+        ],
+        "idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "jump": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "sit": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "emote": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "run": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "combat_idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "backslash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "halfslash": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 64
+    },
+    {
+      "itemId": "shoulders_legion",
+      "name": "Legion (lpcr azure)",
+      "variant": "",
+      "recolors": {
+        "shoulders": "all.lpcr.azure"
+      },
+      "zPos": 60,
+      "layerNum": 1,
+      "yPos": 0,
+      "isCustom": false,
+      "needsRecolor": false,
+      "fileName": "shoulders/legion/male/spellcast.png",
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle"
+      ],
+      "frame": 13,
+      "dir": {
+        "spellcast": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "thrust": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "walk": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "slash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "shoot": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "hurt": [
+          1
+        ],
+        "idle": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 64
+    },
+    {
+      "itemId": "heads_human_male",
+      "name": "Human Male (light)",
+      "variant": "",
+      "recolors": {
+        "head": "light"
+      },
+      "zPos": 100,
+      "layerNum": 1,
+      "yPos": 0,
+      "isCustom": false,
+      "needsRecolor": false,
+      "fileName": "head/heads/human/male/spellcast.png",
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ],
+      "frame": 13,
+      "dir": {
+        "spellcast": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "thrust": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "walk": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "slash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "shoot": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "hurt": [
+          1
+        ],
+        "climb": [
+          1
+        ],
+        "idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "jump": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "sit": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "emote": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "run": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "combat_idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "backslash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "halfslash": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 64
+    },
+    {
+      "itemId": "face_neutral",
+      "name": "Neutral (light)",
+      "variant": "",
+      "recolors": {
+        "expression": "light"
+      },
+      "zPos": 101,
+      "layerNum": 1,
+      "yPos": 0,
+      "isCustom": false,
+      "needsRecolor": false,
+      "fileName": "head/faces/male/neutral/spellcast.png",
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ],
+      "frame": 13,
+      "dir": {
+        "spellcast": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "thrust": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "walk": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "slash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "shoot": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "jump": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "sit": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "emote": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "run": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "combat_idle": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "backslash": [
+          0,
+          2,
+          1,
+          3
+        ],
+        "halfslash": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 64
+    },
+    {
+      "itemId": "weapon_polearm_dragonspear",
+      "name": "Dragon spear (light)",
+      "variant": "light",
+      "zPos": 140,
+      "layerNum": 1,
+      "fileName": "weapon/polearm/dragonspear/foreground/walk/light.png",
+      "supportedAnimations": [
+        "walk_128"
+      ],
+      "frame": 9,
+      "dir": {
+        "walk_128": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 128
+    },
+    {
+      "itemId": "weapon_polearm_dragonspear",
+      "name": "Dragon spear (light)",
+      "variant": "light",
+      "zPos": 9,
+      "layerNum": 2,
+      "fileName": "weapon/polearm/dragonspear/background/walk/light.png",
+      "supportedAnimations": [
+        "walk_128"
+      ],
+      "frame": 9,
+      "dir": {
+        "walk_128": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 128
+    },
+    {
+      "itemId": "weapon_polearm_dragonspear",
+      "name": "Dragon spear (light)",
+      "variant": "light",
+      "zPos": 150,
+      "layerNum": 3,
+      "fileName": "weapon/polearm/dragonspear/foreground/thrust/light.png",
+      "supportedAnimations": [
+        "thrust_oversize"
+      ],
+      "frame": 8,
+      "dir": {
+        "thrust_oversize": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 192
+    },
+    {
+      "itemId": "weapon_polearm_dragonspear",
+      "name": "Dragon spear (light)",
+      "variant": "light",
+      "zPos": -1,
+      "layerNum": 4,
+      "fileName": "weapon/polearm/dragonspear/background/thrust/light.png",
+      "supportedAnimations": [
+        "thrust_oversize"
+      ],
+      "frame": 8,
+      "dir": {
+        "thrust_oversize": [
+          0,
+          2,
+          1,
+          3
+        ]
+      },
+      "size": 192
+    }
+  ],
+  "credits": {
+    "authors": [
+      "bluecarrot16",
+      "JaidynReiman",
+      "Benjamin K. Smith (BenCreating)",
+      "Evert",
+      "Eliza Wyatt (ElizaWy)",
+      "TheraHedwig",
+      "MuffinElZangano",
+      "Durrani",
+      "Johannes Sjölund (wulax)",
+      "Stephen Challener (Redshrike)",
+      "ElizaWy",
+      "Daniel Eddeland (daneeklu)",
+      "gr3yh47",
+      "Nila122"
+    ],
+    "licenses": [
+      "OGA-BY 3.0",
+      "CC-BY-SA 3.0",
+      "GPL 3.0",
+      "GPL 2.0"
+    ],
+    "fileNames": [
+      "body/bodies/male",
+      "head/heads/human/male",
+      "head/faces",
+      "weapon/polearm/dragonspear",
+      "shoulders/legion",
+      "torso/clothes/longsleeve/longsleeve2_cardigan"
+    ],
+    "urls": [
+      "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+      "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+      "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+      "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+      "https://opengameart.org/content/lpc-revised-character-basics",
+      "https://opengameart.org/content/lpc-be-seated",
+      "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+      "https://opengameart.org/content/lpc-jump-expanded",
+      "https://opengameart.org/content/lpc-character-bases",
+      "https://github.com/ElizaWy/LPC/tree/main/Characters/Head",
+      "https://opengameart.org/content/ulpc-expanded-expressions",
+      "https://opengameart.org/content/lpc-weapons-two-bows-a-spear-and-a-trident",
+      "https://opengameart.org/content/lpc-extended-weapon-animations",
+      "https://opengameart.org/content/lpc-roman-armor",
+      "http://opengameart.org/content/lpc-revised-character-basics",
+      "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+      "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+      "https://opengameart.org/content/lpc-expanded-simple-shirts"
+    ]
+  }
+}
