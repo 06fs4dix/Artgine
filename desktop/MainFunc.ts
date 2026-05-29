@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
+import { CAI } from "../artgine/util/CAI.js";
 import { fileURLToPath } from 'url';
 import { CConsol } from "../artgine/basic/CConsol.js";
 import { CFile } from "../artgine/system/CFile.js";
@@ -7,6 +8,23 @@ import { CPath } from "../artgine/basic/CPath.js";
 import { CAlert } from "../artgine/basic/CAlert.js";
 import { CUtil } from "../artgine/basic/CUtil.js";
 import { CJSON } from "../artgine/basic/CJSON.js";
+
+export type AIRole = CAI.eProvider;
+
+function _toProvider(model: CAI.eProvider | string): CAI.eProvider | undefined {
+    const valid = Object.values(CAI.eProvider) as string[];
+    return valid.includes(model as string) ? model as CAI.eProvider : undefined;
+}
+
+// CAI로 이전됨 — 기존 import 호환을 위해 re-export
+export function CreateRole(model: CAI.eProvider | string): boolean {
+    const p = _toProvider(model);
+    return p !== undefined ? CAI.CreateRole(p) as boolean : false;
+}
+export function DeleteRole(model: CAI.eProvider | string, targetDir: string): boolean {
+    const p = _toProvider(model);
+    return p !== undefined ? CAI.DeleteRole(p, targetDir) : false;
+}
 
 export function GetNowString(): string {
     const now = new Date();
@@ -19,32 +37,35 @@ export function GetNowString(): string {
 
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
+const gMainConfig: Record<string, any> = {};
+let gPluginsLoaded = false;
+
 export async function GetAppJSON()
 {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     let initBuf=await CFile.Load(CPath.PHPC()+"Main.json");
     if(initBuf==null)
-    {
         initBuf=await CFile.Load(path.join(__dirname, "Main.json"));
-    }
     if(initBuf==null)
     {
         CAlert.E("error");
         return null;
     }
-    else
+
+    if(!gPluginsLoaded)
     {
+        gPluginsLoaded = true;
         CConsol.Log("Main.json Load!");
         LoadPluginMap([CPath.PHPC()+"/plugin/",CPath.PHPC()+"/artgine"]);
     }
-    
-    
-    type ProgramType = 'developer' | 'client' | 'server';
-    return new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
+
+    const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
         {"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
-            "server":"","github":false,"tsc":true}
+            "server":"","github":false,"tsc":true,"password":"artgine","rootPath":"./"}
     );
+    Object.assign(gMainConfig, parsed);
+    return gMainConfig;
 }
 export function GetProjName(projectPath)
 {

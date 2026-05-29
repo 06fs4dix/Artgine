@@ -6,7 +6,7 @@ import * as https from 'https';
 import * as fs from "fs";
 import { imageSize } from 'image-size';
 
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 
 import {CFile} from '../artgine/system/CFile.js';
 import {CUtil} from '../artgine/basic/CUtil.js';
@@ -18,10 +18,9 @@ import {CPath} from '../artgine/basic/CPath.js';
 import {CString} from '../artgine/basic/CString.js';
 
 
-import { BackUp, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
+import { BackUp, CreateRole, DeleteRole, AIRole, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
-import { CCmdRouter } from '../artgine/network/CCmdRouter.js';
 
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -100,7 +99,7 @@ async function RunServer()
 		const pathname = parsed.pathname; // "/Artgine"
 
 	
-		gWebServer=new CServerMain(Number(port),pathname,gAppJSON.projectPath);
+		gWebServer=new CServerMain(Number(port),pathname,gAppJSON);
 		//new CCmdRouter().SetServerMain(gWebServer);
 		
 		if(await gWebServer.Init())
@@ -332,6 +331,57 @@ ipcMain.handle("VSCodeRun", async (_event) => {
 		return true;
 	}
 	return false;
+});
+ipcMain.handle("AICreate", async (_event, _selected: string[]) => {
+	const roleFile   = path.join(process.cwd(), 'ai', 'ROLE.md');
+	const ignoreFile = path.join(process.cwd(), 'ai', '.ignore');
+	if (!fs.existsSync(roleFile) || !fs.existsSync(ignoreFile)) return false;
+	for (const key of _selected)
+		CreateRole(key);
+	return true;
+});
+ipcMain.handle("AIDelete", async (_event, _selected: string[]) => {
+	for (const key of _selected)
+		DeleteRole(key, process.cwd());
+	return true;
+});
+ipcMain.handle("TTYDRun", async (_event, _cfg: { port: number, password: string }) => {
+    const BIN_DIR    = path.resolve(process.cwd(), 'artgine', 'external', 'bin');
+    const IS_WIN     = process.platform === 'win32';
+    const TTYD_FILE  = IS_WIN ? 'ttyd.win32.exe'
+                     : process.platform === 'darwin' ? 'ttyd.macos'
+                     : process.arch === 'arm64' ? 'ttyd.aarch64' : 'ttyd.x86_64';
+    const ttydPath   = path.join(BIN_DIR, TTYD_FILE);
+
+    if (!fs.existsSync(ttydPath)) {
+        const TTYD_VERSION = '1.7.7';
+        const downloadUrl  = `https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/${TTYD_FILE}`;
+        fs.mkdirSync(BIN_DIR, { recursive: true });
+        const data = await CFile.Load(downloadUrl);
+        if (!data) return false;
+        await CFile.Save(data, ttydPath);
+        if (!IS_WIN) fs.chmodSync(ttydPath, 0o755);
+    }
+
+    const port = _cfg?.port || 7681;
+    const args: string[] = ['-p', String(port), '--writable', '-t', 'scrollback=20000'];
+    if (_cfg?.password) args.push('-c', _cfg.password);
+
+    // 접속자마다 독립 shell: ttyd를 직접 실행
+    const shellCmd = IS_WIN ? 'cmd.exe' : '/bin/bash';
+    args.push(shellCmd);
+
+    if (IS_WIN) {
+        spawn('cmd.exe', ['/c', 'start', '""', ttydPath, ...args], {
+            detached: true, stdio: 'ignore', cwd: process.cwd(),
+        }).unref();
+    } else {
+        spawn(ttydPath, args, {
+            detached: true, stdio: 'ignore', cwd: process.cwd(),
+        }).unref();
+    }
+
+    return true;
 });
 ipcMain.handle("BuildRun", async (_event) => {
 	if(CCMDMgr.IsTSC()==false)
@@ -751,6 +801,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		bTS+="\nimport {CObject} from \""+upFolder+"artgine/basic/CObject.js\"";
 	}
 	
+	const gVersion=CUniqueID.Get();
 	let pfStr= "\nimport {CPreferences} from \""+upFolder+"artgine/basic/CPreferences.js\";\n";
 	pfStr+= "var gPF = new CPreferences();\n";
 	const pref = _json.projetJSON.preference;
@@ -769,6 +820,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	}
 	pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
 	pfStr += `gPF.mGitHub = ${_json.appJSON.github};\n`;
+	pfStr += `gPF.mVersion = "${gVersion}";\n`;
 	
 	//CConsol.Log("mIAuto L "+_json.projetJSON.preference.mIAuto);
 	if(_json.projetJSON.preference.mIAuto)
@@ -819,7 +871,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		});
 	}
 	
-	bTS=CString.InsertAt(bTS,bTS.indexOf("//Version")+9,"\nconst version=\'"+CUniqueID.Get()+"';\n"+"import \""+upFolder+"artgine/artgine.js\"\n");
+	bTS=CString.InsertAt(bTS,bTS.indexOf("//Version")+9,"\nimport \""+upFolder+"artgine/artgine.js\"\n");
 	
 
 	

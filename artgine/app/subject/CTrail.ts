@@ -125,8 +125,9 @@ export class CTrail extends CSubject
                         this.mBCnt++;
                     } else if (this.mFlen >= size) {
                         while (true) {
-                            const blen = CMath.V3Len(CMath.V3SubV3(this.mCorner, this.mPosList[this.mPosList.length - (++this.mBCnt)]));
+                            ++this.mBCnt;
                             if (this.mPosList.length - 1 <= this.mBCnt) { success = 2; break; }
+                            const blen = CMath.V3Len(CMath.V3SubV3(this.mCorner, this.mPosList[this.mPosList.length - this.mBCnt]));
                             if (blen >= size) { success = 1; break; }
                         }
                     } else if (this.mBCnt > 2 && CMath.V3Dot(nowvec, this.mLastVec) < 0.999999) {
@@ -142,6 +143,9 @@ export class CTrail extends CSubject
                         }
                     }
 
+                    // mBCnt 가 mPosList.length 를 넘으면 음수 인덱스 → undefined 접근.
+                    // 위 분기들 중 일부(예: line 125 mBCnt++)가 클램프 없이 증가시키므로 여기서 안전망.
+                    if (this.mBCnt > this.mPosList.length) this.mBCnt = this.mPosList.length;
                     const pArr = [
                         this.mPosList[this.mPosList.length - this.mBCnt],
                         this.mCorner,

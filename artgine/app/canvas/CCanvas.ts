@@ -338,6 +338,7 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 						
 			
 						this.mBrush.mRenInfoMap.set(cpKey,renInfo);
+						this.mBrush.mUpdateRenInfo=true;
 						
 					}
 					
@@ -346,7 +347,6 @@ export class CCanvas extends CObject implements IAutoUpdate,IAutoRender,IFile
 				}
 			}//pt.m_camCull.length==0
 
-			//pt.UpdateRenPt();
 		}
 	}
 	

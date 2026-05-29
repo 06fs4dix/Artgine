@@ -1,0 +1,359 @@
+<style>
+#mi-bar textarea:focus { border-color: #00e5a0 !important; box-shadow: none !important; }
+.has-submenu > .dropdown-menu { top: auto; bottom: 0; right: 100%; }
+</style>
+<script>
+(function() {
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+    var base = '/' + location.pathname.split('/')[1] + '/';
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = base + 'artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css';
+    document.head.appendChild(link);
+    var script = document.createElement('script');
+    script.src = base + 'artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js';
+    document.head.appendChild(script);
+})();
+
+window.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault(); e.stopPropagation();
+        window.top.postMessage({ type: 'terminal-tab-key' }, '*');
+    }
+    if (e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
+        e.preventDefault(); e.stopPropagation();
+        window.top.postMessage({ type: 'home-hotkey', key: e.key }, '*');
+    }
+    if (e.ctrlKey && e.key === 't') {
+        e.preventDefault(); e.stopPropagation();
+        var vp = document.querySelector('.xterm-viewport');
+        if (vp) vp.scrollTop = vp.scrollHeight;
+    }
+}, true);
+
+(function(){
+    var _enc = new TextEncoder();
+    var _W = window.WebSocket;
+    var _wsRef = null;
+    var _storedToken = localStorage.getItem('artgine.token');
+    if (!_storedToken) window.__READ_ONLY = true;
+
+    function _PW(u, p) {
+        var pr = window.location.protocol === "https:" ? "wss:" : "ws:";
+        var params = new URLSearchParams(window.location.search);
+        if (_storedToken) params.set('auth', _storedToken);
+        var _ctxPath = '/' + window.location.pathname.split('/')[1];
+        u = pr + "//" + window.location.hostname + ":" + window.location.port + _ctxPath + "/cmd/ttyd-ws?" + params.toString();
+        var ws = p ? new _W(u, p) : new _W(u);
+        _wsRef = ws;
+        return ws;
+    }
+    _PW.prototype = _W.prototype;
+    _PW.CONNECTING = 0; _PW.OPEN = 1; _PW.CLOSING = 2; _PW.CLOSED = 3;
+    window.WebSocket = _PW;
+
+    function _sendRaw(text) {
+        if (!_wsRef || _wsRef.readyState !== 1) return;
+        var b = _enc.encode(text);
+        var p = new Uint8Array(b.length + 1);
+        p[0] = 48; p.set(b, 1);
+        _wsRef.send(p);
+    }
+
+    window.addEventListener("DOMContentLoaded", function() {
+        console.log('[terminal_ui] DOMContentLoaded — __TTYD_MODE:', window.__TTYD_MODE, '| __READ_ONLY:', window.__READ_ONLY, '| token:', !!_storedToken);
+        if (window.__READ_ONLY) {
+            var _bar = document.createElement('div');
+            _bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:6px;padding:6px 8px;border-top:1px solid #444;background:#1a1a1a;';
+            var _pw  = document.createElement('input');
+            _pw.type = 'password'; _pw.placeholder = 'Password';
+            _pw.style.cssText = 'flex:1;padding:5px 8px;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#fff;font-size:0.9rem;min-width:0;';
+            var _msg = document.createElement('span');
+            _msg.style.cssText = 'color:#f55;font-size:0.8rem;white-space:nowrap;';
+            var _btn = document.createElement('button');
+            _btn.textContent = 'Login';
+            _btn.style.cssText = 'padding:5px 14px;background:#0d6efd;border:none;border-radius:4px;color:#fff;cursor:pointer;white-space:nowrap;';
+            _bar.appendChild(_pw); _bar.appendChild(_msg); _bar.appendChild(_btn);
+            document.body.appendChild(_bar);
+            document.body.style.paddingBottom = '46px';
+            var _doAuth = function() {
+                var password = _pw.value;
+                if (!password) return;
+                _btn.disabled = true; _msg.textContent = '';
+                var _base = '/' + window.location.pathname.split('/')[1] + '/';
+                fetch(_base + 'auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(j) {
+                    if (j.ok) { localStorage.setItem('artgine.token', j.token); location.reload(); }
+                    else { _msg.textContent = j.msg || 'Wrong password'; _btn.disabled = false; _pw.value = ''; _pw.focus(); }
+                })
+                .catch(function() { _msg.textContent = 'Connection failed'; _btn.disabled = false; });
+            };
+            _btn.addEventListener('click', _doAuth);
+            _pw.addEventListener('keydown', function(e) { if (e.key === 'Enter') _doAuth(); });
+            return;
+        }
+
+        var bar = document.createElement("div");
+        bar.id = "mi-bar";
+        bar.className = "position-fixed bottom-0 start-0 end-0 d-flex align-items-center gap-2 px-2 py-2 border-top bg-body";
+        bar.style.zIndex = "10000";
+
+        var inp = document.createElement("textarea");
+        inp.rows = 1;
+        inp.placeholder = "Type then Enter...";
+        inp.autocomplete = "off"; inp.autocorrect = "off"; inp.autocapitalize = "off"; inp.spellcheck = false;
+        inp.className = "form-control font-monospace flex-grow-1";
+        inp.style.cssText = "max-height:200px;overflow-y:auto;resize:none;line-height:1.4;";
+
+        var ddWrap = document.createElement("div");
+        ddWrap.className = "dropup";
+
+        var ddBtn = document.createElement("button");
+        ddBtn.className = "btn btn-secondary fs-5";
+        ddBtn.setAttribute("data-bs-toggle", "dropdown");
+        ddBtn.setAttribute("aria-expanded", "false");
+        ddBtn.textContent = "⌨";
+
+        var ddMenu = document.createElement("ul");
+        ddMenu.className = "dropdown-menu dropdown-menu-end";
+        ddMenu.style.minWidth = "170px";
+
+        // ---- action handler ----
+        function _doAgentAction(kind) {
+            var m = window.__TTYD_MODE;
+            if (kind === "resume") {
+                if (m === "claude" || m === "codex") { _sendRaw("/resume"); return; }
+                if (m === "gemini") { _sendRaw("/chat resume"); return; }
+            }
+            if (kind === "compact") {
+                if (m === "claude" || m === "gemini" || m === "codex") { _sendRaw("/compact"); return; }
+            }
+            if (kind === "exit") {
+                if (m === "codex")  { _sendRaw("\x04"); return; }
+                if (m === "claude" || m === "gemini") { _sendRaw("/exit"); return; }
+            }
+            if (kind === "clear") {
+                if (m === "cmd") { _sendRaw("cls\r"); return; }
+                _sendRaw("/clear"); // claude, gemini, codex, antigravity 모두 동일
+            }
+            if (kind === "status") {
+                if (m === "gemini") { _sendRaw("/stats"); return; } // gemini는 /stats
+                if (m === "cmd") return;
+                _sendRaw("/status"); // claude, codex, antigravity
+            }
+        }
+
+        function hideBar() { bar.style.display = "none"; document.body.style.paddingBottom = "0"; }
+
+        function _sendResize() {
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        function handleAction(seq) {
+            console.log('[terminal_ui] action:', seq, '| mode:', window.__TTYD_MODE);
+            if      (seq === "__SCROLL__")       { var vp = document.querySelector(".xterm-viewport"); if (vp) vp.scrollTop = vp.scrollHeight; }
+            else if (seq === "__CTRL_T__")       { _sendRaw("\x14"); }
+            else if (seq === "__TOGGLE_INPUT__") { hideBar(); }
+            else if (seq === "__RESIZE__")       { _sendResize(); }
+            else if (seq === "__ESC__")          { _sendRaw("\x1b"); inp.focus(); }
+            else if (seq === "__RESUME__")       { _doAgentAction("resume"); }
+            else if (seq === "__COMPACT__")      { _doAgentAction("compact"); }
+            else if (seq === "__CLEAR__")        { _doAgentAction("clear"); }
+            else if (seq === "__STATUS__")       { _doAgentAction("status"); }
+            else if (seq === "__EXIT__")         { _doAgentAction("exit"); }
+            else if (seq && seq.startsWith("__SKILL__:")) {
+                var skillName = seq.slice("__SKILL__:".length);
+                var skill = (window.__SKILLS__ || []).find(function(s) { return s.name === skillName; });
+                if (skill) { inp.value = skill.content; autoHeight(); inp.focus(); }
+            }
+            else if (seq !== null)               { _sendRaw(seq); }
+        }
+
+        // ---- helpers ----
+        function makeSep() {
+            var li = document.createElement("li");
+            li.innerHTML = '<hr class="dropdown-divider">';
+            return li;
+        }
+
+        function makeItem(label, seq) {
+            var li = document.createElement("li");
+            var b = document.createElement("button");
+            b.className = "dropdown-item";
+            b.type = "button";
+            b.textContent = label;
+            b.addEventListener("click", function() { handleAction(seq); });
+            li.appendChild(b);
+            return li;
+        }
+
+        function makeSubmenu(label, items) {
+            var li = document.createElement("li");
+            li.className = "has-submenu position-relative";
+
+            var trigger = document.createElement("button");
+            trigger.className = "dropdown-item d-flex justify-content-between align-items-center";
+            trigger.type = "button";
+            trigger.innerHTML = label + '<span>&#9664;</span>';
+
+            var sub = document.createElement("ul");
+            sub.className = "dropdown-menu";
+            sub.style.cssText = "min-width:200px;max-height:60vh;overflow-y:auto;";
+            items.forEach(function(a) { sub.appendChild(makeItem(a[0], a[1])); });
+
+            trigger.addEventListener("click", function(e) {
+                e.stopPropagation();
+                var isOpen = sub.classList.contains("show");
+                closeAllSubmenus();
+                if (!isOpen) sub.classList.add("show");
+            });
+
+            li.appendChild(trigger);
+            li.appendChild(sub);
+            return li;
+        }
+
+        function closeAllSubmenus() {
+            ddMenu.querySelectorAll(".has-submenu .dropdown-menu").forEach(function(m) {
+                m.classList.remove("show");
+            });
+        }
+
+        // ---- build menu ----
+        ddMenu.appendChild(makeSubmenu("View", [
+            ["⬇ Scroll to bottom", "__SCROLL__"],
+            ["↔ Resize to window", "__RESIZE__"],
+            ["⌨ Ctrl+T",           "__CTRL_T__"],
+            ["⌨ Hide input bar",   "__TOGGLE_INPUT__"],
+        ]));
+        ddMenu.appendChild(makeSep());
+        ddMenu.appendChild(makeItem("↑ Up",    "\x1b[A"));
+        ddMenu.appendChild(makeItem("↓ Down",  "\x1b[B"));
+        ddMenu.appendChild(makeItem("← Left",  "\x1b[D"));
+        ddMenu.appendChild(makeItem("→ Right", "\x1b[C"));
+        ddMenu.appendChild(makeSep());
+        ddMenu.appendChild(makeItem("↵ Enter", "\r"));
+        ddMenu.appendChild(makeItem("ESC",     "__ESC__"));
+        ddMenu.appendChild(makeSep());
+        ddMenu.appendChild(makeSubmenu("Command", [
+            ["⏮ RESUME",  "__RESUME__"],
+            ["🗜 COMPACT", "__COMPACT__"],
+            ["🧹 CLEAR",   "__CLEAR__"],
+            ["📊 STATUS",  "__STATUS__"],
+            ["⏻ EXIT",    "__EXIT__"],
+        ]));
+        var skillItems = [];
+        (window.__SKILLS__ || []).forEach(function(s) {
+            var label = s.name.length > 20 ? s.name.slice(0, 18) + '…' : s.name;
+            skillItems.push(["📝 " + label, "__SKILL__:" + s.name]);
+        });
+        ddMenu.appendChild(makeSubmenu("Skill", skillItems));
+
+        // close submenus when main dropdown closes
+        ddWrap.addEventListener("hidden.bs.dropdown", closeAllSubmenus);
+        // close submenus on outside click within dropdown
+        ddMenu.addEventListener("click", function(e) {
+            if (!e.target.closest(".has-submenu")) closeAllSubmenus();
+        });
+
+        ddWrap.appendChild(ddBtn);
+        ddWrap.appendChild(ddMenu);
+        bar.appendChild(inp);
+        bar.appendChild(ddWrap);
+        document.body.appendChild(bar);
+        document.body.style.paddingBottom = "50px";
+
+        function autoHeight() { inp.style.height = "0"; inp.style.height = Math.min(inp.scrollHeight, 200) + "px"; }
+
+        function sendInput() {
+            var text = inp.value;
+            if (text) {
+                if (window.__TTYD_MODE === "gemini") _sendRaw("\x1b[200~" + text + "\x1b[201~");
+                else _sendRaw(text);
+                if (!text.startsWith("/")) _sendRaw("\r");
+            } else {
+                _sendRaw("\r");
+            }
+            inp.value = ""; autoHeight(); inp.focus();
+        }
+
+        // ---- autocomplete ----
+        var _cmdList = {
+            claude:      ['/compact', '/resume', '/exit', '/clear', '/status', '/help'],
+            gemini:      ['/compact', '/chat resume', '/exit', '/clear', '/stats', '/help'],
+            codex:       ['/compact', '/resume', '/exit', '/clear', '/status', '/help'],
+            antigravity: ['/compact', '/continue', '/exit', '/clear', '/status'],
+        };
+
+        var acBox = document.createElement("ul");
+        acBox.className = "list-group position-fixed shadow";
+        acBox.style.cssText = "display:none;z-index:10002;max-height:40vh;overflow-y:auto;min-width:220px;";
+        document.body.appendChild(acBox);
+
+        var _acIdx = -1;
+        function _acItems() { return acBox.querySelectorAll(".list-group-item"); }
+
+        function _acHide() { acBox.style.display = "none"; acBox.innerHTML = ""; _acIdx = -1; }
+
+        function _acApply(item) {
+            inp.value = item.skill ? item.skill.content : item.cmd;
+            autoHeight(); _acHide(); inp.focus();
+        }
+
+        function _acSelect(idx) {
+            _acItems().forEach(function(el, i) { el.classList.toggle("active", i === idx); });
+            _acIdx = idx;
+        }
+
+        function _acShow(matches) {
+            acBox.innerHTML = ""; _acIdx = -1;
+            if (!matches.length) { _acHide(); return; }
+            var barRect = bar.getBoundingClientRect();
+            acBox.style.left   = barRect.left + "px";
+            acBox.style.bottom = (window.innerHeight - barRect.top + 4) + "px";
+            matches.forEach(function(item) {
+                var li = document.createElement("li");
+                li.className = "list-group-item list-group-item-action py-1 px-3 font-monospace small";
+                li.textContent = item.label;
+                li._acItem = item;
+                li.addEventListener("mousedown", function(e) { e.preventDefault(); _acApply(item); });
+                acBox.appendChild(li);
+            });
+            acBox.style.display = "block";
+        }
+
+        function _acUpdate() {
+            var val = inp.value;
+            if (!val.startsWith("/")) { _acHide(); return; }
+            var mode = window.__TTYD_MODE || 'claude';
+            var items = (_cmdList[mode] || _cmdList['claude']).map(function(c) { return { label: c, cmd: c }; });
+            (window.__SKILLS__ || []).forEach(function(s) { items.push({ label: '/' + s.name, cmd: '/' + s.name, skill: s }); });
+            var matches = items.filter(function(it) { return it.cmd.startsWith(val) && it.cmd !== val; });
+            _acShow(matches);
+        }
+
+        inp.addEventListener("input", function() { autoHeight(); _acUpdate(); });
+        inp.addEventListener("keydown", function(e) {
+            var items = _acItems();
+            if (acBox.style.display !== "none" && items.length) {
+                if (e.key === "ArrowDown") { e.preventDefault(); _acSelect(Math.min(_acIdx + 1, items.length - 1)); return; }
+                if (e.key === "ArrowUp")   { e.preventDefault(); _acSelect(Math.max(_acIdx - 1, 0)); return; }
+                if (e.key === "Tab")       { e.preventDefault(); _acApply(items[Math.max(_acIdx, 0)]._acItem); return; }
+                if (e.key === "Escape")    { _acHide(); return; }
+                if (e.key === "Enter" && !e.shiftKey && !e.isComposing && _acIdx >= 0) {
+                    e.preventDefault(); _acApply(items[_acIdx]._acItem); return;
+                }
+            }
+            if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendInput(); }
+        });
+        document.addEventListener("click", function(e) { if (!bar.contains(e.target)) _acHide(); });
+
+        setTimeout(function() { inp.focus(); }, 500);
+    });
+})();
+</script>

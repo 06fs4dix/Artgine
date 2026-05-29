@@ -1084,12 +1084,29 @@ export class CPaintHTML extends CPaint2D
 		
 		
 
-		if(this.mElement.offsetWidth!=0)
+		if(this.mElement.offsetWidth != 0)
 		{
-			this.mOrgSize.x=this.mElement.clientWidth;
-			this.mOrgSize.y=this.mElement.clientHeight;
+			// DOM 크기가 바뀌었을 때만 바운딩 박스 갱신
+			if (this.mOrgSize.x != this.mElement.clientWidth || this.mOrgSize.y != this.mElement.clientHeight)
+			{
+				this.mOrgSize.x = this.mElement.clientWidth;
+				this.mOrgSize.y = this.mElement.clientHeight;
 
-			
+				// 명시적인 mSize가 없을 때 DOM 실제 크기를 바운딩 박스에 반영
+				if (this.mSize == null)
+				{
+					this.mBound.mMin.x = -this.mOrgSize.x * 0.5;
+					this.mBound.mMin.y = -this.mOrgSize.y * 0.5;
+					this.mBound.mMax.x = this.mOrgSize.x * 0.5;
+					this.mBound.mMax.y = this.mOrgSize.y * 0.5;
+
+					// 부모 CUI가 있다면 앵커 재계산 트리거
+					if (this.mOwner && (this.mOwner as any).mUpdateAnchor !== undefined)
+					{
+						(this.mOwner as any).mUpdateAnchor = true;
+					}
+				}
+			}
 		}
 		let pivotX=0;
 		let pivotY=0;

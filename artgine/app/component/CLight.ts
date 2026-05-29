@@ -254,7 +254,8 @@ export class CLight extends CBrushComp
 
                     const AutoDigitSnapping = (_slook, _orthoHalfWidth) => {
                         let Zaxis = dir;
-                        let Xaxis = CMath.V3Nor(CMath.V3Cross(sup, Zaxis));
+                        let upVec = Math.abs(CMath.V3Dot(sup, Zaxis)) > 0.99 ? new CVec3(0,0,1) : sup;
+                        let Xaxis = CMath.V3Nor(CMath.V3Cross(upVec, Zaxis));
                         let Yaxis = CMath.V3Cross(Zaxis, Xaxis);
 
                         if(this.GetOwner() == null) return;

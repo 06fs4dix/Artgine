@@ -353,6 +353,8 @@ export class CModal implements IAutoUpdate , IListener
 
         this.mOW=_width;
         this.mOH=_height;
+        this.mAutoW=false;
+        this.mAutoH=false;
 
         if(this.mCard != null) {
             this.mCard.style.width=this.mOW+"px";
@@ -426,20 +428,30 @@ export class CModal implements IAutoUpdate , IListener
     {
         this.mLimitPush=_push;
     }
+    private mAutoW=false;
+    private mAutoH=false;
     LimitPushChk()
     {
         if(this.mCard==null)    return;
-        if(this.mOW==0 && this.mCard.offsetWidth!=0)
-            this.mOW=this.mCard.offsetWidth+3;
-        if(this.mOH==0 && this.mCard.offsetHeight!=0)
-            this.mOH=this.mCard.offsetHeight;
-        
+
         let w=window.innerWidth;
         let h=window.innerHeight;
 
-        
-        
-        
+        // --- Width ---
+        if(this.mAutoW)
+        {
+            // auto: 매번 스타일 해제 후 재측정 → mOW 갱신 (드래그/커서 감지에 사용)
+            this.mCard.style.width='';
+            this.mCard.style.maxWidth='';
+            if(this.mCard.offsetWidth!=0) this.mOW=this.mCard.offsetWidth+3;
+        }
+        else if(this.mOW==0 && this.mCard.offsetWidth!=0)
+        {
+            // 최초 호출 시 SetSize 없었으면 auto 모드 진입
+            this.mAutoW=true;
+            this.mOW=this.mCard.offsetWidth+3;
+        }
+
         if(this.mOW>w)
         {
             this.mCard.style.width=w+"px";
@@ -449,53 +461,47 @@ export class CModal implements IAutoUpdate , IListener
         {
             if(this.mFull)
                 this.mCard.style.width=w+"px";
-            else if(this.mOW!=0)
+            else if(!this.mAutoW && this.mOW!=0)
                 this.mCard.style.width=this.mOW+"px";
 
             let right=this.mCard.offsetLeft+this.mOW;
             if(w<right)
                 this.mCard.style.left=(w-this.mOW)+"px";
             else if(0>this.mCard.offsetLeft)
-            {
                 this.mCard.style.left="0px";
-            }
         }
-        
+
+        // --- Height ---
+        if(this.mAutoH)
+        {
+            this.mCard.style.height='';
+            this.mCard.style.maxHeight='';
+            if(this.mCard.offsetHeight!=0) this.mOH=this.mCard.offsetHeight;
+        }
+        else if(this.mOH==0 && this.mCard.offsetHeight!=0)
+        {
+            this.mAutoH=true;
+            this.mOH=this.mCard.offsetHeight;
+        }
 
         if(this.mOH>h)
         {
             this.mCard.style.height=h+"px";
             this.mCard.style.top="0px";
         }
-            
         else
         {
             if(this.mFull)
                 this.mCard.style.height=h+"px";
-            else if(this.mOH!=0)
+            else if(!this.mAutoH && this.mOH!=0)
                 this.mCard.style.height=this.mOH+"px";
+
             let bottom=this.mCard.offsetTop+this.mOH;
             if(h<bottom)
                 this.mCard.style.top=(h-this.mOH)+"px";
             else if(0>this.mCard.offsetTop)
-            {
                 this.mCard.style.top="0px";
-    
-            }
         }
-            
-        
-        
-        
-            
-
-        
-            
-        
-        
-        
-            
-        
     }
     Focus(_action : CModal.eAction=null)
     {

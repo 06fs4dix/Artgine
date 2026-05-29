@@ -141,6 +141,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	public mPause=false;
 	public mRenPriMap=new Map<number,CRenPriority>();
 	public mRenInfoMap=new Map<string,CRenInfo>();
+	mUpdateRenInfo=false;
 	mUpdateShadow=false;
 	mUpdateLight=false;
 	mUpdateLUT=false;

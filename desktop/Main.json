@@ -4,9 +4,11 @@
   "fullScreen": false,
   "program": "developer",
   "url": "http://localhost:8050/Artgine",
-  "projectPath": "proj/Tutorial/Skybox",
+  "projectPath": "proj/Home",
   "page": "html",
-  "server": "local",
+  "server": "webServer",
   "github": false,
-  "tsc": true
+  "tsc": true,
+  "password": "artgine",
+  "rootPath": "./"
 }

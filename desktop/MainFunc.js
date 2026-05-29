@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
+import { CAI } from "../artgine/util/CAI.js";
 import { fileURLToPath } from 'url';
 import { CConsol } from "../artgine/basic/CConsol.js";
 import { CFile } from "../artgine/system/CFile.js";
@@ -7,6 +8,18 @@ import { CPath } from "../artgine/basic/CPath.js";
 import { CAlert } from "../artgine/basic/CAlert.js";
 import { CUtil } from "../artgine/basic/CUtil.js";
 import { CJSON } from "../artgine/basic/CJSON.js";
+function _toProvider(model) {
+    const valid = Object.values(CAI.eProvider);
+    return valid.includes(model) ? model : undefined;
+}
+export function CreateRole(model) {
+    const p = _toProvider(model);
+    return p !== undefined ? CAI.CreateRole(p) : false;
+}
+export function DeleteRole(model, targetDir) {
+    const p = _toProvider(model);
+    return p !== undefined ? CAI.DeleteRole(p, targetDir) : false;
+}
 export function GetNowString() {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -17,23 +30,27 @@ export function GetNowString() {
     const ss = String(now.getSeconds()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
+const gMainConfig = {};
+let gPluginsLoaded = false;
 export async function GetAppJSON() {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     let initBuf = await CFile.Load(CPath.PHPC() + "Main.json");
-    if (initBuf == null) {
+    if (initBuf == null)
         initBuf = await CFile.Load(path.join(__dirname, "Main.json"));
-    }
     if (initBuf == null) {
         CAlert.E("error");
         return null;
     }
-    else {
+    if (!gPluginsLoaded) {
+        gPluginsLoaded = true;
         CConsol.Log("Main.json Load!");
         LoadPluginMap([CPath.PHPC() + "/plugin/", CPath.PHPC() + "/artgine"]);
     }
-    return new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
-        "server": "", "github": false, "tsc": true });
+    const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
+        "server": "", "github": false, "tsc": true, "password": "artgine", "rootPath": "./" });
+    Object.assign(gMainConfig, parsed);
+    return gMainConfig;
 }
 export function GetProjName(projectPath) {
     const parts = projectPath.split(/[\\/]/);

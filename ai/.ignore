@@ -1,0 +1,28 @@
+# ============================================
+# Artgine .claudeignore
+# ============================================
+
+# 폴더
+.vscode/
+node_modules/
+desktop/
+
+artgine/external/
+artgine/wasm/
+artgine/app_imple/
+artgine/basic_impl/
+artgine/geometry_imple/
+artgine/network_imple/
+artgine/render_imple/
+artgine/server_imple/
+artgine/system_imple/
+artgine/util_imple/
+
+**/BackUp/
+**/Canvas/
+
+# JS 파일
+**/*.js
+
+
+

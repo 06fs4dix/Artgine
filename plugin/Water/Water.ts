@@ -48,12 +48,15 @@ export class CWater3D extends CSubject
     // 물 색상
     mDeepColor : CVec3 = new CVec3(0.1,0.2,0.4);
     mShallowColor : CVec3 = new CVec3();
-    mWaterDeep : CVec4 = new CVec4(10,255,10); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 커품이 생기는 최대 깊이
+    mWaterDeep : CVec4 = new CVec4(10,255,30); // x : 물 높이, y : 물 속이 보이는 최대 깊이, z : 커품이 생기는 최대 깊이
     mWaterUnderFadeDist : CVec2 = new CVec2(0, 4000); // x : 물 속이 전부 보이는 최대 거리, y : 물 속이 전혀 보이지 않는 최소 거리
 
     // 코스틱
     mCausticFlowDir : CVec2 = new CVec2(0, 0);
     mCausticFlowFrequency : CVec1 = new CVec1(1);  // x : 코스틱 빈도([0, 1])
+
+    // 노말 플로우
+    mNormalFlowDir : CVec2 = new CVec2(0, 0);
 
     constructor() {
         super();
@@ -68,6 +71,7 @@ export class CWater3D extends CSubject
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterDeep", this.mWaterDeep));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterHeight", this.mWaterHeight));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterUnderFadeDist", this.mWaterUnderFadeDist));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", this.mNormalFlowDir));
         this.PushComp(this.mPaint);
         
     }
@@ -92,8 +96,8 @@ export class CWater3D extends CSubject
             const accuracy = (cam.mProjFar ?? 100000) / (cam.mProjNear ?? 1);
             const worldSizeX = Math.abs(this.GetSca().x);
             const worldSizeY = Math.abs(this.GetSca().y);
-            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000), 1, 100);
-            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000), 1, 100);
+            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000 * 10), 1, 1000);
+            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000 * 10), 1, 1000);
             const waterMeshKey = `waterMesh${scaleX}:${scaleY}`;
             if(this.GetFrame().Res().Find(waterMeshKey) == null)
             {
@@ -202,7 +206,7 @@ export class CWater3D extends CSubject
     }
 
     NormalFlow(_flow : CVec2) {        
-        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
+        this.mNormalFlowDir.Import(_flow);
     }
 
     AddRefractor(_texture : string = undefined, _flow : CVec2 = new CVec2(0, 0)) {
@@ -215,6 +219,7 @@ export class CWater3D extends CSubject
 
             // shaderAttr 포인터로 생성
             this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency);
+            this.mRefractor.AddNormalFlow(this.mNormalFlowDir);
             this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mWaterUnderFadeDist, this.mShallowColor, this.mDeepColor, this.mWaterHeight);
 
             this.mPaint.PushTag("UseRefractTex");
@@ -372,6 +377,8 @@ export class CReflector3D extends CBrushComp
             );
             tex = fw.Res().Find(this.GetTex()) as CTexture;
             tex.SetAutoResize(false);
+            tex.SetFilter(CTexture.eFilter.Linear);
+            tex.SetMipMap(CTexture.eMipmap.GL);
         }
 
         // 사이즈 변경 시 재생성
@@ -472,19 +479,19 @@ export class CRefractor3D extends CBrushComp
         }
 
         // 스카이박스용 RP
-        {
-            const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
-            rp.mCopy = false;
-            rp.mPriority=CRenderPass.ePriority.Normal - 1;
-            rp.mRenderTarget = this.GetTex();
-            rp.mCamera = this.mTexKey;
-            rp.mCullFace=CRenderPass.eCull.CW;
-            rp.mCullFrustum=false;
-            rp.PushOr(new CCondition("class","==","CPaintCube"));
-            rp.PushAnd(new CCondition("mTag[water]","==",false));
-            rp.PushAnd(new CCondition("mTag[sky]"));
-            this.PushRPAuto(rp);
-        }
+        // {
+        //     const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
+        //     rp.mCopy = false;
+        //     rp.mPriority=CRenderPass.ePriority.Normal - 1;
+        //     rp.mRenderTarget = this.GetTex();
+        //     rp.mCamera = this.mTexKey;
+        //     rp.mCullFace=CRenderPass.eCull.CW;
+        //     rp.mCullFrustum=false;
+        //     rp.PushOr(new CCondition("class","==","CPaintCube"));
+        //     rp.PushAnd(new CCondition("mTag[water]","==",false));
+        //     rp.PushAnd(new CCondition("mTag[sky]"));
+        //     this.PushRPAuto(rp);
+        // }
     }
 
     AddWaterDeep(_waterDeep : CVec4, _waterDist : CVec2, _shallowColor : CVec3, _deepColor : CVec3, _waterHeight : CVec1)
@@ -504,6 +511,13 @@ export class CRefractor3D extends CBrushComp
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
             rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
+        }
+    }
+    AddNormalFlow(_flow : CVec2)
+    {
+        for(let rp of this.mWrite) {
+            rp.mTag.add("waterRefract");
+            rp.mShaderAttr.push(new CShaderAttr("normalflowDir", _flow));
         }
     }
 
@@ -529,6 +543,8 @@ export class CRefractor3D extends CBrushComp
             );
             tex = fw.Res().Find(this.GetTex()) as CTexture;
             tex.SetAutoResize(false);
+            tex.SetFilter(CTexture.eFilter.Linear);
+            tex.SetMipMap(CTexture.eMipmap.GL);
         }
 
         // 사이즈 변경 시 재생성

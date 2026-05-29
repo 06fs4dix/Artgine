@@ -105,7 +105,7 @@ export class CRenderer
 	BlitDepth(_read : CTexture,_draw : CTexture=null){	}
 	BlitColor(_read : CTexture,_draw : CTexture=null){}
 	Begin(_tex : CTexture=null,_surface=false,_rtUse:Set<number>=null,_rtLevel=0){	return false;	}
-	End(_tex : CTexture=null,_rtLevel=0){}
+	End(_tex : CTexture=null,_rtUse :Set<number>=null,_rtLevel=0){}
 	
 	GetMainFrameTex() {
 		return this.mMainFrameTex;
@@ -248,7 +248,7 @@ export class CRendererGL extends CRenderer
 		
 		return false;	
 	}
-	override End(_tex : CTexture=null,_rtLevel=0)
+	override End(_tex : CTexture=null,_rtUse :Set<number>,_rtLevel=0)
 	{
 		
 	}

@@ -21,6 +21,7 @@ import {
 	V4Mix,
 	Attribute,
 	Sam2DArrToV4,
+	Sam2DArrToMat,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
@@ -418,18 +419,18 @@ function vs_main_shadow_write(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 	
 	if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
 	{
-		svm =Sam2DToMat(shadowNearCasV0,shadowWrite.y);
-		spm =Sam2DToMat(shadowFarCasP0,shadowWrite.y);
+		svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+		spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
 	}
 	else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
 	{
-		svm =Sam2DToMat(shadowTopCasV1,shadowWrite.y);
-		spm =Sam2DToMat(shadowBottomCasP1,shadowWrite.y);
+		svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+		spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
 	}
 	else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
 	{
-		svm =Sam2DToMat(shadowLeftCasV2,shadowWrite.y);
-		spm =Sam2DToMat(shadowRightCasP2,shadowWrite.y);
+		svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+		spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
 	}
 	
 	P = V4MulMatCoordi(P, worldMat);

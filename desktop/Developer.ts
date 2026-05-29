@@ -10,7 +10,7 @@ import {CWebView} from "../artgine/system/CWebView.js";
 
 
 var gProjJSON = null;
-var gAppJSON: { url, projectPath, program, server, width, height, fullScreen,github } = null;
+var gAppJSON: { url, projectPath, program, server, width, height, fullScreen, github, password, rootPath } = null;
 var gManifest=null;
 var gPlugin;
 var gServiceWorker=null;
@@ -50,7 +50,7 @@ function WatchInputChanges() {
         }
     };
 
-    // Include - checkbox만
+    // Include - checkbox�?
     const updateIncludes = () => {
         const inc: any = gProjJSON.includes ??= {};
         const includeInputs = document.querySelectorAll("#include input[type='checkbox']");
@@ -61,7 +61,7 @@ function WatchInputChanges() {
         });
     };
 
-    // AppJSON 정보 실시간 반영
+    // AppJSON ?�보 ?�시�?반영
     const updateAppJSON = () => {
         gAppJSON.url = (document.getElementById("url_txt") as HTMLInputElement).value;
         gAppJSON.projectPath = (document.getElementById("projectPath_txt") as HTMLInputElement).value;
@@ -72,7 +72,8 @@ function WatchInputChanges() {
         gAppJSON.program = (document.getElementById("program_sel") as HTMLSelectElement).value;
         gAppJSON.fullScreen = (document.getElementById("fullScreen_chk") as HTMLInputElement).checked;
         gAppJSON.github = (document.getElementById("github_chk") as HTMLInputElement).checked;
-
+        gAppJSON.password = (document.getElementById("auth_password_txt") as HTMLInputElement).value;
+        gAppJSON.rootPath = (document.getElementById("auth_rootpath_txt") as HTMLInputElement).value;
     };
     const updateManifest = () => {
         
@@ -90,11 +91,11 @@ function WatchInputChanges() {
         gManifest.background_color = CDOM.IDValue("background_color_pick");
         gManifest.theme_color = CDOM.IDValue("theme_color_pick");
     
-        // categories : comma로 구분된 문자열 → 배열
+        // categories : comma�?구분??문자????배열
         const catStr = CDOM.IDValue("categories_txt");
         gManifest.categories = catStr.split(",").map(s => s.trim()).filter(s => s.length > 0);
     
-        // screenshots, shortcuts : JSON 문자열 → 배열 파싱
+        // screenshots, shortcuts : JSON 문자????배열 ?�싱
         try {
             gManifest.screenshots = JSON.parse(CDOM.IDValue("screenshots_txt"));
         } catch { gManifest.screenshots = []; }
@@ -103,16 +104,16 @@ function WatchInputChanges() {
             gManifest.shortcuts = JSON.parse(CDOM.IDValue("shortcuts_txt"));
         } catch { gManifest.shortcuts = []; }
     
-        // icons는 CreateArrayItemInput()에서 직접 수정되므로 여기선 제외
+        // icons??CreateArrayItemInput()?�서 직접 ?�정?��?�??�기???�외
     };
     const updateServiceWorker = () => {
      
         
-            // 버전 텍스트 → CACHE_NAME 재구성
+            // 버전 ?�스????CACHE_NAME ?�구??
             
             gServiceWorker.CACHE_NAME = CDOM.IDValue("cache_name_txt");
         
-            // MB → Bytes로 변환
+            // MB ??Bytes�?변??
             const maxMB = parseInt(CDOM.IDValue("max_cache_size_num"), 10);
             gServiceWorker.MAX_CACHE_SIZE = (isNaN(maxMB) ? 50 : maxMB) * 1024 * 1024;
         
@@ -131,22 +132,22 @@ function WatchInputChanges() {
             const pluginName = input.id.replace(/^plugin_/, "");
 
             const plugin = gPlugin.find(p => p.name === pluginName);
-            //console.log("플러그인 찾기:", pluginName, plugin); // ← 확인용
+            //console.log("?�러그인 찾기:", pluginName, plugin); // ???�인??
 
             if (input.checked && plugin) 
             {
                 if(typeof plugin.version === "number")
                     newDeps[pluginName] = plugin.version;
                 else
-                    CAlert.E("플러그인 버전 문제");
+                    CAlert.E("?�러그인 버전 문제");
             }
         });
 
         gProjJSON.dependencies = newDeps;
-        //CConsol.Log("새 dependencies:", gProjJSON.dependencies); // ← 확인용
+        //CConsol.Log("??dependencies:", gProjJSON.dependencies); // ???�인??
     };
 
-    // 공통 함수 - id를 mXXX 필드로 매핑
+    // 공통 ?�수 - id�?mXXX ?�드�?매핑
     const idToField = (id: string) => {
         const map = {
             depth: "m32fDepth",
@@ -159,7 +160,7 @@ function WatchInputChanges() {
         return map[id] ?? id;
     };
 
-    // 이벤트 바인딩
+    // ?�벤??바인??
     document.querySelectorAll("#preference input, #preference select").forEach(el =>
         el.addEventListener("change", updatePreference)
     );
@@ -192,7 +193,9 @@ async function Init() {
     CDOM.IDInput("server_sel").value = gAppJSON.server;
     CDOM.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
-    
+    CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
+    CDOM.IDValue("auth_rootpath_txt", gAppJSON.rootPath ?? "");
+
     CDOM.IDInput("program_sel").value = gAppJSON.program;
 
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {
@@ -223,7 +226,7 @@ async function Init() {
             checkbox.type = "checkbox";
             checkbox.id = id;
 
-            // ✅ dependencies에 존재하면 체크
+            // ??dependencies??존재?�면 체크
             if (deps[plugin.name] === 1) {
                 checkbox.checked = true;
             }
@@ -236,7 +239,7 @@ async function Init() {
             label.setAttribute("data-bs-toggle", "tooltip");
             label.setAttribute("data-bs-placement", "top");
             label.setAttribute("title", plugin.html);
-            label.setAttribute("data-bs-html", "true"); // html 사용 허용
+            label.setAttribute("data-bs-html", "true"); // html ?�용 ?�용
 
             inner.appendChild(checkbox);
             inner.appendChild(label);
@@ -282,7 +285,7 @@ async function Init() {
         }
     }
 
-    // Include 항목 체크 상태 세팅
+    // Include ??�� 체크 ?�태 ?�팅
     let inc = gProjJSON.includes;
     if (inc) {
         for (const [key, val] of Object.entries(inc)) {
@@ -323,10 +326,10 @@ async function Init() {
     
     //CAlert.Info(JSON.stringify(gServiceWorker));
     CDOM.IDValue("cache_name_txt", gServiceWorker.CACHE_NAME);
-    // MAX_CACHE_SIZE는 MB 단위로 변환해서 입력
+    // MAX_CACHE_SIZE??MB ?�위�?변?�해???�력
     CDOM.IDValue("max_cache_size_num", Math.floor(gServiceWorker.MAX_CACHE_SIZE / (1024 * 1024)));
 
-    // 체크박스는 boolean 값을 직접 반영
+    // 체크박스??boolean 값을 직접 반영
     CDOM.IDInput("log_chk").checked=gServiceWorker.LOG;
     CDOM.IDInput("api_cache_chk").checked=gServiceWorker.API_CACHE;
     
@@ -356,6 +359,38 @@ document.getElementById("VSCode_btn").addEventListener("click", async function (
 });
 
 
+
+function GetAISelected(): string[] {
+    const ids = ["claude", "antigravity", "manus", "gpt", "codex"];
+    return ids.filter(id => (document.getElementById(`ai_${id}_chk`) as HTMLInputElement).checked);
+}
+
+document.getElementById("aiCreate_btn").addEventListener("click", async function () {
+    const selected = GetAISelected();
+    if (selected.length === 0) return;
+    await CWebView.Call("AICreate", selected);
+});
+
+document.getElementById("aiDelete_btn").addEventListener("click", async function () {
+    const selected = GetAISelected();
+    if (selected.length === 0) return;
+    await CWebView.Call("AIDelete", selected);
+});
+
+function GetTTYDConfig(): { port: number, password: string } {
+    const port = parseInt((document.getElementById("ttyd_port") as HTMLInputElement).value) || 7681;
+    const password = (document.getElementById("ttyd_password") as HTMLInputElement).value;
+    return { port, password };
+}
+
+document.getElementById("ttydRun_btn").addEventListener("click", async function () {
+    await CWebView.Call("TTYDRun", GetTTYDConfig());
+});
+
+document.getElementById("ttydBrowser_btn").addEventListener("click", async function () {
+    const { port } = GetTTYDConfig();
+    await CWebView.Call("URLRun", `http://localhost:${port}`);
+});
 
 document.getElementById("selectProjectPath_btn").addEventListener("click", async function () {
     (CDOM.ID("Run_btn") as HTMLButtonElement).disabled =true;
@@ -438,7 +473,7 @@ document.getElementById("Run_btn").addEventListener("click", async function () {
 function CreateArrayItemInput(fieldId: string, dataList: Array<any>, label: string) {
 	const listEl = document.getElementById(`${fieldId}_list`);
 	if (!listEl) return;
-	listEl.innerHTML = ''; // 초기화
+	listEl.innerHTML = ''; // 초기??
 
 	dataList.forEach((value, index) => {
 		const item = document.createElement("div");
@@ -453,9 +488,9 @@ function CreateArrayItemInput(fieldId: string, dataList: Array<any>, label: stri
 		delBtn.className = "btn-close ms-2";
 		delBtn.ariaLabel = "Remove";
 		delBtn.onclick = () => {
-			dataList.splice(index, 1);              // 배열에서 제거
-			CreateArrayItemInput(fieldId, dataList, label); // 재렌더링
-			//if (fieldId === "icons") updateManifest();       // 반영 필요시 갱신
+			dataList.splice(index, 1);              // 배열?�서 ?�거
+			CreateArrayItemInput(fieldId, dataList, label); // ?�렌?�링
+			//if (fieldId === "icons") updateManifest();       // 반영 ?�요??갱신
 		};
 
 		item.appendChild(text);
@@ -485,3 +520,4 @@ window.addEventListener("keyup", async (e) => {
 	
 	
 });
+

@@ -128,12 +128,15 @@ function ps_main_water() {
     BranchEnd();
     BranchBegin("UseRefractTex", "UseRefractTex", [refractMap]);
     refractColor = Sam2DToColor(refractMap, screenUV);
+    if (refractColor.w < 0.75) {
+        refractColor = new CVec4(shallowColor, 1.0);
+        refractColor.rgb = V3Mix(deepColor, refractColor.rgb, 1.0 - SaturateFloat(Remap(V3Len(V3SubV3(camPos, world)), waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8)));
+    }
     refractType = 1.0;
     BranchEnd();
     if (refractType < -0.5) {
         refractColor = new CVec4(shallowColor, 1.0);
-        var dist = V3Len(V3SubV3(camPos, world));
-        var distanceBlend = 1.0 - SaturateFloat(Remap(dist, waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8));
+        var distanceBlend = 1.0 - SaturateFloat(Remap(V3Len(V3SubV3(camPos, world)), waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8));
         refractColor.rgb = V3Mix(deepColor, refractColor.rgb, distanceBlend);
         refractType = 2.0;
     }

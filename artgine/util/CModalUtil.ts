@@ -7,6 +7,7 @@ import {CDOM} from "../basic/CDOM.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CJSON} from "../basic/CJSON.js";
 import {CModal} from "../basic/CModal.js";
+import { CStorage } from "../system/CStorage.js";
 import { CObject } from "../basic/CObject.js";
 import { CPath } from "../basic/CPath.js";
 import { CString } from "../basic/CString.js";
@@ -667,7 +668,7 @@ export class CFileViewer extends CModal
                            
                             monacoEditer.revealLineInCenter(lastLine);
                         }
-                    },this.mGitHub);
+                    },this.mGitHub,_file);
                     
                     
                     
@@ -1489,5 +1490,122 @@ export class CSheetViewer extends CModal
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+}
+
+export class CModalStackMsg extends CModal
+{
+    private static readonly sGAP = 8;
+    private static readonly sEDGE = 8;
+
+    mStackCorner: CModal.ePos;
+
+    constructor(_corner: CModal.ePos = CModal.ePos.BottomRight, _key: string = null)
+    {
+        super(_key);
+        this.mStackCorner = _corner;
+        this.SetTitle(CModal.eTitle.None);
+        this.SetResize(false);
+        this.SetLimitPush(false);
+        this.mBodyStyle = "card-body p-0 overflow-hidden";
+    }
+
+    static GetStack(_corner: CModal.ePos): CModalStackMsg[]
+    {
+        return CModal.GetModalList().filter(
+            m => m instanceof CModalStackMsg &&
+                 (m as CModalStackMsg).mStackCorner === _corner &&
+                 m.mCard != null &&
+                 m.IsShow()
+        ) as CModalStackMsg[];
+    }
+
+    static RefreshStack(_corner: CModal.ePos)
+    {
+        const list = CModalStackMsg.GetStack(_corner);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const isBottom = _corner === CModal.ePos.BottomLeft || _corner === CModal.ePos.BottomRight;
+        const isRight  = _corner === CModal.ePos.TopRight   || _corner === CModal.ePos.BottomRight;
+
+        let offset = CModalStackMsg.sEDGE;
+
+        for (const modal of list)
+        {
+            const cardH = modal.mCard.offsetHeight || modal.mOH || 60;
+            const cardW = modal.mCard.offsetWidth  || modal.mOW || 300;
+
+            const top  = isBottom ? h - offset - cardH : offset;
+            const left = isRight  ? w - CModalStackMsg.sEDGE - cardW : CModalStackMsg.sEDGE;
+
+            modal.mCard.style.transition = "top 0.3s ease, left 0.3s ease";
+            modal.mCard.style.top  = top  + "px";
+            modal.mCard.style.left = left + "px";
+            modal.mOT = top;
+            modal.mOL = left;
+
+            offset += cardH + CModalStackMsg.sGAP;
+        }
+    }
+
+    override Open(_startPos?: CModal.ePos): void
+    {
+        super.Open(_startPos ?? this.mStackCorner);
+        setTimeout(() => CModalStackMsg.RefreshStack(this.mStackCorner), 0);
+    }
+
+    override Close(_delayTime: number = 0): void
+    {
+        const corner = this.mStackCorner;
+        super.Close(_delayTime);
+        const delay = _delayTime > 0 ? _delayTime * 1000 + 50 : 0;
+        setTimeout(() => CModalStackMsg.RefreshStack(corner), delay);
+    }
+
+    override Hide(_animationTime: number = 300): void
+    {
+        const corner = this.mStackCorner;
+        super.Hide(_animationTime);
+        setTimeout(() => CModalStackMsg.RefreshStack(corner), _animationTime + 50);
+    }
+
+    override Show(): void
+    {
+        super.Show();
+        setTimeout(() => CModalStackMsg.RefreshStack(this.mStackCorner), 16);
+    }
+}
+
+export class CModalTerminal extends CModal
+{
+    private static msCount = 0;
+
+    constructor()
+    {
+        super(null);
+        CModalTerminal.msCount++;
+        this.SetCloseToHide(false);
+        this.SetResize(true);
+        this.SetTitle(CModal.eTitle.TextMinFullClose);
+        this.SetHeader("Terminal #" + CModalTerminal.msCount);
+
+        const token = CStorage.Get("cmd_token");
+        const src = token ? `/cmd?preauth=${token}` : '/cmd';
+
+        this.SetBody(
+            `<div style="position:relative;width:100%;height:100%;">` +
+            `<iframe src="${src}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
+            `<div class="modal-iframe-guard" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;z-index:1;"></div>` +
+            `</div>`
+        );
+        this.SetSize("80%", "80%");
+        this.Open(CModal.ePos.Center);
+
+        // iframe이 마우스 이벤트를 가로채는 것을 방지
+        const guard = this.mBody.querySelector('.modal-iframe-guard') as HTMLElement;
+        if (guard) {
+            document.addEventListener('mousedown', () => { guard.style.display = 'block'; });
+            document.addEventListener('mouseup', () => { guard.style.display = 'none'; });
+        }
     }
 }

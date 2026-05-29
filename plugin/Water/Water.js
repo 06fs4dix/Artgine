@@ -35,10 +35,11 @@ export class CWater3D extends CSubject {
     mWaterHeight = new CVec1(1.0);
     mDeepColor = new CVec3(0.1, 0.2, 0.4);
     mShallowColor = new CVec3();
-    mWaterDeep = new CVec4(10, 255, 10);
+    mWaterDeep = new CVec4(10, 255, 30);
     mWaterUnderFadeDist = new CVec2(0, 4000);
     mCausticFlowDir = new CVec2(0, 0);
     mCausticFlowFrequency = new CVec1(1);
+    mNormalFlowDir = new CVec2(0, 0);
     constructor() {
         super();
         this.mPaint = new CPaint3D(CFrame.Main().Pal().GetPlaneMesh());
@@ -51,6 +52,7 @@ export class CWater3D extends CSubject {
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterDeep", this.mWaterDeep));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterHeight", this.mWaterHeight));
         this.mPaint.PushCShaderAttr(new CShaderAttr("waterUnderFadeDist", this.mWaterUnderFadeDist));
+        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", this.mNormalFlowDir));
         this.PushComp(this.mPaint);
     }
     GetPT() {
@@ -67,8 +69,8 @@ export class CWater3D extends CSubject {
             const accuracy = (cam.mProjFar ?? 100000) / (cam.mProjNear ?? 1);
             const worldSizeX = Math.abs(this.GetSca().x);
             const worldSizeY = Math.abs(this.GetSca().y);
-            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000), 1, 100);
-            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000), 1, 100);
+            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000 * 10), 1, 1000);
+            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000 * 10), 1, 1000);
             const waterMeshKey = `waterMesh${scaleX}:${scaleY}`;
             if (this.GetFrame().Res().Find(waterMeshKey) == null) {
                 const rVal = new CMeshCreateInfo();
@@ -160,7 +162,7 @@ export class CWater3D extends CSubject {
             this.mShallowColor.Import(_shallowColor);
     }
     NormalFlow(_flow) {
-        this.mPaint.PushCShaderAttr(new CShaderAttr("normalflowDir", _flow));
+        this.mNormalFlowDir.Import(_flow);
     }
     AddRefractor(_texture = undefined, _flow = new CVec2(0, 0)) {
         if (_texture == undefined) {
@@ -169,6 +171,7 @@ export class CWater3D extends CSubject {
             this.mRefractor = new CRefractor3D();
             this.PushComp(this.mRefractor);
             this.mRefractor.AddCaustics(this.mCausticFlowDir, this.mCausticFlowFrequency);
+            this.mRefractor.AddNormalFlow(this.mNormalFlowDir);
             this.mRefractor.AddWaterDeep(this.mWaterDeep, this.mWaterUnderFadeDist, this.mShallowColor, this.mDeepColor, this.mWaterHeight);
             this.mPaint.PushTag("UseRefractTex");
             this.mPaint.PushCShaderAttr(new CShaderAttr("refractionMap", 2.0));
@@ -284,6 +287,8 @@ export class CReflector3D extends CBrushComp {
             fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)], new CVec2(this.mSize, this.mSize), this.GetTex());
             tex = fw.Res().Find(this.GetTex());
             tex.SetAutoResize(false);
+            tex.SetFilter(CTexture.eFilter.Linear);
+            tex.SetMipMap(CTexture.eMipmap.GL);
         }
         if (tex.GetWidth() != this.mSize) {
             tex.SetSize(this.mSize, this.mSize);
@@ -357,19 +362,6 @@ export class CRefractor3D extends CBrushComp {
             rp.PushAnd(new CCondition("mTag[water]", "==", false));
             this.PushRPAuto(rp);
         }
-        {
-            const rp = new CRPAuto(CFrame.Main().Pal().SlCube().mKey);
-            rp.mCopy = false;
-            rp.mPriority = CRenderPass.ePriority.Normal - 1;
-            rp.mRenderTarget = this.GetTex();
-            rp.mCamera = this.mTexKey;
-            rp.mCullFace = CRenderPass.eCull.CW;
-            rp.mCullFrustum = false;
-            rp.PushOr(new CCondition("class", "==", "CPaintCube"));
-            rp.PushAnd(new CCondition("mTag[water]", "==", false));
-            rp.PushAnd(new CCondition("mTag[sky]"));
-            this.PushRPAuto(rp);
-        }
     }
     AddWaterDeep(_waterDeep, _waterDist, _shallowColor, _deepColor, _waterHeight) {
         for (let rp of this.mWrite) {
@@ -388,6 +380,12 @@ export class CRefractor3D extends CBrushComp {
             rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
         }
     }
+    AddNormalFlow(_flow) {
+        for (let rp of this.mWrite) {
+            rp.mTag.add("waterRefract");
+            rp.mShaderAttr.push(new CShaderAttr("normalflowDir", _flow));
+        }
+    }
     Update(_update) {
         super.Update(_update);
         if (this.mBrush != null)
@@ -400,6 +398,8 @@ export class CRefractor3D extends CBrushComp {
             fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)], new CVec2(this.mSize, this.mSize), this.GetTex());
             tex = fw.Res().Find(this.GetTex());
             tex.SetAutoResize(false);
+            tex.SetFilter(CTexture.eFilter.Linear);
+            tex.SetMipMap(CTexture.eMipmap.GL);
         }
         if (tex.GetWidth() != this.mSize) {
             tex.SetSize(this.mSize, this.mSize);

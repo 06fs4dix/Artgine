@@ -68,22 +68,25 @@ export class CServerMain
     private mApp;
     private mPort: number;
     private mPath: string;
-    //private mWatchPath: string | null;
+    private mPassword: string = '';
+    private mServicePath: string = '';
     private mServer: Server | null = null;
-    //private mLiveReloadServer = null;
     mWebServerArr=new Array<CServer>();
     mLoadScript=new Set<string>();
 
-    constructor(_port: number, _path: string, _watchPath: string | null = null) {
+    constructor(_port: number, _path: string, _cfg: { password?: string, servicePath?: string } = {}) {
         this.mPort = _port;
         this.mPath = _path;
+        this.mPassword = _cfg.password ?? '';
+        this.mServicePath = _cfg.servicePath ?? '';
         gMain=this;
-        //this.mWatchPath = _watchPath;
     }
     static Main()   {   return gMain;   }
     GetServer() {   return this.mServer;    }
     GetPath(){  return this.mPath;  }
     GetApp(){  return this.mApp;  }
+    GetPassword(){  return this.mPassword;  }
+    GetServicePath(){  return this.mServicePath;  }
     Push(_server : CServer)
     {
         this.mWebServerArr.push(_server);

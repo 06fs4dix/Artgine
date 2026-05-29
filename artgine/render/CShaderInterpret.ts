@@ -1215,6 +1215,20 @@ export class CShaderInterpretGL extends CShaderInterpret
 		}
 		str += "	return vec2(float(ts.x),float(ts.y));\n";
 		str += "}\n";
+
+        str += "vec2 SamCubeSize(float _off)\n";
+		str += "{\n";
+		str += "    ivec2 ts;\n";
+		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.SamCubeMax); ++j)
+		{
+			if (j == 0)
+				str += "    if(_off-0.5 <= " + j + ".0)";
+			else
+				str += "    else if(_off-0.5 <= " + j + ".0)";
+			str += "        ts = textureSize(samCube[" + j + "], 0);\n"; // lod=0에서 사이즈 구하기
+		}
+		str += "    return vec2(float(ts.x), float(ts.y));\n";
+		str += "}\n";
 		
 		return str;
 	}
@@ -1229,16 +1243,8 @@ export class CShaderInterpretGL extends CShaderInterpret
 
 		str += "float SamCubeMaxLod(float _off)\n";
 		str += "{\n";
-		str += "    ivec2 ts;\n";
-		for (var j = 0; j < CDevice.GetProperty(CDevice.eProperty.SamCubeMax); ++j)
-		{
-			if (j == 0)
-				str += "    if(_off-0.5 <= " + j + ".0)";
-			else
-				str += "    else if(_off-0.5 <= " + j + ".0)";
-			str += "        ts = textureSize(samCube[" + j + "], 0);\n"; // lod=0에서 사이즈 구하기
-		}
-		str += "    int size = max(ts.x, ts.y);\n";
+        str += "    vec2 ts = SamCubeSize(_off);\n";
+        str += "    float size = max(ts.x, ts.y);\n";
 		str += "    return floor(log2(float(size)));\n";
 		str += "}\n";
 		
@@ -1469,8 +1475,20 @@ export class CShaderInterpretGL extends CShaderInterpret
 		// str += "	return Sam2DToV4(_uni,float(_off));\n";
 		// str += "}\n";
 		
+        str += "float RadicalInverse_VdC(uint bits)\n";
+		str += "{\n";
+        str += "    bits = (bits << 16u) | (bits >> 16u);\n";
+        str += "    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n";
+        str += "    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n";
+        str += "    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n";
+        str += "    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n";
+        str += "    return float(bits) * 2.3283064365386963e-10;\n";
+		str += "}\n";
 
-
+        str += "vec2 Hammersley(int i, int N)\n";
+		str += "{\n";
+        str += "    return vec2(float(i)/float(N), RadicalInverse_VdC(uint(i)));\n";
+		str += "}\n";
 		
 		// str += "mat4 Sam2DToMat(vec2 _uni,int _off) {\n";
 		// str += "	return Sam2DToMat(_uni,float(_off));\n";

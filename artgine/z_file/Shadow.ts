@@ -68,6 +68,10 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     var edgeY : number = min(_uvZ0.y, 1.0 - _uvZ0.y);
     var blend0 : number = (cas0Valid > 0.5) ? clamp(min(edgeX, edgeY) / blendEdge, 0.0, 1.0) : 0.0;
 
+    var edgeX1 : number = min(_uvZ1.x, 1.0 - _uvZ1.x);
+    var edgeY1 : number = min(_uvZ1.y, 1.0 - _uvZ1.y);
+    var blend1 : number = (cas1Valid > 0.5) ? clamp(min(edgeX1, edgeY1) / blendEdge, 0.0, 1.0) : 0.0;
+
     var sVal0 : number = 0.0;
     var sVal1 : number = 0.0;
     var sVal2 : number = 0.0;
@@ -104,7 +108,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0)
                 {
                     var sp1 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll*4.0 + f16Bias) >= sp1.z ? 0.0 : 1.0);
+                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll*2.0 + f16Bias) >= sp1.z ? 0.0 : 1.0);
                 }
             }
 
@@ -113,7 +117,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0)
                 {
                     var sp2 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
-                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll*16.0 + f16Bias) >= sp2.z ? 0.0 : 1.0);
+                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll*4.0 + f16Bias) >= sp2.z ? 0.0 : 1.0);
                 }
             }
         }
@@ -127,6 +131,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
 
     if(cas0Valid > 0.5 && cas1Valid > 0.5) return mix(res1, res0, blend0);
     if(cas0Valid > 0.5)                    return res0;
+    if(cas1Valid > 0.5 && cas2Valid > 0.5) return mix(res2, res1, blend1);
     if(cas1Valid > 0.5)                    return res1;
     if(cas2Valid > 0.5)                    return res2;
     return 1.0;

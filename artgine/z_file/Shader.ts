@@ -205,6 +205,7 @@ export function Sam2DArrToV4(_uni : Sam2DArrV4,_off : number|any) : CVec4{    re
 export function Sam2DArrToMat(_uni : Sam2DArrMat,_off : number|any) : CMat{    return new CVec4(0,0,0,0);}
 export function Sam2DSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function Sam2DArrSize(_off : number) : CVec3 { return new CVec3(0,0,0);}
+export function SamCubeSize(_off : number) : CVec2 { return new CVec2(0,0);}
 export function SamCubeMaxLod(_off : number) : number { return 0;}
 //export function Sam2DTileToColor(_number,_uv : CVec2) : CVec4{    return new CVec4(0,0,0,0);}
 export function Sam2DArrTileToColor(_number,_uv : CVec3,_x : number,_y : number) : CVec4{    return new CVec4(0,0,0,0);}
@@ -379,6 +380,7 @@ export function BlendFun(_blendRatio : number, _org : CVec4, _add : CVec4, _opac
 export function Reflect(_normal : CVec3, _direct : CVec3) : CVec3 {return new CVec3(0,0,0);}
 //export function TNormalToWNormal(_a : CVec3) : CVec3{    return new CVec3(0,0,0);}
 //export function WNormalToTNormal(_a : CVec3) : CVec3{    return new CVec3(0,0,0);}
+export function Hammersley(_idx : number, _N : number) : CVec2 {return new CVec2(0,0);}
 
 //color convert
 export function RGBAToHSVA(_a : CVec4) : CVec4 { return new CVec4(0,0,0,0);}

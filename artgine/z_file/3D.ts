@@ -69,8 +69,7 @@ import {
 	vfxMat1
 } from "./ColorFun";
 import {
-	ambientColor,
-	envCube,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
+	ambientColor,envCube,EnvmapApprox,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -80,7 +79,7 @@ import {
 	jitter,
 	calcParallaxShadow
 } from "./Shadow";
-import { NoiseNormalGet } from "./Noise";
+import { NoiseGet, NoiseNormalGet } from "./Noise";
 
 
 var screenDepth : number;
@@ -147,6 +146,8 @@ var causticFlowDir : CVec2 = new CVec2(0.0, 0.0);
 var causticFlowFreq : number = 1.0;
 var waterHeight : number = 1.0;
 var waterUnderFadeDist : CVec2 = new CVec2(2000.0, 3000.0);
+var normalflowDir : CVec2 = new CVec2(0.0, 0.0);
+var normalRange : number = 1.0;
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
@@ -576,10 +577,7 @@ function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CV
     var luma : number = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);   // 바닥 색상이 너무 약하면 물리적으로는 맞는데 시각적으로 이상해 보여서 곱해줌
 
     var foamThreshold : number = min(waterDeep.z, waterDeep.z * waterHeight);
-    var foamMask : number = 0.0;
-    if(heightDiff < foamThreshold) {
-        foamMask = 1.0;
-    }
+    var foamMask : number = 1.0 - smoothstep(0.0, foamThreshold, heightDiff);
 
     _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
 
@@ -590,9 +588,13 @@ function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CV
 
     // foam mask
     if(foamMask > 0.0) {
-        var foam : CVec3 = new CVec3(0.6, 0.6, 0.6);
-        _color = V3AddV3(_color, V3MulFloat(foam, 0.35));
-        _color = V3Mix(_color, foam, 0.4);
+        var foam : CVec3 = new CVec3(0.55, 0.58, 0.58);
+
+        var noise : number = NoiseGet(new CVec3(_world.x / 300.0 - normalflowDir.x * time * 0.1, _world.z / 300.0 + normalflowDir.y * time * 0.1, 0.0), SDF.eNoise.Perlin);
+        var edgeFade : number = foamMask * smoothstep(0.25, 1.0, noise);
+
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.35 * edgeFade));
+        _color = V3Mix(_color, foam, 0.4 * edgeFade);
     }
 
     return _color;
@@ -616,6 +618,7 @@ function ps_main()
 		shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
 		shadow = shadowTex.x;
 		
+
 	}
 	BranchEnd();
 
@@ -680,7 +683,7 @@ function ps_main()
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
-	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
+	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor,EnvmapApprox]);
 
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
@@ -690,9 +693,10 @@ function ps_main()
 	
 
 	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, 
-		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
+		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor, 1.0);
 
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
+    
 	BranchDefault();
 	if(shadow > -0.5) {
 		L_cor.rgb = V3MulFloat(L_cor.rgb,shadow);
@@ -709,7 +713,7 @@ function ps_main()
 	BranchEnd();
 
     var caustics : CVec3;
-	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
+	BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
 	if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
 	//out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir, sunDir, sunCol);
 	caustics = Caustics(world.xyz, causticFlowDir,sunDir,sunCol);

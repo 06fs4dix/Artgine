@@ -124,7 +124,7 @@ export class CLoader
 
 		var pos=_file.lastIndexOf(".")+1;
 		var ext=_file.substr(pos,_file.length-pos).toLowerCase();
-		if(ext=="png" || ext=="jpg" || ext=="jpeg" || ext=="tga" || ext=="gif")
+		if(ext=="png" || ext=="jpg" || ext=="jpeg" || ext=="svg" || ext=="tga" || ext=="gif")
 		{
 			
 			return await this.TextureLoad(_file,_buffer,_option);
@@ -307,7 +307,7 @@ export class CLoader
 		var pos=_file.lastIndexOf(".")+1;
 		var ext=_file.substr(pos,_file.length-pos).toLowerCase();
 
-		if (ext=="png" || ext=="jpg" || ext=="jpeg")
+		if (ext=="png" || ext=="jpg" || ext=="jpeg" || ext=="svg")
 		{
 			return await this.TextureLoad(_file, _file, _option);	
 		}

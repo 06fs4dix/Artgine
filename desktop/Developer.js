@@ -51,6 +51,8 @@ function WatchInputChanges() {
         gAppJSON.program = document.getElementById("program_sel").value;
         gAppJSON.fullScreen = document.getElementById("fullScreen_chk").checked;
         gAppJSON.github = document.getElementById("github_chk").checked;
+        gAppJSON.password = document.getElementById("auth_password_txt").value;
+        gAppJSON.rootPath = document.getElementById("auth_rootpath_txt").value;
     };
     const updateManifest = () => {
         gManifest.short_name = CDOM.IDValue("short_name_txt");
@@ -98,7 +100,7 @@ function WatchInputChanges() {
                 if (typeof plugin.version === "number")
                     newDeps[pluginName] = plugin.version;
                 else
-                    CAlert.E("플러그인 버전 문제");
+                    CAlert.E("?�러그인 버전 문제");
             }
         });
         gProjJSON.dependencies = newDeps;
@@ -130,6 +132,8 @@ async function Init() {
     CDOM.IDInput("server_sel").value = gAppJSON.server;
     CDOM.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
+    CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
+    CDOM.IDValue("auth_rootpath_txt", gAppJSON.rootPath ?? "");
     CDOM.IDInput("program_sel").value = gAppJSON.program;
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {
         projectPath: gAppJSON.projectPath,
@@ -240,6 +244,34 @@ document.getElementById("VSCode_btn").addEventListener("click", async function (
         });
         modal.Close(10);
     }
+});
+function GetAISelected() {
+    const ids = ["claude", "antigravity", "manus", "gpt", "codex"];
+    return ids.filter(id => document.getElementById(`ai_${id}_chk`).checked);
+}
+document.getElementById("aiCreate_btn").addEventListener("click", async function () {
+    const selected = GetAISelected();
+    if (selected.length === 0)
+        return;
+    await CWebView.Call("AICreate", selected);
+});
+document.getElementById("aiDelete_btn").addEventListener("click", async function () {
+    const selected = GetAISelected();
+    if (selected.length === 0)
+        return;
+    await CWebView.Call("AIDelete", selected);
+});
+function GetTTYDConfig() {
+    const port = parseInt(document.getElementById("ttyd_port").value) || 7681;
+    const password = document.getElementById("ttyd_password").value;
+    return { port, password };
+}
+document.getElementById("ttydRun_btn").addEventListener("click", async function () {
+    await CWebView.Call("TTYDRun", GetTTYDConfig());
+});
+document.getElementById("ttydBrowser_btn").addEventListener("click", async function () {
+    const { port } = GetTTYDConfig();
+    await CWebView.Call("URLRun", `http://localhost:${port}`);
 });
 document.getElementById("selectProjectPath_btn").addEventListener("click", async function () {
     CDOM.ID("Run_btn").disabled = true;

@@ -1,9 +1,9 @@
 import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor, vfxMat0, vfxMat1 } from "./ColorFun";
-import { envCube, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
+import { envCube, EnvmapApprox, IntegrateBRDF, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { SDF } from "./SDF";
 import { 
-    Attribute, BlendFun, BranchBegin, BranchEnd, Build, CMat, CMat3, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
-    MappingTexToV3, Null, OutColor, OutPosition,Sam2D0ToColor,Sam2DSize,Sam2DToColor, SaturateV3, 
+    Attribute, BlendFun, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
+    MappingTexToV3, Null, OutColor, OutPosition,Sam2D0ToColor,Sam2DArrToV4,Sam2DSize,Sam2DToColor, SaturateV3, 
     SaturateV4, ToV2, ToV3, UV2, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2Mod, V2MulFloat, 
     V2MulV2, V2SubV2, V3AddV3,V3Clamp,V3DivV3,V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, 
     V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, 
@@ -148,7 +148,7 @@ Build("Artgine/Shader/PostLight",["light"],
         ligDir,ligCol,ligCount,
         envCube,ambientColor,
         ligStep0,ligStep1,ligStep2,ligStep3,
-        time,renType,
+        time,renType,EnvmapApprox,
         diffuse,position,normal,specular,shadow
     ],[out_position,to_uv],
     ps_main_light,[out_color]);
@@ -160,7 +160,7 @@ Build("Artgine/Shader/PostLightMulti",["lightMulti"],
         ligDir,ligCol,ligCount,
         envCube,ambientColor,
         ligStep0,ligStep1,ligStep2,ligStep3,
-        time,
+        time,EnvmapApprox,
         diffuse,position,normal,specular,shadow
     ],[out_position,to_uv],
     ps_main_light_MultiTex,[out_color, out_specular, out_emissive]);
@@ -194,19 +194,22 @@ Build("Artgine/Shader/PostVFX",["vfx"],
     ],[out_position,to_uv],
     ps_main_vfx,[out_color]);
 
+
+Build("Artgine/Shader/PostBRDF",["brdf"],
+    vs_main, [
+        worldMat,viewMat,projectMat
+    ],[out_position,to_uv],
+    ps_main_brdf,[out_color]);
+
 function vs_main(f3_ver : Vertex3, f2_uv : UV2) {
     to_uv = f2_uv;
     out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
 }
 
-
 function ps_main_blend() {
     var all : CVec4 = Sam2DToColor(0.0, to_uv);
 
-
     out_color=TexOffBlendFactorFun(all,to_uv,TexOffBlendFactor);
-    //out_color=new CVec4(1.0,1.0,1.0,1.0);
-    
 }
 
 function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {
@@ -333,7 +336,7 @@ function ps_main_light() {
     var shadow : number = -1.0;
     BranchBegin("shadow","S",[shadowOn]);
     if(shadowOn > 0.5) {
-        shadow = Sam2DToColor(shadowOn, to_uv).x;
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, to_uv).x;
     }
     BranchEnd();
 
@@ -347,7 +350,7 @@ function ps_main_light() {
     // var SpecularPower : number = L_spc.z;
   
 
-    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, Normal, shadow, L_spc.y, L_spc.x,L_spc.z, ambientColor);
+    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, Normal, shadow, L_spc.y, L_spc.x,L_spc.z, ambientColor, 1.0);
 
     //diffuse
     if(renType < 0.5)
@@ -375,7 +378,7 @@ function ps_main_light_MultiTex() {
     var shadow : number = -1.0;
     BranchBegin("shadow","S",[shadowOn]);
     if(shadowOn > 0.5) {
-        shadow = Sam2DToColor(shadowOn, to_uv).x;
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, to_uv).x;
     }
     BranchEnd();
     
@@ -388,7 +391,7 @@ function ps_main_light_MultiTex() {
     var Emissive : number = L_spc.y;
     var SpecularPower : number = L_spc.z;
 
-    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, Normal, shadow, SpecularStrength, Emissive,SpecularPower, ambientColor);
+    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, Normal, shadow, SpecularStrength, Emissive,SpecularPower, ambientColor, 1.0);
 
     //diffuse + 톤매핑
     out_color.rgb = dseMat[0];
@@ -580,4 +583,11 @@ function ps_main_UpSample() {
 function ps_main_vfx()
 {
     out_color = VFXDown2(to_uv, VFX, time, new CVec4(0.0,0.0,0.0,0.0));
+}
+
+
+function ps_main_brdf()
+{
+    var integratedBRDF : CVec2 = IntegrateBRDF(to_uv.x, to_uv.y);
+    out_color = new CVec4(integratedBRDF, 0.0, 1.0);
 }

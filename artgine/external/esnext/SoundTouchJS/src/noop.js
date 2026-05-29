@@ -1,4 +1,1 @@
-const noop = function () {
-    return;
-};
-export default noop;
+export default function(){}

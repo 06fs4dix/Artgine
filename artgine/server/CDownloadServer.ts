@@ -12,16 +12,17 @@ import { CJSON } from '../basic/CJSON.js';
 import { CFile } from '../system/CFile.js';
 import { CConsol } from '../basic/CConsol.js';
 import { Request, Response } from 'express';
+import { GetAppJSON } from '../../desktop/MainFunc.js';
 
 const BIN_DIR     = path.resolve(process.cwd(), 'artgine', 'external', 'bin');
 const YTDLP_PATH  = path.join(BIN_DIR, 'yt-dlp.exe');
 const FFMPEG_PATH = path.join(BIN_DIR, 'ffmpeg.exe');
-const SAVE_ROOT = './';  // 'E:/' 또는 './' 등 루트 경로만 지정
 
-function getTodayDir(): string {
+async function getTodayDir(): Promise<string> {
+    const config = await GetAppJSON();
     const d = new Date();
     const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dir = path.join(path.resolve(SAVE_ROOT), 'Downloads', ymd);
+    const dir = path.join(path.resolve(config.rootPath ?? './'), 'Downloads', ymd);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     return dir;
 }
@@ -165,7 +166,7 @@ export class CDownloadServer extends CServerRouter {
 
             if (!isYouTubeUrl(url)) {
                 const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'download');
-                const destPath = path.join(getTodayDir(), fileName);
+                const destPath = path.join(await getTodayDir(), fileName);
                 downloadDirectUrl(url, destPath, (pct) => {
                     gJobs.set(jobId, { status: 'running', progress: pct, msg: `${pct}%`, file: fileName });
                 }).then(() => {
@@ -179,10 +180,10 @@ export class CDownloadServer extends CServerRouter {
                 } else {
                     const args: string[] = format === 'mp3'
                         ? ['-x', '--audio-format', 'mp3', '--ffmpeg-location', BIN_DIR,
-                           '-o', path.join(getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url]
+                           '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url]
                         : ['-f', 'bestvideo+bestaudio/best', '--merge-output-format', 'mp4',
                            '--ffmpeg-location', BIN_DIR,
-                           '-o', path.join(getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url];
+                           '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url];
 
                     const proc = spawn(YTDLP_PATH, args);
                     let lastFile = '';

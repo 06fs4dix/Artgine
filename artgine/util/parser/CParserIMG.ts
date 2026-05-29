@@ -24,7 +24,8 @@ export class CParserIMG extends CParser {
                 url = pa_fileName;
                 
             } else {
-                const blob = new Blob([this.mBuffer], { type: "image/" + ext });
+                const mime = ext == "svg" ? "image/svg+xml" : "image/" + ext;
+                const blob = new Blob([this.mBuffer], { type: mime });
                 url = window.URL.createObjectURL(blob);
             }
 

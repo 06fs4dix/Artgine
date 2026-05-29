@@ -1,7 +1,19 @@
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, Exp, FloatToInt, IntToFloat, max, min, pow, reflect, Sam2DArrToV4, Sam2DArrV4, Sam2DMat, 
-    Sam2DToV4, Sam2DV4, SamCubeLodToColor, SamCubeMaxLod, SaturateV3,  V2AddV2, V2MulFloat, V3AddV3, 
-    V3DivFloat, V3DivV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3, V4AddV4, V4MulFloat } from "./Shader";
+import { 
+    CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
+    Sam2DToColor, SamCubeLodToColor, SamCubeToColor, SaturateFloat, Sam2DArrToV4, Sam2DArrV4, 
+    sin, sqrt, abs, clamp, cos, Exp, max, min, pow, 
+    V2AddV2, V2MulFloat, 
+    V3AddV3, V3Cross, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, 
+    V4AddV4, V4MulFloat,
+    Hammersley, reflect,
+    Exp2,
+    V3DivV3,
+    mix,
+    SamCubeSize,
+    log2,
+    floor,
+} from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
 
@@ -16,86 +28,97 @@ export var ligStep3 : number=0;
 export var ligDir: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightDir);
 export var ligCol: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightColor);
 
+//BRDF LUT
+export var EnvmapApprox : number = 0;
+
 export var envCube : number = -1;
 export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4
 {
     var tm : CVec4=new CVec4(_material.x,_material.y,_material.z,_material.w);
-    if(sam2DCount>1.0)
-    {
+    if(sam2DCount>1.0) {
         if(tm.x<-0.5)	tm.x=_texColor.x;
         if(tm.y<-0.5)	tm.y=_texColor.y;
         if(tm.z<-0.5)	tm.z=_texColor.z;
         if(tm.w<-0.5)	tm.w=_texColor.w;
     }
-    
-    
-
     return tm;
 }
-function DistributionGGX(_normal : CVec3, _halfwayVector : CVec3, _roughness : number) : number {
-    var roughnessSquared : number = _roughness * _roughness;
-    var roughnessSquared2 : number = roughnessSquared * roughnessSquared;
-    var nDotH : number = max(V3Dot(_normal, _halfwayVector), 0.0);
-    var nDotHSquared : number = nDotH * nDotH;
 
-    var nominator : number = roughnessSquared2;
-    var denominator : number = (nDotHSquared * (roughnessSquared2 - 1.0) + 1.0);
-    return nominator / (3.141592 * denominator * denominator);
+//====================================================
+// PBR - Lighting
+//====================================================
+function F_Schlick(_vDotH : number, _F0 : CVec3) : CVec3 {
+    var fresnel : number = pow(clamp(1.0-_vDotH, 0.0, 1.0), 5.0);
+    return V3AddV3(_F0, V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), _F0), fresnel));
 }
-function GeometrySchlickGGX(_nDotV : number, _roughness : number) : number {
-    var k : number = (_roughness * _roughness) / 8.0;
-    return _nDotV / (_nDotV * (1.0 - k) + k);
+// 스펙큘러 미세면 분포 함수
+function D_GGX(_alpha : number, _nDotH : number) : number {
+    var a2 : number = _alpha * _alpha;
+    var denom : number = (_nDotH * _nDotH) * (a2 - 1.0) + 1.0;
+    return 0.3183098861837907 * a2 / (denom * denom);
 }
-function GeometrySmith(_normal : CVec3, _viewDir : CVec3, _lightDir : CVec3, _roughness : number) : number {
-    var nDotV : number = max(V3Dot(_normal, _viewDir), 0.0);
-    var nDotL : number = max(V3Dot(_normal, _lightDir), 0.0);
-    var ggx1 : number = GeometrySchlickGGX(nDotV, _roughness);
-    var ggx2 : number = GeometrySchlickGGX(nDotL, _roughness);
-    return ggx1 * ggx2;
+// 기하 차폐 함수
+function V_GGX(_alpha : number, _nDotL : number, _nDotV : number) : number {
+    var a2 : number = _alpha * _alpha;
+
+    // UNITY : 0.5까지는 스펙큘러 하이라이트 증가, 0.5부터는 감소
+    var visV : number = _nDotL * sqrt(_nDotV * _nDotV * (1.0 - a2) + a2);
+    var visL : number = _nDotV * sqrt(_nDotL * _nDotL * (1.0 - a2) + a2);
+
+    // Unreal : 1.0까지 스펙큘러 하이라이트 증가
+    // var visV : number = _nDotL * (_nDotV * (1.0 - _alpha) + _alpha);
+    // var visL : number = _nDotV * (_nDotL * (1.0 - _alpha) + _alpha);
+
+    return 0.5 / max(visV + visL, 1e-7);
 }
-function FresnelSchlick(_cosTheta : number, F0 : CVec3) : CVec3 {
-    var oneMinusCosTheta : number = pow(clamp(1.0-_cosTheta, 0.0, 1.0), 5.0);
-    return V3AddV3(F0, V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), F0), oneMinusCosTheta));
+// BRDF LUT 대신 사용할 근사법
+function EnvBRDFApprox(_specularColor : CVec3, _roughness : number, _nDotV : number) : CVec3 {
+    var c0 : CVec4 = new CVec4(-1, -0.0275, -0.572, 0.022);
+    var c1 : CVec4 = new CVec4(1, 0.0425, 1.04, -0.04);
+    var r : CVec4 = V4AddV4(V4MulFloat(c0, _roughness), c1);
+    var a004 : number = min( r.x * r.x, Exp2( -9.28 * _nDotV ) ) * r.x + r.y;
+    var AB : CVec2 = V2AddV2(V2MulFloat(new CVec2(-1.04, 1.04), a004), new CVec2(r.z, r.w));
+    return V3AddV3(V3MulFloat(_specularColor, AB.x), new CVec3(AB.y, AB.y, AB.y));
 }
-function FresnelSchlickRoughness(_cosTheta : number, _F0 : CVec3, _roughness : number) : CVec3
+
+//====================================================
+// PBR - IBL
+//====================================================
+function FresnelSchlickRoughness(_nDotV : number, _F0 : CVec3, _roughness : number) : CVec3
 {
-    var oneMinusCosTheta : number = pow(clamp(1.0-_cosTheta, 0.0, 1.0), 5.0);
+    var oneMinusCosTheta : number = pow(clamp(1.0-_nDotV, 0.0, 1.0), 5.0);
     var oneMinusRoughness : number = 1.0 - _roughness;
     var oneMinusRoughnessVec3 : CVec3 = new CVec3(oneMinusRoughness,oneMinusRoughness,oneMinusRoughness);
     
     return V3AddV3(_F0, V3MulFloat(V3SubV3(V3Max(oneMinusRoughnessVec3, _F0), _F0), oneMinusCosTheta));
 }
-function EnvBRDFApprox(_color : CVec3, _roughness : number, _nDotV : number) : CVec3 {
-    var c0 : CVec4 = new CVec4(-1, -0.0275, -0.572, 0.022);
-    var c1 : CVec4 = new CVec4(1, 0.0425, 1.0, -0.04);
-    var r : CVec4 = V4AddV4(V4MulFloat(c0, _roughness), c1);
-    var a004 : number = min( r.x * r.x, Exp( -9.28 * _nDotV ) ) * r.x + r.y;
-    var AB : CVec2 = V2AddV2(V2MulFloat(new CVec2(-1.04, 1.04), a004), new CVec2(r.z, r.w));
-    return V3MulFloat(_color, AB.x + AB.y);
-}
-function EnvBRDFApproxNonMetal(_color : CVec3, _roughness : number, _nDotV : number) : CVec3 {
-    var c0 : CVec2 = new CVec2(-1.0, -0.0275);
-    var c1 : CVec2 = new CVec2(1.0, 0.0425);
-    var r : CVec2 = V2AddV2(V2MulFloat(c0, _roughness), c1);
-    return V3MulFloat(_color, min(r.x * r.x, Exp(-9.28 * _nDotV) * r.x + r.y));
+function ComputeSpecularOcclusion(_nDotV : number, _ao : number, _roughness : number) : number
+{
+    return SaturateFloat(pow(_nDotV + _ao, Exp2(-16.0 * _roughness - 1.0)) - 1.0 + _ao);
 }
 
-export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,normal :CVec3,shadow : number,
-    roughness : number,ao : number,metalic : number, ambient_color : CVec3) : CMat3
-{	
-    roughness = clamp(roughness, 0.0, 1.0);
+export function LightCac3D(
+    campos : CVec3, position : CVec4, albedo : CVec4, normal :CVec3, shadow : number,
+    roughness : number,ao : number,metalic : number, ambient_color : CVec3, gamma : number) : CMat3
+{
+    var viewDir : CVec3 = V3Nor(V3SubV3(campos, position.xyz));
+    var nDotV : number = SaturateFloat(V3Dot(normal, viewDir));
+
+    albedo.rgb = V3Pow(albedo.rgb, gamma);
+
+    normal = V3Nor(normal);
+
+    roughness = mix(0.15, 1.0, clamp(roughness, 0.0, 1.0)); // 0.15는 스펙큘러 하이라이트가 이상하게 보이지 않을 정도로 튜닝한 값
+    var smoothness : number= 1.0 - roughness;
     metalic = clamp(metalic, 0.0, 1.0);
-    normal=V3Nor(normal);
-
-    //낮을수록 정반사(0되면 이상하게 보임)
-    roughness = max(0.05, roughness);
-    var smoothness : number=1.0-roughness;
-    
-    var viewDir : CVec3 =V3Nor(V3SubV3(campos, position.xyz));
 
     var DAll : CVec3=new CVec3(0,0,0);
     var SAll : CVec3=new CVec3(0,0,0);
     var emAll : CVec3=new CVec3(0,0,0);
+
+    //====================================================
+    // Direct Lighting
+    //====================================================
 
     var DDirAll : CVec3=new CVec3(0,0,0);
     var DPtAll : CVec3=new CVec3(0,0,0);
@@ -112,48 +135,43 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
         //lDir가 0이면 라이트 아님
         if(abs(lDir.w) <= 0.5) continue;
 
-        //라이트 방향벡터(L)
+        // 라이트 파라미터
         var L : CVec3=lDir.xyz;
-
-        var angle : number = 0.0; //normal과 lightDir 사이의 cos값
-        var distAttenuation : number = 1.0;  //거리에 따른 빛의 감쇠율
-        var dist : number = 0.0; //라이트와 fragment 사이의 거리
         var radiance : CVec3 = lCol.rgb;
+        if(shadow>-0.5) {   // 라이팅에 그림자 적용
+            radiance = V3MulFloat(radiance, shadow);
+        }
+        var dist : number = 0.0; // 라이트와 fragment 사이의 거리
+        var isPointLight : number = lDir.w>1.1 ? 1.0 : 0.0;
+        
+        if(isPointLight > 0.5) {
+            var inRadius : number = lCol.w;
+            var outRadius : number = lDir.w;
+
+            L = V3SubV3(L, position.xyz);
+            dist = V3Len(L);
+
+            //포인트 라이트 범위 밖에 있는 경우 제외
+            if(dist > outRadius) continue;
+
+            var distAttenuation : number = (outRadius - dist) / (outRadius - inRadius);
+            radiance = V3MulFloat(radiance, distAttenuation);
+        }
+        L = V3Nor(L);
+
+        // 라이팅 계산 파라미터
+        var nDotL : number = SaturateFloat(V3Dot(normal,L));
+
         var diffuse : CVec3 = new CVec3(0.0,0.0,0.0);
         var specular : CVec3 = new CVec3(0.0,0.0,0.0);
 
-        var isPointLight : number = lDir.w>1.1 ? 1.0 : 0.0;
-       
-
-        //포인트라이트
-        if(isPointLight > 0.5)
-        {
-            L=V3SubV3(L,position.xyz);
-            dist=V3Len(L);
-
-            //포인트 라이트 범위 밖에 있는 경우 제외
-            if(dist>lDir.w) continue;
-
-
-            if(lCol.w <= dist) {
-                distAttenuation = 1.0 - ((dist - lCol.w) / (lDir.w - lCol.w));
-            }
-            radiance=V3MulFloat(radiance, distAttenuation);
-        }
-        L=V3Nor(L);
-        angle = V3Dot(normal,L);
-
         //diffuse, specular 둘다 none인 경우 스킵
         if(ligStep0 < SDF.eLightStep0.None + 0.5 && ligStep1 < SDF.eLightStep0.None + 0.5 ) continue;
-
-
-        //음수인 부분(90 ~ 270도 사이 부분)은 제거함
-        var nDotL : number = max(angle, 0.0);
-
         
+        //====================================================
         //Step0 : Diffuse 라이트 모델
-        if(ligStep0 < SDF.eLightStep0.None + 0.5) 
-        {
+        //====================================================
+        if(ligStep0 < SDF.eLightStep0.None + 0.5) {
             //0 None : diffuse 없음
             ;
         }
@@ -164,161 +182,168 @@ export function LightCac3D(campos : CVec3, position : CVec4,albedo : CVec4,norma
         }
         else if(ligStep0 < SDF.eLightStep0.Lambert + 0.5) {
             //2 lambert : 모든 방향에서 보아도 같은 밝기
-            var lambertTerm : number = max(angle, 0.0);
-            if(lambertTerm>shadow && shadow>-0.5) {
-                lambertTerm=shadow; //그림자보다 크면 그림자만큼 줄여줌
-            }
-            diffuse=V3MulFloat(albedo.rgb,lambertTerm);
+            var lambertTerm : number = nDotL;
+            diffuse=V3MulFloat(albedo.rgb, lambertTerm);
         }
         else if(ligStep0 < SDF.eLightStep0.HafeLambert + 0.5) {
             //3 half lambert : 빛을 받지 않는 영역도 0이 아닌 0 ~ 0.5로 계산
-            var halfLabert : number = angle * 0.5 + 0.5;
-            diffuse=V3MulFloat(albedo.rgb,halfLabert);
+            var halfLabert : number = V3Dot(normal,L) * 0.5 + 0.5;
+            diffuse=V3MulFloat(albedo.rgb, halfLabert);
         }
         
+        //====================================================
         //Step1 : Specular 라이트 모델
+        //====================================================
         if(ligStep1 < SDF.eLightStep1.None + 0.5) {
             //0 None : specular 없음
             ;
         }
-        else if(ligStep1 < SDF.eLightStep1.Phong + 0.5)
-        {
+        else if(ligStep1 < SDF.eLightStep1.Phong + 0.5) {
             //1 phong : 적당한 반사
-            var R : CVec3 = V3Nor(V3AddV3(V3MulFloat(L,-1.0),V3MulFloat(normal,2.0 * angle)));
-            var phongValue : number = Math.pow(max(0.0,V3Dot(viewDir,R)),20.0);
+            var R : CVec3 = V3Nor(reflect(V3MulFloat(L, -1.0), normal));
+            var vDotR : number = SaturateFloat(V3Dot(viewDir,R));
+            var phongValue : number = Math.pow(vDotR, 20.0);
             var phongSpecular : number = phongValue*smoothness*nDotL;
-            //phongSpecular=0.0;
             specular = new CVec3(phongSpecular, phongSpecular, phongSpecular);
         }
-        else if(ligStep1 < SDF.eLightStep1.BlinnPhong + 0.5)
-        {
+        else if(ligStep1 < SDF.eLightStep1.BlinnPhong + 0.5) {
             //2 blinn phong : 빠른 반사
-            var halfwayDir : CVec3 = V3Nor(V3AddV3(L, viewDir));
-            var blinnValue : number = Math.pow(max(0.0,V3Dot(normal,halfwayDir)),20.0*4.0 );
+            var halfwayDir : CVec3 = V3Nor(V3AddV3(viewDir, L));
+            var nDotH : number = SaturateFloat(V3Dot(normal,halfwayDir));
+            var blinnValue : number = Math.pow(nDotH, 20.0*4.0);
             var blinnSpecular : number = blinnValue*smoothness*nDotL;
             specular = new CVec3(blinnSpecular, blinnSpecular, blinnSpecular);
         }
         else if(ligStep1 < SDF.eLightStep1.CookTorrance + 0.5) {
             //3 cook-torrance pbr
+            var halfwayDir : CVec3 = V3Nor(V3AddV3(viewDir, L));
 
-            var V : CVec3 = V3Nor(viewDir);
-            var N : CVec3 = V3Nor(normal);
-            var H : CVec3 = V3Nor(V3AddV3(V, L));
-
-            //pbr 기본
-            var NDF : number = DistributionGGX(N, H, roughness);
-            var G : number = GeometrySmith(N, V, L, roughness);
+            var nDotH : number = SaturateFloat(V3Dot(normal, halfwayDir));
+            var vDotH : number = SaturateFloat(V3Dot(viewDir, halfwayDir));
 
             //기본 반사도
             var baseReflectivity : CVec3 = new CVec3(0.04,0.04,0.04);
             var F0 : CVec3 = V3Mix(baseReflectivity, albedo.rgb, metalic);
 
             //프레스넬
-            var F : CVec3 = FresnelSchlick(max(V3Dot(H, V), 0.0),F0);
+            var F : CVec3 = F_Schlick(vDotH, F0);
 
-            //기본 스펙큘러, 디퓨즈
-             var kS : CVec3=F;
+            // 기본 스펙큘러, 디퓨즈
+            var kS : CVec3=F;
             var kD : CVec3=V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0),kS),1.0-metalic);
-           
 
-            //스펙큘러 계산
-            var numerator : CVec3 = V3MulFloat(F, NDF * G);
-            var denominator : number = max(2.0 * max(V3Dot(N, V), 0.0) * max(V3Dot(N, L), 0.0), 0.001);
-            specular = V3MulFloat(numerator, denominator);
-            
-            //쉐도우 값보다 낮으면 쉐도우 사용
-            if(nDotL>shadow && shadow>-0.5)	nDotL=shadow;
+            var alpha : number = roughness * roughness; // UE4 roughness
+            // var alpha : number = ((roughness + 1.0) * (roughness + 1.0)) * 0.5; // Frostbite
 
-            //디퓨즈 계산
-            diffuse = V3MulV3(radiance,V3MulFloat(V3DivFloat(V3MulV3(kD,albedo.xyz), 3.141592), nDotL)); 
-            
+            //pbr 기본
+            var D : number = D_GGX(alpha, nDotH);
+            var G : number = V_GGX(alpha, nDotL, nDotV);
 
-            specular=V3MulFloat(specular,nDotL);
-            diffuse=V3MulFloat(diffuse,4.0); // 디퓨즈값이 너무 낮게 보여서 4배 높게 설정
+            // 라이팅 세기 IBL과 맞추기 위해 PI 곱해줌
+            diffuse = V3MulV3(kD, V3MulFloat(albedo.rgb, nDotL));
+            specular = V3MulFloat(kS, D * G * nDotL * 3.14159265359);
         }
-        
-        //Step1 : Emissive 라이트 모델
+
+        //====================================================
+        //Step2 : Emissive 라이트 모델
+        //====================================================
         if(ligStep2 < SDF.eLightStep2.None + 0.5) {;}
         else if(ligStep2 < SDF.eLightStep2.Emissive + 0.5) 
         {
-            emAll = V3AddV3(emAll, V3MulFloat(radiance, nDotL));
+            emAll=V3AddV3(emAll, V3MulFloat(radiance, nDotL));
         }
         
         if(isPointLight > 0.5) {
-            DPtAll=V3AddV3(DPtAll,V3MulV3(diffuse, radiance));
-            SPtAll= V3AddV3(SPtAll,V3MulV3(specular, radiance));
+            DPtAll=V3AddV3(DPtAll,V3MulV3(diffuse , radiance));
+            SPtAll=V3AddV3(SPtAll,V3MulV3(specular, radiance));
         }
         else {
-            DDirAll=V3AddV3(DDirAll,V3MulV3(diffuse, radiance));
-            SDirAll= V3AddV3(SDirAll,V3MulV3(specular, radiance));
+            DDirAll=V3AddV3(DDirAll,V3MulV3(diffuse , radiance));
+            SDirAll=V3AddV3(SDirAll,V3MulV3(specular, radiance));
         }
 
     }
-    DAll = DDirAll;
-    SAll = SDirAll;
+    DAll = V3AddV3(DDirAll, DPtAll);
+    SAll = V3AddV3(SDirAll, SPtAll);
 
-    //shadow
-    if(shadow>-0.5)
+    //====================================================
+    // Indirect Lighting
+    //====================================================
+    var diffuse_Indirect : CVec3;
+    var specular_Indirect : CVec3;
+    if(envCube < SDF.eEnvCube.None + 0.5)
     {
-        DAll = V3MulFloat(DAll,shadow);
-        SAll = V3MulFloat(SAll,shadow);
+        //0 환경색상 : ambientColor를 간접광으로 사용
+        diffuse_Indirect = V3MulV3(albedo.xyz, ambient_color);
     }
-
-    //point light
-    DAll=V3AddV3(DAll,V3DivV3(DPtAll,V3AddV3(DPtAll,new CVec3(1.0,1.0,1.0))));
-    SAll=V3AddV3(SAll,V3DivV3(SPtAll,V3AddV3(SPtAll,new CVec3(1.0,1.0,1.0))));
-
-    //환경맵 : 그림자 영향 안받음
-    if(envCube > SDF.eEnvCube.None + 0.5) 
+    else if(envCube < SDF.eEnvCube.Texture + 0.5)
     {
-        //pbr 라이팅 모델임 : Specular도 환경맵 영향 받음
-        if(ligStep1 < SDF.eLightStep1.CookTorrance + 0.5 && ligStep1 > SDF.eLightStep1.CookTorrance - 0.5)
+        //1 환경맵 : 환경맵으로 간접광 계산
+        if(ligStep1 < SDF.eLightStep1.CookTorrance + 0.5 && ligStep1 > SDF.eLightStep1.CookTorrance - 0.5 && envCube > SDF.eEnvCube.Texture - 0.5)
         {
-            var posToCam : CVec3 =V3Nor(V3SubV3(position.xyz,campos)); //V
-            var R2 : CVec3 = reflect(posToCam, normal);
+            //0-1 IBL : 물리 기반 간접광
+            var maxReflectionLOD : number = floor(log2(SamCubeSize(1.0).x)) - 4.0;
+            var R : CVec3 = reflect(V3MulFloat(viewDir, -1.0), normal);
 
-            if(envCube > SDF.eEnvCube.Texture - 0.5) {
+            var baseReflectivity : CVec3 = new CVec3(0.04,0.04,0.04);
+            var F0 : CVec3 = V3Mix(baseReflectivity, albedo.rgb, metalic);
+            var F : CVec3 = FresnelSchlickRoughness(nDotV, F0, roughness);
 
-                var baseReflectivity : CVec3 = new CVec3(0.04,0.04,0.04);
-                var F0 : CVec3 = V3Mix(baseReflectivity, albedo.rgb, metalic);
+            var kS : CVec3 = F;
+            var kD : CVec3 = V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), kS), 1.0 - metalic);
 
-                var NdotV : number = max(V3Dot(normal, viewDir), 0.0);
-                var kS_ibl : CVec3 = FresnelSchlickRoughness(NdotV, F0, roughness);
-                var kD_ibl : CVec3 = V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), kS_ibl), 1.0 - metalic);
+            // brdf : 근사값, irradiance : 16x16 mipmap
+            if(EnvmapApprox > 0.5) 
+            {
+                //====================================================
+                //Step0 : Diffuse IBL 모델
+                //====================================================
+                var irradiance : CVec3 = SamCubeLodToColor(1.0, normal, maxReflectionLOD).rgb;
+                diffuse_Indirect = V3MulV3(V3MulV3(albedo.rgb, irradiance), kD);
 
-                //diffuse
-                var maxLod : number=SamCubeMaxLod(0.0);
-                
-                
-                 // ---- Ambient Diffuse (IBL) ----
-                var cubeD : CVec3 = SamCubeLodToColor(0.0,normal, maxLod*0.7).xyz;
-                var ambientLight :CVec3 = V3MulV3(V3MulV3(V3MulV3(albedo.rgb, kD_ibl),cubeD),ambient_color);
-                ambientLight = V3MulFloat(ambientLight, ao);                        // AO
-                DAll=V3AddV3(ambientLight,DAll);
+                //====================================================
+                //Step1 : Specular IBL 모델
+                //====================================================
+                var prefilteredColor : CVec3 = SamCubeLodToColor(1.0, R, roughness * maxReflectionLOD).rgb;
+                specular_Indirect = V3MulV3(prefilteredColor, V3MulV3(kS, EnvBRDFApprox(F0, roughness, nDotV)));
+            }
+            // brdf : LUT, irradiance : 미리 계산된 맵
+            else
+            {
+                //====================================================
+                //Step0 : Diffuse IBL 모델
+                //====================================================
+                var irradiance : CVec3 = SamCubeToColor(0.0, normal).rgb;
+                diffuse_Indirect = V3MulV3(V3MulV3(albedo.rgb, irradiance), kD);
 
-                //specular
-               // ---- Ambient Specular (IBL) ----
-                var lodmin : CVec3=SamCubeLodToColor(0.0,R2, 0.0).xyz;
-                var cubeS  : CVec3=V3Mix(lodmin,cubeD,roughness);
-                // 광택(roughness↓)이 높을수록 AO 감쇠를 완화
-                var specAO : number = Math.pow(ao, 0.5 + 0.5*roughness);            // AO
-                SAll=V3AddV3(SAll, V3MulFloat(V3MulV3(cubeS, kS_ibl), specAO));     // AO
+                //====================================================
+                //Step1 : Specular IBL 모델
+                //====================================================
+                var brdf : CVec2 = Sam2DToColor(9.0, new CVec2(nDotV, roughness)).xy;
+                var prefilteredColor : CVec3 = SamCubeLodToColor(1.0, R, roughness * maxReflectionLOD).rgb;
+                specular_Indirect = V3MulV3(prefilteredColor, V3AddV3(V3MulFloat(kS, brdf.x), new CVec3(brdf.y, brdf.y, brdf.y)));
             }
         }
-        //pbr 모델 아님 : diffuse만 영향 받음
         else
         {
+            //0-2 일반 간접광
             var cubeD : CVec3 = SamCubeLodToColor(0.0,normal,0.0).rgb;
-            var ambientLight :CVec3 = V3MulV3(V3MulV3(albedo.xyz,cubeD),ambient_color);
-            ambientLight = V3MulFloat(ambientLight, ao);   
-            DAll=V3AddV3(ambientLight,DAll);
+            diffuse_Indirect = V3MulV3(V3MulV3(albedo.xyz,cubeD),ambient_color);
         }
-        
-    } 
-    else
+    }
+    DAll = V3AddV3(DAll, V3MulFloat(diffuse_Indirect,  ao));
+    SAll = V3AddV3(SAll, V3MulFloat(specular_Indirect, ComputeSpecularOcclusion(nDotV, ao, roughness)));
+
+    // pbr인 경우에 무조건 linear space로 나오기 때문에 sRGB로 변환
+    if(ligStep1 < SDF.eLightStep1.CookTorrance + 0.5 && ligStep1 > SDF.eLightStep1.CookTorrance - 0.5)
     {
-        var ambientLight :CVec3 = V3MulV3(albedo.xyz,ambient_color);
-        DAll=V3AddV3(ambientLight,DAll);
+        var blended : CVec3 = V3AddV3(DAll, SAll);
+        blended = new CVec3(sqrt(blended.x), sqrt(blended.y), sqrt(blended.z));
+        DAll = new CVec3(sqrt(DAll.x), sqrt(DAll.y), sqrt(DAll.z));
+        SAll = new CVec3(sqrt(SAll.x), sqrt(SAll.y), sqrt(SAll.z));
+        var k : CVec3 = V3DivV3(blended, V3AddV3(DAll, SAll));  // 오차율 계산
+        DAll = V3MulV3(DAll, k);
+        SAll = V3MulV3(SAll, k);
     }
     
     return new CMat3(DAll, SAll, emAll);
@@ -431,4 +456,69 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,ambient
     //DPtAll=new CVec3(1.0,1.0,1.0);
     //DDirAll=V3MulV3(albedo.rgb,new CVec3(1.0,1.0,1.0));	
     return new CMat3(V3AddV3(DPtAll,DDirAll), new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0));
+}
+
+function ImportanceSampleGGX(_Xi : CVec2, _N : CVec3, _roughness : number) : CVec3
+{
+    var a : number = _roughness * _roughness;
+
+    var phi : number = 2.0 * 3.14159265359 * _Xi.x;
+    var cosTheta : number = sqrt((1.0 - _Xi.y) / (1.0 + (a*a - 1.0) * _Xi.y));
+    var sinTheta : number = sqrt(1.0 - cosTheta*cosTheta);
+
+    var H : CVec3;
+    H.x = cos(phi) * sinTheta;
+	H.y = sin(phi) * sinTheta;
+	H.z = cosTheta;
+
+    var up        : CVec3 = abs(_N.z) < 0.999 ? new CVec3(0.0, 0.0, 1.0) : new CVec3(1.0, 0.0, 0.0);
+	var tangent   : CVec3 = V3Nor(V3Cross(up, _N));
+	var bitangent : CVec3 = V3Cross(_N, tangent);
+	
+	var sampleVec : CVec3 = V3AddV3(V3AddV3(V3MulFloat(tangent, H.x), V3MulFloat(bitangent, H.y)), V3MulFloat(_N, H.z));
+	return V3Nor(sampleVec);
+}
+function V_GGX_BRDF(_alpha : number, _nDotV : number, _nDotL : number) : number
+{
+    var k : number = _alpha * 0.5;
+    return (_nDotV * _nDotL) / ((_nDotV * (1.0 - k) + k) * (_nDotL * (1.0 - k) + k));
+}
+export function IntegrateBRDF(_NdotV : number, _roughness : number) : CVec2
+{
+    var V : CVec3;
+    V.x = sqrt(1.0 - _NdotV*_NdotV);
+    V.y = 0.0;
+    V.z = _NdotV;
+
+    var A : number = 0.0;
+    var B : number = 0.0; 
+
+    var N : CVec3 = new CVec3(0.0, 0.0, 1.0);
+    var alpha : number = _roughness * _roughness;
+
+    var numSamples : number = 1024.0;
+    
+    for(var i = 0; i < FloatToInt(numSamples); ++i)
+    {
+        var Xi : CVec2 = Hammersley(i, FloatToInt(numSamples));
+        var H : CVec3 = ImportanceSampleGGX(Xi, N, _roughness);
+        var L : CVec3 = V3Nor(V3SubV3(V3MulFloat(H, 2.0 * V3Dot(V, H)), V));
+
+        var NdotL : number = max(L.z, 0.0);
+        var NdotH : number = max(H.z, 0.0);
+        var VdotH : number = max(V3Dot(V, H), 0.0);
+
+        if(NdotL > 0.0)
+        {
+            var G : number = V_GGX_BRDF(alpha, NdotL, _NdotV);
+            var G_Vis : number = (G * VdotH) / (_NdotV * NdotH);
+            var Fc : number = pow(1.0 - VdotH, 5.0);
+
+            A += (1.0 - Fc) * G_Vis;
+            B += Fc * G_Vis;
+        }
+    }
+    A /= numSamples;
+    B /= numSamples;
+    return new CVec2(A, B);
 }

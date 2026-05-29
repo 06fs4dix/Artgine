@@ -217,7 +217,7 @@ export namespace CComponent
 		First=0,
 		Collider=100,
 		Light=201,
-		IK=300,
+		
 		CamComp=401,
 		
 
@@ -226,6 +226,7 @@ export namespace CComponent
 		WorkFlow=600,
 		Event=601,
 		AniFlow=800,
+		IK=801,
 		Paint=900,
 	};
 }

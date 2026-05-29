@@ -14,7 +14,7 @@
 </head>
 
 <body class="p-4">
-	<!-- 탭 네비게이션 -->
+	<!-- ???�비게이??-->
 	<ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
 		<li class="nav-item" role="presentation">
 			<button class="nav-link active" id="app-tab" data-bs-toggle="tab" data-bs-target="#app" type="button"
@@ -43,6 +43,10 @@
 		<li class="nav-item" role="presentation">
 			<button class="nav-link" id="plugin-tab" data-bs-toggle="tab" data-bs-target="#plugin" type="button"
 				role="tab">Plugin</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button"
+				role="tab">AI</button>
 		</li>
 	</ul>
 
@@ -101,23 +105,34 @@
 					<div class="form-check">
 						<input class="form-check-input" type="checkbox" id="github_chk">
 						<label class="form-check-label" for="github_chk" data-bs-toggle="tooltip" 
-								title="github에서 가져와서 사용한다. chrome_start.bat파일이 생기고 로컬 실행가능.현재 proj파일만 패스 변경됌! ">github</label>
+								title="github?�서 가?��????�용?�다. chrome_start.bat?�일???�기�?로컬 ?�행가???�재 proj?�일�??�스 변경됌! ">github</label>
+					</div>
+				</div>
+			</div>
+			<div class="accordion mb-2" id="authRootAccordion">
+				<div class="accordion-item">
+					<h2 class="accordion-header">
+						<button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#authRoot_collapse">
+							Extra Server Settings
+						</button>
+					</h2>
+					<div id="authRoot_collapse" class="accordion-collapse collapse" data-bs-parent="#authRootAccordion">
+						<div class="accordion-body py-2">
+							<div class="mb-2">
+								<label class="form-label">비번</label>
+								<input type="password" class="form-control" id="auth_password_txt">
+							</div>
+							<div class="mb-2">
+								<label class="form-label">RootPath</label>
+								<input type="text" class="form-control" id="auth_rootpath_txt">
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
 			<div class="d-flex gap-2">
 				<button class="btn btn-primary" id="Run_btn">Run(F9</button>
 				<button class="btn btn-dark" id="VSCode_btn">VSCode(F4</button>
-			</div>
-			<div class="mt-2 d-flex align-items-center flex-wrap gap-3">
-				<div class="d-flex align-items-center">
-					<pre class="form-control user-select-all mb-0 me-2" style="width: auto; display: inline-block;">npm install</pre>
-					<span style="user-select: none;"> node_modules Install</span>
-				</div>
-				<div class="d-flex align-items-center">
-					<pre class="form-control user-select-all mb-0 me-2" style="width: auto; display: inline-block;">npx tsc -w</pre>
-					<span style="user-select: none;"> ts Build</span>
-				</div>
 			</div>
 
 		</div>
@@ -150,12 +165,12 @@
 					<div class="form-check mb-1">
 						<input class="form-check-input" type="checkbox" id="devTool" checked>
 						<label class="form-check-label" for="devTool" data-bs-toggle="tooltip" 
-							title="개발자 모드가 꺼지면 개발창을 열수없다">developer</label>
+							title="개발??모드가 꺼�?�?개발창을 ?�수?�다">developer</label>
 					</div>
 					<div class="form-check mb-1">
 						<input class="form-check-input" type="checkbox" id="IAuto" checked>
 						<label class="form-check-label" for="IAuto" data-bs-toggle="tooltip" 
-							title="Auto가 없으면 상태갱신을 수동으로 해야한다">IAuto(CAtelier Include</label>
+							title="Auto가 ?�으�??�태갱신???�동?�로 ?�야?�다">IAuto(CAtelier Include</label>
 					</div>
 					<div class="form-check mb-3" hidden>
 						<input class="form-check-input" type="checkbox" id="wasm">
@@ -340,6 +355,49 @@
 		<div class="tab-pane fade" id="plugin" role="tabpanel">
 			<div class="row" id="plugin_list"></div>
 		</div>
+		<div class="tab-pane fade" id="ai" role="tabpanel">
+			<div class="mb-3">
+				<div class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" id="ai_claude_chk">
+					<label class="form-check-label" for="ai_claude_chk">Claude</label>
+				</div>
+				<div class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" id=\"ai_antigravity_chk\">
+					<label class="form-check-label" for="ai_gemini_chk">Antigravity</label>
+				</div>
+				<div class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" id="ai_manus_chk">
+					<label class="form-check-label" for="ai_manus_chk">Manus</label>
+				</div>
+				<div class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" id="ai_gpt_chk">
+					<label class="form-check-label" for="ai_gpt_chk">GitHub Copilot</label>
+				</div>
+				<div class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" id="ai_codex_chk">
+					<label class="form-check-label" for="ai_codex_chk">Codex</label>
+				</div>
+			</div>
+			<div class="d-flex gap-2">
+				<button class="btn btn-primary" id="aiCreate_btn">Create</button>
+				<button class="btn btn-danger" id="aiDelete_btn">Delete</button>
+			</div>
+			<hr>
+			<div class="row g-2 mb-2">
+				<div class="col">
+					<label class="form-label mb-1">Port</label>
+					<input type="number" class="form-control" id="ttyd_port" value="7681">
+				</div>
+				<div class="col">
+					<label class="form-label mb-1">Password</label>
+					<input type="password" class="form-control" id="ttyd_password" placeholder="(none)">
+				</div>
+			</div>
+			<div class="d-flex gap-2">
+				<button class="btn btn-secondary" id="ttydRun_btn">Run ttyd</button>
+				<button class="btn btn-outline-secondary" id="ttydBrowser_btn">Open Browser</button>
+			</div>
+		</div>
 
 
 	</div>
@@ -348,3 +406,4 @@
 </body>
 
 </html>
+

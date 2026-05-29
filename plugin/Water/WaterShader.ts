@@ -215,14 +215,17 @@ function ps_main_water()
     // 2. refractor 랜더타겟
     BranchBegin("UseRefractTex","UseRefractTex",[refractMap]);
     refractColor = Sam2DToColor(refractMap, screenUV);
+    if(refractColor.w < 0.75) {
+        refractColor = new CVec4(shallowColor, 1.0);
+        refractColor.rgb = V3Mix(deepColor, refractColor.rgb,1.0 - SaturateFloat(Remap(V3Len(V3SubV3(camPos, world)), waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8)));
+    }
     refractType = 1.0;
     BranchEnd();
     
     // 3. shallowColor 사용
     if(refractType < -0.5) {
         refractColor = new CVec4(shallowColor, 1.0);
-        var dist : number = V3Len(V3SubV3(camPos, world));
-        var distanceBlend : number = 1.0 - SaturateFloat(Remap(dist, waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8));
+        var distanceBlend : number = 1.0 - SaturateFloat(Remap(V3Len(V3SubV3(camPos, world)), waterUnderFadeDist.x, waterUnderFadeDist.y, 0.0, 0.8));
         refractColor.rgb = V3Mix(deepColor, refractColor.rgb, distanceBlend);
         refractType = 2.0;
     }

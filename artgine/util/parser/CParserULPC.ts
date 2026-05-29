@@ -208,7 +208,6 @@ export class CULPC extends CObject
 var gResPath=null;
 export class CParserULPC extends CParser {
 
-    mResBase:    string = null;
     mFrameDelay: number = 0.125;
     private mAnimFilter: string[] | null = null;
 
@@ -233,19 +232,42 @@ export class CParserULPC extends CParser {
             if (!this.mBuffer) await this.Open(pa_fileName);
 
             const rawJson = JSON.parse(new TextDecoder().decode(this.mBuffer));
-            const json    = Array.isArray(rawJson)
-                ? rawJson.reduce((merged: Record<string, any>, obj: Record<string, any>) => {
+
+            // 각 객체의 resBase를 selections[].files[]에 절대경로로 미리 적용한다.
+            // (어레이일 때 각 항목별 resBase가 다를 수 있으므로 merge 전에 처리)
+            const applyResBase = (obj: Record<string, any>) => {
+                const base = obj.resBase ?? gResPath;
+                if (!base) return;
+                const rootSlash = base.endsWith('/') ? base : base + '/';
+                if (Array.isArray(obj.selections)) {
+                    for (const sel of obj.selections) {
+                        if (Array.isArray(sel.files)) {
+                            sel.files = sel.files.map((f: string) =>
+                                /^https?:\/\//i.test(f) ? f : rootSlash + f
+                            );
+                        }
+                    }
+                }
+            };
+
+            let json: Record<string, any>;
+            if (Array.isArray(rawJson)) {
+                for (const obj of rawJson) applyResBase(obj);
+                json = rawJson.reduce((merged: Record<string, any>, obj: Record<string, any>) => {
                     for (const [k, v] of Object.entries(obj)) {
                         if (Array.isArray(v)) merged[k] = [...(merged[k] ?? []), ...v];
                         else if (!(k in merged))  merged[k] = v;
                     }
                     return merged;
-                }, {} as Record<string, any>)
-                : rawJson;
-            const resBase = this.mResBase || gResPath || json.mresBase || "./";
-            const absRoot = new URL(resBase, location.href).toString();
-            const rootSlash = absRoot.endsWith('/') ? absRoot : absRoot + '/';
-            const absBase = new URL(json.resBase ?? "spritesheets", rootSlash).toString().replace(/\/$/, "");
+                }, {} as Record<string, any>);
+            } else {
+                applyResBase(rawJson);
+                json = rawJson;
+            }
+
+            const resBase = json.resBase ?? gResPath ?? "";
+            const rootSlash = resBase ? (resBase.endsWith('/') ? resBase : resBase + '/') : "";
+            const absBase = rootSlash.replace(/\/$/, "");
             const result  = new CULPC();
             const cv      = new CH5CanvasInst();
             let textureFile = pa_fileName.replace(/\.json$/i, ".ulpc");
@@ -257,7 +279,7 @@ export class CParserULPC extends CParser {
                 specs = await this._buildV3(json, absBase, cv);
             } else {
                 // V2: layers[] 기반 (sample.json)
-                const paletteBase = absRoot.replace(/\/$/, "") + "/palette_definitions/";
+                const paletteBase = rootSlash ? new URL("../palette_definitions/", rootSlash).toString() : "palette_definitions/";
                 specs = await this._buildV2(json, absBase, paletteBase, cv);
             }
 
@@ -724,8 +746,8 @@ export class CParserULPC extends CParser {
         // ── 5. 이미지 로드 및 리컬러링 병렬 처리 (최적화 핵심) ────────────────
         // 모든 엔트리에 대해 병렬 처리를 위한 프로미스 생성
         const processTasks = entries.map(async (e) => {
-            const rawPath = this._encodeNPath(e.fullPath);
-            const url    = /^https?:\/\//i.test(e.fullPath) ? rawPath : absBase + '/' + rawPath;
+            // fullPath는 이미 applyResBase에서 각 항목별 resBase가 적용되었으므로 그대로 사용한다.
+            const url    = this._encodeNPath(e.fullPath);
             const img    = await this._loadImg(e.base64 ?? url);
             if (!img) return { entry: e, img: null };
             const rc     = await this._applyNRecolor(img, e.matGroups);

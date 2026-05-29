@@ -442,6 +442,7 @@ export namespace CTexture
 		None=0,
 		GL=1,
 		AlphaCac=2,
+		EnvFilter=3,
 	};
 	export enum eTarget{
 		Sigle=7,

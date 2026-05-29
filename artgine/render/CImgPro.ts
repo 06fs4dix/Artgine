@@ -113,6 +113,326 @@ export class CImgPro
 		
 		return boundList; 
 	}
+    // mip 순서대로 넣어줌
+    static SphericalGaussianBlur(_tex:CTexture,_infoIndex:number=0,_maxSamples:number=128):CTexture[]
+    {
+        // 0. temp
+        const v3 = CPoolGeo.ProductV3();
+
+        // 1. 상수 정의
+        const LOD_MAX = Math.floor( Math.log2( _tex.GetWidth() ) );
+        const LOD_MIN = 4;
+
+        const PHI = ( 1 + Math.sqrt( 5 ) ) / 2;
+        const INV_PHI = 1 / PHI;
+
+        const AxisDirections = [
+            new CVec3( - PHI, INV_PHI, 0 ),
+            new CVec3( PHI, INV_PHI, 0 ),
+            new CVec3( - INV_PHI, 0, PHI ),
+            new CVec3( INV_PHI, 0, PHI ),
+            new CVec3( 0, PHI, - INV_PHI ),
+            new CVec3( 0, PHI, INV_PHI ),
+            new CVec3( - 1, 1, - 1 ),
+            new CVec3( 1, 1, - 1 ),
+            new CVec3( - 1, 1, 1 ),
+            new CVec3( 1, 1, 1 ) 
+        ];
+        
+        const rawBuf = _tex.GetBuf();
+        const buf = [];
+        let bufIndex = 0;
+        let bufInfo : CTextureInfo;
+        for(let i = 0; i < _tex.GetInfo().length; i++) {
+            let info = _tex.GetInfo()[i];
+            let count = info.mTarget === CTexture.eTarget.Cube ? 6 : (info.mTarget === CTexture.eTarget.Array ? info.mCount : 1);
+            for(let j = 0; j < count; j++, bufIndex++) {
+                if (bufIndex >= _tex.GetBuf().length) {
+                    continue;
+                }
+                if(i != _infoIndex) {
+                    continue;
+                }
+                bufInfo = info;
+                buf.push(rawBuf[bufIndex]);
+            }
+        }
+        const isBufferFloat = buf[0] instanceof Float32Array;
+        const isFloatType = bufInfo.mFormat == CTexture.eFormat.RGBA32F;
+        const ArrayBufferType = isFloatType ? Float32Array : Uint8Array;
+
+        // 2. sigmas, sizeLODs 자동 연산
+        const sigmas:number[] = [];
+        const sizeLods:number[] = [];
+
+        let currentLod = LOD_MAX;
+        const totalLods = LOD_MAX - LOD_MIN + 1;
+
+        for(let i = 0; i < totalLods; i++) {
+            const sizeLod = Math.pow(2, currentLod);
+            sizeLods.push(sizeLod);
+
+            const t = i / (totalLods - 1);
+            const sigmaExt = i == 0 ? 0 : 1 / sizeLod;
+            const roughness = t * 0.582;
+            const sigma = CMath.FloatInterpolate(sigmaExt, roughness, t);
+            sigmas.push(sigma);
+
+            if(currentLod > LOD_MIN) {
+                currentLod--;
+            }
+        }
+
+        // 3. 메모리 버퍼 생성 및 초기화
+        const cubeUVOutputs:(Uint8Array|Float32Array)[] = [];
+        const pingpongBuffer:(Uint8Array|Float32Array)[] = [];
+
+        for(let mip = 0; mip < totalLods; mip++) {
+            const size = sizeLods[mip];
+            for(let face = 0; face < 6; face++) {
+                const floatK = isBufferFloat ? 1 : 255;
+                const outData = new ArrayBufferType(size * size * 4);
+                if(mip == 0) {
+                    if(_tex.GetYFlip()) {
+                        for(let y = 0; y < size; y++)
+                        for(let x = 0; x < size; x++)
+                        {
+                            const flippexIdx = 4 * ((size - 1 - y) * size + x);
+                            const idx = 4 * (y * size + x);
+                            outData[idx + 0] = buf[face][flippexIdx + 0] / floatK;
+                            outData[idx + 1] = buf[face][flippexIdx + 1] / floatK;
+                            outData[idx + 2] = buf[face][flippexIdx + 2] / floatK;
+                            outData[idx + 3] = buf[face][flippexIdx + 3] / floatK;
+                        }
+                    }
+                    else
+                        outData.set(buf[face]);
+                }
+                cubeUVOutputs.push(outData);
+                pingpongBuffer.push(new ArrayBufferType(size * size * 4));
+            }
+        }
+
+        // 4. 블러
+        for(let i = 1; i < totalLods; i++) {
+            const lodIn = i - 1;
+            const lodOut = i;
+
+            const sigma = Math.sqrt(sigmas[i] * sigmas[i] - sigmas[i - 1] * sigmas[i - 1]);
+            const axisDir = AxisDirections[(totalLods - i - 1) % AxisDirections.length];
+
+            HalfBlur(cubeUVOutputs, pingpongBuffer, lodIn, lodOut, sigma, true, axisDir);
+            HalfBlur(pingpongBuffer, cubeUVOutputs, lodOut, lodOut, sigma, false, axisDir);
+        }
+
+        // 5. 텍스쳐 오브젝트화
+        const mipmaps : CTexture[] = [];
+        for(let mip = 0; mip < totalLods; mip++) {
+            const tex = new CTexture();
+            mipmaps.push(tex);
+
+            tex.PushInfo([new CTextureInfo(CTexture.eTarget.Sigle, isFloatType ? CTexture.eFormat.RGBA32F : CTexture.eFormat.RGBA8, 1)]);
+            tex.SetSize(sizeLods[mip], sizeLods[mip]);
+            tex.GetBuf().push(cubeUVOutputs[mip * 6 + 0], cubeUVOutputs[mip * 6 + 1], cubeUVOutputs[mip * 6 + 2], cubeUVOutputs[mip * 6 + 3], cubeUVOutputs[mip * 6 + 4], cubeUVOutputs[mip * 6 + 5]);
+        }
+
+        // 6. temp recycle
+        CPoolGeo.RecycleV3(v3);
+
+        return mipmaps;
+
+        // 인라인 함수
+        function HalfBlur(_bufIn:(Uint8Array|Float32Array)[],_bufOut:(Uint8Array|Float32Array)[],_lodIn:number,_lodOut:number,_sigmaRadians:number,_isLatitudinal:boolean,_poleAxis:CVec3) {
+            const STANDARD_DEVIATIONS = 3;
+            
+            const sizeIn = sizeLods[_lodIn];
+            const sizeOut = sizeLods[_lodOut];
+            const invSizeOut = 1 / sizeOut;
+
+            const pixels = sizeIn - 1;
+            const isSigmaFinite = isFinite(_sigmaRadians);
+            const radiansPerPixel = isSigmaFinite ? Math.PI / (2*pixels) : (2*Math.PI) / (2*_maxSamples-1);
+            const sigmaPixels = _sigmaRadians / radiansPerPixel;
+            const samples = isSigmaFinite ? 1 + Math.floor(STANDARD_DEVIATIONS * sigmaPixels) : _maxSamples;
+            const sampleCount = Math.min(samples, _maxSamples);
+
+            // cos/sin 테이블 캐싱
+            const weights = new Float32Array(_maxSamples);
+            const cosTable = new Float32Array(_maxSamples);
+            const sinTable = new Float32Array(_maxSamples);
+
+            let sum = 0;
+            for (let s = 0; s < _maxSamples; ++s) {
+                const x = s / sigmaPixels;
+                const w = Math.exp(-x * x / 2);
+                weights[s] = w;
+
+                const theta = radiansPerPixel * s;
+                cosTable[s] = Math.cos(theta);
+                sinTable[s] = Math.sin(theta);
+
+                if (s === 0) sum += w;
+                else if (s < sampleCount) sum += 2 * w;
+            }
+            for (let s = 0; s < weights.length; s++) {
+                weights[s] /= sum;
+            }
+
+            // 6개 면 연산
+            for (let face = 0; face < 6; face++) {
+                const outFaceIndex = _lodOut * 6 + face;
+                const outBuf = _bufOut[outFaceIndex];
+                let outIdx = 0;
+
+                for (let y = 0; y < sizeOut; y++) {
+                    const v = 1.0 - (y + 0.5) * invSizeOut * 2.0;
+
+                    for (let x = 0; x < sizeOut; x++) {
+                        const u = (x + 0.5) * invSizeOut * 2.0 - 1.0;
+
+                        // 픽셀의 3D 방향 벡터(vOutputDirection) 구하기
+                        let dvX = 0, dvY = 0, dvZ = 0;
+                        switch (face) {
+                            case 0: dvX =  1.0; dvY =    v; dvZ =   -u; break;
+                            case 1: dvX = -1.0; dvY =    v; dvZ =    u; break;
+                            case 2: dvX =    u; dvY =  1.0; dvZ =   -v; break;
+                            case 3: dvX =    u; dvY = -1.0; dvZ =    v; break;
+                            case 4: dvX =    u; dvY =    v; dvZ =  1.0; break;
+                            case 5: dvX =   -u; dvY =    v; dvZ = -1.0; break;
+                        }
+                        const dvLen = Math.sqrt(dvX * dvX + dvY * dvY + dvZ * dvZ);
+                        const outDirX = dvX / dvLen;
+                        const outDirY = dvY / dvLen;
+                        const outDirZ = dvZ / dvLen;
+
+                        // 블러 회전 축 계산
+                        let axX = 0, axY = 0, axZ = 0;
+                        if (_isLatitudinal) {
+                            axX = _poleAxis.x; axY = _poleAxis.y; axZ = _poleAxis.z;
+                        } else {
+                            axX = _poleAxis.y * outDirZ - _poleAxis.z * outDirY;
+                            axY = _poleAxis.z * outDirX - _poleAxis.x * outDirZ;
+                            axZ = _poleAxis.x * outDirY - _poleAxis.y * outDirX;
+                        }
+
+                        const axLenSq = axX * axX + axY * axY + axZ * axZ;
+                        let axisX = axX, axisY = axY, axisZ = axZ;
+                        if (axLenSq < 0.000001) {
+                            axisX = outDirZ; axisY = 0.0; axisZ = -outDirX;
+                        }
+                        const axLen = Math.sqrt(axisX * axisX + axisY * axisY + axisZ * axisZ);
+                        axisX /= axLen; axisY /= axLen; axisZ /= axLen;
+
+                        const dotProd = axisX * outDirX + axisY * outDirY + axisZ * outDirZ;
+                        const cxX = axisY * outDirZ - axisZ * outDirY;
+                        const cxY = axisZ * outDirX - axisX * outDirZ;
+                        const cxZ = axisX * outDirY - axisY * outDirX;
+
+                        let totalR = 0, totalG = 0, totalB = 0;
+
+                        // 가우시안 샘플링 루프 연산
+                        for (let s = 0; s < sampleCount; s++) {
+                            const w = weights[s];
+                            const cosTheta = cosTable[s]; // 최적화: 캐싱된 배열에서 직접 획득
+                            const sinTheta = sinTable[s]; // 최적화: 캐싱된 배열에서 직접 획득
+
+                            const oneMinusCos = 1.0 - cosTheta;
+                            const odCos_X = outDirX * cosTheta;
+                            const odCos_Y = outDirY * cosTheta;
+                            const odCos_Z = outDirZ * cosTheta;
+                            const axDot = axisX * dotProd * oneMinusCos;
+                            const ayDot = axisX * dotProd * oneMinusCos;
+                            const azDot = axisX * dotProd * oneMinusCos;
+
+                            if (s === 0) {
+                                const sDirX = odCos_X + cxX * sinTheta + axDot;
+                                const sDirY = odCos_Y + cxY * sinTheta + ayDot;
+                                const sDirZ = odCos_Z + cxZ * sinTheta + azDot;
+
+                                const rgb = SampleCubeMip(_bufIn, _lodIn, sDirX, sDirY, sDirZ);
+                                totalR += w * rgb.x; totalG += w * rgb.y; totalB += w * rgb.z;
+                            } else {
+                                // Positive Theta 방향
+                                const sDirX_p = odCos_X + cxX * sinTheta + axDot;
+                                const sDirY_p = odCos_Y + cxY * sinTheta + ayDot;
+                                const sDirZ_p = odCos_Z + cxZ * sinTheta + azDot;
+                                
+                                let rgb = SampleCubeMip(_bufIn, _lodIn, sDirX_p, sDirY_p, sDirZ_p);
+                                totalR += w * rgb.x; totalG += w * rgb.y; totalB += w * rgb.z;
+
+                                // Negative Theta 방향 (-sinTheta)
+                                const sDirX_n = odCos_X - cxX * sinTheta + axDot;
+                                const sDirY_n = odCos_Y - cxY * sinTheta + ayDot;
+                                const sDirZ_n = odCos_Z - cxZ * sinTheta + azDot;
+
+                                rgb = SampleCubeMip(_bufIn, _lodIn, sDirX_n, sDirY_n, sDirZ_n);
+                                totalR += w * rgb.x; totalG += w * rgb.y; totalB += w * rgb.z;
+                            }
+                        }
+
+                        outBuf[outIdx++] = totalR;
+                        outBuf[outIdx++] = totalG;
+                        outBuf[outIdx++] = totalB;
+                        outBuf[outIdx++] = isFloatType ? 1 : 255;
+                    }
+                }
+            }
+        }
+
+        function SampleCubeMip(_buf:(Uint8Array|Float32Array)[],_lod:number,_rx:number,_ry:number,_rz:number) {
+            const absX = Math.abs(_rx);
+            const absY = Math.abs(_ry);
+            const absZ = Math.abs(_rz);
+
+            let face = 0;
+            let uc = 0, vc = 0, ma = 0;
+
+            if (absX >= absY && absX >= absZ) {
+                if (_rx > 0) { face = 0; uc = -_rz; vc =  _ry; ma =  _rx; }
+                else        { face = 1; uc =  _rz; vc =  _ry; ma = absX; }
+            } else if (absY >= absX && absY >= absZ) {
+                if (_ry > 0) { face = 2; uc =  _rx; vc = -_rz; ma =  _ry; }
+                else        { face = 3; uc =  _rx; vc =  _rz; ma = absY; }
+            } else {
+                if (_rz > 0) { face = 4; uc =  _rx; vc =  _ry; ma =  _rz; }
+                else        { face = 5; uc = -_rx; vc =  _ry; ma = absZ; }
+            }
+
+            const u = 0.5 * (uc / ma + 1.0);
+            const v = 0.5 * (1.0 - vc / ma);
+
+            const src = _buf[_lod * 6 + face];
+            const w = sizeLods[_lod];
+            const h = sizeLods[_lod];
+
+            const texX = u * w - 0.5;
+            const texY = v * h - 0.5;
+
+            const x0 = Math.max(0, Math.min(w - 1, Math.floor(texX)));
+            const y0 = Math.max(0, Math.min(h - 1, Math.floor(texY)));
+            const x1 = Math.max(0, Math.min(w - 1, x0 + 1));
+            const y1 = Math.max(0, Math.min(h - 1, y0 + 1));
+
+            const fX = texX - Math.floor(texX);
+            const fY = texY - Math.floor(texY);
+
+            const idx00 = (y0 * w + x0) * 4;
+            const idx10 = (y0 * w + x1) * 4;
+            const idx01 = (y1 * w + x0) * 4;
+            const idx11 = (y1 * w + x1) * 4;
+
+            const w00 = (1.0 - fX) * (1.0 - fY);
+            const w10 = fX * (1.0 - fY);
+            const w01 = (1.0 - fX) * fY;
+            const w11 = fX * fY;
+
+            v3.x = (src[idx00 + 0] * w00 + src[idx10 + 0] * w10 + src[idx01 + 0] * w01 + src[idx11 + 0] * w11);
+            v3.y = (src[idx00 + 1] * w00 + src[idx10 + 1] * w10 + src[idx01 + 1] * w01 + src[idx11 + 1] * w11);
+            v3.z = (src[idx00 + 2] * w00 + src[idx10 + 2] * w10 + src[idx01 + 2] * w01 + src[idx11 + 2] * w11);
+
+            return v3;
+        }
+    }
 	static SqurEnlargedReduced( _w:number,_h:number,_buf : any,pa_xScale : number, pa_yScale  : number, pa_sampleRate  : number)
 	{
 		var L_tex = new CTexture();

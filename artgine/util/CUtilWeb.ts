@@ -1,4 +1,5 @@
 import { CAlert } from "../basic/CAlert.js";
+import { CEvent } from "../basic/CEvent.js";
 import { CConsol } from "../basic/CConsol.js";
 import { CDOM } from "../basic/CDOM.js";
 import { CPath } from "../basic/CPath.js";
@@ -11,6 +12,23 @@ import { CChecker } from "./CChecker.js";
 
 var gMonaco = true;
 export class CUtilWeb {
+	private static mNotifPool: Set<Notification> = new Set();
+	static async Notify(_title: string, _body = "", _icon = "", _onClick: ((...args: any[]) => any) | CEvent<(...args: any[]) => any> | null = null): Promise<boolean> {
+		if (!("Notification" in window)) return true;
+		if (Notification.permission === "denied") return true;
+		if (Notification.permission === "default") {
+			const permission = await Notification.requestPermission();
+			if (permission !== "granted") return true;
+		}
+		const noti = new Notification(_title, { body: _body, icon: _icon || undefined });
+		CUtilWeb.mNotifPool.add(noti);
+		noti.onclose = () => CUtilWeb.mNotifPool.delete(noti);
+		if (_onClick != null) {
+			const ev = CEvent.ToCEvent(_onClick);
+			noti.onclick = () => { window.focus(); ev.Call(); };
+		}
+		return false;
+	}
 	static ToastUI(_html: HTMLElement, _height = 400) {
 		if (window["toastui"] == null) {
 			CAlert.W("toastui not import!");
@@ -101,87 +119,65 @@ export class CUtilWeb {
 
 
 	// }
-	static async TSImport(_source: string, _monaco = true, _github = false) {
-		let importPathArr = [];
-		importPathArr = ExtractImportPaths(_source, false);
-		let fullPath = CPath.FullPath();
-		fullPath = CString.PathSub(fullPath);
+	static async TSImport(_source: string, _monaco = true, _github = false, _filePath: string = null) {
+		let importPathArr = ExtractImportPaths(_source, false);
+		const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
+		const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.PHPC()).replace(/\/$/, "");
 
-		// 이미 처리된 경로를 추적하는 맵
-		let processedPaths = new Map<string, string>();
+		const processedPaths = new Map<string, string>();
 
 		for (let i = 0; i < importPathArr.length; ++i) {
-			let path = importPathArr[i];
+			const originalPath = importPathArr[i];
+			if (processedPaths.has(originalPath)) continue;
 
-			// 이미 처리된 경로인지 확인
-			if (processedPaths.has(path)) {
-				// 이미 처리된 경로는 건너뛰기
+			// 이미 절대 URL이면 스킵
+			if (/^https?:\/\//.test(originalPath)) {
+				processedPaths.set(originalPath, originalPath);
 				continue;
 			}
 
-			// "../" 패턴 처리
-			let count = 0;
-			// "../" 패턴을 찾아서 개수를 세고 제거
-			while (path.startsWith("../")) {
-				count++;
-				path = path.substring(3);
+			let path = originalPath;
+			if (_monaco) path = CString.ReplaceAll(path, ".js", "");
+			else if (path.indexOf(".js") == -1) path += ".js";
+
+			let adjustedFullPath: string;
+
+			if (path.startsWith("../") || path.startsWith("./")) {
+				// 상대경로: 현재 파일 디렉토리 기준
+				let count = 0;
+				while (path.startsWith("../")) { count++; path = path.substring(3); }
+				if (path.startsWith("./")) path = path.substring(2);
+
+				if (_github) {
+					// github 모드: 상대경로도 github 루트 기준으로 치환
+					adjustedFullPath = rootBase + "/" + path;
+				} else {
+					const base = count > 0 ? CString.PathSub(fileDir, count) : fileDir;
+					adjustedFullPath = base + "/" + path;
+				}
+			} else {
+				// 프로젝트 루트 절대경로 (artgine/..., plugin/... 등)
+				adjustedFullPath = rootBase + "/" + path;
 			}
-			path = CString.ReplaceAll(path, "./", "");
-			if (_monaco == true)
-				path = CString.ReplaceAll(path, ".js", "");
-			else if (_monaco == false && path.indexOf(".js") == -1)
-				path += ".js";
-			if (count > 0) {
 
+			_source = _source.replace(originalPath, adjustedFullPath);
+			processedPaths.set(originalPath, adjustedFullPath);
+			importPathArr[i] = adjustedFullPath;
 
-				// 상위 디렉토리 개수만큼 fullPath에서 제거
-				let adjustedFullPath = CString.PathSub(fullPath, count);
-				if (_github) adjustedFullPath = "https://06fs4dix.github.io/Artgine";
-
-				adjustedFullPath = adjustedFullPath + "/" + path;
-				// 첫 번째 매치만 변경하도록 수정
-				_source = _source.replace(importPathArr[i], adjustedFullPath);
-				importPathArr[i] = adjustedFullPath;
-				// 처리된 경로를 맵에 저장
-				processedPaths.set(importPathArr[i], adjustedFullPath);
-			}
-			else {
-				let aChk = path.indexOf("artgine");
-				if (aChk != -1)
-					path = path.substring(aChk);
-				let adjustedFullPath = CPath.PHPC();
-				if (_github) adjustedFullPath = "https://06fs4dix.github.io/Artgine/";
-				fullPath = adjustedFullPath;
-				//fullPath=fullPath.substring(0,fullPath.indexOf(adjustedFullPath)+adjustedFullPath.length);
-
-				adjustedFullPath = fullPath + path;
-				// 첫 번째 매치만 변경하도록 수정
-				_source = _source.replace(importPathArr[i], adjustedFullPath);
-				processedPaths.set(importPathArr[i], adjustedFullPath);
-				importPathArr[i] = adjustedFullPath;
-				// 처리된 경로를 맵에 저장
-
-
-			}
 			if (_monaco && window["require"] != null) {
-				let fName = importPathArr[i];
-
-				fName += ".ts";
-				let buf = await CFile.Load(fName);
-
+				const fName = adjustedFullPath + ".ts";
+				const buf = await CFile.Load(fName);
 				window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(
 					CUtil.ArrayToString(buf), fName
 				);
 			}
-
-
 		}
 
 		return _source;
 	}
 
 	static MonacoEditer(_target: HTMLElement, _value: string, _language: "plaintext" | "json" | "typescript" | "javascript" | "wgsl" | "html" = "plaintext",
-		_theme: "vs" | "vs-dark" = "vs-dark", _exeFun = null, _github = false) {
+		_theme: "vs" | "vs-dark" = "vs-dark", _exeFun = null, _github = false, _filePath: string = null) {
 		if (window["require"] == null) {
 			_target.innerHTML = "MonacoEditer not import!";
 
@@ -195,7 +191,7 @@ export class CUtilWeb {
 
 		(require as any)(['vs/editor/editor.main'], async function () {
 			if (_language == "typescript")
-				_value = await CUtilWeb.TSImport(_value, true, _github);
+				_value = await CUtilWeb.TSImport(_value, true, _github, _filePath);
 
 			_target.innerHTML = "";
 			// ✅ JS 파일에 대한 설정
