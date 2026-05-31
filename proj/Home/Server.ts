@@ -7,6 +7,8 @@ import { CFileServer } from "../../artgine/server/CFileServer.js";
 import { COAuthServer } from "../../artgine/server/COAuthServer.js";
 import { CSingServer } from "../../artgine/server/CSingServer.js";
 import { CTerminalRouter } from "../../artgine/server/CTerminalRouter.js";
+import { CDownloadServer } from "../../artgine/server/CDownloadServer.js";
+import { CAIChatRouter } from "../../artgine/server/CAIChatRouter.js";
 
 
 new CBoardServer().SetServerMain(CServerMain.Main());
@@ -14,6 +16,8 @@ new CSingServer().SetServerMain(CServerMain.Main());
 new CFileServer().SetServerMain(CServerMain.Main());
 new COAuthServer().SetServerMain(CServerMain.Main());
 new CTerminalRouter().SetServerMain(CServerMain.Main());
+new CDownloadServer().SetServerMain(CServerMain.Main());
+new CAIChatRouter().SetServerMain(CServerMain.Main());
 //new CTerminalSocket().SetServerMain(CServerMain.Main());
 
 

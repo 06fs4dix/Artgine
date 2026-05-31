@@ -1,5 +1,7 @@
-const version = 'mo18uv2t_2';
 import "../../artgine/artgine.js";
+import { CClass } from "../../artgine/basic/CClass.js";
+import { MountDownloadTab } from "./Downloads/DownloadTab.js";
+CClass.Push(MountDownloadTab);
 import { CPreferences } from "../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
@@ -16,6 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
+gPF.mVersion = "mptgpf92_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -30,8 +33,10 @@ import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
-import { CFileViewer, CMDViewer } from "../../artgine/util/CModalUtil.js";
+import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg } from "../../artgine/util/CModalUtil.js";
 import { CFile } from "../../artgine/system/CFile.js";
+import { CPWA } from '../../artgine/system/CPWA.js';
+import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
 if (gPF.mServer != "webServer")
     CAlert.E("서버 세팅이 잘못되었습니다");
 CUtilWeb.Parameter("");
@@ -66,6 +71,14 @@ loginModal.SetSize(320, 640);
 CDOM.ID("login-btn").addEventListener("click", () => {
     loginModal.Open();
 });
+if (!CPWA.IsInstalled()) {
+    CDOM.ID("install-btn").style.display = "";
+}
+CDOM.ID("install-btn").addEventListener("click", () => {
+    let msg = CPWA.Install();
+    if (msg)
+        CAlert.Info(msg);
+});
 let bClient = null;
 CDOM.ID("board-tab").onclick = () => {
     if (bClient == null) {
@@ -73,25 +86,1075 @@ CDOM.ID("board-tab").onclick = () => {
         bClient.List(0, 5);
     }
 };
-let cmdInited = false;
-CDOM.ID("cmd-tab").addEventListener("shown.bs.tab", () => {
-    if (cmdInited)
+let dlInited = false;
+CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
+    if (dlInited)
         return;
-    cmdInited = true;
-    const panel = CDOM.ID("cmd-panel");
-    const iframe = document.createElement('iframe');
-    iframe.src = '/cmd';
-    iframe.style.cssText = 'width:100%;border:none;display:block;flex:1;min-height:0;';
-    panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
-    panel.appendChild(iframe);
+    dlInited = true;
+    MountDownloadTab("download-root");
 });
-if (CDOM.ID("cmd-panel").classList.contains("active")) {
-    CDOM.ID("cmd-tab").dispatchEvent(new Event("shown.bs.tab", { bubbles: true }));
+if (CDOM.ID("download-panel").classList.contains("active")) {
+    dlInited = true;
+    MountDownloadTab("download-root");
+}
+const AI_TOKEN_KEY = 'artgine.token';
+{
+    const _origFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+        const token = localStorage.getItem(AI_TOKEN_KEY) || '';
+        if (token) {
+            const headers = new Headers(init.headers || {});
+            if (!headers.has('x-ai-token'))
+                headers.set('x-ai-token', token);
+            init = { ...init, headers };
+        }
+        return _origFetch(input, init);
+    };
+}
+const aiFrameContainer = CDOM.ID("ai-frame-container");
+const aiSessionList = CDOM.ID("aiSessionList");
+const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
+let aiInited = false;
+const iframePool = new Map();
+let activeFrameKey = null;
+let pendingNewSid = null;
+let _activeNotifCallback = null;
+function _showModalStackMsg(label, content, onClick) {
+    const m = new CModalStackMsg(CModal.ePos.TopRight);
+    m.SetBG(Bootstrap.eColor.warning);
+    m.SetSize(260, content ? 69 : 49);
+    const nid = `notif_${Date.now()}`;
+    const cursor = onClick ? 'cursor:pointer;' : '';
+    m.SetBody(`<div id="${nid}" class="px-3 py-2" style="width:260px;overflow:hidden;${cursor}">
+        <div class="small fw-semibold text-truncate">${label}</div>
+        ${content ? `<div class="small text-secondary text-truncate mt-1">${content}</div>` : ''}
+    </div>`);
+    m.Open();
+    if (onClick) {
+        _activeNotifCallback = onClick;
+        setTimeout(() => {
+            document.getElementById(nid)?.addEventListener('click', () => {
+                onClick();
+                m.Close();
+                _activeNotifCallback = null;
+            });
+        }, 0);
+    }
+    m.Close(8);
+    setTimeout(() => { if (_activeNotifCallback === onClick)
+        _activeNotifCallback = null; }, 8000);
+}
+function _showDoneNotification(label, content, onClick) {
+    if (!document.hasFocus()) {
+        CUtilWeb.Notify(label, content ?? "", "", onClick ? () => onClick() : null).then(failed => {
+            if (!failed)
+                return;
+            _showModalStackMsg(label, content, onClick);
+        });
+    }
+    else {
+        _showModalStackMsg(label, content, onClick);
+    }
+}
+function isActiveFrame(key) {
+    return activeFrameKey === key;
+}
+function showFrame(key, src) {
+    let f = iframePool.get(key);
+    if (!f) {
+        f = document.createElement('iframe');
+        f.src = src;
+        f.setAttribute('allow', 'clipboard-read; clipboard-write');
+        f.style.display = 'none';
+        f.addEventListener('load', () => {
+            const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
+            try {
+                f.contentWindow?.addEventListener('keydown', (e) => {
+                    if (!isTerm && e.key === 'Tab') {
+                        e.preventDefault();
+                        handleTabKey();
+                        return;
+                    }
+                    if (e.key === 'F2') {
+                        e.preventDefault();
+                        FileSearch();
+                    }
+                    else if (e.key === 'F3') {
+                        e.preventDefault();
+                        const fileTabEl = document.getElementById('file-tab');
+                        if (fileTabEl)
+                            window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
+                        FolderCD('/');
+                    }
+                    else if (e.key === 'F4') {
+                        e.preventDefault();
+                        const aiTabEl = document.getElementById('ai-tab');
+                        if (aiTabEl)
+                            window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+                    }
+                }, true);
+            }
+            catch (_) { }
+        });
+        aiFrameContainer.appendChild(f);
+        iframePool.set(key, f);
+    }
+    if (activeFrameKey && activeFrameKey !== key) {
+        const prev = iframePool.get(activeFrameKey);
+        if (prev)
+            prev.style.display = 'none';
+    }
+    f.style.display = 'block';
+    activeFrameKey = key;
+    return f;
+}
+function destroyFrame(key) {
+    const f = iframePool.get(key);
+    if (!f)
+        return;
+    f.remove();
+    iframePool.delete(key);
+    if (activeFrameKey === key)
+        activeFrameKey = null;
+}
+function uuidv4() {
+    if (crypto && 'randomUUID' in crypto)
+        return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+function aiAuthedFetch(url, init) {
+    const token = localStorage.getItem(AI_TOKEN_KEY) || '';
+    const headers = new Headers(init?.headers || {});
+    if (token)
+        headers.set('x-ai-token', token);
+    return fetch(url, { ...init, headers });
+}
+function aiFormatRelative(ts) {
+    if (!ts)
+        return '';
+    const diff = Date.now() - ts;
+    if (diff < 0 || isNaN(diff))
+        return '';
+    const s = Math.floor(diff / 1000);
+    if (s < 60)
+        return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60)
+        return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24)
+        return `${h}h`;
+    const d = Math.floor(h / 24);
+    if (d < 30)
+        return `${d}d`;
+    const mo = Math.floor(d / 30);
+    if (mo < 12)
+        return `${mo}mo`;
+    return `${Math.floor(mo / 12)}y`;
+}
+function aiEscapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function aiLoadSession(sid) {
+    showFrame(`chat:${sid}`, `./AI/AIChat.html?session=${encodeURIComponent(sid)}`);
+    aiRefreshSessions();
+    termRefreshSessions();
+}
+async function aiRefreshSessions() {
+    const token = localStorage.getItem(AI_TOKEN_KEY);
+    if (!token) {
+        aiSessionList.innerHTML = '<div class="text-center text-secondary small p-3">Please sign in from AI Chat first.</div>';
+        return;
+    }
+    try {
+        const r = await aiAuthedFetch(CPath.PHPC() + 'ai/chat/sessions?limit=30');
+        if (r.status === 401) {
+            localStorage.removeItem(AI_TOKEN_KEY);
+            fileAuthed = false;
+            aiShowAuthOrLoad();
+            return;
+        }
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        const prevYellowChat = new Set();
+        aiSessionList.querySelectorAll('[data-sid]').forEach(el => {
+            if (el.querySelector('.ai-busy-dot'))
+                prevYellowChat.add(el.dataset.sid);
+        });
+        aiSessionList.innerHTML = '';
+        const sessions = j.sessions;
+        const serverSids = new Set(sessions.map(s => s.sessionId));
+        for (const key of Array.from(iframePool.keys())) {
+            if (!key.startsWith('chat:'))
+                continue;
+            if (pendingNewSid && key === `chat:${pendingNewSid}`)
+                continue;
+            if (!serverSids.has(key.slice(5)))
+                destroyFrame(key);
+        }
+        for (const s of sessions) {
+            const key = `chat:${s.sessionId}`;
+            const isActive = activeFrameKey === key;
+            const isLoaded = iframePool.has(key);
+            const item = document.createElement('div');
+            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+                + (isActive ? ' bg-primary-subtle' : '');
+            item.dataset.sid = s.sessionId;
+            const rel = aiFormatRelative(s.updatedAt);
+            let dot;
+            if (!isLoaded) {
+                dot = '<span class="text-danger small" title="미연결">●</span>';
+            }
+            else if (s.busy) {
+                dot = '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>';
+            }
+            else {
+                if (prevYellowChat.has(s.sessionId) && (!isActiveFrame(key) || !document.hasFocus())) {
+                    _showDoneNotification(aiEscapeHtml(s.title), s.lastMsg ? aiEscapeHtml(s.lastMsg) : undefined, () => aiLoadSession(s.sessionId));
+                }
+                dot = '<span class="text-warning small" title="대기 중">●</span>';
+            }
+            item.innerHTML = `
+                <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
+                    ${dot}
+                    ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
+                </span>
+                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+                    <span class="text-truncate small">${aiEscapeHtml(s.title)}</span>
+                    ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
+                </span>
+                <button class="ai-popup-btn btn btn-sm btn-link text-secondary p-0" title="Options">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </button>
+            `;
+            item.addEventListener('click', () => aiLoadSession(s.sessionId));
+            item.querySelector('.ai-popup-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const btn = e.currentTarget;
+                const existing = document.getElementById('ai-session-dropdown');
+                if (existing)
+                    existing.remove();
+                const drop = document.createElement('div');
+                drop.id = 'ai-session-dropdown';
+                drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
+                drop.innerHTML = `
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="delete">🗑️ Delete Session</button>
+                `;
+                const rect = btn.getBoundingClientRect();
+                drop.style.top = (rect.bottom + 4) + 'px';
+                drop.style.left = rect.left + 'px';
+                document.body.appendChild(drop);
+                drop.querySelectorAll('button').forEach(b => {
+                    b.addEventListener('click', async () => {
+                        drop.remove();
+                        if (b.dataset.act === 'delete') {
+                            if (!confirm(`Delete "${s.title}"?`))
+                                return;
+                            await aiAuthedFetch(`${CPath.PHPC()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
+                            destroyFrame(key);
+                            aiRefreshSessions();
+                            termRefreshSessions();
+                        }
+                        else if (b.dataset.act === 'link') {
+                            aiShowShareLink(s.sessionId, s.title);
+                        }
+                    });
+                });
+                const close = (ev) => {
+                    if (!drop.contains(ev.target)) {
+                        drop.remove();
+                        document.removeEventListener('click', close);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', close), 0);
+            });
+            item.addEventListener('mouseenter', () => { if (!isActive)
+                item.classList.add('bg-body-secondary'); });
+            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            aiSessionList.appendChild(item);
+        }
+    }
+    catch (e) {
+        console.error('AI session list error:', e);
+    }
+}
+function refreshSessionsSoon() {
+    setTimeout(() => { aiRefreshSessions(); termRefreshSessions(); }, 1500);
+    setTimeout(() => { aiRefreshSessions(); termRefreshSessions(); }, 4000);
+}
+aiNewChatBtn.addEventListener('click', () => chatStartNew());
+function chatStartNew(initialWorkingDir) {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">옵션</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Working Directory</label>
+            <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chat-opt-allow" checked>
+                <label class="form-check-label small text-secondary" for="chat-opt-allow">Allow working dir write</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chat-opt-mcp">
+                <label class="form-check-label small text-secondary" for="chat-opt-mcp">MCP</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chat-opt-mdcopy" checked>
+                <label class="form-check-label small text-secondary" for="chat-opt-mdcopy">Copy MD</label>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="chat-modal-open" class="btn btn-primary">Open</button>
+            <button id="chat-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const allowCheck = container.querySelector('#chat-opt-allow');
+        const mcpCheck = container.querySelector('#chat-opt-mcp');
+        const mdcopyCheck = container.querySelector('#chat-opt-mdcopy');
+        const workingDirInput = container.querySelector('#chat-opt-workingDir');
+        if (initialWorkingDir)
+            workingDirInput.value = initialWorkingDir;
+        const doOpen = () => {
+            const sid = uuidv4();
+            const workingDir = workingDirInput.value.trim();
+            const params = new URLSearchParams({ session: sid });
+            if (!mcpCheck.checked)
+                params.set('mcp', '0');
+            if (workingDir)
+                params.set('workingDir', workingDir);
+            if (allowCheck.checked)
+                params.set('allow', '1');
+            if (mdcopyCheck.checked)
+                params.set('mdcopy', '1');
+            pendingNewSid = sid;
+            showFrame(`chat:${sid}`, `./AI/AIChat.html?${params.toString()}`);
+            aiRefreshSessions();
+            termRefreshSessions();
+            refreshSessionsSoon();
+            modal.Close();
+        };
+        container.querySelector('#chat-modal-open').addEventListener('click', doOpen);
+        container.querySelector('#chat-modal-cancel').addEventListener('click', () => modal.Close());
+        workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+    }, 100);
+}
+const CMD_TOKEN_KEY = 'artgine.token';
+const termNewBtn = CDOM.ID("termNewBtn");
+const termSessionList = CDOM.ID("termSessionList");
+let termActivePort = null;
+function termAuthedFetch(url, init) {
+    const token = localStorage.getItem(CMD_TOKEN_KEY) || '';
+    const headers = new Headers(init?.headers || {});
+    if (token)
+        headers.set('x-cmd-token', token);
+    return fetch(url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token), { ...init, headers });
+}
+async function termStartNew(_mode = 'cmd', initialWorkingDir) {
+    const token = localStorage.getItem(CMD_TOKEN_KEY);
+    if (token) {
+        try {
+            const r = await termAuthedFetch(CPath.PHPC() + 'cmd/sessions');
+            const j = await r.json();
+            if (j.ok) {
+                const aliveCount = j.sessions.filter((s) => s.alive).length;
+                if (aliveCount >= 9) {
+                    alert('터미널 세션이 가득 찼습니다 (최대 9개).\n기존 세션을 삭제한 후 다시 시도하세요.');
+                    return;
+                }
+            }
+        }
+        catch { }
+    }
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">옵션</p>
+        <div class="mb-3 d-flex gap-2 flex-wrap">
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="gemini">gemini</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Key</label>
+            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="Session key (optional)" autocomplete="off">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Working Directory</label>
+            <input id="term-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="term-opt-allow">
+                <label class="form-check-label small text-secondary" for="term-opt-allow">Allow working dir write</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
+                <label class="form-check-label small text-secondary" for="term-opt-mcp">MCP</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy">
+                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">Copy MD</label>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="term-modal-open" class="btn btn-primary">Open</button>
+            <button id="term-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        let selectedMode = _mode;
+        const modeButtons = container.querySelectorAll('.term-mode-btn');
+        const allowCheck = container.querySelector('#term-opt-allow');
+        const mcpCheck = container.querySelector('#term-opt-mcp');
+        const mdcopyCheck = container.querySelector('#term-opt-mdcopy');
+        const updateModeUI = (mode) => {
+            selectedMode = mode;
+            modeButtons.forEach(b => {
+                b.classList.toggle('btn-primary', b.dataset.mode === mode);
+                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== mode);
+            });
+            allowCheck.disabled = mode === 'cmd';
+            if (mode === 'cmd')
+                allowCheck.checked = false;
+        };
+        modeButtons.forEach(b => b.addEventListener('click', () => updateModeUI(b.dataset.mode)));
+        updateModeUI(selectedMode);
+        const keyInput = container.querySelector('#term-opt-key');
+        const workingDirInput = container.querySelector('#term-opt-workingDir');
+        if (initialWorkingDir)
+            workingDirInput.value = initialWorkingDir;
+        const openBtn = container.querySelector('#term-modal-open');
+        const cancelBtn = container.querySelector('#term-modal-cancel');
+        const doOpen = async () => {
+            const key = keyInput.value.trim();
+            const workingDir = workingDirInput.value.trim();
+            const params = new URLSearchParams({ mode: selectedMode });
+            if (key)
+                params.set('key', key);
+            if (workingDir)
+                params.set('workingDir', workingDir);
+            if (allowCheck.checked)
+                params.set('allow', '1');
+            if (!mcpCheck.checked)
+                params.set('mcp', '0');
+            if (mdcopyCheck.checked)
+                params.set('mdcopy', '1');
+            modal.Close();
+            try {
+                const r = await termAuthedFetch(CPath.PHPC() + 'cmd/start-ttyd?' + params.toString());
+                const j = await r.json();
+                if (!j.ok) {
+                    alert(j.msg || 'Failed to start terminal');
+                    return;
+                }
+                const key = `term-new:${Date.now()}`;
+                showFrame(key, `${CPath.PHPC()}cmd/terminal-proxy?port=${j.port}`);
+                aiRefreshSessions();
+                termRefreshSessions();
+                refreshSessionsSoon();
+            }
+            catch (e) {
+                console.error('[Terminal] start-ttyd error:', e);
+                alert('Failed to start terminal');
+            }
+        };
+        openBtn.addEventListener('click', doOpen);
+        cancelBtn.addEventListener('click', () => modal.Close());
+        workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+    }, 100);
+}
+async function termConnectSession(port) {
+    const key = `term:${port}`;
+    if (iframePool.has(key)) {
+        showFrame(key, '');
+        aiRefreshSessions();
+        termRefreshSessions();
+        return;
+    }
+    showFrame(key, `${CPath.PHPC()}cmd/terminal-proxy?port=${port}`);
+    aiRefreshSessions();
+    termRefreshSessions();
+}
+async function termKillSession(port) {
+    try {
+        const r = await termAuthedFetch(`${CPath.PHPC()}cmd/kill-session?port=${port}`);
+        const j = await r.json();
+        if (!j.ok) {
+            alert(`삭제 실패: ${j.msg || 'unknown error'}`);
+            return;
+        }
+        termRefreshSessions();
+        aiRefreshSessions();
+    }
+    catch (e) {
+        console.error('termKillSession error:', e);
+    }
+}
+async function termRefreshSessions() {
+    try {
+        const r = await fetch(CPath.PHPC() + 'cmd/sessions');
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        const prevYellowTerm = new Set();
+        termSessionList.querySelectorAll('[data-port]').forEach(el => {
+            if (el.querySelector('.term-busy-dot'))
+                prevYellowTerm.add(Number(el.dataset.port));
+        });
+        termSessionList.innerHTML = '';
+        const sessions = j.sessions;
+        const serverPorts = new Set(sessions.map(s => s.port));
+        for (const key of Array.from(iframePool.keys())) {
+            if (!key.startsWith('term:'))
+                continue;
+            if (!serverPorts.has(parseInt(key.slice(5), 10)))
+                destroyFrame(key);
+        }
+        const termNewKeys = Array.from(iframePool.keys()).filter(k => k.startsWith('term-new:'));
+        if (termNewKeys.length > 0) {
+            const newSessions = sessions.filter(s => !iframePool.has(`term:${s.port}`));
+            if (newSessions.length > 0) {
+                const newest = newSessions.reduce((a, b) => (a.createdAt > b.createdAt ? a : b));
+                const key = `term:${newest.port}`;
+                const newKey = termNewKeys[0];
+                const f = iframePool.get(newKey);
+                iframePool.delete(newKey);
+                iframePool.set(key, f);
+                if (activeFrameKey === newKey)
+                    activeFrameKey = key;
+            }
+        }
+        for (const s of sessions) {
+            const key = `term:${s.port}`;
+            const isActive = activeFrameKey === key;
+            const isLoaded = iframePool.has(key);
+            const item = document.createElement('div');
+            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+                + (isActive ? ' bg-success-subtle' : '');
+            item.dataset.port = String(s.port);
+            const rel = aiFormatRelative(s.lastActivity);
+            const preview = aiEscapeHtml(s.lastCmd || s.lastLine || '(empty)');
+            const dotLabel = s.mode.slice(0, 3);
+            const dotTitle = s.key || s.mode;
+            let dot;
+            if (!s.alive || !isLoaded) {
+                dot = `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
+            }
+            else if (s.lineChanged) {
+                dot = `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
+            }
+            else {
+                if (prevYellowTerm.has(s.port) && (!isActiveFrame(key) || !document.hasFocus())) {
+                    const rawPreview = s.lastCmd || s.lastLine || '';
+                    _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
+                }
+                dot = `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
+            }
+            item.innerHTML = `
+                <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
+                    ${dot}
+                    ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
+                </span>
+                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+                    ${s.key ? `<span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.key)}</span>` : ''}
+                    <span class="text-truncate small">${preview}</span>
+                    ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
+                </span>
+                <button class="term-popup-btn btn btn-sm btn-link text-secondary p-0" title="팝업으로 열기">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </button>
+            `;
+            item.style.cursor = 'pointer';
+            item.addEventListener('click', () => termConnectSession(s.port));
+            item.querySelector('.term-popup-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const btn = e.currentTarget;
+                const existing = document.getElementById('term-popup-dropdown');
+                if (existing)
+                    existing.remove();
+                const drop = document.createElement('div');
+                drop.id = 'term-popup-dropdown';
+                drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
+                drop.innerHTML = `
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="modal">📄 Open in Modal</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="window">🪟 Open in New Window</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="kill">🗑️ Delete Session</button>
+                `;
+                const rect = btn.getBoundingClientRect();
+                drop.style.top = (rect.bottom + 4) + 'px';
+                drop.style.left = rect.left + 'px';
+                document.body.appendChild(drop);
+                drop.querySelectorAll('button').forEach(b => {
+                    b.addEventListener('click', () => {
+                        drop.remove();
+                        if (b.dataset.act === 'kill') {
+                            termKillSession(s.port);
+                        }
+                        else if (b.dataset.act === 'link') {
+                            termShowShareLink(s.port);
+                        }
+                        else {
+                            termOpenPopup(s.port, b.dataset.act === 'window');
+                        }
+                    });
+                });
+                const close = (ev) => {
+                    if (!drop.contains(ev.target)) {
+                        drop.remove();
+                        document.removeEventListener('click', close);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', close), 0);
+            });
+            item.addEventListener('mouseenter', () => { if (!isActive)
+                item.classList.add('bg-body-secondary'); });
+            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            termSessionList.appendChild(item);
+        }
+    }
+    catch (e) {
+        console.error('Terminal session list error:', e);
+    }
+}
+function termShowShareLink(port) {
+    const shareUrl = `${CPath.PHPC()}cmd/terminal-proxy?port=${port}`;
+    const uid = `ts_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Terminal Share Link');
+    modal.SetBody(`
+        <div class="mb-2 small text-secondary">Anyone with this link can view the terminal in read-only mode.</div>
+        <div class="input-group">
+            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${shareUrl}" onclick="this.select()">
+            <button class="btn btn-outline-secondary btn-sm" title="Copy"
+                onclick="var i=document.getElementById('${uid}');i.select();document.execCommand('copy');this.innerHTML='<i class=\\'bi bi-check2\\'></i>';setTimeout(()=>this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>',1500)">
+                <i class="bi bi-clipboard"></i>
+            </button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.Open(CModal.ePos.Center);
+}
+function aiShowShareLink(sessionId, title) {
+    const base = location.pathname.replace(/\/[^/]+$/, '');
+    const shareUrl = `${location.origin}${base}/AI/AIChat.html?share=${encodeURIComponent(sessionId)}`;
+    const uid = `as_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('AI Chat Share Link');
+    modal.SetBody(`
+        <div class="mb-2 small text-secondary">Anyone with this link can view the chat: <strong>${title}</strong></div>
+        <div class="input-group">
+            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${shareUrl}" onclick="this.select()">
+            <button class="btn btn-outline-secondary btn-sm" title="Copy"
+                onclick="var i=document.getElementById('${uid}');i.select();document.execCommand('copy');this.innerHTML='<i class=\\'bi bi-check2\\'></i>';setTimeout(()=>this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>',1500)">
+                <i class="bi bi-clipboard"></i>
+            </button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.Open(CModal.ePos.Center);
+}
+async function termOpenPopup(port, newWindow = false) {
+    if (newWindow) {
+        window.open(`${CPath.PHPC()}cmd/terminal-proxy?port=${port}`, `term_${port}`, 'width=900,height=600,toolbar=no,menubar=no,location=no,status=no');
+        return;
+    }
+    try {
+        const modal = new CModal(null);
+        modal.SetCloseToHide(false);
+        modal.SetResize(true);
+        modal.SetTitle(CModal.eTitle.TextClose);
+        modal.SetHeader('Terminal');
+        modal.SetBody(`<div style="position:relative;width:100%;height:100%;">` +
+            `<iframe src="${CPath.PHPC()}cmd/terminal-proxy?port=${port}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
+            `<div class="modal-iframe-guard" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;z-index:1;"></div>` +
+            `</div>`);
+        modal.SetSize('80%', '80%');
+        modal.Open(CModal.ePos.Center);
+        const guard = modal.mBody?.querySelector('.modal-iframe-guard');
+        if (guard) {
+            document.addEventListener('mousedown', () => { guard.style.display = 'block'; });
+            document.addEventListener('mouseup', () => { guard.style.display = 'none'; });
+        }
+    }
+    catch (e) {
+        console.error('Terminal popup error:', e);
+    }
+}
+termNewBtn.addEventListener('click', () => termStartNew('cmd'));
+const schedNewBtn = CDOM.ID("schedNewBtn");
+const schedSessionList = CDOM.ID("schedSessionList");
+function schedIntervalStr(s) {
+    const parts = [`${s.delay}s`];
+    if (s.count > 0)
+        parts.push(`×${s.count}`);
+    if (s.start > 0)
+        parts.push(`+${s.start}s`);
+    if (s.end > 0)
+        parts.push(`~${s.end}s`);
+    return parts.join(' ');
+}
+async function schedRefresh() {
+    try {
+        const r = await termAuthedFetch(CPath.PHPC() + 'cmd/schedules');
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        schedSessionList.innerHTML = '';
+        const schedules = j.schedules;
+        if (schedules.length === 0)
+            return;
+        for (const s of schedules) {
+            const item = document.createElement('div');
+            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-1 rounded';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
+                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'gemini' ? 'bg-success' : s.mode === 'codex' ? 'bg-primary' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
+                    <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
+                </span>
+                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.name)}</span>
+                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.terminalKey)}</span>
+                    <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
+                </span>
+                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+            `;
+            item.addEventListener('click', () => schedOpenModal(s));
+            item.querySelector('.sched-del-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm(`스케줄 '${s.name}' 을 삭제할까요?`))
+                    return;
+                await termAuthedFetch(`${CPath.PHPC()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
+                schedRefresh();
+            });
+            item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
+            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            schedSessionList.appendChild(item);
+        }
+    }
+    catch (e) {
+        console.error('schedRefresh error:', e);
+    }
+}
+function schedOpenModal(existing) {
+    const isEdit = !!existing;
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">${isEdit ? 'Edit Schedule' : 'New Schedule'}</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Name (schedule key)</label>
+            <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Terminal Key</label>
+            <input id="sched-tkey" type="text" class="form-control form-control-sm" placeholder="target terminal key" autocomplete="off" value="${aiEscapeHtml(existing?.terminalKey || '')}">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Mode (created if terminal missing)</label>
+            <div class="d-flex gap-1 flex-wrap">
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="none">none</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="cmd">cmd</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="claude">claude</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="gemini">gemini</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
+            </div>
+        </div>
+        <div class="mb-2">
+            <div class="d-flex gap-2">
+                <div class="flex-fill">
+                    <label class="form-label small text-secondary mb-1">Delay (sec)</label>
+                    <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.delay ?? 60}">
+                </div>
+                <div class="flex-fill">
+                    <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
+                    <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.count ?? 0}">
+                </div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <div class="d-flex gap-2">
+                <div class="flex-fill">
+                    <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
+                    <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.start ?? 0}">
+                </div>
+                <div class="flex-fill">
+                    <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
+                    <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.end ?? 0}">
+                </div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Command</label>
+            <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
+        </div>
+        <div class="accordion accordion-flush mb-3" id="sched-accordion">
+            <div class="accordion-item" style="background:transparent;border:1px solid #444;border-radius:0.375rem;">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2 px-3 small" type="button" data-bs-toggle="collapse" data-bs-target="#sched-acc-body" style="background:transparent;color:inherit;font-size:0.75rem;">
+                        Advanced
+                    </button>
+                </h2>
+                <div id="sched-acc-body" class="accordion-collapse collapse">
+                    <div class="accordion-body py-2 px-3">
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Working Directory</label>
+                            <input id="sched-cwd" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off" value="${aiEscapeHtml(existing?.cwd || '')}">
+                        </div>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sched-allow" ${existing?.allow ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-allow">Allow working dir write</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sched-mcp" ${(existing?.mcp ?? true) ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-mcp">MCP</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sched-mdcopy" ${existing?.mdcopy ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-mdcopy">Copy MD</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="sched-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+            <button id="sched-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        let selectedMode = existing?.mode || 'cmd';
+        const modeBtns = container.querySelectorAll('.sched-mode-btn');
+        const updateMode = (m) => {
+            selectedMode = m;
+            modeBtns.forEach(b => {
+                b.classList.toggle('btn-primary', b.dataset.mode === m);
+                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== m);
+            });
+        };
+        modeBtns.forEach(b => b.addEventListener('click', () => updateMode(b.dataset.mode)));
+        updateMode(selectedMode);
+        const doSave = async () => {
+            const name = (container.querySelector('#sched-name')).value.trim();
+            const tkey = (container.querySelector('#sched-tkey')).value.trim();
+            const command = (container.querySelector('#sched-cmd')).value.trim();
+            const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
+            const count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
+            const start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
+            const end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
+            const cwd = (container.querySelector('#sched-cwd')).value.trim();
+            const allow = (container.querySelector('#sched-allow')).checked;
+            const mcp = (container.querySelector('#sched-mcp')).checked;
+            const mdcopy = (container.querySelector('#sched-mdcopy')).checked;
+            if (!name || !tkey || !command) {
+                alert('Name, terminal key, and command are required');
+                return;
+            }
+            if (delay === 0) {
+                alert('Delay must be at least 1 second');
+                return;
+            }
+            const params = new URLSearchParams({ name, terminalKey: tkey, mode: selectedMode, command,
+                delay: String(delay), count: String(count), start: String(start), end: String(end),
+                allow: allow ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0' });
+            if (cwd)
+                params.set('cwd', cwd);
+            const r = await termAuthedFetch(`${CPath.PHPC()}cmd/schedule-set?${params.toString()}`);
+            const j = await r.json();
+            if (!j.ok) {
+                alert(j.msg || 'Failed');
+                return;
+            }
+            modal.Close();
+            schedRefresh();
+        };
+        container.querySelector('#sched-modal-save').addEventListener('click', doSave);
+        container.querySelector('#sched-modal-cancel').addEventListener('click', () => modal.Close());
+    }, 100);
+}
+schedNewBtn.addEventListener('click', () => schedOpenModal());
+setInterval(() => {
+    if (CDOM.ID("ai-panel").classList.contains("show")) {
+        aiRefreshSessions();
+        termRefreshSessions();
+        schedRefresh();
+    }
+}, 5000);
+window.addEventListener('message', (e) => {
+    if (e.data?.type === 'ai-sessions-changed') {
+        pendingNewSid = null;
+        aiRefreshSessions();
+    }
+    if (e.data?.type === 'terminal-tab-key') {
+        handleTabKey();
+    }
+    if (e.data?.type === 'home-hotkey') {
+        const k = e.data.key;
+        if (k === 'F2')
+            FileSearch();
+        else if (k === 'F3') {
+            const fileTabEl = document.getElementById('file-tab');
+            if (fileTabEl)
+                window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
+            FolderCD('/');
+        }
+        else if (k === 'F4') {
+            const aiTabEl = document.getElementById('ai-tab');
+            if (aiTabEl)
+                window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+        }
+    }
+});
+function handleTabKey() {
+    if (_activeNotifCallback) {
+        const cb = _activeNotifCallback;
+        _activeNotifCallback = null;
+        cb();
+    }
+    else {
+        toggleSidebar();
+    }
+}
+const AI_SIDEBAR_COLLAPSED_KEY = 'ai.sidebarCollapsed';
+const aiSidebarEl = CDOM.ID("ai-sidebar");
+const aiSidebarToggleBtn = CDOM.ID("aiSidebarToggle");
+function applySidebarCollapsed(collapsed) {
+    aiSidebarEl.classList.toggle('collapsed', collapsed);
+    const icon = aiSidebarToggleBtn.querySelector('i');
+    if (icon) {
+        icon.className = collapsed ? 'bi bi-layout-sidebar' : 'bi bi-layout-sidebar-inset';
+    }
+}
+applySidebarCollapsed(false);
+function toggleSidebar() {
+    const next = !aiSidebarEl.classList.contains('collapsed');
+    localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+    applySidebarCollapsed(next);
+}
+aiSidebarToggleBtn.addEventListener('click', toggleSidebar);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+        if (!document.getElementById('ai-panel')?.classList.contains('active'))
+            return;
+        e.preventDefault();
+        handleTabKey();
+        return;
+    }
+    if (e.key === 'F2') {
+        e.preventDefault();
+        FileSearch();
+    }
+    else if (e.key === 'F3') {
+        e.preventDefault();
+        const fileTabEl = document.getElementById('file-tab');
+        if (fileTabEl)
+            window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
+        FolderCD('/');
+    }
+    else if (e.key === 'F4') {
+        e.preventDefault();
+        const aiTabEl = document.getElementById('ai-tab');
+        if (aiTabEl)
+            window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+    }
+});
+const aiAuthOverlay = CDOM.ID("ai-auth-overlay");
+const aiAuthPwInput = CDOM.ID("aiAuthPwInput");
+const aiAuthMsg = CDOM.ID("aiAuthMsg");
+const aiAuthSubmitBtn = CDOM.ID("aiAuthSubmitBtn");
+async function aiCheckAuth() {
+    const token = localStorage.getItem(AI_TOKEN_KEY) || '';
+    if (!token)
+        return false;
+    try {
+        const j = await CFecth.Exe(CPath.PHPC() + "auth/check", { token }, "json");
+        return !!j?.ok;
+    }
+    catch {
+        return false;
+    }
+}
+async function aiShowAuthOrLoad() {
+    const authed = await aiCheckAuth();
+    if (!authed) {
+        fileAuthed = false;
+        aiAuthOverlay.style.display = 'flex';
+        aiAuthPwInput.value = '';
+        aiAuthMsg.textContent = '';
+        setTimeout(() => aiAuthPwInput.focus(), 50);
+    }
+    else {
+        fileAuthed = true;
+        aiAuthOverlay.style.display = 'none';
+        aiRefreshSessions();
+        termRefreshSessions();
+    }
+}
+async function aiDoAuth() {
+    const pw = aiAuthPwInput.value;
+    if (!pw)
+        return;
+    aiAuthSubmitBtn.disabled = true;
+    aiAuthMsg.textContent = '';
+    try {
+        const j = await CFecth.Exe(CPath.PHPC() + "auth/login", { password: pw }, "json");
+        if (j.ok) {
+            localStorage.setItem(AI_TOKEN_KEY, j.token);
+            fileAuthed = true;
+            aiAuthOverlay.style.display = 'none';
+            aiRefreshSessions();
+            termRefreshSessions();
+        }
+        else {
+            aiAuthMsg.textContent = j.msg || 'Wrong password';
+        }
+    }
+    catch {
+        aiAuthMsg.textContent = 'Server error';
+    }
+    aiAuthSubmitBtn.disabled = false;
+}
+aiAuthSubmitBtn.addEventListener('click', aiDoAuth);
+aiAuthPwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+    aiDoAuth(); });
+CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
+CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
+CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
+    aiInited = true;
+    aiShowAuthOrLoad();
+});
+if (CDOM.ID("ai-panel").classList.contains("show")) {
+    aiInited = true;
+    aiShowAuthOrLoad();
 }
 var g_contentJBox = new CModal("content_modal");
 g_contentJBox.SetCloseToHide(true);
 g_contentJBox.SetBody("<img id='ImageModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' onclick='NextPhoto()'/>" +
-    "<video id='VideoModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' controls autoplay onended='NextPhoto()'></video>" +
+    "<video id='VideoModalSrc' style='width:100%;height: auto;max-height: 75vh;object-fit: contain' controls onended='NextPhoto()'></video>" +
     "<a id='FileModalSrc' download >Download</a>" +
     "<div id='SourceSrc'/>");
 g_contentJBox.Hide();
@@ -106,16 +1169,17 @@ g_musicJBox.SetSize(400, 600);
 g_musicJBox.SetCloseToHide(true);
 g_musicJBox.SetBody(`<div id='Music_div'>
         
-        <button type='button' class='btn btn-primary' style='margin: 4px;' onclick='SoundEachCopy()'>개별 복사</button>
-        <button type='button' class='btn btn-danger' style='margin: 4px;' onclick='SoundAllDelate()'>모두 삭제</button>
+        <button type='button' class='btn btn-primary' style='margin: 4px;' onclick='SoundEachCopy()'>Copy Each</button>
+        <button type='button' class='btn btn-danger' style='margin: 4px;' onclick='SoundAllDelate()'>Delete All</button>
         
-        <button type='button' class='btn btn-warning' style='margin: 4px;' onclick='SoundPlayListSave()'>리스트 저장</button>
-        <audio id='MAudio' onended='SoundEnd()' controls playsinline autoplay></audio>
+        <button type='button' class='btn btn-warning' style='margin: 4px;' onclick='SoundPlayListSave()'>Save List</button>
+        <div id='SoundNowPlaying' style='padding:6px;font-weight:bold;color:#0d6efd;'></div>
+        <audio id='MAudio' controls playsinline preload="auto"></audio>
         <div class='form-check'>
             <input class='form-check-input' type='checkbox' id='SoundRandom_chk' checked>
-            <label class='form-check-label' for='SoundRandom_chk'>랜덤 재생</label>
+            <label class='form-check-label' for='SoundRandom_chk'>Random Play</label>
         </div>
-     
+
         <hr><div id='SoundList'></div>
     </div>`);
 g_musicJBox.Hide();
@@ -129,14 +1193,14 @@ function DirListRefresh() {
     folderList = { "<>": "ul", "class": "list-group", "html": [] };
     fileList = { "<>": "ul", "class": "list-group", "html": [] };
     if (window["g_path"] != null && window["g_path"] != "/") {
-        folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-warning list-group-item-action", "html": "<i class='bi bi-folder'></i> 최상위 폴더",
+        folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-warning list-group-item-action", "html": "<i class='bi bi-folder'></i> Root Folder",
             "onclick": () => { FolderCD("/"); },
         });
         let path = window["g_path"];
         let pos = path.lastIndexOf("/", path.length - 2);
         let bpath = path.substr(0, pos);
         bpath += "/";
-        folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-primary list-group-item-action", "html": "<i class='bi bi-folder'></i> 상위 폴더",
+        folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-primary list-group-item-action", "html": "<i class='bi bi-folder'></i> Parent Folder",
             "onclick": () => { FolderCD(bpath); },
         });
     }
@@ -153,11 +1217,11 @@ function DirListRefresh() {
                 "html": "<i class='bi bi-folder-fill'>" + fl.name, "onclick": () => {
                     let soundAddType = CDOM.IDValue("soundAddType");
                     if (soundAddType == "1") {
-                        let p2 = { path: window["g_path"] + fl.name + "/", admin: admin };
-                        if (gRootPath)
-                            p2.gRootPath = gRootPath;
-                        if (gDown)
-                            p2.gDown = gDown;
+                        let p2 = { path: window["g_path"] + fl.name + "/" };
+                        if (RootPath)
+                            p2.RootPath = RootPath;
+                        if (RootUrl)
+                            p2.RootUrl = RootUrl;
                         CFecth.Exe("File/List", p2, "json").then((data) => {
                             CAlert.Info(window["g_path"] + fl.name + "추가");
                             for (let fl2 of data.list) {
@@ -275,7 +1339,7 @@ function DirListRefresh() {
                             });
                             viewer.Open();
                         },
-                    ], ["새 창", "파일뷰어"]);
+                    ], ["New Window", "File Viewer"]);
                     confirm.Open();
                 } });
         }
@@ -302,6 +1366,20 @@ function DirListRefresh() {
                     new CMDViewer(window["g_down"] + window["g_path"] + fl.name);
                 } });
         }
+        else if (fl.ext == "csv" || fl.ext == "xlsx" || fl.ext == "xls") {
+            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
+                "html": "<i class='bi bi-file-earmark-spreadsheet'>" + fl.name, "onclick": () => {
+                    new CSheetViewer([window["g_down"] + window["g_path"] + fl.name], async (filePath, base64) => {
+                        const fileName = filePath.split('/').pop();
+                        const dirPath = window["g_root"] + window["g_path"];
+                        CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
+                            CAlert.Info('저장 완료');
+                        }).catch((e) => {
+                            CAlert.E('저장 실패: ' + e.message);
+                        });
+                    }).Open();
+                } });
+        }
         else {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
                 "html": "<i class='bi bi-file'>" + fl.name, "onclick": () => {
@@ -323,36 +1401,47 @@ function DirListRefresh() {
     CDOM.ID("Delete_div").append(CDOM.DataToDom(fileList));
 }
 let path = CUtilWeb.Parameter("path");
-let admin = CUtilWeb.Parameter("admin");
-let gRootPath = CUtilWeb.Parameter("gRootPath");
-let gDown = CUtilWeb.Parameter("gDown");
-if (admin != "admin")
-    admin = "admin";
+let RootPath = CUtilWeb.Parameter("RootPath");
+let RootUrl = CUtilWeb.Parameter("RootUrl");
+let fileAuthed = !!localStorage.getItem(AI_TOKEN_KEY);
 window["g_dirList"] = CStorage.Get(path == null ? "root" : path);
 if (window["g_dirList"] != null) {
     window["g_dirList"] = JSON.parse(window["g_dirList"]);
     DirListRefresh();
 }
-let fetchParam = { path: path, admin: admin };
-if (gRootPath)
-    fetchParam.gRootPath = gRootPath;
-if (gDown)
-    fetchParam.gDown = gDown;
+let fetchParam = { path: path };
+if (RootPath)
+    fetchParam.RootPath = RootPath;
+if (RootUrl)
+    fetchParam.RootUrl = RootUrl;
 CFecth.Exe("File/List", fetchParam, "json").then((data) => {
     CStorage.Set(path == null ? "root" : path, JSON.stringify(data.list));
     window["g_dirList"] = data.list;
-    window["g_root"] = data.root;
+    window["g_root"] = data.RootPath?.replace(/\/+$/, '') ?? '';
     window["g_path"] = data.path;
-    window["g_down"] = data.down;
+    window["g_down"] = data.RootUrl;
     DirListRefresh();
 });
 let g_soundList = { "fullPath": [], "name": [] };
 let SoundListStr = CStorage.Get("SoundList");
 if (SoundListStr != null)
     g_soundList = JSON.parse(SoundListStr);
-function FolderCD(_path) {
+function FolderCD(_path, _onDone) {
     window["g_path"] = _path;
-    Redirection(false);
+    let p2 = { path: _path };
+    if (RootPath)
+        p2.RootPath = RootPath;
+    if (RootUrl)
+        p2.RootUrl = RootUrl;
+    CFecth.Exe("File/List", p2, "json").then((data) => {
+        window["g_dirList"] = data.list;
+        window["g_root"] = data.RootPath?.replace(/\/+$/, '') ?? '';
+        window["g_path"] = data.path;
+        window["g_down"] = data.RootUrl;
+        index = 0;
+        DirListRefresh();
+        _onDone?.();
+    });
 }
 window["FolderCD"] = FolderCD;
 var g_fun = "";
@@ -362,72 +1451,194 @@ function Redirection(_multi) {
     var form = CDOM.ID("ThisPage");
     form.setAttribute("charset", "UTF-8");
     form.setAttribute("method", "Post");
-    form.setAttribute("action", CPath.PHPC() + "File/Redirection");
+    const _token = localStorage.getItem(AI_TOKEN_KEY) || '';
+    const _tokenQ = _token ? `?token=${encodeURIComponent(_token)}` : '';
+    form.setAttribute("action", CPath.PHPC() + "File/Redirection" + _tokenQ);
     CDOM.IDValue("fun", g_fun);
     CDOM.IDValue("data", g_data);
     CDOM.IDValue("option", g_option);
-    CDOM.IDValue("admin", admin);
-    CDOM.IDValue("path", encodeURIComponent(window["g_path"]));
-    CDOM.IDValue("gRootPath", gRootPath ?? "");
-    CDOM.IDValue("gDown", gDown ?? "");
+    CDOM.IDValue("path", window["g_path"]);
+    CDOM.IDValue("RootPath", RootPath ?? "");
+    CDOM.IDValue("RootUrl", RootUrl ?? "");
     form.submit();
 }
 window["Redirection"] = Redirection;
-var g_menuList = { "<>": "div", "html": [
+var g_menuList = { "<>": "div", "class": "d-flex align-items-center p-1", "html": [
         { "<>": "form", "action": "FilePage.jsp", "id": "ThisPage", "name": "ThisPage", "method": "post", "accept-charset": "UTF-8", "html": [
-                { "<>": "button", "type": "button", "class": "btn btn-primary", "style": "margin: 4px;", "text": "음악", "onclick": () => {
-                        g_musicJBox.Show();
-                        g_musicJBox.SetPosition(CModal.ePos.Center);
-                    } },
-                { "<>": "button", "type": "button", "class": "btn btn-warning", "style": "margin: 4px;", "text": "폴더 생성", "onclick": () => { CreateFolder(); } },
-                { "<>": "button", "type": "button", "class": "btn btn-danger", "style": "margin: 4px;", "text": "삭제", "onclick": () => { g_deleteJBox.Show(); } },
-                { "<>": "button", "type": "button", "class": "btn btn-secondary", "style": "margin: 4px;", "text": "권한", "onclick": () => { AuthRequest(); } },
-                { "<>": "input", "type": "file", "multiple": "multiple", "id": "uploadBtn", "name": "uploadBtn", "text": "업로드" },
-                { "<>": "select", "class": "form-select form-select-sm d-inline-block", "id": "soundAddType", "style": "width:128px;", "html": [
-                        { "<>": "option", "value": "0", "text": "전체 추가" },
-                        { "<>": "option", "value": "1", "text": "개별 추가(폴더 가능)" },
-                    ] },
                 { "<>": "input", "type": "hidden", "id": "fun", "name": "fun" },
                 { "<>": "input", "type": "hidden", "id": "data", "name": "data" },
                 { "<>": "input", "type": "hidden", "id": "option", "name": "option" },
                 { "<>": "input", "type": "hidden", "id": "path", "name": "path" },
-                { "<>": "input", "type": "hidden", "id": "admin", "name": "admin" },
-                { "<>": "input", "type": "hidden", "id": "gRootPath", "name": "gRootPath" },
-                { "<>": "input", "type": "hidden", "id": "gDown", "name": "gDown" },
+                { "<>": "input", "type": "hidden", "id": "RootPath", "name": "RootPath" },
+                { "<>": "input", "type": "hidden", "id": "RootUrl", "name": "RootUrl" },
+            ] },
+        { "<>": "input", "type": "file", "multiple": "multiple", "id": "uploadBtn", "name": "uploadBtn", "style": "display:none" },
+        { "<>": "div", "class": "d-flex align-items-center gap-1", "html": [
+                { "<>": "button", "type": "button", "class": "btn btn-sm btn-primary", "text": "Music", "onclick": () => {
+                        g_musicJBox.Show();
+                        g_musicJBox.SetPosition(CModal.ePos.Center);
+                    } },
+                { "<>": "select", "class": "form-select form-select-sm", "id": "soundAddType", "style": "width:128px;", "html": [
+                        { "<>": "option", "value": "0", "text": "Add All" },
+                        { "<>": "option", "value": "1", "text": "Add Each (w/ Folder)" },
+                    ] },
+                { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-info", "html": "Search <span style='font-size:0.75em;opacity:0.7;'>F2</span>", "onclick": () => { FileSearch(); } },
+                { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-secondary", "text": "Permission", "onclick": () => { PermissionBtn(); } },
             ] },
     ] };
 CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
-function AuthRequest() {
-    let confirm = new CConfirm();
-    confirm.SetBody('관리자 암호를 입력하세요!<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
-    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+async function PermissionBtn() {
+    if (fileAuthed) {
+        const valid = await aiCheckAuth();
+        if (valid) {
+            showFileAdminModal();
+            return;
+        }
+        fileAuthed = false;
+    }
+    const dlg = new CConfirm();
+    dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         () => {
             const pw = CDOM.IDValue("AuthPassword");
-            CFecth.Exe("File/Auth", { password: pw }, "json").then((res) => {
-                if (res.ok)
-                    CAlert.Info("권한 획득 성공");
-                else
-                    CAlert.E("암호가 틀렸습니다: " + (res.msg ?? ""));
-            }).catch(() => {
-                CAlert.E("서버 오류");
-            });
+            CFecth.Exe(CPath.PHPC() + "auth/login", { password: pw }, "json").then((j) => {
+                if (j.ok) {
+                    localStorage.setItem(AI_TOKEN_KEY, j.token);
+                    fileAuthed = true;
+                    aiAuthOverlay.style.display = 'none';
+                    aiRefreshSessions();
+                    termRefreshSessions();
+                    CAlert.Info("Permission granted");
+                }
+                else {
+                    CAlert.E("Wrong password: " + (j.msg ?? ""));
+                }
+            }).catch(() => { CAlert.E("서버 오류"); });
         },
         () => { },
-    ], ["확인", "취소"]);
-    confirm.Open();
+    ], ["OK", "Cancel"]);
+    dlg.Open();
 }
-window["AuthRequest"] = AuthRequest;
+window["PermissionBtn"] = PermissionBtn;
+function showFileAdminModal() {
+    const uid = Date.now();
+    const curRoot = RootPath || window["g_root"] || "";
+    const curDown = RootUrl || window["g_down"] || "";
+    const modal = new CModal();
+    modal.SetHeader("File Manager");
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetCloseToHide(false);
+    modal.SetBody(`
+        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;">
+            <div>
+                <label class="form-label mb-0 small fw-bold">Path</label>
+                <input id="fadm_path_${uid}" type="text" class="form-control form-control-sm" value="${curRoot}" placeholder="Server default">
+            </div>
+            <div>
+                <label class="form-label mb-0 small fw-bold">Down</label>
+                <input id="fadm_down_${uid}" type="text" class="form-control form-control-sm" value="${curDown}" placeholder="Server default">
+            </div>
+            <button id="fadm_apply_${uid}" class="btn btn-sm btn-success">Apply</button>
+            <div class="d-flex gap-1">
+                <button id="fadm_defpath_${uid}" class="btn btn-sm btn-outline-secondary flex-fill">RootPath</button>
+                <button id="fadm_artpath_${uid}" class="btn btn-sm btn-outline-primary flex-fill">ArtginePath</button>
+            </div>
+            <hr class="my-0">
+            <button id="fadm_share_${uid}" class="btn btn-outline-info">Share</button>
+            <button id="fadm_folder_${uid}" class="btn btn-warning">New Folder</button>
+            <button id="fadm_delete_${uid}" class="btn btn-danger">Delete</button>
+            <button id="fadm_upload_${uid}" class="btn btn-primary">Upload</button>
+            <div class="d-flex gap-1">
+                <button id="fadm_chat_${uid}" class="btn btn-outline-primary flex-fill">Chat</button>
+                <button id="fadm_term_${uid}" class="btn btn-outline-success flex-fill">Terminal</button>
+            </div>
+        </div>
+    `);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const pathInput = document.getElementById(`fadm_path_${uid}`);
+        const downInput = document.getElementById(`fadm_down_${uid}`);
+        const applyValues = (root, down) => {
+            RootPath = root || null;
+            RootUrl = down || null;
+            modal.Close();
+            FolderCD("/");
+        };
+        document.getElementById(`fadm_apply_${uid}`)?.addEventListener('click', () => {
+            applyValues(pathInput.value.trim(), downInput.value.trim());
+        });
+        document.getElementById(`fadm_defpath_${uid}`)?.addEventListener('click', () => {
+            pathInput.value = "";
+            downInput.value = "";
+            applyValues("", "");
+        });
+        document.getElementById(`fadm_artpath_${uid}`)?.addEventListener('click', () => {
+            pathInput.value = "./";
+            downInput.value = "/Artgine/";
+            applyValues("./", "/Artgine/");
+        });
+        document.getElementById(`fadm_share_${uid}`)?.addEventListener('click', () => {
+            modal.Hide();
+            FileShare();
+        });
+        document.getElementById(`fadm_folder_${uid}`)?.addEventListener('click', () => {
+            modal.Hide();
+            CreateFolder();
+        });
+        document.getElementById(`fadm_delete_${uid}`)?.addEventListener('click', () => {
+            modal.Hide();
+            g_deleteJBox.Show();
+        });
+        document.getElementById(`fadm_upload_${uid}`)?.addEventListener('click', () => {
+            modal.Hide();
+            CDOM.ID("uploadBtn").click();
+        });
+        document.getElementById(`fadm_chat_${uid}`)?.addEventListener('click', () => {
+            modal.Close();
+            const cwd = (window["g_root"] ?? '') + (window["g_path"] ?? '');
+            const aiTabEl = document.querySelector('[data-bs-target="#ai-panel"]');
+            if (aiTabEl)
+                window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+            setTimeout(() => {
+                const chatSubEl = document.getElementById('ai-chat-subtab');
+                if (chatSubEl)
+                    window.bootstrap.Tab.getOrCreateInstance(chatSubEl).show();
+            }, 150);
+            chatStartNew(cwd || undefined);
+        });
+        document.getElementById(`fadm_term_${uid}`)?.addEventListener('click', () => {
+            modal.Close();
+            const cwd = (window["g_root"] ?? '') + (window["g_path"] ?? '');
+            const aiTabEl = document.querySelector('[data-bs-target="#ai-panel"]');
+            if (aiTabEl)
+                window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+            setTimeout(() => {
+                const termSubEl = document.getElementById('ai-term-subtab');
+                if (termSubEl)
+                    window.bootstrap.Tab.getOrCreateInstance(termSubEl).show();
+            }, 150);
+            termStartNew('cmd', cwd || undefined);
+        });
+    }, 80);
+}
+window["showFileAdminModal"] = showFileAdminModal;
 function CreateFolder() {
     let confirm = new CConfirm();
-    confirm.SetBody('생성할 폴더명을 입력하세요!<br><input type="text" id="CreateFolder" class="form-control form-control-sm" value="새 폴더">');
+    confirm.SetBody('Enter folder name:<br><input type="text" id="CreateFolder" class="form-control form-control-sm" value="New Folder">');
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => {
-            g_fun = "CreateFolder";
-            g_data = window["g_path"] + CDOM.IDValue("CreateFolder");
-            Redirection(false);
+        async () => {
+            const folderName = CDOM.IDValue("CreateFolder");
+            const data = window["g_path"] + folderName;
+            const param = { data };
+            if (RootPath)
+                param.RootPath = RootPath;
+            const j = await CFecth.Exe(CPath.PHPC() + "File/Mkdir", param, "json");
+            if (j?.ok)
+                FolderCD(window["g_path"]);
+            else
+                CAlert.E("폴더 생성 실패");
         },
-        () => {
-        },
+        () => { },
     ], ["Yes", "No"]);
     confirm.Open();
 }
@@ -438,16 +1649,200 @@ function Delete(_file) {
     Redirection(false);
 }
 window["Delete"] = Delete;
+const SEARCH_EXCLUDE_DIRS = ['node_modules'];
+const isSearchExcluded = (name) => name.startsWith('.') || SEARCH_EXCLUDE_DIRS.includes(name);
+let g_srchCache = new Map();
+let g_srchServerKey = '';
+async function FileSearch() {
+    let searchCancelled = false;
+    const uid = Date.now();
+    const modal = new CModal();
+    modal.SetHeader("File Search");
+    modal.SetBody(`
+        <div class="d-flex gap-2 mb-2">
+            <input type="text" id="srchInput_${uid}" class="form-control form-control-sm" placeholder="Filename (partial match)...">
+            <button id="srchBtn_${uid}" class="btn btn-sm btn-primary">Search</button>
+            <button id="srchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">Stop</button>
+        </div>
+        <div id="srchStatus_${uid}" class="small text-secondary mb-1" style="min-height:1.2em;"></div>
+        <div id="srchResults_${uid}" class="list-group" style="max-height:360px;overflow-y:auto;font-size:13px;"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(520, 520);
+    modal.Open(CModal.ePos.Center);
+    await new Promise(r => setTimeout(r, 80));
+    const input = document.getElementById(`srchInput_${uid}`);
+    const btn = document.getElementById(`srchBtn_${uid}`);
+    const stopBtn = document.getElementById(`srchStop_${uid}`);
+    const status = document.getElementById(`srchStatus_${uid}`);
+    const results = document.getElementById(`srchResults_${uid}`);
+    const makeItem = (fl, dirPath) => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item list-group-item-action py-1 px-2';
+        const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+        item.innerHTML =
+            `<i class="bi ${icon} me-1"></i><strong>${fl.name}</strong>` +
+                `<span class="text-muted ms-2" style="font-size:11px;">${dirPath}</span>`;
+        if (fl.file) {
+            item.addEventListener('click', () => {
+                modal.Hide();
+                FolderCD(dirPath, () => {
+                    const els = document.querySelectorAll('#File_div .list-group-item');
+                    for (const el of Array.from(els)) {
+                        if (el.textContent?.includes(fl.name)) {
+                            el.click();
+                            break;
+                        }
+                    }
+                });
+            });
+        }
+        else {
+            item.addEventListener('click', () => { FolderCD(dirPath + fl.name + '/'); modal.Hide(); });
+        }
+        return item;
+    };
+    const renderFromCache = (startPath, query) => {
+        results.innerHTML = '';
+        let found = 0;
+        for (const [dirPath, list] of g_srchCache) {
+            if (!dirPath.startsWith(startPath))
+                continue;
+            for (const fl of list) {
+                if (fl.hidden || isSearchExcluded(fl.name))
+                    continue;
+                if (fl.name.toLowerCase().includes(query)) {
+                    results.appendChild(makeItem(fl, dirPath));
+                    if (++found >= 200)
+                        return found;
+                }
+            }
+        }
+        return found;
+    };
+    const doSearch = async () => {
+        const query = input.value.trim().toLowerCase();
+        if (!query)
+            return;
+        const startPath = window["g_path"] ?? "/";
+        const serverKey = (RootPath ?? '') + '|' + (RootUrl ?? '');
+        if (g_srchServerKey !== serverKey) {
+            g_srchCache = new Map();
+            g_srchServerKey = serverKey;
+        }
+        searchCancelled = false;
+        btn.disabled = true;
+        stopBtn.style.display = '';
+        const hasCached = [...g_srchCache.keys()].some(k => k.startsWith(startPath));
+        if (hasCached) {
+            const n = renderFromCache(startPath, query);
+            status.textContent = `(Cached: ${n}) Refreshing...`;
+        }
+        else {
+            results.innerHTML = '';
+            status.textContent = 'Scanning...';
+        }
+        const queue = [startPath];
+        while (queue.length > 0 && !searchCancelled) {
+            const dirPath = queue.shift();
+            status.textContent = `Scanning: ${dirPath}`;
+            try {
+                let p2 = { path: dirPath };
+                if (RootPath)
+                    p2.RootPath = RootPath;
+                if (RootUrl)
+                    p2.RootUrl = RootUrl;
+                const data = await CFecth.Exe("File/List", p2, "json");
+                g_srchCache.set(dirPath, data.list);
+                for (const fl of data.list) {
+                    if (!fl.hidden && !fl.file && !isSearchExcluded(fl.name))
+                        queue.push(dirPath + fl.name + '/');
+                }
+            }
+            catch (_) { }
+        }
+        if (!searchCancelled) {
+            const n = renderFromCache(startPath, query);
+            const cap = n >= 200 ? ' (capped at 200)' : '';
+            status.textContent = n === 0 ? 'No results.' : `${n} result(s)${cap}`;
+        }
+        else {
+            status.textContent = 'Stopped.';
+        }
+        btn.disabled = false;
+        stopBtn.style.display = 'none';
+    };
+    stopBtn.addEventListener('click', () => { searchCancelled = true; });
+    btn.addEventListener('click', doSearch);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+        doSearch(); });
+    input.focus();
+}
+window["FileSearch"] = FileSearch;
+function FileShare() {
+    const path = window["g_path"] ?? "/";
+    const url = new URL(location.href);
+    url.search = '';
+    url.searchParams.set('path', path);
+    if (RootPath)
+        url.searchParams.set('RootPath', RootPath);
+    if (RootUrl)
+        url.searchParams.set('RootUrl', RootUrl);
+    const shareUrl = url.toString();
+    const uid = Date.now();
+    const modal = new CModal();
+    modal.SetHeader("Share");
+    modal.SetBody(`
+        <div class="mb-2 small text-secondary">현재 폴더 공유 링크</div>
+        <div class="input-group">
+            <input type="text" id="shareInput_${uid}" class="form-control form-control-sm" readonly value="${shareUrl.replace(/"/g, '&quot;')}">
+            <button id="shareCopyBtn_${uid}" class="btn btn-sm btn-outline-primary">Copy</button>
+        </div>
+        <div id="shareCopyMsg_${uid}" class="small text-success mt-1" style="min-height:1.2em;"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(500, 160);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const btn = document.getElementById(`shareCopyBtn_${uid}`);
+        const msg = document.getElementById(`shareCopyMsg_${uid}`);
+        btn?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                msg.textContent = 'Copied!';
+                setTimeout(() => { msg.textContent = ''; }, 2000);
+            }
+            catch {
+                msg.textContent = 'Copy failed — select and copy manually.';
+            }
+        });
+    }, 80);
+}
+window["FileShare"] = FileShare;
 CDOM.ID("uploadBtn").onchange = async (e) => {
     var fi = e.target;
-    let json = { data: [], name: [], path: window["g_root"] + window["g_path"] };
-    for (let i = 0; i < fi.files.length; ++i) {
-        json.name.push(fi.files[i].name);
-        json.data.push(CUtil.ArrayToBase64(await fi.files[i].arrayBuffer()));
-    }
-    CFecth.Exe("File/Upload", json).then(() => {
-        Redirection(true);
+    const path = window["g_root"] + window["g_path"];
+    const readAsBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            resolve(result.split(',')[1]);
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
     });
+    for (let i = 0; i < fi.files.length; ++i) {
+        try {
+            const name = fi.files[i].name;
+            const data = await readAsBase64(fi.files[i]);
+            await CFecth.Exe("File/Upload", { data: [data], name: [name], path });
+        }
+        catch (err) {
+            CAlert.E('Upload failed: ' + (err?.message ?? String(err)));
+            return;
+        }
+    }
+    Redirection(true);
 };
 let gRamdomList = [];
 function SoundListRefresh() {
@@ -480,29 +1875,56 @@ function SoundPlay(_off) {
     if (_off == -1) {
         CDOM.ID("Sound" + g_lastPlay).className = "list-group-item list-group-item-action";
         g_lastPlay = 0;
+        CDOM.ID("SoundNowPlaying").textContent = "";
+        return;
     }
     else {
         CDOM.ID("Sound" + g_lastPlay).className = "list-group-item list-group-item-action";
         g_lastPlay = _off;
-        MAudio.src = g_soundList.fullPath[_off];
-        MAudio.load();
         CDOM.ID("Sound" + _off).className = "list-group-item list-group-item-action list-group-item-dark";
     }
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: g_soundList.name[_off],
-            artwork: [
-                { src: "512x512.png", sizes: "512x512", type: "image/png" }
-            ]
-        });
-        navigator.mediaSession.setActionHandler("play", () => MAudio.play());
-        navigator.mediaSession.setActionHandler("pause", () => MAudio.pause());
-        navigator.mediaSession.setActionHandler("nexttrack", () => SoundEnd());
-        navigator.mediaSession.setActionHandler("previoustrack", () => SoundEnd());
+    const doPlay = () => {
+        MAudio.play()
+            .then(_ => {
+            CDOM.ID("SoundNowPlaying").textContent = "\u266B " + g_soundList.name[_off];
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: g_soundList.name[_off],
+                    artwork: [{ src: "512x512.png", sizes: "512x512", type: "image/png" }]
+                });
+                navigator.mediaSession.playbackState = 'playing';
+                if ('setPositionState' in navigator.mediaSession) {
+                    try {
+                        navigator.mediaSession.setPositionState({ duration: MAudio.duration, playbackRate: MAudio.playbackRate, position: MAudio.currentTime });
+                    }
+                    catch (e) { }
+                }
+            }
+        })
+            .catch(e => console.warn("SoundPlay failed:", e));
+    };
+    if ('audioSession' in navigator) {
+        navigator.audioSession.type = 'playback';
     }
-    MAudio.play().catch(e => console.warn("SoundPlay failed:", e));
+    MAudio.src = g_soundList.fullPath[_off];
+    doPlay();
 }
 window["SoundPlay"] = SoundPlay;
+if ('mediaSession' in navigator) {
+    var MAudioRef = document.getElementById('MAudio');
+    navigator.mediaSession.setActionHandler("play", () => { MAudioRef.play(); });
+    navigator.mediaSession.setActionHandler("pause", () => { MAudioRef.pause(); });
+    navigator.mediaSession.setActionHandler("nexttrack", () => { SoundEnd(); });
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+        let prev = g_lastPlay - 1;
+        if (prev < 0)
+            prev = g_soundList.fullPath.length - 1;
+        SoundPlay(prev);
+    });
+    MAudioRef.addEventListener('play', () => { navigator.mediaSession.playbackState = 'playing'; });
+    MAudioRef.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
+    MAudioRef.addEventListener('ended', () => { SoundEnd(); });
+}
 function SoundDelete(_off) {
     var MAudio = document.getElementById('MAudio');
     g_soundList.fullPath.splice(_off, 1);
@@ -553,7 +1975,7 @@ function SoundListDupChk(_soundKey) {
 window["SoundListPush"] = SoundListDupChk;
 function SoundPlayListSave() {
     let confirm = new CConfirm();
-    confirm.SetBody('저장할 파일명을 입력하세요!<br><input type="text" id="soundListSave" class="form-control form-control-sm" value="basic">');
+    confirm.SetBody('Enter file name to save:<br><input type="text" id="soundListSave" class="form-control form-control-sm" value="basic">');
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
         () => {
             g_fun = "SoundPlayListSave";
@@ -569,7 +1991,7 @@ function SoundPlayListSave() {
 window["SoundPlayListSave"] = SoundPlayListSave;
 function SoundEachCopy() {
     let confirm = new CConfirm();
-    confirm.SetBody('리스트를 복사하겠습니까?">');
+    confirm.SetBody('Copy the list?">');
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
         () => {
             g_fun = "SoundEachCopy";

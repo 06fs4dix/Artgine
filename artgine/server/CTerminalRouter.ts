@@ -11,6 +11,7 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer, getToken, isValidToken } from './CAuthServer.js';
 import { CAI } from '../util/CAI.js';
+import { CSchedule } from '../util/CSchedule.js';
 
 /*
 claude :
@@ -28,6 +29,41 @@ GEMINI_API_KEY
 
 const IS_WIN = process.platform === 'win32';
 let currentCwd = process.cwd();
+
+const SCHEDULES_FILE = path.resolve(process.cwd(), 'ai', 'schedules.json');
+const SCHED_LOG_FILE = path.resolve(process.cwd(), 'ai', 'sched_debug.log');
+function schedLog(msg: string) {
+    const line = `[${new Date().toISOString()}] ${msg}\n`;
+    process.stdout.write(line);
+    try { fs.appendFileSync(SCHED_LOG_FILE, line); } catch {}
+}
+let gScheduleLoading = false;
+
+function gScheduleSave() {
+    if (gScheduleLoading) return;
+    try {
+        const data = Array.from(gSchedules.values()).map(e => ({
+            name: e.name, terminalKey: e.terminalKey,
+            mode: e.mode === null ? 'none' : e.mode === 'cmd' ? 'cmd' : String(e.mode),
+            delay: e.delay, count: e.count, start: e.start, end: e.end,
+            command: e.command,
+            cwd: e.cwd, allow: e.allow, mcp: e.mcp, mdcopy: e.mdcopy,
+        }));
+        fs.writeFileSync(SCHEDULES_FILE, JSON.stringify(data, null, 2), 'utf8');
+    } catch (err) { console.error('[Schedule] save error:', err); }
+}
+
+function gScheduleLoad() {
+    try {
+        if (!fs.existsSync(SCHEDULES_FILE)) return;
+        const data = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
+        if (!Array.isArray(data)) return;
+        gScheduleLoading = true;
+        for (const item of data) gScheduleSet(item);
+        gScheduleLoading = false;
+        console.log(`[Schedule] loaded ${data.length} schedule(s) from file`);
+    } catch (err) { gScheduleLoading = false; console.error('[Schedule] load error:', err); }
+}
 
 // const DEBUG_LOG = path.resolve(process.cwd(), 'ttyd_debug.log');
 // fs.writeFileSync(DEBUG_LOG, `=== ttyd debug log started ${new Date().toISOString()} ===\n`, 'utf8');
@@ -103,12 +139,111 @@ type TtydEntry = {
     lastContent: string;
     lineChanged: boolean;
     createdAt: number;
-    label?: string;
+    key?: string;
     workingDir?: string;
     policyFile?: string;            // gemini: temp policy toml path (cleaned up on kill)
     tempMd?: string;                // mdcopy: temp MD file copied from root (cleaned up on kill)
 };
 const gPortProcs = new Map<number, TtydEntry>();
+
+// ---- Scheduler ----
+const SCHEDULE_MODE_MAP: Record<string, 'cmd' | CAI.eProvider | null> = {
+    none: null, cmd: 'cmd', claude: CAI.eProvider.claude, gemini: CAI.eProvider.gemini,
+    codex: CAI.eProvider.codex, antigravity: CAI.eProvider.antigravity,
+};
+
+type ScheduleEntry = {
+    name: string;
+    terminalKey: string;
+    mode: 'cmd' | CAI.eProvider | null;
+    delay: number;
+    count: number;
+    start: number;
+    end: number;
+    command: string;
+    cwd: string;
+    allow: boolean;
+    mcp: boolean;
+    mdcopy: boolean;
+    cschedule: CSchedule;
+};
+const gSchedules = new Map<string, ScheduleEntry>();
+
+async function _schedTick(e: ScheduleEntry) {
+    schedLog(`TICK name=${e.name} key=${e.terminalKey}`);
+    let target: TtydEntry | null = null;
+    for (const t of gPortProcs.values()) {
+        if (t.key === e.terminalKey) { target = t; break; }
+    }
+    if (!target) {
+        schedLog(`  → no terminal found, mode=${e.mode === null ? 'none' : e.mode}`);
+        if (e.mode === null) return;
+        await startTtyd(e.mode, e.cwd || undefined, e.allow ? '1' : undefined, e.mcp, e.mdcopy, e.terminalKey);
+        schedLog(`  → startTtyd called`);
+        return;
+    }
+    const wsState = target.serverWs ? target.serverWs.readyState : -1;
+    const idle = Date.now() - target.lastActivity;
+    schedLog(`  → terminal found wsState=${wsState}(OPEN=1) idleMs=${idle}`);
+    if (!target.serverWs || target.serverWs.readyState !== WebSocket.OPEN) {
+        schedLog(`  → SKIP: ws not open`);
+        return;
+    }
+    if (idle < 2000) {
+        schedLog(`  → SKIP: idle too short (${idle}ms < 2000ms)`);
+        return;
+    }
+    // \x1b[I = Focus In — codex TUI가 입력 모드로 전환하는 데 ~500ms 필요
+    // (브라우저 실측: focus-in 후 1.5s 뒤에 타이핑 시작)
+    target.serverWs.send('0\x1b[I');
+    await new Promise(r => setTimeout(r, 500));
+    if (target.serverWs.readyState !== WebSocket.OPEN) return;
+    target.serverWs.send('0' + e.command);
+    await new Promise(r => setTimeout(r, 200));
+    if (target.serverWs.readyState !== WebSocket.OPEN) return;
+    target.serverWs.send('0\r');
+    schedLog(`  → SENT focus+cmd+enter key=${e.terminalKey}`);
+
+    // 전송 후 2초간 raw 출력 캡처
+    const capture: string[] = [];
+    const captureMsg = (data: Buffer | string) => {
+        const buf = Buffer.isBuffer(data) ? data : Buffer.from(String(data));
+        if (buf.length > 1 && buf[0] === 0x30) {
+            const raw = buf.slice(1).toString('utf8');
+            const stripped = raw.replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g,'').replace(/\x1b./g,'').replace(/\r/g,'').trim();
+            if (stripped) capture.push(stripped);
+        }
+    };
+    target.serverWs.on('message', captureMsg);
+    await new Promise(r => setTimeout(r, 2000));
+    target.serverWs.removeListener('message', captureMsg);
+    schedLog(`  → 2s output (${capture.length} lines): ${JSON.stringify(capture.join(' | ').slice(0, 500))}`);
+}
+
+function gScheduleSet(data: { name: string; terminalKey: string; mode: string; delay: number; count: number; start: number; end: number; command: string; cwd?: string; allow?: boolean; mcp?: boolean; mdcopy?: boolean }) {
+    gSchedules.delete(data.name);
+    const cs = new CSchedule();
+    cs.mDelay = data.delay;
+    cs.mCount = data.count;
+    cs.mStart = data.start;
+    cs.mEnd = data.end;
+    const entry: ScheduleEntry = {
+        name: data.name, terminalKey: data.terminalKey,
+        mode: data.mode in SCHEDULE_MODE_MAP ? SCHEDULE_MODE_MAP[data.mode] : 'cmd',
+        delay: data.delay, count: data.count, start: data.start, end: data.end,
+        command: data.command,
+        cwd: data.cwd ?? '', allow: data.allow ?? false, mcp: data.mcp ?? true, mdcopy: data.mdcopy ?? false,
+        cschedule: cs,
+    };
+    gSchedules.set(data.name, entry);
+    gScheduleSave();
+}
+
+function gScheduleDel(name: string): boolean {
+    const result = gSchedules.delete(name);
+    if (result) gScheduleSave();
+    return result;
+}
 
 function isCodexYesNoPrompt(entry: TtydEntry, content: string): boolean {
     if (entry.mode !== CAI.eProvider.codex) return false;
@@ -155,7 +290,7 @@ function killOnPort(port: number) {
     gPortProcs.delete(port);
 }
 
-async function startTtyd(mode: 'cmd' | CAI.eProvider, cwd?: string, allow?: string, mcp = true, mdcopy = false, label?: string): Promise<number | null> {
+async function startTtyd(mode: 'cmd' | CAI.eProvider, cwd?: string, allow?: string, mcp = true, mdcopy = false, key?: string): Promise<number | null> {
     // 빈 포트 슬롯 탐색 (PORT_MIN~PORT_MAX 중 사용 중이지 않은 첫 번째 포트)
     let port: number | null = null;
     for (let p = PORT_MIN; p <= PORT_MAX; p++) {
@@ -238,7 +373,7 @@ async function startTtyd(mode: 'cmd' | CAI.eProvider, cwd?: string, allow?: stri
         createdAt: now,
         workingDir: spawnCwd,
     };
-    if (label)      entry.label     = label;
+    if (key)        entry.key       = key;
     if (policyFile) entry.policyFile = policyFile;
     if (tempMd)    entry.tempMd    = tempMd;
     gPortProcs.set(port, entry);
@@ -259,6 +394,12 @@ function connectToTtyd(port: number, retries = 20): void {
     ws.on('open', () => {
         console.log(`[TTYD] Server WS connected to ttyd on port ${port}`);
         entry.serverWs = ws;
+        // ttyd는 JSON_DATA init 메시지('{'로 시작)를 받아야 셸 프로세스를 spawn한다.
+        // 브라우저 없이 생성되는 스케줄러 터미널은 여기서 직접 init을 보내 셸을 띄운다.
+        // (브라우저가 나중에 접속해 보내는 init은 process!=null 이라 ttyd가 무시함)
+        ws.send(Buffer.from(JSON.stringify({ AuthToken: '', columns: 220, rows: 50 })));
+        // 초기 윈도우 사이즈 보정 (RESIZE_TERMINAL = '1')
+        ws.send(Buffer.concat([Buffer.from('1'), Buffer.from(JSON.stringify({ columns: 220, rows: 50 }))]));
     });
 
     ws.on('message', (data: Buffer) => {
@@ -347,7 +488,7 @@ function buildTerminalUiInject(ttydMode: TtydEntry['mode']) {
     return `<script>window.__TTYD_MODE=${JSON.stringify(modeStr)};window.__SKILLS__=${JSON.stringify(skills)};</script>\n` + terminalUi;
 }
 
-@URLPatterns(["/cmd", "/cmd/start-ttyd", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token"])
+@URLPatterns(["/cmd", "/cmd/start-ttyd", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del"])
 export class CTerminalRouter extends CAuthServer {
     constructor() {
         super();
@@ -381,10 +522,59 @@ export class CTerminalRouter extends CAuthServer {
             const allow = _req.query.allow as string | undefined;
             const mcp = _req.query.mcp !== '0';
             const mdcopy = _req.query.mdcopy === '1';
-            const label = (_req.query.label as string | undefined) || undefined;
-            const port = await startTtyd(mode, cwd, allow, mcp, mdcopy, label);
+            const key = (_req.query.key as string | undefined) || undefined;
+            if (key) {
+                for (const entry of gPortProcs.values()) {
+                    if (entry.key === key) {
+                        _res.json({ ok: false, msg: `키 '${key}'는 이미 사용 중입니다.` });
+                        return null;
+                    }
+                }
+            }
+            const port = await startTtyd(mode, cwd, allow, mcp, mdcopy, key);
             if (port === null) { _res.json({ ok: false, msg: `최대 세션 수에 도달했습니다 (최대 ${PORT_MAX - PORT_MIN + 1}개)` }); return null; }
             _res.json({ ok: true, port });
+            return null;
+        });
+
+        this.On("/cmd/schedules", async (_json: CJSON, _req: Request, _res: Response) => {
+            if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            _res.json({ ok: true, schedules: Array.from(gSchedules.values()).map(e => ({
+                name: e.name, terminalKey: e.terminalKey,
+                mode: e.mode === null ? 'none' : e.mode === 'cmd' ? 'cmd' : String(e.mode),
+                delay: e.delay, count: e.count, start: e.start, end: e.end,
+                command: e.command,
+                cwd: e.cwd, allow: e.allow, mcp: e.mcp, mdcopy: e.mdcopy,
+            }))});
+            return null;
+        });
+
+        this.On("/cmd/schedule-set", async (_json: CJSON, _req: Request, _res: Response) => {
+            if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            const name        = _req.query.name as string;
+            const terminalKey = _req.query.terminalKey as string;
+            const mode        = (_req.query.mode as string) || 'cmd';
+            const command     = (_req.query.command as string) || '';
+            const delay = Math.max(0, parseInt(_req.query.delay as string) || 0);
+            const count = Math.max(0, parseInt(_req.query.count as string) || 0);
+            const start = Math.max(0, parseInt(_req.query.start as string) || 0);
+            const end   = Math.max(0, parseInt(_req.query.end   as string) || 0);
+            const cwd    = (_req.query.cwd as string) || '';
+            const allow  = _req.query.allow === '1';
+            const mcp    = _req.query.mcp !== '0';
+            const mdcopy = _req.query.mdcopy === '1';
+            if (!name || !terminalKey || !command) { _res.json({ ok: false, msg: '필수 항목 누락 (name, terminalKey, command)' }); return null; }
+            if (delay === 0) { _res.json({ ok: false, msg: '딜레이는 1초 이상이어야 합니다' }); return null; }
+            gScheduleSet({ name, terminalKey, mode, delay, count, start, end, command, cwd, allow, mcp, mdcopy });
+            _res.json({ ok: true });
+            return null;
+        });
+
+        this.On("/cmd/schedule-del", async (_json: CJSON, _req: Request, _res: Response) => {
+            if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            const name = _req.query.name as string;
+            if (!name) { _res.json({ ok: false, msg: 'name 필요' }); return null; }
+            _res.json({ ok: gScheduleDel(name) });
             return null;
         });
 
@@ -396,7 +586,7 @@ export class CTerminalRouter extends CAuthServer {
                 entry.lineChanged = false;
                 dbg(`[${port}] POLL → lineChanged=${lineChanged}, lastLine="${entry.lastLine}"`);
                 sessions.push({
-                    port, mode: entry.mode, label: entry.label, lastLine: entry.lastLine,
+                    port, mode: entry.mode, key: entry.key, lastLine: entry.lastLine,
                     lastActivity: entry.lastActivity, createdAt: entry.createdAt,
                     alive: entry.serverWs !== null && entry.serverWs.readyState === WebSocket.OPEN,
                     lineChanged, workingDir: entry.workingDir,
@@ -463,6 +653,17 @@ export class CTerminalRouter extends CAuthServer {
         super.Connect();
         console.log(`[CTerminalRouter] Connect() initialized`);
         const mPath = this.mPath;
+
+        gScheduleLoad();
+
+        // CSchedule 기반 스케줄 폴링 루프 (500ms마다 체크)
+        setInterval(() => {
+            for (const e of gSchedules.values()) {
+                if (e.cschedule.Execute(e)) {
+                    _schedTick(e).catch(err => console.error('[Schedule] tick error:', err));
+                }
+            }
+        }, 500);
 
         // --- 시작 시 잔존 ttyd/자식 프로세스 정리 ---
         if (IS_WIN) {
@@ -546,6 +747,8 @@ export class CTerminalRouter extends CAuthServer {
                     } else {
                         entry.clients.add(clientWs);
                         clientWs.on('message', (data) => {
+                            const buf = Buffer.isBuffer(data) ? data : Buffer.from(String(data));
+                            schedLog(`BROWSER→TTYD hex=${buf.toString('hex')} text=${JSON.stringify(buf.toString())}`);
                             if (entry.serverWs && entry.serverWs.readyState === WebSocket.OPEN)
                                 entry.serverWs.send(data as Buffer);
                         });

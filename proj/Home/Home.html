@@ -88,7 +88,14 @@ if (location.protocol == 'file:' && isElectron==false){
 <!--EntryPoint-->
 
 <!-- 탭 네비게이션 -->
-<div class="container vh-100 d-flex flex-column p-0">
+<div class="container d-flex flex-column p-0" style="height: 100vh; height: 100svh; height: 100dvh;">
+<style>#myTab{font-size:0.8rem;} #myTab .nav-link, #myTab .btn{padding:0.25rem 0.5rem; font-size:0.8rem;}
+.ai-session-item{cursor:pointer;}
+#ai-sidebar .tab-pane:not(.active){display:none !important;}
+#ai-frame-container iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+#ai-sidebar{position:absolute;left:0;top:0;height:100%;z-index:10;width:260px;transition:transform .25s ease;}
+#ai-sidebar.collapsed{transform:translateX(-100%);}
+</style>
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button"
@@ -100,15 +107,22 @@ if (location.protocol == 'file:' && isElectron==false){
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab"
-            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="cmd-tab" data-bs-toggle="tab" data-bs-target="#cmd-panel" type="button" role="tab"
-            aria-controls="cmd-panel" aria-selected="false" data-en="CMD"><i class="bi bi-terminal-fill"></i> Terminal</button>
+            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files <span class="text-secondary" style="font-size:0.7em;">F3</span></button>
     </li>
     <!-- 로그인 버튼 (오른쪽 정렬) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
+            role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> Download</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-panel" type="button"
+            role="tab" aria-controls="ai-panel" aria-selected="false" data-en="AI"><i class="bi bi-robot"></i> AI <span class="text-secondary" style="font-size:0.7em;">F4</span></button>
+    </li>
     <li class="nav-item ms-auto" role="presentation">
-        <button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button">
+        <button class="btn btn-outline-success me-1 mt-1" id="install-btn" type="button" style="display:none;">
+            <i class="bi bi-download"></i> Install
+        </button>
+<button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button" style="display:none;">
             Login
         </button>
     </li>
@@ -128,7 +142,69 @@ if (location.protocol == 'file:' && isElectron==false){
         <div id='File_div'></div>
         <br>
     </div>
-    <div class="tab-pane h-100 d-flex flex-column" id="cmd-panel" role="tabpanel" aria-labelledby="cmd-tab" style="background:#1a1a1a;overflow:hidden;">
+    <div class="tab-pane h-100" id="download-panel" role="tabpanel" aria-labelledby="download-tab" style="overflow-y:auto;">
+        <div id="download-root"></div>
+    </div>
+    <div class="tab-pane h-100 position-relative" id="ai-panel" role="tabpanel" aria-labelledby="ai-tab">
+        <div id="ai-auth-overlay" class="position-absolute align-items-center justify-content-center"
+             style="inset:0; z-index:20; background:var(--bs-body-bg); display:none;">
+            <div class="card shadow" style="width:320px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><i class="bi bi-shield-lock"></i> Authentication</h5>
+                    <div class="mb-3">
+                        <input type="password" id="aiAuthPwInput" class="form-control" placeholder="Password">
+                    </div>
+                    <div id="aiAuthMsg" class="text-danger small mb-2" style="min-height:1.2em;"></div>
+                    <button id="aiAuthSubmitBtn" class="btn btn-primary w-100">Sign In</button>
+                </div>
+            </div>
+        </div>
+        <div id="ai-sidebar" class="d-flex flex-column border-end bg-body-tertiary">
+            <ul class="nav nav-tabs nav-fill" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="ai-chat-subtab" data-bs-toggle="tab" data-bs-target="#ai-chat-pane" type="button" role="tab">
+                        <i class="bi bi-chat-dots"></i> Chat
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="ai-term-subtab" data-bs-toggle="tab" data-bs-target="#ai-term-pane" type="button" role="tab">
+                        <i class="bi bi-terminal"></i> Terminal
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content flex-grow-1 d-flex flex-column overflow-hidden">
+                <div class="tab-pane fade show active flex-grow-1 d-flex flex-column overflow-hidden" id="ai-chat-pane" role="tabpanel">
+                    <div class="p-2 border-bottom">
+                        <button id="aiNewChatBtn" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-plus-lg"></i><span>New Chat</span>
+                        </button>
+                    </div>
+                    <div id="aiSessionList" class="flex-grow-1 overflow-auto p-2 d-flex flex-column gap-1"></div>
+                </div>
+                <div class="tab-pane fade flex-grow-1 d-flex flex-column overflow-hidden" id="ai-term-pane" role="tabpanel">
+                    <div class="p-2 border-bottom d-flex gap-1">
+                        <button id="termNewBtn" class="btn btn-outline-success flex-fill d-flex align-items-center justify-content-center gap-1" style="font-size:0.85rem;">
+                            <i class="bi bi-terminal"></i><span>New Terminal</span>
+                        </button>
+                        <button id="schedNewBtn" class="btn btn-outline-info flex-fill d-flex align-items-center justify-content-center gap-1" style="font-size:0.85rem;">
+                            <i class="bi bi-clock"></i><span>Schedule</span>
+                        </button>
+                    </div>
+                    <div id="termSessionList" class="flex-grow-1 overflow-auto p-2 d-flex flex-column gap-1"></div>
+                    <div class="border-top flex-shrink-0">
+                        <div id="schedSessionList" class="overflow-auto p-2 d-flex flex-column gap-1" style="max-height:200px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="ai-frame-container" class="position-absolute" style="inset:0;">
+            <button id="aiSidebarToggle" type="button"
+                class="btn btn-light position-absolute"
+                style="top:48px; right:24px; z-index:10; padding:.3rem .6rem; font-size:1rem;"
+                title="Toggle sidebar">
+                <i class="bi bi-layout-sidebar-inset"></i>
+            </button>
+        </div>
     </div>
 </div>
 </div>
@@ -147,6 +223,7 @@ if (location.protocol == 'file:' && isElectron==false){
             localStorage.setItem(TAB_KEY, e.target.getAttribute('data-bs-target'));
         });
     });
+    // AI iframe lazy-load is now handled by Home.ts
 </script>
 <script type="server" src="Server.js"></script>
 <script type='module' src='Home.js'></script>

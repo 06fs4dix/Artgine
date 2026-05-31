@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MediaSession Lock Screen Test</title>
+</head>
+<body>
+<h2>MediaSession Test</h2>
+<button id="playBtn">Play</button>
+<p id="log"></p>
+
+<script>
+let audio = document.createElement('audio');
+let index = 0;
+let playlist = [
+    { src: '1.mp3', title: 'Track 1' },
+    { src: '2.mp3', title: 'Track 2' }
+];
+
+// --- Silent Audio Keep-Alive ---
+// AudioContext로 무음을 계속 재생해서 Chrome이 "오디오 활성" 상태를 유지하도록 함
+// Chrome 배터리 최적화가 백그라운드 탭을 죽이는 것을 방지
+let keepAliveCtx = null;
+function startKeepAlive() {
+    if(keepAliveCtx) return;
+    keepAliveCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 거의 무음인 오실레이터 (gain 0.001)
+    let osc = keepAliveCtx.createOscillator();
+    let gain = keepAliveCtx.createGain();
+    gain.gain.value = 0.001; // 거의 들리지 않는 수준
+    osc.connect(gain);
+    gain.connect(keepAliveCtx.destination);
+    osc.start();
+}
+// --- End Keep-Alive ---
+
+function log(msg) {
+    console.log(msg);
+    document.getElementById('log').textContent = msg;
+}
+
+function playAudio() {
+    startKeepAlive(); // 오디오 세션 유지
+    audio.src = playlist[index].src;
+    audio.play()
+    .then(_ => updateMetadata())
+    .catch(e => log('play failed: ' + e));
+}
+
+function updateMetadata() {
+    log('Playing: ' + playlist[index].title);
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: playlist[index].title
+    });
+    if ('setPositionState' in navigator.mediaSession) {
+        navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: audio.playbackRate,
+            position: audio.currentTime
+        });
+    }
+}
+
+navigator.mediaSession.setActionHandler('nexttrack', function() {
+    log('> Next track');
+    index = (index + 1) % playlist.length;
+    playAudio();
+});
+
+navigator.mediaSession.setActionHandler('previoustrack', function() {
+    log('> Previous track');
+    index = (index - 1 + playlist.length) % playlist.length;
+    playAudio();
+});
+
+navigator.mediaSession.setActionHandler('play', async function() {
+    await audio.play();
+});
+
+navigator.mediaSession.setActionHandler('pause', function() {
+    audio.pause();
+});
+
+audio.addEventListener('ended', function() {
+    log('> Song ended, auto next');
+    index = (index + 1) % playlist.length;
+    playAudio();
+});
+
+audio.addEventListener('play', function() {
+    navigator.mediaSession.playbackState = 'playing';
+});
+
+audio.addEventListener('pause', function() {
+    navigator.mediaSession.playbackState = 'paused';
+});
+
+document.getElementById('playBtn').addEventListener('click', function() {
+    playAudio();
+});
+</script>
+</body>
+</html>

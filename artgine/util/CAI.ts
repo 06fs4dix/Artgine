@@ -121,6 +121,21 @@ export class CAI {
     static async ProviderInstall(provider: CAI.eProvider): Promise<boolean> {
         const info = await CAI.ProviderInfo(provider);
         if (info.available) return true;
+        // Windows claude: .exe.old.* 파일이 있으면 rename으로 복구 시도
+        if (CAI.IS_WIN && provider === CAI.eProvider.claude) {
+            const pkgBin = path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
+            const binDir = path.dirname(pkgBin);
+            if (fs.existsSync(binDir) && !fs.existsSync(pkgBin)) {
+                const oldFile = fs.readdirSync(binDir).find(f => f.startsWith('claude.exe.old.'));
+                if (oldFile) {
+                    try {
+                        fs.renameSync(path.join(binDir, oldFile), pkgBin);
+                        console.log(`[CAI] Recovered claude.exe from ${oldFile}`);
+                        return true;
+                    } catch {}
+                }
+            }
+        }
         return new Promise((resolve) => {
             if (provider === CAI.eProvider.antigravity) {
                 console.log(`[CAI] Installing Antigravity CLI (agy)...`);
