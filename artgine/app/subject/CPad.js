@@ -1,1 +1,465 @@
-import{CEvent as e}from"../../basic/CEvent.js";import{CMath as t}from"../../geometry/CMath.js";import{CVec2 as i}from"../../geometry/CVec2.js";import{CVec3 as s}from"../../geometry/CVec3.js";import{CH5Canvas as n}from"../../render/CH5Canvas.js";import{CInput as r}from"../../system/CInput.js";import{CSubject as o}from"./CSubject.js";import{CUI as a,CUIButtonRGBA as h,CUIHTML as l}from"./CUI.js";var c,m,d,u;!function(e){e.Cross="Cross",e.Circle="Circle",e.Circle4="Circle4",e.Circle8="Circle8"}(c||(c={})),function(e){e.Alphabet_Rectangle="Alphabet_Rectangle",e.Number_Rectangle="Number_Rectangle",e.HTML="HTML"}(m||(m={})),function(e){e.None="None",e.NES="NES",e.Basic="Basic"}(d||(d={})),function(e){e.Arrow="Arrow",e.WASD="WASD",e.Both="Both"}(u||(u={}));export class CPad extends o{static eStickType=c;static eButtonType=m;static ePadType=d;static eKeyType=u;mStick=new Array;mButton=new Array;mButtonInput=Array();mLockPos=new s;mPacketSend=!1;mDir=new s;mPadType=CPad.ePadType.Basic;mStickType=null;mPressOnStick=!0;mPadScale=1;mKeyType=CPad.eKeyType.Arrow;constructor(){super(),this.SetKey("pad"),this.mPMatMul=!1}SetButtonImg(e,t=null){let i=this.mButton[e].GetPt().GetElement(),s=i;"BUTTON"!==i.tagName&&(s=i.querySelector("button")),s&&(null==t||""==t?(s.innerHTML=`${e}`,s.style.backgroundImage="",s.style.backgroundSize="",s.style.backgroundPosition="",s.style.backgroundRepeat=""):(s.innerHTML="",s.style.backgroundImage=`url('${t}')`,s.style.backgroundSize="70% 70%",s.style.backgroundPosition="center",s.style.backgroundRepeat="no-repeat"))}SetButtonCoolTime(e,t){if(e>=this.mButton.length)return;let i=this.mButton[e].GetPt().GetElement(),s=i;if("BUTTON"!==i.tagName&&(s=i.querySelector("button")),!s)return;const n=s.querySelector(".cooltime-overlay");n&&n.remove();const r=document.createElement("div");r.className="cooltime-overlay",r.style.cssText="\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            border-radius: 50%;\n            pointer-events: none;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            background: conic-gradient(\n                rgba(0, 0, 0, 0.7) 0deg,\n                rgba(0, 0, 0, 0.7) 0deg,\n                transparent 0deg\n            );\n            z-index: 10;\n        ";const o=document.createElement("div");o.className="cooltime-text",o.style.cssText="\n            color: white;\n            font-weight: bold;\n            font-size: 20px;\n            text-shadow: 0 0 4px black;\n            z-index: 11;\n        ",r.appendChild(o),"static"===getComputedStyle(s).position&&(s.style.position="relative"),s.appendChild(r),s.style.filter="brightness(0.6)",s.disabled=!0;const a=performance.now(),h=1e3*t,l=e=>{const t=e-a,i=Math.max(0,h-t),n=i/h;if(i>0){o.textContent=(i/1e3).toFixed(1);const e=360*n;r.style.background=`conic-gradient(\n                    rgba(0, 0, 0, 0.7) 0deg,\n                    rgba(0, 0, 0, 0.7) ${e}deg,\n                    transparent ${e}deg\n                )`,requestAnimationFrame(l)}else r.remove(),s.style.filter="",s.disabled=!1};requestAnimationFrame(l)}SetPadScale(e){this.mPadScale=e,this.PadReset()}IsShould(e,t){return"mStick"!=e&&"mButton"!=e&&"mButtonInput"!=e&&super.IsShould(e,t)}IsOn(){for(let t of this.mStick)if(t.GetLastEvent()!=e.eType.Null)return!0;for(let t of this.mButton)if(t.GetLastEvent()!=e.eType.Null)return!0;return!1}GetDir(){return this.mDir}GetButtonEvent(t){return this.mButton.length>t?this.mButton[t].GetLastEvent()!=e.eType.Null?this.mButton[t].GetLastEvent():this.mButtonInput[t]:e.eType.Null}GetButtonPos(e){let t=this.mButton[e].GetPressPos();return null==t&&(t=s.Vec3(0,0,0)),t}Stick(e,t){if(this.mStickType=e,e==c.Cross){n.Init(50,50,!0,!1);let e=[n.FillStyle("#5A86FF"),n.FillRect(0,0,50,50),n.LineWidth(5),n.StrokeRect(0,0,50,50),n.FillStyle("black"),n.FillText(25,23,"△",32)];n.Draw(e);let t=n.GetNewTex();if(this.GetFrame().Res().Push("Pad/PadStickCrossUP.tex",t),this.GetFrame().Ren().BuildTexture(t),0==this.FindChilds("PadStickCrossUP").length){let e=new h;e.SetCamZoomResize(!0),e.Init("Pad/PadStickCrossUP.tex"),e.SetKey("PadStickCrossUP"),e.SetAnchorX(a.eAnchor.Min,30+50*this.mPadScale),e.SetAnchorY(a.eAnchor.Min,30+100*this.mPadScale),e.SetSize(50*this.mPadScale,50*this.mPadScale),this.PushChild(e),this.mStick.push(e),e.GetPt().GetRenderPass()[0].mDepthTest=!1}if(e=[n.FillStyle("#5A86FF"),n.FillRect(0,0,50,50),n.LineWidth(5),n.StrokeRect(0,0,50,50),n.FillStyle("black"),n.FillText(25,27,"▽",32)],n.Draw(e),t=n.GetNewTex(),this.GetFrame().Res().Push("Pad/PadStickCrossDown.tex",t),this.GetFrame().Ren().BuildTexture(t),0==this.FindChilds("PadStickCrossDown").length){let e=new h;e.SetCamZoomResize(!0),e.Init("Pad/PadStickCrossDown.tex"),e.SetKey("PadStickCrossDown"),e.SetAnchorX(a.eAnchor.Min,30+50*this.mPadScale),e.SetAnchorY(a.eAnchor.Min,30+this.mPadScale),e.SetSize(50*this.mPadScale,50*this.mPadScale),this.PushChild(e),this.mStick.push(e),e.GetPt().GetRenderPass()[0].mDepthTest=!1}if(e=[n.FillStyle("#5A86FF"),n.FillRect(0,0,50,50),n.LineWidth(5),n.StrokeRect(0,0,50,50),n.FillStyle("black"),n.FillText(23,25,"◁",32)],n.Draw(e),t=n.GetNewTex(),this.GetFrame().Res().Push("Pad/PadStickCrossLeft.tex",t),this.GetFrame().Ren().BuildTexture(t),0==this.FindChilds("PadStickCrossLeft").length){let e=new h;e.SetCamZoomResize(!0),e.Init("Pad/PadStickCrossLeft.tex"),e.SetKey("PadStickCrossLeft"),e.SetAnchorX(a.eAnchor.Min,30),e.SetAnchorY(a.eAnchor.Min,30+50*this.mPadScale),e.SetSize(50*this.mPadScale,50*this.mPadScale),this.PushChild(e),this.mStick.push(e),e.GetPt().GetRenderPass()[0].mDepthTest=!1}if(e=[n.FillStyle("#5A86FF"),n.FillRect(0,0,50,50),n.LineWidth(5),n.StrokeRect(0,0,50,50),n.FillStyle("black"),n.FillText(27,25,"▷",32)],n.Draw(e),t=n.GetNewTex(),this.GetFrame().Res().Push("Pad/PadStickCrossRight.tex",t),this.GetFrame().Ren().BuildTexture(t),0==this.FindChilds("PadStickCrossRight").length){let e=new h;e.SetCamZoomResize(!0),e.Init("Pad/PadStickCrossRight.tex"),e.SetKey("PadStickCrossRight"),e.SetAnchorX(a.eAnchor.Min,30+100*this.mPadScale),e.SetAnchorY(a.eAnchor.Min,30+50*this.mPadScale),e.SetSize(50*this.mPadScale,50*this.mPadScale),this.PushChild(e),this.mStick.push(e),e.GetPt().GetRenderPass()[0].mDepthTest=!1}}else if((e==c.Circle||e==c.Circle4||e==c.Circle8)&&0==this.FindChilds("PadStickCircle").length){let e=new l;e.SetCamZoomResize(!0),e.Init('  \n    <button class="btn btn-secondary rounded-circle">\n      <span class="position-absolute top-0 start-50 translate-middle-x fw-bold">↑</span>\n      <span class="position-absolute bottom-0 start-50 translate-middle-x fw-bold">↓</span>\n      <span class="position-absolute start-0 top-50 translate-middle-y fw-bold">←</span>\n      <span class="position-absolute end-0 top-50 translate-middle-y fw-bold">→</span>\n    </button>\n                ',new i(100*this.mPadScale,100*this.mPadScale)),e.SetKey("PadStickCircle"),e.SetHover(!0),e.SetAnchorX(a.eAnchor.Min,40),e.SetAnchorY(a.eAnchor.Min,40),e.SetPressTraking(!0),this.PushChild(e),this.mStick.push(e)}}Button(t,s){if(s>9&&(s=9),t==CPad.eButtonType.Alphabet_Rectangle||t==CPad.eButtonType.Number_Rectangle)for(let t=0;t<s;++t){let s="PadButton"+t;if(0==this.FindChilds(s).length){let n=new l;n.SetCamZoomResize(!0),n.Init(`\n                        <button class="btn btn-outline-danger rounded-circle fw-bold p-0">${t}</button>\n                        `,new i(50*this.mPadScale,50*this.mPadScale)),n.SetKey(s),n.SetAnchorX(a.eAnchor.Max,50),n.SetAnchorY(a.eAnchor.Min,100+100*t*this.mPadScale),n.SetHover(!0),n.SetPressTraking(!0),this.PushChild(n),this.mButton.push(n),this.mButtonInput.push(e.eType.Null)}}}Icon(){return"bi bi-dpad"}SetPad(e){this.mPadType=e}SubjectUpdate(i){if(super.SubjectUpdate(i),0!=this.mStick.length||0!=this.mButton.length){if(this.mDir.Zero(),this.mStickType==CPad.eStickType.Cross)this.mStick[0].GetLastEvent()==e.eType.Press&&t.V3AddV3(this.mDir,s.Up(),this.mDir),this.mStick[1].GetLastEvent()==e.eType.Press&&t.V3AddV3(this.mDir,s.Down(),this.mDir),this.mStick[2].GetLastEvent()==e.eType.Press&&t.V3AddV3(this.mDir,s.Left(),this.mDir),this.mStick[3].GetLastEvent()==e.eType.Press&&t.V3AddV3(this.mDir,s.Right(),this.mDir);else if((this.mStickType==CPad.eStickType.Circle||this.mStickType==CPad.eStickType.Circle4||this.mStickType==CPad.eStickType.Circle8)&&null!=this.mStick[0].GetPressPos()){let i=t.V3Len(this.mStick[0].GetPressPos());if(this.mStick[0].GetLastEvent()==e.eType.Press&&i>16){this.mDir=t.V3Nor(this.mStick[0].GetPressPos());const e=[new s(1,0,0),new s(-1,0,0),new s(0,1,0),new s(0,-1,0),new s(1,-1,0),new s(-1,-1,0),new s(1,1,0),new s(-1,-1,0)];let i=-1,n=-1,r=0;this.mStickType==CPad.eStickType.Circle4?r=4:this.mStickType==CPad.eStickType.Circle8&&(r=8);for(let s=0;s<r;++s)t.V3Dot(e[s],this.mDir)>i&&(i=t.V3Dot(e[s],this.mDir),n=s);-1!=n&&(this.mDir=e[n])}}let i=[],n=[],o=[],a=[],h=[r.eKey.Space],l=[r.eKey.LControl];return this.mKeyType!=CPad.eKeyType.Arrow&&this.mKeyType!=CPad.eKeyType.Both||(i.push(r.eKey.Up),n.push(r.eKey.Down),o.push(r.eKey.Left),a.push(r.eKey.Right)),this.mKeyType!=CPad.eKeyType.WASD&&this.mKeyType!=CPad.eKeyType.Both||(i.push(r.eKey.W),n.push(r.eKey.S),o.push(r.eKey.A),a.push(r.eKey.D)),i.some(e=>this.GetFrame().Input().KeyDown(e))&&t.V3AddV3(this.mDir,s.Up(),this.mDir),n.some(e=>this.GetFrame().Input().KeyDown(e))&&t.V3AddV3(this.mDir,s.Down(),this.mDir),o.some(e=>this.GetFrame().Input().KeyDown(e))&&t.V3AddV3(this.mDir,s.Left(),this.mDir),a.some(e=>this.GetFrame().Input().KeyDown(e))&&t.V3AddV3(this.mDir,s.Right(),this.mDir),this.mButton.length>0&&(h.some(e=>this.GetFrame().Input().KeyDown(e))?this.mButtonInput[0]=e.eType.Press:h.some(e=>this.GetFrame().Input().KeyUp(e))?this.mButtonInput[0]=e.eType.Click:this.mButtonInput[0]=e.eType.Null,l.some(e=>this.GetFrame().Input().KeyDown(e))?this.mButtonInput[1]=e.eType.Press:l.some(e=>this.GetFrame().Input().KeyUp(e))?this.mButtonInput[1]=e.eType.Click:this.mButtonInput[1]=e.eType.Null),void(0==this.mDir.IsZero()&&t.V3Nor(this.mDir,this.mDir))}this.PadReset()}PadReset(){this.SetKey("pad");for(let e of this.mChild)e.Destroy();this.mStick=new Array,this.mButton=new Array,this.mPadType==CPad.ePadType.NES?(this.Stick(CPad.eStickType.Cross,!1),this.Button(CPad.eButtonType.Alphabet_Rectangle,2)):this.mPadType==CPad.ePadType.Basic&&(this.Stick(CPad.eStickType.Circle4,!1),this.Button(CPad.eButtonType.Alphabet_Rectangle,2))}SetFrame(e){super.SetFrame(e),null!=e&&this.PadReset()}ImportCJSON(e){super.ImportCJSON(e);for(let e of this.mChild)-1!=e.Key().indexOf("PadButton")?this.mButton.push(e):this.mStick.push(e);return this}EditChange(e,t){"mPadType"==e.member&&this.PadReset(),super.EditChange(e,t)}}
+import { CEvent } from "../../basic/CEvent.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CVec2 } from "../../geometry/CVec2.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CH5Canvas } from "../../render/CH5Canvas.js";
+import { CInput } from "../../system/CInput.js";
+import { CSubject } from "./CSubject.js";
+import { CUI, CUIButtonRGBA, CUIHTML as CUIHTML } from "./CUI.js";
+var eStickType;
+(function (eStickType) {
+    eStickType["Cross"] = "Cross";
+    eStickType["Circle"] = "Circle";
+    eStickType["Circle4"] = "Circle4";
+    eStickType["Circle8"] = "Circle8";
+})(eStickType || (eStickType = {}));
+;
+var eButtonType;
+(function (eButtonType) {
+    eButtonType["Alphabet_Rectangle"] = "Alphabet_Rectangle";
+    eButtonType["Number_Rectangle"] = "Number_Rectangle";
+    eButtonType["HTML"] = "HTML";
+})(eButtonType || (eButtonType = {}));
+;
+var ePadType;
+(function (ePadType) {
+    ePadType["None"] = "None";
+    ePadType["NES"] = "NES";
+    ePadType["Basic"] = "Basic";
+})(ePadType || (ePadType = {}));
+;
+var eKeyType;
+(function (eKeyType) {
+    eKeyType["Arrow"] = "Arrow";
+    eKeyType["WASD"] = "WASD";
+    eKeyType["Both"] = "Both";
+})(eKeyType || (eKeyType = {}));
+export class CPad extends CSubject {
+    static eStickType = eStickType;
+    static eButtonType = eButtonType;
+    static ePadType = ePadType;
+    static eKeyType = eKeyType;
+    mStick = new Array();
+    mButton = new Array();
+    mButtonInput = Array();
+    mLockPos = new CVec3();
+    mPacketSend = false;
+    mDir = new CVec3();
+    mPadType = CPad.ePadType.Basic;
+    mStickType = null;
+    mPressOnStick = true;
+    mPadScale = 1;
+    mKeyType = CPad.eKeyType.Arrow;
+    constructor() {
+        super();
+        this.SetKey("pad");
+        this.mPMatMul = false;
+    }
+    SetButtonImg(_off, _img = null) {
+        let element = this.mButton[_off].GetPt().GetElement();
+        let button = element;
+        if (element.tagName !== 'BUTTON') {
+            button = element.querySelector('button');
+        }
+        if (button) {
+            if (_img == null || _img == '') {
+                button.innerHTML = `${_off}`;
+                button.style.backgroundImage = '';
+                button.style.backgroundSize = '';
+                button.style.backgroundPosition = '';
+                button.style.backgroundRepeat = '';
+            }
+            else {
+                button.innerHTML = '';
+                button.style.backgroundImage = `url('${_img}')`;
+                button.style.backgroundSize = '70% 70%';
+                button.style.backgroundPosition = 'center';
+                button.style.backgroundRepeat = 'no-repeat';
+            }
+        }
+    }
+    SetButtonCoolTime(_off, _time) {
+        if (_off >= this.mButton.length)
+            return;
+        let element = this.mButton[_off].GetPt().GetElement();
+        let button = element;
+        if (element.tagName !== 'BUTTON') {
+            button = element.querySelector('button');
+        }
+        if (!button)
+            return;
+        const existingOverlay = button.querySelector('.cooltime-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        const overlay = document.createElement('div');
+        overlay.className = 'cooltime-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: conic-gradient(
+                rgba(0, 0, 0, 0.7) 0deg,
+                rgba(0, 0, 0, 0.7) 0deg,
+                transparent 0deg
+            );
+            z-index: 10;
+        `;
+        const timeText = document.createElement('div');
+        timeText.className = 'cooltime-text';
+        timeText.style.cssText = `
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 0 0 4px black;
+            z-index: 11;
+        `;
+        overlay.appendChild(timeText);
+        if (getComputedStyle(button).position === 'static') {
+            button.style.position = 'relative';
+        }
+        button.appendChild(overlay);
+        button.style.filter = 'brightness(0.6)';
+        button.disabled = true;
+        const startTime = performance.now();
+        const duration = _time * 1000;
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const remaining = Math.max(0, duration - elapsed);
+            const progress = remaining / duration;
+            if (remaining > 0) {
+                timeText.textContent = (remaining / 1000).toFixed(1);
+                const degrees = 360 * progress;
+                overlay.style.background = `conic-gradient(
+                    rgba(0, 0, 0, 0.7) 0deg,
+                    rgba(0, 0, 0, 0.7) ${degrees}deg,
+                    transparent ${degrees}deg
+                )`;
+                requestAnimationFrame(animate);
+            }
+            else {
+                overlay.remove();
+                button.style.filter = '';
+                button.disabled = false;
+            }
+        };
+        requestAnimationFrame(animate);
+    }
+    SetPadScale(_val) {
+        this.mPadScale = _val;
+        this.PadReset();
+    }
+    IsShould(_member, _type) {
+        if (_member == "mStick" || _member == "mButton" || _member == "mButtonInput")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    IsOn() {
+        for (let each0 of this.mStick) {
+            if (each0.GetLastEvent() != CEvent.eType.Null) {
+                return true;
+            }
+        }
+        for (let each0 of this.mButton) {
+            if (each0.GetLastEvent() != CEvent.eType.Null) {
+                return true;
+            }
+        }
+        return false;
+    }
+    GetDir() { return this.mDir; }
+    GetButtonEvent(_off) {
+        if (this.mButton.length > _off) {
+            if (this.mButton[_off].GetLastEvent() != CEvent.eType.Null)
+                return this.mButton[_off].GetLastEvent();
+            else
+                return this.mButtonInput[_off];
+        }
+        return CEvent.eType.Null;
+    }
+    GetButtonPos(_off) {
+        let pos = this.mButton[_off].GetPressPos();
+        if (pos == null)
+            pos = CVec3.Vec3(0, 0, 0);
+        return pos;
+    }
+    Stick(_type, _move) {
+        this.mStickType = _type;
+        if (_type == eStickType.Cross) {
+            CH5Canvas.Init(50, 50, true, false);
+            let cmdList = [
+                CH5Canvas.FillStyle('#5A86FF'),
+                CH5Canvas.FillRect(0, 0, 50, 50),
+                CH5Canvas.LineWidth(5),
+                CH5Canvas.StrokeRect(0, 0, 50, 50),
+                CH5Canvas.FillStyle('black'),
+                CH5Canvas.FillText(25, 23, "△", 32),
+            ];
+            CH5Canvas.Draw(cmdList);
+            let tex = CH5Canvas.GetNewTex();
+            this.GetFrame().Res().Push("Pad/PadStickCrossUP.tex", tex);
+            this.GetFrame().Ren().BuildTexture(tex);
+            if (this.FindChilds("PadStickCrossUP").length == 0) {
+                let btn = new CUIButtonRGBA();
+                btn.SetCamZoomResize(true);
+                btn.Init("Pad/PadStickCrossUP.tex");
+                btn.SetKey("PadStickCrossUP");
+                btn.SetAnchorX(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
+                btn.SetAnchorY(CUI.eAnchor.Min, 30 + 100 * this.mPadScale);
+                btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
+                this.PushChild(btn);
+                this.mStick.push(btn);
+                btn.GetPt().GetRenderPass()[0].mDepthTest = false;
+            }
+            cmdList = [
+                CH5Canvas.FillStyle('#5A86FF'),
+                CH5Canvas.FillRect(0, 0, 50, 50),
+                CH5Canvas.LineWidth(5),
+                CH5Canvas.StrokeRect(0, 0, 50, 50),
+                CH5Canvas.FillStyle('black'),
+                CH5Canvas.FillText(25, 27, "▽", 32),
+            ];
+            CH5Canvas.Draw(cmdList);
+            tex = CH5Canvas.GetNewTex();
+            this.GetFrame().Res().Push("Pad/PadStickCrossDown.tex", tex);
+            this.GetFrame().Ren().BuildTexture(tex);
+            if (this.FindChilds("PadStickCrossDown").length == 0) {
+                let btn = new CUIButtonRGBA();
+                btn.SetCamZoomResize(true);
+                btn.Init("Pad/PadStickCrossDown.tex");
+                btn.SetKey("PadStickCrossDown");
+                btn.SetAnchorX(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
+                btn.SetAnchorY(CUI.eAnchor.Min, 30 + this.mPadScale);
+                btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
+                this.PushChild(btn);
+                this.mStick.push(btn);
+                btn.GetPt().GetRenderPass()[0].mDepthTest = false;
+            }
+            cmdList = [
+                CH5Canvas.FillStyle('#5A86FF'),
+                CH5Canvas.FillRect(0, 0, 50, 50),
+                CH5Canvas.LineWidth(5),
+                CH5Canvas.StrokeRect(0, 0, 50, 50),
+                CH5Canvas.FillStyle('black'),
+                CH5Canvas.FillText(23, 25, "◁", 32),
+            ];
+            CH5Canvas.Draw(cmdList);
+            tex = CH5Canvas.GetNewTex();
+            this.GetFrame().Res().Push("Pad/PadStickCrossLeft.tex", tex);
+            this.GetFrame().Ren().BuildTexture(tex);
+            if (this.FindChilds("PadStickCrossLeft").length == 0) {
+                let btn = new CUIButtonRGBA();
+                btn.SetCamZoomResize(true);
+                btn.Init("Pad/PadStickCrossLeft.tex");
+                btn.SetKey("PadStickCrossLeft");
+                btn.SetAnchorX(CUI.eAnchor.Min, 30);
+                btn.SetAnchorY(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
+                btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
+                this.PushChild(btn);
+                this.mStick.push(btn);
+                btn.GetPt().GetRenderPass()[0].mDepthTest = false;
+            }
+            cmdList = [
+                CH5Canvas.FillStyle('#5A86FF'),
+                CH5Canvas.FillRect(0, 0, 50, 50),
+                CH5Canvas.LineWidth(5),
+                CH5Canvas.StrokeRect(0, 0, 50, 50),
+                CH5Canvas.FillStyle('black'),
+                CH5Canvas.FillText(27, 25, "▷", 32),
+            ];
+            CH5Canvas.Draw(cmdList);
+            tex = CH5Canvas.GetNewTex();
+            this.GetFrame().Res().Push("Pad/PadStickCrossRight.tex", tex);
+            this.GetFrame().Ren().BuildTexture(tex);
+            if (this.FindChilds("PadStickCrossRight").length == 0) {
+                let btn = new CUIButtonRGBA();
+                btn.SetCamZoomResize(true);
+                btn.Init("Pad/PadStickCrossRight.tex");
+                btn.SetKey("PadStickCrossRight");
+                btn.SetAnchorX(CUI.eAnchor.Min, 30 + 100 * this.mPadScale);
+                btn.SetAnchorY(CUI.eAnchor.Min, 30 + 50 * this.mPadScale);
+                btn.SetSize(50 * this.mPadScale, 50 * this.mPadScale);
+                this.PushChild(btn);
+                this.mStick.push(btn);
+                btn.GetPt().GetRenderPass()[0].mDepthTest = false;
+            }
+        }
+        else if (_type == eStickType.Circle || _type == eStickType.Circle4 || _type == eStickType.Circle8) {
+            if (this.FindChilds("PadStickCircle").length == 0) {
+                let btn = new CUIHTML();
+                btn.SetCamZoomResize(true);
+                btn.Init(`  
+    <button class="btn btn-secondary rounded-circle">
+      <span class="position-absolute top-0 start-50 translate-middle-x fw-bold">↑</span>
+      <span class="position-absolute bottom-0 start-50 translate-middle-x fw-bold">↓</span>
+      <span class="position-absolute start-0 top-50 translate-middle-y fw-bold">←</span>
+      <span class="position-absolute end-0 top-50 translate-middle-y fw-bold">→</span>
+    </button>
+                `, new CVec2(100 * this.mPadScale, 100 * this.mPadScale));
+                btn.SetKey("PadStickCircle");
+                btn.SetHover(true);
+                btn.SetAnchorX(CUI.eAnchor.Min, 40);
+                btn.SetAnchorY(CUI.eAnchor.Min, 40);
+                btn.SetPressTraking(true);
+                this.PushChild(btn);
+                this.mStick.push(btn);
+            }
+        }
+    }
+    Button(_type, _count) {
+        if (_count > 9)
+            _count = 9;
+        if (_type == CPad.eButtonType.Alphabet_Rectangle || _type == CPad.eButtonType.Number_Rectangle) {
+            for (let i = 0; i < _count; ++i) {
+                let ch5key = "PadButton" + i;
+                if (this.FindChilds(ch5key).length == 0) {
+                    let btn = new CUIHTML();
+                    btn.SetCamZoomResize(true);
+                    btn.Init(`
+                        <button class="btn btn-outline-danger rounded-circle fw-bold p-0">${i}</button>
+                        `, new CVec2(50 * this.mPadScale, 50 * this.mPadScale));
+                    btn.SetKey(ch5key);
+                    btn.SetAnchorX(CUI.eAnchor.Max, 50);
+                    btn.SetAnchorY(CUI.eAnchor.Min, 100 + i * 100 * this.mPadScale);
+                    btn.SetHover(true);
+                    btn.SetPressTraking(true);
+                    this.PushChild(btn);
+                    this.mButton.push(btn);
+                    this.mButtonInput.push(CEvent.eType.Null);
+                }
+            }
+        }
+    }
+    Icon() {
+        return "bi bi-dpad";
+    }
+    SetPad(_type) {
+        this.mPadType = _type;
+    }
+    SubjectUpdate(_update) {
+        super.SubjectUpdate(_update);
+        if (this.mStick.length != 0 || this.mButton.length != 0) {
+            this.mDir.Zero();
+            if (this.mStickType == CPad.eStickType.Cross) {
+                if (this.mStick[0].GetLastEvent() == CEvent.eType.Press)
+                    CMath.V3AddV3(this.mDir, CVec3.Up(), this.mDir);
+                if (this.mStick[1].GetLastEvent() == CEvent.eType.Press)
+                    CMath.V3AddV3(this.mDir, CVec3.Down(), this.mDir);
+                if (this.mStick[2].GetLastEvent() == CEvent.eType.Press)
+                    CMath.V3AddV3(this.mDir, CVec3.Left(), this.mDir);
+                if (this.mStick[3].GetLastEvent() == CEvent.eType.Press)
+                    CMath.V3AddV3(this.mDir, CVec3.Right(), this.mDir);
+            }
+            else if ((this.mStickType == CPad.eStickType.Circle || this.mStickType == CPad.eStickType.Circle4 || this.mStickType == CPad.eStickType.Circle8) &&
+                this.mStick[0].GetPressPos() != null) {
+                let len = CMath.V3Len(this.mStick[0].GetPressPos());
+                if (this.mStick[0].GetLastEvent() == CEvent.eType.Press && len > 16) {
+                    this.mDir = CMath.V3Nor(this.mStick[0].GetPressPos());
+                    const dir = [new CVec3(1, 0, 0), new CVec3(-1, 0, 0), new CVec3(0, 1, 0), new CVec3(0, -1, 0),
+                        new CVec3(1, -1, 0), new CVec3(-1, -1, 0), new CVec3(1, 1, 0), new CVec3(-1, -1, 0)];
+                    let matchVal = -1;
+                    let matchOff = -1;
+                    let count = 0;
+                    if (this.mStickType == CPad.eStickType.Circle4)
+                        count = 4;
+                    else if (this.mStickType == CPad.eStickType.Circle8)
+                        count = 8;
+                    for (let i = 0; i < count; ++i) {
+                        if (CMath.V3Dot(dir[i], this.mDir) > matchVal) {
+                            matchVal = CMath.V3Dot(dir[i], this.mDir);
+                            matchOff = i;
+                        }
+                    }
+                    if (matchOff != -1)
+                        this.mDir = dir[matchOff];
+                }
+            }
+            let up = [], down = [], left = [], right = [];
+            let space = [CInput.eKey.Space];
+            let lctl = [CInput.eKey.LControl];
+            if (this.mKeyType == CPad.eKeyType.Arrow || this.mKeyType == CPad.eKeyType.Both) {
+                up.push(CInput.eKey.Up), down.push(CInput.eKey.Down);
+                left.push(CInput.eKey.Left), right.push(CInput.eKey.Right);
+            }
+            if (this.mKeyType == CPad.eKeyType.WASD || this.mKeyType == CPad.eKeyType.Both) {
+                up.push(CInput.eKey.W), down.push(CInput.eKey.S);
+                left.push(CInput.eKey.A), right.push(CInput.eKey.D);
+            }
+            if (up.some((key => this.GetFrame().Input().KeyDown(key))))
+                CMath.V3AddV3(this.mDir, CVec3.Up(), this.mDir);
+            if (down.some((key => this.GetFrame().Input().KeyDown(key))))
+                CMath.V3AddV3(this.mDir, CVec3.Down(), this.mDir);
+            if (left.some((key => this.GetFrame().Input().KeyDown(key))))
+                CMath.V3AddV3(this.mDir, CVec3.Left(), this.mDir);
+            if (right.some((key => this.GetFrame().Input().KeyDown(key))))
+                CMath.V3AddV3(this.mDir, CVec3.Right(), this.mDir);
+            if (this.mButton.length > 0) {
+                if (space.some((key => this.GetFrame().Input().KeyDown(key)))) {
+                    this.mButtonInput[0] = CEvent.eType.Press;
+                }
+                else if (space.some((key => this.GetFrame().Input().KeyUp(key)))) {
+                    this.mButtonInput[0] = CEvent.eType.Click;
+                }
+                else
+                    this.mButtonInput[0] = CEvent.eType.Null;
+                if (lctl.some((key => this.GetFrame().Input().KeyDown(key)))) {
+                    this.mButtonInput[1] = CEvent.eType.Press;
+                }
+                else if (lctl.some((key => this.GetFrame().Input().KeyUp(key)))) {
+                    this.mButtonInput[1] = CEvent.eType.Click;
+                }
+                else
+                    this.mButtonInput[1] = CEvent.eType.Null;
+            }
+            if (this.mDir.IsZero() == false)
+                CMath.V3Nor(this.mDir, this.mDir);
+            return;
+        }
+        this.PadReset();
+    }
+    PadReset() {
+        this.SetKey("pad");
+        for (let c of this.mChild) {
+            c.Destroy();
+        }
+        this.mStick = new Array();
+        this.mButton = new Array();
+        if (this.mPadType == CPad.ePadType.NES) {
+            this.Stick(CPad.eStickType.Cross, false);
+            this.Button(CPad.eButtonType.Alphabet_Rectangle, 2);
+        }
+        else if (this.mPadType == CPad.ePadType.Basic) {
+            this.Stick(CPad.eStickType.Circle4, false);
+            this.Button(CPad.eButtonType.Alphabet_Rectangle, 2);
+        }
+    }
+    SetFrame(_fw) {
+        super.SetFrame(_fw);
+        if (_fw != null) {
+            this.PadReset();
+        }
+    }
+    ImportCJSON(_json) {
+        super.ImportCJSON(_json);
+        for (let ui of this.mChild) {
+            if (ui.Key().indexOf("PadButton") != -1)
+                this.mButton.push(ui);
+            else
+                this.mStick.push(ui);
+        }
+        return this;
+    }
+    EditChange(_pointer, _child) {
+        if (_pointer.member == "mPadType") {
+            this.PadReset();
+        }
+        super.EditChange(_pointer, _child);
+    }
+}

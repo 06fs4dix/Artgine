@@ -1,1 +1,98 @@
-import{CLZ4 as r,CLZString as e}from"./LZ.js";var t=null;export class CUtil{static IsNode(){return null==t&&(t="undefined"!=typeof process&&null!=process.versions&&null!=process.versions.node),t}static IsSafari(){if(CUtil.IsNode())return!1;const r=navigator.userAgent;return/Safari/.test(r)&&!/Chrome/.test(r)&&!/CriOS/.test(r)}static IsMobile(){return!!(navigator.platform&&0>"win16|win32|win64|mac|macintel".indexOf(navigator.platform.toLowerCase()))}static Delay(r=1e3){return new Promise(e=>setTimeout(e,r))}static Base64ToString(r){return atob(r)}static StringToBase64(r){return btoa(r)}static FileToStr(r){return new Promise((e,t)=>{var a=new FileReader;a.onload=r=>{if(r.target.readyState==FileReader.DONE){var t=CUtil.ArrayToString(r.target.result);e(t)}},a.readAsArrayBuffer(r)})}static Base64ToArray(r){for(var e=atob(r),t=e.length,a=new Uint8Array(t),s=0;s<t;s++)a[s]=e.charCodeAt(s);return a.buffer}static ArrayToBase64(r){return btoa(new Uint8Array(r).reduce((r,e)=>r+String.fromCharCode(e),""))}static ArrayToString(r){return new TextDecoder("utf-8").decode(new Uint8Array(r))}static Language(){return CUtil.IsNode()?process.env.LANG?.split("_")[0]?.toLowerCase()||process.env.LC_ALL?.split("_")[0]?.toLowerCase()||"en":0==CUtil.IsNode()?(navigator.language||navigator.languages?.[0]||"en").split("-")[0].toLowerCase():"en"}static ArrayToLZBase64(r){const t=CUtil.ArrayToBase64(r);return e.compressToBase64(t)}static LZBase64ToArray(r){const t=e.decompressFromBase64(r);if(null==t)throw new Error("압축 해제 실패");return CUtil.Base64ToArray(t)}static _lz4=new r;static ArrayToLZ4(r,e=6){return CUtil._lz4.compress(new Uint8Array(r),e)}static LZ4ToArray(r,e){const t=CUtil._lz4.decompress(r,e);if(null==t)throw new Error("압축 해제 실패");return t.buffer}}
+import { CLZ4, CLZString } from "./LZ.js";
+var gNode = null;
+export class CUtil {
+    static IsNode() {
+        if (gNode == null) {
+            gNode = (typeof process !== 'undefined' &&
+                process.versions != null &&
+                process.versions.node != null);
+        }
+        return gNode;
+    }
+    static IsSafari() {
+        if (CUtil.IsNode())
+            return false;
+        const ua = navigator.userAgent;
+        return /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua);
+    }
+    static IsMobile() {
+        var filter = "win16|win32|win64|mac|macintel";
+        if (navigator.platform) {
+            if (0 > filter.indexOf(navigator.platform.toLowerCase())) {
+                return true;
+            }
+            else {
+            }
+        }
+        return false;
+    }
+    static Delay(ms = 1000) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    static Base64ToString(_base64) {
+        return atob(_base64);
+    }
+    static StringToBase64(_base64) {
+        return btoa(_base64);
+    }
+    static FileToStr(_file) {
+        return new Promise((resolve, reject) => {
+            var reader = new FileReader();
+            reader.onload = (evt) => {
+                if (evt.target.readyState == FileReader.DONE) {
+                    var string = CUtil.ArrayToString(evt.target.result);
+                    resolve(string);
+                }
+            };
+            reader.readAsArrayBuffer(_file);
+        });
+    }
+    static Base64ToArray(_base64) {
+        var binary_string = atob(_base64);
+        var len = binary_string.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binary_string.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+    static ArrayToBase64(_arrayBuffer) {
+        return btoa(new Uint8Array(_arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+    }
+    static ArrayToString(_arrayBuffer) {
+        var enc = new TextDecoder("utf-8");
+        return enc.decode(new Uint8Array(_arrayBuffer));
+    }
+    static Language() {
+        if (CUtil.IsNode()) {
+            return process.env.LANG?.split('_')[0]?.toLowerCase() ||
+                process.env.LC_ALL?.split('_')[0]?.toLowerCase() ||
+                'en';
+        }
+        if (CUtil.IsNode() == false) {
+            const language = navigator.language || navigator.languages?.[0] || 'en';
+            return language.split('-')[0].toLowerCase();
+        }
+        return 'en';
+    }
+    static ArrayToLZBase64(_arrayBuffer) {
+        const b64 = CUtil.ArrayToBase64(_arrayBuffer);
+        return CLZString.compressToBase64(b64);
+    }
+    static LZBase64ToArray(_lzBase64) {
+        const b64 = CLZString.decompressFromBase64(_lzBase64);
+        if (b64 == null)
+            throw new Error("압축 해제 실패");
+        return CUtil.Base64ToArray(b64);
+    }
+    static _lz4 = new CLZ4();
+    static ArrayToLZ4(_arrayBuffer, _level = 6) {
+        return CUtil._lz4.compress(new Uint8Array(_arrayBuffer), _level);
+    }
+    static LZ4ToArray(_lz4, _originalSize) {
+        const result = CUtil._lz4.decompress(_lz4, _originalSize);
+        if (result == null)
+            throw new Error("압축 해제 실패");
+        return result.buffer;
+    }
+}

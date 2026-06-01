@@ -1,1 +1,394 @@
-import{CVec3 as t}from"../../geometry/CVec3.js";import{CAtlas as e}from"../../util/CAtlas.js";import{CCollider as i}from"../component/CCollider.js";import{CPaintVoxel as r}from"../component/paint/CPaintVoxel.js";import{CSubject as s}from"./CSubject.js";import{CObject as o}from"../../basic/CObject.js";import{CUtilObj as m}from"../../basic/CUtilObj.js";import{CUtil as l}from"../../basic/CUtil.js";import{CAlert as h}from"../../basic/CAlert.js";import{CCIndex as n}from"../canvas/CCIndex.js";import{CMapBuf as a}from"./CMapBuf.js";export class CCIndexPick extends n{pick=n.eDir.Null;PickMove(){switch(this.pick){case n.eDir.Front:this.z+=1;break;case n.eDir.Back:this.z-=1;break;case n.eDir.Up:this.y+=1;break;case n.eDir.Down:this.y-=1;break;case n.eDir.Left:this.x-=1;break;case n.eDir.Right:this.x+=1}this.pick=n.eDir.Null}}export class CVTile extends o{mLabel="";mColliderLayer="";mColor=0;mAtlas=0;constructor(t,e,i="",r=""){if(super(),null==t||t<=0){const t=Math.floor(256*Math.random()),e=Math.floor(256*Math.random()),i=Math.floor(256*Math.random());this.mColor=(t<<24|e<<16|i<<8)>>>0}else this.mColor=(4294967040&t)>>>0;this.mAtlas=e,this.mColliderLayer=i,this.mLabel=r}Label(){return this.mLabel}Color(){return this.mColor}Size(){return null}EditForm(t,e,r){if(super.EditForm(t,e,r),"mCollider"==t.member){let s=[],o=[];for(let[t,e]of Object.entries(i.eEvent))s.push(t),o.push(e);e.append(m.Select(t,r,s,o))}}}class u extends o{mColor=0;mRate=1}export class CVTileRole extends o{mLabel="";mRole;mPattern=new Array;constructor(){super(),this.mRole=[16383,16383,16383,16383,16383,16383,16383,16383,16383]}EditForm(t,e,i){super.EditForm(t,e,i),"mPattern"==t.member&&m.ArrayAddSelectList(t,e,i,[new u])}GetTile(){let t=0;for(let e=0;e<this.mPattern.length;++e)t+=this.mPattern[e].mRate;let e=Math.random()*t;for(let t=0;t<this.mPattern.length;++t)if(e-=this.mPattern[t].mRate,e<0)return this.mPattern[t].mColor;return 0}}export class CVTileMold extends o{mLabel="";mSize;mColorArr;constructor(e=1,i=1){super(),this.mSize=new t(1,1,1),this.mColorArr=new Array(this.mSize.x*this.mSize.y*this.mSize.z),this.mColorArr.fill(0)}}export class CVoxelMap extends s{mToolMode=!1;mAtlas=new e("Voxel/");mBuf=new a;mTileMap=new Map;mTileRoleArr=new Array;mTileMoldArr=new Array;mColliderArr=Array();mPaintArr=new Array;mDiv=16;mPlane=new Array;mUpdateRes=!0;mUpdateModify=new Set;mLight=!1;static SunValue=1;mLayer=new Array;IsShould(t,e){return"mPaint"!=t&&"mUpdateRes"!=t&&"mPlane"!=t&&"mColliderArr"!=t&&"mComArr"!=t&&super.IsShould(t,e)}constructor(){super(),this.ResetInfo(new t(8,8,8),100),0==l.IsNode()&&this.mAtlas.Push("test.png",l.Base64ToArray("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABuSURBVDhPlY9RDoAwCEM9iJ/e/2aeARmtZGEw8aU/0r7EHfITCvd5IficCdUQ/DQXYK0SQWPj/J4LVSg0HSwpKKEO4WgWlDDysDa+BXYvrV/iwug+GjNlCKGrshOqo5IIKJT0Ht+AT2e9U+gi8gD5Qf9Q2ZUDNwAAAABJRU5ErkJggg=="))}MapLog(){let e={};e.countX=this.mBuf.mCount.x,e.countY=this.mBuf.mCount.y,e.countZ=this.mBuf.mCount.z,e.size=this.mBuf.mSize,e.labelArr=new Array;let i=new t(this.mBuf.mSize,this.mBuf.mSize,this.mBuf.mSize);for(let t of this.mTileMap.values())e.labelArr.push({label:t.Label(),color:d.HexToRGB(t.Color(),!0).ToHex(),sizeX:i.x,sizeY:i.y,sizeZ:i.z});return JSON.stringify(e)}PushTile(t){this.mTileMap.set(t.mColor,t)}ResetInfo(t,e){if(this.mPlane.length=0,this.mComArr.length=0,this.mComEnableArr.length=0,this.mPaintArr.length=0,this.mPTArr=null,this.mBuf.Reset(t,e),this.mUpdateRes=!0,1==t.z&&0==this.mPos.z){let t=this.mPos.Export();t.z=-101,this.SetPos(t)}}RefreshModify(){let t=Math.ceil(this.mBuf.mCount.x/this.mDiv),e=Math.ceil(this.mBuf.mCount.y/this.mDiv),i=new Map;for(let r of this.mUpdateModify){this.PlaneRefresh(r);let s=Math.floor(r.x/this.mDiv)+Math.floor(r.y/this.mDiv)*t+Math.floor(r.z/this.mDiv)*t*e;i.has(s)||i.set(s,[]),i.get(s).push(r)}for(let[r,s]of i){let i=this.mPaintArr[r];if(null==i)continue;let o=Math.floor(r/(t*e)),m=Math.floor(r%(t*e)/t),l=r%t*this.mDiv,h=m*this.mDiv,n=o*this.mDiv,a=Math.min(this.mDiv,this.mBuf.mCount.x-l),u=Math.min(this.mDiv,this.mBuf.mCount.y-h),f=new Array;for(let t of s){let e=6*(t.x-l+(t.y-h)*a+(t.z-n)*a*u),i=6*t.x+t.y*this.mBuf.mCount.x*6+t.z*this.mBuf.mCount.x*this.mBuf.mCount.y*6;for(let t=0;t<6;++t){let r=this.mPlane[i+t];r.mOff=e+t,f.push(r)}}i.Rebuild(f)}this.mUpdateModify.clear()}PlaneRefresh(t){}IndexOut(t){return t.x<0||t.x>=this.mBuf.mCount.x||t.y<0||t.y>=this.mBuf.mCount.y||t.z<0||t.z>=this.mBuf.mCount.z}IsBlock(t,e){let i=t.x+e.x,r=t.y+e.y,s=t.z+e.z;return!(i<0||i>=this.mBuf.mCount.x||r<0||r>=this.mBuf.mCount.y||s<0||s>=this.mBuf.mCount.z)&&0!=this.mBuf.RGB(i+this.mBuf.mCount.x*r+this.mBuf.mCount.x*this.mBuf.mCount.y*s)}GetTexCodi(t,e){let i=this.mTileMap.get(t);null==i?this.mAtlas.GetUV(0,e):this.mAtlas.GetUV(i.mAtlas,e)}GetLight(t,e,i){t.x,e.x,t.y,e.y,t.z,e.z,i.x=1,i.y=0}RefreshRes(){}Update(t){this.mUpdateRes&&this.RefreshRes(),this.mUpdateModify.size>0&&this.RefreshModify()}PickBox(t){return null}Bonds(t,e){if(!this.IndexOut(t))return this.mBuf.RGB(t,e),0==e?(this.mBuf.RGB(t,0),this.mUpdateModify.add(t.Export()),void(1!=this.mBuf.mCount.z&&(t.Add(1,0,0),this.mUpdateModify.add(t.Export()),t.Add(-2,0,0),this.mUpdateModify.add(t.Export()),t.Add(1,1,0),this.mUpdateModify.add(t.Export()),t.Add(0,-2,0),this.mUpdateModify.add(t.Export()),t.Add(0,1,1),this.mUpdateModify.add(t.Export()),t.Add(0,0,-2),this.mUpdateModify.add(t.Export())))):void(null!=this.mTileMap.get(e)?(this.mUpdateModify.add(t.Export()),this.RoleChk(t)):h.E("select가 없음"))}RoleChk(t){let e=[16383,16383,16383,16383,16383,16383,16383,16383,16383],i=new n,r=0;if(1==this.mBuf.mCount.z)for(var s=t.y+1;s>=t.y-1;--s)for(var o=t.x-1;o<=t.x+1;++o){if(i.x=o,i.y=s,i.z=0,i.x<0||i.x>=this.mBuf.mCount.x||i.y<0||i.y>=this.mBuf.mCount.y||i.z<0||i.z>=this.mBuf.mCount.z){r++;continue}let t=i.Offset(this.mBuf.mCount);e[r]=this.mBuf.RGB(t),r++}else for(o=t.x+1;o>=t.x-1;--o)for(var m=t.z-1;m<=t.z+1;++m){if(i.x=o,i.y=t.y,i.z=m,i.x<0||i.x>=this.mBuf.mCount.x||i.y<0||i.y>=this.mBuf.mCount.y||i.z<0||i.z>=this.mBuf.mCount.z){r++;continue}let s=i.Offset(this.mBuf.mCount);e[r]=this.mBuf.RGB(s),r++}for(let i=0;i<this.mTileRoleArr.length;++i){let r=!0;for(let t=0;t<9;++t)16383!=this.mTileRoleArr[i].mRole[t]&&16383!=e[t]&&e[t]!=this.mTileRoleArr[i].mRole[t]&&(r=!1);if(r){let e=this.mTileRoleArr[i],r=t.Offset(this.mBuf.mCount);this.mBuf.RGB(r,e.GetTile());break}}}EditHTMLInit(t){var e;super.EditHTMLInit(t),(e=document.createElement("button")).innerText="VoxelTool",e.onclick=()=>{window.VoxelTool(this)},t.append(e),(e=document.createElement("button")).innerText="BufferTool",e.onclick=()=>{window.BufferTool(this.mBuf.GetBuf(),this.mBuf.mCount,Array.from(this.mTileMap.values()),null,!1,!0).then(()=>{this.mPlane.length=0,this.mComArr.length=0,this.mComEnableArr.length=0,this.mPaintArr.length=0,this.mPTArr=null,this.mUpdateRes=!0})},t.append(e)}SetPos(t,e=!0){super.SetPos(t,e),this.RemoveComps(r),this.RemoveComps(i)}static Sun=5;static Torch=10;static GSun(t){return t>>>25&7}static GTorch(t){return t>>>28&15}static SSun(t,e){return(t&=~(7<<25))|e<<25}static STorch(t,e){return(t&=268435455)|e<<28}}import f from"../../app_imple/subject/CVoxelMap.js";import{CColor as d}from"../../render/CColor.js";f();
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CAtlas } from "../../util/CAtlas.js";
+import { CCollider } from "../component/CCollider.js";
+import { CPaintVoxel } from "../component/paint/CPaintVoxel.js";
+import { CSubject } from "./CSubject.js";
+import { CObject } from "../../basic/CObject.js";
+import { CUtilObj } from "../../basic/CUtilObj.js";
+import { CUtil } from "../../basic/CUtil.js";
+import { CAlert } from "../../basic/CAlert.js";
+import { CCIndex } from "../canvas/CCIndex.js";
+import { CMapBuf } from "./CMapBuf.js";
+export class CCIndexPick extends CCIndex {
+    pick = CCIndex.eDir.Null;
+    PickMove() {
+        switch (this.pick) {
+            case CCIndex.eDir.Front:
+                this.z += 1;
+                break;
+            case CCIndex.eDir.Back:
+                this.z -= 1;
+                break;
+            case CCIndex.eDir.Up:
+                this.y += 1;
+                break;
+            case CCIndex.eDir.Down:
+                this.y -= 1;
+                break;
+            case CCIndex.eDir.Left:
+                this.x -= 1;
+                break;
+            case CCIndex.eDir.Right:
+                this.x += 1;
+                break;
+        }
+        this.pick = CCIndex.eDir.Null;
+    }
+}
+export class CVTile extends CObject {
+    mLabel = "";
+    mColliderLayer = "";
+    mColor = 0;
+    mAtlas = 0;
+    constructor(_color, _atlas, _collider = "", _label = "") {
+        super();
+        if (_color == null || _color <= 0) {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            this.mColor = ((r << 24) | (g << 16) | (b << 8) | 0x00) >>> 0;
+        }
+        else {
+            this.mColor = (_color & 0xFFFFFF00) >>> 0;
+        }
+        this.mAtlas = _atlas;
+        this.mColliderLayer = _collider;
+        this.mLabel = _label;
+    }
+    Label() {
+        return this.mLabel;
+    }
+    Color() {
+        return this.mColor;
+    }
+    Size() {
+        return null;
+    }
+    EditForm(_pointer, _div, _input) {
+        super.EditForm(_pointer, _div, _input);
+        if (_pointer.member == "mCollider") {
+            let textArr = [], valArr = [];
+            for (let [text, val] of Object.entries(CCollider.eEvent)) {
+                textArr.push(text);
+                valArr.push(val);
+            }
+            _div.append(CUtilObj.Select(_pointer, _input, textArr, valArr));
+        }
+    }
+}
+class CVTillPattern extends CObject {
+    mColor = 0;
+    mRate = 1;
+}
+export class CVTileRole extends CObject {
+    mLabel = "";
+    mRole;
+    mPattern = new Array();
+    constructor() {
+        super();
+        this.mRole = [
+            16383, 16383, 16383, 16383, 16383, 16383, 16383, 16383, 16383
+        ];
+    }
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mPattern") {
+            CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [new CVTillPattern]);
+        }
+    }
+    GetTile() {
+        let sum = 0;
+        for (let i = 0; i < this.mPattern.length; ++i) {
+            sum += this.mPattern[i].mRate;
+        }
+        let ran = Math.random() * sum;
+        for (let i = 0; i < this.mPattern.length; ++i) {
+            ran -= this.mPattern[i].mRate;
+            if (ran < 0) {
+                return this.mPattern[i].mColor;
+            }
+        }
+        return 0;
+    }
+}
+export class CVTileMold extends CObject {
+    mLabel = "";
+    mSize;
+    mColorArr;
+    constructor(_width = 1, _height = 1) {
+        super();
+        this.mSize = new CVec3(1, 1, 1);
+        this.mColorArr = new Array(this.mSize.x * this.mSize.y * this.mSize.z);
+        this.mColorArr.fill(0);
+    }
+}
+export class CVoxelMap extends CSubject {
+    mToolMode = false;
+    mAtlas = new CAtlas("Voxel/");
+    mBuf = new CMapBuf();
+    mTileMap = new Map();
+    mTileRoleArr = new Array();
+    mTileMoldArr = new Array();
+    mColliderArr = Array();
+    mPaintArr = new Array();
+    mDiv = 16;
+    mPlane = new Array();
+    mUpdateRes = true;
+    mUpdateModify = new Set();
+    mLight = false;
+    static SunValue = 1.0;
+    mLayer = new Array();
+    IsShould(_member, _type) {
+        if (_member == "mPaint" || _member == "mUpdateRes" || _member == "mPlane" || _member == "mColliderArr" || _member == "mComArr")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    constructor() {
+        super();
+        this.ResetInfo(new CVec3(8, 8, 8), 100);
+        if (CUtil.IsNode() == false)
+            this.mAtlas.Push("test.png", CUtil.Base64ToArray("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABuSURBVDhPlY9RDoAwCEM9iJ/e/2aeARmtZGEw8aU/0r7EHfITCvd5IficCdUQ/DQXYK0SQWPj/J4LVSg0HSwpKKEO4WgWlDDysDa+BXYvrV/iwug+GjNlCKGrshOqo5IIKJT0Ht+AT2e9U+gi8gD5Qf9Q2ZUDNwAAAABJRU5ErkJggg=="));
+    }
+    MapLog() {
+        let json = {};
+        json["countX"] = this.mBuf.mCount.x;
+        json["countY"] = this.mBuf.mCount.y;
+        json["countZ"] = this.mBuf.mCount.z;
+        json["size"] = this.mBuf.mSize;
+        json["labelArr"] = new Array();
+        let size = new CVec3(this.mBuf.mSize, this.mBuf.mSize, this.mBuf.mSize);
+        for (let tile of this.mTileMap.values()) {
+            json["labelArr"].push({ "label": tile.Label(), "color": CColor.HexToRGB(tile.Color(), true).ToHex(), "sizeX": size.x, "sizeY": size.y, "sizeZ": size.z });
+        }
+        return JSON.stringify(json);
+    }
+    PushTile(_tile) {
+        this.mTileMap.set(_tile.mColor, _tile);
+    }
+    ResetInfo(_count, _size) {
+        this.mPlane.length = 0;
+        this.mComArr.length = 0;
+        this.mComEnableArr.length = 0;
+        this.mPaintArr.length = 0;
+        this.mPTArr = null;
+        this.mBuf.Reset(_count, _size);
+        this.mUpdateRes = true;
+        if (_count.z == 1 && this.mPos.z == 0) {
+            let pos = this.mPos.Export();
+            pos.z = -101;
+            this.SetPos(pos);
+        }
+    }
+    RefreshModify() {
+        let cntX = Math.ceil(this.mBuf.mCount.x / this.mDiv);
+        let cntY = Math.ceil(this.mBuf.mCount.y / this.mDiv);
+        let chunkMap = new Map();
+        for (let m of this.mUpdateModify) {
+            this.PlaneRefresh(m);
+            let cx = Math.floor(m.x / this.mDiv);
+            let cy = Math.floor(m.y / this.mDiv);
+            let cz = Math.floor(m.z / this.mDiv);
+            let pi = cx + cy * cntX + cz * cntX * cntY;
+            if (!chunkMap.has(pi))
+                chunkMap.set(pi, []);
+            chunkMap.get(pi).push(m);
+        }
+        for (let [pi, cells] of chunkMap) {
+            let paint = this.mPaintArr[pi];
+            if (paint == null)
+                continue;
+            let cz = Math.floor(pi / (cntX * cntY));
+            let cy = Math.floor((pi % (cntX * cntY)) / cntX);
+            let cx = pi % cntX;
+            let x0 = cx * this.mDiv, y0 = cy * this.mDiv, z0 = cz * this.mDiv;
+            let chunkW = Math.min(this.mDiv, this.mBuf.mCount.x - x0);
+            let chunkH = Math.min(this.mDiv, this.mBuf.mCount.y - y0);
+            let chunkPlanes = new Array();
+            for (let m of cells) {
+                let lx = m.x - x0, ly = m.y - y0, lz = m.z - z0;
+                let localBase = (lx + ly * chunkW + lz * chunkW * chunkH) * 6;
+                let globalBase = m.x * 6 + m.y * this.mBuf.mCount.x * 6
+                    + m.z * this.mBuf.mCount.x * this.mBuf.mCount.y * 6;
+                for (let j = 0; j < 6; ++j) {
+                    let plane = this.mPlane[globalBase + j];
+                    plane.mOff = localBase + j;
+                    chunkPlanes.push(plane);
+                }
+            }
+            paint.Rebuild(chunkPlanes);
+        }
+        this.mUpdateModify.clear();
+    }
+    PlaneRefresh(_index) {
+    }
+    IndexOut(_index) {
+        if (_index.x < 0 || _index.x >= this.mBuf.mCount.x || _index.y < 0 || _index.y >= this.mBuf.mCount.y || _index.z < 0 || _index.z >= this.mBuf.mCount.z)
+            return true;
+        return false;
+    }
+    IsBlock(_cim, _add) {
+        let x = _cim.x + _add.x;
+        let y = _cim.y + _add.y;
+        let z = _cim.z + _add.z;
+        if (x < 0 || x >= this.mBuf.mCount.x || y < 0 || y >= this.mBuf.mCount.y ||
+            z < 0 || z >= this.mBuf.mCount.z)
+            return false;
+        return this.mBuf.RGB(x + this.mBuf.mCount.x * y + this.mBuf.mCount.x * this.mBuf.mCount.y * z) != 0;
+    }
+    GetTexCodi(_color, _texCodi) {
+        let tile = this.mTileMap.get(_color);
+        if (tile == null)
+            this.mAtlas.GetUV(0, _texCodi);
+        else
+            this.mAtlas.GetUV(tile.mAtlas, _texCodi);
+    }
+    GetLight(_index, _dir, _light) {
+        let x = _index.x + _dir.x;
+        let y = _index.y + _dir.y;
+        let z = _index.z + _dir.z;
+        _light.x = 1.0;
+        _light.y = 0.0;
+    }
+    RefreshRes() {
+    }
+    Update(_update) {
+        if (this.mUpdateRes)
+            this.RefreshRes();
+        if (this.mUpdateModify.size > 0)
+            this.RefreshModify();
+    }
+    PickBox(_ray) {
+        return null;
+    }
+    Bonds(_index, _data) {
+        if (this.IndexOut(_index))
+            return;
+        this.mBuf.RGB(_index, _data);
+        if (_data == 0) {
+            this.mBuf.RGB(_index, 0);
+            this.mUpdateModify.add(_index.Export());
+            if (this.mBuf.mCount.z != 1) {
+                _index.Add(1, 0, 0);
+                this.mUpdateModify.add(_index.Export());
+                _index.Add(-2, 0, 0);
+                this.mUpdateModify.add(_index.Export());
+                _index.Add(1, 1, 0);
+                this.mUpdateModify.add(_index.Export());
+                _index.Add(0, -2, 0);
+                this.mUpdateModify.add(_index.Export());
+                _index.Add(0, 1, 1);
+                this.mUpdateModify.add(_index.Export());
+                _index.Add(0, 0, -2);
+                this.mUpdateModify.add(_index.Export());
+            }
+            return;
+        }
+        let select = this.mTileMap.get(_data);
+        if (select == null) {
+            CAlert.E("select가 없음");
+            return;
+        }
+        this.mUpdateModify.add(_index.Export());
+        this.RoleChk(_index);
+    }
+    RoleChk(_index) {
+        let data = [16383, 16383, 16383, 16383, 16383, 16383, 16383, 16383, 16383];
+        let ix = new CCIndex();
+        let mo = 0;
+        if (this.mBuf.mCount.z == 1) {
+            for (var y = _index.y + 1; y >= _index.y - 1; --y) {
+                for (var x = _index.x - 1; x <= _index.x + 1; ++x) {
+                    ix.x = x;
+                    ix.y = y;
+                    ix.z = 0;
+                    if (ix.x < 0 || ix.x >= this.mBuf.mCount.x || ix.y < 0 || ix.y >= this.mBuf.mCount.y || ix.z < 0 || ix.z >= this.mBuf.mCount.z) {
+                        mo++;
+                        continue;
+                    }
+                    let off = ix.Offset(this.mBuf.mCount);
+                    data[mo] = this.mBuf.RGB(off);
+                    mo++;
+                }
+            }
+        }
+        else {
+            for (var x = _index.x + 1; x >= _index.x - 1; --x) {
+                for (var z = _index.z - 1; z <= _index.z + 1; ++z) {
+                    ix.x = x;
+                    ix.y = _index.y;
+                    ix.z = z;
+                    if (ix.x < 0 || ix.x >= this.mBuf.mCount.x || ix.y < 0 || ix.y >= this.mBuf.mCount.y || ix.z < 0 || ix.z >= this.mBuf.mCount.z) {
+                        mo++;
+                        continue;
+                    }
+                    let off = ix.Offset(this.mBuf.mCount);
+                    data[mo] = this.mBuf.RGB(off);
+                    mo++;
+                }
+            }
+        }
+        for (let j = 0; j < this.mTileRoleArr.length; ++j) {
+            let modify = true;
+            for (let i = 0; i < 9; ++i) {
+                if (this.mTileRoleArr[j].mRole[i] == 16383 || data[i] == 16383)
+                    continue;
+                else if (data[i] != this.mTileRoleArr[j].mRole[i])
+                    modify = false;
+            }
+            if (modify) {
+                let role = this.mTileRoleArr[j];
+                let off = _index.Offset(this.mBuf.mCount);
+                this.mBuf.RGB(off, role.GetTile());
+                break;
+            }
+        }
+    }
+    EditHTMLInit(_div) {
+        super.EditHTMLInit(_div);
+        var button = document.createElement("button");
+        button.innerText = "VoxelTool";
+        button.onclick = () => {
+            window["VoxelTool"](this);
+        };
+        _div.append(button);
+        var button = document.createElement("button");
+        button.innerText = "BufferTool";
+        button.onclick = () => {
+            window["BufferTool"](this.mBuf.GetBuf(), this.mBuf.mCount, Array.from(this.mTileMap.values()), null, false, true).then(() => {
+                this.mPlane.length = 0;
+                this.mComArr.length = 0;
+                this.mComEnableArr.length = 0;
+                this.mPaintArr.length = 0;
+                this.mPTArr = null;
+                this.mUpdateRes = true;
+            });
+        };
+        _div.append(button);
+    }
+    SetPos(_pos, _reset = true) {
+        super.SetPos(_pos, _reset);
+        this.RemoveComps(CPaintVoxel);
+        this.RemoveComps(CCollider);
+    }
+    static Sun = 5;
+    static Torch = 10;
+    static GSun(_texInfo) {
+        return (_texInfo >>> 25) & 0b111;
+    }
+    static GTorch(_texInfo) {
+        return (_texInfo >>> 28) & 0b1111;
+    }
+    static SSun(_texInfo, _val) {
+        _texInfo &= ~(0b111 << 25);
+        _texInfo |= (_val << 25);
+        return _texInfo;
+    }
+    static STorch(_texInfo, _val) {
+        _texInfo &= ~(0b1111 << 28);
+        _texInfo |= (_val << 28);
+        return _texInfo;
+    }
+}
+import CVoxel_imple from "../../app_imple/subject/CVoxelMap.js";
+import { CColor } from "../../render/CColor.js";
+CVoxel_imple();

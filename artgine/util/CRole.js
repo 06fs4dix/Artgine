@@ -1,1 +1,128 @@
-import{CObject as t}from"../basic/CObject.js";import{CAction as e}from"./CAction.js";import{CCondition as r}from"./CCondition.js";export class CRole extends t{constructor(t=null,e=null){super(),null==t||(t instanceof Array?this.mAnd=t:this.mAnd.push(t)),null==e||(e instanceof Array?this.mExecute=e:this.mExecute.push(e))}mPriority=1e4;mAnd=new Array;mOr=new Array;mExecute=new Array;ImportCJSON(t){let l=t.mDocument,o=null==l.mAnd?l.and:l.mAnd;if(null!=o){this.mAnd.length=0;for(let t of o){let e=new r(null);e.ImportJSON(t),this.mAnd.push(e)}}let i=null==l.mOr?l.or:l.mOr;if(null!=i){this.mOr.length=0;for(let t of i){let e=new r(null);e.ImportJSON(t),this.mOr.push(e)}}this.mPriority=null==l.mPriority?l.priority:l.mPriority;let n=null==l.mExcute?l.exe:l.mExcute;if(null!=n)for(let t of n){let r=new e(null,null);r.ImportJSON(t),this.mExecute.push(r)}return this}IsCondition(t){let e=!0;for(let r of this.mAnd)if(0==r.Excute(t)){e=!1;break}if(0==e)return!1;e=0==this.mOr.length;for(let r of this.mOr)if(1==r.Excute(t)){e=!0;break}return e}}export class CRoleMgr extends t{mRoleArr=new Array;mType="";mStateArr=new Array;constructor(){super()}GetType(){return this.mType}SetStateValue(t,e,r=!0){r?this.Temp(t,e):this[t]=e}PushRole(t){if(t instanceof CRole){for(let e=0;e<this.mRoleArr.length;++e)if(this.mRoleArr[e].mPriority<t.mPriority){this.mRoleArr.splice(e,0,t);break}this.mRoleArr.push(t)}else if(t instanceof Array)for(let e of t){let t=new CRole([],null);t.ImportJSON(e),this.PushRole(t)}else{let e=new CRole([],null);e.ImportJSON(t),this.PushRole(e)}}async Update(t,e){e.Provider(this.mType,this.mStateArr);for(let t of this.mStateArr)this.Temp(t,1);for(let r of this.mRoleArr)if(r.IsCondition(this))for(let l of r.mExecute)l.Excute(e,!1,null,null,"",t);for(let t of this.mStateArr)this.Temp(t,0);this.mStateArr.length=0}}
+import { CObject } from "../basic/CObject.js";
+import { CAction } from "./CAction.js";
+import { CCondition } from "./CCondition.js";
+export class CRole extends CObject {
+    constructor(_and = null, _ex = null) {
+        super();
+        if (_and == null) { }
+        else if (_and instanceof Array)
+            this.mAnd = _and;
+        else
+            this.mAnd.push(_and);
+        if (_ex == null) { }
+        else if (_ex instanceof Array)
+            this.mExecute = _ex;
+        else
+            this.mExecute.push(_ex);
+    }
+    mPriority = 10000;
+    mAnd = new Array;
+    mOr = new Array;
+    mExecute = new Array;
+    ImportCJSON(_json) {
+        let json = _json.mDocument;
+        let and = json["mAnd"] == null ? json["and"] : json["mAnd"];
+        if (and != null) {
+            this.mAnd.length = 0;
+            for (let con of and) {
+                let SMC = new CCondition(null);
+                SMC.ImportJSON(con);
+                this.mAnd.push(SMC);
+            }
+        }
+        let or = json["mOr"] == null ? json["or"] : json["mOr"];
+        if (or != null) {
+            this.mOr.length = 0;
+            for (let con of or) {
+                let SMC = new CCondition(null);
+                SMC.ImportJSON(con);
+                this.mOr.push(SMC);
+            }
+        }
+        this.mPriority = json["mPriority"] == null ? json["priority"] : json["mPriority"];
+        let exe = json["mExcute"] == null ? json["exe"] : json["mExcute"];
+        if (exe != null) {
+            for (let ac of exe) {
+                let sma = new CAction(null, null);
+                sma.ImportJSON(ac);
+                this.mExecute.push(sma);
+            }
+        }
+        return this;
+    }
+    IsCondition(_state) {
+        let execute = true;
+        for (let con of this.mAnd) {
+            if (con.Excute(_state) == false) {
+                execute = false;
+                break;
+            }
+        }
+        if (execute == false)
+            return false;
+        execute = this.mOr.length == 0;
+        for (let con of this.mOr) {
+            if (con.Excute(_state) == true) {
+                execute = true;
+                break;
+            }
+        }
+        return execute;
+    }
+}
+export class CRoleMgr extends CObject {
+    mRoleArr = new Array;
+    mType = "";
+    mStateArr = new Array;
+    constructor() {
+        super();
+    }
+    GetType() { return this.mType; }
+    SetStateValue(_key, _value, _temp = true) {
+        if (_temp)
+            this.Temp(_key, _value);
+        else
+            this[_key] = _value;
+    }
+    PushRole(_p) {
+        if (_p instanceof CRole) {
+            for (let i = 0; i < this.mRoleArr.length; ++i) {
+                if (this.mRoleArr[i].mPriority < _p.mPriority) {
+                    this.mRoleArr.splice(i, 0, _p);
+                    break;
+                }
+            }
+            this.mRoleArr.push(_p);
+        }
+        else if (_p instanceof Array) {
+            for (let json of _p) {
+                let p = new CRole([], null);
+                p.ImportJSON(json);
+                this.PushRole(p);
+            }
+        }
+        else {
+            let p = new CRole([], null);
+            p.ImportJSON(_p);
+            this.PushRole(p);
+        }
+    }
+    async Update(_update, _target) {
+        let stateArr = [];
+        _target.Provider(this.mType, this.mStateArr);
+        for (let key of this.mStateArr) {
+            this.Temp(key, 1);
+        }
+        for (let pat of this.mRoleArr) {
+            if (pat.IsCondition(this)) {
+                for (let ac of pat.mExecute) {
+                    ac.Excute(_target, false, null, null, "", _update);
+                }
+            }
+        }
+        for (let key of this.mStateArr) {
+            this.Temp(key, 0);
+        }
+        this.mStateArr.length = 0;
+    }
+}

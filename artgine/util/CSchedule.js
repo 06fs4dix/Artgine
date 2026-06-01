@@ -1,1 +1,66 @@
-import{CObject as m}from"../basic/CObject.js";import{CTimer as e}from"../system/CTimer.js";export class CSchedule extends m{mDelay=0;mCount=1;mStart=0;mEnd=0;Execute(m=null,e="",t=null){return null==m&&(m=this),CSchedule.Update(m,this.mCount,this.mDelay,this.mStart,this.mEnd,e,t)}IsEndReset(m=null,e=""){return null==m&&(m=this),CSchedule.IsEndReset(m,e)}static Update(m,t=0,T=0,l=0,p=0,n="",s=null){null==m.mTemp&&(m.mTemp={});let u,i=null!=s?s.Offset():0;null==m.mTemp["mTimer"+n]?(m.mTemp["mTimer"+n]=new e,m.mTemp["mCount"+n]=0,m.mTemp["mTime"+n]=0,m.mTemp["mDelay"+n]=0):m.mTemp["mOffset"+n]+1<i&&(m.mTemp["mTimer"+n].Delay(),m.mTemp["mCount"+n]=0,m.mTemp["mTime"+n]=0,m.mTemp["mDelay"+n]=0,m.mTemp["mEnd"+n]=!1),m.mTemp["mOffset"+n]=i,u=m.mTemp["mTimer"+n];let r=u.Delay();return m.mTemp["mDelay"+n]=m.mTemp["mDelay"+n]+r,m.mTemp["mTime"+n]=m.mTemp["mTime"+n]+r,!(0!=T&&m.mTemp["mDelay"+n]<T||m.mTemp["mTime"+n]<l||(0!=p&&m.mTemp["mTime"+n]>p?(m.mTemp["mEnd"+n]=!0,1):(m.mTemp["mDelay"+n]=0,m.mTemp["mCount"+n]=m.mTemp["mCount"+n]+1,0!=t&&m.mTemp["mCount"+n]>t&&(m.mTemp["mEnd"+n]=!0,1))))}static IsEndReset(m,e=""){return null!=m.mTemp&&1==m.mTemp["mEnd"+e]&&(m.mTemp["mOffset"+e]=0,!0)}}
+import { CObject } from "../basic/CObject.js";
+import { CTimer } from "../system/CTimer.js";
+export class CSchedule extends CObject {
+    mDelay = 0;
+    mCount = 1;
+    mStart = 0;
+    mEnd = 0;
+    Execute(_dataTarget = null, _run = "", _update = null) {
+        if (_dataTarget == null)
+            _dataTarget = this;
+        return CSchedule.Update(_dataTarget, this.mCount, this.mDelay, this.mStart, this.mEnd, _run, _update);
+    }
+    IsEndReset(_dataTarget = null, _run = "") {
+        if (_dataTarget == null)
+            _dataTarget = this;
+        return CSchedule.IsEndReset(_dataTarget, _run);
+    }
+    static Update(_dataTarget, count = 0, delay = 0, start = 0, end = 0, _run = "", _update = null) {
+        if (_dataTarget["mTemp"] == null)
+            _dataTarget["mTemp"] = {};
+        let offset = _update != null ? _update.Offset() : 0;
+        let timer;
+        if (_dataTarget["mTemp"]["mTimer" + _run] == null) {
+            _dataTarget["mTemp"]["mTimer" + _run] = new CTimer();
+            _dataTarget["mTemp"]["mCount" + _run] = 0;
+            _dataTarget["mTemp"]["mTime" + _run] = 0;
+            _dataTarget["mTemp"]["mDelay" + _run] = 0;
+        }
+        else if (_dataTarget["mTemp"]["mOffset" + _run] + 1 < offset) {
+            _dataTarget["mTemp"]["mTimer" + _run].Delay();
+            _dataTarget["mTemp"]["mCount" + _run] = 0;
+            _dataTarget["mTemp"]["mTime" + _run] = 0;
+            _dataTarget["mTemp"]["mDelay" + _run] = 0;
+            _dataTarget["mTemp"]["mEnd" + _run] = false;
+        }
+        _dataTarget["mTemp"]["mOffset" + _run] = offset;
+        timer = _dataTarget["mTemp"]["mTimer" + _run];
+        let t = timer.Delay();
+        _dataTarget["mTemp"]["mDelay" + _run] = _dataTarget["mTemp"]["mDelay" + _run] + t;
+        _dataTarget["mTemp"]["mTime" + _run] = _dataTarget["mTemp"]["mTime" + _run] + t;
+        if (delay != 0 && _dataTarget["mTemp"]["mDelay" + _run] < delay)
+            return false;
+        if (_dataTarget["mTemp"]["mTime" + _run] < start)
+            return false;
+        if (end != 0 && _dataTarget["mTemp"]["mTime" + _run] > end) {
+            _dataTarget["mTemp"]["mEnd" + _run] = true;
+            return false;
+        }
+        _dataTarget["mTemp"]["mDelay" + _run] = 0;
+        _dataTarget["mTemp"]["mCount" + _run] = _dataTarget["mTemp"]["mCount" + _run] + 1;
+        if (count != 0 && _dataTarget["mTemp"]["mCount" + _run] > count) {
+            _dataTarget["mTemp"]["mEnd" + _run] = true;
+            return false;
+        }
+        return true;
+    }
+    static IsEndReset(_dataTarget, _run = "") {
+        if (_dataTarget["mTemp"] == null)
+            return false;
+        if (_dataTarget["mTemp"]["mEnd" + _run] == true) {
+            _dataTarget["mTemp"]["mOffset" + _run] = 0;
+            return true;
+        }
+        return false;
+    }
+}

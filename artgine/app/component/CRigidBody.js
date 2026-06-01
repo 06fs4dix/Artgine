@@ -1,1 +1,182 @@
-import{CComponent as r}from"../component/CComponent.js";import{CForce as e}from"./CForce.js";import{CVec3 as t}from"../../geometry/CVec3.js";import{CMath as i}from"../../geometry/CMath.js";import{CPhysics as o}from"../component/CPhysics.js";import{CObject as m}from"../../basic/CObject.js";import{CGeometryComp as s}from"./CGeometryComp.js";export class CRigidBody extends s{mForceArr=new Array;mForceGravity=null;mStopover=null;mGravity=0;mFall=!1;mJump=!1;mMoveDir=new t;mPosUpdate=!0;mFreezePos=new Array(!1,!1,!1);mStartPos=null;mLastDir=t.eDir.Null;Icon(){return"bi bi-person-walking"}SetGravity(r){this.mGravity=r}GetGravity(){return this.mGravity}constructor(){super(),this.mSysc=r.eSysn.Wind}Start(){this.mStartPos=this.GetOwner().GetPos().Export()}EditChange(r){"mGravity"==r.member&&(this.mForceGravity=null,this.Remove("g"))}IsJump(){return this.mJump}IsFall(){return this.mFall}Provider(r,e){for(let r of this.mForceArr){if(e.push("/rigidBody/force/"+r.Key()),"g"==r.Key())continue;let o=[0,0,0,0,0,0];o[t.eDir.Up]=i.V3Dot(t.Up(),r.mDirection),o[t.eDir.Down]=i.V3Dot(t.Down(),r.mDirection),o[t.eDir.Left]=i.V3Dot(t.Left(),r.mDirection),o[t.eDir.Right]=i.V3Dot(t.Right(),r.mDirection),o[t.eDir.Front]=i.V3Dot(t.Front(),r.mDirection),o[t.eDir.Back]=i.V3Dot(t.Back(),r.mDirection);let m=-1,s=0;for(let r=0;r<6;++r)o[r]>s&&(s=o[r],m=r);-1!=m&&(this.mLastDir=m),e.push("/rigidBody/force/"+r.mKey+m)}e.push("/rigidBody/force/"+this.mLastDir),this.IsJump()&&e.push("/rigidBody/force/Jump"),this.IsFall()&&e.push("/rigidBody/force/Fall")}IsShould(r,e){return e==m.eShould.Watch?"mForceArr"==r:"mForceGravity"==r||"mLastDir"!=r&&super.IsShould(r,e)}Update(r){null!=this.GetGI()&&this.GetGI().mFixedComp.Push(this)}GetForceArr(){return this.mForceArr}GetForceArrGravity(){for(let r of this.mForceArr)if(r.mKey==o.GravityKey)return r;return null}Fixed(r){}deltacount=0;Push(r,t=!1){if(null!=r){if(r instanceof Array)for(var i=0;i<r.length;++i)this.Push(r[i]);else if(r instanceof e){if(0==t)for(i=0;i<this.mForceArr.length;++i)if(this.mForceArr[i].mKey==r.mKey)return this.mForceArr[i].Import(r),this.mForceArr[i];this.mForceArr.push(r)}else{this.mStopover=r;for(let r=0;r<this.mForceArr.length;++r)this.mForceArr[r].mKey==this.mStopover.mKey&&(this.mForceArr.splice(r,1),r--)}return r}}Remove(r){for(var e=0;e<this.mForceArr.length;++e)if(this.mForceArr[e].mKey==r+""){this.mForceArr[e]==this.mForceGravity&&(this.mForceGravity=null),this.mForceArr.splice(e,1);break}}Find(r){for(var e=0;e<this.mForceArr.length;++e)if(this.mForceArr[e].mKey==r)return this.mForceArr[e];return null}Clear(){this.mForceArr=new Array,this.mStopover=null,this.mForceGravity=null}MoveDir(r=null){if(null==r)return this.mMoveDir;for(var e=new t,o=0;o<this.mForceArr.length;++o)if(this.mForceArr[o].mKey==r||null==r){var m=i.V3MulFloat(this.mForceArr[o].mDirection,this.mForceArr[o].mVelocity);e=i.V3AddV3(e,m);break}return 0==e.x&&0==e.y&&e.z,e}ResetGravity(){null!=this.mForceGravity&&(this.mForceGravity.mTime=0)}ImportCJSON(r){return this.Remove("g"),super.ImportCJSON(r)}}import n from"../../app_imple/component/CRigidBody.js";n();
+import { CComponent } from "../component/CComponent.js";
+import { CForce } from "./CForce.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CPhysics } from "../component/CPhysics.js";
+import { CObject } from "../../basic/CObject.js";
+import { CGeometryComp } from "./CGeometryComp.js";
+var yPath = true;
+export class CRigidBody extends CGeometryComp {
+    mForceArr = new Array();
+    mForceGravity = null;
+    mStopover = null;
+    mGravity = 0;
+    mFall = false;
+    mJump = false;
+    mMoveDir = new CVec3();
+    mPosUpdate = true;
+    mFreezePos = new Array(false, false, false);
+    mStartPos = null;
+    mLastDir = CVec3.eDir.Null;
+    Icon() { return "bi bi-person-walking"; }
+    SetGravity(_scale) { this.mGravity = _scale; }
+    GetGravity() { return this.mGravity; }
+    constructor() {
+        super();
+        this.mSysc = CComponent.eSysn.Wind;
+    }
+    Start() {
+        this.mStartPos = this.GetOwner().GetPos().Export();
+    }
+    EditChange(_pointer) {
+        if (_pointer.member == "mGravity") {
+            this.mForceGravity = null;
+            this.Remove("g");
+        }
+    }
+    IsJump() {
+        return this.mJump;
+    }
+    IsFall() {
+        return this.mFall;
+    }
+    Provider(_type, _state) {
+        for (let f of this.mForceArr) {
+            _state.push("/rigidBody/force/" + f.Key());
+            if (f.Key() == "g")
+                continue;
+            let dirDot = [0, 0, 0, 0, 0, 0];
+            dirDot[CVec3.eDir.Up] = CMath.V3Dot(CVec3.Up(), f.mDirection);
+            dirDot[CVec3.eDir.Down] = CMath.V3Dot(CVec3.Down(), f.mDirection);
+            dirDot[CVec3.eDir.Left] = CMath.V3Dot(CVec3.Left(), f.mDirection);
+            dirDot[CVec3.eDir.Right] = CMath.V3Dot(CVec3.Right(), f.mDirection);
+            dirDot[CVec3.eDir.Front] = CMath.V3Dot(CVec3.Front(), f.mDirection);
+            dirDot[CVec3.eDir.Back] = CMath.V3Dot(CVec3.Back(), f.mDirection);
+            let select = -1;
+            let selectMax = 0;
+            for (let i = 0; i < 6; ++i) {
+                if (dirDot[i] > selectMax) {
+                    selectMax = dirDot[i];
+                    select = i;
+                }
+            }
+            if (select != -1)
+                this.mLastDir = select;
+            _state.push("/rigidBody/force/" + f.mKey + select);
+        }
+        _state.push("/rigidBody/force/" + this.mLastDir);
+        if (this.IsJump())
+            _state.push("/rigidBody/force/Jump");
+        if (this.IsFall())
+            _state.push("/rigidBody/force/Fall");
+    }
+    IsShould(_member, _type) {
+        if (_type == CObject.eShould.Watch) {
+            if (_member == "mForceArr")
+                return true;
+            else
+                return false;
+        }
+        if (_member == "mForceGravity")
+            return true;
+        if (_member == "mLastDir")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    Update(_update) {
+        if (this.GetGI() != null)
+            this.GetGI().mFixedComp.Push(this);
+    }
+    GetForceArr() { return this.mForceArr; }
+    GetForceArrGravity() {
+        for (let each1 of this.mForceArr)
+            if (each1.mKey == CPhysics.GravityKey)
+                return each1;
+        return null;
+    }
+    Fixed(_update) {
+    }
+    deltacount = 0;
+    Push(move, duplication = false) {
+        if (move == null)
+            return;
+        if (move instanceof Array) {
+            for (var i = 0; i < move.length; ++i) {
+                this.Push(move[i]);
+            }
+        }
+        else if (move instanceof CForce) {
+            if (duplication == false) {
+                for (var i = 0; i < this.mForceArr.length; ++i) {
+                    if (this.mForceArr[i].mKey == move.mKey) {
+                        this.mForceArr[i].Import(move);
+                        return this.mForceArr[i];
+                    }
+                }
+            }
+            this.mForceArr.push(move);
+        }
+        else {
+            this.mStopover = move;
+            for (let i = 0; i < this.mForceArr.length; ++i) {
+                if (this.mForceArr[i].mKey == this.mStopover.mKey) {
+                    this.mForceArr.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+        return move;
+    }
+    Remove(_key) {
+        for (var i = 0; i < this.mForceArr.length; ++i) {
+            if (this.mForceArr[i].mKey == (_key + "")) {
+                if (this.mForceArr[i] == this.mForceGravity)
+                    this.mForceGravity = null;
+                this.mForceArr.splice(i, 1);
+                break;
+            }
+        }
+    }
+    Find(_key) {
+        for (var i = 0; i < this.mForceArr.length; ++i) {
+            if (this.mForceArr[i].mKey == _key) {
+                return this.mForceArr[i];
+            }
+        }
+        return null;
+    }
+    Clear() {
+        this.mForceArr = new Array();
+        this.mStopover = null;
+        this.mForceGravity = null;
+    }
+    MoveDir(_key = null) {
+        if (_key == null)
+            return this.mMoveDir;
+        var rVal = new CVec3();
+        for (var i = 0; i < this.mForceArr.length; ++i) {
+            if (this.mForceArr[i].mKey == _key || _key == null) {
+                var dirPower = CMath.V3MulFloat(this.mForceArr[i].mDirection, this.mForceArr[i].mVelocity);
+                rVal = CMath.V3AddV3(rVal, dirPower);
+                break;
+            }
+        }
+        if (rVal.x == 0 && rVal.y == 0 && rVal.z == 0) {
+        }
+        else {
+            rVal = rVal;
+        }
+        return rVal;
+    }
+    ResetGravity() {
+        if (this.mForceGravity != null) {
+            this.mForceGravity.mTime = 0;
+        }
+    }
+    ImportCJSON(_json) {
+        this.Remove("g");
+        return super.ImportCJSON(_json);
+    }
+}
+import CRigidBody_imple from "../../app_imple/component/CRigidBody.js";
+CRigidBody_imple();

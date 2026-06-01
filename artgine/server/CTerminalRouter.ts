@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'child_process';
+import { fileURLToPath } from 'url';
 import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
@@ -30,12 +31,9 @@ GEMINI_API_KEY
 const IS_WIN = process.platform === 'win32';
 let currentCwd = process.cwd();
 
-const SCHEDULES_FILE = path.resolve(process.cwd(), 'ai', 'schedules.json');
-const SCHED_LOG_FILE = path.resolve(process.cwd(), 'ai', 'sched_debug.log');
+const SCHEDULES_FILE = path.join(CAI.AIDir(), 'schedules.json');
 function schedLog(msg: string) {
-    const line = `[${new Date().toISOString()}] ${msg}\n`;
-    process.stdout.write(line);
-    try { fs.appendFileSync(SCHED_LOG_FILE, line); } catch {}
+    process.stdout.write(`[${new Date().toISOString()}] ${msg}\n`);
 }
 let gScheduleLoading = false;
 
@@ -72,7 +70,7 @@ function dbg(_msg: string) { /* disabled */ }
 
 // ttyd 바이너리 정보 및 다운로드 경로 설정
 const TTYD_VERSION = "1.7.7";
-const BIN_DIR = path.resolve(process.cwd(), 'artgine', 'external', 'bin');
+const BIN_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'external', 'bin');
 
 function getTtydFileName() {
     if (IS_WIN) return 'ttyd.win32.exe';
@@ -326,10 +324,7 @@ async function startTtyd(mode: 'cmd' | CAI.eProvider, cwd?: string, allow?: stri
     if (mode !== 'cmd') {
         const built = await CAI.Terminal(mode, mcp, resolvedAllowDir, port);
         policyFile = built.policyFile;
-        // Windows allow 케이스: ttyd가 shell을 통해 policy 파일을 실행
-        if (IS_WIN && resolvedAllowDir && mode === CAI.eProvider.claude) {
-            args = ['-p', String(port), '-i', '127.0.0.1', '--writable', '-t', 'scrollback=20000', shellCmd, shellArg, ...built.args];
-        } else if (IS_WIN && mode !== CAI.eProvider.codex) {
+        if (IS_WIN) {
             args = ['-p', String(port), '-i', '127.0.0.1', '--writable', '-t', 'scrollback=20000', shellCmd, shellArg, ...built.args];
         } else {
             args = ['-p', String(port), '-i', '127.0.0.1', '--writable', '-t', 'scrollback=20000', ...built.args];
@@ -465,13 +460,13 @@ function connectToTtyd(port: number, retries = 20): void {
     });
 }
 
-const _termSvrDir = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')));
+const _termSvrDir = path.dirname(fileURLToPath(import.meta.url));
 const _cmdHtmlPath = path.resolve(process.cwd(), 'proj', 'Home', 'AI', 'Terminal.html');
 
 const _termUiHtmlPath = path.join(_termSvrDir, 'terminal_ui.html');
 
 function _loadSkills(): { name: string; content: string }[] {
-    const skillDir = path.resolve(process.cwd(), 'ai', 'skill');
+    const skillDir = path.join(CAI.AIDir(), 'skill');
     if (!fs.existsSync(skillDir)) return [];
     return fs.readdirSync(skillDir)
         .filter(f => f.endsWith('.md'))
@@ -747,8 +742,6 @@ export class CTerminalRouter extends CAuthServer {
                     } else {
                         entry.clients.add(clientWs);
                         clientWs.on('message', (data) => {
-                            const buf = Buffer.isBuffer(data) ? data : Buffer.from(String(data));
-                            schedLog(`BROWSER→TTYD hex=${buf.toString('hex')} text=${JSON.stringify(buf.toString())}`);
                             if (entry.serverWs && entry.serverWs.readyState === WebSocket.OPEN)
                                 entry.serverWs.send(data as Buffer);
                         });

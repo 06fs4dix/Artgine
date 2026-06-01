@@ -1,1 +1,524 @@
-import{CClass as t}from"./CClass.js";import{CDOM as e}from"./CDOM.js";import{CEvent as i}from"./CEvent.js";import{CString as s}from"./CString.js";import{CUniqueID as n}from"./CUniqueID.js";export class CDrop{mFiles;mPaths;mObject;mX;mY}export class CModalTitleBar{constructor(t,e,s=null){this.mParent=t,this.mKey=e,this.mEvent=i.ToCEvent(s)}mParent="";mKey="";mEvent}var l=-1;export class CModal{static FindModal(t){return null}static GetModalList(){return null}static Index(){return l}mESC=!0;mResizeObserver;mKey="";mSort=CModal.eSort.Auto;mZIndex=0;mParent=null;mCloseToHide=!1;mOT=null;mOL=null;mOW=0;mOH=0;mCard=null;mHeader=null;mBody=null;mBodyStyle="card-body p-2 overflow-auto";mFooter=null;mOverlayDiv=null;mBodyClose=!1;mTitle=CModal.eTitle.TextFullClose;mHelp=null;mDrag=!0;mLimitPush=!1;mFull=!1;mResize=!0;mOverlay=!1;mHeaderData=null;mBodyData=null;mFooterData=null;mBG=null;mWindow=null;mEventMap=new Map;mShow=!0;mDebugMode=null;mPause=!0;constructor(t=null){this.mKey=t,null==this.mKey&&(this.mTitle=CModal.eTitle.None,this.mResize=!1,this.mLimitPush=!0),this.mZIndex=l,l-=1}SetHelp(t){this.mHelp=t}SetParent(t){this.mParent=t}Get(e,i){let n=this;const l=Array.isArray(e)?e:e.split(".");for(let e of l){if(e.includes("(")){const i=s.FunctionAnalyze(e);null!=n?.[i.function]?(n=t.Call(n,i.function,i.parameter),Array.isArray(n)&&1===n.length&&(n=n[0])):n=null}else if(e.includes("[")){const t=Number(e.substring(e.indexOf("[")+1,e.length-1));n=n?.[t]}else n=n?.[e];if(null==n)break}return n??i}Set(e,i){var n=this;if(e instanceof Array){if(0==e.length)return this}else e=e.split(".");for(var l=0;l<e.length-1;++l){if(-1!=e[l].indexOf("(")){var o=s.FunctionAnalyze(e[l]);null!=n[o.function]&&(n=t.Call(n,o.function,o.parameter))instanceof Array&&1==n.length&&(n=n[0])}else if(-1!=e[l].indexOf("[")){let t=e[l].indexOf("[");n=n[Number(e[l].substring(t+1,e[l].length-1))]}else n=n[e[l]];if(null==n)break}if(-1!=e[e.length-1].indexOf("[")){let t=e[l].indexOf("[");n[Number(e[l].substring(t+1,e[l].length-1))]=i}else n[e[e.length-1]]=i;return this}Call(e,i){t.Call(this,e,i)}static Get(e,i){let n=this;const l=Array.isArray(e)?e:e.split(".");for(let e of l){if(e.includes("(")){const i=s.FunctionAnalyze(e);null!=n?.[i.function]?(n=t.Call(n,i.function,i.parameter),Array.isArray(n)&&1===n.length&&(n=n[0])):n=null}else if(e.includes("[")){const t=Number(e.substring(e.indexOf("[")+1,e.length-1));n=n?.[t]}else n=n?.[e];if(null==n)break}return n??i}On(t,e,s=null){this.mEventMap.set(t,i.ToCEvent(e))}Off(t,e){}GetEvent(t,e=null){return this.mEventMap.get(t)}IsShow(){return this.mShow}SetCloseToHide(t){this.mCloseToHide=t}SetCloseEsc(t){this.mESC=t}IsPause(){return this.mPause}Update(t){}Key(){return null==this.mKey&&(this.mKey=n.Get()),this.mKey}SetPause(t){this.mPause=t}SetBG(t){this.mBG=t}SetBodyClose(t){this.mBodyClose=t}SetResize(t){this.mResize=t}SetBody(t){null==this.mBody?this.mBodyData=t:(this.mBody.innerHTML="",this.mBody.append(e.DataToDom(t)))}SetFooter(t){null==this.mFooter?this.mFooterData=t:(this.mFooter.innerHTML="",this.mFooter.append(e.DataToDom(t)))}SetHeader(t){null==this.mHeader?this.mHeaderData=t:"string"==typeof t?this.mHeader.innerHTML=t:(this.mHeader.innerHTML="",this.mHeader.append(t))}SetZIndex(t,e=1e3){switch(this.mSort=t,t){case CModal.eSort.Manual:this.mZIndex=e;break;case CModal.eSort.Auto:this.mZIndex=this.mZIndex;break;case CModal.eSort.Top:this.mZIndex=CModal.eSort.Top}this.Focus()}FullSwitch(t=null){}SetOverlay(t){this.mOverlay=t}SetSize(t,e){if("string"==typeof t&&t.endsWith("%")){const e=parseFloat(t)/100;t=window.innerWidth*e}if("string"==typeof e&&e.endsWith("%")){const t=parseFloat(e)/100;e=window.innerHeight*t}this.mOW=t,this.mOH=e,this.mAutoW=!1,this.mAutoH=!1,null!=this.mCard&&(this.mCard.style.width=this.mOW+"px",this.mCard.style.maxWidth=this.mOW+"px",this.mCard.style.height=this.mOH+"px",this.mCard.style.maxHeight=this.mOH+"px",this.mLimitPush&&this.LimitPushChk())}GetBody(){return this.mBody}GetHeader(){return this.mHeader}SetTitle(t){this.mTitle=t}Close(t=0){}Hide(t=300){this.mShow=!1,null!=this.mOverlayDiv&&(this.mOverlayDiv.style.display="none"),this.mCard&&(this.mCard.style.transition=`opacity ${t}ms ease-out, transform ${t}ms ease-out`,this.mCard.style.opacity="0",this.mCard.style.transform="scale(0.95)",0==t?this.mCard.style.display="none":setTimeout(()=>{null!=this.mCard&&(this.mCard.style.display="none")},t))}Show(){this.mShow||(this.mShow=!0,null!=this.mOverlayDiv&&(this.mOverlayDiv.style.display=""),this.mCard&&(this.mCard.style.display="",setTimeout(()=>{null!=this.mCard&&(this.mCard.style.opacity="1",this.mCard.style.transform="scale(1)",this.mBody.style.width="100%",this.mBody.style.height="100%",this.Focus())},10)))}Open(t=CModal.ePos.Random){}SetPosition(t,e=null){}SetLimitPush(t){this.mLimitPush=t}mAutoW=!1;mAutoH=!1;LimitPushChk(){if(null==this.mCard)return;let t=window.innerWidth,e=window.innerHeight;this.mAutoW?(this.mCard.style.width="",this.mCard.style.maxWidth="",0!=this.mCard.offsetWidth&&(this.mOW=this.mCard.offsetWidth+3)):0==this.mOW&&0!=this.mCard.offsetWidth&&(this.mAutoW=!0,this.mOW=this.mCard.offsetWidth+3),this.mOW>t?(this.mCard.style.width=t+"px",this.mCard.style.left="0px"):(this.mFull?this.mCard.style.width=t+"px":this.mAutoW||0==this.mOW||(this.mCard.style.width=this.mOW+"px"),t<this.mCard.offsetLeft+this.mOW?this.mCard.style.left=t-this.mOW+"px":0>this.mCard.offsetLeft&&(this.mCard.style.left="0px")),this.mAutoH?(this.mCard.style.height="",this.mCard.style.maxHeight="",0!=this.mCard.offsetHeight&&(this.mOH=this.mCard.offsetHeight)):0==this.mOH&&0!=this.mCard.offsetHeight&&(this.mAutoH=!0,this.mOH=this.mCard.offsetHeight),this.mOH>e?(this.mCard.style.height=e+"px",this.mCard.style.top="0px"):(this.mFull?this.mCard.style.height=e+"px":this.mAutoH||0==this.mOH||(this.mCard.style.height=this.mOH+"px"),e<this.mCard.offsetTop+this.mOH?this.mCard.style.top=e-this.mOH+"px":0>this.mCard.offsetTop&&(this.mCard.style.top="0px"))}Focus(t=null){}static ListShow(t=null){}static PushTitleBar(t){}}!function(t){let e,i,s,n;!function(t){t[t.None=-1]="None",t[t.Text=0]="Text",t[t.TextClose=1]="TextClose",t[t.TextFullClose=2]="TextFullClose",t[t.TextMinFullClose=3]="TextMinFullClose",t[t.Window=5]="Window"}(e=t.eTitle||(t.eTitle={})),function(t){t[t.Auto=1e3]="Auto",t[t.Manual=0]="Manual",t[t.Top=1e4]="Top",t[t.ZIndexTool=1200]="ZIndexTool"}(i=t.eSort||(t.eSort={})),function(t){t[t.Center=0]="Center",t[t.Stair=1]="Stair",t[t.Random=2]="Random",t[t.TopLeft=3]="TopLeft",t[t.TopRight=4]="TopRight",t[t.BottomLeft=5]="BottomLeft",t[t.BottomRight=6]="BottomRight"}(s=t.ePos||(t.ePos={})),function(t){t[t.None=0]="None",t[t.Shake=1]="Shake",t[t.FadeIn=2]="FadeIn",t[t.Bounce=3]="Bounce",t[t.SlideUp=4]="SlideUp",t[t.SlideDown=5]="SlideDown"}(n=t.eAction||(t.eAction={}))}(CModal||(CModal={}));export class CConfirm extends CModal{mEventList=new Array;mTextList=new Array;mThemaList=new Array;static List(t,e,i=new Array){let s=new CConfirm;return s.SetBody(t),1==e.length?s.SetConfirm(CConfirm.eConfirm.OK,e,i):2==e.length?s.SetConfirm(CConfirm.eConfirm.YesNo,e,i):s.SetConfirm(CConfirm.eConfirm.List,e,i),s.SetZIndex(CModal.eSort.Top),s.Open(),s}SetConfirm(t,e,s=new Array){if(t==CConfirm.eConfirm.OK)this.mEventList[0]=i.ToCEvent(e[0]),this.mTextList[0]=s[0],null==this.mTextList[0]&&(this.mTextList[0]="OK"),this.mThemaList[0]="btn btn-primary";else if(t==CConfirm.eConfirm.YesNo)this.mEventList[0]=i.ToCEvent(e[0]),this.mTextList[0]=s[0],null==this.mTextList[0]&&(this.mTextList[0]="Yes"),this.mThemaList[0]="btn btn-primary",this.mEventList[1]=i.ToCEvent(e[1]),this.mTextList[1]=s[1],null==this.mTextList[1]&&(this.mTextList[1]="No"),this.mThemaList[1]="btn btn-danger";else for(let t=0;t<s.length;++t)this.mEventList[t]=i.ToCEvent(e[t]),this.mTextList[t]=s[t],this.mThemaList[t]="btn btn-success"}Open(t=CModal.ePos.Center){this.mResize=!1,this.mLimitPush=!0,this.SetFooter(""),this.SetZIndex(CModal.eSort.Top),super.Open(t);let e=document.createElement("div");e.className="d-flex justify-content-between";for(let t=0;t<this.mTextList.length;++t){let i=this.mEventList[t],s=document.createElement("button");s.textContent=this.mTextList[t],s.className=this.mThemaList[t],0!=t&&(s.className+=s.className+" ms-2"),s.onclick=()=>{i&&i.Call(this.mTextList[t]),this.Close()},e.appendChild(s)}this.mFooter.appendChild(e),this.SetPosition(CModal.ePos.Center)}}!function(t){let e;!function(t){t[t.OK=1]="OK",t[t.YesNo=2]="YesNo",t[t.List=3]="List"}(e=t.eConfirm||(t.eConfirm={}))}(CConfirm||(CConfirm={}));import o from"../basic_impl/CModal.js";o();
+import { CClass } from "./CClass.js";
+import { CDOM } from "./CDOM.js";
+import { CEvent } from "./CEvent.js";
+import { CString } from "./CString.js";
+import { CUniqueID } from "./CUniqueID.js";
+export class CDrop {
+    mFiles;
+    mPaths;
+    mObject;
+    mX;
+    mY;
+}
+export class CModalTitleBar {
+    constructor(_parent, _key, _event = null) {
+        this.mParent = _parent;
+        this.mKey = _key;
+        this.mEvent = CEvent.ToCEvent(_event);
+    }
+    mParent = "";
+    mKey = "";
+    mEvent;
+}
+var gIndex = -1;
+export class CModal {
+    static FindModal(_key) {
+        return null;
+    }
+    static GetModalList() {
+        return null;
+    }
+    static Index() { return gIndex; }
+    ;
+    mESC = true;
+    mResizeObserver;
+    mKey = "";
+    mSort = CModal.eSort.Auto;
+    mZIndex = 0;
+    mParent = null;
+    mCloseToHide = false;
+    mOT = null;
+    mOL = null;
+    mOW = 0;
+    mOH = 0;
+    mCard = null;
+    mHeader = null;
+    mBody = null;
+    mBodyStyle = "card-body p-2 overflow-auto";
+    mFooter = null;
+    mOverlayDiv = null;
+    mBodyClose = false;
+    mTitle = CModal.eTitle.TextFullClose;
+    mHelp = null;
+    mDrag = true;
+    mLimitPush = false;
+    mFull = false;
+    mResize = true;
+    mOverlay = false;
+    mHeaderData = null;
+    mBodyData = null;
+    mFooterData = null;
+    mBG = null;
+    mWindow = null;
+    mEventMap = new Map();
+    mShow = true;
+    mDebugMode = null;
+    mPause = true;
+    constructor(_key = null) {
+        this.mKey = _key;
+        if (this.mKey == null) {
+            this.mTitle = CModal.eTitle.None;
+            this.mResize = false;
+            this.mLimitPush = true;
+        }
+        this.mZIndex = gIndex;
+        gIndex -= 1;
+    }
+    SetHelp(_div) {
+        this.mHelp = _div;
+    }
+    SetParent(_div) {
+        this.mParent = _div;
+    }
+    Get(_member, _default) {
+        let t = this;
+        const path = Array.isArray(_member) ? _member : _member.split(".");
+        for (let key of path) {
+            if (key.includes("(")) {
+                const fun = CString.FunctionAnalyze(key);
+                if (t?.[fun.function] != null) {
+                    t = CClass.Call(t, fun.function, fun.parameter);
+                    if (Array.isArray(t) && t.length === 1)
+                        t = t[0];
+                }
+                else {
+                    t = null;
+                }
+            }
+            else if (key.includes("[")) {
+                const index = Number(key.substring(key.indexOf("[") + 1, key.length - 1));
+                t = t?.[index];
+            }
+            else {
+                t = t?.[key];
+            }
+            if (t == null)
+                break;
+        }
+        return t == null ? _default : t;
+    }
+    Set(_member, _value) {
+        var t = this;
+        if (_member instanceof Array) {
+            if (_member.length == 0)
+                return this;
+        }
+        else {
+            _member = _member.split(".");
+        }
+        for (var i = 0; i < _member.length - 1; ++i) {
+            if (_member[i].indexOf("(") != -1) {
+                var fun = CString.FunctionAnalyze(_member[i]);
+                if (t[fun.function] != null) {
+                    t = CClass.Call(t, fun.function, fun.parameter);
+                    if (t instanceof Array && t.length == 1)
+                        t = t[0];
+                }
+            }
+            else if (_member[i].indexOf("[") != -1) {
+                let off = _member[i].indexOf("[");
+                let index = Number(_member[i].substring(off + 1, _member[i].length - 1));
+                t = t[index];
+            }
+            else
+                t = t[_member[i]];
+            if (t == null)
+                break;
+        }
+        if (_member[_member.length - 1].indexOf("[") != -1) {
+            let off = _member[i].indexOf("[");
+            let index = Number(_member[i].substring(off + 1, _member[i].length - 1));
+            t[index] = _value;
+        }
+        else {
+            t[_member[_member.length - 1]] = _value;
+        }
+        return this;
+    }
+    Call(_function, _para) {
+        CClass.Call(this, _function, _para);
+    }
+    static Get(_member, _default) {
+        let t = this;
+        const path = Array.isArray(_member) ? _member : _member.split(".");
+        for (let key of path) {
+            if (key.includes("(")) {
+                const fun = CString.FunctionAnalyze(key);
+                if (t?.[fun.function] != null) {
+                    t = CClass.Call(t, fun.function, fun.parameter);
+                    if (Array.isArray(t) && t.length === 1)
+                        t = t[0];
+                }
+                else {
+                    t = null;
+                }
+            }
+            else if (key.includes("[")) {
+                const index = Number(key.substring(key.indexOf("[") + 1, key.length - 1));
+                t = t?.[index];
+            }
+            else {
+                t = t?.[key];
+            }
+            if (t == null)
+                break;
+        }
+        return t == null ? _default : t;
+    }
+    On(_key, _event, _target = null) {
+        this.mEventMap.set(_key, CEvent.ToCEvent(_event));
+    }
+    Off(_key, _target) {
+    }
+    GetEvent(_key, _target = null) {
+        return this.mEventMap.get(_key);
+    }
+    IsShow() {
+        return this.mShow;
+    }
+    SetCloseToHide(_enable) {
+        this.mCloseToHide = _enable;
+    }
+    SetCloseEsc(_enable) {
+        this.mESC = _enable;
+    }
+    IsPause() {
+        return this.mPause;
+    }
+    Update(_update) { }
+    Key() {
+        if (this.mKey == null)
+            this.mKey = CUniqueID.Get();
+        return this.mKey;
+    }
+    SetPause(_enable) {
+        this.mPause = _enable;
+    }
+    SetBG(_bg) {
+        this.mBG = _bg;
+    }
+    SetBodyClose(_enable) {
+        this.mBodyClose = _enable;
+    }
+    SetResize(_enable) {
+        this.mResize = _enable;
+    }
+    SetBody(_data) {
+        if (this.mBody == null) {
+            this.mBodyData = _data;
+        }
+        else {
+            this.mBody.innerHTML = "";
+            this.mBody.append(CDOM.DataToDom(_data));
+        }
+    }
+    SetFooter(_data) {
+        if (this.mFooter == null) {
+            this.mFooterData = _data;
+        }
+        else {
+            this.mFooter.innerHTML = "";
+            this.mFooter.append(CDOM.DataToDom(_data));
+        }
+    }
+    SetHeader(_html) {
+        if (this.mHeader == null) {
+            this.mHeaderData = _html;
+        }
+        else {
+            if (typeof _html == "string")
+                this.mHeader.innerHTML = _html;
+            else {
+                this.mHeader.innerHTML = "";
+                this.mHeader.append(_html);
+            }
+        }
+    }
+    SetZIndex(_sort, _index = 1000) {
+        this.mSort = _sort;
+        switch (_sort) {
+            case CModal.eSort.Manual:
+                this.mZIndex = _index;
+                break;
+            case CModal.eSort.Auto:
+                this.mZIndex = this.mZIndex;
+                break;
+            case CModal.eSort.Top:
+                this.mZIndex = CModal.eSort.Top;
+                break;
+        }
+        this.Focus();
+    }
+    FullSwitch(_enable = null) {
+    }
+    SetOverlay(_overlay) {
+        this.mOverlay = _overlay;
+    }
+    SetSize(_width, _height) {
+        if (typeof _width === "string" && _width.endsWith("%")) {
+            const percent = parseFloat(_width) / 100;
+            _width = window.innerWidth * percent;
+        }
+        if (typeof _height === "string" && _height.endsWith("%")) {
+            const percent = parseFloat(_height) / 100;
+            _height = window.innerHeight * percent;
+        }
+        this.mOW = _width;
+        this.mOH = _height;
+        this.mAutoW = false;
+        this.mAutoH = false;
+        if (this.mCard != null) {
+            this.mCard.style.width = this.mOW + "px";
+            this.mCard.style.maxWidth = this.mOW + "px";
+            this.mCard.style.height = this.mOH + "px";
+            this.mCard.style.maxHeight = this.mOH + "px";
+            if (this.mLimitPush)
+                this.LimitPushChk();
+        }
+    }
+    GetBody() { return this.mBody; }
+    GetHeader() { return this.mHeader; }
+    SetTitle(_type) {
+        this.mTitle = _type;
+    }
+    Close(_delayTime = 0) {
+    }
+    Hide(_animationTime = 300) {
+        this.mShow = false;
+        if (this.mOverlayDiv != null)
+            this.mOverlayDiv.style.display = "none";
+        if (this.mCard) {
+            this.mCard.style.transition = `opacity ${_animationTime}ms ease-out, transform ${_animationTime}ms ease-out`;
+            this.mCard.style.opacity = "0";
+            this.mCard.style.transform = "scale(0.95)";
+            if (_animationTime == 0) {
+                this.mCard.style.display = "none";
+            }
+            else {
+                setTimeout(() => {
+                    if (this.mCard != null)
+                        this.mCard.style.display = "none";
+                }, _animationTime);
+            }
+        }
+    }
+    Show() {
+        if (this.mShow)
+            return;
+        this.mShow = true;
+        if (this.mOverlayDiv != null)
+            this.mOverlayDiv.style.display = "";
+        if (this.mCard) {
+            this.mCard.style.display = "";
+            setTimeout(() => {
+                if (this.mCard == null)
+                    return;
+                this.mCard.style.opacity = "1";
+                this.mCard.style.transform = "scale(1)";
+                this.mBody.style.width = "100%";
+                this.mBody.style.height = "100%";
+                this.Focus();
+            }, 10);
+        }
+    }
+    Open(_startPos = CModal.ePos.Random) {
+    }
+    SetPosition(_x, _y = null) {
+    }
+    SetLimitPush(_push) {
+        this.mLimitPush = _push;
+    }
+    mAutoW = false;
+    mAutoH = false;
+    LimitPushChk() {
+        if (this.mCard == null)
+            return;
+        let w = window.innerWidth;
+        let h = window.innerHeight;
+        if (this.mAutoW) {
+            this.mCard.style.width = '';
+            this.mCard.style.maxWidth = '';
+            if (this.mCard.offsetWidth != 0)
+                this.mOW = this.mCard.offsetWidth + 3;
+        }
+        else if (this.mOW == 0 && this.mCard.offsetWidth != 0) {
+            this.mAutoW = true;
+            this.mOW = this.mCard.offsetWidth + 3;
+        }
+        if (this.mOW > w) {
+            this.mCard.style.width = w + "px";
+            this.mCard.style.left = "0px";
+        }
+        else {
+            if (this.mFull)
+                this.mCard.style.width = w + "px";
+            else if (!this.mAutoW && this.mOW != 0)
+                this.mCard.style.width = this.mOW + "px";
+            let right = this.mCard.offsetLeft + this.mOW;
+            if (w < right)
+                this.mCard.style.left = (w - this.mOW) + "px";
+            else if (0 > this.mCard.offsetLeft)
+                this.mCard.style.left = "0px";
+        }
+        if (this.mAutoH) {
+            this.mCard.style.height = '';
+            this.mCard.style.maxHeight = '';
+            if (this.mCard.offsetHeight != 0)
+                this.mOH = this.mCard.offsetHeight;
+        }
+        else if (this.mOH == 0 && this.mCard.offsetHeight != 0) {
+            this.mAutoH = true;
+            this.mOH = this.mCard.offsetHeight;
+        }
+        if (this.mOH > h) {
+            this.mCard.style.height = h + "px";
+            this.mCard.style.top = "0px";
+        }
+        else {
+            if (this.mFull)
+                this.mCard.style.height = h + "px";
+            else if (!this.mAutoH && this.mOH != 0)
+                this.mCard.style.height = this.mOH + "px";
+            let bottom = this.mCard.offsetTop + this.mOH;
+            if (h < bottom)
+                this.mCard.style.top = (h - this.mOH) + "px";
+            else if (0 > this.mCard.offsetTop)
+                this.mCard.style.top = "0px";
+        }
+    }
+    Focus(_action = null) {
+    }
+    static ListShow(_div = null) {
+    }
+    static PushTitleBar(_tb) {
+    }
+}
+(function (CModal) {
+    let eTitle;
+    (function (eTitle) {
+        eTitle[eTitle["None"] = -1] = "None";
+        eTitle[eTitle["Text"] = 0] = "Text";
+        eTitle[eTitle["TextClose"] = 1] = "TextClose";
+        eTitle[eTitle["TextFullClose"] = 2] = "TextFullClose";
+        eTitle[eTitle["TextMinFullClose"] = 3] = "TextMinFullClose";
+        eTitle[eTitle["Window"] = 5] = "Window";
+    })(eTitle = CModal.eTitle || (CModal.eTitle = {}));
+    let eSort;
+    (function (eSort) {
+        eSort[eSort["Auto"] = 1000] = "Auto";
+        eSort[eSort["Manual"] = 0] = "Manual";
+        eSort[eSort["Top"] = 10000] = "Top";
+        eSort[eSort["ZIndexTool"] = 1200] = "ZIndexTool";
+    })(eSort = CModal.eSort || (CModal.eSort = {}));
+    let ePos;
+    (function (ePos) {
+        ePos[ePos["Center"] = 0] = "Center";
+        ePos[ePos["Stair"] = 1] = "Stair";
+        ePos[ePos["Random"] = 2] = "Random";
+        ePos[ePos["TopLeft"] = 3] = "TopLeft";
+        ePos[ePos["TopRight"] = 4] = "TopRight";
+        ePos[ePos["BottomLeft"] = 5] = "BottomLeft";
+        ePos[ePos["BottomRight"] = 6] = "BottomRight";
+    })(ePos = CModal.ePos || (CModal.ePos = {}));
+    let eAction;
+    (function (eAction) {
+        eAction[eAction["None"] = 0] = "None";
+        eAction[eAction["Shake"] = 1] = "Shake";
+        eAction[eAction["FadeIn"] = 2] = "FadeIn";
+        eAction[eAction["Bounce"] = 3] = "Bounce";
+        eAction[eAction["SlideUp"] = 4] = "SlideUp";
+        eAction[eAction["SlideDown"] = 5] = "SlideDown";
+    })(eAction = CModal.eAction || (CModal.eAction = {}));
+})(CModal || (CModal = {}));
+export class CConfirm extends CModal {
+    mEventList = new Array();
+    mTextList = new Array();
+    mThemaList = new Array();
+    static List(_body, _eventList, _text = new Array()) {
+        let list = new CConfirm();
+        list.SetBody(_body);
+        if (_eventList.length == 1)
+            list.SetConfirm(CConfirm.eConfirm.OK, _eventList, _text);
+        else if (_eventList.length == 2)
+            list.SetConfirm(CConfirm.eConfirm.YesNo, _eventList, _text);
+        else
+            list.SetConfirm(CConfirm.eConfirm.List, _eventList, _text);
+        list.SetZIndex(CModal.eSort.Top);
+        list.Open();
+        return list;
+    }
+    SetConfirm(_type, _eventList, _text = new Array()) {
+        if (_type == CConfirm.eConfirm.OK) {
+            this.mEventList[0] = CEvent.ToCEvent(_eventList[0]);
+            this.mTextList[0] = _text[0];
+            if (this.mTextList[0] == null)
+                this.mTextList[0] = "OK";
+            this.mThemaList[0] = "btn btn-primary";
+        }
+        else if (_type == CConfirm.eConfirm.YesNo) {
+            this.mEventList[0] = CEvent.ToCEvent(_eventList[0]);
+            this.mTextList[0] = _text[0];
+            if (this.mTextList[0] == null)
+                this.mTextList[0] = "Yes";
+            this.mThemaList[0] = "btn btn-primary";
+            this.mEventList[1] = CEvent.ToCEvent(_eventList[1]);
+            this.mTextList[1] = _text[1];
+            if (this.mTextList[1] == null)
+                this.mTextList[1] = "No";
+            this.mThemaList[1] = "btn btn-danger";
+        }
+        else {
+            for (let i = 0; i < _text.length; ++i) {
+                this.mEventList[i] = CEvent.ToCEvent(_eventList[i]);
+                this.mTextList[i] = _text[i];
+                this.mThemaList[i] = "btn btn-success";
+            }
+        }
+    }
+    Open(_startPos = CModal.ePos.Center) {
+        this.mResize = false;
+        this.mLimitPush = true;
+        this.SetFooter("");
+        this.SetZIndex(CModal.eSort.Top);
+        super.Open(_startPos);
+        let buttonContainer = document.createElement("div");
+        buttonContainer.className = "d-flex justify-content-between";
+        for (let i = 0; i < this.mTextList.length; ++i) {
+            let event = this.mEventList[i];
+            let button = document.createElement("button");
+            button.textContent = this.mTextList[i];
+            button.className = this.mThemaList[i];
+            if (i != 0)
+                button.className += button.className + " ms-2";
+            button.onclick = () => {
+                if (event) {
+                    event.Call(this.mTextList[i]);
+                }
+                this.Close();
+            };
+            buttonContainer.appendChild(button);
+        }
+        this.mFooter.appendChild(buttonContainer);
+        this.SetPosition(CModal.ePos.Center);
+    }
+}
+(function (CConfirm) {
+    let eConfirm;
+    (function (eConfirm) {
+        eConfirm[eConfirm["OK"] = 1] = "OK";
+        eConfirm[eConfirm["YesNo"] = 2] = "YesNo";
+        eConfirm[eConfirm["List"] = 3] = "List";
+    })(eConfirm = CConfirm.eConfirm || (CConfirm.eConfirm = {}));
+})(CConfirm || (CConfirm = {}));
+import CModal_imple from "../basic_impl/CModal.js";
+CModal_imple();

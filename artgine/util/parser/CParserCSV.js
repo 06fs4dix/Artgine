@@ -1,1 +1,34 @@
-import{CUtil as t}from"../../basic/CUtil.js";import{CFile as s}from"../../system/CFile.js";import{CParser as r}from"./CParser.js";export class CParserCSV extends r{GetResult(){return this.mResult}async Load(r){null==this.mBuffer&&(this.mBuffer=await s.Load(r));let i=[];const e=t.ArrayToString(this.mBuffer).split(/\r?\n/),l=e[0].split(",").map(t=>t.trim()),m={},o=e[0].trim().split(",");for(let t=0;t<l.length;t++)m[t]=o[t]?.trim()??"";i.push(m);for(let t=1;t<e.length;t++){const s=e[t].trim();if(!s)continue;const r=s.split(","),m={};for(let t=0;t<l.length;t++)m[l[t]]=r[t]?.trim()??"";i.push(m)}this.mResult=i}}
+import { CUtil } from "../../basic/CUtil.js";
+import { CFile } from "../../system/CFile.js";
+import { CParser } from "./CParser.js";
+export class CParserCSV extends CParser {
+    GetResult() {
+        return this.mResult;
+    }
+    async Load(pa_fileName) {
+        if (this.mBuffer == null) {
+            this.mBuffer = await CFile.Load(pa_fileName);
+        }
+        let arr = [];
+        let str = CUtil.ArrayToString(this.mBuffer);
+        const lines = str.split(/\r?\n/);
+        const headers = lines[0].split(",").map(h => h.trim());
+        const row = {};
+        const line = lines[0].trim();
+        const values = line.split(",");
+        for (let j = 0; j < headers.length; j++)
+            row[j] = values[j]?.trim() ?? "";
+        arr.push(row);
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line)
+                continue;
+            const values = line.split(",");
+            const row = {};
+            for (let j = 0; j < headers.length; j++)
+                row[headers[j]] = values[j]?.trim() ?? "";
+            arr.push(row);
+        }
+        this.mResult = arr;
+    }
+}

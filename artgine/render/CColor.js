@@ -1,1 +1,252 @@
-import{CDOM as t}from"../basic/CDOM.js";import{CUniqueID as o}from"../basic/CUniqueID.js";import{CVec3 as e}from"../geometry/CVec3.js";import{CVec4 as r}from"../geometry/CVec4.js";import{SDF as n}from"../z_file/SDF.js";export class CColor extends r{constructor(t=0,o=0,e=0,r=n.eColorModel.None){super(t,o,e,r),this.Snap(8)}static eModel=n.eColorModel;static eRange={Float:0,Windows:1};static WIN_H_MAX=239;static WIN_SL_MAX=240;GetString(){return this.mF32A[3]==n.eColorModel.HSV||this.mF32A[3]==n.eColorModel.HSVBaseHSPercent?`hsv(${Math.round(360*this.mF32A[0])},${Math.round(100*this.mF32A[1])},${Math.round(100*this.mF32A[2])})`:this.mF32A[3]==n.eColorModel.HSL?`hsl(${Math.round(360*this.mF32A[0])},${Math.round(100*this.mF32A[1])},${Math.round(100*this.mF32A[2])})`:`rgb(${Math.round(255*this.mF32A[0])},${Math.round(255*this.mF32A[1])},${Math.round(255*this.mF32A[2])})`}static Color(t=0,o=0,e=0,r=n.eColorModel.None){return a.mF32A[0]=t,a.mF32A[1]=o,a.mF32A[2]=e,a.mF32A[3]=r,a}static HSVToRGB(t,o,e,r=CColor.eRange.Float){r===CColor.eRange.Windows&&(t/=CColor.WIN_H_MAX,o/=CColor.WIN_SL_MAX,e/=CColor.WIN_SL_MAX);const a=(r,n=(r+6*t)%6)=>e-e*o*Math.max(Math.min(n,4-n,1),0);return new CColor(a(5),a(3),a(1),n.eColorModel.RGBAdd)}static RGBToHSV(t,o,e,r=CColor.eRange.Float){r===CColor.eRange.Windows&&(t/=255,o/=255,e/=255);const a=Math.max(t,o,e),s=a-Math.min(t,o,e);let l=0;return s&&(l=a==t?(o-e)/s+(o<e?6:0):a==o?(e-t)/s+2:(t-o)/s+4),new CColor(l/6,0==a?0:s/a,a,n.eColorModel.HSV)}static HSLToRGB(t,o,e,r=CColor.eRange.Float){r===CColor.eRange.Windows&&(t/=CColor.WIN_H_MAX,o/=CColor.WIN_SL_MAX,e/=CColor.WIN_SL_MAX);const a=o=>(o+12*t)%12,s=o*Math.min(e,1-e),l=t=>e-s*Math.max(-1,Math.min(a(t)-3,Math.min(9-a(t),1)));return new CColor(l(0),l(8),l(4),n.eColorModel.RGBAdd)}static RGBToHSL(t,o,e,r=CColor.eRange.Float){r===CColor.eRange.Windows&&(t/=255,o/=255,e/=255);const a=Math.max(t,o,e),s=Math.min(t,o,e);let l=0,i=0;const C=(a+s)/2;if(a!==s){const r=a-s;i=C>.5?r/(2-a-s):r/(a+s),l=a==t?(o-e)/r+(o<e?6:0):a==o?(e-t)/r+2:(t-o)/r+4,l/=6}return new CColor(l,i,C,n.eColorModel.HSL)}static HSLToHSV(t,o,e,r=CColor.eRange.Float){r===CColor.eRange.Windows&&(t/=CColor.WIN_H_MAX,o/=CColor.WIN_SL_MAX,e/=CColor.WIN_SL_MAX);const a=o*(e<.5?e:1-e);return new CColor(t,0===a?0:2*a/(e+a),e+a,n.eColorModel.HSV)}static HSVToHSL(t,o,e,r=CColor.eRange.Float){r===CColor.eRange.Windows&&(t/=CColor.WIN_H_MAX,o/=CColor.WIN_SL_MAX,e/=CColor.WIN_SL_MAX);const a=(2-o)*e;return new CColor(t,0==a||2==a?0:o*e/(a<=1?a:2-a),a/2,n.eColorModel.HSL)}static RGBToHex(t,o,e,r=null,n=CColor.eRange.Float){return n===CColor.eRange.Float&&(t=Math.round(255*t),o=Math.round(255*o),e=Math.round(255*e)),null==r?(t<<16|o<<8|e)>>>0:(t<<24|o<<16|e<<8|Math.round(255*r))>>>0}static ParseHexString(t){let o=t.trim().replace(/^(0x|#)/i,"");const e=8===o.length;return{value:parseInt(o,16),alpha:e}}static HexToRGB(t,o=!1){if("string"==typeof t){const{value:o,alpha:e}=CColor.ParseHexString(t);return CColor.HexToRGB(o,e)}return 0==o?new CColor((t>>16&255)/255,(t>>8&255)/255,(255&t)/255,n.eColorModel.RGBAdd):new CColor((t>>24&255)/255,(t>>16&255)/255,(t>>8&255)/255,n.eColorModel.RGBAdd)}HexToRGB(t,o=!1){if("string"==typeof t){const{value:o,alpha:e}=CColor.ParseHexString(t);return this.HexToRGB(o,e)}return 0==o?(this.mF32A[0]=(t>>16&255)/255,this.mF32A[1]=(t>>8&255)/255,this.mF32A[2]=(255&t)/255):(this.mF32A[0]=(t>>24&255)/255,this.mF32A[1]=(t>>16&255)/255,this.mF32A[2]=(t>>8&255)/255),this}ToRGB(){const t=n.eColorModel;return this.mF32A[3]==t.HSVBaseHSPercent||this.mF32A[3]==t.HSV?CColor.HSVToRGB(this.mF32A[0],this.mF32A[1],this.mF32A[2]).xyz:this.mF32A[3]==t.HSL?CColor.HSLToRGB(this.mF32A[0],this.mF32A[1],this.mF32A[2]).xyz:this.xyz}ToUInt32(t=null){const o=this.ToRGB(),e=Math.max(0,Math.min(255,Math.round(255*o.x))),r=Math.max(0,Math.min(255,Math.round(255*o.y))),n=Math.max(0,Math.min(255,Math.round(255*o.z)));return null==t?e<<16|r<<8|n:(e<<24|r<<16|n<<8|Math.max(0,Math.min(255,Math.round(255*t))))>>>0}ToHex(t=null){const o=this.ToRGB(),e=Math.max(0,Math.min(255,Math.round(255*o.x))),r=Math.max(0,Math.min(255,Math.round(255*o.y))),n=Math.max(0,Math.min(255,Math.round(255*o.z))),a=t=>t.toString(16).padStart(2,"0");if(null==t)return`${a(e)}${a(r)}${a(n)}`;const s=Math.max(0,Math.min(255,Math.round(255*t)));return`${a(e)}${a(r)}${a(n)}${a(s)}`}EditHTMLInit(r,a=null){super.EditHTMLInit(r,a);const s=this.ToRGB(),l=o.GetHash(),i=Math.max(0,Math.min(255,Math.round(255*s.x))),C=Math.max(0,Math.min(255,Math.round(255*s.y))),h=Math.max(0,Math.min(255,Math.round(255*s.z))),m=`#${i.toString(16).padStart(2,"0")}${C.toString(16).padStart(2,"0")}${h.toString(16).padStart(2,"0")}`;r.append(t.DataToDom({tag:"input",type:"color",class:"form-control form-control-color",id:l+"_color",value:m,onchange:o=>{const r=t.IDValue(l+"_color"),s=parseInt(r.substring(1,3),16)/255,i=parseInt(r.substring(3,5),16)/255,C=parseInt(r.substring(5,7),16)/255,h=new e(s,i,C);this.mF32A[3]==n.eColorModel.HSVBaseHSPercent||this.mF32A[3]==n.eColorModel.HSV?this.xyz=CColor.RGBToHSV(s,i,C).xyz:this.mF32A[3]==n.eColorModel.HSL?this.xyz=CColor.RGBToHSL(s,i,C).xyz:this.xyz=h,this.EditChange(a,!1)}}));const M=[],d=[];for(const[t,o]of Object.entries(n.eColorModel))M.push(t),d.push(o);const c=document.createElement("select");c.className="form-select";for(let t=0;t<M.length;++t){const o=document.createElement("option");o.value=d[t],o.text=M[t],this.mModel==d[t]&&(o.selected=!0),c.add(o)}c.onchange=t=>{const o=t.currentTarget;this.mF32A[3]=d[o.selectedIndex],this.EditChange(a,!1)},r.append(c)}EditChange(t,o){super.EditChange(t,o),"mF32A"==t.member&&3==t.key&&this.EditRefresh()}set r(t){this.mF32A[0]=t}get r(){return this.mF32A[0]}set g(t){this.mF32A[1]=t}get g(){return this.mF32A[1]}set b(t){this.mF32A[2]=t}get b(){return this.mF32A[2]}set mModel(t){this.mF32A[3]=t}get mModel(){return this.mF32A[3]}static black=new CColor(0,0,0);static blue=new CColor(0,0,1);static cyan=new CColor(0,1,1);static gray=new CColor(.5,.5,.5);static green=new CColor(0,1,0);static grey=new CColor(.5,.5,.5);static magenta=new CColor(1,0,1);static red=new CColor(1,0,0);static white=new CColor(1,1,1);static yellow=new CColor(1,.92,.016)}var a=new CColor(0,0,0,0);
+import { CDOM } from "../basic/CDOM.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
+import { CVec3 } from "../geometry/CVec3.js";
+import { CVec4 } from "../geometry/CVec4.js";
+import { SDF } from "../z_file/SDF.js";
+export class CColor extends CVec4 {
+    constructor(_r = 0, _g = 0, _b = 0, _model = SDF.eColorModel.None) {
+        super(_r, _g, _b, _model);
+        this.Snap(8);
+    }
+    static eModel = SDF.eColorModel;
+    static eRange = {
+        Float: 0,
+        Windows: 1,
+    };
+    static WIN_H_MAX = 239;
+    static WIN_SL_MAX = 240;
+    GetString() {
+        if (this.mF32A[3] == SDF.eColorModel.HSV || this.mF32A[3] == SDF.eColorModel.HSVBaseHSPercent)
+            return `hsv(${Math.round(360 * this.mF32A[0])},${Math.round(100 * this.mF32A[1])},${Math.round(100 * this.mF32A[2])})`;
+        if (this.mF32A[3] == SDF.eColorModel.HSL)
+            return `hsl(${Math.round(360 * this.mF32A[0])},${Math.round(100 * this.mF32A[1])},${Math.round(100 * this.mF32A[2])})`;
+        return `rgb(${Math.round(255 * this.mF32A[0])},${Math.round(255 * this.mF32A[1])},${Math.round(255 * this.mF32A[2])})`;
+    }
+    static Color(_r = 0, _g = 0, _b = 0, _model = SDF.eColorModel.None) {
+        gColor.mF32A[0] = _r;
+        gColor.mF32A[1] = _g;
+        gColor.mF32A[2] = _b;
+        gColor.mF32A[3] = _model;
+        return gColor;
+    }
+    static HSVToRGB(_h, _s, _v, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Windows) {
+            _h /= CColor.WIN_H_MAX;
+            _s /= CColor.WIN_SL_MAX;
+            _v /= CColor.WIN_SL_MAX;
+        }
+        const f = (n, k = (n + _h * 6) % 6) => _v - _v * _s * Math.max(Math.min(k, 4 - k, 1), 0);
+        return new CColor(f(5), f(3), f(1), SDF.eColorModel.RGBAdd);
+    }
+    static RGBToHSV(_r, _g, _b, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Windows) {
+            _r /= 255;
+            _g /= 255;
+            _b /= 255;
+        }
+        const max = Math.max(_r, _g, _b), min = Math.min(_r, _g, _b);
+        const d = max - min;
+        let h = 0;
+        if (d)
+            h = max == _r ? (_g - _b) / d + (_g < _b ? 6 : 0) : max == _g ? (_b - _r) / d + 2 : (_r - _g) / d + 4;
+        return new CColor(h / 6, max == 0 ? 0 : d / max, max, SDF.eColorModel.HSV);
+    }
+    static HSLToRGB(_h, _s, _l, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Windows) {
+            _h /= CColor.WIN_H_MAX;
+            _s /= CColor.WIN_SL_MAX;
+            _l /= CColor.WIN_SL_MAX;
+        }
+        const k = (n) => (n + _h * 12) % 12;
+        const a = _s * Math.min(_l, 1 - _l);
+        const f = (n) => _l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        return new CColor(f(0), f(8), f(4), SDF.eColorModel.RGBAdd);
+    }
+    static RGBToHSL(_r, _g, _b, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Windows) {
+            _r /= 255;
+            _g /= 255;
+            _b /= 255;
+        }
+        const max = Math.max(_r, _g, _b), min = Math.min(_r, _g, _b);
+        let h = 0, s = 0;
+        const l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            h = max == _r ? (_g - _b) / d + (_g < _b ? 6 : 0) : max == _g ? (_b - _r) / d + 2 : (_r - _g) / d + 4;
+            h /= 6;
+        }
+        return new CColor(h, s, l, SDF.eColorModel.HSL);
+    }
+    static HSLToHSV(_h, _s, _l, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Windows) {
+            _h /= CColor.WIN_H_MAX;
+            _s /= CColor.WIN_SL_MAX;
+            _l /= CColor.WIN_SL_MAX;
+        }
+        const hsv1 = _s * (_l < 0.5 ? _l : 1 - _l);
+        const hsvS = hsv1 === 0 ? 0 : 2 * hsv1 / (_l + hsv1);
+        return new CColor(_h, hsvS, _l + hsv1, SDF.eColorModel.HSV);
+    }
+    static HSVToHSL(_h, _s, _v, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Windows) {
+            _h /= CColor.WIN_H_MAX;
+            _s /= CColor.WIN_SL_MAX;
+            _v /= CColor.WIN_SL_MAX;
+        }
+        const hslL = (2 - _s) * _v;
+        const hslS = hslL == 0 || hslL == 2 ? 0 : _s * _v / (hslL <= 1 ? hslL : 2 - hslL);
+        return new CColor(_h, hslS, hslL / 2, SDF.eColorModel.HSL);
+    }
+    static RGBToHex(_r, _g, _b, _alpha = null, _range = CColor.eRange.Float) {
+        if (_range === CColor.eRange.Float) {
+            _r = Math.round(_r * 255);
+            _g = Math.round(_g * 255);
+            _b = Math.round(_b * 255);
+        }
+        if (_alpha == null)
+            return ((_r << 16) | (_g << 8) | _b) >>> 0;
+        const a = Math.round(_alpha * 255);
+        return ((_r << 24) | (_g << 16) | (_b << 8) | a) >>> 0;
+    }
+    static ParseHexString(_hex) {
+        let str = _hex.trim().replace(/^(0x|#)/i, '');
+        const alpha = str.length === 8;
+        return { value: parseInt(str, 16), alpha };
+    }
+    static HexToRGB(_hex, _alpha = false) {
+        if (typeof _hex === 'string') {
+            const { value, alpha } = CColor.ParseHexString(_hex);
+            return CColor.HexToRGB(value, alpha);
+        }
+        if (_alpha == false) {
+            const r = (_hex >> 16) & 0xFF;
+            const g = (_hex >> 8) & 0xFF;
+            const b = _hex & 0xFF;
+            return new CColor(r / 255, g / 255, b / 255, SDF.eColorModel.RGBAdd);
+        }
+        const r = (_hex >> 24) & 0xFF;
+        const g = (_hex >> 16) & 0xFF;
+        const b = (_hex >> 8) & 0xFF;
+        return new CColor(r / 255, g / 255, b / 255, SDF.eColorModel.RGBAdd);
+    }
+    HexToRGB(_hex, _alpha = false) {
+        if (typeof _hex === 'string') {
+            const { value, alpha } = CColor.ParseHexString(_hex);
+            return this.HexToRGB(value, alpha);
+        }
+        if (_alpha == false) {
+            this.mF32A[0] = ((_hex >> 16) & 0xFF) / 255;
+            this.mF32A[1] = ((_hex >> 8) & 0xFF) / 255;
+            this.mF32A[2] = (_hex & 0xFF) / 255;
+        }
+        else {
+            this.mF32A[0] = ((_hex >> 24) & 0xFF) / 255;
+            this.mF32A[1] = ((_hex >> 16) & 0xFF) / 255;
+            this.mF32A[2] = ((_hex >> 8) & 0xFF) / 255;
+        }
+        return this;
+    }
+    ToRGB() {
+        const e = SDF.eColorModel;
+        if (this.mF32A[3] == e.HSVBaseHSPercent || this.mF32A[3] == e.HSV)
+            return CColor.HSVToRGB(this.mF32A[0], this.mF32A[1], this.mF32A[2]).xyz;
+        if (this.mF32A[3] == e.HSL)
+            return CColor.HSLToRGB(this.mF32A[0], this.mF32A[1], this.mF32A[2]).xyz;
+        return this.xyz;
+    }
+    ToUInt32(_alpha = null) {
+        const rgb = this.ToRGB();
+        const r = Math.max(0, Math.min(255, Math.round(rgb.x * 255)));
+        const g = Math.max(0, Math.min(255, Math.round(rgb.y * 255)));
+        const b = Math.max(0, Math.min(255, Math.round(rgb.z * 255)));
+        if (_alpha == null)
+            return (r << 16) | (g << 8) | b;
+        const a = Math.max(0, Math.min(255, Math.round(_alpha * 255)));
+        return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
+    }
+    ToHex(_alpha = null) {
+        const rgb = this.ToRGB();
+        const r = Math.max(0, Math.min(255, Math.round(rgb.x * 255)));
+        const g = Math.max(0, Math.min(255, Math.round(rgb.y * 255)));
+        const b = Math.max(0, Math.min(255, Math.round(rgb.z * 255)));
+        const hex = (n) => n.toString(16).padStart(2, '0');
+        if (_alpha == null)
+            return `${hex(r)}${hex(g)}${hex(b)}`;
+        const a = Math.max(0, Math.min(255, Math.round(_alpha * 255)));
+        return `${hex(r)}${hex(g)}${hex(b)}${hex(a)}`;
+    }
+    EditHTMLInit(_div, _pointer = null) {
+        super.EditHTMLInit(_div, _pointer);
+        const color = this.ToRGB();
+        const tempKey = CUniqueID.GetHash();
+        const r = Math.max(0, Math.min(255, Math.round(color.x * 255)));
+        const g = Math.max(0, Math.min(255, Math.round(color.y * 255)));
+        const b = Math.max(0, Math.min(255, Math.round(color.z * 255)));
+        const code = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        _div.append(CDOM.DataToDom({
+            "tag": "input", "type": "color", "class": "form-control form-control-color",
+            "id": tempKey + "_color", "value": code,
+            "onchange": (e) => {
+                const value = CDOM.IDValue(tempKey + "_color");
+                const r = parseInt(value.substring(1, 3), 16) / 255;
+                const g = parseInt(value.substring(3, 5), 16) / 255;
+                const b = parseInt(value.substring(5, 7), 16) / 255;
+                const inputColor = new CVec3(r, g, b);
+                if (this.mF32A[3] == SDF.eColorModel.HSVBaseHSPercent || this.mF32A[3] == SDF.eColorModel.HSV)
+                    this.xyz = CColor.RGBToHSV(r, g, b).xyz;
+                else if (this.mF32A[3] == SDF.eColorModel.HSL)
+                    this.xyz = CColor.RGBToHSL(r, g, b).xyz;
+                else
+                    this.xyz = inputColor;
+                this.EditChange(_pointer, false);
+            }
+        }));
+        const textArr = [], valArr = [];
+        for (const [text, val] of Object.entries(SDF.eColorModel)) {
+            textArr.push(text);
+            valArr.push(val);
+        }
+        const select = document.createElement("select");
+        select.className = "form-select";
+        for (let i = 0; i < textArr.length; ++i) {
+            const opt = document.createElement("option");
+            opt.value = valArr[i];
+            opt.text = textArr[i];
+            if (this.mModel == valArr[i])
+                opt.selected = true;
+            select.add(opt);
+        }
+        select.onchange = (_event) => {
+            const ct = _event.currentTarget;
+            this.mF32A[3] = valArr[ct.selectedIndex];
+            this.EditChange(_pointer, false);
+        };
+        _div.append(select);
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.member == "mF32A" && _pointer.key == 3)
+            this.EditRefresh();
+    }
+    set r(_val) { this.mF32A[0] = _val; }
+    get r() { return this.mF32A[0]; }
+    set g(_val) { this.mF32A[1] = _val; }
+    get g() { return this.mF32A[1]; }
+    set b(_val) { this.mF32A[2] = _val; }
+    get b() { return this.mF32A[2]; }
+    set mModel(_val) { this.mF32A[3] = _val; }
+    get mModel() { return this.mF32A[3]; }
+    static black = new CColor(0, 0, 0);
+    static blue = new CColor(0, 0, 1);
+    static cyan = new CColor(0, 1, 1);
+    static gray = new CColor(0.5, 0.5, 0.5);
+    static green = new CColor(0, 1, 0);
+    static grey = new CColor(0.5, 0.5, 0.5);
+    static magenta = new CColor(1, 0, 1);
+    static red = new CColor(1, 0, 0);
+    static white = new CColor(1, 1, 1);
+    static yellow = new CColor(1, 0.92, 0.016);
+}
+var gColor = new CColor(0, 0, 0, 0);

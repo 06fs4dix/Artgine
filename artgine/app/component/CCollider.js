@@ -1,1 +1,358 @@
-import{CComponent as t}from"./CComponent.js";import{CBound as e}from"../../geometry/CBound.js";import{CGJK_EPA as i}from"../../geometry/CGJK_EPA.js";import{CArray as m}from"../../basic/CArray.js";import{CVec3 as a}from"../../geometry/CVec3.js";import{CMath as s}from"../../geometry/CMath.js";import{CTree as r}from"../../basic/CTree.js";import{CMeshCopyNode as n}from"../../render/CMeshCopyNode.js";import{CMeshTreeUpdate as o}from"../../render/CMeshTreeUpdate.js";import{CMat as h}from"../../geometry/CMat.js";import{CUpdate as l}from"../../basic/Basic.js";import{CUtilObj as d}from"../../basic/CUtilObj.js";import{CBoundWorldCollider as u}from"./CBoundWorld.js";import{CGeometryComp as p}from"./CGeometryComp.js";export class CCollisionObject{mTar=null;mOrg=null;mPush=null;constructor(t,e,i){this.mOrg=t,this.mTar=e,this.mPush=i}}export class CCollider extends p{static eEvent={None:0,Trigger:1,Collision:2,Static:3};mPaintLoad=null;mBound=new e;mLayer="";mPickRay=new Set;mCameraOut=null;mCameraOutLast=!1;mCollision=new Set;mPushVec=new a;mElevator=!1;mStairs=!1;mEvent=CCollider.eEvent.Collision;mOneWayDir=new a;mOneWayArc=-1;mGJK=new i;mBW=new u;m2D;mUpdateMat=l.eType.Updated;mColTarget=new m;mColPush=new m;mColPair=new Map;constructor(i=null,m=null,a=!1){super(),this.mRB=m,this.m2D=a,null!=i?this.InitBound(i):this.mBound=new e,this.mSysc=t.eSysn.Collider}Icon(){return"bi bi-sign-railroad"}RegistHeap(t){}EditForm(t,e,i){"mCollision"==t.member||"mGI"==t.member?d.ArrayAddSelectList(t,e,i,[""]):"mCameraOut"==t.member&&d.NullEdit(t,e,i,"")}EditChange(t,e){super.EditChange(t,e),t.IsRef(this.mBound)?(this.InitBound(this.mBound),this.mBW.mBound.mType=this.mBound.mType,this.mUpdateMat=l.eType.Updated):"mLayer"==t.member&&(this.mUpdateMat=l.eType.Updated)}IsShould(t,e){return"mUpdateMat"!=t&&"mGJK"!=t&&"mPaintLoad"!=t&&"mPushVec"!=t&&"mGI"!=t&&"mBW"!=t&&"mColTarget"!=t&&"mColPush"!=t&&"mColPair"!=t&&"mOneWayMap"!=t&&"mRB"!=t&&"mCameraOutLast"!=t&&super.IsShould(t,e)}Export(t=!0,e=!0){let i=super.Export(t,e);return i.Import(this),i.mPaintLoad=this.mPaintLoad,i}ImportCJSON(t){let e=super.ImportCJSON(t);return this.InitBound(this.mBound),t.GetBool("m_pickMouse")&&this.SetPickMouse(!0),t.GetBool("m_cameraOut")&&this.SetCameraOut(!0),e}SetOneWay(t,e=new a(0,1)){this.mOneWayArc=1-t/s.PI(),this.mOneWayDir=e}static MeshToColliderList(t){var e=t,i=new r;i.mData=new n;var m=new Array,a=new Array;for(var s of(o.TreeCopy(e.meshTree,i,new h,m),m)){var l=new CCollider(s);l.PushCollisionLayer(""),a.push(l)}return a}Update(t){null!=this.mGI&&(this.mEvent!=CCollider.eEvent.Static||this.mGI.mOctree.mStaticBuild)&&this.mGI.mFixedComp.Push(this),this.mEvent!=CCollider.eEvent.Static||this.GetOwner().mUpdateMat==l.eType.Not&&this.mUpdateMat==l.eType.Not||0==this.mGI.mOctree.mStaticBuild&&(this.mGI.mOctree.mStaticUpdate=!0,this.mBW.Init(this.mBound,this.mOwner.GetMat())),this.GetOwner().mUpdateRS==l.eType.Not&&0!=this.mBW.mRadian||this.mBW.Init(this.mBound,this.mOwner.GetMat())}BuildGI(){this.UpdateMat(),0!=this.IsEnable()&&""!=this.GetLayer()&&0!=this.GetOwner().IsEnable()&&this.mGI.mOctree.Insert(this.mBW.mPos,this.mBW.mSize,this,this.mBW.mWBound.mMin,this.mBW.mWBound.mMax,this.mEvent==CCollider.eEvent.Static)}GetBW(){return this.mBW}Prefab(t){null!=this.mPaintLoad&&(this.m2D?null!=this.mPaintLoad.GetSize():this.mPaintLoad.GetBound().GetType()!=e.eType.Null)&&(this.InitBound(this.mPaintLoad),this.mPaintLoad=null,this.UpdateMat())}Start(){super.Start(),this.mBW.Init(this.mBound,this.GetOwner().GetMat()),this.mBW.UpdateMat(this.GetOwner().GetMat())}StartChk(){let t=super.StartChk();return null!=this.mPaintLoad&&(this.InitBound(this.mPaintLoad),null!=this.mPaintLoad)?(this.mStartChk=!0,!1):t}SetOwner(t){super.SetOwner(t),null==this.mPaintLoad&&this.InitBound(this.mBound),this.UpdateMat()}InitBound(t){if(this.mBW.mRadian=0,t instanceof e)this.mBound.Import(t);else{if(0==t.IsStart())return void(this.mPaintLoad=t);this.mPaintLoad=null;let e=t.GetBound().Export();this.mBound.Reset(),this.mBound.mMin.Import(e.mMin),this.mBound.mMax.Import(e.mMax),this.mBound.SetType(e.GetType())}this.mUpdateMat=l.eType.Updated,null!=this.GetOwner()&&this.UpdateMat()}SetEvent(t){null==this.mGI||this.mEvent!=CCollider.eEvent.Static&&t!=CCollider.eEvent.Static||(this.mGI.mOctree.mStaticUpdate=!0),this.mEvent=t}SetLayer(t){this.mLayer=t,this.mUpdateMat=l.eType.Updated}GetLayer(){return this.mLayer}GetElevator(){return this.mElevator}SetElevator(t){this.mElevator=t}GetStairs(){return this.mStairs}SetStairs(t){this.mStairs=t}Fixed(t){}SetBoundType(t){this.mBound.SetType(t),this.mBW.mBound.SetType(t)}PushCollisionLayer(t){if("string"==typeof t)this.mCollision.add(t);else for(let e of t)this.mCollision.add(e)}ClearCollisionLayer(){this.mCollision=new Set}SetPickMouse(t){this.mPickRay.add("")}SetCameraOut(t){this.mCameraOut=""}PushPickRay(t){this.mPickRay.add(t)}UpdateMat(){this.mUpdateMat==l.eType.Not&&0==this.GetOwner().mUpdateMat||(this.mBW.UpdateMat(this.GetOwner().GetMat()),this.mUpdateMat==l.eType.Updated&&(this.mUpdateMat=l.eType.Already))}GetCollision(){return this.mCollision}GetBound(){return this.mBound}CollisionChk(t,e,i){return!1}static PushingSphere(t,e){var i=t.GetInRadius(),m=t.GetCenter(),a=e.GetInRadius(),r=e.GetCenter(),n=s.V3SubV3(m,r),o=s.V3Len(n);return n=s.V3Nor(n),(o=i+a-o)<.01?o=0:o+=.01,s.V3MulFloat(n,-o)}static PushingBox(t,e){var i=t,m=e,s=.001,r=new a,n=1e8,o=0;return o=i.mMin.x-m.mMax.x,n>Math.abs(o)&&(o>0?o+=s:o-=s,n=Math.abs(o),r.x=o,r.y=0,r.z=0),o=i.mMax.x-m.mMin.x,n>Math.abs(o)&&(o>0?o+=s:o-=s,n=Math.abs(o),r.x=o,r.y=0,r.z=0),o=i.mMin.y-m.mMax.y,n>Math.abs(o)&&(o>0?o+=s:o-=s,n=Math.abs(o),r.y=o,r.x=0,r.z=0),o=i.mMax.y-m.mMin.y,n>Math.abs(o)&&(o>0?o+=s:o-=s,n=Math.abs(o),r.y=o,r.x=0,r.z=0),o=i.mMin.z-m.mMax.z,n>Math.abs(o)&&(o>0?o+=s:o-=s,n=Math.abs(o),r.z=o,r.x=0,r.y=0),o=i.mMax.z-m.mMin.z,n>Math.abs(o)&&(o>0?o+=s:o-=s,n=Math.abs(o),r.z=o,r.x=0,r.y=0),r}PickChk(t){return null}CameraOutChk(t){return null}mRestitution=0;mRB=null;mOneWayMap=new Map;SetRestitution(t=.5){this.mRestitution=t}GetRestitution(){return this.mRestitution}PushExe(t,e,i,m){}}import C from"../../app_imple/component/CCollider.js";C();
+import { CComponent } from "./CComponent.js";
+import { CBound } from "../../geometry/CBound.js";
+import { CGJK_EPA } from "../../geometry/CGJK_EPA.js";
+import { CArray } from "../../basic/CArray.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CTree } from "../../basic/CTree.js";
+import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
+import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CUpdate } from "../../basic/Basic.js";
+import { CUtilObj } from "../../basic/CUtilObj.js";
+import { CBoundWorldCollider } from "./CBoundWorld.js";
+import { CGeometryComp } from "./CGeometryComp.js";
+export class CCollisionObject {
+    mTar = null;
+    mOrg = null;
+    mPush = null;
+    constructor(_org, _tar, _push) {
+        this.mOrg = _org;
+        this.mTar = _tar;
+        this.mPush = _push;
+    }
+}
+export class CCollider extends CGeometryComp {
+    static eEvent = {
+        None: 0,
+        Trigger: 1,
+        Collision: 2,
+        Static: 3,
+    };
+    mPaintLoad = null;
+    mBound = new CBound;
+    mLayer = "";
+    mPickRay = new Set();
+    mCameraOut = null;
+    mCameraOutLast = false;
+    mCollision = new Set();
+    mPushVec = new CVec3();
+    mElevator = false;
+    mStairs = false;
+    mEvent = CCollider.eEvent.Collision;
+    mOneWayDir = new CVec3();
+    mOneWayArc = -1;
+    mGJK = new CGJK_EPA();
+    mBW = new CBoundWorldCollider();
+    m2D;
+    mUpdateMat = CUpdate.eType.Updated;
+    mColTarget = new CArray();
+    mColPush = new CArray();
+    mColPair = new Map();
+    constructor(_paint = null, _rb = null, _2d = false) {
+        super();
+        this.mRB = _rb;
+        this.m2D = _2d;
+        if (_paint != null)
+            this.InitBound(_paint);
+        else
+            this.mBound = new CBound();
+        this.mSysc = CComponent.eSysn.Collider;
+    }
+    Icon() { return "bi bi-sign-railroad"; }
+    RegistHeap(_F32A) {
+    }
+    EditForm(_pointer, _body, _input) {
+        if (_pointer.member == "mCollision" || _pointer.member == "mGI")
+            CUtilObj.ArrayAddSelectList(_pointer, _body, _input, [""]);
+        else if (_pointer.member == "mCameraOut")
+            CUtilObj.NullEdit(_pointer, _body, _input, "");
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.IsRef(this.mBound)) {
+            this.InitBound(this.mBound);
+            this.mBW.mBound.mType = this.mBound.mType;
+            this.mUpdateMat = CUpdate.eType.Updated;
+        }
+        else if (_pointer.member == "mLayer") {
+            this.mUpdateMat = CUpdate.eType.Updated;
+        }
+    }
+    IsShould(_member, _type) {
+        if (_member == "mUpdateMat" || _member == "mGJK" || _member == "mPaintLoad" ||
+            _member == "mPushVec" || _member == "mGI" || _member == "mBW" ||
+            _member == "mColTarget" || _member == "mColPush" || _member == "mColPair" ||
+            _member == "mOneWayMap" || _member == "mRB" || _member == "mCameraOutLast")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    Export(_copy = true, _resetKey = true) {
+        let dummy = super.Export(_copy, _resetKey);
+        dummy.Import(this);
+        dummy.mPaintLoad = this.mPaintLoad;
+        return dummy;
+    }
+    ImportCJSON(_json) {
+        let wat = super.ImportCJSON(_json);
+        this.InitBound(this.mBound);
+        if ((_json).GetBool("m_pickMouse"))
+            this.SetPickMouse(true);
+        if ((_json).GetBool("m_cameraOut"))
+            this.SetCameraOut(true);
+        return wat;
+    }
+    SetOneWay(_radian, _dir = new CVec3(0, 1)) {
+        this.mOneWayArc = 1 - _radian / CMath.PI();
+        this.mOneWayDir = _dir;
+    }
+    static MeshToColliderList(_mesh) {
+        var lmesh = _mesh;
+        var tree = new CTree();
+        tree.mData = new CMeshCopyNode();
+        var boundList = new Array();
+        var colList = new Array();
+        CMeshTreeUpdate.TreeCopy(lmesh.meshTree, tree, new CMat(), boundList);
+        for (var each0 of boundList) {
+            var col = new CCollider(each0);
+            col.PushCollisionLayer("");
+            colList.push(col);
+        }
+        return colList;
+    }
+    Update(_update) {
+        if (this.mGI != null) {
+            if (this.mEvent != CCollider.eEvent.Static || this.mGI.mOctree.mStaticBuild) {
+                this.mGI.mFixedComp.Push(this);
+            }
+        }
+        if (this.mEvent == CCollider.eEvent.Static && (this.GetOwner().mUpdateMat != CUpdate.eType.Not || this.mUpdateMat != CUpdate.eType.Not)) {
+            if (this.mGI.mOctree.mStaticBuild == false) {
+                this.mGI.mOctree.mStaticUpdate = true;
+                this.mBW.Init(this.mBound, this.mOwner.GetMat());
+            }
+        }
+        if (this.GetOwner().mUpdateRS != CUpdate.eType.Not || this.mBW.mRadian == 0) {
+            this.mBW.Init(this.mBound, this.mOwner.GetMat());
+        }
+    }
+    BuildGI() {
+        this.UpdateMat();
+        if (this.IsEnable() == false || this.GetLayer() == "" || this.GetOwner().IsEnable() == false)
+            return;
+        this.mGI.mOctree.Insert(this.mBW.mPos, this.mBW.mSize, this, this.mBW.mWBound.mMin, this.mBW.mWBound.mMax, this.mEvent == CCollider.eEvent.Static);
+    }
+    GetBW() {
+        return this.mBW;
+    }
+    Prefab(_owner) {
+        if (this.mPaintLoad != null) {
+            if (this.m2D ? this.mPaintLoad.GetSize() != null : this.mPaintLoad.GetBound().GetType() != CBound.eType.Null) {
+                this.InitBound(this.mPaintLoad);
+                this.mPaintLoad = null;
+                this.UpdateMat();
+            }
+        }
+    }
+    Start() {
+        super.Start();
+        this.mBW.Init(this.mBound, this.GetOwner().GetMat());
+        this.mBW.UpdateMat(this.GetOwner().GetMat());
+    }
+    StartChk() {
+        let start = super.StartChk();
+        if (this.mPaintLoad != null) {
+            this.InitBound(this.mPaintLoad);
+            if (this.mPaintLoad != null) {
+                this.mStartChk = true;
+                return false;
+            }
+        }
+        return start;
+    }
+    SetOwner(_obj) {
+        super.SetOwner(_obj);
+        if (this.mPaintLoad == null)
+            this.InitBound(this.mBound);
+        this.UpdateMat();
+    }
+    InitBound(_paint) {
+        this.mBW.mRadian = 0;
+        if (_paint instanceof CBound) {
+            this.mBound.Import(_paint);
+        }
+        else {
+            if (_paint.IsStart() == false) {
+                this.mPaintLoad = _paint;
+                return;
+            }
+            this.mPaintLoad = null;
+            let bound = _paint.GetBound().Export();
+            this.mBound.Reset();
+            this.mBound.mMin.Import(bound.mMin);
+            this.mBound.mMax.Import(bound.mMax);
+            this.mBound.SetType(bound.GetType());
+        }
+        this.mUpdateMat = CUpdate.eType.Updated;
+        if (this.GetOwner() != null)
+            this.UpdateMat();
+    }
+    SetEvent(_event) {
+        if (this.mGI != null && (this.mEvent == CCollider.eEvent.Static || _event == CCollider.eEvent.Static))
+            this.mGI.mOctree.mStaticUpdate = true;
+        this.mEvent = _event;
+    }
+    SetLayer(_key) {
+        this.mLayer = _key;
+        this.mUpdateMat = CUpdate.eType.Updated;
+    }
+    GetLayer() { return this.mLayer; }
+    GetElevator() { return this.mElevator; }
+    SetElevator(_elevator) { this.mElevator = _elevator; }
+    GetStairs() { return this.mStairs; }
+    SetStairs(_stairs) { this.mStairs = _stairs; }
+    Fixed(_update) {
+    }
+    SetBoundType(_type) {
+        this.mBound.SetType(_type);
+        this.mBW.mBound.SetType(_type);
+    }
+    PushCollisionLayer(_val) {
+        if (typeof _val == "string")
+            this.mCollision.add(_val);
+        else {
+            for (let lay of _val) {
+                this.mCollision.add(lay);
+            }
+        }
+    }
+    ClearCollisionLayer() {
+        this.mCollision = new Set();
+    }
+    SetPickMouse(_val) { this.mPickRay.add(""); }
+    SetCameraOut(_val) { this.mCameraOut = ""; }
+    PushPickRay(_val) {
+        this.mPickRay.add(_val);
+    }
+    UpdateMat() {
+        if (this.mUpdateMat != CUpdate.eType.Not || this.GetOwner().mUpdateMat != 0) {
+            this.mBW.UpdateMat(this.GetOwner().GetMat());
+            if (this.mUpdateMat == CUpdate.eType.Updated)
+                this.mUpdateMat = CUpdate.eType.Already;
+        }
+    }
+    GetCollision() {
+        return this.mCollision;
+    }
+    GetBound() {
+        return this.mBound;
+    }
+    CollisionChk(_co, _colTarget, _colPush) {
+        return false;
+    }
+    static PushingSphere(_a, _b) {
+        var aRadius = _a.GetInRadius();
+        var aCenter = _a.GetCenter();
+        var bRadius = _b.GetInRadius();
+        var bCenter = _b.GetCenter();
+        var dir = CMath.V3SubV3(aCenter, bCenter);
+        var len = CMath.V3Len(dir);
+        dir = CMath.V3Nor(dir);
+        len = aRadius + bRadius - len;
+        if (len < 0.01)
+            len = 0.0;
+        else
+            len += 0.01;
+        return CMath.V3MulFloat(dir, -len);
+    }
+    static PushingBox(_a, _b) {
+        var aBound = _a;
+        var bBound = _b;
+        var rate = 0.001;
+        var pushPos = new CVec3();
+        var minVal = 100000000;
+        var val = 0;
+        val = aBound.mMin.x - bBound.mMax.x;
+        if (minVal > Math.abs(val)) {
+            if (val > 0)
+                val += rate;
+            else
+                val -= rate;
+            minVal = Math.abs(val);
+            pushPos.x = val;
+            pushPos.y = 0;
+            pushPos.z = 0;
+        }
+        val = aBound.mMax.x - bBound.mMin.x;
+        if (minVal > Math.abs(val)) {
+            if (val > 0)
+                val += rate;
+            else
+                val -= rate;
+            minVal = Math.abs(val);
+            pushPos.x = val;
+            pushPos.y = 0;
+            pushPos.z = 0;
+        }
+        val = aBound.mMin.y - bBound.mMax.y;
+        if (minVal > Math.abs(val)) {
+            if (val > 0)
+                val += rate;
+            else
+                val -= rate;
+            minVal = Math.abs(val);
+            pushPos.y = val;
+            pushPos.x = 0;
+            pushPos.z = 0;
+        }
+        val = aBound.mMax.y - bBound.mMin.y;
+        if (minVal > Math.abs(val)) {
+            if (val > 0)
+                val += rate;
+            else
+                val -= rate;
+            minVal = Math.abs(val);
+            pushPos.y = val;
+            pushPos.x = 0;
+            pushPos.z = 0;
+        }
+        val = aBound.mMin.z - bBound.mMax.z;
+        if (minVal > Math.abs(val)) {
+            if (val > 0)
+                val += rate;
+            else
+                val -= rate;
+            minVal = Math.abs(val);
+            pushPos.z = val;
+            pushPos.x = 0;
+            pushPos.y = 0;
+        }
+        val = aBound.mMax.z - bBound.mMin.z;
+        if (minVal > Math.abs(val)) {
+            if (val > 0)
+                val += rate;
+            else
+                val -= rate;
+            minVal = Math.abs(val);
+            pushPos.z = val;
+            pushPos.x = 0;
+            pushPos.y = 0;
+        }
+        return pushPos;
+    }
+    PickChk(_tVec3) {
+        return null;
+    }
+    CameraOutChk(_plane) {
+        return null;
+    }
+    mRestitution = 0;
+    mRB = null;
+    mOneWayMap = new Map();
+    SetRestitution(_restitution = 0.5) { this.mRestitution = _restitution; }
+    GetRestitution() { return this.mRestitution; }
+    PushExe(_org, _size, _tar, _push) {
+    }
+}
+import CCollider_imple from "../../app_imple/component/CCollider.js";
+CCollider_imple();

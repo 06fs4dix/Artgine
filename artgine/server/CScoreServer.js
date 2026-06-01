@@ -1,1 +1,67 @@
-var t=this&&this.__decorate||function(t,e,r,o){var n,c=arguments.length,a=c<3?e:null===o?o=Object.getOwnPropertyDescriptor(e,r):o;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)a=Reflect.decorate(t,e,r,o);else for(var i=t.length-1;i>=0;i--)(n=t[i])&&(a=(c<3?n(a):c>3?n(e,r,a):n(e,r))||a);return c>3&&a&&Object.defineProperty(e,r,a),a};import{CPool as e}from"../basic/CPool.js";import{CORMCondition as r,CORMField as o,CORMOption as n}from"../network/CORM.js";import{URLPatterns as c}from"../network/CServerMain.js";import{CServerRouter as a}from"../network/CServerRouter.js";import{CSQLite as i}from"../network/CSQLite.js";e.On("CLocalDB",async()=>{let t=new i;return await t.Init(),t},"Product");let s=await e.ProductAsync("CLocalDB"),l=new Array,u=new n;u.mLimitOffset=0,u.mLimit=1,null==await s.Select("score",l,null,u)&&await s.Send("CREATE TABLE IF NOT EXISTS score (\n\t\t_project TEXT DEFAULT NULL,\n\t\t_nick TEXT DEFAULT NULL,\n\t\t_data DOUBLE DEFAULT NULL,\n\t\t_datetime DATETIME DEFAULT CURRENT_TIMESTAMP\n\t)");let w=class extends a{constructor(){super(),this.On("/CScore/Read",async(t,o,c)=>{let a=t.GetStr("project"),i=t.GetStr("count"),s=t.GetStr("order"),l=await e.ProductAsync("CLocalDB"),u=new Array;u.push(new r("_project","==",a));let w=new n;w.mLimitOffset=0,w.mLimit=Number(i),w.mOrderBy="_data "+s;let m=await l.Select("score",u,null,w),p=JSON.stringify(m);return e.Recycle(l),p}),this.On("/CScore/Write",async(t,r,n)=>{let c=t.GetStr("project"),a=t.GetStr("nick"),i=t.GetDouble("data"),s=await e.ProductAsync("CLocalDB"),l=new Array;l.push(new o("_project",c)),l.push(new o("_nick",a)),l.push(new o("_data",i)),await s.Insert("score",l),e.Recycle(s)})}};w=t([c(["/CScore/Read","/CScore/Write"])],w);export{w as CScoreServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { CPool } from "../basic/CPool.js";
+import { CORMCondition, CORMField, CORMOption } from "../network/CORM.js";
+import { URLPatterns } from "../network/CServerMain.js";
+import { CServerRouter } from "../network/CServerRouter.js";
+import { CSQLite } from "../network/CSQLite.js";
+CPool.On("CLocalDB", async () => {
+    let CLocalDB = new CSQLite();
+    await CLocalDB.Init();
+    return CLocalDB;
+}, "Product");
+let sql = await CPool.ProductAsync("CLocalDB");
+let con = new Array();
+let option = new CORMOption();
+option.mLimitOffset = 0;
+option.mLimit = 1;
+let data = await sql.Select("score", con, null, option);
+if (data == null) {
+    await sql.Send(`CREATE TABLE IF NOT EXISTS score (
+		_project TEXT DEFAULT NULL,
+		_nick TEXT DEFAULT NULL,
+		_data DOUBLE DEFAULT NULL,
+		_datetime DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`);
+}
+let CScoreServer = class CScoreServer extends CServerRouter {
+    constructor() {
+        super();
+        this.On("/CScore/Read", async (_json, _req, _res) => {
+            let project = _json.GetStr("project");
+            let count = _json.GetStr("count");
+            let order = _json.GetStr("order");
+            let sql = await CPool.ProductAsync("CLocalDB");
+            let con = new Array();
+            con.push(new CORMCondition("_project", "==", project));
+            let option = new CORMOption();
+            option.mLimitOffset = 0;
+            option.mLimit = Number(count);
+            option.mOrderBy = "_data " + order;
+            let data = await sql.Select("score", con, null, option);
+            let jsonStr = JSON.stringify(data);
+            CPool.Recycle(sql);
+            return jsonStr;
+        });
+        this.On("/CScore/Write", async (_json, _req, _res) => {
+            let project = _json.GetStr("project");
+            let nick = _json.GetStr("nick");
+            let data = _json.GetDouble("data");
+            let sql = await CPool.ProductAsync("CLocalDB");
+            let fa = new Array();
+            fa.push(new CORMField("_project", project));
+            fa.push(new CORMField("_nick", nick));
+            fa.push(new CORMField("_data", data));
+            await sql.Insert("score", fa);
+            CPool.Recycle(sql);
+        });
+    }
+};
+CScoreServer = __decorate([
+    URLPatterns(["/CScore/Read", "/CScore/Write"])
+], CScoreServer);
+export { CScoreServer };

@@ -131,7 +131,7 @@ export class CUtilWeb {
 			if (processedPaths.has(originalPath)) continue;
 
 			// 이미 절대 URL이면 스킵
-			if (/^https?:\/\//.test(originalPath)) {
+			if (/^https?:\/\//.test(originalPath) || /^[A-Za-z]:\//.test(originalPath) || /^file:\/\/\//.test(originalPath)) {
 				processedPaths.set(originalPath, originalPath);
 				continue;
 			}
@@ -148,8 +148,8 @@ export class CUtilWeb {
 				while (path.startsWith("../")) { count++; path = path.substring(3); }
 				if (path.startsWith("./")) path = path.substring(2);
 
-				if (_github) {
-					// github 모드: 상대경로도 github 루트 기준으로 치환
+				if (_github || path.startsWith("artgine/")) {
+					// artgine 경로: ../개수와 무관하게 루트에서 해석
 					adjustedFullPath = rootBase + "/" + path;
 				} else {
 					const base = count > 0 ? CString.PathSub(fileDir, count) : fileDir;
@@ -160,7 +160,7 @@ export class CUtilWeb {
 				adjustedFullPath = rootBase + "/" + path;
 			}
 
-			_source = _source.replace(originalPath, adjustedFullPath);
+			_source = _source.replaceAll(originalPath, adjustedFullPath);
 			processedPaths.set(originalPath, adjustedFullPath);
 			importPathArr[i] = adjustedFullPath;
 

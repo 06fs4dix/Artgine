@@ -1,1 +1,413 @@
-import{AlphaModalFun as e,ColorModalFun as n,UnpackRGToGray as x}from"./ColorFun";import{ambientColor as y,envCube as r,GetSunInfo as w,ligCol as z,ligCount as a,ligDir as t,LightCac3D as o,ligStep0 as i,ligStep1 as v,ligStep2 as u,ligStep3 as f}from"./Light";import{NoiseGet as c,NoiseNormalGet as d}from"./Noise";import{SDF as h}from"./SDF";import{Build as N,CMat as S,CVec2 as l,CVec3 as m,CVec4 as g,Sam2DToColor as s,V4MulMatCoordi as p,Sam2DSize as R,Sam2DArrToMat as M,Sam2DArrToV4 as b,Sam2DArrTileToColor as C,Sam2DArrTileToNormal as A,Null as T,CMat3 as D,screenPos as F,FloatToInt as L,IntToFloat as P,SaturateFloat as W,MappingTexToV3 as j,max as k,mix as q,step as B,smoothstep as E,floor as G,sqrt as H,clamp as I,V2MulV2 as J,V2DivV2 as K,V2SubV2 as O,V2AddV2 as Q,V2MulFloat as U,V2Abs as V,V2Floor as X,V3AddV3 as Y,V3Dot as Z,V3Nor as $,V3SubV3 as _,V3Mix as ee,V3MulFloat as ne,V3MulV3 as xe,V4Mix as ye,BranchBegin as re,BranchEnd as we,BranchDefault as ze,discard as ae,V2Len as te,Attribute as oe,SaturateV3 as ie,abs as ve,V3Len as ue,min as fe,V2Mix as ce,V2Fract as de}from"./Shader";import{bias as he,calcShadow as Ne,jitter as Se,normalBias as le,PCF as me,shadowBottomCasP1 as ge,shadowCount as se,shadowFarCasP0 as pe,shadowLeftCasV2 as Re,shadowNearCasV0 as Me,shadowOn as be,shadowPointProj as Ce,shadowRate as Ae,shadowReadList as Te,shadowRightCasP2 as De,shadowTopCasV1 as Fe,shadowWrite as Le,texture16f as Pe}from"./Shadow";var We,je,ke,qe,Be,Ee,Ge,He,Ie,Je,Ke=T(),Oe=T(),Qe=T(),Ue=T(),Ve=T(),Xe=T(),Ye=T(),Ze=new g(0,0,0,1),$e=T(),_e=T(),en=T(),nn=T(),xn=T(),yn=T(),rn=oe(0,"time"),wn=new g(0,0,0,0),zn=new m(0,0,0),an=new m(0,.1,.5),tn=new l(0,0),on=new l(2e3,3e3),vn=new l(0,0);function un(e,n,x){return K(O(e.xz,new l(n.x,n.z)),new l(x.x,x.z))}function fn(e,n,x,y){var r=new l(.33,1),w=x*He,z=y*He,a=V(O(new l(n.x,n.z),e.xz)),t=new l((a.x-w)/(z-w),(a.y-w)/(z-w)),o=k(t.x,t.y);return E(r.x,r.y,o)}function cn(e,n,x){var y=O(J(n,x),new l(.5,.5)),r=de(y),w=X(y),z=J(r,r),a=J(z,r),t=Q(Q(Q(U(a,-1/6),U(z,.5)),U(r,-.5)),new l(1/6,1/6)),o=Q(Q(U(a,.5),U(z,-1)),new l(2/3,2/3)),i=Q(Q(Q(U(a,-.5),U(z,.5)),U(r,.5)),new l(1/6,1/6)),v=U(a,1/6),u=Q(t,o),f=Q(i,v),c=Q(K(o,u),new l(-.5,-.5)),d=Q(K(v,f),new l(1.5,1.5)),h=K(Q(w,c),x),N=K(Q(w,new l(d.x,c.y)),x),S=K(Q(w,new l(c.x,d.y)),x),m=K(Q(w,d),x),g=s(e,h),p=s(e,N),R=s(e,S),M=s(e,m),b=ye(R,g,u.y),C=ye(M,p,u.y);return ye(C,b,u.x)}function dn(e){var n=R(1),x=new l(1/n.x,1/n.y),y=J(new l(n.x-1,n.y-1),x);return Q(J(e,y),U(x,.5))}function hn(e){var n=new m(2*e.x-1,0,2*e.y-1);return n.y=H(k(0,1-Z(n,n))),$(n)}function Nn(e,n,x){var y,r=1;return r>0&&e.w>0&&(y=ye(y,C(0,new m(Q(J(n,V(Ie[3].xy)),Ie[3].zw),x+3),.5*B(0,Ie[3].x),.5*B(0,Ie[3].y)),r),r-=e.w),r>0&&e.z>0&&(y=ye(y,C(0,new m(Q(J(n,V(Ie[2].xy)),Ie[2].zw),x+2),.5*B(0,Ie[2].x),.5*B(0,Ie[2].y)),r),r-=e.z),r>0&&e.y>0&&(y=ye(y,C(0,new m(Q(J(n,V(Ie[1].xy)),Ie[1].zw),x+1),.5*B(0,Ie[1].x),.5*B(0,Ie[1].y)),r),r-=e.y),r>0&&e.x>0&&(y=ye(y,C(0,new m(Q(J(n,V(Ie[0].xy)),Ie[0].zw),x+0),.5*B(0,Ie[0].x),.5*B(0,Ie[0].y)),r),r-=e.x),y}function Sn(e,n){var x=d(e,h.eNoise.PerlinNormal);x=$(new m(x.x/10,x.y,x.z/10));var y=new m(0,1,0),r=k(0,Z(x,y)),w=I(0+(r-.9999)/(1-.9999)*.2,0,1);return ne(n,w)}N("Artgine/Shader/Terrain",[],function(e){var n=R(1),y=new m(n.x*Ge,ke,n.y*Ge),r=NaN,w=NaN,z=p(new g(e,1),Ke);z.x=G(z.x/r)*r,z.z=G(z.z/r)*r;var a=z;a.x=G(a.x/w)*w,a.z=G(a.z/w)*w;var t=dn(un(z,je,y)),o=dn(un(a,je,y)),i=cn(1,t,n),v=cn(1,o,n);z.y=x(i.xy)*y.y+je.y,a.y=x(v.xy)*y.y+je.y;var u=hn(new l(i.z,i.w)),f=hn(new l(v.z,v.w)),c=fn(z,_e,r,w);(nn=ye(z,a,c)).y=e.y*y.y,nn.y+=q(z.y,a.y,c),(yn=ee(u,f,c)).y=H(1-W(yn.x*yn.x+yn.z*yn.z)),en=ce(t,o,c);var d=je,h=Y(je,y);(nn.x<d.x||h.x<nn.x||nn.z<d.z||h.z<nn.z)&&(nn.y=d.y),nn.x=I(nn.x,d.x,h.x),nn.z=I(nn.z,d.z,h.z),Ue=p(p(nn,Oe),Qe)},[Ke,Oe,Qe,_e,je,ke,qe,Be,Ee,Ge,He,Ie,Je,0,1],[Ue,en,nn,yn],function(){new g(0,0,0,0);var x,d=-1;re("shadow","S",[We,be]),be>.5&&(x=K(O(F.xy,new l(.5,.5)),We.xy),d=s(h.eTexSlot.SingleShadowRead,x).x),we();var N=s(0,en),S=new g(1,N.xyz),p=Nn(S,en,0);re("colorModel","CM",[Xe]),p.rgb=n(p.rgb,Xe),we(),re("alphaModel","AM",[Ye]),p.a=e(p.a,Ye),we();var R,M,b,C=new D(0),T=new g(1,1,1,1),L=new m(0,1,0),P=(new m(0,1,0),new m(1,1,1));re("light","L",[t,z,a,$e,Ze,i,v,u,f,r,y]),T=Nn(S,en,4),L=j($(function(e,n){var x,y=1;return y>0&&e.w>0&&(x=ye(x,A(0,new m(Q(J(n,V(Ie[3].xy)),Ie[3].zw),11),.5*B(0,Ie[3].x),.5*B(0,Ie[3].y)),y),y-=e.w),y>0&&e.z>0&&(x=ye(x,A(0,new m(Q(J(n,V(Ie[2].xy)),Ie[2].zw),10),.5*B(0,Ie[2].x),.5*B(0,Ie[2].y)),y),y-=e.z),y>0&&e.y>0&&(x=ye(x,A(0,new m(Q(J(n,V(Ie[1].xy)),Ie[1].zw),9),.5*B(0,Ie[1].x),.5*B(0,Ie[1].y)),y),y-=e.y),y>0&&e.x>0&&(x=ye(x,A(0,new m(Q(J(n,V(Ie[0].xy)),Ie[0].zw),8),.5*B(0,Ie[0].x),.5*B(0,Ie[0].y)),y),y-=e.x),x}(S,en).xyz)),M=$(yn),b=new m(L.x,L.z,L.y),M=Y(M,new m(0,1,0)),b=xe(b,new m(-1,1,-1)),L=$(_(ne(M,Z(M,b)/M.y),b)),(C=w())[0],P=C[1],C=o($e,nn,p,L,d,T.y,T.x,T.z,y),p.rgb=Y(C[0],C[1]),we(),Ve=p,re("waterReflect","waterReflect",[wn]),nn.y,wn.x,we(),re("waterRefract","waterRefract",[wn,on,zn,an,tn,1,1,$e,rn,vn,1]),nn.y,wn.x,wn.z,R=function(e,n,x,y){if(0==te(tn))return new m(0,0,0);var r=new m(-tn.x/k(te(tn),1e-6),tn.y/k(te(tn),1e-6),te(tn)*rn*.1),w=ne(e,.001),z=new m(0,1,0),a=new l(z.x,z.z);a=U(a,-.2);var t=function(e,n,x,y){var r=1/128*I(1/(x.y+.1),1,5),w=te(new l(x.x,x.z)),z=w<1e-4?new l(1,1):new l(x.x/w,x.z/w),a=new m(Q(e.xy,U(z,r)),e.z),t=new m(e.xy,e.z),o=new m(Q(e.xy,U(z,-r)),e.z),i=Sn(a,y).x,v=Sn(t,y).y,u=Sn(o,y).z;return new m(i,v,u)}(new m(Q(new l(w.x+a.x,w.z+a.y),U(r.xy,r.z)),3*r.z),0,z,y);return ie(t)}(nn.xyz,0,0,P),Ve.rgb=function(e,n,x){var y=ve(wn.x-x.y),r=1-W(y/wn.y),w=ue(_($e,x.xyz)),z=E(on.x,on.y,w),a=.299*e.x+.587*e.y+.114*e.z,t=fe(wn.z,1*wn.z),o=1-E(0,t,y);if(e=ee(an,ee(e,zn,.1),r),n=ne(n,r*a*(1-o)),e=Y(e,n),e=ee(an,e,.6*(1-z)),o>0){var i=new m(.55,.58,.58),v=te(tn),u=c(new m(x.x/300-tn.x*rn*.5,x.z/300+tn.y*rn*.5,v*rn*.3),h.eNoise.Perlin),f=o*E(.25,1,u);e=Y(e,ne(i,.35*f)),e=ee(e,i,.4*f)}return e}(Ve.rgb,R,nn),we()},[Ve]),N("Artgine/Shader/TerrainShadowWrite",["shadowWrite"],function(e){var n=new S(0),y=new S(0);Le.x<h.eShadow.Cas0+.5?(n=M(Me,Le.y),y=M(pe,Le.y)):Le.x<h.eShadow.Cas1+.5?(n=M(Fe,Le.y),y=M(ge,Le.y)):Le.x<h.eShadow.Cas2+.5&&(n=M(Re,Le.y),y=M(De,Le.y));var r=R(1),w=new m(r.x*Ge,ke,r.y*Ge),z=NaN,a=NaN,t=p(new g(e,1),Ke);t.x=G(t.x/z)*z,t.z=G(t.z/z)*z;var o=t;o.x=G(o.x/a)*a,o.z=G(o.z/a)*a;var i=dn(un(t,je,w)),v=dn(un(o,je,w)),u=cn(1,i,r),f=cn(1,v,r);t.y=x(u.xy)*w.y+je.y,o.y=x(f.xy)*w.y+je.y;var c=fn(t,_e,z,a),d=ye(t,o,c);d.y=e.y*w.y,d.y+=q(t.y,o.y,c),en=ce(i,v,c);var N=je,l=Y(je,w);(d.x<N.x||l.x<d.x||d.z<N.z||l.z<d.z)&&(d.y=N.y),d.x=I(d.x,N.x,l.x),d.z=I(d.z,N.z,l.z),xn=p(d,n),(Ue=p(xn,y)).z=k(Ue.z,0)},[Ke,Oe,Qe,_e,je,ke,qe,Be,Ee,Ge,He,Ie,Je,0,1,Me,pe,Fe,ge,Re,De,Le,se,Ce,Te],[Ue,xn,en],function(){Ve=xn},[Ve]),N("Artgine/Shader/TerrainShadowRead",["shadowRead"],function(e){var n=R(1),y=new m(n.x*Ge,ke,n.y*Ge),r=NaN,w=NaN,z=p(new g(e,1),Ke);z.x=G(z.x/r)*r,z.z=G(z.z/r)*r;var a=z;a.x=G(a.x/w)*w,a.z=G(a.z/w)*w;var t=dn(un(z,je,y)),o=dn(un(a,je,y)),i=cn(1,t,n),v=cn(1,o,n);z.y=x(i.xy)*y.y+je.y,a.y=x(v.xy)*y.y+je.y;var u=hn(new l(i.z,i.w)),f=hn(new l(v.z,v.w)),c=fn(z,_e,r,w);(nn=ye(z,a,c)).y=e.y*y.y,nn.y+=q(z.y,a.y,c),(yn=ee(u,f,c)).y=H(1-W(yn.x*yn.x+yn.z*yn.z)),en=ce(t,o,c);var d=je,h=Y(je,y);(nn.x<d.x||h.x<nn.x||nn.z<d.z||h.z<nn.z)&&(nn.y=d.y),nn.x=I(nn.x,d.x,h.x),nn.z=I(nn.z,d.z,h.z),Ue=p(p(nn,Oe),Qe)},[Ke,Oe,Qe,_e,je,ke,qe,Be,Ee,Ge,He,Ie,Je,0,1,Me,pe,Fe,ge,Re,De,Le,se,Ce,Te,Ae,me,Pe,he,le,Se],[Ue,en,nn,yn],function(){var e,n=0;re("shadowMulti","SDM",[]);for(var x=0;x<L(se);x++)e=b(Te,x),n+=Ne(e,P(x),yn,nn);(n/=se)<0&&(n=0),ze(),e=b(Te,0),n=Ne(e,0,yn,nn),we(),Ve=new g(n,n,n,1)},[Ve]);
+import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
+import { ambientColor, envCube, EnvmapApprox, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
+import { NoiseGet, NoiseNormalGet } from "./Noise";
+import { SDF } from "./SDF";
+import { Build, CMat, CVec2, CVec3, CVec4, Sam2DToColor, V4MulMatCoordi, Sam2DSize, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrTileToColor, Sam2DArrTileToNormal, Null, CMat3, screenPos, FloatToInt, IntToFloat, SaturateFloat, MappingTexToV3, max, mix, step, smoothstep, floor, sqrt, clamp, V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor, V3AddV3, V3Dot, V3Nor, V3SubV3, V3Mix, V3MulFloat, V3MulV3, V4Mix, BranchBegin, BranchEnd, BranchDefault, discard, V2Len, Attribute, SaturateV3, abs, V3Len, min, V2Mix, V2Fract, } from "./Shader";
+import { bias, calcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
+var worldMat = Null();
+var viewMat = Null();
+var projectMat = Null();
+var out_position = Null();
+var out_color = Null();
+var colorModel = Null();
+var alphaModel = Null();
+var material = new CVec4(0.0, 0.0, 0.0, 1.0);
+var screenSize;
+var camPos = Null();
+var camMain = Null();
+var terrainOffset;
+var terrainHeight;
+var level;
+var levelRepeat;
+var levelScale;
+var cellSize;
+var cellCount;
+var splatMatTexCodi;
+var heightScale;
+var splatSampler2D = 0.0;
+var heightSampler2D = 1.0;
+var to_uv = Null();
+var to_worldPos = Null();
+var to_viewPos = Null();
+var to_normal = Null();
+var time = Attribute(0, "time");
+var waterDeep = new CVec4(0.0, 0.0, 0.0, 0.0);
+var shallowColor = new CVec3(0.0, 0.0, 0.0);
+var deepColor = new CVec3(0.0, 0.1, 0.5);
+var causticFlowDir = new CVec2(0.0, 0.0);
+var causticFlowFreq = 1.0;
+var waterHeight = 1.0;
+var waterUnderFadeDist = new CVec2(2000.0, 3000.0);
+var normalflowDir = new CVec2(0.0, 0.0);
+var normalRange = 1.0;
+Build("Artgine/Shader/Terrain", [], vs_main, [
+    worldMat, viewMat, projectMat, camMain,
+    terrainOffset, terrainHeight,
+    level, levelRepeat, levelScale,
+    cellSize, cellCount, splatMatTexCodi, heightScale,
+    splatSampler2D, heightSampler2D
+], [out_position, to_uv, to_worldPos, to_normal], ps_main, [out_color]);
+Build("Artgine/Shader/TerrainShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
+    worldMat, viewMat, projectMat, camMain,
+    terrainOffset, terrainHeight,
+    level, levelRepeat, levelScale,
+    cellSize, cellCount, splatMatTexCodi, heightScale,
+    splatSampler2D, heightSampler2D,
+    shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite, shadowCount, shadowPointProj, shadowReadList
+], [out_position, to_viewPos, to_uv], ps_main_shadow_write, [out_color]);
+Build("Artgine/Shader/TerrainShadowRead", ["shadowRead"], vs_main_shadow_read, [
+    worldMat, viewMat, projectMat, camMain,
+    terrainOffset, terrainHeight,
+    level, levelRepeat, levelScale,
+    cellSize, cellCount, splatMatTexCodi, heightScale,
+    splatSampler2D, heightSampler2D,
+    shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowWrite, shadowCount, shadowPointProj, shadowReadList,
+    shadowRate, PCF, texture16f, bias, normalBias, jitter
+], [out_position, to_uv, to_worldPos, to_normal], ps_main_shadow_read, [out_color]);
+function WorldToUV(_worldPos, _off, _size) {
+    return V2DivV2(V2SubV2(_worldPos.xz, new CVec2(_off.x, _off.z)), new CVec2(_size.x, _size.z));
+}
+function GetMorphLerpK(_world, _camPos, _cellSize, _pCellSize) {
+    var distRatio = new CVec2(0.33, 1.00);
+    var prevLODSize = _cellSize * cellCount;
+    var curLODRadius = _pCellSize * cellCount;
+    var dist = V2Abs(V2SubV2(new CVec2(_camPos.x, _camPos.z), _world.xz));
+    var alpha = new CVec2((dist.x - prevLODSize) / (curLODRadius - prevLODSize), (dist.y - prevLODSize) / (curLODRadius - prevLODSize));
+    var rawAlpha = max(alpha.x, alpha.y);
+    return smoothstep(distRatio.x, distRatio.y, rawAlpha);
+}
+function Sam2DLODBiCubicToColor(_texOff, _uv, _texSize) {
+    var texelPos = V2SubV2(V2MulV2(_uv, _texSize), new CVec2(0.5, 0.5));
+    var f = V2Fract(texelPos);
+    var idx = V2Floor(texelPos);
+    var f2 = V2MulV2(f, f);
+    var f3 = V2MulV2(f2, f);
+    var k0 = V2AddV2(V2AddV2(V2AddV2(V2MulFloat(f3, -1.0 / 6.0), V2MulFloat(f2, 0.5)), V2MulFloat(f, -0.5)), new CVec2(1.0 / 6.0, 1.0 / 6.0));
+    var k1 = V2AddV2(V2AddV2(V2MulFloat(f3, 0.5), V2MulFloat(f2, -1.0)), new CVec2(2.0 / 3.0, 2.0 / 3.0));
+    var k2 = V2AddV2(V2AddV2(V2AddV2(V2MulFloat(f3, -0.5), V2MulFloat(f2, 0.5)), V2MulFloat(f, 0.5)), new CVec2(1.0 / 6.0, 1.0 / 6.0));
+    var k3 = V2MulFloat(f3, 1.0 / 6.0);
+    var g0 = V2AddV2(k0, k1);
+    var g1 = V2AddV2(k2, k3);
+    var h0 = V2AddV2(V2DivV2(k1, g0), new CVec2(-0.5, -0.5));
+    var h1 = V2AddV2(V2DivV2(k3, g1), new CVec2(1.5, 1.5));
+    var uv00 = V2DivV2(V2AddV2(idx, h0), _texSize);
+    var uv10 = V2DivV2(V2AddV2(idx, new CVec2(h1.x, h0.y)), _texSize);
+    var uv01 = V2DivV2(V2AddV2(idx, new CVec2(h0.x, h1.y)), _texSize);
+    var uv11 = V2DivV2(V2AddV2(idx, h1), _texSize);
+    var tex00 = Sam2DToColor(_texOff, uv00);
+    var tex10 = Sam2DToColor(_texOff, uv10);
+    var tex01 = Sam2DToColor(_texOff, uv01);
+    var tex11 = Sam2DToColor(_texOff, uv11);
+    var tex0 = V4Mix(tex01, tex00, g0.y);
+    var tex1 = V4Mix(tex11, tex10, g0.y);
+    return V4Mix(tex1, tex0, g0.x);
+}
+function GetHeightMapUV(_worldUV) {
+    var samSize = Sam2DSize(heightSampler2D);
+    var heightMapHalfTexel = new CVec2(1.0 / samSize.x, 1.0 / samSize.y);
+    var worldToTexScale = V2MulV2(new CVec2(samSize.x - 1.0, samSize.y - 1.0), heightMapHalfTexel);
+    return V2AddV2(V2MulV2(_worldUV, worldToTexScale), V2MulFloat(heightMapHalfTexel, 0.5));
+}
+function UnpackNormal(_rg) {
+    var normal = new CVec3(_rg.x * 2.0 - 1.0, 0.0, _rg.y * 2.0 - 1.0);
+    normal.y = sqrt(max(0.0, 1.0 - V3Dot(normal, normal)));
+    return V3Nor(normal);
+}
+function SampleSplatmap(_splatBlend, _uv, _off) {
+    var L_cor;
+    var blendAlpha = 1.0;
+    if (blendAlpha > 0.0 && _splatBlend.w > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0, splatMatTexCodi[3].x) * 0.5, step(0.0, splatMatTexCodi[3].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.w;
+    }
+    if (blendAlpha > 0.0 && _splatBlend.z > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0, splatMatTexCodi[2].x) * 0.5, step(0.0, splatMatTexCodi[2].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.z;
+    }
+    if (blendAlpha > 0.0 && _splatBlend.y > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0, splatMatTexCodi[1].x) * 0.5, step(0.0, splatMatTexCodi[1].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.y;
+    }
+    if (blendAlpha > 0.0 && _splatBlend.x > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0, splatMatTexCodi[0].x) * 0.5, step(0.0, splatMatTexCodi[0].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.x;
+    }
+    return L_cor;
+}
+function SampleSplatmapNormal(_splatBlend, _uv, _off) {
+    var L_cor;
+    var blendAlpha = 1.0;
+    if (blendAlpha > 0.0 && _splatBlend.w > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0, splatMatTexCodi[3].x) * 0.5, step(0.0, splatMatTexCodi[3].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.w;
+    }
+    if (blendAlpha > 0.0 && _splatBlend.z > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0, splatMatTexCodi[2].x) * 0.5, step(0.0, splatMatTexCodi[2].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.z;
+    }
+    if (blendAlpha > 0.0 && _splatBlend.y > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0, splatMatTexCodi[1].x) * 0.5, step(0.0, splatMatTexCodi[1].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.y;
+    }
+    if (blendAlpha > 0.0 && _splatBlend.x > 0.0) {
+        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0, splatMatTexCodi[0].x) * 0.5, step(0.0, splatMatTexCodi[0].y) * 0.5), blendAlpha);
+        blendAlpha -= _splatBlend.x;
+    }
+    return L_cor;
+}
+function CombineNormals(_base, _detail) {
+    _base = V3AddV3(_base, new CVec3(0.0, 1.0, 0.0));
+    _detail = V3MulV3(_detail, new CVec3(-1.0, 1.0, -1.0));
+    return V3Nor(V3SubV3(V3MulFloat(_base, V3Dot(_base, _detail) / _base.y), _detail));
+}
+function Remap(_val, _min1, _max1, _min2, _max2) {
+    return _min2 + (_val - _min1) / (_max1 - _min1) * (_max2 - _min2);
+}
+function SampleNormalMapToCaustic(_uvw, _ligCol) {
+    var normal = NoiseNormalGet(_uvw, SDF.eNoise.PerlinNormal);
+    normal = V3Nor(new CVec3(normal.x / 10.0, normal.y, normal.z / 10.0));
+    var L = new CVec3(0.0, 1.0, 0.0);
+    var NdotL = max(0.0, V3Dot(normal, L));
+    var curRange = 0.0001 * causticFlowFreq;
+    var threshold = 1.0 - curRange;
+    var b = clamp(Remap(NdotL, threshold, 1.0, 0.0, 0.2), 0.0, 1.0);
+    return V3MulFloat(_ligCol, b);
+}
+function SampleCaustics(_uvw, _split, _ligDir, _ligCol) {
+    var angleWeight = clamp(1.0 / (_ligDir.y + 0.1), 1.0, 5.0);
+    var dynamicSplit = _split * angleWeight;
+    var xzLen = V2Len(new CVec2(_ligDir.x, _ligDir.z));
+    var offsetDir = (xzLen < 0.0001) ? new CVec2(1.0, 1.0) : new CVec2(_ligDir.x / xzLen, _ligDir.z / xzLen);
+    var uvw1 = new CVec3(V2AddV2(_uvw.xy, V2MulFloat(offsetDir, dynamicSplit)), _uvw.z);
+    var uvw2 = new CVec3(_uvw.xy, _uvw.z);
+    var uvw3 = new CVec3(V2AddV2(_uvw.xy, V2MulFloat(offsetDir, -dynamicSplit)), _uvw.z);
+    var r = SampleNormalMapToCaustic(uvw1, _ligCol).x;
+    var g = SampleNormalMapToCaustic(uvw2, _ligCol).y;
+    var b = SampleNormalMapToCaustic(uvw3, _ligCol).z;
+    return new CVec3(r, g, b);
+}
+function Caustics(_world, _flowDir, _ligDir, _ligCol) {
+    if (V2Len(_flowDir) == 0.0)
+        return new CVec3(0.0, 0.0, 0.0);
+    var flow = new CVec3(-causticFlowDir.x / max(V2Len(causticFlowDir), 1e-6), causticFlowDir.y / max(V2Len(causticFlowDir), 1e-6), V2Len(causticFlowDir) * time * 0.1);
+    var split = 1.0 / 1000.0;
+    var worldToUV = V3MulFloat(_world, split);
+    var L = new CVec3(0, 1, 0);
+    var refractOffset = new CVec2(L.x, L.z);
+    refractOffset = V2MulFloat(refractOffset, -0.2);
+    var uvw = new CVec3(V2AddV2(new CVec2(worldToUV.x + refractOffset.x, worldToUV.z + refractOffset.y), V2MulFloat(flow.xy, flow.z)), flow.z * 3.0);
+    var tex = SampleCaustics(uvw, 1.0 / 128.0, L, _ligCol);
+    return SaturateV3(tex);
+}
+function WaterProcessing(_color, _caustics, _world) {
+    var heightDiff = abs(waterDeep.x - _world.y);
+    var depthBlend = 1.0 - SaturateFloat(heightDiff / waterDeep.y);
+    var dist = V3Len(V3SubV3(camPos, _world.xyz));
+    var t = smoothstep(waterUnderFadeDist.x, waterUnderFadeDist.y, dist);
+    var luma = (_color.x * 0.299 + _color.y * 0.587 + _color.z * 0.114);
+    var foamThreshold = min(waterDeep.z, waterDeep.z * waterHeight);
+    var foamMask = 1.0 - smoothstep(0.0, foamThreshold, heightDiff);
+    _color = V3Mix(deepColor, V3Mix(_color, shallowColor, 0.1), depthBlend);
+    _caustics = V3MulFloat(_caustics, depthBlend * luma * (1.0 - foamMask));
+    _color = V3AddV3(_color, _caustics);
+    _color = V3Mix(deepColor, _color, 0.6 * (1.0 - t));
+    if (foamMask > 0.0) {
+        var foam = new CVec3(0.55, 0.58, 0.58);
+        var foamFlowMag = V2Len(causticFlowDir);
+        var noise = NoiseGet(new CVec3(_world.x / 300.0 - causticFlowDir.x * time * 0.5, _world.z / 300.0 + causticFlowDir.y * time * 0.5, foamFlowMag * time * 0.3), SDF.eNoise.Perlin);
+        var edgeFade = foamMask * smoothstep(0.25, 1.0, noise);
+        _color = V3AddV3(_color, V3MulFloat(foam, 0.35 * edgeFade));
+        _color = V3Mix(_color, foam, 0.4 * edgeFade);
+    }
+    return _color;
+}
+function vs_main(f3_ver) {
+    var heightmapSize = Sam2DSize(heightSampler2D);
+    var terrainSize = new CVec3(heightmapSize.x * cellSize, terrainHeight, heightmapSize.y * cellSize);
+    var worldCellSize = cellSize * levelScale * heightScale;
+    var pWorldCellSize = worldCellSize * (levelRepeat + 1.0);
+    var curPos = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
+    curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
+    curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+    var nextPos = curPos;
+    nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+    var curUV = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
+    var nextUV = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
+    var curSample = Sam2DLODBiCubicToColor(heightSampler2D, curUV, heightmapSize);
+    var nextSample = Sam2DLODBiCubicToColor(heightSampler2D, nextUV, heightmapSize);
+    curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
+    nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
+    var curNor = UnpackNormal(new CVec2(curSample.z, curSample.w));
+    var nextNor = UnpackNormal(new CVec2(nextSample.z, nextSample.w));
+    var morphAlpha = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
+    to_worldPos = V4Mix(curPos, nextPos, morphAlpha);
+    to_worldPos.y = f3_ver.y * terrainSize.y;
+    to_worldPos.y += mix(curPos.y, nextPos.y, morphAlpha);
+    to_normal = V3Mix(curNor, nextNor, morphAlpha);
+    to_normal.y = sqrt(1.0 - SaturateFloat(to_normal.x * to_normal.x + to_normal.z * to_normal.z));
+    to_uv = V2Mix(curUV, nextUV, morphAlpha);
+    var terrainMin = terrainOffset;
+    var terrainMax = V3AddV3(terrainOffset, terrainSize);
+    if (to_worldPos.x < terrainMin.x || terrainMax.x < to_worldPos.x ||
+        to_worldPos.z < terrainMin.z || terrainMax.z < to_worldPos.z) {
+        to_worldPos.y = terrainMin.y;
+    }
+    to_worldPos.x = clamp(to_worldPos.x, terrainMin.x, terrainMax.x);
+    to_worldPos.z = clamp(to_worldPos.z, terrainMin.z, terrainMax.z);
+    out_position = V4MulMatCoordi(V4MulMatCoordi(to_worldPos, viewMat), projectMat);
+}
+function ps_main() {
+    var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
+    var shadow = -1.0;
+    var uvScreen;
+    BranchBegin("shadow", "S", [screenSize, shadowOn]);
+    if (shadowOn > 0.5) {
+        uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
+        shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);
+        shadow = shadowTex.x;
+    }
+    BranchEnd();
+    var splat = Sam2DToColor(splatSampler2D, to_uv);
+    var splatBlend = new CVec4(1.0, splat.xyz);
+    var L_cor = SampleSplatmap(splatBlend, to_uv, 0.0);
+    BranchBegin("colorModel", "CM", [colorModel]);
+    L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);
+    BranchEnd();
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    var dseMat = new CMat3(0);
+    var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
+    var normal = new CVec3(0.0, 1.0, 0.0);
+    var sunDir = new CVec3(0.0, 1.0, 0.0);
+    var sunCol = new CVec3(1.0, 1.0, 1.0);
+    BranchBegin("light", "L", [ligDir, ligCol, ligCount, camPos, material, ligStep0, ligStep1, ligStep2, ligStep3, envCube, ambientColor, EnvmapApprox]);
+    lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0);
+    normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
+    normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
+    dseMat = GetSunInfo();
+    sunDir = dseMat[0];
+    sunCol = dseMat[1];
+    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor, 1.0);
+    L_cor.rgb = V3AddV3(dseMat[0], dseMat[1]);
+    BranchEnd();
+    out_color = L_cor;
+    BranchBegin("waterReflect", "waterReflect", [waterDeep]);
+    if (to_worldPos.y <= waterDeep.x)
+        discard;
+    BranchEnd();
+    var caustics;
+    BranchBegin("waterRefract", "waterRefract", [waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time, normalflowDir, normalRange]);
+    if (to_worldPos.y > waterDeep.x + waterDeep.z)
+        discard;
+    caustics = Caustics(to_worldPos.xyz, causticFlowDir, sunDir, sunCol);
+    out_color.rgb = WaterProcessing(out_color.rgb, caustics, to_worldPos);
+    BranchEnd();
+}
+function vs_main_shadow_write(f3_ver) {
+    var svm = new CMat(0);
+    var spm = new CMat(0);
+    if (shadowWrite.x < SDF.eShadow.Cas0 + 0.5) {
+        svm = Sam2DArrToMat(shadowNearCasV0, shadowWrite.y);
+        spm = Sam2DArrToMat(shadowFarCasP0, shadowWrite.y);
+    }
+    else if (shadowWrite.x < SDF.eShadow.Cas1 + 0.5) {
+        svm = Sam2DArrToMat(shadowTopCasV1, shadowWrite.y);
+        spm = Sam2DArrToMat(shadowBottomCasP1, shadowWrite.y);
+    }
+    else if (shadowWrite.x < SDF.eShadow.Cas2 + 0.5) {
+        svm = Sam2DArrToMat(shadowLeftCasV2, shadowWrite.y);
+        spm = Sam2DArrToMat(shadowRightCasP2, shadowWrite.y);
+    }
+    var heightmapSize = Sam2DSize(heightSampler2D);
+    var terrainSize = new CVec3(heightmapSize.x * cellSize, terrainHeight, heightmapSize.y * cellSize);
+    var worldCellSize = cellSize * levelScale * heightScale;
+    var pWorldCellSize = worldCellSize * (levelRepeat + 1.0);
+    var curPos = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
+    curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
+    curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+    var nextPos = curPos;
+    nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+    var curUV = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
+    var nextUV = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
+    var curSample = Sam2DLODBiCubicToColor(heightSampler2D, curUV, heightmapSize);
+    var nextSample = Sam2DLODBiCubicToColor(heightSampler2D, nextUV, heightmapSize);
+    curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
+    nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
+    var morphAlpha = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
+    var worldPos = V4Mix(curPos, nextPos, morphAlpha);
+    worldPos.y = f3_ver.y * terrainSize.y;
+    worldPos.y += mix(curPos.y, nextPos.y, morphAlpha);
+    to_uv = V2Mix(curUV, nextUV, morphAlpha);
+    var terrainMin = terrainOffset;
+    var terrainMax = V3AddV3(terrainOffset, terrainSize);
+    if (worldPos.x < terrainMin.x || terrainMax.x < worldPos.x ||
+        worldPos.z < terrainMin.z || terrainMax.z < worldPos.z) {
+        worldPos.y = terrainMin.y;
+    }
+    worldPos.x = clamp(worldPos.x, terrainMin.x, terrainMax.x);
+    worldPos.z = clamp(worldPos.z, terrainMin.z, terrainMax.z);
+    to_viewPos = V4MulMatCoordi(worldPos, svm);
+    out_position = V4MulMatCoordi(to_viewPos, spm);
+    out_position.z = max(out_position.z, 0.0);
+}
+function ps_main_shadow_write() {
+    out_color = to_viewPos;
+}
+function vs_main_shadow_read(f3_ver) {
+    var heightmapSize = Sam2DSize(heightSampler2D);
+    var terrainSize = new CVec3(heightmapSize.x * cellSize, terrainHeight, heightmapSize.y * cellSize);
+    var worldCellSize = cellSize * levelScale * heightScale;
+    var pWorldCellSize = worldCellSize * (levelRepeat + 1.0);
+    var curPos = V4MulMatCoordi(new CVec4(f3_ver, 1.0), worldMat);
+    curPos.x = floor(curPos.x / worldCellSize) * worldCellSize;
+    curPos.z = floor(curPos.z / worldCellSize) * worldCellSize;
+    var nextPos = curPos;
+    nextPos.x = floor(nextPos.x / pWorldCellSize) * pWorldCellSize;
+    nextPos.z = floor(nextPos.z / pWorldCellSize) * pWorldCellSize;
+    var curUV = GetHeightMapUV(WorldToUV(curPos, terrainOffset, terrainSize));
+    var nextUV = GetHeightMapUV(WorldToUV(nextPos, terrainOffset, terrainSize));
+    var curSample = Sam2DLODBiCubicToColor(heightSampler2D, curUV, heightmapSize);
+    var nextSample = Sam2DLODBiCubicToColor(heightSampler2D, nextUV, heightmapSize);
+    curPos.y = UnpackRGToGray(curSample.xy) * terrainSize.y + terrainOffset.y;
+    nextPos.y = UnpackRGToGray(nextSample.xy) * terrainSize.y + terrainOffset.y;
+    var curNor = UnpackNormal(new CVec2(curSample.z, curSample.w));
+    var nextNor = UnpackNormal(new CVec2(nextSample.z, nextSample.w));
+    var morphAlpha = GetMorphLerpK(curPos, camMain, worldCellSize, pWorldCellSize);
+    to_worldPos = V4Mix(curPos, nextPos, morphAlpha);
+    to_worldPos.y = f3_ver.y * terrainSize.y;
+    to_worldPos.y += mix(curPos.y, nextPos.y, morphAlpha);
+    to_normal = V3Mix(curNor, nextNor, morphAlpha);
+    to_normal.y = sqrt(1.0 - SaturateFloat(to_normal.x * to_normal.x + to_normal.z * to_normal.z));
+    to_uv = V2Mix(curUV, nextUV, morphAlpha);
+    var terrainMin = terrainOffset;
+    var terrainMax = V3AddV3(terrainOffset, terrainSize);
+    if (to_worldPos.x < terrainMin.x || terrainMax.x < to_worldPos.x ||
+        to_worldPos.z < terrainMin.z || terrainMax.z < to_worldPos.z) {
+        to_worldPos.y = terrainMin.y;
+    }
+    to_worldPos.x = clamp(to_worldPos.x, terrainMin.x, terrainMax.x);
+    to_worldPos.z = clamp(to_worldPos.z, terrainMin.z, terrainMax.z);
+    out_position = V4MulMatCoordi(V4MulMatCoordi(to_worldPos, viewMat), projectMat);
+}
+function ps_main_shadow_read() {
+    var all = 0.0;
+    var shadowRead;
+    var sVal;
+    BranchBegin("shadowMulti", "SDM", []);
+    for (var i = 0; i < FloatToInt(shadowCount); i++) {
+        shadowRead = Sam2DArrToV4(shadowReadList, i);
+        sVal = calcShadow(shadowRead, IntToFloat(i), to_normal, to_worldPos);
+        all += sVal;
+    }
+    all /= shadowCount;
+    if (all < 0.0)
+        all = 0.0;
+    BranchDefault();
+    shadowRead = Sam2DArrToV4(shadowReadList, 0.0);
+    all = calcShadow(shadowRead, 0.0, to_normal, to_worldPos);
+    BranchEnd();
+    out_color = new CVec4(all, all, all, 1.0);
+}

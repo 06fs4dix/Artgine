@@ -1,20 +1,23 @@
 <style>
-#mi-bar textarea:focus { border-color: #00e5a0 !important; box-shadow: none !important; }
-.has-submenu > .dropdown-menu { top: auto; bottom: 0; right: 100%; }
+#mi-bar { position:fixed;bottom:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:8px;padding:6px 8px;border-top:1px solid #444;background:#1a1a1a;box-sizing:border-box; }
+#mi-bar textarea { flex:1;padding:5px 8px;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#fff;font-family:monospace;font-size:0.9rem;resize:none;line-height:1.4;max-height:200px;overflow-y:auto;min-width:0;box-sizing:border-box; }
+#mi-bar textarea:focus { outline:none;border-color:#00e5a0; }
+#mi-dd-btn { padding:5px 12px;background:#555;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:1.2rem;white-space:nowrap;line-height:1.4; }
+#mi-dd-btn:hover { background:#666; }
+#mi-dd-menu { display:none;position:fixed;background:#2a2a2a;border:1px solid #555;border-radius:4px;z-index:10001;min-width:170px;list-style:none;margin:0;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,.6); }
+#mi-dd-menu.show { display:block; }
+.mi-item { display:block;width:100%;padding:6px 14px;background:none;border:none;color:#ddd;text-align:left;cursor:pointer;font-size:0.9rem;white-space:nowrap;box-sizing:border-box; }
+.mi-item:hover { background:#3a3a3a;color:#fff; }
+.mi-sep { height:1px;background:#444;margin:4px 0;list-style:none; }
+.mi-sub-wrap { position:relative; }
+.mi-sub-trigger { display:flex;justify-content:space-between;align-items:center; }
+.mi-submenu { display:none;position:fixed;background:#2a2a2a;border:1px solid #555;border-radius:4px;z-index:10002;min-width:200px;max-height:60vh;overflow-y:auto;list-style:none;margin:0;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,.6); }
+.mi-submenu.show { display:block; }
+#mi-ac { display:none;position:fixed;background:#2a2a2a;border:1px solid #555;border-radius:4px;z-index:10002;max-height:40vh;overflow-y:auto;min-width:220px;list-style:none;margin:0;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,.6); }
+.mi-ac-item { display:block;width:100%;padding:4px 12px;background:none;border:none;color:#ddd;text-align:left;cursor:pointer;font-family:monospace;font-size:0.85rem;white-space:nowrap;box-sizing:border-box; }
+.mi-ac-item:hover,.mi-ac-item.active { background:#3a3a3a;color:#fff; }
 </style>
 <script>
-(function() {
-    document.documentElement.setAttribute('data-bs-theme', 'dark');
-    var base = '/' + location.pathname.split('/')[1] + '/';
-    var link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = base + 'artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css';
-    document.head.appendChild(link);
-    var script = document.createElement('script');
-    script.src = base + 'artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js';
-    document.head.appendChild(script);
-})();
-
 window.addEventListener('keydown', function(e) {
     if (e.key === 'Tab') {
         e.preventDefault(); e.stopPropagation();
@@ -100,28 +103,41 @@ window.addEventListener('keydown', function(e) {
 
         var bar = document.createElement("div");
         bar.id = "mi-bar";
-        bar.className = "position-fixed bottom-0 start-0 end-0 d-flex align-items-center gap-2 px-2 py-2 border-top bg-body";
-        bar.style.zIndex = "10000";
 
         var inp = document.createElement("textarea");
         inp.rows = 1;
         inp.placeholder = "Type then Enter...";
         inp.autocomplete = "off"; inp.autocorrect = "off"; inp.autocapitalize = "off"; inp.spellcheck = false;
-        inp.className = "form-control font-monospace flex-grow-1";
-        inp.style.cssText = "max-height:200px;overflow-y:auto;resize:none;line-height:1.4;";
 
         var ddWrap = document.createElement("div");
-        ddWrap.className = "dropup";
+        ddWrap.style.position = "relative";
 
         var ddBtn = document.createElement("button");
-        ddBtn.className = "btn btn-secondary fs-5";
-        ddBtn.setAttribute("data-bs-toggle", "dropdown");
-        ddBtn.setAttribute("aria-expanded", "false");
+        ddBtn.id = "mi-dd-btn";
         ddBtn.textContent = "⌨";
 
         var ddMenu = document.createElement("ul");
-        ddMenu.className = "dropdown-menu dropdown-menu-end";
-        ddMenu.style.minWidth = "170px";
+        ddMenu.id = "mi-dd-menu";
+
+        // ---- dropdown toggle ----
+        ddBtn.addEventListener("click", function(e) {
+            e.stopPropagation();
+            var isOpen = ddMenu.classList.contains("show");
+            closeAllSubmenus();
+            if (isOpen) {
+                ddMenu.classList.remove("show");
+            } else {
+                var rect = ddBtn.getBoundingClientRect();
+                ddMenu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+                ddMenu.style.right  = (window.innerWidth - rect.right) + "px";
+                ddMenu.classList.add("show");
+            }
+        });
+
+        document.addEventListener("click", function() {
+            ddMenu.classList.remove("show");
+            closeAllSubmenus();
+        });
 
         // ---- action handler ----
         function _doAgentAction(kind) {
@@ -139,12 +155,12 @@ window.addEventListener('keydown', function(e) {
             }
             if (kind === "clear") {
                 if (m === "cmd") { _sendRaw("cls\r"); return; }
-                _sendRaw("/clear"); // claude, gemini, codex, antigravity 모두 동일
+                _sendRaw("/clear");
             }
             if (kind === "status") {
-                if (m === "gemini") { _sendRaw("/stats"); return; } // gemini는 /stats
+                if (m === "gemini") { _sendRaw("/stats"); return; }
                 if (m === "cmd") return;
-                _sendRaw("/status"); // claude, codex, antigravity
+                _sendRaw("/status");
             }
         }
 
@@ -156,6 +172,8 @@ window.addEventListener('keydown', function(e) {
 
         function handleAction(seq) {
             console.log('[terminal_ui] action:', seq, '| mode:', window.__TTYD_MODE);
+            ddMenu.classList.remove("show");
+            closeAllSubmenus();
             if      (seq === "__SCROLL__")       { var vp = document.querySelector(".xterm-viewport"); if (vp) vp.scrollTop = vp.scrollHeight; }
             else if (seq === "__CTRL_T__")       { _sendRaw("\x14"); }
             else if (seq === "__TOGGLE_INPUT__") { hideBar(); }
@@ -177,40 +195,45 @@ window.addEventListener('keydown', function(e) {
         // ---- helpers ----
         function makeSep() {
             var li = document.createElement("li");
-            li.innerHTML = '<hr class="dropdown-divider">';
+            li.className = "mi-sep";
             return li;
         }
 
         function makeItem(label, seq) {
             var li = document.createElement("li");
             var b = document.createElement("button");
-            b.className = "dropdown-item";
+            b.className = "mi-item";
             b.type = "button";
             b.textContent = label;
-            b.addEventListener("click", function() { handleAction(seq); });
+            b.addEventListener("click", function(e) { e.stopPropagation(); handleAction(seq); });
             li.appendChild(b);
             return li;
         }
 
         function makeSubmenu(label, items) {
             var li = document.createElement("li");
-            li.className = "has-submenu position-relative";
+            li.className = "mi-sub-wrap";
 
             var trigger = document.createElement("button");
-            trigger.className = "dropdown-item d-flex justify-content-between align-items-center";
+            trigger.className = "mi-item mi-sub-trigger";
             trigger.type = "button";
             trigger.innerHTML = label + '<span>&#9664;</span>';
 
             var sub = document.createElement("ul");
-            sub.className = "dropdown-menu";
-            sub.style.cssText = "min-width:200px;max-height:60vh;overflow-y:auto;";
+            sub.className = "mi-submenu";
             items.forEach(function(a) { sub.appendChild(makeItem(a[0], a[1])); });
 
             trigger.addEventListener("click", function(e) {
                 e.stopPropagation();
                 var isOpen = sub.classList.contains("show");
                 closeAllSubmenus();
-                if (!isOpen) sub.classList.add("show");
+                if (!isOpen) {
+                    var rect = trigger.getBoundingClientRect();
+                    sub.style.top    = "auto";
+                    sub.style.bottom = (window.innerHeight - rect.bottom) + "px";
+                    sub.style.right  = (window.innerWidth - rect.left + 4) + "px";
+                    sub.classList.add("show");
+                }
             });
 
             li.appendChild(trigger);
@@ -219,7 +242,7 @@ window.addEventListener('keydown', function(e) {
         }
 
         function closeAllSubmenus() {
-            ddMenu.querySelectorAll(".has-submenu .dropdown-menu").forEach(function(m) {
+            ddMenu.querySelectorAll(".mi-submenu").forEach(function(m) {
                 m.classList.remove("show");
             });
         }
@@ -254,13 +277,6 @@ window.addEventListener('keydown', function(e) {
         });
         ddMenu.appendChild(makeSubmenu("Skill", skillItems));
 
-        // close submenus when main dropdown closes
-        ddWrap.addEventListener("hidden.bs.dropdown", closeAllSubmenus);
-        // close submenus on outside click within dropdown
-        ddMenu.addEventListener("click", function(e) {
-            if (!e.target.closest(".has-submenu")) closeAllSubmenus();
-        });
-
         ddWrap.appendChild(ddBtn);
         ddWrap.appendChild(ddMenu);
         bar.appendChild(inp);
@@ -291,12 +307,11 @@ window.addEventListener('keydown', function(e) {
         };
 
         var acBox = document.createElement("ul");
-        acBox.className = "list-group position-fixed shadow";
-        acBox.style.cssText = "display:none;z-index:10002;max-height:40vh;overflow-y:auto;min-width:220px;";
+        acBox.id = "mi-ac";
         document.body.appendChild(acBox);
 
         var _acIdx = -1;
-        function _acItems() { return acBox.querySelectorAll(".list-group-item"); }
+        function _acItems() { return acBox.querySelectorAll(".mi-ac-item"); }
 
         function _acHide() { acBox.style.display = "none"; acBox.innerHTML = ""; _acIdx = -1; }
 
@@ -318,10 +333,13 @@ window.addEventListener('keydown', function(e) {
             acBox.style.bottom = (window.innerHeight - barRect.top + 4) + "px";
             matches.forEach(function(item) {
                 var li = document.createElement("li");
-                li.className = "list-group-item list-group-item-action py-1 px-3 font-monospace small";
-                li.textContent = item.label;
-                li._acItem = item;
-                li.addEventListener("mousedown", function(e) { e.preventDefault(); _acApply(item); });
+                var btn = document.createElement("button");
+                btn.className = "mi-ac-item";
+                btn.type = "button";
+                btn.textContent = item.label;
+                btn._acItem = item;
+                btn.addEventListener("mousedown", function(e) { e.preventDefault(); _acApply(item); });
+                li.appendChild(btn);
                 acBox.appendChild(li);
             });
             acBox.style.display = "block";
@@ -354,6 +372,7 @@ window.addEventListener('keydown', function(e) {
         document.addEventListener("click", function(e) { if (!bar.contains(e.target)) _acHide(); });
 
         setTimeout(function() { inp.focus(); }, 500);
+        setTimeout(_sendResize, 1000);
     });
 })();
 </script>

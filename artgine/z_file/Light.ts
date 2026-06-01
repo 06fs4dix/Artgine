@@ -29,7 +29,7 @@ export var ligDir: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightDir);
 export var ligCol: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightColor);
 
 //BRDF LUT
-export var EnvmapApprox : number = 0;
+export var EnvmapApprox : number = 1;
 
 export var envCube : number = -1;
 export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4

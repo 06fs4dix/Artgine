@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { spawn, ChildProcess } from 'child_process';
+import { CPath } from '../basic/CPath.js';
 
 export interface IAIInteractiveArgs {
     args: string[];
@@ -28,6 +29,10 @@ export class CAI {
     static readonly IS_WIN = process.platform === 'win32';
     static readonly EMPTY_MCP_PATH = path.resolve(process.cwd(), 'proj', 'Home', 'AI', 'empty-mcp.json');
 
+    static AIDir(): string {
+        return CPath.PHPC() + "ai";
+    }
+
     // ---- Role ----
 
     /**
@@ -49,8 +54,9 @@ export class CAI {
             return destMd;
         }
 
-        const roleFile   = path.join(cwd, 'ai', 'ROLE.md');
-        const ignoreFile = path.join(cwd, 'ai', '.ignore');
+        const aiDir      = CAI.AIDir();
+        const roleFile   = path.join(aiDir, 'ROLE.md');
+        const ignoreFile = path.join(aiDir, '.ignore');
         if (!fs.existsSync(roleFile) || !fs.existsSync(ignoreFile)) return false;
         const mdDest     = path.join(cwd, mdName);
         const ignoreDest = path.join(cwd, ignoreName);
@@ -252,17 +258,19 @@ export class CAI {
                     ? allow.replace(/^([A-Za-z]):/, (_, d) => '//' + d.toLowerCase()).replace(/\\/g, '/') + '/**'
                     : '/' + allow + '/**';
                 if (CAI.IS_WIN) {
-                    const binCmd = CAI._resolveBin('claude').join(' ');
+                    const binCmd = 'npx claude';
                     const mcpPart = mcpFlags.length ? ' ' + mcpFlags.map(f => f.includes(' ') ? `"${f}"` : f).join(' ') : '';
                     const policyFile = path.join(os.tmpdir(), `claude-start-${port}.cmd`);
                     fs.writeFileSync(policyFile,
-                        `@${binCmd} --allowedTools "Edit(${allowPattern}),Write(${allowPattern})"${mcpPart}\n`,
+                        `@${binCmd} --allowedTools "Bash,Glob,Grep,Read,Edit(${allowPattern}),Write(${allowPattern})"${mcpPart}\n`,
                         'utf8'
                     );
                     return { args: [policyFile], policyFile };
                 }
-                return { args: [...CAI._resolveBin('claude'), '--allowedTools', `Edit(${allowPattern}),Write(${allowPattern})`, ...mcpFlags] };
+                return { args: [...CAI._resolveBin('claude'), '--allowedTools', `Bash,Glob,Grep,Read,Edit(${allowPattern}),Write(${allowPattern})`, ...mcpFlags] };
             }
+            // Windows: 한글 경로가 ttyd → cmd.exe 전달 시 깨짐 → npx 사용
+            if (CAI.IS_WIN) return { args: ['npx', 'claude', ...mcpFlags] };
             return { args: [...CAI._resolveBin('claude'), ...mcpFlags] };
         }
 
@@ -329,7 +337,12 @@ export class CAI {
     private static _resolveBin(name: string): string[] {
         const ext     = CAI.IS_WIN ? '.cmd' : '';
         const binPath = path.join(process.cwd(), 'node_modules', '.bin', name + ext);
-        return fs.existsSync(binPath) ? [binPath] : ['npx', name];
+        if (fs.existsSync(binPath)) {
+            // Windows: 경로에 비ASCII(한글 등)가 있으면 ttyd C 바이너리가 cmd.exe 전달 시 깨짐 → npx 사용
+            if (CAI.IS_WIN && /[^\x00-\x7F]/.test(binPath)) return ['npx', name];
+            return [binPath];
+        }
+        return ['npx', name];
     }
 
     private static _getCodexMcpKeys(): string[] {

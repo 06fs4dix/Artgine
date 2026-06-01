@@ -1,5 +1,5 @@
 import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
-import { ambientColor, envCube, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
+import { ambientColor, envCube, EnvmapApprox, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
 import { NoiseGet, NoiseNormalGet, SampleNoise } from "./Noise";
 import { SDF } from "./SDF";
 import { 
@@ -444,14 +444,14 @@ function ps_main()
     var normal : CVec3 = new CVec3(0.0, 1.0, 0.0);
     var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
-    BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor]);
+    BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor,EnvmapApprox]);
     lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0); // material 텍스쳐에서 가져옴
     normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
     normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
     dseMat = GetSunInfo();
     sunDir = dseMat[0];
     sunCol = dseMat[1];
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor);
+    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor, 1.0);
     L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchEnd();
 

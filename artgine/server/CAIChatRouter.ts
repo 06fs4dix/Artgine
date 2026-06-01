@@ -34,18 +34,26 @@ CLI invocation:
   Codex resume  : codex exec resume --last -m <model>  (cwd-scoped session)
 */
 
-const AI_ROOT = path.resolve(process.cwd(), 'proj', 'Home', 'AI');
+let AI_ROOT = '';
+let WORKSPACE_ROOT = '';
 // === Workspace 위치 설정 ===
-// 빈 문자열이면 기본 경로(proj/Home/AI/workspace) 사용.
+// 빈 문자열이면 기본 경로(<rootPath>/ai/workspace) 사용.
 // 특정 디스크/폴더로 옮기려면 절대경로 지정 (예: 'D:\\AIWorkspace' 또는 'D:/AIWorkspace').
 // 폴더가 없으면 자동 생성됨.
 const WORKSPACE_ROOT_OVERRIDE = '';
 
-
-const WORKSPACE_ROOT = WORKSPACE_ROOT_OVERRIDE
-    ? path.resolve(WORKSPACE_ROOT_OVERRIDE)
-    : path.join(AI_ROOT, 'workspace');
-const AI_HTML = path.join(AI_ROOT, 'AIChat.html');
+let _pathsPromise: Promise<void> | null = null;
+function ensurePaths(): Promise<void> {
+    if (!_pathsPromise) {
+        _pathsPromise = GetAppJSON().then(cfg => {
+            AI_ROOT = path.join(path.resolve(cfg.rootPath ?? './'), 'ai');
+            WORKSPACE_ROOT = WORKSPACE_ROOT_OVERRIDE
+                ? path.resolve(WORKSPACE_ROOT_OVERRIDE)
+                : path.join(AI_ROOT, 'workspace');
+        });
+    }
+    return _pathsPromise;
+}
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
 
 
@@ -475,18 +483,10 @@ async function handleSend(sid: string, msg: IWsSendMsg, ctx: IWsCtx) {
     });
 }
 
-@URLPatterns(["/ai/chat", "/ai/chat/providers", "/ai/chat/sessions", "/ai/chat/session", "/ai/chat/session/config", "/ai/chat/session/upload", "/ai/chat/share", "/ai/chat/share/file", "/ai/chat/workspace"])
+@URLPatterns(["/ai/chat/providers", "/ai/chat/sessions", "/ai/chat/session", "/ai/chat/session/config", "/ai/chat/session/upload", "/ai/chat/share", "/ai/chat/share/file", "/ai/chat/workspace"])
 export class CAIChatRouter extends CAuthServer {
     constructor() {
         super();
-
-        // GET /ai/chat → redirect to AI.html
-        this.On("/ai/chat", async (_json: CJSON, _req: Request, _res: Response) => {
-            const cfg = await GetAppJSON();
-            const base = new URL(cfg.url).pathname.replace(/\/+$/, '') || '';
-            _res.redirect(`${base}/proj/Home/AI/AIChat.html`);
-            return null;
-        });
 
         // GET /ai/chat/providers
         this.On("/ai/chat/providers", (_json: CJSON, _req: Request, _res: Response) => {
@@ -497,8 +497,9 @@ export class CAIChatRouter extends CAuthServer {
         });
 
         // GET /ai/chat/sessions
-        this.On("/ai/chat/sessions", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/sessions", async (_json: CJSON, _req: Request, _res: Response) => {
             if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            await ensurePaths();
             const limit = parseInt(_req.query.limit as string);
             _res.json({ ok: true, sessions: listSessions(isNaN(limit) ? undefined : limit) });
             return null;
@@ -506,8 +507,9 @@ export class CAIChatRouter extends CAuthServer {
 
         // GET /ai/chat/session?id=  →  history
         // DELETE /ai/chat/session?id=  →  delete
-        this.On("/ai/chat/session", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/session", async (_json: CJSON, _req: Request, _res: Response) => {
             if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            await ensurePaths();
             const sid = safeSessionId((_req.query.id || _json['id']) as string);
             if (!sid) { _res.status(400).json({ ok: false, msg: 'invalid id' }); return null; }
             if (_req.method === 'DELETE') {
@@ -522,8 +524,9 @@ export class CAIChatRouter extends CAuthServer {
 
         // GET /ai/chat/session/config?id=   →  config 조회
         // POST /ai/chat/session/config?id=  →  config 저장
-        this.On("/ai/chat/session/config", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/session/config", async (_json: CJSON, _req: Request, _res: Response) => {
             if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            await ensurePaths();
             const sid = safeSessionId((_req.query.id || _json['id']) as string);
             if (!sid) { _res.json({ ok: false, msg: 'invalid id' }); return null; }
             if (_req.method === 'POST') {
@@ -540,8 +543,9 @@ export class CAIChatRouter extends CAuthServer {
         });
 
         // POST /ai/chat/session/upload?id=<sid>&name=<filename>
-        this.On("/ai/chat/session/upload", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/session/upload", async (_json: CJSON, _req: Request, _res: Response) => {
             if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+            await ensurePaths();
             const sid = safeSessionId(_json['id'] as string);
             if (!sid) { _res.status(400).json({ ok: false, msg: 'invalid id' }); return null; }
             const rawName = (_json['name'] as string) || 'file';
@@ -580,7 +584,8 @@ export class CAIChatRouter extends CAuthServer {
         });
 
         // GET /ai/chat/share?id=<sid>  (public, no auth)
-        this.On("/ai/chat/share", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/share", async (_json: CJSON, _req: Request, _res: Response) => {
+            await ensurePaths();
             const sid = safeSessionId(_json['id'] as string);
             if (!sid) { _res.status(400).json({ ok: false, msg: 'invalid id' }); return null; }
             const h = loadHistory(sid);
@@ -590,7 +595,8 @@ export class CAIChatRouter extends CAuthServer {
         });
 
         // GET /ai/chat/share/file?id=<sid>&path=<rel>  (public, no auth)
-        this.On("/ai/chat/share/file", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/share/file", async (_json: CJSON, _req: Request, _res: Response) => {
+            await ensurePaths();
             const sid = safeSessionId(_json['id'] as string);
             if (!sid) { _res.status(400).end('invalid id'); return null; }
             const dir = sessionDir(sid)!;
@@ -604,8 +610,9 @@ export class CAIChatRouter extends CAuthServer {
         });
 
         // GET /ai/chat/workspace?id=<sid>&path=<rel>
-        this.On("/ai/chat/workspace", (_json: CJSON, _req: Request, _res: Response) => {
+        this.On("/ai/chat/workspace", async (_json: CJSON, _req: Request, _res: Response) => {
             if (!isValidToken(getToken(_req))) { _res.status(401).end('Authentication required'); return null; }
+            await ensurePaths();
             const sid = safeSessionId(_json['id'] as string);
             if (!sid) { _res.status(400).end('invalid id'); return null; }
             const dir = sessionDir(sid)!;
@@ -622,7 +629,7 @@ export class CAIChatRouter extends CAuthServer {
     override Connect() {
         super.Connect();
         CConsol.Log('[CAIChatRouter] Connect()', CConsol.eColor.blue);
-        ensureDir(WORKSPACE_ROOT);
+        ensurePaths().then(() => ensureDir(WORKSPACE_ROOT));
         probeAllProviders();
 
         const mPath = this.mPath;
@@ -678,7 +685,8 @@ export class CAIChatRouter extends CAuthServer {
 }
 
 export const _AIChat = {
-    AI_ROOT, WORKSPACE_ROOT,
+    get AI_ROOT() { return AI_ROOT; },
+    get WORKSPACE_ROOT() { return WORKSPACE_ROOT; },
     ensureDir, safeSessionId, sessionDir, historyPath,
     loadHistory, saveHistory, listSessions, deleteSession, safeAttachmentName,
 };

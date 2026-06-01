@@ -1,1 +1,754 @@
-import{CArray as t}from"../../basic/CArray.js";import{CDOM as e}from"../../basic/CDOM.js";import{CEvent as s}from"../../basic/CEvent.js";import{CBound as i}from"../../geometry/CBound.js";import{CMath as m}from"../../geometry/CMath.js";import{CVec2 as h}from"../../geometry/CVec2.js";import{CVec3 as r}from"../../geometry/CVec3.js";import{CVec4 as n}from"../../geometry/CVec4.js";import{CAlpha as l}from"../../render/CAlpha.js";import{CColor as o}from"../../render/CColor.js";import{CRenderPass as a}from"../../render/CRenderPass.js";import{CFont as u,CFontOption as P}from"../../util/CFont.js";import{CFrame as T}from"../../util/CFrame.js";import{CCollider as p}from"../component/CCollider.js";import{CPaint2D as c,CPaintHTML as U}from"../component/paint/CPaint2D.js";import{CSubject as d}from"./CSubject.js";var C=!1,I=new Array,S=(new t,new a);S.mPriority=a.ePriority.Ui,S.mDepthTest=!1,S.mDepthWrite=!1;export class CUI extends d{static eAnchor={Min:-1,Center:0,Max:1,Null:null};mPick=null;mLastPickMouse=null;mPressPos=new r;mFirstRayMs=null;mPressTraking=!1;mBoundScale=1;mDbClick=0;mDbTime=0;mDbOn=!1;mMove=!1;mUpdate=!0;mEvent=s.eType.Null;mLastEvent=s.eType.Null;mUIPT=null;mUICL=null;mSize=null;mRGBA=null;mClickEvent=new s;mPressEvent=new s;mCamZoomResize=!1;mAnchorXType=CUI.eAnchor.Null;mAnchorYType=CUI.eAnchor.Null;mAnchorXLen=0;mAnchorYLen=0;mUpdateAnchor=!0;mUpdateScale=!1;mPivot=null;mFocusCount=0;mDebugMode=new Array;static ToolMode(t){C=t}static SetMainFrame(t){}IsShould(t,e){return"mPick"==t||"mLastPickMouse"==t||"mLastEvent"==t||"mUpdateAnchor"==t||"mUpdate"==t||"mUpdateScale"==t||super.IsShould(t,e)}ImportCJSON(t){var e=super.ImportCJSON(t),s=this.FindComps(c);s.length>0&&(this.mUIPT=s[0]);var i=this.FindComps(p);i.length>0&&(this.mUICL=i[0]);for(let t=0;t<this.mComArr.length;++t)null!=this.mDebugMode&&this.mDebugMode.length>t&&this.mComArr[t].SetEnable(this.mDebugMode[t]);return e}Export(t=!0,e=!0){var s=super.Export(t,e),i=s.FindComps(c);i.length>0&&(s.mUIPT=i[0]);var m=s.FindComps(p);return m.length>0&&(s.mUICL=m[0]),s}constructor(){super()}SetCamZoomResize(t){this.mCamZoomResize=t}SetPressTraking(t){this.mPressTraking=t}SetDebugMode(t){this.mDebugMode=t?new Array:null}SetAnchorX(t,e=0){this.mAnchorXType=t,this.mAnchorXLen=e,this.mUpdateAnchor=!0}SetAnchorY(t,e=0){this.mAnchorYType=t,this.mAnchorYLen=e,this.mUpdateAnchor=!0}SetEnable(t){super.SetEnable(t)}GetPt(){return this.mUIPT}GetCl(){return this.mUICL}GetPressPos(){return this.mPressPos}GetPick(){return this.mPick}GetLastEvent(){return this.mLastEvent}SetMove(t){this.mMove=t,this.AddCCollider()}AddCCollider(){if(null!=this.mUIPT&&this.mUIPT.GetBound().GetType()!=i.eType.Null){if(null!=this.mUICL)return this.mUICL.InitBound(this.mUIPT),this.mUICL.mBound.mMin.x*=this.mBoundScale,this.mUICL.mBound.mMin.y*=this.mBoundScale,this.mUICL.mBound.mMax.x*=this.mBoundScale,this.mUICL.mBound.mMax.y*=this.mBoundScale,this.mUICL.mBound.mMax.z=.1,void(this.mUICL.mBound.mMin.z=-.1);this.mUICL=new p(this.mUIPT),this.mUICL.SetPickMouse(!0),this.mUICL.SetBoundType(i.eType.Box),this.mUICL.mBound.mMin.x*=this.mBoundScale,this.mUICL.mBound.mMin.y*=this.mBoundScale,this.mUICL.mBound.mMax.x*=this.mBoundScale,this.mUICL.mBound.mMax.y*=this.mBoundScale,this.mUICL.mBound.mMax.z=.1,this.mUICL.mBound.mMin.z=-.1,this.PushComp(this.mUICL)}}GetSize(){return this.mSize}SetSize(t,e){if(null==this.mSize)this.mSize=new h;else if(this.mSize.x==t&&this.mSize.y==e)return;this.mSize.x=t,this.mSize.y=e,null!=this.mUIPT&&(this.mUIPT.SetSize(this.mSize),this.AddCCollider()),this.mUpdateAnchor=!0}GetPivot(){return this.mPivot}SetPivot(t){this.mPivot=t,this.mUIPT&&(null!=this.mPivot&&this.mUIPT.SetPivot(t),this.AddCCollider())}SetClickEvent(t){this.mClickEvent=t instanceof s?t:new s(t),this.AddCCollider()}SetPressEvent(t){this.mPressEvent=t instanceof s?t:new s(t),this.AddCCollider()}SetRGBA(t=new n(0,0,0,1)){null!=this.mRGBA&&this.mRGBA.Equals(t)||(this.mRGBA=t,null!=this.mUIPT&&(this.mUIPT.SetColorModel(new o(t.x,t.y,t.z,o.eModel.RGBAdd)),this.mUIPT.SetAlphaModel(new l(t.w))))}RTTexCodi(){this.mUIPT.SetTexCodi(new n(1,1,0,-1))}PickMouse(t){0!=this.mEnable&&(this.mPick=t)}UpdateAnchor(){if(0==this.mUIPT.mRenPT.length||C)return;var t=this.mUIPT.mRenPT[0].mCam;if(0==this.mUpdateAnchor&&0==this.mFrame.Win().IsResize()&&0==t.mUpdateMat)return;if(this.mAnchorXType==CUI.eAnchor.Null||this.mAnchorYType==CUI.eAnchor.Null||null==this.mUIPT)return;var e=new r,s=this.mUIPT.GetBound().Export();if(s.GetType()==i.eType.Null)return;var m=t.mWidth,h=t.mHeight;m=this.mFrame.PF().mWidth,h=this.mFrame.PF().mHeight;let n=1/t.mZoom,l=Math.round(s.mMax.x*this.mSca.x*n),o=Math.round(s.mMax.y*this.mSca.y*n);e.x=l*-this.mAnchorXType+this.mAnchorXLen*-this.mAnchorXType,e.y=o*-this.mAnchorYType+this.mAnchorYLen*-this.mAnchorYType,this.mAnchorXType>0&&(e.x+=m),this.mAnchorYType>0&&(e.y+=h),(e=t.ScreenToWorld2DPoint(e.x,e.y)).x=Math.trunc(e.x),e.y=Math.trunc(e.y),super.SetPos(e,!0),this.mUpdateAnchor=!1}SetPos(t,e=!0){super.SetPos(t,e),this.mUpdateAnchor=!0}SubjectUpdate(t){if(super.SubjectUpdate(t),null!=this.mDebugMode)if(this.GetFrame().PF().mDebugMode&&0==this.mDebugMode.length)for(let t=0;t<this.mComArr.length;++t)this.mDebugMode[t]=this.mComArr[t].IsEnable(),this.mComArr[t].SetEnable(!1);else if(0==this.GetFrame().PF().mDebugMode&&0!=this.mDebugMode.length){for(let t=0;t<this.mComArr.length;++t)null==this.mDebugMode[t]?this.mComArr[t].SetEnable(!0):this.mComArr[t].SetEnable(this.mDebugMode[t]);this.mUpdateAnchor=!0,this.mDebugMode.length=0}if(null==this.mUIPT||null==this.mFrame)return;if(this.mUIPT.mRenPT.length>0){let t=this.mUIPT.mRenPT[0].mCam;this.mCamZoomResize&&Math.abs(t.mZoom-this.mSca.x)>.001&&this.SetSca(new r(t.mZoom,t.mZoom,t.mZoom))}this.UpdateAnchor();let e=this.mPressPos;this.mPressPos=null;let i=s.eType.Null;if(null!=this.mPick){if(this.mPick.mouse.press){if(i=s.eType.Press,null==this.mFirstRayMs){this.mFirstRayMs=this.mPick.Export();let t=m.V3SubV3(this.mFirstRayMs.ray.GetPosition(),this.GetPos());this.mFirstRayMs.ray.SetOriginal(t)}}else i=s.eType.Pick;let t=!0,e=this.GetPt().GetRenderPass()[0].mPriority+this.GetPt().GetFMat().z;for(let h=0;h<I.length;++h){if(I[h]!=this&&I[h].mLastPickMouse.mouse.key==this.mPick.mouse.key){t=!1,i=s.eType.Null,this.mPick=null;break}if(I[h]==this){t=!1;continue}let r=I[h].GetPt().GetRenderPass()[0].mPriority+I[h].GetPt().GetFMat().z;if(I[h].mLastPickMouse.mouse.key==this.mPick.mouse.key){if(e==r&&m.V3Distance(this.mPick.ray.GetPosition(),this.GetPos())>m.V3Distance(I[h].mLastPickMouse.ray.GetPosition(),I[h].GetPos())){t=!1,i=s.eType.Null,this.mPick=null;break}r<e?I[h].mLastEvent=s.eType.Null:i=s.eType.Null}}t&&I.push(this)}if(null!=this.mLastPickMouse&&null==this.mPick){let t=this.mFrame.Input().GetMouseKey(this.mLastPickMouse.mouse.key);if(null!=t&&t.press&&this.mPressTraking&&null!=this.mFirstRayMs)i=s.eType.Press,this.mLastPickMouse.mouse.Import(t),this.mPick=this.mLastPickMouse;else for(let t=0;t<I.length;++t)if(I[t]==this){I.splice(t,1);break}}if(this.mDbOn&&(this.mDbTime-=t.DeltaTime(),this.mDbTime<=0&&(this.mLastEvent=s.eType.Click,this.mClickEvent.Call(this),this.mDbTime=0,this.mDbOn=!1,this.mPressPos=e)),this.mLastEvent==s.eType.Press?i==s.eType.Pick?0!=this.mDbClick?0==this.mDbOn?(this.mDbOn=!0,this.mDbTime=this.mDbClick,this.mLastEvent=s.eType.Null):this.mDbTime>0&&(this.mLastEvent=s.eType.DoubleClick,this.mClickEvent.Call(this),this.mDbTime=0,this.mDbOn=!1):(this.mLastEvent=s.eType.Click,this.mPressPos=e,this.mClickEvent.Call(this)):i==s.eType.Null&&this.mPressTraking&&(this.mLastEvent=s.eType.Click,this.mPressPos=e,this.mClickEvent.Call(this)):this.mLastEvent=i,null!=this.mFirstRayMs&&i==s.eType.Null&&(this.mFirstRayMs=null),i==s.eType.Press){this.GetFrame().Input().SetUI(this),this.mPressEvent.Call(this);var h=this.mPick.mouse.x-this.mFirstRayMs.mouse.x,n=this.mPick.mouse.y-this.mFirstRayMs.mouse.y;let t=this.mFirstRayMs.ray.GetOriginal();this.mPressPos=new r(h+t.x,n+t.y)}this.mLastPickMouse=this.mPick,this.mPick=null}}export class CUIText extends CUI{mText=null;mFontOption;mAlignCenter=!0;constructor(){super()}Init(t,e=null){null!=e&&(this.mFontOption=e),null==this.mFontOption&&(this.mFontOption=new P(64)),this.mText=t+"",null==this.mUIPT&&(this.mUIPT=new c,this.mUIPT.PushRenderPass(S),this.PushComp(this.mUIPT)),this.mUpdate=!0}SubjectUpdate(t){if(this.mUpdate&&null!=this.mText){null!=this.mDebugMode&&(this.mDebugMode.length=0);var e=u.TextToTexName(this.GetFrame().Ren(),this.mText,this.mFontOption);if(this.mUIPT.SetTexture(e.mKey),this.mUIPT.SetSize(null),this.mAlignCenter){var s=e.mXSize-e.mRXSize;this.mUIPT.SetPos(new r(.5*s,0,0))}this.SetPivot(this.mPivot),null!=this.mUICL&&this.mUICL.SetPickMouse(!1)}null==this.mUICL&&(this.AddCCollider(),null!=this.mUICL&&this.mUICL.SetPickMouse(!1)),super.SubjectUpdate(t),this.mUpdate&&(this.mUpdate=!1)}Export(t=!0,e=!0){return this.mUIPT.SetTexture(""),super.Export(t,e)}SetFrame(t){null!=t&&null!=this.mText&&u.TextToTexName(t.Ren(),this.mText,this.mFontOption),super.SetFrame(t)}}export class CUIPicture extends CUI{mTextureKey="";constructor(){super()}Init(t,e=null){this.mTextureKey=t,this.mUpdate=!0,null==this.mUIPT&&(this.mUIPT=new c(this.mTextureKey,this.mSize),this.mUIPT.PushRenderPass(S),this.PushComp(this.mUIPT))}SubjectUpdate(t){this.mUpdate&&null!=this.mTextureKey&&(this.mDebugMode.length=0,this.mUIPT.SetTexture(this.mTextureKey),this.mUIPT.SetSize(this.mSize),null!=this.mRGBA&&this.SetRGBA(this.mRGBA),this.SetPivot(this.mPivot),null!=this.mUICL&&this.mUICL.SetPickMouse(!1)),null==this.mUICL&&(this.AddCCollider(),null!=this.mUICL&&this.mUICL.SetPickMouse(!1)),super.SubjectUpdate(t),this.mUpdate&&(this.mUpdate=!1)}}export class CUIButtonImg extends CUI{mNormal="";mOverImg="";mPressImg="";constructor(){super()}Init(t,e,s){this.mUpdate=!0,this.mNormal=t,this.mOverImg=e,this.mPressImg=s,null!=this.mFrame&&(this.mFrame.Load().Exe(e),this.mFrame.Load().Exe(s)),this.mUpdate=!0,null==this.mUIPT&&(this.mUIPT=new c(this.mNormal,this.mSize),this.mUIPT.PushRenderPass(S),this.PushComp(this.mUIPT))}SubjectUpdate(t){this.mUpdate&&(null!=this.mNormal&&(this.mDebugMode.length=0,this.mUIPT.SetSize(this.mSize),this.mUIPT.SetTexture(this.mNormal),null!=this.mRGBA&&this.SetRGBA(this.mRGBA),this.SetPivot(this.mPivot)),this.mUpdate=!1),null==this.mUICL&&this.AddCCollider(),this.mLastEvent==s.eType.Press?(this.mPressImg!=this.mUIPT.GetTexture()[0]&&this.mUIPT.SetTexture(this.mPressImg),this.GetFrame().SetCurser(T.eCurser.pointer)):this.mLastEvent==s.eType.Pick?(this.mOverImg!=this.mUIPT.GetTexture()[0]&&this.mUIPT.SetTexture(this.mOverImg),this.GetFrame().SetCurser(T.eCurser.pointer)):this.mNormal!=this.mUIPT.GetTexture()[0]&&this.mUIPT.SetTexture(this.mNormal),super.SubjectUpdate(t)}SetFrame(t){super.SetFrame(t),null!=this.mFrame&&(this.mFrame.Load().Exe(this.mOverImg),this.mFrame.Load().Exe(this.mPressImg))}}export class CUIButtonRGBA extends CUI{mNormal="";mNormalRGBA=new n(0,0,0,1);mOverRGBA=new n(0,0,0,1);mPressRGBA=new n(0,0,0,1);constructor(){super()}Init(t,e=new n(-.2,-.2,-.2,1),s=new n(.2,.2,.2,1)){this.mUpdate=!0,this.mNormal=t,this.mOverRGBA=e,this.mPressRGBA=s,null==this.mUIPT&&null!=this.mNormal&&(this.mUIPT=new c(this.mNormal,this.mSize),this.mUIPT.PushRenderPass(S),this.PushComp(this.mUIPT))}SubjectUpdate(t){this.mUpdate&&(this.mDebugMode.length=0,this.mUIPT.SetSize(this.mSize),this.mUIPT.SetTexture(this.mNormal),null!=this.mRGBA&&this.SetRGBA(this.mRGBA),this.SetPivot(this.mPivot),this.mUpdate=!1),null==this.mUICL&&this.AddCCollider(),this.mLastEvent==s.eType.Press?(this.SetRGBA(this.mPressRGBA),this.GetFrame().SetCurser(T.eCurser.pointer)):this.mLastEvent==s.eType.Pick?(this.SetRGBA(this.mOverRGBA),this.GetFrame().SetCurser(T.eCurser.pointer)):this.SetRGBA(this.mNormalRGBA),super.SubjectUpdate(t)}}export class CUIProgressBar extends CUI{mTexFront;mTexBack;mMax=0;mVal=0;mPTBack;constructor(){super()}ImportCJSON(t){let e=super.ImportCJSON(t),s=e.FindComps(c);return s.length>1&&(this.mPTBack=s[1]),e}Init(t,e,s=new h(2,2),i=null,m=null){if(this.mTexFront=i,this.mTexBack=m,this.mMax=t,this.mVal=e,this.mSize=s,this.mUpdate=!0,null==this.mUIPT){var l=!1;null==this.mTexFront&&null==this.mRGBA&&(l=!0),this.mUIPT=new c("",this.mSize),this.mUIPT.PushRenderPass(S),l?this.SetRGBA(new n(1,0,0,0)):this.mRGBA&&this.SetRGBA(this.mRGBA),this.PushComp(this.mUIPT)}null==this.mPTBack&&(this.mPTBack=new c("",this.mSize),this.mPTBack.PushRenderPass(S),this.mPTBack.SetPos(new r(0,0,-.1)),this.PushComp(this.mPTBack))}SetBarVal(t){if(t<0?this.mVal=0:t>this.mMax?this.mVal=this.mMax:this.mVal=t,null!=this.mUIPT){var e=this.mVal/this.mMax*1;Number.isNaN(e)&&(e=0),this.mUIPT.SetPos(new r(.5*(this.mSize.x*e-this.mSize.x),0,0)),this.mUIPT.SetSize(new h(this.mSize.x*e,this.mSize.y))}}GetBarVal(){return this.mVal}GetBarMax(){return this.mMax}SetBarMax(t){this.mMax=t,this.SetBarVal(this.GetBarVal())}SetSizeScreenX(t){this.mFrame&&this.SetSize(this.mFrame.PF().mWidth,t)}SetSizeScreenY(t){this.mFrame&&this.SetSize(t,this.mFrame.PF().mHeight)}SubjectUpdate(t){if(this.mUpdate){if(!this.mUIPT||!this.mPTBack)return;null==this.mTexFront&&(this.mTexFront=this.mFrame.Pal().GetBlackTex(),this.mUIPT.SetTexture(this.mTexFront)),null==this.mTexBack&&(this.mTexBack=this.mFrame.Pal().GetBlackTex(),this.mPTBack.SetTexture(this.mTexBack)),this.mUIPT.SetSize(this.mSize),null!=this.mRGBA&&this.SetRGBA(this.mRGBA),this.SetBarVal(this.mVal),null!=this.mUICL&&this.mUICL.SetPickMouse(!1)}null==this.mUICL&&(this.AddCCollider(),null!=this.mUICL&&this.mUICL.SetPickMouse(!1)),super.SubjectUpdate(t),this.mUpdate&&(this.mUpdate=!1)}}export class CUIHTML extends CUI{mHTML;mHover=!1;mCLInit=!0;Init(t,s=null){this.mHTML=t,null==this.mUIPT?(this.mUIPT=new U(e.DataToDom(this.mHTML),s),this.PushComp(this.mUIPT)):(this.mUIPT.Destroy(),this.mUIPT=new U(e.DataToDom(this.mHTML),s),this.PushComp(this.mUIPT))}Update(t){if(super.Update(t),null==this.mUICL||this.mCLInit){if(0==this.mUIPT.mAttach)return;this.AddCCollider(),this.mCLInit=!1}this.mUIPT.GetElement().classList.length>0&&this.mHover&&(this.mLastEvent==s.eType.Pick||this.mLastEvent==s.eType.Press?this.mUIPT.GetElement().classList.add("active"):this.mUIPT.GetElement().classList.remove("active"))}SetHover(t){this.mHover=t}}
+import { CArray } from "../../basic/CArray.js";
+import { CDOM } from "../../basic/CDOM.js";
+import { CEvent } from "../../basic/CEvent.js";
+import { CBound } from "../../geometry/CBound.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CVec2 } from "../../geometry/CVec2.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CVec4 } from "../../geometry/CVec4.js";
+import { CAlpha } from "../../render/CAlpha.js";
+import { CColor } from "../../render/CColor.js";
+import { CRenderPass } from "../../render/CRenderPass.js";
+import { CFont, CFontOption } from "../../util/CFont.js";
+import { CFrame } from "../../util/CFrame.js";
+import { CCollider } from "../component/CCollider.js";
+import { CPaint2D, CPaintHTML } from "../component/paint/CPaint2D.js";
+import { CSubject } from "./CSubject.js";
+var gToolMode = false;
+var gUIPDepth = new Array();
+var gMainFrame = null;
+var gPickList = new CArray();
+var gUIRP = new CRenderPass();
+gUIRP.mPriority = CRenderPass.ePriority.Ui;
+gUIRP.mDepthTest = false;
+gUIRP.mDepthWrite = false;
+export class CUI extends CSubject {
+    static eAnchor = {
+        Min: -1,
+        Center: 0,
+        Max: 1,
+        Null: null,
+    };
+    mPick = null;
+    mLastPickMouse = null;
+    mPressPos = new CVec3();
+    mFirstRayMs = null;
+    mPressTraking = false;
+    mBoundScale = 1;
+    mDbClick = 0;
+    mDbTime = 0;
+    mDbOn = false;
+    mMove = false;
+    mUpdate = true;
+    mEvent = CEvent.eType.Null;
+    mLastEvent = CEvent.eType.Null;
+    mUIPT = null;
+    mUICL = null;
+    mSize = null;
+    mRGBA = null;
+    mClickEvent = new CEvent();
+    mPressEvent = new CEvent();
+    mCamZoomResize = false;
+    mAnchorXType = CUI.eAnchor.Null;
+    mAnchorYType = CUI.eAnchor.Null;
+    mAnchorXLen = 0;
+    mAnchorYLen = 0;
+    mUpdateAnchor = true;
+    mUpdateScale = false;
+    mPivot = null;
+    mFocusCount = 0;
+    mDebugMode = new Array();
+    static ToolMode(_enable) { gToolMode = _enable; }
+    static SetMainFrame(_frame) { gMainFrame = _frame; }
+    IsShould(_member, _type) {
+        if (_member == "mPick" || _member == "mLastPickMouse" || _member == "mLastEvent" ||
+            _member == "mUpdateAnchor" || _member == "mUpdate" || _member == "mUpdateScale")
+            return true;
+        return super.IsShould(_member, _type);
+    }
+    ImportCJSON(_json) {
+        var wt = super.ImportCJSON(_json);
+        var ptVec = this.FindComps(CPaint2D);
+        if (ptVec.length > 0)
+            this.mUIPT = ptVec[0];
+        var clVec = this.FindComps(CCollider);
+        if (clVec.length > 0)
+            this.mUICL = clVec[0];
+        for (let i = 0; i < this.mComArr.length; ++i) {
+            if (this.mDebugMode != null && this.mDebugMode.length > i)
+                this.mComArr[i].SetEnable(this.mDebugMode[i]);
+        }
+        return wt;
+    }
+    Export(_copy = true, _resetKey = true) {
+        var wt = super.Export(_copy, _resetKey);
+        var ptVec = wt.FindComps(CPaint2D);
+        if (ptVec.length > 0)
+            wt.mUIPT = ptVec[0];
+        var clVec = wt.FindComps(CCollider);
+        if (clVec.length > 0)
+            wt.mUICL = clVec[0];
+        return wt;
+    }
+    constructor() {
+        super();
+    }
+    SetCamZoomResize(_enable) {
+        this.mCamZoomResize = _enable;
+    }
+    SetPressTraking(_enable) {
+        this.mPressTraking = _enable;
+    }
+    SetDebugMode(_enable) {
+        if (_enable)
+            this.mDebugMode = new Array();
+        else {
+            this.mDebugMode = null;
+        }
+    }
+    SetAnchorX(_type, _len = 0) {
+        this.mAnchorXType = _type;
+        this.mAnchorXLen = _len;
+        this.mUpdateAnchor = true;
+    }
+    SetAnchorY(_type, _len = 0) {
+        this.mAnchorYType = _type;
+        this.mAnchorYLen = _len;
+        this.mUpdateAnchor = true;
+    }
+    SetEnable(_show) {
+        super.SetEnable(_show);
+    }
+    GetPt() { return this.mUIPT; }
+    GetCl() { return this.mUICL; }
+    GetPressPos() { return this.mPressPos; }
+    GetPick() { return this.mPick; }
+    GetLastEvent() { return this.mLastEvent; }
+    SetMove(_enable) {
+        this.mMove = _enable;
+        this.AddCCollider();
+    }
+    AddCCollider() {
+        if (this.mUIPT == null)
+            return;
+        var bound = this.mUIPT.GetBound();
+        if (bound.GetType() == CBound.eType.Null) {
+            return;
+        }
+        if (this.mUICL != null) {
+            this.mUICL.InitBound(this.mUIPT);
+            this.mUICL.mBound.mMin.x *= this.mBoundScale;
+            this.mUICL.mBound.mMin.y *= this.mBoundScale;
+            this.mUICL.mBound.mMax.x *= this.mBoundScale;
+            this.mUICL.mBound.mMax.y *= this.mBoundScale;
+            this.mUICL.mBound.mMax.z = 0.1;
+            this.mUICL.mBound.mMin.z = -0.1;
+            return;
+        }
+        this.mUICL = new CCollider(this.mUIPT);
+        this.mUICL.SetPickMouse(true);
+        this.mUICL.SetBoundType(CBound.eType.Box);
+        this.mUICL.mBound.mMin.x *= this.mBoundScale;
+        this.mUICL.mBound.mMin.y *= this.mBoundScale;
+        this.mUICL.mBound.mMax.x *= this.mBoundScale;
+        this.mUICL.mBound.mMax.y *= this.mBoundScale;
+        this.mUICL.mBound.mMax.z = 0.1;
+        this.mUICL.mBound.mMin.z = -0.1;
+        this.PushComp(this.mUICL);
+    }
+    GetSize() { return this.mSize; }
+    SetSize(_width, _height) {
+        if (this.mSize == null)
+            this.mSize = new CVec2();
+        else if (this.mSize.x == _width && this.mSize.y == _height) {
+            return;
+        }
+        this.mSize.x = _width;
+        this.mSize.y = _height;
+        if (this.mUIPT != null) {
+            this.mUIPT.SetSize(this.mSize);
+            this.AddCCollider();
+        }
+        this.mUpdateAnchor = true;
+    }
+    GetPivot() {
+        return this.mPivot;
+    }
+    SetPivot(_pivot) {
+        this.mPivot = _pivot;
+        if (this.mUIPT) {
+            if (this.mPivot != null) {
+                this.mUIPT.SetPivot(_pivot);
+            }
+            this.AddCCollider();
+        }
+    }
+    SetClickEvent(_event) {
+        if (_event instanceof CEvent)
+            this.mClickEvent = _event;
+        else
+            this.mClickEvent = new CEvent(_event);
+        this.AddCCollider();
+    }
+    SetPressEvent(_event) {
+        if (_event instanceof CEvent)
+            this.mPressEvent = _event;
+        else
+            this.mPressEvent = new CEvent(_event);
+        this.AddCCollider();
+    }
+    SetRGBA(_RGBA = new CVec4(0, 0, 0, 1)) {
+        if (this.mRGBA != null && this.mRGBA.Equals(_RGBA))
+            return;
+        this.mRGBA = _RGBA;
+        if (this.mUIPT != null) {
+            this.mUIPT.SetColorModel(new CColor(_RGBA.x, _RGBA.y, _RGBA.z, CColor.eModel.RGBAdd));
+            this.mUIPT.SetAlphaModel(new CAlpha(_RGBA.w));
+        }
+    }
+    RTTexCodi() {
+        this.mUIPT.SetTexCodi(new CVec4(1, 1, 0, -1));
+    }
+    PickMouse(_rayMouse) {
+        if (this.mEnable == false)
+            return;
+        this.mPick = _rayMouse;
+    }
+    UpdateAnchor() {
+        if (this.mUIPT.mRenPT.length == 0 || gToolMode)
+            return;
+        var cam = this.mUIPT.mRenPT[0].mCam;
+        if (this.mUpdateAnchor == false && this.mFrame.Win().IsResize() == false && cam.mUpdateMat == 0)
+            return;
+        if (this.mAnchorXType == CUI.eAnchor.Null || this.mAnchorYType == CUI.eAnchor.Null || this.mUIPT == null)
+            return;
+        var pos = new CVec3();
+        var bound = this.mUIPT.GetBound().Export();
+        if (bound.GetType() == CBound.eType.Null)
+            return;
+        var width = cam.mWidth;
+        var height = cam.mHeight;
+        width = this.mFrame.PF().mWidth;
+        height = this.mFrame.PF().mHeight;
+        let zoom = (1 / cam.mZoom);
+        let sizeX = Math.round((bound.mMax.x * this.mSca.x) * zoom);
+        let sizeY = Math.round((bound.mMax.y * this.mSca.y) * zoom);
+        pos.x = sizeX * -this.mAnchorXType + this.mAnchorXLen * -this.mAnchorXType;
+        pos.y = sizeY * -this.mAnchorYType + this.mAnchorYLen * -this.mAnchorYType;
+        if (this.mAnchorXType > 0)
+            pos.x += width;
+        if (this.mAnchorYType > 0)
+            pos.y += height;
+        pos = cam.ScreenToWorld2DPoint(pos.x, pos.y);
+        pos.x = Math.trunc(pos.x);
+        pos.y = Math.trunc(pos.y);
+        super.SetPos(pos, true);
+        this.mUpdateAnchor = false;
+    }
+    SetPos(_pos, _reset = true) {
+        super.SetPos(_pos, _reset);
+        this.mUpdateAnchor = true;
+    }
+    SubjectUpdate(_update) {
+        super.SubjectUpdate(_update);
+        if (this.mDebugMode != null) {
+            if (this.GetFrame().PF().mDebugMode && this.mDebugMode.length == 0) {
+                for (let i = 0; i < this.mComArr.length; ++i) {
+                    this.mDebugMode[i] = this.mComArr[i].IsEnable();
+                    this.mComArr[i].SetEnable(false);
+                }
+            }
+            else if (this.GetFrame().PF().mDebugMode == false && this.mDebugMode.length != 0) {
+                for (let i = 0; i < this.mComArr.length; ++i) {
+                    if (this.mDebugMode[i] == null)
+                        this.mComArr[i].SetEnable(true);
+                    else
+                        this.mComArr[i].SetEnable(this.mDebugMode[i]);
+                }
+                this.mUpdateAnchor = true;
+                this.mDebugMode.length = 0;
+            }
+        }
+        if (this.mUIPT == null || this.mFrame == null)
+            return;
+        if (this.mUIPT.mRenPT.length > 0) {
+            let cam = this.mUIPT.mRenPT[0].mCam;
+            if (this.mCamZoomResize && Math.abs(cam.mZoom - this.mSca.x) > 0.001) {
+                this.SetSca(new CVec3(cam.mZoom, cam.mZoom, cam.mZoom));
+            }
+        }
+        this.UpdateAnchor();
+        let lastPressPos = this.mPressPos;
+        this.mPressPos = null;
+        let ev = CEvent.eType.Null;
+        if (this.mPick != null) {
+            if (this.mPick.mouse.press) {
+                ev = CEvent.eType.Press;
+                if (this.mFirstRayMs == null) {
+                    this.mFirstRayMs = this.mPick.Export();
+                    let ctr = CMath.V3SubV3(this.mFirstRayMs.ray.GetPosition(), this.GetPos());
+                    this.mFirstRayMs.ray.SetOriginal(ctr);
+                }
+            }
+            else
+                ev = CEvent.eType.Pick;
+            let push = true;
+            let aDepth = this.GetPt().GetRenderPass()[0].mPriority + this.GetPt().GetFMat().z;
+            for (let i = 0; i < gUIPDepth.length; ++i) {
+                if (gUIPDepth[i] != this && gUIPDepth[i].mLastPickMouse.mouse.key == this.mPick.mouse.key) {
+                    push = false;
+                    ev = CEvent.eType.Null;
+                    this.mPick = null;
+                    break;
+                }
+                if (gUIPDepth[i] == this) {
+                    push = false;
+                    continue;
+                }
+                let bDepth = gUIPDepth[i].GetPt().GetRenderPass()[0].mPriority + gUIPDepth[i].GetPt().GetFMat().z;
+                if (gUIPDepth[i].mLastPickMouse.mouse.key == this.mPick.mouse.key) {
+                    if (aDepth == bDepth) {
+                        let aDist = CMath.V3Distance(this.mPick.ray.GetPosition(), this.GetPos());
+                        let bDist = CMath.V3Distance(gUIPDepth[i].mLastPickMouse.ray.GetPosition(), gUIPDepth[i].GetPos());
+                        if (aDist > bDist) {
+                            push = false;
+                            ev = CEvent.eType.Null;
+                            this.mPick = null;
+                            break;
+                        }
+                    }
+                    if (bDepth < aDepth)
+                        gUIPDepth[i].mLastEvent = CEvent.eType.Null;
+                    else
+                        ev = CEvent.eType.Null;
+                }
+            }
+            if (push) {
+                gUIPDepth.push(this);
+            }
+        }
+        if (this.mLastPickMouse != null && this.mPick == null) {
+            let m = this.mFrame.Input().GetMouseKey(this.mLastPickMouse.mouse.key);
+            if (m != null && m.press && this.mPressTraking && this.mFirstRayMs != null) {
+                ev = CEvent.eType.Press;
+                this.mLastPickMouse.mouse.Import(m);
+                this.mPick = this.mLastPickMouse;
+            }
+            else {
+                for (let i = 0; i < gUIPDepth.length; ++i) {
+                    if (gUIPDepth[i] == this) {
+                        gUIPDepth.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+        }
+        if (this.mDbOn) {
+            this.mDbTime -= _update.DeltaTime();
+            if (this.mDbTime <= 0) {
+                this.mLastEvent = CEvent.eType.Click;
+                this.mClickEvent.Call(this);
+                this.mDbTime = 0;
+                this.mDbOn = false;
+                this.mPressPos = lastPressPos;
+            }
+        }
+        if (this.mLastEvent == CEvent.eType.Press) {
+            if (ev == CEvent.eType.Pick) {
+                if (this.mDbClick != 0) {
+                    if (this.mDbOn == false) {
+                        this.mDbOn = true;
+                        this.mDbTime = this.mDbClick;
+                        this.mLastEvent = CEvent.eType.Null;
+                    }
+                    else {
+                        if (this.mDbTime > 0) {
+                            this.mLastEvent = CEvent.eType.DoubleClick;
+                            this.mClickEvent.Call(this);
+                            this.mDbTime = 0;
+                            this.mDbOn = false;
+                        }
+                    }
+                }
+                else {
+                    this.mLastEvent = CEvent.eType.Click;
+                    this.mPressPos = lastPressPos;
+                    this.mClickEvent.Call(this);
+                }
+            }
+            else if (ev == CEvent.eType.Null && this.mPressTraking) {
+                this.mLastEvent = CEvent.eType.Click;
+                this.mPressPos = lastPressPos;
+                this.mClickEvent.Call(this);
+            }
+        }
+        else
+            this.mLastEvent = ev;
+        if (this.mFirstRayMs != null && ev == CEvent.eType.Null) {
+            this.mFirstRayMs = null;
+        }
+        if (ev == CEvent.eType.Press) {
+            this.GetFrame().Input().SetUI(this);
+            this.mPressEvent.Call(this);
+            var mx = this.mPick.mouse.x - this.mFirstRayMs.mouse.x;
+            var my = this.mPick.mouse.y - this.mFirstRayMs.mouse.y;
+            let ctr = this.mFirstRayMs.ray.GetOriginal();
+            this.mPressPos = new CVec3(mx + ctr.x, my + ctr.y);
+        }
+        this.mLastPickMouse = this.mPick;
+        this.mPick = null;
+    }
+}
+;
+export class CUIText extends CUI {
+    mText = null;
+    mFontOption;
+    mAlignCenter = true;
+    constructor() {
+        super();
+    }
+    Init(_text, _fontOption = null) {
+        if (_fontOption != null)
+            this.mFontOption = _fontOption;
+        if (this.mFontOption == null)
+            this.mFontOption = new CFontOption(64);
+        this.mText = _text + "";
+        if (this.mUIPT == null) {
+            this.mUIPT = new CPaint2D();
+            this.mUIPT.PushRenderPass(gUIRP);
+            this.PushComp(this.mUIPT);
+        }
+        this.mUpdate = true;
+    }
+    SubjectUpdate(_delay) {
+        if (this.mUpdate && this.mText != null) {
+            if (this.mDebugMode != null)
+                this.mDebugMode.length = 0;
+            var fr = CFont.TextToTexName(this.GetFrame().Ren(), this.mText, this.mFontOption);
+            this.mUIPT.SetTexture(fr.mKey);
+            this.mUIPT.SetSize(null);
+            if (this.mAlignCenter) {
+                var xrate = fr.mXSize - fr.mRXSize;
+                this.mUIPT.SetPos(new CVec3(xrate * 0.5, 0, 0));
+            }
+            this.SetPivot(this.mPivot);
+            if (this.mUICL != null) {
+                this.mUICL.SetPickMouse(false);
+            }
+        }
+        if (this.mUICL == null) {
+            this.AddCCollider();
+            if (this.mUICL != null) {
+                this.mUICL.SetPickMouse(false);
+            }
+        }
+        super.SubjectUpdate(_delay);
+        if (this.mUpdate)
+            this.mUpdate = false;
+    }
+    Export(_copy = true, _resetKey = true) {
+        this.mUIPT.SetTexture("");
+        return super.Export(_copy, _resetKey);
+    }
+    SetFrame(_fw) {
+        if (_fw != null && this.mText != null)
+            CFont.TextToTexName(_fw.Ren(), this.mText, this.mFontOption);
+        super.SetFrame(_fw);
+    }
+}
+;
+export class CUIPicture extends CUI {
+    mTextureKey = "";
+    constructor() {
+        super();
+    }
+    Init(_tex, _color = null) {
+        this.mTextureKey = _tex;
+        this.mUpdate = true;
+        if (this.mUIPT == null) {
+            this.mUIPT = new CPaint2D(this.mTextureKey, this.mSize);
+            this.mUIPT.PushRenderPass(gUIRP);
+            this.PushComp(this.mUIPT);
+        }
+    }
+    SubjectUpdate(_delay) {
+        if (this.mUpdate && this.mTextureKey != null) {
+            this.mDebugMode.length = 0;
+            this.mUIPT.SetTexture(this.mTextureKey);
+            this.mUIPT.SetSize(this.mSize);
+            if (this.mRGBA != null)
+                this.SetRGBA(this.mRGBA);
+            this.SetPivot(this.mPivot);
+            if (this.mUICL != null) {
+                this.mUICL.SetPickMouse(false);
+            }
+        }
+        if (this.mUICL == null) {
+            this.AddCCollider();
+            if (this.mUICL != null) {
+                this.mUICL.SetPickMouse(false);
+            }
+        }
+        super.SubjectUpdate(_delay);
+        if (this.mUpdate)
+            this.mUpdate = false;
+    }
+}
+;
+export class CUIButtonImg extends CUI {
+    mNormal = "";
+    mOverImg = "";
+    mPressImg = "";
+    constructor() {
+        super();
+    }
+    Init(_normal, _over, _press) {
+        this.mUpdate = true;
+        this.mNormal = _normal;
+        this.mOverImg = _over;
+        this.mPressImg = _press;
+        if (this.mFrame != null) {
+            this.mFrame.Load().Exe(_over);
+            this.mFrame.Load().Exe(_press);
+        }
+        this.mUpdate = true;
+        if (this.mUIPT == null) {
+            this.mUIPT = new CPaint2D(this.mNormal, this.mSize);
+            this.mUIPT.PushRenderPass(gUIRP);
+            this.PushComp(this.mUIPT);
+        }
+    }
+    SubjectUpdate(_delay) {
+        if (this.mUpdate) {
+            if (this.mNormal != null) {
+                this.mDebugMode.length = 0;
+                this.mUIPT.SetSize(this.mSize);
+                this.mUIPT.SetTexture(this.mNormal);
+                if (this.mRGBA != null)
+                    this.SetRGBA(this.mRGBA);
+                this.SetPivot(this.mPivot);
+            }
+            this.mUpdate = false;
+        }
+        if (this.mUICL == null) {
+            this.AddCCollider();
+        }
+        if (this.mLastEvent == CEvent.eType.Press) {
+            if (this.mPressImg != this.mUIPT.GetTexture()[0])
+                this.mUIPT.SetTexture(this.mPressImg);
+            this.GetFrame().SetCurser(CFrame.eCurser.pointer);
+        }
+        else if (this.mLastEvent == CEvent.eType.Pick) {
+            if (this.mOverImg != this.mUIPT.GetTexture()[0])
+                this.mUIPT.SetTexture(this.mOverImg);
+            this.GetFrame().SetCurser(CFrame.eCurser.pointer);
+        }
+        else {
+            if (this.mNormal != this.mUIPT.GetTexture()[0])
+                this.mUIPT.SetTexture(this.mNormal);
+        }
+        super.SubjectUpdate(_delay);
+    }
+    SetFrame(_fw) {
+        super.SetFrame(_fw);
+        if (this.mFrame != null) {
+            this.mFrame.Load().Exe(this.mOverImg);
+            this.mFrame.Load().Exe(this.mPressImg);
+        }
+    }
+}
+;
+export class CUIButtonRGBA extends CUI {
+    mNormal = "";
+    mNormalRGBA = new CVec4(0, 0, 0, 1);
+    mOverRGBA = new CVec4(0, 0, 0, 1);
+    mPressRGBA = new CVec4(0, 0, 0, 1);
+    constructor() {
+        super();
+    }
+    Init(_normal, _over = new CVec4(-0.2, -0.2, -0.2, 1), _press = new CVec4(0.2, 0.2, 0.2, 1)) {
+        this.mUpdate = true;
+        this.mNormal = _normal;
+        this.mOverRGBA = _over;
+        this.mPressRGBA = _press;
+        if (this.mUIPT == null && this.mNormal != null) {
+            this.mUIPT = new CPaint2D(this.mNormal, this.mSize);
+            this.mUIPT.PushRenderPass(gUIRP);
+            this.PushComp(this.mUIPT);
+        }
+    }
+    SubjectUpdate(_delay) {
+        if (this.mUpdate) {
+            this.mDebugMode.length = 0;
+            this.mUIPT.SetSize(this.mSize);
+            this.mUIPT.SetTexture(this.mNormal);
+            if (this.mRGBA != null)
+                this.SetRGBA(this.mRGBA);
+            this.SetPivot(this.mPivot);
+            this.mUpdate = false;
+        }
+        if (this.mUICL == null) {
+            this.AddCCollider();
+        }
+        if (this.mLastEvent == CEvent.eType.Press) {
+            this.SetRGBA(this.mPressRGBA);
+            this.GetFrame().SetCurser(CFrame.eCurser.pointer);
+        }
+        else if (this.mLastEvent == CEvent.eType.Pick) {
+            this.SetRGBA(this.mOverRGBA);
+            this.GetFrame().SetCurser(CFrame.eCurser.pointer);
+        }
+        else {
+            this.SetRGBA(this.mNormalRGBA);
+        }
+        super.SubjectUpdate(_delay);
+    }
+}
+;
+export class CUIProgressBar extends CUI {
+    mTexFront;
+    mTexBack;
+    mMax = 0;
+    mVal = 0;
+    mPTBack;
+    constructor() {
+        super();
+    }
+    ImportCJSON(_json) {
+        let result = super.ImportCJSON(_json);
+        let ptVec = result.FindComps(CPaint2D);
+        if (ptVec.length > 1) {
+            this.mPTBack = ptVec[1];
+        }
+        return result;
+    }
+    Init(_max, _val, _size = new CVec2(2, 2), _front = null, _back = null) {
+        this.mTexFront = _front;
+        this.mTexBack = _back;
+        this.mMax = _max;
+        this.mVal = _val;
+        this.mSize = _size;
+        this.mUpdate = true;
+        if (this.mUIPT == null) {
+            var redOn = false;
+            if (this.mTexFront == null && this.mRGBA == null) {
+                redOn = true;
+            }
+            this.mUIPT = new CPaint2D("", this.mSize);
+            this.mUIPT.PushRenderPass(gUIRP);
+            if (redOn)
+                this.SetRGBA(new CVec4(1, 0, 0, 0));
+            else if (this.mRGBA)
+                this.SetRGBA(this.mRGBA);
+            this.PushComp(this.mUIPT);
+        }
+        if (this.mPTBack == null) {
+            this.mPTBack = new CPaint2D("", this.mSize);
+            this.mPTBack.PushRenderPass(gUIRP);
+            this.mPTBack.SetPos(new CVec3(0, 0, -0.1));
+            this.PushComp(this.mPTBack);
+        }
+    }
+    SetBarVal(_val) {
+        if (_val < 0)
+            this.mVal = 0;
+        else if (_val > this.mMax)
+            this.mVal = this.mMax;
+        else
+            this.mVal = _val;
+        if (this.mUIPT == null)
+            return;
+        var per = this.mVal / this.mMax * 1.0;
+        if (Number.isNaN(per)) {
+            per = 0;
+        }
+        this.mUIPT.SetPos(new CVec3((this.mSize.x * per - this.mSize.x) * 0.5, 0, 0));
+        this.mUIPT.SetSize(new CVec2(this.mSize.x * per, this.mSize.y));
+    }
+    GetBarVal() { return this.mVal; }
+    GetBarMax() { return this.mMax; }
+    SetBarMax(_val) {
+        this.mMax = _val;
+        this.SetBarVal(this.GetBarVal());
+    }
+    SetSizeScreenX(_yLen) {
+        if (!this.mFrame)
+            return;
+        this.SetSize(this.mFrame.PF().mWidth, _yLen);
+    }
+    SetSizeScreenY(_xLen) {
+        if (!this.mFrame)
+            return;
+        this.SetSize(_xLen, this.mFrame.PF().mHeight);
+    }
+    SubjectUpdate(_delay) {
+        if (this.mUpdate) {
+            if (!(this.mUIPT && this.mPTBack)) {
+                return;
+            }
+            if (this.mTexFront == null) {
+                this.mTexFront = this.mFrame.Pal().GetBlackTex();
+                this.mUIPT.SetTexture(this.mTexFront);
+            }
+            if (this.mTexBack == null) {
+                this.mTexBack = this.mFrame.Pal().GetBlackTex();
+                this.mPTBack.SetTexture(this.mTexBack);
+            }
+            this.mUIPT.SetSize(this.mSize);
+            if (this.mRGBA != null)
+                this.SetRGBA(this.mRGBA);
+            this.SetBarVal(this.mVal);
+            if (this.mUICL != null) {
+                this.mUICL.SetPickMouse(false);
+            }
+        }
+        if (this.mUICL == null) {
+            this.AddCCollider();
+            if (this.mUICL != null) {
+                this.mUICL.SetPickMouse(false);
+            }
+        }
+        super.SubjectUpdate(_delay);
+        if (this.mUpdate)
+            this.mUpdate = false;
+    }
+}
+export class CUIHTML extends CUI {
+    mHTML;
+    mHover = false;
+    mCLInit = true;
+    Init(_html, _size = null) {
+        this.mHTML = _html;
+        if (this.mUIPT == null) {
+            this.mUIPT = new CPaintHTML(CDOM.DataToDom(this.mHTML), _size);
+            this.PushComp(this.mUIPT);
+        }
+        else {
+            this.mUIPT.Destroy();
+            this.mUIPT = new CPaintHTML(CDOM.DataToDom(this.mHTML), _size);
+            this.PushComp(this.mUIPT);
+        }
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.mUICL == null || this.mCLInit) {
+            if (this.mUIPT.mAttach == false) {
+                return;
+            }
+            this.AddCCollider();
+            this.mCLInit = false;
+        }
+        let e = this.mUIPT.GetElement();
+        if (e.classList.length > 0 && this.mHover) {
+            if (this.mLastEvent == CEvent.eType.Pick || this.mLastEvent == CEvent.eType.Press) {
+                this.mUIPT.GetElement().classList.add("active");
+            }
+            else {
+                this.mUIPT.GetElement().classList.remove("active");
+            }
+        }
+    }
+    SetHover(_enable) {
+        this.mHover = _enable;
+    }
+}

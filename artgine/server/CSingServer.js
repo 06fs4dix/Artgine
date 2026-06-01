@@ -1,1 +1,220 @@
-var e=this&&this.__decorate||function(e,t,n,i){var r,l=arguments.length,a=l<3?t:null===i?i=Object.getOwnPropertyDescriptor(t,n):i;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)a=Reflect.decorate(e,t,n,i);else for(var s=e.length-1;s>=0;s--)(r=e[s])&&(a=(l<3?r(a):l>3?r(t,n,a):r(t,n))||a);return l>3&&a&&Object.defineProperty(t,n,a),a};import{CJSON as t}from"../basic/CJSON.js";import{URLPatterns as n}from"../network/CServerMain.js";import{CServerRouter as i}from"../network/CServerRouter.js";import{CORMCondition as r,CORMField as l,CORMOption as a}from"../network/CORM.js";import{CUniqueID as s}from"../basic/CUniqueID.js";import{CPool as c}from"../basic/CPool.js";import{CMail as o}from"../network/CMail.js";import{CAuthInfo as _}from"../network/CAuthInfo.js";import{CSQLite as u}from"../network/CSQLite.js";c.On("CLocalDB",async()=>{let e=new u;return await e.Init(),e},"Product");let w=await c.ProductAsync("CLocalDB"),y=new Array,p=new a;p.mLimitOffset=0,p.mLimit=1,null==await w.Select("user_list",y,null,p)&&await w.Send("CREATE TABLE IF NOT EXISTS user_list (\n        _offset INTEGER PRIMARY KEY AUTOINCREMENT,\n        _privateKey TEXT DEFAULT NULL,\n        _publicKey TEXT DEFAULT NULL,\n        _id TEXT DEFAULT NULL,\n        _nick TEXT DEFAULT NULL,\n        _email TEXT DEFAULT NULL,\n        _loginType TEXT DEFAULT NULL,\n        _lock INTEGER DEFAULT 0,\n        _datetime DATETIME DEFAULT CURRENT_TIMESTAMP,\n        _protectKey TEXT DEFAULT NULL\n        )\n\t");let m=class extends i{mFindPWMap=new Map;constructor(){super(),this.On("/Sing/SingIn",async(e,t,n)=>{let i=await c.ProductAsync("CLocalDB");var l=e.GetStr("privateKey"),a=await i.Select("user_list",[new r("_privateKey","==",l,"and"),new r("_lock","==",0,"and")],null,null);return c.Recycle(i),0==a.length?"-1":(t.session.privateKey=l,"0")}),this.On("/Sing/FireBase",async(e,t,n)=>{let i=await c.ProductAsync("CLocalDB");var r=s.Get(),a=e.GetStr("privateKey");i.Insert("user_list",[new l("_privateKey",a),new l("_email",""),new l("_publicKey",r),new l("_id",r),new l("_nick",r),new l("_loginType","firebase")]),c.Recycle(i)}),this.On("/Sing/Join",async(e,t,n)=>{let i=await c.ProductAsync("CLocalDB");var o=e.GetStr("privateKey"),_=e.GetStr("newPrivateKey"),u=e.GetStr("nick"),w=e.GetStr("id"),y=e.GetStr("email"),p=e.GetStr("loginType");let m=null;if("modify"!=p){if(m=await i.Select("user_list",[new r("_privateKey","==",o,"or")],null,null),0!=m.length)return"-1";if(m=await i.Select("user_list",[new r("_nick","==",u,"or")],null,null),0!=m.length)return"-2";if(m=await i.Select("user_list",[new r("_email","==",y,"or")],null,null),0!=m.length)return"-3";var f=s.Get();return i.Insert("user_list",[new l("_privateKey",o),new l("_email",y),new l("_publicKey",f),new l("_id",w),new l("_nick",u),new l("_loginType",p)]),await this.TagAdd(i,e,f),c.Recycle(i),f}{if(m=await i.Select("user_list",[new r("_privateKey","==",_,"or")],null,null),0!=m.length)return"-5";0==_.length&&(_=o);let n=new a;n.mOrderBy="_offset",n.mLimit=1;var S=await i.Select("user_list",[new r("_privateKey","==",o,"and"),new r("_lock","==",0,"and")],["_offset","_publicKey","_id","_loginType","_nick","_email"],n);return 0==S.length?"-100":S[0]._nick!=u&&(m=await i.Select("user_list",[new r("_nick","==",u,"or")],null,null),0!=m.length)?"-2":S[0]._email!=y&&(m=await i.Select("user_list",[new r("_email","==",y,"or")],null,null),0!=m.length)?"-3":(await i.Update("user_list",[new r("_offset","==",S[0]._offset)],[new l("_lock",1)]),i.Insert("user_list",[new l("_privateKey",_),new l("_email",y),new l("_publicKey",S[0]._publicKey),new l("_id",S[0]._id),new l("_nick",u),new l("_loginType",S[0]._loginType)]),await this.TagAdd(i,e,S[0]._publicKey),c.Recycle(i),t.session.privateKey=_,S[0]._publicKey)}}),this.On("/Sing/FindPW",async(e,t,n)=>{if(""==e.GetStr("value")){let t=Math.trunc(1e7*Math.random());this.mFindPWMap.set(e.GetStr("email"),t+"");let n=new _;return n.mID="id",n.mPW="pw",n.mAddres="smtp.naver.com",n.mPort="465",await o.Send(n,e.GetStr("email"),"Find Password!","Insert Number : "+t),"0"}{let t=new a;if(t.mOrderBy="_offset",t.mLimit=1,this.mFindPWMap.get(e.GetStr("email"))!=e.GetStr("value"))return"-1";let n=await c.ProductAsync("CLocalDB");var i=await n.Select("user_list",[new r("_email","==",e.GetStr("email"),"or")],["_privateKey"],t);return""==i[0]._privateKey?"-2":i}}),this.On("/Sing/PrivateInfo",async(e,t,n)=>{let i=new a;i.mOrderBy="_offset",i.mLimit=1;let l=await c.ProductAsync("CLocalDB"),s=await l.Select("user_list",[new r("_privateKey","==",e.GetStr("key"),"and"),new r("_lock","==",0,"and")],["_publicKey","_id","_nick","_email","_loginType"],i);return c.Recycle(l),0==s.length?"null":JSON.stringify(s)}),this.On("/Sing/PublicInfo",async(e,t,n)=>{let i=new a;i.mOrderBy="_offset",i.mLimit=1;let l=await c.ProductAsync("CLocalDB"),s=await l.Select("user_list",[new r("_publicKey","==",e.GetStr("key"),"and"),new r("_lock","==",0,"and")],["_publicKey","_nick"],i);return c.Recycle(l),0==s.length?"null":JSON.stringify(s)}),this.On("/Sing/TagArr",async(e,n,i)=>{let l=await c.ProductAsync("CLocalDB");var a=e.GetArray("tagArr"),s=e.GetStr("publicKey");let o=new t("{}");for(var _ of a.mArray){let e=_,t=await l.Select("user_list_"+e,[new r("_publicKey","==",s)],null,null);c.Recycle(l),o.Set(e,t[0])}return o.ToStr()}),this.On("/Sing/Tag",async(e,t,n)=>{let i=new a;i.mOrderBy="_offset",i.mLimit=1;let l=await c.ProductAsync("CLocalDB");var s=e.GetStr("tag"),o=e.GetStr("publicKey");let _=l.Select("user_list_"+s,[new r("_publicKey","==",o)],null,i);return c.Recycle(l),JSON.stringify(_)})}async TagAdd(e,t,n){for(let i in t){if("privateKey"==i||"newPrivateKey"==i||"nick"==i||"id"==i||"email"==i||"loginType"==i)continue;let r=t.Get(i),a=new Array;a.push(new l("_offset",0)),a.push(new l("_publicKey",n));for(let e in r)a.push(new l(e,r.GetVal(e)));0==await e.IsCollection("user_list_"+i)&&e.CreateCollection("user_list_"+i,a,"_offset"),e.Insert("user_list_"+i,a)}}};m=e([n(["/Sing/SingIn","/Sing/FireBase","/Sing/Join","/Sing/FindPW","/Sing/PrivateInfo","/Sing/PublicInfo"])],m);export{m as CSingServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { CJSON } from "../basic/CJSON.js";
+import { URLPatterns } from "../network/CServerMain.js";
+import { CServerRouter } from "../network/CServerRouter.js";
+import { CORMCondition, CORMField, CORMOption } from "../network/CORM.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
+import { CPool } from "../basic/CPool.js";
+import { CMail } from "../network/CMail.js";
+import { CAuthInfo } from "../network/CAuthInfo.js";
+import { CSQLite } from "../network/CSQLite.js";
+CPool.On("CLocalDB", async () => {
+    let CLocalDB = new CSQLite();
+    await CLocalDB.Init();
+    return CLocalDB;
+}, "Product");
+let sql = await CPool.ProductAsync("CLocalDB");
+let con = new Array();
+let option = new CORMOption();
+option.mLimitOffset = 0;
+option.mLimit = 1;
+let data = await sql.Select("user_list", con, null, option);
+if (data == null) {
+    await sql.Send(`CREATE TABLE IF NOT EXISTS user_list (
+        _offset INTEGER PRIMARY KEY AUTOINCREMENT,
+        _privateKey TEXT DEFAULT NULL,
+        _publicKey TEXT DEFAULT NULL,
+        _id TEXT DEFAULT NULL,
+        _nick TEXT DEFAULT NULL,
+        _email TEXT DEFAULT NULL,
+        _loginType TEXT DEFAULT NULL,
+        _lock INTEGER DEFAULT 0,
+        _datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+        _protectKey TEXT DEFAULT NULL
+        )
+	`);
+}
+let CSingServer = class CSingServer extends CServerRouter {
+    mFindPWMap = new Map();
+    constructor() {
+        super();
+        this.On("/Sing/SingIn", async (_json, _req, _res) => {
+            let sql = await CPool.ProductAsync("CLocalDB");
+            var privateKey = _json.GetStr("privateKey");
+            var chk = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey, "and"),
+                new CORMCondition("_lock", "==", 0, "and")], null, null);
+            CPool.Recycle(sql);
+            if (chk.length == 0)
+                return "-1";
+            _req.session.privateKey = privateKey;
+            return "0";
+        });
+        this.On("/Sing/FireBase", async (_json, _req, _res) => {
+            let sql = await CPool.ProductAsync("CLocalDB");
+            var publicKey = CUniqueID.Get();
+            var privateKey = _json.GetStr("privateKey");
+            sql.Insert("user_list", [new CORMField("_privateKey", privateKey), new CORMField("_email", ""),
+                new CORMField("_publicKey", publicKey), new CORMField("_id", publicKey), new CORMField("_nick", publicKey),
+                new CORMField("_loginType", "firebase")]);
+            CPool.Recycle(sql);
+        });
+        this.On("/Sing/Join", async (_json, _req, _res) => {
+            let sql = await CPool.ProductAsync("CLocalDB");
+            var privateKey = _json.GetStr("privateKey");
+            var newPrivateKey = _json.GetStr("newPrivateKey");
+            var nick = _json.GetStr("nick");
+            var id = _json.GetStr("id");
+            var email = _json.GetStr("email");
+            var loginType = _json.GetStr("loginType");
+            let chk = null;
+            if (loginType != "modify") {
+                chk = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey, "or")], null, null);
+                if (chk.length != 0)
+                    return "-1";
+                chk = await sql.Select("user_list", [new CORMCondition("_nick", "==", nick, "or")], null, null);
+                if (chk.length != 0)
+                    return "-2";
+                chk = await sql.Select("user_list", [new CORMCondition("_email", "==", email, "or")], null, null);
+                if (chk.length != 0)
+                    return "-3";
+                var publicKey = CUniqueID.Get();
+                sql.Insert("user_list", [new CORMField("_privateKey", privateKey), new CORMField("_email", email),
+                    new CORMField("_publicKey", publicKey), new CORMField("_id", id), new CORMField("_nick", nick),
+                    new CORMField("_loginType", loginType)]);
+                await this.TagAdd(sql, _json, publicKey);
+                CPool.Recycle(sql);
+                return publicKey;
+            }
+            else {
+                chk = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", newPrivateKey, "or")], null, null);
+                if (chk.length != 0)
+                    return "-5";
+                if (newPrivateKey.length == 0)
+                    newPrivateKey = privateKey;
+                let option = new CORMOption();
+                option.mOrderBy = "_offset";
+                option.mLimit = 1;
+                var userVec = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", privateKey, "and"), new CORMCondition("_lock", "==", 0, "and")], ["_offset", "_publicKey", "_id", "_loginType", "_nick", "_email"], option);
+                if (userVec.length == 0)
+                    return "-100";
+                if (userVec[0]._nick != nick) {
+                    chk = await sql.Select("user_list", [new CORMCondition("_nick", "==", nick, "or")], null, null);
+                    if (chk.length != 0)
+                        return "-2";
+                }
+                if (userVec[0]._email != email) {
+                    chk = await sql.Select("user_list", [new CORMCondition("_email", "==", email, "or")], null, null);
+                    if (chk.length != 0)
+                        return "-3";
+                }
+                await sql.Update("user_list", [new CORMCondition("_offset", "==", userVec[0]._offset)], [new CORMField("_lock", 1)]);
+                sql.Insert("user_list", [new CORMField("_privateKey", newPrivateKey), new CORMField("_email", email),
+                    new CORMField("_publicKey", userVec[0]._publicKey), new CORMField("_id", userVec[0]._id), new CORMField("_nick", nick),
+                    new CORMField("_loginType", userVec[0]._loginType)]);
+                await this.TagAdd(sql, _json, userVec[0]._publicKey);
+                CPool.Recycle(sql);
+                _req.session.privateKey = newPrivateKey;
+                return userVec[0]._publicKey;
+            }
+        });
+        this.On("/Sing/FindPW", async (_json, _req, _res) => {
+            if (_json.GetStr("value") == "") {
+                let ranKey = Math.trunc(Math.random() * 10000000);
+                this.mFindPWMap.set(_json.GetStr("email"), ranKey + "");
+                let authInfo = new CAuthInfo();
+                authInfo.mID = "id";
+                authInfo.mPW = "pw";
+                authInfo.mAddres = "smtp.naver.com";
+                authInfo.mPort = "465";
+                await CMail.Send(authInfo, _json.GetStr("email"), "Find Password!", "Insert Number : " + ranKey);
+                return "0";
+            }
+            else {
+                let option = new CORMOption();
+                option.mOrderBy = "_offset";
+                option.mLimit = 1;
+                let ranKey = this.mFindPWMap.get(_json.GetStr("email"));
+                if (ranKey != _json.GetStr("value"))
+                    return "-1";
+                let sql = await CPool.ProductAsync("CLocalDB");
+                var privateKey = await sql.Select("user_list", [new CORMCondition("_email", "==", _json.GetStr("email"), "or")], ["_privateKey"], option);
+                if (privateKey[0]._privateKey == "")
+                    return "-2";
+                return privateKey;
+            }
+        });
+        this.On("/Sing/PrivateInfo", async (_json, _req, _res) => {
+            let option = new CORMOption();
+            option.mOrderBy = "_offset";
+            option.mLimit = 1;
+            let sql = await CPool.ProductAsync("CLocalDB");
+            let jsonArr = await sql.Select("user_list", [new CORMCondition("_privateKey", "==", _json.GetStr("key"), "and"), new CORMCondition("_lock", "==", 0, "and")], ["_publicKey", "_id", "_nick", "_email", "_loginType"], option);
+            CPool.Recycle(sql);
+            if (jsonArr.length == 0)
+                return "null";
+            return JSON.stringify(jsonArr);
+        });
+        this.On("/Sing/PublicInfo", async (_json, _req, _res) => {
+            let option = new CORMOption();
+            option.mOrderBy = "_offset";
+            option.mLimit = 1;
+            let sql = await CPool.ProductAsync("CLocalDB");
+            let jsonArr = await sql.Select("user_list", [new CORMCondition("_publicKey", "==", _json.GetStr("key"), "and"), new CORMCondition("_lock", "==", 0, "and")], ["_publicKey", "_nick"], option);
+            CPool.Recycle(sql);
+            if (jsonArr.length == 0)
+                return "null";
+            return JSON.stringify(jsonArr);
+        });
+        this.On("/Sing/TagArr", async (_json, _req, _res) => {
+            let sql = await CPool.ProductAsync("CLocalDB");
+            var tagArr = _json.GetArray("tagArr");
+            var publicKey = _json.GetStr("publicKey");
+            let json = new CJSON("{}");
+            for (var each0 of tagArr.mArray) {
+                let tag = each0;
+                let jsonArr = await sql.Select("user_list_" + tag, [new CORMCondition("_publicKey", "==", publicKey)], null, null);
+                CPool.Recycle(sql);
+                json.Set(tag, jsonArr[0]);
+            }
+            return json.ToStr();
+        });
+        this.On("/Sing/Tag", async (_json, _req, _res) => {
+            let option = new CORMOption();
+            option.mOrderBy = "_offset";
+            option.mLimit = 1;
+            let sql = await CPool.ProductAsync("CLocalDB");
+            var tag = _json.GetStr("tag");
+            var publicKey = _json.GetStr("publicKey");
+            let jsonArr = sql.Select("user_list_" + tag, [new CORMCondition("_publicKey", "==", publicKey)], null, option);
+            CPool.Recycle(sql);
+            return JSON.stringify(jsonArr);
+        });
+    }
+    async TagAdd(sql, _json, _publicKey) {
+        for (let key in _json) {
+            if (key == "privateKey" || key == "newPrivateKey" || key == "nick" || key == "id" ||
+                key == "email" || key == "loginType") {
+                continue;
+            }
+            let tag = _json.Get(key);
+            let fieldVec = new Array();
+            fieldVec.push(new CORMField("_offset", 0));
+            fieldVec.push(new CORMField("_publicKey", _publicKey));
+            for (let key2 in tag) {
+                fieldVec.push(new CORMField(key2, tag.GetVal(key2)));
+            }
+            if (await sql.IsCollection("user_list_" + key) == false)
+                sql.CreateCollection("user_list_" + key, fieldVec, "_offset");
+            sql.Insert("user_list_" + key, fieldVec);
+        }
+    }
+};
+CSingServer = __decorate([
+    URLPatterns(["/Sing/SingIn", "/Sing/FireBase", "/Sing/Join", "/Sing/FindPW", "/Sing/PrivateInfo", "/Sing/PublicInfo"])
+], CSingServer);
+export { CSingServer };

@@ -1,1 +1,225 @@
-import{CUpdate as e}from"../../basic/Basic.js";import{CArray as t}from"../../basic/CArray.js";import{CJSON as a}from"../../basic/CJSON.js";import{CObject as m}from"../../basic/CObject.js";import{CMat as i}from"../../geometry/CMat.js";import{CVec3 as s}from"../../geometry/CVec3.js";import{CCamera as r}from"../../render/CCamera.js";import{CDevice as n}from"../../render/CDevice.js";import{CFile as h}from"../../system/CFile.js";export class CRenInfo{mRP=null;mCam=null;mCycle=null;mTag=new Set;mShow=!0;mShader=null}export class CRenPriority{mAlphaList=new t;mDistanceList=new t;mRAlphaList=new t;mPriority=0;static CompareNormal(e,t){return e.mDistance+e.mTexHash-(t.mDistance+t.mTexHash)}static CompareReverse(e,t){return t.mDistance+t.mTexHash-(e.mDistance+e.mTexHash)}}export class CBrush extends m{constructor(e){super(),this.SetKey("Brush"),this.mFrame=e;var t=n.GetProperty(n.eProperty.Sam2DSize);this.mLightDir=new Float32Array(4*t),this.mLightColor=new Float32Array(4*t),this.mLightCount=0,this.mWindDir=new Float32Array(4*t),this.mWindPos=new Float32Array(4*t),this.mWindInfo=new Float32Array(4*t),this.mWindCount=0,e.PF().mIAuto&&e.PushIAuto(this)}async SaveJSON(e=null){h.Save(this.ToStr(),e)}async LoadJSON(e=null){let t=await h.Load(e);if(null==t)return!0;this.mCameraMap.clear(),this.ImportCJSON(new a(t));for(let e of this.mCameraMap.values())e.mPF=this.mFrame.PF(),null!=e.mCamCon&&e.mCamCon.SetInput(this.mFrame.Input());return this.mCam3d=this.GetCamera("3D"),this.mCam2d=this.GetCamera("2D"),this.mCamDev=this.GetCamera("Dev"),!1}IsPause(){return this.mPause}SetPause(e){this.mPause=e}mFrame=null;mCam2d=null;mCam3d=null;mCamDev=null;mDoubleChk=new Set;mLightDir=null;mLightColor=null;mLightCount;mSkyTable=[new i([.4,.35,.3,.25,.2,.15,.1,.08,.06,.05,.04,.03,.02,.015,.01,.005]),new i([.6,.55,.5,.45,.4,.35,.3,.25,.2,.15,.1,.08,.06,.04,.02,.01]),new i([.9,.85,.8,.75,.7,.65,.6,.55,.5,.45,.4,.35,.3,.25,.2,.15])];mSunTable=[new i([1,.95,.9,.85,.8,.75,.7,.65,.6,.55,.5,.45,.4,.35,.3,.25]),new i([.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95]),new i([.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85])];mShadowView=new Array;mShadowCount=0;mWindDir=null;mWindPos=null;mWindInfo=null;mWindCount=0;mAutoRPMap=new Map;mAutoRPUpdate=e.eType.Not;mShadowRead=new Map;mCameraMap=new Map;mPause=!1;mRenPriMap=new Map;mRenInfoMap=new Map;mUpdateRenInfo=!1;mUpdateShadow=!1;mUpdateLight=!1;mUpdateLUT=!1;mLUT=[new Float32Array(1024),new Float32Array(1024),new Float32Array(1024),new Float32Array(1024),new Float32Array(1024),new Float32Array(1024)];GetShadowView(){if(0==this.mShadowView.length)for(var e=n.GetProperty(n.eProperty.Sam2DSize),t=0;t<8;++t)this.mShadowView.push(new Float32Array(4*e));return this.mShadowView}IsShould(e,t){return"mCameraMap"==e}ClearRen(){for(let e of this.mRenPriMap.values()){for(let t=0;t<e.mAlphaList.Size();++t)e.mAlphaList.Find(t).mPaint.ClearCRPAuto();for(let t=0;t<e.mDistanceList.Size();++t)e.mDistanceList.Find(t).mPaint.ClearCRPAuto();for(let t=0;t<e.mRAlphaList.Size();++t)e.mRAlphaList.Find(t).mPaint.ClearCRPAuto()}this.mRenInfoMap.clear(),this.mRenPriMap.clear()}RemoveAutoRP(t){this.mAutoRPMap.delete(t),this.mAutoRPUpdate=e.eType.Updated}SetAutoRP(t,a){this.mAutoRPMap.set(t,a),this.mAutoRPUpdate=e.eType.Updated}GetAutoRP(e){return this.mAutoRPMap.get(e)}AutoRP(){return this.mAutoRPMap}GetCamera(e){let t=this.mCameraMap.get(e);return null==t&&(t=new r(this.mFrame.PF()),this.mCameraMap.set(e,t),t.SetKey(e)),t}m_2DCamDisplayReset=!1;GetCam3D(){return this.mCam3d}GetCam2D(){return this.mCam2d}GetCamDev(){return this.mCamDev}InitCamera(e=!1){if(null==this.mCam3d&&(this.mCam3d=this.GetCamera("3D"),this.mCam3d.SetKey("3D")),null==this.mCam2d&&(this.mCam2d=this.GetCamera("2D"),this.mCam2d.SetKey("2D")),null==this.mCamDev&&(this.mCamDev=this.GetCamera("Dev"),this.mCamDev.SetKey("Dev")),this.m_2DCamDisplayReset=e,null!=this.mCam3d&&(this.mCam3d.Init(new s(0,1e3,1),new s(0,0,0)),this.mCam3d.ResetPerspective()),null!=this.mCam2d){if(this.m_2DCamDisplayReset){var t=.5*this.mCam2d.mWidth,a=.5*this.mCam2d.mHeight;this.mCam2d.Init(new s(t,a,100),new s(t,a,0))}else this.mCam2d.Init(new s(0,.1,100),new s(0,.1,0));this.mCam2d.ResetOrthographic()}}Update(t){for(var a of(1!=this.mPause&&(this.mAutoRPUpdate==e.eType.Updated?this.mAutoRPUpdate=e.eType.Already:this.mAutoRPUpdate==e.eType.Already&&(this.mAutoRPUpdate=e.eType.Not),this.mLightCount=0,this.mShadowCount=0,this.mShadowRead.clear(),this.mWindCount=0,this.mDoubleChk.clear()),this.mCameraMap.values()))this.mFrame.Win().IsResize()&&(a.mReset=!0),a.Update(t);if(null!=this.mCam2d&&this.mFrame.Win().IsResize()&&this.m_2DCamDisplayReset){var m=.5*this.mCam2d.mWidth,i=.5*this.mCam2d.mHeight;this.mCam2d.Init(new s(m,i,100),new s(m,i,0)),this.mCam2d.ResetOrthographic()}}Icon(){return"bi-brush"}}
+import { CUpdate } from "../../basic/Basic.js";
+import { CArray } from "../../basic/CArray.js";
+import { CJSON } from "../../basic/CJSON.js";
+import { CObject } from "../../basic/CObject.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CCamera } from "../../render/CCamera.js";
+import { CDevice } from "../../render/CDevice.js";
+import { CFile } from "../../system/CFile.js";
+export class CRenInfo {
+    mRP = null;
+    mCam = null;
+    mCycle = null;
+    mTag = new Set();
+    mShow = true;
+    mShader = null;
+}
+export class CRenPriority {
+    mAlphaList = new CArray();
+    mDistanceList = new CArray();
+    mRAlphaList = new CArray();
+    mPriority = 0;
+    static CompareNormal(a, b) {
+        return (a.mDistance + a.mTexHash) - (b.mDistance + b.mTexHash);
+    }
+    static CompareReverse(a, b) {
+        return (b.mDistance + b.mTexHash) - (a.mDistance + a.mTexHash);
+    }
+}
+export class CBrush extends CObject {
+    constructor(_frame) {
+        super();
+        this.SetKey("Brush");
+        this.mFrame = _frame;
+        var size = CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
+        this.mLightDir = new Float32Array(4 * size);
+        this.mLightColor = new Float32Array(4 * size);
+        this.mLightCount = 0;
+        this.mWindDir = new Float32Array(4 * size);
+        this.mWindPos = new Float32Array(4 * size);
+        this.mWindInfo = new Float32Array(4 * size);
+        this.mWindCount = 0;
+        if (_frame.PF().mIAuto)
+            _frame.PushIAuto(this);
+    }
+    async SaveJSON(_file = null) {
+        CFile.Save(this.ToStr(), _file);
+    }
+    async LoadJSON(_file = null) {
+        let buf = await CFile.Load(_file);
+        if (buf == null)
+            return true;
+        this.mCameraMap.clear();
+        this.ImportCJSON(new CJSON(buf));
+        for (let cam of this.mCameraMap.values()) {
+            cam.mPF = this.mFrame.PF();
+            if (cam.mCamCon != null)
+                cam.mCamCon.SetInput(this.mFrame.Input());
+        }
+        this.mCam3d = this.GetCamera("3D");
+        this.mCam2d = this.GetCamera("2D");
+        this.mCamDev = this.GetCamera("Dev");
+        return false;
+    }
+    IsPause() {
+        return this.mPause;
+    }
+    SetPause(_pause) {
+        this.mPause = _pause;
+    }
+    mFrame = null;
+    mCam2d = null;
+    mCam3d = null;
+    mCamDev = null;
+    mDoubleChk = new Set();
+    mLightDir = null;
+    mLightColor = null;
+    mLightCount;
+    mSkyTable = [
+        new CMat([0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.015, 0.01, 0.005]),
+        new CMat([0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]),
+        new CMat([0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15]),
+    ];
+    mSunTable = [
+        new CMat([1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25]),
+        new CMat([0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]),
+        new CMat([0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85]),
+    ];
+    mShadowView = new Array();
+    mShadowCount = 0;
+    mWindDir = null;
+    mWindPos = null;
+    mWindInfo = null;
+    mWindCount = 0;
+    mAutoRPMap = new Map();
+    mAutoRPUpdate = CUpdate.eType.Not;
+    mShadowRead = new Map();
+    mCameraMap = new Map();
+    mPause = false;
+    mRenPriMap = new Map();
+    mRenInfoMap = new Map();
+    mUpdateRenInfo = false;
+    mUpdateShadow = false;
+    mUpdateLight = false;
+    mUpdateLUT = false;
+    mLUT = [new Float32Array(32 * 32), new Float32Array(32 * 32), new Float32Array(32 * 32),
+        new Float32Array(32 * 32), new Float32Array(32 * 32), new Float32Array(32 * 32)];
+    GetShadowView() {
+        if (this.mShadowView.length == 0) {
+            var size = CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
+            for (var i = 0; i < 8; ++i)
+                this.mShadowView.push(new Float32Array(4 * size));
+        }
+        return this.mShadowView;
+    }
+    IsShould(_member, _type) {
+        if (_member == "mCameraMap")
+            return true;
+        else
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    ClearRen() {
+        for (let value of this.mRenPriMap.values()) {
+            for (let i = 0; i < value.mAlphaList.Size(); ++i) {
+                value.mAlphaList.Find(i).mPaint.ClearCRPAuto();
+            }
+            for (let i = 0; i < value.mDistanceList.Size(); ++i) {
+                value.mDistanceList.Find(i).mPaint.ClearCRPAuto();
+            }
+            for (let i = 0; i < value.mRAlphaList.Size(); ++i) {
+                value.mRAlphaList.Find(i).mPaint.ClearCRPAuto();
+            }
+        }
+        this.mRenInfoMap.clear();
+        this.mRenPriMap.clear();
+    }
+    RemoveAutoRP(_key) {
+        this.mAutoRPMap.delete(_key);
+        this.mAutoRPUpdate = CUpdate.eType.Updated;
+    }
+    SetAutoRP(_key, _val) {
+        this.mAutoRPMap.set(_key, _val);
+        this.mAutoRPUpdate = CUpdate.eType.Updated;
+    }
+    GetAutoRP(_key) {
+        return this.mAutoRPMap.get(_key);
+    }
+    AutoRP() { return this.mAutoRPMap; }
+    GetCamera(_key) {
+        let cam = this.mCameraMap.get(_key);
+        if (cam == null) {
+            cam = new CCamera(this.mFrame.PF());
+            this.mCameraMap.set(_key, cam);
+            cam.SetKey(_key);
+        }
+        return cam;
+    }
+    m_2DCamDisplayReset = false;
+    GetCam3D() { return this.mCam3d; }
+    GetCam2D() { return this.mCam2d; }
+    GetCamDev() { return this.mCamDev; }
+    InitCamera(_displayReset = false) {
+        if (this.mCam3d == null) {
+            this.mCam3d = this.GetCamera("3D");
+            this.mCam3d.SetKey("3D");
+        }
+        if (this.mCam2d == null) {
+            this.mCam2d = this.GetCamera("2D");
+            this.mCam2d.SetKey("2D");
+        }
+        if (this.mCamDev == null) {
+            this.mCamDev = this.GetCamera("Dev");
+            this.mCamDev.SetKey("Dev");
+        }
+        this.m_2DCamDisplayReset = _displayReset;
+        if (this.mCam3d != null) {
+            this.mCam3d.Init(new CVec3(0, 1000, 1), new CVec3(0, 0, 0));
+            this.mCam3d.ResetPerspective();
+        }
+        if (this.mCam2d != null) {
+            if (this.m_2DCamDisplayReset) {
+                var stx = this.mCam2d.mWidth * 0.5;
+                var sty = this.mCam2d.mHeight * 0.5;
+                this.mCam2d.Init(new CVec3(stx, sty, 100), new CVec3(stx, sty, 0));
+            }
+            else {
+                this.mCam2d.Init(new CVec3(0, 0.1, 100), new CVec3(0, 0.1, 0));
+            }
+            this.mCam2d.ResetOrthographic();
+        }
+    }
+    Update(_update) {
+        if (this.mPause != true) {
+            if (this.mAutoRPUpdate == CUpdate.eType.Updated)
+                this.mAutoRPUpdate = CUpdate.eType.Already;
+            else if (this.mAutoRPUpdate == CUpdate.eType.Already)
+                this.mAutoRPUpdate = CUpdate.eType.Not;
+            this.mLightCount = 0;
+            this.mShadowCount = 0;
+            this.mShadowRead.clear();
+            this.mWindCount = 0;
+            this.mDoubleChk.clear();
+        }
+        for (var cam of this.mCameraMap.values()) {
+            if (this.mFrame.Win().IsResize()) {
+                cam.mReset = true;
+            }
+            cam.Update(_update);
+        }
+        if (this.mCam2d != null) {
+            if (this.mFrame.Win().IsResize()) {
+                if (this.m_2DCamDisplayReset) {
+                    var stx = this.mCam2d.mWidth * 0.5;
+                    var sty = this.mCam2d.mHeight * 0.5;
+                    this.mCam2d.Init(new CVec3(stx, sty, 100), new CVec3(stx, sty, 0));
+                    this.mCam2d.ResetOrthographic();
+                }
+            }
+        }
+    }
+    Icon() {
+        return "bi-brush";
+    }
+}

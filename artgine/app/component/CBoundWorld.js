@@ -1,1 +1,147 @@
-import{CBound as t}from"../../geometry/CBound.js";import{CMat as i}from"../../geometry/CMat.js";import{CMath as m}from"../../geometry/CMath.js";import{CVec3 as n}from"../../geometry/CVec3.js";export class CBoundWorld{mBound=new t;mCenter=new n;mSize=new n;mPos=new n;mRadian=0;Init(i,n){if(this.mBound.Reset(),this.mBound.mType=i.mType,i.mType==t.eType.Sphere)return this.mCenter.Zero(),this.mSize.x=m.Max(Math.abs(i.mMin.x),Math.abs(i.mMax.x)),this.mSize.y=m.Max(Math.abs(i.mMin.y),Math.abs(i.mMax.y)),this.mSize.z=m.Max(Math.abs(i.mMin.z),Math.abs(i.mMax.z)),this.mSize.x=this.mSize.y=this.mSize.z=m.Max(m.Max(this.mSize.x,this.mSize.y),this.mSize.z),void this.mBound.InitBound(this.mSize.x);this.mCenter.x=i.mMin.x,this.mCenter.y=i.mMin.y,this.mCenter.z=i.mMin.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMin.x,this.mCenter.y=i.mMin.y,this.mCenter.z=i.mMax.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMin.x,this.mCenter.y=i.mMax.y,this.mCenter.z=i.mMin.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMin.x,this.mCenter.y=i.mMax.y,this.mCenter.z=i.mMax.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMax.x,this.mCenter.y=i.mMin.y,this.mCenter.z=i.mMin.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMax.x,this.mCenter.y=i.mMin.y,this.mCenter.z=i.mMax.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMax.x,this.mCenter.y=i.mMax.y,this.mCenter.z=i.mMin.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mCenter.x=i.mMax.x,this.mCenter.y=i.mMax.y,this.mCenter.z=i.mMax.z,null!=n?this.mBound.InitBound(m.V3MulMatNormal(this.mCenter,n,this.mSize)):this.mBound.InitBound(this.mCenter),this.mBound.GetCenter(this.mCenter),this.mBound.GetSize(this.mSize)}UpdateMat(t){this.mPos.mF32A[0]=this.mCenter.mF32A[0]+t.mF32A[12],this.mPos.mF32A[1]=this.mCenter.mF32A[1]+t.mF32A[13],this.mPos.mF32A[2]=this.mCenter.mF32A[2]+t.mF32A[14]}}export class CBoundWorldPaint extends CBoundWorld{Init(t,i){super.Init(t,i),this.mRadian=this.mBound.GetOutRadius()}}export class CBoundWorldCollider extends CBoundWorld{mMat=new i;mIMat=new i;mWBound=new t;dirPoint=new n;Init(t,i){super.Init(t,i),this.mRadian=this.mBound.GetInRadius()}UpdateMat(t){super.UpdateMat(t),this.mMat.Import(t),t.IsRotScaUnit()?this.mIMat.Unit():m.MatInvert(this.mMat,this.mIMat),this.mWBound.mMin.mF32A[0]=this.mBound.mMin.mF32A[0]+this.mMat.mF32A[12],this.mWBound.mMin.mF32A[1]=this.mBound.mMin.mF32A[1]+this.mMat.mF32A[13],this.mWBound.mMin.mF32A[2]=this.mBound.mMin.mF32A[2]+this.mMat.mF32A[14],this.mWBound.mMax.mF32A[0]=this.mBound.mMax.mF32A[0]+this.mMat.mF32A[12],this.mWBound.mMax.mF32A[1]=this.mBound.mMax.mF32A[1]+this.mMat.mF32A[13],this.mWBound.mMax.mF32A[2]=this.mBound.mMax.mF32A[2]+this.mMat.mF32A[14]}getFarthestPointInDirection(i){let e=1e-5*Math.random();if(this.mBound.GetType()==t.eType.Sphere)m.V3Nor(i,this.dirPoint),m.V3MulFloat(this.dirPoint,this.mRadian+e,this.dirPoint),m.V3AddV3(this.dirPoint,this.mMat.xyz,this.dirPoint);else if(this.mBound.GetType()==t.eType.Box)m.V3MulMatNormal(i,this.mIMat,this.dirPoint),this.dirPoint.mF32A[0]=this.dirPoint.mF32A[0]>0?this.mWBound.mMax.mF32A[0]+e:this.mWBound.mMin.mF32A[0]-e,this.dirPoint.mF32A[1]=this.dirPoint.mF32A[1]>0?this.mWBound.mMax.mF32A[1]+e:this.mWBound.mMin.mF32A[1]-e,this.dirPoint.mF32A[2]=this.dirPoint.mF32A[2]>0?this.mWBound.mMax.mF32A[2]+e:this.mWBound.mMin.mF32A[2]-e;else{var s=m.V3MulMatNormal(i,this.mIMat),h=new n;0!=this.mBound.mPos.Size()&&(h=this.mBound.mPos.Find(0));for(var o=m.V3Dot(h,s),r=1;r<this.mBound.mPos.Size();r++){var d=m.V3Dot(this.mBound.mPos.Find(r),s);d>o&&(o=d,h=this.mBound.mPos.Find(r))}m.V3MulMatCoordi(h,this.mMat,this.dirPoint)}return this.dirPoint}}
+import { CBound } from "../../geometry/CBound.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+export class CBoundWorld {
+    mBound = new CBound();
+    mCenter = new CVec3();
+    mSize = new CVec3();
+    mPos = new CVec3();
+    mRadian = 0;
+    Init(_LBound, _WMat) {
+        this.mBound.Reset();
+        this.mBound.mType = _LBound.mType;
+        if (_LBound.mType == CBound.eType.Sphere) {
+            this.mCenter.Zero();
+            this.mSize.x = CMath.Max(Math.abs(_LBound.mMin.x), Math.abs(_LBound.mMax.x));
+            this.mSize.y = CMath.Max(Math.abs(_LBound.mMin.y), Math.abs(_LBound.mMax.y));
+            this.mSize.z = CMath.Max(Math.abs(_LBound.mMin.z), Math.abs(_LBound.mMax.z));
+            this.mSize.x = this.mSize.y = this.mSize.z = CMath.Max(CMath.Max(this.mSize.x, this.mSize.y), this.mSize.z);
+            this.mBound.InitBound(this.mSize.x);
+            return;
+        }
+        this.mCenter.x = _LBound.mMin.x;
+        this.mCenter.y = _LBound.mMin.y;
+        this.mCenter.z = _LBound.mMin.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMin.x;
+        this.mCenter.y = _LBound.mMin.y;
+        this.mCenter.z = _LBound.mMax.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMin.x;
+        this.mCenter.y = _LBound.mMax.y;
+        this.mCenter.z = _LBound.mMin.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMin.x;
+        this.mCenter.y = _LBound.mMax.y;
+        this.mCenter.z = _LBound.mMax.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMax.x;
+        this.mCenter.y = _LBound.mMin.y;
+        this.mCenter.z = _LBound.mMin.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMax.x;
+        this.mCenter.y = _LBound.mMin.y;
+        this.mCenter.z = _LBound.mMax.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMax.x;
+        this.mCenter.y = _LBound.mMax.y;
+        this.mCenter.z = _LBound.mMin.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mCenter.x = _LBound.mMax.x;
+        this.mCenter.y = _LBound.mMax.y;
+        this.mCenter.z = _LBound.mMax.z;
+        if (_WMat != null)
+            this.mBound.InitBound(CMath.V3MulMatNormal(this.mCenter, _WMat, this.mSize));
+        else
+            this.mBound.InitBound(this.mCenter);
+        this.mBound.GetCenter(this.mCenter);
+        this.mBound.GetSize(this.mSize);
+    }
+    UpdateMat(_mat) {
+        this.mPos.mF32A[0] = this.mCenter.mF32A[0] + _mat.mF32A[12];
+        this.mPos.mF32A[1] = this.mCenter.mF32A[1] + _mat.mF32A[13];
+        this.mPos.mF32A[2] = this.mCenter.mF32A[2] + _mat.mF32A[14];
+    }
+}
+export class CBoundWorldPaint extends CBoundWorld {
+    Init(_LBound, _WMat) {
+        super.Init(_LBound, _WMat);
+        this.mRadian = this.mBound.GetOutRadius();
+    }
+}
+export class CBoundWorldCollider extends CBoundWorld {
+    mMat = new CMat();
+    mIMat = new CMat();
+    mWBound = new CBound();
+    dirPoint = new CVec3();
+    Init(_LBound, _WMat) {
+        super.Init(_LBound, _WMat);
+        this.mRadian = this.mBound.GetInRadius();
+    }
+    UpdateMat(_mat) {
+        super.UpdateMat(_mat);
+        this.mMat.Import(_mat);
+        if (_mat.IsRotScaUnit())
+            this.mIMat.Unit();
+        else
+            CMath.MatInvert(this.mMat, this.mIMat);
+        this.mWBound.mMin.mF32A[0] = this.mBound.mMin.mF32A[0] + this.mMat.mF32A[12];
+        this.mWBound.mMin.mF32A[1] = this.mBound.mMin.mF32A[1] + this.mMat.mF32A[13];
+        this.mWBound.mMin.mF32A[2] = this.mBound.mMin.mF32A[2] + this.mMat.mF32A[14];
+        this.mWBound.mMax.mF32A[0] = this.mBound.mMax.mF32A[0] + this.mMat.mF32A[12];
+        this.mWBound.mMax.mF32A[1] = this.mBound.mMax.mF32A[1] + this.mMat.mF32A[13];
+        this.mWBound.mMax.mF32A[2] = this.mBound.mMax.mF32A[2] + this.mMat.mF32A[14];
+    }
+    getFarthestPointInDirection(v) {
+        let r = Math.random() * 0.00001;
+        if (this.mBound.GetType() == CBound.eType.Sphere) {
+            CMath.V3Nor(v, this.dirPoint);
+            CMath.V3MulFloat(this.dirPoint, this.mRadian + r, this.dirPoint);
+            CMath.V3AddV3(this.dirPoint, this.mMat.xyz, this.dirPoint);
+        }
+        else if (this.mBound.GetType() == CBound.eType.Box) {
+            CMath.V3MulMatNormal(v, this.mIMat, this.dirPoint);
+            this.dirPoint.mF32A[0] = (this.dirPoint.mF32A[0] > 0) ? this.mWBound.mMax.mF32A[0] + r : this.mWBound.mMin.mF32A[0] - r;
+            this.dirPoint.mF32A[1] = (this.dirPoint.mF32A[1] > 0) ? this.mWBound.mMax.mF32A[1] + r : this.mWBound.mMin.mF32A[1] - r;
+            this.dirPoint.mF32A[2] = (this.dirPoint.mF32A[2] > 0) ? this.mWBound.mMax.mF32A[2] + r : this.mWBound.mMin.mF32A[2] - r;
+        }
+        else {
+            var dir = CMath.V3MulMatNormal(v, this.mIMat);
+            var furthest_point = new CVec3();
+            if (this.mBound.mPos.Size() != 0)
+                furthest_point = this.mBound.mPos.Find(0);
+            var max_dot = CMath.V3Dot(furthest_point, dir);
+            for (var i = 1; i < this.mBound.mPos.Size(); i++) {
+                var d = CMath.V3Dot(this.mBound.mPos.Find(i), dir);
+                if (d > max_dot) {
+                    max_dot = d;
+                    furthest_point = this.mBound.mPos.Find(i);
+                }
+            }
+            CMath.V3MulMatCoordi(furthest_point, this.mMat, this.dirPoint);
+        }
+        return this.dirPoint;
+    }
+}

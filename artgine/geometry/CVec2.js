@@ -1,1 +1,74 @@
-import{CDOM as t}from"../basic/CDOM.js";import{CFloat32 as e}from"./CFloat32.js";import{CObject as n}from"../basic/CObject.js";export class CVec2 extends e{constructor(t=0,e=0){if(super(),this.mF32A=new Float32Array(2),"number"==typeof t)this.mF32A[0]=t,this.mF32A[1]=e;else for(let e=0;e<t.length;++e)this.mF32A[e]=t[e]}set x(t){this.mF32A[0]=t}get x(){return this.mF32A[0]}set y(t){this.mF32A[1]=t}get y(){return this.mF32A[1]}EditHTMLInit(e,a){e.innerHTML="";const o=t.DataToDom({tag:"div",class:"d-flex align-items-center",html:[{tag:"input",type:"number",class:"form-control form-control-sm",value:this.x,onchange:t=>{const e=parseFloat(t.target.value);isNaN(e)||(this.x=e,a&&a.target&&"function"==typeof a.target.EditChange&&a.target.EditChange(a,!1))}},{tag:"input",type:"number",class:"form-control form-control-sm",value:this.y,onchange:t=>{const e=parseFloat(t.target.value);isNaN(e)||(this.y=e,a&&a.target&&"function"==typeof a.target.EditChange&&a.target.EditChange(a,!1))}}]});e.appendChild(o);const r=o.querySelectorAll('input[type="number"]'),s=t=>{this.x=t.x,this.y=t.y,a&&a.target&&"function"==typeof a.target.EditChange&&a.target.EditChange(a,!1)},i=t=>{if(1===t.button){t.preventDefault();const e=t.currentTarget;n.FocusInputNumberChange(e,t=>{const e=new CVec2(parseFloat(r[0].value),parseFloat(r[1].value));s(e)})}};r[0].onmousedown=i,r[1].onmousedown=i}}
+import { CDOM } from "../basic/CDOM.js";
+import { CFloat32 } from "./CFloat32.js";
+import { CObject } from "../basic/CObject.js";
+export class CVec2 extends CFloat32 {
+    constructor(_x = 0, _y = 0) {
+        super();
+        this.mF32A = new Float32Array(2);
+        if (typeof _x == "number") {
+            this.mF32A[0] = _x;
+            this.mF32A[1] = _y;
+        }
+        else {
+            for (let i = 0; i < _x.length; ++i)
+                this.mF32A[i] = _x[i];
+        }
+    }
+    set x(_val) { this.mF32A[0] = _val; }
+    get x() { return this.mF32A[0]; }
+    set y(_val) { this.mF32A[1] = _val; }
+    get y() { return this.mF32A[1]; }
+    EditHTMLInit(_div, _pointer) {
+        _div.innerHTML = "";
+        const self = this;
+        const row = CDOM.DataToDom({
+            "tag": "div", "class": "d-flex align-items-center",
+            "html": [
+                { "tag": "input", "type": "number", "class": "form-control form-control-sm",
+                    "value": this.x, "onchange": (e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v)) {
+                            this.x = v;
+                            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                                _pointer.target.EditChange(_pointer, false);
+                            }
+                        }
+                    }
+                },
+                { "tag": "input", "type": "number", "class": "form-control form-control-sm",
+                    "value": this.y, "onchange": (e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v)) {
+                            this.y = v;
+                            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                                _pointer.target.EditChange(_pointer, false);
+                            }
+                        }
+                    }
+                },
+            ]
+        });
+        _div.appendChild(row);
+        const inputs = row.querySelectorAll('input[type="number"]');
+        const setter = (vec) => {
+            this.x = vec.x;
+            this.y = vec.y;
+            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                _pointer.target.EditChange(_pointer, false);
+            }
+        };
+        const getVec = () => new CVec2(parseFloat(inputs[0].value), parseFloat(inputs[1].value));
+        const MounsDownFun = (_event) => {
+            if (_event.button === 1) {
+                _event.preventDefault();
+                const ct = _event.currentTarget;
+                CObject.FocusInputNumberChange(ct, (_value) => {
+                    const vec = getVec();
+                    setter(vec);
+                });
+            }
+        };
+        inputs[0].onmousedown = MounsDownFun;
+        inputs[1].onmousedown = MounsDownFun;
+    }
+}

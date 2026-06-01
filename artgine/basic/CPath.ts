@@ -128,27 +128,8 @@ export class CPath
 		
 		let str="";
 		if (CUtil.IsNode()) {
-			
-
-			
-			let dir = __dirname.replace(/\\/g, "/");
-			let parts = dir.split("/");
-			let idx=0;
-
-			// 기존 분기 로직 유지
-			if (_type.includes(CPath.eUrl.Context)) 
-			{
-				const resourcesIdx = parts.map(p => p.toLowerCase()).lastIndexOf("resources");
-				if(resourcesIdx>0)
-				{
-					parts = parts.slice(0, resourcesIdx); // 'resources' 상위까지만 자름
-					idx = parts.length; // idx 재설정
-				}
-				else
-					idx = parts.map(p => p.toLowerCase()).lastIndexOf("artgine");
-				
-
-				str += parts.slice(0, idx).join("/") + "/"; // ← 여기서 lib 포함하지 않음
+			if (_type.includes(CPath.eUrl.Context)) {
+				str = process.cwd().replace(/\\/g, "/").replace(/\/?$/, "/");
 			}
 			return str;
 

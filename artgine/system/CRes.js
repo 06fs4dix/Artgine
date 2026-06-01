@@ -1,1 +1,307 @@
-import{CBlackBoard as t}from"../basic/CBlackBoard.js";import{CDOM as e}from"../basic/CDOM.js";import{CLan as a}from"../basic/CLan.js";import{CObject as n}from"../basic/CObject.js";import{CPath as s}from"../basic/CPath.js";import{CTree as o}from"../basic/CTree.js";import{CMesh as r}from"../render/CMesh.js";import{CTexture as l}from"../render/CTexture.js";export class CRes extends n{mResMap=new Map;HttpPathChange(t){let e=new URL(t);e.host=location.host;let a="",n=location.pathname.split("/");if(n.length>1&&(a=n[1]),""!=a){let t="";if(n=e.pathname.split("/"),n.length>1&&(t=e.pathname.split("/")[1]),""!=t){e.pathname="";for(let s of n)s==t&&(s=a),""!=s&&(e.pathname+=s,n[n.length-1]!=s&&(e.pathname+="/"))}}return e.toString()}Keys(){return this.mResMap.keys()}Values(){return this.mResMap.values()}Find(t){if(null==t)return null;if(this.mResMap.has(t))return this.mResMap.get(t);let e=t;return!t.startsWith("http")||-1==t.indexOf(s.Join("root"))&&-1==t.indexOf("localhost")||(e=this.HttpPathChange(t),this.mResMap.has(e)&&this.mResMap.set(t,this.mResMap.get(e))),this.mResMap.get(e)}Push(t,e){return this.mResMap.set(t,e),this}Remove(t){this.mResMap.delete(t)}EditInit(){this.blackboard=t.Map(),this.languge=a.Map();const s=super.EditInit(),c=document.createElement("input");c.type="search",c.className="form-control",c.id="resSearch",c.placeholder="Search",c.onkeyup=t=>{const a=t.target,n=a.value;let o=s.getElementsByClassName("border p-1 mt-1"),r="",l="";for(const t of o){if("mResMap_title"===t.id){r=t.getAttribute("data-bs-target").substring(1,99);continue}if("blackboard_title"===t.id){l=t.getAttribute("data-bs-target").substring(1,99);continue}if(t===a)continue;const e=t;-1!==t.textContent?.toLowerCase().indexOf(n.toLowerCase())?e.style.display="":e.style.display="none"}if(""==n)return e.ID(r).className="border border-top-0 ps-2 collapse",void(e.ID(l).className="border border-top-0 ps-2 collapse");e.ID(r).className="border border-top-0 ps-2 collapse show",e.ID(l).className="border border-top-0 ps-2 collapse show",o=s.getElementsByClassName("border border-top-0 ps-2 collapse show");for(const t of o)t.id!=r&&t.id!=l&&(t.className="border border-top-0 ps-2 collapse")},s.prepend(c),i instanceof o||(i=new o);const p=(t,e)=>{let a=t.mChild;for(;a;){if(a.mKey===e)return a;a=a.mColleague}return null},d=(t,e)=>{const a=p(t,e);if(a)return a;if(!t.mChild)return t.PushChild(e);let n=t.mChild;for(;n.mColleague;)n=n.mColleague;return n.PushColleague(e)};for(const[t,e]of this.mResMap){const a=String(t).split("/").filter(Boolean);if(0===a.length)continue;const n=a.pop();let s=i;for(const t of a)s=d(s,t);const o=p(s,n);if(o)null==o.mData&&(o.mData=e);else{const t=d(s,n);null==t.mData&&(t.mData=e)}}for(const[e,a]of t.Map()){if(!a)continue;const t=String(e).split("/").filter(Boolean);if(0===t.length)continue;const n=t.pop();let s=i;for(const e of t)s=d(s,e);const o=p(s,n);if(o)null==o.mData&&(o.mData=a);else{const t=d(s,n);null==t.mData&&(t.mData=a)}}const u=document.createElement("div");u.className="mt-3",s.appendChild(u);const b=t=>{const e=[];let a=t;for(;a&&a.mParent;)a.mKey&&e.push(a.mKey),a=a.mParent;return e.reverse().join("/")||"(root)"};let h=m??i;const f=()=>{u.innerHTML="";const t=document.createElement("div");t.className="mb-2";const e=document.createElement("button");e.type="button",e.className="btn btn-sm btn-outline-warning me-1",e.textContent="/",e.onclick=()=>{h=i,m=h,f()},t.appendChild(e);const a=[];{let t=h;for(;t;)a.push(t),t=t.mParent;a.reverse()}for(let e=1;e<a.length;e++){const n=a[e],s=document.createElement("button");s.type="button",s.className="btn btn-sm btn-outline-danger me-1",s.textContent=n.mKey,s.onclick=()=>{h=n,m=h,f()},t.appendChild(s)}u.appendChild(t);const s=document.createElement("div");s.className="d-flex flex-wrap gap-2";const o=(t=>{const e=[];let a=t.mChild;for(;a;)e.push(a),a=a.mColleague;return e})(h);o.sort((t,e)=>{const a=null==t.mData;return a!==(null==e.mData)?a?-1:1:t.mKey.localeCompare(e.mKey)});for(const t of o){const e=null==t.mData,a=document.createElement("button");a.type="button";const o=document.createElement("i");o.setAttribute("aria-hidden","true"),o.classList.add("me-1"),e?(o.className="bi bi-folder me-1",a.className="btn btn-sm btn-warning border"):(a.setAttribute("draggable","true"),a.addEventListener("dragstart",e=>{e.stopPropagation(),e.dataTransfer?.setData("hash",t.mData.Key()),n.SetDrag("CObject",t.mData)}),o.className="function"==typeof t.mData?.Icon?t.mData.Icon():"bi bi-file-earmark",t.mData instanceof l||t.mData instanceof r?a.className="btn btn-sm btn-light border":t.mData instanceof n&&t.mData.IsBlackBoard()?a.className="btn btn-sm btn-outline-primary border":a.className="btn btn-sm btn-secondary border");const i=document.createElement("span");i.textContent=` ${t.mKey}`,a.append(o,i),e?(a.title="Open folder",a.onclick=()=>{h=t,m=h,f()}):(a.title=b(t),a.onclick=()=>{null!=t.mData.Key&&(c.value=t.mData.Key(),c.dispatchEvent(new Event("keyup",{bubbles:!0})))}),s.appendChild(a)}u.appendChild(s)};return m=h,f(),s}}let i=null,m=null;
+import { CBlackBoard } from "../basic/CBlackBoard.js";
+import { CDOM } from "../basic/CDOM.js";
+import { CLan } from "../basic/CLan.js";
+import { CObject } from "../basic/CObject.js";
+import { CPath } from "../basic/CPath.js";
+import { CTree } from "../basic/CTree.js";
+import { CMesh } from "../render/CMesh.js";
+import { CTexture } from "../render/CTexture.js";
+export class CRes extends CObject {
+    mResMap = new Map();
+    HttpPathChange(_key) {
+        let url = new URL(_key);
+        url.host = location.host;
+        let myProjName = "";
+        let splitPathName = location.pathname.split("/");
+        if (splitPathName.length > 1) {
+            myProjName = splitPathName[1];
+        }
+        if (myProjName != "") {
+            let resProjName = "";
+            splitPathName = url.pathname.split("/");
+            if (splitPathName.length > 1) {
+                resProjName = url.pathname.split("/")[1];
+            }
+            if (resProjName != "") {
+                url.pathname = "";
+                for (let split of splitPathName) {
+                    if (split == resProjName) {
+                        split = myProjName;
+                    }
+                    if (split != "") {
+                        url.pathname += split;
+                        if (splitPathName[splitPathName.length - 1] != split) {
+                            url.pathname += "/";
+                        }
+                    }
+                }
+            }
+        }
+        return url.toString();
+    }
+    Keys() {
+        return this.mResMap.keys();
+    }
+    Values() {
+        return this.mResMap.values();
+    }
+    Find(_key) {
+        if (_key == null)
+            return null;
+        if (this.mResMap.has(_key)) {
+            return this.mResMap.get(_key);
+        }
+        let key = _key;
+        if (_key.startsWith("http") && (_key.indexOf(CPath.Join("root")) != -1 || _key.indexOf("localhost") != -1)) {
+            key = this.HttpPathChange(_key);
+            if (this.mResMap.has(key)) {
+                this.mResMap.set(_key, this.mResMap.get(key));
+            }
+        }
+        return this.mResMap.get(key);
+    }
+    Push(_key, _value) {
+        this.mResMap.set(_key, _value);
+        return this;
+    }
+    Remove(_key) {
+        this.mResMap.delete(_key);
+    }
+    EditInit() {
+        this["blackboard"] = CBlackBoard.Map();
+        this["languge"] = CLan.Map();
+        const div = super.EditInit();
+        const input = document.createElement("input");
+        input.type = "search";
+        input.className = "form-control";
+        input.id = "resSearch";
+        input.placeholder = "Search";
+        input.onkeyup = (e) => {
+            const t = e.target;
+            const val = t.value;
+            let ch = div.getElementsByClassName("border p-1 mt-1");
+            let resMapKey = "";
+            let bbMapKey = "";
+            for (const each0 of ch) {
+                if (each0.id === "mResMap_title") {
+                    resMapKey = each0.getAttribute("data-bs-target").substring(1, 99);
+                    continue;
+                }
+                if (each0.id === "blackboard_title") {
+                    bbMapKey = each0.getAttribute("data-bs-target").substring(1, 99);
+                    ;
+                    continue;
+                }
+                if (each0 === t)
+                    continue;
+                const hel = each0;
+                if (each0.textContent?.toLowerCase().indexOf(val.toLowerCase()) !== -1)
+                    hel.style.display = "";
+                else
+                    hel.style.display = "none";
+            }
+            if (val == "") {
+                CDOM.ID(resMapKey).className = "border border-top-0 ps-2 collapse";
+                CDOM.ID(bbMapKey).className = "border border-top-0 ps-2 collapse";
+                return;
+            }
+            CDOM.ID(resMapKey).className = "border border-top-0 ps-2 collapse show";
+            CDOM.ID(bbMapKey).className = "border border-top-0 ps-2 collapse show";
+            ch = div.getElementsByClassName("border border-top-0 ps-2 collapse show");
+            for (const each0 of ch) {
+                if (each0.id != resMapKey && each0.id != bbMapKey)
+                    each0.className = "border border-top-0 ps-2 collapse";
+            }
+        };
+        div.prepend(input);
+        if (!(gTree instanceof CTree))
+            gTree = new CTree();
+        const findChild = (parent, key) => {
+            let n = parent.mChild;
+            while (n) {
+                if (n.mKey === key)
+                    return n;
+                n = n.mColleague;
+            }
+            return null;
+        };
+        const getOrMakeChild = (parent, key) => {
+            const found = findChild(parent, key);
+            if (found)
+                return found;
+            if (!parent.mChild)
+                return parent.PushChild(key);
+            let tail = parent.mChild;
+            while (tail.mColleague)
+                tail = tail.mColleague;
+            return tail.PushColleague(key);
+        };
+        for (const [key, value] of this.mResMap) {
+            const parts = String(key).split("/").filter(Boolean);
+            if (parts.length === 0)
+                continue;
+            const fileName = parts.pop();
+            let cur = gTree;
+            for (const seg of parts)
+                cur = getOrMakeChild(cur, seg);
+            const existed = findChild(cur, fileName);
+            if (existed) {
+                if (existed.mData == null)
+                    existed.mData = value;
+            }
+            else {
+                const leaf = getOrMakeChild(cur, fileName);
+                if (leaf.mData == null)
+                    leaf.mData = value;
+            }
+        }
+        for (const [key, value] of CBlackBoard.Map()) {
+            if (!value)
+                continue;
+            const parts = String(key).split("/").filter(Boolean);
+            if (parts.length === 0)
+                continue;
+            const fileName = parts.pop();
+            let cur = gTree;
+            for (const seg of parts)
+                cur = getOrMakeChild(cur, seg);
+            const existed = findChild(cur, fileName);
+            if (existed) {
+                if (existed.mData == null)
+                    existed.mData = value;
+            }
+            else {
+                const leaf = getOrMakeChild(cur, fileName);
+                if (leaf.mData == null)
+                    leaf.mData = value;
+            }
+        }
+        const viewer = document.createElement("div");
+        viewer.className = "mt-3";
+        div.appendChild(viewer);
+        const childrenOf = (node) => {
+            const arr = [];
+            let ch = node.mChild;
+            while (ch) {
+                arr.push(ch);
+                ch = ch.mColleague;
+            }
+            return arr;
+        };
+        const pathOf = (node) => {
+            const segs = [];
+            let p = node;
+            while (p && p.mParent) {
+                if (p.mKey)
+                    segs.push(p.mKey);
+                p = p.mParent;
+            }
+            return segs.reverse().join("/") || "(root)";
+        };
+        let curNode = gCurNode ?? gTree;
+        const render = () => {
+            viewer.innerHTML = "";
+            const pathBar = document.createElement("div");
+            pathBar.className = "mb-2";
+            const rootBtn = document.createElement("button");
+            rootBtn.type = "button";
+            rootBtn.className = "btn btn-sm btn-outline-warning me-1";
+            rootBtn.textContent = "/";
+            rootBtn.onclick = () => {
+                curNode = gTree;
+                gCurNode = curNode;
+                render();
+            };
+            pathBar.appendChild(rootBtn);
+            const trail = [];
+            {
+                let p = curNode;
+                while (p) {
+                    trail.push(p);
+                    p = p.mParent;
+                }
+                trail.reverse();
+            }
+            for (let i = 1; i < trail.length; i++) {
+                const node = trail[i];
+                const b = document.createElement("button");
+                b.type = "button";
+                b.className = "btn btn-sm btn-outline-danger me-1";
+                b.textContent = node.mKey;
+                b.onclick = () => {
+                    curNode = node;
+                    gCurNode = curNode;
+                    render();
+                };
+                pathBar.appendChild(b);
+            }
+            viewer.appendChild(pathBar);
+            const list = document.createElement("div");
+            list.className = "d-flex flex-wrap gap-2";
+            const children = childrenOf(curNode);
+            children.sort((a, b) => {
+                const aIsFolder = a.mData == null;
+                const bIsFolder = b.mData == null;
+                if (aIsFolder !== bIsFolder)
+                    return aIsFolder ? -1 : 1;
+                return a.mKey.localeCompare(b.mKey);
+            });
+            for (const n of children) {
+                const isFolder = n.mData == null;
+                const btn = document.createElement("button");
+                btn.type = "button";
+                const i = document.createElement("i");
+                i.setAttribute("aria-hidden", "true");
+                i.classList.add("me-1");
+                if (isFolder) {
+                    i.className = "bi bi-folder me-1";
+                    btn.className = "btn btn-sm btn-warning border";
+                }
+                else {
+                    btn.setAttribute("draggable", "true");
+                    btn.addEventListener("dragstart", (ev) => {
+                        ev.stopPropagation();
+                        ev.dataTransfer?.setData("hash", n.mData.Key());
+                        CObject.SetDrag("CObject", n.mData);
+                    });
+                    i.className = (typeof n.mData?.Icon === "function")
+                        ? n.mData.Icon()
+                        : "bi bi-file-earmark";
+                    if (n.mData instanceof CTexture || n.mData instanceof CMesh)
+                        btn.className = "btn btn-sm btn-light border";
+                    else if (n.mData instanceof CObject && n.mData.IsBlackBoard())
+                        btn.className = "btn btn-sm btn-outline-primary border";
+                    else
+                        btn.className = "btn btn-sm btn-secondary border";
+                }
+                const nameSpan = document.createElement("span");
+                nameSpan.textContent = ` ${n.mKey}`;
+                btn.append(i, nameSpan);
+                if (isFolder) {
+                    btn.title = "Open folder";
+                    btn.onclick = () => {
+                        curNode = n;
+                        gCurNode = curNode;
+                        render();
+                    };
+                }
+                else {
+                    btn.title = pathOf(n);
+                    btn.onclick = () => {
+                        if (n.mData.Key == null)
+                            return;
+                        input.value = n.mData.Key();
+                        input.dispatchEvent(new Event('keyup', { bubbles: true }));
+                    };
+                }
+                list.appendChild(btn);
+            }
+            viewer.appendChild(list);
+        };
+        gCurNode = curNode;
+        render();
+        return div;
+    }
+}
+let gTree = null;
+let gCurNode = null;

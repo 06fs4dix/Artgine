@@ -1,1 +1,141 @@
-import{CDOM as e}from"../../basic/CDOM.js";import{CJSON as t}from"../../basic/CJSON.js";import{CObject as r}from"../../basic/CObject.js";import{CVec2 as s}from"../../geometry/CVec2.js";import{CRenderPass as i}from"../../render/CRenderPass.js";import{CTexture as m}from"../../render/CTexture.js";import{CFile as n}from"../../system/CFile.js";export class CRPAuto extends i{static eState={class:"class",mTag:"mTag"};mAnd=new Array;mOr=new Array;mCopy=!1;PushAnd(e){this.mAnd.push(e)}PushOr(e){this.mOr.push(e)}}export class CRPMgr extends r{mFrame;mRPArr=new Array;mSufArr=new Array;mTexMap=new Map;IsShould(e,t){return"mFrame"!=e&&super.IsShould(e,t)}SetFrame(e){this.mFrame=e,this.Reset()}PushRP(e){return this.mRPArr.push(e),e}PushSuf(e){if(this.mSufArr.push(e),null!=this.mFrame){let t=new m;this.mFrame.Res().Push(e.GetTexKey(),t),t.mFrameBuf.push(null)}return e}PushTex(e,t){return this.mTexMap.set(e,t),null!=this.mFrame&&(this.mFrame.Res().Push(e,t),t.mFrameBuf.push(null)),e}RemoveTex(e){this.mTexMap.delete(e),null!=this.mFrame&&this.mFrame.Res().Remove(e)}RemoveRP(e){for(let t=0;t<this.mRPArr.length;++t)if(this.mRPArr[t]==e)return void this.mRPArr.splice(t,1)}RemoveSuf(e){for(let t=0;t<this.mSufArr.length;++t)if(this.mSufArr[t]==e)return void this.mSufArr.splice(t,1)}SaveTexture(){for(let e of this.mRPArr){const t=e.mRenderTarget;if(""==t||this.mTexMap.has(t))continue;const r=this.mFrame.Res().Find(t);if(null==r)continue;const s=new m;s.SetSize(r.GetWidth(),r.GetHeight()),s.SetResize(r.GetRWidth(),r.GetRHeight()),s.SetAlpha(r.GetAlpha()),s.SetAnti(r.GetAnti()),s.SetFilter(r.GetFilter()),s.PushInfo(r.GetInfo()),r.IsKey()&&s.SetKey(r.Key()),s.SetMipMap(r.GetMipMap()),s.SetWrap(r.GetWrap()),this.mTexMap.set(t,s)}}Reset(){if(null!=this.mFrame)for(let[e,t]of this.mTexMap){let r=null;0!=t.GetWidth()&&0!=t.GetHeight()&&(r=new s,r.x=t.GetWidth(),r.y=t.GetHeight()),this.mFrame.Ren().BuildRenderTarget(t.GetInfo(),r,e)}}ExportCJSON(){return this.SaveTexture(),super.ExportCJSON()}async LoadJSON(e=null){let r=await n.Load(e);return null==r||(this.ImportCJSON(new t(r)),!1)}async SaveJSON(e=null){n.Save(this.ToStr(),e)}EditHTMLInit(t){super.EditHTMLInit(t);var r=e.TagToDom("button");r.innerText="RPMgrTool",r.onclick=()=>{null!=window.RPMgrTool&&window.RPMgrTool(this)},t.append(r)}}
+import { CDOM } from "../../basic/CDOM.js";
+import { CJSON } from "../../basic/CJSON.js";
+import { CObject } from "../../basic/CObject.js";
+import { CVec2 } from "../../geometry/CVec2.js";
+import { CRenderPass } from "../../render/CRenderPass.js";
+import { CTexture } from "../../render/CTexture.js";
+import { CFile } from "../../system/CFile.js";
+export class CRPAuto extends CRenderPass {
+    static eState = {
+        "class": "class",
+        "mTag": "mTag",
+    };
+    mAnd = new Array();
+    mOr = new Array();
+    mCopy = false;
+    PushAnd(_con) {
+        this.mAnd.push(_con);
+    }
+    PushOr(_con) {
+        this.mOr.push(_con);
+    }
+}
+export class CRPMgr extends CObject {
+    mFrame;
+    mRPArr = new Array();
+    mSufArr = new Array();
+    mTexMap = new Map();
+    IsShould(_member, _type) {
+        if (_member == "mFrame") {
+            return false;
+        }
+        return super.IsShould(_member, _type);
+    }
+    SetFrame(_frame) {
+        this.mFrame = _frame;
+        this.Reset();
+    }
+    PushRP(_data) {
+        this.mRPArr.push(_data);
+        return _data;
+    }
+    PushSuf(_data) {
+        this.mSufArr.push(_data);
+        if (this.mFrame != null) {
+            let tex = new CTexture();
+            this.mFrame.Res().Push(_data.GetTexKey(), tex);
+            tex.mFrameBuf.push(null);
+        }
+        return _data;
+    }
+    PushTex(_key, _data) {
+        this.mTexMap.set(_key, _data);
+        if (this.mFrame != null) {
+            this.mFrame.Res().Push(_key, _data);
+            _data.mFrameBuf.push(null);
+        }
+        return _key;
+    }
+    RemoveTex(_key) {
+        this.mTexMap.delete(_key);
+        if (this.mFrame != null) {
+            this.mFrame.Res().Remove(_key);
+        }
+    }
+    RemoveRP(_data) {
+        for (let i = 0; i < this.mRPArr.length; ++i) {
+            if (this.mRPArr[i] == _data) {
+                this.mRPArr.splice(i, 1);
+                return;
+            }
+        }
+    }
+    RemoveSuf(_data) {
+        for (let i = 0; i < this.mSufArr.length; ++i) {
+            if (this.mSufArr[i] == _data) {
+                this.mSufArr.splice(i, 1);
+                return;
+            }
+        }
+    }
+    SaveTexture() {
+        for (let rp of this.mRPArr) {
+            const texKey = rp.mRenderTarget;
+            if (texKey == "" || this.mTexMap.has(texKey))
+                continue;
+            const tex = this.mFrame.Res().Find(texKey);
+            if (tex == null)
+                continue;
+            const newTex = new CTexture();
+            newTex.SetSize(tex.GetWidth(), tex.GetHeight());
+            newTex.SetResize(tex.GetRWidth(), tex.GetRHeight());
+            newTex.SetAlpha(tex.GetAlpha());
+            newTex.SetAnti(tex.GetAnti());
+            newTex.SetFilter(tex.GetFilter());
+            newTex.PushInfo(tex.GetInfo());
+            if (tex.IsKey()) {
+                newTex.SetKey(tex.Key());
+            }
+            newTex.SetMipMap(tex.GetMipMap());
+            newTex.SetWrap(tex.GetWrap());
+            this.mTexMap.set(texKey, newTex);
+        }
+    }
+    Reset() {
+        if (this.mFrame == null)
+            return;
+        for (let [key, tex] of this.mTexMap) {
+            let size = null;
+            if (tex.GetWidth() != 0 && tex.GetHeight() != 0) {
+                size = new CVec2();
+                size.x = tex.GetWidth();
+                size.y = tex.GetHeight();
+            }
+            this.mFrame.Ren().BuildRenderTarget(tex.GetInfo(), size, key);
+        }
+    }
+    ExportCJSON() {
+        this.SaveTexture();
+        return super.ExportCJSON();
+    }
+    async LoadJSON(_file = null) {
+        let buf = await CFile.Load(_file);
+        if (buf == null)
+            return true;
+        this.ImportCJSON(new CJSON(buf));
+        return false;
+    }
+    async SaveJSON(_file = null) {
+        CFile.Save(this.ToStr(), _file);
+    }
+    EditHTMLInit(_div) {
+        super.EditHTMLInit(_div);
+        var button = CDOM.TagToDom("button");
+        button.innerText = "RPMgrTool";
+        button.onclick = () => {
+            if (window["RPMgrTool"] != null)
+                window["RPMgrTool"](this);
+        };
+        _div.append(button);
+    }
+}

@@ -1,1 +1,880 @@
-import{CHash as e}from"../basic/CHash.js";import{CPath as t}from"../basic/CPath.js";import{CStorage as n}from"../system/CStorage.js";export class CSingOption extends w{mLoginBtn="ussLogin";mJoinBtn="ussJoin";mJoinTag=null;mFindPWBtn=null;mLogoutBtn="ussLogout";mID="ussID";mPW="ussPW";mFirebaseCard="firebaseCard";mFirebaseAnoBtn="firebaseAno";mFirebaseEmailBtn="firebaseEmail";mFirebasePhoneBtn="firebasePhone";mKakaoBtn="ussKakao";mNaverBtn="ussNaver";mGoogleBtn="ussGoogle";mModifyBtn="ussModify";mReturnURL=null}var i=new Map,a=new Map;export class CSing{static eEvent={JoinSubmit:"JoinSubmit",JoinInit:"JoinInit",State:"State",Init:"Init",Insert:"Insert"};static On(e,t){a.set(e,I.ToCEvent(t))}static GetEvent(e){let t=a.get(e);return null==t&&(t=I.Default()),t}static MapGet(e){let t=i.get(e);if(null==t){let t=n.Get(e);if(null!=t){let e=JSON.parse(t);if(new f(e.time).Delay()<36e5)return e.data}}return t}static PublicInfo(e,t=null){return new Promise(async(a,l)=>{let o=!1,d=CSing.MapGet(e);if(null==d&&(d=await _.Exe("Sing/PublicInfo",{key:e},"json"),o=!0),null!=t)for(let e=0;e<t.length;++e)null==d[t[e]]&&(d[t[e]]=await _.Exe("Sing/Tag",{publicKey:d._publicKey,tag:t[e]},"json"),o=!0);o&&(i.set(e,d),n.Set(e,JSON.stringify({time:(new f).mBegin,data:d}))),a(d)})}static PrivateInfo(e,t=null){return new Promise(async(a,l)=>{let o=!1,d=CSing.MapGet(e);if(null==d&&(d=(await _.Exe("Sing/PrivateInfo",{key:e},"json"))[0],o=!0),null!=t)for(let e=0;e<t.length;++e)if(null==d[t[e]]){let n=await _.Exe("Sing/Tag",{publicKey:d._publicKey,tag:t[e]},"json");d[t[e]]=n[0],o=!0}o&&(i.set(e,d),n.Set(e,JSON.stringify({time:(new f).mBegin,data:d}))),a(d)})}static PrivateKey(){return n.Get("privateKey")}static ModifyMode(){T(CSing.PrivateKey())}static async InitForm(a=new CSingOption){n.Set("loginType",null),null==a.mReturnURL?n.Set("returnURL",t.FullPath()):n.Set("returnURL",a.mReturnURL);let f={"<>":"div",html:[{"<>":"div",id:"loginDiv",html:[],hidden:!0},{"<>":"div",id:"logoutDiv",html:[],hidden:!0},{"<>":"div",id:"joinDiv",html:[],hidden:!0},{"<>":"div",id:"findPWDiv",html:[],hidden:!0,class:"card text-center",style:"width:23rem;margin:0 auto;"},{"<>":"div",id:"firebaseCardDiv",html:[]}]},I=f.html[0].html,w=f.html[1].html,j=f.html[2].html,F=f.html[3].html,W=f.html[4].html;if(F.push({"<>":"div",class:"card header",id:"findPWCardHeader","data-CLan":E.Set(null,"CSing.PWFindTitle","비번찾기")}),F.push({"<>":"div",class:"card-body",html:[{"<>":"label",for:"email_txt"},{"<>":"input",type:"text",class:"form-control",id:"email_txt",placeholder:"","data-CLan":E.Set(null,"CSing.FindEmail","이메일을 입력하세요")},{"<>":"label",for:"code_txt"},{"<>":"input",type:"text",class:"form-control",id:"code_txt",placeholder:"","data-CLan":E.Set(null,"CSing.FindEmailCode","이메일에서 확인된 코드를 입력해주세요"),disabled:"disabled"},{"<>":"button",type:"button",class:"btn btn-secondary float-left",id:"findPWCardBackBtn","data-CLan":E.Set(null,"CSing.Cancel","취소"),onclick:()=>{B.ID("findPWDiv").hidden=!0}},{"<>":"button",type:"button",class:"btn btn-primary float-right",id:"findPWCardNextBtn","data-CLan":E.Set(null,"CSing.Next","다음"),onclick:()=>{let e=B.ID("code_txt"),t=B.ID("email_txt"),n=B.ID("findPWCardNextBtn");0==t.disabled?(t.disabled=!0,n.hidden=!0,_.Exe("Sing/FindPW",{email:t.value,value:""}).then(()=>{e.disabled=!1,n.hidden=!1})):0==e.disabled&&(e.disabled=!0,n.hidden=!0,_.Exe("Sing/FindPW",{email:t.value,value:e.value}).then(i=>{n.hidden=!1,"-1"==i?(e.disabled=!1,x.Info("잘못된 코드 입니다")):"-2"==i?(t.disabled=!1,e.value="",x.Info("존재하지 않는 이메일 입니다")):T(i)}))}}]}),null!=a.mModifyBtn){var A=B.ID(a.mModifyBtn);let e=()=>{T(CSing.PrivateKey()),CSing.GetEvent(CSing.eEvent.JoinInit).Call(B.ID("joinDiv"))};null!=A?A.onclick=e:w.push({"<>":"button",type:"button",class:"btn btn-danger btn-lg w-100",id:"ModifyBtn",onclick:e,"data-CLan":E.Set(null,"CSing.Modify","정보수정")})}if(null!=a.mLogoutBtn){var N=B.ID(a.mLogoutBtn);let e=()=>{var e=n.Get("privateKey");B.ID("loginDiv").hidden=!1,B.ID("logoutDiv").hidden=!0,n.Set("loginType",null),n.Set("privateKey",null),n.Set("publicKey",null),n.Set(e,null),CSing.GetEvent(CSing.eEvent.State).Call()};null!=N?N.onclick=e:w.push({"<>":"button",type:"button",class:"btn btn-primary btn-lg w-100",id:"IDBtn",onclick:e,"data-CLan":E.Set(null,"CSing.Logout","로그아웃")})}let J=()=>{var t=B.IDValue("id_txt"),n=B.IDValue("pw_txt");l(e.SHA256(e.SHA256(t+"_"+n))).then(e=>{0==e&&(B.ID("loginDiv").hidden=!0,B.ID("logoutDiv").hidden=!1)})};if(null!=a.mID&&(I.push({"<>":"input",type:"text",class:"form-control w-100",id:"id_txt",placeholder:"","data-CLan":E.Set(null,"CSing.ID","아이디"),style:"width:220px;margin:0 auto;"}),I.push({"<>":"input",type:"password",class:"form-control w-100",id:"pw_txt",placeholder:"","data-CLan":E.Set(null,"CSing.PW","비밀번호"),style:"width:220px;margin:0 auto;",onkeyup:()=>{13==window.event.keyCode&&J()}})),null!=a.mLoginBtn&&(null!=B.ID(a.mLoginBtn)?N.onclick=J:I.push({"<>":"button",type:"button",class:"btn btn-primary w-100",style:"width:220px;margin:4px auto;",onclick:function(){J()},"data-CLan":E.Set(null,"CSing.Login","로그인")})),null!=a.mJoinBtn){let e=()=>{B.ID("loginDiv").hidden=!0,B.ID("logoutDiv").hidden=!0,B.ID("joinDiv").hidden=!1,CSing.GetEvent(CSing.eEvent.JoinInit).Call()};var H=B.ID(a.mJoinBtn);null!=H?H.onclick=e:I.push({"<>":"button",type:"button",class:"btn btn-secondary w-100",style:"width:220px;margin:4px auto;",onclick:e,"data-CLan":E.Set(null,"CSing.Join","가입")})}if(null!=a.mFindPWBtn){let e=()=>{var e=B.ID(a.mFindPWBtn),t=B.ID("findPWDiv");e.insertAdjacentElement("afterend",t),t.hidden=!1,B.ID("email_txt").disabled=!1,B.ID("code_txt").disabled=!0};var R=B.ID(a.mFindPWBtn);null!=R?R.onclick=e:I.push({"<>":"button",type:"button",class:"btn btn-success w-100",style:"width:220px;margin:4px auto;",id:a.mFindPWBtn,onclick:e,"data-CLan":E.Set(null,"CSing.FindPW","비번찾기")})}let U=D.GetHash();if(null!=a.mKakaoBtn){let e=()=>{window.location.href="https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=ad6b11b2c011ad95aadb7d8ec5658d13&redirect_uri="+t.PHPC()+"OAuth/Kakao&state="+U};null!=(z=document.getElementById(a.mKakaoBtn))?z.onclick=e:I.push({"<>":"button",type:"button",class:"btn btn-outline-warning w-100",onclick:e,id:a.mKakaoBtn,style:"width:220px; margin:4px auto;",html:[{"<>":"i",class:"bi bi-chat-dots"},{"<>":"text","data-CLan":E.Set(null,"CSing.Kakao","카카오톡")}]})}if(null!=a.mNaverBtn){let e=()=>{window.location.href="https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=UDp9HJZoGIarIZglhM2T&redirect_uri="+t.PHPC()+"OAuthNaver&state="+U};var z;null!=(z=document.getElementById(a.mNaverBtn))?z.onclick=e:I.push({"<>":"button",type:"button",class:"btn btn-outline-success w-100",onclick:e,id:a.mNaverBtn,style:"width:220px; margin:4px auto;",html:[{"<>":"i",class:"bi bi-chat-dots"},{"<>":"text","data-CLan":E.Set(null,"CSing.Naver","네이버")}]})}if(null!=a.mGoogleBtn){let e=()=>{window.location.href="https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=105997798370-insqhtjufjldp899c44ekbandk4b7jrn.apps.googleusercontent.com&scope=https://www.googleapis.com/auth/userinfo.email&redirect_uri="+t.PHPC()+"/OAuthGoogle&state="+U};var q=document.getElementById(a.mGoogleBtn);null!=q?q.onclick=e:I.push({"<>":"button",type:"button",class:"btn btn-outline-danger w-100",onclick:e,id:a.mGoogleBtn,style:"width:220px; margin:4px auto;",html:[{"<>":"i",class:"bi bi-chat-dots"},{"<>":"text","data-CLan":E.Set(null,"CSing.Google","구글")}]})}if(null==d&&(null!=a.mFirebaseAnoBtn||null!=a.mFirebaseEmailBtn||null!=a.mFirebasePhoneBtn)){const e=await import("../external/esnext/firebase/firebase_app.js"),t=await import("../external/esnext/firebase/firebase_auth.js");d=e.initializeApp,r=t.getAuth,u=t.createUserWithEmailAndPassword,s=t.signInWithEmailAndPassword,c=t.onAuthStateChanged,m=t.GoogleAuthProvider,g=t.RecaptchaVerifier,p=t.signInWithPhoneNumber,h=t.signInAnonymously,b=t.linkWithCredential,C=t.signInWithPopup,y=t.signInWithRedirect,S=t.getRedirectResult,v=t.signOut,k=d(P),(L=r(k)).useDeviceLanguage()}if(null!=a.mFirebaseAnoBtn){var Z=document.getElementById(a.mFirebaseAnoBtn);null!=Z?Z.onclick=K:I.push({"<>":"button",type:"button",class:"btn btn-outline-info w-100",id:a.mFirebaseAnoBtn,style:"width:220px;margin:4px auto;",onclick:K,html:[{"<>":"i",class:"bi bi-person"},{"<>":"text","data-CLan":E.Set(null,"CSing.Anonymous","익명")}]})}if(null!=a.mFirebaseEmailBtn){var X=document.getElementById(a.mFirebaseEmailBtn);null!=X?X.onclick=function(){M(a.mFirebaseEmailBtn)}:I.push({"<>":"button",type:"button",class:"btn btn-outline-danger w-100",id:a.mFirebaseEmailBtn,style:"width:220px;margin:4px auto;",onclick:function(){M(a.mFirebaseEmailBtn)},html:[{"<>":"i",class:"bi bi-envelope"},{"<>":"text","data-CLan":E.Set(null,"CSing.Email","이메일")}]})}if(null!=a.mFirebasePhoneBtn){var Y=document.getElementById(a.mFirebasePhoneBtn);null!=Y?Y.onclick=function(){V(a.mFirebasePhoneBtn)}:I.push({"<>":"button",type:"button",class:"btn btn-outline-primary w-100",id:a.mFirebasePhoneBtn,style:"width:220px;margin:4px auto;",onclick:function(){V(a.mFirebasePhoneBtn)},html:[{"<>":"i",class:"bi bi-phone"},{"<>":"text","data-CLan":E.Set(null,"CSing.Phone","전화번호")}]})}return W.push({"<>":"div",class:"card text-center",id:a.mFirebasePhoneBtn+"Card",style:"width:23rem;margin:0 auto;",hidden:"true",html:[{"<>":"div",class:"card-header",id:a.mFirebasePhoneBtn+"CardHeader","data-CLan":E.Set(null,"CSing.TelTitle_InputTel","전화번호 입력")},{"<>":"div",class:"card-body",html:[{"<>":"center",class:"input-group mb-3",html:[{"<>":"span",class:"input-group-text","data-CLan":E.Set(null,"CSing.Tel","전화번호")},{"<>":"input",type:"tel",name:"phoneNumber",class:"card-text",id:"Tel",placeholder:"","data-CLan":E.Set(null,"CSing.Tel","전화번호")}]},{"<>":"center",id:"recaptcha-container"},{"<>":"br"},{"<>":"div",id:"recaptcha-code-container",hidder:"true",html:[{"<>":"center",class:"input-group mb-3",html:[{"<>":"span",class:"input-group-text","data-CLan":E.Set(null,"CSing.RecaptchaCode","인증번호")},{"<>":"input",type:"number",id:"recaptchaCode",placeholder:"","data-CLan":E.Set(null,"CSing.RecaptchaCode","인증번호")}]}]},{"<>":"h6",id:"PhoneErrorMessage"},{"<>":"br"},{"<>":"button",type:"button",class:"btn btn-secondary float-left",id:a.mFirebasePhoneBtn+"CardBackBtn","data-CLan":E.Set(null,"CSing.Cancel","취소"),onclick:function(){O(a.mFirebasePhoneBtn)}},{"<>":"button",type:"button",class:"btn btn-primary float-right",id:a.mFirebasePhoneBtn+"CardNextBtn","data-CLan":E.Set(null,"CSing.Enter","다음"),onclick:function(){V(a.mFirebasePhoneBtn)}}]}]},{"<>":"div",class:"card text-center",id:a.mFirebaseEmailBtn+"Card",style:"width:23rem;margin:0 auto;",hidden:"true",html:[{"<>":"div",class:"card header",id:a.mFirebaseEmailBtn+"CardHeader","data-CLan":E.Set(null,"CSing.EmailTitle_InputEmail","이메일 입력")},{"<>":"div",class:"card-body",html:[{"<>":"center",class:"input-group mb-3",id:"EmailDiv",html:[{"<>":"span",class:"input-group-text","data-CLan":E.Set(null,"CSing.Email","이메일")},{"<>":"input",type:"email",name:"email",id:"Email",class:"form-control",placeholder:"","data-CLan":E.Set(null,"CSing.Email","이메일")}]},{"<>":"center",class:"input-group mb-3",id:"PasswordDiv",html:[{"<>":"span",class:"input-group-text","data-CLan":E.Set(null,"CSing.PW","패스워드")},{"<>":"input",type:"password",name:"password",id:"Password",class:"form-control",placeholder:"","data-CLan":E.Set(null,"CSing.PW","패스워드")}]},{"<>":"h6",id:"EmailErrorMessage"},{"<>":"button",type:"button",class:"btn btn-secondary float-left",id:a.mFirebaseEmailBtn+"CardBackBtn","data-CLan":E.Set(null,"CSing.Cancel","취소"),onclick:function(){G(a.mFirebaseEmailBtn)}},{"<>":"button",type:"button",class:"btn btn-primary float-right",id:a.mFirebaseEmailBtn+"CardNextBtn","data-CLan":E.Set(null,"CSing.Enter","다음"),onclick:function(){M(a.mFirebaseEmailBtn)}}]}]},{"<>":"div",class:"card text-center",id:a.mFindPWBtn+"Card",style:"width:23rem;margin:0 auto;",hidden:!0,html:[{"<>":"div",class:"card header",id:a.mFindPWBtn+"CardHeader","data-CLan":E.Set(null,"CSing.PWFindTitle","비번찾기")},{"<>":"div",class:"card-body",html:[{"<>":"label",for:"email_txt"},{"<>":"input",type:"text",class:"form-control",id:"email_txt",placeholder:"","data-CLan":E.Set(null,"CSing.Email","이메일을 입력하세요")},{"<>":"label",for:"code_txt"},{"<>":"input",type:"text",class:"form-control",id:"code_txt",placeholder:"","data-CLan":E.Set(null,"CSing.EmailCode","이메일에서 확인된 코드를 입력해주세요"),disabled:"disabled"},{"<>":"button",type:"button",class:"btn btn-secondary float-left",id:a.mFindPWBtn+"CardBackBtn","data-CLan":E.Set(null,"CSing.Cancel","취소"),onclick:function(){}},{"<>":"button",type:"button",class:"btn btn-primary float-right",id:a.mFindPWBtn+"CardNextBtn","data-CLan":E.Set(null,"CSing.Enter","완료"),onclick:function(){}}]}]}),j.push({"<>":"div",id:"IDPWDiv",html:[{"<>":"label",for:"join_id_txt",text:"ID",id:"join_id_label"},{"<>":"input",type:"text",class:"form-control",id:"join_id_txt",placeholder:"","data-CLan":E.Set(null,"CSing.IDInfo","아이디를 영어 문자와 숫자로만 입력하세요 6자이상 12자이하로 입력하세요")},{"<>":"label",for:"join_pw_txt",text:"PassWord",id:"join_pw_label"},{"<>":"input",type:"password",class:"form-control",id:"join_pw_txt",placeholder:"","data-CLan":E.Set(null,"CSing.PWInfo","비밀번호를 4자 이상 14자 이하로 입력하세요")},{"<>":"input",type:"password",class:"form-control",id:"join_pwChk_txt",placeholder:"","data-CLan":E.Set(null,"PWCheck","비밀번호를 다시 입력하여 확인하세요")}]}),j.push({"<>":"label",for:"join_nick_txt",text:"Nick"}),j.push({"<>":"input",type:"text",class:"form-control",id:"join_nick_txt",placeholder:"","data-CLan":E.Set(null,"CSing.Nick","닉네임")}),j.push({"<>":"label",for:"join_email_txt",text:"Email"}),j.push({"<>":"input",type:"text",class:"form-control",id:"join_email_txt",placeholder:"","data-CLan":E.Set(null,"CSing.Email","이메일(계정,패스워드 분실시 필요)")}),j.push({"<>":"br"}),j.push({"<>":"br"}),j.push({"<>":"button",type:"button",class:"btn btn-primary btn-lg w-100",id:"uc_btn","data-CLan":E.Set(null,"CSing.Enter","완료"),onclick:()=>{var t="modify"==n.Get("loginType"),a={privateKey:"",email:"",nick:"",loginType:"id",id:"",newPrivateKey:""},l=B.IDValue("join_id_txt"),d=B.IDValue("join_pw_txt"),r=B.IDValue("join_pwChk_txt");if(t){if(a.nick=B.IDValue("join_nick_txt"),a.email=B.IDValue("join_email_txt"),a.loginType="modify",a.privateKey=n.Get("privateKey"),""!=d){if(d!=r)return void x.E("암호가 다릅니다");a.newPrivateKey=e.SHA256(e.SHA256(l+"_"+d))}if(B.ID("uc_btn").hidden=!0,null!=(u=CSing.GetEvent(CSing.eEvent.JoinSubmit).Call()))for(let e=0;e<u.length;++e)a[u[e].key]=u[e].value}else{if(d!=r||""==d)return void x.Info("비번을 확인해 주세요");var u;if(a.nick=B.IDValue("join_nick_txt"),a.email=B.IDValue("join_email_txt"),null==n.Get("loginType")?(a.privateKey=e.SHA256(e.SHA256(l+"_"+d)),a.id=l):(a.loginType=n.Get("loginType"),a.privateKey=n.Get("privateKey"),x.E("error&*(")),B.ID("uc_btn").hidden=!0,null!=(u=CSing.GetEvent(CSing.eEvent.JoinSubmit).Call()))for(let e=0;e<u.length;++e)a[u[e].key]=u[e].value}o(a).then(e=>{B.ID("uc_btn").hidden=!1,e||(B.ID("loginDiv").hidden=!0,B.ID("logoutDiv").hidden=!1,B.ID("joinDiv").hidden=!0,B.IDValue("join_pw_txt",""),B.IDValue("join_pwChk_txt",""),i.clear(),n.Set(CSing.PrivateKey(),null))})}}),j.push({"<>":"button",type:"button",class:"btn btn-danger btn-lg w-100",id:"uc_cancel_btn","data-CLan":E.Set(null,"CSing.Cancel","취소"),onclick:()=>{null==CSing.PrivateKey()?B.ID("loginDiv").hidden=!1:B.ID("logoutDiv").hidden=!1,B.ID("joinDiv").hidden=!0}}),null!=CSing.PrivateKey()?setTimeout(async()=>{CSing.GetEvent(CSing.eEvent.State).Call(),""==(await CSing.PrivateInfo(CSing.PrivateKey()))._email?CSing.GetEvent(CSing.eEvent.Insert).Call():f.html[1].hidden=!1},100):f.html[0].hidden=!1,CSing.GetEvent(CSing.eEvent.Init).Call(),B.DataToDom(f)}}async function l(e){return"0"==await _.Exe("Sing/SingIn",{privateKey:e})?(n.Set("privateKey",e),CSing.GetEvent(CSing.eEvent.State).Call(),!1):(x.Info("id/pw가 잘못되었습니다"),!0)}async function o(e){var t=await _.Exe("Sing/Join",e);return"-1"==t?(x.Info("id 중복입니다."),!0):"-2"==t?(x.Info("nick 중복입니다."),!0):"-3"==t?(x.Info("email 중복입니다."),!0):"-5"==t?(x.Info("생성할수 없는 비밀번호 조합입니다"),!0):-1!=t.indexOf("-")?(x.Info("알수없는 에러!"),!0):(n.Set("privateKey",""==e.newPrivateKey?e.privateKey:e.newPrivateKey),n.Set("publicKey",t),CSing.GetEvent(CSing.eEvent.State).Call(),!1)}window.UserLogout=function(){},window.UserLogin=l,window.UserCreate=o;let d=null,r=null,u=null,s=null,c=null,m=null,g=null,p=null,h=null,b=null,C=null,y=null,S=null,v=null;import{CTimer as f}from"../system/CTimer.js";import{CEvent as I}from"../basic/CEvent.js";import{CLan as E}from"../basic/CLan.js";import{CDOM as B}from"../basic/CDOM.js";import{CObject as w}from"../basic/CObject.js";import{CAlert as x}from"../basic/CAlert.js";import{CUniqueID as D}from"../basic/CUniqueID.js";import{CFecth as _}from"../network/CFecth.js";var P={apiKey:"AIzaSyA7C6aS9vtXJDfcIu1-345yqhunuY6zUIk",authDomain:"openworld-1163a.firebaseapp.com",databaseURL:"https://openworld-1163a.firebaseio.com",projectId:"openworld-1163a",storageBucket:"openworld-1163a.appspot.com",messagingSenderId:"434854181613",appId:"1:434854181613:web:144690754909c280222ae4"},k=null,L=null;function j(e){return CSing.PrivateInfo(e.user.uid).then(t=>{n.Set("privateKey",e.user.uid),null==t?(B.ID("loginDiv").hidden=!1,_.Exe("Sing/FireBase",{privateKey:e.user.uid}).then(()=>{T(CSing.PrivateKey())})):(_.Exe("Sing/SingIn",{privateKey:e.user.uid}),B.ID("loginDiv").hidden=!0,B.ID("logoutDiv").hidden=!1,CSing.GetEvent(CSing.eEvent.State).Call())}),!1}function F(e){if("anonymous-upgrade-merge-conflict"!=e.code)return Promise.resolve();const t=e.credential;return L.signInWithCredential(t)}function K(){h(L).then(j).catch(F)}function T(e){B.ID("findPWDiv").hidden=!0,B.ID("loginDiv").hidden=!0,B.ID("logoutDiv").hidden=!0,B.ID("joinDiv").hidden=!1,CSing.PrivateInfo(e).then(t=>{B.ID("join_id_txt").hidden=!0,B.ID("join_id_label").hidden=!0,null!=t&&(B.IDInput("join_id_txt").value=t._id,B.IDInput("join_nick_txt").value=t._nick,B.IDInput("join_email_txt").value=t._email,"kakao"!=t._loginType&&"firebase"!=t._loginType||(B.ID("join_pw_label").hidden=!0,B.IDInput("join_pw_txt").hidden=!0,B.IDInput("join_pwChk_txt").hidden=!0)),n.Set("loginType","modify"),n.Set("privateKey",e)})}window.signInSuccessFunc=j,window.signInFailFunc=F,window.FireBaseAnonymousLogin=K,window.ModifyFun=T;var W=0;function A(e){let t=document.getElementById(e),n=document.getElementById(e+"Card");t.hidden=!0,n.hidden=!1,document.getElementById(e+"CardHeader").setAttribute("data-CLan",E.Set(null,"CSing.EmailTitle_InputEmail","이메일 입력")),document.getElementById("PasswordDiv").hidden=!0,document.getElementById("EmailErrorMessage").innerText="",t.insertAdjacentElement("afterend",n),W=1}function G(e){switch(W){case 0:break;case 1:!function(e){document.getElementById(e+"Card").hidden=!0,document.getElementById(e).hidden=!1,W=0}(e);break;case 2:case 3:A(e)}}function M(e){let t,n;switch(W){case 0:A(e);break;case 1:t=document.getElementById("Email").value,s(L,t,"000000").then(()=>{console.log("dont make ps 000000")}).catch(t=>{"auth/user-not-found"==t.code?function(e){document.getElementById(e+"Card").hidden=!1,document.getElementById(e+"CardHeader").setAttribute("data-CLan",E.Set(null,"CSing.SignUp","회원가입")),document.getElementById("PasswordDiv").hidden=!1,document.getElementById("EmailErrorMessage").innerText="",W=3}(e):"auth/wrong-password"==t.code?function(e){document.getElementById(e+"Card").hidden=!1,document.getElementById("PasswordDiv").hidden=!1,document.getElementById(e+"CardHeader").setAttribute("data-CLan",E.Set(null,"CSing.Login","로그인")),document.getElementById("EmailErrorMessage").innerText="",W=2}(e):document.getElementById("EmailErrorMessage").innerText=t.message});break;case 2:t=document.getElementById("Email").value,n=document.getElementById("Password").value,s(L,t,n).then(j).catch(e=>{document.getElementById("EmailErrorMessage").innerText=e.message,F(e)});break;case 3:t=document.getElementById("Email").value,n=document.getElementById("Password").value,u(L,t,n).then(j).catch(e=>{document.getElementById("EmailErrorMessage").innerText=e.message,F(e)})}}window.emailBackBtnEvent=G,window.emailNextBtnEvent=M;var N=0,J=null,H=null,R=null;function U(e){let t=document.getElementById(e),n=document.getElementById(e+"Card");n.hidden=!1,t.hidden=!0,document.getElementById(e+"CardNextBtn").hidden=!0,document.getElementById("PhoneErrorMessage").innerText="",document.getElementById("recaptcha-code-container").hidden=!0,t.insertAdjacentElement("afterend",n),N=1}function O(e){switch(N){case 0:break;case 1:!function(e){document.getElementById(e+"Card").hidden=!0,document.getElementById(e).hidden=!1,N=0}(e);break;case 2:U(e)}}function V(e){switch(null==J&&(J=new g("recaptcha-container",{size:"normal",callback:()=>{document.getElementById(e+"CardNextBtn").hidden=!1}},L)).render().then(e=>{R=e}),N){case 0:U(e);break;case 1:let t="+82"+document.getElementById("Tel").value;p(L,t,J).then(t=>{H=t,function(e){document.getElementById(e+"Card").hidden=!1,document.getElementById(e).hidden=!0,document.getElementById("recaptcha-code-container").hidden=!1,N=2}(e)}).catch(e=>{document.getElementById("PhoneErrorMessage").innerText=e.message,J.reset(R)});break;case 2:let n=document.getElementById("recaptchaCode").value;H.confirm(n).then(j).catch(e=>{document.getElementById("PhoneErrorMessage").innerText=e.message,F(e)})}}window.phoneBackBtnEvent=O,window.phoneNextBtnEvent=V;
+import { CHash } from "../basic/CHash.js";
+import { CPath } from "../basic/CPath.js";
+import { CStorage } from "../system/CStorage.js";
+export class CSingOption extends CObject {
+    mLoginBtn = "ussLogin";
+    mJoinBtn = "ussJoin";
+    mJoinTag = null;
+    mFindPWBtn = null;
+    mLogoutBtn = "ussLogout";
+    mID = "ussID";
+    mPW = "ussPW";
+    mFirebaseCard = "firebaseCard";
+    mFirebaseAnoBtn = "firebaseAno";
+    mFirebaseEmailBtn = "firebaseEmail";
+    mFirebasePhoneBtn = "firebasePhone";
+    mKakaoBtn = "ussKakao";
+    mNaverBtn = "ussNaver";
+    mGoogleBtn = "ussGoogle";
+    mModifyBtn = "ussModify";
+    mReturnURL = null;
+}
+var gInfoMap = new Map();
+var gEventMap = new Map;
+export class CSing {
+    static eEvent = {
+        "JoinSubmit": "JoinSubmit",
+        "JoinInit": "JoinInit",
+        "State": "State",
+        "Init": "Init",
+        "Insert": "Insert",
+    };
+    static On(_key, _event) {
+        gEventMap.set(_key, CEvent.ToCEvent(_event));
+    }
+    static GetEvent(_key) {
+        let event = gEventMap.get(_key);
+        if (event == null)
+            event = CEvent.Default();
+        return event;
+    }
+    static MapGet(_key) {
+        let data = gInfoMap.get(_key);
+        if (data == null) {
+            let dataStr = CStorage.Get(_key);
+            if (dataStr != null) {
+                let datajson = JSON.parse(dataStr);
+                if (new CTimer(datajson.time).Delay() < 1000 * 60 * 60) {
+                    return datajson.data;
+                }
+            }
+        }
+        return data;
+    }
+    static PublicInfo(_key, _tag = null) {
+        return new Promise(async (resolve, reject) => {
+            let write = false;
+            let data = CSing.MapGet(_key);
+            if (data == null) {
+                data = await CFecth.Exe("Sing/PublicInfo", { key: _key }, "json");
+                write = true;
+            }
+            if (_tag != null) {
+                for (let i = 0; i < _tag.length; ++i) {
+                    if (data[_tag[i]] == null) {
+                        data[_tag[i]] = await CFecth.Exe("Sing/Tag", { publicKey: data._publicKey, tag: _tag[i] }, "json");
+                        write = true;
+                    }
+                }
+            }
+            if (write) {
+                gInfoMap.set(_key, data);
+                CStorage.Set(_key, JSON.stringify({ time: new CTimer().mBegin, data: data }));
+            }
+            resolve(data);
+        });
+    }
+    static PrivateInfo(_key, _tag = null) {
+        return new Promise(async (resolve, reject) => {
+            let write = false;
+            let data = CSing.MapGet(_key);
+            if (data == null) {
+                let r = await CFecth.Exe("Sing/PrivateInfo", { key: _key }, "json");
+                data = r[0];
+                write = true;
+            }
+            if (_tag != null) {
+                for (let i = 0; i < _tag.length; ++i) {
+                    if (data[_tag[i]] == null) {
+                        let r = await CFecth.Exe("Sing/Tag", { publicKey: data._publicKey, tag: _tag[i] }, "json");
+                        data[_tag[i]] = r[0];
+                        write = true;
+                    }
+                }
+            }
+            if (write) {
+                gInfoMap.set(_key, data);
+                CStorage.Set(_key, JSON.stringify({ time: new CTimer().mBegin, data: data }));
+            }
+            resolve(data);
+        });
+    }
+    static PrivateKey() {
+        return CStorage.Get("privateKey");
+    }
+    static ModifyMode() {
+        ModifyFun(CSing.PrivateKey());
+    }
+    static async InitForm(_option = new CSingOption()) {
+        CStorage.Set("loginType", null);
+        if (_option.mReturnURL == null)
+            CStorage.Set("returnURL", CPath.FullPath());
+        else
+            CStorage.Set("returnURL", _option.mReturnURL);
+        let main = { '<>': 'div', 'html': [
+                { "<>": "div", "id": "loginDiv", 'html': [], 'hidden': true },
+                { "<>": "div", "id": "logoutDiv", 'html': [], 'hidden': true },
+                { "<>": "div", "id": "joinDiv", 'html': [], 'hidden': true },
+                { "<>": "div", "id": "findPWDiv", 'html': [], 'hidden': true, 'class': 'card text-center', 'style': 'width:23rem;margin:0 auto;' },
+                { "<>": "div", "id": "firebaseCardDiv", 'html': [] },
+            ] };
+        let loginDiv = main.html[0].html;
+        let logoutDiv = main.html[1].html;
+        let joinDiv = main.html[2].html;
+        let findPWDiv = main.html[3].html;
+        let firebaseCardDiv = main.html[4].html;
+        findPWDiv.push({ '<>': 'div', 'class': 'card header', 'id': 'findPWCardHeader', 'data-CLan': CLan.Set(null, 'CSing.PWFindTitle', '비번찾기') });
+        findPWDiv.push({ '<>': 'div', 'class': 'card-body', 'html': [
+                { '<>': 'label', "for": "email_txt" },
+                { '<>': 'input', "type": "text", "class": "form-control", "id": "email_txt",
+                    "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.FindEmail', "이메일을 입력하세요") },
+                { '<>': 'label', "for": "code_txt" },
+                { '<>': 'input', "type": "text", "class": "form-control", "id": "code_txt",
+                    "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.FindEmailCode', "이메일에서 확인된 코드를 입력해주세요"), 'disabled': 'disabled' },
+                { '<>': 'button', 'type': 'button', 'class': 'btn btn-secondary float-left', 'id': 'findPWCardBackBtn',
+                    "data-CLan": CLan.Set(null, 'CSing.Cancel', '취소'), "onclick": () => {
+                        CDOM.ID("findPWDiv").hidden = true;
+                    } },
+                { '<>': 'button', "type": "button", "class": "btn btn-primary float-right", 'id': 'findPWCardNextBtn',
+                    "data-CLan": CLan.Set(null, 'CSing.Next', "다음"), "onclick": () => {
+                        let code = CDOM.ID("code_txt");
+                        let email = CDOM.ID("email_txt");
+                        let btn = CDOM.ID("findPWCardNextBtn");
+                        if (email.disabled == false) {
+                            email.disabled = true;
+                            btn.hidden = true;
+                            CFecth.Exe("Sing/FindPW", { email: email.value, value: "" }).then(() => {
+                                code.disabled = false;
+                                btn.hidden = false;
+                            });
+                        }
+                        else if (code.disabled == false) {
+                            code.disabled = true;
+                            btn.hidden = true;
+                            CFecth.Exe("Sing/FindPW", { email: email.value, value: code.value }).then((_error) => {
+                                btn.hidden = false;
+                                if (_error == "-1") {
+                                    code.disabled = false;
+                                    CAlert.Info("잘못된 코드 입니다");
+                                }
+                                else if (_error == "-2") {
+                                    email.disabled = false;
+                                    code.value = "";
+                                    CAlert.Info("존재하지 않는 이메일 입니다");
+                                }
+                                else {
+                                    ModifyFun(_error);
+                                }
+                            });
+                        }
+                    } }
+            ] });
+        if (_option.mModifyBtn != null) {
+            var modifyBtn = CDOM.ID(_option.mModifyBtn);
+            let modifyFun = () => {
+                ModifyFun(CSing.PrivateKey());
+                CSing.GetEvent(CSing.eEvent.JoinInit).Call(CDOM.ID('joinDiv'));
+            };
+            if (modifyBtn != null) {
+                modifyBtn.onclick = modifyFun;
+            }
+            else {
+                logoutDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-danger btn-lg w-100', "id": "ModifyBtn",
+                    "onclick": modifyFun, "data-CLan": CLan.Set(null, 'CSing.Modify', "정보수정") });
+            }
+        }
+        if (_option.mLogoutBtn != null) {
+            var logoutBtn = CDOM.ID(_option.mLogoutBtn);
+            let logoutFun = () => {
+                var privateKey = CStorage.Get("privateKey");
+                CDOM.ID("loginDiv").hidden = false;
+                CDOM.ID("logoutDiv").hidden = true;
+                CStorage.Set("loginType", null);
+                CStorage.Set("privateKey", null);
+                CStorage.Set("publicKey", null);
+                CStorage.Set(privateKey, null);
+                CSing.GetEvent(CSing.eEvent.State).Call();
+            };
+            if (logoutBtn != null) {
+                logoutBtn.onclick = logoutFun;
+            }
+            else {
+                logoutDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-primary btn-lg w-100', "id": "IDBtn",
+                    "onclick": logoutFun, "data-CLan": CLan.Set(null, 'CSing.Logout', "로그아웃") });
+            }
+        }
+        let loginFun = () => {
+            var id_txt = CDOM.IDValue("id_txt");
+            var pw_txt = CDOM.IDValue("pw_txt");
+            UserLogin(CHash.SHA256(CHash.SHA256(id_txt + "_" + pw_txt))).then((_error) => {
+                if (_error == false) {
+                    CDOM.ID("loginDiv").hidden = true;
+                    CDOM.ID("logoutDiv").hidden = false;
+                }
+            });
+        };
+        if (_option.mID != null) {
+            loginDiv.push({ '<>': "input", 'type': 'text', 'class': 'form-control w-100', "id": "id_txt", "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.ID', "아이디"),
+                "style": "width:220px;margin:0 auto;" });
+            loginDiv.push({ '<>': "input", 'type': 'password', 'class': 'form-control w-100', "id": "pw_txt", "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.PW', "비밀번호"),
+                "style": "width:220px;margin:0 auto;", 'onkeyup': () => {
+                    if (window.event["keyCode"] == 13)
+                        loginFun();
+                }
+            });
+        }
+        if (_option.mLoginBtn != null) {
+            var loginBtn = CDOM.ID(_option.mLoginBtn);
+            if (loginBtn != null) {
+                logoutBtn.onclick = loginFun;
+            }
+            else {
+                loginDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-primary w-100', "style": "width:220px;margin:4px auto;",
+                    "onclick": function () { loginFun(); }, "data-CLan": CLan.Set(null, 'CSing.Login', "로그인") });
+            }
+        }
+        if (_option.mJoinBtn != null) {
+            let joinFun = () => {
+                CDOM.ID('loginDiv').hidden = true;
+                CDOM.ID('logoutDiv').hidden = true;
+                CDOM.ID('joinDiv').hidden = false;
+                CSing.GetEvent(CSing.eEvent.JoinInit).Call();
+            };
+            var joinBtn = CDOM.ID(_option.mJoinBtn);
+            if (joinBtn != null) {
+                joinBtn.onclick = joinFun;
+            }
+            else {
+                loginDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-secondary w-100', "style": "width:220px;margin:4px auto;",
+                    "onclick": joinFun, "data-CLan": CLan.Set(null, 'CSing.Join', "가입") });
+            }
+        }
+        if (_option.mFindPWBtn != null) {
+            let findPWFun = () => {
+                var btn = CDOM.ID(_option.mFindPWBtn);
+                var card = CDOM.ID("findPWDiv");
+                btn.insertAdjacentElement('afterend', card);
+                card.hidden = false;
+                CDOM.ID("email_txt").disabled = false;
+                CDOM.ID("code_txt").disabled = true;
+            };
+            var findPWBtn = CDOM.ID(_option.mFindPWBtn);
+            if (findPWBtn != null) {
+                findPWBtn.onclick = findPWFun;
+            }
+            else {
+                loginDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-success w-100',
+                    "style": "width:220px;margin:4px auto;", 'id': _option.mFindPWBtn,
+                    "onclick": findPWFun, "data-CLan": CLan.Set(null, 'CSing.FindPW', "비번찾기") });
+            }
+        }
+        let state = CUniqueID.GetHash();
+        if (_option.mKakaoBtn != null) {
+            let kakaoFun = () => {
+                window.location.href = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=ad6b11b2c011ad95aadb7d8ec5658d13&redirect_uri=' +
+                    CPath.PHPC() + "OAuth/Kakao&state=" + state;
+            };
+            var kakaoBtn = document.getElementById(_option.mKakaoBtn);
+            if (kakaoBtn != null) {
+                kakaoBtn.onclick = kakaoFun;
+            }
+            else {
+                loginDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-outline-warning w-100', 'onclick': kakaoFun, 'id': _option.mKakaoBtn,
+                    'style': 'width:220px; margin:4px auto;', 'html': [
+                        { '<>': 'i', 'class': 'bi bi-chat-dots' },
+                        { '<>': 'text', 'data-CLan': CLan.Set(null, 'CSing.Kakao', "카카오톡") }
+                    ]
+                });
+            }
+        }
+        if (_option.mNaverBtn != null) {
+            let naverFun = () => {
+                window.location.href = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=UDp9HJZoGIarIZglhM2T&redirect_uri=' +
+                    CPath.PHPC() + "OAuthNaver&state=" + state;
+            };
+            var kakaoBtn = document.getElementById(_option.mNaverBtn);
+            if (kakaoBtn != null) {
+                kakaoBtn.onclick = naverFun;
+            }
+            else {
+                loginDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-outline-success w-100', 'onclick': naverFun, 'id': _option.mNaverBtn,
+                    'style': 'width:220px; margin:4px auto;', 'html': [
+                        { '<>': 'i', 'class': 'bi bi-chat-dots' },
+                        { '<>': 'text', 'data-CLan': CLan.Set(null, 'CSing.Naver', "네이버") }
+                    ]
+                });
+            }
+        }
+        if (_option.mGoogleBtn != null) {
+            let googleFun = () => {
+                window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code" +
+                    "&client_id=105997798370-insqhtjufjldp899c44ekbandk4b7jrn.apps.googleusercontent.com" +
+                    "&scope=https://www.googleapis.com/auth/userinfo.email" +
+                    "&redirect_uri=" + CPath.PHPC() + "/OAuthGoogle&state=" + state;
+            };
+            var googleBtn = document.getElementById(_option.mGoogleBtn);
+            if (googleBtn != null) {
+                googleBtn.onclick = googleFun;
+            }
+            else {
+                loginDiv.push({ '<>': 'button', 'type': 'button', 'class': 'btn btn-outline-danger w-100', 'onclick': googleFun, 'id': _option.mGoogleBtn,
+                    'style': 'width:220px; margin:4px auto;', 'html': [
+                        { '<>': 'i', 'class': 'bi bi-chat-dots' },
+                        { '<>': 'text', 'data-CLan': CLan.Set(null, 'CSing.Google', "구글") }
+                    ]
+                });
+            }
+        }
+        if (initializeApp == null && (_option.mFirebaseAnoBtn != null || _option.mFirebaseEmailBtn != null || _option.mFirebasePhoneBtn != null)) {
+            const appMod = await import('../external/esnext/firebase/firebase_app.js');
+            const authMod = await import('../external/esnext/firebase/firebase_auth.js');
+            initializeApp = appMod.initializeApp;
+            getAuth = authMod.getAuth;
+            createUserWithEmailAndPassword = authMod.createUserWithEmailAndPassword;
+            signInWithEmailAndPassword = authMod.signInWithEmailAndPassword;
+            onAuthStateChanged = authMod.onAuthStateChanged;
+            GoogleAuthProvider = authMod.GoogleAuthProvider;
+            RecaptchaVerifier = authMod.RecaptchaVerifier;
+            signInWithPhoneNumber = authMod.signInWithPhoneNumber;
+            signInAnonymously = authMod.signInAnonymously;
+            linkWithCredential = authMod.linkWithCredential;
+            signInWithPopup = authMod.signInWithPopup;
+            signInWithRedirect = authMod.signInWithRedirect;
+            getRedirectResult = authMod.getRedirectResult;
+            signOut = authMod.signOut;
+            app = initializeApp(firebaseConfig);
+            g_firebaseAuth = getAuth(app);
+            g_firebaseAuth.useDeviceLanguage();
+        }
+        if (_option.mFirebaseAnoBtn != null) {
+            var anoBtn = document.getElementById(_option.mFirebaseAnoBtn);
+            if (anoBtn != null) {
+                anoBtn.onclick = FireBaseAnonymousLogin;
+            }
+            else {
+                loginDiv.push({ '<>': "button", 'type': 'button', 'class': 'btn btn-outline-info w-100', 'id': _option.mFirebaseAnoBtn,
+                    'style': 'width:220px;margin:4px auto;', 'onclick': FireBaseAnonymousLogin, 'html': [
+                        { '<>': 'i', 'class': 'bi bi-person' },
+                        { '<>': 'text', 'data-CLan': CLan.Set(null, 'CSing.Anonymous', "익명") }
+                    ]
+                });
+            }
+        }
+        if (_option.mFirebaseEmailBtn != null) {
+            var emailBtn = document.getElementById(_option.mFirebaseEmailBtn);
+            if (emailBtn != null) {
+                emailBtn.onclick = function () { emailNextBtnEvent(_option.mFirebaseEmailBtn); };
+            }
+            else {
+                loginDiv.push({ '<>': "button", 'type': 'button', 'class': 'btn btn-outline-danger w-100', 'id': _option.mFirebaseEmailBtn,
+                    'style': 'width:220px;margin:4px auto;', 'onclick': function () { emailNextBtnEvent(_option.mFirebaseEmailBtn); }, 'html': [
+                        { '<>': 'i', 'class': 'bi bi-envelope' },
+                        { '<>': 'text', 'data-CLan': CLan.Set(null, 'CSing.Email', "이메일") }
+                    ]
+                });
+            }
+        }
+        if (_option.mFirebasePhoneBtn != null) {
+            var phoneBtn = document.getElementById(_option.mFirebasePhoneBtn);
+            if (phoneBtn != null) {
+                phoneBtn.onclick = function () { phoneNextBtnEvent(_option.mFirebasePhoneBtn); };
+            }
+            else {
+                loginDiv.push({ '<>': "button", 'type': 'button', 'class': 'btn btn-outline-primary w-100', 'id': _option.mFirebasePhoneBtn,
+                    'style': 'width:220px;margin:4px auto;', 'onclick': function () { phoneNextBtnEvent(_option.mFirebasePhoneBtn); }, 'html': [
+                        { '<>': 'i', 'class': 'bi bi-phone' },
+                        { '<>': 'text', 'data-CLan': CLan.Set(null, 'CSing.Phone', "전화번호") }
+                    ]
+                });
+            }
+        }
+        firebaseCardDiv.push({ '<>': 'div', 'class': 'card text-center', 'id': _option.mFirebasePhoneBtn + 'Card',
+            'style': 'width:23rem;margin:0 auto;', 'hidden': 'true', 'html': [
+                { '<>': 'div', 'class': 'card-header', 'id': _option.mFirebasePhoneBtn + 'CardHeader', 'data-CLan': CLan.Set(null, 'CSing.TelTitle_InputTel', '전화번호 입력') },
+                { '<>': 'div', 'class': 'card-body', 'html': [
+                        { '<>': 'center', 'class': 'input-group mb-3', 'html': [
+                                { '<>': 'span', 'class': 'input-group-text', 'data-CLan': CLan.Set(null, 'CSing.Tel', '전화번호') },
+                                { '<>': 'input', 'type': 'tel', 'name': 'phoneNumber', 'class': 'card-text', 'id': 'Tel', 'placeholder': "", "data-CLan": CLan.Set(null, 'CSing.Tel', '전화번호') }
+                            ] },
+                        { '<>': 'center', 'id': 'recaptcha-container' },
+                        { '<>': 'br' },
+                        { '<>': 'div', 'id': 'recaptcha-code-container', 'hidder': 'true', 'html': [
+                                { '<>': 'center', 'class': 'input-group mb-3', 'html': [
+                                        { '<>': 'span', 'class': 'input-group-text', 'data-CLan': CLan.Set(null, 'CSing.RecaptchaCode', '인증번호') },
+                                        { '<>': 'input', 'type': 'number', 'id': 'recaptchaCode', 'placeholder': "", "data-CLan": CLan.Set(null, 'CSing.RecaptchaCode', '인증번호') }
+                                    ] }
+                            ] },
+                        { '<>': 'h6', 'id': 'PhoneErrorMessage' },
+                        { '<>': 'br' },
+                        { '<>': 'button', 'type': 'button', 'class': 'btn btn-secondary float-left',
+                            'id': _option.mFirebasePhoneBtn + 'CardBackBtn', 'data-CLan': CLan.Set(null, 'CSing.Cancel', '취소'),
+                            'onclick': function () { phoneBackBtnEvent(_option.mFirebasePhoneBtn); } },
+                        { '<>': 'button', 'type': 'button', 'class': 'btn btn-primary float-right',
+                            'id': _option.mFirebasePhoneBtn + 'CardNextBtn', 'data-CLan': CLan.Set(null, 'CSing.Enter', '다음'),
+                            'onclick': function () { phoneNextBtnEvent(_option.mFirebasePhoneBtn); } }
+                    ] }
+            ]
+        }, { '<>': 'div', 'class': 'card text-center', 'id': _option.mFirebaseEmailBtn + 'Card',
+            'style': 'width:23rem;margin:0 auto;', 'hidden': 'true', 'html': [
+                { '<>': 'div', 'class': 'card header', 'id': _option.mFirebaseEmailBtn + 'CardHeader',
+                    'data-CLan': CLan.Set(null, 'CSing.EmailTitle_InputEmail', '이메일 입력') },
+                { '<>': 'div', 'class': 'card-body', 'html': [
+                        { '<>': 'center', 'class': 'input-group mb-3', 'id': 'EmailDiv', 'html': [
+                                { '<>': 'span', 'class': 'input-group-text', 'data-CLan': CLan.Set(null, 'CSing.Email', '이메일') },
+                                { '<>': 'input', 'type': 'email', 'name': 'email', 'id': 'Email', 'class': 'form-control',
+                                    'placeholder': "", "data-CLan": CLan.Set(null, 'CSing.Email', '이메일') }
+                            ] },
+                        { '<>': 'center', 'class': 'input-group mb-3', 'id': 'PasswordDiv', 'html': [
+                                { '<>': 'span', 'class': 'input-group-text', 'data-CLan': CLan.Set(null, 'CSing.PW', '패스워드') },
+                                { '<>': 'input', 'type': 'password', 'name': 'password', 'id': 'Password',
+                                    'class': 'form-control', 'placeholder': "", "data-CLan": CLan.Set(null, 'CSing.PW', '패스워드') }
+                            ] },
+                        { '<>': 'h6', 'id': 'EmailErrorMessage' },
+                        { '<>': 'button', 'type': 'button', 'class': 'btn btn-secondary float-left',
+                            'id': _option.mFirebaseEmailBtn + 'CardBackBtn', 'data-CLan': CLan.Set(null, 'CSing.Cancel', '취소'),
+                            'onclick': function () { emailBackBtnEvent(_option.mFirebaseEmailBtn); } },
+                        { '<>': 'button', 'type': 'button', 'class': 'btn btn-primary float-right',
+                            'id': _option.mFirebaseEmailBtn + 'CardNextBtn', 'data-CLan': CLan.Set(null, 'CSing.Enter', '다음'),
+                            'onclick': function () { emailNextBtnEvent(_option.mFirebaseEmailBtn); } },
+                    ] }
+            ]
+        }, { '<>': 'div', 'class': 'card text-center', 'id': _option.mFindPWBtn + 'Card',
+            'style': 'width:23rem;margin:0 auto;', 'hidden': true, 'html': [
+                { '<>': 'div', 'class': 'card header', 'id': _option.mFindPWBtn + 'CardHeader',
+                    'data-CLan': CLan.Set(null, 'CSing.PWFindTitle', '비번찾기') },
+                { '<>': 'div', 'class': 'card-body', 'html': [
+                        { '<>': 'label', "for": "email_txt" },
+                        { '<>': 'input', "type": "text", "class": "form-control", "id": "email_txt",
+                            "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.Email', "이메일을 입력하세요") },
+                        { '<>': 'label', "for": "code_txt" },
+                        { '<>': 'input', "type": "text", "class": "form-control", "id": "code_txt",
+                            "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.EmailCode', "이메일에서 확인된 코드를 입력해주세요"), 'disabled': 'disabled' },
+                        { '<>': 'button', 'type': 'button', 'class': 'btn btn-secondary float-left', 'id': _option.mFindPWBtn + 'CardBackBtn',
+                            "data-CLan": CLan.Set(null, 'CSing.Cancel', '취소'), "onclick": function () { } },
+                        { '<>': 'button', "type": "button", "class": "btn btn-primary float-right", 'id': _option.mFindPWBtn + 'CardNextBtn',
+                            "data-CLan": CLan.Set(null, 'CSing.Enter', "완료"), "onclick": function () { } }
+                    ] }
+            ]
+        });
+        joinDiv.push({ '<>': 'div', "id": "IDPWDiv", "html": [
+                { '<>': 'label', "for": "join_id_txt", "text": "ID", "id": "join_id_label" },
+                { '<>': 'input', "type": "text", "class": "form-control", "id": "join_id_txt",
+                    "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.IDInfo', "아이디를 영어 문자와 숫자로만 입력하세요 6자이상 12자이하로 입력하세요"),
+                },
+                { '<>': 'label', "for": "join_pw_txt", "text": "PassWord", "id": "join_pw_label" },
+                { '<>': 'input', "type": "password", "class": "form-control", "id": "join_pw_txt",
+                    "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.PWInfo', "비밀번호를 4자 이상 14자 이하로 입력하세요") },
+                { '<>': 'input', "type": "password", "class": "form-control", "id": "join_pwChk_txt",
+                    "placeholder": "", "data-CLan": CLan.Set(null, 'PWCheck', "비밀번호를 다시 입력하여 확인하세요") },
+            ] });
+        joinDiv.push({ '<>': 'label', "for": "join_nick_txt", "text": "Nick" });
+        joinDiv.push({ '<>': 'input', "type": "text", "class": "form-control", "id": "join_nick_txt",
+            "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.Nick', "닉네임"),
+        });
+        joinDiv.push({ '<>': 'label', "for": "join_email_txt", "text": "Email" });
+        joinDiv.push({ '<>': 'input', "type": "text", "class": "form-control", "id": "join_email_txt",
+            "placeholder": "", "data-CLan": CLan.Set(null, 'CSing.Email', "이메일(계정,패스워드 분실시 필요)"),
+        });
+        joinDiv.push({ '<>': 'br' });
+        joinDiv.push({ '<>': 'br' });
+        joinDiv.push({ '<>': 'button', "type": "button", "class": "btn btn-primary btn-lg w-100", "id": "uc_btn", "data-CLan": CLan.Set(null, 'CSing.Enter', "완료"),
+            "onclick": () => {
+                var modifyMode = CStorage.Get("loginType") == "modify";
+                var user = { privateKey: "", email: "", nick: "", loginType: "id", id: "", newPrivateKey: "" };
+                var id_txt = CDOM.IDValue("join_id_txt");
+                var pw_txt = CDOM.IDValue("join_pw_txt");
+                var pwChk_txt = CDOM.IDValue("join_pwChk_txt");
+                if (modifyMode) {
+                    user.nick = CDOM.IDValue("join_nick_txt");
+                    user.email = CDOM.IDValue("join_email_txt");
+                    user.loginType = "modify";
+                    user.privateKey = CStorage.Get("privateKey");
+                    if (pw_txt != "") {
+                        if (pw_txt != pwChk_txt) {
+                            CAlert.E("암호가 다릅니다");
+                            return;
+                        }
+                        user.newPrivateKey = CHash.SHA256(CHash.SHA256(id_txt + "_" + pw_txt));
+                    }
+                    CDOM.ID("uc_btn").hidden = true;
+                    var tag = CSing.GetEvent(CSing.eEvent.JoinSubmit).Call();
+                    if (tag != null) {
+                        for (let i = 0; i < tag.length; ++i) {
+                            user[tag[i].key] = tag[i].value;
+                        }
+                    }
+                }
+                else {
+                    if (pw_txt != pwChk_txt || pw_txt == "") {
+                        CAlert.Info("비번을 확인해 주세요");
+                        return;
+                    }
+                    user.nick = CDOM.IDValue("join_nick_txt");
+                    user.email = CDOM.IDValue("join_email_txt");
+                    if (CStorage.Get("loginType") == null) {
+                        user.privateKey = CHash.SHA256(CHash.SHA256(id_txt + "_" + pw_txt));
+                        user.id = id_txt;
+                    }
+                    else {
+                        user.loginType = CStorage.Get("loginType");
+                        user.privateKey = CStorage.Get("privateKey");
+                        CAlert.E("error&*(");
+                    }
+                    CDOM.ID("uc_btn").hidden = true;
+                    var tag = CSing.GetEvent(CSing.eEvent.JoinSubmit).Call();
+                    if (tag != null) {
+                        for (let i = 0; i < tag.length; ++i) {
+                            user[tag[i].key] = tag[i].value;
+                        }
+                    }
+                }
+                UserCreate(user).then((_error) => {
+                    CDOM.ID("uc_btn").hidden = false;
+                    if (_error) {
+                    }
+                    else {
+                        CDOM.ID('loginDiv').hidden = true;
+                        CDOM.ID('logoutDiv').hidden = false;
+                        CDOM.ID('joinDiv').hidden = true;
+                        CDOM.IDValue("join_pw_txt", "");
+                        CDOM.IDValue("join_pwChk_txt", "");
+                        gInfoMap.clear();
+                        CStorage.Set(CSing.PrivateKey(), null);
+                    }
+                });
+            }
+        });
+        joinDiv.push({ '<>': 'button', "type": "button", "class": "btn btn-danger btn-lg w-100", "id": "uc_cancel_btn", "data-CLan": CLan.Set(null, 'CSing.Cancel', "취소"),
+            "onclick": () => {
+                if (CSing.PrivateKey() == null) {
+                    CDOM.ID('loginDiv').hidden = false;
+                }
+                else {
+                    CDOM.ID('logoutDiv').hidden = false;
+                }
+                CDOM.ID('joinDiv').hidden = true;
+            }
+        });
+        if (CSing.PrivateKey() != null) {
+            setTimeout(async () => {
+                CSing.GetEvent(CSing.eEvent.State).Call();
+                let _info = await CSing.PrivateInfo(CSing.PrivateKey());
+                if (_info._email == "") {
+                    CSing.GetEvent(CSing.eEvent.Insert).Call();
+                }
+                else
+                    main.html[1].hidden = false;
+            }, 100);
+        }
+        else {
+            main.html[0]['hidden'] = false;
+        }
+        CSing.GetEvent(CSing.eEvent.Init).Call();
+        return CDOM.DataToDom(main);
+    }
+}
+function UserLogout() {
+}
+window["UserLogout"] = UserLogout;
+async function UserLogin(_privateKey) {
+    var val = await CFecth.Exe("Sing/SingIn", { privateKey: _privateKey });
+    if (val == "0") {
+        CStorage.Set("privateKey", _privateKey);
+        CSing.GetEvent(CSing.eEvent.State).Call();
+        return false;
+    }
+    CAlert.Info("id/pw가 잘못되었습니다");
+    return true;
+}
+window["UserLogin"] = UserLogin;
+async function UserCreate(_object) {
+    var val = await CFecth.Exe("Sing/Join", _object);
+    if (val == "-1") {
+        CAlert.Info("id 중복입니다.");
+        return true;
+    }
+    else if (val == "-2") {
+        CAlert.Info("nick 중복입니다.");
+        return true;
+    }
+    else if (val == "-3") {
+        CAlert.Info("email 중복입니다.");
+        return true;
+    }
+    else if (val == "-5") {
+        CAlert.Info("생성할수 없는 비밀번호 조합입니다");
+        return true;
+    }
+    else if (val.indexOf("-") != -1) {
+        CAlert.Info("알수없는 에러!");
+        return true;
+    }
+    CStorage.Set("privateKey", _object.newPrivateKey == "" ? _object.privateKey : _object.newPrivateKey);
+    CStorage.Set("publicKey", val);
+    CSing.GetEvent(CSing.eEvent.State).Call();
+    return false;
+}
+window["UserCreate"] = UserCreate;
+let initializeApp = null;
+let getAuth = null;
+let createUserWithEmailAndPassword = null;
+let signInWithEmailAndPassword = null;
+let onAuthStateChanged = null;
+let GoogleAuthProvider = null;
+let RecaptchaVerifier = null;
+let signInWithPhoneNumber = null;
+let signInAnonymously = null;
+let linkWithCredential = null;
+let signInWithPopup = null;
+let signInWithRedirect = null;
+let getRedirectResult = null;
+let signOut = null;
+import { CTimer } from "../system/CTimer.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CLan } from "../basic/CLan.js";
+import { CDOM } from "../basic/CDOM.js";
+import { CObject } from "../basic/CObject.js";
+import { CAlert } from "../basic/CAlert.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
+import { CFecth } from "../network/CFecth.js";
+var firebaseConfig = {
+    apiKey: "AIzaSyA7C6aS9vtXJDfcIu1-345yqhunuY6zUIk",
+    authDomain: "openworld-1163a.firebaseapp.com",
+    databaseURL: "https://openworld-1163a.firebaseio.com",
+    projectId: "openworld-1163a",
+    storageBucket: "openworld-1163a.appspot.com",
+    messagingSenderId: "434854181613",
+    appId: "1:434854181613:web:144690754909c280222ae4"
+};
+var app = null;
+var g_firebaseAuth = null;
+function signInSuccessFunc(result) {
+    CSing.PrivateInfo(result.user.uid).then((_info) => {
+        CStorage.Set("privateKey", result.user.uid);
+        if (_info == null) {
+            CDOM.ID('loginDiv').hidden = false;
+            CFecth.Exe("Sing/FireBase", { privateKey: result.user.uid }).then(() => {
+                ModifyFun(CSing.PrivateKey());
+            });
+        }
+        else {
+            CFecth.Exe("Sing/SingIn", { privateKey: result.user.uid });
+            CDOM.ID('loginDiv').hidden = true;
+            CDOM.ID('logoutDiv').hidden = false;
+            CSing.GetEvent(CSing.eEvent.State).Call();
+        }
+    });
+    return false;
+}
+;
+window["signInSuccessFunc"] = signInSuccessFunc;
+function signInFailFunc(error) {
+    if (error.code != 'anonymous-upgrade-merge-conflict') {
+        return Promise.resolve();
+    }
+    const cred = error.credential;
+    return g_firebaseAuth.signInWithCredential(cred);
+}
+;
+window["signInFailFunc"] = signInFailFunc;
+function FireBaseAnonymousLogin() {
+    signInAnonymously(g_firebaseAuth)
+        .then(signInSuccessFunc)
+        .catch(signInFailFunc);
+}
+window["FireBaseAnonymousLogin"] = FireBaseAnonymousLogin;
+function ModifyFun(_privateKey) {
+    CDOM.ID("findPWDiv").hidden = true;
+    CDOM.ID("loginDiv").hidden = true;
+    CDOM.ID("logoutDiv").hidden = true;
+    CDOM.ID("joinDiv").hidden = false;
+    CSing.PrivateInfo(_privateKey).then((json) => {
+        CDOM.ID("join_id_txt").hidden = true;
+        CDOM.ID("join_id_label").hidden = true;
+        if (json != null) {
+            CDOM.IDInput("join_id_txt").value = json._id;
+            CDOM.IDInput("join_nick_txt").value = json._nick;
+            CDOM.IDInput("join_email_txt").value = json._email;
+            if (json._loginType == "kakao" || json._loginType == "firebase") {
+                CDOM.ID("join_pw_label").hidden = true;
+                CDOM.IDInput("join_pw_txt").hidden = true;
+                CDOM.IDInput("join_pwChk_txt").hidden = true;
+            }
+        }
+        CStorage.Set("loginType", "modify");
+        CStorage.Set("privateKey", _privateKey);
+    });
+}
+;
+window["ModifyFun"] = ModifyFun;
+var emailCardState = 0;
+function emailCardClose(_btnName) {
+    document.getElementById(_btnName + 'Card').hidden = true;
+    document.getElementById(_btnName).hidden = false;
+    emailCardState = 0;
+}
+function emailCardPageOne(_btnName) {
+    let btn = document.getElementById(_btnName);
+    let card = document.getElementById(_btnName + 'Card');
+    btn.hidden = true;
+    card.hidden = false;
+    document.getElementById(_btnName + 'CardHeader').setAttribute("data-CLan", CLan.Set(null, 'CSing.EmailTitle_InputEmail', '이메일 입력'));
+    document.getElementById("PasswordDiv").hidden = true;
+    document.getElementById("EmailErrorMessage").innerText = '';
+    btn.insertAdjacentElement('afterend', card);
+    emailCardState = 1;
+}
+function emailCardPageSignIn(_btnName) {
+    document.getElementById(_btnName + 'Card').hidden = false;
+    document.getElementById("PasswordDiv").hidden = false;
+    document.getElementById(_btnName + 'CardHeader').setAttribute("data-CLan", CLan.Set(null, 'CSing.Login', '로그인'));
+    document.getElementById("EmailErrorMessage").innerText = '';
+    emailCardState = 2;
+}
+function emailCardPageSignUp(_btnName) {
+    document.getElementById(_btnName + 'Card').hidden = false;
+    document.getElementById(_btnName + 'CardHeader').setAttribute("data-CLan", CLan.Set(null, 'CSing.SignUp', '회원가입'));
+    document.getElementById("PasswordDiv").hidden = false;
+    document.getElementById("EmailErrorMessage").innerText = '';
+    emailCardState = 3;
+}
+function emailBackBtnEvent(_btnName) {
+    switch (emailCardState) {
+        case 0:
+            break;
+        case 1:
+            emailCardClose(_btnName);
+            break;
+        case 2:
+            emailCardPageOne(_btnName);
+            break;
+        case 3:
+            emailCardPageOne(_btnName);
+            break;
+    }
+}
+;
+window["emailBackBtnEvent"] = emailBackBtnEvent;
+function emailNextBtnEvent(_btnName) {
+    let email, pw;
+    switch (emailCardState) {
+        case 0:
+            emailCardPageOne(_btnName);
+            break;
+        case 1:
+            email = document.getElementById("Email").value;
+            signInWithEmailAndPassword(g_firebaseAuth, email, '000000')
+                .then(() => { console.log("dont make ps 000000"); })
+                .catch((err) => {
+                if (err.code == 'auth/user-not-found')
+                    emailCardPageSignUp(_btnName);
+                else if (err.code == 'auth/wrong-password')
+                    emailCardPageSignIn(_btnName);
+                else
+                    document.getElementById("EmailErrorMessage").innerText = err.message;
+            });
+            break;
+        case 2:
+            email = document.getElementById("Email").value;
+            pw = document.getElementById("Password").value;
+            signInWithEmailAndPassword(g_firebaseAuth, email, pw)
+                .then(signInSuccessFunc)
+                .catch((err) => {
+                document.getElementById("EmailErrorMessage").innerText = err.message;
+                signInFailFunc(err);
+            });
+            break;
+        case 3:
+            email = document.getElementById("Email").value;
+            pw = document.getElementById("Password").value;
+            createUserWithEmailAndPassword(g_firebaseAuth, email, pw)
+                .then(signInSuccessFunc)
+                .catch((err) => {
+                document.getElementById("EmailErrorMessage").innerText = err.message;
+                signInFailFunc(err);
+            });
+            break;
+    }
+}
+;
+window["emailNextBtnEvent"] = emailNextBtnEvent;
+var phoneCardState = 0;
+var g_recaptchaVerifier = null;
+var phoneConfirmationResult = null;
+var recaptchaWidgetId = null;
+function phoneCardClose(_btnName) {
+    document.getElementById(_btnName + 'Card').hidden = true;
+    document.getElementById(_btnName).hidden = false;
+    phoneCardState = 0;
+}
+function phoneCardPageOne(_btnName) {
+    let btn = document.getElementById(_btnName);
+    let card = document.getElementById(_btnName + 'Card');
+    card.hidden = false;
+    btn.hidden = true;
+    document.getElementById(_btnName + 'CardNextBtn').hidden = true;
+    document.getElementById('PhoneErrorMessage').innerText = '';
+    document.getElementById('recaptcha-code-container').hidden = true;
+    btn.insertAdjacentElement('afterend', card);
+    phoneCardState = 1;
+}
+function phoneCardPageTwo(_btnName) {
+    document.getElementById(_btnName + 'Card').hidden = false;
+    document.getElementById(_btnName).hidden = true;
+    document.getElementById('recaptcha-code-container').hidden = false;
+    phoneCardState = 2;
+}
+function phoneBackBtnEvent(_btnName) {
+    switch (phoneCardState) {
+        case 0:
+            break;
+        case 1:
+            phoneCardClose(_btnName);
+            break;
+        case 2:
+            phoneCardPageOne(_btnName);
+            break;
+    }
+}
+;
+window["phoneBackBtnEvent"] = phoneBackBtnEvent;
+function phoneNextBtnEvent(_btnName) {
+    if (g_recaptchaVerifier == null) {
+        g_recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
+            'size': 'normal',
+            'callback': () => {
+                document.getElementById(_btnName + 'CardNextBtn').hidden = false;
+            }
+        }, g_firebaseAuth);
+        g_recaptchaVerifier.render().then((w) => {
+            recaptchaWidgetId = w;
+        });
+    }
+    switch (phoneCardState) {
+        case 0:
+            phoneCardPageOne(_btnName);
+            break;
+        case 1:
+            let tel = '+82' + document.getElementById('Tel').value;
+            signInWithPhoneNumber(g_firebaseAuth, tel, g_recaptchaVerifier)
+                .then((result) => {
+                phoneConfirmationResult = result;
+                phoneCardPageTwo(_btnName);
+            })
+                .catch((err) => {
+                document.getElementById("PhoneErrorMessage").innerText = err.message;
+                g_recaptchaVerifier.reset(recaptchaWidgetId);
+            });
+            break;
+        case 2:
+            let code = document.getElementById("recaptchaCode").value;
+            phoneConfirmationResult.confirm(code)
+                .then(signInSuccessFunc)
+                .catch((err) => {
+                document.getElementById("PhoneErrorMessage").innerText = err.message;
+                signInFailFunc(err);
+            });
+            break;
+    }
+}
+window["phoneNextBtnEvent"] = phoneNextBtnEvent;

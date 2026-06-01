@@ -73,6 +73,13 @@ export class CFloat32 extends CObject
 		
 		
 	}
+
+	override Export(_copy=true,_resetKey=true) : this
+	{
+		const copy = new (this.constructor as any)();
+		copy.Import(this);
+		return copy;
+	}
 	set array(_val : Array<number>|Float32Array)
 	{
 		for(let i=0;i<_val.length;++i)

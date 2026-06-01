@@ -1,1 +1,100 @@
-var e=this&&this.__decorate||function(e,t,n,o){var r,s=arguments.length,c=s<3?t:null===o?o=Object.getOwnPropertyDescriptor(t,n):o;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)c=Reflect.decorate(e,t,n,o);else for(var i=e.length-1;i>=0;i--)(r=e[i])&&(c=(s<3?r(c):s>3?r(t,n,c):r(t,n))||c);return s>3&&c&&Object.defineProperty(t,n,c),c};import{URLPatterns as t}from"../network/CServerMain.js";import{CServerRouter as n}from"../network/CServerRouter.js";import{GetAppJSON as o}from"../../desktop/MainFunc.js";const r=144e5,s=new Map,c=new Map;export function genToken(){return Math.random().toString(36).slice(2)+Date.now().toString(36)+Math.random().toString(36).slice(2)}export function isValidToken(e){const t=s.get(e);return!t||t<Date.now()?(s.delete(e),!1):(s.set(e,Date.now()+r),!0)}export function revokeToken(e){s.delete(e)}export function getToken(e){return e.query?.token||e.headers?.["x-ai-token"]||e.headers?.["x-cmd-token"]||""}export function checkBrute(e,t,n){const o=e.ip||e.connection?.remoteAddress||"unknown",r=Date.now(),s=c.get(o);if(s&&s.until>r){const e=Math.ceil((s.until-r)/1e3);return void t.json({ok:!1,msg:`Retry in ${e} seconds`})}n()}export function checkToken(e,t,n){const o=getToken(e);o&&isValidToken(o)?n():t.status(401).json({ok:!1,msg:"Authentication required"})}export async function handleAuth(e,t){const n=await o(),i=Date.now();if(t===(n.password??"")){c.delete(e);const t=genToken();return s.set(t,i+r),{ok:!0,token:t}}const u=c.get(e)||{count:0,until:0};return u.count++,u.until=u.count>=5?i+3e5:0,c.set(e,u),{ok:!1,msg:u.count>=5?"Locked for 5 minutes":"Wrong password"}}export function checkWsToken(e){const t=e.searchParams.get("token")||"";return isValidToken(t)?t:null}let i=class extends n{constructor(){super(),this.On("/auth/login",async(e,t,n)=>{const o=t.ip||t.connection?.remoteAddress||"unknown",r=Date.now(),s=c.get(o);if(s&&s.until>r){const e=Math.ceil((s.until-r)/1e3);return n.json({ok:!1,msg:`Retry in ${e} seconds`}),null}const i=await handleAuth(o,e.GetStr("password"));return i.ok||n.status(403),n.json(i),null}),this.On("/auth/check",async(e,t,n)=>{const o=e.GetStr("token")||getToken(t);return n.json({ok:!!o&&isValidToken(o)}),null})}};i=e([t(["/auth/login","/auth/check"])],i);export{i as CAuthServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns } from '../network/CServerMain.js';
+import { CServerRouter } from '../network/CServerRouter.js';
+import { GetAppJSON } from '../../desktop/MainFunc.js';
+const BRUTE_MAX = 5;
+const BRUTE_LOCK_MS = 5 * 60 * 1000;
+const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
+const gAuthedTokens = new Map();
+const gFailMap = new Map();
+export function genToken() {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+export function isValidToken(token) {
+    const exp = gAuthedTokens.get(token);
+    if (!exp || exp < Date.now()) {
+        gAuthedTokens.delete(token);
+        return false;
+    }
+    gAuthedTokens.set(token, Date.now() + TOKEN_TTL_MS);
+    return true;
+}
+export function revokeToken(token) {
+    gAuthedTokens.delete(token);
+}
+export function getToken(req) {
+    return (req.query?.token || req.headers?.['x-ai-token'] || req.headers?.['x-cmd-token'] || '');
+}
+export function checkBrute(req, res, next) {
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const now = Date.now();
+    const fail = gFailMap.get(ip);
+    if (fail && fail.until > now) {
+        const sec = Math.ceil((fail.until - now) / 1000);
+        res.json({ ok: false, msg: `Retry in ${sec} seconds` });
+        return;
+    }
+    next();
+}
+export function checkToken(req, res, next) {
+    const t = getToken(req);
+    if (!t || !isValidToken(t)) {
+        res.status(401).json({ ok: false, msg: 'Authentication required' });
+        return;
+    }
+    next();
+}
+export async function handleAuth(ip, password) {
+    const config = await GetAppJSON();
+    const now = Date.now();
+    if (password === (config.password ?? '')) {
+        gFailMap.delete(ip);
+        const token = genToken();
+        gAuthedTokens.set(token, now + TOKEN_TTL_MS);
+        return { ok: true, token };
+    }
+    const fail = gFailMap.get(ip) || { count: 0, until: 0 };
+    fail.count++;
+    fail.until = fail.count >= BRUTE_MAX ? now + BRUTE_LOCK_MS : 0;
+    gFailMap.set(ip, fail);
+    const msg = fail.count >= BRUTE_MAX ? 'Locked for 5 minutes' : 'Wrong password';
+    return { ok: false, msg };
+}
+export function checkWsToken(urlObj) {
+    const token = urlObj.searchParams.get('token') || '';
+    return isValidToken(token) ? token : null;
+}
+let CAuthServer = class CAuthServer extends CServerRouter {
+    constructor() {
+        super();
+        this.On("/auth/login", async (_json, _req, _res) => {
+            const ip = _req.ip || _req.connection?.remoteAddress || 'unknown';
+            const now = Date.now();
+            const fail = gFailMap.get(ip);
+            if (fail && fail.until > now) {
+                const sec = Math.ceil((fail.until - now) / 1000);
+                _res.json({ ok: false, msg: `Retry in ${sec} seconds` });
+                return null;
+            }
+            const result = await handleAuth(ip, _json.GetStr("password"));
+            if (!result.ok)
+                _res.status(403);
+            _res.json(result);
+            return null;
+        });
+        this.On("/auth/check", async (_json, _req, _res) => {
+            const t = _json.GetStr("token") || getToken(_req);
+            _res.json({ ok: !!t && isValidToken(t) });
+            return null;
+        });
+    }
+};
+CAuthServer = __decorate([
+    URLPatterns(["/auth/login", "/auth/check"])
+], CAuthServer);
+export { CAuthServer };

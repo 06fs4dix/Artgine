@@ -1,1 +1,321 @@
-import{CJSON as t}from"../basic/CJSON.js";import{CORM as e}from"./CORM.js";export class CNe extends e{mClient=null;mDb=null;mCollections=new Map;mDbPath="db";async Init(){const t=await import("fs");t.existsSync(this.mDbPath)||t.mkdirSync(this.mDbPath,{recursive:!0})}async Close(){this.mCollections.clear()}async getCollection(t){if(!this.mCollections.has(t)){const e=await import("fs"),i=`${this.mDbPath}/${t}.json`;let o=[];if(e.existsSync(i))try{const t=e.readFileSync(i,"utf8");o=JSON.parse(t)}catch(t){console.error(`Error reading ${i}:`,t),o=[]}this.mCollections.set(t,o)}return this.mCollections.get(t)}async saveCollection(t){const e=await import("fs"),i=`${this.mDbPath}/${t}.json`,o=this.mCollections.get(t)||[];try{e.writeFileSync(i,JSON.stringify(o,null,2),"utf8")}catch(t){console.error(`Error writing ${i}:`,t)}}async findGridFSInfo(t){const e=await this.getCollection("gridFS"),i=t.substring(7),o=e.find(t=>t._id===i);return o?[o._id,o.uploadDate?.toString()||"",o.filename||""]:[]}async gridFSUpload(t,e){if(!this.mFileDB)return;const i=await this.getCollection("gridFS");for(const o of e){const e=o.mDoc[o.mKey],n=`${t}_${o.mKey}_${Date.now()}_${Math.floor(1e3*Math.random())}`,s={_id:n,filename:n,uploadDate:new Date,data:e};i.push(s),o.mDoc[o.mKey]=`#GridFS${n}`}await this.saveCollection("gridFS")}async gridFSDownload(t){if(!this.mFileDB)return;const e=await this.getCollection("gridFS");for(const i of t){const t=i.mDoc[i.mKey].substring(7),o=e.find(e=>e._id===t);o&&(i.mDoc[i.mKey]=o.data)}}conditionToLogic(t){if(!t||0===t.length)return{};const e=t.map(t=>{let e={};switch(t.mCondition){case"==":default:e[t.mKey]=t.mValue;break;case"!=":e[t.mKey]={$ne:t.mValue};break;case"<":e[t.mKey]={$lt:t.mValue};break;case"<=":e[t.mKey]={$lte:t.mValue};break;case">":e[t.mKey]={$gt:t.mValue};break;case">=":e[t.mKey]={$gte:t.mValue};break;case"in":e[t.mKey]={$in:Array.isArray(t.mValue)?t.mValue:[t.mValue]}}return e});if(1===e.length)return e[0];const i=t[0].mLogical.toLowerCase();return"and"===i||"&&"===i?{$and:e}:"or"===i||"||"===i?{$or:e}:e[0]}async Insert(e,i){const o=await this.getCollection(e),n={_id:this.generateId()};for(const o of i)if(o.mValue instanceof t){const t=o.mValue,i=t.FileDB(!0);await this.gridFSUpload(e,i),n[o.mKey]=t.mDocument}else n[o.mKey]=o.mValue;o.push(n),await this.saveCollection(e)}generateId(){return Math.random().toString(36).substring(2,15)+Math.random().toString(36).substring(2,15)}async Update(e,i,o){const n=await this.getCollection(e),s=this.conditionToLogic(i),a={};for(const i of o)if(i.mValue instanceof t){const t=i.mValue,o=t.FileDB(!0);await this.gridFSUpload(e,o),a[i.mKey]=t.mDocument}else a[i.mKey]=i.mValue;for(let t=0;t<n.length;t++)this.matchesCondition(n[t],s)&&Object.assign(n[t],a);await this.saveCollection(e)}matchesCondition(t,e){if(!e||0===Object.keys(e).length)return!0;for(const[i,o]of Object.entries(e)){if("$and"===i)return o.every(e=>this.matchesCondition(t,e));if("$or"===i)return o.some(e=>this.matchesCondition(t,e));if("object"==typeof o&&null!==o)for(const[e,n]of Object.entries(o))switch(e){case"$ne":if(t[i]===n)return!1;break;case"$lt":if(t[i]>=n)return!1;break;case"$lte":if(t[i]>n)return!1;break;case"$gt":if(t[i]<=n)return!1;break;case"$gte":if(t[i]<n)return!1;break;case"$in":if(!n.includes(t[i]))return!1}else if(t[i]!==o)return!1}return!0}async Select(t,e,i,o){const n=await this.getCollection(t),s=this.conditionToLogic(e);let a=n.filter(t=>this.matchesCondition(t,s));if(i&&i.length>0&&(a=a.map(t=>{const e={_id:t._id};for(const o of i){const i=o.lastIndexOf("[");if(-1!==i){const n=o.substring(0,i);e[n]=t[n]}else e[o]=t[o]}return e})),o?.mOrderBy){const t=o.mOrderBy.split(" "),e=t[0],i="desc"===t[1]?.toLowerCase()?-1:1;a.sort((t,o)=>t[e]<o[e]?-1*i:t[e]>o[e]?1*i:0)}if(o?.mLimit>0&&(a=a.slice(o.mLimitOffset,o.mLimitOffset+o.mLimit)),o?.mDownload){const t=[];for(const e of a)for(const i of Object.keys(e))"string"==typeof e[i]&&e[i].startsWith("#GridFS")&&t.push({mDoc:e,mKey:i});await this.gridFSDownload(t)}return a}async Delete(t,e){const i=await this.getCollection(t),o=this.conditionToLogic(e),n=i.filter(t=>!this.matchesCondition(t,o));this.mCollections.set(t,n),await this.saveCollection(t)}async IsCollection(t){try{return(await this.getCollection(t)).length>0}catch{return!1}}async CreateCollection(t,e,i){await this.getCollection(t)}async GetProjection(t){return["_id"]}async getAllCollections(){const t=await import("fs"),e=await import("path");return t.existsSync(this.mDbPath)?t.readdirSync(this.mDbPath).filter(t=>t.endsWith(".json")).map(t=>e.basename(t,".json")):[]}async getCollectionStats(){const t=await this.getAllCollections(),e={};for(const i of t)try{const t=await this.getCollection(i);e[i]=t.length}catch(t){e[i]=0}return e}}
+import { CJSON } from '../basic/CJSON.js';
+import { CORM } from './CORM.js';
+export class CNe extends CORM {
+    mClient = null;
+    mDb = null;
+    mCollections = new Map();
+    mDbPath = "db";
+    async Init() {
+        const fs = await import('fs');
+        if (!fs.existsSync(this.mDbPath)) {
+            fs.mkdirSync(this.mDbPath, { recursive: true });
+        }
+    }
+    async Close() {
+        this.mCollections.clear();
+    }
+    async getCollection(_collection) {
+        if (!this.mCollections.has(_collection)) {
+            const fs = await import('fs');
+            const filePath = `${this.mDbPath}/${_collection}.json`;
+            let data = [];
+            if (fs.existsSync(filePath)) {
+                try {
+                    const fileContent = fs.readFileSync(filePath, 'utf8');
+                    data = JSON.parse(fileContent);
+                }
+                catch (error) {
+                    console.error(`Error reading ${filePath}:`, error);
+                    data = [];
+                }
+            }
+            this.mCollections.set(_collection, data);
+        }
+        return this.mCollections.get(_collection);
+    }
+    async saveCollection(_collection) {
+        const fs = await import('fs');
+        const filePath = `${this.mDbPath}/${_collection}.json`;
+        const data = this.mCollections.get(_collection) || [];
+        try {
+            fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        }
+        catch (error) {
+            console.error(`Error writing ${filePath}:`, error);
+        }
+    }
+    async findGridFSInfo(_id) {
+        const gridFSCollection = await this.getCollection('gridFS');
+        const id = _id.substring(7);
+        const doc = gridFSCollection.find((item) => item._id === id);
+        if (doc) {
+            return [
+                doc._id,
+                doc.uploadDate?.toString() || '',
+                doc.filename || ''
+            ];
+        }
+        return [];
+    }
+    async gridFSUpload(_collection, _list) {
+        if (!this.mFileDB)
+            return;
+        const gridFSCollection = await this.getCollection('gridFS');
+        for (const each of _list) {
+            const text = each.mDoc[each.mKey];
+            const filename = `${_collection}_${each.mKey}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            const gridFSDoc = {
+                _id: filename,
+                filename: filename,
+                uploadDate: new Date(),
+                data: text
+            };
+            gridFSCollection.push(gridFSDoc);
+            each.mDoc[each.mKey] = `#GridFS${filename}`;
+        }
+        await this.saveCollection('gridFS');
+    }
+    async gridFSDownload(_list) {
+        if (!this.mFileDB)
+            return;
+        const gridFSCollection = await this.getCollection('gridFS');
+        for (const each of _list) {
+            const str = each.mDoc[each.mKey];
+            const id = str.substring(7);
+            const doc = gridFSCollection.find((item) => item._id === id);
+            if (doc) {
+                each.mDoc[each.mKey] = doc.data;
+            }
+        }
+    }
+    conditionToLogic(_condition) {
+        if (!_condition || _condition.length === 0)
+            return {};
+        const conditions = _condition.map(con => {
+            let condition = {};
+            switch (con.mCondition) {
+                case "==":
+                    condition[con.mKey] = con.mValue;
+                    break;
+                case "!=":
+                    condition[con.mKey] = { $ne: con.mValue };
+                    break;
+                case "<":
+                    condition[con.mKey] = { $lt: con.mValue };
+                    break;
+                case "<=":
+                    condition[con.mKey] = { $lte: con.mValue };
+                    break;
+                case ">":
+                    condition[con.mKey] = { $gt: con.mValue };
+                    break;
+                case ">=":
+                    condition[con.mKey] = { $gte: con.mValue };
+                    break;
+                case "in":
+                    condition[con.mKey] = { $in: Array.isArray(con.mValue) ? con.mValue : [con.mValue] };
+                    break;
+                default:
+                    condition[con.mKey] = con.mValue;
+            }
+            return condition;
+        });
+        if (conditions.length === 1) {
+            return conditions[0];
+        }
+        const logical = _condition[0].mLogical.toLowerCase();
+        if (logical === "and" || logical === "&&") {
+            return { $and: conditions };
+        }
+        else if (logical === "or" || logical === "||") {
+            return { $or: conditions };
+        }
+        return conditions[0];
+    }
+    async Insert(_collection, _data) {
+        const collection = await this.getCollection(_collection);
+        const doc = {
+            _id: this.generateId()
+        };
+        for (const field of _data) {
+            if (field.mValue instanceof CJSON) {
+                const cjson = field.mValue;
+                const gfList = cjson.FileDB(true);
+                await this.gridFSUpload(_collection, gfList);
+                doc[field.mKey] = cjson.mDocument;
+            }
+            else {
+                doc[field.mKey] = field.mValue;
+            }
+        }
+        collection.push(doc);
+        await this.saveCollection(_collection);
+    }
+    generateId() {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+    async Update(_collection, _condition, _data) {
+        const collection = await this.getCollection(_collection);
+        const logic = this.conditionToLogic(_condition);
+        const updateDoc = {};
+        for (const field of _data) {
+            if (field.mValue instanceof CJSON) {
+                const cjson = field.mValue;
+                const gfList = cjson.FileDB(true);
+                await this.gridFSUpload(_collection, gfList);
+                updateDoc[field.mKey] = cjson.mDocument;
+            }
+            else {
+                updateDoc[field.mKey] = field.mValue;
+            }
+        }
+        for (let i = 0; i < collection.length; i++) {
+            if (this.matchesCondition(collection[i], logic)) {
+                Object.assign(collection[i], updateDoc);
+            }
+        }
+        await this.saveCollection(_collection);
+    }
+    matchesCondition(doc, condition) {
+        if (!condition || Object.keys(condition).length === 0)
+            return true;
+        for (const [key, value] of Object.entries(condition)) {
+            if (key === '$and') {
+                return value.every(cond => this.matchesCondition(doc, cond));
+            }
+            else if (key === '$or') {
+                return value.some(cond => this.matchesCondition(doc, cond));
+            }
+            else if (typeof value === 'object' && value !== null) {
+                for (const [op, opValue] of Object.entries(value)) {
+                    switch (op) {
+                        case '$ne':
+                            if (doc[key] === opValue)
+                                return false;
+                            break;
+                        case '$lt':
+                            if (doc[key] >= opValue)
+                                return false;
+                            break;
+                        case '$lte':
+                            if (doc[key] > opValue)
+                                return false;
+                            break;
+                        case '$gt':
+                            if (doc[key] <= opValue)
+                                return false;
+                            break;
+                        case '$gte':
+                            if (doc[key] < opValue)
+                                return false;
+                            break;
+                        case '$in':
+                            if (!opValue.includes(doc[key]))
+                                return false;
+                            break;
+                    }
+                }
+            }
+            else {
+                if (doc[key] !== value)
+                    return false;
+            }
+        }
+        return true;
+    }
+    async Select(_collection, _condition, _projection, _option) {
+        const collection = await this.getCollection(_collection);
+        const logic = this.conditionToLogic(_condition);
+        let results = collection.filter((doc) => this.matchesCondition(doc, logic));
+        if (_projection && _projection.length > 0) {
+            results = results.map((doc) => {
+                const projected = { _id: doc._id };
+                for (const field of _projection) {
+                    const num = field.lastIndexOf("[");
+                    if (num !== -1) {
+                        const strDataName = field.substring(0, num);
+                        projected[strDataName] = doc[strDataName];
+                    }
+                    else {
+                        projected[field] = doc[field];
+                    }
+                }
+                return projected;
+            });
+        }
+        if (_option?.mOrderBy) {
+            const parts = _option.mOrderBy.split(' ');
+            const field = parts[0];
+            const order = parts[1]?.toLowerCase() === 'desc' ? -1 : 1;
+            results.sort((a, b) => {
+                if (a[field] < b[field])
+                    return -1 * order;
+                if (a[field] > b[field])
+                    return 1 * order;
+                return 0;
+            });
+        }
+        if (_option?.mLimit > 0) {
+            results = results.slice(_option.mLimitOffset, _option.mLimitOffset + _option.mLimit);
+        }
+        if (_option?.mDownload) {
+            const gridList = [];
+            for (const doc of results) {
+                for (const key of Object.keys(doc)) {
+                    if (typeof doc[key] === 'string' && doc[key].startsWith('#GridFS')) {
+                        gridList.push({ mDoc: doc, mKey: key });
+                    }
+                }
+            }
+            await this.gridFSDownload(gridList);
+        }
+        return results;
+    }
+    async Delete(_collection, _condition) {
+        const collection = await this.getCollection(_collection);
+        const logic = this.conditionToLogic(_condition);
+        const filteredCollection = collection.filter((doc) => !this.matchesCondition(doc, logic));
+        this.mCollections.set(_collection, filteredCollection);
+        await this.saveCollection(_collection);
+    }
+    async IsCollection(_name) {
+        try {
+            const collection = await this.getCollection(_name);
+            return collection.length > 0;
+        }
+        catch {
+            return false;
+        }
+    }
+    async CreateCollection(_name, _data, _primaryKey) {
+        await this.getCollection(_name);
+    }
+    async GetProjection(_table) {
+        return ['_id'];
+    }
+    async getAllCollections() {
+        const fs = await import('fs');
+        const path = await import('path');
+        if (!fs.existsSync(this.mDbPath)) {
+            return [];
+        }
+        const files = fs.readdirSync(this.mDbPath);
+        return files
+            .filter(file => file.endsWith('.json'))
+            .map(file => path.basename(file, '.json'));
+    }
+    async getCollectionStats() {
+        const collections = await this.getAllCollections();
+        const result = {};
+        for (const collectionName of collections) {
+            try {
+                const collection = await this.getCollection(collectionName);
+                result[collectionName] = collection.length;
+            }
+            catch (error) {
+                result[collectionName] = 0;
+            }
+        }
+        return result;
+    }
+}
