@@ -1,5 +1,4 @@
 //Version
-const version='mice4l4h_69';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -20,14 +19,17 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
-gPF.mServer = 'webServer';
+gPF.mServer = 'local';
 gPF.mGitHub = false;
+gPF.mVersion = "mpufvoga_12";
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
 import {CPlugin} from "../../../artgine/util/CPlugin.js";
 CPlugin.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
 import "../../../plugin/ShadowPlane/ShadowPlane.js"
+CPlugin.PushPath('Water','../../../plugin/Water/');
+import "../../../plugin/Water/Water.js"
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'],"");
@@ -43,56 +45,19 @@ import { CModal } from "../../../artgine/basic/CModal.js";
 import { CEvent } from "../../../artgine/basic/CEvent.js";
 import { CTimer } from "../../../artgine/system/CTimer.js";
 import { CScript } from "../../../artgine/util/CScript.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint2D } from "../../../artgine/app/component/paint/CPaint2D.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CPaint } from "../../../artgine/app/component/paint/CPaint.js";
 
 //Main.Find("House").PushComp(new CPlaneShadow());
 CAlert.Info("f3로 개발모드에서 라이팅 위치와 값을 수정해 보세요",60*1000);
 
-
-
-// let source=`
-// import {CModal} from "../../../artgine/basic/CModal.js"
-// export function RoomStart1(_data )
-// {
-//     if(_data[0].test==0)
-//         return "Test";
-    
-//     return null; //0 false
-// }
-// export function RoomStart0(_data )
-// {
-//     if(_data[0].test==0)
-//         return "Test";
-    
-//     return null; //0 false
-// }
-// export function RoomStart2(_data )
-// {
-//     if(_data[0].test==0)
-//         return "Test";
-//     CModal.FindModal("test");
-//     return null; //0 false
-// }
-// `;
-// CScript.Build("test",await CUtilWeb.TSToJS(await CUtilWeb.TSImport(source,false)));
-// new CMonacoViewer(source,"test.ts");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// let sub=Main.PushSub(new CSubject());
+// sub.SetPos(new CVec3(-200,0));
+// let pt=sub.PushComp(new CPaint2D("Res/01.png",new CVec2(128,128)));
+// //pt.PushTag("tail");
+// pt.PushTag("shadowProj");
 
 

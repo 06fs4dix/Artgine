@@ -1,6 +1,6 @@
-const CACHE_NAME = "CACHE_NAME_2025-08-09 02:09:32";
+const CACHE_NAME = "7cb917eacd5df416";
 		const MAX_CACHE_SIZE = 0;
-		const LOG = true;
+		const LOG = false;
 		const API_CACHE = false;//Start
 function SWLog(...args) 
 {

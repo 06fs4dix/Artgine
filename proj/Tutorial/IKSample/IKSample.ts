@@ -1,5 +1,4 @@
 //Version
-const version='mi8uyskc_5';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -22,8 +21,9 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
+gPF.mVersion = "mpuhzq22_12";
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
 import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
@@ -32,16 +32,19 @@ await gAtl.Init([],"");
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-import {CBlackBoardRef, CObject} from "../../../artgine/basic/CObject.js"
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
+import { CObject } from "../../../artgine/basic/CObject.js"
+import { CComponent } from "../../../artgine/app/component/CComponent.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint3D } from "../../../artgine/app/component/paint/CPaint3D.js";
 import { CVec4 } from "../../../artgine/geometry/CVec4.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CAnimation, CClipMesh, CClipPRS } from "../../../artgine/canvas/component/CAnimation.js";
-import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
-import { CPaint } from "../../../artgine/canvas/component/paint/CPaint.js";
+import { CAnimation, CClipMesh, CClipPRS } from "../../../artgine/app/component/CAnimation.js";
+import { CAniFlow } from "../../../artgine/app/component/CAniFlow.js";
+import { CPaint } from "../../../artgine/app/component/paint/CPaint.js";
 import { CLoaderOption } from "../../../artgine/util/CLoader.js";
-import { CAimIK, CAttacher, CLookAtIK } from "../../../artgine/canvas/component/CResolverComp.js";
+import { CResolverAttach, CResolverIKFABR, CResolverIKLook } from "../../../artgine/render/CResolver.js";
+import { CColor } from "../../../artgine/render/CColor.js";
+import { CAimIK, CAttacher, CLookAtIK } from "../../../plugin/CResolverComp/CResolverComp.js";
 
 
 var Main=gAtl.NewCanvas("Main");
@@ -57,7 +60,7 @@ Main.PushSub(back);
 let pt : CPaint;
 let target1 = new CSubject();
 pt = new CPaint3D(Main.GetFrame().Pal().GetBoxMesh());
-pt.SetRGBA(new CVec4(0,1,0,1));
+pt.SetColorModel(new CColor(0,1,0,CColor.eModel.RGBAdd));
 target1.PushComp(pt);
 target1.SetBlackBoard(true);
 target1.SetSca(new CVec3(0.2, 0.2, 0.2));
@@ -66,7 +69,7 @@ Main.PushSub(target1);
 
 let target2 = new CSubject();
 pt = new CPaint3D(Main.GetFrame().Pal().GetBoxMesh());
-pt.SetRGBA(new CVec4(0,0,1,1));
+pt.SetColorModel(new CColor(0,0,1,CColor.eModel.RGBAdd));
 target2.PushComp(pt);
 target2.SetBlackBoard(true);
 target2.SetPos(new CVec3(0, 500, -500));
@@ -80,7 +83,7 @@ Main.PushSub(target2);
 
 let target3 = new CSubject();
 pt = new CPaint3D(Main.GetFrame().Pal().GetBoxMesh());
-pt.SetRGBA(new CVec4(1,1,0,1));
+pt.SetColorModel(new CColor(1,1,0,CColor.eModel.RGBAdd));
 target3.PushComp(pt);
 target3.SetBlackBoard(true);
 target3.SetPos(new CVec3(0, 0, 0));
@@ -112,6 +115,12 @@ obj.PushComp(new CAttacher("arm_joint_L_3",target3));
 obj.PushComp(new CLookAtIK("neck_joint_1",target2));
 
 Main.PushSub(obj);
+
+
+
+
+
+
 
 
 

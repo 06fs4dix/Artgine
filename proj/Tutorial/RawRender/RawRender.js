@@ -1,19 +1,5 @@
-const version = 'mf2jnnjd_2';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
-var gPF = new CPreferences();
-gPF.mTargetWidth = 0;
-gPF.mTargetHeight = 0;
-gPF.mRenderer = "GL";
-gPF.m32fDepth = false;
-gPF.mTexture16f = false;
-gPF.mAnti = true;
-gPF.mBatchPool = true;
-gPF.mXR = false;
-gPF.mDeveloper = true;
-gPF.mIAuto = false;
-gPF.mWASM = false;
-gPF.mServer = 'local';
 import { CCamera } from "../../../artgine/render/CCamera.js";
 import { CFrame } from "../../../artgine/util/CFrame.js";
 import { CFile } from "../../../artgine/system/CFile.js";
@@ -31,6 +17,7 @@ import { CMeshCreateInfo } from "../../../artgine/render/CMeshCreateInfo.js";
 import { CVec2 } from "../../../artgine/geometry/CVec2.js";
 import { CMat } from "../../../artgine/geometry/CMat.js";
 import { CEvent } from "../../../artgine/basic/CEvent.js";
+var gPF = new CPreferences();
 var gFrame = new CFrame(gPF);
 var gCam = new CCamera(gPF);
 var gSelectShader = "";
@@ -94,7 +81,7 @@ gFrame.PushEvent(CEvent.eType.Render, () => {
     gFrame.Ren().MeshDrawNodeRender(shader, g_meshDraw);
     gFrame.Ren().End();
 });
-gFrame.PushEvent(CEvent.eType.Update, (_delay) => {
-    gCam.Update(_delay);
+gFrame.PushEvent(CEvent.eType.Update, (_update) => {
+    gCam.Update(_update);
 });
 await gFrame.Process();

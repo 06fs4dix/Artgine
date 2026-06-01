@@ -1,4 +1,3 @@
-const version = 'mhsgi0es_5';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -16,218 +15,101 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
-import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+gPF.mVersion = "mpuhzq22_94";
+import { CAtelier } from "../../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init(['Main.json'], "");
 var Main = gAtl.Canvas('Main.json');
 import { CConfirm } from "../../../artgine/basic/CModal.js";
-import { CVoxel, CVoxelLightSpace, CVTile, CVTileMold, CVTileSurface } from "../../../artgine/canvas/subject/CVoxel.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVoxelMap, CVTile } from "../../../artgine/app/subject/CVoxelMap.js";
+import { CCollider } from "../../../artgine/app/component/CCollider.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CCIndex } from "../../../artgine/canvas/CCIndex.js";
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CAlpha, CColor } from "../../../artgine/canvas/component/CColor.js";
-import { CCollider } from "../../../artgine/canvas/component/CCollider.js";
-import CBehavior from "../../../artgine/canvas/component/CBehavior.js";
-import { CUpdate } from "../../../artgine/basic/Basic.js";
-import { CNaviMgr } from "../../../artgine/canvas/CNavigationMgr.js";
-import { CEvent } from "../../../artgine/basic/CEvent.js";
-import { CInput } from "../../../artgine/system/CInput.js";
-import { CNavigation } from "../../../artgine/canvas/component/CNavigation.js";
-import { CAlert } from "../../../artgine/basic/CAlert.js";
-import { CBlackBoardRef } from "../../../artgine/basic/CObject.js";
-var gVoxel = new CVoxel();
+import { CSampler } from "../../../artgine/util/CSampler.js";
+import { CDensityInfo2D, CDensityMap } from "../../../artgine/app/subject/CDensityMap.js";
+import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
+import { CBound } from "../../../artgine/geometry/CBound.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CConsol } from "../../../artgine/basic/CConsol.js";
+import { CWind } from "../../../artgine/app/component/CWind.js";
+import { CUtil } from "../../../artgine/basic/CUtil.js";
+var gVoxel = new CVoxelMap();
 gVoxel.SetBlackBoard(true);
-await gVoxel.mAtlas.Push("Res/floor/tutorial_pad.png");
-await gVoxel.mAtlas.Push("Res/floor/pedestal_full.png");
-await gVoxel.mAtlas.Push("Res/floor/dirt0.png");
-await gVoxel.mAtlas.Push("Res/floor/floor_sand_stone0.png");
-await gVoxel.mAtlas.Push("Res/water/dngn_shoals_shallow_water1.png");
-let mode2D = true;
-let naniMgr = new CNaviMgr();
-let tile = new CVTile();
-tile.mVInfo = 1;
-tile.mPattern.push(new CVTileSurface(1));
-tile.mCollider = CCollider.eEvent.None;
-gVoxel.PushTile(tile);
-tile = new CVTile();
-tile.mVInfo = 2;
-tile.mPattern.push(new CVTileSurface(2));
-tile.mCollider = CCollider.eEvent.Collision;
-gVoxel.PushTile(tile);
-tile = new CVTile();
-tile.mVInfo = 3;
-tile.mPattern.push(new CVTileSurface(3));
-tile.mCollider = CCollider.eEvent.Collision;
-gVoxel.PushTile(tile);
-tile = new CVTile();
-tile.mVInfo = 4;
-tile.mPattern.push(new CVTileSurface(4));
-tile.mCollider = CCollider.eEvent.Collision;
-gVoxel.PushTile(tile);
-tile = new CVTile();
-tile.mVInfo = 5;
-tile.mPattern.push(new CVTileSurface(5));
-tile.mCollider = CCollider.eEvent.Collision;
-gVoxel.PushTile(tile);
-var gVoxelSub = new CVoxel();
-gVoxelSub.SetBlackBoard(true);
-await gVoxelSub.mAtlas.Push("Res/firespitter_statue.png");
-await gVoxelSub.mAtlas.Push("Res/water/deep_water_wave_E.png");
-await gVoxelSub.mAtlas.Push("Res/water/deep_water_wave_W.png");
-gVoxel.mLayer.push(new CBlackBoardRef(gVoxelSub.Key()));
-gVoxelSub.mLayer.push(new CBlackBoardRef(gVoxel.Key()));
-tile = new CVTile();
-tile.mVInfo = 1;
-tile.mPattern.push(new CVTileSurface(1));
-gVoxelSub.PushTile(tile);
-tile = new CVTile();
-tile.mVInfo = 2;
-tile.mPattern.push(new CVTileSurface(2));
-gVoxelSub.PushTile(tile);
-tile = new CVTile();
-tile.mVInfo = 3;
-tile.mPattern.push(new CVTileSurface(3));
-gVoxelSub.PushTile(tile);
-var mold = new CVTileMold(2, 1);
-mold.mTileVInfoArr[0] = 2;
-mold.mTileVInfoArr[1] = 3;
-gVoxelSub.mTileMoldArr.push(mold);
-let A = Main.PushSub(new CSubject());
-let pt = A.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-pt.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
-let nv = A.PushComp(new CNavigation(pt));
-let cl = A.PushComp(new CCollider(pt));
-cl.SetLayer("test");
-cl.PushCollisionLayer("voxel");
-let bh = A.PushComp(new CBehavior());
-bh.Collision = () => {
-    bh["mCollision"] = CUpdate.eType.Updated;
-    pt.SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBAdd));
-};
-bh.Update = (_update) => {
-    if (bh["mCollision"] == CUpdate.eType.Updated) {
-        bh["mCollision"] = CUpdate.eType.Already;
-    }
-    else if (bh["mCollision"] == CUpdate.eType.Already) {
-        bh["mCollision"] = CUpdate.eType.Not;
-        pt.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
-    }
-};
-let B = Main.PushSub(new CSubject());
-let pt2 = B.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-pt2.SetColorModel(new CColor(1, 1, 1, CColor.eModel.RGBAdd));
-nv = B.PushComp(new CNavigation(pt2));
-cl = B.PushComp(new CCollider(pt2));
-cl.SetLayer("test");
-cl.PushCollisionLayer("voxel");
-let vls = new CVoxelLightSpace();
-CConfirm.List("Voxel Mode Select!", [() => {
-        gVoxel.ResetInfo(new CVec3(16, 16, 1), 100, true);
-        Main.PushSub(gVoxel);
-        gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 15, 0), 1);
-        gVoxel.BondsFill(new CCIndex(5, 5, 0), new CCIndex(10, 10, 0), 2);
-        naniMgr.Init(new CVec3(16, 16, 1));
-        Main.GetGI().mNavi = naniMgr;
-        A.SetPos(new CVec3(0, 0, 1));
-        B.SetPos(new CVec3(1200, 1000, 1));
-        gVoxelSub.ResetInfo(new CVec3(16, 16, 1), 100, true);
-        for (let i = 0; i < 5; ++i) {
-            gVoxelSub.Bonds(new CCIndex(Math.trunc(Math.random() * 16), Math.trunc(Math.random() * 16), 0), 1);
-        }
-        gVoxelSub.SetPos(new CVec3(0, 0, 2));
-        Main.PushSub(gVoxelSub);
-    }, () => {
-        mode2D = false;
-        gVoxel.ResetInfo(new CVec3(16, 16, 16), 100, false);
-        Main.PushSub(gVoxel);
+Main.PushSub(gVoxel);
+gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFreeMove(gAtl.Frame().Input()));
+gAtl.Brush().GetCam3D().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
+CConfirm.List("Voxel Mode Select!", [
+    async () => {
+        await gAtl.Frame().Load().Exe("Res/tutorial_map_2d.png");
+        await gVoxel.mAtlas.PushSizeCut("Res/TilesetFloor.png", new CVec2(16, 16));
+        const N = CCollider.eEvent.None;
+        let col = "";
+        gVoxel.PushTile(new CVTile(0xff000000, 22, col, "땅0"));
+        gVoxel.PushTile(new CVTile(0x10000000, 86, col, "땅1"));
+        gVoxel.PushTile(new CVTile(0x20000000, 85, col, "땅2"));
+        gVoxel.PushTile(new CVTile(0x00ff0000, 99, col, "어두운 땅0"));
+        gVoxel.PushTile(new CVTile(0x00100000, 100, col, "어두운 땅1"));
+        gVoxel.PushTile(new CVTile(0x00200000, 101, col, "어두운 땅2"));
+        gVoxel.PushTile(new CVTile(0x00300000, 102, col, "어두운 땅3"));
+        gVoxel.PushTile(new CVTile(0x00400000, 103, col, "어두운 땅4"));
+        gVoxel.PushTile(new CVTile(0x0000ff00, 222, col, "풀0"));
+        gVoxel.PushTile(new CVTile(0x00001000, 208, col, "풀1"));
+        gVoxel.PushTile(new CVTile(0x00002000, 207, col, "풀2"));
+        gVoxel.PushTile(new CVTile(0x00003000, 223, col, "풀3"));
+        gVoxel.PushTile(new CVTile(0x00004000, 224, col, "풀4"));
+        gVoxel.PushTile(new CVTile(0x00000f00, 275, col, "진흙0"));
+        gVoxel.ResetInfo(new CVec3(256, 256, 1), 100);
+        let tex = gAtl.Frame().Res().Find("Res/tutorial_map_2d.png");
+        gVoxel.mBuf.SetTexture(tex);
+        let densityMap = new CDensityMap();
+        densityMap.mDiv = 10;
+        densityMap.mBuf.Reset(new CVec3(256, 256, 1), 100);
+        let info = densityMap.PushDensityInfo(new CDensityInfo2D(0x0000ff00, new CVec3(500, 500, 500), "Res/tutorial_map.png"));
+        info.mSca = new CSampler(new CVec3(0.8, 0.8, 0.8));
+        info.mColliderLayer = "density";
+        info.mWind = 1;
+        Main.PushSub(densityMap);
+        densityMap.mBuf.SetTexture(tex);
+        let sub = Main.PushSub(new CSubject());
+        sub["Collision"] = () => {
+            CConsol.Log("cl");
+        };
+        let cl = sub.PushComp(new CCollider());
+        cl.SetLayer("test");
+        cl.PushCollisionLayer("density");
+        cl.PushCollisionLayer("voxel");
+        let bound = new CBound();
+        bound.InitBound(50);
+        bound.SetType(CBound.eType.Box);
+        cl.InitBound(bound);
+        let windSub = Main.PushSub(new CSubject());
+        windSub.SetKey("Wind");
+        let wind = windSub.PushComp(new CWind());
+        let testbuf = new Uint8Array(32);
+        testbuf.fill(1);
+        let str = CUtil.ArrayToLZBase64(testbuf.buffer);
+        let test = new Uint8Array(CUtil.LZBase64ToArray(str));
+        CConsol.Log(test);
+    },
+    async () => {
+        gAtl.Brush().GetCam3D().SetFar(5000);
         Main.SetCameraKey("3D");
-        Main.ClearBatch();
-        naniMgr.Init(new CVec3(16, 16, 16));
-        Main.GetGI().mNavi = naniMgr;
-        A.SetPos(new CVec3(0, 200, 0));
-        B.SetPos(new CVec3(1200, 200, 1000));
-        gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 0, 15), 1);
-        gVoxel.BondsFill(new CCIndex(6, 0, 6), new CCIndex(9, 1, 9), 2);
-    }], ["2D", "3D"]);
-let gTileList = new Array();
-gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
-    if (gAtl.Frame().Input().KeyUp(CInput.eKey.L)) {
-        gVoxel.BondsFill(new CCIndex(0, 0, 0), new CCIndex(15, 0, 15), 1);
-        gVoxel.BondsFill(new CCIndex(6, 0, 6), new CCIndex(9, 1, 9), 2);
-        vls.AttachVoxel(new CCIndex(0, 0, 0), gVoxel);
-        for (var z = 0; z < gVoxel.mCount.z / 2; ++z)
-            for (var x = 0; x < gVoxel.mCount.x / 2; ++x) {
-                vls.Sun(new CCIndex(x, 0, z));
-            }
+        gVoxel.mAtlas.mPadding = 8;
+        await gAtl.Frame().Load().Exe("Res/tutorial_map_3d.png");
+        await gVoxel.mAtlas.Push("Res/floor/tutorial_pad.png");
+        await gVoxel.mAtlas.Push("Res/floor/pedestal_full.png");
+        await gVoxel.mAtlas.Push("Res/floor/dirt0.png");
+        await gVoxel.mAtlas.Push("Res/floor/floor_sand_stone0.png");
+        await gVoxel.mAtlas.Push("Res/water/dngn_shoals_shallow_water1.png");
+        gVoxel.PushTile(new CVTile(0xFF000000, 1, "voxel"));
+        gVoxel.PushTile(new CVTile(0xAA884400, 2, "voxel"));
+        gVoxel.PushTile(new CVTile(0x88552200, 3, "voxel"));
+        gVoxel.PushTile(new CVTile(0xCCBB8800, 4, "voxel"));
+        gVoxel.PushTile(new CVTile(0x2266CC00, 5, "voxel"));
+        let tex = gAtl.Frame().Res().Find("Res/tutorial_map_3d.png");
+        gVoxel.ResetInfo(new CVec3(128, 8, 128), 100);
+        gVoxel.mBuf.GetBuf().fill(0xFF000000);
+        gVoxel.mBuf.SetTexture(tex);
     }
-    if (gAtl.Frame().Input().KeyUp(CInput.eKey.F)) {
-        for (var each0 of gTileList) {
-            each0.Destroy();
-        }
-        gTileList = new Array();
-        let path = [];
-        if (mode2D == true) {
-            for (var y = 0; y < 16; ++y)
-                for (var x = 0; x < 16; ++x) {
-                    let C = Main.PushSub(new CSubject());
-                    C.SetPos(new CVec3(x * CNavigation.Normal + 50, y * CNavigation.Normal + 50, 110));
-                    C.SetSca(new CVec3(0.4, 0.4, 0.4));
-                    let pt = C.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-                    if (naniMgr.W().mKeyN[x + y * 16] != 0)
-                        pt.SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBAdd));
-                    else
-                        pt.SetColorModel(new CColor(0, 0, 0.5, CColor.eModel.RGBAdd));
-                    gTileList.push(C);
-                }
-            let pass = new Set();
-            pass.add(B.FindComp(CNavigation).GetNaviHash());
-            if (gAtl.Frame().Input().KeyDown(CInput.eKey.LControl))
-                path = naniMgr.PathAll(A.GetPos(), B.GetPos(), A.FindComp(CNavigation).mBound, true, pass);
-            else
-                path = naniMgr.Path(A.GetPos(), B.GetPos(), A.FindComp(CNavigation).mBound, pass, true, false);
-            for (var i = 0; i < path.length; ++i) {
-                let C = Main.PushSub(new CSubject());
-                path[i].z = 120;
-                C.SetPos(path[i]);
-                C.SetSca(new CVec3(0.4, 0.4, 0.4));
-                let pt = C.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-                pt.SetColorModel(new CColor(0, 1, 0, CColor.eModel.RGBAdd));
-                gTileList.push(C);
-            }
-        }
-        else {
-            for (var z = 0; z < 16; ++z)
-                for (var y = 1; y < 2; ++y)
-                    for (var x = 0; x < 16; ++x) {
-                        let C = Main.PushSub(new CSubject());
-                        C.SetPos(new CVec3(x * CNavigation.Normal + 50, y * CNavigation.Normal + 50 + 100, z * CNavigation.Normal + 50));
-                        C.SetSca(new CVec3(0.1, 0.1, 0.1));
-                        let pt = C.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-                        if (naniMgr.W().mKeyN[x + y * 16 + z * 16 * 16] != 0)
-                            pt.SetColorModel(new CColor(1, 0, 0, CColor.eModel.RGBAdd));
-                        else
-                            pt.SetColorModel(new CColor(0, 0, 0.5, CColor.eModel.RGBAdd));
-                        pt.SetAlphaModel(new CAlpha(0.5, CAlpha.eModel.Mul));
-                        gTileList.push(C);
-                    }
-            let pass = new Set();
-            pass.add(B.FindComp(CNavigation).GetNaviHash());
-            if (gAtl.Frame().Input().KeyDown(CInput.eKey.LControl))
-                path = naniMgr.PathAll(A.GetPos(), B.GetPos(), A.FindComp(CNavigation).mBound, false, pass);
-            else
-                path = naniMgr.Path(A.GetPos(), B.GetPos(), A.FindComp(CNavigation).mBound, pass, false, false);
-            for (var i = 0; i < path.length; ++i) {
-                let C = Main.PushSub(new CSubject());
-                path[i].y = 200;
-                C.SetPos(path[i]);
-                C.SetSca(new CVec3(0.1, 0.1, 0.1));
-                let pt = C.PushComp(new CPaint3D(gAtl.Frame().Pal().GetBoxMesh()));
-                pt.SetColorModel(new CColor(0, 1, 0, CColor.eModel.RGBAdd));
-                gTileList.push(C);
-            }
-        }
-    }
-});
-CAlert.Info("2D/3D 선택후 F를 누르면 A->B로 길찾기 실행<br>컨트롤 누르고 누르면 최적화 길찾기<br>3D에서 L누르면 라이팅 적용");
+], ["2D", "3D"]);

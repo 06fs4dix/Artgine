@@ -1,12 +1,11 @@
 //Version
-const version='mfuof8jg_4';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
+import "../../../artgine/artgine.js"
 
 //Class
-import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import {CClass} from "../../../artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import {CPreferences} from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,11 +20,12 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
+gPF.mGitHub = false;
+gPF.mVersion = "mpuhzq22_2";
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
-import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
@@ -33,30 +33,38 @@ await gAtl.Init([],"");
 
 //EntryPoint
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CInput } from "https://06fs4dix.github.io/Artgine/artgine/system/CInput.js";
-import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CFrame } from "https://06fs4dix.github.io/Artgine/artgine/util/CFrame.js";
-import {  CModalBackGround, CFileViewer, CMDViewer } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
-import { CUtilObj } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtilObj.js";
-import { CEvent } from "https://06fs4dix.github.io/Artgine/artgine/basic/CEvent.js";
-import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
-import { CString } from "https://06fs4dix.github.io/Artgine/artgine/basic/CString.js";
-import { CPath } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPath.js";
-import { CAlert } from "https://06fs4dix.github.io/Artgine/artgine/basic/CAlert.js";
-import { CConfirm, CModal } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CChecker } from "https://06fs4dix.github.io/Artgine/artgine/util/CChecker.js";
-import { CTimer } from "https://06fs4dix.github.io/Artgine/artgine/system/CTimer.js";
-import { CTutorial } from "https://06fs4dix.github.io/Artgine/artgine/util/CTutorial.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CLan } from "https://06fs4dix.github.io/Artgine/artgine/basic/CLan.js";
-import { CStorage } from "https://06fs4dix.github.io/Artgine/artgine/system/CStorage.js";
-import { CObject } from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js";
-import { CScript } from "https://06fs4dix.github.io/Artgine/artgine/util/CScript.js";
+import { CInput } from "../../../artgine/system/CInput.js";
+import { CCamCon2DFreeMove, CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
+import { CFrame } from "../../../artgine/util/CFrame.js";
+import {  CModalBackGround, CFileViewer, CMDViewer } from "../../../artgine/util/CModalUtil.js";
+
+import { CUtil } from "../../../artgine/basic/CUtil.js";
+import { CUtilObj } from "../../../artgine/basic/CUtilObj.js";
+import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
+import { CString } from "../../../artgine/basic/CString.js";
+import { CPath } from "../../../artgine/basic/CPath.js";
+import { CAlert } from "../../../artgine/basic/CAlert.js";
+import { CConfirm, CModal } from "../../../artgine/basic/CModal.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CChecker } from "../../../artgine/util/CChecker.js";
+import { CTimer } from "../../../artgine/system/CTimer.js";
+import { CTutorial } from "../../../artgine/util/CTutorial.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CLan } from "../../../artgine/basic/CLan.js";
+import { CStorage } from "../../../artgine/system/CStorage.js";
+import { CObject } from "../../../artgine/basic/CObject.js";
+import { CScript } from "../../../artgine/util/CScript.js";
+import { GetDevToolScriptViewer, InitDevToolScriptViewer } from "../../../artgine/tool/DevTool.js";
+import { CFile } from "../../../artgine/system/CFile.js";
+import { CTooltip } from "../../../artgine/util/CTooltip.js";
+import { Bootstrap } from "../../../artgine/basic/Bootstrap.js";
+import { CCoroutine } from "../../../artgine/util/CCoroutine.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint2D } from "../../../artgine/app/component/paint/CPaint2D.js";
+import { CPaint3D } from "../../../artgine/app/component/paint/CPaint3D.js";
+import { CDOM } from "../../../artgine/basic/CDOM.js";
+
 
 //CLan.SetCode("en");
 
@@ -162,7 +170,7 @@ await CTutorial.Exe(CTutorial.eWait.ModalClose,null,`<div class="p-3 border roun
   <button type="button" class="btn btn-primary" id='tuto' data-CLan='tuto3'>튜토리얼</button>
   <button type="button" class="btn btn-primary" id='code' data-CLan='tuto4'>코드</button>
 </div>`,{call:()=>{
-    CUtil.ID("code").addEventListener("click",()=>{mode=1;});
+    CDOM.ID("code").addEventListener("click",()=>{mode=1;});
 }});
 
 
@@ -180,7 +188,7 @@ if(mode==0)
 
     await CChecker.Exe(async ()=>{
 
-        if(CUtil.ID("RunTime_btn")!=null)
+        if(CDOM.ID("RunTime_btn")!=null)
             return false;
             
         return true;
@@ -191,7 +199,7 @@ if(mode==0)
     
     // await CChecker.Exe(async ()=>{
 
-    //     if(CUtil.ID("mvExcute_btn")!=null)
+    //     if(CDOM.ID("mvExcute_btn")!=null)
     //         return false;
             
     //     return true;
@@ -217,14 +225,14 @@ if(mode==0)
     <p class="mb-3 fs-5" data-CLan='tuto9-1'>3DSubject 선택하여 위치를 변경해 보세요</p>
     </div>`,{bodyClose:false,timeOut:10});
     timer.Delay();
-    let tip=new CTooltip(CDomFactory.DataToDom(`<div style='white-space: nowrap;' data-CLan='tuto_12'>
+    let tip=new CTooltip(CDOM.DataToDom(`<div style='white-space: nowrap;' data-CLan='tuto_12'>
         1.왼쪽 Hierarchy에서 3DCan를 선택해주세요.<br>
         2.3DSubject 선택해 주세요.<br>
         3.두가지 방식중 원하는 방법으로 Pos 이동해 주세요.<br>
         A.서브젝트에 중심에있는 빨강 네모를 잡고 움직이세요.<br>
         B.오른쪽 상단에 Pos : [-300][0][0] 숫자를 수정해 주세요.<br>
         </div>`),
-        CUtil.ID(can.ObjHash()+"_li"),
+        CDOM.ID(can.ObjHash()+"_li"),
         CTooltip.eTrigger.Manual,CTooltip.ePlacement.Auto,Bootstrap.eColor.danger);
     tip.Focus(CModal.eAction.Shake);
     tip.Open();
@@ -305,12 +313,6 @@ for(let i=modalList.length-1;i>=0;--i)
 
 
 
-import { GetDevToolScriptViewer, InitDevToolScriptViewer } from "https://06fs4dix.github.io/Artgine/artgine/tool/DevTool.js";
-import { CFile } from "https://06fs4dix.github.io/Artgine/artgine/system/CFile.js";
-import { CTooltip } from "https://06fs4dix.github.io/Artgine/artgine/util/CTooltip.js";
-import { Bootstrap } from "https://06fs4dix.github.io/Artgine/artgine/basic/Bootstrap.js";
-import { CCoroutine } from "https://06fs4dix.github.io/Artgine/artgine/util/CCoroutine.js";
-import { CDomFactory } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOMFactory.js";
 
 
 let svmodal=await InitDevToolScriptViewer(gAtl.PF().mGitHub);
@@ -324,6 +326,21 @@ if(data==null)
     svmodal.SetSource(CUtil.ArrayToString(buf));
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

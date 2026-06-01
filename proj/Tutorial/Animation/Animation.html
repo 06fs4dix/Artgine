@@ -40,7 +40,13 @@
             }
         });
     }
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+    });
 </script>
+
 <!--Include--><script type='text/javascript' src='../../../artgine/external/legacy/pako-master/dist/pako.min.js'></script>
 <script type='text/javascript' src='../../../artgine/external/legacy/jszip.min.js'></script>
 <script type='text/javascript' src='../../../artgine/external/legacy/screenfull/screenfull.min.js'></script>
@@ -74,28 +80,7 @@ if (location.protocol == 'file:' && isElectron==false){
 	location.replace(target);
 	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
 }</script>
+<script type='module' src='Animation.js'></script>
 
 <!--Manifest-->
 <!--EntryPoint-->
-<script>
-let deferredPrompt;
-window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredPrompt = event;
-
-    // document.getElementById("install-btn").style.display = "block";
-
-    // document.getElementById("install-btn").addEventListener("click", () => {
-    //     deferredPrompt.prompt();
-    //     deferredPrompt.userChoice.then((choiceResult) => {
-    //         if (choiceResult.outcome === "accepted") {
-    //             console.log("User accepted the install prompt");
-    //         } else {
-    //             console.log("User dismissed the install prompt");
-    //         }
-    //         deferredPrompt = null;
-    //     });
-    // });
-});
-</script>
-<script type='module' src='Animation.js'></script>

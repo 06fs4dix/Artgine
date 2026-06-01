@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover' />
+<style>
+    :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+    }
+</style>
+<script>
+    const loadingCard = document.createElement('div');
+    loadingCard.id = "MainLoading";
+    loadingCard.style.position = "fixed";
+    loadingCard.style.top = "0";
+    loadingCard.style.left = "0";
+    loadingCard.style.width = "100vw";
+    loadingCard.style.height = "100vh";
+    loadingCard.style.maxWidth = "none";
+    loadingCard.style.maxHeight = "none";
+    loadingCard.style.margin = "0";
+    loadingCard.style.borderRadius = "0";
+    loadingCard.style.zIndex = "9999";
+    loadingCard.style.pointerEvents = "auto";
+    loadingCard.style.backgroundColor = "#212529"; // Bootstrap dark 색상
+    loadingCard.style.display = "flex";
+    loadingCard.style.alignItems = "center";
+    loadingCard.style.justifyContent = "center";
+    loadingCard.style.color = "white";
+    loadingCard.style.fontSize = "32px";
+    
+    loadingCard.innerHTML = `
+        <div style="text-align: center;"><div>Initialization...</div></div>
+    `;
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('readystatechange', function() {
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                if (document.body)  document.body.appendChild(loadingCard);
+            }
+        });
+    }
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+    });
+</script>
+
+<!--Include--><script type='text/javascript' src='../../../artgine/external/legacy/pako-master/dist/pako.min.js'></script>
+<script type='text/javascript' src='../../../artgine/external/legacy/jszip.min.js'></script>
+<script type='text/javascript' src='../../../artgine/external/legacy/screenfull/screenfull.min.js'></script>
+<script src='../../../artgine/external/legacy/popper/poper.min.js'></script>
+<link rel='stylesheet' href='../../../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+<script src='../../../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+<link rel='stylesheet' href='../../../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+<script>function BootstrapSearchList(searchId, listId) {
+			const input = document.getElementById(searchId);
+			const listItems = document.querySelectorAll(`#${listId} li`);
+		
+			input.addEventListener('keyup', function () {
+				const value = input.value.toLowerCase();
+		
+				listItems.forEach(item => {
+					const text = item.textContent.toLowerCase();
+					item.style.display = text.includes(value) ? '' : 'none';
+				});
+			});
+		}</script>
+<script type='text/javascript' src='../../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
+<link rel='manifest' href='./Terrain.webmanifest'/>
+<script>
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Tutorial/Terrain/Terrain.html';
+const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
+if (location.protocol == 'file:' && isElectron==false){
+	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
+	const target = new URL(page, SERVER_BASE).toString();
+	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	alert('Local Start Redirection!');
+	location.replace(target);
+	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
+}</script>
+<script type='module' src='Terrain.js'></script>
+
+<!--Manifest-->
+<!--EntryPoint-->
+<script type='module' src='Terrain.js'></script>

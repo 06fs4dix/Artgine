@@ -1,5 +1,4 @@
 //Version
-const version='mf2jnnjd_2';
 import "../../../artgine/artgine.js"
 
 //Class
@@ -19,23 +18,26 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
+gPF.mVersion = "mpuhzq22_60";
 
-import {CAtelier} from "../../../artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
 import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([],"");
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
 import {CObject} from "../../../artgine/basic/CObject.js"
 import {  CFileViewer } from "../../../artgine/util/CModalUtil.js";
 import { CCamCon3DThirdPerson } from "../../../artgine/util/CCamCon.js";
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
-import { CColor } from "../../../artgine/canvas/component/CColor.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint3D } from "../../../artgine/app/component/paint/CPaint3D.js";
+import { CColor } from "../../../artgine/render/CColor.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
 import { CWASM } from "../../../artgine/basic/CWASM.js";
@@ -66,7 +68,7 @@ let editer=new CFileViewer(["TestShader.ts","ShaderEditer.json","ShaderEditer.ht
 //editer.SetSize(1024,768);
 editer.Open();
 
-await gAtl.Frame().Load().Load("TestShader.ts");
+await gAtl.Frame().Load().Exe("TestShader.ts");
 
 function Init()
 {
@@ -86,3 +88,6 @@ Init();
 
 
 CConsol.Log(CWASM.Checker(10000));
+
+
+

@@ -1,4 +1,3 @@
-const version = 'mi6qwg9n_67';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -14,22 +13,23 @@ gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
-gPF.mServer = 'webServer';
+gPF.mServer = 'local';
 gPF.mGitHub = false;
-import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+gPF.mVersion = "mpufvoga_22";
+import { CAtelier } from "../../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint2D, CPaintHTML } from "../../../artgine/canvas/component/paint/CPaint2D.js";
-import { CAnimation, CClipCoodi, CClipImg, CClipMesh } from "../../../artgine/canvas/component/CAnimation.js";
-import { CAniFlow } from "../../../artgine/canvas/component/CAniFlow.js";
 import { CInput } from "../../../artgine/system/CInput.js";
 import { CUtilObj } from "../../../artgine/basic/CUtilObj.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
 import { CDOM } from "../../../artgine/basic/CDOM.js";
 import { CEvent } from "../../../artgine/basic/CEvent.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint2D, CPaintHTML } from "../../../artgine/app/component/paint/CPaint2D.js";
+import { CAnimation, CClipCoodi, CClipImg, CClipMesh } from "../../../artgine/app/component/CAnimation.js";
+import { CAniFlow } from "../../../artgine/app/component/CAniFlow.js";
+import { CPaint3D } from "../../../artgine/app/component/paint/CPaint3D.js";
 gAtl.NewCanvas("Main");
 gAtl.Canvas("Main").SetCameraKey("2D");
 let sub = gAtl.Canvas("Main").PushSub(new CSubject());
@@ -71,10 +71,10 @@ for (let y = 0; y < 4; ++y) {
 gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
     let Ani2DSub = gAtl.Canvas("Main").Find("Ani2DSub");
     if (gAtl.Frame().Input().KeyUp(CInput.eKey.Num1)) {
-        Ani2DSub.FindComp(CAniFlow).ResetAni("top");
+        Ani2DSub.FindComp(CAniFlow).SetAni("top");
     }
     else if (gAtl.Frame().Input().KeyUp(CInput.eKey.Num2)) {
-        Ani2DSub.FindComp(CAniFlow).ResetAni("bottom");
+        Ani2DSub.FindComp(CAniFlow).SetAni("bottom");
     }
     else if (gAtl.Frame().Input().KeyUp(CInput.eKey.F)) {
         CUtilObj.ShowModal(Ani2DSub);
@@ -133,12 +133,12 @@ pth.SetPos(new CVec3(0, 200));
 function Shoot() {
     ani = new CAnimation();
     ani.Push(new CClipMesh(0, 2, "shoot"));
-    af.ResetAni(ani);
+    af.SetAni(ani);
 }
 window["Shoot"] = Shoot;
 function Run() {
     ani = new CAnimation();
     ani.Push(new CClipMesh(0, 2, "run"));
-    af.ResetAni(ani);
+    af.SetAni(ani);
 }
 window["Run"] = Run;

@@ -1,12 +1,11 @@
 //Version
-const version='mffeu6vk_13';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
+import "../../../artgine/artgine.js"
 
 //Class
-import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import {CClass} from "../../../artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import {CPreferences} from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,34 +20,39 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
+gPF.mGitHub = false;
+gPF.mVersion = "mpukkmgs_3";
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/canvas/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
-import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/canvas/subject/CSubject.js";
-import { CPaint2D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint2D.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
+import {CObject} from "../../../artgine/basic/CObject.js"
 
-import { CConfirm, CModal, CModalTitleBar } from "https://06fs4dix.github.io/Artgine/artgine/basic/CModal.js";
-import { CWind } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CWind.js";
-import { CBGAttachButton } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CPaint3D } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/paint/CPaint3D.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/canvas/component/CColor.js";
-import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
-import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
-import { CLoader, CLoaderOption } from "https://06fs4dix.github.io/Artgine/artgine/util/CLoader.js";
-import { CTexture } from "https://06fs4dix.github.io/Artgine/artgine/render/CTexture.js";
-import { CVec4 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec4.js";
-import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+
+import { CConfirm, CModal, CModalTitleBar } from "../../../artgine/basic/CModal.js";
+
+import { CBGAttachButton } from "../../../artgine/util/CModalUtil.js";
+
+import { CShaderAttr } from "../../../artgine/render/CShaderAttr.js";
+import { CVec1 } from "../../../artgine/geometry/CVec1.js";
+import { CLoader, CLoaderOption } from "../../../artgine/util/CLoader.js";
+import { CTexture } from "../../../artgine/render/CTexture.js";
+import { CVec4 } from "../../../artgine/geometry/CVec4.js";
+import { CUtilWeb } from "../../../artgine/util/CUtilWeb.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint2D } from "../../../artgine/app/component/paint/CPaint2D.js";
+import { CWind } from "../../../artgine/app/component/CWind.js";
+import { CPaint3D } from "../../../artgine/app/component/paint/CPaint3D.js";
+import { CColor } from "../../../artgine/render/CColor.js";
+import { CAlpha } from "../../../artgine/render/CAlpha.js";
 
 
 
@@ -73,6 +77,7 @@ function Init2D()
     }
 
     let sub=Main.PushSub(new CSubject());
+    sub.SetKey("Wind");
     let pt=sub.PushComp(new CPaint2D(gAtl.Frame().Pal().GetNoneTex()));
     let wind=sub.PushComp(new CWind());
 
@@ -104,6 +109,7 @@ function Init3D()
 {
     //gAtl.Frame().Load().Load("Res/grass.png",new CLoaderOption().Set("mMipMap",CTexture.eMipmap.None).Set("mAlphaCut",128));
     //gAtl.Frame().Load().Load("Res/grass.png",new CLoaderOption().Set("mAlphaCut",250));
+    gAtl.Brush().GetCam3D().Init(new CVec3(0,900,1000),new CVec3(0,-300,-500))
     Main.SetCameraKey("3D");
     let gXSize=20;
     let gZSize=20;
@@ -114,28 +120,33 @@ function Init3D()
             let sub=Main.PushSub(new CSubject());
             let pt=sub.PushComp(new CPaint2D("Res/grass.png",new CVec2(50,50)));
             
+            
             sub.SetPos(new CVec3(x*50,0,z*50));
             pt.Wind(100);
             pt.SetBillBoard(true);
             pt.SetTexCodi(null,0.02);
-            pt.AlphaCut();
+            //pt.AlphaCut();
             pt.PushCShaderAttr(new CShaderAttr("alphaCut",new CVec1(0.7)));
             //pt.SetWindInfluence(1);
         }
     }
 
     let sub=Main.PushSub(new CSubject());
+    sub.SetKey("Wind");
     sub.SetSca(0.1);
     let pt=sub.PushComp(new CPaint3D());
     pt.SetColorModel(new CColor(1,0.5,0.5,CColor.eModel.RGBAdd));
     let wind=sub.PushComp(new CWind());
 
-   
+    let lo=new CLoaderOption();
+    lo.mMipMap=CTexture.eMipmap.AlphaCac;
     for(let i=0;i<10;++i)
     {
         sub=Main.PushSub(new CSubject());
         sub.SetPos(new CVec3(Math.random()*1000-500,0,Math.random()*1000-500));
-        pt=sub.PushComp(new CPaint3D("Res/tree.fbx"));
+        pt=sub.PushComp(new CPaint3D("Res/tree.glb"));
+        pt.SetAlphaModel(new CAlpha(1,0.9));
+        pt.SetAutoLoad(lo);
         pt.Wind(100);
     }
     
@@ -182,27 +193,6 @@ CConfirm.List("Select Init!", [
 
 
 let test=CUtilWeb.MDReader("../../README.md");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

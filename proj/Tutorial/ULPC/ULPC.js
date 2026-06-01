@@ -1,8 +1,8 @@
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js";
-import { CClass } from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import "../../../artgine/artgine.js";
+import { CClass } from "../../../artgine/basic/CClass.js";
 import { ULPCChar } from "./ULPCChar.js";
 CClass.Push(ULPCChar);
-import { CPreferences } from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -14,30 +14,22 @@ gPF.mBatchPool = true;
 gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
-gPF.mCanvas = "";
 gPF.mWASM = false;
-gPF.mServer = 'webServer';
-gPF.mGitHub = true;
-gPF.mVersion = "mp6zcg65_12";
-import { CAtelier } from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
+gPF.mCanvas = "";
+gPF.mServer = 'local';
+gPF.mGitHub = false;
+gPF.mVersion = "mpul7pt0_16";
+import { CAtelier } from "../../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([], "");
-import { CCamCon2DFollow } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CPad } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CPad.js";
-import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
-import { CUtilWeb } from "https://06fs4dix.github.io/Artgine/artgine/util/CUtilWeb.js";
+import { CCamCon2DFollow } from "../../../artgine/util/CCamCon.js";
+import { CPad } from "../../../artgine/app/subject/CPad.js";
 let Main = gAtl.NewCanvas("Main");
 Main.SetCameraKey("2D");
 gAtl.Brush().GetCam2D().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
 const hero = new ULPCChar();
-const jsonParam = CUtilWeb.Parameter('json');
-if (jsonParam) {
-    hero.SetupFromData(CUtil.Base64ToString(jsonParam));
-}
-else {
-    hero.Setup("ulpc_selection.json");
-}
+hero.Setup("ulpc_selection.json");
 hero.PushChild(new CPad()).mSave = false;
 Main.PushSub(hero);
 const KEY_ANIM = {

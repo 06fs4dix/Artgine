@@ -1,4 +1,3 @@
-const version = 'mf2jnnjd_2';
 import "../../../artgine/artgine.js";
 import { CPreferences } from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
@@ -13,16 +12,18 @@ gPF.mXR = false;
 gPF.mDeveloper = true;
 gPF.mIAuto = true;
 gPF.mWASM = false;
+gPF.mCanvas = "";
 gPF.mServer = 'local';
 gPF.mGitHub = false;
-import { CAtelier } from "../../../artgine/canvas/CAtelier.js";
+gPF.mVersion = "mpuhzq22_60";
+import { CAtelier } from "../../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
-await gAtl.Init([]);
+await gAtl.Init([], "");
 import { CFileViewer } from "../../../artgine/util/CModalUtil.js";
 import { CCamCon3DThirdPerson } from "../../../artgine/util/CCamCon.js";
-import { CSubject } from "../../../artgine/canvas/subject/CSubject.js";
-import { CPaint3D } from "../../../artgine/canvas/component/paint/CPaint3D.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CPaint3D } from "../../../artgine/app/component/paint/CPaint3D.js";
 import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
 import { CWASM } from "../../../artgine/basic/CWASM.js";
@@ -46,7 +47,7 @@ let editer = new CFileViewer(["TestShader.ts", "ShaderEditer.json", "ShaderEdite
     Init();
 });
 editer.Open();
-await gAtl.Frame().Load().Load("TestShader.ts");
+await gAtl.Frame().Load().Exe("TestShader.ts");
 function Init() {
     Main.Clear();
     Main.ClearBatch();

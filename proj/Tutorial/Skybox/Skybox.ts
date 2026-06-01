@@ -1,12 +1,11 @@
 //Version
-const version='mp4216w1_7';
-import "https://06fs4dix.github.io/Artgine/artgine/artgine.js"
+import "../../../artgine/artgine.js"
 
 //Class
-import {CClass} from "https://06fs4dix.github.io/Artgine/artgine/basic/CClass.js";
+import {CClass} from "../../../artgine/basic/CClass.js";
 
 //Atelier
-import {CPreferences} from "https://06fs4dix.github.io/Artgine/artgine/basic/CPreferences.js";
+import {CPreferences} from "../../../artgine/basic/CPreferences.js";
 var gPF = new CPreferences();
 gPF.mTargetWidth = 0;
 gPF.mTargetHeight = 0;
@@ -21,34 +20,35 @@ gPF.mIAuto = true;
 gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'local';
-gPF.mGitHub = true;
+gPF.mGitHub = false;
+gPF.mVersion = "mpuhzq22_70";
 
-import {CAtelier} from "https://06fs4dix.github.io/Artgine/artgine/app/CAtelier.js";
+import {CAtelier} from "../../../artgine/app/CAtelier.js";
 
-import {CPlugin} from "https://06fs4dix.github.io/Artgine/artgine/util/CPlugin.js";
+import {CPlugin} from "../../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
 //The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
 
 //EntryPoint
-import {CObject} from "https://06fs4dix.github.io/Artgine/artgine/basic/CObject.js"
-import { CCamCon3DFirstPerson } from "https://06fs4dix.github.io/Artgine/artgine/util/CCamCon.js";
-import { CRenderPass } from "https://06fs4dix.github.io/Artgine/artgine/render/CRenderPass.js";
-import { CVec3 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec3.js";
-import { CSubject } from "https://06fs4dix.github.io/Artgine/artgine/app/subject/CSubject.js";
-import { CLight } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLight.js";
-import { CPaint3D, CPaintCube } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaint3D.js";
-import { CDayCycle, CLightPlanet } from "https://06fs4dix.github.io/Artgine/artgine/app/component/CLightPlanet.js";
-import { CColor } from "https://06fs4dix.github.io/Artgine/artgine/render/CColor.js";
-import { CBGAttachButton, CModalFrameView } from "https://06fs4dix.github.io/Artgine/artgine/util/CModalUtil.js";
-import { CVec2 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec2.js";
-import { CUtil } from "https://06fs4dix.github.io/Artgine/artgine/basic/CUtil.js";
-import { CDOM } from "https://06fs4dix.github.io/Artgine/artgine/basic/CDOM.js";
-import { CMath } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CMath.js";
-import { CShaderAttr } from "https://06fs4dix.github.io/Artgine/artgine/render/CShaderAttr.js";
-import { CVec1 } from "https://06fs4dix.github.io/Artgine/artgine/geometry/CVec1.js";
-import { CPaintSurface } from "https://06fs4dix.github.io/Artgine/artgine/app/component/paint/CPaintSurface.js";
+import {CObject} from "../../../artgine/basic/CObject.js"
+import { CCamCon3DFirstPerson } from "../../../artgine/util/CCamCon.js";
+import { CRenderPass } from "../../../artgine/render/CRenderPass.js";
+import { CVec3 } from "../../../artgine/geometry/CVec3.js";
+import { CSubject } from "../../../artgine/app/subject/CSubject.js";
+import { CLight } from "../../../artgine/app/component/CLight.js";
+import { CPaint3D, CPaintCube } from "../../../artgine/app/component/paint/CPaint3D.js";
+import { CDayCycle, CLightPlanet } from "../../../artgine/app/component/CLightPlanet.js";
+import { CColor } from "../../../artgine/render/CColor.js";
+import { CBGAttachButton, CModalFrameView } from "../../../artgine/util/CModalUtil.js";
+import { CVec2 } from "../../../artgine/geometry/CVec2.js";
+import { CUtil } from "../../../artgine/basic/CUtil.js";
+import { CDOM } from "../../../artgine/basic/CDOM.js";
+import { CMath } from "../../../artgine/geometry/CMath.js";
+import { CShaderAttr } from "../../../artgine/render/CShaderAttr.js";
+import { CVec1 } from "../../../artgine/geometry/CVec1.js";
+import { CPaintSurface } from "../../../artgine/app/component/paint/CPaintSurface.js";
 
 var Main=gAtl.NewCanvas("Main");
 Main.SetCameraKey(gAtl.Brush().GetCam3D().Key());
@@ -564,6 +564,8 @@ function updateCloudParams()
 window["updateCloudParams"] = updateCloudParams;
 
 new CModalFrameView();
+
+
 
 
 

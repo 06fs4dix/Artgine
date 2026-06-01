@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover' />
 
-
+<link rel='stylesheet' href='../../../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+<script src='../../../artgine/external/legacy/popper/poper.min.js'></script>
+<script src='../../../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
 
 <script>
-let SERVER_BASE='http://localhost:8050/Artgine/proj/Shorts/Shorts.html';
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Tutorial/RawRender/RawRender.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
-	
 	const target = new URL(page, SERVER_BASE).toString();
 	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
 	alert('Local Start Redirection!');
@@ -16,23 +17,4 @@ if (location.protocol == 'file:' && isElectron==false){
 	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
 }</script>
 
-
-
-<script type='module'>
-import { CAtelier } from "../../artgine/canvas/CAtelier.js";
-import { CColor } from "../../artgine/canvas/component/CColor.js";
-import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
-import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
-import { CVec2 } from "../../artgine/geometry/CVec2.js";
-
-
-var gAtl = new CAtelier();
-await gAtl.Init([], "");
-let Main = gAtl.NewCanvas("Main");
-const box = Main.PushSub(new CSubject());
-const paint2D = new CPaint2D(null,new CVec2(120,120));
-paint2D.SetColorModel(new CColor(1,0,0,CColor.eModel.RGBAdd))
-box.PushComp(paint2D);
-</script>
-
-<!--<script type='module' src='Shorts.js'></script>-->
+<script type='module' src='RawRender.js'></script>

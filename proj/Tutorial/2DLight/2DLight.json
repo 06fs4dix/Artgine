@@ -34,6 +34,7 @@
     "toastui": false
   },
   "dependencies": {
-    "ShadowPlane": 1
+    "ShadowPlane": 1,
+    "Water": 1
   }
 }
