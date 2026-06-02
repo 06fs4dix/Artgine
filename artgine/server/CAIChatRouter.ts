@@ -180,8 +180,10 @@ function listSessions(limit?: number): (ISessionMeta & { busy: boolean; lastMsg?
         const h = loadHistory(name);
         if (!h?.meta) continue;
         const normalized = normalizeHistory(h);
-        const last = normalized.messages.length > 0 ? normalized.messages[normalized.messages.length - 1] : null;
-        const lastMsg = last ? last.content.slice(0, 80).replace(/\n+/g, ' ') : undefined;
+        const lastMsg = gLastUserMsg.get(name) ?? (() => {
+            const last = [...normalized.messages].reverse().find(m => m.role === 'user');
+            return last ? last.content.slice(0, 80).replace(/\n+/g, ' ') : undefined;
+        })();
         const cfg = loadConfig(name);
         out.push({ ...normalized.meta, lastMsg, workingDir: cfg.workingDir });
     }
@@ -283,6 +285,7 @@ function buildUserPromptOneShot(sid: string, msg: IMessage): string {
 // ---- Room management ----
 const gRooms = new Map<string, Set<WebSocket>>();  // sessionId → 연결된 클라이언트들
 const gRoomLock = new Map<string, boolean>();       // sessionId → 전송 중 여부
+const gLastUserMsg = new Map<string, string>();     // sessionId → 마지막 유저 메시지
 
 function broadcastToRoom(sid: string, msg: object) {
     const room = gRooms.get(sid);
@@ -416,6 +419,7 @@ async function handleSend(sid: string, msg: IWsSendMsg, ctx: IWsCtx) {
     history.meta.updatedAt = now;
     history.messages.push(userMsg);
     saveHistory(history);
+    gLastUserMsg.set(sid, userMsg.content.slice(0, 80).replace(/\n+/g, ' '));
 
     // 룸 전체에 유저 메시지 + 시작 신호 broadcast
     broadcastToRoom(sid, { type: 'message', message: userMsg });
@@ -450,7 +454,6 @@ async function handleSend(sid: string, msg: IWsSendMsg, ctx: IWsCtx) {
         broadcastToRoom(sid, { type: 'error', msg: `process error: ${err.message}` });
     });
     child.on('close', async (code) => {
-        gRoomLock.delete(sid);
         const finalText = assistantBuf.trim();
         const snapAfter = snapshotWorkspace(dir);
         const changedFiles = diffWorkspace(snapBefore, snapAfter);
@@ -479,6 +482,7 @@ async function handleSend(sid: string, msg: IWsSendMsg, ctx: IWsCtx) {
             }
         }
         if (changedFiles.length) broadcastToRoom(sid, { type: 'files', changed: changedFiles });
+        gRoomLock.delete(sid);
         broadcastToRoom(sid, { type: 'done', code, errored, stderr: stderrBuf.slice(0, 4000) });
     });
 }
@@ -586,7 +590,7 @@ export class CAIChatRouter extends CAuthServer {
         // GET /ai/chat/share?id=<sid>  (public, no auth)
         this.On("/ai/chat/share", async (_json: CJSON, _req: Request, _res: Response) => {
             await ensurePaths();
-            const sid = safeSessionId(_json['id'] as string);
+            const sid = safeSessionId(_json.GetStr('id'));
             if (!sid) { _res.status(400).json({ ok: false, msg: 'invalid id' }); return null; }
             const h = loadHistory(sid);
             if (!h) { _res.status(404).json({ ok: false, msg: 'not found' }); return null; }
@@ -597,10 +601,10 @@ export class CAIChatRouter extends CAuthServer {
         // GET /ai/chat/share/file?id=<sid>&path=<rel>  (public, no auth)
         this.On("/ai/chat/share/file", async (_json: CJSON, _req: Request, _res: Response) => {
             await ensurePaths();
-            const sid = safeSessionId(_json['id'] as string);
+            const sid = safeSessionId(_json.GetStr('id'));
             if (!sid) { _res.status(400).end('invalid id'); return null; }
             const dir = sessionDir(sid)!;
-            const rel = _json['path'] as string;
+            const rel = _json.GetStr('path');
             if (!rel) { _res.status(400).end('missing path'); return null; }
             const abs = path.resolve(dir, rel);
             const rootWithSep = dir.endsWith(path.sep) ? dir : dir + path.sep;
@@ -613,10 +617,10 @@ export class CAIChatRouter extends CAuthServer {
         this.On("/ai/chat/workspace", async (_json: CJSON, _req: Request, _res: Response) => {
             if (!isValidToken(getToken(_req))) { _res.status(401).end('Authentication required'); return null; }
             await ensurePaths();
-            const sid = safeSessionId(_json['id'] as string);
+            const sid = safeSessionId(_json.GetStr('id'));
             if (!sid) { _res.status(400).end('invalid id'); return null; }
             const dir = sessionDir(sid)!;
-            const rel = _json['path'] as string;
+            const rel = _json.GetStr('path');
             if (!rel) { _res.status(400).end('missing path'); return null; }
             const abs = path.resolve(dir, rel);
             const rootWithSep = dir.endsWith(path.sep) ? dir : dir + path.sep;

@@ -1,13 +1,1 @@
-import { CModal } from "./basic/CModal.js";
-window.addEventListener("message", (event) => {
-    if (event.data.type === "modalData") {
-        const data = event.data.data;
-        if (data.header != null && typeof data.header == "string")
-            document.title = data.header;
-        let mo = new CModal();
-        mo.SetBody(data.body);
-        mo.SetHeader(data.body);
-        mo.Open();
-        mo.FullSwitch();
-    }
-});
+import{CModal as e}from"./basic/CModal.js";window.addEventListener("message",t=>{if("modalData"===t.data.type){const a=t.data.data;null!=a.header&&"string"==typeof a.header&&(document.title=a.header);let d=new e;d.SetBody(a.body),d.SetHeader(a.body),d.Open(),d.FullSwitch()}});

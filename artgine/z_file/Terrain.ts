@@ -21,6 +21,8 @@ import {
     V2Mix,
     V2Fract,
     V2DivFloat,
+    V4AddV4,
+    V4MulFloat,
 } from "./Shader";
 import { bias, calcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
 
@@ -197,43 +199,43 @@ function SampleSplatmap(_splatBlend : CVec4, _uv : CVec2, _off : number) : CVec4
     var L_cor : CVec4;
     var blendAlpha : number = 1.0;
     if(blendAlpha > 0.0 && _splatBlend.w > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0,splatMatTexCodi[3].x)*0.5, step(0.0,splatMatTexCodi[3].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.w;
+        L_cor = V4AddV4(L_cor, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0,splatMatTexCodi[3].x)*0.5, step(0.0,splatMatTexCodi[3].y)*0.5), blendAlpha * _splatBlend.w));
+        blendAlpha -= blendAlpha * _splatBlend.w;
     }
     if(blendAlpha > 0.0 && _splatBlend.z > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0,splatMatTexCodi[2].x)*0.5, step(0.0,splatMatTexCodi[2].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.z;
+        L_cor = V4AddV4(L_cor, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0,splatMatTexCodi[2].x)*0.5, step(0.0,splatMatTexCodi[2].y)*0.5), blendAlpha * _splatBlend.z));
+        blendAlpha -= blendAlpha * _splatBlend.z;
     }
     if(blendAlpha > 0.0 && _splatBlend.y > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0,splatMatTexCodi[1].x)*0.5, step(0.0,splatMatTexCodi[1].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.y;
+        L_cor = V4AddV4(L_cor, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0,splatMatTexCodi[1].x)*0.5, step(0.0,splatMatTexCodi[1].y)*0.5), blendAlpha * _splatBlend.y));
+        blendAlpha -= blendAlpha * _splatBlend.y;
     }
     if(blendAlpha > 0.0 && _splatBlend.x > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0,splatMatTexCodi[0].x)*0.5, step(0.0,splatMatTexCodi[0].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.x;
+        L_cor = V4AddV4(L_cor, V4MulFloat(Sam2DArrTileToColor(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0,splatMatTexCodi[0].x)*0.5, step(0.0,splatMatTexCodi[0].y)*0.5), blendAlpha * _splatBlend.x));
+        blendAlpha -= blendAlpha * _splatBlend.x;
     }
     return L_cor;
 }
 
 function SampleSplatmapNormal(_splatBlend : CVec4, _uv : CVec2, _off : number) : CVec4
 {
-    var L_cor : CVec4;
+    var L_cor : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
     var blendAlpha : number = 1.0;
     if(blendAlpha > 0.0 && _splatBlend.w > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0,splatMatTexCodi[3].x)*0.5, step(0.0,splatMatTexCodi[3].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.w;
+        L_cor = V4AddV4(L_cor, V4Mix(new CVec4(0.0,0.0,0.0,0.0), Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[3].xy)), splatMatTexCodi[3].zw), _off + 3.0), step(0.0,splatMatTexCodi[3].x)*0.5, step(0.0,splatMatTexCodi[3].y)*0.5), blendAlpha * _splatBlend.w));
+        blendAlpha -= blendAlpha * _splatBlend.w;
     }
     if(blendAlpha > 0.0 && _splatBlend.z > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0,splatMatTexCodi[2].x)*0.5, step(0.0,splatMatTexCodi[2].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.z;
+        L_cor = V4AddV4(L_cor, V4Mix(new CVec4(0.0,0.0,0.0,0.0), Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[2].xy)), splatMatTexCodi[2].zw), _off + 2.0), step(0.0,splatMatTexCodi[2].x)*0.5, step(0.0,splatMatTexCodi[2].y)*0.5), blendAlpha * _splatBlend.z));
+        blendAlpha -= blendAlpha * _splatBlend.z;
     }
     if(blendAlpha > 0.0 && _splatBlend.y > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0,splatMatTexCodi[1].x)*0.5, step(0.0,splatMatTexCodi[1].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.y;
+        L_cor = V4AddV4(L_cor, V4Mix(new CVec4(0.0,0.0,0.0,0.0), Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[1].xy)), splatMatTexCodi[1].zw), _off + 1.0), step(0.0,splatMatTexCodi[1].x)*0.5, step(0.0,splatMatTexCodi[1].y)*0.5), blendAlpha * _splatBlend.y));
+        blendAlpha -= blendAlpha * _splatBlend.y;
     }
     if(blendAlpha > 0.0 && _splatBlend.x > 0.0) {
-        L_cor = V4Mix(L_cor, Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0,splatMatTexCodi[0].x)*0.5, step(0.0,splatMatTexCodi[0].y)*0.5), blendAlpha);
-        blendAlpha -= _splatBlend.x;
+        L_cor = V4AddV4(L_cor, V4Mix(new CVec4(0.0,0.0,0.0,0.0), Sam2DArrTileToNormal(0.0, new CVec3(V2AddV2(V2MulV2(_uv, V2Abs(splatMatTexCodi[0].xy)), splatMatTexCodi[0].zw), _off + 0.0), step(0.0,splatMatTexCodi[0].x)*0.5, step(0.0,splatMatTexCodi[0].y)*0.5), blendAlpha * _splatBlend.x));
+        blendAlpha -= blendAlpha * _splatBlend.x;
     }
     return L_cor;
 }
@@ -448,6 +450,7 @@ function ps_main()
     lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0); // material 텍스쳐에서 가져옴
     normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
     normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
+    normal = V3Nor(to_normal);
     dseMat = GetSunInfo();
     sunDir = dseMat[0];
     sunCol = dseMat[1];

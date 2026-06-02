@@ -70,7 +70,6 @@ export class CRapierCollider extends CCollider {
         }
     }
     mCL;
-    mPaintLoad = null;
     mDensity = null;
     mColTargetSwap = new CArray();
     mColPushSwap = new CArray();
@@ -109,7 +108,7 @@ export class CRapierCollider extends CCollider {
                 this.mPaintLoad = _bound;
                 return;
             }
-            let mat = _bound.GetFMat().Export();
+            let mat = this.GetOwner().GetMat().Export();
             mat.mF32A[3] = 0;
             mat.mF32A[7] = 0;
             mat.mF32A[11] = 0;
@@ -196,7 +195,7 @@ export class CRapierRigidBody extends CRigidBody {
     Start() {
         const wMat = this.GetOwner().GetMat();
         const wPos = CMath.V3MulMatCoordi(new CVec3(0, 0, 0), wMat);
-        const wRot = CMath.EulerToQut(CMath.MatDecomposeRotMat(wMat, true, true, true));
+        const wRot = CMath.MatDecomposeRot(wMat);
         this.mRB.setTranslation({ x: wPos.x + this.mCenter.x, y: wPos.y + this.mCenter.y, z: wPos.z + this.mCenter.z }, true);
         this.mRB.setRotation({ x: wRot.x, y: wRot.y, z: wRot.z, w: wRot.w });
     }
@@ -284,8 +283,12 @@ export class CRapier extends CComponent {
     static Update(_delay) {
         gWorld.step(gEventQut);
         gEventQut.drainCollisionEvents((h1, h2, started) => {
+            if (!started)
+                return;
             const a = gColliderMap.get(gWorld.getCollider(h1));
             const b = gColliderMap.get(gWorld.getCollider(h2));
+            if (a == null || b == null)
+                return;
             a.mColTarget.Push(b);
         });
         gEventQut.drainContactForceEvents((e) => {
@@ -293,6 +296,8 @@ export class CRapier extends CComponent {
             const cb = gWorld.getCollider(e.collider2());
             const a = gColliderMap.get(ca);
             const b = gColliderMap.get(cb);
+            if (a == null || b == null)
+                return;
             let dir = e.totalForce ? e.totalForce() : e.maxForceDirection();
             let mag = e.totalForceMagnitude ? e.totalForceMagnitude()
                 : e.maxForceMagnitude();

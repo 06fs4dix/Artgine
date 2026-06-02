@@ -63,7 +63,7 @@ export class CRapierCollider extends CCollider
         this.mCL.setRestitutionCombineRule(_role);
     }
     //복원계수
-    SetRestitution(_value:number=1) 
+    override SetRestitution(_value:number=1) 
     {
         if(this.mCL==null)
         {
@@ -93,7 +93,7 @@ export class CRapierCollider extends CCollider
         this.mCL.setDensity(_value);   
 
     }
-    SetEvent(_event) 
+    override SetEvent(_event) 
     {
         if(this.mCL==null)
         {
@@ -113,7 +113,6 @@ export class CRapierCollider extends CCollider
         }
     }
     mCL;//Collider
-    mPaintLoad=null;
     mDensity: number | null = null;
     //mUpdate=CUpdate.eType.Updated;
     
@@ -125,11 +124,11 @@ export class CRapierCollider extends CCollider
     //mRestitution=null;
     mFriction=null;//마찰
     
-    SetOwner(_obj) {
+    override SetOwner(_obj) {
         //super.SetOwner(_obj);
         this.mOwner=_obj;
     }
-    StartChk() 
+    override StartChk() 
     {
         if(this.mStartChk==true)
         {
@@ -138,9 +137,9 @@ export class CRapierCollider extends CCollider
         }
 		return false;
     }
-    InitBound(_bound : CBound);
-	InitBound(_paint : CPaint);
-    InitBound(_bound)
+    override InitBound(_bound : CBound);
+	override InitBound(_paint : CPaint);
+    override InitBound(_bound)
     {
         if(this.GetOwner()==null)   return;
         if(this.mRB==null)
@@ -174,7 +173,7 @@ export class CRapierCollider extends CCollider
             }
             //this.mBound=_bound.GetBound().Export() as CBound;
 			//bound.Reset();
-            let mat=_bound.GetFMat().Export();
+            let mat=this.GetOwner().GetMat().Export();
             mat.mF32A[3]=0;mat.mF32A[7]=0;mat.mF32A[11]=0;
 			this.mBound.InitBound(CMath.V3MulMatCoordi(_bound.GetBound().mMin, mat));
 			this.mBound.InitBound(CMath.V3MulMatCoordi(_bound.GetBound().mMax, mat));
@@ -204,7 +203,6 @@ export class CRapierCollider extends CCollider
 
         }
         
-            
 
         if(this.mRestitution!=null)
         {
@@ -222,7 +220,7 @@ export class CRapierCollider extends CCollider
             this.mDensity=null;
         }
     }
-    Update(_update : CUpdate): void {
+    override Update(_update : CUpdate): void {
         //super.Update(_delay);
 
         if(this.mPaintLoad!=null ||this.mCL==null)
@@ -260,7 +258,7 @@ export class CRapierCollider extends CCollider
         
 
     }
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
         gColliderMap.delete(this.mCL);
 
@@ -270,7 +268,7 @@ export class CRapierCollider extends CCollider
             this.mCL = null;
         }
     }
-    EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+    override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
         _div.innerHTML="Not Support";
     }
 }
@@ -289,16 +287,16 @@ export class CRapierRigidBody extends CRigidBody
     mRB;
     mCenter=new CVec3();
     mLateImpulse : CVec3=null;
-    Start(): void {
+    override Start(): void {
     
         const wMat = this.GetOwner().GetMat();
         const wPos = CMath.V3MulMatCoordi(new CVec3(0, 0, 0), wMat);
-        const wRot= CMath.EulerToQut(CMath.MatDecomposeRotMat(wMat,true,true,true));
+        const wRot = CMath.MatDecomposeRot(wMat);
 
         this.mRB.setTranslation({ x: wPos.x+this.mCenter.x, y: wPos.y+this.mCenter.y, z: wPos.z+this.mCenter.z }, true);
         this.mRB.setRotation({x:wRot.x,y:wRot.y,z:wRot.z,w:wRot.w});
     }
-    SetGravity(_scale : number)
+    override SetGravity(_scale : number)
 	{
 		this.mRB.setGravityScale(_scale, true);
 	}
@@ -311,7 +309,7 @@ export class CRapierRigidBody extends CRigidBody
 		this.mRB.setEnabledRotations(!_x, !_y, !_z, true);
 	}
     
-    Update(_update : CUpdate): void {
+    override Update(_update : CUpdate): void {
         //super.Update(_delay);
         if(this.mLateImpulse!=null)
         {
@@ -341,11 +339,6 @@ export class CRapierRigidBody extends CRigidBody
             this.mUpdate=CUpdate.eType.Updated;
         }
 
-        
-            
-
-        
-
     }
    
     Impulse(_value : CVec3)
@@ -364,7 +357,7 @@ export class CRapierRigidBody extends CRigidBody
         if(this.mRB!=null)
             this.mRB.setLinvel(_value, true);
     }
-    Clear()
+    override Clear()
 	{
 		if(this.mRB!=null)
         {
@@ -379,13 +372,13 @@ export class CRapierRigidBody extends CRigidBody
     {
         this.mRB.wakeUp();
     }
-    Push(move: CStopover);
-    Push(move: CForce);
-    Push(move: Array<CForce>);
-    Push(move: any, duplication?: boolean): void {
+    override Push(move: CStopover);
+    override Push(move: CForce);
+    override Push(move: Array<CForce>);
+    override Push(move: any, duplication?: boolean): void {
         CAlert.E("Not Support!");
     }
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
         
         if (this.mRB) {
@@ -396,7 +389,7 @@ export class CRapierRigidBody extends CRigidBody
         }
         
     }
-    EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
+    override EditHTMLInit(_div: HTMLDivElement, _pointer?: CPointer): void {
         _div.innerHTML="Not Support";
     }
     
@@ -426,8 +419,10 @@ export class CRapier extends CComponent
         gWorld.step(gEventQut);
         gEventQut.drainCollisionEvents((h1, h2, started) => 
         {
+            if (!started) return;
             const a = gColliderMap.get(gWorld.getCollider(h1));
             const b = gColliderMap.get(gWorld.getCollider(h2));
+            if (a == null || b == null) return;
             a.mColTarget.Push(b);
         });
         gEventQut.drainContactForceEvents((e) => 
@@ -437,6 +432,7 @@ export class CRapier extends CComponent
 
             const a = gColliderMap.get(ca);
             const b = gColliderMap.get(cb);
+            if (a == null || b == null) return;
 
             //const mag = e.totalForceMagnitude(); // 총 접촉 힘 크기(스칼라)
 

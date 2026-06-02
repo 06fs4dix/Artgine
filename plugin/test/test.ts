@@ -1,15 +1,17 @@
+import { CRPAuto, CRPMgr } from "../../artgine/app/canvas/CRPMgr.js";
+import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
+import { CSubject } from "../../artgine/app/subject/CSubject.js";
 import { IRecycle } from "../../artgine/basic/Basic.js";
 import { CClass } from "../../artgine/basic/CClass.js";
 import { CEvent } from "../../artgine/basic/CEvent.js";
 import { CObject } from "../../artgine/basic/CObject.js";
 import { CPool } from "../../artgine/basic/CPool.js";
-import { CPaint2D } from "../../artgine/canvas/component/paint/CPaint2D.js";
-import { CRPAuto, CRPMgr } from "../../artgine/canvas/CRPMgr.js";
-import { CSubject } from "../../artgine/canvas/subject/CSubject.js";
+
 import { CInput } from "../../artgine/system/CInput.js";
+import { CCondition } from "../../artgine/util/CCondition.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
 import { CPlugin } from "../../artgine/util/CPlugin.js";
-import { CCondition } from "../../artgine/util/CStateMachine.js";
+
 
 export class CTest extends CObject
 {

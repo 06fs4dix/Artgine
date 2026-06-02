@@ -1,4 +1,5 @@
 import { CFileDB, CJSON } from '../basic/CJSON.js';
+import { CPath } from '../basic/CPath.js';
 import { CORM, CORMCondition, CORMField, CORMOption } from './CORM.js';
 
 
@@ -7,7 +8,7 @@ export class CNe extends CORM
     private mClient: any = null;
     private mDb: any = null;
     private mCollections: Map<string, any[]> = new Map();
-    private mDbPath: string = "db";
+    private mDbPath: string = CPath.PHPC() + "db";
 
     async Init(): Promise<void> 
     {

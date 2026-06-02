@@ -137,7 +137,7 @@ export class CDownloadServer extends CServerRouter {
                 return JSON.stringify({ ok: false, msg: 'yt-dlp 설치 중입니다. 잠시 후 다시 시도하세요.' });
 
             return new Promise<string>((resolve) => {
-                const proc = spawn(YTDLP_PATH, ['--dump-json', '--no-playlist', url]);
+                const proc = spawn(YTDLP_PATH, ['--dump-json', '--no-playlist', '--js-runtimes', 'node', url], { env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' } });
                 let out = '';
                 let err = '';
                 proc.stdout.on('data', (d: Buffer) => out += d.toString());
@@ -180,12 +180,14 @@ export class CDownloadServer extends CServerRouter {
                 } else {
                     const args: string[] = format === 'mp3'
                         ? ['-x', '--audio-format', 'mp3', '--ffmpeg-location', BIN_DIR,
+                           '--js-runtimes', 'node',
                            '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url]
                         : ['-f', 'bestvideo+bestaudio/best', '--merge-output-format', 'mp4',
                            '--ffmpeg-location', BIN_DIR,
+                           '--js-runtimes', 'node',
                            '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url];
 
-                    const proc = spawn(YTDLP_PATH, args);
+                    const proc = spawn(YTDLP_PATH, args, { env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' } });
                     let lastFile = '';
 
                     proc.stdout.on('data', (d: Buffer) => {

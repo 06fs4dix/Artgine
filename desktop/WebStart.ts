@@ -19,5 +19,5 @@ if(await gWebServer.Init())
     process.exit(1);
 }
 
-console.log(`\n서버 시작`);
-console.log(`http://localhost:${port}${pathname}/proj/Home/Home.html\n`);
+console.log(`\nServerStart`);
+console.log(`http://localhost:${port}${pathname}\n`);

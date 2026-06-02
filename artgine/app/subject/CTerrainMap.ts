@@ -59,7 +59,6 @@ export class CTerrainMap extends CSubject
 
         this.mHeightBuf.Reset(new CVec3(1024,1024,1),10);
         this.mSplatBuf.Reset(new CVec3(1024,1024,1),10);
-        this.mSplatBuf.mBuffer.fill(0x000000FF);
         this.mCollider = this.PushComp(new CColliderTerrain(this));
     }
     ClearAll() {
@@ -162,8 +161,11 @@ export class CTerrainMap extends CSubject
             const tex=this.mSplatBuf.GetTexture(); 
             tex.mModifyEvent=new CEvent(async ()=>{
                 await CClass.CallAsync(null,"BufferTool",[tex.GetBuf()[0],new CVec3(tex.GetWidth(),tex.GetHeight(),1),true]);
+                // CImgPro.NormalizedBlend(tex, 10);
+                // this.GetFrame().Ren().BuildTexture(tex);
                 this.mSplatBuf.SetTexture(tex);
             });
+            // CImgPro.NormalizedBlend(tex, 10);
             this.GetFrame().Res().Push(this.mSplatTexture,tex);
         }
 

@@ -3,10 +3,17 @@ import { CDOM } from "../artgine/basic/CDOM.js";
 import { CWebView } from "../artgine/system/CWebView.js";
 var gIpInfo;
 async function Init() {
+    const appJSON = JSON.parse(await CWebView.Call("LoadAppJSON"));
     gIpInfo = JSON.parse(await CWebView.Call("GetIPInfo"));
     CDOM.IDValue("url_txt", gIpInfo.url);
     CDOM.IDValue("publicIP_txt", gIpInfo.public);
     CDOM.IDValue("privateIP_txt", gIpInfo.private);
+    CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
+    CDOM.IDValue("auth_rootpath_txt", appJSON.rootPath ?? "");
+    document.querySelectorAll("#authRoot_collapse input").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
+        password: document.getElementById("auth_password_txt").value,
+        rootPath: document.getElementById("auth_rootpath_txt").value,
+    })));
 }
 Init();
 function copyToClipboard(inputId) {

@@ -108,7 +108,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0)
                 {
                     var sp1 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll*2.0 + f16Bias) >= sp1.z ? 0.0 : 1.0);
+                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll*4.0 + f16Bias) >= sp1.z ? 0.0 : 1.0);
                 }
             }
 
@@ -117,7 +117,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0)
                 {
                     var sp2 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
-                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll*4.0 + f16Bias) >= sp2.z ? 0.0 : 1.0);
+                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll*16.0 + f16Bias) >= sp2.z ? 0.0 : 1.0);
                 }
             }
         }

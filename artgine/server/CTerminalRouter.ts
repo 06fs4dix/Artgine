@@ -70,7 +70,8 @@ function dbg(_msg: string) { /* disabled */ }
 
 // ttyd 바이너리 정보 및 다운로드 경로 설정
 const TTYD_VERSION = "1.7.7";
-const BIN_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'external', 'bin');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BIN_DIR = path.resolve(__dirname, '..', 'external', 'bin');
 
 function getTtydFileName() {
     if (IS_WIN) return 'ttyd.win32.exe';
@@ -132,10 +133,12 @@ type TtydEntry = {
     readOnlyClients: Set<WebSocket>; // connected browser clients (read-only)
     buffer: Buffer[];               // output history
     bufferSize: number;
-    lastActivity: number;
-    lastLine: string;
+    updatedAt: number;
+    lastMsg: string;
+    _inputBuf: string;
     lastContent: string;
-    lineChanged: boolean;
+    busy: boolean;
+    _cmdSent: boolean;
     createdAt: number;
     key?: string;
     workingDir?: string;
@@ -181,7 +184,7 @@ async function _schedTick(e: ScheduleEntry) {
         return;
     }
     const wsState = target.serverWs ? target.serverWs.readyState : -1;
-    const idle = Date.now() - target.lastActivity;
+    const idle = Date.now() - target.updatedAt;
     schedLog(`  → terminal found wsState=${wsState}(OPEN=1) idleMs=${idle}`);
     if (!target.serverWs || target.serverWs.readyState !== WebSocket.OPEN) {
         schedLog(`  → SKIP: ws not open`);
@@ -361,10 +364,12 @@ async function startTtyd(mode: 'cmd' | CAI.eProvider, cwd?: string, allow?: stri
         readOnlyClients: new Set(),
         buffer: [],
         bufferSize: 0,
-        lastActivity: now,
-        lastLine: '',
+        updatedAt: now,
+        lastMsg: '',
+        _inputBuf: '',
         lastContent: '',
-        lineChanged: false,
+        busy: false,
+        _cmdSent: false,
         createdAt: now,
         workingDir: spawnCwd,
     };
@@ -406,7 +411,7 @@ function connectToTtyd(port: number, retries = 20): void {
 
         // Track last activity and last line (output messages: first byte 0x30 = '0')
         if (buf.length > 1 && buf[0] === 0x30) {
-            entry.lastActivity = Date.now();
+            entry.updatedAt = Date.now();
             const text = buf.slice(1).toString('utf8');
             const stripped = text
                 .replace(/\x1b\[[?!>]?[0-9;]*[a-zA-Z]/g, '')   // CSI (incl. DEC private: ESC[?...h/l)
@@ -415,12 +420,11 @@ function connectToTtyd(port: number, retries = 20): void {
             const lines = stripped.split('\n').filter(l => l.trim());
             if (lines.length > 0) {
                 const newContent = lines.map(l => l.trim()).join('\n').substring(0, 500);
-                entry.lastLine = lines[lines.length - 1].trim().substring(0, 200);
                 if (newContent !== entry.lastContent) {
                     dbg(`[${port}] content changed`);
                     entry.lastContent = newContent;
-                    if (!isCodexYesNoPrompt(entry, newContent)) {
-                        entry.lineChanged = true;
+                    if (entry._cmdSent && !isCodexYesNoPrompt(entry, newContent)) {
+                        entry.busy = true;
                     }
                 } else {
                     dbg(`[${port}] content same`);
@@ -577,14 +581,15 @@ export class CTerminalRouter extends CAuthServer {
             if (!isValidToken(getToken(_req))) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
             const sessions: any[] = [];
             for (const [port, entry] of gPortProcs) {
-                const lineChanged = entry.lineChanged;
-                entry.lineChanged = false;
-                dbg(`[${port}] POLL → lineChanged=${lineChanged}, lastLine="${entry.lastLine}"`);
+                const busy = entry.busy;
+                entry.busy = false;
+                if (!busy && Date.now() - entry.updatedAt >= 10_000) entry._cmdSent = false;
+                dbg(`[${port}] POLL → busy=${busy}, lastMsg="${entry.lastMsg}"`);
                 sessions.push({
-                    port, mode: entry.mode, key: entry.key, lastLine: entry.lastLine,
-                    lastActivity: entry.lastActivity, createdAt: entry.createdAt,
+                    port, mode: entry.mode, key: entry.key, lastMsg: entry.lastMsg,
+                    updatedAt: entry.updatedAt, createdAt: entry.createdAt,
                     alive: entry.serverWs !== null && entry.serverWs.readyState === WebSocket.OPEN,
-                    lineChanged, workingDir: entry.workingDir,
+                    busy, workingDir: entry.workingDir,
                 });
             }
             _res.json({ ok: true, sessions });
@@ -742,8 +747,29 @@ export class CTerminalRouter extends CAuthServer {
                     } else {
                         entry.clients.add(clientWs);
                         clientWs.on('message', (data) => {
+                            const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
                             if (entry.serverWs && entry.serverWs.readyState === WebSocket.OPEN)
-                                entry.serverWs.send(data as Buffer);
+                                entry.serverWs.send(buf);
+                            // 유저 입력(0x30 prefix) 누적 → Enter 시 lastMsg 확정
+                            if (buf.length > 1 && buf[0] === 0x30) {
+                                const raw = buf.slice(1).toString('utf8');
+                                // 이스케이프 시퀀스 제거 (CSI, SS3, 기타 2바이트)
+                                const text = raw
+                                    .replace(/\x1b\[[0-9;]*[a-zA-Z~]/g, '')
+                                    .replace(/\x1bO[a-zA-Z]/g, '')
+                                    .replace(/\x1b./g, '');
+                                for (const ch of text) {
+                                    if (ch === '\r' || ch === '\n') {
+                                        const cmd = entry._inputBuf.trim();
+                                        if (cmd) { entry.lastMsg = cmd.substring(0, 200); entry._cmdSent = true; }
+                                        entry._inputBuf = '';
+                                    } else if (ch === '\x7f' || ch === '\x08') {
+                                        entry._inputBuf = entry._inputBuf.slice(0, -1);
+                                    } else if (ch >= ' ') {
+                                        entry._inputBuf += ch;
+                                    }
+                                }
+                            }
                         });
                         clientWs.on('close', () => { entry.clients.delete(clientWs); });
                         clientWs.on('error', () => { entry.clients.delete(clientWs); });

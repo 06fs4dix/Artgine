@@ -37,6 +37,27 @@
 						<button class="btn btn-outline-secondary" id="publicIP_btn">Copy</button>
 					</div>
 				</div>
+				<div class="accordion mb-3" id="authRootAccordion">
+					<div class="accordion-item">
+						<h2 class="accordion-header">
+							<button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#authRoot_collapse">
+								Extra Server Settings
+							</button>
+						</h2>
+						<div id="authRoot_collapse" class="accordion-collapse collapse" data-bs-parent="#authRootAccordion">
+							<div class="accordion-body py-2">
+								<div class="mb-2">
+									<label class="form-label">Password</label>
+									<input type="password" class="form-control" id="auth_password_txt">
+								</div>
+								<div class="mb-2">
+									<label class="form-label">RootPath</label>
+									<input type="text" class="form-control" id="auth_rootpath_txt">
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div class="text-center">
 					<button class="btn btn-primary" id="browser_btn">Browser</button>
 				</div>

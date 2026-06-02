@@ -12,12 +12,12 @@ export class CMapBuf extends CObject
     mBuffer : Uint32Array=null;
     mSize : number=0;
     mCount : CVec3=new CVec3(1,1,1);
-    Reset(_count : CVec3,_size : number)
+        Reset(_count : CVec3,_size : number,_default:number=0x000000FF)
     {
         this.mSize=_size;
         this.mCount=_count;
         this.mBuffer=new Uint32Array(this.mCount.x*this.mCount.y*this.mCount.z);
-        this.mBuffer.fill(0);
+        this.mBuffer.fill(_default);
     }
     RGB(_index: CCIndex | number, _data: number = null)
     {

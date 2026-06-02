@@ -333,9 +333,6 @@ ipcMain.handle("VSCodeRun", async (_event) => {
 	return false;
 });
 ipcMain.handle("AICreate", async (_event, _selected: string[]) => {
-	const roleFile   = path.join(process.cwd(), 'ai', 'ROLE.md');
-	const ignoreFile = path.join(process.cwd(), 'ai', '.ignore');
-	if (!fs.existsSync(roleFile) || !fs.existsSync(ignoreFile)) return false;
 	for (const key of _selected)
 		CreateRole(key);
 	return true;
@@ -614,7 +611,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 			buttons: ['OK'],
 			defaultId: 0,
 			title: 'info',
-			message: '수동으로 만들었습니다.폴더안 chrome_start.bat으로 직접 실행하세요!',
+			message: 'No <!--EntryPoint--> marker found. Recognized as manually created. Auto code generation will not work.',
 		});
 		return "";
 	}
@@ -980,6 +977,14 @@ ipcMain.handle("LoadProjJSON", async (_event,_json: {
 });
 ipcMain.handle("LoadAppJSON", async (_event,) => {
 	return JSON.stringify(gAppJSON);
+});
+ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string, rootPath: string }) => {
+	gAppJSON.password = _json.password;
+	gAppJSON.rootPath = _json.rootPath;
+	if (gAppRootPath)
+		CFile.Save(gAppJSON, CPath.PHPC() + "Main.json");
+	else
+		CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
 });
 ipcMain.handle("LoadPlugin", async (_event,) => 
 {
