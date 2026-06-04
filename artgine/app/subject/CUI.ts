@@ -51,7 +51,8 @@ export class CUI extends CSubject
 	public mLastPickMouse : CRayMouse=null;
 	public mPressPos :CVec3=new CVec3();
 	mFirstRayMs : CRayMouse=null;
-	mPressTraking=false;
+	mPressTraking : number = 0;
+	mTrackPos2 : {x:number,y:number}|null = null;
 	//mOverlay=false;
 	mBoundScale=1;
 	mDbClick=0;
@@ -149,9 +150,9 @@ export class CUI extends CSubject
 	{
 		this.mCamZoomResize=_enable;
 	}
-	SetPressTraking(_enable : boolean)
+	SetPressTraking(_val : number)
 	{
-		this.mPressTraking=_enable;
+		this.mPressTraking=_val;
 	}
 	
 	SetDebugMode(_enable : boolean)
@@ -188,6 +189,11 @@ export class CUI extends CSubject
 	GetCl() { return this.mUICL;}
 	
 	GetPressPos()	{	return this.mPressPos; }
+	GetTrackDotOffset() : {x:number,y:number}|null
+	{
+		if(this.mPressTraking!=2 || this.mFirstRayMs==null) return null;
+		return this.mFirstRayMs.mouse;
+	}
 	
 	
 	GetPick() { return this.mPick;	 }
@@ -550,11 +556,23 @@ export class CUI extends CSubject
 		{
 			let m=this.mFrame.Input().GetMouseKey(this.mLastPickMouse.mouse.key);
 			//마우스키가 없으면 끝.누르고 있어야하고,트레킹 모드고,첫 누름유지
-			if(m!=null && m.press && this.mPressTraking && this.mFirstRayMs!=null)
+			if(m!=null && m.press && this.mPressTraking>0 && this.mFirstRayMs!=null)
 			{
 				ev=CEvent.eType.Press;
 				this.mLastPickMouse.mouse.Import(m);
 				this.mPick=this.mLastPickMouse;
+				if(this.mPressTraking==2)
+				{
+					if(this.mTrackPos2!=null && this.mTrackPos2.x==m.x && this.mTrackPos2.y==m.y)
+					{
+						let dmx=m.x-this.mFirstRayMs.mouse.x;
+						let dmy=m.y-this.mFirstRayMs.mouse.y;
+						let ctr=this.mFirstRayMs.ray.GetOriginal();
+						this.mFirstRayMs.mouse.Import(m);
+						this.mFirstRayMs.ray.SetOriginal(new CVec3(dmx+ctr.x,dmy+ctr.y));
+					}
+					this.mTrackPos2={x:m.x,y:m.y};
+				}
 			}
 			else
 			{
@@ -617,7 +635,7 @@ export class CUI extends CSubject
 					//CConsol.Log("Click"+this.Key());
 				}
 			}
-			else if(ev==CEvent.eType.Null && this.mPressTraking)
+			else if(ev==CEvent.eType.Null && this.mPressTraking>0)
 			{
 				this.mLastEvent=CEvent.eType.Click;
 				this.mPressPos=lastPressPos;
@@ -633,6 +651,7 @@ export class CUI extends CSubject
 		if(this.mFirstRayMs!=null && ev==CEvent.eType.Null)
 		{
 			this.mFirstRayMs=null;
+			this.mTrackPos2=null;
 		}
 			
 		if(ev==CEvent.eType.Press)

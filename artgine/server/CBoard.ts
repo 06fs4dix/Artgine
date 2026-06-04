@@ -115,7 +115,7 @@ export class CBoard //implements IListener
 		
 		this.mTarget.innerHTML="";
 		this.mTarget.append(CDOM.DataToDom(html));
-		CFecth.Exe(CPath.PHPC()+"CBoard/List",{category:this.mCategory,limitOffset:_offsetList,limitCount:_listCount},"json").
+		CFecth.Exe(CPath.WebRootUrl()+"CBoard/List",{category:this.mCategory,limitOffset:_offsetList,limitCount:_listCount},"json").
 		then((_result : Array<{"_offset","_nick","_subject","_datetime"}>)=>{
 			var colArr=_result;
 			//var colHtml=[];
@@ -135,7 +135,7 @@ export class CBoard //implements IListener
 			//CDOM.ID("Board_tbody").
 			
 		});
-		CFecth.Exe(CPath.PHPC()+"CBoard/ListCount",{category:this.mCategory},"json").then((_result : Array<{"COUNT(*)"}>)=>{
+		CFecth.Exe(CPath.WebRootUrl()+"CBoard/ListCount",{category:this.mCategory},"json").then((_result : Array<{"COUNT(*)"}>)=>{
 			let allCount=Number(_result[0]["COUNT(*)"]);
 			var div=Math.floor((allCount/_listCount)+0.99);
 			var minDiv=Math.floor(_offsetList/_listCount)-2;
@@ -187,7 +187,7 @@ export class CBoard //implements IListener
 		};
 		let DeleteClick=()=>{
 			
-				CFecth.Exe(CPath.PHPC()+"CBoard/Delete",{offset:CDOM.IDValue("Offset_num")}).then(()=>{
+				CFecth.Exe(CPath.WebRootUrl()+"CBoard/Delete",{offset:CDOM.IDValue("Offset_num")}).then(()=>{
 					
 					this.List(-1,this.mListCount);
 				});
@@ -215,7 +215,7 @@ export class CBoard //implements IListener
 		this.mTarget.innerHTML="";
 		this.mTarget.append(CDOM.DataToDom(html));
 		
-		CFecth.Exe(CPath.PHPC()+"CBoard/Read",{offset:_offset},"json").
+		CFecth.Exe(CPath.WebRootUrl()+"CBoard/Read",{offset:_offset},"json").
 		then(async(_result : Array<{"_subject","_content","_publicKey","_offset"}>)=>{
 			
 			CDOM.ID("Subject_span").innerHTML=_result[0]._subject;
@@ -276,7 +276,7 @@ export class CBoard //implements IListener
 				if(this.mEditer!=null)	content=this.mEditer.getHTML();
 
 
-				CFecth.Exe(CPath.PHPC()+"CBoard/Write",{category:this.mCategory,publicKey:publicKey,
+				CFecth.Exe(CPath.WebRootUrl()+"CBoard/Write",{category:this.mCategory,publicKey:publicKey,
 					offset:CDOM.IDValue("Offset_num"),subject:CDOM.IDValue("Subject_txt"),
 					nick:CDOM.IDValue("Nick_txt"),content:content}).then(()=>{
 				
@@ -302,7 +302,7 @@ export class CBoard //implements IListener
 					if(this.mEditer!=null)	content=this.mEditer.getHTML();
 	
 	
-					return CFecth.Exe(CPath.PHPC()+"CBoard/Write",{category:this.mCategory,publicKey:publicKey,
+					return CFecth.Exe(CPath.WebRootUrl()+"CBoard/Write",{category:this.mCategory,publicKey:publicKey,
 						offset:CDOM.IDValue("Offset_num"),subject:CDOM.IDValue("Subject_txt"),
 						nick:CDOM.IDValue("Nick_txt"),content:content});
 						
@@ -341,7 +341,7 @@ export class CBoard //implements IListener
 		this.mTarget.append(CDOM.DataToDom(html));
 		if(_offset!=-1)
 		{
-			CFecth.Exe(CPath.PHPC()+"CBoard/Modify",{offset:_offset},"json").
+			CFecth.Exe(CPath.WebRootUrl()+"CBoard/Modify",{offset:_offset},"json").
 			then((_result : Array<{"_subject","_content","_nick","_offset"}>)=>{
 				
 				CDOM.IDValue("Subject_txt",_result[0]._subject);

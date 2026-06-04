@@ -63,6 +63,7 @@ export class CPad extends CSubject
     mPressOnStick=true;
     mPadScale=1;
     mKeyType : eKeyType = CPad.eKeyType.Arrow;
+    mRefDot : HTMLElement = null;
 
     
     constructor()
@@ -407,7 +408,7 @@ export class CPad extends CSubject
                 
                 
                 //btn.SetSize(100*this.mPadScale,100*this.mPadScale);
-                btn.SetPressTraking(true);
+                btn.SetPressTraking(1);
                 this.PushChild(btn);
                 this.mStick.push(btn);
 
@@ -447,7 +448,7 @@ export class CPad extends CSubject
                     btn.SetAnchorX(CUI.eAnchor.Max,50);
                     btn.SetAnchorY(CUI.eAnchor.Min,100+i*100*this.mPadScale);
                     btn.SetHover(true);
-                    btn.SetPressTraking(true);
+                    btn.SetPressTraking(1);
                     
                     
                     
@@ -528,9 +529,31 @@ export class CPad extends CSubject
 
 
                 }
-                
-                
+
+
             }
+
+            // Mode 2 기준점 dot 시각화
+            if(this.mStick.length>0 && this.mStick[0].mPressTraking==2)
+            {
+                if(this.mRefDot==null)
+                {
+                    let d=document.createElement('div');
+                    d.style.cssText='position:fixed;width:12px;height:12px;border-radius:50%;background:rgba(255,220,0,0.85);border:2px solid white;pointer-events:none;transform:translate(-50%,-50%);display:none;z-index:9999;';
+                    document.body.appendChild(d);
+                    this.mRefDot=d;
+                }
+                let offset=this.mStick[0].GetTrackDotOffset();
+                if(offset!=null)
+                {
+                    this.mRefDot.style.left=offset.x+'px';
+                    this.mRefDot.style.top=offset.y+'px';
+                    this.mRefDot.style.display='block';
+                }
+                else
+                    this.mRefDot.style.display='none';
+            }
+
             let up = [], down = [], left = [], right = [];
             let space = [CInput.eKey.Space];
             let lctl = [CInput.eKey.LControl];

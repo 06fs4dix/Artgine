@@ -107,10 +107,15 @@ export class CPath
 	{
 		return location.origin+location.pathname;
 	}
-	static PHPC()
+	static WebRootUrl()
 	{
 		if(g_root==null)
-			g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context);
+		{
+			if(CUtil.IsNode())
+				g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context);
+			else
+				g_root=new URL("../../", import.meta.url).href;
+		}
 		return g_root;
 	}
 	// static PHPR()
@@ -119,7 +124,7 @@ export class CPath
 	// 		g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Resources);
 	// 	return g_root;
 	// }
-	static PHPCR()
+	static WebPageUrl()
 	{
 		return CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context+CPath.eUrl.Route);
 	}
@@ -132,11 +137,7 @@ export class CPath
 				str = process.cwd().replace(/\\/g, "/").replace(/\/?$/, "/");
 			}
 			return str;
-
-
-			
-			// return str;
-			
+	
 		}
 
 
@@ -217,6 +218,18 @@ export class CPath
 		}
 		
 		return str;
+	}
+	static ArtgineRootPath(): string
+	{
+		if (CUtil.IsNode())
+			return path.resolve(__dirname, "../..").replace(/\\/g, "/").replace(/\/?$/, "/");
+		return new URL("../../", import.meta.url).href;
+	}
+	static WorkingPath(): string
+	{
+		if (CUtil.IsNode())
+			return process.cwd().replace(/\\/g, "/").replace(/\/?$/, "/");
+		return location.href.replace(/[^/]*$/, "");
 	}
 	static LocalToWebPath(_A,_B){
 		var src1 = _A.replace(/\\/g, '/');

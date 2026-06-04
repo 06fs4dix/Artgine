@@ -73,7 +73,7 @@ export class CAtelier
 		this.mFrame.PushEvent(CEvent.eType.Load,async ()=>{
 
 
-			let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+			let data=CStorage.Get(CPath.WebPageUrl()+"Save.json");
 			if(CWebView.IsWebView()==CWebView.eType.None && data!=null)
 			{
 				let json:{script,canvas,brash}=JSON.parse(data);

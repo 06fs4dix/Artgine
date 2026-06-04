@@ -383,7 +383,7 @@ export class CSing
                 //window.location.href = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=ad6b11b2c011ad95aadb7d8ec5658d13&redirect_uri='+CPath.PHPC()+"OAuth"+
                 //"&state=kakao_"+Math.trunc(Math.random()*100000);
                 window.location.href = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=ad6b11b2c011ad95aadb7d8ec5658d13&redirect_uri='+
-                    CPath.PHPC()+"OAuth/Kakao&state="+state;
+                    CPath.WebRootUrl()+"OAuth/Kakao&state="+state;
             };
             var kakaoBtn=document.getElementById(_option.mKakaoBtn);
             if(kakaoBtn!=null)
@@ -406,7 +406,7 @@ export class CSing
                 // window.location.href = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=UDp9HJZoGIarIZglhM2T&redirect_uri='+CPath.PHPC()+"OAuth"+
                 // "&state=naver_"+Math.trunc(Math.random()*100000);
                 window.location.href = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=UDp9HJZoGIarIZglhM2T&redirect_uri='+
-                    CPath.PHPC()+"OAuthNaver&state="+state;
+                    CPath.WebRootUrl()+"OAuthNaver&state="+state;
             };
             var kakaoBtn=document.getElementById(_option.mNaverBtn);
             if(kakaoBtn!=null)
@@ -429,7 +429,7 @@ export class CSing
                 window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code"+
                     "&client_id=105997798370-insqhtjufjldp899c44ekbandk4b7jrn.apps.googleusercontent.com"+
                     "&scope=https://www.googleapis.com/auth/userinfo.email"+
-                    "&redirect_uri="+CPath.PHPC()+"/OAuthGoogle&state="+state;
+                    "&redirect_uri="+CPath.WebRootUrl()+"/OAuthGoogle&state="+state;
                     
 
                 

@@ -16,7 +16,10 @@ if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b
 )
-
+if not exist "desktop\Start.js" (
+    echo desktop/Start.js not found. Installing submodules...
+    git submodule update --init --recursive
+)
 echo Start... desktop/Start.js
 node desktop/Start.js
 pause

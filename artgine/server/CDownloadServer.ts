@@ -13,8 +13,9 @@ import { CFile } from '../system/CFile.js';
 import { CConsol } from '../basic/CConsol.js';
 import { Request, Response } from 'express';
 import { GetAppJSON } from '../../desktop/MainFunc.js';
+import { CPath } from '../basic/CPath.js';
 
-const BIN_DIR     = path.resolve(process.cwd(), 'artgine', 'external', 'bin');
+const BIN_DIR     = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
 const YTDLP_PATH  = path.join(BIN_DIR, 'yt-dlp.exe');
 const FFMPEG_PATH = path.join(BIN_DIR, 'ffmpeg.exe');
 

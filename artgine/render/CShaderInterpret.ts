@@ -201,7 +201,7 @@ export class CShaderInterpret
 			{
 				var fname = _fileName;
 				if (fname.indexOf(":") == -1) {
-					fname = CPath.PHPCR() + source;
+					fname = CPath.WebPageUrl() + source;
 				}
 				var rpath = CString.PathSub(fname);
 				source="";
@@ -221,7 +221,7 @@ export class CShaderInterpret
 			{
 				var fname = _fileName;
 				if (fname.indexOf(":") == -1) {
-					fname = CPath.PHPCR() + source;
+					fname = CPath.WebPageUrl() + source;
 				}
 				var rpath = CString.PathSub(fname);
 				source="";

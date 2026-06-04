@@ -43,7 +43,7 @@ export class CUtilWeb {
 		return editor;
 	}
 	static Window(_title = "Window", _width = 640, _height = 480) {
-		return window.open(CPath.PHPC() + "lib/artgine/Window.html", _title, "width=" + _width + ",height" + _height + "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes");
+		return window.open(CPath.WebRootUrl() + "lib/artgine/Window.html", _title, "width=" + _width + ",height" + _height + "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes");
 	}
 	static Parameter(_name, _value = null) {
 		var source = window['g_requestParameter'];
@@ -122,7 +122,7 @@ export class CUtilWeb {
 	static async TSImport(_source: string, _monaco = true, _github = false, _filePath: string = null) {
 		let importPathArr = ExtractImportPaths(_source, false);
 		const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
-		const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.PHPC()).replace(/\/$/, "");
+		const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootUrl()).replace(/\/$/, "");
 
 		const processedPaths = new Map<string, string>();
 
@@ -185,7 +185,7 @@ export class CUtilWeb {
 		}
 
 		if (gMonaco) {
-			(require as any).config({ paths: { vs: CPath.PHPC() + '/artgine/external/legacy/monaco-editor/min/vs' } });
+			(require as any).config({ paths: { vs: CPath.WebRootUrl() + '/artgine/external/legacy/monaco-editor/min/vs' } });
 			gMonaco = false;
 		}
 
@@ -324,7 +324,7 @@ export class CUtilWeb {
 				gTSLoaded = true;
 				await new Promise((resolve, reject) => {
 					const script = document.createElement("script");
-					script.src = CPath.PHPC() + "artgine/external/legacy/typescript.js";
+					script.src = CPath.WebRootUrl() + "artgine/external/legacy/typescript.js";
 					script.onload = resolve;
 					script.onerror = reject;
 					document.head.appendChild(script);
@@ -438,7 +438,7 @@ upsertStyle(`mdr-style-2-${scopeClass}`, `
 	  
     }
   `, host);
-			CPath.PHPC()
+			CPath.WebRootUrl()
 		// ---------- 동적 import ----------
 		const { marked } = await import('../external/esnext/md/marked.esm.js');
 		const hljs = (await import('../external/esnext/md/highlight.min.js')).default;
@@ -487,7 +487,7 @@ upsertStyle(`mdr-style-2-${scopeClass}`, `
 		{
 			const GH_BASE_NO_SLASH = "https://06fs4dix.github.io/Artgine";
 			const GH_BASE = GH_BASE_NO_SLASH + "/";
-			const LOCAL_BASE_RAW = CPath.PHPC();
+			const LOCAL_BASE_RAW = CPath.WebRootUrl();
 			// LOCAL_BASE: 끝이 항상 "/"가 되도록 보정
 			const LOCAL_BASE = LOCAL_BASE_RAW.endsWith("/") ? LOCAL_BASE_RAW : (LOCAL_BASE_RAW + "/");
 

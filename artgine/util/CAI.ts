@@ -27,10 +27,10 @@ const _roleTargets: Record<string, [string, string]> = {
 
 export class CAI {
     static readonly IS_WIN = process.platform === 'win32';
-    static readonly EMPTY_MCP_PATH = path.resolve(process.cwd(), 'proj', 'Home', 'AI', 'empty-mcp.json');
+    static readonly EMPTY_MCP_PATH = path.resolve(CPath.WorkingPath(), 'proj', 'Home', 'AI', 'empty-mcp.json');
 
     static AIDir(): string {
-        return CPath.PHPC() + "ai";
+        return CPath.WorkingPath() + "ai";
     }
 
     // ---- Role ----
@@ -40,7 +40,7 @@ export class CAI {
      * targetDir 있음: 루트의 provider MD → targetDir에 복사. 이미 있으면 건너뜀. 복사한 경로 반환(null=건너뜀/실패)
      */
     static CreateRole(provider: CAI.eProvider, targetDir?: string): boolean | string | null {
-        const cwd = process.cwd();
+        const cwd = CPath.WorkingPath();
         const target = _roleTargets[provider];
         if (!target) return false;
         const [mdName, ignoreName] = target;
@@ -104,7 +104,7 @@ export class CAI {
             bin = resolved;
         } else {
             const ext = CAI.IS_WIN ? '.cmd' : '';
-            bin = path.join(process.cwd(), 'node_modules', '.bin', provider + ext);
+            bin = path.join(CPath.WorkingPath(), 'node_modules', '.bin', provider + ext);
             if (!fs.existsSync(bin)) return { id: provider, available: false, version: '', models: [] };
         }
         const version = await new Promise<string>((resolve) => {
@@ -129,7 +129,7 @@ export class CAI {
         if (info.available) return true;
         // Windows claude: .exe.old.* 파일이 있으면 rename으로 복구 시도
         if (CAI.IS_WIN && provider === CAI.eProvider.claude) {
-            const pkgBin = path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
+            const pkgBin = path.join(CPath.WorkingPath(), 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
             const binDir = path.dirname(pkgBin);
             if (fs.existsSync(binDir) && !fs.existsSync(pkgBin)) {
                 const oldFile = fs.readdirSync(binDir).find(f => f.startsWith('claude.exe.old.'));
@@ -163,7 +163,7 @@ export class CAI {
             const pkg = pkgs[provider];
             if (!pkg) { resolve(false); return; }
             console.log(`[CAI] Installing ${pkg}...`);
-            const child = spawn('npm', ['install', pkg], { shell: true, stdio: 'inherit', cwd: process.cwd() });
+            const child = spawn('npm', ['install', pkg], { shell: true, stdio: 'inherit', cwd: CPath.WorkingPath() });
             child.on('error', () => resolve(false));
             child.on('close', (code) => {
                 if (code === 0) { console.log(`[CAI] ${pkg} installed.`); resolve(true); }
@@ -336,7 +336,7 @@ export class CAI {
 
     private static _resolveBin(name: string): string[] {
         const ext     = CAI.IS_WIN ? '.cmd' : '';
-        const binPath = path.join(process.cwd(), 'node_modules', '.bin', name + ext);
+        const binPath = path.join(CPath.WorkingPath(), 'node_modules', '.bin', name + ext);
         if (fs.existsSync(binPath)) {
             // Windows: 경로에 비ASCII(한글 등)가 있으면 ttyd C 바이너리가 cmd.exe 전달 시 깨짐 → npx 사용
             if (CAI.IS_WIN && /[^\x00-\x7F]/.test(binPath)) return ['npx', name];

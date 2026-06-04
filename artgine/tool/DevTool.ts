@@ -195,12 +195,12 @@ let gScriptViewer : CMonacoViewer=null;
 export async function InitDevToolScriptViewer(_github)
 {
     let json={brash:"",canvas:[],script:""};
-    let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+    let data=CStorage.Get(CPath.WebPageUrl()+"Save.json");
     if(data!=null)  json=JSON.parse(data);
 
     if(json.script=="")
     {
-        let buf=await CFile.Load(CPath.PHPC()+"desktop/Template/RuntimeScript.ts")
+        let buf=await CFile.Load(CPath.WebRootUrl()+"desktop/Template/RuntimeScript.ts")
         json.script=CUtil.ArrayToString(buf);
     }
     
@@ -217,7 +217,7 @@ export async function InitDevToolScriptViewer(_github)
     
     ));
     CDOM.ID("mvSample_btn").addEventListener("click",async ()=>{
-        new CMDViewer(CPath.PHPC()+"artgine/tool/RunTimeSample.md");
+        new CMDViewer(CPath.WebRootUrl()+"artgine/tool/RunTimeSample.md");
     });
        
     
@@ -257,11 +257,11 @@ export async function InitDevToolScriptViewer(_github)
     });
     CDOM.ID("mvSave_btn").addEventListener("click",async ()=>{
         
-        data=CStorage.Get(CPath.PHPCR()+"Save.json");
+        data=CStorage.Get(CPath.WebPageUrl()+"Save.json");
         if(data!=null)  json=JSON.parse(data);
 
         json.script=gScriptViewer.GetSource();
-        CStorage.Set(CPath.PHPCR()+"Save.json",JSON.stringify(json));
+        CStorage.Set(CPath.WebPageUrl()+"Save.json",JSON.stringify(json));
         CAlert.Info(CLan.Get("Script0","Script Save! Executed at program startup!"));
         //let moudle=await CScript.Build("Test.ts",mv.GetSource());
     });
@@ -2297,7 +2297,7 @@ function DevToolLeft()
                 CConfirm.List("Save Type Select!",[
                     ()=>{
                         let json={brash:"",canvas:[],script:""};
-                        let data=CStorage.Get(CPath.PHPCR()+"Save.json");
+                        let data=CStorage.Get(CPath.WebPageUrl()+"Save.json");
                         if(data!=null)  json=JSON.parse(data);
 
                         json.brash=gAtl.Brush().ToStr();
@@ -2310,7 +2310,7 @@ function DevToolLeft()
                                 json.canvas.push(value.ToStr());
                             value.SetCameraKey("Dev");
                         }
-                        CStorage.Set(CPath.PHPCR()+"Save.json",JSON.stringify(json));
+                        CStorage.Set(CPath.WebPageUrl()+"Save.json",JSON.stringify(json));
                         
                         CAlert.Info("All Saved!");
                     },

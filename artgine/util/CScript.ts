@@ -4,6 +4,7 @@ import { CObject } from "../basic/CObject.js";
 import { CUtil } from "../basic/CUtil.js";
 import { CTimer } from "../system/CTimer.js";
 import { CUtilWeb } from "./CUtilWeb.js";
+import { CPath } from "../basic/CPath.js";
 
 
 var gScriptMap=new Map<string,any>();
@@ -46,7 +47,7 @@ export class CScript extends CObject
                         _source = "//@sourceURL=" + _key + ".js\n" + _source;
                         const moduleCode = _source;
 
-                        const tempFile = (path as any).default.join(process.cwd(), `temp_${_key}.js`);
+                        const tempFile = (path as any).default.join(CPath.WorkingPath(), `temp_${_key}.js`);
                         (fs as any).default.writeFileSync(tempFile, moduleCode);
                             
                         let importPath = tempFile;

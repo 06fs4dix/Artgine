@@ -22,7 +22,7 @@ var gWebServer = null;
 var gRunPage = false;
 const isWindows = os.platform() === 'win32';
 let gAppRootPath = true;
-if (await CFile.Load(CPath.PHPC() + "Main.json") == null)
+if (await CFile.Load(CPath.WorkingPath() + "Main.json") == null)
     gAppRootPath = false;
 var gAppJSON = await GetAppJSON();
 if (gAppJSON == null)
@@ -87,8 +87,8 @@ async function RunPage() {
     let projectName = GetProjName(gAppJSON.projectPath);
     gMainWindow.setTitle(projectName);
     if (gAppJSON.server == "local") {
-        gMainWindow.loadFile(CPath.PHPC() + projectPath + "/" + projectName + ".html");
-        CConsol.Log("RunPage loadFile : " + CPath.PHPC() + projectPath + "/" + projectName + ".html");
+        gMainWindow.loadFile(CPath.WorkingPath() + projectPath + "/" + projectName + ".html");
+        CConsol.Log("RunPage loadFile : " + CPath.WorkingPath() + projectPath + "/" + projectName + ".html");
     }
     else {
         gMainWindow.loadURL(url + "/" + projectPath + "/" + projectName + ".html");
@@ -197,13 +197,13 @@ ipcMain.handle("KeyUp", async (_event, _key) => {
                 CCMDMgr.RunVSCode();
                 await CCMDMgr.Delay(2000);
             }
-            const folderPath = path.resolve(CPath.PHPC() + gAppJSON.projectPath);
+            const folderPath = path.resolve(CPath.WorkingPath() + gAppJSON.projectPath);
             let projectName = GetProjName(gAppJSON.projectPath);
             CCMDMgr.VSCodeOpenCode(folderPath + "/" + projectName + ".ts");
         }
     }
     if (_key == "F7") {
-        const folderPath = path.resolve(CPath.PHPC() + gAppJSON.projectPath);
+        const folderPath = path.resolve(CPath.WorkingPath() + gAppJSON.projectPath);
         shell.openPath(folderPath);
     }
     if (_key == "F5") {
@@ -230,11 +230,11 @@ ipcMain.handle("AICreate", async (_event, _selected) => {
 });
 ipcMain.handle("AIDelete", async (_event, _selected) => {
     for (const key of _selected)
-        DeleteRole(key, process.cwd());
+        DeleteRole(key, CPath.WorkingPath());
     return true;
 });
 ipcMain.handle("TTYDRun", async (_event, _cfg) => {
-    const BIN_DIR = path.resolve(process.cwd(), 'artgine', 'external', 'bin');
+    const BIN_DIR = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
     const IS_WIN = process.platform === 'win32';
     const TTYD_FILE = IS_WIN ? 'ttyd.win32.exe'
         : process.platform === 'darwin' ? 'ttyd.macos'
@@ -259,12 +259,12 @@ ipcMain.handle("TTYDRun", async (_event, _cfg) => {
     args.push(shellCmd);
     if (IS_WIN) {
         spawn('cmd.exe', ['/c', 'start', '""', ttydPath, ...args], {
-            detached: true, stdio: 'ignore', cwd: process.cwd(),
+            detached: true, stdio: 'ignore', cwd: CPath.WorkingPath(),
         }).unref();
     }
     else {
         spawn(ttydPath, args, {
-            detached: true, stdio: 'ignore', cwd: process.cwd(),
+            detached: true, stdio: 'ignore', cwd: CPath.WorkingPath(),
         }).unref();
     }
     return true;
@@ -283,7 +283,7 @@ ipcMain.handle("URLRun", async (_event, _url) => {
 });
 ipcMain.handle("FolderSelectModal", async (_event, _data) => {
     const { name, ext = [], mode, multi, absolute } = _data;
-    let rootPath = CPath.PHPC();
+    let rootPath = CPath.WorkingPath();
     if (!fs.existsSync(rootPath)) {
         console.warn("Node: ", CUtil.IsNode() + " dir : " + __dirname);
         console.warn("Base Path Null:", rootPath);
@@ -365,10 +365,12 @@ ipcMain.handle("NewPage", async (_event, _json) => {
 		const MAX_CACHE_SIZE = ${_json.serviceWorker.MAX_CACHE_SIZE};
 		const LOG = ${_json.serviceWorker.LOG};
 		const API_CACHE = ${_json.serviceWorker.API_CACHE};` + bSW;
-    const depth = (_json.projectPath.match(/\//g) || []).length;
-    let upFolder = "../" + "../".repeat(depth);
+    const artgineRoot = CPath.ArtgineRootPath();
+    const projectRoot = CPath.WorkingPath();
+    const _projectAbsPath = (projectRoot + _json.projectPath).replace(/\/+$/, "");
+    let upFolder = path.relative(_projectAbsPath, artgineRoot.slice(0, -1)).replace(/\\/g, "/") + "/";
     let projectName = GetProjName(_json.projectPath);
-    let savePath = CPath.PHPC() + _json.projectPath + "/" + projectName;
+    let savePath = projectRoot + _json.projectPath + "/" + projectName;
     buf = await CFile.Load(savePath + ".html");
     let oHTML = CUtil.ArrayToString(buf);
     buf = await CFile.Load(savePath + ".ts");
@@ -419,7 +421,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
 
 		echo Chrome closed.
 		pause`;
-        await CFile.Save(startBatContent, CPath.PHPC() + _json.projectPath + "/chrome_start.bat");
+        await CFile.Save(startBatContent, projectRoot + _json.projectPath + "/chrome_start.bat");
     };
     if (_json.appJSON.github == true) {
         upFolder = "https://06fs4dix.github.io/Artgine/";
@@ -427,7 +429,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     }
     if (oHTML != "" && oHTML.indexOf("EntryPoint") == -1) {
         ChromeStartCreate();
-        await ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder, CPath.PHPC() + _json.projectPath);
+        await ReplaceArtginePathsInFolder(projectRoot + _json.projectPath, upFolder, projectRoot + _json.projectPath);
         dialog.showMessageBoxSync({
             type: 'error',
             buttons: ['OK'],
@@ -515,7 +517,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     IStr += "	location.replace(target);\n";
     IStr += "	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });\n";
     IStr += "}</script>\n";
-    let canvasList = GetFolderCanvasFileName(CPath.PHPC() + _json.projectPath + "/Canvas");
+    let canvasList = GetFolderCanvasFileName(projectRoot + _json.projectPath + "/Canvas");
     if (_json.appJSON.server.indexOf("web") != -1 && _json.serviceWorker.MAX_CACHE_SIZE > 0) {
         IStr += `
 		<script>
@@ -543,7 +545,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
             const cleanPath = path.replace(/^\/+/, '');
             return `${quote}${cleanUpFolder}/${cleanPath}`;
         });
-        await ReplaceArtginePathsInFolder(CPath.PHPC() + _json.projectPath, upFolder, CPath.PHPC() + _json.projectPath);
+        await ReplaceArtginePathsInFolder(projectRoot + _json.projectPath, upFolder, projectRoot + _json.projectPath);
         bTS = CString.InsertAt(bTS, pos + 12, epStr);
     }
     else {
@@ -605,12 +607,12 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     bTS = CString.InsertAt(bTS, bTS.indexOf("//Version") + 9, "\nimport \"" + upFolder + "artgine/artgine.js\"\n");
     bTS = CString.InsertAt(bTS, bTS.indexOf("//Atelier") + 9, pfStr);
     let ClassStr = "import {CClass} from \"" + upFolder + "artgine/basic/CClass.js\";\n";
-    ClassStr += GenerateCClassPushes(CPath.PHPC() + _json.projectPath, savePath + ".ts");
+    ClassStr += GenerateCClassPushes(projectRoot + _json.projectPath, savePath + ".ts");
     bTS = CString.InsertAt(bTS, bTS.indexOf("//Class") + 7, "\n" + ClassStr);
-    CCMDMgr.CreateEmptyFolder(CPath.PHPC() + _json.projectPath + "/Canvas");
-    CCMDMgr.CreateEmptyFolder(CPath.PHPC() + _json.projectPath + "/BackUp");
-    BackUp(CPath.PHPC() + _json.projectPath + "/BackUp", CPath.PHPC() + _json.projectPath + "/Canvas");
-    await CFile.Save(bSW, CPath.PHPC() + _json.projectPath + "/ServiceWorker.js");
+    CCMDMgr.CreateEmptyFolder(projectRoot + _json.projectPath + "/Canvas");
+    CCMDMgr.CreateEmptyFolder(projectRoot + _json.projectPath + "/BackUp");
+    BackUp(projectRoot + _json.projectPath + "/BackUp", projectRoot + _json.projectPath + "/Canvas");
+    await CFile.Save(bSW, projectRoot + _json.projectPath + "/ServiceWorker.js");
     await CFile.Save(bMF, savePath + ".webmanifest");
     await CFile.Save(bTS, savePath + ".ts");
     await CFile.Save(_json.projetJSON, savePath + ".json");
@@ -647,7 +649,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
         appChange = true;
     gAppJSON = _json.appJSON;
     if (gAppRootPath)
-        CFile.Save(gAppJSON, CPath.PHPC() + "Main.json");
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
     else
         CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
     if (appChange)
@@ -657,7 +659,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
 var gTSCRun = false;
 ipcMain.handle("LoadProjJSON", async (_event, _json) => {
     let projectName = GetProjName(_json.projectPath);
-    let savePath = CPath.PHPC() + _json.projectPath + "/" + projectName;
+    let savePath = CPath.WorkingPath() + _json.projectPath + "/" + projectName;
     let buf = await CFile.Load(path.join(__dirname, 'Template/Basic.json'));
     let bJSON = CUtil.ArrayToString(buf);
     buf = await CFile.Load(savePath + ".json");
@@ -673,7 +675,7 @@ ipcMain.handle("UpdateExtraSettings", async (_event, _json) => {
     gAppJSON.password = _json.password;
     gAppJSON.rootPath = _json.rootPath;
     if (gAppRootPath)
-        CFile.Save(gAppJSON, CPath.PHPC() + "Main.json");
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
     else
         CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
 });
@@ -682,7 +684,7 @@ ipcMain.handle("LoadPlugin", async (_event) => {
 });
 ipcMain.handle("LoadManifest", async (_event, _json) => {
     let projectName = GetProjName(_json.projectPath);
-    let savePath = CPath.PHPC() + _json.projectPath + "/" + projectName;
+    let savePath = CPath.WorkingPath() + _json.projectPath + "/" + projectName;
     let buf = await CFile.Load(path.join(__dirname, 'Template/Basic.webmanifest'));
     let bMF = CUtil.ArrayToString(buf);
     buf = await CFile.Load(savePath + ".webmanifest");
@@ -700,7 +702,7 @@ ipcMain.handle("LoadManifest", async (_event, _json) => {
 });
 ipcMain.handle("LoadServiceWorker", async (_event, _json) => {
     let projectName = GetProjName(_json.projectPath);
-    let savePath = CPath.PHPC() + _json.projectPath + "/";
+    let savePath = CPath.WorkingPath() + _json.projectPath + "/";
     let bSW = {
         "CACHE_NAME": "ServiceWorker-1",
         "MAX_CACHE_SIZE": 0,
@@ -786,7 +788,7 @@ ipcMain.handle("RunBrowser", async (_event, _url) => {
     }
 });
 ipcMain.handle("ICONSize", async (_event, _imgFile) => {
-    let savePath = CPath.PHPC() + gAppJSON.projectPath + "/" + _imgFile;
+    let savePath = CPath.WorkingPath() + gAppJSON.projectPath + "/" + _imgFile;
     let buf = await CFile.Load(savePath);
     try {
         const size = imageSize(Buffer.from(buf));
@@ -799,12 +801,12 @@ ipcMain.handle("ICONSize", async (_event, _imgFile) => {
     return "256x256";
 });
 ipcMain.handle("FileSave", async (_event, _json) => {
-    let savePath = CPath.PHPC() + gAppJSON.projectPath + "/Canvas/";
+    let savePath = CPath.WorkingPath() + gAppJSON.projectPath + "/Canvas/";
     await CFile.Save(_json.data, savePath + _json.filename);
 });
 var gPaths = [];
 ipcMain.handle("FileDropped", async (_event, _paths) => {
-    const basePath = (path.resolve(CPath.PHPC(), gAppJSON.projectPath) + path.sep).replace(/\\/g, "/");
+    const basePath = (path.resolve(CPath.WorkingPath(), gAppJSON.projectPath) + path.sep).replace(/\\/g, "/");
     const resultPaths = _paths.map(fullPath => {
         if (fullPath.startsWith(basePath)) {
             return fullPath.slice(basePath.length).replace(/\\/g, "/");

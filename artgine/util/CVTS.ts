@@ -516,7 +516,7 @@ export class CSoundFont extends CVST
                 soundfont: 'MusyngKite',
                 format: 'mp3',
                 nameToUrl: (name, soundfont = 'MusyngKite', format = 'mp3') => {
-                    return CPath.PHPC()+`artgine/external/legacy/soundfont/MusyngKite/${name}-${format}.js`;
+                    return CPath.WebRootUrl()+`artgine/external/legacy/soundfont/MusyngKite/${name}-${format}.js`;
                 }
             });
             gInstrumentMap.set(name,inst);

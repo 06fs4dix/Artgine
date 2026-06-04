@@ -13,6 +13,7 @@ import { Request, Response } from 'express';
 import { CAuthServer, getToken, isValidToken } from './CAuthServer.js';
 import { CAI } from '../util/CAI.js';
 import { CSchedule } from '../util/CSchedule.js';
+import { CPath } from '../basic/CPath.js';
 
 /*
 claude :
@@ -29,7 +30,7 @@ GEMINI_API_KEY
 */
 
 const IS_WIN = process.platform === 'win32';
-let currentCwd = process.cwd();
+let currentCwd = CPath.WorkingPath();
 
 const SCHEDULES_FILE = path.join(CAI.AIDir(), 'schedules.json');
 function schedLog(msg: string) {
@@ -70,8 +71,7 @@ function dbg(_msg: string) { /* disabled */ }
 
 // ttyd 바이너리 정보 및 다운로드 경로 설정
 const TTYD_VERSION = "1.7.7";
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BIN_DIR = path.resolve(__dirname, '..', 'external', 'bin');
+const BIN_DIR = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
 
 function getTtydFileName() {
     if (IS_WIN) return 'ttyd.win32.exe';
@@ -465,7 +465,7 @@ function connectToTtyd(port: number, retries = 20): void {
 }
 
 const _termSvrDir = path.dirname(fileURLToPath(import.meta.url));
-const _cmdHtmlPath = path.resolve(process.cwd(), 'proj', 'Home', 'AI', 'Terminal.html');
+const _cmdHtmlPath = path.resolve(CPath.ArtgineRootPath(), 'proj', 'Home', 'AI', 'Terminal.html');
 
 const _termUiHtmlPath = path.join(_termSvrDir, 'terminal_ui.html');
 

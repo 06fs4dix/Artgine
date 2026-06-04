@@ -52,7 +52,7 @@ export class CPalette
 	{
 		if(_fw.Ren()==null)	return;
 		
-		let upFolder=CPath.PHPC();
+		let upFolder=CPath.WebRootUrl();
 		if(_fw.PF().mGitHub)
 			upFolder="https://06fs4dix.github.io/Artgine/";
 		gNoneTex="Artgine/none.png"//upFolder+"artgine/z_file/none.png";

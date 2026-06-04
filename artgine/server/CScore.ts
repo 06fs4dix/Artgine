@@ -7,7 +7,7 @@ export class CScore
     static async Read(_project : string,_count : number=10,_desc=false)
     {
         // 서버에서 받아온 리스트(오름차순으로 들어있음)
-        const list = await CFecth.Exe(CPath.PHPC()+"CScore/Read",{project:_project,count:_count,order:_desc?"desc":""},"json") as Array<{
+        const list = await CFecth.Exe(CPath.WebRootUrl()+"CScore/Read",{project:_project,count:_count,order:_desc?"desc":""},"json") as Array<{
             _offset?: string,
             _project?: string,
             _nick?: string,
@@ -83,7 +83,7 @@ export class CScore
 
     static async Write(_project : string,_nick : string,_data : number)
     {
-        await CFecth.Exe(CPath.PHPC()+"CScore/Write",{project:_project,nick:_nick,data:_data});
+        await CFecth.Exe(CPath.WebRootUrl()+"CScore/Write",{project:_project,nick:_nick,data:_data});
         
     }
 }

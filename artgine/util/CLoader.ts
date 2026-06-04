@@ -668,7 +668,7 @@ export class CLoader
 				}
 				else
 				{
-					import(CPath.PHPCR()+_file).then((_im)=>{
+					import(CPath.WebPageUrl()+_file).then((_im)=>{
 						for(var each0 in _im)
 						{
 							window[each0] = _im[each0];

@@ -747,7 +747,7 @@ export class CFrame
 
 		if(this.mDevice)	await this.mDevice.Init();
 		
-		let path=CPath.PHPC();
+		let path=CPath.WebRootUrl();
 		if(this.mPreferences.mGitHub)
 			path="https://06fs4dix.github.io/Artgine/";
 		await CWASM.Init(this.mPreferences.mWASM,path);
