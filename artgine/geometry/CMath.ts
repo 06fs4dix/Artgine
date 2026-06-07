@@ -99,7 +99,7 @@ export class CMath
 	static V3Nor(_a : CVec3,_b : CVec3=null):CVec3
 	{
 		if (_a.IsZero())
-			return new CVec3(0, -1, 0);
+			return new CVec3(0, 0, 0);
 		var dummy=CMath.V3Len(_a);
 		
 		if(_b != null)

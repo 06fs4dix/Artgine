@@ -795,10 +795,10 @@ export class CPaintTrail extends CPaint
 			
 			// 버퍼 사이즈가 변경되었으므로 관련 상태 초기화
 			this.mIsOutChanged = true;
-			this.mRenPT = [];
-			for (let key of this.mBatchMap.keys()) {
-				this.mBatchMap.set(key, null);
-			}
+			// this.mRenPT = [];
+			// for (let key of this.mBatchMap.keys()) {
+			// 	this.mBatchMap.set(key, null);
+			// }
 			this.ClearBatch();
 			this.mCamCullUpdate = true;
 		} else {

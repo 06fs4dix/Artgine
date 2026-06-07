@@ -1191,6 +1191,8 @@ export class CPaint2DMerge extends CPaint
 			else
 				this.SetTexture(_texture);
 		}
+
+        this.PushTag("merge");
 	}
 
     override InitChk()
@@ -1291,7 +1293,8 @@ export class CPaint2DMerge extends CPaint
 		let norb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Normal);
 		let inb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Index);
 		if(posb.length == 0) {
-			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);
+			this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);   // pos
+            this.mMeshDataNode.ci.Create(CVertexFormat.eIdentifier.Position);   // sca
 			posb = this.mMeshDataNode.ci.GetVFType(CVertexFormat.eIdentifier.Position);
 		}
 		if(uvb.length == 0) {
@@ -1319,11 +1322,23 @@ export class CPaint2DMerge extends CPaint
 
 		const nor = new CVec3(0, 0, 1);
 
+        const scaB = new CVec3();
+        const scaT = new CVec3();
+
 		for(let i = posb[0].bufF.Size(3); i < this.mMatList.length; i++)
 		{
 			const pMat = this.mMatList[i];
+
+            scaB.x = CMath.V3Len(pMat.GetV3(0));
+            scaB.y = CMath.V3Len(pMat.GetV3(1));
+            scaB.z = CMath.V3Len(pMat.GetV3(2));
+
+            scaT.x = -scaB.x;
+            scaT.y = -scaB.y;
+            scaT.z = -scaB.z;
+
 			if(this.mYSort) {
-				const ySortOrigin = -0.5 * (pMat.mF32A[1] + pMat.mF32A[5]) + 1;
+				const ySortOrigin = -0.5 * scaB.y + 1;
 				const yVal = pMat.mF32A[13] + ySortOrigin;
 				const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
 				pMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
@@ -1339,6 +1354,10 @@ export class CPaint2DMerge extends CPaint
 			posb[0].bufF.Push(rb);
 			posb[0].bufF.Push(rt);
 			posb[0].bufF.Push(lt);
+            posb[1].bufF.Push(scaB);
+            posb[1].bufF.Push(scaB);
+            posb[1].bufF.Push(scaT);
+            posb[1].bufF.Push(scaT);
 			this.mBound.InitBound(lb);
 			this.mBound.InitBound(rb);
 			this.mBound.InitBound(rt);
@@ -1348,13 +1367,20 @@ export class CPaint2DMerge extends CPaint
             let codi  : CVec4=new CVec4(1, 1, 0, 0);;;
 			if(this.mCodiList[i]!=null)
 			{
-
-                codi.x = (this.mCodiList[i].z - this.mCodiList[i].x) / this.mTexSize.x;
-				codi.y = (this.mCodiList[i].w - this.mCodiList[i].y) / this.mTexSize.y;
-
-
-				codi.z = this.mCodiList[i].x / this.mTexSize.x;
-				codi.w = 1-(this.mCodiList[i].y / this.mTexSize.x)-codi.y;
+				const v = this.mCodiList[i];
+				if(v.x <= 1 && v.y <= 1 && v.z <= 1 && v.w <= 1)
+				{
+					// mTexCodi UV 포맷: (scaleX, scaleY, offsetX, offsetY)
+					codi.Import(v);
+				}
+				else
+				{
+					// 픽셀 좌표 포맷: (x1, y1, x2, y2)
+                	codi.x = (v.z - v.x) / this.mTexSize.x;
+					codi.y = (v.w - v.y) / this.mTexSize.y;
+					codi.z = v.x / this.mTexSize.x;
+					codi.w = 1-(v.y / this.mTexSize.x)-codi.y;
+				}
 
 				//codi.y = (this.mCodiList[i].w - this.mCodiList[i].y - gMargin) / this.mTexSize.y;
 

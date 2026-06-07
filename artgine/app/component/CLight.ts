@@ -11,7 +11,7 @@ import {CTexture,  CTextureInfo } from "../../render/CTexture.js";
 import {CVec2} from "../../geometry/CVec2.js";
 import {CDOM} from "../../basic/CDOM.js";
 import { CUpdate } from "../../basic/Basic.js";
-import { CPointer } from "../../basic/CObject.js";
+import { CObject, CPointer } from "../../basic/CObject.js";
 import { CUtil } from "../../basic/CUtil.js";
 import { CJSON } from "../../basic/CJSON.js";
 
@@ -61,7 +61,12 @@ export class CLight extends CBrushComp
 		this.mSysc=CComponent.eSysn.Light;
 	}
 	override Icon(){ return "bi bi-lightbulb"; }
-
+    override IsShould(_member: string, _type: CObject.eShould): boolean {
+        if(_member == "mWrite") {
+            return false;
+        }
+        return super.IsShould(_member, _type);
+    }
 	override EditChange(_pointer : CPointer,_child : boolean)
 	{
 		super.EditChange(_pointer,_child);
@@ -140,6 +145,24 @@ export class CLight extends CBrushComp
 					this.EditRefresh();
 				}
 			});
+
+            // shadow
+			div.html.push({"<>":"div","id":"ligSh_div"+wtKey,"html":[
+				{"<>":"span","text":"Cascade:"},
+				{"<>":"input","type":"number","id":"ligSh0_num"+wtKey,"class":"form-control","placeholder":"cas0"},
+				{"<>":"input","type":"number","id":"ligSh1_num"+wtKey,"class":"form-control","placeholder":"cas1"},
+                {"<>":"input","type":"number","id":"ligSh2_num"+wtKey,"class":"form-control","placeholder":"cas2"},
+			]});
+			div.html.push({"<>":"button","type":"button","class":"btn btn-primary btn-lg btn-block btn-sm","text":"그림자 적용",
+				"onclick":()=>{
+					let sh0=Number(CDOM.IDValue("ligSh0_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh0_num"+wtKey));
+					let sh1=Number(CDOM.IDValue("ligSh1_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh1_num"+wtKey));
+					let sh2=Number(CDOM.IDValue("ligSh2_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh2_num"+wtKey));
+                    this.SetShadow(wtKey, sh0, sh1, sh2);
+					this.EditRefresh();
+				}
+			});
+
 			_body.append(CDOM.DataToDom(div));
 
 
@@ -214,7 +237,22 @@ export class CLight extends CBrushComp
 			srp.PushAnd(new CCondition("mTag[shadowReadOnly]",CCondition.eOperator["!="]));
 			srp.mPriority=CRenderPass.ePriority.BackGround - 1;
 			this.PushRPAuto(srp);
+
+            // 2d plane
+            srp=new CRPAuto(fw.Pal().Sl2D().mKey);
+            srp.mCopy=false;
+			srp.mTag.add("shadowPlane");
+			srp.PushOr(new CCondition("class","==","CPaint2D"));
+            srp.PushOr(new CCondition("class","==","CPaint2DMerge"));
+			srp.PushAnd(new CCondition("mTag[shadow]"));
+            srp.PushAnd(new CCondition("mTag[shadowReadOnly]",CCondition.eOperator["!="]));
+			srp.mPriority=CRenderPass.ePriority.AlphaAuto;
+            srp.mCullFace=CRenderPass.eCull.None;
+            srp.mPaintSort=CRenderPass.ePaintSort.Revers;
+            srp.mAlpha=true;
+			this.PushRPAuto(srp);
 		}
+
 		let ShadowUpdate=false;
 		if (this.mTexKey!=null)
 		{
@@ -223,6 +261,34 @@ export class CLight extends CBrushComp
 				this.mShadowOff=true;
 			else
 				this.mShadowOff=false;
+
+            // 2d
+            if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
+            {
+                for(let rp of this.mWrite)
+                {
+                    // shadowPlane
+                    if(rp.mTag.has("shadowPlane"))
+                    {
+                        var srpKey=this.mTexKey+rp.mShader;
+                        var srp : CRPAuto=this.mBrush.GetAutoRP(srpKey);
+                        if(srp==null)
+                        {
+                            srp=rp.Export();
+                            srp.mTag.add("shadowPlaneV");
+                            srp.mTag.add("shadowPlaneF");
+                            this.mBrush.SetAutoRP(srpKey,srp);
+                            srp.mShaderAttr.push(new CShaderAttr("lightIndex", this.mBrush.mLightCount));
+                        }
+                        if(srp.mShaderAttr[0].mData.x != this.mBrush.mLightCount) {
+                            srp.mShaderAttr[0].mData.x = this.mBrush.mLightCount;
+                        }
+
+                        if(this.mShadowOff) srp.mCycle = 100000000;
+                        else srp.mCycle=0;
+                    }
+                }
+            }
 
 			if(Math.abs(this.mDirPos.w)>0.5)
 			{
@@ -234,9 +300,9 @@ export class CLight extends CBrushComp
 					scam0.mShadow=true;
 					scam1.mShadow=true;
 					scam2.mShadow=true;
-                    scam0.SetNear(1);
-                    scam1.SetNear(1);
-                    scam2.SetNear(1);
+                    scam0.SetNear(100);
+                    scam1.SetNear(100);
+                    scam2.SetNear(100);
                     scam0.SetFar(4*2000*2);
                     scam1.SetFar(16*2000*2);
                     scam2.SetFar(64*2000*2);
@@ -370,37 +436,39 @@ export class CLight extends CBrushComp
 
 					for(let rp of this.mWrite)
 					{
-						if(rp.mTag.has("shadowWrite")==false) continue;
+                        // shadowWrite
+						if(rp.mTag.has("shadowWrite"))
+                        {
+                            var srpKey=this.mTexKey+rp.mShader+i;
+                            var srp : CRPAuto=this.mBrush.GetAutoRP(srpKey);
+                            if(srp==null)
+                            {
+                                srp=rp.Export();
+                                srp.mTag.add("shadowWrite");
+                                this.mBrush.SetAutoRP(srpKey,srp);
+                                var fw=this.GetOwner().GetFrame();
+                                var tex=fw.Res().Find(this.GetTex()) as CTexture;
+                                if(tex.GetInfo()[0].mCount<(this.mBrush.mShadowCount+1)*6)
+                                {
+                                    fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,
+                                        (this.mBrush.mShadowCount+1)*6)],new CVec2(tex.GetWidth(), tex.GetHeight()),fw.Pal().GetShadowWriteTex());	
+                                }
+                                srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,this.mBrush.mShadowCount,this.mBrush.mShadowCount*6+i)));
+                                srp.mPriority -= (this.mCascadeCycle.length - i);   // 캐스케이드 낮은 걸 먼저 그리고 싶음
+                            }
+                            srp.mRenderTarget=this.GetTex();
+                            srp.mRenderTargetUse=new Set<number>([this.mBrush.mShadowCount*6+i]);
+                            srp.mCamera=this.mTexKey+i;
+                            if(srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
+                                srp.mShaderAttr[0].mData.x=i;
+                                srp.mShaderAttr[0].mData.y=this.mBrush.mShadowCount;
+                                srp.mShaderAttr[0].mData.z=this.mBrush.mShadowCount*6+i;
+                                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
+                            }
 
-						var srpKey=this.mTexKey+rp.mShader+i;
-						var srp : CRPAuto=this.mBrush.GetAutoRP(srpKey);
-						if(srp==null)
-						{
-							srp=rp.Export();
-							srp.mTag.add("shadowWrite");
-							this.mBrush.SetAutoRP(srpKey,srp);
-							var fw=this.GetOwner().GetFrame();
-							var tex=fw.Res().Find(this.GetTex()) as CTexture;
-							if(tex.GetInfo()[0].mCount<(this.mBrush.mShadowCount+1)*6)
-							{
-								fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,
-									(this.mBrush.mShadowCount+1)*6)],new CVec2(tex.GetWidth(), tex.GetHeight()),fw.Pal().GetShadowWriteTex());	
-							}
-							srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,this.mBrush.mShadowCount,this.mBrush.mShadowCount*6+i)));
-                            srp.mPriority -= (this.mCascadeCycle.length - i);   // 캐스케이드 낮은 걸 먼저 그리고 싶음
-						}
-						srp.mRenderTarget=this.GetTex();
-						srp.mRenderTargetUse=new Set<number>([this.mBrush.mShadowCount*6+i]);
-						srp.mCamera=this.mTexKey+i;
-						if(srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
-							srp.mShaderAttr[0].mData.x=i;
-							srp.mShaderAttr[0].mData.y=this.mBrush.mShadowCount;
-							srp.mShaderAttr[0].mData.z=this.mBrush.mShadowCount*6+i;
-							this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
-						}
-
-						if(this.mShadowOff) srp.mCycle = 100000000;
-						else srp.mCycle=this.mCascadeCycle[i];
+                            if(this.mShadowOff) srp.mCycle = 100000000;
+                            else srp.mCycle=this.mCascadeCycle[i];
+                        }
 					}
 					
 					if(i<3)
@@ -492,6 +560,14 @@ export class CLight extends CBrushComp
 		this.mCascadeCycle[2]=_CycleTime2;
 		this.mUpdate = CUpdate.eType.Updated;
 	}
+    SetShadow2D(_shadowKey)
+	{
+		this.mTexKey=_shadowKey;
+		this.mCascadeCycle[0]=-1;
+		this.mCascadeCycle[1]=-1;
+		this.mCascadeCycle[2]=-1;
+		this.mUpdate = CUpdate.eType.Updated;
+	}
 	SetShadowDistance(_dist : number)
 	{
 		this.mShadowDistance=_dist;
@@ -528,8 +604,56 @@ export class CLight extends CBrushComp
 	override ImportCJSON(_json: CJSON): this {
 		return super.ImportCJSON(_json);
 	}
+    override SetEnable(_val: boolean): void {
+        super.SetEnable(_val);
+
+        if(_val == false) {
+            if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
+            {
+                for(let rp of this.mWrite)
+                {
+                    if(rp.mTag.has("shadowPlane")==false) continue;
+                    var srpKey=this.mTexKey+rp.mShader;
+                    this.mBrush.RemoveAutoRP(srpKey);
+                }
+            }
+
+            if(Math.abs(this.mDirPos.w)>0.5 && this.mBrush!=null)
+            {
+                this.mBrush.mUpdateLight=true;
+                this.mBrush.mUpdateShadow=true;
+                this.mBrush.mCameraMap.delete(this.mTexKey+0);
+                this.mBrush.mCameraMap.delete(this.mTexKey+1);
+                this.mBrush.mCameraMap.delete(this.mTexKey+2);
+                this.mBrush.ClearRen();
+                
+                for(var i=0;i<this.mCascadeCycle.length;++i)
+                {
+                    if(this.mCascadeCycle[i]==-1)	continue;
+                    for(let rp of this.mWrite)
+                    {
+                        if(rp.mTag.has("shadowWrite")==false)	continue;
+                        var srpKey=this.mTexKey+rp.mShader+i;
+                        this.mBrush.RemoveAutoRP(srpKey);
+
+                    }
+                    
+                }
+            }
+        }
+    }
 	override Destroy(): void {
 		super.Destroy();
+
+        if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
+        {
+            for(let rp of this.mWrite)
+            {
+                if(rp.mTag.has("shadowPlane")==false) continue;
+                var srpKey=this.mTexKey+rp.mShader;
+                this.mBrush.RemoveAutoRP(srpKey);
+            }
+        }
 		
 		if(Math.abs(this.mDirPos.w)>0.5 && this.mBrush!=null)
 		{

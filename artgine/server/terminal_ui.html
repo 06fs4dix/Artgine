@@ -368,6 +368,10 @@ window.addEventListener('keydown', function(e) {
                 }
             }
             if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendInput(); }
+            if (!inp.value) {
+                var _arrows = { "ArrowUp": "\x1b[A", "ArrowDown": "\x1b[B", "ArrowLeft": "\x1b[D", "ArrowRight": "\x1b[C" };
+                if (_arrows[e.key]) { e.preventDefault(); _sendRaw(_arrows[e.key]); return; }
+            }
         });
         document.addEventListener("click", function(e) { if (!bar.contains(e.target)) _acHide(); });
 

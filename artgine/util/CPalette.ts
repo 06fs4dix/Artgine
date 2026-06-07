@@ -171,6 +171,8 @@ export class CPalette
 	Init(_fw : CFrame)
 	{
 		if(_fw.Ren()==null)	return;
+
+        _fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8,1)],new CVec2(1, 1),this.GetMainFrameTex());
 		
 		CH5Canvas.Init(2,2);
 		var para=[CH5Canvas.Cmd("fillStyle","black"),CH5Canvas.Cmd("fillRect",[0,0,2,2])];
@@ -367,5 +369,13 @@ export class CPalette
 		return "Artgine/shadowRead.tex";
 	}
 	
+    GetMainFrameTex()
+    {
+        return "Artgine/MainFrame.tex";
+    }
+    GetDefaultFrameBuffer()
+    {
+        return "Artgine/DefaultFrame.tex";
+    }
 }
 

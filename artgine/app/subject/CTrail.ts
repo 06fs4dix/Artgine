@@ -15,6 +15,7 @@ export class CTrail extends CSubject
     mFadeTime: number = 1.0;
     mLastSmall: boolean = false;
     mLastHide: boolean = true;
+    mNormal: CVec3 = null;   // 지정 시 카메라 계산 대신 이 노말을 사용
     mCam: CCamera;
 
     // ── 내부 상태 (private)
@@ -46,14 +47,19 @@ export class CTrail extends CSubject
     }
 
     override Update(_update: CUpdate): void {
-        super.Update(_update);
+        if (this.mFirstFrame) {
+            this.mFirstFrame = false;
+            const pos = this.GetPos();
+            this.mPosList.push(new CVec3(pos.x, pos.y, pos.z));
+        }
 
-        if (this.mFirstFrame) { this.mFirstFrame = false; return; }
+        super.Update(_update);
 
         const dt = _update.DeltaTime();
         if (dt > 1) return;
 
         const pos = this.GetPos();
+        
         const prevPos = this.mPosList.length > 0 ? this.mPosList[this.mPosList.length - 1] : null;
         const moved = prevPos !== null && !prevPos.Equals(pos);
         if (!moved) this.mInCurve = false;
@@ -67,12 +73,9 @@ export class CTrail extends CSubject
         // ── 새 포인트 추가
         if (moved) {
             const nvec = CMath.V3SubV3(pos, this.mPosList[this.mPosList.length - 1]);
+            if (nvec.IsZero()) return;
             let nowvec = CMath.V3Nor(nvec);
             let success = 0;
-
-            // 수직 하강 방향 예외처리
-            if (CMath.V3Dot(nowvec, new CVec3(0, -1, 0)) === 1 && this.mVList.length > 0)
-                nowvec = this.mVList[this.mVList.length - 1];
 
             if (this.mVList.length === 0) {
                 if (!this.mPosList[this.mPosList.length - 1].Equals(pos)) {
@@ -101,9 +104,16 @@ export class CTrail extends CSubject
                             this.mPosList.splice(this.mLastLinePos + 1, 1);
                             this.mVList.splice(this.mLastLinePos + 1, 1);
                         }
+                    } else if (this.mLastLinelen < size || CMath.V3Len(nvec) < size) {
+                        this.mPosList.push(new CVec3(pos.x, pos.y, pos.z));
+                        this.mVList.push(nowvec);
+                        this.mLastLinelen = 0;
+                        this.mLastLinePos = this.mPosList.length - 2;
                     } else {
                         // 방향 전환: Bezier 보정 시작
                         this.mBCnt = 2;
+                        this.mBlen = 0;
+                        this.mFlen = 0;
                         this.mCorner = this.mPosList[this.mPosList.length - 1];
 
                         const pArr = [
@@ -240,6 +250,7 @@ export class CTrail extends CSubject
 
     CalcCamera(): void {
         if (this.mTrailPaint === null) return;
+        if (this.mPosList.length < 2) return;
 
         const segLen: number[] = [];
         let totalLen = 0;
@@ -248,6 +259,9 @@ export class CTrail extends CSubject
             segLen.push(l);
             totalLen += l;
         }
+
+        // trail이 너무 짧으면 첫 세그먼트의 chord 방향 오차가 width만큼 증폭돼 inner edge가 arc 뒤로 튀는 현상 방지
+        if (totalLen < this.mWidth * 0.05) return;
 
         const cumLen: number[] = [0];
         for (const l of segLen) cumLen.push(cumLen[cumLen.length - 1] + l);
@@ -270,14 +284,15 @@ export class CTrail extends CSubject
 
         const upList: CVec3[] = [];
         const downList: CVec3[] = [];
-        const camEye = this.mCam.mEye;
+        const fixedNor = this.mNormal != null ? CMath.V3Nor(this.mNormal) : null;
+        const camEye   = this.mCam.mEye;
 
         for (let i = 0; i < this.mVCount; i++) {
             const sto = i / this.mVCount;
             const st = samplePos((i / this.mVCount) * totalLen);
             const ed = samplePos(((i + 1) / this.mVCount) * totalLen);
 
-            const camview = CMath.V3Nor(CMath.V3SubV3(st, camEye));
+            const camview = fixedNor ?? CMath.V3Nor(CMath.V3SubV3(st, camEye));
             const L_nor = CMath.V3Nor(CMath.V3Cross(camview, CMath.V3Nor(CMath.V3SubV3(ed, st))));
 
             const tsize = (this.mLastSmall ? sto : 1) * (this.mWidth / 2);

@@ -62,6 +62,7 @@ export class CDensityInfo extends CObject implements IMapLabel
     mSca : CSampler<CVec3>=null;
     mRot : CSampler<CVec3>=null;
     mColliderLayer : string=null;
+    mBound : CBound=null;
     mPaintTag=new Array<string>();
     mRes="";
 }
@@ -268,8 +269,9 @@ export class CDensityMap extends CSubject implements IMapSchema
                         cl.SetLayer(density.mColliderLayer);
                         let cbound = new CBound();
                         cbound.SetType(CBound.eType.Box);
-                        CMath.V3MulMatCoordi(bound.mMin, lastMat, cbound.mMin);
-                        CMath.V3MulMatCoordi(bound.mMax, lastMat, cbound.mMax);
+                        const srcBound = density.mBound ?? bound;
+                        CMath.V3MulMatCoordi(srcBound.mMin, lastMat, cbound.mMin);
+                        CMath.V3MulMatCoordi(srcBound.mMax, lastMat, cbound.mMax);
                         cl.InitBound(cbound);
                         cl.SetEvent(CCollider.eEvent.Static);
                         this.PushComp(cl);

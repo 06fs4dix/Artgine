@@ -111,10 +111,7 @@ export class CPath
 	{
 		if(g_root==null)
 		{
-			if(CUtil.IsNode())
-				g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context);
-			else
-				g_root=new URL("../../", import.meta.url).href;
+			g_root=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context);
 		}
 		return g_root;
 	}

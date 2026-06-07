@@ -13,6 +13,11 @@ import {
 	Sam2DArrV4,
 	Sam2DArrToV4,
 	Vertex2,
+    V3Dot,
+    V2AddV2,
+    IntToFloat,
+    smoothstep,
+    V3Abs,
 } from "./Shader";
 import {
 	VFX, VFXDown2, GetTexCodiedUV,
@@ -26,7 +31,7 @@ import {
 	ligCol, ligDir, ligCount,
 	LightCac2D
 } from "./Light";
-import { shadowOn } from "./Shadow";
+import { shadowOn, shadowRate } from "./Shadow";
 import { 
 	GetWind, windCount, windDir, windInfluence, windInfo, windPos 
 } from "./Wind";
@@ -63,6 +68,9 @@ var trailPos: Sam2DArrV4=new Sam2DArrV4(1);
 var zDepth : number=0.0;
 var zDepthBias : number=0.001;
 var sam2DCount : number=Null();
+
+// 2d shadow
+var lightIndex : number;
 
 Build("Artgine/Shader/2DPlane",[],
 	vs_main,[
@@ -238,6 +246,34 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 		rpos.xyz = V3AddV3(rpos.xyz, GetWind(mid, size, time));
 	}
 	BranchEnd();
+	
+	var lDir : CVec4;
+    var lCol : CVec4;
+    BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, lightIndex, shadowRate]);
+    if(lightIndex < ligCount) {
+        lDir = Sam2DArrToV4(ligDir,lightIndex);
+        lCol = Sam2DArrToV4(ligCol,lightIndex);
+
+        to_uv.z *= max(max(lCol.x, lCol.y), lCol.z) * shadowRate;
+
+        if(lDir.w > 0.5) {    // point light
+            lDir.xyz = V3SubV3(mid, lDir.xyz);
+            if(V3Len(lDir.xyz) <= lCol.w) to_uv.z *= 1.0;
+            else if(V3Len(lDir.xyz) >= lDir.w) to_uv.z *= 0.0;
+            else to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
+        }
+        lDir.xyz = V3Nor(lDir.xyz);
+
+        if(f2_uv.y > 0.5) {
+            rpos.y -= size.y;
+
+            rpos.xy = V2AddV2(rpos.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
+            rpos.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
+        }
+    } else {
+        rpos.xyz = new CVec3(0.0, 0.0, 0.0);
+    }
+    BranchEnd();
 
 	to_worldPos=rpos;
 	rpos=V4MulMatCoordi(rpos,viewMat);
@@ -271,7 +307,7 @@ function vs_main_trail(f2_ver : Vertex2)
 	out_position=rpos;
 }
 
-function vs_main(f3_ver : Vertex3,f2_uv : UV2)
+function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 {
     var uv : CVec2 = f2_uv;
 	BranchBegin("codi","C",[texCodi]);
@@ -319,21 +355,54 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2)
 	BranchDefault();
 	P = V4MulMatCoordi(P, wMat);
 	BranchEnd();
-	
-	var size : CVec3;
-	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
-	if(uv.y > 0.5 && windInfluence > 0.01) {
-		// mci 기본 사이즈 10
-		size = new CVec3(
-			V3Len(wMat[0].xyz) * 10.0,
-			V3Len(wMat[1].xyz) * 10.0,
-			0.0
-		);
 
+    var isVertexTop : number;
+	var size : CVec3;
+    BranchBegin("merge","MG",[]);
+    isVertexTop = f3_sca.x < 0.0 ? 1.0 : 0.0;
+    size = V3Abs(f3_sca);
+    BranchDefault();
+    isVertexTop = f2_uv.y > 0.5 ? 1.0 : 0.0;
+    size = new CVec3(V3Len(wMat[0].xyz)*10.0,V3Len(wMat[1].xyz)*10.0,0.0);
+    BranchEnd();
+    
+	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
+	if(isVertexTop > 0.5 && windInfluence > 0.01) {
 		P.xyz = V3AddV3(P.xyz, GetWind(P.xyz, size, time));
 	}
 	BranchEnd();
 
+    var lDir : CVec4;
+    var lCol : CVec4;
+    BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, lightIndex, shadowRate]);
+    if(lightIndex < ligCount) {
+        lDir = Sam2DArrToV4(ligDir,lightIndex);
+        lCol = Sam2DArrToV4(ligCol,lightIndex);
+
+        to_uv.z *= max(max(lCol.x, lCol.y), lCol.z) * shadowRate;
+
+        if(lDir.w > 0.5) {    // point light
+            lDir.xyz = V3SubV3(P.xyz, lDir.xyz);
+            if(V3Len(lDir.xyz) <= lCol.w) to_uv.z *= 1.0;
+            else if(V3Len(lDir.xyz) >= lDir.w) {
+                to_uv.z *= 0.0;
+                return; // 랜더링 안되는 그림자
+            }
+            else to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
+        }
+        lDir.xyz = V3Nor(lDir.xyz);
+
+        if(isVertexTop > 0.5) {
+            P.y -= size.y;
+
+            P.xy = V2AddV2(P.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
+            P.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
+        }
+    } else {
+        return; // 랜더링 안되는 그림자
+    }
+    BranchEnd();
+	
 	to_worldPos=P;
 	P=V4MulMatCoordi(P,viewMat);
 	out_position=V4MulMatCoordi(P, projectMat);
@@ -364,6 +433,10 @@ function ps_main()
 	BranchBegin("colorModel","CM",[colorModel]);
 	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
+	
+	BranchBegin("shadowPlaneF","SPF",[]);
+    L_cor.rgb=new CVec3(0.0, 0.0, 0.0);
+    BranchEnd();
 
 
 	BranchBegin("alphaModel","AM",[alphaModel]);

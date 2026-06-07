@@ -5,7 +5,6 @@ import * as https from 'https';
 import * as http from 'http';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const AdmZip: any = require('adm-zip');
 import { URLPatterns } from '../network/CServerMain.js';
 import { CServerRouter } from '../network/CServerRouter.js';
 import { CJSON } from '../basic/CJSON.js';
@@ -56,6 +55,7 @@ async function ensureFfmpeg(): Promise<boolean> {
     const data = await CFile.Load(FFMPEG_ZIP_URL);
     if (!data) { CConsol.Log('[Download] ffmpeg ZIP 다운로드 실패'); return false; }
 
+    const AdmZip: any = require('adm-zip');
     const zip = new AdmZip(Buffer.from(data as ArrayBuffer));
     const entry = zip.getEntries().find((e: any) => /\/bin\/ffmpeg\.exe$/i.test(e.entryName));
     if (!entry) { CConsol.Log('[Download] ZIP 안에서 ffmpeg.exe 못 찾음'); return false; }
