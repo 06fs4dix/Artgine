@@ -115,6 +115,10 @@ export class CPath
 		}
 		return g_root;
 	}
+	static WebRootArtgineUrl(): string
+	{
+		return new URL("../../", import.meta.url).href;
+	}
 	// static PHPR()
 	// {
 	// 	if(g_root==null)
