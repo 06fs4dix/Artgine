@@ -4,6 +4,7 @@ import {CWASM} from "../basic/CWASM.js";
 import {CFloat32} from "./CFloat32.js";
 import { CObject } from "../basic/CObject.js";
 
+
 export class CVec2 extends CFloat32
 {
 
@@ -82,4 +83,14 @@ export class CVec2 extends CFloat32
 		(inputs[0] as HTMLInputElement).onmousedown = MounsDownFun;
 		(inputs[1] as HTMLInputElement).onmousedown = MounsDownFun;
 	}
+	static Vec2(_x,_y)
+	{
+		gVec2.mF32A[0]=_x;
+		gVec2.mF32A[1]=_y;
+		
+
+		return gVec2;
+	}
 }
+
+let gVec2=new CVec2();

@@ -68,7 +68,7 @@ export class CCollider extends CGeometryComp
 	public mPushVec=new CVec3();
 	
 	
-	public mElevator=false;//엘리베이터인지
+	//public mElevator=false;//엘리베이터인지
 	public mStairs=false;//계단인지
 	public mEvent=CCollider.eEvent.Collision;
 	
@@ -359,8 +359,8 @@ export class CCollider extends CGeometryComp
 	}
 	GetLayer()	: string	{	return this.mLayer;	}
 	
-	GetElevator()	{	return this.mElevator;	}
-	SetElevator(_elevator:boolean){ this.mElevator = _elevator;}
+	// GetElevator()	{	return this.mElevator;	}
+	// SetElevator(_elevator:boolean){ this.mElevator = _elevator;}
 	
 
 	GetStairs()	{	return this.mStairs;	}

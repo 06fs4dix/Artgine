@@ -12,6 +12,9 @@ const LS_TOKEN = 'artgine.token';
 import { CFecth } from "../../../artgine/network/CFecth.js";
 import { CPath } from "../../../artgine/basic/CPath.js";
 let authToken = localStorage.getItem(LS_TOKEN) || '';
+function isStandaloneChat() {
+    return window.parent === window;
+}
 function authedFetch(input, init) {
     const headers = new Headers(init?.headers || {});
     if (authToken)
@@ -24,19 +27,8 @@ function clearAuth() {
     showLoginOverlay('Session expired. Please sign in again.');
 }
 function showLoginOverlay(msg = '') {
-    const overlay = document.getElementById('loginOverlay');
-    const msgEl = document.getElementById('loginMsg');
-    const pwEl = document.getElementById('loginPw');
-    if (overlay) {
-        overlay.classList.remove('d-none');
-        overlay.style.display = '';
-    }
-    if (msgEl)
-        msgEl.textContent = msg;
-    if (pwEl) {
-        pwEl.value = '';
-        pwEl.focus();
-    }
+    hideLoginOverlay();
+    showComposerLogin(msg);
 }
 function hideLoginOverlay() {
     const overlay = document.getElementById('loginOverlay');
@@ -60,7 +52,52 @@ const elSendBtn = $('sendBtn');
 const elFileBtn = $('fileBtn');
 const elFileInput = $('fileInput');
 const elEmpty = $('emptyState');
-const elShareBtn = $('shareBtn');
+const elComposerRow = elInput.closest('.d-flex');
+let elComposerLogin = null;
+function showComposerLogin(msg = '') {
+    elAttachPrev.classList.add('d-none');
+    elComposerRow?.classList.add('d-none');
+    if (!elComposerLogin) {
+        elComposerLogin = document.createElement('div');
+        elComposerLogin.id = 'composerLogin';
+        elComposerLogin.innerHTML = `
+            <div class="d-flex gap-2 align-items-end">
+                <div class="flex-grow-1">
+                    <input id="composerLoginPw" type="password" class="form-control" placeholder="Password" autocomplete="current-password">
+                    <div id="composerLoginMsg" class="small text-danger mt-1" style="min-height: 1.2em;"></div>
+                </div>
+                <button id="composerLoginBtn" class="btn btn-primary">Sign in</button>
+            </div>
+        `;
+        elComposer.appendChild(elComposerLogin);
+        const pwEl = document.getElementById('composerLoginPw');
+        const btnEl = document.getElementById('composerLoginBtn');
+        btnEl.addEventListener('click', () => tryLogin(pwEl.value));
+        pwEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter')
+                tryLogin(pwEl.value);
+        });
+    }
+    const msgEl = document.getElementById('composerLoginMsg');
+    const pwEl = document.getElementById('composerLoginPw');
+    if (msgEl)
+        msgEl.textContent = msg;
+    if (pwEl) {
+        pwEl.value = '';
+        setTimeout(() => pwEl.focus(), 50);
+    }
+}
+function hideComposerLogin() {
+    elAttachPrev.classList.remove('d-none');
+    elComposerRow?.classList.remove('d-none');
+    elComposerLogin?.classList.add('d-none');
+}
+function redirectToAuthedChat() {
+    const url = new URL(location.href);
+    if (!url.searchParams.get('session'))
+        url.searchParams.set('session', uuid());
+    location.replace(url.toString());
+}
 let currentSid = null;
 let currentHistory = null;
 let pendingAttachments = [];
@@ -77,8 +114,6 @@ const _urlParams = (() => {
         return null;
     }
 })();
-const shareSid = _urlParams?.get('share') ?? null;
-const shareMode = !!shareSid;
 const paramSid = _urlParams?.get('session') ?? null;
 function shortUA(ua) {
     let os = '';
@@ -178,14 +213,11 @@ function isImagePath(p) {
 }
 function attachmentUrl(sid, relPath, bust) {
     const t = bust ?? Date.now();
-    if (shareMode) {
-        return `${CPath.PHPC()}ai/chat/share/file?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
-    }
-    return `${CPath.PHPC()}ai/chat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}&token=${encodeURIComponent(authToken)}`;
+    return `${CPath.WebRootUrl()}ai/chat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}&token=${encodeURIComponent(authToken)}`;
 }
 async function fetchProviders() {
     try {
-        const r = await authedFetch(CPath.PHPC() + 'ai/chat/providers');
+        const r = await authedFetch(CPath.WebRootUrl() + 'ai/chat/providers');
         if (r.status === 401) {
             clearAuth();
             return false;
@@ -245,7 +277,7 @@ elModelSel.addEventListener('change', () => {
 });
 async function fetchHistory(sid) {
     try {
-        const r = await authedFetch(`${CPath.PHPC()}ai/chat/session?id=${encodeURIComponent(sid)}`);
+        const r = await authedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${encodeURIComponent(sid)}`);
         if (r.status === 401) {
             clearAuth();
             return;
@@ -343,7 +375,7 @@ elFileInput.addEventListener('change', async () => {
 });
 async function uploadFile(f) {
     try {
-        const r = await authedFetch(`${CPath.PHPC()}ai/chat/session/upload?id=${currentSid}&name=${encodeURIComponent(f.name)}`, {
+        const r = await authedFetch(`${CPath.WebRootUrl()}ai/chat/session/upload?id=${currentSid}&name=${encodeURIComponent(f.name)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/octet-stream' },
             body: f,
@@ -535,7 +567,7 @@ function connectWs() {
         ws = null;
     }
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${CPath.PHPC().replace(/^http/, 'ws')}ai/chat/ws?token=${encodeURIComponent(authToken)}`);
+    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}ai/chat/ws?token=${encodeURIComponent(authToken)}`);
     ws.addEventListener('open', () => {
         setStatus('connected', 'text-bg-success');
         ws.send(JSON.stringify({ type: 'join', sessionId: currentSid }));
@@ -550,14 +582,20 @@ function connectWs() {
     ws.addEventListener('message', handleWsMessage);
 }
 async function tryLogin(pw) {
-    const msgEl = document.getElementById('loginMsg');
+    const msgEl = document.getElementById('composerLoginMsg') || document.getElementById('loginMsg');
     try {
-        const j = await CFecth.Exe(CPath.PHPC() + "auth/login", { password: pw }, "json");
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json");
         if (j.ok && j.token) {
             authToken = j.token;
             localStorage.setItem(LS_TOKEN, authToken);
             hideLoginOverlay();
-            bootChat();
+            hideComposerLogin();
+            if (isStandaloneChat()) {
+                redirectToAuthedChat();
+            }
+            else {
+                bootChat();
+            }
         }
         else {
             if (msgEl)
@@ -596,57 +634,17 @@ async function bootChat() {
     await fetchHistory(currentSid);
     connectWs();
 }
-async function bootShareView() {
-    document.body.classList.add('share-mode');
-    hideLoginOverlay();
-    try {
-        const r = await fetch(`${CPath.PHPC()}ai/chat/share?id=${encodeURIComponent(shareSid)}`);
-        if (!r.ok) {
-            elMessages.innerHTML = '<div class="text-center text-danger mt-5">Session not found.</div>';
-            return;
-        }
-        const j = await r.json();
-        if (!j.ok) {
-            elMessages.innerHTML = '<div class="text-center text-danger mt-5">Session not available.</div>';
-            return;
-        }
-        currentSid = shareSid;
-        currentHistory = j.history;
-        renderMessages();
-    }
-    catch {
-        elMessages.innerHTML = '<div class="text-center text-danger mt-5">Failed to load.</div>';
-    }
-}
-elShareBtn?.addEventListener('click', async () => {
-    if (!currentSid) {
-        alert('No active session.');
-        return;
-    }
-    const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(currentSid)}`;
-    try {
-        await navigator.clipboard.writeText(url);
-        elShareBtn.innerHTML = '<i class="bi bi-check2"></i>';
-        setTimeout(() => { elShareBtn.innerHTML = '<i class="bi bi-share"></i>'; }, 1500);
-    }
-    catch {
-        prompt('Copy this link:', url);
-    }
-});
 async function init() {
-    if (shareMode) {
-        bootShareView();
-        return;
-    }
     installLoginHandlers();
     if (!authToken) {
         showLoginOverlay();
         return;
     }
     try {
-        const j = await CFecth.Exe(CPath.PHPC() + "auth/check", { token: authToken }, "json");
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token: authToken }, "json");
         if (j.ok) {
             hideLoginOverlay();
+            hideComposerLogin();
             bootChat();
         }
         else {

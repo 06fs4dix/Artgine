@@ -43,6 +43,11 @@ export class CFloat32Mgr extends CFloat32
 	{
 		this.mSize=0;
 	}
+	Shrink()
+	{
+		this.Clear();
+		this.Reserve(0);
+	}
 	IsEmpty()
 	{
 		return this.mF32A.length==0;

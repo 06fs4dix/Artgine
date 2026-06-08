@@ -321,6 +321,9 @@ export class CVoxelMap extends CSubject implements IMapSchema
 	mLayer =new Array<CBlackBoardRef<CVoxelMap>>();
 	override IsShould(_member: string, _type: CObject.eShould) 
 	{
+
+		if(_member=="mComArr" && _type==CObject.eShould.Editer)	return true;
+
 		if(_member=="mPaint" || _member=="mUpdateRes" || _member=="mPlane" || _member=="mColliderArr" || _member=="mComArr")	return false;
 
 		return super.IsShould(_member,_type);

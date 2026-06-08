@@ -96,13 +96,13 @@ export class CPaintVoxel extends CPaint
 	//6면이 한세트로 들어있어야 한다.
 	Rebuild(_arr : Array<CVoxPlane>)
 	{	
-		var pbuf=new Float32Array(4*6);
-		var ubuf=new Float32Array(4*6);
-		var cbuf=new Float32Array(2*6);
+		let pbuf=new Float32Array(4*6);
+		let ubuf=new Float32Array(4*6);
+		let cbuf=new Float32Array(2*6);
 
-		for(var i=0;i<_arr.length;++i)
+		for(let i=0;i<_arr.length;++i)
 		{
-			for(var j=0;j<6;++j)
+			for(let j=0;j<6;++j)
 			{
 				pbuf[j*4+0]=_arr[i].mPos.mF32A[0];
 				pbuf[j*4+1]=_arr[i].mPos.mF32A[1];
@@ -122,14 +122,15 @@ export class CPaintVoxel extends CPaint
 			this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(this.mMD,1,_arr[i].mOff*4*6*4,ubuf);
 			this.mOwner.GetFrame().Ren().RebuildMeshDrawNode(this.mMD,2,_arr[i].mOff*2*6*4,cbuf);
 		}
+		//this.ClearBatch();
 	}
 	Build(_arr : Array<CVoxPlane>)
 	{
 		if(CUtil.IsNode())	return;
 
-		var pbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Position)[0].bufF;
-		var ubuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.UV)[0].bufF;
-		var cbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Color)[0].bufF;
+		let pbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Position)[0].bufF;
+		let ubuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.UV)[0].bufF;
+		let cbuf=this.mMCI.GetVFType(CVertexFormat.eIdentifier.Color)[0].bufF;
 
 		pbuf.Resize(_arr.length*6*4);
 		ubuf.Resize(_arr.length*6*4);
@@ -140,8 +141,8 @@ export class CPaintVoxel extends CPaint
 
 		this.mBound.Reset();
 		this.mMCI.vertexCount=_arr.length*6;
-		var i=0;
-		for(var each0 of _arr)
+		let i=0;
+		for(let each0 of _arr)
 		{
 			this.mBound.InitBound(each0.mPos);
 			pbuf.V4(0+i*6,each0.mPos.mF32A[0],each0.mPos.mF32A[1],each0.mPos.mF32A[2],each0.mDir+0);
@@ -180,10 +181,19 @@ export class CPaintVoxel extends CPaint
 			return;
 		this.mOwner.GetFrame().Ren().BuildMeshDrawNodeAutoFix(this.mMD,this.mOwner.GetFrame().Pal().SlVoxel().mShader[0],
 			this.mMCI);
+
+		// pbuf.Shrink();   // GPU 업로드 끝났으니 CPU 그림자 복사본 해제
+		// ubuf.Shrink();
+		// cbuf.Shrink();
 		
 	}
 	override Render(_vf : CShader)
 	{
+		if(this.mMD.vGBuf==null || this.mMD.vNum<=0)	return;
+
+		var barr=this.RenderBatch(_vf,1);
+		if(barr==null)	return;
+
 		this.mOwner.GetFrame().BMgr().BatchOn();
 		this.Common(_vf);
 		
@@ -191,7 +201,13 @@ export class CPaintVoxel extends CPaint
 		this.mOwner.GetFrame().BMgr().SetBatchSA(new CShaderAttr("size", this.mSize));
 		this.mOwner.GetFrame().BMgr().SetBatchTex(this.mTextureKey);
 		this.mOwner.GetFrame().BMgr().SetBatchMesh(this.mMD);
-		this.mOwner.GetFrame().BMgr().BatchOff();
+		let batch=this.mOwner.GetFrame().BMgr().BatchOff();
+		if(batch==null || batch.mKey==0)
+		{
+			this.ClearBatch();
+			return;
+		}
+		barr[0]=batch;
 	}
 	override ClearCRPAuto(): void {
 		super.ClearCRPAuto();

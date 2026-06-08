@@ -158,7 +158,7 @@ export class CLight extends CBrushComp
 					let sh0=Number(CDOM.IDValue("ligSh0_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh0_num"+wtKey));
 					let sh1=Number(CDOM.IDValue("ligSh1_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh1_num"+wtKey));
 					let sh2=Number(CDOM.IDValue("ligSh2_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh2_num"+wtKey));
-                    this.SetShadow(wtKey, sh0, sh1, sh2);
+                    this.SetShadow3D(wtKey, sh0, sh1, sh2);
 					this.EditRefresh();
 				}
 			});
@@ -552,7 +552,7 @@ export class CLight extends CBrushComp
 		this.mColor.z = _col.z;
 		this.mUpdate = CUpdate.eType.Updated;
 	}
-	SetShadow(_shadowKey,_CycleTime0=0,_CycleTime1=-1,_CycleTime2=-1)
+	SetShadow3D(_shadowKey,_CycleTime0=0,_CycleTime1=-1,_CycleTime2=-1)
 	{
 		this.mTexKey=_shadowKey;
 		this.mCascadeCycle[0]=_CycleTime0;

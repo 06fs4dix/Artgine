@@ -22,11 +22,11 @@ export class CScript extends CObject
                 {
                     const fs = await import('fs');
                     const path = await import('path');
-                    
+
                     // _source가 .js 파일 경로인 경우 직접 import
                     if (_source.endsWith('.js') && !_source.includes('import')) {
                         const filePath = _source;
-                        
+
                         if ((fs as any).default.existsSync(filePath)) {
                             let importPath = filePath;
                             if (filePath.match(/^[A-Za-z]:/)) {
@@ -49,20 +49,20 @@ export class CScript extends CObject
 
                         const tempFile = (path as any).default.join(CPath.WorkingPath(), `temp_${_key}.js`);
                         (fs as any).default.writeFileSync(tempFile, moduleCode);
-                            
+
                         let importPath = tempFile;
                         if (tempFile.match(/^[A-Za-z]:/)) {
                             importPath = `file:///${tempFile.replace(/\\/g, '/')}`;
                         }
-                            
+
                         const module = await import(importPath);
                         gScriptMap.set(_key, module);
-                        
+
                         if (!(global as any).__importCache) {
                             (global as any).__importCache = new Map();
                         }
                         (global as any).__importCache.set(importPath, module);
-                            
+
                         // 임시 파일 삭제
                         (fs as any).default.unlinkSync(tempFile);
                     }
@@ -78,7 +78,7 @@ export class CScript extends CObject
                     const url = URL.createObjectURL(blob);
                     const module = await import(url);
                     gScriptMap.set(_key, module);
-                    
+
                     URL.revokeObjectURL(url);
                 }
                 

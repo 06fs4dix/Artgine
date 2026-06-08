@@ -475,6 +475,11 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 			each0.mPEnable=_enable;
 			each0.SetChildShow(_enable && this.mEnable);
 		}
+
+        for(let each0 of this.mComArr)
+        {
+            each0.SetEnable(each0.IsEnable());
+        }
 	}
 	
 	IsEnable() 
@@ -1080,4 +1085,5 @@ export class CSubject extends CObject implements IFile , IMat , IProvider
 
 
 import CSubject_imple from "../../app_imple/subject/CSubject.js"
+import { CPool } from "../../basic/CPool.js"
 CSubject_imple();

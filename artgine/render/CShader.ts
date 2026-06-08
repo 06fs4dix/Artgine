@@ -107,14 +107,14 @@ export class CShader extends CObject
 		this.mTagMain=new Set<string>();
 		//this.m_instance=null;
 	}
-	IsShould(_member: string, _type: CObject.eShould): boolean 
+	override IsShould(_member: string, _type: CObject.eShould): boolean 
 	{
 		if(_member=="m_complie" || _member=="m_program")
 			return false;
 		return super.IsShould(_member,_type);
 	}
 
-	Icon(){		return "bi bi-filetype-sh";	}
+	override Icon(){		return "bi bi-filetype-sh";	}
 	PushProgram(_program : any)
 	{
 		this.mProgram=_program;
@@ -168,9 +168,11 @@ export class CShaderList extends CObject
 {
 	public mKey ="";
 	public mShader = new Array<CShader>();
+	public mShaderMap = new Map<string,CShader>();
 	PushShader(_shader : CShader)
 	{
 		this.mShader.push(_shader);
+		this.mShaderMap.set(_shader.mKey,_shader);
 		// this.m_shader.push(_shader);
 		// for(var each0 of _tag)
 		// {
@@ -236,11 +238,7 @@ export class CShaderList extends CObject
 	
 		else
 		{
-			for(var i=0;i<this.mShader.length;++i)
-			{
-				if(this.mShader[i].mKey==_tag)
-					return this.mShader[i];
-			}
+			return this.mShaderMap.get(_tag);
 		}
 		return null;
 	}

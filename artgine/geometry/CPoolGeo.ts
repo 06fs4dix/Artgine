@@ -2,9 +2,11 @@ import {CQueue} from "../basic/CQueue.js";
 import {CBound} from "./CBound.js";
 import {CMat} from "./CMat.js";
 import {CRay} from "./CRay.js";
+import { CVec2 } from "./CVec2.js";
 import {CVec3} from "./CVec3.js";
 import {CVec4} from "./CVec4.js";
 
+var gV2=new CQueue<CVec2>();
 var gV3=new CQueue<CVec3>();
 var gV4=new CQueue<CVec4>();
 var gMat=new CQueue<CMat>();
@@ -15,6 +17,22 @@ var maxLen=0;
 
 export class CPoolGeo
 {
+    static V2()
+    {
+        return gV2;
+    }
+    static ProductV2()
+    {
+       
+        let data=gV2.Dequeue();
+        if(data==null)  data=new CVec2();
+        return data;
+    }
+    static RecycleV2(_v : CVec2)
+    {
+        gV2.Enqueue(_v);
+    }
+
     static V3()
     {
         return gV3;

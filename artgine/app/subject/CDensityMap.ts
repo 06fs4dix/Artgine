@@ -272,6 +272,15 @@ export class CDensityMap extends CSubject implements IMapSchema
                         const srcBound = density.mBound ?? bound;
                         CMath.V3MulMatCoordi(srcBound.mMin, lastMat, cbound.mMin);
                         CMath.V3MulMatCoordi(srcBound.mMax, lastMat, cbound.mMax);
+                        if(density instanceof CDensityInfo2D)
+                        {
+                            const xHalf = (cbound.mMax.x - cbound.mMin.x) * 0.5;
+                            const yHalf = (cbound.mMax.y - cbound.mMin.y) * 0.5;
+                            const zHalf = Math.max(xHalf, Math.abs(yHalf));
+                            const zCenter = (cbound.mMin.z + cbound.mMax.z) * 0.5;
+                            cbound.mMin.z = zCenter - zHalf;
+                            cbound.mMax.z = zCenter + zHalf;
+                        }
                         cl.InitBound(cbound);
                         cl.SetEvent(CCollider.eEvent.Static);
                         this.PushComp(cl);

@@ -418,7 +418,7 @@ export class CLoader
 
 		
 		let basePath="";
-		if(_file.indexOf("z_file")==-1)
+		if(_file.indexOf("z_file")==-1 && _file.indexOf("/")!=-1)
 		{
 			basePath="/"+CString.PathSub(_file);
 		}

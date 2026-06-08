@@ -219,11 +219,14 @@ export class CCamera extends CObject
 			this.mBillboardMat.mF32A[10]=0;
 			
 		}
-		var inMat = CMath.MatInvert(this.GetViewMat());
+		let inMat=CPoolGeo.ProductMat();
+		CMath.MatInvert(this.GetViewMat(),inMat);
 		var rote = CMath.MatDecomposeRotMat(inMat, true, true, true);
+		CPoolGeo.RecycleMat(inMat);
 	
-		var rot = CMath.MatRotation(CVec3.Vec3(0, 0, 0));
-		CMath.MatMul(rot, rote,this.mBillboardMat);
+		 this.mBillboardMat.Import(rote);
+		// var rot = CMath.MatRotation(CVec3.Vec3(0, 0, 0));
+		// CMath.MatMul(rot, rote,this.mBillboardMat);
 	}
 	ResetPerspective() : void
 	{

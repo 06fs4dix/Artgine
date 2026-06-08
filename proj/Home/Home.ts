@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mptgpf92_2";
+gPF.mVersion = "mq3tc6m0_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -49,6 +49,7 @@ import { CFile } from "../../artgine/system/CFile.js";
 import { CWebSocket } from '../../artgine/network/CWebSocket.js';
 import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
+import { CTooltip } from "../../artgine/util/CTooltip.js";
 
 
 // let mdModal=new CModal("test");
@@ -297,7 +298,7 @@ async function aiRefreshSessions() {
         return;
     }
     try {
-        const r = await aiAuthedFetch(CPath.PHPC() + 'ai/chat/sessions?limit=30');
+        const r = await aiAuthedFetch(CPath.WebRootUrl() + 'ai/chat/sessions?limit=30');
         if (r.status === 401) {
             localStorage.removeItem(AI_TOKEN_KEY);
             fileAuthed = false;
@@ -374,7 +375,7 @@ async function aiRefreshSessions() {
                         drop.remove();
                         if (b.dataset.act === 'delete') {
                             if (!confirm(`Delete "${s.title}"?`)) return;
-                            await aiAuthedFetch(`${CPath.PHPC()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
+                            await aiAuthedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
                             destroyFrame(key);
                             aiRefreshSessions();
                             termRefreshSessions();
@@ -390,6 +391,10 @@ async function aiRefreshSessions() {
             });
             item.addEventListener('mouseenter', () => { if (!isActive) item.classList.add('bg-body-secondary'); });
             item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            const aiTipEl = document.createElement('div');
+            aiTipEl.style.cssText = 'white-space:pre-wrap;max-width:280px;font-size:0.82rem;';
+            aiTipEl.textContent = s.title + (s.lastMsg ? '\n\n' + s.lastMsg : '');
+            new CTooltip(aiTipEl, item, CTooltip.eTrigger.Hover, CTooltip.ePlacement.Left);
             aiSessionList.appendChild(item);
         }
     } catch (e) { console.error('AI session list error:', e); }
@@ -470,6 +475,8 @@ const CMD_TOKEN_KEY = 'artgine.token';
 const termNewBtn = CDOM.ID("termNewBtn");
 const termSessionList = CDOM.ID("termSessionList");
 let termActivePort: number | null = null;
+const prevTermUpdatedAt = new Map<number, number>();
+const termPendingNotify = new Set<number>();
 
 
 
@@ -485,7 +492,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' | 'gemini' | 'codex' | 'anti
     const token = localStorage.getItem(CMD_TOKEN_KEY);
     if (token) {
         try {
-            const r = await termAuthedFetch(CPath.PHPC() + 'cmd/sessions');
+            const r = await termAuthedFetch(CPath.WebRootUrl() + 'cmd/sessions');
             const j = await r.json();
             if (j.ok) {
                 const aliveCount = (j.sessions as any[]).filter((s: any) => s.alive).length;
@@ -577,11 +584,11 @@ async function termStartNew(_mode: 'cmd' | 'claude' | 'gemini' | 'codex' | 'anti
             if (mdcopyCheck.checked) params.set('mdcopy', '1');
             modal.Close();
             try {
-                const r = await termAuthedFetch(CPath.PHPC() + 'cmd/start-ttyd?' + params.toString());
+                const r = await termAuthedFetch(CPath.WebRootUrl() + 'cmd/start-ttyd?' + params.toString());
                 const j = await r.json();
                 if (!j.ok) { alert(j.msg || 'Failed to start terminal'); return; }
                 const key = `term-new:${Date.now()}`;
-                showFrame(key, `${CPath.PHPC()}cmd/terminal-proxy?port=${j.port}`);
+                showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${j.port}`);
                 aiRefreshSessions();
                 termRefreshSessions();
                 refreshSessionsSoon();
@@ -606,14 +613,14 @@ async function termConnectSession(port: number) {
         termRefreshSessions();
         return;
     }
-    showFrame(key, `${CPath.PHPC()}cmd/terminal-proxy?port=${port}`);
+    showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`);
     aiRefreshSessions();
     termRefreshSessions();
 }
 
 async function termKillSession(port: number) {
     try {
-        const r = await termAuthedFetch(`${CPath.PHPC()}cmd/kill-session?port=${port}`);
+        const r = await termAuthedFetch(`${CPath.WebRootUrl()}cmd/kill-session?port=${port}`);
         const j = await r.json();
         if (!j.ok) { alert(`삭제 실패: ${j.msg || 'unknown error'}`); return; }
         termRefreshSessions();
@@ -623,7 +630,7 @@ async function termKillSession(port: number) {
 
 async function termRefreshSessions() {
     try {
-        const r = await fetch(CPath.PHPC() + 'cmd/sessions');
+        const r = await fetch(CPath.WebRootUrl() + 'cmd/sessions');
         const j = await r.json();
         if (!j.ok) return;
         // DOM 지우기 전에 노란점(처리 중)이었던 포트 수집
@@ -632,7 +639,7 @@ async function termRefreshSessions() {
             if (el.querySelector('.term-busy-dot')) prevYellowTerm.add(Number(el.dataset.port));
         });
         termSessionList.innerHTML = '';
-        const sessions = j.sessions as { port: number; mode: string; key?: string; lastLine: string; lastCmd: string; lastActivity: number; createdAt: number; alive: boolean; lineChanged: boolean; workingDir?: string }[];
+        const sessions = j.sessions as { port: number; mode: string; key?: string; lastMsg: string; updatedAt: number; createdAt: number; alive: boolean; busy: boolean; workingDir?: string }[];
         const serverPorts = new Set(sessions.map(s => s.port));
         for (const key of Array.from(iframePool.keys())) {
             if (!key.startsWith('term:')) continue;
@@ -660,19 +667,32 @@ async function termRefreshSessions() {
             item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
                 + (isActive ? ' bg-success-subtle' : '');
             item.dataset.port = String(s.port);
-            const rel = aiFormatRelative(s.lastActivity);
-            const preview = aiEscapeHtml(s.lastCmd || s.lastLine || '(empty)');
+            const rel = aiFormatRelative(s.updatedAt);
+            const preview = aiEscapeHtml(s.lastMsg || '(empty)');
             const dotLabel = s.mode.slice(0, 3);
             const dotTitle = s.key || s.mode;
             let dot: string;
             if (!s.alive || !isLoaded) {
+                termPendingNotify.delete(s.port);
                 dot = `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-            } else if (s.lineChanged) {
+            } else if (s.busy) {
+                termPendingNotify.delete(s.port);
                 dot = `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
             } else {
-                if (prevYellowTerm.has(s.port) && (!isActiveFrame(key) || !document.hasFocus())) {
-                    const rawPreview = s.lastCmd || s.lastLine || '';
-                    _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
+                if (prevYellowTerm.has(s.port)) {
+                    // busy→not-busy 전환: pending 등록, updatedAt 기록
+                    termPendingNotify.add(s.port);
+                    prevTermUpdatedAt.set(s.port, s.updatedAt);
+                } else if (termPendingNotify.has(s.port)) {
+                    // 두 번째 체크: updatedAt이 안정됐으면 알림 (출력이 진짜 멈춘 것)
+                    const rawPreview = s.lastMsg || '';
+                    if (prevTermUpdatedAt.get(s.port) === s.updatedAt && (!isActiveFrame(key) || !document.hasFocus())) {
+                        _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
+                        termPendingNotify.delete(s.port);
+                        prevTermUpdatedAt.delete(s.port);
+                    } else {
+                        prevTermUpdatedAt.set(s.port, s.updatedAt);
+                    }
                 }
                 dot = `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
             }
@@ -729,13 +749,17 @@ async function termRefreshSessions() {
             });
             item.addEventListener('mouseenter', () => { if (!isActive) item.classList.add('bg-body-secondary'); });
             item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            const termTipEl = document.createElement('div');
+            termTipEl.style.cssText = 'white-space:pre-wrap;max-width:280px;font-size:0.82rem;';
+            termTipEl.textContent = s.lastMsg || '(empty)';
+            new CTooltip(termTipEl, item, CTooltip.eTrigger.Hover, CTooltip.ePlacement.Left);
             termSessionList.appendChild(item);
         }
     } catch (e) { console.error('Terminal session list error:', e); }
 }
 
 function termShowShareLink(port: number) {
-    const shareUrl = `${CPath.PHPC()}cmd/terminal-proxy?port=${port}`;
+    const shareUrl = `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`;
     const uid = `ts_${Date.now()}`;
     const modal = new CModal();
     modal.SetHeader('Terminal Share Link');
@@ -755,7 +779,7 @@ function termShowShareLink(port: number) {
 
 function aiShowShareLink(sessionId: string, title: string) {
     const base = location.pathname.replace(/\/[^/]+$/, '');
-    const shareUrl = `${location.origin}${base}/AI/AIChat.html?share=${encodeURIComponent(sessionId)}`;
+    const shareUrl = `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}`;
     const uid = `as_${Date.now()}`;
     const modal = new CModal();
     modal.SetHeader('AI Chat Share Link');
@@ -776,7 +800,7 @@ function aiShowShareLink(sessionId: string, title: string) {
 async function termOpenPopup(port: number, newWindow = false) {
     if (newWindow) {
         window.open(
-            `${CPath.PHPC()}cmd/terminal-proxy?port=${port}`,
+            `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`,
             `term_${port}`,
             'width=900,height=600,toolbar=no,menubar=no,location=no,status=no'
         );
@@ -790,7 +814,7 @@ async function termOpenPopup(port: number, newWindow = false) {
         modal.SetHeader('Terminal');
         modal.SetBody(
             `<div style="position:relative;width:100%;height:100%;">` +
-            `<iframe src="${CPath.PHPC()}cmd/terminal-proxy?port=${port}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
+            `<iframe src="${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
             `<div class="modal-iframe-guard" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;z-index:1;"></div>` +
             `</div>`
         );
@@ -822,7 +846,7 @@ function schedIntervalStr(s: ScheduleData): string {
 
 async function schedRefresh() {
     try {
-        const r = await termAuthedFetch(CPath.PHPC() + 'cmd/schedules');
+        const r = await termAuthedFetch(CPath.WebRootUrl() + 'cmd/schedules');
         const j = await r.json();
         if (!j.ok) return;
         schedSessionList.innerHTML = '';
@@ -848,7 +872,7 @@ async function schedRefresh() {
             item.querySelector('.sched-del-btn')!.addEventListener('click', async (e: Event) => {
                 e.stopPropagation();
                 if (!confirm(`스케줄 '${s.name}' 을 삭제할까요?`)) return;
-                await termAuthedFetch(`${CPath.PHPC()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
+                await termAuthedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
                 schedRefresh();
             });
             item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
@@ -982,7 +1006,7 @@ function schedOpenModal(existing?: ScheduleData) {
                 delay: String(delay), count: String(count), start: String(start), end: String(end),
                 allow: allow ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0' });
             if (cwd) params.set('cwd', cwd);
-            const r = await termAuthedFetch(`${CPath.PHPC()}cmd/schedule-set?${params.toString()}`);
+            const r = await termAuthedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
             const j = await r.json();
             if (!j.ok) { alert(j.msg || 'Failed'); return; }
             modal.Close();
@@ -1090,7 +1114,7 @@ async function aiCheckAuth(): Promise<boolean> {
     const token = localStorage.getItem(AI_TOKEN_KEY) || '';
     if (!token) return false;
     try {
-        const j = await CFecth.Exe(CPath.PHPC() + "auth/check", { token }, "json") as any;
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token }, "json") as any;
         return !!j?.ok;
     } catch { return false; }
 }
@@ -1117,7 +1141,7 @@ async function aiDoAuth() {
     aiAuthSubmitBtn.disabled = true;
     aiAuthMsg.textContent = '';
     try {
-        const j = await CFecth.Exe(CPath.PHPC() + "auth/login", { password: pw }, "json") as any;
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as any;
         if (j.ok) {
             localStorage.setItem(AI_TOKEN_KEY, j.token);
             fileAuthed = true;
@@ -1539,7 +1563,7 @@ function Redirection(_multi : boolean)
     form.setAttribute("method", "Post");
     const _token = localStorage.getItem(AI_TOKEN_KEY) || '';
     const _tokenQ = _token ? `?token=${encodeURIComponent(_token)}` : '';
-    form.setAttribute("action", CPath.PHPC()+"File/Redirection"+_tokenQ);
+    form.setAttribute("action", CPath.WebRootUrl()+"File/Redirection"+_tokenQ);
 
     CDOM.IDValue("fun",g_fun);
     CDOM.IDValue("data",g_data);
@@ -1602,7 +1626,7 @@ async function PermissionBtn() {
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         () => {
             const pw = CDOM.IDValue("AuthPassword");
-            (CFecth.Exe(CPath.PHPC() + "auth/login", { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
+            (CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
                 if (j.ok) {
                     localStorage.setItem(AI_TOKEN_KEY, j.token!);
                     fileAuthed = true;
@@ -1730,7 +1754,7 @@ function CreateFolder()
         const data = window["g_path"] + folderName;
         const param: any = { data };
         if (RootPath) param.RootPath = RootPath;
-        const j = await CFecth.Exe(CPath.PHPC() + "File/Mkdir", param, "json") as any;
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "File/Mkdir", param, "json") as any;
         if (j?.ok) FolderCD(window["g_path"]);
         else CAlert.E("폴더 생성 실패");
     },
@@ -2334,6 +2358,26 @@ let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
 
 // CDOM.ID("main").innerHTML="";
 //     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

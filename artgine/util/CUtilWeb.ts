@@ -130,13 +130,33 @@ export class CUtilWeb {
 			const originalPath = importPathArr[i];
 			if (processedPaths.has(originalPath)) continue;
 
-			// 이미 절대 URL이면 스킵
-			if (/^https?:\/\//.test(originalPath) || /^[A-Za-z]:\//.test(originalPath) || /^file:\/\/\//.test(originalPath)) {
+			// 이미 HTTP URL이면 스킵
+			if (/^https?:\/\//.test(originalPath) || /^file:\/\/\//.test(originalPath)) {
 				processedPaths.set(originalPath, originalPath);
 				continue;
 			}
 
 			let path = originalPath;
+
+			// Windows 절대경로(E:/...) → 프로젝트 루트 기준 상대경로로 변환 후 rootBase HTTP URL로 처리
+			if (/^[A-Za-z]:[\\/]/.test(path)) {
+				const normalized = path.replace(/\\/g, '/');
+				const knownRoots = ['/artgine/', '/proj/', '/plugin/', '/desktop/'];
+				let found = false;
+				for (const root of knownRoots) {
+					const idx = normalized.indexOf(root);
+					if (idx !== -1) {
+						path = normalized.substring(idx + 1);
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					processedPaths.set(originalPath, originalPath);
+					continue;
+				}
+			}
+
 			if (_monaco) path = CString.ReplaceAll(path, ".js", "");
 			else if (path.indexOf(".js") == -1) path += ".js";
 
