@@ -723,6 +723,7 @@ export class CModalFlex extends CModal
         this.mBody.classList.add(this.m_horizontal ? "flex-row" : "flex-column");
         this.mBody.style.width = "100%";
         this.mBody.style.height = "100%";
+        this.mBody.style.position = "relative";
         
         this.mBody.innerHTML = ""; // 기존 내용 삭제
         let dividerList = new Array<HTMLDivElement>();
@@ -754,20 +755,21 @@ export class CModalFlex extends CModal
 
             if (i < this.m_flex.length - 1) {
                 let divider = document.createElement("div");
-                //divider.className = "position-absolute bg-secondary";
                 divider.style.cursor = this.m_horizontal ? "ew-resize" : "ns-resize";
                 divider.style.pointerEvents = "auto";
+                divider.style.position = "absolute";
+                divider.style.zIndex = "10";
+                divider.style.userSelect = "none";
+                divider.style.backgroundColor = "rgba(108,117,125,0.35)";
                 
                 if (this.m_horizontal) {
-                    divider.style.right = "-2px";
                     divider.style.top = "0";
-                    divider.style.width = "2px";
+                    divider.style.width = "6px";
                     divider.style.height = "100%";
                 } else {
-                    divider.style.bottom = "-2px";
                     divider.style.left = "0";
                     divider.style.width = "100%";
-                    divider.style.height = "2px";
+                    divider.style.height = "6px";
                 }
                 
                 this.mBody.appendChild(divider);
@@ -786,8 +788,26 @@ export class CModalFlex extends CModal
         let startPos = 0;
         let startSizeA = 0;
         let startSizeB = 0;
+        const syncDivider = () => {
+            if(this.m_horizontal)
+            {
+                divider.style.left = (divA.offsetLeft + divA.offsetWidth - 3) + "px";
+                divider.style.top = "0";
+                divider.style.height = "100%";
+            }
+            else
+            {
+                divider.style.left = "0";
+                divider.style.top = (divA.offsetTop + divA.offsetHeight - 3) + "px";
+                divider.style.width = "100%";
+            }
+        };
+        syncDivider();
+        setTimeout(syncDivider, 0);
         
         divider.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             isDragging = true;
             startPos = this.m_horizontal ? e.clientX : e.clientY;
             startSizeA = this.m_horizontal ? divA.offsetWidth : divA.offsetHeight;
@@ -807,6 +827,7 @@ export class CModalFlex extends CModal
             {
                 divA.style.flex = `0 0 ${newSizeA}px`;
                 divB.style.flex = `0 0 ${newSizeB}px`;
+                syncDivider();
                 //divA.style.width = `${newSizeA}px`;
                 //divB.style.width = `${newSizeB}px`;
             }
@@ -814,6 +835,7 @@ export class CModalFlex extends CModal
             {
                 divA.style.flex = `0 0 ${newSizeA}px`;
                 divB.style.flex = `0 0 ${newSizeB}px`;
+                syncDivider();
                 //divA.style.height = `${newSizeA}px`;
                 //divB.style.height = `${newSizeB}px`;
             }
@@ -1607,5 +1629,180 @@ export class CModalTerminal extends CModal
             document.addEventListener('mousedown', () => { guard.style.display = 'block'; });
             document.addEventListener('mouseup', () => { guard.style.display = 'none'; });
         }
+    }
+}
+
+export class CModalMusic extends CModal
+{
+    private mNames: string[];
+    private mPaths: string[];
+    private mSaveFn: (names: string[], paths: string[]) => void;
+    private mLastPlay = 0;
+    private mRandomPool: string[] = [];
+    private mAudio: HTMLAudioElement;
+    private mNowPlayingEl: HTMLElement;
+    private mListEl: HTMLElement;
+    private mRandomChk: HTMLInputElement;
+
+    constructor(names: string[], paths: string[], saveFn?: (names: string[], paths: string[]) => void)
+    {
+        super(null);
+        this.mNames = [...names];
+        this.mPaths = [...paths];
+        this.mSaveFn = saveFn;
+
+        this.SetTitle(CModal.eTitle.TextClose);
+        this.SetHeader('Music');
+        this.SetCloseToHide(true);
+        this.SetSize(400, 600);
+        this.SetBody(`<div style="padding:4px;">
+            <button type="button" class="btn btn-danger btn-sm" style="margin:4px;">Delete All</button>
+            ${saveFn ? `<button type="button" class="btn btn-warning btn-sm mm-save-list" style="margin:4px;">Save List</button>` : ''}
+            <div class="mm-now" style="padding:6px;font-weight:bold;color:#0d6efd;"></div>
+            <audio controls playsinline preload="auto" style="width:100%;"></audio>
+            <div class="form-check" style="padding-left:2rem;">
+                <label class="form-check-label">
+                    <input class="form-check-input" type="checkbox" checked> Random Play
+                </label>
+            </div>
+            <hr><div class="mm-list"></div>
+        </div>`);
+        this.Open(CModal.ePos.Center);
+        this.Hide();
+
+        this.mAudio        = this.mBody.querySelector('audio') as HTMLAudioElement;
+        this.mNowPlayingEl = this.mBody.querySelector('.mm-now');
+        this.mListEl       = this.mBody.querySelector('.mm-list');
+        this.mRandomChk    = this.mBody.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+        this.mBody.querySelector('.btn-danger').addEventListener('click', () => this._DeleteAll());
+        if (saveFn) this.mBody.querySelector('.mm-save-list')?.addEventListener('click', () => saveFn(this.mNames, this.mPaths));
+
+        this.mAudio.addEventListener('ended', () => this._Next());
+        this.mAudio.addEventListener('pause', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; });
+        this.mAudio.addEventListener('play',  () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; });
+
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play',          () => this.mAudio.play());
+            navigator.mediaSession.setActionHandler('pause',         () => this.mAudio.pause());
+            navigator.mediaSession.setActionHandler('nexttrack',     () => this._Next());
+            navigator.mediaSession.setActionHandler('previoustrack', () => this.Play(this.mLastPlay > 0 ? this.mLastPlay - 1 : this.mNames.length - 1));
+        }
+
+        this._RefreshList();
+    }
+
+    AddTrack(name: string, path: string): boolean
+    {
+        for (const p of this.mPaths) if (p === path) return false;
+        this.mNames.push(name);
+        this.mPaths.push(path);
+        this._Persist();
+        return true;
+    }
+
+    Play(index: number): void
+    {
+        if (this.mPaths.length === 0) return;
+        const items = this.mListEl.querySelectorAll('li');
+        items[this.mLastPlay]?.classList.remove('list-group-item-dark');
+        this.mLastPlay = index;
+        items[index]?.classList.add('list-group-item-dark');
+
+        if ('audioSession' in navigator) (navigator as any).audioSession.type = 'playback';
+        this.mAudio.src = this.mPaths[index];
+        this.mAudio.play()
+            .then(() => {
+                this.mNowPlayingEl.textContent = '♫ ' + this.mNames[index];
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: this.mNames[index],
+                        artwork: [{ src: '512x512.png', sizes: '512x512', type: 'image/png' }]
+                    });
+                    navigator.mediaSession.playbackState = 'playing';
+                    if ('setPositionState' in navigator.mediaSession) {
+                        try { navigator.mediaSession.setPositionState({ duration: this.mAudio.duration, playbackRate: this.mAudio.playbackRate, position: this.mAudio.currentTime }); } catch(e) {}
+                    }
+                }
+            })
+            .catch(e => console.warn('CModalMusic.Play:', e));
+    }
+
+    SetList(names: string[], paths: string[]): void
+    {
+        this.mRandomPool = [];
+        this.mNames = [...names];
+        this.mPaths = [...paths];
+        this.mLastPlay = 0;
+        this.mAudio.pause();
+        this.mNowPlayingEl.textContent = '';
+        this._Persist();
+    }
+
+    get Names(): string[] { return [...this.mNames]; }
+    get Paths(): string[] { return [...this.mPaths]; }
+
+    private _Next(): void
+    {
+        if (this.mRandomChk.checked) {
+            while (this.mPaths.length > 0) {
+                if (this.mRandomPool.length === 0) this.mRandomPool = [...this.mPaths];
+                const sel = Math.trunc(Math.random() * this.mRandomPool.length);
+                const key = this.mRandomPool.splice(sel, 1)[0];
+                const i   = this.mPaths.indexOf(key);
+                if (i >= 0) { this.Play(i); return; }
+            }
+        } else {
+            this.Play(this.mLastPlay + 1 >= this.mPaths.length ? 0 : this.mLastPlay + 1);
+        }
+    }
+
+    private _DeleteTrack(index: number): void
+    {
+        this.mNames.splice(index, 1);
+        this.mPaths.splice(index, 1);
+        this.mAudio.pause();
+        if (index < this.mLastPlay)       this.mLastPlay--;
+        else if (index === this.mLastPlay) { this.mLastPlay = 0; this.mNowPlayingEl.textContent = ''; }
+        this._Persist();
+    }
+
+    private _DeleteAll(): void
+    {
+        this.mRandomPool = [];
+        this.mNames = [];
+        this.mPaths = [];
+        this.mAudio.pause();
+        this.mNowPlayingEl.textContent = '';
+        this.mLastPlay = 0;
+        this._Persist();
+    }
+
+    private _Persist(): void
+    {
+        this.mSaveFn?.(this.mNames, this.mPaths);
+        this._RefreshList();
+    }
+
+    private _RefreshList(): void
+    {
+        this.mRandomPool = [];
+        let html = '';
+        for (let i = 0; i < this.mPaths.length; i++) {
+            html += `<ul class="list-group">` +
+                    `<li class="list-group-item list-group-item-action" data-idx="${i}">` +
+                    `<i class="bi bi-file-music"></i> <font color="red">${this.mNames[i]}</font>` +
+                    `<i class="bi bi-file-earmark-x float-right" data-del="${i}"></i>` +
+                    `</li></ul>`;
+        }
+        this.mListEl.innerHTML = html;
+        this.mListEl.querySelectorAll('li').forEach((li, i) => {
+            li.addEventListener('click', (e) => {
+                const del = (e.target as HTMLElement).closest('[data-del]');
+                if (del) this._DeleteTrack(parseInt((del as HTMLElement).dataset.del));
+                else     this.Play(i);
+            });
+        });
+        this.mListEl.querySelectorAll('li')[this.mLastPlay]?.classList.add('list-group-item-dark');
     }
 }

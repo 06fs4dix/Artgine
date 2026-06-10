@@ -482,7 +482,7 @@ export class CUI extends CSubject
 			{
 				
 				ev=CEvent.eType.Press;
-				if(this.mFirstRayMs==null)
+				if(this.mFirstRayMs==null && this.mPressTraking!=2)
 				{
 					this.mFirstRayMs=this.mPick.Export();
 					let ctr=CMath.V3SubV3(this.mFirstRayMs.ray.GetPosition(),this.GetPos());
@@ -556,26 +556,24 @@ export class CUI extends CSubject
 		{
 			let m=this.mFrame.Input().GetMouseKey(this.mLastPickMouse.mouse.key);
 			//마우스키가 없으면 끝.누르고 있어야하고,트레킹 모드고,첫 누름유지
-			if(m!=null && m.press && this.mPressTraking>0 && this.mFirstRayMs!=null)
+			if(m!=null && m.press && this.mPressTraking>0 && (this.mPressTraking==2 || this.mFirstRayMs!=null))
 			{
 				ev=CEvent.eType.Press;
 				this.mLastPickMouse.mouse.Import(m);
 				this.mPick=this.mLastPickMouse;
-				if(this.mPressTraking==2)
+				if(this.mPressTraking==2 && this.mFirstRayMs==null)
 				{
 					if(this.mTrackPos2!=null && this.mTrackPos2.x==m.x && this.mTrackPos2.y==m.y)
 					{
-						let dmx=m.x-this.mFirstRayMs.mouse.x;
-						let dmy=m.y-this.mFirstRayMs.mouse.y;
-						let ctr=this.mFirstRayMs.ray.GetOriginal();
-						this.mFirstRayMs.mouse.Import(m);
-						this.mFirstRayMs.ray.SetOriginal(new CVec3(dmx+ctr.x,dmy+ctr.y));
+						this.mFirstRayMs=this.mLastPickMouse.Export();
+						this.mFirstRayMs.ray.SetOriginal(new CVec3(0,0,0));
 					}
 					this.mTrackPos2={x:m.x,y:m.y};
 				}
 			}
 			else
 			{
+				this.mTrackPos2=null;
 				for(let i=0;i<gUIPDepth.length;++i)
 				{
 					if(gUIPDepth[i]==this)
@@ -658,15 +656,13 @@ export class CUI extends CSubject
 		{	
 			this.GetFrame().Input().SetUI(this);
 			this.mPressEvent.Call(this);
-			var mx=this.mPick.mouse.x-this.mFirstRayMs.mouse.x;
-			var my=this.mPick.mouse.y-this.mFirstRayMs.mouse.y;
-			
-			let ctr=this.mFirstRayMs.ray.GetOriginal();
-			
-			
-			
-
-			this.mPressPos=new CVec3(mx+ctr.x,my+ctr.y);
+			if(this.mFirstRayMs!=null)
+			{
+				var mx=this.mPick.mouse.x-this.mFirstRayMs.mouse.x;
+				var my=this.mPick.mouse.y-this.mFirstRayMs.mouse.y;
+				let ctr=this.mFirstRayMs.ray.GetOriginal();
+				this.mPressPos=new CVec3(mx+ctr.x,my+ctr.y);
+			}
 
 
 		}

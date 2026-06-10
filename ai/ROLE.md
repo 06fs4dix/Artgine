@@ -2,9 +2,6 @@
 
 ## OS예외상황
 
-### Windows
-- Windows 환경에서는 PowerShell을 사용하지 않는다.
-
 ## 메모리 저장 규칙
 - 메모리 정보 저장 전 사용자 승인 필수.
 
@@ -16,6 +13,12 @@
 ```bash
 node ai/tsc_check.js 수정한파일.ts
 ```
+
+## 제한 명령어
+다음 명령어는 사용자가 명시적으로 요청하거나 승인하지 않는 한 실행하지 않는다.
+
+- node 임의 실행. ai/tsc_check.js는 제외
+- python / python3 실행
 
 ## 접속 정보
 - **로컬 주소**: `http://localhost:8050/Artgine`

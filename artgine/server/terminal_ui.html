@@ -2,6 +2,8 @@
 #mi-bar { position:fixed;bottom:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:8px;padding:6px 8px;border-top:1px solid #444;background:#1a1a1a;box-sizing:border-box; }
 #mi-bar textarea { flex:1;padding:5px 8px;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#fff;font-family:monospace;font-size:0.9rem;resize:none;line-height:1.4;max-height:200px;overflow-y:auto;min-width:0;box-sizing:border-box; }
 #mi-bar textarea:focus { outline:none;border-color:#00e5a0; }
+#mi-bar textarea.super, #mi-bar textarea.super:focus { border-color:#ff3b3b !important;background:#2a0e0e !important;color:#ff7a7a; }
+.mi-item.super-on { color:#ff7a7a; }
 #mi-dd-btn { padding:5px 12px;background:#555;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:1.2rem;white-space:nowrap;line-height:1.4; }
 #mi-dd-btn:hover { background:#666; }
 #mi-dd-menu { display:none;position:fixed;background:#2a2a2a;border:1px solid #555;border-radius:4px;z-index:10001;min-width:170px;list-style:none;margin:0;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,.6); }
@@ -26,6 +28,10 @@ window.addEventListener('keydown', function(e) {
     if (e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
         e.preventDefault(); e.stopPropagation();
         window.top.postMessage({ type: 'home-hotkey', key: e.key }, '*');
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        // 알림 전환(→)/이전 세션 복귀(←)용으로 상위에 전달만 한다(터미널 커서 이동은 막지 않음)
+        window.top.postMessage({ type: 'terminal-arrow-key', key: e.key }, '*');
     }
     if (e.ctrlKey && e.key === 't') {
         e.preventDefault(); e.stopPropagation();
@@ -143,7 +149,7 @@ window.addEventListener('keydown', function(e) {
         function _doAgentAction(kind) {
             var m = window.__TTYD_MODE;
             if (kind === "resume") {
-                if (m === "claude" || m === "codex") { _sendRaw("/resume"); return; }
+                if (m === "claude" || m === "codex" || m === "antigravity") { _sendRaw("/resume"); return; }
                 if (m === "gemini") { _sendRaw("/chat resume"); return; }
             }
             if (kind === "compact") {
@@ -170,6 +176,38 @@ window.addEventListener('keydown', function(e) {
             window.dispatchEvent(new Event('resize'));
         }
 
+        // ---- super mode (서버 측 무조건 자동승인, 포트별) ----
+        var _superOn = false;
+        var _superPort = new URLSearchParams(window.location.search).get("port") || "";
+        function _superUrl(extra) {
+            var ctxPath = "/" + window.location.pathname.split("/")[1];
+            var q = "port=" + encodeURIComponent(_superPort);
+            if (_storedToken) q += "&token=" + encodeURIComponent(_storedToken);
+            return ctxPath + "/cmd/super-mode?" + q + (extra || "");
+        }
+        function _setSuperUI(on) {
+            _superOn = !!on;
+            inp.classList.toggle("super", _superOn);
+            superItem.querySelector(".mi-item").classList.toggle("super-on", _superOn);
+            superItem.querySelector(".mi-item").textContent = (_superOn ? "⚡ SUPER (ON)" : "⚡ SUPER (auto-approve)");
+        }
+        function _toggleSuper() {
+            fetch(_superUrl("&on=" + (_superOn ? "0" : "1")))
+                .then(function(r) { return r.json(); })
+                .then(function(j) { if (j.ok) _setSuperUI(j.super); });
+        }
+        function _initSuper() {
+            if (!_superPort || !_storedToken) return;
+            fetch(_superUrl())
+                .then(function(r) { return r.json(); })
+                .then(function(j) { if (j.ok) _setSuperUI(j.super); })
+                .catch(function() {});
+        }
+        _initSuper();
+        setInterval(function() {
+            if (!document.hidden) _initSuper();
+        }, 60000);
+
         function handleAction(seq) {
             console.log('[terminal_ui] action:', seq, '| mode:', window.__TTYD_MODE);
             ddMenu.classList.remove("show");
@@ -179,11 +217,13 @@ window.addEventListener('keydown', function(e) {
             else if (seq === "__TOGGLE_INPUT__") { hideBar(); }
             else if (seq === "__RESIZE__")       { _sendResize(); }
             else if (seq === "__ESC__")          { _sendRaw("\x1b"); inp.focus(); }
+            else if (seq === "__SUPER__")        { _toggleSuper(); }
             else if (seq === "__RESUME__")       { _doAgentAction("resume"); }
             else if (seq === "__COMPACT__")      { _doAgentAction("compact"); }
             else if (seq === "__CLEAR__")        { _doAgentAction("clear"); }
             else if (seq === "__STATUS__")       { _doAgentAction("status"); }
             else if (seq === "__EXIT__")         { _doAgentAction("exit"); }
+            else if (seq === "__MODEL__")        { inp.value = "/model "; autoHeight(); inp.focus(); }
             else if (seq && seq.startsWith("__SKILL__:")) {
                 var skillName = seq.slice("__SKILL__:".length);
                 var skill = (window.__SKILLS__ || []).find(function(s) { return s.name === skillName; });
@@ -260,11 +300,15 @@ window.addEventListener('keydown', function(e) {
         ddMenu.appendChild(makeItem("← Left",  "\x1b[D"));
         ddMenu.appendChild(makeItem("→ Right", "\x1b[C"));
         ddMenu.appendChild(makeSep());
+        var superItem = makeItem("⚡ SUPER (auto-approve)", "__SUPER__");
+        ddMenu.appendChild(superItem);
+        ddMenu.appendChild(makeSep());
         ddMenu.appendChild(makeItem("↵ Enter", "\r"));
         ddMenu.appendChild(makeItem("ESC",     "__ESC__"));
         ddMenu.appendChild(makeSep());
         ddMenu.appendChild(makeSubmenu("Command", [
             ["⏮ RESUME",  "__RESUME__"],
+            ["🤖 MODEL",   "__MODEL__"],
             ["🗜 COMPACT", "__COMPACT__"],
             ["🧹 CLEAR",   "__CLEAR__"],
             ["📊 STATUS",  "__STATUS__"],
@@ -288,8 +332,9 @@ window.addEventListener('keydown', function(e) {
 
         function sendInput() {
             var text = inp.value;
+            if (text.trim() === "/super") { _toggleSuper(); inp.value = ""; autoHeight(); inp.focus(); return; }
             if (text) {
-                if (window.__TTYD_MODE === "gemini") _sendRaw("\x1b[200~" + text + "\x1b[201~");
+                if (window.__TTYD_MODE === "gemini" || window.__TTYD_MODE === "antigravity") _sendRaw("\x1b[200~" + text + "\x1b[201~");
                 else _sendRaw(text);
                 if (!text.startsWith("/")) _sendRaw("\r");
             } else {
@@ -300,10 +345,10 @@ window.addEventListener('keydown', function(e) {
 
         // ---- autocomplete ----
         var _cmdList = {
-            claude:      ['/compact', '/resume', '/exit', '/clear', '/status', '/help'],
+            claude:      ['/compact', '/resume', '/model', '/exit', '/clear', '/status', '/help'],
             gemini:      ['/compact', '/chat resume', '/exit', '/clear', '/stats', '/help'],
             codex:       ['/compact', '/resume', '/exit', '/clear', '/status', '/help'],
-            antigravity: ['/compact', '/continue', '/exit', '/clear', '/status'],
+            antigravity: ['/compact', '/resume', '/model', '/continue', '/exit', '/clear', '/status'],
         };
 
         var acBox = document.createElement("ul");
@@ -350,6 +395,7 @@ window.addEventListener('keydown', function(e) {
             if (!val.startsWith("/")) { _acHide(); return; }
             var mode = window.__TTYD_MODE || 'claude';
             var items = (_cmdList[mode] || _cmdList['claude']).map(function(c) { return { label: c, cmd: c }; });
+            items.push({ label: '/super (toggle auto-approve)', cmd: '/super' });
             (window.__SKILLS__ || []).forEach(function(s) { items.push({ label: '/' + s.name, cmd: '/' + s.name, skill: s }); });
             var matches = items.filter(function(it) { return it.cmd.startsWith(val) && it.cmd !== val; });
             _acShow(matches);
@@ -375,6 +421,7 @@ window.addEventListener('keydown', function(e) {
         });
         document.addEventListener("click", function(e) { if (!bar.contains(e.target)) _acHide(); });
 
+        _initSuper();
         setTimeout(function() { inp.focus(); }, 500);
         setTimeout(_sendResize, 1000);
     });

@@ -405,8 +405,8 @@ export class CPad extends CSubject
                 btn.SetHover(true);
                 btn.SetAnchorX(CUI.eAnchor.Min,40);
                 btn.SetAnchorY(CUI.eAnchor.Min,40);
-                
-                
+
+
                 //btn.SetSize(100*this.mPadScale,100*this.mPadScale);
                 btn.SetPressTraking(1);
                 this.PushChild(btn);
@@ -533,8 +533,8 @@ export class CPad extends CSubject
 
             }
 
-            // Mode 2 기준점 dot 시각화
-            if(this.mStick.length>0 && this.mStick[0].mPressTraking==2)
+            // 기준점 dot 시각화 (Mode 1: UI 중심, Mode 2: 최초 클릭 위치)
+            if(this.mStick.length>0 && (this.mStick[0].mPressTraking==1 || this.mStick[0].mPressTraking==2))
             {
                 if(this.mRefDot==null)
                 {
@@ -543,15 +543,49 @@ export class CPad extends CSubject
                     document.body.appendChild(d);
                     this.mRefDot=d;
                 }
-                let offset=this.mStick[0].GetTrackDotOffset();
-                if(offset!=null)
+                if(this.mStick[0].mPressTraking==2)
                 {
-                    this.mRefDot.style.left=offset.x+'px';
-                    this.mRefDot.style.top=offset.y+'px';
-                    this.mRefDot.style.display='block';
+                    let offset=this.mStick[0].GetTrackDotOffset();
+                    if(offset!=null)
+                    {
+                        let rect=this.GetFrame().Win().Handle().getBoundingClientRect();
+                        let pf=this.GetFrame().PF();
+                        this.mRefDot.style.left=(offset.x+rect.left)+'px';
+                        this.mRefDot.style.top=(pf.mHeight-offset.y+rect.top)+'px';
+                        this.mRefDot.style.display='block';
+                    }
+                    else
+                        this.mRefDot.style.display='none';
                 }
                 else
-                    this.mRefDot.style.display='none';
+                {
+                    let stick=this.mStick[0];
+                    if(stick.GetLastEvent()==CEvent.eType.Press)
+                    {
+                        let pt=stick.GetPt() as any;
+                        if(typeof pt.GetElement === 'function')
+                        {
+                            let rect=pt.GetElement().getBoundingClientRect();
+                            this.mRefDot.style.left=(rect.left+rect.width/2)+'px';
+                            this.mRefDot.style.top=(rect.top+rect.height/2)+'px';
+                            this.mRefDot.style.display='block';
+                        }
+                        else if(pt.mRenPT && pt.mRenPT.length>0)
+                        {
+                            let cam=pt.mRenPT[0].mCam;
+                            let worldPos=stick.GetPos();
+                            let ndc=CMath.V3MulMatCoordi(worldPos,cam.GetViewMat());
+                            ndc=CMath.V3MulMatCoordi(ndc,cam.GetProjMat());
+                            this.mRefDot.style.left=((ndc.x+1)*this.GetFrame().PF().mWidth/2)+'px';
+                            this.mRefDot.style.top=((ndc.y+1)*this.GetFrame().PF().mHeight/2)+'px';
+                            this.mRefDot.style.display='block';
+                        }
+                        else
+                            this.mRefDot.style.display='none';
+                    }
+                    else
+                        this.mRefDot.style.display='none';
+                }
             }
 
             let up = [], down = [], left = [], right = [];
