@@ -139,7 +139,15 @@ export class CImgPro
             new CVec3( 1, 1, 1 ) 
         ];
         
-        const rawBuf = _tex.GetBuf();
+        const rawBuf = _tex.GetBuf() as (Uint8Array | Float32Array)[];
+        for(let i = 0; i < rawBuf.length; i++) {
+            if(rawBuf[i].length != _tex.GetWidth()*_tex.GetHeight()*4) {
+                const rawBufSize = Math.round(Math.sqrt(rawBuf[i].length / 4));
+                const newTex = CImgPro.SqurEnlargedReduced(rawBufSize, rawBufSize, rawBuf[i], _tex.GetWidth() / rawBufSize, _tex.GetHeight() / rawBufSize, 4);
+                rawBuf[i] = newTex.GetBuf()[0];
+            }
+        }
+
         const buf = [];
         let bufIndex = 0;
         let bufInfo : CTextureInfo;
@@ -190,7 +198,9 @@ export class CImgPro
         for(let mip = 0; mip < totalLods; mip++) {
             const size = sizeLods[mip];
             for(let face = 0; face < 6; face++) {
-                const floatK = isBufferFloat ? 1 : 255;
+                const bufferK = isBufferFloat ? 1 : 255;
+                const typeK = isFloatType ? 1 : 255;
+                const floatK = typeK / bufferK;
                 const outData = new ArrayBufferType(size * size * 4);
                 if(mip == 0) {
                     if(_tex.GetYFlip()) {

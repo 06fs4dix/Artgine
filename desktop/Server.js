@@ -1,6 +1,8 @@
 import { CConsol } from "../artgine/basic/CConsol.js";
 import { CDOM } from "../artgine/basic/CDOM.js";
 import { CWebView } from "../artgine/system/CWebView.js";
+import { CUtilWeb } from "../artgine/util/CUtilWeb.js";
+import { CConfirm } from "../artgine/basic/CModal.js";
 var gIpInfo;
 async function Init() {
     const appJSON = JSON.parse(await CWebView.Call("LoadAppJSON"));
@@ -8,6 +10,11 @@ async function Init() {
     CDOM.IDValue("url_txt", gIpInfo.url);
     CDOM.IDValue("publicIP_txt", gIpInfo.public);
     CDOM.IDValue("privateIP_txt", gIpInfo.private);
+    if (gIpInfo.public.startsWith("http")) {
+        const qrUrl = await CUtilWeb.QRCode(gIpInfo.public, 180);
+        document.getElementById("qr_img").src = qrUrl;
+        document.getElementById("qr_area").style.display = "block";
+    }
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
     CDOM.IDValue("auth_rootpath_txt", appJSON.rootPath ?? "");
     document.querySelectorAll("#authRoot_collapse input").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
@@ -35,4 +42,13 @@ document.getElementById("url_btn")?.addEventListener("click", () => {
 });
 document.getElementById("browser_btn")?.addEventListener("click", () => {
     CWebView.Call("RunBrowser", gIpInfo.url);
+});
+document.getElementById("switchDev_btn")?.addEventListener("click", () => {
+    CConfirm.List(`<p class="text-danger fw-bold">
+			Switching to Developer mode.<br><br>
+			To return to server mode, you must change the program type to <b>"server"</b> and restart.
+		</p>`, [
+        () => { CWebView.Call("SwitchProgram", "developer"); },
+        () => { }
+    ]);
 });

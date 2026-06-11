@@ -1,7 +1,6 @@
-let MODELS = { claude: [], gemini: [], codex: [], antigravity: [] };
+let MODELS = { claude: [], codex: [], antigravity: [] };
 let PROVIDER_INFO = {
     claude: { id: 'claude', available: false, version: '', models: [] },
-    gemini: { id: 'gemini', available: false, version: '', models: [] },
     codex: { id: 'codex', available: false, version: '', models: [] },
     antigravity: { id: 'antigravity', available: false, version: '', models: [] },
 };
@@ -43,6 +42,7 @@ const elModelSel = $('modelSel');
 let sessionMcp = true;
 let sessionWorkingDir = null;
 let sessionMdcopy = false;
+let sessionAllow = false;
 const elStatus = $('status');
 const elMessages = $('messages');
 const elComposer = $('composer');
@@ -226,7 +226,7 @@ async function fetchProviders() {
         if (!j.ok || !Array.isArray(j.providers))
             return false;
         for (const p of j.providers) {
-            if (p.id === 'claude' || p.id === 'gemini' || p.id === 'codex' || p.id === 'antigravity') {
+            if (p.id === 'claude' || p.id === 'codex' || p.id === 'antigravity') {
                 PROVIDER_INFO[p.id] = p;
                 MODELS[p.id] = p.models || [];
             }
@@ -240,9 +240,9 @@ async function fetchProviders() {
 function rebuildProviderOptions() {
     elProviderSel.innerHTML = '';
     const _providerLabels = {
-        claude: 'Claude', gemini: 'Gemini', codex: 'Codex', antigravity: 'Antigravity',
+        claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity',
     };
-    for (const id of ['claude', 'gemini', 'codex', 'antigravity']) {
+    for (const id of ['claude', 'codex', 'antigravity']) {
         const o = document.createElement('option');
         o.value = id;
         o.textContent = _providerLabels[id];
@@ -439,6 +439,7 @@ function send() {
         title: text.slice(0, 30) || 'New chat',
         ua: navigator.userAgent,
         mcp: sessionMcp,
+        allow: sessionAllow,
     };
     if (sessionWorkingDir)
         sendMsg.workingDir = sessionWorkingDir;
@@ -625,6 +626,7 @@ async function bootChat() {
         sessionMcp = paramMcp !== '0';
     sessionWorkingDir = _urlParams?.get('workingDir') ?? null;
     sessionMdcopy = _urlParams?.get('mdcopy') === '1';
+    sessionAllow = _urlParams?.get('allow') === '1';
     await fetchProviders();
     rebuildProviderOptions();
     const savedProvider = localStorage.getItem(LS_PROVIDER);

@@ -7,6 +7,7 @@
 	<link rel='stylesheet' href='../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
 	<script src='../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
 	<link rel='stylesheet' href='../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+	<script src='../artgine/external/legacy/qrcode.min.js'></script>
 	<script type="module" src="Server.js"></script>
 
 	<title>Artgine</title>
@@ -58,8 +59,12 @@
 						</div>
 					</div>
 				</div>
-				<div class="text-center">
+				<div class="text-center d-flex justify-content-center gap-2">
 					<button class="btn btn-primary" id="browser_btn">Browser</button>
+					<button class="btn btn-secondary" id="switchDev_btn">Developer</button>
+				</div>
+				<div class="text-center mt-3" id="qr_area" style="display:none;">
+					<img id="qr_img" width="180" height="180">
 				</div>
 			</div>
 		</div>

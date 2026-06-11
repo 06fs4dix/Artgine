@@ -22,7 +22,8 @@ alphaCut
 skin
 weightArrMat
 sam2DCount
-
+sam2DArrCount
+samCube
 */
 
 

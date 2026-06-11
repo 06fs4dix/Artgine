@@ -1,10 +1,10 @@
 import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
-import { ambientColor, envCube, EnvmapApprox, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
-import { NoiseGet, NoiseNormalGet, SampleNoise } from "./Noise";
+import { ambientColor, envmapOn, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
+import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { SDF } from "./SDF";
 import { 
 	Build, CMat, CVec2, CVec3, CVec4,  OutColor, OutPosition,  
-    Sam2DToColor, V4MulMatCoordi, Sam2DLodToColor, Sam2DSize, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrToColor, Sam2DArrTileToColor, Sam2DArrTileToNormal, 
+    Sam2DToColor, V4MulMatCoordi, Sam2DSize, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrTileToColor, Sam2DArrTileToNormal, 
     ToV2, Vertex3, Null, CMat3, ToV4, screenPos, FloatToInt, IntToFloat, ToV3, SaturateFloat, MappingTexToV3,
 	max, mix, step, smoothstep, floor, sqrt, clamp,
 	V2MulV2, V2DivV2, V2SubV2, V2AddV2, V2MulFloat, V2Abs, V2Floor,
@@ -20,7 +20,6 @@ import {
     min,
     V2Mix,
     V2Fract,
-    V2DivFloat,
     V4AddV4,
     V4MulFloat,
 } from "./Shader";
@@ -446,15 +445,14 @@ function ps_main()
     var normal : CVec3 = new CVec3(0.0, 1.0, 0.0);
     var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
-    BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor,EnvmapApprox]);
+    BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
     lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0); // material 텍스쳐에서 가져옴
     normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
     normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
-    normal = V3Nor(to_normal);
     dseMat = GetSunInfo();
     sunDir = dseMat[0];
     sunCol = dseMat[1];
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, ambientColor, 1.0);
+    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
     L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchEnd();
 

@@ -1,9 +1,9 @@
 import { 
 	Binormal3, Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,
-	ToV2, ToV3, ToV4, Shadow2, Normal3, TexOff3, Tangent4, UV2, Vertex3, Weight4, WeightIndexI4, InverseMat3, 
+	ToV2, ToV3, ToV4, Normal3, TexOff3, Tangent4, UV2, Vertex3, Weight4, WeightIndexI4, InverseMat3, 
 	LWVPMul, discard, screenPos,  MappingV3ToTex,
 	Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3,
-	Sam2DToColor, Sam2DToMat, Sam2DToV4, Sam2DMat, Sam2DSize, 
+	Sam2DToColor, Sam2DToMat, 
 	V2SubV2, V2MulFloat, V2DivV2, 
 	V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3,
 	V4MulMatCoordi, 
@@ -12,14 +12,8 @@ import {
 	Attribute, Null,
 	clamp,
 	floor,
-	mod,
-	Mat34ToMat,
-	CMat12,
-	CMat43,
-	Sam2DArrSize,
 	MatMix,
 	Sam2D0ToColor,
-	CMat42,
 	MatTypeToMat,
 	min,
 	abs,
@@ -28,22 +22,13 @@ import {
 	V3Len,
 	length,
 	dFdx,
-	V3MulV3,
 	V3Mix,
-	Exp,
 	V3SubV3,
 	SaturateFloat,
-	sin,
-	cos,
 	V2AddV2,
-	V2MulV2,
-	pow,
-	V3Min,
 	V2Len,
 	SaturateV3,
-	V4Dot,
 	V3Cross,
-	V2Nor,
 	smoothstep,
 	Sam2DArrMat,
 	Sam2DArrToMat,
@@ -69,7 +54,10 @@ import {
 	vfxMat1
 } from "./ColorFun";
 import {
-	ambientColor,envCube,EnvmapApprox,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3
+	ambientColor,envmapOn,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligStep0,ligStep1,ligStep2,ligStep3,
+    material,
+    sam2DCount,
+    samCubeCount
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
@@ -90,11 +78,8 @@ var texCodi : CVec4=Null();
 var screenSize : CVec2;
 var skin : number=Null();
 var parallaxNormal : number=Attribute(0,"canvas");
-var sam2DCount : number=Null();
-var material: CVec4 = new CVec4(0.0,0.0,0.0,1.0);
 
 //var alphaCut : number = 0.1;
-
 
 //mat
 var worldMat : CMat=Null();
@@ -123,7 +108,7 @@ var out_nor : OutColor=Null();
 var out_spc : OutColor=Null();
 
 //non multitex uniform
-var outputType : number=Null();
+var outputType : number=SDF.eGBuf.Albedo;
 
 //lighting uniform
 var camPos: CVec3=Null();
@@ -151,16 +136,18 @@ var normalRange : number = 1.0;
 
 //Skin
 Build("Artgine/Shader/3DSkin",[],
-	vs_main,[worldMat,viewMat,projectMat,skin,sam2DCount,
-		screenSize
+	vs_main,[
+        worldMat,viewMat,projectMat,skin,
+		screenSize,sam2DCount
 	],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
 );
 //Simple
 Build("Artgine/Shader/3DSimple",["simple"],
-	vs_main_simple,[worldMat,
-		viewMat,projectMat],
+	vs_main_simple,[
+        worldMat,viewMat,projectMat
+    ],
 	[out_position,to_uv],
 	ps_main_simple,[out_color]
 );
@@ -168,37 +155,25 @@ Build("Artgine/Shader/3DSimple",["simple"],
 //gBuffer
 Build("Artgine/Shader/3DGBuffer", ["gBuf"], 
 	vs_main_gBuffer, [
-		worldMat,
-		viewMat,projectMat,skin,
-		sam2DCount,material,outputType,
+		worldMat,viewMat,projectMat,skin,
+        sam2DCount,
+		outputType,material
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
-	ps_main_gBuffer,[out_color]
-);
-//gBuffer MultiTex
-Build("Artgine/Shader/3DGBufferMulti", ["gBufMulti"], 
-	vs_main_gBuffer, [
-		worldMat,
-		viewMat,projectMat,skin,
-		sam2DCount,material,
-	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
-	ps_main_gBuffer_multi,[out_color, out_pos, out_nor, out_spc]
+	ps_main_gBuffer,[out_color, out_pos, out_nor, out_spc]
 );
 
 //shadow
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
-		worldMat,
-		viewMat,projectMat,skin,
+		worldMat,viewMat,projectMat,skin,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,jitter
 	], [out_position,to_uv,to_viewPos],
 	ps_main_shadow_write,[out_color]
 );
-
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
-		worldMat,
-		viewMat,projectMat,skin,
+		worldMat,viewMat,projectMat,skin,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
@@ -683,7 +658,7 @@ function ps_main()
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
-	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor,EnvmapApprox]);
+	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
 
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
@@ -691,9 +666,7 @@ function ps_main()
 	sunDir = dseMat[0];
 	sunCol = dseMat[1];
 	
-
-	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, 
-		lmaterial.y, lmaterial.x, lmaterial.z, ambientColor, 1.0);
+	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
 
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
     
@@ -729,20 +702,14 @@ function ps_main()
 }
 
 
-function ps_main_gBuffer() {
-	
-
-	
-
-
+function ps_main_gBuffer() 
+{
 	var uv : CVec2 = to_uv;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
 	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
 	BranchEnd();
 
 	var L_cor : CVec4;
-	
-
 
 	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
 	L_cor=VFXDown2(uv,VFX,time,to_worldPos);
@@ -758,72 +725,38 @@ function ps_main_gBuffer() {
 	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	BranchEnd();
 
-
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
 	if ( L_cor.a <= 0.01 ) discard;
 
-	//position
-	if(outputType < SDF.eGBuf.Position + 0.5) {
-		out_color = new CVec4(to_viewPos.xyz, 0.5);
-	}
-	//normal
-	else if(outputType < SDF.eGBuf.Normal + 0.5) {
-		var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
-		out_color = new CVec4(MappingV3ToTex(N), 1.0);
-	}
-	//diffuse
-	else if(outputType < SDF.eGBuf.Albedo + 0.5) {
+    // 0 position
+	out_pos = new CVec4(to_viewPos.xyz, 1.0);
+
+	// 1 normal
+	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
+	out_nor = new CVec4(MappingV3ToTex(N), 1.0);
+
+    // 3 material (ao, roughness, metalic, emissive)
+    var lmaterial : CVec4=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
+	out_spc = lmaterial;
+	
+    if(outputType < SDF.eGBuf.Albedo + 0.5) {
+        // 0 albedo
 		out_color = L_cor;
 	}
-	//(specular strength, emissive, specular power)
-	else if(outputType < SDF.eGBuf.SpeculerPowEmissive + 0.5)
-	{
-		var lmaterial : CVec4=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
-		out_color = lmaterial;
+	else if(outputType < SDF.eGBuf.Position + 0.5) {
+        // 1 position
+		out_color = out_pos;
 	}
-}
-
-function ps_main_gBuffer_multi() {
-	
-
-	var uv : CVec2 = to_uv;
-	BranchBegin("parallax","P",[parallaxNormal,camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
-	BranchEnd();
-
-	var L_cor : CVec4;
-
-	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
-	L_cor=VFXDown2(uv,VFX,time,to_worldPos);
-	BranchDefault();
-	if(sam2DCount == 1.0)
-		L_cor = Sam2DToColor(0.0, uv);
-	else
-		L_cor = Sam2DToColor(to_ref.x, uv);
-	BranchEnd();
-
-	BranchBegin("colorModel","CM",[colorModel]);
-	L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
-	BranchEnd();
-
-
-	BranchBegin("alphaModel","AM",[alphaModel]);
-	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
-	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
-
-	//position
-	out_pos = new CVec4(to_viewPos.xyz, 1.0);
-	//normal
-	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
-	out_nor = new CVec4(MappingV3ToTex(N), 1.0);
-	//diffuse
-	out_color = L_cor;
-
-	var lmaterial : CVec4=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
-	out_spc = lmaterial;
+	else if(outputType < SDF.eGBuf.Normal + 0.5) {
+        // 2 normal
+		out_color = out_nor;
+	}
+	else if(outputType < SDF.eGBuf.SpeculerPowEmissive + 0.5) {
+        // 3 material (ao, roughness, metalic, emissive)
+		out_color = out_spc;
+	}
 }
 
 function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2) 

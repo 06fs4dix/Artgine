@@ -1,5 +1,5 @@
 import {  ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
-import { ambientColor, envCube, EnvmapApprox, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "../../artgine/z_file/Light";
+import { ambientColor, envmapOn, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "../../artgine/z_file/Light";
 import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
 
@@ -42,7 +42,6 @@ var skin : number=Null();
 
 var camPos: CVec3=Null();
 var time : number = Attribute(0,"time");
-var sam2DCount : number=Null();
 
 var reflectMap : number = 1.0;
 var refractMap : number = 2.0;
@@ -298,9 +297,9 @@ function ps_main_water()
     // ---------------------------------------------------------
     var dseMat : CMat3;
     var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
-    BranchBegin("light","L",[ligDir,ligCol,ligCount,material,camPos,ligStep0,ligStep1,ligStep2,ligStep3,envCube,ambientColor,EnvmapApprox]);
+    BranchBegin("light","L",[ligDir,ligCol,ligCount,material,camPos,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
-    dseMat = LightCac3D(camPos, to_worldPos, reflectColor, normalWS, shadow, lmaterial.y, lmaterial.x, lmaterial.z, new CVec3(0.0, 0.0, 0.0), 1.0);
+    dseMat = LightCac3D(camPos, to_worldPos, reflectColor, normalWS, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
     L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);    // 반사만 적용
     if(shadow > -0.5) { // 그림자
         L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);

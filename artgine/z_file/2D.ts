@@ -2,7 +2,7 @@ import {
 	Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,
 	ToV3, ToV4, UV2, Vertex3, Attribute, Null,
 	LWVPMul, discard, screenPos,
-	Sam2D0ToColor, Sam2DToColor, Sam2DToV4, Sam2DV4, Sam2DSize,
+	Sam2D0ToColor, Sam2DToColor, Sam2DSize,
 	max, min,
 	V2MulFloat, V2DivV2,
 	V3AddV3, V3Len, V3MulFloat, V3SubV3, V3Cross, V3Nor,
@@ -13,9 +13,7 @@ import {
 	Sam2DArrV4,
 	Sam2DArrToV4,
 	Vertex2,
-    V3Dot,
     V2AddV2,
-    IntToFloat,
     smoothstep,
     V3Abs,
 } from "./Shader";
@@ -35,7 +33,6 @@ import { shadowOn, shadowRate } from "./Shadow";
 import { 
 	GetWind, windCount, windDir, windInfluence, windInfo, windPos 
 } from "./Wind";
-import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
 
 var worldMat : CMat=Null();
 var worldMatShort : CVec4=Null();
@@ -457,7 +454,7 @@ function ps_main()
 	BranchEnd();
 	var DSE : CMat3=new CMat3(0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,ambientColor]);
-	DSE =LightCac2D(to_worldPos,L_cor,normal,ambientColor);
+	DSE =LightCac2D(to_worldPos,L_cor,normal);
 	L_cor.rgb=DSE[0];
 	BranchEnd();
 	

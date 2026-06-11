@@ -374,7 +374,7 @@ function ps_main()
 
 	var DSE : CMat3=new CMat3(0);
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,ambientColor]);
-	DSE =LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0),ambientColor);
+	DSE =LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0));
 	L_cor.rgb=DSE[0];
 	BranchEnd();
     

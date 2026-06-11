@@ -533,6 +533,14 @@ upsertStyle(`mdr-style-2-${scopeClass}`, `
 		return root;
 	}
 
+	static QRCode(_text: string, _size: number = 256): Promise<string> {
+		return new Promise((resolve, reject) => {
+			(window as any).QRCode.toDataURL(_text, { width: _size, margin: 1 }, (err, url) => {
+				if (err) reject(err);
+				else resolve(url);
+			});
+		});
+	}
 
 }
 

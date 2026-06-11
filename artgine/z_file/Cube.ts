@@ -32,13 +32,6 @@ import {
     V2Len,
     Sam2DArrToV4,
     ToV4,
-    V3Cross,
-    cos,
-    Hammersley,
-    SamCubeSize,
-    log2,
-    SamCubeLodToColor,
-    V3Pow,
 } from "./Shader"
 
 var worldMat: CMat=Null();
@@ -49,7 +42,6 @@ var out_position: OutPosition=Null();
 var out_color: OutColor=Null();
 
 var to_uvw: ToV3=Null();
-var to_worldPos: ToV4=Null();
 
 var time: number = Attribute(0, "time");
 
@@ -153,12 +145,6 @@ Build("Artgine/Shader/CubeSky", ["sky"],
     vs_main_camBased, [worldMat, viewMat, projectMat,time,camPos], 
     [out_position,to_uvw], 
     ps_main, [out_color]
-);
-
-Build("Artgine/Shader/CubeIrradiance", ["irradiance"],
-    vs_main_camBased, [worldMat, viewMat, projectMat],
-    [out_position,to_uvw],
-    ps_main_irradiance, [out_color]
 );
 
 function vs_main(f3_ver: Vertex3) {
@@ -720,46 +706,4 @@ function ps_main() {
 
     out_color.rgb = finalColor;
     out_color.a = 1.0;
-}
-
-// 큐브맵이기 때문에 spherical 좌표계를 그대로 uvw로 변환 가능
-// spherical 좌표계 기준으로 (360, 90, 0)만큼의 샘플을 평균내서 저장
-// PI 곱해진 상태로 나오기 때문에 아웃풋 범위는 [0, PI]
-function ps_main_irradiance()
-{
-    var PI : number = 3.14159265359;
-
-    var N : CVec3 = V3Nor(to_uvw);
-    var irradiance : CVec3 = new CVec3(0.0, 0.0, 0.0);
-
-    var up : CVec3 = new CVec3(0.0, 1.0, 0.0);
-    var right : CVec3 = V3Nor(V3Cross(up, N));
-    up = V3Nor(V3Cross(N, right));
-
-    var sampleDelta : number = 0.025;
-    var nrSamples : number = 0.0;
-    var phi : number = 0.0;
-    for(; phi < 2.0 * PI; phi += sampleDelta)
-    {
-        var sinPhi : number = sin(phi);
-        var cosPhi : number = cos(phi);
-        
-        var theta : number = 0.0;
-        for(; theta < 0.5 * PI; theta += sampleDelta)
-        {
-            var sinTheta : number = sin(theta);
-            var cosTheta : number = cos(theta);
-
-            var tangentSample : CVec3 = new CVec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-            var sampleVec : CVec3 = V3AddV3(V3AddV3(V3MulFloat(right, tangentSample.x), V3MulFloat(up, tangentSample.y)), V3MulFloat(N, tangentSample.z));
-
-            var fragCol : CVec3 = V3MulFloat(SamCubeToColor(0.0, sampleVec).rgb, cosTheta * sinTheta);
-
-            irradiance = V3AddV3(irradiance, fragCol);
-            nrSamples += 1.0;
-        }
-    }
-
-    irradiance = V3MulFloat(irradiance, PI / nrSamples);
-    out_color = new CVec4(irradiance, 1.0);
 }

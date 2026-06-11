@@ -30,6 +30,11 @@ export class SDF {
 	{
 		None:0,
 		Rim:1,
+        Anisotropy:2,
+        SubsurfaceScattering:3,
+        Sheen:4,
+        Iridescence:5,
+        Clearcoat:6,
 	}
 	static eShadow=
 	{
@@ -46,10 +51,10 @@ export class SDF {
 
 	static eGBuf=
 	{
-		Position : 0,
-		Normal : 1,
-		Albedo : 2,
-		Ambient : 4,
+        Albedo : 0,
+		Position : 1,
+		Normal : 2,
+		Ambient : 3,
 		SpeculerPowEmissive : 5,
 	};
 	static eSkin=
@@ -58,11 +63,6 @@ export class SDF {
 		Bone:1,
 		Bake:2,
 	};
-	static eEnvCube=
-	{
-		None:-1,
-		Texture:0,
-	}
 	static eSLTag=
 	{
 		simple:"simple",

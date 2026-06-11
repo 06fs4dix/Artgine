@@ -1,26 +1,26 @@
 import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor, vfxMat0, vfxMat1 } from "./ColorFun";
-import { envCube, EnvmapApprox, IntegrateBRDF, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3 } from "./Light";
+import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
-    Attribute, BlendFun, BranchBegin, BranchDefault, BranchEnd, Build, CMat, CMat3, CMath, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, 
-    MappingTexToV3, Null, OutColor, OutPosition,Sam2D0ToColor,Sam2DArrToV4,Sam2DSize,Sam2DToColor, SaturateV3, 
-    SaturateV4, ToV2, ToV3, UV2, V2Abs, V2AddV2, V2DivV2, V2Floor, V2Max, V2Min, V2Mod, V2MulFloat, 
-    V2MulV2, V2SubV2, V3AddV3,V3Clamp,V3DivV3,V3Dot, V3Exp, V3Floor, V3Max, V3Min, V3Mix, 
-    V3Mod, V3MulFloat, V3MulV3, V3Pow, V3PowV3, V3Step, V3SubV3, V4Abs, V4AddV4, V4DivV4, 
-    V4Dot, V4Floor, V4Max, V4Mod, V4MulFloat, V4MulMatCoordi, V4MulV4, V4Pow, V4Step, 
-    V4SubV4, Vertex3, abs, clamp, discard, floor, fract, gl_Position, max, min, mod, pow, sampler2D, screenPos, sign, sin, smoothstep 
+    Attribute, BranchBegin, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, ToV2, UV2, 
+    MappingTexToV3, Null, OutColor, OutPosition,Sam2D0ToColor,Sam2DSize,Sam2DToColor, Vertex3,
+    V2MulV2, V2AddV2, V2DivV2, V2MulFloat, 
+    V3AddV3, V3Dot, V3MulFloat, 
+    V4AddV4, V4DivV4, V4MulFloat, V4MulMatCoordi, clamp, discard, max, pow, sampler2D, 
+    SamCubeToColor,
+    V3Nor,
+    SamCubeLodToColor
 } from "./Shader";
+import { shadowOn } from "./Shadow";
 
 //mat
 var worldMat : CMat=Null();
 var viewMat : CMat=Null();
 var projectMat : CMat=Null();
-
-
+var viewMatInv3D : CMat=Null();
 
 //varying
 var to_uv : ToV2 = new CVec2(0.0, 0.0);
-var to_worldPos : ToV3 = new CVec3(0.0, 0.0, 0.0);
 
 //out
 var out_position : OutPosition = new CVec4(0.0, 0.0, 0.0, 0.0);
@@ -29,98 +29,30 @@ var out_emissive : OutColor = new CVec4(0.0, 0.0, 0.0, 0.0);
 var out_specular : OutColor = new CVec4(0.0, 0.0, 0.0, 0.0);
 
 //common uniform
-var texCodi : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 var renderCount : number=Null();
 var renderType : number=Null();
-var viewMatInv3D : CMat=Null();
+
 var camPos3D : CVec3=Null();
 var time : number = Attribute(0,"time");
-var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
-var shadowOn : number = -1.0;
 
 //non multiTex uniform
-var renType : number=Null();
-
-//blend uniform
-const TexMax = 12;
-var blend : Array<number> = new Array(TexMax);
-var opacity : Array<number> = new Array(TexMax);
-
+var renType : number=0.0;
 
 //tex offset
-var diffuse : sampler2D = 0.0;
-var position : sampler2D = 1.0;
-var normal : sampler2D = 2.0;
-var specular : sampler2D = 3.0;
-var shadow : sampler2D = 4.0;
-
-
-//for noise
-/********************************/
-//좌우로 흔들리는 정도(1.0이면 가장 왼쪽 픽셀이 가장 오른쪽까지 흔들림)
-var distortDistance : CVec2 = new CVec2(0.02, 0.05);
+var sam2DDiffuse : sampler2D = 0.0;
+var sam2DPosition : sampler2D = 1.0;
+var sam2DNormal : sampler2D = 2.0;
+var sam2DSpecular : sampler2D = 3.0;
+var sam2DShadow : sampler2D = 4.0;
 
 /********************************/
-
-//for noise
-/********************************/
-//항상 적용되고 있는 애버레이션 강도
-var abrBaseStr : number = 0.005;
-//시간에 따라 시야가 흔들리는 효과를 주는 애버레이션의 흔들림 강도
-var abrAddedStr : number = 0.02;
-
-/********************************/
-
-//for pixelated image
-/********************************/
-var pixelSize : CVec2 = new CVec2(15.0, 10.0);
-
-/********************************/
-
-//for 80 computer
-/********************************/
-var borderThickness : number = 0.3;
-var borderIntensity : number = 0.3;
-var noiseSpeed : number = 4.0;
-var noiseIntensity : number = 0.25;
-var scanLineDensity : number = 192.0;
-var scanLineThickness : number = 0.3;
-var scanLineIntensity : number = 0.5;
-
-/********************************/
-
-//for fxaa
-/********************************/
-var span_max : number = 8.0;
-var reduce_mul : number = 0.125;
-var reduce_min : number = 0.0078125;
-var subpix_shift : number = 0.25;
-
-/********************************/
-
-//for gamma
-/********************************/
-var gamma : number = 2.2;
-var exposure : number = 1.0;
-var contrast : number = 1.5;
-var brightness : number = 1.2;
-var colorCorrection : CVec3 = new CVec3(1.2,1.1,1.0);
-var toneMappingFactor : number = 0.5;
-
-/********************************/
-
 //for sample
 /********************************/
-
 var mipLevel : number=Null();
 var threshold : number=Null();
 var softThreshold : number=Null();
-var mixFactor : number=Null();
-var exposure : number=Null();
 
 var blendFactor : number=Null();
-/********************************/
-
 /********************************/
 
 //Blend
@@ -136,34 +68,22 @@ Build("Artgine/Shader/PostBlur",["blur"],
     ],[out_position,to_uv],
     ps_main_blur,[out_color]);
 Build("Artgine/Shader/PostFloodFill",["floodFill"],
-        vs_main,[
-            worldMat,viewMat,projectMat,
-        ],[out_position,to_uv],
-        ps_main_floodFill,[out_color]);
+    vs_main,[
+        worldMat,viewMat,projectMat,
+    ],[out_position,to_uv],
+    ps_main_floodFill,[out_color]);
 //Light
 Build("Artgine/Shader/PostLight",["light"],
     vs_main,[
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
         ligDir,ligCol,ligCount,
-        envCube,ambientColor,
+        ambientColor,sam2DCount,samCubeCount,envmapOn,
         ligStep0,ligStep1,ligStep2,ligStep3,
-        time,renType,EnvmapApprox,
-        diffuse,position,normal,specular,shadow
+        time,renType,
+        sam2DDiffuse,sam2DPosition,sam2DNormal,sam2DSpecular,sam2DShadow
     ],[out_position,to_uv],
-    ps_main_light,[out_color]);
-//Light MultiTex
-Build("Artgine/Shader/PostLightMulti",["lightMulti"],
-    vs_main,[
-        worldMat,viewMat,projectMat,
-        viewMatInv3D, camPos3D,
-        ligDir,ligCol,ligCount,
-        envCube,ambientColor,
-        ligStep0,ligStep1,ligStep2,ligStep3,
-        time,EnvmapApprox,
-        diffuse,position,normal,specular,shadow
-    ],[out_position,to_uv],
-    ps_main_light_MultiTex,[out_color, out_specular, out_emissive]);
+    ps_main_light,[out_color, out_specular, out_emissive]);
 //baked light
 Build("Artgine/Shader/PostExpandBakedLight",["bake"],
     vs_main,[
@@ -194,13 +114,6 @@ Build("Artgine/Shader/PostVFX",["vfx"],
     ],[out_position,to_uv],
     ps_main_vfx,[out_color]);
 
-
-Build("Artgine/Shader/PostBRDF",["brdf"],
-    vs_main, [
-        worldMat,viewMat,projectMat
-    ],[out_position,to_uv],
-    ps_main_brdf,[out_color]);
-
 function vs_main(f3_ver : Vertex3, f2_uv : UV2) {
     to_uv = f2_uv;
     out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
@@ -220,73 +133,67 @@ function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {
 function ps_main_blur() {
     var all : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 
-    var fx : number = -renderCount;
-    var fy : number = -renderCount;
+    var fCount : number = renderCount > 32.0 ? 32.0 : renderCount;
+    var fx : number = -fCount;
+    var fy : number = -fCount;
     var count : number = 0.0;
-    if(renderCount > 32.0) {
-        fx = -32.0;
-        fy = -32.0;
-    }
     var texScale : CVec2 = V2DivV2(new CVec2(1.0,1.0), Sam2DSize(0.0));
 
-    //전체 블러
-    if(renderType < 0.1) {
+    if(renderType < 0.5) {
+        // 0 전체 블러
         for(var y = 0; y < 64; y++) {
             for(var x = 0; x < 64; x++) {
-                if(fx <= renderCount && fy <= renderCount) {
-                    var color : CVec4 = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
-                    if(color.a > 0.01) {
-                        all = V4AddV4(all, color);
-                        count += 1.0;
-                    }
-                } else
+                if(fx > fCount || fy > fCount) {
                     break;
+                }
+                var color : CVec4 = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
+                if(color.a > 0.01) {
+                    all = V4AddV4(all, color);
+                    count += 1.0;
+                }
                 fx += 1.0;
             }
-            fx = -renderCount;
+            fx = -fCount;
             fy += 1.0;
         }
-        if(count > 0.01) {
+        if(count > 0.5) {
             all = V4DivV4(all, new CVec4(count,count,count,count));
-            all = SaturateV4(all);
         }
     }
-    //x 블러
-    else if(renderType < 1.1) {
+    else if(renderType < 1.5) {
+        // 1 x블러
         fy = 0.0;
         for(var x = 0; x <= 64; x++) {
-            if(fx <= renderCount && fy <= renderCount) {
-                var color : CVec4 = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
-                if(color.a > 0.01) {
-                    all = V4AddV4(all, color);
-                    count += 1.0;
-                }
-            } else
+            if(fx > fCount) {
                 break;
+            }
+            var color : CVec4 = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
+            if(color.a > 0.01) {
+                all = V4AddV4(all, color);
+                count += 1.0;
+            }
             fx += 1.0;
         }
-        if(count > 0.01) {
+        if(count > 0.5) {
             all = V4DivV4(all, new CVec4(count,count,count,count));
-            all = SaturateV4(all);
         }
     }
-    //y 블러
-    else if(renderType < 2.1) {
+    else if(renderType < 2.5) {
+        // 2 y블러
         fx = 0.0;
         for(var y = 0; y < 64; y++) {
-            if(fx<=renderCount && fy <=renderCount) {
-                var color : CVec4 = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
-                if(color.a > 0.01) {
-                    all = V4AddV4(all, color);
-                    count += 1.0;
-                }
-            } else
+            if(fy > fCount) {
                 break;
+            }
+            var color : CVec4 = GetBlurColor(to_uv, new CVec2(fx, fy), texScale);
+            if(color.a > 0.01) {
+                all = V4AddV4(all, color);
+                count += 1.0;
+            }
             fy += 1.0;
         }
-        if(count > 0.01) {
+        if(count > 0.5) {
             all = V4DivV4(all, new CVec4(count,count,count,count));
-            all = SaturateV4(all);
         }
     }
 
@@ -328,10 +235,10 @@ function ps_main_floodFill() {
 }
 
 function ps_main_light() {
-    var L_dif : CVec4 = Sam2DToColor(diffuse, to_uv);
-    var L_pos : CVec4 = Sam2DToColor(position, to_uv);
-    var L_nor : CVec4 = Sam2DToColor(normal, to_uv);
-    var L_spc : CVec3 = Sam2DToColor(specular, to_uv).xyz;
+    var L_dif : CVec4 = Sam2DToColor(sam2DDiffuse, to_uv);
+    var L_pos : CVec4 = Sam2DToColor(sam2DPosition, to_uv);
+    var L_nor : CVec4 = Sam2DToColor(sam2DNormal, to_uv);
+    var L_spc : CVec3 = Sam2DToColor(sam2DSpecular, to_uv).xyz;
 
     var shadow : number = -1.0;
     BranchBegin("shadow","S",[shadowOn]);
@@ -340,62 +247,28 @@ function ps_main_light() {
     }
     BranchEnd();
 
-    var L_cor : CVec4 = new CVec4(0.0,0.0,0.0,L_dif.a);
-    
+    var L_cor : CVec4 = L_dif;
     var worldPos : CVec4 = V4MulMatCoordi(L_pos, viewMatInv3D);
+    var normal : CVec3 = MappingTexToV3(L_nor.rgb);
 
-    var Normal : CVec3 = MappingTexToV3(L_nor.rgb);
-    // var SpecularStrength : number = L_spc.y;
-    // var Emissive : number = L_spc.x;
-    // var SpecularPower : number = L_spc.z;
-  
+    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, normal, shadow, L_spc.y, L_spc.x, L_spc.z, 1.0);
 
-    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, Normal, shadow, L_spc.y, L_spc.x,L_spc.z, ambientColor, 1.0);
-
-    //diffuse
-    if(renType < 0.5)
-        L_cor.rgb = dseMat[0];
-    //specular
-    else if(renType < 1.5)
-    {
-        //L_cor.rgb = L_spc.xyz;
-        L_cor.rgb = dseMat[1];
-    }
-        
-    //emissive
-    else
-        L_cor.rgb = dseMat[2];
-    out_color = L_cor;
-    //out_color = new CVec4(shadow,shadow,shadow,1.0);
-}
-
-function ps_main_light_MultiTex() {
-    var L_dif : CVec4 = Sam2DToColor(diffuse, to_uv);
-    var L_pos : CVec4 = Sam2DToColor(position, to_uv);
-    var L_nor : CVec4 = Sam2DToColor(normal, to_uv);
-    var L_spc : CVec3 = Sam2DToColor(specular, to_uv).xyz;
-
-    var shadow : number = -1.0;
-    BranchBegin("shadow","S",[shadowOn]);
-    if(shadowOn > 0.5) {
-        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, to_uv).x;
-    }
-    BranchEnd();
     
-    var L_cor : CVec4 = new CVec4(0.0,0.0,0.0,L_dif.a);
-    
-    var worldPos : CVec4 = V4MulMatCoordi(L_pos, viewMatInv3D);
-
-    var Normal : CVec3 = MappingTexToV3(L_nor.rgb);
-    var SpecularStrength : number = L_spc.x;
-    var Emissive : number = L_spc.y;
-    var SpecularPower : number = L_spc.z;
-
-    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, Normal, shadow, SpecularStrength, Emissive,SpecularPower, ambientColor, 1.0);
-
-    //diffuse + 톤매핑
-    out_color.rgb = dseMat[0];
-    out_color.w = L_cor.w;
+    if(renType < 0.5) {
+        // 0 diffuse
+        out_color.rgb = dseMat[0];
+        out_color.w = L_cor.w;
+    }
+    else if(renType < 1.5) {
+        // 1 specular
+        out_color.rgb = dseMat[1];
+        out_color.w = L_cor.w;
+    }
+    else {
+        // 2 emissive
+        out_color.rgb = dseMat[2];
+        out_color.w = L_cor.w;
+    }
 
     //specular
     out_specular.rgb = dseMat[1];
@@ -583,11 +456,4 @@ function ps_main_UpSample() {
 function ps_main_vfx()
 {
     out_color = VFXDown2(to_uv, VFX, time, new CVec4(0.0,0.0,0.0,0.0));
-}
-
-
-function ps_main_brdf()
-{
-    var integratedBRDF : CVec2 = IntegrateBRDF(to_uv.x, to_uv.y);
-    out_color = new CVec4(integratedBRDF, 0.0, 1.0);
 }

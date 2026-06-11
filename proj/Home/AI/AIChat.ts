@@ -2,7 +2,7 @@
 // Talks to CAIChatRouter (/ai/chat/*, /ai/chat/ws)
 
 
-type Provider = 'claude' | 'gemini' | 'codex' | 'antigravity';
+type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity';
 interface IAttachment { name: string; path: string; }
 interface IMessage {
     role: 'user' | 'assistant';
@@ -30,10 +30,10 @@ interface IProviderInfo {
     models: { value: string; label: string }[];
 }
 // populated from GET /ai/chat/providers (server probes installed CLI on startup)
-let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], gemini: [], codex: [], antigravity: [] };
+let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [] };
 let PROVIDER_INFO: Record<Provider, IProviderInfo> = {
     claude:       { id: 'claude',       available: false, version: '', models: [] },
-    gemini:       { id: 'gemini',       available: false, version: '', models: [] },
+    // gemini:       { id: 'gemini',       available: false, version: '', models: [] },
     codex:        { id: 'codex',        available: false, version: '', models: [] },
     antigravity:  { id: 'antigravity',  available: false, version: '', models: [] },
 };
@@ -78,6 +78,7 @@ const elModelSel     = $<HTMLSelectElement>('modelSel');
 let sessionMcp = true;
 let sessionWorkingDir: string | null = null;
 let sessionMdcopy = false;
+let sessionAllow = false;
 const elStatus       = $<HTMLSpanElement>('status');
 const elMessages     = $<HTMLDivElement>('messages');
 const elComposer     = $<HTMLDivElement>('composer');
@@ -240,7 +241,7 @@ async function fetchProviders(): Promise<boolean> {
         const j = await r.json();
         if (!j.ok || !Array.isArray(j.providers)) return false;
         for (const p of j.providers as IProviderInfo[]) {
-            if (p.id === 'claude' || p.id === 'gemini' || p.id === 'codex' || p.id === 'antigravity') {
+            if (p.id === 'claude' /* || p.id === 'gemini' */ || p.id === 'codex' || p.id === 'antigravity') {
                 PROVIDER_INFO[p.id] = p;
                 MODELS[p.id] = p.models || [];
             }
@@ -251,9 +252,9 @@ async function fetchProviders(): Promise<boolean> {
 function rebuildProviderOptions() {
     elProviderSel.innerHTML = '';
     const _providerLabels: Record<Provider, string> = {
-        claude: 'Claude', gemini: 'Gemini', codex: 'Codex', antigravity: 'Antigravity',
+        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity',
     };
-    for (const id of ['claude', 'gemini', 'codex', 'antigravity'] as Provider[]) {
+    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity'] as Provider[]) {
         const o = document.createElement('option');
         o.value = id;
         o.textContent = _providerLabels[id];
@@ -446,6 +447,7 @@ function send() {
         title: text.slice(0, 30) || 'New chat',
         ua: navigator.userAgent,
         mcp: sessionMcp,
+        allow: sessionAllow,
     };
     if (sessionWorkingDir) sendMsg.workingDir = sessionWorkingDir;
     if (sessionMdcopy) sendMsg.mdcopy = true;
@@ -618,6 +620,7 @@ async function bootChat() {
     if (paramMcp !== null && paramMcp !== undefined) sessionMcp = paramMcp !== '0';
     sessionWorkingDir = _urlParams?.get('workingDir') ?? null;
     sessionMdcopy = _urlParams?.get('mdcopy') === '1';
+    sessionAllow = _urlParams?.get('allow') === '1';
 
     await fetchProviders();
     rebuildProviderOptions();

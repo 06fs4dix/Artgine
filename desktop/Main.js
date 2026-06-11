@@ -3,6 +3,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import * as os from 'os';
 import * as https from 'https';
+import * as net from 'net';
 import * as fs from "fs";
 import { imageSize } from 'image-size';
 import { spawn } from 'child_process';
@@ -95,7 +96,7 @@ async function RunPage() {
         CConsol.Log("RunPage loadURL : " + url + "/" + projectPath + "/" + projectName + ".html");
     }
 }
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     createWindow();
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0)
@@ -110,12 +111,12 @@ app.whenReady().then(() => {
     }
     else if (gAppJSON.program == "server") {
         gMainWindow.setFullScreen(false);
-        gMainWindow.setSize(480, 420);
+        gMainWindow.setSize(480, 650);
         gMainWindow.center();
-        gMainWindow.loadFile(path.join(__dirname, 'Server.html'));
         if (gAppJSON.server.indexOf("web") == -1)
             gAppJSON.server = "webServer+other";
-        RunServer();
+        await RunServer();
+        gMainWindow.loadFile(path.join(__dirname, 'Server.html'));
     }
 });
 app.on('window-all-closed', () => {
@@ -340,15 +341,15 @@ ipcMain.handle("FolderSelectModal", async (_event, _data) => {
 function ConfirmAndRestart() {
     const result = dialog.showMessageBoxSync({
         type: 'question',
-        buttons: ['예', '아니오'],
+        buttons: ['Yes', 'No'],
         defaultId: 0,
         cancelId: 1,
-        title: '재시작 확인',
-        message: '재시작하시겠습니까?',
+        title: 'Restart',
+        message: 'Do you want to restart?',
     });
     if (result === 0) {
         app.relaunch();
-        app.exit(0);
+        app.quit();
     }
 }
 ipcMain.handle("NewPage", async (_event, _json) => {
@@ -498,6 +499,9 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     if (_json.projetJSON.includes["toastui"]) {
         IStr += "<link rel='stylesheet' href='" + upFolder + "artgine/external/legacy/toastui/toastui-editor.min.css'>\n";
         IStr += "<script src='" + upFolder + "artgine/external/legacy/toastui/toastui-editor-all.min.js'></script>\n";
+    }
+    if (_json.projetJSON.includes["qrcode"]) {
+        IStr += "<script src='" + upFolder + "artgine/external/legacy/qrcode.min.js'></script>\n";
     }
     if (_json.projetJSON.includes["MonacoEditor"]) {
         IStr += "<script type='text/javascript' src='" + upFolder + "artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
@@ -671,6 +675,14 @@ ipcMain.handle("LoadProjJSON", async (_event, _json) => {
 ipcMain.handle("LoadAppJSON", async (_event) => {
     return JSON.stringify(gAppJSON);
 });
+ipcMain.handle("SwitchProgram", async (_event, _program) => {
+    gAppJSON.program = _program;
+    if (gAppRootPath)
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
+    else
+        CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+    ConfirmAndRestart();
+});
 ipcMain.handle("UpdateExtraSettings", async (_event, _json) => {
     gAppJSON.password = _json.password;
     gAppJSON.rootPath = _json.rootPath;
@@ -762,6 +774,15 @@ function fetchText(url) {
 function isValidIP(ip) {
     return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
 }
+function checkPort(host, port, timeout = 3000) {
+    return new Promise(resolve => {
+        const socket = new net.Socket();
+        socket.setTimeout(timeout);
+        socket.connect(port, host, () => { socket.destroy(); resolve(true); });
+        socket.on('error', () => { socket.destroy(); resolve(false); });
+        socket.on('timeout', () => { socket.destroy(); resolve(false); });
+    });
+}
 ipcMain.handle("GetIPInfo", async (_event) => {
     const parsed = new URL(gAppJSON.url);
     const port = parsed.port;
@@ -773,7 +794,12 @@ ipcMain.handle("GetIPInfo", async (_event) => {
     ipInfo.public = await GetPublicIP();
     ipInfo.url = gAppJSON.url + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     ipInfo.private = protocol + "//" + ipInfo.private + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
-    ipInfo.public = protocol + "//" + ipInfo.public + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
+    if (ipInfo.public === "Unavailable")
+        ipInfo.public = "Please check your internet connection.";
+    else if (!(await checkPort(ipInfo.public, Number(port))))
+        ipInfo.public = "Port unreachable. Please check port forwarding.";
+    else
+        ipInfo.public = protocol + "//" + ipInfo.public + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     CConsol.Log(ipInfo.private + "\n" + ipInfo.public);
     return JSON.stringify(ipInfo);
 });

@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mq3tc6m0_2";
+gPF.mVersion = "mq81jg2d_4";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -33,7 +33,7 @@ import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
-import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg } from "../../artgine/util/CModalUtil.js";
+import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg, CModalMusic } from "../../artgine/util/CModalUtil.js";
 import { CFile } from "../../artgine/system/CFile.js";
 import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
@@ -120,6 +120,36 @@ const iframePool = new Map();
 let activeFrameKey = null;
 let pendingNewSid = null;
 let _activeNotifCallback = null;
+function isAiPanelActive() {
+    return document.getElementById('ai-panel')?.classList.contains('active') === true;
+}
+function isAiAuthVisible() {
+    const overlay = document.getElementById('ai-auth-overlay');
+    return !!overlay && overlay.style.display !== 'none';
+}
+function handleTermSidebarShortcut(e) {
+    if (!isAiPanelActive())
+        return false;
+    if (isAiAuthVisible())
+        return false;
+    if (aiSidebarEl.classList.contains('collapsed'))
+        return false;
+    if (e.shiftKey && !e.ctrlKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        e.stopPropagation();
+        termStartNew('cmd');
+        return true;
+    }
+    if (e.shiftKey && !e.ctrlKey && e.key.toLowerCase() === 'd') {
+        if (!activeFrameKey?.startsWith('term:'))
+            return false;
+        e.preventDefault();
+        e.stopPropagation();
+        termConfirmKillSession(parseInt(activeFrameKey.slice(5), 10));
+        return true;
+    }
+    return false;
+}
 function _showModalStackMsg(label, content, onClick) {
     const m = new CModalStackMsg(CModal.ePos.TopRight);
     m.SetBG(Bootstrap.eColor.warning);
@@ -171,9 +201,24 @@ function showFrame(key, src) {
             const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
             try {
                 f.contentWindow?.addEventListener('keydown', (e) => {
+                    if (isTerm && handleTermSidebarShortcut(e))
+                        return;
                     if (!isTerm && e.key === 'Tab') {
                         e.preventDefault();
                         handleTabKey();
+                        return;
+                    }
+                    if (!isTerm && e.key === 'ArrowRight' && _activeNotifCallback) {
+                        e.preventDefault();
+                        handleNotifKey();
+                        return;
+                    }
+                    if (!isTerm && e.key === 'ArrowLeft' && goPrevFrame()) {
+                        e.preventDefault();
+                        return;
+                    }
+                    if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && goNextSession(e.key === 'ArrowUp' ? -1 : 1)) {
+                        e.preventDefault();
                         return;
                     }
                     if (e.key === 'F2') {
@@ -217,6 +262,23 @@ function destroyFrame(key) {
     iframePool.delete(key);
     if (activeFrameKey === key)
         activeFrameKey = null;
+}
+function focusActiveFrame() {
+    if (!activeFrameKey)
+        return;
+    const f = iframePool.get(activeFrameKey);
+    if (!f)
+        return;
+    try {
+        f.contentWindow?.focus();
+        const input = f.contentDocument?.querySelector('#mi-bar textarea, textarea, input');
+        if (input) {
+            input.focus();
+            return;
+        }
+    }
+    catch (_) { }
+    f.focus();
 }
 function uuidv4() {
     if (crypto && 'randomUUID' in crypto)
@@ -282,11 +344,6 @@ async function aiRefreshSessions() {
         const j = await r.json();
         if (!j.ok)
             return;
-        const prevYellowChat = new Set();
-        aiSessionList.querySelectorAll('[data-sid]').forEach(el => {
-            if (el.querySelector('.ai-busy-dot'))
-                prevYellowChat.add(el.dataset.sid);
-        });
         aiSessionList.innerHTML = '';
         const sessions = j.sessions;
         const serverSids = new Set(sessions.map(s => s.sessionId));
@@ -307,19 +364,14 @@ async function aiRefreshSessions() {
                 + (isActive ? ' bg-primary-subtle' : '');
             item.dataset.sid = s.sessionId;
             const rel = aiFormatRelative(s.updatedAt);
-            let dot;
-            if (!isLoaded) {
-                dot = '<span class="text-danger small" title="미연결">●</span>';
-            }
-            else if (s.busy) {
-                dot = '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>';
-            }
-            else {
-                if (prevYellowChat.has(s.sessionId) && (!isActiveFrame(key) || !document.hasFocus())) {
+            const st = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
+            syncSessState(`chat:${s.sessionId}`, st, () => {
+                if (!isActiveFrame(key) || !document.hasFocus())
                     _showDoneNotification(aiEscapeHtml(s.title), s.lastMsg ? aiEscapeHtml(s.lastMsg) : undefined, () => aiLoadSession(s.sessionId));
-                }
-                dot = '<span class="text-warning small" title="대기 중">●</span>';
-            }
+            });
+            const dot = st === 'off' ? '<span class="text-danger small" title="미연결">●</span>'
+                : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
+                    : '<span class="text-success small" title="대기 중">●</span>';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
                     ${dot}
@@ -460,8 +512,15 @@ const CMD_TOKEN_KEY = 'artgine.token';
 const termNewBtn = CDOM.ID("termNewBtn");
 const termSessionList = CDOM.ID("termSessionList");
 let termActivePort = null;
-const prevTermUpdatedAt = new Map();
-const termPendingNotify = new Set();
+const _sessState = new Map();
+function syncSessState(id, cur, onDone, onWait) {
+    const prev = _sessState.get(id);
+    if (prev === 'busy' && cur === 'idle')
+        onDone();
+    if (prev !== 'wait' && cur === 'wait')
+        onWait?.();
+    _sessState.set(id, cur);
+}
 function termAuthedFetch(url, init) {
     const token = localStorage.getItem(CMD_TOKEN_KEY) || '';
     const headers = new Headers(init?.headers || {});
@@ -491,7 +550,7 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
         <div class="mb-3 d-flex gap-2 flex-wrap">
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="gemini">gemini</button>
+            <!-- <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="gemini">gemini</button> -->
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
         </div>
@@ -615,17 +674,23 @@ async function termKillSession(port) {
         console.error('termKillSession error:', e);
     }
 }
+function termConfirmKillSession(port) {
+    const item = termSessionList.querySelector(`[data-port="${port}"]`);
+    const label = item?.querySelector('.fw-semibold')?.textContent || `Terminal ${port}`;
+    const confirm = new CConfirm();
+    confirm.SetBody(`Delete ${aiEscapeHtml(label)}?`);
+    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+        () => { termKillSession(port); },
+        () => { },
+    ], ["Delete", "Cancel"]);
+    confirm.Open();
+}
 async function termRefreshSessions() {
     try {
         const r = await fetch(CPath.WebRootUrl() + 'cmd/sessions');
         const j = await r.json();
         if (!j.ok)
             return;
-        const prevYellowTerm = new Set();
-        termSessionList.querySelectorAll('[data-port]').forEach(el => {
-            if (el.querySelector('.term-busy-dot'))
-                prevYellowTerm.add(Number(el.dataset.port));
-        });
         termSessionList.innerHTML = '';
         const sessions = j.sessions;
         const serverPorts = new Set(sessions.map(s => s.port));
@@ -661,33 +726,23 @@ async function termRefreshSessions() {
             const preview = aiEscapeHtml(s.lastMsg || '(empty)');
             const dotLabel = s.mode.slice(0, 3);
             const dotTitle = s.key || s.mode;
-            let dot;
-            if (!s.alive || !isLoaded) {
-                termPendingNotify.delete(s.port);
-                dot = `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-            }
-            else if (s.busy) {
-                termPendingNotify.delete(s.port);
-                dot = `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-            }
-            else {
-                if (prevYellowTerm.has(s.port)) {
-                    termPendingNotify.add(s.port);
-                    prevTermUpdatedAt.set(s.port, s.updatedAt);
-                }
-                else if (termPendingNotify.has(s.port)) {
-                    const rawPreview = s.lastMsg || '';
-                    if (prevTermUpdatedAt.get(s.port) === s.updatedAt && (!isActiveFrame(key) || !document.hasFocus())) {
-                        _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
-                        termPendingNotify.delete(s.port);
-                        prevTermUpdatedAt.delete(s.port);
-                    }
-                    else {
-                        prevTermUpdatedAt.set(s.port, s.updatedAt);
-                    }
-                }
-                dot = `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-            }
+            const st = !s.alive ? 'off'
+                : s.permPending ? 'wait'
+                    : !isLoaded ? 'off'
+                        : s.busy ? 'busy'
+                            : 'idle';
+            syncSessState(`term:${s.port}`, st, () => {
+                const rawPreview = s.lastMsg || '';
+                if (!isActiveFrame(key) || !document.hasFocus())
+                    _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
+            }, () => {
+                if (!isActiveFrame(key) || !document.hasFocus())
+                    _showDoneNotification(`⚠ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.port));
+            });
+            const dot = st === 'off' ? `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
+                : st === 'wait' ? `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
+                    : st === 'busy' ? `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
+                        : `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
                     ${dot}
@@ -727,7 +782,7 @@ async function termRefreshSessions() {
                     b.addEventListener('click', () => {
                         drop.remove();
                         if (b.dataset.act === 'kill') {
-                            termKillSession(s.port);
+                            termConfirmKillSession(s.port);
                         }
                         else if (b.dataset.act === 'link') {
                             termShowShareLink(s.port);
@@ -852,7 +907,7 @@ async function schedRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'gemini' ? 'bg-success' : s.mode === 'codex' ? 'bg-primary' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
+                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'codex' ? 'bg-primary' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
                     <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
                 </span>
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
@@ -898,7 +953,7 @@ function schedOpenModal(existing) {
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="none">none</button>
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="cmd">cmd</button>
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="claude">claude</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="gemini">gemini</button>
+                <!-- <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="gemini">gemini</button> -->
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
             </div>
@@ -1036,6 +1091,16 @@ window.addEventListener('message', (e) => {
     if (e.data?.type === 'terminal-tab-key') {
         handleTabKey();
     }
+    if (e.data?.type === 'terminal-arrow-key') {
+        if (e.data.key === 'ArrowLeft')
+            goPrevFrame();
+        else if (e.data.key === 'ArrowUp')
+            goNextSession(-1);
+        else if (e.data.key === 'ArrowDown')
+            goNextSession(1);
+        else
+            handleNotifKey();
+    }
     if (e.data?.type === 'home-hotkey') {
         const k = e.data.key;
         if (k === 'F2')
@@ -1054,13 +1119,72 @@ window.addEventListener('message', (e) => {
     }
 });
 function handleTabKey() {
+    toggleSidebar();
+}
+let _notifReturnKey = null;
+let _notifReturnTimer = null;
+function handleNotifKey() {
     if (_activeNotifCallback) {
         const cb = _activeNotifCallback;
         _activeNotifCallback = null;
+        const from = activeFrameKey;
         cb();
+        if (from && from !== activeFrameKey) {
+            _notifReturnKey = from;
+            if (_notifReturnTimer)
+                clearTimeout(_notifReturnTimer);
+            _notifReturnTimer = window.setTimeout(() => { _notifReturnKey = null; }, 8000);
+        }
+        return true;
+    }
+    return false;
+}
+function goPrevFrame() {
+    if (!_notifReturnKey || _notifReturnKey === activeFrameKey)
+        return false;
+    const f = iframePool.get(_notifReturnKey);
+    if (!f) {
+        _notifReturnKey = null;
+        return false;
+    }
+    showFrame(_notifReturnKey, f.src);
+    _notifReturnKey = null;
+    if (_notifReturnTimer) {
+        clearTimeout(_notifReturnTimer);
+        _notifReturnTimer = null;
+    }
+    aiRefreshSessions();
+    termRefreshSessions();
+    return true;
+}
+function goNextSession(dir) {
+    if (aiSidebarEl.classList.contains('collapsed'))
+        return false;
+    const isChat = !activeFrameKey || activeFrameKey.startsWith('chat:');
+    if (isChat) {
+        const items = Array.from(aiSessionList.querySelectorAll('[data-sid]'));
+        if (items.length === 0)
+            return false;
+        const curIdx = activeFrameKey ? items.findIndex(el => el.dataset.sid === activeFrameKey.slice(5)) : -1;
+        const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+        if (nxt === curIdx)
+            return false;
+        const sid = items[nxt].dataset.sid;
+        aiLoadSession(sid);
+        items[nxt].scrollIntoView({ block: 'nearest' });
+        return true;
     }
     else {
-        toggleSidebar();
+        const items = Array.from(termSessionList.querySelectorAll('[data-port]'));
+        if (items.length === 0)
+            return false;
+        const curIdx = activeFrameKey ? items.findIndex(el => `term:${el.dataset.port}` === activeFrameKey) : -1;
+        const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+        if (nxt === curIdx)
+            return false;
+        termConnectSession(parseInt(items[nxt].dataset.port));
+        items[nxt].scrollIntoView({ block: 'nearest' });
+        return true;
     }
 }
 const AI_SIDEBAR_COLLAPSED_KEY = 'ai.sidebarCollapsed';
@@ -1078,14 +1202,42 @@ function toggleSidebar() {
     const next = !aiSidebarEl.classList.contains('collapsed');
     localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
     applySidebarCollapsed(next);
+    setTimeout(() => next ? focusActiveFrame() : aiSidebarEl.focus(), 0);
 }
 aiSidebarToggleBtn.addEventListener('click', toggleSidebar);
 document.addEventListener('keydown', (e) => {
+    if (isAiPanelActive() && isAiAuthVisible())
+        return;
     if (e.key === 'Tab') {
-        if (!document.getElementById('ai-panel')?.classList.contains('active'))
+        if (!isAiPanelActive())
             return;
         e.preventDefault();
         handleTabKey();
+        return;
+    }
+    if (handleTermSidebarShortcut(e))
+        return;
+    if (e.key === 'ArrowRight') {
+        if (!isAiPanelActive())
+            return;
+        if (_activeNotifCallback) {
+            e.preventDefault();
+            handleNotifKey();
+        }
+        return;
+    }
+    if (e.key === 'ArrowLeft') {
+        if (!isAiPanelActive())
+            return;
+        if (goPrevFrame())
+            e.preventDefault();
+        return;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        if (!isAiPanelActive())
+            return;
+        if (goNextSession(e.key === 'ArrowUp' ? -1 : 1))
+            e.preventDefault();
         return;
     }
     if (e.key === 'F2') {
@@ -1110,6 +1262,7 @@ const aiAuthOverlay = CDOM.ID("ai-auth-overlay");
 const aiAuthPwInput = CDOM.ID("aiAuthPwInput");
 const aiAuthMsg = CDOM.ID("aiAuthMsg");
 const aiAuthSubmitBtn = CDOM.ID("aiAuthSubmitBtn");
+aiAuthOverlay.addEventListener('keydown', (e) => e.stopPropagation());
 async function aiCheckAuth() {
     const token = localStorage.getItem(AI_TOKEN_KEY) || '';
     if (!token)
@@ -1188,26 +1341,7 @@ g_deleteJBox.SetCloseToHide(true);
 g_deleteJBox.SetBody("<div id='Delete_div'/>");
 g_deleteJBox.Hide();
 g_deleteJBox.Open(CModal.ePos.Center);
-var g_musicJBox = new CModal("music_modal");
-g_musicJBox.SetSize(400, 600);
-g_musicJBox.SetCloseToHide(true);
-g_musicJBox.SetBody(`<div id='Music_div'>
-        
-        <button type='button' class='btn btn-primary' style='margin: 4px;' onclick='SoundEachCopy()'>Copy Each</button>
-        <button type='button' class='btn btn-danger' style='margin: 4px;' onclick='SoundAllDelate()'>Delete All</button>
-        
-        <button type='button' class='btn btn-warning' style='margin: 4px;' onclick='SoundPlayListSave()'>Save List</button>
-        <div id='SoundNowPlaying' style='padding:6px;font-weight:bold;color:#0d6efd;'></div>
-        <audio id='MAudio' controls playsinline preload="auto"></audio>
-        <div class='form-check'>
-            <input class='form-check-input' type='checkbox' id='SoundRandom_chk' checked>
-            <label class='form-check-label' for='SoundRandom_chk'>Random Play</label>
-        </div>
-
-        <hr><div id='SoundList'></div>
-    </div>`);
-g_musicJBox.Hide();
-g_musicJBox.Open(CModal.ePos.Center);
+var g_musicJBox;
 let index = 0;
 var folderList = { "<>": "ul", "class": "list-group", "html": [] };
 var fileList = { "<>": "ul", "class": "list-group", "html": [] };
@@ -1251,15 +1385,10 @@ function DirListRefresh() {
                             for (let fl2 of data.list) {
                                 if (fl.name == fl2.name)
                                     continue;
-                                if (fl2.ext == "mp3" || fl.ext == "ogg") {
-                                    if (SoundListDupChk(window["g_down"] + window["g_path"] + fl.name + "/" + fl2.name) == false) {
-                                        g_soundList.fullPath.push(window["g_down"] + window["g_path"] + fl.name + "/" + fl2.name);
-                                        g_soundList.name.push(fl2.name);
-                                    }
-                                }
+                                if (fl2.ext == "mp3" || fl2.ext == "ogg")
+                                    g_musicJBox.AddTrack(fl2.name, window["g_down"] + window["g_path"] + fl.name + "/" + fl2.name);
                             }
-                            SoundListRefresh();
-                            SoundPlay(0);
+                            g_musicJBox.Play(0);
                         });
                     }
                     else
@@ -1283,31 +1412,26 @@ function DirListRefresh() {
                 "html": "<i class='bi bi-folder-music'>" + fl.name, "onclick": () => {
                     let soundAddType = CDOM.IDValue("soundAddType");
                     if (soundAddType == "1") {
-                        if (SoundListDupChk(window["g_down"] + window["g_path"] + fl.name) == false) {
-                            g_soundList.fullPath.push(window["g_down"] + window["g_path"] + fl.name);
-                            g_soundList.name.push(fl.name);
-                        }
+                        g_musicJBox.AddTrack(fl.name, window["g_down"] + window["g_path"] + fl.name);
                         CAlert.Info(fl.name + " 추가");
                     }
                     else {
-                        g_soundList.name.length = 0;
-                        g_soundList.fullPath.length = 0;
-                        g_soundList.fullPath.push(window["g_down"] + window["g_path"] + fl.name);
-                        g_soundList.name.push(fl.name);
+                        const _newNames = [fl.name];
+                        const _newPaths = [window["g_down"] + window["g_path"] + fl.name];
                         for (let fl2 of window["g_dirList"]) {
                             if (fl.name == fl2.name)
                                 continue;
-                            if (fl2.ext == "mp3" || fl.ext == "ogg") {
-                                if (SoundListDupChk(window["g_down"] + window["g_path"] + fl2.name) == false) {
-                                    g_soundList.fullPath.push(window["g_down"] + window["g_path"] + fl2.name);
-                                    g_soundList.name.push(fl2.name);
+                            if (fl2.ext == "mp3" || fl2.ext == "ogg") {
+                                const _fp = window["g_down"] + window["g_path"] + fl2.name;
+                                if (!_newPaths.includes(_fp)) {
+                                    _newNames.push(fl2.name);
+                                    _newPaths.push(_fp);
                                 }
                             }
                         }
-                        SoundListRefresh();
-                        SoundPlay(0);
+                        g_musicJBox.SetList(_newNames, _newPaths);
+                        g_musicJBox.Play(0);
                     }
-                    SoundListSave();
                     fl.open = true;
                     RefreshOpen();
                 } });
@@ -1333,8 +1457,8 @@ function DirListRefresh() {
                             CAlert.E("XMLHttpRequest error code" + oReq.status);
                         }
                         else {
-                            g_soundList = oReq.response;
-                            SoundListSave();
+                            const _d = oReq.response;
+                            g_musicJBox.SetList(_d.name || [], _d.fullPath || []);
                             CAlert.Info("ListUp!");
                         }
                     };
@@ -1446,10 +1570,11 @@ CFecth.Exe("File/List", fetchParam, "json").then((data) => {
     window["g_down"] = data.RootUrl;
     DirListRefresh();
 });
-let g_soundList = { "fullPath": [], "name": [] };
-let SoundListStr = CStorage.Get("SoundList");
-if (SoundListStr != null)
-    g_soundList = JSON.parse(SoundListStr);
+{
+    const _sd = CStorage.Get("SoundList");
+    const _d = _sd ? JSON.parse(_sd) : { name: [], fullPath: [] };
+    g_musicJBox = new CModalMusic(_d.name, _d.fullPath, (names, paths) => CStorage.Set("SoundList", JSON.stringify({ name: names, fullPath: paths })));
+}
 function FolderCD(_path, _onDone) {
     window["g_path"] = _path;
     let p2 = { path: _path };
@@ -1868,142 +1993,13 @@ CDOM.ID("uploadBtn").onchange = async (e) => {
     }
     Redirection(true);
 };
-let gRamdomList = [];
-function SoundListRefresh() {
-    gRamdomList = [];
-    if (g_soundList == null)
-        return;
-    var musicStr = "";
-    CDOM.ID("SoundList").innerHTML = "";
-    for (let i = 0; i < g_soundList.fullPath.length; ++i) {
-        musicStr += "<ul class='list-group'>";
-        musicStr += "<li class='list-group-item list-group-item-action' id='Sound" + i + "' onclick='SoundPlay(" + i + ")'>" +
-            "<i class='bi bi-file-music'></i> <font color='red'>" + g_soundList.name[i] +
-            "</font><i class='bi bi-file-earmark-x float-right' onclick='SoundDelete(" + i + ")'></i></li>";
-        musicStr += "</ul>";
-    }
-    CDOM.ID("SoundList").innerHTML = musicStr;
-}
-window["SoundListRefresh"] = SoundListRefresh;
-SoundListRefresh();
-function SoundListSave() {
-    CStorage.Set("SoundList", JSON.stringify(g_soundList));
-    SoundListRefresh();
-}
-window["SoundListSave"] = SoundListSave;
-var g_lastPlay = 0;
-function SoundPlay(_off) {
-    if (g_soundList.fullPath.length == 0)
-        return;
-    var MAudio = document.getElementById('MAudio');
-    if (_off == -1) {
-        CDOM.ID("Sound" + g_lastPlay).className = "list-group-item list-group-item-action";
-        g_lastPlay = 0;
-        CDOM.ID("SoundNowPlaying").textContent = "";
-        return;
-    }
-    else {
-        CDOM.ID("Sound" + g_lastPlay).className = "list-group-item list-group-item-action";
-        g_lastPlay = _off;
-        CDOM.ID("Sound" + _off).className = "list-group-item list-group-item-action list-group-item-dark";
-    }
-    const doPlay = () => {
-        MAudio.play()
-            .then(_ => {
-            CDOM.ID("SoundNowPlaying").textContent = "\u266B " + g_soundList.name[_off];
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: g_soundList.name[_off],
-                    artwork: [{ src: "512x512.png", sizes: "512x512", type: "image/png" }]
-                });
-                navigator.mediaSession.playbackState = 'playing';
-                if ('setPositionState' in navigator.mediaSession) {
-                    try {
-                        navigator.mediaSession.setPositionState({ duration: MAudio.duration, playbackRate: MAudio.playbackRate, position: MAudio.currentTime });
-                    }
-                    catch (e) { }
-                }
-            }
-        })
-            .catch(e => console.warn("SoundPlay failed:", e));
-    };
-    if ('audioSession' in navigator) {
-        navigator.audioSession.type = 'playback';
-    }
-    MAudio.src = g_soundList.fullPath[_off];
-    doPlay();
-}
-window["SoundPlay"] = SoundPlay;
-if ('mediaSession' in navigator) {
-    var MAudioRef = document.getElementById('MAudio');
-    navigator.mediaSession.setActionHandler("play", () => { MAudioRef.play(); });
-    navigator.mediaSession.setActionHandler("pause", () => { MAudioRef.pause(); });
-    navigator.mediaSession.setActionHandler("nexttrack", () => { SoundEnd(); });
-    navigator.mediaSession.setActionHandler("previoustrack", () => {
-        let prev = g_lastPlay - 1;
-        if (prev < 0)
-            prev = g_soundList.fullPath.length - 1;
-        SoundPlay(prev);
-    });
-    MAudioRef.addEventListener('play', () => { navigator.mediaSession.playbackState = 'playing'; });
-    MAudioRef.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
-    MAudioRef.addEventListener('ended', () => { SoundEnd(); });
-}
-function SoundDelete(_off) {
-    var MAudio = document.getElementById('MAudio');
-    g_soundList.fullPath.splice(_off, 1);
-    g_soundList.name.splice(_off, 1);
-    SoundListSave();
-    MAudio.pause();
-}
-window["SoundDelete"] = SoundDelete;
-function SoundEnd() {
-    if (CDOM.ID("SoundRandom_chk").checked) {
-        while (g_soundList.fullPath.length > 0) {
-            if (gRamdomList.length == 0) {
-                gRamdomList = [...g_soundList.fullPath];
-            }
-            let sel = Math.trunc(Math.random() * gRamdomList.length);
-            let selKey = gRamdomList.splice(sel, 1)[0];
-            for (let i = 0; i < g_soundList.fullPath.length; ++i) {
-                if (g_soundList.fullPath[i] == selKey) {
-                    SoundPlay(i);
-                    return;
-                }
-            }
-        }
-    }
-    else {
-        ;
-        if (g_soundList.fullPath.length <= g_lastPlay + 1)
-            SoundPlay(0);
-        else
-            SoundPlay(g_lastPlay + 1);
-    }
-}
-window["SoundEnd"] = SoundEnd;
-function SoundAllDelate() {
-    gRamdomList = [];
-    g_soundList.fullPath = [];
-    g_soundList.name = [];
-    SoundListSave();
-}
-window["SoundAllDelate"] = SoundAllDelate;
-function SoundListDupChk(_soundKey) {
-    for (let each0 of g_soundList.fullPath) {
-        if (each0 == _soundKey)
-            return true;
-    }
-    return false;
-}
-window["SoundListPush"] = SoundListDupChk;
 function SoundPlayListSave() {
     let confirm = new CConfirm();
     confirm.SetBody('Enter file name to save:<br><input type="text" id="soundListSave" class="form-control form-control-sm" value="basic">');
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
         () => {
             g_fun = "SoundPlayListSave";
-            g_data = JSON.stringify(g_soundList);
+            g_data = JSON.stringify({ name: g_musicJBox.Names, fullPath: g_musicJBox.Paths });
             g_option = CDOM.IDValue("soundListSave");
             Redirection(false);
         },
@@ -2013,22 +2009,6 @@ function SoundPlayListSave() {
     confirm.Open();
 }
 window["SoundPlayListSave"] = SoundPlayListSave;
-function SoundEachCopy() {
-    let confirm = new CConfirm();
-    confirm.SetBody('Copy the list?">');
-    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => {
-            g_fun = "SoundEachCopy";
-            g_data = JSON.stringify(g_soundList);
-            Redirection(false);
-        },
-        () => {
-            g_musicJBox.Hide();
-        },
-    ], ["Yes", "No"]);
-    confirm.Open();
-}
-window["SoundEachCopy"] = SoundEachCopy;
 function RefreshOpen() {
     for (let fl of window["g_dirList"]) {
         if (fl.index == null)

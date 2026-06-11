@@ -203,10 +203,24 @@ window.addEventListener('keydown', function(e) {
                 .then(function(j) { if (j.ok) _setSuperUI(j.super); })
                 .catch(function() {});
         }
+        function showBarAndFocusInput() {
+            bar.style.display = "flex";
+            document.body.style.paddingBottom = "50px";
+            inp.focus();
+        }
         _initSuper();
         setInterval(function() {
             if (!document.hidden) _initSuper();
         }, 60000);
+        window.addEventListener("keydown", function(e) {
+            if (e.key === "F6") {
+                e.preventDefault(); e.stopPropagation();
+                _toggleSuper();
+            } else if (e.key === "F7") {
+                e.preventDefault(); e.stopPropagation();
+                showBarAndFocusInput();
+            }
+        }, true);
 
         function handleAction(seq) {
             console.log('[terminal_ui] action:', seq, '| mode:', window.__TTYD_MODE);
