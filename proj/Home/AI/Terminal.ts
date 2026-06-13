@@ -23,7 +23,7 @@ pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
 loginBtn.addEventListener('click', doAuth);
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
         e.preventDefault();
         window.parent.postMessage({ type: 'home-hotkey', key: e.key }, '*');
     }

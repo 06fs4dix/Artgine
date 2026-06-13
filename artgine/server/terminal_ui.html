@@ -25,7 +25,7 @@ window.addEventListener('keydown', function(e) {
         e.preventDefault(); e.stopPropagation();
         window.top.postMessage({ type: 'terminal-tab-key' }, '*');
     }
-    if (e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
         e.preventDefault(); e.stopPropagation();
         window.top.postMessage({ type: 'home-hotkey', key: e.key }, '*');
     }

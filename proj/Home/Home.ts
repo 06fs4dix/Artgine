@@ -1,4 +1,4 @@
-//Version
+﻿//Version
 import "../../artgine/artgine.js"
 
 //Class
@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mq81jg2d_4";
+gPF.mVersion = "mqc55wv8_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -30,8 +30,7 @@ import {CPlugin} from "../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
-//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
-
+//The content above this line is automatically set by the program. Do not modify.燧녳쐦?슟燧녳삝截륆윊π윍?
 //EntryPoint
 import {CObject} from "../../artgine/basic/CObject.js"
 import { CSing, CSingOption } from "../../artgine/server/CSing.js";
@@ -60,7 +59,7 @@ import { CTooltip } from "../../artgine/util/CTooltip.js";
 
 
 if(gPF.mServer!="webServer")
-    CAlert.E("서버 세팅이 잘못되었습니다");
+    CAlert.E("Server setting is invalid.");
 
 //CStorage.Set("privateKey",null);
 
@@ -100,7 +99,7 @@ CDOM.ID("login-btn").addEventListener("click",()=>{
     loginModal.Open();
 });
 
-// PWA Install 버튼
+// PWA Install 踰꾪듉
 if(!CPWA.IsInstalled()) {
     CDOM.ID("install-btn").style.display="";
 }
@@ -119,7 +118,7 @@ CDOM.ID("board-tab").onclick=()=>{
     
 };
 
-// Download 탭
+// Download ??
 let dlInited = false;
 CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
     if (dlInited) return;
@@ -134,7 +133,7 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
 // ---- AI tab: session list ----
 const AI_TOKEN_KEY = 'artgine.token';
 
-// 모든 fetch에 AI 토큰 자동 첨부 → File/AI/Terminal 인증 공유
+// 紐⑤뱺 fetch??AI ?좏겙 ?먮룞 泥⑤? ??File/AI/Terminal ?몄쬆 怨듭쑀
 {
     const _origFetch = window.fetch.bind(window);
     (window as any).fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
@@ -153,11 +152,11 @@ const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
 let aiInited = false;
 
-// ---- iframe pool: 세션별 iframe을 유지하고 show/hide만 토글 ----
-// key 규칙: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
+// ---- iframe pool: ?몄뀡蹂?iframe???좎??섍퀬 show/hide留??좉? ----
+// key 洹쒖튃: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
 const iframePool = new Map<string, HTMLIFrameElement>();
 let activeFrameKey: string | null = null;
-let pendingNewSid: string | null = null; // 서버에 아직 없는 새 세션 (첫 메시지 전)
+let pendingNewSid: string | null = null; // ?쒕쾭???꾩쭅 ?녿뒗 ???몄뀡 (泥?硫붿떆吏 ??
 
 let _activeNotifCallback: (() => void) | null = null;
 
@@ -215,13 +214,13 @@ function _showModalStackMsg(label: string, content?: string, onClick?: () => voi
 
 function _showDoneNotification(label: string, content?: string, onClick?: () => void) {
     if (!document.hasFocus()) {
-        // 포커스 없을 때: 브라우저 알림 우선, 실패 시 CModalStackMsg로 폴백
+        // ?ъ빱???놁쓣 ?? 釉뚮씪?곗? ?뚮┝ ?곗꽑, ?ㅽ뙣 ??CModalStackMsg濡??대갚
         CUtilWeb.Notify(label, content ?? "", "", onClick ? () => onClick() : null).then(failed => {
             if (!failed) return;
             _showModalStackMsg(label, content, onClick);
         });
     } else {
-        // 포커스 있을 때: CModalStackMsg 사용
+        // ?ъ빱???덉쓣 ?? CModalStackMsg ?ъ슜
         _showModalStackMsg(label, content, onClick);
     }
 }
@@ -247,13 +246,14 @@ function showFrame(key: string, src: string): HTMLIFrameElement {
                     if (!isTerm && e.key === 'ArrowRight' && _activeNotifCallback) { e.preventDefault(); handleNotifKey(); return; }
                     if (!isTerm && e.key === 'ArrowLeft' && goPrevFrame()) { e.preventDefault(); return; }
                     if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && goNextSession(e.key === 'ArrowUp' ? -1 : 1)) { e.preventDefault(); return; }
-                    if (e.key === 'F2') { e.preventDefault(); FileSearch(); }
-                    else if (e.key === 'F3') {
+                    if (!isTerm && e.key === 'F1') { e.preventDefault(); FileBtn(); }
+                    else if (!isTerm && e.key === 'F2') { e.preventDefault(); FileSearch(); }
+                    else if (!isTerm && e.key === 'F3') {
                         e.preventDefault();
                         const fileTabEl = document.getElementById('file-tab') as HTMLElement;
                         if (fileTabEl) (window as any).bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
                         FolderCD('/');
-                    } else if (e.key === 'F4') {
+                    } else if (!isTerm && e.key === 'F4') {
                         e.preventDefault();
                         const aiTabEl = document.getElementById('ai-tab') as HTMLElement;
                         if (aiTabEl) (window as any).bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
@@ -294,6 +294,11 @@ function focusActiveFrame() {
         }
     } catch (_) {}
     f.focus();
+}
+
+function focusActiveFrameIfSidebarCollapsed() {
+    if (!aiSidebarEl.classList.contains('collapsed')) return;
+    setTimeout(() => focusActiveFrame(), 0);
 }
 
 function uuidv4(): string {
@@ -360,7 +365,7 @@ async function aiRefreshSessions() {
         const serverSids = new Set(sessions.map(s => s.sessionId));
         for (const key of Array.from(iframePool.keys())) {
             if (!key.startsWith('chat:')) continue;
-            if (pendingNewSid && key === `chat:${pendingNewSid}`) continue; // 새 세션 보호
+            if (pendingNewSid && key === `chat:${pendingNewSid}`) continue; // ???몄뀡 蹂댄샇
             if (!serverSids.has(key.slice(5))) destroyFrame(key);
         }
         for (const s of sessions) {
@@ -377,9 +382,9 @@ async function aiRefreshSessions() {
                 if (!isActiveFrame(key) || !document.hasFocus())
                     _showDoneNotification(aiEscapeHtml(s.title), s.lastMsg ? aiEscapeHtml(s.lastMsg) : undefined, () => aiLoadSession(s.sessionId));
             });
-            const dot = st === 'off'  ? '<span class="text-danger small" title="미연결">●</span>'
-                      : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
-                      :                 '<span class="text-success small" title="대기 중">●</span>';
+            const dot = st === 'off'  ? '<span class="text-danger small" title="誘몄뿰寃?>??/span>'
+                      : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="泥섎━ 以?>??/span>'
+                      :                 '<span class="text-success small" title="?湲?以?>??/span>';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
                     ${dot}
@@ -403,8 +408,8 @@ async function aiRefreshSessions() {
                 drop.id = 'ai-session-dropdown';
                 drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
                 drop.innerHTML = `
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="delete">🗑️ Delete Session</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">?뵕 Share Link</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="delete">?뿊截?Delete Session</button>
                 `;
                 const rect = btn.getBoundingClientRect();
                 drop.style.top = (rect.bottom + 4) + 'px';
@@ -441,8 +446,8 @@ async function aiRefreshSessions() {
 }
 
 function refreshSessionsSoon() {
-    // 새 채팅은 첫 메시지 시점, 새 터미널은 ttyd 기동 후에 서버에 등록되므로
-    // 짧은/긴 두 시점에 재요청해서 리스트를 따라가게 한다.
+    // ??梨꾪똿? 泥?硫붿떆吏 ?쒖젏, ???곕??먯? ttyd 湲곕룞 ?꾩뿉 ?쒕쾭???깅줉?섎?濡?
+    // 吏㏃?/湲????쒖젏???ъ슂泥?빐??由ъ뒪?몃? ?곕씪媛寃??쒕떎.
     setTimeout(() => { aiRefreshSessions(); termRefreshSessions(); }, 1500);
     setTimeout(() => { aiRefreshSessions(); termRefreshSessions(); }, 4000);
 }
@@ -452,7 +457,7 @@ aiNewChatBtn.addEventListener('click', () => chatStartNew());
 function chatStartNew(initialWorkingDir?: string) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">옵션</p>
+        <p class="fw-semibold mb-3">?듭뀡</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Working Directory</label>
             <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
@@ -516,13 +521,13 @@ const termNewBtn = CDOM.ID("termNewBtn");
 const termSessionList = CDOM.ID("termSessionList");
 let termActivePort: number | null = null;
 
-// ---- 세션 상태(빨강 off / 노랑 busy / 초록 idle)를 1곳에서 관리 ----
-// 알림은 노랑→초록(busy→idle) 전환에서만 발화한다. AI 채팅·터미널 공용.
+// ---- ?몄뀡 ?곹깭(鍮④컯 off / ?몃옉 busy / 珥덈줉 idle)瑜?1怨녹뿉??愿由?----
+// ?뚮┝? ?몃옉/二쇳솴?믪큹濡?busy쨌wait?뭝dle) ?꾪솚?먯꽌留?諛쒗솕?쒕떎. AI 梨꾪똿쨌?곕???怨듭슜.
 type SessState = 'off' | 'busy' | 'idle' | 'wait';
 const _sessState = new Map<string, SessState>();
 function syncSessState(id: string, cur: SessState, onDone: () => void, onWait?: () => void): void {
     const prev = _sessState.get(id);
-    if (prev === 'busy' && cur === 'idle') onDone();
+    if ((prev === 'busy' || prev === 'wait') && cur === 'idle') onDone();
     if (prev !== 'wait' && cur === 'wait') onWait?.();
     _sessState.set(id, cur);
 }
@@ -546,7 +551,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
             if (j.ok) {
                 const aliveCount = (j.sessions as any[]).filter((s: any) => s.alive).length;
                 if (aliveCount >= 9) {
-                    alert('터미널 세션이 가득 찼습니다 (최대 9개).\n기존 세션을 삭제한 후 다시 시도하세요.');
+                    alert('?곕????몄뀡??媛??李쇱뒿?덈떎 (理쒕? 9媛?.\n湲곗〈 ?몄뀡????젣?????ㅼ떆 ?쒕룄?섏꽭??');
                     return;
                 }
             }
@@ -555,7 +560,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
 
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">옵션</p>
+        <p class="fw-semibold mb-3">?듭뀡</p>
         <div class="mb-3 d-flex gap-2 flex-wrap">
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
@@ -655,7 +660,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
 
 async function termConnectSession(port: number) {
     const key = `term:${port}`;
-    // 이미 풀에 있으면 그대로 보여주고 끝
+    // ?대? ????덉쑝硫?洹몃?濡?蹂댁뿬二쇨퀬 ??
     if (iframePool.has(key)) {
         showFrame(key, '');
         aiRefreshSessions();
@@ -671,7 +676,7 @@ async function termKillSession(port: number) {
     try {
         const r = await termAuthedFetch(`${CPath.WebRootUrl()}cmd/kill-session?port=${port}`);
         const j = await r.json();
-        if (!j.ok) { alert(`삭제 실패: ${j.msg || 'unknown error'}`); return; }
+        if (!j.ok) { alert(`??젣 ?ㅽ뙣: ${j.msg || 'unknown error'}`); return; }
         termRefreshSessions();
         aiRefreshSessions();
     } catch (e) { console.error('termKillSession error:', e); }
@@ -701,7 +706,7 @@ async function termRefreshSessions() {
             if (!key.startsWith('term:')) continue;
             if (!serverPorts.has(parseInt(key.slice(5), 10))) destroyFrame(key);
         }
-        // term-new: 프레임을 실제 포트 키로 승격 (가장 최근 생성된 새 세션에만 매칭)
+        // term-new: ?꾨젅?꾩쓣 ?ㅼ젣 ?ы듃 ?ㅻ줈 ?밴꺽 (媛??理쒓렐 ?앹꽦?????몄뀡?먮쭔 留ㅼ묶)
         const termNewKeys = Array.from(iframePool.keys()).filter(k => k.startsWith('term-new:'));
         if (termNewKeys.length > 0) {
             const newSessions = sessions.filter(s => !iframePool.has(`term:${s.port}`));
@@ -740,7 +745,7 @@ async function termRefreshSessions() {
                 },
                 () => {
                     if (!isActiveFrame(key) || !document.hasFocus())
-                        _showDoneNotification(`⚠ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.port));
+                        _showDoneNotification(`??${s.key || s.mode}: 沅뚰븳 ?뱀씤 ?꾩슂`, s.lastMsg || undefined, () => termConnectSession(s.port));
                 }
             );
             const dot = st === 'off'  ? `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
@@ -757,7 +762,7 @@ async function termRefreshSessions() {
                     <span class="text-truncate small">${preview}</span>
                     ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
                 </span>
-                <button class="term-popup-btn btn btn-sm btn-link text-secondary p-0" title="팝업으로 열기">
+                <button class="term-popup-btn btn btn-sm btn-link text-secondary p-0" title="?앹뾽?쇰줈 ?닿린">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </button>
             `;
@@ -772,10 +777,10 @@ async function termRefreshSessions() {
                 drop.id = 'term-popup-dropdown';
                 drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
                 drop.innerHTML = `
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="modal">📄 Open in Modal</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="window">🪟 Open in New Window</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="kill">🗑️ Delete Session</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="modal">?뱞 Open in Modal</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="window">?첒 Open in New Window</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">?뵕 Share Link</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="kill">?뿊截?Delete Session</button>
                 `;
                 const rect = btn.getBoundingClientRect();
                 drop.style.top = (rect.bottom + 4) + 'px';
@@ -889,7 +894,7 @@ type ScheduleData = { name: string; terminalKey: string; mode: string; delay: nu
 
 function schedIntervalStr(s: ScheduleData): string {
     const parts: string[] = [`${s.delay}s`];
-    if (s.count > 0) parts.push(`×${s.count}`);
+    if (s.count > 0) parts.push(`횞${s.count}`);
     if (s.start > 0) parts.push(`+${s.start}s`);
     if (s.end > 0)   parts.push(`~${s.end}s`);
     return parts.join(' ');
@@ -917,12 +922,12 @@ async function schedRefresh() {
                     <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.terminalKey)}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
                 </span>
-                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="??젣"><i class="bi bi-trash"></i></button>
             `;
             item.addEventListener('click', () => schedOpenModal(s));
             item.querySelector('.sched-del-btn')!.addEventListener('click', async (e: Event) => {
                 e.stopPropagation();
-                if (!confirm(`스케줄 '${s.name}' 을 삭제할까요?`)) return;
+                if (!confirm(`?ㅼ?以?'${s.name}' ????젣?좉퉴??`)) return;
                 await termAuthedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
                 schedRefresh();
             });
@@ -1072,7 +1077,7 @@ function schedOpenModal(existing?: ScheduleData) {
 schedNewBtn.addEventListener('click', () => schedOpenModal());
 
 
-// AI 탭 active 시 5초마다 채팅·터미널·스케줄 목록 갱신
+// AI ??active ??5珥덈쭏??梨꾪똿쨌?곕??먃룹뒪耳以?紐⑸줉 媛깆떊
 setInterval(() => {
     if (CDOM.ID("ai-panel").classList.contains("show")) {
         aiRefreshSessions();
@@ -1084,7 +1089,7 @@ setInterval(() => {
 // Listen for session changes from iframe
 window.addEventListener('message', (e) => {
     if (e.data?.type === 'ai-sessions-changed') {
-        pendingNewSid = null; // 서버에 세션이 생성됐으므로 보호 해제
+        pendingNewSid = null; // ?쒕쾭???몄뀡???앹꽦?먯쑝誘濡?蹂댄샇 ?댁젣
         aiRefreshSessions();
     }
     if (e.data?.type === 'terminal-tab-key') {
@@ -1098,7 +1103,8 @@ window.addEventListener('message', (e) => {
     }
     if (e.data?.type === 'home-hotkey') {
         const k = e.data.key as string;
-        if (k === 'F2') FileSearch();
+        if (k === 'F1') FileBtn();
+        else if (k === 'F2') FileSearch();
         else if (k === 'F3') {
             const fileTabEl = document.getElementById('file-tab') as HTMLElement;
             if (fileTabEl) (window as any).bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
@@ -1114,28 +1120,29 @@ function handleTabKey() {
     toggleSidebar();
 }
 
-// → 로 알림 세션 전환 직후, ← 로 돌아갈 직전 세션. 시간이 지나면 해제된다.
+// ??濡??뚮┝ ?몄뀡 ?꾪솚 吏곹썑, ??濡??뚯븘媛?吏곸쟾 ?몄뀡. ?쒓컙??吏?섎㈃ ?댁젣?쒕떎.
 let _notifReturnKey: string | null = null;
 let _notifReturnTimer: number | null = null;
 
-// 활성 알림(완료 메세지) 콜백을 발화한다. → 화살표로 호출된다.
+// ?쒖꽦 ?뚮┝(?꾨즺 硫붿꽭吏) 肄쒕갚??諛쒗솕?쒕떎. ???붿궡?쒕줈 ?몄텧?쒕떎.
 function handleNotifKey(): boolean {
     if (_activeNotifCallback) {
         const cb = _activeNotifCallback;
         _activeNotifCallback = null;
-        const from = activeFrameKey;   // 전환 전 세션 기록
-        cb();                          // 알림 세션으로 전환
+        const from = activeFrameKey;   // ?꾪솚 ???몄뀡 湲곕줉
+        cb();                          // ?뚮┝ ?몄뀡?쇰줈 ?꾪솚
         if (from && from !== activeFrameKey) {
             _notifReturnKey = from;
             if (_notifReturnTimer) clearTimeout(_notifReturnTimer);
             _notifReturnTimer = window.setTimeout(() => { _notifReturnKey = null; }, 8000);
         }
+        focusActiveFrameIfSidebarCollapsed();
         return true;
     }
     return false;
 }
 
-// ← 화살표: 직전에 보던 세션으로 복귀(알림 전환 직후에만 armed).
+// ???붿궡?? 吏곸쟾??蹂대뜕 ?몄뀡?쇰줈 蹂듦?(?뚮┝ ?꾪솚 吏곹썑?먮쭔 armed).
 function goPrevFrame(): boolean {
     if (!_notifReturnKey || _notifReturnKey === activeFrameKey) return false;
     const f = iframePool.get(_notifReturnKey);
@@ -1145,10 +1152,11 @@ function goPrevFrame(): boolean {
     if (_notifReturnTimer) { clearTimeout(_notifReturnTimer); _notifReturnTimer = null; }
     aiRefreshSessions();
     termRefreshSessions();
+    focusActiveFrameIfSidebarCollapsed();
     return true;
 }
 
-// ↑↓ 화살표: 사이드바가 열려 있을 때 세션 목록 위아래 이동
+// ?묅넃 ?붿궡?? ?ъ씠?쒕컮媛 ?대젮 ?덉쓣 ???몄뀡 紐⑸줉 ?꾩븘???대룞
 function goNextSession(dir: 1 | -1): boolean {
     if (aiSidebarEl.classList.contains('collapsed')) return false;
     const isChat = !activeFrameKey || activeFrameKey.startsWith('chat:');
@@ -1218,7 +1226,10 @@ document.addEventListener('keydown', (e) => {
         if (goNextSession(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
         return;
     }
-    if (e.key === 'F2') {
+    if (e.key === 'F1') {
+        e.preventDefault();
+        FileBtn();
+    } else if (e.key === 'F2') {
         e.preventDefault();
         FileSearch();
     } else if (e.key === 'F3') {
@@ -1254,10 +1265,13 @@ async function aiShowAuthOrLoad() {
     const authed = await aiCheckAuth();
     if (!authed) {
         fileAuthed = false;
+        const wasVisible = aiAuthOverlay.style.display === 'flex';
         aiAuthOverlay.style.display = 'flex';
-        aiAuthPwInput.value = '';
-        aiAuthMsg.textContent = '';
-        setTimeout(() => aiAuthPwInput.focus(), 50);
+        if (!wasVisible) {
+            aiAuthPwInput.value = '';
+            aiAuthMsg.textContent = '';
+            setTimeout(() => aiAuthPwInput.focus(), 50);
+        }
     } else {
         fileAuthed = true;
         aiAuthOverlay.style.display = 'none';
@@ -1289,17 +1303,24 @@ async function aiDoAuth() {
 aiAuthSubmitBtn.addEventListener('click', aiDoAuth);
 aiAuthPwInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') aiDoAuth(); });
 
-// 서브탭 전환 시 해당 리스트 갱신
+// ?쒕툕???꾪솚 ???대떦 由ъ뒪??媛깆떊
 CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
 CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
 
+function showAiTermSubtab() {
+    const termSubEl = CDOM.ID("ai-term-subtab") as HTMLElement;
+    (window as any).bootstrap.Tab.getOrCreateInstance(termSubEl).show();
+}
+
 CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
     aiInited = true;
+    showAiTermSubtab();
     aiShowAuthOrLoad();
 });
 // also init if AI tab is the restored last-active tab
 if (CDOM.ID("ai-panel").classList.contains("show")) {
     aiInited = true;
+    showAiTermSubtab();
     aiShowAuthOrLoad();
 }
 
@@ -1327,6 +1348,19 @@ var g_musicJBox: CModalMusic;
 
 
 
+function vcsTag(fl: { Status?: string, name?: string }): string {
+    const s = fl.Status;
+    if (!s) return '';
+    const color = s === 'A' ? 'success' : s === 'D' ? 'danger' : s === 'M' ? 'warning' : 'secondary';
+    const canDiff = s === 'M' || s === 'A' || s === 'D';
+    if (canDiff) {
+        const filePath = ((window["g_root"] as string) ?? '') + ((window["g_path"] as string) ?? '') + (fl.name ?? '');
+        const escaped = filePath.replace(/'/g, "\\'");
+        return `<span class="badge bg-${color} float-end" style="font-size:0.65rem;cursor:pointer;" onclick="event.stopPropagation();openVcsDiff('${escaped}')">${s}</span>`;
+    }
+    return `<span class="badge bg-${color} float-end" style="font-size:0.65rem;">${s}</span>`;
+}
+
 let index=0;
 var folderList={"<>":"ul","class":"list-group","html":[]};
 var fileList={"<>":"ul","class":"list-group","html":[]};
@@ -1352,7 +1386,7 @@ function DirListRefresh()
         });
     }
 
-    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number}>)
+    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number,Status?:string}>)
     {
         if(fl.hidden)   continue;
         fl.open=false;
@@ -1364,7 +1398,7 @@ function DirListRefresh()
         if(fl.file==false)
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-folder-fill'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-folder-fill'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 let soundAddType=CDOM.IDValue("soundAddType");
                 if(soundAddType=="1")
                 {
@@ -1373,7 +1407,7 @@ function DirListRefresh()
                     if(RootUrl)     p2.RootUrl = RootUrl;
                     CFecth.Exe("File/List",p2,"json").then((data : {"list","RootPath","path","RootUrl"})=>{
                         //CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
-                        CAlert.Info(window["g_path"]+fl.name+"추가");
+                        CAlert.Info(window["g_path"]+fl.name+"異붽?");
                         
 
                         for(let fl2 of data.list as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
@@ -1392,7 +1426,7 @@ function DirListRefresh()
         else if(fl.ext=="png" || fl.ext=="jpg" || fl.ext=="jpeg" || fl.ext=="bmp")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-folder-image'>"+fl.name,"onclick":(e)=>{
+                "html":"<i class='bi bi-folder-image'>"+fl.name+vcsTag(fl),"onclick":(e)=>{
                 CDOM.ID("ImageModalSrc").hidden=false;
                 (CDOM.ID("ImageModalSrc") as HTMLImageElement).src=window["g_down"]+window["g_path"]+fl.name;
                 CDOM.ID("VideoModalSrc").hidden=true;
@@ -1408,7 +1442,7 @@ function DirListRefresh()
         // else if(fl.ext=="ts" || fl.ext=="js" || fl.ext=="html" || fl.ext=="json")
         // {
         //     folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-        //         "html":"<i class='bi bi-file-earmark'>"+fl.name,"onclick":(e)=>{
+        //         "html":"<i class='bi bi-file-earmark'>"+fl.name+vcsTag(fl),"onclick":(e)=>{
                 
 
         //         let modal=new CSourceViewer([window["g_down"]+window["g_path"]+fl.name]);
@@ -1421,12 +1455,12 @@ function DirListRefresh()
         else if(fl.ext=="mp3" || fl.ext=="ogg")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-folder-music'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-folder-music'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 let soundAddType=CDOM.IDValue("soundAddType");
                 if(soundAddType=="1")
                 {
                     g_musicJBox.AddTrack(fl.name, window["g_down"]+window["g_path"]+fl.name);
-                    CAlert.Info(fl.name+" 추가");
+                    CAlert.Info(fl.name+" 異붽?");
                 }
                 else
                 {
@@ -1452,7 +1486,7 @@ function DirListRefresh()
         else if(fl.ext=="mp4" || fl.ext=="mov" || fl.ext=="avi")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-folder-play'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-folder-play'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 
                 CDOM.ID("ImageModalSrc").hidden=true;
                 (CDOM.ID("VideoModalSrc") as HTMLVideoElement).src=window["g_down"]+window["g_path"]+fl.name;
@@ -1468,7 +1502,7 @@ function DirListRefresh()
         else if(fl.ext=="soundlist")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-flower1'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-flower1'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 var oReq = new XMLHttpRequest();
                 oReq.onload = (e)=> 
                 {
@@ -1491,9 +1525,9 @@ function DirListRefresh()
         else if(fl.ext=="html")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-file-earmark-code'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-file-earmark-code'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 let confirm=new CConfirm();
-                confirm.SetBody("HTML 파일을 어떻게 열까요?");
+                confirm.SetBody("HTML ?뚯씪???대뼸寃??닿퉴??");
                 confirm.SetConfirm(CConfirm.eConfirm.YesNo,[
                     ()=>{ window.open(window["g_down"]+window["g_path"]+fl.name, "_blank"); },
                     ()=>{
@@ -1502,9 +1536,9 @@ function DirListRefresh()
                             const dirPath = window["g_root"] + window["g_path"];
                             const base64 = btoa(unescape(encodeURIComponent(bufStr)));
                             CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                                CAlert.Info('저장 완료');
+                                CAlert.Info('????꾨즺');
                             }).catch((e) => {
-                                CAlert.E('저장 실패: ' + e.message);
+                                CAlert.E('????ㅽ뙣: ' + e.message);
                             });
                         });
                         viewer.Open();
@@ -1516,18 +1550,18 @@ function DirListRefresh()
         else if(fl.ext=="ts" || fl.ext=="js" || fl.ext=="txt" || fl.ext=="json")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-file-code'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-file-code'>"+fl.name+vcsTag(fl),"onclick":()=>{
                                 
                 
                 let viewer = new CFileViewer([window["g_down"]+window["g_path"]+fl.name], async (filePath, bufStr) => {
                     const fileName = filePath.split('/').pop();
                     const dirPath = window["g_root"] + window["g_path"];
                     const base64 = btoa(unescape(encodeURIComponent(bufStr)));
-                    console.log('Upload →', { path: dirPath, name: [fileName] }); // ← 확인용
+                    console.log('Upload save', { path: dirPath, name: [fileName] });
                     CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                        CAlert.Info('저장 완료');
+                        CAlert.Info('????꾨즺');
                     }).catch((e) => {
-                        CAlert.E('저장 실패: ' + e.message);
+                        CAlert.E('????ㅽ뙣: ' + e.message);
                     });
                 });
                 viewer.Open();
@@ -1536,21 +1570,21 @@ function DirListRefresh()
         else if(fl.ext=="md")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-file-earmark-text'>"+fl.name,"onclick":(e)=>{
+                "html":"<i class='bi bi-file-earmark-text'>"+fl.name+vcsTag(fl),"onclick":(e)=>{
                 new CMDViewer(window["g_down"]+window["g_path"]+fl.name);
             }});
         }
         else if(fl.ext=="csv" || fl.ext=="xlsx" || fl.ext=="xls")
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-file-earmark-spreadsheet'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-file-earmark-spreadsheet'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 new CSheetViewer([window["g_down"]+window["g_path"]+fl.name], async (filePath, base64) => {
                     const fileName = filePath.split('/').pop();
                     const dirPath = window["g_root"] + window["g_path"];
                     CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                        CAlert.Info('저장 완료');
+                        CAlert.Info('????꾨즺');
                     }).catch((e: any) => {
-                        CAlert.E('저장 실패: ' + e.message);
+                        CAlert.E('????ㅽ뙣: ' + e.message);
                     });
                 }).Open();
             }});
@@ -1558,7 +1592,7 @@ function DirListRefresh()
         else
         {
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-file'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 
                 CDOM.ID("ImageModalSrc").hidden=true;
                 (CDOM.ID("FileModalSrc") as HTMLLinkElement).href=window["g_down"]+window["g_path"]+fl.name;
@@ -1573,7 +1607,7 @@ function DirListRefresh()
         if(fl.file==true)
         {
             fileList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-                "html":"<i class='bi bi-file'>"+fl.name,"onclick":()=>{
+                "html":"<i class='bi bi-file'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 Delete(fl.name);
             }});
         }
@@ -1601,12 +1635,13 @@ let fetchParam: any = {path:path};
 if(RootPath) fetchParam.RootPath = RootPath;
 if(RootUrl)     fetchParam.RootUrl = RootUrl;
 
-CFecth.Exe("File/List",fetchParam,"json").then((data : {"list","RootPath","path","RootUrl"})=>{
+CFecth.Exe("File/List",fetchParam,"json").then((data : {"list","RootPath","path","RootUrl","roots"})=>{
     CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
     window["g_dirList"]=data.list;
     window["g_root"]=(data.RootPath as string)?.replace(/\/+$/, '') ?? '';
     window["g_path"]=data.path;
     window["g_down"]=data.RootUrl;
+    window["g_roots"]=data.roots ?? [];
     DirListRefresh();
 });
 
@@ -1627,11 +1662,12 @@ function FolderCD(_path, _onDone?: () => void)
     let p2: any = {path:_path};
     if(RootPath) p2.RootPath = RootPath;
     if(RootUrl)     p2.RootUrl = RootUrl;
-    CFecth.Exe("File/List",p2,"json").then((data : {"list","RootPath","path","RootUrl"})=>{
+    CFecth.Exe("File/List",p2,"json").then((data : {"list","RootPath","path","RootUrl","roots"})=>{
         window["g_dirList"]=data.list;
         window["g_root"]=(data.RootPath as string)?.replace(/\/+$/, '') ?? '';
         window["g_path"]=data.path;
         window["g_down"]=data.RootUrl;
+        window["g_roots"]=data.roots ?? [];
         index=0;
         DirListRefresh();
         _onDone?.();
@@ -1642,7 +1678,7 @@ window["FolderCD"]=FolderCD;
 var g_fun="";
 var g_data="";
 var g_option="";
-// 변경 후
+// 蹂寃???
 function Redirection(_multi : boolean)
 {
     var form = CDOM.ID("ThisPage") as HTMLFormElement;
@@ -1691,88 +1727,120 @@ var g_menuList={"<>":"div","class":"d-flex align-items-center p-1","html":[
             {"<>":"option","value":"1","text":"Add Each (w/ Folder)"},
         ]},
         {"<>":"button","type":"button","class":"btn btn-sm btn-outline-info","html":"Search <span style='font-size:0.75em;opacity:0.7;'>F2</span>","onclick":()=>{FileSearch();}},
-        {"<>":"button","type":"button","class":"btn btn-sm btn-outline-secondary","text":"Permission","onclick":()=>{PermissionBtn();}},
+        {"<>":"button","type":"button","class":"btn btn-sm btn-outline-secondary","html":"File <span style='font-size:0.75em;opacity:0.7;'>F1</span>","onclick":()=>{FileBtn();}},
     ]},
 ]};
 
 CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
 
-async function PermissionBtn() {
+async function FileBtn() {
     if (fileAuthed) {
-        // 서버 토큰 유효성 검증 (서버 재시작 시 메모리 토큰 초기화됨)
+        // ?쒕쾭 ?좏겙 ?좏슚??寃利?(?쒕쾭 ?ъ떆????硫붾え由??좏겙 珥덇린?붾맖)
         const valid = await aiCheckAuth();
         if (valid) {
             showFileAdminModal();
             return;
         }
-        // 토큰 만료/무효 → 재인증 필요
+        // ?좏겙 留뚮즺/臾댄슚 ???ъ씤利??꾩슂
         fileAuthed = false;
     }
     const dlg = new CConfirm();
     dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    const doAuth = () => {
+        const pw = CDOM.IDValue("AuthPassword");
+        (CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
+            if (j.ok) {
+                localStorage.setItem(AI_TOKEN_KEY, j.token!);
+                fileAuthed = true;
+                aiAuthOverlay.style.display = 'none';
+                aiRefreshSessions();
+                termRefreshSessions();
+                CAlert.Info("Permission granted");
+            } else {
+                CAlert.E("Wrong password: " + (j.msg ?? ""));
+            }
+        }).catch(() => { CAlert.E("Server error"); });
+    };
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => {
-            const pw = CDOM.IDValue("AuthPassword");
-            (CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
-                if (j.ok) {
-                    localStorage.setItem(AI_TOKEN_KEY, j.token!);
-                    fileAuthed = true;
-                    aiAuthOverlay.style.display = 'none';
-                    aiRefreshSessions();
-                    termRefreshSessions();
-                    CAlert.Info("Permission granted");
-                } else {
-                    CAlert.E("Wrong password: " + (j.msg ?? ""));
-                }
-            }).catch(() => { CAlert.E("서버 오류"); });
-        },
+        doAuth,
         () => {},
     ], ["OK", "Cancel"]);
     dlg.Open();
+    setTimeout(() => {
+        const input = CDOM.ID("AuthPassword") as HTMLInputElement | null;
+        input?.focus();
+        input?.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            doAuth();
+        });
+    }, 80);
 }
-window["PermissionBtn"] = PermissionBtn;
+window["FileBtn"] = FileBtn;
+window["PermissionBtn"] = FileBtn;
 
 function showFileAdminModal() {
     const uid = Date.now();
-    const curRoot = RootPath || (window["g_root"] as string) || "";
-    const curDown = RootUrl || (window["g_down"] as string) || "";
+
+    const _roots = (window["g_roots"] as Array<{path:string,url:string,name:string}>) ?? [];
+    // ?ㅼ젙 猷⑦듃??+ ?꾪떚???뚰궧) 寃쎈줈瑜?????됲듃???듯빀
+    const _opts = [..._roots, { path: "./", url: "/Artgine/", name: "Artgine (WorkingPath)" }];
+    // ?꾩옱 ?쒖꽦 ??ぉ ?쒖떆: RootPath+RootUrl 議고빀 留ㅼ묶, 湲곕낯(誘몄꽑???대㈃ 泥?猷⑦듃
+    let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? '') && r.url === (RootUrl ?? ''));
+    if (_curIdx < 0) _curIdx = 0;
+    const _rootOpts = _opts.map((r, i) => `<option value="${i}" ${i === _curIdx ? 'selected' : ''}>${r.name}</option>`).join('');
 
     const modal = new CModal();
     modal.SetHeader("File Manager");
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetCloseToHide(false);
     modal.SetBody(`
-        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;">
-            <div>
-                <label class="form-label mb-0 small fw-bold">Path</label>
-                <input id="fadm_path_${uid}" type="text" class="form-control form-control-sm" value="${curRoot}" placeholder="Server default">
-            </div>
-            <div>
-                <label class="form-label mb-0 small fw-bold">Down</label>
-                <input id="fadm_down_${uid}" type="text" class="form-control form-control-sm" value="${curDown}" placeholder="Server default">
-            </div>
-            <button id="fadm_apply_${uid}" class="btn btn-sm btn-success">Apply</button>
-            <div class="d-flex gap-1">
-                <button id="fadm_defpath_${uid}" class="btn btn-sm btn-outline-secondary flex-fill">RootPath</button>
-                <button id="fadm_artpath_${uid}" class="btn btn-sm btn-outline-primary flex-fill">ArtginePath</button>
-            </div>
+        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;min-height:420px;">
+            <select id="fadm_rootsel_${uid}" class="form-select form-select-sm">${_rootOpts}</select>
             <hr class="my-0">
-            <button id="fadm_share_${uid}" class="btn btn-outline-info">Share</button>
-            <button id="fadm_folder_${uid}" class="btn btn-warning">New Folder</button>
-            <button id="fadm_delete_${uid}" class="btn btn-danger">Delete</button>
-            <button id="fadm_upload_${uid}" class="btn btn-primary">Upload</button>
             <div class="d-flex gap-1">
                 <button id="fadm_chat_${uid}" class="btn btn-outline-primary flex-fill">Chat</button>
                 <button id="fadm_term_${uid}" class="btn btn-outline-success flex-fill">Terminal</button>
+            </div>
+            <hr class="my-0">
+            <div class="accordion" id="fadm_acc_${uid}">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button py-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fadm_file_actions_body_${uid}" aria-expanded="false" aria-controls="fadm_file_actions_body_${uid}">
+                            File Actions
+                        </button>
+                    </h2>
+                    <div id="fadm_file_actions_body_${uid}" class="accordion-collapse collapse" data-bs-parent="#fadm_acc_${uid}">
+                        <div class="accordion-body d-flex flex-column gap-2 p-2">
+                            <button id="fadm_share_${uid}" class="btn btn-outline-info">Share</button>
+                            <button id="fadm_folder_${uid}" class="btn btn-warning">New Folder</button>
+                            <button id="fadm_delete_${uid}" class="btn btn-danger">Delete</button>
+                            <button id="fadm_upload_${uid}" class="btn btn-primary">Upload</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#fadm_vcs_body_${uid}" aria-expanded="true" aria-controls="fadm_vcs_body_${uid}">
+                            Version Control
+                        </button>
+                    </h2>
+                    <div id="fadm_vcs_body_${uid}" class="accordion-collapse collapse show" data-bs-parent="#fadm_acc_${uid}">
+                        <div class="accordion-body d-flex flex-column gap-2 p-2">
+                            <button id="fadm_vcs_diff_${uid}" class="btn btn-outline-secondary btn-sm w-100">Diff</button>
+                            <button id="fadm_vcs_update_${uid}" class="btn btn-outline-primary btn-sm w-100">Update</button>
+                            <button id="fadm_vcs_add_${uid}" class="btn btn-outline-info btn-sm w-100">Add (SVN)</button>
+                            <button id="fadm_vcs_revert_${uid}" class="btn btn-outline-warning btn-sm w-100">Revert</button>
+                            <button id="fadm_vcs_commit_${uid}" class="btn btn-outline-success btn-sm w-100">Commit & Push</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `);
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-        const pathInput = document.getElementById(`fadm_path_${uid}`) as HTMLInputElement;
-        const downInput = document.getElementById(`fadm_down_${uid}`) as HTMLInputElement;
-
         const applyValues = (root: string, down: string) => {
             RootPath = root || null;
             RootUrl = down || null;
@@ -1780,18 +1848,10 @@ function showFileAdminModal() {
             FolderCD("/");
         };
 
-        document.getElementById(`fadm_apply_${uid}`)?.addEventListener('click', () => {
-            applyValues(pathInput.value.trim(), downInput.value.trim());
-        });
-        document.getElementById(`fadm_defpath_${uid}`)?.addEventListener('click', () => {
-            pathInput.value = "";
-            downInput.value = "";
-            applyValues("", "");
-        });
-        document.getElementById(`fadm_artpath_${uid}`)?.addEventListener('click', () => {
-            pathInput.value = "./";
-            downInput.value = "/Artgine/";
-            applyValues("./", "/Artgine/");
+        const rootSel = document.getElementById(`fadm_rootsel_${uid}`) as HTMLSelectElement | null;
+        rootSel?.addEventListener('change', () => {
+            const r = _opts[parseInt(rootSel.value)];
+            if (r) applyValues(r.path, r.url);
         });
         document.getElementById(`fadm_share_${uid}`)?.addEventListener('click', () => {
             modal.Hide(); FileShare();
@@ -1800,7 +1860,7 @@ function showFileAdminModal() {
             modal.Hide(); CreateFolder();
         });
         document.getElementById(`fadm_delete_${uid}`)?.addEventListener('click', () => {
-            modal.Hide(); g_deleteJBox.Show();
+            openDeleteModal();
         });
         document.getElementById(`fadm_upload_${uid}`)?.addEventListener('click', () => {
             modal.Hide(); (CDOM.ID("uploadBtn") as HTMLInputElement).click();
@@ -1827,9 +1887,197 @@ function showFileAdminModal() {
             }, 150);
             termStartNew('cmd', cwd || undefined);
         });
+
+        const vcsPath = () => ((window["g_root"] as string) ?? './') + ((window["g_path"] as string) ?? '');
+
+        document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
+        document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
+            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "update", path: vcsPath() }, "json") as any;
+            CAlert.Info(res.msg || (res.ok ? 'Update complete' : 'Update failed'));
+            if (res.ok) FolderCD(window["g_path"]);
+        });
+        document.getElementById(`fadm_vcs_add_${uid}`)?.addEventListener('click', () => openVcsModal('add', vcsPath()));
+        document.getElementById(`fadm_vcs_revert_${uid}`)?.addEventListener('click', () => openVcsModal('revert', vcsPath()));
+        document.getElementById(`fadm_vcs_commit_${uid}`)?.addEventListener('click', () => openVcsModal('commit', vcsPath()));
     }, 80);
 }
 window["showFileAdminModal"] = showFileAdminModal;
+
+type ActionItem = {badge?:string, badgeClass?:string, icon?:string, label:string, value:string, checked?:boolean};
+type ActionRunFn = (values: string[], message?: string) => Promise<{result: string, refresh?: boolean}>;
+
+function openActionModal(
+    title: string,
+    runLabel: string,
+    runClass: string,
+    onRun: ActionRunFn,
+    hasMessage = false,
+    fetchItems?: () => Promise<ActionItem[]>,
+    staticItems?: ActionItem[]
+) {
+    const uid = Date.now();
+    const hasFetch = !!fetchItems;
+
+    const modal = new CModal();
+    modal.SetHeader(title);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetBody(`
+        <div class="d-flex flex-column gap-2 p-1" style="width:380px;height:480px;overflow:hidden;">
+            ${hasFetch ? `
+            <div class="d-flex gap-2 align-items-center flex-shrink-0">
+                ${hasMessage ? `<input id="am_msg_${uid}" type="text" class="form-control form-control-sm flex-fill" placeholder="Commit message...">` : ''}
+                <button id="am_refresh_${uid}" class="btn btn-outline-secondary btn-sm flex-shrink-0"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>` : hasMessage ? `<input id="am_msg_${uid}" type="text" class="form-control form-control-sm flex-shrink-0" placeholder="Commit message...">` : ''}
+            <div id="am_list_${uid}" class="border rounded p-1 flex-fill" style="overflow-y:auto;font-size:0.78rem;min-height:0;">
+                ${hasFetch ? '<span class="text-secondary">Loading...</span>' : ''}
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0">
+                <button id="am_all_${uid}" class="btn btn-outline-secondary btn-sm">Select All</button>
+                <button id="am_run_${uid}" class="btn ${runClass} btn-sm flex-fill">${runLabel}</button>
+            </div>
+            <pre id="am_result_${uid}" class="p-2 rounded bg-body-secondary small mb-0 flex-shrink-0" style="display:none;max-height:120px;overflow-y:auto;white-space:pre-wrap;"></pre>
+        </div>
+    `);
+    modal.Open(CModal.ePos.Center);
+
+    const listEl   = document.getElementById(`am_list_${uid}`)!;
+    const resultEl = document.getElementById(`am_result_${uid}`)!;
+    const allBtn   = document.getElementById(`am_all_${uid}`)!;
+    const runBtn   = document.getElementById(`am_run_${uid}`)!;
+    const msgEl    = document.getElementById(`am_msg_${uid}`) as HTMLInputElement | null;
+
+    const renderItems = (items: ActionItem[] | undefined) => {
+        if (!items || items.length === 0) { listEl.innerHTML = '<span class="text-secondary">No items</span>'; return; }
+        listEl.innerHTML = items.map((i, idx) => `
+            <div class="d-flex align-items-center gap-1 py-1">
+                <input type="checkbox" class="form-check-input am-chk-${uid}" id="am_${uid}_${idx}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
+                ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
+                ${i.icon  ? `<i class="bi ${i.icon}"></i>` : ''}
+                <label for="am_${uid}_${idx}" class="text-truncate mb-0 flex-fill" style="cursor:pointer;" title="${i.label}">${i.label}</label>
+            </div>`).join('');
+    };
+
+    const refresh = async () => {
+        if (!fetchItems) return;
+        listEl.innerHTML = '<span class="text-secondary">Loading...</span>';
+        resultEl.style.display = 'none';
+        renderItems(await fetchItems());
+    };
+
+    if (fetchItems) refresh();
+    else renderItems(staticItems);
+
+    document.getElementById(`am_refresh_${uid}`)?.addEventListener('click', refresh);
+
+    allBtn.addEventListener('click', () => {
+        const chks = listEl.querySelectorAll<HTMLInputElement>(`.am-chk-${uid}`);
+        const allChecked = Array.from(chks).every(c => c.checked);
+        chks.forEach(c => c.checked = !allChecked);
+    });
+
+    runBtn.addEventListener('click', async () => {
+        const values = Array.from(listEl.querySelectorAll<HTMLInputElement>(`.am-chk-${uid}`))
+            .filter(c => c.checked).map(c => c.value);
+        if (values.length === 0) { CAlert.Info('No items selected'); return; }
+        if (hasMessage && !msgEl?.value.trim()) { CAlert.Info('Please enter a message'); return; }
+
+        runBtn.setAttribute('disabled', '');
+        resultEl.style.display = '';
+        resultEl.textContent = 'Processing...';
+        const { result, refresh: doRefresh } = await onRun(values, msgEl?.value.trim());
+        resultEl.textContent = result;
+        runBtn.removeAttribute('disabled');
+        if (doRefresh) refresh();
+    });
+}
+
+function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
+    const statusColor = (s: string) => s === 'M' ? 'warning' : s === 'A' ? 'success' : s === 'D' ? 'danger' : 'secondary';
+    const title = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
+    const runLabel = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
+    const runClass = action === 'commit' ? 'btn-success' : action === 'revert' ? 'btn-warning' : 'btn-info';
+    openActionModal(
+        title,
+        runLabel,
+        runClass,
+        async (files, message) => {
+            const param: any = { action, path, files };
+            if (action === 'commit') param.message = message;
+            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", param, "json") as any;
+            if (res.ok) FolderCD(window["g_path"]);
+            return { result: res.msg || (res.ok ? 'Done' : 'Failed'), refresh: res.ok };
+        },
+        action === 'commit',
+        async () => {
+            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "status", path }, "json") as any;
+            if (!res.ok) return [];
+            const items = res.items as {status: string, file: string}[];
+            const filtered = action === 'add' ? items.filter(i => i.status === '?') : items;
+            return filtered.map(i => ({ badge: i.status, badgeClass: statusColor(i.status), label: i.file, value: i.file, checked: true }));
+        }
+    );
+}
+
+async function openVcsDiff(filePath: string) {
+    let res: any;
+    try {
+        res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "diff", path: filePath }, "json");
+    } catch (e) {
+        CAlert.Info("Diff request failed"); return;
+    }
+    if (!res?.ok) { CAlert.Info(res?.msg || "Diff failed"); return; }
+
+    // ?쇱씤踰덊샇 td媛 position:absolute???ㅽ겕濡??곸뿭 ?덉뿉 湲곗???position:relative)???꾩슂.
+    // ?놁쑝硫??몃줈 ?ㅽ겕濡???肄붾뱶留??吏곸씠怨??쇱씤踰덊샇媛 ?닿툔?? 1?뚮쭔 二쇱엯.
+    if (!document.getElementById("vcs-diff-style")) {
+        const st = document.createElement("style");
+        st.id = "vcs-diff-style";
+        st.textContent = "#vcs-diff-view .d2h-code-wrapper{position:relative;}";
+        document.head.appendChild(st);
+    }
+
+    const modal = new CModal();
+    modal.SetHeader(`Diff: ${filePath.replace(/\/+$/, '').split('/').pop() || filePath}`);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetBody(`<div id="vcs-diff-view"></div>`);
+    modal.SetSize(860, 580);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(() => {
+        const el = document.getElementById("vcs-diff-view");
+        if (!el) return;
+        const D2H = (window as any).Diff2HtmlUI;
+        if (!D2H) { el.textContent = "diff2html not loaded"; return; }
+        const cfg = { drawFileList: false, matching: "lines", outputFormat: "line-by-line", highlight: false, stickyFileHeaders: false };
+        new D2H(el, res.diff, cfg).draw();
+    }, 80);
+}
+window["openVcsDiff"] = openVcsDiff;
+
+function openDeleteModal() {
+    const dirList = (window["g_dirList"] as Array<{file:boolean, name:string, hidden?:boolean}>) ?? [];
+    openActionModal(
+        'Delete',
+        'Delete',
+        'btn-danger',
+        async (names) => {
+            const lines: string[] = [];
+            for (const name of names) {
+                const param: any = { data: window["g_path"] + name };
+                if (RootPath) param.RootPath = RootPath;
+                const res = await CFecth.Exe(CPath.WebRootUrl() + "File/Delete", param, "json") as any;
+                lines.push(`${res.ok ? 'OK' : 'FAIL'} ${name}`);
+            }
+            FolderCD(window["g_path"]);
+            return { result: lines.join('\n') };
+        },
+        false,
+        undefined,
+        dirList
+            .filter(fl => !fl.hidden)
+            .map(fl => ({ icon: fl.file ? 'bi-file' : 'bi-folder-fill', label: fl.name, value: fl.name, checked: false }))
+    );
+}
 
 function CreateFolder()
 {
@@ -1843,7 +2091,7 @@ function CreateFolder()
         if (RootPath) param.RootPath = RootPath;
         const j = await CFecth.Exe(CPath.WebRootUrl() + "File/Mkdir", param, "json") as any;
         if (j?.ok) FolderCD(window["g_path"]);
-        else CAlert.E("폴더 생성 실패");
+        else CAlert.E("?대뜑 ?앹꽦 ?ㅽ뙣");
     },
     ()=> {},
     ],["Yes","No"])
@@ -1861,8 +2109,8 @@ window["Delete"]=Delete;
 type SrchFile = {hidden:boolean,file:boolean,name:string,ext:string};
 const SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const isSearchExcluded = (name: string) => name.startsWith('.') || SEARCH_EXCLUDE_DIRS.includes(name);
-// 서버 루트 단위로 캐시 유지 — 경로가 바뀌어도 유지, 해당 subtree 항목만 활용
-let g_srchCache: Map<string, SrchFile[]> = new Map(); // dirPath → fileList
+// ?쒕쾭 猷⑦듃 ?⑥쐞濡?罹먯떆 ?좎? ??寃쎈줈媛 諛붾뚯뼱???좎?, ?대떦 subtree ??ぉ留??쒖슜
+let g_srchCache: Map<string, SrchFile[]> = new Map(); // dirPath ??fileList
 let g_srchServerKey = '';
 
 async function FileSearch() {
@@ -1943,7 +2191,7 @@ async function FileSearch() {
         btn.disabled = true;
         stopBtn.style.display = '';
 
-        // startPath 하위 캐시가 있으면 즉시 표시
+        // startPath ?섏쐞 罹먯떆媛 ?덉쑝硫?利됱떆 ?쒖떆
         const hasCached = [...g_srchCache.keys()].some(k => k.startsWith(startPath));
         if (hasCached) {
             const n = renderFromCache(startPath, query);
@@ -1953,7 +2201,7 @@ async function FileSearch() {
             status.textContent = 'Scanning...';
         }
 
-        // 최신 스캔 — 완료 후 캐시 업데이트 & 결과 교체
+        // 理쒖떊 ?ㅼ틪 ???꾨즺 ??罹먯떆 ?낅뜲?댄듃 & 寃곌낵 援먯껜
         const queue: string[] = [startPath];
         while (queue.length > 0 && !searchCancelled) {
             const dirPath = queue.shift()!;
@@ -2001,7 +2249,7 @@ function FileShare() {
     const modal = new CModal();
     modal.SetHeader("Share");
     modal.SetBody(`
-        <div class="mb-2 small text-secondary">현재 폴더 공유 링크</div>
+        <div class="mb-2 small text-secondary">?꾩옱 ?대뜑 怨듭쑀 留곹겕</div>
         <div class="input-group">
             <input type="text" id="shareInput_${uid}" class="form-control form-control-sm" readonly value="${shareUrl.replace(/"/g, '&quot;')}">
             <button id="shareCopyBtn_${uid}" class="btn btn-sm btn-outline-primary">Copy</button>
@@ -2021,7 +2269,7 @@ function FileShare() {
                 msg.textContent = 'Copied!';
                 setTimeout(() => { msg.textContent = ''; }, 2000);
             } catch {
-                msg.textContent = 'Copy failed — select and copy manually.';
+                msg.textContent = 'Copy failed ??select and copy manually.';
             }
         });
     }, 80);
@@ -2035,12 +2283,12 @@ CDOM.ID("uploadBtn").onchange=async (e)=>{
     var fi=e.target as HTMLInputElement;
     const path=window["g_root"]+window["g_path"];
 
-    // arrayBuffer() 대신 FileReader 사용: iOS Safari에서 대용량 파일 안정성이 높음
+    // arrayBuffer() ???FileReader ?ъ슜: iOS Safari?먯꽌 ??⑸웾 ?뚯씪 ?덉젙?깆씠 ?믪쓬
     const readAsBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
             const result = reader.result as string;
-            resolve(result.split(',')[1]); // data:image/jpeg;base64,XXX → XXX
+            resolve(result.split(',')[1]); // data:image/jpeg;base64,XXX ??XXX
         };
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(file);
@@ -2089,7 +2337,7 @@ window["SoundPlayListSave"]=SoundPlayListSave;
 function RefreshOpen()
 {
     
-    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number}>)
+    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number,Status?:string}>)
     {
         if(fl.index==null)  continue;
         if(fl.open==false)
@@ -2105,7 +2353,7 @@ function RefreshOpen()
 window["RefreshOpen"]=RefreshOpen;
 function NextPhoto()
 {
-    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number}>)
+    for(let fl of window["g_dirList"] as Array<{hidden:boolean,file:boolean,name:string,ext:string,open:boolean,index:number,Status?:string}>)
     {
         if(fl.open==false)
         {
@@ -2130,7 +2378,7 @@ function NextPhoto()
       
         
     }
-    CAlert.Info("더 이상 없습니다.");
+    CAlert.Info("???댁긽 ?놁뒿?덈떎.");
 }
 window["NextPhoto"]=NextPhoto;
 
@@ -2147,6 +2395,17 @@ let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
 
 // CDOM.ID("main").innerHTML="";
 //     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
+
+
+
+
+
+
+
+
+
 
 
 

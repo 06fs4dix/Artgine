@@ -283,7 +283,7 @@ export class CFileServer extends CAuthServer
                 if (action === "update") {
                     cmd = vcs === 'svn'
                         ? `svn update ${quote(path)}`
-                        : `git -C ${quote(path)} pull && git -C ${quote(path)} submodule update --init --recursive`;
+                        : `git -C ${quote(dirPath)} pull && git -C ${quote(dirPath)} submodule update --remote --recursive`;
                 } else if (action === "add") {
                     if (vcs !== 'svn') return JSON.stringify({ ok: false, msg: "Add is SVN-only. Use commit for Git (git add is implicit)." });
                     cmd = `svn add ${files.map(quote).join(" ")}`;

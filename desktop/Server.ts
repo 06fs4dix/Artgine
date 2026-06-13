@@ -57,7 +57,8 @@ document.getElementById("url_btn")?.addEventListener("click", () => {
 	copyToClipboard("url_txt");
 });
 document.getElementById("browser_btn")?.addEventListener("click", () => {
-	CWebView.Call("RunBrowser",gIpInfo.url);
+	const target = gIpInfo.public.startsWith("http") ? gIpInfo.public : gIpInfo.url;
+	CWebView.Call("RunBrowser", target);
 });
 document.getElementById("switchDev_btn")?.addEventListener("click", () => {
 	CConfirm.List(

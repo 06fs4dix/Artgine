@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mq81jg2d_4";
+gPF.mVersion = "mqc4n085_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -221,18 +221,22 @@ function showFrame(key, src) {
                         e.preventDefault();
                         return;
                     }
-                    if (e.key === 'F2') {
+                    if (!isTerm && e.key === 'F1') {
+                        e.preventDefault();
+                        FileBtn();
+                    }
+                    else if (!isTerm && e.key === 'F2') {
                         e.preventDefault();
                         FileSearch();
                     }
-                    else if (e.key === 'F3') {
+                    else if (!isTerm && e.key === 'F3') {
                         e.preventDefault();
                         const fileTabEl = document.getElementById('file-tab');
                         if (fileTabEl)
                             window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
                         FolderCD('/');
                     }
-                    else if (e.key === 'F4') {
+                    else if (!isTerm && e.key === 'F4') {
                         e.preventDefault();
                         const aiTabEl = document.getElementById('ai-tab');
                         if (aiTabEl)
@@ -279,6 +283,11 @@ function focusActiveFrame() {
     }
     catch (_) { }
     f.focus();
+}
+function focusActiveFrameIfSidebarCollapsed() {
+    if (!aiSidebarEl.classList.contains('collapsed'))
+        return;
+    setTimeout(() => focusActiveFrame(), 0);
 }
 function uuidv4() {
     if (crypto && 'randomUUID' in crypto)
@@ -515,7 +524,7 @@ let termActivePort = null;
 const _sessState = new Map();
 function syncSessState(id, cur, onDone, onWait) {
     const prev = _sessState.get(id);
-    if (prev === 'busy' && cur === 'idle')
+    if ((prev === 'busy' || prev === 'wait') && cur === 'idle')
         onDone();
     if (prev !== 'wait' && cur === 'wait')
         onWait?.();
@@ -1103,7 +1112,9 @@ window.addEventListener('message', (e) => {
     }
     if (e.data?.type === 'home-hotkey') {
         const k = e.data.key;
-        if (k === 'F2')
+        if (k === 'F1')
+            FileBtn();
+        else if (k === 'F2')
             FileSearch();
         else if (k === 'F3') {
             const fileTabEl = document.getElementById('file-tab');
@@ -1135,6 +1146,7 @@ function handleNotifKey() {
                 clearTimeout(_notifReturnTimer);
             _notifReturnTimer = window.setTimeout(() => { _notifReturnKey = null; }, 8000);
         }
+        focusActiveFrameIfSidebarCollapsed();
         return true;
     }
     return false;
@@ -1155,6 +1167,7 @@ function goPrevFrame() {
     }
     aiRefreshSessions();
     termRefreshSessions();
+    focusActiveFrameIfSidebarCollapsed();
     return true;
 }
 function goNextSession(dir) {
@@ -1240,7 +1253,11 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         return;
     }
-    if (e.key === 'F2') {
+    if (e.key === 'F1') {
+        e.preventDefault();
+        FileBtn();
+    }
+    else if (e.key === 'F2') {
         e.preventDefault();
         FileSearch();
     }
@@ -1279,10 +1296,13 @@ async function aiShowAuthOrLoad() {
     const authed = await aiCheckAuth();
     if (!authed) {
         fileAuthed = false;
+        const wasVisible = aiAuthOverlay.style.display === 'flex';
         aiAuthOverlay.style.display = 'flex';
-        aiAuthPwInput.value = '';
-        aiAuthMsg.textContent = '';
-        setTimeout(() => aiAuthPwInput.focus(), 50);
+        if (!wasVisible) {
+            aiAuthPwInput.value = '';
+            aiAuthMsg.textContent = '';
+            setTimeout(() => aiAuthPwInput.focus(), 50);
+        }
     }
     else {
         fileAuthed = true;
@@ -1320,12 +1340,18 @@ aiAuthPwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
     aiDoAuth(); });
 CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
 CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
+function showAiTermSubtab() {
+    const termSubEl = CDOM.ID("ai-term-subtab");
+    window.bootstrap.Tab.getOrCreateInstance(termSubEl).show();
+}
 CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
     aiInited = true;
+    showAiTermSubtab();
     aiShowAuthOrLoad();
 });
 if (CDOM.ID("ai-panel").classList.contains("show")) {
     aiInited = true;
+    showAiTermSubtab();
     aiShowAuthOrLoad();
 }
 var g_contentJBox = new CModal("content_modal");
@@ -1342,6 +1368,19 @@ g_deleteJBox.SetBody("<div id='Delete_div'/>");
 g_deleteJBox.Hide();
 g_deleteJBox.Open(CModal.ePos.Center);
 var g_musicJBox;
+function vcsTag(fl) {
+    const s = fl.Status;
+    if (!s)
+        return '';
+    const color = s === 'A' ? 'success' : s === 'D' ? 'danger' : s === 'M' ? 'warning' : 'secondary';
+    const canDiff = s === 'M' || s === 'A' || s === 'D';
+    if (canDiff) {
+        const filePath = (window["g_root"] ?? '') + (window["g_path"] ?? '') + (fl.name ?? '');
+        const escaped = filePath.replace(/'/g, "\\'");
+        return `<span class="badge bg-${color} float-end" style="font-size:0.65rem;cursor:pointer;" onclick="event.stopPropagation();openVcsDiff('${escaped}')">${s}</span>`;
+    }
+    return `<span class="badge bg-${color} float-end" style="font-size:0.65rem;">${s}</span>`;
+}
 let index = 0;
 var folderList = { "<>": "ul", "class": "list-group", "html": [] };
 var fileList = { "<>": "ul", "class": "list-group", "html": [] };
@@ -1372,7 +1411,7 @@ function DirListRefresh() {
         let onclick = null;
         if (fl.file == false) {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-fill'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-folder-fill'>" + fl.name + vcsTag(fl), "onclick": () => {
                     let soundAddType = CDOM.IDValue("soundAddType");
                     if (soundAddType == "1") {
                         let p2 = { path: window["g_path"] + fl.name + "/" };
@@ -1397,7 +1436,7 @@ function DirListRefresh() {
         }
         else if (fl.ext == "png" || fl.ext == "jpg" || fl.ext == "jpeg" || fl.ext == "bmp") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-image'>" + fl.name, "onclick": (e) => {
+                "html": "<i class='bi bi-folder-image'>" + fl.name + vcsTag(fl), "onclick": (e) => {
                     CDOM.ID("ImageModalSrc").hidden = false;
                     CDOM.ID("ImageModalSrc").src = window["g_down"] + window["g_path"] + fl.name;
                     CDOM.ID("VideoModalSrc").hidden = true;
@@ -1409,7 +1448,7 @@ function DirListRefresh() {
         }
         else if (fl.ext == "mp3" || fl.ext == "ogg") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-music'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-folder-music'>" + fl.name + vcsTag(fl), "onclick": () => {
                     let soundAddType = CDOM.IDValue("soundAddType");
                     if (soundAddType == "1") {
                         g_musicJBox.AddTrack(fl.name, window["g_down"] + window["g_path"] + fl.name);
@@ -1438,7 +1477,7 @@ function DirListRefresh() {
         }
         else if (fl.ext == "mp4" || fl.ext == "mov" || fl.ext == "avi") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-play'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-folder-play'>" + fl.name + vcsTag(fl), "onclick": () => {
                     CDOM.ID("ImageModalSrc").hidden = true;
                     CDOM.ID("VideoModalSrc").src = window["g_down"] + window["g_path"] + fl.name;
                     CDOM.ID("VideoModalSrc").hidden = false;
@@ -1450,7 +1489,7 @@ function DirListRefresh() {
         }
         else if (fl.ext == "soundlist") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-flower1'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-flower1'>" + fl.name + vcsTag(fl), "onclick": () => {
                     var oReq = new XMLHttpRequest();
                     oReq.onload = (e) => {
                         if (oReq.status != 200) {
@@ -1469,7 +1508,7 @@ function DirListRefresh() {
         }
         else if (fl.ext == "html") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-earmark-code'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-file-earmark-code'>" + fl.name + vcsTag(fl), "onclick": () => {
                     let confirm = new CConfirm();
                     confirm.SetBody("HTML 파일을 어떻게 열까요?");
                     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
@@ -1493,7 +1532,7 @@ function DirListRefresh() {
         }
         else if (fl.ext == "ts" || fl.ext == "js" || fl.ext == "txt" || fl.ext == "json") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-code'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-file-code'>" + fl.name + vcsTag(fl), "onclick": () => {
                     let viewer = new CFileViewer([window["g_down"] + window["g_path"] + fl.name], async (filePath, bufStr) => {
                         const fileName = filePath.split('/').pop();
                         const dirPath = window["g_root"] + window["g_path"];
@@ -1510,13 +1549,13 @@ function DirListRefresh() {
         }
         else if (fl.ext == "md") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-earmark-text'>" + fl.name, "onclick": (e) => {
+                "html": "<i class='bi bi-file-earmark-text'>" + fl.name + vcsTag(fl), "onclick": (e) => {
                     new CMDViewer(window["g_down"] + window["g_path"] + fl.name);
                 } });
         }
         else if (fl.ext == "csv" || fl.ext == "xlsx" || fl.ext == "xls") {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-earmark-spreadsheet'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-file-earmark-spreadsheet'>" + fl.name + vcsTag(fl), "onclick": () => {
                     new CSheetViewer([window["g_down"] + window["g_path"] + fl.name], async (filePath, base64) => {
                         const fileName = filePath.split('/').pop();
                         const dirPath = window["g_root"] + window["g_path"];
@@ -1530,7 +1569,7 @@ function DirListRefresh() {
         }
         else {
             folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-file'>" + fl.name + vcsTag(fl), "onclick": () => {
                     CDOM.ID("ImageModalSrc").hidden = true;
                     CDOM.ID("FileModalSrc").href = window["g_down"] + window["g_path"] + fl.name;
                     CDOM.ID("VideoModalSrc").hidden = true;
@@ -1540,7 +1579,7 @@ function DirListRefresh() {
         }
         if (fl.file == true) {
             fileList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file'>" + fl.name, "onclick": () => {
+                "html": "<i class='bi bi-file'>" + fl.name + vcsTag(fl), "onclick": () => {
                     Delete(fl.name);
                 } });
         }
@@ -1568,6 +1607,7 @@ CFecth.Exe("File/List", fetchParam, "json").then((data) => {
     window["g_root"] = data.RootPath?.replace(/\/+$/, '') ?? '';
     window["g_path"] = data.path;
     window["g_down"] = data.RootUrl;
+    window["g_roots"] = data.roots ?? [];
     DirListRefresh();
 });
 {
@@ -1587,6 +1627,7 @@ function FolderCD(_path, _onDone) {
         window["g_root"] = data.RootPath?.replace(/\/+$/, '') ?? '';
         window["g_path"] = data.path;
         window["g_down"] = data.RootUrl;
+        window["g_roots"] = data.roots ?? [];
         index = 0;
         DirListRefresh();
         _onDone?.();
@@ -1632,11 +1673,11 @@ var g_menuList = { "<>": "div", "class": "d-flex align-items-center p-1", "html"
                         { "<>": "option", "value": "1", "text": "Add Each (w/ Folder)" },
                     ] },
                 { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-info", "html": "Search <span style='font-size:0.75em;opacity:0.7;'>F2</span>", "onclick": () => { FileSearch(); } },
-                { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-secondary", "text": "Permission", "onclick": () => { PermissionBtn(); } },
+                { "<>": "button", "type": "button", "class": "btn btn-sm btn-outline-secondary", "html": "File <span style='font-size:0.75em;opacity:0.7;'>F1</span>", "onclick": () => { FileBtn(); } },
             ] },
     ] };
 CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
-async function PermissionBtn() {
+async function FileBtn() {
     if (fileAuthed) {
         const valid = await aiCheckAuth();
         if (valid) {
@@ -1668,63 +1709,77 @@ async function PermissionBtn() {
     ], ["OK", "Cancel"]);
     dlg.Open();
 }
-window["PermissionBtn"] = PermissionBtn;
+window["FileBtn"] = FileBtn;
+window["PermissionBtn"] = FileBtn;
 function showFileAdminModal() {
     const uid = Date.now();
-    const curRoot = RootPath || window["g_root"] || "";
-    const curDown = RootUrl || window["g_down"] || "";
+    const _roots = window["g_roots"] ?? [];
+    const _opts = [..._roots, { path: "./", url: "/Artgine/", name: "Artgine (WorkingPath)" }];
+    let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? '') && r.url === (RootUrl ?? ''));
+    if (_curIdx < 0)
+        _curIdx = 0;
+    const _rootOpts = _opts.map((r, i) => `<option value="${i}" ${i === _curIdx ? 'selected' : ''}>${r.name}</option>`).join('');
     const modal = new CModal();
     modal.SetHeader("File Manager");
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetCloseToHide(false);
     modal.SetBody(`
-        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;">
-            <div>
-                <label class="form-label mb-0 small fw-bold">Path</label>
-                <input id="fadm_path_${uid}" type="text" class="form-control form-control-sm" value="${curRoot}" placeholder="Server default">
-            </div>
-            <div>
-                <label class="form-label mb-0 small fw-bold">Down</label>
-                <input id="fadm_down_${uid}" type="text" class="form-control form-control-sm" value="${curDown}" placeholder="Server default">
-            </div>
-            <button id="fadm_apply_${uid}" class="btn btn-sm btn-success">Apply</button>
-            <div class="d-flex gap-1">
-                <button id="fadm_defpath_${uid}" class="btn btn-sm btn-outline-secondary flex-fill">RootPath</button>
-                <button id="fadm_artpath_${uid}" class="btn btn-sm btn-outline-primary flex-fill">ArtginePath</button>
-            </div>
+        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;min-height:420px;">
+            <select id="fadm_rootsel_${uid}" class="form-select form-select-sm">${_rootOpts}</select>
             <hr class="my-0">
-            <button id="fadm_share_${uid}" class="btn btn-outline-info">Share</button>
-            <button id="fadm_folder_${uid}" class="btn btn-warning">New Folder</button>
-            <button id="fadm_delete_${uid}" class="btn btn-danger">Delete</button>
-            <button id="fadm_upload_${uid}" class="btn btn-primary">Upload</button>
             <div class="d-flex gap-1">
                 <button id="fadm_chat_${uid}" class="btn btn-outline-primary flex-fill">Chat</button>
                 <button id="fadm_term_${uid}" class="btn btn-outline-success flex-fill">Terminal</button>
+            </div>
+            <hr class="my-0">
+            <div class="accordion" id="fadm_acc_${uid}">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button py-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fadm_file_actions_body_${uid}" aria-expanded="false" aria-controls="fadm_file_actions_body_${uid}">
+                            File Actions
+                        </button>
+                    </h2>
+                    <div id="fadm_file_actions_body_${uid}" class="accordion-collapse collapse" data-bs-parent="#fadm_acc_${uid}">
+                        <div class="accordion-body d-flex flex-column gap-2 p-2">
+                            <button id="fadm_share_${uid}" class="btn btn-outline-info">Share</button>
+                            <button id="fadm_folder_${uid}" class="btn btn-warning">New Folder</button>
+                            <button id="fadm_delete_${uid}" class="btn btn-danger">Delete</button>
+                            <button id="fadm_upload_${uid}" class="btn btn-primary">Upload</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#fadm_vcs_body_${uid}" aria-expanded="true" aria-controls="fadm_vcs_body_${uid}">
+                            Version Control
+                        </button>
+                    </h2>
+                    <div id="fadm_vcs_body_${uid}" class="accordion-collapse collapse show" data-bs-parent="#fadm_acc_${uid}">
+                        <div class="accordion-body d-flex flex-column gap-2 p-2">
+                            <button id="fadm_vcs_diff_${uid}" class="btn btn-outline-secondary btn-sm w-100">Diff</button>
+                            <button id="fadm_vcs_update_${uid}" class="btn btn-outline-primary btn-sm w-100">Update</button>
+                            <button id="fadm_vcs_add_${uid}" class="btn btn-outline-info btn-sm w-100">Add (SVN)</button>
+                            <button id="fadm_vcs_revert_${uid}" class="btn btn-outline-warning btn-sm w-100">Revert</button>
+                            <button id="fadm_vcs_commit_${uid}" class="btn btn-outline-success btn-sm w-100">Commit & Push</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
-        const pathInput = document.getElementById(`fadm_path_${uid}`);
-        const downInput = document.getElementById(`fadm_down_${uid}`);
         const applyValues = (root, down) => {
             RootPath = root || null;
             RootUrl = down || null;
             modal.Close();
             FolderCD("/");
         };
-        document.getElementById(`fadm_apply_${uid}`)?.addEventListener('click', () => {
-            applyValues(pathInput.value.trim(), downInput.value.trim());
-        });
-        document.getElementById(`fadm_defpath_${uid}`)?.addEventListener('click', () => {
-            pathInput.value = "";
-            downInput.value = "";
-            applyValues("", "");
-        });
-        document.getElementById(`fadm_artpath_${uid}`)?.addEventListener('click', () => {
-            pathInput.value = "./";
-            downInput.value = "/Artgine/";
-            applyValues("./", "/Artgine/");
+        const rootSel = document.getElementById(`fadm_rootsel_${uid}`);
+        rootSel?.addEventListener('change', () => {
+            const r = _opts[parseInt(rootSel.value)];
+            if (r)
+                applyValues(r.path, r.url);
         });
         document.getElementById(`fadm_share_${uid}`)?.addEventListener('click', () => {
             modal.Hide();
@@ -1735,8 +1790,7 @@ function showFileAdminModal() {
             CreateFolder();
         });
         document.getElementById(`fadm_delete_${uid}`)?.addEventListener('click', () => {
-            modal.Hide();
-            g_deleteJBox.Show();
+            openDeleteModal();
         });
         document.getElementById(`fadm_upload_${uid}`)?.addEventListener('click', () => {
             modal.Hide();
@@ -1768,9 +1822,178 @@ function showFileAdminModal() {
             }, 150);
             termStartNew('cmd', cwd || undefined);
         });
+        const vcsPath = () => (window["g_root"] ?? './') + (window["g_path"] ?? '');
+        document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
+        document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
+            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "update", path: vcsPath() }, "json");
+            CAlert.Info(res.msg || (res.ok ? 'Update complete' : 'Update failed'));
+            if (res.ok)
+                FolderCD(window["g_path"]);
+        });
+        document.getElementById(`fadm_vcs_add_${uid}`)?.addEventListener('click', () => openVcsModal('add', vcsPath()));
+        document.getElementById(`fadm_vcs_revert_${uid}`)?.addEventListener('click', () => openVcsModal('revert', vcsPath()));
+        document.getElementById(`fadm_vcs_commit_${uid}`)?.addEventListener('click', () => openVcsModal('commit', vcsPath()));
     }, 80);
 }
 window["showFileAdminModal"] = showFileAdminModal;
+function openActionModal(title, runLabel, runClass, onRun, hasMessage = false, fetchItems, staticItems) {
+    const uid = Date.now();
+    const hasFetch = !!fetchItems;
+    const modal = new CModal();
+    modal.SetHeader(title);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetBody(`
+        <div class="d-flex flex-column gap-2 p-1" style="width:380px;height:480px;overflow:hidden;">
+            ${hasFetch ? `
+            <div class="d-flex gap-2 align-items-center flex-shrink-0">
+                ${hasMessage ? `<input id="am_msg_${uid}" type="text" class="form-control form-control-sm flex-fill" placeholder="Commit message...">` : ''}
+                <button id="am_refresh_${uid}" class="btn btn-outline-secondary btn-sm flex-shrink-0"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>` : hasMessage ? `<input id="am_msg_${uid}" type="text" class="form-control form-control-sm flex-shrink-0" placeholder="Commit message...">` : ''}
+            <div id="am_list_${uid}" class="border rounded p-1 flex-fill" style="overflow-y:auto;font-size:0.78rem;min-height:0;">
+                ${hasFetch ? '<span class="text-secondary">Loading...</span>' : ''}
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0">
+                <button id="am_all_${uid}" class="btn btn-outline-secondary btn-sm">Select All</button>
+                <button id="am_run_${uid}" class="btn ${runClass} btn-sm flex-fill">${runLabel}</button>
+            </div>
+            <pre id="am_result_${uid}" class="p-2 rounded bg-body-secondary small mb-0 flex-shrink-0" style="display:none;max-height:120px;overflow-y:auto;white-space:pre-wrap;"></pre>
+        </div>
+    `);
+    modal.Open(CModal.ePos.Center);
+    const listEl = document.getElementById(`am_list_${uid}`);
+    const resultEl = document.getElementById(`am_result_${uid}`);
+    const allBtn = document.getElementById(`am_all_${uid}`);
+    const runBtn = document.getElementById(`am_run_${uid}`);
+    const msgEl = document.getElementById(`am_msg_${uid}`);
+    const renderItems = (items) => {
+        if (!items || items.length === 0) {
+            listEl.innerHTML = '<span class="text-secondary">No items</span>';
+            return;
+        }
+        listEl.innerHTML = items.map((i, idx) => `
+            <div class="d-flex align-items-center gap-1 py-1">
+                <input type="checkbox" class="form-check-input am-chk-${uid}" id="am_${uid}_${idx}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
+                ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
+                ${i.icon ? `<i class="bi ${i.icon}"></i>` : ''}
+                <label for="am_${uid}_${idx}" class="text-truncate mb-0 flex-fill" style="cursor:pointer;" title="${i.label}">${i.label}</label>
+            </div>`).join('');
+    };
+    const refresh = async () => {
+        if (!fetchItems)
+            return;
+        listEl.innerHTML = '<span class="text-secondary">Loading...</span>';
+        resultEl.style.display = 'none';
+        renderItems(await fetchItems());
+    };
+    if (fetchItems)
+        refresh();
+    else
+        renderItems(staticItems);
+    document.getElementById(`am_refresh_${uid}`)?.addEventListener('click', refresh);
+    allBtn.addEventListener('click', () => {
+        const chks = listEl.querySelectorAll(`.am-chk-${uid}`);
+        const allChecked = Array.from(chks).every(c => c.checked);
+        chks.forEach(c => c.checked = !allChecked);
+    });
+    runBtn.addEventListener('click', async () => {
+        const values = Array.from(listEl.querySelectorAll(`.am-chk-${uid}`))
+            .filter(c => c.checked).map(c => c.value);
+        if (values.length === 0) {
+            CAlert.Info('No items selected');
+            return;
+        }
+        if (hasMessage && !msgEl?.value.trim()) {
+            CAlert.Info('Please enter a message');
+            return;
+        }
+        runBtn.setAttribute('disabled', '');
+        resultEl.style.display = '';
+        resultEl.textContent = 'Processing...';
+        const { result, refresh: doRefresh } = await onRun(values, msgEl?.value.trim());
+        resultEl.textContent = result;
+        runBtn.removeAttribute('disabled');
+        if (doRefresh)
+            refresh();
+    });
+}
+function openVcsModal(action, path) {
+    const statusColor = (s) => s === 'M' ? 'warning' : s === 'A' ? 'success' : s === 'D' ? 'danger' : 'secondary';
+    const title = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
+    const runLabel = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
+    const runClass = action === 'commit' ? 'btn-success' : action === 'revert' ? 'btn-warning' : 'btn-info';
+    openActionModal(title, runLabel, runClass, async (files, message) => {
+        const param = { action, path, files };
+        if (action === 'commit')
+            param.message = message;
+        const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", param, "json");
+        if (res.ok)
+            FolderCD(window["g_path"]);
+        return { result: res.msg || (res.ok ? 'Done' : 'Failed'), refresh: res.ok };
+    }, action === 'commit', async () => {
+        const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "status", path }, "json");
+        if (!res.ok)
+            return [];
+        const items = res.items;
+        const filtered = action === 'add' ? items.filter(i => i.status === '?') : items;
+        return filtered.map(i => ({ badge: i.status, badgeClass: statusColor(i.status), label: i.file, value: i.file, checked: true }));
+    });
+}
+async function openVcsDiff(filePath) {
+    let res;
+    try {
+        res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "diff", path: filePath }, "json");
+    }
+    catch (e) {
+        CAlert.Info("Diff request failed");
+        return;
+    }
+    if (!res?.ok) {
+        CAlert.Info(res?.msg || "Diff failed");
+        return;
+    }
+    if (!document.getElementById("vcs-diff-style")) {
+        const st = document.createElement("style");
+        st.id = "vcs-diff-style";
+        st.textContent = "#vcs-diff-view .d2h-code-wrapper{position:relative;}";
+        document.head.appendChild(st);
+    }
+    const modal = new CModal();
+    modal.SetHeader(`Diff: ${filePath.replace(/\/+$/, '').split('/').pop() || filePath}`);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetBody(`<div id="vcs-diff-view"></div>`);
+    modal.SetSize(860, 580);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const el = document.getElementById("vcs-diff-view");
+        if (!el)
+            return;
+        const D2H = window.Diff2HtmlUI;
+        if (!D2H) {
+            el.textContent = "diff2html not loaded";
+            return;
+        }
+        const cfg = { drawFileList: false, matching: "lines", outputFormat: "line-by-line", highlight: false, stickyFileHeaders: false };
+        new D2H(el, res.diff, cfg).draw();
+    }, 80);
+}
+window["openVcsDiff"] = openVcsDiff;
+function openDeleteModal() {
+    const dirList = window["g_dirList"] ?? [];
+    openActionModal('Delete', 'Delete', 'btn-danger', async (names) => {
+        const lines = [];
+        for (const name of names) {
+            const param = { data: window["g_path"] + name };
+            if (RootPath)
+                param.RootPath = RootPath;
+            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/Delete", param, "json");
+            lines.push(`${res.ok ? '✓' : '✗'} ${name}`);
+        }
+        FolderCD(window["g_path"]);
+        return { result: lines.join('\n') };
+    }, false, undefined, dirList
+        .filter(fl => !fl.hidden)
+        .map(fl => ({ icon: fl.file ? 'bi-file' : 'bi-folder-fill', label: fl.name, value: fl.name, checked: false })));
+}
 function CreateFolder() {
     let confirm = new CConfirm();
     confirm.SetBody('Enter folder name:<br><input type="text" id="CreateFolder" class="form-control form-control-sm" value="New Folder">');
