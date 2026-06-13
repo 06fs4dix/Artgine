@@ -288,13 +288,40 @@ export class CFileServer extends CAuthServer
                     if (vcs !== 'svn') return JSON.stringify({ ok: false, msg: "Add is SVN-only. Use commit for Git (git add is implicit)." });
                     cmd = `svn add ${files.map(quote).join(" ")}`;
                 } else if (action === "revert") {
-                    cmd = vcs === 'svn'
-                        ? `svn revert ${files.map(quote).join(" ")}`
-                        : `git -C ${quote(path)} restore ${files.map(quote).join(" ")}`;
+                    if (vcs === 'svn') {
+                        cmd = `svn revert ${files.map(quote).join(" ")}`;
+                    } else {
+                        const CHUNK = 50;
+                        let revertOut = '';
+                        for (let i = 0; i < files.length; i += CHUNK) {
+                            const chunk = files.slice(i, i + CHUNK);
+                            const { stdout: s, stderr: e } = await execAsync(`git -C ${quote(path)} restore ${chunk.map(quote).join(" ")}`);
+                            revertOut += s + e;
+                        }
+                        return JSON.stringify({ ok: true, vcs, msg: revertOut.trim() });
+                    }
                 } else if (action === "commit") {
-                    cmd = vcs === 'svn'
-                        ? `svn commit -m ${quote(message)} ${files.map(quote).join(" ")}`
-                        : `git -C ${quote(path)} add ${files.map(quote).join(" ")} && git -C ${quote(path)} commit -m ${quote(message)}`;
+                    if (vcs === 'svn') {
+                        cmd = `svn commit -m ${quote(message)} ${files.map(quote).join(" ")}`;
+                    } else {
+                        // git add in chunks to avoid ENAMETOOLONG on large file lists
+                        const CHUNK = 50;
+                        let addOut = '';
+                        for (let i = 0; i < files.length; i += CHUNK) {
+                            const chunk = files.slice(i, i + CHUNK);
+                            const { stdout: s, stderr: e } = await execAsync(`git -C ${quote(path)} add ${chunk.map(quote).join(" ")}`);
+                            addOut += s + e;
+                        }
+                        const { stdout: commitOut, stderr: commitErr } = await execAsync(`git -C ${quote(path)} commit -m ${quote(message)}`);
+                        let pushOut = '';
+                        try {
+                            const { stdout: ps, stderr: pe } = await execAsync(`git -C ${quote(path)} push`);
+                            pushOut = ps + pe;
+                        } catch (pushErr: any) {
+                            pushOut = pushErr.stderr || pushErr.message || String(pushErr);
+                        }
+                        return JSON.stringify({ ok: true, vcs, msg: (addOut + commitOut + commitErr + pushOut).trim() });
+                    }
                 } else {
                     return JSON.stringify({ ok: false, msg: "Unknown action" });
                 }
