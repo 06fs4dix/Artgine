@@ -271,7 +271,7 @@ export class CFileServer extends CAuthServer
                 if (action === "status") {
                     const cmd = vcs === 'svn'
                         ? `svn status ${quote(path)}`
-                        : `git -C ${quote(path)} status --short`;
+                        : `git -C ${quote(path)} status --short -- .`;
                     const { stdout } = await execAsync(cmd);
                     const items = vcs === 'svn'
                         ? parseSvnStatus(stdout)
