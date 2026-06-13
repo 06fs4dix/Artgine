@@ -16,10 +16,10 @@ async function Init() {
         document.getElementById("qr_area").style.display = "block";
     }
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", appJSON.rootPath ?? "");
-    document.querySelectorAll("#authRoot_collapse input").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
+    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(appJSON.rootPath) ? appJSON.rootPath : [appJSON.rootPath ?? "./"]).join("\n"));
+    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
         password: document.getElementById("auth_password_txt").value,
-        rootPath: document.getElementById("auth_rootpath_txt").value,
+        rootPath: document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean),
     })));
 }
 Init();

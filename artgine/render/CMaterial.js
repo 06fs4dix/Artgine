@@ -1,1 +1,0 @@
-import{CVec3 as e}from"../geometry/CVec3.js";export class CMaterial{name;ambient;diffuse;specular;emissive;power;constructor(){this.name="",this.ambient=new e(.2,.2,.2),this.diffuse=new e(1,1,1),this.specular=new e(.5,.5,.5),this.emissive=new e,this.power=10}}

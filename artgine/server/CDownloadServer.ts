@@ -11,7 +11,7 @@ import { CJSON } from '../basic/CJSON.js';
 import { CFile } from '../system/CFile.js';
 import { CConsol } from '../basic/CConsol.js';
 import { Request, Response } from 'express';
-import { GetAppJSON } from '../../desktop/MainFunc.js';
+import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
 import { CPath } from '../basic/CPath.js';
 
 const BIN_DIR     = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
@@ -22,7 +22,7 @@ async function getTodayDir(): Promise<string> {
     const config = await GetAppJSON();
     const d = new Date();
     const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dir = path.join(path.resolve(config.rootPath ?? './'), 'Downloads', ymd);
+    const dir = path.join(path.resolve(GetRootPaths(config)[0]), 'Downloads', ymd);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     return dir;
 }

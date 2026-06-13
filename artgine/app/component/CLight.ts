@@ -451,7 +451,7 @@ export class CLight extends CBrushComp
                                 if(tex.GetInfo()[0].mCount<(this.mBrush.mShadowCount+1)*6)
                                 {
                                     fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA32F,
-                                        (this.mBrush.mShadowCount+1)*6)],new CVec2(tex.GetWidth(), tex.GetHeight()),fw.Pal().GetShadowWriteTex());	
+                                        (this.mBrush.mShadowCount+1)*6)],new CVec2(tex.GetWidth(), tex.GetHeight()),fw.Pal().GetShadowWriteTex());
                                 }
                                 srp.mShaderAttr.push(new CShaderAttr("shadowWrite",new CVec3(i,this.mBrush.mShadowCount,this.mBrush.mShadowCount*6+i)));
                                 srp.mPriority -= (this.mCascadeCycle.length - i);   // 캐스케이드 낮은 걸 먼저 그리고 싶음

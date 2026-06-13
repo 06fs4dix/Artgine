@@ -52,7 +52,7 @@ function WatchInputChanges() {
         gAppJSON.fullScreen = document.getElementById("fullScreen_chk").checked;
         gAppJSON.github = document.getElementById("github_chk").checked;
         gAppJSON.password = document.getElementById("auth_password_txt").value;
-        gAppJSON.rootPath = document.getElementById("auth_rootpath_txt").value;
+        gAppJSON.rootPath = document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean);
     };
     const updateManifest = () => {
         gManifest.short_name = CDOM.IDValue("short_name_txt");
@@ -118,7 +118,11 @@ function WatchInputChanges() {
     };
     document.querySelectorAll("#preference input, #preference select").forEach(el => el.addEventListener("change", updatePreference));
     document.querySelectorAll("#include input[type='checkbox']").forEach(el => el.addEventListener("change", updateIncludes));
-    document.querySelectorAll("#app input, #app select").forEach(el => el.addEventListener("change", updateAppJSON));
+    document.querySelectorAll("#app input, #app select, #app textarea").forEach(el => el.addEventListener("change", updateAppJSON));
+    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
+        password: document.getElementById("auth_password_txt").value,
+        rootPath: document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean),
+    })));
     document.querySelectorAll("#manifest input, #manifest select, #manifest textarea").forEach(el => el.addEventListener("change", updateManifest));
     document.querySelectorAll("#serviceworker input").forEach(el => el.addEventListener("change", updateServiceWorker));
     document.querySelectorAll("#plugin_list input[type='checkbox']").forEach(el => el.addEventListener("change", updatePlugins));
@@ -133,7 +137,7 @@ async function Init() {
     CDOM.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
     CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", gAppJSON.rootPath ?? "");
+    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(gAppJSON.rootPath) ? gAppJSON.rootPath : [gAppJSON.rootPath ?? "./"]).join("\n"));
     CDOM.IDInput("program_sel").value = gAppJSON.program;
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {
         projectPath: gAppJSON.projectPath,

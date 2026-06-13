@@ -48,9 +48,15 @@ export async function GetAppJSON() {
         LoadPluginMap([CPath.ArtgineRootPath() + "plugin/", CPath.ArtgineRootPath() + "artgine"]);
     }
     const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
-        "server": "", "github": false, "tsc": true, "password": "artgine", "rootPath": "./" });
+        "server": "", "github": false, "tsc": true, "password": "artgine", "rootPath": ["./"] });
     Object.assign(gMainConfig, parsed);
     return gMainConfig;
+}
+export function GetRootPaths(cfg) {
+    const r = cfg?.rootPath;
+    if (Array.isArray(r))
+        return r.length ? r : ["./"];
+    return [r ?? "./"];
 }
 export function GetProjName(projectPath) {
     const parts = projectPath.split(/[\\/]/);

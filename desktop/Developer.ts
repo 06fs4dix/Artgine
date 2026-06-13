@@ -73,7 +73,7 @@ function WatchInputChanges() {
         gAppJSON.fullScreen = (document.getElementById("fullScreen_chk") as HTMLInputElement).checked;
         gAppJSON.github = (document.getElementById("github_chk") as HTMLInputElement).checked;
         gAppJSON.password = (document.getElementById("auth_password_txt") as HTMLInputElement).value;
-        gAppJSON.rootPath = (document.getElementById("auth_rootpath_txt") as HTMLInputElement).value;
+        gAppJSON.rootPath = (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean);
     };
     const updateManifest = () => {
         
@@ -167,8 +167,15 @@ function WatchInputChanges() {
     document.querySelectorAll("#include input[type='checkbox']").forEach(el =>
         el.addEventListener("change", updateIncludes)
     );
-    document.querySelectorAll("#app input, #app select").forEach(el =>
+    document.querySelectorAll("#app input, #app select, #app textarea").forEach(el =>
         el.addEventListener("change", updateAppJSON)
+    );
+    // auth(Password/RootPath) 변경은 즉시 저장 + rootPath 변경 시 재시작 확인 (Server 패널과 동일)
+    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el =>
+        el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
+            password: (document.getElementById("auth_password_txt") as HTMLInputElement).value,
+            rootPath: (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean),
+        }))
     );
     document.querySelectorAll("#manifest input, #manifest select, #manifest textarea").forEach(el =>
         el.addEventListener("change", updateManifest)
@@ -194,7 +201,7 @@ async function Init() {
     CDOM.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
     CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", gAppJSON.rootPath ?? "");
+    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(gAppJSON.rootPath) ? gAppJSON.rootPath : [gAppJSON.rootPath ?? "./"]).join("\n"));
 
     CDOM.IDInput("program_sel").value = gAppJSON.program;
 

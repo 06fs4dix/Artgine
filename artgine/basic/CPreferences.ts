@@ -36,6 +36,8 @@ export class CPreferences extends CObject
     public mCanvas="";
     public mParallelShader=true;
     public mVersion="";
+    public mRTScaleW=1.0;
+    public mRTScaleH=1.0;
 
 
     

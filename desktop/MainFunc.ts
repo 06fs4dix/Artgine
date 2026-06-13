@@ -62,10 +62,17 @@ export async function GetAppJSON()
 
     const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
         {"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
-            "server":"","github":false,"tsc":true,"password":"artgine","rootPath":"./"}
+            "server":"","github":false,"tsc":true,"password":"artgine","rootPath":["./"]}
     );
     Object.assign(gMainConfig, parsed);
     return gMainConfig;
+}
+// rootPath는 string(구버전) 또는 string[](신버전) 모두 허용 → 항상 비어있지 않은 배열로 정규화
+export function GetRootPaths(cfg): string[]
+{
+    const r = cfg?.rootPath;
+    if (Array.isArray(r)) return r.length ? r : ["./"];
+    return [r ?? "./"];
 }
 export function GetProjName(projectPath)
 {

@@ -218,7 +218,9 @@ window.addEventListener('keydown', function(e) {
                 _toggleSuper();
             } else if (e.key === "F7") {
                 e.preventDefault(); e.stopPropagation();
-                showBarAndFocusInput();
+                bar.style.display = "flex";
+                document.body.style.paddingBottom = "50px";
+                inp.focus();
             }
         }, true);
 

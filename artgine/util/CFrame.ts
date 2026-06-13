@@ -634,11 +634,11 @@ export class CFrame
 					let res=this.mRes.Find(this.mResizeList[i]);
 					if(res.m_depthBuf!=null)
 					{
-						var size=new CVec2(Math.trunc(res.GetRWidth()*this.PF().mWidth),Math.trunc(res.GetRHeight()*this.PF().mHeight));
+						var size=this.Ren().RTOrgToSize(res.GetOrgWidth(),res.GetOrgHeight());
 						if(size.IsZero())	continue;
-						
+
 						if(res.GetWidth() != size.x || res.GetHeight() != size.y)
-							this.Ren().BuildRenderTarget(res.GetInfo(),size,this.mResizeList[i]);
+							this.Ren().BuildRenderTarget(res.GetInfo(),new CVec2(res.GetOrgWidth(),res.GetOrgHeight()),this.mResizeList[i]);
 						var ntex=this.Res().Find(this.mResizeList[i]) as CTexture;
 						ntex.SetFilter(res.GetFilter());
 						this.mResizeList.splice(i,1);
@@ -686,11 +686,11 @@ export class CFrame
 						{
 							if(res.mDepthBuf!=null)
 							{
-								var size=new CVec2(Math.trunc(res.GetRWidth()*this.PF().mWidth),Math.trunc(res.GetRHeight()*this.PF().mHeight));
+								var size=this.Ren().RTOrgToSize(res.GetOrgWidth(),res.GetOrgHeight());
 								if(size.IsZero())	continue;
-								
+
 								if(res.GetWidth() != size.x || res.GetHeight() != size.y)
-									this.Ren().BuildRenderTarget(res.GetInfo(),size,key);
+									this.Ren().BuildRenderTarget(res.GetInfo(),new CVec2(res.GetOrgWidth(),res.GetOrgHeight()),key);
 								var ntex=this.Res().Find(key) as CTexture;
 								ntex.SetFilter(res.GetFilter());
 							}

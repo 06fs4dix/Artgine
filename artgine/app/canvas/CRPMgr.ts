@@ -135,7 +135,7 @@ export class CRPMgr extends CObject implements IFile
 
 			const newTex = new CTexture();
 			newTex.SetSize(tex.GetWidth(), tex.GetHeight());
-			newTex.SetResize(tex.GetRWidth(), tex.GetRHeight());
+			newTex.SetOrg(tex.GetOrgWidth(), tex.GetOrgHeight());
 			newTex.SetAlpha(tex.GetAlpha());
 			newTex.SetAnti(tex.GetAnti());
 			newTex.SetFilter(tex.GetFilter());
@@ -155,12 +155,8 @@ export class CRPMgr extends CObject implements IFile
 
 		for(let [key, tex] of this.mTexMap) {
 			let size : CVec2 = null;
-			if(tex.GetWidth() != 0 && tex.GetHeight() != 0)
-			{
-				size=new CVec2()
-				size.x = tex.GetWidth();
-				size.y = tex.GetHeight();
-			}
+			if(tex.HasOrg())
+				size=new CVec2(tex.GetOrgWidth(), tex.GetOrgHeight());
 			this.mFrame.Ren().BuildRenderTarget(tex.GetInfo(),size,key);
 
 			//this.m_can.GetFrame().Ren().ChangeAnti(key,tex.GetAnti());

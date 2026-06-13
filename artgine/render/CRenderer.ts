@@ -127,6 +127,14 @@ export class CRenderer
 	{
 		return "";
 	}
+	//원본 사이즈 -> 실제 픽셀 크기. RTScale는 여기서 단 한번만 적용한다.
+	//원본이 0~1이면 화면 대비 비율, 1 초과면 절대 픽셀(화면과 무관하게 고정)
+	RTOrgToSize(_orgW : number,_orgH : number) : CVec2
+	{
+		if(_orgW>=0 && _orgW<=1 && _orgH>=0 && _orgH<=1)
+			return new CVec2(Math.trunc(_orgW*this.mPF.mRTScaleW*this.mPF.mWidth),Math.trunc(_orgH*this.mPF.mRTScaleH*this.mPF.mHeight));
+		return new CVec2(Math.trunc(_orgW*this.mPF.mRTScaleW),Math.trunc(_orgH*this.mPF.mRTScaleH));
+	}
 	/*
 	GL_TEXTURE_CUBE_MAP_POSITIVE_X 	오른쪽
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_X 	왼쪽

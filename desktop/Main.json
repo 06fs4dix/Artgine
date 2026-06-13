@@ -4,11 +4,14 @@
   "fullScreen": false,
   "program": "developer",
   "url": "http://localhost:8050/Artgine",
-  "projectPath": "proj/3D/Terrain",
+  "projectPath": "proj/Home",
   "page": "html",
-  "server": "local",
+  "server": "webServer",
   "github": false,
   "tsc": true,
   "password": "artgine",
-  "rootPath": "./"
+  "rootPath": [
+    "./",
+    "C:\\Users\\JHPC\\Desktop\\git"
+  ]
 }

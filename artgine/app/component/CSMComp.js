@@ -1,1 +1,0 @@
-import{CRoleMgr as e}from"../../util/CRole.js";import{CComponent as t}from"./CComponent.js";export class CSMComp extends t{mSM=new e;mNameSet=new Set;mLastDir=null;Update(e){super.Update(e),this.mSM.Update(e,this.GetOwner())}GetSM(){return this.mSM}}

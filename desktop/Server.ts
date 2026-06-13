@@ -26,12 +26,12 @@ async function Init()
     }
 
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", appJSON.rootPath ?? "");
+    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(appJSON.rootPath) ? appJSON.rootPath : [appJSON.rootPath ?? "./"]).join("\n"));
 
-    document.querySelectorAll("#authRoot_collapse input").forEach(el =>
+    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el =>
         el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
             password: (document.getElementById("auth_password_txt") as HTMLInputElement).value,
-            rootPath: (document.getElementById("auth_rootpath_txt") as HTMLInputElement).value,
+            rootPath: (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean),
         }))
     );
 }

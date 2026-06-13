@@ -993,13 +993,15 @@ ipcMain.handle("SwitchProgram", async (_event, _program: string) => {
 		CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
 	ConfirmAndRestart();
 });
-ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string, rootPath: string }) => {
+ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string, rootPath: string[] }) => {
+	const rootChanged = JSON.stringify(gAppJSON.rootPath) !== JSON.stringify(_json.rootPath);
 	gAppJSON.password = _json.password;
 	gAppJSON.rootPath = _json.rootPath;
 	if (gAppRootPath)
 		CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
 	else
 		CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+	if (rootChanged) ConfirmAndRestart(); // rootPath 변경 시 /RootN 재등록 위해 재시작 확인
 });
 ipcMain.handle("LoadPlugin", async (_event,) => 
 {

@@ -684,12 +684,15 @@ ipcMain.handle("SwitchProgram", async (_event, _program) => {
     ConfirmAndRestart();
 });
 ipcMain.handle("UpdateExtraSettings", async (_event, _json) => {
+    const rootChanged = JSON.stringify(gAppJSON.rootPath) !== JSON.stringify(_json.rootPath);
     gAppJSON.password = _json.password;
     gAppJSON.rootPath = _json.rootPath;
     if (gAppRootPath)
         CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
     else
         CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+    if (rootChanged)
+        ConfirmAndRestart();
 });
 ipcMain.handle("LoadPlugin", async (_event) => {
     return JSON.stringify(GetPluginArr());

@@ -64,10 +64,10 @@ export class CTexture extends CObject
 	private mFilter : number = CTexture.eFilter.Neaest;
 	private mInfo : Array<CTextureInfo> = [new CTextureInfo(CTexture.eTarget.Sigle,CTexture.eFormat.RGBA8)];
 	private mYFlip=true;
-	//리사이즈시 화면 비율을 유지하려고 필요한 변수
-	//화면 100사이즈에 50으로 만들면 50으로 화면이 줄면 25로 유지하려고 존재함
-	private mRWidth : number=0;
-	private mRHeight : number=0;
+	//렌더타겟 최초 생성 시 지정한 원본 사이즈. 0=미설정(sentinel)
+	//값이 0~1이면 화면 대비 비율, 1 초과면 절대 픽셀(화면과 무관하게 고정)
+	private mOrgWidth : number=0;
+	private mOrgHeight : number=0;
 	private mAnti : number = 0;
 	private mAlpha =false;
 	private mAutoResize = true;
@@ -372,12 +372,13 @@ export class CTexture extends CObject
 		this.mInfo=_info;
 	}
 
-	GetRWidth() { return this.mRWidth; }
-	GetRHeight() { return this.mRHeight; }
-	SetResize(_width,_height)
+	GetOrgWidth() { return this.mOrgWidth; }
+	GetOrgHeight() { return this.mOrgHeight; }
+	HasOrg() { return this.mOrgWidth!=0; }
+	SetOrg(_width,_height)
 	{
-		this.mRWidth=_width;
-		this.mRHeight=_height;
+		this.mOrgWidth=_width;
+		this.mOrgHeight=_height;
 	}
 	SetSize(_width,_height)
 	{

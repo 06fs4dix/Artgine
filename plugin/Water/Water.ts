@@ -382,9 +382,13 @@ export class CReflector3D extends CBrushComp
         }
 
         // 사이즈 변경 시 재생성
-        if(tex.GetWidth() != this.mSize) {
-            tex.SetSize(this.mSize, this.mSize);
-            fw.Ren().BuildTexture(tex);
+        const expectedSize = Math.trunc(this.mSize * fw.PF().mRTScaleW);
+        if(tex.GetWidth() != expectedSize) {
+            fw.Ren().BuildRenderTarget(
+                [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)],
+                new CVec2(this.mSize, this.mSize),
+                this.GetTex()
+            );
         }
 
         // ---------------------------------------------------------
@@ -548,9 +552,13 @@ export class CRefractor3D extends CBrushComp
         }
 
         // 사이즈 변경 시 재생성
-        if(tex.GetWidth() != this.mSize) {
-            tex.SetSize(this.mSize, this.mSize);
-            fw.Ren().BuildTexture(tex);
+        const expectedSize = Math.trunc(this.mSize * fw.PF().mRTScaleW);
+        if(tex.GetWidth() != expectedSize) {
+            fw.Ren().BuildRenderTarget(
+                [new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)],
+                new CVec2(this.mSize, this.mSize),
+                this.GetTex()
+            );
         }
 
         // ---------------------------------------------------------
