@@ -1,4 +1,4 @@
-﻿//Version
+//Version
 import "../../artgine/artgine.js"
 
 //Class
@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqc55wv8_2";
+gPF.mVersion = "mqczbbe7_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -30,7 +30,8 @@ import {CPlugin} from "../../artgine/util/CPlugin.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
 await gAtl.Init([],"");
-//The content above this line is automatically set by the program. Do not modify.燧녳쐦?슟燧녳삝截륆윊π윍?
+//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥
+
 //EntryPoint
 import {CObject} from "../../artgine/basic/CObject.js"
 import { CSing, CSingOption } from "../../artgine/server/CSing.js";
@@ -99,7 +100,7 @@ CDOM.ID("login-btn").addEventListener("click",()=>{
     loginModal.Open();
 });
 
-// PWA Install 踰꾪듉
+// PWA Install 버튼
 if(!CPWA.IsInstalled()) {
     CDOM.ID("install-btn").style.display="";
 }
@@ -133,7 +134,7 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
 // ---- AI tab: session list ----
 const AI_TOKEN_KEY = 'artgine.token';
 
-// 紐⑤뱺 fetch??AI ?좏겙 ?먮룞 泥⑤? ??File/AI/Terminal ?몄쬆 怨듭쑀
+// 모든 fetch에 AI 토큰 자동 첨부 → File/AI/Terminal 인증 공유
 {
     const _origFetch = window.fetch.bind(window);
     (window as any).fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
@@ -152,11 +153,11 @@ const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
 let aiInited = false;
 
-// ---- iframe pool: ?몄뀡蹂?iframe???좎??섍퀬 show/hide留??좉? ----
-// key 洹쒖튃: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
+// ---- iframe pool: 세션별 iframe을 유지하고 show/hide만 토글 ----
+// key 규칙: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
 const iframePool = new Map<string, HTMLIFrameElement>();
 let activeFrameKey: string | null = null;
-let pendingNewSid: string | null = null; // ?쒕쾭???꾩쭅 ?녿뒗 ???몄뀡 (泥?硫붿떆吏 ??
+let pendingNewSid: string | null = null; // 서버에 아직 없는 새 세션 (첫 메시지 전)
 
 let _activeNotifCallback: (() => void) | null = null;
 
@@ -214,13 +215,13 @@ function _showModalStackMsg(label: string, content?: string, onClick?: () => voi
 
 function _showDoneNotification(label: string, content?: string, onClick?: () => void) {
     if (!document.hasFocus()) {
-        // ?ъ빱???놁쓣 ?? 釉뚮씪?곗? ?뚮┝ ?곗꽑, ?ㅽ뙣 ??CModalStackMsg濡??대갚
+        // 포커스 없을 때: 브라우저 알림 우선, 실패 시 CModalStackMsg로 폴백
         CUtilWeb.Notify(label, content ?? "", "", onClick ? () => onClick() : null).then(failed => {
             if (!failed) return;
             _showModalStackMsg(label, content, onClick);
         });
     } else {
-        // ?ъ빱???덉쓣 ?? CModalStackMsg ?ъ슜
+        // 포커스 있을 때: CModalStackMsg 사용
         _showModalStackMsg(label, content, onClick);
     }
 }
@@ -365,7 +366,7 @@ async function aiRefreshSessions() {
         const serverSids = new Set(sessions.map(s => s.sessionId));
         for (const key of Array.from(iframePool.keys())) {
             if (!key.startsWith('chat:')) continue;
-            if (pendingNewSid && key === `chat:${pendingNewSid}`) continue; // ???몄뀡 蹂댄샇
+            if (pendingNewSid && key === `chat:${pendingNewSid}`) continue; // 새 세션 보호
             if (!serverSids.has(key.slice(5))) destroyFrame(key);
         }
         for (const s of sessions) {
@@ -382,9 +383,9 @@ async function aiRefreshSessions() {
                 if (!isActiveFrame(key) || !document.hasFocus())
                     _showDoneNotification(aiEscapeHtml(s.title), s.lastMsg ? aiEscapeHtml(s.lastMsg) : undefined, () => aiLoadSession(s.sessionId));
             });
-            const dot = st === 'off'  ? '<span class="text-danger small" title="誘몄뿰寃?>??/span>'
-                      : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="泥섎━ 以?>??/span>'
-                      :                 '<span class="text-success small" title="?湲?以?>??/span>';
+            const dot = st === 'off'  ? '<span class="text-danger small" title="미연결">●</span>'
+                      : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
+                      :                 '<span class="text-success small" title="대기 중">●</span>';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
                     ${dot}
@@ -408,8 +409,8 @@ async function aiRefreshSessions() {
                 drop.id = 'ai-session-dropdown';
                 drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
                 drop.innerHTML = `
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">?뵕 Share Link</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="delete">?뿊截?Delete Session</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="delete">🗑️ Delete Session</button>
                 `;
                 const rect = btn.getBoundingClientRect();
                 drop.style.top = (rect.bottom + 4) + 'px';
@@ -446,8 +447,8 @@ async function aiRefreshSessions() {
 }
 
 function refreshSessionsSoon() {
-    // ??梨꾪똿? 泥?硫붿떆吏 ?쒖젏, ???곕??먯? ttyd 湲곕룞 ?꾩뿉 ?쒕쾭???깅줉?섎?濡?
-    // 吏㏃?/湲????쒖젏???ъ슂泥?빐??由ъ뒪?몃? ?곕씪媛寃??쒕떎.
+    // 새 채팅은 첫 메시지 시점, 새 터미널은 ttyd 기동 후에 서버에 등록되므로
+    // 짧은/긴 두 시점에 재요청해서 리스트를 따라가게 한다.
     setTimeout(() => { aiRefreshSessions(); termRefreshSessions(); }, 1500);
     setTimeout(() => { aiRefreshSessions(); termRefreshSessions(); }, 4000);
 }
@@ -457,7 +458,7 @@ aiNewChatBtn.addEventListener('click', () => chatStartNew());
 function chatStartNew(initialWorkingDir?: string) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">?듭뀡</p>
+        <p class="fw-semibold mb-3">옵션</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Working Directory</label>
             <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
@@ -521,8 +522,8 @@ const termNewBtn = CDOM.ID("termNewBtn");
 const termSessionList = CDOM.ID("termSessionList");
 let termActivePort: number | null = null;
 
-// ---- ?몄뀡 ?곹깭(鍮④컯 off / ?몃옉 busy / 珥덈줉 idle)瑜?1怨녹뿉??愿由?----
-// ?뚮┝? ?몃옉/二쇳솴?믪큹濡?busy쨌wait?뭝dle) ?꾪솚?먯꽌留?諛쒗솕?쒕떎. AI 梨꾪똿쨌?곕???怨듭슜.
+// ---- 세션 상태(빨강 off / 주황 busy / 초록 idle)를 1곳에서 관리 ----
+// 알림은 트랙/주황(초록→busy·wait·idle) 전환에서만 발화한다. AI 채팅·터미널 공용.
 type SessState = 'off' | 'busy' | 'idle' | 'wait';
 const _sessState = new Map<string, SessState>();
 function syncSessState(id: string, cur: SessState, onDone: () => void, onWait?: () => void): void {
@@ -551,7 +552,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
             if (j.ok) {
                 const aliveCount = (j.sessions as any[]).filter((s: any) => s.alive).length;
                 if (aliveCount >= 9) {
-                    alert('?곕????몄뀡??媛??李쇱뒿?덈떎 (理쒕? 9媛?.\n湲곗〈 ?몄뀡????젣?????ㅼ떆 ?쒕룄?섏꽭??');
+                    alert('터미널 세션이 가득 찼습니다 (최대 9개).\n기존 세션을 삭제한 후 다시 시도하세요.');
                     return;
                 }
             }
@@ -560,7 +561,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
 
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">?듭뀡</p>
+        <p class="fw-semibold mb-3">옵션</p>
         <div class="mb-3 d-flex gap-2 flex-wrap">
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
@@ -660,7 +661,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
 
 async function termConnectSession(port: number) {
     const key = `term:${port}`;
-    // ?대? ????덉쑝硫?洹몃?濡?蹂댁뿬二쇨퀬 ??
+    // 이미 풀에 있으면 그대로 보여주고 끝
     if (iframePool.has(key)) {
         showFrame(key, '');
         aiRefreshSessions();
@@ -676,7 +677,7 @@ async function termKillSession(port: number) {
     try {
         const r = await termAuthedFetch(`${CPath.WebRootUrl()}cmd/kill-session?port=${port}`);
         const j = await r.json();
-        if (!j.ok) { alert(`??젣 ?ㅽ뙣: ${j.msg || 'unknown error'}`); return; }
+        if (!j.ok) { alert(`삭제 실패: ${j.msg || 'unknown error'}`); return; }
         termRefreshSessions();
         aiRefreshSessions();
     } catch (e) { console.error('termKillSession error:', e); }
@@ -706,7 +707,7 @@ async function termRefreshSessions() {
             if (!key.startsWith('term:')) continue;
             if (!serverPorts.has(parseInt(key.slice(5), 10))) destroyFrame(key);
         }
-        // term-new: ?꾨젅?꾩쓣 ?ㅼ젣 ?ы듃 ?ㅻ줈 ?밴꺽 (媛??理쒓렐 ?앹꽦?????몄뀡?먮쭔 留ㅼ묶)
+        // term-new: 프레임을 실제 포트 키로 승격 (가장 최근 생성된 새 세션에만 매칭)
         const termNewKeys = Array.from(iframePool.keys()).filter(k => k.startsWith('term-new:'));
         if (termNewKeys.length > 0) {
             const newSessions = sessions.filter(s => !iframePool.has(`term:${s.port}`));
@@ -745,7 +746,7 @@ async function termRefreshSessions() {
                 },
                 () => {
                     if (!isActiveFrame(key) || !document.hasFocus())
-                        _showDoneNotification(`??${s.key || s.mode}: 沅뚰븳 ?뱀씤 ?꾩슂`, s.lastMsg || undefined, () => termConnectSession(s.port));
+                        _showDoneNotification(`⚠️ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.port));
                 }
             );
             const dot = st === 'off'  ? `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
@@ -762,7 +763,7 @@ async function termRefreshSessions() {
                     <span class="text-truncate small">${preview}</span>
                     ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
                 </span>
-                <button class="term-popup-btn btn btn-sm btn-link text-secondary p-0" title="?앹뾽?쇰줈 ?닿린">
+                <button class="term-popup-btn btn btn-sm btn-link text-secondary p-0" title="팝업으로 열기">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </button>
             `;
@@ -777,10 +778,10 @@ async function termRefreshSessions() {
                 drop.id = 'term-popup-dropdown';
                 drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
                 drop.innerHTML = `
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="modal">?뱞 Open in Modal</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="window">?첒 Open in New Window</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">?뵕 Share Link</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="kill">?뿊截?Delete Session</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="modal">📄 Open in Modal</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="window">🪟 Open in New Window</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
+                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="kill">🗑️ Delete Session</button>
                 `;
                 const rect = btn.getBoundingClientRect();
                 drop.style.top = (rect.bottom + 4) + 'px';
@@ -894,7 +895,7 @@ type ScheduleData = { name: string; terminalKey: string; mode: string; delay: nu
 
 function schedIntervalStr(s: ScheduleData): string {
     const parts: string[] = [`${s.delay}s`];
-    if (s.count > 0) parts.push(`횞${s.count}`);
+    if (s.count > 0) parts.push(`×${s.count}`);
     if (s.start > 0) parts.push(`+${s.start}s`);
     if (s.end > 0)   parts.push(`~${s.end}s`);
     return parts.join(' ');
@@ -922,12 +923,12 @@ async function schedRefresh() {
                     <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.terminalKey)}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
                 </span>
-                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="??젣"><i class="bi bi-trash"></i></button>
+                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
             `;
             item.addEventListener('click', () => schedOpenModal(s));
             item.querySelector('.sched-del-btn')!.addEventListener('click', async (e: Event) => {
                 e.stopPropagation();
-                if (!confirm(`?ㅼ?以?'${s.name}' ????젣?좉퉴??`)) return;
+                if (!confirm(`스케줄 '${s.name}' 을 삭제할까요?`)) return;
                 await termAuthedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
                 schedRefresh();
             });
@@ -1077,7 +1078,7 @@ function schedOpenModal(existing?: ScheduleData) {
 schedNewBtn.addEventListener('click', () => schedOpenModal());
 
 
-// AI ??active ??5珥덈쭏??梨꾪똿쨌?곕??먃룹뒪耳以?紐⑸줉 媛깆떊
+// AI 탭 active 시 5초마다 채팅·터미널·스케줄 목록 갱신
 setInterval(() => {
     if (CDOM.ID("ai-panel").classList.contains("show")) {
         aiRefreshSessions();
@@ -1089,7 +1090,7 @@ setInterval(() => {
 // Listen for session changes from iframe
 window.addEventListener('message', (e) => {
     if (e.data?.type === 'ai-sessions-changed') {
-        pendingNewSid = null; // ?쒕쾭???몄뀡???앹꽦?먯쑝誘濡?蹂댄샇 ?댁젣
+        pendingNewSid = null; // 서버에 세션이 생성됐으므로 보호 해제
         aiRefreshSessions();
     }
     if (e.data?.type === 'terminal-tab-key') {
@@ -1120,17 +1121,17 @@ function handleTabKey() {
     toggleSidebar();
 }
 
-// ??濡??뚮┝ ?몄뀡 ?꾪솚 吏곹썑, ??濡??뚯븘媛?吏곸쟾 ?몄뀡. ?쒓컙??吏?섎㈃ ?댁젣?쒕떎.
+// 새로 알림 세션 전환 직후, 새로 돌아갈 직전 세션. 시간이 지나면 해제된다.
 let _notifReturnKey: string | null = null;
 let _notifReturnTimer: number | null = null;
 
-// ?쒖꽦 ?뚮┝(?꾨즺 硫붿꽭吏) 肄쒕갚??諛쒗솕?쒕떎. ???붿궡?쒕줈 ?몄텧?쒕떎.
+// 활성 알림(완료 메세지) 콜백을 발화한다. 이 윈도우로 노출한다.
 function handleNotifKey(): boolean {
     if (_activeNotifCallback) {
         const cb = _activeNotifCallback;
         _activeNotifCallback = null;
-        const from = activeFrameKey;   // ?꾪솚 ???몄뀡 湲곕줉
-        cb();                          // ?뚮┝ ?몄뀡?쇰줈 ?꾪솚
+        const from = activeFrameKey;   // 전환 전 세션 기록
+        cb();                          // 알림 세션으로 전환
         if (from && from !== activeFrameKey) {
             _notifReturnKey = from;
             if (_notifReturnTimer) clearTimeout(_notifReturnTimer);
@@ -1142,7 +1143,7 @@ function handleNotifKey(): boolean {
     return false;
 }
 
-// ???붿궡?? 吏곸쟾??蹂대뜕 ?몄뀡?쇰줈 蹂듦?(?뚮┝ ?꾪솚 吏곹썑?먮쭔 armed).
+// 이 윈도우, 직전에 보던 세션으로 복귀(알림 전환 직후에만 armed).
 function goPrevFrame(): boolean {
     if (!_notifReturnKey || _notifReturnKey === activeFrameKey) return false;
     const f = iframePool.get(_notifReturnKey);
@@ -1156,7 +1157,7 @@ function goPrevFrame(): boolean {
     return true;
 }
 
-// ?묅넃 ?붿궡?? ?ъ씠?쒕컮媛 ?대젮 ?덉쓣 ???몄뀡 紐⑸줉 ?꾩븘???대룞
+// 위↓ 윈도우, 사이드바가 가려 있을 때 세션 목록 아래로 이동
 function goNextSession(dir: 1 | -1): boolean {
     if (aiSidebarEl.classList.contains('collapsed')) return false;
     const isChat = !activeFrameKey || activeFrameKey.startsWith('chat:');
@@ -1303,7 +1304,7 @@ async function aiDoAuth() {
 aiAuthSubmitBtn.addEventListener('click', aiDoAuth);
 aiAuthPwInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') aiDoAuth(); });
 
-// ?쒕툕???꾪솚 ???대떦 由ъ뒪??媛깆떊
+// 서브탭 전환 시 해당 리스트 갱신
 CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
 CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
 
@@ -1407,7 +1408,7 @@ function DirListRefresh()
                     if(RootUrl)     p2.RootUrl = RootUrl;
                     CFecth.Exe("File/List",p2,"json").then((data : {"list","RootPath","path","RootUrl"})=>{
                         //CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
-                        CAlert.Info(window["g_path"]+fl.name+"異붽?");
+                        CAlert.Info(window["g_path"]+fl.name+"추가");
                         
 
                         for(let fl2 of data.list as Array<{hidden:boolean,file:boolean,name:string,ext:string}>)
@@ -1460,7 +1461,7 @@ function DirListRefresh()
                 if(soundAddType=="1")
                 {
                     g_musicJBox.AddTrack(fl.name, window["g_down"]+window["g_path"]+fl.name);
-                    CAlert.Info(fl.name+" 異붽?");
+                    CAlert.Info(fl.name+" 추가");
                 }
                 else
                 {
@@ -1527,7 +1528,7 @@ function DirListRefresh()
             folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
                 "html":"<i class='bi bi-file-earmark-code'>"+fl.name+vcsTag(fl),"onclick":()=>{
                 let confirm=new CConfirm();
-                confirm.SetBody("HTML ?뚯씪???대뼸寃??닿퉴??");
+                confirm.SetBody("HTML 파일을 어떻게 열까요?");
                 confirm.SetConfirm(CConfirm.eConfirm.YesNo,[
                     ()=>{ window.open(window["g_down"]+window["g_path"]+fl.name, "_blank"); },
                     ()=>{
@@ -1536,9 +1537,9 @@ function DirListRefresh()
                             const dirPath = window["g_root"] + window["g_path"];
                             const base64 = btoa(unescape(encodeURIComponent(bufStr)));
                             CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                                CAlert.Info('????꾨즺');
+                                CAlert.Info('저장 완료');
                             }).catch((e) => {
-                                CAlert.E('????ㅽ뙣: ' + e.message);
+                                CAlert.E('저장 실패: ' + e.message);
                             });
                         });
                         viewer.Open();
@@ -1559,9 +1560,9 @@ function DirListRefresh()
                     const base64 = btoa(unescape(encodeURIComponent(bufStr)));
                     console.log('Upload save', { path: dirPath, name: [fileName] });
                     CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                        CAlert.Info('????꾨즺');
+                        CAlert.Info('저장 완료');
                     }).catch((e) => {
-                        CAlert.E('????ㅽ뙣: ' + e.message);
+                        CAlert.E('저장 실패: ' + e.message);
                     });
                 });
                 viewer.Open();
@@ -1582,9 +1583,9 @@ function DirListRefresh()
                     const fileName = filePath.split('/').pop();
                     const dirPath = window["g_root"] + window["g_path"];
                     CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                        CAlert.Info('????꾨즺');
+                        CAlert.Info('저장 완료');
                     }).catch((e: any) => {
-                        CAlert.E('????ㅽ뙣: ' + e.message);
+                        CAlert.E('저장 실패: ' + e.message);
                     });
                 }).Open();
             }});
@@ -1678,7 +1679,7 @@ window["FolderCD"]=FolderCD;
 var g_fun="";
 var g_data="";
 var g_option="";
-// 蹂寃???
+// 변경 후
 function Redirection(_multi : boolean)
 {
     var form = CDOM.ID("ThisPage") as HTMLFormElement;
@@ -1735,13 +1736,13 @@ CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
 
 async function FileBtn() {
     if (fileAuthed) {
-        // ?쒕쾭 ?좏겙 ?좏슚??寃利?(?쒕쾭 ?ъ떆????硫붾え由??좏겙 珥덇린?붾맖)
+        // 서버 토큰 유효성 검증 (서버 재시작 시 메모리 토큰 초기화됨)
         const valid = await aiCheckAuth();
         if (valid) {
             showFileAdminModal();
             return;
         }
-        // ?좏겙 留뚮즺/臾댄슚 ???ъ씤利??꾩슂
+        // 토큰 만료/무효 → 재인증 필요
         fileAuthed = false;
     }
     const dlg = new CConfirm();
@@ -1783,9 +1784,9 @@ function showFileAdminModal() {
     const uid = Date.now();
 
     const _roots = (window["g_roots"] as Array<{path:string,url:string,name:string}>) ?? [];
-    // ?ㅼ젙 猷⑦듃??+ ?꾪떚???뚰궧) 寃쎈줈瑜?????됲듃???듯빀
+    // 설정 루트(맵 + 안티앨리싱) 경로를 텍스트로 통합
     const _opts = [..._roots, { path: "./", url: "/Artgine/", name: "Artgine (WorkingPath)" }];
-    // ?꾩옱 ?쒖꽦 ??ぉ ?쒖떆: RootPath+RootUrl 議고빀 留ㅼ묶, 湲곕낯(誘몄꽑???대㈃ 泥?猷⑦듃
+    // 현재 활성 항목 표시: RootPath+RootUrl 조합 매칭, 기본(미선택이면 첫 루트)
     let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? '') && r.url === (RootUrl ?? ''));
     if (_curIdx < 0) _curIdx = 0;
     const _rootOpts = _opts.map((r, i) => `<option value="${i}" ${i === _curIdx ? 'selected' : ''}>${r.name}</option>`).join('');
@@ -2027,8 +2028,8 @@ async function openVcsDiff(filePath: string) {
     }
     if (!res?.ok) { CAlert.Info(res?.msg || "Diff failed"); return; }
 
-    // ?쇱씤踰덊샇 td媛 position:absolute???ㅽ겕濡??곸뿭 ?덉뿉 湲곗???position:relative)???꾩슂.
-    // ?놁쑝硫??몃줈 ?ㅽ겕濡???肄붾뱶留??吏곸씠怨??쇱씤踰덊샇媛 ?닿툔?? 1?뚮쭔 二쇱엯.
+    // 라인번호 td가 position:absolute라 스크롤 영역 내에 기준(position:relative)이 필요.
+    // 없으면 세로 스크롤 시 코드만 움직이고 라인번호가 안 따라가서 1픽셀만 주입.
     if (!document.getElementById("vcs-diff-style")) {
         const st = document.createElement("style");
         st.id = "vcs-diff-style";
@@ -2091,7 +2092,7 @@ function CreateFolder()
         if (RootPath) param.RootPath = RootPath;
         const j = await CFecth.Exe(CPath.WebRootUrl() + "File/Mkdir", param, "json") as any;
         if (j?.ok) FolderCD(window["g_path"]);
-        else CAlert.E("?대뜑 ?앹꽦 ?ㅽ뙣");
+        else CAlert.E("폴더 생성 실패");
     },
     ()=> {},
     ],["Yes","No"])
@@ -2109,7 +2110,7 @@ window["Delete"]=Delete;
 type SrchFile = {hidden:boolean,file:boolean,name:string,ext:string};
 const SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const isSearchExcluded = (name: string) => name.startsWith('.') || SEARCH_EXCLUDE_DIRS.includes(name);
-// ?쒕쾭 猷⑦듃 ?⑥쐞濡?罹먯떆 ?좎? ??寃쎈줈媛 諛붾뚯뼱???좎?, ?대떦 subtree ??ぉ留??쒖슜
+// 서버 루트 단위로 캐시 유지 — 경로가 바뀌어도 유지, 해당 subtree 항목만 활용
 let g_srchCache: Map<string, SrchFile[]> = new Map(); // dirPath ??fileList
 let g_srchServerKey = '';
 
@@ -2191,7 +2192,7 @@ async function FileSearch() {
         btn.disabled = true;
         stopBtn.style.display = '';
 
-        // startPath ?섏쐞 罹먯떆媛 ?덉쑝硫?利됱떆 ?쒖떆
+        // startPath 하위 캐시가 있으면 즉시 표시
         const hasCached = [...g_srchCache.keys()].some(k => k.startsWith(startPath));
         if (hasCached) {
             const n = renderFromCache(startPath, query);
@@ -2201,7 +2202,7 @@ async function FileSearch() {
             status.textContent = 'Scanning...';
         }
 
-        // 理쒖떊 ?ㅼ틪 ???꾨즺 ??罹먯떆 ?낅뜲?댄듃 & 寃곌낵 援먯껜
+        // 최신 스캔 — 완료 후 캐시 업데이트 & 결과 교체
         const queue: string[] = [startPath];
         while (queue.length > 0 && !searchCancelled) {
             const dirPath = queue.shift()!;
@@ -2249,7 +2250,7 @@ function FileShare() {
     const modal = new CModal();
     modal.SetHeader("Share");
     modal.SetBody(`
-        <div class="mb-2 small text-secondary">?꾩옱 ?대뜑 怨듭쑀 留곹겕</div>
+        <div class="mb-2 small text-secondary">현재 폴더 공유 링크</div>
         <div class="input-group">
             <input type="text" id="shareInput_${uid}" class="form-control form-control-sm" readonly value="${shareUrl.replace(/"/g, '&quot;')}">
             <button id="shareCopyBtn_${uid}" class="btn btn-sm btn-outline-primary">Copy</button>
@@ -2283,7 +2284,7 @@ CDOM.ID("uploadBtn").onchange=async (e)=>{
     var fi=e.target as HTMLInputElement;
     const path=window["g_root"]+window["g_path"];
 
-    // arrayBuffer() ???FileReader ?ъ슜: iOS Safari?먯꽌 ??⑸웾 ?뚯씪 ?덉젙?깆씠 ?믪쓬
+    // arrayBuffer() 대신 FileReader 사용: iOS Safari에서 대용량 파일 안정성이 높음
     const readAsBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -2378,7 +2379,7 @@ function NextPhoto()
       
         
     }
-    CAlert.Info("???댁긽 ?놁뒿?덈떎.");
+    CAlert.Info("더 이상 없습니다.");
 }
 window["NextPhoto"]=NextPhoto;
 
@@ -2395,6 +2396,8 @@ let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
 
 // CDOM.ID("main").innerHTML="";
 //     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
 
 
 

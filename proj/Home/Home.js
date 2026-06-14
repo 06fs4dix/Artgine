@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqc4n085_2";
+gPF.mVersion = "mqczbbe7_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -39,7 +39,7 @@ import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
 import { CTooltip } from "../../artgine/util/CTooltip.js";
 if (gPF.mServer != "webServer")
-    CAlert.E("서버 세팅이 잘못되었습니다");
+    CAlert.E("Server setting is invalid.");
 CUtilWeb.Parameter("");
 let option = new CSingOption();
 option.mFindPWBtn = "pass";
@@ -746,7 +746,7 @@ async function termRefreshSessions() {
                     _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
             }, () => {
                 if (!isActiveFrame(key) || !document.hasFocus())
-                    _showDoneNotification(`⚠ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.port));
+                    _showDoneNotification(`⚠️ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.port));
             });
             const dot = st === 'off' ? `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
                 : st === 'wait' ? `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
@@ -1537,7 +1537,7 @@ function DirListRefresh() {
                         const fileName = filePath.split('/').pop();
                         const dirPath = window["g_root"] + window["g_path"];
                         const base64 = btoa(unescape(encodeURIComponent(bufStr)));
-                        console.log('Upload →', { path: dirPath, name: [fileName] });
+                        console.log('Upload save', { path: dirPath, name: [fileName] });
                         CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
                             CAlert.Info('저장 완료');
                         }).catch((e) => {
@@ -1688,26 +1688,37 @@ async function FileBtn() {
     }
     const dlg = new CConfirm();
     dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    const doAuth = () => {
+        const pw = CDOM.IDValue("AuthPassword");
+        CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json").then((j) => {
+            if (j.ok) {
+                localStorage.setItem(AI_TOKEN_KEY, j.token);
+                fileAuthed = true;
+                aiAuthOverlay.style.display = 'none';
+                aiRefreshSessions();
+                termRefreshSessions();
+                CAlert.Info("Permission granted");
+            }
+            else {
+                CAlert.E("Wrong password: " + (j.msg ?? ""));
+            }
+        }).catch(() => { CAlert.E("Server error"); });
+    };
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => {
-            const pw = CDOM.IDValue("AuthPassword");
-            CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json").then((j) => {
-                if (j.ok) {
-                    localStorage.setItem(AI_TOKEN_KEY, j.token);
-                    fileAuthed = true;
-                    aiAuthOverlay.style.display = 'none';
-                    aiRefreshSessions();
-                    termRefreshSessions();
-                    CAlert.Info("Permission granted");
-                }
-                else {
-                    CAlert.E("Wrong password: " + (j.msg ?? ""));
-                }
-            }).catch(() => { CAlert.E("서버 오류"); });
-        },
+        doAuth,
         () => { },
     ], ["OK", "Cancel"]);
     dlg.Open();
+    setTimeout(() => {
+        const input = CDOM.ID("AuthPassword");
+        input?.focus();
+        input?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter')
+                return;
+            e.preventDefault();
+            doAuth();
+        });
+    }, 80);
 }
 window["FileBtn"] = FileBtn;
 window["PermissionBtn"] = FileBtn;
@@ -1986,7 +1997,7 @@ function openDeleteModal() {
             if (RootPath)
                 param.RootPath = RootPath;
             const res = await CFecth.Exe(CPath.WebRootUrl() + "File/Delete", param, "json");
-            lines.push(`${res.ok ? '✓' : '✗'} ${name}`);
+            lines.push(`${res.ok ? 'OK' : 'FAIL'} ${name}`);
         }
         FolderCD(window["g_path"]);
         return { result: lines.join('\n') };
@@ -2185,7 +2196,7 @@ function FileShare() {
                 setTimeout(() => { msg.textContent = ''; }, 2000);
             }
             catch {
-                msg.textContent = 'Copy failed — select and copy manually.';
+                msg.textContent = 'Copy failed ??select and copy manually.';
             }
         });
     }, 80);
