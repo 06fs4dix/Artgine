@@ -16,8 +16,6 @@
     button,input,select,textarea{font:inherit}
     .app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}
     .guide{background:#fff;border-right:1px solid var(--bs-border-color);display:flex;flex-direction:column;min-height:0}
-    .guide-head{padding:18px;border-bottom:1px solid var(--bs-border-color)}
-    .guide-head h1{font-size:19px;margin:0 0 6px}.guide-head p{margin:0;color:#6c757d;line-height:1.45}
     .steps{padding:12px;overflow:auto;min-height:0;flex:1}
     .step{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;text-align:left;border:1px solid var(--bs-border-color);background:#fff;border-radius:.375rem;padding:10px;margin-bottom:8px;cursor:pointer}
     .step.active{background:#e7f1ff;border-color:#9ec5fe}
@@ -79,8 +77,6 @@
     ============================================================ */
     const STRINGS = {
       ko: {
-        guideTitle: 'Artgine-Agent 사용 안내',
-        guideDesc: '기존 앱 화면을 Bootstrap 5 스타일로 축소 재현한 안내 페이지입니다. 모든 버튼은 가짜 데모만 보여줍니다.',
         prev: '이전', next: '다음', done: '완료',
 
         home: 'Home', files: 'Files', ai: 'AI',
@@ -242,8 +238,6 @@
       },
 
       en: {
-        guideTitle: 'Artgine-Agent Tutorial',
-        guideDesc: 'A self-contained demo recreating the app UI in Bootstrap 5 style. All buttons show mock interactions only.',
         prev: 'Previous', next: 'Next', done: 'Done',
 
         home: 'Home', files: 'Files', ai: 'AI',
@@ -412,10 +406,6 @@
 
   <div class="app">
     <aside class="guide">
-      <div class="guide-head">
-        <h1 data-i18n="guideTitle"></h1>
-        <p data-i18n="guideDesc"></p>
-      </div>
       <div class="steps" id="steps"></div>
     </aside>
 
