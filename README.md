@@ -7,6 +7,10 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
 
+## Usage
+
+[Artgine](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
+
 ## Getting Started
 
 - Run `start.bat` (Windows) or `start.sh` (Linux).  
@@ -104,6 +108,3 @@ Only edit code **after the `EntryPoint`**. Example:
 ```
 
 Avoid modifying auto‑generated code.
-
-## GPT
-[Artgine BOT](https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot): Ask questions in real time using the pre‑trained Artgine GPT bot.

@@ -9,6 +9,10 @@ Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합
 
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
 
+## 사용법
+
+[Artgine](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
+
 ## 시작하기
 
 - start.bat/start.sh실행 하거나  ```💡"알 수 없는 게시자" 경고가 표시될 수 있습니다```
@@ -112,6 +116,3 @@ npm start
 
 자동 생성되는 코드는 수정하지 마세요
 
-**GPT**
-
-[Artgine BOT](https://chatgpt.com/g/g-68ad603d9b3081918273f3d352f995fc-artgine-bot) : 미리 학습된 GPT Bot을 이용해서 실시간 질문해보세요.

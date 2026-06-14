@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Electron UI Guide</title>
+  <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
+  <script src="../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js"></script>
+  <style>
+    html,body{height:100%;margin:0;background:#eef1f5}
+    .tutorial-app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}
+    .guide{background:#fff;border-right:1px solid var(--bs-border-color);display:flex;flex-direction:column;min-height:0}
+    .guide-head{padding:18px;border-bottom:1px solid var(--bs-border-color)}
+    .guide-head h1{font-size:19px;margin:0 0 6px}.guide-head p{margin:0;color:var(--bs-secondary)}
+    .modebar{display:flex;gap:6px;padding:12px;border-bottom:1px solid var(--bs-border-color);background:var(--bs-tertiary-bg)}
+    .modebar .btn{flex:1;font-size:13px}
+    .steps{padding:12px;overflow:auto;min-height:0;flex:1}
+    .step{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;text-align:left;border:1px solid var(--bs-border-color);background:#fff;border-radius:.375rem;padding:10px;margin-bottom:8px;cursor:pointer}
+    .step.active{background:#e7f1ff;border-color:#9ec5fe}
+    .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e9ecef;color:#495057;font-weight:700;font-size:13px}
+    .step.active .num{background:var(--bs-blue);color:#fff}.step strong{display:block;margin-bottom:3px}.step span:last-child{font-size:12px;color:var(--bs-secondary)}
+    .workspace{height:100%;min-width:0;padding:14px}
+    .electron-window{height:100%;min-height:0;background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;box-shadow:0 .25rem .75rem rgba(0,0,0,.08);overflow:auto;position:relative}
+    .mode-screen{display:none;height:100%;overflow:auto}.mode-screen.active{display:block}
+    .server-wrap{max-width:500px}
+    .source-screen{height:100%;display:grid;grid-template-columns:220px minmax(0,1fr)}
+    .source-tabs{border-right:1px solid var(--bs-border-color);background:var(--bs-tertiary-bg);padding:10px}
+    .source-main{min-width:0;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .fake-qr{width:180px;height:180px;margin:0 auto;border:8px solid #fff;background:#fff;box-shadow:0 0 0 1px var(--bs-border-color);display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(13,1fr);gap:2px;padding:8px}
+    .fake-qr i{display:block;background:#111}.fake-qr i.blank{background:#fff}
+    .fake-qr .finder{grid-column:span 4;grid-row:span 4;border:8px solid #111;background:#fff;position:relative}
+    .fake-qr .finder:after{content:"";position:absolute;inset:8px;background:#111}
+    .source-legend{display:flex;flex-wrap:wrap;gap:6px;color:var(--bs-secondary);font-size:12px}
+    .source-legend span{border:1px solid var(--bs-border-color);border-radius:999px;background:#fff;padding:5px 8px}
+    .danger-mark{color:var(--bs-danger);font-weight:800}.ok-mark{color:var(--bs-success);font-weight:800}
+    .code{flex:1;margin:0;min-height:0;overflow:auto;background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:14px;font-family:Consolas,monospace;white-space:pre-wrap;line-height:1.55}
+    .danger{color:#ff9a9a;background:rgba(220,53,69,.22);border-radius:.25rem;padding:1px 3px}.ok{color:#8df0a8;background:rgba(25,135,84,.24);border-radius:.25rem;padding:1px 3px}.comment{color:#9ca3af}.keyword{color:#8ab4f8}.string{color:#ffd166}
+    .coach{position:absolute;right:18px;bottom:18px;width:min(520px,calc(100% - 36px));background:#151b26;color:#fff;border-radius:.5rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15);padding:16px;z-index:30}
+    .coach h2{font-size:18px;margin:0 0 8px}.coach p{margin:0 0 12px;color:#d1d5db;line-height:1.45}
+    .tip{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);border-radius:.375rem;padding:9px;color:#e5e7eb;line-height:1.45}
+    .coach-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.coach-actions .btn{background:#263244;color:#fff;border-color:#4b5563}.coach-actions .btn-primary{background:#0d6efd;border-color:#0d6efd}
+    .highlight{outline:3px solid #f7c948;outline-offset:3px;position:relative;z-index:4}
+    .click-tooltip{display:none;position:fixed;z-index:80;max-width:320px;background:#212529;color:#fff;border-radius:.375rem;padding:10px 12px;box-shadow:0 .5rem 1rem rgba(0,0,0,.2);font-size:13px;line-height:1.45}
+    .click-tooltip.show{display:block}
+    @media(max-width:940px){.tutorial-app{grid-template-columns:1fr;grid-template-rows:270px minmax(0,1fr)}.guide{border-right:0;border-bottom:1px solid var(--bs-border-color)}.workspace{padding:8px}.coach{right:10px;bottom:10px;width:calc(100% - 20px)}.source-screen{grid-template-columns:1fr}.source-tabs{display:none}}
+  </style>
+
+  <script>
+    /* ============================================================
+       STRING MAP
+    ============================================================ */
+    const STRINGS = {
+      ko: {
+        pageTitle: 'Electron UI Guide',
+
+        modeSetup:  '초기 셋업',
+        modeDev:    '개발 모드',
+        modeServer: '서버 모드',
+        modeSource: '소스 수정 법',
+
+        next: '다음',
+        done: '완료',
+
+        /* Setup screen */
+        setupTitle:       '초기 셋업',
+        setupStartBody:   'start.bat/start.sh를 실행하거나 콘솔에서 직접 설치 후 실행합니다.',
+        setupConsoleTitle:'콘솔 실행',
+        setupServerTitle: '서버만 실행',
+        setupFolderTitle: '프로젝트 위치',
+        setupFolderBody:  '<p class="mb-2">프로젝트 파일은 <code>proj/</code> 아래에 둡니다.</p><p class="mb-0 text-danger">프로젝트 폴더를 작업 폴더보다 상위에 두면 안 됩니다.</p>',
+        setupRunTitle:    '프로젝트 실행',
+        setupRunBody:     '<ol class="mb-0"><li><code>projectPath</code>에서 Folder를 눌러 <code>proj</code> 아래 프로젝트 폴더를 선택합니다.</li><li><code>Run(F9)</code>을 누르면 프로젝트가 로드됩니다.</li></ol>',
+
+        /* Source screen */
+        sourceTabAuto:    '자동 생성 파일',
+        sourceTabTs:      'TS 수정 위치',
+        sourceTabHtml:    'HTML 수정 위치',
+        legendRedLabel:   '빨강',
+        legendRedDesc:    '자동 생성 영역 / 직접 수정 주의',
+        legendGreenLabel: '초록',
+        legendGreenDesc:  '수동 작성 영역 / 직접 수정 가능',
+        legendJsonLabel:  '.json',
+        legendJsonDesc:   '프로젝트 설정 파일 / 수동 편집 주의',
+
+        /* stepsByMode */
+        stepsByMode: {
+          setup: [
+            ["실행 방법", "start.bat / start.sh", "setupStartBox", "처음 시작할 때는 Windows에서는 start.bat, Linux에서는 start.sh를 실행할 수 있습니다.", "알 수 없는 게시자 경고가 표시될 수 있습니다."],
+            ["콘솔 설치", "git clone → npm start", "setupCommandBox", "콘솔에서 직접 실행할 때는 저장소를 받은 뒤 npm install, npm start 순서로 실행합니다.", "이미 프로젝트를 받은 상태라면 git clone 단계는 생략하고 프로젝트 루트에서 npm install, npm start를 실행합니다."],
+            ["서버만 실행", "npm run start_web", "setupServerBox", "Electron 개발 UI 없이 서버만 단독으로 실행하려면 npm start 대신 npm run start_web을 사용합니다.", "외부 브라우저나 다른 장치에서 서버 접근을 확인할 때 사용합니다."],
+            ["프로젝트 위치", "proj 폴더 아래", "setupFolderBox", "Artgine 프로젝트 파일은 proj 폴더 아래에 두는 것이 기본 구조입니다.", "프로젝트 폴더를 작업 폴더보다 상위에 두면 경로 계산과 자동 생성 흐름이 깨질 수 있습니다."],
+            ["프로젝트 실행", "Folder → Run(F9)", "setupRunBox", "projectPath에서 Folder를 눌러 proj 아래 프로젝트 폴더를 선택하고 Run(F9)을 누르면 프로젝트가 로드됩니다.", "Run(F9) 후 생성/수정되는 파일과 코드 수정 위치는 소스 수정 법에서 확인합니다."]
+          ],
+          dev: [
+            ["App 탭", "프로젝트 실행 기본 설정", "projectPathBox", "App 탭은 Artgine 프로젝트를 어떤 경로에서, 어떤 창 크기와 실행 방식으로 열지 정하는 기본 실행 설정입니다.", "처음 실행할 때는 projectPath를 프로젝트 폴더로 맞추고, server 방식과 program 값을 확인한 뒤 Run(F9)을 누릅니다."],
+            ["Run(F9)", "프로젝트 실행", "Run_btn", "Run(F9)을 누르면 현재 App 탭 설정을 기준으로 프로젝트 파일을 준비하고 프로젝트 HTML을 실행합니다.", "자동 생성되는 파일과 수정 위치는 뒤쪽의 소스 수정 법에서 확인합니다."],
+            ["Preference", "렌더러와 개발 옵션", "pref-tab", "Preference 탭은 targetWidth, targetHeight, depth, anti, xr, developer, IAuto, Renderer, Canvas 값을 다룹니다.", "developer 체크는 개발자 도구 표시와 연결됩니다."],
+            ["Include", "HTML include 자동 구성", "include-tab", "Include 탭의 체크 항목은 HTML의 Include 자동 생성 영역에 반영됩니다.", "EntryPoint 위쪽 자동 생성 영역을 직접 고치면 다음 생성 때 덮어써질 수 있습니다."],
+            ["Manifest / ServiceWorker", "PWA 파일 생성", "manifest-tab", "Manifest와 ServiceWorker 탭은 webmanifest와 ServiceWorker.js 생성에 필요한 설정입니다.", "설정은 UI에서 관리하고 생성 파일은 직접 수정하지 않는 흐름입니다."],
+            ["Plugin / AI", "플러그인과 AI 도구", "plugin-tab", "Plugin 탭은 프로젝트에 사용할 플러그인을 선택하고, AI 탭은 Codex 같은 도구 생성을 다룹니다.", "플러그인 선택은 TS 자동 생성 영역의 CPlugin.PushPath 구성에도 반영됩니다."]
+          ],
+          server: [
+            ["Server 화면", "URL/IP 중앙 폼", "serverUrlBox", "서버 모드는 실제 Server.html처럼 Bootstrap container 안의 중앙 500px 폼입니다.", "Developer 화면과 달리 설정 탭이 아니라 접속 정보 확인 중심입니다."],
+            ["Copy 버튼", "URL/IP 복사", "privateIpBox", "URL, Private IP, Public IP 옆 Copy 버튼으로 접속 정보를 복사합니다.", "다른 장치에서 접속할 때 Public IP와 QR 영역을 확인합니다."],
+            ["Browser", "브라우저 열기", "browser_btn", "Browser 버튼은 현재 서버 URL을 브라우저로 열어 Electron 밖에서 프로젝트를 확인합니다.", "Developer 버튼은 다시 개발 설정 화면으로 돌아가는 역할입니다."]
+          ],
+          source: [
+            ["자동 생성 파일", "Run(F9) 시 생성/수정", "sourceAuto", "Run(F9)을 누르면 프로젝트 설정을 기준으로 필요한 파일을 생성/수정한 뒤 프로젝트를 로드합니다.", "수정은 [Name].ts와 [Name].html의 EntryPoint 아래에서 합니다. [Name].js, [Name].json, webmanifest, ServiceWorker.js는 직접 수정하지 않는 쪽이 안전합니다.", "auto"],
+            ["TS 수정 법", "Template + 자동 생성", "sourceTs", "TS는 desktop/Template/Basic.ts의 //Version, //Class, //Atelier, //EntryPoint 자리표시자를 기준으로 Run(F9)의 파일 준비 단계에서 자동 코드가 채워집니다.", "CPreferences, CPlugin.PushPath, CAtelier, gAtl.Init, Canvas 변수는 자동 생성 영역입니다. EntryPoint 아래 초록 영역부터 직접 수정합니다.", "ts"],
+            ["HTML 수정 법", "EntryPoint 아래", "sourceHtml", "HTML도 수정할 수 있습니다. 단, Include와 Manifest가 있는 EntryPoint 위쪽은 자동 생성 영역이고 EntryPoint 아래부터 직접 수정합니다.", "HTML 사용자 스크립트 연결이나 별도 마크업은 EntryPoint 아래에 둡니다.", "html"]
+          ]
+        },
+
+        /* guideTips */
+        guideTips: {
+          "app-tab": "App 탭입니다. Artgine 프로젝트 실행에 필요한 기본값을 설정합니다. 프로젝트 경로, 실행 URL, 창 크기, 실행 프로그램, 서버 방식을 여기서 정합니다.",
+          "pref-tab": "Preference 탭입니다. 렌더러, 캔버스, 개발자 도구, Include 자동 갱신 같은 실행 옵션을 조정합니다.",
+          "include-tab": "Include 탭입니다. HTML 자동 생성 영역에 포함할 외부 라이브러리를 선택합니다.",
+          "manifest-tab": "Manifest 탭입니다. PWA용 webmanifest에 들어갈 이름, 아이콘, 색상, 표시 방식을 설정합니다.",
+          "service-tab": "ServiceWorker 탭입니다. 캐시 이름, 캐시 개수, 로그, API 캐시 같은 ServiceWorker 생성 옵션입니다.",
+          "plugin-tab": "Plugin 탭입니다. 프로젝트에서 사용할 플러그인을 선택합니다. 선택 내용은 생성되는 소스 설정에 반영됩니다.",
+          "ai-tab": "AI 탭입니다. Codex, Claude 같은 AI 도구 실행 구성을 만들거나 삭제합니다.",
+          "url_txt": "webServer 또는 remote 방식에서 프로젝트 HTML을 열 기준 주소입니다. local 실행에서는 파일 경로로 열기 때문에 URL이 비워질 수 있습니다.",
+          "projectPath_txt": "실행할 Artgine 프로젝트 폴더입니다. 이 경로의 이름이 프로젝트 이름이 되고, [Name].html, [Name].ts 같은 파일 생성 기준이 됩니다.",
+          "selectProjectPath_btn": "실행할 프로젝트 폴더를 탐색해서 선택합니다.",
+          "width_num": "프로젝트 실행 창의 너비입니다. 화면 비율과 UI 배치를 확인할 때 사용하는 값입니다.",
+          "height_num": "프로젝트 실행 창의 높이입니다. width와 함께 Electron 실행 창 크기를 결정합니다.",
+          "program_sel": "실행할 프로그램 모드입니다. developer는 제작/디버깅용, client는 클라이언트 실행용, server는 서버 화면 실행용으로 사용합니다.",
+          "server_sel": "프로젝트를 여는 방식입니다. local은 로컬 파일 기준, remote/webServer는 URL 기준으로 실행 흐름이 달라집니다.",
+          "fullScreen_chk": "프로젝트를 전체 화면으로 실행할지 정합니다. 키오스크나 전시용 실행을 확인할 때 사용합니다.",
+          "github_chk": "GitHub Pages처럼 정적 배포 경로를 기준으로 실행할 때 사용하는 옵션입니다. 켜면 경로와 chrome_start.bat 생성 흐름이 달라집니다.",
+          "Run_btn": "Run(F9)입니다. 현재 설정을 반영해 필요한 프로젝트 파일을 준비한 뒤 프로젝트 HTML을 실행합니다. 자동 생성 원리는 소스 수정 법에서 확인합니다.",
+          "VSCode_btn": "현재 프로젝트 경로를 VS Code로 엽니다.",
+          "targetWidth": "렌더링 대상 너비입니다. 0이면 기본 창 크기를 따릅니다.",
+          "targetHeight": "렌더링 대상 높이입니다. 0이면 기본 창 크기를 따릅니다.",
+          "depth": "32비트 depth 사용 옵션입니다.",
+          "anti": "안티앨리어싱 사용 옵션입니다.",
+          "xr": "XR 실행 옵션입니다.",
+          "devTool": "개발자 도구를 함께 열지 결정하는 옵션입니다.",
+          "IAuto": "CAtelier Include 자동 갱신 옵션입니다.",
+          "canvas_txt": "사용할 Canvas 설정 이름 또는 경로를 입력하는 칸입니다.",
+          "short_name_txt": "Manifest에 들어가는 짧은 앱 이름입니다.",
+          "name_txt": "Manifest에 들어가는 전체 앱 이름입니다.",
+          "iconsAdd_btn": "Manifest 아이콘 항목을 추가합니다.",
+          "orientation_sel": "앱 화면 방향 설정입니다.",
+          "display_sel": "PWA 표시 방식입니다. standalone, fullscreen 같은 값을 설정합니다.",
+          "background_color_pick": "Manifest 배경색입니다.",
+          "theme_color_pick": "Manifest 테마색입니다.",
+          "cache_name_txt": "ServiceWorker 캐시 이름입니다. 생성 파일에서 캐시 식별자로 사용됩니다.",
+          "max_cache_size_num": "ServiceWorker가 유지할 최대 캐시 개수입니다.",
+          "log_chk": "ServiceWorker 로그 출력 여부입니다.",
+          "api_cache_chk": "API 요청 캐시 사용 여부입니다.",
+          "aiCreate_btn": "선택한 AI 도구 구성을 생성합니다.",
+          "aiDelete_btn": "선택한 AI 도구 구성을 삭제합니다.",
+          "browser_btn": "현재 서버 URL을 기본 브라우저로 엽니다.",
+          "switchDev_btn": "서버 화면에서 개발 모드 화면으로 돌아갑니다.",
+          "sourceTs": "TS 수정 위치입니다. desktop/Template/Basic.ts의 자리표시자와 Main.ts의 자동 생성 결과를 같이 보여줍니다. EntryPoint 아래 초록 영역부터 직접 수정합니다.",
+          "sourceHtml": "HTML 수정 위치입니다. EntryPoint 위쪽 Include/Manifest는 자동 생성, 아래쪽은 직접 수정 가능합니다.",
+          "sourceAuto": "자동 생성 파일 목록입니다. 빨강은 직접 수정 주의, 초록은 수동 작성 가능 영역입니다.",
+          "setupStartBox": "README-ko의 시작하기 내용입니다. start.bat 또는 start.sh로 Electron 앱을 실행할 수 있습니다.",
+          "setupCommandBox": "콘솔에서 직접 설치/실행하는 명령입니다. npm install 후 npm start로 Electron 앱을 실행합니다.",
+          "setupServerBox": "서버만 단독 실행할 때 사용하는 명령입니다. Electron UI 없이 웹 서버만 띄웁니다.",
+          "setupFolderBox": "프로젝트 폴더 위치 규칙입니다. 프로젝트는 작업 폴더 안의 proj 아래에 두는 구조가 기본입니다.",
+          "setupRunBox": "초기 실행 절차입니다. projectPath에서 프로젝트를 선택하고 Run(F9)으로 로드합니다."
+        },
+
+        /* sourceSamples */
+        sourceSamples: {
+          ts: `<span class="comment">// desktop/Template/Basic.ts</span>
+<span class="danger">//Version</span>
+<span class="danger">//Class</span>
+<span class="danger">//Atelier</span>
+<span class="danger">//EntryPoint</span>
+
+<span class="comment">// Run(F9)의 파일 준비 단계에서 실제 TS에는 위 자리표시자에 아래 코드가 자동 생성됩니다.</span>
+<span class="danger">import { CPreferences } from "../../../artgine/basic/CPreferences.js";</span>
+<span class="danger">var gPF = new CPreferences();</span>
+<span class="danger">gPF.mTargetWidth = 0;</span>
+<span class="danger">gPF.mTargetHeight = 0;</span>
+<span class="danger">gPF.mRenderer = "GL";</span>
+<span class="danger">gPF.mServer = "local";</span>
+<span class="danger">gPF.mGitHub = false;</span>
+<span class="danger">gPF.mVersion = "자동 생성 버전값";</span>
+
+<span class="danger">import { CAtelier } from "../../../artgine/app/CAtelier.js";</span>
+<span class="danger">import { CPlugin } from "../../../artgine/util/CPlugin.js";</span>
+<span class="danger">CPlugin.PushPath("Bloom", "../../../plugin/Bloom/");</span>
+<span class="danger">import "../../../plugin/Bloom/Bloom.js";</span>
+<span class="danger">var gAtl = new CAtelier();</span>
+<span class="danger">gAtl.mPF = gPF;</span>
+<span class="danger"><span class="keyword">await</span> gAtl.Init(["Main.json"], "");</span>
+<span class="danger">var Main = gAtl.Canvas("Main.json");</span>
+<span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
+<span class="danger">//EntryPoint</span>
+<span class="ok">//여기서부터 수정가능.</span>
+<span class="ok">import { CClass } from "../../../artgine/basic/CClass.js";</span>
+<span class="ok">import { CObject } from "../../../artgine/basic/CObject.js";</span>
+
+<span class="ok">// 게임 로직, 컴포넌트 등록, 사용자 코드는 EntryPoint 아래에 작성합니다.</span>`,
+          html: `<span class="danger">&lt;!--Include--&gt;</span>
+<span class="danger">&lt;script type='module' src='../../../artgine/artgine.js'&gt;&lt;/script&gt;</span>
+<span class="danger">&lt;link rel='manifest' href='./Sample.webmanifest'/&gt;</span>
+<span class="danger">&lt;!--Manifest--&gt;</span>
+<span class="danger">&lt;!--EntryPoint--&gt;</span>
+<span class="ok">&lt;!-- 여기서부터 수정가능. HTML 사용자 스크립트와 UI 연결을 둘 수 있습니다. --&gt;</span>
+<span class="ok">&lt;script type='module' src='Sample.js'&gt;&lt;/script&gt;</span>`,
+          auto: `<span class="comment">Run(F9) 시 프로젝트를 로드합니다.</span>
+1. Run(F9)을 누르면 프로젝트 설정을 기준으로 필요한 파일을 생성/수정합니다.
+2. 파일 생성이 끝나면 프로젝트 HTML을 Electron 창에서 로드합니다.
+3. TS 빌드가 필요하면 [Name].ts 빌드 결과인 [Name].js를 기다립니다.
+4. 내부 자동 생성 원리는 아래 파일 목록과 수정 위치를 기준으로 보면 됩니다.
+
+<span class="comment">생성/수정되는 파일</span>
+<span class="danger">[Name].ts             ← 프로젝트 실행 TS 파일</span>
+<span class="danger">[Name].html           ← 프로젝트 실행 HTML 파일</span>
+<span class="danger">[Name].js             ← [Name].ts 빌드 결과, 직접 수정 금지</span>
+<span class="danger">[Name].json           ← 프로젝트 설정 파일, 수동 편집 주의</span>
+<span class="danger">[Name].webmanifest    ← Manifest 설정에서 자동 생성</span>
+<span class="danger">ServiceWorker.js      ← ServiceWorker 설정에서 자동 생성</span>
+<span class="danger">chrome_start.bat      ← github 옵션이 켜진 경우 생성</span>
+
+<span class="comment">수정해야 하는 파일</span>
+<span class="ok">[Name].ts</span>
+  <span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
+  <span class="danger">//EntryPoint</span>
+  <span class="ok">//여기서부터 수정가능.</span>
+
+<span class="ok">[Name].html</span>
+  <span class="danger">&lt;!--Include--&gt;, &lt;!--Manifest--&gt;, &lt;!--EntryPoint--&gt; 위쪽은 자동 생성 영역</span>
+  <span class="ok">&lt;!--EntryPoint--&gt; 아래부터 직접 수정 가능</span>
+
+<span class="comment">주의</span>
+<span class="danger">빨강 영역은 Run(F9) 때 다시 생성될 수 있습니다.</span>
+<span class="ok">초록 영역은 사용자가 작성한 코드가 보존되는 위치입니다.</span>`
+        }
+      },
+
+      en: {
+        pageTitle: 'Electron UI Guide',
+
+        modeSetup:  'Initial Setup',
+        modeDev:    'Developer Mode',
+        modeServer: 'Server Mode',
+        modeSource: 'Source Editing',
+
+        next: 'Next',
+        done: 'Done',
+
+        /* Setup screen */
+        setupTitle:       'Initial Setup',
+        setupStartBody:   'Run start.bat (Windows) or start.sh (Linux), or install and run from the console directly.',
+        setupConsoleTitle:'Console Install',
+        setupServerTitle: 'Server Only',
+        setupFolderTitle: 'Project Location',
+        setupFolderBody:  '<p class="mb-2">Place project files under <code>proj/</code>.</p><p class="mb-0 text-danger">Do not place the project folder above the working directory.</p>',
+        setupRunTitle:    'Run Project',
+        setupRunBody:     '<ol class="mb-0"><li>Click <code>Folder</code> in <code>projectPath</code> and select the project folder under <code>proj</code>.</li><li>Press <code>Run(F9)</code> to load the project.</li></ol>',
+
+        /* Source screen */
+        sourceTabAuto:    'Auto-generated Files',
+        sourceTabTs:      'TS Edit Location',
+        sourceTabHtml:    'HTML Edit Location',
+        legendRedLabel:   'Red',
+        legendRedDesc:    'Auto-generated area / caution when editing directly',
+        legendGreenLabel: 'Green',
+        legendGreenDesc:  'Manual write area / editable directly',
+        legendJsonLabel:  '.json',
+        legendJsonDesc:   'Project config file / caution when editing manually',
+
+        /* stepsByMode */
+        stepsByMode: {
+          setup: [
+            ["Run Options", "start.bat / start.sh", "setupStartBox", "On Windows run start.bat; on Linux run start.sh to launch the Electron app.", "An 'unknown publisher' warning may appear on Windows."],
+            ["Console Install", "git clone → npm start", "setupCommandBox", "To run from the console, clone the repo then run npm install followed by npm start.", "If you already have the project, skip git clone and run npm install then npm start from the project root."],
+            ["Server Only", "npm run start_web", "setupServerBox", "To run only the server without the Electron developer UI, use npm run start_web instead of npm start.", "Useful for verifying server access from an external browser or another device."],
+            ["Project Location", "Under proj folder", "setupFolderBox", "Artgine project files go under the proj folder — that is the default structure.", "Placing the project folder above the working directory breaks path resolution and the auto-generation flow."],
+            ["Run Project", "Folder → Run(F9)", "setupRunBox", "Click Folder in projectPath to select the project folder under proj, then press Run(F9) to load it.", "See Source Editing for details on files generated/modified after Run(F9) and where to make code changes."]
+          ],
+          dev: [
+            ["App Tab", "Basic project run settings", "projectPathBox", "The App tab configures the fundamental run settings: which path to open the project from, window size, and execution mode.", "On first run, set projectPath to the project folder, confirm server mode and program value, then press Run(F9)."],
+            ["Run(F9)", "Run the project", "Run_btn", "Pressing Run(F9) prepares project files based on the current App tab settings and launches the project HTML.", "See Source Editing for details on auto-generated files and edit locations."],
+            ["Preference", "Renderer and dev options", "pref-tab", "The Preference tab covers targetWidth, targetHeight, depth, anti, xr, developer, IAuto, Renderer, and Canvas.", "Keeping developer checked lets you open DevTools."],
+            ["Include", "Auto-configure HTML includes", "include-tab", "Checked items in the Include tab are reflected in the HTML auto-generation area.", "Editing the auto-generated area above EntryPoint directly may be overwritten on the next generation."],
+            ["Manifest / ServiceWorker", "Generate PWA files", "manifest-tab", "The Manifest and ServiceWorker tabs provide settings for generating webmanifest and ServiceWorker.js.", "Manage settings through the UI; do not edit the generated files directly."],
+            ["Plugin / AI", "Plugins and AI tools", "plugin-tab", "The Plugin tab selects plugins for the project; the AI tab manages tools like Codex.", "Plugin selections are also reflected in the CPlugin.PushPath configuration in the auto-generated TS area."]
+          ],
+          server: [
+            ["Server Screen", "URL/IP center form", "serverUrlBox", "Server mode shows a centered 500px form inside a Bootstrap container, just like the real Server.html.", "Unlike the Developer screen, the focus is on connection info rather than settings tabs."],
+            ["Copy Button", "Copy URL/IP", "privateIpBox", "Use the Copy button next to URL, Private IP, and Public IP to copy connection info.", "Check Public IP and the QR area when connecting from another device."],
+            ["Browser", "Open in browser", "browser_btn", "The Browser button opens the current server URL in a browser to verify the project outside of Electron.", "The Developer button returns to the development settings screen."]
+          ],
+          source: [
+            ["Auto-generated Files", "Generated/modified on Run(F9)", "sourceAuto", "Pressing Run(F9) generates/modifies the necessary files based on project settings, then loads the project.", "Edit in [Name].ts and [Name].html below EntryPoint. Avoid editing [Name].js, [Name].json, webmanifest, and ServiceWorker.js directly.", "auto"],
+            ["Editing TS", "Template + auto-generation", "sourceTs", "The TS file uses placeholders in desktop/Template/Basic.ts (//Version, //Class, //Atelier, //EntryPoint) that are filled by auto-generation during the Run(F9) file prep step.", "CPreferences, CPlugin.PushPath, CAtelier, gAtl.Init, and Canvas variables are auto-generated. Edit from the green EntryPoint area down.", "ts"],
+            ["Editing HTML", "Below EntryPoint", "sourceHtml", "HTML can also be edited. The area above EntryPoint (Include and Manifest) is auto-generated; edit below EntryPoint only.", "Place HTML user scripts or additional markup below EntryPoint.", "html"]
+          ]
+        },
+
+        /* guideTips */
+        guideTips: {
+          "app-tab": "This is the App tab. Set the basic values required to run an Artgine project: project path, execution URL, window size, program mode, and server mode.",
+          "pref-tab": "This is the Preference tab. Adjust renderer, canvas, developer tools, and Include auto-refresh settings.",
+          "include-tab": "This is the Include tab. Select external libraries to include in the HTML auto-generation area.",
+          "manifest-tab": "This is the Manifest tab. Configure the name, icon, colors, and display mode for the PWA webmanifest.",
+          "service-tab": "This is the ServiceWorker tab. Set cache name, cache size, logging, and API cache options for ServiceWorker generation.",
+          "plugin-tab": "This is the Plugin tab. Select plugins to use in the project. Selections are reflected in the generated source settings.",
+          "ai-tab": "This is the AI tab. Create or delete execution configurations for AI tools like Codex and Claude.",
+          "url_txt": "The base URL to open the project HTML in webServer or remote mode. In local mode it may be left empty since files are opened by path.",
+          "projectPath_txt": "The Artgine project folder to run. This path's name becomes the project name and the basis for generating [Name].html, [Name].ts, etc.",
+          "selectProjectPath_btn": "Browse and select the project folder to run.",
+          "width_num": "The width of the project execution window.",
+          "height_num": "The height of the project execution window.",
+          "program_sel": "The program mode to run. developer is for authoring/debugging; client is for client execution; server is for the server info screen.",
+          "server_sel": "The method for opening the project. local uses local file paths; remote/webServer changes the flow to URL-based loading.",
+          "fullScreen_chk": "Whether to run the project in fullscreen mode. Useful for kiosk or exhibition setups.",
+          "github_chk": "Option for static deployment paths like GitHub Pages. Enabling it changes the path and chrome_start.bat generation flow.",
+          "Run_btn": "Run (F9). Prepares the necessary project files based on current settings and runs the project HTML. See Source Editing for the auto-generation details.",
+          "VSCode_btn": "Opens the current project path in VS Code.",
+          "targetWidth": "Target render width. 0 follows the window size.",
+          "targetHeight": "Target render height. 0 follows the window size.",
+          "depth": "Enable 32-bit depth option.",
+          "anti": "Enable anti-aliasing option.",
+          "xr": "XR execution option.",
+          "devTool": "Option to open DevTools alongside the project.",
+          "IAuto": "CAtelier Include auto-refresh option.",
+          "canvas_txt": "Canvas configuration name or path to use.",
+          "short_name_txt": "Short app name for the Manifest.",
+          "name_txt": "Full app name for the Manifest.",
+          "iconsAdd_btn": "Add a Manifest icon entry.",
+          "orientation_sel": "Screen orientation setting.",
+          "display_sel": "PWA display mode. Set values like standalone or fullscreen.",
+          "background_color_pick": "Manifest background color.",
+          "theme_color_pick": "Manifest theme color.",
+          "cache_name_txt": "ServiceWorker cache name. Used as the cache identifier in the generated file.",
+          "max_cache_size_num": "Maximum cache count the ServiceWorker will maintain.",
+          "log_chk": "Whether to output ServiceWorker logs.",
+          "api_cache_chk": "Whether to use API request caching.",
+          "aiCreate_btn": "Create the selected AI tool configuration.",
+          "aiDelete_btn": "Delete the selected AI tool configuration.",
+          "browser_btn": "Open the current server URL in the default browser.",
+          "switchDev_btn": "Return to the developer mode screen from the server screen.",
+          "sourceTs": "TS edit location. Shows the placeholders in desktop/Template/Basic.ts and the auto-generated results. Edit from the green EntryPoint area down.",
+          "sourceHtml": "HTML edit location. Include/Manifest above EntryPoint is auto-generated; below EntryPoint can be edited directly.",
+          "sourceAuto": "Auto-generated file list. Red = caution when editing directly; green = manual edit area.",
+          "setupStartBox": "From README Getting Started. Run start.bat or start.sh to launch the Electron app.",
+          "setupCommandBox": "Commands to install and run directly from the console. Run npm install then npm start to launch the Electron app.",
+          "setupServerBox": "Command to run only the server standalone. Starts the web server without the Electron UI.",
+          "setupFolderBox": "Project folder location rules. Projects go under the proj folder inside the working directory.",
+          "setupRunBox": "Initial run procedure. Select the project in projectPath and press Run(F9) to load it."
+        },
+
+        /* sourceSamples */
+        sourceSamples: {
+          ts: `<span class="comment">// desktop/Template/Basic.ts</span>
+<span class="danger">//Version</span>
+<span class="danger">//Class</span>
+<span class="danger">//Atelier</span>
+<span class="danger">//EntryPoint</span>
+
+<span class="comment">// During the Run(F9) file prep step, the code below is auto-generated into the actual TS at these placeholders.</span>
+<span class="danger">import { CPreferences } from "../../../artgine/basic/CPreferences.js";</span>
+<span class="danger">var gPF = new CPreferences();</span>
+<span class="danger">gPF.mTargetWidth = 0;</span>
+<span class="danger">gPF.mTargetHeight = 0;</span>
+<span class="danger">gPF.mRenderer = "GL";</span>
+<span class="danger">gPF.mServer = "local";</span>
+<span class="danger">gPF.mGitHub = false;</span>
+<span class="danger">gPF.mVersion = "auto-generated version value";</span>
+
+<span class="danger">import { CAtelier } from "../../../artgine/app/CAtelier.js";</span>
+<span class="danger">import { CPlugin } from "../../../artgine/util/CPlugin.js";</span>
+<span class="danger">CPlugin.PushPath("Bloom", "../../../plugin/Bloom/");</span>
+<span class="danger">import "../../../plugin/Bloom/Bloom.js";</span>
+<span class="danger">var gAtl = new CAtelier();</span>
+<span class="danger">gAtl.mPF = gPF;</span>
+<span class="danger"><span class="keyword">await</span> gAtl.Init(["Main.json"], "");</span>
+<span class="danger">var Main = gAtl.Canvas("Main.json");</span>
+<span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
+<span class="danger">//EntryPoint</span>
+<span class="ok">// Editable from here.</span>
+<span class="ok">import { CClass } from "../../../artgine/basic/CClass.js";</span>
+<span class="ok">import { CObject } from "../../../artgine/basic/CObject.js";</span>
+
+<span class="ok">// Game logic, component registration, and user code go below EntryPoint.</span>`,
+          html: `<span class="danger">&lt;!--Include--&gt;</span>
+<span class="danger">&lt;script type='module' src='../../../artgine/artgine.js'&gt;&lt;/script&gt;</span>
+<span class="danger">&lt;link rel='manifest' href='./Sample.webmanifest'/&gt;</span>
+<span class="danger">&lt;!--Manifest--&gt;</span>
+<span class="danger">&lt;!--EntryPoint--&gt;</span>
+<span class="ok">&lt;!-- Editable from here. You can add HTML user scripts and UI wiring. --&gt;</span>
+<span class="ok">&lt;script type='module' src='Sample.js'&gt;&lt;/script&gt;</span>`,
+          auto: `<span class="comment">Run(F9) loads the project.</span>
+1. Pressing Run(F9) generates/modifies the necessary files based on project settings.
+2. Once file generation is complete, the project HTML is loaded in the Electron window.
+3. If a TS build is needed, it waits for [Name].js, the build output of [Name].ts.
+4. To understand the auto-generation internals, refer to the file list and edit locations below.
+
+<span class="comment">Files generated/modified</span>
+<span class="danger">[Name].ts             ← Project entry TS file</span>
+<span class="danger">[Name].html           ← Project entry HTML file</span>
+<span class="danger">[Name].js             ← Build output of [Name].ts — do not edit directly</span>
+<span class="danger">[Name].json           ← Project config file — caution when editing manually</span>
+<span class="danger">[Name].webmanifest    ← Auto-generated from Manifest settings</span>
+<span class="danger">ServiceWorker.js      ← Auto-generated from ServiceWorker settings</span>
+<span class="danger">chrome_start.bat      ← Generated when github option is enabled</span>
+
+<span class="comment">Files to edit</span>
+<span class="ok">[Name].ts</span>
+  <span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
+  <span class="danger">//EntryPoint</span>
+  <span class="ok">// Editable from here.</span>
+
+<span class="ok">[Name].html</span>
+  <span class="danger">&lt;!--Include--&gt;, &lt;!--Manifest--&gt;, &lt;!--EntryPoint--&gt; above is the auto-generated area</span>
+  <span class="ok">&lt;!--EntryPoint--&gt; below is editable directly</span>
+
+<span class="comment">Note</span>
+<span class="danger">Red areas may be regenerated on Run(F9).</span>
+<span class="ok">Green areas preserve user-written code.</span>`
+        }
+      }
+    };
+
+    const LANG = (navigator.language || navigator.userLanguage || 'en').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+    const S = STRINGS[LANG] || STRINGS.en;
+    document.documentElement.lang = LANG;
+  </script>
+</head>
+<body>
+  <div class="tutorial-app">
+    <aside class="guide">
+      <div class="modebar">
+        <button class="btn btn-primary"          data-mode="setup"  data-i18n="modeSetup"  type="button"></button>
+        <button class="btn btn-outline-secondary" data-mode="dev"    data-i18n="modeDev"    type="button"></button>
+        <button class="btn btn-outline-success"   data-mode="server" data-i18n="modeServer" type="button"></button>
+        <button class="btn btn-outline-secondary" data-mode="source" data-i18n="modeSource" type="button"></button>
+      </div>
+      <div class="steps" id="steps"></div>
+    </aside>
+
+    <main class="workspace">
+      <section class="electron-window">
+        <div class="mode-screen active" id="screen-setup">
+          <div class="container mt-3" style="max-width:760px;">
+            <h4 class="mb-3" data-i18n="setupTitle"></h4>
+            <div class="alert alert-info" id="setupStartBox" data-i18n="setupStartBody"></div>
+            <div class="card mb-3" id="setupCommandBox">
+              <div class="card-header" data-i18n="setupConsoleTitle"></div>
+              <div class="card-body">
+                <pre class="mb-0 bg-dark text-light p-3 rounded">git clone https://github.com/06fs4dix/Artgine.git
+cd Artgine
+npm install
+npm start</pre>
+              </div>
+            </div>
+            <div class="card mb-3" id="setupServerBox">
+              <div class="card-header" data-i18n="setupServerTitle"></div>
+              <div class="card-body">
+                <code>npm run start_web</code>
+              </div>
+            </div>
+            <div class="card mb-3" id="setupFolderBox">
+              <div class="card-header" data-i18n="setupFolderTitle"></div>
+              <div class="card-body" data-i18n-html="setupFolderBody"></div>
+            </div>
+            <div class="card" id="setupRunBox">
+              <div class="card-header" data-i18n="setupRunTitle"></div>
+              <div class="card-body" data-i18n-html="setupRunBody"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-screen" id="screen-dev">
+          <div class="p-4">
+            <ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
+              <li class="nav-item" role="presentation"><button class="nav-link active" id="app-tab" data-bs-toggle="tab" data-bs-target="#app" type="button" role="tab">App</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="pref-tab" data-bs-toggle="tab" data-bs-target="#preference" type="button" role="tab">Preference</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="include-tab" data-bs-toggle="tab" data-bs-target="#include" type="button" role="tab">Include</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="manifest-tab" data-bs-toggle="tab" data-bs-target="#manifest" type="button" role="tab">Manifest</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="service-tab" data-bs-toggle="tab" data-bs-target="#serviceworker" type="button" role="tab">ServiceWorker</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="plugin-tab" data-bs-toggle="tab" data-bs-target="#plugin" type="button" role="tab">Plugin</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button" role="tab">AI</button></li>
+            </ul>
+
+            <div class="tab-content" id="settingsTabsContent">
+              <div class="tab-pane fade show active" id="app" role="tabpanel">
+                <div class="mb-2" id="urlBox">
+                  <label class="form-label">url</label>
+                  <input type="text" class="form-control" id="url_txt" value="http://localhost:8082/Artgine">
+                </div>
+                <div class="mb-2" id="projectPathBox">
+                  <label class="form-label">projectPath</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="projectPath_txt" value="proj/Sample">
+                    <button class="btn btn-outline-secondary" type="button" id="selectProjectPath_btn">Folder</button>
+                  </div>
+                </div>
+                <div class="row mb-2" id="sizeBox">
+                  <div class="col"><label class="form-label">width</label><input type="number" class="form-control" id="width_num" value="1024"></div>
+                  <div class="col"><label class="form-label">height</label><input type="number" class="form-control" id="height_num" value="768"></div>
+                </div>
+                <div class="mb-2" id="programBox">
+                  <label class="form-label">program</label>
+                  <select class="form-select" id="program_sel"><option>developer</option><option>client</option><option>server</option></select>
+                </div>
+                <div class="mb-2" id="serverBox">
+                  <label class="form-label">server</label>
+                  <select class="form-select" id="server_sel"><option>local</option><option>remote</option><option>webServer</option></select>
+                </div>
+                <div class="row mb-2">
+                  <div class="col d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" id="fullScreen_chk"><label class="form-check-label" for="fullScreen_chk">fullScreen</label></div></div>
+                  <div class="col d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" id="github_chk"><label class="form-check-label" for="github_chk">github</label></div></div>
+                </div>
+                <div class="accordion mb-2" id="authRootAccordion">
+                  <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button">Extra Server Settings</button></h2>
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-primary" id="Run_btn">Run(F9</button>
+                  <button class="btn btn-dark" id="VSCode_btn">VSCode(F4</button>
+                </div>
+              </div>
+
+              <div class="tab-pane fade" id="preference" role="tabpanel">
+                <div class="row mb-2">
+                  <div class="col">
+                    <label class="form-label">targetWidth</label><input id="targetWidth" type="number" class="form-control" value="0">
+                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="depth"><label class="form-check-label" for="depth">32fDepth</label></div>
+                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="anti"><label class="form-check-label" for="anti">anti</label></div>
+                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="xr"><label class="form-check-label" for="xr">xr</label></div>
+                  </div>
+                  <div class="col">
+                    <label class="form-label">targetHeight</label><input id="targetHeight" type="number" class="form-control" value="0">
+                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="devTool" checked><label class="form-check-label" for="devTool">developer</label></div>
+                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="IAuto" checked><label class="form-check-label" for="IAuto">IAuto(CAtelier Include</label></div>
+                  </div>
+                </div>
+                <div class="mb-3"><label class="form-label">Renderer</label><select class="form-select"><option>Null</option><option selected>GL</option><option>GPU</option></select></div>
+                <div class="mb-2"><label class="form-label">Canvas</label><input type="text" class="form-control" id="canvas_txt" value=""></div>
+                <button class="btn btn-secondary">Default</button>
+              </div>
+
+              <div class="tab-pane fade" id="include" role="tabpanel">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">PakoZlib(FBX)</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">JSZip</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">ScreenFull</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Popper</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Bootstrap</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">MonacoEditor</label></div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Excel</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Firebase</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">NoSleep</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Tone</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">QRCode</label></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tab-pane fade" id="manifest" role="tabpanel">
+                <div class="mb-2"><label class="form-label">short_name</label><input type="text" class="form-control" id="short_name_txt"></div>
+                <div class="mb-2"><label class="form-label">name</label><input type="text" class="form-control" id="name_txt"></div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="iconsAdd_btn">+ Add Icon</button>
+                <div class="mb-2 mt-3"><label class="form-label">orientation</label><select class="form-select" id="orientation_sel"><option>any</option><option>landscape</option></select></div>
+                <div class="mb-2"><label class="form-label">display</label><select class="form-select" id="display_sel"><option>standalone</option><option>fullscreen</option></select></div>
+                <div class="mb-2"><label class="form-label">background_color</label><input type="color" class="form-control form-control-color" id="background_color_pick" value="#ffffff"></div>
+                <div class="mb-2"><label class="form-label">theme_color</label><input type="color" class="form-control form-control-color" id="theme_color_pick" value="#000000"></div>
+              </div>
+
+              <div class="tab-pane fade" id="serviceworker" role="tabpanel">
+                <div class="mb-2"><label class="form-label">CACHE_NAME</label><input type="text" class="form-control" id="cache_name_txt" value="ServiceWorker-1" readonly></div>
+                <div class="mb-2"><label class="form-label">max_cache_size</label><input type="number" class="form-control" id="max_cache_size_num" min="1" value="50"></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="log_chk"><label class="form-check-label" for="log_chk">log</label></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="api_cache_chk"><label class="form-check-label" for="api_cache_chk">api cache</label></div>
+              </div>
+
+              <div class="tab-pane fade" id="plugin" role="tabpanel">
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Bloom</label></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Rapier</label></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Water</label></div>
+              </div>
+
+              <div class="tab-pane fade" id="ai" role="tabpanel">
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Claude</label></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Antigravity</label></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Codex</label></div>
+                <button class="btn btn-primary" id="aiCreate_btn">Create</button>
+                <button class="btn btn-danger" id="aiDelete_btn">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-screen" id="screen-server">
+          <div class="container mt-3 server-wrap">
+            <div class="d-flex justify-content-center">
+              <div class="w-100">
+                <div class="row align-items-center mb-2" id="serverUrlBox">
+                  <label class="col-sm-4 col-form-label">URL</label>
+                  <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="http://localhost:8082/Artgine" readonly><button class="btn btn-outline-secondary">Copy</button></div>
+                </div>
+                <div class="mb-3 row align-items-center" id="privateIpBox">
+                  <label class="col-sm-4 col-form-label">Private IP</label>
+                  <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="192.168.0.12" readonly><button class="btn btn-outline-secondary">Copy</button></div>
+                </div>
+                <div class="mb-3 row align-items-center" id="publicIpBox">
+                  <label class="col-sm-4 col-form-label">Public IP</label>
+                  <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="singleton88.iptime.org" readonly><button class="btn btn-outline-secondary">Copy</button></div>
+                </div>
+                <div class="accordion mb-3" id="serverExtraBox">
+                  <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button">Extra Server Settings</button></h2></div>
+                </div>
+                <div class="text-center d-flex justify-content-center gap-2">
+                  <button class="btn btn-primary" id="browser_btn">Browser</button>
+                  <button class="btn btn-secondary" id="switchDev_btn">Developer</button>
+                </div>
+                <div class="text-center mt-3" id="qr_area">
+                  <div class="fake-qr" aria-label="QR">
+                    <span class="finder"></span><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><span class="finder"></span>
+                    <i class="blank"></i><i></i><i></i><i class="blank"></i><i></i>
+                    <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i>
+                    <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
+                    <span class="finder"></span><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i>
+                    <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
+                    <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-screen" id="screen-source">
+          <div class="source-screen">
+            <div class="source-tabs">
+              <div class="list-group">
+                <button class="list-group-item active" data-source="auto" id="sourceAuto" data-i18n="sourceTabAuto" type="button"></button>
+                <button class="list-group-item" data-source="ts"   id="sourceTs"   data-i18n="sourceTabTs"   type="button"></button>
+                <button class="list-group-item" data-source="html" id="sourceHtml" data-i18n="sourceTabHtml" type="button"></button>
+              </div>
+            </div>
+            <div class="source-main">
+              <div class="source-legend">
+                <span><b class="danger-mark" data-i18n="legendRedLabel"></b> <span data-i18n="legendRedDesc"></span></span>
+                <span><b class="ok-mark"     data-i18n="legendGreenLabel"></b> <span data-i18n="legendGreenDesc"></span></span>
+                <span><b class="danger-mark" data-i18n="legendJsonLabel"></b> <span data-i18n="legendJsonDesc"></span></span>
+              </div>
+              <pre class="code" id="sourceCode"></pre>
+            </div>
+          </div>
+        </div>
+
+        <aside class="coach">
+          <h2 id="coachTitle"></h2>
+          <p id="coachBody"></p>
+          <div class="tip" id="coachTip"></div>
+          <div class="coach-actions">
+            <span id="progress"></span>
+            <button class="btn btn-primary" id="coachNext" type="button"></button>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <div class="click-tooltip" id="clickTooltip"></div>
+
+  <script>
+    /* ── i18n ── */
+    function applyI18n() {
+      document.title = S.pageTitle;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const v = S[el.dataset.i18n];
+        if (v !== undefined) el.textContent = v;
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const v = S[el.dataset.i18nHtml];
+        if (v !== undefined) el.innerHTML = v;
+      });
+    }
+
+    const sourceSamples = S.sourceSamples;
+    const stepsByMode   = S.stepsByMode;
+    const guideTips     = S.guideTips;
+
+    let mode = "setup";
+    let current = 0;
+    let activeTooltipTarget = null;
+    const modeOrder = ["setup", "dev", "server", "source"];
+    const $ = id => document.getElementById(id);
+
+    function setMode(nextMode){
+      mode = nextMode;
+      current = 0;
+      document.querySelectorAll("[data-mode]").forEach(btn=>{
+        const active = btn.dataset.mode === mode;
+        btn.className = "btn " + (active ? "btn-primary" : btn.dataset.mode === "server" ? "btn-outline-success" : "btn-outline-secondary");
+      });
+      document.querySelectorAll(".mode-screen").forEach(screen=>screen.classList.remove("active"));
+      $("screen-" + mode).classList.add("active");
+      render();
+    }
+
+    function renderSteps(){
+      $("steps").innerHTML = stepsByMode[mode].map((step,index)=>
+        `<button class="step ${index===current?"active":""}" data-step="${index}" type="button">
+          <span class="num">${index+1}</span>
+          <span><strong>${step[0]}</strong><span>${step[1]}</span></span>
+        </button>`).join("");
+      document.querySelectorAll("[data-step]").forEach(btn=>btn.onclick=()=>{current=+btn.dataset.step;render();});
+    }
+
+    function showDevTab(buttonId){
+      if(!buttonId) return;
+      const button = $(buttonId);
+      if(!button || !button.dataset.bsTarget) return;
+      bootstrap.Tab.getOrCreateInstance(button).show();
+    }
+
+    function render(){
+      const steps = stepsByMode[mode];
+      const step = steps[current];
+      renderSteps();
+      document.querySelectorAll(".highlight").forEach(el=>el.classList.remove("highlight"));
+      if(mode === "dev"){
+        const tab = {"pref-tab":"pref-tab","include-tab":"include-tab","manifest-tab":"manifest-tab","plugin-tab":"plugin-tab"}[step[2]] || "app-tab";
+        showDevTab(tab);
+      }
+      if(step[5]) setSource(step[5]);
+      $(step[2])?.classList.add("highlight");
+      $("coachTitle").textContent = step[0];
+      $("coachBody").textContent = step[3];
+      $("coachTip").textContent = step[4];
+      $("progress").textContent = `${current+1} / ${steps.length}`;
+      $("coachNext").textContent = current === steps.length - 1 ? S.done : S.next;
+    }
+
+    function setSource(name){
+      document.querySelectorAll("[data-source]").forEach(btn=>btn.classList.toggle("active",btn.dataset.source===name));
+      $("sourceCode").innerHTML = sourceSamples[name];
+    }
+
+    function inferTip(target){
+      const explicit = target.closest("[data-guide-tip]");
+      if(explicit) return explicit.dataset.guideTip;
+      const element = target.closest("button,input,select,textarea,label,.form-check,.card,.alert");
+      if(!element) return "";
+      const id = element.id || element.getAttribute("for") || element.querySelector("input")?.id;
+      if(id && guideTips[id]) return guideTips[id];
+      if(element.classList.contains("nav-link")){
+        const tabName = element.textContent.trim();
+        return guideTips[element.id] || tabName;
+      }
+      if(element.classList.contains("form-check")){
+        const label = element.querySelector("label")?.textContent.trim() || "";
+        const inputId = element.querySelector("input")?.id;
+        return (inputId && guideTips[inputId]) || label;
+      }
+      const group = element.closest(".mb-2,.mb-3,.row");
+      const label = group?.querySelector(".form-label,.col-form-label")?.textContent.trim();
+      if(label) return label;
+      if(element.tagName === "BUTTON") return guideTips[element.id] || element.textContent.trim();
+      return "";
+    }
+
+    function showClickTooltip(target, text){
+      const tooltip = $("clickTooltip");
+      if(!text){ tooltip.classList.remove("show"); return; }
+      if(activeTooltipTarget === target && tooltip.classList.contains("show")){
+        tooltip.classList.remove("show");
+        activeTooltipTarget = null;
+        return;
+      }
+      activeTooltipTarget = target;
+      tooltip.textContent = text;
+      tooltip.classList.add("show");
+      const rect = target.getBoundingClientRect();
+      const margin = 10;
+      let left = rect.right + 8;
+      if(left + tooltip.offsetWidth > window.innerWidth - margin) left = rect.left - tooltip.offsetWidth - 8;
+      if(left < margin) left = margin;
+      let top = rect.top;
+      if(top + tooltip.offsetHeight > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - tooltip.offsetHeight - margin);
+      tooltip.style.left = left + "px";
+      tooltip.style.top = top + "px";
+    }
+
+    document.querySelectorAll("[data-mode]").forEach(btn=>btn.onclick=()=>setMode(btn.dataset.mode));
+    document.querySelectorAll("[data-source]").forEach(btn=>btn.onclick=()=>{
+      setSource(btn.dataset.source);
+      if(mode==="source"){
+        const index = stepsByMode.source.findIndex(step=>step[5]===btn.dataset.source);
+        if(index>=0){current=index;render();}
+      }
+    });
+    $("coachNext").onclick=()=>{
+      if(current < stepsByMode[mode].length - 1){
+        current++;
+        render();
+        return;
+      }
+      const nextMode = modeOrder[modeOrder.indexOf(mode) + 1];
+      if(nextMode) setMode(nextMode);
+      else render();
+    };
+    document.querySelector(".electron-window").addEventListener("click", event=>{
+      const target = event.target.closest("button,input,select,textarea,label,.form-check,.card,.alert");
+      if(!target) return;
+      const text = inferTip(target);
+      if(text) showClickTooltip(target, text);
+    });
+    document.addEventListener("click", event=>{
+      if(!event.target.closest(".electron-window") && !event.target.closest("#clickTooltip")){
+        $("clickTooltip").classList.remove("show");
+        activeTooltipTarget = null;
+      }
+    });
+    $("clickTooltip").onclick=()=>{
+      $("clickTooltip").classList.remove("show");
+      activeTooltipTarget = null;
+    };
+
+    applyI18n();
+    setSource("auto");
+    setMode("setup");
+  </script>
+</body>
+</html>

@@ -417,10 +417,6 @@
         <p data-i18n="guideDesc"></p>
       </div>
       <div class="steps" id="steps"></div>
-      <div class="guide-foot">
-        <button class="btn" id="prevBtn" type="button" data-i18n="prev"></button>
-        <button class="btn btn-primary" id="nextBtn" type="button" data-i18n="next"></button>
-      </div>
     </aside>
 
     <main class="workspace">
@@ -790,7 +786,6 @@
             <div class="tip" id="coachTip"></div>
             <div class="coach-actions">
               <span id="progress" class="small"></span>
-              <div><button class="btn btn-sm" id="coachPrev" type="button"></button> <button class="btn btn-sm btn-primary" id="coachNext" type="button"></button></div>
             </div>
           </div>
           <div class="popover" id="popover"></div>
@@ -850,11 +845,6 @@
       $('terminalFrame').textContent =
         `$ cd D:/git/Artgine-Agent\n$ npm run start_web\n\nServerStart\nhttp://localhost:8050/Artgine-Agent\n\n> codex\nCodex session started.\nWorking directory: D:/git/Artgine-Agent\n\n${S.termComment}`;
 
-      /* coach nav buttons */
-      $('coachPrev').textContent = S.prev;
-      $('coachNext').textContent = S.next;
-      $('prevBtn').textContent   = S.prev;
-      $('nextBtn').textContent   = S.next;
 
       /* keyboard shortcuts list */
       const sc = [
@@ -916,11 +906,6 @@
       $('coachText').textContent  = s[4];
       $('coachTip').textContent   = s[5];
       $('progress').textContent   = `${current + 1} / ${steps.length}`;
-      $('prevBtn').disabled   = current === 0;
-      $('coachPrev').disabled = current === 0;
-      const lastLabel = current === steps.length - 1 ? S.done : S.next;
-      $('nextBtn').textContent   = lastLabel;
-      $('coachNext').textContent = lastLabel;
       renderSteps();
     }
 
@@ -937,8 +922,6 @@
 
     document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { setTab(b.dataset.tab); clearHi(); });
     document.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => setSub(b.dataset.sub));
-    $('prevBtn').onclick  = $('coachPrev').onclick = () => go(current - 1);
-    $('nextBtn').onclick  = $('coachNext').onclick = next;
 
     $('fileModalBtn').onclick   = () => openModal('fileModal');
     $('searchModalBtn').onclick = () => openModal('searchModal');
