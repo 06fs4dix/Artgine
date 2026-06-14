@@ -9,7 +9,8 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 ## Usage
 
-[Artgine](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
+[Artgine Tool](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
+[Artgine Agent(Home)](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
 
 ## Getting Started
 

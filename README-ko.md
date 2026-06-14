@@ -11,7 +11,8 @@ Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합
 
 ## 사용법
 
-[Artgine](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
+[Artgine Tool](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
+[Artgine Agent(Home)](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
 
 ## 시작하기
 
