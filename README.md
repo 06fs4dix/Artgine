@@ -3,9 +3,8 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 > Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-ko.md)**
 
-## Demo
 
-[Artgine Agent(Home)](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
+## Demo
 
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
 
@@ -14,6 +13,8 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 
 ## Getting Started
+
+[Guide](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
 
 - Run `start.bat` (Windows) or `start.sh` (Linux).  
   💡 You may see an **“Unknown publisher”** warning.

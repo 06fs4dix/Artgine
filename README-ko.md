@@ -7,18 +7,12 @@ Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합
 
 ## 데모
 
-[Artgine Agent(Home)](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
-
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
 
 
-## 사용법
-
-[Artgine Tool](https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html)
-
-[Artgine Agent(Home)](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
-
 ## 시작하기
+
+[안내](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
 
 - start.bat/start.sh실행 하거나  ```💡"알 수 없는 게시자" 경고가 표시될 수 있습니다```
 	
