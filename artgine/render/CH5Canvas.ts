@@ -3,6 +3,7 @@ import {CString} from "../basic/CString.js";
 import { CUtil } from "../basic/CUtil.js";
 import {CVec2} from "../geometry/CVec2.js";
 import { CVec4 } from "../geometry/CVec4.js";
+import { CFuncCall } from "../system/CFuncCall.js";
 import {CTexture} from "./CTexture.js";
 
 
@@ -10,11 +11,11 @@ import {CTexture} from "./CTexture.js";
 
 export class CH5CMDList extends CObject
 {
-	mCMD : Array<CH5Cmd>;
+	mCMD : Array<CFuncCall>;
 	mSize : CVec2;
 	mKey : string;
 
-	constructor(_name:string="",_size:CVec2=new CVec2(),_cmd=new Array<CH5Cmd>()){
+	constructor(_name:string="",_size:CVec2=new CVec2(),_cmd=new Array<CFuncCall>()){
         super();
         this.mKey=_name;
 		this.mSize=_size;
@@ -30,7 +31,7 @@ export class CH5CMDList extends CObject
 		}
 		return str;
 	}
-	// Push(_cmd:CH5Cmd){
+	// Push(_cmd:CFuncCall){
 	// 	this.m_cmd.push(_cmd);
 	// }
 	// Delete(_num:number){
@@ -38,43 +39,6 @@ export class CH5CMDList extends CObject
 	// }
 }
 
-export class CH5Cmd extends CObject
-{
-	constructor(_name : string,_para : any);
-	constructor(_name : string,_para : Array<any>);
-	constructor(_name : string,_para : any)
-	{
-		super();
-		this.mName=_name;
-		if(_para instanceof Array) {
-			for(let i = 0; i < _para.length; i++) {
-				if(_para[i] instanceof Array) {
-					_para[i] = JSON.stringify(_para[i]);
-				}
-			}
-		}
-		this.mParameter=_para;
-	}
-	public mName="";
-	public mParameter=null;
-
-	CmdToString() {
-		let str = "(";
-		for(let para of this.mParameter) {
-			if(typeof(para) == "string" && para.startsWith("[") == false) {
-				str += `"${para}",`;
-			}
-			else {
-				str += para + ",";
-			}
-		}
-		if(this.mParameter.length > 0) {
-			str = str.substring(0, str.length - 1);
-		}
-		str += ")";
-		return str;
-	}
-}
 
 export class CH5CanvasInst
 {
@@ -83,7 +47,7 @@ export class CH5CanvasInst
 	private mPara = new Array(9);
 	private mLinear = true;
 	private mExp = true;
-	private mCMDStack = new Array<CH5Cmd>();
+	private mCMDStack = new Array<CFuncCall>();
 
 	constructor() {
 		if (CUtil.IsNode() == false) {
@@ -93,9 +57,9 @@ export class CH5CanvasInst
 			this.mCTX = this.mCanvas.getContext('2d', { willReadFrequently: true });
 		}
 	}
-	Cmd(_name : string,_para : any)	{	return new CH5Cmd(_name,_para);	}
+	Cmd(_name : string,_para : any)	{	return new CFuncCall(_name,_para);	}
 	
-    AddCmd(_cmdVec : CH5Cmd | Array<CH5Cmd>)
+    AddCmd(_cmdVec : CFuncCall | Array<CFuncCall>)
     {
         if(_cmdVec instanceof Array) {
             this.mCMDStack.push(..._cmdVec);
@@ -306,7 +270,7 @@ export class CH5CanvasInst
 		_height: number,
 		_codi  : CVec4 = null
 	) {
-		const cmdVec: Array<CH5Cmd> = [];
+		const cmdVec: Array<CFuncCall> = [];
 
 		// 기본 검증
 		if (!_buf || _buf.length === 0) return cmdVec;
@@ -370,7 +334,7 @@ export class CH5CanvasInst
 
 
 	DrawImage(_img:string|HTMLImageElement,_posX:number,_posY:number,_width:number=0,_height:number=0){
-		var cmdVec=new Array<CH5Cmd>();
+		var cmdVec=new Array<CFuncCall>();
 		if(_width!=0 && _height!=0)
 			cmdVec.push(this.Cmd("drawImage",[_img,_posX,_posY,_width,_height]));
 		else
@@ -394,19 +358,19 @@ export class CH5CanvasInst
 
 	
 	// 1. 함수 앞에 async를 붙여 비동기 함수로 만듭니다.
-	async Draw(_pVec : Array<CH5Cmd>| Array<Array<CH5Cmd>>=null)
+	async Draw(_pVec : Array<CFuncCall>| Array<Array<CFuncCall>>=null)
 	{
 		if(_pVec==null)
 			_pVec=this.mCMDStack;
 
-		let pDummy : Array<CH5Cmd>=new Array<CH5Cmd>();
+		let pDummy : Array<CFuncCall>=new Array<CFuncCall>();
 
 		for(let i=0;i<_pVec.length;++i)
 		{
-			if(_pVec[i] instanceof CH5Cmd)
-				pDummy.push(_pVec[i] as CH5Cmd);
+			if(_pVec[i] instanceof CFuncCall)
+				pDummy.push(_pVec[i] as CFuncCall);
 			else
-				pDummy.push(...(_pVec[i] as Array<CH5Cmd>));
+				pDummy.push(...(_pVec[i] as Array<CFuncCall>));
 		}
 		 _pVec=pDummy;
 		let errorcount=0;
@@ -559,7 +523,7 @@ export class CH5CanvasInst
     	}
 		this.mCTX.putImageData(imageData,0,0);
 	}
-	// static CreateTex(_ch5json:CCH5CMDList)
+	// static CreateTex(_ch5json:CCFuncCallList)
 	// {
 	// 	CH5Canvas.CreateCanvas(_ch5json.m_size.x,_ch5json.m_size.y);
 	// 	this.Draw(_ch5json.m_cmd);
@@ -780,7 +744,7 @@ export class CH5CanvasInst
 		}
 	
 		for(let analyzedFunc of analyzedFuncArr) {
-			arr.push(new CH5Cmd(analyzedFunc.function, analyzedFunc.parameter));
+			arr.push(new CFuncCall(analyzedFunc.function, analyzedFunc.parameter));
 		}
 	
 		return new CH5CMDList("", size, arr);

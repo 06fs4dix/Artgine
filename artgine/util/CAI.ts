@@ -17,7 +17,7 @@ export class CAI {
     static readonly EMPTY_MCP_PATH: string = '';
 
     static AIDir(): string { return ''; }
-    static CreateRole(_provider: CAI.eProvider, _targetDir?: string): boolean | string | null { return false; }
+    static CreateRole(_provider: CAI.eProvider, _targetDir?: string, _host?: string, _port?: number, _basePath?: string): boolean | string | null { return false; }
     static DeleteRole(_provider: CAI.eProvider, _targetDir: string): boolean { return false; }
     static ProviderInfo(_provider: CAI.eProvider): Promise<IProviderInfo> { return Promise.resolve({ id: _provider, available: false, version: '', models: [] }); }
     static ProviderInstall(_provider: CAI.eProvider): Promise<boolean> { return Promise.resolve(false); }

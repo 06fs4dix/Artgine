@@ -17,13 +17,17 @@ node ai/tsc_check.js 수정한파일.ts
 ## 제한 명령어
 다음 명령어는 사용자가 명시적으로 요청하거나 승인하지 않는 한 실행하지 않는다.
 
-- node 임의 실행. ai/tsc_check.js는 제외
+- node 임의 실행. `ai/tsc_check.js`, `ai/web_debug.js`는 제외
 - python / python3 실행
 
 ## 접속 정보
-- **로컬 주소**: `http://localhost:8050/Artgine`
-- **경로 구조**: `http://localhost:8050/Artgine/<폴더경로>/<파일명>.html` 
-- **예시 (Village)**: `http://localhost:8050/Artgine/proj/2D/Village/Village.html`
+포트/경로는 `Main.json`의 `url` 필드 기준. 우선순위: 워킹 폴더 `Main.json` → `desktop/Main.json`.
+- **주소**: `http://localhost`
+- **포트**: `8050`
+- **기본 경로**: `/Artgine`
+- **외부 주소** (공인 IP/DNS, 외부 접속 시): _(미설정)_
+- 경로 구조: `<주소>:<포트>/<기본경로>/<폴더경로>/<파일명>.html`
+- 예시: `http://localhost:8050/Artgine/proj/2D/Village/Village.html`
 
 ## 새 프로젝트 생성
 **`ai/ProjectSetup.md`** 먼저 읽기 필수.
@@ -75,35 +79,40 @@ node ai/tsc_check.js 수정한파일.ts
 └── ai/        ← AI 가이드 및 설정 문서
 ```
 
+## AI 웹브라우저 디버깅 (curl HTTP API)
 
-## AI 행동 원칙
+> 라이브 페이지 콘솔 로그·JS 실행·DOM 조회용. 코드 파일 수정엔 쓰지 않는다.
 
-### 1. 코딩 전 사고 (Think Before Coding)
-- 불확실하면 가정하지 말고 먼저 질문
-- 모호함이 있을 때 해석을 선택하지 말고 복수 해석 제시
-- 더 단순한 방법이 있으면 먼저 말하기
-- 혼란스러우면 멈추고 명확화 요청
+`ai/web_debug.js`를 사용한다. 비밀번호는 스크립트가 자동으로 읽는다. 쿠키는 `ai/cookie.txt`에 자동 저장/로드.  
+**규칙**: Bash 툴만 사용 (PowerShell 금지)
 
-### 2. 단순함 우선 (Simplicity First)
-- 요청한 것만 구현. 추측성 기능 추가 금지
-- 단일 사용 코드에 추상화 레이어 금지
-- 요청하지 않은 유연성/설정 가능성 추가 금지
-- 200줄이 50줄로 될 수 있으면 다시 작성
+> ⚠️ **첫 번째 인자(BASE_URL)는 이 파일 위쪽 "접속 정보" 섹션의 `주소`+`포트`+`기본경로` 값을 직접 읽어서 조합한다. Main.json을 열거나 포트를 임의로 추측하지 말 것.**
 
-### 3. 외과적 수정 (Surgical Changes)
-- 요청된 코드만 수정. 인접 코드/주석/포맷 건드리지 말 것
-- 관련 없는 dead code 발견 시 → 삭제 말고 언급만
-- 내 수정으로 생긴 미사용 import/변수/함수는 제거
-- 변경된 모든 줄은 사용자 요청으로 직접 추적 가능해야 함
+```bash
+node ai/web_debug.js $BASE_URL login                                   # 인증 (최초 1회) → "ok" 출력
+node ai/web_debug.js $BASE_URL push <url> [ttl=60] [logSize=100]       # 세션 생성 → sessionId 문자열 출력
+node ai/web_debug.js $BASE_URL exec <sid> <fn> [args_json]             # 명령 실행 → result 출력
+node ai/web_debug.js $BASE_URL logs <sid> [fromOffset=0]               # 콘솔 로그 조회 → logs, nextOffset 출력
+node ai/web_debug.js $BASE_URL list                                     # 세션 목록
+node ai/web_debug.js $BASE_URL remove <sid>                             # 세션 제거 (TTL 만료 시 자동 제거)
+```
 
-### 4. 목표 기반 실행 (Goal-Driven Execution)
-- 작업 전 성공 기준 정의
-- 멀티스텝 작업은 계획 먼저 제시: `[단계] → 검증: [확인방법]`
-- "동작하게 만들기" 같은 약한 기준 대신 검증 가능한 조건으로 변환
+- `fn`: Playwright Page API 메서드, dot-notation 지원 (`mouse.click`, `keyboard.type` 등)
+- `args_json`: JSON 배열 문자열 (기본 `[]`)
+- `logs` 응답: `{ logs: [{"type":"log"|"error"|"network","text":"...","ts":0,"offset":N}], nextOffset: N }`
+  - 로그는 조회해도 삭제되지 않음. `logSize` 초과 시 오래된 것부터 자동 삭제
+  - `fromOffset` 미입력 시 전체 조회. 이전 `nextOffset`을 넘기면 새 로그만 조회 가능
 
-### 5. 중복 구현 금지 (No Duplicate Implementation)
-- 절대 같은 기능을 두 번 구현하지 않는다
-- 수정/추가 전에 기존에 관련 기능, 함수, 설정, 흐름이 있는지 먼저 확인한다
-- 기존 기능으로 해결 가능하면 새로 만들지 말고 기존 코드를 재사용하거나 최소 수정한다
-- 비슷한 기능이 이미 있으면 차이점을 먼저 설명하고, 통합/수정/재사용 중 가장 단순한 방법을 제안한다
-- 중복 구현이 필요해 보이면 바로 구현하지 말고 이유를 설명하고 확인을 받는다
+**흐름 예시** (페이지 콘솔 확인):
+```
+# BASE_URL = "접속 정보" 섹션의 주소+포트+기본경로 (이 파일에서 직접 읽을 것, Main.json 금지)
+BASE_URL=<접속정보.주소>:<접속정보.포트>/<접속정보.기본경로>
+node ai/web_debug.js $BASE_URL login
+→ ok
+
+node ai/web_debug.js $BASE_URL push $BASE_URL/proj/Home/Home.html 60 100
+→ 3he4wj8iy6vmqf86ham   (이 값이 sessionId)
+
+node ai/web_debug.js $BASE_URL exec 3he4wj8iy6vmqf86ham title
+node ai/web_debug.js $BASE_URL logs 3he4wj8iy6vmqf86ham
+```

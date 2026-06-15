@@ -1,5 +1,5 @@
 import { CJSON } from '../basic/CJSON.js';
-import { URLPatterns } from '../network/CServerMain.js';
+import { URLPatterns, gSessionParser } from '../network/CServerMain.js';
 import { CServerRouter } from '../network/CServerRouter.js';
 import { Request, Response } from 'express';
 import { GetAppJSON } from '../../desktop/MainFunc.js';
@@ -29,7 +29,26 @@ export function revokeToken(token: string): void {
 }
 
 export function getToken(req: any): string {
-    return (req.query?.token || req.headers?.['x-ai-token'] || req.headers?.['x-cmd-token'] || '') as string;
+    return (req.query?.token || '') as string;
+}
+
+// 일반 요청 인증: 세션 쿠키만으로 판정 (토큰 불필요)
+export function isAuthedReq(req: any): boolean {
+    return req.session?.authed === true;
+}
+
+// WebSocket 업그레이드 인증: 미들웨어가 자동 실행되지 않으므로 공유 세션 파서를
+// 직접 호출해 req.session을 채운 뒤 authed 여부를 반환한다.
+export function isAuthedUpgrade(req: any): Promise<boolean> {
+    return new Promise((resolve) => {
+        const parser = gSessionParser;
+        if (!parser) { resolve(false); return; }
+        try {
+            parser(req, {}, () => resolve(req.session?.authed === true));
+        } catch {
+            resolve(false);
+        }
+    });
 }
 
 export function checkBrute(req: any, res: any, next: any): void {
@@ -70,16 +89,12 @@ export async function handleAuth(ip: string, password: string): Promise<{ ok: bo
     return { ok: false, msg };
 }
 
-export function checkWsToken(urlObj: URL): string | null {
-    const token = urlObj.searchParams.get('token') || '';
-    return isValidToken(token) ? token : null;
-}
-
 @URLPatterns(["/auth/login", "/auth/check"])
 export class CAuthServer extends CServerRouter {
     constructor() {
         super();
 
+        // 비밀번호 로그인: 성공 시 세션에 인증 표시 + 토큰 발급(재접속용 relog 자격증명).
         this.On("/auth/login", async (_json: CJSON, _req: Request, _res: Response) => {
             const ip  = _req.ip || (_req.connection as any)?.remoteAddress || 'unknown';
             const now = Date.now();
@@ -90,14 +105,18 @@ export class CAuthServer extends CServerRouter {
                 return null;
             }
             const result = await handleAuth(ip, _json.GetStr("password"));
-            if (!result.ok) _res.status(403);
+            if (result.ok) (_req as any).session.authed = true;
+            else _res.status(403);
             _res.json(result);
             return null;
         });
 
+        // 세션 유효성 확인. 토큰이 주어지면 relog: 토큰이 살아있으면 세션을 재설정한다.
+        // (서버가 살아있는데 세션 쿠키만 잃은 경우 복구용)
         this.On("/auth/check", async (_json: CJSON, _req: Request, _res: Response) => {
             const t = _json.GetStr("token") || getToken(_req);
-            _res.json({ ok: !!t && isValidToken(t) });
+            if (t && isValidToken(t)) (_req as any).session.authed = true;
+            _res.json({ ok: true, authed: isAuthedReq(_req) });
             return null;
         });
     }

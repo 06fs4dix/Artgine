@@ -6,15 +6,23 @@ import { CUtil } from "../basic/CUtil.js";
 import { URLPatterns } from "../network/CServerMain.js";
 import { CFile } from "../system/CFile.js";
 import { Request, Response, NextFunction } from 'express';
-import { CAuthServer, isValidToken, getToken } from './CAuthServer.js';
+import { CAuthServer, isAuthedReq } from './CAuthServer.js';
 import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as nodePath from 'path';
-const execAsync = promisify(exec);
+const _exec = promisify(exec);
+const execAsync = (cmd: string) => _exec(cmd, { maxBuffer: 64 * 1024 * 1024 });
 
 type VcsStatus = "M" | "A" | "D" | "?";
 type VcsType = "svn" | "git";
+
+async function getGitRoot(dirPath: string): Promise<string | null> {
+    try {
+        const { stdout } = await execAsync(`git -C "${dirPath}" rev-parse --show-toplevel`);
+        return stdout.trim().replace(/\\/g, '/');
+    } catch { return null; }
+}
 
 async function detectVcsType(dirPath: string): Promise<VcsType | null> {
     try { await execAsync(`svn info "${dirPath}"`); return "svn"; } catch {}
@@ -79,8 +87,9 @@ async function getVcsStatus(dirPath: string): Promise<Map<string, VcsStatus>> {
         } catch {}
     } else if (vcs === 'git') {
         try {
+            const gitRoot = await getGitRoot(dirPath) || dirPath;
             const { stdout } = await execAsync(`git -C "${dirPath}" status --short`);
-            for (const { status, file } of parseGitStatus(stdout, dirPath)) addEntry(file, status);
+            for (const { status, file } of parseGitStatus(stdout, gitRoot)) addEntry(file, status);
         } catch {}
     }
     return map;
@@ -99,7 +108,7 @@ function applyVcsStatus(
 export class CFileServer extends CAuthServer
 {
     private IsAuth(req: Request): boolean {
-        return isValidToken(getToken(req));
+        return isAuthedReq(req);
     }
 
     constructor()
@@ -273,17 +282,30 @@ export class CFileServer extends CAuthServer
                         ? `svn status ${quote(path)}`
                         : `git -C ${quote(path)} status --short -- .`;
                     const { stdout } = await execAsync(cmd);
+                    const gitRoot = vcs === 'git' ? (await getGitRoot(dirPath) || path) : path;
                     const items = vcs === 'svn'
                         ? parseSvnStatus(stdout)
-                        : parseGitStatus(stdout, path);
+                        : parseGitStatus(stdout, gitRoot);
                     return JSON.stringify({ ok: true, vcs, items });
                 }
 
                 let cmd = "";
                 if (action === "update") {
-                    cmd = vcs === 'svn'
-                        ? `svn update ${quote(path)}`
-                        : `git -C ${quote(dirPath)} pull && git -C ${quote(dirPath)} submodule update --remote --recursive`;
+                    if (vcs === 'svn') {
+                        const { stdout, stderr } = await execAsync(`svn update ${quote(path)}`);
+                        const revMatch = (stdout + stderr).match(/At revision (\d+)/);
+                        return JSON.stringify({ ok: true, vcs, msg: (stdout + stderr).trim(), revision: revMatch?.[1] ?? null });
+                    } else {
+                        const { stdout, stderr } = await execAsync(
+                            `git -C ${quote(dirPath)} pull && git -C ${quote(dirPath)} submodule update --remote --recursive`
+                        );
+                        let revision: string | null = null;
+                        try {
+                            const { stdout: logOut } = await execAsync(`git -C ${quote(dirPath)} log -1 --format="%h %s"`);
+                            revision = logOut.trim() || null;
+                        } catch {}
+                        return JSON.stringify({ ok: true, vcs, msg: (stdout + stderr).trim(), revision });
+                    }
                 } else if (action === "add") {
                     if (vcs !== 'svn') return JSON.stringify({ ok: false, msg: "Add is SVN-only. Use commit for Git (git add is implicit)." });
                     cmd = `svn add ${files.map(quote).join(" ")}`;
@@ -314,13 +336,15 @@ export class CFileServer extends CAuthServer
                         }
                         const { stdout: commitOut, stderr: commitErr } = await execAsync(`git -C ${quote(path)} commit -m ${quote(message)}`);
                         let pushOut = '';
+                        let pushFailed = false;
                         try {
                             const { stdout: ps, stderr: pe } = await execAsync(`git -C ${quote(path)} push`);
                             pushOut = ps + pe;
                         } catch (pushErr: any) {
                             pushOut = pushErr.stderr || pushErr.message || String(pushErr);
+                            pushFailed = true;
                         }
-                        return JSON.stringify({ ok: true, vcs, msg: (addOut + commitOut + commitErr + pushOut).trim() });
+                        return JSON.stringify({ ok: !pushFailed, vcs, msg: (addOut + commitOut + commitErr + pushOut).trim() });
                     }
                 } else {
                     return JSON.stringify({ ok: false, msg: "Unknown action" });

@@ -66,7 +66,6 @@ import { CVec3 } from "../../../artgine/geometry/CVec3.js";
 import { CVec4 } from "../../../artgine/geometry/CVec4.js";
 import { CCamera } from "../../../artgine/render/CCamera.js";
 import { CH5CMDList } from "../../../artgine/render/CH5Canvas.js";
-import { CH5Cmd } from "../../../artgine/render/CH5Canvas.js";
 import { CH5Canvas } from "../../../artgine/render/CH5Canvas.js";
 import { CTexture } from "../../../artgine/render/CTexture.js";
 import { CUniform } from "../../../artgine/render/CUniform.js";

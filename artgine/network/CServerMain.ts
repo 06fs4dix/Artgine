@@ -15,6 +15,11 @@ var gDummyEvent=new CEvent();
 
 var gURLPatterns  = new Map<any,Array<string>>();
 
+// 세션 미들웨어 공유: REST는 express가 자동 처리하지만, WebSocket 업그레이드는
+// 미들웨어가 자동 실행되지 않으므로 같은 인스턴스를 직접 호출해 req.session을 채운다.
+export let gSessionParser: any = null;
+export function SetSessionParser(_mw: any) { gSessionParser = _mw; }
+
 export function URLPatterns(_paths: string[]) {
     return function (target: Function) {
         gURLPatterns.set(target.name, _paths);

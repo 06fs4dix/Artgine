@@ -42,6 +42,7 @@
     "nodemailer": "^7.0.5",
     "path": "^0.12.7",
     "raw-body": "^3.0.0",
+	"playwright": "^1.60.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "typescript": "^5.8.2",
