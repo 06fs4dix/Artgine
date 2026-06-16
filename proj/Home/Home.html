@@ -1,3 +1,4 @@
+<title>Home</title>
 <!DOCTYPE html>
 <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover' />
 <style>
@@ -166,17 +167,17 @@ if (location.protocol == 'file:' && isElectron==false){
             <ul class="nav nav-tabs nav-fill" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="ai-chat-subtab" data-bs-toggle="tab" data-bs-target="#ai-chat-pane" type="button" role="tab">
-                        <i class="bi bi-chat-dots"></i> Chat
+                        <i class="bi bi-chat-dots"></i> Chat <span class="opacity-50" style="font-size:0.65rem;">1</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="ai-term-subtab" data-bs-toggle="tab" data-bs-target="#ai-term-pane" type="button" role="tab">
-                        <i class="bi bi-terminal"></i> Term
+                        <i class="bi bi-terminal"></i> Term <span class="opacity-50" style="font-size:0.65rem;">2</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="ai-browser-subtab" data-bs-toggle="tab" data-bs-target="#ai-browser-pane" type="button" role="tab">
-                        <i class="bi bi-browser-chrome"></i> Web
+                        <i class="bi bi-browser-chrome"></i> Web <span class="opacity-50" style="font-size:0.65rem;">3</span>
                     </button>
                 </li>
             </ul>
@@ -242,4 +243,3 @@ if (location.protocol == 'file:' && isElectron==false){
     // AI iframe lazy-load is now handled by Home.ts
 </script>
 <script type="server" src="Server.js"></script>
-<script type='module' src='Home.js'></script>

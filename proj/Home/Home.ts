@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqex2tpd_11";
+gPF.mVersion = "mqgmxeda_3";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -145,7 +145,6 @@ let aiInited = false;
 // key 규칙: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
 const iframePool = new Map<string, HTMLIFrameElement>();
 let activeFrameKey: string | null = null;
-let activeBrowserSid: string | null = null;
 let pendingNewSid: string | null = null; // 서버에 아직 없는 새 세션 (첫 메시지 전)
 
 let _activeNotifCallback: (() => void) | null = null;
@@ -235,7 +234,21 @@ function showFrame(key: string, src: string): HTMLIFrameElement {
                     if (!isTerm && e.key === 'Tab') { e.preventDefault(); handleTabKey(); return; }
                     if (!isTerm && e.key === 'ArrowRight' && _activeNotifCallback) { e.preventDefault(); handleNotifKey(); return; }
                     if (!isTerm && e.key === 'ArrowLeft' && goPrevFrame()) { e.preventDefault(); return; }
-                    if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && goNextSession(e.key === 'ArrowUp' ? -1 : 1)) { e.preventDefault(); return; }
+                    if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                        if (!aiSidebarEl.classList.contains('collapsed')) { e.preventDefault(); goNextSession(e.key === 'ArrowUp' ? -1 : 1); return; }
+                    }
+                    if (!isTerm && (e.key === '1' || e.key === '2' || e.key === '3') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                        if (!aiSidebarEl.classList.contains('collapsed')) {
+                            const target = e.target as HTMLElement;
+                            if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable)) {
+                                e.preventDefault();
+                                const subtabs = ['ai-chat-subtab', 'ai-term-subtab', 'ai-browser-subtab'];
+                                const tabEl = document.getElementById(subtabs[parseInt(e.key) - 1]) as HTMLElement;
+                                if (tabEl) (window as any).bootstrap.Tab.getOrCreateInstance(tabEl).show();
+                                return;
+                            }
+                        }
+                    }
                     if (!isTerm && e.key === 'F1') { e.preventDefault(); FileBtn(); }
                     else if (!isTerm && e.key === 'F2') { e.preventDefault(); FileSearch(); }
                     else if (!isTerm && e.key === 'F3') {
@@ -254,9 +267,6 @@ function showFrame(key: string, src: string): HTMLIFrameElement {
         aiFrameContainer.appendChild(f);
         iframePool.set(key, f);
     }
-    // 브라우저 패널이 열려 있으면 닫기
-    document.querySelectorAll<HTMLElement>('.browser-panel').forEach(p => { p.style.display = 'none'; });
-    activeBrowserSid = null;
     if (activeFrameKey && activeFrameKey !== key) {
         const prev = iframePool.get(activeFrameKey);
         if (prev) prev.style.display = 'none';
@@ -336,6 +346,7 @@ function aiLoadSession(sid: string) {
 }
 
 async function aiRefreshSessions() {
+    if (document.querySelector('.dropdown-menu.show')) return;
     const token = localStorage.getItem(AI_TOKEN_KEY);
     if (!token) {
         aiSessionList.innerHTML = '<div class="text-center text-secondary small p-3">Please sign in from AI Chat first.</div>';
@@ -385,45 +396,30 @@ async function aiRefreshSessions() {
                     <span class="text-truncate small">${aiEscapeHtml(s.title)}</span>
                     ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
                 </span>
-                <button class="ai-popup-btn btn btn-sm btn-link text-secondary p-0" title="Options">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                </button>
+                <div class="dropdown" style="flex-shrink:0;">
+                    <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                        ${POPUP_MENU_ITEMS}
+                        <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item text-danger" data-act="delete">🗑️ Delete Session</button></li>
+                    </ul>
+                </div>
             `;
             item.addEventListener('click', () => aiLoadSession(s.sessionId));
-            item.querySelector('.ai-popup-btn')!.addEventListener('click', (e: Event) => {
-                e.stopPropagation();
-                const btn = e.currentTarget as HTMLElement;
-                const existing = document.getElementById('ai-session-dropdown');
-                if (existing) existing.remove();
-                const drop = document.createElement('div');
-                drop.id = 'ai-session-dropdown';
-                drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
-                drop.innerHTML = `
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="delete">🗑️ Delete Session</button>
-                `;
-                const rect = btn.getBoundingClientRect();
-                drop.style.top = (rect.bottom + 4) + 'px';
-                drop.style.left = rect.left + 'px';
-                document.body.appendChild(drop);
-                drop.querySelectorAll('button').forEach(b => {
-                    b.addEventListener('click', async () => {
-                        drop.remove();
-                        if (b.dataset.act === 'delete') {
-                            if (!confirm(`Delete "${s.title}"?`)) return;
-                            await aiAuthedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
-                            destroyFrame(key);
-                            aiRefreshSessions();
-                            termRefreshSessions();
-                        } else if (b.dataset.act === 'link') {
-                            aiShowShareLink(s.sessionId, s.title);
-                        }
-                    });
-                });
-                const close = (ev: MouseEvent) => {
-                    if (!drop.contains(ev.target as Node)) { drop.remove(); document.removeEventListener('click', close); }
-                };
-                setTimeout(() => document.addEventListener('click', close), 0);
+            const aiDropEl = item.querySelector('.dropdown')!;
+            aiDropEl.addEventListener('click', (e: Event) => e.stopPropagation());
+            new (window as any).bootstrap.Dropdown(aiDropEl.querySelector('[data-bs-toggle="dropdown"]')!, { popperConfig: { strategy: 'fixed' } });
+            item.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', () => aiShowShareLink(s.sessionId, s.title));
+            wirePopupActions(item, () => `./AI/AIChat.html?session=${encodeURIComponent(s.sessionId)}`, s.title, `chat_${s.sessionId}`);
+            item.querySelector<HTMLElement>('[data-act="delete"]')!.addEventListener('click', async () => {
+                if (!confirm(`Delete "${s.title}"?`)) return;
+                await aiAuthedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
+                destroyFrame(key);
+                aiRefreshSessions();
+                termRefreshSessions();
             });
             item.addEventListener('mouseenter', () => { if (!isActive) item.classList.add('bg-body-secondary'); });
             item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
@@ -684,6 +680,7 @@ function termConfirmKillSession(port: number) {
 }
 
 async function termRefreshSessions() {
+    if (document.querySelector('.dropdown-menu.show')) return;
     try {
         const r = await fetch(CPath.WebRootUrl() + 'cmd/sessions');
         const j = await r.json();
@@ -751,47 +748,26 @@ async function termRefreshSessions() {
                     <span class="text-truncate small">${preview}</span>
                     ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
                 </span>
-                <button class="term-popup-btn btn btn-sm btn-link text-secondary p-0" title="팝업으로 열기">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                </button>
+                <div class="dropdown" style="flex-shrink:0;">
+                    <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                        ${POPUP_MENU_ITEMS}
+                        <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item text-danger" data-act="kill">🗑️ Delete Session</button></li>
+                    </ul>
+                </div>
             `;
             item.style.cursor = 'pointer';
             item.addEventListener('click', () => termConnectSession(s.port));
-            item.querySelector('.term-popup-btn')!.addEventListener('click', (e: Event) => {
-                e.stopPropagation();
-                const btn = e.currentTarget as HTMLElement;
-                const existing = document.getElementById('term-popup-dropdown');
-                if (existing) existing.remove();
-                const drop = document.createElement('div');
-                drop.id = 'term-popup-dropdown';
-                drop.style.cssText = 'position:fixed;z-index:9999;background:#2a2a2a;border:1px solid #555;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.5);min-width:160px;';
-                drop.innerHTML = `
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="modal">📄 Open in Modal</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="window">🪟 Open in New Window</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-light px-3 py-2" data-act="link">🔗 Share Link</button>
-                    <button class="d-block w-100 text-start btn btn-sm text-danger px-3 py-2" data-act="kill">🗑️ Delete Session</button>
-                `;
-                const rect = btn.getBoundingClientRect();
-                drop.style.top = (rect.bottom + 4) + 'px';
-                drop.style.left = rect.left + 'px';
-                document.body.appendChild(drop);
-                drop.querySelectorAll('button').forEach(b => {
-                    b.addEventListener('click', () => {
-                        drop.remove();
-                        if (b.dataset.act === 'kill') {
-                            termConfirmKillSession(s.port);
-                        } else if (b.dataset.act === 'link') {
-                            termShowShareLink(s.port);
-                        } else {
-                            termOpenPopup(s.port, b.dataset.act === 'window');
-                        }
-                    });
-                });
-                const close = (ev: MouseEvent) => {
-                    if (!drop.contains(ev.target as Node)) { drop.remove(); document.removeEventListener('click', close); }
-                };
-                setTimeout(() => document.addEventListener('click', close), 0);
-            });
+            const termDropEl = item.querySelector('.dropdown')!;
+            termDropEl.addEventListener('click', (e: Event) => e.stopPropagation());
+            new (window as any).bootstrap.Dropdown(termDropEl.querySelector('[data-bs-toggle="dropdown"]')!, { popperConfig: { strategy: 'fixed' } });
+            wirePopupActions(item, () => `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${s.port}`, s.key || s.mode || 'Terminal', `term_${s.port}`);
+            item.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', () => termShowShareLink(s.port));
+            item.querySelector<HTMLElement>('[data-act="kill"]')!.addEventListener('click', () => termConfirmKillSession(s.port));
             item.addEventListener('mouseenter', () => { if (!isActive) item.classList.add('bg-body-secondary'); });
             item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
             const termTipEl = document.createElement('div');
@@ -842,13 +818,10 @@ function aiShowShareLink(sessionId: string, title: string) {
     modal.Open(CModal.ePos.Center);
 }
 
-async function termOpenPopup(port: number, newWindow = false) {
+// ---- 세션 프레임을 모달/새 창으로 여는 통합 로직 (채팅·터미널·웹 공용) ----
+function openSessionPopup(url: string, title: string, newWindow = false, winName = '_blank') {
     if (newWindow) {
-        window.open(
-            `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`,
-            `term_${port}`,
-            'width=900,height=600,toolbar=no,menubar=no,location=no,status=no'
-        );
+        window.open(url, winName, 'width=900,height=600,toolbar=no,menubar=no,location=no,status=no');
         return;
     }
     try {
@@ -856,10 +829,10 @@ async function termOpenPopup(port: number, newWindow = false) {
         modal.SetCloseToHide(false);
         modal.SetResize(true);
         modal.SetTitle(CModal.eTitle.TextClose);
-        modal.SetHeader('Terminal');
+        modal.SetHeader(title);
         modal.SetBody(
             `<div style="position:relative;width:100%;height:100%;">` +
-            `<iframe src="${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
+            `<iframe src="${url}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
             `<div class="modal-iframe-guard" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;z-index:1;"></div>` +
             `</div>`
         );
@@ -870,7 +843,17 @@ async function termOpenPopup(port: number, newWindow = false) {
             document.addEventListener('mousedown', () => { guard.style.display = 'block'; });
             document.addEventListener('mouseup',   () => { guard.style.display = 'none'; });
         }
-    } catch (e) { console.error('Terminal popup error:', e); }
+    } catch (e) { console.error('Session popup error:', e); }
+}
+
+// 드롭다운 공용 메뉴 항목(모달/새 창) + 클릭 핸들러 연결
+const POPUP_MENU_ITEMS =
+    '<li><button class="dropdown-item" data-act="modal"><i class="bi bi-window-stack"></i> Open in Modal</button></li>' +
+    '<li><button class="dropdown-item" data-act="window"><i class="bi bi-box-arrow-up-right"></i> Open in New Window</button></li>';
+
+function wirePopupActions(rootEl: Element, getUrl: () => string, title: string, winName: string) {
+    rootEl.querySelector<HTMLElement>('[data-act="modal"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, false, winName));
+    rootEl.querySelector<HTMLElement>('[data-act="window"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, true, winName));
 }
 
 termNewBtn.addEventListener('click', () => termStartNew('cmd'));
@@ -1072,6 +1055,7 @@ setInterval(() => {
         aiRefreshSessions();
         termRefreshSessions();
         schedRefresh();
+        browserRefreshList();
     }
 }, 5000);
 
@@ -1148,27 +1132,33 @@ function goPrevFrame(): boolean {
 // 위↓ 윈도우, 사이드바가 가려 있을 때 세션 목록 아래로 이동
 function goNextSession(dir: 1 | -1): boolean {
     if (aiSidebarEl.classList.contains('collapsed')) return false;
-    const isChat = !activeFrameKey || activeFrameKey.startsWith('chat:');
-    if (isChat) {
+    const subtab = document.getElementById('ai-chat-subtab')?.classList.contains('active') ? 'chat'
+                 : document.getElementById('ai-term-subtab')?.classList.contains('active') ? 'term'
+                 : 'browser';
+    if (subtab === 'chat') {
         const items = Array.from(aiSessionList.querySelectorAll<HTMLElement>('[data-sid]'));
         if (items.length === 0) return false;
-        const curIdx = activeFrameKey ? items.findIndex(el => el.dataset.sid === activeFrameKey.slice(5)) : -1;
-        const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+        const curIdx = activeFrameKey?.startsWith('chat:')
+            ? items.findIndex(el => el.dataset.sid === activeFrameKey!.slice(5))
+            : -1;
+        const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
         if (nxt === curIdx) return false;
-        const sid = items[nxt].dataset.sid!;
-        aiLoadSession(sid);
+        aiLoadSession(items[nxt].dataset.sid!);
         items[nxt].scrollIntoView({ block: 'nearest' });
         return true;
-    } else {
+    } else if (subtab === 'term') {
         const items = Array.from(termSessionList.querySelectorAll<HTMLElement>('[data-port]'));
         if (items.length === 0) return false;
-        const curIdx = activeFrameKey ? items.findIndex(el => `term:${el.dataset.port}` === activeFrameKey) : -1;
-        const nxt = curIdx === -1 ? (dir === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+        const curIdx = activeFrameKey?.startsWith('term:')
+            ? items.findIndex(el => `term:${el.dataset.port}` === activeFrameKey)
+            : -1;
+        const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
         if (nxt === curIdx) return false;
         termConnectSession(parseInt(items[nxt].dataset.port!));
         items[nxt].scrollIntoView({ block: 'nearest' });
         return true;
     }
+    return false;
 }
 
 // ---- sidebar collapse toggle ----
@@ -1200,6 +1190,18 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     if (handleTermSidebarShortcut(e)) return;
+    if ((e.key === '1' || e.key === '2' || e.key === '3') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (isAiPanelActive() && !aiSidebarEl.classList.contains('collapsed')) {
+            const target = e.target as HTMLElement;
+            if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable) {
+                e.preventDefault();
+                const subtabs = ['ai-chat-subtab', 'ai-term-subtab', 'ai-browser-subtab'];
+                const tabEl = document.getElementById(subtabs[parseInt(e.key) - 1]) as HTMLElement;
+                if (tabEl) (window as any).bootstrap.Tab.getOrCreateInstance(tabEl).show();
+                return;
+            }
+        }
+    }
     if (e.key === 'ArrowRight') {
         if (!isAiPanelActive()) return;
         if (_activeNotifCallback) { e.preventDefault(); handleNotifKey(); }
@@ -1212,7 +1214,8 @@ document.addEventListener('keydown', (e) => {
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         if (!isAiPanelActive()) return;
-        if (goNextSession(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
+        if (!aiSidebarEl.classList.contains('collapsed')) e.preventDefault();
+        goNextSession(e.key === 'ArrowUp' ? -1 : 1);
         return;
     }
     if (e.key === 'F1') {
@@ -1308,16 +1311,9 @@ interface IBrowserSession {
     expiresAt: number;
     sidebarEl: HTMLDivElement;
     ttlEl: HTMLSpanElement;
-    panelEl: HTMLDivElement;
-    imgEl: HTMLImageElement;
-    logEl: HTMLDivElement;
-    timer: number | null;
-    pollMs: number;
-    inputMode: boolean;
 }
 
 const browserSessions = new Map<string, IBrowserSession>();
-const BROWSER_POLL_MS = 3000;
 
 setInterval(() => {
     for (const s of browserSessions.values()) {
@@ -1325,23 +1321,14 @@ setInterval(() => {
     }
 }, 1000);
 
-function browserBufToDataUrl(buf: { type: string; data: number[] }): string {
-    const bytes = new Uint8Array(buf.data);
-    let bin = '';
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return 'data:image/png;base64,' + btoa(bin);
+function browserLoadSession(sessionId: string) {
+    showFrame(`browser:${sessionId}`, `./AI/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    _browserUpdateHighlights();
 }
 
-function browserShowPanel(sessionId: string) {
-    // 채팅/터미널 iframe 숨기기
-    if (activeFrameKey) {
-        iframePool.get(activeFrameKey)?.style.setProperty('display', 'none');
-        activeFrameKey = null;
-    }
-    // 패널 show/hide + 사이드바 하이라이트 + dot 색상
+function _browserUpdateHighlights() {
     for (const [sid, s] of browserSessions) {
-        const isActive = sid === sessionId;
-        s.panelEl.style.display = isActive ? 'flex' : 'none';
+        const isActive = activeFrameKey === `browser:${sid}`;
         s.sidebarEl.classList.toggle('bg-primary-subtle', isActive);
         const dot = s.sidebarEl.querySelector<HTMLElement>('.browser-dot');
         if (dot) {
@@ -1349,37 +1336,6 @@ function browserShowPanel(sessionId: string) {
             dot.classList.toggle('text-danger', !isActive);
         }
     }
-    activeBrowserSid = sessionId;
-}
-
-async function browserPoll(sessionId: string) {
-    const s = browserSessions.get(sessionId);
-    if (!s) return;
-
-    if (document.hasFocus() && activeBrowserSid === sessionId) {
-        try {
-            const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, fn: 'screenshot', args: [] })
-            });
-            const j = await r.json();
-            if (j.ok && j.result?.type === 'Buffer') {
-                s.imgEl.src = browserBufToDataUrl(j.result);
-            }
-            if (j.logs?.length) {
-                for (const l of j.logs as { type: string; text: string }[]) {
-                    const div = document.createElement('div');
-                    div.className = (l.type === 'error' || l.type === 'network') ? 'text-danger' : '';
-                    div.textContent = `[${l.type}] ${l.text}`;
-                    s.logEl.appendChild(div);
-                }
-                s.logEl.scrollTop = s.logEl.scrollHeight;
-            }
-        } catch {}
-    }
-
-    s.timer = window.setTimeout(() => browserPoll(sessionId), s.pollMs);
 }
 
 function browserFmtTtl(expiresAt: number): string {
@@ -1390,10 +1346,9 @@ function browserFmtTtl(expiresAt: number): string {
     return m > 0 ? `−${m}m${s}s` : `−${s}s`;
 }
 
-function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0) {
+function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0, navigate = true) {
     if (browserSessions.has(sessionId)) return;
 
-    // 사이드바 아이템 (2줄: URL + 브라우저명 / TTL)
     const sidebarEl = document.createElement('div') as HTMLDivElement;
     sidebarEl.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded';
     sidebarEl.innerHTML = `
@@ -1405,139 +1360,41 @@ function browserAddSession(sessionId: string, url: string, browserName: string =
                 <span class="browser-ttl-label"></span>
             </span>
         </span>
-        <button class="browser-close-btn btn btn-sm btn-link text-secondary p-0"><i class="bi bi-x-lg"></i></button>
+        <div class="dropdown" style="flex-shrink:0;">
+            <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                ${POPUP_MENU_ITEMS}
+                <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item text-danger" data-act="delete">🗑️ Delete Session</button></li>
+            </ul>
+        </div>
     `;
     const ttlEl = sidebarEl.querySelector<HTMLSpanElement>('.browser-ttl-label')!;
-    sidebarEl.addEventListener('click', () => browserShowPanel(sessionId));
-    sidebarEl.querySelector('.browser-close-btn')!.addEventListener('click', (e: Event) => {
-        e.stopPropagation();
-        browserRemoveSession(sessionId);
-    });
-    sidebarEl.addEventListener('mouseenter', () => { if (activeBrowserSid !== sessionId) sidebarEl.classList.add('bg-body-secondary'); });
+    sidebarEl.addEventListener('click', () => browserLoadSession(sessionId));
+    const dropEl = sidebarEl.querySelector('.dropdown')!;
+    dropEl.addEventListener('click', (e: Event) => e.stopPropagation());
+    new (window as any).bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]')!, { popperConfig: { strategy: 'fixed' } });
+    sidebarEl.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', () => browserShowShareLink(sessionId, url));
+    wirePopupActions(sidebarEl, () => `./AI/Browser.html?session=${encodeURIComponent(sessionId)}`, url, `browser_${sessionId}`);
+    sidebarEl.querySelector<HTMLElement>('[data-act="delete"]')!.addEventListener('click', () => browserRemoveSession(sessionId));
+    sidebarEl.addEventListener('mouseenter', () => { if (activeFrameKey !== `browser:${sessionId}`) sidebarEl.classList.add('bg-body-secondary'); });
     sidebarEl.addEventListener('mouseleave', () => sidebarEl.classList.remove('bg-body-secondary'));
     browserSessionList.appendChild(sidebarEl);
 
-    // 센터 패널
-    const panelEl = document.createElement('div') as HTMLDivElement;
-    panelEl.className = 'browser-panel';
-    panelEl.style.cssText = 'position:absolute;inset:0;display:none;flex-direction:column;';
-    panelEl.innerHTML = `
-        <div class="d-flex align-items-center gap-2 px-3 flex-shrink-0" style="height:36px;background:#1e1e1e;border-bottom:1px solid #333;font-size:0.75rem;color:#aaa;">
-            <span>갱신</span>
-            <input type="range" class="browser-rate-slider form-range" min="0.1" max="10" step="0.1" value="3" style="width:120px;">
-            <span class="browser-rate-label">3s</span>
-            <span class="ms-3">인풋 모드</span>
-            <input type="checkbox" class="browser-click-toggle form-check-input ms-1">
-        </div>
-        <div class="browser-img-wrap" style="flex:1;min-height:0;background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;">
-            <img class="browser-screenshot" style="max-width:100%;max-height:100%;object-fit:contain;" alt="" />
-        </div>
-        <div class="browser-logs overflow-auto p-2 font-monospace d-flex flex-column" style="height:200px;font-size:0.75rem;background:#1a1a1a;color:#aaa;border-top:1px solid #333;flex-shrink:0;"></div>
-    `;
-    const imgEl    = panelEl.querySelector<HTMLImageElement>('.browser-screenshot')!;
-    const logEl    = panelEl.querySelector<HTMLDivElement>('.browser-logs')!;
-    const slider   = panelEl.querySelector<HTMLInputElement>('.browser-rate-slider')!;
-    const rateLabel = panelEl.querySelector<HTMLSpanElement>('.browser-rate-label')!;
-    const clickToggle = panelEl.querySelector<HTMLInputElement>('.browser-click-toggle')!;
+    browserSessions.set(sessionId, { sessionId, url, browserName, expiresAt, sidebarEl, ttlEl });
 
-    aiFrameContainer.appendChild(panelEl);
-
-    const session: IBrowserSession = {
-        sessionId, url, browserName, expiresAt,
-        sidebarEl, ttlEl, panelEl, imgEl, logEl,
-        timer: null, pollMs: 3000, inputMode: false,
-    };
-    browserSessions.set(sessionId, session);
-
-    // 슬라이더: 갱신 속도 (0.5s 단위)
-    slider.addEventListener('input', () => {
-        const s = parseFloat(slider.value);
-        session.pollMs = s * 1000;
-        rateLabel.textContent = `${s}s`;
-    });
-
-    // 인풋 모드 토글
-    clickToggle.addEventListener('change', () => {
-        session.inputMode = clickToggle.checked;
-        imgWrap.tabIndex = clickToggle.checked ? 0 : -1;
-        if (clickToggle.checked) imgWrap.focus();
-    });
-
-    const imgWrap = panelEl.querySelector<HTMLDivElement>('.browser-img-wrap')!;
-    imgWrap.tabIndex = -1;
-    imgWrap.style.outline = 'none';
-
-    // 키보드 이벤트 → playwright keyboard
-    imgWrap.addEventListener('keydown', async (e: KeyboardEvent) => {
-        if (!session.inputMode) return;
-        e.preventDefault();
-        const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
-        try {
-            await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, fn, args: [e.key] })
-            });
-        } catch {}
-    });
-
-    // 이미지 클릭 → mouse.click + ripple 애니메이션
-    imgEl.addEventListener('click', async (e: MouseEvent) => {
-        if (!session.inputMode) return;
-        if (session.inputMode) imgWrap.focus();
-        const rect   = imgEl.getBoundingClientRect();
-        const natW   = imgEl.naturalWidth;
-        const natH   = imgEl.naturalHeight;
-        if (!natW || !natH) return;
-        const scale  = Math.min(rect.width / natW, rect.height / natH);
-        const dispW  = natW * scale;
-        const dispH  = natH * scale;
-        const ox     = (rect.width  - dispW) / 2;
-        const oy     = (rect.height - dispH) / 2;
-        const cx     = Math.round((e.clientX - rect.left - ox) / scale);
-        const cy     = Math.round((e.clientY - rect.top  - oy) / scale);
-        if (cx < 0 || cy < 0 || cx > natW || cy > natH) return;
-
-        // ripple 표시 (클릭한 화면 좌표 기준)
-        const wrapRect = imgWrap.getBoundingClientRect();
-        const ripple = document.createElement('div');
-        ripple.style.cssText = `
-            position:absolute;
-            left:${e.clientX - wrapRect.left}px;
-            top:${e.clientY - wrapRect.top}px;
-            width:24px;height:24px;
-            margin:-12px 0 0 -12px;
-            border-radius:50%;
-            border:2px solid #000;
-            background:rgba(255,120,0,0.5);
-            box-shadow:0 0 0 1.5px #ff7800;
-            pointer-events:none;
-            animation:browser-ripple 0.5s ease-out forwards;
-        `;
-        imgWrap.appendChild(ripple);
-        setTimeout(() => ripple.remove(), 500);
-
-        try {
-            await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, fn: 'mouse.click', args: [cx, cy] })
-            });
-        } catch {}
-    });
-
-    browserShowPanel(sessionId);
-    browserPoll(sessionId);
+    if (navigate) browserLoadSession(sessionId);
 }
 
 async function browserRemoveSession(sessionId: string) {
     const s = browserSessions.get(sessionId);
     if (!s) return;
-    if (s.timer !== null) { clearTimeout(s.timer); s.timer = null; }
     s.sidebarEl.remove();
-    s.panelEl.remove();
     browserSessions.delete(sessionId);
-    if (activeBrowserSid === sessionId) activeBrowserSid = null;
+    destroyFrame(`browser:${sessionId}`);
     try {
         await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/remove`, {
             method: 'POST',
@@ -1548,18 +1405,44 @@ async function browserRemoveSession(sessionId: string) {
 }
 
 async function browserRefreshList() {
+    if (document.querySelector('.dropdown-menu.show')) return;
     try {
         const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/list`);
         const j = await r.json();
         if (!j.ok) return;
-        const serverIds = new Set<string>((j.sessions as { sessionId: string; url: string }[]).map(s => s.sessionId));
-        for (const [sid] of browserSessions) {
+        const serverIds = new Set<string>((j.sessions as { sessionId: string }[]).map(s => s.sessionId));
+        for (const [sid] of Array.from(browserSessions)) {
             if (!serverIds.has(sid)) browserRemoveSession(sid);
         }
         for (const s of j.sessions as { sessionId: string; currentUrl: string; browserName: string; expiresAt: number }[]) {
-            browserAddSession(s.sessionId, s.currentUrl, s.browserName, s.expiresAt);
+            if (!browserSessions.has(s.sessionId)) {
+                browserAddSession(s.sessionId, s.currentUrl, s.browserName, s.expiresAt, false);
+            } else {
+                const sess = browserSessions.get(s.sessionId)!;
+                sess.expiresAt = s.expiresAt;
+            }
         }
+        _browserUpdateHighlights();
     } catch {}
+}
+
+function browserShowShareLink(sessionId: string, url: string) {
+    const shareUrl = `${location.origin}${location.pathname.replace(/\/[^/]+$/, '')}/AI/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`;
+    const uid = `bsl_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Browser Share Link');
+    modal.SetBody(`
+        <div class="mb-2 small text-secondary">Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong></div>
+        <div class="input-group">
+            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${aiEscapeHtml(shareUrl)}" onclick="this.select()">
+            <button class="btn btn-outline-secondary btn-sm" title="Copy"
+                onclick="var i=document.getElementById('${uid}');i.select();document.execCommand('copy');this.innerHTML='<i class=\\'bi bi-check2\\'></i>';setTimeout(()=>this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>',1500)">
+                <i class="bi bi-clipboard"></i>
+            </button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.Open(CModal.ePos.Center);
 }
 
 browserNewBtn.addEventListener('click', () => {
@@ -1723,7 +1606,7 @@ function DirListRefresh()
                     let p2: any = {path:window["g_path"]+fl.name+"/"};
                     if(RootPath) p2.RootPath = RootPath;
                     if(RootUrl)     p2.RootUrl = RootUrl;
-                    CFecth.Exe("File/List",p2,"json").then((data : {"list","RootPath","path","RootUrl"})=>{
+                    CFecth.Exe(FileApiUrl("File/List"),p2,"json").then((data : {"list","RootPath","path","RootUrl"})=>{
                         //CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
                         CAlert.Info(window["g_path"]+fl.name+"추가");
                         
@@ -1853,7 +1736,7 @@ function DirListRefresh()
                             const fileName = filePath.split('/').pop();
                             const dirPath = window["g_root"] + window["g_path"];
                             const base64 = btoa(unescape(encodeURIComponent(bufStr)));
-                            CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
+                            CFecth.Exe(FileApiUrl("File/Upload"), { path: dirPath, name: [fileName], data: [base64] }).then(() => {
                                 CAlert.Info('저장 완료');
                             }).catch((e) => {
                                 CAlert.E('저장 실패: ' + e.message);
@@ -1876,7 +1759,7 @@ function DirListRefresh()
                     const dirPath = window["g_root"] + window["g_path"];
                     const base64 = btoa(unescape(encodeURIComponent(bufStr)));
                     console.log('Upload save', { path: dirPath, name: [fileName] });
-                    CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
+                    CFecth.Exe(FileApiUrl("File/Upload"), { path: dirPath, name: [fileName], data: [base64] }).then(() => {
                         CAlert.Info('저장 완료');
                     }).catch((e) => {
                         CAlert.E('저장 실패: ' + e.message);
@@ -1899,7 +1782,7 @@ function DirListRefresh()
                 new CSheetViewer([window["g_down"]+window["g_path"]+fl.name], async (filePath, base64) => {
                     const fileName = filePath.split('/').pop();
                     const dirPath = window["g_root"] + window["g_path"];
-                    CFecth.Exe("File/Upload", { path: dirPath, name: [fileName], data: [base64] }).then(() => {
+                    CFecth.Exe(FileApiUrl("File/Upload"), { path: dirPath, name: [fileName], data: [base64] }).then(() => {
                         CAlert.Info('저장 완료');
                     }).catch((e: any) => {
                         CAlert.E('저장 실패: ' + e.message);
@@ -1939,6 +1822,7 @@ function DirListRefresh()
 let path=CUtilWeb.Parameter("path");
 let RootPath=CUtilWeb.Parameter("RootPath");
 let RootUrl=CUtilWeb.Parameter("RootUrl");
+let g_fileWebRootUrl = CPath.WebRootUrl();
 
 let fileAuthed = !!localStorage.getItem(AI_TOKEN_KEY);
 
@@ -1949,19 +1833,112 @@ if(window["g_dirList"]!=null)
     DirListRefresh();
 }
 
-let fetchParam: any = {path:path};
-if(RootPath) fetchParam.RootPath = RootPath;
-if(RootUrl)     fetchParam.RootUrl = RootUrl;
+function NormalizeWebRootUrl(url: string): string {
+    return url.replace(/\/+$/, '') + '/';
+}
 
-CFecth.Exe("File/List",fetchParam,"json").then((data : {"list","RootPath","path","RootUrl","roots"})=>{
-    CStorage.Set(path==null?"root":path,JSON.stringify(data.list));
+function ResolveFileUrl(url?: string | null): string {
+    if (!url) return '';
+    if (url.startsWith("http://") || url.startsWith("https://")) return url.replace(/\/+$/, '');
+    return new URL(url, g_fileWebRootUrl).href.replace(/\/+$/, '');
+}
+
+function FileApiUrl(path: string): string {
+    return g_fileWebRootUrl + path.replace(/^\/+/, '');
+}
+
+function FileTokenKey(): string {
+    return `artgine.token:${g_fileWebRootUrl}`;
+}
+
+function GetFileToken(): string {
+    return localStorage.getItem(FileTokenKey()) || localStorage.getItem(AI_TOKEN_KEY) || '';
+}
+
+function SetFileToken(token: string) {
+    localStorage.setItem(FileTokenKey(), token);
+    localStorage.setItem(AI_TOKEN_KEY, token);
+}
+
+function SyncFileRoot(data: {RootPath?: string | null, RootUrl?: string | null, roots?: Array<{path:string,name:string,url?:string}>}) {
+    if (data.RootPath != null) RootPath = data.RootPath;
+    if (data.RootUrl != null) RootUrl = data.RootUrl;
+    window["g_root"]=(RootPath as string)?.replace(/\/+$/, '') ?? '';
+    window["g_down"]=ResolveFileUrl(RootUrl);
+    if (data.roots) window["g_roots"]=data.roots;
+}
+
+async function fileCheckAuth(): Promise<boolean> {
+    const token = GetFileToken();
+    if (!token) return false;
+    try {
+        const j = await CFecth.Exe(FileApiUrl("auth/check"), { token }, "json") as any;
+        return !!j?.authed;
+    } catch { return false; }
+}
+
+async function InitFileRoot() {
+    const rootParam: any = {};
+    if(RootPath) rootParam.RootPath = RootPath;
+    if(RootUrl)  rootParam.RootUrl = RootUrl;
+    const data = await CFecth.Exe(FileApiUrl("File/Root"), rootParam, "json") as {RootPath:string, RootUrl:string, roots:Array<{path:string,name:string,url?:string}>};
+    SyncFileRoot(data);
+}
+
+async function FetchFileList(_path) {
+    let fetchParam: any = {path:_path};
+    if(RootPath) fetchParam.RootPath = RootPath;
+    if(RootUrl)  fetchParam.RootUrl = RootUrl;
+    return await CFecth.Exe(FileApiUrl("File/List"), fetchParam, "json") as {"list","RootPath","path","RootUrl"};
+}
+
+async function LoadFileList(_path) {
+    const data = await FetchFileList(_path);
+    CStorage.Set(_path==null?"root":_path,JSON.stringify(data.list));
     window["g_dirList"]=data.list;
-    window["g_root"]=(data.RootPath as string)?.replace(/\/+$/, '') ?? '';
+    SyncFileRoot(data);
     window["g_path"]=data.path;
-    window["g_down"]=data.RootUrl;
-    window["g_roots"]=data.roots ?? [];
     DirListRefresh();
-});
+}
+
+function ParseFileHomeUrl(input: string): {webRootUrl:string, path:string, RootPath:string | null, RootUrl:string | null} {
+    const u = new URL(input);
+    const marker = "/proj/Home/Home.html";
+    const homeIdx = u.pathname.indexOf(marker);
+    const basePath = homeIdx >= 0 ? u.pathname.substring(0, homeIdx) : u.pathname;
+    return {
+        webRootUrl: NormalizeWebRootUrl(u.origin + (basePath || "/")),
+        path: u.searchParams.get("path") || "/",
+        RootPath: u.searchParams.get("RootPath"),
+        RootUrl: u.searchParams.get("RootUrl"),
+    };
+}
+
+async function ConnectFileHomeUrl(input?: string) {
+    if (!input) {
+        g_fileWebRootUrl = CPath.WebRootUrl();
+        RootPath = null;
+        RootUrl = null;
+        path = "/";
+    }
+    else {
+        const parsed = ParseFileHomeUrl(input);
+        g_fileWebRootUrl = parsed.webRootUrl;
+        RootPath = parsed.RootPath;
+        RootUrl = parsed.RootUrl;
+        path = parsed.path;
+    }
+
+    try {
+        await InitFileRoot();
+    } catch (err) {
+        throw err;
+    }
+    await LoadFileList(path);
+}
+window["ConnectFileHomeUrl"] = ConnectFileHomeUrl;
+
+ConnectFileHomeUrl(CUtilWeb.Parameter("FileHomeUrl") ?? undefined);
 
 
 
@@ -1977,15 +1954,10 @@ CFecth.Exe("File/List",fetchParam,"json").then((data : {"list","RootPath","path"
 function FolderCD(_path, _onDone?: () => void)
 {
     window["g_path"]=_path;
-    let p2: any = {path:_path};
-    if(RootPath) p2.RootPath = RootPath;
-    if(RootUrl)     p2.RootUrl = RootUrl;
-    CFecth.Exe("File/List",p2,"json").then((data : {"list","RootPath","path","RootUrl","roots"})=>{
+    FetchFileList(_path).then((data : {"list","RootPath","path","RootUrl"})=>{
         window["g_dirList"]=data.list;
-        window["g_root"]=(data.RootPath as string)?.replace(/\/+$/, '') ?? '';
+        SyncFileRoot(data);
         window["g_path"]=data.path;
-        window["g_down"]=data.RootUrl;
-        window["g_roots"]=data.roots ?? [];
         index=0;
         DirListRefresh();
         _onDone?.();
@@ -2003,7 +1975,7 @@ function Redirection(_multi : boolean)
     form.setAttribute("charset", "UTF-8");
     form.setAttribute("method", "Post");
     // 폼 전송도 같은 출처라 세션 쿠키가 자동 전송된다.
-    form.setAttribute("action", CPath.WebRootUrl()+"File/Redirection");
+    form.setAttribute("action", FileApiUrl("File/Redirection"));
 
     CDOM.IDValue("fun",g_fun);
     CDOM.IDValue("data",g_data);
@@ -2053,7 +2025,7 @@ CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
 async function FileBtn() {
     if (fileAuthed) {
         // 서버 토큰 유효성 검증 (서버 재시작 시 메모리 토큰 초기화됨)
-        const valid = await aiCheckAuth();
+        const valid = await fileCheckAuth();
         if (valid) {
             showFileAdminModal();
             return;
@@ -2065,9 +2037,9 @@ async function FileBtn() {
     dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
     const doAuth = () => {
         const pw = CDOM.IDValue("AuthPassword");
-        (CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
+        (CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
             if (j.ok) {
-                localStorage.setItem(AI_TOKEN_KEY, j.token!);
+                SetFileToken(j.token!);
                 fileAuthed = true;
                 aiAuthOverlay.style.display = 'none';
                 aiRefreshSessions();
@@ -2100,11 +2072,11 @@ window["PermissionBtn"] = FileBtn;
 function showFileAdminModal() {
     const uid = Date.now();
 
-    const _roots = (window["g_roots"] as Array<{path:string,url:string,name:string}>) ?? [];
+    const _roots = (window["g_roots"] as Array<{path:string,name:string,url?:string}>) ?? [];
     // 설정 루트(맵 + 안티앨리싱) 경로를 텍스트로 통합
-    const _opts = [..._roots, { path: "./", url: "/Artgine/", name: "Artgine (WorkingPath)" }];
+    const _opts: Array<{path:string,name:string,url?:string}> = [..._roots, { path: "./", name: "Artgine (WorkingPath)" }];
     // 현재 활성 항목 표시: RootPath+RootUrl 조합 매칭, 기본(미선택이면 첫 루트)
-    let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? '') && r.url === (RootUrl ?? ''));
+    let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? ''));
     if (_curIdx < 0) _curIdx = 0;
     const _rootOpts = _opts.map((r, i) => `<option value="${i}" ${i === _curIdx ? 'selected' : ''}>${r.name}</option>`).join('');
 
@@ -2113,8 +2085,13 @@ function showFileAdminModal() {
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetCloseToHide(false);
     modal.SetBody(`
-        <div class="d-flex flex-column gap-2 p-2" style="min-width:260px;min-height:420px;">
-            <select id="fadm_rootsel_${uid}" class="form-select form-select-sm">${_rootOpts}</select>
+        <div class="d-flex flex-column gap-2 p-2" style="width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+            <div class="d-flex gap-1 align-items-center">
+                <input type="text" class="form-control form-control-sm flex-shrink-0" id="fileHomeUrl" placeholder="Home.html URL" style="width:140px;min-width:0;flex:0 0 140px;">
+                <button type="button" class="btn btn-outline-primary btn-sm flex-shrink-0" id="fileHomeConnect_${uid}">Connect</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="fileHomeLocal_${uid}">Local</button>
+            </div>
+            <select id="fadm_rootsel_${uid}" class="form-select form-select-sm" style="width:100%;min-width:0;">${_rootOpts}</select>
             <hr class="my-0">
             <div class="d-flex gap-1">
                 <button id="fadm_chat_${uid}" class="btn btn-outline-primary flex-fill">Chat</button>
@@ -2159,11 +2136,38 @@ function showFileAdminModal() {
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-        const applyValues = (root: string, down: string) => {
-            RootPath = root || null;
-            RootUrl = down || null;
+        const fileHomeInput = document.getElementById("fileHomeUrl") as HTMLInputElement | null;
+        const connectBtn = document.getElementById(`fileHomeConnect_${uid}`);
+        const localBtn = document.getElementById(`fileHomeLocal_${uid}`);
+
+        // 접속(원격/로컬) 후 파일 매니저 창을 닫고, 새 접속지 권한을 다시 받도록 퍼미션 창을 띄운다.
+        const connectAndReauth = async (input?: string) => {
+            try {
+                await ConnectFileHomeUrl(input || undefined);
+            } catch (e: any) {
+                CAlert.E("Connect failed: " + (e?.message ?? String(e)));
+                return;
+            }
             modal.Close();
+            fileAuthed = false;
+            FileBtn();
+        };
+
+        connectBtn?.addEventListener('click', () => {
+            connectAndReauth(fileHomeInput?.value.trim() || undefined);
+        });
+        localBtn?.addEventListener('click', () => {
+            if (fileHomeInput) fileHomeInput.value = "";
+            connectAndReauth();
+        });
+
+        const applyValues = async (rootPath: string, rootUrl?: string) => {
+            SyncFileRoot({ RootPath: rootPath || null, RootUrl: rootUrl ?? null });
+            // 루트 리스트가 자기 url을 들고 오면 그대로 사용, 없으면(예: WorkingPath) 서버에서 받아온다.
+            if (!rootUrl) await InitFileRoot();
             FolderCD("/");
+            const fileTabEl = document.getElementById('file-tab') as HTMLElement;
+            if (fileTabEl) (window as any).bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
         };
 
         const rootSel = document.getElementById(`fadm_rootsel_${uid}`) as HTMLSelectElement | null;
@@ -2210,7 +2214,7 @@ function showFileAdminModal() {
 
         document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
         document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
-            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "update", path: vcsPath() }, "json") as any;
+            const res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "update", path: vcsPath() }, "json") as any;
             const revLine = res.revision ? `<br><b>Revision: ${res.revision}</b>` : '';
             const msgBody = res.msg ? res.msg.replace(/\n/g, '<br>') : (res.ok ? 'Update complete' : 'Update failed');
             CAlert.Info(msgBody + revLine);
@@ -2250,7 +2254,7 @@ function openActionModal(
                 ${hasMessage ? `<input id="am_msg_${uid}" type="text" class="form-control form-control-sm flex-fill" placeholder="Commit message...">` : ''}
                 <button id="am_refresh_${uid}" class="btn btn-outline-secondary btn-sm flex-shrink-0"><i class="bi bi-arrow-clockwise"></i></button>
             </div>` : hasMessage ? `<input id="am_msg_${uid}" type="text" class="form-control form-control-sm flex-shrink-0" placeholder="Commit message...">` : ''}
-            <div id="am_list_${uid}" class="border rounded p-1 flex-fill" style="overflow-y:auto;font-size:0.78rem;min-height:0;">
+            <div id="am_list_${uid}" class="border rounded p-1 flex-fill" style="overflow-y:auto;min-height:0;">
                 ${hasFetch ? '<span class="text-secondary">Loading...</span>' : ''}
             </div>
             <div class="d-flex gap-1 flex-shrink-0">
@@ -2274,10 +2278,10 @@ function openActionModal(
         currentItems = items;
         listEl.innerHTML = items.map((i, idx) => `
             <div class="d-flex align-items-center gap-1 py-1" data-action-idx="${idx}">
-                <input type="checkbox" class="form-check-input am-chk-${uid}" id="am_${uid}_${idx}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
+                <input type="checkbox" class="form-check-input am-chk-${uid}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
                 ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
                 ${i.icon  ? `<i class="bi ${i.icon}"></i>` : ''}
-                <label for="am_${uid}_${idx}" class="text-truncate mb-0 flex-fill" style="cursor:pointer;" title="${i.label}">${i.label}</label>
+                <span class="text-truncate mb-0 flex-fill" title="${i.label}">${i.label}</span>
             </div>`).join('');
         if (onItemDblClick) {
             listEl.querySelectorAll<HTMLElement>('[data-action-idx]').forEach(row => {
@@ -2340,13 +2344,13 @@ function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
         async (files, message) => {
             const param: any = { action, path, files };
             if (action === 'commit') param.message = message;
-            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", param, "json") as any;
+            const res = await CFecth.Exe(FileApiUrl("File/VCS"), param, "json") as any;
             if (res.ok) FolderCD(window["g_path"]);
             return { result: res.msg || (res.ok ? 'Done' : 'Failed'), refresh: res.ok };
         },
         action === 'commit',
         async () => {
-            const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "status", path }, "json") as any;
+            const res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "status", path }, "json") as any;
             if (!res.ok) return [];
             const items = res.items as {status: string, file: string}[];
             // SVN의 '?'(미버전) 파일은 svn add 전엔 커밋 대상이 아니므로 commit 목록에서 제외
@@ -2365,7 +2369,7 @@ function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
 async function openVcsDiff(filePath: string) {
     let res: any;
     try {
-        res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "diff", path: filePath }, "json");
+        res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "diff", path: filePath }, "json");
     } catch (e) {
         CAlert.Info("Diff request failed"); return;
     }
@@ -2409,7 +2413,7 @@ function openDeleteModal() {
             for (const name of names) {
                 const param: any = { data: window["g_path"] + name };
                 if (RootPath) param.RootPath = RootPath;
-                const res = await CFecth.Exe(CPath.WebRootUrl() + "File/Delete", param, "json") as any;
+                const res = await CFecth.Exe(FileApiUrl("File/Delete"), param, "json") as any;
                 lines.push(`${res.ok ? 'OK' : 'FAIL'} ${name}`);
             }
             FolderCD(window["g_path"]);
@@ -2433,7 +2437,7 @@ function CreateFolder()
         const data = window["g_path"] + folderName;
         const param: any = { data };
         if (RootPath) param.RootPath = RootPath;
-        const j = await CFecth.Exe(CPath.WebRootUrl() + "File/Mkdir", param, "json") as any;
+        const j = await CFecth.Exe(FileApiUrl("File/Mkdir"), param, "json") as any;
         if (j?.ok) FolderCD(window["g_path"]);
         else CAlert.E("폴더 생성 실패");
     },
@@ -2491,9 +2495,14 @@ async function FileSearch() {
         item.innerHTML =
             `<i class="bi ${icon} me-1"></i><strong>${fl.name}</strong>` +
             `<span class="text-muted ms-2" style="font-size:11px;">${dirPath}</span>`;
+        const switchToFileTab = () => {
+            const fileTabEl = document.getElementById('file-tab') as HTMLElement;
+            if (fileTabEl) (window as any).bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
+        };
         if (fl.file) {
             item.addEventListener('click', () => {
                 modal.Hide();
+                switchToFileTab();
                 FolderCD(dirPath, () => {
                     const els = document.querySelectorAll('#File_div .list-group-item');
                     for (const el of Array.from(els)) {
@@ -2502,7 +2511,7 @@ async function FileSearch() {
                 });
             });
         } else {
-            item.addEventListener('click', () => { FolderCD(dirPath + fl.name + '/'); modal.Hide(); });
+            item.addEventListener('click', () => { FolderCD(dirPath + fl.name + '/'); switchToFileTab(); });
         }
         return item;
     };
@@ -2534,18 +2543,10 @@ async function FileSearch() {
         searchCancelled = false;
         btn.disabled = true;
         stopBtn.style.display = '';
+        results.innerHTML = '';
+        status.textContent = 'Scanning...';
+        let found = 0;
 
-        // startPath 하위 캐시가 있으면 즉시 표시
-        const hasCached = [...g_srchCache.keys()].some(k => k.startsWith(startPath));
-        if (hasCached) {
-            const n = renderFromCache(startPath, query);
-            status.textContent = `(Cached: ${n}) Refreshing...`;
-        } else {
-            results.innerHTML = '';
-            status.textContent = 'Scanning...';
-        }
-
-        // 최신 스캔 — 완료 후 캐시 업데이트 & 결과 교체
         const queue: string[] = [startPath];
         while (queue.length > 0 && !searchCancelled) {
             const dirPath = queue.shift()!;
@@ -2553,22 +2554,21 @@ async function FileSearch() {
             try {
                 let p2: any = { path: dirPath };
                 if (RootPath) p2.RootPath = RootPath;
-                if (RootUrl)     p2.RootUrl     = RootUrl;
-                const data = await CFecth.Exe("File/List", p2, "json") as { list: Array<SrchFile> };
+                if (RootUrl)  p2.RootUrl  = RootUrl;
+                const data = await CFecth.Exe(FileApiUrl("File/List"), p2, "json") as { list: Array<SrchFile> };
                 g_srchCache.set(dirPath, data.list);
                 for (const fl of data.list) {
                     if (!fl.hidden && !fl.file && !isSearchExcluded(fl.name)) queue.push(dirPath + fl.name + '/');
+                    if (!fl.hidden && fl.name.toLowerCase().includes(query) && found < 200) {
+                        results.appendChild(makeItem(fl, dirPath));
+                        found++;
+                    }
                 }
             } catch (_) {}
         }
 
-        if (!searchCancelled) {
-            const n = renderFromCache(startPath, query);
-            const cap = n >= 200 ? ' (capped at 200)' : '';
-            status.textContent = n === 0 ? 'No results.' : `${n} result(s)${cap}`;
-        } else {
-            status.textContent = 'Stopped.';
-        }
+        const cap = found >= 200 ? ' (capped at 200)' : '';
+        status.textContent = searchCancelled ? `Stopped. (${found} result(s))` : found === 0 ? 'No results.' : `${found} result(s)${cap}`;
         btn.disabled = false;
         stopBtn.style.display = 'none';
     };
@@ -2643,7 +2643,7 @@ CDOM.ID("uploadBtn").onchange=async (e)=>{
         try {
             const name=fi.files[i].name;
             const data=await readAsBase64(fi.files[i]);
-            await CFecth.Exe("File/Upload",{data:[data],name:[name],path});
+            await CFecth.Exe(FileApiUrl("File/Upload"),{data:[data],name:[name],path});
         } catch(err: any) {
             CAlert.E('Upload failed: ' + (err?.message ?? String(err)));
             return;
@@ -2739,6 +2739,12 @@ let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
 
 // CDOM.ID("main").innerHTML="";
 //     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
+
+
+
+
 
 
 
