@@ -1,0 +1,113 @@
+## Introduction
+Artgine is a 2D/3D content engine and an integrated development environment built with Electron and web technologies. It combines web‑based graphics rendering with the convenience of a desktop app, so you can build interactive content and games without complex setup.
+
+> Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-ko.md)**
+
+
+## Demo
+
+[Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
+
+
+
+
+
+## Getting Started
+
+[Guide](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
+
+- Run `start.bat` (Windows) or `start.sh` (Linux).  
+  💡 You may see an **“Unknown publisher”** warning.
+- Or run the following in your console:
+```bash
+git clone https://github.com/06fs4dix/Artgine.git
+cd Artgine
+npm install
+npm start
+```
+To run **only the server**, use `npm run start_web` instead of `npm start`.
+
+### Folder Overview
+```
+├── README.md
+├── LICENSE.txt
+├── NOTICE.txt
+├── package.json
+├── start.bat       (Windows launch script)
+├── start.sh        (Linux launch script)
+├── tsconfig.json
+├── App/            (Electron files)
+├── artgine/        (Engine files)
+├── db/             (Database storage path)
+├── plugin/
+└── proj/           (Project files)
+```
+> 🚫 Do **not** place your project folder above the working directory.
+
+### Electron
+
+![Artgine App](https://06fs4dix.github.io/Artgine/help/Artgine.png)
+
+**Tabs**
+- **App**: Application run settings
+- **Preference**: Project configuration
+- **Include**: Project include file settings
+- **Manifest**: PWA configuration
+- **ServiceWorker**: Cache settings
+- **Plugin**: External libraries for Artgine
+  
+**App Tab**
+- **url**: The web server address to run  
+  - Example: `http://localhost:8050/Artgine`
+- **projectPath**: Project to launch  
+  - Example: `proj/Tutorial/ShaderEditer`
+- Use the **Folder** button to browse and select a project directory.
+- **width, height**: Initial window size  
+  - Example: `1024 x 768`  
+  - Note: Preserved only when running as an `.exe`.
+
+**Program Modes**
+- **program**: App role  
+  - `developer`: Developer mode (do **not** distribute; server and client are applied together)
+  - `client`: Client mode
+  - `server`: Web server mode
+
+**Server Configuration**
+- **server**: Server operation mode  
+  - `local`: File‑based local run
+  - `remote`: Connect to an external server
+  - `webserver`: Host a web server (allow external access)
+
+**Display Options**
+- **fullScreen**: Fullscreen mode
+- **github**: Run using the GitHub library  
+  - Creates a local Chrome launcher (.bat) in the project
+
+**Actions**
+- **Run**: Launch the application
+- **VSCode**: Open in Visual Studio Code
+
+### Running a Project
+1. In **projectPath**, click **Folder** and select a folder under `proj`.
+2. Click **Run (F9)** or use the shortcut to load the project.
+
+## Coding
+
+When running as an Electron app:  
+> 💡 **Note**: If you’re working manually, you’re free to edit your code.
+
+> 🚫 The following files are **auto‑generated and managed** based on **[Project Name]**. Edit with care:
+- **[Project Name]** HTML files
+- **[Project Name]** TypeScript files
+- **[Project Name]** JSON files
+- **[Project Name]** Web Manifest files
+
+**📝 What you can safely edit**  
+Only edit code **after the `EntryPoint`**. Example:
+```js
+// The content above this line is automatically set by the program. Do not modify. ⬆✋🚫⬆☠️💥🔥
+// EntryPoint
+// You can edit from here.
+```
+
+Avoid modifying auto‑generated code.
