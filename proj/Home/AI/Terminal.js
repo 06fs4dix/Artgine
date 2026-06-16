@@ -59,7 +59,7 @@ function showAuth(msg = '') {
 function enterTerminal() {
     authScreen.style.setProperty('display', 'none', 'important');
     termScreen.style.display = 'block';
-    const q = new URLSearchParams({ token: authToken, mode: _modeParam });
+    const q = new URLSearchParams({ mode: _modeParam });
     if (_keyParam)
         q.set('key', _keyParam);
     if (_workingDirParam)
@@ -108,7 +108,7 @@ function init() {
     })
         .then(r => r.json())
         .then((j) => {
-        if (j.ok) {
+        if (j.authed) {
             authToken = savedToken;
             enterTerminal();
         }

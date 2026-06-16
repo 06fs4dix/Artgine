@@ -67,7 +67,7 @@ function showAuth(msg: string = '') {
 function enterTerminal() {
     authScreen.style.setProperty('display', 'none', 'important');
     termScreen.style.display = 'block';
-    const q = new URLSearchParams({ token: authToken!, mode: _modeParam });
+    const q = new URLSearchParams({ mode: _modeParam });
     if (_keyParam)        q.set('key', _keyParam);
     if (_workingDirParam) q.set('workingDir', _workingDirParam);
     if (_allowParam)      q.set('allow', _allowParam);
@@ -111,7 +111,7 @@ function init() {
     })
     .then(r => r.json())
     .then((j: any) => {
-        if (j.ok) {
+        if (j.authed) {
             authToken = savedToken;
             enterTerminal();
         } else {

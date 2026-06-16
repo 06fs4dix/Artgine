@@ -187,16 +187,16 @@ export class CPalette
 		this.mMCI2D=mesh.meshTree.mData.ci;
 		CUtilRender.MeshBoundUpdate(mesh);
 		
-		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(100),this.GetBlackTex());
+		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetBox(0.5),this.GetBlackTex());
 		_fw.Res().Push(this.GetBoxMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
 
-		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetDevBox(100),this.GetBlackTex());
+		var mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetDevBox(0.5),this.GetBlackTex());
 		_fw.Res().Push(this.GetDevBoxMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
 	
 		//mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphereUVEach(100, 32),this.GetBlackTex());
-		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(100,100,100),16,16,100,100),this.GetBlackTex());
+		mesh = CUtilRender.CMeshCreateInfoToCMesh(CUtilRender.GetSphere(new CVec3(0.5,0.5,0.5),16,16,100,100),this.GetBlackTex());
 		_fw.Res().Push(this.GetSphereMesh(), mesh);
 		CUtilRender.MeshBoundUpdate(mesh);
 		

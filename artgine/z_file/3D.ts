@@ -33,6 +33,7 @@ import {
 	Sam2DArrMat,
 	Sam2DArrToMat,
 	Sam2DArrToV4,
+    V3MulMatCoordi,
 	
 } from "./Shader"
 import {
@@ -620,12 +621,11 @@ function ps_main()
 	));
 
 	// depth offset 적용
-	screenDepth = screenPos.z;
 	if(parallaxNormal > 0.0001) {
 		ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
 		screenDepth = SDF.ClipControl > 0
-			? clamp(1.0 + (screenPos.z - 1.0) * ratio, 0.0, 1.0)
-			: clamp((1.0 + ((screenPos.z * 2.0 - 1.0) - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
+			? clamp(screenPos.z * ratio, 0.0, 1.0)
+			: clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
 	}
 
 	BranchEnd();
@@ -705,14 +705,40 @@ function ps_main()
 function ps_main_gBuffer() 
 {
 	var uv : CVec2 = to_uv;
+
+    var world : CVec4 = to_worldPos;
+    var view : CVec4 = to_viewPos;
+
+    var uvh : CVec3;
+    var ratio : number;
 	BranchBegin("parallax","P",[parallaxNormal,camPos]);
-	uv = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref).xy;
+	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, to_worldPos, camPos, to_ref);
+    uv = uvh.xy;
+
+	world.xyz = V3SubV3(world.xyz, V3MulFloat(
+		V3Nor(V3SubV3(camPos, world.xyz)), 
+		V3Len(new CVec3(V2SubV2(uvh.xy,to_uv), parallaxNormal * uvh.z)) / max(
+			length(abs(dFdx(to_uv))) / length(dFdx(world.xyz)),
+			length(abs(dFdy(to_uv))) / length(dFdy(world.xyz))
+		)
+	));
+
+    view.xyz = V4MulMatCoordi(world, viewMat).xyz;
+
+	// depth offset 적용
+	if(parallaxNormal > 0.0001) {
+		ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
+		screenDepth = SDF.ClipControl > 0
+			? clamp(screenPos.z * ratio, 0.0, 1.0)
+			: clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
+	}
+
 	BranchEnd();
 
 	var L_cor : CVec4;
 
 	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
-	L_cor=VFXDown2(uv,VFX,time,to_worldPos);
+	L_cor=VFXDown2(uv,VFX,time,world);
 	BranchDefault();
 	if(sam2DCount == 1.0)
 		L_cor = Sam2DToColor(0.0, uv);
@@ -731,7 +757,7 @@ function ps_main_gBuffer()
 	if ( L_cor.a <= 0.01 ) discard;
 
     // 0 position
-	out_pos = new CVec4(to_viewPos.xyz, 1.0);
+	out_pos = new CVec4(view.xyz, 1.0);
 
 	// 1 normal
 	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);
@@ -885,17 +911,17 @@ function ps_main_shadow_read()
 
 	var uv : CVec2 = to_uv;
 	var uvh : CVec3;
+    var ratio : number;
 
 	var pAll : number = 1.0;
-	var worldLigDir : CVec4;
-	var worldNormal : CVec4;
+	var tangentLigDir : CVec4;
+	var tangentNormal : CVec4;
 
 	BranchBegin("parallax","P",[parallaxNormal, camPos]);
 
 	// 패럴렉스 uv, 높이 계산
 	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, world, camPos, to_ref);
 	uv = uvh.xy;
-
 
 	world.xyz = V3SubV3(world.xyz, V3MulFloat(
 		V3Nor(V3SubV3(camPos, world.xyz)), 
@@ -905,22 +931,29 @@ function ps_main_shadow_read()
 		)
 	));
 
-	worldNormal = Sam2DToColor(to_ref.y, uv);
-	worldNormal.xyz = MappingTexToV3(worldNormal.xyz);
-	worldNormal.y = -worldNormal.y;
+	// depth offset 적용
+	if(parallaxNormal > 0.0001) {
+		ratio = V3Dot(V3SubV3(to_worldPos.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2]))) / V3Dot(V3SubV3(world.xyz, camPos), V3Nor(new CVec3(viewMat[0][2], viewMat[1][2], viewMat[2][2])));
+		screenDepth = SDF.ClipControl > 0
+			? clamp(screenPos.z * ratio, 0.0, 1.0)
+			: clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
+	}
+
+	tangentNormal = Sam2DToColor(to_ref.y, uv);
+	tangentNormal.xyz = MappingTexToV3(tangentNormal.xyz);
+	// tangentNormal.y = -tangentNormal.y;
 
 	pAll = 0.0;
 	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		worldLigDir = Sam2DArrToV4(ligDir, Sam2DArrToV4(shadowReadList,IntToFloat(i)).x);
+		tangentLigDir = Sam2DArrToV4(ligDir, Sam2DArrToV4(shadowReadList,IntToFloat(i)).x);
+        tangentLigDir.xyz = V3MulMat3Normal(V3Nor(tangentLigDir.xyz), TransposeMat3(V3ToMat3(to_tangent, to_binormal, to_normal))).xyz; // ligDir을 tangent space로 변환
 
 		// 디렉셔널 라이팅이고, 라이팅을 받는 영역임
-		if(worldLigDir.w < 1.5) {
-			// ligDir을 tangent space로 변환
-			worldLigDir.xyz = V3MulMat3Normal(V3Nor(worldLigDir.xyz), TransposeMat3(V3ToMat3(to_tangent, to_binormal, to_normal))).xyz;
-			if(V3Dot(worldNormal.xyz, worldLigDir.xyz) > 0.0) {
-				pAll += calcParallaxShadow(to_ref.y, uv, worldLigDir.xyz, parallaxNormal);
-			}
-			else {	// 빛 방향과 반대면임
+		if(tangentLigDir.w < 1.5) {
+			if(tangentLigDir.z > 0.0 && V3Dot(tangentNormal.xyz, tangentLigDir.xyz) > 0.0) {
+				pAll += calcParallaxShadow(to_ref.y, uv, tangentLigDir.xyz, parallaxNormal);
+			} 
+            else {	// 빛 방향과 반대면임
 				pAll += shadowRate;	
 			}
 		}

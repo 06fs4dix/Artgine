@@ -117,7 +117,7 @@ Build("Artgine/Shader/2DBlit",["blit"],vs_main_blit,[
 
 function vs_main_blit(f3_ver : Vertex3, f2_uv : UV2)
 {
-	out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
+	out_position = new CVec4(V2MulFloat(f3_ver.xy, 2.0), 1.0, 1.0);
 	to_uv = new CVec3(f2_uv, 1.0);
 }
 function ps_main_blit()
@@ -360,7 +360,7 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
     size = V3Abs(f3_sca);
     BranchDefault();
     isVertexTop = f2_uv.y > 0.5 ? 1.0 : 0.0;
-    size = new CVec3(V3Len(wMat[0].xyz)*10.0,V3Len(wMat[1].xyz)*10.0,0.0);
+    size = new CVec3(V3Len(wMat[0].xyz)*1.0,V3Len(wMat[1].xyz)*1.0,0.0);
     BranchEnd();
     
 	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);

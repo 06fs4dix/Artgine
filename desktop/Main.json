@@ -4,7 +4,7 @@
   "fullScreen": false,
   "program": "developer",
   "url": "http://localhost:8050/Artgine",
-  "projectPath": "proj/AI/Shooting",
+  "projectPath": "proj/Home",
   "page": "html",
   "server": "webServer",
   "github": false,
@@ -12,6 +12,6 @@
   "password": "artgine",
   "rootPath": [
     "./",
-    "C:\\Users\\JHPC\\Desktop\\git"
+    "E:/"
   ]
 }

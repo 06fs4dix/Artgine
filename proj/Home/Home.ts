@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqczbbe7_2";
+gPF.mVersion = "mqex2tpd_11";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -132,21 +132,9 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
 }
 
 // ---- AI tab: session list ----
+// 토큰은 로그인 시 저장해두는 relog 자격증명일 뿐이며, 일반 요청 인증은
+// 같은 출처(same-origin) fetch가 자동 전송하는 세션 쿠키로 처리된다.
 const AI_TOKEN_KEY = 'artgine.token';
-
-// 모든 fetch에 AI 토큰 자동 첨부 → File/AI/Terminal 인증 공유
-{
-    const _origFetch = window.fetch.bind(window);
-    (window as any).fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
-        const token = localStorage.getItem(AI_TOKEN_KEY) || '';
-        if (token) {
-            const headers = new Headers((init.headers as HeadersInit) || {});
-            if (!headers.has('x-ai-token')) headers.set('x-ai-token', token);
-            init = { ...init, headers };
-        }
-        return _origFetch(input, init);
-    };
-}
 
 const aiFrameContainer = CDOM.ID("ai-frame-container") as HTMLDivElement;
 const aiSessionList = CDOM.ID("aiSessionList");
@@ -157,6 +145,7 @@ let aiInited = false;
 // key 규칙: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
 const iframePool = new Map<string, HTMLIFrameElement>();
 let activeFrameKey: string | null = null;
+let activeBrowserSid: string | null = null;
 let pendingNewSid: string | null = null; // 서버에 아직 없는 새 세션 (첫 메시지 전)
 
 let _activeNotifCallback: (() => void) | null = null;
@@ -265,6 +254,9 @@ function showFrame(key: string, src: string): HTMLIFrameElement {
         aiFrameContainer.appendChild(f);
         iframePool.set(key, f);
     }
+    // 브라우저 패널이 열려 있으면 닫기
+    document.querySelectorAll<HTMLElement>('.browser-panel').forEach(p => { p.style.display = 'none'; });
+    activeBrowserSid = null;
     if (activeFrameKey && activeFrameKey !== key) {
         const prev = iframePool.get(activeFrameKey);
         if (prev) prev.style.display = 'none';
@@ -312,10 +304,8 @@ function uuidv4(): string {
 }
 
 function aiAuthedFetch(url: string, init?: RequestInit): Promise<Response> {
-    const token = localStorage.getItem(AI_TOKEN_KEY) || '';
-    const headers = new Headers((init?.headers as HeadersInit) || {});
-    if (token) headers.set('x-ai-token', token);
-    return fetch(url, { ...init, headers });
+    // 세션 쿠키로 인증되므로 토큰을 별도로 첨부하지 않는다.
+    return fetch(url, init);
 }
 
 function aiFormatRelative(ts?: number): string {
@@ -537,10 +527,8 @@ function syncSessState(id: string, cur: SessState, onDone: () => void, onWait?: 
 
 
 function termAuthedFetch(url: string, init?: RequestInit): Promise<Response> {
-    const token = localStorage.getItem(CMD_TOKEN_KEY) || '';
-    const headers = new Headers((init?.headers as HeadersInit) || {});
-    if (token) headers.set('x-cmd-token', token);
-    return fetch(url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token), { ...init, headers });
+    // 세션 쿠키로 인증되므로 토큰을 별도로 첨부하지 않는다.
+    return fetch(url, init);
 }
 
 async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' = 'cmd', initialWorkingDir?: string) {
@@ -1258,7 +1246,7 @@ async function aiCheckAuth(): Promise<boolean> {
     if (!token) return false;
     try {
         const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token }, "json") as any;
-        return !!j?.ok;
+        return !!j?.authed;
     } catch { return false; }
 }
 
@@ -1307,6 +1295,335 @@ aiAuthPwInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 
 // 서브탭 전환 시 해당 리스트 갱신
 CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
 CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
+CDOM.ID("ai-browser-subtab").addEventListener("shown.bs.tab", () => browserRefreshList());
+
+// ---- Browser tab: Playwright sessions ----
+const browserNewBtn      = CDOM.ID("browserNewBtn") as HTMLButtonElement;
+const browserSessionList = CDOM.ID("browserSessionList") as HTMLDivElement;
+
+interface IBrowserSession {
+    sessionId: string;
+    url: string;
+    browserName: string;
+    expiresAt: number;
+    sidebarEl: HTMLDivElement;
+    ttlEl: HTMLSpanElement;
+    panelEl: HTMLDivElement;
+    imgEl: HTMLImageElement;
+    logEl: HTMLDivElement;
+    timer: number | null;
+    pollMs: number;
+    inputMode: boolean;
+}
+
+const browserSessions = new Map<string, IBrowserSession>();
+const BROWSER_POLL_MS = 3000;
+
+setInterval(() => {
+    for (const s of browserSessions.values()) {
+        s.ttlEl.textContent = browserFmtTtl(s.expiresAt);
+    }
+}, 1000);
+
+function browserBufToDataUrl(buf: { type: string; data: number[] }): string {
+    const bytes = new Uint8Array(buf.data);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return 'data:image/png;base64,' + btoa(bin);
+}
+
+function browserShowPanel(sessionId: string) {
+    // 채팅/터미널 iframe 숨기기
+    if (activeFrameKey) {
+        iframePool.get(activeFrameKey)?.style.setProperty('display', 'none');
+        activeFrameKey = null;
+    }
+    // 패널 show/hide + 사이드바 하이라이트 + dot 색상
+    for (const [sid, s] of browserSessions) {
+        const isActive = sid === sessionId;
+        s.panelEl.style.display = isActive ? 'flex' : 'none';
+        s.sidebarEl.classList.toggle('bg-primary-subtle', isActive);
+        const dot = s.sidebarEl.querySelector<HTMLElement>('.browser-dot');
+        if (dot) {
+            dot.classList.toggle('text-success', isActive);
+            dot.classList.toggle('text-danger', !isActive);
+        }
+    }
+    activeBrowserSid = sessionId;
+}
+
+async function browserPoll(sessionId: string) {
+    const s = browserSessions.get(sessionId);
+    if (!s) return;
+
+    if (document.hasFocus() && activeBrowserSid === sessionId) {
+        try {
+            const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, fn: 'screenshot', args: [] })
+            });
+            const j = await r.json();
+            if (j.ok && j.result?.type === 'Buffer') {
+                s.imgEl.src = browserBufToDataUrl(j.result);
+            }
+            if (j.logs?.length) {
+                for (const l of j.logs as { type: string; text: string }[]) {
+                    const div = document.createElement('div');
+                    div.className = (l.type === 'error' || l.type === 'network') ? 'text-danger' : '';
+                    div.textContent = `[${l.type}] ${l.text}`;
+                    s.logEl.appendChild(div);
+                }
+                s.logEl.scrollTop = s.logEl.scrollHeight;
+            }
+        } catch {}
+    }
+
+    s.timer = window.setTimeout(() => browserPoll(sessionId), s.pollMs);
+}
+
+function browserFmtTtl(expiresAt: number): string {
+    const rem = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+    if (rem <= 0) return '−0s';
+    const m = Math.floor(rem / 60);
+    const s = rem % 60;
+    return m > 0 ? `−${m}m${s}s` : `−${s}s`;
+}
+
+function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0) {
+    if (browserSessions.has(sessionId)) return;
+
+    // 사이드바 아이템 (2줄: URL + 브라우저명 / TTL)
+    const sidebarEl = document.createElement('div') as HTMLDivElement;
+    sidebarEl.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded';
+    sidebarEl.innerHTML = `
+        <span class="browser-dot text-danger small flex-shrink-0">●</span>
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            <span class="text-truncate small" title="${aiEscapeHtml(url)}">${aiEscapeHtml(url)}</span>
+            <span class="d-flex gap-2 text-secondary" style="font-size:0.7rem;">
+                <span>${aiEscapeHtml(browserName || 'auto')}</span>
+                <span class="browser-ttl-label"></span>
+            </span>
+        </span>
+        <button class="browser-close-btn btn btn-sm btn-link text-secondary p-0"><i class="bi bi-x-lg"></i></button>
+    `;
+    const ttlEl = sidebarEl.querySelector<HTMLSpanElement>('.browser-ttl-label')!;
+    sidebarEl.addEventListener('click', () => browserShowPanel(sessionId));
+    sidebarEl.querySelector('.browser-close-btn')!.addEventListener('click', (e: Event) => {
+        e.stopPropagation();
+        browserRemoveSession(sessionId);
+    });
+    sidebarEl.addEventListener('mouseenter', () => { if (activeBrowserSid !== sessionId) sidebarEl.classList.add('bg-body-secondary'); });
+    sidebarEl.addEventListener('mouseleave', () => sidebarEl.classList.remove('bg-body-secondary'));
+    browserSessionList.appendChild(sidebarEl);
+
+    // 센터 패널
+    const panelEl = document.createElement('div') as HTMLDivElement;
+    panelEl.className = 'browser-panel';
+    panelEl.style.cssText = 'position:absolute;inset:0;display:none;flex-direction:column;';
+    panelEl.innerHTML = `
+        <div class="d-flex align-items-center gap-2 px-3 flex-shrink-0" style="height:36px;background:#1e1e1e;border-bottom:1px solid #333;font-size:0.75rem;color:#aaa;">
+            <span>갱신</span>
+            <input type="range" class="browser-rate-slider form-range" min="0.1" max="10" step="0.1" value="3" style="width:120px;">
+            <span class="browser-rate-label">3s</span>
+            <span class="ms-3">인풋 모드</span>
+            <input type="checkbox" class="browser-click-toggle form-check-input ms-1">
+        </div>
+        <div class="browser-img-wrap" style="flex:1;min-height:0;background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;">
+            <img class="browser-screenshot" style="max-width:100%;max-height:100%;object-fit:contain;" alt="" />
+        </div>
+        <div class="browser-logs overflow-auto p-2 font-monospace d-flex flex-column" style="height:200px;font-size:0.75rem;background:#1a1a1a;color:#aaa;border-top:1px solid #333;flex-shrink:0;"></div>
+    `;
+    const imgEl    = panelEl.querySelector<HTMLImageElement>('.browser-screenshot')!;
+    const logEl    = panelEl.querySelector<HTMLDivElement>('.browser-logs')!;
+    const slider   = panelEl.querySelector<HTMLInputElement>('.browser-rate-slider')!;
+    const rateLabel = panelEl.querySelector<HTMLSpanElement>('.browser-rate-label')!;
+    const clickToggle = panelEl.querySelector<HTMLInputElement>('.browser-click-toggle')!;
+
+    aiFrameContainer.appendChild(panelEl);
+
+    const session: IBrowserSession = {
+        sessionId, url, browserName, expiresAt,
+        sidebarEl, ttlEl, panelEl, imgEl, logEl,
+        timer: null, pollMs: 3000, inputMode: false,
+    };
+    browserSessions.set(sessionId, session);
+
+    // 슬라이더: 갱신 속도 (0.5s 단위)
+    slider.addEventListener('input', () => {
+        const s = parseFloat(slider.value);
+        session.pollMs = s * 1000;
+        rateLabel.textContent = `${s}s`;
+    });
+
+    // 인풋 모드 토글
+    clickToggle.addEventListener('change', () => {
+        session.inputMode = clickToggle.checked;
+        imgWrap.tabIndex = clickToggle.checked ? 0 : -1;
+        if (clickToggle.checked) imgWrap.focus();
+    });
+
+    const imgWrap = panelEl.querySelector<HTMLDivElement>('.browser-img-wrap')!;
+    imgWrap.tabIndex = -1;
+    imgWrap.style.outline = 'none';
+
+    // 키보드 이벤트 → playwright keyboard
+    imgWrap.addEventListener('keydown', async (e: KeyboardEvent) => {
+        if (!session.inputMode) return;
+        e.preventDefault();
+        const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
+        try {
+            await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, fn, args: [e.key] })
+            });
+        } catch {}
+    });
+
+    // 이미지 클릭 → mouse.click + ripple 애니메이션
+    imgEl.addEventListener('click', async (e: MouseEvent) => {
+        if (!session.inputMode) return;
+        if (session.inputMode) imgWrap.focus();
+        const rect   = imgEl.getBoundingClientRect();
+        const natW   = imgEl.naturalWidth;
+        const natH   = imgEl.naturalHeight;
+        if (!natW || !natH) return;
+        const scale  = Math.min(rect.width / natW, rect.height / natH);
+        const dispW  = natW * scale;
+        const dispH  = natH * scale;
+        const ox     = (rect.width  - dispW) / 2;
+        const oy     = (rect.height - dispH) / 2;
+        const cx     = Math.round((e.clientX - rect.left - ox) / scale);
+        const cy     = Math.round((e.clientY - rect.top  - oy) / scale);
+        if (cx < 0 || cy < 0 || cx > natW || cy > natH) return;
+
+        // ripple 표시 (클릭한 화면 좌표 기준)
+        const wrapRect = imgWrap.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        ripple.style.cssText = `
+            position:absolute;
+            left:${e.clientX - wrapRect.left}px;
+            top:${e.clientY - wrapRect.top}px;
+            width:24px;height:24px;
+            margin:-12px 0 0 -12px;
+            border-radius:50%;
+            border:2px solid #000;
+            background:rgba(255,120,0,0.5);
+            box-shadow:0 0 0 1.5px #ff7800;
+            pointer-events:none;
+            animation:browser-ripple 0.5s ease-out forwards;
+        `;
+        imgWrap.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 500);
+
+        try {
+            await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, fn: 'mouse.click', args: [cx, cy] })
+            });
+        } catch {}
+    });
+
+    browserShowPanel(sessionId);
+    browserPoll(sessionId);
+}
+
+async function browserRemoveSession(sessionId: string) {
+    const s = browserSessions.get(sessionId);
+    if (!s) return;
+    if (s.timer !== null) { clearTimeout(s.timer); s.timer = null; }
+    s.sidebarEl.remove();
+    s.panelEl.remove();
+    browserSessions.delete(sessionId);
+    if (activeBrowserSid === sessionId) activeBrowserSid = null;
+    try {
+        await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/remove`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId })
+        });
+    } catch {}
+}
+
+async function browserRefreshList() {
+    try {
+        const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/list`);
+        const j = await r.json();
+        if (!j.ok) return;
+        const serverIds = new Set<string>((j.sessions as { sessionId: string; url: string }[]).map(s => s.sessionId));
+        for (const [sid] of browserSessions) {
+            if (!serverIds.has(sid)) browserRemoveSession(sid);
+        }
+        for (const s of j.sessions as { sessionId: string; currentUrl: string; browserName: string; expiresAt: number }[]) {
+            browserAddSession(s.sessionId, s.currentUrl, s.browserName, s.expiresAt);
+        }
+    } catch {}
+}
+
+browserNewBtn.addEventListener('click', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">새 브라우저 세션</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">URL</label>
+            <input id="brow-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-2">
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Browser</label>
+                <select id="brow-browser" class="form-select form-select-sm">
+                    <option value="">auto</option>
+                    <option value="chrome">chrome</option>
+                    <option value="msedge">msedge</option>
+                    <option value="firefox">firefox</option>
+                </select>
+            </div>
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">TTL (sec)</label>
+                <input id="brow-ttl" type="number" min="10" class="form-control form-control-sm" value="300">
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="brow-open" class="btn btn-primary">Open</button>
+            <button id="brow-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(() => {
+        const urlInput   = container.querySelector<HTMLInputElement>('#brow-url')!;
+        const browserSel = container.querySelector<HTMLSelectElement>('#brow-browser')!;
+        const ttlInput   = container.querySelector<HTMLInputElement>('#brow-ttl')!;
+
+        const doOpen = async () => {
+            const url = urlInput.value.trim();
+            if (!url) return;
+            const browser = browserSel.value;
+            const ttl = parseInt(ttlInput.value) || 300;
+            modal.Close();
+            try {
+                const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200 })
+                });
+                const j = await r.json();
+                if (!j.ok) { CAlert.E(j.msg || 'Failed'); return; }
+                browserAddSession(j.sessionId, url, browser || 'auto', Date.now() + ttl * 1000);
+            } catch { CAlert.E('Failed to start browser'); }
+        };
+
+        container.querySelector<HTMLButtonElement>('#brow-open')!.addEventListener('click', doOpen);
+        container.querySelector<HTMLButtonElement>('#brow-cancel')!.addEventListener('click', () => modal.Close());
+        urlInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') doOpen(); });
+        setTimeout(() => urlInput.focus(), 50);
+    }, 100);
+});
 
 function showAiTermSubtab() {
     const termSubEl = CDOM.ID("ai-term-subtab") as HTMLElement;
@@ -1685,9 +2002,8 @@ function Redirection(_multi : boolean)
     var form = CDOM.ID("ThisPage") as HTMLFormElement;
     form.setAttribute("charset", "UTF-8");
     form.setAttribute("method", "Post");
-    const _token = localStorage.getItem(AI_TOKEN_KEY) || '';
-    const _tokenQ = _token ? `?token=${encodeURIComponent(_token)}` : '';
-    form.setAttribute("action", CPath.WebRootUrl()+"File/Redirection"+_tokenQ);
+    // 폼 전송도 같은 출처라 세션 쿠키가 자동 전송된다.
+    form.setAttribute("action", CPath.WebRootUrl()+"File/Redirection");
 
     CDOM.IDValue("fun",g_fun);
     CDOM.IDValue("data",g_data);
@@ -1774,6 +2090,7 @@ async function FileBtn() {
             if (e.key !== 'Enter') return;
             e.preventDefault();
             doAuth();
+            dlg.Close();
         });
     }, 80);
 }
@@ -1894,7 +2211,9 @@ function showFileAdminModal() {
         document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
         document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
             const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "update", path: vcsPath() }, "json") as any;
-            CAlert.Info(res.msg || (res.ok ? 'Update complete' : 'Update failed'));
+            const revLine = res.revision ? `<br><b>Revision: ${res.revision}</b>` : '';
+            const msgBody = res.msg ? res.msg.replace(/\n/g, '<br>') : (res.ok ? 'Update complete' : 'Update failed');
+            CAlert.Info(msgBody + revLine);
             if (res.ok) FolderCD(window["g_path"]);
         });
         document.getElementById(`fadm_vcs_add_${uid}`)?.addEventListener('click', () => openVcsModal('add', vcsPath()));
@@ -1906,6 +2225,7 @@ window["showFileAdminModal"] = showFileAdminModal;
 
 type ActionItem = {badge?:string, badgeClass?:string, icon?:string, label:string, value:string, checked?:boolean};
 type ActionRunFn = (values: string[], message?: string) => Promise<{result: string, refresh?: boolean}>;
+type ActionItemDblClickFn = (item: ActionItem) => void;
 
 function openActionModal(
     title: string,
@@ -1914,7 +2234,8 @@ function openActionModal(
     onRun: ActionRunFn,
     hasMessage = false,
     fetchItems?: () => Promise<ActionItem[]>,
-    staticItems?: ActionItem[]
+    staticItems?: ActionItem[],
+    onItemDblClick?: ActionItemDblClickFn
 ) {
     const uid = Date.now();
     const hasFetch = !!fetchItems;
@@ -1947,15 +2268,25 @@ function openActionModal(
     const runBtn   = document.getElementById(`am_run_${uid}`)!;
     const msgEl    = document.getElementById(`am_msg_${uid}`) as HTMLInputElement | null;
 
+    let currentItems: ActionItem[] = [];
     const renderItems = (items: ActionItem[] | undefined) => {
         if (!items || items.length === 0) { listEl.innerHTML = '<span class="text-secondary">No items</span>'; return; }
+        currentItems = items;
         listEl.innerHTML = items.map((i, idx) => `
-            <div class="d-flex align-items-center gap-1 py-1">
+            <div class="d-flex align-items-center gap-1 py-1" data-action-idx="${idx}">
                 <input type="checkbox" class="form-check-input am-chk-${uid}" id="am_${uid}_${idx}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
                 ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
                 ${i.icon  ? `<i class="bi ${i.icon}"></i>` : ''}
                 <label for="am_${uid}_${idx}" class="text-truncate mb-0 flex-fill" style="cursor:pointer;" title="${i.label}">${i.label}</label>
             </div>`).join('');
+        if (onItemDblClick) {
+            listEl.querySelectorAll<HTMLElement>('[data-action-idx]').forEach(row => {
+                row.addEventListener('dblclick', () => {
+                    const item = currentItems[parseInt(row.dataset.actionIdx ?? '-1')];
+                    if (item) onItemDblClick(item);
+                });
+            });
+        }
     };
 
     const refresh = async () => {
@@ -1997,6 +2328,11 @@ function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
     const title = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
     const runLabel = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
     const runClass = action === 'commit' ? 'btn-success' : action === 'revert' ? 'btn-warning' : 'btn-info';
+    const diffPath = (file: string) => {
+        const normalized = file.replace(/\\/g, '/');
+        if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith('/')) return normalized;
+        return (path.replace(/\\/g, '/').replace(/\/?$/, '/') + normalized).replace(/\/+/g, '/');
+    };
     openActionModal(
         title,
         runLabel,
@@ -2013,9 +2349,16 @@ function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
             const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "status", path }, "json") as any;
             if (!res.ok) return [];
             const items = res.items as {status: string, file: string}[];
-            const filtered = action === 'add' ? items.filter(i => i.status === '?') : items;
+            // SVN의 '?'(미버전) 파일은 svn add 전엔 커밋 대상이 아니므로 commit 목록에서 제외
+            const filtered = action === 'add'
+                ? items.filter(i => i.status === '?')
+                : (action === 'commit' && res.vcs === 'svn')
+                    ? items.filter(i => i.status !== '?')
+                    : items;
             return filtered.map(i => ({ badge: i.status, badgeClass: statusColor(i.status), label: i.file, value: i.file, checked: true }));
-        }
+        },
+        undefined,
+        action === 'add' ? undefined : item => openVcsDiff(diffPath(item.value))
     );
 }
 
@@ -2396,6 +2739,12 @@ let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
 
 // CDOM.ID("main").innerHTML="";
 //     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README.md"));
+
+
+
+
+
+
 
 
 

@@ -277,7 +277,197 @@ export class CRendererGL extends CRenderer
 	//Texture==========================================================================
 	override async BuildTexture(pa_tex : CTexture)
 	{
-		
+		function TOW_POWER_CHK(pa_x, pa_y)
+		{
+			switch (pa_x)
+			{
+			case 1:case 2:case 4:case 8:case 16:case 32:case 64:case 128:case 256:
+			case 512:case 1024:case 2048:case 4096:case 8192:case 16384:case 32768:case 65536:
+				break;
+			default:
+				return true;
+			}
+			switch (pa_y)
+			{
+			case 1:case 2:case 4:case 8:case 16:case 32:case 64:case 128:case 256:
+			case 512:case 1024:case 2048:case 4096:case 8192:case 16384:case 32768:case 65536:
+				break;
+			default:
+				return true;
+			}
+			return false;
+			//return ((pa_x%2)==0 && (pa_y%2)==0)?false:true;
+		}
+        pa_tex.mUpdate.clear();
+        var internalformat = Number(this.mDev.GL().RGBA8);
+        var fmt1 = Number(this.mDev.GL().RGBA);
+        var fmt2 = Number(this.mDev.GL().UNSIGNED_BYTE);
+        
+        if (TOW_POWER_CHK(pa_tex.GetWidth(), pa_tex.GetHeight()) && pa_tex.GetWrap() != CTexture.eWrap.Clamp)
+        {
+            //pa_tex.SetWrap(CTexture.eWrap.Clamp)
+            //pa_tex.SetMipMap(CTexture.eMipmap.None);
+            CAlert.W("2제곱 텍스쳐가 아니면 클램프로 지정해주세요!(d_TexWClamp)");
+        }
+        var info=pa_tex.GetInfo();
+        var gbufArr : Array<any>=pa_tex.GetGBuf();
+        
+        for(var i=0;i<info.length;++i)
+        {
+            if(info[i].mCount>1 && info[i].mTarget==CTexture.eTarget.Sigle)
+            {
+                    CAlert.E("CTex target single count miss!");
+            }
+            if (info[i].mFormat == CTexture.eFormat.RGBA32F)
+            {
+                if(typeof this.mDev.GL().RGB32F == 'undefined')
+                {
+                    alert("RGBA32F not support");
+                }
+    
+                if (CDevice.GetProperty(CDevice.eProperty.FloatTex32)==0 || this.mPF.mTexture16f)
+                {
+                    internalformat = this.mDev.GL().RGBA16F; fmt1 = this.mDev.GL().RGBA; fmt2 = Number(this.mDev.GL().FLOAT);
+                    
+                }
+                else
+                {
+                    internalformat = this.mDev.GL().RGBA32F; fmt1 = this.mDev.GL().RGBA; fmt2 = Number(this.mDev.GL().FLOAT);
+                }
+                //없어도 될거 같은데, 이상한 값넣어서 실수할까봐 넣어둠
+                //if(pa_tex.GetBuf() instanceof Uint8Array)
+                //	pa_tex.SetBuf(null);
+                
+                
+            }
+            else
+            {
+                internalformat = Number(this.mDev.GL().RGBA8);fmt1 = Number(this.mDev.GL().RGBA);fmt2 = Number(this.mDev.GL().UNSIGNED_BYTE);
+            }
+            
+        
+            if(gbufArr.length<=i)
+            {
+                gbufArr.push(this.mDev.GL().createTexture());
+            }
+                
+            
+            var type=Number(this.mDev.GL().TEXTURE_2D);
+            if(info[i].mTarget==CTexture.eTarget.Array)
+                type=this.mDev.GL().TEXTURE_2D_ARRAY;
+            else if(info[i].mTarget==CTexture.eTarget.Cube)
+                type=this.mDev.GL().TEXTURE_CUBE_MAP;
+            
+                
+
+            this.mDev.GL().bindTexture(type, gbufArr[i]);
+            var buf=null;
+            if(pa_tex.GetBuf().length>=i && pa_tex.GetBuf().length>i)
+                buf=pa_tex.GetBuf()[i];
+
+            if(info[i].mTarget==CTexture.eTarget.Array)
+            {
+                this.mDev.GL().texImage3D(type, 0, internalformat, pa_tex.GetWidth(), pa_tex.GetHeight(),
+                    info[i].mCount,0, fmt1, fmt2,buf);
+            }
+            else if(info[i].mTarget==CTexture.eTarget.Cube)
+            {
+                if(pa_tex.GetYFlip())   this.mDev.GL().pixelStorei(this.mDev.GL().UNPACK_FLIP_Y_WEBGL, true);
+                if(pa_tex.GetWidth()!=pa_tex.GetHeight())
+                {
+                    CAlert.E("CTexture.eTarget.Cube Size Diffent!");
+                }
+                for(var j=0;j<6;++j)
+                {
+                    this.mDev.GL().texImage2D(this.mDev.GL().TEXTURE_CUBE_MAP_POSITIVE_X+j, 0, internalformat, 
+                        pa_tex.GetWidth(), pa_tex.GetHeight(), 0, fmt1, fmt2, pa_tex.GetBuf()[j]);
+                }
+                if(pa_tex.GetYFlip())   this.mDev.GL().pixelStorei(this.mDev.GL().UNPACK_FLIP_Y_WEBGL, false);
+            }
+            else
+            {
+                if(pa_tex.GetYFlip())   this.mDev.GL().pixelStorei(this.mDev.GL().UNPACK_FLIP_Y_WEBGL, true);
+                if(buf instanceof Image || buf instanceof HTMLVideoElement)
+                    this.mDev.GL().texImage2D(type, 0, internalformat, fmt1, fmt2,buf);
+                else
+                    this.mDev.GL().texImage2D(type, 0, internalformat, pa_tex.GetWidth(), pa_tex.GetHeight(), 0, fmt1, fmt2,buf);
+                if(pa_tex.GetYFlip())   this.mDev.GL().pixelStorei(this.mDev.GL().UNPACK_FLIP_Y_WEBGL, false);
+            }
+            
+                
+            
+            if (TOW_POWER_CHK(pa_tex.GetWidth(), pa_tex.GetHeight())==false && pa_tex.GetMipMap()!=0)
+            {
+            
+                
+                if(pa_tex.GetMipMap()==CTexture.eMipmap.AlphaCac && pa_tex.GetWidth()==pa_tex.GetHeight())
+                {
+                    var mcount=1;
+                    var ntex : CTexture=pa_tex;
+                    while(true)
+                    {
+                        if(ntex.GetBuf()[0] instanceof Image)
+                        {
+                            let img=ntex.GetBuf()[0] as HTMLImageElement;
+                            CH5Canvas.Init(img.width,img.height);
+                            CH5Canvas.Draw(CH5Canvas.DrawImage(img,0,0));
+                            ntex=CH5Canvas.GetNewTex();
+                        }
+                    
+                        var w=ntex.GetWidth();
+                        var h=ntex.GetHeight();
+                        var buf2=ntex.GetBuf()[0];
+                        if(w<=1 || h<=1)
+                            break;
+                        ntex=CImgPro.SqurEnlargedReduced(w,h,buf2,0.5,0.5,9);
+                        this.mDev.GL().texImage2D(type, mcount, internalformat, ntex.GetWidth(), ntex.GetHeight(), 0, fmt1, fmt2,ntex.GetBuf()[0]);
+                        mcount++;
+                    }
+                    
+
+
+                }
+
+                else if(pa_tex.GetMipMap()==CTexture.eMipmap.EnvFilter && pa_tex.GetWidth()==pa_tex.GetHeight() && info[i].mTarget == CTexture.eTarget.Cube)
+                {
+                    this.mDev.GL().generateMipmap(type);
+                    if (pa_tex.GetBuf().length != 0) {
+                        var ntex = pa_tex;
+                        if (ntex.GetBuf()[0] instanceof Image) {
+                            let img = ntex.GetBuf()[0];
+                            CH5Canvas.Init(img.width, img.height);
+                            CH5Canvas.Draw(CH5Canvas.DrawImage(img, 0, 0));
+                            ntex = CH5Canvas.GetNewTex();
+                            for (let face = 1; face < 6; face++) {
+                                img = ntex.GetBuf()[face];
+                                CH5Canvas.Init(img.width, img.height);
+                                CH5Canvas.Draw(CH5Canvas.DrawImage(img, 0, 0));
+                                ntex.GetBuf().push(CH5Canvas.GetNewTex().GetBuf()[0]);
+                            }
+                        }
+                        const nTexArr = CImgPro.SphericalGaussianBlur(ntex);
+                        for (let mip = 0; mip < Math.floor(Math.log2(pa_tex.GetWidth())) - 3; mip++) {
+                            const w = ntex.GetWidth() >> mip;
+                            const h = ntex.GetHeight() >> mip;
+                            for (let face = 0; face < 6; face++) {
+                                this.mDev.GL().texImage2D(this.mDev.GL().TEXTURE_CUBE_MAP_POSITIVE_X + face, mip, internalformat, w, h, 0, fmt1, fmt2, nTexArr[mip].GetBuf()[face]);
+                            }
+                        }
+                    }
+                    
+                    
+                }
+                
+                else
+                    this.mDev.GL().generateMipmap(type);
+            }
+                
+            else
+                pa_tex.SetMipMap(CTexture.eMipmap.None);
+            this.BindTexture(pa_tex,i);
+            this.mDev.GL().bindTexture(type, null);
+
+        }//for
 	}
 	override ReleaseTexture(pa_tex : CTexture)
 	{

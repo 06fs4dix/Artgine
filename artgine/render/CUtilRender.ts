@@ -318,7 +318,7 @@ function MakeSphere(_vec: CFloat32Mgr, _uv: CFloat32Mgr, _nv: CFloat32Mgr, _inde
 
 export class CUtilRender 
 {
-	static Mesh2DSize = 10;
+	static Mesh2DSize = 1;
 	static FrameToMili(_frame: number): number {
 		return parseInt(((_frame / 30.0) * 1000) + "");
 	}

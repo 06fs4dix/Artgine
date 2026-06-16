@@ -11,7 +11,7 @@ export class CDevice
 {
     public mDrawType=-1;
 	mViewportArr=[0,0,0,0];
-	mDepthVal=1.0;
+	mDepthVal=0.0;
 	mColorVal=new CVec4(0,0,0,0);
 	mClearColor=true;
 	mClearDepth=true;
@@ -276,7 +276,7 @@ export class CDeviceGL extends CDevice
 			
 		this.GL().enable(this.GL().CULL_FACE);
 		this.GL().enable(this.GL().DEPTH_TEST);
-		this.GL().depthFunc(this.GL().LEQUAL); 
+        this.GL().depthFunc(this.GL().GEQUAL); 
 		//https://mrdoob.github.io/webgl-blendfunctions/blendfunc.html
 		//http://mrdoob.github.io/webgl-blendfunctions/blendfuncseparate.html
 		this.GL().enable(this.GL().BLEND);
@@ -367,9 +367,9 @@ export class CDeviceGL extends CDevice
 		this.mStaticRP.mDepthTest=_enable;
 		if (_enable)
 		{
-			
 			//this.GL().enable(this.GL().DEPTH_TEST);
-			this.GL().depthFunc(this.GL().LEQUAL);
+
+            this.GL().depthFunc(this.GL().GEQUAL);
 			
 		}
 		else

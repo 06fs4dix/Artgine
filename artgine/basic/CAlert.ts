@@ -53,7 +53,7 @@ export class CAlert
 		let modal=new CModal();
 		modal.SetHeader("Info")
 		modal.SetTitle(CModal.eTitle.Text);
-		modal.SetBody(_msg);
+		modal.SetBody(`<div style="word-break:break-word;">${_msg}</div>`);
 		modal.SetZIndex(CModal.eSort.Top);
 		//modal.SetBG(CModal.eBG.danger);
 		modal.SetBodyClose(true);
@@ -65,7 +65,7 @@ export class CAlert
 		let modal=new CModal();
 		modal.SetHeader("Warning")
 		modal.SetTitle(CModal.eTitle.Text);
-		modal.SetBody(_msg);
+		modal.SetBody(`<div style="word-break:break-word;">${_msg}</div>`);
 		modal.SetZIndex(CModal.eSort.Top);
 		modal.SetBG("warning");
 		modal.SetBodyClose(true);
@@ -79,7 +79,7 @@ export class CAlert
 		let modal=new CModal();
 		modal.SetHeader("Error")
 		modal.SetTitle(CModal.eTitle.Text);
-		modal.SetBody(_msg);
+		modal.SetBody(`<div style="word-break:break-word;">${_msg}</div>`);
 		modal.SetZIndex(CModal.eSort.Top);
 		modal.SetBG("danger");
 		modal.SetBodyClose(true);

@@ -449,7 +449,7 @@ function VoxelToolUpdate(_delay)
 
     if(gSelectedTile instanceof CVTileMold)
     {
-        let sca=(gVoxelTar.mBuf.mSize/200)*1.1;
+        let sca=gVoxelTar.mBuf.mSize*1.1;
         pos.x+=(gSelectedTile.mSize.x-1)*gVoxelTar.mBuf.mSize*0.5;
         pos.y+=(gSelectedTile.mSize.y-1)*gVoxelTar.mBuf.mSize*0.5;
         pos.z+=(gSelectedTile.mSize.z-1)*gVoxelTar.mBuf.mSize*0.5;
@@ -457,7 +457,7 @@ function VoxelToolUpdate(_delay)
     }
     else
     {
-        let sca=(gVoxelTar.mBuf.mSize/200)*1.1;
+        let sca=gVoxelTar.mBuf.mSize*1.1;
         gCurser.SetSca(new CVec3(sca,sca,sca));
     }
     
@@ -790,7 +790,7 @@ async function VoxelAtlasCodiDiv(_atlas : number, _width : number = 200, _vinfo?
 }
 function SelectMapRefresh()
 {
-    let sca=(gVoxelTar.mBuf.mSize/200)*1.1;
+    let sca=gVoxelTar.mBuf.mSize*1.1;
     gPress.RemoveComps(CPaint3D);
 
     for(let index of gSelectMap.values())
@@ -825,8 +825,8 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
             let pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
 
             let pos = new CVec3();
-            pos.x = x * 200;
-            pos.y = -y * 200;
+            pos.x = x * 1;
+            pos.y = -y * 1;
 
             let mat=new CMat();
             mat.xyz=pos;
@@ -842,7 +842,7 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
         let pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
         let mat=new CMat();
         mat.mF32A[5]=0.2;
-        mat.xyz=new CVec3(200 * (_xSize),0,0);
+        mat.xyz=new CVec3(1 * (_xSize),0,0);
         pt.SetLMat(mat);
         gCurser.PushComp(pt);
         pt.SetColorModel(new CColor(0,0,1,CColor.eModel.RGBAdd));
@@ -852,7 +852,7 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
         pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
         mat=new CMat();
         mat.mF32A[0]=0.2;
-        mat.xyz=new CVec3(0,200,0);
+        mat.xyz=new CVec3(0,1,0);
         pt.SetLMat(mat);
         gCurser.PushComp(pt);
         pt.SetColorModel(new CColor(0,1,0,CColor.eModel.RGBAdd));
@@ -873,7 +873,7 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
         let pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
         let mat=new CMat();
         mat.mF32A[10]=0.2;
-        mat.xyz=new CVec3(200 * (_xSize),0,0)
+        mat.xyz=new CVec3(1 * (_xSize),0,0)
         pt.SetLMat(mat);
         gCurser.PushComp(pt);
         //pt.SetRGBA(new CVec4(0,0,1,-0.6));
@@ -883,7 +883,7 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
         pt=new CPaint3D(gAtl.Frame().Pal().GetBoxMesh());
         mat=new CMat();
         mat.mF32A[0]=0.2;
-        mat.xyz=new CVec3(0,0,200 * (_ySize));
+        mat.xyz=new CVec3(0,0,1 * (_ySize));
         pt.SetLMat(mat);
         gCurser.PushComp(pt);
         //pt.SetRGBA(new CVec4(0,1,0,-0.6));
@@ -891,7 +891,7 @@ function VoxelToolResetCurser(_xSize : number = 1, _ySize : number = 1)
         pt.SetAlphaModel(new CAlpha(0.6));
     }
     
-    gCurser.SetSca(new CVec3(0.55,0.55,0.55));
+    gCurser.SetSca(new CVec3(110,110,110));
 }
 function VoxelToolResetCam()
 {

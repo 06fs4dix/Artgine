@@ -650,7 +650,7 @@ function DevToolRender()
                 (min.y + max.y) * 0.5,
                 (min.z + max.z) * 0.5
             );
-            const boxSize = 200; // 기준 박스 사이즈 (-100~100)
+            const boxSize = 1; // 기준 박스 사이즈 (-0.5~0.5)
             // 스케일 = (max - min) * 0.5
             const scale = new CVec3(
                 (max.x - min.x) /boxSize,
@@ -683,9 +683,9 @@ function DevToolRender()
                     color.z=0;
                     wmat.xyz=CMath.V3AddV3(pt.GetHalf(),subject.GetPos());
                     wmat.y+=pt.mYSortOrigin;
-                    wmat.mF32A[0]=0.02;
-                    wmat.mF32A[5]=0.02;
-                    wmat.mF32A[10]=0.02;
+                    wmat.mF32A[0]=4;
+                    wmat.mF32A[5]=4;
+                    wmat.mF32A[10]=4;
 
                     render.SendGPU(shader,color,"colorModel");
                     render.SendGPU(shader,alpha,"alphaModel");
@@ -722,7 +722,7 @@ function DevToolRender()
                 (min.y + max.y) * 0.5,
                 (min.z + max.z) * 0.5
             );
-            const boxSize = 200; // 기준 박스 사이즈 (-100~100)
+            const boxSize = 1; // 기준 박스 사이즈 (-0.5~0.5)
             // 스케일 = (max - min) * 0.5
             const scale = new CVec3(
                 (max.x - min.x) /boxSize,
@@ -829,9 +829,9 @@ function DevToolRender()
             wmat.xyz=pos;
                     
             
-            wmat.mF32A[0]=gBoundTick/100;
-            wmat.mF32A[5]=gBoundTick/100;
-            wmat.mF32A[10]=gBoundTick/1000;
+            wmat.mF32A[0]=gBoundTick*2;
+            wmat.mF32A[5]=gBoundTick*2;
+            wmat.mF32A[10]=gBoundTick/5;
             
             if(gDragBound==1)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
@@ -851,9 +851,9 @@ function DevToolRender()
             wmat.xyz=pos;
                     
             
-            wmat.mF32A[0]=gBoundTick/100;
-            wmat.mF32A[5]=gBoundTick/1000;
-            wmat.mF32A[10]=gBoundTick/1000;
+            wmat.mF32A[0]=gBoundTick*2;
+            wmat.mF32A[5]=gBoundTick/5;
+            wmat.mF32A[10]=gBoundTick/5;
             
             if(gDragBound==1)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
@@ -868,9 +868,9 @@ function DevToolRender()
             color.z=0;
             wmat.xyz=pos;
 
-            wmat.mF32A[0]=gBoundTick/1000;
-            wmat.mF32A[5]=gBoundTick/100;
-            wmat.mF32A[10]=gBoundTick/1000;
+            wmat.mF32A[0]=gBoundTick/5;
+            wmat.mF32A[5]=gBoundTick*2;
+            wmat.mF32A[10]=gBoundTick/5;
 
             if(gDragBound==2)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");
@@ -887,9 +887,9 @@ function DevToolRender()
             //wmat.mF32A[12]+=gBoundTick*0.5;
             //wmat.mF32A[14]+=gBoundTick*0.5;
             
-            wmat.mF32A[0]=gBoundTick/1000;
-            wmat.mF32A[5]=gBoundTick/1000;
-            wmat.mF32A[10]=gBoundTick/100;
+            wmat.mF32A[0]=gBoundTick/5;
+            wmat.mF32A[5]=gBoundTick/5;
+            wmat.mF32A[10]=gBoundTick*2;
 
             if(gDragBound==3)gAtl.Frame().Dev().SetLine(CRenderPass.eLine.TRIANGLES);
             render.SendGPU(shader,color,"colorModel");

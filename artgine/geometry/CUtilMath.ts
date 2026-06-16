@@ -49,6 +49,27 @@ export class CUtilMath
         result.mF32A[14] = -q * znear;
         return result;
     }
+    static CameraPerspectiveFovLH_ReverseZ(fov, aspect, znear, zfar,_width,result=new CMat()) 
+    {
+        var yScale = (1.0 / Math.tan(fov * 0.5));
+        var q = zfar / (znear - zfar);
+  
+        result.SetUnit(false);
+        if(_width)
+        {
+            result.mF32A[0] = yScale / aspect;
+            result.mF32A[5] = yScale;
+        }
+        else
+        {
+            result.mF32A[0] = yScale;
+            result.mF32A[5] = yScale / aspect;
+        }
+        result.mF32A[10] = -q;
+        result.mF32A[11] = 1.0;
+        result.mF32A[14] = q * znear;
+        return result;
+    }
     static CameraPerspectiveFovRH(fov, aspect, znear, zfar,_width,result=new CMat()) 
     {
         var yScale = (1.0 / Math.tan(fov * 0.5));
@@ -71,8 +92,41 @@ export class CUtilMath
         result.mF32A[14] = q * znear;
         return result;
     }
+    static CameraPerspectiveFovRH_ReverseZ(fov, aspect, znear, zfar,_width,result=new CMat()) 
+    {
+        var yScale = (1.0 / Math.tan(fov * 0.5));
+        var q = znear / (zfar-znear);
+        
+        result.SetUnit(false);
+        if(_width)
+        {
+            result.mF32A[0] = yScale / aspect;
+            result.mF32A[5] = yScale;
+        }
+        else
+        {
+            result.mF32A[0] = yScale;
+            result.mF32A[5] = yScale / aspect;
+        }
+        
+        result.mF32A[10] = q;
+        result.mF32A[11] = -1.0;
+        result.mF32A[14] = q * zfar;
+        return result;
+    }
 
     static CameraOrthoLH(width, height, zn, zf,result=new CMat())	//직교투영
+    {
+        //var projMat=new CMat();
+        result.SetUnit(false);
+        result.mF32A[0] = 2 / width; result.mF32A[1] = 0; result.mF32A[2] = 0; result.mF32A[3] = 0;
+        result.mF32A[4] = 0; result.mF32A[5] = 2 / height; result.mF32A[6] = 0; result.mF32A[7] = 0;
+        result.mF32A[8] = 0; result.mF32A[9] = 0; result.mF32A[10] = 1 / (zn - zf); result.mF32A[11] = 0;
+        result.mF32A[12] = 0; result.mF32A[13] = 0; result.mF32A[14] = -zf / (zn - zf); result.mF32A[15] = 1;
+    
+        return result;
+    }
+    static CameraOrthoLH_ReverseZ(width, height, zn, zf,result=new CMat())	//직교투영
     {
         //var projMat=new CMat();
         result.SetUnit(false);
@@ -91,6 +145,17 @@ export class CUtilMath
         result.mF32A[4] = 0; result.mF32A[5] = 2 / height; result.mF32A[6] = 0; result.mF32A[7] = 0;
         result.mF32A[8] = 0; result.mF32A[9] = 0; result.mF32A[10] = 1 / (zn - zf); result.mF32A[11] = 0;
         result.mF32A[12] = 0; result.mF32A[13] = 0; result.mF32A[14] = zn / (zn - zf); result.mF32A[15] = 1;
+    
+        return result;
+    }
+    static CameraOrthoRH_ReverseZ(width, height, zn, zf,result=new CMat())	//직교투영
+    {
+        
+        result.SetUnit(false);
+        result.mF32A[0] = 2 / width; result.mF32A[1] = 0; result.mF32A[2] = 0; result.mF32A[3] = 0;
+        result.mF32A[4] = 0; result.mF32A[5] = 2 / height; result.mF32A[6] = 0; result.mF32A[7] = 0;
+        result.mF32A[8] = 0; result.mF32A[9] = 0; result.mF32A[10] = 1 / (zf - zn); result.mF32A[11] = 0;
+        result.mF32A[12] = 0; result.mF32A[13] = 0; result.mF32A[14] = zf / (zf - zn); result.mF32A[15] = 1;
     
         return result;
     }

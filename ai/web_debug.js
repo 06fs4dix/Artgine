@@ -42,8 +42,12 @@ const [,, baseArg, cmd, ...args] = process.argv;
 if (!baseArg || !baseArg.startsWith('http')) {
     console.error('Usage: node ai/web_debug.js <base-url> <cmd> [args]');
     console.error('  node ai/web_debug.js http://localhost:7000 login');
-    console.error('  node ai/web_debug.js http://localhost:7000 push <url> [ttl=60] [logSize=100]');
+    console.error('  node ai/web_debug.js http://localhost:7000 push <url> [ttl=600] [logSize=100]');
     console.error('  node ai/web_debug.js http://localhost:7000 exec <sid> <fn> [args_json]');
+    console.error('  node ai/web_debug.js http://localhost:7000 input <sid> <key|mouseButton> <time_ms> <focus> [x y [x2 y2]]');
+    console.error('  node ai/web_debug.js http://localhost:7000 eval <sid> <js_expression>');
+    console.error('  node ai/web_debug.js http://localhost:7000 eval_stdin <sid>');
+    console.error('  node ai/web_debug.js http://localhost:7000 eval_base64 <sid> <base64_js_expression>');
     console.error('  node ai/web_debug.js http://localhost:7000 logs <sid> [fromOffset=0]');
     console.error('  node ai/web_debug.js http://localhost:7000 list');
     console.error('  node ai/web_debug.js http://localhost:7000 remove <sid>');
@@ -58,7 +62,7 @@ if (cmd === 'login') {
     console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'push') {
-    const [url, ttl = '60', logSize = '100'] = args;
+    const [url, ttl = '600', logSize = '100'] = args;
     if (!url) { console.error('Usage: push <url> [ttl] [logSize]'); process.exit(1); }
     const r = await call(base, 'playwright/push', { url, ttl, logSize });
     console.log(r.ok ? r.sessionId : `fail: ${r.msg ?? 'unknown'}`);
@@ -67,6 +71,26 @@ if (cmd === 'login') {
     const [sid, fn, argsJson = '[]'] = args;
     if (!sid || !fn) { console.error('Usage: exec <sid> <fn> [args_json]'); process.exit(1); }
     const r = await call(base, 'playwright/exec', { sessionId: sid, fn, args: JSON.parse(argsJson) });
+    if (fn === 'screenshot' && r.ok && r.result && r.result.data) {
+        writeFileSync('screenshot.png', Buffer.from(r.result.data));
+        console.log('Screenshot saved to screenshot.png');
+    } else {
+        console.log(JSON.stringify(r, null, 2));
+    }
+
+} else if (cmd === 'input') {
+    const [sid, key, timeArg, focus = 'canvas', ...pointArgs] = args;
+    if (!sid || !key || !timeArg) {
+        console.error('Usage: input <sid> <key|mouseButton> <time_ms> <focus> [x y [x2 y2]]');
+        process.exit(1);
+    }
+    const time = parseInt(timeArg, 10);
+    const points = pointArgs.map((v) => Number(v));
+    if (!Number.isFinite(time) || time < 0 || points.some((v) => !Number.isFinite(v)) || (points.length !== 0 && points.length !== 2 && points.length !== 4)) {
+        console.error('Usage: input <sid> <key|mouseButton> <time_ms> <focus> [x y [x2 y2]]');
+        process.exit(1);
+    }
+    const r = await call(base, 'playwright/input', { sessionId: sid, time, key, focus, points });
     console.log(JSON.stringify(r, null, 2));
 
 } else if (cmd === 'list') {
@@ -79,6 +103,28 @@ if (cmd === 'login') {
     const r = await call(base, 'playwright/logs', { sessionId: sid, fromOffset: parseInt(fromOffset, 10) });
     console.log(JSON.stringify(r, null, 2));
 
+} else if (cmd === 'eval') {
+    const [sid, ...exprParts] = args;
+    if (!sid || exprParts.length === 0) { console.error('Usage: eval <sid> <js_expression>'); process.exit(1); }
+    const expr = exprParts.join(' ');
+    const r = await call(base, 'playwright/eval', { sessionId: sid, expr });
+    console.log(JSON.stringify(r, null, 2));
+
+} else if (cmd === 'eval_stdin') {
+    const [sid] = args;
+    if (!sid) { console.error('Usage: eval_stdin <sid>'); process.exit(1); }
+    const expr = readFileSync(0, 'utf8');
+    if (expr.length === 0) { console.error('Usage: eval_stdin <sid> < stdin_js_expression'); process.exit(1); }
+    const r = await call(base, 'playwright/eval', { sessionId: sid, expr });
+    console.log(JSON.stringify(r, null, 2));
+
+} else if (cmd === 'eval_base64') {
+    const [sid, ...encodedParts] = args;
+    if (!sid || encodedParts.length === 0) { console.error('Usage: eval_base64 <sid> <base64_js_expression>'); process.exit(1); }
+    const expr = Buffer.from(encodedParts.join(''), 'base64').toString('utf8');
+    const r = await call(base, 'playwright/eval', { sessionId: sid, expr });
+    console.log(JSON.stringify(r, null, 2));
+
 } else if (cmd === 'remove') {
     const [sid] = args;
     if (!sid) { console.error('Usage: remove <sid>'); process.exit(1); }
@@ -87,6 +133,6 @@ if (cmd === 'login') {
 
 } else {
     console.error(`Unknown command: ${cmd}`);
-    console.error('Commands: login, push, exec, list, remove');
+    console.error('Commands: login, push, exec, input, eval, eval_stdin, eval_base64, logs, list, remove');
     process.exit(1);
 }

@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqczbbe7_2";
+gPF.mVersion = "mqex2tpd_11";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -99,25 +99,13 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
     MountDownloadTab("download-root");
 }
 const AI_TOKEN_KEY = 'artgine.token';
-{
-    const _origFetch = window.fetch.bind(window);
-    window.fetch = (input, init = {}) => {
-        const token = localStorage.getItem(AI_TOKEN_KEY) || '';
-        if (token) {
-            const headers = new Headers(init.headers || {});
-            if (!headers.has('x-ai-token'))
-                headers.set('x-ai-token', token);
-            init = { ...init, headers };
-        }
-        return _origFetch(input, init);
-    };
-}
 const aiFrameContainer = CDOM.ID("ai-frame-container");
 const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
 let aiInited = false;
 const iframePool = new Map();
 let activeFrameKey = null;
+let activeBrowserSid = null;
 let pendingNewSid = null;
 let _activeNotifCallback = null;
 function isAiPanelActive() {
@@ -249,6 +237,8 @@ function showFrame(key, src) {
         aiFrameContainer.appendChild(f);
         iframePool.set(key, f);
     }
+    document.querySelectorAll('.browser-panel').forEach(p => { p.style.display = 'none'; });
+    activeBrowserSid = null;
     if (activeFrameKey && activeFrameKey !== key) {
         const prev = iframePool.get(activeFrameKey);
         if (prev)
@@ -299,11 +289,7 @@ function uuidv4() {
     });
 }
 function aiAuthedFetch(url, init) {
-    const token = localStorage.getItem(AI_TOKEN_KEY) || '';
-    const headers = new Headers(init?.headers || {});
-    if (token)
-        headers.set('x-ai-token', token);
-    return fetch(url, { ...init, headers });
+    return fetch(url, init);
 }
 function aiFormatRelative(ts) {
     if (!ts)
@@ -531,11 +517,7 @@ function syncSessState(id, cur, onDone, onWait) {
     _sessState.set(id, cur);
 }
 function termAuthedFetch(url, init) {
-    const token = localStorage.getItem(CMD_TOKEN_KEY) || '';
-    const headers = new Headers(init?.headers || {});
-    if (token)
-        headers.set('x-cmd-token', token);
-    return fetch(url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token), { ...init, headers });
+    return fetch(url, init);
 }
 async function termStartNew(_mode = 'cmd', initialWorkingDir) {
     const token = localStorage.getItem(CMD_TOKEN_KEY);
@@ -1286,7 +1268,7 @@ async function aiCheckAuth() {
         return false;
     try {
         const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token }, "json");
-        return !!j?.ok;
+        return !!j?.authed;
     }
     catch {
         return false;
@@ -1340,6 +1322,312 @@ aiAuthPwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
     aiDoAuth(); });
 CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
 CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
+CDOM.ID("ai-browser-subtab").addEventListener("shown.bs.tab", () => browserRefreshList());
+const browserNewBtn = CDOM.ID("browserNewBtn");
+const browserSessionList = CDOM.ID("browserSessionList");
+const browserSessions = new Map();
+const BROWSER_POLL_MS = 3000;
+setInterval(() => {
+    for (const s of browserSessions.values()) {
+        s.ttlEl.textContent = browserFmtTtl(s.expiresAt);
+    }
+}, 1000);
+function browserBufToDataUrl(buf) {
+    const bytes = new Uint8Array(buf.data);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++)
+        bin += String.fromCharCode(bytes[i]);
+    return 'data:image/png;base64,' + btoa(bin);
+}
+function browserShowPanel(sessionId) {
+    if (activeFrameKey) {
+        iframePool.get(activeFrameKey)?.style.setProperty('display', 'none');
+        activeFrameKey = null;
+    }
+    for (const [sid, s] of browserSessions) {
+        const isActive = sid === sessionId;
+        s.panelEl.style.display = isActive ? 'flex' : 'none';
+        s.sidebarEl.classList.toggle('bg-primary-subtle', isActive);
+        const dot = s.sidebarEl.querySelector('.browser-dot');
+        if (dot) {
+            dot.classList.toggle('text-success', isActive);
+            dot.classList.toggle('text-danger', !isActive);
+        }
+    }
+    activeBrowserSid = sessionId;
+}
+async function browserPoll(sessionId) {
+    const s = browserSessions.get(sessionId);
+    if (!s)
+        return;
+    if (document.hasFocus() && activeBrowserSid === sessionId) {
+        try {
+            const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, fn: 'screenshot', args: [] })
+            });
+            const j = await r.json();
+            if (j.ok && j.result?.type === 'Buffer') {
+                s.imgEl.src = browserBufToDataUrl(j.result);
+            }
+            if (j.logs?.length) {
+                for (const l of j.logs) {
+                    const div = document.createElement('div');
+                    div.className = (l.type === 'error' || l.type === 'network') ? 'text-danger' : '';
+                    div.textContent = `[${l.type}] ${l.text}`;
+                    s.logEl.appendChild(div);
+                }
+                s.logEl.scrollTop = s.logEl.scrollHeight;
+            }
+        }
+        catch { }
+    }
+    s.timer = window.setTimeout(() => browserPoll(sessionId), s.pollMs);
+}
+function browserFmtTtl(expiresAt) {
+    const rem = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+    if (rem <= 0)
+        return '−0s';
+    const m = Math.floor(rem / 60);
+    const s = rem % 60;
+    return m > 0 ? `−${m}m${s}s` : `−${s}s`;
+}
+function browserAddSession(sessionId, url, browserName = '', expiresAt = 0) {
+    if (browserSessions.has(sessionId))
+        return;
+    const sidebarEl = document.createElement('div');
+    sidebarEl.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded';
+    sidebarEl.innerHTML = `
+        <span class="browser-dot text-danger small flex-shrink-0">●</span>
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            <span class="text-truncate small" title="${aiEscapeHtml(url)}">${aiEscapeHtml(url)}</span>
+            <span class="d-flex gap-2 text-secondary" style="font-size:0.7rem;">
+                <span>${aiEscapeHtml(browserName || 'auto')}</span>
+                <span class="browser-ttl-label"></span>
+            </span>
+        </span>
+        <button class="browser-close-btn btn btn-sm btn-link text-secondary p-0"><i class="bi bi-x-lg"></i></button>
+    `;
+    const ttlEl = sidebarEl.querySelector('.browser-ttl-label');
+    sidebarEl.addEventListener('click', () => browserShowPanel(sessionId));
+    sidebarEl.querySelector('.browser-close-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        browserRemoveSession(sessionId);
+    });
+    sidebarEl.addEventListener('mouseenter', () => { if (activeBrowserSid !== sessionId)
+        sidebarEl.classList.add('bg-body-secondary'); });
+    sidebarEl.addEventListener('mouseleave', () => sidebarEl.classList.remove('bg-body-secondary'));
+    browserSessionList.appendChild(sidebarEl);
+    const panelEl = document.createElement('div');
+    panelEl.className = 'browser-panel';
+    panelEl.style.cssText = 'position:absolute;inset:0;display:none;flex-direction:column;';
+    panelEl.innerHTML = `
+        <div class="d-flex align-items-center gap-2 px-3 flex-shrink-0" style="height:36px;background:#1e1e1e;border-bottom:1px solid #333;font-size:0.75rem;color:#aaa;">
+            <span>갱신</span>
+            <input type="range" class="browser-rate-slider form-range" min="0.1" max="10" step="0.1" value="3" style="width:120px;">
+            <span class="browser-rate-label">3s</span>
+            <span class="ms-3">인풋 모드</span>
+            <input type="checkbox" class="browser-click-toggle form-check-input ms-1">
+        </div>
+        <div class="browser-img-wrap" style="flex:1;min-height:0;background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;">
+            <img class="browser-screenshot" style="max-width:100%;max-height:100%;object-fit:contain;" alt="" />
+        </div>
+        <div class="browser-logs overflow-auto p-2 font-monospace d-flex flex-column" style="height:200px;font-size:0.75rem;background:#1a1a1a;color:#aaa;border-top:1px solid #333;flex-shrink:0;"></div>
+    `;
+    const imgEl = panelEl.querySelector('.browser-screenshot');
+    const logEl = panelEl.querySelector('.browser-logs');
+    const slider = panelEl.querySelector('.browser-rate-slider');
+    const rateLabel = panelEl.querySelector('.browser-rate-label');
+    const clickToggle = panelEl.querySelector('.browser-click-toggle');
+    aiFrameContainer.appendChild(panelEl);
+    const session = {
+        sessionId, url, browserName, expiresAt,
+        sidebarEl, ttlEl, panelEl, imgEl, logEl,
+        timer: null, pollMs: 3000, inputMode: false,
+    };
+    browserSessions.set(sessionId, session);
+    slider.addEventListener('input', () => {
+        const s = parseFloat(slider.value);
+        session.pollMs = s * 1000;
+        rateLabel.textContent = `${s}s`;
+    });
+    clickToggle.addEventListener('change', () => {
+        session.inputMode = clickToggle.checked;
+        imgWrap.tabIndex = clickToggle.checked ? 0 : -1;
+        if (clickToggle.checked)
+            imgWrap.focus();
+    });
+    const imgWrap = panelEl.querySelector('.browser-img-wrap');
+    imgWrap.tabIndex = -1;
+    imgWrap.style.outline = 'none';
+    imgWrap.addEventListener('keydown', async (e) => {
+        if (!session.inputMode)
+            return;
+        e.preventDefault();
+        const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
+        try {
+            await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, fn, args: [e.key] })
+            });
+        }
+        catch { }
+    });
+    imgEl.addEventListener('click', async (e) => {
+        if (!session.inputMode)
+            return;
+        if (session.inputMode)
+            imgWrap.focus();
+        const rect = imgEl.getBoundingClientRect();
+        const natW = imgEl.naturalWidth;
+        const natH = imgEl.naturalHeight;
+        if (!natW || !natH)
+            return;
+        const scale = Math.min(rect.width / natW, rect.height / natH);
+        const dispW = natW * scale;
+        const dispH = natH * scale;
+        const ox = (rect.width - dispW) / 2;
+        const oy = (rect.height - dispH) / 2;
+        const cx = Math.round((e.clientX - rect.left - ox) / scale);
+        const cy = Math.round((e.clientY - rect.top - oy) / scale);
+        if (cx < 0 || cy < 0 || cx > natW || cy > natH)
+            return;
+        const wrapRect = imgWrap.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        ripple.style.cssText = `
+            position:absolute;
+            left:${e.clientX - wrapRect.left}px;
+            top:${e.clientY - wrapRect.top}px;
+            width:24px;height:24px;
+            margin:-12px 0 0 -12px;
+            border-radius:50%;
+            border:2px solid #000;
+            background:rgba(255,120,0,0.5);
+            box-shadow:0 0 0 1.5px #ff7800;
+            pointer-events:none;
+            animation:browser-ripple 0.5s ease-out forwards;
+        `;
+        imgWrap.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 500);
+        try {
+            await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, fn: 'mouse.click', args: [cx, cy] })
+            });
+        }
+        catch { }
+    });
+    browserShowPanel(sessionId);
+    browserPoll(sessionId);
+}
+async function browserRemoveSession(sessionId) {
+    const s = browserSessions.get(sessionId);
+    if (!s)
+        return;
+    if (s.timer !== null) {
+        clearTimeout(s.timer);
+        s.timer = null;
+    }
+    s.sidebarEl.remove();
+    s.panelEl.remove();
+    browserSessions.delete(sessionId);
+    if (activeBrowserSid === sessionId)
+        activeBrowserSid = null;
+    try {
+        await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/remove`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId })
+        });
+    }
+    catch { }
+}
+async function browserRefreshList() {
+    try {
+        const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/list`);
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        const serverIds = new Set(j.sessions.map(s => s.sessionId));
+        for (const [sid] of browserSessions) {
+            if (!serverIds.has(sid))
+                browserRemoveSession(sid);
+        }
+        for (const s of j.sessions) {
+            browserAddSession(s.sessionId, s.currentUrl, s.browserName, s.expiresAt);
+        }
+    }
+    catch { }
+}
+browserNewBtn.addEventListener('click', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">새 브라우저 세션</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">URL</label>
+            <input id="brow-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-2">
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Browser</label>
+                <select id="brow-browser" class="form-select form-select-sm">
+                    <option value="">auto</option>
+                    <option value="chrome">chrome</option>
+                    <option value="msedge">msedge</option>
+                    <option value="firefox">firefox</option>
+                </select>
+            </div>
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">TTL (sec)</label>
+                <input id="brow-ttl" type="number" min="10" class="form-control form-control-sm" value="300">
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="brow-open" class="btn btn-primary">Open</button>
+            <button id="brow-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const urlInput = container.querySelector('#brow-url');
+        const browserSel = container.querySelector('#brow-browser');
+        const ttlInput = container.querySelector('#brow-ttl');
+        const doOpen = async () => {
+            const url = urlInput.value.trim();
+            if (!url)
+                return;
+            const browser = browserSel.value;
+            const ttl = parseInt(ttlInput.value) || 300;
+            modal.Close();
+            try {
+                const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200 })
+                });
+                const j = await r.json();
+                if (!j.ok) {
+                    CAlert.E(j.msg || 'Failed');
+                    return;
+                }
+                browserAddSession(j.sessionId, url, browser || 'auto', Date.now() + ttl * 1000);
+            }
+            catch {
+                CAlert.E('Failed to start browser');
+            }
+        };
+        container.querySelector('#brow-open').addEventListener('click', doOpen);
+        container.querySelector('#brow-cancel').addEventListener('click', () => modal.Close());
+        urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+        setTimeout(() => urlInput.focus(), 50);
+    }, 100);
+});
 function showAiTermSubtab() {
     const termSubEl = CDOM.ID("ai-term-subtab");
     window.bootstrap.Tab.getOrCreateInstance(termSubEl).show();
@@ -1641,9 +1929,7 @@ function Redirection(_multi) {
     var form = CDOM.ID("ThisPage");
     form.setAttribute("charset", "UTF-8");
     form.setAttribute("method", "Post");
-    const _token = localStorage.getItem(AI_TOKEN_KEY) || '';
-    const _tokenQ = _token ? `?token=${encodeURIComponent(_token)}` : '';
-    form.setAttribute("action", CPath.WebRootUrl() + "File/Redirection" + _tokenQ);
+    form.setAttribute("action", CPath.WebRootUrl() + "File/Redirection");
     CDOM.IDValue("fun", g_fun);
     CDOM.IDValue("data", g_data);
     CDOM.IDValue("option", g_option);
@@ -1717,6 +2003,7 @@ async function FileBtn() {
                 return;
             e.preventDefault();
             doAuth();
+            dlg.Close();
         });
     }, 80);
 }
@@ -1837,7 +2124,9 @@ function showFileAdminModal() {
         document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
         document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
             const res = await CFecth.Exe(CPath.WebRootUrl() + "File/VCS", { action: "update", path: vcsPath() }, "json");
-            CAlert.Info(res.msg || (res.ok ? 'Update complete' : 'Update failed'));
+            const revLine = res.revision ? `<br><b>Revision: ${res.revision}</b>` : '';
+            const msgBody = res.msg ? res.msg.replace(/\n/g, '<br>') : (res.ok ? 'Update complete' : 'Update failed');
+            CAlert.Info(msgBody + revLine);
             if (res.ok)
                 FolderCD(window["g_path"]);
         });
@@ -1847,7 +2136,7 @@ function showFileAdminModal() {
     }, 80);
 }
 window["showFileAdminModal"] = showFileAdminModal;
-function openActionModal(title, runLabel, runClass, onRun, hasMessage = false, fetchItems, staticItems) {
+function openActionModal(title, runLabel, runClass, onRun, hasMessage = false, fetchItems, staticItems, onItemDblClick) {
     const uid = Date.now();
     const hasFetch = !!fetchItems;
     const modal = new CModal();
@@ -1876,18 +2165,29 @@ function openActionModal(title, runLabel, runClass, onRun, hasMessage = false, f
     const allBtn = document.getElementById(`am_all_${uid}`);
     const runBtn = document.getElementById(`am_run_${uid}`);
     const msgEl = document.getElementById(`am_msg_${uid}`);
+    let currentItems = [];
     const renderItems = (items) => {
         if (!items || items.length === 0) {
             listEl.innerHTML = '<span class="text-secondary">No items</span>';
             return;
         }
+        currentItems = items;
         listEl.innerHTML = items.map((i, idx) => `
-            <div class="d-flex align-items-center gap-1 py-1">
+            <div class="d-flex align-items-center gap-1 py-1" data-action-idx="${idx}">
                 <input type="checkbox" class="form-check-input am-chk-${uid}" id="am_${uid}_${idx}" value="${i.value}" ${i.checked !== false ? 'checked' : ''}>
                 ${i.badge ? `<span class="badge bg-${i.badgeClass ?? 'secondary'}" style="font-size:0.65rem;min-width:1.4rem;">${i.badge}</span>` : ''}
                 ${i.icon ? `<i class="bi ${i.icon}"></i>` : ''}
                 <label for="am_${uid}_${idx}" class="text-truncate mb-0 flex-fill" style="cursor:pointer;" title="${i.label}">${i.label}</label>
             </div>`).join('');
+        if (onItemDblClick) {
+            listEl.querySelectorAll('[data-action-idx]').forEach(row => {
+                row.addEventListener('dblclick', () => {
+                    const item = currentItems[parseInt(row.dataset.actionIdx ?? '-1')];
+                    if (item)
+                        onItemDblClick(item);
+                });
+            });
+        }
     };
     const refresh = async () => {
         if (!fetchItems)
@@ -1932,6 +2232,12 @@ function openVcsModal(action, path) {
     const title = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
     const runLabel = action === 'commit' ? 'Commit & Push' : action === 'revert' ? 'Revert' : 'Add';
     const runClass = action === 'commit' ? 'btn-success' : action === 'revert' ? 'btn-warning' : 'btn-info';
+    const diffPath = (file) => {
+        const normalized = file.replace(/\\/g, '/');
+        if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith('/'))
+            return normalized;
+        return (path.replace(/\\/g, '/').replace(/\/?$/, '/') + normalized).replace(/\/+/g, '/');
+    };
     openActionModal(title, runLabel, runClass, async (files, message) => {
         const param = { action, path, files };
         if (action === 'commit')
@@ -1945,9 +2251,13 @@ function openVcsModal(action, path) {
         if (!res.ok)
             return [];
         const items = res.items;
-        const filtered = action === 'add' ? items.filter(i => i.status === '?') : items;
+        const filtered = action === 'add'
+            ? items.filter(i => i.status === '?')
+            : (action === 'commit' && res.vcs === 'svn')
+                ? items.filter(i => i.status !== '?')
+                : items;
         return filtered.map(i => ({ badge: i.status, badgeClass: statusColor(i.status), label: i.file, value: i.file, checked: true }));
-    });
+    }, undefined, action === 'add' ? undefined : item => openVcsDiff(diffPath(item.value)));
 }
 async function openVcsDiff(filePath) {
     let res;

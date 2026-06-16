@@ -156,7 +156,9 @@ function vs_main(f3_ver: Vertex3) {
 function vs_main_camBased(f3_ver: Vertex3) {
     to_uvw = f3_ver;
 
-    var v4: CVec4 = new CVec4(f3_ver, 1.0);
+    // 기본 박스 메쉬가 1단위(±0.5)로 통일되어 큐브가 near plane 안쪽으로 들어가 클리핑됨.
+    // 스카이박스는 방향(to_uvw)만 쓰므로, 투영 지오메트리는 메쉬 크기와 무관하게 고정 크기로 강제한다.
+    var v4: CVec4 = new CVec4(V3MulFloat(V3Nor(f3_ver), 1000.0), 1.0);
 
     //view에서 eye position 제거함(스카이박스 끝에 닫는거 방지)
     var P: CVec4 = V4MulMatCoordi(v4, Mat3ToMat4(Mat4ToMat3(viewMat)));
@@ -164,7 +166,7 @@ function vs_main_camBased(f3_ver: Vertex3) {
 
     //z값 1로 고정 => 마지막 랜더패스에 랜더링해서 depth test하면 빈공간에만 스카이박스 랜더링됨
     //만약 z값이 1로 고정된 다른 물체 있으면 depth test를 less대신 lequal로 바꿔야함
-    out_position = new CVec4(P.x, P.y, P.w, P.w);
+    out_position = new CVec4(P.x, P.y, 0.0, P.w);
 }
 
 

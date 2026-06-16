@@ -1,10 +1,11 @@
 {
-  "log": false,
+  "log": true,
   "permissions": {
     "allow": [
       {"type": "read"},
       {"command": "node *ai/tsc_check"},
-	  {"command": "node *ai/web_debug"}
+	  {"command": "node *ai/web_debug"},
+	  {"command": "node *antigravity-cli/*"}
     ],
     "deny": [],
     "annotation": {

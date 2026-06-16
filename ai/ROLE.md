@@ -92,6 +92,8 @@ node ai/tsc_check.js 수정한파일.ts
 node ai/web_debug.js $BASE_URL login                                   # 인증 (최초 1회) → "ok" 출력
 node ai/web_debug.js $BASE_URL push <url> [ttl=60] [logSize=100]       # 세션 생성 → sessionId 문자열 출력
 node ai/web_debug.js $BASE_URL exec <sid> <fn> [args_json]             # 명령 실행 → result 출력
+node ai/web_debug.js $BASE_URL input <sid> <key|mouseButton> <time> <focus> [x y [x2 y2]] # 입력 실행
+node ai/web_debug.js $BASE_URL eval <sid> <js_expression>              # JS 표현식 직접 실행 → result 출력
 node ai/web_debug.js $BASE_URL logs <sid> [fromOffset=0]               # 콘솔 로그 조회 → logs, nextOffset 출력
 node ai/web_debug.js $BASE_URL list                                     # 세션 목록
 node ai/web_debug.js $BASE_URL remove <sid>                             # 세션 제거 (TTL 만료 시 자동 제거)
@@ -99,6 +101,11 @@ node ai/web_debug.js $BASE_URL remove <sid>                             # 세션
 
 - `fn`: Playwright Page API 메서드, dot-notation 지원 (`mouse.click`, `keyboard.type` 등)
 - `args_json`: JSON 배열 문자열 (기본 `[]`)
+- `input`: 키보드/마우스 입력을 한 요청 안에서 실행한다. 좌표가 없으면 키보드, `x y`가 있으면 마우스 press, `x y x2 y2`가 있으면 드래그로 처리한다. 마우스 버튼은 `mouseLeft|mouseRight|mouseMiddle`, `focus`는 `canvas|page|none`.
+  - 키 유지: `node ai/web_debug.js $BASE_URL input <sid> w 1000 canvas`
+  - 마우스 클릭/프레스: `node ai/web_debug.js $BASE_URL input <sid> mouseLeft 80 canvas 400 300`
+  - 마우스 드래그: `node ai/web_debug.js $BASE_URL input <sid> mouseLeft 800 canvas 400 300 520 300`
+- `eval` vs `exec evaluate`: DOM 조회·JS 변수 읽기 등 브라우저 메모리 접근 시 `eval` 사용. `exec evaluate`는 args_json 따옴표 이스케이핑 문제로 사용 금지.
 - `logs` 응답: `{ logs: [{"type":"log"|"error"|"network","text":"...","ts":0,"offset":N}], nextOffset: N }`
   - 로그는 조회해도 삭제되지 않음. `logSize` 초과 시 오래된 것부터 자동 삭제
   - `fromOffset` 미입력 시 전체 조회. 이전 `nextOffset`을 넘기면 새 로그만 조회 가능
@@ -116,3 +123,8 @@ node ai/web_debug.js $BASE_URL push $BASE_URL/proj/Home/Home.html 60 100
 node ai/web_debug.js $BASE_URL exec 3he4wj8iy6vmqf86ham title
 node ai/web_debug.js $BASE_URL logs 3he4wj8iy6vmqf86ham
 ```
+
+
+## 파일 변경 전 설명 규칙
+
+- 파일을 수정, 생성, 삭제하기 전에는 대상 파일과 수행할 작업 내용을 먼저 설명한다.

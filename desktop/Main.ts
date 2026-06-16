@@ -947,6 +947,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		// 	bHTML+="<script type='module' src='"+projectName+".js'></script>\n";
 		bHTML=CString.InsertAt(bHTML,pos+17,oHTML.substring(oHTML.indexOf("<!--EntryPoint-->")+17,oHTML.length));
 	}
+	bHTML="<title>"+projectName+"</title>\n"+bHTML; // 프로젝트명을 문서 타이틀로 삽입
 	await CFile.Save(bHTML,savePath+".html");
 
 	

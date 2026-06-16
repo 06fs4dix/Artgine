@@ -260,18 +260,17 @@ export class CCamera extends CObject
 		{
 			CUtilMath.CameraLookAtRH(eye,look,this.mUp,this.mViewMat);
 			if(this.mScreenWidthBase)
-				CUtilMath.CameraPerspectiveFovRH(this.mFov, width / height,this.mProjNear,this.mProjFar,true,this.mProjMat);
+                CUtilMath.CameraPerspectiveFovRH_ReverseZ(this.mFov, width / height,this.mProjNear,this.mProjFar,true,this.mProjMat);
 			else
-				CUtilMath.CameraPerspectiveFovRH(this.mFov, height/width,this.mProjNear,this.mProjFar,false,this.mProjMat);
-				//this.m_projMat=CMath.CameraPerspectiveRH(1,height/ width,this.m_projectNear,this.m_projectFar);
+                CUtilMath.CameraPerspectiveFovRH_ReverseZ(this.mFov, height/width,this.mProjNear,this.mProjFar,false,this.mProjMat);
 		}
 		else
 		{
 			CUtilMath.CameraLookAtLH(eye,look,this.mUp,this.mViewMat);
 			if(this.mScreenWidthBase)
-				CUtilMath.CameraPerspectiveFovLH(this.mFov, width / height,this.mProjNear,this.mProjFar,true,this.mProjMat);
+                CUtilMath.CameraPerspectiveFovLH_ReverseZ(this.mFov, width / height,this.mProjNear,this.mProjFar,true,this.mProjMat);
 			else
-				CUtilMath.CameraPerspectiveFovLH(this.mFov, height / width,this.mProjNear,this.mProjFar,false,this.mProjMat);
+                CUtilMath.CameraPerspectiveFovLH_ReverseZ(this.mFov, height / width,this.mProjNear,this.mProjFar,false,this.mProjMat);
 		}
 		
 		this.mOrthographic=false;
@@ -348,12 +347,12 @@ export class CCamera extends CObject
 		if(this.mRCS)
 		{
 			CUtilMath.CameraLookAtRH(eye,look,this.mUp,this.mViewMat);
-			CUtilMath.CameraOrthoRH(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
+            CUtilMath.CameraOrthoRH_ReverseZ(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
 		}
 		else
 		{
 			CUtilMath.CameraLookAtLH(eye,look,this.mUp,this.mViewMat);
-			CUtilMath.CameraOrthoLH(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
+            CUtilMath.CameraOrthoLH_ReverseZ(width,height, this.mProjNear, this.mProjFar,this.mProjMat);
 		}
 		//this.m_VPMat=CMath.MatMul(this.m_viewMat,this.m_projMat);
 		this.mOrthographic=true;

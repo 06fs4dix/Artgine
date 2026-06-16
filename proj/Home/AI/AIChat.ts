@@ -52,9 +52,8 @@ function isStandaloneChat(): boolean {
     return window.parent === window;
 }
 function authedFetch(input: string, init?: RequestInit): Promise<Response> {
-    const headers = new Headers(init?.headers || {});
-    if (authToken) headers.set('x-ai-token', authToken);
-    return fetch(input, { ...init, headers });
+    // 세션 쿠키로 인증되므로 토큰을 별도로 첨부하지 않는다.
+    return fetch(input, init);
 }
 function clearAuth() {
     authToken = '';
@@ -230,7 +229,8 @@ function isImagePath(p: string): boolean {
 }
 function attachmentUrl(sid: string, relPath: string, bust?: number): string {
     const t = bust ?? Date.now();
-    return `${CPath.WebRootUrl()}ai/chat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}&token=${encodeURIComponent(authToken)}`;
+    // 같은 출처 요청이라 세션 쿠키가 자동 전송된다(토큰 불필요).
+    return `${CPath.WebRootUrl()}ai/chat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
 }
 
 // ---- provider/model dropdowns ----
@@ -563,7 +563,8 @@ function connectWs() {
     if (ws && ws.readyState === WebSocket.OPEN) return;
     if (ws) { ws.close(); ws = null; }
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}ai/chat/ws?token=${encodeURIComponent(authToken)}`);
+    // 인증은 WS 핸드셰이크에 자동 전송되는 세션 쿠키로 처리된다(토큰 불필요).
+    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}ai/chat/ws`);
     ws.addEventListener('open', () => {
         setStatus('connected', 'text-bg-success');
         ws!.send(JSON.stringify({ type: 'join', sessionId: currentSid }));
@@ -642,7 +643,7 @@ async function init() {
     // verify cached token; if invalid, ask again
     try {
         const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token: authToken }, "json") as any;
-        if (j.ok) {
+        if (j.authed) {
             hideLoginOverlay();
             hideComposerLogin();
             bootChat();

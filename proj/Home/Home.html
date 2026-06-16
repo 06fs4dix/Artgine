@@ -95,8 +95,9 @@ if (location.protocol == 'file:' && isElectron==false){
 .ai-session-item{cursor:pointer;}
 #ai-sidebar .tab-pane:not(.active){display:none !important;}
 #ai-frame-container iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
-#ai-sidebar{position:absolute;left:0;top:0;height:100%;z-index:10;width:260px;transition:transform .25s ease;}
+#ai-sidebar{position:absolute;left:0;top:0;height:100%;z-index:10;width:310px;transition:transform .25s ease;}
 #ai-sidebar.collapsed{transform:translateX(-100%);}
+@keyframes browser-ripple{0%{transform:scale(1);opacity:1;}100%{transform:scale(2.5);opacity:0;}}
 </style>
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
@@ -170,7 +171,12 @@ if (location.protocol == 'file:' && isElectron==false){
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="ai-term-subtab" data-bs-toggle="tab" data-bs-target="#ai-term-pane" type="button" role="tab">
-                        <i class="bi bi-terminal"></i> Terminal
+                        <i class="bi bi-terminal"></i> Term
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="ai-browser-subtab" data-bs-toggle="tab" data-bs-target="#ai-browser-pane" type="button" role="tab">
+                        <i class="bi bi-browser-chrome"></i> Web
                     </button>
                 </li>
             </ul>
@@ -196,6 +202,14 @@ if (location.protocol == 'file:' && isElectron==false){
                     <div class="border-top flex-shrink-0">
                         <div id="schedSessionList" class="overflow-auto p-2 d-flex flex-column gap-1" style="max-height:200px;"></div>
                     </div>
+                </div>
+                <div class="tab-pane fade flex-grow-1 d-flex flex-column overflow-hidden" id="ai-browser-pane" role="tabpanel">
+                    <div class="p-2 border-bottom">
+                        <button id="browserNewBtn" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-1" style="font-size:0.85rem;">
+                            <i class="bi bi-plus-lg"></i><span>New Browser</span>
+                        </button>
+                    </div>
+                    <div id="browserSessionList" class="flex-grow-1 overflow-auto p-2 d-flex flex-column gap-2"></div>
                 </div>
             </div>
         </div>

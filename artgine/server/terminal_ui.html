@@ -165,6 +165,7 @@ window.addEventListener('keydown', function(e) {
             }
             if (kind === "status") {
                 if (m === "gemini") { _sendRaw("/stats"); return; }
+                if (m === "antigravity") { _sendRaw("/usage"); return; }
                 if (m === "cmd") return;
                 _sendRaw("/status");
             }
@@ -346,8 +347,19 @@ window.addEventListener('keydown', function(e) {
 
         function autoHeight() { inp.style.height = "0"; inp.style.height = Math.min(inp.scrollHeight, 200) + "px"; }
 
+        function normalizeInputCommand(text) {
+            var cmd = text.trim();
+            var mode = window.__TTYD_MODE;
+            if (mode === "gemini") {
+                if (cmd === "/status") return "/stats";
+                if (cmd === "/resume") return "/chat resume";
+            }
+            if (mode === "antigravity" && cmd === "/status") return "/usage";
+            return text;
+        }
+
         function sendInput() {
-            var text = inp.value;
+            var text = normalizeInputCommand(inp.value);
             if (text.trim() === "/super") { _toggleSuper(); inp.value = ""; autoHeight(); inp.focus(); return; }
             if (text) {
                 if (window.__TTYD_MODE === "gemini" || window.__TTYD_MODE === "antigravity") _sendRaw("\x1b[200~" + text + "\x1b[201~");
@@ -360,12 +372,7 @@ window.addEventListener('keydown', function(e) {
         }
 
         // ---- autocomplete ----
-        var _cmdList = {
-            claude:      ['/compact', '/resume', '/model', '/exit', '/clear', '/status', '/help'],
-            gemini:      ['/compact', '/chat resume', '/exit', '/clear', '/stats', '/help'],
-            codex:       ['/compact', '/resume', '/exit', '/clear', '/status', '/help'],
-            antigravity: ['/compact', '/resume', '/model', '/continue', '/exit', '/clear', '/status'],
-        };
+        var _cmdList = ['/compact', '/resume', '/model', '/continue', '/exit', '/clear', '/status', '/help'];
 
         var acBox = document.createElement("ul");
         acBox.id = "mi-ac";
@@ -409,8 +416,7 @@ window.addEventListener('keydown', function(e) {
         function _acUpdate() {
             var val = inp.value;
             if (!val.startsWith("/")) { _acHide(); return; }
-            var mode = window.__TTYD_MODE || 'claude';
-            var items = (_cmdList[mode] || _cmdList['claude']).map(function(c) { return { label: c, cmd: c }; });
+            var items = _cmdList.map(function(c) { return { label: c, cmd: c }; });
             items.push({ label: '/super (toggle auto-approve)', cmd: '/super' });
             (window.__SKILLS__ || []).forEach(function(s) { items.push({ label: '/' + s.name, cmd: '/' + s.name, skill: s }); });
             var matches = items.filter(function(it) { return it.cmd.startsWith(val) && it.cmd !== val; });

@@ -102,7 +102,7 @@ export class CWater3D extends CSubject
             if(this.GetFrame().Res().Find(waterMeshKey) == null)
             {
                 const rVal = new CMeshCreateInfo();
-                const size = CUtilRender.Mesh2DSize / 2.0
+                const size = CUtilRender.Mesh2DSize / 2.0;
                 const nor = new CVec3(0, 0, 1);
                 
                 let dir = new CVec3(1 - CMath.Abs(nor.x), 1 - CMath.Abs(nor.y), 1 - CMath.Abs(nor.z));

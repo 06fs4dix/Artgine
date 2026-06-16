@@ -182,6 +182,8 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
 }
 
 export function calcParallaxShadow(_index : number, _uv : CVec2, _ligDir : CVec3, _heightScale : number) : number {
+    if (_ligDir.z <= 0.0) return shadowRate;    // 아랫쪽에서 오는 빛은 그림자 처리(tangent space여서 아랫쪽 무조건 자를 수 있음)
+
     var minLayers : number = 4.0;
     var maxLayers : number = 16.0;
     var numLayers : number = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), _ligDir)));

@@ -116,7 +116,7 @@ Build("Artgine/Shader/PostVFX",["vfx"],
 
 function vs_main(f3_ver : Vertex3, f2_uv : UV2) {
     to_uv = f2_uv;
-    out_position = new CVec4(V2MulFloat(f3_ver.xy, 0.2), 0.0, 1.0);
+    out_position = new CVec4(V2MulFloat(f3_ver.xy, 2.0), 0.0, 1.0);
 }
 
 function ps_main_blend() {
