@@ -417,15 +417,18 @@ export class CLoader
 		this.mRes.Push(_file,sl);
 
 		
-		let basePath="";
-		if(_file.indexOf("z_file")==-1 && _file.indexOf("/")!=-1)
-		{
-			basePath="/"+CString.PathSub(_file);
-		}
-		for(var each01 of sl.mShader)
-		{
-			this.mRes.Push(basePath+each01.mKey,each01);
-		}
+		// let basePath="";
+		// if(_file.indexOf("z_file")==-1 && _file.indexOf("/")!=-1)
+		// {
+		// 	basePath="/"+CString.PathSub(_file);
+		// }
+		// let count=0;
+		// for(var each01 of sl.mShader)
+		// {
+		// 	this.mRes.Push(basePath+each01.mKey,each01);
+		// 	count++;
+		// 	if(count>1000)	break;
+		// }
 		return sl;
 		
 	}

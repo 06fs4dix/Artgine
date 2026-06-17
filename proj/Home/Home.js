@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqgmxeda_3";
+gPF.mVersion = "mqi3dqcv_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -119,7 +119,7 @@ function handleTermSidebarShortcut(e) {
         return false;
     if (isAiAuthVisible())
         return false;
-    if (aiSidebarEl.classList.contains('collapsed'))
+    if (!aiSidebarEl.classList.contains('show'))
         return false;
     if (e.shiftKey && !e.ctrlKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
@@ -177,7 +177,26 @@ function _showDoneNotification(label, content, onClick) {
 function isActiveFrame(key) {
     return activeFrameKey === key;
 }
+const myAppContainerEl = document.querySelector('.container');
+const myTabBarEl = document.getElementById('myTab');
+const myTabContentEl = document.getElementById('myTabContent');
+function syncFrameContainerSize() {
+    if (!myAppContainerEl || !myTabBarEl || !myTabContentEl)
+        return;
+    const viewportH = window.visualViewport?.height ?? window.innerHeight;
+    myAppContainerEl.style.height = `${viewportH}px`;
+    const tabBarH = myTabBarEl.getBoundingClientRect().height;
+    myTabContentEl.style.flex = '0 0 auto';
+    myTabContentEl.style.height = `${Math.max(0, viewportH - tabBarH)}px`;
+}
+syncFrameContainerSize();
+window.addEventListener('resize', syncFrameContainerSize);
+window.addEventListener('orientationchange', syncFrameContainerSize);
+window.visualViewport?.addEventListener('resize', syncFrameContainerSize);
+if (myTabBarEl)
+    new ResizeObserver(syncFrameContainerSize).observe(myTabBarEl);
 function showFrame(key, src) {
+    syncFrameContainerSize();
     let f = iframePool.get(key);
     if (!f) {
         f = document.createElement('iframe');
@@ -205,14 +224,14 @@ function showFrame(key, src) {
                         return;
                     }
                     if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-                        if (!aiSidebarEl.classList.contains('collapsed')) {
+                        if (aiSidebarEl.classList.contains('show')) {
                             e.preventDefault();
                             goNextSession(e.key === 'ArrowUp' ? -1 : 1);
                             return;
                         }
                     }
                     if (!isTerm && (e.key === '1' || e.key === '2' || e.key === '3') && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                        if (!aiSidebarEl.classList.contains('collapsed')) {
+                        if (aiSidebarEl.classList.contains('show')) {
                             const target = e.target;
                             if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable)) {
                                 e.preventDefault();
@@ -288,7 +307,7 @@ function focusActiveFrame() {
     f.focus();
 }
 function focusActiveFrameIfSidebarCollapsed() {
-    if (!aiSidebarEl.classList.contains('collapsed'))
+    if (aiSidebarEl.classList.contains('show'))
         return;
     setTimeout(() => focusActiveFrame(), 0);
 }
@@ -403,19 +422,28 @@ async function aiRefreshSessions() {
                     </ul>
                 </div>
             `;
-            item.addEventListener('click', () => aiLoadSession(s.sessionId));
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.dropdown'))
+                    return;
+                aiLoadSession(s.sessionId);
+            });
             const aiDropEl = item.querySelector('.dropdown');
-            aiDropEl.addEventListener('click', (e) => e.stopPropagation());
             new window.bootstrap.Dropdown(aiDropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
             item.querySelector('[data-act="link"]').addEventListener('click', () => aiShowShareLink(s.sessionId, s.title));
             wirePopupActions(item, () => `./AI/AIChat.html?session=${encodeURIComponent(s.sessionId)}`, s.title, `chat_${s.sessionId}`);
-            item.querySelector('[data-act="delete"]').addEventListener('click', async () => {
-                if (!confirm(`Delete "${s.title}"?`))
-                    return;
-                await aiAuthedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
-                destroyFrame(key);
-                aiRefreshSessions();
-                termRefreshSessions();
+            item.querySelector('[data-act="delete"]').addEventListener('click', () => {
+                const delConfirm = new CConfirm();
+                delConfirm.SetBody(`Delete "${aiEscapeHtml(s.title)}"?`);
+                delConfirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+                    async () => {
+                        await aiAuthedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
+                        destroyFrame(key);
+                        aiRefreshSessions();
+                        termRefreshSessions();
+                    },
+                    () => { },
+                ], ["Delete", "Cancel"]);
+                delConfirm.Open();
             });
             item.addEventListener('mouseenter', () => { if (!isActive)
                 item.classList.add('bg-body-secondary'); });
@@ -754,9 +782,12 @@ async function termRefreshSessions() {
                 </div>
             `;
             item.style.cursor = 'pointer';
-            item.addEventListener('click', () => termConnectSession(s.port));
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.dropdown'))
+                    return;
+                termConnectSession(s.port);
+            });
             const termDropEl = item.querySelector('.dropdown');
-            termDropEl.addEventListener('click', (e) => e.stopPropagation());
             new window.bootstrap.Dropdown(termDropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
             wirePopupActions(item, () => `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${s.port}`, s.key || s.mode || 'Terminal', `term_${s.port}`);
             item.querySelector('[data-act="link"]').addEventListener('click', () => termShowShareLink(s.port));
@@ -1130,7 +1161,7 @@ function goPrevFrame() {
     return true;
 }
 function goNextSession(dir) {
-    if (aiSidebarEl.classList.contains('collapsed'))
+    if (!aiSidebarEl.classList.contains('show'))
         return false;
     const subtab = document.getElementById('ai-chat-subtab')?.classList.contains('active') ? 'chat'
         : document.getElementById('ai-term-subtab')?.classList.contains('active') ? 'term'
@@ -1168,19 +1199,22 @@ function goNextSession(dir) {
 const AI_SIDEBAR_COLLAPSED_KEY = 'ai.sidebarCollapsed';
 const aiSidebarEl = CDOM.ID("ai-sidebar");
 const aiSidebarToggleBtn = CDOM.ID("aiSidebarToggle");
-function applySidebarCollapsed(collapsed) {
-    aiSidebarEl.classList.toggle('collapsed', collapsed);
-    const icon = aiSidebarToggleBtn.querySelector('i');
-    if (icon) {
-        icon.className = collapsed ? 'bi bi-layout-sidebar' : 'bi bi-layout-sidebar-inset';
-    }
-}
-applySidebarCollapsed(false);
+const aiSidebarOffcanvas = new window.bootstrap.Offcanvas(aiSidebarEl, { backdrop: false, scroll: true });
+aiSidebarEl.addEventListener('shown.bs.offcanvas', () => {
+    aiSidebarToggleBtn.querySelector('i').className = 'bi bi-layout-sidebar-inset';
+    localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, '0');
+});
+aiSidebarEl.addEventListener('hidden.bs.offcanvas', () => {
+    aiSidebarToggleBtn.querySelector('i').className = 'bi bi-layout-sidebar';
+    localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, '1');
+});
+aiSidebarEl.style.transition = 'none';
+aiSidebarOffcanvas.show();
+requestAnimationFrame(() => { aiSidebarEl.style.transition = ''; });
 function toggleSidebar() {
-    const next = !aiSidebarEl.classList.contains('collapsed');
-    localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
-    applySidebarCollapsed(next);
-    setTimeout(() => next ? focusActiveFrame() : aiSidebarEl.focus(), 0);
+    const wasShown = aiSidebarEl.classList.contains('show');
+    aiSidebarOffcanvas.toggle();
+    setTimeout(() => wasShown ? focusActiveFrame() : aiSidebarEl.focus(), 0);
 }
 aiSidebarToggleBtn.addEventListener('click', toggleSidebar);
 document.addEventListener('keydown', (e) => {
@@ -1196,7 +1230,7 @@ document.addEventListener('keydown', (e) => {
     if (handleTermSidebarShortcut(e))
         return;
     if ((e.key === '1' || e.key === '2' || e.key === '3') && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        if (isAiPanelActive() && !aiSidebarEl.classList.contains('collapsed')) {
+        if (isAiPanelActive() && aiSidebarEl.classList.contains('show')) {
             const target = e.target;
             if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable) {
                 e.preventDefault();
@@ -1227,7 +1261,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         if (!isAiPanelActive())
             return;
-        if (!aiSidebarEl.classList.contains('collapsed'))
+        if (aiSidebarEl.classList.contains('show'))
             e.preventDefault();
         goNextSession(e.key === 'ArrowUp' ? -1 : 1);
         return;
@@ -1378,9 +1412,12 @@ function browserAddSession(sessionId, url, browserName = '', expiresAt = 0, navi
         </div>
     `;
     const ttlEl = sidebarEl.querySelector('.browser-ttl-label');
-    sidebarEl.addEventListener('click', () => browserLoadSession(sessionId));
+    sidebarEl.addEventListener('click', (e) => {
+        if (e.target.closest('.dropdown'))
+            return;
+        browserLoadSession(sessionId);
+    });
     const dropEl = sidebarEl.querySelector('.dropdown');
-    dropEl.addEventListener('click', (e) => e.stopPropagation());
     new window.bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
     sidebarEl.querySelector('[data-act="link"]').addEventListener('click', () => browserShowShareLink(sessionId, url));
     wirePopupActions(sidebarEl, () => `./AI/Browser.html?session=${encodeURIComponent(sessionId)}`, url, `browser_${sessionId}`);
@@ -1476,6 +1513,16 @@ browserNewBtn.addEventListener('click', () => {
                 <input id="brow-ttl" type="number" min="10" class="form-control form-control-sm" value="300">
             </div>
         </div>
+        <div class="mb-3 d-flex gap-2">
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Width</label>
+                <input id="brow-width" type="number" min="1" class="form-control form-control-sm" value="1280">
+            </div>
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Height</label>
+                <input id="brow-height" type="number" min="1" class="form-control form-control-sm" value="720">
+            </div>
+        </div>
         <div class="d-flex justify-content-between">
             <button id="brow-open" class="btn btn-primary">Open</button>
             <button id="brow-cancel" class="btn btn-danger ms-2">Cancel</button>
@@ -1488,18 +1535,22 @@ browserNewBtn.addEventListener('click', () => {
         const urlInput = container.querySelector('#brow-url');
         const browserSel = container.querySelector('#brow-browser');
         const ttlInput = container.querySelector('#brow-ttl');
+        const widthInput = container.querySelector('#brow-width');
+        const heightInput = container.querySelector('#brow-height');
         const doOpen = async () => {
             const url = urlInput.value.trim();
             if (!url)
                 return;
             const browser = browserSel.value;
             const ttl = parseInt(ttlInput.value) || 300;
+            const width = parseInt(widthInput.value);
+            const height = parseInt(heightInput.value);
             modal.Close();
             try {
                 const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/push`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200 })
+                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200, width, height })
                 });
                 const j = await r.json();
                 if (!j.ok) {
@@ -1799,6 +1850,28 @@ function SetFileToken(token) {
     localStorage.setItem(FileTokenKey(), token);
     localStorage.setItem(AI_TOKEN_KEY, token);
 }
+function BuildFileHomeUrl() {
+    const base = g_fileWebRootUrl.replace(/\/+$/, '');
+    let url = base + "/proj/Home/Home.html";
+    const q = [];
+    if (path)
+        q.push("path=" + encodeURIComponent(path));
+    if (RootPath)
+        q.push("RootPath=" + encodeURIComponent(RootPath));
+    if (RootUrl)
+        q.push("RootUrl=" + encodeURIComponent(RootUrl));
+    if (q.length)
+        url += "?" + q.join("&");
+    return url;
+}
+async function SendRemoteGuide(token) {
+    try {
+        await CFecth.Exe(CPath.WebRootUrl() + "File/Remote", { addr: BuildFileHomeUrl(), token }, "json");
+    }
+    catch (e) {
+        console.error("File/Remote update failed:", e);
+    }
+}
 function SyncFileRoot(data) {
     if (data.RootPath != null)
         RootPath = data.RootPath;
@@ -1956,6 +2029,7 @@ async function FileBtn() {
         CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json").then((j) => {
             if (j.ok) {
                 SetFileToken(j.token);
+                SendRemoteGuide(j.token);
                 fileAuthed = true;
                 aiAuthOverlay.style.display = 'none';
                 aiRefreshSessions();
@@ -2006,10 +2080,10 @@ function showFileAdminModal() {
                 <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="fileHomeLocal_${uid}">Local</button>
             </div>
             <select id="fadm_rootsel_${uid}" class="form-select form-select-sm" style="width:100%;min-width:0;">${_rootOpts}</select>
-            <hr class="my-0">
-            <div class="d-flex gap-1">
-                <button id="fadm_chat_${uid}" class="btn btn-outline-primary flex-fill">Chat</button>
-                <button id="fadm_term_${uid}" class="btn btn-outline-success flex-fill">Terminal</button>
+            <div class="d-flex gap-1 align-items-center">
+                <span class="small text-secondary flex-shrink-0" title="Find from current path"><i class="bi bi-folder2-open"></i> PathTo</span>
+                <button id="fadm_chat_${uid}" class="btn btn-outline-primary btn-sm flex-fill">Chat</button>
+                <button id="fadm_term_${uid}" class="btn btn-outline-success btn-sm flex-fill">Terminal</button>
             </div>
             <hr class="my-0">
             <div class="accordion" id="fadm_acc_${uid}">
@@ -2021,10 +2095,10 @@ function showFileAdminModal() {
                     </h2>
                     <div id="fadm_file_actions_body_${uid}" class="accordion-collapse collapse" data-bs-parent="#fadm_acc_${uid}">
                         <div class="accordion-body d-flex flex-column gap-2 p-2">
-                            <button id="fadm_share_${uid}" class="btn btn-outline-info">Share</button>
-                            <button id="fadm_folder_${uid}" class="btn btn-warning">New Folder</button>
-                            <button id="fadm_delete_${uid}" class="btn btn-danger">Delete</button>
-                            <button id="fadm_upload_${uid}" class="btn btn-primary">Upload</button>
+                            <button id="fadm_share_${uid}" class="btn btn-outline-info btn-sm">Share</button>
+                            <button id="fadm_folder_${uid}" class="btn btn-warning btn-sm">New Folder</button>
+                            <button id="fadm_delete_${uid}" class="btn btn-danger btn-sm">Delete</button>
+                            <button id="fadm_upload_${uid}" class="btn btn-primary btn-sm">Upload</button>
                         </div>
                     </div>
                 </div>

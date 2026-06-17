@@ -42,7 +42,7 @@ const [,, baseArg, cmd, ...args] = process.argv;
 if (!baseArg || !baseArg.startsWith('http')) {
     console.error('Usage: node ai/web_debug.js <base-url> <cmd> [args]');
     console.error('  node ai/web_debug.js http://localhost:7000 login');
-    console.error('  node ai/web_debug.js http://localhost:7000 push <url> [ttl=600] [logSize=100]');
+    console.error('  node ai/web_debug.js http://localhost:7000 push <url> [ttl=600] [logSize=100] [width=1280] [height=720]');
     console.error('  node ai/web_debug.js http://localhost:7000 exec <sid> <fn> [args_json]');
     console.error('  node ai/web_debug.js http://localhost:7000 input <sid> <key|mouseButton> <time_ms> <focus> [x y [x2 y2]]');
     console.error('  node ai/web_debug.js http://localhost:7000 eval <sid> <js_expression>');
@@ -62,9 +62,9 @@ if (cmd === 'login') {
     console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'push') {
-    const [url, ttl = '600', logSize = '100'] = args;
-    if (!url) { console.error('Usage: push <url> [ttl] [logSize]'); process.exit(1); }
-    const r = await call(base, 'playwright/push', { url, ttl, logSize });
+    const [url, ttl = '600', logSize = '100', width = '1280', height = '720'] = args;
+    if (!url) { console.error('Usage: push <url> [ttl] [logSize] [width] [height]'); process.exit(1); }
+    const r = await call(base, 'playwright/push', { url, ttl, logSize, width, height });
     console.log(r.ok ? r.sessionId : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'exec') {

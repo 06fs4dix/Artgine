@@ -752,7 +752,7 @@ function DevToolRender()
 
     let subject=gLeftSelect as CSubject;
     const render=gAtl.Frame().Ren();
-    let shader=gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCMAM") as CShader;
+    let shader=gAtl.Frame().Pal().Sl3D().GetShader("Artgine/Shader/3DSimpleCMAM"); //;gAtl.Frame().Res().Find("Artgine/Shader/3DSimpleCMAM") as CShader;
     
     let meshDrawBox=gAtl.Frame().Res().Find(gAtl.Frame().Pal().GetDevBoxMesh()+"Dev") as CMeshDrawNode;
     if(meshDrawBox==null)

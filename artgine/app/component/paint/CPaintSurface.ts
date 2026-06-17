@@ -36,7 +36,8 @@ export class CPaintSurface extends CPaint
     {
         if(this.mRenderPass.length==0)
         {
-            var rp=new CRPAuto("Artgine/Shader/2DBlit");
+            var rp=new CRPAuto(this.mOwner.GetFrame().Pal().Sl2D().GetShader("Artgine/Shader/2DBlit").mKey);
+            //var rp=new CRPAuto("Artgine/Shader/2DBlit");
             this.mRenderPass=[rp];
         }
         // for(let rp of this.mRenderPass)

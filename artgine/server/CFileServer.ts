@@ -10,7 +10,7 @@ import { promisify } from 'util';
 import * as nodePath from 'path';
 
 const _exec = promisify(exec);
-const execAsync = (cmd: string) => _exec(cmd, { maxBuffer: 64 * 1024 * 1024 });
+const execAsync = (cmd: string, opts?: { cwd?: string }) => _exec(cmd, { maxBuffer: 64 * 1024 * 1024, ...opts });
 
 type VcsStatus = "M" | "A" | "D" | "?";
 type VcsType = "svn" | "git";
@@ -89,6 +89,28 @@ async function getVcsStatus(dirPath: string): Promise<Map<string, VcsStatus>> {
     return map;
 }
 
+function resolveAbs(p: string): string {
+    return nodePath.resolve(p).replace(/\\/g, '/');
+}
+
+function isInsideRoot(rootPath: string, targetPath: string): boolean {
+    const base = resolveAbs(rootPath).replace(/\/+$/, '');
+    const target = resolveAbs(targetPath);
+    return target === base || target.startsWith(base + '/');
+}
+
+async function isInsideAnyRoot(targetPath: string): Promise<boolean> {
+    const roots = GetRootPaths(await GetAppJSON());
+    return roots.some(r => isInsideRoot(r, targetPath));
+}
+
+async function validateRoot(rootParam: string | undefined): Promise<string | null> {
+    const roots = GetRootPaths(await GetAppJSON());
+    if (!rootParam) return roots[0];
+    const match = roots.find(r => resolveAbs(r) === resolveAbs(rootParam));
+    return match ?? null;
+}
+
 function applyVcsStatus(
     list: { file: boolean; name: string; ext: string }[],
     vcsMap: Map<string, VcsStatus>
@@ -99,7 +121,7 @@ function applyVcsStatus(
     });
 }
 
-@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS"])
+@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS", "/File/CMD", "/File/Remote"])
 export class CFileServer extends CAuthServer
 {
     private IsAuth(req: Request): boolean {
@@ -117,6 +139,8 @@ export class CFileServer extends CAuthServer
         this.On("/File/Delete", this.onDelete.bind(this));
         this.On("/File/Upload", this.onUpload.bind(this));
         this.On("/File/VCS", this.onVCS.bind(this));
+        this.On("/File/CMD", this.onCmd.bind(this));
+        this.On("/File/Remote", this.onRemote.bind(this));
     }
 
     async onRoot(_json: CJSON, _req: Request, _res: Response): Promise<string> {
@@ -148,23 +172,43 @@ export class CFileServer extends CAuthServer
         if(downParam) extraQ += `&RootUrl=${encodeURIComponent(downParam)}`;
 
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
-        const currentRootPath = rootParam || GetRootPaths(await GetAppJSON())[0];
 
         if (fun?.includes("CreateFolder") || fun?.includes("Delete") || fun?.includes("SoundPlayList")) {
             if (!this.IsAuth(_req)) {
                 _res.status(403);
                 return JSON.stringify({ ok: false, msg: "Unauthorized" });
             }
-        }
 
-        if (fun?.includes("CreateFolder")) {
-            await CFile.FolderCreate(fix(currentRootPath + data));
-        }
-        else if (fun?.includes("Delete")) {
-            await CFile.Delete(fix(currentRootPath + data));
-        }
-        else if (fun?.includes("SoundPlayList")) {
-            CFile.Save(data, fix(currentRootPath + path + option + ".soundlist"));
+            const currentRootPath = await validateRoot(rootParam);
+            if (currentRootPath === null) {
+                _res.status(403);
+                return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+            }
+
+            if (fun?.includes("CreateFolder")) {
+                const targetPath = fix(currentRootPath + data);
+                if (!isInsideRoot(currentRootPath, targetPath)) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
+                }
+                await CFile.FolderCreate(targetPath);
+            }
+            else if (fun?.includes("Delete")) {
+                const targetPath = fix(currentRootPath + data);
+                if (!isInsideRoot(currentRootPath, targetPath)) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
+                }
+                await CFile.Delete(targetPath);
+            }
+            else if (fun?.includes("SoundPlayList")) {
+                const targetPath = fix(currentRootPath + path + option + ".soundlist");
+                if (!isInsideRoot(currentRootPath, targetPath)) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
+                }
+                CFile.Save(data, targetPath);
+            }
         }
 
         _res.redirect(302, "../proj/Home/Home.html" + `?path=${path}${extraQ}`);
@@ -173,11 +217,19 @@ export class CFileServer extends CAuthServer
 
     async onList(_json: CJSON, _req: Request, _res: Response): Promise<string> {
         let path = _json.GetStr("path") || "/";
-        let currentRootPath = _json.GetStr("RootPath") || GetRootPaths(await GetAppJSON())[0];
+        const currentRootPath = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRootPath === null) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
         let currentDown = _json.GetStr("RootUrl");
 
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
         const targetPath = fix(currentRootPath + path);
+        if (!isInsideRoot(currentRootPath, targetPath)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
 
         let list = await CFile.FolderList(targetPath);
 
@@ -200,10 +252,18 @@ export class CFileServer extends CAuthServer
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
-        const rootParam = _json.GetStr("RootPath");
-        const currentRootPath = rootParam || GetRootPaths(await GetAppJSON())[0];
+        const currentRootPath = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRootPath === null) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
         const data = _json.GetStr("data");
-        const ok = await CFile.FolderCreate(fix(currentRootPath + data));
+        const targetPath = fix(currentRootPath + data);
+        if (!isInsideRoot(currentRootPath, targetPath)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
+        const ok = await CFile.FolderCreate(targetPath);
         return JSON.stringify({ ok });
     }
 
@@ -213,10 +273,17 @@ export class CFileServer extends CAuthServer
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
-        const rootParam = _json.GetStr("RootPath");
-        const currentRootPath = rootParam || GetRootPaths(await GetAppJSON())[0];
+        const currentRootPath = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRootPath === null) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
         const data = _json.GetStr("data");
         const fullPath = fix(currentRootPath + data);
+        if (!isInsideRoot(currentRootPath, fullPath)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
         try {
             await execAsync(`svn info "${fullPath}"`);
             await execAsync(`svn delete "${fullPath}"`);
@@ -237,8 +304,16 @@ export class CFileServer extends CAuthServer
         let dataArr = _json.GetArray("data");
         const fix   = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
 
+        const filePaths = nameArr.mArray.map((n: string) => fix(path + n));
+        for (const filePath of filePaths) {
+            if (!await isInsideAnyRoot(filePath)) {
+                _res.status(403);
+                return JSON.stringify({ ok: false, msg: "Path escapes root" });
+            }
+        }
+
         for (let i = 0; i < nameArr.mArray.length; ++i) {
-            const filePath = fix(path + nameArr.mArray[i]);
+            const filePath = filePaths[i];
             const fileData = CUtil.Base64ToArray(dataArr.mArray[i]);
             CFile.Save(fileData, filePath);
             CFile.PushCache(filePath, fileData);
@@ -261,6 +336,9 @@ export class CFileServer extends CAuthServer
 
         const isDir  = path.endsWith("/");
         const dirPath = isDir ? path : fixPath(nodePath.dirname(path));
+        if (!await isInsideAnyRoot(dirPath)) {
+            return JSON.stringify({ ok: false, msg: "Path escapes allowed roots" });
+        }
         const vcs = await detectVcsType(dirPath);
         if (!vcs) return JSON.stringify({ ok: false, msg: "SVN/Git not found. Check installation." });
 
@@ -354,6 +432,43 @@ export class CFileServer extends CAuthServer
             return JSON.stringify({ ok: true, vcs, msg: (stdout + stderr).trim() });
         } catch (e: any) {
             return JSON.stringify({ ok: false, msg: e.stderr || e.message || String(e) });
+        }
+    }
+
+    async onCmd(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        if (!this.IsAuth(_req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const cmd = _json.GetStr("cmd");
+        const cwd = _json.GetStr("path") || undefined;
+        const fullCmd = process.platform === 'win32' ? `chcp 65001>nul && ${cmd}` : cmd;
+        try {
+            const { stdout, stderr } = await execAsync(fullCmd, cwd ? { cwd } : undefined);
+            return JSON.stringify({ ok: true, stdout, stderr });
+        } catch (e: any) {
+            return JSON.stringify({ ok: false, msg: e.message || String(e), stdout: e.stdout, stderr: e.stderr });
+        }
+    }
+
+    // 인증 성공 시 클라이언트가 호출한다(인증 체크 없음). 넘어온 주소/토큰으로 ai/FileServerGuide.md를 갱신한다.
+    async onRemote(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        const addr  = _json.GetStr("addr");
+        const token = _json.GetStr("token");
+        if (!addr) {
+            return JSON.stringify({ ok: false, msg: "Missing addr" });
+        }
+        const guidePath = nodePath.resolve(process.cwd(), "ai/FileServerGuide.md");
+        try {
+            const fs = await import('fs/promises');
+            let md = await fs.readFile(guidePath, 'utf8');
+            // `## 주소` / `## 토큰` 헤딩 바로 다음의 `- ...` 라인을 넘어온 값으로 치환한다.
+            md = md.replace(/(##\s*주소[^\n]*\r?\n-\s*)[^\r\n]*/, `$1${addr}`);
+            md = md.replace(/(##\s*토큰[^\n]*\r?\n-\s*)[^\r\n]*/, `$1${token}`);
+            await fs.writeFile(guidePath, md, 'utf8');
+            return JSON.stringify({ ok: true });
+        } catch (e: any) {
+            return JSON.stringify({ ok: false, msg: e.message || String(e) });
         }
     }
 }

@@ -32,6 +32,9 @@ node ai/tsc_check.js 수정한파일.ts
 ## 새 프로젝트 생성
 **`ai/ProjectSetup.md`** 먼저 읽기 필수.
 
+## 원격 작업
+**`ai/FileServerGuide.md`** 먼저 읽기 필수.
+
 
 ## Project Rules
 ** ai/CodeNamingGuide.md ** 먼저 읽기 필수. 
@@ -83,6 +86,12 @@ node ai/tsc_check.js 수정한파일.ts
 
 > 라이브 페이지 콘솔 로그·JS 실행·DOM 조회용. 코드 파일 수정엔 쓰지 않는다.
 
+### 사용 제한
+- 소스 분석과 정적 검증을 먼저 한다.
+- `ai/web_debug.js`는 런타임 확인이 꼭 필요할 때만 쓴다.
+- 용도: 콘솔 로그, JS 실행, DOM 조회, 최종 동작 검증.
+- 단순 코드 확인이나 파일 구조 파악에는 쓰지 않는다.
+
 `ai/web_debug.js`를 사용한다. 비밀번호는 스크립트가 자동으로 읽는다. 쿠키는 `ai/cookie.txt`에 자동 저장/로드.  
 **규칙**: Bash 툴만 사용 (PowerShell 금지)
 
@@ -90,7 +99,7 @@ node ai/tsc_check.js 수정한파일.ts
 
 ```bash
 node ai/web_debug.js $BASE_URL login                                   # 인증 (최초 1회) → "ok" 출력
-node ai/web_debug.js $BASE_URL push <url> [ttl=60] [logSize=100]       # 세션 생성 → sessionId 문자열 출력
+node ai/web_debug.js $BASE_URL push <url> [ttl=60] [logSize=100] [width=1280] [height=720] # 세션 생성 → sessionId 문자열 출력
 node ai/web_debug.js $BASE_URL exec <sid> <fn> [args_json]             # 명령 실행 → result 출력
 node ai/web_debug.js $BASE_URL input <sid> <key|mouseButton> <time> <focus> [x y [x2 y2]] # 입력 실행
 node ai/web_debug.js $BASE_URL eval <sid> <js_expression>              # JS 표현식 직접 실행 → result 출력
@@ -99,6 +108,7 @@ node ai/web_debug.js $BASE_URL list                                     # 세션
 node ai/web_debug.js $BASE_URL remove <sid>                             # 세션 제거 (TTL 만료 시 자동 제거)
 ```
 
+- `push`: width/height로 Playwright viewport size를 지정한다. 0 이하, 미입력, 알 수 없는 값은 서버 기본값 1280x720을 사용한다.
 - `fn`: Playwright Page API 메서드, dot-notation 지원 (`mouse.click`, `keyboard.type` 등)
 - `args_json`: JSON 배열 문자열 (기본 `[]`)
 - `input`: 키보드/마우스 입력을 한 요청 안에서 실행한다. 좌표가 없으면 키보드, `x y`가 있으면 마우스 press, `x y x2 y2`가 있으면 드래그로 처리한다. 마우스 버튼은 `mouseLeft|mouseRight|mouseMiddle`, `focus`는 `canvas|page|none`.
@@ -117,7 +127,7 @@ BASE_URL=<접속정보.주소>:<접속정보.포트>/<접속정보.기본경로>
 node ai/web_debug.js $BASE_URL login
 → ok
 
-node ai/web_debug.js $BASE_URL push $BASE_URL/proj/Home/Home.html 60 100
+node ai/web_debug.js $BASE_URL push $BASE_URL/proj/Home/Home.html 60 100 1280 720
 → 3he4wj8iy6vmqf86ham   (이 값이 sessionId)
 
 node ai/web_debug.js $BASE_URL exec 3he4wj8iy6vmqf86ham title

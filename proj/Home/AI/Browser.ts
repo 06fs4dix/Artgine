@@ -14,6 +14,7 @@ let pollTimer: number | null = null;
 let pollMs     = 3000;
 let logOffset  = 0;
 let inputMode  = false;
+let screenshotQuality = 75;
 
 const loginOverlay  = document.getElementById('loginOverlay')  as HTMLDivElement;
 const loginPw       = document.getElementById('loginPw')       as HTMLInputElement;
@@ -21,12 +22,32 @@ const loginBtn      = document.getElementById('loginBtn')      as HTMLButtonElem
 const loginMsg      = document.getElementById('loginMsg')      as HTMLDivElement;
 const screenshot    = document.getElementById('screenshot')    as HTMLImageElement;
 const logArea       = document.getElementById('logArea')       as HTMLDivElement;
+const controlsBar   = document.getElementById('controlsBar')   as HTMLDivElement;
 const rateSlider    = document.getElementById('rateSlider')    as HTMLInputElement;
 const rateLabel     = document.getElementById('rateLabel')     as HTMLSpanElement;
-const ttlLabel      = document.getElementById('ttlLabel')      as HTMLSpanElement;
 const inputToggle   = document.getElementById('inputToggle')   as HTMLInputElement;
 const imgWrap       = document.getElementById('imgWrap')       as HTMLDivElement;
 const inputModeRow  = document.getElementById('inputModeRow')  as HTMLDivElement;
+
+function initQualityControl() {
+    if (!controlsBar) return;
+
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-1';
+    row.innerHTML = `
+        <input id="qualitySlider" type="range" class="form-range" min="0" max="100" step="1" value="${screenshotQuality}" style="width:100px;">
+        <span id="qualityLabel" style="font-size:0.75rem;min-width:2.4rem;">${screenshotQuality}</span>
+    `;
+    controlsBar.insertBefore(row, inputModeRow);
+
+    const slider = row.querySelector<HTMLInputElement>('#qualitySlider')!;
+    const label = row.querySelector<HTMLSpanElement>('#qualityLabel')!;
+    slider.addEventListener('input', () => {
+        const quality = Math.trunc(Number(slider.value));
+        screenshotQuality = Math.max(0, Math.min(100, Number.isFinite(quality) ? quality : 75));
+        label.textContent = String(screenshotQuality);
+    });
+}
 
 function showOverlay(msg = '') {
     loginOverlay.style.setProperty('display', 'flex', 'important');
@@ -74,19 +95,11 @@ async function checkAuth() {
     }
 }
 
-function bufToDataUrl(buf: { data: number[] }): string {
+function bufToDataUrl(buf: { data: number[] }, mime = 'image/png'): string {
     const bytes = new Uint8Array(buf.data);
     let bin = '';
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return 'data:image/png;base64,' + btoa(bin);
-}
-
-function fmtTtl(expiresAt: number): string {
-    const rem = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-    if (rem <= 0) return '−0s';
-    const m = Math.floor(rem / 60);
-    const s = rem % 60;
-    return m > 0 ? `−${m}m${s}s` : `−${s}s`;
+    return `data:${mime};base64,` + btoa(bin);
 }
 
 async function poll() {
@@ -95,7 +108,11 @@ async function poll() {
             fetch(CPath.WebRootUrl() + 'playwright/exec', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: SESSION_ID, fn: 'screenshot', args: [] })
+                body: JSON.stringify({
+                    sessionId: SESSION_ID,
+                    fn: 'screenshot',
+                    args: [{ type: 'jpeg', quality: screenshotQuality }]
+                })
             }),
             fetch(CPath.WebRootUrl() + 'playwright/logs', {
                 method: 'POST',
@@ -105,7 +122,7 @@ async function poll() {
         ]);
         const jScreen = await rScreen.json();
         if (jScreen.ok && jScreen.result?.type === 'Buffer') {
-            screenshot.src = bufToDataUrl(jScreen.result);
+            screenshot.src = bufToDataUrl(jScreen.result, 'image/jpeg');
         }
         const jLogs = await rLogs.json();
         if (jLogs.ok && jLogs.logs?.length) {
@@ -129,15 +146,6 @@ function boot() {
     }
 
     if (READONLY) inputModeRow.style.display = 'none';
-
-    fetch(CPath.WebRootUrl() + 'playwright/list').then(r => r.json()).then(j => {
-        if (!j.ok) return;
-        const s = (j.sessions as { sessionId: string; expiresAt: number }[]).find(x => x.sessionId === SESSION_ID);
-        if (!s) return;
-        const update = () => { ttlLabel.textContent = fmtTtl(s.expiresAt); };
-        update();
-        setInterval(update, 1000);
-    }).catch(() => {});
 
     rateSlider.addEventListener('input', () => {
         pollMs = parseFloat(rateSlider.value) * 1000;
@@ -263,4 +271,5 @@ function boot() {
 loginBtn.addEventListener('click', () => tryLogin(loginPw.value));
 loginPw.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') tryLogin(loginPw.value); });
 
+initQualityControl();
 checkAuth();

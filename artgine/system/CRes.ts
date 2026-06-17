@@ -251,6 +251,7 @@ export class CRes extends CObject {
 		input.id = "resSearch";
 		input.placeholder = "Search";
 		input.onkeyup = (e) => {
+			if (e.key !== "Enter") return;
 			const t = e.target as HTMLInputElement;
 			const val = t.value;
 			let ch = div.getElementsByClassName("border p-1 mt-1");
@@ -492,7 +493,7 @@ export class CRes extends CObject {
 					btn.onclick = () => {
 						if(n.mData.Key==null)	return;
 						input.value=n.mData.Key();
-						input.dispatchEvent(new Event('keyup', {bubbles: true}));
+						input.dispatchEvent(new KeyboardEvent('keyup', {key: "Enter", bubbles: true}));
 						// const fullPath = pathOf(n);
 						// try { navigator.clipboard?.writeText(fullPath); } catch { }
 						// console.log("[Res]", fullPath, n.mData);

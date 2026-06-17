@@ -3,7 +3,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import * as os from 'os';
 import * as https from 'https';
-import * as net from 'net';
+import * as http from 'http';
 import * as fs from "fs";
 import { imageSize } from 'image-size';
 import { spawn } from 'child_process';
@@ -778,13 +778,15 @@ function fetchText(url) {
 function isValidIP(ip) {
     return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
 }
-function checkPort(host, port, timeout = 3000) {
+function checkHttp(url, timeout = 3000) {
     return new Promise(resolve => {
-        const socket = new net.Socket();
-        socket.setTimeout(timeout);
-        socket.connect(port, host, () => { socket.destroy(); resolve(true); });
-        socket.on('error', () => { socket.destroy(); resolve(false); });
-        socket.on('timeout', () => { socket.destroy(); resolve(false); });
+        const lib = url.startsWith('https') ? https : http;
+        const req = lib.get(url, res => {
+            res.resume();
+            resolve(res.statusCode === 200);
+        });
+        req.on('error', () => resolve(false));
+        req.setTimeout(timeout, () => { req.destroy(); resolve(false); });
     });
 }
 ipcMain.handle("GetIPInfo", async (_event) => {
@@ -798,12 +800,13 @@ ipcMain.handle("GetIPInfo", async (_event) => {
     ipInfo.public = await GetPublicIP();
     ipInfo.url = gAppJSON.url + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     ipInfo.private = protocol + "//" + ipInfo.private + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
+    const publicPage = protocol + "//" + ipInfo.public + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     if (ipInfo.public === "Unavailable")
         ipInfo.public = "Please check your internet connection.";
-    else if (!(await checkPort(ipInfo.public, Number(port))))
+    else if (!(await checkHttp(publicPage)))
         ipInfo.public = "Port unreachable. Please check port forwarding.";
     else
-        ipInfo.public = protocol + "//" + ipInfo.public + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
+        ipInfo.public = publicPage;
     CConsol.Log(ipInfo.private + "\n" + ipInfo.public);
     return JSON.stringify(ipInfo);
 });
