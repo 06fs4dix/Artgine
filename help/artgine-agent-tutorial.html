@@ -50,7 +50,10 @@
     .fake-monaco{min-height:280px;background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:14px;font-family:Consolas,monospace;white-space:pre-wrap}.fake-image{height:260px;border:1px dashed #adb5bd;border-radius:.5rem;display:grid;place-items:center;background:linear-gradient(135deg,#f8f9fa,#e9ecef);color:#6c757d}.fake-video{height:260px;border-radius:.5rem;background:#111827;color:#fff;display:grid;place-items:center}
 
     .ai-pane.active{display:grid;grid-template-rows:auto minmax(0,1fr);background:#f8f9fa;overflow:hidden}.ai-body{min-height:0;display:grid;grid-template-columns:260px minmax(0,1fr);height:100%}.ai-sidebar{display:flex;flex-direction:column;border-right:1px solid var(--bs-border-color);min-height:0;background:#f8f9fa}.ai-subtabs{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--bs-border-color)}.ai-subtabs .nav-link{height:40px;border-radius:0;border:0;border-right:1px solid var(--bs-border-color)}
-    .side-section{display:none;overflow:auto;padding:10px;min-height:0;flex:1}.side-section.active{display:block}.session{border:1px solid transparent;border-radius:.375rem;background:#fff;padding:8px;margin-bottom:7px;cursor:pointer}.session.chat-active{background:#cfe2ff;border-color:#9ec5fe}.session.term-active{background:#d1e7dd;border-color:#a3cfbb}.session.web-active{background:#e7f1ff;border-color:#9ec5fe}.sess-title{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:#198754}.dot.busy{background:#ffc107}.dot.off{background:#dc3545}.session small{display:block;color:#6c757d;margin-left:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .side-section{display:none;overflow:auto;padding:10px;min-height:0;flex:1}.side-section.active{display:block}.session{position:relative;border:1px solid transparent;border-radius:.375rem;background:#fff;padding:8px;margin-bottom:7px;cursor:pointer}.session.chat-active{background:#cfe2ff;border-color:#9ec5fe}.session.term-active{background:#d1e7dd;border-color:#a3cfbb}.session.web-active{background:#e7f1ff;border-color:#9ec5fe}.sess-title{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:#198754}.dot.busy{background:#ffc107}.dot.off{background:#dc3545}.session small{display:block;color:#6c757d;margin-left:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sess-menu-btn{margin-left:auto;border:0;background:transparent;color:#6c757d;font-weight:700;padding:0 5px;line-height:1.4;cursor:pointer;border-radius:.25rem;font-size:14px}.sess-menu-btn:hover{background:rgba(0,0,0,.08)}
+    .sess-menu{display:none;position:absolute;right:6px;top:30px;z-index:25;background:#fff;border:1px solid var(--bs-border-color);border-radius:.375rem;box-shadow:var(--shadow);min-width:108px;padding:4px}.sess-menu.show{display:block}
+    .sess-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:.35rem .55rem;border-radius:.25rem;cursor:pointer;font-size:.82rem;font-weight:400}.sess-menu button:hover{background:#f1f3f5}.sess-menu button[data-action="delete"]{color:#dc3545}
     .frame{min-width:0;min-height:0;height:100%;overflow:hidden;display:flex;flex-direction:column;position:relative;background:#f8f9fa}.sidebar-toggle{position:absolute;right:22px;top:48px;z-index:4}.chat-top{height:48px;flex:0 0 48px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--bs-border-color);background:#fff}.chat-main{flex:1 1 auto;min-height:0;height:100%;display:flex;flex-direction:column}.messages{flex:1 1 auto;min-height:0;overflow:auto;padding:16px}.bubble{max-width:780px;border:1px solid var(--bs-border-color);border-left:4px solid #6c757d;background:#fff;border-radius:.5rem;padding:12px;margin-bottom:12px}.bubble.user{margin-left:auto;border-left-color:#0d6efd;background:#cfe2ff}.bubble small{display:block;text-transform:uppercase;color:#6c757d;font-size:11px;margin-bottom:5px}.composer{flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid var(--bs-border-color);background:#fff}.composer textarea{min-height:42px;max-height:110px;resize:vertical}
     .terminal{display:none;flex:1;min-height:0;overflow:auto;background:#0f172a;color:#d1fae5;font-family:Consolas,monospace;padding:14px;white-space:pre-wrap}.terminal.active{display:block}.term-bar{display:none;gap:8px;padding:9px;background:#111827;border-top:1px solid #263244}.term-bar.active{display:flex}.term-bar input{background:#0b1220;color:#d1fae5;border-color:#10b981}.browser-frame{display:none;flex:1;min-height:0;background:#111;color:#aaa;overflow:hidden}.browser-frame.active{display:flex;flex-direction:column}.browser-controls{height:36px;flex:0 0 36px;display:flex;align-items:center;gap:8px;padding:0 8px;background:#1e1e1e;border-bottom:1px solid #333;font-size:.75rem;color:#aaa}.browser-controls input[type=range]{width:86px}.browser-control{display:flex;align-items:center;gap:5px;min-width:0}.browser-control-label{font-size:.68rem;color:#777;text-transform:uppercase}.browser-shot-wrap{flex:1 1 0;min-height:0;background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}.browser-shot-img{width:min(760px,92%);height:min(390px,86%);background:#f8f9fa;color:#212529;border:1px solid #333;border-radius:.35rem;box-shadow:0 12px 28px rgba(0,0,0,.45);overflow:hidden}.browser-mock-top{height:28px;background:#e9ecef;border-bottom:1px solid #ced4da;display:flex;align-items:center;gap:5px;padding:0 8px}.browser-dot{width:8px;height:8px;border-radius:50%;background:#dc3545}.browser-dot:nth-child(2){background:#ffc107}.browser-dot:nth-child(3){background:#198754}.browser-address{margin-left:6px;flex:1;height:16px;border-radius:8px;background:#fff;color:#6c757d;font-size:10px;display:flex;align-items:center;padding:0 8px}.browser-mock-page{height:calc(100% - 28px);display:grid;grid-template-columns:140px minmax(0,1fr);background:#fff}.browser-mock-side{background:#f1f3f5;border-right:1px solid #dee2e6;padding:12px}.browser-mock-line{height:9px;border-radius:5px;background:#ced4da;margin-bottom:8px}.browser-mock-main{padding:14px}.browser-mock-hero{height:72px;border-radius:.4rem;background:linear-gradient(135deg,#cfe2ff,#e7f1ff);margin-bottom:12px}.browser-mock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.browser-mock-card{height:78px;border:1px solid #dee2e6;border-radius:.35rem;background:#fff}.browser-log{flex:0 0 160px;overflow:auto;padding:8px;font-family:Consolas,monospace;font-size:.75rem;background:#1a1a1a;color:#aaa;border-top:1px solid #333;white-space:pre-wrap}
 
@@ -87,7 +90,9 @@
         gsAlt: 'start.bat (Windows) 또는 start.sh (Linux) 로도 바로 실행할 수 있습니다.',
         gsRun: 'Artgine 앱에서 projectPath를 proj/Home 으로 설정하고 Run을 클릭하세요.',
         gsWeb: '웹 전용 모드 — npm run start_web [port] (기본값: 8050)',
-        gsPwd: '기본 비밀번호: artgine',
+        gsPwd: '기본 비밀번호: artgine — 반드시 변경하세요!',
+        gsPwdHow: '비밀번호 변경 방법: 툴(Extra Server Settings → Password) 에서 변경하거나, Main.json 파일의 "password" 값을 직접 수정하세요. (Main.json 위치는 실행 환경마다 다릅니다 — 보통 실행 폴더 또는 desktop 폴더에 있습니다.)',
+        gsPwdDanger: '☠️ 경고: 비밀번호를 기본값(artgine) 그대로 두면 누구든 이 비밀번호 하나로 AI 에이전트와 터미널에 접속해 파일을 읽고 쓰고 지우고, 임의의 명령까지 실행할 수 있습니다. 그 순간 이 PC는 더 이상 당신의 PC가 아닙니다. 지금 바로 비밀번호를 변경하고, 외부망에 노출하지 마세요.',
         filesCardTitle: 'Files', filesCardDesc: '서버가 허용한 폴더를 탐색하고 파일을 미리보거나 편집합니다.',
         aiCardTitle: 'AI Chat', aiCardDesc: '작업 폴더와 권한을 지정해 AI 에이전트 세션을 시작합니다.',
         termCardTitle: 'Terminal', termCardDesc: 'cmd, codex, claude 같은 터미널 세션을 웹 화면 안에서 다룹니다.',
@@ -105,6 +110,10 @@
         aiKeys: 'AI Keys', sidebar: 'Sidebar', session: 'Session',
         chat: 'Chat', terminal: 'Terminal', web: 'Web',
         newChat: '+ New Chat', newTerminal: '+ New Terminal', newBrowser: 'New Browser', schedule: 'Schedule',
+        sessNewWindow: '새창', sessShare: '공유', sessDelete: '삭제',
+        sessNewWindowNote: '이 세션을 별도 창으로 분리해서 보여줍니다. 실제 앱에서는 진짜 새 브라우저 창이 열리며, 내용은 지금 화면과 동일합니다.',
+        sessShareNote: '이 세션에 접근할 수 있는 링크입니다. 복사해서 다른 사람에게 전달할 수 있습니다.',
+        copy: '복사', copied: '복사되었습니다',
         tipNewChat: '작업 폴더, 쓰기 권한, MCP 등을 정하고 AI 채팅 세션을 엽니다.',
         tipNewTerm: 'cmd, codex, claude, antigravity 모드의 웹 터미널을 시작합니다.',
         tipWebSubtab: 'Playwright 브라우저 세션 목록을 보여줍니다. 세션을 선택하면 오른쪽 작업 화면에서 Browser.html 뷰어가 열립니다.',
@@ -267,7 +276,9 @@
         gsAlt: 'You can also run start.bat (Windows) or start.sh (Linux) directly.',
         gsRun: 'Set projectPath to proj/Home in the Artgine app, then click Run.',
         gsWeb: 'Web-only mode — npm run start_web [port] (default: 8050)',
-        gsPwd: 'Default password: artgine',
+        gsPwd: 'Default password: artgine — you must change this!',
+        gsPwdHow: 'How to change it: use the tool (Extra Server Settings → Password), or edit the "password" value directly in Main.json. (The location of Main.json varies by environment — usually the run folder or the desktop folder.)',
+        gsPwdDanger: '☠️ Warning: leave the password as the default (artgine) and anyone who learns it can use it to access your AI agent and terminal — reading, writing, deleting files, and running arbitrary commands. At that point this is no longer your PC. Change the password now, and never expose it on a public network.',
         filesCardTitle: 'Files', filesCardDesc: 'Browse server-allowed folders and preview or edit files.',
         aiCardTitle: 'AI Chat', aiCardDesc: 'Start an AI agent session by specifying a working directory and permissions.',
         termCardTitle: 'Terminal', termCardDesc: 'Manage terminal sessions like cmd, codex, and claude inside the web interface.',
@@ -285,6 +296,10 @@
         aiKeys: 'AI Keys', sidebar: 'Sidebar', session: 'Session',
         chat: 'Chat', terminal: 'Terminal', web: 'Web',
         newChat: '+ New Chat', newTerminal: '+ New Terminal', newBrowser: '+ New Browser', schedule: 'Schedule',
+        sessNewWindow: 'New window', sessShare: 'Share', sessDelete: 'Delete',
+        sessNewWindowNote: 'Detaches this session into its own window. In the real app a real browser window opens, showing the same content as now.',
+        sessShareNote: 'A link that can be used to access this session. Copy it to send to someone else.',
+        copy: 'Copy', copied: 'Copied',
         tipNewChat: 'Set the working directory, write permission, and MCP, then open an AI chat session.',
         tipNewTerm: 'Start a web terminal in cmd, codex, claude, or antigravity mode.',
         tipWebSubtab: 'Shows Playwright browser sessions. Select a session to open Browser.html in the workspace frame.',
@@ -480,7 +495,9 @@ npm start</pre>
               <p style="margin:0 0 10px;color:#6c757d;font-size:.8em;display:flex;align-items:flex-start;gap:5px"><span>💡</span><span data-i18n="gsAlt"></span></p>
               <p style="margin:0 0 6px" data-i18n="gsRun"></p>
               <p style="margin:0 0 6px;color:#6c757d;font-size:.875em" data-i18n="gsWeb"></p>
-              <p style="margin:0 0 8px;font-size:.875em;display:flex;align-items:center;gap:5px"><span>🔑</span><span data-i18n="gsPwd"></span></p>
+              <p style="margin:0 0 4px;font-size:.875em;display:flex;align-items:center;gap:5px;color:#dc3545;font-weight:700"><span>🔑</span><span data-i18n="gsPwd"></span></p>
+              <p style="margin:0 0 4px;font-size:.8em;color:#6c757d;display:flex;align-items:flex-start;gap:5px"><span>⚠️</span><span data-i18n="gsPwdHow"></span></p>
+              <p style="margin:0 0 8px;font-size:.85em;color:#fff;background:#dc3545;border-radius:.375rem;padding:8px 10px;font-weight:700;display:flex;align-items:flex-start;gap:6px"><span data-i18n="gsPwdDanger"></span></p>
               <p style="margin:0;font-size:.875em;display:flex;align-items:center;gap:5px"><span>📦</span><a href="https://github.com/06fs4dix/Artgine-Agent" target="_blank" style="color:#60a5fa">https://github.com/06fs4dix/Artgine-Agent</a></p>
             </div>
           </section>
@@ -548,16 +565,31 @@ npm start</pre>
                 <div class="side-section active" id="chatSide">
                   <button class="btn btn-primary new-btn" id="newChatBtn" data-tip-key="tipNewChat" type="button" data-i18n="newChat"></button>
                   <div class="session chat-active">
-                    <div class="sess-title"><span class="dot"></span><span id="sess1Title"></span></div>
+                    <div class="sess-title"><span class="dot"></span><span id="sess1Title"></span><button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small>D:/git/Artgine-Agent</small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                   <div class="session">
-                    <div class="sess-title"><span class="dot busy"></span><span id="sess2Title"></span></div>
+                    <div class="sess-title"><span class="dot busy"></span><span id="sess2Title"></span><button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small id="sess2Sub"></small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                   <div class="session">
-                    <div class="sess-title"><span class="dot off"></span><span id="sess3Title"></span></div>
+                    <div class="sess-title"><span class="dot off"></span><span id="sess3Title"></span><button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small id="sess3Sub"></small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                 </div>
                 <div class="side-section" id="termSide">
@@ -566,23 +598,43 @@ npm start</pre>
                     <button class="btn btn-sm btn-outline-info" id="scheduleBtn" data-tip-key="tipSchedule" type="button" data-i18n="schedule"></button>
                   </div>
                   <div class="session term-active">
-                    <div class="sess-title"><span class="dot"></span>cmd : local</div>
+                    <div class="sess-title"><span class="dot"></span>cmd : local<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small>D:/git/Artgine-Agent</small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                   <div class="session">
-                    <div class="sess-title"><span class="dot busy"></span>codex : app</div>
+                    <div class="sess-title"><span class="dot busy"></span>codex : app<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small id="tsess2Sub"></small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                 </div>
                 <div class="side-section" id="webSide">
                   <button class="btn btn-outline-primary new-btn" id="newBrowserBtn" data-tip-key="tipNewBrowser" type="button"><i class="bi">＋</i><span data-i18n="newBrowser"></span></button>
                   <div class="session web-active" data-tip-key="tipBrowserSession">
-                    <div class="sess-title"><span class="dot"></span>localhost:8050</div>
+                    <div class="sess-title"><span class="dot"></span>localhost:8050<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small>Home.html screenshot</small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                   <div class="session" data-tip-key="tipBrowserSession">
-                    <div class="sess-title"><span class="dot busy"></span>docs session</div>
+                    <div class="sess-title"><span class="dot busy"></span>docs session<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
                     <small>Capturing logs</small>
+                    <div class="sess-menu">
+                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
+                      <button type="button" data-action="share" data-i18n="sessShare"></button>
+                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
+                    </div>
                   </div>
                 </div>
               </aside>
@@ -801,9 +853,12 @@ npm start</pre>
               <div class="modal-header"><h2 class="modal-title" data-i18n="newTermModalTitle"></h2><button class="xbtn" data-close="newTermModal" aria-label="Close" type="button">×</button></div>
               <div class="modal-body">
                 <label class="small text-secondary"><span data-i18n="modeLabel"></span> <button class="help" data-tip-key="tipModeHelp" type="button">?</button></label>
-                <select class="form-select" style="margin-bottom:10px">
-                  <option>cmd</option><option>codex</option><option>claude</option><option>antigravity</option>
-                </select>
+                <div class="mode-btn-group" style="display:flex;gap:6px;margin-bottom:10px">
+                  <button class="btn btn-sm btn-primary mode-btn active" data-mode="cmd" type="button">cmd</button>
+                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="codex" type="button">codex</button>
+                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="claude" type="button">claude</button>
+                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="antigravity" type="button">antigravity</button>
+                </div>
                 <label class="small text-secondary"><span data-i18n="keyLabel"></span> <button class="help" data-tip-key="tipKeyHelp" type="button">?</button></label>
                 <input class="form-control" value="local" style="margin-bottom:10px">
                 <label class="small text-secondary" data-i18n="workingDirLabel"></label>
@@ -879,6 +934,32 @@ npm start</pre>
             <div class="modal">
               <div class="modal-header"><h2 class="modal-title" id="vcsTitle"></h2><button class="xbtn" data-close="vcsModal" aria-label="Close" type="button">×</button></div>
               <div class="modal-body" id="vcsBody"></div>
+            </div>
+          </div>
+
+          <!-- SESSION NEW WINDOW MODAL -->
+          <div class="modal-backdrop" id="sessionWindowModal">
+            <div class="modal" style="width:min(760px,100%)">
+              <div class="modal-header"><h2 class="modal-title" id="sessionWindowTitle"></h2><button class="xbtn" data-close="sessionWindowModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-body">
+                <p class="small text-secondary" style="margin:0 0 10px" data-i18n="sessNewWindowNote"></p>
+                <div style="border:1px solid var(--bs-border-color);border-radius:.5rem;overflow:hidden;height:420px" id="sessionWindowBody"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SESSION SHARE MODAL -->
+          <div class="modal-backdrop" id="sessionShareModal">
+            <div class="modal">
+              <div class="modal-header"><h2 class="modal-title" id="sessionShareTitle"></h2><button class="xbtn" data-close="sessionShareModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-body">
+                <p class="small text-secondary" style="margin:0 0 10px" data-i18n="sessShareNote"></p>
+                <div style="display:flex;gap:6px">
+                  <input class="form-control" id="sessionShareLink" readonly>
+                  <button class="btn btn-outline-primary" id="sessionShareCopyBtn" type="button" data-i18n="copy"></button>
+                </div>
+                <p class="small" id="sessionShareCopied" style="margin:8px 0 0;color:#198754;display:none"></p>
+              </div>
             </div>
           </div>
 
@@ -1065,6 +1146,17 @@ npm start</pre>
     $('scheduleBtn').onclick    = () => { setSub('term'); openModal('scheduleModal'); };
     $('newBrowserBtn').onclick  = () => setSub('web');
 
+    document.querySelectorAll('.mode-btn-group').forEach(group => {
+      group.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', () => {
+        group.querySelectorAll('.mode-btn').forEach(b => {
+          b.classList.remove('active', 'btn-primary');
+          b.classList.add('btn-outline-secondary');
+        });
+        btn.classList.add('active', 'btn-primary');
+        btn.classList.remove('btn-outline-secondary');
+      }));
+    });
+
     document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
     document.querySelectorAll('.modal-backdrop').forEach(m => m.onclick = e => { if (e.target === m) m.classList.remove('show'); });
 
@@ -1131,6 +1223,77 @@ npm start</pre>
       const side = $('aiSidebar');
       side.style.display = side.style.display === 'none' ? 'flex' : 'none';
     }
+
+    function closeSessionMenus() { document.querySelectorAll('.sess-menu.show').forEach(m => m.classList.remove('show')); }
+
+    document.querySelectorAll('.sess-menu-btn').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const menu = btn.closest('.session').querySelector('.sess-menu');
+      const open = menu.classList.contains('show');
+      closeSessionMenus();
+      if (!open) menu.classList.add('show');
+    }));
+
+    function sessionName(session) {
+      return session.querySelector('.sess-title').textContent.replace('⋮', '').trim();
+    }
+
+    function openSessionWindow(session) {
+      $('sessionWindowTitle').textContent = `${S.sessNewWindow} — ${sessionName(session)}`;
+      const active = $('terminalFrame').classList.contains('active') ? $('terminalFrame')
+        : ($('browserFrame').classList.contains('active') ? $('browserFrame') : $('chatFrame'));
+      const clone = active.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+      clone.classList.add('active');
+      clone.style.display = 'flex';
+      clone.style.height = '100%';
+      const body = $('sessionWindowBody');
+      body.innerHTML = '';
+      body.appendChild(clone);
+      openModal('sessionWindowModal');
+    }
+
+    function openSessionShare(session) {
+      const name = sessionName(session);
+      $('sessionShareTitle').textContent = `${S.sessShare} — ${name}`;
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'session';
+      $('sessionShareLink').value = `http://localhost:8050/Artgine/proj/Home/Home.html?session=${encodeURIComponent(slug)}`;
+      $('sessionShareCopied').style.display = 'none';
+      openModal('sessionShareModal');
+    }
+
+    $('sessionShareCopyBtn').onclick = () => {
+      const input = $('sessionShareLink');
+      input.select();
+      if (navigator.clipboard) navigator.clipboard.writeText(input.value).catch(() => {});
+      $('sessionShareCopied').textContent = S.copied;
+      $('sessionShareCopied').style.display = 'block';
+    };
+
+    document.querySelectorAll('.sess-menu button').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const session = btn.closest('.session');
+      if (btn.dataset.action === 'delete') {
+        const pane = session.closest('.side-section');
+        const wasActive = session.matches('.chat-active,.term-active,.web-active');
+        session.remove();
+        if (wasActive) {
+          const next = pane.querySelector('.session');
+          if (next) {
+            const cls = pane.id === 'chatSide' ? 'chat-active' : (pane.id === 'webSide' ? 'web-active' : 'term-active');
+            next.classList.add(cls);
+          }
+        }
+      } else if (btn.dataset.action === 'newwin') {
+        openSessionWindow(session);
+      } else if (btn.dataset.action === 'share') {
+        openSessionShare(session);
+      }
+      closeSessionMenus();
+    }));
+
+    document.addEventListener('click', closeSessionMenus);
 
     let superOn = false;
     document.addEventListener('keydown', e => {
