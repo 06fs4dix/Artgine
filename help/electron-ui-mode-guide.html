@@ -24,10 +24,18 @@
     .electron-window{height:100%;min-height:0;background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;box-shadow:0 .25rem .75rem rgba(0,0,0,.08);overflow:auto;position:relative}
     .mode-screen{display:none;height:100%;overflow:auto}.mode-screen.active{display:block}
     .server-wrap{max-width:500px}
-    .source-screen{height:100%;display:grid;grid-template-columns:220px minmax(0,1fr)}
-    .source-tabs{border-right:1px solid var(--bs-border-color);background:var(--bs-tertiary-bg);padding:10px}
-    .source-main{min-width:0;padding:10px;display:flex;flex-direction:column;gap:8px}
-    .fake-qr{width:180px;height:180px;margin:0 auto;border:8px solid #fff;background:#fff;box-shadow:0 0 0 1px var(--bs-border-color);display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(13,1fr);gap:2px;padding:8px}
+    .setup-intro{background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;padding:16px 18px}
+    .setup-flow{position:relative;padding-left:48px}
+    .setup-flow:before{content:"";position:absolute;left:17px;top:6px;bottom:6px;width:2px;background:var(--bs-border-color)}
+    .setup-item{position:relative;margin-bottom:20px}
+    .setup-item:last-child{margin-bottom:0}
+    .setup-icon{position:absolute;left:-48px;top:0;width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid var(--bs-blue);color:var(--bs-blue);display:grid;place-items:center;font-size:16px;z-index:1}
+    .setup-content{background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;padding:14px 16px}
+    .setup-content-title{font-weight:700;margin-bottom:8px}
+    .source-screen{height:100%;display:flex;flex-direction:column;min-height:0}
+    .source-tabs{border-bottom:1px solid var(--bs-border-color);background:var(--bs-tertiary-bg);padding:6px 10px}
+    .source-main{min-width:0;min-height:0;flex:1;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .fake-qr{width:180px;height:180px;margin:0;border:8px solid #fff;background:#fff;box-shadow:0 0 0 1px var(--bs-border-color);display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(13,1fr);gap:2px;padding:8px}
     .fake-qr i{display:block;background:#111}.fake-qr i.blank{background:#fff}
     .fake-qr .finder{grid-column:span 4;grid-row:span 4;border:8px solid #111;background:#fff;position:relative}
     .fake-qr .finder:after{content:"";position:absolute;inset:8px;background:#111}
@@ -43,7 +51,7 @@
     .highlight{outline:3px solid #f7c948;outline-offset:3px;position:relative;z-index:4}
     .click-tooltip{display:none;position:fixed;z-index:80;max-width:320px;background:#212529;color:#fff;border-radius:.375rem;padding:10px 12px;box-shadow:0 .5rem 1rem rgba(0,0,0,.2);font-size:13px;line-height:1.45}
     .click-tooltip.show{display:block}
-    @media(max-width:940px){.tutorial-app{grid-template-columns:1fr;grid-template-rows:270px minmax(0,1fr)}.guide{border-right:0;border-bottom:1px solid var(--bs-border-color)}.workspace{padding:8px}.coach{right:10px;bottom:10px;width:calc(100% - 20px)}.source-screen{grid-template-columns:1fr}.source-tabs{display:none}}
+    @media(max-width:940px){.tutorial-app{grid-template-columns:1fr;grid-template-rows:1fr}.guide{display:none}.workspace{padding:8px}.coach{right:10px;bottom:10px;width:calc(100% - 20px)}}
   </style>
 
   <script>
@@ -64,13 +72,14 @@
 
         /* Setup screen */
         setupTitle:       '초기 셋업',
-        setupStartBody:   'start.bat/start.sh를 실행하거나 콘솔에서 직접 설치 후 실행합니다.',
-        setupConsoleTitle:'콘솔 실행',
+        introTitle:       'Artgine이란',
+        introBody:        'Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합 개발 환경입니다. 웹 기반 그래픽 렌더링과 데스크톱 앱의 편의성을 결합하여, 복잡한 설정 없이도 인터랙티브한 콘텐츠와 게임을 손쉽게 개발할 수 있도록 설계되었습니다.',
+        setupConsoleTitle:'콘솔 설치',
+        setupStartTitle:  'GUI 실행',
+        setupStartBody:   '소스를 받은 뒤 Windows에서는 start.bat, Linux에서는 start.sh를 실행하면 같은 방식으로 Electron GUI가 실행됩니다.',
         setupServerTitle: '서버만 실행',
-        setupFolderTitle: '프로젝트 위치',
-        setupFolderBody:  '<p class="mb-2">프로젝트 파일은 <code>proj/</code> 아래에 둡니다.</p><p class="mb-0 text-danger">프로젝트 폴더를 작업 폴더보다 상위에 두면 안 됩니다.</p>',
         setupRunTitle:    '프로젝트 실행',
-        setupRunBody:     '<ol class="mb-0"><li><code>projectPath</code>에서 Folder를 눌러 <code>proj</code> 아래 프로젝트 폴더를 선택합니다.</li><li><code>Run(F9)</code>을 누르면 프로젝트가 로드됩니다.</li></ol>',
+        setupRunBody:     '<ol class="mb-2"><li><code>projectPath</code>에서 Folder를 눌러 <code>proj</code> 아래 프로젝트 폴더를 선택합니다.</li><li><code>Run(F9)</code>을 누르면 프로젝트가 로드됩니다.</li></ol><small class="text-secondary">원하는 프로젝트를 선택하면 됩니다. (예: <code>proj/Sample</code>)</small>',
 
         /* Source screen */
         sourceTabAuto:    '자동 생성 파일',
@@ -86,10 +95,9 @@
         /* stepsByMode */
         stepsByMode: {
           setup: [
-            ["실행 방법", "start.bat / start.sh", "setupStartBox", "처음 시작할 때는 Windows에서는 start.bat, Linux에서는 start.sh를 실행할 수 있습니다.", "알 수 없는 게시자 경고가 표시될 수 있습니다."],
             ["콘솔 설치", "git clone → npm start", "setupCommandBox", "콘솔에서 직접 실행할 때는 저장소를 받은 뒤 npm install, npm start 순서로 실행합니다.", "이미 프로젝트를 받은 상태라면 git clone 단계는 생략하고 프로젝트 루트에서 npm install, npm start를 실행합니다."],
+            ["GUI 실행", "start.bat / start.sh", "setupStartBox", "소스를 받은 뒤 Windows에서는 start.bat, Linux에서는 start.sh를 실행해도 같은 방식으로 Electron GUI가 실행됩니다.", "처음 실행할 때 '알 수 없는 게시자' 경고가 표시될 수 있습니다."],
             ["서버만 실행", "npm run start_web", "setupServerBox", "Electron 개발 UI 없이 서버만 단독으로 실행하려면 npm start 대신 npm run start_web을 사용합니다.", "외부 브라우저나 다른 장치에서 서버 접근을 확인할 때 사용합니다."],
-            ["프로젝트 위치", "proj 폴더 아래", "setupFolderBox", "Artgine 프로젝트 파일은 proj 폴더 아래에 두는 것이 기본 구조입니다.", "프로젝트 폴더를 작업 폴더보다 상위에 두면 경로 계산과 자동 생성 흐름이 깨질 수 있습니다."],
             ["프로젝트 실행", "Folder → Run(F9)", "setupRunBox", "projectPath에서 Folder를 눌러 proj 아래 프로젝트 폴더를 선택하고 Run(F9)을 누르면 프로젝트가 로드됩니다.", "Run(F9) 후 생성/수정되는 파일과 코드 수정 위치는 소스 수정 법에서 확인합니다."]
           ],
           dev: [
@@ -158,10 +166,9 @@
           "sourceTs": "TS 수정 위치입니다. desktop/Template/Basic.ts의 자리표시자와 Main.ts의 자동 생성 결과를 같이 보여줍니다. EntryPoint 아래 초록 영역부터 직접 수정합니다.",
           "sourceHtml": "HTML 수정 위치입니다. EntryPoint 위쪽 Include/Manifest는 자동 생성, 아래쪽은 직접 수정 가능합니다.",
           "sourceAuto": "자동 생성 파일 목록입니다. 빨강은 직접 수정 주의, 초록은 수동 작성 가능 영역입니다.",
-          "setupStartBox": "README-ko의 시작하기 내용입니다. start.bat 또는 start.sh로 Electron 앱을 실행할 수 있습니다.",
+          "setupStartBox": "소스를 받은 뒤 start.bat 또는 start.sh로도 Electron 앱을 실행할 수 있습니다.",
           "setupCommandBox": "콘솔에서 직접 설치/실행하는 명령입니다. npm install 후 npm start로 Electron 앱을 실행합니다.",
           "setupServerBox": "서버만 단독 실행할 때 사용하는 명령입니다. Electron UI 없이 웹 서버만 띄웁니다.",
-          "setupFolderBox": "프로젝트 폴더 위치 규칙입니다. 프로젝트는 작업 폴더 안의 proj 아래에 두는 구조가 기본입니다.",
           "setupRunBox": "초기 실행 절차입니다. projectPath에서 프로젝트를 선택하고 Run(F9)으로 로드합니다."
         },
 
@@ -249,13 +256,14 @@
 
         /* Setup screen */
         setupTitle:       'Initial Setup',
-        setupStartBody:   'Run start.bat (Windows) or start.sh (Linux), or install and run from the console directly.',
+        introTitle:       'What is Artgine?',
+        introBody:        'Artgine is a 2D/3D content engine and integrated development environment built with Electron and web technologies. It combines web-based graphics rendering with the convenience of a desktop app, making it easy to build interactive content and games without complex setup.',
         setupConsoleTitle:'Console Install',
+        setupStartTitle:  'Run via GUI',
+        setupStartBody:   'After getting the source, you can also launch the same Electron GUI by running start.bat on Windows or start.sh on Linux.',
         setupServerTitle: 'Server Only',
-        setupFolderTitle: 'Project Location',
-        setupFolderBody:  '<p class="mb-2">Place project files under <code>proj/</code>.</p><p class="mb-0 text-danger">Do not place the project folder above the working directory.</p>',
         setupRunTitle:    'Run Project',
-        setupRunBody:     '<ol class="mb-0"><li>Click <code>Folder</code> in <code>projectPath</code> and select the project folder under <code>proj</code>.</li><li>Press <code>Run(F9)</code> to load the project.</li></ol>',
+        setupRunBody:     '<ol class="mb-2"><li>Click <code>Folder</code> in <code>projectPath</code> and select the project folder under <code>proj</code>.</li><li>Press <code>Run(F9)</code> to load the project.</li></ol><small class="text-secondary">Just pick any project you like. (e.g. <code>proj/Sample</code>)</small>',
 
         /* Source screen */
         sourceTabAuto:    'Auto-generated Files',
@@ -271,10 +279,9 @@
         /* stepsByMode */
         stepsByMode: {
           setup: [
-            ["Run Options", "start.bat / start.sh", "setupStartBox", "On Windows run start.bat; on Linux run start.sh to launch the Electron app.", "An 'unknown publisher' warning may appear on Windows."],
             ["Console Install", "git clone → npm start", "setupCommandBox", "To run from the console, clone the repo then run npm install followed by npm start.", "If you already have the project, skip git clone and run npm install then npm start from the project root."],
+            ["Run via GUI", "start.bat / start.sh", "setupStartBox", "After getting the source, running start.bat on Windows or start.sh on Linux launches the same Electron GUI.", "An 'unknown publisher' warning may appear on first run."],
             ["Server Only", "npm run start_web", "setupServerBox", "To run only the server without the Electron developer UI, use npm run start_web instead of npm start.", "Useful for verifying server access from an external browser or another device."],
-            ["Project Location", "Under proj folder", "setupFolderBox", "Artgine project files go under the proj folder — that is the default structure.", "Placing the project folder above the working directory breaks path resolution and the auto-generation flow."],
             ["Run Project", "Folder → Run(F9)", "setupRunBox", "Click Folder in projectPath to select the project folder under proj, then press Run(F9) to load it.", "See Source Editing for details on files generated/modified after Run(F9) and where to make code changes."]
           ],
           dev: [
@@ -343,10 +350,9 @@
           "sourceTs": "TS edit location. Shows the placeholders in desktop/Template/Basic.ts and the auto-generated results. Edit from the green EntryPoint area down.",
           "sourceHtml": "HTML edit location. Include/Manifest above EntryPoint is auto-generated; below EntryPoint can be edited directly.",
           "sourceAuto": "Auto-generated file list. Red = caution when editing directly; green = manual edit area.",
-          "setupStartBox": "From README Getting Started. Run start.bat or start.sh to launch the Electron app.",
+          "setupStartBox": "After getting the source, you can also launch the Electron app with start.bat or start.sh.",
           "setupCommandBox": "Commands to install and run directly from the console. Run npm install then npm start to launch the Electron app.",
           "setupServerBox": "Command to run only the server standalone. Starts the web server without the Electron UI.",
-          "setupFolderBox": "Project folder location rules. Projects go under the proj folder inside the working directory.",
           "setupRunBox": "Initial run procedure. Select the project in projectPath and press Run(F9) to load it."
         },
 
@@ -442,31 +448,44 @@
     <main class="workspace">
       <section class="electron-window">
         <div class="mode-screen active" id="screen-setup">
-          <div class="container mt-3" style="max-width:760px;">
+          <div class="mt-3 ms-3" style="max-width:760px;">
             <h4 class="mb-3" data-i18n="setupTitle"></h4>
-            <div class="alert alert-info" id="setupStartBox" data-i18n="setupStartBody"></div>
-            <div class="card mb-3" id="setupCommandBox">
-              <div class="card-header" data-i18n="setupConsoleTitle"></div>
-              <div class="card-body">
-                <pre class="mb-0 bg-dark text-light p-3 rounded">git clone https://github.com/06fs4dix/Artgine.git
+            <div class="setup-intro mb-4">
+              <div class="setup-content-title" data-i18n="introTitle"></div>
+              <p class="mb-0 text-secondary" data-i18n="introBody"></p>
+            </div>
+            <div class="setup-flow">
+              <div class="setup-item" id="setupCommandBox">
+                <div class="setup-icon"><i class="bi bi-terminal"></i></div>
+                <div class="setup-content">
+                  <div class="setup-content-title" data-i18n="setupConsoleTitle"></div>
+                  <pre class="mb-0 bg-dark text-light p-3 rounded">git clone https://github.com/06fs4dix/Artgine.git
 cd Artgine
 npm install
 npm start</pre>
+                </div>
               </div>
-            </div>
-            <div class="card mb-3" id="setupServerBox">
-              <div class="card-header" data-i18n="setupServerTitle"></div>
-              <div class="card-body">
-                <code>npm run start_web</code>
+              <div class="setup-item" id="setupStartBox">
+                <div class="setup-icon"><i class="bi bi-window"></i></div>
+                <div class="setup-content">
+                  <div class="setup-content-title" data-i18n="setupStartTitle"></div>
+                  <p class="mb-0" data-i18n="setupStartBody"></p>
+                </div>
               </div>
-            </div>
-            <div class="card mb-3" id="setupFolderBox">
-              <div class="card-header" data-i18n="setupFolderTitle"></div>
-              <div class="card-body" data-i18n-html="setupFolderBody"></div>
-            </div>
-            <div class="card" id="setupRunBox">
-              <div class="card-header" data-i18n="setupRunTitle"></div>
-              <div class="card-body" data-i18n-html="setupRunBody"></div>
+              <div class="setup-item" id="setupServerBox">
+                <div class="setup-icon"><i class="bi bi-hdd-network"></i></div>
+                <div class="setup-content">
+                  <div class="setup-content-title" data-i18n="setupServerTitle"></div>
+                  <code>npm run start_web</code>
+                </div>
+              </div>
+              <div class="setup-item" id="setupRunBox">
+                <div class="setup-icon"><i class="bi bi-play-circle"></i></div>
+                <div class="setup-content">
+                  <div class="setup-content-title" data-i18n="setupRunTitle"></div>
+                  <div data-i18n-html="setupRunBody"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -597,39 +616,35 @@ npm start</pre>
         </div>
 
         <div class="mode-screen" id="screen-server">
-          <div class="container mt-3 server-wrap">
-            <div class="d-flex justify-content-center">
-              <div class="w-100">
-                <div class="row align-items-center mb-2" id="serverUrlBox">
-                  <label class="col-sm-4 col-form-label">URL</label>
-                  <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="http://localhost:8082/Artgine" readonly><button class="btn btn-outline-secondary">Copy</button></div>
-                </div>
-                <div class="mb-3 row align-items-center" id="privateIpBox">
-                  <label class="col-sm-4 col-form-label">Private IP</label>
-                  <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="192.168.0.12" readonly><button class="btn btn-outline-secondary">Copy</button></div>
-                </div>
-                <div class="mb-3 row align-items-center" id="publicIpBox">
-                  <label class="col-sm-4 col-form-label">Public IP</label>
-                  <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="singleton88.iptime.org" readonly><button class="btn btn-outline-secondary">Copy</button></div>
-                </div>
-                <div class="accordion mb-3" id="serverExtraBox">
-                  <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button">Extra Server Settings</button></h2></div>
-                </div>
-                <div class="text-center d-flex justify-content-center gap-2">
-                  <button class="btn btn-primary" id="browser_btn">Browser</button>
-                  <button class="btn btn-secondary" id="switchDev_btn">Developer</button>
-                </div>
-                <div class="text-center mt-3" id="qr_area">
-                  <div class="fake-qr" aria-label="QR">
-                    <span class="finder"></span><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><span class="finder"></span>
-                    <i class="blank"></i><i></i><i></i><i class="blank"></i><i></i>
-                    <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i>
-                    <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
-                    <span class="finder"></span><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i>
-                    <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
-                    <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i>
-                  </div>
-                </div>
+          <div class="mt-3 ms-3 server-wrap">
+            <div class="row align-items-center mb-2" id="serverUrlBox">
+              <label class="col-sm-4 col-form-label">URL</label>
+              <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="http://localhost:8082/Artgine" readonly><button class="btn btn-outline-secondary">Copy</button></div>
+            </div>
+            <div class="mb-3 row align-items-center" id="privateIpBox">
+              <label class="col-sm-4 col-form-label">Private IP</label>
+              <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="192.168.0.12" readonly><button class="btn btn-outline-secondary">Copy</button></div>
+            </div>
+            <div class="mb-3 row align-items-center" id="publicIpBox">
+              <label class="col-sm-4 col-form-label">Public IP</label>
+              <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="singleton88.iptime.org" readonly><button class="btn btn-outline-secondary">Copy</button></div>
+            </div>
+            <div class="accordion mb-3" id="serverExtraBox">
+              <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button">Extra Server Settings</button></h2></div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary" id="browser_btn">Browser</button>
+              <button class="btn btn-secondary" id="switchDev_btn">Developer</button>
+            </div>
+            <div class="mt-3" id="qr_area">
+              <div class="fake-qr" aria-label="QR">
+                <span class="finder"></span><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><span class="finder"></span>
+                <i class="blank"></i><i></i><i></i><i class="blank"></i><i></i>
+                <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i>
+                <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
+                <span class="finder"></span><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i>
+                <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
+                <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i>
               </div>
             </div>
           </div>
@@ -638,10 +653,10 @@ npm start</pre>
         <div class="mode-screen" id="screen-source">
           <div class="source-screen">
             <div class="source-tabs">
-              <div class="list-group">
-                <button class="list-group-item active" data-source="auto" id="sourceAuto" data-i18n="sourceTabAuto" type="button"></button>
-                <button class="list-group-item" data-source="ts"   id="sourceTs"   data-i18n="sourceTabTs"   type="button"></button>
-                <button class="list-group-item" data-source="html" id="sourceHtml" data-i18n="sourceTabHtml" type="button"></button>
+              <div class="nav nav-tabs" role="tablist">
+                <button class="nav-link active" data-source="auto" id="sourceAuto" data-i18n="sourceTabAuto" type="button"></button>
+                <button class="nav-link" data-source="ts"   id="sourceTs"   data-i18n="sourceTabTs"   type="button"></button>
+                <button class="nav-link" data-source="html" id="sourceHtml" data-i18n="sourceTabHtml" type="button"></button>
               </div>
             </div>
             <div class="source-main">
