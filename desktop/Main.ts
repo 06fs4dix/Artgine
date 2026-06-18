@@ -715,6 +715,11 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	{
 		IStr+="<script type='text/javascript' src='"+upFolder+"artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>\n";
 	}
+	if(_json.projetJSON.includes["diff2html"])
+	{
+		IStr+="<link rel='stylesheet' href='"+upFolder+"artgine/external/legacy/diff2html/diff2html.min.css'>\n";
+		IStr+="<script src='"+upFolder+"artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>\n";
+	}
 	
 	
 	IStr+="<link rel='manifest' href='./"+projectName+".webmanifest'/>\n";

@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqi3dqcv_2";
+gPF.mVersion = "mqjeo4zr_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -41,37 +41,6 @@ import { CTooltip } from "../../artgine/util/CTooltip.js";
 if (gPF.mServer != "webServer")
     CAlert.E("Server setting is invalid.");
 CUtilWeb.Parameter("");
-let option = new CSingOption();
-option.mFindPWBtn = "pass";
-CSing.On(CSing.eEvent.State, () => {
-    if (CSing.PrivateKey() == null)
-        CDOM.ID("login-btn").innerText = "Login";
-    else
-        CDOM.ID("login-btn").innerText = "Logout";
-});
-CSing.On(CSing.eEvent.Init, () => {
-    if (CSing.PrivateKey() == null)
-        CDOM.ID("login-btn").innerText = "Login";
-    else
-        CDOM.ID("login-btn").innerText = "Logout";
-});
-CSing.On(CSing.eEvent.JoinInit, () => {
-    loginModal.SetPosition(CModal.ePos.Center);
-});
-CSing.On(CSing.eEvent.Insert, () => {
-    loginModal.Open();
-    CSing.ModifyMode();
-});
-let html = await CSing.InitForm(option);
-let loginModal = new CModal();
-loginModal.SetHeader("Sing");
-loginModal.SetBody(html);
-loginModal.SetTitle(CModal.eTitle.TextClose);
-loginModal.SetCloseToHide(true);
-loginModal.SetSize(320, 640);
-CDOM.ID("login-btn").addEventListener("click", () => {
-    loginModal.Open();
-});
 if (!CPWA.IsInstalled()) {
     CDOM.ID("install-btn").style.display = "";
 }
@@ -80,26 +49,13 @@ CDOM.ID("install-btn").addEventListener("click", () => {
     if (msg)
         CAlert.Info(msg);
 });
-let bClient = null;
-CDOM.ID("board-tab").onclick = () => {
-    if (bClient == null) {
-        bClient = new CBoard(CDOM.ID("board"), "");
-        bClient.List(0, 5);
-    }
-};
-let dlInited = false;
-CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
-    if (dlInited)
-        return;
-    dlInited = true;
-    MountDownloadTab("download-root");
-});
-if (CDOM.ID("download-panel").classList.contains("active")) {
-    dlInited = true;
-    MountDownloadTab("download-root");
-}
+const MODAL_DOM_DELAY = 100;
 const AI_TOKEN_KEY = 'artgine.token';
 const aiFrameContainer = CDOM.ID("ai-frame-container");
+const aiFramePlaceholder = CDOM.ID("ai-frame-placeholder");
+function updateFramePlaceholder() {
+    aiFramePlaceholder.style.display = activeFrameKey ? 'none' : '';
+}
 const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
 let aiInited = false;
@@ -183,7 +139,7 @@ const myTabContentEl = document.getElementById('myTabContent');
 function syncFrameContainerSize() {
     if (!myAppContainerEl || !myTabBarEl || !myTabContentEl)
         return;
-    const viewportH = window.visualViewport?.height ?? window.innerHeight;
+    const viewportH = window.innerHeight;
     myAppContainerEl.style.height = `${viewportH}px`;
     const tabBarH = myTabBarEl.getBoundingClientRect().height;
     myTabContentEl.style.flex = '0 0 auto';
@@ -192,9 +148,31 @@ function syncFrameContainerSize() {
 syncFrameContainerSize();
 window.addEventListener('resize', syncFrameContainerSize);
 window.addEventListener('orientationchange', syncFrameContainerSize);
-window.visualViewport?.addEventListener('resize', syncFrameContainerSize);
 if (myTabBarEl)
     new ResizeObserver(syncFrameContainerSize).observe(myTabBarEl);
+function showTab(target) {
+    const el = /^[[#.]/.test(target) ? document.querySelector(target) : document.getElementById(target);
+    if (el)
+        window.bootstrap.Tab.getOrCreateInstance(el).show();
+}
+function runHomeHotkey(key) {
+    switch (key) {
+        case 'F1':
+            FileBtn();
+            return true;
+        case 'F2':
+            FileSearch();
+            return true;
+        case 'F3':
+            showTab('file-tab');
+            FolderCD('/');
+            return true;
+        case 'F4':
+            showTab('ai-tab');
+            return true;
+    }
+    return false;
+}
 function showFrame(key, src) {
     syncFrameContainerSize();
     let f = iframePool.get(key);
@@ -236,33 +214,14 @@ function showFrame(key, src) {
                             if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable)) {
                                 e.preventDefault();
                                 const subtabs = ['ai-chat-subtab', 'ai-term-subtab', 'ai-browser-subtab'];
-                                const tabEl = document.getElementById(subtabs[parseInt(e.key) - 1]);
-                                if (tabEl)
-                                    window.bootstrap.Tab.getOrCreateInstance(tabEl).show();
+                                showTab(subtabs[parseInt(e.key) - 1]);
                                 return;
                             }
                         }
                     }
-                    if (!isTerm && e.key === 'F1') {
+                    if (!isTerm && (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4')) {
                         e.preventDefault();
-                        FileBtn();
-                    }
-                    else if (!isTerm && e.key === 'F2') {
-                        e.preventDefault();
-                        FileSearch();
-                    }
-                    else if (!isTerm && e.key === 'F3') {
-                        e.preventDefault();
-                        const fileTabEl = document.getElementById('file-tab');
-                        if (fileTabEl)
-                            window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
-                        FolderCD('/');
-                    }
-                    else if (!isTerm && e.key === 'F4') {
-                        e.preventDefault();
-                        const aiTabEl = document.getElementById('ai-tab');
-                        if (aiTabEl)
-                            window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+                        runHomeHotkey(e.key);
                     }
                 }, true);
             }
@@ -278,6 +237,7 @@ function showFrame(key, src) {
     }
     f.style.display = 'block';
     activeFrameKey = key;
+    updateFramePlaceholder();
     return f;
 }
 function destroyFrame(key) {
@@ -288,6 +248,7 @@ function destroyFrame(key) {
     iframePool.delete(key);
     if (activeFrameKey === key)
         activeFrameKey = null;
+    updateFramePlaceholder();
 }
 function focusActiveFrame() {
     if (!activeFrameKey)
@@ -320,7 +281,7 @@ function uuidv4() {
         return v.toString(16);
     });
 }
-function aiAuthedFetch(url, init) {
+function authedFetch(url, init) {
     return fetch(url, init);
 }
 function aiFormatRelative(ts) {
@@ -363,7 +324,7 @@ async function aiRefreshSessions() {
         return;
     }
     try {
-        const r = await aiAuthedFetch(CPath.WebRootUrl() + 'ai/chat/sessions?limit=30');
+        const r = await authedFetch(CPath.WebRootUrl() + 'ai/chat/sessions?limit=30');
         if (r.status === 401) {
             localStorage.removeItem(AI_TOKEN_KEY);
             fileAuthed = false;
@@ -388,10 +349,6 @@ async function aiRefreshSessions() {
             const key = `chat:${s.sessionId}`;
             const isActive = activeFrameKey === key;
             const isLoaded = iframePool.has(key);
-            const item = document.createElement('div');
-            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
-                + (isActive ? ' bg-primary-subtle' : '');
-            item.dataset.sid = s.sessionId;
             const rel = aiFormatRelative(s.updatedAt);
             const st = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
             syncSessState(`chat:${s.sessionId}`, st, () => {
@@ -401,57 +358,41 @@ async function aiRefreshSessions() {
             const dot = st === 'off' ? '<span class="text-danger small" title="미연결">●</span>'
                 : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
                     : '<span class="text-success small" title="대기 중">●</span>';
-            item.innerHTML = `
+            const item = createSessionItem({
+                activeClass: 'bg-primary-subtle',
+                isActive,
+                dataAttr: { name: 'sid', value: s.sessionId },
+                leftHtml: `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
                     ${dot}
                     ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
-                </span>
+                </span>`,
+                bodyHtml: `
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
                     <span class="text-truncate small">${aiEscapeHtml(s.title)}</span>
                     ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
-                </span>
-                <div class="dropdown" style="flex-shrink:0;">
-                    <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-three-dots-vertical"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
-                        ${POPUP_MENU_ITEMS}
-                        <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><button class="dropdown-item text-danger" data-act="delete">🗑️ Delete Session</button></li>
-                    </ul>
-                </div>
-            `;
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.dropdown'))
-                    return;
-                aiLoadSession(s.sessionId);
+                </span>`,
+                deleteAct: 'delete',
+                deleteLabel: '🗑️ Delete Session',
+                onClick: () => aiLoadSession(s.sessionId),
+                onShare: () => aiShowShareLink(s.sessionId, s.title),
+                onDelete: () => {
+                    const delConfirm = new CConfirm();
+                    delConfirm.SetBody(`Delete "${aiEscapeHtml(s.title)}"?`);
+                    delConfirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+                        async () => {
+                            await authedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
+                            destroyFrame(key);
+                            aiRefreshSessions();
+                            termRefreshSessions();
+                        },
+                        () => { },
+                    ], ["Delete", "Cancel"]);
+                    delConfirm.Open();
+                },
+                popup: { url: () => `./AI/AIChat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
+                tooltipText: s.title + (s.lastMsg ? '\n\n' + s.lastMsg : ''),
             });
-            const aiDropEl = item.querySelector('.dropdown');
-            new window.bootstrap.Dropdown(aiDropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
-            item.querySelector('[data-act="link"]').addEventListener('click', () => aiShowShareLink(s.sessionId, s.title));
-            wirePopupActions(item, () => `./AI/AIChat.html?session=${encodeURIComponent(s.sessionId)}`, s.title, `chat_${s.sessionId}`);
-            item.querySelector('[data-act="delete"]').addEventListener('click', () => {
-                const delConfirm = new CConfirm();
-                delConfirm.SetBody(`Delete "${aiEscapeHtml(s.title)}"?`);
-                delConfirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-                    async () => {
-                        await aiAuthedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${s.sessionId}`, { method: 'DELETE' });
-                        destroyFrame(key);
-                        aiRefreshSessions();
-                        termRefreshSessions();
-                    },
-                    () => { },
-                ], ["Delete", "Cancel"]);
-                delConfirm.Open();
-            });
-            item.addEventListener('mouseenter', () => { if (!isActive)
-                item.classList.add('bg-body-secondary'); });
-            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
-            const aiTipEl = document.createElement('div');
-            aiTipEl.style.cssText = 'white-space:pre-wrap;max-width:280px;font-size:0.82rem;';
-            aiTipEl.textContent = s.title + (s.lastMsg ? '\n\n' + s.lastMsg : '');
-            new CTooltip(aiTipEl, item, CTooltip.eTrigger.Hover, CTooltip.ePlacement.Left);
             aiSessionList.appendChild(item);
         }
     }
@@ -524,7 +465,7 @@ function chatStartNew(initialWorkingDir) {
         container.querySelector('#chat-modal-cancel').addEventListener('click', () => modal.Close());
         workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
             doOpen(); });
-    }, 100);
+    }, MODAL_DOM_DELAY);
 }
 const CMD_TOKEN_KEY = 'artgine.token';
 const termNewBtn = CDOM.ID("termNewBtn");
@@ -539,14 +480,11 @@ function syncSessState(id, cur, onDone, onWait) {
         onWait?.();
     _sessState.set(id, cur);
 }
-function termAuthedFetch(url, init) {
-    return fetch(url, init);
-}
 async function termStartNew(_mode = 'cmd', initialWorkingDir) {
     const token = localStorage.getItem(CMD_TOKEN_KEY);
     if (token) {
         try {
-            const r = await termAuthedFetch(CPath.WebRootUrl() + 'cmd/sessions');
+            const r = await authedFetch(CPath.WebRootUrl() + 'cmd/sessions');
             const j = await r.json();
             if (j.ok) {
                 const aliveCount = j.sessions.filter((s) => s.alive).length;
@@ -638,7 +576,7 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
                 params.set('mdcopy', '1');
             modal.Close();
             try {
-                const r = await termAuthedFetch(CPath.WebRootUrl() + 'cmd/start-ttyd?' + params.toString());
+                const r = await authedFetch(CPath.WebRootUrl() + 'cmd/start-ttyd?' + params.toString());
                 const j = await r.json();
                 if (!j.ok) {
                     alert(j.msg || 'Failed to start terminal');
@@ -659,7 +597,7 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
         cancelBtn.addEventListener('click', () => modal.Close());
         workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
             doOpen(); });
-    }, 100);
+    }, MODAL_DOM_DELAY);
 }
 async function termConnectSession(port) {
     const key = `term:${port}`;
@@ -675,7 +613,7 @@ async function termConnectSession(port) {
 }
 async function termKillSession(port) {
     try {
-        const r = await termAuthedFetch(`${CPath.WebRootUrl()}cmd/kill-session?port=${port}`);
+        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/kill-session?port=${port}`);
         const j = await r.json();
         if (!j.ok) {
             alert(`삭제 실패: ${j.msg || 'unknown error'}`);
@@ -734,10 +672,6 @@ async function termRefreshSessions() {
             const key = `term:${s.port}`;
             const isActive = activeFrameKey === key;
             const isLoaded = iframePool.has(key);
-            const item = document.createElement('div');
-            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
-                + (isActive ? ' bg-success-subtle' : '');
-            item.dataset.port = String(s.port);
             const rel = aiFormatRelative(s.updatedAt);
             const preview = aiEscapeHtml(s.lastMsg || '(empty)');
             const dotLabel = s.mode.slice(0, 3);
@@ -759,46 +693,30 @@ async function termRefreshSessions() {
                 : st === 'wait' ? `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
                     : st === 'busy' ? `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
                         : `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-            item.innerHTML = `
+            const item = createSessionItem({
+                activeClass: 'bg-success-subtle',
+                isActive,
+                dataAttr: { name: 'port', value: String(s.port) },
+                cursorPointer: true,
+                leftHtml: `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
                     ${dot}
                     ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
-                </span>
+                </span>`,
+                bodyHtml: `
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
                     ${s.key ? `<span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.key)}</span>` : ''}
                     <span class="text-truncate small">${preview}</span>
                     ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
-                </span>
-                <div class="dropdown" style="flex-shrink:0;">
-                    <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-three-dots-vertical"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
-                        ${POPUP_MENU_ITEMS}
-                        <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><button class="dropdown-item text-danger" data-act="kill">🗑️ Delete Session</button></li>
-                    </ul>
-                </div>
-            `;
-            item.style.cursor = 'pointer';
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.dropdown'))
-                    return;
-                termConnectSession(s.port);
+                </span>`,
+                deleteAct: 'kill',
+                deleteLabel: '🗑️ Delete Session',
+                onClick: () => termConnectSession(s.port),
+                onShare: () => termShowShareLink(s.port),
+                onDelete: () => termConfirmKillSession(s.port),
+                popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${s.port}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.port}` },
+                tooltipText: s.lastMsg || '(empty)',
             });
-            const termDropEl = item.querySelector('.dropdown');
-            new window.bootstrap.Dropdown(termDropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
-            wirePopupActions(item, () => `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${s.port}`, s.key || s.mode || 'Terminal', `term_${s.port}`);
-            item.querySelector('[data-act="link"]').addEventListener('click', () => termShowShareLink(s.port));
-            item.querySelector('[data-act="kill"]').addEventListener('click', () => termConfirmKillSession(s.port));
-            item.addEventListener('mouseenter', () => { if (!isActive)
-                item.classList.add('bg-body-secondary'); });
-            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
-            const termTipEl = document.createElement('div');
-            termTipEl.style.cssText = 'white-space:pre-wrap;max-width:280px;font-size:0.82rem;';
-            termTipEl.textContent = s.lastMsg || '(empty)';
-            new CTooltip(termTipEl, item, CTooltip.eTrigger.Hover, CTooltip.ePlacement.Left);
             termSessionList.appendChild(item);
         }
     }
@@ -807,41 +725,11 @@ async function termRefreshSessions() {
     }
 }
 function termShowShareLink(port) {
-    const shareUrl = `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`;
-    const uid = `ts_${Date.now()}`;
-    const modal = new CModal();
-    modal.SetHeader('Terminal Share Link');
-    modal.SetBody(`
-        <div class="mb-2 small text-secondary">Anyone with this link can view the terminal in read-only mode.</div>
-        <div class="input-group">
-            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${shareUrl}" onclick="this.select()">
-            <button class="btn btn-outline-secondary btn-sm" title="Copy"
-                onclick="var i=document.getElementById('${uid}');i.select();document.execCommand('copy');this.innerHTML='<i class=\\'bi bi-check2\\'></i>';setTimeout(()=>this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>',1500)">
-                <i class="bi bi-clipboard"></i>
-            </button>
-        </div>
-    `);
-    modal.SetTitle(CModal.eTitle.TextClose);
-    modal.Open(CModal.ePos.Center);
+    showShareLinkModal('Terminal Share Link', 'Anyone with this link can view the terminal in read-only mode.', `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`);
 }
 function aiShowShareLink(sessionId, title) {
     const base = location.pathname.replace(/\/[^/]+$/, '');
-    const shareUrl = `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}`;
-    const uid = `as_${Date.now()}`;
-    const modal = new CModal();
-    modal.SetHeader('AI Chat Share Link');
-    modal.SetBody(`
-        <div class="mb-2 small text-secondary">Anyone with this link can view the chat: <strong>${title}</strong></div>
-        <div class="input-group">
-            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${shareUrl}" onclick="this.select()">
-            <button class="btn btn-outline-secondary btn-sm" title="Copy"
-                onclick="var i=document.getElementById('${uid}');i.select();document.execCommand('copy');this.innerHTML='<i class=\\'bi bi-check2\\'></i>';setTimeout(()=>this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>',1500)">
-                <i class="bi bi-clipboard"></i>
-            </button>
-        </div>
-    `);
-    modal.SetTitle(CModal.eTitle.TextClose);
-    modal.Open(CModal.ePos.Center);
+    showShareLinkModal('AI Chat Share Link', `Anyone with this link can view the chat: <strong>${aiEscapeHtml(title)}</strong>`, `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}`);
 }
 function openSessionPopup(url, title, newWindow = false, winName = '_blank') {
     if (newWindow) {
@@ -870,11 +758,84 @@ function openSessionPopup(url, title, newWindow = false, winName = '_blank') {
         console.error('Session popup error:', e);
     }
 }
+function showShareLinkModal(header, descHtml, shareUrl) {
+    const uid = `share_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader(header);
+    modal.SetBody(`
+        <div class="mb-2 small text-secondary">${descHtml}</div>
+        <div class="input-group">
+            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${aiEscapeHtml(shareUrl)}">
+            <button id="${uid}_copy" class="btn btn-outline-secondary btn-sm" title="Copy"><i class="bi bi-clipboard"></i></button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const input = document.getElementById(uid);
+        const copyBtn = document.getElementById(`${uid}_copy`);
+        input?.addEventListener('click', () => input.select());
+        copyBtn?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+            }
+            catch {
+                input?.select();
+                document.execCommand('copy');
+            }
+            copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+            setTimeout(() => { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+        });
+    }, MODAL_DOM_DELAY);
+}
 const POPUP_MENU_ITEMS = '<li><button class="dropdown-item" data-act="modal"><i class="bi bi-window-stack"></i> Open in Modal</button></li>' +
     '<li><button class="dropdown-item" data-act="window"><i class="bi bi-box-arrow-up-right"></i> Open in New Window</button></li>';
 function wirePopupActions(rootEl, getUrl, title, winName) {
     rootEl.querySelector('[data-act="modal"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, false, winName));
     rootEl.querySelector('[data-act="window"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, true, winName));
+}
+function createSessionItem(spec) {
+    const item = document.createElement('div');
+    item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+        + (spec.isActive ? ' ' + spec.activeClass : '');
+    item.dataset[spec.dataAttr.name] = spec.dataAttr.value;
+    if (spec.cursorPointer)
+        item.style.cursor = 'pointer';
+    item.innerHTML = `
+        ${spec.leftHtml}
+        ${spec.bodyHtml}
+        <div class="dropdown" style="flex-shrink:0;">
+            <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                ${POPUP_MENU_ITEMS}
+                <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item text-danger" data-act="${spec.deleteAct}">${spec.deleteLabel}</button></li>
+            </ul>
+        </div>
+    `;
+    item.addEventListener('click', (e) => {
+        if (e.target.closest('.dropdown'))
+            return;
+        spec.onClick();
+    });
+    const dropEl = item.querySelector('.dropdown');
+    new window.bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
+    item.querySelector('[data-act="link"]').addEventListener('click', spec.onShare);
+    wirePopupActions(item, spec.popup.url, spec.popup.title, spec.popup.winName);
+    item.querySelector(`[data-act="${spec.deleteAct}"]`).addEventListener('click', spec.onDelete);
+    item.addEventListener('mouseenter', () => { if (!spec.isActive)
+        item.classList.add('bg-body-secondary'); });
+    item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+    if (spec.tooltipText !== undefined) {
+        const tipEl = document.createElement('div');
+        tipEl.style.cssText = 'white-space:pre-wrap;max-width:280px;font-size:0.82rem;';
+        tipEl.textContent = spec.tooltipText;
+        new CTooltip(tipEl, item, CTooltip.eTrigger.Hover, CTooltip.ePlacement.Left);
+    }
+    return item;
 }
 termNewBtn.addEventListener('click', () => termStartNew('cmd'));
 const schedNewBtn = CDOM.ID("schedNewBtn");
@@ -891,7 +852,7 @@ function schedIntervalStr(s) {
 }
 async function schedRefresh() {
     try {
-        const r = await termAuthedFetch(CPath.WebRootUrl() + 'cmd/schedules');
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/schedules');
         const j = await r.json();
         if (!j.ok)
             return;
@@ -920,7 +881,7 @@ async function schedRefresh() {
                 e.stopPropagation();
                 if (!confirm(`스케줄 '${s.name}' 을 삭제할까요?`))
                     return;
-                await termAuthedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
+                await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
                 schedRefresh();
             });
             item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
@@ -1060,7 +1021,7 @@ function schedOpenModal(existing) {
                 allow: allow ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0' });
             if (cwd)
                 params.set('cwd', cwd);
-            const r = await termAuthedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
+            const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
             const j = await r.json();
             if (!j.ok) {
                 alert(j.msg || 'Failed');
@@ -1071,7 +1032,7 @@ function schedOpenModal(existing) {
         };
         container.querySelector('#sched-modal-save').addEventListener('click', doSave);
         container.querySelector('#sched-modal-cancel').addEventListener('click', () => modal.Close());
-    }, 100);
+    }, MODAL_DOM_DELAY);
 }
 schedNewBtn.addEventListener('click', () => schedOpenModal());
 setInterval(() => {
@@ -1101,22 +1062,7 @@ window.addEventListener('message', (e) => {
             handleNotifKey();
     }
     if (e.data?.type === 'home-hotkey') {
-        const k = e.data.key;
-        if (k === 'F1')
-            FileBtn();
-        else if (k === 'F2')
-            FileSearch();
-        else if (k === 'F3') {
-            const fileTabEl = document.getElementById('file-tab');
-            if (fileTabEl)
-                window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
-            FolderCD('/');
-        }
-        else if (k === 'F4') {
-            const aiTabEl = document.getElementById('ai-tab');
-            if (aiTabEl)
-                window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
-        }
+        runHomeHotkey(e.data.key);
     }
 });
 function handleTabKey() {
@@ -1235,9 +1181,7 @@ document.addEventListener('keydown', (e) => {
             if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable) {
                 e.preventDefault();
                 const subtabs = ['ai-chat-subtab', 'ai-term-subtab', 'ai-browser-subtab'];
-                const tabEl = document.getElementById(subtabs[parseInt(e.key) - 1]);
-                if (tabEl)
-                    window.bootstrap.Tab.getOrCreateInstance(tabEl).show();
+                showTab(subtabs[parseInt(e.key) - 1]);
                 return;
             }
         }
@@ -1266,26 +1210,9 @@ document.addEventListener('keydown', (e) => {
         goNextSession(e.key === 'ArrowUp' ? -1 : 1);
         return;
     }
-    if (e.key === 'F1') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
         e.preventDefault();
-        FileBtn();
-    }
-    else if (e.key === 'F2') {
-        e.preventDefault();
-        FileSearch();
-    }
-    else if (e.key === 'F3') {
-        e.preventDefault();
-        const fileTabEl = document.getElementById('file-tab');
-        if (fileTabEl)
-            window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
-        FolderCD('/');
-    }
-    else if (e.key === 'F4') {
-        e.preventDefault();
-        const aiTabEl = document.getElementById('ai-tab');
-        if (aiTabEl)
-            window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
+        runHomeHotkey(e.key);
     }
 });
 const aiAuthOverlay = CDOM.ID("ai-auth-overlay");
@@ -1438,7 +1365,7 @@ async function browserRemoveSession(sessionId) {
     browserSessions.delete(sessionId);
     destroyFrame(`browser:${sessionId}`);
     try {
-        await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/remove`, {
+        await authedFetch(`${CPath.WebRootUrl()}playwright/remove`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId })
@@ -1450,7 +1377,7 @@ async function browserRefreshList() {
     if (document.querySelector('.dropdown-menu.show'))
         return;
     try {
-        const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/list`);
+        const r = await authedFetch(`${CPath.WebRootUrl()}playwright/list`);
         const j = await r.json();
         if (!j.ok)
             return;
@@ -1473,22 +1400,8 @@ async function browserRefreshList() {
     catch { }
 }
 function browserShowShareLink(sessionId, url) {
-    const shareUrl = `${location.origin}${location.pathname.replace(/\/[^/]+$/, '')}/AI/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`;
-    const uid = `bsl_${Date.now()}`;
-    const modal = new CModal();
-    modal.SetHeader('Browser Share Link');
-    modal.SetBody(`
-        <div class="mb-2 small text-secondary">Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong></div>
-        <div class="input-group">
-            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${aiEscapeHtml(shareUrl)}" onclick="this.select()">
-            <button class="btn btn-outline-secondary btn-sm" title="Copy"
-                onclick="var i=document.getElementById('${uid}');i.select();document.execCommand('copy');this.innerHTML='<i class=\\'bi bi-check2\\'></i>';setTimeout(()=>this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>',1500)">
-                <i class="bi bi-clipboard"></i>
-            </button>
-        </div>
-    `);
-    modal.SetTitle(CModal.eTitle.TextClose);
-    modal.Open(CModal.ePos.Center);
+    const base = location.pathname.replace(/\/[^/]+$/, '');
+    showShareLinkModal('Browser Share Link', `Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong>`, `${location.origin}${base}/AI/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`);
 }
 browserNewBtn.addEventListener('click', () => {
     const container = document.createElement('div');
@@ -1547,7 +1460,7 @@ browserNewBtn.addEventListener('click', () => {
             const height = parseInt(heightInput.value);
             modal.Close();
             try {
-                const r = await aiAuthedFetch(`${CPath.WebRootUrl()}playwright/push`, {
+                const r = await authedFetch(`${CPath.WebRootUrl()}playwright/push`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200, width, height })
@@ -1568,11 +1481,10 @@ browserNewBtn.addEventListener('click', () => {
         urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
             doOpen(); });
         setTimeout(() => urlInput.focus(), 50);
-    }, 100);
+    }, MODAL_DOM_DELAY);
 });
 function showAiTermSubtab() {
-    const termSubEl = CDOM.ID("ai-term-subtab");
-    window.bootstrap.Tab.getOrCreateInstance(termSubEl).show();
+    showTab('ai-term-subtab');
 }
 CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
     aiInited = true;
@@ -1605,7 +1517,7 @@ function vcsTag(fl) {
     const color = s === 'A' ? 'success' : s === 'D' ? 'danger' : s === 'M' ? 'warning' : 'secondary';
     const canDiff = s === 'M' || s === 'A' || s === 'D';
     if (canDiff) {
-        const filePath = (window["g_root"] ?? '') + (window["g_path"] ?? '') + (fl.name ?? '');
+        const filePath = (gRoot ?? '') + (gPath ?? '') + (fl.name ?? '');
         const escaped = filePath.replace(/'/g, "\\'");
         return `<span class="badge bg-${color} float-end" style="font-size:0.65rem;cursor:pointer;" onclick="event.stopPropagation();openVcsDiff('${escaped}')">${s}</span>`;
     }
@@ -1614,16 +1526,149 @@ function vcsTag(fl) {
 let index = 0;
 var folderList = { "<>": "ul", "class": "list-group", "html": [] };
 var fileList = { "<>": "ul", "class": "list-group", "html": [] };
+const EXT_KIND = {
+    png: 'image', jpg: 'image', jpeg: 'image', bmp: 'image',
+    mp3: 'audio', ogg: 'audio',
+    mp4: 'video', mov: 'video', avi: 'video',
+    soundlist: 'soundlist', html: 'html', md: 'md',
+    ts: 'code', js: 'code', txt: 'code', json: 'code',
+    csv: 'sheet', xlsx: 'sheet', xls: 'sheet',
+};
+const FILE_ICON = {
+    folder: 'bi-folder-fill', image: 'bi-folder-image', audio: 'bi-folder-music',
+    video: 'bi-folder-play', soundlist: 'bi-flower1', html: 'bi-file-earmark-code',
+    code: 'bi-file-code', md: 'bi-file-earmark-text', sheet: 'bi-file-earmark-spreadsheet',
+    file: 'bi-file',
+};
+const kindOf = (fl) => fl.file ? (EXT_KIND[fl.ext] ?? 'file') : 'folder';
+const downUrl = (fl) => gDown + gPath + fl.name;
+function saveEditedFile(filePath, base64) {
+    const fileName = filePath.split('/').pop();
+    CFecth.Exe(FileApiUrl("File/Upload"), { path: gRoot + gPath, name: [fileName], data: [base64] })
+        .then(() => CAlert.Info('저장 완료'))
+        .catch((e) => CAlert.E('저장 실패: ' + e.message));
+}
+const textToBase64 = (text) => btoa(unescape(encodeURIComponent(text)));
+function openFolder(fl) {
+    if (CDOM.IDValue("soundAddType") == "1") {
+        const p2 = { path: gPath + fl.name + "/" };
+        if (RootPath)
+            p2.RootPath = RootPath;
+        if (RootUrl)
+            p2.RootUrl = RootUrl;
+        CFecth.Exe(FileApiUrl("File/List"), p2, "json").then((data) => {
+            CAlert.Info(gPath + fl.name + "추가");
+            for (const fl2 of data.list) {
+                if (fl.name == fl2.name)
+                    continue;
+                if (fl2.ext == "mp3" || fl2.ext == "ogg")
+                    g_musicJBox.AddTrack(fl2.name, gDown + gPath + fl.name + "/" + fl2.name);
+            }
+            g_musicJBox.Play(0);
+        });
+    }
+    else {
+        FolderCD(gPath + fl.name + "/");
+    }
+}
+function openImage(fl) {
+    CDOM.ID("ImageModalSrc").hidden = false;
+    CDOM.ID("ImageModalSrc").src = downUrl(fl);
+    CDOM.ID("VideoModalSrc").hidden = true;
+    CDOM.ID("FileModalSrc").hidden = true;
+    fl.open = true;
+    RefreshOpen();
+    g_contentJBox.Show();
+}
+function openAudio(fl) {
+    if (CDOM.IDValue("soundAddType") == "1") {
+        g_musicJBox.AddTrack(fl.name, downUrl(fl));
+        CAlert.Info(fl.name + " 추가");
+    }
+    else {
+        const names = [fl.name];
+        const paths = [downUrl(fl)];
+        for (const fl2 of gDirList) {
+            if (fl.name == fl2.name)
+                continue;
+            if (fl2.ext == "mp3" || fl2.ext == "ogg") {
+                const fp = gDown + gPath + fl2.name;
+                if (!paths.includes(fp)) {
+                    names.push(fl2.name);
+                    paths.push(fp);
+                }
+            }
+        }
+        g_musicJBox.SetList(names, paths);
+        g_musicJBox.Play(0);
+    }
+    fl.open = true;
+    RefreshOpen();
+}
+function openVideo(fl) {
+    CDOM.ID("ImageModalSrc").hidden = true;
+    CDOM.ID("VideoModalSrc").src = downUrl(fl);
+    CDOM.ID("VideoModalSrc").hidden = false;
+    CDOM.ID("FileModalSrc").hidden = true;
+    fl.open = true;
+    RefreshOpen();
+    g_contentJBox.Show();
+}
+function openSoundList(fl) {
+    const oReq = new XMLHttpRequest();
+    oReq.onload = () => {
+        if (oReq.status != 200) {
+            CAlert.E("XMLHttpRequest error code" + oReq.status);
+            return;
+        }
+        const d = oReq.response;
+        g_musicJBox.SetList(d.name || [], d.fullPath || []);
+        CAlert.Info("ListUp!");
+    };
+    oReq.open("GET", downUrl(fl));
+    oReq.responseType = "json";
+    oReq.send();
+}
+function openHtml(fl) {
+    const confirm = new CConfirm();
+    confirm.SetBody("HTML 파일을 어떻게 열까요?");
+    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+        () => { window.open(downUrl(fl), "_blank"); },
+        () => { new CFileViewer([downUrl(fl)], async (filePath, bufStr) => saveEditedFile(filePath, textToBase64(bufStr))).Open(); },
+    ], ["New Window", "File Viewer"]);
+    confirm.Open();
+}
+function openCode(fl) {
+    new CFileViewer([downUrl(fl)], async (filePath, bufStr) => saveEditedFile(filePath, textToBase64(bufStr))).Open();
+}
+function openMd(fl) {
+    new CMDViewer(downUrl(fl));
+}
+function openSheet(fl) {
+    new CSheetViewer([downUrl(fl)], async (filePath, base64) => saveEditedFile(filePath, base64)).Open();
+}
+function openGenericFile(fl) {
+    CDOM.ID("ImageModalSrc").hidden = true;
+    CDOM.ID("FileModalSrc").href = downUrl(fl);
+    CDOM.ID("VideoModalSrc").hidden = true;
+    CDOM.ID("FileModalSrc").hidden = false;
+    g_contentJBox.Show();
+}
+const FILE_OPEN = {
+    folder: openFolder, image: openImage, audio: openAudio, video: openVideo,
+    soundlist: openSoundList, html: openHtml, code: openCode, md: openMd,
+    sheet: openSheet, file: openGenericFile,
+};
 function DirListRefresh() {
     CDOM.ID("File_div").innerHTML = "";
     CDOM.ID("Delete_div").innerHTML = "";
     folderList = { "<>": "ul", "class": "list-group", "html": [] };
     fileList = { "<>": "ul", "class": "list-group", "html": [] };
-    if (window["g_path"] != null && window["g_path"] != "/") {
+    if (gPath != null && gPath != "/") {
         folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-warning list-group-item-action", "html": "<i class='bi bi-folder'></i> Root Folder",
             "onclick": () => { FolderCD("/"); },
         });
-        let path = window["g_path"];
+        let path = gPath;
         let pos = path.lastIndexOf("/", path.length - 2);
         let bpath = path.substr(0, pos);
         bpath += "/";
@@ -1631,187 +1676,18 @@ function DirListRefresh() {
             "onclick": () => { FolderCD(bpath); },
         });
     }
-    for (let fl of window["g_dirList"]) {
+    for (let fl of gDirList) {
         if (fl.hidden)
             continue;
         fl.open = false;
         fl.index = index;
         index++;
-        let name = "";
-        let onclick = null;
-        if (fl.file == false) {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-fill'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    let soundAddType = CDOM.IDValue("soundAddType");
-                    if (soundAddType == "1") {
-                        let p2 = { path: window["g_path"] + fl.name + "/" };
-                        if (RootPath)
-                            p2.RootPath = RootPath;
-                        if (RootUrl)
-                            p2.RootUrl = RootUrl;
-                        CFecth.Exe(FileApiUrl("File/List"), p2, "json").then((data) => {
-                            CAlert.Info(window["g_path"] + fl.name + "추가");
-                            for (let fl2 of data.list) {
-                                if (fl.name == fl2.name)
-                                    continue;
-                                if (fl2.ext == "mp3" || fl2.ext == "ogg")
-                                    g_musicJBox.AddTrack(fl2.name, window["g_down"] + window["g_path"] + fl.name + "/" + fl2.name);
-                            }
-                            g_musicJBox.Play(0);
-                        });
-                    }
-                    else
-                        FolderCD(window["g_path"] + fl.name + "/");
-                } });
-        }
-        else if (fl.ext == "png" || fl.ext == "jpg" || fl.ext == "jpeg" || fl.ext == "bmp") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-image'>" + fl.name + vcsTag(fl), "onclick": (e) => {
-                    CDOM.ID("ImageModalSrc").hidden = false;
-                    CDOM.ID("ImageModalSrc").src = window["g_down"] + window["g_path"] + fl.name;
-                    CDOM.ID("VideoModalSrc").hidden = true;
-                    CDOM.ID("FileModalSrc").hidden = true;
-                    fl.open = true;
-                    RefreshOpen();
-                    g_contentJBox.Show();
-                } });
-        }
-        else if (fl.ext == "mp3" || fl.ext == "ogg") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-music'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    let soundAddType = CDOM.IDValue("soundAddType");
-                    if (soundAddType == "1") {
-                        g_musicJBox.AddTrack(fl.name, window["g_down"] + window["g_path"] + fl.name);
-                        CAlert.Info(fl.name + " 추가");
-                    }
-                    else {
-                        const _newNames = [fl.name];
-                        const _newPaths = [window["g_down"] + window["g_path"] + fl.name];
-                        for (let fl2 of window["g_dirList"]) {
-                            if (fl.name == fl2.name)
-                                continue;
-                            if (fl2.ext == "mp3" || fl2.ext == "ogg") {
-                                const _fp = window["g_down"] + window["g_path"] + fl2.name;
-                                if (!_newPaths.includes(_fp)) {
-                                    _newNames.push(fl2.name);
-                                    _newPaths.push(_fp);
-                                }
-                            }
-                        }
-                        g_musicJBox.SetList(_newNames, _newPaths);
-                        g_musicJBox.Play(0);
-                    }
-                    fl.open = true;
-                    RefreshOpen();
-                } });
-        }
-        else if (fl.ext == "mp4" || fl.ext == "mov" || fl.ext == "avi") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-folder-play'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    CDOM.ID("ImageModalSrc").hidden = true;
-                    CDOM.ID("VideoModalSrc").src = window["g_down"] + window["g_path"] + fl.name;
-                    CDOM.ID("VideoModalSrc").hidden = false;
-                    CDOM.ID("FileModalSrc").hidden = true;
-                    fl.open = true;
-                    RefreshOpen();
-                    g_contentJBox.Show();
-                } });
-        }
-        else if (fl.ext == "soundlist") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-flower1'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    var oReq = new XMLHttpRequest();
-                    oReq.onload = (e) => {
-                        if (oReq.status != 200) {
-                            CAlert.E("XMLHttpRequest error code" + oReq.status);
-                        }
-                        else {
-                            const _d = oReq.response;
-                            g_musicJBox.SetList(_d.name || [], _d.fullPath || []);
-                            CAlert.Info("ListUp!");
-                        }
-                    };
-                    oReq.open("GET", window["g_down"] + window["g_path"] + fl.name);
-                    oReq.responseType = "json";
-                    oReq.send();
-                } });
-        }
-        else if (fl.ext == "html") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-earmark-code'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    let confirm = new CConfirm();
-                    confirm.SetBody("HTML 파일을 어떻게 열까요?");
-                    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-                        () => { window.open(window["g_down"] + window["g_path"] + fl.name, "_blank"); },
-                        () => {
-                            let viewer = new CFileViewer([window["g_down"] + window["g_path"] + fl.name], async (filePath, bufStr) => {
-                                const fileName = filePath.split('/').pop();
-                                const dirPath = window["g_root"] + window["g_path"];
-                                const base64 = btoa(unescape(encodeURIComponent(bufStr)));
-                                CFecth.Exe(FileApiUrl("File/Upload"), { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                                    CAlert.Info('저장 완료');
-                                }).catch((e) => {
-                                    CAlert.E('저장 실패: ' + e.message);
-                                });
-                            });
-                            viewer.Open();
-                        },
-                    ], ["New Window", "File Viewer"]);
-                    confirm.Open();
-                } });
-        }
-        else if (fl.ext == "ts" || fl.ext == "js" || fl.ext == "txt" || fl.ext == "json") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-code'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    let viewer = new CFileViewer([window["g_down"] + window["g_path"] + fl.name], async (filePath, bufStr) => {
-                        const fileName = filePath.split('/').pop();
-                        const dirPath = window["g_root"] + window["g_path"];
-                        const base64 = btoa(unescape(encodeURIComponent(bufStr)));
-                        console.log('Upload save', { path: dirPath, name: [fileName] });
-                        CFecth.Exe(FileApiUrl("File/Upload"), { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                            CAlert.Info('저장 완료');
-                        }).catch((e) => {
-                            CAlert.E('저장 실패: ' + e.message);
-                        });
-                    });
-                    viewer.Open();
-                } });
-        }
-        else if (fl.ext == "md") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-earmark-text'>" + fl.name + vcsTag(fl), "onclick": (e) => {
-                    new CMDViewer(window["g_down"] + window["g_path"] + fl.name);
-                } });
-        }
-        else if (fl.ext == "csv" || fl.ext == "xlsx" || fl.ext == "xls") {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file-earmark-spreadsheet'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    new CSheetViewer([window["g_down"] + window["g_path"] + fl.name], async (filePath, base64) => {
-                        const fileName = filePath.split('/').pop();
-                        const dirPath = window["g_root"] + window["g_path"];
-                        CFecth.Exe(FileApiUrl("File/Upload"), { path: dirPath, name: [fileName], data: [base64] }).then(() => {
-                            CAlert.Info('저장 완료');
-                        }).catch((e) => {
-                            CAlert.E('저장 실패: ' + e.message);
-                        });
-                    }).Open();
-                } });
-        }
-        else {
-            folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    CDOM.ID("ImageModalSrc").hidden = true;
-                    CDOM.ID("FileModalSrc").href = window["g_down"] + window["g_path"] + fl.name;
-                    CDOM.ID("VideoModalSrc").hidden = true;
-                    CDOM.ID("FileModalSrc").hidden = false;
-                    g_contentJBox.Show();
-                } });
-        }
+        const kind = kindOf(fl);
+        folderList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
+            "html": `<i class='bi ${FILE_ICON[kind]}'>${fl.name}${vcsTag(fl)}`, "onclick": () => FILE_OPEN[kind](fl) });
         if (fl.file == true) {
             fileList.html.push({ "<>": "li", "class": "list-group-item list-group-item-action", "id": "fl" + fl.index,
-                "html": "<i class='bi bi-file'>" + fl.name + vcsTag(fl), "onclick": () => {
-                    Delete(fl.name);
-                } });
+                "html": `<i class='bi bi-file'>${fl.name}${vcsTag(fl)}`, "onclick": () => Delete(fl.name) });
         }
     }
     CDOM.ID("File_div").append(CDOM.DataToDom(folderList));
@@ -1822,9 +1698,14 @@ let RootPath = CUtilWeb.Parameter("RootPath");
 let RootUrl = CUtilWeb.Parameter("RootUrl");
 let g_fileWebRootUrl = CPath.WebRootUrl();
 let fileAuthed = !!localStorage.getItem(AI_TOKEN_KEY);
-window["g_dirList"] = CStorage.Get(path == null ? "root" : path);
-if (window["g_dirList"] != null) {
-    window["g_dirList"] = JSON.parse(window["g_dirList"]);
+let gPath = '/';
+let gRoot = '';
+let gDown = '';
+let gRoots = [];
+let gDirList = [];
+const cachedDirList = CStorage.Get(path == null ? "root" : path);
+if (cachedDirList != null) {
+    gDirList = JSON.parse(cachedDirList);
     DirListRefresh();
 }
 function NormalizeWebRootUrl(url) {
@@ -1877,10 +1758,10 @@ function SyncFileRoot(data) {
         RootPath = data.RootPath;
     if (data.RootUrl != null)
         RootUrl = data.RootUrl;
-    window["g_root"] = RootPath?.replace(/\/+$/, '') ?? '';
-    window["g_down"] = ResolveFileUrl(RootUrl);
+    gRoot = RootPath?.replace(/\/+$/, '') ?? '';
+    gDown = ResolveFileUrl(RootUrl);
     if (data.roots)
-        window["g_roots"] = data.roots;
+        gRoots = data.roots;
 }
 async function fileCheckAuth() {
     const token = GetFileToken();
@@ -1914,9 +1795,9 @@ async function FetchFileList(_path) {
 async function LoadFileList(_path) {
     const data = await FetchFileList(_path);
     CStorage.Set(_path == null ? "root" : _path, JSON.stringify(data.list));
-    window["g_dirList"] = data.list;
+    gDirList = data.list;
     SyncFileRoot(data);
-    window["g_path"] = data.path;
+    gPath = data.path;
     DirListRefresh();
 }
 function ParseFileHomeUrl(input) {
@@ -1961,11 +1842,11 @@ ConnectFileHomeUrl(CUtilWeb.Parameter("FileHomeUrl") ?? undefined);
     g_musicJBox = new CModalMusic(_d.name, _d.fullPath, (names, paths) => CStorage.Set("SoundList", JSON.stringify({ name: names, fullPath: paths })));
 }
 function FolderCD(_path, _onDone) {
-    window["g_path"] = _path;
+    gPath = _path;
     FetchFileList(_path).then((data) => {
-        window["g_dirList"] = data.list;
+        gDirList = data.list;
         SyncFileRoot(data);
-        window["g_path"] = data.path;
+        gPath = data.path;
         index = 0;
         DirListRefresh();
         _onDone?.();
@@ -1983,7 +1864,7 @@ function Redirection(_multi) {
     CDOM.IDValue("fun", g_fun);
     CDOM.IDValue("data", g_data);
     CDOM.IDValue("option", g_option);
-    CDOM.IDValue("path", window["g_path"]);
+    CDOM.IDValue("path", gPath);
     CDOM.IDValue("RootPath", RootPath ?? "");
     CDOM.IDValue("RootUrl", RootUrl ?? "");
     form.submit();
@@ -2056,13 +1937,13 @@ async function FileBtn() {
             doAuth();
             dlg.Close();
         });
-    }, 80);
+    }, MODAL_DOM_DELAY);
 }
 window["FileBtn"] = FileBtn;
 window["PermissionBtn"] = FileBtn;
 function showFileAdminModal() {
     const uid = Date.now();
-    const _roots = window["g_roots"] ?? [];
+    const _roots = gRoots ?? [];
     const _opts = [..._roots, { path: "./", name: "Artgine (WorkingPath)" }];
     let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? ''));
     if (_curIdx < 0)
@@ -2151,9 +2032,7 @@ function showFileAdminModal() {
             if (!rootUrl)
                 await InitFileRoot();
             FolderCD("/");
-            const fileTabEl = document.getElementById('file-tab');
-            if (fileTabEl)
-                window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
+            showTab('file-tab');
         };
         const rootSel = document.getElementById(`fadm_rootsel_${uid}`);
         rootSel?.addEventListener('change', () => {
@@ -2176,33 +2055,22 @@ function showFileAdminModal() {
             modal.Hide();
             CDOM.ID("uploadBtn").click();
         });
+        const isRemoteServer = () => g_fileWebRootUrl !== CPath.WebRootUrl();
         document.getElementById(`fadm_chat_${uid}`)?.addEventListener('click', () => {
             modal.Close();
-            const cwd = (window["g_root"] ?? '') + (window["g_path"] ?? '');
-            const aiTabEl = document.querySelector('[data-bs-target="#ai-panel"]');
-            if (aiTabEl)
-                window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
-            setTimeout(() => {
-                const chatSubEl = document.getElementById('ai-chat-subtab');
-                if (chatSubEl)
-                    window.bootstrap.Tab.getOrCreateInstance(chatSubEl).show();
-            }, 150);
+            const cwd = isRemoteServer() ? '' : (gRoot ?? '') + (gPath ?? '');
+            showTab('[data-bs-target="#ai-panel"]');
+            setTimeout(() => showTab('ai-chat-subtab'), 150);
             chatStartNew(cwd || undefined);
         });
         document.getElementById(`fadm_term_${uid}`)?.addEventListener('click', () => {
             modal.Close();
-            const cwd = (window["g_root"] ?? '') + (window["g_path"] ?? '');
-            const aiTabEl = document.querySelector('[data-bs-target="#ai-panel"]');
-            if (aiTabEl)
-                window.bootstrap.Tab.getOrCreateInstance(aiTabEl).show();
-            setTimeout(() => {
-                const termSubEl = document.getElementById('ai-term-subtab');
-                if (termSubEl)
-                    window.bootstrap.Tab.getOrCreateInstance(termSubEl).show();
-            }, 150);
+            const cwd = isRemoteServer() ? '' : (gRoot ?? '') + (gPath ?? '');
+            showTab('[data-bs-target="#ai-panel"]');
+            setTimeout(() => showTab('ai-term-subtab'), 150);
             termStartNew('cmd', cwd || undefined);
         });
-        const vcsPath = () => (window["g_root"] ?? './') + (window["g_path"] ?? '');
+        const vcsPath = () => (gRoot ?? './') + (gPath ?? '');
         document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
         document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
             const res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "update", path: vcsPath() }, "json");
@@ -2210,12 +2078,12 @@ function showFileAdminModal() {
             const msgBody = res.msg ? res.msg.replace(/\n/g, '<br>') : (res.ok ? 'Update complete' : 'Update failed');
             CAlert.Info(msgBody + revLine);
             if (res.ok)
-                FolderCD(window["g_path"]);
+                FolderCD(gPath);
         });
         document.getElementById(`fadm_vcs_add_${uid}`)?.addEventListener('click', () => openVcsModal('add', vcsPath()));
         document.getElementById(`fadm_vcs_revert_${uid}`)?.addEventListener('click', () => openVcsModal('revert', vcsPath()));
         document.getElementById(`fadm_vcs_commit_${uid}`)?.addEventListener('click', () => openVcsModal('commit', vcsPath()));
-    }, 80);
+    }, MODAL_DOM_DELAY);
 }
 window["showFileAdminModal"] = showFileAdminModal;
 function openActionModal(title, runLabel, runClass, onRun, hasMessage = false, fetchItems, staticItems, onItemDblClick) {
@@ -2326,7 +2194,7 @@ function openVcsModal(action, path) {
             param.message = message;
         const res = await CFecth.Exe(FileApiUrl("File/VCS"), param, "json");
         if (res.ok)
-            FolderCD(window["g_path"]);
+            FolderCD(gPath);
         return { result: res.msg || (res.ok ? 'Done' : 'Failed'), refresh: res.ok };
     }, action === 'commit', async () => {
         const res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "status", path }, "json");
@@ -2377,21 +2245,21 @@ async function openVcsDiff(filePath) {
         }
         const cfg = { drawFileList: false, matching: "lines", outputFormat: "line-by-line", highlight: false, stickyFileHeaders: false };
         new D2H(el, res.diff, cfg).draw();
-    }, 80);
+    }, MODAL_DOM_DELAY);
 }
 window["openVcsDiff"] = openVcsDiff;
 function openDeleteModal() {
-    const dirList = window["g_dirList"] ?? [];
+    const dirList = gDirList ?? [];
     openActionModal('Delete', 'Delete', 'btn-danger', async (names) => {
         const lines = [];
         for (const name of names) {
-            const param = { data: window["g_path"] + name };
+            const param = { data: gPath + name };
             if (RootPath)
                 param.RootPath = RootPath;
             const res = await CFecth.Exe(FileApiUrl("File/Delete"), param, "json");
             lines.push(`${res.ok ? 'OK' : 'FAIL'} ${name}`);
         }
-        FolderCD(window["g_path"]);
+        FolderCD(gPath);
         return { result: lines.join('\n') };
     }, false, undefined, dirList
         .filter(fl => !fl.hidden)
@@ -2403,13 +2271,13 @@ function CreateFolder() {
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
         async () => {
             const folderName = CDOM.IDValue("CreateFolder");
-            const data = window["g_path"] + folderName;
+            const data = gPath + folderName;
             const param = { data };
             if (RootPath)
                 param.RootPath = RootPath;
             const j = await CFecth.Exe(FileApiUrl("File/Mkdir"), param, "json");
             if (j?.ok)
-                FolderCD(window["g_path"]);
+                FolderCD(gPath);
             else
                 CAlert.E("폴더 생성 실패");
         },
@@ -2420,7 +2288,7 @@ function CreateFolder() {
 window["CreateFolder"] = CreateFolder;
 function Delete(_file) {
     g_fun = "Delete";
-    g_data = window["g_path"] + _file;
+    g_data = gPath + _file;
     Redirection(false);
 }
 window["Delete"] = Delete;
@@ -2445,7 +2313,7 @@ async function FileSearch() {
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(520, 520);
     modal.Open(CModal.ePos.Center);
-    await new Promise(r => setTimeout(r, 80));
+    await new Promise(r => setTimeout(r, MODAL_DOM_DELAY));
     const input = document.getElementById(`srchInput_${uid}`);
     const btn = document.getElementById(`srchBtn_${uid}`);
     const stopBtn = document.getElementById(`srchStop_${uid}`);
@@ -2459,9 +2327,7 @@ async function FileSearch() {
             `<i class="bi ${icon} me-1"></i><strong>${fl.name}</strong>` +
                 `<span class="text-muted ms-2" style="font-size:11px;">${dirPath}</span>`;
         const switchToFileTab = () => {
-            const fileTabEl = document.getElementById('file-tab');
-            if (fileTabEl)
-                window.bootstrap.Tab.getOrCreateInstance(fileTabEl).show();
+            showTab('file-tab');
         };
         if (fl.file) {
             item.addEventListener('click', () => {
@@ -2505,7 +2371,7 @@ async function FileSearch() {
         const query = input.value.trim().toLowerCase();
         if (!query)
             return;
-        const startPath = window["g_path"] ?? "/";
+        const startPath = gPath ?? "/";
         const serverKey = (RootPath ?? '') + '|' + (RootUrl ?? '');
         if (g_srchServerKey !== serverKey) {
             g_srchCache = new Map();
@@ -2553,7 +2419,7 @@ async function FileSearch() {
 }
 window["FileSearch"] = FileSearch;
 function FileShare() {
-    const path = window["g_path"] ?? "/";
+    const path = gPath ?? "/";
     const url = new URL(location.href);
     url.search = '';
     url.searchParams.set('path', path);
@@ -2589,12 +2455,12 @@ function FileShare() {
                 msg.textContent = 'Copy failed ??select and copy manually.';
             }
         });
-    }, 80);
+    }, MODAL_DOM_DELAY);
 }
 window["FileShare"] = FileShare;
 CDOM.ID("uploadBtn").onchange = async (e) => {
     var fi = e.target;
-    const path = window["g_root"] + window["g_path"];
+    const path = gRoot + gPath;
     const readAsBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -2634,7 +2500,7 @@ function SoundPlayListSave() {
 }
 window["SoundPlayListSave"] = SoundPlayListSave;
 function RefreshOpen() {
-    for (let fl of window["g_dirList"]) {
+    for (let fl of gDirList) {
         if (fl.index == null)
             continue;
         if (fl.open == false) {
@@ -2647,19 +2513,19 @@ function RefreshOpen() {
 }
 window["RefreshOpen"] = RefreshOpen;
 function NextPhoto() {
-    for (let fl of window["g_dirList"]) {
+    for (let fl of gDirList) {
         if (fl.open == false) {
             CDOM.ID("fl" + fl.index).className = "list-group-item list-group-item-action list-group-item-secondary";
             fl.open = true;
             if (fl.ext == "png" || fl.ext == "jpg" || fl.ext == "jpeg" || fl.ext == "bmp") {
                 CDOM.ID("ImageModalSrc").hidden = false;
-                CDOM.ID("ImageModalSrc").src = window["g_down"] + window["g_path"] + fl.name;
+                CDOM.ID("ImageModalSrc").src = gDown + gPath + fl.name;
                 CDOM.ID("VideoModalSrc").hidden = true;
                 CDOM.ID("FileModalSrc").hidden = true;
             }
             else if (fl.ext == "mp4" || fl.ext == "mov" || fl.ext == "avi") {
                 CDOM.ID("ImageModalSrc").hidden = true;
-                CDOM.ID("VideoModalSrc").src = window["g_down"] + window["g_path"] + fl.name;
+                CDOM.ID("VideoModalSrc").src = gDown + gPath + fl.name;
                 CDOM.ID("VideoModalSrc").hidden = false;
                 CDOM.ID("FileModalSrc").hidden = true;
             }
@@ -2678,3 +2544,52 @@ let buf = CFile.Load("../../README-" + lan + ".md").then(async () => {
     CDOM.ID("main").innerHTML = "";
     CDOM.ID("main").append(await CUtilWeb.MDReader("../../README" + lan + ".md"));
 });
+let option = new CSingOption();
+option.mFindPWBtn = "pass";
+CSing.On(CSing.eEvent.State, () => {
+    if (CSing.PrivateKey() == null)
+        CDOM.ID("login-btn").innerText = "Login";
+    else
+        CDOM.ID("login-btn").innerText = "Logout";
+});
+CSing.On(CSing.eEvent.Init, () => {
+    if (CSing.PrivateKey() == null)
+        CDOM.ID("login-btn").innerText = "Login";
+    else
+        CDOM.ID("login-btn").innerText = "Logout";
+});
+CSing.On(CSing.eEvent.JoinInit, () => {
+    loginModal.SetPosition(CModal.ePos.Center);
+});
+CSing.On(CSing.eEvent.Insert, () => {
+    loginModal.Open();
+    CSing.ModifyMode();
+});
+let html = await CSing.InitForm(option);
+let loginModal = new CModal();
+loginModal.SetHeader("Sing");
+loginModal.SetBody(html);
+loginModal.SetTitle(CModal.eTitle.TextClose);
+loginModal.SetCloseToHide(true);
+loginModal.SetSize(320, 640);
+CDOM.ID("login-btn").addEventListener("click", () => {
+    loginModal.Open();
+});
+let bClient = null;
+CDOM.ID("board-tab").onclick = () => {
+    if (bClient == null) {
+        bClient = new CBoard(CDOM.ID("board"), "");
+        bClient.List(0, 5);
+    }
+};
+let dlInited = false;
+CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
+    if (dlInited)
+        return;
+    dlInited = true;
+    MountDownloadTab("download-root");
+});
+if (CDOM.ID("download-panel").classList.contains("active")) {
+    dlInited = true;
+    MountDownloadTab("download-root");
+}

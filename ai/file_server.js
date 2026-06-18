@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = dirname(SCRIPT_DIR);
-const COOKIE_FILE = join(SCRIPT_DIR, 'cookie.txt');
+const COOKIE_FILE = join(SCRIPT_DIR, 'file_cookie.txt');
 
 function getPassword() {
     const candidates = [

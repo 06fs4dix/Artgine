@@ -1,15 +1,15 @@
-# Artgine 프로젝트 셋업 가이드
+# Artgine 프로젝트 셋업 가이드 (Artgine Project Setup Guide)
 > 2D · 3D 통합 / 최종 업데이트: 2026-04-19
 
 ---
 
-## 핵심 규칙
+## 핵심 규칙 (Core Rules)
 - **HTML · ServiceWorker.js · webmanifest** 는 Artgine 앱이 자동 생성 → AI이용 수동작업 제외
 - **`Canvas/*.json`** 은 Artgine 앱에서 씬 저장 시 자동 생성 → 코드에서 없는 파일 참조 금지
 
 ---
 
-## 폴더 구조
+## 폴더 구조 (Folder Structure)
 ```
 proj/
 ├── 2D/[Name]/
@@ -26,10 +26,10 @@ proj/
 
 ---
 
-## TS 파일 구조
+## TS 파일 구조 (TS File Structure)
 Artgine 앱이 헤더(버전~gAtl.Init)를 자동 관리. **EntryPoint 이후만 작성**.
 
-### 2D 기본 (로컬 서버, 새 씬)
+### 2D 기본 - 로컬 서버, 새 씬 (2D Basic - Local Server, New Scene)
 ```typescript
 const version='[proj]_v1';
 import "../../../artgine/artgine.js"
@@ -54,7 +54,7 @@ let Main = gAtl.NewCanvas("Main");
 Main.SetCameraKey("2D");
 ```
 
-### 3D 기본 (로컬 서버, 새 씬)
+### 3D 기본 - 로컬 서버, 새 씬 (3D Basic - Local Server, New Scene)
 ```typescript
 // ...
 await gAtl.Init([], "");
@@ -69,7 +69,7 @@ Main.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
 
 ---
 
-## 2D vs 3D 핵심 차이
+## 2D vs 3D 핵심 차이 (Key Differences between 2D and 3D)
 
 | 항목 | 2D | 3D |
 |------|----|----|
@@ -78,7 +78,7 @@ Main.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
 
 ---
 
-## JSON 설정 파일
+## JSON 설정 파일 (JSON Configuration File)
 
 ```json
 {"preference":{"mTargetWidth":0,"mTargetHeight":0,"mRenderer":"GL","m32fDepth":false,"mTexture16f":false,"mAnti":true,"mBatchPool":true,"mXR":false,"mDeveloper":true,"mIAuto":true,"mWASM":true,"mCanvas":""},"pluging":[],"includes":{"pakozlib":true,"jszip":true,"screenfull":true,"popper":true,"bootstrap":true,"MonacoEditor":true}}
@@ -86,7 +86,7 @@ Main.GetCam().SetCamCon(new CCamCon3DFirstPerson(gAtl.Frame().Input()));
 
 ---
 
-## ⚠️ Canvas 404 에러 (자주 발생)
+## ⚠️ Canvas 404 에러 (자주 발생) (Canvas 404 Error - Frequently Occurs)
 
 ```typescript
 // ❌ 없는 씬 파일 참조 → 404
@@ -101,13 +101,13 @@ Main.SetCameraKey("2D"); // 또는 "3D"
 
 ---
 
-## 추가 클래스 등록 (헤더 영역)
+## 추가 클래스 등록 - 헤더 영역 (Register Additional Classes - Header Area)
 ```typescript
 import { MyClass } from "./MyClass.js";
 CClass.Push(MyClass);
 ```
 
-## 플러그인 등록 (헤더 영역)
+## 플러그인 등록 - 헤더 영역 (Register Plugins - Header Area)
 ```typescript
 CPlugin.PushPath('ShadowPlane','../../../plugin/ShadowPlane/');
 import "../../../plugin/ShadowPlane/ShadowPlane.js"
@@ -116,7 +116,7 @@ import "../../../plugin/ShadowPlane/ShadowPlane.js"
 
 ---
 
-## 참고 예제 프로젝트
+## 참고 예제 프로젝트 (Reference Example Projects)
 
 | 경로 | 특징 |
 |------|------|
@@ -128,7 +128,7 @@ import "../../../plugin/ShadowPlane/ShadowPlane.js"
 
 ---
 
-## 2D 캐릭터 컴포넌트 구성
+## 2D 캐릭터 컴포넌트 구성 (2D Character Component Configuration)
 ```typescript
 // CSubject 상속 후 Start()에서 조립
 this.mPT = this.PushComp(new CPaint2D("Res/sprite.png", new CVec2(100,100)));
@@ -141,7 +141,7 @@ this.PushComp(new CShadowPlane());
 this.mAF = this.PushComp(new CAniFlow(ani));
 ```
 
-## FSM (CSMComp) 패턴
+## FSM (CSMComp) 패턴 (FSM - CSMComp Pattern)
 ```typescript
 sm.GetSM().PushPattern([
   {"and":[{"s":CVec3.eDir.Null,"o":"==","v":1}],"exe":[{"t":"Message","a":"StandDown"}]},
@@ -151,7 +151,7 @@ sm.GetSM().PushPattern([
 // "a" 값 = 클래스 메서드 이름과 일치해야 함
 ```
 
-## 이동 처리
+## 이동 처리 (Movement Handling)
 ```typescript
 override Update(_update: CUpdate): void {
   super.Update(_update);

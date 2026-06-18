@@ -29,6 +29,7 @@
 		"colorpicker": false,
 		"jquery": false,
 		"MonacoEditor":true,
+		"diff2html": false,
 		"summernote": false
 	}
 }

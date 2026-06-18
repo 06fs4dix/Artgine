@@ -71,6 +71,8 @@
 <link rel='stylesheet' href='../../artgine/external/legacy/toastui/toastui-editor.min.css'>
 <script src='../../artgine/external/legacy/toastui/toastui-editor-all.min.js'></script>
 <script type='text/javascript' src='../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
+<link rel='stylesheet' href='../../artgine/external/legacy/diff2html/diff2html.min.css'>
+<script src='../../artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
 <link rel='manifest' href='./Home.webmanifest'/>
 <script>
 let SERVER_BASE='http://localhost:8050/Artgine/proj/Home/Home.html';
@@ -87,9 +89,6 @@ if (location.protocol == 'file:' && isElectron==false){
 
 <!--Manifest-->
 <!--EntryPoint-->
-<link rel='stylesheet' href='../../artgine/external/legacy/diff2html/diff2html.min.css'>
-<script src='../../artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
-
 <!-- 탭 네비게이션 -->
 <div class="container d-flex flex-column p-0" style="height: 100vh; height: 100svh; height: 100dvh;">
 <style>#myTab{font-size:0.8rem;} #myTab .nav-link, #myTab .btn{padding:0.25rem 0.5rem; font-size:0.8rem;}
@@ -220,6 +219,45 @@ if (location.protocol == 'file:' && isElectron==false){
                 title="Toggle sidebar">
                 <i class="bi bi-layout-sidebar-inset"></i>
             </button>
+            <div id="ai-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center"
+                 style="inset:0;overflow-y:auto;background:var(--bs-body-bg);">
+                <div class="p-4" style="max-width:560px;width:100%;">
+                    <h5 class="mb-3 text-secondary"><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h5>
+                    <div class="mb-3">
+                        <div class="small text-secondary fw-semibold mb-1">Global</div>
+                        <ul class="list-unstyled small mb-0">
+                            <li><kbd>F1</kbd> File Manager</li>
+                            <li><kbd>F2</kbd> File Search</li>
+                            <li><kbd>F3</kbd> Go to File tab (root)</li>
+                            <li><kbd>F4</kbd> Go to AI tab</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small text-secondary fw-semibold mb-1">AI Panel</div>
+                        <ul class="list-unstyled small mb-0">
+                            <li><kbd>Tab</kbd> Toggle sidebar</li>
+                            <li><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> Switch Chat / Terminal / Web subtab</li>
+                            <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
+                            <li><kbd>&rarr;</kbd> Jump to notification session</li>
+                            <li><kbd>&larr;</kbd> Return to previous session</li>
+                            <li><kbd>Shift</kbd>+<kbd>N</kbd> New terminal (Terminal subtab, sidebar open)</li>
+                            <li><kbd>Shift</kbd>+<kbd>D</kbd> Delete current terminal session</li>
+                        </ul>
+                    </div>
+                    <div class="mb-0">
+                        <div class="small text-secondary fw-semibold mb-1">Inside Terminal</div>
+                        <ul class="list-unstyled small mb-0">
+                            <li><kbd>Enter</kbd> Send input (<kbd>Shift</kbd>+<kbd>Enter</kbd> for newline)</li>
+                            <li><kbd>Tab</kbd> Apply autocomplete suggestion</li>
+                            <li><kbd>Esc</kbd> Close autocomplete</li>
+                            <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Navigate autocomplete, or move cursor when input is empty</li>
+                            <li><kbd>Ctrl</kbd>+<kbd>T</kbd> Scroll to bottom</li>
+                            <li><kbd>F6</kbd> Toggle SUPER (auto-approve)</li>
+                            <li><kbd>F7</kbd> Show / focus input bar</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

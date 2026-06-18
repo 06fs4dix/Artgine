@@ -27,6 +27,7 @@
     "colorpicker": false,
     "jquery": false,
     "MonacoEditor": true,
+    "diff2html": true,
     "summernote": false,
     "tone": false,
     "soundfont": false,

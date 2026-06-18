@@ -15,6 +15,7 @@ let pollMs     = 3000;
 let logOffset  = 0;
 let inputMode  = false;
 let screenshotQuality = 75;
+let consoleVisible = true;
 
 const loginOverlay  = document.getElementById('loginOverlay')  as HTMLDivElement;
 const loginPw       = document.getElementById('loginPw')       as HTMLInputElement;
@@ -46,6 +47,24 @@ function initQualityControl() {
         const quality = Math.trunc(Number(slider.value));
         screenshotQuality = Math.max(0, Math.min(100, Number.isFinite(quality) ? quality : 75));
         label.textContent = String(screenshotQuality);
+    });
+}
+
+function initConsoleControl() {
+    if (!controlsBar) return;
+
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-1';
+    row.innerHTML = `
+        <span>console</span>
+        <input id="consoleToggle" type="checkbox" class="form-check-input ms-1" checked>
+    `;
+    controlsBar.insertBefore(row, inputModeRow.nextSibling);
+
+    const toggle = row.querySelector<HTMLInputElement>('#consoleToggle')!;
+    toggle.addEventListener('change', () => {
+        consoleVisible = toggle.checked;
+        logArea.style.display = consoleVisible ? '' : 'none';
     });
 }
 
@@ -104,37 +123,41 @@ function bufToDataUrl(buf: { data: number[] }, mime = 'image/png'): string {
 
 async function poll() {
     try {
+        const screenReq = fetch(CPath.WebRootUrl() + 'playwright/exec', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId: SESSION_ID,
+                fn: 'screenshot',
+                args: [{ type: 'jpeg', quality: screenshotQuality }]
+            })
+        });
+        const logsReq = consoleVisible ? fetch(CPath.WebRootUrl() + 'playwright/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, fromOffset: logOffset })
+        }) : null;
         const [rScreen, rLogs] = await Promise.all([
-            fetch(CPath.WebRootUrl() + 'playwright/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sessionId: SESSION_ID,
-                    fn: 'screenshot',
-                    args: [{ type: 'jpeg', quality: screenshotQuality }]
-                })
-            }),
-            fetch(CPath.WebRootUrl() + 'playwright/logs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: SESSION_ID, fromOffset: logOffset })
-            }),
+            screenReq,
+            logsReq,
         ]);
         const jScreen = await rScreen.json();
         if (jScreen.ok && jScreen.result?.type === 'Buffer') {
             screenshot.src = bufToDataUrl(jScreen.result, 'image/jpeg');
         }
-        const jLogs = await rLogs.json();
-        if (jLogs.ok && jLogs.logs?.length) {
-            for (const l of jLogs.logs as { type: string; text: string }[]) {
-                const div = document.createElement('div');
-                div.className = (l.type === 'error' || l.type === 'network') ? 'text-danger' : '';
-                div.textContent = `[${l.type}] ${l.text}`;
-                logArea.appendChild(div);
+        if (rLogs) {
+            const jLogs = await rLogs.json();
+            if (jLogs.ok && jLogs.logs?.length) {
+                for (const l of jLogs.logs as { type: string; text: string }[]) {
+                    const div = document.createElement('div');
+                    div.className = (l.type === 'error' || l.type === 'network') ? 'text-danger' : '';
+                    div.textContent = `[${l.type}] ${l.text}`;
+                    logArea.appendChild(div);
+                }
+                logArea.scrollTop = logArea.scrollHeight;
             }
-            logArea.scrollTop = logArea.scrollHeight;
+            if (jLogs.ok && jLogs.nextOffset != null) logOffset = jLogs.nextOffset;
         }
-        if (jLogs.ok && jLogs.nextOffset != null) logOffset = jLogs.nextOffset;
     } catch {}
     pollTimer = window.setTimeout(poll, pollMs);
 }
@@ -198,6 +221,13 @@ function boot() {
         });
     }
 
+    function getMouseButton(e: MouseEvent): 'left' | 'right' | 'middle' | null {
+        if (e.button === 0) return 'left';
+        if (e.button === 1) return 'middle';
+        if (e.button === 2) return 'right';
+        return null;
+    }
+
     function showRipple(e: MouseEvent) {
         const wrapRect = imgWrap.getBoundingClientRect();
         const ripple = document.createElement('div');
@@ -218,51 +248,93 @@ function boot() {
         setTimeout(() => ripple.remove(), 500);
     }
 
-    let _isDragging = false;
+    let _activeButton: 'left' | 'right' | 'middle' | null = null;
     let _hasMoved = false;
     let _lastMoveTime = 0;
+    let _lastMiddleY = 0;
     const MOVE_THROTTLE_MS = 30;
+
+    async function releaseActiveMouse() {
+        const button = _activeButton;
+        _activeButton = null;
+        if (!button) return;
+        try { await pwExec('mouse.up', [{ button }]); } catch {}
+    }
 
     imgWrap.addEventListener('mousedown', async (e: MouseEvent) => {
         if (!inputMode) return;
+        e.preventDefault();
         imgWrap.focus();
         const coords = toNativeCoords(e);
         if (!coords) return;
-        _isDragging = true;
+        const button = getMouseButton(e);
+        if (!button) return;
+        if (_activeButton) await releaseActiveMouse();
+        _activeButton = button;
         _hasMoved = false;
+        _lastMiddleY = e.clientY;
         try {
             await pwExec('mouse.move', [coords.cx, coords.cy]);
-            await pwExec('mouse.down', []);
+            await pwExec('mouse.down', [{ button }]);
         } catch {}
     });
 
     imgWrap.addEventListener('mousemove', async (e: MouseEvent) => {
-        if (!inputMode || !_isDragging) return;
+        if (!inputMode || !_activeButton) return;
+        e.preventDefault();
         const now = Date.now();
         if (now - _lastMoveTime < MOVE_THROTTLE_MS) return;
         _lastMoveTime = now;
         const coords = toNativeCoords(e);
         if (!coords) return;
         _hasMoved = true;
-        try { await pwExec('mouse.move', [coords.cx, coords.cy]); } catch {}
+        try {
+            await pwExec('mouse.move', [coords.cx, coords.cy]);
+            if (_activeButton === 'middle') {
+                const dy = e.clientY - _lastMiddleY;
+                _lastMiddleY = e.clientY;
+                if (dy !== 0) await pwExec('mouse.wheel', [0, dy * 3]);
+            }
+        } catch {}
     });
 
     imgWrap.addEventListener('mouseup', async (e: MouseEvent) => {
-        if (!inputMode || !_isDragging) return;
-        _isDragging = false;
+        if (!inputMode || !_activeButton) return;
+        e.preventDefault();
+        const button = _activeButton;
+        _activeButton = null;
         const coords = toNativeCoords(e);
-        if (!coords) return;
-        if (!_hasMoved) showRipple(e);
         try {
-            await pwExec('mouse.move', [coords.cx, coords.cy]);
-            await pwExec('mouse.up', []);
+            if (coords) await pwExec('mouse.move', [coords.cx, coords.cy]);
+            if (!_hasMoved && coords) showRipple(e);
+            await pwExec('mouse.up', [{ button }]);
         } catch {}
     });
 
     imgWrap.addEventListener('mouseleave', async () => {
-        if (!inputMode || !_isDragging) return;
-        _isDragging = false;
-        try { await pwExec('mouse.up', []); } catch {}
+        if (!inputMode || !_activeButton) return;
+        await releaseActiveMouse();
+    });
+
+    window.addEventListener('mouseup', async () => {
+        if (!inputMode || !_activeButton) return;
+        await releaseActiveMouse();
+    });
+
+    imgWrap.addEventListener('contextmenu', (e: MouseEvent) => {
+        if (!inputMode) return;
+        e.preventDefault();
+    });
+
+    imgWrap.addEventListener('wheel', async (e: WheelEvent) => {
+        if (!inputMode) return;
+        const coords = toNativeCoords(e);
+        if (!coords) return;
+        e.preventDefault();
+        try {
+            await pwExec('mouse.move', [coords.cx, coords.cy]);
+            await pwExec('mouse.wheel', [e.deltaX, e.deltaY]);
+        } catch {}
     });
 
     poll();
@@ -272,4 +344,5 @@ loginBtn.addEventListener('click', () => tryLogin(loginPw.value));
 loginPw.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') tryLogin(loginPw.value); });
 
 initQualityControl();
+initConsoleControl();
 checkAuth();
