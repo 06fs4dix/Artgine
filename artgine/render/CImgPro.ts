@@ -443,6 +443,443 @@ export class CImgPro
             return v3;
         }
     }
+
+    // ScaleMipMapsAlphaForCoverage(w, h, buf)
+    static ScaleMipMapAlpha(w: number, h: number, buf: any, filtering: 'box' | 'kaiser' = 'kaiser', coverageThreshold: number = 0.3): CTexture
+    {
+        const kWidth   = 3.0;
+        const kAlpha   = 4.0;
+        const kStretch = 1.0;
+        const besselI0_kAlpha = 11.30192195213633;
+
+        const besselI0 = (x: number): number => {
+            const ax = Math.abs(x);
+            if (ax < 3.75) {
+                const y = (x / 3.75) ** 2;
+                return 1.0 + y * (3.5156229 + y * (3.0899424 + y * (1.2067492
+                    + y * (0.2659732 + y * (0.0360768 + y * 0.0045813)))));
+            } else {
+                const y = 3.75 / ax;
+                return (Math.exp(ax) / Math.sqrt(ax)) *
+                    (0.39894228 + y * (0.01328592 + y * (0.00225319
+                    + y * (-0.00157565 + y * (0.00916281 + y * (-0.02057706
+                    + y * (0.02635537 + y * (-0.01647633 + y * 0.00392377))))))));
+            }
+        };
+
+        const sinc = (x: number): number => {
+            if (Math.abs(x) < 1e-10) return 1.0;
+            const px = Math.PI * x;
+            return Math.sin(px) / px;
+        };
+
+        const kaiserValue = (x: number): number => {
+            const t = x / kWidth;
+            if (Math.abs(t) >= 1.0) return 0.0;
+            const window = besselI0(kAlpha * Math.sqrt(1.0 - t * t)) / besselI0_kAlpha;
+            return window * sinc(x);
+        };
+
+        const buildKaiserKernel = (dstPos: number, scale: number, srcSize: number): { indices: Int32Array; weights: Float64Array } => {
+            const center    = (dstPos + 0.5) * scale - 0.5;
+            const halfWidth = kWidth * scale * kStretch;
+            const lo        = Math.max(0, Math.ceil(center - halfWidth));
+            const hi        = Math.min(srcSize - 1, Math.floor(center + halfWidth));
+            const count     = hi - lo + 1;
+            const indices   = new Int32Array(count);
+            const weights   = new Float64Array(count);
+            let wSum = 0.0;
+            const invScale = 1.0 / scale;
+            for (let i = 0; i < count; i++) {
+                const sx  = lo + i;
+                indices[i] = sx;
+                const wv  = kaiserValue((sx - center) * invScale);
+                weights[i] = wv;
+                wSum += wv;
+            }
+            if (wSum !== 0) {
+                const invWSum = 1.0 / wSum;
+                for (let i = 0; i < count; i++) weights[i] *= invWSum;
+            }
+            return { indices, weights };
+        };
+
+        const downsampleBoxPremultiplied = (src: Uint8Array, sw: number, sh: number, dw: number, dh: number): Uint8Array => {
+            const dst    = new Uint8Array(dw * dh * 4);
+            const scaleX = sw / dw;
+            const scaleY = sh / dh;
+            const inv255 = 1.0 / 255.0;
+
+            for (let dy = 0; dy < dh; dy++) {
+                const sy0 = dy * scaleY;
+                const sy1 = sy0 + scaleY;
+                const iy0 = sy0 | 0;
+                const iy1 = Math.min(sh - 1, (sy1 - 1e-6) | 0);
+                const rowOffset = dy * dw;
+
+                for (let dx = 0; dx < dw; dx++) {
+                    const sx0 = dx * scaleX;
+                    const sx1 = sx0 + scaleX;
+                    const ix0 = sx0 | 0;
+                    const ix1 = Math.min(sw - 1, (sx1 - 1e-6) | 0);
+                    let rP = 0, gP = 0, bP = 0, a = 0, wSum = 0;
+                    for (let iy = iy0; iy <= iy1; iy++) {
+                        const wy = Math.min(iy + 1, sy1) - Math.max(iy, sy0);
+                        const syOffset = iy * sw;
+                        for (let ix = ix0; ix <= ix1; ix++) {
+                            const wx = Math.min(ix + 1, sx1) - Math.max(ix, sx0);
+                            const wv = wx * wy;
+                            const si = (syOffset + ix) << 2;
+                            const srcA = src[si + 3];
+                            const wvANorm = wv * srcA * inv255;
+                            rP   += src[si    ] * wvANorm;
+                            gP   += src[si + 1] * wvANorm;
+                            bP   += src[si + 2] * wvANorm;
+                            a    += srcA * wv;
+                            wSum += wv;
+                        }
+                    }
+                    const di     = (rowOffset + dx) << 2;
+                    const invW = wSum > 0 ? 1.0 / wSum : 0;
+                    const avgA   = a * invW;
+                    dst[di + 3]  = (avgA + 0.5) | 0;
+                    const avgANorm = avgA * inv255;
+                    if (avgANorm > 1e-6) {
+                        const factor = invW / avgANorm;
+                        dst[di    ] = (rP * factor + 0.5) | 0;
+                        dst[di + 1] = (gP * factor + 0.5) | 0;
+                        dst[di + 2] = (bP * factor + 0.5) | 0;
+                    }
+                }
+            }
+            return dst;
+        };
+
+        const downsampleKaiserPremultiplied = (src: Uint8Array, sw: number, sh: number, dw: number, dh: number): Uint8Array => {
+            const scaleX = sw / dw;
+            const scaleY = sh / dh;
+            const STRIDE = 5; // rP, gP, bP, a, wSum
+            const inv255 = 1.0 / 255.0;
+
+            const xKernels = new Array(dw);
+            for (let dx = 0; dx < dw; dx++) xKernels[dx] = buildKaiserKernel(dx, scaleX, sw);
+            const yKernels = new Array(dh);
+            for (let dy = 0; dy < dh; dy++) yKernels[dy] = buildKaiserKernel(dy, scaleY, sh);
+
+            const tmp = new Float64Array(dw * sh * STRIDE);
+            for (let sy = 0; sy < sh; sy++) {
+                const syOffset = sy * sw;
+                const tyOffset = sy * dw;
+                for (let dx = 0; dx < dw; dx++) {
+                    const kernel = xKernels[dx];
+                    const indices = kernel.indices;
+                    const weights = kernel.weights;
+                    let rP = 0, gP = 0, bP = 0, a = 0, wSum = 0;
+                    for (let i = 0; i < indices.length; i++) {
+                        const si = (syOffset + indices[i]) << 2;
+                        const wv = weights[i];
+                        const srcA = src[si + 3];
+                        const wvANorm = wv * (srcA * inv255);
+                        rP   += src[si    ] * wvANorm;
+                        gP   += src[si + 1] * wvANorm;
+                        bP   += src[si + 2] * wvANorm;
+                        a    += srcA * wv;
+                        wSum += wv;
+                    }
+                    const ti = (tyOffset + dx) * STRIDE;
+                    tmp[ti] = rP; tmp[ti+1] = gP; tmp[ti+2] = bP; tmp[ti+3] = a; tmp[ti+4] = wSum;
+                }
+            }
+
+            const dst = new Uint8Array(dw * dh * 4);
+            for (let dy = 0; dy < dh; dy++) {
+                const kernel = yKernels[dy];
+                const indices = kernel.indices;
+                const weights = kernel.weights;
+                const dyOffset = dy * dw;
+                for (let dx = 0; dx < dw; dx++) {
+                    let rP = 0, gP = 0, bP = 0, a = 0, wSum = 0;
+                    for (let i = 0; i < indices.length; i++) {
+                        const ti = (indices[i] * dw + dx) * STRIDE;
+                        const wv = weights[i];
+                        rP   += tmp[ti]   * wv;
+                        gP   += tmp[ti+1] * wv;
+                        bP   += tmp[ti+2] * wv;
+                        a    += tmp[ti+3] * wv;
+                        wSum += tmp[ti+4] * wv;
+                    }
+                    const di   = (dyOffset + dx) << 2;
+                    const invW = wSum > 0 ? 1.0 / wSum : 0;
+                    const avgA = a * invW;
+                    dst[di+3]  = (avgA + 0.5) | 0;
+                    const avgANorm = avgA * inv255;
+                    if (avgANorm > 1e-6) {
+                        const factor = 1.0 / avgANorm;
+                        dst[di]   = (rP * invW * factor + 0.5) | 0;
+                        dst[di+1] = (gP * invW * factor + 0.5) | 0;
+                        dst[di+2] = (bP * invW * factor + 0.5) | 0;
+                    }
+                }
+            }
+            return dst;
+        };
+
+        const INF = 1e20;
+
+        const dt1D = (f: Float64Array, n: number, d: Float64Array, v: Int32Array, z: Float64Array): void => {
+            let k = 0;
+            v[0] = 0;
+            z[0] = -INF;
+            z[1] = INF;
+            for (let q = 1; q < n; q++) {
+                let s = 0;
+                const fq_q2 = f[q] + q * q;
+                for (;;) {
+                    const vk = v[k];
+                    s = (fq_q2 - (f[vk] + vk * vk)) / (2 * (q - vk));
+                    if (s <= z[k]) { k--; } else { break; }
+                }
+                k++;
+                v[k] = q;
+                z[k] = s;
+                z[k + 1] = INF;
+            }
+            k = 0;
+            for (let q = 0; q < n; q++) {
+                while (z[k + 1] < q) k++;
+                const vk = v[k];
+                const dx = q - vk;
+                d[q] = dx * dx + f[vk];
+            }
+        };
+
+        const squaredDistanceTransform = (mask: Uint8Array, w: number, h: number, insideToOutside: boolean): Float64Array => {
+            const size = w * h;
+            const f = new Float64Array(size);
+            for (let i = 0; i < size; i++) {
+                const isInside = mask[i] !== 0;
+                f[i] = (insideToOutside ? !isInside : isInside) ? 0 : INF;
+            }
+            const g = new Float64Array(size);
+            const rowBuf = new Float64Array(w);
+            const rowD = new Float64Array(w);
+            const rowV = new Int32Array(w);
+            const rowZ = new Float64Array(w + 1);
+
+            for (let y = 0; y < h; y++) {
+                const offset = y * w;
+                for (let x = 0; x < w; x++) rowBuf[x] = f[offset + x];
+                dt1D(rowBuf, w, rowD, rowV, rowZ);
+                for (let x = 0; x < w; x++) g[offset + x] = rowD[x];
+            }
+            const out = new Float64Array(size);
+            const colBuf = new Float64Array(h);
+            const colD = new Float64Array(h);
+            const colV = new Int32Array(h);
+            const colZ = new Float64Array(h + 1);
+            for (let x = 0; x < w; x++) {
+                for (let y = 0; y < h; y++) colBuf[y] = g[y * w + x];
+                dt1D(colBuf, h, colD, colV, colZ);
+                for (let y = 0; y < h; y++) out[y * w + x] = colD[y];
+            }
+            return out;
+        };
+
+        const computeSDF = (alphaData: Uint8Array, w: number, h: number, cutoff255: number): Float64Array => {
+            const size = w * h;
+            const mask = new Uint8Array(size);
+            for (let i = 0; i < size; i++) mask[i] = alphaData[(i << 2) + 3] >= cutoff255 ? 1 : 0;
+
+            const distToOutsideSq = squaredDistanceTransform(mask, w, h, true);
+            const distToInsideSq  = squaredDistanceTransform(mask, w, h, false);
+
+            const sdf = new Float64Array(size);
+            for (let i = 0; i < size; i++) {
+                sdf[i] = mask[i] !== 0 ? Math.sqrt(distToOutsideSq[i]) : -Math.sqrt(distToInsideSq[i]);
+            }
+            return sdf;
+        };
+
+        const boxDownsampleSDF = (sdf: Float64Array, sw: number, sh: number, dw: number, dh: number): Float64Array => {
+            const out = new Float64Array(dw * dh);
+            const scaleX = sw / dw;
+            const scaleY = sh / dh;
+            for (let dy = 0; dy < dh; dy++) {
+                const sy0 = (dy * scaleY) | 0;
+                const sy1 = Math.min(sh, ((dy + 1) * scaleY + 0.999) | 0);
+                const dyOffset = dy * dw;
+                for (let dx = 0; dx < dw; dx++) {
+                    const sx0 = (dx * scaleX) | 0;
+                    const sx1 = Math.min(sw, ((dx + 1) * scaleX + 0.999) | 0);
+                    let sum = 0, count = 0;
+                    for (let sy = sy0; sy < sy1; sy++) {
+                        const syOffset = sy * sw;
+                        for (let sx = sx0; sx < sx1; sx++) {
+                            sum += sdf[syOffset + sx];
+                            count++;
+                        }
+                    }
+                    out[dyOffset + dx] = count > 0 ? sum / count : 0;
+                }
+            }
+            return out;
+        };
+
+        const computeCoverage = (alphaData: Uint8Array, w: number, h: number, cutoff255: number): number => {
+            const size = w * h;
+            let count = 0;
+            for (let i = 0; i < size; i++) {
+                if (alphaData[(i << 2) + 3] >= cutoff255) count++;
+            }
+            return count / size;
+        };
+
+        const findCoveragePreservingCutoff = (
+            sdf: Float64Array, n: number, targetCoverage: number,
+            alphaTestCutoff255: number, half_cutoff: number
+        ): number => {
+            let lo = 0, hi = 255;
+            for (let iter = 0; iter < 16; iter++) {
+                const mid = (lo + hi) * 0.5;
+                const sdfThreshold = half_cutoff > 0 ? (mid - alphaTestCutoff255) / half_cutoff : 0;
+                let count = 0;
+                for (let i = 0; i < n; i++) if (sdf[i] >= sdfThreshold) count++;
+                const coverage = count / n;
+                if (coverage > targetCoverage) lo = mid; else hi = mid;
+            }
+            return (lo + hi) * 0.5;
+        };
+
+        const mip0Data   = new Uint8Array(buf);
+
+        const ALPHA_TEST_CUTOFF_255 = 127.5;
+        const cutoff255  = (coverageThreshold * 255 + 0.5) | 0;
+
+        const dstW = Math.max(1, w >> 1);
+        const dstH = Math.max(1, h >> 1);
+
+        let dstData = filtering === 'box'
+            ? downsampleBoxPremultiplied   (mip0Data, w, h, dstW, dstH)
+            : downsampleKaiserPremultiplied(mip0Data, w, h, dstW, dstH);
+
+        const sdf0 = computeSDF(mip0Data, w, h, cutoff255);
+        const sdf1 = boxDownsampleSDF(sdf0, w, h, dstW, dstH);
+
+        const half_cutoff = Math.min(cutoff255, 255 - cutoff255);
+
+        const targetCoverage = computeCoverage(mip0Data, w, h, ALPHA_TEST_CUTOFF_255);
+        const correctedCutoff255 = findCoveragePreservingCutoff(
+            sdf1, dstW * dstH, targetCoverage, cutoff255, half_cutoff
+        );
+
+        const bias = correctedCutoff255 - ALPHA_TEST_CUTOFF_255;
+        for (let i = 0; i < dstW * dstH; i++) {
+            const a = ALPHA_TEST_CUTOFF_255 + (sdf1[i] * half_cutoff - bias);
+            dstData[(i << 2) + 3] = a > 255 ? 255 : a < 0 ? 0 : (a + 0.5) | 0;
+        }
+
+        var L_tex = new CTexture();
+        L_tex.SetSize(dstW, dstH);
+        L_tex.SetBuf(dstData);
+        return L_tex;
+    }
+
+    static BleedTexture(src : Uint8Array, w : number, h : number)
+    {
+        const MIN_SIZE_FOR_BLEED = 4;
+        if (w < MIN_SIZE_FOR_BLEED || h < MIN_SIZE_FOR_BLEED) {
+            return src;
+        }
+
+        const dst = new Uint8Array(src.length);
+        dst.set(src); // Copy original data
+
+        const getPixelIdx = (x: number, y: number) => (y * w + x) * 4;
+        const clearPixel = (idx: number) => {
+            dst[idx] = 0;
+            dst[idx + 1] = 0;
+            dst[idx + 2] = 0;
+            dst[idx + 3] = 0;
+        };
+
+        const edgeMargin = 1;
+        if (w >= edgeMargin * 2 + 1 && h >= edgeMargin * 2 + 1) {
+            for (let x = 0; x < w; x++) {
+                for (let r = 0; r < edgeMargin; r++) {
+                    const topIdx = getPixelIdx(x, r);
+                    const bottomIdx = getPixelIdx(x, h - 1 - r);
+                    const topAlpha = dst[topIdx + 3];
+                    const bottomAlpha = dst[bottomIdx + 3];
+
+                    if (topAlpha === 0 && bottomAlpha !== 0) {
+                        clearPixel(bottomIdx);
+                    } else if (bottomAlpha === 0 && topAlpha !== 0) {
+                        clearPixel(topIdx);
+                    }
+                }
+            }
+            for (let y = 0; y < h; y++) {
+                for (let r = 0; r < edgeMargin; r++) {
+                    const leftIdx = getPixelIdx(r, y);
+                    const rightIdx = getPixelIdx(w - 1 - r, y);
+                    const leftAlpha = dst[leftIdx + 3];
+                    const rightAlpha = dst[rightIdx + 3];
+
+                    if (leftAlpha === 0 && rightAlpha !== 0) {
+                        clearPixel(rightIdx);
+                    } else if (rightAlpha === 0 && leftAlpha !== 0) {
+                        clearPixel(leftIdx);
+                    }
+                }
+            }
+        }
+
+        const wrap = (v: number, n: number) => ((v % n) + n) % n;
+
+        const dx = [-1, 0, 1, -1, 1, -1, 0, 1];
+        const dy = [-1, -1, -1, 0, 0, 1, 1, 1];
+
+        for(let iter = 0; iter < 2; iter++) {
+            let changed = false;
+            for(let y = 0; y < h; y++) {
+                for(let x = 0; x < w; x++) {
+                    const index = getPixelIdx(x, y);
+                    const alpha = src[index + 3];
+                    if(alpha == 0 || (src[index + 0] == 0 && src[index + 1] == 0 && src[index + 2] == 0)) {
+                        let rSum = 0;
+                        let gSum = 0;
+                        let bSum = 0;
+                        let validNeighborCount = 0;
+                        for (let i = 0; i < 8; i++) {
+                            const nx = wrap(x + dx[i], w);
+                            const ny = wrap(y + dy[i], h);
+
+                            const neighborIndex = (ny * w + nx) * 4;
+                            const neighborAlpha = src[neighborIndex + 3];
+
+                            // 주변 픽셀이 투명하지 않다면 색상 누적
+                            if (neighborAlpha > 0) {
+                                rSum += src[neighborIndex];
+                                gSum += src[neighborIndex + 1];
+                                bSum += src[neighborIndex + 2];
+                                validNeighborCount++;
+                            }
+                        }
+
+                        if (validNeighborCount > 0) {
+                            dst[index] = Math.round(rSum / validNeighborCount);    
+                            dst[index + 1] = Math.round(gSum / validNeighborCount);
+                            dst[index + 2] = Math.round(bSum / validNeighborCount);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            src.set(dst);
+            if (!changed) break;
+        }
+    }
+
 	static SqurEnlargedReduced( _w:number,_h:number,_buf : any,pa_xScale : number, pa_yScale  : number, pa_sampleRate  : number)
 	{
 		var L_tex = new CTexture();
@@ -485,7 +922,7 @@ export class CImgPro
 				L_orgY = Math.trunc(y / pa_yScale);
 				L_add = 0;
 
-				if (x + 1 != outSizeX && pa_sampleRate >= 1)//→
+				if (L_orgX + 1 != outSizeX && pa_sampleRate >= 1)//→
 				{
 					L_pos = L_orgY * outSizeX * 4 + (L_orgX + 1) * 4;
 					L_arr[L_add].x = outBuf[L_pos + 0];
@@ -565,7 +1002,6 @@ export class CImgPro
 				else
 					texBuf[L_pos + 3] = add;
 				
-
 			}//for
 		}//for
 		CPoolGeo.RecycleV4(v4);

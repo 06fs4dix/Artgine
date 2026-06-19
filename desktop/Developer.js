@@ -250,7 +250,7 @@ document.getElementById("VSCode_btn").addEventListener("click", async function (
     }
 });
 function GetAISelected() {
-    const ids = ["claude", "antigravity", "manus", "gpt", "codex"];
+    const ids = ["claude", "antigravity", "manus", "gpt", "codex", "opencode"];
     return ids.filter(id => document.getElementById(`ai_${id}_chk`).checked);
 }
 document.getElementById("aiCreate_btn").addEventListener("click", async function () {

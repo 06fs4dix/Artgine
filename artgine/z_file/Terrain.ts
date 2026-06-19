@@ -421,7 +421,7 @@ function ps_main()
    
     BranchBegin("shadow","S",[screenSize,shadowOn]);
     if(shadowOn>0.5) {
-        uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
+        uvScreen = V2DivV2(screenPos.xy, screenSize.xy);
         shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
         shadow = shadowTex.x;
     }

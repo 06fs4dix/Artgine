@@ -358,6 +358,7 @@ export class CPaint extends CComponent implements IMat
 		else if(_pointer.member=="mTextureKey" || _pointer.member=="mTag")
 		{
 			CUtilObj.ArrayAddSelectList(_pointer,_body,_input,[""],true);
+			
 			// if(_pointer.member=="mTag")
 			// {
 			// 	_body.append(CUtilObj.ArrayAddButton(_pointer,"Light","light"));
@@ -729,8 +730,7 @@ export class CPaint extends CComponent implements IMat
 			let key="";
 			let sortedArr = Array.from(this.mTag);
 			sortedArr.sort();
-			this.mTag = new Set(sortedArr);
-			for(var each0 of this.mTag)
+			for(var each0 of sortedArr)
 			{
 				if(each0=="")	continue;
 				key+=each0+"/";

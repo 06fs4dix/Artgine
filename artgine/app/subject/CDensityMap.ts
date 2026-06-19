@@ -18,6 +18,7 @@ import { CColor } from "../../render/CColor.js";
 import { CMesh } from "../../render/CMesh.js";
 import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
+import { CShaderAttr } from "../../render/CShaderAttr.js";
 
 import { CSampler, CSampMinMax } from "../../util/CSampler.js";
 
@@ -28,6 +29,7 @@ import { CPaint2DMerge } from "../component/paint/CPaint2D.js";
 import { CPaint3DMerge } from "../component/paint/CPaint3D.js";
 import { CMapBuf, IMapLabel, IMapSchema } from "./CMapBuf.js";
 import { CSubject } from "./CSubject.js";
+import { CTerrainMap } from "./CTerrainMap.js";
 
 export class CDensityInfo extends CObject implements IMapLabel
 { 
@@ -64,6 +66,7 @@ export class CDensityInfo extends CObject implements IMapLabel
     mColliderLayer : string=null;
     mBound : CBound=null;
     mPaintTag=new Array<string>();
+    mPaintShaderAttr=new Array<CShaderAttr>();
     mRes="";
 }
 export class CDensityInfo2D extends CDensityInfo
@@ -84,13 +87,15 @@ export class CDensityInfo3D extends CDensityInfo
         super(_color,_size);
         this.mRes=_mesh;
     }
+    mTerrain:CTerrainMap=null;
+    mTerrainRot:boolean=false;
+    mColorModel:CColor;
 }
 export class CDensityMap extends CSubject implements IMapSchema
 {
-    
     mBuf : CMapBuf=new CMapBuf();
     mDensityArr =new Array<CDensityInfo>();
-    mDiv : number = 100; 
+    mDiv : number = 100;
     mUpdate=true;
 
     override IsShould(_member: string, _type: CObject.eShould): boolean {
@@ -234,7 +239,7 @@ export class CDensityMap extends CSubject implements IMapSchema
 
                         if(density.mCodi != null) codiLists[chunkIdx].push(density.mCodi.Execute());
                     }
-                    else
+                    else if(density instanceof CDensityInfo3D)
                     {
                         pos.x=worldX;
                         pos.z=worldY;
@@ -251,6 +256,14 @@ export class CDensityMap extends CSubject implements IMapSchema
                         scale.x *= density.mSize.x / maxSize;
                         scale.y *= density.mSize.y / maxSize;
                         scale.z *= density.mSize.z / maxSize;
+
+                        if(density.mTerrain != null)
+                        {
+                            pos.y = density.mTerrain.GetHeight(pos.x, pos.z);
+                            if(density.mTerrainRot) {
+                                rot = CMath.QutToEuler(CMath.QutMul(CMath.EulerToQut(rot), CMath.FromToRotation(new CVec3(0, 1, 0), density.mTerrain.GetNormal(pos.x, pos.z))));
+                            }
+                        }
 
                         const scaMat = CMath.MatScale(scale);
                         const rotMat = CMath.MatRotation(rot);
@@ -304,15 +317,22 @@ export class CDensityMap extends CSubject implements IMapSchema
                     this.PushComp(ptMerge2D);
                     ptMerge=ptMerge2D;
                 }
-                else
+                else if(density instanceof CDensityInfo3D)
                 {
                     const ptMerge3D = new CPaint3DMerge(meshLists[ci], matLists[ci]);
                     if(density.mWind > 0) ptMerge3D.Wind(density.mWind);
                     this.PushComp(ptMerge3D);
                     ptMerge=ptMerge3D;
+
+                    if(density.mColorModel!=null) {
+                        ptMerge3D.SetColorModel(density.mColorModel);
+                    }
+
                 }
                 for(let tag of density.mPaintTag)
                     ptMerge.PushTag(tag);
+                for(let attr of density.mPaintShaderAttr)
+                    ptMerge.PushCShaderAttr(attr);
             }
         }//density
         this.mUpdate=false;

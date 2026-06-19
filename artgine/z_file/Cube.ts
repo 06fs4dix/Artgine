@@ -156,7 +156,7 @@ function vs_main(f3_ver: Vertex3) {
 function vs_main_camBased(f3_ver: Vertex3) {
     to_uvw = f3_ver;
 
-    // 기본 박스 메쉬가 1단위(±0.5)로 통일되어 큐브가 near plane 안쪽으로 들어가 클리핑됨.
+	// 기본 박스 메쉬가 1단위(±0.5)로 통일되어 큐브가 near plane 안쪽으로 들어가 클리핑됨.
     // 스카이박스는 방향(to_uvw)만 쓰므로, 투영 지오메트리는 메쉬 크기와 무관하게 고정 크기로 강제한다.
     var v4: CVec4 = new CVec4(V3MulFloat(V3Nor(f3_ver), 1000.0), 1.0);
 

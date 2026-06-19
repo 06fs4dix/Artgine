@@ -48,6 +48,7 @@ import { CRigidBody } from "../app/component/CRigidBody.js";
 
 import { CPaint } from "../app/component/paint/CPaint.js";
 import { CCollider } from "../app/component/CCollider.js";
+import { CLight } from "../app/component/CLight.js";
 import { CPaint2D } from "../app/component/paint/CPaint2D.js";
 import { CLocation } from "../app/subject/CLocation.js";
 import { CPaint3D } from "../app/component/paint/CPaint3D.js";
@@ -746,6 +747,43 @@ function DevToolRender()
                 render.MeshDrawNodeRender(shader,meshDrawSphere);
             else
                 render.MeshDrawNodeRender(shader,meshDrawBox);
+        }
+
+        let ltArr=_sub.FindComps(CLight);
+        for(let lt of ltArr)
+        {
+            if(lt.GetOwner()==null || lt.GetOwner().IsEnable()==false || lt.IsPointLight()==false) continue;
+
+            let ltColor=lt.GetColor();
+            color.x=ltColor.x;
+            color.y=ltColor.y;
+            color.z=ltColor.z;
+            color.w=SDF.eColorModel.RGBAdd;
+            wmat.xyz=lt.GetDirectPos();
+
+            // 아웃바운드 (반투명)
+            alpha.x=0.35;
+            wmat.mF32A[0]=lt.GetOutRadius()*2;
+            wmat.mF32A[5]=lt.GetOutRadius()*2;
+            wmat.mF32A[10]=lt.GetOutRadius()*2;
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
+            render.MeshDrawNodeRender(shader,meshDrawSphere);
+
+            // 인바운드 (불투명)
+            alpha.x=1;
+            wmat.mF32A[0]=lt.GetInRadius()*2;
+            wmat.mF32A[5]=lt.GetInRadius()*2;
+            wmat.mF32A[10]=lt.GetInRadius()*2;
+            render.SendGPU(shader,color,"colorModel");
+            render.SendGPU(shader,alpha,"alphaModel");
+            MatToMat12Fun(wmat);
+            render.SendGPU(shader,wMatSA);
+            render.SendGPU(shader,[gAtl.Frame().Pal().GetBlackTex()]);
+            render.MeshDrawNodeRender(shader,meshDrawSphere);
         }
     };
     

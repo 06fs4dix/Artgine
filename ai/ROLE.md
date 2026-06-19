@@ -1,7 +1,5 @@
 # Artgine Script - 프로젝트 가이드 (Project Guide)
 
-## OS예외상황 (OS Exception Cases)
-
 ## 메모리 저장 규칙 (Memory Storage Rules)
 - 메모리 정보 저장 전 사용자 승인 필수.
 
@@ -139,3 +137,13 @@ node ai/web_debug.js $BASE_URL logs 3he4wj8iy6vmqf86ham
 ## 파일 변경 전 설명 규칙 (File Modification Explanation Rules)
 
 - 파일을 수정, 생성, 삭제하기 전에는 대상 파일과 수행할 작업 내용을 먼저 설명한다.
+
+## 보호 경로 변경 승인 규칙(Protected Project Areas)
+
+다음 경로의 파일을 수정, 생성, 삭제, 이동, 이름 변경하기 전에는 반드시 사용자 승인을 받아야 한다.
+
+* 현재 작업 폴더 밖의 모든 상위 경로
+* `artgine/`
+* `desktop/`
+* `ai/`
+* `plugin/`

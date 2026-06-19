@@ -34,6 +34,10 @@ import {
 	Sam2DArrToMat,
 	Sam2DArrToV4,
     V3MulMatCoordi,
+    V2Dot,
+    sin,
+    fract,
+    V2Fract,
 	
 } from "./Shader"
 import {
@@ -80,7 +84,7 @@ var screenSize : CVec2;
 var skin : number=Null();
 var parallaxNormal : number=Attribute(0,"canvas");
 
-//var alphaCut : number = 0.1;
+var alphaCut : number = 0.01;
 
 //mat
 var worldMat : CMat=Null();
@@ -589,7 +593,7 @@ function ps_main()
 		// shadow = shadowTex.x;
 
 		//uvScreen = V2DivV2(gl_FragCoord.xy, new CVec2(1920,1017)); // 0~1
-		uvScreen = V2DivV2(V2SubV2(screenPos.xy, new CVec2(0.5, 0.5)), screenSize.xy);
+		uvScreen = V2DivV2(screenPos.xy, screenSize.xy);
 	
 		shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
 		shadow = shadowTex.x;
@@ -650,9 +654,12 @@ function ps_main()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
 
-	
+    BranchBegin("alphaCut","AC",[alphaCut]);
+    if ( L_cor.a <= alphaCut ) discard;
+    BranchDefault();
+    if ( L_cor.a <= 0.01 ) discard;
+	BranchEnd();
 	
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
@@ -754,7 +761,12 @@ function ps_main_gBuffer()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
+	
+    BranchBegin("alphaCut","AC",[alphaCut]);
+    if ( L_cor.a <= alphaCut ) discard;
+    BranchDefault();
+    if ( L_cor.a <= 0.01 ) discard;
+	BranchEnd();
 
     // 0 position
 	out_pos = new CVec4(view.xyz, 1.0);
@@ -856,7 +868,12 @@ function ps_main_shadow_write()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
+	
+    BranchBegin("alphaCut","AC",[alphaCut]);
+    if ( L_cor.a <= alphaCut ) discard;
+    BranchDefault();
+    if ( L_cor.a <= 0.01 ) discard;
+	BranchEnd();
 	
 
 	out_color = to_viewPos;
@@ -979,7 +996,12 @@ function ps_main_shadow_read()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
+	
+    BranchBegin("alphaCut","AC",[alphaCut]);
+    if ( L_cor.a <= alphaCut ) discard;
+    BranchDefault();
+    if ( L_cor.a <= 0.01 ) discard;
+	BranchEnd();
 	
 
 	var all : number=0.0;

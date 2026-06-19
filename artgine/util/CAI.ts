@@ -21,13 +21,12 @@ export class CAI {
     static DeleteRole(_provider: CAI.eProvider, _targetDir: string): boolean { return false; }
     static ProviderInfo(_provider: CAI.eProvider): Promise<IProviderInfo> { return Promise.resolve({ id: _provider, available: false, version: '', models: [] }); }
     static ProviderInstall(_provider: CAI.eProvider): Promise<boolean> { return Promise.resolve(false); }
-    static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true, _allow?: string): Promise<ChildProcess> { return Promise.reject(new Error('CAI_imple not loaded')); }
+    static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true): Promise<ChildProcess> { return Promise.reject(new Error('CAI_imple not loaded')); }
     static Terminal(_provider: CAI.eProvider, _mcp: boolean, _allow: string, _port: number): Promise<IAIInteractiveArgs> { return Promise.resolve({ args: [] }); }
-    // static CaptureGeminiSessionId(_cwd: string): Promise<string | null> { return Promise.resolve(null); }
 }
 
 export namespace CAI {
-    export enum eProvider { claude='claude', /* gemini='gemini', */ codex='codex', manus='manus', gpt='gpt', antigravity='antigravity' }
+    export enum eProvider { claude='claude', codex='codex', manus='manus', gpt='gpt', antigravity='antigravity', opencode='opencode' }
 }
 
 import CAI_imple from "../util_imple/CAI.js";

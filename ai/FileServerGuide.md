@@ -1,10 +1,10 @@
 # 파일서버 원격 작업 (Remote File Server Work - ai/file_server.js)
 
 ## 주소 (Address)
-- http://singleton88.iptime.org:8050/Artgine/proj/Home/Home.html?path=%2Fmusic%2F&RootPath=E%3A%2F&RootUrl=%2FArtgine%2FRoot0
+- http://localhost:7000/Artgine/proj/Home/Home.html?path=%2F&RootPath=.%2F&RootUrl=%2FArtgine%2FRoot0
 
 ## 토큰 (Token)
-- xxu6o46bhjmqiu2naynmeqn5xsg4b
+- PE3abvJ5nKepW8BJG0MdFmArhQeIJnstfxHdNLX-7W4
 
 > 파일서버(`artgine/server/CFileServer.ts`)의 `/File/CMD` 엔드포인트를 통해 원격 서버에서 콘솔 명령을 직접 실행하고 결과를 받는다.
 

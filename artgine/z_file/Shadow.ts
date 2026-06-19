@@ -63,14 +63,20 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     var cas1Valid : number = (_read.z > -0.5 && _uvZ1.x > 0.0 && _uvZ1.y > 0.0 && _uvZ1.x < 1.0 && _uvZ1.y < 1.0) ? 1.0 : 0.0;
     var cas2Valid : number = (_read.w > -0.5 && _uvZ2.x > 0.0 && _uvZ2.y > 0.0 && _uvZ2.x < 1.0 && _uvZ2.y < 1.0) ? 1.0 : 0.0;
 
-    var blendEdge : number = 0.1;
-    var edgeX : number = min(_uvZ0.x, 1.0 - _uvZ0.x);
-    var edgeY : number = min(_uvZ0.y, 1.0 - _uvZ0.y);
-    var blend0 : number = (cas0Valid > 0.5) ? clamp(min(edgeX, edgeY) / blendEdge, 0.0, 1.0) : 0.0;
+    // 캐스케이드 전이 밴드 (각 캐스케이드 UV 기준, 독립 튜너블).
+    // 박스 최소거리(min) 대신 중심으로부터의 방사거리를 써서 사각 경계(각짐)를 완화한다.
+    // cas0 는 박스가 작아(2w) blendEdge0 가 0.5 에 닿으면 순수 영역이 사라지므로 0.4 로 둔다.
+    // cas1↔cas2 는 해상도 차가 커 더 넓게 섞어야 자연스러워서 따로 키운다.
+    var blendEdge0 : number = 0.4;  // cas0↔cas1 (cas0 UV) : world 0.8w
+    var blendEdge1 : number = 0.2;  // cas1↔cas2 (cas1 UV) : world 1.6w - 차이 크면 더 키울 것
 
-    var edgeX1 : number = min(_uvZ1.x, 1.0 - _uvZ1.x);
-    var edgeY1 : number = min(_uvZ1.y, 1.0 - _uvZ1.y);
-    var blend1 : number = (cas1Valid > 0.5) ? clamp(min(edgeX1, edgeY1) / blendEdge, 0.0, 1.0) : 0.0;
+    var cen0 : CVec2 = new CVec2(_uvZ0.x - 0.5, _uvZ0.y - 0.5);
+    var r0 : number = sqrt(V2Dot(cen0, cen0));   // 0(중심) ~ 0.707(모서리)
+    var blend0 : number = (cas0Valid > 0.5) ? clamp((0.5 - r0) / blendEdge0, 0.0, 1.0) : 0.0;
+
+    var cen1 : CVec2 = new CVec2(_uvZ1.x - 0.5, _uvZ1.y - 0.5);
+    var r1 : number = sqrt(V2Dot(cen1, cen1));
+    var blend1 : number = (cas1Valid > 0.5) ? clamp((0.5 - r1) / blendEdge1, 0.0, 1.0) : 0.0;
 
     var sVal0 : number = 0.0;
     var sVal1 : number = 0.0;
@@ -129,9 +135,12 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     var res2 : number = 1.0 - sVal2 / gridCount;
 
 
-    if(cas0Valid > 0.5 && cas1Valid > 0.5) return mix(res1, res0, blend0);
+    // 보수적 블렌딩: 미세 캐스케이드가 (occluder 가 박스 밖이라) 그림자를 잃는 경우
+    // 거친 캐스케이드의 그림자를 유지하도록 거친 쪽보다 밝아지지 않게 클램프(min).
+    // 미세 쪽이 더 어두우면(디테일 추가) 기존처럼 부드럽게 섞인다.
+    if(cas0Valid > 0.5 && cas1Valid > 0.5) return min(min(mix(res1, res0, blend0), res1), (cas2Valid > 0.5) ? res2 : 1.0);
     if(cas0Valid > 0.5)                    return res0;
-    if(cas1Valid > 0.5 && cas2Valid > 0.5) return mix(res2, res1, blend1);
+    if(cas1Valid > 0.5 && cas2Valid > 0.5) return min(mix(res2, res1, blend1), res2);
     if(cas1Valid > 0.5)                    return res1;
     if(cas2Valid > 0.5)                    return res2;
     return 1.0;

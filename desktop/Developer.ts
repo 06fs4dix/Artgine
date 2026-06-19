@@ -368,7 +368,7 @@ document.getElementById("VSCode_btn").addEventListener("click", async function (
 
 
 function GetAISelected(): string[] {
-    const ids = ["claude", "antigravity", "manus", "gpt", "codex"];
+    const ids = ["claude", "antigravity", "manus", "gpt", "codex", "opencode"];
     return ids.filter(id => (document.getElementById(`ai_${id}_chk`) as HTMLInputElement).checked);
 }
 

@@ -46,6 +46,7 @@ var billboardMat : CMat=Null();
 
 var texCodi : CVec4=Null();
 
+var alphaCut : number = 0.01;
 
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
@@ -140,9 +141,6 @@ function vs_main_simple(f3_ver : Vertex3,f2_uv : UV2)
 function ps_main_simple()
 {
     var L_cor : CVec4=Sam2D0ToColor(to_uv.xy);
-	// BranchBegin("alphaCut","A",[alphaCut]);
-	// if ( L_cor.a <= alphaCut ) discard;
-	// BranchEnd();
 	out_color=L_cor;
 }
 
@@ -439,9 +437,12 @@ function ps_main()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
-
-
+	
+    BranchBegin("alphaCut","AC",[alphaCut]);
+    if ( L_cor.a <= alphaCut ) discard;
+    BranchDefault();
+    if ( L_cor.a <= 0.01 ) discard;
+    BranchEnd();
 
 	var normal : CVec3=new CVec3(0.0,0.0,0.0);
 	
@@ -477,7 +478,12 @@ function ps_main_mask()
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
-	if ( L_cor.a <= 0.01 ) discard;
+	
+    BranchBegin("alphaCut","AC",[alphaCut]);
+    if ( L_cor.a <= alphaCut ) discard;
+    BranchDefault();
+    if ( L_cor.a <= 0.01 ) discard;
+    BranchEnd();
 	
 	L_cor.a=mask;
 	out_color=L_cor;

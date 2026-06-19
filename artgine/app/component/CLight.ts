@@ -214,7 +214,7 @@ export class CLight extends CBrushComp
 			srp.mCopy=false;
 			srp.mTag.add("shadowWrite");
 			srp.PushOr(new CCondition("class","==","CPaint3D"));
-			srp.PushOr(new CCondition("class","==","CPaintMeshMerge"));
+			srp.PushOr(new CCondition("class","==","CPaint3DMerge"));
 			srp.PushAnd(new CCondition("mTag[shadow]"));
 			srp.PushAnd(new CCondition("mTag[shadowReadOnly]",CCondition.eOperator["!="]));
 			srp.mPriority=CRenderPass.ePriority.BackGround - 1;

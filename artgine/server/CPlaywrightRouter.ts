@@ -12,12 +12,13 @@ Playwright Router
 - /playwright/remove  POST  세션 제거 { sessionId }                              → { ok }
 */
 
-@URLPatterns(["/playwright/list", "/playwright/push", "/playwright/exec", "/playwright/input", "/playwright/logs", "/playwright/remove", "/playwright/eval"])
+@URLPatterns(["/playwright/list", "/playwright/push", "/playwright/reset", "/playwright/exec", "/playwright/input", "/playwright/logs", "/playwright/remove", "/playwright/eval"])
 export class CPlaywrightRouter extends CAuthServer {
     constructor() {
         super();
         this.On("/playwright/list",   this.onList.bind(this));
         this.On("/playwright/push",   this.onPush.bind(this));
+        this.On("/playwright/reset",  this.onReset.bind(this));
         this.On("/playwright/exec",   this.onExec.bind(this));
         this.On("/playwright/input",  this.onInput.bind(this));
         this.On("/playwright/logs",   this.onLogs.bind(this));
@@ -30,6 +31,7 @@ export class CPlaywrightRouter extends CAuthServer {
 
     async onList(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onPush(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onReset(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onExec(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onInput(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onLogs(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
