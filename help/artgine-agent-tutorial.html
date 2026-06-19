@@ -39,7 +39,7 @@
     .form-control,.form-select{display:block;width:100%;padding:.45rem .65rem;border:1px solid #ced4da;border-radius:.375rem;background:#fff;color:#212529}.form-check{display:flex;align-items:flex-start;gap:.45rem;line-height:1.35}.form-check input{margin-top:.2rem}.form-check .help{flex:0 0 auto;margin-left:auto}.modal-backdrop{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:40;align-items:center;justify-content:center;padding:18px}.modal-backdrop.show{display:flex}.modal{width:min(560px,100%);background:#fff;border-radius:.5rem;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,.2)}.modal-header,.modal-footer{display:flex;align-items:center;gap:8px;padding:1rem;border-bottom:1px solid var(--bs-border-color)}.modal-footer{border-top:1px solid var(--bs-border-color);border-bottom:0;justify-content:flex-end}.modal-title{margin:0;font-size:1.1rem}.modal-body{padding:1rem}
 
     .topbar{height:42px;display:flex;align-items:stretch}.topbar-actions{display:flex;align-items:center;gap:4px;padding:0 8px 0 4px;margin-left:auto;border-bottom:1px solid var(--bs-border-color);background:#fff}.topbar-actions .btn{height:30px;min-width:82px;padding:.25rem .5rem;font-size:.875rem;line-height:1.2}.topbar .install{margin-left:0;align-self:auto}
-    .home{padding:24px;overflow:auto}.home h2{margin:0 0 10px}.home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.card{border:1px solid var(--bs-border-color);border-radius:.5rem;background:#fff;padding:16px}.card h3{margin:0 0 8px;font-size:16px}.card p{margin:0;color:#6c757d;line-height:1.45}
+    .home{padding:24px;overflow:auto}.home h2{margin:0 0 10px}.home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.card{border:1px solid var(--bs-border-color);border-radius:.5rem;background:#fff;padding:16px}.card h3{margin:0 0 8px;font-size:16px}.card p{margin:0;color:#6c757d;line-height:1.45}
 
     .file-pane.active{display:block;overflow:auto}
     .shortcut-strip{display:flex;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--bs-border-color);background:#f8f9fa;overflow:auto;min-height:30px;white-space:nowrap}.kbd{display:inline-flex;align-items:center;justify-content:center;min-height:18px;border:1px solid #adb5bd;border-bottom-width:2px;border-radius:.25rem;background:#fff;padding:0 .35rem;font-family:Consolas,monospace;font-size:12px;line-height:1;color:#212529;white-space:nowrap}.shortcut-strip .small{line-height:1;white-space:nowrap}.shortcut-strip .btn{white-space:nowrap}
@@ -94,8 +94,9 @@
         gsPwdHow: '비밀번호 변경 방법: 툴(Extra Server Settings → Password) 에서 변경하거나, Main.json 파일의 "password" 값을 직접 수정하세요. (Main.json 위치는 실행 환경마다 다릅니다 — 보통 실행 폴더 또는 desktop 폴더에 있습니다.)',
         gsPwdDanger: '☠️ 경고: 비밀번호를 기본값(artgine) 그대로 두면 누구든 이 비밀번호 하나로 AI 에이전트와 터미널에 접속해 파일을 읽고 쓰고 지우고, 임의의 명령까지 실행할 수 있습니다. 그 순간 이 PC는 더 이상 당신의 PC가 아닙니다. 지금 바로 비밀번호를 변경하고, 외부망에 노출하지 마세요.',
         filesCardTitle: 'Files', filesCardDesc: '서버가 허용한 폴더를 탐색하고 파일을 미리보거나 편집합니다.',
-        aiCardTitle: 'AI Chat', aiCardDesc: '작업 폴더와 권한을 지정해 AI 에이전트 세션을 시작합니다.',
-        termCardTitle: 'Terminal', termCardDesc: 'cmd, codex, claude 같은 터미널 세션을 웹 화면 안에서 다룹니다.',
+        aiCardTitle: 'Chat', aiCardDesc: '헤드리스 모드로 동작하는 AI 채팅입니다. AI 웹 채팅(claude.ai, chatgpt.com 등)과 동일한 방식으로 대화합니다.',
+        termCardTitle: 'Terminal', termCardDesc: '인터렉티브 모드로 동작하는 CLI 모드입니다. cmd, codex, claude 같은 터미널 세션을 웹 화면 안에서 다룹니다.',
+        browserCardTitle: 'Browser', browserCardDesc: '가상 브라우저를 만들어 AI와 함께 작업하고, 그 화면을 그대로 공유받아 볼 수 있습니다.',
 
         keys: 'Keys', help: '?',
         scFile: 'File', scSearch: 'Search', scFiles: 'Files', scAI: 'AI', scClose: 'Close modal',
@@ -115,7 +116,7 @@
         sessShareNote: '이 세션에 접근할 수 있는 링크입니다. 복사해서 다른 사람에게 전달할 수 있습니다.',
         copy: '복사', copied: '복사되었습니다',
         tipNewChat: '작업 폴더, 쓰기 권한, MCP 등을 정하고 AI 채팅 세션을 엽니다.',
-        tipNewTerm: 'cmd, codex, claude, antigravity 모드의 웹 터미널을 시작합니다.',
+        tipNewTerm: 'cmd, codex, claude, antigravity, opencode 모드의 웹 터미널을 시작합니다.',
         tipWebSubtab: 'Playwright 브라우저 세션 목록을 보여줍니다. 세션을 선택하면 오른쪽 작업 화면에서 Browser.html 뷰어가 열립니다.',
         tipNewBrowser: 'Playwright 브라우저 세션을 만들고 화면, 로그, 입력 동작을 웹 UI에서 확인합니다.',
         tipBrowserSession: '브라우저 세션 항목입니다. 실제 앱에서는 선택 시 해당 세션의 Browser.html 뷰어가 열립니다.',
@@ -196,25 +197,24 @@
         tipWDHelp: 'AI나 터미널이 작업을 시작할 폴더입니다. 예: D:/git/Artgine-Agent. 이 경로가 작업 범위의 기준이 됩니다.',
         tipWDInput: '새 Chat이나 Terminal을 만들 때 이 폴더를 기준으로 파일을 읽거나 명령을 실행합니다.',
         allowWriteLabel: 'Allow working dir write',
-        allowWriteDesc: 'AI/터미널 에이전트가 이 폴더 안 파일을 만들거나 수정할 수 있게 허용합니다.',
-        tipAllowWrite: '쉽게 말해 쓰기 권한입니다. 꺼두면 파일을 읽고 제안은 할 수 있지만, 직접 수정/생성은 제한됩니다. 켜면 지정한 Working Directory 안에서 변경 작업이 가능합니다.',
         mcpLabel: 'MCP', mcpDesc: '추가 도구 서버를 AI 세션에 연결하는 옵션입니다.',
         tipMCP: 'MCP는 Model Context Protocol입니다. DB, 브라우저, 외부 도구 같은 추가 기능을 AI에게 붙이는 통로라고 생각하면 됩니다. 필요 없으면 꺼둬도 됩니다.',
         copyMdLabel: 'Copy MD', copyMdDesc: '답변이나 결과를 Markdown 형식으로 복사하기 쉽게 만드는 옵션입니다.',
         tipCopyMD: 'MD는 Markdown입니다. 체크하면 AI 답변을 문서나 이슈, PR 설명에 붙여넣기 좋은 형식으로 다루기 쉽습니다. 코드 블록/목록/제목 형식 보존에 유용합니다.',
         newChatWarning: '처음 쓰는 경우에는 <b>Working Directory</b>를 정확히 확인하고, 파일 수정을 맡길 때만 <b>Allow working dir write</b>를 켜세요.<br>Chat은 AI와 대화하면서 작업 지시를 내리는 세션입니다. 첫 메시지를 보내면 실제 AI CLI 세션과 연결됩니다.',
+        newChatWarningDanger: '⚠️ Chat 모드는 모든 권한을 획득한 상태로 실행되니, 복잡한 작업을 맡길 때는 규칙을 명확하게 정해두세요.',
         cancel: 'Cancel', open: 'Open',
 
         newTermModalTitle: 'New Terminal',
-        modeLabel: 'Mode', tipModeHelp: '터미널을 어떤 방식으로 시작할지 정합니다. cmd는 일반 쉘, codex/claude/antigravity는 AI CLI 모드입니다.',
+        modeLabel: 'Mode', tipModeHelp: '터미널을 어떤 방식으로 시작할지 정합니다. cmd는 일반 쉘, codex/claude/antigravity/opencode는 AI CLI 모드입니다.',
         keyLabel: 'Key', tipKeyHelp: '여러 터미널을 구분하기 위한 별명입니다. 비워도 되지만 반복 작업이나 공유할 때 유용합니다.',
         allowWriteTermDesc: 'AI CLI 모드에서 파일 수정 명령을 허용합니다. cmd 모드에서는 보통 의미가 약합니다.',
         tipAllowWriteTerm: '터미널은 실제 명령을 실행할 수 있으므로 Chat보다 더 직접적입니다. AI CLI 모드에서 이 옵션을 켜면 파일 수정 작업을 승인하기 쉬워집니다.',
         mcpTermDesc: '터미널 AI 에이전트에 추가 도구 연결을 허용합니다.',
-        tipMCPTerm: 'codex/claude 같은 CLI가 MCP 도구를 사용할 수 있게 하는 옵션입니다. 일반 cmd만 쓸 때는 필요하지 않습니다.',
+        tipMCPTerm: 'codex/claude/opencode 같은 CLI가 MCP 도구를 사용할 수 있게 하는 옵션입니다. 일반 cmd만 쓸 때는 필요하지 않습니다.',
         copyMdTermDesc: '터미널 출력이나 AI 응답을 Markdown 복사 흐름에 맞춥니다.',
         tipCopyMDTerm: '터미널 작업 결과를 문서화하거나 복사할 때 Markdown 형식을 유지하는 데 도움을 줍니다.',
-        newTermWarning: 'Terminal은 명령 실행 화면입니다. <b>cmd</b>는 일반 명령어, <b>codex/claude/antigravity</b>는 AI CLI 작업용입니다.<br>⚠️ <b>codex/claude/antigravity</b> 등 각 에이전트는 최초 1회 인증(로그인)을 먼저 완료해야 사용할 수 있습니다.',
+        newTermWarning: 'Terminal은 명령 실행 화면입니다. <b>cmd</b>는 일반 명령어, <b>codex/claude/antigravity/opencode</b>는 AI CLI 작업용입니다.<br>⚠️ <b>codex/claude/antigravity/opencode</b> 등 각 에이전트는 최초 1회 인증(로그인)을 먼저 완료해야 사용할 수 있습니다.',
 
         newScheduleTitle: 'New Schedule',
         nameLabel: 'Name', tipNameHelp: '스케줄을 구분하는 이름입니다. 목록에서 이 이름으로 표시됩니다.',
@@ -239,7 +239,7 @@
           ['AI 탭','Chat과 Terminal 세션','ai','panel-ai','AI 탭은 왼쪽 세션 목록과 오른쪽 iframe 작업 화면으로 나뉩니다. Chat과 Terminal을 전환하며 사용합니다.','F4를 누르면 실제 앱에서 AI 탭으로 이동합니다.'],
           ['New Chat','AI 작업 시작','ai','newChatBtn','New Chat은 작업 폴더와 권한을 정하고 AI 에이전트 채팅을 시작하는 버튼입니다.','Working Directory와 Allow write 의미를 먼저 이해하는 것이 중요합니다.'],
           ['채팅 화면','지시와 결과 확인','ai','messages','오른쪽 채팅 화면에서 AI에게 지시하고 응답과 변경 파일 목록을 확인합니다.','작업 후 Files나 Git diff로 결과를 확인하는 흐름입니다.'],
-          ['Terminal','웹 터미널 예시','ai','termSubtab','Terminal은 cmd, codex, claude, antigravity 같은 터미널 세션을 보여줍니다.','이 페이지의 터미널은 가짜 로그만 표시합니다.'],
+          ['Terminal','웹 터미널 예시','ai','termSubtab','Terminal은 cmd, codex, claude, antigravity, opencode 같은 터미널 세션을 보여줍니다.','이 페이지의 터미널은 가짜 로그만 표시합니다.'],
           ['Schedule','반복 작업','ai','scheduleBtn','Schedule은 정해진 주기로 명령이나 프롬프트를 반복 실행하는 기능입니다.','처음에는 Count와 종료 조건을 넣어 무한 반복을 피하는 편이 좋습니다.'],
           ['툴팁','모바일 클릭 도움말','file','fileModalBtn','각 주요 버튼의 ? 도움말이나 버튼 자체를 누르면 설명 팝오버가 표시됩니다.','데스크톱 hover 대신 모바일 탭 동작을 우선했습니다.']
         ],
@@ -280,8 +280,9 @@
         gsPwdHow: 'How to change it: use the tool (Extra Server Settings → Password), or edit the "password" value directly in Main.json. (The location of Main.json varies by environment — usually the run folder or the desktop folder.)',
         gsPwdDanger: '☠️ Warning: leave the password as the default (artgine) and anyone who learns it can use it to access your AI agent and terminal — reading, writing, deleting files, and running arbitrary commands. At that point this is no longer your PC. Change the password now, and never expose it on a public network.',
         filesCardTitle: 'Files', filesCardDesc: 'Browse server-allowed folders and preview or edit files.',
-        aiCardTitle: 'AI Chat', aiCardDesc: 'Start an AI agent session by specifying a working directory and permissions.',
-        termCardTitle: 'Terminal', termCardDesc: 'Manage terminal sessions like cmd, codex, and claude inside the web interface.',
+        aiCardTitle: 'Chat', aiCardDesc: 'Headless-mode AI chat — the same experience as web-based AI chat (claude.ai, chatgpt.com, etc).',
+        termCardTitle: 'Terminal', termCardDesc: 'Interactive, CLI-mode terminal sessions like cmd, codex, and claude, right inside the web interface.',
+        browserCardTitle: 'Browser', browserCardDesc: 'Spin up a virtual browser to work alongside the AI, with its screen shared live with you.',
 
         keys: 'Keys', help: '?',
         scFile: 'File', scSearch: 'Search', scFiles: 'Files', scAI: 'AI', scClose: 'Close modal',
@@ -301,7 +302,7 @@
         sessShareNote: 'A link that can be used to access this session. Copy it to send to someone else.',
         copy: 'Copy', copied: 'Copied',
         tipNewChat: 'Set the working directory, write permission, and MCP, then open an AI chat session.',
-        tipNewTerm: 'Start a web terminal in cmd, codex, claude, or antigravity mode.',
+        tipNewTerm: 'Start a web terminal in cmd, codex, claude, antigravity, or opencode mode.',
         tipWebSubtab: 'Shows Playwright browser sessions. Select a session to open Browser.html in the workspace frame.',
         tipNewBrowser: 'Create a Playwright browser session and inspect the screen, logs, and input from the web UI.',
         tipBrowserSession: 'A browser session item. In the real app, selecting it opens the Browser.html viewer for that session.',
@@ -382,25 +383,24 @@
         tipWDHelp: 'The folder where the AI or terminal starts work. e.g. D:/git/Artgine-Agent. This path defines the task scope.',
         tipWDInput: 'When creating a new Chat or Terminal, files are read and commands are run relative to this folder.',
         allowWriteLabel: 'Allow working dir write',
-        allowWriteDesc: 'Allows the AI/terminal agent to create or modify files inside this folder.',
-        tipAllowWrite: 'Think of this as write permission. When off, the agent can read and suggest but cannot directly modify or create files. When on, changes inside the Working Directory are permitted.',
         mcpLabel: 'MCP', mcpDesc: 'Connects additional tool servers to the AI session.',
         tipMCP: 'MCP stands for Model Context Protocol — a channel for attaching extra capabilities like a DB, browser, or external tools to the AI. Leave it off if not needed.',
         copyMdLabel: 'Copy MD', copyMdDesc: 'Makes it easy to copy answers or results in Markdown format.',
         tipCopyMD: 'MD = Markdown. When checked, AI responses are easy to paste into docs, issues, or PR descriptions. Useful for preserving code blocks, lists, and heading formats.',
         newChatWarning: 'First-time users: verify the <b>Working Directory</b> before starting, and only enable <b>Allow working dir write</b> when you want the AI to modify files.<br>Chat is a session for giving instructions to the AI. Sending the first message connects it to a real AI CLI session.',
+        newChatWarningDanger: '⚠️ Chat mode runs with full permissions already granted, so when assigning complex tasks, make the rules explicit beforehand.',
         cancel: 'Cancel', open: 'Open',
 
         newTermModalTitle: 'New Terminal',
-        modeLabel: 'Mode', tipModeHelp: 'Choose how to start the terminal. cmd is a standard shell; codex/claude/antigravity are AI CLI modes.',
+        modeLabel: 'Mode', tipModeHelp: 'Choose how to start the terminal. cmd is a standard shell; codex/claude/antigravity/opencode are AI CLI modes.',
         keyLabel: 'Key', tipKeyHelp: 'A label to distinguish multiple terminals. Optional, but useful for repeated tasks or sharing.',
         allowWriteTermDesc: 'Allows file modification commands in AI CLI mode. Usually less relevant in cmd mode.',
         tipAllowWriteTerm: 'Terminal runs real commands, so it is more direct than Chat. Enabling this in AI CLI mode makes it easier to approve file modification tasks.',
         mcpTermDesc: 'Allows the terminal AI agent to connect additional tools.',
-        tipMCPTerm: 'Lets CLIs like codex/claude use MCP tools. Not needed when using regular cmd only.',
+        tipMCPTerm: 'Lets CLIs like codex/claude/opencode use MCP tools. Not needed when using regular cmd only.',
         copyMdTermDesc: 'Aligns terminal output or AI responses with the Markdown copy flow.',
         tipCopyMDTerm: 'Helps preserve Markdown formatting when documenting or copying terminal results.',
-        newTermWarning: 'Terminal is a command execution screen. <b>cmd</b> is for regular commands; <b>codex/claude/antigravity</b> are for AI CLI tasks.<br>⚠️ Each agent (<b>codex/claude/antigravity</b>, etc.) requires a one-time authentication (login) before it can be used.',
+        newTermWarning: 'Terminal is a command execution screen. <b>cmd</b> is for regular commands; <b>codex/claude/antigravity/opencode</b> are for AI CLI tasks.<br>⚠️ Each agent (<b>codex/claude/antigravity/opencode</b>, etc.) requires a one-time authentication (login) before it can be used.',
 
         newScheduleTitle: 'New Schedule',
         nameLabel: 'Name', tipNameHelp: 'A name to identify this schedule. Displayed in the schedule list.',
@@ -425,7 +425,7 @@
           ['AI Tab',         'Chat and Terminal sessions',   'ai', 'panel-ai',      'The AI tab is split into a session list on the left and a workspace frame on the right. Switch between Chat and Terminal as needed.','Press F4 to navigate to the AI tab in the real app.'],
           ['New Chat',       'Start an AI task',             'ai', 'newChatBtn',    'New Chat lets you set a working directory and permissions, then start an AI agent chat session.',                       'Understanding Working Directory and Allow write is key before you begin.'],
           ['Chat View',      'Give instructions & review',   'ai', 'messages',      'Use the chat view on the right to give instructions to the AI and review responses and changed file lists.',              'After work completes, check results via Files or Git diff.'],
-          ['Terminal',       'Web terminal example',         'ai', 'termSubtab',    'Terminal shows sessions like cmd, codex, claude, and antigravity.',                                                       'The terminal on this page shows mock logs only.'],
+          ['Terminal',       'Web terminal example',         'ai', 'termSubtab',    'Terminal shows sessions like cmd, codex, claude, antigravity, and opencode.',                                              'The terminal on this page shows mock logs only.'],
           ['Schedule',       'Recurring tasks',              'ai', 'scheduleBtn',   'Schedule runs a command or prompt repeatedly at a set interval.',                                                         'Start with a Count and end condition to avoid infinite loops.'],
           ['Tooltips',       'Mobile tap help',              'file','fileModalBtn', 'Tap the ? help button or the button itself to see an explanation popover for key controls.',                               'Mobile tap actions are prioritized over desktop hover.']
         ],
@@ -485,6 +485,7 @@
               <div class="card"><h3 data-i18n="filesCardTitle"></h3><p data-i18n="filesCardDesc"></p></div>
               <div class="card"><h3 data-i18n="aiCardTitle"></h3><p data-i18n="aiCardDesc"></p></div>
               <div class="card"><h3 data-i18n="termCardTitle"></h3><p data-i18n="termCardDesc"></p></div>
+              <div class="card"><h3 data-i18n="browserCardTitle"></h3><p data-i18n="browserCardDesc"></p></div>
             </div>
             <div style="margin-top:20px">
               <h3 style="margin:0 0 10px;font-size:15px" data-i18n="gsTitle"></h3>
@@ -823,11 +824,6 @@ npm start</pre>
                 <input class="form-control" value="D:/git/Artgine-Agent" style="margin-bottom:12px" data-tip-key="tipWDInput">
                 <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
                   <label class="form-check">
-                    <input type="checkbox" checked>
-                    <span><b data-i18n="allowWriteLabel"></b><span class="file-meta" data-i18n="allowWriteDesc"></span></span>
-                    <button class="help" data-tip-key="tipAllowWrite" type="button">?</button>
-                  </label>
-                  <label class="form-check">
                     <input type="checkbox">
                     <span><b data-i18n="mcpLabel"></b><span class="file-meta" data-i18n="mcpDesc"></span></span>
                     <button class="help" data-tip-key="tipMCP" type="button">?</button>
@@ -838,7 +834,8 @@ npm start</pre>
                     <button class="help" data-tip-key="tipCopyMD" type="button">?</button>
                   </label>
                 </div>
-                <div style="border:1px solid #f1b8b8;background:#fff5f5;color:#842029;border-radius:.375rem;padding:10px;line-height:1.45" data-i18n-html="newChatWarning"></div>
+                <div style="border:1px solid #9ec5fe;background:#e7f1ff;color:#084298;border-radius:.375rem;padding:10px;line-height:1.45;margin-bottom:8px" data-i18n-html="newChatWarning"></div>
+                <div style="border:1px solid #f1b8b8;background:#fff5f5;color:#842029;border-radius:.375rem;padding:10px;line-height:1.45" data-i18n-html="newChatWarningDanger"></div>
               </div>
               <div class="modal-footer">
                 <button class="btn" data-close="newChatModal" type="button" data-i18n="cancel"></button>
@@ -858,6 +855,7 @@ npm start</pre>
                   <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="codex" type="button">codex</button>
                   <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="claude" type="button">claude</button>
                   <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="antigravity" type="button">antigravity</button>
+                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="opencode" type="button">opencode</button>
                 </div>
                 <label class="small text-secondary"><span data-i18n="keyLabel"></span> <button class="help" data-tip-key="tipKeyHelp" type="button">?</button></label>
                 <input class="form-control" value="local" style="margin-bottom:10px">
@@ -900,7 +898,7 @@ npm start</pre>
                 <input class="form-control" value="local" style="margin-bottom:10px">
                 <label class="small text-secondary" data-i18n="modeLabel"></label>
                 <select class="form-select" style="margin-bottom:10px">
-                  <option>cmd</option><option>codex</option><option>claude</option><option>antigravity</option><option>none</option>
+                  <option>cmd</option><option>codex</option><option>claude</option><option>antigravity</option><option>opencode</option><option>none</option>
                 </select>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
                   <div><label class="small text-secondary" data-i18n="delayLabel"></label><input class="form-control" value="3600"></div>
