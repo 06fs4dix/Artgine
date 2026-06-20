@@ -205,7 +205,7 @@ export class CUtilWeb {
 		}
 
 		if (gMonaco) {
-			(require as any).config({ paths: { vs: CPath.WebRootUrl() + '/artgine/external/legacy/monaco-editor/min/vs' } });
+			(require as any).config({ paths: { vs: CPath.WebRootArtgineUrl() + 'artgine/external/legacy/monaco-editor/min/vs' } });
 			gMonaco = false;
 		}
 
