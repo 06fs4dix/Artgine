@@ -2,7 +2,7 @@
 // Talks to CAIChatRouter (/ai/chat/*, /ai/chat/ws)
 
 
-type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity';
+type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode';
 interface IAttachment { name: string; path: string; }
 interface IMessage {
     role: 'user' | 'assistant';
@@ -30,12 +30,13 @@ interface IProviderInfo {
     models: { value: string; label: string }[];
 }
 // populated from GET /ai/chat/providers (server probes installed CLI on startup)
-let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [] };
+let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [] };
 let PROVIDER_INFO: Record<Provider, IProviderInfo> = {
     claude:       { id: 'claude',       available: false, version: '', models: [] },
     // gemini:       { id: 'gemini',       available: false, version: '', models: [] },
     codex:        { id: 'codex',        available: false, version: '', models: [] },
     antigravity:  { id: 'antigravity',  available: false, version: '', models: [] },
+    opencode:     { id: 'opencode',     available: false, version: '', models: [] },
 };
 const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
@@ -87,6 +88,7 @@ const elSendBtn      = $<HTMLButtonElement>('sendBtn');
 const elFileBtn      = $<HTMLButtonElement>('fileBtn');
 const elFileInput    = $<HTMLInputElement>('fileInput');
 const elEmpty        = $<HTMLDivElement>('emptyState');
+const elInitWarning  = $<HTMLDivElement>('initWarning');
 // sidebar/sidebarToggle removed (moved to Home.ts)
 const elComposerRow  = elInput.closest('.d-flex') as HTMLDivElement | null;
 let elComposerLogin: HTMLDivElement | null = null;
@@ -98,13 +100,11 @@ function showComposerLogin(msg: string = '') {
         elComposerLogin = document.createElement('div');
         elComposerLogin.id = 'composerLogin';
         elComposerLogin.innerHTML = `
-            <div class="d-flex gap-2 align-items-end">
-                <div class="flex-grow-1">
-                    <input id="composerLoginPw" type="password" class="form-control" placeholder="Password" autocomplete="current-password">
-                    <div id="composerLoginMsg" class="small text-danger mt-1" style="min-height: 1.2em;"></div>
-                </div>
-                <button id="composerLoginBtn" class="btn btn-primary">Sign in</button>
+            <div class="d-flex gap-2 align-items-center">
+                <input id="composerLoginPw" type="password" class="form-control flex-grow-1" style="min-width:0;" placeholder="Password" autocomplete="current-password">
+                <button id="composerLoginBtn" class="btn btn-primary flex-shrink-0 text-nowrap">Sign in</button>
             </div>
+            <div id="composerLoginMsg" class="small text-danger mt-1" style="min-height: 1.2em;"></div>
         `;
         elComposer.appendChild(elComposerLogin);
         const pwEl = document.getElementById('composerLoginPw') as HTMLInputElement;
@@ -132,6 +132,7 @@ function hideComposerLogin() {
 function redirectToAuthedChat() {
     const url = new URL(location.href);
     if (!url.searchParams.get('session')) url.searchParams.set('session', uuid());
+    url.searchParams.delete('share');
     location.replace(url.toString());
 }
 
@@ -150,6 +151,8 @@ const _urlParams: URLSearchParams | null = (() => {
     try { return new URL(location.href).searchParams; } catch { return null; }
 })();
 const paramSid: string | null = _urlParams?.get('session') ?? null;
+// 공유 링크(?share=1): /ai/chat/share 의 공개(무인증) 히스토리만 읽기, 전송 불가(읽기전용).
+let isShareMode: boolean = _urlParams?.get('share') === '1';
 
 function shortUA(ua: string): string {
     // pick OS + main engine in a compact form
@@ -229,8 +232,10 @@ function isImagePath(p: string): boolean {
 }
 function attachmentUrl(sid: string, relPath: string, bust?: number): string {
     const t = bust ?? Date.now();
+    // share 모드는 무인증 공개 엔드포인트를 써야 한다(workspace는 로그인 필요).
+    const ep = isShareMode ? 'ai/chat/share/file' : 'ai/chat/workspace';
     // 같은 출처 요청이라 세션 쿠키가 자동 전송된다(토큰 불필요).
-    return `${CPath.WebRootUrl()}ai/chat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
+    return `${CPath.WebRootUrl()}${ep}?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
 }
 
 // ---- provider/model dropdowns ----
@@ -241,7 +246,7 @@ async function fetchProviders(): Promise<boolean> {
         const j = await r.json();
         if (!j.ok || !Array.isArray(j.providers)) return false;
         for (const p of j.providers as IProviderInfo[]) {
-            if (p.id === 'claude' /* || p.id === 'gemini' */ || p.id === 'codex' || p.id === 'antigravity') {
+            if (p.id === 'claude' /* || p.id === 'gemini' */ || p.id === 'codex' || p.id === 'antigravity' || p.id === 'opencode') {
                 PROVIDER_INFO[p.id] = p;
                 MODELS[p.id] = p.models || [];
             }
@@ -252,9 +257,9 @@ async function fetchProviders(): Promise<boolean> {
 function rebuildProviderOptions() {
     elProviderSel.innerHTML = '';
     const _providerLabels: Record<Provider, string> = {
-        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity',
+        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode',
     };
-    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity'] as Provider[]) {
+    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode'] as Provider[]) {
         const o = document.createElement('option');
         o.value = id;
         o.textContent = _providerLabels[id];
@@ -316,9 +321,11 @@ function renderMessages() {
     if (!currentHistory || currentHistory.messages.length === 0) {
         elMessages.appendChild(elEmpty);
         elEmpty.style.display = '';
+        elInitWarning.style.display = '';
         return;
     }
     elEmpty.style.display = 'none';
+    elInitWarning.style.display = 'none';
     for (const m of currentHistory.messages) appendMessage(m);
     elMessages.scrollTop = elMessages.scrollHeight;
 }
@@ -350,7 +357,7 @@ function appendMessage(m: IMessage): HTMLDivElement {
         const meta = buildUserMeta(m);
         role = meta || 'User';
     } else {
-        role = `Assistant${m.model ? ' · ' + m.model : ''}`;
+        role = m.model || 'Assistant';
     }
     if (ts) role += ` · ${ts}`;
     const bubbleCls = m.role === 'user'
@@ -476,12 +483,14 @@ function handleWsMessage(ev: MessageEvent) {
         const m = msg.message as IMessage;
         if (currentHistory) currentHistory.messages.push(m);
         elEmpty.style.display = 'none';
+        elInitWarning.style.display = 'none';
         appendMessage(m);
         elMessages.scrollTop = elMessages.scrollHeight;
     } else if (msg.type === 'start') {
         // AI 응답 시작 — 스트리밍 placeholder 생성 (이 시점에 세션이 디스크에 저장됨)
+        elInitWarning.style.display = 'none';
         refreshSessions();
-        const placeholder: IMessage = { role: 'assistant', content: '', timestamp: Date.now() };
+        const placeholder: IMessage = { role: 'assistant', content: '', timestamp: Date.now(), provider: elProviderSel.value as Provider, model: elModelSel.value };
         streamingEl = appendMessage(placeholder);
         streamingEl.querySelector('.msg-bubble')?.classList.add('msg-streaming');
         elMessages.scrollTop = elMessages.scrollHeight;
@@ -589,6 +598,10 @@ async function tryLogin(pw: string) {
             localStorage.setItem(LS_TOKEN, authToken);
             hideLoginOverlay();
             hideComposerLogin();
+            if (isShareMode) {
+                isShareMode = false;
+                document.body.classList.remove('share-mode');
+            }
             if (isStandaloneChat()) {
                 redirectToAuthedChat();
             } else {
@@ -634,8 +647,29 @@ async function bootChat() {
     connectWs(); // WS 연결 (채팅 스트리밍용)
 }
 
+// ---- share mode (read-only, no auth) ----
+async function initShareMode() {
+    document.body.classList.add('share-mode');
+    currentSid = paramSid;
+    if (!currentSid) { showComposerLogin('Invalid share link'); return; }
+    try {
+        const r = await fetch(`${CPath.WebRootUrl()}ai/chat/share?id=${encodeURIComponent(currentSid)}`);
+        const j = await r.json();
+        currentHistory = (j.ok && j.history) ? j.history as IHistory : null;
+    } catch {
+        currentHistory = null;
+    }
+    renderMessages();
+    // 입력란 자리에 패스워드 입력만 노출 (로그인하면 일반 채팅으로 전환됨)
+    showComposerLogin();
+}
+
 async function init() {
     installLoginHandlers();
+    if (isShareMode) {
+        await initShareMode();
+        return;
+    }
     if (!authToken) {
         showLoginOverlay();
         return;

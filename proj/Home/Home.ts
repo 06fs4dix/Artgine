@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqjeo4zr_2";
+gPF.mVersion = "mqlozpqu_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -72,6 +72,11 @@ CDOM.ID("install-btn").addEventListener("click",()=>{
 // CModal.Open() 직후엔 모달 본문 DOM이 아직 붙기 전이라, 내부 요소에 접근하려면
 // 한 틱 양보해야 한다. 이벤트 바인딩/포커스용 공통 지연(ms).
 const MODAL_DOM_DELAY = 100;
+const DEFAULT_AUTH_PASSWORD = 'artgine';
+
+function warnIfDefaultAuthPassword(pw: string) {
+    if (pw === DEFAULT_AUTH_PASSWORD) CAlert.E("Please change the default password.");
+}
 
 // ---- AI tab: session list ----
 // 토큰은 로그인 시 저장해두는 relog 자격증명일 뿐이며, 일반 요청 인증은
@@ -419,16 +424,12 @@ aiNewChatBtn.addEventListener('click', () => chatStartNew());
 function chatStartNew(initialWorkingDir?: string) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">옵션</p>
+        <p class="fw-semibold mb-3">New Chat</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Working Directory</label>
             <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="chat-opt-allow" checked>
-                <label class="form-check-label small text-secondary" for="chat-opt-allow">Allow working dir write</label>
-            </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="chat-opt-mcp">
                 <label class="form-check-label small text-secondary" for="chat-opt-mcp">MCP</label>
@@ -449,7 +450,6 @@ function chatStartNew(initialWorkingDir?: string) {
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-        const allowCheck      = container.querySelector<HTMLInputElement>('#chat-opt-allow')!;
         const mcpCheck        = container.querySelector<HTMLInputElement>('#chat-opt-mcp')!;
         const mdcopyCheck     = container.querySelector<HTMLInputElement>('#chat-opt-mdcopy')!;
         const workingDirInput = container.querySelector<HTMLInputElement>('#chat-opt-workingDir')!;
@@ -461,7 +461,6 @@ function chatStartNew(initialWorkingDir?: string) {
             const params = new URLSearchParams({ session: sid });
             if (!mcpCheck.checked) params.set('mcp', '0');
             if (workingDir) params.set('workingDir', workingDir);
-            if (allowCheck.checked) params.set('allow', '1');
             if (mdcopyCheck.checked) params.set('mdcopy', '1');
             pendingNewSid = sid;
             showFrame(`chat:${sid}`, `./AI/AIChat.html?${params.toString()}`);
@@ -498,7 +497,7 @@ function syncSessState(id: string, cur: SessState, onDone: () => void, onWait?: 
 
 
 
-async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' = 'cmd', initialWorkingDir?: string) {
+async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode' = 'cmd', initialWorkingDir?: string) {
     const token = localStorage.getItem(CMD_TOKEN_KEY);
     if (token) {
         try {
@@ -516,13 +515,14 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
 
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">옵션</p>
+        <p class="fw-semibold mb-3">New Terminal</p>
         <div class="mb-3 d-flex gap-2 flex-wrap">
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
             <!-- <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="gemini">gemini</button> -->
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="opencode">opencode</button>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Key</label>
@@ -533,10 +533,6 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
             <input id="term-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-allow">
-                <label class="form-check-label small text-secondary" for="term-opt-allow">Allow working dir write</label>
-            </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
                 <label class="form-check-label small text-secondary" for="term-opt-mcp">MCP</label>
@@ -560,7 +556,6 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
         let selectedMode: string = _mode;
 
         const modeButtons = container.querySelectorAll<HTMLButtonElement>('.term-mode-btn');
-        const allowCheck  = container.querySelector<HTMLInputElement>('#term-opt-allow')!;
         const mcpCheck    = container.querySelector<HTMLInputElement>('#term-opt-mcp')!;
         const mdcopyCheck = container.querySelector<HTMLInputElement>('#term-opt-mdcopy')!;
 
@@ -570,8 +565,6 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
                 b.classList.toggle('btn-primary', b.dataset.mode === mode);
                 b.classList.toggle('btn-outline-secondary', b.dataset.mode !== mode);
             });
-            allowCheck.disabled = mode === 'cmd';
-            if (mode === 'cmd') allowCheck.checked = false;
         };
 
         modeButtons.forEach(b => b.addEventListener('click', () => updateModeUI(b.dataset.mode!)));
@@ -589,7 +582,6 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
             const params = new URLSearchParams({ mode: selectedMode });
             if (key)        params.set('key', key);
             if (workingDir) params.set('workingDir', workingDir);
-            if (allowCheck.checked) params.set('allow', '1');
             if (!mcpCheck.checked) params.set('mcp', '0');
             if (mdcopyCheck.checked) params.set('mdcopy', '1');
             modal.Close();
@@ -747,7 +739,7 @@ function aiShowShareLink(sessionId: string, title: string) {
     showShareLinkModal(
         'AI Chat Share Link',
         `Anyone with this link can view the chat: <strong>${aiEscapeHtml(title)}</strong>`,
-        `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}`
+        `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}&share=1`
     );
 }
 
@@ -906,7 +898,7 @@ async function schedRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode==='none'?'bg-secondary':s.mode==='cmd'?'bg-info':s.mode==='claude'?'bg-warning text-dark':/*s.mode==='gemini'?'bg-success':*/s.mode==='codex'?'bg-primary':'bg-danger'}" style="font-size:0.65rem;">${s.mode==='antigravity'?'agy':s.mode}</span>
+                    <span class="badge rounded-pill ${s.mode==='none'?'bg-secondary':s.mode==='cmd'?'bg-info':s.mode==='claude'?'bg-warning text-dark':/*s.mode==='gemini'?'bg-success':*/s.mode==='codex'?'bg-primary':s.mode==='opencode'?'bg-success':'bg-danger'}" style="font-size:0.65rem;">${s.mode==='antigravity'?'agy':s.mode}</span>
                     <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
                 </span>
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
@@ -952,6 +944,7 @@ function schedOpenModal(existing?: ScheduleData) {
                 <!-- <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="gemini">gemini</button> -->
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="opencode">opencode</button>
             </div>
         </div>
         <div class="mb-2">
@@ -1085,6 +1078,9 @@ window.addEventListener('message', (e) => {
         pendingNewSid = null; // 서버에 세션이 생성됐으므로 보호 해제
         aiRefreshSessions();
     }
+    if (e.data?.type === 'browser-sessions-changed') {
+        browserRefreshList();
+    }
     if (e.data?.type === 'terminal-tab-key') {
         handleTabKey();
     }
@@ -1180,6 +1176,10 @@ const aiSidebarToggleBtn = CDOM.ID("aiSidebarToggle") as HTMLButtonElement;
 // scroll:true를 같이 줘야 포커스 트랩이 완전히 꺼진다.
 const aiSidebarOffcanvas = new (window as any).bootstrap.Offcanvas(aiSidebarEl, { backdrop: false, scroll: true });
 
+function openAiSidebar() {
+    if (!aiSidebarEl.classList.contains('show')) aiSidebarOffcanvas.show();
+}
+
 // 백드롭 클릭/Esc 등 토글 버튼을 거치지 않는 닫힘에도 아이콘/저장값이 따라가도록 이벤트로 동기화
 aiSidebarEl.addEventListener('shown.bs.offcanvas', () => {
     aiSidebarToggleBtn.querySelector('i')!.className = 'bi bi-layout-sidebar-inset';
@@ -1192,7 +1192,7 @@ aiSidebarEl.addEventListener('hidden.bs.offcanvas', () => {
 
 // 첫 진입 시 슬라이드 인 애니메이션 없이 바로 펼쳐진 상태로 시작
 aiSidebarEl.style.transition = 'none';
-aiSidebarOffcanvas.show();
+openAiSidebar();
 requestAnimationFrame(() => { aiSidebarEl.style.transition = ''; });
 
 function toggleSidebar() {
@@ -1292,6 +1292,7 @@ async function aiDoAuth() {
             aiAuthOverlay.style.display = 'none';
             aiRefreshSessions();
             termRefreshSessions();
+            warnIfDefaultAuthPassword(pw);
         } else {
             aiAuthMsg.textContent = j.msg || 'Wrong password';
         }
@@ -1447,7 +1448,7 @@ function browserShowShareLink(sessionId: string, url: string) {
 browserNewBtn.addEventListener('click', () => {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">새 브라우저 세션</p>
+        <p class="fw-semibold mb-3">New Browser Session</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">URL</label>
             <input id="brow-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
@@ -1526,13 +1527,16 @@ function showAiTermSubtab() {
 }
 
 CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
+    const isFirstInit = !aiInited;
     aiInited = true;
+    if (isFirstInit) openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
 });
 // also init if AI tab is the restored last-active tab
 if (CDOM.ID("ai-panel").classList.contains("show")) {
     aiInited = true;
+    openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
 }
@@ -2007,6 +2011,7 @@ async function FileBtn() {
                 aiRefreshSessions();
                 termRefreshSessions();
                 CAlert.Info("Permission granted");
+                warnIfDefaultAuthPassword(pw);
             } else {
                 CAlert.E("Wrong password: " + (j.msg ?? ""));
             }
@@ -2758,6 +2763,9 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
     dlInited = true;
     MountDownloadTab("download-root");
 }
+
+
+
 
 
 

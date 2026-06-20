@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqjeo4zr_2";
+gPF.mVersion = "mqlozpqu_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -50,6 +50,11 @@ CDOM.ID("install-btn").addEventListener("click", () => {
         CAlert.Info(msg);
 });
 const MODAL_DOM_DELAY = 100;
+const DEFAULT_AUTH_PASSWORD = 'artgine';
+function warnIfDefaultAuthPassword(pw) {
+    if (pw === DEFAULT_AUTH_PASSWORD)
+        CAlert.E("Please change the default password.");
+}
 const AI_TOKEN_KEY = 'artgine.token';
 const aiFrameContainer = CDOM.ID("ai-frame-container");
 const aiFramePlaceholder = CDOM.ID("ai-frame-placeholder");
@@ -408,16 +413,12 @@ aiNewChatBtn.addEventListener('click', () => chatStartNew());
 function chatStartNew(initialWorkingDir) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">옵션</p>
+        <p class="fw-semibold mb-3">New Chat</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Working Directory</label>
             <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="chat-opt-allow" checked>
-                <label class="form-check-label small text-secondary" for="chat-opt-allow">Allow working dir write</label>
-            </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="chat-opt-mcp">
                 <label class="form-check-label small text-secondary" for="chat-opt-mcp">MCP</label>
@@ -436,7 +437,6 @@ function chatStartNew(initialWorkingDir) {
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
-        const allowCheck = container.querySelector('#chat-opt-allow');
         const mcpCheck = container.querySelector('#chat-opt-mcp');
         const mdcopyCheck = container.querySelector('#chat-opt-mdcopy');
         const workingDirInput = container.querySelector('#chat-opt-workingDir');
@@ -450,8 +450,6 @@ function chatStartNew(initialWorkingDir) {
                 params.set('mcp', '0');
             if (workingDir)
                 params.set('workingDir', workingDir);
-            if (allowCheck.checked)
-                params.set('allow', '1');
             if (mdcopyCheck.checked)
                 params.set('mdcopy', '1');
             pendingNewSid = sid;
@@ -498,13 +496,14 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
     }
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">옵션</p>
+        <p class="fw-semibold mb-3">New Terminal</p>
         <div class="mb-3 d-flex gap-2 flex-wrap">
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
             <!-- <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="gemini">gemini</button> -->
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
             <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="opencode">opencode</button>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Key</label>
@@ -515,10 +514,6 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
             <input id="term-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-allow">
-                <label class="form-check-label small text-secondary" for="term-opt-allow">Allow working dir write</label>
-            </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
                 <label class="form-check-label small text-secondary" for="term-opt-mcp">MCP</label>
@@ -539,7 +534,6 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
     setTimeout(() => {
         let selectedMode = _mode;
         const modeButtons = container.querySelectorAll('.term-mode-btn');
-        const allowCheck = container.querySelector('#term-opt-allow');
         const mcpCheck = container.querySelector('#term-opt-mcp');
         const mdcopyCheck = container.querySelector('#term-opt-mdcopy');
         const updateModeUI = (mode) => {
@@ -548,9 +542,6 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
                 b.classList.toggle('btn-primary', b.dataset.mode === mode);
                 b.classList.toggle('btn-outline-secondary', b.dataset.mode !== mode);
             });
-            allowCheck.disabled = mode === 'cmd';
-            if (mode === 'cmd')
-                allowCheck.checked = false;
         };
         modeButtons.forEach(b => b.addEventListener('click', () => updateModeUI(b.dataset.mode)));
         updateModeUI(selectedMode);
@@ -568,8 +559,6 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
                 params.set('key', key);
             if (workingDir)
                 params.set('workingDir', workingDir);
-            if (allowCheck.checked)
-                params.set('allow', '1');
             if (!mcpCheck.checked)
                 params.set('mcp', '0');
             if (mdcopyCheck.checked)
@@ -729,7 +718,7 @@ function termShowShareLink(port) {
 }
 function aiShowShareLink(sessionId, title) {
     const base = location.pathname.replace(/\/[^/]+$/, '');
-    showShareLinkModal('AI Chat Share Link', `Anyone with this link can view the chat: <strong>${aiEscapeHtml(title)}</strong>`, `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}`);
+    showShareLinkModal('AI Chat Share Link', `Anyone with this link can view the chat: <strong>${aiEscapeHtml(title)}</strong>`, `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}&share=1`);
 }
 function openSessionPopup(url, title, newWindow = false, winName = '_blank') {
     if (newWindow) {
@@ -866,7 +855,7 @@ async function schedRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'codex' ? 'bg-primary' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
+                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'codex' ? 'bg-primary' : s.mode === 'opencode' ? 'bg-success' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
                     <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
                 </span>
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
@@ -915,6 +904,7 @@ function schedOpenModal(existing) {
                 <!-- <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="gemini">gemini</button> -->
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
                 <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="opencode">opencode</button>
             </div>
         </div>
         <div class="mb-2">
@@ -1048,6 +1038,9 @@ window.addEventListener('message', (e) => {
         pendingNewSid = null;
         aiRefreshSessions();
     }
+    if (e.data?.type === 'browser-sessions-changed') {
+        browserRefreshList();
+    }
     if (e.data?.type === 'terminal-tab-key') {
         handleTabKey();
     }
@@ -1146,6 +1139,10 @@ const AI_SIDEBAR_COLLAPSED_KEY = 'ai.sidebarCollapsed';
 const aiSidebarEl = CDOM.ID("ai-sidebar");
 const aiSidebarToggleBtn = CDOM.ID("aiSidebarToggle");
 const aiSidebarOffcanvas = new window.bootstrap.Offcanvas(aiSidebarEl, { backdrop: false, scroll: true });
+function openAiSidebar() {
+    if (!aiSidebarEl.classList.contains('show'))
+        aiSidebarOffcanvas.show();
+}
 aiSidebarEl.addEventListener('shown.bs.offcanvas', () => {
     aiSidebarToggleBtn.querySelector('i').className = 'bi bi-layout-sidebar-inset';
     localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, '0');
@@ -1155,7 +1152,7 @@ aiSidebarEl.addEventListener('hidden.bs.offcanvas', () => {
     localStorage.setItem(AI_SIDEBAR_COLLAPSED_KEY, '1');
 });
 aiSidebarEl.style.transition = 'none';
-aiSidebarOffcanvas.show();
+openAiSidebar();
 requestAnimationFrame(() => { aiSidebarEl.style.transition = ''; });
 function toggleSidebar() {
     const wasShown = aiSidebarEl.classList.contains('show');
@@ -1265,6 +1262,7 @@ async function aiDoAuth() {
             aiAuthOverlay.style.display = 'none';
             aiRefreshSessions();
             termRefreshSessions();
+            warnIfDefaultAuthPassword(pw);
         }
         else {
             aiAuthMsg.textContent = j.msg || 'Wrong password';
@@ -1406,7 +1404,7 @@ function browserShowShareLink(sessionId, url) {
 browserNewBtn.addEventListener('click', () => {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">새 브라우저 세션</p>
+        <p class="fw-semibold mb-3">New Browser Session</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">URL</label>
             <input id="brow-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
@@ -1487,12 +1485,16 @@ function showAiTermSubtab() {
     showTab('ai-term-subtab');
 }
 CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
+    const isFirstInit = !aiInited;
     aiInited = true;
+    if (isFirstInit)
+        openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
 });
 if (CDOM.ID("ai-panel").classList.contains("show")) {
     aiInited = true;
+    openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
 }
@@ -1916,6 +1918,7 @@ async function FileBtn() {
                 aiRefreshSessions();
                 termRefreshSessions();
                 CAlert.Info("Permission granted");
+                warnIfDefaultAuthPassword(pw);
             }
             else {
                 CAlert.E("Wrong password: " + (j.msg ?? ""));

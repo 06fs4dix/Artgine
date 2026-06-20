@@ -30,6 +30,61 @@ const inputToggle   = document.getElementById('inputToggle')   as HTMLInputEleme
 const imgWrap       = document.getElementById('imgWrap')       as HTMLDivElement;
 const inputModeRow  = document.getElementById('inputModeRow')  as HTMLDivElement;
 
+interface IBrowserSessionInfo {
+    sessionId: string;
+    currentUrl: string;
+    browserName?: string;
+    ttl?: number;
+    logSize?: number;
+    width?: number;
+    height?: number;
+}
+
+function initResetControl() {
+    if (!controlsBar) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+    btn.textContent = 'Reset';
+    controlsBar.appendChild(btn);
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+            const listRes = await fetch(CPath.WebRootUrl() + 'playwright/list');
+            const listJson = await listRes.json();
+            const session = (listJson.sessions as IBrowserSessionInfo[] | undefined)?.find(s => s.sessionId === SESSION_ID);
+            if (!listJson.ok || !session) throw new Error('Session not found');
+
+            const resetRes = await fetch(CPath.WebRootUrl() + 'playwright/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId: SESSION_ID,
+                    browser: session.browserName || '',
+                    url: session.currentUrl,
+                    ttl: session.ttl || 300,
+                    logSize: session.logSize || 100,
+                    width: session.width || 1280,
+                    height: session.height || 720,
+                })
+            });
+            const resetJson = await resetRes.json();
+            if (!resetJson.ok) throw new Error(resetJson.msg || 'Reset failed');
+
+            btn.textContent = 'Reset OK';
+            window.parent?.postMessage({ type: 'browser-sessions-changed' }, '*');
+            setTimeout(() => { btn.textContent = 'Reset'; }, 1000);
+        } catch {
+            btn.textContent = 'Failed';
+            setTimeout(() => { btn.textContent = 'Reset'; }, 1500);
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
 function initQualityControl() {
     if (!controlsBar) return;
 
@@ -345,4 +400,5 @@ loginPw.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter
 
 initQualityControl();
 initConsoleControl();
+initResetControl();
 checkAuth();

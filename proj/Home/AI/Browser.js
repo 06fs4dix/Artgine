@@ -23,6 +23,51 @@ const rateLabel = document.getElementById('rateLabel');
 const inputToggle = document.getElementById('inputToggle');
 const imgWrap = document.getElementById('imgWrap');
 const inputModeRow = document.getElementById('inputModeRow');
+function initResetControl() {
+    if (!controlsBar)
+        return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+    btn.textContent = 'Reset';
+    controlsBar.appendChild(btn);
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+            const listRes = await fetch(CPath.WebRootUrl() + 'playwright/list');
+            const listJson = await listRes.json();
+            const session = listJson.sessions?.find(s => s.sessionId === SESSION_ID);
+            if (!listJson.ok || !session)
+                throw new Error('Session not found');
+            const resetRes = await fetch(CPath.WebRootUrl() + 'playwright/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId: SESSION_ID,
+                    browser: session.browserName || '',
+                    url: session.currentUrl,
+                    ttl: session.ttl || 300,
+                    logSize: session.logSize || 100,
+                    width: session.width || 1280,
+                    height: session.height || 720,
+                })
+            });
+            const resetJson = await resetRes.json();
+            if (!resetJson.ok)
+                throw new Error(resetJson.msg || 'Reset failed');
+            btn.textContent = 'Reset OK';
+            window.parent?.postMessage({ type: 'browser-sessions-changed' }, '*');
+            setTimeout(() => { btn.textContent = 'Reset'; }, 1000);
+        }
+        catch {
+            btn.textContent = 'Failed';
+            setTimeout(() => { btn.textContent = 'Reset'; }, 1500);
+        }
+        finally {
+            btn.disabled = false;
+        }
+    });
+}
 function initQualityControl() {
     if (!controlsBar)
         return;
@@ -348,4 +393,5 @@ loginPw.addEventListener('keydown', (e) => { if (e.key === 'Enter')
     tryLogin(loginPw.value); });
 initQualityControl();
 initConsoleControl();
+initResetControl();
 checkAuth();

@@ -1,8 +1,9 @@
-let MODELS = { claude: [], codex: [], antigravity: [] };
+let MODELS = { claude: [], codex: [], antigravity: [], opencode: [] };
 let PROVIDER_INFO = {
     claude: { id: 'claude', available: false, version: '', models: [] },
     codex: { id: 'codex', available: false, version: '', models: [] },
     antigravity: { id: 'antigravity', available: false, version: '', models: [] },
+    opencode: { id: 'opencode', available: false, version: '', models: [] },
 };
 const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
@@ -49,6 +50,7 @@ const elSendBtn = $('sendBtn');
 const elFileBtn = $('fileBtn');
 const elFileInput = $('fileInput');
 const elEmpty = $('emptyState');
+const elInitWarning = $('initWarning');
 const elComposerRow = elInput.closest('.d-flex');
 let elComposerLogin = null;
 function showComposerLogin(msg = '') {
@@ -58,13 +60,11 @@ function showComposerLogin(msg = '') {
         elComposerLogin = document.createElement('div');
         elComposerLogin.id = 'composerLogin';
         elComposerLogin.innerHTML = `
-            <div class="d-flex gap-2 align-items-end">
-                <div class="flex-grow-1">
-                    <input id="composerLoginPw" type="password" class="form-control" placeholder="Password" autocomplete="current-password">
-                    <div id="composerLoginMsg" class="small text-danger mt-1" style="min-height: 1.2em;"></div>
-                </div>
-                <button id="composerLoginBtn" class="btn btn-primary">Sign in</button>
+            <div class="d-flex gap-2 align-items-center">
+                <input id="composerLoginPw" type="password" class="form-control flex-grow-1" style="min-width:0;" placeholder="Password" autocomplete="current-password">
+                <button id="composerLoginBtn" class="btn btn-primary flex-shrink-0 text-nowrap">Sign in</button>
             </div>
+            <div id="composerLoginMsg" class="small text-danger mt-1" style="min-height: 1.2em;"></div>
         `;
         elComposer.appendChild(elComposerLogin);
         const pwEl = document.getElementById('composerLoginPw');
@@ -93,6 +93,7 @@ function redirectToAuthedChat() {
     const url = new URL(location.href);
     if (!url.searchParams.get('session'))
         url.searchParams.set('session', uuid());
+    url.searchParams.delete('share');
     location.replace(url.toString());
 }
 let currentSid = null;
@@ -112,6 +113,7 @@ const _urlParams = (() => {
     }
 })();
 const paramSid = _urlParams?.get('session') ?? null;
+let isShareMode = _urlParams?.get('share') === '1';
 function shortUA(ua) {
     let os = '';
     if (/Windows NT 10/.test(ua))
@@ -210,7 +212,8 @@ function isImagePath(p) {
 }
 function attachmentUrl(sid, relPath, bust) {
     const t = bust ?? Date.now();
-    return `${CPath.WebRootUrl()}ai/chat/workspace?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
+    const ep = isShareMode ? 'ai/chat/share/file' : 'ai/chat/workspace';
+    return `${CPath.WebRootUrl()}${ep}?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
 }
 async function fetchProviders() {
     try {
@@ -223,7 +226,7 @@ async function fetchProviders() {
         if (!j.ok || !Array.isArray(j.providers))
             return false;
         for (const p of j.providers) {
-            if (p.id === 'claude' || p.id === 'codex' || p.id === 'antigravity') {
+            if (p.id === 'claude' || p.id === 'codex' || p.id === 'antigravity' || p.id === 'opencode') {
                 PROVIDER_INFO[p.id] = p;
                 MODELS[p.id] = p.models || [];
             }
@@ -237,9 +240,9 @@ async function fetchProviders() {
 function rebuildProviderOptions() {
     elProviderSel.innerHTML = '';
     const _providerLabels = {
-        claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity',
+        claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode',
     };
-    for (const id of ['claude', 'codex', 'antigravity']) {
+    for (const id of ['claude', 'codex', 'antigravity', 'opencode']) {
         const o = document.createElement('option');
         o.value = id;
         o.textContent = _providerLabels[id];
@@ -302,9 +305,11 @@ function renderMessages() {
     if (!currentHistory || currentHistory.messages.length === 0) {
         elMessages.appendChild(elEmpty);
         elEmpty.style.display = '';
+        elInitWarning.style.display = '';
         return;
     }
     elEmpty.style.display = 'none';
+    elInitWarning.style.display = 'none';
     for (const m of currentHistory.messages)
         appendMessage(m);
     elMessages.scrollTop = elMessages.scrollHeight;
@@ -336,7 +341,7 @@ function appendMessage(m) {
         role = meta || 'User';
     }
     else {
-        role = `Assistant${m.model ? ' · ' + m.model : ''}`;
+        role = m.model || 'Assistant';
     }
     if (ts)
         role += ` · ${ts}`;
@@ -467,12 +472,14 @@ function handleWsMessage(ev) {
         if (currentHistory)
             currentHistory.messages.push(m);
         elEmpty.style.display = 'none';
+        elInitWarning.style.display = 'none';
         appendMessage(m);
         elMessages.scrollTop = elMessages.scrollHeight;
     }
     else if (msg.type === 'start') {
+        elInitWarning.style.display = 'none';
         refreshSessions();
-        const placeholder = { role: 'assistant', content: '', timestamp: Date.now() };
+        const placeholder = { role: 'assistant', content: '', timestamp: Date.now(), provider: elProviderSel.value, model: elModelSel.value };
         streamingEl = appendMessage(placeholder);
         streamingEl.querySelector('.msg-bubble')?.classList.add('msg-streaming');
         elMessages.scrollTop = elMessages.scrollHeight;
@@ -588,6 +595,10 @@ async function tryLogin(pw) {
             localStorage.setItem(LS_TOKEN, authToken);
             hideLoginOverlay();
             hideComposerLogin();
+            if (isShareMode) {
+                isShareMode = false;
+                document.body.classList.remove('share-mode');
+            }
             if (isStandaloneChat()) {
                 redirectToAuthedChat();
             }
@@ -633,8 +644,30 @@ async function bootChat() {
     await fetchHistory(currentSid);
     connectWs();
 }
+async function initShareMode() {
+    document.body.classList.add('share-mode');
+    currentSid = paramSid;
+    if (!currentSid) {
+        showComposerLogin('Invalid share link');
+        return;
+    }
+    try {
+        const r = await fetch(`${CPath.WebRootUrl()}ai/chat/share?id=${encodeURIComponent(currentSid)}`);
+        const j = await r.json();
+        currentHistory = (j.ok && j.history) ? j.history : null;
+    }
+    catch {
+        currentHistory = null;
+    }
+    renderMessages();
+    showComposerLogin();
+}
 async function init() {
     installLoginHandlers();
+    if (isShareMode) {
+        await initShareMode();
+        return;
+    }
     if (!authToken) {
         showLoginOverlay();
         return;
