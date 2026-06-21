@@ -75,7 +75,7 @@
 <script src='../../artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
 <link rel='manifest' href='./Home.webmanifest'/>
 <script>
-let SERVER_BASE='http://localhost:8050/Artgine/proj/Home/Home.html';
+let SERVER_BASE='http://localhost:8000/Artgine/proj/Home/Home.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
@@ -96,12 +96,15 @@ if (location.protocol == 'file:' && isElectron==false){
 #ai-sidebar .tab-pane:not(.active){display:none !important;}
 #ai-frame-container iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 #ai-sidebar{position:absolute;--bs-offcanvas-width:310px;z-index:10;}
+#rdp-frame-container iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+#rdp-sidebar{position:absolute;--bs-offcanvas-width:310px;z-index:10;}
 @keyframes browser-ripple{0%{transform:scale(1);opacity:1;}100%{transform:scale(2.5);opacity:0;}}
+@keyframes remote-ripple{0%{transform:scale(1);opacity:1;}100%{transform:scale(2.5);opacity:0;}}
 </style>
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button"
-            role="tab" aria-controls="main" aria-selected="true" data-en="Main"><i class="bi bi-house-fill"></i> Home</button>
+        <button class="nav-link active" id="rdp-tab" data-bs-toggle="tab" data-bs-target="#rdp-panel" type="button"
+            role="tab" aria-controls="rdp-panel" aria-selected="true" data-en="RDP"><i class="bi bi-display"></i> RDP <span class="text-secondary" style="font-size:0.7em;">F3</span></button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab"
@@ -109,7 +112,7 @@ if (location.protocol == 'file:' && isElectron==false){
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab"
-            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files <span class="text-secondary" style="font-size:0.7em;">F3</span></button>
+            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files <span class="text-secondary" style="font-size:0.7em;">F1/F2</span></button>
     </li>
     <!-- 로그인 버튼 (오른쪽 정렬) -->
     <li class="nav-item" role="presentation">
@@ -132,9 +135,27 @@ if (location.protocol == 'file:' && isElectron==false){
 
 <!-- 탭 콘텐츠 -->
 <div class="tab-content flex-fill overflow-hidden" id="myTabContent">
-    <div class="tab-pane h-100 show active" id="main" role="tabpanel" aria-labelledby="main-tab" style="overflow-y:auto;">
-        <div class="text-center" data-en="Welcome.">
-            환영합니다.
+    <div class="tab-pane h-100 show active position-relative" id="rdp-panel" role="tabpanel" aria-labelledby="rdp-tab">
+        <div id="rdp-sidebar" class="offcanvas offcanvas-start d-flex flex-column border-end bg-body-tertiary" tabindex="-1">
+            <div class="p-2 border-bottom d-flex gap-1">
+                <input id="rdpAddUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Home.html URL">
+                <button id="rdpAddBtn" class="btn btn-outline-primary btn-sm flex-shrink-0" title="Add Remote">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+            <div id="rdpSessionList" class="flex-grow-1 overflow-auto p-2 d-flex flex-column gap-1"></div>
+        </div>
+        <div id="rdp-frame-container" class="position-absolute" style="inset:0;">
+            <button id="rdpSidebarToggle" type="button"
+                class="btn btn-light position-absolute"
+                style="top:48px; right:24px; z-index:10; padding:.3rem .6rem; font-size:1rem;"
+                title="Toggle sidebar">
+                <i class="bi bi-layout-sidebar-inset"></i>
+            </button>
+            <div id="rdp-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center"
+                 style="inset:0;overflow-y:auto;background:var(--bs-body-bg);">
+                <div class="text-secondary">Select a target from the sidebar.</div>
+            </div>
         </div>
     </div>
     <div class="tab-pane h-100" id="board" role="tabpanel" aria-labelledby="board-tab" style="overflow-x: hidden;">
@@ -226,9 +247,9 @@ if (location.protocol == 'file:' && isElectron==false){
                     <div class="mb-3">
                         <div class="small text-secondary fw-semibold mb-1">Global</div>
                         <ul class="list-unstyled small mb-0">
-                            <li><kbd>F1</kbd> File Manager</li>
-                            <li><kbd>F2</kbd> File Search</li>
-                            <li><kbd>F3</kbd> Go to File tab (root)</li>
+                            <li><kbd>F1</kbd> Go to File tab + File Manager</li>
+                            <li><kbd>F2</kbd> Go to File tab + File Search</li>
+                            <li><kbd>F3</kbd> Go to RDP tab</li>
                             <li><kbd>F4</kbd> Go to AI tab</li>
                         </ul>
                     </div>

@@ -201,7 +201,7 @@ export async function InitDevToolScriptViewer(_github)
 
     if(json.script=="")
     {
-        let buf=await CFile.Load(CPath.WebRootUrl()+"desktop/Template/RuntimeScript.ts")
+        let buf=await CFile.Load(CPath.WebRootArtgineUrl()+"desktop/Template/RuntimeScript.ts")
         json.script=CUtil.ArrayToString(buf);
     }
     
@@ -218,7 +218,7 @@ export async function InitDevToolScriptViewer(_github)
     
     ));
     CDOM.ID("mvSample_btn").addEventListener("click",async ()=>{
-        new CMDViewer(CPath.WebRootUrl()+"artgine/tool/RunTimeSample.md");
+        new CMDViewer(CPath.WebRootArtgineUrl()+"artgine/tool/RunTimeSample.md");
     });
        
     

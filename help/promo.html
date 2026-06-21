@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artgine-Agent — 웹 기반 AI 에이전트 인터페이스</title>
+<link rel="stylesheet" href="../../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="../../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif; }
+  .hero { background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1a26 100%); border-bottom: 1px solid #30363d; padding: 100px 0 80px; }
+  .hero h1 { font-size: 3.2rem; font-weight: 800; background: linear-gradient(135deg, #58a6ff, #3fb950, #d2a8ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero .lead { color: #8b949e; font-size: 1.25rem; max-width: 700px; }
+  .badge-tag { background: #1f2937; color: #58a6ff; border: 1px solid #30363d; font-weight: 500; padding: .25rem .75rem; border-radius: 20px; font-size: .82rem; }
+  .stat-number { font-size: 2.4rem; font-weight: 800; }
+  .section-title { font-weight: 700; font-size: 1.6rem; margin-bottom: .5rem; }
+  .section-sub { color: #8b949e; margin-bottom: 2rem; }
+  .feature-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; transition: all .2s; }
+  .feature-card:hover { border-color: #58a6ff; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(88,166,255,.12); }
+  .tab-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .7rem; border-radius: 20px; font-size: .82rem; font-weight: 600; }
+  .tab-files { background: #1a2e1f; color: #3fb950; }
+  .tab-ai { background: #2e1a2e; color: #f778ba; }
+  .kbd-shortcut { background: #1f2937; border: 1px solid #30363d; border-radius: 4px; padding: .15rem .45rem; font-size: .78rem; font-family: monospace; color: #c9d1d9; }
+  .highlight-box { background: linear-gradient(135deg, #1a2332, #0d1a26); border: 1px solid #1f6feb; border-radius: 12px; padding: 1.5rem; }
+  .footer { border-top: 1px solid #30363d; padding: 2rem 0; color: #6e7681; font-size: .85rem; }
+  .scroll-reveal { opacity: 0; transform: translateY(30px); transition: all .6s ease; }
+  .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .status-off { background: #f85149; }
+  .status-busy { background: #d29922; }
+  .status-idle { background: #3fb950; }
+  code.cmd { color: #7ee787; font-size: .85rem; background: #0d1117; padding: .1rem .4rem; border-radius: 4px; }
+
+  /* ── Mock Screenshot Styles ── */
+  .mock-browser { background: #0d1117; border: 1px solid #30363d; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+  .mock-topbar { height: 32px; background: #161b22; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+  .mock-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .mock-dot:nth-child(1) { background: #f85149; } .mock-dot:nth-child(2) { background: #d29922; } .mock-dot:nth-child(3) { background: #3fb950; }
+  .mock-addr { margin-left: 8px; flex: 1; height: 18px; border-radius: 4px; background: #0d1117; border: 1px solid #21262d; color: #484f58; font-size: 10px; display: flex; align-items: center; padding: 0 8px; font-family: monospace; }
+  .mock-body { padding: 12px; min-height: 280px; }
+
+  .mock-file-list { border: 1px solid #21262d; border-radius: 6px; overflow: hidden; }
+  .mock-file-item { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #21262d; font-size: 13px; }
+  .mock-file-item:last-child { border-bottom: 0; }
+  .mock-file-item:hover { background: #161b22; }
+  .mock-file-icon { font-size: 16px; width: 22px; text-align: center; }
+  .mock-file-badge { margin-left: auto; font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .mock-badge-m { background: #d29922; color: #000; }
+  .mock-badge-d { background: #f85149; color: #fff; }
+  .mock-badge-a { background: #3fb950; color: #000; }
+  .mock-badge-q { background: #484f58; color: #c9d1d9; }
+
+  .mock-chat { display: flex; flex-direction: column; gap: 10px; }
+  .mock-msg { max-width: 80%; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+  .mock-msg.assistant { background: #161b22; border: 1px solid #30363d; align-self: flex-start; color: #c9d1d9; }
+  .mock-msg.user { background: #1a2332; border: 1px solid #58a6ff; align-self: flex-end; color: #c9d1d9; }
+  .mock-msg .label { font-size: 10px; text-transform: uppercase; color: #484f58; margin-bottom: 4px; }
+  .mock-msg code { color: #7ee787; background: #0d1117; padding: 0 4px; border-radius: 3px; font-size: 12px; }
+  .mock-composer { display: flex; gap: 8px; margin-top: 8px; }
+  .mock-input { flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #8b949e; font-size: 13px; }
+  .mock-send { background: #238636; border: 0; color: #fff; padding: 6px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; }
+
+  .mock-term { background: #0a0f18; color: #d1fae5; padding: 14px; font-family: Consolas,monospace; font-size: 12px; border-radius: 6px; min-height: 200px; line-height: 1.6; }
+  .mock-term .dim { color: #6c757d; }
+  .mock-term .green { color: #3fb950; }
+  .mock-term .blue { color: #58a6ff; }
+  .mock-term .yellow { color: #d29922; }
+  .mock-term-bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding: 8px; background: #161b22; border-radius: 6px; }
+  .mock-term-bar input { flex: 1; background: #0d1117; border: 1px solid #3fb950; border-radius: 4px; padding: 6px 10px; color: #d1fae5; font-family: Consolas,monospace; font-size: 12px; }
+  .mock-super { background: #da3633; border: 1px solid #f85149; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+  .mock-browser-frame {background: #0d1117; border-radius: 6px; overflow: hidden;}
+  .mock-browser-ctl {height:28px; background:#161b22; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:8px; padding:0 10px; font-size:10px; color:#8b949e;}
+  .mock-browser-ctl input[type=range]{width:80px; accent-color:#58a6ff;}
+  .mock-browser-page {display:grid; grid-template-columns:130px 1fr; min-height:160px; background:#fff; color:#212529;}
+  .mock-browser-side {background:#f6f8fa; border-right:1px solid #d0d7de; padding:12px;}
+  .mock-browser-line {height:7px; border-radius:4px; background:#d0d7de; margin-bottom:7px;}
+  .mock-browser-main {padding:14px;}
+  .mock-browser-hero {height:56px; border-radius:6px; background:linear-gradient(135deg,#ddf4ff,#b6e3ff); margin-bottom:10px;}
+  .mock-browser-grid {display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .mock-browser-card {height:60px; border:1px solid #d0d7de; border-radius:4px; background:#fff;}
+  .mock-browser-log {height:80px; background:#1a1a1a; border-top:1px solid #333; padding:8px; font-family:Consolas,monospace; font-size:10px; color:#8b949e; overflow:hidden;}
+
+  .mock-sidebar { display: grid; grid-template-columns: 220px 1fr; gap: 0; min-height: 260px; border-radius: 6px; overflow: hidden; border: 1px solid #21262d; }
+  .mock-side { background: #161b22; border-right: 1px solid #21262d; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .mock-sess { background: #0d1117; border: 1px solid #21262d; border-radius: 5px; padding: 8px; cursor: default; }
+  .mock-sess.active { border-color: #58a6ff; background: #1a2332; }
+  .mock-sess .name { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .mock-sess .sub { font-size: 10px; color: #484f58; margin-top: 2px; }
+  .mock-frame { background: #0d1117; padding: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero text-center">
+  <div class="container">
+    <div class="mb-3 d-flex justify-content-center gap-2 flex-wrap">
+      <span class="badge-tag">Web Agent</span>
+      <span class="badge-tag">File Browser</span>
+      <span class="badge-tag">Multi-AI Chat</span>
+      <span class="badge-tag">Web Terminal</span>
+      <span class="badge-tag">Open Source</span>
+    </div>
+    <h1>Artgine-Agent</h1>
+    <p class="lead mx-auto mt-3">
+      Artgine 엔진 위에서 동작하는 <strong>웹 기반 에이전트 인터페이스</strong>입니다.<br>
+      파일 탐색·편집, AI 채팅, 웹 터미널, 원격 브라우저 디버깅을 하나의 PWA에서 통합 제공합니다.
+    </p>
+    <div class="mt-4 d-flex justify-content-center gap-2 flex-wrap">
+      <a href="https://github.com/06fs4dix/Artgine-Agent" class="btn btn-primary px-4" target="_blank"><i class="bi bi-github"></i> GitHub</a>
+      <a href="https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html" class="btn btn-outline-light px-4" target="_blank"><i class="bi bi-book"></i> 튜토리얼</a>
+      <a href="#features" class="btn btn-outline-light px-4"><i class="bi bi-arrow-down"></i> 기능 살펴보기</a>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<div class="container py-5" id="features">
+  <h2 class="section-title text-center">주요 기능</h2>
+  <p class="section-sub text-center">파일 관리와 AI 에이전트를 하나의 창에서</p>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="feature-card p-4 h-100">
+        <i class="bi bi-folder-fill fs-2" style="color:#3fb950;"></i>
+        <h5 class="mt-3">파일 탐색기 <small class="text-muted">F3</small></h5>
+        <p class="text-muted mb-0 small">서버의 파일을 탐색·관리합니다. 폴더 이동, 이미지·오디오·비디오 재생, 코드·문서 편집을 지원합니다. 버전 관리(Git/SVN) 상태 배지로 변경 현황을 한눈에 확인할 수 있습니다.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="feature-card p-4 h-100">
+        <i class="bi bi-search fs-2" style="color:#58a6ff;"></i>
+        <h5 class="mt-3">파일 검색 + VCS <small class="text-muted">F1 F2</small></h5>
+        <p class="text-muted mb-0 small"><strong>F1</strong> File Manager 모달로 파일 추가·삭제·업로드. <strong>F2</strong> 재귀 검색(최대 200개 결과, 중지 버튼 제공). Git/SVN diff·update·add·revert·commit·push를 웹 UI에서 직접 실행합니다.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="feature-card p-4 h-100">
+        <i class="bi bi-chat-dots fs-2" style="color:#d2a8ff;"></i>
+        <h5 class="mt-3">멀티 AI 채팅</h5>
+        <p class="text-muted mb-0 small">Claude·Codex·Antigravity·OpenCode 4종 제공자 지원. 멀티 세션 동시 운용. 세션 상태 색상: <span class="status-dot status-off"></span> 미연결 · <span class="status-dot status-busy"></span> 처리 중 · <span class="status-dot status-idle"></span> 대기 중. 실시간 응답, 파일 첨부, 마크다운 렌더링.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="feature-card p-4 h-100">
+        <i class="bi bi-terminal-fill fs-2" style="color:#f778ba;"></i>
+        <h5 class="mt-3">웹 터미널</h5>
+        <p class="text-muted mb-0 small">최대 9개 동시 세션. <code class="cmd">cmd</code> <code class="cmd">claude</code> <code class="cmd">codex</code> <code class="cmd">antigravity</code> <code class="cmd">opencode</code> 5가지 모드. <strong>F6</strong> SUPER 모드(에이전트 명령 자동 승인). <strong>F7</strong> 입력 바 포커스.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="feature-card p-4 h-100">
+        <i class="bi bi-browser-chrome fs-2" style="color:#d29922;"></i>
+        <h5 class="mt-3">원격 브라우저 디버깅</h5>
+        <p class="text-muted mb-0 small">실시간 화면 공유, 콘솔·네트워크 로그 수집. 마우스(이동·클릭·드래그·휠)·키보드 원격 제어. URL 파라미터로 읽기 전용 공유 링크 생성 가능.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="feature-card p-4 h-100">
+        <i class="bi bi-clock-fill fs-2" style="color:#58a6ff;"></i>
+        <h5 class="mt-3">스케줄러</h5>
+        <p class="text-muted mb-0 small">터미널 세션에 cron 스타일 명령을 등록하여 타이머 주기로 자동 반복 실행. 지연(delay)·횟수(count)·시작(start)·종료(end) 오프셋 설정으로 정밀한 작업 스케줄링.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mock Screenshots -->
+<div class="container py-4">
+  <h2 class="section-title text-center">화면 미리보기</h2>
+  <p class="section-sub text-center">실제 앱과 동일한 구조의 화면 구성입니다</p>
+
+  <!-- Files Tab Mock -->
+  <div class="mb-5 scroll-reveal">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="tab-badge tab-files"><i class="bi bi-folder-fill"></i> Files</span>
+      <strong>파일 탐색기 &amp; 코드 편집</strong>
+    </div>
+    <p class="text-muted small mb-3">
+      서버 디렉토리를 탐색하며 파일을 관리합니다. 파일을 누르면 종류별 모달 뷰어가 열리고, Git/SVN 설치 시 변경 상태 배지가 표시됩니다.
+    </p>
+    <div class="mock-browser">
+      <div class="mock-topbar">
+        <div class="mock-dot"></div><div class="mock-dot"></div><div class="mock-dot"></div>
+        <div class="mock-addr">localhost:8050/Artgine/proj/Home/Home.html</div>
+      </div>
+      <div class="mock-body">
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+          <span class="kbd-shortcut">F1</span><span class="text-muted small me-2">File</span>
+          <span class="kbd-shortcut">F2</span><span class="text-muted small me-2">Search</span>
+          <span class="text-muted small" style="margin-left:auto;">/proj/Home/</span>
+        </div>
+        <div class="mock-file-list">
+          <div class="mock-file-item"><span class="mock-file-icon">📁</span> AI <span class="mock-file-badge mock-badge-q">?</span></div>
+          <div class="mock-file-item"><span class="mock-file-icon">🖼</span> 256x256.png</div>
+          <div class="mock-file-item"><span class="mock-file-icon">🎵</span> sample.mp3</div>
+          <div class="mock-file-item"><span class="mock-file-icon">🎬</span> sample.mp4 <span class="mock-file-badge mock-badge-d">D</span></div>
+          <div class="mock-file-item"><span class="mock-file-icon">📄</span> Home.html <span class="mock-file-badge mock-badge-m">M</span></div>
+          <div class="mock-file-item"><span class="mock-file-icon">📄</span> Home.ts <span class="mock-file-badge mock-badge-a">A</span></div>
+          <div class="mock-file-item"><span class="mock-file-icon">📝</span> README.md</div>
+          <div class="mock-file-item"><span class="mock-file-icon">📎</span> archive.zip <span class="mock-file-badge mock-badge-q">?</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Chat Mock -->
+  <div class="mb-5 scroll-reveal">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="tab-badge tab-ai"><i class="bi bi-robot"></i> AI</span>
+      <strong>멀티 AI 채팅 — Claude · Codex · Antigravity · OpenCode</strong>
+    </div>
+    <p class="text-muted small mb-3">
+      <strong>F4</strong>로 AI 탭 진입. 세션 상태 색상으로 연결 상태를 실시간 확인하며 여러 세션을 동시에 운용합니다.
+    </p>
+    <div class="mock-sidebar">
+      <div class="mock-side">
+        <div class="text-muted small mb-1" style="font-size:10px;">Chat</div>
+        <div class="mock-sess active">
+          <div class="name"><span class="status-dot status-idle"></span> 홈 화면 개선</div>
+          <div class="sub">Claude</div>
+        </div>
+        <div class="mock-sess">
+          <div class="name"><span class="status-dot status-busy"></span> README 정리</div>
+          <div class="sub">Codex · 응답 생성 중</div>
+        </div>
+        <div class="mock-sess">
+          <div class="name"><span class="status-dot status-off"></span> 이전 작업</div>
+          <div class="sub">연결 안 됨</div>
+        </div>
+        <div class="text-muted small mt-2 mb-1" style="font-size:10px;">Terminal</div>
+        <div class="mock-sess">
+          <div class="name"><span class="status-dot status-idle"></span> cmd : local</div>
+        </div>
+        <div class="mock-sess">
+          <div class="name"><span class="status-dot status-idle"></span> codex : app</div>
+          <div class="sub">승인 대기</div>
+        </div>
+      </div>
+      <div class="mock-frame">
+        <div class="mock-chat">
+          <div class="mock-msg user">
+            <div class="label">User</div>
+            이 폴더에서 튜토리얼 페이지를 만들어줘.
+          </div>
+          <div class="mock-msg assistant">
+            <div class="label">Assistant</div>
+            작업 폴더를 기준으로 단일 HTML 튜토리얼을 생성하겠습니다.<br>
+            <code>tutorial.html</code> 파일을 작성하고...
+          </div>
+        </div>
+        <div class="mock-composer">
+          <div class="mock-input">여기에 AI에게 지시를 입력합니다...</div>
+          <div class="mock-send">Send</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terminal Mock -->
+  <div class="mb-5 scroll-reveal">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="tab-badge tab-ai"><i class="bi bi-terminal-fill"></i> AI</span>
+      <strong>웹 터미널 — 최대 9개 동시 실행</strong>
+    </div>
+    <p class="text-muted small mb-3">
+      5가지 모드 지원. <strong>F6</strong> SUPER 모드 토글, <strong>F7</strong> 입력 바 포커스. 실제 명령을 실행하는 CLI 환경입니다.
+    </p>
+    <div class="mock-browser">
+      <div class="mock-topbar">
+        <div class="mock-dot"></div><div class="mock-dot"></div><div class="mock-dot"></div>
+        <div class="mock-addr">Terminal — codex : app</div>
+      </div>
+      <div class="mock-body">
+        <div class="mock-term">
+          <span class="dim"># 이 터미널은 codex 모드입니다.</span><br>
+          <span class="dim"># 작업 경로: D:/git/Artgine-Agent</span><br><br>
+          <span class="green">$</span> npm test<br>
+          <span class="dim">> artgine-agent@1.0.0 test</span><br>
+          <span class="dim">> node ai/tsc_check.js</span><br><br>
+          <span class="green">✓</span> Home.ts<br>
+          <span class="green">✓</span> AIChat.ts<br>
+          <span class="green">✓</span> Browser.ts<br>
+          <span class="blue">All checks passed.</span><br><br>
+          <span class="green">$</span> <span class="yellow">▊</span>
+        </div>
+        <div class="mock-term-bar">
+          <div class="mock-super">SUPER</div>
+          <input value="npm run build" readonly style="cursor:default;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Browser Mock -->
+  <div class="mb-5 scroll-reveal">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="tab-badge tab-ai"><i class="bi bi-browser-chrome"></i> AI</span>
+      <strong>원격 브라우저 — 라이브 디버깅</strong>
+    </div>
+    <p class="text-muted small mb-3">
+      URL과 브라우저를 선택하여 원격 세션을 생성합니다. 스크린샷 폴링, 콘솔 로그 수집, 마우스·키보드 원격 제어가 가능합니다.
+    </p>
+    <div class="mock-browser">
+      <div class="mock-topbar">
+        <div class="mock-dot"></div><div class="mock-dot"></div><div class="mock-dot"></div>
+        <div class="mock-addr">Browser — docs session</div>
+      </div>
+      <div class="mock-browser-frame">
+        <div class="mock-browser-ctl">
+          <span>frame</span><input type="range" value="30" readonly>
+          <span style="margin-left:4px;">3s</span>
+          <span style="margin-left:8px;">quality</span><input type="range" value="75" readonly>
+          <span>75</span>
+          <span style="margin-left:auto;color:#3fb950;">input on</span>
+        </div>
+        <div class="mock-browser-page">
+          <div class="mock-browser-side">
+            <div class="mock-browser-line" style="width:60%;"></div>
+            <div class="mock-browser-line" style="width:85%;"></div>
+            <div class="mock-browser-line" style="width:40%;"></div>
+            <div class="mock-browser-line" style="width:70%;"></div>
+            <div class="mock-browser-line" style="width:50%;"></div>
+          </div>
+          <div class="mock-browser-main">
+            <div class="mock-browser-hero"></div>
+            <div class="mock-browser-grid">
+              <div class="mock-browser-card"></div>
+              <div class="mock-browser-card"></div>
+              <div class="mock-browser-card"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-browser-log">
+<span style="color:#58a6ff;">[log]</span> Page loaded: http://localhost:8050/Artgine/proj/Home/Home.html
+<span style="color:#d29922;">[network]</span> GET /Artgine/proj/Home/Home.html → 200
+<span style="color:#3fb950;">[log]</span> console/network events
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Keyboard Shortcuts -->
+<div class="container py-4">
+  <h2 class="section-title text-center">키보드 단축키</h2>
+  <p class="section-sub text-center">마우스 없이 모든 기능을 조작할 수 있습니다</p>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="feature-card p-4 h-100">
+        <h6 class="mb-3"><i class="bi bi-globe2 me-2"></i>전역</h6>
+        <div class="d-flex flex-column gap-2">
+          <div><span class="kbd-shortcut">F1</span> <span class="text-muted ms-2">File Manager 모달</span></div>
+          <div><span class="kbd-shortcut">F2</span> <span class="text-muted ms-2">파일 재귀 검색</span></div>
+          <div><span class="kbd-shortcut">F3</span> <span class="text-muted ms-2">Files 탭 + 루트 폴더</span></div>
+          <div><span class="kbd-shortcut">F4</span> <span class="text-muted ms-2">AI 탭 전환</span></div>
+          <div><span class="kbd-shortcut">F6</span> <span class="text-muted ms-2">SUPER 모드 토글 (터미널)</span></div>
+          <div><span class="kbd-shortcut">F7</span> <span class="text-muted ms-2">터미널 입력 바 포커스</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="feature-card p-4 h-100">
+        <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset me-2"></i>AI 패널 (사이드바)</h6>
+        <div class="d-flex flex-column gap-2">
+          <div><span class="kbd-shortcut">Tab</span> <span class="text-muted ms-2">사이드바 열기/닫기</span></div>
+          <div><span class="kbd-shortcut">1</span> / <span class="kbd-shortcut">2</span> / <span class="kbd-shortcut">3</span> <span class="text-muted ms-2">Chat / Terminal / Web 서브탭</span></div>
+          <div><span class="kbd-shortcut">↑</span> / <span class="kbd-shortcut">↓</span> <span class="text-muted ms-2">세션 리스트 탐색</span></div>
+          <div><span class="kbd-shortcut">→</span> <span class="text-muted ms-2">알림 세션으로 점프</span></div>
+          <div><span class="kbd-shortcut">←</span> <span class="text-muted ms-2">이전 세션 복귀</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="feature-card p-4 h-100">
+        <h6 class="mb-3"><i class="bi bi-terminal-fill me-2"></i>터미널</h6>
+        <div class="d-flex flex-column gap-2">
+          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">N</span> <span class="text-muted ms-2">새 터미널</span></div>
+          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">D</span> <span class="text-muted ms-2">현재 터미널 종료</span></div>
+          <div><span class="kbd-shortcut">Enter</span> <span class="text-muted ms-2">입력 전송</span></div>
+          <div><span class="kbd-shortcut">Ctrl</span>+<span class="kbd-shortcut">T</span> <span class="text-muted ms-2">맨 아래로 스크롤</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="feature-card p-4 h-100">
+        <h6 class="mb-3"><i class="bi bi-chat-dots me-2"></i>채팅</h6>
+        <div class="d-flex flex-column gap-2">
+          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">Enter</span> <span class="text-muted ms-2">새 줄 (전송 대신)</span></div>
+          <div><span class="kbd-shortcut">Esc</span> <span class="text-muted ms-2">자동완성 닫기</span></div>
+          <div><span class="kbd-shortcut">Tab</span> <span class="text-muted ms-2">자동완성 적용</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Start -->
+<div class="container py-4">
+  <h2 class="section-title text-center">시작하기</h2>
+  <p class="section-sub text-center">3단계로 바로 실행할 수 있습니다</p>
+  <div class="highlight-box text-center" style="max-width:700px; margin:0 auto;">
+    <div class="text-start font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;">
+      <div style="color:#8b949e;"># 1. 클론</div>
+      <div>git clone --recursive https://github.com/06fs4dix/Artgine-Agent.git</div>
+      <div style="color:#8b949e;margin-top:.5rem;"># 2. 설치</div>
+      <div>cd Artgine-Agent &amp;&amp; npm install</div>
+      <div style="color:#8b949e;margin-top:.5rem;"># 3. 실행</div>
+      <div>npm start <span style="color:#8b949e;"># → http://localhost:8050</span></div>
+    </div>
+    <p class="text-muted small mb-2">웹 서버만 실행하려면 <code class="cmd">npm run start_web [포트]</code></p>
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
+      <a href="https://github.com/06fs4dix/Artgine-Agent" class="btn btn-primary" target="_blank"><i class="bi bi-github"></i> GitHub</a>
+      <a href="https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html" class="btn btn-outline-light" target="_blank"><i class="bi bi-book"></i> 전체 튜토리얼</a>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer text-center">
+  <div class="container">
+    <strong>Artgine-Agent</strong> · <a href="https://github.com/06fs4dix/Artgine-Agent" class="text-muted" target="_blank">github.com/06fs4dix/Artgine-Agent</a><br>
+    <span class="text-muted">Built on</span> <a href="https://github.com/06fs4dix/Artgine" class="text-muted" target="_blank">Artgine Engine</a> <span class="text-muted">· MIT License</span>
+  </div>
+</footer>
+
+<script>
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

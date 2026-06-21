@@ -42,13 +42,13 @@ const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
 const LS_MODEL    = 'ai.model';
 // LS_SIDEBAR removed (sidebar moved to Home.ts)
-const LS_TOKEN    = 'artgine.token';
 
 import { CFecth } from "../../../artgine/network/CFecth.js";
 import { CPath } from "../../../artgine/basic/CPath.js";
+import { getAuthToken, setAuthToken, removeAuthToken } from "../../../artgine/server/CAuthToken.js";
 
 // ---- auth ----
-let authToken: string = localStorage.getItem(LS_TOKEN) || '';
+let authToken: string = getAuthToken(CPath.WebRootUrl());
 function isStandaloneChat(): boolean {
     return window.parent === window;
 }
@@ -58,7 +58,7 @@ function authedFetch(input: string, init?: RequestInit): Promise<Response> {
 }
 function clearAuth() {
     authToken = '';
-    localStorage.removeItem(LS_TOKEN);
+    removeAuthToken(CPath.WebRootUrl());
     showLoginOverlay('Session expired. Please sign in again.');
 }
 function showLoginOverlay(msg: string = '') {
@@ -595,7 +595,7 @@ async function tryLogin(pw: string) {
         const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as any;
         if (j.ok && j.token) {
             authToken = j.token;
-            localStorage.setItem(LS_TOKEN, authToken);
+            setAuthToken(CPath.WebRootUrl(), authToken);
             hideLoginOverlay();
             hideComposerLogin();
             if (isShareMode) {
@@ -683,7 +683,7 @@ async function init() {
             bootChat();
         } else {
             authToken = '';
-            localStorage.removeItem(LS_TOKEN);
+            removeAuthToken(CPath.WebRootUrl());
             showLoginOverlay();
         }
     } catch {

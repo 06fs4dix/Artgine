@@ -56,7 +56,7 @@ export class CWASM
             else if (WebAssembly && WebAssembly.validate) 
             {
                 try {
-                    await WebAssembly.compileStreaming(fetch(CPath.WebRootUrl()+"artgine/wasm/WASM_SIMD.wasm"));
+                    await WebAssembly.compileStreaming(fetch(CPath.WebRootArtgineUrl()+"artgine/wasm/WASM_SIMD.wasm"));
                     gSimd=true;
                 } catch (e) {
                     console.log("SIMD 미지원");

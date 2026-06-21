@@ -344,7 +344,7 @@ export class CUtilWeb {
 				gTSLoaded = true;
 				await new Promise((resolve, reject) => {
 					const script = document.createElement("script");
-					script.src = CPath.WebRootUrl() + "artgine/external/legacy/typescript.js";
+					script.src = CPath.WebRootArtgineUrl() + "artgine/external/legacy/typescript.js";
 					script.onload = resolve;
 					script.onerror = reject;
 					document.head.appendChild(script);

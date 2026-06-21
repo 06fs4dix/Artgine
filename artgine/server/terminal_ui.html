@@ -44,8 +44,22 @@ window.addEventListener('keydown', function(e) {
     var _enc = new TextEncoder();
     var _W = window.WebSocket;
     var _wsRef = null;
-    var _storedToken = localStorage.getItem('artgine.token');
-    if (!_storedToken) window.__READ_ONLY = true;
+
+    // 토큰 저장/마이그레이션 로직은 CAuthToken.ts(artgine/server/CAuthToken.ts)가 유일한 소스다.
+    // 이 인라인 스크립트는 type="module"이 될 수 없어(아래 WebSocket 몽키패치가 ttyd 본문 스크립트보다
+    // 먼저 동기 실행돼야 함 — module은 defer 취급되어 너무 늦게 실행됨) 동적 import()로 그 모듈만 불러와 쓴다.
+    // 키 문자열(CPath.WebRootUrl()과 동일한 "origin + 첫 경로 세그먼트")만 여기서 직접 계산한다
+    // — CPath.js를 불러오면 CUtil/LZ 등 부수 의존성이 줄줄이 따라오기 때문.
+    function _webRootUrl() {
+        var seg = window.location.pathname.split('/')[1] || '';
+        return window.location.protocol + '//' + window.location.host + '/' + seg + '/';
+    }
+    var _authTokenMod = null;
+    var _authTokenReady = import(window.location.origin + '/' + (window.location.pathname.split('/')[1] || '') + '/artgine/server/CAuthToken.js')
+        .then(function(m) { _authTokenMod = m; })
+        .catch(function(e) { console.error('[terminal_ui] CAuthToken.js load failed:', e); });
+
+    var _storedToken = '';
 
     function _PW(u, p) {
         var pr = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -69,7 +83,10 @@ window.addEventListener('keydown', function(e) {
         _wsRef.send(p);
     }
 
-    window.addEventListener("DOMContentLoaded", function() {
+    window.addEventListener("DOMContentLoaded", async function() {
+        await _authTokenReady;
+        _storedToken = _authTokenMod ? _authTokenMod.getAuthToken(_webRootUrl()) : '';
+        window.__READ_ONLY = !_storedToken;
         console.log('[terminal_ui] DOMContentLoaded — __TTYD_MODE:', window.__TTYD_MODE, '| __READ_ONLY:', window.__READ_ONLY, '| token:', !!_storedToken);
         if (window.__READ_ONLY) {
             var _bar = document.createElement('div');
@@ -97,7 +114,7 @@ window.addEventListener('keydown', function(e) {
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(j) {
-                    if (j.ok) { localStorage.setItem('artgine.token', j.token); location.reload(); }
+                    if (j.ok) { if (_authTokenMod) _authTokenMod.setAuthToken(_webRootUrl(), j.token); location.reload(); }
                     else { _msg.textContent = j.msg || 'Wrong password'; _btn.disabled = false; _pw.value = ''; _pw.focus(); }
                 })
                 .catch(function() { _msg.textContent = 'Connection failed'; _btn.disabled = false; });

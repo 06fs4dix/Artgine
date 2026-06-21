@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqlozpqu_2";
+gPF.mVersion = "mqntkohp_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -44,8 +44,8 @@ import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
+import { getAuthToken, setAuthToken, removeAuthToken } from "../../artgine/server/CAuthToken.js";
 import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg, CModalMusic } from "../../artgine/util/CModalUtil.js";
-import { CFile } from "../../artgine/system/CFile.js";
 import { CWebSocket } from '../../artgine/network/CWebSocket.js';
 import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
@@ -81,7 +81,6 @@ function warnIfDefaultAuthPassword(pw: string) {
 // ---- AI tab: session list ----
 // 토큰은 로그인 시 저장해두는 relog 자격증명일 뿐이며, 일반 요청 인증은
 // 같은 출처(same-origin) fetch가 자동 전송하는 세션 쿠키로 처리된다.
-const AI_TOKEN_KEY = 'artgine.token';
 
 const aiFrameContainer = CDOM.ID("ai-frame-container") as HTMLDivElement;
 const aiFramePlaceholder = CDOM.ID("ai-frame-placeholder") as HTMLDivElement;
@@ -102,6 +101,10 @@ let _activeNotifCallback: (() => void) | null = null;
 
 function isAiPanelActive(): boolean {
     return document.getElementById('ai-panel')?.classList.contains('active') === true;
+}
+
+function isRdpPanelActive(): boolean {
+    return document.getElementById('rdp-panel')?.classList.contains('active') === true;
 }
 
 function isAiAuthVisible(): boolean {
@@ -177,6 +180,31 @@ function isActiveFrame(key: string): boolean {
 const myAppContainerEl = document.querySelector('.container') as HTMLElement;
 const myTabBarEl = document.getElementById('myTab') as HTMLElement;
 const myTabContentEl = document.getElementById('myTabContent') as HTMLElement;
+const FILE_LIST_AUTHED_CLASS = 'file-list-authed';
+
+function installFileAuthIndicatorStyle() {
+    if (document.getElementById('file-auth-indicator-style')) return;
+    const style = document.createElement('style');
+    style.id = 'file-auth-indicator-style';
+    style.textContent = `
+        #File_div.${FILE_LIST_AUTHED_CLASS} {
+            outline: 2px solid #dc3545;
+            outline-offset: -2px;
+            border-radius: .375rem;
+            box-shadow: 0 0 0 .12rem rgba(220, 53, 69, .18);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function applyFileAuthIndicator(authed: boolean) {
+    const fileList = document.getElementById('File_div');
+    if (!fileList) return;
+    fileList.classList.toggle(FILE_LIST_AUTHED_CLASS, authed);
+    fileList.setAttribute('title', authed ? 'File admin authenticated' : '');
+}
+
+installFileAuthIndicatorStyle();
 
 function syncFrameContainerSize() {
     if (!myAppContainerEl || !myTabBarEl || !myTabContentEl) return;
@@ -205,12 +233,28 @@ function showTab(target: string) {
 // F1~F4 전역 단축키. iframe keydown·postMessage·document keydown 세 진입점에서 공용으로 호출한다.
 function runHomeHotkey(key: string): boolean {
     switch (key) {
-        case 'F1': FileBtn(); return true;
-        case 'F2': FileSearch(); return true;
-        case 'F3': showTab('file-tab'); FolderCD('/'); return true;
+        case 'F1': showTab('file-tab'); FileBtn(); return true;
+        case 'F2': showTab('file-tab'); FileSearch(); return true;
+        case 'F3': showTab('rdp-tab'); return true;
         case 'F4': showTab('ai-tab'); return true;
     }
     return false;
+}
+
+// 화면 캡처 폴링을 하는 iframe(browser:, rdp:)에 표시 여부를 알려준다.
+// display:none 토글은 iframe 내부 document의 visibilitychange를 발생시키지 않으므로 postMessage로 직접 알린다.
+function postFrameVisible(f: HTMLIFrameElement | null | undefined, visible: boolean) {
+    try { f?.contentWindow?.postMessage({ type: 'frame-visibility', visible }, '*'); } catch (_) {}
+}
+
+function isAiTabActive(): boolean { return CDOM.ID('ai-tab').classList.contains('active'); }
+function isBrowserSubtabActive(): boolean { return CDOM.ID('ai-browser-subtab').classList.contains('active'); }
+
+// browser: 세션 iframe은 ai-tab과 ai-browser-subtab이 둘 다 활성 상태여야 실제로 보이는 상태다.
+function updateBrowserFrameVisibility() {
+    if (!activeFrameKey?.startsWith('browser:')) return;
+    const f = iframePool.get(activeFrameKey);
+    postFrameVisible(f, isAiTabActive() && isBrowserSubtabActive());
 }
 
 function showFrame(key: string, src: string): HTMLIFrameElement {
@@ -255,11 +299,15 @@ function showFrame(key: string, src: string): HTMLIFrameElement {
     }
     if (activeFrameKey && activeFrameKey !== key) {
         const prev = iframePool.get(activeFrameKey);
-        if (prev) prev.style.display = 'none';
+        if (prev) {
+            prev.style.display = 'none';
+            if (activeFrameKey.startsWith('browser:')) postFrameVisible(prev, false);
+        }
     }
     f.style.display = 'block';
     activeFrameKey = key;
     updateFramePlaceholder();
+    if (key.startsWith('browser:')) updateBrowserFrameVisibility();
     return f;
 }
 
@@ -336,7 +384,7 @@ function aiLoadSession(sid: string) {
 
 async function aiRefreshSessions() {
     if (document.querySelector('.dropdown-menu.show')) return;
-    const token = localStorage.getItem(AI_TOKEN_KEY);
+    const token = getAuthToken(CPath.WebRootUrl());
     if (!token) {
         aiSessionList.innerHTML = '<div class="text-center text-secondary small p-3">Please sign in from AI Chat first.</div>';
         return;
@@ -344,8 +392,8 @@ async function aiRefreshSessions() {
     try {
         const r = await authedFetch(CPath.WebRootUrl() + 'ai/chat/sessions?limit=30');
         if (r.status === 401) {
-            localStorage.removeItem(AI_TOKEN_KEY);
-            fileAuthed = false;
+            removeAuthToken(CPath.WebRootUrl());
+            refreshFileAuthState();
             aiShowAuthOrLoad();
             return;
         }
@@ -477,7 +525,6 @@ function chatStartNew(initialWorkingDir?: string) {
 }
 
 // ---- Terminal session management ----
-const CMD_TOKEN_KEY = 'artgine.token';
 const termNewBtn = CDOM.ID("termNewBtn");
 const termSessionList = CDOM.ID("termSessionList");
 let termActivePort: number | null = null;
@@ -498,7 +545,7 @@ function syncSessState(id: string, cur: SessState, onDone: () => void, onWait?: 
 
 
 async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode' = 'cmd', initialWorkingDir?: string) {
-    const token = localStorage.getItem(CMD_TOKEN_KEY);
+    const token = getAuthToken(CPath.WebRootUrl());
     if (token) {
         try {
             const r = await authedFetch(CPath.WebRootUrl() + 'cmd/sessions');
@@ -1084,6 +1131,9 @@ window.addEventListener('message', (e) => {
     if (e.data?.type === 'terminal-tab-key') {
         handleTabKey();
     }
+    if (e.data?.type === 'rdp-tab-key') {
+        if (isRdpPanelActive()) handleRdpTabKey();
+    }
     if (e.data?.type === 'terminal-arrow-key') {
         if (e.data.key === 'ArrowLeft') goPrevFrame();
         else if (e.data.key === 'ArrowUp') goNextSession(-1);
@@ -1204,6 +1254,11 @@ aiSidebarToggleBtn.addEventListener('click', toggleSidebar);
 document.addEventListener('keydown', (e) => {
     if (isAiPanelActive() && isAiAuthVisible()) return;
     if (e.key === 'Tab') {
+        if (isRdpPanelActive()) {
+            e.preventDefault();
+            handleRdpTabKey();
+            return;
+        }
         if (!isAiPanelActive()) return;
         e.preventDefault();
         handleTabKey();
@@ -1252,18 +1307,20 @@ const aiAuthSubmitBtn = CDOM.ID("aiAuthSubmitBtn") as HTMLButtonElement;
 aiAuthOverlay.addEventListener('keydown', (e) => e.stopPropagation());
 
 async function aiCheckAuth(): Promise<boolean> {
-    const token = localStorage.getItem(AI_TOKEN_KEY) || '';
+    const token = getAuthToken(CPath.WebRootUrl());
     if (!token) return false;
     try {
         const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/check", { token }, "json") as any;
-        return !!j?.authed;
+        const authed = !!j?.authed;
+        if (!authed) removeAuthToken(CPath.WebRootUrl());
+        return authed;
     } catch { return false; }
 }
 
 async function aiShowAuthOrLoad() {
     const authed = await aiCheckAuth();
     if (!authed) {
-        fileAuthed = false;
+        refreshFileAuthState();
         const wasVisible = aiAuthOverlay.style.display === 'flex';
         aiAuthOverlay.style.display = 'flex';
         if (!wasVisible) {
@@ -1272,7 +1329,7 @@ async function aiShowAuthOrLoad() {
             setTimeout(() => aiAuthPwInput.focus(), 50);
         }
     } else {
-        fileAuthed = true;
+        refreshFileAuthState();
         aiAuthOverlay.style.display = 'none';
         aiRefreshSessions();
         termRefreshSessions();
@@ -1287,8 +1344,8 @@ async function aiDoAuth() {
     try {
         const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as any;
         if (j.ok) {
-            localStorage.setItem(AI_TOKEN_KEY, j.token);
-            fileAuthed = true;
+            setAuthToken(CPath.WebRootUrl(), j.token);
+            refreshFileAuthState();
             aiAuthOverlay.style.display = 'none';
             aiRefreshSessions();
             termRefreshSessions();
@@ -1522,6 +1579,173 @@ browserNewBtn.addEventListener('click', () => {
     }, MODAL_DOM_DELAY);
 });
 
+// ---- RDP tab: local / remote desktop screen viewer ----
+// AI 탭의 iframe pool과는 별개로, RDP 탭 자신의 frame-container를 위한 독립된 풀을 둔다.
+const rdpFrameContainer = CDOM.ID("rdp-frame-container") as HTMLDivElement;
+const rdpFramePlaceholder = CDOM.ID("rdp-frame-placeholder") as HTMLDivElement;
+const rdpSessionList = CDOM.ID("rdpSessionList") as HTMLDivElement;
+const rdpAddUrlInput = CDOM.ID("rdpAddUrlInput") as HTMLInputElement;
+const rdpAddBtn = CDOM.ID("rdpAddBtn") as HTMLButtonElement;
+const rdpIframePool = new Map<string, HTMLIFrameElement>();
+let activeRdpFrameKey: string | null = null;
+
+function updateRdpFramePlaceholder() {
+    rdpFramePlaceholder.style.display = activeRdpFrameKey ? 'none' : '';
+}
+
+function isRdpTabActive(): boolean { return CDOM.ID('rdp-tab').classList.contains('active'); }
+
+function updateRdpFrameVisibility() {
+    if (!activeRdpFrameKey) return;
+    postFrameVisible(rdpIframePool.get(activeRdpFrameKey), isRdpTabActive());
+}
+
+function showRdpFrame(key: string, src: string): HTMLIFrameElement {
+    let f = rdpIframePool.get(key);
+    if (!f) {
+        f = document.createElement('iframe');
+        f.src = src;
+        f.style.display = 'none';
+        rdpFrameContainer.appendChild(f);
+        rdpIframePool.set(key, f);
+    }
+    if (activeRdpFrameKey && activeRdpFrameKey !== key) {
+        const prev = rdpIframePool.get(activeRdpFrameKey);
+        if (prev) {
+            prev.style.display = 'none';
+            postFrameVisible(prev, false);
+        }
+    }
+    f.style.display = 'block';
+    activeRdpFrameKey = key;
+    updateRdpFramePlaceholder();
+    updateRdpFrameVisibility();
+    return f;
+}
+
+function focusActiveRdpFrame() {
+    if (!activeRdpFrameKey) return;
+    const f = rdpIframePool.get(activeRdpFrameKey);
+    if (!f) return;
+    try {
+        f.contentWindow?.focus();
+        const inputTarget = f.contentDocument?.querySelector<HTMLElement>('#imgWrap');
+        if (inputTarget) {
+            inputTarget.focus();
+            return;
+        }
+    } catch (_) {}
+    f.focus();
+}
+
+interface IRdpRemote { url: string; }
+// 임시 목록(현재 세션 동안만 유지) — 저장/로드는 추후 추가 예정.
+let rdpRemotes: IRdpRemote[] = [];
+
+function rdpRenderList() {
+    rdpSessionList.innerHTML = '';
+
+    const localItem = document.createElement('div');
+    localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+        + (activeRdpFrameKey === 'rdp:local' ? ' bg-primary-subtle' : '');
+    localItem.innerHTML = `<i class="bi bi-pc-display"></i><span class="flex-grow-1">Local</span>`;
+    localItem.addEventListener('click', () => rdpOpenLocal());
+    rdpSessionList.appendChild(localItem);
+
+    rdpRemotes.forEach((r, i) => {
+        const key = `rdp:remote:${i}`;
+        const item = document.createElement('div');
+        item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+            + (activeRdpFrameKey === key ? ' bg-primary-subtle' : '');
+        item.innerHTML = `
+            <i class="bi bi-hdd-network"></i>
+            <span class="flex-grow-1 text-truncate small">${aiEscapeHtml(r.url)}</span>
+            <button type="button" class="rdp-remote-del btn btn-sm btn-link text-danger p-0" title="Remove"><i class="bi bi-trash"></i></button>
+        `;
+        item.addEventListener('click', (e: Event) => {
+            if ((e.target as HTMLElement).closest('.rdp-remote-del')) return;
+            rdpOpenRemote(i);
+        });
+        item.querySelector('.rdp-remote-del')?.addEventListener('click', (e: Event) => {
+            e.stopPropagation();
+            rdpRemotes.splice(i, 1);
+            rdpRenderList();
+        });
+        rdpSessionList.appendChild(item);
+    });
+}
+
+async function rdpOpenLocal() {
+    try {
+        await ConnectFileHomeUrl();
+    } catch (e: any) {
+        CAlert.E("Connect failed: " + (e?.message ?? String(e)));
+        return;
+    }
+    showRdpFrame('rdp:local', './AI/RemoteDesktop.html');
+    rdpRenderList();
+}
+
+// 원격 항목 클릭: File 탭의 ConnectFileHomeUrl과 동일한 방식으로 File 탭 컨텍스트만 전환하고,
+// RDP 메인 화면에는 그 서버 자신의 RemoteDesktop.html을 로드해 해당 서버의 화면을 보여준다.
+async function rdpOpenRemote(index: number) {
+    const remote = rdpRemotes[index];
+    if (!remote) return;
+    try {
+        await ConnectFileHomeUrl(remote.url);
+    } catch (e: any) {
+        CAlert.E("Connect failed: " + (e?.message ?? String(e)));
+        return;
+    }
+    const webRootUrl = ParseFileHomeUrl(remote.url).webRootUrl;
+    showRdpFrame(`rdp:remote:${index}`, `${webRootUrl}proj/Home/AI/RemoteDesktop.html`);
+    rdpRenderList();
+}
+
+rdpAddBtn.addEventListener('click', () => {
+    const input = rdpAddUrlInput.value.trim();
+    if (!input) return;
+    rdpRemotes.push({ url: input });
+    rdpAddUrlInput.value = '';
+    rdpRenderList();
+});
+rdpAddUrlInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') rdpAddBtn.click(); });
+
+const rdpSidebarEl = CDOM.ID("rdp-sidebar") as HTMLDivElement;
+const rdpSidebarToggleBtn = CDOM.ID("rdpSidebarToggle") as HTMLButtonElement;
+const rdpSidebarOffcanvas = new (window as any).bootstrap.Offcanvas(rdpSidebarEl, { backdrop: false, scroll: true });
+rdpSidebarEl.addEventListener('shown.bs.offcanvas', () => {
+    rdpSidebarToggleBtn.querySelector('i')!.className = 'bi bi-layout-sidebar-inset';
+});
+rdpSidebarEl.addEventListener('hidden.bs.offcanvas', () => {
+    rdpSidebarToggleBtn.querySelector('i')!.className = 'bi bi-layout-sidebar';
+});
+rdpSidebarEl.style.transition = 'none';
+rdpSidebarOffcanvas.show();
+requestAnimationFrame(() => { rdpSidebarEl.style.transition = ''; });
+function toggleRdpSidebar() {
+    const wasShown = rdpSidebarEl.classList.contains('show');
+    rdpSidebarOffcanvas.toggle();
+    setTimeout(() => wasShown ? focusActiveRdpFrame() : rdpSidebarEl.focus(), 0);
+}
+function handleRdpTabKey() {
+    toggleRdpSidebar();
+}
+rdpSidebarToggleBtn.addEventListener('click', toggleRdpSidebar);
+
+let rdpInited = false;
+function rdpInitIfNeeded() {
+    if (rdpInited) return;
+    rdpInited = true;
+    rdpRenderList();
+    rdpOpenLocal();
+}
+CDOM.ID("rdp-tab").addEventListener("shown.bs.tab", () => { rdpInitIfNeeded(); updateRdpFrameVisibility(); });
+CDOM.ID("rdp-tab").addEventListener("hidden.bs.tab", () => updateRdpFrameVisibility());
+// rdpOpenLocal()이 g_fileWebRootUrl(파일 하단에서 선언됨)을 참조하므로, 모듈 평가가 끝난
+// 뒤로 미뤄서 호출한다(그대로 동기 호출하면 TDZ로 'g_fileWebRootUrl' 참조 에러가 난다).
+if (CDOM.ID("rdp-panel").classList.contains("show")) queueMicrotask(() => rdpInitIfNeeded());
+
 function showAiTermSubtab() {
     showTab('ai-term-subtab');
 }
@@ -1532,7 +1756,11 @@ CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
     if (isFirstInit) openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
+    updateBrowserFrameVisibility();
 });
+CDOM.ID("ai-tab").addEventListener("hidden.bs.tab", () => updateBrowserFrameVisibility());
+CDOM.ID("ai-browser-subtab").addEventListener("shown.bs.tab", () => updateBrowserFrameVisibility());
+CDOM.ID("ai-browser-subtab").addEventListener("hidden.bs.tab", () => updateBrowserFrameVisibility());
 // also init if AI tab is the restored last-active tab
 if (CDOM.ID("ai-panel").classList.contains("show")) {
     aiInited = true;
@@ -1603,7 +1831,7 @@ const downUrl = (fl: DirEntry) => gDown + gPath + fl.name;
 // 에디터(텍스트/HTML/시트)에서 저장 콜백 공용. base64를 그대로 업로드한다.
 function saveEditedFile(filePath: string, base64: string) {
     const fileName = filePath.split('/').pop();
-    CFecth.Exe(FileApiUrl("File/Upload"), { path: gRoot + gPath, name: [fileName], data: [base64] })
+    CFecth.Exe(FileApiUrl("File/Upload"), FileParam({ path: gRoot + gPath, name: [fileName], data: [base64] }))
         .then(() => CAlert.Info('저장 완료'))
         .catch((e: any) => CAlert.E('저장 실패: ' + e.message));
 }
@@ -1614,7 +1842,7 @@ function openFolder(fl: DirEntry) {
         const p2: any = { path: gPath + fl.name + "/" };
         if (RootPath) p2.RootPath = RootPath;
         if (RootUrl)  p2.RootUrl = RootUrl;
-        CFecth.Exe(FileApiUrl("File/List"), p2, "json").then((data: {"list","RootPath","path","RootUrl"}) => {
+        CFecth.Exe(FileApiUrl("File/List"), FileParam(p2), "json").then((data: {"list","RootPath","path","RootUrl"}) => {
             CAlert.Info(gPath + fl.name + "추가");
             for (const fl2 of data.list as Array<DirEntry>) {
                 if (fl.name == fl2.name) continue;
@@ -1753,12 +1981,30 @@ function DirListRefresh()
     CDOM.ID("Delete_div").append(CDOM.DataToDom(fileList));
 }
 
+// F1 File Manager에서 마지막으로 고른 루트를 기억해뒀다가, URL 쿼리(path/RootPath/RootUrl)가 없는
+// 일반 진입 시에는 그 값을 기본 선택으로 복원한다.
+const FILE_ROOT_KEY = 'artgine.fileRoot';
+function loadPersistedFileRoot(): { RootPath: string | null, RootUrl: string | null } {
+    try {
+        const v = JSON.parse(localStorage.getItem(FILE_ROOT_KEY) || '{}');
+        return { RootPath: v.RootPath ?? null, RootUrl: v.RootUrl ?? null };
+    } catch { return { RootPath: null, RootUrl: null }; }
+}
+function savePersistedFileRoot(rootPath: string | null, rootUrl: string | null) {
+    try { localStorage.setItem(FILE_ROOT_KEY, JSON.stringify({ RootPath: rootPath, RootUrl: rootUrl })); } catch {}
+}
+const _persistedFileRoot = loadPersistedFileRoot();
+
 let path=CUtilWeb.Parameter("path");
-let RootPath=CUtilWeb.Parameter("RootPath");
-let RootUrl=CUtilWeb.Parameter("RootUrl");
+let RootPath=CUtilWeb.Parameter("RootPath") ?? _persistedFileRoot.RootPath;
+let RootUrl=CUtilWeb.Parameter("RootUrl") ?? _persistedFileRoot.RootUrl;
 let g_fileWebRootUrl = CPath.WebRootUrl();
 
-let fileAuthed = !!localStorage.getItem(AI_TOKEN_KEY);
+let fileAuthed = !!getAuthToken(g_fileWebRootUrl);
+function setFileAuthed(authed: boolean) {
+    fileAuthed = authed;
+    applyFileAuthIndicator(authed);
+}
 
 // ---- 파일 브라우저 상태 (이전 window["g_*"] 전역을 타입 있는 모듈 변수로 대체) ----
 interface DirEntry { hidden: boolean; file: boolean; name: string; ext: string; open: boolean; index: number; Status?: string; }
@@ -1789,20 +2035,21 @@ function FileApiUrl(path: string): string {
     return g_fileWebRootUrl + path.replace(/^\/+/, '');
 }
 
-function FileTokenKey(): string {
-    return `artgine.token:${g_fileWebRootUrl}`;
-}
-
 function GetFileToken(): string {
-    return localStorage.getItem(FileTokenKey()) || localStorage.getItem(AI_TOKEN_KEY) || '';
+    return getAuthToken(g_fileWebRootUrl);
 }
 
 function SetFileToken(token: string) {
-    localStorage.setItem(FileTokenKey(), token);
-    localStorage.setItem(AI_TOKEN_KEY, token);
+    setAuthToken(g_fileWebRootUrl, token);
 }
 
-// 현재 접속된 서버 기준 Home.html URL(주소)을 재구성한다. FileServerGuide.md의 `## 주소` 형식과 동일.
+// File/* 요청 본문에 토큰을 동봉한다. 다른 origin(원격 서버)으로 보내는 cross-origin
+// fetch는 쿠키가 기본적으로 첨부되지 않으므로, 서버가 토큰 우선으로 인증할 수 있게 한다.
+function FileParam(extra: object = {}): object {
+    return { ...extra, token: GetFileToken() };
+}
+
+// 현재 접속된 서버 기준 Home.html URL(주소)을 재구성한다. RemoteCMDGuide.md의 `## 주소` 형식과 동일.
 function BuildFileHomeUrl(): string {
     const base = g_fileWebRootUrl.replace(/\/+$/, '');
     let url = base + "/proj/Home/Home.html";
@@ -1814,14 +2061,15 @@ function BuildFileHomeUrl(): string {
     return url;
 }
 
-// 인증 성공 직후 호출. 현재 인증한 서버의 주소/토큰을 "현재 구동 중인(페이지가 떠 있는)" 서버로 보내 ai/FileServerGuide.md를 갱신한다.
+// RDP 사이드바에서 원격 서버로 전환되어 인증이 확인됐을 때(refreshFileAuthState) 호출된다.
+// 그 원격 서버의 주소/토큰을 "현재 구동 중인(페이지가 떠 있는)" 서버로 보내 ai/RemoteCMDGuide.md를 갱신한다.
 // (리모트 서버 자신에게 보내면 로컬 AI가 볼 수 없는 파일이 갱신되므로 의미가 없다 — g_fileWebRootUrl이 아니라 CPath.WebRootUrl()로 보낸다.)
 async function SendRemoteGuide(token: string) {
     try {
-        await CFecth.Exe(CPath.WebRootUrl() + "File/Remote", { addr: BuildFileHomeUrl(), token }, "json");
+        await CFecth.Exe(CPath.WebRootUrl() + "RemoteCMD/Write", { addr: BuildFileHomeUrl(), token }, "json");
     } catch (e) {
         // 가이드 갱신 실패는 인증 흐름에 영향을 주지 않는다.
-        console.error("File/Remote update failed:", e);
+        console.error("RemoteCMD/Write update failed:", e);
     }
 }
 
@@ -1842,6 +2090,20 @@ async function fileCheckAuth(): Promise<boolean> {
     } catch { return false; }
 }
 
+async function refreshFileAuthState() {
+    const checkedWebRootUrl = g_fileWebRootUrl;
+    const hasToken = !!GetFileToken();
+    fileAuthed = hasToken;
+    applyFileAuthIndicator(false);
+    if (!hasToken) return;
+    const valid = await fileCheckAuth();
+    if (!valid) removeAuthToken(checkedWebRootUrl);
+    if (checkedWebRootUrl !== g_fileWebRootUrl) return;
+    setFileAuthed(valid);
+    // RDP 사이드바에서 원격 서버로 전환해 인증이 확인된 시점에 가이드를 갱신한다(로컬 자기 자신은 대상이 아님).
+    if (valid && checkedWebRootUrl !== CPath.WebRootUrl()) SendRemoteGuide(GetFileToken());
+}
+
 async function InitFileRoot() {
     const rootParam: any = {};
     if(RootPath) rootParam.RootPath = RootPath;
@@ -1854,7 +2116,7 @@ async function FetchFileList(_path) {
     let fetchParam: any = {path:_path};
     if(RootPath) fetchParam.RootPath = RootPath;
     if(RootUrl)  fetchParam.RootUrl = RootUrl;
-    return await CFecth.Exe(FileApiUrl("File/List"), fetchParam, "json") as {"list","RootPath","path","RootUrl"};
+    return await CFecth.Exe(FileApiUrl("File/List"), FileParam(fetchParam), "json") as {"list","RootPath","path","RootUrl"};
 }
 
 async function LoadFileList(_path) {
@@ -1900,6 +2162,7 @@ async function ConnectFileHomeUrl(input?: string) {
         throw err;
     }
     await LoadFileList(path);
+    refreshFileAuthState();
 }
 window["ConnectFileHomeUrl"] = ConnectFileHomeUrl;
 
@@ -1939,7 +2202,7 @@ function Redirection(_multi : boolean)
     var form = CDOM.ID("ThisPage") as HTMLFormElement;
     form.setAttribute("charset", "UTF-8");
     form.setAttribute("method", "Post");
-    // 폼 전송도 같은 출처라 세션 쿠키가 자동 전송된다.
+    // 원격 서버로 보낼 수도 있어 쿠키에 의존하지 않고 hidden input(token)으로 직접 인증한다.
     form.setAttribute("action", FileApiUrl("File/Redirection"));
 
     CDOM.IDValue("fun",g_fun);
@@ -1948,7 +2211,8 @@ function Redirection(_multi : boolean)
     CDOM.IDValue("path",gPath);
     CDOM.IDValue("RootPath", RootPath ?? "");
     CDOM.IDValue("RootUrl", RootUrl ?? "");
-    
+    CDOM.IDValue("redirToken", GetFileToken());
+
     form.submit();
 }
 window["Redirection"]=Redirection;
@@ -1969,6 +2233,7 @@ var g_menuList={"<>":"div","class":"d-flex align-items-center p-1","html":[
         {"<>":"input","type":"hidden","id":"path","name":"path"},
         {"<>":"input","type":"hidden","id":"RootPath","name":"RootPath"},
         {"<>":"input","type":"hidden","id":"RootUrl","name":"RootUrl"},
+        {"<>":"input","type":"hidden","id":"redirToken","name":"token"},
     ]},
     {"<>":"input","type":"file","multiple":"multiple","id":"uploadBtn","name":"uploadBtn","style":"display:none"},
     {"<>":"div","class":"d-flex align-items-center gap-1","html":[
@@ -1992,11 +2257,12 @@ async function FileBtn() {
         // 서버 토큰 유효성 검증 (서버 재시작 시 메모리 토큰 초기화됨)
         const valid = await fileCheckAuth();
         if (valid) {
+            setFileAuthed(true);
             showFileAdminModal();
             return;
         }
         // 토큰 만료/무효 → 재인증 필요
-        fileAuthed = false;
+        setFileAuthed(false);
     }
     const dlg = new CConfirm();
     dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
@@ -2005,8 +2271,7 @@ async function FileBtn() {
         (CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
             if (j.ok) {
                 SetFileToken(j.token!);
-                SendRemoteGuide(j.token!);
-                fileAuthed = true;
+                setFileAuthed(true);
                 aiAuthOverlay.style.display = 'none';
                 aiRefreshSessions();
                 termRefreshSessions();
@@ -2053,11 +2318,6 @@ function showFileAdminModal() {
     modal.SetCloseToHide(false);
     modal.SetBody(`
         <div class="d-flex flex-column gap-2 p-2" style="width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
-            <div class="d-flex gap-1 align-items-center">
-                <input type="text" class="form-control form-control-sm flex-shrink-0" id="fileHomeUrl" placeholder="Home.html URL" style="width:140px;min-width:0;flex:0 0 140px;">
-                <button type="button" class="btn btn-outline-primary btn-sm flex-shrink-0" id="fileHomeConnect_${uid}">Connect</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="fileHomeLocal_${uid}">Local</button>
-            </div>
             <select id="fadm_rootsel_${uid}" class="form-select form-select-sm" style="width:100%;min-width:0;">${_rootOpts}</select>
             <div class="d-flex gap-1 align-items-center">
                 <span class="small text-secondary flex-shrink-0" title="Find from current path"><i class="bi bi-folder2-open"></i> PathTo</span>
@@ -2103,33 +2363,9 @@ function showFileAdminModal() {
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-        const fileHomeInput = document.getElementById("fileHomeUrl") as HTMLInputElement | null;
-        const connectBtn = document.getElementById(`fileHomeConnect_${uid}`);
-        const localBtn = document.getElementById(`fileHomeLocal_${uid}`);
-
-        // 접속(원격/로컬) 후 파일 매니저 창을 닫고, 새 접속지 권한을 다시 받도록 퍼미션 창을 띄운다.
-        const connectAndReauth = async (input?: string) => {
-            try {
-                await ConnectFileHomeUrl(input || undefined);
-            } catch (e: any) {
-                CAlert.E("Connect failed: " + (e?.message ?? String(e)));
-                return;
-            }
-            modal.Close();
-            fileAuthed = false;
-            FileBtn();
-        };
-
-        connectBtn?.addEventListener('click', () => {
-            connectAndReauth(fileHomeInput?.value.trim() || undefined);
-        });
-        localBtn?.addEventListener('click', () => {
-            if (fileHomeInput) fileHomeInput.value = "";
-            connectAndReauth();
-        });
-
         const applyValues = async (rootPath: string, rootUrl?: string) => {
             SyncFileRoot({ RootPath: rootPath || null, RootUrl: rootUrl ?? null });
+            savePersistedFileRoot(rootPath || null, rootUrl ?? null);
             // 루트 리스트가 자기 url을 들고 오면 그대로 사용, 없으면(예: WorkingPath) 서버에서 받아온다.
             if (!rootUrl) await InitFileRoot();
             FolderCD("/");
@@ -2155,6 +2391,7 @@ function showFileAdminModal() {
         });
         // RootUrl은 "로컬 리소스 루트 선택"에도 채워지므로 원격 판단 기준으로 쓰면 안 된다.
         // 진짜 원격 서버 접속 여부는 g_fileWebRootUrl이 로컬 WebRootUrl과 다른지로만 판별한다.
+        // 원격 연결은 File 탭에만 영향을 주어야 하므로, Chat/Term은 원격 상태일 때 cwd를 비워 전달받지 않는다.
         const isRemoteServer = () => g_fileWebRootUrl !== CPath.WebRootUrl();
         document.getElementById(`fadm_chat_${uid}`)?.addEventListener('click', () => {
             modal.Close();
@@ -2175,7 +2412,7 @@ function showFileAdminModal() {
 
         document.getElementById(`fadm_vcs_diff_${uid}`)?.addEventListener('click', () => openVcsDiff(vcsPath()));
         document.getElementById(`fadm_vcs_update_${uid}`)?.addEventListener('click', async () => {
-            const res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "update", path: vcsPath() }, "json") as any;
+            const res = await CFecth.Exe(FileApiUrl("File/VCS"), FileParam({ action: "update", path: vcsPath() }), "json") as any;
             const revLine = res.revision ? `<br><b>Revision: ${res.revision}</b>` : '';
             const msgBody = res.msg ? res.msg.replace(/\n/g, '<br>') : (res.ok ? 'Update complete' : 'Update failed');
             CAlert.Info(msgBody + revLine);
@@ -2305,13 +2542,13 @@ function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
         async (files, message) => {
             const param: any = { action, path, files };
             if (action === 'commit') param.message = message;
-            const res = await CFecth.Exe(FileApiUrl("File/VCS"), param, "json") as any;
+            const res = await CFecth.Exe(FileApiUrl("File/VCS"), FileParam(param), "json") as any;
             if (res.ok) FolderCD(gPath);
             return { result: res.msg || (res.ok ? 'Done' : 'Failed'), refresh: res.ok };
         },
         action === 'commit',
         async () => {
-            const res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "status", path }, "json") as any;
+            const res = await CFecth.Exe(FileApiUrl("File/VCS"), FileParam({ action: "status", path }), "json") as any;
             if (!res.ok) return [];
             const items = res.items as {status: string, file: string}[];
             // SVN의 '?'(미버전) 파일은 svn add 전엔 커밋 대상이 아니므로 commit 목록에서 제외
@@ -2330,7 +2567,7 @@ function openVcsModal(action: 'add' | 'revert' | 'commit', path: string) {
 async function openVcsDiff(filePath: string) {
     let res: any;
     try {
-        res = await CFecth.Exe(FileApiUrl("File/VCS"), { action: "diff", path: filePath }, "json");
+        res = await CFecth.Exe(FileApiUrl("File/VCS"), FileParam({ action: "diff", path: filePath }), "json");
     } catch (e) {
         CAlert.Info("Diff request failed"); return;
     }
@@ -2374,7 +2611,7 @@ function openDeleteModal() {
             for (const name of names) {
                 const param: any = { data: gPath + name };
                 if (RootPath) param.RootPath = RootPath;
-                const res = await CFecth.Exe(FileApiUrl("File/Delete"), param, "json") as any;
+                const res = await CFecth.Exe(FileApiUrl("File/Delete"), FileParam(param), "json") as any;
                 lines.push(`${res.ok ? 'OK' : 'FAIL'} ${name}`);
             }
             FolderCD(gPath);
@@ -2398,7 +2635,7 @@ function CreateFolder()
         const data = gPath + folderName;
         const param: any = { data };
         if (RootPath) param.RootPath = RootPath;
-        const j = await CFecth.Exe(FileApiUrl("File/Mkdir"), param, "json") as any;
+        const j = await CFecth.Exe(FileApiUrl("File/Mkdir"), FileParam(param), "json") as any;
         if (j?.ok) FolderCD(gPath);
         else CAlert.E("폴더 생성 실패");
     },
@@ -2515,7 +2752,7 @@ async function FileSearch() {
                 let p2: any = { path: dirPath };
                 if (RootPath) p2.RootPath = RootPath;
                 if (RootUrl)  p2.RootUrl  = RootUrl;
-                const data = await CFecth.Exe(FileApiUrl("File/List"), p2, "json") as { list: Array<SrchFile> };
+                const data = await CFecth.Exe(FileApiUrl("File/List"), FileParam(p2), "json") as { list: Array<SrchFile> };
                 g_srchCache.set(dirPath, data.list);
                 for (const fl of data.list) {
                     if (!fl.hidden && !fl.file && !isSearchExcluded(fl.name)) queue.push(dirPath + fl.name + '/');
@@ -2603,7 +2840,7 @@ CDOM.ID("uploadBtn").onchange=async (e)=>{
         try {
             const name=fi.files[i].name;
             const data=await readAsBase64(fi.files[i]);
-            await CFecth.Exe(FileApiUrl("File/Upload"),{data:[data],name:[name],path});
+            await CFecth.Exe(FileApiUrl("File/Upload"), FileParam({data:[data],name:[name],path}));
         } catch(err: any) {
             CAlert.E('Upload failed: ' + (err?.message ?? String(err)));
             return;
@@ -2689,17 +2926,6 @@ window["NextPhoto"]=NextPhoto;
 
 
 
-let lan=CUtil.Language();
-let buf=CFile.Load("../../README-"+lan+".md").then(async ()=>{
-    if(buf==null || lan=="en")  lan="";
-    else lan="-"+lan;
-    CDOM.ID("main").innerHTML="";
-    CDOM.ID("main").append(await CUtilWeb.MDReader("../../README"+lan+".md"));
-});
-
-
-
-
 
 // ==================================================================================================================
 // 로그인 (CSing)
@@ -2763,6 +2989,25 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
     dlInited = true;
     MountDownloadTab("download-root");
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

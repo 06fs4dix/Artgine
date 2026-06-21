@@ -3,7 +3,7 @@ import { CUtil } from "../basic/CUtil.js";
 import { URLPatterns } from "../network/CServerMain.js";
 import { CFile } from "../system/CFile.js";
 import { Request, Response } from 'express';
-import { CAuthServer, isAuthedReq } from './CAuthServer.js';
+import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -121,11 +121,14 @@ function applyVcsStatus(
     });
 }
 
-@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS", "/File/CMD", "/File/Remote"])
+@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS"])
 export class CFileServer extends CAuthServer
 {
-    private IsAuth(req: Request): boolean {
-        return isAuthedReq(req);
+    // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
+    // cross-origin(다른 origin 서버를 다루는) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
+    private IsAuth(_json: CJSON, req: Request): boolean {
+        const token = _json.GetStr('token');
+        return token ? isValidToken(token) : isAuthedReq(req);
     }
 
     constructor()
@@ -139,8 +142,6 @@ export class CFileServer extends CAuthServer
         this.On("/File/Delete", this.onDelete.bind(this));
         this.On("/File/Upload", this.onUpload.bind(this));
         this.On("/File/VCS", this.onVCS.bind(this));
-        this.On("/File/CMD", this.onCmd.bind(this));
-        this.On("/File/Remote", this.onRemote.bind(this));
     }
 
     async onRoot(_json: CJSON, _req: Request, _res: Response): Promise<string> {
@@ -174,7 +175,7 @@ export class CFileServer extends CAuthServer
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
 
         if (fun?.includes("CreateFolder") || fun?.includes("Delete") || fun?.includes("SoundPlayList")) {
-            if (!this.IsAuth(_req)) {
+            if (!this.IsAuth(_json, _req)) {
                 _res.status(403);
                 return JSON.stringify({ ok: false, msg: "Unauthorized" });
             }
@@ -233,7 +234,7 @@ export class CFileServer extends CAuthServer
 
         let list = await CFile.FolderList(targetPath);
 
-        if (!this.IsAuth(_req)) {
+        if (!this.IsAuth(_json, _req)) {
             const mediaExts = ["png","jpg","jpeg","bmp","mp3","ogg","mp4","mov","avi"];
             list = list.filter((item: { file: boolean; name: string; ext: string }) => !item.file || mediaExts.includes(item.ext));
         }
@@ -247,7 +248,7 @@ export class CFileServer extends CAuthServer
     }
 
     async onMkdir(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        if (!this.IsAuth(_req)) {
+        if (!this.IsAuth(_json, _req)) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
@@ -268,7 +269,7 @@ export class CFileServer extends CAuthServer
     }
 
     async onDelete(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        if (!this.IsAuth(_req)) {
+        if (!this.IsAuth(_json, _req)) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
@@ -294,7 +295,7 @@ export class CFileServer extends CAuthServer
     }
 
     async onUpload(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        if (!this.IsAuth(_req)) {
+        if (!this.IsAuth(_json, _req)) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
@@ -322,7 +323,7 @@ export class CFileServer extends CAuthServer
     }
 
     async onVCS(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        if (!this.IsAuth(_req)) {
+        if (!this.IsAuth(_json, _req)) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
@@ -435,40 +436,4 @@ export class CFileServer extends CAuthServer
         }
     }
 
-    async onCmd(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        if (!this.IsAuth(_req)) {
-            _res.status(403);
-            return JSON.stringify({ ok: false, msg: "Unauthorized" });
-        }
-        const cmd = _json.GetStr("cmd");
-        const cwd = _json.GetStr("path") || undefined;
-        const fullCmd = process.platform === 'win32' ? `chcp 65001>nul && ${cmd}` : cmd;
-        try {
-            const { stdout, stderr } = await execAsync(fullCmd, cwd ? { cwd } : undefined);
-            return JSON.stringify({ ok: true, stdout, stderr });
-        } catch (e: any) {
-            return JSON.stringify({ ok: false, msg: e.message || String(e), stdout: e.stdout, stderr: e.stderr });
-        }
-    }
-
-    // 인증 성공 시 클라이언트가 호출한다(인증 체크 없음). 넘어온 주소/토큰으로 ai/FileServerGuide.md를 갱신한다.
-    async onRemote(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        const addr  = _json.GetStr("addr");
-        const token = _json.GetStr("token");
-        if (!addr) {
-            return JSON.stringify({ ok: false, msg: "Missing addr" });
-        }
-        const guidePath = nodePath.resolve(process.cwd(), "ai/FileServerGuide.md");
-        try {
-            const fs = await import('fs/promises');
-            let md = await fs.readFile(guidePath, 'utf8');
-            // `## 주소` / `## 토큰` 헤딩 바로 다음의 `- ...` 라인을 넘어온 값으로 치환한다.
-            md = md.replace(/(##\s*주소[^\n]*\r?\n-\s*)[^\r\n]*/, `$1${addr}`);
-            md = md.replace(/(##\s*토큰[^\n]*\r?\n-\s*)[^\r\n]*/, `$1${token}`);
-            await fs.writeFile(guidePath, md, 'utf8');
-            return JSON.stringify({ ok: true });
-        } catch (e: any) {
-            return JSON.stringify({ ok: false, msg: e.message || String(e) });
-        }
-    }
 }
