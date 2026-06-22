@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artgine Agent — 로컬 웹 작업 인터페이스</title>
+<title data-i18n="pageTitle">Artgine Agent — 로컬 웹 작업 인터페이스</title>
 <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
 <style>
@@ -124,73 +124,65 @@
 <!-- Hero -->
 <section class="hero text-center">
   <div class="container">
-    <div class="mb-3 d-flex justify-content-center gap-2 flex-wrap">
-      <span class="badge-tag">RDP</span>
-      <span class="badge-tag">File Manager</span>
-      <span class="badge-tag">AI Chat</span>
-      <span class="badge-tag">Term</span>
-      <span class="badge-tag">Web</span>
-      <span class="badge-tag">Open Source</span>
-    </div>
     <h1>Artgine Agent</h1>
     <p class="lead mx-auto mt-3">
-      Artgine의 Home 화면에서 <strong>원격 화면, 파일, AI 작업</strong>을 한 번에 다루는 로컬 웹 인터페이스입니다.<br>
-      RDP, Files, AI(Chat/Term/Web)를 한 화면에서 제공합니다.
+      <span data-i18n-html="heroDesc1">Artgine의 Home 화면에서 <strong>원격 화면, 파일, AI 작업</strong>을 한 번에 다루는 로컬 웹 인터페이스입니다.</span><br>
+      <span data-i18n="heroDesc2">RDP, Files, AI(Chat/Term/Web)를 한 화면에서 제공합니다.</span>
     </p>
     <div class="mt-4 d-flex justify-content-center gap-2 flex-wrap">
-      <a href="https://github.com/06fs4dix/Artgine" class="btn btn-primary px-4" target="_blank"><i class="bi bi-github"></i> GitHub</a>
-      <a href="https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html" class="btn btn-outline-light px-4" target="_blank"><i class="bi bi-book"></i> 튜토리얼</a>
-      <a href="#features" class="btn btn-outline-light px-4"><i class="bi bi-arrow-down"></i> 기능 살펴보기</a>
+      <a href="https://github.com/06fs4dix/Artgine" class="btn btn-primary px-4" target="_blank"><i class="bi bi-github"></i> <span data-i18n="btnGithub">GitHub</span></a>
+      <a href="https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html" class="btn btn-outline-light px-4" target="_blank"><i class="bi bi-book"></i> <span data-i18n="btnTutorial">튜토리얼</span></a>
+      <a href="#features" class="btn btn-outline-light px-4"><i class="bi bi-arrow-down"></i> <span data-i18n="btnFeatures">기능 살펴보기</span></a>
     </div>
   </div>
 </section>
 
 <!-- Features -->
 <div class="container py-5" id="features">
-  <h2 class="section-title text-center">주요 기능</h2>
-  <p class="section-sub text-center">RDP, Files, AI를 중심으로 작업 상태 확인부터 실행까지 하나의 화면에서</p>
+  <h2 class="section-title text-center" data-i18n="featuresTitle">주요 기능</h2>
+  <p class="section-sub text-center" data-i18n="featuresSub">RDP, Files, AI를 중심으로 작업 상태 확인부터 실행까지 하나의 화면에서</p>
 
   <div class="row g-3 mb-4">
     <div class="col-md-6 col-lg-4">
       <div class="feature-card p-4 h-100">
         <i class="bi bi-display fs-2" style="color:#58a6ff;"></i>
-        <h5 class="mt-3">RDP <small class="text-muted">F3</small></h5>
-        <p class="text-muted mb-0 small">Local 또는 원격 Home.html 서버의 화면을 확인합니다. 입력 모드를 켜면 키보드와 마우스가 대상 화면으로 전달됩니다.</p>
+        <h5 class="mt-3"><span data-i18n="fRdpTitle">RDP</span> <small class="text-muted">F3</small></h5>
+        <p class="text-muted mb-0 small" data-i18n="fRdpDesc">Local 또는 원격 Home.html 서버의 화면을 확인합니다. 입력 모드를 켜면 키보드와 마우스가 대상 화면으로 전달됩니다.</p>
       </div>
     </div>
     <div class="col-md-6 col-lg-4">
       <div class="feature-card p-4 h-100">
         <i class="bi bi-folder-fill fs-2" style="color:#3fb950;"></i>
-        <h5 class="mt-3">Files <small class="text-muted">F1/F2</small></h5>
-        <p class="text-muted mb-0 small">허용된 서버 폴더를 탐색하고 파일 보기, 편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.</p>
+        <h5 class="mt-3"><span data-i18n="fFilesTitle">Files</span> <small class="text-muted">F1/F2</small></h5>
+        <p class="text-muted mb-0 small" data-i18n="fFilesDesc">허용된 서버 폴더를 탐색하고 파일 보기, 편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.</p>
       </div>
     </div>
     <div class="col-md-6 col-lg-4">
       <div class="feature-card p-4 h-100">
         <i class="bi bi-search fs-2" style="color:#58a6ff;"></i>
-        <h5 class="mt-3">File Manager / Search</h5>
-        <p class="text-muted mb-0 small"><strong>F1</strong>은 File Manager, <strong>F2</strong>는 파일 검색입니다. 검색 결과에서 위치로 이동하고, 관리 메뉴에서 루트 선택과 버전 관리 작업을 실행합니다.</p>
+        <h5 class="mt-3" data-i18n="fFileMgrTitle">File Manager / Search</h5>
+        <p class="text-muted mb-0 small" data-i18n-html="fFileMgrDesc"><strong>F1</strong>은 File Manager, <strong>F2</strong>는 파일 검색입니다. 검색 결과에서 위치로 이동하고, 관리 메뉴에서 루트 선택과 버전 관리 작업을 실행합니다.</p>
       </div>
     </div>
     <div class="col-md-6 col-lg-4">
       <div class="feature-card p-4 h-100">
         <i class="bi bi-chat-dots fs-2" style="color:#d2a8ff;"></i>
-        <h5 class="mt-3">AI Chat</h5>
-        <p class="text-muted mb-0 small">Working Directory와 옵션을 정한 뒤 AI 채팅 세션을 시작합니다. 여러 세션을 동시에 두고 상태 색상으로 연결 상태와 응답 상태를 확인합니다.</p>
+        <h5 class="mt-3" data-i18n="fAiChatTitle">AI Chat</h5>
+        <p class="text-muted mb-0 small" data-i18n="fAiChatDesc">Working Directory와 옵션을 정한 뒤 AI 채팅 세션을 시작합니다. 여러 세션을 동시에 두고 상태 색상으로 연결 상태와 응답 상태를 확인합니다.</p>
       </div>
     </div>
     <div class="col-md-6 col-lg-4">
       <div class="feature-card p-4 h-100">
         <i class="bi bi-terminal-fill fs-2" style="color:#f778ba;"></i>
-        <h5 class="mt-3">Term / Schedule</h5>
-        <p class="text-muted mb-0 small"><code class="cmd">cmd</code>, <code class="cmd">codex</code>, <code class="cmd">claude</code>, <code class="cmd">opencode</code> 같은 CLI 세션을 관리합니다. 반복 작업은 Schedule로 등록합니다.</p>
+        <h5 class="mt-3" data-i18n="fTermTitle">Term / Schedule</h5>
+        <p class="text-muted mb-0 small" data-i18n-html="fTermDesc"><code class="cmd">cmd</code>, <code class="cmd">codex</code>, <code class="cmd">claude</code>, <code class="cmd">opencode</code> 같은 CLI 세션을 관리합니다. 반복 작업은 Schedule로 등록합니다.</p>
       </div>
     </div>
     <div class="col-md-6 col-lg-4">
       <div class="feature-card p-4 h-100">
         <i class="bi bi-browser-chrome fs-2" style="color:#d29922;"></i>
-        <h5 class="mt-3">Web 세션</h5>
-        <p class="text-muted mb-0 small">확인할 URL, 유지 시간, 화면 크기를 정해 웹 화면을 열고 화면과 동작 기록을 확인합니다. 입력을 켜면 키보드와 마우스를 전달할 수 있습니다.</p>
+        <h5 class="mt-3" data-i18n="fWebTitle">Web 세션</h5>
+        <p class="text-muted mb-0 small" data-i18n="fWebDesc">확인할 URL, 유지 시간, 화면 크기를 정해 웹 화면을 열고 화면과 동작 기록을 확인합니다. 입력을 켜면 키보드와 마우스를 전달할 수 있습니다.</p>
       </div>
     </div>
   </div>
@@ -198,16 +190,16 @@
 
 <!-- Mock Screenshots -->
 <div class="container py-4">
-  <h2 class="section-title text-center">화면 미리보기</h2>
-  <p class="section-sub text-center">실제 앱과 동일한 구조의 화면 구성입니다</p>
+  <h2 class="section-title text-center" data-i18n="previewTitle">화면 미리보기</h2>
+  <p class="section-sub text-center" data-i18n="previewSub">실제 앱과 동일한 구조의 화면 구성입니다</p>
 
   <!-- RDP Tab Mock -->
   <div class="mb-5 scroll-reveal">
     <div class="d-flex align-items-center gap-2 mb-3">
       <span class="tab-badge tab-rdp"><i class="bi bi-display"></i> RDP</span>
-      <strong>Local / 원격 Home 화면 확인</strong>
+      <strong data-i18n="mockRdpTitle">Local / 원격 Home 화면 확인</strong>
     </div>
-    <p class="text-muted small mb-3">
+    <p class="text-muted small mb-3" data-i18n-html="mockRdpDesc">
       <strong>F3</strong>으로 RDP 탭에 진입합니다. Local을 선택하거나 Remote Home.html URL을 추가해 대상 화면을 전환합니다.
     </p>
     <div class="mock-browser">
@@ -224,9 +216,9 @@
           </div>
           <div class="mock-rdp-screen">
             <div class="mock-rdp-controls">
-              <span>화면</span><input type="range" value="45" readonly><span>3s</span>
-              <span>화질</span><input type="range" value="70" readonly><span>70</span>
-              <span style="margin-left:auto;color:#3fb950;">입력 가능</span>
+              <span data-i18n="rdpFrame">화면</span><input type="range" value="45" readonly><span>3s</span>
+              <span data-i18n="rdpQuality">화질</span><input type="range" value="70" readonly><span>70</span>
+              <span style="margin-left:auto;color:#3fb950;" data-i18n="rdpInputOn">입력 가능</span>
             </div>
             <div class="mock-desktop">
               <div class="mock-window one">
@@ -255,9 +247,9 @@
   <div class="mb-5 scroll-reveal">
     <div class="d-flex align-items-center gap-2 mb-3">
       <span class="tab-badge tab-files"><i class="bi bi-folder-fill"></i> Files</span>
-      <strong>Files — 파일 보기, 편집, 검색</strong>
+      <strong data-i18n="mockFilesTitle">Files — 파일 보기, 편집, 검색</strong>
     </div>
-    <p class="text-muted small mb-3">
+    <p class="text-muted small mb-3" data-i18n="mockFilesDesc">
       허용된 서버 경로를 탐색하며 파일을 관리합니다. 파일을 누르면 종류별 뷰어가 열리고, Git/SVN 설치 시 변경 상태 배지가 표시됩니다.
     </p>
     <div class="mock-browser">
@@ -267,8 +259,8 @@
       </div>
       <div class="mock-body">
         <div class="d-flex gap-2 mb-2 flex-wrap">
-          <span class="kbd-shortcut">F1</span><span class="text-muted small me-2">File</span>
-          <span class="kbd-shortcut">F2</span><span class="text-muted small me-2">Search</span>
+          <span class="kbd-shortcut">F1</span><span class="text-muted small me-2" data-i18n="fileLabel">File</span>
+          <span class="kbd-shortcut">F2</span><span class="text-muted small me-2" data-i18n="searchLabel">Search</span>
           <span class="text-muted small" style="margin-left:auto;">/proj/Home/</span>
         </div>
         <div class="mock-file-list">
@@ -289,25 +281,25 @@
   <div class="mb-5 scroll-reveal">
     <div class="d-flex align-items-center gap-2 mb-3">
       <span class="tab-badge tab-ai"><i class="bi bi-robot"></i> AI</span>
-      <strong>멀티 AI 채팅 — Claude · Codex · Antigravity · OpenCode</strong>
+      <strong data-i18n="mockAiChatTitle">멀티 AI 채팅 — Claude · Codex · Antigravity · OpenCode</strong>
     </div>
-    <p class="text-muted small mb-3">
+    <p class="text-muted small mb-3" data-i18n-html="mockAiChatDesc">
       <strong>F4</strong>로 AI 탭 진입. 세션 상태 색상으로 연결 상태를 실시간 확인하며 여러 세션을 동시에 운용합니다.
     </p>
     <div class="mock-sidebar">
       <div class="mock-side">
         <div class="text-muted small mb-1" style="font-size:10px;">Chat</div>
         <div class="mock-sess active">
-          <div class="name"><span class="status-dot status-idle"></span> 홈 화면 개선</div>
+          <div class="name"><span class="status-dot status-idle"></span> <span data-i18n="chatSess1">홈 화면 개선</span></div>
           <div class="sub">Claude</div>
         </div>
         <div class="mock-sess">
-          <div class="name"><span class="status-dot status-busy"></span> README 정리</div>
-          <div class="sub">Codex · 응답 생성 중</div>
+          <div class="name"><span class="status-dot status-busy"></span> <span data-i18n="chatSess2">README 정리</span></div>
+          <div class="sub"><span data-i18n="chatSess2Sub">Codex · 응답 생성 중</span></div>
         </div>
         <div class="mock-sess">
-          <div class="name"><span class="status-dot status-off"></span> 이전 작업</div>
-          <div class="sub">연결 안 됨</div>
+          <div class="name"><span class="status-dot status-off"></span> <span data-i18n="chatSess3">이전 작업</span></div>
+          <div class="sub" data-i18n="chatSess3Sub">연결 안 됨</div>
         </div>
         <div class="text-muted small mt-2 mb-1" style="font-size:10px;">Terminal</div>
         <div class="mock-sess">
@@ -315,24 +307,24 @@
         </div>
         <div class="mock-sess">
           <div class="name"><span class="status-dot status-idle"></span> codex : app</div>
-          <div class="sub">승인 대기</div>
+          <div class="sub" data-i18n="chatSessApproval">승인 대기</div>
         </div>
       </div>
       <div class="mock-panel">
         <div class="mock-chat">
           <div class="mock-msg user">
             <div class="label">User</div>
-            이 폴더에서 튜토리얼 페이지를 만들어줘.
+            <span data-i18n="chatMsgUser">이 폴더에서 튜토리얼 페이지를 만들어줘.</span>
           </div>
           <div class="mock-msg assistant">
             <div class="label">Assistant</div>
-            작업 폴더를 기준으로 단일 HTML 튜토리얼을 생성하겠습니다.<br>
-            <code>tutorial.html</code> 파일을 작성하고...
+            <span data-i18n-html="chatMsgAssistant">작업 폴더를 기준으로 단일 HTML 튜토리얼을 생성하겠습니다.<br>
+            <code>tutorial.html</code> 파일을 작성하고...</span>
           </div>
         </div>
         <div class="mock-composer">
-          <div class="mock-input">여기에 AI에게 지시를 입력합니다...</div>
-          <div class="mock-send">Send</div>
+          <div class="mock-input" data-i18n="chatComposer">여기에 AI에게 지시를 입력합니다...</div>
+          <div class="mock-send" data-i18n="chatSend">Send</div>
         </div>
       </div>
     </div>
@@ -342,9 +334,9 @@
   <div class="mb-5 scroll-reveal">
     <div class="d-flex align-items-center gap-2 mb-3">
       <span class="tab-badge tab-ai"><i class="bi bi-terminal-fill"></i> AI</span>
-      <strong>웹 터미널 — 최대 9개 동시 실행</strong>
+      <strong data-i18n="mockTermTitle">웹 터미널 — 최대 9개 동시 실행</strong>
     </div>
-    <p class="text-muted small mb-3">
+    <p class="text-muted small mb-3" data-i18n-html="mockTermDesc">
       5가지 모드 지원. <strong>F6</strong> SUPER 모드 토글, <strong>F7</strong> 입력 바 포커스. 실제 명령을 실행하는 CLI 환경입니다.
     </p>
     <div class="mock-browser">
@@ -354,15 +346,15 @@
       </div>
       <div class="mock-body">
         <div class="mock-term">
-          <span class="dim"># 이 터미널은 codex 모드입니다.</span><br>
-          <span class="dim"># 작업 경로: D:/git/Artgine</span><br><br>
+          <span class="dim"># <span data-i18n="termModeCodex">이 터미널은 codex 모드입니다.</span></span><br>
+          <span class="dim"># <span data-i18n="termWorkDir">작업 경로: D:/git/Artgine</span></span><br><br>
           <span class="green">$</span> npm test<br>
-          <span class="dim">> artgine@1.0.0 test</span><br>
-          <span class="dim">> node ai/tsc_check.js</span><br><br>
+          <span class="dim">&gt; artgine@1.0.0 test</span><br>
+          <span class="dim">&gt; node ai/tsc_check.js</span><br><br>
           <span class="green">✓</span> Home.ts<br>
           <span class="green">✓</span> AIChat.ts<br>
           <span class="green">✓</span> Web.ts<br>
-          <span class="blue">All checks passed.</span><br><br>
+          <span class="blue" data-i18n="termAllPassed">All checks passed.</span><br><br>
           <span class="green">$</span> <span class="yellow">▊</span>
         </div>
         <div class="mock-term-bar">
@@ -377,9 +369,9 @@
   <div class="mb-5 scroll-reveal">
     <div class="d-flex align-items-center gap-2 mb-3">
       <span class="tab-badge tab-ai"><i class="bi bi-browser-chrome"></i> AI</span>
-      <strong>웹 화면 원격 확인</strong>
+      <strong data-i18n="mockWebTitle">웹 화면 원격 확인</strong>
     </div>
-    <p class="text-muted small mb-3">
+    <p class="text-muted small mb-3" data-i18n="mockWebDesc">
       URL을 입력해 웹 화면을 열고, 실시간 화면 확인과 마우스·키보드 원격 제어를 사용할 수 있습니다.
     </p>
     <div class="mock-browser">
@@ -389,11 +381,11 @@
       </div>
       <div class="mock-web-shell">
         <div class="mock-browser-ctl">
-          <span>화면</span><input type="range" value="30" readonly>
+          <span data-i18n="webFrame">화면</span><input type="range" value="30" readonly>
           <span style="margin-left:4px;">3s</span>
-          <span style="margin-left:8px;">화질</span><input type="range" value="75" readonly>
+          <span style="margin-left:8px;" data-i18n="webQuality">화질</span><input type="range" value="75" readonly>
           <span>75</span>
-          <span style="margin-left:auto;color:#3fb950;">입력 가능</span>
+          <span style="margin-left:auto;color:#3fb950;" data-i18n="webInputOn">입력 가능</span>
         </div>
         <div class="mock-browser-page">
           <div class="mock-browser-side">
@@ -424,53 +416,53 @@
 
 <!-- Keyboard Shortcuts -->
 <div class="container py-4">
-  <h2 class="section-title text-center">키보드 단축키</h2>
-  <p class="section-sub text-center">마우스 없이 모든 기능을 조작할 수 있습니다</p>
+  <h2 class="section-title text-center" data-i18n="shortcutsTitle">키보드 단축키</h2>
+  <p class="section-sub text-center" data-i18n="shortcutsSub">마우스 없이 모든 기능을 조작할 수 있습니다</p>
 
   <div class="row g-3">
     <div class="col-md-6">
       <div class="feature-card p-4 h-100">
-        <h6 class="mb-3"><i class="bi bi-globe2 me-2"></i>전역</h6>
+        <h6 class="mb-3"><i class="bi bi-globe2 me-2"></i><span data-i18n="scGlobal">전역</span></h6>
         <div class="d-flex flex-column gap-2">
-          <div><span class="kbd-shortcut">F1</span> <span class="text-muted ms-2">File Manager 모달</span></div>
-          <div><span class="kbd-shortcut">F2</span> <span class="text-muted ms-2">파일 재귀 검색</span></div>
-          <div><span class="kbd-shortcut">F3</span> <span class="text-muted ms-2">RDP 탭으로 이동</span></div>
-          <div><span class="kbd-shortcut">F4</span> <span class="text-muted ms-2">AI 탭 전환</span></div>
-          <div><span class="kbd-shortcut">F6</span> <span class="text-muted ms-2">SUPER 모드 토글 (터미널)</span></div>
-          <div><span class="kbd-shortcut">F7</span> <span class="text-muted ms-2">터미널 입력 바 포커스</span></div>
+          <div><span class="kbd-shortcut">F1</span> <span class="text-muted ms-2" data-i18n="scGlobalF1">File Manager 모달</span></div>
+          <div><span class="kbd-shortcut">F2</span> <span class="text-muted ms-2" data-i18n="scGlobalF2">파일 재귀 검색</span></div>
+          <div><span class="kbd-shortcut">F3</span> <span class="text-muted ms-2" data-i18n="scGlobalF3">RDP 탭으로 이동</span></div>
+          <div><span class="kbd-shortcut">F4</span> <span class="text-muted ms-2" data-i18n="scGlobalF4">AI 탭 전환</span></div>
+          <div><span class="kbd-shortcut">F6</span> <span class="text-muted ms-2" data-i18n="scGlobalF6">SUPER 모드 토글 (터미널)</span></div>
+          <div><span class="kbd-shortcut">F7</span> <span class="text-muted ms-2" data-i18n="scGlobalF7">터미널 입력 바 포커스</span></div>
         </div>
       </div>
     </div>
     <div class="col-md-6">
       <div class="feature-card p-4 h-100">
-        <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset me-2"></i>AI 패널 (사이드바)</h6>
+        <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset me-2"></i><span data-i18n="scAiPanel">AI 패널 (사이드바)</span></h6>
         <div class="d-flex flex-column gap-2">
-          <div><span class="kbd-shortcut">Tab</span> <span class="text-muted ms-2">사이드바 열기/닫기</span></div>
-          <div><span class="kbd-shortcut">1</span> / <span class="kbd-shortcut">2</span> / <span class="kbd-shortcut">3</span> <span class="text-muted ms-2">Chat / Term / Web 하위 탭</span></div>
-          <div><span class="kbd-shortcut">↑</span> / <span class="kbd-shortcut">↓</span> <span class="text-muted ms-2">세션 리스트 탐색</span></div>
-          <div><span class="kbd-shortcut">→</span> <span class="text-muted ms-2">알림 세션으로 점프</span></div>
-          <div><span class="kbd-shortcut">←</span> <span class="text-muted ms-2">이전 세션 복귀</span></div>
+          <div><span class="kbd-shortcut">Tab</span> <span class="text-muted ms-2" data-i18n="scAiTab">사이드바 열기/닫기</span></div>
+          <div><span class="kbd-shortcut">1</span> / <span class="kbd-shortcut">2</span> / <span class="kbd-shortcut">3</span> <span class="text-muted ms-2" data-i18n="scAi123">Chat / Term / Web 하위 탭</span></div>
+          <div><span class="kbd-shortcut">↑</span> / <span class="kbd-shortcut">↓</span> <span class="text-muted ms-2" data-i18n="scAiUpDown">세션 리스트 탐색</span></div>
+          <div><span class="kbd-shortcut">→</span> <span class="text-muted ms-2" data-i18n="scAiRight">알림 세션으로 점프</span></div>
+          <div><span class="kbd-shortcut">←</span> <span class="text-muted ms-2" data-i18n="scAiLeft">이전 세션 복귀</span></div>
         </div>
       </div>
     </div>
     <div class="col-md-6">
       <div class="feature-card p-4 h-100">
-        <h6 class="mb-3"><i class="bi bi-terminal-fill me-2"></i>터미널</h6>
+        <h6 class="mb-3"><i class="bi bi-terminal-fill me-2"></i><span data-i18n="scTerm">터미널</span></h6>
         <div class="d-flex flex-column gap-2">
-          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">N</span> <span class="text-muted ms-2">새 터미널</span></div>
-          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">D</span> <span class="text-muted ms-2">현재 터미널 종료</span></div>
-          <div><span class="kbd-shortcut">Enter</span> <span class="text-muted ms-2">입력 전송</span></div>
-          <div><span class="kbd-shortcut">Ctrl</span>+<span class="kbd-shortcut">T</span> <span class="text-muted ms-2">맨 아래로 스크롤</span></div>
+          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">N</span> <span class="text-muted ms-2" data-i18n="scTermNew">새 터미널</span></div>
+          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">D</span> <span class="text-muted ms-2" data-i18n="scTermDel">현재 터미널 종료</span></div>
+          <div><span class="kbd-shortcut">Enter</span> <span class="text-muted ms-2" data-i18n="scTermEnter">입력 전송</span></div>
+          <div><span class="kbd-shortcut">Ctrl</span>+<span class="kbd-shortcut">T</span> <span class="text-muted ms-2" data-i18n="scTermScroll">맨 아래로 스크롤</span></div>
         </div>
       </div>
     </div>
     <div class="col-md-6">
       <div class="feature-card p-4 h-100">
-        <h6 class="mb-3"><i class="bi bi-chat-dots me-2"></i>채팅</h6>
+        <h6 class="mb-3"><i class="bi bi-chat-dots me-2"></i><span data-i18n="scChat">채팅</span></h6>
         <div class="d-flex flex-column gap-2">
-          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">Enter</span> <span class="text-muted ms-2">새 줄 (전송 대신)</span></div>
-          <div><span class="kbd-shortcut">Esc</span> <span class="text-muted ms-2">자동완성 닫기</span></div>
-          <div><span class="kbd-shortcut">Tab</span> <span class="text-muted ms-2">자동완성 적용</span></div>
+          <div><span class="kbd-shortcut">Shift</span>+<span class="kbd-shortcut">Enter</span> <span class="text-muted ms-2" data-i18n="scChatNewline">새 줄 (전송 대신)</span></div>
+          <div><span class="kbd-shortcut">Esc</span> <span class="text-muted ms-2" data-i18n="scChatEsc">자동완성 닫기</span></div>
+          <div><span class="kbd-shortcut">Tab</span> <span class="text-muted ms-2" data-i18n="scChatTab">자동완성 적용</span></div>
         </div>
       </div>
     </div>
@@ -479,22 +471,38 @@
 
 <!-- Quick Start -->
 <div class="container py-4">
-  <h2 class="section-title text-center">시작하기</h2>
-  <p class="section-sub text-center">3단계로 바로 실행할 수 있습니다</p>
-  <div class="highlight-box text-center" style="max-width:700px; margin:0 auto;">
-    <div class="text-start font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;">
-      <div style="color:#8b949e;"># 1. 클론</div>
-      <div>git clone --recursive https://github.com/06fs4dix/Artgine.git</div>
-      <div style="color:#8b949e;margin-top:.5rem;"># 2. 설치</div>
-      <div>cd Artgine &amp;&amp; npm install</div>
-      <div style="color:#8b949e;margin-top:.5rem;"># 3. 실행</div>
-      <div>npm start <span style="color:#8b949e;"># → http://localhost:8050</span></div>
+  <h2 class="section-title text-center" data-i18n="quickStartTitle">시작하기</h2>
+  <p class="section-sub text-center" data-i18n="quickStartSub">두 가지 방법으로 바로 시작할 수 있습니다</p>
+
+  <div class="row g-4" style="max-width:960px; margin:0 auto;">
+    <div class="col-md-6">
+      <div class="feature-card p-4 h-100">
+        <h5 class="mb-3"><span class="badge-tag me-2" data-i18n="gsBadge1">방법 1</span> <span data-i18n="gsMethod1Title">전체 설치 &amp; 실행</span></h5>
+        <div class="font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;color:#c9d1d9;">
+          <div style="color:#8b949e;"># <span data-i18n="gsClone">클론</span></div>
+          <div>git clone --recursive https://github.com/06fs4dix/Artgine.git</div>
+          <div style="color:#8b949e;margin-top:.5rem;"># <span data-i18n="gsInstall">설치</span></div>
+          <div>cd Artgine &amp;&amp; npm install</div>
+          <div style="color:#8b949e;margin-top:.5rem;"># <span data-i18n="gsRun">실행</span></div>
+          <div>npm start <span style="color:#8b949e;"># → http://localhost:8050</span></div>
+        </div>
+        <p class="text-muted small mb-0"><span data-i18n="gsWebOnly">웹 서버만 실행하려면</span> <code class="cmd">npm run start_web [<span data-i18n="gsPort">포트</span>]</code> (<span data-i18n="gsDefaultPort">기본 포트 8050</span>)</p>
+      </div>
     </div>
-    <p class="text-muted small mb-2">웹 서버만 실행하려면 <code class="cmd">npm run start_web [포트]</code></p>
-    <div class="d-flex justify-content-center gap-2 flex-wrap">
-      <a href="https://github.com/06fs4dix/Artgine" class="btn btn-primary" target="_blank"><i class="bi bi-github"></i> GitHub</a>
-      <a href="https://06fs4dix.github.io/Artgine/help/artgine-agent-tutorial.html" class="btn btn-outline-light" target="_blank"><i class="bi bi-book"></i> 전체 튜토리얼</a>
+    <div class="col-md-6">
+      <div class="feature-card p-4 h-100">
+        <h5 class="mb-3"><span class="badge-tag me-2" data-i18n="gsBadge2">방법 2</span> <span data-i18n="gsMethod2Title">압축 파일 다운로드</span></h5>
+        <div class="font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;">
+          <a href="https://github.com/06fs4dix/Artgine/archive/refs/heads/main.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine/archive/refs/heads/main.zip</a>
+        </div>
+        <p class="text-muted small mb-2" data-i18n="gsMethod2Desc1">위 주소에서 다운로드 후 압축을 풀어주세요.</p>
+        <p class="text-muted small mb-0"><span data-i18n="gsMethod2Desc2">Windows에서는</span> <code class="cmd">start.bat</code><span data-i18n="gsMethod2Desc3">, Linux/macOS에서는</span> <code class="cmd">start.sh</code><span data-i18n="gsMethod2Desc4">로도 실행할 수 있습니다.</span></p>
+      </div>
     </div>
+  </div>
+
+  <div class="text-center mt-4" style="max-width:960px; margin-left:auto; margin-right:auto;">
+    <p class="small mb-3" style="color:#f85149;background:#1a0f14;border:1px solid #3d1f24;border-radius:8px;padding:10px 14px;"><i class="bi bi-shield-exclamation"></i> <span data-i18n="gsPassword">기본 비밀번호는 <strong>artgine</strong>입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.</span></p>
   </div>
 </div>
 
@@ -502,11 +510,227 @@
 <footer class="footer text-center">
   <div class="container">
     <strong>Artgine Agent</strong> · <a href="https://github.com/06fs4dix/Artgine" class="text-muted" target="_blank">github.com/06fs4dix/Artgine</a><br>
-    <span class="text-muted">Built on Artgine Engine</span> <span class="text-muted">· MIT License</span>
+    <span class="text-muted" data-i18n="footerBuilt">Built on Artgine Engine</span> · <span class="text-muted" data-i18n="footerLicense">MIT License</span>
   </div>
 </footer>
 
 <script>
+const STRINGS = {
+  ko: {
+    pageTitle: 'Artgine Agent — 로컬 웹 작업 인터페이스',
+    heroDesc1: 'Artgine의 Home 화면에서 <strong>원격 화면, 파일, AI 작업</strong>을 한 번에 다루는 로컬 웹 인터페이스입니다.',
+    heroDesc2: 'RDP, Files, AI(Chat/Term/Web)를 한 화면에서 제공합니다.',
+    btnGithub: 'GitHub',
+    btnTutorial: '튜토리얼',
+    btnFeatures: '기능 살펴보기',
+    featuresTitle: '주요 기능',
+    featuresSub: 'RDP, Files, AI를 중심으로 작업 상태 확인부터 실행까지 하나의 화면에서',
+    fRdpTitle: 'RDP',
+    fRdpDesc: 'Local 또는 원격 Home.html 서버의 화면을 확인합니다. 입력 모드를 켜면 키보드와 마우스가 대상 화면으로 전달됩니다.',
+    fFilesTitle: 'Files',
+    fFilesDesc: '허용된 서버 폴더를 탐색하고 파일 보기, 편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.',
+    fFileMgrTitle: 'File Manager / Search',
+    fFileMgrDesc: '<strong>F1</strong>은 File Manager, <strong>F2</strong>는 파일 검색입니다. 검색 결과에서 위치로 이동하고, 관리 메뉴에서 루트 선택과 버전 관리 작업을 실행합니다.',
+    fAiChatTitle: 'AI Chat',
+    fAiChatDesc: 'Working Directory와 옵션을 정한 뒤 AI 채팅 세션을 시작합니다. 여러 세션을 동시에 두고 상태 색상으로 연결 상태와 응답 상태를 확인합니다.',
+    fTermTitle: 'Term / Schedule',
+    fTermDesc: '<code class="cmd">cmd</code>, <code class="cmd">codex</code>, <code class="cmd">claude</code>, <code class="cmd">opencode</code> 같은 CLI 세션을 관리합니다. 반복 작업은 Schedule로 등록합니다.',
+    fWebTitle: 'Web 세션',
+    fWebDesc: '확인할 URL, 유지 시간, 화면 크기를 정해 웹 화면을 열고 화면과 동작 기록을 확인합니다. 입력을 켜면 키보드와 마우스를 전달할 수 있습니다.',
+    previewTitle: '화면 미리보기',
+    previewSub: '실제 앱과 동일한 구조의 화면 구성입니다',
+    mockRdpTitle: 'Local / 원격 Home 화면 확인',
+    mockRdpDesc: '<strong>F3</strong>으로 RDP 탭에 진입합니다. Local을 선택하거나 Remote Home.html URL을 추가해 대상 화면을 전환합니다.',
+    rdpFrame: '화면',
+    rdpQuality: '화질',
+    rdpInputOn: '입력 가능',
+    mockFilesTitle: 'Files — 파일 보기, 편집, 검색',
+    mockFilesDesc: '허용된 서버 경로를 탐색하며 파일을 관리합니다. 파일을 누르면 종류별 뷰어가 열리고, Git/SVN 설치 시 변경 상태 배지가 표시됩니다.',
+    fileLabel: 'File',
+    searchLabel: 'Search',
+    mockAiChatTitle: '멀티 AI 채팅 — Claude · Codex · Antigravity · OpenCode',
+    mockAiChatDesc: '<strong>F4</strong>로 AI 탭 진입. 세션 상태 색상으로 연결 상태를 실시간 확인하며 여러 세션을 동시에 운용합니다.',
+    chatSess1: '홈 화면 개선',
+    chatSess2: 'README 정리',
+    chatSess2Sub: 'Codex · 응답 생성 중',
+    chatSess3: '이전 작업',
+    chatSess3Sub: '연결 안 됨',
+    chatSessApproval: '승인 대기',
+    chatMsgUser: '이 폴더에서 튜토리얼 페이지를 만들어줘.',
+    chatMsgAssistant: '작업 폴더를 기준으로 단일 HTML 튜토리얼을 생성하겠습니다.<br><code>tutorial.html</code> 파일을 작성하고...',
+    chatComposer: '여기에 AI에게 지시를 입력합니다...',
+    chatSend: 'Send',
+    mockTermTitle: '웹 터미널 — 최대 9개 동시 실행',
+    mockTermDesc: '5가지 모드 지원. <strong>F6</strong> SUPER 모드 토글, <strong>F7</strong> 입력 바 포커스. 실제 명령을 실행하는 CLI 환경입니다.',
+    termModeCodex: '이 터미널은 codex 모드입니다.',
+    termWorkDir: '작업 경로: D:/git/Artgine',
+    termAllPassed: 'All checks passed.',
+    mockWebTitle: '웹 화면 원격 확인',
+    mockWebDesc: 'URL을 입력해 웹 화면을 열고, 실시간 화면 확인과 마우스·키보드 원격 제어를 사용할 수 있습니다.',
+    webFrame: '화면',
+    webQuality: '화질',
+    webInputOn: '입력 가능',
+    shortcutsTitle: '키보드 단축키',
+    shortcutsSub: '마우스 없이 모든 기능을 조작할 수 있습니다',
+    scGlobal: '전역',
+    scGlobalF1: 'File Manager 모달',
+    scGlobalF2: '파일 재귀 검색',
+    scGlobalF3: 'RDP 탭으로 이동',
+    scGlobalF4: 'AI 탭 전환',
+    scGlobalF6: 'SUPER 모드 토글 (터미널)',
+    scGlobalF7: '터미널 입력 바 포커스',
+    scAiPanel: 'AI 패널 (사이드바)',
+    scAiTab: '사이드바 열기/닫기',
+    scAi123: 'Chat / Term / Web 하위 탭',
+    scAiUpDown: '세션 리스트 탐색',
+    scAiRight: '알림 세션으로 점프',
+    scAiLeft: '이전 세션 복귀',
+    scTerm: '터미널',
+    scTermNew: '새 터미널',
+    scTermDel: '현재 터미널 종료',
+    scTermEnter: '입력 전송',
+    scTermScroll: '맨 아래로 스크롤',
+    scChat: '채팅',
+    scChatNewline: '새 줄 (전송 대신)',
+    scChatEsc: '자동완성 닫기',
+    scChatTab: '자동완성 적용',
+    quickStartTitle: '시작하기',
+    quickStartSub: '두 가지 방법으로 바로 시작할 수 있습니다',
+    gsBadge1: '방법 1',
+    gsMethod1Title: '전체 설치 & 실행',
+    gsClone: '클론',
+    gsInstall: '설치',
+    gsRun: '실행',
+    gsWebOnly: '웹 서버만 실행하려면',
+    gsPort: '포트',
+    gsDefaultPort: '기본 포트 8050',
+    gsBadge2: '방법 2',
+    gsMethod2Title: '압축 파일 다운로드',
+    gsMethod2Desc1: '위 주소에서 다운로드 후 압축을 풀어주세요.',
+    gsMethod2Desc2: 'Windows에서는',
+    gsMethod2Desc3: ', Linux/macOS에서는',
+    gsMethod2Desc4: '로도 실행할 수 있습니다.',
+    gsPassword: '기본 비밀번호는 <strong>artgine</strong>입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
+    footerBuilt: 'Built on Artgine Engine',
+    footerLicense: 'MIT License'
+  },
+  en: {
+    pageTitle: 'Artgine Agent — Local Web Work Interface',
+    heroDesc1: '<strong>Remote screen, files, AI work</strong> in one place — a local web interface from the Artgine Home screen.',
+    heroDesc2: 'RDP, Files, AI (Chat/Term/Web) delivered in a single screen.',
+    btnGithub: 'GitHub',
+    btnTutorial: 'Tutorial',
+    btnFeatures: 'Explore Features',
+    featuresTitle: 'Key Features',
+    featuresSub: 'From status checks to execution — RDP, Files, and AI in one screen',
+    fRdpTitle: 'RDP',
+    fRdpDesc: 'View the screen of local or remote Home.html servers. Turn on input mode to forward keyboard and mouse to the target screen.',
+    fFilesTitle: 'Files',
+    fFilesDesc: 'Browse allowed server folders and handle file viewing, editing, search, sharing, uploads, and Git/SVN operations.',
+    fFileMgrTitle: 'File Manager / Search',
+    fFileMgrDesc: '<strong>F1</strong> opens File Manager, <strong>F2</strong> opens file search. Click search results to navigate to the location, and use the management menu for root selection and version control.',
+    fAiChatTitle: 'AI Chat',
+    fAiChatDesc: 'Set the Working Directory and options, then start an AI chat session. Run multiple sessions simultaneously and monitor connection and response status with color indicators.',
+    fTermTitle: 'Term / Schedule',
+    fTermDesc: 'Manage CLI sessions like <code class="cmd">cmd</code>, <code class="cmd">codex</code>, <code class="cmd">claude</code>, <code class="cmd">opencode</code>. Register recurring tasks with Schedule.',
+    fWebTitle: 'Web Session',
+    fWebDesc: 'Configure the URL, keep-alive time, and screen size to open a web view. Check the screen and action log. Turn on input to forward keyboard and mouse.',
+    previewTitle: 'Screen Preview',
+    previewSub: 'Screen layout matches the actual application',
+    mockRdpTitle: 'Local / Remote Home Screen',
+    mockRdpDesc: 'Press <strong>F3</strong> to enter the RDP tab. Select Local or add a Remote Home.html URL to switch targets.',
+    rdpFrame: 'Frame',
+    rdpQuality: 'Quality',
+    rdpInputOn: 'Input Enabled',
+    mockFilesTitle: 'Files — View, Edit, Search',
+    mockFilesDesc: 'Browse server paths and manage files. Click a file to open a type-specific viewer. Git/SVN status badges appear when installed.',
+    fileLabel: 'File',
+    searchLabel: 'Search',
+    mockAiChatTitle: 'Multi AI Chat — Claude · Codex · Antigravity · OpenCode',
+    mockAiChatDesc: 'Press <strong>F4</strong> to enter the AI tab. Monitor connection status in real time with session colors and run multiple sessions at once.',
+    chatSess1: 'Home UI Update',
+    chatSess2: 'README Cleanup',
+    chatSess2Sub: 'Codex · Generating response',
+    chatSess3: 'Previous Work',
+    chatSess3Sub: 'Not Connected',
+    chatSessApproval: 'Awaiting Approval',
+    chatMsgUser: 'Create a tutorial page in this folder.',
+    chatMsgAssistant: 'I will create a single HTML tutorial based on the working directory.<br>Writing <code>tutorial.html</code> file...',
+    chatComposer: 'Type instructions for the AI here...',
+    chatSend: 'Send',
+    mockTermTitle: 'Web Terminal — Up to 9 Concurrent',
+    mockTermDesc: '5 modes supported. <strong>F6</strong> toggles SUPER mode, <strong>F7</strong> focuses the input bar. A real CLI environment that runs actual commands.',
+    termModeCodex: 'This terminal is in codex mode.',
+    termWorkDir: 'Working directory: D:/git/Artgine',
+    termAllPassed: 'All checks passed.',
+    mockWebTitle: 'Remote Web View',
+    mockWebDesc: 'Enter a URL to open a web screen, then check it in real time and control it remotely with mouse and keyboard.',
+    webFrame: 'Frame',
+    webQuality: 'Quality',
+    webInputOn: 'Input Enabled',
+    shortcutsTitle: 'Keyboard Shortcuts',
+    shortcutsSub: 'Operate every feature without a mouse',
+    scGlobal: 'Global',
+    scGlobalF1: 'File Manager modal',
+    scGlobalF2: 'Recursive file search',
+    scGlobalF3: 'Go to RDP tab',
+    scGlobalF4: 'Switch to AI tab',
+    scGlobalF6: 'Toggle SUPER mode (terminal)',
+    scGlobalF7: 'Focus terminal input bar',
+    scAiPanel: 'AI Panel (Sidebar)',
+    scAiTab: 'Open/Close sidebar',
+    scAi123: 'Chat / Term / Web subtabs',
+    scAiUpDown: 'Navigate session list',
+    scAiRight: 'Jump to notification session',
+    scAiLeft: 'Return to previous session',
+    scTerm: 'Terminal',
+    scTermNew: 'New terminal',
+    scTermDel: 'Close current terminal',
+    scTermEnter: 'Send input',
+    scTermScroll: 'Scroll to bottom',
+    scChat: 'Chat',
+    scChatNewline: 'New line (instead of send)',
+    scChatEsc: 'Close autocomplete',
+    scChatTab: 'Apply autocomplete',
+    quickStartTitle: 'Getting Started',
+    quickStartSub: 'Two ways to get started right away',
+    gsBadge1: 'Method 1',
+    gsMethod1Title: 'Full Setup & Run',
+    gsClone: 'Clone',
+    gsInstall: 'Install',
+    gsRun: 'Run',
+    gsWebOnly: 'To run only the web server',
+    gsPort: 'port',
+    gsDefaultPort: 'default port 8050',
+    gsBadge2: 'Method 2',
+    gsMethod2Title: 'Download ZIP',
+    gsMethod2Desc1: 'Download from the link above and unzip it.',
+    gsMethod2Desc2: 'You can also run it with',
+    gsMethod2Desc3: ' on Windows, or',
+    gsMethod2Desc4: ' on Linux/macOS.',
+    gsPassword: 'The default password is <strong>artgine</strong>. Be sure to change it before exposing this to an external network.',
+    footerBuilt: 'Built on Artgine Engine',
+    footerLicense: 'MIT License'
+  }
+};
+
+const LANG = (navigator.language || navigator.userLanguage || 'en').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+const S = STRINGS[LANG] || STRINGS.en;
+document.documentElement.lang = LANG;
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var value = S[el.dataset.i18n];
+    if (value !== undefined) el.textContent = value;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+    var value = S[el.dataset.i18nHtml];
+    if (value !== undefined) el.innerHTML = value;
+  });
+}
+
+applyI18n();
+
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.15 });
