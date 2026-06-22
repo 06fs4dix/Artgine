@@ -789,12 +789,18 @@ ipcMain.handle("NewPage", async (_event, _json: {
 		
 		
 		epStr = epStr.replace(
-			/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g,
-			(match, quote, path) => {
-				// upFolder 끝 / 제거, path 앞 / 제거 후 결합
-				const cleanUpFolder = upFolder.replace(/\/+$/, '');
-				const cleanPath = path.replace(/^\/+/, '');
-				return `${quote}${cleanUpFolder}/${cleanPath}`;
+			/^.*$/gm,
+			(line) => {
+				if (!/\bimport\b/.test(line)) return line;
+				return line.replace(
+					/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g,
+					(match, quote, path) => {
+						// upFolder 끝 / 제거, path 앞 / 제거 후 결합
+						const cleanUpFolder = upFolder.replace(/\/+$/, '');
+						const cleanPath = path.replace(/^\/+/, '');
+						return `${quote}${cleanUpFolder}/${cleanPath}`;
+					}
+				);
 			}
 		);
 

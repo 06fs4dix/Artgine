@@ -3,458 +3,491 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Artgine-Agent Tutorial</title>
+  <title>Artgine Agent Tutorial</title>
+  <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
   <style>
     :root {
-      --bs-blue:#0d6efd; --bs-green:#198754; --bs-red:#dc3545; --bs-yellow:#ffc107;
-      --bs-body-bg:#f8f9fa; --bs-body-color:#212529; --bs-secondary:#6c757d;
-      --bs-border-color:#dee2e6; --bs-tertiary-bg:#f8f9fa; --bs-light:#f8f9fa;
+      --blue:#0d6efd;
+      --green:#198754;
+      --red:#dc3545;
+      --cyan:#0dcaf0;
+      --yellow:#ffc107;
+      --border:#dee2e6;
+      --body:#212529;
+      --muted:#6c757d;
+      --light:#f8f9fa;
       --shadow:0 .5rem 1rem rgba(0,0,0,.15);
     }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:#eef1f5;color:var(--bs-body-color);font-family:Arial,"Noto Sans KR",sans-serif;font-size:14px;line-height:1.45}
-    button,input,select,textarea{font:inherit}
-    .app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}
-    .guide{background:#fff;border-right:1px solid var(--bs-border-color);display:flex;flex-direction:column;min-height:0}
-    .steps{padding:12px;overflow:auto;min-height:0;flex:1}
-    .step{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;text-align:left;border:1px solid var(--bs-border-color);background:#fff;border-radius:.375rem;padding:10px;margin-bottom:8px;cursor:pointer}
-    .step.active{background:#e7f1ff;border-color:#9ec5fe}
-    .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e9ecef;color:#495057;font-weight:700;font-size:13px}
-    .step.active .num{background:var(--bs-blue);color:#fff}.step strong{display:block;margin-bottom:3px}.step span:last-child{font-size:12px;color:#6c757d}
-    .guide-foot{display:flex;gap:8px;padding:12px;border-top:1px solid var(--bs-border-color)}.guide-foot .btn{flex:1}
-    .workspace{height:100%;min-width:0;padding:14px;display:flex;flex-direction:column}
-    .mock-browser{height:100%;min-height:0;background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;box-shadow:0 .25rem .75rem rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column;position:relative}
-
-    .btn{border:1px solid var(--bs-border-color);background:#fff;color:#212529;border-radius:.375rem;padding:.375rem .75rem;cursor:pointer;line-height:1.4}
-    .btn:hover{background:#f8f9fa}.btn-sm{padding:.25rem .5rem;font-size:.875rem}.btn-primary{background:var(--bs-blue);border-color:var(--bs-blue);color:#fff}.btn-primary:hover{background:#0b5ed7}
-    .btn-outline-primary{border-color:var(--bs-blue);color:var(--bs-blue)}.btn-outline-success{border-color:var(--bs-green);color:var(--bs-green)}
-    .btn-outline-secondary{border-color:#6c757d;color:#6c757d}.btn-outline-danger{border-color:var(--bs-red);color:var(--bs-red)}
-    .btn-outline-info{border-color:#0dcaf0;color:#087990}.btn-success{background:var(--bs-green);border-color:var(--bs-green);color:#fff}
-    .nav-tabs{display:flex;align-items:end;gap:0;padding:0 8px;margin:0;list-style:none;border-bottom:1px solid var(--bs-border-color);background:#fff}
-    .nav-item{display:block}.nav-link{height:36px;border:1px solid transparent;border-top-left-radius:.375rem;border-top-right-radius:.375rem;background:transparent;padding:.35rem .65rem;cursor:pointer}
-    .nav-link.active{background:#fff;border-color:var(--bs-border-color);border-bottom-color:#fff;color:#0d6efd;font-weight:600}.nav-link small{color:#6c757d}
-    .tab-content{flex:1;min-height:0;position:relative;background:#fff}.tab-pane{display:none;height:100%;min-height:0}.tab-pane.active{display:block}
-    .badge{display:inline-block;padding:.25em .55em;border-radius:.375rem;font-size:.75em;font-weight:700}.bg-success{background:#198754;color:#fff}.bg-warning{background:#ffc107;color:#212529}.bg-danger{background:#dc3545;color:#fff}.bg-secondary{background:#6c757d;color:#fff}.bg-primary-subtle{background:#cfe2ff}.bg-success-subtle{background:#d1e7dd}.text-secondary{color:#6c757d}.small{font-size:.875em}
-    .list-group{display:flex;flex-direction:column}.list-group-item{display:block;width:100%;padding:.55rem .75rem;border:1px solid rgba(0,0,0,.125);background:#fff;text-align:left;cursor:pointer;line-height:1.35;min-height:38px}.list-group-item+.list-group-item{border-top-width:0}.list-group-item:hover{background:#f8f9fa}.list-group-item.active{background:#e9ecef;color:#212529;border-color:#ced4da}
-    .form-control,.form-select{display:block;width:100%;padding:.45rem .65rem;border:1px solid #ced4da;border-radius:.375rem;background:#fff;color:#212529}.form-check{display:flex;align-items:flex-start;gap:.45rem;line-height:1.35}.form-check input{margin-top:.2rem}.form-check .help{flex:0 0 auto;margin-left:auto}.modal-backdrop{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:40;align-items:center;justify-content:center;padding:18px}.modal-backdrop.show{display:flex}.modal{width:min(560px,100%);background:#fff;border-radius:.5rem;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,.2)}.modal-header,.modal-footer{display:flex;align-items:center;gap:8px;padding:1rem;border-bottom:1px solid var(--bs-border-color)}.modal-footer{border-top:1px solid var(--bs-border-color);border-bottom:0;justify-content:flex-end}.modal-title{margin:0;font-size:1.1rem}.modal-body{padding:1rem}
-
-    .topbar{height:42px;display:flex;align-items:stretch}.topbar-actions{display:flex;align-items:center;gap:4px;padding:0 8px 0 4px;margin-left:auto;border-bottom:1px solid var(--bs-border-color);background:#fff}.topbar-actions .btn{height:30px;min-width:82px;padding:.25rem .5rem;font-size:.875rem;line-height:1.2}.topbar .install{margin-left:0;align-self:auto}
-    .home{padding:24px;overflow:auto}.home h2{margin:0 0 10px}.home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.card{border:1px solid var(--bs-border-color);border-radius:.5rem;background:#fff;padding:16px}.card h3{margin:0 0 8px;font-size:16px}.card p{margin:0;color:#6c757d;line-height:1.45}
-
-    .file-pane.active{display:block;overflow:auto}
-    .shortcut-strip{display:flex;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--bs-border-color);background:#f8f9fa;overflow:auto;min-height:30px;white-space:nowrap}.kbd{display:inline-flex;align-items:center;justify-content:center;min-height:18px;border:1px solid #adb5bd;border-bottom-width:2px;border-radius:.25rem;background:#fff;padding:0 .35rem;font-family:Consolas,monospace;font-size:12px;line-height:1;color:#212529;white-space:nowrap}.shortcut-strip .small{line-height:1;white-space:nowrap}.shortcut-strip .btn{white-space:nowrap}
-    .file-menu{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--bs-border-color);background:#fff;min-height:39px}.file-menu .path{margin-left:auto;font-family:Consolas,monospace;color:#6c757d;font-size:12px}
-    .file-body{background:#fff;padding:0}.file-list-wrap{padding:0}
-    .file-list-wrap .list-group{border-radius:0}.file-list-wrap .list-group-item{border-left:0;border-right:0;border-radius:0;padding:.72rem 1rem;font-size:14px}
-    .file-list-wrap .list-group-item i{display:inline-block;width:1.35rem;margin-right:.25rem;text-align:center}.file-list-wrap .list-group-item-secondary{background:#e9ecef}.file-list-wrap .list-group-item-warning{background:#fff3cd}.file-list-wrap .list-group-item-primary{background:#cfe2ff}
-    .fake-monaco{min-height:280px;background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:14px;font-family:Consolas,monospace;white-space:pre-wrap}.fake-image{height:260px;border:1px dashed #adb5bd;border-radius:.5rem;display:grid;place-items:center;background:linear-gradient(135deg,#f8f9fa,#e9ecef);color:#6c757d}.fake-video{height:260px;border-radius:.5rem;background:#111827;color:#fff;display:grid;place-items:center}
-
-    .ai-pane.active{display:grid;grid-template-rows:auto minmax(0,1fr);background:#f8f9fa;overflow:hidden}.ai-body{min-height:0;display:grid;grid-template-columns:260px minmax(0,1fr);height:100%}.ai-sidebar{display:flex;flex-direction:column;border-right:1px solid var(--bs-border-color);min-height:0;background:#f8f9fa}.ai-subtabs{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--bs-border-color)}.ai-subtabs .nav-link{height:40px;border-radius:0;border:0;border-right:1px solid var(--bs-border-color)}
-    .side-section{display:none;overflow:auto;padding:10px;min-height:0;flex:1}.side-section.active{display:block}.session{position:relative;border:1px solid transparent;border-radius:.375rem;background:#fff;padding:8px;margin-bottom:7px;cursor:pointer}.session.chat-active{background:#cfe2ff;border-color:#9ec5fe}.session.term-active{background:#d1e7dd;border-color:#a3cfbb}.session.web-active{background:#e7f1ff;border-color:#9ec5fe}.sess-title{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:#198754}.dot.busy{background:#ffc107}.dot.off{background:#dc3545}.session small{display:block;color:#6c757d;margin-left:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .sess-menu-btn{margin-left:auto;border:0;background:transparent;color:#6c757d;font-weight:700;padding:0 5px;line-height:1.4;cursor:pointer;border-radius:.25rem;font-size:14px}.sess-menu-btn:hover{background:rgba(0,0,0,.08)}
-    .sess-menu{display:none;position:absolute;right:6px;top:30px;z-index:25;background:#fff;border:1px solid var(--bs-border-color);border-radius:.375rem;box-shadow:var(--shadow);min-width:108px;padding:4px}.sess-menu.show{display:block}
-    .sess-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:.35rem .55rem;border-radius:.25rem;cursor:pointer;font-size:.82rem;font-weight:400}.sess-menu button:hover{background:#f1f3f5}.sess-menu button[data-action="delete"]{color:#dc3545}
-    .frame{min-width:0;min-height:0;height:100%;overflow:hidden;display:flex;flex-direction:column;position:relative;background:#f8f9fa}.sidebar-toggle{position:absolute;right:22px;top:48px;z-index:4}.chat-top{height:48px;flex:0 0 48px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--bs-border-color);background:#fff}.chat-main{flex:1 1 auto;min-height:0;height:100%;display:flex;flex-direction:column}.messages{flex:1 1 auto;min-height:0;overflow:auto;padding:16px}.bubble{max-width:780px;border:1px solid var(--bs-border-color);border-left:4px solid #6c757d;background:#fff;border-radius:.5rem;padding:12px;margin-bottom:12px}.bubble.user{margin-left:auto;border-left-color:#0d6efd;background:#cfe2ff}.bubble small{display:block;text-transform:uppercase;color:#6c757d;font-size:11px;margin-bottom:5px}.composer{flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid var(--bs-border-color);background:#fff}.composer textarea{min-height:42px;max-height:110px;resize:vertical}
-    .terminal{display:none;flex:1;min-height:0;overflow:auto;background:#0f172a;color:#d1fae5;font-family:Consolas,monospace;padding:14px;white-space:pre-wrap}.terminal.active{display:block}.term-bar{display:none;gap:8px;padding:9px;background:#111827;border-top:1px solid #263244}.term-bar.active{display:flex}.term-bar input{background:#0b1220;color:#d1fae5;border-color:#10b981}.browser-frame{display:none;flex:1;min-height:0;background:#111;color:#aaa;overflow:hidden}.browser-frame.active{display:flex;flex-direction:column}.browser-controls{height:36px;flex:0 0 36px;display:flex;align-items:center;gap:8px;padding:0 8px;background:#1e1e1e;border-bottom:1px solid #333;font-size:.75rem;color:#aaa}.browser-controls input[type=range]{width:86px}.browser-control{display:flex;align-items:center;gap:5px;min-width:0}.browser-control-label{font-size:.68rem;color:#777;text-transform:uppercase}.browser-shot-wrap{flex:1 1 0;min-height:0;background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}.browser-shot-img{width:min(760px,92%);height:min(390px,86%);background:#f8f9fa;color:#212529;border:1px solid #333;border-radius:.35rem;box-shadow:0 12px 28px rgba(0,0,0,.45);overflow:hidden}.browser-mock-top{height:28px;background:#e9ecef;border-bottom:1px solid #ced4da;display:flex;align-items:center;gap:5px;padding:0 8px}.browser-dot{width:8px;height:8px;border-radius:50%;background:#dc3545}.browser-dot:nth-child(2){background:#ffc107}.browser-dot:nth-child(3){background:#198754}.browser-address{margin-left:6px;flex:1;height:16px;border-radius:8px;background:#fff;color:#6c757d;font-size:10px;display:flex;align-items:center;padding:0 8px}.browser-mock-page{height:calc(100% - 28px);display:grid;grid-template-columns:140px minmax(0,1fr);background:#fff}.browser-mock-side{background:#f1f3f5;border-right:1px solid #dee2e6;padding:12px}.browser-mock-line{height:9px;border-radius:5px;background:#ced4da;margin-bottom:8px}.browser-mock-main{padding:14px}.browser-mock-hero{height:72px;border-radius:.4rem;background:linear-gradient(135deg,#cfe2ff,#e7f1ff);margin-bottom:12px}.browser-mock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.browser-mock-card{height:78px;border:1px solid #dee2e6;border-radius:.35rem;background:#fff}.browser-log{flex:0 0 160px;overflow:auto;padding:8px;font-family:Consolas,monospace;font-size:.75rem;background:#1a1a1a;color:#aaa;border-top:1px solid #333;white-space:pre-wrap}
-
-    .coach{position:absolute;right:18px;bottom:18px;width:min(520px,calc(100% - 36px));background:#151b26;color:#fff;border-radius:.5rem;box-shadow:var(--shadow);padding:16px;z-index:30}.coach h2{font-size:18px;margin:0 0 8px;line-height:1.25}.coach p{margin:0 0 12px;color:#d1d5db;line-height:1.45}.tip{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);border-radius:.375rem;padding:9px;color:#e5e7eb;line-height:1.45}.coach-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.coach-actions .btn{background:#263244;color:#fff;border-color:#4b5563}.coach-actions .btn-primary{background:#0d6efd;border-color:#0d6efd}
-    .file-meta{display:block;color:#6c757d;font-size:11px;line-height:1.25;margin-top:2px;margin-left:0}
-    .modal .file-meta{margin-left:0}
-    .modal-body .list-group-item .kbd{margin-right:.35rem}
-    .modal-body .list-group-item{padding:.65rem .75rem}
-    .shortcut-list .list-group-item{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px;align-items:start}
-    .shortcut-list .keycell{white-space:nowrap;line-height:1.6}
-    .shortcut-list .desccell{line-height:1.35}
-    .shortcut-list .file-meta{margin-top:3px}
-    .mm-now{padding:6px;font-weight:bold;color:#0d6efd;min-height:30px}
-    .mm-list .list-group{margin-bottom:0}.mm-list .list-group+.list-group{margin-top:0}.mm-list font{color:red}.float-right{float:right}
-    .highlight{outline:3px solid #f7c948;outline-offset:3px;position:relative;z-index:5}.help{border-radius:50%;width:22px;height:22px;padding:0;display:inline-grid;place-items:center;font-weight:700;color:#0d6efd;border-color:#9ec5fe;background:#e7f1ff}.popover{display:none;position:absolute;z-index:60;max-width:280px;background:#212529;color:#fff;border-radius:.375rem;padding:10px;box-shadow:var(--shadow);font-size:13px;line-height:1.45}.popover.show{display:block}.xbtn{font-size:1.25rem;line-height:1;border:0;background:transparent;padding:.25rem .45rem}
-    @media(max-width:940px){.app{grid-template-columns:1fr;grid-template-rows:260px minmax(0,1fr)}.guide{border-right:0;border-bottom:1px solid var(--bs-border-color)}.workspace{padding:8px}.home-grid{grid-template-columns:1fr}.file-body{grid-template-columns:1fr}.ai-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.ai-sidebar{max-height:230px;border-right:0;border-bottom:1px solid var(--bs-border-color)}.coach{right:10px;bottom:10px;width:calc(100% - 20px)}.file-menu{overflow:auto}.file-menu .path{display:none}}
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      color: var(--body);
+      background: #eef1f5;
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    button, input, select, textarea { font: inherit; }
+    code, kbd { font-family: Consolas, "SFMono-Regular", monospace; }
+    .app { height: 100%; display: grid; grid-template-columns: 330px minmax(0,1fr); }
+    .guide { background: #fff; border-right: 1px solid var(--border); min-height: 0; display: flex; flex-direction: column; }
+    .steps { padding: 12px; overflow: auto; min-height: 0; flex: 1; }
+    .step {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 28px minmax(0,1fr);
+      gap: 10px;
+      text-align: left;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: .375rem;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .step.active { background: #e7f1ff; border-color: #9ec5fe; }
+    .num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #e9ecef;
+      color: #495057;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .step.active .num { background: var(--blue); color: #fff; }
+    .step strong { display: block; margin-bottom: 3px; }
+    .step span:last-child { font-size: 12px; color: var(--muted); }
+    .workspace { height: 100%; min-width: 0; padding: 14px; display: flex; flex-direction: column; }
+    .mock-browser {
+      height: 100%;
+      min-height: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      box-shadow: 0 .25rem .75rem rgba(0,0,0,.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #212529;
+      border-radius: .375rem;
+      padding: .375rem .75rem;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .btn:hover { background: var(--light); }
+    .btn-sm { padding: .25rem .5rem; font-size: .875rem; }
+    .btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn-success { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn-outline-primary { border-color: var(--blue); color: var(--blue); }
+    .btn-outline-success { border-color: var(--green); color: var(--green); }
+    .btn-outline-info { border-color: var(--cyan); color: #087990; }
+    .btn-outline-secondary { border-color: var(--muted); color: var(--muted); }
+    .btn-outline-danger { border-color: var(--red); color: var(--red); }
+    .topbar { height: 42px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
+    .nav-tabs { display: flex; align-items: end; gap: 0; padding: 0 8px; margin: 0; list-style: none; background: #fff; flex: 1; }
+    .nav-link {
+      height: 36px;
+      border: 1px solid transparent;
+      border-top-left-radius: .375rem;
+      border-top-right-radius: .375rem;
+      background: transparent;
+      padding: .35rem .65rem;
+      cursor: pointer;
+    }
+    .nav-link.active { background: #fff; border-color: var(--border); border-bottom-color: #fff; color: var(--blue); font-weight: 600; }
+    .nav-link small { color: var(--muted); }
+    .topbar-actions { display: flex; align-items: center; gap: 6px; padding: 0 8px; background: #fff; }
+    .tab-content { flex: 1; min-height: 0; position: relative; background: #fff; }
+    .tab-pane { display: none; height: 100%; min-height: 0; }
+    .tab-pane.active { display: block; }
+    .home { padding: 24px; overflow: auto; }
+    .home h2 { margin: 0 0 10px; }
+    .home-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 16px; }
+    .card { border: 1px solid var(--border); border-radius: .5rem; background: #fff; padding: 16px; }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .card p { margin: 0; color: var(--muted); }
+    .shortcut-strip {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--light);
+      overflow: auto;
+      min-height: 30px;
+      white-space: nowrap;
+    }
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 18px;
+      border: 1px solid #adb5bd;
+      border-bottom-width: 2px;
+      border-radius: .25rem;
+      background: #fff;
+      padding: 0 .35rem;
+      font-size: 12px;
+      line-height: 1;
+      color: #212529;
+      white-space: nowrap;
+    }
+    .small { font-size: .875em; }
+    .text-secondary { color: var(--muted); }
+    .badge { display: inline-block; padding: .25em .55em; border-radius: .375rem; font-size: .75em; font-weight: 700; }
+    .bg-success { background: var(--green); color: #fff; }
+    .bg-warning { background: var(--yellow); color: #212529; }
+    .bg-danger { background: var(--red); color: #fff; }
+    .bg-secondary { background: var(--muted); color: #fff; }
+    .bg-primary-subtle { background: #cfe2ff; }
+    .bg-success-subtle { background: #d1e7dd; }
+    .form-control, .form-select {
+      display: block;
+      width: 100%;
+      padding: .45rem .65rem;
+      border: 1px solid #ced4da;
+      border-radius: .375rem;
+      background: #fff;
+      color: #212529;
+    }
+    .list-group { display: flex; flex-direction: column; }
+    .list-group-item {
+      display: block;
+      width: 100%;
+      padding: .6rem .75rem;
+      border: 1px solid rgba(0,0,0,.125);
+      background: #fff;
+      text-align: left;
+      cursor: pointer;
+      line-height: 1.35;
+      min-height: 38px;
+    }
+    .list-group-item + .list-group-item { border-top-width: 0; }
+    .list-group-item:hover { background: var(--light); }
+    .list-group-item.active { background: #e9ecef; }
+    .list-group-item-warning { background: #fff3cd; }
+    .list-group-item-primary { background: #cfe2ff; }
+    .help {
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+      font-weight: 700;
+      color: var(--blue);
+      border-color: #9ec5fe;
+      background: #e7f1ff;
+    }
+    .highlight { outline: 3px solid #f7c948; outline-offset: 3px; position: relative; z-index: 5; }
+    .coach {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      width: min(520px, calc(100% - 36px));
+      background: #151b26;
+      color: #fff;
+      border-radius: .5rem;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      z-index: 30;
+    }
+    .coach h2 { font-size: 18px; margin: 0 0 8px; line-height: 1.25; }
+    .coach p { margin: 0 0 12px; color: #d1d5db; }
+    .tip { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08); border-radius: .375rem; padding: 9px; color: #e5e7eb; }
+    .coach-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+    .coach-actions .btn { background: #263244; color: #fff; border-color: #4b5563; }
+    .coach-actions .btn-primary { background: var(--blue); border-color: var(--blue); }
+    .modal-backdrop {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 40;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal { width: min(600px,100%); background: #fff; border-radius: .5rem; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,.2); }
+    .modal-header, .modal-footer { display: flex; align-items: center; gap: 8px; padding: 1rem; border-bottom: 1px solid var(--border); }
+    .modal-footer { border-top: 1px solid var(--border); border-bottom: 0; justify-content: flex-end; }
+    .modal-title { margin: 0; font-size: 1.1rem; }
+    .modal-body { padding: 1rem; }
+    .xbtn { font-size: 1.25rem; line-height: 1; border: 0; background: transparent; padding: .25rem .45rem; margin-left: auto; cursor: pointer; }
+    .popover {
+      display: none;
+      position: absolute;
+      z-index: 60;
+      max-width: 300px;
+      background: #212529;
+      color: #fff;
+      border-radius: .375rem;
+      padding: 10px;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .popover.show { display: block; }
+    .rdp-pane.active, .ai-pane.active { display: grid; grid-template-rows: auto minmax(0,1fr); overflow: hidden; background: var(--light); }
+    .rdp-body, .ai-body { min-height: 0; display: grid; grid-template-columns: 310px minmax(0,1fr); height: 100%; }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      min-height: 0;
+      background: var(--light);
+    }
+    .sidebar-head { padding: 8px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; }
+    .side-section { overflow: auto; padding: 10px; min-height: 0; flex: 1; }
+    .session {
+      position: relative;
+      border: 1px solid transparent;
+      border-radius: .375rem;
+      background: #fff;
+      padding: 8px;
+      margin-bottom: 7px;
+      cursor: pointer;
+    }
+    .session.active-rdp { background: #cfe2ff; border-color: #9ec5fe; }
+    .session.chat-active { background: #cfe2ff; border-color: #9ec5fe; }
+    .session.term-active { background: #d1e7dd; border-color: #a3cfbb; }
+    .session.web-active { background: #e7f1ff; border-color: #9ec5fe; }
+    .sess-title { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+    .dot.busy { background: var(--yellow); }
+    .dot.off { background: var(--red); }
+    .session small { display: block; color: var(--muted); margin-left: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .frame {
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--light);
+    }
+    .sidebar-toggle { position: absolute; right: 22px; top: 48px; z-index: 4; }
+    .rdp-controls, .browser-controls {
+      height: 36px;
+      flex: 0 0 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #333;
+      font-size: .75rem;
+      color: #aaa;
+    }
+    .control { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .control input[type=range] { width: 90px; }
+    .rdp-screen, .browser-shot-wrap {
+      flex: 1 1 0;
+      min-height: 0;
+      background: #111;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .remote-desktop {
+      width: min(880px,92%);
+      height: min(500px,84%);
+      background: #1d2430;
+      border: 1px solid #3b4655;
+      border-radius: .35rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,.45);
+      overflow: hidden;
+      color: #e5e7eb;
+      display: grid;
+      grid-template-rows: 34px minmax(0,1fr);
+    }
+    .remote-top { background: #0f172a; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+    .remote-page { display: grid; grid-template-columns: 150px minmax(0,1fr); min-height: 0; }
+    .remote-side { background: #111827; border-right: 1px solid #334155; padding: 12px; }
+    .remote-main { padding: 14px; background: #f8f9fa; color: #212529; }
+    .line { height: 9px; border-radius: 5px; background: #ced4da; margin-bottom: 8px; }
+    .hero { height: 78px; border-radius: .4rem; background: linear-gradient(135deg,#cfe2ff,#e7f1ff); margin-bottom: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .mini-card { height: 86px; border: 1px solid #dee2e6; border-radius: .35rem; background: #fff; }
+    .file-pane.active { display: block; overflow: auto; }
+    .file-menu { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); background: #fff; min-height: 39px; }
+    .file-menu .path { margin-left: auto; font-family: Consolas, monospace; color: var(--muted); font-size: 12px; }
+    .file-list-wrap .list-group-item { border-left: 0; border-right: 0; border-radius: 0; padding: .72rem 1rem; }
+    .file-list-wrap .list-group-item i { display: inline-block; width: 1.35rem; margin-right: .25rem; text-align: center; font-size: 1rem; vertical-align: -.1em; }
+    .file-list-hint { padding: 8px 12px; border-bottom: 1px solid var(--border); background: #f8f9fa; color: var(--muted); font-size: 12px; }
+    .file-list-wrap [data-view="root"] i,
+    .file-list-wrap [data-view="parent"] i,
+    .file-list-wrap [data-view="folder"] i { color: #d29922; }
+    .file-list-wrap [data-view="html"] i { color: #0d6efd; }
+    .file-list-wrap [data-view="code"] i { color: #198754; }
+    .file-list-wrap [data-view="file"] i { color: #6c757d; }
+    .ai-subtabs { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--border); }
+    .ai-subtabs .nav-link { height: 40px; border-radius: 0; border: 0; border-right: 1px solid var(--border); }
+    .ai-side-pane { display: none; overflow: auto; padding: 10px; min-height: 0; flex: 1; }
+    .ai-side-pane.active { display: block; }
+    .chat-main { flex: 1 1 auto; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+    .chat-top { height: 48px; flex: 0 0 48px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #fff; }
+    .messages { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px; }
+    .bubble { max-width: 780px; border: 1px solid var(--border); border-left: 4px solid var(--muted); background: #fff; border-radius: .5rem; padding: 12px; margin-bottom: 12px; }
+    .bubble.user { margin-left: auto; border-left-color: var(--blue); background: #cfe2ff; }
+    .bubble small { display: block; text-transform: uppercase; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
+    .composer { flex: 0 0 auto; display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: #fff; }
+    .composer textarea { min-height: 42px; max-height: 110px; resize: vertical; }
+    .terminal { display: none; flex: 1; min-height: 0; overflow: auto; background: #0f172a; color: #d1fae5; font-family: Consolas, monospace; padding: 14px; white-space: pre-wrap; }
+    .terminal.active { display: block; }
+    .term-bar { display: none; gap: 8px; padding: 9px; background: #111827; border-top: 1px solid #263244; }
+    .term-bar.active { display: flex; }
+    .term-bar input { background: #0b1220; color: #d1fae5; border-color: #10b981; }
+    .browser-frame { display: none; flex: 1; min-height: 0; background: #111; color: #aaa; overflow: hidden; }
+    .browser-frame.active { display: flex; flex-direction: column; }
+    .browser-shot-img { width: min(760px,92%); height: min(390px,86%); background: #f8f9fa; color: #212529; border: 1px solid #333; border-radius: .35rem; box-shadow: 0 12px 28px rgba(0,0,0,.45); overflow: hidden; }
+    .browser-mock-top { height: 28px; background: #e9ecef; border-bottom: 1px solid #ced4da; display: flex; align-items: center; gap: 5px; padding: 0 8px; }
+    .browser-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+    .browser-dot:nth-child(2) { background: var(--yellow); }
+    .browser-dot:nth-child(3) { background: var(--green); }
+    .browser-address { margin-left: 6px; flex: 1; height: 16px; border-radius: 8px; background: #fff; color: var(--muted); font-size: 10px; display: flex; align-items: center; padding: 0 8px; }
+    .browser-mock-page { height: calc(100% - 28px); display: grid; grid-template-columns: 140px minmax(0,1fr); background: #fff; }
+    .browser-mock-side { background: #f1f3f5; border-right: 1px solid #dee2e6; padding: 12px; }
+    .browser-mock-main { padding: 14px; }
+    .browser-log { flex: 0 0 150px; overflow: auto; padding: 8px; font-family: Consolas, monospace; font-size: .75rem; background: #1a1a1a; color: #aaa; border-top: 1px solid #333; white-space: pre-wrap; }
+    .fake-monaco { min-height: 240px; background: #1e1e1e; color: #d4d4d4; border-radius: .375rem; padding: 14px; font-family: Consolas, monospace; white-space: pre-wrap; }
+    .shortcut-list .list-group-item { display: grid; grid-template-columns: 130px minmax(0,1fr); gap: 10px; align-items: start; }
+    .file-meta { display: block; color: var(--muted); font-size: 11px; line-height: 1.25; margin-top: 2px; }
+    @media (max-width: 940px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: 250px minmax(0,1fr); }
+      .guide { border-right: 0; border-bottom: 1px solid var(--border); }
+      .workspace { padding: 8px; }
+      .home-grid { grid-template-columns: 1fr; }
+      .rdp-body, .ai-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+      .sidebar { max-height: 230px; border-right: 0; border-bottom: 1px solid var(--border); }
+      .coach { right: 10px; bottom: 10px; width: calc(100% - 20px); }
+      .file-menu { overflow: auto; }
+      .file-menu .path { display: none; }
+    }
   </style>
 </head>
 <body>
   <script>
-    /* ============================================================
-       STRING MAP  —  add new languages here as needed
-       Default fallback: 'en'
-    ============================================================ */
-    const STRINGS = {
-      ko: {
-        prev: '이전', next: '다음', done: '완료',
-
-        home: 'Home', files: 'Files', ai: 'AI',
-        shortcuts: 'Shortcuts', install: 'Install',
-
-        homeDesc: '파일 브라우저, AI 채팅, 웹 터미널을 한 화면에서 사용하는 로컬 웹 인터페이스입니다.',
-        gsTitle: '시작하기',
-        gsAlt: 'start.bat (Windows) 또는 start.sh (Linux) 로도 바로 실행할 수 있습니다.',
-        gsRun: 'Artgine 앱에서 projectPath를 proj/Home 으로 설정하고 Run을 클릭하세요.',
-        gsWeb: '웹 전용 모드 — npm run start_web [port] (기본값: 8050)',
-        gsPwd: '기본 비밀번호: artgine — 반드시 변경하세요!',
-        gsPwdHow: '비밀번호 변경 방법: 툴(Extra Server Settings → Password) 에서 변경하거나, Main.json 파일의 "password" 값을 직접 수정하세요. (Main.json 위치는 실행 환경마다 다릅니다 — 보통 실행 폴더 또는 desktop 폴더에 있습니다.)',
-        gsPwdDanger: '☠️ 경고: 비밀번호를 기본값(artgine) 그대로 두면 누구든 이 비밀번호 하나로 AI 에이전트와 터미널에 접속해 파일을 읽고 쓰고 지우고, 임의의 명령까지 실행할 수 있습니다. 그 순간 이 PC는 더 이상 당신의 PC가 아닙니다. 지금 바로 비밀번호를 변경하고, 외부망에 노출하지 마세요.',
-        filesCardTitle: 'Files', filesCardDesc: '서버가 허용한 폴더를 탐색하고 파일을 미리보거나 편집합니다.',
-        aiCardTitle: 'Chat', aiCardDesc: '헤드리스 모드로 동작하는 AI 채팅입니다. AI 웹 채팅(claude.ai, chatgpt.com 등)과 동일한 방식으로 대화합니다.',
-        termCardTitle: 'Terminal', termCardDesc: '인터렉티브 모드로 동작하는 CLI 모드입니다. cmd, codex, claude 같은 터미널 세션을 웹 화면 안에서 다룹니다.',
-        browserCardTitle: 'Browser', browserCardDesc: '가상 브라우저를 만들어 AI와 함께 작업하고, 그 화면을 그대로 공유받아 볼 수 있습니다.',
-
-        keys: 'Keys', help: '?',
-        scFile: 'File', scSearch: 'Search', scFiles: 'Files', scAI: 'AI', scClose: 'Close modal',
-
-        music: 'Music', search: 'Search', file: 'File',
-        tipMusic: '음악 플레이리스트 모달을 여는 버튼입니다. 실제 앱에서는 mp3/ogg 파일을 목록에 담아 재생합니다.',
-        tipSearch: '현재 폴더 아래에서 파일 이름을 검색하는 창입니다. 실제 앱에서는 서버 목록을 스캔합니다.',
-        tipFile: '파일 관리 모달입니다. 루트 선택, 공유, 폴더 생성, 삭제, 업로드, Git 작업으로 이어집니다.',
-        tipHelpMobile: '모바일에서는 이런 도움말 버튼을 눌러 설명을 확인합니다.',
-        tipShortcuts: '단축키 목록을 모달로 엽니다. 이 튜토리얼에서는 실제 키 입력도 데모 동작으로 연결되어 있습니다.',
-
-        aiKeys: 'AI Keys', sidebar: 'Sidebar', session: 'Session',
-        chat: 'Chat', terminal: 'Terminal', web: 'Web',
-        newChat: '+ New Chat', newTerminal: '+ New Terminal', newBrowser: 'New Browser', schedule: 'Schedule',
-        sessNewWindow: '새창', sessShare: '공유', sessDelete: '삭제',
-        sessNewWindowNote: '이 세션을 별도 창으로 분리해서 보여줍니다. 실제 앱에서는 진짜 새 브라우저 창이 열리며, 내용은 지금 화면과 동일합니다.',
-        sessShareNote: '이 세션에 접근할 수 있는 링크입니다. 복사해서 다른 사람에게 전달할 수 있습니다.',
-        copy: '복사', copied: '복사되었습니다',
-        tipNewChat: '작업 폴더, 쓰기 권한, MCP 등을 정하고 AI 채팅 세션을 엽니다.',
-        tipNewTerm: 'cmd, codex, claude, antigravity, opencode 모드의 웹 터미널을 시작합니다.',
-        tipWebSubtab: 'Playwright 브라우저 세션 목록을 보여줍니다. 세션을 선택하면 오른쪽 작업 화면에서 Browser.html 뷰어가 열립니다.',
-        tipNewBrowser: 'Playwright 브라우저 세션을 만들고 화면, 로그, 입력 동작을 웹 UI에서 확인합니다.',
-        tipBrowserSession: '브라우저 세션 항목입니다. 실제 앱에서는 선택 시 해당 세션의 Browser.html 뷰어가 열립니다.',
-        tipBrowserRate: '프레임 간격입니다. Browser 페이지가 Playwright 스크린샷을 새로 가져오는 주기를 조절합니다.',
-        tipBrowserQuality: '스크린샷 JPEG 품질입니다. 값이 높을수록 선명하지만 이미지 전송량이 늘어납니다.',
-        tipBrowserInput: '입력 모드입니다. 켜면 키보드와 마우스 입력이 Playwright 페이지로 전달됩니다.',
-        tipBrowserShot: '스크린샷 표시 영역입니다. 실제 Browser.html은 최신 캡처 이미지를 object-fit: contain 방식으로 보여줍니다.',
-        tipBrowserLog: '브라우저 세션에서 수집한 콘솔과 네트워크 로그가 표시되는 영역입니다.',
-        tipSchedule: '정해진 간격으로 명령이나 프롬프트를 반복 실행합니다.',
-        tipAIHelp: 'AI 탭에서는 세션 전환, 사이드바 토글, 터미널 입력 바 제어 단축키를 자주 씁니다.',
-        tipSUPER: 'SUPER는 자동 승인 성격이 강하므로 실제 앱에서 신중히 켭니다.',
-
-        sess1Title: '홈 화면 개선', sess2Title: 'README 정리', sess2Sub: '응답 생성 중',
-        sess3Title: '이전 작업', sess3Sub: '연결 안 됨',
-        tsess2Sub: '승인 대기',
-
-        aiChatTitle: 'AI Chat', connected: 'connected', defaultModel: 'default model',
-        msgUserLabel: 'User', msgAssLabel: 'Assistant', msgChangedLabel: 'Changed files',
-        msgUserText: '이 폴더에서 튜토리얼 페이지를 만들어줘.',
-        msgAssText: '작업 폴더를 기준으로 단일 HTML 튜토리얼을 생성하겠습니다.',
-        composerPlaceholder: '여기는 실제 앱에서 AI에게 지시를 입력하는 곳입니다.',
-        send: 'Send', enterBtn: 'Enter', superBtn: 'SUPER',
-        termComment: '# 이 화면은 실제 명령을 실행하지 않는 터미널 예시입니다.',
-
-        fileManagerTitle: 'File Manager',
-        rootLabel: 'Root',
-        tipRoot: 'Root는 파일 브라우저가 보여줄 최상위 작업 폴더입니다. 실제 앱에서는 여기서 다른 루트로 전환할 수 있습니다.',
-        fileHomeUrlPlaceholder: 'Home.html URL',
-        connect: 'Connect', local: 'Local',
-        tipFileHomeUrl: '원격 또는 다른 서버의 Home.html 주소를 입력합니다. 예: http://host:8050/Artgine/proj/Home/Home.html',
-        tipFileHomeConnect: '입력한 Home.html 주소의 파일 서버에 연결합니다. 연결 후 해당 서버 기준으로 파일 목록과 권한을 다시 확인합니다.',
-        tipFileHomeLocal: '현재 실행 중인 로컬 Home 파일 서버로 다시 전환합니다.',
-        tipRootSelect: '루트를 바꾸면 실제 앱에서는 File_div 목록이 해당 루트 기준으로 다시 로드됩니다.',
-        tipChatFromFile: '현재 폴더를 Working Directory로 넣어서 새 AI Chat 세션을 여는 버튼입니다.',
-        tipTermFromFile: '현재 폴더에서 시작하는 새 웹 터미널을 여는 버튼입니다. cmd 또는 AI CLI 작업 시작점입니다.',
-        fileActionsLabel: 'File Actions',
-        tipFileActions: '파일과 폴더를 직접 조작하는 영역입니다. 삭제와 업로드는 실제 파일에 영향을 줍니다.',
-        share: 'Share', tipShare: '현재 폴더 위치를 다시 열 수 있는 링크를 만드는 기능입니다.',
-        newFolder: 'New Folder', tipNewFolder: '현재 폴더 아래에 새 폴더를 생성합니다. 실제 앱에서는 이름 입력창이 한 번 더 뜹니다.',
-        delete: 'Delete', tipDelete: '선택한 항목을 삭제하는 기능입니다. 실제 앱에서는 삭제 대상 선택 모달이 열립니다.',
-        upload: 'Upload', tipUpload: '로컬 파일을 현재 폴더로 업로드합니다. 모바일에서도 파일 선택창이 열립니다.',
-        versionControlLabel: 'Version Control',
-        tipVC: '현재 폴더가 Git 또는 SVN 작업 폴더일 때 변경사항 확인과 반영을 돕는 영역입니다.',
-        modified: 'Modified', deleted: 'Deleted', added: 'Added', untracked: 'Untracked',
-        diff: 'Diff', tipDiff: '변경된 파일 내용을 diff 뷰어로 확인합니다. 커밋 전 확인용입니다.',
-        update: 'Update', tipUpdate: '원격 저장소의 최신 변경사항을 가져옵니다. Git에서는 pull과 submodule update 흐름입니다.',
-        addSvn: 'Add (SVN)', tipAddSvn: 'SVN 전용 추가 작업 예시입니다. Git에서는 commit 시 add가 암묵적으로 처리됩니다.',
-        revert: 'Revert', tipRevert: '선택한 변경사항을 되돌립니다. 실제 작업에서는 신중히 눌러야 합니다.',
-        commitPush: 'Commit & Push', tipCommitPush: '변경 파일을 선택하고 메시지를 입력한 뒤 commit 및 push를 수행합니다.',
-
-        musicTitle: 'Music',
-        deleteAll: 'Delete All', tipDeleteAll: '기존 CModalMusic의 Delete All 버튼입니다. 전체 플레이리스트를 비웁니다.',
-        saveList: 'Save List', tipSaveList: '현재 리스트를 저장하는 버튼입니다. 실제 앱에서는 SoundList 저장 콜백을 호출합니다.',
-        randomPlay: 'Random Play',
-
-        fileSearchTitle: 'File Search', searchResultCount: '3 result(s)',
-        tipSearchInput: '검색할 파일 이름 일부를 입력합니다. 확장자까지 넣어도 되고 일부 문자열만 넣어도 됩니다.',
-        tipSearchBtn: '현재 경로 아래를 스캔해서 일치하는 파일과 폴더를 찾습니다. 결과는 최대 개수로 제한됩니다.',
-        tipSearchResultHelp: '실제 앱에서는 먼저 캐시된 결과를 보여주고, 백그라운드로 다시 스캔해서 최신 결과로 갱신합니다.',
-        tipSR1: '검색 결과 파일을 누르면 실제 앱에서는 해당 폴더로 이동한 뒤 파일 항목을 열거나 강조합니다.',
-        tipSR2: 'HTML 파일은 실제 앱에서 새 창으로 열지, 파일 뷰어로 열지 선택하는 확인창이 뜹니다.',
-        tipSR3: 'JSON/TS/JS/TXT 파일은 편집 가능한 파일 뷰어로 열립니다.',
-
-        keyboardShortcutsTitle: 'Keyboard Shortcuts',
-        sc_f1_d: 'File Manager 열기', sc_f1_s: 'Files 탭에서 사용',
-        sc_f2_d: 'File Search 열기', sc_f2_s: '어디서든 검색 모달 표시',
-        sc_f3_d: 'Files 탭으로 이동', sc_f3_s: '루트 폴더 화면으로 전환',
-        sc_f4_d: 'AI 탭으로 이동', sc_f4_s: 'Chat/Terminal 패널 표시',
-        sc_tab_d: 'AI Sidebar 접기/펼치기', sc_tab_s: 'AI 탭에서 작동',
-        sc_arr_d: '세션 이동', sc_arr_s: 'AI 사이드바가 열려 있을 때',
-        sc_shn_d: '새 터미널', sc_shn_s: 'Terminal 서브탭으로 이동 후 모달 표시',
-        sc_f6_d: 'SUPER 토글 예시', sc_f6_s: '터미널 입력 바의 SUPER 상태 표시',
-        sc_f7_d: '터미널 입력 바 포커스', sc_f7_s: 'Terminal 화면으로 전환',
-        sc_esc_d: '열린 모달 닫기',
-
-        newChatModalTitle: 'New Chat',
-        workingDirLabel: 'Working Directory',
-        tipWDHelp: 'AI나 터미널이 작업을 시작할 폴더입니다. 예: D:/git/Artgine-Agent. 이 경로가 작업 범위의 기준이 됩니다.',
-        tipWDInput: '새 Chat이나 Terminal을 만들 때 이 폴더를 기준으로 파일을 읽거나 명령을 실행합니다.',
-        allowWriteLabel: 'Allow working dir write',
-        mcpLabel: 'MCP', mcpDesc: '추가 도구 서버를 AI 세션에 연결하는 옵션입니다.',
-        tipMCP: 'MCP는 Model Context Protocol입니다. DB, 브라우저, 외부 도구 같은 추가 기능을 AI에게 붙이는 통로라고 생각하면 됩니다. 필요 없으면 꺼둬도 됩니다.',
-        copyMdLabel: 'Copy MD', copyMdDesc: '답변이나 결과를 Markdown 형식으로 복사하기 쉽게 만드는 옵션입니다.',
-        tipCopyMD: 'MD는 Markdown입니다. 체크하면 AI 답변을 문서나 이슈, PR 설명에 붙여넣기 좋은 형식으로 다루기 쉽습니다. 코드 블록/목록/제목 형식 보존에 유용합니다.',
-        newChatWarning: '처음 쓰는 경우에는 <b>Working Directory</b>를 정확히 확인하고, 파일 수정을 맡길 때만 <b>Allow working dir write</b>를 켜세요.<br>Chat은 AI와 대화하면서 작업 지시를 내리는 세션입니다. 첫 메시지를 보내면 실제 AI CLI 세션과 연결됩니다.',
-        newChatWarningDanger: '⚠️ Chat 모드는 모든 권한을 획득한 상태로 실행되니, 복잡한 작업을 맡길 때는 규칙을 명확하게 정해두세요.',
-        cancel: 'Cancel', open: 'Open',
-
-        newTermModalTitle: 'New Terminal',
-        modeLabel: 'Mode', tipModeHelp: '터미널을 어떤 방식으로 시작할지 정합니다. cmd는 일반 쉘, codex/claude/antigravity/opencode는 AI CLI 모드입니다.',
-        keyLabel: 'Key', tipKeyHelp: '여러 터미널을 구분하기 위한 별명입니다. 비워도 되지만 반복 작업이나 공유할 때 유용합니다.',
-        allowWriteTermDesc: 'AI CLI 모드에서 파일 수정 명령을 허용합니다. cmd 모드에서는 보통 의미가 약합니다.',
-        tipAllowWriteTerm: '터미널은 실제 명령을 실행할 수 있으므로 Chat보다 더 직접적입니다. AI CLI 모드에서 이 옵션을 켜면 파일 수정 작업을 승인하기 쉬워집니다.',
-        mcpTermDesc: '터미널 AI 에이전트에 추가 도구 연결을 허용합니다.',
-        tipMCPTerm: 'codex/claude/opencode 같은 CLI가 MCP 도구를 사용할 수 있게 하는 옵션입니다. 일반 cmd만 쓸 때는 필요하지 않습니다.',
-        copyMdTermDesc: '터미널 출력이나 AI 응답을 Markdown 복사 흐름에 맞춥니다.',
-        tipCopyMDTerm: '터미널 작업 결과를 문서화하거나 복사할 때 Markdown 형식을 유지하는 데 도움을 줍니다.',
-        newTermWarning: 'Terminal은 명령 실행 화면입니다. <b>cmd</b>는 일반 명령어, <b>codex/claude/antigravity/opencode</b>는 AI CLI 작업용입니다.<br>⚠️ <b>codex/claude/antigravity/opencode</b> 등 각 에이전트는 최초 1회 인증(로그인)을 먼저 완료해야 사용할 수 있습니다.',
-
-        newScheduleTitle: 'New Schedule',
-        nameLabel: 'Name', tipNameHelp: '스케줄을 구분하는 이름입니다. 목록에서 이 이름으로 표시됩니다.',
-        termKeyLabel: 'Terminal Key', tipTermKeyHelp: '명령을 보낼 대상 터미널의 Key입니다. 없으면 Mode 설정에 따라 백그라운드 터미널을 만들 수 있습니다.',
-        delayLabel: 'Delay (sec)', countLabel: 'Count',
-        startOffsetLabel: 'Start offset', endOffsetLabel: 'End offset',
-        commandLabel: 'Command', save: 'Save',
-        scheduleWarning: 'Schedule은 반복 실행입니다. 처음에는 <b>Count</b>를 작게 두고, 무한 반복이 필요할 때만 0을 사용하세요.',
-
-        previewTitle: 'Preview', vcsStatusTitle: 'Version Control Status',
-        rootFolder: 'Root Folder', parentFolder: 'Parent Folder',
-
-        doneText: 'Files에서 대상을 확인하고 AI Chat 또는 Terminal에서 작업을 시작하면 됩니다.',
-        doneTip: '실제 앱에서는 작업 폴더와 쓰기 권한을 먼저 확인하세요.',
-
-        steps: [
-          ['시작하기','설치 및 실행 방법','home','tab-home','저장소를 클론하고 npm install 후 npm start 로 실행합니다.','start.bat (Windows) 또는 start.sh (Linux) 로 실행할 수도 있습니다.'],
-          ['처음 화면','Artgine-Agent 소개','home','tab-home','Artgine-Agent는 파일 브라우저, AI 채팅, 웹 터미널을 한 화면에서 사용하는 로컬 웹 인터페이스입니다.','Files 탭에서 파일을 탐색하고, AI 탭에서 에이전트와 대화하거나 터미널 세션을 시작할 수 있습니다.'],
-          ['Files 탭','실제 앱의 파일 브라우저','file','panel-file','Files 탭은 세로 파일 목록입니다. 파일을 누르면 종류에 맞는 모달 뷰어가 열립니다. Git 또는 SVN이 설치되어 있으면 파일 옆에 변경 상태 배지(M/D/A/?)가 표시됩니다.','F3을 누르면 Files 탭으로 이동합니다. 배지를 누르면 각 상태의 상세 설명을 확인할 수 있습니다.'],
-          ['File 모달','관리 작업','file','fileModalBtn','File 버튼은 루트 선택, 공유, 폴더 생성, 삭제, 업로드, Git 작업을 모아 둔 관리 모달을 엽니다.','이 데모에서도 File 버튼을 누르면 비슷한 모달이 열립니다.'],
-          ['Search 모달','파일 이름 검색','file','searchModalBtn','Search는 현재 루트 아래에서 파일 이름을 찾는 창입니다. 결과를 누르면 해당 폴더와 파일로 이동하는 흐름입니다.','모바일에서도 버튼을 누르면 모달로 결과를 확인하는 방식이 직관적입니다.'],
-          ['AI 탭','Chat과 Terminal 세션','ai','panel-ai','AI 탭은 왼쪽 세션 목록과 오른쪽 iframe 작업 화면으로 나뉩니다. Chat과 Terminal을 전환하며 사용합니다.','F4를 누르면 실제 앱에서 AI 탭으로 이동합니다.'],
-          ['New Chat','AI 작업 시작','ai','newChatBtn','New Chat은 작업 폴더와 권한을 정하고 AI 에이전트 채팅을 시작하는 버튼입니다.','Working Directory와 Allow write 의미를 먼저 이해하는 것이 중요합니다.'],
-          ['채팅 화면','지시와 결과 확인','ai','messages','오른쪽 채팅 화면에서 AI에게 지시하고 응답과 변경 파일 목록을 확인합니다.','작업 후 Files나 Git diff로 결과를 확인하는 흐름입니다.'],
-          ['Terminal','웹 터미널 예시','ai','termSubtab','Terminal은 cmd, codex, claude, antigravity, opencode 같은 터미널 세션을 보여줍니다.','이 페이지의 터미널은 가짜 로그만 표시합니다.'],
-          ['Schedule','반복 작업','ai','scheduleBtn','Schedule은 정해진 주기로 명령이나 프롬프트를 반복 실행하는 기능입니다.','처음에는 Count와 종료 조건을 넣어 무한 반복을 피하는 편이 좋습니다.'],
-          ['툴팁','모바일 클릭 도움말','file','fileModalBtn','각 주요 버튼의 ? 도움말이나 버튼 자체를 누르면 설명 팝오버가 표시됩니다.','데스크톱 hover 대신 모바일 탭 동작을 우선했습니다.']
-        ],
-
-        views: {
-          root:    ['Root Folder',   '<div class="fake-monaco">Root Folder를 누르면 실제 앱에서는 / 경로로 이동합니다.</div>'],
-          parent:  ['Parent Folder', '<div class="fake-monaco">Parent Folder를 누르면 현재 폴더의 상위 경로로 이동합니다.</div>'],
-          folder:  ['AI',            '<div class="fake-monaco">폴더 항목을 누르면 실제 앱에서는 해당 폴더로 이동하고 File_div 목록이 다시 그려집니다.</div>'],
-          image:   ['256x256.png',   '<div class="fake-image">이미지 미리보기 모달</div>'],
-          audio:   ['sample.mp3',    '<div class="fake-monaco">음악 파일은 Music 플레이어 목록에 추가되거나 재생됩니다.</div>'],
-          video:   ['sample.mp4',    '<div class="fake-video">비디오 플레이어 모달</div>'],
-          html:    ['Home.html',     '<div class="fake-monaco">HTML 파일은 실제 앱에서 New Window 또는 File Viewer 중 하나로 열 수 있습니다.</div>'],
-          code:    ['Home.ts',       '<div class="fake-monaco">function demo() {\n  // 실제 앱에서는 CFileViewer/Monaco 편집기 모달이 열립니다.\n}</div>'],
-          md:      ['README.md',     '<div class="fake-monaco"># README\n\nMarkdown 파일은 문서 뷰어 모달로 열립니다.</div>'],
-          file:    ['archive.zip',   '<div class="fake-monaco">일반 파일은 다운로드 링크 모달로 표시됩니다.</div>']
-        },
-
-        vcsInfo: {
-          M: ['Modified',  '<p><span class="badge bg-warning">M</span> 은 수정된 파일입니다.</p><p>Git 기준으로는 <code>git status --short</code>의 <code>M</code> 상태이고, SVN에서도 수정된 working copy 항목을 의미합니다.</p><p>실제 앱에서는 이 배지를 누르면 diff를 확인할 수 있는 흐름으로 연결됩니다.</p>'],
-          D: ['Deleted',   '<p><span class="badge bg-danger">D</span> 는 삭제된 파일입니다.</p><p>Git/SVN 작업 폴더에서 파일이 삭제되었지만 아직 commit되지 않은 상태입니다.</p><p>필요하면 File Manager의 Revert로 되돌리거나 Commit &amp; Push로 반영합니다.</p>'],
-          A: ['Added',     '<p><span class="badge bg-success">A</span> 는 추가된 파일입니다.</p><p>SVN에서는 Add 작업이 별도로 필요할 수 있고, 이 앱의 <b>Add (SVN)</b> 버튼이 그 용도입니다.</p><p>Git에서는 Commit &amp; Push 흐름에서 add가 함께 처리되는 구조입니다.</p>'],
-          '?':['Untracked','<p><span class="badge bg-secondary">?</span> 는 추적되지 않는 새 파일입니다.</p><p>Git의 <code>??</code> 상태와 비슷하게, 아직 버전 관리에 포함되지 않은 파일입니다.</p><p>필요한 파일이면 commit 대상에 포함하고, 임시 파일이면 삭제하거나 ignore 처리를 검토합니다.</p>']
-        }
-      },
-
-      en: {
-        prev: 'Previous', next: 'Next', done: 'Done',
-
-        home: 'Home', files: 'Files', ai: 'AI',
-        shortcuts: 'Shortcuts', install: 'Install',
-
-        homeDesc: 'A local web interface that brings together a file browser, AI chat, and web terminal in one screen.',
-        gsTitle: 'Getting Started',
-        gsAlt: 'You can also run start.bat (Windows) or start.sh (Linux) directly.',
-        gsRun: 'Set projectPath to proj/Home in the Artgine app, then click Run.',
-        gsWeb: 'Web-only mode — npm run start_web [port] (default: 8050)',
-        gsPwd: 'Default password: artgine — you must change this!',
-        gsPwdHow: 'How to change it: use the tool (Extra Server Settings → Password), or edit the "password" value directly in Main.json. (The location of Main.json varies by environment — usually the run folder or the desktop folder.)',
-        gsPwdDanger: '☠️ Warning: leave the password as the default (artgine) and anyone who learns it can use it to access your AI agent and terminal — reading, writing, deleting files, and running arbitrary commands. At that point this is no longer your PC. Change the password now, and never expose it on a public network.',
-        filesCardTitle: 'Files', filesCardDesc: 'Browse server-allowed folders and preview or edit files.',
-        aiCardTitle: 'Chat', aiCardDesc: 'Headless-mode AI chat — the same experience as web-based AI chat (claude.ai, chatgpt.com, etc).',
-        termCardTitle: 'Terminal', termCardDesc: 'Interactive, CLI-mode terminal sessions like cmd, codex, and claude, right inside the web interface.',
-        browserCardTitle: 'Browser', browserCardDesc: 'Spin up a virtual browser to work alongside the AI, with its screen shared live with you.',
-
-        keys: 'Keys', help: '?',
-        scFile: 'File', scSearch: 'Search', scFiles: 'Files', scAI: 'AI', scClose: 'Close modal',
-
-        music: 'Music', search: 'Search', file: 'File',
-        tipMusic: 'Opens the music playlist modal. In the real app, mp3/ogg files are queued and played.',
-        tipSearch: 'Searches for file names under the current folder. In the real app, it scans the server file list.',
-        tipFile: 'Opens the file management modal: root selection, sharing, folder creation, deletion, upload, and Git operations.',
-        tipHelpMobile: 'On mobile, tap help buttons like this to see explanations.',
-        tipShortcuts: 'Opens the keyboard shortcut list in a modal. In this tutorial, actual key presses also trigger demo actions.',
-
-        aiKeys: 'AI Keys', sidebar: 'Sidebar', session: 'Session',
-        chat: 'Chat', terminal: 'Terminal', web: 'Web',
-        newChat: '+ New Chat', newTerminal: '+ New Terminal', newBrowser: '+ New Browser', schedule: 'Schedule',
-        sessNewWindow: 'New window', sessShare: 'Share', sessDelete: 'Delete',
-        sessNewWindowNote: 'Detaches this session into its own window. In the real app a real browser window opens, showing the same content as now.',
-        sessShareNote: 'A link that can be used to access this session. Copy it to send to someone else.',
-        copy: 'Copy', copied: 'Copied',
-        tipNewChat: 'Set the working directory, write permission, and MCP, then open an AI chat session.',
-        tipNewTerm: 'Start a web terminal in cmd, codex, claude, antigravity, or opencode mode.',
-        tipWebSubtab: 'Shows Playwright browser sessions. Select a session to open Browser.html in the workspace frame.',
-        tipNewBrowser: 'Create a Playwright browser session and inspect the screen, logs, and input from the web UI.',
-        tipBrowserSession: 'A browser session item. In the real app, selecting it opens the Browser.html viewer for that session.',
-        tipBrowserRate: 'Frame interval. This controls how often the Browser page refreshes the Playwright screenshot.',
-        tipBrowserQuality: 'Screenshot JPEG quality. Higher values look clearer but send larger images.',
-        tipBrowserInput: 'Input mode. When enabled, keyboard and mouse events are forwarded to the Playwright page.',
-        tipBrowserShot: 'Screenshot viewport. The real Browser.html displays the latest captured image here with object-fit: contain.',
-        tipBrowserLog: 'Console and network logs collected from the browser session appear here.',
-        tipSchedule: 'Repeatedly run a command or prompt at a set interval.',
-        tipAIHelp: 'In the AI tab, shortcuts for switching sessions, toggling the sidebar, and controlling the terminal input bar are frequently used.',
-        tipSUPER: 'SUPER enables auto-approval, so use it cautiously in the real app.',
-
-        sess1Title: 'Home Screen Improvement', sess2Title: 'README Cleanup', sess2Sub: 'Generating response…',
-        sess3Title: 'Previous Task', sess3Sub: 'Disconnected',
-        tsess2Sub: 'Waiting for approval',
-
-        aiChatTitle: 'AI Chat', connected: 'connected', defaultModel: 'default model',
-        msgUserLabel: 'User', msgAssLabel: 'Assistant', msgChangedLabel: 'Changed files',
-        msgUserText: 'Create a tutorial page in this folder.',
-        msgAssText: 'I will generate a single-file HTML tutorial based on the working directory.',
-        composerPlaceholder: 'This is where you type instructions to the AI in the real app.',
-        send: 'Send', enterBtn: 'Enter', superBtn: 'SUPER',
-        termComment: '# This screen is a terminal example — no real commands are executed.',
-
-        fileManagerTitle: 'File Manager',
-        rootLabel: 'Root',
-        tipRoot: 'Root is the top-level working folder for the file browser. In the real app, you can switch to a different root here.',
-        fileHomeUrlPlaceholder: 'Home.html URL',
-        connect: 'Connect', local: 'Local',
-        tipFileHomeUrl: 'Enter the Home.html URL for a remote or different server. Example: http://host:8050/Artgine/proj/Home/Home.html',
-        tipFileHomeConnect: 'Connect to the file server represented by the entered Home.html URL. The file list and permissions are checked again for that server.',
-        tipFileHomeLocal: 'Switch back to the currently running local Home file server.',
-        tipRootSelect: 'Changing the root reloads the File_div list based on the selected root in the real app.',
-        tipChatFromFile: 'Opens a new AI Chat session with this folder set as the Working Directory.',
-        tipTermFromFile: 'Opens a new web terminal starting in this folder — a starting point for cmd or AI CLI work.',
-        fileActionsLabel: 'File Actions',
-        tipFileActions: 'Directly manipulate files and folders. Delete and Upload actions affect real files.',
-        share: 'Share', tipShare: 'Creates a shareable link to reopen the current folder location.',
-        newFolder: 'New Folder', tipNewFolder: 'Creates a new folder inside the current directory. A name input prompt appears first in the real app.',
-        delete: 'Delete', tipDelete: 'Deletes selected items. A selection modal opens before deletion in the real app.',
-        upload: 'Upload', tipUpload: 'Upload local files to the current folder. A file picker opens on mobile too.',
-        versionControlLabel: 'Version Control',
-        tipVC: 'Helps you review and apply changes when the current folder is a Git or SVN working directory.',
-        modified: 'Modified', deleted: 'Deleted', added: 'Added', untracked: 'Untracked',
-        diff: 'Diff', tipDiff: 'Review changed file content in a diff viewer before committing.',
-        update: 'Update', tipUpdate: 'Fetch the latest changes from the remote repository. For Git: pull + submodule update.',
-        addSvn: 'Add (SVN)', tipAddSvn: 'SVN-specific add example. In Git, add is handled implicitly during commit.',
-        revert: 'Revert', tipRevert: 'Reverts selected changes. Use carefully in real work.',
-        commitPush: 'Commit & Push', tipCommitPush: 'Select changed files, enter a commit message, then commit and push.',
-
-        musicTitle: 'Music',
-        deleteAll: 'Delete All', tipDeleteAll: 'Delete All clears the entire playlist.',
-        saveList: 'Save List', tipSaveList: 'Saves the current list. In the real app, calls the SoundList save callback.',
-        randomPlay: 'Random Play',
-
-        fileSearchTitle: 'File Search', searchResultCount: '3 result(s)',
-        tipSearchInput: 'Type part of a file name to search. You can include the extension or just part of the name.',
-        tipSearchBtn: 'Scans the current path for matching files and folders. Results are capped at a maximum count.',
-        tipSearchResultHelp: 'In the real app, cached results are shown first, then a background re-scan updates them.',
-        tipSR1: 'Clicking a result navigates to that folder and highlights or opens the file in the real app.',
-        tipSR2: 'For HTML files, the real app asks whether to open in a new window or the file viewer.',
-        tipSR3: 'JSON/TS/JS/TXT files open in an editable file viewer.',
-
-        keyboardShortcutsTitle: 'Keyboard Shortcuts',
-        sc_f1_d: 'Open File Manager',    sc_f1_s: 'Available in Files tab',
-        sc_f2_d: 'Open File Search',     sc_f2_s: 'Shows search modal from anywhere',
-        sc_f3_d: 'Go to Files tab',      sc_f3_s: 'Switches to root folder view',
-        sc_f4_d: 'Go to AI tab',         sc_f4_s: 'Shows Chat/Terminal panel',
-        sc_tab_d: 'Toggle AI Sidebar',   sc_tab_s: 'Works in AI tab',
-        sc_arr_d: 'Navigate sessions',   sc_arr_s: 'When AI sidebar is open',
-        sc_shn_d: 'New Terminal',        sc_shn_s: 'Goes to Terminal subtab then shows modal',
-        sc_f6_d: 'Toggle SUPER (demo)',  sc_f6_s: 'Shows SUPER state in terminal input bar',
-        sc_f7_d: 'Focus terminal input', sc_f7_s: 'Switches to Terminal view',
-        sc_esc_d: 'Close open modal',
-
-        newChatModalTitle: 'New Chat',
-        workingDirLabel: 'Working Directory',
-        tipWDHelp: 'The folder where the AI or terminal starts work. e.g. D:/git/Artgine-Agent. This path defines the task scope.',
-        tipWDInput: 'When creating a new Chat or Terminal, files are read and commands are run relative to this folder.',
-        allowWriteLabel: 'Allow working dir write',
-        mcpLabel: 'MCP', mcpDesc: 'Connects additional tool servers to the AI session.',
-        tipMCP: 'MCP stands for Model Context Protocol — a channel for attaching extra capabilities like a DB, browser, or external tools to the AI. Leave it off if not needed.',
-        copyMdLabel: 'Copy MD', copyMdDesc: 'Makes it easy to copy answers or results in Markdown format.',
-        tipCopyMD: 'MD = Markdown. When checked, AI responses are easy to paste into docs, issues, or PR descriptions. Useful for preserving code blocks, lists, and heading formats.',
-        newChatWarning: 'First-time users: verify the <b>Working Directory</b> before starting, and only enable <b>Allow working dir write</b> when you want the AI to modify files.<br>Chat is a session for giving instructions to the AI. Sending the first message connects it to a real AI CLI session.',
-        newChatWarningDanger: '⚠️ Chat mode runs with full permissions already granted, so when assigning complex tasks, make the rules explicit beforehand.',
-        cancel: 'Cancel', open: 'Open',
-
-        newTermModalTitle: 'New Terminal',
-        modeLabel: 'Mode', tipModeHelp: 'Choose how to start the terminal. cmd is a standard shell; codex/claude/antigravity/opencode are AI CLI modes.',
-        keyLabel: 'Key', tipKeyHelp: 'A label to distinguish multiple terminals. Optional, but useful for repeated tasks or sharing.',
-        allowWriteTermDesc: 'Allows file modification commands in AI CLI mode. Usually less relevant in cmd mode.',
-        tipAllowWriteTerm: 'Terminal runs real commands, so it is more direct than Chat. Enabling this in AI CLI mode makes it easier to approve file modification tasks.',
-        mcpTermDesc: 'Allows the terminal AI agent to connect additional tools.',
-        tipMCPTerm: 'Lets CLIs like codex/claude/opencode use MCP tools. Not needed when using regular cmd only.',
-        copyMdTermDesc: 'Aligns terminal output or AI responses with the Markdown copy flow.',
-        tipCopyMDTerm: 'Helps preserve Markdown formatting when documenting or copying terminal results.',
-        newTermWarning: 'Terminal is a command execution screen. <b>cmd</b> is for regular commands; <b>codex/claude/antigravity/opencode</b> are for AI CLI tasks.<br>⚠️ Each agent (<b>codex/claude/antigravity/opencode</b>, etc.) requires a one-time authentication (login) before it can be used.',
-
-        newScheduleTitle: 'New Schedule',
-        nameLabel: 'Name', tipNameHelp: 'A name to identify this schedule. Displayed in the schedule list.',
-        termKeyLabel: 'Terminal Key', tipTermKeyHelp: 'The Key of the target terminal to send commands to. If absent, a background terminal may be created based on Mode.',
-        delayLabel: 'Delay (sec)', countLabel: 'Count',
-        startOffsetLabel: 'Start offset', endOffsetLabel: 'End offset',
-        commandLabel: 'Command', save: 'Save',
-        scheduleWarning: 'Schedule runs repeatedly. Start with a small <b>Count</b> and only use 0 for truly infinite repetition.',
-
-        previewTitle: 'Preview', vcsStatusTitle: 'Version Control Status',
-        rootFolder: 'Root Folder', parentFolder: 'Parent Folder',
-
-        doneText: 'Confirm your target in Files, then start work in AI Chat or Terminal.',
-        doneTip: 'In the real app, always verify the working folder and write permissions first.',
-
-        steps: [
-          ['Getting Started', 'Installation & setup',        'home','tab-home',     'Clone the repository, run npm install, then npm start.', 'You can also run start.bat (Windows) or start.sh (Linux).'],
-          ['Home Screen',    'About Artgine-Agent',          'home','tab-home',     'Artgine-Agent is a local web interface that brings together a file browser, AI chat, and web terminal in one screen.', 'Browse files in the Files tab, and start AI agent sessions or terminal sessions in the AI tab.'],
-          ['Files Tab',      'Real app file browser',        'file','panel-file',   'The Files tab shows a vertical file list. Clicking a file opens a type-matched modal viewer. If Git or SVN is installed, change status badges (M/D/A/?) appear alongside files.','Press F3 to go to the Files tab. Click a badge to see a detailed explanation of that status.'],
-          ['File Modal',     'Management entry point',       'file','fileModalBtn', 'The File button opens a management modal with root selection, sharing, folder creation, deletion, upload, and Git operations.','In this demo, clicking the File button opens a similar modal.'],
-          ['Search Modal',   'File name search',             'file','searchModalBtn','Search opens a window to find file names under the current root. Clicking a result navigates to the folder and file.','On mobile, tapping the button and viewing results in a modal is the natural flow.'],
-          ['AI Tab',         'Chat and Terminal sessions',   'ai', 'panel-ai',      'The AI tab is split into a session list on the left and a workspace frame on the right. Switch between Chat and Terminal as needed.','Press F4 to navigate to the AI tab in the real app.'],
-          ['New Chat',       'Start an AI task',             'ai', 'newChatBtn',    'New Chat lets you set a working directory and permissions, then start an AI agent chat session.',                       'Understanding Working Directory and Allow write is key before you begin.'],
-          ['Chat View',      'Give instructions & review',   'ai', 'messages',      'Use the chat view on the right to give instructions to the AI and review responses and changed file lists.',              'After work completes, check results via Files or Git diff.'],
-          ['Terminal',       'Web terminal example',         'ai', 'termSubtab',    'Terminal shows sessions like cmd, codex, claude, antigravity, and opencode.',                                              'The terminal on this page shows mock logs only.'],
-          ['Schedule',       'Recurring tasks',              'ai', 'scheduleBtn',   'Schedule runs a command or prompt repeatedly at a set interval.',                                                         'Start with a Count and end condition to avoid infinite loops.'],
-          ['Tooltips',       'Mobile tap help',              'file','fileModalBtn', 'Tap the ? help button or the button itself to see an explanation popover for key controls.',                               'Mobile tap actions are prioritized over desktop hover.']
-        ],
-
-        views: {
-          root:   ['Root Folder',   '<div class="fake-monaco">Clicking Root Folder navigates to the / path in the real app.</div>'],
-          parent: ['Parent Folder', '<div class="fake-monaco">Clicking Parent Folder navigates to the parent directory of the current folder.</div>'],
-          folder: ['AI',            '<div class="fake-monaco">Clicking a folder item navigates into it and redraws the File_div list in the real app.</div>'],
-          image:  ['256x256.png',   '<div class="fake-image">Image preview modal</div>'],
-          audio:  ['sample.mp3',    '<div class="fake-monaco">Audio files are added to the Music player playlist or played directly.</div>'],
-          video:  ['sample.mp4',    '<div class="fake-video">Video player modal</div>'],
-          html:   ['Home.html',     '<div class="fake-monaco">HTML files can be opened in a New Window or the File Viewer in the real app.</div>'],
-          code:   ['Home.ts',       '<div class="fake-monaco">function demo() {\n  // In the real app, a CFileViewer/Monaco editor modal opens here.\n}</div>'],
-          md:     ['README.md',     '<div class="fake-monaco"># README\n\nMarkdown files open in a document viewer modal.</div>'],
-          file:   ['archive.zip',   '<div class="fake-monaco">General files are shown in a file link modal.</div>']
-        },
-
-        vcsInfo: {
-          M: ['Modified',  '<p><span class="badge bg-warning">M</span> indicates a modified file.</p><p>In Git: the <code>M</code> status in <code>git status --short</code>. In SVN: a modified working copy item.</p><p>In the real app, clicking this badge leads to a diff viewer.</p>'],
-          D: ['Deleted',   '<p><span class="badge bg-danger">D</span> indicates a deleted file.</p><p>The file was deleted in the Git/SVN working directory but not yet committed.</p><p>Use Revert in File Manager to restore it, or Commit &amp; Push to apply the deletion.</p>'],
-          A: ['Added',     '<p><span class="badge bg-success">A</span> indicates an added file.</p><p>In SVN an explicit Add step may be required — that is what the <b>Add (SVN)</b> button does.</p><p>In Git, the add step is handled together during Commit &amp; Push.</p>'],
-          '?':['Untracked','<p><span class="badge bg-secondary">?</span> indicates an untracked new file.</p><p>Similar to the <code>??</code> status in Git — not yet under version control.</p><p>Include it in a commit if needed; otherwise delete it or add it to .gitignore.</p>']
-        }
-      }
+    const S = {
+      prev: '이전',
+      next: '다음',
+      done: '완료',
+      shortcuts: 'Shortcuts',
+      homeDesc: '최신 Home은 RDP, Files, AI를 한 화면에서 사용하는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.',
+      rdpCardTitle: 'RDP',
+      rdpCardDesc: 'Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.',
+      filesCardTitle: 'Files',
+      filesCardDesc: '허용된 서버 폴더를 탐색하고, 파일 보기/편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.',
+      aiCardTitle: 'AI',
+      aiCardDesc: 'Chat, Term, Web 하위 탭에서 AI 채팅, 웹 터미널, 웹 화면 원격 확인을 관리합니다.',
+      gsTitle: '시작하기',
+      gsAlt: 'Windows에서는 start.bat, Linux/macOS에서는 start.sh로도 실행할 수 있습니다.',
+      gsRun: 'Artgine 앱에서 projectPath를 proj/Home으로 설정하고 Run을 누르거나, 웹 전용 모드에서는 npm run start_web [port]를 사용합니다.',
+      gsPwd: '기본 비밀번호는 artgine입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
+      keys: 'Keys',
+      file: 'File',
+      music: 'Music',
+      addAll: 'Add All',
+      addEach: 'Add Each (w/ Folder)',
+      search: 'Search',
+      ai: 'AI',
+      rdp: 'RDP',
+      close: 'Close',
+      help: '?',
+      remoteHomeUrl: 'Remote Home.html URL',
+      addRemote: 'Add Remote',
+      local: 'Local',
+      remote: 'Remote',
+      selectTarget: 'Select a target from the sidebar.',
+      frame: 'frame',
+      quality: 'quality',
+      input: 'input',
+      tipRdpUrl: '원격 서버의 Home.html 주소를 입력합니다. 예: http://host:8050/Artgine/proj/Home/Home.html',
+      tipRdpAdd: '입력한 원격 Home.html을 RDP 목록에 추가합니다. 선택하면 해당 서버 기준 RemoteDesktop.html이 열립니다.',
+      tipRdpLocal: '현재 접속 중인 서버의 RemoteDesktop.html을 엽니다.',
+      tipRdpRemote: '원격 서버의 화면을 봅니다. 실제 앱에서는 선택 시 파일 서버 컨텍스트도 해당 Home.html 기준으로 전환됩니다.',
+      tipRdpRate: '화면 캡처 갱신 주기입니다. 짧을수록 빠르게 갱신되지만 서버 부하와 전송량이 늘어납니다.',
+      tipRdpQuality: 'JPEG 품질입니다. 값이 높으면 선명하지만 이미지 전송량이 커집니다.',
+      tipRdpInput: '입력 모드를 켜면 키보드, 클릭, 드래그, 휠 이벤트가 원격 PC로 전달됩니다.',
+      tipFile: 'File 버튼은 루트 선택, 공유, 폴더 생성, 삭제, 업로드, VCS 작업을 여는 관리 진입점입니다.',
+      tipMusic: '음악 파일을 재생 목록으로 열어 관리합니다. 폴더 추가 방식은 옆 선택 박스에서 고릅니다.',
+      tipSearch: '현재 경로 아래에서 파일명 일부로 검색합니다. 결과를 클릭하면 해당 폴더나 파일로 이동합니다.',
+      tipShortcuts: '최신 단축키 목록을 모달로 확인합니다.',
+      tipAIHelp: 'AI 탭에서는 Tab으로 사이드바를 열고 닫고, 1/2/3으로 Chat/Term/Web 하위 탭을 전환합니다.',
+      tipNewChat: '작업 폴더와 옵션을 정한 뒤 AI Chat 세션을 시작합니다.',
+      tipNewTerm: 'cmd 또는 AI CLI(codex, claude, opencode 등) 터미널 세션을 시작합니다.',
+      tipSchedule: '지정한 명령이나 프롬프트를 반복 실행하는 스케줄을 만듭니다.',
+      tipNewBrowser: '새 웹 화면을 열고 화면, 기록, 입력 상태를 확인합니다.',
+      tipBrowserInput: '브라우저 세션으로 키보드와 마우스 입력을 전달합니다.',
+      fileManagerTitle: 'File Manager',
+      fileSearchTitle: 'File Search',
+      keyboardShortcutsTitle: 'Keyboard Shortcuts',
+      newChatModalTitle: 'New Chat',
+      newTermModalTitle: 'New Terminal',
+      newBrowserModalTitle: 'New Browser',
+      workingDir: 'Working Directory',
+      mode: 'Mode',
+      key: 'Key',
+      mcp: 'MCP',
+      copyMd: 'Copy MD',
+      open: 'Open',
+      cancel: 'Cancel',
+      browserModalDesc: '확인할 URL, 유지 시간, 화면 크기를 설정합니다.',
+      share: 'Share',
+      newFolder: 'New Folder',
+      delete: 'Delete',
+      upload: 'Upload',
+      versionControl: 'Version Control',
+      diff: 'Diff',
+      update: 'Update',
+      addSvn: 'Add (SVN)',
+      revert: 'Revert',
+      commitPush: 'Commit & Push',
+      chat: 'Chat',
+      terminal: 'Term',
+      web: 'Web',
+      newChat: 'New Chat',
+      newTerminal: 'New Terminal',
+      newBrowser: 'New Browser',
+      schedule: 'Schedule',
+      auth: 'Authentication',
+      signIn: 'Sign In',
+      sidebar: 'Sidebar',
+      connected: 'connected',
+      send: 'Send',
+      enter: 'Enter',
+      super: 'SUPER',
+      doneText: '최신 Home 흐름은 RDP에서 대상 화면을 확인하고, Files에서 작업 위치를 검증한 뒤, AI Chat 또는 Term에서 작업을 시작하는 방식입니다.',
+      doneTip: '실제 사용 전에는 비밀번호, 작업 폴더, Allow write 같은 권한 옵션을 먼저 확인하세요.',
+      steps: [
+        ['시작하기', '설치와 실행', 'home', 'tab-home', '저장소를 받은 뒤 npm install, npm start 또는 npm run start_web [port]로 실행합니다.', 'Artgine 앱에서 projectPath를 proj/Home으로 지정해 실행할 수도 있습니다.'],
+        ['최신 Home 구성', 'RDP / Files / AI', 'home', 'tab-home', '현재 Home의 주요 사용 탭은 RDP, Files, AI입니다.', 'RDP가 첫 화면 흐름에 추가되었고, 튜토리얼 단계도 그 흐름에 맞췄습니다.'],
+        ['RDP 탭', '원격 화면 보기', 'rdp', 'panel-rdp', 'RDP 탭은 Local 또는 원격 Home.html 서버의 RemoteDesktop.html을 열어 화면 캡처를 보여줍니다.', 'F3은 최신 Home에서 RDP 탭으로 이동합니다.'],
+        ['RDP 사이드바', 'Local과 원격 대상', 'rdp', 'rdpSidebar', '사이드바에서 Local을 선택하거나 Remote Home.html URL을 추가해 원격 서버 화면으로 전환합니다.', 'Tab 또는 우측 상단 사이드바 버튼으로 RDP 사이드바를 열고 닫습니다.'],
+        ['RDP 입력', '화면 제어 옵션', 'rdp', 'rdpControls', 'frame은 캡처 주기, quality는 JPEG 품질, input은 키보드/마우스 전달 여부입니다.', 'input을 켠 상태에서는 실제 원격 PC에 클릭, 드래그, 휠, 키보드 입력이 전달됩니다.'],
+        ['Files 탭', '파일 브라우저', 'file', 'panel-file', 'Files 탭은 서버가 허용한 경로의 파일 목록을 보여줍니다. 파일을 누르면 종류에 맞는 팝업이 열려 보기나 편집을 진행합니다.', 'F1은 File Manager, F2는 File Search, F4는 AI 탭으로 이동합니다.'],
+        ['File Manager', '관리 작업', 'file', 'fileModalBtn', 'File Manager에서 루트 선택, 공유, 폴더 생성, 삭제, 업로드, Git/SVN 작업을 처리합니다.', '삭제와 업로드는 실제 파일에 영향을 주므로 대상 경로를 먼저 확인하세요.'],
+        ['File Search', '파일명 검색', 'file', 'searchModalBtn', 'File Search는 현재 경로 아래에서 파일명 일부를 찾고 결과 클릭 시 해당 위치로 이동합니다.', '검색은 node_modules 같은 제외 대상과 숨김 경로를 건너뜁니다.'],
+        ['AI 탭', 'Chat / Term / Web', 'ai', 'panel-ai', 'AI 탭은 왼쪽 사이드바와 오른쪽 작업 화면으로 구성됩니다.', '사이드바가 열려 있을 때 숫자 1/2/3으로 Chat, Term, Web을 전환합니다.'],
+        ['New Chat', 'AI 작업 시작', 'ai', 'newChatBtn', 'New Chat은 Working Directory와 옵션을 정하고 AI 채팅 세션을 시작합니다.', '파일 수정을 맡길 때는 작업 폴더와 권한 범위를 명확히 지정하세요.'],
+        ['Terminal', '명령 실행 세션', 'ai', 'termSubtab', 'Term은 cmd와 codex/claude/opencode 같은 AI CLI 세션을 관리합니다.', 'Shift+N은 새 터미널, Shift+D는 현재 터미널 삭제 단축키입니다.'],
+        ['Web 세션', '웹 화면 확인', 'ai', 'webSubtab', 'Web 하위 탭은 웹 화면 목록을 보여주며 화면과 동작 기록을 확인합니다.', '입력을 켜면 확인 중인 페이지에 키보드와 마우스를 전달할 수 있습니다.'],
+        ['완료', '권장 사용 순서', 'ai', 'panel-ai', 'RDP로 화면 상태를 확인하고, Files에서 대상 경로를 검증한 뒤, AI Chat 또는 Term에서 작업을 시작합니다.', '공개망에서는 기본 비밀번호를 그대로 두지 마세요.']
+      ]
     };
-
-    const LANG = (navigator.language || navigator.userLanguage || 'en').toLowerCase().startsWith('ko') ? 'ko' : 'en';
-    const S = STRINGS[LANG] || STRINGS.en;
-    document.documentElement.lang = LANG;
   </script>
 
   <div class="app">
@@ -465,377 +498,329 @@
     <main class="workspace">
       <div class="mock-browser">
         <div class="topbar">
-          <ul class="nav-tabs" style="flex:1">
-            <li class="nav-item"><button class="nav-link active" data-tab="home" id="tab-home" type="button"></button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="file" id="tab-file" type="button"></button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="ai" id="tab-ai" type="button"></button></li>
+          <ul class="nav-tabs">
+            <li><button class="nav-link active" data-tab="home" id="tab-home" type="button">Home</button></li>
+            <li><button class="nav-link" data-tab="rdp" id="tab-rdp" type="button">RDP <small>F3</small></button></li>
+            <li><button class="nav-link" data-tab="file" id="tab-file" type="button">Files <small>F1/F2</small></button></li>
+            <li><button class="nav-link" data-tab="ai" id="tab-ai" type="button">AI <small>F4</small></button></li>
           </ul>
           <div class="topbar-actions">
-            <button class="btn btn-sm btn-outline-secondary" id="shortcutsBtn" data-tip-key="tipShortcuts" type="button" data-i18n="shortcuts"></button>
-            <button class="btn btn-sm btn-outline-success install" type="button" data-i18n="install"></button>
+            <button class="btn btn-sm btn-outline-secondary" id="shortcutsBtn" data-tip-key="tipShortcuts" type="button"></button>
           </div>
         </div>
 
         <div class="tab-content">
-          <!-- HOME -->
           <section class="tab-pane active home" id="panel-home">
-            <h2>Artgine-Agent</h2>
+            <h2>Artgine Agent</h2>
             <p class="text-secondary" data-i18n="homeDesc"></p>
             <div class="home-grid">
+              <div class="card"><h3 data-i18n="rdpCardTitle"></h3><p data-i18n="rdpCardDesc"></p></div>
               <div class="card"><h3 data-i18n="filesCardTitle"></h3><p data-i18n="filesCardDesc"></p></div>
               <div class="card"><h3 data-i18n="aiCardTitle"></h3><p data-i18n="aiCardDesc"></p></div>
-              <div class="card"><h3 data-i18n="termCardTitle"></h3><p data-i18n="termCardDesc"></p></div>
-              <div class="card"><h3 data-i18n="browserCardTitle"></h3><p data-i18n="browserCardDesc"></p></div>
             </div>
             <div style="margin-top:20px">
               <h3 style="margin:0 0 10px;font-size:15px" data-i18n="gsTitle"></h3>
-              <pre style="background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:12px;font-family:Consolas,monospace;font-size:13px;margin:0 0 8px;overflow:auto">git clone --recursive https://github.com/06fs4dix/Artgine-Agent.git
-cd Artgine-Agent
+              <pre style="background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:12px;font-family:Consolas,monospace;font-size:13px;margin:0 0 8px;overflow:auto">git clone --recursive https://github.com/06fs4dix/Artgine.git
+cd Artgine
 npm install
 npm start</pre>
-              <p style="margin:0 0 10px;color:#6c757d;font-size:.8em;display:flex;align-items:flex-start;gap:5px"><span>💡</span><span data-i18n="gsAlt"></span></p>
+              <p style="margin:0 0 6px;color:#6c757d;font-size:.875em" data-i18n="gsAlt"></p>
               <p style="margin:0 0 6px" data-i18n="gsRun"></p>
-              <p style="margin:0 0 6px;color:#6c757d;font-size:.875em" data-i18n="gsWeb"></p>
-              <p style="margin:0 0 4px;font-size:.875em;display:flex;align-items:center;gap:5px;color:#dc3545;font-weight:700"><span>🔑</span><span data-i18n="gsPwd"></span></p>
-              <p style="margin:0 0 4px;font-size:.8em;color:#6c757d;display:flex;align-items:flex-start;gap:5px"><span>⚠️</span><span data-i18n="gsPwdHow"></span></p>
-              <p style="margin:0 0 8px;font-size:.85em;color:#fff;background:#dc3545;border-radius:.375rem;padding:8px 10px;font-weight:700;display:flex;align-items:flex-start;gap:6px"><span data-i18n="gsPwdDanger"></span></p>
-              <p style="margin:0;font-size:.875em;display:flex;align-items:center;gap:5px"><span>📦</span><a href="https://github.com/06fs4dix/Artgine-Agent" target="_blank" style="color:#60a5fa">https://github.com/06fs4dix/Artgine-Agent</a></p>
+              <p style="margin:0 0 8px;font-size:.85em;color:#fff;background:#dc3545;border-radius:.375rem;padding:8px 10px;font-weight:700" data-i18n="gsPwd"></p>
             </div>
           </section>
 
-          <!-- FILES -->
-          <section class="tab-pane file-pane" id="panel-file">
+          <section class="tab-pane rdp-pane" id="panel-rdp">
             <div class="shortcut-strip">
               <span class="text-secondary small" data-i18n="keys"></span>
-              <span class="kbd">F1</span><span class="small" data-i18n="scFile"></span>
-              <span class="kbd">F2</span><span class="small" data-i18n="scSearch"></span>
-              <span class="kbd">F3</span><span class="small" data-i18n="scFiles"></span>
-              <span class="kbd">F4</span><span class="small" data-i18n="scAI"></span>
-              <span class="kbd">Esc</span><span class="small" data-i18n="scClose"></span>
-            </div>
-            <div class="file-menu">
-              <button class="btn btn-sm btn-primary" id="musicBtn" data-tip-key="tipMusic" type="button" data-i18n="music"></button>
-              <select class="form-select" style="width:128px;padding:.25rem .5rem;font-size:.875rem">
-                <option>Add All</option>
-                <option>Add Each (w/ Folder)</option>
-              </select>
-              <button class="btn btn-sm btn-outline-info" id="searchModalBtn" data-tip-key="tipSearch" type="button"></button>
-              <button class="btn btn-sm btn-outline-secondary" id="fileModalBtn" data-tip-key="tipFile" type="button"></button>
-              <button class="help" data-tip-key="tipHelpMobile" type="button" data-i18n="help"></button>
-              <span class="path">/</span>
-            </div>
-            <div class="file-body">
-              <div id="Menu_div" hidden></div>
-              <div id="File_div" class="file-list-wrap">
-                <ul class="list-group" id="fileList">
-                  <li class="list-group-item list-group-item-action list-group-item-warning" data-view="root"><i class="bi">📁</i> <span data-i18n="rootFolder"></span></li>
-                  <li class="list-group-item list-group-item-action list-group-item-primary" data-view="parent"><i class="bi">📁</i> <span data-i18n="parentFolder"></span></li>
-                  <li class="list-group-item list-group-item-action" data-view="folder"><i class="bi">📂</i> AI <span class="badge bg-secondary vcs-badge" data-vcs="?" style="float:right;font-size:.65rem">?</span></li>
-                  <li class="list-group-item list-group-item-action" data-view="image"><i class="bi">🖼</i> 256x256.png</li>
-                  <li class="list-group-item list-group-item-action" data-view="audio"><i class="bi">🎵</i> sample.mp3</li>
-                  <li class="list-group-item list-group-item-action" data-view="video"><i class="bi">🎬</i> sample.mp4 <span class="badge bg-danger vcs-badge" data-vcs="D" style="float:right;font-size:.65rem">D</span></li>
-                  <li class="list-group-item list-group-item-action" data-view="html"><i class="bi">📄</i> Home.html <span class="badge bg-warning vcs-badge" data-vcs="M" style="float:right;font-size:.65rem">M</span></li>
-                  <li class="list-group-item list-group-item-action" data-view="code"><i class="bi">📄</i> Home.ts <span class="badge bg-success vcs-badge" data-vcs="A" style="float:right;font-size:.65rem">A</span></li>
-                  <li class="list-group-item list-group-item-action" data-view="md"><i class="bi">📝</i> README.md</li>
-                  <li class="list-group-item list-group-item-action" data-view="file"><i class="bi">📎</i> archive.zip <span class="badge bg-secondary vcs-badge" data-vcs="?" style="float:right;font-size:.65rem">?</span></li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          <!-- AI -->
-          <section class="tab-pane ai-pane" id="panel-ai">
-            <div class="shortcut-strip" style="grid-column:1 / -1">
-              <span class="text-secondary small" data-i18n="aiKeys"></span>
-              <span class="kbd">F4</span><span class="small" data-i18n="ai"></span>
+              <span class="kbd">F3</span><span class="small" data-i18n="rdp"></span>
               <span class="kbd">Tab</span><span class="small" data-i18n="sidebar"></span>
-              <span class="kbd">↑</span><span class="kbd">↓</span><span class="small" data-i18n="session"></span>
-              <span class="kbd">Shift</span><span class="kbd">N</span><span class="small" data-i18n="newTerminal"></span>
-              <span class="kbd">F6</span><span class="small">SUPER</span>
-              <span class="kbd">F7</span><span class="small" data-i18n="keys"></span>
-              <span class="kbd">Esc</span><span class="small" data-i18n="scClose"></span>
-              <button class="help" data-tip-key="tipAIHelp" type="button" data-i18n="help"></button>
+              <span class="kbd">F1</span><span class="small" data-i18n="file"></span>
+              <span class="kbd">F2</span><span class="small" data-i18n="search"></span>
+              <span class="kbd">F4</span><span class="small" data-i18n="ai"></span>
             </div>
-            <div class="ai-body">
-              <aside class="ai-sidebar" id="aiSidebar">
-                <div class="ai-subtabs">
-                  <button class="nav-link active" data-sub="chat" id="chatSubtab" type="button" data-i18n="chat"></button>
-                  <button class="nav-link" data-sub="term" id="termSubtab" type="button" data-i18n="terminal"></button>
-                  <button class="nav-link" data-sub="web" id="webSubtab" type="button" data-i18n="web" data-tip-key="tipWebSubtab"></button>
+            <div class="rdp-body">
+              <aside class="sidebar" id="rdpSidebar">
+                <div class="sidebar-head">
+                  <input class="form-control" id="rdpUrl" data-tip-key="tipRdpUrl">
+                  <button class="btn btn-outline-primary btn-sm" id="rdpAddBtn" data-tip-key="tipRdpAdd" type="button">+</button>
                 </div>
-                <div class="side-section active" id="chatSide">
-                  <button class="btn btn-primary new-btn" id="newChatBtn" data-tip-key="tipNewChat" type="button" data-i18n="newChat"></button>
-                  <div class="session chat-active">
-                    <div class="sess-title"><span class="dot"></span><span id="sess1Title"></span><button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small>D:/git/Artgine-Agent</small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
+                <div class="side-section">
+                  <div class="session active-rdp" data-tip-key="tipRdpLocal">
+                    <div class="sess-title"><span class="dot"></span><span data-i18n="local"></span></div>
+                    <small>./AI/RemoteDesktop.html</small>
                   </div>
-                  <div class="session">
-                    <div class="sess-title"><span class="dot busy"></span><span id="sess2Title"></span><button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small id="sess2Sub"></small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
-                  </div>
-                  <div class="session">
-                    <div class="sess-title"><span class="dot off"></span><span id="sess3Title"></span><button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small id="sess3Sub"></small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
-                  </div>
-                </div>
-                <div class="side-section" id="termSide">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
-                    <button class="btn btn-sm btn-outline-success" id="newTermBtn" data-tip-key="tipNewTerm" type="button" data-i18n="newTerminal"></button>
-                    <button class="btn btn-sm btn-outline-info" id="scheduleBtn" data-tip-key="tipSchedule" type="button" data-i18n="schedule"></button>
-                  </div>
-                  <div class="session term-active">
-                    <div class="sess-title"><span class="dot"></span>cmd : local<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small>D:/git/Artgine-Agent</small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
-                  </div>
-                  <div class="session">
-                    <div class="sess-title"><span class="dot busy"></span>codex : app<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small id="tsess2Sub"></small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
-                  </div>
-                </div>
-                <div class="side-section" id="webSide">
-                  <button class="btn btn-outline-primary new-btn" id="newBrowserBtn" data-tip-key="tipNewBrowser" type="button"><i class="bi">＋</i><span data-i18n="newBrowser"></span></button>
-                  <div class="session web-active" data-tip-key="tipBrowserSession">
-                    <div class="sess-title"><span class="dot"></span>localhost:8050<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small>Home.html screenshot</small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
-                  </div>
-                  <div class="session" data-tip-key="tipBrowserSession">
-                    <div class="sess-title"><span class="dot busy"></span>docs session<button class="sess-menu-btn" type="button" aria-label="menu">⋮</button></div>
-                    <small>Capturing logs</small>
-                    <div class="sess-menu">
-                      <button type="button" data-action="newwin" data-i18n="sessNewWindow"></button>
-                      <button type="button" data-action="share" data-i18n="sessShare"></button>
-                      <button type="button" data-action="delete" data-i18n="sessDelete"></button>
-                    </div>
+                  <div class="session" data-tip-key="tipRdpRemote">
+                    <div class="sess-title"><span class="dot busy"></span><span data-i18n="remote"></span></div>
+                    <small>http://192.168.0.20:8050/Artgine/proj/Home/Home.html</small>
                   </div>
                 </div>
               </aside>
               <section class="frame">
-                <button class="btn btn-sm sidebar-toggle" id="sidebarToggle" type="button" data-i18n="sidebar"></button>
+                <button class="btn btn-sm sidebar-toggle" id="rdpSidebarToggle" type="button" data-i18n="sidebar"></button>
+                <div class="rdp-controls" id="rdpControls">
+                  <div class="control" data-tip-key="tipRdpRate">
+                    <span data-i18n="frame"></span>
+                    <input type="range" min="0.05" max="10" step="0.05" value="0.5">
+                    <span>0.5s</span>
+                  </div>
+                  <div class="control" data-tip-key="tipRdpQuality">
+                    <span data-i18n="quality"></span>
+                    <input type="range" min="10" max="100" step="5" value="75">
+                    <span>75</span>
+                  </div>
+                  <div class="control" data-tip-key="tipRdpInput">
+                    <span data-i18n="input"></span>
+                    <input type="checkbox">
+                  </div>
+                </div>
+                <div class="rdp-screen">
+                  <div class="remote-desktop">
+                    <div class="remote-top"><strong>Remote Desktop</strong><span class="text-secondary small">Local</span></div>
+                    <div class="remote-page">
+                      <div class="remote-side">
+                        <div class="line" style="width:82%"></div>
+                        <div class="line" style="width:64%"></div>
+                        <div class="line" style="width:72%"></div>
+                        <div class="line" style="width:48%;margin-top:18px"></div>
+                      </div>
+                      <div class="remote-main">
+                        <div class="hero"></div>
+                        <div class="grid">
+                          <div class="mini-card"></div>
+                          <div class="mini-card"></div>
+                          <div class="mini-card"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="tab-pane file-pane" id="panel-file">
+            <div class="shortcut-strip">
+              <span class="text-secondary small" data-i18n="keys"></span>
+              <span class="kbd">F1</span><span class="small" data-i18n="file"></span>
+              <span class="kbd">F2</span><span class="small" data-i18n="search"></span>
+              <span class="kbd">F3</span><span class="small" data-i18n="rdp"></span>
+              <span class="kbd">F4</span><span class="small" data-i18n="ai"></span>
+              <span class="kbd">Esc</span><span class="small" data-i18n="close"></span>
+            </div>
+            <div class="file-menu">
+              <button class="btn btn-sm btn-primary" id="musicBtn" data-tip-key="tipMusic" type="button" data-i18n="music"></button>
+              <select class="form-select" style="width:150px;padding:.25rem .5rem;font-size:.875rem">
+                <option data-i18n="addAll"></option>
+                <option data-i18n="addEach"></option>
+              </select>
+              <button class="btn btn-sm btn-outline-info" id="searchModalBtn" data-tip-key="tipSearch" type="button" data-i18n="search"></button>
+              <button class="btn btn-sm btn-outline-secondary" id="fileModalBtn" data-tip-key="tipFile" type="button" data-i18n="file"></button>
+              <button class="help" data-tip-key="tipFile" type="button" data-i18n="help"></button>
+              <span class="path">/proj/Home/</span>
+            </div>
+            <div class="file-list-wrap">
+              <div class="file-list-hint">파일을 누르면 이미지, 음악, 코드, 문서 등 파일 종류에 맞는 팝업이 열립니다.</div>
+              <ul class="list-group" id="fileList">
+                <li class="list-group-item list-group-item-warning" data-view="root"><i class="bi bi-folder"></i> Root Folder</li>
+                <li class="list-group-item list-group-item-primary" data-view="parent"><i class="bi bi-folder"></i> Parent Folder</li>
+                <li class="list-group-item" data-view="folder"><i class="bi bi-folder-fill"></i> AI <span class="badge bg-secondary" style="float:right">?</span></li>
+                <li class="list-group-item" data-view="html"><i class="bi bi-file-earmark-code"></i> Home.html <span class="badge bg-warning" style="float:right">M</span></li>
+                <li class="list-group-item" data-view="code"><i class="bi bi-file-code"></i> Home.ts <span class="badge bg-success" style="float:right">A</span></li>
+                <li class="list-group-item" data-view="html"><i class="bi bi-file-earmark-code"></i> RemoteDesktop.html</li>
+                <li class="list-group-item" data-view="code"><i class="bi bi-file-code"></i> RemoteDesktop.ts</li>
+                <li class="list-group-item" data-view="file"><i class="bi bi-file"></i> Home.webmanifest</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="tab-pane ai-pane" id="panel-ai">
+            <div class="shortcut-strip">
+              <span class="text-secondary small" data-i18n="keys"></span>
+              <span class="kbd">F4</span><span class="small" data-i18n="ai"></span>
+              <span class="kbd">Tab</span><span class="small" data-i18n="sidebar"></span>
+              <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="small">Chat/Term/Web</span>
+              <span class="kbd">Shift</span><span class="kbd">N</span><span class="small" data-i18n="newTerminal"></span>
+              <span class="kbd">F6</span><span class="small">SUPER</span>
+              <span class="kbd">F7</span><span class="small">Input</span>
+              <button class="help" data-tip-key="tipAIHelp" type="button" data-i18n="help"></button>
+            </div>
+            <div class="ai-body">
+              <aside class="sidebar" id="aiSidebar">
+                <div class="ai-subtabs">
+                  <button class="nav-link active" data-sub="chat" id="chatSubtab" type="button">Chat <small>1</small></button>
+                  <button class="nav-link" data-sub="term" id="termSubtab" type="button">Term <small>2</small></button>
+                  <button class="nav-link" data-sub="web" id="webSubtab" type="button">Web <small>3</small></button>
+                </div>
+                <div class="ai-side-pane active" id="chatSide">
+                  <button class="btn btn-primary" id="newChatBtn" data-tip-key="tipNewChat" type="button" style="width:100%;margin-bottom:8px" data-i18n="newChat"></button>
+                  <div class="session chat-active"><div class="sess-title"><span class="dot"></span>Home UI update</div><small>D:/git/Artgine</small></div>
+                  <div class="session"><div class="sess-title"><span class="dot busy"></span>README cleanup</div><small>Generating response</small></div>
+                </div>
+                <div class="ai-side-pane" id="termSide">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+                    <button class="btn btn-sm btn-outline-success" id="newTermBtn" data-tip-key="tipNewTerm" type="button" data-i18n="newTerminal"></button>
+                    <button class="btn btn-sm btn-outline-info" id="scheduleBtn" data-tip-key="tipSchedule" type="button" data-i18n="schedule"></button>
+                  </div>
+                  <div class="session term-active"><div class="sess-title"><span class="dot"></span>cmd : local</div><small>D:/git/Artgine</small></div>
+                  <div class="session"><div class="sess-title"><span class="dot busy"></span>codex : app</div><small>Waiting for approval</small></div>
+                </div>
+                <div class="ai-side-pane" id="webSide">
+                  <button class="btn btn-outline-primary" id="newBrowserBtn" data-tip-key="tipNewBrowser" type="button" style="width:100%;margin-bottom:8px" data-i18n="newBrowser"></button>
+                  <div class="session web-active"><div class="sess-title"><span class="dot"></span>localhost:8050</div><small>Web screen preview</small></div>
+                </div>
+              </aside>
+              <section class="frame">
+                <button class="btn btn-sm sidebar-toggle" id="aiSidebarToggle" type="button" data-i18n="sidebar"></button>
                 <div class="chat-main" id="chatFrame">
                   <div class="chat-top">
-                    <strong data-i18n="aiChatTitle"></strong>
-                    <select class="form-select" style="width:130px"><option>Codex</option><option>Claude</option><option>Antigravity</option></select>
-                    <select class="form-select" style="width:160px"><option id="defaultModelOpt"></option></select>
+                    <strong>AI Chat</strong>
+                    <select class="form-select" style="width:130px"><option>Codex</option><option>Claude</option></select>
                     <span class="badge bg-success" data-i18n="connected"></span>
                   </div>
                   <div class="messages" id="messages">
-                    <div class="bubble user"><small id="msgUserLabel"></small><span id="msgUserText"></span></div>
-                    <div class="bubble"><small id="msgAssLabel"></small><span id="msgAssText"></span></div>
-                    <div class="bubble"><small id="msgChangedLabel"></small>ai/artgine-agent-tutorial.html</div>
+                    <div class="bubble user"><small>User</small>Home 튜토리얼을 최신 UI에 맞게 갱신해줘.</div>
+                    <div class="bubble"><small>Assistant</small>RDP, Files, AI 중심으로 최신 Home 흐름에 맞춰 구성하겠습니다.</div>
+                    <div class="bubble"><small>Changed files</small>help/artgine-agent-tutorial.html</div>
                   </div>
                   <div class="composer">
-                    <textarea class="form-control" id="composerTa"></textarea>
+                    <textarea class="form-control">여기에 실제 앱에서는 AI에게 지시를 입력합니다.</textarea>
                     <button class="btn btn-primary" type="button" data-i18n="send"></button>
                   </div>
                 </div>
-                <div class="terminal" id="terminalFrame"></div>
+                <div class="terminal" id="terminalFrame">$ cd D:/git/Artgine
+$ npm run start_web
+
+ServerStart
+http://localhost:8050/Artgine/proj/Home/Home.html
+
+> codex
+Codex session started.</div>
                 <div class="term-bar" id="termBar">
                   <input class="form-control" value="/status">
-                  <button class="btn btn-sm" type="button" data-i18n="enterBtn"></button>
-                  <button class="btn btn-sm btn-outline-danger" data-tip-key="tipSUPER" type="button" data-i18n="superBtn"></button>
+                  <button class="btn btn-sm" type="button" data-i18n="enter"></button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" data-i18n="super"></button>
                 </div>
                 <div class="browser-frame" id="browserFrame">
                   <div class="browser-controls">
-                    <div class="browser-control" data-tip-key="tipBrowserRate">
-                      <span class="browser-control-label">frame</span>
-                      <input type="range" min="0.1" max="10" step="0.1" value="3">
-                      <span style="min-width:2rem">3s</span>
-                    </div>
-                    <div class="browser-control" data-tip-key="tipBrowserQuality">
-                      <span class="browser-control-label">quality</span>
-                      <input type="range" min="0" max="100" step="1" value="75" style="width:100px">
-                      <span style="min-width:2.4rem">75</span>
-                    </div>
-                    <div class="browser-control" data-tip-key="tipBrowserInput">
-                      <span>input</span>
-                      <input type="checkbox" class="form-check-input">
-                    </div>
+                    <div class="control"><span>frame</span><input type="range" value="3"><span>3s</span></div>
+                    <div class="control"><span>quality</span><input type="range" value="75"><span>75</span></div>
+                    <div class="control" data-tip-key="tipBrowserInput"><span>input</span><input type="checkbox"></div>
                   </div>
-                  <div class="browser-shot-wrap" tabindex="-1" data-tip-key="tipBrowserShot">
+                  <div class="browser-shot-wrap">
                     <div class="browser-shot-img">
                       <div class="browser-mock-top">
                         <span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span>
                         <div class="browser-address">localhost:8050/Artgine/proj/Home/Home.html</div>
                       </div>
                       <div class="browser-mock-page">
-                        <div class="browser-mock-side">
-                          <div class="browser-mock-line" style="width:82%"></div>
-                          <div class="browser-mock-line" style="width:64%"></div>
-                          <div class="browser-mock-line" style="width:72%"></div>
-                          <div class="browser-mock-line" style="width:48%;margin-top:18px"></div>
-                        </div>
-                        <div class="browser-mock-main">
-                          <div class="browser-mock-hero"></div>
-                          <div class="browser-mock-grid">
-                            <div class="browser-mock-card"></div>
-                            <div class="browser-mock-card"></div>
-                            <div class="browser-mock-card"></div>
-                          </div>
-                        </div>
+                        <div class="browser-mock-side"><div class="line" style="width:80%"></div><div class="line" style="width:60%"></div></div>
+                        <div class="browser-mock-main"><div class="hero"></div><div class="grid"><div class="mini-card"></div><div class="mini-card"></div><div class="mini-card"></div></div></div>
                       </div>
                     </div>
                   </div>
-                  <div class="browser-log" data-tip-key="tipBrowserLog">[log] console/network events
+                  <div class="browser-log">[log] console/network events
 [input] click and keyboard events appear when input is enabled</div>
                 </div>
               </section>
             </div>
           </section>
 
-          <!-- FILE MODAL -->
           <div class="modal-backdrop" id="fileModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="fileManagerTitle"></h2><button class="xbtn" data-close="fileModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="fileManagerTitle"></h2><button class="xbtn" data-close="fileModal" type="button">×</button></div>
               <div class="modal-body">
                 <div style="display:flex;flex-direction:column;gap:8px">
-                  <div style="display:flex;gap:4px;align-items:center">
-                    <input type="text" id="fileHomeUrlDemo" class="form-control form-control-sm" placeholder="Home.html URL" style="width:140px;flex:0 0 140px" data-tip-key="tipFileHomeUrl">
-                    <button type="button" class="btn btn-outline-primary btn-sm" data-i18n="connect" data-tip-key="tipFileHomeConnect"></button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-i18n="local" data-tip-key="tipFileHomeLocal"></button>
-                  </div>
-                  <select class="form-select form-select-sm" data-tip-key="tipRootSelect"><option>Artgine (WorkingPath)</option><option>D:/git/Artgine-Agent</option></select>
-                  <div style="display:flex;gap:4px;align-items:center">
-                    <span class="small text-secondary" title="Find from current path">📂 PathTo</span>
-                    <button class="btn btn-outline-primary btn-sm" style="flex:1" data-tip-key="tipChatFromFile" type="button" data-i18n="chat"></button>
-                    <button class="btn btn-outline-success btn-sm" style="flex:1" data-tip-key="tipTermFromFile" type="button" data-i18n="terminal"></button>
+                  <select class="form-select"><option>Artgine (WorkingPath)</option><option>D:/git/Artgine</option></select>
+                  <div style="display:flex;gap:4px">
+                    <button class="btn btn-outline-primary btn-sm" style="flex:1" type="button" data-i18n="chat"></button>
+                    <button class="btn btn-outline-success btn-sm" style="flex:1" type="button" data-i18n="terminal"></button>
                   </div>
                   <hr style="margin:0">
-                  <div style="border:1px solid var(--bs-border-color);border-radius:.375rem;overflow:hidden">
-                    <button class="btn" style="width:100%;border:0;border-radius:0;text-align:left;background:#f8f9fa" data-tip-key="tipFileActions" type="button" data-i18n="fileActionsLabel"></button>
-                    <div style="display:flex;flex-direction:column;gap:8px;padding:8px">
-                      <button class="btn btn-outline-info btn-sm"  data-tip-key="tipShare"     type="button" data-i18n="share"></button>
-                      <button class="btn btn-warning btn-sm" data-tip-key="tipNewFolder" type="button" data-i18n="newFolder"></button>
-                      <button class="btn btn-danger btn-sm" data-tip-key="tipDelete"   type="button" data-i18n="delete"></button>
-                      <button class="btn btn-primary btn-sm"        data-tip-key="tipUpload"   type="button" data-i18n="upload"></button>
-                    </div>
-                  </div>
-                  <div style="border:1px solid var(--bs-border-color);border-radius:.375rem;overflow:hidden">
-                    <button class="btn" style="width:100%;border:0;border-radius:0;text-align:left;background:#fff" data-tip-key="tipVC" type="button" data-i18n="versionControlLabel"></button>
-                    <div class="small text-secondary" style="padding:8px 8px 0;line-height:1.45">
-                      <span class="badge bg-warning">M</span> <span data-i18n="modified"></span>
-                      <span class="badge bg-danger">D</span> <span data-i18n="deleted"></span>
-                      <span class="badge bg-success">A</span> <span data-i18n="added"></span>
-                      <span class="badge bg-secondary">?</span> <span data-i18n="untracked"></span>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:8px;padding:8px">
-                      <button class="btn btn-sm btn-outline-secondary" data-tip-key="tipDiff"        type="button" data-i18n="diff"></button>
-                      <button class="btn btn-sm btn-outline-primary"   data-tip-key="tipUpdate"      type="button" data-i18n="update"></button>
-                      <button class="btn btn-sm btn-outline-info"      data-tip-key="tipAddSvn"      type="button" data-i18n="addSvn"></button>
-                      <button class="btn btn-sm btn-outline-warning"    data-tip-key="tipRevert"      type="button" data-i18n="revert"></button>
-                      <button class="btn btn-sm btn-outline-success"   data-tip-key="tipCommitPush"  type="button" data-i18n="commitPush"></button>
-                    </div>
-                  </div>
+                  <button class="btn btn-outline-info btn-sm" type="button" data-i18n="share"></button>
+                  <button class="btn btn-outline-secondary btn-sm" type="button" data-i18n="newFolder"></button>
+                  <button class="btn btn-outline-danger btn-sm" type="button" data-i18n="delete"></button>
+                  <button class="btn btn-primary btn-sm" type="button" data-i18n="upload"></button>
+                  <hr style="margin:0">
+                  <strong data-i18n="versionControl"></strong>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" data-i18n="diff"></button>
+                  <button class="btn btn-sm btn-outline-primary" type="button" data-i18n="update"></button>
+                  <button class="btn btn-sm btn-outline-info" type="button" data-i18n="addSvn"></button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" data-i18n="revert"></button>
+                  <button class="btn btn-sm btn-outline-success" type="button" data-i18n="commitPush"></button>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- MUSIC MODAL -->
-          <div class="modal-backdrop" id="musicModal">
-            <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="musicTitle"></h2><button class="xbtn" data-close="musicModal" aria-label="Close" type="button">×</button></div>
-              <div class="modal-body">
-                <div style="padding:4px">
-                  <button type="button" class="btn btn-danger btn-sm" id="musicDeleteAll" style="margin:4px" data-tip-key="tipDeleteAll" data-i18n="deleteAll"></button>
-                  <button type="button" class="btn btn-warning btn-sm mm-save-list" id="musicSaveList" style="margin:4px" data-tip-key="tipSaveList" data-i18n="saveList"></button>
-                  <div class="mm-now" id="musicNow">♫ sample.mp3</div>
-                  <audio controls playsinline preload="auto" style="width:100%"></audio>
-                  <div class="form-check" style="padding-left:2rem;margin-top:6px">
-                    <label class="form-check-label">
-                      <input class="form-check-input" id="musicRandom" type="checkbox" checked> <span data-i18n="randomPlay"></span>
-                    </label>
-                  </div>
-                  <hr>
-                  <div class="mm-list" id="musicList">
-                    <ul class="list-group"><li class="list-group-item list-group-item-action list-group-item-dark" data-music="sample.mp3"><i class="bi">🎵</i> <font color="red">sample.mp3</font><i class="bi float-right" data-del="0">❌</i></li></ul>
-                    <ul class="list-group"><li class="list-group-item list-group-item-action" data-music="theme.ogg"><i class="bi">🎵</i> <font color="red">theme.ogg</font><i class="bi float-right" data-del="1">❌</i></li></ul>
-                    <ul class="list-group"><li class="list-group-item list-group-item-action" data-music="notification.mp3"><i class="bi">🎵</i> <font color="red">notification.mp3</font><i class="bi float-right" data-del="2">❌</i></li></ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- SEARCH MODAL -->
           <div class="modal-backdrop" id="searchModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="fileSearchTitle"></h2><button class="xbtn" data-close="searchModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="fileSearchTitle"></h2><button class="xbtn" data-close="searchModal" type="button">×</button></div>
               <div class="modal-body">
                 <div style="display:flex;gap:8px;margin-bottom:10px">
-                  <input class="form-control" value="Home" aria-label="search" data-tip-key="tipSearchInput">
-                  <button class="btn btn-primary" data-tip-key="tipSearchBtn" type="button" data-i18n="search"></button>
+                  <input class="form-control" value="RemoteDesktop">
+                  <button class="btn btn-primary" type="button" data-i18n="search"></button>
                 </div>
-                <div class="small text-secondary" style="margin-bottom:6px"><span data-i18n="searchResultCount"></span> <button class="help" data-tip-key="tipSearchResultHelp" type="button">?</button></div>
                 <div class="list-group">
-                  <button class="list-group-item" data-tip-key="tipSR1" type="button">Home.ts <span class="file-meta">/proj/Home/</span></button>
-                  <button class="list-group-item" data-tip-key="tipSR2" type="button">Home.html <span class="file-meta">/proj/Home/</span></button>
-                  <button class="list-group-item" data-tip-key="tipSR3" type="button">Home.json <span class="file-meta">/proj/Home/</span></button>
+                  <button class="list-group-item" type="button">RemoteDesktop.html <span class="file-meta">/proj/Home/AI/</span></button>
+                  <button class="list-group-item" type="button">RemoteDesktop.ts <span class="file-meta">/proj/Home/AI/</span></button>
+                  <button class="list-group-item" type="button">Home.ts <span class="file-meta">/proj/Home/</span></button>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- SHORTCUTS MODAL -->
-          <div class="modal-backdrop" id="shortcutsModal">
+          <div class="modal-backdrop" id="musicModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="keyboardShortcutsTitle"></h2><button class="xbtn" data-close="shortcutsModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="music"></h2><button class="xbtn" data-close="musicModal" type="button">×</button></div>
               <div class="modal-body">
-                <div class="list-group shortcut-list" id="shortcutList"></div>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                  <button class="btn btn-sm btn-outline-danger" type="button">Delete All</button>
+                  <button class="btn btn-sm btn-outline-warning" type="button">Save List</button>
+                </div>
+                <div class="small text-secondary" style="margin-bottom:6px">Now Playing</div>
+                <div style="font-weight:700;color:#0d6efd;margin-bottom:8px">sample.mp3</div>
+                <audio controls style="width:100%;margin-bottom:8px"></audio>
+                <label style="display:block;margin-bottom:10px"><input type="checkbox" checked> Random Play</label>
+                <div class="list-group">
+                  <button class="list-group-item active" type="button"><i class="bi bi-folder-music"></i> sample.mp3</button>
+                  <button class="list-group-item" type="button"><i class="bi bi-folder-music"></i> theme.ogg</button>
+                  <button class="list-group-item" type="button"><i class="bi bi-folder-music"></i> notification.mp3</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- NEW CHAT MODAL -->
+          <div class="modal-backdrop" id="filePreviewModal">
+            <div class="modal">
+              <div class="modal-header"><h2 class="modal-title" id="filePreviewTitle">File Preview</h2><button class="xbtn" data-close="filePreviewModal" type="button">×</button></div>
+              <div class="modal-body">
+                <p class="text-secondary" style="margin-top:0">선택한 파일 형식에 맞는 팝업이 열립니다. 코드와 문서는 편집 화면, 이미지와 음악은 미리보기 화면으로 확인합니다.</p>
+                <div class="fake-monaco" id="filePreviewBody">&lt;!-- Home.html --&gt;
+&lt;section class="home"&gt;
+  &lt;h1&gt;Artgine Agent&lt;/h1&gt;
+&lt;/section&gt;</div>
+              </div>
+              <div class="modal-footer">
+                <button class="btn" data-close="filePreviewModal" type="button">Close</button>
+                <button class="btn btn-primary" data-close="filePreviewModal" type="button">Save</button>
+              </div>
+            </div>
+          </div>
+
           <div class="modal-backdrop" id="newChatModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="newChatModalTitle"></h2><button class="xbtn" data-close="newChatModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="newChatModalTitle"></h2><button class="xbtn" data-close="newChatModal" type="button">×</button></div>
               <div class="modal-body">
-                <label class="small text-secondary"><span data-i18n="workingDirLabel"></span> <button class="help" data-tip-key="tipWDHelp" type="button">?</button></label>
-                <input class="form-control" value="D:/git/Artgine-Agent" style="margin-bottom:12px" data-tip-key="tipWDInput">
-                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
-                  <label class="form-check">
-                    <input type="checkbox">
-                    <span><b data-i18n="mcpLabel"></b><span class="file-meta" data-i18n="mcpDesc"></span></span>
-                    <button class="help" data-tip-key="tipMCP" type="button">?</button>
-                  </label>
-                  <label class="form-check">
-                    <input type="checkbox" checked>
-                    <span><b data-i18n="copyMdLabel"></b><span class="file-meta" data-i18n="copyMdDesc"></span></span>
-                    <button class="help" data-tip-key="tipCopyMD" type="button">?</button>
-                  </label>
+                <label class="small text-secondary" data-i18n="workingDir"></label>
+                <input class="form-control" value="D:/git/Artgine" style="margin:4px 0 12px">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <label><input type="checkbox"> <b data-i18n="mcp"></b><span class="file-meta">AI 세션에 추가 도구 서버를 연결합니다.</span></label>
+                  <label><input type="checkbox" checked> <b data-i18n="copyMd"></b><span class="file-meta">응답을 Markdown 복사 흐름에 맞춥니다.</span></label>
                 </div>
-                <div style="border:1px solid #9ec5fe;background:#e7f1ff;color:#084298;border-radius:.375rem;padding:10px;line-height:1.45;margin-bottom:8px" data-i18n-html="newChatWarning"></div>
-                <div style="border:1px solid #f1b8b8;background:#fff5f5;color:#842029;border-radius:.375rem;padding:10px;line-height:1.45" data-i18n-html="newChatWarningDanger"></div>
+                <div style="border:1px solid #9ec5fe;background:#e7f1ff;color:#084298;border-radius:.375rem;padding:10px;margin-top:12px">
+                  Chat은 작업 지시를 AI에게 보내는 세션입니다. 시작 전에 Working Directory를 확인하세요.
+                </div>
               </div>
               <div class="modal-footer">
                 <button class="btn" data-close="newChatModal" type="button" data-i18n="cancel"></button>
@@ -844,124 +829,82 @@ npm start</pre>
             </div>
           </div>
 
-          <!-- NEW TERMINAL MODAL -->
           <div class="modal-backdrop" id="newTermModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="newTermModalTitle"></h2><button class="xbtn" data-close="newTermModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="newTermModalTitle"></h2><button class="xbtn" data-close="newTermModal" type="button">×</button></div>
               <div class="modal-body">
-                <label class="small text-secondary"><span data-i18n="modeLabel"></span> <button class="help" data-tip-key="tipModeHelp" type="button">?</button></label>
-                <div class="mode-btn-group" style="display:flex;gap:6px;margin-bottom:10px">
-                  <button class="btn btn-sm btn-primary mode-btn active" data-mode="cmd" type="button">cmd</button>
-                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="codex" type="button">codex</button>
-                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="claude" type="button">claude</button>
-                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="antigravity" type="button">antigravity</button>
-                  <button class="btn btn-sm btn-outline-secondary mode-btn" data-mode="opencode" type="button">opencode</button>
+                <label class="small text-secondary" data-i18n="workingDir"></label>
+                <input class="form-control" value="D:/git/Artgine" style="margin:4px 0 10px">
+                <label class="small text-secondary" data-i18n="mode"></label>
+                <div style="display:flex;gap:6px;margin:4px 0 10px;flex-wrap:wrap">
+                  <button class="btn btn-sm btn-primary" type="button">cmd</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button">codex</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button">claude</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button">opencode</button>
                 </div>
-                <label class="small text-secondary"><span data-i18n="keyLabel"></span> <button class="help" data-tip-key="tipKeyHelp" type="button">?</button></label>
-                <input class="form-control" value="local" style="margin-bottom:10px">
-                <label class="small text-secondary" data-i18n="workingDirLabel"></label>
-                <input class="form-control" value="D:/git/Artgine-Agent" style="margin-bottom:12px">
-                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
-                  <label class="form-check">
-                    <input type="checkbox" checked>
-                    <span><b data-i18n="allowWriteLabel"></b><span class="file-meta" data-i18n="allowWriteTermDesc"></span></span>
-                    <button class="help" data-tip-key="tipAllowWriteTerm" type="button">?</button>
-                  </label>
-                  <label class="form-check">
-                    <input type="checkbox">
-                    <span><b data-i18n="mcpLabel"></b><span class="file-meta" data-i18n="mcpTermDesc"></span></span>
-                    <button class="help" data-tip-key="tipMCPTerm" type="button">?</button>
-                  </label>
-                  <label class="form-check">
-                    <input type="checkbox" checked>
-                    <span><b data-i18n="copyMdLabel"></b><span class="file-meta" data-i18n="copyMdTermDesc"></span></span>
-                    <button class="help" data-tip-key="tipCopyMDTerm" type="button">?</button>
-                  </label>
+                <label class="small text-secondary" data-i18n="key"></label>
+                <input class="form-control" value="local" style="margin:4px 0 12px">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <label><input type="checkbox"> <b data-i18n="mcp"></b><span class="file-meta">터미널 AI 세션에 추가 도구 서버를 연결합니다.</span></label>
+                  <label><input type="checkbox" checked> <b data-i18n="copyMd"></b><span class="file-meta">출력 복사 시 Markdown 형식을 유지합니다.</span></label>
                 </div>
-                <div style="border:1px solid #f1b8b8;background:#fff5f5;color:#842029;border-radius:.375rem;padding:10px;line-height:1.45" data-i18n-html="newTermWarning"></div>
               </div>
               <div class="modal-footer">
                 <button class="btn" data-close="newTermModal" type="button" data-i18n="cancel"></button>
-                <button class="btn btn-primary" data-close="newTermModal" type="button" data-i18n="open"></button>
+                <button class="btn btn-success" data-close="newTermModal" type="button" data-i18n="open"></button>
               </div>
             </div>
           </div>
 
-          <!-- SCHEDULE MODAL -->
-          <div class="modal-backdrop" id="scheduleModal">
+          <div class="modal-backdrop" id="newBrowserModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="newScheduleTitle"></h2><button class="xbtn" data-close="scheduleModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="newBrowserModalTitle"></h2><button class="xbtn" data-close="newBrowserModal" type="button">×</button></div>
               <div class="modal-body">
-                <label class="small text-secondary"><span data-i18n="nameLabel"></span> <button class="help" data-tip-key="tipNameHelp" type="button">?</button></label>
-                <input class="form-control" value="nightly-check" style="margin-bottom:10px">
-                <label class="small text-secondary"><span data-i18n="termKeyLabel"></span> <button class="help" data-tip-key="tipTermKeyHelp" type="button">?</button></label>
-                <input class="form-control" value="local" style="margin-bottom:10px">
-                <label class="small text-secondary" data-i18n="modeLabel"></label>
-                <select class="form-select" style="margin-bottom:10px">
-                  <option>cmd</option><option>codex</option><option>claude</option><option>antigravity</option><option>opencode</option><option>none</option>
-                </select>
+                <p style="margin-top:0" data-i18n="browserModalDesc"></p>
+                <label class="small text-secondary">URL</label>
+                <input class="form-control" value="https://example.com" style="margin:4px 0 10px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-                  <div><label class="small text-secondary" data-i18n="delayLabel"></label><input class="form-control" value="3600"></div>
-                  <div><label class="small text-secondary" data-i18n="countLabel"></label><input class="form-control" value="3"></div>
+                  <div>
+                    <label class="small text-secondary">Browser</label>
+                    <select class="form-select" style="margin-top:4px">
+                      <option>auto</option>
+                      <option>chrome</option>
+                      <option>msedge</option>
+                      <option>firefox</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="small text-secondary">TTL (sec)</label>
+                    <input class="form-control" type="number" value="300" style="margin-top:4px">
+                  </div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-                  <div><label class="small text-secondary" data-i18n="startOffsetLabel"></label><input class="form-control" value="0"></div>
-                  <div><label class="small text-secondary" data-i18n="endOffsetLabel"></label><input class="form-control" value="0"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div>
+                    <label class="small text-secondary">Width</label>
+                    <input class="form-control" type="number" value="1280" style="margin-top:4px">
+                  </div>
+                  <div>
+                    <label class="small text-secondary">Height</label>
+                    <input class="form-control" type="number" value="720" style="margin-top:4px">
+                  </div>
                 </div>
-                <label class="small text-secondary" data-i18n="commandLabel"></label>
-                <textarea class="form-control" style="min-height:70px;margin-bottom:10px">npm test</textarea>
-                <div style="border:1px solid #f1b8b8;background:#fff5f5;color:#842029;border-radius:.375rem;padding:10px;line-height:1.45" data-i18n-html="scheduleWarning"></div>
               </div>
               <div class="modal-footer">
-                <button class="btn" data-close="scheduleModal" type="button" data-i18n="cancel"></button>
-                <button class="btn btn-primary" data-close="scheduleModal" type="button" data-i18n="save"></button>
+                <button class="btn" data-close="newBrowserModal" type="button" data-i18n="cancel"></button>
+                <button class="btn btn-primary" data-close="newBrowserModal" type="button" data-i18n="open"></button>
               </div>
             </div>
           </div>
 
-          <!-- CONTENT MODAL -->
-          <div class="modal-backdrop" id="contentModal">
+          <div class="modal-backdrop" id="shortcutsModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" id="contentTitle"></h2><button class="xbtn" data-close="contentModal" aria-label="Close" type="button">×</button></div>
-              <div class="modal-body" id="contentBody"></div>
-            </div>
-          </div>
-
-          <!-- VCS MODAL -->
-          <div class="modal-backdrop" id="vcsModal">
-            <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" id="vcsTitle"></h2><button class="xbtn" data-close="vcsModal" aria-label="Close" type="button">×</button></div>
-              <div class="modal-body" id="vcsBody"></div>
-            </div>
-          </div>
-
-          <!-- SESSION NEW WINDOW MODAL -->
-          <div class="modal-backdrop" id="sessionWindowModal">
-            <div class="modal" style="width:min(760px,100%)">
-              <div class="modal-header"><h2 class="modal-title" id="sessionWindowTitle"></h2><button class="xbtn" data-close="sessionWindowModal" aria-label="Close" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="keyboardShortcutsTitle"></h2><button class="xbtn" data-close="shortcutsModal" type="button">×</button></div>
               <div class="modal-body">
-                <p class="small text-secondary" style="margin:0 0 10px" data-i18n="sessNewWindowNote"></p>
-                <div style="border:1px solid var(--bs-border-color);border-radius:.5rem;overflow:hidden;height:420px" id="sessionWindowBody"></div>
+                <div class="list-group shortcut-list" id="shortcutList"></div>
               </div>
             </div>
           </div>
 
-          <!-- SESSION SHARE MODAL -->
-          <div class="modal-backdrop" id="sessionShareModal">
-            <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" id="sessionShareTitle"></h2><button class="xbtn" data-close="sessionShareModal" aria-label="Close" type="button">×</button></div>
-              <div class="modal-body">
-                <p class="small text-secondary" style="margin:0 0 10px" data-i18n="sessShareNote"></p>
-                <div style="display:flex;gap:6px">
-                  <input class="form-control" id="sessionShareLink" readonly>
-                  <button class="btn btn-outline-primary" id="sessionShareCopyBtn" type="button" data-i18n="copy"></button>
-                </div>
-                <p class="small" id="sessionShareCopied" style="margin:8px 0 0;color:#198754;display:none"></p>
-              </div>
-            </div>
-          </div>
-
-          <!-- COACH -->
           <div class="coach">
             <h2 id="coachTitle"></h2>
             <p id="coachText"></p>
@@ -981,88 +924,65 @@ npm start</pre>
   </div>
 
   <script>
-    const steps   = S.steps;
-    const views   = S.views;
-    const vcsInfo = S.vcsInfo;
-    steps.splice(9, 0, ['Web', 'Browser sessions', 'ai', 'webSubtab', 'The AI tab now has a Web subtab for Playwright browser sessions.', 'The Browser page has frame and quality sliders, an input toggle, a screenshot area, and a log area.']);
-
     let current = 0;
     const $ = id => document.getElementById(id);
 
     function applyI18n() {
-      /* text content */
       document.querySelectorAll('[data-i18n]').forEach(el => {
-        const v = S[el.dataset.i18n];
-        if (v !== undefined) el.textContent = v;
+        const value = S[el.dataset.i18n];
+        if (value !== undefined) el.textContent = value;
       });
-      /* inner HTML (for strings containing tags) */
-      document.querySelectorAll('[data-i18n-html]').forEach(el => {
-        const v = S[el.dataset.i18nHtml];
-        if (v !== undefined) el.innerHTML = v;
-      });
-      /* data-tip from key */
       document.querySelectorAll('[data-tip-key]').forEach(el => {
-        const v = S[el.dataset.tipKey];
-        if (v !== undefined) el.dataset.tip = v;
+        const value = S[el.dataset.tipKey];
+        if (value !== undefined) el.dataset.tip = value;
       });
+      $('shortcutsBtn').textContent = S.shortcuts;
+      $('rdpUrl').placeholder = S.remoteHomeUrl;
+      renderShortcuts();
+    }
 
-      /* tab labels with <small> F-key hints */
-      $('tab-home').textContent = S.home;
-      $('tab-file').innerHTML   = `${S.files} <small>F3</small>`;
-      $('tab-ai').innerHTML     = `${S.ai} <small>F4</small>`;
-      $('searchModalBtn').innerHTML = `${S.search} <small>F2</small>`;
-      $('fileModalBtn').innerHTML   = `${S.file} <small>F1</small>`;
-      $('fileHomeUrlDemo').placeholder = S.fileHomeUrlPlaceholder;
-
-      /* dynamic text nodes */
-      $('sess1Title').textContent    = S.sess1Title;
-      $('sess2Title').textContent    = S.sess2Title;
-      $('sess2Sub').textContent      = S.sess2Sub;
-      $('sess3Title').textContent    = S.sess3Title;
-      $('sess3Sub').textContent      = S.sess3Sub;
-      $('tsess2Sub').textContent     = S.tsess2Sub;
-      $('defaultModelOpt').textContent = S.defaultModel;
-      $('msgUserLabel').textContent  = S.msgUserLabel;
-      $('msgUserText').textContent   = S.msgUserText;
-      $('msgAssLabel').textContent   = S.msgAssLabel;
-      $('msgAssText').textContent    = S.msgAssText;
-      $('msgChangedLabel').textContent = S.msgChangedLabel;
-      $('composerTa').textContent    = S.composerPlaceholder;
-
-      /* terminal content */
-      $('terminalFrame').textContent =
-        `$ cd D:/git/Artgine-Agent\n$ npm run start_web\n\nServerStart\nhttp://localhost:8050/Artgine-Agent\n\n> codex\nCodex session started.\nWorking directory: D:/git/Artgine-Agent\n\n${S.termComment}`;
-
-
-      /* keyboard shortcuts list */
-      const sc = [
-        [['F1'], S.sc_f1_d, S.sc_f1_s],
-        [['F2'], S.sc_f2_d, S.sc_f2_s],
-        [['F3'], S.sc_f3_d, S.sc_f3_s],
-        [['F4'], S.sc_f4_d, S.sc_f4_s],
-        [['Tab'], S.sc_tab_d, S.sc_tab_s],
-        [['↑', '↓'], S.sc_arr_d, S.sc_arr_s],
-        [['Shift', 'N'], S.sc_shn_d, S.sc_shn_s],
-        [['F6'], S.sc_f6_d, S.sc_f6_s],
-        [['F7'], S.sc_f7_d, S.sc_f7_s],
-        [['Esc'], S.sc_esc_d, null]
+    function renderShortcuts() {
+      const rows = [
+        [['F1'], 'Files 탭으로 이동하고 File Manager 열기'],
+        [['F2'], 'Files 탭으로 이동하고 File Search 열기'],
+        [['F3'], 'RDP 탭으로 이동'],
+        [['F4'], 'AI 탭으로 이동'],
+        [['Tab'], 'RDP 또는 AI 사이드바 열기/닫기'],
+        [['1'], 'AI 사이드바가 열려 있을 때 Chat 하위 탭'],
+        [['2'], 'AI 사이드바가 열려 있을 때 Term 하위 탭'],
+        [['3'], 'AI 사이드바가 열려 있을 때 Web 하위 탭'],
+        [['Shift','N'], '새 터미널 세션 만들기'],
+        [['Shift','D'], '현재 터미널 세션 삭제'],
+        [['F6'], 'Terminal SUPER 토글'],
+        [['F7'], 'Terminal 입력 바 표시/포커스'],
+        [['Esc'], '열린 모달 닫기']
       ];
-      $('shortcutList').innerHTML = sc.map(([keys, desc, sub]) =>
+      $('shortcutList').innerHTML = rows.map(([keys, desc]) =>
         `<button class="list-group-item" type="button">
-          <span class="keycell">${keys.map(k=>`<span class="kbd">${k}</span>`).join(' + ')}</span>
-          <span class="desccell">${desc}${sub ? `<span class="file-meta">${sub}</span>` : ''}</span>
+          <span>${keys.map(k => `<span class="kbd">${k}</span>`).join(' + ')}</span>
+          <span>${desc}</span>
         </button>`
       ).join('');
     }
 
+    function renderSteps() {
+      $('steps').innerHTML = S.steps.map((step, i) =>
+        `<button class="step ${i === current ? 'active' : ''}" data-step="${i}" type="button">
+          <span class="num">${i + 1}</span>
+          <span><strong>${step[0]}</strong><span>${step[1]}</span></span>
+        </button>`
+      ).join('');
+      document.querySelectorAll('[data-step]').forEach(btn => btn.onclick = () => go(Number(btn.dataset.step)));
+    }
+
     function setTab(tab) {
-      document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('[data-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
       $('panel-' + tab).classList.add('active');
     }
 
     function setSub(sub) {
-      document.querySelectorAll('[data-sub]').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+      document.querySelectorAll('[data-sub]').forEach(btn => btn.classList.toggle('active', btn.dataset.sub === sub));
       $('chatSide').classList.toggle('active', sub === 'chat');
       $('termSide').classList.toggle('active', sub === 'term');
       $('webSide').classList.toggle('active', sub === 'web');
@@ -1072,244 +992,128 @@ npm start</pre>
       $('browserFrame').classList.toggle('active', sub === 'web');
     }
 
-    function renderSteps() {
-      $('steps').innerHTML = steps.map((s, i) =>
-        `<button class="step ${i === current ? 'active' : ''}" data-step="${i}" type="button">
-          <span class="num">${i + 1}</span>
-          <span><strong>${s[0]}</strong><span>${s[1]}</span></span>
-        </button>`
-      ).join('');
-      document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => go(+b.dataset.step));
+    function clearHighlight() {
+      document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
     }
 
-    function clearHi() { document.querySelectorAll('.highlight').forEach(e => e.classList.remove('highlight')); }
-
-    function hl(raw) {
-      let t = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      // commands / paths → green code
-      ['npm run start_web','npm install','npm start','git clone','start\\.bat','start\\.sh','proj/Home'].forEach(p => {
-        t = t.replace(new RegExp(p,'g'), m => `<code style="background:rgba(0,0,0,.35);color:#4ade80;padding:.05em .32em;border-radius:.2rem;font-family:Consolas,monospace;font-size:.87em">${m}</code>`);
-      });
-      // F-keys → kbd pill
-      t = t.replace(/\b(F[1-9]|Esc)\b/g, '<span style="background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-bottom-width:2px;border-radius:.2rem;padding:.05em .3em;font-size:.8em;font-family:Consolas,monospace">$1</span>');
-      // tab / UI names → blue bold
-      t = t.replace(/\b(Files|Chat|Terminal|SUPER|New Chat|New Terminal|Run)\b/g, '<span style="color:#60a5fa;font-weight:700">$1</span>');
-      // special terms → amber
-      t = t.replace(/\b(Git|SVN|MCP|Working Directory|Allow write|Artgine)\b/g, '<span style="color:#fbbf24;font-weight:700">$1</span>');
-      // badges inline
-      t = t.replace(/\(M\/D\/A\/\?\)/g, '(<span style="color:#fbbf24;font-weight:700">M</span>/<span style="color:#f87171;font-weight:700">D</span>/<span style="color:#4ade80;font-weight:700">A</span>/<span style="color:#9ca3af;font-weight:700">?</span>)');
-      return t;
+    function inlineHelp(text) {
+      const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return escaped
+        .replace(/\b(F1|F2|F3|F4|F6|F7|Tab|Esc)\b/g, '<span class="kbd" style="background:#374151;color:#e5e7eb;border-color:#6b7280">$1</span>')
+        .replace(/\b(RDP|Files|AI|Chat|Term|Web|Local|RemoteDesktop\.html|Home\.html|Working Directory|Allow write|SUPER)\b/g, '<strong style="color:#93c5fd">$1</strong>');
     }
 
-    function go(i) {
-      current = Math.max(0, Math.min(steps.length - 1, i));
-      const s = steps[current];
-      setTab(s[2]);
-      if (s[2] === 'ai') {
-        const targetSub = (s[3] === 'webSubtab' || s[3] === 'newBrowserBtn') ? 'web'
-          : (s[3] === 'termSubtab' || s[3] === 'scheduleBtn' || s[3] === 'newTermBtn') ? 'term'
+    function go(index) {
+      current = Math.max(0, Math.min(S.steps.length - 1, index));
+      const step = S.steps[current];
+      setTab(step[2]);
+      if (step[2] === 'ai') {
+        const sub = step[3] === 'termSubtab' || step[3] === 'scheduleBtn' ? 'term'
+          : step[3] === 'webSubtab' || step[3] === 'newBrowserBtn' ? 'web'
           : 'chat';
-        setSub(targetSub);
+        setSub(sub);
       }
-      clearHi();
-      const target = $(s[3]);
-      if (target) { target.classList.add('highlight'); target.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
-      $('coachTitle').textContent = s[0];
-      $('coachText').innerHTML    = hl(s[4]);
-      $('coachTip').innerHTML     = hl(s[5]);
-      $('progress').textContent   = `${current + 1} / ${steps.length}`;
+      clearHighlight();
+      const target = $(step[3]);
+      if (target) {
+        target.classList.add('highlight');
+        target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+      $('coachTitle').textContent = step[0];
+      $('coachText').innerHTML = inlineHelp(step[4]);
+      $('coachTip').innerHTML = inlineHelp(step[5]);
+      $('progress').textContent = `${current + 1} / ${S.steps.length}`;
       renderSteps();
     }
 
     function next() {
-      if (current < steps.length - 1) {
+      if (current < S.steps.length - 1) {
         go(current + 1);
-      } else {
-        clearHi();
-        $('coachTitle').textContent = S.done;
-        $('coachText').innerHTML    = hl(S.doneText);
-        $('coachTip').innerHTML     = hl(S.doneTip);
+        return;
       }
+      clearHighlight();
+      $('coachTitle').textContent = S.done;
+      $('coachText').innerHTML = inlineHelp(S.doneText);
+      $('coachTip').innerHTML = inlineHelp(S.doneTip);
     }
 
-    document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { setTab(b.dataset.tab); clearHi(); });
-    document.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => setSub(b.dataset.sub));
-
-    $('fileModalBtn').onclick   = () => openModal('fileModal');
-    $('searchModalBtn').onclick = () => openModal('searchModal');
-    $('musicBtn').onclick       = () => openModal('musicModal');
-    $('shortcutsBtn').onclick   = () => openModal('shortcutsModal');
-    $('newChatBtn').onclick     = () => openModal('newChatModal');
-    $('newTermBtn').onclick     = () => openModal('newTermModal');
-    $('scheduleBtn').onclick    = () => { setSub('term'); openModal('scheduleModal'); };
-    $('newBrowserBtn').onclick  = () => setSub('web');
-
-    document.querySelectorAll('.mode-btn-group').forEach(group => {
-      group.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', () => {
-        group.querySelectorAll('.mode-btn').forEach(b => {
-          b.classList.remove('active', 'btn-primary');
-          b.classList.add('btn-outline-secondary');
-        });
-        btn.classList.add('active', 'btn-primary');
-        btn.classList.remove('btn-outline-secondary');
-      }));
-    });
-
-    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
-    document.querySelectorAll('.modal-backdrop').forEach(m => m.onclick = e => { if (e.target === m) m.classList.remove('show'); });
-
-    function openModal(id)  { $(id).classList.add('show'); }
+    function openModal(id) { $(id).classList.add('show'); }
     function closeModal(id) { $(id).classList.remove('show'); }
 
-    document.querySelectorAll('.vcs-badge').forEach(b => b.onclick = e => {
-      e.stopPropagation();
-      const v = vcsInfo[b.dataset.vcs];
-      $('vcsTitle').textContent = v[0];
-      $('vcsBody').innerHTML    = v[1];
-      openModal('vcsModal');
-    });
-
-    document.querySelectorAll('#fileList .list-group-item').forEach(b => b.onclick = () => {
-      document.querySelectorAll('#fileList .list-group-item').forEach(x => x.classList.remove('list-group-item-secondary'));
-      b.classList.add('list-group-item-secondary');
-      const v = views[b.dataset.view];
-      $('contentTitle').textContent = v[0];
-      $('contentBody').innerHTML    = v[1];
-      openModal('contentModal');
-    });
-
-    document.querySelectorAll('#musicList .list-group-item').forEach(li => li.onclick = e => {
-      const del = e.target.closest('[data-del]');
-      if (del) { li.closest('ul').remove(); $('musicNow').textContent = ''; return; }
-      document.querySelectorAll('#musicList .list-group-item').forEach(x => x.classList.remove('list-group-item-dark'));
-      li.classList.add('list-group-item-dark');
-      $('musicNow').textContent = '♫ ' + li.dataset.music;
-    });
-    $('musicDeleteAll').onclick = () => { $('musicList').innerHTML = ''; $('musicNow').textContent = ''; };
-    $('musicSaveList').onclick  = () => { $('musicNow').textContent = S.saveList; };
+    function closeTopModal() {
+      const modal = [...document.querySelectorAll('.modal-backdrop.show')].pop();
+      if (!modal) return false;
+      modal.classList.remove('show');
+      return true;
+    }
 
     function showTip(el) {
-      const text = el.dataset.tip; if (!text) return;
-      const p = $('popover'); p.textContent = text; p.classList.add('show');
-      const r = el.getBoundingClientRect(), host = document.querySelector('.tab-content').getBoundingClientRect();
-      const left  = Math.max(8, Math.min(r.left - host.left, host.width - 300));
-      const below = r.bottom - host.top + 8;
-      const above = r.top - host.top - p.offsetHeight - 8;
-      p.style.left = left + 'px';
-      p.style.top  = (below + 120 > host.height && above > 0 ? above : below) + 'px';
-    }
-    document.querySelectorAll('[data-tip]').forEach(el => el.addEventListener('click', e => { showTip(el); e.stopPropagation(); }));
-    document.addEventListener('click', () => $('popover').classList.remove('show'));
-
-    function closeTopModal() {
-      const open = [...document.querySelectorAll('.modal-backdrop.show')].pop();
-      if (open) { open.classList.remove('show'); return true; }
-      return false;
+      const text = el.dataset.tip;
+      if (!text) return;
+      const pop = $('popover');
+      pop.textContent = text;
+      pop.classList.add('show');
+      const r = el.getBoundingClientRect();
+      const host = document.querySelector('.tab-content').getBoundingClientRect();
+      const left = Math.max(8, Math.min(r.left - host.left, host.width - 320));
+      const top = Math.max(8, Math.min(r.bottom - host.top + 8, host.height - 120));
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
     }
 
-    function moveSession(dir) {
-      const pane  = $('chatSide').classList.contains('active') ? $('chatSide') : ($('termSide').classList.contains('active') ? $('termSide') : $('webSide'));
-      const items = [...pane.querySelectorAll('.session')];
-      if (!items.length) return;
-      const cls = pane.id === 'chatSide' ? 'chat-active' : (pane.id === 'webSide' ? 'web-active' : 'term-active');
-      let i = items.findIndex(x => x.classList.contains(cls)); if (i < 0) i = 0;
-      items.forEach(x => x.classList.remove(cls));
-      items[(i + dir + items.length) % items.length].classList.add(cls);
-    }
-
-    function toggleSidebar() {
-      const side = $('aiSidebar');
-      side.style.display = side.style.display === 'none' ? 'flex' : 'none';
-    }
-
-    function closeSessionMenus() { document.querySelectorAll('.sess-menu.show').forEach(m => m.classList.remove('show')); }
-
-    document.querySelectorAll('.sess-menu-btn').forEach(btn => btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const menu = btn.closest('.session').querySelector('.sess-menu');
-      const open = menu.classList.contains('show');
-      closeSessionMenus();
-      if (!open) menu.classList.add('show');
-    }));
-
-    function sessionName(session) {
-      return session.querySelector('.sess-title').textContent.replace('⋮', '').trim();
-    }
-
-    function openSessionWindow(session) {
-      $('sessionWindowTitle').textContent = `${S.sessNewWindow} — ${sessionName(session)}`;
-      const active = $('terminalFrame').classList.contains('active') ? $('terminalFrame')
-        : ($('browserFrame').classList.contains('active') ? $('browserFrame') : $('chatFrame'));
-      const clone = active.cloneNode(true);
-      clone.removeAttribute('id');
-      clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-      clone.classList.add('active');
-      clone.style.display = 'flex';
-      clone.style.height = '100%';
-      const body = $('sessionWindowBody');
-      body.innerHTML = '';
-      body.appendChild(clone);
-      openModal('sessionWindowModal');
-    }
-
-    function openSessionShare(session) {
-      const name = sessionName(session);
-      $('sessionShareTitle').textContent = `${S.sessShare} — ${name}`;
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'session';
-      $('sessionShareLink').value = `http://localhost:8050/Artgine/proj/Home/Home.html?session=${encodeURIComponent(slug)}`;
-      $('sessionShareCopied').style.display = 'none';
-      openModal('sessionShareModal');
-    }
-
-    $('sessionShareCopyBtn').onclick = () => {
-      const input = $('sessionShareLink');
-      input.select();
-      if (navigator.clipboard) navigator.clipboard.writeText(input.value).catch(() => {});
-      $('sessionShareCopied').textContent = S.copied;
-      $('sessionShareCopied').style.display = 'block';
-    };
-
-    document.querySelectorAll('.sess-menu button').forEach(btn => btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const session = btn.closest('.session');
-      if (btn.dataset.action === 'delete') {
-        const pane = session.closest('.side-section');
-        const wasActive = session.matches('.chat-active,.term-active,.web-active');
-        session.remove();
-        if (wasActive) {
-          const next = pane.querySelector('.session');
-          if (next) {
-            const cls = pane.id === 'chatSide' ? 'chat-active' : (pane.id === 'webSide' ? 'web-active' : 'term-active');
-            next.classList.add(cls);
-          }
-        }
-      } else if (btn.dataset.action === 'newwin') {
-        openSessionWindow(session);
-      } else if (btn.dataset.action === 'share') {
-        openSessionShare(session);
+    document.querySelectorAll('[data-tab]').forEach(btn => btn.onclick = () => { setTab(btn.dataset.tab); clearHighlight(); });
+    document.querySelectorAll('[data-sub]').forEach(btn => btn.onclick = () => setSub(btn.dataset.sub));
+    document.querySelectorAll('[data-close]').forEach(btn => btn.onclick = () => closeModal(btn.dataset.close));
+    document.querySelectorAll('.modal-backdrop').forEach(modal => modal.onclick = e => { if (e.target === modal) modal.classList.remove('show'); });
+    document.addEventListener('click', e => {
+      const tipTarget = e.target.closest('[data-tip]');
+      if (tipTarget) {
+        showTip(tipTarget);
+        e.stopPropagation();
+      } else {
+        $('popover').classList.remove('show');
       }
-      closeSessionMenus();
-    }));
+    });
 
-    document.addEventListener('click', closeSessionMenus);
+    $('fileModalBtn').onclick = () => openModal('fileModal');
+    $('searchModalBtn').onclick = () => openModal('searchModal');
+    $('musicBtn').onclick = () => openModal('musicModal');
+    $('shortcutsBtn').onclick = () => openModal('shortcutsModal');
+    $('newChatBtn').onclick = () => openModal('newChatModal');
+    $('newTermBtn').onclick = () => { setSub('term'); openModal('newTermModal'); };
+    $('scheduleBtn').onclick = () => setSub('term');
+    $('newBrowserBtn').onclick = () => { setSub('web'); openModal('newBrowserModal'); };
+    $('fileList').addEventListener('click', e => {
+      const item = e.target.closest('.list-group-item');
+      if (!item || ['root', 'parent', 'folder'].includes(item.dataset.view)) return;
+      const name = item.childNodes[1]?.textContent?.trim() || item.textContent.trim();
+      $('filePreviewTitle').textContent = name;
+      $('filePreviewBody').textContent = item.dataset.view === 'file'
+        ? `${name}\n\n파일 형식에 맞는 미리보기 팝업이 열립니다.`
+        : `// ${name}\nimport { Bootstrap } from '../../artgine/basic/Bootstrap.js';\n\nexport default class Home {\n  // 코드 파일은 팝업에서 확인하고 편집합니다.\n}`;
+      openModal('filePreviewModal');
+    });
 
-    let superOn = false;
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { if (closeTopModal()) e.preventDefault(); return; }
       if (e.key === 'F1') { e.preventDefault(); setTab('file'); openModal('fileModal'); }
-      if (e.key === 'F2') { e.preventDefault(); openModal('searchModal'); }
-      if (e.key === 'F3') { e.preventDefault(); setTab('file'); }
+      if (e.key === 'F2') { e.preventDefault(); setTab('file'); openModal('searchModal'); }
+      if (e.key === 'F3') { e.preventDefault(); setTab('rdp'); }
       if (e.key === 'F4') { e.preventDefault(); setTab('ai'); }
-      if (e.key === 'Tab' && $('panel-ai').classList.contains('active')) { e.preventDefault(); toggleSidebar(); }
-      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && $('panel-ai').classList.contains('active')) { e.preventDefault(); moveSession(e.key === 'ArrowUp' ? -1 : 1); }
+      if ((e.key === '1' || e.key === '2' || e.key === '3') && $('panel-ai').classList.contains('active')) {
+        e.preventDefault();
+        setSub(['chat','term','web'][Number(e.key) - 1]);
+      }
       if (e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); setTab('ai'); setSub('term'); openModal('newTermModal'); }
-      if (e.key === 'F6') { e.preventDefault(); setTab('ai'); setSub('term'); superOn = !superOn; $('termBar').querySelector('.btn-outline-danger').textContent = superOn ? 'SUPER ON' : S.superBtn; $('termBar').querySelector('input').style.borderColor = superOn ? '#dc3545' : '#10b981'; }
-      if (e.key === 'F7') { e.preventDefault(); setTab('ai'); setSub('term'); $('termBar').querySelector('input').focus(); }
+      if (e.key === 'F7') {
+        e.preventDefault();
+        setTab('ai');
+        setSub('term');
+        document.querySelector('#termBar input')?.focus();
+      }
     });
 
-    /* data-tip listeners must be re-attached after applyI18n sets the data-tip values */
     applyI18n();
-    document.querySelectorAll('[data-tip]').forEach(el => el.addEventListener('click', e => { showTip(el); e.stopPropagation(); }));
     go(0);
   </script>
 </body>

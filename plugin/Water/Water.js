@@ -266,7 +266,7 @@ export class CReflector3D extends CBrushComp {
         }
     }
     AddWaterDeep(_waterDeep) {
-        for (let rp of this.mWrite) {
+        for (let rp of this.mWriteRP) {
             rp.mTag.add("waterReflect");
             rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
         }
@@ -294,7 +294,7 @@ export class CReflector3D extends CBrushComp {
         if (tex.GetWidth() != expectedSize) {
             fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)], new CVec2(this.mSize, this.mSize), this.GetTex());
         }
-        for (const rp of this.mWrite) {
+        for (const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader;
             if (!this.mBrush.AutoRP().has(rpKey)) {
                 this.mBrush.SetAutoRP(rpKey, rp);
@@ -328,12 +328,12 @@ export class CReflector3D extends CBrushComp {
     }
     Destroy() {
         super.Destroy();
-        if (this.mWrite.length > 0) {
-            for (const rp of this.mWrite) {
+        if (this.mWriteRP.length > 0) {
+            for (const rp of this.mWriteRP) {
                 const rpKey = this.mTexKey + rp.mShader;
                 this.mBrush.RemoveAutoRP(rpKey);
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
         }
     }
 }
@@ -364,7 +364,7 @@ export class CRefractor3D extends CBrushComp {
         }
     }
     AddWaterDeep(_waterDeep, _waterDist, _shallowColor, _deepColor, _waterHeight) {
-        for (let rp of this.mWrite) {
+        for (let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
             rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
@@ -374,14 +374,14 @@ export class CRefractor3D extends CBrushComp {
         }
     }
     AddCaustics(_flow, _freq) {
-        for (let rp of this.mWrite) {
+        for (let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
             rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
         }
     }
     AddNormalFlow(_flow) {
-        for (let rp of this.mWrite) {
+        for (let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("normalflowDir", _flow));
         }
@@ -405,7 +405,7 @@ export class CRefractor3D extends CBrushComp {
         if (tex.GetWidth() != expectedSize) {
             fw.Ren().BuildRenderTarget([new CTextureInfo(CTexture.eTarget.Sigle, CTexture.eFormat.RGBA8, 1)], new CVec2(this.mSize, this.mSize), this.GetTex());
         }
-        for (const rp of this.mWrite) {
+        for (const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader;
             if (!this.mBrush.AutoRP().has(rpKey)) {
                 this.mBrush.SetAutoRP(rpKey, rp);
@@ -430,12 +430,12 @@ export class CRefractor3D extends CBrushComp {
     }
     Destroy() {
         super.Destroy();
-        if (this.mWrite.length > 0) {
-            for (const rp of this.mWrite) {
+        if (this.mWriteRP.length > 0) {
+            for (const rp of this.mWriteRP) {
                 const rpKey = this.mTexKey + rp.mShader;
                 this.mBrush.RemoveAutoRP(rpKey);
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
         }
     }
 }
@@ -543,7 +543,7 @@ export class CReflector2D extends CBrushComp {
             this.mWaterCam.Set2DZoom(2.0 * mainCam.GetZoom());
             this.mWaterCam.ResetOrthographic();
         }
-        for (const rp of this.mWrite) {
+        for (const rp of this.mWriteRP) {
             if (!this.mBrush.AutoRP().has(rp.Key())) {
                 this.mBrush.SetAutoRP(rp.Key(), rp);
             }
@@ -551,11 +551,11 @@ export class CReflector2D extends CBrushComp {
     }
     Destroy() {
         super.Destroy();
-        if (this.mWrite.length > 0) {
-            for (const rp of this.mWrite) {
+        if (this.mWriteRP.length > 0) {
+            for (const rp of this.mWriteRP) {
                 this.mBrush.RemoveAutoRP(rp.Key());
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
             this.mBrush.ClearRen();
         }
     }

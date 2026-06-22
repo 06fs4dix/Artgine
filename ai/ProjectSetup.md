@@ -1,11 +1,22 @@
 # Artgine 프로젝트 셋업 가이드 (Artgine Project Setup Guide)
-> 2D · 3D 통합 / 최종 업데이트: 2026-04-19
+> 2D · 3D 통합 / 최종 업데이트: 2026-06-22
 
 ---
 
 ## 핵심 규칙 (Core Rules)
-- **HTML · ServiceWorker.js · webmanifest** 는 Artgine 앱이 자동 생성 → AI이용 수동작업 제외
-- **`Canvas/*.json`** 은 Artgine 앱에서 씬 저장 시 자동 생성 → 코드에서 없는 파일 참조 금지
+
+### 자동 생성 vs 수동 생성 (Auto vs Manual)
+| 파일 | 데스크탑 앱 | 웹 서버만 사용 | 비고 |
+|------|------------|---------------|------|
+| `[Name].ts` | 수동 작성 | 수동 작성 | 메인 로직 |
+| `[Name].json` | 수동 작성 | 수동 작성 | 프로젝트 설정 |
+| `[Name].js` | 자동 컴파일 | 자동 컴파일 | .ts 저장 시 생성 |
+| `[Name].html` | 앱 실행 시 자동 생성 | **수동 생성 필요** | 기존 프로젝트 복사 후 경로 수정 |
+| `[Name].webmanifest` | 앱 실행 시 자동 생성 | **수동 생성 필요** | 프로젝트명만 변경 |
+| `ServiceWorker.js` | 앱 실행 시 자동 생성 | **수동 생성 필요** | 기존 프로젝트에서 복사 |
+| `Canvas/*.json` | 씬 저장 시 자동 생성 | — | 코드에서 없는 파일 참조 금지 |
+
+> **중요**: 데스크탑 앱(Electron)을 실행하지 않고 웹 서버만 사용하는 경우, **HTML·webmanifest·ServiceWorker.js** 3개 파일을 AI가 수동 생성해야 한다. 기존 프로젝트(예: `proj/3D/BoxShow/`)의 파일을 복사해 프로젝트명과 경로만 수정한다.
 
 ---
 
@@ -13,16 +24,34 @@
 ```
 proj/
 ├── 2D/[Name]/
-│   ├── [Name].ts          ← 메인 로직 (수정 대상)
-│   ├── [Name].js          ← 자동 생성 (수정 금지)
-│   ├── [Name].html        ← 자동 생성
-│   ├── [Name].json        ← 프로젝트 설정
-│   ├── [Name].webmanifest ← 자동 생성
-│   ├── ServiceWorker.js   ← 자동 생성
+│   ├── [Name].ts          ← 메인 로직 (직접 작성)
+│   ├── [Name].js          ← .ts 저장 시 자동 컴파일
+│   ├── [Name].html        ← 앱 실행 시 생성 / 웹서버 전용은 수동 생성
+│   ├── [Name].json        ← 프로젝트 설정 (직접 작성)
+│   ├── [Name].webmanifest ← 앱 실행 시 생성 / 웹서버 전용은 수동 생성
+│   ├── ServiceWorker.js   ← 앱 실행 시 생성 / 웹서버 전용은 수동 생성
 │   ├── Canvas/            ← 씬 파일 (앱에서 저장 시 생성)
 │   └── Res/               ← 스프라이트 등 리소스
 └── 3D/[Name]/             ← 동일 구조
 ```
+
+---
+
+## 신규 프로젝트 생성 절차 (New Project Creation Procedure)
+
+### 웹 서버 전용 (데스크탑 앱 미사용)
+1. `proj/[2D or 3D]/[Name]/` 폴더 생성
+2. `[Name].ts` 작성 (아래 TS 템플릿 참조)
+3. `[Name].json` 작성 (아래 JSON 템플릿 참조)
+4. **HTML·webmanifest·ServiceWorker.js** 3개 파일을 기존 프로젝트에서 복사:
+   - HTML: `SERVER_BASE` URL의 프로젝트 경로를 새 프로젝트에 맞게 수정
+   - webmanifest: `short_name`, `name`, `start_url` 수정
+   - ServiceWorker.js: 그대로 복사 (CACHE_NAME은 자동 갱신됨)
+
+### 데스크탑 앱 사용
+1. `proj/[2D or 3D]/[Name]/` 폴더 생성
+2. `[Name].ts` + `[Name].json` 작성
+3. 앱에서 프로젝트 열기 → HTML·webmanifest·ServiceWorker.js 자동 생성
 
 ---
 
@@ -124,6 +153,7 @@ import "../../../plugin/ShadowPlane/ShadowPlane.js"
 | `proj/2D/Village/` | 캐릭터·FSM·NPC·플러그인 완성 예제 |
 | `proj/2D/CharGen/` | LPC 다중 레이어 캐릭터, 커스터마이징 시스템 |
 | `proj/3D/BoxShow/` | 가장 단순한 3D, 1인칭 카메라 |
+| `proj/AI/Box3D/` | 최소 3D (박스 하나), 웹서버 전용 생성 예시 |
 | `proj/3D/ModularVillage/` | 3D 모듈러 씬 |
 
 ---

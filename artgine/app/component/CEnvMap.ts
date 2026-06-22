@@ -33,6 +33,7 @@ export default class CEnvMap extends CBrushComp
                 rp.mCamera = this.mTexKey+i;
                 rp.PushOr(new CCondition("class","==","CPaint3D"));
                 rp.PushAnd(new CCondition("mTag[water]","==",false));
+                rp.PushAnd(new CCondition("mTag[envRender]","==",true));
                 this.PushRPAuto(rp);
             }
 
@@ -56,7 +57,7 @@ export default class CEnvMap extends CBrushComp
         }
     }
 
-    Update(_update: CUpdate): boolean|any {
+    override Update(_update: CUpdate): boolean|any {
         super.Update(_update);
         if(this.mBrush != null) this.UpdateBrush(_update);
     }
@@ -93,7 +94,7 @@ export default class CEnvMap extends CBrushComp
         // ---------------------------------------------------------
         // 2. 렌더 패스 설정
         // ---------------------------------------------------------
-        for(const rp of this.mWrite) {
+        for(const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
             // 등록된 RP가 없다면 등록
             if(!this.mBrush.AutoRP().has(rpKey)) {
@@ -132,15 +133,15 @@ export default class CEnvMap extends CBrushComp
         }
     }
 
-    Destroy(): void {
+    override Destroy(): void {
         super.Destroy();
 
-        if(this.mWrite.length > 0) {
-            for(const rp of this.mWrite) {
+        if(this.mWriteRP.length > 0) {
+            for(const rp of this.mWriteRP) {
                 const rpKey = this.mTexKey + rp.mShader + rp.mCamera;
                 this.mBrush.RemoveAutoRP(rpKey);
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
         }
     }
 }

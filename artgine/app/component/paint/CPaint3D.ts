@@ -49,7 +49,7 @@ export class CPaint3D extends CPaint
 	public mBakedLight : string = null;
 	public mWindInfluence : CVec1 = new CVec1(0.0);
 
-	public mCamCompLayer=[];
+	public mBrushCompArr=[];
 	public mTexLoad=false;
 	
 	mFMatLink=false;
@@ -98,17 +98,18 @@ export class CPaint3D extends CPaint
 	CubeMap(_camComp : CBrushComp)
 	{
 		
-		if(this.mTag.has(_camComp.mRead)==false)	return;
+		if(this.mTag.has(_camComp.mReadTag)==false)	return;
 
 		var len=CMath.V3Distance(this.mOwner.GetPos(),_camComp.GetOwner().GetPos());
-		var play=this.mCamCompLayer[_camComp.mLayer];
+		var play=this.mBrushCompArr[_camComp.mTexOff];
 		if(play==null)
 		{
 			
 			if(_camComp.mReadLen>len)
 			{
-				this.PushCShaderAttr(new CShaderAttr(0,_camComp.GetTex()))
-				this.mCamCompLayer[_camComp.mLayer]=_camComp;	
+				this.PushCShaderAttr(new CShaderAttr(_camComp.mTexOff,_camComp.GetTex()))
+				this.PushCShaderAttr(new CShaderAttr("envmapOn", 1));
+				this.mBrushCompArr[_camComp.mTexOff]=_camComp;	
 			}
 		}
 		else if(play==_camComp)
@@ -117,7 +118,7 @@ export class CPaint3D extends CPaint
 			{
 				this.mShaderAttrMap.delete(_camComp.GetTex());
 				this.ClearBatch();
-				this.mCamCompLayer[_camComp.mLayer]=null;
+				this.mBrushCompArr[_camComp.mTexOff]=null;
 			}
 		}
 		else if(_camComp.mReadLen>len)
@@ -125,7 +126,7 @@ export class CPaint3D extends CPaint
 			var len2=CMath.V3Distance(this.mOwner.GetPos(),play.GetOwner().GetPos());
 			if(len2>len)
 			{
-				this.mCamCompLayer[_camComp.mLayer]=_camComp;	
+				this.mBrushCompArr[_camComp.mTexOff]=_camComp;	
 				this.mShaderAttrMap.get(_camComp.GetTex()).mKey=_camComp.GetTex();
 			}
 		}

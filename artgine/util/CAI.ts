@@ -1,5 +1,3 @@
-import type { ChildProcess } from 'child_process';
-
 export interface IAIInteractiveArgs {
     args: string[];
 }
@@ -11,6 +9,11 @@ export interface IProviderInfo {
     models: { value: string; label: string }[];
 }
 
+export interface IChatResult {
+    text: string;
+    sessionId?: string;
+}
+
 export class CAI {
     static readonly IS_WIN: boolean = false;
     static readonly EMPTY_MCP_PATH: string = '';
@@ -20,7 +23,7 @@ export class CAI {
     static DeleteRole(_provider: CAI.eProvider, _targetDir: string): boolean { return false; }
     static ProviderInfo(_provider: CAI.eProvider): Promise<IProviderInfo> { return Promise.resolve({ id: _provider, available: false, version: '', models: [] }); }
     static ProviderInstall(_provider: CAI.eProvider): Promise<boolean> { return Promise.resolve(false); }
-    static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true): Promise<ChildProcess> { return Promise.reject(new Error('CAI_imple not loaded')); }
+    static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true): Promise<IChatResult> { return Promise.reject(new Error('CAI_imple not loaded')); }
     static Terminal(_provider: CAI.eProvider, _mcp: boolean): Promise<IAIInteractiveArgs> { return Promise.resolve({ args: [] }); }
 }
 

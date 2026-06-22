@@ -548,10 +548,14 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     if (oTS != "") {
         pos = bTS.indexOf("//EntryPoint");
         let epStr = oTS.substring(oTS.indexOf("//EntryPoint") + 12, oTS.length);
-        epStr = epStr.replace(/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g, (match, quote, path) => {
-            const cleanUpFolder = upFolder.replace(/\/+$/, '');
-            const cleanPath = path.replace(/^\/+/, '');
-            return `${quote}${cleanUpFolder}/${cleanPath}`;
+        epStr = epStr.replace(/^.*$/gm, (line) => {
+            if (!/\bimport\b/.test(line))
+                return line;
+            return line.replace(/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g, (match, quote, path) => {
+                const cleanUpFolder = upFolder.replace(/\/+$/, '');
+                const cleanPath = path.replace(/^\/+/, '');
+                return `${quote}${cleanUpFolder}/${cleanPath}`;
+            });
         });
         await ReplaceArtginePathsInFolder(projectRoot + _json.projectPath, upFolder, projectRoot + _json.projectPath);
         bTS = CString.InsertAt(bTS, pos + 12, epStr);

@@ -165,13 +165,15 @@ export class CParserFBX extends CParser
 	public mGeometryMap=new Map<string,string>();
 	public mModelKeyMap=new Map<string,string>();
 	mColorTex : boolean;
+	public mComputeNormal : boolean;
 
-	constructor(_colorTex=false)
+	constructor(_colorTex=false,_computeNormal=true)
 	{
 		super();
 		this.mColorTex=_colorTex;
+		this.mComputeNormal=_computeNormal;
 	}
-	GetResult() 	{	return this.mMesh;	}
+	override GetResult() 	{	return this.mMesh;	}
 	PosScaAxis(_vec)
 	{
 		//var vec=new CVec3(_x,_y,_z);
@@ -211,9 +213,9 @@ export class CParserFBX extends CParser
 		
 		
 	}
-	async Load(pa_fileName)
+	override async Load(pa_fileName)
 	{
-		
+
 
 	}
 	async Rebuild()

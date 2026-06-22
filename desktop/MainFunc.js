@@ -446,11 +446,15 @@ async function ReplaceArtginePathsInFile(filePath, upFolder, projPath) {
                 additionalLevels = filePathParts.length - projPathParts.length - 1;
             }
         }
-        const modifiedContent = originalContent.replace(/(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g, (match, quote, path) => {
-            const cleanUpFolder = upFolder.replace(/\/+$/, '');
-            const cleanPath = path.replace(/^\/+/, '');
-            const upPath = '../'.repeat(additionalLevels);
-            return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
+        const modifiedContent = originalContent.replace(/^.*$/gm, (line) => {
+            if (!/\bimport\b/.test(line))
+                return line;
+            return line.replace(/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g, (match, quote, path) => {
+                const cleanUpFolder = upFolder.replace(/\/+$/, '');
+                const cleanPath = path.replace(/^\/+/, '');
+                const upPath = '../'.repeat(additionalLevels);
+                return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
+            });
         });
         if (originalContent !== modifiedContent) {
             fs.writeFileSync(filePath, modifiedContent, 'utf8');

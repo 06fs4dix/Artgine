@@ -13,13 +13,15 @@ export default class CParserGLTF extends CParser
     mTexMap=new Map<any,number>();
     mColorTex : boolean;
     mTexBufRaw:boolean;
+    public mComputeNormal : boolean;
 
-    constructor(_inch : boolean,_colorTex=false,_texBufRaw=false)
+    constructor(_inch : boolean,_colorTex=false,_texBufRaw=false,_computeNormal=true)
     {
         super();
         this.mInch = _inch;
         this.mColorTex=_colorTex;
         this.mTexBufRaw=_texBufRaw;
+        this.mComputeNormal=_computeNormal;
     }
     override GetResult() {
         return this.mMesh;

@@ -51,10 +51,16 @@ function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
     var h : CVec2 = Hash22(fragCoord);
     return new CVec2((h.x - 0.5)*_strength, (h.y - 0.5)*_strength);
 }
-function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasAll : number, _world : CVec4) : number
+function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _biasConst : number, _biasSlope : number, _world : CVec4) : number
 {
     var f16Bias : number = SDF.FloatTex16 > 0 ? abs(_uvZ0.z) * (2.0 / 1024.0) : 0.0;
-    
+
+    // 평지 공통 바이어스(캐스케이드 동일) + 경사 의존 바이어스(텍셀 크기 배율 1/4/16).
+    // 평지(경사0)에서는 _biasSlope=0 이라 세 캐스케이드 바이어스가 같아져 그림자 위치가 정렬된다.
+    var bias0 : number = _biasConst + _biasSlope * 1.0;
+    var bias1 : number = _biasConst + _biasSlope * 4.0;
+    var bias2 : number = _biasConst + _biasSlope * 16.0;
+
     var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
     var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
@@ -104,7 +110,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv0N.x > 0.0 && uv0N.y > 0.0 && uv0N.x < 1.0 && uv0N.y < 1.0)
                 {
                     var sp0 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv0N);
-                    sVal0 += (sp0.w == 0.0) ? 0.0 : ((_uvZ0.z + _biasAll + f16Bias) >= sp0.z ? 0.0 : 1.0);
+                    sVal0 += (sp0.w == 0.0) ? 0.0 : ((_uvZ0.z + bias0 + f16Bias) >= sp0.z ? 0.0 : 1.0);
                 }
                 // else: 범위 밖 샘플은 0.0(빛) 기여 — sVal0 증가 없음
             }
@@ -114,7 +120,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv1N.x > 0.0 && uv1N.y > 0.0 && uv1N.x < 1.0 && uv1N.y < 1.0)
                 {
                     var sp1 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv1N);
-                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + _biasAll*4.0 + f16Bias) >= sp1.z ? 0.0 : 1.0);
+                    sVal1 += (sp1.w == 0.0) ? 0.0 : ((_uvZ1.z + bias1 + f16Bias) >= sp1.z ? 0.0 : 1.0);
                 }
             }
 
@@ -123,7 +129,7 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
                 if(uv2N.x > 0.0 && uv2N.y > 0.0 && uv2N.x < 1.0 && uv2N.y < 1.0)
                 {
                     var sp2 : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uv2N);
-                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + _biasAll*16.0 + f16Bias) >= sp2.z ? 0.0 : 1.0);
+                    sVal2 += (sp2.w == 0.0) ? 0.0 : ((_uvZ2.z + bias2 + f16Bias) >= sp2.z ? 0.0 : 1.0);
                 }
             }
         }
@@ -178,13 +184,15 @@ export function calcShadow(_read : CVec4, _index : number,_nor : CVec3, _worldPo
     var normalOffset : CVec3 = V3MulFloat(V3Nor(_nor), normalScale);
 
     // 바이어스 계산 (셀프 섀도잉 방지)
-    var biasAll : number = bias * (1.0 + clamp(tanTheta * 0.5, 0.0, 2.0));
+    // 평지 공통분(캐스케이드 동일)과 경사 의존분(텍셀 크기 배율 적용 대상)을 분리한다.
+    var biasConst : number = bias;                                   // 캐스케이드 공통
+    var biasSlope : number = bias * clamp(tanTheta * 0.5, 0.0, 2.0); // 텍셀 배율(1/4/16) 적용 대상
 
     var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, 1.0, normalOffset, _worldPos, _index);
     var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, 1.0, normalOffset, _worldPos, _index);
     var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, 1.0, normalOffset, _worldPos, _index);
 
-    var sVal : number = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasAll, _worldPos);
+    var sVal : number = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasConst, biasSlope, _worldPos);
     
     //최소 그림자 강도 적용
     return sVal * (1.0-shadowRate) + shadowRate;

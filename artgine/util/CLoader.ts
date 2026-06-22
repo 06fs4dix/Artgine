@@ -45,9 +45,10 @@ export class CLoaderOption extends CObject
 	mCache=null;//버퍼 등록용
 	mGPU=true;
 	mTexBufRaw=false;
-	
-	
+
+
 	public mInch=false;
+	public mComputeNormal=true;
 	//public simplify=100;
 	
 	
@@ -440,9 +441,9 @@ export class CLoader
 		
 		
 		var par :CParser=null;
-		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex);
-		else if(ext=="obj") 	par = new CParserOBJ();
-		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex,_option.mTexBufRaw);
+		if(ext=="fbx")	par = new CParserFBX(_option.mColorTex,_option.mComputeNormal);
+		else if(ext=="obj") 	par = new CParserOBJ(_option.mComputeNormal);
+		else 	par = new CParserGLTF(_option.mInch,_option.mColorTex,_option.mTexBufRaw,_option.mComputeNormal);
 		
 		
 

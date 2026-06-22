@@ -340,7 +340,7 @@ export class CReflector3D extends CBrushComp
 
     AddWaterDeep(_waterDeep : CVec4)
     {
-        for(let rp of this.mWrite) {
+        for(let rp of this.mWriteRP) {
             rp.mTag.add("waterReflect");
             rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
         }
@@ -394,7 +394,7 @@ export class CReflector3D extends CBrushComp
         // ---------------------------------------------------------
         // 2. 렌더 패스 설정
         // ---------------------------------------------------------
-        for(const rp of this.mWrite) {
+        for(const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader;
             // 등록된 RP가 없다면 등록
             if(!this.mBrush.AutoRP().has(rpKey)) {
@@ -440,12 +440,12 @@ export class CReflector3D extends CBrushComp
     override Destroy(): void {
         super.Destroy();
 
-        if(this.mWrite.length > 0) {
-            for(const rp of this.mWrite) {
+        if(this.mWriteRP.length > 0) {
+            for(const rp of this.mWriteRP) {
                 const rpKey = this.mTexKey + rp.mShader;
                 this.mBrush.RemoveAutoRP(rpKey);
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
         }
     }
 }
@@ -500,7 +500,7 @@ export class CRefractor3D extends CBrushComp
 
     AddWaterDeep(_waterDeep : CVec4, _waterDist : CVec2, _shallowColor : CVec3, _deepColor : CVec3, _waterHeight : CVec1)
     {
-        for(let rp of this.mWrite) {
+        for(let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("waterDeep", _waterDeep));
             rp.mShaderAttr.push(new CShaderAttr("waterUnderFadeDist", _waterDist));
@@ -511,7 +511,7 @@ export class CRefractor3D extends CBrushComp
     }
     AddCaustics(_flow : CVec2, _freq : CVec1)
     {
-        for(let rp of this.mWrite) {
+        for(let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("causticFlowDir", _flow));
             rp.mShaderAttr.push(new CShaderAttr("causticFlowFreq", _freq));
@@ -519,7 +519,7 @@ export class CRefractor3D extends CBrushComp
     }
     AddNormalFlow(_flow : CVec2)
     {
-        for(let rp of this.mWrite) {
+        for(let rp of this.mWriteRP) {
             rp.mTag.add("waterRefract");
             rp.mShaderAttr.push(new CShaderAttr("normalflowDir", _flow));
         }
@@ -564,7 +564,7 @@ export class CRefractor3D extends CBrushComp
         // ---------------------------------------------------------
         // 2. 렌더 패스 설정
         // ---------------------------------------------------------
-        for(const rp of this.mWrite) {
+        for(const rp of this.mWriteRP) {
             const rpKey = this.mTexKey + rp.mShader;
             // 등록된 RP가 없다면 등록
             if(!this.mBrush.AutoRP().has(rpKey)) {
@@ -599,12 +599,12 @@ export class CRefractor3D extends CBrushComp
     override Destroy(): void {
         super.Destroy();
 
-        if(this.mWrite.length > 0) {
-            for(const rp of this.mWrite) {
+        if(this.mWriteRP.length > 0) {
+            for(const rp of this.mWriteRP) {
                 const rpKey = this.mTexKey + rp.mShader;
                 this.mBrush.RemoveAutoRP(rpKey);
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
         }
     }
 }
@@ -887,7 +887,7 @@ export class CReflector2D extends CBrushComp
            
         }
 
-        for(const rp of this.mWrite) {
+        for(const rp of this.mWriteRP) {
             
             // if(rp.mShaderAttr.length>0)
             // {
@@ -912,11 +912,11 @@ export class CReflector2D extends CBrushComp
     override Destroy(): void {
         super.Destroy();
 
-        if(this.mWrite.length > 0) {
-            for(const rp of this.mWrite) {
+        if(this.mWriteRP.length > 0) {
+            for(const rp of this.mWriteRP) {
                 this.mBrush.RemoveAutoRP(rp.Key());
             }
-            this.mWrite.length = 0;
+            this.mWriteRP.length = 0;
             this.mBrush.ClearRen();
         }
     }

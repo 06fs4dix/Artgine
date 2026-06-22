@@ -601,18 +601,24 @@ async function ReplaceArtginePathsInFile(filePath: string, upFolder: string,proj
         }
         
         
-        // artgine/ 또는 plugin/ 경로 치환
+        // artgine/ 또는 plugin/ 경로 치환 — import 구문이 있는 줄에서만 적용 (런타임 URL 문자열 등 오탐 방지)
         const modifiedContent = originalContent.replace(
-            /(["'])[^"']*?((?:artgine|plugin)\/[^"']+)/g,
-            (match, quote, path) => {
-                // upFolder 끝 / 제거, path 앞 / 제거 후 결합
-                const cleanUpFolder = upFolder.replace(/\/+$/, '');
-                const cleanPath = path.replace(/^\/+/, '');
-                
-                // 추가 경로 횟수만큼 ../ 추가
-                const upPath = '../'.repeat(additionalLevels);
-                
-                return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
+            /^.*$/gm,
+            (line) => {
+                if (!/\bimport\b/.test(line)) return line;
+                return line.replace(
+                    /(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g,
+                    (match, quote, path) => {
+                        // upFolder 끝 / 제거, path 앞 / 제거 후 결합
+                        const cleanUpFolder = upFolder.replace(/\/+$/, '');
+                        const cleanPath = path.replace(/^\/+/, '');
+
+                        // 추가 경로 횟수만큼 ../ 추가
+                        const upPath = '../'.repeat(additionalLevels);
+
+                        return `${quote}${upPath}${cleanUpFolder}/${cleanPath}`;
+                    }
+                );
             }
         );
 

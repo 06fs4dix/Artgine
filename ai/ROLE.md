@@ -114,6 +114,10 @@ node ai/tool/browser.js $BASE_URL remove <sid>                             # 세
 - `push`: width/height로 Playwright viewport size를 지정한다. 0 이하, 미입력, 알 수 없는 값은 서버 기본값 1280x720을 사용한다.
 - `reset`: 기존 세션을 재사용하면서 ttl/logSize/width/height를 다시 지정해 페이지를 새로 로드한다.
 - `fn`: Playwright Page API 메서드, dot-notation 지원 (`mouse.click`, `keyboard.type` 등). `fn`이 `screenshot`이면 결과를 자동으로 `screenshot.png`에 저장한다.
+  - `exec`는 Playwright(`playwright`)의 `Page` API를 그대로 가져와 쓴 것이라, 복잡한 동작은 Playwright 공식 문서나 `node_modules/playwright-core/types/types.d.ts`의 `Page`/`Mouse`/`Keyboard` 정의를 참고해서 메서드/인자를 확인한다.
+  - `args_json`은 그 메서드의 인자에 **위치 순서대로** 대응하는 배열이다.
+    - 예: `mouse.click(x, y, options?)` → `exec <sid> mouse.click [400, 300]`
+    - 예: `keyboard.press(key)` → `exec <sid> keyboard.press '["Enter"]'`
 - `args_json`: JSON 배열 문자열 (기본 `[]`)
 - `input`: 키보드/마우스 입력을 한 요청 안에서 실행한다. 좌표가 없으면 키보드, `x y`가 있으면 마우스 press, `x y x2 y2`가 있으면 드래그로 처리한다. 마우스 버튼은 `mouseLeft|mouseRight|mouseMiddle`, `focus`는 `canvas|page|none`.
   - 키 유지: `node ai/tool/browser.js $BASE_URL input <sid> w 1000 canvas`
@@ -160,6 +164,10 @@ node ai/tool/remotedesktop.js $BASE_URL input <key|mouseButton> <time_ms> <windo
 ```
 
 - `fn`: nut-js `mouse`/`keyboard`/`screen` 객체의 메서드, dot-notation 지원 (`mouse.setPosition`, `keyboard.type` 등). 패스스루 호출이라 nut-js 시그니처 그대로 적용된다.
+  - `exec`는 nut-js(`@nut-tree-fork/nut-js`)를 그대로 가져와 쓴 것이라, `mouse.move`/`drag`/`scrollDown` 등 복잡한 동작은 nut-js 공식 문서나 `node_modules/@nut-tree-fork/nut-js/dist/lib/{mouse,keyboard,screen}.class.d.ts` 타입 정의를 참고해서 메서드/인자를 확인한다.
+  - `args_json`은 그 메서드의 인자에 **위치 순서대로** 대응하는 배열이다. nut-js의 `Point`는 `{"x":N,"y":N}`, `Button`은 숫자(`LEFT=0`/`MIDDLE=1`/`RIGHT=2`)로 표현한다.
+    - 예: `mouse.setPosition(target: Point)` → `exec mouse.setPosition '[{"x":100,"y":100}]'`
+    - 예: `mouse.click(btn: Button)` → `exec mouse.click [2]` (우클릭)
 - `args_json`: JSON 배열 문자열 (기본 `[]`)
 - `screenshot`: `quality`(1~100, 기본 75)로 JPEG 압축률 지정.
 - `input`: 키/마우스를 시간 기반(hold/drag)으로 실행한다. 좌표가 없으면 키보드, `x y`가 있으면 마우스 press, `x y x2 y2`가 있으면 드래그로 처리한다. 마우스 버튼은 `left|right|middle`. `windowTitle`을 지정하면(`-`는 미지정) 해당 창을 포그라운드로 올린 뒤 입력한다.

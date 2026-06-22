@@ -207,7 +207,7 @@ export class CLight extends CBrushComp
 
 	UpdateBaush(_update : CUpdate)
 	{
-		if(this.mWrite.length == 0) {
+		if(this.mWriteRP.length == 0) {
 			let fw = this.mBrush.mFrame;
 
 			let srp=new CRPAuto(fw.Pal().Sl3D().mKey);
@@ -265,7 +265,7 @@ export class CLight extends CBrushComp
             // 2d
             if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
             {
-                for(let rp of this.mWrite)
+                for(let rp of this.mWriteRP)
                 {
                     // shadowPlane
                     if(rp.mTag.has("shadowPlane"))
@@ -434,7 +434,7 @@ export class CLight extends CBrushComp
 				{
 					if(this.mCascadeCycle[i]==-1) continue;
 
-					for(let rp of this.mWrite)
+					for(let rp of this.mWriteRP)
 					{
                         // shadowWrite
 						if(rp.mTag.has("shadowWrite"))
@@ -610,7 +610,7 @@ export class CLight extends CBrushComp
         if(_val == false) {
             if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
             {
-                for(let rp of this.mWrite)
+                for(let rp of this.mWriteRP)
                 {
                     if(rp.mTag.has("shadowPlane")==false) continue;
                     var srpKey=this.mTexKey+rp.mShader;
@@ -630,7 +630,7 @@ export class CLight extends CBrushComp
                 for(var i=0;i<this.mCascadeCycle.length;++i)
                 {
                     if(this.mCascadeCycle[i]==-1)	continue;
-                    for(let rp of this.mWrite)
+                    for(let rp of this.mWriteRP)
                     {
                         if(rp.mTag.has("shadowWrite")==false)	continue;
                         var srpKey=this.mTexKey+rp.mShader+i;
@@ -647,7 +647,7 @@ export class CLight extends CBrushComp
 
         if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
         {
-            for(let rp of this.mWrite)
+            for(let rp of this.mWriteRP)
             {
                 if(rp.mTag.has("shadowPlane")==false) continue;
                 var srpKey=this.mTexKey+rp.mShader;
@@ -668,7 +668,7 @@ export class CLight extends CBrushComp
 			for(var i=0;i<this.mCascadeCycle.length;++i)
 			{
 				if(this.mCascadeCycle[i]==-1)	continue;
-				for(let rp of this.mWrite)
+				for(let rp of this.mWriteRP)
 				{
 					if(rp.mTag.has("shadowWrite")==false)	continue;
 					var srpKey=this.mTexKey+rp.mShader+i;

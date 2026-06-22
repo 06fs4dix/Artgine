@@ -19,10 +19,17 @@ export class CParserOBJ extends CParser
 {
     public mMesh = new CMesh();
     private mPath: string = "";
+    public mComputeNormal : boolean;
 
-    GetResult() { return this.mMesh; }
+    constructor(_computeNormal=true)
+    {
+        super();
+        this.mComputeNormal=_computeNormal;
+    }
 
-    async Load(pa_fileName: string)
+    override GetResult() { return this.mMesh; }
+
+    override async Load(pa_fileName: string)
     {
         
     }
