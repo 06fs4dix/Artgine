@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "read",
+  "tool": "Bash",
+  "command": "cd /d/Artgine_svn/WebContent 2>/dev/null; grep -rl \"require(['\\\"]typescript['\\\"]\\|from ['\\\"]typescript['\\\"]\" --include=\"*.ts\" --include=\"*.js\" desktop artgine proj plugin 2>/dev/null | grep -v node_modules Check if typescript package is imported at runtime anywhere",
+  "auto": "allow",
+  "content": "● Bash(cd /d/Artgine_svn/WebContent 2>/dev/null; grep -rl \"require(['\\\"]typescript['\\\"]\\|from ['\\\"]typescript['\\\"]\" --include=\"*.ts\" --include=\"*.js\" desktop artgine p…)\n⎿  Waiting…\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\nBash command\ncd /d/Artgine_svn/WebContent 2>/dev/null; grep -rl \"require(['\\\"]typescript['\\\"]\\|from ['\\\"]typescript['\\\"]\" --include=\"*.ts\" --include=\"*.js\" desktop artgine proj plugin\n2>/dev/null | grep -v node_modules\nCheck if typescript package is imported at runtime anywhere\nCompound command contains cd with output redirection - manual approval required to prevent path resolution bypass\nDo you want to proceed?\n❯ 1. Yes\n2. No",
+  "savedAt": "2026-06-24T03:13:50.924Z"
+}

@@ -87,6 +87,7 @@ export class CModal implements IAutoUpdate , IListener
     mShow=true;
     mDebugMode=null;
     mPause=true;
+    private mShowHideTimer : any = null;
 
     constructor(_key : string=null)
     {
@@ -377,6 +378,11 @@ export class CModal implements IAutoUpdate , IListener
         
     }
     Hide(_animationTime : number = 300) {
+        if(this.mShowHideTimer!=null) {
+            clearTimeout(this.mShowHideTimer);
+            this.mShowHideTimer=null;
+        }
+        if(this.mShow==false && this.mCard && this.mCard.style.display=="none") return;
         this.mShow=false;
         if(this.mOverlayDiv!=null) this.mOverlayDiv.style.display="none";
         if (this.mCard) {
@@ -387,23 +393,29 @@ export class CModal implements IAutoUpdate , IListener
                 this.mCard.style.display = "none";
             }
             else {
-                setTimeout(() => {
-                    if(this.mCard!=null)
+                this.mShowHideTimer=setTimeout(() => {
+                    this.mShowHideTimer=null;
+                    if(this.mCard!=null && this.mShow==false)
                         this.mCard.style.display = "none";
                 }, _animationTime); // 애니메이션 후 숨김
             }
         }
     }
-    
+
     Show() {
+        if(this.mShowHideTimer!=null) {
+            clearTimeout(this.mShowHideTimer);
+            this.mShowHideTimer=null;
+        }
         if(this.mShow) return;
         this.mShow=true;
         if(this.mOverlayDiv!=null) this.mOverlayDiv.style.display="";
         if (this.mCard) {
             this.mCard.style.display = "";
             //this.m_card.hidden=true;
-            setTimeout(() => {
-                if(this.mCard==null)    return;
+            this.mShowHideTimer=setTimeout(() => {
+                this.mShowHideTimer=null;
+                if(this.mCard==null || this.mShow==false)    return;
                 this.mCard.style.opacity = "1";
                 this.mCard.style.transform = "scale(1)";
                 this.mBody.style.width="100%";

@@ -1,0 +1,11 @@
+{
+  "port": 7681,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": null,
+  "command": null,
+  "auto": null,
+  "content": "Esc to cancel · Tab to amend",
+  "savedAt": "2026-06-24T06:57:41.773Z"
+}

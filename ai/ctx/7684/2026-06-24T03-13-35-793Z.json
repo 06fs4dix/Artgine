@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "read",
+  "tool": "Bash",
+  "command": "cd /d/Artgine_svn/WebContent 2>/dev/null; grep -n \"require\\|from ['\\\"]\" artgine/util_imple/CAI.ts artgine/server_imple/CPlaywrightRouter.ts 2>/dev/null | grep -iv \"^.*://\" Check imports in CAI.ts and CPlaywrightRouter.ts",
+  "auto": "allow",
+  "content": "● Bash(cd /d/Artgine_svn/WebContent 2>/dev/null; grep -n \"require\\|from ['\\\"]\" artgine/util_imple/CAI.ts artgine/server_imple/CPlaywrightRouter.ts 2>/dev/null | grep -…)\n⎿  Waiting…\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\nBash command\ncd /d/Artgine_svn/WebContent 2>/dev/null; grep -n \"require\\|from ['\\\"]\" artgine/util_imple/CAI.ts artgine/server_imple/CPlaywrightRouter.ts 2>/dev/null | grep -iv \"^.*://\"\nCheck imports in CAI.ts and CPlaywrightRouter.ts\nCompound command contains cd with output redirection - manual approval required to prevent path resolution bypass\nDo you want to proceed?\n❯ 1. Yes\n2. No",
+  "savedAt": "2026-06-24T03:13:35.793Z"
+}

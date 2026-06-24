@@ -20,7 +20,7 @@ export class CRemoteDesktopRouter extends CAuthServer {
         this.On("/RemoteDesktop/screenshot", this.onScreenshot.bind(this));
         this.On("/RemoteDesktop/input",      this.onInput.bind(this));
         this.On("/RemoteCMD/Exec",           this.onCmd.bind(this));
-        this.On("/RemoteCMD/Write",          this.onRemote.bind(this));
+        this.On("/RemoteCMD/Write",          this.onWrite.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -30,7 +30,7 @@ export class CRemoteDesktopRouter extends CAuthServer {
     async onScreenshot(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onInput(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onCmd(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
-    async onRemote(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onWrite(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
 }
 
 import CRemoteDesktopRouter_imple from '../server_imple/CRemoteDesktopRouter.js';

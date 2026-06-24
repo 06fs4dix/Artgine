@@ -1,0 +1,11 @@
+{
+  "port": 7681,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": null,
+  "command": null,
+  "auto": "allow",
+  "content": "❯ 1. Yes\n2. Yes, and don’t ask again for: node *\n3. No\nEsc to cancel · Tab to amend · ctrl+e to explain",
+  "savedAt": "2026-06-24T06:58:26.290Z"
+}

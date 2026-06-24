@@ -1,0 +1,11 @@
+{
+  "port": 7682,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Edit",
+  "command": null,
+  "auto": null,
+  "content": "296      ctx.updatePlaceholder();\n297  }\n298\n299 +let suppressTermFocus = false; // 키보드 ↑/↓로 세션 탐색 중에는 터미널 input 자동 포커스를 막는다\n300 +\n301  function isAiTabActive(): boolean { return CDOM.ID('ai-tab').classList.contains('active'); }\n302  function isBrowserSubtabActive(): boolean { return CDOM.ID('ai-browser-subtab').classList.contains('active'); }\n303\n╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\nDo you want to make this edit to Home.ts?",
+  "savedAt": "2026-06-24T04:40:02.635Z"
+}

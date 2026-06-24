@@ -1,0 +1,11 @@
+{
+  "port": 7682,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Edit",
+  "command": null,
+  "auto": null,
+  "content": "696      }, MODAL_DOM_DELAY);\n697  }\n698\n699 -async function termConnectSession(port: number) {\n699 +async function termConnectSession(port: number, focusInput: boolean = true) {\n700      const key = `term:${port}`;\n701      // 이미 풀에 있으면 그대로 보여주고 끝\n702      if (iframePool.has(key)) {\n703          showFrame(key, '');\n704          aiRefreshSessions();\n705          termRefreshSessions();\n706 -        postFrameMessage(key, { type: 'focus-input' });\n706 +        if (focusInput) postFrameMessage(key, { type: 'focus-input' });\n707          return;\n708      }\n709      showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`);\n╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\nDo you want to make this edit to Home.ts?\n❯ 1. Yes\n2. Yes, allow all edits during this session (shift+tab)\n3. No\nEsc to cancel · Tab to amend",
+  "savedAt": "2026-06-24T04:36:34.095Z"
+}

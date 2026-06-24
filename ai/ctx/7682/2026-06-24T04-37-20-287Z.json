@@ -1,0 +1,11 @@
+{
+  "port": 7682,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Edit",
+  "command": null,
+  "auto": null,
+  "content": "316          f.setAttribute('allow', 'clipboard-read; clipboard-write');\n317          f.addEventListener('load', () => {\n318const isTerm = key.startsWith('term:') || key.startsWith('term-new:');\n319 -                if (isTerm) { postFrameMessage(key, { type: 'focus-input' }); }\n319 +if (isTerm && !suppressTermFocus) { postFrameMessage(key, { type: 'focus-input' }); }\n320try {\n321                      f.contentWindow?.addEventListener('keydown', (e) => {\n322if (isTerm && handleTermSidebarShortcut(e)) return;\n╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\nDo you want to make this edit to Home.ts?",
+  "savedAt": "2026-06-24T04:37:20.287Z"
+}

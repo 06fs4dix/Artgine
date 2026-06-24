@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Bash",
+  "command": "cd /d/Artgine_svn/WebContent 2>/dev/null; grep -ril \"prune\" node_modules/electron-packager/*.js node_modules/electron-packager/dist/*.js 2>/dev/null | head; echo ---; node -e \"console.log(require('./node_modules/electron-packager/package.json').version)\"",
+  "auto": null,
+  "content": "Read 1 file (ctrl+o to expand)\n● Bash(cd /d/Artgine_svn/WebContent 2>/dev/null; grep -ril \"prune\" node_modules/electron-packager/*.js node_modules/electron-packager/dist/*.js 2>/dev/null | head; ech…)\n⎿  Waiting…\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\nBash command\ncd /d/Artgine_svn/WebContent 2>/dev/null; grep -ril \"prune\" node_modules/electron-packager/*.js node_modules/electron-packager/dist/*.js 2>/dev/null | head; echo ---; node -e\n\"console.log(require('./node_modules/electron-packager/package.json').version)\"\nCheck electron-packager prune behavior\nDo you want to proceed?\n❯ 1. Yes\n2. Yes, and don’t ask again for: node -e \"console.log(require('./node_modules/electron-packager/package.json').version)\"\n3. No\nEsc to cancel · Tab to amend · ctrl+e to explain",
+  "savedAt": "2026-06-24T03:13:09.025Z"
+}

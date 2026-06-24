@@ -25,7 +25,7 @@ window.addEventListener('keydown', function(e) {
         e.preventDefault(); e.stopPropagation();
         window.top.postMessage({ type: 'terminal-tab-key' }, '*');
     }
-    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4' || e.key === 'F7') {
         e.preventDefault(); e.stopPropagation();
         window.top.postMessage({ type: 'home-hotkey', key: e.key }, '*');
     }
@@ -234,11 +234,7 @@ window.addEventListener('keydown', function(e) {
             if (e.key === "F6") {
                 e.preventDefault(); e.stopPropagation();
                 _toggleSuper();
-            } else if (e.key === "F7") {
-                e.preventDefault(); e.stopPropagation();
-                bar.style.display = "flex";
-                document.body.style.paddingBottom = "50px";
-                inp.focus();
+                showBarAndFocusInput();
             }
         }, true);
 
@@ -463,6 +459,12 @@ window.addEventListener('keydown', function(e) {
         _initSuper();
         setTimeout(function() { inp.focus(); }, 500);
         setTimeout(_sendResize, 1000);
+
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'focus-input') {
+                showBarAndFocusInput();
+            }
+        });
     });
 })();
 </script>

@@ -69,9 +69,9 @@ gAtl.Frame().PushEvent(CEvent.eType.Update, () => {
 
 // Directional Light
 let ligSub = Main.PushSub(new CSubject());
-ligSub.SetPos(new CVec3(10, 15, 10));
+ligSub.SetPos(new CVec3(0, 1, 0));
 let ligComp = ligSub.PushComp(new CLight());
-ligComp.SetDirect(0);
+ligComp.SetDirect(-1);
 
 // ============================================================
 // 1~9: 기능별 샘플 (가로 배치)
@@ -246,4 +246,29 @@ Main.PushSub(new CShape3D({
     shadow: true,
     animation: colAni,
 }));
+
+// 10. Shadow test (sphere + floor plane)
+{
+    Main.PushSub(new CShape3D({
+        shape: 'sphere',
+        pos: new CVec3(50, 0, 0),
+        sca: 3,
+        color: new CColor(0.9, 0.9, 0.9, CColor.eModel.RGBAdd),
+        roughness: 0.5,
+        metallic: 0.0,
+        //shadow: true,
+        tags: ["light"],
+    }));
+    Main.PushSub(new CShape3D({
+        shape: 'plane',
+        pos: new CVec3(50, -3, 0),
+        sca: 7.5,
+        rot: new CVec3(-Math.PI / 2, 0, 0),
+        color: new CColor(0.15, 0.15, 0.25, CColor.eModel.RGBAdd),
+        roughness: 0.9,
+        metallic: 0.0,
+        //shadow: true,
+        tags: ["light"],
+    }));
+}
 

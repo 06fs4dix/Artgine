@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "read",
+  "tool": "Bash",
+  "command": "cd /d/Artgine_svn/WebContent 2>/dev/null && find . -iname \"*help*\" -type d 2>/dev/null | grep -v node_modules Search entire tree for any folder with help in the name",
+  "auto": "allow",
+  "content": "● Bash(cd /d/Artgine_svn/WebContent 2>/dev/null && find . -iname \"*help*\" -type d 2>/dev/null | grep -v node_modules)\n⎿  Waiting…\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\nBash command\ncd /d/Artgine_svn/WebContent 2>/dev/null && find . -iname \"*help*\" -type d 2>/dev/null | grep -v node_modules\nSearch entire tree for any folder with help in the name\nCompound command contains cd with output redirection - manual approval required to prevent path resolution bypass\nDo you want to proceed?\n❯ 1. Yes\n2. No",
+  "savedAt": "2026-06-24T04:28:19.049Z"
+}

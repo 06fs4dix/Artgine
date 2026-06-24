@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "read",
+  "tool": "Bash",
+  "command": "cd /d/Artgine_svn/WebContent 2>/dev/null && ls -la",
+  "auto": "allow",
+  "content": "✢ Smooshing…\n● Bash(cd /d/Artgine_svn/WebContent 2>/dev/null && ls -la)\n⎿  Running…\n✢ Smooshing… (21s · ↓ 861 tokens)\n⎿  Tip: Use /permissions to pre-approve and pre-deny bash, edit, and MCP tools\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n❯\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n🤖 Sonnet 4.6 | 💰 $1.41 session / $5.78 today / $5.78 block (35m left) | 🔥 $1.59/hr | 🧠 70,432 (7%)◐ medium · /effort\n← for agents",
+  "savedAt": "2026-06-24T04:25:01.541Z"
+}

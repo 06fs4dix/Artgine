@@ -56,7 +56,7 @@ export class CAIChatRouter extends CAuthServer {
     override Connect() { super.Connect(); this._connectImpl(); }
     _connectImpl() {}
 
-    onGetProviders(_json: CJSON, _req: Request, _res: Response): null { return null; }
+    async onGetProviders(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onGetSessions(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSession(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSessionConfig(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }

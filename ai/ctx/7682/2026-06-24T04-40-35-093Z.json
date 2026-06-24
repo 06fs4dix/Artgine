@@ -1,0 +1,11 @@
+{
+  "port": 7682,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Edit",
+  "command": "proj\\Home\\Home.ts",
+  "auto": "allow",
+  "content": "Update(proj\\Home\\Home.ts)\n✽ Clauding… (3m 31s · ↓ 8.3k tokens)\n⎿  Tip: Use /btw to ask a quick side question without interrupting Claude's current work\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n❯\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n🤖 Sonnet 4.6 | 💰 $0.87 session / $7.51 today / $7.51 block (19m left) | 🔥 $1.93/hr | 🧠 50,804 (5%)◐ medium · /effort\n← for agents\nClauding…\n● Update(proj\\Home\\Home\n✽ Clauding… (3m 31s · ↑\n● Update(proj\\Home\\Home.ts)\n⎿  Added 4 lines, removed 1 line\n318          f.setAttribute('allow', 'clipboard-read; clipboard-write');\n319          f.addEventListener('load', () => {\n320const isTerm = key.startsWith('term:') || key.startsWith('term-new:');\n321 -                if (isTerm && !suppressTermFocus) { postFrameMessage(key, { type: 'focus-input' }); }\n321 +if (isTerm) {\n322 +if (noFocusTermKeys.has(key)) { noFocusTermKeys.delete(key); }\n323 +else { postFrameMessage(key, { type: 'focus-input' }); }\n324 +                }\n325  try {\n326  f.contentWindow?.addEventListener('keydown', (e) => {\n327  if (isTerm && handleTermSidebarShortcut(e)) return;\n✽ Clauding… (3m 31s · ↑ 8.3k tokens)",
+  "savedAt": "2026-06-24T04:40:35.093Z"
+}

@@ -28,6 +28,14 @@ import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// packaged exe(app.isPackaged)에서는 cwd(exe 폴더)와 실제 코드 위치(resources/app)가
+// 달라져 WorkingPath()(cwd 기준)와 ArtgineRootPath()(__dirname 기준)가 서로 다른
+// 폴더를 가리키는 문제가 생긴다. 패키징된 경우에만 cwd를 desktop의 부모(resources/app)로
+// 고정한다. 소스로 직접 실행(npm start, start.bat, 서브모듈 등)될 때는 건드리지 않는다.
+if (app.isPackaged) {
+    process.chdir(path.resolve(__dirname, ".."));
+}
+
 let gMainWindow: BrowserWindow | null = null;
 var gWebServer : CServerMain=null;
 var gRunPage=false;

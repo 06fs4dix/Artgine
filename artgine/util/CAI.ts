@@ -24,7 +24,7 @@ export class CAI {
     static ProviderInfo(_provider: CAI.eProvider): Promise<IProviderInfo> { return Promise.resolve({ id: _provider, available: false, version: '', models: [] }); }
     static ProviderInstall(_provider: CAI.eProvider): Promise<boolean> { return Promise.resolve(false); }
     static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true): Promise<IChatResult> { return Promise.reject(new Error('CAI_imple not loaded')); }
-    static Terminal(_provider: CAI.eProvider, _mcp: boolean): Promise<IAIInteractiveArgs> { return Promise.resolve({ args: [] }); }
+    static Terminal(_provider: CAI.eProvider, _mcp: boolean, _model?: string): Promise<IAIInteractiveArgs> { return Promise.resolve({ args: [] }); }
 }
 
 export namespace CAI {

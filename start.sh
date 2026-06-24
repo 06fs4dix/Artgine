@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Node.js 설치 확인
+# Check Node.js installation
 if ! command -v node &> /dev/null; then
-    echo "Node.js가 설치되어 있지 않습니다. 다운로드 페이지를 여는 중..."
+    echo "Node.js is not installed. Opening download page..."
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         open https://nodejs.org/
@@ -12,18 +12,18 @@ if ! command -v node &> /dev/null; then
         elif command -v gnome-open &> /dev/null; then
             gnome-open https://nodejs.org/
         else
-            echo "브라우저를 열 수 없습니다. 수동으로 https://nodejs.org/ 에 접속해주세요."
+            echo "Cannot open browser. Please visit https://nodejs.org/ manually."
         fi
     fi
 
-    echo "Node.js 설치 후 다시 실행해주세요."
-    read -p "계속하려면 Enter를 누르세요..."
+    echo "Please install Node.js and run this again."
+    read -p "Press Enter to continue..."
     exit 1
 fi
 
-# Git 설치 확인
+# Check Git installation
 if ! command -v git &> /dev/null; then
-    echo "Git이 설치되어 있지 않습니다. 다운로드 페이지를 여는 중..."
+    echo "Git is not installed. Opening download page..."
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         open https://git-scm.com/downloads
@@ -31,12 +31,12 @@ if ! command -v git &> /dev/null; then
         if command -v xdg-open &> /dev/null; then
             xdg-open https://git-scm.com/downloads
         else
-            echo "브라우저를 열 수 없습니다. 수동으로 https://git-scm.com/downloads 에 접속해주세요."
+            echo "Cannot open browser. Please visit https://git-scm.com/downloads manually."
         fi
     fi
 
-    echo "Git 설치 후 다시 실행해주세요."
-    read -p "계속하려면 Enter를 누르세요..."
+    echo "Please install Git and run this again."
+    read -p "Press Enter to continue..."
     exit 1
 fi
 

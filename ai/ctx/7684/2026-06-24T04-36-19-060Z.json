@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": null,
+  "command": null,
+  "auto": null,
+  "content": "❯ 1. Yes\n2. Yes, allow all edits during this session (shift+tab)",
+  "savedAt": "2026-06-24T04:36:19.060Z"
+}

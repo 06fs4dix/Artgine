@@ -33,6 +33,9 @@ node ai/tool/tsc_check.js 수정한파일.ts
 ## 원격 작업 (Remote Work & Command Execution)
 **`ai/RemoteCMDGuide.md`** 먼저 읽기 필수.
 
+## 메모 가이드 (Memo Guide)
+메모 저장/검색 관련 작업 전 **`ai/MemoGuide.md`** 먼저 읽기 필수.
+
 
 ## 프로젝트 명명 규칙 (Project Naming Convention)
 ** ai/CodeNamingGuide.md ** 먼저 읽기 필수. 
@@ -86,10 +89,8 @@ node ai/tool/tsc_check.js 수정한파일.ts
 > 라이브 페이지 콘솔 로그·JS 실행·DOM 조회용. 코드 파일 수정엔 쓰지 않는다.
 
 ### 사용 제한 (Usage Restrictions)
-- 소스 분석과 정적 검증을 먼저 한다.
-- `ai/tool/browser.js`는 런타임 확인이 꼭 필요할 때만 쓴다.
-- 용도: 콘솔 로그, JS 실행, DOM 조회, 스크린샷, 최종 동작 검증.
-- 단순 코드 확인이나 파일 구조 파악에는 쓰지 않는다.
+- **정적 분석(파일 읽기, grep, glob)을 먼저 한다. `ai/tool/browser.js`는 정적 분석으로 절대 알 수 없는 런타임 정보가 필요할 때만 쓴다.**
+- **코드 확인, 클래스/함수 찾기, 파일 구조 파악에 browser.js를 쓰지 않는다.**
 
 `ai/tool/browser.js`를 사용한다. 비밀번호는 스크립트가 자동으로 읽는다. 쿠키는 `ai/tool/browser_cookie.txt`에 자동 저장/로드.  
 **규칙**: Bash 툴만 사용 (PowerShell 금지)

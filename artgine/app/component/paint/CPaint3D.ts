@@ -107,7 +107,7 @@ export class CPaint3D extends CPaint
 			
 			if(_camComp.mReadLen>len)
 			{
-				this.PushCShaderAttr(new CShaderAttr(_camComp.mTexOff,_camComp.GetTex()))
+				this.PushCShaderAttr(new CShaderAttr(0,_camComp.GetTex()))
 				this.PushCShaderAttr(new CShaderAttr("envmapOn", 1));
 				this.mBrushCompArr[_camComp.mTexOff]=_camComp;	
 			}
@@ -127,7 +127,7 @@ export class CPaint3D extends CPaint
 			if(len2>len)
 			{
 				this.mBrushCompArr[_camComp.mTexOff]=_camComp;	
-				this.mShaderAttrMap.get(_camComp.GetTex()).mKey=_camComp.GetTex();
+				this.FindCShaderAttr(0).mKey=_camComp.GetTex();
 			}
 		}
 		

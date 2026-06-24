@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Edit",
+  "command": null,
+  "auto": null,
+  "content": "15  --out=\"script\" ^\n16  --overwrite ^\n17  --ignore=\"\\.vscode\" ^\n18 +--ignore=\"\\.serena\" ^\n19  --ignore=\"/WEB-INF\" ^\n20  --ignore=\"/proj\" ^\n21  --ignore=\"/temp\" ^\n22  --ignore=\"/big\" ^\n23 +--ignore=\"/ai\" ^\n24 +--ignore=\"/db\" ^\n25\n23 -\n24 -\n26  --ignore=\"/artgine\" ^\n27  --ignore=\"/script/temp\" ^\n28  --ignore=\"/script/Artgine-script\" ^\n╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\nDo you want to make this edit to build_exe.bat?",
+  "savedAt": "2026-06-24T04:29:51.770Z"
+}

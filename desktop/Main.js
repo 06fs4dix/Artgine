@@ -18,6 +18,9 @@ import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+if (app.isPackaged) {
+    process.chdir(path.resolve(__dirname, ".."));
+}
 let gMainWindow = null;
 var gWebServer = null;
 var gRunPage = false;

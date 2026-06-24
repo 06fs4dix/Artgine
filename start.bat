@@ -2,7 +2,7 @@
 where node >nul 2>nul
 
 if %ERRORLEVEL% NEQ 0 (
-    echo Node.js가 설치되어 있지 않습니다. 다운로드 페이지를 여는 중...
+    echo Node.js is not installed. Opening download page...
     start https://nodejs.org/
     pause
     exit /b
@@ -11,7 +11,7 @@ if %ERRORLEVEL% NEQ 0 (
 where git >nul 2>nul
 
 if %ERRORLEVEL% NEQ 0 (
-    echo Git이 설치되어 있지 않습니다. 다운로드 페이지를 여는 중...
+    echo Git is not installed. Opening download page...
     start https://git-scm.com/downloads
     pause
     exit /b

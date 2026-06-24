@@ -1,0 +1,11 @@
+{
+  "port": 7684,
+  "mode": "claude",
+  "key": null,
+  "type": "write",
+  "tool": "Edit",
+  "command": null,
+  "auto": null,
+  "content": "1  @echo off\n2  cd ..\n3\n4 +echo Clear external\\bin\n5 +set \"EMPTY_DIR=%TEMP%\\empty_%RANDOM%\"\n6 +mkdir \"%EMPTY_DIR%\"\n7 +robocopy \"%EMPTY_DIR%\" \"artgine\\external\\bin\" /MIR /NFL /NDL /NJH /NJS\n8 +rmdir \"%EMPTY_DIR%\"\n9 +\n10  echo [STEP] Electron package...\n11  call npx electron-packager . Artgine ^\n12  --platform=win32 ^\n╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\nDo you want to make this edit to build_exe.bat?\n❯ 1. Yes\n2. Yes, allow all edits during this session (shift+tab)\n3. No\nEsc to cancel · Tab to amend",
+  "savedAt": "2026-06-24T03:10:05.119Z"
+}
