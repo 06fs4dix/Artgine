@@ -18,6 +18,7 @@ export class CMemo {
     private static sInit = false;
     private static sRecordTable = 'memo_record';
     private static sKeywordTable = 'memo_keyword_ref';
+    private static sDeletedTable = 'memo_deleted';
     private static sLastKeywords: string[] = [];
     private static sLastText: string = '';
     private static sProvider: CAI.eProvider = CAI.eProvider.claude;
@@ -106,16 +107,121 @@ export class CMemo {
         }
 
         const merged = CMemo.MergeGroups(groups);
-        return merged.map(group => group.map(record => `[${CMemo.FormatTime(record.chatTime)}] ${record.original}`).join('\n'));
+        return merged.map(group => group.map(record => `[${record.selfOffset}][${CMemo.FormatTime(record.chatTime)}] ${record.original}`).join('\n'));
     }
 
-    public static async Chat(_text: string, _write: boolean | null = true, _provider?: CAI.eProvider, _model?: string, _continueOffset?: number): Promise<string> {
-        // auto 모드: AI 호출 없이 물음표 포함 여부로 단순 판단한다 (있으면 검색, 없으면 저장).
+    // auto 모드 판단 시, 이 단어 중 하나라도 포함되어 있으면 검색(read)으로 처리한다.
+    private static readonly sReadIntentWords: string[] = [
+        '?', '？', '알려줘', '알려주', '찾아줘', '찾아주', '검색해줘', '검색해주', '보여줘', '보여주',
+        'find', 'search', 'show me', 'tell me', 'look up', 'look for', 'lookup',
+    ];
+
+    private static HasReadIntent(_text: string): boolean {
+        const lower = _text.toLowerCase();
+        return CMemo.sReadIntentWords.some(word => lower.includes(word.toLowerCase()));
+    }
+
+    // auto 모드에서 텍스트에 -r/-w(/r//w) 토큰이 있으면 그걸로 모드를 강제 지정한다. 토큰은 결과 텍스트에서 제거된다.
+    private static ExtractModeMarker(_text: string): { write: boolean | null; text: string } {
+        const match = _text.match(/(^|\s)(-r|\/r|-w|\/w)(?=\s|$)/i);
+        if (match == null) {
+            return { write: null, text: _text };
+        }
+        const marker = match[2].toLowerCase();
+        const write = marker === '-w' || marker === '/w';
+        const text = (_text.slice(0, match.index! + match[1].length) + _text.slice(match.index! + match[0].length)).trim();
+        return { write, text };
+    }
+
+    // auto 모드에서 -d(/d) 토큰을 찾는다. 뒤에 숫자(selfOffset)가 오면 그 메모를 바로 가리키고,
+    // 그 외엔 토큰을 뗀 나머지 텍스트를 설명문으로 취급해 설명 기반 삭제로 넘긴다.
+    private static ExtractDeleteMarker(_text: string): { offset: number | null; text: string } | null {
+        const match = _text.match(/(^|\s)(-d|\/d)(?:\s+(\d+))?(?=\s|$)/i);
+        if (match == null) {
+            return null;
+        }
+        const offset = match[3] != null ? Number(match[3]) : null;
+        const text = (_text.slice(0, match.index! + match[1].length) + _text.slice(match.index! + match[0].length)).trim();
+        return { offset, text };
+    }
+
+    // 응답에 같이 보여줄 삭제 내용 요약을 위해 한 줄로 펴고 일정 길이로 자른다.
+    private static TruncateSnippet(_text: string, _max: number = 40): string {
+        const oneLine = _text.replace(/\s+/g, ' ').trim();
+        return oneLine.length > _max ? oneLine.slice(0, _max) + '...' : oneLine;
+    }
+
+    // 단건 직접 삭제(숫자로 지정). 성공하면 지운 내용 일부를 영문 메시지에 같이 보여준다.
+    private static async DeleteSingle(_selfOffset: number): Promise<string> {
+        const record = await CMemo.GetRecord(_selfOffset);
+        const ok = await CMemo.Delete(_selfOffset);
+        if (!ok) {
+            return `Memo ${_selfOffset} not found.`;
+        }
+        const snippet = record != null ? CMemo.TruncateSnippet(record.original) : '';
+        return `Deleted memo ${_selfOffset}: ${snippet}`;
+    }
+
+    // delete 모드에서 텍스트가 설명문일 때, read와 같은 방식으로 키워드/기간을 뽑아 매칭된 레코드 전부를 삭제하고 삭제 목록을 요약해 돌려준다.
+    private static async DeleteAllByDescription(_text: string, _provider?: CAI.eProvider, _model?: string): Promise<string> {
+        const now = CMemo.Now();
+        const monthAgo = CMemo.AddMonthTime(-1);
+        const info = await CMemo.ExtractReadInfo(_text, monthAgo, now, _provider, _model);
+        const offsets = await CMemo.FindOffsets(CMemo.UniqueKeywords(info.keywords), info.startTime, info.endTime);
+        if (offsets.length === 0) {
+            return 'No memos found to delete.';
+        }
+
+        const deleted: MemoRecord[] = [];
+        for (const offset of offsets) {
+            const record = await CMemo.GetRecord(offset);
+            if (record == null) {
+                continue;
+            }
+            if (await CMemo.Delete(offset)) {
+                deleted.push(record);
+            }
+        }
+
+        if (deleted.length === 0) {
+            return 'No memos found to delete.';
+        }
+
+        const lines = deleted.map(record => `[${record.selfOffset}][${CMemo.FormatTime(record.chatTime)}] ${CMemo.TruncateSnippet(record.original)}`);
+        return `Deleted ${deleted.length} memo(s):\n${lines.join('\n')}`;
+    }
+
+    public static async Chat(_text: string, _write: boolean | null | 'delete' = true, _provider?: CAI.eProvider, _model?: string, _continueOffset?: number): Promise<string> {
+        // delete 모드: 텍스트에 숫자(selfOffset)가 있으면 그 메모 하나만 바로 삭제, 없으면 설명을 보고 매칭되는 메모를 전부 삭제한다.
+        if (_write === 'delete') {
+            const numMatch = _text.match(/\d+/);
+            if (numMatch != null) {
+                return await CMemo.DeleteSingle(Number(numMatch[0]));
+            }
+            return await CMemo.DeleteAllByDescription(_text, _provider, _model);
+        }
+
+        // auto 모드: -d 토큰 + 숫자면 즉시 삭제, -r/-w 토큰이 있으면 그걸로 강제 지정, 없으면 검색 의도 키워드(물음표 포함) 포함 여부로 판단한다.
         if (_write === null) {
-            _write = !_text.includes('?') && !_text.includes('？');
+            const deleteMarker = CMemo.ExtractDeleteMarker(_text);
+            if (deleteMarker != null) {
+                if (deleteMarker.offset != null) {
+                    return await CMemo.DeleteSingle(deleteMarker.offset);
+                }
+                return await CMemo.DeleteAllByDescription(deleteMarker.text, _provider, _model);
+            }
+
+            const marker = CMemo.ExtractModeMarker(_text);
+            if (marker.write !== null) {
+                _write = marker.write;
+                _text = marker.text;
+            } else {
+                _write = !CMemo.HasReadIntent(_text);
+            }
         }
 
         const hashtags = CMemo.ExtractHashtags(_text);
+        const manualTodo = CMemo.DetectTodoKeyword(_text);
 
         if (_write) {
             let continueTarget: { text: string; keywords: string[] } | undefined;
@@ -127,7 +233,7 @@ export class CMemo {
             }
 
             const info = await CMemo.ExtractWriteInfo(_text, continueTarget, _provider, _model);
-            const keywords = CMemo.UniqueKeywords([...info.keywords, ...hashtags]);
+            const keywords = CMemo.UniqueKeywords([...info.keywords, ...hashtags, ...manualTodo]);
             // continueOffset이 명시되면 호출 쪽의 명시적 의도(특정 대화에 이어쓰기)이므로
             // AI의 new 판단과 무관하게 항상 연결한다.
             const isNew = continueTarget == null
@@ -142,7 +248,7 @@ export class CMemo {
         const now = CMemo.Now();
         const monthAgo = CMemo.AddMonthTime(-1);
         const info = await CMemo.ExtractReadInfo(_text, monthAgo, now, _provider, _model);
-        const keywords = CMemo.UniqueKeywords([...info.keywords, ...hashtags]);
+        const keywords = CMemo.UniqueKeywords([...info.keywords, ...hashtags, ...manualTodo]);
         const groups = await CMemo.Read(keywords, info.startTime, info.endTime);
         if (groups.length === 0) {
             return '관련 메모가 없습니다.';
@@ -194,6 +300,12 @@ export class CMemo {
         try {
             await CMemo.sDB.Send('BEGIN TRANSACTION');
 
+            // 삭제 전 내용을 보관해서 나중에 무엇이 왜 삭제됐는지 추적할 수 있게 한다.
+            await CMemo.sDB.Send(
+                `INSERT INTO ${CMemo.sDeletedTable} (selfOffset, original, chatTime, deletedTime) VALUES (?, ?, ?, ?)`,
+                [record.selfOffset, record.original, record.chatTime, CMemo.Now()]
+            );
+
             await CMemo.sDB.Send(`DELETE FROM ${CMemo.sKeywordTable} WHERE selfOffset = ?`, [_selfOffset]);
             await CMemo.sDB.Send(`DELETE FROM ${CMemo.sRecordTable} WHERE selfOffset = ?`, [_selfOffset]);
 
@@ -231,6 +343,13 @@ export class CMemo {
             new CORMField('selfOffset', 0),
             new CORMField('chatTime', 0),
         ], 'keyword,selfOffset');
+
+        await CMemo.sDB.CreateCollection(CMemo.sDeletedTable, [
+            new CORMField('selfOffset', 0),
+            new CORMField('original', ''),
+            new CORMField('chatTime', 0),
+            new CORMField('deletedTime', 0),
+        ], 'selfOffset,deletedTime');
 
         // 기존에 만들어진 DB에는 headOffset/lastActivity 컬럼이 없으므로 마이그레이션으로 추가한다.
         // 이미 컬럼이 있으면(신규 DB) ALTER가 실패하므로 무시한다.
@@ -473,6 +592,17 @@ export class CMemo {
         return matches.map(tag => tag.slice(1)).filter(tag => tag.length > 0);
     }
 
+    // AI 판단 전에 한/영 "할 일" 표현이 포함되어 있으면 무조건 "TODO"를 키워드에 강제 추가한다.
+    private static readonly sTodoWords: string[] = [
+        '해야', '할일', '할 일', '확인 필요', '확인필요', '예정',
+        'todo', 'to-do', 'fixme',
+    ];
+
+    private static DetectTodoKeyword(_text: string): string[] {
+        const lower = _text.toLowerCase();
+        return CMemo.sTodoWords.some(word => lower.includes(word.toLowerCase())) ? ['TODO'] : [];
+    }
+
     private static async ExtractWriteInfo(
         _text: string,
         _continueTarget?: { text: string; keywords: string[] },
@@ -526,7 +656,8 @@ export class CMemo {
             '너는 메모 읽기 응답 생성기다.',
             '아래 메모 그룹들 중 사용자 요청과 관련 있는 그룹만 근거로 짧고 자연스럽게 답해라.',
             '관련 없는 메모 그룹은 답변에 쓰지 말고 무시해라.',
-            '각 줄 맨 앞 [YYYY-MM-DD HH:mm:ss]는 그 메모를 작성한 시각이다. 질문이 시점을 묻는다면 이 시각을 답에 포함해라.',
+            '각 줄 맨 앞 [selfOffset][YYYY-MM-DD HH:mm:ss]는 그 메모의 오프셋과 작성 시각이다.',
+            '답변에서 각 메모를 인용할 때는 이 [selfOffset][YYYY-MM-DD HH:mm:ss] 표시를 내용 앞에 그대로 남겨라.',
             '없는 내용은 지어내지 마라.',
             `요청: ${JSON.stringify(_request)}`,
             '메모 그룹:',

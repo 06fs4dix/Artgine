@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqntkohp_2";
+gPF.mVersion = "mqtgsq45_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -37,7 +37,6 @@ import {CObject} from "../../artgine/basic/CObject.js"
 import { CSing, CSingOption } from "../../artgine/server/CSing.js";
 import { CConfirm, CModal } from "../../artgine/basic/CModal.js";
 import { CUtil } from "../../artgine/basic/CUtil.js";
-import {CBoard} from "../../artgine/server/CBoard.js";
 import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
 import { CStorage } from "../../artgine/system/CStorage.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
@@ -49,7 +48,6 @@ import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg, CModalMusic } fro
 import { CWebSocket } from '../../artgine/network/CWebSocket.js';
 import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
-import { CTooltip } from "../../artgine/util/CTooltip.js";
 
 
 if(gPF.mServer!="webServer")
@@ -90,6 +88,28 @@ function updateFramePlaceholder() {
 const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
 let aiInited = false;
+
+// 인증 여부와 무관하게 즉시 호출 가능한 엔드포인트라 페이지 접속과 동시에 조회한다.
+interface IProviderStateEntry { id: string; installed: boolean; authenticated: boolean; version: string; models: { value: string; label: string }[]; }
+async function loadAiProviderStatus() {
+    const el = document.getElementById('aiProviderStatus');
+    if (!el) return;
+    try {
+        const r = await fetch(CPath.WebRootUrl() + 'cmd/provider-state');
+        const list: IProviderStateEntry[] = await r.json();
+        el.innerHTML = list.map(p => {
+            const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
+            const icon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
+            const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
+            const ver = p.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${p.version}</span>` : '';
+            return `<div class="d-flex align-items-center justify-content-between rounded px-3 py-2 ${rowClass}" style="font-size:1.05rem;">
+                <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
+                <span class="d-flex align-items-center gap-1"><i class="bi ${icon}"></i>${status}</span>
+            </div>`;
+        }).join('');
+    } catch (e) { console.error('provider-state error:', e); }
+}
+loadAiProviderStatus();
 
 // ---- iframe pool: 세션별 iframe을 유지하고 show/hide만 토글 ----
 // key 규칙: 'chat:<sid>', 'term:<port>', 'term-new:<localId>'
@@ -237,6 +257,7 @@ function runHomeHotkey(key: string): boolean {
         case 'F2': showTab('file-tab'); FileSearch(); return true;
         case 'F3': showTab('rdp-tab'); return true;
         case 'F4': showTab('ai-tab'); return true;
+        case 'F7': showTab('memo-tab'); return true;
     }
     return false;
 }
@@ -246,6 +267,58 @@ function runHomeHotkey(key: string): boolean {
 function postFrameVisible(f: HTMLIFrameElement | null | undefined, visible: boolean) {
     try { f?.contentWindow?.postMessage({ type: 'frame-visibility', visible }, '*'); } catch (_) {}
 }
+
+function postFrameMessage(key: string, msg: any) {
+    const f = iframePool.get(key);
+    try { f?.contentWindow?.postMessage(msg, '*'); } catch (_) {}
+}
+
+// ---- 공통 iframe 풀 관리 ----
+// AI 탭(chat/term/browser)과 RDP 탭은 각자 독립된 Map/container/activeKey를 쓰지만,
+// "있으면 재사용, 없으면 생성 후 보이기/숨기기 토글" 로직 자체는 동일하므로 여기서 통합한다.
+// 탭마다 다른 부분(생성 시 1회성 와이어링, 전환 시 부가 동작)은 ctx의 훅으로 주입한다.
+interface FramePoolCtx {
+    pool: Map<string, HTMLIFrameElement>;
+    container: HTMLElement;
+    getActiveKey: () => string | null;
+    setActiveKey: (key: string | null) => void;
+    updatePlaceholder: () => void;
+    onCreate?: (f: HTMLIFrameElement, key: string) => void;
+    onActivate?: (key: string, prevKey: string | null) => void;
+}
+
+function showPooledFrame(ctx: FramePoolCtx, key: string, src: string): HTMLIFrameElement {
+    let f = ctx.pool.get(key);
+    if (!f) {
+        f = document.createElement('iframe');
+        f.src = src;
+        f.style.display = 'none';
+        ctx.onCreate?.(f, key);
+        ctx.container.appendChild(f);
+        ctx.pool.set(key, f);
+    }
+    const prevKey = ctx.getActiveKey();
+    if (prevKey && prevKey !== key) {
+        const prev = ctx.pool.get(prevKey);
+        if (prev) prev.style.display = 'none';
+    }
+    f.style.display = 'block';
+    ctx.setActiveKey(key);
+    ctx.updatePlaceholder();
+    ctx.onActivate?.(key, prevKey);
+    return f;
+}
+
+function destroyPooledFrame(ctx: FramePoolCtx, key: string) {
+    const f = ctx.pool.get(key);
+    if (!f) return;
+    f.remove();
+    ctx.pool.delete(key);
+    if (ctx.getActiveKey() === key) ctx.setActiveKey(null);
+    ctx.updatePlaceholder();
+}
+
+const noFocusTermKeys = new Set<string>(); // 키보드 ↑/↓로 세션 탐색 중 새로 만들어지는 터미널 iframe엔 자동 포커스를 막는다 (key별 1회성)
 
 function isAiTabActive(): boolean { return CDOM.ID('ai-tab').classList.contains('active'); }
 function isBrowserSubtabActive(): boolean { return CDOM.ID('ai-browser-subtab').classList.contains('active'); }
@@ -257,18 +330,22 @@ function updateBrowserFrameVisibility() {
     postFrameVisible(f, isAiTabActive() && isBrowserSubtabActive());
 }
 
-function showFrame(key: string, src: string): HTMLIFrameElement {
-    syncFrameContainerSize();
-    let f = iframePool.get(key);
-    if (!f) {
-        f = document.createElement('iframe');
-        f.src = src;
+const aiFrameCtx: FramePoolCtx = {
+    pool: iframePool,
+    container: aiFrameContainer,
+    getActiveKey: () => activeFrameKey,
+    setActiveKey: (key) => { activeFrameKey = key; },
+    updatePlaceholder: updateFramePlaceholder,
+    onCreate: (f, key) => {
         f.setAttribute('allow', 'clipboard-read; clipboard-write');
-        f.style.display = 'none';
         f.addEventListener('load', () => {
-            const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
-            try {
-                f!.contentWindow?.addEventListener('keydown', (e) => {
+                const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
+                if (isTerm) {
+                    if (noFocusTermKeys.has(key)) { noFocusTermKeys.delete(key); }
+                    else { postFrameMessage(key, { type: 'focus-input' }); }
+                }
+                try {
+                    f.contentWindow?.addEventListener('keydown', (e) => {
                     if (isTerm && handleTermSidebarShortcut(e)) return;
                     if (!isTerm && e.key === 'Tab') { e.preventDefault(); handleTabKey(); return; }
                     if (!isTerm && e.key === 'ArrowRight' && _activeNotifCallback) { e.preventDefault(); handleNotifKey(); return; }
@@ -287,46 +364,40 @@ function showFrame(key: string, src: string): HTMLIFrameElement {
                             }
                         }
                     }
-                    if (!isTerm && (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4')) {
+                    if (!isTerm && (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4' || e.key === 'F7')) {
                         e.preventDefault();
                         runHomeHotkey(e.key);
                     }
                 }, true);
             } catch (_) {}
         });
-        aiFrameContainer.appendChild(f);
-        iframePool.set(key, f);
-    }
-    if (activeFrameKey && activeFrameKey !== key) {
-        const prev = iframePool.get(activeFrameKey);
-        if (prev) {
-            prev.style.display = 'none';
-            if (activeFrameKey.startsWith('browser:')) postFrameVisible(prev, false);
-        }
-    }
-    f.style.display = 'block';
-    activeFrameKey = key;
-    updateFramePlaceholder();
-    if (key.startsWith('browser:')) updateBrowserFrameVisibility();
-    return f;
+    },
+    onActivate: (key, prevKey) => {
+        if (prevKey && prevKey.startsWith('browser:')) postFrameVisible(iframePool.get(prevKey), false);
+        if (key.startsWith('browser:')) updateBrowserFrameVisibility();
+    },
+};
+
+function showFrame(key: string, src: string): HTMLIFrameElement {
+    syncFrameContainerSize();
+    return showPooledFrame(aiFrameCtx, key, src);
 }
 
 function destroyFrame(key: string) {
-    const f = iframePool.get(key);
-    if (!f) return;
-    f.remove();
-    iframePool.delete(key);
-    if (activeFrameKey === key) activeFrameKey = null;
-    updateFramePlaceholder();
+    destroyPooledFrame(aiFrameCtx, key);
 }
 
 function focusActiveFrame() {
     if (!activeFrameKey) return;
+    if (activeFrameKey.startsWith('term:') || activeFrameKey.startsWith('term-new:')) {
+        postFrameMessage(activeFrameKey, { type: 'focus-input' });
+        return;
+    }
     const f = iframePool.get(activeFrameKey);
     if (!f) return;
     try {
         f.contentWindow?.focus();
-        const input = f.contentDocument?.querySelector<HTMLElement>('#mi-bar textarea, textarea, input');
+        const input = f.contentDocument?.querySelector<HTMLElement>('textarea, input');
         if (input) {
             input.focus();
             return;
@@ -373,11 +444,11 @@ function aiFormatRelative(ts?: number): string {
 }
 
 function aiEscapeHtml(s: string): string {
-    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]!));
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 }
 
 function aiLoadSession(sid: string) {
-    showFrame(`chat:${sid}`, `./AI/AIChat.html?session=${encodeURIComponent(sid)}`);
+    showFrame(`chat:${sid}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`);
     aiRefreshSessions();
     termRefreshSessions();
 }
@@ -452,8 +523,7 @@ async function aiRefreshSessions() {
                     ], ["Delete", "Cancel"]);
                     delConfirm.Open();
                 },
-                popup: { url: () => `./AI/AIChat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
-                tooltipText: s.title + (s.lastMsg ? '\n\n' + s.lastMsg : ''),
+                popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
             });
             aiSessionList.appendChild(item);
         }
@@ -511,7 +581,7 @@ function chatStartNew(initialWorkingDir?: string) {
             if (workingDir) params.set('workingDir', workingDir);
             if (mdcopyCheck.checked) params.set('mdcopy', '1');
             pendingNewSid = sid;
-            showFrame(`chat:${sid}`, `./AI/AIChat.html?${params.toString()}`);
+            showFrame(`chat:${sid}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?${params.toString()}`);
             aiRefreshSessions();
             termRefreshSessions();
             refreshSessionsSoon();
@@ -585,7 +655,7 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
                 <label class="form-check-label small text-secondary" for="term-opt-mcp">MCP</label>
             </div>
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy">
+                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
                 <label class="form-check-label small text-secondary" for="term-opt-mdcopy">Copy MD</label>
             </div>
         </div>
@@ -623,27 +693,39 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
         const openBtn   = container.querySelector<HTMLButtonElement>('#term-modal-open')!;
         const cancelBtn = container.querySelector<HTMLButtonElement>('#term-modal-cancel')!;
 
+        let opening = false;
         const doOpen = async () => {
-            const key        = keyInput.value.trim();
-            const workingDir = workingDirInput.value.trim();
-            const params = new URLSearchParams({ mode: selectedMode });
-            if (key)        params.set('key', key);
-            if (workingDir) params.set('workingDir', workingDir);
-            if (!mcpCheck.checked) params.set('mcp', '0');
-            if (mdcopyCheck.checked) params.set('mdcopy', '1');
-            modal.Close();
+            if (opening) return;   // ttyd 기동에 시간이 걸려 응답이 늦으므로, 그 사이 중복 클릭 차단
+            opening = true;
+            openBtn.disabled = true;
+            cancelBtn.disabled = true;
+            const openBtnOrigHtml = openBtn.innerHTML;
+            openBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Opening...`;
             try {
+                const key        = keyInput.value.trim();
+                const workingDir = workingDirInput.value.trim();
+                const params = new URLSearchParams({ mode: selectedMode });
+                if (key)        params.set('key', key);
+                if (workingDir) params.set('workingDir', workingDir);
+                if (!mcpCheck.checked) params.set('mcp', '0');
+                if (mdcopyCheck.checked) params.set('mdcopy', '1');
                 const r = await authedFetch(CPath.WebRootUrl() + 'cmd/start-ttyd?' + params.toString());
                 const j = await r.json();
                 if (!j.ok) { alert(j.msg || 'Failed to start terminal'); return; }
-                const key = `term-new:${Date.now()}`;
-                showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${j.port}`);
+                modal.Close();
+                const key2 = `term-new:${Date.now()}`;
+                showFrame(key2, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${j.port}`);
                 aiRefreshSessions();
                 termRefreshSessions();
                 refreshSessionsSoon();
             } catch (e) {
                 console.error('[Terminal] start-ttyd error:', e);
                 alert('Failed to start terminal');
+            } finally {
+                opening = false;
+                openBtn.disabled = false;
+                cancelBtn.disabled = false;
+                openBtn.innerHTML = openBtnOrigHtml;
             }
         };
 
@@ -653,15 +735,17 @@ async function termStartNew(_mode: 'cmd' | 'claude' /* | 'gemini' */ | 'codex' |
     }, MODAL_DOM_DELAY);
 }
 
-async function termConnectSession(port: number) {
+async function termConnectSession(port: number, focusInput: boolean = true) {
     const key = `term:${port}`;
     // 이미 풀에 있으면 그대로 보여주고 끝
     if (iframePool.has(key)) {
         showFrame(key, '');
         aiRefreshSessions();
         termRefreshSessions();
+        if (focusInput) postFrameMessage(key, { type: 'focus-input' });
         return;
     }
+    if (!focusInput) noFocusTermKeys.add(key);
     showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`);
     aiRefreshSessions();
     termRefreshSessions();
@@ -766,7 +850,6 @@ async function termRefreshSessions() {
                 onShare: () => termShowShareLink(s.port),
                 onDelete: () => termConfirmKillSession(s.port),
                 popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${s.port}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.port}` },
-                tooltipText: s.lastMsg || '(empty)',
             });
             termSessionList.appendChild(item);
         }
@@ -782,11 +865,10 @@ function termShowShareLink(port: number) {
 }
 
 function aiShowShareLink(sessionId: string, title: string) {
-    const base = location.pathname.replace(/\/[^/]+$/, '');
     showShareLinkModal(
         'AI Chat Share Link',
         `Anyone with this link can view the chat: <strong>${aiEscapeHtml(title)}</strong>`,
-        `${location.origin}${base}/AI/AIChat.html?session=${encodeURIComponent(sessionId)}&share=1`
+        `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sessionId)}&share=1`
     );
 }
 
@@ -832,6 +914,7 @@ function showShareLinkModal(header: string, descHtml: string, shareUrl: string) 
         </div>
     `);
     modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(480, 160);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
         const input = document.getElementById(uid) as HTMLInputElement | null;
@@ -871,7 +954,6 @@ interface SessionItemSpec {
     onShare: () => void;
     onDelete: () => void;
     popup: { url: () => string; title: string; winName: string };
-    tooltipText?: string;                   // 있으면 CTooltip 부착
     cursorPointer?: boolean;
 }
 function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
@@ -906,12 +988,6 @@ function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
     item.querySelector<HTMLElement>(`[data-act="${spec.deleteAct}"]`)!.addEventListener('click', spec.onDelete);
     item.addEventListener('mouseenter', () => { if (!spec.isActive) item.classList.add('bg-body-secondary'); });
     item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
-    if (spec.tooltipText !== undefined) {
-        const tipEl = document.createElement('div');
-        tipEl.style.cssText = 'white-space:pre-wrap;max-width:280px;font-size:0.82rem;';
-        tipEl.textContent = spec.tooltipText;
-        new CTooltip(tipEl, item, CTooltip.eTrigger.Hover, CTooltip.ePlacement.Left);
-    }
     return item;
 }
 
@@ -1210,7 +1286,7 @@ function goNextSession(dir: 1 | -1): boolean {
             : -1;
         const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
         if (nxt === curIdx) return false;
-        termConnectSession(parseInt(items[nxt].dataset.port!));
+        termConnectSession(parseInt(items[nxt].dataset.port!), false);
         items[nxt].scrollIntoView({ block: 'nearest' });
         return true;
     }
@@ -1292,7 +1368,7 @@ document.addEventListener('keydown', (e) => {
         goNextSession(e.key === 'ArrowUp' ? -1 : 1);
         return;
     }
-    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4' || e.key === 'F7') {
         e.preventDefault();
         runHomeHotkey(e.key);
     }
@@ -1362,14 +1438,13 @@ aiAuthPwInput.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 
 
 // 서브탭 전환 시 해당 리스트 갱신
 CDOM.ID("ai-chat-subtab").addEventListener("shown.bs.tab", () => aiRefreshSessions());
-CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); });
+CDOM.ID("ai-term-subtab").addEventListener("shown.bs.tab", () => { termRefreshSessions(); schedRefresh(); focusActiveFrame(); });
 CDOM.ID("ai-browser-subtab").addEventListener("shown.bs.tab", () => browserRefreshList());
 
 // ---- Browser tab: Playwright sessions ----
 const browserNewBtn      = CDOM.ID("browserNewBtn") as HTMLButtonElement;
-const browserSessionList = CDOM.ID("browserSessionList") as HTMLDivElement;
-
-interface IBrowserSession {
+const browserSessionList = CDOM.ID("browserSessionList");
+interface IBrowserSessionState {
     sessionId: string;
     url: string;
     browserName: string;
@@ -1377,17 +1452,10 @@ interface IBrowserSession {
     sidebarEl: HTMLDivElement;
     ttlEl: HTMLSpanElement;
 }
-
-const browserSessions = new Map<string, IBrowserSession>();
-
-setInterval(() => {
-    for (const s of browserSessions.values()) {
-        s.ttlEl.textContent = browserFmtTtl(s.expiresAt);
-    }
-}, 1000);
+const browserSessions = new Map<string, IBrowserSessionState>();
 
 function browserLoadSession(sessionId: string) {
-    showFrame(`browser:${sessionId}`, `./AI/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    showFrame(`browser:${sessionId}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
     _browserUpdateHighlights();
 }
 
@@ -1414,41 +1482,27 @@ function browserFmtTtl(expiresAt: number): string {
 function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0, navigate = true) {
     if (browserSessions.has(sessionId)) return;
 
-    const sidebarEl = document.createElement('div') as HTMLDivElement;
-    sidebarEl.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded';
-    sidebarEl.innerHTML = `
-        <span class="browser-dot text-danger small flex-shrink-0">●</span>
+    const sidebarEl = createSessionItem({
+        activeClass: 'bg-primary-subtle',
+        isActive: activeFrameKey === `browser:${sessionId}`,
+        dataAttr: { name: 'sid', value: sessionId },
+        leftHtml: `<span class="browser-dot text-danger small flex-shrink-0">●</span>`,
+        bodyHtml: `
         <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
             <span class="text-truncate small" title="${aiEscapeHtml(url)}">${aiEscapeHtml(url)}</span>
             <span class="d-flex gap-2 text-secondary" style="font-size:0.7rem;">
                 <span>${aiEscapeHtml(browserName || 'auto')}</span>
                 <span class="browser-ttl-label"></span>
             </span>
-        </span>
-        <div class="dropdown" style="flex-shrink:0;">
-            <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-three-dots-vertical"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
-                ${POPUP_MENU_ITEMS}
-                <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><button class="dropdown-item text-danger" data-act="delete">🗑️ Delete Session</button></li>
-            </ul>
-        </div>
-    `;
-    const ttlEl = sidebarEl.querySelector<HTMLSpanElement>('.browser-ttl-label')!;
-    sidebarEl.addEventListener('click', (e: Event) => {
-        if ((e.target as HTMLElement).closest('.dropdown')) return;
-        browserLoadSession(sessionId);
+        </span>`,
+        deleteAct: 'delete',
+        deleteLabel: '🗑️ Delete Session',
+        onClick: () => browserLoadSession(sessionId),
+        onShare: () => browserShowShareLink(sessionId, url),
+        onDelete: () => browserRemoveSession(sessionId),
+        popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`, title: url, winName: `browser_${sessionId}` },
     });
-    const dropEl = sidebarEl.querySelector('.dropdown')!;
-    new (window as any).bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]')!, { popperConfig: { strategy: 'fixed' } });
-    sidebarEl.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', () => browserShowShareLink(sessionId, url));
-    wirePopupActions(sidebarEl, () => `./AI/Browser.html?session=${encodeURIComponent(sessionId)}`, url, `browser_${sessionId}`);
-    sidebarEl.querySelector<HTMLElement>('[data-act="delete"]')!.addEventListener('click', () => browserRemoveSession(sessionId));
-    sidebarEl.addEventListener('mouseenter', () => { if (activeFrameKey !== `browser:${sessionId}`) sidebarEl.classList.add('bg-body-secondary'); });
-    sidebarEl.addEventListener('mouseleave', () => sidebarEl.classList.remove('bg-body-secondary'));
+    const ttlEl = sidebarEl.querySelector<HTMLSpanElement>('.browser-ttl-label')!;
     browserSessionList.appendChild(sidebarEl);
 
     browserSessions.set(sessionId, { sessionId, url, browserName, expiresAt, sidebarEl, ttlEl });
@@ -1463,7 +1517,7 @@ async function browserRemoveSession(sessionId: string) {
     browserSessions.delete(sessionId);
     destroyFrame(`browser:${sessionId}`);
     try {
-        await authedFetch(`${CPath.WebRootUrl()}playwright/remove`, {
+        await authedFetch(`${CPath.WebRootUrl()}PlayWright/remove`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId })
@@ -1474,7 +1528,7 @@ async function browserRemoveSession(sessionId: string) {
 async function browserRefreshList() {
     if (document.querySelector('.dropdown-menu.show')) return;
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}playwright/list`);
+        const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
         const j = await r.json();
         if (!j.ok) return;
         const serverIds = new Set<string>((j.sessions as { sessionId: string }[]).map(s => s.sessionId));
@@ -1494,11 +1548,10 @@ async function browserRefreshList() {
 }
 
 function browserShowShareLink(sessionId: string, url: string) {
-    const base = location.pathname.replace(/\/[^/]+$/, '');
     showShareLinkModal(
         'Browser Share Link',
         `Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong>`,
-        `${location.origin}${base}/AI/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`
+        `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`
     );
 }
 
@@ -1561,7 +1614,7 @@ browserNewBtn.addEventListener('click', () => {
             const height = parseInt(heightInput.value);
             modal.Close();
             try {
-                const r = await authedFetch(`${CPath.WebRootUrl()}playwright/push`, {
+                const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/push`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200, width, height })
@@ -1600,27 +1653,20 @@ function updateRdpFrameVisibility() {
     postFrameVisible(rdpIframePool.get(activeRdpFrameKey), isRdpTabActive());
 }
 
+const rdpFrameCtx: FramePoolCtx = {
+    pool: rdpIframePool,
+    container: rdpFrameContainer,
+    getActiveKey: () => activeRdpFrameKey,
+    setActiveKey: (key) => { activeRdpFrameKey = key; },
+    updatePlaceholder: updateRdpFramePlaceholder,
+    onActivate: (_key, prevKey) => {
+        if (prevKey) postFrameVisible(rdpIframePool.get(prevKey), false);
+        updateRdpFrameVisibility();
+    },
+};
+
 function showRdpFrame(key: string, src: string): HTMLIFrameElement {
-    let f = rdpIframePool.get(key);
-    if (!f) {
-        f = document.createElement('iframe');
-        f.src = src;
-        f.style.display = 'none';
-        rdpFrameContainer.appendChild(f);
-        rdpIframePool.set(key, f);
-    }
-    if (activeRdpFrameKey && activeRdpFrameKey !== key) {
-        const prev = rdpIframePool.get(activeRdpFrameKey);
-        if (prev) {
-            prev.style.display = 'none';
-            postFrameVisible(prev, false);
-        }
-    }
-    f.style.display = 'block';
-    activeRdpFrameKey = key;
-    updateRdpFramePlaceholder();
-    updateRdpFrameVisibility();
-    return f;
+    return showPooledFrame(rdpFrameCtx, key, src);
 }
 
 function focusActiveRdpFrame() {
@@ -1648,31 +1694,111 @@ function rdpRenderList() {
     const localItem = document.createElement('div');
     localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
         + (activeRdpFrameKey === 'rdp:local' ? ' bg-primary-subtle' : '');
-    localItem.innerHTML = `<i class="bi bi-pc-display"></i><span class="flex-grow-1">Local</span>`;
+    localItem.innerHTML = `<i class="bi bi-pc-display"></i><span class="flex-grow-1">Local</span>`
+        + `<button type="button" class="btn btn-sm btn-link text-secondary p-0" data-act="local-link" title="Show accessible link"><i class="bi bi-link-45deg"></i></button>`;
     localItem.addEventListener('click', () => rdpOpenLocal());
+    localItem.querySelector<HTMLButtonElement>('[data-act="local-link"]')!.addEventListener('click', (e) => {
+        e.stopPropagation();
+        rdpShowLocalAccessLink();
+    });
     rdpSessionList.appendChild(localItem);
 
     rdpRemotes.forEach((r, i) => {
         const key = `rdp:remote:${i}`;
-        const item = document.createElement('div');
-        item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
-            + (activeRdpFrameKey === key ? ' bg-primary-subtle' : '');
-        item.innerHTML = `
-            <i class="bi bi-hdd-network"></i>
-            <span class="flex-grow-1 text-truncate small">${aiEscapeHtml(r.url)}</span>
-            <button type="button" class="rdp-remote-del btn btn-sm btn-link text-danger p-0" title="Remove"><i class="bi bi-trash"></i></button>
-        `;
-        item.addEventListener('click', (e: Event) => {
-            if ((e.target as HTMLElement).closest('.rdp-remote-del')) return;
-            rdpOpenRemote(i);
-        });
-        item.querySelector('.rdp-remote-del')?.addEventListener('click', (e: Event) => {
-            e.stopPropagation();
-            rdpRemotes.splice(i, 1);
-            rdpRenderList();
+        const item = createSessionItem({
+            activeClass: 'bg-primary-subtle',
+            isActive: activeRdpFrameKey === key,
+            dataAttr: { name: 'idx', value: String(i) },
+            leftHtml: `<i class="bi bi-hdd-network"></i>`,
+            bodyHtml: `<span class="flex-grow-1 text-truncate small">${aiEscapeHtml(r.url)}</span>`,
+            deleteAct: 'delete',
+            deleteLabel: '🗑️ Delete',
+            onClick: () => rdpOpenRemote(i),
+            onShare: () => rdpShowShareLink(r.url),
+            onDelete: () => { rdpRemotes.splice(i, 1); rdpRenderList(); },
+            popup: { url: () => `${ParseFileHomeUrl(r.url).webRootUrl}artgine/server/html/RemoteDesktop.html`, title: r.url, winName: `rdp_${i}` },
         });
         rdpSessionList.appendChild(item);
     });
+}
+
+// 현재 페이지가 localhost로 열려있으면 공인 IP로 바꾸고, fetch(no-cors)로 외부에서
+// 그 포트에 실제로 닿는지 확인한다. no-cors는 응답 본문을 읽을 수 없지만, 연결 자체가
+// 실패(타임아웃/거부)하면 reject되므로 포트 개방 여부 판단에는 충분하다.
+async function rdpResolveAccessibleUrl(): Promise<{ url: string; blocked: boolean }> {
+    const loc = window.location;
+    const isLocalHost = loc.hostname === 'localhost' || loc.hostname === '127.0.0.1' || loc.hostname === '::1';
+    if (!isLocalHost) return { url: loc.href, blocked: false };
+
+    let publicIp = '';
+    try {
+        publicIp = (await (await fetch('https://api.ipify.org?format=text')).text()).trim();
+    } catch (_) {
+        return { url: '', blocked: true };
+    }
+    if (!publicIp) return { url: '', blocked: true };
+
+    const port = loc.port ? `:${loc.port}` : '';
+    const url = `${loc.protocol}//${publicIp}${port}${loc.pathname}${loc.search}`;
+    const reachable = await rdpCheckPortOpen(url);
+    return { url, blocked: !reachable };
+}
+
+function rdpCheckPortOpen(url: string, timeoutMs = 4000): Promise<boolean> {
+    return new Promise(resolve => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => { ctrl.abort(); resolve(false); }, timeoutMs);
+        fetch(url, { mode: 'no-cors', signal: ctrl.signal })
+            .then(() => { clearTimeout(timer); resolve(true); })
+            .catch(() => { clearTimeout(timer); resolve(false); });
+    });
+}
+
+async function rdpShowLocalAccessLink() {
+    const boxId = `rdp_local_link_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Local Access Link');
+    modal.SetBody(`<div id="${boxId}" class="small text-secondary">Checking accessible link...</div>`);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(480, 160);
+    modal.Open(CModal.ePos.Center);
+
+    const { url, blocked } = await rdpResolveAccessibleUrl();
+    const box = document.getElementById(boxId);
+    if (!box) return;
+
+    if (blocked || !url) {
+        box.innerHTML = `<div class="text-danger">Port appears to be blocked from outside access. Please check port forwarding.</div>`;
+        return;
+    }
+
+    const inputId = `${boxId}_input`;
+    const copyId = `${boxId}_copy`;
+    box.className = '';
+    box.innerHTML = `
+        <div class="mb-2 small text-secondary">Accessible link for this page:</div>
+        <div class="input-group">
+            <input id="${inputId}" type="text" class="form-control form-control-sm" readonly value="${aiEscapeHtml(url)}">
+            <button id="${copyId}" class="btn btn-outline-secondary btn-sm" title="Copy"><i class="bi bi-clipboard"></i></button>
+        </div>`;
+    const input = document.getElementById(inputId) as HTMLInputElement | null;
+    const copyBtn = document.getElementById(copyId) as HTMLButtonElement | null;
+    input?.addEventListener('click', () => input.select());
+    copyBtn?.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(url); }
+        catch { input?.select(); document.execCommand('copy'); }
+        copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+        setTimeout(() => { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+    });
+}
+
+function rdpShowShareLink(remoteUrl: string) {
+    const shareUrl = `${ParseFileHomeUrl(remoteUrl).webRootUrl}artgine/server/html/RemoteDesktop.html`;
+    showShareLinkModal(
+        'Remote Desktop Share Link',
+        `Anyone with this link can access the remote desktop: <strong>${aiEscapeHtml(remoteUrl)}</strong>`,
+        shareUrl
+    );
 }
 
 async function rdpOpenLocal() {
@@ -1682,7 +1808,7 @@ async function rdpOpenLocal() {
         CAlert.E("Connect failed: " + (e?.message ?? String(e)));
         return;
     }
-    showRdpFrame('rdp:local', './AI/RemoteDesktop.html');
+    showRdpFrame('rdp:local', `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`);
     rdpRenderList();
 }
 
@@ -1698,7 +1824,7 @@ async function rdpOpenRemote(index: number) {
         return;
     }
     const webRootUrl = ParseFileHomeUrl(remote.url).webRootUrl;
-    showRdpFrame(`rdp:remote:${index}`, `${webRootUrl}proj/Home/AI/RemoteDesktop.html`);
+    showRdpFrame(`rdp:remote:${index}`, `${webRootUrl}artgine/server/html/RemoteDesktop.html`);
     rdpRenderList();
 }
 
@@ -1984,16 +2110,21 @@ function DirListRefresh()
 // F1 File Manager에서 마지막으로 고른 루트를 기억해뒀다가, URL 쿼리(path/RootPath/RootUrl)가 없는
 // 일반 진입 시에는 그 값을 기본 선택으로 복원한다.
 const FILE_ROOT_KEY = 'artgine.fileRoot';
-function loadPersistedFileRoot(): { RootPath: string | null, RootUrl: string | null } {
+// SelKey: 사용자가 File Manager에서 실제로 클릭한 옵션의 식별자.
+// 'workingpath'면 WorkingPath 항목, 그 외엔 설정 루트의 원본(미정규화) path 문자열.
+// RootPath는 서버 왕복(File/Root, File/List)을 거치며 슬래시 정규화 등으로 형태가 바뀌므로,
+// 그 값으로 드롭다운 선택을 역추정하면 다른 루트를 골라도 매칭이 깨진다. 그래서 SelKey를 따로 기억한다.
+function loadPersistedFileRoot(): { RootPath: string | null, RootUrl: string | null, SelKey: string | null } {
     try {
         const v = JSON.parse(localStorage.getItem(FILE_ROOT_KEY) || '{}');
-        return { RootPath: v.RootPath ?? null, RootUrl: v.RootUrl ?? null };
-    } catch { return { RootPath: null, RootUrl: null }; }
+        return { RootPath: v.RootPath ?? null, RootUrl: v.RootUrl ?? null, SelKey: v.SelKey ?? null };
+    } catch { return { RootPath: null, RootUrl: null, SelKey: null }; }
 }
-function savePersistedFileRoot(rootPath: string | null, rootUrl: string | null) {
-    try { localStorage.setItem(FILE_ROOT_KEY, JSON.stringify({ RootPath: rootPath, RootUrl: rootUrl })); } catch {}
+function savePersistedFileRoot(rootPath: string | null, rootUrl: string | null, selKey: string | null) {
+    try { localStorage.setItem(FILE_ROOT_KEY, JSON.stringify({ RootPath: rootPath, RootUrl: rootUrl, SelKey: selKey })); } catch {}
 }
 const _persistedFileRoot = loadPersistedFileRoot();
+let fileRootSelKey: string | null = _persistedFileRoot.SelKey;
 
 let path=CUtilWeb.Parameter("path");
 let RootPath=CUtilWeb.Parameter("RootPath") ?? _persistedFileRoot.RootPath;
@@ -2163,6 +2294,7 @@ async function ConnectFileHomeUrl(input?: string) {
     }
     await LoadFileList(path);
     refreshFileAuthState();
+    memoNotifyRootChanged();
 }
 window["ConnectFileHomeUrl"] = ConnectFileHomeUrl;
 
@@ -2307,8 +2439,17 @@ function showFileAdminModal() {
     const _roots = (gRoots as Array<{path:string,name:string,url?:string}>) ?? [];
     // 설정 루트(맵 + 안티앨리싱) 경로를 텍스트로 통합
     const _opts: Array<{path:string,name:string,url?:string}> = [..._roots, { path: "./", name: "Artgine (WorkingPath)" }];
-    // 현재 활성 항목 표시: RootPath+RootUrl 조합 매칭, 기본(미선택이면 첫 루트)
-    let _curIdx = _opts.findIndex(r => r.path === (RootPath ?? ''));
+    // 현재 활성 항목 표시: 사용자가 마지막으로 클릭한 SelKey로 직접 매칭한다.
+    // (RootPath는 서버 왕복 중 정규화되어 형태가 바뀌므로 비교 기준으로 쓰지 않는다.)
+    let _curIdx = fileRootSelKey === 'workingpath'
+        ? _opts.length - 1
+        : (fileRootSelKey != null ? _roots.findIndex(r => r.path === fileRootSelKey) : -1);
+    if (_curIdx < 0) {
+        // SelKey 기록이 없는 최초 진입 등에는 RootPath로 추정한다.
+        for (let i = _opts.length - 1; i >= 0; i--) {
+            if (_opts[i].path === (RootPath || './')) { _curIdx = i; break; }
+        }
+    }
     if (_curIdx < 0) _curIdx = 0;
     const _rootOpts = _opts.map((r, i) => `<option value="${i}" ${i === _curIdx ? 'selected' : ''}>${r.name}</option>`).join('');
 
@@ -2363,9 +2504,11 @@ function showFileAdminModal() {
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-        const applyValues = async (rootPath: string, rootUrl?: string) => {
+        const applyValues = async (rootPath: string, rootUrl: string | undefined, selKey: string) => {
+            fileRootSelKey = selKey;
+            RootUrl = rootUrl ?? null; // SyncFileRoot는 null을 무시하므로(부분 갱신용) 여기서 직접 초기화해야 이전 루트의 RootUrl이 남지 않는다.
             SyncFileRoot({ RootPath: rootPath || null, RootUrl: rootUrl ?? null });
-            savePersistedFileRoot(rootPath || null, rootUrl ?? null);
+            savePersistedFileRoot(rootPath || null, rootUrl ?? null, selKey);
             // 루트 리스트가 자기 url을 들고 오면 그대로 사용, 없으면(예: WorkingPath) 서버에서 받아온다.
             if (!rootUrl) await InitFileRoot();
             FolderCD("/");
@@ -2374,8 +2517,9 @@ function showFileAdminModal() {
 
         const rootSel = document.getElementById(`fadm_rootsel_${uid}`) as HTMLSelectElement | null;
         rootSel?.addEventListener('change', () => {
-            const r = _opts[parseInt(rootSel.value)];
-            if (r) applyValues(r.path, r.url);
+            const idx = parseInt(rootSel.value);
+            const r = _opts[idx];
+            if (r) applyValues(r.path, r.url, idx === _opts.length - 1 ? 'workingpath' : r.path);
         });
         document.getElementById(`fadm_share_${uid}`)?.addEventListener('click', () => {
             modal.Hide(); FileShare();
@@ -2927,6 +3071,472 @@ window["NextPhoto"]=NextPhoto;
 
 
 
+
+// ==================================================================================================================
+// 메모
+// ==================================================================================================================
+const memoTab = CDOM.ID("memo-tab") as HTMLButtonElement;
+const memoPanel = CDOM.ID("memo") as HTMLDivElement;
+let memoProviders: { id: string; models: { value: string; label: string }[] }[] = [];
+// RDP 전환으로 서버가 바뀌는 도중 이전 서버를 향한 요청이 늦게 응답하면 새로 받아온 목록을
+// 옛 서버 데이터로 덮어쓸 수 있으므로, 서버 전환마다 증가시켜 응답이 최신 전환인지 검증한다.
+let memoLoadGen = 0;
+
+function memoFormatTime(_t: number): string {
+    const s = String(_t);
+    if (s.length < 14) return s;
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
+}
+
+// RDP 전환으로 g_fileWebRootUrl이 바뀌면 Memo도 그 서버를 대상으로 동작해야 하므로,
+// 다른 origin(원격 서버)으로 보내는 요청에 토큰을 직접 동봉한다(쿠키는 cross-origin이라 전달되지 않음).
+async function memoGetJson(_url: string): Promise<any> {
+    const token = GetFileToken();
+    const url = token ? _url + (_url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token) : _url;
+    const r = await authedFetch(url);
+    if (r.status === 401) { removeAuthToken(g_fileWebRootUrl); memoShowAuthOrLoad(); return { ok: false }; }
+    return await r.json();
+}
+
+async function memoPostJson(_url: string, _body: object): Promise<any> {
+    const r = await authedFetch(_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ..._body, token: GetFileToken() }) });
+    if (r.status === 401) { removeAuthToken(g_fileWebRootUrl); memoShowAuthOrLoad(); return { ok: false }; }
+    return await r.json();
+}
+
+async function memoLoadProviders() {
+    if (memoProviders.length > 0) { memoPopulateProviderSelect(); return; }
+    const gen = memoLoadGen;
+    try {
+        const setting = await memoGetJson(FileApiUrl('cmd/setting'));
+        if (gen !== memoLoadGen) return;
+        if (setting.models) {
+            memoProviders = Object.keys(setting.models).map(id => ({ id, models: setting.models[id] || [] }));
+            memoPopulateProviderSelect();
+        }
+    } catch (e) { console.error('memo providers error:', e); }
+}
+
+async function memoShowAuthOrLoad() {
+    const overlay = CDOM.ID("memo-auth-overlay") as HTMLDivElement | null;
+    if (overlay == null) return;
+    const authed = await fileCheckAuth();
+    if (!authed) {
+        refreshFileAuthState();
+        const wasVisible = overlay.style.display === 'flex';
+        overlay.style.display = 'flex';
+        if (!wasVisible) {
+            const pwInput = CDOM.ID("memoAuthPwInput") as HTMLInputElement;
+            const msgEl = CDOM.ID("memoAuthMsg") as HTMLElement;
+            pwInput.value = '';
+            msgEl.textContent = '';
+            setTimeout(() => pwInput.focus(), 50);
+        }
+    } else {
+        refreshFileAuthState();
+        overlay.style.display = 'none';
+        memoLoadProviders();
+        memoLoadRecentLog();
+    }
+}
+
+async function memoDoAuth() {
+    const pwInput = CDOM.ID("memoAuthPwInput") as HTMLInputElement;
+    const msgEl = CDOM.ID("memoAuthMsg") as HTMLElement;
+    const submitBtn = CDOM.ID("memoAuthSubmitBtn") as HTMLButtonElement;
+    const pw = pwInput.value;
+    if (!pw) return;
+    submitBtn.disabled = true;
+    msgEl.textContent = '';
+    try {
+        const j = await CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json") as any;
+        if (j.ok) {
+            SetFileToken(j.token);
+            refreshFileAuthState();
+            (CDOM.ID("memo-auth-overlay") as HTMLDivElement).style.display = 'none';
+            memoLoadProviders();
+            memoLoadRecentLog();
+            warnIfDefaultAuthPassword(pw);
+        } else {
+            msgEl.textContent = j.msg || 'Wrong password';
+        }
+    } catch { msgEl.textContent = 'Server error'; }
+    submitBtn.disabled = false;
+}
+
+function memoPopulateProviderSelect() {
+    const providerEl = CDOM.ID("memoProviderSelect") as HTMLSelectElement;
+    if (providerEl == null) return;
+    providerEl.innerHTML = memoProviders.map(p => `<option value="${p.id}">${p.id}</option>`).join('');
+    memoPopulateModelSelect();
+}
+
+function memoPopulateModelSelect() {
+    const providerEl = CDOM.ID("memoProviderSelect") as HTMLSelectElement;
+    const modelEl = CDOM.ID("memoModelSelect") as HTMLSelectElement;
+    if (providerEl == null || modelEl == null) return;
+    const info = memoProviders.find(p => p.id === providerEl.value);
+    const models = info ? info.models : [];
+    modelEl.innerHTML = models.map(m => `<option value="${m.value}">${aiEscapeHtml(m.label)}</option>`).join('');
+    if (models.length > 0) {
+        modelEl.value = models[Math.floor(models.length / 2)].value;
+    }
+}
+
+async function memoLoadRecentLog() {
+    const gen = memoLoadGen;
+    try {
+        const j = await memoGetJson(FileApiUrl('Memo/List?n=30'));
+        if (gen !== memoLoadGen) return;
+        if (!j.ok) return;
+        const list = j.list as { original: string; keywords: string[]; chatTime: number; selfOffset: number; headOffset: number; lastActivity: number }[];
+        const logEl = CDOM.ID("memo-log");
+        if (logEl == null) return;
+        logEl.innerHTML = '';
+        if (list.length === 0) { memoRenderEmptyLog(); return; }
+        for (let i = list.length - 1; i >= 0; i--) {
+            const r = list[i];
+            const wrap = document.createElement('div');
+            wrap.style.cursor = 'pointer';
+            wrap.dataset.offset = String(r.selfOffset);
+            wrap.innerHTML = `
+                <div class="text-secondary small text-uppercase mb-1" style="letter-spacing: .5px;">${r.headOffset !== r.selfOffset ? `#${r.headOffset}-#${r.selfOffset}` : `#${r.selfOffset}`} · ${memoFormatTime(r.chatTime)}</div>
+                <div class="msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle">${aiEscapeHtml(r.original)}</div>
+                ${r.keywords && r.keywords.length > 0 ? `<div class="mt-2 d-flex flex-wrap gap-1">${r.keywords.map(k => `<span class="badge bg-secondary">#${k}</span>`).join('')}</div>` : ''}
+            `;
+            wrap.addEventListener('click', () => memoOpenChainModal(r.selfOffset));
+            logEl.appendChild(wrap);
+        }
+        memoScrollBottom();
+    } catch (e) { console.error('memo recent log error:', e); }
+}
+
+// 삭제 응답 문구(단건 "메모 X 삭제 완료" / 다건 "N개 메모 삭제 완료:\n[X][시각] ...")에서 삭제된 selfOffset들을 뽑아낸다.
+function memoExtractDeletedOffsets(_text: string): number[] {
+    const offsets = new Set<number>();
+    for (const m of _text.matchAll(/Deleted memo (\d+):/g)) offsets.add(Number(m[1]));
+    for (const m of _text.matchAll(/^\[(\d+)\]/gm)) offsets.add(Number(m[1]));
+    return Array.from(offsets);
+}
+
+// 전체 재조회 없이, 삭제된 selfOffset에 해당하는 항목만 화면 목록에서 제거한다.
+function memoRemoveLogEntries(_offsets: number[]) {
+    const logEl = CDOM.ID("memo-log");
+    if (logEl == null) return;
+    for (const offset of _offsets) {
+        logEl.querySelector(`[data-offset="${offset}"]`)?.remove();
+    }
+    if (logEl.children.length === 0) memoRenderEmptyLog();
+}
+
+type MemoChainItem = { original: string; chatTime: number; selfOffset: number; nextOffset: number };
+
+function memoChainBodyHtml(_chain: MemoChainItem[]): string {
+    const range = _chain.length > 1 ? `#${_chain[0].selfOffset} - #${_chain[_chain.length - 1].selfOffset}` : `#${_chain[0].selfOffset}`;
+    return `
+        <div class="d-flex flex-column h-100">
+            <div class="text-secondary small text-uppercase px-2 pt-2" style="letter-spacing: .5px;">${range}</div>
+            <div id="memoChainLog" class="flex-grow-1 overflow-auto d-flex flex-column gap-2 p-2">
+                ${_chain.map(r => `
+                    <div class="position-relative">
+                        <div class="text-secondary small text-uppercase mb-1" style="letter-spacing: .5px;">#${r.selfOffset} · ${memoFormatTime(r.chatTime)}</div>
+                        <button type="button" class="btn-close memoChainDeleteBtn" data-offset="${r.selfOffset}" aria-label="Delete" style="position:absolute; top:0; right:0;"></button>
+                        <div class="msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle" style="white-space: pre-wrap; word-wrap: break-word;">${aiEscapeHtml(r.original)}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="border-top p-2 d-flex gap-2 align-items-end">
+                <textarea id="memoChainInput" class="form-control" placeholder="Continue this conversation..." rows="1" style="resize: none; max-height: 160px;"></textarea>
+                <button id="memoChainSendBtn" class="btn btn-primary"><i class="bi bi-send"></i></button>
+            </div>
+        </div>
+    `;
+}
+
+async function memoRefreshChainModal(_modal: CModal, _selfOffset: number): Promise<void> {
+    const j = await memoGetJson(FileApiUrl('Memo/Get?offset=' + _selfOffset));
+    if (!j.ok) return;
+    const chain = j.chain as MemoChainItem[];
+    if (chain.length === 0) { _modal.Close(); return; }
+
+    const tail = chain.find(r => r.nextOffset === 0) || chain[chain.length - 1];
+
+    _modal.SetBody(memoChainBodyHtml(chain));
+
+    const body = _modal.GetBody() as HTMLElement;
+    const logEl = body.querySelector('#memoChainLog') as HTMLElement;
+    logEl.scrollTop = logEl.scrollHeight;
+
+    const input = body.querySelector('#memoChainInput') as HTMLTextAreaElement;
+    const sendBtn = body.querySelector('#memoChainSendBtn') as HTMLButtonElement;
+    const send = () => memoChainSend(_modal, input, sendBtn, tail.selfOffset);
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (ev: KeyboardEvent) => {
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); send(); }
+    });
+    input.addEventListener('input', () => {
+        input.style.height = '0';
+        input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    });
+    setTimeout(() => input.focus(), 50);
+
+    body.querySelectorAll('.memoChainDeleteBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const offset = Number((btn as HTMLElement).dataset.offset);
+            memoChainDelete(_modal, chain, offset);
+        });
+    });
+}
+
+async function memoChainDelete(_modal: CModal, _chain: MemoChainItem[], _offset: number): Promise<void> {
+    if (!confirm('이 메모를 삭제할까요?')) return;
+    try {
+        const j = await memoPostJson(FileApiUrl('Memo/Delete'), { offset: _offset });
+        if (!j.ok) { console.error('memo delete error:', j.msg); return; }
+
+        await memoLoadRecentLog();
+        const remaining = _chain.find(r => r.selfOffset !== _offset);
+        if (remaining == null) { _modal.Close(); return; }
+        await memoRefreshChainModal(_modal, remaining.selfOffset);
+    } catch (e) {
+        console.error('memo delete error:', e);
+    }
+}
+
+async function memoChainSend(_modal: CModal, _input: HTMLTextAreaElement, _btn: HTMLButtonElement, _continueOffset: number): Promise<void> {
+    const text = _input.value.trim();
+    if (!text) return;
+
+    _input.disabled = true;
+    _btn.disabled = true;
+    try {
+        const j = await memoPostJson(FileApiUrl('Memo/Chat'), {
+            mode: 'write',
+            text,
+            continueOffset: _continueOffset,
+        });
+        if (!j.ok) { console.error('memo chain send error:', j.msg); return; }
+
+        await memoLoadRecentLog();
+        await memoRefreshChainModal(_modal, _continueOffset);
+    } catch (e) {
+        console.error('memo chain send error:', e);
+    } finally {
+        _input.disabled = false;
+        _btn.disabled = false;
+    }
+}
+
+async function memoOpenChainModal(_selfOffset: number) {
+    const modal = new CModal("memoChainModal");
+    modal.SetTitle(CModal.eTitle.TextFullClose);
+    modal.SetHeader("Memo");
+    modal.SetSize(480, 600);
+    modal.SetBody('<div class="text-center text-secondary p-4">Loading...</div>');
+    modal.Open(CModal.ePos.Center);
+    await memoRefreshChainModal(modal, _selfOffset);
+}
+
+function memoScrollBottom() {
+    const el = CDOM.ID("memo-content");
+    if (el) el.scrollTop = el.scrollHeight;
+}
+
+let memoPendingEl: HTMLElement | null = null;
+
+function memoAppendBubble(_role: 'user' | 'ai' | 'system', _text: string, _pending?: boolean): HTMLElement {
+    const logEl = CDOM.ID("memo-log");
+    if (logEl == null) return null!;
+    const placeholder = logEl.querySelector('#memoEmptyState');
+    if (placeholder) placeholder.remove();
+
+    const roleLabel = _role === 'ai' ? 'Memo' : _role === 'system' ? 'System' : '';
+    const bubbleCls = _role === 'user'
+        ? _pending
+            ? 'msg-bubble p-3 rounded border-start border-4 border-secondary bg-body-tertiary memo-pending'
+            : 'msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle'
+        : _role === 'ai'
+        ? 'msg-bubble p-3 rounded border-start border-4 border-secondary bg-body-tertiary'
+        : 'msg-bubble p-2 px-3 rounded border border-danger bg-danger-subtle text-danger-emphasis';
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+        <div class="text-secondary small text-uppercase mb-1" style="letter-spacing: .5px;">${roleLabel}</div>
+        <div class="${bubbleCls}">${aiEscapeHtml(_text)}</div>
+    `;
+    logEl.appendChild(wrap);
+    memoScrollBottom();
+    return wrap;
+}
+
+function memoRenderEmptyLog() {
+    const logEl = CDOM.ID("memo-log");
+    if (logEl == null) return;
+    logEl.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.id = 'memoEmptyState';
+    empty.className = 'text-center text-secondary mt-5';
+    empty.innerHTML = `
+        <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
+        <div>Enter a new memo.</div>
+    `;
+    logEl.appendChild(empty);
+}
+
+async function memoSend() {
+    const textEl = CDOM.ID("memoTextInput") as HTMLTextAreaElement;
+    const modeEl = CDOM.ID("memoModeSelect") as HTMLSelectElement;
+    const providerEl = CDOM.ID("memoProviderSelect") as HTMLSelectElement;
+    const modelEl = CDOM.ID("memoModelSelect") as HTMLSelectElement;
+    const sendBtn = CDOM.ID("memoSendBtn") as HTMLButtonElement;
+    const text = textEl.value.trim();
+    if (!text) return;
+
+    memoPendingEl = memoAppendBubble('user', text, true);
+    textEl.value = '';
+    textEl.style.height = '0';
+    sendBtn.disabled = true;
+    try {
+        const j = await memoPostJson(FileApiUrl('Memo/Chat'), {
+            provider: providerEl.value || undefined,
+            model: modelEl.value || undefined,
+            mode: modeEl.value,
+            text,
+        });
+        if (!j.ok) { memoAppendBubble('system', j.msg || 'Error'); return; }
+
+        if (j.result === 'saved') {
+            if (memoPendingEl) { memoPendingEl.remove(); memoPendingEl = null; }
+            await memoLoadRecentLog();
+        } else {
+            if (memoPendingEl) {
+                const bubble = memoPendingEl.querySelector('.msg-bubble') as HTMLElement;
+                if (bubble) bubble.className = 'msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle';
+                memoPendingEl = null;
+            }
+            memoAppendBubble('ai', j.result);
+            // 삭제 응답이면 결과 문구에서 삭제된 selfOffset들을 뽑아 전체 재조회 없이 해당 항목만 제거한다.
+            const deletedOffsets = memoExtractDeletedOffsets(j.result);
+            if (deletedOffsets.length > 0) memoRemoveLogEntries(deletedOffsets);
+        }
+    } catch (e) {
+        console.error('memo chat error:', e);
+        memoAppendBubble('system', 'Network error');
+    } finally {
+        sendBtn.disabled = false;
+    }
+}
+
+function memoEnsureLayout() {
+    if (CDOM.ID("memo-content")) return;
+
+    memoPanel.classList.add("position-relative");
+    memoPanel.style.overflow = "hidden";
+    memoPanel.innerHTML = `
+        <style>
+            #memo-content .msg-bubble { white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
+            #memo-content .msg-bubble pre { background: var(--bs-tertiary-bg); padding: .5rem; border-radius: .25rem; overflow-x: auto; }
+            #memo-content .msg-bubble code { font-family: var(--bs-font-monospace); font-size: .875em; }
+            #memo-content .memo-pending { opacity: 0.5; }
+        </style>
+        <div id="memo-auth-overlay" class="position-absolute align-items-center justify-content-center"
+             style="inset:0; z-index:20; background:var(--bs-body-bg); display:none;">
+            <div class="card shadow" style="width:320px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><i class="bi bi-shield-lock"></i> Authentication</h5>
+                    <div class="mb-3">
+                        <input type="password" id="memoAuthPwInput" class="form-control" placeholder="Password">
+                    </div>
+                    <div id="memoAuthMsg" class="text-danger small mb-2" style="min-height:1.2em;"></div>
+                    <button id="memoAuthSubmitBtn" class="btn btn-primary w-100">Sign In</button>
+                </div>
+            </div>
+        </div>
+        <div id="memo-frame-container" class="d-flex flex-column overflow-hidden position-absolute bg-body text-body" style="inset:0;" data-bs-theme="dark">
+            <div id="memo-topbar" class="d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary">
+                <select id="memoModeSelect" class="form-select form-select-sm w-auto">
+                    <option value="auto">Auto</option>
+                    <option value="write">Write</option>
+                    <option value="read">Read</option>
+                </select>
+                <select id="memoProviderSelect" class="form-select form-select-sm w-auto"></select>
+                <select id="memoModelSelect" class="form-select form-select-sm w-auto"></select>
+            </div>
+            <div id="memo-content" class="flex-grow-1 overflow-auto p-3 bg-body">
+                <div id="memo-log" class="d-flex flex-column gap-2">
+                    <div id="memoEmptyState" class="text-center text-secondary mt-5">
+                        <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
+                        <div>Enter a new memo.</div>
+                    </div>
+                </div>
+            </div>
+            <div id="memo-composer" class="border-top bg-body-tertiary p-2">
+                <div class="d-flex gap-2 align-items-end">
+                    <textarea id="memoTextInput" class="form-control" placeholder="Enter memo..." rows="1" style="resize: none; max-height: 200px;"></textarea>
+                    <button id="memoSendBtn" class="btn btn-primary">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    (CDOM.ID("memoProviderSelect") as HTMLSelectElement).addEventListener("change", memoPopulateModelSelect);
+    CDOM.ID("memoSendBtn").addEventListener("click", memoSend);
+    CDOM.ID("memoTextInput").addEventListener("keydown", (ev: KeyboardEvent) => {
+        if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); memoSend(); }
+    });
+    CDOM.ID("memoTextInput").addEventListener("input", () => {
+        const el = CDOM.ID("memoTextInput") as HTMLTextAreaElement;
+        el.style.height = '0';
+        el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+    });
+    CDOM.ID("memo-auth-overlay").addEventListener("keydown", (e) => e.stopPropagation());
+    CDOM.ID("memoAuthSubmitBtn").addEventListener("click", memoDoAuth);
+    (CDOM.ID("memoAuthPwInput") as HTMLInputElement).addEventListener("keydown", (ev: KeyboardEvent) => {
+        if (ev.key === "Enter") memoDoAuth();
+    });
+    memoRenderEmptyLog();
+}
+
+memoEnsureLayout();
+let memoInited = false;
+let memoSyncedRootUrl: string | null = null;
+function memoTryInit() {
+    if (memoInited) return;
+    memoInited = true;
+    memoSyncedRootUrl = g_fileWebRootUrl;
+    memoShowAuthOrLoad();
+}
+memoTab.addEventListener("shown.bs.tab", memoTryInit);
+if (memoTab.classList.contains("active")) memoTryInit();
+
+// RDP 사이드바에서 다른 서버로 전환되면(ConnectFileHomeUrl) Memo도 그 서버 기준으로 다시 로드한다.
+function memoNotifyRootChanged() {
+    if (!memoInited || memoSyncedRootUrl === g_fileWebRootUrl) return;
+    memoSyncedRootUrl = g_fileWebRootUrl;
+    memoLoadGen++;
+    memoProviders = [];
+    memoRenderEmptyLog();
+    memoShowAuthOrLoad();
+}
+
+
+// ==================================================================================================================
+// 다운로드 (MountDownloadTab)
+// ==================================================================================================================
+let dlInited = false;
+CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
+    if (dlInited) return;
+    dlInited = true;
+    MountDownloadTab("download-root");
+});
+if (CDOM.ID("download-panel").classList.contains("active")) {
+    dlInited = true;
+    MountDownloadTab("download-root");
+}
+
+
 // ==================================================================================================================
 // 로그인 (CSing)
 // ==================================================================================================================
@@ -2961,57 +3571,6 @@ loginModal.SetSize(320,640);
 CDOM.ID("login-btn").addEventListener("click",()=>{
     loginModal.Open();
 });
-
-
-// ==================================================================================================================
-// 보드 (CBoard)
-// ==================================================================================================================
-let bClient=null;
-CDOM.ID("board-tab").onclick=()=>{
-    if(bClient==null)
-    {
-        bClient=new CBoard(CDOM.ID("board"),"")
-        bClient.List(0,5);
-    }
-};
-
-
-// ==================================================================================================================
-// 다운로드 (MountDownloadTab)
-// ==================================================================================================================
-let dlInited = false;
-CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
-    if (dlInited) return;
-    dlInited = true;
-    MountDownloadTab("download-root");
-});
-if (CDOM.ID("download-panel").classList.contains("active")) {
-    dlInited = true;
-    MountDownloadTab("download-root");
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

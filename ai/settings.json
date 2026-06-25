@@ -54,55 +54,6 @@
 	  {"command": "node *ai/tool/memo"},
 	  {"command": "node *antigravity-cli/*"}
     ],
-    "deny": [],
-    "annotation": {
-      "log": "ai/ctx/ 에 컨텍스트 JSON 로그를 남길지 여부 (최상위 \"log\" 필드). true=저장, false=저장 안함. false여도 자동 승인(allow/deny)은 그대로 동작함. 기본값 true.",
-      "description": "allow/deny 규칙: 지정된 모든 필드가 일치해야 매칭 (AND 조건). 빈 배열이면 자동 처리 없음.",
-      "matching": {
-        "type": "정확히 일치 (read | write | reply)",
-        "tool": "대소문자 무시 일치",
-        "command": "trimStart 후 prefix 일치 + 단어 경계(공백·점·끝). * 와일드카드 지원(예: *proj/Home/*). \\ 와 / 는 동일하게 취급(정규화). 복합 명령(&&·|·;)은 하위 명령으로 분해해 각각 검사 — 하나라도 write/redirect 포함 시 write로 분류(fail-closed)."
-      },
-      "types": {
-        "read": "상태 변경 없는 읽기·조회 작업",
-        "write": "파일 생성·수정·삭제, git 커밋 등 상태 변경 작업",
-        "reply": "AI 응답 텍스트 — 도구 호출 없음, 자동 처리 대상 아님"
-      },
-      "tools": {
-        "_note"     : "Claude Code / Codex / Antigravity CLI는 각각 고유한 툴 이름을 사용한다. run_command(Antigravity)와 RunShell은 내부적으로 Bash로 정규화됨 — 규칙에서는 tool:Bash로 작성해야 매칭된다. 미등록 툴은 fail-closed로 write 처리(자동승인 안됨).",
-        "Read"        : "파일 읽기                                → type: read",
-        "Glob"        : "파일 패턴 검색                           → type: read",
-        "Grep"        : "파일 내용 검색                           → type: read",
-        "LS"          : "디렉토리 목록                            → type: read",
-        "ListDir"     : "디렉토리 목록 (Antigravity)              → type: read",
-        "SearchFiles" : "파일 검색 (Antigravity)                  → type: read",
-        "WebFetch"    : "웹 URL 조회                              → type: read",
-        "WebSearch"   : "웹 검색                                  → type: read",
-        "TodoRead"    : "Todo 항목 읽기                           → type: read",
-        "Edit"        : "파일 편집 (Claude)                       → type: write",
-        "Write"       : "파일 쓰기 (Claude)                       → type: write",
-        "MultiEdit"   : "다중 위치 편집 (Claude)                  → type: write",
-        "NotebookEdit": "Jupyter 노트북 편집 (Claude)             → type: write",
-        "TodoWrite"   : "Todo 항목 작성                           → type: write",
-        "WriteFile"   : "파일 쓰기 (Codex/기타)                   → type: write",
-        "EditFile"    : "파일 편집 (Codex/기타)                   → type: write",
-        "ReplaceInFile": "파일 내 치환 (Codex/기타)               → type: write",
-        "generate_image": "이미지 생성                            → type: write",
-        "Bash"        : "셸 명령 (Claude / run_command·RunShell 정규화 포함) — 명령 내용으로 read/write 분류",
-        "Node"        : "node / npx / ts-node 실행  → type: write (Bash 분류)",
-        "Python"      : "python / python3 실행      → type: write (Bash 분류)",
-        "Deno"        : "Deno 실행                  → type: write (Bash 분류)",
-        "Bun"         : "Bun 실행                   → type: write (Bash 분류)",
-        "Agent"       : "서브 에이전트 실행          → type: reply"
-      },
-      "rule_examples": [
-        {"allow": {"type": "read"},                         "설명": "모든 읽기 작업 자동 허용"},
-        {"allow": {"tool": "Bash", "type": "read"},         "설명": "Bash 읽기 명령만 허용"},
-        {"allow": {"command": "node ai/tsc_check"},         "설명": "tsc_check 실행만 허용"},
-        {"allow": {"command": "*proj/Home/*"},              "설명": "proj/Home/ 폴더 내 모든 명령·파일 접근 허용 (\\도 /와 동일 취급)"},
-        {"deny":  {"tool": "Edit"},                         "설명": "모든 파일 편집 거부"},
-        {"deny":  {"type": "write"},                        "설명": "모든 쓰기 작업 거부"}
-      ]
-    }
+    "deny": []
   }
 }

@@ -379,6 +379,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     let oHTML = CUtil.ArrayToString(buf);
     buf = await CFile.Load(savePath + ".ts");
     let oTS = CUtil.ArrayToString(buf);
+    await ReplaceArtginePathsInFolder(projectRoot + _json.projectPath, upFolder, projectRoot + _json.projectPath);
     let oMF = _json.manifast;
     let IStr = "";
     let MStr = "";
@@ -431,17 +432,25 @@ ipcMain.handle("NewPage", async (_event, _json) => {
         upFolder = "https://06fs4dix.github.io/Artgine/";
         ChromeStartCreate();
     }
-    if (oHTML != "" && oHTML.indexOf("EntryPoint") == -1) {
+    let isEmptyProject = (oHTML == "" && oTS == "");
+    let htmlManual = oHTML != "" && oHTML.indexOf("<!--EntryPoint-->") == -1;
+    let tsManual = oTS != "" && oTS.indexOf("//EntryPoint") == -1;
+    let htmlSkip = htmlManual || (!isEmptyProject && oHTML == "");
+    let tsSkip = tsManual || (!isEmptyProject && oTS == "");
+    if (htmlManual || tsManual) {
         ChromeStartCreate();
-        await ReplaceArtginePathsInFolder(projectRoot + _json.projectPath, upFolder, projectRoot + _json.projectPath);
+        let manualMsg = "";
+        if (htmlManual)
+            manualMsg += "No <!--EntryPoint--> marker found in html. Recognized as manually created. Auto code generation for html will not work.\n";
+        if (tsManual)
+            manualMsg += "No //EntryPoint marker found in ts. Recognized as manually created. Auto code generation for ts will not work.\n";
         dialog.showMessageBoxSync({
-            type: 'error',
+            type: 'info',
             buttons: ['OK'],
             defaultId: 0,
             title: 'info',
-            message: 'No <!--EntryPoint--> marker found. Recognized as manually created. Auto code generation will not work.',
+            message: manualMsg,
         });
-        return "";
     }
     if (_json.projetJSON.includes["pakozlib"]) {
         IStr += "<script type='text/javascript' src='" + upFolder + "artgine/external/legacy/pako-master/dist/pako.min.js'></script>\n";
@@ -548,118 +557,123 @@ ipcMain.handle("NewPage", async (_event, _json) => {
     if (oMF != "") {
         bMF = JSON.stringify(oMF);
     }
-    if (oTS != "") {
-        pos = bTS.indexOf("//EntryPoint");
-        let epStr = oTS.substring(oTS.indexOf("//EntryPoint") + 12, oTS.length);
-        epStr = epStr.replace(/^.*$/gm, (line) => {
-            if (!/\bimport\b/.test(line))
-                return line;
-            return line.replace(/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g, (match, quote, path) => {
-                const cleanUpFolder = upFolder.replace(/\/+$/, '');
-                const cleanPath = path.replace(/^\/+/, '');
-                return `${quote}${cleanUpFolder}/${cleanPath}`;
+    if (!(htmlSkip && tsSkip)) {
+        CCMDMgr.CreateEmptyFolder(projectRoot + _json.projectPath + "/Canvas");
+        CCMDMgr.CreateEmptyFolder(projectRoot + _json.projectPath + "/BackUp");
+        BackUp(projectRoot + _json.projectPath + "/BackUp", projectRoot + _json.projectPath + "/Canvas");
+        await CFile.Save(bSW, projectRoot + _json.projectPath + "/ServiceWorker.js");
+        await CFile.Save(bMF, savePath + ".webmanifest");
+        await CFile.Save(_json.projetJSON, savePath + ".json");
+    }
+    if (!tsSkip) {
+        if (oTS != "") {
+            pos = bTS.indexOf("//EntryPoint");
+            let epStr = oTS.substring(oTS.indexOf("//EntryPoint") + 12, oTS.length);
+            epStr = epStr.replace(/^.*$/gm, (line) => {
+                if (!/\bimport\b/.test(line))
+                    return line;
+                return line.replace(/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g, (match, quote, path) => {
+                    const cleanUpFolder = upFolder.replace(/\/+$/, '');
+                    const cleanPath = path.replace(/^\/+/, '');
+                    return `${quote}${cleanUpFolder}/${cleanPath}`;
+                });
             });
-        });
-        await ReplaceArtginePathsInFolder(projectRoot + _json.projectPath, upFolder, projectRoot + _json.projectPath);
-        bTS = CString.InsertAt(bTS, pos + 12, epStr);
-    }
-    else {
-        bTS += "\nimport {CObject} from \"" + upFolder + "artgine/basic/CObject.js\"";
-    }
-    const gVersion = CUniqueID.Get();
-    let pfStr = "\nimport {CPreferences} from \"" + upFolder + "artgine/basic/CPreferences.js\";\n";
-    pfStr += "var gPF = new CPreferences();\n";
-    const pref = _json.projetJSON.preference;
-    for (const key in pref) {
-        const value = pref[key];
-        if (typeof value === "string") {
-            pfStr += `gPF.${key} = "${value}";\n`;
+            bTS = CString.InsertAt(bTS, pos + 12, epStr);
         }
         else {
-            pfStr += `gPF.${key} = ${value};\n`;
+            bTS += "\nimport {CObject} from \"" + upFolder + "artgine/basic/CObject.js\"";
+        }
+        const gVersion = CUniqueID.Get();
+        let pfStr = "\nimport {CPreferences} from \"" + upFolder + "artgine/basic/CPreferences.js\";\n";
+        pfStr += "var gPF = new CPreferences();\n";
+        const pref = _json.projetJSON.preference;
+        for (const key in pref) {
+            const value = pref[key];
+            if (typeof value === "string") {
+                pfStr += `gPF.${key} = "${value}";\n`;
+            }
+            else {
+                pfStr += `gPF.${key} = ${value};\n`;
+            }
+        }
+        pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
+        pfStr += `gPF.mGitHub = ${_json.appJSON.github};\n`;
+        pfStr += `gPF.mVersion = "${gVersion}";\n`;
+        if (_json.projetJSON.preference.mIAuto) {
+            pfStr += "\nimport {CAtelier} from \"" + upFolder + "artgine/app/CAtelier.js\";\n";
+            pfStr += "\nimport {CPlugin} from \"" + upFolder + "artgine/util/CPlugin.js\";\n";
+            for (let p in _json.projetJSON.dependencies) {
+                pfStr += "CPlugin.PushPath('" + p + "','" + upFolder + "plugin/" + p + "/');\n";
+                pfStr += "import \"" + upFolder + "plugin/" + p + "/" + p + ".js\"\n";
+            }
+            pfStr += "var gAtl = new CAtelier();\n";
+            pfStr += "gAtl.mPF = gPF;\n";
+            pfStr += "await gAtl.Init([";
+            let add = false;
+            for (let canName of canvasList) {
+                if (canName.indexOf("Brush") != -1)
+                    continue;
+                if (add)
+                    pfStr += ",";
+                pfStr += "'" + canName + "'";
+                add = true;
+            }
+            pfStr += `],"${pref.mCanvas}");\n`;
+            for (let canName of canvasList) {
+                if (canName.indexOf("Brush") !== -1)
+                    continue;
+                const baseName = canName.replace(/\.json$/i, "");
+                pfStr += "var " + baseName + " = gAtl.Canvas('" + canName + "');\n";
+            }
+            pfStr += "//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥\n";
+        }
+        if (DependenciesChk(_json.projetJSON.dependencies)) {
+            dialog.showMessageBoxSync({
+                type: 'error',
+                buttons: ['확인'],
+                defaultId: 0,
+                title: 'Plugin',
+                message: '프로젝트 플러그인 에러',
+            });
+        }
+        bTS = CString.InsertAt(bTS, bTS.indexOf("//Version") + 9, "\nimport \"" + upFolder + "artgine/artgine.js\"\n");
+        bTS = CString.InsertAt(bTS, bTS.indexOf("//Atelier") + 9, pfStr);
+        let ClassStr = "import {CClass} from \"" + upFolder + "artgine/basic/CClass.js\";\n";
+        ClassStr += GenerateCClassPushes(projectRoot + _json.projectPath, savePath + ".ts");
+        bTS = CString.InsertAt(bTS, bTS.indexOf("//Class") + 7, "\n" + ClassStr);
+        await CFile.Save(bTS, savePath + ".ts");
+        let waitTS = await WaitForBuild(savePath + ".ts");
+        if (waitTS) {
+            dialog.showMessageBoxSync({
+                type: 'error',
+                buttons: ['OK'],
+                defaultId: 0,
+                title: 'info',
+                message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
+            });
+            return "error";
         }
     }
-    pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
-    pfStr += `gPF.mGitHub = ${_json.appJSON.github};\n`;
-    pfStr += `gPF.mVersion = "${gVersion}";\n`;
-    if (_json.projetJSON.preference.mIAuto) {
-        pfStr += "\nimport {CAtelier} from \"" + upFolder + "artgine/app/CAtelier.js\";\n";
-        pfStr += "\nimport {CPlugin} from \"" + upFolder + "artgine/util/CPlugin.js\";\n";
-        for (let p in _json.projetJSON.dependencies) {
-            pfStr += "CPlugin.PushPath('" + p + "','" + upFolder + "plugin/" + p + "/');\n";
-            pfStr += "import \"" + upFolder + "plugin/" + p + "/" + p + ".js\"\n";
+    if (!htmlSkip) {
+        if (_json.appJSON.github == true) {
+            buf = await CFile.Load(savePath + ".js");
+            IStr += "<script type='module'>\n";
+            IStr += CUtil.ArrayToString(buf);
+            IStr += "</script>\n";
         }
-        pfStr += "var gAtl = new CAtelier();\n";
-        pfStr += "gAtl.mPF = gPF;\n";
-        pfStr += "await gAtl.Init([";
-        let add = false;
-        for (let canName of canvasList) {
-            if (canName.indexOf("Brush") != -1)
-                continue;
-            if (add)
-                pfStr += ",";
-            pfStr += "'" + canName + "'";
-            add = true;
+        else {
+            IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
         }
-        pfStr += `],"${pref.mCanvas}");\n`;
-        for (let canName of canvasList) {
-            if (canName.indexOf("Brush") !== -1)
-                continue;
-            const baseName = canName.replace(/\.json$/i, "");
-            pfStr += "var " + baseName + " = gAtl.Canvas('" + canName + "');\n";
+        pos = bHTML.indexOf("<!--Include-->");
+        bHTML = CString.InsertAt(bHTML, pos + 14, IStr);
+        if (oHTML != "") {
+            pos = bHTML.indexOf("<!--EntryPoint-->");
+            bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
+            bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
         }
-        pfStr += "//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥\n";
+        bHTML = "<title>" + projectName + "</title>\n" + bHTML;
+        await CFile.Save(bHTML, savePath + ".html");
     }
-    if (DependenciesChk(_json.projetJSON.dependencies)) {
-        dialog.showMessageBoxSync({
-            type: 'error',
-            buttons: ['확인'],
-            defaultId: 0,
-            title: 'Plugin',
-            message: '프로젝트 플러그인 에러',
-        });
-    }
-    bTS = CString.InsertAt(bTS, bTS.indexOf("//Version") + 9, "\nimport \"" + upFolder + "artgine/artgine.js\"\n");
-    bTS = CString.InsertAt(bTS, bTS.indexOf("//Atelier") + 9, pfStr);
-    let ClassStr = "import {CClass} from \"" + upFolder + "artgine/basic/CClass.js\";\n";
-    ClassStr += GenerateCClassPushes(projectRoot + _json.projectPath, savePath + ".ts");
-    bTS = CString.InsertAt(bTS, bTS.indexOf("//Class") + 7, "\n" + ClassStr);
-    CCMDMgr.CreateEmptyFolder(projectRoot + _json.projectPath + "/Canvas");
-    CCMDMgr.CreateEmptyFolder(projectRoot + _json.projectPath + "/BackUp");
-    BackUp(projectRoot + _json.projectPath + "/BackUp", projectRoot + _json.projectPath + "/Canvas");
-    await CFile.Save(bSW, projectRoot + _json.projectPath + "/ServiceWorker.js");
-    await CFile.Save(bMF, savePath + ".webmanifest");
-    await CFile.Save(bTS, savePath + ".ts");
-    await CFile.Save(_json.projetJSON, savePath + ".json");
-    let waitTS = await WaitForBuild(savePath + ".ts");
-    if (waitTS) {
-        dialog.showMessageBoxSync({
-            type: 'error',
-            buttons: ['OK'],
-            defaultId: 0,
-            title: 'info',
-            message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
-        });
-        return "error";
-    }
-    if (_json.appJSON.github == true) {
-        buf = await CFile.Load(savePath + ".js");
-        IStr += "<script type='module'>\n";
-        IStr += CUtil.ArrayToString(buf);
-        IStr += "</script>\n";
-    }
-    else {
-        IStr += "<script type='module' src='" + projectName + ".js'></script>\n";
-    }
-    pos = bHTML.indexOf("<!--Include-->");
-    bHTML = CString.InsertAt(bHTML, pos + 14, IStr);
-    if (oHTML != "") {
-        pos = bHTML.indexOf("<!--EntryPoint-->");
-        bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
-        bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
-    }
-    bHTML = "<title>" + projectName + "</title>\n" + bHTML;
-    await CFile.Save(bHTML, savePath + ".html");
     let appChange = false;
     if (gAppJSON.program !== _json.appJSON.program)
         appChange = true;
@@ -743,52 +757,6 @@ ipcMain.handle("LoadServiceWorker", async (_event, _json) => {
     bSW.CACHE_NAME = CUniqueID.GetHash();
     return JSON.stringify(bSW);
 });
-export function GetPrivateIP() {
-    const interfaces = os.networkInterfaces();
-    for (const name of Object.keys(interfaces)) {
-        for (const net of interfaces[name]) {
-            if (net.family === 'IPv4' && !net.internal) {
-                return net.address;
-            }
-        }
-    }
-    return '127.0.0.1';
-}
-export async function GetPublicIP() {
-    const ipServices = [
-        'https://api.ipify.org',
-        'https://ifconfig.me/ip',
-        'https://ipinfo.io/ip',
-    ];
-    for (const url of ipServices) {
-        try {
-            const ip = await fetchText(url);
-            if (ip && isValidIP(ip))
-                return ip;
-        }
-        catch (err) {
-            console.warn(`⚠️ Failed to fetch from ${url}`);
-        }
-    }
-    return 'Unavailable';
-}
-function fetchText(url) {
-    return new Promise((resolve, reject) => {
-        https
-            .get(url, (res) => {
-            let data = '';
-            res.on('data', chunk => (data += chunk));
-            res.on('end', () => resolve(data.trim()));
-        })
-            .on('error', reject)
-            .setTimeout(3000, function () {
-            this.destroy(new Error('Timeout'));
-        });
-    });
-}
-function isValidIP(ip) {
-    return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
-}
 function checkHttp(url, timeout = 3000) {
     return new Promise(resolve => {
         const lib = url.startsWith('https') ? https : http;
@@ -807,8 +775,8 @@ ipcMain.handle("GetIPInfo", async (_event) => {
     const pathname = parsed.pathname;
     let projectName = GetProjName(gAppJSON.projectPath);
     let ipInfo = { private: "", public: "", url: "" };
-    ipInfo.private = GetPrivateIP();
-    ipInfo.public = await GetPublicIP();
+    ipInfo.private = CServerMain.GetPrivateIP();
+    ipInfo.public = await CServerMain.GetPublicIP();
     ipInfo.url = gAppJSON.url + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     ipInfo.private = protocol + "//" + ipInfo.private + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     const publicPage = protocol + "//" + ipInfo.public + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;

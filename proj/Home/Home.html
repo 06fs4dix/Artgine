@@ -75,7 +75,7 @@
 <script src='../../artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
 <link rel='manifest' href='./Home.webmanifest'/>
 <script>
-let SERVER_BASE='http://localhost:8000/Artgine/proj/Home/Home.html';
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Home/Home.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
@@ -104,24 +104,24 @@ if (location.protocol == 'file:' && isElectron==false){
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="rdp-tab" data-bs-toggle="tab" data-bs-target="#rdp-panel" type="button"
-            role="tab" aria-controls="rdp-panel" aria-selected="true" data-en="RDP"><i class="bi bi-display"></i> RDP <span class="text-secondary" style="font-size:0.7em;">F3</span></button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab"
-            aria-controls="board" aria-selected="false" data-en="Board"><i class="bi bi-kanban-fill"></i> Board</button>
+            role="tab" aria-controls="rdp-panel" aria-selected="true" data-en="RDP"><i class="bi bi-display"></i> RDP<span class="text-secondary" style="font-size:0.7em;">F3</span></button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab"
-            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files <span class="text-secondary" style="font-size:0.7em;">F1/F2</span></button>
-    </li>
-    <!-- 로그인 버튼 (오른쪽 정렬) -->
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
-            role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> Download</button>
+            aria-controls="file" aria-selected="false" data-en="File"><i class="bi bi-folder-fill"></i> Files<span class="text-secondary" style="font-size:0.7em;">F1/F2</span></button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-panel" type="button"
-            role="tab" aria-controls="ai-panel" aria-selected="false" data-en="AI"><i class="bi bi-robot"></i> AI <span class="text-secondary" style="font-size:0.7em;">F4</span></button>
+            role="tab" aria-controls="ai-panel" aria-selected="false" data-en="AI"><i class="bi bi-robot"></i> AI<span class="text-secondary" style="font-size:0.7em;">F4</span></button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo" type="button" role="tab"
+            aria-controls="memo" aria-selected="false" data-en="Memo"><i class="bi bi-journal-text"></i> Memo<span class="text-secondary" style="font-size:0.7em;">F7</span></button>
+    </li>
+	<!-- 로그인 버튼 (오른쪽 정렬) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
+            role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> Down</button>
     </li>
     <li class="nav-item ms-auto" role="presentation">
         <button class="btn btn-outline-success me-1 mt-1" id="install-btn" type="button" style="display:none;">
@@ -158,7 +158,7 @@ if (location.protocol == 'file:' && isElectron==false){
             </div>
         </div>
     </div>
-    <div class="tab-pane h-100" id="board" role="tabpanel" aria-labelledby="board-tab" style="overflow-x: hidden;">
+    <div class="tab-pane h-100" id="memo" role="tabpanel" aria-labelledby="memo-tab" style="overflow-x: hidden;">
     </div>
     <div class="tab-pane h-100" id="file" role="tabpanel" aria-labelledby="file-tab" style="overflow-y:auto;">
         <div id='Menu_div'></div>
@@ -186,17 +186,17 @@ if (location.protocol == 'file:' && isElectron==false){
             <ul class="nav nav-tabs nav-fill" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="ai-chat-subtab" data-bs-toggle="tab" data-bs-target="#ai-chat-pane" type="button" role="tab">
-                        <i class="bi bi-chat-dots"></i> Chat <span class="opacity-50" style="font-size:0.65rem;">1</span>
+                        <i class="bi bi-chat-dots"></i> Chat<span class="opacity-50" style="font-size:0.65rem;">1</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="ai-term-subtab" data-bs-toggle="tab" data-bs-target="#ai-term-pane" type="button" role="tab">
-                        <i class="bi bi-terminal"></i> Term <span class="opacity-50" style="font-size:0.65rem;">2</span>
+                        <i class="bi bi-terminal"></i> Term<span class="opacity-50" style="font-size:0.65rem;">2</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="ai-browser-subtab" data-bs-toggle="tab" data-bs-target="#ai-browser-pane" type="button" role="tab">
-                        <i class="bi bi-browser-chrome"></i> Web <span class="opacity-50" style="font-size:0.65rem;">3</span>
+                        <i class="bi bi-browser-chrome"></i>Brow<span class="opacity-50" style="font-size:0.65rem;">3</span>
                     </button>
                 </li>
             </ul>
@@ -243,6 +243,10 @@ if (location.protocol == 'file:' && isElectron==false){
             <div id="ai-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center"
                  style="inset:0;overflow-y:auto;background:var(--bs-body-bg);">
                 <div class="p-4" style="max-width:560px;width:100%;">
+                    <div class="mb-4">
+                        <div class="text-secondary fw-semibold mb-2"><i class="bi bi-robot"></i> Provider Status</div>
+                        <div id="aiProviderStatus" class="d-flex flex-column gap-2"></div>
+                    </div>
                     <h5 class="mb-3 text-secondary"><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h5>
                     <div class="mb-3">
                         <div class="small text-secondary fw-semibold mb-1">Global</div>
@@ -257,7 +261,7 @@ if (location.protocol == 'file:' && isElectron==false){
                         <div class="small text-secondary fw-semibold mb-1">AI Panel</div>
                         <ul class="list-unstyled small mb-0">
                             <li><kbd>Tab</kbd> Toggle sidebar</li>
-                            <li><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> Switch Chat / Terminal / Web subtab</li>
+                            <li><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> Switch Chat / Terminal / Brow subtab</li>
                             <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
                             <li><kbd>&rarr;</kbd> Jump to notification session</li>
                             <li><kbd>&larr;</kbd> Return to previous session</li>
@@ -273,8 +277,7 @@ if (location.protocol == 'file:' && isElectron==false){
                             <li><kbd>Esc</kbd> Close autocomplete</li>
                             <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Navigate autocomplete, or move cursor when input is empty</li>
                             <li><kbd>Ctrl</kbd>+<kbd>T</kbd> Scroll to bottom</li>
-                            <li><kbd>F6</kbd> Toggle SUPER (auto-approve)</li>
-                            <li><kbd>F7</kbd> Show / focus input bar</li>
+                            <li><kbd>F6</kbd> Toggle SUPER (auto-approve) + focus input bar</li>
                         </ul>
                     </div>
                 </div>

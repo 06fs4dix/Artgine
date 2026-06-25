@@ -8,6 +8,7 @@ import { CAI } from '../util/CAI.js';
 AI Chat Router
 - /ai/chat                            GET    AI.html serve
 - /ai/chat/sessions                   GET    session list
+  (provider 목록은 /cmd/setting으로 이전됨 — CTerminalRouter 참고)
 - /ai/chat/sessions/:id               GET    history.json
 - /ai/chat/sessions/:id               DELETE remove session + workspace
 - /ai/chat/session/config?id=         GET    세션 config 조회
@@ -39,11 +40,10 @@ interface ISessionMeta {
 }
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
-@URLPatterns(["/ai/chat/providers", "/ai/chat/sessions", "/ai/chat/session", "/ai/chat/session/config", "/ai/chat/session/upload", "/ai/chat/share", "/ai/chat/share/file", "/ai/chat/workspace"])
+@URLPatterns(["/ai/chat/sessions", "/ai/chat/session", "/ai/chat/session/config", "/ai/chat/session/upload", "/ai/chat/share", "/ai/chat/share/file", "/ai/chat/workspace"])
 export class CAIChatRouter extends CAuthServer {
     constructor() {
         super();
-        this.On("/ai/chat/providers",       this.onGetProviders.bind(this));
         this.On("/ai/chat/sessions",        this.onGetSessions.bind(this));
         this.On("/ai/chat/session",         this.onSession.bind(this));
         this.On("/ai/chat/session/config",  this.onSessionConfig.bind(this));
@@ -56,7 +56,6 @@ export class CAIChatRouter extends CAuthServer {
     override Connect() { super.Connect(); this._connectImpl(); }
     _connectImpl() {}
 
-    async onGetProviders(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onGetSessions(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSession(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSessionConfig(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }

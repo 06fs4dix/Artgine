@@ -87,6 +87,9 @@ export class CServerMain
         gMain=this;
     }
     static Main()   {   return gMain;   }
+    static GetPrivateIP(): string { return '127.0.0.1'; }
+    static async GetPublicIP(): Promise<string> { return 'Unavailable'; }
+    static async GetAccessibleHost(_port: number): Promise<string> { return 'http://localhost'; }
     GetServer() {   return this.mServer;    }
     GetPath(){  return this.mPath;  }
     GetApp(){  return this.mApp;  }

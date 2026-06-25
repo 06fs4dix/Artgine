@@ -25,19 +25,8 @@ interface ISessionMeta {
 }
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
-interface IProviderInfo {
-    id: Provider; available: boolean; version: string;
-    models: { value: string; label: string }[];
-}
-// populated from GET /ai/chat/providers (server probes installed CLI on startup)
+// populated from GET /cmd/setting (ai/settings.json을 그대로 받아 models 필드만 사용)
 let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [] };
-let PROVIDER_INFO: Record<Provider, IProviderInfo> = {
-    claude:       { id: 'claude',       available: false, version: '', models: [] },
-    // gemini:       { id: 'gemini',       available: false, version: '', models: [] },
-    codex:        { id: 'codex',        available: false, version: '', models: [] },
-    antigravity:  { id: 'antigravity',  available: false, version: '', models: [] },
-    opencode:     { id: 'opencode',     available: false, version: '', models: [] },
-};
 const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
 const LS_MODEL    = 'ai.model';
@@ -241,15 +230,12 @@ function attachmentUrl(sid: string, relPath: string, bust?: number): string {
 // ---- provider/model dropdowns ----
 async function fetchProviders(): Promise<boolean> {
     try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'ai/chat/providers');
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/setting');
         if (r.status === 401) { clearAuth(); return false; }
-        const j = await r.json();
-        if (!j.ok || !Array.isArray(j.providers)) return false;
-        for (const p of j.providers as IProviderInfo[]) {
-            if (p.id === 'claude' /* || p.id === 'gemini' */ || p.id === 'codex' || p.id === 'antigravity' || p.id === 'opencode') {
-                PROVIDER_INFO[p.id] = p;
-                MODELS[p.id] = p.models || [];
-            }
+        const setting = await r.json();
+        const models = setting.models || {};
+        for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode'] as Provider[]) {
+            MODELS[id] = models[id] || [];
         }
         return true;
     } catch { return false; }

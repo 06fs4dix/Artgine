@@ -7,7 +7,7 @@ import { CAI } from '../util/CAI.js';
 
 /*
 Memo Router
-- /Memo/Chat   POST  provider, model, mode(read|write|auto), text, continueOffset? -> 메모 저장/검색 응답
+- /Memo/Chat   POST  provider, model, mode(read|write|auto|delete), text, continueOffset? -> 메모 저장/검색/삭제 응답
 - /Memo/List   GET   n -> 전체 레코드 중 작성 시각(chatTime) 기준 최근 n개 (체인 구분 없이 평면 목록)
 - /Memo/Get    GET   offset -> 해당 오프셋이 속한 체인 전체
 - /Memo/Delete POST  offset -> 해당 오프셋 레코드 삭제 (체인 앞뒤 재연결)
@@ -37,7 +37,7 @@ export class CMemoRouter extends CAuthServer {
         if (!text) { _res.status(400).json({ ok: false, msg: 'text 필요' }); return null; }
 
         const modeStr = (_json.GetStr('mode') as string) || 'auto';
-        const modeMap: Record<string, boolean | null> = { read: false, write: true, auto: null };
+        const modeMap: Record<string, boolean | null | 'delete'> = { read: false, write: true, auto: null, delete: 'delete' };
         if (!(modeStr in modeMap)) { _res.status(400).json({ ok: false, msg: 'Invalid mode' }); return null; }
 
         const providerStr = _json.GetStr('provider') as string | undefined;
@@ -46,8 +46,13 @@ export class CMemoRouter extends CAuthServer {
         const continueOffsetRaw = _json.GetInt('continueOffset');
         const continueOffset = continueOffsetRaw == null ? undefined : Number(continueOffsetRaw);
 
-        const result = await CMemo.Chat(text, modeMap[modeStr], provider, model, continueOffset);
-        _res.json({ ok: true, result });
+        try {
+            const result = await CMemo.Chat(text, modeMap[modeStr], provider, model, continueOffset);
+            _res.json({ ok: true, result });
+        } catch (e: any) {
+            // CAI.Chat은 설치는 자동으로 처리하므로, 평범한 상황에서 여기로 오는 에러는 대부분 미인증 상태다.
+            _res.status(500).json({ ok: false, msg: e?.message || 'AI call failed' });
+        }
         return null;
     }
 

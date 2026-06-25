@@ -150,7 +150,8 @@ export class CFileServer extends CAuthServer
         const roots = GetRootPaths(_cfg).map((p, i) => ({ path: p, url: serverPath + '/Root' + i, name: p }));
         const requestedRootPath = _json.GetStr("RootPath");
         const requestedRootUrl = _json.GetStr("RootUrl");
-        const root = roots.find(r => r.path === requestedRootPath || r.url === requestedRootUrl) ?? roots[0];
+        const root = (!requestedRootPath && !requestedRootUrl) ? roots[0]
+            : roots.find(r => (requestedRootPath && resolveAbs(r.path) === resolveAbs(requestedRootPath)) || r.url === requestedRootUrl) ?? roots[0];
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
         return JSON.stringify({
             RootPath: fix(root.path),

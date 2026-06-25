@@ -1,0 +1,17 @@
+{
+  "width": 1024,
+  "height": 768,
+  "fullScreen": false,
+  "program": "developer",
+  "url": "http://localhost:7000/Artgine",
+  "projectPath": "help",
+  "page": "html",
+  "server": "webServer",
+  "github": false,
+  "tsc": true,
+  "password": "artgine",
+  "rootPath": [
+    "./",
+    "C:\\Users\\JHPC\\Desktop\\git"
+  ]
+}

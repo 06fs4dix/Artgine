@@ -54,8 +54,12 @@ window.addEventListener('keydown', function(e) {
         var seg = window.location.pathname.split('/')[1] || '';
         return window.location.protocol + '//' + window.location.host + '/' + seg + '/';
     }
+    // artgine/ 폴더는 작업 디렉토리(WorkingPath) 바로 아래가 아니라 한 단계 더 들어간 구조
+    // (예: Artgine/artgine)일 수 있어, pathname의 첫 세그먼트만으로는 경로를 만들 수 없다.
+    // CTerminalRouter.ts의 buildTerminalUiInject()가 실제 위치를 계산해 window.__ARTGINE_BASE__로
+    // 주입해주므로 그 값을 그대로 쓴다.
     var _authTokenMod = null;
-    var _authTokenReady = import(window.location.origin + '/' + (window.location.pathname.split('/')[1] || '') + '/artgine/server/CAuthToken.js')
+    var _authTokenReady = import(window.location.origin + window.__ARTGINE_BASE__ + 'server/CAuthToken.js')
         .then(function(m) { _authTokenMod = m; })
         .catch(function(e) { console.error('[terminal_ui] CAuthToken.js load failed:', e); });
 
@@ -65,8 +69,7 @@ window.addEventListener('keydown', function(e) {
         var pr = window.location.protocol === "https:" ? "wss:" : "ws:";
         var params = new URLSearchParams(window.location.search);
         // 인증은 WS 핸드셰이크에 자동 전송되는 세션 쿠키로 처리된다(토큰 불필요).
-        var _ctxPath = '/' + window.location.pathname.split('/')[1];
-        u = pr + "//" + window.location.hostname + ":" + window.location.port + _ctxPath + "/cmd/ttyd-ws?" + params.toString();
+        u = pr + "//" + window.location.hostname + ":" + window.location.port + window.__CTX_PATH__ + "/cmd/ttyd-ws?" + params.toString();
         var ws = p ? new _W(u, p) : new _W(u);
         _wsRef = ws;
         return ws;
@@ -106,7 +109,7 @@ window.addEventListener('keydown', function(e) {
                 var password = _pw.value;
                 if (!password) return;
                 _btn.disabled = true; _msg.textContent = '';
-                var _base = '/' + window.location.pathname.split('/')[1] + '/';
+                var _base = window.__CTX_PATH__ + '/';
                 fetch(_base + 'auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

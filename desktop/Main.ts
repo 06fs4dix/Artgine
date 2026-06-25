@@ -548,6 +548,9 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	buf=await CFile.Load(savePath+".ts");
 	let oTS=CUtil.ArrayToString(buf);
 
+	//ts import 경로 수정은 html/ts 자동생성 여부와 무관하게 항상 독립적으로 동작
+	await ReplaceArtginePathsInFolder(projectRoot+_json.projectPath,upFolder,projectRoot+_json.projectPath);
+
 	//buf=await CFile.Load(savePath+".webmanifest");
 	let oMF=_json.manifast;
 	//CConsol.Log(oMF);
@@ -613,19 +616,27 @@ ipcMain.handle("NewPage", async (_event, _json: {
 
 	
 
-	//이건 사용자가 직접 만든거다
-	if(oHTML!="" && oHTML.indexOf("EntryPoint")==-1)
+	//파일 생성은 폴더가 완전히 비어있을 때(html,ts 둘 다 없음)만 수행. 하나라도 있으면 EntryPoint 체크로 분기 (html/ts 각각 독립적으로 판단)
+	let isEmptyProject=(oHTML=="" && oTS=="");
+	let htmlManual=oHTML!="" && oHTML.indexOf("<!--EntryPoint-->")==-1;
+	let tsManual=oTS!="" && oTS.indexOf("//EntryPoint")==-1;
+	let htmlSkip=htmlManual || (!isEmptyProject && oHTML=="");
+	let tsSkip=tsManual || (!isEmptyProject && oTS=="");
+	if(htmlManual || tsManual)
 	{
 		ChromeStartCreate();
-		await ReplaceArtginePathsInFolder(projectRoot+_json.projectPath,upFolder,projectRoot+_json.projectPath);
+		let manualMsg="";
+		if(htmlManual)
+			manualMsg+="No <!--EntryPoint--> marker found in html. Recognized as manually created. Auto code generation for html will not work.\n";
+		if(tsManual)
+			manualMsg+="No //EntryPoint marker found in ts. Recognized as manually created. Auto code generation for ts will not work.\n";
 		dialog.showMessageBoxSync({
-			type: 'error',
+			type: 'info',
 			buttons: ['OK'],
 			defaultId: 0,
 			title: 'info',
-			message: 'No <!--EntryPoint--> marker found. Recognized as manually created. Auto code generation will not work.',
+			message: manualMsg,
 		});
-		return "";
 	}
 	//let root=upFolder;
 	
@@ -788,154 +799,163 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	}
 	
 
-	if(oTS!="")
+	//html/ts가 둘 다 없는 빈 프로젝트도 아니고, 둘 다 스킵 대상이면(=실제 아티젠 프로젝트가 아님) 프로젝트 부산물은 만들지 않음
+	if(!(htmlSkip && tsSkip))
 	{
-		
-		pos=bTS.indexOf("//EntryPoint");
-		let epStr=oTS.substring(oTS.indexOf("//EntryPoint")+12,oTS.length);
-		//if(_json.appJSON.github==true)
-		
-		
-		epStr = epStr.replace(
-			/^.*$/gm,
-			(line) => {
-				if (!/\bimport\b/.test(line)) return line;
-				return line.replace(
-					/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g,
-					(match, quote, path) => {
-						// upFolder 끝 / 제거, path 앞 / 제거 후 결합
-						const cleanUpFolder = upFolder.replace(/\/+$/, '');
-						const cleanPath = path.replace(/^\/+/, '');
-						return `${quote}${cleanUpFolder}/${cleanPath}`;
-					}
-				);
+		CCMDMgr.CreateEmptyFolder(projectRoot+_json.projectPath+"/Canvas");
+		CCMDMgr.CreateEmptyFolder(projectRoot+_json.projectPath+"/BackUp");
+		BackUp(projectRoot+_json.projectPath+"/BackUp",projectRoot+_json.projectPath+"/Canvas");
+
+		//ServiceWorker.js / webmanifest는 html,ts와 별개로 항상 갱신
+		await CFile.Save(bSW,projectRoot+_json.projectPath+"/ServiceWorker.js");
+		await CFile.Save(bMF,savePath+".webmanifest");
+		await CFile.Save(_json.projetJSON,savePath+".json");
+	}
+
+	//ts 자동 수정은 비어있는 프로젝트(신규 생성) 또는 //EntryPoint 마커가 있는 기존 ts일 때만. 수동 작성 ts나, html만 있고 ts가 없는 경우는 건드리지 않음
+	if(!tsSkip)
+	{
+		if(oTS!="")
+		{
+
+			pos=bTS.indexOf("//EntryPoint");
+			let epStr=oTS.substring(oTS.indexOf("//EntryPoint")+12,oTS.length);
+			//if(_json.appJSON.github==true)
+
+
+			epStr = epStr.replace(
+				/^.*$/gm,
+				(line) => {
+					if (!/\bimport\b/.test(line)) return line;
+					return line.replace(
+						/(["'])[^"'\n]*?((?:artgine|plugin)\/[^"'\n]+)/g,
+						(match, quote, path) => {
+							// upFolder 끝 / 제거, path 앞 / 제거 후 결합
+							const cleanUpFolder = upFolder.replace(/\/+$/, '');
+							const cleanPath = path.replace(/^\/+/, '');
+							return `${quote}${cleanUpFolder}/${cleanPath}`;
+						}
+					);
+				}
+			);
+
+			bTS=CString.InsertAt(bTS,pos+12,epStr);
+
+
+
+		}
+		else
+		{
+			bTS+="\nimport {CObject} from \""+upFolder+"artgine/basic/CObject.js\"";
+		}
+
+		const gVersion=CUniqueID.Get();
+		let pfStr= "\nimport {CPreferences} from \""+upFolder+"artgine/basic/CPreferences.js\";\n";
+		pfStr+= "var gPF = new CPreferences();\n";
+		const pref = _json.projetJSON.preference;
+		for (const key in pref)
+		{
+			const value = pref[key];
+
+			// 문자열은 따옴표로 감싸기
+			if (typeof value === "string") {
+				pfStr += `gPF.${key} = "${value}";\n`;
 			}
-		);
-
-		await ReplaceArtginePathsInFolder(projectRoot+_json.projectPath,upFolder,projectRoot+_json.projectPath);
-
-
-		bTS=CString.InsertAt(bTS,pos+12,epStr);
-		
-		
-
-	}
-	else
-	{
-		bTS+="\nimport {CObject} from \""+upFolder+"artgine/basic/CObject.js\"";
-	}
-	
-	const gVersion=CUniqueID.Get();
-	let pfStr= "\nimport {CPreferences} from \""+upFolder+"artgine/basic/CPreferences.js\";\n";
-	pfStr+= "var gPF = new CPreferences();\n";
-	const pref = _json.projetJSON.preference;
-	for (const key in pref) 
-	{
-		const value = pref[key];
-	
-		// 문자열은 따옴표로 감싸기
-		if (typeof value === "string") {
-			pfStr += `gPF.${key} = "${value}";\n`;
+			// 숫자나 불린은 그대로
+			else {
+				pfStr += `gPF.${key} = ${value};\n`;
+			}
 		}
-		// 숫자나 불린은 그대로
-		else {
-			pfStr += `gPF.${key} = ${value};\n`;
-		}
-	}
-	pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
-	pfStr += `gPF.mGitHub = ${_json.appJSON.github};\n`;
-	pfStr += `gPF.mVersion = "${gVersion}";\n`;
-	
-	//CConsol.Log("mIAuto L "+_json.projetJSON.preference.mIAuto);
-	if(_json.projetJSON.preference.mIAuto)
-	{
-		pfStr+= "\nimport {CAtelier} from \""+upFolder+"artgine/app/CAtelier.js\";\n";
-		pfStr+= "\nimport {CPlugin} from \""+upFolder+"artgine/util/CPlugin.js\";\n";
-		for(let p in _json.projetJSON.dependencies)
+		pfStr += `gPF.mServer = '${_json.appJSON.server}';\n`;
+		pfStr += `gPF.mGitHub = ${_json.appJSON.github};\n`;
+		pfStr += `gPF.mVersion = "${gVersion}";\n`;
+
+		//CConsol.Log("mIAuto L "+_json.projetJSON.preference.mIAuto);
+		if(_json.projetJSON.preference.mIAuto)
 		{
-			//let pInfo=GetPluginMap().get(p);
-			pfStr+="CPlugin.PushPath('"+p+"','"+upFolder+"plugin/"+p+"/');\n";
-			pfStr+="import \""+upFolder+"plugin/"+p+"/"+p+".js\"\n";
+			pfStr+= "\nimport {CAtelier} from \""+upFolder+"artgine/app/CAtelier.js\";\n";
+			pfStr+= "\nimport {CPlugin} from \""+upFolder+"artgine/util/CPlugin.js\";\n";
+			for(let p in _json.projetJSON.dependencies)
+			{
+				//let pInfo=GetPluginMap().get(p);
+				pfStr+="CPlugin.PushPath('"+p+"','"+upFolder+"plugin/"+p+"/');\n";
+				pfStr+="import \""+upFolder+"plugin/"+p+"/"+p+".js\"\n";
+			}
+			pfStr+= "var gAtl = new CAtelier();\n";
+			pfStr+= "gAtl.mPF = gPF;\n";
+			pfStr+= "await gAtl.Init([";
+			let add=false;
+			for(let canName of canvasList)
+			{
+				if(canName.indexOf("Brush")!=-1)	continue;
+				if(add)
+					pfStr+=",";
+
+				pfStr+="'"+canName+"'";
+				add=true;
+			}
+
+
+			pfStr+=`],"${pref.mCanvas}");\n`;
+			for (let canName of canvasList)
+			{
+				if (canName.indexOf("Brush") !== -1) continue;
+
+				const baseName = canName.replace(/\.json$/i, ""); // 또는 split(".")[0];
+				pfStr += "var " + baseName + " = gAtl.Canvas('" + canName + "');\n";
+			}
+			pfStr+="//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥\n";
 		}
-		pfStr+= "var gAtl = new CAtelier();\n";
-		pfStr+= "gAtl.mPF = gPF;\n";
-		pfStr+= "await gAtl.Init([";
-		let add=false;
-		for(let canName of canvasList)
+		//CConsol.Log(_json.projetJSON.dependencies);
+
+		if(DependenciesChk(_json.projetJSON.dependencies))
 		{
-			if(canName.indexOf("Brush")!=-1)	continue;
-			if(add)
-				pfStr+=",";
-
-			pfStr+="'"+canName+"'";
-			add=true;
+			dialog.showMessageBoxSync({
+				type: 'error',
+				buttons: ['확인'],
+				defaultId: 0,
+				title: 'Plugin',
+				message: '프로젝트 플러그인 에러',
+			});
 		}
-		
 
-		pfStr+=`],"${pref.mCanvas}");\n`;
-		for (let canName of canvasList) 
+		bTS=CString.InsertAt(bTS,bTS.indexOf("//Version")+9,"\nimport \""+upFolder+"artgine/artgine.js\"\n");
+
+
+
+
+		bTS=CString.InsertAt(bTS,bTS.indexOf("//Atelier")+9,pfStr);
+
+		let ClassStr="import {CClass} from \""+upFolder+"artgine/basic/CClass.js\";\n";
+		ClassStr+=GenerateCClassPushes(projectRoot+_json.projectPath,savePath+".ts");
+		//ClassStr+="\nimport \""+upFolder+"artgine/artgine.js\";\n";
+
+
+
+		bTS=CString.InsertAt(bTS,bTS.indexOf("//Class")+7,"\n"+ClassStr);
+
+		await CFile.Save(bTS,savePath+".ts");
+		let waitTS=await WaitForBuild(savePath+".ts");
+		if(waitTS)
 		{
-			if (canName.indexOf("Brush") !== -1) continue;
+			// if(gTSCRun)
+			// {
+			dialog.showMessageBoxSync({
+				type: 'error',
+				buttons: ['OK'],
+				defaultId: 0,
+				title: 'info',
+				message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
+			});
+			return "error";
 
-			const baseName = canName.replace(/\.json$/i, ""); // 또는 split(".")[0];
-			pfStr += "var " + baseName + " = gAtl.Canvas('" + canName + "');\n";
+
 		}
-		pfStr+="//The content above this line is automatically set by the program. Do not modify.⬆✋🚫⬆☠️💥🔥\n";
 	}
-	//CConsol.Log(_json.projetJSON.dependencies);
-	
-	if(DependenciesChk(_json.projetJSON.dependencies))
+
+	//html 자동 수정은 비어있는 프로젝트(신규 생성) 또는 <!--EntryPoint--> 마커가 있는 기존 html일 때만. 수동 작성 html이나, ts만 있고 html이 없는 경우는 건드리지 않음
+	if(!htmlSkip)
 	{
-		dialog.showMessageBoxSync({
-			type: 'error',
-			buttons: ['확인'],
-			defaultId: 0,
-			title: 'Plugin',
-			message: '프로젝트 플러그인 에러',
-		});
-	}
-	
-	bTS=CString.InsertAt(bTS,bTS.indexOf("//Version")+9,"\nimport \""+upFolder+"artgine/artgine.js\"\n");
-	
-
-	
-
-	bTS=CString.InsertAt(bTS,bTS.indexOf("//Atelier")+9,pfStr);
-
-	let ClassStr="import {CClass} from \""+upFolder+"artgine/basic/CClass.js\";\n";
-	ClassStr+=GenerateCClassPushes(projectRoot+_json.projectPath,savePath+".ts");
-	//ClassStr+="\nimport \""+upFolder+"artgine/artgine.js\";\n";
-	
-	
-
-	bTS=CString.InsertAt(bTS,bTS.indexOf("//Class")+7,"\n"+ClassStr);
-
-	CCMDMgr.CreateEmptyFolder(projectRoot+_json.projectPath+"/Canvas");
-	CCMDMgr.CreateEmptyFolder(projectRoot+_json.projectPath+"/BackUp");
-	BackUp(projectRoot+_json.projectPath+"/BackUp",projectRoot+_json.projectPath+"/Canvas");
-
-	await CFile.Save(bSW,projectRoot+_json.projectPath+"/ServiceWorker.js");
-	await CFile.Save(bMF,savePath+".webmanifest");
-	
-	await CFile.Save(bTS,savePath+".ts");
-	await CFile.Save(_json.projetJSON,savePath+".json");
-	let waitTS=await WaitForBuild(savePath+".ts");
-	if(waitTS)
-	{
-		// if(gTSCRun)
-		// {
-		dialog.showMessageBoxSync({
-			type: 'error',
-			buttons: ['OK'],
-			defaultId: 0,
-			title: 'info',
-			message: 'Please build the TypeScript.\nType `npx tsc -w` in the terminal',
-		});
-		return "error";
-		
-		
-	}
-
 	if(_json.appJSON.github==true)
 	{
 		buf=await CFile.Load(savePath+".js");
@@ -969,6 +989,7 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	}
 	bHTML="<title>"+projectName+"</title>\n"+bHTML; // 프로젝트명을 문서 타이틀로 삽입
 	await CFile.Save(bHTML,savePath+".html");
+	}
 
 	
 	let appChange=false;
@@ -1088,60 +1109,6 @@ ipcMain.handle("LoadServiceWorker", async (_event,_json: {
 
 //server========================================================
 
-// ✅ 1. 로컬(사설) IP 확인 함수
-export function GetPrivateIP(): string {
-    const interfaces = os.networkInterfaces();
-    for (const name of Object.keys(interfaces)) {
-        for (const net of interfaces[name]!) {
-            if (net.family === 'IPv4' && !net.internal) {
-                return net.address;
-            }
-        }
-    }
-    return '127.0.0.1'; // fallback
-}
-
-// ✅ 2. 공인 IP 확인 함수 (우선 사이트 → 실패 시 대체 사이트 사용)
-export async function GetPublicIP(): Promise<string> {
-    const ipServices = [
-        'https://api.ipify.org',
-        'https://ifconfig.me/ip',
-        'https://ipinfo.io/ip',
-    ];
-
-    for (const url of ipServices) {
-        try {
-            const ip = await fetchText(url);
-            if (ip && isValidIP(ip)) return ip;
-        } catch (err) {
-            console.warn(`⚠️ Failed to fetch from ${url}`);
-        }
-    }
-
-    return 'Unavailable';
-}
-
-// 🔧 텍스트 응답용 fetch 함수 (https 전용)
-function fetchText(url: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        https
-            .get(url, (res) => {
-                let data = '';
-                res.on('data', chunk => (data += chunk));
-                res.on('end', () => resolve(data.trim()));
-            })
-            .on('error', reject)
-            .setTimeout(3000, function () {
-                this.destroy(new Error('Timeout'));
-            });
-    });
-}
-
-// 🔍 IPv4 유효성 검사
-function isValidIP(ip: string): boolean {
-    return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
-}
-
 // 설정한 프로젝트 페이지로 실제 HTTP 접속해 200이 오는지 확인한다.
 // 단순 포트 열림(TCP)만 보면 Tomcat 등 엉뚱한 서버도 통과하므로,
 // 실제로 내 Node 서버가 해당 콘텐츠를 서빙 중인지(200)로 검증한다.
@@ -1164,8 +1131,8 @@ ipcMain.handle("GetIPInfo", async (_event) => {
 
 	let projectName=GetProjName(gAppJSON.projectPath);
 	let ipInfo={private:"",public:"",url:""};
-	ipInfo.private=GetPrivateIP();
-	ipInfo.public=await GetPublicIP();
+	ipInfo.private=CServerMain.GetPrivateIP();
+	ipInfo.public=await CServerMain.GetPublicIP();
 
 	ipInfo.url=gAppJSON.url+"/"+gAppJSON.projectPath+"/"+projectName+"."+gAppJSON.page;
 	ipInfo.private=protocol+"//"+ipInfo.private+":"+port+pathname+"/"+gAppJSON.projectPath+"/"+projectName+"."+gAppJSON.page;
