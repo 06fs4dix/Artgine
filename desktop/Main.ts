@@ -8,7 +8,8 @@ import * as net from 'net';
 import * as fs from "fs";
 import { imageSize } from 'image-size';
 
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
+import { CUtilSystem } from '../artgine/system/CUtilSystem.js';
 
 import {CFile} from '../artgine/system/CFile.js';
 import {CUtil} from '../artgine/basic/CUtil.js';
@@ -378,15 +379,7 @@ ipcMain.handle("TTYDRun", async (_event, _cfg: { port: number, password: string 
     const shellCmd = IS_WIN ? 'cmd.exe' : '/bin/bash';
     args.push(shellCmd);
 
-    if (IS_WIN) {
-        spawn('cmd.exe', ['/c', 'start', '""', ttydPath, ...args], {
-            detached: true, stdio: 'ignore', cwd: CPath.WorkingPath(),
-        }).unref();
-    } else {
-        spawn(ttydPath, args, {
-            detached: true, stdio: 'ignore', cwd: CPath.WorkingPath(),
-        }).unref();
-    }
+    await CUtilSystem.Spawn(ttydPath, args, 'ignore', CPath.WorkingPath(), null, true, true);
 
     return true;
 });
@@ -396,9 +389,31 @@ ipcMain.handle("BuildRun", async (_event) => {
 
 	await CCMDMgr.RunCMD("npx tsc -w",true);
 
-	
-	
+
+
 	return false;
+});
+ipcMain.handle("TSCToggle", async (_event, _enable: boolean) => {
+	if (_enable) {
+		if (gTSCPID === 0) {
+			CCMDMgr.RunCMD("npx tsc -w", true).then((_pid) => {
+				gTSCPID = _pid;
+				CConsol.Log("TSC Build Start");
+			});
+		}
+	} else {
+		if (gTSCPID > 0) {
+			await CCMDMgr.KillPID(gTSCPID);
+			gTSCPID = 0;
+			CConsol.Log("TSC Build Stop");
+		}
+	}
+	gAppJSON.tsc = _enable;
+	if (gAppRootPath)
+		CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
+	else
+		CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+	return true;
 });
 ipcMain.handle("PageRun", async (_event) => {
 	

@@ -1,14 +1,14 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const target = (process.argv[2] || '').trim().replace(/^["']|["']$/g, '');
-if (!target) {
-  console.error('usage: node ai/tsc_check.js <modified-file.ts>');
+const targets = process.argv.slice(2).map(t => t.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+if (!targets.length) {
+  console.error('usage: node ai/tsc_check.js <file1.ts> [file2.ts ...]');
   process.exit(1);
 }
 
-const normalizedTarget = target.replace(/\\/g, '/');
-const targetBase = path.basename(normalizedTarget);
+const normalizedTargets = targets.map(t => t.replace(/\\/g, '/'));
+const targetBases = normalizedTargets.map(t => path.basename(t));
 
 const result = spawnSync('npx', ['tsc', '--noEmit', '--pretty', 'false'], {
   encoding: 'utf8',
@@ -27,7 +27,8 @@ const lines = output
   .filter(line => {
     if (!line) return false;
     const normalizedLine = line.replace(/\\/g, '/');
-    return normalizedLine.includes(normalizedTarget) || normalizedLine.includes(targetBase);
+    return normalizedTargets.some(t => normalizedLine.includes(t)) ||
+           targetBases.some(b => normalizedLine.includes(b));
   });
 
 console.log(lines.length ? lines.join('\n') : 'no errors');

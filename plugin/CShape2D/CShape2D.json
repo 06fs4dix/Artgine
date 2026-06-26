@@ -1,0 +1,8 @@
+{
+    "dependencies": {
+        "artgine": 1
+    },
+    "version": 1,
+    "text": "CShape2D - 2D 오브젝트 통합 생성기 (스프라이트/색상/알파/물리/충돌/애니)",
+    "include": true
+}

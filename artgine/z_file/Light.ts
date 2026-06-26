@@ -6,6 +6,7 @@ import {
     V2AddV2, V2MulFloat, 
     V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V3DivV3,
     V4AddV4, V4MulFloat,
+    SaturateV3,
 } from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
@@ -29,6 +30,7 @@ export var envmapOn : number = 0.0;
 //LUT
 export var ligDir: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightDir);
 export var ligCol: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightColor);
+export var ligMask: Sam2DArrV4=new Sam2DArrV4(1,SDF.eUni.V4LightMask);
 
 export function GetMaterial(_material : CVec4,_texColor : CVec4,sam2DCount : number) : CVec4
 {
@@ -69,7 +71,10 @@ function V_GGX(_alpha : number, _nDotL : number, _nDotV : number) : number {
 
     return 0.5 / max(visV + visL, 1e-7);
 }
-// BRDF LUT 대신 사용할 근사법
+
+//====================================================
+// PBR - IBL
+//====================================================
 function EnvBRDFApprox(_specularColor : CVec3, _roughness : number, _nDotV : number) : CVec3 {
     var c0 : CVec4 = new CVec4(-1.0, -0.0275, -0.572, 0.022);
     var c1 : CVec4 = new CVec4(1.0, 0.0425, 1.04, -0.04);
@@ -78,10 +83,6 @@ function EnvBRDFApprox(_specularColor : CVec3, _roughness : number, _nDotV : num
     var AB : CVec2 = V2AddV2(V2MulFloat(new CVec2(-1.04, 1.04), a004), new CVec2(r.z, r.w));
     return V3AddV3(V3MulFloat(_specularColor, AB.x), new CVec3(AB.y, AB.y, AB.y));
 }
-
-//====================================================
-// PBR - IBL
-//====================================================
 function FresnelSchlickRoughness(_nDotV : number, _F0 : CVec3, _roughness : number) : CVec3
 {
     var oneMinusCosTheta : number = pow(clamp(1.0-_nDotV, 0.0, 1.0), 5.0);
@@ -90,16 +91,25 @@ function FresnelSchlickRoughness(_nDotV : number, _F0 : CVec3, _roughness : numb
     
     return V3AddV3(_F0, V3MulFloat(V3SubV3(V3Max(oneMinusRoughnessVec3, _F0), _F0), oneMinusCosTheta));
 }
+/*
+function DFX_Approx(_nDotV : number, _roughness : number) : CVec2 {
+    var c0 : CVec4 = new CVec4(-1.0, -0.0275, -0.572, 0.022);
+    var c1 : CVec4 = new CVec4(1.0, 0.0425, 1.04, -0.04);
+    var r : CVec4 = V4AddV4(V4MulFloat(c0, _roughness), c1);
+    var a004 : number = min( r.x * r.x, Exp2( -9.28 * _nDotV ) ) * r.x + r.y;
+    var AB : CVec2 = V2AddV2(V2MulFloat(new CVec2(-1.04, 1.04), a004), new CVec2(r.z, r.w));
+    return AB;
+}
+*/
 function ComputeSpecularOcclusion(_nDotV : number, _ao : number, _roughness : number) : number
 {
     return SaturateFloat(pow(_nDotV + _ao, Exp2(-16.0 * _roughness - 1.0)) - 1.0 + _ao);
 }
 
 export function LightCac3D(
-    campos : CVec3, position : CVec4, albedo : CVec4, normal :CVec3, shadow : number,
-    roughness : number,ao : number,metalic : number, gamma : number) : CMat3
+    campos : CVec3, position : CVec4, albedo : CVec4, normal :CVec3, shadow : CVec4,
+    roughness : number,ao : number,metalic : number) : CMat3
 {
-    albedo.rgb = V3Pow(albedo.rgb, gamma);
     normal = V3Nor(normal);
 
     var viewDir : CVec3 = V3Nor(V3SubV3(campos, position.xyz));
@@ -109,6 +119,8 @@ export function LightCac3D(
     var smoothness : number= 1.0 - roughness;
     metalic = clamp(metalic, 0.0, 1.0);
 
+    var shadowIndex : number = 0.0;
+
     var DAll : CVec3=new CVec3(0,0,0);
     var SAll : CVec3=new CVec3(0,0,0);
     var emAll : CVec3=new CVec3(0,0,0);
@@ -117,8 +129,8 @@ export function LightCac3D(
     // Direct Lighting
     //====================================================
 
-    var DLinearSpace : number = 0.0;
-
+	var DLinearSpace : number = 0.0;
+	
     var DDirAll : CVec3=new CVec3(0,0,0);
     var DPtAll : CVec3=new CVec3(0,0,0);
     
@@ -137,8 +149,9 @@ export function LightCac3D(
         // 라이트 파라미터
         var L : CVec3=lDir.xyz;
         var radiance : CVec3 = lCol.rgb;
-        if(shadow>-0.5) {   // 라이팅에 그림자 적용
-            radiance = V3MulFloat(radiance, shadow);
+        if(shadow[FloatToInt(shadowIndex)]>-0.5) {   // 라이팅에 그림자 적용
+            radiance = V3MulFloat(radiance, shadow[FloatToInt(shadowIndex)]);
+            shadowIndex = min(shadowIndex + 1.0, 3.0);
         }
         var dist : number = 0.0; // 라이트와 fragment 사이의 거리
         var isPointLight : number = lDir.w>1.1 ? 1.0 : 0.0;
@@ -239,9 +252,7 @@ export function LightCac3D(
             var G : number = V_GGX(alpha, nDotL, nDotV);
 
             diffuse = V3MulV3(kD, diffuse);
-            specular = V3MulFloat(kS, D * G * nDotL * 3.14159265359);
-
-            DLinearSpace = 1.0;
+            specular = V3MulFloat(kS, D * G * nDotL);
         }
 
         //====================================================
@@ -267,7 +278,6 @@ export function LightCac3D(
     //====================================================
     // Indirect Lighting
     //====================================================
-    var ILinearSpace : number = 0.0;
     var DEnvAll : CVec3;
     var SEnvAll : CVec3;
     {
@@ -276,7 +286,7 @@ export function LightCac3D(
             DEnvAll = V3MulV3(albedo.xyz, ambientColor);
         }
         else {
-            // 1 IBL approx : 블러된 큐브맵(0)을 IBL로 사용
+        	// 1 IBL approx : 블러된 큐브맵(0)을 IBL로 사용
             var maxReflectionLOD : number = floor(log2(SamCubeSize(0.0).x)) - 4.0;
             var R : CVec3 = reflect(V3MulFloat(viewDir, -1.0), normal);
 
@@ -293,9 +303,33 @@ export function LightCac3D(
             var orgRoughness : number = (roughness - 0.15) / 0.85;
             var prefilteredColor : CVec3 = SamCubeLodToColor(0.0, R, orgRoughness * maxReflectionLOD).rgb;
             SEnvAll = V3MulV3(prefilteredColor, V3MulV3(kS, EnvBRDFApprox(F0, roughness, nDotV)));
-
-            ILinearSpace = 1.0;
         }
+        /*
+        // Scattering 처리
+        else {
+            // 1 IBL approx : 블러된 큐브맵(0)을 IBL로 사용
+            var maxReflectionLOD : number = floor(log2(SamCubeSize(0.0).x)) - 4.0;
+            var R : CVec3 = reflect(V3MulFloat(viewDir, -1.0), normal);
+
+            var baseReflectivity : CVec3 = new CVec3(0.04,0.04,0.04);
+            var F0 : CVec3 = V3Mix(baseReflectivity, albedo.rgb, metalic);
+
+            var fab : CVec2 = DFX_Approx(nDotV, roughness);
+            var ems : number = 1.0 - (fab.x + fab.y);
+            var favg : CVec3 = V3AddV3(F0, V3MulFloat(V3SubV3(new CVec3(1.0, 1.0, 1.0), F0), 0.047619));
+
+            var singleScattering : CVec3 = V3AddV3(V3MulFloat(F0, fab.x), new CVec3(fab.y, fab.y, fab.y));
+            var multiScattering : CVec3 = V3MulFloat(V3DivV3(V3MulV3(singleScattering, favg), V3SubV3(new CVec3(1.0, 1.0, 1.0), V3MulFloat(favg, ems))), ems);
+            var totalScattering : CVec3 = V3AddV3(singleScattering, multiScattering);
+
+            var irradiance : CVec3 = SamCubeLodToColor(0.0, normal, maxReflectionLOD).rgb;
+            DEnvAll = V3MulV3(irradiance, V3MulFloat(albedo.rgb, 1.0 - max(totalScattering.x, max(totalScattering.y, totalScattering.z))));
+
+            var orgRoughness : number = (roughness - 0.15) / 0.85;
+            var envRadiance : CVec3 = SamCubeLodToColor(0.0, R, orgRoughness * maxReflectionLOD).rgb;
+            SEnvAll = V3AddV3(V3MulV3(envRadiance, singleScattering), V3MulV3(irradiance, multiScattering));
+        }
+        */
         /*
         else if(samCubeCount < 2.5) {
             // 2 IBL : 밝기 맵(0), 블러된 큐브맵(1)을 IBL로 사용
@@ -315,37 +349,12 @@ export function LightCac3D(
             var orgRoughness : number = (roughness - 0.15) / 0.85;
             var prefilteredColor : CVec3 = SamCubeLodToColor(1.0, R, orgRoughness * maxReflectionLOD).rgb;
             SEnvAll = V3MulV3(prefilteredColor, V3MulV3(kS, EnvBRDFApprox(F0, roughness, nDotV)));
-
-            ILinearSpace = 1.0;
         }
         */
         DEnvAll = V3MulFloat(DEnvAll, ao);
         SEnvAll = V3MulFloat(SEnvAll, ComputeSpecularOcclusion(nDotV, ao, roughness));
     }
-
-    //====================================================
-    // Final
-    //====================================================
-    if(DLinearSpace > 0.5 || ILinearSpace > 0.5) {
-        // LinearSpace에 있는 값을 sRGB로 낮춰서 합성
-        var blended : CVec3 = new CVec3(0, 0, 0);
-        if(DLinearSpace > 0.5) blended = V3AddV3(blended, V3AddV3(V3AddV3(DDirAll, DPtAll), V3AddV3(SDirAll, SPtAll)));
-        if(ILinearSpace > 0.5) blended = V3AddV3(blended, V3AddV3(DEnvAll, SEnvAll));
-
-        var sBlended : CVec3 = new CVec3(sqrt(blended.x), sqrt(blended.y), sqrt(blended.z));
-        var k : CVec3 = V3DivV3(sBlended, blended);
-
-        if(DLinearSpace > 0.5) {
-            DDirAll = V3MulV3(DDirAll, k);
-            DPtAll = V3MulV3(DPtAll, k);
-            SDirAll = V3MulV3(SDirAll, k);
-            SPtAll = V3MulV3(SPtAll, k);
-        }
-        if(ILinearSpace > 0.5) {
-            DEnvAll = V3MulV3(DEnvAll, k);
-            SEnvAll = V3MulV3(SEnvAll, k);
-        }
-    }
+    
     DAll = V3AddV3(V3AddV3(DDirAll, DPtAll), DEnvAll);
     SAll = V3AddV3(V3AddV3(SDirAll, SPtAll), SEnvAll);
     

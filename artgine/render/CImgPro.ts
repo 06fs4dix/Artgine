@@ -146,7 +146,24 @@ export class CImgPro
                 const newTex = CImgPro.SqurEnlargedReduced(rawBufSize, rawBufSize, rawBuf[i], _tex.GetWidth() / rawBufSize, _tex.GetHeight() / rawBufSize, 4);
                 rawBuf[i] = newTex.GetBuf()[0];
             }
+
+            // sRGB => Linear
+            for(let idx = 0; idx < rawBuf[i].length; idx += 4)
+            {
+                if(rawBuf[i] instanceof Uint8Array) {
+                    rawBuf[i][idx + 0] = Math.pow(rawBuf[i][idx + 0] / 255, 2.2) * 255;
+                    rawBuf[i][idx + 1] = Math.pow(rawBuf[i][idx + 1] / 255, 2.2) * 255;
+                    rawBuf[i][idx + 2] = Math.pow(rawBuf[i][idx + 2] / 255, 2.2) * 255;
+                }
+                else {
+                    rawBuf[i][idx + 0] = Math.pow(rawBuf[i][idx + 0], 2.2);
+                    rawBuf[i][idx + 1] = Math.pow(rawBuf[i][idx + 1], 2.2);
+                    rawBuf[i][idx + 2] = Math.pow(rawBuf[i][idx + 2], 2.2);
+                }
+            }
         }
+
+        
 
         const buf = [];
         let bufIndex = 0;

@@ -23,7 +23,7 @@ import {
     V4AddV4,
     V4MulFloat,
 } from "./Shader";
-import { bias, calcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
+import { bias, calcShadowDirectional, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
 
 
 var worldMat : CMat=Null();
@@ -611,14 +611,14 @@ function ps_main_shadow_read()
     BranchBegin("shadowMulti","SDM",[]);
     for(var i = 0; i < FloatToInt(shadowCount); i++) {
         shadowRead =Sam2DArrToV4(shadowReadList,i);
-        sVal  = calcShadow(shadowRead, IntToFloat(i), to_normal, to_worldPos);
+        sVal  = calcShadowDirectional(shadowRead, IntToFloat(i), to_normal, to_worldPos);
         all+=sVal;
     }
     all/=shadowCount;
     if(all<0.0)all=0.0;
     BranchDefault();
     shadowRead =Sam2DArrToV4(shadowReadList,0.0);
-    all  = calcShadow(shadowRead, 0.0, to_normal, to_worldPos);
+    all  = calcShadowDirectional(shadowRead, 0.0, to_normal, to_worldPos);
     BranchEnd();
     
     out_color = new CVec4(all, all, all, 1.0);

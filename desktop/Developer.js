@@ -136,6 +136,7 @@ async function Init() {
     CDOM.IDInput("server_sel").value = gAppJSON.server;
     CDOM.IDInput("fullScreen_chk").checked = gAppJSON.fullScreen;
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
+    CDOM.IDInput("tsc_chk").checked = !!gAppJSON.tsc;
     CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
     CDOM.IDValue("auth_rootpath_txt", (Array.isArray(gAppJSON.rootPath) ? gAppJSON.rootPath : [gAppJSON.rootPath ?? "./"]).join("\n"));
     CDOM.IDInput("program_sel").value = gAppJSON.program;
@@ -276,6 +277,10 @@ document.getElementById("ttydRun_btn").addEventListener("click", async function 
 document.getElementById("ttydBrowser_btn").addEventListener("click", async function () {
     const { port } = GetTTYDConfig();
     await CWebView.Call("URLRun", `http://localhost:${port}`);
+});
+document.getElementById("tsc_chk").addEventListener("change", async function () {
+    const checked = this.checked;
+    await CWebView.Call("TSCToggle", checked);
 });
 document.getElementById("selectProjectPath_btn").addEventListener("click", async function () {
     CDOM.ID("Run_btn").disabled = true;

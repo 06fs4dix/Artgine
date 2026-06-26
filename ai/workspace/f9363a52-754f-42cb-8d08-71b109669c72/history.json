@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "sessionId": "f9363a52-754f-42cb-8d08-71b109669c72",
+    "title": "test",
+    "provider": "claude",
+    "model": "claude-haiku-4-5-20251001",
+    "createdAt": 1782454994755,
+    "updatedAt": 1782455001878,
+    "cliSessionId": "a08e6d33-a8c0-4c0b-978e-73c58342ce4b"
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "test",
+      "provider": "claude",
+      "model": "claude-haiku-4-5-20251001",
+      "attachments": [],
+      "timestamp": 1782454994755,
+      "senderIp": "1.215.229.139",
+      "senderUa": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm ready! I can see you're working on the **Artgine** project. I've reviewed the CLAUDE.md guidelines and understand the key constraints:\n\n- `.ts` files only — `.js` builds automatically\n- Must run `node ai/tool/tsc_check.js` after TS changes\n- Can't run arbitrary `node` or `python` commands without approval\n- Should verify engine APIs exist before using them\n- Need user approval before modifying protected paths (`artgine/`, `desktop/`, `ai/`, `plugin/`)\n- Memory saves require your approval first\n\nWhat would you like to work on?",
+      "provider": "claude",
+      "model": "claude-haiku-4-5-20251001",
+      "timestamp": 1782455001878
+    }
+  ]
+}

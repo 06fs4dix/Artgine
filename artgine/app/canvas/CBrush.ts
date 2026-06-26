@@ -61,6 +61,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 		var size=CDevice.GetProperty(CDevice.eProperty.Sam2DSize);
 		this.mLightDir = new Float32Array(4*size);
 		this.mLightColor = new Float32Array(4*size);
+		this.mLightMask = new Float32Array(4*size);
 		this.mLightCount=0;
 		// for(var i=0;i<8;++i)
 		// 	this.mShadowView.push(new Float32Array(4*size));
@@ -108,6 +109,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	mDoubleChk=new Set<any>();
 	public mLightDir : Float32Array=null;
 	public mLightColor : Float32Array=null;
+	public mLightMask : Float32Array=null;
 	public mLightCount : number;
 
 	public mSkyTable : Array<CMat>=[
@@ -125,6 +127,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	protected mShadowView : Array<Float32Array>=new Array<Float32Array>();
 	//public m_shadowCamera=new Map<string,CCamera>();
 	public mShadowCount=0;
+    public mShadowTexOff=0;
 
 	//mWindChk=new Set<any>();
 	public mWindDir : Float32Array=null;
@@ -284,6 +287,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 
 			this.mLightCount=0;
 			this.mShadowCount=0;
+            this.mShadowTexOff=0;
 			this.mShadowRead.clear();
 
 			this.mWindCount=0;

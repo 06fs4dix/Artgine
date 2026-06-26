@@ -27,7 +27,7 @@ import {
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, 
 	shadowPointProj, shadowRightCasP2, shadowTopCasV1,
-	calcShadow,
+	calcShadowDirectional,
 	jitter,
 	shadowReadList, 
 } from "./Shadow";
@@ -526,7 +526,7 @@ function ps_main_shadow_read()
 	for(var i = 0; i < FloatToInt(shadowCount); i++) 
 	{
 		shadowRead =Sam2DArrToV4(shadowReadList,IntToFloat(i));
-		sVal  = calcShadow(shadowRead, IntToFloat(i),to_normal,to_worldPos);
+		sVal  = calcShadowDirectional(shadowRead, IntToFloat(i),to_normal,to_worldPos);
 		all+=sVal;
 		//all=all-(1.0-sVal);
 		
@@ -535,7 +535,7 @@ function ps_main_shadow_read()
 	if(all<0.0)all=0.0;
 	BranchDefault();
 	shadowRead =Sam2DArrToV4(shadowReadList,0.0);
-	all = calcShadow(shadowRead, 0.0,to_normal,to_worldPos);
+	all = calcShadowDirectional(shadowRead, 0.0,to_normal,to_worldPos);
 	BranchEnd();
 	
 

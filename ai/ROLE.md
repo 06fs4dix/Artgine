@@ -15,7 +15,7 @@
 ## TS 타입 체크 규칙 - 필수 (TS Type Check Rules - Required)
 `.ts` 수정 후 완료 보고 전 반드시 실행한다.
 ```bash
-node ai/tool/tsc_check.js 수정한파일.ts
+node ai/tool/tsc_check.js 파일A.ts 파일B.ts 파일C.ts
 ```
 
 ## 제한 명령어 (Restricted Commands)

@@ -1,4 +1,5 @@
 import { execSync, spawn, exec } from 'child_process';
+import { CUtilSystem } from '../artgine/system/CUtilSystem.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -37,17 +38,7 @@ export class CCMDMgr {
     }
     static async KillPID(pid) {
         try {
-            if (os.platform() === 'win32') {
-                execSync(`taskkill /PID ${pid} /T /F`, { stdio: 'ignore' });
-            }
-            else {
-                try {
-                    process.kill(-pid, 'SIGTERM');
-                }
-                catch {
-                    process.kill(pid, 'SIGTERM');
-                }
-            }
+            await CUtilSystem.KillPID(pid);
             return true;
         }
         catch (e) {
@@ -103,28 +94,11 @@ export class CCMDMgr {
             }
         }
         else {
+            const env = { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
+            const child = platform === 'win32'
+                ? await CUtilSystem.Spawn('cmd', ['/c', `chcp 65001 >nul && ${_cmd}`], 'inherit', '', env)
+                : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'inherit', '', env);
             return new Promise((resolve, reject) => {
-                let child;
-                if (platform === 'win32') {
-                    child = spawn('cmd', ['/c', 'chcp 65001 >nul && ' + _cmd], {
-                        stdio: 'inherit',
-                        env: {
-                            ...process.env,
-                            LANG: 'C.UTF-8',
-                            LC_ALL: 'C.UTF-8'
-                        }
-                    });
-                }
-                else {
-                    child = spawn('bash', ['-c', _cmd], {
-                        stdio: 'inherit',
-                        env: {
-                            ...process.env,
-                            LANG: 'C.UTF-8',
-                            LC_ALL: 'C.UTF-8'
-                        }
-                    });
-                }
                 child.on('exit', (code) => {
                     console.log(`명령어 종료됨. 종료 코드: ${code}`);
                     resolve(null);

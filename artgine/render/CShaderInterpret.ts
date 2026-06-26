@@ -693,6 +693,10 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "{\n";
 		str += "	return fract(_a);\n";
 		str += "}\n";
+        str += "vec3 V3Sqrt(vec3 _a)\n";
+		str += "{\n";
+		str += "	return sqrt(_a);\n";
+		str += "}\n";
 
 		//v4
 		str += "vec4 V4SubV4(vec4 _a,vec4 _b)\n";

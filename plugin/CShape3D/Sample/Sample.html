@@ -71,7 +71,7 @@
 <script type='text/javascript' src='../../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
 <link rel='manifest' href='./Sample.webmanifest'/>
 <script>
-let SERVER_BASE='http://localhost:8000/Artgine/plugin/CShape3D/Sample/Sample.html';
+let SERVER_BASE='http://localhost:8050/Artgine/plugin/CShape3D/Sample/Sample.html';
 const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
 if (location.protocol == 'file:' && isElectron==false){
 	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');

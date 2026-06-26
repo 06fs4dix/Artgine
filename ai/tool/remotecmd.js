@@ -1,5 +1,6 @@
-import { dirname, join } from 'path';
+import { dirname, join, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync } from 'fs';
 import { createApiClient, login } from './common.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -17,22 +18,25 @@ function parseHomeUrl(homeUrlArg) {
     const base = `${u.origin}${basePath}`;
     const rootPath = u.searchParams.get('RootPath') ?? './';
     const path = u.searchParams.get('path') ?? '/';
+    const rootUrl = u.searchParams.get('RootUrl') ?? '';
     const cwd = rootPath + path;
-    return { base, cwd };
+    return { base, cwd, origin: u.origin, rootUrl };
 }
 
 const [, , homeUrlArg, cmd, ...rest] = process.argv;
 
 function usageAndExit() {
-    console.error('Usage: node ai/remotecmd.js <HomeURL> login');
-    console.error('       node ai/remotecmd.js <HomeURL> cmd <콘솔 명령어 그대로...>');
-    console.error('       node ai/remotecmd.js <HomeURL> remote <토큰>  # 토큰으로 세션 인증');
+    console.error('Usage: node ai/tool/remotecmd.js <HomeURL> login');
+    console.error('       node ai/tool/remotecmd.js <HomeURL> remote <토큰>');
+    console.error('       node ai/tool/remotecmd.js <HomeURL> cmd <콘솔 명령어 그대로...>');
+    console.error('       node ai/tool/remotecmd.js <HomeURL> upload <로컬파일> <원격디렉터리>');
+    console.error('       node ai/tool/remotecmd.js <HomeURL> download <원격파일경로> [로컬저장경로]');
     process.exit(1);
 }
 
 if (!homeUrlArg || !homeUrlArg.startsWith('http') || !cmd) usageAndExit();
 
-const { base, cwd } = parseHomeUrl(homeUrlArg);
+const { base, cwd, origin, rootUrl } = parseHomeUrl(homeUrlArg);
 
 if (cmd === 'login') {
     const r = await login(call, base, PROJECT_ROOT);
@@ -50,8 +54,28 @@ if (cmd === 'login') {
     const r = await call(base, 'auth/check', { token });
     console.log(JSON.stringify(r, null, 2));
 
+} else if (cmd === 'upload') {
+    const [localFile, remotePath] = rest;
+    if (!localFile || !remotePath) { console.error('Usage: upload <로컬파일> <원격디렉터리>'); process.exit(1); }
+    const data = readFileSync(localFile);
+    const b64 = data.toString('base64');
+    const name = basename(localFile);
+    const r = await call(base, 'File/Upload', { path: remotePath, name: [name], data: [b64] });
+    console.log(JSON.stringify(r, null, 2));
+
+} else if (cmd === 'download') {
+    const [remotePath, localPath] = rest;
+    if (!remotePath) { console.error('Usage: download <원격파일경로> [로컬저장경로]'); process.exit(1); }
+    const fileUrl = `${origin}${rootUrl}${remotePath}`;
+    const res = await fetch(fileUrl);
+    if (!res.ok) { console.error(JSON.stringify({ ok: false, msg: `HTTP ${res.status}` })); process.exit(1); }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const savePath = localPath || basename(remotePath);
+    writeFileSync(savePath, buf);
+    console.log(JSON.stringify({ ok: true, file: savePath, size: buf.length }));
+
 } else {
     console.error(`Unknown command: ${cmd}`);
-    console.error('Commands: login, cmd, remote');
+    console.error('Commands: login, cmd, remote, upload, download');
     process.exit(1);
 }

@@ -38,6 +38,11 @@ import {
     sin,
     fract,
     V2Fract,
+    V3Pow,
+    V4Min,
+    V2MulV2,
+    V3Sqrt,
+    V3MulV3,
 	
 } from "./Shader"
 import {
@@ -66,13 +71,16 @@ import {
 } from "./Light";
 import { ApplyWind, windCount, windDir, windInfluence, windInfo, windPos } from "./Wind";
 import { 
-	bias, calcShadow,  normalBias, PCF, shadowCount, shadowOn, 
+	bias, calcShadowDirectional,  normalBias, PCF, shadowCount, shadowOn, 
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, 
 	shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, 
 	jitter,
-	calcParallaxShadow
+	calcParallaxShadow,
+    shadowNearFar,
+    calcShadowPoint
 } from "./Shadow";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
+import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
 
 
 var screenDepth : number;
@@ -142,8 +150,7 @@ var normalRange : number = 1.0;
 //Skin
 Build("Artgine/Shader/3DSkin",[],
 	vs_main,[
-        worldMat,viewMat,projectMat,skin,
-		screenSize,sam2DCount
+        worldMat,viewMat,projectMat,skin,sam2DCount
 	],
 	[out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos], 
 	ps_main,[out_color]
@@ -171,7 +178,7 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"],
 Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"], 
 	vs_main_shadow_write, [
 		worldMat,viewMat,projectMat,skin,
-		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
+		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowNearFar,
 		shadowCount,shadowPointProj,shadowReadList,jitter
 	], [out_position,to_uv,to_viewPos],
 	ps_main_shadow_write,[out_color]
@@ -182,7 +189,7 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
-		ligDir,ligCol,ligCount,
+        ligDir,ligCol,ligCount,
 	], [out_position,to_uv,to_normal,to_worldPos,to_binormal,to_tangent,to_ref],
 	ps_main_shadow_read,[out_color]
 );
@@ -351,7 +358,7 @@ function GetTangentSpaceNormal(_uv : CVec2, _tan : CVec3, _bi : CVec3, _nor : CV
 
 		N=Sam2DToColor(to_ref.y,_uv).xyz;
 		N=MappingTexToV3(N);
-		N.y=-N.y;
+		// N.y=-N.y;
 		if(V3Dot(N,new CVec3(0,0,1))>0.999)
 			N=_nor;
 		else	
@@ -582,29 +589,12 @@ function WaterProcessing(_color : CVec3, _caustics : CVec3, _world : CVec4) : CV
 
 function ps_main()
 {
-	var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
-	var shadow : number=-1.0;
-	
-	var uvScreen : CVec2;
-	BranchBegin("shadow","S",[shadowOn]);
-	if(shadowOn>0.5)
-	{
-		// shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
-		// shadow = shadowTex.x;
-
-		//uvScreen = V2DivV2(gl_FragCoord.xy, new CVec2(1920,1017)); // 0~1
-		uvScreen = V2DivV2(screenPos.xy, screenSize.xy);
-	
-		shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
-		shadow = shadowTex.x;
-		
-
+	var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
+	BranchBegin("shadow","S",[shadowOn, screenSize]);
+	if(shadowOn>0.5) {
+		shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, V2DivV2(screenPos.xy, screenSize.xy));  // <- 여기! 절대 size 곱하지 말기
 	}
 	BranchEnd();
-
-	// out_color=new CVec4(shadowTex.x,shadowTex.y,shadowTex.z,1.0);
-	// return;
-
 
 	
 	var world : CVec4 = to_worldPos;
@@ -636,7 +626,6 @@ function ps_main()
 
 	var normal : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref,sam2DCount);
 
-
 	var L_cor : CVec4;
 
 	BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
@@ -660,26 +649,28 @@ function ps_main()
     BranchDefault();
     if ( L_cor.a <= 0.01 ) discard;
 	BranchEnd();
-	
+
 	var dseMat : CMat3=new CMat3(0);
 	var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
+    var gamma : number = 1.0;
 	BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
-
+    gamma = 2.2;
+    L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
 	
 	lmaterial=GetMaterial(material,Sam2DToColor(to_ref.z,uv),sam2DCount);
 	dseMat = GetSunInfo();
 	sunDir = dseMat[0];
 	sunCol = dseMat[1];
 	
-	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
-
+	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z);
+ 
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
     
 	BranchDefault();
-	if(shadow > -0.5) {
-		L_cor.rgb = V3MulFloat(L_cor.rgb,shadow);
+	if(shadow.a > -0.5) {
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
 	}
 	//L_cor.rgb = V3MulFloat(L_cor.rgb,shadow);
 	BranchEnd();
@@ -700,12 +691,13 @@ function ps_main()
 	out_color.rgb = WaterProcessing(out_color.rgb, caustics, world);
 	BranchEnd();
 
-	// BranchBegin("waterRefract","waterRefract",[waterDeep, waterUnderFadeDist, shallowColor, deepColor, causticFlowDir, causticFlowFreq, waterHeight, camPos, time]);
-	// if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
-	// if(world.y > waterDeep.x + waterDeep.z) discard; // (물 높이 + 거품이 생기는 깊이)보다 낮은 것만 랜더링
-	// out_color.rgb = Caustics(out_color.rgb, world.xyz, causticFlowDir,new CVec3(0,1,0),new CVec3(1,1,1));
-	// out_color.rgb = WaterProcessing(out_color.rgb, world);
-	// BranchEnd();
+    BranchBegin("tonemapping","tonemapping",[exposure, tonemappingType]);
+    out_color.rgb = Tonemap(out_color.rgb, exposure, tonemappingType);
+    BranchEnd();
+
+    if(gamma > 1.1) {
+        out_color.rgb = V3Sqrt(out_color.rgb);
+    }
 }
 
 
@@ -818,24 +810,6 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	woweMat = GetWorldWeightMat(weightArrMat,weightBakeMat,weightBakeIndex, f4_we, f4_wi, wMat, skin);
 	BranchEnd();
 
-	var svm : CMat=new CMat(0);
-	var spm : CMat=new CMat(0);
-	
-	if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
-	{
-		svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
-		spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
-	}
-	else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
-	{
-		svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
-		spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
-	}
-	else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
-	{
-		svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
-		spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
-	}
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
 	P = V4MulMatCoordi(P, woweMat);
 
@@ -843,9 +817,60 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	P = ApplyWind(P, skin, f4_we, time);
 	BranchEnd();
 
-	P = V4MulMatCoordi(P, svm);
-	to_viewPos = P;
-	P = V4MulMatCoordi(P, spm);
+    // 디렉셔널
+    if(shadowWrite.z < 0.5) {
+        var svm : CMat=new CMat(0);
+        var spm : CMat=new CMat(0);
+        if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
+        {
+            svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+            spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
+        {
+            svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+            spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
+        {
+            svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+            spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+        }
+
+        P = V4MulMatCoordi(P, svm);
+        to_viewPos = P;
+        P = V4MulMatCoordi(P, spm);
+    }
+    // 포인트
+    else {
+        var spvm : CMat=new CMat(0);
+        if(shadowWrite.x<SDF.eShadow.Near + 0.5)
+        {
+            spvm = Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Far + 0.5)
+        {
+            spvm = Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Top + 0.5)
+        {
+            spvm = Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Bottom + 0.5)
+        {
+            spvm = Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Left + 0.5)
+        {
+            spvm = Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+        }
+        else if(shadowWrite.x<SDF.eShadow.Right + 0.5)
+        {
+            spvm = Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+        }
+        to_viewPos = P;
+        P = V4MulMatCoordi(P, spvm);
+    }
 	
 	out_position = P;
 }
@@ -864,7 +889,6 @@ function ps_main_shadow_write()
 	// L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
 	// BranchEnd();
 
-
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
@@ -875,8 +899,14 @@ function ps_main_shadow_write()
     if ( L_cor.a <= 0.01 ) discard;
 	BranchEnd();
 	
-
-	out_color = to_viewPos;
+    // 디렉셔널
+    if(shadowWrite.z < 0.5) {
+        out_color = to_viewPos;
+    }
+    else {
+        out_color.z = (V3Len(V3SubV3(to_viewPos.xyz, worldMat[3].xyz)) - shadowNearFar.x) / (shadowNearFar.y - shadowNearFar.x);
+        out_color.w = 1.0;
+    }
 }
 function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3,f4_tan : Tangent4,f3_bi : Binormal3,f3_ref : TexOff3) {
 
@@ -930,13 +960,8 @@ function ps_main_shadow_read()
 	var uvh : CVec3;
     var ratio : number;
 
-	var pAll : number = 1.0;
-	var tangentLigDir : CVec4;
-	var tangentNormal : CVec4;
-
-	BranchBegin("parallax","P",[parallaxNormal, camPos]);
-
-	// 패럴렉스 uv, 높이 계산
+    var pShadow : CVec4 = new CVec4(1.0, 1.0, 1.0, 1.0);
+	BranchBegin("parallax","P",[parallaxNormal, camPos, ligDir, ligCol, ligCount]);
 	uvh = GetParallaxMappedUV(to_uv, to_tangent, to_binormal, to_normal, world, camPos, to_ref);
 	uv = uvh.xy;
 
@@ -954,29 +979,22 @@ function ps_main_shadow_read()
 		screenDepth = SDF.ClipControl > 0
 			? clamp(screenPos.z * ratio, 0.0, 1.0)
 			: clamp(((screenPos.z * 2.0 - 1.0) * ratio) * 0.5 + 0.5, 0.0, 1.0);
+
+        pShadow = new CVec4(0.0, 0.0, 0.0, 0.0);
+        if(0.5 < shadowCount) {
+            pShadow.r = calcParallaxShadow(uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal, 0.0);
+        }
+        if(1.5 < shadowCount) {
+            pShadow.g = calcParallaxShadow(uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal, 1.0);
+        }
+        if(2.5 < shadowCount) {
+            pShadow.b = calcParallaxShadow(uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal, 2.0);
+        }
+        for(var i = 3; i < FloatToInt(shadowCount); i++) {
+            pShadow.a += calcParallaxShadow(uv, to_ref, parallaxNormal, to_tangent, to_binormal, to_normal, IntToFloat(i));
+        }
+        pShadow.a /= shadowCount - 3.0;
 	}
-
-	tangentNormal = Sam2DToColor(to_ref.y, uv);
-	tangentNormal.xyz = MappingTexToV3(tangentNormal.xyz);
-	// tangentNormal.y = -tangentNormal.y;
-
-	pAll = 0.0;
-	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		tangentLigDir = Sam2DArrToV4(ligDir, Sam2DArrToV4(shadowReadList,IntToFloat(i)).x);
-        tangentLigDir.xyz = V3MulMat3Normal(V3Nor(tangentLigDir.xyz), TransposeMat3(V3ToMat3(to_tangent, to_binormal, to_normal))).xyz; // ligDir을 tangent space로 변환
-
-		// 디렉셔널 라이팅이고, 라이팅을 받는 영역임
-		if(tangentLigDir.w < 1.5) {
-			if(tangentLigDir.z > 0.0 && V3Dot(tangentNormal.xyz, tangentLigDir.xyz) > 0.0) {
-				pAll += calcParallaxShadow(to_ref.y, uv, tangentLigDir.xyz, parallaxNormal);
-			} 
-            else {	// 빛 방향과 반대면임
-				pAll += shadowRate;	
-			}
-		}
-	}
-	pAll /= shadowCount;
-	if(pAll < 0.0) pAll=0.0;
 
 	BranchEnd();
 
@@ -1004,27 +1022,53 @@ function ps_main_shadow_read()
 	BranchEnd();
 	
 
-	var all : number=0.0;
 	var shadowRead : CVec4;
-	var sVal : number;
-	BranchBegin("shadowMulti","SDM",[alphaModel]);
-	
-	for(var i = 0; i < FloatToInt(shadowCount); i++) {
-		shadowRead =Sam2DArrToV4(shadowReadList,i);
-		sVal  = calcShadow(shadowRead, IntToFloat(i), to_normal, world);
-		all+=sVal;
-	}
-	all/=shadowCount;
-	if(all<0.0)all=0.0;
+    var lDir : CVec4;
+    var isPointLight : number;
+	BranchBegin("shadowMulti","SDM",[]);
+    if(0.5 < shadowCount) {
+        shadowRead = Sam2DArrToV4(shadowReadList, 0.0);  // R
+        lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+        isPointLight = lDir.w>1.1 ? 1.0 : 0.0;
+        if(isPointLight > 0.5) out_color.r = calcShadowPoint(shadowRead, 0.0, to_normal, world, lDir);
+        else out_color.r = calcShadowDirectional(shadowRead, 0.0, to_normal, world, lDir);
+    }
+    if(1.5 < shadowCount) {
+        shadowRead = Sam2DArrToV4(shadowReadList, 1.0);  // G
+        lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+        isPointLight = lDir.w>1.1 ? 1.0 : 0.0;
+        if(isPointLight > 0.5) out_color.g = calcShadowPoint(shadowRead, 1.0, to_normal, world, lDir);
+        else out_color.g = calcShadowDirectional(shadowRead, 1.0, to_normal, world, lDir);
+    }
+    if(2.5 < shadowCount) {
+        shadowRead = Sam2DArrToV4(shadowReadList, 2.0);  // B
+        lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+        isPointLight = lDir.w>1.1 ? 1.0 : 0.0;
+        if(isPointLight > 0.5) out_color.b = calcShadowPoint(shadowRead, 2.0, to_normal, world, lDir);
+        else out_color.b = calcShadowDirectional(shadowRead, 2.0, to_normal, world, lDir);
+    }
+    if(3.5 < shadowCount) {
+        for(var i = 3; i < FloatToInt(shadowCount); i++) {
+            shadowRead = Sam2DArrToV4(shadowReadList, IntToFloat(i)); // A
+            lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+            isPointLight = lDir.w>1.1 ? 1.0 : 0.0;
+            if(isPointLight > 0.5) out_color.a = calcShadowPoint(shadowRead, IntToFloat(i), to_normal, world, lDir);
+            else out_color.a += calcShadowDirectional(shadowRead, IntToFloat(i), to_normal, world, lDir);
+        }
+        out_color.a /= shadowCount - 3.0;
+    }
 	BranchDefault();
-	shadowRead =Sam2DArrToV4(shadowReadList,0.0);
-	all  = calcShadow(shadowRead, 0.0, to_normal, world);
+	shadowRead = Sam2DArrToV4(shadowReadList, 0.0);
+    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+    isPointLight = lDir.w>1.1 ? 1.0 : 0.0;
+    if(isPointLight > 0.5) out_color.a = calcShadowPoint(shadowRead, 0.0, to_normal, world, lDir);
+    else out_color.a = calcShadowDirectional(shadowRead, 0.0, to_normal, world, lDir);
+    // 하나만 사용하기 때문에 rgba 같은값으로 넣어줌
+    out_color.rgb = new CVec3(out_color.a, out_color.a, out_color.a);
+    pShadow = new CVec4(pShadow.r, pShadow.r, pShadow.r, pShadow.r);
 	BranchEnd();
-	
-	
 
-	// parallax self shadow 곱해줌
-	all = min(all, pAll);
-
-	out_color = new CVec4(all, all,all, 1.0);
+    // parallax 적용
+    out_color = V4Min(out_color, pShadow);
+    out_color.a = 1.0;
 }

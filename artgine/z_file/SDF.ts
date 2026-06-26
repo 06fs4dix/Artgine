@@ -165,7 +165,7 @@ export class SDF {
 		MatShadowRightCasP2:60,
 		MatShadowPointProj:64,
 		V4ShadowReadList:68,
-
+		V4LightMask:69,
 
 		SlotShadow:2,//512계 사용함2048
 		SlotUni:2,//512계 사용함2048

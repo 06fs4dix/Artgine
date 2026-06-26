@@ -1,4 +1,5 @@
 import { execSync, spawn, exec } from 'child_process';
+import { CUtilSystem } from '../artgine/system/CUtilSystem.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -44,19 +45,7 @@ export class CCMDMgr {
      */
     static async KillPID(pid: number): Promise<boolean> {
         try {
-            if (os.platform() === 'win32') {
-                // Windows: taskkill로 프로세스 트리 종료
-                execSync(`taskkill /PID ${pid} /T /F`, { stdio: 'ignore' });
-            } else {
-                // Unix 계열: 프로세스 그룹 종료 시도 후 단일 프로세스 종료
-                try {
-                    // detached 프로세스의 경우 프로세스 그룹으로 생성됨
-                    process.kill(-pid, 'SIGTERM');
-                } catch {
-                    // 그룹 종료 실패 시 단일 프로세스 종료
-                    process.kill(pid, 'SIGTERM');
-                }
-            }
+            await CUtilSystem.KillPID(pid);
             return true;
         } catch (e) {
             console.warn(`KillPID 실패(pid=${pid}):`, e);
@@ -119,34 +108,15 @@ export class CCMDMgr {
             }
         } else {
             // 현재 콘솔에서 실행하고 종료까지 대기
+            const env = { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
+            const child = platform === 'win32'
+                ? await CUtilSystem.Spawn('cmd', ['/c', `chcp 65001 >nul && ${_cmd}`], 'inherit', '', env)
+                : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'inherit', '', env);
             return new Promise<number | null>((resolve, reject) => {
-                let child;
-                if (platform === 'win32') {
-                    // Windows에서 유니코드 지원을 위해 UTF-8 코드페이지 설정
-                    child = spawn('cmd', ['/c', 'chcp 65001 >nul && ' + _cmd], {
-                        stdio: 'inherit',
-                        env: {
-                            ...process.env,
-                            LANG: 'C.UTF-8',
-                            LC_ALL: 'C.UTF-8'
-                        }
-                    });
-                } else {
-                    child = spawn('bash', ['-c', _cmd], {
-                        stdio: 'inherit',
-                        env: {
-                            ...process.env,
-                            LANG: 'C.UTF-8',
-                            LC_ALL: 'C.UTF-8'
-                        }
-                    });
-                }
-
                 child.on('exit', (code) => {
                     console.log(`명령어 종료됨. 종료 코드: ${code}`);
                     resolve(null);
                 });
-
                 child.on('error', (err) => {
                     console.error("RunCMD 에러:", err);
                     reject(err);

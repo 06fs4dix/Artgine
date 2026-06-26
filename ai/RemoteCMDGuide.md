@@ -1,10 +1,10 @@
 # 원격 명령 실행 (Remote Command Execution - ai/tool/remotecmd.js)
 
 ## 주소 (Address)
-- http://localhost:7000/Artgine/proj/Home/Home.html?path=%2F&RootPath=.%2F&RootUrl=%2FArtgine%2FRoot0
+- http://rowplayon.com:8050/Artgine/proj/Home/Home.html?path=%2F&RootPath=.%2F&RootUrl=%2FArtgine%2FRoot0
 
 ## 토큰 (Token)
-- UNt_X0dEDNf-0-WT36yv3xdyezQPbME9nZY9IgH-wzQ
+- Q8_L0IqWx0-nqhJ0lFMpM0c7hruvGwdCRe1QLHEGZpU
 
 > `artgine/server/CRemoteDesktopRouter.ts`의 `/RemoteCMD/Exec` 엔드포인트를 통해 원격 서버에서 콘솔 명령을 직접 실행하고 결과를 받는다.
 
@@ -55,3 +55,36 @@ node ai/tool/remotecmd.js <HomeURL> cmd "echo 내용>>sample.txt"
 - `cmd` 뒤 명령어에 공백, `\`(백슬래시), `&&`, `>`, `|` 등 특수문자가 포함되면 명령 전체를 큰따옴표(`"..."`)로 감싸서 하나의 인자로 전달한다.
   - `node ai/tool/remotecmd.js <HomeURL> cmd "type sample\sample.txt"`
   - `node ai/tool/remotecmd.js <HomeURL> cmd "git status && git diff"`
+
+## 파일 업로드/다운로드 (File Upload / Download)
+
+### 업로드 (로컬 → 원격)
+```
+node ai/tool/remotecmd.js <HomeURL> upload <로컬파일경로> <원격디렉터리>
+```
+- 인증 필요 — 먼저 `remote <토큰>`으로 세션을 인증해야 한다.
+- `<원격디렉터리>`: 서버 파일시스템 기준 절대/상대 경로, 끝에 `/` 포함 (예: `./proj/MyProject/`)
+- 내부적으로 `/File/Upload` API에 Base64 인코딩된 파일 데이터를 POST한다.
+
+```
+node ai/tool/remotecmd.js <HomeURL> remote <토큰>
+node ai/tool/remotecmd.js <HomeURL> upload ./local/file.ts ./proj/MyProject/
+→ {"ok":true}
+```
+
+### 다운로드 (원격 → 로컬)
+```
+node ai/tool/remotecmd.js <HomeURL> download <원격파일경로> [로컬저장경로]
+```
+- 인증 불필요 — 정적 서빙 URL(`RootUrl` + 경로)로 HTTP GET한다.
+- `<원격파일경로>`: `RootPath` 기준 상대 경로, `/`로 시작 (예: `/proj/MyProject/file.ts`)
+- `[로컬저장경로]` 생략 시 현재 디렉터리에 파일명으로 저장.
+- 텍스트/바이너리 모두 지원.
+
+```
+node ai/tool/remotecmd.js <HomeURL> download /proj/MyProject/file.ts
+→ {"ok":true,"file":"file.ts","size":1234}
+
+node ai/tool/remotecmd.js <HomeURL> download /proj/MyProject/file.ts ./out/file.ts
+→ {"ok":true,"file":"./out/file.ts","size":1234}
+```

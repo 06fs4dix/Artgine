@@ -266,6 +266,7 @@ export function V3Dot(_a : CVec3,_b : CVec3) : number{    return 0;}
 export function V3Nor(_a : CVec3) : CVec3{    return new CVec3(0,0,0);}
 export function V3Cross(_a : CVec3, _b : CVec3) : CVec3 { return new CVec3(0,0,0);}
 export function V3Fract(_a : CVec3) : CVec3 { return new CVec3(0,0,0);}
+export function V3Sqrt(_a : CVec3) : CVec3 {return new CVec3(0,0,0);}
 
 //V4
 export function V4SubV4(_a : CVec4,_b : CVec4) : CVec4{    return new CVec4(0,0,0,0);}

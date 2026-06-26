@@ -35,6 +35,28 @@ const LS_MODEL    = 'ai.model';
 import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { CLan } from "../../basic/CLan.js";
+
+// ---- 다국어(CLan) ----
+// 기본 텍스트는 영문(HTML innerHTML)이고 한국어만 추가 등록한다.
+// 미등록 언어/키는 원문(영문)으로 폴백되므로 안전하다.
+CLan.Set(CLan.eType.ko, "chat.caution", "⚠ 주의");
+CLan.Set(CLan.eType.ko, "chat.cautionMsg", "채팅 모드는 모든 권한으로 시작됩니다. AI는 실수할 수 있으니 명확한 규칙을 정하세요.");
+CLan.Set(CLan.eType.ko, "chat.cautionAuth", "프로바이더 인증이 안 되어 있으면 작동하지 않을 수 있습니다.");
+function applyChatLan(root: ParentNode = document): void {
+    root.querySelectorAll<HTMLElement>('[data-CLan]').forEach(el => {
+        const key = el.getAttribute('data-CLan');
+        if (!key) return;
+        if (el instanceof HTMLInputElement) {
+            const t = CLan.Get(key, el.placeholder);
+            if (t != null) el.placeholder = t;
+        } else {
+            const t = CLan.Get(key, el.innerHTML);
+            if (t != null) el.innerHTML = t;
+        }
+    });
+}
+applyChatLan();
 
 // ---- auth ----
 let authToken: string = getAuthToken(CPath.WebRootUrl());
