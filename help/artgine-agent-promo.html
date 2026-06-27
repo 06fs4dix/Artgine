@@ -491,12 +491,12 @@
     </div>
     <div class="col-md-6">
       <div class="feature-card p-4 h-100">
-        <h5 class="mb-3"><span class="badge-tag me-2" data-i18n="gsBadge2">방법 2</span> <span data-i18n="gsMethod2Title">압축 파일 다운로드</span></h5>
+        <h5 class="mb-3"><span class="badge-tag me-2" data-i18n="gsBadge2">방법 2</span> <span data-i18n="gsMethod2Title">실행파일 다운로드</span></h5>
         <div class="font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;">
-          <a href="https://github.com/06fs4dix/Artgine/archive/refs/heads/main.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine/archive/refs/heads/main.zip</a>
+          <div class="mb-2"><span style="color:#8b949e;">Windows</span><br><a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-win32-x64.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-win32-x64.zip</a></div>
+          <div><span style="color:#8b949e;">Linux</span><br><a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip</a></div>
         </div>
-        <p class="text-muted small mb-2" data-i18n="gsMethod2Desc1">위 주소에서 다운로드 후 압축을 풀어주세요.</p>
-        <p class="text-muted small mb-0"><span data-i18n="gsMethod2Desc2">Windows에서는</span> <code class="cmd">start.bat</code><span data-i18n="gsMethod2Desc3">, Linux/macOS에서는</span> <code class="cmd">start.sh</code><span data-i18n="gsMethod2Desc4">로도 실행할 수 있습니다.</span></p>
+        <p class="text-muted small mb-0" data-i18n="gsMethod2Desc1">다운로드 후 압축을 풀고 Artgine을 실행하세요.</p>
       </div>
     </div>
   </div>
@@ -605,11 +605,8 @@ const STRINGS = {
     gsPort: '포트',
     gsDefaultPort: '기본 포트 8050',
     gsBadge2: '방법 2',
-    gsMethod2Title: '압축 파일 다운로드',
-    gsMethod2Desc1: '위 주소에서 다운로드 후 압축을 풀어주세요.',
-    gsMethod2Desc2: 'Windows에서는',
-    gsMethod2Desc3: ', Linux/macOS에서는',
-    gsMethod2Desc4: '로도 실행할 수 있습니다.',
+    gsMethod2Title: '실행파일 다운로드',
+    gsMethod2Desc1: '다운로드 후 압축을 풀고 Artgine을 실행하세요.',
     gsPassword: '기본 비밀번호는 <strong>artgine</strong>입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
     footerBuilt: 'Built on Artgine Engine',
     footerLicense: 'MIT License'
@@ -703,11 +700,8 @@ const STRINGS = {
     gsPort: 'port',
     gsDefaultPort: 'default port 8050',
     gsBadge2: 'Method 2',
-    gsMethod2Title: 'Download ZIP',
-    gsMethod2Desc1: 'Download from the link above and unzip it.',
-    gsMethod2Desc2: 'You can also run it with',
-    gsMethod2Desc3: ' on Windows, or',
-    gsMethod2Desc4: ' on Linux/macOS.',
+    gsMethod2Title: 'Download Executable',
+    gsMethod2Desc1: 'Unzip and run Artgine.',
     gsPassword: 'The default password is <strong>artgine</strong>. Be sure to change it before exposing this to an external network.',
     footerBuilt: 'Built on Artgine Engine',
     footerLicense: 'MIT License'

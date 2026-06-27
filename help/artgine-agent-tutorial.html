@@ -388,6 +388,7 @@
         done: '완료',
         shortcuts: 'Shortcuts',
         homeDesc: '최신 Home은 RDP, Files, AI를 한 화면에서 사용하는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.',
+        aiAuthNote: 'AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.',
         rdpCardTitle: 'RDP',
         rdpCardDesc: 'Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.',
         filesCardTitle: 'Files',
@@ -399,9 +400,9 @@
         gsWebOnlyTitle: '웹 서버만 실행',
         gsMethod2Desc: '같은 저장소에서 npm run start_web [포트]로 웹 서버만 실행합니다. 기본 포트는 8050입니다. 전체 앱이 필요 없을 때 사용합니다.',
         gsPwd: '기본 비밀번호는 artgine입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
-        gsAltTitle: '방법 2: 압축 파일 다운로드',
-        gsAltZip: '위 주소에서 다운로드 후 압축을 풀어주세요.',
-        gsAlt: 'Windows에서는 start.bat, Linux/macOS에서는 start.sh로도 실행할 수 있습니다.',
+        gsAltTitle: '방법 2: 실행파일 다운로드',
+        gsAltZip: '다운로드 후 압축을 풀고 Artgine을 실행하세요.',
+        gsAlt: '',
         keys: 'Keys',
         file: 'File',
         music: 'Music',
@@ -526,6 +527,7 @@
         done: 'Done',
         shortcuts: 'Shortcuts',
         homeDesc: 'The latest Home is a local web interface that brings RDP, Files, and AI together in one screen. This tutorial covers only the main workflow.',
+        aiAuthNote: 'To use AI features, you must authenticate separately with your own account for each provider (Claude, Codex, etc.).',
         rdpCardTitle: 'RDP',
         rdpCardDesc: 'View the screen of the local or a remote Home.html server right away, and forward keyboard/mouse input once input mode is on.',
         filesCardTitle: 'Files',
@@ -537,9 +539,9 @@
         gsWebOnlyTitle: 'Web Server Only',
         gsMethod2Desc: 'Run npm run start_web [port] from the same repository to start only the web server. Default port is 8050. Use this when you don\'t need the full app.',
         gsPwd: 'The default password is artgine. Be sure to change it before exposing this to an external network.',
-        gsAltTitle: 'Method 2: Download ZIP',
-        gsAltZip: 'Download from the address above and unzip it.',
-        gsAlt: 'You can also run it with start.bat on Windows or start.sh on Linux/macOS.',
+        gsAltTitle: 'Method 2: Download Executable',
+        gsAltZip: 'Unzip and run Artgine.',
+        gsAlt: '',
         keys: 'Keys',
         file: 'File',
         music: 'Music',
@@ -727,6 +729,7 @@
           <section class="tab-pane home active" id="panel-home">
             <h2>Artgine Agent</h2>
             <p class="text-secondary" data-i18n="homeDesc">최신 Home은 RDP, Files, AI를 한 화면에서 사용하는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.</p>
+            <p class="text-secondary" style="font-size:.9em;margin-top:-.25rem" data-i18n="aiAuthNote">AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.</p>
             <div class="home-grid">
               <div class="card"><h3 data-i18n="rdpCardTitle">RDP</h3><p data-i18n="rdpCardDesc">Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.</p></div>
               <div class="card"><h3 data-i18n="filesCardTitle">Files</h3><p data-i18n="filesCardDesc">허용된 서버 폴더를 탐색하고, 파일 보기/편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.</p></div>
@@ -742,9 +745,12 @@ npm install
 npm start</pre>
 
               <h3 style="margin:16px 0 10px;font-size:15px" data-i18n="gsAltTitle"></h3>
-              <pre style="background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:12px;font-family:Consolas,monospace;font-size:13px;margin:0 0 8px;overflow:auto"><a href="https://github.com/06fs4dix/Artgine-Agent/archive/refs/heads/main.zip" target="_blank" rel="noopener" style="color:#4fc3f7;word-break:break-all">https://github.com/06fs4dix/Artgine-Agent/archive/refs/heads/main.zip</a></pre>
+              <pre style="background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:12px;font-family:Consolas,monospace;font-size:13px;margin:0 0 8px;overflow:auto"><span style="color:#8b949e;">Windows</span>
+<a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-win32-x64.zip" target="_blank" rel="noopener" style="color:#4fc3f7;word-break:break-all">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-win32-x64.zip</a>
+
+<span style="color:#8b949e;">Linux</span>
+<a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip" target="_blank" rel="noopener" style="color:#4fc3f7;word-break:break-all">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip</a></pre>
               <p style="margin:0 0 4px;color:#6c757d;font-size:.875em" data-i18n="gsAltZip"></p>
-              <p style="margin:0;color:#6c757d;font-size:.875em" data-i18n="gsAlt"></p>
 
               <p style="margin:12px 0 8px;font-size:.85em;color:#fff;background:#dc3545;border-radius:.375rem;padding:8px 10px;font-weight:700" data-i18n="gsPwd"></p>
 
