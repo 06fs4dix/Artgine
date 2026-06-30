@@ -91,6 +91,7 @@ window.addEventListener('keydown', function(e) {
         _storedToken = _authTokenMod ? _authTokenMod.getAuthToken(_webRootUrl()) : '';
         window.__READ_ONLY = !_storedToken;
         console.log('[terminal_ui] DOMContentLoaded — __TTYD_MODE:', window.__TTYD_MODE, '| __READ_ONLY:', window.__READ_ONLY, '| token:', !!_storedToken);
+
         if (window.__READ_ONLY) {
             var _bar = document.createElement('div');
             _bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:6px;padding:6px 8px;border-top:1px solid #444;background:#1a1a1a;';
@@ -197,13 +198,13 @@ window.addEventListener('keydown', function(e) {
             window.dispatchEvent(new Event('resize'));
         }
 
-        // ---- super mode (서버 측 무조건 자동승인, 포트별) ----
+        // ---- super mode (서버 측 무조건 자동승인, 세션별) ----
         var _superOn = false;
-        var _superPort = new URLSearchParams(window.location.search).get("port") || "";
+        var _superToken = new URLSearchParams(window.location.search).get("token") || "";
         function _superUrl(extra) {
             var ctxPath = "/" + window.location.pathname.split("/")[1];
-            var q = "port=" + encodeURIComponent(_superPort);
-            if (_storedToken) q += "&token=" + encodeURIComponent(_storedToken);
+            var q = "token=" + encodeURIComponent(_superToken);
+            if (_storedToken) q += "&authToken=" + encodeURIComponent(_storedToken);
             return ctxPath + "/cmd/super-mode?" + q + (extra || "");
         }
         function _setSuperUI(on) {
@@ -218,7 +219,7 @@ window.addEventListener('keydown', function(e) {
                 .then(function(j) { if (j.ok) _setSuperUI(j.super); });
         }
         function _initSuper() {
-            if (!_superPort || !_storedToken) return;
+            if (!_superToken || !_storedToken) return;
             fetch(_superUrl())
                 .then(function(r) { return r.json(); })
                 .then(function(j) { if (j.ok) _setSuperUI(j.super); })
@@ -439,7 +440,60 @@ window.addEventListener('keydown', function(e) {
             _acShow(matches);
         }
 
-        inp.addEventListener("input", function() { autoHeight(); _acUpdate(); });
+        // 슬래시 명령어 입력 시 두벌식 한글→영문 자동 역변환
+        (function() {
+            var _cho  = ['r','R','s','e','E','f','a','q','Q','t','T','d','w','W','c','z','x','v','g'];
+            var _jung = ['k','o','i','O','j','p','u','P','h','hk','ho','hl','y','n','nj','np','nl','b','m','ml','l'];
+            var _jong = ['','r','R','rt','s','sw','sg','e','f','fr','fa','fq','ft','fx','fv','fg','a','q','qt','t','T','d','w','c','z','x','v','g'];
+            var _jamo = {
+                'ㄱ':'r','ㄲ':'R','ㄳ':'rt','ㄴ':'s','ㄵ':'sw','ㄶ':'sg',
+                'ㄷ':'e','ㄸ':'E','ㄹ':'f','ㄺ':'fr','ㄻ':'fa','ㄼ':'fq',
+                'ㄽ':'ft','ㄾ':'fx','ㄿ':'fv','ㅀ':'fg','ㅁ':'a','ㅂ':'q',
+                'ㅃ':'Q','ㅄ':'qt','ㅅ':'t','ㅆ':'T','ㅇ':'d','ㅈ':'w',
+                'ㅉ':'W','ㅊ':'c','ㅋ':'z','ㅌ':'x','ㅍ':'v','ㅎ':'g',
+                'ㅏ':'k','ㅐ':'o','ㅑ':'i','ㅒ':'O','ㅓ':'j','ㅔ':'p',
+                'ㅕ':'u','ㅖ':'P','ㅗ':'h','ㅘ':'hk','ㅙ':'ho','ㅚ':'hl',
+                'ㅛ':'y','ㅜ':'n','ㅝ':'nj','ㅞ':'np','ㅟ':'nl','ㅠ':'b',
+                'ㅡ':'m','ㅢ':'ml','ㅣ':'l'
+            };
+            function _krToEn(str) {
+                var out = '';
+                for (var i = 0; i < str.length; i++) {
+                    var c = str.charCodeAt(i);
+                    if (c >= 0xAC00 && c <= 0xD7A3) {
+                        var n = c - 0xAC00;
+                        out += _cho[Math.floor(n/28/21)] + _jung[Math.floor(n/28)%21] + _jong[n%28];
+                    } else {
+                        out += _jamo[str[i]] || str[i];
+                    }
+                }
+                return out;
+            }
+            inp.addEventListener('input', function(e) {
+                if (e.isComposing && inp.value.startsWith('/')) {
+                    var cvt = _krToEn(inp.value.slice(1));
+                    if (cvt !== inp.value.slice(1)) {
+                        inp.value = '/' + cvt;
+                        inp.setSelectionRange(inp.value.length, inp.value.length);
+                    }
+                }
+                autoHeight();
+                _acUpdate();
+            });
+            inp.addEventListener('compositionend', function(e) {
+                if (!inp.value.startsWith('/') || !e.data) return;
+                var latin = _krToEn(e.data);
+                if (latin === e.data) return;
+                var pos = inp.selectionStart;
+                var start = pos - e.data.length;
+                if (start < 0 || inp.value.slice(start, pos) !== e.data) return;
+                inp.value = inp.value.slice(0, start) + latin + inp.value.slice(pos);
+                inp.setSelectionRange(start + latin.length, start + latin.length);
+                autoHeight();
+                _acUpdate();
+            });
+        })();
+
         inp.addEventListener("keydown", function(e) {
             var items = _acItems();
             if (acBox.style.display !== "none" && items.length) {
@@ -462,6 +516,44 @@ window.addEventListener('keydown', function(e) {
         _initSuper();
         setTimeout(function() { inp.focus(); }, 500);
         setTimeout(_sendResize, 1000);
+
+        if (window.__TTYD_MODE === 'codex') {
+            var _scrollDepth = 0;
+            function _codexScrollUp() {
+                var prev = _scrollDepth;
+                _scrollDepth++;
+                _sendRaw("\x1b[A");
+                if (prev === 0) _sendRaw("\x14");
+            }
+            function _codexScrollDown() {
+                var prev = _scrollDepth;
+                if (_scrollDepth > 0) _scrollDepth--;
+                _sendRaw("\x1b[B");
+                if (prev === 1 && _scrollDepth === 0) _sendRaw("\x14");
+            }
+            document.addEventListener("wheel", function(e) {
+                e.preventDefault(); e.stopPropagation();
+                if (e.deltaY < 0) _codexScrollUp(); else _codexScrollDown();
+            }, { passive: false, capture: true });
+            (function _attachCodexKeys() {
+                if (!window.term || typeof window.term.attachCustomKeyEventHandler !== 'function') {
+                    setTimeout(_attachCodexKeys, 200); return;
+                }
+                window.term.attachCustomKeyEventHandler(function(e) {
+                    if (e.type !== 'keydown') return true;
+                    if (e.key === 'PageUp')   { _codexScrollUp();   return false; }
+                    if (e.key === 'PageDown') { _codexScrollDown(); return false; }
+                    return true;
+                });
+            })();
+        }
+
+        document.addEventListener("wheel", function(e) {
+            if (window.__TTYD_MODE !== "opencode") return;
+            e.preventDefault();
+            e.stopPropagation();
+            _sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~");
+        }, { passive: false, capture: true });
 
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'focus-input') {

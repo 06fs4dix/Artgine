@@ -363,6 +363,7 @@ export function V4Pow(_a : CVec4, _pow : number) : CVec4 { return new CVec4(0,0,
 export function V4Exp(_a : CVec4) : CVec4 { return new CVec4(0,0,0,0);}
 
 //type casting
+export function FloatBitsToInt(_a : number) : number {return 0;}
 export function IntToFloat(_a : number|sampler2D) : number { return 0;}
 export function FloatToInt(_a : number) : number { return 0;}
 export function Mat4ToMat3(_a : CMat) : CMat3{    return new CMat3(0);}

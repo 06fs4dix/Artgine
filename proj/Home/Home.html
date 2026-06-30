@@ -100,6 +100,8 @@ if (location.protocol == 'file:' && isElectron==false){
 #rdp-sidebar{position:absolute;--bs-offcanvas-width:310px;z-index:10;}
 @keyframes browser-ripple{0%{transform:scale(1);opacity:1;}100%{transform:scale(2.5);opacity:0;}}
 @keyframes remote-ripple{0%{transform:scale(1);opacity:1;}100%{transform:scale(2.5);opacity:0;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spin{display:inline-block;animation:spin 0.8s linear infinite;}
 </style>
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
@@ -124,9 +126,6 @@ if (location.protocol == 'file:' && isElectron==false){
             role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> Down</button>
     </li>
     <li class="nav-item ms-auto" role="presentation">
-        <button class="btn btn-outline-success me-1 mt-1" id="install-btn" type="button" style="display:none;">
-            <i class="bi bi-download"></i> Install
-        </button>
 <button class="btn btn-outline-primary me-2 mt-1" id="login-btn" type="button" style="display:none;">
             Login
         </button>
@@ -162,6 +161,12 @@ if (location.protocol == 'file:' && isElectron==false){
     </div>
     <div class="tab-pane h-100" id="file" role="tabpanel" aria-labelledby="file-tab" style="overflow-y:auto;">
         <div id='Menu_div'></div>
+        <div id="fileUrlBar" class="d-flex align-items-center gap-1 px-2 py-1 border-bottom border-top">
+<input id="fileUrlInput" type="text" class="form-control form-control-sm font-monospace" readonly style="font-size:0.8em;">
+            <button id="fileUrlCopyBtn" class="btn btn-sm btn-outline-secondary flex-shrink-0" title="Copy URL">
+                <i class="bi bi-clipboard"></i>
+            </button>
+        </div>
         <div id='File_div'></div>
         <br>
     </div>
@@ -240,46 +245,71 @@ if (location.protocol == 'file:' && isElectron==false){
                 title="Toggle sidebar">
                 <i class="bi bi-layout-sidebar-inset"></i>
             </button>
-            <div id="ai-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center"
+            <div id="ai-frame-placeholder" class="position-absolute"
                  style="inset:0;overflow-y:auto;background:var(--bs-body-bg);">
+                <div class="d-flex align-items-center justify-content-center" style="min-height:100%;">
                 <div class="p-4" style="max-width:560px;width:100%;">
+                    <div class="d-flex gap-2 mb-4">
+                        <button class="ai-site-launch-btn btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1 px-1 py-1" data-web="https://claude.ai" data-app="claude://" style="min-width:0;font-size:0.78rem;">
+                            <span style="width:16px;height:16px;border-radius:3px;background:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:#fff;flex-shrink:0;">C</span>
+                            Claude
+                        </button>
+                        <button class="ai-site-launch-btn btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1 px-1 py-1" data-web="https://chatgpt.com" data-app="chatgpt://" style="min-width:0;font-size:0.78rem;">
+                            <span style="width:16px;height:16px;border-radius:3px;background:#10a37f;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:#fff;flex-shrink:0;">G</span>
+                            GPT
+                        </button>
+                        <button class="ai-site-launch-btn btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1 px-1 py-1" data-web="https://gemini.google.com" data-app="https://gemini.google.com" style="min-width:0;font-size:0.78rem;">
+                            <span style="width:16px;height:16px;border-radius:3px;background:#4285f4;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:#fff;flex-shrink:0;">G</span>
+                            Gemini
+                        </button>
+                        <button class="ai-site-launch-btn btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1 px-1 py-1" data-web="https://opencode.ai" data-app="https://opencode.ai" style="min-width:0;font-size:0.78rem;">
+                            <span style="width:16px;height:16px;border-radius:3px;background:#6366f1;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:#fff;flex-shrink:0;">O</span>
+                            OpenCode
+                        </button>
+                    </div>
                     <div class="mb-4">
-                        <div class="text-secondary fw-semibold mb-2"><i class="bi bi-robot"></i> Provider Status</div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-secondary fw-semibold"><i class="bi bi-robot"></i> <span data-CLan="ai.providerStatus">Provider Status</span></span>
+                            <button id="aiProviderRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" title="Refresh">
+                                <i class="bi bi-arrow-clockwise"></i><span data-CLan="ai.refresh">Refresh</span>
+                            </button>
+                        </div>
                         <div id="aiProviderStatus" class="d-flex flex-column gap-2"></div>
                     </div>
-                    <h5 class="mb-3 text-secondary"><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h5>
+                    <h5 class="mb-3 text-secondary"><i class="bi bi-keyboard"></i> <span data-CLan="ai.shortcuts">Keyboard Shortcuts</span></h5>
                     <div class="mb-3">
-                        <div class="small text-secondary fw-semibold mb-1">Global</div>
+                        <div class="small text-secondary fw-semibold mb-1" data-CLan="ai.global">Global</div>
                         <ul class="list-unstyled small mb-0">
-                            <li><kbd>F1</kbd> Go to File tab + File Manager</li>
-                            <li><kbd>F2</kbd> Go to File tab + File Search</li>
-                            <li><kbd>F3</kbd> Go to RDP tab</li>
-                            <li><kbd>F4</kbd> Go to AI tab</li>
+                            <li data-CLan="ai.kb.f1"><kbd>F1</kbd> Go to File tab + File Manager</li>
+                            <li data-CLan="ai.kb.f2"><kbd>F2</kbd> Go to File tab + File Search</li>
+                            <li data-CLan="ai.kb.f3"><kbd>F3</kbd> Go to RDP tab</li>
+                            <li data-CLan="ai.kb.f4"><kbd>F4</kbd> Go to AI tab</li>
                         </ul>
                     </div>
                     <div class="mb-3">
-                        <div class="small text-secondary fw-semibold mb-1">AI Panel</div>
+                        <div class="small text-secondary fw-semibold mb-1" data-CLan="ai.panel">AI Panel</div>
                         <ul class="list-unstyled small mb-0">
-                            <li><kbd>Tab</kbd> Toggle sidebar</li>
-                            <li><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> Switch Chat / Terminal / Brow subtab</li>
-                            <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
-                            <li><kbd>&rarr;</kbd> Jump to notification session</li>
-                            <li><kbd>&larr;</kbd> Return to previous session</li>
-                            <li><kbd>Shift</kbd>+<kbd>N</kbd> New terminal (Terminal subtab, sidebar open)</li>
-                            <li><kbd>Shift</kbd>+<kbd>D</kbd> Delete current terminal session</li>
+                            <li data-CLan="ai.kb.tab"><kbd>Tab</kbd> Toggle sidebar</li>
+                            <li data-CLan="ai.kb.123"><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> Switch Chat / Terminal / Brow subtab</li>
+                            <li data-CLan="ai.kb.updown"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
+                            <li data-CLan="ai.kb.right"><kbd>&rarr;</kbd> Jump to notification session</li>
+                            <li data-CLan="ai.kb.left"><kbd>&larr;</kbd> Return to previous session</li>
+                            <li data-CLan="ai.kb.shiftN"><kbd>Shift</kbd>+<kbd>N</kbd> New terminal (Terminal subtab, sidebar open)</li>
+                            <li data-CLan="ai.kb.shiftD"><kbd>Shift</kbd>+<kbd>D</kbd> Delete current terminal session</li>
                         </ul>
                     </div>
                     <div class="mb-0">
-                        <div class="small text-secondary fw-semibold mb-1">Inside Terminal</div>
+                        <div class="small text-secondary fw-semibold mb-1" data-CLan="ai.insideTerm">Inside Terminal</div>
                         <ul class="list-unstyled small mb-0">
-                            <li><kbd>Enter</kbd> Send input (<kbd>Shift</kbd>+<kbd>Enter</kbd> for newline)</li>
-                            <li><kbd>Tab</kbd> Apply autocomplete suggestion</li>
-                            <li><kbd>Esc</kbd> Close autocomplete</li>
-                            <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Navigate autocomplete, or move cursor when input is empty</li>
-                            <li><kbd>Ctrl</kbd>+<kbd>T</kbd> Scroll to bottom</li>
-                            <li><kbd>F6</kbd> Toggle SUPER (auto-approve) + focus input bar</li>
+                            <li data-CLan="ai.kb.enter"><kbd>Enter</kbd> Send input (<kbd>Shift</kbd>+<kbd>Enter</kbd> for newline)</li>
+                            <li data-CLan="ai.kb.tabAuto"><kbd>Tab</kbd> Apply autocomplete suggestion</li>
+                            <li data-CLan="ai.kb.esc"><kbd>Esc</kbd> Close autocomplete</li>
+                            <li data-CLan="ai.kb.updownAuto"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Navigate autocomplete, or move cursor when input is empty</li>
+                            <li data-CLan="ai.kb.ctrlT"><kbd>Ctrl</kbd>+<kbd>T</kbd> Scroll to bottom</li>
+                            <li data-CLan="ai.kb.f6"><kbd>F6</kbd> Toggle SUPER (auto-approve) + focus input bar</li>
                         </ul>
                     </div>
+                </div>
                 </div>
             </div>
         </div>

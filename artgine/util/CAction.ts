@@ -9,10 +9,10 @@ import { CSchedule } from "./CSchedule.js";
 //action
 export class CAction extends CObject
 {
-    constructor(_type,_action : string|CEvent,_para : Array<any>=[])
+    constructor(_action : any,_para : Array<any>=[],_type="")
     {
         super();
-        this.mAction=_action;
+        this.mAction=typeof _action=="string"?_action:CEvent.ToCEvent(_action);
         this.mParameter=_para==null?[]:_para;
         this.mType=_type;
     }
@@ -31,11 +31,11 @@ export class CAction extends CObject
     mParameter : Array<any>=new Array<any>();
     mSamplerTimer=new CSchedule();
     mTemp=null;
-    mRun="";
+    mTempKey="";
  
     static Excute(_temp,_event :  ((...args: any[]) => any) | CEvent<(...args: any[]) => any>,count=0,delay=0,start=0,_end=0)
     {
-        if(CSchedule.Update(_temp,count,delay,start,_end))
+        if(CSchedule.Update(_temp,"",count,delay,start,_end))
         {
             if(_event instanceof CEvent)
                 _event.Call(_temp);
@@ -47,14 +47,15 @@ export class CAction extends CObject
     // {
     //     CSamplerTimer.Reset(_temp);
     // }
-    async Excute(_actionTarget,_async=false,_parameter : Array<any>=null,_tempTarget=null,_run="",_update : CUpdate=null)
+    //액션 타겟은 액션이 실행될 타겟
+    async Excute(_actionTarget,_async=false,_parameter : Array<any>=null,_tempTarget=null,_tempKey="",_update : CUpdate=null)
     {
         if(_tempTarget==null) this.mTemp=this;
         else    this.mTemp=_tempTarget;
         
-        this.mRun=_run;
+        this.mTempKey=_tempKey;
 
-        if(this.mSamplerTimer.Execute(this.mTemp,this.mRun,_update)==false)    return;
+        if(this.mSamplerTimer.Execute(this.mTemp,this.mTempKey,_update)==false)    return;
        
         
              
@@ -108,6 +109,6 @@ export class CAction extends CObject
     IsEndReset()
     {
         if(this.mTemp==null)    return false;
-        return CSchedule.IsEndReset(this.mTemp,this.mRun);
+        return CSchedule.IsEndReset(this.mTemp,this.mTempKey);
     }
 }

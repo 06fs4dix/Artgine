@@ -1,5 +1,6 @@
+import { ligDir, ligMask } from "./Light";
 import { SDF } from "./SDF";
-import { abs, clamp, CMat, CMat3, CVec2, CVec3, CVec4, fract, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, screenPos, ShadowPosToUv, 
+import { abs, clamp, CMat3, CVec2, CVec3, CVec4, FloatToInt, fract, max, min, mix, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, ShadowPosToUv, 
     sin, sqrt, TransposeMat3, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4MulMatCoordi } from "./Shader";
 
 export var shadowNearCasV0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNearCasV0);
@@ -21,6 +22,8 @@ export var texture16f : number =0;
 export var shadowCount : number = 0;
 export var shadowWrite : CVec3 = new CVec3(0,0,0);
 export var shadowNearFar : CVec2 = new CVec2(1, 100000);
+export var shadowLigPos : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
+export var shadowTest : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
 
 //최대 쉐도우 색상
 export var shadowRate : number = 0.3;
@@ -44,7 +47,6 @@ function Hash22(p : CVec2) : CVec2
     var h2 : number = fract(sin(n2) * 43758.5453);
     return new CVec2(h1, h2);
 }
-
 // 프래그먼트(또는 화면) 좌표 기반 난수 지터 (-0.5 ~ 0.5)
 function randomJitter(fragCoord : CVec2,_strength : number) : CVec2
 {
@@ -152,87 +154,53 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     if(cas2Valid > 0.5)                    return res2;
     return 1.0;
 }
-
-function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _normalOffset : CVec3, _worldPos : CVec4, _index : number) : CVec3
+function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _world : CVec4, _shadowIndex : number) : CVec3
 {
     if(_isActive < -0.5) return new CVec3(0.0, 0.0, 0.0);
-    
-    var svm : CMat = Sam2DArrToMat(_viewMatOff, _index);
-    var spm : CMat = Sam2DArrToMat(_projMatOff, _index);
-
-    var world : CVec4 = new CVec4(V3AddV3(_worldPos.xyz, _normalOffset), _worldPos.w);
-    var viewPos : CVec4 = V4MulMatCoordi(world, svm);
-    var shadowPos : CVec4 = V4MulMatCoordi(viewPos, spm);
-    
-    // 결과 저장
+    var viewPos : CVec4 = V4MulMatCoordi(_world, Sam2DArrToMat(_viewMatOff, _shadowIndex));
+    var shadowPos : CVec4 = V4MulMatCoordi(viewPos, Sam2DArrToMat(_projMatOff, _shadowIndex));
     return new CVec3(ShadowPosToUv(shadowPos).xy, viewPos.z);
 }
-
-export function calcShadowDirectional(_read : CVec4, _index : number,_nor : CVec3, _worldPos : CVec4, _ligDir : CVec4) : number
+function CalcShadowDirectional(_read : CVec4, _index : number, _world : CVec4, _ligDir : CVec4, _bias: CVec2) : number
 {
-    // 빛 방향에 따른 바이어스 증감
-    var NdotL : number = max(V3Dot(_nor, V3Nor(_ligDir.xyz)), 0.05);
-    var tanTheta : number = sqrt(1.0 - NdotL * NdotL) / NdotL;
-
-    // 노말 오프셋 계산 (셀프 섀도잉 방지)
-    var normalScale : number = normalBias * (1.0 + clamp(tanTheta, 0.0, 4.0));
-    var normalOffset : CVec3 = V3MulFloat(V3Nor(_nor), normalScale);
-
-    // 바이어스 계산 (셀프 섀도잉 방지)
-    // 평지 공통분(캐스케이드 동일)과 경사 의존분(텍셀 크기 배율 적용 대상)을 분리한다.
-    var biasConst : number = bias;                                   // 캐스케이드 공통
-    var biasSlope : number = bias * clamp(tanTheta * 0.5, 0.0, 2.0); // 텍셀 배율(1/4/16) 적용 대상
-
-    var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, normalOffset, _worldPos, _index);
-    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, normalOffset, _worldPos, _index);
-    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, normalOffset, _worldPos, _index);
-
-    var sVal : number = ApplyPCF(uvZ0, uvZ1, uvZ2, _read, biasConst, biasSlope, _worldPos);
-    
-    //최소 그림자 강도 적용
-    return mix(shadowRate, 1.0, sVal);
+    var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, _world, _index);
+    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, _world, _index);
+    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, _world, _index);
+    return ApplyPCF(uvZ0, uvZ1, uvZ2, _read, _bias.x, _bias.y, _world);
 }
 
 function CubeToUV(_cubeUVW : CVec3, _texelSize : CVec2, _nearTexOff : number) : CVec3
 {
-    var absV : CVec3 = V3Abs(_cubeUVW);
+    var absDir : CVec3 = V3Abs(_cubeUVW);
 
-    var scaleToCube : number = 1.0 / max(absV.x, max(absV.y, absV.z));
-    absV = V3MulFloat(absV, scaleToCube);
+    var scaleToCube : number = 1.0 / max(absDir.x, max(absDir.y, absDir.z));
+    absDir = V3MulFloat(absDir, scaleToCube);
 
-    _cubeUVW = V3MulFloat(_cubeUVW, scaleToCube * (1.0 - 2.0 * _texelSize.y));
+    _cubeUVW = V3MulFloat(_cubeUVW, scaleToCube);
+    // _cubeUVW = V3MulFloat(_cubeUVW, scaleToCube * (1.0 - 2.0 * _texelSize.y));
 
-    var planar : CVec3 = _cubeUVW;
-    var uvw : CVec3;
-
-    if(absV.x >= absV.y && absV.x >= absV.z) {
-        if(planar.x > 0.0) uvw = new CVec3(-planar.z, -planar.y, SDF.eShadow.Bottom);  // Near
-        else uvw = new CVec3(planar.z, -planar.y, SDF.eShadow.Bottom);                  // Far
+    if(absDir.x >= absDir.y && absDir.x >= absDir.z) {
+        if(_cubeUVW.x > 0.0) _cubeUVW = new CVec3(_cubeUVW.z, _cubeUVW.y, SDF.eShadow.Near);   // Near(+X)
+        else _cubeUVW = new CVec3(-_cubeUVW.z, _cubeUVW.y, SDF.eShadow.Far);                    // Far(-X)
     }
-    else if(absV.y >= absV.x && absV.y >= absV.z) {
-        if(planar.y > 0.0) uvw = new CVec3(planar.x, planar.z, SDF.eShadow.Bottom);     // Top
-        else uvw = new CVec3(planar.x, -planar.z, SDF.eShadow.Bottom);               // Bottom
+    else if(absDir.y >= absDir.x && absDir.y >= absDir.z) {
+        if(_cubeUVW.y > 0.0) _cubeUVW = new CVec3(_cubeUVW.x, _cubeUVW.z, SDF.eShadow.Top);    // Top(+Y)
+        else _cubeUVW = new CVec3(_cubeUVW.x, -_cubeUVW.z, SDF.eShadow.Bottom);                // Bottom(-Y)
     }
     else {
-        if(planar.z > 0.0) uvw = new CVec3(planar.x, -planar.y, SDF.eShadow.Bottom);   // Left
-        else uvw = new CVec3(-planar.x, -planar.y, SDF.eShadow.Bottom);               // Right
+        if(_cubeUVW.z > 0.0) _cubeUVW = new CVec3(-_cubeUVW.x, _cubeUVW.y, SDF.eShadow.Left);  // Left(+Z)
+        else _cubeUVW = new CVec3(_cubeUVW.x, _cubeUVW.y, SDF.eShadow.Right);                  // Right(-Z)
     }
-    uvw.xy = V2AddV2(V2MulFloat(uvw.xy, 0.5), new CVec2(0.5, 0.5));
-    uvw.z += _nearTexOff - SDF.eShadow.Near;
-    return uvw;
+    _cubeUVW.xy = V2AddV2(V2MulFloat(_cubeUVW.xy, 0.5), new CVec2(0.5, 0.5));
+    _cubeUVW.z += _nearTexOff - SDF.eShadow.Near;
+    return _cubeUVW;
 }
-
-export function calcShadowPoint(_read : CVec4, _index : number, _nor : CVec3, _worldPos : CVec4, _ligDir : CVec4) : number
+function CalcShadowPoint(_read : CVec4, _index : number, _world : CVec4, _ligDir : CVec4, _bias: CVec2) : number
 {
     var shadowCamNear : number = _read.z;
     var shadowCamFar : number = _read.w;
 
-    // 노말 오프셋 계산 (셀프 섀도잉 방지)
-    var normalScale : number = normalBias;
-    var normalOffset : CVec3 = V3MulFloat(V3Nor(_nor), normalScale);
-    _worldPos.xyz = V3AddV3(_worldPos.xyz, normalOffset);
-
-    var ligToPos : CVec3 = V3SubV3(_worldPos.xyz, _ligDir.xyz);
+    var ligToPos : CVec3 = V3SubV3(_world.xyz, _ligDir.xyz);
     var ligToPosLength : number = V3Len(ligToPos);
 
     var sVal : number = 1.0;
@@ -241,38 +209,70 @@ export function calcShadowPoint(_read : CVec4, _index : number, _nor : CVec3, _w
         var depth : number = (ligToPosLength - shadowCamNear) / (shadowCamFar - shadowCamNear);
         var ligDir : CVec3 = V3Nor(ligToPos);
 
-        // 빛 방향에 따른 바이어스 증감
-        var NdotL : number = max(V3Dot(_nor, ligDir), 0.05);
-        var tanTheta : number = sqrt(1.0 - NdotL * NdotL) / NdotL;
-        
-        // 바이어스 계산 (셀프 섀도잉 방지)
-        // 평지 공통분(캐스케이드 동일)과 경사 의존분(텍셀 크기 배율 적용 대상)을 분리한다.
-        var biasConst : number = bias;                                   // 캐스케이드 공통
-        var biasSlope : number = bias * clamp(tanTheta * 0.5, 0.0, 2.0); // 텍셀 배율(1/4/16) 적용 대상
-
         var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
         var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
         var uvw : CVec3 = CubeToUV(V3AddV3(ligDir, new CVec3(0.0, 0.0, 0.0)), texScale, _read.y);
         var sp : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uvw);
-        sVal = (sp.w == 0.0) ? 0.0 : ((depth + biasSlope) >= sp.z ? 0.0 : 1.0);
+        sVal = (sp.w == 0.0) ? 1.0 : (depth >= sp.z ? 0.0 : 1.0);
     }
+    return sVal;
+}
 
+export function CalcShadow(_shadowIndex: number, _normal: CVec3, _world: CVec4): number
+{
+    // shadowRead
+    var shadowRead: CVec4 = Sam2DArrToV4(shadowReadList, _shadowIndex);
+
+    // light 정보
+    var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowRead.x);
+    var isPointLight: number = lDir.w>1.1 ? 1.0 : 0.0;
+
+    var NdotL : number = max(V3Dot(_normal, V3Nor(lDir.xyz)), 0.05);
+    var tanTheta : number = sqrt(1.0 - NdotL * NdotL) / NdotL;
+
+    // 노말 바이어스 적용
+    var normalScale : number = normalBias * (1.0 + clamp(tanTheta, 0.0, 4.0));
+    var normalOffset : CVec3 = V3MulFloat(V3Nor(_normal), normalScale);
+    _world.xyz = V3AddV3(_world.xyz, normalOffset);
+
+    // bias 계산
+    var biasConst : number = bias;                                   // 캐스케이드 공통
+    var biasSlope : number = bias * clamp(tanTheta * 0.5, 0.0, 2.0); // 텍셀 배율(1/4/16) 적용 대상
+    var biasAll: CVec2 = new CVec2(biasConst, biasSlope);
+    
+    var sVal: number;
+    if(isPointLight > 0.5) sVal = CalcShadowPoint(shadowRead, _shadowIndex, _world, lDir, biasAll);
+    else sVal = CalcShadowDirectional(shadowRead, _shadowIndex, _world, lDir, biasAll);
     return mix(shadowRate, 1.0, sVal);
 }
 
-export function calcParallaxShadow(_uv: CVec2, _texOff: CVec3, _heightScale: number, _tan : CVec3, _bi : CVec3, _nor : CVec3, _index: number, _ligDir : CVec4) : number 
+export function CalcParallaxShadow(_shadowIndex: number, _world: CVec4, _uv: CVec2, _texOff: CVec3, _heightScale: number, _tan: CVec3, _bi: CVec3, _nor: CVec3): number
 {
+    // shadowRead
+    var shadowRead: CVec4 = Sam2DArrToV4(shadowReadList, _shadowIndex);
+
+    // light 정보
+    var lDir: CVec4 = Sam2DArrToV4(ligDir, shadowRead.x);
+    var isPointLight: number = lDir.w>1.1 ? 1.0 : 0.0;
+    if(isPointLight > 0.5) {
+        var outRadius : number = shadowRead.w;
+        lDir.xyz = V3SubV3(lDir.xyz, _world.xyz);
+        var dist : number = V3Len(lDir.xyz);
+        if(dist > outRadius) return shadowRate;
+    }
+    lDir.xyz = V3Nor(lDir.xyz);
+    
+    // ligDir을 탄젠트 공간으로 이동
     var TBN : CMat3 = TransposeMat3(V3ToMat3(_tan, _bi, _nor));
-    var lDir : CVec3 = V3MulMat3Normal(_ligDir.xyz, TBN).xyz;
+    lDir.xyz = V3MulMat3Normal(lDir.xyz, TBN);
     if (lDir.z <= 0.0) return shadowRate; // 아랫쪽에서 오는 빛은 전체 그림자 처리
 
-    var minLayers : number = 8.0;
-    var maxLayers : number = 32.0;
-    var numLayers : number = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), lDir)));
+    var minLayers : number = 4.0;
+    var maxLayers : number = 16.0;
+    var numLayers : number = mix(maxLayers, minLayers, abs(V3Dot(new CVec3(0.0, 0.0, 1.0), lDir.xyz)));
 
     lDir.z += 0.2;
-
     var P : CVec2 = V2MulFloat(V2DivFloat(lDir.xy, lDir.z), _heightScale);
     var deltaTexCoords : CVec2 = V2DivFloat(P, numLayers);
     
@@ -283,19 +283,15 @@ export function calcParallaxShadow(_uv: CVec2, _texOff: CVec3, _heightScale: num
     var layerDepth : number = currentDepthMapValue / numLayers;
 
     var shadowMultiplier : number = 0.0;
-    var stepIndex : number = 0.0;
-
-    while(currentLayerDepth > 0.0)
-    {
+    var stepIndex : number = 0.0;   // soft shadow 위한 용도
+    while(currentLayerDepth > 0.0) {
         if (currentDepthMapValue < currentLayerDepth)
-        {
             shadowMultiplier = max(shadowMultiplier, (currentLayerDepth - currentDepthMapValue) * (1.0 - stepIndex / numLayers) * 10.0);
-        }
         stepIndex += 1.0;
         currentTexCoords = V2AddV2(currentTexCoords, deltaTexCoords);
         currentDepthMapValue = 1.0 - Sam2DToColor(_texOff.y, currentTexCoords).a;
         currentLayerDepth -= layerDepth;
     }
 
-    return (1.0 - shadowMultiplier) * (1.0 - shadowRate) + shadowRate;
+    return mix(shadowRate, 1.0, 1.0 - shadowMultiplier);
 }

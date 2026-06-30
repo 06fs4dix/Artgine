@@ -12,6 +12,7 @@ let pollTimer: number | null = null;
 let pollMs = 1000;
 let inputMode = false;
 let screenshotQuality = 75;
+let screenshotMonitor = 0;
 
 // /RemoteDesktop/exec는 nut-js 메서드를 그대로 호출하는 패스스루라서, nut-js의 숫자 enum 값을 여기서 직접 들고 있어야 한다.
 // (Button.LEFT=0, MIDDLE=1, RIGHT=2 / Key.* 값은 nut-js 소스 기준 — 값이 바뀌면 서버 KEY_MAP과 함께 갱신 필요)
@@ -68,6 +69,22 @@ function initQualityControl() {
         const quality = Math.trunc(Number(slider.value));
         screenshotQuality = Math.max(10, Math.min(100, Number.isFinite(quality) ? quality : 75));
         label.textContent = String(screenshotQuality);
+    });
+}
+
+function initMonitorControl() {
+    if (!controlsBar) return;
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-1';
+    row.innerHTML = `<span style="font-size:0.75rem;">Mon</span>
+        <input id="monitorInput" type="number" min="0" max="9" value="${screenshotMonitor}"
+               class="form-control form-control-sm p-0 text-center" style="width:3rem;">`;
+    controlsBar.insertBefore(row, inputModeRow);
+    const input = row.querySelector<HTMLInputElement>('#monitorInput')!;
+    input.addEventListener('change', () => {
+        const v = Math.trunc(Number(input.value));
+        screenshotMonitor = Number.isFinite(v) && v >= 0 ? v : 0;
+        input.value = String(screenshotMonitor);
     });
 }
 
@@ -129,7 +146,7 @@ async function rdScreenshot() {
     return fetch(CPath.WebRootUrl() + 'RemoteDesktop/screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quality: screenshotQuality, token: authToken })
+        body: JSON.stringify({ quality: screenshotQuality, monitor: screenshotMonitor, token: authToken })
     });
 }
 
@@ -347,4 +364,5 @@ loginBtn.addEventListener('click', () => tryLogin(loginPw.value));
 loginPw.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') tryLogin(loginPw.value); });
 
 initQualityControl();
+initMonitorControl();
 checkAuth();

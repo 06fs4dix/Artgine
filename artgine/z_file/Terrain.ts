@@ -23,7 +23,7 @@ import {
     V4AddV4,
     V4MulFloat,
 } from "./Shader";
-import { bias, calcShadowDirectional, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
+import { bias, CalcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
 
 
 var worldMat : CMat=Null();
@@ -415,15 +415,10 @@ function vs_main(f3_ver : Vertex3)
 }
 function ps_main()
 {
-    var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
-    var shadow : number=-1.0;
-    var uvScreen : CVec2;
-   
-    BranchBegin("shadow","S",[screenSize,shadowOn]);
+    var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
+    BranchBegin("shadow","S",[shadowOn, screenSize]);
     if(shadowOn>0.5) {
-        uvScreen = V2DivV2(screenPos.xy, screenSize.xy);
-        shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, uvScreen);  // <- 여기! 절대 size 곱하지 말기
-        shadow = shadowTex.x;
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, V2DivV2(screenPos.xy, screenSize.xy));  // <- 여기! 절대 size 곱하지 말기
     }
     BranchEnd();
 
@@ -605,21 +600,21 @@ function vs_main_shadow_read(f3_ver : Vertex3)
 
 function ps_main_shadow_read() 
 {
-    var all : number=0.0;
-    var shadowRead : CVec4;
-    var sVal : number;
+    var outputIndex: number;
+    var all : CVec4=new CVec4(1.0,1.0,1.0,1.0);
     BranchBegin("shadowMulti","SDM",[]);
-    for(var i = 0; i < FloatToInt(shadowCount); i++) {
-        shadowRead =Sam2DArrToV4(shadowReadList,i);
-        sVal  = calcShadowDirectional(shadowRead, IntToFloat(i), to_normal, to_worldPos);
-        all+=sVal;
+    outputIndex = 0.0;
+    all = new CVec4(0.0,0.0,0.0,0.0);
+    for(var i=0;i<SDF.TexSizeMax;++i) {
+        if(i >= FloatToInt(shadowCount)) break;
+        all[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, to_worldPos);
+        outputIndex = min(outputIndex + 1.0, 3.0);
     }
-    all/=shadowCount;
-    if(all<0.0)all=0.0;
+    all.a /= max(shadowCount - 3.0, 1.0);
     BranchDefault();
-    shadowRead =Sam2DArrToV4(shadowReadList,0.0);
-    all  = calcShadowDirectional(shadowRead, 0.0, to_normal, to_worldPos);
+    all.a = CalcShadow(0.0, to_normal, to_worldPos);
+    all.rgb = new CVec3(all.a, all.a, all.a);
     BranchEnd();
     
-    out_color = new CVec4(all, all, all, 1.0);
+    out_color = all;
 }

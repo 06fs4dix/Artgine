@@ -5,6 +5,7 @@ import { CCollider } from "../../artgine/app/component/CCollider.js";
 import { CCondition } from "../../artgine/util/CCondition.js";
 import { CForce } from "../../artgine/app/component/CForce.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
+import { CLight } from "../../artgine/app/component/CLight.js";
 import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
 import { CRigidBody } from "../../artgine/app/component/CRigidBody.js";
@@ -100,6 +101,21 @@ export class CShape2D extends CSubject {
             if (_opt.collider.pickMouse)
                 col.SetPickMouse(true);
             this.PushComp(col);
+        }
+        if (_opt.light) {
+            const lit = new CLight();
+            if (_opt.light.type === 'point') {
+                lit.SetPoint(_opt.light.outerRadius || 100, _opt.light.innerRadius || 1);
+            }
+            else {
+                lit.SetDirect(-1);
+            }
+            if (_opt.light.color)
+                lit.SetColor(_opt.light.color);
+            this.PushComp(lit);
+        }
+        if (_opt.receiveLighting) {
+            this.mPaint.PushTag("light");
         }
         if (_opt.tags) {
             for (const tag of _opt.tags) {

@@ -29,6 +29,7 @@ import { CShape2D } from "../../../plugin/CShape2D/CShape2D.js";
 import { CAnimation } from "../../../artgine/app/component/CAnimation.js";
 import { CClipPRS } from "../../../artgine/app/component/CAnimation.js";
 import { CClipColor } from "../../../artgine/app/component/CAnimation.js";
+import { CShadowPlane } from "../../../plugin/ShadowPlane/ShadowPlane.js";
 var Main = gAtl.NewCanvas("Main");
 Main.SetCameraKey("2D");
 Main.GetCam().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
@@ -106,3 +107,34 @@ Main.PushSub(new CShape2D({
     pos: new CVec3(360, 0, 0),
     animation: colAni,
 }));
+const ROW2_Y = -280;
+Main.PushSub(new CShape2D({
+    size: new CVec2(1400, 520),
+    pos: new CVec3(20, ROW2_Y, -11),
+    color: new CColor(1, 1, 1, CColor.eModel.RGBAdd),
+}));
+Main.PushSub(new CShape2D({
+    texture: "../../../proj/Tutorial/2DLight/Res/back.jpg",
+    size: new CVec2(1400, 520),
+    pos: new CVec3(20, ROW2_Y, -10),
+    receiveLighting: true,
+}));
+Main.PushSub(new CShape2D({
+    pos: new CVec3(-26, 154, 0),
+    light: { type: 'directional', color: new CVec3(1, 0.5, 0.5) },
+}));
+Main.PushSub(new CShape2D({
+    pos: new CVec3(-134, ROW2_Y - 148, 0),
+    light: { type: 'point', outerRadius: 600, innerRadius: 300, color: new CVec3(1, 1, 1) },
+}));
+{
+    const sub = Main.PushSub(new CShape2D({
+        texture: "../../../proj/Tutorial/2DLight/Res/01.png",
+        size: new CVec2(64, 48),
+        pos: new CVec3(220, ROW2_Y, 0),
+        sca: new CVec3(2, 2, 2),
+    }));
+    const shadow = sub.PushComp(new CShadowPlane());
+    shadow.mShadowLen = 1;
+    shadow.mShadowAlpha = 0.75;
+}

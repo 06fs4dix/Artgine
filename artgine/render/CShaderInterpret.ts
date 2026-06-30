@@ -1016,6 +1016,10 @@ export class CShaderInterpretGL extends CShaderInterpret
 		str += "}\n";
 
 		//type casting
+        str += "int FloatBitsToInt(float _a)\n";
+		str += "{\n";
+		str += "	return floatBitsToInt(_a);\n";
+		str += "}\n";
 		str += "float IntToFloat(int _a)\n";
 		str += "{\n";
 		str += "	return float(_a);\n";

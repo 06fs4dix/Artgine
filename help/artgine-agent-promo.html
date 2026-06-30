@@ -12,7 +12,7 @@
   .hero { background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1a26 100%); border-bottom: 1px solid #30363d; padding: 100px 0 80px; }
   .hero h1 { font-size: 3.2rem; font-weight: 800; background: linear-gradient(135deg, #58a6ff, #3fb950, #d2a8ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .hero .lead { color: #8b949e; font-size: 1.25rem; max-width: 700px; }
-  .badge-tag { background: #1f2937; color: #58a6ff; border: 1px solid #30363d; font-weight: 500; padding: .25rem .75rem; border-radius: 20px; font-size: .82rem; }
+  .badge-tag { background: #1f2937; color: #58a6ff; border: 1px solid #30363d; font-weight: 600; padding: .35rem 1rem; border-radius: 6px; font-size: 1rem; }
   .stat-number { font-size: 2.4rem; font-weight: 800; }
   .section-title { font-weight: 700; font-size: 1.6rem; margin-bottom: .5rem; }
   .section-sub { color: #8b949e; margin-bottom: 2rem; }
@@ -32,6 +32,7 @@
   .status-busy { background: #d29922; }
   .status-idle { background: #3fb950; }
   code.cmd { color: #7ee787; font-size: .85rem; background: #0d1117; padding: .1rem .4rem; border-radius: 4px; }
+  .uc-msg { background: #0d1117; border-left: 3px solid #58a6ff; border-radius: 0 6px 6px 0; padding: .65rem .9rem; font-size: .9rem; color: #c9d1d9; line-height: 1.5; }
 
   /* ── Mock Screenshot Styles ── */
   .mock-browser { background: #0d1117; border: 1px solid #30363d; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
@@ -469,6 +470,81 @@
   </div>
 </div>
 
+<!-- Use Cases -->
+<div class="container py-4">
+  <h2 class="section-title text-center" data-i18n="useCasesTitle">사용 예시</h2>
+  <p class="section-sub text-center" data-i18n="useCasesSub">AI에게 자연어로 지시만 하면 됩니다</p>
+  <div class="row g-3">
+
+    <div class="col-md-6 col-lg-4 scroll-reveal">
+      <div class="feature-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-phone" style="color:#58a6ff;font-size:1.2rem;"></i>
+          <span class="text-muted small" data-i18n="ucTag1">크로스 디바이스</span>
+        </div>
+        <div class="uc-msg mb-3" data-i18n="ucMsg1">PC에서 작업 중인데 모바일로 접속해서 마무리해줘</div>
+        <p class="text-muted small mb-0" data-i18n="ucDesc1">외출 중에도 스마트폰 브라우저로 접속해 PC 작업을 그대로 이어받습니다.</p>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4 scroll-reveal">
+      <div class="feature-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-display" style="color:#f85149;font-size:1.2rem;"></i>
+          <span class="text-muted small" data-i18n="ucTag2">원격 디버깅</span>
+        </div>
+        <div class="uc-msg mb-3" data-i18n="ucMsg2">지금 PC 화면에 에러창 떠 있는데 확인하고 해결해줘</div>
+        <p class="text-muted small mb-0" data-i18n="ucDesc2">RDP로 현재 PC 화면을 캡처해 에러 내용을 파악하고 즉시 수정합니다.</p>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4 scroll-reveal">
+      <div class="feature-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-globe" style="color:#3fb950;font-size:1.2rem;"></i>
+          <span class="text-muted small" data-i18n="ucTag3">웹 자동화</span>
+        </div>
+        <div class="uc-msg mb-3" data-i18n="ucMsg3">사이트에 로그인해서 메일 확인하고 비밀번호 변경해줘</div>
+        <p class="text-muted small mb-0" data-i18n="ucDesc3">Web 세션으로 브라우저를 원격 조작해 반복 웹 작업을 자동 처리합니다.</p>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4 scroll-reveal">
+      <div class="feature-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-shield-check" style="color:#d2a8ff;font-size:1.2rem;"></i>
+          <span class="text-muted small" data-i18n="ucTag4">영구 지시</span>
+        </div>
+        <div class="uc-msg mb-3" data-i18n="ucMsg4">이 폴더 작업할 때 권한 확인 메시지 무시해줘</div>
+        <p class="text-muted small mb-0" data-i18n="ucDesc4">특정 폴더나 조건에 대한 규칙을 한 번 지시해두면 세션 내내 유지됩니다.</p>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4 scroll-reveal">
+      <div class="feature-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-clock-history" style="color:#d29922;font-size:1.2rem;"></i>
+          <span class="text-muted small" data-i18n="ucTag5">스케줄 + 파일 정리</span>
+        </div>
+        <div class="uc-msg mb-3" data-i18n="ucMsg5">매일 자정마다 다운로드 폴더를 날짜별로 자동 정리해줘</div>
+        <p class="text-muted small mb-0" data-i18n="ucDesc5">스케줄러에 등록하면 AI가 지정 시각마다 파일 탐색·이동·정리를 자동 실행합니다.</p>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4 scroll-reveal">
+      <div class="feature-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-hdd-network" style="color:#f778ba;font-size:1.2rem;"></i>
+          <span class="text-muted small" data-i18n="ucTag6">원격 서버 작업</span>
+        </div>
+        <div class="uc-msg mb-3" data-i18n="ucMsg6">운영 서버에 접속해서 로그 분석하고 에러 원인 찾아줘</div>
+        <p class="text-muted small mb-0" data-i18n="ucDesc6">서버에서 원격 서버로 직접 접속해 로그를 읽고 에러 패턴을 분석해 원인을 보고합니다.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Quick Start -->
 <div class="container py-4">
   <h2 class="section-title text-center" data-i18n="quickStartTitle">시작하기</h2>
@@ -480,7 +556,7 @@
         <h5 class="mb-3"><span class="badge-tag me-2" data-i18n="gsBadge1">방법 1</span> <span data-i18n="gsMethod1Title">전체 설치 &amp; 실행</span></h5>
         <div class="font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;color:#c9d1d9;">
           <div style="color:#8b949e;"># <span data-i18n="gsClone">클론</span></div>
-          <div>git clone --recursive https://github.com/06fs4dix/Artgine.git</div>
+          <div>git clone --recursive https://github.com/06fs4dix/Artgine-Agent.git</div>
           <div style="color:#8b949e;margin-top:.5rem;"># <span data-i18n="gsInstall">설치</span></div>
           <div>cd Artgine &amp;&amp; npm install</div>
           <div style="color:#8b949e;margin-top:.5rem;"># <span data-i18n="gsRun">실행</span></div>
@@ -594,6 +670,14 @@ const STRINGS = {
     scChatNewline: '새 줄 (전송 대신)',
     scChatEsc: '자동완성 닫기',
     scChatTab: '자동완성 적용',
+    useCasesTitle: '사용 예시',
+    useCasesSub: 'AI에게 자연어로 지시만 하면 됩니다',
+    ucTag1: '크로스 디바이스', ucMsg1: 'PC에서 작업 중인데 모바일로 접속해서 마무리해줘', ucDesc1: '외출 중에도 스마트폰 브라우저로 접속해 PC 작업을 그대로 이어받습니다.',
+    ucTag2: '원격 디버깅',   ucMsg2: '지금 PC 화면에 에러창 떠 있는데 확인하고 해결해줘', ucDesc2: 'RDP로 현재 PC 화면을 캡처해 에러 내용을 파악하고 즉시 수정합니다.',
+    ucTag3: '웹 자동화',    ucMsg3: '사이트에 로그인해서 메일 확인하고 비밀번호 변경해줘', ucDesc3: 'Web 세션으로 브라우저를 원격 조작해 반복 웹 작업을 자동 처리합니다.',
+    ucTag4: '영구 지시',    ucMsg4: '이 폴더 작업할 때 권한 확인 메시지 무시해줘', ucDesc4: '특정 폴더나 조건에 대한 규칙을 한 번 지시해두면 세션 내내 유지됩니다.',
+    ucTag5: '스케줄 + 파일 정리', ucMsg5: '매일 자정마다 다운로드 폴더를 날짜별로 자동 정리해줘', ucDesc5: '스케줄러에 등록하면 AI가 지정 시각마다 파일 탐색·이동·정리를 자동 실행합니다.',
+    ucTag6: '원격 서버 작업',    ucMsg6: '운영 서버에 접속해서 로그 분석하고 에러 원인 찾아줘', ucDesc6: '서버에서 원격 서버로 직접 접속해 로그를 읽고 에러 패턴을 분석해 원인을 보고합니다.',
     quickStartTitle: '시작하기',
     quickStartSub: '두 가지 방법으로 바로 시작할 수 있습니다',
     gsBadge1: '방법 1',
@@ -607,7 +691,7 @@ const STRINGS = {
     gsBadge2: '방법 2',
     gsMethod2Title: '실행파일 다운로드',
     gsMethod2Desc1: '다운로드 후 압축을 풀고 Artgine을 실행하세요.',
-    gsPassword: '기본 비밀번호는 <strong>artgine</strong>입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
+    gsPassword: '기본 비밀번호는 [artgine]입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
     footerBuilt: 'Built on Artgine Engine',
     footerLicense: 'MIT License'
   },
@@ -689,6 +773,14 @@ const STRINGS = {
     scChatNewline: 'New line (instead of send)',
     scChatEsc: 'Close autocomplete',
     scChatTab: 'Apply autocomplete',
+    useCasesTitle: 'Use Cases',
+    useCasesSub: 'Just tell the AI what you need in plain language',
+    ucTag1: 'Cross-device',      ucMsg1: "I'm working on the PC — connect from mobile and wrap it up", ucDesc1: 'Access from your smartphone browser while away and pick up exactly where you left off.',
+    ucTag2: 'Remote Debugging',  ucMsg2: "There's an error dialog on my PC screen — check it and fix it", ucDesc2: 'RDP captures the current PC screen, reads the error, and applies a fix immediately.',
+    ucTag3: 'Web Automation',    ucMsg3: 'Log into the site, check my email, and change the password', ucDesc3: 'The Web session remotely operates the browser to automate repetitive web tasks.',
+    ucTag4: 'Persistent Rule',   ucMsg4: 'Whenever you work in this folder, skip the permission prompts', ucDesc4: 'State a rule once and it applies for the entire session, no matter the task.',
+    ucTag5: 'Schedule + Files',    ucMsg5: 'Every midnight, automatically sort the Downloads folder by date', ucDesc5: 'Register once with the scheduler and the AI runs file browsing, moving, and organizing at the set time.',
+    ucTag6: 'Remote Server Work', ucMsg6: 'Connect to the production server, analyze the logs, and find the error cause', ucDesc6: 'SSH from server to server, read the logs directly, and report the error pattern and root cause.',
     quickStartTitle: 'Getting Started',
     quickStartSub: 'Two ways to get started right away',
     gsBadge1: 'Method 1',
@@ -702,7 +794,7 @@ const STRINGS = {
     gsBadge2: 'Method 2',
     gsMethod2Title: 'Download Executable',
     gsMethod2Desc1: 'Unzip and run Artgine.',
-    gsPassword: 'The default password is <strong>artgine</strong>. Be sure to change it before exposing this to an external network.',
+    gsPassword: 'The default password is [artgine]. Be sure to change it before exposing this to an external network.',
     footerBuilt: 'Built on Artgine Engine',
     footerLicense: 'MIT License'
   }

@@ -1,5 +1,5 @@
 import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor, vfxMat0, vfxMat1 } from "./ColorFun";
-import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
     Attribute, BranchBegin, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, ToV2, UV2, 
@@ -9,7 +9,8 @@ import {
     V4AddV4, V4DivV4, V4MulFloat, V4MulMatCoordi, clamp, discard, max, pow, sampler2D, 
     SamCubeToColor,
     V3Nor,
-    SamCubeLodToColor
+    SamCubeLodToColor,
+    Sam2DArrToV4
 } from "./Shader";
 import { shadowOn } from "./Shadow";
 
@@ -77,8 +78,8 @@ Build("Artgine/Shader/PostLight",["light"],
     vs_main,[
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
-        ligDir,ligCol,ligCount,
-        ambientColor,sam2DCount,samCubeCount,envmapOn,
+        ligDir,ligCol,ligMask,ligCount,
+        ambientColor,mask,sam2DCount,samCubeCount,envmapOn,
         ligStep0,ligStep1,ligStep2,ligStep3,
         time,renType,
         sam2DDiffuse,sam2DPosition,sam2DNormal,sam2DSpecular,sam2DShadow
@@ -123,7 +124,7 @@ function ps_main_blend() {
     var all : CVec4 = Sam2DToColor(0.0, to_uv);
 
     out_color=TexOffBlendFactorFun(all,to_uv,TexOffBlendFactor);
-}
+}   
 
 function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {
     var uv : CVec2 = V2AddV2(_uv, V2MulV2(_f, _texScale));
@@ -240,20 +241,20 @@ function ps_main_light() {
     var L_nor : CVec4 = Sam2DToColor(sam2DNormal, to_uv);
     var L_spc : CVec3 = Sam2DToColor(sam2DSpecular, to_uv).xyz;
 
-    var shadow : number = -1.0;
+    var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
     BranchBegin("shadow","S",[shadowOn]);
-    if(shadowOn > 0.5) {
-        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, to_uv).x;
+    if(shadowOn>0.5) {
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, to_uv);
     }
     BranchEnd();
 
     var L_cor : CVec4 = L_dif;
-    var worldPos : CVec4 = V4MulMatCoordi(L_pos, viewMatInv3D);
+    var worldPos : CVec4 = V4MulMatCoordi(new CVec4(L_pos.xyz, 1.0), viewMatInv3D);
     var normal : CVec3 = MappingTexToV3(L_nor.rgb);
-
-    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, normal, shadow, L_spc.y, L_spc.x, L_spc.z, 1.0);
-
+    var maskIndex : number = L_pos.w;
     
+    var dseMat : CMat3 = LightCac3D(camPos3D, worldPos, L_dif, normal, shadow, L_spc.y, L_spc.x, L_spc.z, maskIndex);
+
     if(renType < 0.5) {
         // 0 diffuse
         out_color.rgb = dseMat[0];

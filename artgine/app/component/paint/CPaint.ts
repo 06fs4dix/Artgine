@@ -102,6 +102,26 @@ export class CPaint extends CComponent implements IMat
 
 	};
 
+    // 15bit 사용
+    static eLightMask={
+        Default:0b100000000000000,
+        Mask01:0b010000000000000,
+        Mask02:0b001000000000000,
+        Mask03:0b000100000000000,
+        Mask04:0b000010000000000,
+        Mask05:0b000001000000000,
+        Mask06:0b000000100000000,
+        Mask07:0b000000010000000,
+        Mask08:0b000000001000000,
+        Mask09:0b000000000100000,
+        Mask10:0b000000000010000,
+        Mask11:0b000000000001000,
+        Mask12:0b000000000000100,
+        Mask13:0b000000000000010,
+        Mask14:0b000000000000001,
+        All:0b111111111111111,
+    };
+
 	mBW=new CBoundWorldPaint();
 	protected mFMat : CMat;//= new CMat();
 	protected mLMat : CMat;//= new CMat();
@@ -126,6 +146,7 @@ export class CPaint extends CComponent implements IMat
 
 	protected mTextureKey=new Array<string>();
 	public mMaterial=new CVec4(1,-1,-1,1);
+    public mMask:CVec4;
 	
 	protected mUpdateLMat=true;
 	protected mUpdateFMat=true;
@@ -150,6 +171,8 @@ export class CPaint extends CComponent implements IMat
 		this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mShaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None)));
 		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(1)));
+        this.mMask=new CVec4(CPaint.eLightMask.Default);
+        this.mShaderAttrMap.set("mask",new CShaderAttr("mask",this.mMask));
 		//this.m_shaderAttrMap.set("CVLS",new CShaderAttr("CVLS",new CVec4(0,0,0,0,this)));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
@@ -424,6 +447,10 @@ export class CPaint extends CComponent implements IMat
 		this.mMaterial.z=metalric;
 		this.mMaterial.w=emissive;
 	}
+    SetMask(_mask:number)
+    {
+        this.mMask.x=_mask;
+    }
 	IsAlphaState()
 	{
 		if(this.mAlphaTex || (this.GetTag().has("alphaModel") && this.mAlphaModel.x!=1))

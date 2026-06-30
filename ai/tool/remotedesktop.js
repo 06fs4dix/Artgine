@@ -15,7 +15,7 @@ if (!baseArg || !baseArg.startsWith('http')) {
     console.error('Usage: node ai/remotedesktop.js <base-url> <cmd> [args]');
     console.error('  node ai/remotedesktop.js http://localhost:7000 login');
     console.error('  node ai/remotedesktop.js http://localhost:7000 exec <fn> [args_json]');
-    console.error('  node ai/remotedesktop.js http://localhost:7000 screenshot [quality=75]');
+    console.error('  node ai/remotedesktop.js http://localhost:7000 screenshot [quality=75] [monitor=0]');
     console.error('  node ai/remotedesktop.js http://localhost:7000 input <key|mouseButton> <time_ms> <windowTitle|-> [x y [x2 y2]]');
     process.exit(1);
 }
@@ -33,9 +33,10 @@ if (cmd === 'login') {
     console.log(JSON.stringify(r, null, 2));
 
 } else if (cmd === 'screenshot') {
-    const [qualityArg = '75'] = args;
+    const [qualityArg = '75', monitorArg = '0'] = args;
     const quality = Number(qualityArg);
-    const r = await call(base, 'RemoteDesktop/screenshot', { quality });
+    const monitor = Math.max(0, Math.trunc(Number(monitorArg)));
+    const r = await call(base, 'RemoteDesktop/screenshot', { quality, monitor });
     if (r.ok && r.result && r.result.data) {
         writeFileSync('screenshot.png', Buffer.from(r.result.data, 'base64'));
         console.log('Screenshot saved to screenshot.png');

@@ -8,6 +8,7 @@ import { CColor } from "../../artgine/render/CColor.js";
 import { CCondition } from "../../artgine/util/CCondition.js";
 import { CForce } from "../../artgine/app/component/CForce.js";
 import { CFrame } from "../../artgine/util/CFrame.js";
+import { CLight } from "../../artgine/app/component/CLight.js";
 import { CMat } from "../../artgine/geometry/CMat.js";
 import { CPaint2D } from "../../artgine/app/component/paint/CPaint2D.js";
 import { CRPAuto } from "../../artgine/app/canvas/CRPMgr.js";
@@ -47,6 +48,13 @@ export interface ICShape2DYSort {
 	origin?: number;
 }
 
+export interface ICShape2DLight {
+	type: 'point' | 'directional';
+	color?: CVec3;
+	outerRadius?: number;
+	innerRadius?: number;
+}
+
 export interface ICShape2DOption {
 	texture?: string | string[];
 	size?: CVec2;
@@ -73,6 +81,9 @@ export interface ICShape2DOption {
 	rigidBody?: ICShape2DRigidBody;
 	forces?: ICShape2DForce[];
 	collider?: ICShape2DCollider;
+
+	light?: ICShape2DLight;
+	receiveLighting?: boolean;
 
 	tags?: string[];
 
@@ -158,6 +169,21 @@ export class CShape2D extends CSubject {
 			if (_opt.collider.boundType !== undefined) col.SetBoundType(_opt.collider.boundType);
 			if (_opt.collider.pickMouse) col.SetPickMouse(true);
 			this.PushComp(col);
+		}
+
+		if (_opt.light) {
+			const lit = new CLight();
+			if (_opt.light.type === 'point') {
+				lit.SetPoint(_opt.light.outerRadius || 100, _opt.light.innerRadius || 1);
+			} else {
+				lit.SetDirect(-1);
+			}
+			if (_opt.light.color) lit.SetColor(_opt.light.color);
+			this.PushComp(lit);
+		}
+
+		if (_opt.receiveLighting) {
+			this.mPaint.PushTag("light");
 		}
 
 		if (_opt.tags) {

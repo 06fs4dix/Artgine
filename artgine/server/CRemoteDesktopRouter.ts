@@ -6,7 +6,7 @@ import { CAuthServer } from './CAuthServer.js';
 /*
 Remote Desktop Router
 - /RemoteDesktop/exec       POST  명령 실행 { fn, args }                       → { ok, result }
-- /RemoteDesktop/screenshot POST  화면 캡처 { quality? }                       → { ok, result: Buffer }
+- /RemoteDesktop/screenshot POST  화면 캡처 { quality?, monitor? }              → { ok, result: Buffer }  (monitor: 0=primary(기본값), 1=두번째...)
 - /RemoteDesktop/input      POST  시간 기반 입력(hold/drag) { key, time?, windowTitle?, points? } → { ok, result }
 - /RemoteCMD/Exec        POST  원격 PC에서 콘솔 명령 실행 { cmd, path }          → { ok, stdout, stderr }
 - /RemoteCMD/Write       POST  주소/토큰을 ai/RemoteCMDGuide.md에 등록 { addr, token } → { ok }

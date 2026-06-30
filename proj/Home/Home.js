@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mqtgsq45_2";
+gPF.mVersion = "mr0dnlnw_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -29,23 +29,15 @@ import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
 import { CStorage } from "../../artgine/system/CStorage.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CDOM } from "../../artgine/basic/CDOM.js";
+import { CLan } from "../../artgine/basic/CLan.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../../artgine/server/CAuthToken.js";
 import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg, CModalMusic } from "../../artgine/util/CModalUtil.js";
-import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
 if (gPF.mServer != "webServer")
     CAlert.E("Server setting is invalid.");
 CUtilWeb.Parameter("");
-if (!CPWA.IsInstalled()) {
-    CDOM.ID("install-btn").style.display = "";
-}
-CDOM.ID("install-btn").addEventListener("click", () => {
-    let msg = CPWA.Install();
-    if (msg)
-        CAlert.Info(msg);
-});
 const MODAL_DOM_DELAY = 100;
 const DEFAULT_AUTH_PASSWORD = 'artgine';
 function warnIfDefaultAuthPassword(pw) {
@@ -60,29 +52,159 @@ function updateFramePlaceholder() {
 const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
 let aiInited = false;
+function registerHomeLan() {
+    const ko = CLan.eType.ko;
+    CLan.Set(ko, "ai.providerStatus", "프로바이더 상태");
+    CLan.Set(ko, "ai.refresh", "갱신");
+    CLan.Set(ko, "ai.shortcuts", "단축키");
+    CLan.Set(ko, "ai.global", "전역");
+    CLan.Set(ko, "ai.panel", "AI 패널");
+    CLan.Set(ko, "ai.insideTerm", "터미널 내부");
+    CLan.Set(ko, "ai.ready", "준비됨");
+    CLan.Set(ko, "ai.notInstalled", "미설치");
+    CLan.Set(ko, "ai.notAuth", "인증 안됨");
+    CLan.Set(ko, "ai.nodeRequired", "Node.js가 설치되어 있지 않습니다. Provider 상태 페이지에서 확인 후 Node.js를 설치해 주세요.");
+    CLan.Set(ko, "memo.authNotice", "프로바이더 인증이 안 되어 있으면 작동하지 않을 수 있습니다.");
+    CLan.Set(ko, "ai.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
+    CLan.Set(ko, "ai.kb.f2", "<kbd>F2</kbd> 파일 탭 + 파일 검색으로 이동");
+    CLan.Set(ko, "ai.kb.f3", "<kbd>F3</kbd> RDP 탭으로 이동");
+    CLan.Set(ko, "ai.kb.f4", "<kbd>F4</kbd> AI 탭으로 이동");
+    CLan.Set(ko, "ai.kb.tab", "<kbd>Tab</kbd> 사이드바 토글");
+    CLan.Set(ko, "ai.kb.123", "<kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> Chat / Terminal / Brow 서브탭 전환");
+    CLan.Set(ko, "ai.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
+    CLan.Set(ko, "ai.kb.right", "<kbd>&rarr;</kbd> 알림 세션으로 이동");
+    CLan.Set(ko, "ai.kb.left", "<kbd>&larr;</kbd> 이전 세션으로 복귀");
+    CLan.Set(ko, "ai.kb.shiftN", "<kbd>Shift</kbd>+<kbd>N</kbd> 새 터미널 (Terminal 서브탭, 사이드바 열림)");
+    CLan.Set(ko, "ai.kb.shiftD", "<kbd>Shift</kbd>+<kbd>D</kbd> 현재 터미널 세션 삭제");
+    CLan.Set(ko, "ai.kb.enter", "<kbd>Enter</kbd> 입력 전송 (<kbd>Shift</kbd>+<kbd>Enter</kbd> 줄바꿈)");
+    CLan.Set(ko, "ai.kb.tabAuto", "<kbd>Tab</kbd> 자동완성 적용");
+    CLan.Set(ko, "ai.kb.esc", "<kbd>Esc</kbd> 자동완성 닫기");
+    CLan.Set(ko, "ai.kb.updownAuto", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 자동완성 탐색, 입력이 비었을 때 커서 이동");
+    CLan.Set(ko, "ai.kb.ctrlT", "<kbd>Ctrl</kbd>+<kbd>T</kbd> 맨 아래로 스크롤");
+    CLan.Set(ko, "ai.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스");
+}
+function applyLanIn(root) {
+    if (!root)
+        return;
+    root.querySelectorAll('[data-CLan]').forEach(el => {
+        const key = el.getAttribute('data-CLan');
+        if (!key)
+            return;
+        if (el instanceof HTMLInputElement) {
+            const t = CLan.Get(key, el.placeholder);
+            if (t != null)
+                el.placeholder = t;
+        }
+        else {
+            const t = CLan.Get(key, el.innerHTML);
+            if (t != null)
+                el.innerHTML = t;
+        }
+    });
+}
+registerHomeLan();
+applyLanIn(document.getElementById('ai-frame-placeholder'));
+let _nodeInstalled = null;
 async function loadAiProviderStatus() {
     const el = document.getElementById('aiProviderStatus');
     if (!el)
         return;
+    const btn = document.getElementById('aiProviderRefreshBtn');
+    const icon = btn?.querySelector('i');
+    if (btn)
+        btn.disabled = true;
+    icon?.classList.add('spin');
     try {
         const r = await fetch(CPath.WebRootUrl() + 'cmd/provider-state');
-        const list = await r.json();
-        el.innerHTML = list.map(p => {
+        const resp = await r.json();
+        const node = resp.node;
+        _nodeInstalled = !!node?.installed;
+        const providers = resp.providers ?? [];
+        const nodeRowClass = node?.installed ? 'bg-success-subtle' : 'bg-secondary-subtle';
+        const nodeIcon = node?.installed ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-secondary';
+        const nodeStatus = node?.installed ? CLan.Get('ai.ready', 'Ready') : CLan.Get('ai.notInstalled', 'Not Installed');
+        const nodeVer = node?.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${node.version}</span>` : '';
+        const nodeStatusHtml = node?.installed
+            ? `<span class="d-flex align-items-center gap-1"><i class="bi ${nodeIcon}"></i>${nodeStatus}</span>`
+            : `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="aiNodeDownloadBtn"><i class="bi ${nodeIcon}"></i>${nodeStatus}</button>`;
+        const nodeRow = `<div class="d-flex align-items-center justify-content-between rounded px-3 py-2 ${nodeRowClass}" style="font-size:1.05rem;">
+                <span class="fw-semibold">Node.js${nodeVer}</span>
+                ${nodeStatusHtml}
+            </div>`;
+        el.innerHTML = nodeRow + providers.map(p => {
             const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
             const icon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
-            const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
+            const status = !p.installed ? CLan.Get('ai.notInstalled', 'Not Installed') : p.authenticated ? CLan.Get('ai.ready', 'Ready') : CLan.Get('ai.notAuth', 'Not Authenticated');
             const ver = p.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${p.version}</span>` : '';
+            const statusHtml = !p.installed
+                ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}"><i class="bi ${icon}"></i>${status}</button>`
+                : `<span class="d-flex align-items-center gap-1"><i class="bi ${icon}"></i>${status}</span>`;
             return `<div class="d-flex align-items-center justify-content-between rounded px-3 py-2 ${rowClass}" style="font-size:1.05rem;">
                 <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
-                <span class="d-flex align-items-center gap-1"><i class="bi ${icon}"></i>${status}</span>
+                ${statusHtml}
             </div>`;
         }).join('');
+        document.getElementById('aiNodeDownloadBtn')?.addEventListener('click', () => {
+            window.open('https://nodejs.org/en/download', '_blank');
+        });
+        el.querySelectorAll('.ai-provider-launch-btn').forEach(b => {
+            b.addEventListener('click', () => termStartNew(b.dataset.provider));
+        });
     }
     catch (e) {
         console.error('provider-state error:', e);
     }
+    finally {
+        if (btn)
+            btn.disabled = false;
+        icon?.classList.remove('spin');
+    }
 }
 loadAiProviderStatus();
+document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
+function openAiSite(appUrl, webUrl) {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile && appUrl !== webUrl) {
+        const t = setTimeout(() => { window.open(webUrl, '_blank', 'noopener,noreferrer'); }, 1500);
+        window.addEventListener('blur', () => clearTimeout(t), { once: true });
+        window.location.href = appUrl;
+    }
+    else {
+        window.open(webUrl, '_blank', 'noopener,noreferrer');
+    }
+}
+document.querySelectorAll('.ai-site-launch-btn').forEach(btn => {
+    btn.addEventListener('click', () => openAiSite(btn.dataset.app ?? btn.dataset.web, btn.dataset.web));
+});
+function goProviderStatusPage() {
+    showTab('ai-tab');
+    if (activeFrameKey) {
+        const f = iframePool.get(activeFrameKey);
+        if (f)
+            f.style.display = 'none';
+        activeFrameKey = null;
+        updateFramePlaceholder();
+    }
+    loadAiProviderStatus();
+}
+async function ensureNodeInstalled() {
+    if (_nodeInstalled === null) {
+        try {
+            const r = await fetch(CPath.WebRootUrl() + 'cmd/provider-state');
+            const resp = await r.json();
+            _nodeInstalled = !!resp?.node?.installed;
+        }
+        catch (e) {
+            console.error('node check error:', e);
+            _nodeInstalled = false;
+        }
+    }
+    if (_nodeInstalled)
+        return true;
+    goProviderStatusPage();
+    CAlert.E(CLan.Get('ai.nodeRequired', 'Node.js is not installed. Please check the Provider status page and install Node.js.'));
+    return false;
+}
 const iframePool = new Map();
 let activeFrameKey = null;
 let pendingNewSid = null;
@@ -115,7 +237,7 @@ function handleTermSidebarShortcut(e) {
             return false;
         e.preventDefault();
         e.stopPropagation();
-        termConfirmKillSession(parseInt(activeFrameKey.slice(5), 10));
+        termConfirmKillSession(activeFrameKey.slice(5));
         return true;
     }
     return false;
@@ -170,21 +292,23 @@ function installFileAuthIndicatorStyle() {
     const style = document.createElement('style');
     style.id = 'file-auth-indicator-style';
     style.textContent = `
-        #File_div.${FILE_LIST_AUTHED_CLASS} {
-            outline: 2px solid #dc3545;
-            outline-offset: -2px;
-            border-radius: .375rem;
-            box-shadow: 0 0 0 .12rem rgba(220, 53, 69, .18);
+        #fileUrlBar.${FILE_LIST_AUTHED_CLASS} {
+            background-color: var(--bs-primary-bg-subtle);
+            border-color: var(--bs-primary) !important;
+        }
+#fileUrlBar.${FILE_LIST_AUTHED_CLASS} #fileUrlCopyBtn {
+            border-color: var(--bs-primary);
+            color: var(--bs-primary);
         }
     `;
     document.head.appendChild(style);
 }
 function applyFileAuthIndicator(authed) {
-    const fileList = document.getElementById('File_div');
-    if (!fileList)
+    const urlBar = document.getElementById('fileUrlBar');
+    if (!urlBar)
         return;
-    fileList.classList.toggle(FILE_LIST_AUTHED_CLASS, authed);
-    fileList.setAttribute('title', authed ? 'File admin authenticated' : '');
+    urlBar.classList.toggle(FILE_LIST_AUTHED_CLASS, authed);
+    urlBar.title = authed ? 'File admin authenticated' : '';
 }
 installFileAuthIndicatorStyle();
 function syncFrameContainerSize() {
@@ -549,7 +673,11 @@ function chatStartNew(initialWorkingDir) {
         const workingDirInput = container.querySelector('#chat-opt-workingDir');
         if (initialWorkingDir)
             workingDirInput.value = initialWorkingDir;
-        const doOpen = () => {
+        const doOpen = async () => {
+            if (!(await ensureNodeInstalled())) {
+                modal.Close();
+                return;
+            }
             const sid = uuidv4();
             const workingDir = workingDirInput.value.trim();
             const params = new URLSearchParams({ session: sid });
@@ -585,6 +713,8 @@ function syncSessState(id, cur, onDone, onWait) {
     _sessState.set(id, cur);
 }
 async function termStartNew(_mode = 'cmd', initialWorkingDir) {
+    if (!(await ensureNodeInstalled()))
+        return;
     const token = getAuthToken(CPath.WebRootUrl());
     if (token) {
         try {
@@ -686,7 +816,7 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
                 }
                 modal.Close();
                 const key2 = `term-new:${Date.now()}`;
-                showFrame(key2, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${j.port}`);
+                showFrame(key2, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
                 aiRefreshSessions();
                 termRefreshSessions();
                 refreshSessionsSoon();
@@ -708,8 +838,8 @@ async function termStartNew(_mode = 'cmd', initialWorkingDir) {
             doOpen(); });
     }, MODAL_DOM_DELAY);
 }
-async function termConnectSession(port, focusInput = true) {
-    const key = `term:${port}`;
+async function termConnectSession(token, focusInput = true) {
+    const key = `term:${token}`;
     if (iframePool.has(key)) {
         showFrame(key, '');
         aiRefreshSessions();
@@ -720,13 +850,13 @@ async function termConnectSession(port, focusInput = true) {
     }
     if (!focusInput)
         noFocusTermKeys.add(key);
-    showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`);
+    showFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
     aiRefreshSessions();
     termRefreshSessions();
 }
-async function termKillSession(port) {
+async function termKillSession(token) {
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/kill-session?port=${port}`);
+        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/kill-session?token=${token}`);
         const j = await r.json();
         if (!j.ok) {
             alert(`삭제 실패: ${j.msg || 'unknown error'}`);
@@ -739,13 +869,13 @@ async function termKillSession(port) {
         console.error('termKillSession error:', e);
     }
 }
-function termConfirmKillSession(port) {
-    const item = termSessionList.querySelector(`[data-port="${port}"]`);
-    const label = item?.querySelector('.fw-semibold')?.textContent || `Terminal ${port}`;
+function termConfirmKillSession(token) {
+    const item = termSessionList.querySelector(`[data-token="${token}"]`);
+    const label = item?.querySelector('.fw-semibold')?.textContent || 'Terminal';
     const confirm = new CConfirm();
     confirm.SetBody(`Delete ${aiEscapeHtml(label)}?`);
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => { termKillSession(port); },
+        () => { termKillSession(token); },
         () => { },
     ], ["Delete", "Cancel"]);
     confirm.Open();
@@ -760,19 +890,19 @@ async function termRefreshSessions() {
             return;
         termSessionList.innerHTML = '';
         const sessions = j.sessions;
-        const serverPorts = new Set(sessions.map(s => s.port));
+        const serverTokens = new Set(sessions.map(s => s.token));
         for (const key of Array.from(iframePool.keys())) {
             if (!key.startsWith('term:'))
                 continue;
-            if (!serverPorts.has(parseInt(key.slice(5), 10)))
+            if (!serverTokens.has(key.slice(5)))
                 destroyFrame(key);
         }
         const termNewKeys = Array.from(iframePool.keys()).filter(k => k.startsWith('term-new:'));
         if (termNewKeys.length > 0) {
-            const newSessions = sessions.filter(s => !iframePool.has(`term:${s.port}`));
+            const newSessions = sessions.filter(s => !iframePool.has(`term:${s.token}`));
             if (newSessions.length > 0) {
                 const newest = newSessions.reduce((a, b) => (a.createdAt > b.createdAt ? a : b));
-                const key = `term:${newest.port}`;
+                const key = `term:${newest.token}`;
                 const newKey = termNewKeys[0];
                 const f = iframePool.get(newKey);
                 iframePool.delete(newKey);
@@ -782,7 +912,7 @@ async function termRefreshSessions() {
             }
         }
         for (const s of sessions) {
-            const key = `term:${s.port}`;
+            const key = `term:${s.token}`;
             const isActive = activeFrameKey === key;
             const isLoaded = iframePool.has(key);
             const rel = aiFormatRelative(s.updatedAt);
@@ -794,13 +924,13 @@ async function termRefreshSessions() {
                     : !isLoaded ? 'off'
                         : s.busy ? 'busy'
                             : 'idle';
-            syncSessState(`term:${s.port}`, st, () => {
+            syncSessState(`term:${s.token}`, st, () => {
                 const rawPreview = s.lastMsg || '';
                 if (!isActiveFrame(key) || !document.hasFocus())
-                    _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.port));
+                    _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? preview : undefined, () => termConnectSession(s.token));
             }, () => {
                 if (!isActiveFrame(key) || !document.hasFocus())
-                    _showDoneNotification(`⚠️ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.port));
+                    _showDoneNotification(`⚠️ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.token));
             });
             const dot = st === 'off' ? `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
                 : st === 'wait' ? `<span class="badge rounded-pill bg-warning term-busy-dot" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
@@ -809,7 +939,7 @@ async function termRefreshSessions() {
             const item = createSessionItem({
                 activeClass: 'bg-success-subtle',
                 isActive,
-                dataAttr: { name: 'port', value: String(s.port) },
+                dataAttr: { name: 'token', value: s.token },
                 cursorPointer: true,
                 leftHtml: `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -824,10 +954,10 @@ async function termRefreshSessions() {
                 </span>`,
                 deleteAct: 'kill',
                 deleteLabel: '🗑️ Delete Session',
-                onClick: () => termConnectSession(s.port),
-                onShare: () => termShowShareLink(s.port),
-                onDelete: () => termConfirmKillSession(s.port),
-                popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${s.port}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.port}` },
+                onClick: () => termConnectSession(s.token),
+                onShare: () => termShowShareLink(s.token),
+                onDelete: () => termConfirmKillSession(s.token),
+                popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.token.slice(0, 8)}` },
             });
             termSessionList.appendChild(item);
         }
@@ -836,8 +966,8 @@ async function termRefreshSessions() {
         console.error('Terminal session list error:', e);
     }
 }
-function termShowShareLink(port) {
-    showShareLinkModal('Terminal Share Link', 'Anyone with this link can view the terminal in read-only mode.', `${CPath.WebRootUrl()}cmd/terminal-proxy?port=${port}`);
+function termShowShareLink(token) {
+    showShareLinkModal('Terminal Share Link', 'Anyone with this link can view the terminal in read-only mode.', `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
 }
 function aiShowShareLink(sessionId, title) {
     showShareLinkModal('AI Chat Share Link', `Anyone with this link can view the chat: <strong>${aiEscapeHtml(title)}</strong>`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sessionId)}&share=1`);
@@ -947,6 +1077,11 @@ termNewBtn.addEventListener('click', () => termStartNew('cmd'));
 const schedNewBtn = CDOM.ID("schedNewBtn");
 const schedSessionList = CDOM.ID("schedSessionList");
 function schedIntervalStr(s) {
+    if (s.timeMode) {
+        const hh = String(s.hour ?? 0).padStart(2, '0');
+        const mm = String(s.minute ?? 0).padStart(2, '0');
+        return `${hh}:${mm}`;
+    }
     const parts = [`${s.delay}s`];
     if (s.count > 0)
         parts.push(`×${s.count}`);
@@ -1025,26 +1160,53 @@ function schedOpenModal(existing) {
             </div>
         </div>
         <div class="mb-2">
-            <div class="d-flex gap-2">
-                <div class="flex-fill">
-                    <label class="form-label small text-secondary mb-1">Delay (sec)</label>
-                    <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.delay ?? 60}">
+            <div class="d-flex gap-1 mb-2">
+                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${!(existing?.timeMode) ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
+                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.timeMode ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
+            </div>
+            <div id="sched-panel-interval" style="display:${!(existing?.timeMode) ? '' : 'none'}">
+                <div class="d-flex gap-2 mb-2">
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Delay (sec)</label>
+                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.delay ?? 60}">
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
+                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.count ?? 0}">
+                    </div>
                 </div>
-                <div class="flex-fill">
-                    <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
-                    <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.count ?? 0}">
+                <div class="d-flex gap-2">
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
+                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.start ?? 0}">
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
+                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.end ?? 0}">
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="mb-2">
-            <div class="d-flex gap-2">
-                <div class="flex-fill">
-                    <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
-                    <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.start ?? 0}">
+            <div id="sched-panel-time" style="display:${existing?.timeMode ? '' : 'none'}">
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">Days of Week</label>
+                    <div class="d-flex gap-1 flex-wrap">
+                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((lbl, i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
+                    </div>
                 </div>
-                <div class="flex-fill">
-                    <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
-                    <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.end ?? 0}">
+                <div class="d-flex gap-2 align-items-end">
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Hour (0–23)</label>
+                        <select id="sched-hour" class="form-select form-select-sm">
+                            ${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${(existing?.hour ?? 9) === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Minute</label>
+                        <select id="sched-minute" class="form-select form-select-sm">
+                            ${Array.from({ length: 12 }, (_, i) => i * 5).map(m => `<option value="${m}" ${(existing?.minute ?? 0) === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -1103,14 +1265,30 @@ function schedOpenModal(existing) {
         };
         modeBtns.forEach(b => b.addEventListener('click', () => updateMode(b.dataset.mode)));
         updateMode(selectedMode);
+        let isTimeMode = existing?.timeMode ?? false;
+        const tabInterval = container.querySelector('#sched-tab-interval');
+        const tabTime = container.querySelector('#sched-tab-time');
+        const panelInterval = container.querySelector('#sched-panel-interval');
+        const panelTime = container.querySelector('#sched-panel-time');
+        const switchTab = (toTime) => {
+            isTimeMode = toTime;
+            tabInterval.className = `btn btn-sm flex-fill ${!toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
+            tabTime.className = `btn btn-sm flex-fill ${toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
+            panelInterval.style.display = toTime ? 'none' : '';
+            panelTime.style.display = toTime ? '' : 'none';
+        };
+        tabInterval.addEventListener('click', () => switchTab(false));
+        tabTime.addEventListener('click', () => switchTab(true));
+        const dayBtns = container.querySelectorAll('.sched-day-btn');
+        dayBtns.forEach(b => b.addEventListener('click', () => {
+            const active = b.classList.contains('btn-primary');
+            b.classList.toggle('btn-primary', !active);
+            b.classList.toggle('btn-outline-secondary', active);
+        }));
         const doSave = async () => {
             const name = (container.querySelector('#sched-name')).value.trim();
             const tkey = (container.querySelector('#sched-tkey')).value.trim();
             const command = (container.querySelector('#sched-cmd')).value.trim();
-            const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
-            const count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
-            const start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
-            const end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
             const cwd = (container.querySelector('#sched-cwd')).value.trim();
             const allow = (container.querySelector('#sched-allow')).checked;
             const mcp = (container.querySelector('#sched-mcp')).checked;
@@ -1119,15 +1297,44 @@ function schedOpenModal(existing) {
                 alert('Name, terminal key, and command are required');
                 return;
             }
-            if (delay === 0) {
-                alert('Delay must be at least 1 second');
-                return;
-            }
             const params = new URLSearchParams({ name, terminalKey: tkey, mode: selectedMode, command,
-                delay: String(delay), count: String(count), start: String(start), end: String(end),
-                allow: allow ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0' });
+                allow: allow ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0',
+                timeMode: isTimeMode ? '1' : '0' });
             if (cwd)
                 params.set('cwd', cwd);
+            if (isTimeMode) {
+                const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
+                if (selectedDays.length === 0) {
+                    alert('Select at least one day');
+                    return;
+                }
+                const hh = parseInt((container.querySelector('#sched-hour')).value) || 0;
+                const mm = parseInt((container.querySelector('#sched-minute')).value) || 0;
+                params.set('days', selectedDays.join(','));
+                params.set('hour', String(hh));
+                params.set('minute', String(mm));
+                params.set('delay', '60');
+                params.set('count', '0');
+                params.set('start', '0');
+                params.set('end', '0');
+            }
+            else {
+                const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
+                const count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
+                const start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
+                const end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
+                if (delay === 0) {
+                    alert('Delay must be at least 1 second');
+                    return;
+                }
+                params.set('delay', String(delay));
+                params.set('count', String(count));
+                params.set('start', String(start));
+                params.set('end', String(end));
+                params.set('days', '');
+                params.set('hour', '0');
+                params.set('minute', '0');
+            }
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
             const j = await r.json();
             if (!j.ok) {
@@ -1241,16 +1448,16 @@ function goNextSession(dir) {
         return true;
     }
     else if (subtab === 'term') {
-        const items = Array.from(termSessionList.querySelectorAll('[data-port]'));
+        const items = Array.from(termSessionList.querySelectorAll('[data-token]'));
         if (items.length === 0)
             return false;
         const curIdx = activeFrameKey?.startsWith('term:')
-            ? items.findIndex(el => `term:${el.dataset.port}` === activeFrameKey)
+            ? items.findIndex(el => `term:${el.dataset.token}` === activeFrameKey)
             : -1;
         const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
         if (nxt === curIdx)
             return false;
-        termConnectSession(parseInt(items[nxt].dataset.port), false);
+        termConnectSession(items[nxt].dataset.token, false);
         items[nxt].scrollIntoView({ block: 'nearest' });
         return true;
     }
@@ -1765,6 +1972,46 @@ async function rdpOpenRemote(index) {
     const webRootUrl = ParseFileHomeUrl(remote.url).webRootUrl;
     showRdpFrame(`rdp:remote:${index}`, `${webRootUrl}artgine/server/html/RemoteDesktop.html`);
     rdpRenderList();
+    if (!(await fileCheckAuth()))
+        promptFileAuth();
+}
+function promptFileAuth(onSuccess) {
+    const dlg = new CConfirm();
+    dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    const doAuth = () => {
+        const pw = CDOM.IDValue("AuthPassword");
+        CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json").then(async (j) => {
+            if (j.ok) {
+                SetFileToken(j.token);
+                await refreshFileAuthState();
+                aiAuthOverlay.style.display = 'none';
+                aiRefreshSessions();
+                termRefreshSessions();
+                CAlert.Info("Permission granted");
+                warnIfDefaultAuthPassword(pw);
+                onSuccess?.();
+            }
+            else {
+                CAlert.E("Wrong password: " + (j.msg ?? ""));
+            }
+        }).catch(() => { CAlert.E("Server error"); });
+    };
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+        doAuth,
+        () => { },
+    ], ["OK", "Cancel"]);
+    dlg.Open();
+    setTimeout(() => {
+        const input = CDOM.ID("AuthPassword");
+        input?.focus();
+        input?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter')
+                return;
+            e.preventDefault();
+            doAuth();
+            dlg.Close();
+        });
+    }, MODAL_DOM_DELAY);
 }
 rdpAddBtn.addEventListener('click', () => {
     const input = rdpAddUrlInput.value.trim();
@@ -1820,6 +2067,10 @@ CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
     showAiTermSubtab();
     aiShowAuthOrLoad();
     updateBrowserFrameVisibility();
+});
+CDOM.ID("ai-tab").addEventListener("click", () => {
+    if (CDOM.ID("ai-tab").classList.contains("active"))
+        goProviderStatusPage();
 });
 CDOM.ID("ai-tab").addEventListener("hidden.bs.tab", () => updateBrowserFrameVisibility());
 CDOM.ID("ai-browser-subtab").addEventListener("shown.bs.tab", () => updateBrowserFrameVisibility());
@@ -1993,7 +2244,21 @@ const FILE_OPEN = {
     soundlist: openSoundList, html: openHtml, code: openCode, md: openMd,
     sheet: openSheet, file: openGenericFile,
 };
+function updateFileUrlBar() {
+    const input = document.getElementById('fileUrlInput');
+    if (!input)
+        return;
+    const url = new URL(location.href);
+    url.search = '';
+    url.searchParams.set('path', gPath ?? '/');
+    if (RootPath)
+        url.searchParams.set('RootPath', RootPath);
+    if (RootUrl)
+        url.searchParams.set('RootUrl', RootUrl);
+    input.value = url.toString();
+}
 function DirListRefresh() {
+    updateFileUrlBar();
     CDOM.ID("File_div").innerHTML = "";
     CDOM.ID("Delete_div").innerHTML = "";
     folderList = { "<>": "ul", "class": "list-group", "html": [] };
@@ -2208,7 +2473,23 @@ async function ConnectFileHomeUrl(input) {
     memoNotifyRootChanged();
 }
 window["ConnectFileHomeUrl"] = ConnectFileHomeUrl;
-ConnectFileHomeUrl(CUtilWeb.Parameter("FileHomeUrl") ?? undefined);
+{
+    const fileHomeUrlParam = CUtilWeb.Parameter("FileHomeUrl");
+    if (fileHomeUrlParam) {
+        ConnectFileHomeUrl(fileHomeUrlParam);
+    }
+    else {
+        (async () => {
+            try {
+                await InitFileRoot();
+            }
+            catch { }
+            await LoadFileList(path ?? '/');
+            refreshFileAuthState();
+            memoNotifyRootChanged();
+        })();
+    }
+}
 {
     const _sd = CStorage.Get("SoundList");
     const _d = _sd ? JSON.parse(_sd) : { name: [], fullPath: [] };
@@ -2269,6 +2550,21 @@ var g_menuList = { "<>": "div", "class": "d-flex align-items-center p-1", "html"
             ] },
     ] };
 CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
+{
+    const copyBtn = document.getElementById('fileUrlCopyBtn');
+    copyBtn?.addEventListener('click', () => {
+        const input = document.getElementById('fileUrlInput');
+        if (!input?.value)
+            return;
+        navigator.clipboard.writeText(input.value).then(() => {
+            const icon = copyBtn.querySelector('i');
+            if (!icon)
+                return;
+            icon.className = 'bi bi-clipboard-check';
+            setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
+        });
+    });
+}
 async function FileBtn() {
     if (fileAuthed) {
         const valid = await fileCheckAuth();
@@ -2279,41 +2575,7 @@ async function FileBtn() {
         }
         setFileAuthed(false);
     }
-    const dlg = new CConfirm();
-    dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
-    const doAuth = () => {
-        const pw = CDOM.IDValue("AuthPassword");
-        CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json").then((j) => {
-            if (j.ok) {
-                SetFileToken(j.token);
-                setFileAuthed(true);
-                aiAuthOverlay.style.display = 'none';
-                aiRefreshSessions();
-                termRefreshSessions();
-                CAlert.Info("Permission granted");
-                warnIfDefaultAuthPassword(pw);
-            }
-            else {
-                CAlert.E("Wrong password: " + (j.msg ?? ""));
-            }
-        }).catch(() => { CAlert.E("Server error"); });
-    };
-    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
-        doAuth,
-        () => { },
-    ], ["OK", "Cancel"]);
-    dlg.Open();
-    setTimeout(() => {
-        const input = CDOM.ID("AuthPassword");
-        input?.focus();
-        input?.addEventListener('keydown', (e) => {
-            if (e.key !== 'Enter')
-                return;
-            e.preventDefault();
-            doAuth();
-            dlg.Close();
-        });
-    }, MODAL_DOM_DELAY);
+    promptFileAuth();
 }
 window["FileBtn"] = FileBtn;
 window["PermissionBtn"] = FileBtn;
@@ -2357,8 +2619,7 @@ function showFileAdminModal() {
                     </h2>
                     <div id="fadm_file_actions_body_${uid}" class="accordion-collapse collapse" data-bs-parent="#fadm_acc_${uid}">
                         <div class="accordion-body d-flex flex-column gap-2 p-2">
-                            <button id="fadm_share_${uid}" class="btn btn-outline-info btn-sm">Share</button>
-                            <button id="fadm_folder_${uid}" class="btn btn-warning btn-sm">New Folder</button>
+<button id="fadm_folder_${uid}" class="btn btn-warning btn-sm">New Folder</button>
                             <button id="fadm_delete_${uid}" class="btn btn-danger btn-sm">Delete</button>
                             <button id="fadm_upload_${uid}" class="btn btn-primary btn-sm">Upload</button>
                         </div>
@@ -2401,10 +2662,6 @@ function showFileAdminModal() {
             const r = _opts[idx];
             if (r)
                 applyValues(r.path, r.url, idx === _opts.length - 1 ? 'workingpath' : r.path);
-        });
-        document.getElementById(`fadm_share_${uid}`)?.addEventListener('click', () => {
-            modal.Hide();
-            FileShare();
         });
         document.getElementById(`fadm_folder_${uid}`)?.addEventListener('click', () => {
             modal.Hide();
@@ -2780,46 +3037,6 @@ async function FileSearch() {
     input.focus();
 }
 window["FileSearch"] = FileSearch;
-function FileShare() {
-    const path = gPath ?? "/";
-    const url = new URL(location.href);
-    url.search = '';
-    url.searchParams.set('path', path);
-    if (RootPath)
-        url.searchParams.set('RootPath', RootPath);
-    if (RootUrl)
-        url.searchParams.set('RootUrl', RootUrl);
-    const shareUrl = url.toString();
-    const uid = Date.now();
-    const modal = new CModal();
-    modal.SetHeader("Share");
-    modal.SetBody(`
-        <div class="mb-2 small text-secondary">현재 폴더 공유 링크</div>
-        <div class="input-group">
-            <input type="text" id="shareInput_${uid}" class="form-control form-control-sm" readonly value="${shareUrl.replace(/"/g, '&quot;')}">
-            <button id="shareCopyBtn_${uid}" class="btn btn-sm btn-outline-primary">Copy</button>
-        </div>
-        <div id="shareCopyMsg_${uid}" class="small text-success mt-1" style="min-height:1.2em;"></div>
-    `);
-    modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetSize(500, 160);
-    modal.Open(CModal.ePos.Center);
-    setTimeout(() => {
-        const btn = document.getElementById(`shareCopyBtn_${uid}`);
-        const msg = document.getElementById(`shareCopyMsg_${uid}`);
-        btn?.addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(shareUrl);
-                msg.textContent = 'Copied!';
-                setTimeout(() => { msg.textContent = ''; }, 2000);
-            }
-            catch {
-                msg.textContent = 'Copy failed ??select and copy manually.';
-            }
-        });
-    }, MODAL_DOM_DELAY);
-}
-window["FileShare"] = FileShare;
 CDOM.ID("uploadBtn").onchange = async (e) => {
     var fi = e.target;
     const path = gRoot + gPath;
@@ -3017,6 +3234,15 @@ function memoPopulateModelSelect() {
         modelEl.value = models[Math.floor(models.length / 2)].value;
     }
 }
+function memoInsertAuthNotice(logEl) {
+    if (logEl.querySelector('#memoAuthNotice'))
+        return;
+    const notice = document.createElement('div');
+    notice.id = 'memoAuthNotice';
+    notice.className = 'small p-2 mb-1 rounded border border-danger bg-danger-subtle text-danger-emphasis d-flex align-items-center gap-2';
+    notice.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i><span>${CLan.Get('memo.authNotice', 'It may not work if the provider is not authenticated.')}</span>`;
+    logEl.insertBefore(notice, logEl.firstChild);
+}
 async function memoLoadRecentLog() {
     const gen = memoLoadGen;
     try {
@@ -3034,6 +3260,7 @@ async function memoLoadRecentLog() {
             memoRenderEmptyLog();
             return;
         }
+        memoInsertAuthNotice(logEl);
         for (let i = list.length - 1; i >= 0; i--) {
             const r = list[i];
             const wrap = document.createElement('div');
@@ -3052,24 +3279,6 @@ async function memoLoadRecentLog() {
     catch (e) {
         console.error('memo recent log error:', e);
     }
-}
-function memoExtractDeletedOffsets(_text) {
-    const offsets = new Set();
-    for (const m of _text.matchAll(/Deleted memo (\d+):/g))
-        offsets.add(Number(m[1]));
-    for (const m of _text.matchAll(/^\[(\d+)\]/gm))
-        offsets.add(Number(m[1]));
-    return Array.from(offsets);
-}
-function memoRemoveLogEntries(_offsets) {
-    const logEl = CDOM.ID("memo-log");
-    if (logEl == null)
-        return;
-    for (const offset of _offsets) {
-        logEl.querySelector(`[data-offset="${offset}"]`)?.remove();
-    }
-    if (logEl.children.length === 0)
-        memoRenderEmptyLog();
 }
 function memoChainBodyHtml(_chain) {
     const range = _chain.length > 1 ? `#${_chain[0].selfOffset} - #${_chain[_chain.length - 1].selfOffset}` : `#${_chain[0].selfOffset}`;
@@ -3228,6 +3437,7 @@ function memoRenderEmptyLog() {
         <div>Enter a new memo.</div>
     `;
     logEl.appendChild(empty);
+    memoInsertAuthNotice(logEl);
 }
 async function memoSend() {
     const textEl = CDOM.ID("memoTextInput");
@@ -3237,6 +3447,8 @@ async function memoSend() {
     const sendBtn = CDOM.ID("memoSendBtn");
     const text = textEl.value.trim();
     if (!text)
+        return;
+    if (!(await ensureNodeInstalled()))
         return;
     memoPendingEl = memoAppendBubble('user', text, true);
     textEl.value = '';
@@ -3268,9 +3480,9 @@ async function memoSend() {
                 memoPendingEl = null;
             }
             memoAppendBubble('ai', j.result);
-            const deletedOffsets = memoExtractDeletedOffsets(j.result);
-            if (deletedOffsets.length > 0)
-                memoRemoveLogEntries(deletedOffsets);
+            if (modeEl.value === 'delete' || (modeEl.value === 'auto' && j.result.startsWith('Deleted'))) {
+                await memoLoadRecentLog();
+            }
         }
     }
     catch (e) {

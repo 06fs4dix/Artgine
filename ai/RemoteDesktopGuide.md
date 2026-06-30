@@ -15,7 +15,7 @@
 ```bash
 node ai/tool/remotedesktop.js $BASE_URL login                                              # 인증 (최초 1회) → "ok" 출력
 node ai/tool/remotedesktop.js $BASE_URL exec <fn> [args_json]                              # nut-js API 호출(RemoteDesktop/exec) → result 출력
-node ai/tool/remotedesktop.js $BASE_URL screenshot [quality=75]                            # 화면 캡처 → screenshot.png 저장
+node ai/tool/remotedesktop.js $BASE_URL screenshot [quality=75] [monitor=0]                # 화면 캡처 → screenshot.png 저장 (monitor: 0=주모니터(기본값), 1=두번째...)
 node ai/tool/remotedesktop.js $BASE_URL input <key|mouseButton> <time_ms> <windowTitle|-> [x y [x2 y2]] # 입력 실행
 ```
 

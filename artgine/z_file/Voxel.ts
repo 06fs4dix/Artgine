@@ -22,14 +22,16 @@ import {
 	Attribute,
 	Sam2DArrToV4,
 	Sam2DArrToMat,
+    min,
+    max,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, 
 	shadowPointProj, shadowRightCasP2, shadowTopCasV1,
-	calcShadowDirectional,
 	jitter,
-	shadowReadList, 
+	shadowReadList,
+    CalcShadow, 
 } from "./Shadow";
 
 var size : number=100;
@@ -519,29 +521,21 @@ function ps_main_shadow_read()
 	BranchEnd();
 	if ( L_cor.a <= 0.01 ) discard;
 
-	var all : number=0.0;
-	var shadowRead : CVec4;
-	var sVal : number;
+	var outputIndex: number;
+    var all : CVec4=new CVec4(1.0,1.0,1.0,1.0);
 	BranchBegin("shadowMulti","SDM",[alphaModel]);
-	for(var i = 0; i < FloatToInt(shadowCount); i++) 
-	{
-		shadowRead =Sam2DArrToV4(shadowReadList,IntToFloat(i));
-		sVal  = calcShadowDirectional(shadowRead, IntToFloat(i),to_normal,to_worldPos);
-		all+=sVal;
-		//all=all-(1.0-sVal);
-		
-	}
-	all/=shadowCount;
-	if(all<0.0)all=0.0;
+	outputIndex = 0.0;
+    all = new CVec4(0.0,0.0,0.0,0.0);
+    for(var i=0;i<SDF.TexSizeMax;++i) {
+        if(i >= FloatToInt(shadowCount)) break;
+        all[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, to_worldPos);
+        outputIndex = min(outputIndex + 1.0, 3.0);
+    }
+    all.a /= max(shadowCount - 3.0, 1.0);
 	BranchDefault();
-	shadowRead =Sam2DArrToV4(shadowReadList,0.0);
-	all = calcShadowDirectional(shadowRead, 0.0,to_normal,to_worldPos);
+	all.a = CalcShadow(0.0, to_normal, to_worldPos);
+    all.rgb = new CVec3(all.a, all.a, all.a);
 	BranchEnd();
 	
-
-	
-	
-	out_color = new CVec4(all,all,all,1.0);
-
-	
+	out_color = all;
 }

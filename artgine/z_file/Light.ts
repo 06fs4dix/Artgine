@@ -7,10 +7,14 @@ import {
     V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V3DivV3,
     V4AddV4, V4MulFloat,
     SaturateV3,
+    int,
+    round,
+    FloatBitsToInt,
 } from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
 export var material : CVec4 = new CVec4(0.0,0.0,0.0,1.0);
+export var mask : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 
 //count
 export var sam2DCount : number;
@@ -108,7 +112,7 @@ function ComputeSpecularOcclusion(_nDotV : number, _ao : number, _roughness : nu
 
 export function LightCac3D(
     campos : CVec3, position : CVec4, albedo : CVec4, normal :CVec3, shadow : CVec4,
-    roughness : number,ao : number,metalic : number) : CMat3
+    roughness : number,ao : number,metalic : number,maskIndex : number) : CMat3
 {
     normal = V3Nor(normal);
 
@@ -119,8 +123,6 @@ export function LightCac3D(
     var smoothness : number= 1.0 - roughness;
     metalic = clamp(metalic, 0.0, 1.0);
 
-    var shadowIndex : number = 0.0;
-
     var DAll : CVec3=new CVec3(0,0,0);
     var SAll : CVec3=new CVec3(0,0,0);
     var emAll : CVec3=new CVec3(0,0,0);
@@ -128,8 +130,6 @@ export function LightCac3D(
     //====================================================
     // Direct Lighting
     //====================================================
-
-	var DLinearSpace : number = 0.0;
 	
     var DDirAll : CVec3=new CVec3(0,0,0);
     var DPtAll : CVec3=new CVec3(0,0,0);
@@ -142,6 +142,10 @@ export function LightCac3D(
         if(i >= FloatToInt(ligCount)) break;
         var lDir : CVec4=Sam2DArrToV4(ligDir,IntToFloat(i));
         var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
+        var lMask: CVec4=Sam2DArrToV4(ligMask,IntToFloat(i));
+
+        // lMask.x가 default(0)이 아니고, lMask.x가 mask.x와 다르면 적용 안함.
+        if(FloatBitsToInt(round(lMask.x)) != 0 && (FloatBitsToInt(round(lMask.x)) & FloatBitsToInt(round(maskIndex))) == 0) continue;
 
         //lDir가 0이면 라이트 아님
         if(abs(lDir.w) <= 0.5) continue;
@@ -149,9 +153,9 @@ export function LightCac3D(
         // 라이트 파라미터
         var L : CVec3=lDir.xyz;
         var radiance : CVec3 = lCol.rgb;
-        if(shadow[FloatToInt(shadowIndex)]>-0.5) {   // 라이팅에 그림자 적용
+        var shadowIndex : number = round(min(lMask.w, 3.0));
+        if(shadowIndex > -0.5 && shadow[FloatToInt(shadowIndex)]>-0.5) {   // 라이팅에 그림자 적용
             radiance = V3MulFloat(radiance, shadow[FloatToInt(shadowIndex)]);
-            shadowIndex = min(shadowIndex + 1.0, 3.0);
         }
         var dist : number = 0.0; // 라이트와 fragment 사이의 거리
         var isPointLight : number = lDir.w>1.1 ? 1.0 : 0.0;
@@ -272,7 +276,6 @@ export function LightCac3D(
             DDirAll=V3AddV3(DDirAll,V3MulV3(diffuse , radiance));
             SDirAll=V3AddV3(SDirAll,V3MulV3(specular, radiance));
         }
-
     }
 
     //====================================================

@@ -35,13 +35,15 @@ export class CCondition extends CObject
         ">=":">=",
         "<":"<",
         ">":">",
+        "&":"&",
 
         Equal:"==",
         NotEqual:"!=",
         LessEqual: "<=",
         GreaterEqual: ">=",
         Less: "<",
-        Greater: ">"
+        Greater: ">",
+        And: "&"
     };
     Excute(_state : CObject)
     {
@@ -59,7 +61,7 @@ export class CCondition extends CObject
         if(this.mOperator==">=")    return st>=this.mValue;
         if(this.mOperator=="<")    return st<this.mValue;
         if(this.mOperator==">")    return st>this.mValue;
-        
+        if(this.mOperator=="&")     return st&this.mValue;
 
         return true;
     }
