@@ -45,6 +45,8 @@ body { display: flex; flex-direction: column; }
 <!-- Screenshot (센터 - 남은 공간 모두 차지) -->
 <div id="imgWrap" tabindex="-1">
     <img id="screenshot" style="width:100%;height:100%;object-fit:contain;" alt="">
+    <!-- 화면 밖 텍스트영역: HTTPS가 아니어도 네이티브 copy/paste 이벤트로 로컬 클립보드를 주고받기 위한 브릿지 -->
+    <textarea id="kbBridge" tabindex="-1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="position:absolute;opacity:0;width:1px;height:1px;padding:0;border:0;overflow:hidden;"></textarea>
 </div>
 
 <script type="module" src="./RemoteDesktop.js"></script>

@@ -230,6 +230,31 @@ window.addEventListener('keydown', function(e) {
             document.body.style.paddingBottom = "50px";
             inp.focus();
         }
+
+        // codex TUI는 표준 PageUp/Down(\x1b[5~/\x1b[6~)을 해석하지 못해 위/아래 화살표 반복 전송으로
+        // 스크롤을 흉내낸다(휠 스크롤과 동일 로직). Ctrl+T(\x14)는 codex의 스크롤 모드 진입/이탈 토글.
+        var _scrollDepth = 0;
+        function _codexScrollUp() {
+            var prev = _scrollDepth;
+            _scrollDepth++;
+            _sendRaw("\x1b[A");
+            if (prev === 0) _sendRaw("\x14");
+        }
+        function _codexScrollDown() {
+            var prev = _scrollDepth;
+            if (_scrollDepth > 0) _scrollDepth--;
+            _sendRaw("\x1b[B");
+            if (prev === 1 && _scrollDepth === 0) _sendRaw("\x14");
+        }
+        function _doPageUp() {
+            if (window.__TTYD_MODE === 'codex') { _codexScrollUp(); return; }
+            _sendRaw("\x1b[5~");
+        }
+        function _doPageDown() {
+            if (window.__TTYD_MODE === 'codex') { _codexScrollDown(); return; }
+            _sendRaw("\x1b[6~");
+        }
+
         _initSuper();
         setInterval(function() {
             if (!document.hidden) _initSuper();
@@ -247,9 +272,10 @@ window.addEventListener('keydown', function(e) {
             ddMenu.classList.remove("show");
             closeAllSubmenus();
             if      (seq === "__SCROLL__")       { var vp = document.querySelector(".xterm-viewport"); if (vp) vp.scrollTop = vp.scrollHeight; }
-            else if (seq === "__CTRL_T__")       { _sendRaw("\x14"); }
             else if (seq === "__TOGGLE_INPUT__") { hideBar(); }
             else if (seq === "__RESIZE__")       { _sendResize(); }
+            else if (seq === "__PAGE_UP__")      { _doPageUp(); }
+            else if (seq === "__PAGE_DOWN__")    { _doPageDown(); }
             else if (seq === "__ESC__")          { _sendRaw("\x1b"); inp.focus(); }
             else if (seq === "__SUPER__")        { _toggleSuper(); }
             else if (seq === "__RESUME__")       { _doAgentAction("resume"); }
@@ -325,7 +351,8 @@ window.addEventListener('keydown', function(e) {
         ddMenu.appendChild(makeSubmenu("View", [
             ["⬇ Scroll to bottom", "__SCROLL__"],
             ["↔ Resize to window", "__RESIZE__"],
-            ["⌨ Ctrl+T",           "__CTRL_T__"],
+            ["⇞ Page Up",          "__PAGE_UP__"],
+            ["⇟ Page Down",        "__PAGE_DOWN__"],
             ["⌨ Hide input bar",   "__TOGGLE_INPUT__"],
         ]));
         ddMenu.appendChild(makeSep());
@@ -518,19 +545,6 @@ window.addEventListener('keydown', function(e) {
         setTimeout(_sendResize, 1000);
 
         if (window.__TTYD_MODE === 'codex') {
-            var _scrollDepth = 0;
-            function _codexScrollUp() {
-                var prev = _scrollDepth;
-                _scrollDepth++;
-                _sendRaw("\x1b[A");
-                if (prev === 0) _sendRaw("\x14");
-            }
-            function _codexScrollDown() {
-                var prev = _scrollDepth;
-                if (_scrollDepth > 0) _scrollDepth--;
-                _sendRaw("\x1b[B");
-                if (prev === 1 && _scrollDepth === 0) _sendRaw("\x14");
-            }
             document.addEventListener("wheel", function(e) {
                 e.preventDefault(); e.stopPropagation();
                 if (e.deltaY < 0) _codexScrollUp(); else _codexScrollDown();

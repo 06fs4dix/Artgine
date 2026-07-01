@@ -251,6 +251,8 @@ export class CLight extends CBrushComp
             srp.PushOr(new CCondition("class","==","CPaint2DMerge"));
 			srp.PushAnd(new CCondition("mTag[shadow]"));
             srp.PushAnd(new CCondition("mTag[shadowReadOnly]",CCondition.eOperator["!="]));
+            srp.mTag.add("shadowPlaneV");
+            srp.mTag.add("shadowPlaneF");
 			srp.mPriority=CRenderPass.ePriority.AlphaAuto;
             srp.mCullFace=CRenderPass.eCull.None;
             srp.mPaintSort=CRenderPass.ePaintSort.Revers;
@@ -445,8 +447,8 @@ export class CLight extends CBrushComp
                             srp=rp.Export();
                             srp.mPriority -= i + this.mBrush.mShadowTexOff;
                             srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(SDF.eShadow.Near + i, this.mBrush.mShadowCount, 1)));
-                            srp.mShaderAttr.push(new CShaderAttr("shadowNearFar", new CVec2(1, this.GetOutRadius())));
-                            srp.mShaderAttr.push(new CShaderAttr("shadowLigPos", this.mDirPos));
+                            srp.mTag.add("PointLightShadowV");
+                            srp.mTag.add("PointLightShadowF");
                             this.mBrush.SetAutoRP(srpKey, srp);
                         }
                         srp.mRenderTarget=this.GetTex();
@@ -457,10 +459,6 @@ export class CLight extends CBrushComp
                             srp.mShaderAttr[0].mData.y = this.mBrush.mShadowCount;  // 현재 그림자의 인덱스
                             srp.mShaderAttr[0].mData.z = 1; // 디렉셔널 라이팅은 0, 포인트 라이팅은 1
                             this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
-                        }
-                        if(srp.mShaderAttr[1].mData.y != this.GetOutRadius()) {
-                            srp.mShaderAttr[1].mData.x = 1;
-                            srp.mShaderAttr[1].mData.y = this.GetOutRadius();
                         }
                         if(this.mMask.x != 0) {
                             if(srp.mAnd[srp.mAnd.length-1].mState!="mMask.x") srp.PushAnd(new CCondition("mMask.x","&",this.mMask.x)); 
@@ -498,8 +496,6 @@ export class CLight extends CBrushComp
                         if(srp==null)
                         {
                             srp=rp.Export();
-                            srp.mTag.add("shadowPlaneV");
-                            srp.mTag.add("shadowPlaneF");
                             this.mBrush.SetAutoRP(srpKey,srp);
                             srp.mShaderAttr.push(new CShaderAttr("lightIndex", this.mBrush.mLightCount));
                         }

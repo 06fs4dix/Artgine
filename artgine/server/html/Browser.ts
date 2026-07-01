@@ -28,6 +28,7 @@ const rateSlider    = document.getElementById('rateSlider')    as HTMLInputEleme
 const rateLabel     = document.getElementById('rateLabel')     as HTMLSpanElement;
 const inputToggle   = document.getElementById('inputToggle')   as HTMLInputElement;
 const imgWrap       = document.getElementById('imgWrap')       as HTMLDivElement;
+const kbBridge      = document.getElementById('kbBridge')      as HTMLTextAreaElement;
 const inputModeRow  = document.getElementById('inputModeRow')  as HTMLDivElement;
 
 interface IBrowserSessionInfo {
@@ -246,12 +247,72 @@ function boot() {
     inputToggle.addEventListener('change', () => {
         inputMode = inputToggle.checked;
         imgWrap.tabIndex = inputMode ? 0 : -1;
-        if (inputMode) imgWrap.focus();
+        if (inputMode) kbBridge.focus();
     });
 
-    imgWrap.addEventListener('keydown', async (e: KeyboardEvent) => {
+    // 키보드 포커스는 imgWrap이 아니라 숨겨진 kbBridge(textarea)에 준다.
+    // Ctrl+V의 네이티브 paste 이벤트는 포커스 대상이 편집 가능한 요소(textarea 등)일 때만 발생하며,
+    // 이 경로는 HTTPS(secure context)가 아니어도 동작한다 (navigator.clipboard.readText는 secure context 필요).
+    kbBridge.addEventListener('keydown', async (e: KeyboardEvent) => {
         if (!inputMode) return;
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            try {
+                const text = await pwEval('window.getSelection().toString()');
+                if (typeof text === 'string' && text) {
+                    kbBridge.value = text;
+                    kbBridge.select();
+                    document.execCommand('copy');
+                    kbBridge.value = '';
+                }
+            } catch {}
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+            // preventDefault하지 않는다: 브라우저가 kbBridge에 네이티브 'paste' 이벤트를 발생시키도록 둔다.
+            return;
+        }
+
         e.preventDefault();
+
+        // Ctrl+C: 가상 브라우저 선택 텍스트 → 로컬 클립보드
+        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+            try {
+                const evalRes = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: SESSION_ID, expr: 'window.getSelection()?.toString() ?? ""' })
+                });
+                const evalJson = await evalRes.json();
+                const selected = typeof evalJson.result === 'string' ? evalJson.result : '';
+                if (selected) await navigator.clipboard.writeText(selected).catch(() => {});
+            } catch {}
+            try {
+                await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.press', args: ['Control+C'] })
+                });
+            } catch {}
+            return;
+        }
+
+        // Ctrl+V: 로컬 클립보드 → 가상 브라우저
+        if (e.ctrlKey && e.key.toLowerCase() === 'v') {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: SESSION_ID, fn: 'keyboard.type', args: [text] })
+                    });
+                }
+            } catch {}
+            return;
+        }
+
         const fn = e.key.length === 1 ? 'keyboard.type' : 'keyboard.press';
         try {
             await fetch(CPath.WebRootUrl() + 'PlayWright/exec', {
@@ -260,6 +321,16 @@ function boot() {
                 body: JSON.stringify({ sessionId: SESSION_ID, fn, args: [e.key] })
             });
         } catch {}
+    });
+
+    kbBridge.addEventListener('paste', async (e: ClipboardEvent) => {
+        if (!inputMode) return;
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text');
+        kbBridge.value = '';
+        if (text) {
+            try { await pwExec('keyboard.type', [text]); } catch {}
+        }
     });
 
     // 인풋 모드 여부 관계없이 img 네이티브 드래그 금지
@@ -287,6 +358,16 @@ function boot() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: SESSION_ID, fn, args })
         });
+    }
+
+    async function pwEval(expr: string): Promise<any> {
+        const r = await fetch(CPath.WebRootUrl() + 'PlayWright/eval', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, expr })
+        });
+        const j = await r.json();
+        return j.ok ? j.result : null;
     }
 
     function getMouseButton(e: MouseEvent): 'left' | 'right' | 'middle' | null {
@@ -332,7 +413,7 @@ function boot() {
     imgWrap.addEventListener('mousedown', async (e: MouseEvent) => {
         if (!inputMode) return;
         e.preventDefault();
-        imgWrap.focus();
+        kbBridge.focus();
         const coords = toNativeCoords(e);
         if (!coords) return;
         const button = getMouseButton(e);

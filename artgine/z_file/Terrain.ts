@@ -1,5 +1,5 @@
 import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
-import { ambientColor, envmapOn, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envmapOn, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "./Light";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { SDF } from "./SDF";
 import { 
@@ -22,8 +22,10 @@ import {
     V2Fract,
     V4AddV4,
     V4MulFloat,
+    V3Sqrt,
 } from "./Shader";
 import { bias, CalcShadow, jitter, normalBias, PCF, shadowBottomCasP1, shadowCount, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowOn, shadowPointProj, shadowRate, shadowReadList, shadowRightCasP2, shadowTopCasV1, shadowWrite, texture16f } from "./Shadow";
+import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
 
 
 var worldMat : CMat=Null();
@@ -95,7 +97,7 @@ Build("Artgine/Shader/TerrainShadowWrite", ["shadowWrite"],
         cellSize,cellCount,splatMatTexCodi,heightScale,
         splatSampler2D,heightSampler2D,
         shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList
-    ], [out_position,to_viewPos,to_uv],
+    ], [out_position,to_viewPos,to_uv,to_worldPos],
     ps_main_shadow_write,[out_color]
 );
 
@@ -107,7 +109,8 @@ Build("Artgine/Shader/TerrainShadowRead", ["shadowRead"],
         cellSize,cellCount,splatMatTexCodi,heightScale,
         splatSampler2D,heightSampler2D,
         shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,shadowCount,shadowPointProj,shadowReadList,
-        shadowRate,PCF,texture16f,bias,normalBias,jitter
+        shadowRate,PCF,texture16f,bias,normalBias,jitter,
+        ligDir,ligCol,ligMask,ligCount
     ], [out_position,to_uv,to_worldPos,to_normal],
     ps_main_shadow_read,[out_color]
 );
@@ -440,18 +443,33 @@ function ps_main()
     var normal : CVec3 = new CVec3(0.0, 1.0, 0.0);
     var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
-    BranchBegin("light","L",[ligDir,ligCol,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
-    lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0); // material 텍스쳐에서 가져옴
+    var gamma : number = 1.0;
+    BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,mask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
+    gamma = 2.2;
+    L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
+    
     normal = MappingTexToV3(V3Nor(SampleSplatmapNormal(splatBlend, to_uv, 8.0).xyz));
     normal = CombineNormals(V3Nor(to_normal), new CVec3(normal.x, normal.z, normal.y));
+
+    lmaterial = SampleSplatmap(splatBlend, to_uv, 4.0); // material 텍스쳐에서 가져옴
     dseMat = GetSunInfo();
     sunDir = dseMat[0];
     sunCol = dseMat[1];
+
     dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
+
     L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchEnd();
 
     out_color = L_cor;
+
+    BranchBegin("tonemapping","tonemapping",[exposure, tonemappingType]);
+    out_color.rgb = Tonemap(out_color.rgb, exposure, tonemappingType);
+    BranchEnd();
+
+    if(gamma > 1.1) {
+        out_color.rgb = V3Sqrt(out_color.rgb);
+    }
 
     BranchBegin("waterReflect","waterReflect",[waterDeep]);
     if(to_worldPos.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
@@ -467,24 +485,6 @@ function ps_main()
 
 function vs_main_shadow_write(f3_ver : Vertex3)
 {
-    var svm : CMat=new CMat(0);
-	var spm : CMat=new CMat(0);
-    if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
-    {
-        svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
-        spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
-    }
-    else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
-    {
-        svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
-        spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
-    }
-    else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
-    {
-        svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
-        spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
-    }
-
     var heightmapSize : CVec2 = Sam2DSize(heightSampler2D);
     var terrainSize : CVec3 = new CVec3(heightmapSize.x * cellSize, terrainHeight, heightmapSize.y * cellSize);
 
@@ -530,8 +530,39 @@ function vs_main_shadow_write(f3_ver : Vertex3)
     worldPos.x = clamp(worldPos.x, terrainMin.x, terrainMax.x);
     worldPos.z = clamp(worldPos.z, terrainMin.z, terrainMax.z);
 
+    var svm : CMat=new CMat(0);
+    var spm : CMat=new CMat(0);
+    BranchBegin("PointLightShadowV","PLSV",[]);
+    if(shadowWrite.x<SDF.eShadow.Near + 0.5)
+        svm = Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Far + 0.5)
+        svm = Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Top + 0.5)
+        svm = Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Bottom + 0.5)
+        svm = Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Left + 0.5)
+        svm = Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Right + 0.5)
+        svm = Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+    to_viewPos = worldPos;
+    out_position = V4MulMatCoordi(worldPos, svm);
+    BranchDefault();
+    if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5) {
+        svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+        spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+    }
+    else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5) {
+        svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+        spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+    }
+    else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5) {
+        svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+        spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+    }
     to_viewPos = V4MulMatCoordi(worldPos, svm);
     out_position = V4MulMatCoordi(to_viewPos, spm);
+    BranchEnd();
 
     // pancacking
     out_position.z = max(out_position.z, 0.0);
@@ -539,7 +570,16 @@ function vs_main_shadow_write(f3_ver : Vertex3)
 
 function ps_main_shadow_write() 
 {
+    var shadowRead: CVec4;
+    var lDir: CVec4;
+    BranchBegin("PointLightShadowF","PLSF",[ligDir]);
+    shadowRead = Sam2DArrToV4(shadowReadList, shadowWrite.y);
+    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowRead.z) / (shadowRead.w - shadowRead.z);
+    out_color.a = 1.0;
+    BranchDefault();
     out_color = to_viewPos;
+    BranchEnd();
 }
 
 function vs_main_shadow_read(f3_ver : Vertex3)

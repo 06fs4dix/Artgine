@@ -21,9 +21,6 @@ export var texture16f : number =0;
 //아래 두개는 쉐도우맵 곗수. 케스케이드 유무이다 총 3장 사용
 export var shadowCount : number = 0;
 export var shadowWrite : CVec3 = new CVec3(0,0,0);
-export var shadowNearFar : CVec2 = new CVec2(1, 100000);
-export var shadowLigPos : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
-export var shadowTest : CVec4 = new CVec4(0.0, 0.0, 0.0, 0.0);
 
 //최대 쉐도우 색상
 export var shadowRate : number = 0.3;
@@ -212,9 +209,24 @@ function CalcShadowPoint(_read : CVec4, _index : number, _world : CVec4, _ligDir
         var texSize : CVec3 = Sam2DArrSize(SDF.eTexSlot.ArrShadowWrite);
         var texScale : CVec2 = new CVec2(1.0 / texSize.x, 1.0 / texSize.y);
 
-        var uvw : CVec3 = CubeToUV(V3AddV3(ligDir, new CVec3(0.0, 0.0, 0.0)), texScale, _read.y);
-        var sp : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uvw);
-        sVal = (sp.w == 0.0) ? 1.0 : (depth >= sp.z ? 0.0 : 1.0);
+        var pcf: number = max(PCF + 1.0, 1.0);
+        var offset : number = 0.01;
+
+        sVal = 0.0;
+        var x: number = -offset;
+        for(; x < offset; x += offset / (pcf * 0.5)) {
+            var y: number = -offset;
+            for(; y < offset; y += offset / (pcf * 0.5)) {
+                var z: number = -offset;
+                for(; z < offset; z += offset / (pcf * 0.5)) {
+                    var uvw : CVec3 = CubeToUV(V3AddV3(ligDir, new CVec3(x, y, z)), texScale, _read.y);
+                    var sp : CVec4 = Sam2DArrToColor(SDF.eTexSlot.ArrShadowWrite, uvw);
+                    sVal += (sp.w == 0.0) ? 1.0 : (depth >= sp.z ? 0.0 : 1.0);
+                }
+            }
+        }
+        sVal /= (PCF + 1.0) * (PCF + 1.0);
+        
     }
     return sVal;
 }

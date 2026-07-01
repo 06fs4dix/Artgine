@@ -29,6 +29,10 @@ const KEY_MAP: Record<string, number> = {
     F7: 7, F8: 8, F9: 9, F10: 10, F11: 11, F12: 12,
 };
 
+// Ctrl+C/Ctrl+V 조합키를 원격에 실제로 전송하기 위한 nut-js Key 코드 (Key.LeftControl=104, Key.C=90, Key.V=91).
+const CTRL_KEY = 104;
+const COPY_PASTE_KEY_MAP: Record<string, number> = { c: 90, v: 91 };
+
 const loginOverlay  = document.getElementById('loginOverlay')  as HTMLDivElement;
 const loginPw       = document.getElementById('loginPw')       as HTMLInputElement;
 const loginBtn      = document.getElementById('loginBtn')      as HTMLButtonElement;
@@ -39,6 +43,7 @@ const rateSlider    = document.getElementById('rateSlider')    as HTMLInputEleme
 const rateLabel     = document.getElementById('rateLabel')     as HTMLSpanElement;
 const inputToggle   = document.getElementById('inputToggle')   as HTMLInputElement;
 const imgWrap       = document.getElementById('imgWrap')       as HTMLDivElement;
+const kbBridge      = document.getElementById('kbBridge')      as HTMLTextAreaElement;
 const inputModeRow  = document.getElementById('inputModeRow')  as HTMLDivElement;
 
 function isLoginOverlayVisible(): boolean {
@@ -195,11 +200,41 @@ function boot() {
     inputToggle.addEventListener('change', () => {
         inputMode = inputToggle.checked;
         imgWrap.tabIndex = inputMode ? 0 : -1;
-        if (inputMode) imgWrap.focus();
+        if (inputMode) kbBridge.focus();
     });
 
-    imgWrap.addEventListener('keydown', async (e: KeyboardEvent) => {
+    function sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // 키보드 포커스는 imgWrap이 아니라 숨겨진 kbBridge(textarea)에 준다.
+    // Ctrl+V의 네이티브 paste 이벤트는 포커스 대상이 편집 가능한 요소(textarea 등)일 때만 발생하며,
+    // 이 경로는 HTTPS(secure context)가 아니어도 동작한다 (navigator.clipboard는 secure context 필요).
+    kbBridge.addEventListener('keydown', async (e: KeyboardEvent) => {
         if (!inputMode) return;
+
+        if ((e.ctrlKey || e.metaKey) && COPY_PASTE_KEY_MAP[e.key.toLowerCase()] != null) {
+            e.preventDefault();
+            const letterKey = COPY_PASTE_KEY_MAP[e.key.toLowerCase()];
+            try {
+                if (e.key.toLowerCase() === 'v') return; // paste 이벤트에서 처리
+                // 실제 Ctrl+C를 원격에 전송해 포커스된 원격 앱이 자체적으로 복사하게 한다.
+                await rdExec('keyboard.pressKey', [CTRL_KEY, letterKey]);
+                await rdExec('keyboard.releaseKey', [CTRL_KEY, letterKey]);
+                await sleep(150); // 원격 앱이 클립보드를 갱신할 시간을 준다
+                const r = await rdExec('clipboard.getContent', []);
+                const j = await r.json();
+                const text = j.ok ? j.result : null;
+                if (typeof text === 'string' && text) {
+                    kbBridge.value = text;
+                    kbBridge.select();
+                    document.execCommand('copy');
+                    kbBridge.value = '';
+                }
+            } catch {}
+            return;
+        }
+
         e.preventDefault();
         try {
             if (e.key.length === 1) {
@@ -210,6 +245,21 @@ function boot() {
                 await rdExec('keyboard.pressKey', [key]);
                 await rdExec('keyboard.releaseKey', [key]);
             }
+        } catch {}
+    });
+
+    kbBridge.addEventListener('paste', async (e: ClipboardEvent) => {
+        if (!inputMode) return;
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text');
+        kbBridge.value = '';
+        if (!text) return;
+        try {
+            // 로컬 클립보드 텍스트를 원격 OS 클립보드에 반영한 뒤, 실제 Ctrl+V를 보내
+            // 포커스된 원격 앱이 자체적으로 붙여넣기 하게 한다(문자 단위 타이핑보다 IME/서식에 안전).
+            await rdExec('clipboard.setContent', [text]);
+            await rdExec('keyboard.pressKey', [CTRL_KEY, COPY_PASTE_KEY_MAP['v']]);
+            await rdExec('keyboard.releaseKey', [CTRL_KEY, COPY_PASTE_KEY_MAP['v']]);
         } catch {}
     });
 
@@ -274,7 +324,7 @@ function boot() {
     imgWrap.addEventListener('mousedown', async (e: MouseEvent) => {
         if (!inputMode) return;
         e.preventDefault();
-        imgWrap.focus();
+        kbBridge.focus();
         const coords = toNativeCoords(e);
         if (!coords) return;
         const button = getMouseButton(e);

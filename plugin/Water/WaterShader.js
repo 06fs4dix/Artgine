@@ -1,5 +1,5 @@
 import { ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
-import { ambientColor, envmapOn, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "../../artgine/z_file/Light";
+import { ambientColor, envmapOn, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "../../artgine/z_file/Light";
 import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
 import { Attribute, BranchBegin, BranchDefault, BranchEnd, Build, clamp, CVec2, CVec3, CVec4, dFdy, MatTypeToMat, max, min, Null, pow, reflect, Sam2DToColor, SamCubeToColor, SaturateFloat, smoothstep, V2AddV2, V2Len, V2MulFloat, V3AddV3, V3Dot, V3Len, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V4MulFloat, V4MulMatCoordi } from "../../artgine/z_file/Shader";
@@ -156,12 +156,10 @@ function ps_main_water() {
     if (reflectType < -0.5) {
         reflectType = 2.0;
     }
-    var shadowTex = new CVec4(0.0, 0.0, 0.0, 0.0);
-    var shadow = -1.0;
+    var shadow = new CVec4(-1.0, -1.0, -1.0, -1.0);
     BranchBegin("shadow", "S", [shadowOn]);
     if (shadowOn > 0.5) {
-        shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, screenUV);
-        shadow = shadowTex.x;
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, screenUV);
     }
     BranchEnd();
     var L_cor;
@@ -177,13 +175,10 @@ function ps_main_water() {
     }
     var dseMat;
     var lmaterial = new CVec4(1.0, 1.0, 1.0, 1.0);
-    BranchBegin("light", "L", [ligDir, ligCol, ligCount, material, camPos, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envmapOn, sam2DCount, samCubeCount]);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, camPos, material, mask, ligStep0, ligStep1, ligStep2, ligStep3, ambientColor, envmapOn, sam2DCount, samCubeCount]);
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
     dseMat = LightCac3D(camPos, to_worldPos, reflectColor, normalWS, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
     L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);
-    if (shadow > -0.5) {
-        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);
-    }
     BranchEnd();
     BranchBegin("colorModel", "CM", [colorModel]);
     L_cor.rgb = ColorModalFun(L_cor.rgb, colorModel);

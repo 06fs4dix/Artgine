@@ -1,4 +1,4 @@
-import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor, vfxMat0, vfxMat1 } from "./ColorFun";
+import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor, vfxMat0, vfxMat1, BlendColor0, BlendColor1, BlendColor2, BlendColor3, BlendColor4, BlendColor5, BlendColor6, BlendColor7, BlendColor9, BlendColor8, BlendColor10, BlendColor11, BlendColor12, BlendColor13, BlendColor14, BlendColor15 } from "./ColorFun";
 import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
@@ -10,9 +10,11 @@ import {
     SamCubeToColor,
     V3Nor,
     SamCubeLodToColor,
-    Sam2DArrToV4
+    Sam2DArrToV4,
+    V3Sqrt
 } from "./Shader";
 import { shadowOn } from "./Shadow";
+import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
 
 //mat
 var worldMat : CMat=Null();
@@ -59,7 +61,11 @@ var blendFactor : number=Null();
 //Blend
 Build("Artgine/Shader/PostBlend",["blend"],
     vs_main,[
-        worldMat,viewMat,projectMat,TexOffBlendFactor
+        worldMat,viewMat,projectMat,
+        BlendColor0,BlendColor1,BlendColor2,BlendColor3,
+        BlendColor4,BlendColor5,BlendColor6,BlendColor7,
+        BlendColor8,BlendColor9,BlendColor10,BlendColor11,
+        BlendColor12,BlendColor13,BlendColor14,BlendColor15,
     ],[out_position,to_uv],
     ps_main_blend,[out_color]);
 //Blur
@@ -121,10 +127,8 @@ function vs_main(f3_ver : Vertex3, f2_uv : UV2) {
 }
 
 function ps_main_blend() {
-    var all : CVec4 = Sam2DToColor(0.0, to_uv);
-
-    out_color=TexOffBlendFactorFun(all,to_uv,TexOffBlendFactor);
-}   
+    out_color = TexOffBlendFactorFun(to_uv);
+}
 
 function GetBlurColor(_uv : CVec2, _f : CVec2, _texScale : CVec2) : CVec4 {
     var uv : CVec2 = V2AddV2(_uv, V2MulV2(_f, _texScale));

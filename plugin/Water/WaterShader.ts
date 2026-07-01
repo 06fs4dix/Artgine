@@ -1,5 +1,5 @@
 import {  ColorModalFun, GetTexCodiedUV } from "../../artgine/z_file/ColorFun";
-import { ambientColor, envmapOn, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "../../artgine/z_file/Light";
+import { ambientColor, envmapOn, GetMaterial, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "../../artgine/z_file/Light";
 import { NoiseGet, NoiseNormalGet } from "../../artgine/z_file/Noise";
 import { SDF } from "../../artgine/z_file/SDF";
 
@@ -260,14 +260,11 @@ function ps_main_water()
     // ---------------------------------------------------------
     // 그림자
     // ---------------------------------------------------------
-    var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
-    var shadow : number=-1.0;
-
+    var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
     BranchBegin("shadow","S",[shadowOn]);
     if(shadowOn>0.5)
     {
-        shadowTex = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, screenUV);  // <- 여기! 절대 size 곱하지 말기
-        shadow = shadowTex.x;
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, screenUV);  // <- 여기! 절대 size 곱하지 말기
     }
     BranchEnd();
 
@@ -297,13 +294,10 @@ function ps_main_water()
     // ---------------------------------------------------------
     var dseMat : CMat3;
     var lmaterial : CVec4=new CVec4(1.0,1.0,1.0,1.0);
-    BranchBegin("light","L",[ligDir,ligCol,ligCount,material,camPos,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
+    BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,mask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
     lmaterial = GetMaterial(material, Sam2DToColor(to_ref.z, uv), sam2DCount);
     dseMat = LightCac3D(camPos, to_worldPos, reflectColor, normalWS, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
-    L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);    // 반사만 적용
-    if(shadow > -0.5) { // 그림자
-        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow);
-    }
+    L_cor.rgb = V3AddV3(L_cor.rgb, dseMat[1]);
     BranchEnd();
 
     // ---------------------------------------------------------

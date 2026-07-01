@@ -81,6 +81,13 @@ export class SDF {
 		None:5,
 		Unpack:6,
 	}
+    static eTonemap=
+    {
+        None: 0,
+        Neutral: 1,
+        ACES: 2,
+        Reinhard: 3,
+    }
 	
 	static eVFX=
 	{
@@ -128,17 +135,19 @@ export class SDF {
 	}
 	static eBlend=
 	{
-		Null :0,
-		LinearDodge :1,//a+b 덧셈
+		Null:0,
+		LinearDodge:1,//a+b 덧셈
 		Multiply:2,//a*b 곱셈
 		LerpPer:3,//(a*percent)+(b*percent) 퍼센트 기준 lerp
 		LerpAlpha:4,//(a*alpth)+(b*alpth) 알파 비율기준 lerp
 		Darken:5,//min(a,b) 두 색 중에서 무조건 어두운 색 선택
 		Lighten:6,//max(a,b) 두 색 중에서 무조건 밝은 색 선택
-		Org:7,
-		Tar:8,
+		Org:7,//a
+		Tar:8,//b
 		DarkCut : 9,//0보다 크면 무조건 0
-		
+        Texture:10,//텍스쳐 샘플링
+		Tonemap:11,//톤매핑해줌
+        GammaCorrect:12,//linear공간에서 감마공간으로 이동
 	}
 	//Arr하나에 크기는 
 	//2048*256

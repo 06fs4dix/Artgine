@@ -31,8 +31,11 @@ import {
     InverseMat3,
     Sam2DArrV4,
     Sam2DArrToV4,
-    fract
+    fract,
+    round,
+    V3Sqrt
 } from "./Shader";
+import { Tonemap } from "./ToneMapping";
 
 export function GetTexCodiedUV(_uv : CVec2, _texCodi : CVec4) : CVec2 {
     var result : CVec2 = new CVec2(0.0,0.0);
@@ -802,74 +805,123 @@ export function VFXDown2(_uv : CVec2, _value : CMat,_time : number, _worldPos : 
 
 
 //=============================================================
-export var TexOffBlendFactor : CMat=Null();
-export function TexOffBlendFactorFun(_color : CVec4,_uv : CVec2,_obo : CMat) : CVec4
+// x:type, y:orgIndex, z:tarIndex|value0, w:value1
+// SDF.eBlend.Null 인 경우에만 x를 texOff로 사용
+export var BlendColor0 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor1 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor2 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor3 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor4 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor5 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor6 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor7 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor8 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor9 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor10 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor11 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor12 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor13 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor14 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var BlendColor15 : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+function GetColorByIndex(_index: number, _tempMat0: CMat, _tempMat1: CMat, _tempMat2: CMat, _tempMat3: CMat): CVec4 
 {
-    for(var i = 0; i < 4; i++) 
-    {
-        var tCol : CVec4 = Sam2DToColor(_obo[i].x, _uv);
-        var op : number=_obo[i].z;
+    if(_index < -0.5) return new CVec4(0.0, 0.0, 0.0, 0.0);
+    else if(_index <  4.0 - 0.5) return _tempMat0[FloatToInt(mod(_index, 4.0))];
+    else if(_index <  8.0 - 0.5) return _tempMat1[FloatToInt(mod(_index, 4.0))];
+    else if(_index < 12.0 - 0.5) return _tempMat2[FloatToInt(mod(_index, 4.0))];
+    else if(_index < 16.0 - 0.5) return _tempMat3[FloatToInt(mod(_index, 4.0))];
+    return new CVec4(0.0, 0.0, 0.0, 0.0);
+}
+function BlendFactorFun(_index: number, _uv: CVec2, _obo: CVec4, _tempMat0: CMat, _tempMat1: CMat, _tempMat2: CMat, _tempMat3: CMat): CVec4
+{
+    var type    : number = _obo[0] - 0.5;
+    var orgIndex: number = _obo[1];
+    var value0  : number = _obo[2];
+    var value1  : number = _obo[3];
 
-        if(SDF.eBlend.Null>_obo[i].y-0.5) 
-        {
-            _color=_color;
-        }
-        else if(SDF.eBlend.LinearDodge>_obo[i].y-0.5)
-        {
-            // org + tar * per
-            _color = V4AddV4(_color,V4MulFloat(tCol,op));
-        }
-        else if(SDF.eBlend.Multiply>_obo[i].y-0.5)
-        {
-            // org * ( tar*per + (1-per) )
-            _color = V4MulV4(
-                _color,
-                V4AddV4(
-                    V4MulFloat(tCol,op),
-                    V4SubV4(new CVec4(1.0,1.0,1.0,1.0),new CVec4(op,op,op,op))
-                )
-            );
-        }
-        else if(SDF.eBlend.LerpPer>_obo[i].y-0.5)
-        {
-            // org + (tar - org) * per
-            var diff : CVec4 = V4SubV4(tCol, _color);
-            _color = V4AddV4(_color, V4MulFloat(diff, op));
-        }
-        else if(SDF.eBlend.LerpAlpha>_obo[i].y-0.5)
-        {
-            // rgb: org.rgb*(1-org.a) + tar.rgb*tar.a, a=1
-            var invOrgA : number = 1.0 - _color.a;
-            var srcA :number   = tCol.a;
-            _color = new CVec4(
-                _color.r * invOrgA + tCol.r * srcA,
-                _color.g * invOrgA + tCol.g * srcA,
-                _color.b * invOrgA + tCol.b * srcA,
-                1.0
-            );
-        }
-        else if(SDF.eBlend.Darken>_obo[i].y-0.5)
-        {
-            var so : number = _color.r + _color.g + _color.b;
-            var st : number = tCol.r + tCol.g + tCol.b;
-            _color = so < st ? _color : tCol;
-        }
-        else if(SDF.eBlend.Lighten>_obo[i].y-0.5)
-        {
-            var so : number= _color.r + _color.g + _color.b;
-            var st : number= tCol.r + tCol.g + tCol.b;
-            _color = so > st ? _color : tCol;
-        }
-        else if(SDF.eBlend.Tar>_obo[i].y-0.5)
-        {
-            _color = tCol;
-        }
-        else if(SDF.eBlend.DarkCut>_obo[i].y-0.5)
-        {
-            var so : number = _color.r + _color.g + _color.b;
-            _color = so < 2.5  ? new CVec4(0.0, 0.0, 0.0, 0.0): tCol;
-        }
+    var org: CVec4 = GetColorByIndex(orgIndex, _tempMat0, _tempMat1, _tempMat2, _tempMat3);
+    var tar: CVec4 = GetColorByIndex(value0, _tempMat0, _tempMat1, _tempMat2, _tempMat3);
+
+    if(type < SDF.eBlend.Null) {
+        // 이전 색상 그대로 사용
+        return GetColorByIndex(_index-1.0, _tempMat0, _tempMat1, _tempMat2, _tempMat3);
     }
+    else if(type < SDF.eBlend.LinearDodge) {
+        // org + tar * value1
+        return V4AddV4(org, V4MulFloat(tar, value1));
+    }
+    else if(type < SDF.eBlend.Multiply) {
+        // org * (1 - value0) + org * tar * value0
+        return V4Mix(org, V4MulV4(org, tar), value1);
+    }
+    else if(type < SDF.eBlend.LerpPer) {
+        // org + (tar - org) * per
+        return V4Mix(org, tar, value1);
+    }
+    else if(type < SDF.eBlend.LerpAlpha) {
+        // rgb: org.rgb*(1-org.a) + tar.rgb*tar.a, a=1
+        return new CVec4(V3AddV3(V3MulFloat(org.rgb, 1.0 - org.a), V3MulFloat(tar.rgb, tar.a)), 1.0);
+    }
+    else if(type < SDF.eBlend.Darken) {
+        // 더 어두운 쪽 골라줌
+        var so : number = org.r + org.g + org.b;
+        var st : number = tar.r + tar.g + tar.b;
+        return so < st ? org : tar;
+    }
+    else if(type < SDF.eBlend.Lighten) {
+        // 더 밝은 쪽 골라줌
+        var so : number = org.r + org.g + org.b;
+        var st : number = tar.r + tar.g + tar.b;
+        return so >= st ? org : tar;
+    }
+    else if(type < SDF.eBlend.Org) {
+        return org;
+    }
+    else if(type < SDF.eBlend.Tar) {
+        return tar;
+    }
+    else if(type < SDF.eBlend.DarkCut) {
+        // 엄청나게 밝은 부분이 아니면 자름
+        var so : number = org.r + org.g + org.b;
+        return so < 2.5 ? new CVec4(0.0, 0.0, 0.0, 0.0) : tar;
+    }
+    else if(type < SDF.eBlend.Texture) {
+        return Sam2DToColor(orgIndex, _uv);
+    }
+    else if(type < SDF.eBlend.Tonemap) {
+        // value0 : exposure, value1 : tonemap type
+        return new CVec4(Tonemap(org.rgb, value0, value1), org.a);
+    }
+    else if(type < SDF.eBlend.GammaCorrect) {
+        return new CVec4(V3Sqrt(org.rgb), org.a);
+    }
+    return org;
+}
+export function TexOffBlendFactorFun(_uv: CVec2) : CVec4
+{
+    // 이전 색상 정보 저장하기 위한 매트릭스
+    var tempColor0 : CMat = new CMat(0);
+    var tempColor1 : CMat = new CMat(0);
+    var tempColor2 : CMat = new CMat(0);
+    var tempColor3 : CMat = new CMat(0);
 
-    return _color;
+    // 16회 진행
+    tempColor0[0] = BlendFactorFun(0.0, _uv, BlendColor0, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor0[1] = BlendFactorFun(1.0, _uv, BlendColor1, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor0[2] = BlendFactorFun(2.0, _uv, BlendColor2, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor0[3] = BlendFactorFun(3.0, _uv, BlendColor3, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[0] = BlendFactorFun(4.0, _uv, BlendColor4, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[1] = BlendFactorFun(5.0, _uv, BlendColor5, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[2] = BlendFactorFun(6.0, _uv, BlendColor6, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor1[3] = BlendFactorFun(7.0, _uv, BlendColor7, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[0] = BlendFactorFun(8.0, _uv, BlendColor8, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[1] = BlendFactorFun(9.0, _uv, BlendColor9, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[2] = BlendFactorFun(10.0, _uv, BlendColor10, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor2[3] = BlendFactorFun(11.0, _uv, BlendColor11, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[0] = BlendFactorFun(12.0, _uv, BlendColor12, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[1] = BlendFactorFun(13.0, _uv, BlendColor13, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[2] = BlendFactorFun(14.0, _uv, BlendColor14, tempColor0, tempColor1, tempColor2, tempColor3);
+    tempColor3[3] = BlendFactorFun(15.0, _uv, BlendColor15, tempColor0, tempColor1, tempColor2, tempColor3);
+
+    return tempColor3[3];
 }

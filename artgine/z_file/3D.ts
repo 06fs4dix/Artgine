@@ -1,50 +1,17 @@
 import { 
 	Binormal3, Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,
 	ToV2, ToV3, ToV4, Normal3, TexOff3, Tangent4, UV2, Vertex3, Weight4, WeightIndexI4, InverseMat3, 
-	LWVPMul, discard, screenPos,  MappingV3ToTex,
-	Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3,
-	Sam2DToColor, Sam2DToMat, 
-	V2SubV2, V2MulFloat, V2DivV2, 
-	V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3,
-	V4MulMatCoordi, 
+	LWVPMul, discard, screenPos, MappingV3ToTex,
+	Mat4ToMat3, MatAdd, MatMul, FloatMulMat, TransposeMat3, MatMix, MatTypeToMat,
+	Sam2DToColor, Sam2DToMat, Sam2DArrMat, Sam2D0ToColor, Sam2DArrToMat,
+    clamp, floor, min, abs, max, dFdy, dFdx, length, SaturateFloat, smoothstep,
+	V2SubV2, V2MulFloat, V2DivV2, V2AddV2, V2Len,
+	V3AddV3, V3Dot, V3Nor, V3MulFloat, V3MulMat3Normal, V3ToMat3, V3Len, V3Mix, V3SubV3, SaturateV3, V3Cross, V3Sqrt, V3MulV3,
+	V4MulMatCoordi, V4Min,
 	ParallaxNormal, FloatToInt, IntToFloat, MappingTexToV3, 
 	BranchBegin,BranchEnd,BranchDefault,
 	Attribute, Null,
-	clamp,
-	floor,
-	MatMix,
-	Sam2D0ToColor,
-	MatTypeToMat,
-	min,
-	abs,
-	max,
-	dFdy,
-	V3Len,
-	length,
-	dFdx,
-	V3Mix,
-	V3SubV3,
-	SaturateFloat,
-	V2AddV2,
-	V2Len,
-	SaturateV3,
-	V3Cross,
-	smoothstep,
-	Sam2DArrMat,
-	Sam2DArrToMat,
-	Sam2DArrToV4,
-    V3MulMatCoordi,
-    V2Dot,
-    sin,
-    fract,
-    V2Fract,
-    V3Pow,
-    V4Min,
-    V2MulV2,
-    V3Sqrt,
-    V3MulV3,
-    V3DivFloat,
-	
+    Sam2DArrToV4,
 } from "./Shader"
 import {
 	SDF
@@ -77,15 +44,11 @@ import {
 	shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowRightCasP2, shadowTopCasV1, 
 	shadowPointProj, shadowRate, shadowReadList, shadowWrite, texture16f, 
 	jitter,
-    shadowNearFar,
-    shadowLigPos,
-    shadowTest,
     CalcShadow,
     CalcParallaxShadow
 } from "./Shadow";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { exposure, Tonemap, tonemappingType } from "./ToneMapping";
-
 
 var screenDepth : number;
 //uniform
@@ -183,9 +146,8 @@ Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"],
 	vs_main_shadow_write, [
 		worldMat,viewMat,projectMat,skin,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
-		shadowCount,shadowPointProj,shadowReadList,jitter,
-        shadowNearFar,shadowLigPos
-	], [out_position,to_uv,to_viewPos,to_worldPos],
+		shadowCount,shadowPointProj,shadowReadList,jitter
+	], [out_position,to_uv,to_viewPos],
 	ps_main_shadow_write,[out_color]
 );
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
@@ -195,7 +157,7 @@ Build("Artgine/Shader/3DShadowRead", ["shadowRead"],
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
-        ligDir,ligCol,ligMask,ligCount,shadowTest
+        ligDir,ligCol,ligMask,ligCount
 	], [out_position,to_uv,to_normal,to_worldPos,to_binormal,to_tangent,to_ref],
 	ps_main_shadow_read,[out_color]
 );
@@ -679,6 +641,14 @@ function ps_main()
 
 	out_color=L_cor;
 
+    BranchBegin("tonemapping","tonemapping",[exposure, tonemappingType]);
+    out_color.rgb = Tonemap(out_color.rgb, exposure, tonemappingType);
+    BranchEnd();
+
+    if(gamma > 1.1) {
+        out_color.rgb = V3Sqrt(out_color.rgb);
+    }
+
 	BranchBegin("waterReflect","waterReflect",[waterDeep]);
 	if(world.y <= waterDeep.x) discard;	// 물 높이보다 높은 것만 랜더링
 	BranchEnd();
@@ -690,14 +660,6 @@ function ps_main()
 	caustics = Caustics(world.xyz, causticFlowDir,sunDir,sunCol);
 	out_color.rgb = WaterProcessing(out_color.rgb, caustics, world);
 	BranchEnd();
-
-    BranchBegin("tonemapping","tonemapping",[exposure, tonemappingType]);
-    out_color.rgb = Tonemap(out_color.rgb, exposure, tonemappingType);
-    BranchEnd();
-
-    if(gamma > 1.1) {
-        out_color.rgb = V3Sqrt(out_color.rgb);
-    }
 }
 
 
@@ -817,77 +779,46 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
 	P = ApplyWind(P, skin, f4_we, time);
 	BranchEnd();
 
-    // 디렉셔널
-    if(shadowWrite.z < 0.5) {
-        var svm : CMat=new CMat(0);
-        var spm : CMat=new CMat(0);
-        if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
-        {
-            svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
-            spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
-        {
-            svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
-            spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
-        {
-            svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
-            spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
-        }
-
-        P = V4MulMatCoordi(P, svm);
-        to_viewPos = P;
-        P = V4MulMatCoordi(P, spm);
+    var svm : CMat=new CMat(0);
+    var spm : CMat=new CMat(0);
+    BranchBegin("PointLightShadowV","PLSV",[]);
+    if(shadowWrite.x<SDF.eShadow.Near + 0.5)
+        svm = Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Far + 0.5)
+        svm = Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Top + 0.5)
+        svm = Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Bottom + 0.5)
+        svm = Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Left + 0.5)
+        svm = Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Right + 0.5)
+        svm = Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+    to_viewPos = P;
+    out_position = V4MulMatCoordi(P, svm);
+    BranchDefault();
+    if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5) {
+        svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+        spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
     }
-    // 포인트
-    else {
-        var spvm : CMat=new CMat(0);
-        if(shadowWrite.x<SDF.eShadow.Near + 0.5)
-        {
-            spvm = Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Far + 0.5)
-        {
-            spvm = Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Top + 0.5)
-        {
-            spvm = Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Bottom + 0.5)
-        {
-            spvm = Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Left + 0.5)
-        {
-            spvm = Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
-        }
-        else if(shadowWrite.x<SDF.eShadow.Right + 0.5)
-        {
-            spvm = Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
-        }
-        to_worldPos = P;
-        P = V4MulMatCoordi(P, spvm);
+    else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5) {
+        svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+        spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
     }
-	
-	out_position = P;
+    else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5) {
+        svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+        spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+    }
+    to_viewPos = V4MulMatCoordi(P, svm);
+    out_position = V4MulMatCoordi(to_viewPos, spm);
+    BranchEnd();
+    
+    // pancacking
+    out_position.z = max(out_position.z, 0.0);
 }
 function ps_main_shadow_write() 
 {
-	var L_cor : CVec4;
-
-	// BranchBegin("vfx","VFX",[VFX,LUT0,LUT1,LUT2,LUT3,LUT4,LUT5,time,vfxMat0,vfxMat1]);
-	// L_cor=VFXDown2(to_uv,VFX,time,new CVec4(0.0,0.0,0.0,0.0));
-	// BranchDefault();
-	// L_cor = Sam2DToColor(0.0, to_uv);
-	// BranchEnd();
-	L_cor = Sam2DToColor(0.0, to_uv);
-
-	// BranchBegin("colorModel","CM",[colorModel]);
-	// L_cor.rgb=ColorModalFun(L_cor.rgb,colorModel);
-	// BranchEnd();
+	var L_cor : CVec4 = Sam2DToColor(0.0, to_uv);
 
 	BranchBegin("alphaModel","AM",[alphaModel]);
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
@@ -898,16 +829,17 @@ function ps_main_shadow_write()
     BranchDefault();
     if ( L_cor.a <= 0.01 ) discard;
 	BranchEnd();
-	
-    // 디렉셔널
-    if(shadowWrite.z < 0.5) {
-        out_color = to_viewPos;
-    }
-    else {
-        var lightToWorldPos : CVec3 = V3SubV3(to_worldPos.xyz, shadowLigPos.xyz);
-        var distance : number = (V3Len(lightToWorldPos) - shadowNearFar.x) / (shadowNearFar.y - shadowNearFar.x);
-        out_color = new CVec4(distance, distance, distance, 1.0);
-    }
+
+    var shadowRead: CVec4;
+    var lDir: CVec4;
+    BranchBegin("PointLightShadowF","PLSF",[ligDir]);
+    shadowRead = Sam2DArrToV4(shadowReadList, shadowWrite.y);
+    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowRead.z) / (shadowRead.w - shadowRead.z);
+    out_color.a = 1.0;
+    BranchDefault();
+    out_color = to_viewPos;
+    BranchEnd();
 }
 function vs_main_shadow_read(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : Weight4, f2_uv : UV2,f3_nor : Normal3,f4_tan : Tangent4,f3_bi : Binormal3,f3_ref : TexOff3) {
 

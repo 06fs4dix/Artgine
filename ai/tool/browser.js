@@ -14,7 +14,7 @@ const [,, baseArg, cmd, ...args] = process.argv;
 if (!baseArg || !baseArg.startsWith('http')) {
     console.error('Usage: node ai/browser.js <base-url> <cmd> [args]');
     console.error('  node ai/browser.js http://localhost:7000 login');
-    console.error('  node ai/browser.js http://localhost:7000 push <url> [ttl=600] [logSize=100] [width=1280] [height=720]');
+    console.error('  node ai/browser.js http://localhost:7000 push <url> [ttl=600] [logSize=100] [width=1280] [height=720] [captureConsole=1]');
     console.error('  node ai/browser.js http://localhost:7000 reset <sid> [ttl] [logSize] [width] [height]');
     console.error('  node ai/browser.js http://localhost:7000 exec <sid> <fn> [args_json]');
     console.error('  node ai/browser.js http://localhost:7000 screenshot <sid> [options_json]');
@@ -35,9 +35,9 @@ if (cmd === 'login') {
     console.log(r.ok ? 'ok' : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'push') {
-    const [url, ttl = '600', logSize = '100', width = '1280', height = '720'] = args;
-    if (!url) { console.error('Usage: push <url> [ttl] [logSize] [width] [height]'); process.exit(1); }
-    const r = await call(base, 'PlayWright/push', { url, ttl, logSize, width, height });
+    const [url, ttl = '600', logSize = '100', width = '1280', height = '720', captureConsole = '1'] = args;
+    if (!url) { console.error('Usage: push <url> [ttl] [logSize] [width] [height] [captureConsole]'); process.exit(1); }
+    const r = await call(base, 'PlayWright/push', { url, ttl, logSize, width, height, captureConsole: captureConsole !== '0' });
     console.log(r.ok ? r.sessionId : `fail: ${r.msg ?? 'unknown'}`);
 
 } else if (cmd === 'reset') {

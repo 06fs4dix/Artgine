@@ -58,13 +58,13 @@ export class CSignalingClient extends CSocketIO
         //     }
         // });
 
-        event[PacketSN.eHeader.RoomOwner] = new CEvent((_stream: CStream) => {
+        event[PacketSN.RoomOwner.name] = new CEvent((_stream: CStream) => {
             let RoomConnectReq=PacketSN.RoomConnectReq(_stream);
             this.mOwnerKey=RoomConnectReq.userKey;
             _stream.ResetOffset();
             _stream.GetString();
-            
-            event[PacketSN.eHeader.RoomConnectReq].Call(_stream);
+
+            event[PacketSN.RoomConnectReq.name].Call(_stream);
         });
       
     

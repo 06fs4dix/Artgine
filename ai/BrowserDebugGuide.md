@@ -13,7 +13,7 @@
 
 ```bash
 node ai/tool/browser.js $BASE_URL login                                   # 인증 (최초 1회) → "ok" 출력
-node ai/tool/browser.js $BASE_URL push <url> [ttl=600] [logSize=100] [width=1280] [height=720] # 세션 생성 → sessionId 문자열 출력
+node ai/tool/browser.js $BASE_URL push <url> [ttl=600] [logSize=100] [width=1280] [height=720] [captureConsole=1] # 세션 생성 → sessionId 문자열 출력
 node ai/tool/browser.js $BASE_URL reset <sid> [ttl] [logSize] [width] [height]    # 세션 재설정(페이지 새로 로드)
 node ai/tool/browser.js $BASE_URL exec <sid> <fn> [args_json]             # Playwright Page API 호출 → result 출력
 node ai/tool/browser.js $BASE_URL screenshot <sid> [options_json]        # 스크린샷 → screenshot.png 저장
@@ -27,6 +27,7 @@ node ai/tool/browser.js $BASE_URL remove <sid>                             # 세
 ```
 
 - `push`: width/height로 Playwright viewport size를 지정한다. 0 이하, 미입력, 알 수 없는 값은 서버 기본값 1280x720을 사용한다.
+  - `captureConsole=0`으로 콘솔/에러 로그 수집을 끌 수 있다. 콘솔 캡처(`page.on('console')`, `page.on('pageerror')`)는 CDP `Runtime.enable`을 활성화시키는데, 이는 일부 안티봇 스크립트가 자동화(Playwright/CDP) 여부를 판별하는 데 쓰는 알려진 탐지 신호("Runtime.enable leak")다. 대상 사이트가 봇으로 계속 인식되면 `captureConsole=0`으로 세션을 만들어 이 신호를 제거해본다(단, 이 경우 `logs` 명령으로 콘솔/에러 로그를 볼 수 없다 — network 4xx/5xx 로그는 계속 남는다).
 - `reset`: 기존 세션을 재사용하면서 ttl/logSize/width/height를 다시 지정해 페이지를 새로 로드한다.
 - `fn`: Playwright Page API 메서드, dot-notation 지원 (`mouse.click`, `keyboard.type` 등). `fn`이 `screenshot`이면 결과를 자동으로 `screenshot.png`에 저장한다.
   - `exec`는 Playwright(`playwright`)의 `Page` API를 그대로 가져와 쓴 것이라, 복잡한 동작은 Playwright 공식 문서나 `node_modules/playwright-core/types/types.d.ts`의 `Page`/`Mouse`/`Keyboard` 정의를 참고해서 메서드/인자를 확인한다.
