@@ -123,6 +123,11 @@ export class CUtilWeb {
 		let importPathArr = ExtractImportPaths(_source, false);
 		const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
 		const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootUrl()).replace(/\/$/, "");
+		// 워킹 루트와 아티젠 엔진 루트가 다른 프로젝트(엔진이 서브폴더로 중첩된 구조) 대응.
+		// artgine/desktop/plugin/ai는 항상 엔진 실제 위치(WebRootArtgineUrl) 기준으로 해석한다.
+		const engineBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootArtgineUrl()).replace(/\/$/, "");
+		const engineRoots = ["artgine/", "desktop/", "plugin/", "ai/"];
+		const PickBase = (_path: string) => engineRoots.some(r => _path.startsWith(r)) ? engineBase : rootBase;
 
 		const processedPaths = new Map<string, string>();
 
@@ -169,15 +174,15 @@ export class CUtilWeb {
 				if (path.startsWith("./")) path = path.substring(2);
 
 				if (_github || path.startsWith("artgine/")) {
-					// artgine 경로: ../개수와 무관하게 루트에서 해석
-					adjustedFullPath = rootBase + "/" + path;
+					// artgine 경로: ../개수와 무관하게 엔진 루트에서 해석
+					adjustedFullPath = PickBase(path) + "/" + path;
 				} else {
 					const base = count > 0 ? CString.PathSub(fileDir, count) : fileDir;
 					adjustedFullPath = base + "/" + path;
 				}
 			} else {
 				// 프로젝트 루트 절대경로 (artgine/..., plugin/... 등)
-				adjustedFullPath = rootBase + "/" + path;
+				adjustedFullPath = PickBase(path) + "/" + path;
 			}
 
 			_source = _source.replaceAll(originalPath, adjustedFullPath);

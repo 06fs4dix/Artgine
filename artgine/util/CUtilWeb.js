@@ -1,1 +1,389 @@
-import{CAlert as t}from"../basic/CAlert.js";import{CEvent as e}from"../basic/CEvent.js";import{CDOM as n}from"../basic/CDOM.js";import{CPath as r}from"../basic/CPath.js";import{CString as o}from"../basic/CString.js";import{CUtil as i}from"../basic/CUtil.js";import{ExtractImportPaths as a}from"../render/CShaderInterpret.js";import{CFile as s}from"../system/CFile.js";import{CChecker as l}from"./CChecker.js";var d=!0;export class CUtilWeb{static mNotifPool=new Set;static async Notify(t,n="",r="",o=null){if(!("Notification"in window))return!0;if("denied"===Notification.permission)return!0;if("default"===Notification.permission&&"granted"!==await Notification.requestPermission())return!0;const i=new Notification(t,{body:n,icon:r||void 0});if(CUtilWeb.mNotifPool.add(i),i.onclose=()=>CUtilWeb.mNotifPool.delete(i),null!=o){const t=e.ToCEvent(o);i.onclick=()=>{window.focus(),t.Call()}}return!1}static ToastUI(e,n=400){return null==window.toastui?(t.W("toastui not import!"),null):new window.toastui.Editor({el:e,height:n+"px",initialEditType:"wysiwyg",previewStyle:"vertical"})}static Window(t="Window",e=640,n=480){return window.open(r.WebRootUrl()+"lib/artgine/Window.html",t,"width="+e+",height"+n+"toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes")}static Parameter(t,e=null){var n=window.g_requestParameter;null==n&&(n=location.search),t=t.replace(/[\[]/,"\\[").replace(/[\]]/,"\\]");var r=new RegExp("[\\?&]"+t+"=([^&#]*)").exec(n);return null==r?e:decodeURIComponent(r[1].replace(/\+/g," "))}static PageReload(){location.reload()}static PageCall(t,e=new Array,n=new Array,r=!0){var o=document.createElement("form");o.setAttribute("charset","UTF-8"),o.setAttribute("method",r?"Post":"Get"),o.setAttribute("action",t);for(var i=0;i<e.length;++i){var a=document.createElement("input");a.setAttribute("type","hidden"),a.setAttribute("name",e[i]),a.setAttribute("value",n[i]),o.appendChild(a)}document.body.appendChild(o),o.submit()}static PageBack(){window.history.back()}static async TSImport(t,e=!0,n=!1,l=null){let d=a(t,!1);const c=o.PathSub(l??r.FullPath()),p=(n?"https://06fs4dix.github.io/Artgine":r.WebRootUrl()).replace(/\/$/,""),u=new Map;for(let r=0;r<d.length;++r){const a=d[r];if(u.has(a))continue;if(/^https?:\/\//.test(a)||/^file:\/\/\//.test(a)){u.set(a,a);continue}let l,m=a;if(/^[A-Za-z]:[\\/]/.test(m)){const t=m.replace(/\\/g,"/"),e=["/artgine/","/proj/","/plugin/","/desktop/"];let n=!1;for(const r of e){const e=t.indexOf(r);if(-1!==e){m=t.substring(e+1),n=!0;break}}if(!n){u.set(a,a);continue}}if(e?m=o.ReplaceAll(m,".js",""):-1==m.indexOf(".js")&&(m+=".js"),m.startsWith("../")||m.startsWith("./")){let t=0;for(;m.startsWith("../");)t++,m=m.substring(3);m.startsWith("./")&&(m=m.substring(2)),l=n||m.startsWith("artgine/")?p+"/"+m:(t>0?o.PathSub(c,t):c)+"/"+m}else l=p+"/"+m;if(t=t.replaceAll(a,l),u.set(a,l),d[r]=l,e&&null!=window.require){const t=l+".ts",e=await s.Load(t);window.monaco.languages.typescript.typescriptDefaults.addExtraLib(i.ArrayToString(e),t)}}return t}static MonacoEditer(t,e,n="plaintext",o="vs-dark",i=null,a=!1,s=null){null!=window.require?(d&&(require.config({paths:{vs:r.WebRootArtgineUrl()+"artgine/external/legacy/monaco-editor/min/vs"}}),d=!1),require(["vs/editor/editor.main"],async function(){"typescript"==n&&(e=await CUtilWeb.TSImport(e,!0,a,s)),t.innerHTML="",window.monaco.languages.typescript.javascriptDefaults.setCompilerOptions({allowJs:!0,checkJs:!0,target:window.monaco.languages.typescript.ScriptTarget.ES2022,module:window.monaco.languages.typescript.ModuleKind.ESNext});let r=window.monaco.editor.create(t,{value:e,language:n,automaticLayout:!0,readOnly:!1,theme:o});null!=i&&i(r,e)})):t.innerHTML="MonacoEditer not import!"}static async TSToJS(t){const e=t=>t.replace(/from\s+['"]([^'"]+)['"]/g,(t,e)=>{if(/\.(js|ts|json|mjs)$/.test(e))return t;if(/^[A-Za-z]:[\\/]/.test(e)){const n=`file:///${e.replace(/\\/g,"/")}.js`;return t.replace(e,n)}return/^(https?:\/\/|file:\/\/)/.test(e)?t.replace(e,`${e}.js`):t});if(i.IsNode()){const n=(await import("typescript")).default;return e(n.transpileModule(t,{compilerOptions:{module:n.ModuleKind.ESNext,target:n.ScriptTarget.ES2020,downlevelIteration:!0}}).outputText)}return null!=window.ts&&null!=window.ts.transpileModule||(c?await l.Exe(async()=>null==window.ts||null==window.ts.transpileModule):(c=!0,await new Promise((t,e)=>{const n=document.createElement("script");n.src=r.WebRootArtgineUrl()+"artgine/external/legacy/typescript.js",n.onload=t,n.onerror=e,document.head.appendChild(n)}))),e(window.ts.transpileModule(t,{compilerOptions:{module:window.ts.ModuleKind.ESNext,target:window.ts.ScriptTarget.ES2020,downlevelIteration:!0,lib:["es2015","dom"]}}).outputText)}static async MDReader(t){const e=n.DataToDom(null),a=`mdr-scope-${Math.random().toString(36).slice(2)}`;e.classList.add(a);const l=(t,e,n)=>{let r=n.querySelector?.(`#${t}`);r||(r=document.createElement("style"),r.id=t,n.appendChild(r)),r.textContent=e},d=(t=>{const e=t?.getRootNode?.();return e&&e instanceof ShadowRoot?e:document.head})(e);l(`mdr-style-1-${a}`,`\n    .${a} h1, .${a} h2 {\n      padding-bottom: .3em;\n      border-bottom: 1px solid #d0d7de;\n      margin-top: 24px;\n      margin-bottom: 16px;\n      font-weight: 600;\n      line-height: 1.25;\n    }\n    .${a} hr {\n      height: 0;\n      border: 0;\n      border-top: 1px solid #d0d7de;\n      margin: 24px 0;\n    }\n  `,d),l(`mdr-style-2-${a}`,`\n  .${a} pre > code,\n  .${a} pre > code.hljs {\n    display: block;\n    background: #f6f8fa !important; /* 원하는 색 */\n    padding: 12px !important;\n    border-radius: 8px;\n    box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);\n  }\n  .${a} :not(pre) > code {\n    background: #f6f8fa;\n    padding: .2em .4em;\n    border-radius: 4px;\n  }\n\n  /* ▼▼ 텍스트 선택 강제 허용 (중요) ▼▼ */\n  .${a} pre,\n  .${a} code,\n  .${a} .hljs,\n  .${a} .hljs * {\n    -webkit-user-select: text !important;\n    -moz-user-select: text !important;\n    -ms-user-select: text !important;\n    user-select: text !important;\n  }\n  .${a} pre,\n  .${a} code,\n  .${a} .hljs {\n    cursor: text;\n  }\n`,d),l(`mdr-style-3-${a}`,`\n    .${a} blockquote {\n      margin: 1em 0;\n      padding: 0.6em 1em;\n      color: #57606a;\n      border-left: 0.25em solid #d0d7de;\n      background: #f8f9fb;\n      border-radius: 6px;\n    }\n    .${a} blockquote > :first-child { margin-top: 0; }\n    .${a} blockquote > :last-child  { margin-bottom: 0; }\n    .${a} blockquote pre > code,\n    .${a} blockquote pre > code.hljs {\n      background: #eef2ff !important;\n      border-radius: 8px;\n      padding: 12px;\n\t  \n    }\n  `,d),r.WebRootUrl();const{marked:c}=await import("../external/esnext/md/marked.esm.js"),p=(await import("../external/esnext/md/highlight.min.js")).default,u=(await import("../external/esnext/md/javascript.min.js")).default,m=(await import("../external/esnext/md/typescript.min.js")).default;p.registerLanguage("javascript",u),p.registerLanguage("typescript",m),c.setOptions({gfm:!0,breaks:!1,mangle:!1,headerIds:!0});let g=null,f="";if("md"==o.ExtCut(t).ext){if(g=await s.Load(t),!g)return e;f=i.ArrayToString(g)}else f=t;const h=c.parse(f,{xhtml:!1});e.innerHTML=h,e.querySelectorAll("pre code").forEach(t=>{p.highlightElement(t),t.classList.add("hljs")}),e.querySelectorAll('a[href^="http"]').forEach(t=>{t.setAttribute("target","_blank"),t.setAttribute("rel","noopener")}),e.querySelectorAll("img, video, canvas, svg").forEach(t=>{t.style.maxWidth="100%",t.style.height="auto"});{const t="https://06fs4dix.github.io/Artgine",n=t+"/",o=r.WebRootUrl(),i=o.endsWith("/")?o:o+"/";e.querySelectorAll("a[href]").forEach(e=>{const r=e.getAttribute("href")??"";if(r.startsWith(n)){const t=r.slice(n.length);return void e.setAttribute("href",i+t.replace(/^\/+/,""))}if(r.startsWith(t)){const n=r.slice(t.length);return void e.setAttribute("href",i+n.replace(/^\/+/,""))}})}return e}static QRCode(t,e=256){return new Promise((n,r)=>{window.QRCode.toDataURL(t,{width:e,margin:1},(t,e)=>{t?r(t):n(e)})})}}let c=!1;
+import { CAlert } from "../basic/CAlert.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CDOM } from "../basic/CDOM.js";
+import { CPath } from "../basic/CPath.js";
+import { CString } from "../basic/CString.js";
+import { CUtil } from "../basic/CUtil.js";
+import { ExtractImportPaths } from "../render/CShaderInterpret.js";
+import { CFile } from "../system/CFile.js";
+import { CChecker } from "./CChecker.js";
+var gMonaco = true;
+export class CUtilWeb {
+    static mNotifPool = new Set();
+    static async Notify(_title, _body = "", _icon = "", _onClick = null) {
+        if (!("Notification" in window))
+            return true;
+        if (Notification.permission === "denied")
+            return true;
+        if (Notification.permission === "default") {
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted")
+                return true;
+        }
+        const noti = new Notification(_title, { body: _body, icon: _icon || undefined });
+        CUtilWeb.mNotifPool.add(noti);
+        noti.onclose = () => CUtilWeb.mNotifPool.delete(noti);
+        if (_onClick != null) {
+            const ev = CEvent.ToCEvent(_onClick);
+            noti.onclick = () => { window.focus(); ev.Call(); };
+        }
+        return false;
+    }
+    static ToastUI(_html, _height = 400) {
+        if (window["toastui"] == null) {
+            CAlert.W("toastui not import!");
+            return null;
+        }
+        const editor = new window["toastui"].Editor({
+            el: _html,
+            height: _height + 'px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical'
+        });
+        return editor;
+    }
+    static Window(_title = "Window", _width = 640, _height = 480) {
+        return window.open(CPath.WebRootUrl() + "lib/artgine/Window.html", _title, "width=" + _width + ",height" + _height + "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes");
+    }
+    static Parameter(_name, _value = null) {
+        var source = window['g_requestParameter'];
+        if (source == null)
+            source = location.search;
+        _name = _name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + _name + "=([^&#]*)"), results = regex.exec(source);
+        return results == null ? _value : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+    static PageReload() {
+        location.reload();
+    }
+    static PageCall(_link, _keyArr = new Array(), _valueArr = new Array(), _post = true) {
+        var form = document.createElement("form");
+        form.setAttribute("charset", "UTF-8");
+        form.setAttribute("method", _post ? "Post" : "Get");
+        form.setAttribute("action", _link);
+        for (var i = 0; i < _keyArr.length; ++i) {
+            var hiddenField = document.createElement("input");
+            hiddenField.setAttribute("type", "hidden");
+            hiddenField.setAttribute("name", _keyArr[i]);
+            hiddenField.setAttribute("value", _valueArr[i]);
+            form.appendChild(hiddenField);
+        }
+        document.body.appendChild(form);
+        form.submit();
+    }
+    static PageBack() {
+        window.history.back();
+    }
+    static async TSImport(_source, _monaco = true, _github = false, _filePath = null) {
+        let importPathArr = ExtractImportPaths(_source, false);
+        const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
+        const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootUrl()).replace(/\/$/, "");
+        const engineBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootArtgineUrl()).replace(/\/$/, "");
+        const engineRoots = ["artgine/", "desktop/", "plugin/", "ai/"];
+        const PickBase = (_path) => engineRoots.some(r => _path.startsWith(r)) ? engineBase : rootBase;
+        const processedPaths = new Map();
+        for (let i = 0; i < importPathArr.length; ++i) {
+            const originalPath = importPathArr[i];
+            if (processedPaths.has(originalPath))
+                continue;
+            if (/^https?:\/\//.test(originalPath) || /^file:\/\/\//.test(originalPath)) {
+                processedPaths.set(originalPath, originalPath);
+                continue;
+            }
+            let path = originalPath;
+            if (/^[A-Za-z]:[\\/]/.test(path)) {
+                const normalized = path.replace(/\\/g, '/');
+                const knownRoots = ['/artgine/', '/proj/', '/plugin/', '/desktop/'];
+                let found = false;
+                for (const root of knownRoots) {
+                    const idx = normalized.indexOf(root);
+                    if (idx !== -1) {
+                        path = normalized.substring(idx + 1);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    processedPaths.set(originalPath, originalPath);
+                    continue;
+                }
+            }
+            if (_monaco)
+                path = CString.ReplaceAll(path, ".js", "");
+            else if (path.indexOf(".js") == -1)
+                path += ".js";
+            let adjustedFullPath;
+            if (path.startsWith("../") || path.startsWith("./")) {
+                let count = 0;
+                while (path.startsWith("../")) {
+                    count++;
+                    path = path.substring(3);
+                }
+                if (path.startsWith("./"))
+                    path = path.substring(2);
+                if (_github || path.startsWith("artgine/")) {
+                    adjustedFullPath = PickBase(path) + "/" + path;
+                }
+                else {
+                    const base = count > 0 ? CString.PathSub(fileDir, count) : fileDir;
+                    adjustedFullPath = base + "/" + path;
+                }
+            }
+            else {
+                adjustedFullPath = PickBase(path) + "/" + path;
+            }
+            _source = _source.replaceAll(originalPath, adjustedFullPath);
+            processedPaths.set(originalPath, adjustedFullPath);
+            importPathArr[i] = adjustedFullPath;
+            if (_monaco && window["require"] != null) {
+                const fName = adjustedFullPath + ".ts";
+                const buf = await CFile.Load(fName);
+                window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(CUtil.ArrayToString(buf), fName);
+            }
+        }
+        return _source;
+    }
+    static MonacoEditer(_target, _value, _language = "plaintext", _theme = "vs-dark", _exeFun = null, _github = false, _filePath = null) {
+        if (window["require"] == null) {
+            _target.innerHTML = "MonacoEditer not import!";
+            return;
+        }
+        if (gMonaco) {
+            require.config({ paths: { vs: CPath.WebRootArtgineUrl() + 'artgine/external/legacy/monaco-editor/min/vs' } });
+            gMonaco = false;
+        }
+        require(['vs/editor/editor.main'], async function () {
+            if (_language == "typescript")
+                _value = await CUtilWeb.TSImport(_value, true, _github, _filePath);
+            _target.innerHTML = "";
+            window["monaco"].languages.typescript.javascriptDefaults.setCompilerOptions({
+                allowJs: true,
+                checkJs: true,
+                target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
+                module: window["monaco"].languages.typescript.ModuleKind.ESNext
+            });
+            let editor = window["monaco"].editor.create(_target, {
+                value: _value,
+                language: _language,
+                automaticLayout: true,
+                readOnly: false,
+                theme: _theme
+            });
+            if (_exeFun != null)
+                _exeFun(editor, _value);
+        });
+    }
+    static async TSToJS(_source) {
+        const patchImportPaths = (code) => {
+            return code.replace(/from\s+['"]([^'"]+)['"]/g, (match, path) => {
+                if (/\.(js|ts|json|mjs)$/.test(path)) {
+                    return match;
+                }
+                if (/^[A-Za-z]:[\\/]/.test(path)) {
+                    const fixedPath = `file:///${path.replace(/\\/g, '/')}.js`;
+                    return match.replace(path, fixedPath);
+                }
+                if (/^(https?:\/\/|file:\/\/)/.test(path)) {
+                    return match.replace(path, `${path}.js`);
+                }
+                return match;
+            });
+        };
+        const transpileOptions = {
+            compilerOptions: {
+                module: 99,
+                target: 7,
+                downlevelIteration: true,
+                lib: ["es2015", "dom"]
+            }
+        };
+        if (CUtil.IsNode()) {
+            const ts = (await import('typescript')).default;
+            const jsCode = ts.transpileModule(_source, {
+                compilerOptions: {
+                    module: ts.ModuleKind.ESNext,
+                    target: ts.ScriptTarget.ES2020,
+                    downlevelIteration: true,
+                }
+            }).outputText;
+            return patchImportPaths(jsCode);
+        }
+        if (window["ts"] == null || window["ts"].transpileModule == null) {
+            if (!gTSLoaded) {
+                gTSLoaded = true;
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement("script");
+                    script.src = CPath.WebRootArtgineUrl() + "artgine/external/legacy/typescript.js";
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+            else {
+                await CChecker.Exe(async () => {
+                    if (window["ts"] != null && window["ts"].transpileModule != null)
+                        return false;
+                    return true;
+                });
+            }
+        }
+        const jsCode = window["ts"].transpileModule(_source, {
+            compilerOptions: {
+                module: window["ts"].ModuleKind.ESNext,
+                target: window["ts"].ScriptTarget.ES2020,
+                downlevelIteration: true,
+                lib: ["es2015", "dom"]
+            }
+        }).outputText;
+        return patchImportPaths(jsCode);
+    }
+    static async MDReader(_urlOrText) {
+        const root = CDOM.DataToDom(null);
+        const scopeClass = `mdr-scope-${Math.random().toString(36).slice(2)}`;
+        root.classList.add(scopeClass);
+        const getStyleHost = (node) => {
+            const rn = node?.getRootNode?.();
+            return (rn && rn instanceof ShadowRoot) ? rn : document.head;
+        };
+        const upsertStyle = (id, css, host) => {
+            let el = host.querySelector?.(`#${id}`);
+            if (!el) {
+                el = document.createElement('style');
+                el.id = id;
+                host.appendChild(el);
+            }
+            el.textContent = css;
+        };
+        const host = getStyleHost(root);
+        upsertStyle(`mdr-style-1-${scopeClass}`, `
+    .${scopeClass} h1, .${scopeClass} h2 {
+      padding-bottom: .3em;
+      border-bottom: 1px solid #d0d7de;
+      margin-top: 24px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .${scopeClass} hr {
+      height: 0;
+      border: 0;
+      border-top: 1px solid #d0d7de;
+      margin: 24px 0;
+    }
+  `, host);
+        upsertStyle(`mdr-style-2-${scopeClass}`, `
+  .${scopeClass} pre > code,
+  .${scopeClass} pre > code.hljs {
+    display: block;
+    background: #f6f8fa !important; /* 원하는 색 */
+    padding: 12px !important;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
+  }
+  .${scopeClass} :not(pre) > code {
+    background: #f6f8fa;
+    padding: .2em .4em;
+    border-radius: 4px;
+  }
+
+  /* ▼▼ 텍스트 선택 강제 허용 (중요) ▼▼ */
+  .${scopeClass} pre,
+  .${scopeClass} code,
+  .${scopeClass} .hljs,
+  .${scopeClass} .hljs * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+  .${scopeClass} pre,
+  .${scopeClass} code,
+  .${scopeClass} .hljs {
+    cursor: text;
+  }
+`, host);
+        upsertStyle(`mdr-style-3-${scopeClass}`, `
+    .${scopeClass} blockquote {
+      margin: 1em 0;
+      padding: 0.6em 1em;
+      color: #57606a;
+      border-left: 0.25em solid #d0d7de;
+      background: #f8f9fb;
+      border-radius: 6px;
+    }
+    .${scopeClass} blockquote > :first-child { margin-top: 0; }
+    .${scopeClass} blockquote > :last-child  { margin-bottom: 0; }
+    .${scopeClass} blockquote pre > code,
+    .${scopeClass} blockquote pre > code.hljs {
+      background: #eef2ff !important;
+      border-radius: 8px;
+      padding: 12px;
+	  
+    }
+  `, host);
+        CPath.WebRootUrl();
+        const { marked } = await import('../external/esnext/md/marked.esm.js');
+        const hljs = (await import('../external/esnext/md/highlight.min.js')).default;
+        const javascript = (await import('../external/esnext/md/javascript.min.js')).default;
+        const typescript = (await import('../external/esnext/md/typescript.min.js')).default;
+        hljs.registerLanguage('javascript', javascript);
+        hljs.registerLanguage('typescript', typescript);
+        marked.setOptions({ gfm: true, breaks: false, mangle: false, headerIds: true });
+        let buf = null;
+        let md = "";
+        let ext = CString.ExtCut(_urlOrText);
+        if (ext.ext == "md") {
+            buf = await CFile.Load(_urlOrText);
+            if (!buf)
+                return root;
+            md = CUtil.ArrayToString(buf);
+        }
+        else
+            md = _urlOrText;
+        const rawHtml = marked.parse(md, { xhtml: false });
+        root.innerHTML = rawHtml;
+        root.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+            block.classList.add('hljs');
+        });
+        root.querySelectorAll('a[href^="http"]').forEach(a => {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener');
+        });
+        root.querySelectorAll('img, video, canvas, svg').forEach(el => {
+            el.style.maxWidth = '100%';
+            el.style.height = 'auto';
+        });
+        {
+            const GH_BASE_NO_SLASH = "https://06fs4dix.github.io/Artgine";
+            const GH_BASE = GH_BASE_NO_SLASH + "/";
+            const LOCAL_BASE_RAW = CPath.WebRootUrl();
+            const LOCAL_BASE = LOCAL_BASE_RAW.endsWith("/") ? LOCAL_BASE_RAW : (LOCAL_BASE_RAW + "/");
+            root.querySelectorAll('a[href]').forEach(a => {
+                const href = a.getAttribute('href') ?? "";
+                if (href.startsWith(GH_BASE)) {
+                    const rest = href.slice(GH_BASE.length);
+                    a.setAttribute('href', LOCAL_BASE + rest.replace(/^\/+/, ""));
+                    return;
+                }
+                if (href.startsWith(GH_BASE_NO_SLASH)) {
+                    const rest = href.slice(GH_BASE_NO_SLASH.length);
+                    a.setAttribute('href', LOCAL_BASE + rest.replace(/^\/+/, ""));
+                    return;
+                }
+            });
+        }
+        return root;
+    }
+    static QRCode(_text, _size = 256) {
+        return new Promise((resolve, reject) => {
+            window.QRCode.toDataURL(_text, { width: _size, margin: 1 }, (err, url) => {
+                if (err)
+                    reject(err);
+                else
+                    resolve(url);
+            });
+        });
+    }
+}
+let gTSLoaded = false;

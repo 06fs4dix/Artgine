@@ -1,1 +1,271 @@
-import{CAlert as t}from"../../basic/CAlert.js";import{CParser as e}from"./CParser.js";import{CTexture as r}from"../../render/CTexture.js";const s=(()=>{const t=new Uint32Array(256);for(let e=0;e<256;e++){let r=e;for(let t=0;t<8;t++)r=1&r?3988292384^r>>>1:r>>>1;t[e]=r}return t})();function n(t){let e=4294967295;for(let r=0;r<t.length;r++)e=s[255&(e^t[r])]^e>>>8;return(4294967295^e)>>>0}const a=[137,80,78,71,13,10,26,10],o={0:1,2:3,3:1,4:2,6:4};function i(t,e){return(t[e]<<24|t[e+1]<<16|t[e+2]<<8|t[e+3])>>>0}export class CParserPNG extends e{mTemp=new Uint8Array(4);mAlphaCut=0;mAlphaBleed;constructor(){super()}async Load(e){if(await this.Open(e))return;const s=this.mBuffer;for(let e=0;e<8;e++)if(s[e]!==a[e])return void t.E("[CParserPNG] Invalid PNG signature");let l=8,c=0,h=0,u=0,f=0,d=1,P=0,p=null;const b=[];for(;l+12<=s.length;){const e=l,r=i(s,l);l+=4;const a=String.fromCharCode(s[l],s[l+1],s[l+2],s[l+3]);l+=4;const m=l,w=i(s,e+8+r);if(n(s.subarray(e+4,e+8+r))!==w)return void t.E(`[CParserPNG] CRC 불일치 — chunk: ${a}`);if("acTL"===a)return void t.E("[CParserPNG] APNG(애니메이션 PNG)는 미지원");if("IHDR"===a){if(c=i(s,l),l+=4,h=i(s,l),l+=4,u=s[l++],f=s[l++],l+=2,P=s[l++],d=o[f]??1,1===P)return void t.E("[CParserPNG] Adam7 인터레이스는 미지원");if(![1,2,4,8,16].includes(u))return void t.E(`[CParserPNG] 지원하지 않는 bit depth: ${u}`)}else if("PLTE"===a)p=s.slice(m,m+r),l=m+r;else if("IDAT"===a)b.push(s.slice(m,m+r)),l=m+r;else{if("IEND"===a)break;l=m+r}l+=4}const m=b.reduce((t,e)=>t+e.length,0),w=new Uint8Array(m);let A=0;for(const t of b)w.set(t,A),A+=t.length;const T=await this.Decompress(w);if(!T)return void t.E("[CParserPNG] IDAT 압축 해제 실패");const y=this.ApplyFilters(T,c,h,u,f,d);let C=y,k=d;if(3===f){if(!p)return void t.E("[CParserPNG] PLTE 청크 없음");C=this.ExpandPalette(y,p,c,h),k=3}const G=new r;G.SetSize(c,h),G.CreateBuf();const g=G.GetBuf()[0];this.mResult=G;const E=16===u?65535:255;for(let t=0;t<h;t++)for(let e=0;e<c;e++){const r=(t*c+e)*k,s=t*c*4+4*e;let n=0,a=0,o=0,i=255;switch(f){case 0:n=a=o=this.To8(C[r],u,E);break;case 2:n=this.To8(C[r],u,E),a=this.To8(C[r+1],u,E),o=this.To8(C[r+2],u,E);break;case 3:n=C[r],a=C[r+1],o=C[r+2];break;case 4:n=a=o=this.To8(C[r],u,E),i=this.To8(C[r+1],u,E);break;case 6:n=this.To8(C[r],u,E),a=this.To8(C[r+1],u,E),o=this.To8(C[r+2],u,E),i=this.To8(C[r+3],u,E)}g[s]=n,g[s+1]=a,g[s+2]=o,g[s+3]=i,255!==i&&0!==i&&G.SetAlpha(!0)}}GetResult(){return this.mResult}async Decompress(t){try{const e=t.slice(2,t.length-4),r=new DecompressionStream("deflate-raw"),s=r.writable.getWriter(),n=r.readable.getReader();s.write(e),s.close();const a=[];let o=0;for(;;){const{done:t,value:e}=await n.read();if(t)break;a.push(e),o+=e.length}const i=new Uint8Array(o);let l=0;for(const t of a)i.set(t,l),l+=t.length;return i}catch(t){return null}}ApplyFilters(t,e,r,s,n,a){const o=Math.ceil(e*s*a/8),i=Math.max(1,Math.floor(s*a/8)),l=new Uint8Array(r*o);for(let e=0;e<r;e++){const r=t[e*(o+1)],s=t.subarray(e*(o+1)+1,e*(o+1)+1+o),n=l.subarray(e*o,e*o+o),a=e>0?l.subarray((e-1)*o,(e-1)*o+o):null;for(let t=0;t<o;t++){const e=t>=i?n[t-i]:0,o=a?a[t]:0,l=a&&t>=i?a[t-i]:0;switch(r){case 0:default:n[t]=s[t];break;case 1:n[t]=s[t]+e&255;break;case 2:n[t]=s[t]+o&255;break;case 3:n[t]=s[t]+(e+o>>>1)&255;break;case 4:n[t]=s[t]+this.Paeth(e,o,l)&255}}}if(16===s){const t=new Uint16Array(r*e*a);for(let e=0;e<t.length;e++)t[e]=l[2*e]<<8|l[2*e+1];return t}return s<8?this.UnpackBits(l,e,r,s,a):l}UnpackBits(t,e,r,s,n){const a=(1<<s)-1,o=255/a,i=Math.ceil(e*s*n/8),l=new Uint8Array(r*e*n);let c=0;for(let n=0;n<r;n++){let r=0;for(let h=0;h<e;h++){const e=n*i+Math.floor(r/8),h=8-s-r%8;l[c++]=Math.round((t[e]>>>h&a)*o),r+=s}}return l}ExpandPalette(t,e,r,s){const n=new Uint8Array(s*r*3);for(let a=0;a<s*r;a++){const r=3*t[a];n[3*a]=e[r],n[3*a+1]=e[r+1],n[3*a+2]=e[r+2]}return n}To8(t,e,r){return 16===e?Math.round(t/r*255):t}Paeth(t,e,r){const s=t+e-r,n=Math.abs(s-t),a=Math.abs(s-e),o=Math.abs(s-r);return n<=a&&n<=o?t:a<=o?e:r}}
+import { CAlert } from "../../basic/CAlert.js";
+import { CParser } from "./CParser.js";
+import { CTexture } from "../../render/CTexture.js";
+const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++)
+            c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c;
+    }
+    return t;
+})();
+function Crc32(pa_data) {
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < pa_data.length; i++)
+        crc = CRC_TABLE[(crc ^ pa_data[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+const PNG_SIG = [137, 80, 78, 71, 13, 10, 26, 10];
+const CH_COUNT = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
+function ReadU32BE(buf, off) {
+    return ((buf[off] << 24) | (buf[off + 1] << 16) | (buf[off + 2] << 8) | buf[off + 3]) >>> 0;
+}
+export class CParserPNG extends CParser {
+    mTemp = new Uint8Array(4);
+    mAlphaCut = 0;
+    mAlphaBleed;
+    constructor() { super(); }
+    async Load(pa_fileName) {
+        if (await this.Open(pa_fileName))
+            return;
+        const buf = this.mBuffer;
+        for (let i = 0; i < 8; i++) {
+            if (buf[i] !== PNG_SIG[i]) {
+                CAlert.E("[CParserPNG] Invalid PNG signature");
+                return;
+            }
+        }
+        let pos = 8;
+        let width = 0, height = 0, bitDepth = 0, colorType = 0, channels = 1, interlace = 0;
+        let palette = null;
+        const idatParts = [];
+        while (pos + 12 <= buf.length) {
+            const chunkStart = pos;
+            const length = ReadU32BE(buf, pos);
+            pos += 4;
+            const type = String.fromCharCode(buf[pos], buf[pos + 1], buf[pos + 2], buf[pos + 3]);
+            pos += 4;
+            const dataStart = pos;
+            const storedCRC = ReadU32BE(buf, chunkStart + 8 + length);
+            if (Crc32(buf.subarray(chunkStart + 4, chunkStart + 8 + length)) !== storedCRC) {
+                CAlert.E(`[CParserPNG] CRC 불일치 — chunk: ${type}`);
+                return;
+            }
+            if (type === 'acTL') {
+                CAlert.E("[CParserPNG] APNG(애니메이션 PNG)는 미지원");
+                return;
+            }
+            if (type === 'IHDR') {
+                width = ReadU32BE(buf, pos);
+                pos += 4;
+                height = ReadU32BE(buf, pos);
+                pos += 4;
+                bitDepth = buf[pos++];
+                colorType = buf[pos++];
+                pos += 2;
+                interlace = buf[pos++];
+                channels = CH_COUNT[colorType] ?? 1;
+                if (interlace === 1) {
+                    CAlert.E("[CParserPNG] Adam7 인터레이스는 미지원");
+                    return;
+                }
+                if (![1, 2, 4, 8, 16].includes(bitDepth)) {
+                    CAlert.E(`[CParserPNG] 지원하지 않는 bit depth: ${bitDepth}`);
+                    return;
+                }
+            }
+            else if (type === 'PLTE') {
+                palette = buf.slice(dataStart, dataStart + length);
+                pos = dataStart + length;
+            }
+            else if (type === 'IDAT') {
+                idatParts.push(buf.slice(dataStart, dataStart + length));
+                pos = dataStart + length;
+            }
+            else if (type === 'IEND') {
+                break;
+            }
+            else {
+                pos = dataStart + length;
+            }
+            pos += 4;
+        }
+        const totalLen = idatParts.reduce((a, b) => a + b.length, 0);
+        const idat = new Uint8Array(totalLen);
+        let off = 0;
+        for (const p of idatParts) {
+            idat.set(p, off);
+            off += p.length;
+        }
+        const raw = await this.Decompress(idat);
+        if (!raw) {
+            CAlert.E("[CParserPNG] IDAT 압축 해제 실패");
+            return;
+        }
+        const rawPixels = this.ApplyFilters(raw, width, height, bitDepth, colorType, channels);
+        let finalPixels = rawPixels;
+        let finalCh = channels;
+        if (colorType === 3) {
+            if (!palette) {
+                CAlert.E("[CParserPNG] PLTE 청크 없음");
+                return;
+            }
+            finalPixels = this.ExpandPalette(rawPixels, palette, width, height);
+            finalCh = 3;
+        }
+        const L_tex = new CTexture();
+        L_tex.SetSize(width, height);
+        L_tex.CreateBuf();
+        const texBuf = L_tex.GetBuf()[0];
+        this.mResult = L_tex;
+        const maxVal = bitDepth === 16 ? 65535 : 255;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const si = (y * width + x) * finalCh;
+                const di = y * width * 4 + x * 4;
+                let r = 0, g = 0, b = 0, a = 255;
+                switch (colorType) {
+                    case 0:
+                        r = g = b = this.To8(finalPixels[si], bitDepth, maxVal);
+                        break;
+                    case 2:
+                        r = this.To8(finalPixels[si], bitDepth, maxVal);
+                        g = this.To8(finalPixels[si + 1], bitDepth, maxVal);
+                        b = this.To8(finalPixels[si + 2], bitDepth, maxVal);
+                        break;
+                    case 3:
+                        r = finalPixels[si];
+                        g = finalPixels[si + 1];
+                        b = finalPixels[si + 2];
+                        break;
+                    case 4:
+                        r = g = b = this.To8(finalPixels[si], bitDepth, maxVal);
+                        a = this.To8(finalPixels[si + 1], bitDepth, maxVal);
+                        break;
+                    case 6:
+                        r = this.To8(finalPixels[si], bitDepth, maxVal);
+                        g = this.To8(finalPixels[si + 1], bitDepth, maxVal);
+                        b = this.To8(finalPixels[si + 2], bitDepth, maxVal);
+                        a = this.To8(finalPixels[si + 3], bitDepth, maxVal);
+                        break;
+                }
+                texBuf[di] = r;
+                texBuf[di + 1] = g;
+                texBuf[di + 2] = b;
+                texBuf[di + 3] = a;
+                if (a !== 0xFF && a !== 0)
+                    L_tex.SetAlpha(true);
+            }
+        }
+    }
+    GetResult() { return this.mResult; }
+    async Decompress(pa_idat) {
+        try {
+            const deflateRaw = pa_idat.slice(2, pa_idat.length - 4);
+            const ds = new DecompressionStream('deflate-raw');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(deflateRaw);
+            writer.close();
+            const chunks = [];
+            let total = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done)
+                    break;
+                chunks.push(value);
+                total += value.length;
+            }
+            const out = new Uint8Array(total);
+            let p = 0;
+            for (const c of chunks) {
+                out.set(c, p);
+                p += c.length;
+            }
+            return out;
+        }
+        catch (e) {
+            return null;
+        }
+    }
+    ApplyFilters(pa_raw, pa_w, pa_h, pa_bit, pa_ct, pa_ch) {
+        const stride = Math.ceil(pa_w * pa_bit * pa_ch / 8);
+        const bpp = Math.max(1, Math.floor(pa_bit * pa_ch / 8));
+        const out = new Uint8Array(pa_h * stride);
+        for (let y = 0; y < pa_h; y++) {
+            const fb = pa_raw[y * (stride + 1)];
+            const src = pa_raw.subarray(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);
+            const curr = out.subarray(y * stride, y * stride + stride);
+            const prev = y > 0 ? out.subarray((y - 1) * stride, (y - 1) * stride + stride) : null;
+            for (let i = 0; i < stride; i++) {
+                const a = i >= bpp ? curr[i - bpp] : 0;
+                const b = prev ? prev[i] : 0;
+                const c = prev && i >= bpp ? prev[i - bpp] : 0;
+                switch (fb) {
+                    case 0:
+                        curr[i] = src[i];
+                        break;
+                    case 1:
+                        curr[i] = (src[i] + a) & 0xFF;
+                        break;
+                    case 2:
+                        curr[i] = (src[i] + b) & 0xFF;
+                        break;
+                    case 3:
+                        curr[i] = (src[i] + ((a + b) >>> 1)) & 0xFF;
+                        break;
+                    case 4:
+                        curr[i] = (src[i] + this.Paeth(a, b, c)) & 0xFF;
+                        break;
+                    default: curr[i] = src[i];
+                }
+            }
+        }
+        if (pa_bit === 16) {
+            const u16 = new Uint16Array(pa_h * pa_w * pa_ch);
+            for (let i = 0; i < u16.length; i++)
+                u16[i] = (out[i * 2] << 8) | out[i * 2 + 1];
+            return u16;
+        }
+        if (pa_bit < 8)
+            return this.UnpackBits(out, pa_w, pa_h, pa_bit, pa_ch);
+        return out;
+    }
+    UnpackBits(pa_packed, pa_w, pa_h, pa_bit, pa_ch) {
+        const mask = (1 << pa_bit) - 1;
+        const scale = 255 / mask;
+        const stride = Math.ceil(pa_w * pa_bit * pa_ch / 8);
+        const out = new Uint8Array(pa_h * pa_w * pa_ch);
+        let idx = 0;
+        for (let y = 0; y < pa_h; y++) {
+            let bitOff = 0;
+            for (let x = 0; x < pa_w; x++) {
+                const byteIdx = y * stride + Math.floor(bitOff / 8);
+                const shift = 8 - pa_bit - (bitOff % 8);
+                out[idx++] = Math.round(((pa_packed[byteIdx] >>> shift) & mask) * scale);
+                bitOff += pa_bit;
+            }
+        }
+        return out;
+    }
+    ExpandPalette(pa_indexed, pa_palette, pa_w, pa_h) {
+        const out = new Uint8Array(pa_h * pa_w * 3);
+        for (let i = 0; i < pa_h * pa_w; i++) {
+            const pi = pa_indexed[i] * 3;
+            out[i * 3] = pa_palette[pi];
+            out[i * 3 + 1] = pa_palette[pi + 1];
+            out[i * 3 + 2] = pa_palette[pi + 2];
+        }
+        return out;
+    }
+    To8(pa_v, pa_bit, pa_max) {
+        return pa_bit === 16 ? Math.round(pa_v / pa_max * 255) : pa_v;
+    }
+    Paeth(a, b, c) {
+        const p = a + b - c;
+        const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+        return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+    }
+}
