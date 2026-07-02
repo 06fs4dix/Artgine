@@ -18,6 +18,15 @@ const BIN_DIR     = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external',
 const YTDLP_PATH  = path.join(BIN_DIR, 'yt-dlp.exe');
 const FFMPEG_PATH = path.join(BIN_DIR, 'ffmpeg.exe');
 
+function resolveAbs(p: string): string {
+    return path.resolve(p).replace(/\\/g, '/');
+}
+function isInsideRoot(rootPath: string, targetPath: string): boolean {
+    const base = resolveAbs(rootPath).replace(/\/+$/, '');
+    const target = resolveAbs(targetPath);
+    return target === base || target.startsWith(base + '/');
+}
+
 async function getTodayDir(): Promise<string> {
     const config = await GetAppJSON();
     const d = new Date();
@@ -167,7 +176,12 @@ export class CDownloadServer extends CServerRouter {
 
             if (!isYouTubeUrl(url)) {
                 const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'download');
-                const destPath = path.join(await getTodayDir(), fileName);
+                const todayDir = await getTodayDir();
+                const destPath = path.join(todayDir, fileName);
+                if (!isInsideRoot(todayDir, destPath)) {
+                    gJobs.set(jobId, { status: 'error', progress: 0, msg: 'Path escapes Downloads' });
+                    return JSON.stringify({ ok: true, jobId });
+                }
                 downloadDirectUrl(url, destPath, (pct) => {
                     gJobs.set(jobId, { status: 'running', progress: pct, msg: `${pct}%`, file: fileName });
                 }).then(() => {

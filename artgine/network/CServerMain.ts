@@ -70,12 +70,12 @@ export class CServer implements IListener
 var gMain : CServerMain=null;
 export class CServerMain 
 {
-    private mApp;
-    private mPort: number;
-    private mPath: string;
-    private mPassword: string = '';
-    private mServicePath: string = '';
-    private mServer: Server | null = null;
+    public mApp;
+    public mPort: number;
+    public mPath: string;
+    public mPassword: string = '';
+    public mServicePath: string = '';
+    public mServer: Server | null = null;
     mWebServerArr=new Array<CServer>();
     mLoadScript=new Set<string>();
 

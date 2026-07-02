@@ -1,16 +1,15 @@
-
-
 ## 소개
 
 Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합 개발 환경입니다. 웹 기반 그래픽 렌더링과 데스크톱 앱의 편의성을 결합하여, 복잡한 설정 없이도 인터랙티브한 콘텐츠와 게임을 손쉽게 개발할 수 있도록 설계되었습니다.
 
 [Take a Look](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-promo.html)
 
+## 언어
+**[English](README.md)**
 
 ## 데모
 
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
-
 
 ## 시작하기
 
@@ -28,6 +27,8 @@ npm start
 ```
 
 서버만 단독으로 실행하려면  npm start가 아닌 npm run start_web 해주세요.
+
+## 설명
 
 ### 폴더 설명
 
@@ -116,4 +117,3 @@ npm start
 ```
 
 자동 생성되는 코드는 수정하지 마세요
-

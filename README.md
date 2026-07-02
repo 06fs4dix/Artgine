@@ -3,17 +3,12 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 
 [Take a Look](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-promo.html)
 
-> Language **[한국어](https://github.com/06fs4dix/Artgine/blob/main/README-ko.md)**
-
-
+## Language
+**[한국어](README-ko.md)**
 
 ## Demo
 
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
-
-
-
-
 
 ## Getting Started
 
@@ -29,6 +24,8 @@ npm install
 npm start
 ```
 To run **only the server**, use `npm run start_web` instead of `npm start`.
+
+## Description
 
 ### Folder Overview
 ```
@@ -94,7 +91,7 @@ To run **only the server**, use `npm run start_web` instead of `npm start`.
 1. In **projectPath**, click **Folder** and select a folder under `proj`.
 2. Click **Run (F9)** or use the shortcut to load the project.
 
-## Coding
+### Coding
 
 When running as an Electron app:  
 > 💡 **Note**: If you’re working manually, you’re free to edit your code.
