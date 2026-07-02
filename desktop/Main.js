@@ -782,6 +782,14 @@ function checkHttp(url, timeout = 3000) {
         req.setTimeout(timeout, () => { req.destroy(); resolve(false); });
     });
 }
+async function checkHttpRetry(url, tries = 3, timeout = 5000) {
+    for (let i = 0; i < tries; i++) {
+        if (await checkHttp(url, timeout))
+            return true;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    return false;
+}
 ipcMain.handle("GetIPInfo", async (_event) => {
     const parsed = new URL(gAppJSON.url);
     const port = parsed.port;
@@ -796,7 +804,7 @@ ipcMain.handle("GetIPInfo", async (_event) => {
     const publicPage = protocol + "//" + ipInfo.public + ":" + port + pathname + "/" + gAppJSON.projectPath + "/" + projectName + "." + gAppJSON.page;
     if (ipInfo.public === "Unavailable")
         ipInfo.public = "Please check your internet connection.";
-    else if (!(await checkHttp(publicPage)))
+    else if (!(await checkHttpRetry(publicPage)))
         ipInfo.public = "Port unreachable. Please check port forwarding.";
     else
         ipInfo.public = publicPage;

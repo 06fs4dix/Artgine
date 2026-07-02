@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Artgine Agent Tutorial</title>
-  <link rel="stylesheet" href="Artgine%20Agent%20Tutorial_files/bootstrap-icons_AoX7.css">
+  <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
   <style>
     :root {
       --blue:#0d6efd;
@@ -387,7 +387,7 @@
         next: '다음',
         done: '완료',
         shortcuts: 'Shortcuts',
-        homeDesc: '최신 Home은 RDP, Files, AI를 한 화면에서 사용하는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.',
+        homeDesc: '원격 화면, 파일, AI 작업을 한 번에 다루는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.',
         aiAuthNote: 'AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.',
         rdpCardTitle: 'RDP',
         rdpCardDesc: 'Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.',
@@ -526,7 +526,7 @@
         next: 'Next',
         done: 'Done',
         shortcuts: 'Shortcuts',
-        homeDesc: 'The latest Home is a local web interface that brings RDP, Files, and AI together in one screen. This tutorial covers only the main workflow.',
+        homeDesc: 'A local web interface that brings remote screen, files, and AI work together in one place. This tutorial covers only the main workflow.',
         aiAuthNote: 'To use AI features, you must authenticate separately with your own account for each provider (Claude, Codex, etc.).',
         rdpCardTitle: 'RDP',
         rdpCardDesc: 'View the screen of the local or a remote Home.html server right away, and forward keyboard/mouse input once input mode is on.',
@@ -728,13 +728,13 @@
         <div class="tab-content">
           <section class="tab-pane home active" id="panel-home">
             <h2>Artgine Agent</h2>
-            <p class="text-secondary" data-i18n="homeDesc">최신 Home은 RDP, Files, AI를 한 화면에서 사용하는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.</p>
-            <p class="text-secondary" style="font-size:.9em;margin-top:-.25rem" data-i18n="aiAuthNote">AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.</p>
+            <p class="text-secondary" data-i18n="homeDesc">원격 화면, 파일, AI 작업을 한 번에 다루는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.</p>
             <div class="home-grid">
               <div class="card"><h3 data-i18n="rdpCardTitle">RDP</h3><p data-i18n="rdpCardDesc">Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.</p></div>
               <div class="card"><h3 data-i18n="filesCardTitle">Files</h3><p data-i18n="filesCardDesc">허용된 서버 폴더를 탐색하고, 파일 보기/편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.</p></div>
               <div class="card"><h3 data-i18n="aiCardTitle">AI</h3><p data-i18n="aiCardDesc">Chat, Term, Web 하위 탭에서 AI 채팅, 웹 터미널, 웹 화면 원격 확인을 관리합니다.</p></div>
             </div>
+            <p style="font-size:.9em;margin-top:10px;color:#e8590c" data-i18n="aiAuthNote">AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.</p>
             <div style="margin-top:20px">
               <h3 style="margin:0 0 10px;font-size:15px" data-i18n="gsTitle"></h3>
 
@@ -855,11 +855,11 @@ npm start</pre>
                 <li class="list-group-item list-group-item-warning" data-view="root"><i class="bi bi-folder"></i> Root Folder</li>
                 <li class="list-group-item list-group-item-primary" data-view="parent"><i class="bi bi-folder"></i> Parent Folder</li>
                 <li class="list-group-item" data-view="folder"><i class="bi bi-folder-fill"></i> AI <span class="badge bg-secondary" style="float:right">?</span></li>
-                <li class="list-group-item" data-view="html"><i class="bi bi-file-earmark-code"></i> Home.html <span class="badge bg-warning" style="float:right">M</span></li>
-                <li class="list-group-item" data-view="code"><i class="bi bi-file-code"></i> Home.ts <span class="badge bg-success" style="float:right">A</span></li>
-                <li class="list-group-item" data-view="html"><i class="bi bi-file-earmark-code"></i> RemoteDesktop.html</li>
-                <li class="list-group-item" data-view="code"><i class="bi bi-file-code"></i> RemoteDesktop.ts</li>
-                <li class="list-group-item" data-view="file"><i class="bi bi-file"></i> Home.webmanifest</li>
+                <li class="list-group-item" data-view="html"><i class="bi bi-filetype-html"></i> Home.html <span class="badge bg-warning" style="float:right">M</span></li>
+                <li class="list-group-item" data-view="code"><i class="bi bi-filetype-tsx"></i> Home.ts <span class="badge bg-success" style="float:right">A</span></li>
+                <li class="list-group-item" data-view="html"><i class="bi bi-filetype-html"></i> RemoteDesktop.html</li>
+                <li class="list-group-item" data-view="code"><i class="bi bi-filetype-tsx"></i> RemoteDesktop.ts</li>
+                <li class="list-group-item" data-view="file"><i class="bi bi-filetype-json"></i> Home.webmanifest</li>
               </ul>
             </div>
           </section>

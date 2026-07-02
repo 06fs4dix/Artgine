@@ -103,7 +103,7 @@ export class CPaint extends CComponent implements IMat
 	};
 
     // 15bit 사용
-    static eLightMask={
+    static eCullMask={
         Default:0b100000000000000,
         Mask01:0b010000000000000,
         Mask02:0b001000000000000,
@@ -146,7 +146,7 @@ export class CPaint extends CComponent implements IMat
 
 	protected mTextureKey=new Array<string>();
 	public mMaterial=new CVec4(1,-1,-1,1);
-    public mMask:CVec4;
+    public mCullMask:CVec4;
 	
 	protected mUpdateLMat=true;
 	protected mUpdateFMat=true;
@@ -171,11 +171,11 @@ export class CPaint extends CComponent implements IMat
 		this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mShaderAttrMap.set("colorModel",new CShaderAttr("colorModel",new CColor(0,0,0,SDF.eColorModel.None)));
 		this.mShaderAttrMap.set("alphaModel",new CShaderAttr("alphaModel",new CAlpha(1)));
-        this.mMask=new CVec4(CPaint.eLightMask.Default);
-        this.mShaderAttrMap.set("mask",new CShaderAttr("mask",this.mMask));
+        this.mShaderAttrMap.set("cullMask",new CShaderAttr("cullMask",new CVec4(CPaint.eCullMask.Default)));
 		//this.m_shaderAttrMap.set("CVLS",new CShaderAttr("CVLS",new CVec4(0,0,0,0,this)));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
+        this.mCullMask=this.mShaderAttrMap.get("cullMask").mData;
 		
 		
 		this.mVFX=null;
@@ -429,6 +429,61 @@ export class CPaint extends CComponent implements IMat
 			_input.prepend(CDOM.DataToDom(pushDiv));
 			
 		}
+		else if(_pointer.member=="mCullMask")
+		{
+			let ukey=this.ObjHash();
+			let maskKeys=CClass.EnumName(CPaint.eCullMask).filter(_k=>_k!="All");
+			let curMask=this.mCullMask.x;
+
+			let wrap=document.createElement("div");
+			wrap.className="border p-1 mt-1";
+
+			let title=document.createElement("span");
+			title.className="text-primary";
+			title.innerText="CullMask";
+			wrap.append(title);
+
+			let valSpan=document.createElement("span");
+			valSpan.className="text-secondary ms-2";
+			valSpan.id="cm_val_"+ukey;
+			valSpan.innerText="0b"+curMask.toString(2);
+			wrap.append(valSpan);
+			wrap.append(document.createElement("br"));
+
+			let grid=document.createElement("div");
+			grid.className="row";
+			for(let key of maskKeys)
+			{
+				let cell=document.createElement("div");
+				cell.className="col-6";
+				let chk=document.createElement("input");
+				chk.type="checkbox";
+				chk.id="cm_"+ukey+"_"+key;
+				chk.className="form-check-input";
+				chk.checked=(curMask & CPaint.eCullMask[key])!==0;
+				chk.onchange=()=>{
+					let newMask=0;
+					for(let k of maskKeys)
+					{
+						let c=document.getElementById("cm_"+ukey+"_"+k) as HTMLInputElement;
+						if(c && c.checked)
+							newMask|=CPaint.eCullMask[k];
+					}
+					this.SetCullMask(newMask);
+					(document.getElementById("cm_val_"+ukey) as HTMLElement).innerText="0b"+newMask.toString(2);
+					this.EditChange(_pointer,false);
+				};
+				let lbl=document.createElement("label");
+				lbl.className="form-check-label ms-1";
+				lbl.setAttribute("for","cm_"+ukey+"_"+key);
+				lbl.innerText=key;
+				cell.append(chk);
+				cell.append(lbl);
+				grid.append(cell);
+			}
+			wrap.append(grid);
+			_body.append(wrap);
+		}
 		
 		
 	}
@@ -447,9 +502,9 @@ export class CPaint extends CComponent implements IMat
 		this.mMaterial.z=metalric;
 		this.mMaterial.w=emissive;
 	}
-    SetMask(_mask:number)
+    SetCullMask(_cullmask:number)
     {
-        this.mMask.x=_mask;
+        this.mCullMask.x=_cullmask;
     }
 	IsAlphaState()
 	{
@@ -516,6 +571,7 @@ export class CPaint extends CComponent implements IMat
 			this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
+        this.mCullMask=this.mShaderAttrMap.get("cullMask").mData;
 
 		if(this.mColorModel.mModel!=SDF.eColorModel.None)
 			this.PushTag("colorModel");
@@ -611,6 +667,10 @@ export class CPaint extends CComponent implements IMat
 		else if(_pointer.member=="mAlphaModel")
 		{
 			this.PushTag("alphaModel");
+			this.ClearCRPAuto();
+		}
+		else if(_pointer.member=="mCullMask")
+		{
 			this.ClearCRPAuto();
 		}
 		else if(_child)
@@ -1285,9 +1345,13 @@ export class CPaint extends CComponent implements IMat
 		if(this.mShaderAttrMap.get("texCodi")==null)		
 			this.mShaderAttrMap.set("texCodi",new CShaderAttr("texCodi",this.mTexCodi));
 		
+        if(this.mShaderAttrMap.get("cullMask")==null) {
+            this.mShaderAttrMap.set("cullMask",new CShaderAttr("cullMask",new CVec4(CPaint.eCullMask.Default)));
+        }
 		
 		this.mColorModel=this.mShaderAttrMap.get("colorModel").mData;
 		this.mAlphaModel=this.mShaderAttrMap.get("alphaModel").mData;
+        this.mCullMask=this.mShaderAttrMap.get("cullMask").mData;
 		if(this.mShaderAttrMap.get("VFX")!=null)
 			this.mVFX=this.mShaderAttrMap.get("VFX").mData;
 		if(this.mTextureKey.length>0)

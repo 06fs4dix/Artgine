@@ -5,7 +5,7 @@ import { CUniqueID } from "../../basic/CUniqueID.js";
 import { URLPatterns } from "../../network/CServerMain.js";
 import { CServerSocker } from "../../network/CServerSocket.js";
 import { PacketSN } from "./PacketSN.js";
-
+CWASM.IsWASM();
 export class CSGRoomUser
 {
     
@@ -175,4 +175,5 @@ export class CSignalingServer extends CServerSocker
     }
 }
 import CSignalingServer_imple from "../../server_imple/signaling/CSignalingServer.js"
+import { CWASM } from "../../basic/CWASM.js";
 CSignalingServer_imple();

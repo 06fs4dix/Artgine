@@ -64,12 +64,14 @@ export class CSurface extends CSubject
 		
 		return false;
 	}
-    SetFrame(_fw: CFrame): void {
+    override SetFrame(_fw: CFrame): void {
         super.SetFrame(_fw);
 		if(_fw!=null)
 		{
-			if(this.mRenderPass.mShader=="")
-				this.mRenderPass.mShader=_fw.Pal().Sl2D().GetShader("2DBlit").Key();//_fw.Pal().Sl2D().m_key;
+			if(this.mRenderPass.mShader=="") {
+				this.mRenderPass.mShader=_fw.Pal().Sl2D().Key();
+                this.mRenderPass.mTag.add("blit");
+            }
 			if(this.mTexCreate && this.mRenderPass.mRenderTarget!="")
 			{
 				this.mTexCreate=false;
@@ -149,7 +151,7 @@ export class CSurface extends CSubject
 	}
 	GetTexKey()	{	return this.mRenderPass.mRenderTarget;	}
 
-	public Export(_copy?: boolean, _resetKey?: boolean): this {
+	public override Export(_copy?: boolean, _resetKey?: boolean): this {
 		const watch = super.Export(_copy, _resetKey);
 		watch.mPaint = watch.FindComps(CPaintSurface)[0];
 		for(let i=0;i<this.mChild.length;++i)
@@ -163,7 +165,7 @@ export class CSurface extends CSubject
 		//watch.mPaint.Import(this.mPaint);
 		return watch;
 	}
-	ImportCJSON(_json: CJSON)
+	override ImportCJSON(_json: CJSON)
     {
 		const watch = super.ImportCJSON(_json) as CSurface;
 		watch.mPaint = watch.FindComps(CPaintSurface)[0] as CPaintSurface;

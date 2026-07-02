@@ -4,17 +4,15 @@ import {
     SamCubeLodToColor, SaturateFloat, Sam2DArrToV4, Sam2DArrV4, SamCubeSize, 
     sqrt, abs, clamp, max, min, pow, mix, Exp2, log2, floor,
     V2AddV2, V2MulFloat, 
-    V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3Pow, V3SubV3, V3DivV3,
+    V3AddV3, V3Dot, V3Len, V3Max, V3Mix, V3MulFloat, V3MulV3, V3Nor, V3SubV3,
     V4AddV4, V4MulFloat,
-    SaturateV3,
-    int,
     round,
     FloatBitsToInt,
 } from "./Shader";
 
 export var ambientColor : CVec3 = new CVec3(0.2,0.2,0.2);
 export var material : CVec4 = new CVec4(0.0,0.0,0.0,1.0);
-export var mask : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
+export var cullMask : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
 
 //count
 export var sam2DCount : number;
@@ -144,8 +142,8 @@ export function LightCac3D(
         var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
         var lMask: CVec4=Sam2DArrToV4(ligMask,IntToFloat(i));
 
-        // lMask.x가 default(0)이 아니고, lMask.x가 mask.x와 다르면 적용 안함.
-        if(FloatBitsToInt(round(lMask.x)) != 0 && (FloatBitsToInt(round(lMask.x)) & FloatBitsToInt(round(maskIndex))) == 0) continue;
+        // lMask.x가 ptMask.x에 겹치는 비트가 없으면 라이팅 받지 않음
+        if((FloatToInt(lMask.x) & FloatToInt(maskIndex)) == 0) continue;
 
         //lDir가 0이면 라이트 아님
         if(abs(lDir.w) <= 0.5) continue;
@@ -391,84 +389,68 @@ export function GetSunInfo() : CMat3
     );
 }
 
-export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3) : CMat3
+export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow :CVec4,maskIndex :number) : CMat3
 {
+    albedo.rgb = V3Max(albedo.rgb, new CVec3(0.01, 0.01, 0.01));
     
     var DPtAll : CVec3=new CVec3(0.0,0.0,0.0);
     var DDirAll : CVec3=new CVec3(0.0,0.0,0.0);
-    if(albedo.x<0.01) albedo.x=0.01;
-    if(albedo.y<0.01) albedo.y=0.01;
-    if(albedo.z<0.01) albedo.z=0.01;
 
     var norLen : number=V3Len(normal);
-    //노말맵 안쓰면 기본 노말
-    if(norLen<0.5)  normal=new CVec3(0.0,1.0,0.0);
+    if(norLen<0.5)  normal=new CVec3(0.0,1.0,0.0);  //노말맵 안쓰면 기본 노말
 
     for(var i=0;i<SDF.TexSizeMax;++i)
     {
         if(i >= FloatToInt(ligCount)) break;
         var lDir : CVec4=Sam2DArrToV4(ligDir,IntToFloat(i));
         var lCol : CVec4=Sam2DArrToV4(ligCol,IntToFloat(i));
+        var lMask: CVec4=Sam2DArrToV4(ligMask,IntToFloat(i));
+
+        // lMask.x가 ptMask.x에 겹치는 비트가 없으면 라이팅 받지 않음
+        if((FloatToInt(lMask.x) & FloatToInt(maskIndex)) == 0) continue;
 
         //라이팅 아니어서 스킵
         if(abs(lDir.w) <= 0.5) continue;
 
-        var isPointLight : number = lDir.w > 1.1 ? 1.0 : 0.0;
         var L : CVec3=lDir.xyz;
-        //노말맵을 안쓴다는 가정하에 포인트 라이트 처리함
+        var radiance : CVec3 = lCol.rgb;
+        var shadowIndex : number = round(min(lMask.w, 3.0));
+        if(shadowIndex > -0.5 && shadow[FloatToInt(shadowIndex)]>-0.5) {   // 라이팅에 그림자 적용
+            radiance = V3MulFloat(radiance, shadow[FloatToInt(shadowIndex)]);
+        }
+        var isPointLight : number = lDir.w > 1.1 ? 1.0 : 0.0;
         if(isPointLight > 0.5)
         {
-            var attenuation : number=1.0;
             L=V3SubV3(L,position.xyz);
-            //var lightDir : CVec3=V3SubV3(lDir.xyz,position.xyz);
             var dist : number=V3Len(L);
             
-
             //포인트 라이트 범위 밖에 있으면 스킵
             if(dist>lDir.w) continue;
+
+            var attenuation : number = 1.0 - max(0.0, (dist - lCol.w) / (lDir.w - lCol.w));
+            radiance = V3MulFloat(radiance, attenuation);
             
-            if(lCol.w <= dist) {
-                attenuation=1.0 - ((dist - lCol.w) / (lDir.w - lCol.w));
-            }
-            if(norLen<0.5)
-            {
-                var diffuse : CVec3=V3MulFloat(lCol.xyz,attenuation);
-                DPtAll=V3AddV3(DPtAll,V3MulV3(albedo.rgb,diffuse));
-                
-            }
-            else
-            {
+            var diffuse : CVec3 = albedo.rgb;
+            if(norLen>0.5) {    // 노말맵이 존재함
                 L.z=0.0;
                 L=V3Nor(L);
-
                 var angle:number=max(0.0,V3Dot(normal,L));
-                var diffuse:CVec3=V3MulFloat(lCol.xyz,angle*attenuation);
-                // if(diffuse.x<ambientColor.x)    diffuse.x=ambientColor.x;
-                // if(diffuse.y<ambientColor.y)    diffuse.y=ambientColor.y;
-                // if(diffuse.z<ambientColor.z)    diffuse.z=ambientColor.z;
-
-                DPtAll=V3AddV3(DPtAll,V3MulV3(albedo.rgb,diffuse));
+                diffuse = V3MulFloat(diffuse, angle);
             }
-            
+
+            DPtAll=V3AddV3(DPtAll, V3MulV3(diffuse, radiance));
         }
         else
         {
-            //var lightDir : CVec3=lDir.xyz;
             var angle:number=max(0.0,V3Dot(normal,L));
-            var diffuse:CVec3=V3MulFloat(lCol.xyz,angle);
-            //diffuse=new CVec3(1.0,1.0,1.0);
-            DDirAll=V3AddV3(DDirAll,V3MulV3(albedo.rgb,diffuse));	
+            var diffuse:CVec3=V3MulFloat(radiance,angle);
+            DDirAll=V3AddV3(DDirAll,V3MulV3(albedo.rgb,diffuse));
         }
     }
-    var ambientLight :CVec3 = V3MulV3(albedo.xyz,ambientColor);
-    //최저점으로 계산한다
-    //DDirAll=V3AddV3(ambientLight,DDirAll);
-    if(DDirAll.x<ambientLight.x)DDirAll.x=ambientLight.x;
-    if(DDirAll.y<ambientLight.y)DDirAll.y=ambientLight.y;
-    if(DDirAll.z<ambientLight.z)DDirAll.z=ambientLight.z;
 
+    // 엠비언트를 최저점으로 계산한다
+    var ambientLight :CVec3 = V3MulV3(albedo.xyz, ambientColor);
+    DDirAll = V3Max(DDirAll, ambientLight);
 
-    //DPtAll=new CVec3(1.0,1.0,1.0);
-    //DDirAll=V3MulV3(albedo.rgb,new CVec3(1.0,1.0,1.0));	
     return new CMat3(V3AddV3(DPtAll,DDirAll), new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0));
 }

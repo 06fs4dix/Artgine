@@ -497,23 +497,19 @@ window.addEventListener('keydown', function(e) {
                 return out;
             }
             inp.addEventListener('input', function(e) {
-                if (e.isComposing && inp.value.startsWith('/')) {
-                    var cvt = _krToEn(inp.value.slice(1));
-                    if (cvt !== inp.value.slice(1)) {
-                        inp.value = '/' + cvt;
-                        inp.setSelectionRange(inp.value.length, inp.value.length);
-                    }
-                }
                 autoHeight();
                 _acUpdate();
             });
             inp.addEventListener('compositionend', function(e) {
                 if (!inp.value.startsWith('/') || !e.data) return;
-                var latin = _krToEn(e.data);
-                if (latin === e.data) return;
                 var pos = inp.selectionStart;
                 var start = pos - e.data.length;
                 if (start < 0 || inp.value.slice(start, pos) !== e.data) return;
+                // 아직 완성되지 않은 슬래시 커맨드 이름을 입력 중일 때만 변환한다.
+                // (공백/추가 '/' 등이 섞이면 주석·문장이므로 건드리지 않음)
+                if (!/^[A-Za-z]*$/.test(inp.value.slice(1, start))) return;
+                var latin = _krToEn(e.data);
+                if (latin === e.data) return;
                 inp.value = inp.value.slice(0, start) + latin + inp.value.slice(pos);
                 inp.setSelectionRange(start + latin.length, start + latin.length);
                 autoHeight();

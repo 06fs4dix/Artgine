@@ -897,7 +897,7 @@ function VoxelToolResetCam()
 {
     if(gVoxelTar.mBuf.mCount.z==1)
     {
-        gAtl.Brush().GetCam2D().Init(new CVec3(0, 0.1, 100),new CVec3(0, 0.1, 0));
+        gAtl.Brush().GetCam2D().Init(new CVec3(0, 0.1, 1000),new CVec3(0, 0.1, 0));
         gAtl.Canvas("VoxelTool").SetCameraKey("2D");
     }
         

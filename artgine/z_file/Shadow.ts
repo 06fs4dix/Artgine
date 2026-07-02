@@ -1,6 +1,6 @@
-import { ligDir, ligMask } from "./Light";
+import { ligDir } from "./Light";
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, FloatToInt, fract, max, min, mix, round, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, ShadowPosToUv, 
+import { abs, clamp, CMat3, CVec2, CVec3, CVec4, fract, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, ShadowPosToUv, 
     sin, sqrt, TransposeMat3, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4MulMatCoordi } from "./Shader";
 
 export var shadowNearCasV0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNearCasV0);

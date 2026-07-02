@@ -17,6 +17,7 @@ import { CJSON } from "../../basic/CJSON.js";
 
 import { CVec1 } from "../../geometry/CVec1.js";
 import { CUtilObj } from "../../basic/CUtilObj.js";
+import { CClass } from "../../basic/CClass.js";
 import { CRPAuto } from "../canvas/CRPMgr.js";
 import { CCondition } from "../../util/CCondition.js";
 import { CUtilMath } from "../../geometry/CUtilMath.js";
@@ -35,7 +36,7 @@ export class CLight extends CBrushComp
 
 	protected mDirPos : CVec4;//XYZ,TYPE(디렉션 음수-1-2 거리 양수:포인트)
 	protected mColor : CVec4;//RGB,User(사용 유무)
-	protected mMask : CVec4;//x마스크인덱스 w그림자인덱스(사용하면 안됨)
+	protected mCullMask : CVec4;//x마스크인덱스 w그림자인덱스(사용하면 안됨)
 	public mUpdate : number = CUpdate.eType.Updated;
 	
 
@@ -51,7 +52,7 @@ export class CLight extends CBrushComp
 
 		this.mDirPos=new CVec4();
 		this.mColor=new CVec4();
-        this.mMask=new CVec4();
+        this.mCullMask=new CVec4();
 		
 		this.mDirPos.w = 1;
 		
@@ -60,7 +61,7 @@ export class CLight extends CBrushComp
 		this.mColor.z = 1;
 		this.mColor.w = 1;
 
-        this.mMask.x = CPaint.eLightMask.All;
+        this.mCullMask.x = CPaint.eCullMask.All;
 		
 		this.mSysc=CComponent.eSysn.Light;
 	}
@@ -74,6 +75,10 @@ export class CLight extends CBrushComp
 	override EditChange(_pointer : CPointer,_child : boolean)
 	{
 		super.EditChange(_pointer,_child);
+		if(_pointer.member=="mCullMask")
+		{
+			this.mUpdate = CUpdate.eType.Updated;
+		}
 		if(_child==false) return;
 		for(let ref of _pointer.refArr) 
 		{
@@ -171,6 +176,61 @@ export class CLight extends CBrushComp
 
 
 		}
+		else if(_pointer.member=="mCullMask")
+		{
+			let ukey=this.ObjHash();
+			let maskKeys=CClass.EnumName(CPaint.eCullMask).filter(_k=>_k!="All");
+			let curMask=this.mCullMask.x;
+
+			let wrap=document.createElement("div");
+			wrap.className="border p-1 mt-1";
+
+			let title=document.createElement("span");
+			title.className="text-primary";
+			title.innerText="CullMask";
+			wrap.append(title);
+
+			let valSpan=document.createElement("span");
+			valSpan.className="text-secondary ms-2";
+			valSpan.id="cm_val_"+ukey;
+			valSpan.innerText="0b"+curMask.toString(2);
+			wrap.append(valSpan);
+			wrap.append(document.createElement("br"));
+
+			let grid=document.createElement("div");
+			grid.className="row";
+			for(let key of maskKeys)
+			{
+				let cell=document.createElement("div");
+				cell.className="col-6";
+				let chk=document.createElement("input");
+				chk.type="checkbox";
+				chk.id="cm_"+ukey+"_"+key;
+				chk.className="form-check-input";
+				chk.checked=(curMask & CPaint.eCullMask[key])!==0;
+				chk.onchange=()=>{
+					let newMask=0;
+					for(let k of maskKeys)
+					{
+						let c=document.getElementById("cm_"+ukey+"_"+k) as HTMLInputElement;
+						if(c && c.checked)
+							newMask|=CPaint.eCullMask[k];
+					}
+					this.SetMask(newMask);
+					(document.getElementById("cm_val_"+ukey) as HTMLElement).innerText="0b"+newMask.toString(2);
+					this.EditChange(_pointer,false);
+				};
+				let lbl=document.createElement("label");
+				lbl.className="form-check-label ms-1";
+				lbl.setAttribute("for","cm_"+ukey+"_"+key);
+				lbl.innerText=key;
+				cell.append(chk);
+				cell.append(lbl);
+				grid.append(cell);
+			}
+			wrap.append(grid);
+			_body.append(wrap);
+		}
 	}
 	DirPosV4()	{	return this.mDirPos;	}
 	override GetTex()    {   return this.GetOwner().GetFrame().Pal().GetShadowWriteTex();   }
@@ -178,16 +238,16 @@ export class CLight extends CBrushComp
 	{
 		if(this.mUpdate == CUpdate.eType.Already) {
 			this.mUpdate = CUpdate.eType.Not;
-			this.mBrush.mUpdateLight=true;
+			this.mBrush.mUpdateLight=CUpdate.eType.Updated;
 		}
 		else if(this.mUpdate == CUpdate.eType.Updated) {			
 			this.mUpdate = CUpdate.eType.Already;
-			this.mBrush.mUpdateLight=true;
+			this.mBrush.mUpdateLight=CUpdate.eType.Updated;
 		}
 
 		if(this.GetOwner().mUpdateMat !=0 || this.mUpdate==CUpdate.eType.Updated)
 		{
-			this.mBrush.mUpdateLight=true;
+			this.mBrush.mUpdateLight=CUpdate.eType.Updated;
 			var pos=this.GetOwner().GetMat().xyz;
 			
 
@@ -211,7 +271,7 @@ export class CLight extends CBrushComp
 
 	UpdateBaush(_update : CUpdate)
 	{
-        this.mMask.w = -1;
+        this.mCullMask.w = -1;
 
 		if(this.mWriteRP.length == 0)
         {
@@ -276,114 +336,116 @@ export class CLight extends CBrushComp
                 maxVal = new CVec4(this.mBrush.mLightCount,-1,-1,-1);
                 this.mBrush.mShadowRead.set(this.mBrush.mShadowCount, maxVal);
             }
-            if(this.mBrush.mShadowCount >= 1) {
-                maxVal.mF32A[0] = this.mBrush.mLightCount;
-                maxVal.mF32A[1] = maxVal.mF32A[2] = maxVal.mF32A[3] = -1;
-            }
 
             // 카메라 이동
-            if(!this.IsPointLight() && !this.mShadowOff)
-            {                
-                const eye = this.mBrush.GetCam3D().GetEye();
-                const view = this.mBrush.GetCam3D().GetView();
-                const ligDir : CVec3 = CMath.V3Nor(this.mDirPos.xyz);
-
-                let slook : CVec3;
-                let seye : CVec3;
-                let sup : CVec3 = new CVec3(0,1,0);
-
-                const AutoDigitSnapping = (_slook : CVec3, _halfSize : number) => {
-                    let Zaxis = ligDir;
-                    let upVec = Math.abs(CMath.V3Dot(sup, Zaxis)) > 0.99 ? new CVec3(0,0,1) : sup;
-                    let Xaxis = CMath.V3Nor(CMath.V3Cross(upVec, Zaxis));
-                    let Yaxis = CMath.V3Cross(Zaxis, Xaxis);
-
-                    const texelSize = (_halfSize * 2) / shadowTex.GetWidth();
-
-                    const originLS_x = _slook.x * Xaxis.x + _slook.y * Xaxis.y + _slook.z * Xaxis.z;
-                    const originLS_y = _slook.x * Yaxis.x + _slook.y * Yaxis.y + _slook.z * Yaxis.z;
-
-                    const dx = Math.floor(originLS_x / texelSize) * texelSize - originLS_x;
-                    const dy = Math.floor(originLS_y / texelSize) * texelSize - originLS_y;
-
-                    const diffX = Xaxis.x * dx + Yaxis.x * dy;
-                    const diffY = Xaxis.y * dx + Yaxis.y * dy;
-                    const diffZ = Xaxis.z * dx + Yaxis.z * dy;
-
-                    _slook.x += diffX;
-                    _slook.y += diffY;
-                    _slook.z += diffZ;
-                }
-
-                let size = 2000 * this.mShadowDistance;
-                for(let i=0;i<this.mCascadeCycle.length;++i)
-                {
-                    if(this.mCascadeCycle[i]==-1) continue;
-                    const scam=this.mBrush.GetCamera(this.mTexKey+i);
-                    scam.mShadow=true;
-                    scam.SetNear(100);
-                    scam.SetFar(2*size);    // 2 * size, 화면 밖의 오브젝트도 생각해서 더 크게 잡음
-
-                    slook=CMath.V3AddV3(eye,CMath.V3MulFloat(view, size*0.5));
-                    if(this.mDigit == null) {   // digit없으면 자동으로 계산
-                        AutoDigitSnapping(slook, size*0.5);
-                    }
-                    else {
-                        slook.x = Math.round(slook.x/this.mDigit)*this.mDigit;
-                        slook.y = Math.round(slook.y/this.mDigit)*this.mDigit;
-                        slook.z = Math.round(slook.z/this.mDigit)*this.mDigit;
-                    }
-                    seye=CMath.V3AddV3(slook,CMath.V3MulFloat(ligDir, 3/2*size)); // 빛 방향과 반대되는 방향의 물체는 영향을 못 주기 때문에 프러스텀을 빛 방향으로만 확장시킴
-                    if(scam.Init(seye,slook,sup))
-                    {
-                        scam.mWidth=size;
-                        scam.mHeight=size;
-                        scam.ResetOrthographic();
-                        ShadowUpdate=true;
-                        this.mBrush.mUpdateShadow=true;
-                    }
-                    ShadowView[i * 2 + 0].set(scam.GetViewMat().F32A(),this.mBrush.mShadowCount*16);
-                    ShadowView[i * 2 + 1].set(scam.GetProjMat().F32A(),this.mBrush.mShadowCount*16);
-                    scam.Update(_update);
-
-                    size *= 4;  // 다음 cascade는 4배 커짐
-                }
-            }
-            else
+            if(this.mShadowOff == false) 
             {
-                let seye = this.mDirPos.xyz;
-                let slook : CVec3;
-                let sup : CVec3;
-                let PVMat : CMat = new CMat();
+                if(!this.IsPointLight())
+                {                
+                    const eye = this.mBrush.GetCam3D().GetEye();
+                    const view = this.mBrush.GetCam3D().GetView();
+                    const ligDir : CVec3 = CMath.V3Nor(this.mDirPos.xyz);
 
-                const cubeDir : CVec3[] = [
-                    new CVec3( 1,  0,  0 ), new CVec3( -1,  0,  0 ), new CVec3( 0, 1, 0 ),
-                    new CVec3( 0,  -1, 0 ), new CVec3( 0,  0,  1 ), new CVec3( 0, 0, -1 )
-                ];
-                const cubeUp : CVec3[] = [
-                    new CVec3( 0, 1, 0 ), new CVec3( 0, 1, 0 ), new CVec3( 0, 0, 1 ),
-                    new CVec3( 0, 0, -1 ), new CVec3( 0, 1, 0 ),	new CVec3( 0, 1, 0 )
-                ];
-                for(let i = 0; i < 6; i++)
-                {
-                    let scam=this.mBrush.GetCamera(this.mTexKey+i);
-                    scam.mShadow=true;
-                    scam.SetNear(1);
-                    scam.SetFov(CMath.DegreeToRadian(90));
+                    let slook : CVec3;
+                    let seye : CVec3;
+                    let sup : CVec3 = new CVec3(0,1,0);
 
-                    slook = CMath.V3AddV3(seye, cubeDir[i]);
-                    sup = cubeUp[i];
-                    if(scam.Init(seye,slook,sup) || scam.mProjFar != this.GetOutRadius())
-                    {
-                        scam.SetFar(this.GetOutRadius());
-                        scam.mWidth = shadowTex.GetWidth();
-                        scam.mHeight = shadowTex.GetHeight();
-                        scam.ResetPerspective();
-                        ShadowUpdate=true;
-                        this.mBrush.mUpdateShadow=true;
+                    const AutoDigitSnapping = (_slook : CVec3, _halfSize : number) => {
+                        let Zaxis = ligDir;
+                        let upVec = Math.abs(CMath.V3Dot(sup, Zaxis)) > 0.99 ? new CVec3(0,0,1) : sup;
+                        let Xaxis = CMath.V3Nor(CMath.V3Cross(upVec, Zaxis));
+                        let Yaxis = CMath.V3Cross(Zaxis, Xaxis);
+
+                        const texelSize = (_halfSize * 2) / shadowTex.GetWidth();
+
+                        const originLS_x = _slook.x * Xaxis.x + _slook.y * Xaxis.y + _slook.z * Xaxis.z;
+                        const originLS_y = _slook.x * Yaxis.x + _slook.y * Yaxis.y + _slook.z * Yaxis.z;
+
+                        const dx = Math.floor(originLS_x / texelSize) * texelSize - originLS_x;
+                        const dy = Math.floor(originLS_y / texelSize) * texelSize - originLS_y;
+
+                        const diffX = Xaxis.x * dx + Yaxis.x * dy;
+                        const diffY = Xaxis.y * dx + Yaxis.y * dy;
+                        const diffZ = Xaxis.z * dx + Yaxis.z * dy;
+
+                        _slook.x += diffX;
+                        _slook.y += diffY;
+                        _slook.z += diffZ;
                     }
-                    ShadowView[i].set(CMath.MatMul(scam.GetViewMat(), scam.GetProjMat(), PVMat).F32A(), this.mBrush.mShadowCount*16);
-                    scam.Update(_update);
+
+                    let size = 2000 * this.mShadowDistance;
+                    for(let i=0;i<this.mCascadeCycle.length;++i)
+                    {
+                        if(this.mCascadeCycle[i]==-1) continue;
+                        const scam=this.mBrush.GetCamera(this.mTexKey+i);
+                        scam.mShadow=true;
+                        scam.SetNear(100);
+                        scam.SetFar(2*size);    // 2 * size, 화면 밖의 오브젝트도 생각해서 더 크게 잡음
+
+                        slook=CMath.V3AddV3(eye,CMath.V3MulFloat(view, size*0.5));
+                        if(this.mDigit == null) {   // digit없으면 자동으로 계산
+                            AutoDigitSnapping(slook, size*0.5);
+                        }
+                        else {
+                            slook.x = Math.round(slook.x/this.mDigit)*this.mDigit;
+                            slook.y = Math.round(slook.y/this.mDigit)*this.mDigit;
+                            slook.z = Math.round(slook.z/this.mDigit)*this.mDigit;
+                        }
+                        seye=CMath.V3AddV3(slook,CMath.V3MulFloat(ligDir, 3/2*size)); // 빛 방향과 반대되는 방향의 물체는 영향을 못 주기 때문에 프러스텀을 빛 방향으로만 확장시킴
+                        if(scam.Init(seye,slook,sup))
+                        {
+                            scam.mWidth=size;
+                            scam.mHeight=size;
+                            scam.ResetOrthographic();
+                            ShadowUpdate=true;
+                            this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
+                        }
+                        ShadowView[i * 2 + 0].set(scam.GetViewMat().F32A(),this.mBrush.mShadowCount*16);
+                        ShadowView[i * 2 + 1].set(scam.GetProjMat().F32A(),this.mBrush.mShadowCount*16);
+                        scam.Update(_update);
+
+                        size *= 4;  // 다음 cascade는 4배 커짐
+                    }
+                }
+                else
+                {
+                    let seye = this.mDirPos.xyz;
+                    let slook : CVec3;
+                    let sup : CVec3;
+                    let PVMat : CMat = new CMat();
+
+                    const cubeDir : CVec3[] = [
+                        new CVec3( 1,  0,  0 ), new CVec3( -1,  0,  0 ), new CVec3( 0, 1, 0 ),
+                        new CVec3( 0,  -1, 0 ), new CVec3( 0,  0,  1 ), new CVec3( 0, 0, -1 )
+                    ];
+                    const cubeUp : CVec3[] = [
+                        new CVec3( 0, 1, 0 ), new CVec3( 0, 1, 0 ), new CVec3( 0, 0, 1 ),
+                        new CVec3( 0, 0, -1 ), new CVec3( 0, 1, 0 ),	new CVec3( 0, 1, 0 )
+                    ];
+                    if(this.mCascadeCycle[0]!=-1)
+                    {
+                        for(let i = 0; i < 6; i++)
+                        {
+                            let scam=this.mBrush.GetCamera(this.mTexKey+i);
+                            scam.mShadow=true;
+                            scam.SetNear(1);
+                            scam.SetFov(CMath.DegreeToRadian(90));
+
+                            slook = CMath.V3AddV3(seye, cubeDir[i]);
+                            sup = cubeUp[i];
+                            if(scam.Init(seye,slook,sup) || scam.mProjFar != this.GetOutRadius())
+                            {
+                                scam.SetFar(this.GetOutRadius());
+                                scam.mWidth = shadowTex.GetWidth();
+                                scam.mHeight = shadowTex.GetHeight();
+                                scam.ResetPerspective();
+                                ShadowUpdate=true;
+                                this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
+                            }
+                            ShadowView[i].set(CMath.MatMul(scam.GetViewMat(), scam.GetProjMat(), PVMat).F32A(), this.mBrush.mShadowCount*16);
+                            scam.Update(_update);
+                        }
+                    }
                 }
             }
 
@@ -404,6 +466,7 @@ export class CLight extends CBrushComp
                             srp=rp.Export();
                             srp.mPriority -= i + this.mBrush.mShadowTexOff;
                             srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(i, this.mBrush.mShadowCount, 0)));
+                            srp.PushAnd(new CCondition("mCullMask.x","&",this.mCullMask.x)); 
                             this.mBrush.SetAutoRP(srpKey, srp);
                         }
                         srp.mRenderTarget=this.GetTex();
@@ -413,15 +476,10 @@ export class CLight extends CBrushComp
                             srp.mShaderAttr[0].mData.x = i; // 몇번째 캐스케이드인지
                             srp.mShaderAttr[0].mData.y = this.mBrush.mShadowCount;  // 현재 그림자의 인덱스
                             srp.mShaderAttr[0].mData.z = 0; // 디렉셔널 라이팅은 0, 포인트 라이팅은 1
+                            srp.Reset();
                             this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
                         }
-                        if(this.mMask.x != 0) {
-                            if(srp.mAnd[srp.mAnd.length-1].mState!="mMask.x") srp.PushAnd(new CCondition("mMask.x","&",this.mMask.x)); 
-                            else srp.mAnd[srp.mAnd.length-1].mValue=this.mMask.x;
-                        }
-                        else if(srp.mAnd[srp.mAnd.length-1].mState!="mMask.x") {
-                            srp.mAnd.splice(srp.mAnd.length-1, 1);
-                        }
+                        srp.mAnd[srp.mAnd.length - 1].mValue=this.mCullMask.x;
                         if(this.mShadowOff) srp.mCycle = 100000000;
                         else srp.mCycle=this.mCascadeCycle[i];
                     }
@@ -435,40 +493,39 @@ export class CLight extends CBrushComp
             }
             else
             {
-                for(let i=0;i<6;++i)
+                if(this.mCascadeCycle[0]!=-1)
                 {
-                    for(const rp of this.mWriteRP)
+                    for(let i=0;i<6;++i)
                     {
-                        if(!rp.mTag.has("shadowWrite")) continue;
+                        for(const rp of this.mWriteRP)
+                        {
+                            if(!rp.mTag.has("shadowWrite")) continue;
 
-                        const srpKey=this.mTexKey+rp.mShader+i;
-                        let srp : CRPAuto=this.mBrush.GetAutoRP(srpKey);
-                        if(srp == null) {
-                            srp=rp.Export();
-                            srp.mPriority -= i + this.mBrush.mShadowTexOff;
-                            srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(SDF.eShadow.Near + i, this.mBrush.mShadowCount, 1)));
-                            srp.mTag.add("PointLightShadowV");
-                            srp.mTag.add("PointLightShadowF");
-                            this.mBrush.SetAutoRP(srpKey, srp);
+                            const srpKey=this.mTexKey+rp.mShader+i;
+                            let srp : CRPAuto=this.mBrush.GetAutoRP(srpKey);
+                            if(srp == null) {
+                                srp=rp.Export();
+                                srp.mPriority -= i + this.mBrush.mShadowTexOff;
+                                srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(SDF.eShadow.Near + i, this.mBrush.mShadowCount, 1)));
+                                srp.mTag.add("PointLightShadowV");
+                                srp.mTag.add("PointLightShadowF");
+                                srp.PushAnd(new CCondition("mCullMask.x","&",this.mCullMask.x));
+                                this.mBrush.SetAutoRP(srpKey, srp);
+                            }
+                            srp.mRenderTarget=this.GetTex();
+                            srp.mRenderTargetUse=new Set<number>([this.mBrush.mShadowTexOff+i]);
+                            srp.mCamera=this.mTexKey+i;
+                            if(srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
+                                srp.mShaderAttr[0].mData.x = i; // 현재 그림자의 방향
+                                srp.mShaderAttr[0].mData.y = this.mBrush.mShadowCount;  // 현재 그림자의 인덱스
+                                srp.mShaderAttr[0].mData.z = 1; // 디렉셔널 라이팅은 0, 포인트 라이팅은 1
+                                srp.Reset();
+                                this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
+                            }
+                            srp.mAnd[srp.mAnd.length - 1].mValue=this.mCullMask.x;
+                            if(this.mShadowOff) srp.mCycle = 100000000;
+                            else srp.mCycle=this.mCascadeCycle[0];
                         }
-                        srp.mRenderTarget=this.GetTex();
-                        srp.mRenderTargetUse=new Set<number>([this.mBrush.mShadowTexOff+i]);
-                        srp.mCamera=this.mTexKey+i;
-                        if(srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
-                            srp.mShaderAttr[0].mData.x = i; // 현재 그림자의 방향
-                            srp.mShaderAttr[0].mData.y = this.mBrush.mShadowCount;  // 현재 그림자의 인덱스
-                            srp.mShaderAttr[0].mData.z = 1; // 디렉셔널 라이팅은 0, 포인트 라이팅은 1
-                            this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
-                        }
-                        if(this.mMask.x != 0) {
-                            if(srp.mAnd[srp.mAnd.length-1].mState!="mMask.x") srp.PushAnd(new CCondition("mMask.x","&",this.mMask.x)); 
-                            else srp.mAnd[srp.mAnd.length-1].mValue=this.mMask.x;
-                        }
-                        else if(srp.mAnd[srp.mAnd.length-1].mState!="mMask.x") {
-                            srp.mAnd.splice(srp.mAnd.length-1, 1);
-                        }
-                        if(this.mShadowOff) srp.mCycle = 100000000;
-                        else srp.mCycle=this.mCascadeCycle[0];
                     }
                 }
                 maxVal.mF32A[1]=this.mBrush.mShadowTexOff;
@@ -497,12 +554,17 @@ export class CLight extends CBrushComp
                         {
                             srp=rp.Export();
                             this.mBrush.SetAutoRP(srpKey,srp);
-                            srp.mShaderAttr.push(new CShaderAttr("lightIndex", this.mBrush.mLightCount));
+                            srp.mShaderAttr.push(new CShaderAttr("shadowWrite", new CVec3(this.mBrush.mLightCount, this.mBrush.mShadowCount, 2)));
+                            srp.PushAnd(new CCondition("mCullMask.x","&",this.mCullMask.x));
                         }
-                        if(srp.mShaderAttr[0].mData.x != this.mBrush.mLightCount) {
+                        if(srp.mShaderAttr[0].mData.x != this.mBrush.mLightCount || srp.mShaderAttr[0].mData.y != this.mBrush.mShadowCount) {
                             srp.mShaderAttr[0].mData.x = this.mBrush.mLightCount;
+                            srp.mShaderAttr[0].mData.y = this.mBrush.mShadowCount;
+                            srp.mShaderAttr[0].mData.z = 2;
+                            srp.Reset();
+                            this.mBrush.mAutoRPUpdate = CUpdate.eType.Updated;
                         }
-
+                        srp.mAnd[srp.mAnd.length - 1].mValue=this.mCullMask.x;
                         if(this.mShadowOff) srp.mCycle = 100000000;
                         else srp.mCycle=0;
                     }
@@ -519,7 +581,7 @@ export class CLight extends CBrushComp
             }
 
 			if(!this.mShadowOff) {
-                this.mMask.w = this.mBrush.mShadowCount;
+                this.mCullMask.w = this.mBrush.mShadowCount;
 				this.mBrush.mShadowCount++;
             }
 		}
@@ -537,10 +599,10 @@ export class CLight extends CBrushComp
 		this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 2] = this.mColor.z;
 		this.mBrush.mLightColor[this.mBrush.mLightCount * 4 + 3] = this.mColor.w;
 		
-		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 0] = this.mMask.x;
-		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 1] = this.mMask.y;
-		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 2] = this.mMask.z;
-		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 3] = this.mMask.w;
+		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 0] = this.mCullMask.x;
+		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 1] = this.mCullMask.y;
+		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 2] = this.mCullMask.z;
+		this.mBrush.mLightMask[this.mBrush.mLightCount * 4 + 3] = this.mCullMask.w;
 		this.mBrush.mLightCount++;
 	}
 	SetDirectPos(_dir : CVec3)
@@ -606,7 +668,7 @@ export class CLight extends CBrushComp
         this.mDigit = _digit;
     }
     SetMask(_mask : number) {
-        this.mMask.x = _mask;
+        this.mCullMask.x = _mask;
     }
 	GetDirectPos() : CVec3 {
 		return this.mDirPos.xyz;
@@ -615,7 +677,7 @@ export class CLight extends CBrushComp
 		return this.mColor.xyz;
 	}
     GetMask() : number {
-        return this.mMask.x;
+        return this.mCullMask.x;
     }
 	IsColorZero()
 	{
@@ -637,43 +699,41 @@ export class CLight extends CBrushComp
     override SetEnable(_val: boolean): void {
         super.SetEnable(_val);
 
-        if(_val == false) {
-            if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
+        if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
+        {
+            for(let rp of this.mWriteRP)
             {
-                for(let rp of this.mWriteRP)
-                {
-                    if(rp.mTag.has("shadowPlane")==false) continue;
-                    const srpKey=this.mTexKey+rp.mShader;
-                    this.mBrush.RemoveAutoRP(srpKey);
-                }
+                if(rp.mTag.has("shadowPlane")==false) continue;
+                const srpKey=this.mTexKey+rp.mShader;
+                this.mBrush.RemoveAutoRP(srpKey);
             }
+        }
 
-            if(this.mBrush!=null)
-            {
-                this.mBrush.mUpdateLight=true;
-                this.mBrush.mUpdateShadow=true;
-                if(this.IsPointLight()) {
-                    for(let i=0;i<6;i++) {
-                        this.mBrush.mCameraMap.delete(this.mTexKey+i);
-                        for(let rp of this.mWriteRP) {
-                            if(rp.mTag.has("shadowWrite")==false) continue;
-                            const srpKey=this.mTexKey+rp.mShader+i;
-                            this.mBrush.RemoveAutoRP(srpKey);
-                        }
-                    }
-                } else {
-                    for(let i=0;i<this.mCascadeCycle.length;++i) {
-                        if(this.mCascadeCycle[i]==-1) continue;
-                        this.mBrush.mCameraMap.delete(this.mTexKey+i);
-                        for(let rp of this.mWriteRP) {
-                            if(rp.mTag.has("shadowWrite")==false) continue;
-                            const srpKey=this.mTexKey+rp.mShader+i;
-                            this.mBrush.RemoveAutoRP(srpKey);
-                        }
+        if(this.mBrush!=null)
+        {
+            this.mBrush.mUpdateLight=CUpdate.eType.Updated;
+            this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
+            if(this.IsPointLight()) {
+                for(let i=0;i<6;i++) {
+                    this.mBrush.mCameraMap.delete(this.mTexKey+i);
+                    for(let rp of this.mWriteRP) {
+                        if(rp.mTag.has("shadowWrite")==false) continue;
+                        const srpKey=this.mTexKey+rp.mShader+i;
+                        this.mBrush.RemoveAutoRP(srpKey);
                     }
                 }
-                this.mBrush.ClearRen();
+            } else {
+                for(let i=0;i<this.mCascadeCycle.length;++i) {
+                    if(this.mCascadeCycle[i]==-1) continue;
+                    this.mBrush.mCameraMap.delete(this.mTexKey+i);
+                    for(let rp of this.mWriteRP) {
+                        if(rp.mTag.has("shadowWrite")==false) continue;
+                        const srpKey=this.mTexKey+rp.mShader+i;
+                        this.mBrush.RemoveAutoRP(srpKey);
+                    }
+                }
             }
+            this.mBrush.ClearRen();
         }
     }
 	override Destroy(): void {
@@ -690,8 +750,8 @@ export class CLight extends CBrushComp
 		
 		if(this.mBrush!=null)
         {
-            this.mBrush.mUpdateLight=true;
-            this.mBrush.mUpdateShadow=true;
+            this.mBrush.mUpdateLight=CUpdate.eType.Updated;
+            this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
             if(this.IsPointLight()) {
                 for(let i=0;i<6;i++) {
                     this.mBrush.mCameraMap.delete(this.mTexKey+i);

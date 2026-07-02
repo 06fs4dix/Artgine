@@ -114,9 +114,6 @@ export class CShape2D extends CSubject {
                 lit.SetColor(_opt.light.color);
             this.PushComp(lit);
         }
-        if (_opt.receiveLighting) {
-            this.mPaint.PushTag("light");
-        }
         if (_opt.tags) {
             for (const tag of _opt.tags) {
                 this.mPaint.PushTag(tag);

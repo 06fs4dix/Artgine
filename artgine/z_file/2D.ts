@@ -16,6 +16,10 @@ import {
     V2AddV2,
     smoothstep,
     V3Abs,
+    V3Sqrt,
+    V3MulV3,
+    FloatToInt,
+    IntToFloat,
 } from "./Shader";
 import {
 	VFX, VFXDown2, GetTexCodiedUV,
@@ -27,12 +31,15 @@ import {
 import {
 	ambientColor,
 	ligCol, ligDir, ligCount,
-	LightCac2D
+	LightCac2D,
+    ligMask,
+    cullMask
 } from "./Light";
-import { shadowOn, shadowRate } from "./Shadow";
+import { shadowOn, shadowRate, shadowWrite } from "./Shadow";
 import { 
 	GetWind, windCount, windDir, windInfluence, windInfo, windPos 
 } from "./Wind";
+import { SDF } from "./SDF";
 
 var worldMat : CMat=Null();
 var worldMatShort : CVec4=Null();
@@ -62,13 +69,12 @@ var mask: number=1.0;
 var lastHide : number=Null();
 var trailPos: Sam2DArrV4=new Sam2DArrV4(1);
 
+var screenSize : CVec2;
+
 //depthmap
 var zDepth : number=0.0;
 var zDepthBias : number=0.001;
 var sam2DCount : number=Null();
-
-// 2d shadow
-var lightIndex : number;
 
 Build("Artgine/Shader/2DPlane",[],
 	vs_main,[
@@ -244,29 +250,32 @@ function vs_main_tail(f3_ver : Vertex3,f2_uv : UV2)
 	
 	var lDir : CVec4;
     var lCol : CVec4;
-    BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, lightIndex, shadowRate]);
-    if(lightIndex < ligCount) {
-        lDir = Sam2DArrToV4(ligDir,lightIndex);
-        lCol = Sam2DArrToV4(ligCol,lightIndex);
+    BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, shadowWrite, shadowRate]);
+    if(shadowWrite.x > ligCount - 0.5) {
+        to_uv.z *= 0.0;
+    }
+    else {
+        lDir =Sam2DArrToV4(ligDir,shadowWrite.x);
+        lCol =Sam2DArrToV4(ligCol,shadowWrite.x);
 
-        to_uv.z *= max(max(lCol.x, lCol.y), lCol.z) * shadowRate;
+        to_uv.z *= max(lCol.r, max(lCol.g, lCol.b)) * shadowRate;
 
         if(lDir.w > 0.5) {    // point light
-            lDir.xyz = V3SubV3(mid, lDir.xyz);
+            lDir.xyz = V3SubV3(rpos.xyz, lDir.xyz);
             if(V3Len(lDir.xyz) <= lCol.w) to_uv.z *= 1.0;
-            else if(V3Len(lDir.xyz) >= lDir.w) to_uv.z *= 0.0;
+            else if(V3Len(lDir.xyz) >= lDir.w) {
+                to_uv.z *= 0.0;
+            }
             else to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
         }
+
         lDir.xyz = V3Nor(lDir.xyz);
 
         if(f2_uv.y > 0.5) {
             rpos.y -= size.y;
-
             rpos.xy = V2AddV2(rpos.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
             rpos.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
         }
-    } else {
-        rpos.xyz = new CVec3(0.0, 0.0, 0.0);
     }
     BranchEnd();
 
@@ -369,33 +378,34 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 
     var lDir : CVec4;
     var lCol : CVec4;
-    BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, lightIndex, shadowRate]);
-    if(lightIndex < ligCount) {
-        lDir = Sam2DArrToV4(ligDir,lightIndex);
-        lCol = Sam2DArrToV4(ligCol,lightIndex);
+    BranchBegin("shadowPlaneV","SPV",[ligDir, ligCol, ligCount, shadowWrite, shadowRate]);
+    if(shadowWrite.x > ligCount - 0.5) {
+        to_uv.z *= 0.0;
+    }
+    else {
+        lDir =Sam2DArrToV4(ligDir,shadowWrite.x);
+        lCol =Sam2DArrToV4(ligCol,shadowWrite.x);
 
-        to_uv.z *= max(max(lCol.x, lCol.y), lCol.z) * shadowRate;
+        to_uv.z *= max(lCol.r, max(lCol.g, lCol.b)) * shadowRate;
 
         if(lDir.w > 0.5) {    // point light
             lDir.xyz = V3SubV3(P.xyz, lDir.xyz);
             if(V3Len(lDir.xyz) <= lCol.w) to_uv.z *= 1.0;
             else if(V3Len(lDir.xyz) >= lDir.w) {
                 to_uv.z *= 0.0;
-                return; // 랜더링 안되는 그림자
             }
             else to_uv.z *= 1.0 - smoothstep(0.0, 1.0, (V3Len(lDir.xyz) - lCol.w) / (lDir.w - lCol.w));
         }
+
         lDir.xyz = V3Nor(lDir.xyz);
 
         if(isVertexTop > 0.5) {
             P.y -= size.y;
-
             P.xy = V2AddV2(P.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
             P.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄
         }
-    } else {
-        return; // 랜더링 안되는 그림자
     }
+
     BranchEnd();
 	
 	to_worldPos=P;
@@ -405,15 +415,12 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 
 function ps_main()
 {
-	var shadowTex : CVec4 = new CVec4(0.0,0.0,0.0,0.0);
-	var shadow : number=-1.0;
-	BranchBegin("shadow","S",[shadowOn]);
-	if(shadowOn>0.5)
-	{
-		shadowTex = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, Sam2DSize(shadowOn)));
-		shadow = shadowTex.x;
-	}
-	BranchEnd();
+    var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
+    BranchBegin("shadow","S",[shadowOn, screenSize]);
+    if(shadowOn>0.5) {
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, V2DivV2(screenPos.xy, screenSize.xy));  // <- 여기! 절대 size 곱하지 말기
+    }
+    BranchEnd();
 
     var L_cor : CVec4;
 
@@ -445,7 +452,6 @@ function ps_main()
     BranchEnd();
 
 	var normal : CVec3=new CVec3(0.0,0.0,0.0);
-	
 	BranchBegin("normalMap","N",[sam2DCount]);
 	if(sam2DCount>1.0)
 	{
@@ -453,17 +459,26 @@ function ps_main()
 		normal=MappingTexToV3(normal);
 	}
 	BranchEnd();
+
+    var gamma : number = 1.0;
 	var DSE : CMat3=new CMat3(0);
-	BranchBegin("light","L",[ligDir,ligCol,ligCount,ambientColor]);
-	DSE =LightCac2D(to_worldPos,L_cor,normal);
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,cullMask,ambientColor]);
+    gamma = 2.2;
+    L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
+
+	DSE =LightCac2D(to_worldPos,L_cor,normal,shadow,cullMask.x);
 	L_cor.rgb=DSE[0];
+    BranchDefault();
+    if(shadow.a > -0.5) {
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
+	}
 	BranchEnd();
 	
-	if(shadow > -0.5) {
-		L_cor.rgb = V3MulFloat(L_cor.rgb,shadow);
-	}
-	
 	out_color=L_cor;
+
+    if(gamma > 1.1) {
+        out_color.rgb = V3Sqrt(out_color.rgb);
+    }
 }
 
 function ps_main_mask()

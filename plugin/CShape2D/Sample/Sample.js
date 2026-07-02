@@ -15,7 +15,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "shape2d_v1";
+gPF.mVersion = "mr34uyvy_15";
 import { CAtelier } from "../../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -29,7 +29,7 @@ import { CShape2D } from "../../../plugin/CShape2D/CShape2D.js";
 import { CAnimation } from "../../../artgine/app/component/CAnimation.js";
 import { CClipPRS } from "../../../artgine/app/component/CAnimation.js";
 import { CClipColor } from "../../../artgine/app/component/CAnimation.js";
-import { CShadowPlane } from "../../../plugin/ShadowPlane/ShadowPlane.js";
+import { CLight } from "../../../artgine/app/component/CLight.js";
 var Main = gAtl.NewCanvas("Main");
 Main.SetCameraKey("2D");
 Main.GetCam().SetCamCon(new CCamCon2DFollow(gAtl.Frame().Input()));
@@ -112,29 +112,21 @@ Main.PushSub(new CShape2D({
     size: new CVec2(1400, 520),
     pos: new CVec3(20, ROW2_Y, -11),
     color: new CColor(1, 1, 1, CColor.eModel.RGBAdd),
+    tags: ["light"],
 }));
-Main.PushSub(new CShape2D({
-    texture: "../../../proj/Tutorial/2DLight/Res/back.jpg",
-    size: new CVec2(1400, 520),
-    pos: new CVec3(20, ROW2_Y, -10),
-    receiveLighting: true,
-}));
-Main.PushSub(new CShape2D({
+const dLightSub = Main.PushSub(new CShape2D({
     pos: new CVec3(-26, 154, 0),
-    light: { type: 'directional', color: new CVec3(1, 0.5, 0.5) },
+    light: { type: 'directional', color: new CVec3(0.8, 0.8, 0.8) },
+}));
+dLightSub.FindComp(CLight).SetShadow2D("dLightShadow");
+const pLightSub = Main.PushSub(new CShape2D({
+    pos: new CVec3(-134, ROW2_Y - 148, 0),
+    light: { type: 'point', outerRadius: 600, innerRadius: 300, color: new CVec3(1, 0, 0) },
 }));
 Main.PushSub(new CShape2D({
-    pos: new CVec3(-134, ROW2_Y - 148, 0),
-    light: { type: 'point', outerRadius: 600, innerRadius: 300, color: new CVec3(1, 1, 1) },
+    texture: "../../../proj/Tutorial/2DLight/Res/01.png",
+    size: new CVec2(64, 48),
+    pos: new CVec3(220, ROW2_Y, 0),
+    sca: new CVec3(2, 2, 2),
+    tags: ["shadow"],
 }));
-{
-    const sub = Main.PushSub(new CShape2D({
-        texture: "../../../proj/Tutorial/2DLight/Res/01.png",
-        size: new CVec2(64, 48),
-        pos: new CVec3(220, ROW2_Y, 0),
-        sca: new CVec3(2, 2, 2),
-    }));
-    const shadow = sub.PushComp(new CShadowPlane());
-    shadow.mShadowLen = 1;
-    shadow.mShadowAlpha = 0.75;
-}

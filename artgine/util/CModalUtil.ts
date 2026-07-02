@@ -703,7 +703,8 @@ export class CModalFlex extends CModal
 {
     m_flex = new Array<any>();
     m_horizontal = true; // true: 가로 정렬, false: 세로 정렬
-    
+    m_dividerSyncFns = new Array<() => void>();
+
     constructor(_percent : Array<number>,_key : string=null)
     {
         super(_key);
@@ -777,10 +778,20 @@ export class CModalFlex extends CModal
                 //this.AttachResizeHandler(div, this.m_flex[i + 1], divider);
             }
         }
-        for (let i = 0; i < this.m_flex.length-1; i++) 
+        this.m_dividerSyncFns = [];
+        for (let i = 0; i < this.m_flex.length-1; i++)
         {
-            this.AttachResizeHandler(this.m_flex[i], this.m_flex[i + 1], dividerList[i]);
+            this.m_dividerSyncFns.push(this.AttachResizeHandler(this.m_flex[i], this.m_flex[i + 1], dividerList[i]));
         }
+
+        this.On(CEvent.eType.Resize, () => this.RelayoutFlex());
+    }
+
+    RelayoutFlex() {
+        // 컨테이너 크기가 바뀌면 divider 위치만 다시 맞춘다.
+        // 패널 크기(flex-basis)는 그대로 두고 마지막 auto 패널이 남는 공간을 흡수한다.
+        for (const sync of this.m_dividerSyncFns)
+            sync();
     }
 
     AttachResizeHandler(divA, divB, divider) {
@@ -847,6 +858,8 @@ export class CModalFlex extends CModal
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
         };
+
+        return syncDivider;
     }
     override FullSwitch(_enable : boolean=null)
     {

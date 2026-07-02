@@ -45,9 +45,14 @@
     .code{flex:1;margin:0;min-height:0;overflow:auto;background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:14px;font-family:Consolas,monospace;white-space:pre-wrap;line-height:1.55}
     .danger{color:#ff9a9a;background:rgba(220,53,69,.22);border-radius:.25rem;padding:1px 3px}.ok{color:#8df0a8;background:rgba(25,135,84,.24);border-radius:.25rem;padding:1px 3px}.comment{color:#9ca3af}.keyword{color:#8ab4f8}.string{color:#ffd166}
     .coach{position:absolute;right:18px;bottom:18px;width:min(520px,calc(100% - 36px));background:#151b26;color:#fff;border-radius:.5rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15);padding:16px;z-index:30}
-    .coach h2{font-size:18px;margin:0 0 8px}.coach p{margin:0 0 12px;color:#d1d5db;line-height:1.45}
+    .coach.collapsed{display:none}
+    .coach h2{font-size:18px;margin:0 0 8px;padding-right:24px}.coach p{margin:0 0 12px;color:#d1d5db;line-height:1.45}
+    .coach-close{position:absolute;top:10px;right:10px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;line-height:1;font-size:14px;cursor:pointer}
+    .coach-close:hover{background:rgba(255,255,255,.2)}
     .tip{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);border-radius:.375rem;padding:9px;color:#e5e7eb;line-height:1.45}
     .coach-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.coach-actions .btn{background:#263244;color:#fff;border-color:#4b5563}.coach-actions .btn-primary{background:#0d6efd;border-color:#0d6efd}
+    .coach-reopen{display:none;position:absolute;right:18px;bottom:18px;z-index:30;border-radius:999px;padding:.5rem 1rem;background:#0d6efd;color:#fff;border:0;box-shadow:0 .5rem 1rem rgba(0,0,0,.15);cursor:pointer}
+    .coach-reopen.show{display:inline-flex;align-items:center;gap:.4rem}
     .highlight{outline:3px solid #f7c948;outline-offset:3px;position:relative;z-index:4}
     .click-tooltip{display:none;position:fixed;z-index:80;max-width:320px;background:#212529;color:#fff;border-radius:.375rem;padding:10px 12px;box-shadow:0 .5rem 1rem rgba(0,0,0,.2);font-size:13px;line-height:1.45}
     .click-tooltip.show{display:block}
@@ -69,6 +74,8 @@
 
         next: '다음',
         done: '완료',
+        hideCoach: '숨기기',
+        showCoach: '가이드 열기',
 
         /* Setup screen */
         setupTitle:       '초기 셋업',
@@ -253,6 +260,8 @@
 
         next: 'Next',
         done: 'Done',
+        hideCoach: 'Hide',
+        showCoach: 'Open Guide',
 
         /* Setup screen */
         setupTitle:       'Initial Setup',
@@ -670,7 +679,8 @@ npm start</pre>
           </div>
         </div>
 
-        <aside class="coach">
+        <aside class="coach" id="coach">
+          <button class="coach-close" id="coachClose" type="button" title="hide">&times;</button>
           <h2 id="coachTitle"></h2>
           <p id="coachBody"></p>
           <div class="tip" id="coachTip"></div>
@@ -679,6 +689,7 @@ npm start</pre>
             <button class="btn btn-primary" id="coachNext" type="button"></button>
           </div>
         </aside>
+        <button class="coach-reopen" id="coachReopen" type="button"><i class="bi bi-chat-dots"></i> <span id="coachReopenLabel"></span></button>
       </section>
     </main>
   </div>
@@ -696,6 +707,7 @@ npm start</pre>
         const v = S[el.dataset.i18nHtml];
         if (v !== undefined) el.innerHTML = v;
       });
+      $("coachReopenLabel").textContent = S.showCoach;
     }
 
     const sourceSamples = S.sourceSamples;
@@ -837,6 +849,14 @@ npm start</pre>
     $("clickTooltip").onclick=()=>{
       $("clickTooltip").classList.remove("show");
       activeTooltipTarget = null;
+    };
+    $("coachClose").onclick=()=>{
+      $("coach").classList.add("collapsed");
+      $("coachReopen").classList.add("show");
+    };
+    $("coachReopen").onclick=()=>{
+      $("coach").classList.remove("collapsed");
+      $("coachReopen").classList.remove("show");
     };
 
     applyI18n();

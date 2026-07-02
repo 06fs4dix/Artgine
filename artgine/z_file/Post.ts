@@ -1,5 +1,5 @@
-import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, TexOffBlendFactor, vfxMat0, vfxMat1, BlendColor0, BlendColor1, BlendColor2, BlendColor3, BlendColor4, BlendColor5, BlendColor6, BlendColor7, BlendColor9, BlendColor8, BlendColor10, BlendColor11, BlendColor12, BlendColor13, BlendColor14, BlendColor15 } from "./ColorFun";
-import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "./Light";
+import { VFXDown2, VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, TexOffBlendFactorFun, vfxMat0, vfxMat1, BlendColor0, BlendColor1, BlendColor2, BlendColor3, BlendColor4, BlendColor5, BlendColor6, BlendColor7, BlendColor9, BlendColor8, BlendColor10, BlendColor11, BlendColor12, BlendColor13, BlendColor14, BlendColor15 } from "./ColorFun";
+import { ambientColor, envmapOn, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
     Attribute, BranchBegin, BranchEnd, Build, CMat, CMat3, CVec2, CVec3, CVec4, FloatToInt, IntToFloat, ToV2, UV2, 
@@ -85,7 +85,7 @@ Build("Artgine/Shader/PostLight",["light"],
         worldMat,viewMat,projectMat,
         viewMatInv3D, camPos3D,
         ligDir,ligCol,ligMask,ligCount,
-        ambientColor,mask,sam2DCount,samCubeCount,envmapOn,
+        ambientColor,sam2DCount,samCubeCount,envmapOn,
         ligStep0,ligStep1,ligStep2,ligStep3,
         time,renType,
         sam2DDiffuse,sam2DPosition,sam2DNormal,sam2DSpecular,sam2DShadow

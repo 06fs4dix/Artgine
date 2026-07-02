@@ -83,7 +83,6 @@ export interface ICShape2DOption {
 	collider?: ICShape2DCollider;
 
 	light?: ICShape2DLight;
-	receiveLighting?: boolean;
 
 	tags?: string[];
 
@@ -180,10 +179,6 @@ export class CShape2D extends CSubject {
 			}
 			if (_opt.light.color) lit.SetColor(_opt.light.color);
 			this.PushComp(lit);
-		}
-
-		if (_opt.receiveLighting) {
-			this.mPaint.PushTag("light");
 		}
 
 		if (_opt.tags) {

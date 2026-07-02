@@ -33,8 +33,8 @@ import {
 } from "./ColorFun";
 import {
 	ambientColor,envmapOn,GetMaterial,GetSunInfo,ligCol,ligCount,ligDir,LightCac3D,ligMask,ligStep0,ligStep1,ligStep2,ligStep3,
-    mask,
     material,
+    cullMask,
     sam2DCount,
     samCubeCount
 } from "./Light";
@@ -136,7 +136,7 @@ Build("Artgine/Shader/3DGBuffer", ["gBuf"],
 	vs_main_gBuffer, [
 		worldMat,viewMat,projectMat,skin,
         sam2DCount,
-		outputType,material,mask
+		outputType,material,cullMask
 	], [out_position,to_uv,to_normal,to_binormal,to_tangent,to_ref,to_worldPos,to_viewPos],
 	ps_main_gBuffer,[out_color, out_pos, out_nor, out_spc]
 );
@@ -153,7 +153,7 @@ Build("Artgine/Shader/3DShadowWrite", ["shadowWrite"],
 Build("Artgine/Shader/3DShadowRead", ["shadowRead"], 
 	vs_main_shadow_read, [
 		worldMat,viewMat,projectMat,skin,
-        mask,
+        cullMask,
 		shadowNearCasV0,shadowFarCasP0,shadowTopCasV1,shadowBottomCasP1,shadowLeftCasV2,shadowRightCasP2,shadowWrite,
 		shadowCount,shadowPointProj,shadowReadList,
 		shadowRate,PCF,texture16f,bias,normalBias,jitter,
@@ -619,7 +619,7 @@ function ps_main()
 	var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
     var gamma : number = 1.0;
-	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,mask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
 	
@@ -628,7 +628,7 @@ function ps_main()
 	sunDir = dseMat[0];
 	sunCol = dseMat[1];
 	
-	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, mask.x);
+	dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, cullMask.x);
  
 	L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
     
@@ -723,7 +723,7 @@ function ps_main_gBuffer()
 	BranchEnd();
 
     // 0 position
-	out_pos = new CVec4(view.xyz, mask.x);
+	out_pos = new CVec4(view.xyz, cullMask.x);
 
 	// 1 normal
 	var N : CVec3 = GetTangentSpaceNormal(uv, to_tangent, to_binormal, to_normal, to_ref, sam2DCount);

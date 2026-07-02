@@ -29,11 +29,11 @@
     loadingCard.style.justifyContent = "center";
     loadingCard.style.color = "white";
     loadingCard.style.fontSize = "32px";
-
+    
     loadingCard.innerHTML = `
         <div style="text-align: center;"><div>Initialization...</div></div>
     `;
-
+    
     if (document.readyState === 'loading') {
         document.addEventListener('readystatechange', function() {
             if (document.readyState === 'interactive' || document.readyState === 'complete') {
@@ -58,10 +58,10 @@
 <script>function BootstrapSearchList(searchId, listId) {
 			const input = document.getElementById(searchId);
 			const listItems = document.querySelectorAll(`#${listId} li`);
-
+		
 			input.addEventListener('keyup', function () {
 				const value = input.value.toLowerCase();
-
+		
 				listItems.forEach(item => {
 					const text = item.textContent.toLowerCase();
 					item.style.display = text.includes(value) ? '' : 'none';

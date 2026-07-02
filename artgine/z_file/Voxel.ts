@@ -1,7 +1,7 @@
 
 import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2 } from "./ColorFun";
 import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
-import { ambientColor, ligCol, ligCount, ligDir, LightCac2D } from "./Light";
+import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask } from "./Light";
 import { SDF } from "./SDF";
 import { 
 	Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,   
@@ -50,6 +50,7 @@ var to_shadowBias : ToV1=Null();
 var to_worldPos : ToV4=Null();
 var to_normal : ToV3=Null();
 
+var screenSize : CVec2;
 
 var shadowOn : number = -1.0;
 var sun : number=1.0;
@@ -374,29 +375,24 @@ function ps_main()
 	L_cor.a=AlphaModalFun(L_cor.a,alphaModel);
 	BranchEnd();
 
+    var shadow : CVec4 = new CVec4(-1.0, -1.0, -1.0, -1.0);
+    BranchBegin("shadow","S",[shadowOn, screenSize]);
+    if(shadowOn>0.5) {
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, V2DivV2(screenPos.xy, screenSize.xy));  // <- 여기! 절대 size 곱하지 말기
+    }
+    BranchEnd();
+
 	var DSE : CMat3=new CMat3(0);
-	BranchBegin("light","L",[ligDir,ligCol,ligCount,ambientColor]);
-	DSE =LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0));
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,ambientColor,cullMask]);
+	DSE = LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0),shadow,cullMask.x);
 	L_cor.rgb=DSE[0];
+    BranchDefault();
+    if(shadow.a > -0.5) {
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
+	}
 	BranchEnd();
-    
-
-	var shadow : number = 1.0;
-	if(shadowOn > 0.5) {
-		var shadowSize : CVec2 = Sam2DSize(shadowOn);
-		shadow = Sam2DToColor(shadowOn, V2DivV2(screenPos.xy, shadowSize)).x;
-	}
-	else 
-	{
-		shadow=1.0;
-	}
-	L_cor.xyz=V3MulFloat(L_cor.xyz,shadow);
-
 
 	out_color=L_cor;
-
-
-	//out_color=new CVec4(1.0,1.0,1.0,1.0);
 }
 
 

@@ -183,12 +183,12 @@ export class CStream
 		let packet = {} as { [P in K[number]]: any };
 		return packet;
 	}
-	GetPacket<const K extends readonly string[]>(keys: readonly [...K]): { [P in K[number]]: any };
-	GetPacket<const K extends readonly string[]>(...keys: [...K]): { [P in K[number]]: any };
-	GetPacket(...args: any[]): any {
-		const keys = Array.isArray(args[0]) ? args[0] : args;
-		return this.GetPacketParser(keys);
-	}
+	// GetPacket<const K extends readonly string[]>(keys: readonly [...K]): { [P in K[number]]: any };
+	// GetPacket<const K extends readonly string[]>(...keys: [...K]): { [P in K[number]]: any };
+	// GetPacket(...args: any[]): any {
+	// 	const keys = Array.isArray(args[0]) ? args[0] : args;
+	// 	return this.GetPacketParser(keys);
+	// }
 
 	// sample(JSON 예시 객체)만 넘기면 CStream <-> JSON 변환 함수를 만들어주는 팩토리.
 	// 패킷 이름은 함수 안에 직접 안 적고, RegisterPacketNames()가 static 프로퍼티 이름을 보고 채워준다.

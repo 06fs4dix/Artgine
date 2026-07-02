@@ -1138,6 +1138,15 @@ function checkHttp(url: string, timeout: number = 3000): Promise<boolean> {
         req.setTimeout(timeout, () => { req.destroy(); resolve(false); });
     });
 }
+
+// 서버 기동 직후 자기 공인 IP로 접속하면 NAT 헤어핀 콜드 스타트로 첫 요청이 느려질 수 있어 재시도한다.
+async function checkHttpRetry(url: string, tries: number = 3, timeout: number = 5000): Promise<boolean> {
+    for (let i = 0; i < tries; i++) {
+        if (await checkHttp(url, timeout)) return true;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    return false;
+}
 ipcMain.handle("GetIPInfo", async (_event) => {
 	const parsed = new URL(gAppJSON.url);
 	const port = parsed.port;       // "8080"
@@ -1154,7 +1163,7 @@ ipcMain.handle("GetIPInfo", async (_event) => {
 	const publicPage=protocol+"//"+ipInfo.public+":"+port+pathname+"/"+gAppJSON.projectPath+"/"+projectName+"."+gAppJSON.page;
 	if(ipInfo.public==="Unavailable")
 		ipInfo.public="Please check your internet connection.";
-	else if(!(await checkHttp(publicPage)))
+	else if(!(await checkHttpRetry(publicPage)))
 		ipInfo.public="Port unreachable. Please check port forwarding.";
 	else
 		ipInfo.public=publicPage;

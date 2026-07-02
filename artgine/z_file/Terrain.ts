@@ -1,5 +1,5 @@
 import { AlphaModalFun, ColorModalFun, UnpackRGToGray } from "./ColorFun";
-import { ambientColor, envmapOn, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, mask, sam2DCount, samCubeCount } from "./Light";
+import { ambientColor, envmapOn, GetSunInfo, ligCol, ligCount, ligDir, LightCac3D, ligMask, ligStep0, ligStep1, ligStep2, ligStep3, cullMask, sam2DCount, samCubeCount } from "./Light";
 import { NoiseGet, NoiseNormalGet } from "./Noise";
 import { SDF } from "./SDF";
 import { 
@@ -444,7 +444,7 @@ function ps_main()
     var sunDir : CVec3 = new CVec3(0.0, 1.0, 0.0);
 	var sunCol : CVec3 = new CVec3(1.0, 1.0, 1.0);
     var gamma : number = 1.0;
-    BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,mask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
+    BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,cullMask,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount]);
     gamma = 2.2;
     L_cor.rgb = V3MulV3(L_cor.rgb, L_cor.rgb);
     
@@ -456,7 +456,7 @@ function ps_main()
     sunDir = dseMat[0];
     sunCol = dseMat[1];
 
-    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, 1.0);
+    dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, cullMask.x);
 
     L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
 	BranchEnd();

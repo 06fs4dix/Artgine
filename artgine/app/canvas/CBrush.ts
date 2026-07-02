@@ -145,8 +145,8 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 	public mRenPriMap=new Map<number,CRenPriority>();
 	public mRenInfoMap=new Map<string,CRenInfo>();
 	mUpdateRenInfo=false;
-	mUpdateShadow=false;
-	mUpdateLight=false;
+	mUpdateShadow=CUpdate.eType.Updated;
+	mUpdateLight=CUpdate.eType.Updated;
 	mUpdateLUT=false;
 	public mLUT=[new Float32Array(32*32),new Float32Array(32*32),new Float32Array(32*32),
 		new Float32Array(32*32),new Float32Array(32*32),new Float32Array(32*32)];
@@ -311,7 +311,7 @@ export class CBrush extends CObject implements IAutoUpdate,IFile
 				{
 					var stx = this.mCam2d.mWidth*0.5;
 					var sty = this.mCam2d.mHeight*0.5;
-					this.mCam2d.Init(new CVec3(stx, sty, 100),new CVec3(stx, sty, 0));
+					this.mCam2d.Init(new CVec3(stx, sty, 200),new CVec3(stx, sty, 0));
 					this.mCam2d.ResetOrthographic();
 				}	
 				

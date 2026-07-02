@@ -19,6 +19,12 @@ export class CSurfaceDownSample extends CSurface {
     SetFrame(_fw) {
         super.SetFrame(_fw);
         if (_fw != null) {
+            if (this.mRenderPass.mShader == "Artgine/Shader/PostDownSample") {
+                this.mRenderPass.mShader = _fw.Pal().SlPost().Key();
+                this.mRenderPass.mTag.clear();
+                this.mRenderPass.mTag.add("sample");
+                this.mRenderPass.mTag.add("down");
+            }
             this.SetShaderAttr();
         }
     }
@@ -54,6 +60,12 @@ export class CSurfaceUpSample extends CSurface {
     SetFrame(_fw) {
         super.SetFrame(_fw);
         if (_fw != null) {
+            if (this.mRenderPass.mShader == "Artgine/Shader/PostUpSample") {
+                this.mRenderPass.mShader = _fw.Pal().SlPost().Key();
+                this.mRenderPass.mTag.clear();
+                this.mRenderPass.mTag.add("sample");
+                this.mRenderPass.mTag.add("up");
+            }
             this.SetShaderAttr();
         }
     }
@@ -67,7 +79,7 @@ export class CSurfaceUpSample extends CSurface {
             this.GetRP().DeleteSA("blendFactor");
         }
         this.GetRP().mShaderAttr.push(new CShaderAttr("blendFactor", this.m_blendFactor));
-        this.GetRP().mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ZERO, CRenderPass.eBlend.ONE];
+        this.GetRP().mBlend = [CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.FUNC_ADD, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE, CRenderPass.eBlend.ONE];
     }
 }
 export class CSurfaceBloom extends CSurface {
@@ -101,8 +113,8 @@ export class CSurfaceBloom extends CSurface {
     }
     Init() {
         const screenSize = new CVec2(1, 1);
-        let mipSize = [screenSize];
-        let mipTex = [];
+        const mipSize = [screenSize];
+        const mipTex = [];
         this.GetRP().mClearColor = false;
         this.GetRP().mDepthWrite = false;
         this.GetRP().mDepthTest = false;
@@ -111,31 +123,27 @@ export class CSurfaceBloom extends CSurface {
         mipTex.push(this.mRenderPass.mRenderTarget);
         for (let i = 0; i < this.m_mipMax; i++) {
             mipSize.push(new CVec2(mipSize[i].x * 0.5, mipSize[i].y * 0.5));
-            let downSampleSurf = new CSurfaceDownSample();
+            const downSampleSurf = this.PushChild(new CSurfaceDownSample());
             downSampleSurf.mTexKey = "Bloom/" + "DownSample" + i + ".tex";
             downSampleSurf.SetKey("DownSample" + i);
             downSampleSurf.ResetTexture(mipSize[i], i, this.m_threshold, this.m_softThreshold);
             downSampleSurf.GetRP().mRenderTarget = downSampleSurf.GetTexKey();
             downSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
-            this.PushChild(downSampleSurf);
             mipTex.push(downSampleSurf.GetTexKey());
         }
         for (let i = this.m_mipMax; i > 1; i--) {
-            let upSampleSurf = new CSurfaceUpSample();
-            const texIndex = this.m_mipMax - i;
-            upSampleSurf.SetKey("UpSample" + texIndex);
+            const upSampleSurf = this.PushChild(new CSurfaceUpSample());
+            upSampleSurf.SetKey("UpSample" + (this.m_mipMax - i));
             upSampleSurf.mTexKey = "Bloom/" + "UpSample" + i + ".tex";
             upSampleSurf.ResetTexture(mipTex[i - 1], this.GetBlendFactor(i, this.m_mipMax));
             upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[i]));
-            this.PushChild(upSampleSurf);
         }
-        let upSampleSurf = new CSurfaceUpSample();
+        const upSampleSurf = this.PushChild(new CSurfaceUpSample());
         upSampleSurf.SetKey("UpSample" + (this.m_mipMax - 1));
-        upSampleSurf.mTexKey = "Bloom/" + "UpSample" + (this.m_mipMax - 1) + ".tex";
-        upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(0, this.m_mipMax));
+        upSampleSurf.mTexKey = "Bloom/" + "UpSample1.tex";
+        upSampleSurf.ResetTexture(mipTex[0], this.GetBlendFactor(1, this.m_mipMax));
         upSampleSurf.mTexCreate = false;
-        upSampleSurf.GetPaint().SetTexture(mipTex[1]);
-        this.PushChild(upSampleSurf);
+        upSampleSurf.GetRP().mShaderAttr.push(new CShaderAttr(0, mipTex[1]));
     }
     GetTexKey() {
         return this.mChild[this.mChild.length - 1].GetTexKey();
@@ -231,8 +239,6 @@ export class CSurfaceBloom extends CSurface {
         this.Refresh();
         let msg = this.NewOutMsg("ClearBatch");
         msg.mInter = "canvas";
-    }
-    Update(_update) {
     }
     Export(_copy, _resetKey) {
         const watch = super.Export(_copy, _resetKey);

@@ -1,6 +1,6 @@
 
 import { MessagePort, parentPort, workerData } from "worker_threads";
-import { CUpdate } from "../../basic/Basic.js";
+import { CUpdate, IListener } from "../../basic/Basic.js";
 import { CConsol } from "../../basic/CConsol.js";
 import { CEvent } from "../../basic/CEvent.js";
 import { CStream } from "../../basic/CStream.js";
@@ -78,6 +78,7 @@ export class CRoom
     mParentPort : MessagePort;
     mFrameTime=0;
     mFrameCount=0;
+    
     constructor(_pp : MessagePort,_link="",_key=null)
     {
         this.mParentPort=_pp;
@@ -85,20 +86,23 @@ export class CRoom
         if(_key==null)  this.mKey=CUniqueID.GetHash();
         else this.mKey=_key;
     }
+    
+
+
     PushUser(_key)
     {
         if(this.mUserSet.has(_key))
         {
-            this.Send(PacketLB.R2LUserConnect(_key,CLBRoomWorker.eState.Already));
+            this.Send(PacketLB.R2LUserConnect({ userKey: _key, state: CLBRoomWorker.eState.Already }));
             return true;
         }
         if(this.mUserSet.size>=this.mUserMax )
         {
-            this.Send(PacketLB.R2LUserConnect(_key,CLBRoomWorker.eState.Lock));
+            this.Send(PacketLB.R2LUserConnect({ userKey: _key, state: CLBRoomWorker.eState.Lock }));
             return false;
         }
         this.mUserSet.add(_key);
-        this.Send(PacketLB.R2LUserConnect(_key,CLBRoomWorker.eState.Ready));
+        this.Send(PacketLB.R2LUserConnect({ userKey: _key, state: CLBRoomWorker.eState.Ready }));
         return false;
     }
     
@@ -140,9 +144,15 @@ export class CRoom
         
         
     }
-    ThreadMessage(parentPort : MessagePort,message : string)
+    async Message(message : string)
     {
+
+    }
+    async ThreadMessage(parentPort : MessagePort,message : string)
+    {
+
         
+        await this.Message(message);
     }
 
     Send(_stream : CStream|string)
@@ -199,7 +209,7 @@ export class CLobbyServer extends CServerSocker
         let user=this.mUserMap.get(ws);
         if(user!=null)
         {
-            user.SendRoom(PacketLB.L2RURoomRemoveUser(user.mUserKey));
+            user.SendRoom(PacketLB.L2RURoomRemoveUser({ userKey: user.mUserKey }));
             user.mWorker.mUserMap.delete(user.mUserKey);
             this.mUserMap.delete(ws);
 
@@ -241,4 +251,5 @@ export class CLobbyServer extends CServerSocker
     }
 }
 import CLobbyServer_imple from "../../server_imple/lobby/CLobbyServer.js"
+import { CStreamHandler } from "../../network/CSocketIO.js";
 CLobbyServer_imple();
