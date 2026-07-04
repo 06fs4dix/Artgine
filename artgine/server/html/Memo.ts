@@ -91,6 +91,7 @@ let activeCatId: number | null = null;
 // 카테고리 트리
 // ==================================================================================================================
 const catTreeEl = El("catTree");
+const catSearchInputEl = El<HTMLInputElement>("catSearchInput");
 const catBreadcrumbEl = El("catBreadcrumb");
 
 // 사이드바 열고 닫기 - Home의 ai-sidebar/rdp-sidebar와 동일하게 Bootstrap Offcanvas 컴포넌트를 사용한다.
@@ -152,7 +153,7 @@ function RenderCatNode(_cat: CategoryRecord): string {
         <div class="cat-row d-flex flex-column rounded-3 user-select-none ${isActive ? 'active' : ''}" data-select-cat="${_cat.id}">
           <div class="d-flex align-items-center gap-1">
             <button class="cat-toggle d-inline-flex align-items-center justify-content-center flex-shrink-0 border-0 bg-transparent p-0 ${hasChildren ? '' : 'invisible'}" data-toggle-cat="${_cat.id}">
-              <i class="bi bi-chevron-down" id="chev-${_cat.id}"></i>
+              <i class="bi bi-chevron-right" id="chev-${_cat.id}"></i>
             </button>
             <i class="bi ${hasChildren ? 'bi-folder2-open' : 'bi-folder2'}"></i>
             <span class="cat-label text-truncate">${EscapeHtml(_cat.name)}</span>
@@ -164,7 +165,7 @@ function RenderCatNode(_cat: CategoryRecord): string {
           </div>
           ${tagsHtml}
         </div>
-        ${hasChildren ? `<div class="cat-children" id="children-${_cat.id}">${children.map(RenderCatNode).join('')}</div>` : ''}
+        ${hasChildren ? `<div class="cat-children d-none" id="children-${_cat.id}">${children.map(RenderCatNode).join('')}</div>` : ''}
       </div>
     `;
 }
@@ -187,9 +188,38 @@ function ToggleCat(_id: number): void {
     chev.classList.toggle('bi-chevron-right');
 }
 
+// 검색으로 찾은 카테고리까지 가는 경로(조상들)를 전부 펼친다 - 접혀있어도 강제로 열어서 보이게 한다.
+function ExpandAncestors(_id: number): void {
+    for (const cat of GetPath(_id)) {
+        El('children-' + cat.id)?.classList.remove('d-none');
+        const chev = El('chev-' + cat.id);
+        if (chev) { chev.classList.remove('bi-chevron-right'); chev.classList.add('bi-chevron-down'); }
+    }
+}
+
+// 카테고리 검색 - 이름에 검색어가 포함된 카테고리를 찾아 조상까지 펼치고, 클릭한 것처럼 선택/활성화한다.
+// FindCategoryMatches(카테고리명이 문장 안에 포함되는지 검사, AI 텍스트 매칭용)와는 반대 방향 매칭이라 별도로 둔다.
+async function SearchCategoryInput(): Promise<void> {
+    const query = catSearchInputEl.value.trim().toLowerCase();
+    if (!query) return;
+    const found = categoryCache.find(c => c.name.toLowerCase().includes(query));
+    if (!found) return;
+    ExpandAncestors(found.id);
+    await SelectCategory(found.id);
+    catTreeEl.querySelector(`[data-select-cat="${found.id}"]`)?.scrollIntoView({ block: 'center' });
+}
+
+// 선택 카테고리 표시는 active 클래스 토글만으로 충분하다 - RenderTree()로 전체를
+// 다시 그리면 카테고리가 많을 때 비용이 크고, 접어둔 하위 트리(d-none)도 리셋된다.
+function UpdateActiveCatUI(_prevId: number | null, _newId: number | null): void {
+    if (_prevId != null) catTreeEl.querySelector(`[data-select-cat="${_prevId}"]`)?.classList.remove('active');
+    if (_newId != null) catTreeEl.querySelector(`[data-select-cat="${_newId}"]`)?.classList.add('active');
+}
+
 async function SelectCategory(_id: number | null): Promise<void> {
+    const prevId = activeCatId;
     activeCatId = _id;
-    RenderTree();
+    UpdateActiveCatUI(prevId, _id);
     RenderBreadcrumb();
     await LoadData();
 }
@@ -328,6 +358,9 @@ El<HTMLInputElement>('newRootCatInput').addEventListener('keydown', (ev: Keyboar
     if (ev.key === 'Enter') AddRootCategory();
 });
 El('clearCatSelectionBtn').addEventListener('click', () => SelectCategory(null));
+catSearchInputEl.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter') SearchCategoryInput();
+});
 
 catTreeEl.addEventListener('click', (e: MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -353,14 +386,19 @@ catBreadcrumbEl.addEventListener('click', (e: MouseEvent) => {
 // 새 메모가 추가/삭제될 때마다 LoadRecentData()로 다시 불러와 갱신한다.
 // ==================================================================================================================
 const timeListEl = El("timeList");
+const timeSearchInputEl = El<HTMLInputElement>("timeSearchInput");
 let recentDataCache: DataRecord[] = [];
+let timeSearchQuery = '';
 
 function RenderTimeList(): void {
-    if (recentDataCache.length === 0) {
+    const items = timeSearchQuery
+        ? recentDataCache.filter(item => item.content.toLowerCase().includes(timeSearchQuery))
+        : recentDataCache;
+    if (items.length === 0) {
         timeListEl.innerHTML = `<div class="cat-emptyhint text-body-secondary">No memos yet.</div>`;
         return;
     }
-    timeListEl.innerHTML = recentDataCache.map(item => {
+    timeListEl.innerHTML = items.map(item => {
         const catName = GetCategory(item.categoryId)?.name ?? '?';
         return `
           <div class="time-item rounded-1" data-time-item-cat="${item.categoryId}">
@@ -386,6 +424,22 @@ timeListEl.addEventListener('click', (e: MouseEvent) => {
     const item = target.closest('[data-time-item-cat]') as HTMLElement | null;
     if (item) SelectCategory(Number(item.dataset.timeItemCat));
 });
+
+timeSearchInputEl.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (ev.key !== 'Enter') return;
+    timeSearchQuery = timeSearchInputEl.value.trim().toLowerCase();
+    RenderTimeList();
+});
+
+// 탭을 전환하면 검색 입력/필터를 초기화해서, 다른 탭으로 갔다 돌아왔을 때 이전 검색 상태가 남아있지 않게 한다.
+function ResetSidebarSearch(): void {
+    catSearchInputEl.value = '';
+    timeSearchInputEl.value = '';
+    timeSearchQuery = '';
+    RenderTimeList();
+}
+El("cat-tab-category").addEventListener('shown.bs.tab', ResetSidebarSearch);
+El("cat-tab-time").addEventListener('shown.bs.tab', ResetSidebarSearch);
 
 // ==================================================================================================================
 // Provider / Model - Home의 AI 채팅과 동일하게 cmd/setting에서 읽어온다.
