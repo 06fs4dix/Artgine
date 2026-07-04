@@ -61,7 +61,7 @@ export class CLight extends CBrushComp
 		this.mColor.z = 1;
 		this.mColor.w = 1;
 
-        this.mCullMask.x = CPaint.eCullMask.All;
+        this.mCullMask.x = CPaint.eCullMask.Default;
 		
 		this.mSysc=CComponent.eSysn.Light;
 	}
@@ -97,80 +97,109 @@ export class CLight extends CBrushComp
 		{
 			var div={"tag":"div","html":[]};
 			div.html.push({"<>":"br"});
-			
+
 			let wtKey=this.ObjHash();
-			let sel={"<>":"select","class":"form-select","html":[
-				{"<>":"option","value":0,"text":"None","selected":true},
-				{"<>":"option","value":-1,"text":"Direct"},
-				{"<>":"option","value":1,"text":"Point"},
+			let isPoint=this.IsPointLight();
+			let is2D=(this.mTexKey!=null && this.mCascadeCycle[0]==-1 && this.mCascadeCycle[1]==-1 && this.mCascadeCycle[2]==-1);
+			let curType=is2D?(isPoint?"2dpoint":"2ddirect"):(isPoint?"point":"direct");
+
+			let applyDirColor=()=>{
+				let cx=Number(CDOM.IDValue("ligDirCX_num"+wtKey));
+				let cy=Number(CDOM.IDValue("ligDirCY_num"+wtKey));
+				let cz=Number(CDOM.IDValue("ligDirCZ_num"+wtKey));
+				this.SetColor(new CVec3(cx,cy,cz));
+			};
+			let applyPtColor=()=>{
+				let cx=Number(CDOM.IDValue("ligPtCX_num"+wtKey));
+				let cy=Number(CDOM.IDValue("ligPtCY_num"+wtKey));
+				let cz=Number(CDOM.IDValue("ligPtCZ_num"+wtKey));
+				this.SetColor(new CVec3(cx,cy,cz));
+			};
+			let applyPtRadius=()=>{
+				let outer=Number(CDOM.IDValue("ligPtOuter_num"+wtKey));
+				let inner=Number(CDOM.IDValue("ligPtInner_num"+wtKey));
+				if(!(outer>0)) outer=1;
+				if(!(inner>0)) inner=1;
+				this.SetPoint(outer,inner);
+			};
+			let applyCascade=()=>{
+				if(this.mTexKey==null) return;
+				let c0=Number(CDOM.IDValue("ligCas0_num"+wtKey));
+				let c1=Number(CDOM.IDValue("ligCas1_num"+wtKey));
+				let c2=Number(CDOM.IDValue("ligCas2_num"+wtKey));
+				this.mCascadeCycle[0]=c0;
+				this.mCascadeCycle[1]=c1;
+				this.mCascadeCycle[2]=c2;
+				this.mUpdate=CUpdate.eType.Updated;
+			};
+
+			// Light Type 토글
+			div.html.push({"<>":"span","text":"Light Type:"});
+			div.html.push({"<>":"select","class":"form-select","id":"ligType_sel"+wtKey,"html":[
+				{"<>":"option","value":"direct","text":"Directional","selected":curType=="direct"},
+				{"<>":"option","value":"point","text":"Point","selected":curType=="point"},
+				{"<>":"option","value":"2ddirect","text":"2D Directional","selected":curType=="2ddirect"},
+				{"<>":"option","value":"2dpoint","text":"2D Point","selected":curType=="2dpoint"},
 			],"onchange":(e)=>{
-				let selObj=e.target as HTMLSelectElement;
-				if(selObj.value=="-1")
+				let v=(e.target as HTMLSelectElement).value;
+				if(v=="point"||v=="2dpoint")
 				{
-					CDOM.ID("ligPo_div"+wtKey).hidden=true;
-					CDOM.ID("ligCor_div"+wtKey).hidden=false;
-				}
-				else if(selObj.value=="1")
-				{
-					CDOM.ID("ligPo_div"+wtKey).hidden=false;
-					CDOM.ID("ligCor_div"+wtKey).hidden=false;
+					CDOM.ID("ligDir_div"+wtKey).hidden=true;
+					CDOM.ID("ligPt_div"+wtKey).hidden=false;
+					applyPtRadius();
 				}
 				else
 				{
-					CDOM.ID("ligPo_div"+wtKey).hidden=true;
-					CDOM.ID("ligCor_div"+wtKey).hidden=true;
+					CDOM.ID("ligDir_div"+wtKey).hidden=false;
+					CDOM.ID("ligPt_div"+wtKey).hidden=true;
+					this.SetDirect();
 				}
-			}};
-			div.html.push(sel);
-			div.html.push({"<>":"div","id":"ligPo_div"+wtKey,"hidden":true,"html":[
-				{"<>":"span","text":"Point:"},
-				{"<>":"input","type":"number","id":"ligPoOuter_num"+wtKey,"class":"form-control","placeholder":"outer"},
-				{"<>":"input","type":"number","id":"ligPoInner_num"+wtKey,"class":"form-control","placeholder":"inner"},
-			]});
-			div.html.push({"<>":"div","id":"ligCor_div"+wtKey,"hidden":true,"html":[
-				{"<>":"span","text":"Color:"},
-				{"<>":"input","type":"number","id":"ligCorX_num"+wtKey,"class":"form-control","placeholder":"x"},
-				{"<>":"input","type":"number","id":"ligCorY_num"+wtKey,"class":"form-control","placeholder":"y"},
-				{"<>":"input","type":"number","id":"ligCorZ_num"+wtKey,"class":"form-control","placeholder":"z"},
-			]});
-			div.html.push({"<>":"button","type":"button","class":"btn btn-primary btn-lg btn-block btn-sm","text":"적용",
-				"onclick":()=>{
-					let po=CDOM.ID("ligPo_div"+wtKey).hidden;
-					let cor=CDOM.ID("ligCor_div"+wtKey).hidden;
-					if(po==false)
-					{
-						let outer=Number(CDOM.IDValue("ligPoOuter_num"+wtKey));
-						let inner=Number(CDOM.IDValue("ligPoInner_num"+wtKey));
-						this.SetPoint(outer,inner);
-					}
-					else if(cor==false)
-					{
-						this.SetDirect();
-					}
-					let corX=Number(CDOM.IDValue("ligCorX_num"+wtKey));
-					let corY=Number(CDOM.IDValue("ligCorY_num"+wtKey));
-					let corZ=Number(CDOM.IDValue("ligCorZ_num"+wtKey));
-					this.SetColor(new CVec3(corX,corY,corZ));
-					this.EditRefresh();
-				}
-			});
+			}});
 
-            // shadow
-			div.html.push({"<>":"div","id":"ligSh_div"+wtKey,"html":[
-				{"<>":"span","text":"Cascade:"},
-				{"<>":"input","type":"number","id":"ligSh0_num"+wtKey,"class":"form-control","placeholder":"cas0"},
-				{"<>":"input","type":"number","id":"ligSh1_num"+wtKey,"class":"form-control","placeholder":"cas1"},
-                {"<>":"input","type":"number","id":"ligSh2_num"+wtKey,"class":"form-control","placeholder":"cas2"},
+			// Directional 전용 패널
+			div.html.push({"<>":"div","id":"ligDir_div"+wtKey,"hidden":isPoint,"html":[
+				{"<>":"span","text":"Color:"},
+				{"<>":"input","type":"number","id":"ligDirCX_num"+wtKey,"class":"form-control","placeholder":"x","value":this.mColor.x,"onchange":()=>applyDirColor()},
+				{"<>":"input","type":"number","id":"ligDirCY_num"+wtKey,"class":"form-control","placeholder":"y","value":this.mColor.y,"onchange":()=>applyDirColor()},
+				{"<>":"input","type":"number","id":"ligDirCZ_num"+wtKey,"class":"form-control","placeholder":"z","value":this.mColor.z,"onchange":()=>applyDirColor()},
 			]});
-			div.html.push({"<>":"button","type":"button","class":"btn btn-primary btn-lg btn-block btn-sm","text":"그림자 적용",
-				"onclick":()=>{
-					let sh0=Number(CDOM.IDValue("ligSh0_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh0_num"+wtKey));
-					let sh1=Number(CDOM.IDValue("ligSh1_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh1_num"+wtKey));
-					let sh2=Number(CDOM.IDValue("ligSh2_num"+wtKey) == "" ? -1 : CDOM.IDValue("ligSh2_num"+wtKey));
-                    this.SetShadow3D(wtKey, sh0, sh1, sh2);
-					this.EditRefresh();
-				}
-			});
+			if(curType=="direct" && this.mTexKey!=null)
+			{
+				div.html.push({"<>":"div","id":"ligCas_div"+wtKey,"html":[
+					{"<>":"span","text":"Shadow Cascade:"},
+					{"<>":"input","type":"number","id":"ligCas0_num"+wtKey,"class":"form-control","placeholder":"cas0","value":this.mCascadeCycle[0],"onchange":()=>applyCascade()},
+					{"<>":"input","type":"number","id":"ligCas1_num"+wtKey,"class":"form-control","placeholder":"cas1","value":this.mCascadeCycle[1],"onchange":()=>applyCascade()},
+					{"<>":"input","type":"number","id":"ligCas2_num"+wtKey,"class":"form-control","placeholder":"cas2","value":this.mCascadeCycle[2],"onchange":()=>applyCascade()},
+				]});
+			}
+
+			// Point 전용 패널
+			div.html.push({"<>":"div","id":"ligPt_div"+wtKey,"hidden":!isPoint,"html":[
+				{"<>":"span","text":"Outer:"},
+				{"<>":"input","type":"number","id":"ligPtOuter_num"+wtKey,"class":"form-control","placeholder":"outer","value":(isPoint?this.mDirPos.w:1),"onchange":()=>applyPtRadius()},
+				{"<>":"span","text":"Inner:"},
+				{"<>":"input","type":"number","id":"ligPtInner_num"+wtKey,"class":"form-control","placeholder":"inner","value":this.mColor.w,"onchange":()=>applyPtRadius()},
+				{"<>":"span","text":"Color:"},
+				{"<>":"input","type":"number","id":"ligPtCX_num"+wtKey,"class":"form-control","placeholder":"x","value":this.mColor.x,"onchange":()=>applyPtColor()},
+				{"<>":"input","type":"number","id":"ligPtCY_num"+wtKey,"class":"form-control","placeholder":"y","value":this.mColor.y,"onchange":()=>applyPtColor()},
+				{"<>":"input","type":"number","id":"ligPtCZ_num"+wtKey,"class":"form-control","placeholder":"z","value":this.mColor.z,"onchange":()=>applyPtColor()},
+			]});
+
+			// Shadow 섹션
+			div.html.push({"<>":"hr"});
+			div.html.push({"<>":"span","text":"Shadow: "});
+			div.html.push({"<>":"button","type":"button","class":"btn btn-primary btn-sm","text":"그림자 적용","onclick":()=>{
+				let v=(CDOM.ID("ligType_sel"+wtKey) as HTMLSelectElement).value;
+				if(v=="2ddirect"||v=="2dpoint") this.SetShadow2D(this.ObjHash());
+				else this.SetShadow3D(this.ObjHash(),0,-1,-1);
+				this.EditRefresh();
+			}});
+			div.html.push({"<>":"button","type":"button","class":"btn btn-danger btn-sm","text":"그림자 제거","onclick":()=>{
+				this.RemoveShadow();
+				let casDiv=CDOM.ID("ligCas_div"+wtKey);
+				if(casDiv!=null) casDiv.hidden=true;
+                this.EditRefresh();
+			}});
 
 			_body.append(CDOM.DataToDom(div));
 
@@ -179,7 +208,7 @@ export class CLight extends CBrushComp
 		else if(_pointer.member=="mCullMask")
 		{
 			let ukey=this.ObjHash();
-			let maskKeys=CClass.EnumName(CPaint.eCullMask).filter(_k=>_k!="All");
+			let maskKeys=CClass.EnumName(CPaint.eCullMask);
 			let curMask=this.mCullMask.x;
 
 			let wrap=document.createElement("div");
@@ -646,13 +675,63 @@ export class CLight extends CBrushComp
 		this.mCascadeCycle[2]=_CycleTime2;
 		this.mUpdate = CUpdate.eType.Updated;
 	}
-    SetShadow2D(_shadowKey)
+	SetShadow2D(_shadowKey)
 	{
 		this.mTexKey=_shadowKey;
 		this.mCascadeCycle[0]=-1;
 		this.mCascadeCycle[1]=-1;
 		this.mCascadeCycle[2]=-1;
 		this.mUpdate = CUpdate.eType.Updated;
+	}
+    Refresh() {
+        if(this.mBrush!=null && this.mTexKey!=null)
+		{
+			this.mBrush.mUpdateLight=CUpdate.eType.Updated;
+			this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
+
+			if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
+			{
+				for(let rp of this.mWriteRP)
+				{
+					if(rp.mTag.has("shadowPlane")==false) continue;
+					this.mBrush.RemoveAutoRP(this.mTexKey+rp.mShader);
+				}
+			}
+
+			if(this.IsPointLight())
+			{
+				for(let i=0;i<6;i++)
+				{
+					this.mBrush.mCameraMap.delete(this.mTexKey+i);
+					for(let rp of this.mWriteRP)
+					{
+						if(rp.mTag.has("shadowWrite")==false) continue;
+						this.mBrush.RemoveAutoRP(this.mTexKey+rp.mShader+i);
+					}
+				}
+			}
+			else
+			{
+				for(let i=0;i<this.mCascadeCycle.length;++i)
+				{
+					if(this.mCascadeCycle[i]==-1) continue;
+					this.mBrush.mCameraMap.delete(this.mTexKey+i);
+					for(let rp of this.mWriteRP)
+					{
+						if(rp.mTag.has("shadowWrite")==false) continue;
+						this.mBrush.RemoveAutoRP(this.mTexKey+rp.mShader+i);
+					}
+				}
+			}
+			this.mBrush.ClearRen();
+		}
+    }
+	RemoveShadow()
+	{
+		this.Refresh();
+		this.mCascadeCycle=[0,-1,-1];
+		this.mTexKey=null;
+		this.mUpdate=CUpdate.eType.Updated;
 	}
 	SetShadowDistance(_dist : number)
 	{
@@ -698,82 +777,11 @@ export class CLight extends CBrushComp
 	}
     override SetEnable(_val: boolean): void {
         super.SetEnable(_val);
-
-        if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
-        {
-            for(let rp of this.mWriteRP)
-            {
-                if(rp.mTag.has("shadowPlane")==false) continue;
-                const srpKey=this.mTexKey+rp.mShader;
-                this.mBrush.RemoveAutoRP(srpKey);
-            }
-        }
-
-        if(this.mBrush!=null)
-        {
-            this.mBrush.mUpdateLight=CUpdate.eType.Updated;
-            this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
-            if(this.IsPointLight()) {
-                for(let i=0;i<6;i++) {
-                    this.mBrush.mCameraMap.delete(this.mTexKey+i);
-                    for(let rp of this.mWriteRP) {
-                        if(rp.mTag.has("shadowWrite")==false) continue;
-                        const srpKey=this.mTexKey+rp.mShader+i;
-                        this.mBrush.RemoveAutoRP(srpKey);
-                    }
-                }
-            } else {
-                for(let i=0;i<this.mCascadeCycle.length;++i) {
-                    if(this.mCascadeCycle[i]==-1) continue;
-                    this.mBrush.mCameraMap.delete(this.mTexKey+i);
-                    for(let rp of this.mWriteRP) {
-                        if(rp.mTag.has("shadowWrite")==false) continue;
-                        const srpKey=this.mTexKey+rp.mShader+i;
-                        this.mBrush.RemoveAutoRP(srpKey);
-                    }
-                }
-            }
-            this.mBrush.ClearRen();
-        }
+        this.Refresh();
     }
 	override Destroy(): void {
 		super.Destroy();
-
-        if(this.mCascadeCycle[0]==-1&&this.mCascadeCycle[1]==-1&&this.mCascadeCycle[2]==-1)
-        {
-            for(let rp of this.mWriteRP) {
-                if(rp.mTag.has("shadowPlane")==false) continue;
-                const srpKey=this.mTexKey+rp.mShader;
-                this.mBrush.RemoveAutoRP(srpKey);
-            }
-        }
-		
-		if(this.mBrush!=null)
-        {
-            this.mBrush.mUpdateLight=CUpdate.eType.Updated;
-            this.mBrush.mUpdateShadow=CUpdate.eType.Updated;
-            if(this.IsPointLight()) {
-                for(let i=0;i<6;i++) {
-                    this.mBrush.mCameraMap.delete(this.mTexKey+i);
-                    for(let rp of this.mWriteRP) {
-                        if(rp.mTag.has("shadowWrite")==false) continue;
-                        const srpKey=this.mTexKey+rp.mShader+i;
-                        this.mBrush.RemoveAutoRP(srpKey);
-                    }
-                }
-            } else {
-                for(let i=0;i<this.mCascadeCycle.length;++i) {
-                    if(this.mCascadeCycle[i]==-1) continue;
-                    this.mBrush.mCameraMap.delete(this.mTexKey+i);
-                    for(let rp of this.mWriteRP) {
-                        if(rp.mTag.has("shadowWrite")==false) continue;
-                        const srpKey=this.mTexKey+rp.mShader+i;
-                        this.mBrush.RemoveAutoRP(srpKey);
-                    }
-                }
-            }
-            this.mBrush.ClearRen();
-        }
+        this.Refresh();
 	}
 
 }

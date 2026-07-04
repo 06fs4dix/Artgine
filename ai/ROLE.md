@@ -23,6 +23,7 @@ node ai/tool/tsc_check.js 파일A.ts 파일B.ts 파일C.ts
 
 - node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`는 제외
 - python / python3 실행
+- 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
 
 ## 접속 정보 (Connection Information)
 포트/경로는 `Main.json`의 `url` 필드 기준. 우선순위: 워킹 폴더 `Main.json` → `desktop/Main.json`.

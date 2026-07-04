@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+<title>Memo</title>
+<link rel="stylesheet" href="../../external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="../../external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
+<script src="../../external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js" defer></script>
+<style>
+:root{ --cat-indent: 12px; }
+html,body{height:100%;}
+body{ font-size:14px; }
+.app-shell{ height:100vh; height:100dvh; overflow:hidden; }
+/* ---------- 좌측 카테고리 트리 (Home의 사이드바와 동일하게 Bootstrap offcanvas + absolute 오버라이드, 310px) ---------- */
+#cat-sidebar{ position:absolute; --bs-offcanvas-width:310px; z-index:10; }
+.cat-sidebar-header{ padding:14px 14px 10px; }
+.cat-add-row{ gap:6px; }
+.cat-tree-scroll{ flex:1; padding:8px 6px 16px; }
+.cat-row{ padding:6px 8px; cursor:pointer; color:inherit; border:1px solid var(--bs-border-color); margin-bottom:3px; }
+.cat-row:hover{ background:var(--bs-secondary-bg); }
+.cat-row.active{ background:var(--bs-primary); color:#fff; }
+.cat-row.active .cat-count{ color:rgba(255,255,255,.8) !important; }
+.cat-toggle{ width:18px; height:18px; color:var(--bs-secondary-color); }
+.cat-row.active .cat-toggle{ color:rgba(255,255,255,.85); }
+.cat-label{ flex:1; min-width:0; font-size:13.5px; }
+.cat-count{ font-size:11px; border-radius:10px; padding:1px 7px; }
+.cat-actions{ gap:2px; }
+.cat-actions button{ color:var(--bs-secondary-color); width:20px; height:20px; font-size:12px; }
+.cat-row.active .cat-actions button{ color:rgba(255,255,255,.9); }
+.cat-actions button:hover{ background:rgba(0,0,0,.1); }
+.cat-tags{ margin-left:24px; margin-top:2px; }
+.cat-tags .badge{ font-size:9.5px; font-weight:normal; }
+.cat-row.active .cat-tags .badge{ color:rgba(255,255,255,.9) !important; background:rgba(255,255,255,.2) !important; }
+.cat-children{ margin-left:calc(var(--cat-indent)); }
+.cat-emptyhint{ font-size:12px; padding:10px 12px; }
+.time-item{ padding:6px 8px; cursor:pointer; border:1px solid var(--bs-border-color); margin-bottom:3px; font-size:12.5px; }
+.time-item:hover{ background:var(--bs-secondary-bg); }
+.time-item .time-item-meta{ font-size:10.5px; color:var(--bs-secondary-color); }
+/* ---------- 우측 컨텐츠: 탑 / 센터(채팅 로그) / 채팅 입력. 사이드바가 offcanvas라 콘텐츠 위에 겹치므로 position:absolute inset:0 ---------- */
+#memo-topbar{ padding:10px 22px; }
+#memo-topbar .breadcrumb{ font-size:13px; }
+#memo-content .container-narrow{ max-width:820px; }
+#memo-composer textarea{ resize:none; }
+.msg-bubble{ white-space:pre-wrap; word-wrap:break-word; line-height:1.6; }
+.empty-state{ padding:60px 20px; }
+.empty-state i{ font-size:2.2rem; margin-bottom:10px; opacity:.6; }
+</style>
+</head>
+<body>
+
+<div id="memo-auth-overlay" class="position-fixed top-0 start-0 end-0 bottom-0 align-items-center justify-content-center bg-body"
+     style="z-index:9998; display:none;">
+    <div class="card shadow" style="width:320px;">
+        <div class="card-body">
+            <h5 class="card-title mb-3"><i class="bi bi-shield-lock"></i> Authentication</h5>
+            <div class="mb-3">
+                <input type="password" id="authPwInput" class="form-control" placeholder="Password">
+            </div>
+            <div id="authMsg" class="text-danger small mb-2" style="min-height:1.2em;"></div>
+            <button id="authSubmitBtn" class="btn btn-primary w-100">Sign In</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-shell position-relative">
+    <aside id="cat-sidebar" class="offcanvas offcanvas-start d-flex flex-column border-end bg-body-tertiary" tabindex="-1">
+        <div class="cat-sidebar-header border-bottom">
+            <div class="cat-add-row d-flex">
+                <input type="text" class="form-control form-control-sm" id="newRootCatInput" placeholder="New root category...">
+                <button class="btn btn-sm btn-primary flex-shrink-0" id="addRootCatBtn"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <button id="clearCatSelectionBtn" type="button"
+                class="btn btn-sm btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-1"
+                title="Clear selection - Search/Delete will look across all categories">
+                <i class="bi bi-x-circle"></i> All categories
+            </button>
+        </div>
+        <ul class="nav nav-tabs nav-fill" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="cat-tab-category" data-bs-toggle="tab" data-bs-target="#cat-pane-category" type="button" role="tab">Category</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cat-tab-time" data-bs-toggle="tab" data-bs-target="#cat-pane-time" type="button" role="tab">Time</button>
+            </li>
+        </ul>
+        <div class="tab-content flex-grow-1 overflow-hidden">
+            <div class="tab-pane fade show active h-100 overflow-hidden" id="cat-pane-category" role="tabpanel">
+                <div class="cat-tree-scroll overflow-auto h-100" id="catTree"></div>
+            </div>
+            <div class="tab-pane fade h-100 overflow-hidden" id="cat-pane-time" role="tabpanel">
+                <div class="cat-tree-scroll overflow-auto h-100" id="timeList"></div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="memo-frame-container" class="position-absolute d-flex flex-column overflow-hidden" style="inset:0;">
+        <button id="catSidebarToggle" type="button"
+            class="btn btn-light position-absolute"
+            style="top:48px; right:24px; z-index:10; padding:.3rem .6rem; font-size:1rem;"
+            title="Toggle sidebar (Tab)">
+            <i class="bi bi-layout-sidebar-inset"></i>
+        </button>
+        <div id="memo-topbar" class="d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary">
+            <select id="modeSelect" class="form-select form-select-sm w-auto" title="Type /w, /s or /d in the message box to switch">
+                <option value="write">Write /w</option>
+                <option value="search">Search /s</option>
+                <option value="delete">Delete /d</option>
+            </select>
+            <select id="providerSelect" class="form-select form-select-sm w-auto"></select>
+            <select id="modelSelect" class="form-select form-select-sm w-auto"></select>
+            <nav aria-label="breadcrumb" class="flex-grow-1 text-end">
+                <ol class="breadcrumb m-0 justify-content-end" id="catBreadcrumb"></ol>
+            </nav>
+        </div>
+        <div id="memo-content" class="flex-grow-1 overflow-auto p-3 bg-body">
+            <div class="container-narrow mx-auto">
+                <div id="memo-log" class="d-flex flex-column gap-2">
+                    <div id="memoEmptyState" class="empty-state text-center text-body-secondary">
+                        <i class="bi bi-signpost-split d-block"></i>No category selected. Select one to write, or use Search/Delete to work across all categories.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="memo-composer" class="p-2 border-top bg-body-tertiary">
+            <div class="container-narrow mx-auto d-flex gap-2 align-items-end">
+                <textarea id="composerText" class="form-control" placeholder="Write a memo or enter a search query... (#tags supported)" rows="1"></textarea>
+                <button id="submitBtn" class="btn btn-primary flex-shrink-0">
+                    <i class="bi bi-send"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./Memo.js"></script>
+</body>
+</html>

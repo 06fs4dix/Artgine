@@ -30,7 +30,19 @@ export function createApiClient(cookieFile) {
         if (setCookie) saveCookie(setCookie.split(';')[0]);
         return res.json();
     }
-    return { call };
+    async function get(base, path, query = {}) {
+        const qs = new URLSearchParams(
+            Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined && v !== null))
+        ).toString();
+        const url = `${base}/${path}${qs ? `?${qs}` : ''}`;
+        const cookie = loadCookie();
+        const headers = { ...(cookie ? { Cookie: cookie } : {}) };
+        const res = await fetch(url, { method: 'GET', headers });
+        const setCookie = res.headers.get('set-cookie');
+        if (setCookie) saveCookie(setCookie.split(';')[0]);
+        return res.json();
+    }
+    return { call, get };
 }
 
 export async function login(call, base, projectRoot) {

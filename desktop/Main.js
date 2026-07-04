@@ -685,7 +685,7 @@ ipcMain.handle("NewPage", async (_event, _json) => {
             bHTML = bHTML.substring(0, bHTML.indexOf("<!--EntryPoint-->") + 17);
             bHTML = CString.InsertAt(bHTML, pos + 17, oHTML.substring(oHTML.indexOf("<!--EntryPoint-->") + 17, oHTML.length));
         }
-        bHTML = "<title>" + projectName + "</title>\n" + bHTML;
+        bHTML = bHTML.replace("<title>Artgine</title>", "<title>" + projectName + "</title>");
         await CFile.Save(bHTML, savePath + ".html");
     }
     let appChange = false;

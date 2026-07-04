@@ -256,6 +256,11 @@ function boot() {
     kbBridge.addEventListener('keydown', async (e: KeyboardEvent) => {
         if (!inputMode) return;
 
+        // Android 등 모바일 IME는 조합 중인 키를 keydown에서 실제 문자로 알려주지 않고
+        // e.key === 'Unidentified'(keyCode 229)로 보낸다. 여기서 막지 않고 네이티브 입력을
+        // 그대로 진행시켜, 아래 input/compositionend 핸들러에서 실제 문자를 캡처한다.
+        if (e.isComposing || e.key === 'Unidentified' || e.keyCode === 229) return;
+
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
             e.preventDefault();
             try {
@@ -330,6 +335,30 @@ function boot() {
         kbBridge.value = '';
         if (text) {
             try { await pwExec('keyboard.type', [text]); } catch {}
+        }
+    });
+
+    // 모바일 IME(Android 등)는 문자 입력을 keydown이 아니라 input/composition 이벤트로만 알려준다.
+    // keydown 쪽에서 preventDefault하지 않고 흘려보낸 조합 입력을 여기서 캡처해 가상 브라우저로 전달한다.
+    kbBridge.addEventListener('input', async (e: Event) => {
+        if (!inputMode) return;
+        const ie = e as InputEvent;
+        if (ie.isComposing) return;
+        const inputType = ie.inputType;
+        kbBridge.value = '';
+        try {
+            if (inputType === 'deleteContentBackward') { await pwExec('keyboard.press', ['Backspace']); return; }
+            if (inputType === 'deleteContentForward')  { await pwExec('keyboard.press', ['Delete']); return; }
+            if (inputType === 'insertLineBreak')        { await pwExec('keyboard.press', ['Enter']); return; }
+            if (ie.data) await pwExec('keyboard.type', [ie.data]);
+        } catch {}
+    });
+
+    kbBridge.addEventListener('compositionend', async (e: CompositionEvent) => {
+        kbBridge.value = '';
+        if (!inputMode) return;
+        if (e.data) {
+            try { await pwExec('keyboard.type', [e.data]); } catch {}
         }
     });
 

@@ -118,8 +118,7 @@ export class CPaint extends CComponent implements IMat
         Mask11:0b000000000001000,
         Mask12:0b000000000000100,
         Mask13:0b000000000000010,
-        Mask14:0b000000000000001,
-        All:0b111111111111111,
+        Mask14:0b000000000000001
     };
 
 	mBW=new CBoundWorldPaint();
@@ -432,7 +431,7 @@ export class CPaint extends CComponent implements IMat
 		else if(_pointer.member=="mCullMask")
 		{
 			let ukey=this.ObjHash();
-			let maskKeys=CClass.EnumName(CPaint.eCullMask).filter(_k=>_k!="All");
+			let maskKeys=CClass.EnumName(CPaint.eCullMask);
 			let curMask=this.mCullMask.x;
 
 			let wrap=document.createElement("div");

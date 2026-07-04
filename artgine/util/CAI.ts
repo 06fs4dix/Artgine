@@ -10,6 +10,12 @@ export interface IProviderInfo {
     models: { value: string; label: string }[];
 }
 
+// fiveHour/weekly: 남은 사용량 비율(1=가득 참, 0=소진). 조회 실패/미지원 시 -1.
+export interface IProviderUsage {
+    fiveHour: number;
+    weekly: number;
+}
+
 export interface IChatResult {
     text: string;
     sessionId?: string;
@@ -24,6 +30,7 @@ export class CAI {
     static DeleteRole(_provider: CAI.eProvider, _targetDir: string): boolean { return false; }
     static ProviderInfo(_provider: CAI.eProvider): Promise<IProviderInfo> { return Promise.resolve({ id: _provider, installed: false, authenticated: false, version: '', models: [] }); }
     static ProviderInstall(_provider: CAI.eProvider): Promise<boolean> { return Promise.resolve(false); }
+    static ProviderUsage(_provider: CAI.eProvider): Promise<IProviderUsage> { return Promise.resolve({ fiveHour: -1, weekly: -1 }); }
     static Chat(_provider: CAI.eProvider, _model: string, _cwd: string, _prompt: string, _mcp = true, _cliSessionId?: string, _isFirstCall = true): Promise<IChatResult> { return Promise.reject(new Error('CAI_imple not loaded')); }
     static Terminal(_provider: CAI.eProvider, _mcp: boolean, _model?: string): Promise<IAIInteractiveArgs> { return Promise.resolve({ args: [] }); }
 }

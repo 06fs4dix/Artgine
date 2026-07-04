@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mr0dnlnw_2";
+gPF.mVersion = "mr6bwtd7_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -51,7 +51,6 @@ function updateFramePlaceholder() {
 }
 const aiSessionList = CDOM.ID("aiSessionList");
 const aiNewChatBtn = CDOM.ID("aiNewChatBtn");
-let aiInited = false;
 function registerHomeLan() {
     const ko = CLan.eType.ko;
     CLan.Set(ko, "ai.providerStatus", "프로바이더 상태");
@@ -63,6 +62,8 @@ function registerHomeLan() {
     CLan.Set(ko, "ai.ready", "준비됨");
     CLan.Set(ko, "ai.notInstalled", "미설치");
     CLan.Set(ko, "ai.notAuth", "인증 안됨");
+    CLan.Set(ko, "ai.weekly", "주간");
+    CLan.Set(ko, "ai.usageRemaining", "남음");
     CLan.Set(ko, "ai.nodeRequired", "Node.js가 설치되어 있지 않습니다. Provider 상태 페이지에서 확인 후 Node.js를 설치해 주세요.");
     CLan.Set(ko, "memo.authNotice", "프로바이더 인증이 안 되어 있으면 작동하지 않을 수 있습니다.");
     CLan.Set(ko, "ai.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
@@ -139,9 +140,21 @@ async function loadAiProviderStatus() {
             const statusHtml = !p.installed
                 ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}"><i class="bi ${icon}"></i>${status}</button>`
                 : `<span class="d-flex align-items-center gap-1"><i class="bi ${icon}"></i>${status}</span>`;
-            return `<div class="d-flex align-items-center justify-content-between rounded px-3 py-2 ${rowClass}" style="font-size:1.05rem;">
-                <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
-                ${statusHtml}
+            const pct = (v) => Math.round(v * 100);
+            const usageParts = [];
+            if (p.usage?.fiveHour >= 0)
+                usageParts.push(`5h ${pct(p.usage.fiveHour)}%`);
+            if (p.usage?.weekly >= 0)
+                usageParts.push(`${CLan.Get('ai.weekly', '주간')} ${pct(p.usage.weekly)}%`);
+            const usageHtml = usageParts.length
+                ? `<div class="text-secondary mt-1" style="font-size:0.8em;">${usageParts.join(' · ')} ${CLan.Get('ai.usageRemaining', '남음')}</div>`
+                : '';
+            return `<div class="rounded px-3 py-2 ${rowClass}" style="font-size:1.05rem;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
+                    ${statusHtml}
+                </div>
+                ${usageHtml}
             </div>`;
         }).join('');
         document.getElementById('aiNodeDownloadBtn')?.addEventListener('click', () => {
@@ -1468,8 +1481,7 @@ const aiSidebarEl = CDOM.ID("ai-sidebar");
 const aiSidebarToggleBtn = CDOM.ID("aiSidebarToggle");
 const aiSidebarOffcanvas = new window.bootstrap.Offcanvas(aiSidebarEl, { backdrop: false, scroll: true });
 function openAiSidebar() {
-    if (!aiSidebarEl.classList.contains('show'))
-        aiSidebarOffcanvas.show();
+    aiSidebarOffcanvas.show();
 }
 aiSidebarEl.addEventListener('shown.bs.offcanvas', () => {
     aiSidebarToggleBtn.querySelector('i').className = 'bi bi-layout-sidebar-inset';
@@ -1748,6 +1760,10 @@ browserNewBtn.addEventListener('click', () => {
                 <input id="brow-height" type="number" min="1" class="form-control form-control-sm" value="720">
             </div>
         </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">Stealth (sec, 0=off)</label>
+            <input id="brow-stealth" type="number" min="0" class="form-control form-control-sm" value="0">
+        </div>
         <div class="d-flex justify-content-between">
             <button id="brow-open" class="btn btn-primary">Open</button>
             <button id="brow-cancel" class="btn btn-danger ms-2">Cancel</button>
@@ -1762,6 +1778,7 @@ browserNewBtn.addEventListener('click', () => {
         const ttlInput = container.querySelector('#brow-ttl');
         const widthInput = container.querySelector('#brow-width');
         const heightInput = container.querySelector('#brow-height');
+        const stealthInput = container.querySelector('#brow-stealth');
         const doOpen = async () => {
             const url = urlInput.value.trim();
             if (!url)
@@ -1770,12 +1787,13 @@ browserNewBtn.addEventListener('click', () => {
             const ttl = parseInt(ttlInput.value) || 300;
             const width = parseInt(widthInput.value);
             const height = parseInt(heightInput.value);
+            const stealth = parseInt(stealthInput.value) || 0;
             modal.Close();
             try {
                 const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/push`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200, width, height })
+                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200, width, height, stealth })
                 });
                 const j = await r.json();
                 if (!j.ok) {
@@ -2040,6 +2058,9 @@ function toggleRdpSidebar() {
     rdpSidebarOffcanvas.toggle();
     setTimeout(() => wasShown ? focusActiveRdpFrame() : rdpSidebarEl.focus(), 0);
 }
+function openRdpSidebar() {
+    rdpSidebarOffcanvas.show();
+}
 function handleRdpTabKey() {
     toggleRdpSidebar();
 }
@@ -2052,7 +2073,7 @@ function rdpInitIfNeeded() {
     rdpRenderList();
     rdpOpenLocal();
 }
-CDOM.ID("rdp-tab").addEventListener("shown.bs.tab", () => { rdpInitIfNeeded(); updateRdpFrameVisibility(); });
+CDOM.ID("rdp-tab").addEventListener("shown.bs.tab", () => { rdpInitIfNeeded(); openRdpSidebar(); updateRdpFrameVisibility(); });
 CDOM.ID("rdp-tab").addEventListener("hidden.bs.tab", () => updateRdpFrameVisibility());
 if (CDOM.ID("rdp-panel").classList.contains("show"))
     queueMicrotask(() => rdpInitIfNeeded());
@@ -2060,10 +2081,7 @@ function showAiTermSubtab() {
     showTab('ai-term-subtab');
 }
 CDOM.ID("ai-tab").addEventListener("shown.bs.tab", () => {
-    const isFirstInit = !aiInited;
-    aiInited = true;
-    if (isFirstInit)
-        openAiSidebar();
+    openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
     updateBrowserFrameVisibility();
@@ -2076,7 +2094,6 @@ CDOM.ID("ai-tab").addEventListener("hidden.bs.tab", () => updateBrowserFrameVisi
 CDOM.ID("ai-browser-subtab").addEventListener("shown.bs.tab", () => updateBrowserFrameVisibility());
 CDOM.ID("ai-browser-subtab").addEventListener("hidden.bs.tab", () => updateBrowserFrameVisibility());
 if (CDOM.ID("ai-panel").classList.contains("show")) {
-    aiInited = true;
     openAiSidebar();
     showAiTermSubtab();
     aiShowAuthOrLoad();
@@ -2552,17 +2569,22 @@ var g_menuList = { "<>": "div", "class": "d-flex align-items-center p-1", "html"
 CDOM.ID("Menu_div").append(CDOM.DataToDom(g_menuList));
 {
     const copyBtn = document.getElementById('fileUrlCopyBtn');
-    copyBtn?.addEventListener('click', () => {
+    copyBtn?.addEventListener('click', async () => {
         const input = document.getElementById('fileUrlInput');
         if (!input?.value)
             return;
-        navigator.clipboard.writeText(input.value).then(() => {
-            const icon = copyBtn.querySelector('i');
-            if (!icon)
-                return;
-            icon.className = 'bi bi-clipboard-check';
-            setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
-        });
+        try {
+            await navigator.clipboard.writeText(input.value);
+        }
+        catch {
+            input.select();
+            document.execCommand('copy');
+        }
+        const icon = copyBtn.querySelector('i');
+        if (!icon)
+            return;
+        icon.className = 'bi bi-clipboard-check';
+        setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
     });
 }
 async function FileBtn() {
@@ -3116,478 +3138,44 @@ function NextPhoto() {
 window["NextPhoto"] = NextPhoto;
 const memoTab = CDOM.ID("memo-tab");
 const memoPanel = CDOM.ID("memo");
-let memoProviders = [];
-let memoLoadGen = 0;
-function memoFormatTime(_t) {
-    const s = String(_t);
-    if (s.length < 14)
-        return s;
-    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
-}
-async function memoGetJson(_url) {
-    const token = GetFileToken();
-    const url = token ? _url + (_url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token) : _url;
-    const r = await authedFetch(url);
-    if (r.status === 401) {
-        removeAuthToken(g_fileWebRootUrl);
-        memoShowAuthOrLoad();
-        return { ok: false };
-    }
-    return await r.json();
-}
-async function memoPostJson(_url, _body) {
-    const r = await authedFetch(_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ..._body, token: GetFileToken() }) });
-    if (r.status === 401) {
-        removeAuthToken(g_fileWebRootUrl);
-        memoShowAuthOrLoad();
-        return { ok: false };
-    }
-    return await r.json();
-}
-async function memoLoadProviders() {
-    if (memoProviders.length > 0) {
-        memoPopulateProviderSelect();
-        return;
-    }
-    const gen = memoLoadGen;
-    try {
-        const setting = await memoGetJson(FileApiUrl('cmd/setting'));
-        if (gen !== memoLoadGen)
-            return;
-        if (setting.models) {
-            memoProviders = Object.keys(setting.models).map(id => ({ id, models: setting.models[id] || [] }));
-            memoPopulateProviderSelect();
-        }
-    }
-    catch (e) {
-        console.error('memo providers error:', e);
-    }
-}
-async function memoShowAuthOrLoad() {
-    const overlay = CDOM.ID("memo-auth-overlay");
-    if (overlay == null)
-        return;
-    const authed = await fileCheckAuth();
-    if (!authed) {
-        refreshFileAuthState();
-        const wasVisible = overlay.style.display === 'flex';
-        overlay.style.display = 'flex';
-        if (!wasVisible) {
-            const pwInput = CDOM.ID("memoAuthPwInput");
-            const msgEl = CDOM.ID("memoAuthMsg");
-            pwInput.value = '';
-            msgEl.textContent = '';
-            setTimeout(() => pwInput.focus(), 50);
-        }
-    }
-    else {
-        refreshFileAuthState();
-        overlay.style.display = 'none';
-        memoLoadProviders();
-        memoLoadRecentLog();
-    }
-}
-async function memoDoAuth() {
-    const pwInput = CDOM.ID("memoAuthPwInput");
-    const msgEl = CDOM.ID("memoAuthMsg");
-    const submitBtn = CDOM.ID("memoAuthSubmitBtn");
-    const pw = pwInput.value;
-    if (!pw)
-        return;
-    submitBtn.disabled = true;
-    msgEl.textContent = '';
-    try {
-        const j = await CFecth.Exe(FileApiUrl("auth/login"), { password: pw }, "json");
-        if (j.ok) {
-            SetFileToken(j.token);
-            refreshFileAuthState();
-            CDOM.ID("memo-auth-overlay").style.display = 'none';
-            memoLoadProviders();
-            memoLoadRecentLog();
-            warnIfDefaultAuthPassword(pw);
-        }
-        else {
-            msgEl.textContent = j.msg || 'Wrong password';
-        }
-    }
-    catch {
-        msgEl.textContent = 'Server error';
-    }
-    submitBtn.disabled = false;
-}
-function memoPopulateProviderSelect() {
-    const providerEl = CDOM.ID("memoProviderSelect");
-    if (providerEl == null)
-        return;
-    providerEl.innerHTML = memoProviders.map(p => `<option value="${p.id}">${p.id}</option>`).join('');
-    memoPopulateModelSelect();
-}
-function memoPopulateModelSelect() {
-    const providerEl = CDOM.ID("memoProviderSelect");
-    const modelEl = CDOM.ID("memoModelSelect");
-    if (providerEl == null || modelEl == null)
-        return;
-    const info = memoProviders.find(p => p.id === providerEl.value);
-    const models = info ? info.models : [];
-    modelEl.innerHTML = models.map(m => `<option value="${m.value}">${aiEscapeHtml(m.label)}</option>`).join('');
-    if (models.length > 0) {
-        modelEl.value = models[Math.floor(models.length / 2)].value;
-    }
-}
-function memoInsertAuthNotice(logEl) {
-    if (logEl.querySelector('#memoAuthNotice'))
-        return;
-    const notice = document.createElement('div');
-    notice.id = 'memoAuthNotice';
-    notice.className = 'small p-2 mb-1 rounded border border-danger bg-danger-subtle text-danger-emphasis d-flex align-items-center gap-2';
-    notice.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i><span>${CLan.Get('memo.authNotice', 'It may not work if the provider is not authenticated.')}</span>`;
-    logEl.insertBefore(notice, logEl.firstChild);
-}
-async function memoLoadRecentLog() {
-    const gen = memoLoadGen;
-    try {
-        const j = await memoGetJson(FileApiUrl('Memo/List?n=30'));
-        if (gen !== memoLoadGen)
-            return;
-        if (!j.ok)
-            return;
-        const list = j.list;
-        const logEl = CDOM.ID("memo-log");
-        if (logEl == null)
-            return;
-        logEl.innerHTML = '';
-        if (list.length === 0) {
-            memoRenderEmptyLog();
-            return;
-        }
-        memoInsertAuthNotice(logEl);
-        for (let i = list.length - 1; i >= 0; i--) {
-            const r = list[i];
-            const wrap = document.createElement('div');
-            wrap.style.cursor = 'pointer';
-            wrap.dataset.offset = String(r.selfOffset);
-            wrap.innerHTML = `
-                <div class="text-secondary small text-uppercase mb-1" style="letter-spacing: .5px;">${r.headOffset !== r.selfOffset ? `#${r.headOffset}-#${r.selfOffset}` : `#${r.selfOffset}`} · ${memoFormatTime(r.chatTime)}</div>
-                <div class="msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle">${aiEscapeHtml(r.original)}</div>
-                ${r.keywords && r.keywords.length > 0 ? `<div class="mt-2 d-flex flex-wrap gap-1">${r.keywords.map(k => `<span class="badge bg-secondary">#${k}</span>`).join('')}</div>` : ''}
-            `;
-            wrap.addEventListener('click', () => memoOpenChainModal(r.selfOffset));
-            logEl.appendChild(wrap);
-        }
-        memoScrollBottom();
-    }
-    catch (e) {
-        console.error('memo recent log error:', e);
-    }
-}
-function memoChainBodyHtml(_chain) {
-    const range = _chain.length > 1 ? `#${_chain[0].selfOffset} - #${_chain[_chain.length - 1].selfOffset}` : `#${_chain[0].selfOffset}`;
-    return `
-        <div class="d-flex flex-column h-100">
-            <div class="text-secondary small text-uppercase px-2 pt-2" style="letter-spacing: .5px;">${range}</div>
-            <div id="memoChainLog" class="flex-grow-1 overflow-auto d-flex flex-column gap-2 p-2">
-                ${_chain.map(r => `
-                    <div class="position-relative">
-                        <div class="text-secondary small text-uppercase mb-1" style="letter-spacing: .5px;">#${r.selfOffset} · ${memoFormatTime(r.chatTime)}</div>
-                        <button type="button" class="btn-close memoChainDeleteBtn" data-offset="${r.selfOffset}" aria-label="Delete" style="position:absolute; top:0; right:0;"></button>
-                        <div class="msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle" style="white-space: pre-wrap; word-wrap: break-word;">${aiEscapeHtml(r.original)}</div>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="border-top p-2 d-flex gap-2 align-items-end">
-                <textarea id="memoChainInput" class="form-control" placeholder="Continue this conversation..." rows="1" style="resize: none; max-height: 160px;"></textarea>
-                <button id="memoChainSendBtn" class="btn btn-primary"><i class="bi bi-send"></i></button>
-            </div>
-        </div>
-    `;
-}
-async function memoRefreshChainModal(_modal, _selfOffset) {
-    const j = await memoGetJson(FileApiUrl('Memo/Get?offset=' + _selfOffset));
-    if (!j.ok)
-        return;
-    const chain = j.chain;
-    if (chain.length === 0) {
-        _modal.Close();
-        return;
-    }
-    const tail = chain.find(r => r.nextOffset === 0) || chain[chain.length - 1];
-    _modal.SetBody(memoChainBodyHtml(chain));
-    const body = _modal.GetBody();
-    const logEl = body.querySelector('#memoChainLog');
-    logEl.scrollTop = logEl.scrollHeight;
-    const input = body.querySelector('#memoChainInput');
-    const sendBtn = body.querySelector('#memoChainSendBtn');
-    const send = () => memoChainSend(_modal, input, sendBtn, tail.selfOffset);
-    sendBtn.addEventListener('click', send);
-    input.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' && !ev.shiftKey) {
-            ev.preventDefault();
-            send();
-        }
-    });
-    input.addEventListener('input', () => {
-        input.style.height = '0';
-        input.style.height = Math.min(input.scrollHeight, 160) + 'px';
-    });
-    setTimeout(() => input.focus(), 50);
-    body.querySelectorAll('.memoChainDeleteBtn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const offset = Number(btn.dataset.offset);
-            memoChainDelete(_modal, chain, offset);
-        });
-    });
-}
-async function memoChainDelete(_modal, _chain, _offset) {
-    if (!confirm('이 메모를 삭제할까요?'))
-        return;
-    try {
-        const j = await memoPostJson(FileApiUrl('Memo/Delete'), { offset: _offset });
-        if (!j.ok) {
-            console.error('memo delete error:', j.msg);
-            return;
-        }
-        await memoLoadRecentLog();
-        const remaining = _chain.find(r => r.selfOffset !== _offset);
-        if (remaining == null) {
-            _modal.Close();
-            return;
-        }
-        await memoRefreshChainModal(_modal, remaining.selfOffset);
-    }
-    catch (e) {
-        console.error('memo delete error:', e);
-    }
-}
-async function memoChainSend(_modal, _input, _btn, _continueOffset) {
-    const text = _input.value.trim();
-    if (!text)
-        return;
-    _input.disabled = true;
-    _btn.disabled = true;
-    try {
-        const j = await memoPostJson(FileApiUrl('Memo/Chat'), {
-            mode: 'write',
-            text,
-            continueOffset: _continueOffset,
-        });
-        if (!j.ok) {
-            console.error('memo chain send error:', j.msg);
-            return;
-        }
-        await memoLoadRecentLog();
-        await memoRefreshChainModal(_modal, _continueOffset);
-    }
-    catch (e) {
-        console.error('memo chain send error:', e);
-    }
-    finally {
-        _input.disabled = false;
-        _btn.disabled = false;
-    }
-}
-async function memoOpenChainModal(_selfOffset) {
-    const modal = new CModal("memoChainModal");
-    modal.SetTitle(CModal.eTitle.TextFullClose);
-    modal.SetHeader("Memo");
-    modal.SetSize(480, 600);
-    modal.SetBody('<div class="text-center text-secondary p-4">Loading...</div>');
-    modal.Open(CModal.ePos.Center);
-    await memoRefreshChainModal(modal, _selfOffset);
-}
-function memoScrollBottom() {
-    const el = CDOM.ID("memo-content");
-    if (el)
-        el.scrollTop = el.scrollHeight;
-}
-let memoPendingEl = null;
-function memoAppendBubble(_role, _text, _pending) {
-    const logEl = CDOM.ID("memo-log");
-    if (logEl == null)
-        return null;
-    const placeholder = logEl.querySelector('#memoEmptyState');
-    if (placeholder)
-        placeholder.remove();
-    const roleLabel = _role === 'ai' ? 'Memo' : _role === 'system' ? 'System' : '';
-    const bubbleCls = _role === 'user'
-        ? _pending
-            ? 'msg-bubble p-3 rounded border-start border-4 border-secondary bg-body-tertiary memo-pending'
-            : 'msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle'
-        : _role === 'ai'
-            ? 'msg-bubble p-3 rounded border-start border-4 border-secondary bg-body-tertiary'
-            : 'msg-bubble p-2 px-3 rounded border border-danger bg-danger-subtle text-danger-emphasis';
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-        <div class="text-secondary small text-uppercase mb-1" style="letter-spacing: .5px;">${roleLabel}</div>
-        <div class="${bubbleCls}">${aiEscapeHtml(_text)}</div>
-    `;
-    logEl.appendChild(wrap);
-    memoScrollBottom();
-    return wrap;
-}
-function memoRenderEmptyLog() {
-    const logEl = CDOM.ID("memo-log");
-    if (logEl == null)
-        return;
-    logEl.innerHTML = '';
-    const empty = document.createElement('div');
-    empty.id = 'memoEmptyState';
-    empty.className = 'text-center text-secondary mt-5';
-    empty.innerHTML = `
-        <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
-        <div>Enter a new memo.</div>
-    `;
-    logEl.appendChild(empty);
-    memoInsertAuthNotice(logEl);
-}
-async function memoSend() {
-    const textEl = CDOM.ID("memoTextInput");
-    const modeEl = CDOM.ID("memoModeSelect");
-    const providerEl = CDOM.ID("memoProviderSelect");
-    const modelEl = CDOM.ID("memoModelSelect");
-    const sendBtn = CDOM.ID("memoSendBtn");
-    const text = textEl.value.trim();
-    if (!text)
-        return;
-    if (!(await ensureNodeInstalled()))
-        return;
-    memoPendingEl = memoAppendBubble('user', text, true);
-    textEl.value = '';
-    textEl.style.height = '0';
-    sendBtn.disabled = true;
-    try {
-        const j = await memoPostJson(FileApiUrl('Memo/Chat'), {
-            provider: providerEl.value || undefined,
-            model: modelEl.value || undefined,
-            mode: modeEl.value,
-            text,
-        });
-        if (!j.ok) {
-            memoAppendBubble('system', j.msg || 'Error');
-            return;
-        }
-        if (j.result === 'saved') {
-            if (memoPendingEl) {
-                memoPendingEl.remove();
-                memoPendingEl = null;
-            }
-            await memoLoadRecentLog();
-        }
-        else {
-            if (memoPendingEl) {
-                const bubble = memoPendingEl.querySelector('.msg-bubble');
-                if (bubble)
-                    bubble.className = 'msg-bubble p-3 rounded border-start border-4 border-primary bg-primary-subtle';
-                memoPendingEl = null;
-            }
-            memoAppendBubble('ai', j.result);
-            if (modeEl.value === 'delete' || (modeEl.value === 'auto' && j.result.startsWith('Deleted'))) {
-                await memoLoadRecentLog();
-            }
-        }
-    }
-    catch (e) {
-        console.error('memo chat error:', e);
-        memoAppendBubble('system', 'Network error');
-    }
-    finally {
-        sendBtn.disabled = false;
-    }
-}
+let memoIframe = null;
+let memoLoadedRootUrl = null;
 function memoEnsureLayout() {
-    if (CDOM.ID("memo-content"))
+    if (memoIframe)
         return;
     memoPanel.classList.add("position-relative");
     memoPanel.style.overflow = "hidden";
-    memoPanel.innerHTML = `
-        <style>
-            #memo-content .msg-bubble { white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
-            #memo-content .msg-bubble pre { background: var(--bs-tertiary-bg); padding: .5rem; border-radius: .25rem; overflow-x: auto; }
-            #memo-content .msg-bubble code { font-family: var(--bs-font-monospace); font-size: .875em; }
-            #memo-content .memo-pending { opacity: 0.5; }
-        </style>
-        <div id="memo-auth-overlay" class="position-absolute align-items-center justify-content-center"
-             style="inset:0; z-index:20; background:var(--bs-body-bg); display:none;">
-            <div class="card shadow" style="width:320px;">
-                <div class="card-body">
-                    <h5 class="card-title mb-3"><i class="bi bi-shield-lock"></i> Authentication</h5>
-                    <div class="mb-3">
-                        <input type="password" id="memoAuthPwInput" class="form-control" placeholder="Password">
-                    </div>
-                    <div id="memoAuthMsg" class="text-danger small mb-2" style="min-height:1.2em;"></div>
-                    <button id="memoAuthSubmitBtn" class="btn btn-primary w-100">Sign In</button>
-                </div>
-            </div>
-        </div>
-        <div id="memo-frame-container" class="d-flex flex-column overflow-hidden position-absolute bg-body text-body" style="inset:0;" data-bs-theme="dark">
-            <div id="memo-topbar" class="d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary">
-                <select id="memoModeSelect" class="form-select form-select-sm w-auto">
-                    <option value="auto">Auto</option>
-                    <option value="write">Write</option>
-                    <option value="read">Read</option>
-                </select>
-                <select id="memoProviderSelect" class="form-select form-select-sm w-auto"></select>
-                <select id="memoModelSelect" class="form-select form-select-sm w-auto"></select>
-            </div>
-            <div id="memo-content" class="flex-grow-1 overflow-auto p-3 bg-body">
-                <div id="memo-log" class="d-flex flex-column gap-2">
-                    <div id="memoEmptyState" class="text-center text-secondary mt-5">
-                        <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
-                        <div>Enter a new memo.</div>
-                    </div>
-                </div>
-            </div>
-            <div id="memo-composer" class="border-top bg-body-tertiary p-2">
-                <div class="d-flex gap-2 align-items-end">
-                    <textarea id="memoTextInput" class="form-control" placeholder="Enter memo..." rows="1" style="resize: none; max-height: 200px;"></textarea>
-                    <button id="memoSendBtn" class="btn btn-primary">
-                        <i class="bi bi-send"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    CDOM.ID("memoProviderSelect").addEventListener("change", memoPopulateModelSelect);
-    CDOM.ID("memoSendBtn").addEventListener("click", memoSend);
-    CDOM.ID("memoTextInput").addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter" && !ev.shiftKey) {
-            ev.preventDefault();
-            memoSend();
-        }
-    });
-    CDOM.ID("memoTextInput").addEventListener("input", () => {
-        const el = CDOM.ID("memoTextInput");
-        el.style.height = '0';
-        el.style.height = Math.min(el.scrollHeight, 200) + 'px';
-    });
-    CDOM.ID("memo-auth-overlay").addEventListener("keydown", (e) => e.stopPropagation());
-    CDOM.ID("memoAuthSubmitBtn").addEventListener("click", memoDoAuth);
-    CDOM.ID("memoAuthPwInput").addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter")
-            memoDoAuth();
-    });
-    memoRenderEmptyLog();
+    memoIframe = document.createElement("iframe");
+    memoIframe.id = "memo-iframe";
+    memoIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
+    memoPanel.appendChild(memoIframe);
+}
+function memoLoadFrame() {
+    memoEnsureLayout();
+    if (memoLoadedRootUrl === g_fileWebRootUrl)
+        return;
+    memoLoadedRootUrl = g_fileWebRootUrl;
+    memoIframe.src = `${g_fileWebRootUrl}artgine/server/html/Memo.html`;
 }
 memoEnsureLayout();
 let memoInited = false;
-let memoSyncedRootUrl = null;
 function memoTryInit() {
     if (memoInited)
         return;
     memoInited = true;
-    memoSyncedRootUrl = g_fileWebRootUrl;
-    memoShowAuthOrLoad();
+    memoLoadFrame();
 }
-memoTab.addEventListener("shown.bs.tab", memoTryInit);
+memoTab.addEventListener("shown.bs.tab", () => {
+    memoTryInit();
+    memoIframe?.contentWindow?.postMessage({ type: 'open-sidebar' }, '*');
+    memoIframe?.contentWindow?.focus();
+});
 if (memoTab.classList.contains("active"))
     memoTryInit();
 function memoNotifyRootChanged() {
-    if (!memoInited || memoSyncedRootUrl === g_fileWebRootUrl)
+    if (!memoInited)
         return;
-    memoSyncedRootUrl = g_fileWebRootUrl;
-    memoLoadGen++;
-    memoProviders = [];
-    memoRenderEmptyLog();
-    memoShowAuthOrLoad();
+    memoLoadFrame();
 }
 let dlInited = false;
 CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {

@@ -35,9 +35,11 @@ import { CDOM } from "../basic/CDOM.js"
 import { CUtil } from "../basic/CUtil.js"
 import { CUtilObj } from "../basic/CUtilObj.js"
 import { CPool } from "../basic/CPool.js"
+import { CFecth } from "../network/CFecth.js"
 
 
 let gConsolChat : CModalChat=null;
+let gConsolServerSend=false;
 var gFocus=null;
 function WebInit()
 {
@@ -118,31 +120,71 @@ if(CUtil.IsNode()==false)	WebInit();
 
 
 
+interface IConsolCmd
+{
+	keys : string[];
+	desc : string;
+	handler : ()=>void;
+}
+
+const gConsolCmdTable : IConsolCmd[]=
+[
+	{
+		keys:["frame","fps"],
+		desc:"Open frame/FPS viewer",
+		handler:()=>{ new CModalFrameView(); }
+	},
+	{
+		keys:["win size","window size"],
+		desc:"Print window (browser) size",
+		handler:()=>{ gConsolChat.ChatAdd("win width : " + window.innerWidth + " height : " + window.innerHeight,"#00cc00"); }
+	},
+	{
+		keys:["pf size","cpreferences size"],
+		desc:"Print CPreferences size",
+		handler:()=>{ gConsolChat.ChatAdd("pf width : " + CFrame.Main().PF().mWidth + " height : " + CFrame.Main().PF().mHeight,"#00cc00"); }
+	},
+	{
+		keys:["res"],
+		desc:"Open resource modal",
+		handler:()=>
+		{
+			let modal=CUtilObj.ShowModal(CFrame.Main().Res(),"Resource");
+			modal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
+		}
+	},
+	{
+		keys:["server on"],
+		desc:"Forward console logs to server (/log)",
+		handler:()=>{ gConsolServerSend=true; gConsolChat.ChatAdd("server send : on","#00cc00"); }
+	},
+	{
+		keys:["server off"],
+		desc:"Stop forwarding console logs to server",
+		handler:()=>{ gConsolServerSend=false; gConsolChat.ChatAdd("server send : off","#00cc00"); }
+	},
+];
+
 function CConsolModalInit()
 {
 	gConsolChat=new CModalChat("ConsolChat",false);
 	gConsolChat.SetCloseToHide(true);
 	gConsolChat.Open();
 	gConsolChat.On(CEvent.eType.Chat,(msg : string)=>{
-		msg=msg.toLowerCase();
+		msg=msg.toLowerCase().trim();
 		gConsolChat.ChatAdd(msg);
-		if(["frame", "fps"].some(word => msg.includes(word)))
-			new CModalFrameView();
-		else if (["win", "window", "preferences"].some(word => msg.includes(word)) &&
-         ["size"].some(word => msg.includes(word)))
+
+		if(msg=="-h" || msg=="help")
 		{
-			gConsolChat.ChatAdd("win width : " + window.innerWidth + " height : " + window.innerHeight,"#00cc00");
+			gConsolChat.ChatAdd("등록된 명령어 목록 :","#00cc00");
+			for(const cmd of gConsolCmdTable)
+				gConsolChat.ChatAdd(cmd.keys.join(" / ") + " : " + cmd.desc,"#00cc00");
+			return;
 		}
-		else if (["pf", "cpreferences"].some(word => msg.includes(word)) &&
-				["size"].some(word => msg.includes(word)))
-		{
-			gConsolChat.ChatAdd("pf width : " + CFrame.Main().PF().mWidth + " height : " + CFrame.Main().PF().mHeight,"#00cc00");
-		}
-		else if(["res"].some(word => msg.includes(word)))
-		{
-			let modal=CUtilObj.ShowModal(CFrame.Main().Res(),"Resource");
-			modal.SetZIndex(CModal.eSort.Manual,CModal.eSort.ZIndexTool);
-		}
+
+		const cmd=gConsolCmdTable.find(cmd => cmd.keys.includes(msg));
+		if(cmd!=null)
+			cmd.handler();
 	});
 	while(CConsol.GetLogQue().IsEmpty()==false)
 		gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(),"gray");
@@ -150,6 +192,9 @@ function CConsolModalInit()
 
 
 CConsol.SetLogEvent((_msg,_color)=>{
+	if(gConsolServerSend)
+		CFecth.Exe("/log",{msg:_msg,color:_color},"text").catch(()=>{});
+
 	if(gConsolChat!=null && gConsolChat.IsShow())
 	{
 		gConsolChat.ChatAdd(_msg,_color);
