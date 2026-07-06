@@ -39,7 +39,6 @@ body{ font-size:14px; }
 .time-item .time-item-meta{ font-size:10.5px; color:var(--bs-secondary-color); }
 /* ---------- 우측 컨텐츠: 탑 / 센터(채팅 로그) / 채팅 입력. 사이드바가 offcanvas라 콘텐츠 위에 겹치므로 position:absolute inset:0 ---------- */
 #memo-topbar{ padding:4px 22px; }
-#memo-topbar .breadcrumb{ font-size:12px; }
 #memo-topbar .form-select-sm{ padding-top:.15rem; padding-bottom:.15rem; font-size:12px; }
 #memo-content .container-narrow{ max-width:820px; }
 #memo-composer textarea{ resize:none; }
@@ -67,15 +66,19 @@ body{ font-size:14px; }
 <div class="app-shell position-relative">
     <aside id="cat-sidebar" class="offcanvas offcanvas-start d-flex flex-column border-end bg-body-tertiary" tabindex="-1">
         <div class="cat-sidebar-header border-bottom">
-            <div class="cat-add-row d-flex">
-                <input type="text" class="form-control form-control-sm" id="newRootCatInput" placeholder="New root category...">
-                <button class="btn btn-sm btn-primary flex-shrink-0" id="addRootCatBtn"><i class="bi bi-plus-lg"></i></button>
+            <div class="mb-2">
+                <input type="text" class="form-control form-control-sm" id="memoFolderInput" placeholder="Folder path (e.g. proj/2D/Village)">
             </div>
-            <button id="clearCatSelectionBtn" type="button"
-                class="btn btn-sm btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-1"
-                title="Clear selection - Search/Delete will look across all categories">
-                <i class="bi bi-x-circle"></i> All categories
-            </button>
+            <div class="d-flex gap-2">
+                <button id="addCatBtn" type="button" class="btn btn-sm btn-primary flex-fill d-flex align-items-center justify-content-center gap-1">
+                    <i class="bi bi-plus-lg"></i> Add Category
+                </button>
+                <button id="clearCatSelectionBtn" type="button"
+                    class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1"
+                    title="Clear selection - Search/Delete will look across all categories">
+                    <i class="bi bi-x-circle"></i> Deselect
+                </button>
+            </div>
         </div>
         <ul class="nav nav-tabs nav-fill" role="tablist">
             <li class="nav-item" role="presentation">
@@ -120,9 +123,6 @@ body{ font-size:14px; }
             </select>
             <select id="providerSelect" class="form-select form-select-sm w-auto"></select>
             <select id="modelSelect" class="form-select form-select-sm w-auto"></select>
-            <nav aria-label="breadcrumb" class="flex-grow-1 text-end">
-                <ol class="breadcrumb m-0 justify-content-end" id="catBreadcrumb"></ol>
-            </nav>
         </div>
         <div id="memo-content" class="flex-grow-1 overflow-auto p-3 bg-body">
             <div class="container-narrow mx-auto">

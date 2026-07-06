@@ -4,27 +4,30 @@
 
 구 버전은 offset으로 이어지는 "체인" 구조(`/Memo/Chat`)였으나, 현재는 **카테고리(트리) + 카테고리별 메모(플랫 리스트)** 구조로 전면 교체되었다. 메모끼리 서로 이어쓰기(체인) 개념은 더 이상 없다.
 
+모든 `/Memo/*` 엔드포인트는 **`folder`(실제 파일 시스템 경로)를 선택적으로 받는다** — 그 폴더 안에 `memo.sqlite`를 직접 만들어(없으면 자동 생성) 폴더별로 완전히 독립된 db를 갖는다. 서로 다른 `folder` 값끼리는 카테고리/메모가 절대 섞이지 않는다. 보통 작업 중인 프로젝트 폴더 경로(예: `D:/Artgine_svn/WebContent/proj/2D/Village` 또는 `proj/2D/Village`)를 그대로 쓴다. **`folder`를 생략하거나 빈 값이면 폴더 구분 이전부터 쓰던 기존 기본 db(`./db/memo.sqlite`)를 그대로 쓴다** — 하위 호환용 기본값.
+
 ## 빠른 사용 (ai/tool/memo.js)
 저장/검색만 필요하면 전용 도구를 쓴다. `browser.js`/`remotecmd.js`와 동일하게 `common.js`의 인증 공유 방식(쿠키 jar)을 쓰며, 쿠키는 `ai/tool/memo_cookie.txt`에 저장/로드된다.
 
 > ⚠️ `<BASE_URL>`은 CLAUDE.md "접속 정보" 섹션의 주소+포트+기본경로를 직접 읽어서 조합한다. Main.json을 열거나 포트를 추측하지 말 것.
 
 ```bash
-node ai/tool/memo.js <BASE_URL> login                          # 인증(auth/login, Main.json password 자동 읽음) → "ok" 출력
-node ai/tool/memo.js <BASE_URL> cats                            # 카테고리 목록
-node ai/tool/memo.js <BASE_URL> addcat <name> [parentId]        # 카테고리 추가 (parentId 생략 시 0 = 루트)
-node ai/tool/memo.js <BASE_URL> delcat <id>                     # 카테고리+하위 카테고리+데이터 전부 삭제
-node ai/tool/memo.js <BASE_URL> list <categoryId>                # 해당 카테고리의 메모 목록 (최신순)
-node ai/tool/memo.js <BASE_URL> recent [limit]                   # 전체 카테고리 통틀어 최신 메모 (기본 30개)
-node ai/tool/memo.js <BASE_URL> add <categoryId> <text>          # 메모 저장 (태그 자동 추출)
-node ai/tool/memo.js <BASE_URL> log <text>                       # 최상위 "Log" 카테고리에 저장 (없으면 자동 생성, [Log]/#Log 자동 부여)
-node ai/tool/memo.js <BASE_URL> del <id>                         # 메모 단건 삭제
-node ai/tool/memo.js <BASE_URL> find [categoryId|-] <text>       # 삭제 후보 검색만 (실제 삭제 안 함)
-node ai/tool/memo.js <BASE_URL> search [categoryId|-] <text>     # AI 기반 검색 ("-" 또는 생략 시 전체 카테고리)
+node ai/tool/memo.js <BASE_URL> login                                          # 인증(auth/login, Main.json password 자동 읽음) → "ok" 출력
+node ai/tool/memo.js <BASE_URL> cats [--folder=<f>]                            # 카테고리 목록
+node ai/tool/memo.js <BASE_URL> addcat <name> [parentId] [--folder=<f>]        # 카테고리 추가 (parentId 생략 시 0 = 루트)
+node ai/tool/memo.js <BASE_URL> delcat <id> [--folder=<f>]                     # 카테고리+하위 카테고리+데이터 전부 삭제
+node ai/tool/memo.js <BASE_URL> list <categoryId> [--folder=<f>]               # 해당 카테고리의 메모 목록 (최신순)
+node ai/tool/memo.js <BASE_URL> recent [limit] [--folder=<f>]                  # 해당 folder 전체에서 최신 메모 (기본 30개)
+node ai/tool/memo.js <BASE_URL> add <categoryId> <text> [--folder=<f>]         # 메모 저장 (태그 자동 추출)
+node ai/tool/memo.js <BASE_URL> log <text> [--folder=<f>]                      # 최상위 "Log" 카테고리에 저장 (없으면 자동 생성, [Log]/#Log 자동 부여)
+node ai/tool/memo.js <BASE_URL> del <id> [--folder=<f>]                        # 메모 단건 삭제
+node ai/tool/memo.js <BASE_URL> find [categoryId|-] <text> [--folder=<f>]      # 삭제 후보 검색만 (실제 삭제 안 함)
+node ai/tool/memo.js <BASE_URL> search [categoryId|-] <text> [--folder=<f>]    # AI 기반 검색 ("-" 또는 생략 시 전체 카테고리)
 ```
 
 - 모든 명령은 세션 쿠키 기반 인증이 필요하다 — 먼저 `login`으로 세션을 인증시켜야 한다.
-- `find`/`search`에서 `categoryId`를 생략하거나 `-`를 넣으면 전체 카테고리를 대상으로 한다.
+- `--folder=<f>`는 어느 위치에 넣어도 되는 옵션 플래그다(폴더별 개별 sqlite 파일 식별자, 예: 작업 중인 프로젝트 경로). 같은 값이면 항상 같은 파일, 다르면 완전히 별개의 파일. **생략하면 기존 기본 db**를 쓴다.
+- `find`/`search`에서 `categoryId`를 생략하거나 `-`를 넣으면 그 `folder` 내 전체 카테고리를 대상으로 한다(폴더 자체는 그대로 필터링됨).
 - 카테고리 추천(`Category/Suggest`)과 카테고리 태그(`Category/Tag/*`)는 아직 `memo.js` CLI에 명령이 없다 — 아래 curl 예시를 직접 쓴다.
 
 ## curl로 직접 호출 (전체 API)
@@ -43,9 +46,11 @@ curl -s -c "$COOKIE_JAR" -X POST "$BASE_URL/auth/login" \
 
 이후 모든 `/Memo/*` 호출에 `-b "$COOKIE_JAR"`로 같은 쿠키를 사용한다.
 
+아래 예시들의 `folder` 필드는 선택 사항이다 — 생략하거나 빈 문자열이면 기존 기본 db(`./db/memo.sqlite`)를 그대로 쓴다.
+
 ## 카테고리 목록 - GET /Memo/Category/List
 ```bash
-curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Category/List"
+curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Category/List?folder=<folder>"
 ```
 → `{"ok": true, "categories": [{"id", "parentId", "name"}, ...], "tags": [{"categoryId", "tag"}, ...]}`
 
@@ -56,7 +61,7 @@ curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Category/List"
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Suggest" \
   -H "Content-Type: application/json" \
-  -d '{"text": "<저장하려는 메모 내용>"}'
+  -d '{"folder": "<folder>", "text": "<저장하려는 메모 내용>"}'
 ```
 → `{"ok": true, "category": {"id", "parentId", "name"} | null}`
 
@@ -66,11 +71,11 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Suggest" \
 
 ## 카테고리 태그 - GET /Memo/Category/Tag/List, POST /Memo/Category/Tag/Add, /Remove
 ```bash
-curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Category/Tag/List?categoryId=<categoryId>"
+curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Category/Tag/List?folder=<folder>&categoryId=<categoryId>"
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Tag/Add" \
-  -H "Content-Type: application/json" -d '{"categoryId": <categoryId>, "tag": "<태그>"}'
+  -H "Content-Type: application/json" -d '{"folder": "<folder>", "categoryId": <categoryId>, "tag": "<태그>"}'
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Tag/Remove" \
-  -H "Content-Type: application/json" -d '{"categoryId": <categoryId>, "tag": "<태그>"}'
+  -H "Content-Type: application/json" -d '{"folder": "<folder>", "categoryId": <categoryId>, "tag": "<태그>"}'
 ```
 → 세 엔드포인트 모두 `{"ok": true, "tags": ["<현재 태그 목록>"]}`
 
@@ -82,7 +87,7 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Tag/Remove" \
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Add" \
   -H "Content-Type: application/json" \
-  -d '{"name": "<카테고리명>", "parentId": 0}'
+  -d '{"folder": "<folder>", "name": "<카테고리명>", "parentId": 0}'
 ```
 → `{"ok": true, "category": {"id", "parentId", "name"}}`
 
@@ -92,7 +97,7 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Add" \
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Delete" \
   -H "Content-Type: application/json" \
-  -d '{"id": <categoryId>}'
+  -d '{"folder": "<folder>", "id": <categoryId>}'
 ```
 → `{"ok": true, "deletedCategoryIds": [...], "deletedDataCount": <n>}` (없으면 `404`)
 
@@ -101,7 +106,7 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Category/Delete" \
 
 ## 메모(데이터) 목록 - GET /Memo/Data/List
 ```bash
-curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Data/List?categoryId=<categoryId>"
+curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Data/List?folder=<folder>&categoryId=<categoryId>"
 ```
 → `{"ok": true, "data": [{"id", "categoryId", "content", "tags", "date"}, ...]}`
 
@@ -109,17 +114,17 @@ curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Data/List?categoryId=<categoryId>"
 
 ## 전체 최신 메모 - GET /Memo/Data/ListRecent
 ```bash
-curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Data/ListRecent?limit=30"
+curl -s -b "$COOKIE_JAR" "$BASE_URL/Memo/Data/ListRecent?folder=<folder>&limit=30"
 ```
 → `{"ok": true, "data": [...]}`
 
-- 카테고리 구분 없이 전체에서 최신 `limit`개(기본 30)를 반환한다. 사이드바 "타임" 탭 용도.
+- 그 `folder` 안에서 카테고리 구분 없이 전체 최신 `limit`개(기본 30)를 반환한다. 사이드바 "타임" 탭 용도.
 
 ## 메모 저장 - POST /Memo/Data/Add
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Data/Add" \
   -H "Content-Type: application/json" \
-  -d '{"categoryId": <categoryId>, "text": "<저장할 내용>"}'
+  -d '{"folder": "<folder>", "categoryId": <categoryId>, "text": "<저장할 내용>"}'
 ```
 → `{"ok": true, "data": {"id", "categoryId", "content", "tags", "date"}}`
 
@@ -132,7 +137,7 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Data/Add" \
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Data/Delete" \
   -H "Content-Type: application/json" \
-  -d '{"id": <dataId>}'
+  -d '{"folder": "<folder>", "id": <dataId>}'
 ```
 → `{"ok": true}` (없으면 `404`)
 
@@ -142,7 +147,7 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Data/Delete" \
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Data/FindByDescription" \
   -H "Content-Type: application/json" \
-  -d '{"text": "<자연어 설명>", "categoryId": null}'
+  -d '{"folder": "<folder>", "text": "<자연어 설명>", "categoryId": null}'
 ```
 → `{"ok": true, "data": [{"id", "categoryId", "content", "tags", "date"}, ...]}`
 
@@ -155,7 +160,7 @@ curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Data/FindByDescription" \
 ```bash
 curl -s -b "$COOKIE_JAR" -X POST "$BASE_URL/Memo/Search" \
   -H "Content-Type: application/json" \
-  -d '{"text": "오늘 할일 알려줘", "categoryId": null}'
+  -d '{"folder": "<folder>", "text": "오늘 할일 알려줘", "categoryId": null}'
 ```
 → `{"ok": true, "result": "<매칭된 메모를 '[id][YYYY-MM-DD HH:mm:ss] 내용' 형식으로 줄바꿈 나열한 문자열, 없으면 '관련 메모가 없습니다.'>"}`
 

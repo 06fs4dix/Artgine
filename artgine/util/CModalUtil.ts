@@ -6,7 +6,7 @@ import { CBlackBoard } from "../basic/CBlackBoard.js";
 import {CDOM} from "../basic/CDOM.js";
 import {CEvent} from "../basic/CEvent.js";
 import {CJSON} from "../basic/CJSON.js";
-import {CModal} from "../basic/CModal.js";
+import {CModal, CConfirm} from "../basic/CModal.js";
 import { CStorage } from "../system/CStorage.js";
 import { CObject } from "../basic/CObject.js";
 import { CPath } from "../basic/CPath.js";
@@ -21,6 +21,8 @@ import { CShaderInterpret, ExtractImportPaths, GetImportFile } from "../render/C
 import { CFile } from "../system/CFile.js";
 import { CChecker } from "./CChecker.js";
 import { CUtilWeb } from "./CUtilWeb.js";
+import { CFecth } from "../network/CFecth.js";
+import { CAuthInfo } from "../network/CAuthInfo.js";
 
 
 
@@ -1817,5 +1819,390 @@ export class CModalMusic extends CModal
             });
         });
         this.mListEl.querySelectorAll('li')[this.mLastPlay]?.classList.add('list-group-item-dark');
+    }
+}
+
+// 서버 CORMRouter(/ORM/Exec)에 연결해 테이블 목록/데이터를 보여주는 읽기 전용 뷰어.
+// 생성자에 인증정보 + DB 정보만 넣으면 Open() 시 자동으로 테이블 목록을 불러온다.
+export class CORMViewer extends CModal {
+    private static readonly sPageSize = 100;
+
+    private mAuth: CAuthInfo;
+    private mDbType: string;
+    private mDatabase: string;
+    private mServerUrl: string;
+    private mToken: string;
+    private mCurTable: string = null;
+    private mOffset = 0;
+    private mHasNext = false;
+    private mSortCol: string = null;
+    private mSortAsc = true;
+    private mCurRows: object[] = [];
+
+    // _serverUrl: File/Memo 라우터와 동일하게, 원격 서버 브라우징 중이면 그 서버의 절대 URL(프로토콜 포함)을 넘겨
+    // ORM/Exec도 로컬이 아닌 원격 서버로 가도록 한다. 비워두면 기존처럼 현재 접속된 서버(CPath.WebRootUrl())로 간다.
+    // _token: 원격 서버는 세션 쿠키가 안 실리므로(cross-origin), 그 서버 기준 인증 토큰을 함께 넘겨야 CORMRouter의 IsAuth를 통과한다.
+    constructor(_auth?: CAuthInfo, _dbType?: "mysql" | "mssql" | "sqlite" | "ne", _database?: string, _serverUrl?: string, _token?: string) {
+        super();
+        this.mAuth = _auth ?? new CAuthInfo();
+        this.mDbType = _dbType ?? null;
+        this.mDatabase = _database ?? '';
+        this.mServerUrl = _serverUrl ?? '';
+        this.mToken = _token ?? '';
+
+        this.SetTitle(CModal.eTitle.TextFullClose);
+        this.SetResize(true);
+        this.SetSize("70%", "70%");
+
+        if (this.mDbType && this.mDatabase) {
+            this.SetHeader(`ORM Viewer - ${this.mDatabase}`);
+            this.SetBody(this.RenderViewerLayout());
+        } else {
+            this.SetHeader(`ORM Viewer - 연결 정보 입력`);
+            this.SetBody(this.RenderConnectForm());
+        }
+    }
+
+    override Open(_startPos?: number): void {
+        super.Open(_startPos);
+        if (this.mDbType && this.mDatabase) this.WireViewer();
+        else this.WireConnectForm();
+    }
+
+    private RenderConnectForm(): string {
+        const id = this.Key();
+        return `
+            <div class="p-3" style="max-width:420px;">
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">DB 종류</label>
+                    <select id="${id}_conn_dbType" class="form-select form-select-sm">
+                        <option value="mysql">mysql</option>
+                        <option value="mssql">mssql</option>
+                        <option value="sqlite">sqlite</option>
+                        <option value="ne">ne</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">연결 위치 (database / 파일·폴더 경로)</label>
+                    <input id="${id}_conn_database" type="text" class="form-control form-control-sm">
+                </div>
+                <hr>
+                <div class="small text-secondary mb-2">인증 정보 (mysql/mssql만 필요)</div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">ID</label>
+                    <input id="${id}_conn_id" type="text" class="form-control form-control-sm">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">Password</label>
+                    <input id="${id}_conn_pw" type="password" class="form-control form-control-sm">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">Address</label>
+                    <input id="${id}_conn_addres" type="text" class="form-control form-control-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary mb-1">Port</label>
+                    <input id="${id}_conn_port" type="text" class="form-control form-control-sm">
+                </div>
+                <button id="${id}_conn_ok" class="btn btn-primary btn-sm w-100">OK</button>
+            </div>
+        `;
+    }
+
+    private WireConnectForm(): void {
+        const id = this.Key();
+        CDOM.ID(`${id}_conn_ok`).addEventListener('click', () => {
+            const dbType = (CDOM.ID(`${id}_conn_dbType`) as HTMLSelectElement).value as "mysql" | "mssql" | "sqlite" | "ne";
+            const database = (CDOM.ID(`${id}_conn_database`) as HTMLInputElement).value.trim();
+            if (!database) { alert('연결 위치를 입력하세요.'); return; }
+
+            this.mDbType = dbType;
+            this.mDatabase = database;
+            this.mAuth.mID = (CDOM.ID(`${id}_conn_id`) as HTMLInputElement).value;
+            this.mAuth.mPW = (CDOM.ID(`${id}_conn_pw`) as HTMLInputElement).value;
+            this.mAuth.mAddres = (CDOM.ID(`${id}_conn_addres`) as HTMLInputElement).value;
+            this.mAuth.mPort = (CDOM.ID(`${id}_conn_port`) as HTMLInputElement).value;
+
+            this.SetHeader(`ORM Viewer - ${this.mDatabase}`);
+            this.SetBody(this.RenderViewerLayout());
+            this.WireViewer();
+        });
+    }
+
+    private RenderViewerLayout(): string {
+        const id = this.Key();
+        return `
+            <div class="d-flex h-100">
+                <div id="${id}_tables" class="border-end overflow-auto p-2" style="width:220px;flex-shrink:0;"></div>
+                <div class="flex-grow-1 d-flex flex-column" style="min-width:0;">
+                    <div class="d-flex align-items-center gap-2 p-2 border-bottom flex-shrink-0">
+                        <button id="${id}_prev" class="btn btn-sm btn-outline-secondary">&lt;</button>
+                        <span id="${id}_pageInfo" class="small text-secondary"></span>
+                        <button id="${id}_next" class="btn btn-sm btn-outline-secondary">&gt;</button>
+                    </div>
+                    <div id="${id}_data" class="flex-grow-1 overflow-auto p-2"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    private WireViewer(): void {
+        const id = this.Key();
+        CDOM.ID(`${id}_prev`).addEventListener('click', () => this.ChangePage(-1));
+        CDOM.ID(`${id}_next`).addEventListener('click', () => this.ChangePage(1));
+        this.LoadTables();
+    }
+
+    private async Exec(_func: string, _params: any = {}): Promise<any> {
+        const url = this.mServerUrl ? this.mServerUrl.replace(/\/+$/, '') + '/ORM/Exec' : 'ORM/Exec';
+        const res: any = await CFecth.Exe(url, {
+            auth: this.mAuth,
+            dbType: this.mDbType,
+            database: this.mDatabase,
+            token: this.mToken,
+            func: _func,
+            ..._params,
+        }, 'json');
+        if (!res.ok) throw new Error(res.msg || 'ORM request failed');
+        return res.result;
+    }
+
+    private async LoadTables(): Promise<void> {
+        const id = this.Key();
+        const listEl = CDOM.ID(`${id}_tables`);
+        listEl.innerHTML = `<div class="text-secondary small p-2">Loading...</div>`;
+        try {
+            const tables: string[] = await this.Exec('GetCollection');
+            listEl.innerHTML = '';
+            for (const table of tables) {
+                const item = document.createElement('div');
+                item.className = 'p-1 rounded';
+                item.style.cursor = 'pointer';
+                item.textContent = table;
+                item.addEventListener('click', () => {
+                    listEl.querySelectorAll('div').forEach(el => el.classList.remove('bg-primary-subtle'));
+                    item.classList.add('bg-primary-subtle');
+                    this.mCurTable = table;
+                    this.mOffset = 0;
+                    this.mSortCol = null;
+                    this.mSortAsc = true;
+                    this.LoadTableData();
+                });
+                listEl.appendChild(item);
+            }
+        } catch (e: any) {
+            listEl.innerHTML = `<div class="alert alert-danger m-1 p-2 small">${this.EscapeHtmlORM(e.message)}</div>`;
+        }
+    }
+
+    private ChangePage(_dir: number): void {
+        if (!this.mCurTable) return;
+        if (_dir < 0 && this.mOffset === 0) return;
+        if (_dir > 0 && !this.mHasNext) return;
+        this.mOffset = Math.max(0, this.mOffset + _dir * CORMViewer.sPageSize);
+        this.LoadTableData();
+    }
+
+    private async LoadTableData(): Promise<void> {
+        const id = this.Key();
+        const dataEl = CDOM.ID(`${id}_data`);
+        dataEl.innerHTML = `<div class="text-secondary small p-2">Loading...</div>`;
+        try {
+            // 다음 페이지 존재 여부 확인용으로 1개 더 요청하고, 표시는 sPageSize개까지만 한다.
+            const rows: object[] = await this.Exec('Select', {
+                collection: this.mCurTable, condition: [], projection: [],
+                limit: {
+                    mLimitOffset: this.mOffset, mLimit: CORMViewer.sPageSize + 1,
+                    mOrderBy: this.mSortCol, mASC: this.mSortAsc,
+                },
+            });
+            this.mHasNext = rows.length > CORMViewer.sPageSize;
+            this.mCurRows = rows.slice(0, CORMViewer.sPageSize);
+            // 행이 없어도(빈 테이블) 추가 입력 행을 그리려면 컬럼 목록이 필요하다.
+            const cols = this.mCurRows.length > 0 ? Object.keys(this.mCurRows[0]) : await this.Exec('GetProjection', { collection: this.mCurTable });
+            dataEl.innerHTML = this.BuildTableORM(this.mCurRows, cols);
+            this.AttachRowHandlers(dataEl);
+            this.UpdatePageInfo();
+        } catch (e: any) {
+            dataEl.innerHTML = `<div class="alert alert-danger m-1 p-2 small">${this.EscapeHtmlORM(e.message)}</div>`;
+        }
+    }
+
+    private UpdatePageInfo(): void {
+        const id = this.Key();
+        const page = Math.floor(this.mOffset / CORMViewer.sPageSize) + 1;
+        CDOM.ID(`${id}_pageInfo`).textContent = `${this.mCurTable} - page ${page}`;
+        (CDOM.ID(`${id}_prev`) as HTMLButtonElement).disabled = this.mOffset === 0;
+        (CDOM.ID(`${id}_next`) as HTMLButtonElement).disabled = !this.mHasNext;
+    }
+
+    private BuildTableORM(rows: object[], cols: string[]): string {
+        if (!cols || cols.length === 0) return `<div class="p-3 text-muted">데이터가 없습니다.</div>`;
+        // table-layout:fixed로 컬럼 폭을 고정하고, 액션 컬럼만 별도 폭을 줘서 버튼이 두 줄로
+        // 안 깨지게 한다. 나머지 데이터 컬럼은 넘치는 내용을 옆으로 늘리지 않고 줄바꿈되게 처리.
+        const ACTION_COL_WIDTH = 64;
+        const colgroupHtml = `<colgroup>${cols.map(() => '<col>').join('')}<col style="width:${ACTION_COL_WIDTH}px"></colgroup>`;
+        const wrapStyle = 'overflow-wrap:break-word;word-break:break-all;white-space:normal;';
+        const headerHtml = cols.map(c => {
+            const arrow = c === this.mSortCol ? (this.mSortAsc ? ' ↑' : ' ↓') : '';
+            return `<th class="px-2" data-col="${this.EscapeHtmlORM(c)}" style="${wrapStyle}cursor:pointer;user-select:none;">${this.EscapeHtmlORM(c)}${arrow}</th>`;
+        }).join('');
+        let html = `<table class="table table-sm table-bordered table-hover table-striped mb-0" style="font-size:0.85em;table-layout:fixed;width:100%;">
+            ${colgroupHtml}
+            <thead class="table-dark sticky-top"><tr>${headerHtml}<th class="px-2"></th></tr></thead>
+            <tbody>`;
+        rows.forEach((row, i) => {
+            html += `<tr>${cols.map(c => `<td class="px-2 orm-cell" data-idx="${i}" data-col="${this.EscapeHtmlORM(c)}" style="${wrapStyle}cursor:pointer;">${this.EscapeHtmlORM(String((row as any)[c] ?? ''))}</td>`).join('')}` +
+                `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-danger orm-del-btn" data-idx="${i}">삭제</button></td></tr>`;
+        });
+        // 마지막 행: 빈 입력칸 + "추가" 버튼으로 새 레코드를 바로 입력할 수 있게 한다.
+        html += `<tr class="orm-add-row">${cols.map(c => `<td class="px-2"><input type="text" class="form-control form-control-sm" data-newfield="${this.EscapeHtmlORM(c)}"></td>`).join('')}` +
+            `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-success orm-add-btn">추가</button></td></tr>`;
+        html += `</tbody></table>`;
+        return html;
+    }
+
+    private AttachRowHandlers(dataEl: HTMLElement): void {
+        dataEl.querySelectorAll<HTMLElement>('th[data-col]').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (this.mSortCol === col) this.mSortAsc = !this.mSortAsc;
+                else { this.mSortCol = col; this.mSortAsc = true; }
+                this.mOffset = 0;
+                this.LoadTableData();
+            });
+        });
+        dataEl.querySelectorAll<HTMLButtonElement>('.orm-del-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.DeleteRow(this.mCurRows[parseInt(btn.dataset.idx)]));
+        });
+        dataEl.querySelector<HTMLButtonElement>('.orm-add-btn')?.addEventListener('click', () => this.SubmitAddRow(dataEl));
+        dataEl.querySelectorAll<HTMLElement>('.orm-cell').forEach(td => {
+            td.addEventListener('click', () => this.BeginEditCell(td));
+        });
+    }
+
+    private BeginEditCell(_td: HTMLElement): void {
+        if (_td.querySelector('input')) return; // 이미 편집 중
+
+        const idx = parseInt(_td.dataset.idx);
+        const col = _td.dataset.col;
+        const row: any = this.mCurRows[idx];
+        if (!row) return;
+
+        const original = row[col];
+        const originalStr = typeof original === 'object' && original !== null ? JSON.stringify(original) : String(original ?? '');
+        const originalText = _td.textContent;
+
+        _td.innerHTML = '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-control form-control-sm p-0 px-1 border-0';
+        input.value = originalStr;
+        _td.appendChild(input);
+        input.focus();
+        input.select();
+
+        let committed = false;
+        const commit = async () => {
+            if (committed) return;
+            committed = true;
+
+            if (input.value === originalStr) { _td.textContent = originalText; return; }
+
+            const { value, error } = this.ConvertInputValue(input.value);
+            if (error) { alert(`[${col}] ${error}`); _td.textContent = originalText; return; }
+
+            // PK를 모르므로 편집 전 행의 모든 컬럼값이 일치하는 레코드를 조건으로 갱신한다.
+            const condition = Object.keys(row).map(k => ({ mKey: k, mCondition: '==', mValue: row[k] }));
+            try {
+                await this.Exec('Update', { collection: this.mCurTable, condition, data: [{ mKey: col, mValue: value }] });
+                this.LoadTableData();
+            } catch (e: any) {
+                alert('Update 실패: ' + e.message);
+                _td.textContent = originalText;
+            }
+        };
+        const cancel = () => {
+            if (committed) return;
+            committed = true;
+            _td.textContent = originalText;
+        };
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (ke) => {
+            if (ke.key === 'Enter') { ke.preventDefault(); commit(); }
+            else if (ke.key === 'Escape') { ke.preventDefault(); cancel(); input.blur(); }
+        });
+    }
+
+    private async SubmitAddRow(dataEl: HTMLElement): Promise<void> {
+        const inputs = dataEl.querySelectorAll<HTMLInputElement>('input[data-newfield]');
+        const data: { mKey: string; mValue: any }[] = [];
+        for (const inp of Array.from(inputs)) {
+            const field = inp.dataset.newfield;
+            const { value, error } = this.ConvertInputValue(inp.value);
+            if (error) { alert(`[${field}] ${error}`); return; }
+            data.push({ mKey: field, mValue: value });
+        }
+        try {
+            await this.Exec('Insert', { collection: this.mCurTable, data });
+            this.LoadTableData();
+        } catch (e: any) {
+            alert('Insert 실패: ' + e.message);
+        }
+    }
+
+    private DeleteRow(_row: object): void {
+        if (!_row) return;
+        const confirm = new CConfirm();
+        confirm.SetBody('이 행을 삭제하시겠습니까?');
+        confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+            async () => {
+                // PK를 모르므로 행의 모든 컬럼값이 일치하는 레코드를 조건으로 삭제한다.
+                const condition = Object.keys(_row).map(k => ({ mKey: k, mCondition: '==', mValue: (_row as any)[k] }));
+                try {
+                    await this.Exec('Delete', { collection: this.mCurTable, condition });
+                    this.LoadTableData();
+                } catch (e: any) {
+                    alert('삭제 실패: ' + e.message);
+                }
+            },
+            () => {},
+        ], ['Delete', 'Cancel']);
+        confirm.Open();
+    }
+
+    // 입력창은 항상 문자열이므로, 정수/실수/불리언/JSON처럼 보이는 값은 실제 타입으로 변환해서 보낸다.
+    // 변환 중 형식이 깨졌거나(JSON 파싱 실패) 범위를 벗어난 경우(안전 정수 초과)는 error를 채워 저장을 막는다.
+    private ConvertInputValue(_raw: string): { value: any; error?: string } {
+        const trimmed = _raw.trim();
+        if (trimmed === '') return { value: '' };
+
+        if (/^-?\d+$/.test(trimmed)) {
+            const n = parseInt(trimmed, 10);
+            if (!Number.isSafeInteger(n)) return { value: null, error: `정수 범위를 벗어났습니다: ${trimmed}` };
+            return { value: n };
+        }
+        if (/^-?\d+\.\d+$/.test(trimmed)) {
+            const n = parseFloat(trimmed);
+            if (Number.isNaN(n)) return { value: null, error: `숫자 형식이 올바르지 않습니다: ${trimmed}` };
+            return { value: n };
+        }
+        if (trimmed === 'true' || trimmed === 'false') return { value: trimmed === 'true' };
+
+        const looksLikeJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
+        if (looksLikeJson) {
+            try {
+                return { value: JSON.parse(trimmed) };
+            } catch (e: any) {
+                return { value: null, error: `JSON 형식이 올바르지 않습니다: ${e.message}` };
+            }
+        }
+
+        return { value: _raw };
+    }
+
+    private EscapeHtmlORM(s: string): string {
+        return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
     }
 }

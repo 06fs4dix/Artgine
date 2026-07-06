@@ -16,6 +16,7 @@ import { CString } from '../artgine/basic/CString.js';
 import { BackUp, CreateRole, DeleteRole, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetPluginArr, GetProjName, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
+import { CLogRouter } from '../artgine/server/CLogRouter.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 if (app.isPackaged) {
@@ -78,6 +79,9 @@ async function RunServer() {
                 message: '서버를 시작할 수 없습니다.\n중복 포트를 확인해보세요.',
             });
             return;
+        }
+        if (gAppJSON.program == "developer") {
+            new CLogRouter().SetServerMain(gWebServer);
         }
     }
 }

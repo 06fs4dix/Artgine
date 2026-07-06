@@ -8,7 +8,7 @@ import { CAI } from '../util/CAI.js';
 AI Chat Router
 - /ai/chat                            GET    AI.html serve
 - /ai/chat/sessions                   GET    session list
-  (provider 목록은 /cmd/setting으로 이전됨 — CTerminalRouter 참고)
+  (provider 목록은 /AIInfo/setting으로 이전됨 — CAIRouter 참고)
 - /ai/chat/sessions/:id               GET    history.json
 - /ai/chat/sessions/:id               DELETE remove session + workspace
 - /ai/chat/session/config?id=         GET    세션 config 조회

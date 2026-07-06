@@ -64,6 +64,11 @@ export class CSQLite extends CRDBMS {
         let columnRows= await this.Recv(`PRAGMA table_info(${_table})`);
         return columnRows.map(row => row[1]);;
     }
+    override async GetCollection() : Promise<string[]>
+    {
+        let rows = await this.Recv("SELECT name FROM sqlite_master WHERE type='table'");
+        return rows.map(row => row[0]);
+    }
     override async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String=null) 
     {
         if (!Array.isArray(_data) || _data.length === 0) throw new Error('컬럼을 하나 이상 제공해야 합니다.');

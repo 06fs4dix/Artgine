@@ -25,7 +25,7 @@ interface ISessionMeta {
 }
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
-// populated from GET /cmd/setting (ai/settings.json을 그대로 받아 models 필드만 사용)
+// populated from GET /AIInfo/setting (ai/settings.json을 그대로 받아 models 필드만 사용)
 let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [] };
 const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
@@ -252,7 +252,7 @@ function attachmentUrl(sid: string, relPath: string, bust?: number): string {
 // ---- provider/model dropdowns ----
 async function fetchProviders(): Promise<boolean> {
     try {
-        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/setting');
+        const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/setting');
         if (r.status === 401) { clearAuth(); return false; }
         const setting = await r.json();
         const models = setting.models || {};

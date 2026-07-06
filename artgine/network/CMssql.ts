@@ -46,6 +46,10 @@ export class CMssql extends CRDBMS {
     override async Close() {
         await this.mConn?.close();
     }
+    override async GetCollection(): Promise<string[]> {
+        const rows = await this.Recv("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'");
+        return rows.map(row => row[0]);
+    }
     override async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String=null) 
     {
         if (!Array.isArray(_data) || _data.length === 0) throw new Error('컬럼을 하나 이상 제공해야 합니다.');

@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mr6bwtd7_2";
+gPF.mVersion = "mr98nf6u_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -45,10 +45,11 @@ import { CLan } from "../../artgine/basic/CLan.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../../artgine/server/CAuthToken.js";
-import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg, CModalMusic } from "../../artgine/util/CModalUtil.js";
+import { CFileViewer, CMDViewer, CSheetViewer, CModalStackMsg, CModalMusic, CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CWebSocket } from '../../artgine/network/CWebSocket.js';
 import { CPWA } from '../../artgine/system/CPWA.js';
 import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
+import { CAuthInfo } from "../../artgine/network/CAuthInfo.js";
 
 
 if(gPF.mServer!="webServer")
@@ -155,7 +156,7 @@ async function loadAiProviderStatus() {
     if (btn) btn.disabled = true;
     icon?.classList.add('spin');
     try {
-        const r = await fetch(CPath.WebRootUrl() + 'cmd/provider-state');
+        const r = await fetch(CPath.WebRootUrl() + 'AIInfo/provider-state');
         const resp: IProviderStateResp = await r.json();
         const node = resp.node;
         _nodeInstalled = !!node?.installed; // 갱신 시점마다 캐시 갱신
@@ -180,11 +181,14 @@ async function loadAiProviderStatus() {
             const statusHtml = !p.installed
                 ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}"><i class="bi ${icon}"></i>${status}</button>`
                 : `<span class="d-flex align-items-center gap-1"><i class="bi ${icon}"></i>${status}</span>`;
-            // usage.fiveHour/weekly: 0~1 남은 비율, -1이면 조회 실패/미지원이라 표시하지 않는다.
+// usage.fiveHour/weekly: 0~1 남은 비율, -1이면 조회 실패/미지원. 인증된 프로바이더는 ? 로 표시.
             const pct = (v: number) => Math.round(v * 100);
             const usageParts: string[] = [];
-            if (p.usage?.fiveHour >= 0) usageParts.push(`5h ${pct(p.usage.fiveHour)}%`);
-            if (p.usage?.weekly >= 0)   usageParts.push(`${CLan.Get('ai.weekly', '주간')} ${pct(p.usage.weekly)}%`);
+            const showUsage = p.authenticated && p.usage;
+            if (showUsage) {
+                usageParts.push(p.usage!.fiveHour >= 0 ? `5h ${pct(p.usage!.fiveHour)}%` : `5h ?`);
+                usageParts.push(p.usage!.weekly >= 0 ? `${CLan.Get('ai.weekly', '주간')} ${pct(p.usage!.weekly)}%` : `${CLan.Get('ai.weekly', '주간')} ?`);
+            }
             const usageHtml = usageParts.length
                 ? `<div class="text-secondary mt-1" style="font-size:0.8em;">${usageParts.join(' · ')} ${CLan.Get('ai.usageRemaining', '남음')}</div>`
                 : '';
@@ -210,6 +214,79 @@ async function loadAiProviderStatus() {
 }
 loadAiProviderStatus();
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
+document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
+
+// Ollama/LM Studio(OpenAI 호환) 서버 주소를 입력받아 /AIInfo/push-ollama 로 등록한다.
+// 서버가 모델 목록·툴 지원 여부를 조회해 opencode.json의 커스텀 provider로 기록한다(없으면 CreateRole).
+function showAddOllamaModal() {
+    const uid = `ollama_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Add OpenCode Model');
+    modal.SetBody(`
+        <div class="small text-secondary mb-3">
+            <p class="mb-2">Register a local <strong>Ollama</strong> or <strong>LM Studio</strong> server as an OpenCode model provider.</p>
+            <p class="mb-2">Paste the server address in <strong>any form</strong> &mdash; only the IP and port are extracted and recombined into the correct base URL <code>http://&lt;ip&gt;:&lt;port&gt;/v1</code>. All of these work:</p>
+            <ul class="mb-2 ps-3">
+                <li><code>127.0.0.1:11434</code></li>
+                <li><code>http://127.0.0.1:11434</code></li>
+                <li><code>http://127.0.0.1:11434/v1/models</code></li>
+            </ul>
+            <p class="mb-2">Ollama is tried first (native API); if that doesn't respond, LM Studio's OpenAI-compatible <code>/v1/models</code> is tried next. Between the two, most local model runners are covered.</p>
+            <p class="mb-2">The server's model list is looked up automatically and written into <code>opencode.json</code> (it is created via CreateRole if missing). Tool-use support is detected for Ollama; for LM Studio it can't be queried via API, so it's assumed enabled &mdash; edit <code>opencode.json</code> manually if a model doesn't actually support tools.</p>
+            <p class="mb-0">If the server requires authentication, enter its API key below &mdash; it's sent as a Bearer token and saved into <code>opencode.json</code>. Leave blank for open/unauthenticated servers.</p>
+        </div>
+        <div class="input-group mb-2">
+            <input id="${uid}" type="text" class="form-control form-control-sm" placeholder="e.g. 127.0.0.1:11434">
+            <button id="${uid}_go" class="btn btn-primary btn-sm">Add</button>
+        </div>
+        <input id="${uid}_key" type="text" class="form-control form-control-sm" placeholder="API key (optional)">
+        <div id="${uid}_result" class="small mt-2"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(560, 400);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const input   = document.getElementById(uid) as HTMLInputElement | null;
+        const keyInput = document.getElementById(`${uid}_key`) as HTMLInputElement | null;
+        const goBtn   = document.getElementById(`${uid}_go`) as HTMLButtonElement | null;
+        const result  = document.getElementById(`${uid}_result`);
+        input?.focus();
+        const submit = async () => {
+            const host = (input?.value ?? '').trim();
+            const apiKey = (keyInput?.value ?? '').trim();
+            if (!host) { input?.focus(); return; }
+            if (goBtn) goBtn.disabled = true;
+            if (result) result.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> …</span>';
+            try {
+                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/push-opencode-model', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify(apiKey ? { host, apiKey } : { host }),
+                });
+                const j = await r.json();
+                if (!j.ok) {
+                    if (result) {
+                        const msg = r.status === 401 ? 'Login required' : (j.msg || 'Failed');
+                        result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(msg)}</span>`;
+                    }
+                    return;
+                }
+                const models: { name: string; tools: boolean }[] = j.models ?? [];
+                const list = models.map(m => `${aiEscapeHtml(m.name)}${m.tools ? ' <span class="badge bg-success">tools</span>' : ''}`).join(', ');
+                if (result) result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> ${aiEscapeHtml(j.provider)} — ${models.length} models</span><div class="text-secondary mt-1">${list}</div>`;
+                CAlert.Info(`${j.provider}: ${models.length} models → opencode.json`);
+            } catch (e: any) {
+                if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+            } finally {
+                if (goBtn) goBtn.disabled = false;
+            }
+        };
+        goBtn?.addEventListener('click', submit);
+        const onEnter = (e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+        input?.addEventListener('keydown', onEnter);
+        keyInput?.addEventListener('keydown', onEnter);
+    }, MODAL_DOM_DELAY);
+}
 
 // AI 사이트 바로가기 버튼: 모바일이면 앱 스킴 먼저 시도, 미설치 시 웹으로 폴백
 function openAiSite(appUrl: string, webUrl: string) {
@@ -246,7 +323,7 @@ async function ensureNodeInstalled(): Promise<boolean> {
     if (_nodeInstalled === null) {
         // 페이지 로드 시 loadAiProviderStatus가 아직 못 받아온 경우에만 1회 조회
         try {
-            const r = await fetch(CPath.WebRootUrl() + 'cmd/provider-state');
+            const r = await fetch(CPath.WebRootUrl() + 'AIInfo/provider-state');
             const resp: IProviderStateResp = await r.json();
             _nodeInstalled = !!resp?.node?.installed;
         } catch (e) { console.error('node check error:', e); _nodeInstalled = false; }
@@ -1147,7 +1224,7 @@ termNewBtn.addEventListener('click', () => termStartNew('cmd'));
 const schedNewBtn   = CDOM.ID("schedNewBtn");
 const schedSessionList = CDOM.ID("schedSessionList");
 
-type ScheduleData = { name: string; terminalKey: string; mode: string; delay: number; count: number; start: number; end: number; command: string; cwd?: string; allow?: boolean; mcp?: boolean; mdcopy?: boolean; timeMode?: boolean; days?: number[]; hour?: number; minute?: number };
+type ScheduleData = { name: string; terminalKey: string; mode: string; delay: number; count: number; start: number; end: number; command: string; cwd?: string; clear?: boolean; mcp?: boolean; mdcopy?: boolean; timeMode?: boolean; days?: number[]; hour?: number; minute?: number };
 
 function schedIntervalStr(s: ScheduleData): string {
     if (s.timeMode) {
@@ -1295,8 +1372,8 @@ function schedOpenModal(existing?: ScheduleData) {
                         </div>
                         <div class="d-flex gap-4">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-allow" ${existing?.allow ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-allow">Allow working dir write</label>
+                                <input class="form-check-input" type="checkbox" id="sched-clear" ${existing?.clear ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-clear">클리어</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="sched-mcp" ${(existing?.mcp ?? true) ? 'checked' : ''}>
@@ -1363,13 +1440,13 @@ function schedOpenModal(existing?: ScheduleData) {
             const tkey    = (container.querySelector<HTMLInputElement>('#sched-tkey')!).value.trim();
             const command = (container.querySelector<HTMLTextAreaElement>('#sched-cmd')!).value.trim();
             const cwd    = (container.querySelector<HTMLInputElement>('#sched-cwd')!).value.trim();
-            const allow  = (container.querySelector<HTMLInputElement>('#sched-allow')!).checked;
+            const clear  = (container.querySelector<HTMLInputElement>('#sched-clear')!).checked;
             const mcp    = (container.querySelector<HTMLInputElement>('#sched-mcp')!).checked;
             const mdcopy = (container.querySelector<HTMLInputElement>('#sched-mdcopy')!).checked;
             if (!name || !tkey || !command) { alert('Name, terminal key, and command are required'); return; }
 
             const params = new URLSearchParams({ name, terminalKey: tkey, mode: selectedMode, command,
-                allow: allow ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0',
+                clear: clear ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0',
                 timeMode: isTimeMode ? '1' : '0' });
             if (cwd) params.set('cwd', cwd);
 
@@ -2211,7 +2288,7 @@ var folderList={"<>":"ul","class":"list-group","html":[]};
 var fileList={"<>":"ul","class":"list-group","html":[]};
 
 // ---- 파일 항목 종류 분류 + 종류별 (아이콘 / 클릭 동작) 테이블 ----
-type FileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'file';
+type FileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'orm'|'file';
 const EXT_KIND: Record<string, FileKind> = {
     png:'image', jpg:'image', jpeg:'image', bmp:'image',
     mp3:'audio', ogg:'audio',
@@ -2219,14 +2296,29 @@ const EXT_KIND: Record<string, FileKind> = {
     soundlist:'soundlist', html:'html', md:'md',
     ts:'code', js:'code', txt:'code', json:'code',
     csv:'sheet', xlsx:'sheet', xls:'sheet',
+    sqlite:'orm', db:'orm',
 };
 const FILE_ICON: Record<FileKind, string> = {
     folder:'bi-folder-fill', image:'bi-folder-image', audio:'bi-folder-music',
     video:'bi-folder-play', soundlist:'bi-flower1', html:'bi-file-earmark-code',
     code:'bi-file-code', md:'bi-file-earmark-text', sheet:'bi-file-earmark-spreadsheet',
-    file:'bi-file',
+    orm:'bi-file-earmark-binary', file:'bi-file',
 };
-const kindOf = (fl: DirEntry): FileKind => fl.file ? (EXT_KIND[fl.ext] ?? 'file') : 'folder';
+// ".nedb"로 끝나는 폴더는 일반 폴더 탐색 대신 ORM 뷰어(ne 타입)로 연다.
+// "db" 폴더 안의 .json 파일들은 CNe가 폴더 단위(mDatabase)로 컬렉션(파일)들을 묶어 다루므로,
+// 개별 json을 코드뷰어 대신 ORM 뷰어(ne 타입, database=현재 폴더)로 연다.
+const isDbFolder = () => {
+    const trimmed = gPath.replace(/\/+$/, '');
+    const last = trimmed.substring(trimmed.lastIndexOf('/') + 1);
+    return last.toLowerCase() === 'db';
+};
+const kindOf = (fl: DirEntry): FileKind => {
+    if (fl.file) {
+        if (fl.ext === 'json' && isDbFolder()) return 'orm';
+        return EXT_KIND[fl.ext] ?? 'file';
+    }
+    return fl.name.toLowerCase().endsWith('.nedb') ? 'orm' : 'folder';
+};
 const downUrl = (fl: DirEntry) => gDown + gPath + fl.name;
 // 에디터(텍스트/HTML/시트)에서 저장 콜백 공용. base64를 그대로 업로드한다.
 function saveEditedFile(filePath: string, base64: string) {
@@ -2237,20 +2329,23 @@ function saveEditedFile(filePath: string, base64: string) {
 }
 const textToBase64 = (text: string) => btoa(unescape(encodeURIComponent(text)));
 
+function addFolderTracks(fl: DirEntry) {
+    const p2: any = { path: gPath + fl.name + "/" };
+    if (RootPath) p2.RootPath = RootPath;
+    if (RootUrl)  p2.RootUrl = RootUrl;
+    CFecth.Exe(FileApiUrl("File/List"), FileParam(p2), "json").then((data: {"list","RootPath","path","RootUrl"}) => {
+        CAlert.Info(gPath + fl.name + "추가");
+        for (const fl2 of data.list as Array<DirEntry>) {
+            if (fl.name == fl2.name) continue;
+            if (fl2.ext == "mp3" || fl2.ext == "ogg")
+                g_musicJBox.AddTrack(fl2.name, gDown + gPath + fl.name + "/" + fl2.name);
+        }
+        g_musicJBox.Play(0);
+    });
+}
 function openFolder(fl: DirEntry) {
     if (CDOM.IDValue("soundAddType") == "1") {
-        const p2: any = { path: gPath + fl.name + "/" };
-        if (RootPath) p2.RootPath = RootPath;
-        if (RootUrl)  p2.RootUrl = RootUrl;
-        CFecth.Exe(FileApiUrl("File/List"), FileParam(p2), "json").then((data: {"list","RootPath","path","RootUrl"}) => {
-            CAlert.Info(gPath + fl.name + "추가");
-            for (const fl2 of data.list as Array<DirEntry>) {
-                if (fl.name == fl2.name) continue;
-                if (fl2.ext == "mp3" || fl2.ext == "ogg")
-                    g_musicJBox.AddTrack(fl2.name, gDown + gPath + fl.name + "/" + fl2.name);
-            }
-            g_musicJBox.Play(0);
-        });
+        addFolderTracks(fl);
     } else {
         FolderCD(gPath + fl.name + "/");
     }
@@ -2323,6 +2418,18 @@ function openMd(fl: DirEntry) {
 function openSheet(fl: DirEntry) {
     new CSheetViewer([downUrl(fl)], async (filePath, base64) => saveEditedFile(filePath, base64)).Open();
 }
+// File/Memo 라우터와 동일하게, 현재 파일탭이 원격 서버에 접속된 상태면 ORM도 그 원격 서버(g_fileWebRootUrl)로 보낸다.
+function openOrm(fl: DirEntry) {
+    const remote = g_fileWebRootUrl !== CPath.WebRootUrl();
+    const serverUrl = remote ? g_fileWebRootUrl : '';
+    const token = remote ? GetFileToken() : '';
+    if (fl.file) {
+        if (fl.ext === 'json') new CORMViewer(new CAuthInfo(), "ne", gRoot + gPath, serverUrl, token).Open();
+        else new CORMViewer(new CAuthInfo(), "sqlite", gRoot + gPath + fl.name, serverUrl, token).Open();
+    } else {
+        new CORMViewer(new CAuthInfo(), "ne", gRoot + gPath + fl.name + "/", serverUrl, token).Open();
+    }
+}
 function openGenericFile(fl: DirEntry) {
     CDOM.ID("ImageModalSrc").hidden = true;
     (CDOM.ID("FileModalSrc") as HTMLLinkElement).href = downUrl(fl);
@@ -2333,18 +2440,46 @@ function openGenericFile(fl: DirEntry) {
 const FILE_OPEN: Record<FileKind, (fl: DirEntry) => void> = {
     folder: openFolder, image: openImage, audio: openAudio, video: openVideo,
     soundlist: openSoundList, html: openHtml, code: openCode, md: openMd,
-    sheet: openSheet, file: openGenericFile,
+    sheet: openSheet, orm: openOrm, file: openGenericFile,
 };
+
+// 꾹 누르면(롱프레스) 클릭 동작 대신: 파일은 다운로드 모달(openGenericFile), 폴더는 사운드 Add Each(addFolderTracks).
+const LONG_PRESS_MS = 500;
+function makeLongPressHandlers(fl: DirEntry, kind: FileKind) {
+    let pressTimer: number | null = null;
+    let longPressed = false;
+    const start = () => {
+        longPressed = false;
+        pressTimer = window.setTimeout(() => {
+            longPressed = true;
+            if (fl.file) openGenericFile(fl);
+            else addFolderTracks(fl);
+        }, LONG_PRESS_MS);
+    };
+    const cancel = () => { if (pressTimer != null) { clearTimeout(pressTimer); pressTimer = null; } };
+    const click = () => { if (longPressed) { longPressed = false; return; } FILE_OPEN[kind](fl); };
+    return {
+        onclick: click,
+        onmousedown: start, onmouseup: cancel, onmouseleave: cancel,
+        ontouchstart: start, ontouchend: cancel, ontouchcancel: cancel, ontouchmove: cancel,
+    };
+}
+
+// URLSearchParams.set()은 form-urlencoded 규칙상 '/'까지 %2F로 인코딩해버려 주소창이 읽기 어려워진다.
+// '/'는 쿼리 문자열에서 인코딩 없이 써도 유효한 문자라 그대로 둬도 파싱에 문제없으므로, 인코딩 후 %2F만 복원한다.
+function encodeQueryValue(_value: string): string {
+    return encodeURIComponent(_value).replace(/%2F/g, '/');
+}
 
 function updateFileUrlBar() {
     const input = document.getElementById('fileUrlInput') as HTMLInputElement | null;
     if (!input) return;
     const url = new URL(location.href);
     url.search = '';
-    url.searchParams.set('path', gPath ?? '/');
-    if (RootPath) url.searchParams.set('RootPath', RootPath);
-    if (RootUrl)  url.searchParams.set('RootUrl', RootUrl);
-    input.value = url.toString();
+    const params = [`path=${encodeQueryValue(gPath ?? '/')}`];
+    if (RootPath) params.push(`RootPath=${encodeQueryValue(RootPath)}`);
+    if (RootUrl)  params.push(`RootUrl=${encodeQueryValue(RootUrl)}`);
+    input.value = `${url.toString()}?${params.join('&')}`;
 }
 
 function DirListRefresh()
@@ -2378,7 +2513,8 @@ function DirListRefresh()
         
         const kind = kindOf(fl);
         folderList.html.push({"<>":"li","class":"list-group-item list-group-item-action","id":"fl"+fl.index,
-            "html":`<i class='bi ${FILE_ICON[kind]}'>${fl.name}${vcsTag(fl)}`,"onclick":()=>FILE_OPEN[kind](fl)});
+            "html":`<i class='bi ${FILE_ICON[kind]}'>${fl.name}${vcsTag(fl)}`,
+            ...makeLongPressHandlers(fl, kind)});
 
         if(fl.file==true)
         {
@@ -2745,6 +2881,7 @@ function showFileAdminModal() {
                 <span class="small text-secondary flex-shrink-0" title="Find from current path"><i class="bi bi-folder2-open"></i> PathTo</span>
                 <button id="fadm_chat_${uid}" class="btn btn-outline-primary btn-sm flex-fill">Chat</button>
                 <button id="fadm_term_${uid}" class="btn btn-outline-success btn-sm flex-fill">Terminal</button>
+                <button id="fadm_memo_${uid}" class="btn btn-outline-warning btn-sm flex-fill">Memo</button>
             </div>
             <hr class="my-0">
             <div class="accordion" id="fadm_acc_${uid}">
@@ -2759,6 +2896,7 @@ function showFileAdminModal() {
 <button id="fadm_folder_${uid}" class="btn btn-warning btn-sm">New Folder</button>
                             <button id="fadm_delete_${uid}" class="btn btn-danger btn-sm">Delete</button>
                             <button id="fadm_upload_${uid}" class="btn btn-primary btn-sm">Upload</button>
+                            <button id="fadm_orm_${uid}" class="btn btn-outline-success btn-sm">ORM Viewer</button>
                         </div>
                     </div>
                 </div>
@@ -2810,6 +2948,11 @@ document.getElementById(`fadm_folder_${uid}`)?.addEventListener('click', () => {
         document.getElementById(`fadm_upload_${uid}`)?.addEventListener('click', () => {
             modal.Hide(); (CDOM.ID("uploadBtn") as HTMLInputElement).click();
         });
+        document.getElementById(`fadm_orm_${uid}`)?.addEventListener('click', () => {
+            modal.Close();
+            const remote = isRemoteServer();
+            new CORMViewer(new CAuthInfo(), null, '', remote ? g_fileWebRootUrl : '', remote ? GetFileToken() : '').Open();
+        });
         // RootUrl은 "로컬 리소스 루트 선택"에도 채워지므로 원격 판단 기준으로 쓰면 안 된다.
         // 진짜 원격 서버 접속 여부는 g_fileWebRootUrl이 로컬 WebRootUrl과 다른지로만 판별한다.
         // 원격 연결은 File 탭에만 영향을 주어야 하므로, Chat/Term은 원격 상태일 때 cwd를 비워 전달받지 않는다.
@@ -2827,6 +2970,16 @@ document.getElementById(`fadm_folder_${uid}`)?.addEventListener('click', () => {
             showTab('[data-bs-target="#ai-panel"]');
             setTimeout(() => showTab('ai-term-subtab'), 150);
             termStartNew('cmd', cwd || undefined);
+        });
+        document.getElementById(`fadm_memo_${uid}`)?.addEventListener('click', () => {
+            modal.Close();
+            // Chat/Terminal과 달리 Memo는 원격 서버 자체로 API 호출이 넘어가므로(memoSendRemoteInfo 참고),
+            // 원격일 때도 그 서버 기준 경로(gRoot+gPath)를 그대로 보내면 된다.
+            const cwd = ((gRoot as string) ?? '') + ((gPath as string) ?? '');
+            showTab('memo-tab');
+            memoTryInit();
+            // iframe이 방금 로드됐을 수 있으니(memoTryInit), 스크립트가 메시지 리스너를 등록할 시간을 준다.
+            setTimeout(() => memoIframe?.contentWindow?.postMessage({ type: 'set-folder', folder: cwd }, '*'), 200);
         });
 
         const vcsPath = () => ((gRoot as string) ?? './') + ((gPath as string) ?? '');
@@ -3316,7 +3469,7 @@ window["NextPhoto"]=NextPhoto;
 const memoTab = CDOM.ID("memo-tab") as HTMLButtonElement;
 const memoPanel = CDOM.ID("memo") as HTMLDivElement;
 let memoIframe: HTMLIFrameElement | null = null;
-let memoLoadedRootUrl: string | null = null;
+let memoLoaded = false;
 
 function memoEnsureLayout() {
     if (memoIframe) return;
@@ -3328,12 +3481,13 @@ function memoEnsureLayout() {
     memoPanel.appendChild(memoIframe);
 }
 
-// RDP 전환으로 g_fileWebRootUrl이 바뀌면 그 서버의 Memo.html을 다시 로드한다.
+// Chat/Browser/RemoteDesktop과 동일하게, 서브모듈(Artgine/) 경로까지 정확히 계산해 주는
+// CPath.WebRootArtgineUrl()을 사용한다(g_fileWebRootUrl은 Artgine/ 세그먼트를 포함하지 않아 404가 났었다).
 function memoLoadFrame() {
     memoEnsureLayout();
-    if (memoLoadedRootUrl === g_fileWebRootUrl) return;
-    memoLoadedRootUrl = g_fileWebRootUrl;
-    memoIframe!.src = `${g_fileWebRootUrl}artgine/server/html/Memo.html`;
+    if (memoLoaded) return;
+    memoLoaded = true;
+    memoIframe!.src = `${CPath.WebRootArtgineUrl()}artgine/server/html/Memo.html`;
 }
 
 memoEnsureLayout();
@@ -3349,12 +3503,25 @@ memoTab.addEventListener("shown.bs.tab", () => {
     memoTryInit();
     memoIframe?.contentWindow?.postMessage({ type: 'open-sidebar' }, '*');
     memoIframe?.contentWindow?.focus();
+    memoSendRemoteInfo();
 });
 if (memoTab.classList.contains("active")) memoTryInit();
+
+// RDP/File 탭에서 원격지가 바뀔 때(g_fileWebRootUrl 변경) 메모 iframe에도 알려서, 로컬이 아니라
+// 그 원격 서버의 /Memo/*를 쓰도록 만든다 - File 탭이 FileApiUrl/FileParam으로 하는 것과 동일한 패턴.
+// 쿠키는 cross-origin에 안 실리므로, File 탭이 그 원격에 대해 이미 로그인해서 저장해둔 토큰을 그대로
+// 재사용한다(Memo/File 라우터가 서버 프로세스 전역 토큰 저장소를 공유 - CAuthServer.ts 참고).
+// 로컬이면 baseUrl을 빈 값으로 보내 로컬로 리셋한다. iframe이 방금 로드됐을 수 있으니 약간 지연을 준다.
+function memoSendRemoteInfo() {
+    const baseUrl = g_fileWebRootUrl === CPath.WebRootUrl() ? '' : g_fileWebRootUrl;
+    const token = baseUrl ? getAuthToken(baseUrl) : '';
+    setTimeout(() => memoIframe?.contentWindow?.postMessage({ type: 'set-remote', baseUrl, token }, '*'), 50);
+}
 
 function memoNotifyRootChanged() {
     if (!memoInited) return;
     memoLoadFrame();
+    memoSendRemoteInfo();
 }
 
 
@@ -3407,6 +3574,18 @@ loginModal.SetSize(320,640);
 CDOM.ID("login-btn").addEventListener("click",()=>{
     loginModal.Open();
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

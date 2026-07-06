@@ -3,12 +3,10 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer } from './CAuthServer.js';
 
-@URLPatterns(["/cmd/start-ttyd", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode", "/cmd/setting", "/cmd/provider-state"])
+@URLPatterns(["/cmd/start-ttyd", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode"])
 export class CTerminalRouter extends CAuthServer {
     constructor() {
         super();
-        this.On("/cmd/setting", this.onGetSettingJSON.bind(this));
-        this.On("/cmd/provider-state", this.onProviderState.bind(this));
         this.On("/cmd/start-ttyd", this.onStartTtyd.bind(this));
         this.On("/cmd/schedules", this.onSchedules.bind(this));
         this.On("/cmd/schedule-set", this.onScheduleSet.bind(this));
@@ -23,8 +21,6 @@ export class CTerminalRouter extends CAuthServer {
     override Connect() { super.Connect(); this._connectImpl(); }
     _connectImpl() {}
 
-    async onGetSettingJSON(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
-    async onProviderState(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onStartTtyd(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSchedules(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onScheduleSet(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }

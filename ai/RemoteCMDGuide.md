@@ -1,10 +1,10 @@
 # 원격 명령 실행 (Remote Command Execution - ai/tool/remotecmd.js)
 
 ## 주소 (Address)
-- http://rowplayon.com:8050/Artgine/proj/Home/Home.html?path=%2F&RootPath=.%2F&RootUrl=%2FArtgine%2FRoot0
+- http://singleton88.iptime.org:8050/Artgine/proj/Home/Home.html?path=%2Fmusic%2F&RootPath=E%3A%2F&RootUrl=%2FArtgine%2FRoot0
 
 ## 토큰 (Token)
-- Q8_L0IqWx0-nqhJ0lFMpM0c7hruvGwdCRe1QLHEGZpU
+- NXnpsNHz7OGOt9TXtP_19EbATS1oyENlRtBT9hRnk7M
 
 > `artgine/server/CRemoteDesktopRouter.ts`의 `/RemoteCMD/Exec` 엔드포인트를 통해 원격 서버에서 콘솔 명령을 직접 실행하고 결과를 받는다.
 

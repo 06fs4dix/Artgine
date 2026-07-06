@@ -24,6 +24,7 @@ import {CString} from '../artgine/basic/CString.js';
 import { BackUp, CreateRole, DeleteRole, AIRole, DependenciesChk, ExtractServiceWorkerConfig, GenerateCClassPushes, GetAppJSON, GetFolderCanvasFileName, GetNowString, GetPluginArr,  GetPluginMap,  GetProjName, LoadPluginMap, PluginMapDependenciesChk, ReplaceArtginePathsInFolder, WaitForBuild } from './MainFunc.js';
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
+import { CLogRouter } from '../artgine/server/CLogRouter.js';
 
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -129,6 +130,11 @@ async function RunServer()
 		// {
 		// 	ImportServer(gWebServer);
 		// }
+
+		if(gAppJSON.program=="developer")
+		{
+			new CLogRouter().SetServerMain(gWebServer);
+		}
 
 	}
 }

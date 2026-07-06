@@ -8,10 +8,13 @@ export class CNe extends CORM
     private mClient: any = null;
     private mDb: any = null;
     private mCollections: Map<string, any[]> = new Map();
-    private mDbPath: string = CPath.WorkingPath() + "db";
+    private mDbPath: string = "";
 
-    async Init(): Promise<void> 
+    async Init(): Promise<void>
     {
+        // mDatabase가 지정되면 그 경로를 폴더로 쓰고, 없으면 기존 기본 경로로 폴백한다.
+        this.mDbPath = this.mDatabase || (CPath.WorkingPath() + "db");
+
         // Create db directory if it doesn't exist
         const fs = await import('fs');
         if (!fs.existsSync(this.mDbPath)) {
@@ -331,7 +334,7 @@ export class CNe extends CORM
     }
 
     // Get all collections from the database
-    async getAllCollections(): Promise<string[]> {
+    override async GetCollection(): Promise<string[]> {
         const fs = await import('fs');
         const path = await import('path');
         
@@ -347,7 +350,7 @@ export class CNe extends CORM
 
     // Get collection statistics
     async getCollectionStats(): Promise<any> {
-        const collections = await this.getAllCollections();
+        const collections = await this.GetCollection();
         const result: any = {};
         
         for (const collectionName of collections) {

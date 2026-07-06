@@ -8,9 +8,11 @@ import { CSingServer } from "../../artgine/server/CSingServer.js";
 import { CTerminalRouter } from "../../artgine/server/CTerminalRouter.js";
 import { CDownloadServer } from "../../artgine/server/CDownloadServer.js";
 import { CAIChatRouter } from "../../artgine/server/CAIChatRouter.js";
+import { CAIRouter } from "../../artgine/server/CAIRouter.js";
 import { CPlaywrightRouter } from "../../artgine/server/CPlaywrightRouter.js";
 import { CRemoteDesktopRouter } from "../../artgine/server/CRemoteDesktopRouter.js";
 import { CMemoRouter } from "../../artgine/server/CMemoRouter.js";
+import { CORMRouter } from "../../artgine/server/CORMRouter.js";
 
 
 
@@ -23,10 +25,12 @@ new CDownloadServer().SetServerMain(CServerMain.Main());
 // ---- 기타 라우터 ----
 new CFileServer().SetServerMain(CServerMain.Main());
 new CTerminalRouter().SetServerMain(CServerMain.Main());
+new CAIRouter().SetServerMain(CServerMain.Main());
 new CAIChatRouter().SetServerMain(CServerMain.Main());
 new CPlaywrightRouter().SetServerMain(CServerMain.Main());
 new CRemoteDesktopRouter().SetServerMain(CServerMain.Main());
 new CMemoRouter().SetServerMain(CServerMain.Main());
+new CORMRouter().SetServerMain(CServerMain.Main());
 //new CTerminalSocket().SetServerMain(CServerMain.Main());
 
 

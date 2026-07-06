@@ -68,13 +68,86 @@ authPwInput.addEventListener('keydown', (ev: KeyboardEvent) => {
     if (ev.key === 'Enter') DoAuth();
 });
 
+// ==================================================================================================================
+// 폴더 경로 - 서버가 폴더별로 완전히 독립된 sqlite 파일에 저장하므로(CMemo.ts 참고),
+// 모든 /Memo/* 호출에 이 값을 함께 보내야 한다. 새로고침해도 남아있도록 localStorage에 저장한다.
+// ==================================================================================================================
+const FOLDER_STORAGE_KEY = 'memo_folder';
+const folderInputEl = El<HTMLInputElement>("memoFolderInput");
+folderInputEl.value = localStorage.getItem(FOLDER_STORAGE_KEY) ?? '';
+
+function GetFolder(): string {
+    return folderInputEl.value.trim();
+}
+
+async function ReloadForFolder(): Promise<void> {
+    localStorage.setItem(FOLDER_STORAGE_KEY, GetFolder());
+    activeCatId = null;
+    await LoadCategories();
+    await LoadData();
+    await LoadRecentData();
+}
+// blur(포커스 아웃)로는 리로드하지 않는다 - 다른 곳(예: Time 탭 항목)을 클릭하면 그 클릭보다
+// blur가 먼저 발생해서, 클릭이 도착하기 전에 목록이 통째로 다시 그려져 클릭 대상이 사라지는 경합이 생긴다.
+folderInputEl.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter') ReloadForFolder();
+});
+
+// GET 호출(_data===null)은 querystring에, POST 호출은 body에 끼워 넣는다(공용 헬퍼).
+function AppendParam(_path: string, _data: object | null, _key: string, _value: string): { path: string; data: object | null } {
+    if (_data === null) {
+        const sep = _path.includes('?') ? '&' : '?';
+        return { path: `${_path}${sep}${_key}=${encodeURIComponent(_value)}`, data: null };
+    }
+    return { path: _path, data: { ..._data, [_key]: _value } };
+}
+
+// auth/*, cmd/* 등 Memo 이외의 엔드포인트는 folder가 필요 없으므로 그대로 둔다.
+function InjectFolder(_path: string, _data: object | null): { path: string; data: object | null } {
+    if (!_path.startsWith('Memo/')) return { path: _path, data: _data };
+    return AppendParam(_path, _data, 'folder', GetFolder());
+}
+
+// 원격 서버 상태 - Home.ts가 RDP/File 탭에서 원격지가 바뀔 때마다 postMessage('set-remote')로 알려준다.
+// 비어있으면 로컬(같은 오리진), 값이 있으면 그 서버의 /Memo/*를 대신 호출한다 - File 탭의
+// g_fileWebRootUrl/FileApiUrl/FileParam과 동일한 패턴. 쿠키는 cross-origin에 안 실리므로 token을 함께 보낸다
+// (토큰은 File 탭이 그 원격에 대해 이미 로그인해서 얻어둔 것을 그대로 재사용 - 서버 프로세스 전역 토큰 저장소를
+// Memo 라우터도 File 라우터와 함께 공유하므로 별도 메모 전용 로그인이 필요 없다. CAuthServer.ts 참고).
+let memoApiBaseUrl = '';
+let memoApiToken = '';
+
+function InjectRemote(_path: string, _data: object | null): { path: string; data: object | null } {
+    if (!memoApiBaseUrl || !_path.startsWith('Memo/')) return { path: _path, data: _data };
+    const absPath = memoApiBaseUrl.replace(/\/+$/, '') + '/' + _path.replace(/^\/+/, '');
+    return memoApiToken ? AppendParam(absPath, _data, 'token', memoApiToken) : { path: absPath, data: _data };
+}
+
+function ExtractHttpStatus(_err: any): number | null {
+    const m = String(_err?.message || '').match(/status:\s*(\d+)/);
+    return m ? Number(m[1]) : null;
+}
+
 // 401 응답을 받으면 인증 오버레이를 다시 띄운다. 세션이 만료된 경우를 처리.
+// 그 외 실패(서버가 400/500 등을 반환한 경우)도 여기서 한 번에 눈에 보이는 에러를 띄운다 -
+// LoadCategories/LoadData 등 개별 호출부가 별도로 try/catch를 하지 않아도 사용자가 실패를 알 수 있게 한다.
+// (folder를 비워두면 서버가 기존 기본 db로 대체하므로, 빈 folder 자체는 에러가 아니다.)
 async function ApiExe(_path: string, _data: object | null, _returnType: "text" | "json" = "json"): Promise<any> {
+    const step1 = InjectFolder(_path, _data);
+    const { path, data } = InjectRemote(step1.path, step1.data);
     try {
-        return await CFecth.Exe(_path, _data, _returnType);
+        return await CFecth.Exe(path, data, _returnType);
     } catch (e: any) {
-        if (String(e?.message || '').includes('401')) {
-            authOverlay.style.display = 'flex';
+        const status = ExtractHttpStatus(e);
+        if (status === 401) {
+            // 원격 모드의 401은 로컬 로그인 오버레이가 아니라 File 매니저 쪽 인증 문제이므로 안내만 한다 -
+            // 여기서 비밀번호를 받아도 로컬 서버에 로그인될 뿐 원격 토큰은 갱신되지 않는다.
+            if (memoApiBaseUrl) {
+                CAlert.E('Not authenticated on the remote server. Authenticate it from the File Manager (Chat/Terminal/Memo) first.');
+            } else {
+                authOverlay.style.display = 'flex';
+            }
+        } else {
+            CAlert.E(`Request failed (${status ?? 'network error'}): ${_path.split('?')[0]}`);
         }
         throw e;
     }
@@ -86,13 +159,13 @@ async function ApiExe(_path: string, _data: object | null, _returnType: "text" |
 let categoryCache: CategoryRecord[] = [];
 let categoryTagsCache: Map<number, string[]> = new Map();
 let activeCatId: number | null = null;
+const expandedCatIds: Set<number> = new Set();
 
 // ==================================================================================================================
 // 카테고리 트리
 // ==================================================================================================================
 const catTreeEl = El("catTree");
 const catSearchInputEl = El<HTMLInputElement>("catSearchInput");
-const catBreadcrumbEl = El("catBreadcrumb");
 
 // 사이드바 열고 닫기 - Home의 ai-sidebar/rdp-sidebar와 동일하게 Bootstrap Offcanvas 컴포넌트를 사용한다.
 const catSidebarEl = El<HTMLElement>("cat-sidebar");
@@ -119,8 +192,25 @@ function OpenCatSidebar(): void {
     catSidebarOffcanvas.show();
 }
 // Home.ts가 memo 탭으로 전환될 때마다 사이드바를 펼치도록 postMessage로 알려준다.
+// 'set-folder'는 파일 매니저의 Memo 버튼에서 보내는 것 - 현재 경로를 폴더 입력창에 채워주기만 하고,
+// 실제 로드는 사용자가 직접 Enter를 눌러야 한다(다른 폴더로 확정하기 전 실수로 덮어쓰는 것을 방지).
+// 'set-remote'는 RDP/File 탭에서 원격지가 바뀔 때마다 Home.ts가 보내는 것 - 이후 모든 /Memo/* 호출을
+// 그 원격 서버로 돌린다(InjectRemote 참고). 로컬로 돌아오면 baseUrl이 빈 값으로 와서 다시 로컬로 리셋된다.
+// 사용자가 원격지를 전환하는 그 행위 자체가 명시적 액션이므로(폴더 입력처럼 Enter를 또 기다리지 않고) 바로 다시 로드한다.
 window.addEventListener('message', (ev: MessageEvent) => {
     if (ev.data?.type === 'open-sidebar') OpenCatSidebar();
+    else if (ev.data?.type === 'set-folder') {
+        folderInputEl.value = String(ev.data.folder ?? '');
+        OpenCatSidebar();
+        setTimeout(() => { folderInputEl.focus(); folderInputEl.select(); }, 50);
+    } else if (ev.data?.type === 'set-remote') {
+        memoApiBaseUrl = String(ev.data.baseUrl ?? '');
+        memoApiToken = String(ev.data.token ?? '');
+        activeCatId = null;
+        LoadCategories();
+        LoadData();
+        LoadRecentData();
+    }
 });
 
 function GetChildren(_parentId: number): CategoryRecord[] {
@@ -143,6 +233,7 @@ function RenderCatNode(_cat: CategoryRecord): string {
     const children = GetChildren(_cat.id);
     const hasChildren = children.length > 0;
     const isActive = _cat.id === activeCatId;
+    const isExpanded = expandedCatIds.has(_cat.id);
     const tags = categoryTagsCache.get(_cat.id) ?? [];
     const tagsHtml = tags.length > 0
         ? `<div class="cat-tags d-flex flex-wrap gap-1">${tags.map(t => `<span class="badge rounded-pill text-bg-secondary">#${EscapeHtml(t)}</span>`).join('')}</div>`
@@ -153,19 +244,19 @@ function RenderCatNode(_cat: CategoryRecord): string {
         <div class="cat-row d-flex flex-column rounded-3 user-select-none ${isActive ? 'active' : ''}" data-select-cat="${_cat.id}">
           <div class="d-flex align-items-center gap-1">
             <button class="cat-toggle d-inline-flex align-items-center justify-content-center flex-shrink-0 border-0 bg-transparent p-0 ${hasChildren ? '' : 'invisible'}" data-toggle-cat="${_cat.id}">
-              <i class="bi bi-chevron-right" id="chev-${_cat.id}"></i>
+              <i class="bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'}" id="chev-${_cat.id}"></i>
             </button>
             <i class="bi ${hasChildren ? 'bi-folder2-open' : 'bi-folder2'}"></i>
             <span class="cat-label text-truncate">${EscapeHtml(_cat.name)}</span>
             <span class="cat-actions d-flex flex-shrink-0">
-              <button class="border-0 bg-transparent d-inline-flex align-items-center justify-content-center rounded-1" title="Edit tags" data-edit-tags="${_cat.id}"><i class="bi bi-tag"></i></button>
+              <button class="border-0 bg-transparent d-inline-flex align-items-center justify-content-center rounded-1" title="Rename" data-rename-cat="${_cat.id}"><i class="bi bi-pencil"></i></button>
               <button class="border-0 bg-transparent d-inline-flex align-items-center justify-content-center rounded-1" title="Add subcategory" data-add-child="${_cat.id}"><i class="bi bi-plus-lg"></i></button>
               <button class="border-0 bg-transparent d-inline-flex align-items-center justify-content-center rounded-1" title="Delete" data-delete-cat="${_cat.id}"><i class="bi bi-x-lg"></i></button>
             </span>
           </div>
           ${tagsHtml}
         </div>
-        ${hasChildren ? `<div class="cat-children d-none" id="children-${_cat.id}">${children.map(RenderCatNode).join('')}</div>` : ''}
+        ${hasChildren ? `<div class="cat-children ${isExpanded ? '' : 'd-none'}" id="children-${_cat.id}">${children.map(RenderCatNode).join('')}</div>` : ''}
       </div>
     `;
 }
@@ -186,6 +277,8 @@ function ToggleCat(_id: number): void {
     el.classList.toggle('d-none');
     chev.classList.toggle('bi-chevron-down');
     chev.classList.toggle('bi-chevron-right');
+    if (expandedCatIds.has(_id)) expandedCatIds.delete(_id);
+    else expandedCatIds.add(_id);
 }
 
 // 검색으로 찾은 카테고리까지 가는 경로(조상들)를 전부 펼친다 - 접혀있어도 강제로 열어서 보이게 한다.
@@ -194,6 +287,7 @@ function ExpandAncestors(_id: number): void {
         El('children-' + cat.id)?.classList.remove('d-none');
         const chev = El('chev-' + cat.id);
         if (chev) { chev.classList.remove('bi-chevron-right'); chev.classList.add('bi-chevron-down'); }
+        expandedCatIds.add(cat.id);
     }
 }
 
@@ -220,23 +314,7 @@ async function SelectCategory(_id: number | null): Promise<void> {
     const prevId = activeCatId;
     activeCatId = _id;
     UpdateActiveCatUI(prevId, _id);
-    RenderBreadcrumb();
     await LoadData();
-}
-
-function RenderBreadcrumb(): void {
-    const path = GetPath(activeCatId);
-    if (path.length === 0) {
-        const label = activeCatId == null ? 'All categories' : 'Select a category';
-        catBreadcrumbEl.innerHTML = `<li class="breadcrumb-item active text-body-secondary">${label}</li>`;
-        return;
-    }
-    catBreadcrumbEl.innerHTML = path.map((c, i) => {
-        const isLast = i === path.length - 1;
-        return isLast
-            ? `<li class="breadcrumb-item active fw-semibold">${EscapeHtml(c.name)}</li>`
-            : `<li class="breadcrumb-item"><a href="#" data-select-cat="${c.id}" class="text-decoration-none">${EscapeHtml(c.name)}</a></li>`;
-    }).join('');
 }
 
 async function LoadCategories(): Promise<void> {
@@ -251,30 +329,64 @@ async function LoadCategories(): Promise<void> {
         categoryTagsCache.set(row.categoryId, list);
     }
     RenderTree();
-    RenderBreadcrumb();
     if (activeCatId != null && !GetCategory(activeCatId)) {
         activeCatId = null;
-        RenderBreadcrumb();
         await LoadData();
     }
 }
 
-async function AddRootCategory(): Promise<void> {
-    const input = El<HTMLInputElement>('newRootCatInput');
-    const name = input.value.trim();
-    if (!name) return;
-    const j = await ApiExe("Memo/Category/Add", { name, parentId: 0 }, "json");
-    if (!j?.ok) { CAlert.E(j?.msg || 'Failed to add category'); return; }
-    input.value = '';
-    await LoadCategories();
+// 카테고리 트리를 depth 순서로 평평하게 펼쳐서 "부모 선택" 드롭다운 옵션으로 쓴다(이름은 depth만큼 들여쓰기).
+function BuildCategoryOptions(): { id: number; label: string }[] {
+    const result: { id: number; label: string }[] = [];
+    const walk = (_parentId: number, _depth: number) => {
+        for (const cat of GetChildren(_parentId)) {
+            result.push({ id: cat.id, label: `${'  '.repeat(_depth)}${cat.name}` });
+            walk(cat.id, _depth + 1);
+        }
+    };
+    walk(0, 0);
+    return result;
 }
 
-async function PromptAddChild(_parentId: number): Promise<void> {
-    const name = await PromptText('New subcategory name:');
-    if (!name || !name.trim()) return;
-    const j = await ApiExe("Memo/Category/Add", { name: name.trim(), parentId: _parentId }, "json");
+// 카테고리 추가 모달 - "어디에 붙일지"(부모 선택)와 "이름" 두 필드를 하나로 통합해서 루트 추가/하위 추가를 모두 이 모달 하나로 처리한다.
+function OpenAddCategoryModal(_defaultParentId: number): Promise<{ parentId: number; name: string } | null> {
+    return new Promise(resolve => {
+        const selectId = 'addCatParentSelect_' + Math.random().toString(36).slice(2);
+        const nameId = 'addCatNameInput_' + Math.random().toString(36).slice(2);
+        const optionsHtml = [`<option value="0">-- Root (no parent) --</option>`]
+            .concat(BuildCategoryOptions().map(o => `<option value="${o.id}">${EscapeHtml(o.label)}</option>`))
+            .join('');
+        const c = new CConfirm();
+        c.SetBody(`
+            <label class="form-label small mb-1">Parent category</label>
+            <select id="${selectId}" class="form-select form-select-sm mb-2">${optionsHtml}</select>
+            <label class="form-label small mb-1">Name</label>
+            <input type="text" id="${nameId}" class="form-control form-control-sm">
+        `);
+        c.SetConfirm(CConfirm.eConfirm.YesNo, [
+            () => {
+                const parentId = Number((document.getElementById(selectId) as HTMLSelectElement | null)?.value ?? '0');
+                const name = (document.getElementById(nameId) as HTMLInputElement | null)?.value.trim() ?? '';
+                resolve(name.length > 0 ? { parentId, name } : null);
+            },
+            () => resolve(null),
+        ], ['Add', 'Cancel']);
+        c.Open();
+        setTimeout(() => {
+            const sel = document.getElementById(selectId) as HTMLSelectElement | null;
+            if (sel) sel.value = String(_defaultParentId);
+            (document.getElementById(nameId) as HTMLInputElement | null)?.focus();
+        }, 50);
+    });
+}
+
+async function AddCategoryUI(_defaultParentId: number): Promise<void> {
+    const result = await OpenAddCategoryModal(_defaultParentId);
+    if (!result) return;
+    const j = await ApiExe("Memo/Category/Add", { name: result.name, parentId: result.parentId }, "json");
     if (!j?.ok) { CAlert.E(j?.msg || 'Failed to add category'); return; }
     await LoadCategories();
+    ExpandAncestors(result.parentId);
 }
 
 function CollectDescendantIds(_id: number): number[] {
@@ -319,28 +431,17 @@ async function DeleteCategoryUI(_id: number): Promise<void> {
     if (!(await PerformCategoryDelete(_id))) CAlert.E('Failed to delete category');
 }
 
-// 카테고리 태그 편집 - 콤마로 구분된 현재 태그를 PromptText로 보여주고, 다시 입력받은 목록과 비교해서
-// 추가/삭제된 것만 서버에 반영한다. 태그는 카테고리 이름과 별개로 검색 시 하위 카테고리까지 상속된다.
-async function EditCategoryTags(_id: number): Promise<void> {
+// 카테고리 이름 변경 - 이름을 바꾸면 서버가 새 이름으로 태그도 다시 뽑아 교체한다(CMemo.RenameCategory 참고).
+// 같은 부모 아래 다른 카테고리가 이미 그 태그를 쓰고 있으면 서버가 거부한다.
+async function RenameCategoryUI(_id: number): Promise<void> {
     const cat = GetCategory(_id);
     if (!cat) return;
 
-    const j = await ApiExe("Memo/Category/Tag/List?categoryId=" + _id, null, "json");
-    if (!j?.ok) { CAlert.E(j?.msg || 'Failed to load tags'); return; }
-    const currentTags = j.tags as string[];
+    const name = await PromptText(`Rename category "${cat.name}" to:`, cat.name);
+    if (name == null || !name.trim() || name.trim() === cat.name) return;
 
-    const input = await PromptText(`Tags for "${cat.name}" (comma-separated, inherited by subcategories):`, currentTags.join(', '));
-    if (input == null) return;
-    const newTags = Array.from(new Set(input.split(',').map(t => t.trim()).filter(t => t.length > 0)));
-
-    const toAdd = newTags.filter(t => !currentTags.includes(t));
-    const toRemove = currentTags.filter(t => !newTags.includes(t));
-    for (const tag of toAdd) {
-        await ApiExe("Memo/Category/Tag/Add", { categoryId: _id, tag }, "json");
-    }
-    for (const tag of toRemove) {
-        await ApiExe("Memo/Category/Tag/Remove", { categoryId: _id, tag }, "json");
-    }
+    const j = await ApiExe("Memo/Category/Rename", { id: _id, name: name.trim() }, "json");
+    if (!j?.ok) { CAlert.E(j?.msg || 'Failed to rename category'); return; }
     await LoadCategories();
 }
 
@@ -353,10 +454,7 @@ function FindCategoryMatches(_text: string): CategoryRecord[] {
         .sort((a, b) => b.name.length - a.name.length);
 }
 
-El('addRootCatBtn').addEventListener('click', AddRootCategory);
-El<HTMLInputElement>('newRootCatInput').addEventListener('keydown', (ev: KeyboardEvent) => {
-    if (ev.key === 'Enter') AddRootCategory();
-});
+El('addCatBtn').addEventListener('click', () => AddCategoryUI(0));
 El('clearCatSelectionBtn').addEventListener('click', () => SelectCategory(null));
 catSearchInputEl.addEventListener('keydown', (ev: KeyboardEvent) => {
     if (ev.key === 'Enter') SearchCategoryInput();
@@ -366,19 +464,14 @@ catTreeEl.addEventListener('click', (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     const toggleBtn = target.closest('[data-toggle-cat]') as HTMLElement | null;
     if (toggleBtn) { e.stopPropagation(); ToggleCat(Number(toggleBtn.dataset.toggleCat)); return; }
-    const tagBtn = target.closest('[data-edit-tags]') as HTMLElement | null;
-    if (tagBtn) { e.stopPropagation(); EditCategoryTags(Number(tagBtn.dataset.editTags)); return; }
+    const renameBtn = target.closest('[data-rename-cat]') as HTMLElement | null;
+    if (renameBtn) { e.stopPropagation(); RenameCategoryUI(Number(renameBtn.dataset.renameCat)); return; }
     const addBtn = target.closest('[data-add-child]') as HTMLElement | null;
-    if (addBtn) { e.stopPropagation(); PromptAddChild(Number(addBtn.dataset.addChild)); return; }
+    if (addBtn) { e.stopPropagation(); AddCategoryUI(Number(addBtn.dataset.addChild)); return; }
     const delBtn = target.closest('[data-delete-cat]') as HTMLElement | null;
     if (delBtn) { e.stopPropagation(); DeleteCategoryUI(Number(delBtn.dataset.deleteCat)); return; }
     const row = target.closest('[data-select-cat]') as HTMLElement | null;
     if (row) { SelectCategory(Number(row.dataset.selectCat)); return; }
-});
-catBreadcrumbEl.addEventListener('click', (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const link = target.closest('[data-select-cat]') as HTMLElement | null;
-    if (link) { e.preventDefault(); SelectCategory(Number(link.dataset.selectCat)); }
 });
 
 // ==================================================================================================================
@@ -442,7 +535,7 @@ El("cat-tab-category").addEventListener('shown.bs.tab', ResetSidebarSearch);
 El("cat-tab-time").addEventListener('shown.bs.tab', ResetSidebarSearch);
 
 // ==================================================================================================================
-// Provider / Model - Home의 AI 채팅과 동일하게 cmd/setting에서 읽어온다.
+// Provider / Model - Home의 AI 채팅과 동일하게 AIInfo/setting에서 읽어온다.
 // ==================================================================================================================
 type ProviderInfo = { id: string; models: { value: string; label: string }[] };
 let providers: ProviderInfo[] = [];
@@ -468,7 +561,7 @@ function PopulateProviderSelect(): void {
 async function LoadProviders(): Promise<void> {
     if (providers.length > 0) { PopulateProviderSelect(); return; }
     try {
-        const setting = await ApiExe("cmd/setting", null, "json");
+        const setting = await ApiExe("AIInfo/setting", null, "json");
         if (setting?.models) {
             providers = Object.keys(setting.models).map(id => ({ id, models: setting.models[id] || [] }));
             PopulateProviderSelect();
@@ -583,12 +676,12 @@ memoLogEl.addEventListener('click', (e: MouseEvent) => {
 // 채팅 입력(하단) - 모드(Write/Search/Delete)에 따라 메모 등록, 이 카테고리 안에서의 AI 검색,
 // 또는 설명 기반 삭제(2단계: 후보 조회 -> confirm -> 삭제)를 수행한다.
 // ==================================================================================================================
-// 입력창 맨 앞의 /w(write), /s(search), /d(delete) 접두어로 모드를 강제 전환한다.
-// 접두어가 있으면 modeSelect 값도 함께 맞춰서 화면 표시와 실제 동작이 어긋나지 않게 한다.
-const sSlashModeMap: { [key: string]: string } = { '/w': 'write', '/s': 'search', '/d': 'delete' };
+// 입력창 맨 앞의 /w(write), /s(search), /r(search와 동일), /d(delete) 접두어로 이번 전송 한 번만 모드를 강제 전환한다.
+// modeSelect(화면 위 모드 표시)는 그대로 두고, 그 전송에만 접두어 모드를 적용한다.
+const sSlashModeMap: { [key: string]: string } = { '/w': 'write', '/s': 'search', '/r': 'search', '/d': 'delete' };
 
 function ExtractSlashMode(_text: string): { mode: string | null; text: string } {
-    const m = _text.match(/^(\/[wsd])(?:\s+|$)([\s\S]*)$/i);
+    const m = _text.match(/^(\/[wsrd])(?:\s+|$)([\s\S]*)$/i);
     if (m) return { mode: sSlashModeMap[m[1].toLowerCase()], text: m[2] };
     return { mode: null, text: _text };
 }
@@ -598,8 +691,8 @@ async function ComposerSend(): Promise<void> {
     if (!text) return;
 
     const slash = ExtractSlashMode(text);
+    const mode = slash.mode ?? modeSelectEl.value;
     if (slash.mode) {
-        modeSelectEl.value = slash.mode;
         text = slash.text.trim();
         if (!text) { composerTextEl.value = ''; composerTextEl.style.height = '0'; return; }
     }
@@ -607,26 +700,26 @@ async function ComposerSend(): Promise<void> {
     const provider = providerSelectEl.value || undefined;
     const model = modelSelectEl.value || undefined;
 
-    // Write인데 카테고리 미선택이면, 텍스트 안에서 카테고리 이름을 찾아 확인받는다(Delete의 카테고리
-    // 매칭과 동일한 방식). 매칭이 없거나 거절하면 입력창에 텍스트를 그대로 두고 아무것도 저장하지 않는다.
-    if (modeSelectEl.value === 'write' && activeCatId == null) {
-        await ComposerWriteWithoutCategory(text, provider, model);
-        return;
-    }
-
     composerTextEl.value = '';
     composerTextEl.style.height = '0';
     submitBtn.disabled = true;
 
     try {
-        if (modeSelectEl.value === 'write') {
+        if (mode === 'write') {
             pendingEl = AppendChatBubble('user', text, true);
+            // categoryId를 생략(null)하면 서버가 내용으로 태그를 뽑아 그 태그를 가진 카테고리에 저장하고,
+            // 없으면 그 태그 이름으로 카테고리를 새로 만들어 저장한다(CMemo.AddDataAuto 참고).
             const j = await ApiExe("Memo/Data/Add", { categoryId: activeCatId, text, provider, model }, "json");
             if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Failed to save'); return; }
             if (pendingEl) { pendingEl.remove(); pendingEl = null; }
-            await LoadData();
+            if (activeCatId == null) {
+                await LoadCategories();
+                await SelectCategory((j.data as DataRecord).categoryId);
+            } else {
+                await LoadData();
+            }
             await LoadRecentData();
-        } else if (modeSelectEl.value === 'search') {
+        } else if (mode === 'search') {
             const userBubble = AppendChatBubble('user', text, true);
             const j = await ApiExe("Memo/Search", { text, categoryId: activeCatId, provider, model }, "json");
             UnpendUserBubble(userBubble);
@@ -635,46 +728,6 @@ async function ComposerSend(): Promise<void> {
         } else {
             await ComposerDelete(text, provider, model);
         }
-    } catch (e) {
-        AppendChatBubble('system', 'Network error');
-    } finally {
-        submitBtn.disabled = false;
-    }
-}
-
-// Write 모드 + 카테고리 미선택 상태 전용 흐름. 텍스트를 서버로 보내 AI가 내용과 어울리는 카테고리를
-// 찾게 하고(Memo/Category/Suggest), 그 결과를 확인받은 뒤 승인되면 그 카테고리로 실제 저장 + 이동한다.
-// 추천 없음/거절이면 입력창의 텍스트를 그대로 둔다(지우지 않고 return하면 됨).
-async function ComposerWriteWithoutCategory(_text: string, _provider: string | undefined, _model: string | undefined): Promise<void> {
-    submitBtn.disabled = true;
-    let suggestion: any;
-    try {
-        suggestion = await ApiExe("Memo/Category/Suggest", { text: _text, provider: _provider, model: _model }, "json");
-    } catch (e) {
-        submitBtn.disabled = false;
-        CAlert.E('Network error while suggesting a category.');
-        return;
-    }
-    submitBtn.disabled = false;
-    if (!suggestion?.ok) { CAlert.E(suggestion?.msg || 'Failed to suggest a category'); return; }
-
-    const cat = suggestion.category as CategoryRecord | null;
-    if (!cat) {
-        CAlert.Info('No suitable category found for this memo. Select a category on the left, or add a more specific one.');
-        return;
-    }
-    if (!(await ConfirmModal(`Save this memo in category "${cat.name}"?\n\n${_text}`))) return;
-
-    composerTextEl.value = '';
-    composerTextEl.style.height = '0';
-    submitBtn.disabled = true;
-    try {
-        pendingEl = AppendChatBubble('user', _text, true);
-        const j = await ApiExe("Memo/Data/Add", { categoryId: cat.id, text: _text, provider: _provider, model: _model }, "json");
-        if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Failed to save'); return; }
-        if (pendingEl) { pendingEl.remove(); pendingEl = null; }
-        await SelectCategory(cat.id);
-        await LoadRecentData();
     } catch (e) {
         AppendChatBubble('system', 'Network error');
     } finally {
@@ -736,7 +789,7 @@ composerTextEl.addEventListener('input', () => {
 });
 
 // ==================================================================================================================
-// 전역 단축키 - Tab: 사이드바 열고 닫기. 모드 전환은 입력창에서 /w /s /d 접두어로 한다(ExtractSlashMode 참고).
+// 전역 단축키 - Tab: 사이드바 열고 닫기. 모드 전환은 입력창에서 /w /s /r /d 접두어로 한다(ExtractSlashMode 참고).
 // 입력 중(input/textarea/contentEditable)일 때는 브라우저 기본 동작(Tab 이동)을 막지 않는다.
 // ==================================================================================================================
 document.addEventListener('keydown', (ev: KeyboardEvent) => {

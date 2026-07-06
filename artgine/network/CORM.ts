@@ -74,6 +74,7 @@ export class CORM extends CObject
     async IsCollection(_name: string) { return false; }
     async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String) { }
     async GetProjection(_table) : Promise<string[]> {    return null;    }
+    async GetCollection() : Promise<string[]> {    return null;    }
 }
 //================================================
 type ProjectedObject<T extends readonly string[]> = {

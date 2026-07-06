@@ -68,6 +68,11 @@ export class CMysql extends CRDBMS
          
         return columnRows.map(row => row[0]).filter(name => !["USER", "CURRENT_CONNECTIONS", "TOTAL_CONNECTIONS"].includes(name));
     }
+    override async GetCollection() : Promise<string[]>
+    {
+        let rows = await this.Recv("SHOW TABLES");
+        return rows.map(row => row[0]);
+    }
     // async CreateCollection(_name: string, _data: Array<CORMField>, _primaryKey: String=null) 
     // {
     //     if (!Array.isArray(_data) || _data.length === 0) throw new Error('컬럼을 하나 이상 제공해야 합니다.');
