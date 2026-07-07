@@ -14,7 +14,7 @@ const SETTINGS_FILE = path.join(CAI.AIDir(), 'settings.json');
 const _PROVIDER_STATE_LIST = Object.values(CAI.eProvider).filter(p => p !== CAI.eProvider.manus && p !== CAI.eProvider.gpt);
 
 @URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/push-opencode-model"])
-export class CAIRouter extends CAuthServer {
+export class CAIInfoRouter extends CAuthServer {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
     // cross-origin(RDP로 전환된 원격 서버) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
     private IsAuth(_json: CJSON, req: Request): boolean {
@@ -82,7 +82,7 @@ export class CAIRouter extends CAuthServer {
     // Ollama 네이티브 API로 모델 목록/툴 지원 여부를 조회한다. Ollama가 아니면(엔드포인트 없음) null.
     private static async _tryOllama(root: string, apiKey?: string): Promise<{ name: string; tools: boolean }[] | null> {
         try {
-            const authHeaders = CAIRouter._authHeaders(apiKey);
+            const authHeaders = CAIInfoRouter._authHeaders(apiKey);
             const tagsRes = await fetch(`${root}/api/tags`, { headers: authHeaders, signal: AbortSignal.timeout(8000) });
             if (!tagsRes.ok) return null;
             const tagsJson: any = await tagsRes.json();
@@ -115,7 +115,7 @@ export class CAIRouter extends CAuthServer {
     // tools=true로 낙관적으로 채운다(실제 미지원 모델이면 opencode.json에서 수동으로 false로 고치면 됨).
     private static async _tryOpenAIModels(root: string, apiKey?: string): Promise<{ name: string; tools: boolean }[] | null> {
         try {
-            const res = await fetch(`${root}/v1/models`, { headers: CAIRouter._authHeaders(apiKey), signal: AbortSignal.timeout(8000) });
+            const res = await fetch(`${root}/v1/models`, { headers: CAIInfoRouter._authHeaders(apiKey), signal: AbortSignal.timeout(8000) });
             if (!res.ok) return null;
             const json: any = await res.json();
             const names: string[] = Array.isArray(json?.data)
@@ -139,13 +139,13 @@ export class CAIRouter extends CAuthServer {
         if (!raw) { _res.status(400).json({ ok: false, msg: 'host required' }); return null; }
 
         try {
-            const { root, baseURL, host } = CAIRouter._normalizeHost(raw);
+            const { root, baseURL, host } = CAIInfoRouter._normalizeHost(raw);
 
             let backend: 'ollama' | 'lmstudio' = 'ollama';
-            let models = await CAIRouter._tryOllama(root, apiKey);
+            let models = await CAIInfoRouter._tryOllama(root, apiKey);
             if (!models) {
                 backend = 'lmstudio';
-                models = await CAIRouter._tryOpenAIModels(root, apiKey);
+                models = await CAIInfoRouter._tryOpenAIModels(root, apiKey);
             }
             if (!models) throw new Error(`no models found at ${root} (tried Ollama /api/tags and LM Studio /v1/models)`);
 
@@ -173,7 +173,9 @@ export class CAIRouter extends CAuthServer {
             config.provider[key] = {
                 npm: '@ai-sdk/openai-compatible',
                 name: label,
-                options: apiKey ? { baseURL, apiKey } : { baseURL },
+                options: apiKey
+                    ? { baseURL, apiKey, timeout: 3000000, chunkTimeout: 3000000 }
+                    : { baseURL, timeout: 3000000, chunkTimeout: 3000000 },
                 models: modelMap,
             };
             fs.writeFileSync(ocPath, JSON.stringify(config, null, 2), 'utf8');

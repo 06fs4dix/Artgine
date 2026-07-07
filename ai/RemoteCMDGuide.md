@@ -26,7 +26,7 @@
 
 ## 명령어 (Commands)
 ```
-node ai/tool/remotecmd.js <HomeURL> login                     # 비밀번호로 세션 인증(auth/login, Main.json 자동 읽음) → 이후 cmd 호출 가능
+node ai/tool/remotecmd.js <HomeURL> login                     # 비밀번호로 세션 인증(auth/login, settings.json 자동 읽음) → 이후 cmd 호출 가능
 node ai/tool/remotecmd.js <HomeURL> remote <토큰>              # 토큰으로 세션 인증(auth/check) → 이후 cmd 호출 가능
 node ai/tool/remotecmd.js <HomeURL> cmd <콘솔 명령어 그대로...>  # 명령 실행(RemoteCMD/Exec) → {ok, stdout, stderr} JSON 출력
 ```

@@ -35,16 +35,16 @@ let gPluginsLoaded = false;
 export async function GetAppJSON() {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    let initBuf = await CFile.Load(CPath.WorkingPath() + "Main.json");
+    let initBuf = await CFile.Load(CPath.WorkingPath() + "settings.json");
     if (initBuf == null)
-        initBuf = await CFile.Load(path.join(__dirname, "Main.json"));
+        initBuf = await CFile.Load(path.join(__dirname, "settings.json"));
     if (initBuf == null) {
         CAlert.E("error");
         return null;
     }
     if (!gPluginsLoaded) {
         gPluginsLoaded = true;
-        CConsol.Log("Main.json Load!");
+        CConsol.Log("settings.json Load!");
         LoadPluginMap([CPath.ArtgineRootPath() + "plugin/", CPath.ArtgineRootPath() + "artgine"]);
     }
     const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",

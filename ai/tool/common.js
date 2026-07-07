@@ -3,10 +3,10 @@ import { join } from 'path';
 
 export function getPassword(projectRoot) {
     const candidates = [
-        'Main.json',
-        join('desktop', 'Main.json'),
-        join(projectRoot, 'Main.json'),
-        join(projectRoot, 'desktop', 'Main.json'),
+        'settings.json',
+        join('desktop', 'settings.json'),
+        join(projectRoot, 'settings.json'),
+        join(projectRoot, 'desktop', 'settings.json'),
     ];
     const file = candidates.find((path) => existsSync(path));
     if (!file) return 'artgine';

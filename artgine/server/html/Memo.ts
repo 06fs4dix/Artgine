@@ -676,12 +676,22 @@ memoLogEl.addEventListener('click', (e: MouseEvent) => {
 // 채팅 입력(하단) - 모드(Write/Search/Delete)에 따라 메모 등록, 이 카테고리 안에서의 AI 검색,
 // 또는 설명 기반 삭제(2단계: 후보 조회 -> confirm -> 삭제)를 수행한다.
 // ==================================================================================================================
-// 입력창 맨 앞의 /w(write), /s(search), /r(search와 동일), /d(delete) 접두어로 이번 전송 한 번만 모드를 강제 전환한다.
+// 입력창 맨 앞의 /w(write), /s(search), /r(search와 동일), /d(delete), /m(move) 접두어로 이번 전송 한 번만 모드를 강제 전환한다.
 // modeSelect(화면 위 모드 표시)는 그대로 두고, 그 전송에만 접두어 모드를 적용한다.
-const sSlashModeMap: { [key: string]: string } = { '/w': 'write', '/s': 'search', '/r': 'search', '/d': 'delete' };
+const sSlashModeMap: { [key: string]: string } = { '/w': 'write', '/s': 'search', '/r': 'search', '/d': 'delete', '/m': 'move' };
+
+// 한글 입력기가 켜진 채로 w/s/r/d/m을 누르면(2벌식 자판) 같은 자리의 자음/모음(ㅈ/ㄴ/ㄱ/ㅇ/ㅡ)이 그대로
+// 입력창에 찍힌다 - 그 글자를 다시 원래 영문 키로 되돌려서, 한/영 전환을 깜빡해도 슬래시 모드가 그대로 동작하게 한다.
+const sJamoToKey: { [key: string]: string } = { 'ㅈ': 'w', 'ㄴ': 's', 'ㄱ': 'r', 'ㅇ': 'd', 'ㅡ': 'm' };
+
+function NormalizeSlashPrefix(_text: string): string {
+    const m = _text.match(/^\/([ㄱ-ㅎㅏ-ㅣ])/);
+    const key = m ? sJamoToKey[m[1]] : undefined;
+    return key ? '/' + key + _text.slice(2) : _text;
+}
 
 function ExtractSlashMode(_text: string): { mode: string | null; text: string } {
-    const m = _text.match(/^(\/[wsrd])(?:\s+|$)([\s\S]*)$/i);
+    const m = NormalizeSlashPrefix(_text).match(/^(\/[wsrdm])(?:\s+|$)([\s\S]*)$/i);
     if (m) return { mode: sSlashModeMap[m[1].toLowerCase()], text: m[2] };
     return { mode: null, text: _text };
 }
@@ -725,6 +735,8 @@ async function ComposerSend(): Promise<void> {
             UnpendUserBubble(userBubble);
             if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Search failed'); return; }
             AppendChatBubble('ai', j.result);
+        } else if (mode === 'move') {
+            await ComposerMove(text);
         } else {
             await ComposerDelete(text, provider, model);
         }
@@ -733,6 +745,32 @@ async function ComposerSend(): Promise<void> {
     } finally {
         submitBtn.disabled = false;
     }
+}
+
+// 다른 카테고리에 있는 메모를 "지금 선택된 카테고리"로 옮긴다 - 옮겨올 대상 메모가 있는 카테고리가 아니라,
+// 옮겨 담을 카테고리를 선택한 채로 "/m 2" 또는 "/m @2"(2는 그 메모의 id) 형태로 입력한다.
+// 카테고리가 선택되어 있지 않으면(어디로 옮길지 알 수 없으므로) 경고만 띄운다.
+async function ComposerMove(_text: string): Promise<void> {
+    AppendChatBubble('user', _text);
+
+    if (activeCatId == null) {
+        AppendChatBubble('system', 'No category selected - select the destination category first, then use /m @<memo id>.');
+        return;
+    }
+
+    const m = _text.trim().match(/^@?(\d+)$/);
+    if (!m) {
+        AppendChatBubble('system', 'Usage: /m <memo id> (e.g. /m 2 or @2)');
+        return;
+    }
+    const dataId = Number(m[1]);
+
+    const j = await ApiExe("Memo/Data/Move", { id: dataId, categoryId: activeCatId }, "json");
+    if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Failed to move memo'); return; }
+
+    await LoadData();
+    await LoadRecentData();
+    AppendChatBubble('system', `Moved memo @${dataId} into "${GetCategory(activeCatId)?.name ?? activeCatId}".`);
 }
 
 // 숫자만 입력하면 그 id 하나만 바로 삭제, 텍스트에 카테고리 이름이 포함되면 카테고리(+하위+메모)를

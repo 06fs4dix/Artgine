@@ -6,15 +6,19 @@ import { CAI } from '../util/CAI.js';
 
 /*
 AI Chat Router
-- /ai/chat                            GET    AI.html serve
-- /ai/chat/sessions                   GET    session list
-  (provider 목록은 /AIInfo/setting으로 이전됨 — CAIRouter 참고)
-- /ai/chat/sessions/:id               GET    history.json
-- /ai/chat/sessions/:id               DELETE remove session + workspace
-- /ai/chat/session/config?id=         GET    세션 config 조회
-- /ai/chat/session/config?id=         POST   세션 config 저장 (workingDir, mcp, allow)
-- /ai/chat/sessions/:id/upload?name=  POST   raw body -> uploads/<safe>
-- /ai/chat/ws                         WS     streaming chat
+- /AIChat                            GET    AI.html serve
+- /AIChat/sessions                   GET    session list
+  (provider 목록은 /AIInfo/setting으로 이전됨 — CAIInfoRouter 참고)
+- /AIChat/sessions/:id               GET    history.json
+- /AIChat/sessions/:id               DELETE remove session + workspace
+- /AIChat/session/config?id=         GET    세션 config 조회
+- /AIChat/session/config?id=         POST   세션 config 저장 (workingDir, mcp, allow)
+- /AIChat/sessions/:id/upload?name=  POST   raw body -> uploads/<safe>
+- /AIChat/ws                         WS     streaming chat
+
+주의: CServerMain.ts의 정적 파일 차단 미들웨어가 '/ai/*' 경로를 전부 403으로 막기 때문에
+(ai/ 디렉토리의 가이드·툴 소스 보호 목적), 이 라우터의 실제 경로는 반드시 '/ai/chat'이
+아닌 '/AIChat'을 써야 한다. CAIInfoRouter가 '/AIInfo'를 쓰는 것과 같은 이유.
 
 Workspace layout:
   proj/Home/AI/workspace/<sessionId>/
@@ -40,17 +44,17 @@ interface ISessionMeta {
 }
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
-@URLPatterns(["/ai/chat/sessions", "/ai/chat/session", "/ai/chat/session/config", "/ai/chat/session/upload", "/ai/chat/share", "/ai/chat/share/file", "/ai/chat/workspace"])
+@URLPatterns(["/AIChat/sessions", "/AIChat/session", "/AIChat/session/config", "/AIChat/session/upload", "/AIChat/share", "/AIChat/share/file", "/AIChat/workspace"])
 export class CAIChatRouter extends CAuthServer {
     constructor() {
         super();
-        this.On("/ai/chat/sessions",        this.onGetSessions.bind(this));
-        this.On("/ai/chat/session",         this.onSession.bind(this));
-        this.On("/ai/chat/session/config",  this.onSessionConfig.bind(this));
-        this.On("/ai/chat/session/upload",  this.onSessionUpload.bind(this));
-        this.On("/ai/chat/share",           this.onShare.bind(this));
-        this.On("/ai/chat/share/file",      this.onShareFile.bind(this));
-        this.On("/ai/chat/workspace",       this.onWorkspace.bind(this));
+        this.On("/AIChat/sessions",        this.onGetSessions.bind(this));
+        this.On("/AIChat/session",         this.onSession.bind(this));
+        this.On("/AIChat/session/config",  this.onSessionConfig.bind(this));
+        this.On("/AIChat/session/upload",  this.onSessionUpload.bind(this));
+        this.On("/AIChat/share",           this.onShare.bind(this));
+        this.On("/AIChat/share/file",      this.onShareFile.bind(this));
+        this.On("/AIChat/workspace",       this.onWorkspace.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }

@@ -127,6 +127,27 @@ export class CMemo {
         return { id: category.id, parentId: category.parentId, name: _newName };
     }
 
+    // 메모(데이터) 하나를 다른 카테고리로 옮긴다(categoryId만 변경) - "다른 카테고리를 선택한 채로
+    // /m @<메모id>를 입력하면 그 메모를 지금 선택된 카테고리로 옮긴다"는 흐름을 위한 것.
+    public static async MoveData(_folder: string, _id: number, _newCategoryId: number): Promise<DataRecord> {
+        const db = await CMemo.Init(_folder);
+
+        const rows = await db.Recv(
+            `SELECT id, categoryId, content, date FROM ${CMemo.sDataTable} WHERE id = ? LIMIT 1`,
+            [_id]
+        );
+        if (rows == null || rows.length === 0) {
+            throw new Error('메모를 찾을 수 없습니다');
+        }
+        const categories = await CMemo.ListCategories(_folder);
+        if (!categories.some(c => c.id === _newCategoryId)) {
+            throw new Error('대상 카테고리를 찾을 수 없습니다');
+        }
+
+        await db.Send(`UPDATE ${CMemo.sDataTable} SET categoryId = ? WHERE id = ?`, [_newCategoryId, _id]);
+        return await CMemo.RowToData(db, [rows[0][0], _newCategoryId, rows[0][2], rows[0][3]]);
+    }
+
     // 카테고리와 그 하위 카테고리 전부, 그 아래 딸린 데이터까지 함께 삭제한다.
     // 데이터는 memo_data_deleted에 먼저 기록한 뒤 삭제하는 soft-delete 감사 로그 패턴을 유지한다.
     public static async DeleteCategory(_folder: string, _id: number): Promise<{ deletedCategoryIds: number[]; deletedDataCount: number }> {
@@ -402,13 +423,68 @@ export class CMemo {
     // ==================================================================
 
     // _categoryId가 null이면 전체 검색, 지정되면 그 카테고리로만 필터링한다.
+    // "@123"(정확히 그 id의 메모 하나) / "#tag"(그 태그를 가진 메모만, AI 호출 없이 결정적으로) 형태는
+    // AI 검색을 거치지 않고 바로 조회한다 - /r(=search 모드) 입력창에서 빠르고 정확하게 콕 집어 찾을 때 쓴다.
     public static async Search(_folder: string, _text: string, _categoryId: number | null, _provider?: CAI.eProvider, _model?: string): Promise<string> {
+        const trimmed = _text.trim();
+
+        const idMatch = trimmed.match(/^@(\d+)$/);
+        if (idMatch) {
+            return await CMemo.SearchById(_folder, Number(idMatch[1]));
+        }
+        const tagMatch = trimmed.match(/^#(\S+)$/);
+        if (tagMatch) {
+            return await CMemo.SearchByTag(_folder, tagMatch[1], _categoryId);
+        }
+
         const records = await CMemo.FindMatchingData(_folder, _text, _categoryId, _provider, _model);
         if (records.length === 0) {
             return '관련 메모가 없습니다.';
         }
 
         const lines = records.map(r => `[${r.id}][${CMemo.FormatTime(r.date)}] ${r.content}`);
+        return lines.join('\n');
+    }
+
+    private static async SearchById(_folder: string, _id: number): Promise<string> {
+        const db = await CMemo.Init(_folder);
+        const rows = await db.Recv(
+            `SELECT id, categoryId, content, date FROM ${CMemo.sDataTable} WHERE id = ? LIMIT 1`,
+            [_id]
+        );
+        if (rows == null || rows.length === 0) {
+            return `@${_id} 메모를 찾을 수 없습니다.`;
+        }
+        const record = await CMemo.RowToData(db, rows[0]);
+        return `[${record.id}][${CMemo.FormatTime(record.date)}] ${record.content}`;
+    }
+
+    // 태그 완전일치(대소문자 무시)만으로 찾는다 - AI로 태그를 다시 뽑지 않고 입력된 태그 그대로 쓴다.
+    // 날짜 범위는 전체 기간으로 열어둬서(hasExplicitDate=false와 별개로 own-tag 정확매치에도 날짜 필터가 걸리므로) 항상 다 나오게 한다.
+    private static async SearchByTag(_folder: string, _tag: string, _categoryId: number | null): Promise<string> {
+        const tag = _tag.trim().toLowerCase();
+        if (tag.length === 0) {
+            return '태그가 비어 있습니다.';
+        }
+
+        const ids = await CMemo.FindDataIds(_folder, [tag], 'OR', 0, 99999999999999, _categoryId, false);
+        if (ids.length === 0) {
+            return `#${tag} 태그를 가진 메모가 없습니다.`;
+        }
+
+        const db = await CMemo.Init(_folder);
+        const lines: string[] = [];
+        for (const id of ids) {
+            const rows = await db.Recv(
+                `SELECT id, categoryId, content, date FROM ${CMemo.sDataTable} WHERE id = ? LIMIT 1`,
+                [id]
+            );
+            if (rows == null || rows.length === 0) {
+                continue;
+            }
+            const record = await CMemo.RowToData(db, rows[0]);
+            lines.push(`[${record.id}][${CMemo.FormatTime(record.date)}] ${record.content}`);
+        }
         return lines.join('\n');
     }
 

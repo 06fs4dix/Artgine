@@ -3,7 +3,7 @@
 1. 이번 세션에서 한 작업(수정한 파일, 해결한 문제, 결정한 내용 등)을 핵심만 간단히 요약한다. `log` 명령이 자동으로 `[Log]` 접두사와 `#Log` 해시태그를 붙여 태그로 강제 저장되게 한다 - 요약 텍스트만 넘기면 된다.
 2. 자세한 사용법은 **`ai/MemoGuide.md`** 참고. 저장에는 `ai/tool/memo.js`를 쓴다.
 3. 프로젝트 가이드(CLAUDE.md)의 "접속 정보" 섹션에서 주소/포트/기본경로를 읽어 BASE_URL을 구성한다.
-4. `/Memo/*` API는 인증이 필요하다(`401`). 먼저 로그인해서 세션 쿠키를 확보한다 (비밀번호는 스크립트가 `Main.json` → `desktop/Main.json` 순으로 자동으로 읽는다. 쿠키는 `ai/tool/memo_cookie.txt`에 자동 저장/로드).
+4. `/Memo/*` API는 인증이 필요하다(`401`). 먼저 로그인해서 세션 쿠키를 확보한다 (비밀번호는 스크립트가 `settings.json` → `desktop/settings.json` 순으로 자동으로 읽는다. 쿠키는 `ai/tool/memo_cookie.txt`에 자동 저장/로드).
 
 ```bash
 node ai/tool/memo.js $BASE_URL login

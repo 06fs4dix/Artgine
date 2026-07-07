@@ -21,6 +21,7 @@ Memo Router (카테고리 트리 + 플랫 데이터)
 - /Memo/Data/Add         POST  folder, categoryId?, text, provider?, model? -> 데이터 추가(태그 자동 추출).
   categoryId를 생략하면 내용으로 Tag/Suggest해서 그 태그를 가진 카테고리를 찾아 저장하고, 없으면 그 태그 이름으로 카테고리를 새로 만들어 저장한다.
 - /Memo/Data/Delete      POST  folder, id -> 데이터 단건 삭제
+- /Memo/Data/Move        POST  folder, id, categoryId -> 메모를 다른 카테고리로 이동(categoryId만 변경)
 - /Memo/Data/FindByDescription POST folder, text, categoryId?, provider?, model? -> 설명으로 삭제 후보 찾기(삭제는 안 함)
 - /Memo/Search           POST  folder, text, categoryId?, provider?, model? -> AI 기반 검색(categoryId 없으면 전체)
 */
@@ -28,7 +29,7 @@ Memo Router (카테고리 트리 + 플랫 데이터)
 @URLPatterns([
     "/Memo/Category/List", "/Memo/Category/Add", "/Memo/Category/Delete", "/Memo/Category/Rename",
     "/Memo/Tag/Suggest",
-    "/Memo/Data/List", "/Memo/Data/ListRecent", "/Memo/Data/Add", "/Memo/Data/Delete", "/Memo/Data/FindByDescription",
+    "/Memo/Data/List", "/Memo/Data/ListRecent", "/Memo/Data/Add", "/Memo/Data/Delete", "/Memo/Data/Move", "/Memo/Data/FindByDescription",
     "/Memo/Search",
 ])
 export class CMemoRouter extends CAuthServer {
@@ -55,6 +56,7 @@ export class CMemoRouter extends CAuthServer {
         this.On("/Memo/Data/ListRecent", this.onDataListRecent.bind(this));
         this.On("/Memo/Data/Add", this.onDataAdd.bind(this));
         this.On("/Memo/Data/Delete", this.onDataDelete.bind(this));
+        this.On("/Memo/Data/Move", this.onDataMove.bind(this));
         this.On("/Memo/Data/FindByDescription", this.onDataFindByDescription.bind(this));
         this.On("/Memo/Search", this.onSearch.bind(this));
     }
@@ -212,6 +214,24 @@ export class CMemoRouter extends CAuthServer {
         if (!deleted) { _res.status(404).json({ ok: false, msg: '해당 id 데이터를 찾을 수 없음' }); return null; }
 
         _res.json({ ok: true });
+        return null;
+    }
+
+    async onDataMove(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+
+        const folder = this.GetFolder(_json, _req);
+
+        const idRaw = _json.GetInt('id');
+        const categoryIdRaw = _json.GetInt('categoryId');
+        if (idRaw == null || categoryIdRaw == null) { _res.status(400).json({ ok: false, msg: 'id, categoryId 필요' }); return null; }
+
+        try {
+            const data = await CMemo.MoveData(folder, Number(idRaw), Number(categoryIdRaw));
+            _res.json({ ok: true, data });
+        } catch (e: any) {
+            _res.status(400).json({ ok: false, msg: e?.message || 'Move failed' });
+        }
         return null;
     }
 

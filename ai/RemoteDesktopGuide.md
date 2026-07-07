@@ -10,7 +10,7 @@
 `ai/tool/remotedesktop.js`를 사용한다. 비밀번호는 스크립트가 자동으로 읽는다. 쿠키는 `ai/tool/remotedesktop_cookie.txt`에 자동 저장/로드.
 **규칙**: Bash 툴만 사용 (PowerShell 금지)
 
-> ⚠️ **첫 번째 인자(BASE_URL)는 CLAUDE.md "접속 정보" 섹션의 `주소`+`포트`+`기본경로` 값을 직접 읽어서 조합한다. Main.json을 열거나 포트를 임의로 추측하지 말 것.**
+> ⚠️ **첫 번째 인자(BASE_URL)는 CLAUDE.md "접속 정보" 섹션의 `주소`+`포트`+`기본경로` 값을 직접 읽어서 조합한다. settings.json을 열거나 포트를 임의로 추측하지 말 것.**
 
 ```bash
 node ai/tool/remotedesktop.js $BASE_URL login                                              # 인증 (최초 1회) → "ok" 출력

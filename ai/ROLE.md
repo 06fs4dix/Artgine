@@ -26,7 +26,7 @@ node ai/tool/tsc_check.js 파일A.ts 파일B.ts 파일C.ts
 - 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
 
 ## 접속 정보 (Connection Information)
-포트/경로는 `Main.json`의 `url` 필드 기준. 우선순위: 워킹 폴더 `Main.json` → `desktop/Main.json`.
+포트/경로는 `settings.json`의 `url` 필드 기준. 우선순위: 워킹 폴더 `settings.json` → `desktop/settings.json`.
 - **주소**: `http://localhost`
 - **포트**: `8050`
 - **기본 경로**: `/Artgine`
@@ -103,8 +103,7 @@ node ai/tool/tsc_check.js 파일A.ts 파일B.ts 파일C.ts
 
 다음 경로의 파일을 수정, 생성, 삭제, 이동, 이름 변경하기 전에는 반드시 사용자 승인을 받아야 한다.
 
-* 현재 작업 폴더 밖의 모든 상위 경로
+
 * `artgine/`
 * `desktop/`
-* `ai/`
 * `plugin/`

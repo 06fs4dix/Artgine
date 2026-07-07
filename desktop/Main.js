@@ -10,6 +10,7 @@ import { CUtilSystem } from '../artgine/system/CUtilSystem.js';
 import { CFile } from '../artgine/system/CFile.js';
 import { CUtil } from '../artgine/basic/CUtil.js';
 import { CConsol } from '../artgine/basic/CConsol.js';
+import { CAI } from '../artgine/util/CAI.js';
 import { CCMDMgr } from './CCMDMgr.js';
 import { CPath } from '../artgine/basic/CPath.js';
 import { CString } from '../artgine/basic/CString.js';
@@ -27,7 +28,7 @@ var gWebServer = null;
 var gRunPage = false;
 const isWindows = os.platform() === 'win32';
 let gAppRootPath = true;
-if (await CFile.Load(CPath.WorkingPath() + "Main.json") == null)
+if (await CFile.Load(CPath.WorkingPath() + "settings.json") == null)
     gAppRootPath = false;
 var gAppJSON = await GetAppJSON();
 if (gAppJSON == null)
@@ -242,22 +243,15 @@ ipcMain.handle("AIDelete", async (_event, _selected) => {
     return true;
 });
 ipcMain.handle("TTYDRun", async (_event, _cfg) => {
-    const BIN_DIR = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
     const IS_WIN = process.platform === 'win32';
-    const TTYD_FILE = IS_WIN ? 'ttyd.win32.exe'
-        : process.platform === 'darwin' ? 'ttyd.macos'
-            : process.arch === 'arm64' ? 'ttyd.aarch64' : 'ttyd.x86_64';
-    const ttydPath = path.join(BIN_DIR, TTYD_FILE);
-    if (!fs.existsSync(ttydPath)) {
-        const TTYD_VERSION = '1.7.7';
-        const downloadUrl = `https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/${TTYD_FILE}`;
-        fs.mkdirSync(BIN_DIR, { recursive: true });
-        const data = await CFile.Load(downloadUrl);
-        if (!data)
-            return false;
-        await CFile.Save(data, ttydPath);
-        if (!IS_WIN)
-            fs.chmodSync(ttydPath, 0o755);
+    const TTYD_VERSION = '1.7.7';
+    let ttydPath;
+    try {
+        ttydPath = await CAI.EnsureTtyd(TTYD_VERSION);
+    }
+    catch (e) {
+        CConsol.Log(`[TTYD] Failed to ensure ttyd executable: ${e.message}`, CConsol.eColor.red);
+        return false;
     }
     const port = _cfg?.port || 7681;
     const args = ['-p', String(port), '--writable', '-t', 'scrollback=20000'];
@@ -292,9 +286,9 @@ ipcMain.handle("TSCToggle", async (_event, _enable) => {
     }
     gAppJSON.tsc = _enable;
     if (gAppRootPath)
-        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
     else
-        CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+        CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
     return true;
 });
 ipcMain.handle("PageRun", async (_event) => {
@@ -697,9 +691,9 @@ ipcMain.handle("NewPage", async (_event, _json) => {
         appChange = true;
     gAppJSON = _json.appJSON;
     if (gAppRootPath)
-        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
     else
-        CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+        CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
     if (appChange)
         ConfirmAndRestart();
     return "";
@@ -722,9 +716,9 @@ ipcMain.handle("LoadAppJSON", async (_event) => {
 ipcMain.handle("SwitchProgram", async (_event, _program) => {
     gAppJSON.program = _program;
     if (gAppRootPath)
-        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
     else
-        CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+        CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
     ConfirmAndRestart();
 });
 ipcMain.handle("UpdateExtraSettings", async (_event, _json) => {
@@ -732,9 +726,9 @@ ipcMain.handle("UpdateExtraSettings", async (_event, _json) => {
     gAppJSON.password = _json.password;
     gAppJSON.rootPath = _json.rootPath;
     if (gAppRootPath)
-        CFile.Save(gAppJSON, CPath.WorkingPath() + "Main.json");
+        CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
     else
-        CFile.Save(gAppJSON, path.join(__dirname, "Main.json"));
+        CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
     if (rootChanged)
         ConfirmAndRestart();
 });

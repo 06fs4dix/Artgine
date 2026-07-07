@@ -1,5 +1,5 @@
 // AI Chat client
-// Talks to CAIChatRouter (/ai/chat/*, /ai/chat/ws)
+// Talks to CAIChatRouter (/AIChat/*, /AIChat/ws)
 
 
 type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode';
@@ -162,7 +162,7 @@ const _urlParams: URLSearchParams | null = (() => {
     try { return new URL(location.href).searchParams; } catch { return null; }
 })();
 const paramSid: string | null = _urlParams?.get('session') ?? null;
-// 공유 링크(?share=1): /ai/chat/share 의 공개(무인증) 히스토리만 읽기, 전송 불가(읽기전용).
+// 공유 링크(?share=1): /AIChat/share 의 공개(무인증) 히스토리만 읽기, 전송 불가(읽기전용).
 let isShareMode: boolean = _urlParams?.get('share') === '1';
 
 function shortUA(ua: string): string {
@@ -244,7 +244,7 @@ function isImagePath(p: string): boolean {
 function attachmentUrl(sid: string, relPath: string, bust?: number): string {
     const t = bust ?? Date.now();
     // share 모드는 무인증 공개 엔드포인트를 써야 한다(workspace는 로그인 필요).
-    const ep = isShareMode ? 'ai/chat/share/file' : 'ai/chat/workspace';
+    const ep = isShareMode ? 'AIChat/share/file' : 'AIChat/workspace';
     // 같은 출처 요청이라 세션 쿠키가 자동 전송된다(토큰 불필요).
     return `${CPath.WebRootUrl()}${ep}?id=${encodeURIComponent(sid)}&path=${relPath}&t=${t}`;
 }
@@ -303,7 +303,7 @@ elModelSel.addEventListener('change', () => {
 // ---- history (REST) ----
 async function fetchHistory(sid: string): Promise<void> {
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}ai/chat/session?id=${encodeURIComponent(sid)}`);
+        const r = await authedFetch(`${CPath.WebRootUrl()}AIChat/session?id=${encodeURIComponent(sid)}`);
         if (r.status === 401) { clearAuth(); return; }
         if (!r.ok) { currentHistory = null; renderMessages(); return; }
         const j = await r.json();
@@ -401,7 +401,7 @@ elFileInput.addEventListener('change', async () => {
 
 async function uploadFile(f: File) {
     try {
-        const r = await authedFetch(`${CPath.WebRootUrl()}ai/chat/session/upload?id=${currentSid}&name=${encodeURIComponent(f.name)}`, {
+        const r = await authedFetch(`${CPath.WebRootUrl()}AIChat/session/upload?id=${currentSid}&name=${encodeURIComponent(f.name)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/octet-stream' },
             body: f,
@@ -581,7 +581,7 @@ function connectWs() {
     if (ws) { ws.close(); ws = null; }
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     // 인증은 WS 핸드셰이크에 자동 전송되는 세션 쿠키로 처리된다(토큰 불필요).
-    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}ai/chat/ws`);
+    ws = new WebSocket(`${CPath.WebRootUrl().replace(/^http/, 'ws')}AIChat/ws`);
     ws.addEventListener('open', () => {
         setStatus('connected', 'text-bg-success');
         ws!.send(JSON.stringify({ type: 'join', sessionId: currentSid }));
@@ -661,7 +661,7 @@ async function initShareMode() {
     currentSid = paramSid;
     if (!currentSid) { showComposerLogin('Invalid share link'); return; }
     try {
-        const r = await fetch(`${CPath.WebRootUrl()}ai/chat/share?id=${encodeURIComponent(currentSid)}`);
+        const r = await fetch(`${CPath.WebRootUrl()}AIChat/share?id=${encodeURIComponent(currentSid)}`);
         const j = await r.json();
         currentHistory = (j.ok && j.history) ? j.history as IHistory : null;
     } catch {

@@ -4,7 +4,7 @@ import * as path from "path";
 import { CCMDMgr } from "./CCMDMgr.js";
 
 function GetStartPort(): number | null {
-    const mainPath = fs.existsSync("Main.json") ? "Main.json" : path.join("desktop", "Main.json");
+    const mainPath = fs.existsSync("settings.json") ? "settings.json" : path.join("desktop", "settings.json");
     if (!fs.existsSync(mainPath)) return null;
 
     try {

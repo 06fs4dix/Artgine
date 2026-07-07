@@ -1858,7 +1858,7 @@ export class CORMViewer extends CModal {
             this.SetHeader(`ORM Viewer - ${this.mDatabase}`);
             this.SetBody(this.RenderViewerLayout());
         } else {
-            this.SetHeader(`ORM Viewer - 연결 정보 입력`);
+            this.SetHeader(`ORM Viewer - Connection Info`);
             this.SetBody(this.RenderConnectForm());
         }
     }
@@ -1874,7 +1874,7 @@ export class CORMViewer extends CModal {
         return `
             <div class="p-3" style="max-width:420px;">
                 <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">DB 종류</label>
+                    <label class="form-label small text-secondary mb-1">DB Type</label>
                     <select id="${id}_conn_dbType" class="form-select form-select-sm">
                         <option value="mysql">mysql</option>
                         <option value="mssql">mssql</option>
@@ -1883,11 +1883,11 @@ export class CORMViewer extends CModal {
                     </select>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">연결 위치 (database / 파일·폴더 경로)</label>
+                    <label class="form-label small text-secondary mb-1">Connection location (database / file·folder path)</label>
                     <input id="${id}_conn_database" type="text" class="form-control form-control-sm">
                 </div>
                 <hr>
-                <div class="small text-secondary mb-2">인증 정보 (mysql/mssql만 필요)</div>
+                <div class="small text-secondary mb-2">Auth info (mysql/mssql only)</div>
                 <div class="mb-2">
                     <label class="form-label small text-secondary mb-1">ID</label>
                     <input id="${id}_conn_id" type="text" class="form-control form-control-sm">
@@ -1914,7 +1914,7 @@ export class CORMViewer extends CModal {
         CDOM.ID(`${id}_conn_ok`).addEventListener('click', () => {
             const dbType = (CDOM.ID(`${id}_conn_dbType`) as HTMLSelectElement).value as "mysql" | "mssql" | "sqlite" | "ne";
             const database = (CDOM.ID(`${id}_conn_database`) as HTMLInputElement).value.trim();
-            if (!database) { alert('연결 위치를 입력하세요.'); return; }
+            if (!database) { alert('Please enter a connection location.'); return; }
 
             this.mDbType = dbType;
             this.mDatabase = database;
@@ -1932,16 +1932,14 @@ export class CORMViewer extends CModal {
     private RenderViewerLayout(): string {
         const id = this.Key();
         return `
-            <div class="d-flex h-100">
-                <div id="${id}_tables" class="border-end overflow-auto p-2" style="width:220px;flex-shrink:0;"></div>
-                <div class="flex-grow-1 d-flex flex-column" style="min-width:0;">
-                    <div class="d-flex align-items-center gap-2 p-2 border-bottom flex-shrink-0">
-                        <button id="${id}_prev" class="btn btn-sm btn-outline-secondary">&lt;</button>
-                        <span id="${id}_pageInfo" class="small text-secondary"></span>
-                        <button id="${id}_next" class="btn btn-sm btn-outline-secondary">&gt;</button>
-                    </div>
-                    <div id="${id}_data" class="flex-grow-1 overflow-auto p-2"></div>
+            <div class="d-flex flex-column h-100">
+                <div id="${id}_tables" class="d-flex border-bottom flex-shrink-0" style="overflow-x:auto;white-space:nowrap;"></div>
+                <div class="d-flex align-items-center gap-2 p-2 border-bottom flex-shrink-0">
+                    <button id="${id}_prev" class="btn btn-sm btn-outline-secondary">&lt;</button>
+                    <span id="${id}_pageInfo" class="small text-secondary"></span>
+                    <button id="${id}_next" class="btn btn-sm btn-outline-secondary">&gt;</button>
                 </div>
+                <div id="${id}_data" class="flex-grow-1 overflow-auto p-2"></div>
             </div>
         `;
     }
@@ -1976,12 +1974,17 @@ export class CORMViewer extends CModal {
             listEl.innerHTML = '';
             for (const table of tables) {
                 const item = document.createElement('div');
-                item.className = 'p-1 rounded';
+                item.className = 'px-3 py-2 flex-shrink-0';
                 item.style.cursor = 'pointer';
+                item.style.borderBottom = '2px solid transparent';
                 item.textContent = table;
                 item.addEventListener('click', () => {
-                    listEl.querySelectorAll('div').forEach(el => el.classList.remove('bg-primary-subtle'));
+                    listEl.querySelectorAll('div').forEach(el => {
+                        el.classList.remove('bg-primary-subtle');
+                        (el as HTMLElement).style.borderBottom = '2px solid transparent';
+                    });
                     item.classList.add('bg-primary-subtle');
+                    item.style.borderBottom = '2px solid var(--bs-primary)';
                     this.mCurTable = table;
                     this.mOffset = 0;
                     this.mSortCol = null;
@@ -2037,7 +2040,7 @@ export class CORMViewer extends CModal {
     }
 
     private BuildTableORM(rows: object[], cols: string[]): string {
-        if (!cols || cols.length === 0) return `<div class="p-3 text-muted">데이터가 없습니다.</div>`;
+        if (!cols || cols.length === 0) return `<div class="p-3 text-muted">No data.</div>`;
         // table-layout:fixed로 컬럼 폭을 고정하고, 액션 컬럼만 별도 폭을 줘서 버튼이 두 줄로
         // 안 깨지게 한다. 나머지 데이터 컬럼은 넘치는 내용을 옆으로 늘리지 않고 줄바꿈되게 처리.
         const ACTION_COL_WIDTH = 64;
@@ -2053,11 +2056,11 @@ export class CORMViewer extends CModal {
             <tbody>`;
         rows.forEach((row, i) => {
             html += `<tr>${cols.map(c => `<td class="px-2 orm-cell" data-idx="${i}" data-col="${this.EscapeHtmlORM(c)}" style="${wrapStyle}cursor:pointer;">${this.EscapeHtmlORM(String((row as any)[c] ?? ''))}</td>`).join('')}` +
-                `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-danger orm-del-btn" data-idx="${i}">삭제</button></td></tr>`;
+                `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-danger orm-del-btn" data-idx="${i}">Delete</button></td></tr>`;
         });
         // 마지막 행: 빈 입력칸 + "추가" 버튼으로 새 레코드를 바로 입력할 수 있게 한다.
         html += `<tr class="orm-add-row">${cols.map(c => `<td class="px-2"><input type="text" class="form-control form-control-sm" data-newfield="${this.EscapeHtmlORM(c)}"></td>`).join('')}` +
-            `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-success orm-add-btn">추가</button></td></tr>`;
+            `<td class="px-2 text-nowrap"><button class="btn btn-sm btn-outline-success orm-add-btn">Add</button></td></tr>`;
         html += `</tbody></table>`;
         return html;
     }
@@ -2118,7 +2121,7 @@ export class CORMViewer extends CModal {
                 await this.Exec('Update', { collection: this.mCurTable, condition, data: [{ mKey: col, mValue: value }] });
                 this.LoadTableData();
             } catch (e: any) {
-                alert('Update 실패: ' + e.message);
+                alert('Update failed: ' + e.message);
                 _td.textContent = originalText;
             }
         };
@@ -2148,14 +2151,14 @@ export class CORMViewer extends CModal {
             await this.Exec('Insert', { collection: this.mCurTable, data });
             this.LoadTableData();
         } catch (e: any) {
-            alert('Insert 실패: ' + e.message);
+            alert('Insert failed: ' + e.message);
         }
     }
 
     private DeleteRow(_row: object): void {
         if (!_row) return;
         const confirm = new CConfirm();
-        confirm.SetBody('이 행을 삭제하시겠습니까?');
+        confirm.SetBody('Delete this row?');
         confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
             async () => {
                 // PK를 모르므로 행의 모든 컬럼값이 일치하는 레코드를 조건으로 삭제한다.
@@ -2164,7 +2167,7 @@ export class CORMViewer extends CModal {
                     await this.Exec('Delete', { collection: this.mCurTable, condition });
                     this.LoadTableData();
                 } catch (e: any) {
-                    alert('삭제 실패: ' + e.message);
+                    alert('Delete failed: ' + e.message);
                 }
             },
             () => {},
@@ -2180,12 +2183,12 @@ export class CORMViewer extends CModal {
 
         if (/^-?\d+$/.test(trimmed)) {
             const n = parseInt(trimmed, 10);
-            if (!Number.isSafeInteger(n)) return { value: null, error: `정수 범위를 벗어났습니다: ${trimmed}` };
+            if (!Number.isSafeInteger(n)) return { value: null, error: `Integer out of safe range: ${trimmed}` };
             return { value: n };
         }
         if (/^-?\d+\.\d+$/.test(trimmed)) {
             const n = parseFloat(trimmed);
-            if (Number.isNaN(n)) return { value: null, error: `숫자 형식이 올바르지 않습니다: ${trimmed}` };
+            if (Number.isNaN(n)) return { value: null, error: `Invalid number format: ${trimmed}` };
             return { value: n };
         }
         if (trimmed === 'true' || trimmed === 'false') return { value: trimmed === 'true' };
@@ -2195,7 +2198,7 @@ export class CORMViewer extends CModal {
             try {
                 return { value: JSON.parse(trimmed) };
             } catch (e: any) {
-                return { value: null, error: `JSON 형식이 올바르지 않습니다: ${e.message}` };
+                return { value: null, error: `Invalid JSON format: ${e.message}` };
             }
         }
 
