@@ -1,17 +1,10 @@
 import { CUpdate } from "../../basic/Basic.js";
-import { CArray } from "../../basic/CArray.js";
-import { CBlackBoard } from "../../basic/CBlackBoard.js";
-import { CConsol } from "../../basic/CConsol.js";
-import { CDOM } from "../../basic/CDOM.js";
-import { CBlackBoardRef, CObject, CPointer } from "../../basic/CObject.js";
+import { CObject } from "../../basic/CObject.js";
 import { CTree } from "../../basic/CTree.js";
 import { CBound } from "../../geometry/CBound.js";
 import { CMat } from "../../geometry/CMat.js";
 import { CMath } from "../../geometry/CMath.js";
-import { COctree, COctreeData, COctreeMgr } from "../../geometry/COctree.js";
 import { CPoolGeo } from "../../geometry/CPoolGeo.js";
-import { CUtilMath } from "../../geometry/CUtilMath.js";
-import { CVec2 } from "../../geometry/CVec2.js";
 import { CVec3 } from "../../geometry/CVec3.js";
 import { CVec4 } from "../../geometry/CVec4.js";
 import { CColor } from "../../render/CColor.js";
@@ -19,12 +12,9 @@ import { CMesh } from "../../render/CMesh.js";
 import { CMeshCopyNode } from "../../render/CMeshCopyNode.js";
 import { CMeshTreeUpdate } from "../../render/CMeshTreeUpdate.js";
 import { CShaderAttr } from "../../render/CShaderAttr.js";
-
-import { CSampler, CSampMinMax } from "../../util/CSampler.js";
-
+import { CSampler } from "../../util/CSampler.js";
 import { CCIndex } from "../canvas/CCIndex.js";
 import { CCollider } from "../component/CCollider.js";
-import { CPaint } from "../component/paint/CPaint.js";
 import { CPaint2DMerge } from "../component/paint/CPaint2D.js";
 import { CPaint3DMerge } from "../component/paint/CPaint3D.js";
 import { CMapBuf, IMapLabel, IMapSchema } from "./CMapBuf.js";
@@ -33,7 +23,7 @@ import { CTerrainMap } from "./CTerrainMap.js";
 
 export class CDensityInfo extends CObject implements IMapLabel
 { 
-    constructor(_color : number,_size : CVec3)
+    constructor(_color : number,_size : CVec3,_res : string)
     {
         super();
         if(_color == null || _color <= 0) {
@@ -45,6 +35,7 @@ export class CDensityInfo extends CObject implements IMapLabel
             this.mColor = (_color & 0xFFFFFF00) >>> 0;
         }
         this.mSize=_size;
+        this.mRes=_res;
     }
     Label(): string {
         return this.mLabel;
@@ -56,25 +47,30 @@ export class CDensityInfo extends CObject implements IMapLabel
         return this.mSize;
     }
     
+    // 배치 관련 변수
     mLabel="";
     mSize : CVec3;
     mColor : number;
-    mWind=0;
     mPos : CSampler<CVec3>=null;
     mSca : CSampler<CVec3>=null;
     mRot : CSampler<CVec3>=null;
-    mColliderLayer : string=null;
-    mBound : CBound=null;
+
+    // 배치된 페인트 관련 변수
+    mRes="";
+    mWind=0;
+    mColorModel: CColor;
     mPaintTag=new Array<string>();
     mPaintShaderAttr=new Array<CShaderAttr>();
-    mRes="";
+    
+    // 배치된 콜라이더 관련 변수
+    mColliderLayer : string=null;
+    mColliderBound : CBound=null;
 }
 export class CDensityInfo2D extends CDensityInfo
 { 
     constructor(_color : number,_size : CVec3,_tex : string,_codi : CSampler<CVec4>=null)
     {
-        super(_color,_size);
-        this.mRes=_tex;
+        super(_color,_size,_tex);
         this.mCodi=_codi;
     }
     mCodi : CSampler<CVec4>;
@@ -84,12 +80,8 @@ export class CDensityInfo3D extends CDensityInfo
 { 
     constructor(_color : number,_size : CVec3,_mesh : string)
     {
-        super(_color,_size);
-        this.mRes=_mesh;
+        super(_color,_size,_mesh);
     }
-    mTerrain:CTerrainMap=null;
-    mTerrainRot:boolean=false;
-    mColorModel:CColor;
 }
 export class CDensityMap extends CSubject implements IMapSchema
 {
@@ -97,6 +89,7 @@ export class CDensityMap extends CSubject implements IMapSchema
     mDensityArr =new Array<CDensityInfo>();
     mDiv : number = 100;
     mUpdate=true;
+    mTerrain:CTerrainMap=null;
 
     override IsShould(_member: string, _type: CObject.eShould): boolean {
 
@@ -169,9 +162,16 @@ export class CDensityMap extends CSubject implements IMapSchema
             const codiLists : CVec4[][]  = Array.from({length: chunkCount}, () => []);
             const meshLists : string[][] = Array.from({length: chunkCount}, () => []);
 
-            let scale    = CPoolGeo.ProductV3();
-            let rotation = CPoolGeo.ProductV3();
-            let bound    = new CBound();
+            const pos      = CPoolGeo.ProductV3();
+            const scale    = CPoolGeo.ProductV3();
+            const rotation = CPoolGeo.ProductV3();
+            const cbound   = CPoolGeo.ProductBound();
+            cbound.SetType(CBound.eType.Box);
+
+            const rMat     = CPoolGeo.ProductMat();
+            const sMat     = CPoolGeo.ProductMat();
+
+            const bound    = new CBound();
             bound.SetType(CBound.eType.Box);
             if(density instanceof CDensityInfo2D)
             {
@@ -179,8 +179,8 @@ export class CDensityMap extends CSubject implements IMapSchema
             }
             else
             {
-                let mesh  = this.GetFrame().Res().Find(density.mRes) as CMesh;
-                let dummy = new CTree<CMeshCopyNode>();
+                const mesh  = this.GetFrame().Res().Find(density.mRes) as CMesh;
+                const dummy = new CTree<CMeshCopyNode>();
                 dummy.mData = new CMeshCopyNode();
                 CMeshTreeUpdate.TreeCopy(mesh.meshTree, dummy, new CMat(), bound);
             }
@@ -191,7 +191,6 @@ export class CDensityMap extends CSubject implements IMapSchema
                 {
                     const worldX = (cx + 0.5) * cellW;
                     const worldY = (cy + 0.5) * cellH;
-
                                     
                     const eps = 0.01;
                     const checkPoints : [number,number][] = [
@@ -218,73 +217,52 @@ export class CDensityMap extends CSubject implements IMapSchema
                     const chunkY   = Math.min(Math.floor(cy / div), cntY - 1);
                     const chunkIdx = chunkX + chunkY * cntX;
 
-                    let pos = new CVec3();
-
+                    // TRS 생성
+                    pos.Zero();
+                    if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Execute(), pos);
+                    if(density.mSca != null) scale.Import(density.mSca.Execute());
+                    else { scale.x=1; scale.y=1; scale.z=1; }
+                    if(density.mRot != null) rotation.Import(density.mRot.Execute());
+                    else rotation.Zero();
                     if(density instanceof CDensityInfo2D)
                     {
-                        pos.x=worldX;
-                        pos.y=worldY;
-                        let SamScale = new CVec3(1,1,1);
-                        if(density.mSca != null) SamScale = density.mSca.Execute();
-                        let rot = new CVec3();
-                        if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Execute(), pos);
-                        CMath.V3MulV3(density.mSize, SamScale, scale);
-                        if(density.mRot != null) rot = density.mRot.Execute();
-
-                        const scaMat = CMath.MatScale(scale);
-                        const rotMat = CMath.MatRotation(rot);
-                        const mat    = CMath.MatMul(scaMat, rotMat);
-                        mat.SetV3(3, pos);
-                        matLists[chunkIdx].push(mat);
-
-                        if(density.mCodi != null) codiLists[chunkIdx].push(density.mCodi.Execute());
-                    }
-                    else if(density instanceof CDensityInfo3D)
-                    {
-                        pos.x=worldX;
-                        pos.z=worldY;
-                        let rot = new CVec3();
-                        if(density.mPos != null) CMath.V3AddV3(pos, density.mPos.Execute(), pos);
-                        if(density.mSca != null) scale.Import(density.mSca.Execute());
-                        else { scale.x=1; scale.y=1; scale.z=1; }
-                        if(density.mRot != null) rot = density.mRot.Execute();
-
-                        CMath.V3AddV3(pos, CMath.V3MulFloat(bound.GetCenter(), -1), pos);
-
-                        let size    = bound.GetSize();
-                        let maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
-                        scale.x *= density.mSize.x / maxSize;
-                        scale.y *= density.mSize.y / maxSize;
-                        scale.z *= density.mSize.z / maxSize;
-
-                        if(density.mTerrain != null)
-                        {
-                            pos.y = density.mTerrain.GetHeight(pos.x, pos.z);
-                            if(density.mTerrainRot) {
-                                rot = CMath.QutToEuler(CMath.QutMul(CMath.EulerToQut(rot), CMath.FromToRotation(new CVec3(0, 1, 0), density.mTerrain.GetNormal(pos.x, pos.z))));
-                            }
+                        if(this.mTerrain != null) {
+                            pos.x += worldX; pos.z += worldY;
+                            pos.y += this.mTerrain.GetHeight(pos.x, pos.z);
                         }
-
-                        const scaMat = CMath.MatScale(scale);
-                        const rotMat = CMath.MatRotation(rot);
-                        const mat    = CMath.MatMul(scaMat, rotMat);
-                        mat.SetV3(3, pos);
-                        matLists[chunkIdx].push(mat);
-                        meshLists[chunkIdx].push(density.mRes);
+                        else {
+                            pos.x += worldX;
+                            pos.y += worldY;
+                        }
                     }
+                    else
+                    {
+                        const size    = bound.GetSize();
+                        scale.x *= density.mSize.x / size.x;
+                        scale.y *= density.mSize.y / size.y;
+                        scale.z *= density.mSize.z / size.z;
 
+                        pos.x += worldX; pos.z += worldY;
+                        CMath.V3SubV3(pos, bound.GetCenter(), pos); // 오브젝트 중심이 포지션으로 가도록 이동
+                        if(this.mTerrain != null) {
+                            pos.y += this.mTerrain.GetHeight(pos.x, pos.z);
+                        }
+                    }
+                    const trsMat = CMath.MatMul(CMath.MatScale(scale, sMat), CMath.MatRotation(rotation, rMat));
+                    trsMat.SetV3(3, pos);
+                    matLists[chunkIdx].push(trsMat);
+
+                    // 콜라이더 생성
                     if(density.mColliderLayer != null)
                     {
-                        const mList   = matLists[chunkIdx];
-                        const lastMat = mList[mList.length - 1];
-
-                        let cl = new CCollider();
+                        const cl = this.PushComp(new CCollider());
                         cl.SetLayer(density.mColliderLayer);
-                        let cbound = new CBound();
-                        cbound.SetType(CBound.eType.Box);
-                        const srcBound = density.mBound ?? bound;
-                        CMath.V3MulMatCoordi(srcBound.mMin, lastMat, cbound.mMin);
-                        CMath.V3MulMatCoordi(srcBound.mMax, lastMat, cbound.mMax);
+                        cl.SetEvent(CCollider.eEvent.Static);   // density는 안움직임
+
+                        const srcBound = density.mColliderBound ?? bound;
+                        CMath.V3MulMatCoordi(srcBound.mMin, trsMat, cbound.mMin);
+                        CMath.V3MulMatCoordi(srcBound.mMax, trsMat, cbound.mMax);
+
                         if(density instanceof CDensityInfo2D)
                         {
                             const xHalf = (cbound.mMax.x - cbound.mMin.x) * 0.5;
@@ -295,44 +273,49 @@ export class CDensityMap extends CSubject implements IMapSchema
                             cbound.mMax.z = zCenter + zHalf;
                         }
                         cl.InitBound(cbound);
-                        cl.SetEvent(CCollider.eEvent.Static);
-                        this.PushComp(cl);
+                    }
+
+                    // 이외 리스트 생성
+                    if(density instanceof CDensityInfo2D)
+                    {
+                        if(density.mCodi != null) codiLists[chunkIdx].push(density.mCodi.Execute());
+                    }
+                    else
+                    {
+                        meshLists[chunkIdx].push(density.mRes);
                     }
                 }
             }
 
+            CPoolGeo.RecycleV3(pos);
             CPoolGeo.RecycleV3(scale);
             CPoolGeo.RecycleV3(rotation);
+            CPoolGeo.RecycleBound(cbound);
+            CPoolGeo.RecycleMat(sMat);
+            CPoolGeo.RecycleMat(rMat);
 
-            let ptMerge : CPaint;
+            // 페인트 생성
+            let ptMerge : CPaint2DMerge|CPaint3DMerge;
             for(let ci = 0; ci < chunkCount; ci++)
             {
                 if(matLists[ci].length == 0) continue;
 
                 if(density instanceof CDensityInfo2D)
                 {
-                    const ptMerge2D = new CPaint2DMerge(density.mRes, matLists[ci], codiLists[ci]);
-                    ptMerge2D.SetYSort(density.mYSort);
-                    if(density.mWind > 0) ptMerge2D.Wind(density.mWind);
-                    this.PushComp(ptMerge2D);
-                    ptMerge=ptMerge2D;
+                    ptMerge = this.PushComp(new CPaint2DMerge(density.mRes, matLists[ci], codiLists[ci]));
+                    ptMerge.SetYSort(density.mYSort);
                 }
-                else if(density instanceof CDensityInfo3D)
+                else
                 {
-                    const ptMerge3D = new CPaint3DMerge(meshLists[ci], matLists[ci]);
-                    if(density.mWind > 0) ptMerge3D.Wind(density.mWind);
-                    this.PushComp(ptMerge3D);
-                    ptMerge=ptMerge3D;
-
-                    if(density.mColorModel!=null) {
-                        ptMerge3D.SetColorModel(density.mColorModel);
-                    }
-
+                    ptMerge = this.PushComp(new CPaint3DMerge(meshLists[ci], matLists[ci]));
                 }
+
+                if(density.mWind > 0) ptMerge.Wind(density.mWind);
+                if(density.mColorModel!=null) ptMerge.SetColorModel(density.mColorModel);
                 for(let tag of density.mPaintTag)
                     ptMerge.PushTag(tag);
-                for(let attr of density.mPaintShaderAttr)
-                    ptMerge.PushCShaderAttr(attr);
+                for(let shaderAttr of density.mPaintShaderAttr)
+                    ptMerge.PushCShaderAttr(shaderAttr);
             }
         }//density
         this.mUpdate=false;

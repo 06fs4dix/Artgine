@@ -461,8 +461,7 @@ export class CImgPro
         }
     }
 
-    // ScaleMipMapsAlphaForCoverage(w, h, buf)
-    static ScaleMipMapAlpha(w: number, h: number, buf: any, filtering: 'box' | 'kaiser' = 'kaiser', coverageThreshold: number = 0.3): CTexture
+    static ScaleMipMapAlpha(w: number, h: number, buf: any, filtering: 'box' | 'kaiser' = 'kaiser', coverageThreshold: number = 0.4): CTexture
     {
         const kWidth   = 3.0;
         const kAlpha   = 4.0;
@@ -770,7 +769,10 @@ export class CImgPro
         const mip0Data   = new Uint8Array(buf);
 
         const ALPHA_TEST_CUTOFF_255 = 127.5;
-        const cutoff255  = (coverageThreshold * 255 + 0.5) | 0;
+        // SDF 기준 컷오프를 알파테스트 컷오프(128)로 통일한다.
+        // 과거에는 coverageThreshold(0.4)에서 파생된 102를 사용했으나,
+        // 이는 실제 알파테스트 경계(128)와 불일치하여 경계가 불안정했다.
+        const cutoff255  = 128;
 
         const dstW = Math.max(1, w >> 1);
         const dstH = Math.max(1, h >> 1);
@@ -790,8 +792,22 @@ export class CImgPro
         );
 
         const bias = correctedCutoff255 - ALPHA_TEST_CUTOFF_255;
+
+        // ---------------------------------------------------------------
+        // SDF 팽창(Dilate): 얇은 형태(풀잎 등)가 밉맵 축소 시 사라지는
+        // 것을 방지한다. SDF에 양수 오프셋을 더하면 불투명 영역이
+        // 넓어진다. 바이어스(커버리지 보존) 계산 이후에 적용하여,
+        // 기본 커버리지는 유지하면서 추가로 얇은 부분을 두껍게 만든다.
+        //
+        // 이 팽창은 밉맵 체인을 통해 누적된다: 각 ScaleMipMapAlpha 호출
+        // 시 입력의 알파가 이미 팽창되어 있으므로, 깊은 밉맵일수록
+        // 형태가 점진적으로 더 두꺼워진다. 이것이 "밉맵이 작아질수록
+        // 깜빡거림이 적어지도록" 하는 핵심 메커니즘이다.
+        // ---------------------------------------------------------------
+        const DILATE_OFFSET = 0.75;
+
         for (let i = 0; i < dstW * dstH; i++) {
-            const a = ALPHA_TEST_CUTOFF_255 + (sdf1[i] * half_cutoff - bias);
+            const a = ALPHA_TEST_CUTOFF_255 + ((sdf1[i] + DILATE_OFFSET) * half_cutoff - bias);
             dstData[(i << 2) + 3] = a > 255 ? 255 : a < 0 ? 0 : (a + 0.5) | 0;
         }
 
@@ -799,14 +815,16 @@ export class CImgPro
         L_tex.SetSize(dstW, dstH);
         L_tex.SetBuf(dstData);
         return L_tex;
-    }
+    }   
 
-    static BleedTexture(src : Uint8Array, w : number, h : number)
+    static BleedTexture(src: Uint8Array, w: number, h: number)
     {
         const MIN_SIZE_FOR_BLEED = 4;
         if (w < MIN_SIZE_FOR_BLEED || h < MIN_SIZE_FOR_BLEED) {
             return src;
         }
+
+        const dilateIterations = (w >= 8) ? 0 : 1;   // 현재 밉맵 레벨을 못 받아와서 임시로 넣음
 
         const dst = new Uint8Array(src.length);
         dst.set(src); // Copy original data
@@ -819,35 +837,47 @@ export class CImgPro
             dst[idx + 3] = 0;
         };
 
-        const edgeMargin = 1;
-        if (w >= edgeMargin * 2 + 1 && h >= edgeMargin * 2 + 1) {
-            for (let x = 0; x < w; x++) {
-                for (let r = 0; r < edgeMargin; r++) {
-                    const topIdx = getPixelIdx(x, r);
-                    const bottomIdx = getPixelIdx(x, h - 1 - r);
-                    const topAlpha = dst[topIdx + 3];
-                    const bottomAlpha = dst[bottomIdx + 3];
+        const isBorder = (x: number, y: number) => x === 0 || x === w - 1 || y === 0 || y === h - 1;
 
-                    if (topAlpha === 0 && bottomAlpha !== 0) {
-                        clearPixel(bottomIdx);
-                    } else if (bottomAlpha === 0 && topAlpha !== 0) {
-                        clearPixel(topIdx);
-                    }
-                }
+        const clearBorderRing = () => {
+            for (let x = 0; x < w; x++) {
+                clearPixel(getPixelIdx(x, 0));
+                clearPixel(getPixelIdx(x, h - 1));
             }
             for (let y = 0; y < h; y++) {
-                for (let r = 0; r < edgeMargin; r++) {
-                    const leftIdx = getPixelIdx(r, y);
-                    const rightIdx = getPixelIdx(w - 1 - r, y);
-                    const leftAlpha = dst[leftIdx + 3];
-                    const rightAlpha = dst[rightIdx + 3];
+                clearPixel(getPixelIdx(0, y));
+                clearPixel(getPixelIdx(w - 1, y));
+            }
+        };
 
-                    if (leftAlpha === 0 && rightAlpha !== 0) {
-                        clearPixel(rightIdx);
-                    } else if (rightAlpha === 0 && leftAlpha !== 0) {
-                        clearPixel(leftIdx);
-                    }
-                }
+        // ---------------------------------------------------------------
+        // 가장 외곽 1픽셀 테두리는 항상 비워둔다 (원본 값과 무관하게 강제 클리어)
+        // ---------------------------------------------------------------
+        clearBorderRing();
+
+        // ---------------------------------------------------------------
+        // 알파 이진화(Binarize) 단계: 알파테스트 경계를 명확히 한다.
+        //
+        // 알파테스트 컷오프(128) 기준으로 알파를 0 또는 255로 이진화한다.
+        //   alpha >= 128 → 255 (불투명, RGB 유지)
+        //   alpha <  128 →   0 (투명, RGB 도 클리어 → 블리딩 단계에서 보간)
+        //
+        // 반투명 AA 그라디언트(알파 1~254)가 남아 있으면 밉맵 다운샘플링 시
+        // 평균되어 알파테스트 통과 여부가 프레임마다 들쭉날쭉 바뀌 → 깜빡임.
+        // 이진화하면 베이스 밉의 실루엣은 동일(같은 픽셀이 같은 결과로 판정)하면서
+        // 밉맵이 작아져도 경계가 일관되어 깜빡임이 크게 줄어든다.
+        // 또한 0/255의 깨끗한 입력을 받아 이후 팽창(Dilate) 단계의 효과도 좋아진다.
+        // ---------------------------------------------------------------
+        const ALPHA_BINARIZE_CUTOFF = 128;
+        for (let i = 0, n = w * h; i < n; i++) {
+            const idx = i * 4;
+            if (dst[idx + 3] >= ALPHA_BINARIZE_CUTOFF) {
+                dst[idx + 3] = 255;
+            } else {
+                dst[idx] = 0;
+                dst[idx + 1] = 0;
+                dst[idx + 2] = 0;
+                dst[idx + 3] = 0;
             }
         }
 
@@ -856,16 +886,89 @@ export class CImgPro
         const dx = [-1, 0, 1, -1, 1, -1, 0, 1];
         const dy = [-1, -1, -1, 0, 0, 1, 1, 1];
 
-        for(let iter = 0; iter < 2; iter++) {
+        // ---------------------------------------------------------------
+        // 알파 팽창(Dilate) 단계: 얇은 형태(나뭇잎 등)를 두껍게 만들어
+        // 먼 거리 밉맵에서 사라지며 발생하는 깜빡임을 줄인다.
+        //
+        // 입력이 이진화(0/255)되어 있으므로, 인접 불투명 픽셀이 있으면
+        // bestAlpha 는 항상 255 가 되어 완전 불투명으로 채워진다.
+        // 이로써 얇은 부분이 확실하게 두꺼워지고 밉맵 축소 후에도 잔존한다.
+        //
+        // 중요: 이웃 알파의 "평균"을 쓰면 안 된다. 대각선으로만 인접한
+        // 픽셀은 유효 이웃이 1개뿐이라 값이 낮게, 상하좌우로 인접한
+        // 픽셀은 이웃이 여러 개라 값이 높게 나와서 픽셀마다 결과가
+        // 들쭉날쭉해지고, 알파테스트 시 톱니(sawtooth) 모양의 구멍/돌기가
+        // 생긴다. 대신 이웃 중 "최댓값(max) alpha"를 사용하고, 색상도
+        // 여러 이웃을 섞지 않고 그 최댓값을 가진 이웃의 색을 그대로
+        // 가져와야 형태가 보존된다.
+        //
+        // 외곽 테두리는 팽창 대상에서 제외해 항상 비워둔 상태를 유지한다.
+        // ---------------------------------------------------------------
+        for (let iter = 0; iter < dilateIterations; iter++) {
+            const dilated = new Uint8Array(dst.length);
+            dilated.set(dst);
+            let dilatedChanged = false;
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (isBorder(x, y)) continue; // 외곽은 항상 비워둔다
+
+                    const index = getPixelIdx(x, y);
+                    const alpha = dst[index + 3];
+                    if (alpha > 0) continue; // 이미 불투명한 픽셀은 유지
+
+                    let bestAlpha = 0;
+                    let bestR = 0, bestG = 0, bestB = 0;
+
+                    for (let i = 0; i < 8; i++) {
+                        const nx = x + dx[i];
+                        const ny = y + dy[i];
+
+                        // 팽창 단계는 wrap 하지 않는다 (외곽 바깥/반대편 색 유입 방지)
+                        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+
+                        const neighborIndex = getPixelIdx(nx, ny);
+                        const neighborAlpha = dst[neighborIndex + 3];
+
+                        // 평균이 아니라 "가장 진한(alpha가 가장 큰) 이웃"만 채택
+                        if (neighborAlpha > bestAlpha) {
+                            bestAlpha = neighborAlpha;
+                            bestR = dst[neighborIndex];
+                            bestG = dst[neighborIndex + 1];
+                            bestB = dst[neighborIndex + 2];
+                        }
+                    }
+
+                    if (bestAlpha > 0) {
+                        dilated[index] = bestR;
+                        dilated[index + 1] = bestG;
+                        dilated[index + 2] = bestB;
+                        dilated[index + 3] = bestAlpha;
+                        dilatedChanged = true;
+                    }
+                }
+            }
+
+            dst.set(dilated);
+            if (!dilatedChanged) break;
+        }
+
+        clearBorderRing(); // 팽창 이후 안전하게 재확인
+        src.set(dst);       // 이후 블리딩이 "두꺼워진" 형태를 기준으로 동작하도록 동기화
+
+        // ---------------------------------------------------------------
+        // 색상 블리딩 단계 (알파는 건드리지 않고 RGB만 채움)
+        // 이 단계는 이미 투명한(alpha=0) 픽셀의 색상만 채우는 것이라
+        // 실루엣 형태에 영향을 주지 않으므로 평균 방식 그대로 유지해도 무방하다.
+        // ---------------------------------------------------------------
+        for (let iter = 0; iter < 2; iter++) {
             let changed = false;
-            for(let y = 0; y < h; y++) {
-                for(let x = 0; x < w; x++) {
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
                     const index = getPixelIdx(x, y);
                     const alpha = src[index + 3];
-                    if(alpha == 0 || (src[index + 0] == 0 && src[index + 1] == 0 && src[index + 2] == 0)) {
-                        let rSum = 0;
-                        let gSum = 0;
-                        let bSum = 0;
+                    if (alpha == 0 || (src[index + 0] == 0 && src[index + 1] == 0 && src[index + 2] == 0)) {
+                        let rSum = 0, gSum = 0, bSum = 0;
                         let validNeighborCount = 0;
                         for (let i = 0; i < 8; i++) {
                             const nx = wrap(x + dx[i], w);
@@ -874,7 +977,6 @@ export class CImgPro
                             const neighborIndex = (ny * w + nx) * 4;
                             const neighborAlpha = src[neighborIndex + 3];
 
-                            // 주변 픽셀이 투명하지 않다면 색상 누적
                             if (neighborAlpha > 0) {
                                 rSum += src[neighborIndex];
                                 gSum += src[neighborIndex + 1];
@@ -884,7 +986,7 @@ export class CImgPro
                         }
 
                         if (validNeighborCount > 0) {
-                            dst[index] = Math.round(rSum / validNeighborCount);    
+                            dst[index] = Math.round(rSum / validNeighborCount);
                             dst[index + 1] = Math.round(gSum / validNeighborCount);
                             dst[index + 2] = Math.round(bSum / validNeighborCount);
                             changed = true;
@@ -895,6 +997,11 @@ export class CImgPro
             src.set(dst);
             if (!changed) break;
         }
+
+        clearBorderRing(); // 최종 반환 전 외곽 최종 재확인
+        src.set(dst);
+
+        return dst;
     }
 
 	static SqurEnlargedReduced( _w:number,_h:number,_buf : any,pa_xScale : number, pa_yScale  : number, pa_sampleRate  : number)
@@ -916,7 +1023,7 @@ export class CImgPro
 		var L_arr=new Array<CVec4>();
 		for (var i = 0; i < 9; ++i)
 		{
-			L_arr.push(new CVec4(0,0,0,0));
+			L_arr.push(CPoolGeo.ProductV4());
 		}
 		
 
@@ -1022,6 +1129,10 @@ export class CImgPro
 			}//for
 		}//for
 		CPoolGeo.RecycleV4(v4);
+		for (var i = 0; i < 9; ++i)
+		{
+			CPoolGeo.RecycleV4(L_arr[i]);
+		}
 		return L_tex;
 	}
 

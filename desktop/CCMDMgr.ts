@@ -287,4 +287,26 @@ export class CCMDMgr {
         return CCMDMgr.IsRun("code");                                                  // Linux 바이너리
     }
 
+    // tsc -w(watch) 프로세스가 실제로 동작 중인지 확인
+    // 임시 .ts 파일을 만들고, 대응하는 .js 파일이 생성되는지 최대 5초까지 폴링(먼저 생기면 즉시 종료)
+    static async IsTSCRun(): Promise<boolean> {
+        const tempName = `__tsc_check_${Date.now()}`;
+        const tsPath = path.join(process.cwd(), `${tempName}.ts`);
+        const jsPath = path.join(process.cwd(), `${tempName}.js`);
+        const timeoutMs = 5000;
+        const intervalMs = 200;
+        try {
+            fs.writeFileSync(tsPath, `export const __tscCheck = true;\n`);
+            const start = Date.now();
+            while (Date.now() - start < timeoutMs) {
+                if (fs.existsSync(jsPath)) return true;
+                await CCMDMgr.Delay(intervalMs);
+            }
+            return fs.existsSync(jsPath);
+        } finally {
+            try { if (fs.existsSync(tsPath)) fs.unlinkSync(tsPath); } catch (e) { }
+            try { if (fs.existsSync(jsPath)) fs.unlinkSync(jsPath); } catch (e) { }
+        }
+    }
+
 }

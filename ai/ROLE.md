@@ -18,10 +18,17 @@
 node ai/tool/tsc_check.js 파일A.ts 파일B.ts 파일C.ts
 ```
 
+## C/C++ 빌드 체크 규칙 - 필수 (C/C++ Build Check Rules - Required)
+`.c`/`.cpp` 수정 후 완료 보고 전 반드시 실행한다.
+```bash
+node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
+```
+
+
 ## 제한 명령어 (Restricted Commands)
 다음 명령어는 사용자가 명시적으로 요청하거나 승인하지 않는 한 실행하지 않는다.
 
-- node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`는 제외
+- node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`, `ai/tool/c_cpp_check.js`는 제외
 - python / python3 실행
 - 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
 

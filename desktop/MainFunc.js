@@ -32,24 +32,29 @@ export function GetNowString() {
 }
 const gMainConfig = {};
 let gPluginsLoaded = false;
-export async function GetAppJSON() {
+let gLoadedSettingsFileName = null;
+export async function GetAppJSON(_settingsFileName) {
+    const settingsFileName = _settingsFileName ?? gLoadedSettingsFileName ?? "settings.json";
+    if (gLoadedSettingsFileName !== null && settingsFileName === gLoadedSettingsFileName)
+        return gMainConfig;
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    let initBuf = await CFile.Load(CPath.WorkingPath() + "settings.json");
+    let initBuf = await CFile.Load(CPath.WorkingPath() + settingsFileName);
     if (initBuf == null)
-        initBuf = await CFile.Load(path.join(__dirname, "settings.json"));
+        initBuf = await CFile.Load(path.join(__dirname, settingsFileName));
     if (initBuf == null) {
         CAlert.E("error");
         return null;
     }
     if (!gPluginsLoaded) {
         gPluginsLoaded = true;
-        CConsol.Log("settings.json Load!");
+        CConsol.Log(`${settingsFileName} Load!`);
         LoadPluginMap([CPath.ArtgineRootPath() + "plugin/", CPath.ArtgineRootPath() + "artgine"]);
     }
     const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
         "server": "", "github": false, "tsc": true, "password": "artgine", "rootPath": ["./"] });
     Object.assign(gMainConfig, parsed);
+    gLoadedSettingsFileName = settingsFileName;
     return gMainConfig;
 }
 export function GetRootPaths(cfg) {

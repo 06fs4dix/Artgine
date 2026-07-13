@@ -39,14 +39,24 @@ export function GetNowString(): string {
 }
 const gMainConfig: Record<string, any> = {};
 let gPluginsLoaded = false;
+// 마지막으로 로드에 성공한 settings 파일명. 파일명 없이 GetAppJSON()이 호출되면
+// 하드코딩된 기본값("settings.json") 대신 이 값을 재사용해, 커스텀 settings 파일로
+// 기동한 프로세스에서 무인자 호출이 gMainConfig를 다른 파일 내용으로 덮어쓰는 것을 막는다.
+let gLoadedSettingsFileName: string | null = null;
 
-export async function GetAppJSON()
+export async function GetAppJSON(_settingsFileName?: string)
 {
+    const settingsFileName = _settingsFileName ?? gLoadedSettingsFileName ?? "settings.json";
+    // 이미 같은 파일로 로드된 상태면 재읽기 없이 캐시된 설정을 그대로 반환한다.
+    // 이전과 다른 파일명이 명시적으로 들어오면 그때만 다시 읽어 반영한다.
+    if(gLoadedSettingsFileName !== null && settingsFileName === gLoadedSettingsFileName)
+        return gMainConfig;
+
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    let initBuf=await CFile.Load(CPath.WorkingPath()+"settings.json");
+    let initBuf=await CFile.Load(CPath.WorkingPath()+settingsFileName);
     if(initBuf==null)
-        initBuf=await CFile.Load(path.join(__dirname, "settings.json"));
+        initBuf=await CFile.Load(path.join(__dirname, settingsFileName));
     if(initBuf==null)
     {
         CAlert.E("error");
@@ -56,7 +66,7 @@ export async function GetAppJSON()
     if(!gPluginsLoaded)
     {
         gPluginsLoaded = true;
-        CConsol.Log("settings.json Load!");
+        CConsol.Log(`${settingsFileName} Load!`);
         LoadPluginMap([CPath.ArtgineRootPath()+"plugin/", CPath.ArtgineRootPath()+"artgine"]);
     }
 
@@ -65,6 +75,7 @@ export async function GetAppJSON()
             "server":"","github":false,"tsc":true,"password":"artgine","rootPath":["./"]}
     );
     Object.assign(gMainConfig, parsed);
+    gLoadedSettingsFileName = settingsFileName;
     return gMainConfig;
 }
 // rootPath는 string(구버전) 또는 string[](신버전) 모두 허용 → 항상 비어있지 않은 배열로 정규화

@@ -1,1 +1,123 @@
-import{CObject as t}from"../basic/CObject.js";import{CFloat32 as e}from"./CFloat32.js";import{CDOM as n}from"../basic/CDOM.js";export class CVec3 extends e{constructor(t=0,e=0,n=0){if(super(),this.mF32A=new Float32Array(3),"number"==typeof t)this.mF32A[0]=t,this.mF32A[1]=e,this.mF32A[2]=n;else for(let e=0;e<t.length;++e)this.mF32A[e]=t[e]}set x(t){this.mF32A[0]=t}get x(){return this.mF32A[0]}set y(t){this.mF32A[1]=t}get y(){return this.mF32A[1]}set z(t){this.mF32A[2]=t}get z(){return this.mF32A[2]}static Left(){return a}static Right(){return s}static Up(){return o}static Down(){return i}static Front(){return c}static Back(){return u}static eDir={Null:-1,Up:0,Down:1,Left:2,Right:3,Front:4,Back:5,North:0,South:1,West:2,East:3};EditHTMLInit(e,r){e.innerHTML="";const a=n.DataToDom({tag:"div",class:"d-flex align-items-center",html:[{tag:"input",type:"number",class:"form-control form-control-sm",value:this.x,onchange:t=>{const e=parseFloat(t.target.value);isNaN(e)||(this.x=e,r&&r.target&&"function"==typeof r.target.EditChange&&r.target.EditChange(r,!1))}},{tag:"input",type:"number",class:"form-control form-control-sm",value:this.y,onchange:t=>{const e=parseFloat(t.target.value);isNaN(e)||(this.y=e,r&&r.target&&"function"==typeof r.target.EditChange&&r.target.EditChange(r,!1))}},{tag:"input",type:"number",class:"form-control form-control-sm",value:this.z,onchange:t=>{const e=parseFloat(t.target.value);isNaN(e)||(this.z=e,r&&r.target&&"function"==typeof r.target.EditChange&&r.target.EditChange(r,!1))}}]});e.appendChild(a);const s=a.querySelectorAll('input[type="number"]'),o=t=>{this.x=t.x,this.y=t.y,this.z=t.z,r&&r.target&&"function"==typeof r.target.EditChange&&r.target.EditChange(r,!1)},i=e=>{if(1===e.button){e.preventDefault();const n=e.currentTarget;t.FocusInputNumberChange(n,t=>{const e=new CVec3(parseFloat(s[0].value),parseFloat(s[1].value),parseFloat(s[2].value));o(e)})}};s[0].onmousedown=i,s[1].onmousedown=i,s[2].onmousedown=i}static Vec3(t,e,n){return r.mF32A[0]=t,r.mF32A[1]=e,r.mF32A[2]=n,r}}var r=new CVec3,a=new CVec3(-1,0,0),s=new CVec3(1,0,0),o=new CVec3(0,1,0),i=new CVec3(0,-1,0),c=new CVec3(0,0,1),u=new CVec3(0,0,-1);
+import { CObject } from "../basic/CObject.js";
+import { CFloat32 } from "./CFloat32.js";
+import { CDOM } from '../basic/CDOM.js';
+export class CVec3 extends CFloat32 {
+    constructor(_x = 0, _y = 0, _z = 0) {
+        super();
+        this.mF32A = new Float32Array(3);
+        if (typeof _x == "number") {
+            this.mF32A[0] = _x;
+            this.mF32A[1] = _y;
+            this.mF32A[2] = _z;
+        }
+        else {
+            for (let i = 0; i < _x.length; ++i)
+                this.mF32A[i] = _x[i];
+        }
+    }
+    set x(_val) { this.mF32A[0] = _val; }
+    get x() { return this.mF32A[0]; }
+    set y(_val) { this.mF32A[1] = _val; }
+    get y() { return this.mF32A[1]; }
+    set z(_val) { this.mF32A[2] = _val; }
+    get z() { return this.mF32A[2]; }
+    static Left() { return g_left; }
+    static Right() { return g_right; }
+    static Up() { return g_up; }
+    static Down() { return g_down; }
+    static Front() { return g_front; }
+    static Back() { return g_back; }
+    static eDir = {
+        "Null": -1,
+        "Up": 0,
+        "Down": 1,
+        "Left": 2,
+        "Right": 3,
+        "Front": 4,
+        "Back": 5,
+        "North": 0,
+        "South": 1,
+        "West": 2,
+        "East": 3,
+    };
+    EditHTMLInit(_div, _pointer) {
+        _div.innerHTML = "";
+        const self = this;
+        const row = CDOM.DataToDom({
+            "tag": "div", "class": "d-flex align-items-center",
+            "html": [
+                { "tag": "input", "type": "number", "class": "form-control form-control-sm",
+                    "value": this.x, "onchange": (e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v)) {
+                            this.x = v;
+                            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                                _pointer.target.EditChange(_pointer, false);
+                            }
+                        }
+                    }
+                },
+                { "tag": "input", "type": "number", "class": "form-control form-control-sm",
+                    "value": this.y, "onchange": (e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v)) {
+                            this.y = v;
+                            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                                _pointer.target.EditChange(_pointer, false);
+                            }
+                        }
+                    }
+                },
+                { "tag": "input", "type": "number", "class": "form-control form-control-sm",
+                    "value": this.z, "onchange": (e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v)) {
+                            this.z = v;
+                            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                                _pointer.target.EditChange(_pointer, false);
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+        _div.appendChild(row);
+        const inputs = row.querySelectorAll('input[type="number"]');
+        const setter = (vec) => {
+            this.x = vec.x;
+            this.y = vec.y;
+            this.z = vec.z;
+            if (_pointer && _pointer.target && typeof _pointer.target.EditChange === "function") {
+                _pointer.target.EditChange(_pointer, false);
+            }
+        };
+        const getVec = () => new CVec3(parseFloat(inputs[0].value), parseFloat(inputs[1].value), parseFloat(inputs[2].value));
+        const MounsDownFun = (_event) => {
+            if (_event.button === 1) {
+                _event.preventDefault();
+                const ct = _event.currentTarget;
+                CObject.FocusInputNumberChange(ct, (_value) => {
+                    const vec = getVec();
+                    setter(vec);
+                });
+            }
+        };
+        inputs[0].onmousedown = MounsDownFun;
+        inputs[1].onmousedown = MounsDownFun;
+        inputs[2].onmousedown = MounsDownFun;
+    }
+    static Vec3(_x, _y, _z) {
+        gVec3.mF32A[0] = _x;
+        gVec3.mF32A[1] = _y;
+        gVec3.mF32A[2] = _z;
+        return gVec3;
+    }
+}
+;
+var gVec3 = new CVec3();
+var g_left = new CVec3(-1, 0, 0);
+var g_right = new CVec3(1, 0, 0);
+var g_up = new CVec3(0, 1, 0);
+var g_down = new CVec3(0, -1, 0);
+var g_front = new CVec3(0, 0, 1);
+var g_back = new CVec3(0, 0, -1);

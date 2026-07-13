@@ -1,1 +1,415 @@
-import{CUpdate as e}from"../../basic/Basic.js";import{CClass as t}from"../../basic/CClass.js";import{CEvent as i}from"../../basic/CEvent.js";import{CBound as s}from"../../geometry/CBound.js";import{CMat as r}from"../../geometry/CMat.js";import{CMath as n}from"../../geometry/CMath.js";import{CPoolGeo as m}from"../../geometry/CPoolGeo.js";import{CVec3 as h}from"../../geometry/CVec3.js";import{CVec4 as o}from"../../geometry/CVec4.js";import{CColor as a}from"../../render/CColor.js";import{CImgPro as u}from"../../render/CImgPro.js";import{CRenderPass as l}from"../../render/CRenderPass.js";import{CTexture as f,CTextureInfo as d}from"../../render/CTexture.js";import{CCIndex as T}from"../canvas/CCIndex.js";import{CCollider as g}from"../component/CCollider.js";import{CPhysics as B}from"../component/CPhysics.js";import{CPaintTerrain as x}from"../component/paint/CPaintTerrain.js";import{CMapBuf as p}from"./CMapBuf.js";import{CSubject as c}from"./CSubject.js";export class CTerrainMap extends c{mHeightBuf=new p;mSplatBuf=new p;mHeightTexture=null;mSplatTexture=null;mLayerTexture=null;mTerrainHeight=1024;mDefaultHeight=1024;mLevel=new Array(0);mTexture=new Array;mTexCodi=new r([32,32,0,0,32,32,0,0,32,32,0,0,32,32,0,0]);mTag=new Set;mTestMode=!1;mCollider;constructor(){super(),this.mHeightBuf.Reset(new h(1024,1024,1),10),this.mSplatBuf.Reset(new h(1024,1024,1),10),this.mCollider=this.PushComp(new CColliderTerrain(this))}ClearAll(){this.mHeightTexture=null,this.mSplatTexture=null,this.mLayerTexture=null,this.RemoveComps(x)}SetLevel(e){this.mLevel=e}SetSplat(e,t){this.mTexture=[...e],this.mTexCodi.Import(t)}GetHeight(e,t){let i=(e-this.GetPos().x)/this.mHeightBuf.mSize,s=(t-this.GetPos().z)/this.mHeightBuf.mSize;i*=(this.mHeightBuf.mCount.x-.5)/this.mHeightBuf.mCount.x,s*=(this.mHeightBuf.mCount.y-.5)/this.mHeightBuf.mCount.y;const r=Math.floor(i),n=Math.floor(s),m=i-r,h=s-n,o=this.mHeightBuf.RGB(new T(r+0,n+0))||0,a=this.mHeightBuf.RGB(new T(r+1,n+0))||0,u=this.mHeightBuf.RGB(new T(r+0,n+1))||0,l=this.mHeightBuf.RGB(new T(r+1,n+1))||0,f=e=>((e>>24&255)<<8|e>>16&255)/65535,d=f(o)*this.mTerrainHeight+this.GetPos().y,g=f(a)*this.mTerrainHeight+this.GetPos().y,B=f(u)*this.mTerrainHeight+this.GetPos().y,x=f(l)*this.mTerrainHeight+this.GetPos().y;return m<=1-h?d+m*(g-d)+h*(B-d):g+B-x+m*(x-B)+h*(x-g)}GetNormal(e,t){let i=(e-this.GetPos().x)/this.mHeightBuf.mSize,s=(t-this.GetPos().z)/this.mHeightBuf.mSize;i*=(this.mHeightBuf.mCount.x-.5)/this.mHeightBuf.mCount.x,s*=(this.mHeightBuf.mCount.y-.5)/this.mHeightBuf.mCount.y;const r=Math.floor(i),m=Math.floor(s),o=i-r,a=s-m,u=this.mHeightBuf.RGB(new T(r+0,m+0))||0,l=this.mHeightBuf.RGB(new T(r+1,m+0))||0,f=this.mHeightBuf.RGB(new T(r+0,m+1))||0,d=this.mHeightBuf.RGB(new T(r+1,m+1))||0,g=e=>((e>>24&255)<<8|e>>16&255)/65535,B=g(u)*this.mTerrainHeight+this.GetPos().y,x=g(l)*this.mTerrainHeight+this.GetPos().y,p=g(f)*this.mTerrainHeight+this.GetPos().y,c=g(d)*this.mTerrainHeight+this.GetPos().y,G=this.mHeightBuf.mSize;let H,C;return o<=1-a?(H=new h(G,x-B,0),C=new h(0,p-B,G)):(H=new h(-G,p-c,0),C=new h(0,x-c,-G)),n.V3Nor(n.V3Cross(C,H))}EditChange(t,i){if(super.EditChange(t,i),"mTestMode"==t.member)this.SetTestMode();else if(t.IsRef(this.mLevel))this.RemoveComps(x);else{for(const e of this.FindComps(x))e.mTerrainHeight.x=this.mTerrainHeight,e.mCellSize.x=this.mHeightBuf.mSize,e.mDefaultHeight.x=this.mDefaultHeight,e.MatUpdate();this.mUpdateMat=e.eType.Already}}Update(e){if(super.Update(e),null!=this.FindComp(x))return;if(!this.LoadSplatTextures())return;this.InitTexture(),this.SetTestMode();const t=[this.mLayerTexture,this.mSplatTexture,this.mHeightTexture],i=(e,i,s,r)=>{const n=this.PushComp(new x(t,this.GetPos(),this.mTerrainHeight,e,i,s,this.mHeightBuf.mSize,r,this.mTexCodi,this.mDefaultHeight));for(let e of this.mTag)n.PushTag(e);return n};for(let e=0;e<2;e++)for(let t=0;t<2;t++)i(0,1,1,new h(e-.5,0,t-.5));let s=1;for(const[e,t]of this.mLevel.entries()){for(let r=0;r<t;r++){const n=4+2*r,m=1.5+r,o=n-1;for(let r=0;r<n;r++)i(e,t,s,new h(0-m,0,r-m)),i(e,t,s,new h(o-m,0,r-m)),r>0&&r<o&&(i(e,t,s,new h(r-m,0,0-m)),i(e,t,s,new h(r-m,0,o-m)))}s*=t+1}}LoadSplatTextures(){let e=!0;for(const t of this.mTexture)null!=t&&""!==t&&"string"==typeof t&&(null==this.GetFrame().Res().Find(t)&&(e=!1),this.GetFrame().Load().IsLoad(t)||this.GetFrame().Load().Exe(t));return e}BakeNormal(e){const t=.05,i=e.GetBuf()[0],[s,r]=[e.GetWidth(),e.GetHeight()],m=(e,t)=>{const m=4*(n.Clamp(t,0,r-1)*s+n.Clamp(e,0,s-1));return i[m]/255+i[m+1]/65535};for(let e=0;e<r;e++)for(let r=0;r<s;r++){const n=m(r+1,e+0)-m(r-1,e+0),h=m(r+0,e+1)-m(r+0,e-1),o=Math.sqrt(n*n*t*t+h*h*t*t+6250000000000002e-21),a=4*(e*s+r);i[a+2]=255*(.5-n*t/o*.5),i[a+3]=255*(.5+h*t/o*.5)}}InitTexture(){if(null==this.mHeightTexture){this.mHeightTexture=`height${this.Key()}.tex`,null!=this.GetFrame().Res().Find(this.mHeightTexture)&&this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mHeightTexture));const e=this.mHeightBuf.GetTexture();e.SetFilter(f.eFilter.Linear),this.BakeNormal(e),this.GetFrame().Res().Push(this.mHeightTexture,e),e.mModifyEvent=new i(async()=>{await t.CallAsync(null,"BufferTool",[e.GetBuf()[0],new h(e.GetWidth(),e.GetHeight(),1),!0]),this.BakeNormal(e),this.mHeightBuf.SetTexture(e)})}if(null==this.mSplatTexture){this.mSplatTexture=`splat${this.Key()}.tex`,null!=this.GetFrame().Res().Find(this.mSplatTexture)&&this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mSplatTexture));const e=this.mSplatBuf.GetTexture();e.SetFilter(f.eFilter.Linear),this.GetFrame().Res().Push(this.mSplatTexture,e),e.mModifyEvent=new i(async()=>{await t.CallAsync(null,"BufferTool",[e.GetBuf()[0],new h(e.GetWidth(),e.GetHeight(),1),!0]),this.mSplatBuf.SetTexture(e)})}if(null==this.mLayerTexture){this.mLayerTexture=`layer${this.Key()}.tex`,null!=this.GetFrame().Res().Find(this.mLayerTexture)&&this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mLayerTexture));const e=new f;e.SetSize(1024,1024),e.PushInfo([new d(f.eTarget.Array,f.eFormat.RGBA8,12)]),e.SetFilter(f.eFilter.Linear),e.SetMipMap(f.eMipmap.GL),e.SetWrap(f.eWrap.Repeat),this.GetFrame().Res().Push(this.mLayerTexture,e),e.mReadPixelEvent=new i(this.GetFrame().Ren().ReadPixel,this)}const e=this.GetFrame().Res().Find(this.mLayerTexture);e.CreateBuf();const s=e.GetBuf()[0],[r,n]=[e.GetWidth(),e.GetHeight()];for(let e=0;e<12;e++){let t;if(this.mTexture[e]instanceof o)t=u.Square(r,n,this.mTexture[e]);else if("string"==typeof this.mTexture[e]){const i=this.GetFrame().Res().Find(this.mTexture[e]),[s,m]=[i.GetWidth(),i.GetHeight()];if(t=u.SqurEnlargedReduced(s,m,i.GetBuf()[0],r/s,n/m,4),i.GetYFlip()){const e=new Uint8Array(t.GetBuf()[0].length),i=4*t.GetWidth();for(let s=0;s<t.GetHeight();s++){const r=s*i,n=(t.GetHeight()-1-s)*i,m=t.GetBuf()[0].subarray(r,r+i);e.set(m,n)}t.GetBuf()[0]=e}}else{const i=[new o(0,0,0,1),new o(1,.5,0,1),new o(.5,.5,1,0)],s=e<4?i[0]:e<8?i[1]:i[2];t=u.Square(r,n,s)}s.set(t.GetBuf()[0],r*n*4*e)}this.GetFrame().Ren().BuildTexture(e)}SetTestMode(){const e=[new a(0,1,1,a.eModel.HSV),new a(.083,1,1,a.eModel.HSV),new a(.166,1,1,a.eModel.HSV),new a(.333,1,1,a.eModel.HSV),new a(.5,1,1,a.eModel.HSV),new a(.666,1,1,a.eModel.HSV),new a(.75,1,1,a.eModel.HSV),new a(.833,1,1,a.eModel.HSV)];for(const t of this.FindComps(x))if(this.mTestMode){t.SetColorModel(e[t.mLevel.x%e.length]);const i=new l(this.GetFrame().Pal().SlTerrainKey());i.mLine=1,t.PushRenderPass(i)}else t.RemoveTag("colorModel"),t.PushRenderPass([])}}export class CColliderTerrain extends g{mTerrain;constructor(e){super(),this.mTerrain=e,this.MatUpdate(),this.SetEvent(g.eEvent.Static)}IsShould(e,t){return"mTerrain"!=e&&super.IsShould(e,t)}Update(t){this.GetOwner().mUpdateMat!=e.eType.Not&&this.MatUpdate(),super.Update(t)}MatUpdate(){this.mBound.Reset(),this.mBound.mMin.x=0,this.mBound.mMin.y=0,this.mBound.mMin.z=0,this.mBound.mMax.x=this.mTerrain.mHeightBuf.mCount.x*this.mTerrain.mHeightBuf.mSize,this.mBound.mMax.y=this.mTerrain.mTerrainHeight,this.mBound.mMax.z=this.mTerrain.mHeightBuf.mCount.y*this.mTerrain.mHeightBuf.mSize,this.mBound.SetType(s.eType.Box)}ClosestPointOnTriangle(e,t,i,s){const r=m.ProductV3(),h=n.V3SubV3(i,t),o=n.V3SubV3(s,t),a=n.V3SubV3(e,t,r),u=n.V3Dot(h,a),l=n.V3Dot(o,a);if(u<=0&&l<=0)return m.RecycleV3(r),t.Export();const f=n.V3SubV3(e,i,r),d=n.V3Dot(h,f),T=n.V3Dot(o,f);if(d>=0&&T<=d)return m.RecycleV3(r),i.Export();const g=n.V3SubV3(e,s,r),B=n.V3Dot(h,g),x=n.V3Dot(o,g);if(x>=0&&B<=x)return m.RecycleV3(r),s.Export();const p=u*T-d*l;if(p<=0&&u>=0&&d<=0){const e=u/(u-d),i=n.V3AddV3(t,n.V3MulFloat(h,e,r));return m.RecycleV3(r),i}const c=B*l-u*x;if(c<=0&&l>=0&&x<=0){const e=l/(l-x),i=n.V3AddV3(t,n.V3MulFloat(o,e,r));return m.RecycleV3(r),i}const G=d*x-B*T;if(G<=0&&T-d>=0&&B-x>=0){const e=(T-d)/(T-d+(B-x)),t=n.V3AddV3(i,n.V3MulFloat(n.V3SubV3(s,i,r),e,r));return m.RecycleV3(r),t}const H=1/(G+c+p),C=n.V3MulFloat(h,c*H);return n.V3AddV3(C,n.V3MulFloat(o,p*H,r),C),m.RecycleV3(r),n.V3AddV3(t,C,C)}CollisionChk(e,t,i){let r=null;if(e.GetBound().GetType()==s.eType.Sphere){const t=e.mBW.mRadian,i=e.mBW.mCenter,s=this.mTerrain.mHeightBuf.mCount.x,m=this.mTerrain.mHeightBuf.mSize,o=s*m*.5,a=Math.max(0,Math.floor((i.x-t+o)/m)),u=Math.min(s-2,Math.ceil((i.x+t+o)/m)),l=Math.max(0,Math.floor((i.z-t+o)/m)),f=Math.min(s-2,Math.ceil((i.z+t+o)/m));for(let e=a;e<=u;e++)for(let s=l;s<=f;s++){const a=e*m-o,u=s*m-o,l=a+m,f=u+m,d=this.mTerrain.GetHeight(a,u),T=this.mTerrain.GetHeight(l,u),g=this.mTerrain.GetHeight(a,f),B=this.mTerrain.GetHeight(l,f),x=[[new h(a,d,u),new h(l,T,u),new h(l,B,f)],[new h(a,d,u),new h(l,B,f),new h(a,g,f)]];for(const e of x){const s=this.ClosestPointOnTriangle(i,e[0],e[1],e[2]),m=n.V3SubV3(i,s),o=n.V3Len(m);o<t&&o>1e-9&&(null==r&&(r=new h(0,0,0)),n.V3AddV3(r,n.V3MulFloat(m,t-o),r))}}}else if(e.GetBound().GetType()==s.eType.Box){const t=5,i=e.mBW.mWBound.mMin.x,s=e.mBW.mWBound.mMin.z,m=e.mBW.mWBound.mMax.x-e.mBW.mWBound.mMin.x,h=e.mBW.mWBound.mMax.z-e.mBW.mWBound.mMin.z,o=e.mBW.mWBound.mMin.y;let a=0;for(let e=0;e<=t;e++)for(let u=0;u<=t;u++){const u=i+m*(e/t),l=s+h*(e/t),f=this.mTerrain.GetHeight(u,l)-o;if(f>0&&f>a){a=f;const e=this.mTerrain.GetNormal(u,l);r=n.V3MulFloat(e,f)}}}return null!=r&&(Math.abs(r.x)<B.CutMinPushValue&&(r.x=0),Math.abs(r.y)<B.CutMinPushValue&&(r.y=0),Math.abs(r.z)<B.CutMinPushValue&&(r.z=0),!r.IsZero()&&(e.mColPair.set(this,r),null!=t&&t.Push(e),null!=i&&i.Push(r),!0))}}
+import { CUpdate } from "../../basic/Basic.js";
+import { CClass } from "../../basic/CClass.js";
+import { CEvent } from "../../basic/CEvent.js";
+import { CBound } from "../../geometry/CBound.js";
+import { CMat } from "../../geometry/CMat.js";
+import { CMath } from "../../geometry/CMath.js";
+import { CPoolGeo } from "../../geometry/CPoolGeo.js";
+import { CVec3 } from "../../geometry/CVec3.js";
+import { CVec4 } from "../../geometry/CVec4.js";
+import { CColor } from "../../render/CColor.js";
+import { CImgPro } from "../../render/CImgPro.js";
+import { CRenderPass } from "../../render/CRenderPass.js";
+import { CTexture, CTextureInfo } from "../../render/CTexture.js";
+import { CCIndex } from "../canvas/CCIndex.js";
+import { CCollider } from "../component/CCollider.js";
+import { CPhysics } from "../component/CPhysics.js";
+import { CPaintTerrain } from "../component/paint/CPaintTerrain.js";
+import { CMapBuf } from "./CMapBuf.js";
+import { CSubject } from "./CSubject.js";
+export class CTerrainMap extends CSubject {
+    mHeightBuf = new CMapBuf();
+    mSplatBuf = new CMapBuf();
+    mHeightTexture = null;
+    mSplatTexture = null;
+    mLayerTexture = null;
+    mTerrainHeight = 1024;
+    mDefaultHeight = 1024;
+    mLevel = [1, 1, 1, 1, 1];
+    mTexture = new Array();
+    mTexCodi = new CMat([
+        32, 32, 0, 0,
+        32, 32, 0, 0,
+        32, 32, 0, 0,
+        32, 32, 0, 0
+    ]);
+    mTag = new Set();
+    mCollider;
+    constructor(_collider = true) {
+        super();
+        this.mHeightBuf.Reset(new CVec3(1024, 1024, 1), 10);
+        this.mSplatBuf.Reset(new CVec3(1024, 1024, 1), 10);
+        if (_collider)
+            this.mCollider = this.PushComp(new CColliderTerrain(this));
+    }
+    ClearAll() {
+        this.mHeightTexture = null;
+        this.mSplatTexture = null;
+        this.mLayerTexture = null;
+        this.RemoveComps(CPaintTerrain);
+    }
+    SetLevel(_level) {
+        this.mLevel = _level;
+        this.ClearAll();
+    }
+    SetSplat(_splatTexs, _splatTexCodi) {
+        this.mTexture = [..._splatTexs];
+        this.mTexCodi.Import(_splatTexCodi);
+    }
+    ToggleDebugMode() {
+        const TEST_COLORS = [
+            new CColor(0.000, 1, 1, CColor.eModel.HSV),
+            new CColor(0.083, 1, 1, CColor.eModel.HSV),
+            new CColor(0.166, 1, 1, CColor.eModel.HSV),
+            new CColor(0.333, 1, 1, CColor.eModel.HSV),
+            new CColor(0.500, 1, 1, CColor.eModel.HSV),
+            new CColor(0.666, 1, 1, CColor.eModel.HSV),
+            new CColor(0.750, 1, 1, CColor.eModel.HSV),
+            new CColor(0.833, 1, 1, CColor.eModel.HSV)
+        ];
+        for (const pt of this.FindComps(CPaintTerrain)) {
+            if (pt.GetRenderPass()[0].mLine != 1) {
+                pt.SetColorModel(TEST_COLORS[pt.mLevel.x % TEST_COLORS.length]);
+                pt.PushRenderPass(new CRenderPass(this.GetFrame().Pal().SlTerrainKey()).Set("mLine", 1));
+            }
+            else {
+                pt.RemoveTag("colorModel");
+                pt.PushRenderPass([]);
+            }
+        }
+    }
+    EditChange(_pointer, _child) {
+        super.EditChange(_pointer, _child);
+        if (_pointer.member == "mTestMode") {
+            this.ToggleDebugMode();
+        }
+        else if (_pointer.IsRef(this.mLevel)) {
+            this.RemoveComps(CPaintTerrain);
+        }
+        else {
+            for (const pt of this.FindComps(CPaintTerrain)) {
+                pt.mTerrainHeight.x = this.mTerrainHeight;
+                pt.mCellSize.x = this.mHeightBuf.mSize;
+                pt.mDefaultHeight.x = this.mDefaultHeight;
+                pt.MatUpdate();
+            }
+            this.mUpdateMat = CUpdate.eType.Already;
+        }
+    }
+    Update(_update) {
+        super.Update(_update);
+        if (this.FindComp(CPaintTerrain) != null)
+            return;
+        if (!this.LoadSplatTextures())
+            return;
+        this.InitTexture();
+        this.InitPaints();
+    }
+    LoadSplatTextures() {
+        let allLoaded = true;
+        for (const texKey of this.mTexture) {
+            if (texKey == null || texKey === "" || typeof texKey !== "string")
+                continue;
+            if (this.GetFrame().Res().Find(texKey) == null)
+                allLoaded = false;
+            if (!this.GetFrame().Load().IsLoad(texKey))
+                this.GetFrame().Load().Exe(texKey);
+        }
+        return allLoaded;
+    }
+    InitTexture() {
+        if (this.mHeightTexture == null) {
+            this.mHeightTexture = `height${this.Key()}.tex`;
+            if (this.GetFrame().Res().Find(this.mHeightTexture) != null)
+                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mHeightTexture));
+            const heightTex = this.mHeightBuf.GetTexture().Set("mFilter", CTexture.eFilter.Linear);
+            this.GetFrame().Res().Push(this.mHeightTexture, heightTex);
+            const BakeNormal = (_tex) => {
+                const scale = 0.05;
+                const texBuf = _tex.GetBuf()[0];
+                const [w, h] = [_tex.GetWidth(), _tex.GetHeight()];
+                const H = (_x, _y) => {
+                    const idx = (CMath.Clamp(_y, 0, h - 1) * w + CMath.Clamp(_x, 0, w - 1)) * 4;
+                    return ((texBuf[idx] << 8) + texBuf[idx + 1]) / 65535;
+                };
+                for (let y = 0; y < h; y++)
+                    for (let x = 0; x < w; x++) {
+                        const dx = H(x + 1, y + 0) - H(x - 1, y + 0), dy = H(x + 0, y + 1) - H(x + 0, y - 1);
+                        const len = Math.sqrt(dx * dx * scale * scale + dy * dy * scale * scale + scale * scale * scale * scale);
+                        const idx = (y * w + x) * 4;
+                        texBuf[idx + 2] = (0.5 - dx * scale / len * 0.5) * 255;
+                        texBuf[idx + 3] = (0.5 + dy * scale / len * 0.5) * 255;
+                    }
+            };
+            BakeNormal(heightTex);
+            heightTex.mModifyEvent = new CEvent(() => {
+                CClass.CallAsync(null, "BufferTool", [heightTex.GetBuf()[0], new CVec3(heightTex.GetWidth(), heightTex.GetHeight(), 1), true]).then(() => {
+                    this.mHeightBuf.SetTexture(heightTex);
+                    BakeNormal(heightTex);
+                });
+            });
+        }
+        if (this.mSplatTexture == null) {
+            this.mSplatTexture = `splat${this.Key()}.tex`;
+            if (this.GetFrame().Res().Find(this.mSplatTexture) != null)
+                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mSplatTexture));
+            const splatTex = this.mSplatBuf.GetTexture().Set("mFilter", CTexture.eFilter.Linear);
+            this.GetFrame().Res().Push(this.mSplatTexture, splatTex);
+            splatTex.mModifyEvent = new CEvent(() => {
+                CClass.CallAsync(null, "BufferTool", [splatTex.GetBuf()[0], new CVec3(splatTex.GetWidth(), splatTex.GetHeight(), 1), true]).then(() => {
+                    this.mSplatBuf.SetTexture(splatTex);
+                });
+            });
+        }
+        if (this.mLayerTexture == null) {
+            this.mLayerTexture = `layer${this.Key()}.tex`;
+            if (this.GetFrame().Res().Find(this.mLayerTexture) != null)
+                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mLayerTexture));
+            const layerTex = new CTexture().Set("mWidth", 1024).Set("mHeight", 1024).Set("mFilter", CTexture.eFilter.Linear).Set("mMipMap", CTexture.eMipmap.GL).Set("mWrap", CTexture.eWrap.Repeat);
+            layerTex.PushInfo([new CTextureInfo(CTexture.eTarget.Array, CTexture.eFormat.RGBA8, 12)]);
+            this.GetFrame().Res().Push(this.mLayerTexture, layerTex);
+            layerTex.mReadPixelEvent = new CEvent(this.GetFrame().Ren().ReadPixel, this);
+            if (layerTex.GetBuf().length == 0)
+                layerTex.CreateBuf();
+            const layerBuf = layerTex.GetBuf()[0];
+            const EnlargeTexture = (_org, _default) => {
+                if (_org instanceof CVec4)
+                    return CImgPro.Square(layerTex.GetWidth(), layerTex.GetHeight(), _org);
+                if (_org == null)
+                    return CImgPro.Square(layerTex.GetWidth(), layerTex.GetHeight(), _default);
+                const orgTex = this.GetFrame().Res().Find(_org);
+                const result = CImgPro.SqurEnlargedReduced(orgTex.GetWidth(), orgTex.GetHeight(), orgTex.GetBuf()[0], layerTex.GetWidth() / orgTex.GetWidth(), layerTex.GetHeight() / orgTex.GetHeight(), 4);
+                if (orgTex.GetYFlip()) {
+                    const temp = new Uint8Array(result.GetWidth() * 4);
+                    for (let y = 0; y < (result.GetHeight() >> 1); y++) {
+                        temp.set(result.GetBuf()[0].subarray(y * result.GetWidth() * 4, (y + 1) * result.GetWidth() * 4));
+                        result.GetBuf()[0].copyWithin(y * result.GetWidth() * 4, (result.GetHeight() - 1 - y) * result.GetWidth() * 4, (result.GetHeight() - y) * result.GetWidth() * 4);
+                        result.GetBuf()[0].set(temp, (result.GetHeight() - 1 - y) * result.GetWidth() * 4);
+                    }
+                }
+                return result;
+            };
+            for (let i = 0; i < 4; i++) {
+                layerBuf.set(EnlargeTexture(this.mTexture[i], new CVec4(0, 0, 0, 1)).GetBuf()[0], layerTex.GetWidth() * layerTex.GetHeight() * 4 * i);
+            }
+            for (let i = 4; i < 8; i++) {
+                layerBuf.set(EnlargeTexture(this.mTexture[i], new CVec4(1, 0.5, 0, 1)).GetBuf()[0], layerTex.GetWidth() * layerTex.GetHeight() * 4 * i);
+            }
+            for (let i = 8; i < 12; i++) {
+                layerBuf.set(EnlargeTexture(this.mTexture[i], new CVec4(0.5, 0.5, 1, 0)).GetBuf()[0], layerTex.GetWidth() * layerTex.GetHeight() * 4 * i);
+            }
+            this.GetFrame().Ren().BuildTexture(layerTex);
+        }
+    }
+    InitPaints() {
+        const textureList = [this.mLayerTexture, this.mSplatTexture, this.mHeightTexture];
+        const Spawn = (_level, _repeatCount, _scale, _cellIndex) => {
+            const pt = this.PushComp(new CPaintTerrain(textureList, this.GetPos(), this.mTerrainHeight, _level, _repeatCount, _scale, this.mHeightBuf.mSize, _cellIndex, this.mTexCodi, this.mDefaultHeight));
+            for (let tag of this.mTag)
+                pt.PushTag(tag);
+            return pt;
+        };
+        for (let x = 0; x < 2; x++)
+            for (let y = 0; y < 2; y++) {
+                Spawn(0, 1, 1, new CVec3(x - 0.5, 0, y - 0.5));
+            }
+        let levelScale = 1;
+        for (const [level, repeatCount] of this.mLevel.entries()) {
+            for (let repeat = 0; repeat < repeatCount; repeat++) {
+                const size = 4 + repeat * 2;
+                const center = 1.5 + repeat;
+                const limit = size - 1;
+                for (let i = 0; i < size; i++) {
+                    Spawn(level, repeatCount, levelScale, new CVec3(0 - center, 0, i - center));
+                    Spawn(level, repeatCount, levelScale, new CVec3(limit - center, 0, i - center));
+                    if (i > 0 && i < limit) {
+                        Spawn(level, repeatCount, levelScale, new CVec3(i - center, 0, 0 - center));
+                        Spawn(level, repeatCount, levelScale, new CVec3(i - center, 0, limit - center));
+                    }
+                }
+            }
+            levelScale *= repeatCount + 1;
+        }
+    }
+    SampleHeights(_worldX, _worldZ) {
+        const pixelX = (_worldX - this.GetPos().x) / this.mHeightBuf.mSize * (this.mHeightBuf.mCount.x - 0.5) / this.mHeightBuf.mCount.x;
+        const pixelY = (_worldZ - this.GetPos().z) / this.mHeightBuf.mSize * (this.mHeightBuf.mCount.y - 0.5) / this.mHeightBuf.mCount.y;
+        const xi = Math.floor(pixelX), yi = Math.floor(pixelY);
+        const xf = pixelX - xi, yf = pixelY - yi;
+        const decodeHeight = (_rgb) => {
+            const r = (_rgb >> 24) & 0xff, g = (_rgb >> 16) & 0xff;
+            return ((r << 8) | g) / 65535;
+        };
+        const sample = (dx, dy) => decodeHeight(this.mHeightBuf.RGB(new CCIndex(xi + dx, yi + dy)) || 0) * this.mTerrainHeight + this.GetPos().y;
+        return { xf, yf, h00: sample(0, 0), h10: sample(1, 0), h01: sample(0, 1), h11: sample(1, 1) };
+    }
+    GetHeight(_worldX, _worldZ) {
+        const { xf, yf, h00, h10, h01, h11 } = this.SampleHeights(_worldX, _worldZ);
+        if (xf <= (1 - yf))
+            return h00 + xf * (h10 - h00) + yf * (h01 - h00);
+        return h10 + h01 - h11 + xf * (h11 - h01) + yf * (h11 - h10);
+    }
+    GetNormal(_worldX, _worldZ) {
+        const { xf, yf, h00, h10, h01, h11 } = this.SampleHeights(_worldX, _worldZ);
+        if (xf <= (1 - yf))
+            return CMath.V3Nor(CMath.V3Cross(new CVec3(0, h01 - h00, this.mHeightBuf.mSize), new CVec3(this.mHeightBuf.mSize, h10 - h00, 0)));
+        else
+            return CMath.V3Nor(CMath.V3Cross(new CVec3(0, h10 - h11, -this.mHeightBuf.mSize), new CVec3(-this.mHeightBuf.mSize, h01 - h11, 0)));
+    }
+}
+export class CColliderTerrain extends CCollider {
+    mTerrain;
+    constructor(_terrain) {
+        super();
+        this.mTerrain = _terrain;
+        this.MatUpdate();
+        this.SetEvent(CCollider.eEvent.Static);
+    }
+    IsShould(_member, _type) {
+        if (_member == "mTerrain")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    Update(_update) {
+        if (this.GetOwner().mUpdateMat != CUpdate.eType.Not)
+            this.MatUpdate();
+        super.Update(_update);
+    }
+    MatUpdate() {
+        this.mBound.Reset();
+        this.mBound.mMin.x = 0;
+        this.mBound.mMin.y = 0;
+        this.mBound.mMin.z = 0;
+        this.mBound.mMax.x = this.mTerrain.mHeightBuf.mCount.x * this.mTerrain.mHeightBuf.mSize;
+        this.mBound.mMax.y = this.mTerrain.mTerrainHeight;
+        this.mBound.mMax.z = this.mTerrain.mHeightBuf.mCount.y * this.mTerrain.mHeightBuf.mSize;
+        this.mBound.SetType(CBound.eType.Box);
+    }
+    ClosestPointOnTriangle(_point, _triVertA, _triVertB, _triVertC) {
+        const xp = CPoolGeo.ProductV3();
+        const ab = CMath.V3SubV3(_triVertB, _triVertA), ac = CMath.V3SubV3(_triVertC, _triVertA);
+        const ap = CMath.V3SubV3(_point, _triVertA, xp);
+        const d1 = CMath.V3Dot(ab, ap), d2 = CMath.V3Dot(ac, ap);
+        if (d1 <= 0 && d2 <= 0) {
+            CPoolGeo.RecycleV3(xp);
+            return _triVertA.Export();
+        }
+        const bp = CMath.V3SubV3(_point, _triVertB, xp);
+        const d3 = CMath.V3Dot(ab, bp), d4 = CMath.V3Dot(ac, bp);
+        if (d3 >= 0 && d4 <= d3) {
+            CPoolGeo.RecycleV3(xp);
+            return _triVertB.Export();
+        }
+        const cp = CMath.V3SubV3(_point, _triVertC, xp);
+        const d5 = CMath.V3Dot(ab, cp), d6 = CMath.V3Dot(ac, cp);
+        if (d6 >= 0 && d5 <= d6) {
+            CPoolGeo.RecycleV3(xp);
+            return _triVertC.Export();
+        }
+        const vc = d1 * d4 - d3 * d2;
+        if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+            const v = d1 / (d1 - d3);
+            const result = CMath.V3AddV3(_triVertA, CMath.V3MulFloat(ab, v, xp));
+            CPoolGeo.RecycleV3(xp);
+            return result;
+        }
+        const vb = d5 * d2 - d1 * d6;
+        if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+            const w = d2 / (d2 - d6);
+            const result = CMath.V3AddV3(_triVertA, CMath.V3MulFloat(ac, w, xp));
+            CPoolGeo.RecycleV3(xp);
+            return result;
+        }
+        const va = d3 * d6 - d5 * d4;
+        if (va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0) {
+            const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+            const result = CMath.V3AddV3(_triVertB, CMath.V3MulFloat(CMath.V3SubV3(_triVertC, _triVertB, xp), w, xp));
+            CPoolGeo.RecycleV3(xp);
+            return result;
+        }
+        const denom = 1 / (va + vb + vc);
+        const result = CMath.V3MulFloat(ab, vb * denom);
+        CMath.V3AddV3(result, CMath.V3MulFloat(ac, vc * denom, xp), result);
+        CPoolGeo.RecycleV3(xp);
+        return CMath.V3AddV3(_triVertA, result, result);
+    }
+    CollisionChk(_co, _colTarget, _colPush) {
+        let push = null;
+        if (_co.GetBound().GetType() == CBound.eType.Sphere) {
+            const radius = _co.mBW.mRadian;
+            const center = _co.mBW.mCenter;
+            const N = this.mTerrain.mHeightBuf.mCount.x;
+            const cellSize = this.mTerrain.mHeightBuf.mSize;
+            const half = N * cellSize * 0.5;
+            const minI = Math.max(0, Math.floor((center.x - radius + half) / cellSize));
+            const maxI = Math.min(N - 2, Math.ceil((center.x + radius + half) / cellSize));
+            const minJ = Math.max(0, Math.floor((center.z - radius + half) / cellSize));
+            const maxJ = Math.min(N - 2, Math.ceil((center.z + radius + half) / cellSize));
+            for (let i = minI; i <= maxI; i++) {
+                for (let j = minJ; j <= maxJ; j++) {
+                    const wx0 = -half + i * cellSize;
+                    const wz0 = -half + j * cellSize;
+                    const wx1 = wx0 + cellSize, wz1 = wz0 + cellSize;
+                    const h00 = this.mTerrain.GetHeight(wx0, wz0);
+                    const h10 = this.mTerrain.GetHeight(wx1, wz0);
+                    const h01 = this.mTerrain.GetHeight(wx0, wz1);
+                    const h11 = this.mTerrain.GetHeight(wx1, wz1);
+                    const tris = [
+                        [new CVec3(wx0, h00, wz0), new CVec3(wx1, h10, wz0), new CVec3(wx1, h11, wz1)],
+                        [new CVec3(wx0, h00, wz0), new CVec3(wx1, h11, wz1), new CVec3(wx0, h01, wz1)]
+                    ];
+                    for (const tri of tris) {
+                        const closest = this.ClosestPointOnTriangle(center, tri[0], tri[1], tri[2]);
+                        const diff = CMath.V3SubV3(center, closest);
+                        const dist = CMath.V3Len(diff);
+                        if (dist < radius && dist > 1e-9) {
+                            if (push == null)
+                                push = new CVec3(0, 0, 0);
+                            CMath.V3AddV3(push, CMath.V3MulFloat(diff, radius - dist), push);
+                        }
+                    }
+                }
+            }
+        }
+        else if (_co.GetBound().GetType() == CBound.eType.Box) {
+            const steps = 5;
+            const x = _co.mBW.mWBound.mMin.x;
+            const z = _co.mBW.mWBound.mMin.z;
+            const hx = _co.mBW.mWBound.mMax.x - _co.mBW.mWBound.mMin.x;
+            const hz = _co.mBW.mWBound.mMax.z - _co.mBW.mWBound.mMin.z;
+            const bottomY = _co.mBW.mWBound.mMin.y;
+            let maxPenetration = 0;
+            for (let i = 0; i <= steps; i++)
+                for (let k = 0; k <= steps; k++) {
+                    const wx = x + hx * (i / steps);
+                    const wz = z + hz * (i / steps);
+                    const terrainY = this.mTerrain.GetHeight(wx, wz);
+                    const penetration = terrainY - bottomY;
+                    if (penetration > 0) {
+                        if (penetration > maxPenetration) {
+                            maxPenetration = penetration;
+                            const normal = this.mTerrain.GetNormal(wx, wz);
+                            push = CMath.V3MulFloat(normal, penetration);
+                        }
+                    }
+                }
+        }
+        if (push != null) {
+            if (Math.abs(push.x) < CPhysics.CutMinPushValue)
+                push.x = 0;
+            if (Math.abs(push.y) < CPhysics.CutMinPushValue)
+                push.y = 0;
+            if (Math.abs(push.z) < CPhysics.CutMinPushValue)
+                push.z = 0;
+            if (push.IsZero())
+                return false;
+            _co.mColPair.set(this, push);
+            if (_colTarget != null)
+                _colTarget.Push(_co);
+            if (_colPush != null)
+                _colPush.Push(push);
+            return true;
+        }
+        return false;
+    }
+}

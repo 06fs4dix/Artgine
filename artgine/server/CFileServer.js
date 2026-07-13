@@ -1,1 +1,440 @@
-var t=this&&this.__decorate||function(t,e,s,r){var i,n=arguments.length,o=n<3?e:null===r?r=Object.getOwnPropertyDescriptor(e,s):r;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)o=Reflect.decorate(t,e,s,r);else for(var a=t.length-1;a>=0;a--)(i=t[a])&&(o=(n<3?i(o):n>3?i(e,s,o):i(e,s))||o);return n>3&&o&&Object.defineProperty(e,s,o),o};import{CUtil as e}from"../basic/CUtil.js";import{URLPatterns as s}from"../network/CServerMain.js";import{CFile as r}from"../system/CFile.js";import{CAuthServer as i,isAuthedReq as n,isValidToken as o}from"./CAuthServer.js";import{GetAppJSON as a,GetRootPaths as l}from"../../desktop/MainFunc.js";import{exec as c}from"child_process";import{promisify as u}from"util";import*as f from"path";const g=u(c),d=(t,e)=>g(t,{maxBuffer:67108864,...e});async function h(t){try{const{stdout:e}=await d(`git -C "${t}" rev-parse --show-toplevel`);return e.trim().replace(/\\/g,"/")}catch{return null}}async function m(t){try{return await d(`svn info "${t}"`),"svn"}catch{}const e=async t=>{try{return await d(`git -C "${t}" rev-parse --git-dir`),!0}catch{}return!1};if(await e(t))return"git";const s=f.dirname(f.resolve(t));return s!==f.resolve(t)&&await e(s)?"git":null}function p(t){return t.split("\n").filter(t=>t.length>=9).map(t=>({status:t[0],file:t.slice(8).trim()})).filter(t=>t.file&&("M"===t.status||"A"===t.status||"D"===t.status||"?"===t.status))}function y(t,e){const s={M:4,A:3,D:2,"?":1},r=t=>"M"===t?"M":"A"===t?"A":"D"===t?"D":"?"===t?"?":null;return t.split("\n").filter(t=>t.length>=3).map(t=>{const i=r(t[0]),n=r(t[1]),o=f.join(e,t.slice(3).trim()).replace(/\\/g,"/"),a=i&&n?s[i]>=s[n]?i:n:i||n;return a?{status:a,file:o}:null}).filter(t=>!!t&&!!t.file)}function S(t){return f.resolve(t).replace(/\\/g,"/")}function v(t,e){const s=S(t).replace(/\/+$/,""),r=S(e);return r===s||r.startsWith(s+"/")}async function w(t){return l(await a()).some(e=>v(e,t))}async function O(t){const e=l(await a());return t?e.find(e=>S(e)===S(t))??null:e[0]}let k=class extends i{IsAuth(t,e){const s=t.GetStr("token");return s?o(s):n(e)}constructor(){super(),this.On("/File/Root",this.onRoot.bind(this)),this.On("/File/Redirection",this.onRedirection.bind(this)),this.On("/File/List",this.onList.bind(this)),this.On("/File/Mkdir",this.onMkdir.bind(this)),this.On("/File/Delete",this.onDelete.bind(this)),this.On("/File/Upload",this.onUpload.bind(this)),this.On("/File/VCS",this.onVCS.bind(this))}async onRoot(t,e,s){const r=await a(),i=new URL(r.url).pathname.replace(/\/+$/,"")||"/Artgine",n=l(r).map((t,e)=>({path:t,url:i+"/Root"+e,name:t})),o=t.GetStr("RootPath"),c=t.GetStr("RootUrl"),u=o||c?n.find(t=>o&&S(t.path)===S(o)||t.url===c)??n[0]:n[0];return JSON.stringify({RootPath:(f=u.path,f.replace(/\\/g,"/").replace(/\/+/g,"/")),RootUrl:u.url,roots:n});var f}async onRedirection(t,e,s){const i=e.body&&"object"==typeof e.body?e.body:{};let n=i.path||"/",o=i.fun,a=i.data,l=i.option,c=i.RootPath,u=i.RootUrl,f="";c&&(f+=`&RootPath=${encodeURIComponent(c)}`),u&&(f+=`&RootUrl=${encodeURIComponent(u)}`);const g=t=>t.replace(/\\/g,"/").replace(/\/+/g,"/");if(o?.includes("CreateFolder")||o?.includes("Delete")||o?.includes("SoundPlayList")){if(!this.IsAuth(t,e))return s.status(403),JSON.stringify({ok:!1,msg:"Unauthorized"});const i=await O(c);if(null===i)return s.status(403),JSON.stringify({ok:!1,msg:"Invalid RootPath"});if(o?.includes("CreateFolder")){const t=g(i+a);if(!v(i,t))return s.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});await r.FolderCreate(t)}else if(o?.includes("Delete")){const t=g(i+a);if(!v(i,t))return s.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});await r.Delete(t)}else if(o?.includes("SoundPlayList")){const t=g(i+n+l+".soundlist");if(!v(i,t))return s.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});r.Save(a,t)}}return s.redirect(302,`../proj/Home/Home.html?path=${n}${f}`),null}async onList(t,e,s){let i=t.GetStr("path")||"/";const n=await O(t.GetStr("RootPath"));if(null===n)return s.status(403),JSON.stringify({ok:!1,msg:"Invalid RootPath"});let o=t.GetStr("RootUrl");const a=t=>t.replace(/\\/g,"/").replace(/\/+/g,"/"),l=a(n+i);if(!v(n,l))return s.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});let c=await r.FolderList(l);if(!this.IsAuth(t,e)){const t=["png","jpg","jpeg","bmp","mp3","ogg","mp4","mov","avi"];c=c.filter(e=>!e.file||t.includes(e.ext))}c=c.filter(t=>!t.name.toLowerCase().includes("secret"));const u=await async function(t){const e=new Map,s=t=>t.replace(/\\/g,"/").replace(/\/+$/,""),r=s(f.resolve(t)),i={M:4,A:3,D:2,"?":1},n=(t,n)=>{const o=s(f.resolve(t));if(!o.startsWith(r+"/")&&o!==r)return;const a=o.slice(r.length+1),l=a.split("/")[0];if(!l)return;if("?"===n&&a.includes("/"))return;const c=e.get(l);(!c||i[n]>i[c])&&e.set(l,n)},o=await m(t);if("svn"===o)try{const{stdout:e}=await d(`svn status "${t}"`);for(const{status:t,file:s}of p(e))n(s,t)}catch{}else if("git"===o)try{const e=await h(t)||t,{stdout:s}=await d(`git -C "${t}" status --short`);for(const{status:t,file:r}of y(s,e))n(r,t)}catch{}return e}(l);return u.size>0&&(c=function(t,e){return t.map(t=>{const s=e.get(t.name);return s?{...t,Status:s}:t})}(c,u)),JSON.stringify({RootPath:a(n),list:c,path:i,RootUrl:o})}async onMkdir(t,e,s){if(!this.IsAuth(t,e))return s.status(403),JSON.stringify({ok:!1,msg:"Unauthorized"});const i=await O(t.GetStr("RootPath"));if(null===i)return s.status(403),JSON.stringify({ok:!1,msg:"Invalid RootPath"});const n=(i+t.GetStr("data")).replace(/\\/g,"/").replace(/\/+/g,"/");if(!v(i,n))return s.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});const o=await r.FolderCreate(n);return JSON.stringify({ok:o})}async onDelete(t,e,s){if(!this.IsAuth(t,e))return s.status(403),JSON.stringify({ok:!1,msg:"Unauthorized"});const i=await O(t.GetStr("RootPath"));if(null===i)return s.status(403),JSON.stringify({ok:!1,msg:"Invalid RootPath"});const n=(i+t.GetStr("data")).replace(/\\/g,"/").replace(/\/+/g,"/");if(!v(i,n))return s.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});try{await d(`svn info "${n}"`),await d(`svn delete "${n}"`)}catch{await r.Delete(n)}return JSON.stringify({ok:!0})}async onUpload(t,s,i){if(!this.IsAuth(t,s))return i.status(403),JSON.stringify({ok:!1,msg:"Unauthorized"});let n=t.GetStr("path"),o=t.GetArray("name"),a=t.GetArray("data");const l=o.mArray.map(t=>(n+t).replace(/\\/g,"/").replace(/\/+/g,"/"));for(const t of l)if(!await w(t))return i.status(403),JSON.stringify({ok:!1,msg:"Path escapes root"});for(let t=0;t<o.mArray.length;++t){const s=l[t],i=e.Base64ToArray(a.mArray[t]);r.Save(i,s),r.PushCache(s,i)}return JSON.stringify({ok:!0})}async onVCS(t,e,s){if(!this.IsAuth(t,e))return s.status(403),JSON.stringify({ok:!1,msg:"Unauthorized"});const r=t.GetStr("action"),i=t=>t.replace(/\\/g,"/").replace(/\/+/g,"/"),n=i(t.GetStr("path")||"./"),o=t.GetArray("files").mArray,a=t.GetStr("message")||"",l=t=>`"${t.replace(/"/g,'\\"')}"`,c=n.endsWith("/"),u=c?n:i(f.dirname(n));if(!await w(u))return JSON.stringify({ok:!1,msg:"Path escapes allowed roots"});const g=await m(u);if(!g)return JSON.stringify({ok:!1,msg:"SVN/Git not found. Check installation."});try{if("diff"===r){let t;t="svn"===g?`svn diff ${l(n)}`:c?`git -C ${l(n)} diff`:`git -C ${l(u)} diff -- ${l(f.basename(n))}`;const{stdout:e}=await d(t);return JSON.stringify({ok:!0,vcs:g,diff:e})}if("status"===r){const t="svn"===g?`svn status ${l(n)}`:`git -C ${l(n)} status --short -- .`,{stdout:e}=await d(t),s="git"===g&&await h(u)||n,r="svn"===g?p(e):y(e,s);return JSON.stringify({ok:!0,vcs:g,items:r})}let t="";if("update"===r){if("svn"===g){const{stdout:t,stderr:e}=await d(`svn update ${l(n)}`),s=(t+e).match(/At revision (\d+)/);return JSON.stringify({ok:!0,vcs:g,msg:(t+e).trim(),revision:s?.[1]??null})}{const{stdout:t,stderr:e}=await d(`git -C ${l(u)} pull && git -C ${l(u)} submodule update --remote --recursive`);let s=null;try{const{stdout:t}=await d(`git -C ${l(u)} log -1 --format="%h %s"`);s=t.trim()||null}catch{}return JSON.stringify({ok:!0,vcs:g,msg:(t+e).trim(),revision:s})}}if("add"===r){if("svn"!==g)return JSON.stringify({ok:!1,msg:"Add is SVN-only. Use commit for Git (git add is implicit)."});t=`svn add ${o.map(l).join(" ")}`}else if("revert"===r){if("svn"!==g){const t=50;let e="";for(let s=0;s<o.length;s+=t){const r=o.slice(s,s+t),{stdout:i,stderr:a}=await d(`git -C ${l(n)} restore ${r.map(l).join(" ")}`);e+=i+a}return JSON.stringify({ok:!0,vcs:g,msg:e.trim()})}t=`svn revert ${o.map(l).join(" ")}`}else{if("commit"!==r)return JSON.stringify({ok:!1,msg:"Unknown action"});if("svn"!==g){const t=50;let e="";for(let s=0;s<o.length;s+=t){const r=o.slice(s,s+t),{stdout:i,stderr:a}=await d(`git -C ${l(n)} add ${r.map(l).join(" ")}`);e+=i+a}const{stdout:s,stderr:r}=await d(`git -C ${l(n)} commit -m ${l(a)}`);let i="",c=!1;try{const{stdout:t,stderr:e}=await d(`git -C ${l(n)} push`);i=t+e}catch(t){i=t.stderr||t.message||String(t),c=!0}return JSON.stringify({ok:!c,vcs:g,msg:(e+s+r+i).trim()})}t=`svn commit -m ${l(a)} ${o.map(l).join(" ")}`}const{stdout:e,stderr:s}=await d(t);return JSON.stringify({ok:!0,vcs:g,msg:(e+s).trim()})}catch(t){return JSON.stringify({ok:!1,msg:t.stderr||t.message||String(t)})}}};k=t([s(["/File/Root","/File/List","/File/Redirection","/File/Upload","/File/Mkdir","/File/Delete","/File/VCS"])],k);export{k as CFileServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { CUtil } from "../basic/CUtil.js";
+import { URLPatterns } from "../network/CServerMain.js";
+import { CFile } from "../system/CFile.js";
+import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
+import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as nodePath from 'path';
+const _exec = promisify(exec);
+const execAsync = (cmd, opts) => _exec(cmd, { maxBuffer: 64 * 1024 * 1024, ...opts });
+async function getGitRoot(dirPath) {
+    try {
+        const { stdout } = await execAsync(`git -C "${dirPath}" rev-parse --show-toplevel`);
+        return stdout.trim().replace(/\\/g, '/');
+    }
+    catch {
+        return null;
+    }
+}
+async function detectVcsType(dirPath) {
+    try {
+        await execAsync(`svn info "${dirPath}"`);
+        return "svn";
+    }
+    catch { }
+    const tryGit = async (d) => { try {
+        await execAsync(`git -C "${d}" rev-parse --git-dir`);
+        return true;
+    }
+    catch { } return false; };
+    if (await tryGit(dirPath))
+        return "git";
+    const parent = nodePath.dirname(nodePath.resolve(dirPath));
+    if (parent !== nodePath.resolve(dirPath) && await tryGit(parent))
+        return "git";
+    return null;
+}
+function parseSvnStatus(stdout) {
+    return stdout.split('\n')
+        .filter(l => l.length >= 9)
+        .map(l => ({ status: l[0], file: l.slice(8).trim() }))
+        .filter(i => i.file && (i.status === 'M' || i.status === 'A' || i.status === 'D' || i.status === '?'));
+}
+function parseGitStatus(stdout, dirPath) {
+    const priority = { 'M': 4, 'A': 3, 'D': 2, '?': 1 };
+    const toStatus = (c) => c === 'M' ? 'M' : c === 'A' ? 'A' : c === 'D' ? 'D' : (c === '?' ? '?' : null);
+    return stdout.split('\n')
+        .filter(l => l.length >= 3)
+        .map(l => {
+        const x = toStatus(l[0]);
+        const y = toStatus(l[1]);
+        const file = nodePath.join(dirPath, l.slice(3).trim()).replace(/\\/g, '/');
+        const s = (x && y)
+            ? (priority[x] >= priority[y] ? x : y)
+            : (x || y);
+        return s ? { status: s, file } : null;
+    })
+        .filter((i) => !!i && !!i.file);
+}
+async function getVcsStatus(dirPath) {
+    const map = new Map();
+    const normalize = (p) => p.replace(/\\/g, '/').replace(/\/+$/, '');
+    const base = normalize(nodePath.resolve(dirPath));
+    const priority = { 'M': 4, 'A': 3, 'D': 2, '?': 1 };
+    const addEntry = (rawPath, s) => {
+        const abs = normalize(nodePath.resolve(rawPath));
+        if (!abs.startsWith(base + '/') && abs !== base)
+            return;
+        const rel = abs.slice(base.length + 1);
+        const first = rel.split('/')[0];
+        if (!first)
+            return;
+        if (s === '?' && rel.includes('/'))
+            return;
+        const existing = map.get(first);
+        if (!existing || priority[s] > priority[existing])
+            map.set(first, s);
+    };
+    const vcs = await detectVcsType(dirPath);
+    if (vcs === 'svn') {
+        try {
+            const { stdout } = await execAsync(`svn status "${dirPath}"`);
+            for (const { status, file } of parseSvnStatus(stdout))
+                addEntry(file, status);
+        }
+        catch { }
+    }
+    else if (vcs === 'git') {
+        try {
+            const gitRoot = await getGitRoot(dirPath) || dirPath;
+            const { stdout } = await execAsync(`git -C "${dirPath}" status --short`);
+            for (const { status, file } of parseGitStatus(stdout, gitRoot))
+                addEntry(file, status);
+        }
+        catch { }
+    }
+    return map;
+}
+function resolveAbs(p) {
+    return nodePath.resolve(p).replace(/\\/g, '/');
+}
+function isInsideRoot(rootPath, targetPath) {
+    const base = resolveAbs(rootPath).replace(/\/+$/, '');
+    const target = resolveAbs(targetPath);
+    return target === base || target.startsWith(base + '/');
+}
+async function isInsideAnyRoot(targetPath) {
+    const roots = GetRootPaths(await GetAppJSON());
+    return roots.some(r => isInsideRoot(r, targetPath));
+}
+async function getRoots() {
+    const _cfg = await GetAppJSON();
+    const serverPath = new URL(_cfg.url).pathname.replace(/\/+$/, '') || '/Artgine';
+    return GetRootPaths(_cfg).map((p, i) => ({ path: resolveAbs(p), url: serverPath + '/Root' + i, name: p }));
+}
+async function validateRoot(rootParam) {
+    const roots = await getRoots();
+    if (!rootParam)
+        return roots[0] ?? null;
+    const match = roots.find(r => resolveAbs(r.path) === resolveAbs(rootParam));
+    return match ?? null;
+}
+function applyVcsStatus(list, vcsMap) {
+    return list.map(item => {
+        const s = vcsMap.get(item.name);
+        return s ? { ...item, Status: s } : item;
+    });
+}
+let CFileServer = class CFileServer extends CAuthServer {
+    IsAuth(_json, req) {
+        const token = _json.GetStr('token');
+        return token ? isValidToken(token) : isAuthedReq(req);
+    }
+    constructor() {
+        super();
+        this.On("/File/Root", this.onRoot.bind(this));
+        this.On("/File/Redirection", this.onRedirection.bind(this));
+        this.On("/File/List", this.onList.bind(this));
+        this.On("/File/Mkdir", this.onMkdir.bind(this));
+        this.On("/File/Delete", this.onDelete.bind(this));
+        this.On("/File/Upload", this.onUpload.bind(this));
+        this.On("/File/VCS", this.onVCS.bind(this));
+    }
+    async onRoot(_json, _req, _res) {
+        const roots = await getRoots();
+        const root = await validateRoot(_json.GetStr("RootPath")) ?? roots[0];
+        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        return JSON.stringify({
+            RootPath: fix(root.path),
+            RootUrl: root.url,
+            roots,
+        });
+    }
+    async onRedirection(_json, _req, _res) {
+        const body = (_req.body && typeof _req.body === 'object') ? _req.body : {};
+        let path = body["path"] || "/";
+        let fun = body["fun"];
+        let data = body["data"];
+        let option = body["option"];
+        let rootParam = body["RootPath"];
+        let extraQ = "";
+        if (rootParam) {
+            const root = await validateRoot(rootParam);
+            if (root)
+                extraQ += `&RootPath=${encodeURIComponent(rootParam)}&RootUrl=${encodeURIComponent(root.url)}`;
+        }
+        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        if (fun?.includes("CreateFolder") || fun?.includes("Delete") || fun?.includes("SoundPlayList")) {
+            if (!this.IsAuth(_json, _req)) {
+                _res.status(403);
+                return JSON.stringify({ ok: false, msg: "Unauthorized" });
+            }
+            const currentRoot = await validateRoot(rootParam);
+            if (currentRoot === null) {
+                _res.status(403);
+                return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+            }
+            const currentRootPath = currentRoot.path;
+            if (fun?.includes("CreateFolder")) {
+                const targetPath = fix(currentRootPath + data);
+                if (!isInsideRoot(currentRootPath, targetPath)) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
+                }
+                await CFile.FolderCreate(targetPath);
+            }
+            else if (fun?.includes("Delete")) {
+                const targetPath = fix(currentRootPath + data);
+                if (!isInsideRoot(currentRootPath, targetPath)) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
+                }
+                await CFile.Delete(targetPath);
+            }
+            else if (fun?.includes("SoundPlayList")) {
+                const targetPath = fix(currentRootPath + path + option + ".soundlist");
+                if (!isInsideRoot(currentRootPath, targetPath)) {
+                    _res.status(403);
+                    return JSON.stringify({ ok: false, msg: "Path escapes root" });
+                }
+                CFile.Save(data, targetPath);
+            }
+        }
+        _res.redirect(302, "../proj/Home/Home.html" + `?path=${path}${extraQ}`);
+        return null;
+    }
+    async onList(_json, _req, _res) {
+        let path = _json.GetStr("path") || "/";
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
+        const currentRootPath = currentRoot.path;
+        const currentDown = currentRoot.url;
+        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const targetPath = fix(currentRootPath + path);
+        if (!isInsideRoot(currentRootPath, targetPath)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
+        let list = await CFile.FolderList(targetPath);
+        if (!this.IsAuth(_json, _req)) {
+            const mediaExts = ["png", "jpg", "jpeg", "bmp", "mp3", "ogg", "mp4", "mov", "avi"];
+            list = list.filter((item) => !item.file || mediaExts.includes(item.ext));
+        }
+        list = list.filter((item) => !item.name.toLowerCase().includes("secret"));
+        const vcsMap = await getVcsStatus(targetPath);
+        if (vcsMap.size > 0)
+            list = applyVcsStatus(list, vcsMap);
+        list = list.slice().sort((a, b) => {
+            if (a.file !== b.file)
+                return a.file ? 1 : -1;
+            return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        });
+        return JSON.stringify({ RootPath: fix(currentRootPath), list, path, RootUrl: currentDown });
+    }
+    async onMkdir(_json, _req, _res) {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
+        const currentRootPath = currentRoot.path;
+        const data = _json.GetStr("data");
+        const targetPath = fix(currentRootPath + data);
+        if (!isInsideRoot(currentRootPath, targetPath)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
+        const ok = await CFile.FolderCreate(targetPath);
+        return JSON.stringify({ ok });
+    }
+    async onDelete(_json, _req, _res) {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
+        }
+        const currentRootPath = currentRoot.path;
+        const data = _json.GetStr("data");
+        const fullPath = fix(currentRootPath + data);
+        if (!isInsideRoot(currentRootPath, fullPath)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Path escapes root" });
+        }
+        try {
+            await execAsync(`svn info "${fullPath}"`);
+            await execAsync(`svn delete "${fullPath}"`);
+        }
+        catch {
+            await CFile.Delete(fullPath);
+        }
+        return JSON.stringify({ ok: true });
+    }
+    async onUpload(_json, _req, _res) {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        let path = _json.GetStr("path");
+        let nameArr = _json.GetArray("name");
+        let dataArr = _json.GetArray("data");
+        const fix = (_str) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const filePaths = nameArr.mArray.map((n) => fix(path + n));
+        for (const filePath of filePaths) {
+            if (!await isInsideAnyRoot(filePath)) {
+                _res.status(403);
+                return JSON.stringify({ ok: false, msg: "Path escapes root" });
+            }
+        }
+        for (let i = 0; i < nameArr.mArray.length; ++i) {
+            const filePath = filePaths[i];
+            const fileData = CUtil.Base64ToArray(dataArr.mArray[i]);
+            CFile.Save(fileData, filePath);
+            CFile.PushCache(filePath, fileData);
+        }
+        return JSON.stringify({ ok: true });
+    }
+    async onVCS(_json, _req, _res) {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        const action = _json.GetStr("action");
+        const rawPath = _json.GetStr("path") || "./";
+        const fixPath = (p) => p.replace(/\\/g, "/").replace(/\/+/g, "/");
+        const path = fixPath(rawPath);
+        const files = _json.GetArray("files").mArray;
+        const message = _json.GetStr("message") || "";
+        const quote = (p) => `"${p.replace(/"/g, '\\"')}"`;
+        const isDir = path.endsWith("/");
+        const dirPath = isDir ? path : fixPath(nodePath.dirname(path));
+        if (!await isInsideAnyRoot(dirPath)) {
+            return JSON.stringify({ ok: false, msg: "Path escapes allowed roots" });
+        }
+        const vcs = await detectVcsType(dirPath);
+        if (!vcs)
+            return JSON.stringify({ ok: false, msg: "SVN/Git not found. Check installation." });
+        try {
+            if (action === "diff") {
+                let cmd;
+                if (vcs === 'svn') {
+                    cmd = `svn diff ${quote(path)}`;
+                }
+                else if (isDir) {
+                    cmd = `git -C ${quote(path)} diff`;
+                }
+                else {
+                    cmd = `git -C ${quote(dirPath)} diff -- ${quote(nodePath.basename(path))}`;
+                }
+                const { stdout } = await execAsync(cmd);
+                return JSON.stringify({ ok: true, vcs, diff: stdout });
+            }
+            if (action === "status") {
+                const cmd = vcs === 'svn'
+                    ? `svn status ${quote(path)}`
+                    : `git -C ${quote(path)} status --short -- .`;
+                const { stdout } = await execAsync(cmd);
+                const gitRoot = vcs === 'git' ? (await getGitRoot(dirPath) || path) : path;
+                const items = vcs === 'svn'
+                    ? parseSvnStatus(stdout)
+                    : parseGitStatus(stdout, gitRoot);
+                return JSON.stringify({ ok: true, vcs, items });
+            }
+            let cmd = "";
+            if (action === "update") {
+                if (vcs === 'svn') {
+                    const { stdout, stderr } = await execAsync(`svn update ${quote(path)}`);
+                    const revMatch = (stdout + stderr).match(/At revision (\d+)/);
+                    return JSON.stringify({ ok: true, vcs, msg: (stdout + stderr).trim(), revision: revMatch?.[1] ?? null });
+                }
+                else {
+                    const { stdout, stderr } = await execAsync(`git -C ${quote(dirPath)} pull && git -C ${quote(dirPath)} submodule update --remote --recursive`);
+                    let revision = null;
+                    try {
+                        const { stdout: logOut } = await execAsync(`git -C ${quote(dirPath)} log -1 --format="%h %s"`);
+                        revision = logOut.trim() || null;
+                    }
+                    catch { }
+                    return JSON.stringify({ ok: true, vcs, msg: (stdout + stderr).trim(), revision });
+                }
+            }
+            else if (action === "add") {
+                if (vcs !== 'svn')
+                    return JSON.stringify({ ok: false, msg: "Add is SVN-only. Use commit for Git (git add is implicit)." });
+                cmd = `svn add ${files.map(quote).join(" ")}`;
+            }
+            else if (action === "revert") {
+                if (vcs === 'svn') {
+                    cmd = `svn revert ${files.map(quote).join(" ")}`;
+                }
+                else {
+                    const CHUNK = 50;
+                    let revertOut = '';
+                    for (let i = 0; i < files.length; i += CHUNK) {
+                        const chunk = files.slice(i, i + CHUNK);
+                        const { stdout: s, stderr: e } = await execAsync(`git -C ${quote(path)} restore ${chunk.map(quote).join(" ")}`);
+                        revertOut += s + e;
+                    }
+                    return JSON.stringify({ ok: true, vcs, msg: revertOut.trim() });
+                }
+            }
+            else if (action === "commit") {
+                if (vcs === 'svn') {
+                    cmd = `svn commit -m ${quote(message)} ${files.map(quote).join(" ")}`;
+                }
+                else {
+                    const CHUNK = 50;
+                    let addOut = '';
+                    for (let i = 0; i < files.length; i += CHUNK) {
+                        const chunk = files.slice(i, i + CHUNK);
+                        const { stdout: s, stderr: e } = await execAsync(`git -C ${quote(path)} add ${chunk.map(quote).join(" ")}`);
+                        addOut += s + e;
+                    }
+                    const { stdout: commitOut, stderr: commitErr } = await execAsync(`git -C ${quote(path)} commit -m ${quote(message)}`);
+                    let pushOut = '';
+                    let pushFailed = false;
+                    try {
+                        const { stdout: ps, stderr: pe } = await execAsync(`git -C ${quote(path)} push`);
+                        pushOut = ps + pe;
+                    }
+                    catch (pushErr) {
+                        pushOut = pushErr.stderr || pushErr.message || String(pushErr);
+                        pushFailed = true;
+                    }
+                    return JSON.stringify({ ok: !pushFailed, vcs, msg: (addOut + commitOut + commitErr + pushOut).trim() });
+                }
+            }
+            else {
+                return JSON.stringify({ ok: false, msg: "Unknown action" });
+            }
+            const { stdout, stderr } = await execAsync(cmd);
+            return JSON.stringify({ ok: true, vcs, msg: (stdout + stderr).trim() });
+        }
+        catch (e) {
+            return JSON.stringify({ ok: false, msg: e.stderr || e.message || String(e) });
+        }
+    }
+};
+CFileServer = __decorate([
+    URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS"])
+], CFileServer);
+export { CFileServer };

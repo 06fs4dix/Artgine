@@ -6,6 +6,7 @@ import {CModal} from "../artgine/basic/CModal.js";
 import {CString} from "../artgine/basic/CString.js";
 import {CUtil} from "../artgine/basic/CUtil.js";
 import {CWebView} from "../artgine/system/CWebView.js";
+import {CHash} from "../artgine/basic/CHash.js";
 
 
 
@@ -171,12 +172,20 @@ function WatchInputChanges() {
         el.addEventListener("change", updateAppJSON)
     );
     // auth(Password/RootPath) 변경은 즉시 저장 + rootPath 변경 시 재시작 확인 (Server 패널과 동일)
-    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el =>
-        el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
-            password: (document.getElementById("auth_password_txt") as HTMLInputElement).value,
-            rootPath: (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean),
-        }))
-    );
+    const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
+        password: (document.getElementById("auth_password_txt") as HTMLInputElement).value,
+        rootPath: (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean),
+    });
+    const pwInput = document.getElementById("auth_password_txt") as HTMLInputElement;
+    const hashPW = () => {
+        const v = pwInput.value;
+        if (v && v.length < 64) { pwInput.value = CHash.SHA256('artgine_' + v); if (gAppJSON) gAppJSON.password = pwInput.value; }
+    };
+    pwInput.addEventListener("blur", () => { hashPW(); commitAuth(); });
+    pwInput.addEventListener("keydown", (e: KeyboardEvent) => {
+        if (e.key === "Enter") { e.preventDefault(); pwInput.blur(); }
+    });
+    document.getElementById("auth_rootpath_txt")?.addEventListener("change", commitAuth);
     document.querySelectorAll("#manifest input, #manifest select, #manifest textarea").forEach(el =>
         el.addEventListener("change", updateManifest)
     );
@@ -383,21 +392,6 @@ document.getElementById("aiDelete_btn").addEventListener("click", async function
     const selected = GetAISelected();
     if (selected.length === 0) return;
     await CWebView.Call("AIDelete", selected);
-});
-
-function GetTTYDConfig(): { port: number, password: string } {
-    const port = parseInt((document.getElementById("ttyd_port") as HTMLInputElement).value) || 7681;
-    const password = (document.getElementById("ttyd_password") as HTMLInputElement).value;
-    return { port, password };
-}
-
-document.getElementById("ttydRun_btn").addEventListener("click", async function () {
-    await CWebView.Call("TTYDRun", GetTTYDConfig());
-});
-
-document.getElementById("ttydBrowser_btn").addEventListener("click", async function () {
-    const { port } = GetTTYDConfig();
-    await CWebView.Call("URLRun", `http://localhost:${port}`);
 });
 
 document.getElementById("tsc_chk").addEventListener("change", async function () {

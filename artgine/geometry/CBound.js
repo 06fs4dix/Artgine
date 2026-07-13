@@ -1,1 +1,204 @@
-import{CVec3 as m}from"../geometry/CVec3.js";import{CMath as t}from"../geometry/CMath.js";import{CArray as i}from"../basic/CArray.js";import{CObject as e}from"../basic/CObject.js";export class CBound extends e{mMin;mMax;mType;mPos;constructor(){super(),this.mMin=new m(1e5,1e5,1e5),this.mMax=new m(-1e5,-1e5,-1e5),this.mType=CBound.eType.Null,this.mPos=new i}NewWASM(){this.mMin.NewWASM(),this.mMax.NewWASM()}DeleteWASM(){this.mMin.ReleaseWASM(),this.mMax.ReleaseWASM()}GetType(){return this.mType}SetType(m){this.mType=m}EditForm(m,t,i){if(super.EditForm(m,t,i),"mType"==m.member){let h=["Box","Sphere","Polytope","Null"],n=[0,1,2,4];i.hidden=!0;let a=document.createElement("select");a.className="form-select";for(var s=0;s<h.length;++s){var M=document.createElement("option");M.value=n[s]+"",M.text=h[s],m.Get()==n[s]&&(M.selected=!0),a.add(M)}a.onchange=t=>{var s=t.currentTarget;m.Set(n[s.selectedIndex]),i.value=n[s.selectedIndex]+"",m.target instanceof e&&m.target.EditChange(m,!1)},t.append(a),a.addEventListener("change",()=>{this.EditRefresh()})}}Reset(){this.mMin.mF32A[0]=1e5,this.mMin.mF32A[1]=1e5,this.mMin.mF32A[2]=1e5,this.mMax.mF32A[0]=-1e5,this.mMax.mF32A[1]=-1e5,this.mMax.mF32A[2]=-1e5,this.mType=CBound.eType.Null,this.mPos.Clear()}ResetBoxMinMax(m){this.mType==CBound.eType.Null&&(this.mType=CBound.eType.Box),this.mMin.mF32A[0]=t.Min(this.mMin.mF32A[0],m.mF32A[0]),this.mMin.mF32A[1]=t.Min(this.mMin.mF32A[1],m.mF32A[1]),this.mMin.mF32A[2]=t.Min(this.mMin.mF32A[2],m.mF32A[2]),this.mMax.mF32A[0]=t.Max(this.mMax.mF32A[0],m.mF32A[0]),this.mMax.mF32A[1]=t.Max(this.mMax.mF32A[1],m.mF32A[1]),this.mMax.mF32A[2]=t.Max(this.mMax.mF32A[2],m.mF32A[2])}InitBound(m,i=!1){if("number"==typeof m)this.mMin.x=-m,this.mMin.y=-m,this.mMin.z=-m,this.mMax.x=m,this.mMax.y=m,this.mMax.z=m;else if(m instanceof CBound)this.mMin.x=t.Min(m.mMin.x,this.mMin.x),this.mMin.y=t.Min(m.mMin.y,this.mMin.y),this.mMin.z=t.Min(m.mMin.z,this.mMin.z),this.mMax.x=t.Max(m.mMax.x,this.mMax.x),this.mMax.y=t.Max(m.mMax.y,this.mMax.y),this.mMax.z=t.Max(m.mMax.z,this.mMax.z),this.mPos.PushArray(m.mPos);else if(m instanceof Array)for(var e of m)this.GetType()==CBound.eType.Polytope&&this.mPos.Push(e),this.ResetBoxMinMax(e);else i&&this.mPos.Push(m),this.ResetBoxMinMax(m)}GetInRadius(){var m=this.GetCenter(),i=t.Max(this.mMax.mF32A[0]-m.mF32A[0],this.mMin.mF32A[0]-m.mF32A[0]),e=t.Max(this.mMax.mF32A[1]-m.mF32A[1],this.mMin.mF32A[1]-m.mF32A[1]),s=t.Max(this.mMax.mF32A[2]-m.mF32A[2],this.mMin.mF32A[2]-m.mF32A[2]);return Math.min(i,e,s)}GetOutRadius(){var m=this.GetCenter(),i=t.Max(this.mMax.mF32A[0]-m.mF32A[0],this.mMin.mF32A[0]-m.mF32A[0]),e=t.Max(this.mMax.mF32A[1]-m.mF32A[1],this.mMin.mF32A[1]-m.mF32A[1]),s=t.Max(this.mMax.mF32A[2]-m.mF32A[2],this.mMin.mF32A[2]-m.mF32A[2]);return Math.hypot(i,e,s)}GetCenter(t=null){var i=t;return null==i&&(i=new m),i.mF32A[0]=.5*(this.mMax.mF32A[0]+this.mMin.mF32A[0]),i.mF32A[1]=.5*(this.mMax.mF32A[1]+this.mMin.mF32A[1]),i.mF32A[2]=.5*(this.mMax.mF32A[2]+this.mMin.mF32A[2]),i}GetSize(t=null){return null==t?t=new m(this.mMax.mF32A[0]-this.mMin.mF32A[0],this.mMax.mF32A[1]-this.mMin.mF32A[1],this.mMax.mF32A[2]-this.mMin.mF32A[2]):(t.mF32A[0]=this.mMax.mF32A[0]-this.mMin.mF32A[0],t.mF32A[1]=this.mMax.mF32A[1]-this.mMin.mF32A[1],t.mF32A[2]=this.mMax.mF32A[2]-this.mMin.mF32A[2]),t}GetRandom(t=!0,i=!0,e=!0){let s=new m,M=this.GetSize();return t&&(s.x=M.x*Math.random()+this.mMin.x),i&&(s.y=M.y*Math.random()+this.mMin.y),e&&(s.z=M.z*Math.random()+this.mMin.z),s}MatCoordi(i){this.mMin=t.V3MulMatCoordi(this.mMin,i),this.mMax=t.V3MulMatCoordi(this.mMax,i);let e=new m;for(let m=0;m<this.mPos.Size();++m){let s=this.mPos.Find(m);e.Import(s),t.V3MulMatCoordi(e,i,s)}}AddPos(m){this.mMin.x+=m.x,this.mMin.y+=m.y,this.mMin.z+=m.z,this.mMax.x+=m.x,this.mMax.y+=m.y,this.mMax.z+=m.z}WTBubbling(){return!1}Export(m,t){var i=new CBound;for(var e of(i.mMin=this.mMin.Export(),i.mMax=this.mMax.Export(),i.mType=this.mType,this.mPos.mArray))i.mPos.Push(e);return i}Import(m){for(var t of(this.mMin.Import(m.mMin),this.mMax.Import(m.mMax),this.mType=m.mType,this.mPos.Clear(),m.mPos.mArray))this.mPos.Push(t)}}!function(m){let t;!function(m){m[m.Box=0]="Box",m[m.Sphere=1]="Sphere",m[m.Polytope=2]="Polytope",m[m.Voxel=3]="Voxel",m[m.Null=4]="Null"}(t=m.eType||(m.eType={}))}(CBound||(CBound={}));
+import { CVec3 } from "../geometry/CVec3.js";
+import { CMath } from "../geometry/CMath.js";
+import { CArray } from "../basic/CArray.js";
+import { CObject } from "../basic/CObject.js";
+export class CBound extends CObject {
+    mMin;
+    mMax;
+    mType;
+    mPos;
+    constructor() {
+        super();
+        this.mMin = new CVec3(100000, 100000, 100000);
+        this.mMax = new CVec3(-100000, -100000, -100000);
+        this.mType = CBound.eType.Null;
+        this.mPos = new CArray();
+    }
+    NewWASM() {
+        this.mMin.NewWASM();
+        this.mMax.NewWASM();
+    }
+    DeleteWASM() {
+        this.mMin.ReleaseWASM();
+        this.mMax.ReleaseWASM();
+    }
+    GetType() {
+        return this.mType;
+    }
+    SetType(_type) {
+        this.mType = _type;
+    }
+    EditForm(_pointer, _body, _input) {
+        super.EditForm(_pointer, _body, _input);
+        if (_pointer.member == "mType") {
+            let textArr = ["Box", "Sphere", "Polytope", "Null"], valArr = [0, 1, 2, 4];
+            _input.hidden = true;
+            let select = document.createElement("select");
+            select.className = "form-select";
+            for (var i = 0; i < textArr.length; ++i) {
+                var opt = document.createElement("option");
+                opt.value = valArr[i] + "";
+                opt.text = textArr[i];
+                if (_pointer.Get() == valArr[i])
+                    opt.selected = true;
+                select.add(opt);
+            }
+            select.onchange = (_event) => {
+                var ct = _event.currentTarget;
+                _pointer.Set(valArr[ct.selectedIndex]);
+                _input.value = valArr[ct.selectedIndex] + "";
+                if (_pointer.target instanceof CObject)
+                    _pointer.target.EditChange(_pointer, false);
+            };
+            _body.append(select);
+            select.addEventListener("change", () => {
+                this.EditRefresh();
+            });
+        }
+    }
+    Reset() {
+        this.mMin.mF32A[0] = 100000;
+        this.mMin.mF32A[1] = 100000;
+        this.mMin.mF32A[2] = 100000;
+        this.mMax.mF32A[0] = -100000;
+        this.mMax.mF32A[1] = -100000;
+        this.mMax.mF32A[2] = -100000;
+        this.mType = CBound.eType.Null;
+        this.mPos.Clear();
+    }
+    ResetBoxMinMax(_vec) {
+        if (this.mType == CBound.eType.Null) {
+            this.mType = CBound.eType.Box;
+        }
+        this.mMin.mF32A[0] = CMath.Min(this.mMin.mF32A[0], _vec.mF32A[0]);
+        this.mMin.mF32A[1] = CMath.Min(this.mMin.mF32A[1], _vec.mF32A[1]);
+        this.mMin.mF32A[2] = CMath.Min(this.mMin.mF32A[2], _vec.mF32A[2]);
+        this.mMax.mF32A[0] = CMath.Max(this.mMax.mF32A[0], _vec.mF32A[0]);
+        this.mMax.mF32A[1] = CMath.Max(this.mMax.mF32A[1], _vec.mF32A[1]);
+        this.mMax.mF32A[2] = CMath.Max(this.mMax.mF32A[2], _vec.mF32A[2]);
+    }
+    InitBound(_vInfo, _push = false) {
+        if (typeof _vInfo == "number") {
+            this.mMin.x = -_vInfo;
+            this.mMin.y = -_vInfo;
+            this.mMin.z = -_vInfo;
+            this.mMax.x = _vInfo;
+            this.mMax.y = _vInfo;
+            this.mMax.z = _vInfo;
+        }
+        else if (_vInfo instanceof CBound) {
+            this.mMin.x = CMath.Min(_vInfo.mMin.x, this.mMin.x);
+            this.mMin.y = CMath.Min(_vInfo.mMin.y, this.mMin.y);
+            this.mMin.z = CMath.Min(_vInfo.mMin.z, this.mMin.z);
+            this.mMax.x = CMath.Max(_vInfo.mMax.x, this.mMax.x);
+            this.mMax.y = CMath.Max(_vInfo.mMax.y, this.mMax.y);
+            this.mMax.z = CMath.Max(_vInfo.mMax.z, this.mMax.z);
+            this.mPos.PushArray(_vInfo.mPos);
+        }
+        else if (_vInfo instanceof Array) {
+            for (var each0 of _vInfo) {
+                if (this.GetType() == CBound.eType.Polytope)
+                    this.mPos.Push(each0);
+                this.ResetBoxMinMax(each0);
+            }
+        }
+        else {
+            if (_push)
+                this.mPos.Push(_vInfo);
+            this.ResetBoxMinMax(_vInfo);
+        }
+    }
+    GetInRadius() {
+        var cen = this.GetCenter();
+        var maxX = CMath.Max(this.mMax.mF32A[0] - cen.mF32A[0], this.mMin.mF32A[0] - cen.mF32A[0]);
+        var maxY = CMath.Max(this.mMax.mF32A[1] - cen.mF32A[1], this.mMin.mF32A[1] - cen.mF32A[1]);
+        var maxZ = CMath.Max(this.mMax.mF32A[2] - cen.mF32A[2], this.mMin.mF32A[2] - cen.mF32A[2]);
+        return Math.min(maxX, maxY, maxZ);
+    }
+    GetOutRadius() {
+        var cen = this.GetCenter();
+        var maxX = CMath.Max(this.mMax.mF32A[0] - cen.mF32A[0], this.mMin.mF32A[0] - cen.mF32A[0]);
+        var maxY = CMath.Max(this.mMax.mF32A[1] - cen.mF32A[1], this.mMin.mF32A[1] - cen.mF32A[1]);
+        var maxZ = CMath.Max(this.mMax.mF32A[2] - cen.mF32A[2], this.mMin.mF32A[2] - cen.mF32A[2]);
+        return Math.hypot(maxX, maxY, maxZ);
+    }
+    GetCenter(_copy = null) {
+        var L_cen = _copy;
+        if (L_cen == null)
+            L_cen = new CVec3();
+        L_cen.mF32A[0] = (this.mMax.mF32A[0] + this.mMin.mF32A[0]) * 0.5;
+        L_cen.mF32A[1] = (this.mMax.mF32A[1] + this.mMin.mF32A[1]) * 0.5;
+        L_cen.mF32A[2] = (this.mMax.mF32A[2] + this.mMin.mF32A[2]) * 0.5;
+        return L_cen;
+    }
+    GetSize(_copy = null) {
+        if (_copy == null)
+            _copy = new CVec3(this.mMax.mF32A[0] - this.mMin.mF32A[0], this.mMax.mF32A[1] - this.mMin.mF32A[1], this.mMax.mF32A[2] - this.mMin.mF32A[2]);
+        else {
+            _copy.mF32A[0] = this.mMax.mF32A[0] - this.mMin.mF32A[0];
+            _copy.mF32A[1] = this.mMax.mF32A[1] - this.mMin.mF32A[1];
+            _copy.mF32A[2] = this.mMax.mF32A[2] - this.mMin.mF32A[2];
+        }
+        return _copy;
+    }
+    GetRandom(_x = true, _y = true, _z = true) {
+        let pos = new CVec3();
+        let size = this.GetSize();
+        if (_x)
+            pos.x = size.x * Math.random() + this.mMin.x;
+        if (_y)
+            pos.y = size.y * Math.random() + this.mMin.y;
+        if (_z)
+            pos.z = size.z * Math.random() + this.mMin.z;
+        return pos;
+    }
+    MatCoordi(_mat) {
+        this.mMin = CMath.V3MulMatCoordi(this.mMin, _mat);
+        this.mMax = CMath.V3MulMatCoordi(this.mMax, _mat);
+        let dummy = new CVec3();
+        for (let i = 0; i < this.mPos.Size(); ++i) {
+            let v = this.mPos.Find(i);
+            dummy.Import(v);
+            CMath.V3MulMatCoordi(dummy, _mat, v);
+        }
+    }
+    AddPos(_pos) {
+        this.mMin.x += _pos.x;
+        this.mMin.y += _pos.y;
+        this.mMin.z += _pos.z;
+        this.mMax.x += _pos.x;
+        this.mMax.y += _pos.y;
+        this.mMax.z += _pos.z;
+    }
+    WTBubbling() { return false; }
+    Export(_copy, _resetKey) {
+        var dummy = new CBound();
+        dummy.mMin = this.mMin.Export();
+        dummy.mMax = this.mMax.Export();
+        dummy.mType = this.mType;
+        for (var each0 of this.mPos.mArray) {
+            dummy.mPos.Push(each0);
+        }
+        return dummy;
+    }
+    Import(_tar) {
+        this.mMin.Import(_tar.mMin);
+        this.mMax.Import(_tar.mMax);
+        this.mType = _tar.mType;
+        this.mPos.Clear();
+        for (var each0 of _tar.mPos.mArray) {
+            this.mPos.Push(each0);
+        }
+    }
+}
+(function (CBound) {
+    let eType;
+    (function (eType) {
+        eType[eType["Box"] = 0] = "Box";
+        eType[eType["Sphere"] = 1] = "Sphere";
+        eType[eType["Polytope"] = 2] = "Polytope";
+        eType[eType["Voxel"] = 3] = "Voxel";
+        eType[eType["Null"] = 4] = "Null";
+    })(eType = CBound.eType || (CBound.eType = {}));
+    ;
+})(CBound || (CBound = {}));

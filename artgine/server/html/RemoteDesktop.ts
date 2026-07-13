@@ -5,7 +5,9 @@
 
 import { CFecth } from "../../network/CFecth.js";
 import { CPath }  from "../../basic/CPath.js";
+import { CHash }  from "../../basic/CHash.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { CIframeMsg } from "./CIframeMsg.js";
 
 let authToken: string = getAuthToken(CPath.WebRootUrl());
 let pollTimer: number | null = null;
@@ -54,7 +56,7 @@ function postRdpTabKey(e: KeyboardEvent) {
     if (isLoginOverlayVisible()) return;
     e.preventDefault();
     e.stopPropagation();
-    window.parent?.postMessage({ type: 'rdp-tab-key' }, '*');
+    if (window.parent) CIframeMsg.Send(window.parent, 'rdp-tab-key');
 }
 
 function initQualityControl() {
@@ -105,7 +107,7 @@ function hideOverlay() {
 async function tryLogin(pw: string) {
     loginMsg.textContent = '';
     try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/login', { password: pw }, 'json') as any;
+        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/login', { password: CHash.SHA256('artgine_' + pw) }, 'json') as any;
         if (j.ok && j.token) {
             authToken = j.token;
             setAuthToken(CPath.WebRootUrl(), authToken);
@@ -181,10 +183,11 @@ document.addEventListener('visibilitychange', () => {
     pageHidden = document.hidden;
     resumePollIfNeeded();
 });
-window.addEventListener('message', (e: MessageEvent) => {
-    if (e.data?.type !== 'frame-visibility') return;
-    frameHidden = !e.data.visible;
-    resumePollIfNeeded();
+CIframeMsg.Recv({
+    'frame-visibility': (data) => {
+        frameHidden = !data.visible;
+        resumePollIfNeeded();
+    },
 });
 
 function boot() {

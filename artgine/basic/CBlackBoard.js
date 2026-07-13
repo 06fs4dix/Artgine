@@ -1,1 +1,17 @@
-var t=new Map;export class CBlackBoard{static Find(e){return t.get(e)}static Push(e,a){null!=t.get(e)&&console.log("CBlackBoard dup!!!!error : "+e),t.set(e,a)}static Map(){return t}static Delete(e){t.delete(e)}}
+var gBBMap = new Map();
+export class CBlackBoard {
+    static Find(_key) {
+        return gBBMap.get(_key);
+    }
+    static Push(_key, _val) {
+        if (gBBMap.get(_key) != null)
+            console.log("CBlackBoard dup!!!!error : " + _key);
+        gBBMap.set(_key, _val);
+    }
+    static Map() {
+        return gBBMap;
+    }
+    static Delete(_key) {
+        gBBMap.delete(_key);
+    }
+}

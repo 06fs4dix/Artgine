@@ -3,6 +3,7 @@ import { CDOM } from "../artgine/basic/CDOM.js";
 import { CWebView } from "../artgine/system/CWebView.js";
 import { CUtilWeb } from "../artgine/util/CUtilWeb.js";
 import { CConfirm } from "../artgine/basic/CModal.js";
+import { CHash } from "../artgine/basic/CHash.js";
 var gIpInfo;
 async function Init() {
     const appJSON = JSON.parse(await CWebView.Call("LoadAppJSON"));
@@ -17,10 +18,24 @@ async function Init() {
     }
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
     CDOM.IDValue("auth_rootpath_txt", (Array.isArray(appJSON.rootPath) ? appJSON.rootPath : [appJSON.rootPath ?? "./"]).join("\n"));
-    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
+    const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
         password: document.getElementById("auth_password_txt").value,
         rootPath: document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean),
-    })));
+    });
+    const pwInput = document.getElementById("auth_password_txt");
+    const hashPW = () => {
+        const v = pwInput.value;
+        if (v && v.length < 64)
+            pwInput.value = CHash.SHA256('artgine_' + v);
+    };
+    pwInput.addEventListener("blur", () => { hashPW(); commitAuth(); });
+    pwInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            pwInput.blur();
+        }
+    });
+    document.getElementById("auth_rootpath_txt")?.addEventListener("change", commitAuth);
 }
 Init();
 function copyToClipboard(inputId) {

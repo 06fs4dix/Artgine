@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<title>Control</title>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover' />
+<style>
+    :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+    }
+</style>
+<script>
+    const loadingCard = document.createElement('div');
+    loadingCard.id = "MainLoading";
+    loadingCard.style.position = "fixed";
+    loadingCard.style.top = "0";
+    loadingCard.style.left = "0";
+    loadingCard.style.width = "100vw";
+    loadingCard.style.height = "100vh";
+    loadingCard.style.maxWidth = "none";
+    loadingCard.style.maxHeight = "none";
+    loadingCard.style.margin = "0";
+    loadingCard.style.borderRadius = "0";
+    loadingCard.style.zIndex = "9999";
+    loadingCard.style.pointerEvents = "auto";
+    loadingCard.style.backgroundColor = "#212529"; // Bootstrap dark 색상
+    loadingCard.style.display = "flex";
+    loadingCard.style.alignItems = "center";
+    loadingCard.style.justifyContent = "center";
+    loadingCard.style.color = "white";
+    loadingCard.style.fontSize = "32px";
+    
+    loadingCard.innerHTML = `
+        <div style="text-align: center;"><div>Initialization...</div></div>
+    `;
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('readystatechange', function() {
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                if (document.body)  document.body.appendChild(loadingCard);
+            }
+        });
+    }
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+    });
+</script>
+
+<!--Include--><script type='text/javascript' src='../../artgine/external/legacy/pako-master/dist/pako.min.js'></script>
+<script type='text/javascript' src='../../artgine/external/legacy/jszip.min.js'></script>
+<script type='text/javascript' src='../../artgine/external/legacy/screenfull/screenfull.min.js'></script>
+<script src='../../artgine/external/legacy/popper/poper.min.js'></script>
+<link rel='stylesheet' href='../../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css'>
+<script src='../../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js'></script>
+<link rel='stylesheet' href='../../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css'>
+<script>function BootstrapSearchList(searchId, listId) {
+			const input = document.getElementById(searchId);
+			const listItems = document.querySelectorAll(`#${listId} li`);
+		
+			input.addEventListener('keyup', function () {
+				const value = input.value.toLowerCase();
+		
+				listItems.forEach(item => {
+					const text = item.textContent.toLowerCase();
+					item.style.display = text.includes(value) ? '' : 'none';
+				});
+			});
+		}</script>
+<link rel='stylesheet' href='../../artgine/external/legacy/toastui/toastui-editor.min.css'>
+<script src='../../artgine/external/legacy/toastui/toastui-editor-all.min.js'></script>
+<script type='text/javascript' src='../../artgine/external/legacy/monaco-editor/min/vs/loader.js'></script>
+<link rel='stylesheet' href='../../artgine/external/legacy/diff2html/diff2html.min.css'>
+<script src='../../artgine/external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
+<link rel='manifest' href='./Control.webmanifest'/>
+<script>
+let SERVER_BASE='http://localhost:8050/Artgine/proj/Control/Control.html';
+const isElectron =/Electron/i.test(navigator.userAgent) ||(typeof window !== 'undefined' &&typeof window.process === 'object' &&!!window.process.versions?.electron);
+if (location.protocol == 'file:' && isElectron==false){
+	const page = (location.href.split('/').pop() || 'index.html').replace(/\?.*$/, '');
+	const target = new URL(page, SERVER_BASE).toString();
+	fetch(target, {method: 'GET',mode: 'cors',cache: 'no-store',redirect: 'manual'}).then(()=>{
+	alert('Local Start Redirection!');
+	location.replace(target);
+	}).catch(() => {    alert('Please run the web server! [npm run start_web]');  });
+}</script>
+<script type='module' src='Control.js'></script>
+
+<!--Manifest-->
+<!--EntryPoint-->
+<style>
+#myTab{font-size:0.8rem;} #myTab .nav-link, #myTab .btn{padding:0.25rem 0.5rem; font-size:0.8rem;}
+#rightSidebarTab{font-size:0.8rem;} #rightSidebarTab .nav-link{padding:0.25rem 0.5rem; font-size:0.8rem;}
+/* Bootstrap 기본 .container는 폭별로 max-width가 계단식(xl:1140px, xxl:1320px)이라, 화면폭에 따라
+   좌우 여백이 사이드바 두 개(310px/300px) 임계값 사이에 애매하게 걸릴 수 있다(예: 1920px에서 여백 300px→
+   왼쪽만 실패). 좁을 땐 꽉 채우고, 1850px부터는 한 번에 두 사이드바가 동시에 들어갈 여백(각 325px)을
+   보장하도록 재정의한다. */
+.container{max-width:100%;}
+@media (min-width:1850px){ .container{max-width:1200px;} }
+/* 사이드바(offcanvas 기본 z-index:1045)가 CModal 모달(기본 z-index 1000부터 시작)보다 위에 뜨는 문제 방지 -
+   모달이 항상 사이드바 위에 오도록 사이드바 z-index를 모달 최소값보다 낮게 고정한다. */
+#app-sidebar, #app-sidebar-right{z-index:900 !important;}
+#app-sidebar{--bs-offcanvas-width:310px;}
+/* 우측 콘텐츠 옆 여백이 충분할 때: 사이드바를 좌측 여백 자리에 고정 표시(콘텐츠를 밀지 않음, 오버레이/배경막 없음) */
+#app-sidebar.sidebar-docked{transform:none !important; visibility:visible !important; box-shadow:none; border-right:1px solid var(--bs-border-color);}
+#app-sidebar.sidebar-docked .offcanvas-header{display:none;}
+#app-sidebar-right{--bs-offcanvas-width:300px;}
+/* 좌측 사이드바와 동일한 방식: 콘텐츠 우측에 여백이 충분하면 고정 표시, 부족하면 열고닫는 오버레이. */
+#app-sidebar-right.sidebar-docked{transform:none !important; visibility:visible !important; box-shadow:none; border-left:1px solid var(--bs-border-color);}
+#app-sidebar-right.sidebar-docked .offcanvas-header{display:none;}
+/* 히든 콘솔 채팅 트리거를 위해 탭 맨 앞에 작은 여백 확보 */
+#myTab{padding-left:14px;}
+#rdp-sidebar-list .ai-session-item, #session-sidebar-list .ai-session-item{cursor:pointer;}
+/* 사이드바 항목 종류(RDP/Chat/Terminal/Browser/Editor)마다 다른 활성색(bg-primary-subtle/bg-success-subtle)을 쓰면
+   항목 자체의 상태 점(초록/빨강/주황) 색과 뒤섞여 "지금 포커스된 것"이 눈에 띄지 않는다.
+   종류에 상관없이 단일 강조(좌측 바 + 배경 + 굵게)로 통일한다. */
+.ai-session-item.ai-session-item-active{background-color:var(--bs-primary-bg-subtle);box-shadow:inset 3px 0 0 var(--bs-primary);font-weight:600;}
+/* Bootstrap 유틸리티 클래스(d-flex 등)는 !important라서 JS의 style.display 토글이 먹히지 않는다.
+   placeholder를 확실히 숨기기 위한 전용 클래스. */
+#rdp-frame-placeholder.rdp-frame-placeholder-hidden{display:none !important;}
+#chat-frame-placeholder.chat-frame-placeholder-hidden{display:none !important;}
+#term-frame-placeholder.term-frame-placeholder-hidden{display:none !important;}
+#browser-frame-placeholder.browser-frame-placeholder-hidden{display:none !important;}
+#editor-frame-placeholder.editor-frame-placeholder-hidden{display:none !important;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spin{display:inline-block;animation:spin 0.8s linear infinite;}
+/* 완료 알림 로그(aiNotifLog)에 새 항목이 들어올 때 잠시 강조했다가 원래 배경색으로 되돌아간다.
+   Bootstrap의 .bg-secondary-subtle은 background-color를 !important로 고정하므로, 애니메이션이
+   그보다 낮은 우선순위(author !important > animations)에 밀려 전혀 반영되지 않는다. 그래서 배경은
+   !important 없는 전용 클래스(.notif-row)로 지정하고, 애니메이션은 그 위에서 동작하게 한다. */
+.notif-row{background-color:var(--bs-secondary-bg-subtle);}
+@keyframes notif-flash-anim{from{background-color:var(--bs-warning);}to{background-color:var(--bs-secondary-bg-subtle);}}
+.notif-flash{animation:notif-flash-anim 1.2s ease-out;}
+
+</style>
+<!-- 앱 전체 레이아웃: 좌측 통합 사이드바(여백에 고정 또는 열고닫는 오버레이) + 우측(탭 네비 + 탭 콘텐츠) -->
+<div class="d-flex" style="height: 100vh; height: 100svh; height: 100dvh;">
+    <!-- 통합 사이드바 (RDP/터미널/브라우저/파일/다운로드 공용, 메모 탭 제외) -->
+    <div class="offcanvas offcanvas-start d-flex flex-column bg-body-tertiary" tabindex="-1" id="app-sidebar" data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="app-sidebar-label">
+        <div class="offcanvas-header border-bottom">
+            <h6 class="offcanvas-title" id="app-sidebar-label">Menu</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-body">
+            <!-- 현재 활성 서버(Local/원격)의 File/Root 목록. Control.ts의 ctrlRefreshRootSelect()가 채우고,
+                 선택 시 File 탭 iframe에 'set-file-root'를 보내 실제 루트를 바꾼다. -->
+            <select id="ctrl-root-sel" class="form-select form-select-sm mb-2"></select>
+            <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다. -->
+            <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
+            <!-- Chat/Terminal/Browser 통합 세션 목록. 유형 구분 없이 실제 최신순으로 함께 정렬된다.
+                 Control.ts의 renderSessionSidebar()가 채운다. -->
+            <div id="session-sidebar-list" class="d-flex flex-column gap-1"></div>
+        </div>
+    </div>
+
+    <div class="container d-flex flex-column p-0" style="min-width:0;">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <!-- RDP 패널을 활성화하기 위한 숨은 탭 트리거(nav-tabs 소속이어야 Bootstrap Tab.js가 정상 동작함).
+             사이드바의 Local/Remote 항목은 이 하나의 트리거를 통해 #rdp-panel을 활성 탭으로 전환하고,
+             실제로 보여줄 iframe은 풀에서 전환한다. -->
+        <li class="nav-item d-none" role="presentation">
+            <button type="button" id="rdp-panel-tab" class="active" data-bs-toggle="tab" data-bs-target="#rdp-panel" role="tab" aria-controls="rdp-panel" aria-selected="true"></button>
+        </li>
+        <!-- Chat 패널을 활성화하기 위한 숨은 탭 트리거(드롭다운 안의 항목을 직접 탭으로 쓰면
+             Bootstrap Tab.js가 상위 dropdown-toggle(More)에도 active를 붙여 계속 켜진 것처럼 보이는
+             문제가 있어, RDP와 동일하게 드롭다운 밖의 트리거로 분리). -->
+        <li class="nav-item d-none" role="presentation">
+            <button type="button" id="chat-panel-tab" data-bs-toggle="tab" data-bs-target="#chat-panel" role="tab" aria-controls="chat-panel"></button>
+        </li>
+        <!-- Browser 패널을 활성화하기 위한 숨은 탭 트리거(RDP/Chat과 동일한 이유로 분리). -->
+        <li class="nav-item d-none" role="presentation">
+            <button type="button" id="browser-panel-tab" data-bs-toggle="tab" data-bs-target="#browser-panel" role="tab" aria-controls="browser-panel"></button>
+        </li>
+        <!-- Editor 패널을 활성화하기 위한 숨은 탭 트리거(File 탭에서 파일을 열면 사이드바 항목으로 추가되고, 그 항목 클릭으로 전환됨). -->
+        <li class="nav-item d-none" role="presentation">
+            <button type="button" id="editor-panel-tab" data-bs-toggle="tab" data-bs-target="#editor-panel" role="tab" aria-controls="editor-panel"></button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-panel" type="button" role="tab"
+                aria-controls="file-panel" aria-selected="false"><i class="bi bi-folder-fill"></i> File</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <!-- File 탭으로 이동한 뒤 File.ts의 FileSearch() 모달을 연다(Home.ts의 F2 단축키와 동일한 trigger-file-search 메시지 사용). -->
+            <button type="button" class="nav-link" id="file-search-btn" title="File Search"><i class="bi bi-search"></i> Search</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <!-- data-bs-toggle="tab"을 일부러 빼서 클릭해도 자동으로 탭이 전환되지 않게 한다(보고 있던 화면 유지).
+                 실제 전환은 termActivatePane()이 New Terminal 모달에서 세션을 실제로 열었을 때만 수행한다. -->
+            <button class="nav-link" id="term-tab" data-bs-target="#term-panel" type="button"
+                role="tab" aria-controls="term-panel" aria-selected="false"><i class="bi bi-terminal"></i> Terminal</button>
+        </li>
+        <li class="nav-item dropdown" role="presentation">
+            <button class="nav-link dropdown-toggle" id="more-tab" data-bs-toggle="dropdown" type="button" aria-expanded="false" title="More">
+                <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="more-tab">
+                <li><button class="dropdown-item" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo-panel" type="button" role="tab"
+                    aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> Memo</button></li>
+                <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> RDP</button></li>
+                <li><button class="dropdown-item" id="chat-new-btn" type="button"><i class="bi bi-chat-dots"></i> Chat</button></li>
+                <li><button class="dropdown-item" id="browser-new-btn" type="button"><i class="bi bi-browser-chrome"></i> Browser</button></li>
+                <li><button class="dropdown-item" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
+                    role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> Download</button></li>
+            </ul>
+        </li>
+        <li class="nav-item ms-auto" role="presentation" style="display:none;" id="sidebarToggleBtnWrap">
+            <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtn" type="button"
+                data-bs-toggle="offcanvas" data-bs-target="#app-sidebar" aria-controls="app-sidebar" title="Menu">
+                <i class="bi bi-list"></i>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation" style="display:none;" id="sidebarToggleBtnWrapRight">
+            <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtnRight" type="button"
+                data-bs-toggle="offcanvas" data-bs-target="#app-sidebar-right" aria-controls="app-sidebar-right" title="Provider Status">
+                <i class="bi bi-robot"></i>
+            </button>
+        </li>
+    </ul>
+
+    <!-- 탭 콘텐츠 -->
+    <div class="tab-content flex-fill overflow-hidden" id="myTabContent">
+    <div class="tab-pane h-100 position-relative" id="chat-panel" role="tabpanel" aria-labelledby="chat-panel-tab">
+        <div id="chat-frame-container" class="position-absolute" style="inset:0;"></div>
+        <div id="chat-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
+            <div class="text-secondary">사이드바에서 채팅을 선택하세요</div>
+        </div>
+    </div>
+    <div class="tab-pane h-100 position-relative active" id="rdp-panel" role="tabpanel" aria-labelledby="rdp-panel-tab">
+        <div id="rdp-frame-container" class="position-absolute" style="inset:0;"></div>
+        <div id="rdp-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
+            <div class="text-secondary">사이드바에서 원격 데스크탑을 선택하세요</div>
+        </div>
+    </div>
+    <div class="tab-pane h-100 position-relative" id="term-panel" role="tabpanel" aria-labelledby="term-tab">
+        <div id="term-frame-container" class="position-absolute" style="inset:0;"></div>
+        <div id="term-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
+        </div>
+    </div>
+    <div class="tab-pane h-100 position-relative" id="browser-panel" role="tabpanel" aria-labelledby="browser-panel-tab">
+        <div id="browser-frame-container" class="position-absolute" style="inset:0;"></div>
+        <div id="browser-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
+            <div class="text-secondary">사이드바에서 브라우저 세션을 선택하거나 새로 만드세요</div>
+        </div>
+    </div>
+    <div class="tab-pane h-100" id="file-panel" role="tabpanel" aria-labelledby="file-tab">
+    </div>
+    <div class="tab-pane h-100 position-relative" id="editor-panel" role="tabpanel" aria-labelledby="editor-panel-tab">
+        <div id="editor-frame-container" class="position-absolute" style="inset:0;"></div>
+        <div id="editor-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
+            <div class="text-secondary">File 탭에서 파일을 열면 여기에 표시됩니다</div>
+        </div>
+    </div>
+    <div class="tab-pane h-100" id="memo-panel" role="tabpanel" aria-labelledby="memo-tab" style="overflow-x:hidden;">
+    </div>
+    <div class="tab-pane h-100" id="download-panel" role="tabpanel" aria-labelledby="download-tab" style="overflow-y:auto;">
+        <div id="download-root"></div>
+    </div>
+    </div>
+    </div>
+
+    <!-- 우측 상태 사이드바 (AI Provider 상태 전용). 좌측과 동일하게 여백에 고정되거나 열고닫는 오버레이. -->
+    <div class="offcanvas offcanvas-end d-flex flex-column bg-body-tertiary" tabindex="-1" id="app-sidebar-right" data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="app-sidebar-right-label">
+        <div class="offcanvas-header border-bottom">
+            <h6 class="offcanvas-title" id="app-sidebar-right-label">Status</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar-right" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-right-body">
+            <ul class="nav nav-tabs mb-2" id="rightSidebarTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="right-info-tab" data-bs-toggle="tab" data-bs-target="#right-info-panel" type="button"
+                        role="tab" aria-controls="right-info-panel" aria-selected="true"><i class="bi bi-info-circle"></i> Info</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="right-option-tab" data-bs-toggle="tab" data-bs-target="#right-option-panel" type="button"
+                        role="tab" aria-controls="right-option-panel" aria-selected="false"><i class="bi bi-gear"></i> Option</button>
+                </li>
+            </ul>
+            <div class="tab-content flex-grow-1 overflow-auto">
+                <div class="tab-pane fade show active" id="right-info-panel" role="tabpanel" aria-labelledby="right-info-tab">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-secondary fw-semibold"><i class="bi bi-robot"></i> Provider Status</span>
+                        <button id="aiProviderRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" title="Refresh">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div id="aiProviderStatus" class="d-flex flex-column gap-1"></div>
+                    <hr class="my-2">
+                    <!-- 채팅/터미널 완료 알림 로그. Control.ts의 _showDoneNotification()이 최신순으로 쌓고 7개 초과 시 오래된 것부터 제거한다. -->
+                    <div id="aiNotifLog" class="d-flex flex-column gap-1"></div>
+                </div>
+                <div class="tab-pane fade" id="right-option-panel" role="tabpanel" aria-labelledby="right-option-tab">
+                    <div class="mb-2">
+                        <label for="theme-select" class="form-label text-secondary small mb-1"><i class="bi bi-palette"></i> Theme</label>
+                        <select id="theme-select" class="form-select form-select-sm">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="mt-3">
+                        <button id="aiAddOllamaBtn" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <i class="bi bi-plus-circle"></i><span>Add OpenCode Model</span>
+                        </button>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h6 class="text-secondary mb-0"><i class="bi bi-clock"></i> Schedule</h6>
+                        <button id="sched-new-btn" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> New</button>
+                    </div>
+                    <!-- 저장된 스케줄 목록. Control.ts의 schedRefresh()가 채운다(생성/편집은 위 New 버튼). -->
+                    <div id="schedSessionList" class="d-flex flex-column gap-1"></div>
+                    <hr class="my-3">
+                    <h6 class="text-secondary"><i class="bi bi-keyboard"></i> <span data-CLan="ctrl.help">Help</span></h6>
+                    <div class="mb-0">
+                        <div class="small text-secondary fw-semibold mb-1" data-CLan="ctrl.kb.global">Global Shortcuts</div>
+                        <ul class="list-unstyled small mb-0">
+                            <li data-CLan="ctrl.kb.f1"><kbd>F1</kbd> Go to File tab + File Manager</li>
+                            <li data-CLan="ctrl.kb.f2"><kbd>F2</kbd> Open File Search</li>
+                            <li data-CLan="ctrl.kb.f3"><kbd>F3</kbd> Focus/toggle sidebar</li>
+                            <li data-CLan="ctrl.kb.f6"><kbd>F6</kbd> Toggle SUPER (auto-approve) + focus input bar (Chat/Terminal)</li>
+                            <li data-CLan="ctrl.kb.updown"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="server" src="Server.js"></script>

@@ -326,10 +326,6 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 
 
 	var P : CVec4 = new CVec4(f3_ver, 1.0);
-	
-	var scaleX :number=0.0;
-	var scaleY :number=0.0;
-	var scaleZ :number=0.0;
 
 	var wMat : CMat;
 	BranchBegin("worldType","WT",[worldMatType,worldMatShort]);
@@ -338,40 +334,46 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 	wMat=worldMat;
 	BranchEnd();
 	
+    var isMerge : number;
+    var isVertexBot : number;
+    var isVertexLeft : number;
+	var size : CVec3;
+    BranchBegin("merge","MG",[]);
+    isMerge = 1.0;
+    isVertexLeft = f3_sca.x < 0.0 ? 1.0 : 0.0;
+    isVertexBot = f3_sca.y < 0.0 ? 1.0 : 0.0;
+    size = V3Abs(f3_sca);
+    BranchDefault();
+    isMerge = 0.0;
+    isVertexLeft = f3_sca.x < 0.0 ? 1.0 : 0.0;
+    isVertexBot = f3_ver.y < 0.0 ? 1.0 : 0.0;
+    size = new CVec3(V3Len(wMat[0].xyz)*1.0,V3Len(wMat[1].xyz)*1.0,V3Len(wMat[2].xyz)*1.0);
+    BranchEnd();
 
+    var origin: CVec3;
 	BranchBegin("billboard","B",[billboard,billboardMat]);
 	if(billboard>0.5)
 	{
-		scaleX = V3Len(wMat[0].xyz);
-		scaleY = V3Len(wMat[1].xyz);
-		scaleZ = V3Len(wMat[2].xyz);
-		P.x*=scaleX;
-		P.y*=scaleY;
-		P.z*=scaleZ;
+        if(isMerge > 0.5) {
+            origin = new CVec3(isVertexLeft > 0.5 ? -0.5 : 0.5, isVertexBot > 0.5 ? -0.5 : 0.5, 0.0);
+            P = new CVec4(origin, 1.0);
+        }
+        P.xyz = V3MulV3(P.xyz, size);
 		P = V4MulMatCoordi(P, billboardMat);
 
-		P.x+=wMat[3].x;
-		P.y+=wMat[3].y;
-		P.z+=wMat[3].z;
+        if(isMerge > 0.5)
+            P.xyz = V3AddV3(P.xyz, V3SubV3(f3_ver, V3MulV3(origin, size)));
+        else
+            P.xyz = V3AddV3(P.xyz, wMat[3].xyz);
 	}
 	else
 		P = V4MulMatCoordi(P, wMat);
 	BranchDefault();
 	P = V4MulMatCoordi(P, wMat);
 	BranchEnd();
-
-    var isVertexTop : number;
-	var size : CVec3;
-    BranchBegin("merge","MG",[]);
-    isVertexTop = f3_sca.x < 0.0 ? 1.0 : 0.0;
-    size = V3Abs(f3_sca);
-    BranchDefault();
-    isVertexTop = f2_uv.y > 0.5 ? 1.0 : 0.0;
-    size = new CVec3(V3Len(wMat[0].xyz)*1.0,V3Len(wMat[1].xyz)*1.0,0.0);
-    BranchEnd();
     
 	BranchBegin("wind","W",[windDir, windPos, windInfo, windCount, windInfluence, time]);
-	if(isVertexTop > 0.5 && windInfluence > 0.01) {
+	if(isVertexBot < 0.5 && windInfluence > 0.01) {
 		P.xyz = V3AddV3(P.xyz, GetWind(P.xyz, size, time));
 	}
 	BranchEnd();
@@ -399,7 +401,7 @@ function vs_main(f3_ver : Vertex3,f2_uv : UV2,f3_sca : Vertex3)
 
         lDir.xyz = V3Nor(lDir.xyz);
 
-        if(isVertexTop > 0.5) {
+        if(isVertexBot < 0.5) {
             P.y -= size.y;
             P.xy = V2AddV2(P.xy, V2MulFloat(lDir.xy, size.y * (1.0 + lDir.y * 0.1)));
             P.z -= 0.1; // z fighting 막기 위해 뒤로 조금 보냄

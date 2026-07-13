@@ -1,1 +1,81 @@
-import{CVec3 as e}from"../geometry/CVec3.js";import{CVec4 as r}from"../geometry/CVec4.js";import{CObject as t}from"../basic/CObject.js";export class CKeyFrame extends t{key;value;constructor(){super(),this.key=0,this.value=new r,this.value.w=1e5}}export class CMeshDataNode extends t{ci;keyFramePos;keyFrameRot;keyFrameSca;keyFrameCA;keyFrameTex;textureOff;pos;sca;rot;CA;skinKey;constructor(){super(),this.ci=null,this.keyFramePos=new Array,this.keyFrameRot=new Array,this.keyFrameSca=new Array,this.keyFrameCA=new Array,this.keyFrameTex=new Array,this.textureOff=new Array,this.pos=new e,this.sca=new e(1,1,1),this.rot=new r,this.CA=new r(1,1,1,1),this.skinKey=new Array}IsSkinKey(e){for(var r of this.skinKey)if(r==e)return!0;return!1}FindKeyFrame(e,r){for(var t=null,s=(t="S"==e||"Lcl Scaling"==e?this.keyFrameSca:"R"==e||"Lcl Rotation"==e?this.keyFrameRot:"DiffuseColor"===e||"BaseColor"===e||"Base Color"===e||"Visibility"===e||"Opacity"===e?this.keyFrameCA:this.keyFramePos).length,a=0;a<t.length;++a){if(r==t[a].key)return t[a];if(r<t[a].key){s=a;break}}var i=new CKeyFrame;return t==this.keyFrameCA&&(i.value.x=1,i.value.y=1,i.value.z=1,i.value.w=1),i.key=r,t.splice(s,0,i),t[s]}}
+import { CVec3 } from "../geometry/CVec3.js";
+import { CVec4 } from "../geometry/CVec4.js";
+import { CObject } from "../basic/CObject.js";
+export class CKeyFrame extends CObject {
+    key;
+    value;
+    constructor() {
+        super();
+        this.key = 0;
+        this.value = new CVec4();
+        this.value.w = 100000;
+    }
+}
+export class CMeshDataNode extends CObject {
+    ci;
+    keyFramePos;
+    keyFrameRot;
+    keyFrameSca;
+    keyFrameCA;
+    keyFrameTex;
+    textureOff;
+    pos;
+    sca;
+    rot;
+    CA;
+    ;
+    skinKey;
+    constructor() {
+        super();
+        this.ci = null;
+        this.keyFramePos = new Array();
+        this.keyFrameRot = new Array();
+        this.keyFrameSca = new Array();
+        this.keyFrameCA = new Array();
+        this.keyFrameTex = new Array();
+        this.textureOff = new Array();
+        this.pos = new CVec3();
+        this.sca = new CVec3(1, 1, 1);
+        this.rot = new CVec4();
+        this.CA = new CVec4(1, 1, 1, 1);
+        this.skinKey = new Array();
+    }
+    IsSkinKey(_key) {
+        for (var each0 of this.skinKey) {
+            if (each0 == _key)
+                return true;
+        }
+        return false;
+    }
+    FindKeyFrame(_type, _key) {
+        var fv = null;
+        if (_type == "S" || _type == "Lcl Scaling")
+            fv = this.keyFrameSca;
+        else if (_type == "R" || _type == "Lcl Rotation")
+            fv = this.keyFrameRot;
+        else if (_type === "DiffuseColor" || _type === "BaseColor" ||
+            _type === "Base Color" || _type === "Visibility" || _type === "Opacity")
+            fv = this.keyFrameCA;
+        else
+            fv = this.keyFramePos;
+        var off = fv.length;
+        for (var i = 0; i < fv.length; ++i) {
+            if (_key == fv[i].key)
+                return fv[i];
+            else if (_key < fv[i].key) {
+                off = i;
+                break;
+            }
+        }
+        var keyframe = new CKeyFrame();
+        if (fv == this.keyFrameCA) {
+            keyframe.value.x = 1;
+            keyframe.value.y = 1;
+            keyframe.value.z = 1;
+            keyframe.value.w = 1;
+        }
+        keyframe.key = _key;
+        fv.splice(off, 0, keyframe);
+        return fv[off];
+    }
+}

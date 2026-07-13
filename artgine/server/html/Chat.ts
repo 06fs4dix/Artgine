@@ -34,8 +34,10 @@ const LS_MODEL    = 'ai.model';
 
 import { CFecth } from "../../network/CFecth.js";
 import { CPath } from "../../basic/CPath.js";
+import { CHash } from "../../basic/CHash.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
+import { CIframeMsg } from "./CIframeMsg.js";
 
 // ---- 다국어(CLan) ----
 // 기본 텍스트는 영문(HTML innerHTML)이고 한국어만 추가 등록한다.
@@ -318,7 +320,7 @@ async function fetchHistory(sid: string): Promise<void> {
 async function refreshSessions() {
     // session list is now managed by Home.ts — notify parent if in iframe
     if (window.parent !== window) {
-        window.parent.postMessage({ type: 'ai-sessions-changed' }, '*');
+        CIframeMsg.Send(window.parent, 'ai-sessions-changed');
     }
 }
 
@@ -600,7 +602,7 @@ function connectWs() {
 async function tryLogin(pw: string) {
     const msgEl = document.getElementById('composerLoginMsg') || document.getElementById('loginMsg');
     try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: pw }, "json") as any;
+        const j = await CFecth.Exe(CPath.WebRootUrl() + "auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json") as any;
         if (j.ok && j.token) {
             authToken = j.token;
             setAuthToken(CPath.WebRootUrl(), authToken);

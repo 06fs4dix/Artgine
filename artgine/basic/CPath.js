@@ -1,1 +1,138 @@
-import{CUtil as t}from"./CUtil.js";var e=null;let o=null;var a="",r="";if(t.IsNode()){const t=await import("url");o=await import("path"),a=t.fileURLToPath(import.meta.url),r=o.dirname(a)}export class CPath{static eUrl={Protocol:"Protocol",Host:"Host",Port:"Port",Context:"Context",Route:"Route",Endpoint:"Endpoint"};static Origin(){return location.origin}static PathName(){return location.pathname}static FullPath(){return location.origin+location.pathname}static WebRootUrl(){return null==e&&(e=CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context)),e}static WebRootArtgineUrl(){return new URL("../../",import.meta.url).href}static WebPageUrl(){return CPath.Join(CPath.eUrl.Protocol+CPath.eUrl.Host+CPath.eUrl.Port+CPath.eUrl.Context+CPath.eUrl.Route)}static Join(e){let o="";if(t.IsNode())return e.includes(CPath.eUrl.Context)&&(o=process.cwd().replace(/\\/g,"/").replace(/\/?$/,"/")),o;if(null!=location&&"file:"===location.protocol){const t=decodeURI(location.pathname).split("/");let a=t.indexOf("proj");-1==a&&(a=t.indexOf("App"));let r=t.indexOf("WebContent"),n=a>=0?a:r;n>=0&&(e.includes(CPath.eUrl.Context)&&(o+=t.slice(1,n).join("/")+"/"),e.includes(CPath.eUrl.Route)&&(o+=t.slice(n,t.length-1).join("/")+"/"),e.includes(CPath.eUrl.Endpoint))&&(o+=t[t.length-1])}else{var a;-1!=e.indexOf(CPath.eUrl.Protocol)&&(o+=location.protocol),-1!=e.indexOf(CPath.eUrl.Host)&&(-1!=e.indexOf(CPath.eUrl.Protocol)&&(o+="//"),o+=location.hostname),-1!=e.indexOf(CPath.eUrl.Port)&&(-1!=e.indexOf(CPath.eUrl.Host)&&""!=location.port&&(o+=":"),o+=location.port),-1!=e.indexOf(CPath.eUrl.Context)&&(-1==e.indexOf(CPath.eUrl.Host)&&-1==e.indexOf(CPath.eUrl.Port)||(o+="/"),o+=a=location.pathname.substr(1,location.pathname.indexOf("/",1))),-1!=e.indexOf(CPath.eUrl.Route)&&(-1!=(a=location.pathname.substr(0,location.pathname.lastIndexOf("/")+1)).indexOf("/",1)&&(a=a.substr(a.indexOf("/",1)+1,a.length)),o+=a),-1!=e.indexOf(CPath.eUrl.Endpoint)&&(o+=a=location.pathname.substr(location.pathname.lastIndexOf("/")+1,location.pathname.length))}return o}static ArtgineRootPath(){return t.IsNode()?o.resolve(r,"../..").replace(/\\/g,"/").replace(/\/?$/,"/"):new URL("../../",import.meta.url).href}static WorkingPath(){return t.IsNode()?process.cwd().replace(/\\/g,"/").replace(/\/?$/,"/"):location.href.replace(/[^/]*$/,"")}static LocalToWebPath(t,e){for(var o=t.replace(/\\/g,"/"),a=e.replace(/\\/g,"/"),r=o.split("/"),n=a.split("/"),l=-1,i=-1,c=0;c<r.length;c++)for(var s=0;s<n.length;s++)r[c]==n[s]&&(l=r[c],i=n[s]);var h=o.indexOf(l),P=a.indexOf(i);return a.slice(0,P)+o.slice(h,t.length)}}
+import { CUtil } from "./CUtil.js";
+var g_root = null;
+let path = null;
+var __filename = "";
+var __dirname = "";
+if (CUtil.IsNode()) {
+    const urlMod = await import("url");
+    path = await import("path");
+    __filename = urlMod.fileURLToPath(import.meta.url);
+    __dirname = path.dirname(__filename);
+}
+export class CPath {
+    static eUrl = {
+        Protocol: "Protocol",
+        Host: "Host",
+        Port: "Port",
+        Context: "Context",
+        Route: "Route",
+        Endpoint: "Endpoint",
+    };
+    static Origin() {
+        return location.origin;
+    }
+    static PathName() {
+        return location.pathname;
+    }
+    static FullPath() {
+        return location.origin + location.pathname;
+    }
+    static WebRootUrl() {
+        if (g_root == null) {
+            g_root = CPath.Join(CPath.eUrl.Protocol + CPath.eUrl.Host + CPath.eUrl.Port + CPath.eUrl.Context);
+        }
+        return g_root;
+    }
+    static WebRootArtgineUrl() {
+        return new URL("../../", import.meta.url).href;
+    }
+    static WebPageUrl() {
+        return CPath.Join(CPath.eUrl.Protocol + CPath.eUrl.Host + CPath.eUrl.Port + CPath.eUrl.Context + CPath.eUrl.Route);
+    }
+    static Join(_type) {
+        let str = "";
+        if (CUtil.IsNode()) {
+            if (_type.includes(CPath.eUrl.Context)) {
+                str = process.cwd().replace(/\\/g, "/").replace(/\/?$/, "/");
+            }
+            return str;
+        }
+        else if (location != null && location.protocol === "file:") {
+            const pathName = decodeURI(location.pathname);
+            const parts = pathName.split("/");
+            let idxProj = parts.indexOf("proj");
+            if (idxProj == -1)
+                idxProj = parts.indexOf("App");
+            let idxWebContent = parts.indexOf("WebContent");
+            let baseIdx = idxProj >= 0 ? idxProj : idxWebContent;
+            if (baseIdx >= 0) {
+                if (_type.includes(CPath.eUrl.Context)) {
+                    str += parts.slice(1, baseIdx).join("/") + "/";
+                }
+                if (_type.includes(CPath.eUrl.Route)) {
+                    str += parts.slice(baseIdx, parts.length - 1).join("/") + "/";
+                }
+                if (_type.includes(CPath.eUrl.Endpoint)) {
+                    const page = parts[parts.length - 1];
+                    str += page;
+                }
+            }
+        }
+        else {
+            var count = 0;
+            if (_type.indexOf(CPath.eUrl.Protocol) != -1) {
+                str += location.protocol;
+                count++;
+            }
+            if (_type.indexOf(CPath.eUrl.Host) != -1) {
+                if (_type.indexOf(CPath.eUrl.Protocol) != -1)
+                    str += "//";
+                str += location.hostname;
+                count++;
+            }
+            if (_type.indexOf(CPath.eUrl.Port) != -1) {
+                if (_type.indexOf(CPath.eUrl.Host) != -1 && location.port != "")
+                    str += ":";
+                str += location.port;
+                count++;
+            }
+            if (_type.indexOf(CPath.eUrl.Context) != -1) {
+                if (_type.indexOf(CPath.eUrl.Host) != -1 || _type.indexOf(CPath.eUrl.Port) != -1)
+                    str += "/";
+                var temp = location.pathname.substr(1, location.pathname.indexOf("/", 1));
+                str += temp;
+            }
+            if (_type.indexOf(CPath.eUrl.Route) != -1) {
+                var temp = location.pathname.substr(0, location.pathname.lastIndexOf("/") + 1);
+                if (temp.indexOf("/", 1) != -1) {
+                    temp = temp.substr(temp.indexOf("/", 1) + 1, temp.length);
+                }
+                str += temp;
+            }
+            if (_type.indexOf(CPath.eUrl.Endpoint) != -1) {
+                var temp = location.pathname.substr(location.pathname.lastIndexOf("/") + 1, location.pathname.length);
+                str += temp;
+            }
+        }
+        return str;
+    }
+    static ArtgineRootPath() {
+        if (CUtil.IsNode())
+            return path.resolve(__dirname, "../..").replace(/\\/g, "/").replace(/\/?$/, "/");
+        return new URL("../../", import.meta.url).href;
+    }
+    static WorkingPath() {
+        if (CUtil.IsNode())
+            return process.cwd().replace(/\\/g, "/").replace(/\/?$/, "/");
+        return location.href.replace(/[^/]*$/, "");
+    }
+    static LocalToWebPath(_A, _B) {
+        var src1 = _A.replace(/\\/g, '/');
+        var src2 = _B.replace(/\\/g, '/');
+        var src = "";
+        var words1 = src1.split('/');
+        var words2 = src2.split('/');
+        var lastA = -1;
+        var lastB = -1;
+        for (var i = 0; i < words1.length; i++)
+            for (var j = 0; j < words2.length; j++)
+                if (words1[i] == words2[j]) {
+                    lastA = words1[i];
+                    lastB = words2[j];
+                }
+        var src1_ = src1.indexOf(lastA);
+        var src2_ = src2.indexOf(lastB);
+        src = src2.slice(0, src2_) + src1.slice(src1_, _A.length);
+        return src;
+    }
+}

@@ -1,5 +1,6 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { CHash } from '../../artgine/basic/CHash.js';
 
 export function getPassword(projectRoot) {
     const candidates = [
@@ -47,5 +48,6 @@ export function createApiClient(cookieFile) {
 
 export async function login(call, base, projectRoot) {
     const password = getPassword(projectRoot);
-    return call(base, 'auth/login', { password });
+    const hashed = password.length >= 64 ? password : CHash.SHA256('artgine_' + password);
+    return call(base, 'auth/login', { password: hashed });
 }

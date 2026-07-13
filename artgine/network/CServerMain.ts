@@ -97,6 +97,11 @@ export class CServerMain
     GetServicePath(){  return this.mServicePath;  }
     Push(_server : CServer)
     {
+        const dup = this.mWebServerArr.some(s => s.constructor === _server.constructor);
+        if (dup) {
+            CConsol.Log(`[${_server.constructor.name}] already registered, skip duplicate instance`, CConsol.eColor.yellow);
+            return;
+        }
         this.mWebServerArr.push(_server);
         _server.Connect();
     }

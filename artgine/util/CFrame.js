@@ -1,1 +1,632 @@
-import{CWindow as e}from"../system/CWindow.js";import{CPreferences as t}from"../basic/CPreferences.js";import{CRes as s}from"../system/CRes.js";import{CTimer as i}from"../system/CTimer.js";import{CWASM as r}from"../basic/CWASM.js";import{CUniqueID as n}from"../basic/CUniqueID.js";import{CEvent as o}from"../basic/CEvent.js";import{CCoroutine as a}from"./CCoroutine.js";import{CConfirm as m,CModal as l}from"../basic/CModal.js";import{CUpdate as d}from"../basic/Basic.js";import{CPWA as h}from"../system/CPWA.js";import{CConsol as u}from"../basic/CConsol.js";import{CModalChat as c,CModalFrameView as p,CFileViewer as f,CLoadingBack as C}from"./CModalUtil.js";import{CAlert as y}from"../basic/CAlert.js";import{CInput as v}from"../system/CInput.js";import{CWebView as g}from"../system/CWebView.js";import{CRendererGL as w}from"../render/CRenderer.js";import{CDeviceGL as P}from"../render/CDevice.js";import{CShaderInterpretGL as R}from"../render/CShaderInterpret.js";import{CSoundMgr as F}from"../system/CSoundMgr.js";import{CChecker as b}from"./CChecker.js";import{CWebXR as E}from"./CWebXR.js";import{CLoader as L}from"./CLoader.js";import{CVec2 as I}from"../geometry/CVec2.js";import{CTexture as T}from"../render/CTexture.js";import{CBatchMgrGL as D}from"../render/CBatchMgr.js";import{CPalette as S}from"./CPalette.js";import{CPlugin as M}from"./CPlugin.js";import{CPath as k}from"../basic/CPath.js";import{CString as A}from"../basic/CString.js";import{CRollBack as U}from"./CRollBack.js";import{CSysAuth as x}from"../system/CSysAuth.js";import{CUtilWeb as j}from"./CUtilWeb.js";import{CDOM as G}from"../basic/CDOM.js";import{CUtil as W}from"../basic/CUtil.js";import{CUtilObj as z}from"../basic/CUtilObj.js";import{CPool as O}from"../basic/CPool.js";import{CFecth as V}from"../network/CFecth.js";let H=null,B=!1;0==W.IsNode()&&function(){const e=G.TagToDom("div");e.style.position="absolute",e.style.top="0",e.style.left="0",e.style.width="32px",e.style.height="32px",e.style.opacity="0",e.style.zIndex="9999",e.style.pointerEvents="auto",e.style.background="transparent",document.body.appendChild(e),e.addEventListener("dblclick",()=>{for(null==H?q():H.Show();0==u.GetLogQue().IsEmpty();)H.ChatAdd(u.GetLogQue().Dequeue(),"gray")}),window.addEventListener("error",function(e){-1==e.message.indexOf("ResizeObserver")&&(null==H&&null==Q&&q(),u.Log("📄 filename: "+e.filename),u.Log("📌 lineno/colno: "+e.lineno+"/"+e.colno),e.error?(u.Log("💬 message: "+e.error.message),u.Log("🧵 stack:\n"+e.error.stack)):u.Log("⚠️ message: "+e.message))}),window.addEventListener("unhandledrejection",function(e){null==H&&null==Q&&q(),u.Log("💬 reason:"+e.reason)}),document.addEventListener("freeze",()=>{null!=CFrame.Main()&&CFrame.EventCall(CFrame.Main().GetEvent(o.eType.Freeze))}),document.addEventListener("resume",()=>{null!=CFrame.Main()&&CFrame.EventCall(CFrame.Main().GetEvent(o.eType.Resume))}),document.addEventListener("visibilitychange",()=>{null!=CFrame.Main()&&(document.hidden?CFrame.EventCall(CFrame.Main().GetEvent(o.eType.Freeze)):CFrame.EventCall(CFrame.Main().GetEvent(o.eType.Resume)))})}();const K=[{keys:["frame","fps"],desc:"Open frame/FPS viewer",handler:()=>{new p}},{keys:["win size","window size"],desc:"Print window (browser) size",handler:()=>{H.ChatAdd("win width : "+window.innerWidth+" height : "+window.innerHeight,"#00cc00")}},{keys:["pf size","cpreferences size"],desc:"Print CPreferences size",handler:()=>{H.ChatAdd("pf width : "+CFrame.Main().PF().mWidth+" height : "+CFrame.Main().PF().mHeight,"#00cc00")}},{keys:["res"],desc:"Open resource modal",handler:()=>{z.ShowModal(CFrame.Main().Res(),"Resource").SetZIndex(l.eSort.Manual,l.eSort.ZIndexTool)}},{keys:["server on"],desc:"Forward console logs to server (/log)",handler:()=>{B=!0,H.ChatAdd("server send : on","#00cc00")}},{keys:["server off"],desc:"Stop forwarding console logs to server",handler:()=>{B=!1,H.ChatAdd("server send : off","#00cc00")}}];function q(){for(H=new c("ConsolChat",!1),H.SetCloseToHide(!0),H.Open(),H.On(o.eType.Chat,e=>{if(e=e.toLowerCase().trim(),H.ChatAdd(e),"-h"==e||"help"==e){H.ChatAdd("등록된 명령어 목록 :","#00cc00");for(const e of K)H.ChatAdd(e.keys.join(" / ")+" : "+e.desc,"#00cc00");return}const t=K.find(t=>t.keys.includes(e));null!=t&&t.handler()});0==u.GetLogQue().IsEmpty();)H.ChatAdd(u.GetLogQue().Dequeue(),"gray")}u.SetLogEvent((e,t)=>(B&&V.Exe("/log",{msg:e,color:t},"text").catch(()=>{}),null==H||!H.IsShow()||(H.ChatAdd(e,t),!1)));var N=0;export class CFrame{mMainProcess;mSubProcess;mLoadProcess=null;mRenderProcess=null;mLoadChk=null;mInit=!0;m_offset;mDevice;mRenderer;mBatchMgr;mWindow;mSoundMgr=null;mPreferences;mLoader;mRes=new s;mInput;mPalette=new S;mIAutoRenderArr=new Array;mResizeList=new Array;mEventVec=new Array;mUpdate=new d;DeltaTime(){return this.mUpdate.DeltaTime()}Input(){return this.mInput}Win(){return this.mWindow}Dev(){return this.mDevice}Ren(){return this.mRenderer}BMgr(){return this.mBatchMgr}Load(){return this.mLoader}Res(){return this.mRes}PF(){return this.mPreferences}Pal(){return this.mPalette}SMgr(){return this.mSoundMgr}Off(){return this.m_offset}static Main(){return Q}static Sub(){return _}static CConsolModal(){null==H?q():H.Show()}IsInit(){return null==this.mLoadProcess}constructor(s,i=""){if(this.m_offset=N++,this.mPreferences=s,!W.IsNode()){var r=i;"string"==typeof i?(null==(r=G.ID(i))?((r=G.TagToDom("canvas")).width=640,r.height=480,r.id=""==i?"can_"+n.GetHash():i,document.body.append(r),document.body.style.userSelect="none",document.body.style.margin="0px",document.body.style.backgroundColor="black",r.style.backgroundColor="black"):r.id=i,r.setAttribute("draggable","true"),r.setAttribute("oncontextmenu","return false"),r.setAttribute("ondragstart","return false"),r.setAttribute("onselectstart","return false"),r.setAttribute("onselectstart","return false"),r.style.display="block",r.style.userSelect="none",r.style.outline="none",r.style.webkitUserSelect="none"):i instanceof HTMLCanvasElement&&y.E("HTMLCanvasElement 구현 안함"),this.mSoundMgr=new F(this.mRes),this.mInput=new v(s,r),null==Q&&(window.addEventListener("DOMContentLoaded",e=>{var t=document.querySelectorAll("input");for(var s of t)s.onfocus=()=>{this.mInput.SetFocus(!1)},s.onblur=()=>{this.mInput.SetFocus(!0)}}),window.onkeydown=t=>(v.sKeyPress[t.keyCode]=!0,116==t.keyCode&&g.IsWebView()==g.eType.None?(j.PageReload(),!1):t.keyCode>=112&&t.keyCode<=121?(t.keyCode>=112&&t.keyCode<=115&&(this.mInput.mKeyPress[t.keyCode]=!0),t.preventDefault(),!1):123==t.keyCode&&0==this.mPreferences.mDeveloper?(t.preventDefault(),t.returnValue=!1,!1):18==t.keyCode?(t.preventDefault(),!1):(13==t.keyCode&&t.altKey&&(g.IsWebView()==g.eType.None?e.ScreenFull():g.JToWKeyUp("Alt+Enter")),90==t.keyCode&&t.ctrlKey&&U.Exe()&&t.preventDefault(),t.altKey?(t.preventDefault(),!1):void 0)),window.onkeyup=e=>{if(v.sKeyPress[e.keyCode]=!1,e.keyCode>=112&&e.keyCode<=115&&(this.mInput.mKeyPress[e.keyCode]=!1,e.preventDefault()),115==e.keyCode&&(g.IsWebView()==g.eType.None||1==e.ctrlKey)&&1==this.mPreferences.mDeveloper){let e=A.ExtCut(k.FullPath());new f([e.name+".ts",e.name+".json",e.name+".html"]).Open()}}),this.mPreferences.mIAuto&&(this.PushEvent(o.eType.Load,new o(async()=>{await this.mPalette.Load(this)})),this.PushEvent(o.eType.Init,new o(()=>{this.mPalette.Init(this)}))),null!=r&&(this.mWindow=new e(this.mPreferences,r,this.mInput),navigator.gpu&&this.mPreferences.mRenderer==t.eRenderer.GPU||this.mPreferences.mRenderer==t.eRenderer.GL&&(this.mDevice=new P(this.mPreferences,r),this.mRenderer=new w(this.mDevice,new R,this.mRes,this.mPreferences),this.mBatchMgr=new D(this.mRenderer)),this.mLoader=new L(this.mRenderer,this.mRes)),null==Q?Q=this:_=this}}PushIAuto(e){e.Init&&this.mEventVec.push(new o("Init",e,o.eType.Init)),e.Update&&this.mEventVec.push(new o("Update",e,o.eType.Update)),e.Fixed&&this.mEventVec.push(new o("Fixed",e,o.eType.Fixed)),e.Render&&(0==this.mIAutoRenderArr.length&&(this.mRenderProcess=async()=>{for(var e of(this.Ren().Begin(),this.mIAutoRenderArr))e.RenderQue(!0);for(var e of this.mIAutoRenderArr)e.RenderQue(!1);await CFrame.EventCall(this.GetEvent(o.eType.Render)),this.Ren().End()}),this.mIAutoRenderArr.push(e))}PushEvent(e,t){this.mEventVec.push(o.ToCEvent(t,e))}RemoveEvent(e){for(let t=0;t<this.mEventVec.length;++t)if(this.mEventVec[t]===e){this.mEventVec.splice(t,1);break}}RemoveIAuto(e){for(let t=0;t<this.mEventVec.length;++t)this.mEventVec[t].mClass==e&&this.mEventVec.splice(t,1);for(let t=0;t<this.mIAutoRenderArr.length;++t)this.mIAutoRenderArr[t]==e&&this.mIAutoRenderArr.splice(t,1)}GetEvent(e){var t=new Array;for(var s of this.mEventVec)s.mKey==e&&t.push(s);return t}Update(e){if("visible"!=document.visibilityState||1==document.hidden?this.SetCurser(CFrame.eCurser.notAllowed):null!=Q.Win()&&document.activeElement!=Q.Win().Handle()?this.SetCurser(CFrame.eCurser.help):this.SetCurser(CFrame.eCurser.default),CFrame.Main()==this){O.Update();let e=l.GetModalList(),t=!0;for(let s of e)0==s.IsPause()&&s.Update(this.mUpdate),null!=s.mDebugMode&&(this.PF().mDebugMode&&s.mShow&&1==s.mDebugMode?(s.Hide(0),s.mDebugMode=!1):0==this.PF().mDebugMode&&0==s.mDebugMode&&(s.mDebugMode=!0,s.Show())),s instanceof m&&(t=!1);this.Input().SetFocus(t);let s=a.GetLoopArr();for(let e=0;e<s.Size();++e)s.Find(e).Start();s.Clear()}if(this.mInput.Update(this.mUpdate),this.mSoundMgr.Update(this.mUpdate),null!=this.mWindow){if(this.mWindow.Update(this.mUpdate),this.mResizeList.length>0)for(let e=0;e<this.mResizeList.length;++e){let s=this.mRes.Find(this.mResizeList[e]);if(null!=s.m_depthBuf){if((t=this.Ren().RTOrgToSize(s.GetOrgWidth(),s.GetOrgHeight())).IsZero())continue;s.GetWidth()==t.x&&s.GetHeight()==t.y||this.Ren().BuildRenderTarget(s.GetInfo(),new I(s.GetOrgWidth(),s.GetOrgHeight()),this.mResizeList[e]),this.Res().Find(this.mResizeList[e]).SetFilter(s.GetFilter()),this.mResizeList.splice(e,1),e--}}if(this.mWindow.IsResize()||E.IsResize()){if(CFrame.Main()==this)if(G.PaintDiv().style.width=this.mWindow.mPF.mWidth+"px",G.PaintDiv().style.height=this.mWindow.mPF.mHeight+"px",0==this.mWindow.mPF.mTargetWidth){const e=this.mWindow.Handle().getBoundingClientRect();G.PaintDiv().style.left=e.left+"px",G.PaintDiv().style.top=e.top+"px"}else G.PaintDiv().style.left="0px",G.PaintDiv().style.top="0px";let e=l.GetModalList();for(let t of e)t.mLimitPush&&t.LimitPushChk();for(let e of this.mRes.Keys()){let s=this.mRes.Find(e);if(s instanceof T&&s.GetAutoResize()&&s.GetInfo()[0].mTarget==T.eTarget.Sigle)if(null!=s.mDepthBuf){var t;if((t=this.Ren().RTOrgToSize(s.GetOrgWidth(),s.GetOrgHeight())).IsZero())continue;s.GetWidth()==t.x&&s.GetHeight()==t.y||this.Ren().BuildRenderTarget(s.GetInfo(),new I(s.GetOrgWidth(),s.GetOrgHeight()),e),this.Res().Find(e).SetFilter(s.GetFilter())}else this.mResizeList.push(e)}CFrame.EventCall(this.GetEvent(o.eType.Resize))}}}static async EventCall(e,t=null){if(null!=e)for(var s of e)s.IsCall()&&await s.CallAsync(t)}async Process(){this.Load().mLoadSet.add("load"),null==CFrame.Sub()&&new C("MainLoading",()=>{let e=this.Load().mLoadSet.size+(this.mInit?1:0);return 0==this.Load().mLoadSet.size&&this.mInit&&(this.mInit=!1),e}),this.mDevice&&await this.mDevice.Init();let e=k.WebRootArtgineUrl();if(this.mPreferences.mGitHub&&(e="https://06fs4dix.github.io/Artgine/"),await r.Init(this.mPreferences.mWASM,e),"serviceWorker"in navigator&&navigator.serviceWorker.controller&&await h.IsOnline(),M.sEventVec.length>0&&Q==this)for(let e of M.sEventVec)this.PushEvent(e.mKey,e);var t=new i;this.mMainProcess=async()=>{if(null==this.mMainProcess)return;this.mUpdate.mDeltaTime=t.Delay(),this.mUpdate.mOffset++;this.mUpdate.mDeltaTime>5&&this.mPreferences.mDeveloper&&(this.mUpdate.mDeltaTime=.0166,y.W("[Debug Detected] 시간 보정 발생: 0.0166s로 강제 설정"));const e=.03;this.mUpdate.mDeltaTime>.5?(this.mUpdate.mDeltaTime=.001,this.mUpdate.mFixedCount=1,this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime):this.mUpdate.mDeltaTime>e?(this.mUpdate.mFixedCount=Math.ceil(this.mUpdate.mDeltaTime/e),this.mUpdate.mFixedCount>30&&(this.mUpdate.mDeltaTime=30*e,this.mUpdate.mFixedCount=30),this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime/this.mUpdate.mFixedCount):(this.mUpdate.mFixedCount=1,this.mUpdate.mFixedTime=this.mUpdate.mDeltaTime),this.Update(this.mUpdate),await CFrame.EventCall(this.GetEvent(o.eType.Update),this.mUpdate),await CFrame.EventCall(this.GetEvent(o.eType.Fixed),this.mUpdate),null==this.mRenderProcess?await CFrame.EventCall(this.GetEvent(o.eType.Render)):await this.mRenderProcess(),requestAnimationFrame(this.mMainProcess),r.SetThread(!1)},this.mSubProcess=e=>{r.SetThread(!0),null!=this.mMainProcess&&(CFrame.EventCall(this.GetEvent(o.eType.SubUpdate),e),"requestIdleCallback"in window&&requestIdleCallback(this.mSubProcess),r.Checker(1))},await CFrame.EventCall(this.GetEvent(o.eType.Load)),b.Exe(async()=>{if(null!=this.mMainProcess)return this.Load().mLoadSet.has("load")&&0==x.IsLock()&&this.Load().mLoadSet.delete("load"),this.Load().LoadCompleteChk()&&(this.mLoadChk=!0),this.mLoadChk?(await CFrame.EventCall(this.GetEvent(o.eType.Init)),t.Delay(),requestAnimationFrame(this.mMainProcess),"requestIdleCallback"in window&&requestIdleCallback(this.mSubProcess),this.mLoadProcess=null,!1):(this.mLoadChk=!1,CFrame.EventCall(this.GetEvent(o.eType.LoadUpdate)),!0)})}Destroy(){this.mLoadProcess=null,this.mSubProcess=null,this.mMainProcess=null;for(let[e,t]of this.mRes.mResMap)-1!=e.indexOf("png")||-1!=e.indexOf("jpg")||-1!=e.indexOf("tga")||-1!=e.indexOf("tex")?this.mRenderer.ReleaseTexture(t):-1!=e.indexOf("/DM/")&&this.mRenderer.ReleaseMeshDrawNode(t)}static eCurser={default:"default",pointer:"pointer",wait:"wait",none:"none",help:"help",notAllowed:"not-allowed"};SetCurser(e){null!=this.Win()&&this.Win().Handle().style.cursor!=e&&(this.Win().Handle().style.cursor=e)}}var Q=null,_=null;
+import { CWindow } from "../system/CWindow.js";
+import { CPreferences } from "../basic/CPreferences.js";
+import { CRes } from "../system/CRes.js";
+import { CTimer } from "../system/CTimer.js";
+import { CWASM } from "../basic/CWASM.js";
+import { CUniqueID } from "../basic/CUniqueID.js";
+import { CEvent } from "../basic/CEvent.js";
+import { CCoroutine } from "./CCoroutine.js";
+import { CConfirm, CModal } from "../basic/CModal.js";
+import { CUpdate } from "../basic/Basic.js";
+import { CPWA } from "../system/CPWA.js";
+import { CConsol } from "../basic/CConsol.js";
+import { CModalChat, CModalFrameView, CFileViewer, CLoadingBack } from "./CModalUtil.js";
+import { CAlert } from "../basic/CAlert.js";
+import { CInput } from "../system/CInput.js";
+import { CWebView } from "../system/CWebView.js";
+import { CRendererGL } from "../render/CRenderer.js";
+import { CDeviceGL } from "../render/CDevice.js";
+import { CShaderInterpretGL } from "../render/CShaderInterpret.js";
+import { CSoundMgr } from "../system/CSoundMgr.js";
+import { CChecker } from "./CChecker.js";
+import { CWebXR } from "./CWebXR.js";
+import { CLoader } from "./CLoader.js";
+import { CVec2 } from "../geometry/CVec2.js";
+import { CTexture } from "../render/CTexture.js";
+import { CBatchMgrGL } from "../render/CBatchMgr.js";
+import { CPalette } from "./CPalette.js";
+import { CPlugin } from "./CPlugin.js";
+import { CPath } from "../basic/CPath.js";
+import { CString } from "../basic/CString.js";
+import { CRollBack } from "./CRollBack.js";
+import { CSysAuth } from "../system/CSysAuth.js";
+import { CUtilWeb } from "./CUtilWeb.js";
+import { CDOM } from "../basic/CDOM.js";
+import { CUtil } from "../basic/CUtil.js";
+import { CUtilObj } from "../basic/CUtilObj.js";
+import { CPool } from "../basic/CPool.js";
+import { CFecth } from "../network/CFecth.js";
+let gConsolChat = null;
+let gConsolServerSend = false;
+var gFocus = null;
+function WebInit() {
+    const invisibleButton = CDOM.TagToDom("div");
+    invisibleButton.style.position = "absolute";
+    invisibleButton.style.top = "0";
+    invisibleButton.style.left = "0";
+    invisibleButton.style.width = "32px";
+    invisibleButton.style.height = "32px";
+    invisibleButton.style.opacity = "0";
+    invisibleButton.style.zIndex = "9999";
+    invisibleButton.style.pointerEvents = "auto";
+    invisibleButton.style.background = "transparent";
+    document.body.appendChild(invisibleButton);
+    invisibleButton.addEventListener("dblclick", () => {
+        if (gConsolChat == null) {
+            CConsolModalInit();
+        }
+        else
+            gConsolChat.Show();
+        while (CConsol.GetLogQue().IsEmpty() == false)
+            gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(), "gray");
+    });
+    window.addEventListener('error', function (event) {
+        if (event.message.indexOf("ResizeObserver") != -1)
+            return;
+        if (gConsolChat == null && gMainFramework == null)
+            CConsolModalInit();
+        CConsol.Log("📄 filename: " + event.filename);
+        CConsol.Log("📌 lineno/colno: " + event.lineno + "/" + event.colno);
+        if (event.error) {
+            CConsol.Log("💬 message: " + event.error.message);
+            CConsol.Log("🧵 stack:\n" + event.error.stack);
+        }
+        else {
+            CConsol.Log("⚠️ message: " + event.message);
+        }
+    });
+    window.addEventListener("unhandledrejection", function (event) {
+        if (gConsolChat == null && gMainFramework == null)
+            CConsolModalInit();
+        CConsol.Log("💬 reason:" + event.reason);
+    });
+    document.addEventListener("freeze", () => {
+        if (CFrame.Main() == null)
+            return;
+        CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
+    });
+    document.addEventListener("resume", () => {
+        if (CFrame.Main() == null)
+            return;
+        CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
+    });
+    document.addEventListener("visibilitychange", () => {
+        if (CFrame.Main() == null)
+            return;
+        if (document.hidden) {
+            CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Freeze));
+        }
+        else {
+            CFrame.EventCall(CFrame.Main().GetEvent(CEvent.eType.Resume));
+        }
+    });
+}
+if (CUtil.IsNode() == false)
+    WebInit();
+const gConsolCmdTable = [
+    {
+        keys: ["frame", "fps"],
+        desc: "Open frame/FPS viewer",
+        handler: () => { new CModalFrameView(); }
+    },
+    {
+        keys: ["win size", "window size"],
+        desc: "Print window (browser) size",
+        handler: () => { gConsolChat.ChatAdd("win width : " + window.innerWidth + " height : " + window.innerHeight, "#00cc00"); }
+    },
+    {
+        keys: ["pf size", "cpreferences size"],
+        desc: "Print CPreferences size",
+        handler: () => { gConsolChat.ChatAdd("pf width : " + CFrame.Main().PF().mWidth + " height : " + CFrame.Main().PF().mHeight, "#00cc00"); }
+    },
+    {
+        keys: ["res"],
+        desc: "Open resource modal",
+        handler: () => {
+            let modal = CUtilObj.ShowModal(CFrame.Main().Res(), "Resource");
+            modal.SetZIndex(CModal.eSort.Manual, CModal.eSort.ZIndexTool);
+        }
+    },
+    {
+        keys: ["server on"],
+        desc: "Forward console logs to server (/log)",
+        handler: () => { gConsolServerSend = true; gConsolChat.ChatAdd("server send : on", "#00cc00"); }
+    },
+    {
+        keys: ["server off"],
+        desc: "Stop forwarding console logs to server",
+        handler: () => { gConsolServerSend = false; gConsolChat.ChatAdd("server send : off", "#00cc00"); }
+    },
+];
+function CConsolModalInit() {
+    gConsolChat = new CModalChat("ConsolChat", false);
+    gConsolChat.SetCloseToHide(true);
+    gConsolChat.Open();
+    gConsolChat.On(CEvent.eType.Chat, (msg) => {
+        msg = msg.toLowerCase().trim();
+        gConsolChat.ChatAdd(msg);
+        if (msg == "-h" || msg == "help") {
+            gConsolChat.ChatAdd("등록된 명령어 목록 :", "#00cc00");
+            for (const cmd of gConsolCmdTable)
+                gConsolChat.ChatAdd(cmd.keys.join(" / ") + " : " + cmd.desc, "#00cc00");
+            return;
+        }
+        const cmd = gConsolCmdTable.find(cmd => cmd.keys.includes(msg));
+        if (cmd != null)
+            cmd.handler();
+    });
+    while (CConsol.GetLogQue().IsEmpty() == false)
+        gConsolChat.ChatAdd(CConsol.GetLogQue().Dequeue(), "gray");
+}
+CConsol.SetLogEvent((_msg, _color) => {
+    if (gConsolServerSend)
+        CFecth.Exe("/log", { msg: _msg, color: _color }, "text").catch(() => { });
+    if (gConsolChat != null && gConsolChat.IsShow()) {
+        gConsolChat.ChatAdd(_msg, _color);
+    }
+    else
+        return true;
+    return false;
+});
+var g_offset = 0;
+export class CFrame {
+    mMainProcess;
+    mSubProcess;
+    mLoadProcess = null;
+    mRenderProcess = null;
+    mLoadChk = null;
+    mInit = true;
+    m_offset;
+    mDevice;
+    mRenderer;
+    mBatchMgr;
+    mWindow;
+    mSoundMgr = null;
+    mPreferences;
+    mLoader;
+    mRes = new CRes();
+    mInput;
+    mPalette = new CPalette();
+    mIAutoRenderArr = new Array();
+    mResizeList = new Array();
+    mEventVec = new Array();
+    mUpdate = new CUpdate();
+    DeltaTime() { return this.mUpdate.DeltaTime(); }
+    Input() { return this.mInput; }
+    Win() { return this.mWindow; }
+    Dev() { return this.mDevice; }
+    Ren() { return this.mRenderer; }
+    BMgr() { return this.mBatchMgr; }
+    Load() { return this.mLoader; }
+    Res() { return this.mRes; }
+    PF() { return this.mPreferences; }
+    Pal() { return this.mPalette; }
+    SMgr() { return this.mSoundMgr; }
+    Off() { return this.m_offset; }
+    static Main() { return gMainFramework; }
+    static Sub() { return gSubFramework; }
+    static CConsolModal() {
+        if (gConsolChat == null)
+            CConsolModalInit();
+        else
+            gConsolChat.Show();
+    }
+    IsInit() { return this.mLoadProcess == null; }
+    constructor(_pf, _htmlObj = "") {
+        this.m_offset = g_offset++;
+        this.mPreferences = _pf;
+        if (CUtil.IsNode()) {
+            return;
+        }
+        var canDummy = _htmlObj;
+        if (typeof _htmlObj == "string") {
+            canDummy = CDOM.ID(_htmlObj);
+            if (canDummy == null) {
+                canDummy = CDOM.TagToDom("canvas");
+                canDummy.width = 640;
+                canDummy.height = 480;
+                if (_htmlObj == "")
+                    canDummy.id = "can_" + CUniqueID.GetHash();
+                else
+                    canDummy.id = _htmlObj;
+                document.body.append(canDummy);
+                document.body.style.userSelect = 'none';
+                document.body.style.margin = '0px';
+                document.body.style.backgroundColor = "black";
+                canDummy.style.backgroundColor = 'black';
+            }
+            else {
+                canDummy.id = _htmlObj;
+            }
+            canDummy.setAttribute("draggable", "true");
+            canDummy.setAttribute("oncontextmenu", "return false");
+            canDummy.setAttribute("ondragstart", "return false");
+            canDummy.setAttribute("onselectstart", "return false");
+            canDummy.setAttribute("onselectstart", "return false");
+            canDummy.style.display = 'block';
+            canDummy.style.userSelect = 'none';
+            canDummy.style.outline = 'none';
+            canDummy.style.webkitUserSelect = "none";
+        }
+        else if (_htmlObj instanceof HTMLCanvasElement) {
+            CAlert.E("HTMLCanvasElement 구현 안함");
+        }
+        this.mSoundMgr = new CSoundMgr(this.mRes);
+        this.mInput = new CInput(_pf, canDummy);
+        if (gMainFramework == null) {
+            window.addEventListener('DOMContentLoaded', (event) => {
+                var inputList = document.querySelectorAll("input");
+                for (var input of inputList) {
+                    input.onfocus = () => {
+                        this.mInput.SetFocus(false);
+                    };
+                    input.onblur = () => {
+                        this.mInput.SetFocus(true);
+                    };
+                }
+            });
+            window.onkeydown = (e) => {
+                CInput.sKeyPress[e.keyCode] = true;
+                if (e.keyCode == 116 && CWebView.IsWebView() == CWebView.eType.None) {
+                    CUtilWeb.PageReload();
+                    return false;
+                }
+                else if (e.keyCode >= 112 && e.keyCode <= 121) {
+                    if (e.keyCode >= 112 && e.keyCode <= 115)
+                        this.mInput.mKeyPress[e.keyCode] = true;
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.keyCode == 123 && this.mPreferences.mDeveloper == false) {
+                    e.preventDefault();
+                    e.returnValue = false;
+                    return false;
+                }
+                if (e.keyCode == 18) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.keyCode == 13 && e.altKey) {
+                    if (CWebView.IsWebView() == CWebView.eType.None)
+                        CWindow.ScreenFull();
+                    else
+                        CWebView.JToWKeyUp("Alt+Enter");
+                }
+                if (e.keyCode == 90 && e.ctrlKey) {
+                    if (CRollBack.Exe())
+                        e.preventDefault();
+                }
+                if (e.altKey) {
+                    e.preventDefault();
+                    return false;
+                }
+            };
+            window.onkeyup = (e) => {
+                CInput.sKeyPress[e.keyCode] = false;
+                if (e.keyCode >= 112 && e.keyCode <= 115) {
+                    this.mInput.mKeyPress[e.keyCode] = false;
+                    e.preventDefault();
+                }
+                if (e.keyCode == 115 && (CWebView.IsWebView() == CWebView.eType.None || e.ctrlKey == true) && this.mPreferences.mDeveloper == true) {
+                    let info = CString.ExtCut(CPath.FullPath());
+                    let sv = new CFileViewer([info.name + ".ts", info.name + ".json", info.name + ".html"]);
+                    sv.Open();
+                }
+            };
+        }
+        if (this.mPreferences.mIAuto) {
+            this.PushEvent(CEvent.eType.Load, new CEvent(async () => {
+                await this.mPalette.Load(this);
+            }));
+            this.PushEvent(CEvent.eType.Init, new CEvent(() => {
+                this.mPalette.Init(this);
+            }));
+        }
+        if (canDummy != null) {
+            this.mWindow = new CWindow(this.mPreferences, canDummy, this.mInput);
+            if (navigator.gpu && this.mPreferences.mRenderer == CPreferences.eRenderer.GPU) {
+            }
+            else if (this.mPreferences.mRenderer == CPreferences.eRenderer.GL) {
+                this.mDevice = new CDeviceGL(this.mPreferences, canDummy);
+                this.mRenderer = new CRendererGL(this.mDevice, new CShaderInterpretGL(), this.mRes, this.mPreferences);
+                this.mBatchMgr = new CBatchMgrGL(this.mRenderer);
+            }
+            this.mLoader = new CLoader(this.mRenderer, this.mRes);
+        }
+        if (gMainFramework == null)
+            gMainFramework = this;
+        else
+            gSubFramework = this;
+    }
+    PushIAuto(_any) {
+        if (_any["Init"]) {
+            this.mEventVec.push(new CEvent("Init", _any, CEvent.eType.Init));
+        }
+        if (_any["Update"]) {
+            this.mEventVec.push(new CEvent("Update", _any, CEvent.eType.Update));
+        }
+        if (_any["Fixed"]) {
+            this.mEventVec.push(new CEvent("Fixed", _any, CEvent.eType.Fixed));
+        }
+        if (_any["Render"]) {
+            if (this.mIAutoRenderArr.length == 0) {
+                this.mRenderProcess = async () => {
+                    this.Ren().Begin();
+                    for (var each0 of this.mIAutoRenderArr) {
+                        each0.RenderQue(true);
+                    }
+                    for (var each0 of this.mIAutoRenderArr) {
+                        each0.RenderQue(false);
+                    }
+                    await CFrame.EventCall(this.GetEvent(CEvent.eType.Render));
+                    this.Ren().End();
+                };
+            }
+            this.mIAutoRenderArr.push(_any);
+        }
+    }
+    PushEvent(_type, _event) {
+        this.mEventVec.push(CEvent.ToCEvent(_event, _type));
+    }
+    RemoveEvent(_event) {
+        for (let i = 0; i < this.mEventVec.length; ++i) {
+            if (this.mEventVec[i] === _event) {
+                this.mEventVec.splice(i, 1);
+                break;
+            }
+        }
+    }
+    RemoveIAuto(_IAuto) {
+        for (let i = 0; i < this.mEventVec.length; ++i) {
+            if (this.mEventVec[i].mClass == _IAuto) {
+                this.mEventVec.splice(i, 1);
+            }
+        }
+        for (let i = 0; i < this.mIAutoRenderArr.length; ++i) {
+            if (this.mIAutoRenderArr[i] == _IAuto) {
+                this.mIAutoRenderArr.splice(i, 1);
+            }
+        }
+    }
+    GetEvent(_key) {
+        var earr = new Array();
+        for (var each0 of this.mEventVec) {
+            if (each0.mKey == _key) {
+                earr.push(each0);
+            }
+        }
+        return earr;
+    }
+    Update(_update) {
+        if (document.visibilityState != "visible" || document.hidden == true)
+            this.SetCurser(CFrame.eCurser.notAllowed);
+        else if (gMainFramework.Win() != null && document.activeElement != gMainFramework.Win().Handle())
+            this.SetCurser(CFrame.eCurser.help);
+        else
+            this.SetCurser(CFrame.eCurser.default);
+        if (CFrame.Main() == this) {
+            CPool.Update();
+            let mList = CModal.GetModalList();
+            let conFocus = true;
+            for (let m of mList) {
+                if (m.IsPause() == false)
+                    m.Update(this.mUpdate);
+                if (m.mDebugMode != null) {
+                    if (this.PF().mDebugMode && m.mShow && m.mDebugMode == true) {
+                        m.Hide(0);
+                        m.mDebugMode = false;
+                    }
+                    else if (this.PF().mDebugMode == false && m.mDebugMode == false) {
+                        m.mDebugMode = true;
+                        m.Show();
+                    }
+                }
+                if (m instanceof CConfirm)
+                    conFocus = false;
+            }
+            this.Input().SetFocus(conFocus);
+            let cLoop = CCoroutine.GetLoopArr();
+            for (let i = 0; i < cLoop.Size(); ++i) {
+                cLoop.Find(i).Start();
+            }
+            cLoop.Clear();
+        }
+        this.mInput.Update(this.mUpdate);
+        this.mSoundMgr.Update(this.mUpdate);
+        if (this.mWindow != null) {
+            this.mWindow.Update(this.mUpdate);
+            if (this.mResizeList.length > 0) {
+                for (let i = 0; i < this.mResizeList.length; ++i) {
+                    let res = this.mRes.Find(this.mResizeList[i]);
+                    if (res.m_depthBuf != null) {
+                        var size = this.Ren().RTOrgToSize(res.GetOrgWidth(), res.GetOrgHeight());
+                        if (size.IsZero())
+                            continue;
+                        if (res.GetWidth() != size.x || res.GetHeight() != size.y)
+                            this.Ren().BuildRenderTarget(res.GetInfo(), new CVec2(res.GetOrgWidth(), res.GetOrgHeight()), this.mResizeList[i]);
+                        var ntex = this.Res().Find(this.mResizeList[i]);
+                        ntex.SetFilter(res.GetFilter());
+                        this.mResizeList.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+            if (this.mWindow.IsResize() || CWebXR.IsResize()) {
+                if (CFrame.Main() == this) {
+                    CDOM.PaintDiv().style.width = this.mWindow.mPF.mWidth + "px";
+                    CDOM.PaintDiv().style.height = this.mWindow.mPF.mHeight + "px";
+                    if (this.mWindow.mPF.mTargetWidth == 0) {
+                        const rect = this.mWindow.Handle().getBoundingClientRect();
+                        CDOM.PaintDiv().style.left = rect.left + "px";
+                        CDOM.PaintDiv().style.top = rect.top + "px";
+                    }
+                    else {
+                        CDOM.PaintDiv().style.left = 0 + "px";
+                        CDOM.PaintDiv().style.top = 0 + "px";
+                    }
+                }
+                let mList = CModal.GetModalList();
+                for (let m of mList) {
+                    if (m.mLimitPush)
+                        m.LimitPushChk();
+                }
+                for (let key of this.mRes.Keys()) {
+                    let res = this.mRes.Find(key);
+                    if (res instanceof CTexture) {
+                        if (res.GetAutoResize() && res.GetInfo()[0].mTarget == CTexture.eTarget.Sigle) {
+                            if (res.mDepthBuf != null) {
+                                var size = this.Ren().RTOrgToSize(res.GetOrgWidth(), res.GetOrgHeight());
+                                if (size.IsZero())
+                                    continue;
+                                if (res.GetWidth() != size.x || res.GetHeight() != size.y)
+                                    this.Ren().BuildRenderTarget(res.GetInfo(), new CVec2(res.GetOrgWidth(), res.GetOrgHeight()), key);
+                                var ntex = this.Res().Find(key);
+                                ntex.SetFilter(res.GetFilter());
+                            }
+                            else {
+                                this.mResizeList.push(key);
+                            }
+                        }
+                    }
+                }
+                CFrame.EventCall(this.GetEvent(CEvent.eType.Resize));
+            }
+        }
+    }
+    static async EventCall(_eventArr, _val = null) {
+        if (_eventArr == null)
+            return;
+        for (var each0 of _eventArr) {
+            if (each0.IsCall())
+                await each0.CallAsync(_val);
+        }
+    }
+    async Process() {
+        this.Load().mLoadSet.add("load");
+        if (CFrame.Sub() == null) {
+            new CLoadingBack("MainLoading", () => {
+                let size = this.Load().mLoadSet.size + (this.mInit ? 1 : 0);
+                if (this.Load().mLoadSet.size == 0 && this.mInit)
+                    this.mInit = false;
+                return size;
+            });
+        }
+        if (this.mDevice)
+            await this.mDevice.Init();
+        let path = CPath.WebRootArtgineUrl();
+        if (this.mPreferences.mGitHub)
+            path = "https://06fs4dix.github.io/Artgine/";
+        await CWASM.Init(this.mPreferences.mWASM, path);
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller)
+            await CPWA.IsOnline();
+        if (CPlugin.sEventVec.length > 0 && gMainFramework == this) {
+            for (let event of CPlugin.sEventVec) {
+                this.PushEvent(event.mKey, event);
+            }
+        }
+        var timer = new CTimer();
+        var subCall = false;
+        var subWDelay = 0;
+        this.mMainProcess = async () => {
+            if (this.mMainProcess == null)
+                return;
+            this.mUpdate.mDeltaTime = timer.Delay();
+            this.mUpdate.mOffset++;
+            const DEBUG_THRESHOLD = 5.0;
+            const NORMAL_FRAME_TIME = 0.0166;
+            if (this.mUpdate.mDeltaTime > DEBUG_THRESHOLD && this.mPreferences.mDeveloper) {
+                this.mUpdate.mDeltaTime = NORMAL_FRAME_TIME;
+                CAlert.W(`[Debug Detected] 시간 보정 발생: ${NORMAL_FRAME_TIME}s로 강제 설정`);
+            }
+            const maxTime = 0.03;
+            const maxCount = 30;
+            if (this.mUpdate.mDeltaTime > 0.5) {
+                this.mUpdate.mDeltaTime = 0.001;
+                this.mUpdate.mFixedCount = 1;
+                this.mUpdate.mFixedTime = this.mUpdate.mDeltaTime;
+            }
+            else {
+                if (this.mUpdate.mDeltaTime > maxTime) {
+                    this.mUpdate.mFixedCount = Math.ceil(this.mUpdate.mDeltaTime / maxTime);
+                    if (this.mUpdate.mFixedCount > maxCount) {
+                        this.mUpdate.mDeltaTime = maxCount * maxTime;
+                        this.mUpdate.mFixedCount = maxCount;
+                    }
+                    this.mUpdate.mFixedTime = this.mUpdate.mDeltaTime / this.mUpdate.mFixedCount;
+                }
+                else {
+                    this.mUpdate.mFixedCount = 1;
+                    this.mUpdate.mFixedTime = this.mUpdate.mDeltaTime;
+                }
+            }
+            this.Update(this.mUpdate);
+            await CFrame.EventCall(this.GetEvent(CEvent.eType.Update), this.mUpdate);
+            await CFrame.EventCall(this.GetEvent(CEvent.eType.Fixed), this.mUpdate);
+            if (this.mRenderProcess == null)
+                await CFrame.EventCall(this.GetEvent(CEvent.eType.Render));
+            else
+                await this.mRenderProcess();
+            requestAnimationFrame(this.mMainProcess);
+            CWASM.SetThread(false);
+        };
+        this.mSubProcess = (deadline) => {
+            CWASM.SetThread(true);
+            if (this.mMainProcess == null)
+                return;
+            subWDelay = 0;
+            subCall = true;
+            CFrame.EventCall(this.GetEvent(CEvent.eType.SubUpdate), deadline);
+            if ('requestIdleCallback' in window)
+                requestIdleCallback(this.mSubProcess);
+            CWASM.Checker(1);
+        };
+        await CFrame.EventCall(this.GetEvent(CEvent.eType.Load));
+        CChecker.Exe(async () => {
+            if (this.mMainProcess == null)
+                return;
+            if (this.Load().mLoadSet.has("load") && CSysAuth.IsLock() == false)
+                this.Load().mLoadSet.delete("load");
+            if (this.Load().LoadCompleteChk())
+                this.mLoadChk = true;
+            if (this.mLoadChk) {
+                await CFrame.EventCall(this.GetEvent(CEvent.eType.Init));
+                timer.Delay();
+                requestAnimationFrame(this.mMainProcess);
+                if ('requestIdleCallback' in window)
+                    requestIdleCallback(this.mSubProcess);
+                this.mLoadProcess = null;
+            }
+            else {
+                this.mLoadChk = false;
+                CFrame.EventCall(this.GetEvent(CEvent.eType.LoadUpdate));
+                return true;
+            }
+            return false;
+        });
+    }
+    Destroy() {
+        this.mLoadProcess = null;
+        this.mSubProcess = null;
+        this.mMainProcess = null;
+        for (let [key, value] of this.mRes.mResMap) {
+            if (key.indexOf("png") != -1 || key.indexOf("jpg") != -1 || key.indexOf("tga") != -1 || key.indexOf("tex") != -1)
+                this.mRenderer.ReleaseTexture(value);
+            else if (key.indexOf("/DM/") != -1)
+                this.mRenderer.ReleaseMeshDrawNode(value);
+        }
+    }
+    static eCurser = {
+        default: "default",
+        pointer: "pointer",
+        wait: "wait",
+        none: "none",
+        help: "help",
+        notAllowed: "not-allowed",
+    };
+    SetCurser(_type) {
+        if (this.Win() != null && this.Win().Handle().style.cursor != _type)
+            this.Win().Handle().style.cursor = _type;
+    }
+}
+var gMainFramework = null;
+var gSubFramework = null;

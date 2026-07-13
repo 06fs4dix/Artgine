@@ -247,4 +247,33 @@ export class CCMDMgr {
             return CCMDMgr.IsRun("Visual Studio Code");
         return CCMDMgr.IsRun("code");
     }
+    static async IsTSCRun() {
+        const tempName = `__tsc_check_${Date.now()}`;
+        const tsPath = path.join(process.cwd(), `${tempName}.ts`);
+        const jsPath = path.join(process.cwd(), `${tempName}.js`);
+        const timeoutMs = 5000;
+        const intervalMs = 200;
+        try {
+            fs.writeFileSync(tsPath, `export const __tscCheck = true;\n`);
+            const start = Date.now();
+            while (Date.now() - start < timeoutMs) {
+                if (fs.existsSync(jsPath))
+                    return true;
+                await CCMDMgr.Delay(intervalMs);
+            }
+            return fs.existsSync(jsPath);
+        }
+        finally {
+            try {
+                if (fs.existsSync(tsPath))
+                    fs.unlinkSync(tsPath);
+            }
+            catch (e) { }
+            try {
+                if (fs.existsSync(jsPath))
+                    fs.unlinkSync(jsPath);
+            }
+            catch (e) { }
+        }
+    }
 }

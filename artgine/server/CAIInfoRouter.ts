@@ -6,12 +6,31 @@ import { spawnSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CAI } from '../util/CAI.js';
+import type { IProviderUsage } from '../util/CAI.js';
 import { CPath } from '../basic/CPath.js';
 
 const SETTINGS_FILE = path.join(CAI.AIDir(), 'settings.json');
 
 // manus/gpt는 터미널 실행 모드에 연결되어 있지 않은 미사용 프로바이더라 제외한다.
 const _PROVIDER_STATE_LIST = Object.values(CAI.eProvider).filter(p => p !== CAI.eProvider.manus && p !== CAI.eProvider.gpt);
+
+// Claude 사용량 API는 최근 실제 호출 흔적이 있어야 값을 채워주는 것으로 보여, 설치·인증된 상태에서도
+// 한동안 안 쓰면 -1(조회 불가)이 나온다. 이 경우 헤드리스로 한 번 짧게 호출해 실제 응답을 받은 뒤
+// 사용량을 재조회하면 채워진다(실측 확인). 매 조회마다 반복 호출하지 않도록 최소 재시도 간격을 둔다.
+const CLAUDE_WARMUP_COOLDOWN_MS = 5 * 60 * 1000;
+let _lastClaudeWarmupAt = 0;
+
+// antigravity 사용량 조회는 agy를 PTY로 띄워 /usage 화면을 파싱하는 방식이라 호출당 수 초가 걸린다
+// (agy는 헤드리스에서 로컬 조회 API/캐시를 전혀 노출하지 않아 이 방법 외엔 값을 얻을 수 없음 — 실측 확인).
+// 페이지 로드/폴링마다 매번 새 프로세스를 띄우지 않도록 짧게 캐시한다.
+const AGY_USAGE_CACHE_TTL_MS = 5 * 60 * 1000;
+let _agyUsageCache: { at: number; value: IProviderUsage } | null = null;
+async function _getAgyUsageCached(): Promise<IProviderUsage> {
+    if (_agyUsageCache && Date.now() - _agyUsageCache.at < AGY_USAGE_CACHE_TTL_MS) return _agyUsageCache.value;
+    const value = await CAI.ProviderUsage(CAI.eProvider.antigravity);
+    _agyUsageCache = { at: Date.now(), value };
+    return value;
+}
 
 @URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/push-opencode-model"])
 export class CAIInfoRouter extends CAuthServer {
@@ -47,11 +66,28 @@ export class CAIInfoRouter extends CAuthServer {
     // 각 AI 프로바이더의 설치/인증/버전/모델/사용량(5시간·주간 잔여 비율) 현황을 반환한다 (인증 불필요).
     async onProviderState(_json: CJSON, _req: Request, _res: Response): Promise<null> {
         const list = await Promise.all(_PROVIDER_STATE_LIST.map(async p => {
-            const [info, usage] = await Promise.all([CAI.ProviderInfo(p), CAI.ProviderUsage(p)]);
+            const info = await CAI.ProviderInfo(p);
+            const usage = (p === CAI.eProvider.antigravity && info.installed && info.authenticated)
+                ? await _getAgyUsageCached()
+                : await CAI.ProviderUsage(p);
             // opencode: 인증은 됐는데 최근 7일 내 사용 기록이 없어 -1,-1(조회 불가)이 나오는 경우,
             // "한 번도 안 써서 100% 남음"으로 간주한다 (미인증/조회 실패와 구분하기 위해 인증 상태에서만 적용).
             if (p === CAI.eProvider.opencode && info.authenticated && usage.fiveHour < 0 && usage.weekly < 0) {
                 return { ...info, usage: { fiveHour: 1, weekly: 1 } };
+            }
+            // claude: 설치·인증되어 있는데 usage가 -1이면, 쿨다운이 지난 경우에 한해 헤드리스로 한 번
+            // 짧게 호출해서(실제 API 응답을 받아야 사용량 API도 값을 채워줌) 사용량을 재조회한다.
+            // 웜업 자체가 실패하거나 재조회도 -1이면 원래 usage(-1)를 그대로 반환한다.
+            if (p === CAI.eProvider.claude && info.installed && info.authenticated
+                && usage.fiveHour < 0 && usage.weekly < 0
+                && Date.now() - _lastClaudeWarmupAt > CLAUDE_WARMUP_COOLDOWN_MS) {
+                _lastClaudeWarmupAt = Date.now();
+                try {
+                    const model = info.models[0]?.value ?? '';
+                    await CAI.Chat(p, model, process.cwd(), 'hi', false);
+                    const retried = await CAI.ProviderUsage(p);
+                    return { ...info, usage: retried };
+                } catch { /* 웜업 실패 시 원래 usage(-1)를 그대로 사용 */ }
             }
             return { ...info, usage };
         }));

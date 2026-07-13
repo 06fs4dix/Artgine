@@ -1,4 +1,4 @@
-import { app, BrowserWindow,ipcMain ,screen,dialog,shell   } from 'electron';
+import { app, BrowserWindow,ipcMain ,screen,dialog,shell,Menu   } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import * as os from 'os'
@@ -47,22 +47,42 @@ var gRunPage=false;
 //CConsol.Log("__dirname : "+__dirname);
 //CConsol.Log("CPath.WorkingPath() : "+CPath.WorkingPath());
 const isWindows = os.platform() === 'win32';
-let gAppRootPath=true;
-if(await CFile.Load(CPath.WorkingPath()+"settings.json")==null)
-	gAppRootPath=false;
-	
 
-var gAppJSON = await GetAppJSON();
+// 임의 settings 파일명 지정: `npx electron . <settings파일명>` 형태의 위치 인자로 받는다.
+// (app.isPackaged 여부에 따라 electron이 argv에 자기 실행 경로를 앞에 붙이는 위치가 달라진다)
+const gSettingsFileName = process.argv.slice(app.isPackaged ? 1 : 2).find(a => !a.startsWith('-') && a.trim() !== '') ?? "settings.json";
+
+let gAppRootPath=true;
+if(await CFile.Load(CPath.WorkingPath()+gSettingsFileName)==null)
+	gAppRootPath=false;
+
+
+var gAppJSON = await GetAppJSON(gSettingsFileName);
 if(gAppJSON==null)
 	app.exit(1);
+
+// 같은 앱을 포트만 다르게 하여 동시에 여러 개 실행할 때, 기본 userData 경로(GPUCache/Code Cache 등)를
+// 모든 인스턴스가 공유하면서 발생하는 캐시 파일 락 경합(WASM 컴파일 캐시 등에서 멈춤 현상)을 막기 위해
+// 인스턴스별로 userData 경로를 포트 단위로 분리한다.
+{
+	const port = new URL(gAppJSON.url).port || "default";
+	app.setPath('userData', app.getPath('userData') + "-" + port);
+}
 
 var gTSCPID=0;
 if(gAppJSON.tsc)
 {
-	CCMDMgr.RunCMD("npx tsc -w", true).then((_pid)=>{
-		gTSCPID=_pid;
-		CConsol.Log("TSC Build");
-	});
+	if(await CCMDMgr.IsTSCRun())
+	{
+		CConsol.Log("TSC 이미 실행 중 - 건너뜀");
+	}
+	else
+	{
+		CCMDMgr.RunCMD("npx tsc -w", true).then((_pid)=>{
+			gTSCPID=_pid;
+			CConsol.Log("TSC Build");
+		});
+	}
 }
 
 
@@ -71,6 +91,7 @@ const createWindow = () => {
         width: 1024,
         height: 768,
         autoHideMenuBar: true, // 메뉴바 제거
+        icon: path.resolve(__dirname, "icon.png"),
         webPreferences: {
 			sandbox: true,
             contextIsolation: true,
@@ -83,6 +104,35 @@ const createWindow = () => {
         }
     });
 	gMainWindow.webContents.session.clearCache();
+
+	// Electron BrowserWindow는 크롬과 달리 우클릭 컨텍스트 메뉴(복사/붙여넣기/검사 등)를 기본 제공하지 않으므로 직접 구현한다.
+	gMainWindow.webContents.on('context-menu', (_event, params) => {
+		const template: Electron.MenuItemConstructorOptions[] = [];
+
+		if (params.isEditable) {
+			template.push(
+				{ role: 'cut', enabled: params.editFlags.canCut },
+				{ role: 'copy', enabled: params.editFlags.canCopy },
+				{ role: 'paste', enabled: params.editFlags.canPaste },
+				{ type: 'separator' },
+				{ role: 'selectAll', enabled: params.editFlags.canSelectAll },
+			);
+		}
+		else if (params.selectionText) {
+			template.push({ role: 'copy' });
+		}
+
+		if (!app.isPackaged) {
+			if (template.length > 0) template.push({ type: 'separator' });
+			template.push({
+				label: 'Inspect Element',
+				click: () => gMainWindow.webContents.inspectElement(params.x, params.y),
+			});
+		}
+
+		if (template.length === 0) return;
+		Menu.buildFromTemplate(template).popup({ window: gMainWindow });
+	});
 
 	let err=PluginMapDependenciesChk();
 	if(err!=null)
@@ -360,34 +410,14 @@ ipcMain.handle("AIDelete", async (_event, _selected: string[]) => {
 		DeleteRole(key, CPath.WorkingPath());
 	return true;
 });
-ipcMain.handle("TTYDRun", async (_event, _cfg: { port: number, password: string }) => {
-    const IS_WIN = process.platform === 'win32';
-    const TTYD_VERSION = '1.7.7';
-    let ttydPath: string;
-    try {
-        ttydPath = await CAI.EnsureTtyd(TTYD_VERSION);
-    } catch (e) {
-        CConsol.Log(`[TTYD] Failed to ensure ttyd executable: ${(e as Error).message}`, CConsol.eColor.red);
-        return false;
-    }
-
-    const port = _cfg?.port || 7681;
-    const args: string[] = ['-p', String(port), '--writable', '-t', 'scrollback=20000'];
-    if (_cfg?.password) args.push('-c', _cfg.password);
-
-    // 접속자마다 독립 shell: ttyd를 직접 실행
-    const shellCmd = IS_WIN ? 'cmd.exe' : '/bin/bash';
-    args.push(shellCmd);
-
-    await CUtilSystem.Spawn(ttydPath, args, 'ignore', CPath.WorkingPath(), null, true, true);
-
-    return true;
-});
 ipcMain.handle("BuildRun", async (_event) => {
 	if(CCMDMgr.IsTSC()==false)
 		await CCMDMgr.RunCMD("npm install",false);
 
-	await CCMDMgr.RunCMD("npx tsc -w",true);
+	if(await CCMDMgr.IsTSCRun())
+		CConsol.Log("TSC 이미 실행 중 - 건너뜀");
+	else
+		await CCMDMgr.RunCMD("npx tsc -w",true);
 
 
 
@@ -396,10 +426,14 @@ ipcMain.handle("BuildRun", async (_event) => {
 ipcMain.handle("TSCToggle", async (_event, _enable: boolean) => {
 	if (_enable) {
 		if (gTSCPID === 0) {
-			CCMDMgr.RunCMD("npx tsc -w", true).then((_pid) => {
-				gTSCPID = _pid;
-				CConsol.Log("TSC Build Start");
-			});
+			if (await CCMDMgr.IsTSCRun()) {
+				CConsol.Log("TSC 이미 실행 중 - 건너뜀");
+			} else {
+				CCMDMgr.RunCMD("npx tsc -w", true).then((_pid) => {
+					gTSCPID = _pid;
+					CConsol.Log("TSC Build Start");
+				});
+			}
 		}
 	} else {
 		if (gTSCPID > 0) {
@@ -410,9 +444,9 @@ ipcMain.handle("TSCToggle", async (_event, _enable: boolean) => {
 	}
 	gAppJSON.tsc = _enable;
 	if (gAppRootPath)
-		CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
+		CFile.Save(gAppJSON, CPath.WorkingPath() + gSettingsFileName);
 	else
-		CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
+		CFile.Save(gAppJSON, path.join(__dirname, gSettingsFileName));
 	return true;
 });
 ipcMain.handle("PageRun", async (_event) => {
@@ -1014,9 +1048,9 @@ ipcMain.handle("NewPage", async (_event, _json: {
 	gAppJSON=_json.appJSON;
 	
 	if(gAppRootPath)
-		CFile.Save(gAppJSON,CPath.WorkingPath()+"settings.json");
+		CFile.Save(gAppJSON,CPath.WorkingPath()+gSettingsFileName);
 	else
-		CFile.Save(gAppJSON,path.join(__dirname, "settings.json"));
+		CFile.Save(gAppJSON,path.join(__dirname, gSettingsFileName));
 	if(appChange)
 		ConfirmAndRestart();
 	return "";
@@ -1045,9 +1079,9 @@ ipcMain.handle("LoadAppJSON", async (_event,) => {
 ipcMain.handle("SwitchProgram", async (_event, _program: string) => {
 	gAppJSON.program = _program;
 	if (gAppRootPath)
-		CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
+		CFile.Save(gAppJSON, CPath.WorkingPath() + gSettingsFileName);
 	else
-		CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
+		CFile.Save(gAppJSON, path.join(__dirname, gSettingsFileName));
 	ConfirmAndRestart();
 });
 ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string, rootPath: string[] }) => {
@@ -1055,9 +1089,9 @@ ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string, 
 	gAppJSON.password = _json.password;
 	gAppJSON.rootPath = _json.rootPath;
 	if (gAppRootPath)
-		CFile.Save(gAppJSON, CPath.WorkingPath() + "settings.json");
+		CFile.Save(gAppJSON, CPath.WorkingPath() + gSettingsFileName);
 	else
-		CFile.Save(gAppJSON, path.join(__dirname, "settings.json"));
+		CFile.Save(gAppJSON, path.join(__dirname, gSettingsFileName));
 	if (rootChanged) ConfirmAndRestart(); // rootPath 변경 시 /RootN 재등록 위해 재시작 확인
 });
 ipcMain.handle("LoadPlugin", async (_event,) => 

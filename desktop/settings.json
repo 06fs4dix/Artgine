@@ -4,12 +4,12 @@
   "fullScreen": false,
   "program": "developer",
   "url": "http://localhost:8050/Artgine",
-  "projectPath": "proj/Home",
+  "projectPath": "proj/Viewer",
   "page": "html",
   "server": "webServer",
   "github": false,
   "tsc": true,
-  "password": "artgine",
+  "password": "4f05cc03f695805b710ab5306a987f69909b27ee935addbddbd8938818592cd9",
   "rootPath": [
     "./"
   ]

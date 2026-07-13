@@ -91,13 +91,14 @@ export class CWater3D extends CSubject
         const renPt = this.mPaint.mRenPT[0];
         if(renPt != null)
         {
-            // worldSize 5000, near 1, far 100000 기준을 메시 크기 1로 잡고 계산함
+            // reverse-z 이후 z파이팅이 크게 줄어서 크기를 매우 줄임
+            // worldSize 50000, near 1, far 100000 기준을 메시 크기 1로 잡고 계산함
             const cam = renPt.mCam;
             const accuracy = (cam.mProjFar ?? 100000) / (cam.mProjNear ?? 1);
             const worldSizeX = Math.abs(this.GetSca().x);
             const worldSizeY = Math.abs(this.GetSca().y);
-            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000 * 10), 1, 1000);
-            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000 * 10), 1, 1000);
+            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / (50000*100000)), 1, 1000);
+            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / (50000*100000)), 1, 1000);
             const waterMeshKey = `waterMesh${scaleX}:${scaleY}`;
             if(this.GetFrame().Res().Find(waterMeshKey) == null)
             {
@@ -292,7 +293,7 @@ export class CWater3D extends CSubject
 
 export class CReflector3D extends CBrushComp
 {
-    mSize : number = 512;
+    mSize : number = 256;
     mCycle : number = 0;
 
     constructor() {
@@ -452,7 +453,7 @@ export class CReflector3D extends CBrushComp
 
 export class CRefractor3D extends CBrushComp
 {
-    mSize : number = 512;
+    mSize : number = 256;
     mCycle : number = 0;
 
     constructor() {

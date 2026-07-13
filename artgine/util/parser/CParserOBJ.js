@@ -1,1 +1,16 @@
-import{CMesh as r}from"../../render/CMesh.js";import{CParser as e}from"./CParser.js";export class CParserOBJ extends e{mMesh=new r;mPath="";mComputeNormal;constructor(r=!0){super(),this.mComputeNormal=r}GetResult(){return this.mMesh}async Load(r){}}import s from"../../util_imple/parser/CParserOBJ.js";s();
+import { CMesh } from "../../render/CMesh.js";
+import { CParser } from "./CParser.js";
+export class CParserOBJ extends CParser {
+    mMesh = new CMesh();
+    mPath = "";
+    mComputeNormal;
+    constructor(_computeNormal = true) {
+        super();
+        this.mComputeNormal = _computeNormal;
+    }
+    GetResult() { return this.mMesh; }
+    async Load(pa_fileName) {
+    }
+}
+import CParserOBJ_imple from "../../util_imple/parser/CParserOBJ.js";
+CParserOBJ_imple();

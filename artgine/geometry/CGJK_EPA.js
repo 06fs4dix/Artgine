@@ -1,1 +1,262 @@
-import{CVec3 as t}from"../geometry/CVec3.js";import{CMat as i}from"../geometry/CMat.js";import{CMath as e}from"../geometry/CMath.js";import{CBound as r}from"../geometry/CBound.js";import{CArray as s}from"../basic/CArray.js";import{CObject as a}from"../basic/CObject.js";import{CPoolGeo as n}from"./CPoolGeo.js";export class CGJKShape extends a{modelMatrix;inversMatrix;dirPoint;constructor(){super(),this.modelMatrix=new i,this.inversMatrix=new i,this.dirPoint=new t}SetMatrix(t){this.modelMatrix=t}SetMatrixDown(t,e){null==this.modelMatrix&&(this.modelMatrix=new i)}GetMatrix(){return null==this.modelMatrix?new i:this.modelMatrix}getFarthestPointInDirection(t){return this.dirPoint}static NewCBound(t,i=!1){switch(t.GetType()){case r.eType.Polytope:return new CGJKPolytope(t.mPos);case r.eType.Box:return new CGJKBox(t.mMin,t.mMax);case r.eType.Sphere:{let e=t.GetSize();return i&&(e.z=0),new CGJKSphere(e)}}return null}}export class CGJKSphere extends CGJKShape{r;size;sca;constructor(i=new t){super(),this.size=i,this.sca=new t(1,1,1),this.UpdateRadius()}UpdateRadius(){let t;t=this.sca?e.V3MulV3(e.V3MulFloat(this.size,.5),this.sca):e.V3MulFloat(this.size,.5),t.x=Math.abs(t.x),t.y=Math.abs(t.y),0==this.size.z?t.z=0:t.z=Math.abs(t.z),this.r=Math.max(t.x,t.y,t.z),this.r+=.001*Math.random()}SetMatrix(t){super.SetMatrix(t),e.MatDecomposeSca(this.modelMatrix,this.sca),this.UpdateRadius()}SetMatrixDown(t,i){super.SetMatrixDown(t,i),e.MatDecomposeSca(this.modelMatrix,this.sca),this.UpdateRadius()}GetRadian(){return this.r}getFarthestPointInDirection(t){return e.V3Nor(t,this.dirPoint),e.V3MulFloat(this.dirPoint,this.r,this.dirPoint),e.V3AddV3(this.dirPoint,this.modelMatrix.xyz,this.dirPoint),this.dirPoint}}export class CGJKBox extends CGJKShape{min;max;constructor(i=new t,e=new t){super(),this.min=i.Export(),this.max=e.Export(),this.min.x-=1e-5*Math.random(),this.max.x+=1e-5*Math.random(),this.min.y-=1e-5*Math.random(),this.max.y+=1e-5*Math.random(),this.min.z-=1e-5*Math.random(),this.max.z+=1e-5*Math.random()}SetMatrix(t){super.SetMatrix(t),0==t.IsRotScaUnit()&&e.MatInvert(this.modelMatrix,this.inversMatrix)}SetMatrixDown(t,i){super.SetMatrixDown(t,i),this.inversMatrix.IsRotScaUnit()?this.inversMatrix.Unit():e.MatInvert(this.modelMatrix,this.inversMatrix)}getFarthestPointInDirection(t){let i=n.ProductV3();return e.V3MulMatNormal(t,this.inversMatrix,this.dirPoint),i.mF32A[0]=this.dirPoint.mF32A[0]>0?this.max.mF32A[0]:this.min.mF32A[0],i.mF32A[1]=this.dirPoint.mF32A[1]>0?this.max.mF32A[1]:this.min.mF32A[1],i.mF32A[2]=this.dirPoint.mF32A[2]>0?this.max.mF32A[2]:this.min.mF32A[2],e.V3MulMatCoordi(i,this.modelMatrix,this.dirPoint),n.RecycleV3(i),this.dirPoint}}export class CGJKPolytope extends CGJKShape{vertices;constructor(t=new s){super(),this.vertices=t}SetMatrix(t){super.SetMatrix(t),0==t.IsRotScaUnit()&&e.MatInvert(this.modelMatrix,this.inversMatrix)}SetMatrixDown(t,i){super.SetMatrixDown(t,i),this.inversMatrix.IsRotScaUnit()?this.inversMatrix.Unit():e.MatInvert(this.modelMatrix,this.inversMatrix)}getFarthestPointInDirection(i){var r=e.V3MulMatNormal(i,this.inversMatrix),s=new t;0!=this.vertices.Size()&&(s=this.vertices.Find(0));for(var a=e.V3Dot(s,r),n=1;n<this.vertices.Size();n++){var o=e.V3Dot(this.vertices.Find(n),r);o>a&&(a=o,s=this.vertices.Find(n))}return e.V3MulMatCoordi(s,this.modelMatrix,this.dirPoint),this.dirPoint}}export class CGJK_EPA{m_n;m_a;m_v;m_b;m_c;m_d;m_tmp;m_ao;m_ab;m_ac;m_ad;m_abc;m_abp;m_acp;m_acd;m_adb;constructor(){this.m_n=0,this.m_a=new t,this.m_v=new t,this.m_b=new t,this.m_c=new t,this.m_d=new t,this.m_tmp=new t,this.m_ao=new t,this.m_ab=new t,this.m_ac=new t,this.m_ad=new t,this.m_abc=new t,this.m_abp=new t,this.m_acp=new t,this.m_acd=new t,this.m_adb=new t}Intersect(t,i){return!0}support(i,r,s,a=null){var n=i.getFarthestPointInDirection(s);e.V3MulFloat(s,-1,this.m_tmp);var o=r.getFarthestPointInDirection(this.m_tmp);return null==a&&(a=new t),e.V3SubV3(n,o,a),a}update(t){return!0}tripleProduct(t,i,r){let s=n.ProductV3();e.V3Cross(t,i,s),e.V3Cross(s,t,r),n.RecycleV3(s)}checkOneFaceAC(t,i,r){return!(e.V3Dot(e.V3Cross(t,i),r)>0&&(this.m_b=e.V3MulFloat(r,-1),this.tripleProduct(i,r,this.m_v),this.m_n=2,1))}checkOneFaceAB(t,i,r){return!(e.V3Dot(e.V3Cross(i,t),r)>0&&(this.m_c.Import(this.m_b),e.V3MulFloat(r,-1,this.m_b),this.tripleProduct(i,r,this.m_v),this.m_n=2,1))}checkTwoFaces(t,i,r,s,a,n){return!(e.V3Dot(e.V3Cross(t,r),n)>0&&(this.m_b=this.m_c,this.m_c=this.m_d,r=a,t=i,1))}EPA(t,i){return null}}import o from"../geometry_imple/CGJK_EPA.js";o();
+import { CVec3 } from "../geometry/CVec3.js";
+import { CMat } from "../geometry/CMat.js";
+import { CMath } from "../geometry/CMath.js";
+import { CBound } from "../geometry/CBound.js";
+import { CArray } from "../basic/CArray.js";
+import { CObject } from "../basic/CObject.js";
+import { CPoolGeo } from "./CPoolGeo.js";
+export class CGJKShape extends CObject {
+    modelMatrix;
+    inversMatrix;
+    dirPoint;
+    constructor() {
+        super();
+        this.modelMatrix = new CMat();
+        this.inversMatrix = new CMat();
+        this.dirPoint = new CVec3();
+    }
+    SetMatrix(_mat) {
+        this.modelMatrix = _mat;
+    }
+    SetMatrixDown(_mat, _pos) {
+        if (this.modelMatrix == null)
+            this.modelMatrix = new CMat();
+    }
+    GetMatrix() {
+        if (this.modelMatrix == null)
+            return new CMat();
+        return this.modelMatrix;
+    }
+    getFarthestPointInDirection(v) {
+        return this.dirPoint;
+    }
+    static NewCBound(_bound, _2d = false) {
+        switch (_bound.GetType()) {
+            case CBound.eType.Polytope:
+                return new CGJKPolytope(_bound.mPos);
+            case CBound.eType.Box:
+                return new CGJKBox(_bound.mMin, _bound.mMax);
+            case CBound.eType.Sphere:
+                {
+                    let size = _bound.GetSize();
+                    if (_2d)
+                        size.z = 0;
+                    return new CGJKSphere(size);
+                }
+        }
+        return null;
+    }
+}
+;
+export class CGJKSphere extends CGJKShape {
+    r;
+    size;
+    sca;
+    constructor(_size = new CVec3()) {
+        super();
+        this.size = _size;
+        this.sca = new CVec3(1, 1, 1);
+        this.UpdateRadius();
+    }
+    UpdateRadius() {
+        let scaledSize;
+        if (this.sca)
+            scaledSize = CMath.V3MulV3(CMath.V3MulFloat(this.size, 0.5), this.sca);
+        else
+            scaledSize = CMath.V3MulFloat(this.size, 0.5);
+        scaledSize.x = Math.abs(scaledSize.x);
+        scaledSize.y = Math.abs(scaledSize.y);
+        if (this.size.z == 0)
+            scaledSize.z = 0;
+        else
+            scaledSize.z = Math.abs(scaledSize.z);
+        this.r = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+        this.r += Math.random() * 0.001;
+    }
+    SetMatrix(_mat) {
+        super.SetMatrix(_mat);
+        CMath.MatDecomposeSca(this.modelMatrix, this.sca);
+        this.UpdateRadius();
+    }
+    SetMatrixDown(_mat, _pos) {
+        super.SetMatrixDown(_mat, _pos);
+        CMath.MatDecomposeSca(this.modelMatrix, this.sca);
+        this.UpdateRadius();
+    }
+    GetRadian() {
+        return this.r;
+    }
+    getFarthestPointInDirection(v) {
+        CMath.V3Nor(v, this.dirPoint);
+        CMath.V3MulFloat(this.dirPoint, this.r, this.dirPoint);
+        CMath.V3AddV3(this.dirPoint, this.modelMatrix.xyz, this.dirPoint);
+        return this.dirPoint;
+    }
+}
+;
+export class CGJKBox extends CGJKShape {
+    min;
+    max;
+    constructor(_min = new CVec3(), _max = new CVec3()) {
+        super();
+        this.min = _min.Export();
+        this.max = _max.Export();
+        this.min.x -= Math.random() * 0.00001;
+        this.max.x += Math.random() * 0.00001;
+        this.min.y -= Math.random() * 0.00001;
+        this.max.y += Math.random() * 0.00001;
+        this.min.z -= Math.random() * 0.00001;
+        this.max.z += Math.random() * 0.00001;
+    }
+    SetMatrix(_mat) {
+        super.SetMatrix(_mat);
+        if (_mat.IsRotScaUnit() == false)
+            CMath.MatInvert(this.modelMatrix, this.inversMatrix);
+    }
+    SetMatrixDown(_mat, _pos) {
+        super.SetMatrixDown(_mat, _pos);
+        if (this.inversMatrix.IsRotScaUnit())
+            this.inversMatrix.Unit();
+        else
+            CMath.MatInvert(this.modelMatrix, this.inversMatrix);
+    }
+    getFarthestPointInDirection(v) {
+        let vNor = CPoolGeo.ProductV3();
+        CMath.V3MulMatNormal(v, this.inversMatrix, this.dirPoint);
+        vNor.mF32A[0] = (this.dirPoint.mF32A[0] > 0) ? this.max.mF32A[0] : this.min.mF32A[0];
+        vNor.mF32A[1] = (this.dirPoint.mF32A[1] > 0) ? this.max.mF32A[1] : this.min.mF32A[1];
+        vNor.mF32A[2] = (this.dirPoint.mF32A[2] > 0) ? this.max.mF32A[2] : this.min.mF32A[2];
+        CMath.V3MulMatCoordi(vNor, this.modelMatrix, this.dirPoint);
+        CPoolGeo.RecycleV3(vNor);
+        return this.dirPoint;
+    }
+}
+;
+export class CGJKPolytope extends CGJKShape {
+    vertices;
+    constructor(_vertices = new CArray()) {
+        super();
+        this.vertices = _vertices;
+    }
+    SetMatrix(_mat) {
+        super.SetMatrix(_mat);
+        if (_mat.IsRotScaUnit() == false)
+            CMath.MatInvert(this.modelMatrix, this.inversMatrix);
+    }
+    SetMatrixDown(_mat, _pos) {
+        super.SetMatrixDown(_mat, _pos);
+        if (this.inversMatrix.IsRotScaUnit())
+            this.inversMatrix.Unit();
+        else
+            CMath.MatInvert(this.modelMatrix, this.inversMatrix);
+    }
+    getFarthestPointInDirection(v) {
+        var dir = CMath.V3MulMatNormal(v, this.inversMatrix);
+        var furthest_point = new CVec3();
+        if (this.vertices.Size() != 0)
+            furthest_point = this.vertices.Find(0);
+        var max_dot = CMath.V3Dot(furthest_point, dir);
+        for (var i = 1; i < this.vertices.Size(); i++) {
+            var d = CMath.V3Dot(this.vertices.Find(i), dir);
+            if (d > max_dot) {
+                max_dot = d;
+                furthest_point = this.vertices.Find(i);
+            }
+        }
+        CMath.V3MulMatCoordi(furthest_point, this.modelMatrix, this.dirPoint);
+        return this.dirPoint;
+    }
+}
+;
+var MAX_ITERATIONS = 30;
+var EPA_TOLERANCE = 0.0001;
+var EPA_MAX_NUM_FACES = 64;
+var EPA_MAX_NUM_LOOSE_EDGES = 32;
+var EPA_MAX_NUM_ITERATIONS = 64;
+export class CGJK_EPA {
+    m_n;
+    m_a;
+    m_v;
+    m_b;
+    m_c;
+    m_d;
+    m_tmp;
+    m_ao;
+    m_ab;
+    m_ac;
+    m_ad;
+    m_abc;
+    m_abp;
+    m_acp;
+    m_acd;
+    m_adb;
+    constructor() {
+        this.m_n = 0;
+        this.m_a = new CVec3();
+        this.m_v = new CVec3();
+        this.m_b = new CVec3();
+        this.m_c = new CVec3();
+        this.m_d = new CVec3();
+        this.m_tmp = new CVec3();
+        this.m_ao = new CVec3();
+        this.m_ab = new CVec3();
+        this.m_ac = new CVec3();
+        this.m_ad = new CVec3();
+        this.m_abc = new CVec3();
+        this.m_abp = new CVec3();
+        this.m_acp = new CVec3();
+        this.m_acd = new CVec3();
+        this.m_adb = new CVec3();
+    }
+    Intersect(shape1, shape2) { return true; }
+    support(shape1, shape2, _v, p3 = null) {
+        var p1 = shape1.getFarthestPointInDirection(_v);
+        CMath.V3MulFloat(_v, -1, this.m_tmp);
+        var p2 = shape2.getFarthestPointInDirection(this.m_tmp);
+        if (p3 == null)
+            p3 = new CVec3();
+        CMath.V3SubV3(p1, p2, p3);
+        return p3;
+    }
+    update(_a) { return true; }
+    tripleProduct(ab, c, r) {
+        let vc = CPoolGeo.ProductV3();
+        CMath.V3Cross(ab, c, vc);
+        CMath.V3Cross(vc, ab, r);
+        CPoolGeo.RecycleV3(vc);
+    }
+    checkOneFaceAC(abc, ac, ao) {
+        if (CMath.V3Dot(CMath.V3Cross(abc, ac), ao) > 0) {
+            this.m_b = CMath.V3MulFloat(ao, -1);
+            this.tripleProduct(ac, ao, this.m_v);
+            this.m_n = 2;
+            return false;
+        }
+        return true;
+    }
+    checkOneFaceAB(abc, ab, ao) {
+        if (CMath.V3Dot(CMath.V3Cross(ab, abc), ao) > 0) {
+            this.m_c.Import(this.m_b);
+            CMath.V3MulFloat(ao, -1, this.m_b);
+            this.tripleProduct(ab, ao, this.m_v);
+            this.m_n = 2;
+            return false;
+        }
+        return true;
+    }
+    checkTwoFaces(abc, acd, ac, ab, ad, ao) {
+        if (CMath.V3Dot(CMath.V3Cross(abc, ac), ao) > 0) {
+            this.m_b = this.m_c;
+            this.m_c = this.m_d;
+            ab = ac;
+            ac = ad;
+            abc = acd;
+            return false;
+        }
+        return true;
+    }
+    EPA(coll1, coll2) { return null; }
+}
+;
+import CGJK_EPA_imple from "../geometry_imple/CGJK_EPA.js";
+CGJK_EPA_imple();

@@ -1,6 +1,6 @@
 # 웹브라우저 디버깅 (Web Browser Debugging - curl HTTP API)
 
-> 라이브 페이지 콘솔 로그·JS 실행·DOM 조회용. 코드 파일 수정엔 쓰지 않는다.
+> 라이브 페이지 콘솔 로그·JS 실행·DOM 조회용. 코드로 해결 불가능한 작업에만 사용한다.
 
 ## 사용 제한 (Usage Restrictions)
 - **정적 분석(파일 읽기, grep, glob)을 먼저 한다. `ai/tool/browser.js`는 정적 분석으로 절대 알 수 없는 런타임 정보가 필요할 때만 쓴다.**

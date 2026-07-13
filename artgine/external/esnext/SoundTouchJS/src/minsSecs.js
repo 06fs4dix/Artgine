@@ -1,1 +1,11 @@
-export default function(n){const t=Math.floor(n/60);return`${t}:${r=parseInt(n-60*t),e=e||"0",(r+="").length>=2?r:new Array(2-r.length+1).join(e)+r}`;var r,e}
+const pad = function (n, width, z) {
+    z = z || '0';
+    n = n + '';
+    return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+};
+const minsSecs = function (secs) {
+    const mins = Math.floor(secs / 60);
+    const seconds = secs - mins * 60;
+    return `${mins}:${pad(parseInt(seconds), 2)}`;
+};
+export default minsSecs;

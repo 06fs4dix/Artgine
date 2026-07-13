@@ -4,7 +4,7 @@
 - http://singleton88.iptime.org:8050/Artgine/proj/Home/Home.html?path=%2Fmusic%2F&RootPath=E%3A%2F&RootUrl=%2FArtgine%2FRoot0
 
 ## 토큰 (Token)
-- NXnpsNHz7OGOt9TXtP_19EbATS1oyENlRtBT9hRnk7M
+- BwcwoyTwbrHXcR1ojGMnT-PijnXcIxygp3HByeHhp8E
 
 > `artgine/server/CRemoteDesktopRouter.ts`의 `/RemoteCMD/Exec` 엔드포인트를 통해 원격 서버에서 콘솔 명령을 직접 실행하고 결과를 받는다.
 

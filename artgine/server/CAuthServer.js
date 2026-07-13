@@ -1,1 +1,180 @@
-var t=this&&this.__decorate||function(t,e,n,o){var r,u=arguments.length,s=u<3?e:null===o?o=Object.getOwnPropertyDescriptor(e,n):o;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)s=Reflect.decorate(t,e,n,o);else for(var i=t.length-1;i>=0;i--)(r=t[i])&&(s=(u<3?r(s):u>3?r(e,n,s):r(e,n))||s);return u>3&&s&&Object.defineProperty(e,n,s),s};import{URLPatterns as e,gSessionParser as n}from"../network/CServerMain.js";import{CServerRouter as o}from"../network/CServerRouter.js";import{GetAppJSON as r}from"../../desktop/MainFunc.js";import{randomBytes as u}from"crypto";const s=3e5,i=144e5,c=new Map,l=new Map;let a=[],h=0;export function genToken(){return u(32).toString("base64url")}export function isValidToken(t){const e=c.get(t);return!e||e<Date.now()?(c.delete(t),!1):(c.set(t,Date.now()+i),!0)}export function revokeToken(t){c.delete(t)}export function getToken(t){return t.query?.token||""}export function getAuthIP(t){return t.ip||t.connection?.remoteAddress||"unknown"}export function isAuthedReq(t){return!0===t.session?.authed}export function isAuthedUpgrade(t){return new Promise(e=>{const o=n;if(o)try{o(t,{},()=>e(!0===t.session?.authed))}catch{e(!1)}else e(!1)})}export function getAuthLockMsg(t,e=Date.now()){if(h>e)return`All login locked. Retry in ${Math.ceil((h-e)/1e3)} seconds`;const n=l.get(t);return n&&n.until>e?`Retry in ${Math.ceil((n.until-e)/1e3)} seconds`:null}export function clearAuthFail(t){l.delete(t)}export function recordGlobalAuthFail(t=Date.now()){const e=t-6e4;return a=a.filter(t=>t>=e),a.push(t),a.length>=1e3?(h=t+s,a=[],"All login locked for 5 minutes"):null}export function recordAuthFail(t,e="Authentication required"){const n=Date.now(),o=recordGlobalAuthFail(n),r=l.get(t)||{count:0,until:0};return r.count++,r.until=r.count>=5?n+s:0,l.set(t,r),{ok:!1,msg:o??(r.count>=5?"Locked for 5 minutes":e)}}export function checkBrute(t,e,n){const o=getAuthLockMsg(getAuthIP(t));null==o?n():e.json({ok:!1,msg:o})}export function checkToken(t,e,n){const o=getAuthIP(t),r=getToken(t);if(!r)return void e.status(401).json({ok:!1,msg:"Authentication required"});const u=getAuthLockMsg(o);if(null==u){if(!isValidToken(r)){const t=recordAuthFail(o,"Authentication required");return void e.status(401).json(t)}clearAuthFail(o),n()}else e.status(401).json({ok:!1,msg:u})}export async function handleAuth(t,e){const n=getAuthLockMsg(t);if(null!=n)return{ok:!1,msg:n};const o=await r(),u=Date.now();if(e===(o.password??"")){clearAuthFail(t);const e=genToken();return c.set(e,u+i),{ok:!0,token:e}}return recordAuthFail(t,"Wrong password")}let d=class extends o{constructor(){super(),this.On("/auth/login",async(t,e,n)=>{const o=getAuthIP(e),r=await handleAuth(o,t.GetStr("password"));return r.ok?e.session.authed=!0:n.status(403),n.json(r),null}),this.On("/auth/check",async(t,e,n)=>{const o=getAuthIP(e),r=t.GetStr("token")||getToken(e);if(r){const t=getAuthLockMsg(o);if(null!=t)return n.status(403).json({ok:!1,msg:t,authed:!1}),null;if(!isValidToken(r)){const t=recordAuthFail(o,"Authentication required");return n.status(403).json({...t,authed:!1}),null}clearAuthFail(o),e.session.authed=!0}return n.json({ok:!0,authed:isAuthedReq(e)}),null})}};d=t([e(["/auth/login","/auth/check"])],d);export{d as CAuthServer};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { URLPatterns, gSessionParser } from '../network/CServerMain.js';
+import { CServerRouter } from '../network/CServerRouter.js';
+import { GetAppJSON } from '../../desktop/MainFunc.js';
+import { randomBytes } from 'crypto';
+import { CHash } from '../basic/CHash.js';
+const BRUTE_MAX = 5;
+const BRUTE_LOCK_MS = 5 * 60 * 1000;
+const GLOBAL_BRUTE_MAX = 1000;
+const GLOBAL_BRUTE_WINDOW_MS = 60 * 1000;
+const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
+const gAuthedTokens = new Map();
+const gFailMap = new Map();
+let gGlobalFailTimeList = [];
+let gGlobalFailUntil = 0;
+export function genToken() {
+    return randomBytes(32).toString('base64url');
+}
+export function isValidToken(token) {
+    const exp = gAuthedTokens.get(token);
+    if (!exp || exp < Date.now()) {
+        gAuthedTokens.delete(token);
+        return false;
+    }
+    gAuthedTokens.set(token, Date.now() + TOKEN_TTL_MS);
+    return true;
+}
+export function revokeToken(token) {
+    gAuthedTokens.delete(token);
+}
+export function getToken(req) {
+    return (req.query?.token || '');
+}
+export function getAuthIP(req) {
+    return req.ip || req.connection?.remoteAddress || 'unknown';
+}
+export function isAuthedReq(req) {
+    return req.session?.authed === true;
+}
+export function isAuthedUpgrade(req) {
+    return new Promise((resolve) => {
+        const parser = gSessionParser;
+        if (!parser) {
+            resolve(false);
+            return;
+        }
+        try {
+            parser(req, {}, () => resolve(req.session?.authed === true));
+        }
+        catch {
+            resolve(false);
+        }
+    });
+}
+export function getAuthLockMsg(ip, now = Date.now()) {
+    if (gGlobalFailUntil > now) {
+        const sec = Math.ceil((gGlobalFailUntil - now) / 1000);
+        return `All login locked. Retry in ${sec} seconds`;
+    }
+    const fail = gFailMap.get(ip);
+    if (fail && fail.until > now) {
+        const sec = Math.ceil((fail.until - now) / 1000);
+        return `Retry in ${sec} seconds`;
+    }
+    return null;
+}
+export function clearAuthFail(ip) {
+    gFailMap.delete(ip);
+}
+export function recordGlobalAuthFail(now = Date.now()) {
+    const minTime = now - GLOBAL_BRUTE_WINDOW_MS;
+    gGlobalFailTimeList = gGlobalFailTimeList.filter((time) => time >= minTime);
+    gGlobalFailTimeList.push(now);
+    if (gGlobalFailTimeList.length >= GLOBAL_BRUTE_MAX) {
+        gGlobalFailUntil = now + BRUTE_LOCK_MS;
+        gGlobalFailTimeList = [];
+        return 'All login locked for 5 minutes';
+    }
+    return null;
+}
+export function recordAuthFail(ip, msg = 'Authentication required') {
+    const now = Date.now();
+    const globalLockMsg = recordGlobalAuthFail(now);
+    const fail = gFailMap.get(ip) || { count: 0, until: 0 };
+    fail.count++;
+    fail.until = fail.count >= BRUTE_MAX ? now + BRUTE_LOCK_MS : 0;
+    gFailMap.set(ip, fail);
+    return { ok: false, msg: globalLockMsg ?? (fail.count >= BRUTE_MAX ? 'Locked for 5 minutes' : msg) };
+}
+export function checkBrute(req, res, next) {
+    const ip = getAuthIP(req);
+    const msg = getAuthLockMsg(ip);
+    if (msg != null) {
+        res.json({ ok: false, msg });
+        return;
+    }
+    next();
+}
+export function checkToken(req, res, next) {
+    const ip = getAuthIP(req);
+    const t = getToken(req);
+    if (!t) {
+        res.status(401).json({ ok: false, msg: 'Authentication required' });
+        return;
+    }
+    const lockMsg = getAuthLockMsg(ip);
+    if (lockMsg != null) {
+        res.status(401).json({ ok: false, msg: lockMsg });
+        return;
+    }
+    if (!isValidToken(t)) {
+        const result = recordAuthFail(ip, 'Authentication required');
+        res.status(401).json(result);
+        return;
+    }
+    clearAuthFail(ip);
+    next();
+}
+export async function handleAuth(ip, password) {
+    const lockMsg = getAuthLockMsg(ip);
+    if (lockMsg != null)
+        return { ok: false, msg: lockMsg };
+    const config = await GetAppJSON();
+    const now = Date.now();
+    const stored = config.password ?? '';
+    const storedHash = stored.length >= 64 ? stored : CHash.SHA256('artgine_' + stored);
+    if (password === storedHash) {
+        clearAuthFail(ip);
+        const token = genToken();
+        gAuthedTokens.set(token, now + TOKEN_TTL_MS);
+        return { ok: true, token };
+    }
+    return recordAuthFail(ip, 'Wrong password');
+}
+let CAuthServer = class CAuthServer extends CServerRouter {
+    constructor() {
+        super();
+        this.On("/auth/login", async (_json, _req, _res) => {
+            const ip = getAuthIP(_req);
+            const result = await handleAuth(ip, _json.GetStr("password"));
+            if (result.ok)
+                _req.session.authed = true;
+            else
+                _res.status(403);
+            _res.json(result);
+            return null;
+        });
+        this.On("/auth/check", async (_json, _req, _res) => {
+            const ip = getAuthIP(_req);
+            const t = _json.GetStr("token") || getToken(_req);
+            if (t) {
+                const lockMsg = getAuthLockMsg(ip);
+                if (lockMsg != null) {
+                    _res.status(403).json({ ok: false, msg: lockMsg, authed: false });
+                    return null;
+                }
+                if (isValidToken(t)) {
+                    clearAuthFail(ip);
+                    _req.session.authed = true;
+                }
+                else {
+                    const result = recordAuthFail(ip, 'Authentication required');
+                    _res.status(403).json({ ...result, authed: false });
+                    return null;
+                }
+            }
+            _res.json({ ok: true, authed: isAuthedReq(_req) });
+            return null;
+        });
+    }
+};
+CAuthServer = __decorate([
+    URLPatterns(["/auth/login", "/auth/check"])
+], CAuthServer);
+export { CAuthServer };

@@ -3,7 +3,9 @@
 
 import { CFecth } from "../../network/CFecth.js";
 import { CPath }  from "../../basic/CPath.js";
+import { CHash }  from "../../basic/CHash.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
+import { CIframeMsg } from "./CIframeMsg.js";
 
 const params     = new URLSearchParams(location.search);
 const SESSION_ID = params.get('session') || '';
@@ -75,7 +77,7 @@ function initResetControl() {
             if (!resetJson.ok) throw new Error(resetJson.msg || 'Reset failed');
 
             btn.textContent = 'Reset OK';
-            window.parent?.postMessage({ type: 'browser-sessions-changed' }, '*');
+            if (window.parent) CIframeMsg.Send(window.parent, 'browser-sessions-changed');
             setTimeout(() => { btn.textContent = 'Reset'; }, 1000);
         } catch {
             btn.textContent = 'Failed';
@@ -136,7 +138,7 @@ function hideOverlay() {
 async function tryLogin(pw: string) {
     loginMsg.textContent = '';
     try {
-        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/login', { password: pw }, 'json') as any;
+        const j = await CFecth.Exe(CPath.WebRootUrl() + 'auth/login', { password: CHash.SHA256('artgine_' + pw) }, 'json') as any;
         if (j.ok && j.token) {
             authToken = j.token;
             setAuthToken(CPath.WebRootUrl(), authToken);
@@ -184,10 +186,11 @@ document.addEventListener('visibilitychange', () => {
     pageHidden = document.hidden;
     resumePollIfNeeded();
 });
-window.addEventListener('message', (e: MessageEvent) => {
-    if (e.data?.type !== 'frame-visibility') return;
-    frameHidden = !e.data.visible;
-    resumePollIfNeeded();
+CIframeMsg.Recv({
+    'frame-visibility': (data) => {
+        frameHidden = !data.visible;
+        resumePollIfNeeded();
+    },
 });
 
 async function poll() {

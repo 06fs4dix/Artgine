@@ -53,6 +53,10 @@ function F_Schlick(_vDotH : number, _F0 : CVec3) : CVec3 {
     var fresnel : number = pow(clamp(1.0-_vDotH, 0.0, 1.0), 5.0);
     return V3AddV3(_F0, V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), _F0), fresnel));
 }
+function F_Schlick_Fast(_vDotH : number, _F0 : CVec3) : CVec3 {
+    var fresnel : number = Exp2((-5.55473 * _vDotH - 6.98316) * _vDotH);
+    return V3AddV3(_F0, V3MulFloat(V3SubV3(new CVec3(1.0,1.0,1.0), _F0), fresnel));
+}
 // 스펙큘러 미세면 분포 함수
 function D_GGX(_alpha : number, _nDotH : number) : number {
     var a2 : number = _alpha * _alpha;
@@ -117,8 +121,9 @@ export function LightCac3D(
     var viewDir : CVec3 = V3Nor(V3SubV3(campos, position.xyz));
     var nDotV : number = SaturateFloat(V3Dot(normal, viewDir));
 
-    roughness = mix(0.15, 1.0, clamp(roughness, 0.0, 1.0)); // 0.15는 스펙큘러 하이라이트가 이상하게 보이지 않을 정도로 튜닝한 값
-    var smoothness : number= 1.0 - roughness;
+    var orgRoughness : number = clamp(roughness, 0.0, 1.0);
+    var smoothness : number= 1.0 - orgRoughness;
+    roughness = mix(0.15, 1.0, orgRoughness); // 0.15는 스펙큘러 하이라이트가 이상하게 보이지 않을 정도로 튜닝한 값
     metalic = clamp(metalic, 0.0, 1.0);
 
     var DAll : CVec3=new CVec3(0,0,0);
@@ -214,19 +219,25 @@ export function LightCac3D(
         }
         else if(ligStep1 < SDF.eLightStep1.Phong + 0.5) {
             //1 phong : 적당한 반사
+            var shininess : number = 20.0;
             var R : CVec3 = V3Nor(reflect(V3MulFloat(L, -1.0), normal));
             var vDotR : number = SaturateFloat(V3Dot(viewDir,R));
-            var phongValue : number = Math.pow(vDotR, 20.0);
+            var nDotV : number = SaturateFloat(V3Dot(normal, viewDir));
+            var F : CVec3 = F_Schlick_Fast(nDotV, new CVec3(0.0625, 0.0625, 0.0625));
+            var phongValue : number = (shininess * 0.5 + 1.0) * pow(vDotR, shininess);
             var phongSpecular : number = phongValue*smoothness*nDotL;
-            specular = new CVec3(phongSpecular, phongSpecular, phongSpecular);
+            specular = V3MulFloat(F, phongSpecular);
         }
         else if(ligStep1 < SDF.eLightStep1.BlinnPhong + 0.5) {
             //2 blinn phong : 빠른 반사
+            var shininess : number = 30.0;
             var halfwayDir : CVec3 = V3Nor(V3AddV3(viewDir, L));
             var nDotH : number = SaturateFloat(V3Dot(normal,halfwayDir));
-            var blinnValue : number = Math.pow(nDotH, 20.0*4.0);
+            var vDotH : number = SaturateFloat(V3Dot(viewDir,halfwayDir));
+            var F : CVec3 = F_Schlick_Fast(vDotH, new CVec3(0.0625, 0.0625, 0.0625));
+            var blinnValue : number = 0.25 * (shininess * 0.5 + 1.0) * pow(nDotH, shininess);
             var blinnSpecular : number = blinnValue*smoothness*nDotL;
-            specular = new CVec3(blinnSpecular, blinnSpecular, blinnSpecular);
+            specular = V3MulFloat(F, blinnSpecular);
         }
         else if(ligStep1 < SDF.eLightStep1.CookTorrance + 0.5) {
             //3 cook-torrance pbr
@@ -253,7 +264,7 @@ export function LightCac3D(
             var D : number = D_GGX(alpha, nDotH);
             var G : number = V_GGX(alpha, nDotL, nDotV);
 
-            diffuse = V3MulV3(kD, diffuse);
+            diffuse = V3MulFloat(V3MulV3(kD, diffuse), 0.3183098861837907);
             specular = V3MulFloat(kS, D * G * nDotL);
         }
 
@@ -301,7 +312,6 @@ export function LightCac3D(
             var irradiance : CVec3 = SamCubeLodToColor(0.0, normal, maxReflectionLOD).rgb;
             DEnvAll = V3MulV3(V3MulV3(albedo.rgb, irradiance), kD);
 
-            var orgRoughness : number = (roughness - 0.15) / 0.85;
             var prefilteredColor : CVec3 = SamCubeLodToColor(0.0, R, orgRoughness * maxReflectionLOD).rgb;
             SEnvAll = V3MulV3(prefilteredColor, V3MulV3(kS, EnvBRDFApprox(F0, roughness, nDotV)));
         }
@@ -442,15 +452,18 @@ export function LightCac2D(position : CVec4,albedo : CVec4,normal :CVec3,shadow 
         }
         else
         {
+            L = V3Nor(L);
             var angle:number=max(0.0,V3Dot(normal,L));
             var diffuse:CVec3=V3MulFloat(radiance,angle);
             DDirAll=V3AddV3(DDirAll,V3MulV3(albedo.rgb,diffuse));
         }
     }
 
+    var DAll : CVec3 = V3AddV3(DPtAll,DDirAll);
+
     // 엠비언트를 최저점으로 계산한다
     var ambientLight :CVec3 = V3MulV3(albedo.xyz, ambientColor);
-    DDirAll = V3Max(DDirAll, ambientLight);
+    DAll = V3Max(DAll, ambientLight);
 
-    return new CMat3(V3AddV3(DPtAll,DDirAll), new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0));
+    return new CMat3(DAll, new CVec3(0.0,0.0,0.0), new CVec3(0.0,0.0,0.0));
 }

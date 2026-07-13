@@ -3,6 +3,7 @@ import { CDOM } from "../artgine/basic/CDOM.js";
 import { CModal } from "../artgine/basic/CModal.js";
 import { CString } from "../artgine/basic/CString.js";
 import { CWebView } from "../artgine/system/CWebView.js";
+import { CHash } from "../artgine/basic/CHash.js";
 var gProjJSON = null;
 var gAppJSON = null;
 var gManifest = null;
@@ -119,10 +120,27 @@ function WatchInputChanges() {
     document.querySelectorAll("#preference input, #preference select").forEach(el => el.addEventListener("change", updatePreference));
     document.querySelectorAll("#include input[type='checkbox']").forEach(el => el.addEventListener("change", updateIncludes));
     document.querySelectorAll("#app input, #app select, #app textarea").forEach(el => el.addEventListener("change", updateAppJSON));
-    document.querySelectorAll("#authRoot_collapse input, #authRoot_collapse textarea").forEach(el => el.addEventListener("change", () => CWebView.Call("UpdateExtraSettings", {
+    const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
         password: document.getElementById("auth_password_txt").value,
         rootPath: document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean),
-    })));
+    });
+    const pwInput = document.getElementById("auth_password_txt");
+    const hashPW = () => {
+        const v = pwInput.value;
+        if (v && v.length < 64) {
+            pwInput.value = CHash.SHA256('artgine_' + v);
+            if (gAppJSON)
+                gAppJSON.password = pwInput.value;
+        }
+    };
+    pwInput.addEventListener("blur", () => { hashPW(); commitAuth(); });
+    pwInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            pwInput.blur();
+        }
+    });
+    document.getElementById("auth_rootpath_txt")?.addEventListener("change", commitAuth);
     document.querySelectorAll("#manifest input, #manifest select, #manifest textarea").forEach(el => el.addEventListener("change", updateManifest));
     document.querySelectorAll("#serviceworker input").forEach(el => el.addEventListener("change", updateServiceWorker));
     document.querySelectorAll("#plugin_list input[type='checkbox']").forEach(el => el.addEventListener("change", updatePlugins));
@@ -265,18 +283,6 @@ document.getElementById("aiDelete_btn").addEventListener("click", async function
     if (selected.length === 0)
         return;
     await CWebView.Call("AIDelete", selected);
-});
-function GetTTYDConfig() {
-    const port = parseInt(document.getElementById("ttyd_port").value) || 7681;
-    const password = document.getElementById("ttyd_password").value;
-    return { port, password };
-}
-document.getElementById("ttydRun_btn").addEventListener("click", async function () {
-    await CWebView.Call("TTYDRun", GetTTYDConfig());
-});
-document.getElementById("ttydBrowser_btn").addEventListener("click", async function () {
-    const { port } = GetTTYDConfig();
-    await CWebView.Call("URLRun", `http://localhost:${port}`);
 });
 document.getElementById("tsc_chk").addEventListener("change", async function () {
     const checked = this.checked;

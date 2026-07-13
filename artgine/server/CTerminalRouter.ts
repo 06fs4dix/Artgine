@@ -3,11 +3,11 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer } from './CAuthServer.js';
 
-@URLPatterns(["/cmd/start-ttyd", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode"])
+@URLPatterns(["/cmd/start-term", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode"])
 export class CTerminalRouter extends CAuthServer {
     constructor() {
         super();
-        this.On("/cmd/start-ttyd", this.onStartTtyd.bind(this));
+        this.On("/cmd/start-term", this.onStartTerm.bind(this));
         this.On("/cmd/schedules", this.onSchedules.bind(this));
         this.On("/cmd/schedule-set", this.onScheduleSet.bind(this));
         this.On("/cmd/schedule-del", this.onScheduleDel.bind(this));
@@ -21,7 +21,7 @@ export class CTerminalRouter extends CAuthServer {
     override Connect() { super.Connect(); this._connectImpl(); }
     _connectImpl() {}
 
-    async onStartTtyd(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onStartTerm(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onSchedules(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onScheduleSet(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onScheduleDel(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
@@ -32,5 +32,6 @@ export class CTerminalRouter extends CAuthServer {
     async onTerminalProxy(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
 }
 
-import CTerminalRouter_imple from '../server_imple/CTerminalRouter.js';
-CTerminalRouter_imple();
+// 터미널 백엔드: node-pty + xterm (구 ttyd 구현은 제거됨).
+import CTerminalPty_imple from '../server_imple/CTerminalRouter.js';
+CTerminalPty_imple();

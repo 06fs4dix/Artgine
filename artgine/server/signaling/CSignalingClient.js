@@ -1,1 +1,22 @@
-import{CEvent as e}from"../../basic/CEvent.js";import{CSocketIO as n}from"../../network/CSocketIO.js";import{PacketSN as t}from"./PacketSN.js";export class CSignalingClient extends n{mOwnerKey=null;constructor(n){let r=new Array;super(n,"signaling",r),n&&(this.mOwnerKey="local"),r[t.RoomOwner.name]=new e(e=>{let n=t.RoomConnectReq(e);this.mOwnerKey=n.userKey,e.ResetOffset(),e.GetString(),r[t.RoomConnectReq.name].Call(e)})}GetOwnerKey(){return this.mOwnerKey}}
+import { CEvent } from "../../basic/CEvent.js";
+import { CSocketIO } from "../../network/CSocketIO.js";
+import { PacketSN } from "./PacketSN.js";
+export class CSignalingClient extends CSocketIO {
+    mOwnerKey = null;
+    constructor(_local) {
+        let event = new Array();
+        super(_local, "signaling", event);
+        if (_local)
+            this.mOwnerKey = "local";
+        event[PacketSN.RoomOwner.name] = new CEvent((_stream) => {
+            let RoomConnectReq = PacketSN.RoomConnectReq(_stream);
+            this.mOwnerKey = RoomConnectReq.userKey;
+            _stream.ResetOffset();
+            _stream.GetString();
+            event[PacketSN.RoomConnectReq.name].Call(_stream);
+        });
+    }
+    GetOwnerKey() {
+        return this.mOwnerKey;
+    }
+}

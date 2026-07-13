@@ -24,15 +24,15 @@ export class CTerrainMap extends CSubject
 {
     mHeightBuf : CMapBuf = new CMapBuf();
     mSplatBuf : CMapBuf = new CMapBuf();
- 
+
     mHeightTexture : string=null;
     mSplatTexture : string=null;
     mLayerTexture : string=null;
 
     mTerrainHeight : number = 1024;
-    mDefaultHeight : number = 1024; // 카메라의 기본 높이, 이 높이보다 2^n배 높아질 때 셀의 크기가 2^n배로 커짐
+    mDefaultHeight : number = 1024; // 높이에 따른 LOD를 적용하기 위한 값, 이 높이보다 카메라가 높아지면 셀의 크기가 2배로 커짐
 
-    mLevel = new Array<number>(0);  // 해당 레벨이 몇번 반복할지
+    mLevel = [1, 1, 1, 1, 1];  // 해당 레벨이 몇번 반복할지
     
     mTexture : (CVec4|string)[] = new Array();
     mTexCodi : CMat = new CMat([
@@ -45,100 +45,59 @@ export class CTerrainMap extends CSubject
     // 페인트 태그
     mTag : Set<string> = new Set();
     
-    mTestMode : boolean = false;    // 라인 드로잉과 색상 추가
     mCollider : CColliderTerrain;
     
-    constructor() {
+    constructor(_collider: boolean = true) {
         super();
         this.mHeightBuf.Reset(new CVec3(1024,1024,1),10);
         this.mSplatBuf.Reset(new CVec3(1024,1024,1),10);
-        this.mCollider = this.PushComp(new CColliderTerrain(this));
+        if(_collider)
+            this.mCollider = this.PushComp(new CColliderTerrain(this));
     }
 
-    ClearAll() {
+    public ClearAll() {
         this.mHeightTexture = null;
         this.mSplatTexture = null;
         this.mLayerTexture = null;
         this.RemoveComps(CPaintTerrain);
     }
-    SetLevel(_level : Array<number>) {
+    public SetLevel(_level : Array<number>) {
         this.mLevel = _level;
+        this.ClearAll();
     }
     //xy : 반복 패턴(음수시 타일링 회전 미적용),zw : 텍스쳐 시작 위치
-    SetSplat(_splatTexs : (CVec4|string)[], _splatTexCodi : CMat) {
+    public SetSplat(_splatTexs : (CVec4|string)[], _splatTexCodi : CMat) {
         this.mTexture = [..._splatTexs];
         this.mTexCodi.Import(_splatTexCodi);
     }
 
-    GetHeight(_worldX: number, _worldZ: number) {
-        let pixelX = (_worldX - this.GetPos().x) / this.mHeightBuf.mSize;
-        let pixelY = (_worldZ - this.GetPos().z) / this.mHeightBuf.mSize;
-
-        // linear를 할 때 외곽의 한 픽셀에 평평한 지형이 생기는 것을 방지하기 위함임
-        // 가장 왼쪽 아래를 (0.5, 0.5), 가장 오른쪽 위를 (w-0.5, h-0.5)로 바꿔줌
-        pixelX *= (this.mHeightBuf.mCount.x - 0.5) / this.mHeightBuf.mCount.x;
-        pixelY *= (this.mHeightBuf.mCount.y - 0.5) / this.mHeightBuf.mCount.y;
-
-        const xi = Math.floor(pixelX);
-        const yi = Math.floor(pixelY);
-        const xf = pixelX - xi;
-        const yf = pixelY - yi;
-
-        const rgb00 = this.mHeightBuf.RGB(new CCIndex(xi + 0, yi + 0)) || 0;
-        const rgb10 = this.mHeightBuf.RGB(new CCIndex(xi + 1, yi + 0)) || 0;
-        const rgb01 = this.mHeightBuf.RGB(new CCIndex(xi + 0, yi + 1)) || 0;
-        const rgb11 = this.mHeightBuf.RGB(new CCIndex(xi + 1, yi + 1)) || 0;
-
-        const decodeHeight = (_rgb: number) => ((((_rgb >> 24) & 0xff) << 8) | ((_rgb >> 16) & 0xff)) / 65535;
-        const h00 = decodeHeight(rgb00) * this.mTerrainHeight + this.GetPos().y;
-        const h10 = decodeHeight(rgb10) * this.mTerrainHeight + this.GetPos().y;
-        const h01 = decodeHeight(rgb01) * this.mTerrainHeight + this.GetPos().y;
-        const h11 = decodeHeight(rgb11) * this.mTerrainHeight + this.GetPos().y;
-
-        if(xf <= (1 - yf)) return h00 + xf * (h10 - h00) + yf * (h01 - h00);
-        return h10 + h01 - h11 + xf * (h11 - h01) + yf * (h11 - h10);
-    }
-    GetNormal(_worldX: number, _worldZ: number) {
-        let pixelX = (_worldX - this.GetPos().x) / this.mHeightBuf.mSize;
-        let pixelY = (_worldZ - this.GetPos().z) / this.mHeightBuf.mSize;
-
-        // linear를 할 때 외곽의 한 픽셀에 평평한 지형이 생기는 것을 방지하기 위함임
-        // 가장 왼쪽 아래를 (0.5, 0.5), 가장 오른쪽 위를 (w-0.5, h-0.5)로 바꿔줌
-        pixelX *= (this.mHeightBuf.mCount.x - 0.5) / this.mHeightBuf.mCount.x;
-        pixelY *= (this.mHeightBuf.mCount.y - 0.5) / this.mHeightBuf.mCount.y;
-
-        const xi = Math.floor(pixelX);
-        const yi = Math.floor(pixelY);
-        const xf = pixelX - xi;
-        const yf = pixelY - yi;
-
-        const rgb00 = this.mHeightBuf.RGB(new CCIndex(xi + 0, yi + 0)) || 0;
-        const rgb10 = this.mHeightBuf.RGB(new CCIndex(xi + 1, yi + 0)) || 0;
-        const rgb01 = this.mHeightBuf.RGB(new CCIndex(xi + 0, yi + 1)) || 0;
-        const rgb11 = this.mHeightBuf.RGB(new CCIndex(xi + 1, yi + 1)) || 0;
-
-        const decodeHeight = (_rgb: number) => ((((_rgb >> 24) & 0xff) << 8) | ((_rgb >> 16) & 0xff)) / 65535;
-        const h00 = decodeHeight(rgb00) * this.mTerrainHeight + this.GetPos().y;
-        const h10 = decodeHeight(rgb10) * this.mTerrainHeight + this.GetPos().y;
-        const h01 = decodeHeight(rgb01) * this.mTerrainHeight + this.GetPos().y;
-        const h11 = decodeHeight(rgb11) * this.mTerrainHeight + this.GetPos().y;
-
-        const step = this.mHeightBuf.mSize;
-        let e1:CVec3,e2:CVec3;
-        if(xf <= (1 - yf)) {
-            e1 = new CVec3(step, h10 - h00, 0);
-            e2 = new CVec3(0, h01 - h00, step);
-        } else {
-            e1 = new CVec3(-step, h01 - h11, 0);
-            e2 = new CVec3(0, h10 - h11, -step);
+    // 디버깅
+    public ToggleDebugMode() {
+        const TEST_COLORS : CColor[] = [
+            new CColor(0.000, 1, 1, CColor.eModel.HSV),
+            new CColor(0.083, 1, 1, CColor.eModel.HSV),
+            new CColor(0.166, 1, 1, CColor.eModel.HSV),
+            new CColor(0.333, 1, 1, CColor.eModel.HSV),
+            new CColor(0.500, 1, 1, CColor.eModel.HSV),
+            new CColor(0.666, 1, 1, CColor.eModel.HSV),
+            new CColor(0.750, 1, 1, CColor.eModel.HSV),
+            new CColor(0.833, 1, 1, CColor.eModel.HSV)
+        ];
+        for(const pt of this.FindComps(CPaintTerrain)) {
+            if(pt.GetRenderPass()[0].mLine != 1) {
+                pt.SetColorModel(TEST_COLORS[pt.mLevel.x % TEST_COLORS.length]);
+                pt.PushRenderPass(new CRenderPass(this.GetFrame().Pal().SlTerrainKey()).Set("mLine", 1));
+            } else {
+                pt.RemoveTag("colorModel");
+                pt.PushRenderPass([]);
+            }
         }
-        return CMath.V3Nor(CMath.V3Cross(e2, e1));
     }
 
     override EditChange(_pointer: CPointer, _child: boolean): void {
         super.EditChange(_pointer, _child);
         if(_pointer.member == "mTestMode") {
-            this.SetTestMode();
+            this.ToggleDebugMode();
         }
         else if(_pointer.IsRef(this.mLevel)) {
             this.RemoveComps(CPaintTerrain);
@@ -153,15 +112,116 @@ export class CTerrainMap extends CSubject
             this.mUpdateMat = CUpdate.eType.Already;
         }
     }
+
     override Update(_update: CUpdate): void {
         super.Update(_update);
 
-        if(this.FindComp(CPaintTerrain) != null) return;
-        if(!this.LoadSplatTextures()) return;
+        if(this.FindComp(CPaintTerrain) != null) return;    // 이미 생성되어 있으면 패스
+        if(!this.LoadSplatTextures()) return;               // 스플랫 텍스쳐 로드가 완료되야 생성 가능
 
         this.InitTexture();
-        this.SetTestMode();
-        
+        this.InitPaints();
+    }
+    private LoadSplatTextures(): boolean {
+        let allLoaded = true;
+        for (const texKey of this.mTexture) {
+            if (texKey == null || texKey === "" || typeof texKey !== "string") continue;
+            if (this.GetFrame().Res().Find(texKey) == null) allLoaded = false;
+            if (!this.GetFrame().Load().IsLoad(texKey)) this.GetFrame().Load().Exe(texKey);
+        }
+        return allLoaded;
+    }
+    private InitTexture(): void {
+        if(this.mHeightTexture==null) { // 높이/노말 맵 생성
+            this.mHeightTexture = `height${this.Key()}.tex`;
+            if(this.GetFrame().Res().Find(this.mHeightTexture) != null)
+                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mHeightTexture));  // 이미 생성되어 있는 텍스쳐면 삭제
+            const heightTex = this.mHeightBuf.GetTexture().Set("mFilter", CTexture.eFilter.Linear);
+            this.GetFrame().Res().Push(this.mHeightTexture, heightTex);
+            
+            const BakeNormal = (_tex : CTexture) => {
+                const scale = 0.05;
+                const texBuf = _tex.GetBuf()[0];
+                const [w, h] = [_tex.GetWidth(), _tex.GetHeight()];
+                const H = (_x : number, _y : number) : number => {
+                    const idx = (CMath.Clamp(_y, 0, h - 1) * w + CMath.Clamp(_x, 0, w - 1)) * 4;
+                    return ((texBuf[idx] << 8) + texBuf[idx + 1]) / 65535;
+                };
+                for(let y=0;y<h;y++)
+                for(let x=0;x<w;x++) {
+                    const dx = H(x+1,y+0)-H(x-1,y+0), dy = H(x+0,y+1)-H(x+0,y-1);
+                    const len = Math.sqrt(dx*dx*scale*scale+dy*dy*scale*scale+scale*scale*scale*scale);
+                    const idx = (y*w+x)*4;
+                    texBuf[idx + 2] = (0.5-dx*scale/len*0.5)*255;
+                    texBuf[idx + 3] = (0.5+dy*scale/len*0.5)*255;
+                }
+            };
+            BakeNormal(heightTex); // zw에 노말 베이킹
+
+            // 디버그 용도 : 런타임에 텍스쳐 변경하면 버퍼에도 적용
+            heightTex.mModifyEvent=new CEvent(()=>{
+                CClass.CallAsync(null,"BufferTool",[heightTex.GetBuf()[0],new CVec3(heightTex.GetWidth(),heightTex.GetHeight(),1),true]).then(() => {
+                    this.mHeightBuf.SetTexture(heightTex);
+                    BakeNormal(heightTex);
+                });
+            });
+        }
+        if(this.mSplatTexture==null) {  // 스플랫 맵 생성
+            this.mSplatTexture=`splat${this.Key()}.tex`;
+            if(this.GetFrame().Res().Find(this.mSplatTexture) != null)
+                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mSplatTexture));   // 이미 생성되어 있는 텍스쳐면 삭제
+            const splatTex=this.mSplatBuf.GetTexture().Set("mFilter", CTexture.eFilter.Linear);
+            this.GetFrame().Res().Push(this.mSplatTexture,splatTex);
+
+            // 디버그 용도 : 런타임에 텍스쳐 변경하면 버퍼에도 적용
+            splatTex.mModifyEvent=new CEvent(()=>{
+                CClass.CallAsync(null,"BufferTool",[splatTex.GetBuf()[0],new CVec3(splatTex.GetWidth(),splatTex.GetHeight(),1),true]).then(() => {
+                    this.mSplatBuf.SetTexture(splatTex);
+                });
+            });
+        }
+        if(this.mLayerTexture==null) {  // 레이어 텍스쳐 생성
+            this.mLayerTexture=`layer${this.Key()}.tex`;
+            if(this.GetFrame().Res().Find(this.mLayerTexture) != null)
+                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mLayerTexture));   // 이미 생성되어 있는 텍스쳐면 삭제
+            const layerTex=new CTexture().Set("mWidth", 1024).Set("mHeight", 1024).Set("mFilter", CTexture.eFilter.Linear).Set("mMipMap", CTexture.eMipmap.GL).Set("mWrap", CTexture.eWrap.Repeat);
+            layerTex.PushInfo([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA8,12)]);
+            this.GetFrame().Res().Push(this.mLayerTexture, layerTex);
+            
+            // 디버그 용도 : 런타임에 어떤 텍스쳐 들어있는지 확인
+            layerTex.mReadPixelEvent=new CEvent(this.GetFrame().Ren().ReadPixel,this);
+
+            // 레이어 텍스쳐에 디퓨즈/노말/ORM 텍스쳐 복사
+            if(layerTex.GetBuf().length == 0) layerTex.CreateBuf();
+            const layerBuf = layerTex.GetBuf()[0] as Uint8Array;
+            const EnlargeTexture = (_org : string|CVec4, _default : CVec4) => { // layerTex와 같은 크기로 스케일링
+                if(_org instanceof CVec4) return CImgPro.Square(layerTex.GetWidth(), layerTex.GetHeight(), _org);
+                if(_org == null) return CImgPro.Square(layerTex.GetWidth(), layerTex.GetHeight(), _default);
+                const orgTex = this.GetFrame().Res().Find(_org) as CTexture;
+                const result = CImgPro.SqurEnlargedReduced(orgTex.GetWidth(), orgTex.GetHeight(), orgTex.GetBuf()[0], layerTex.GetWidth() / orgTex.GetWidth(), layerTex.GetHeight() / orgTex.GetHeight(), 4);
+                if(orgTex.GetYFlip()) { // 텍스쳐어레이는 yflip이 안되서 버퍼에서 돌려줌
+                    const temp = new Uint8Array(result.GetWidth() * 4);
+                    for(let y = 0; y < (result.GetHeight() >> 1); y++) {
+                        temp.set(result.GetBuf()[0].subarray(y * result.GetWidth() * 4, (y + 1) * result.GetWidth() * 4));
+                        result.GetBuf()[0].copyWithin(y * result.GetWidth() * 4, (result.GetHeight() - 1 - y) * result.GetWidth() * 4, (result.GetHeight() - y) * result.GetWidth() * 4);
+                        result.GetBuf()[0].set(temp, (result.GetHeight() - 1 - y) * result.GetWidth() * 4);
+                    }
+                }
+                return result;
+            }
+            for(let i = 0; i < 4; i++) {    // 디퓨즈
+                layerBuf.set(EnlargeTexture(this.mTexture[i], new CVec4(0,0,0,1)).GetBuf()[0], layerTex.GetWidth() * layerTex.GetHeight() * 4 * i);
+            }
+            for(let i = 4; i < 8; i++) {    // 노말
+                layerBuf.set(EnlargeTexture(this.mTexture[i], new CVec4(1,0.5,0,1)).GetBuf()[0], layerTex.GetWidth() * layerTex.GetHeight() * 4 * i);
+            }
+            for(let i = 8; i < 12; i++) {   // ORM
+                layerBuf.set(EnlargeTexture(this.mTexture[i], new CVec4(0.5,0.5,1,0)).GetBuf()[0], layerTex.GetWidth() * layerTex.GetHeight() * 4 * i);
+            }
+            this.GetFrame().Ren().BuildTexture(layerTex);
+        }
+    }
+    private InitPaints(): void {
         const textureList = [this.mLayerTexture, this.mSplatTexture, this.mHeightTexture];
         const Spawn = (_level: number, _repeatCount: number, _scale: number, _cellIndex: CVec3) => {
             const pt = this.PushComp(new CPaintTerrain(
@@ -173,17 +233,13 @@ export class CTerrainMap extends CSubject
             ));
             for(let tag of this.mTag) pt.PushTag(tag);
             return pt;
-        }
-
-        // 중앙부 생성
+        };
         for(let x = 0; x < 2; x++)
-        for(let y = 0; y < 2; y++) {
+        for(let y = 0; y < 2; y++) {    // 중앙부 생성, 중앙부 정사각형 4개
             Spawn(0, 1, 1, new CVec3(x-0.5, 0, y-0.5));
         }
-
-        // 외곽 생성
         let levelScale = 1;
-        for (const [level, repeatCount] of this.mLevel.entries()) {
+        for (const [level, repeatCount] of this.mLevel.entries()) { // 외곽 생성, 외곽 한 줄에 12개씩 추가됨(repeat은 8n+4개 추가됨)
             for(let repeat = 0; repeat < repeatCount; repeat++) {
                 const size = 4 + repeat * 2;
                 const center = 1.5 + repeat;
@@ -191,7 +247,7 @@ export class CTerrainMap extends CSubject
                 for(let i = 0; i < size; i++) {
                     Spawn(level, repeatCount, levelScale, new CVec3(0 - center, 0, i - center));
                     Spawn(level, repeatCount, levelScale, new CVec3(limit - center, 0, i - center));
-                    if(i > 0 && i < limit) {
+                    if(i > 0 && i < limit) {    // 중앙부는 패스
                         Spawn(level, repeatCount, levelScale, new CVec3(i - center, 0, 0 - center));
                         Spawn(level, repeatCount, levelScale, new CVec3(i - center, 0, limit - center));
                     }
@@ -201,154 +257,28 @@ export class CTerrainMap extends CSubject
         }
     }
 
-    private LoadSplatTextures(): boolean {
-        let allLoaded = true;
-        for (const texKey of this.mTexture) {
-            if (texKey == null || texKey === "" || typeof texKey !== "string") continue;
-            if (this.GetFrame().Res().Find(texKey) == null) allLoaded = false;
-            if (!this.GetFrame().Load().IsLoad(texKey)) this.GetFrame().Load().Exe(texKey);
-        }
-        return allLoaded;
-    }
-    private BakeNormal(_tex: CTexture): void {
-        const scale = 0.05;
-        const texBuf = _tex.GetBuf()[0];
-        const [w, h] = [_tex.GetWidth(), _tex.GetHeight()];
-        const H = (_x : number, _y : number) : number => {
-            const idx = (CMath.Clamp(_y, 0, h - 1) * w + CMath.Clamp(_x, 0, w - 1)) * 4;
-            return (texBuf[idx] / 255) + (texBuf[idx + 1] / 65535);
+    // 헬퍼
+    private SampleHeights(_worldX: number, _worldZ: number) {
+        const pixelX = (_worldX - this.GetPos().x) / this.mHeightBuf.mSize * (this.mHeightBuf.mCount.x - 0.5) / this.mHeightBuf.mCount.x; // linear를 할 때 외곽의 한 픽셀에 평평한 지형이 생기는 것을 방지하기 위함임
+        const pixelY = (_worldZ - this.GetPos().z) / this.mHeightBuf.mSize * (this.mHeightBuf.mCount.y - 0.5) / this.mHeightBuf.mCount.y; // left-Bottom을 (0.5, 0.5), 가장 오른쪽 위를 (w-0.5, h-0.5)로 바꿔줌
+        const xi = Math.floor(pixelX), yi = Math.floor(pixelY);
+        const xf = pixelX - xi, yf = pixelY - yi;
+        const decodeHeight = (_rgb: number) => {
+            const r = (_rgb >> 24) & 0xff, g = (_rgb >> 16) & 0xff;
+            return ((r << 8) | g) / 65535;
         };
-        for(let y=0;y<h;y++)
-        for(let x=0;x<w;x++) {
-            const dx = H(x+1,y+0)-H(x-1,y+0), dy = H(x+0,y+1)-H(x+0,y-1);
-            const len = Math.sqrt(dx*dx*scale*scale+dy*dy*scale*scale+scale*scale*scale*scale);
-            const idx = (y*w+x)*4;
-            texBuf[idx + 2] = (0.5-dx*scale/len*0.5)*255;
-            texBuf[idx + 3] = (0.5+dy*scale/len*0.5)*255;
-        }
+        const sample = (dx: number, dy: number) => decodeHeight(this.mHeightBuf.RGB(new CCIndex(xi + dx, yi + dy)) || 0) * this.mTerrainHeight + this.GetPos().y;
+        return {xf,yf,h00: sample(0, 0),h10: sample(1, 0),h01: sample(0, 1),h11: sample(1, 1)};
     }
-    private InitTexture(): void {
-        if(this.mHeightTexture==null) {
-            // xy높이 zw노말 텍스쳐 생성
-            this.mHeightTexture=`height${this.Key()}.tex`;
-            if(this.GetFrame().Res().Find(this.mHeightTexture) != null) {
-                // 이미 생성되어 있는 텍스쳐면 삭제
-                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mHeightTexture));
-            }
-
-            const tex=this.mHeightBuf.GetTexture();
-            tex.SetFilter(CTexture.eFilter.Linear);
-            this.BakeNormal(tex);
-            this.GetFrame().Res().Push(this.mHeightTexture,tex);
-
-            // 디버그 용도 : 런타임에 텍스쳐 변경하면 버퍼에도 적용
-            tex.mModifyEvent=new CEvent(async ()=>{
-                await CClass.CallAsync(null,"BufferTool",[tex.GetBuf()[0],new CVec3(tex.GetWidth(),tex.GetHeight(),1),true]);
-                this.BakeNormal(tex);
-                this.mHeightBuf.SetTexture(tex);
-            });
-        }
-
-        if(this.mSplatTexture==null) {
-            // 스플랫 맵 생성
-            this.mSplatTexture=`splat${this.Key()}.tex`;
-            if(this.GetFrame().Res().Find(this.mSplatTexture) != null) {
-                // 이미 생성되어 있는 텍스쳐면 삭제
-                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mSplatTexture));
-            }
-
-            const tex=this.mSplatBuf.GetTexture();
-            tex.SetFilter(CTexture.eFilter.Linear);
-            this.GetFrame().Res().Push(this.mSplatTexture,tex);
-
-            // 디버그 용도 : 런타임에 텍스쳐 변경하면 버퍼에도 적용
-            tex.mModifyEvent=new CEvent(async ()=>{
-                await CClass.CallAsync(null,"BufferTool",[tex.GetBuf()[0],new CVec3(tex.GetWidth(),tex.GetHeight(),1),true]);
-                this.mSplatBuf.SetTexture(tex);
-            });
-        }
-
-        if(this.mLayerTexture==null) {
-            // 레이어 텍스쳐 생성
-            this.mLayerTexture=`layer${this.Key()}.tex`;
-            if(this.GetFrame().Res().Find(this.mLayerTexture) != null) {
-                // 이미 생성되어 있는 텍스쳐면 삭제
-                this.GetFrame().Ren().ReleaseTexture(this.GetFrame().Res().Find(this.mLayerTexture));
-            }
-
-            const tex=new CTexture();
-            tex.SetSize(1024, 1024);
-            tex.PushInfo([new CTextureInfo(CTexture.eTarget.Array,CTexture.eFormat.RGBA8,12)]);
-            tex.SetFilter(CTexture.eFilter.Linear);
-            tex.SetMipMap(CTexture.eMipmap.GL);
-            tex.SetWrap(CTexture.eWrap.Repeat);
-            this.GetFrame().Res().Push(this.mLayerTexture, tex);
-            
-            // 디버그 용도 : 런타임에 어떤 텍스쳐 들어있는지 확인
-            tex.mReadPixelEvent=new CEvent(this.GetFrame().Ren().ReadPixel,this);
-        }
-
-        const splatArrayTex : CTexture = this.GetFrame().Res().Find(this.mLayerTexture);
-        splatArrayTex.CreateBuf();
-        const buf = splatArrayTex.GetBuf()[0] as Uint8Array;
-        const [w, h] = [splatArrayTex.GetWidth(), splatArrayTex.GetHeight()];
-        for(let i = 0; i < 12; i++) {
-            let layerTex: CTexture;
-            if(this.mTexture[i] instanceof CVec4) {
-                layerTex = CImgPro.Square(w, h, this.mTexture[i] as CVec4);
-            }
-            else if(typeof this.mTexture[i] == "string") {
-                const tex = this.GetFrame().Res().Find(this.mTexture[i] as string) as CTexture;
-                const [tw, th] = [tex.GetWidth(), tex.GetHeight()];
-                layerTex = CImgPro.SqurEnlargedReduced(tw, th, tex.GetBuf()[0], w / tw, h / th, 4);
-                if(tex.GetYFlip()) {
-                    const flipped = new Uint8Array(layerTex.GetBuf()[0].length);
-                    const rowLength = layerTex.GetWidth()*4;
-                    for(let y=0;y<layerTex.GetHeight();y++) {
-                        const srcRowStart = y*rowLength;
-                        const destRowStart = (layerTex.GetHeight()-1-y)*rowLength;
-                        const rowView = layerTex.GetBuf()[0].subarray(srcRowStart, srcRowStart + rowLength);
-                        flipped.set(rowView, destRowStart);
-                    }
-                    layerTex.GetBuf()[0] = flipped;
-                }
-            }
-            else {
-                const layerDefaultColor: CVec4[] = [
-                    new CVec4(0,0,0,1),
-                    new CVec4(1,0.5,0,1),
-                    new CVec4(0.5,0.5,1,0)
-                ];
-                const defaultCol = i < 4 ? layerDefaultColor[0] : i < 8 ? layerDefaultColor[1] : layerDefaultColor[2];
-                layerTex = CImgPro.Square(w, h, defaultCol);
-            }
-            buf.set(layerTex.GetBuf()[0], w * h * 4 * i);
-        }
-        this.GetFrame().Ren().BuildTexture(splatArrayTex);  // RebuildTexture쓰면 밉맵 생성 안됨
+    public GetHeight(_worldX: number, _worldZ: number) {
+        const { xf, yf, h00, h10, h01, h11 } = this.SampleHeights(_worldX, _worldZ);
+        if (xf <= (1 - yf)) return h00 + xf * (h10 - h00) + yf * (h01 - h00);
+        return h10 + h01 - h11 + xf * (h11 - h01) + yf * (h11 - h10);
     }
-
-    SetTestMode() {
-        const TEST_COLORS : CColor[] = [
-            new CColor(0.000, 1, 1, CColor.eModel.HSV),
-            new CColor(0.083, 1, 1, CColor.eModel.HSV),
-            new CColor(0.166, 1, 1, CColor.eModel.HSV),
-            new CColor(0.333, 1, 1, CColor.eModel.HSV),
-            new CColor(0.500, 1, 1, CColor.eModel.HSV),
-            new CColor(0.666, 1, 1, CColor.eModel.HSV),
-            new CColor(0.750, 1, 1, CColor.eModel.HSV),
-            new CColor(0.833, 1, 1, CColor.eModel.HSV)
-        ];
-        for(const pt of this.FindComps(CPaintTerrain)) {
-            if(this.mTestMode) {
-                pt.SetColorModel(TEST_COLORS[pt.mLevel.x % TEST_COLORS.length]);
-                const rp = new CRenderPass(this.GetFrame().Pal().SlTerrainKey());
-                rp.mLine = 1;
-                pt.PushRenderPass(rp);
-            } else {
-                pt.RemoveTag("colorModel");
-                pt.PushRenderPass([]);
-            }
-        }
+    public GetNormal(_worldX: number, _worldZ: number) {
+        const { xf, yf, h00, h10, h01, h11 } = this.SampleHeights(_worldX, _worldZ);
+        if (xf <= (1 - yf)) return CMath.V3Nor(CMath.V3Cross(new CVec3(0, h01 - h00, this.mHeightBuf.mSize), new CVec3(this.mHeightBuf.mSize, h10 - h00, 0)));
+        else return CMath.V3Nor(CMath.V3Cross(new CVec3(0, h10 - h11, -this.mHeightBuf.mSize), new CVec3(-this.mHeightBuf.mSize, h01 - h11, 0)));
     }
 }
 

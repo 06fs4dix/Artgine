@@ -1,6 +1,138 @@
 import { CFecth } from "../../network/CFecth.js";
-import { CConfirm } from "../../basic/CModal.js";
+import { CModal, CConfirm } from "../../basic/CModal.js";
 import { CAlert } from "../../basic/CAlert.js";
+import { CHash } from "../../basic/CHash.js";
+import { CLan } from "../../basic/CLan.js";
+import { CIframeMsg } from "./CIframeMsg.js";
+import { CUtilWeb } from "../../util/CUtilWeb.js";
+
+// Control.html이 iframe으로 열 때 자신의 현재 테마(light/dark)를 함께 넘겨준다.
+// 값이 없으면(단독 접속 등) 기존과 동일하게 아무 것도 건드리지 않는다(기본 Bootstrap 라이트 모습).
+const _memoTheme = CUtilWeb.Parameter("theme");
+if (_memoTheme) document.documentElement.setAttribute('data-bs-theme', _memoTheme);
+
+// ==================================================================================================================
+// 다국어(CLan) - 기본 텍스트는 영문(HTML innerHTML/placeholder, 코드 내 기본값)이고 한국어만 추가 등록한다.
+// 미등록 언어/키는 원문(영문)으로 폴백되므로 안전하다(CUtil.Language()로 브라우저 언어 자동감지).
+// ==================================================================================================================
+function L(_key: string, _def: string): string {
+    return CLan.Get(_key, _def) ?? _def;
+}
+
+function RegisterMemoLan(): void {
+    const ko = CLan.eType.ko;
+    CLan.Set(ko, "memo.auth.title", "인증");
+    CLan.Set(ko, "memo.auth.pwPlaceholder", "비밀번호");
+    CLan.Set(ko, "memo.auth.signIn", "로그인");
+    CLan.Set(ko, "memo.folder.placeholder", "폴더 경로 (예: proj/2D/Village)");
+    CLan.Set(ko, "memo.addCategory", "카테고리 추가");
+    CLan.Set(ko, "memo.deselect", "선택 해제");
+    CLan.Set(ko, "memo.deselect.title", "선택 해제 - Search/Delete가 전체 카테고리를 대상으로 동작합니다");
+    CLan.Set(ko, "memo.tab.category", "카테고리");
+    CLan.Set(ko, "memo.tab.message", "메시지");
+    CLan.Set(ko, "memo.search.category", "카테고리 검색...");
+    CLan.Set(ko, "memo.search.message", "메시지 검색...");
+    CLan.Set(ko, "memo.sidebarToggle.title", "사이드바 토글 (Tab)");
+    CLan.Set(ko, "memo.mode.title", "입력창에 /w, /s, /d를 입력해도 전환됩니다");
+    CLan.Set(ko, "memo.mode.write", "쓰기 /w");
+    CLan.Set(ko, "memo.mode.search", "검색 /s /r");
+    CLan.Set(ko, "memo.mode.delete", "삭제 /d");
+    CLan.Set(ko, "memo.mode.move", "이동 /m");
+    CLan.Set(ko, "memo.help.title", "도움말");
+    CLan.Set(ko, "memo.empty.noCategory", "선택된 카테고리가 없습니다. 쓰려면 카테고리를 선택하거나, 전체를 대상으로 Search/Delete를 사용하세요.");
+    CLan.Set(ko, "memo.composer.placeholder", "메모... #태그");
+
+    // JS로 그려지는 문구
+    CLan.Set(ko, "memo.empty.writeHint", "메모를 작성해 시작하세요.");
+    CLan.Set(ko, "memo.cat.emptyHint", "아직 카테고리가 없습니다. 위에서 추가하세요.");
+    CLan.Set(ko, "memo.time.empty", "아직 메모가 없습니다.");
+    CLan.Set(ko, "memo.confirm.deleteCatMulti", `"{name}" 및 하위 카테고리 {n}개(내부 메모 포함)가 모두 삭제됩니다. 계속하시겠습니까?`);
+    CLan.Set(ko, "memo.confirm.deleteCatSingle", `"{name}" 카테고리를 삭제하시겠습니까? (내부 메모도 함께 삭제됩니다)`);
+    CLan.Set(ko, "memo.confirm.deleteData", "이 메모를 삭제하시겠습니까?");
+    CLan.Set(ko, "memo.confirm.deleteDataId", "메모 @{id}를 삭제하시겠습니까?");
+    CLan.Set(ko, "memo.confirm.deleteCandidates", "일치하는 메모 {n}건을 삭제하시겠습니까?\n\n{preview}");
+    CLan.Set(ko, "memo.addCatModal.root", "-- 루트 (부모 없음) --");
+    CLan.Set(ko, "memo.addCatModal.parent", "부모 카테고리");
+    CLan.Set(ko, "memo.addCatModal.name", "이름");
+    CLan.Set(ko, "memo.addCatModal.add", "추가");
+    CLan.Set(ko, "memo.common.cancel", "취소");
+    CLan.Set(ko, "memo.common.yes", "예");
+    CLan.Set(ko, "memo.common.no", "아니오");
+    CLan.Set(ko, "memo.common.ok", "확인");
+    CLan.Set(ko, "memo.prompt.renameCategory", `카테고리 "{name}"의 새 이름:`);
+    CLan.Set(ko, "memo.msg.failAddCategory", "카테고리 추가 실패");
+    CLan.Set(ko, "memo.msg.failDeleteCategory", "카테고리 삭제 실패");
+    CLan.Set(ko, "memo.msg.failRenameCategory", "카테고리 이름 변경 실패");
+    CLan.Set(ko, "memo.msg.failSave", "저장 실패");
+    CLan.Set(ko, "memo.msg.failDeleteMemo", "메모 삭제 실패");
+    CLan.Set(ko, "memo.msg.searchFailed", "검색 실패");
+    CLan.Set(ko, "memo.msg.networkError", "네트워크 오류");
+    CLan.Set(ko, "memo.msg.cancelled", "취소되었습니다.");
+    CLan.Set(ko, "memo.msg.deletedMemo", "메모 @{id}가 삭제되었습니다.");
+    CLan.Set(ko, "memo.msg.failDeleteCategoryDone", "카테고리 삭제 실패.");
+    CLan.Set(ko, "memo.msg.deletedCategory", `카테고리 "{name}"가 삭제되었습니다.`);
+    CLan.Set(ko, "memo.msg.noMatchingMemos", "일치하는 메모가 없습니다.");
+    CLan.Set(ko, "memo.msg.deletedCandidates", "일치하는 메모 {total}건 중 {n}건이 삭제되었습니다.");
+    CLan.Set(ko, "memo.msg.moveNoCategory", "선택된 카테고리가 없습니다 - 먼저 옮길 대상 카테고리를 선택한 뒤 /m @<메모 id>를 사용하세요.");
+    CLan.Set(ko, "memo.msg.moveUsage", "사용법: /m <메모 id> (예: /m 2 또는 @2)");
+    CLan.Set(ko, "memo.msg.failMoveMemo", "메모 이동 실패");
+    CLan.Set(ko, "memo.msg.movedMemo", `메모 @{id}를 "{name}"로 옮겼습니다.`);
+    CLan.Set(ko, "memo.msg.requestFailed", "요청 실패 ({status}): {path}");
+    CLan.Set(ko, "memo.msg.remoteNotAuthed", "원격 서버에 인증되어 있지 않습니다. 파일 관리자(Chat/Terminal/Memo)에서 먼저 인증하세요.");
+
+    // 헬프 모달 본문 (한글은 하나의 블록으로 등록, 영문은 코드 쪽 기본값 그대로 사용)
+    CLan.Set(ko, "memo.help.body", `
+        <div class="small">
+            <h6>단축키</h6>
+            <ul class="mb-3">
+                <li><b>Tab</b> - 좌측 카테고리/타임 사이드바 열고 닫기</li>
+                <li><b>Enter</b> - 입력창에서 전송 (줄바꿈은 <b>Shift+Enter</b>)</li>
+                <li><b>F1~F4, F7</b> - 상위 화면(Home)의 단축키로 전달됨</li>
+            </ul>
+            <h6>메시지 입력창 명령어</h6>
+            <p class="mb-1">입력 맨 앞에 아래 접두어를 붙이면 상단 모드 선택과 무관하게 <b>이번 전송 한 번만</b> 해당 모드로 동작합니다.</p>
+            <ul class="mb-3">
+                <li><code>/w &lt;내용&gt;</code> - <b>Write</b>: 메모 저장 (카테고리 미선택 시 내용으로 자동 분류)</li>
+                <li><code>/s &lt;질문&gt;</code> 또는 <code>/r &lt;질문&gt;</code> - <b>Search</b>: AI 검색 (선택된 카테고리 범위, 미선택 시 전체)</li>
+                <li><code>/d &lt;내용&gt;</code> - <b>Delete</b>: 삭제
+                    <ul>
+                        <li>숫자만 입력 - 해당 id의 메모 1건 삭제 (예: <code>/d 12</code>)</li>
+                        <li>카테고리 이름 포함 - 그 카테고리(+하위 카테고리+메모) 전체 삭제</li>
+                        <li>그 외 - AI가 설명과 어울리는 메모 후보를 찾아 확인 후 삭제</li>
+                    </ul>
+                </li>
+                <li><code>/m &lt;메모 id&gt;</code> - <b>Move</b>: 해당 메모를 현재 선택된(옮겨 담을) 카테고리로 이동 (예: <code>/m 2</code> 또는 <code>/m @2</code>). 먼저 목적지 카테고리를 선택해야 함</li>
+            </ul>
+            <p class="mb-0 text-body-secondary">접두어 없이 전송하면 상단의 <b>모드 선택 드롭다운</b>(Write/Search/Delete/Move)에 맞춰 동작합니다. 한/영 전환을 깜빡해도 같은 자리의 한글 자모(ㅈㄴㄱㅇㅡ)로 인식됩니다.</p>
+        </div>
+    `);
+    CLan.Set(ko, "memo.help.close", "닫기");
+}
+
+// data-CLan(본문/placeholder) + data-CLan-title(title 속성) 요소에 현재 언어 번역을 적용한다.
+// 기존 내용을 기본값으로 쓰므로 미등록 키/언어는 원문(영문)이 그대로 유지된다.
+function ApplyMemoLan(_root: ParentNode = document): void {
+    _root.querySelectorAll<HTMLElement>('[data-CLan]').forEach(el => {
+        const key = el.getAttribute('data-CLan');
+        if (!key) return;
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+            const t = CLan.Get(key, el.placeholder);
+            if (t != null) el.placeholder = t;
+        } else {
+            const t = CLan.Get(key, el.innerHTML);
+            if (t != null) el.innerHTML = t;
+        }
+    });
+    _root.querySelectorAll<HTMLElement>('[data-CLan-title]').forEach(el => {
+        const key = el.getAttribute('data-CLan-title');
+        if (!key) return;
+        const t = CLan.Get(key, el.title);
+        if (t != null) el.title = t;
+    });
+}
+
+RegisterMemoLan();
+ApplyMemoLan();
 
 // ==================================================================================================================
 // 타입 - 서버(artgine/server/CMemo.ts)의 CategoryRecord/DataRecord와 형태를 맞춘다.
@@ -33,7 +165,7 @@ async function DoAuth(): Promise<void> {
     authSubmitBtn.disabled = true;
     authMsg.textContent = '';
     try {
-        const j = await CFecth.Exe("auth/login", { password: pw }, "json") as any;
+        const j = await CFecth.Exe("auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json") as any;
         if (j.ok) {
             authOverlay.style.display = 'none';
             await LoadProviders();
@@ -142,12 +274,13 @@ async function ApiExe(_path: string, _data: object | null, _returnType: "text" |
             // 원격 모드의 401은 로컬 로그인 오버레이가 아니라 File 매니저 쪽 인증 문제이므로 안내만 한다 -
             // 여기서 비밀번호를 받아도 로컬 서버에 로그인될 뿐 원격 토큰은 갱신되지 않는다.
             if (memoApiBaseUrl) {
-                CAlert.E('Not authenticated on the remote server. Authenticate it from the File Manager (Chat/Terminal/Memo) first.');
+                CAlert.E(L('memo.msg.remoteNotAuthed', 'Not authenticated on the remote server. Authenticate it from the File Manager (Chat/Terminal/Memo) first.'));
             } else {
                 authOverlay.style.display = 'flex';
             }
         } else {
-            CAlert.E(`Request failed (${status ?? 'network error'}): ${_path.split('?')[0]}`);
+            CAlert.E(L('memo.msg.requestFailed', 'Request failed ({status}): {path}')
+                .replace('{status}', String(status ?? 'network error')).replace('{path}', _path.split('?')[0]));
         }
         throw e;
     }
@@ -197,20 +330,21 @@ function OpenCatSidebar(): void {
 // 'set-remote'는 RDP/File 탭에서 원격지가 바뀔 때마다 Home.ts가 보내는 것 - 이후 모든 /Memo/* 호출을
 // 그 원격 서버로 돌린다(InjectRemote 참고). 로컬로 돌아오면 baseUrl이 빈 값으로 와서 다시 로컬로 리셋된다.
 // 사용자가 원격지를 전환하는 그 행위 자체가 명시적 액션이므로(폴더 입력처럼 Enter를 또 기다리지 않고) 바로 다시 로드한다.
-window.addEventListener('message', (ev: MessageEvent) => {
-    if (ev.data?.type === 'open-sidebar') OpenCatSidebar();
-    else if (ev.data?.type === 'set-folder') {
-        folderInputEl.value = String(ev.data.folder ?? '');
+CIframeMsg.Recv({
+    'open-sidebar': () => OpenCatSidebar(),
+    'set-folder': (data) => {
+        folderInputEl.value = String(data.folder ?? '');
         OpenCatSidebar();
         setTimeout(() => { folderInputEl.focus(); folderInputEl.select(); }, 50);
-    } else if (ev.data?.type === 'set-remote') {
-        memoApiBaseUrl = String(ev.data.baseUrl ?? '');
-        memoApiToken = String(ev.data.token ?? '');
+    },
+    'set-remote': (data) => {
+        memoApiBaseUrl = String(data.baseUrl ?? '');
+        memoApiToken = String(data.token ?? '');
         activeCatId = null;
         LoadCategories();
         LoadData();
         LoadRecentData();
-    }
+    },
 });
 
 function GetChildren(_parentId: number): CategoryRecord[] {
@@ -264,7 +398,7 @@ function RenderCatNode(_cat: CategoryRecord): string {
 function RenderTree(): void {
     const roots = GetChildren(0);
     if (roots.length === 0) {
-        catTreeEl.innerHTML = `<div class="cat-emptyhint text-body-secondary">No categories yet. Add one above.</div>`;
+        catTreeEl.innerHTML = `<div class="cat-emptyhint text-body-secondary">${EscapeHtml(L('memo.cat.emptyHint', 'No categories yet. Add one above.'))}</div>`;
         return;
     }
     catTreeEl.innerHTML = roots.map(RenderCatNode).join('');
@@ -353,14 +487,14 @@ function OpenAddCategoryModal(_defaultParentId: number): Promise<{ parentId: num
     return new Promise(resolve => {
         const selectId = 'addCatParentSelect_' + Math.random().toString(36).slice(2);
         const nameId = 'addCatNameInput_' + Math.random().toString(36).slice(2);
-        const optionsHtml = [`<option value="0">-- Root (no parent) --</option>`]
+        const optionsHtml = [`<option value="0">${EscapeHtml(L('memo.addCatModal.root', '-- Root (no parent) --'))}</option>`]
             .concat(BuildCategoryOptions().map(o => `<option value="${o.id}">${EscapeHtml(o.label)}</option>`))
             .join('');
         const c = new CConfirm();
         c.SetBody(`
-            <label class="form-label small mb-1">Parent category</label>
+            <label class="form-label small mb-1">${EscapeHtml(L('memo.addCatModal.parent', 'Parent category'))}</label>
             <select id="${selectId}" class="form-select form-select-sm mb-2">${optionsHtml}</select>
-            <label class="form-label small mb-1">Name</label>
+            <label class="form-label small mb-1">${EscapeHtml(L('memo.addCatModal.name', 'Name'))}</label>
             <input type="text" id="${nameId}" class="form-control form-control-sm">
         `);
         c.SetConfirm(CConfirm.eConfirm.YesNo, [
@@ -370,7 +504,7 @@ function OpenAddCategoryModal(_defaultParentId: number): Promise<{ parentId: num
                 resolve(name.length > 0 ? { parentId, name } : null);
             },
             () => resolve(null),
-        ], ['Add', 'Cancel']);
+        ], [L('memo.addCatModal.add', 'Add'), L('memo.common.cancel', 'Cancel')]);
         c.Open();
         setTimeout(() => {
             const sel = document.getElementById(selectId) as HTMLSelectElement | null;
@@ -384,7 +518,7 @@ async function AddCategoryUI(_defaultParentId: number): Promise<void> {
     const result = await OpenAddCategoryModal(_defaultParentId);
     if (!result) return;
     const j = await ApiExe("Memo/Category/Add", { name: result.name, parentId: result.parentId }, "json");
-    if (!j?.ok) { CAlert.E(j?.msg || 'Failed to add category'); return; }
+    if (!j?.ok) { CAlert.E(j?.msg || L('memo.msg.failAddCategory', 'Failed to add category')); return; }
     await LoadCategories();
     ExpandAncestors(result.parentId);
 }
@@ -406,8 +540,10 @@ function CollectDescendantIds(_id: number): number[] {
 function CategoryDeleteConfirmMsg(_cat: CategoryRecord): string {
     const descendantCount = CollectDescendantIds(_cat.id).length - 1;
     return descendantCount > 0
-        ? `"${_cat.name}" and its ${descendantCount} subcategor${descendantCount === 1 ? 'y' : 'ies'} (with all memos inside) will be deleted. Continue?`
-        : `Delete category "${_cat.name}"? (Memos inside will also be deleted)`;
+        ? L('memo.confirm.deleteCatMulti', `"{name}" and its {n} subcategory(ies) (with all memos inside) will be deleted. Continue?`)
+            .replace('{name}', _cat.name).replace('{n}', String(descendantCount))
+        : L('memo.confirm.deleteCatSingle', `Delete category "{name}"? (Memos inside will also be deleted)`)
+            .replace('{name}', _cat.name);
 }
 
 // 실제 카테고리 삭제 API 호출 + 화면 갱신. 사이드바 버튼과 Delete 모드 입력창이 공유한다.
@@ -428,7 +564,7 @@ async function DeleteCategoryUI(_id: number): Promise<void> {
     const cat = GetCategory(_id);
     if (!cat) return;
     if (!(await ConfirmModal(CategoryDeleteConfirmMsg(cat)))) return;
-    if (!(await PerformCategoryDelete(_id))) CAlert.E('Failed to delete category');
+    if (!(await PerformCategoryDelete(_id))) CAlert.E(L('memo.msg.failDeleteCategory', 'Failed to delete category'));
 }
 
 // 카테고리 이름 변경 - 이름을 바꾸면 서버가 새 이름으로 태그도 다시 뽑아 교체한다(CMemo.RenameCategory 참고).
@@ -437,11 +573,11 @@ async function RenameCategoryUI(_id: number): Promise<void> {
     const cat = GetCategory(_id);
     if (!cat) return;
 
-    const name = await PromptText(`Rename category "${cat.name}" to:`, cat.name);
+    const name = await PromptText(L('memo.prompt.renameCategory', `Rename category "{name}" to:`).replace('{name}', cat.name), cat.name);
     if (name == null || !name.trim() || name.trim() === cat.name) return;
 
     const j = await ApiExe("Memo/Category/Rename", { id: _id, name: name.trim() }, "json");
-    if (!j?.ok) { CAlert.E(j?.msg || 'Failed to rename category'); return; }
+    if (!j?.ok) { CAlert.E(j?.msg || L('memo.msg.failRenameCategory', 'Failed to rename category')); return; }
     await LoadCategories();
 }
 
@@ -488,7 +624,7 @@ function RenderTimeList(): void {
         ? recentDataCache.filter(item => item.content.toLowerCase().includes(timeSearchQuery))
         : recentDataCache;
     if (items.length === 0) {
-        timeListEl.innerHTML = `<div class="cat-emptyhint text-body-secondary">No memos yet.</div>`;
+        timeListEl.innerHTML = `<div class="cat-emptyhint text-body-secondary">${EscapeHtml(L('memo.time.empty', 'No memos yet.'))}</div>`;
         return;
     }
     timeListEl.innerHTML = items.map(item => {
@@ -572,6 +708,49 @@ async function LoadProviders(): Promise<void> {
 providerSelectEl.addEventListener('change', PopulateModelSelect);
 
 // ==================================================================================================================
+// 도움말 모달 - 단축키/명령어 설명(한글). CConfirm(OK 전용)으로 표시.
+// ==================================================================================================================
+const helpBtnEl = El<HTMLButtonElement>("helpBtn");
+
+const sHelpBodyDefaultEn = `
+        <div class="small">
+            <h6>Keyboard shortcuts</h6>
+            <ul class="mb-3">
+                <li><b>Tab</b> - Open/close the category/time sidebar</li>
+                <li><b>Enter</b> - Send in the input box (<b>Shift+Enter</b> for a newline)</li>
+                <li><b>F1~F4, F7</b> - Forwarded to the parent screen (Home)'s shortcuts</li>
+            </ul>
+            <h6>Message box commands</h6>
+            <p class="mb-1">Prefix the input with one of the following to force that mode for <b>this send only</b>, regardless of the mode dropdown above.</p>
+            <ul class="mb-3">
+                <li><code>/w &lt;text&gt;</code> - <b>Write</b>: save a memo (auto-classified by content if no category is selected)</li>
+                <li><code>/s &lt;question&gt;</code> or <code>/r &lt;question&gt;</code> - <b>Search</b>: AI search (scoped to the selected category, or all if none selected)</li>
+                <li><code>/d &lt;text&gt;</code> - <b>Delete</b>
+                    <ul>
+                        <li>Number only - deletes that single memo id (e.g. <code>/d 12</code>)</li>
+                        <li>Text containing a category name - deletes that category (+ subcategories + memos)</li>
+                        <li>Otherwise - AI finds matching memo candidates, then deletes after confirmation</li>
+                    </ul>
+                </li>
+                <li><code>/m &lt;memo id&gt;</code> - <b>Move</b>: move that memo into the currently selected category (e.g. <code>/m 2</code> or <code>/m @2</code>). Select the destination category first</li>
+            </ul>
+            <p class="mb-0 text-body-secondary">Sending without a prefix uses the <b>mode dropdown</b> above (Write/Search/Delete/Move). Typing w/s/r/d/m with Korean IME on still works - the same-position Jamo is recognized.</p>
+        </div>
+    `;
+
+function ShowHelpModal(): void {
+    const c = new CConfirm();
+    c.SetHeader(`<i class="bi bi-question-circle me-1"></i>${L('memo.help.title', 'Help')}`);
+    c.SetTitle(CModal.eTitle.Text);
+    c.SetBody(L('memo.help.body', sHelpBodyDefaultEn));
+    c.SetSize('520px', '70%');
+    c.SetConfirm(CConfirm.eConfirm.OK, [() => {}], [L('memo.help.close', 'Close')]);
+    c.Open();
+}
+
+helpBtnEl.addEventListener('click', ShowHelpModal);
+
+// ==================================================================================================================
 // 채팅 로그(센터) - 선택된 카테고리의 메모를 대화 로그처럼 표시. 검색 시 AI 답변도 말풍선으로 추가된다.
 // ==================================================================================================================
 const memoLogEl = El("memo-log");
@@ -643,14 +822,14 @@ function UnpendUserBubble(_wrap: HTMLElement): void {
 
 async function LoadData(): Promise<void> {
     if (activeCatId == null) {
-        RenderEmptyLog('No category selected. Select one to write, or use Search/Delete to work across all categories.', 'bi-signpost-split');
+        RenderEmptyLog(L('memo.empty.noCategory', 'No category selected. Select one to write, or use Search/Delete to work across all categories.'), 'bi-signpost-split');
         return;
     }
     const j = await ApiExe("Memo/Data/List?categoryId=" + activeCatId, null, "json");
     if (!j?.ok) return;
     const items = (j.data as DataRecord[]).slice().reverse(); // 최신순 응답을 오래된순으로 뒤집어 대화 흐름처럼 표시
     if (items.length === 0) {
-        RenderEmptyLog('Write a memo to get started.', 'bi-journal-text');
+        RenderEmptyLog(L('memo.empty.writeHint', 'Write a memo to get started.'), 'bi-journal-text');
         return;
     }
     memoLogEl.innerHTML = '';
@@ -659,9 +838,9 @@ async function LoadData(): Promise<void> {
 }
 
 async function DeleteDataUI(_id: number): Promise<void> {
-    if (!(await ConfirmModal('Delete this memo?'))) return;
+    if (!(await ConfirmModal(L('memo.confirm.deleteData', 'Delete this memo?')))) return;
     const j = await ApiExe("Memo/Data/Delete", { id: _id }, "json");
-    if (!j?.ok) { CAlert.E(j?.msg || 'Failed to delete memo'); return; }
+    if (!j?.ok) { CAlert.E(j?.msg || L('memo.msg.failDeleteMemo', 'Failed to delete memo')); return; }
     await LoadData();
     await LoadRecentData();
 }
@@ -720,7 +899,7 @@ async function ComposerSend(): Promise<void> {
             // categoryId를 생략(null)하면 서버가 내용으로 태그를 뽑아 그 태그를 가진 카테고리에 저장하고,
             // 없으면 그 태그 이름으로 카테고리를 새로 만들어 저장한다(CMemo.AddDataAuto 참고).
             const j = await ApiExe("Memo/Data/Add", { categoryId: activeCatId, text, provider, model }, "json");
-            if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Failed to save'); return; }
+            if (!j?.ok) { AppendChatBubble('system', j?.msg || L('memo.msg.failSave', 'Failed to save')); return; }
             if (pendingEl) { pendingEl.remove(); pendingEl = null; }
             if (activeCatId == null) {
                 await LoadCategories();
@@ -733,7 +912,7 @@ async function ComposerSend(): Promise<void> {
             const userBubble = AppendChatBubble('user', text, true);
             const j = await ApiExe("Memo/Search", { text, categoryId: activeCatId, provider, model }, "json");
             UnpendUserBubble(userBubble);
-            if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Search failed'); return; }
+            if (!j?.ok) { AppendChatBubble('system', j?.msg || L('memo.msg.searchFailed', 'Search failed')); return; }
             AppendChatBubble('ai', j.result);
         } else if (mode === 'move') {
             await ComposerMove(text);
@@ -741,7 +920,7 @@ async function ComposerSend(): Promise<void> {
             await ComposerDelete(text, provider, model);
         }
     } catch (e) {
-        AppendChatBubble('system', 'Network error');
+        AppendChatBubble('system', L('memo.msg.networkError', 'Network error'));
     } finally {
         submitBtn.disabled = false;
     }
@@ -754,23 +933,24 @@ async function ComposerMove(_text: string): Promise<void> {
     AppendChatBubble('user', _text);
 
     if (activeCatId == null) {
-        AppendChatBubble('system', 'No category selected - select the destination category first, then use /m @<memo id>.');
+        AppendChatBubble('system', L('memo.msg.moveNoCategory', 'No category selected - select the destination category first, then use /m @<memo id>.'));
         return;
     }
 
     const m = _text.trim().match(/^@?(\d+)$/);
     if (!m) {
-        AppendChatBubble('system', 'Usage: /m <memo id> (e.g. /m 2 or @2)');
+        AppendChatBubble('system', L('memo.msg.moveUsage', 'Usage: /m <memo id> (e.g. /m 2 or @2)'));
         return;
     }
     const dataId = Number(m[1]);
 
     const j = await ApiExe("Memo/Data/Move", { id: dataId, categoryId: activeCatId }, "json");
-    if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Failed to move memo'); return; }
+    if (!j?.ok) { AppendChatBubble('system', j?.msg || L('memo.msg.failMoveMemo', 'Failed to move memo')); return; }
 
     await LoadData();
     await LoadRecentData();
-    AppendChatBubble('system', `Moved memo @${dataId} into "${GetCategory(activeCatId)?.name ?? activeCatId}".`);
+    AppendChatBubble('system', L('memo.msg.movedMemo', `Moved memo @{id} into "{name}".`)
+        .replace('{id}', String(dataId)).replace('{name}', String(GetCategory(activeCatId)?.name ?? activeCatId)));
 }
 
 // 숫자만 입력하면 그 id 하나만 바로 삭제, 텍스트에 카테고리 이름이 포함되면 카테고리(+하위+메모)를
@@ -781,10 +961,10 @@ async function ComposerDelete(_text: string, _provider: string | undefined, _mod
 
     if (/^\d+$/.test(_text)) {
         const id = Number(_text);
-        if (!(await ConfirmModal(`Delete memo @${id}?`))) { AppendChatBubble('system', 'Cancelled.'); return; }
+        if (!(await ConfirmModal(L('memo.confirm.deleteDataId', 'Delete memo @{id}?').replace('{id}', String(id))))) { AppendChatBubble('system', L('memo.msg.cancelled', 'Cancelled.')); return; }
         const j = await ApiExe("Memo/Data/Delete", { id }, "json");
-        if (!j?.ok) { AppendChatBubble('system', j?.msg || 'Failed to delete'); return; }
-        AppendChatBubble('system', `Deleted memo @${id}.`);
+        if (!j?.ok) { AppendChatBubble('system', j?.msg || L('memo.msg.failDeleteMemo', 'Failed to delete')); return; }
+        AppendChatBubble('system', L('memo.msg.deletedMemo', 'Deleted memo @{id}.').replace('{id}', String(id)));
         await LoadData();
         await LoadRecentData();
         return;
@@ -793,26 +973,30 @@ async function ComposerDelete(_text: string, _provider: string | undefined, _mod
     const catMatches = FindCategoryMatches(_text);
     if (catMatches.length > 0) {
         const cat = catMatches[0];
-        if (!(await ConfirmModal(CategoryDeleteConfirmMsg(cat)))) { AppendChatBubble('system', 'Cancelled.'); return; }
+        if (!(await ConfirmModal(CategoryDeleteConfirmMsg(cat)))) { AppendChatBubble('system', L('memo.msg.cancelled', 'Cancelled.')); return; }
         const ok = await PerformCategoryDelete(cat.id);
-        AppendChatBubble('system', ok ? `Deleted category "${cat.name}".` : 'Failed to delete category.');
+        AppendChatBubble('system', ok
+            ? L('memo.msg.deletedCategory', `Deleted category "{name}".`).replace('{name}', cat.name)
+            : L('memo.msg.failDeleteCategoryDone', 'Failed to delete category.'));
         return;
     }
 
     const found = await ApiExe("Memo/Data/FindByDescription", { text: _text, categoryId: activeCatId, provider: _provider, model: _model }, "json");
-    if (!found?.ok) { AppendChatBubble('system', found?.msg || 'Search failed'); return; }
+    if (!found?.ok) { AppendChatBubble('system', found?.msg || L('memo.msg.searchFailed', 'Search failed')); return; }
     const candidates = found.data as DataRecord[];
-    if (candidates.length === 0) { AppendChatBubble('system', 'No matching memos found.'); return; }
+    if (candidates.length === 0) { AppendChatBubble('system', L('memo.msg.noMatchingMemos', 'No matching memos found.')); return; }
 
     const preview = candidates.map(c => `@${c.id} ${c.content.slice(0, 40)}${c.content.length > 40 ? '...' : ''}`).join('\n');
-    if (!(await ConfirmModal(`Delete ${candidates.length} matching memo(s)?\n\n${preview}`))) { AppendChatBubble('system', 'Cancelled.'); return; }
+    if (!(await ConfirmModal(L('memo.confirm.deleteCandidates', 'Delete {n} matching memo(s)?\n\n{preview}')
+        .replace('{n}', String(candidates.length)).replace('{preview}', preview)))) { AppendChatBubble('system', L('memo.msg.cancelled', 'Cancelled.')); return; }
 
     let deletedCount = 0;
     for (const c of candidates) {
         const j = await ApiExe("Memo/Data/Delete", { id: c.id }, "json");
         if (j?.ok) deletedCount++;
     }
-    AppendChatBubble('system', `Deleted ${deletedCount} of ${candidates.length} matching memo(s).`);
+    AppendChatBubble('system', L('memo.msg.deletedCandidates', 'Deleted {n} of {total} matching memo(s).')
+        .replace('{n}', String(deletedCount)).replace('{total}', String(candidates.length)));
     await LoadData();
     await LoadRecentData();
 }
@@ -845,7 +1029,7 @@ document.addEventListener('keydown', (ev: KeyboardEvent) => {
     }
     if (ev.key === 'F1' || ev.key === 'F2' || ev.key === 'F3' || ev.key === 'F4' || ev.key === 'F7') {
         ev.preventDefault();
-        window.top?.postMessage({ type: 'home-hotkey', key: ev.key }, '*');
+        if (window.top) CIframeMsg.Send(window.top, 'home-hotkey', { key: ev.key });
         return;
     }
 });
@@ -860,7 +1044,7 @@ function EscapeHtml(_s: string): string {
 }
 
 // 네이티브 confirm() 대신 아티젠이 제공하는 CConfirm(Yes/No 모달)을 쓴다.
-function ConfirmModal(_text: string, _yesText = 'Yes', _noText = 'No'): Promise<boolean> {
+function ConfirmModal(_text: string, _yesText = L('memo.common.yes', 'Yes'), _noText = L('memo.common.no', 'No')): Promise<boolean> {
     return new Promise(resolve => {
         const c = new CConfirm();
         c.SetBody(EscapeHtml(_text).replace(/\n/g, '<br>'));
@@ -882,7 +1066,7 @@ function PromptText(_label: string, _defaultValue = ''): Promise<string | null> 
         c.SetConfirm(CConfirm.eConfirm.YesNo, [
             () => resolve((document.getElementById(inputId) as HTMLInputElement | null)?.value ?? null),
             () => resolve(null),
-        ], ['OK', 'Cancel']);
+        ], [L('memo.common.ok', 'OK'), L('memo.common.cancel', 'Cancel')]);
         c.Open();
         setTimeout(() => {
             const el = document.getElementById(inputId) as HTMLInputElement | null;

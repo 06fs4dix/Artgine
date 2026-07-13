@@ -1,1 +1,209 @@
-var t,e=this&&this.__decorate||function(t,e,o,r){var n,s=arguments.length,i=s<3?e:null===r?r=Object.getOwnPropertyDescriptor(e,o):r;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)i=Reflect.decorate(t,e,o,r);else for(var a=t.length-1;a>=0;a--)(n=t[a])&&(i=(s<3?n(i):s>3?n(e,o,i):n(e,o))||i);return s>3&&i&&Object.defineProperty(e,o,i),i};import{URLPatterns as o}from"../network/CServerMain.js";import{CAuthServer as r,isAuthedReq as n,isValidToken as s}from"./CAuthServer.js";import{spawnSync as i}from"child_process";import*as a from"path";import*as l from"fs";import{CAI as c}from"../util/CAI.js";import{CPath as u}from"../basic/CPath.js";const d=a.join(c.AIDir(),"settings.json"),p=Object.values(c.eProvider).filter(t=>t!==c.eProvider.manus&&t!==c.eProvider.gpt);let m=t=class extends r{IsAuth(t,e){const o=t.GetStr("token");return o?s(o):n(e)}constructor(){super(),this.On("/AIInfo/setting",this.onGetSettingJSON.bind(this)),this.On("/AIInfo/provider-state",this.onProviderState.bind(this)),this.On("/AIInfo/push-opencode-model",this.onPushOpencodeModel.bind(this))}Connect(){super.Connect(),this._connectImpl()}_connectImpl(){}async onGetSettingJSON(t,e,o){try{o.json(JSON.parse(l.readFileSync(d,"utf8")))}catch{o.json({})}return null}async onProviderState(t,e,o){const r=await Promise.all(p.map(async t=>{const[e,o]=await Promise.all([c.ProviderInfo(t),c.ProviderUsage(t)]);return t===c.eProvider.opencode&&e.authenticated&&o.fiveHour<0&&o.weekly<0?{...e,usage:{fiveHour:1,weekly:1}}:{...e,usage:o}})),n=i("node",["--version"],{encoding:"utf8",windowsHide:!0}),s=0===n.status&&!n.error,a={installed:s,version:s?(n.stdout||"").trim().replace(/^v/,""):""};return o.json({node:a,providers:r}),null}static _normalizeHost(t){let e=(t||"").trim();if(!e)throw new Error("host is required");/^https?:\/\//i.test(e)||(e="http://"+e);const o=new URL(e),r=o.host,n=`${o.protocol}//${r}`;return{root:n,baseURL:`${n}/v1`,host:r}}static _authHeaders(t){return t?{Authorization:`Bearer ${t}`}:{}}static async _tryOllama(e,o){try{const r=t._authHeaders(o),n=await fetch(`${e}/api/tags`,{headers:r,signal:AbortSignal.timeout(8e3)});if(!n.ok)return null;const s=await n.json(),i=Array.isArray(s?.models)?s.models.map(t=>t?.name).filter(t=>"string"==typeof t):[];return i.length?await Promise.all(i.map(async t=>{let o=!1;try{const n=await fetch(`${e}/api/show`,{method:"POST",headers:{"content-type":"application/json",...r},body:JSON.stringify({name:t}),signal:AbortSignal.timeout(8e3)});if(n.ok){const t=await n.json();o=Array.isArray(t?.capabilities)&&t.capabilities.includes("tools")}}catch{}return{name:t,tools:o}})):null}catch{return null}}static async _tryOpenAIModels(e,o){try{const r=await fetch(`${e}/v1/models`,{headers:t._authHeaders(o),signal:AbortSignal.timeout(8e3)});if(!r.ok)return null;const n=await r.json(),s=Array.isArray(n?.data)?n.data.map(t=>t?.id).filter(t=>"string"==typeof t):[];return s.length?s.map(t=>({name:t,tools:!0})):null}catch{return null}}async onPushOpencodeModel(e,o,r){if(!this.IsAuth(e,o))return r.status(401).json({ok:!1,msg:"Authentication required"}),null;const n=(e.GetStr("host")||e.GetStr("url")||"").trim(),s=(e.GetStr("apiKey")||"").trim()||void 0;if(!n)return r.status(400).json({ok:!1,msg:"host required"}),null;try{const{root:e,baseURL:o,host:i}=t._normalizeHost(n);let d="ollama",p=await t._tryOllama(e,s);if(p||(d="lmstudio",p=await t._tryOpenAIModels(e,s)),!p)throw new Error(`no models found at ${e} (tried Ollama /api/tags and LM Studio /v1/models)`);const m=`${d}-`+i.replace(/[^a-zA-Z0-9]/g,"_"),h="ollama"===d?`Ollama (${i})`:`LM Studio (${i})`,f=u.WorkingPath(),y=a.join(f,"opencode.json");l.existsSync(y)||(c.CreateRole(c.eProvider.opencode),l.existsSync(y)||l.writeFileSync(y,JSON.stringify({$schema:"https://opencode.ai/config.json",permission:{"*":"ask",read:"allow"}},null,2),"utf8"));let g={};try{g=JSON.parse(l.readFileSync(y,"utf8"))}catch{g={}}g&&"object"==typeof g||(g={}),g.provider&&"object"==typeof g.provider||(g.provider={});const v={};for(const t of p)v[t.name]={name:t.name,tools:t.tools};g.provider[m]={npm:"@ai-sdk/openai-compatible",name:h,options:s?{baseURL:o,apiKey:s,timeout:3e6,chunkTimeout:3e6}:{baseURL:o,timeout:3e6,chunkTimeout:3e6},models:v},l.writeFileSync(y,JSON.stringify(g,null,2),"utf8"),r.json({ok:!0,provider:m,backend:d,baseURL:o,path:y,models:p})}catch(t){r.status(500).json({ok:!1,msg:String(t?.message??t)})}return null}};m=t=e([o(["/AIInfo/setting","/AIInfo/provider-state","/AIInfo/push-opencode-model"])],m);export{m as CAIInfoRouter};
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var CAIInfoRouter_1;
+import { URLPatterns } from '../network/CServerMain.js';
+import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
+import { spawnSync } from 'child_process';
+import * as path from 'path';
+import * as fs from 'fs';
+import { CAI } from '../util/CAI.js';
+import { CPath } from '../basic/CPath.js';
+const SETTINGS_FILE = path.join(CAI.AIDir(), 'settings.json');
+const _PROVIDER_STATE_LIST = Object.values(CAI.eProvider).filter(p => p !== CAI.eProvider.manus && p !== CAI.eProvider.gpt);
+const CLAUDE_WARMUP_COOLDOWN_MS = 5 * 60 * 1000;
+let _lastClaudeWarmupAt = 0;
+const AGY_USAGE_CACHE_TTL_MS = 5 * 60 * 1000;
+let _agyUsageCache = null;
+async function _getAgyUsageCached() {
+    if (_agyUsageCache && Date.now() - _agyUsageCache.at < AGY_USAGE_CACHE_TTL_MS)
+        return _agyUsageCache.value;
+    const value = await CAI.ProviderUsage(CAI.eProvider.antigravity);
+    _agyUsageCache = { at: Date.now(), value };
+    return value;
+}
+let CAIInfoRouter = CAIInfoRouter_1 = class CAIInfoRouter extends CAuthServer {
+    IsAuth(_json, req) {
+        const token = _json.GetStr('token');
+        return token ? isValidToken(token) : isAuthedReq(req);
+    }
+    constructor() {
+        super();
+        this.On("/AIInfo/setting", this.onGetSettingJSON.bind(this));
+        this.On("/AIInfo/provider-state", this.onProviderState.bind(this));
+        this.On("/AIInfo/push-opencode-model", this.onPushOpencodeModel.bind(this));
+    }
+    Connect() { super.Connect(); this._connectImpl(); }
+    _connectImpl() { }
+    async onGetSettingJSON(_json, _req, _res) {
+        try {
+            _res.json(JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')));
+        }
+        catch {
+            _res.json({});
+        }
+        return null;
+    }
+    async onProviderState(_json, _req, _res) {
+        const list = await Promise.all(_PROVIDER_STATE_LIST.map(async (p) => {
+            const info = await CAI.ProviderInfo(p);
+            const usage = (p === CAI.eProvider.antigravity && info.installed && info.authenticated)
+                ? await _getAgyUsageCached()
+                : await CAI.ProviderUsage(p);
+            if (p === CAI.eProvider.opencode && info.authenticated && usage.fiveHour < 0 && usage.weekly < 0) {
+                return { ...info, usage: { fiveHour: 1, weekly: 1 } };
+            }
+            if (p === CAI.eProvider.claude && info.installed && info.authenticated
+                && usage.fiveHour < 0 && usage.weekly < 0
+                && Date.now() - _lastClaudeWarmupAt > CLAUDE_WARMUP_COOLDOWN_MS) {
+                _lastClaudeWarmupAt = Date.now();
+                try {
+                    const model = info.models[0]?.value ?? '';
+                    await CAI.Chat(p, model, process.cwd(), 'hi', false);
+                    const retried = await CAI.ProviderUsage(p);
+                    return { ...info, usage: retried };
+                }
+                catch { }
+            }
+            return { ...info, usage };
+        }));
+        const _nodeCheck = spawnSync('node', ['--version'], { encoding: 'utf8', windowsHide: true });
+        const _nodeOk = _nodeCheck.status === 0 && !_nodeCheck.error;
+        const node = { installed: _nodeOk, version: _nodeOk ? (_nodeCheck.stdout || '').trim().replace(/^v/, '') : '' };
+        _res.json({ node, providers: list });
+        return null;
+    }
+    static _normalizeHost(raw) {
+        let s = (raw || '').trim();
+        if (!s)
+            throw new Error('host is required');
+        if (!/^https?:\/\//i.test(s))
+            s = 'http://' + s;
+        const u = new URL(s);
+        const host = u.host;
+        const root = `${u.protocol}//${host}`;
+        return { root, baseURL: `${root}/v1`, host };
+    }
+    static _authHeaders(apiKey) {
+        return apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+    }
+    static async _tryOllama(root, apiKey) {
+        try {
+            const authHeaders = CAIInfoRouter_1._authHeaders(apiKey);
+            const tagsRes = await fetch(`${root}/api/tags`, { headers: authHeaders, signal: AbortSignal.timeout(8000) });
+            if (!tagsRes.ok)
+                return null;
+            const tagsJson = await tagsRes.json();
+            const names = Array.isArray(tagsJson?.models)
+                ? tagsJson.models.map((m) => m?.name).filter((n) => typeof n === 'string')
+                : [];
+            if (!names.length)
+                return null;
+            return await Promise.all(names.map(async (name) => {
+                let tools = false;
+                try {
+                    const showRes = await fetch(`${root}/api/show`, {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json', ...authHeaders },
+                        body: JSON.stringify({ name }),
+                        signal: AbortSignal.timeout(8000),
+                    });
+                    if (showRes.ok) {
+                        const showJson = await showRes.json();
+                        tools = Array.isArray(showJson?.capabilities) && showJson.capabilities.includes('tools');
+                    }
+                }
+                catch { }
+                return { name, tools };
+            }));
+        }
+        catch {
+            return null;
+        }
+    }
+    static async _tryOpenAIModels(root, apiKey) {
+        try {
+            const res = await fetch(`${root}/v1/models`, { headers: CAIInfoRouter_1._authHeaders(apiKey), signal: AbortSignal.timeout(8000) });
+            if (!res.ok)
+                return null;
+            const json = await res.json();
+            const names = Array.isArray(json?.data)
+                ? json.data.map((m) => m?.id).filter((n) => typeof n === 'string')
+                : [];
+            if (!names.length)
+                return null;
+            return names.map(name => ({ name, tools: true }));
+        }
+        catch {
+            return null;
+        }
+    }
+    async onPushOpencodeModel(_json, _req, _res) {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(401).json({ ok: false, msg: 'Authentication required' });
+            return null;
+        }
+        const raw = (_json.GetStr('host') || _json.GetStr('url') || '').trim();
+        const apiKey = (_json.GetStr('apiKey') || '').trim() || undefined;
+        if (!raw) {
+            _res.status(400).json({ ok: false, msg: 'host required' });
+            return null;
+        }
+        try {
+            const { root, baseURL, host } = CAIInfoRouter_1._normalizeHost(raw);
+            let backend = 'ollama';
+            let models = await CAIInfoRouter_1._tryOllama(root, apiKey);
+            if (!models) {
+                backend = 'lmstudio';
+                models = await CAIInfoRouter_1._tryOpenAIModels(root, apiKey);
+            }
+            if (!models)
+                throw new Error(`no models found at ${root} (tried Ollama /api/tags and LM Studio /v1/models)`);
+            const key = `${backend}-` + host.replace(/[^a-zA-Z0-9]/g, '_');
+            const label = backend === 'ollama' ? `Ollama (${host})` : `LM Studio (${host})`;
+            const destDir = CPath.WorkingPath();
+            const ocPath = path.join(destDir, 'opencode.json');
+            if (!fs.existsSync(ocPath)) {
+                CAI.CreateRole(CAI.eProvider.opencode);
+                if (!fs.existsSync(ocPath)) {
+                    fs.writeFileSync(ocPath, JSON.stringify({ '$schema': 'https://opencode.ai/config.json', permission: { '*': 'ask', read: 'allow' } }, null, 2), 'utf8');
+                }
+            }
+            let config = {};
+            try {
+                config = JSON.parse(fs.readFileSync(ocPath, 'utf8'));
+            }
+            catch {
+                config = {};
+            }
+            if (!config || typeof config !== 'object')
+                config = {};
+            if (!config.provider || typeof config.provider !== 'object')
+                config.provider = {};
+            const modelMap = {};
+            for (const m of models)
+                modelMap[m.name] = { name: m.name, tools: m.tools };
+            config.provider[key] = {
+                npm: '@ai-sdk/openai-compatible',
+                name: label,
+                options: apiKey
+                    ? { baseURL, apiKey, timeout: 3000000, chunkTimeout: 3000000 }
+                    : { baseURL, timeout: 3000000, chunkTimeout: 3000000 },
+                models: modelMap,
+            };
+            fs.writeFileSync(ocPath, JSON.stringify(config, null, 2), 'utf8');
+            _res.json({ ok: true, provider: key, backend, baseURL, path: ocPath, models });
+        }
+        catch (e) {
+            _res.status(500).json({ ok: false, msg: String(e?.message ?? e) });
+        }
+        return null;
+    }
+};
+CAIInfoRouter = CAIInfoRouter_1 = __decorate([
+    URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/push-opencode-model"])
+], CAIInfoRouter);
+export { CAIInfoRouter };

@@ -15,3 +15,32 @@ if (await gWebServer.Init()) {
 }
 console.log(`\nServerStart`);
 console.log(`http://localhost:${port}${pathname}\n`);
+let gShutdownStarted = false;
+function ShutdownOnParentGone(_reason) {
+    if (gShutdownStarted)
+        return;
+    gShutdownStarted = true;
+    clearInterval(gParentWatchdog);
+    console.log(`\nParent process gone (${_reason}) — shutting down.`);
+    try {
+        gWebServer.Destroy();
+    }
+    catch { }
+    process.exit(0);
+}
+process.stdin.on('end', () => ShutdownOnParentGone('stdin end'));
+process.stdin.on('close', () => ShutdownOnParentGone('stdin close'));
+process.stdin.resume();
+const gParentPid = process.ppid;
+const gParentWatchdog = setInterval(() => {
+    let parentAlive = true;
+    try {
+        process.kill(gParentPid, 0);
+    }
+    catch {
+        parentAlive = false;
+    }
+    if (parentAlive)
+        return;
+    ShutdownOnParentGone(`ppid ${gParentPid} not found`);
+}, 2000);

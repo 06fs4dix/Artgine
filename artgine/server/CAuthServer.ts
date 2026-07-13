@@ -4,6 +4,7 @@ import { CServerRouter } from '../network/CServerRouter.js';
 import { Request, Response } from 'express';
 import { GetAppJSON } from '../../desktop/MainFunc.js';
 import { randomBytes } from 'crypto';
+import { CHash } from '../basic/CHash.js';
 
 const BRUTE_MAX     = 5;
 const BRUTE_LOCK_MS = 5 * 60 * 1000;
@@ -138,7 +139,9 @@ export async function handleAuth(ip: string, password: string): Promise<{ ok: bo
 
     const config = await GetAppJSON();
     const now = Date.now();
-    if (password === (config.password ?? '')) {
+    const stored = config.password ?? '';
+    const storedHash = stored.length >= 64 ? stored : CHash.SHA256('artgine_' + stored);
+    if (password === storedHash) {
         clearAuthFail(ip);
         const token = genToken();
         gAuthedTokens.set(token, now + TOKEN_TTL_MS);

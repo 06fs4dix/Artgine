@@ -104,10 +104,18 @@ async function isInsideAnyRoot(targetPath: string): Promise<boolean> {
     return roots.some(r => isInsideRoot(r, targetPath));
 }
 
-async function validateRoot(rootParam: string | undefined): Promise<string | null> {
-    const roots = GetRootPaths(await GetAppJSON());
-    if (!rootParam) return roots[0];
-    const match = roots.find(r => resolveAbs(r) === resolveAbs(rootParam));
+// RootUrl은 RootPath에 대응하는 파생값(roots 배열 인덱스로 결정)이라 클라이언트가 보낸 값을
+// 신뢰하지 않고 여기서 직접 계산한다.
+async function getRoots(): Promise<{ path: string, url: string, name: string }[]> {
+    const _cfg = await GetAppJSON();
+    const serverPath = new URL(_cfg.url).pathname.replace(/\/+$/, '') || '/Artgine';
+    return GetRootPaths(_cfg).map((p, i) => ({ path: resolveAbs(p), url: serverPath + '/Root' + i, name: p }));
+}
+
+async function validateRoot(rootParam: string | undefined): Promise<{ path: string, url: string } | null> {
+    const roots = await getRoots();
+    if (!rootParam) return roots[0] ?? null;
+    const match = roots.find(r => resolveAbs(r.path) === resolveAbs(rootParam));
     return match ?? null;
 }
 
@@ -145,13 +153,8 @@ export class CFileServer extends CAuthServer
     }
 
     async onRoot(_json: CJSON, _req: Request, _res: Response): Promise<string> {
-        const _cfg = await GetAppJSON();
-        const serverPath = new URL(_cfg.url).pathname.replace(/\/+$/, '') || '/Artgine';
-        const roots = GetRootPaths(_cfg).map((p, i) => ({ path: p, url: serverPath + '/Root' + i, name: p }));
-        const requestedRootPath = _json.GetStr("RootPath");
-        const requestedRootUrl = _json.GetStr("RootUrl");
-        const root = (!requestedRootPath && !requestedRootUrl) ? roots[0]
-            : roots.find(r => (requestedRootPath && resolveAbs(r.path) === resolveAbs(requestedRootPath)) || r.url === requestedRootUrl) ?? roots[0];
+        const roots = await getRoots();
+        const root = await validateRoot(_json.GetStr("RootPath")) ?? roots[0];
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
         return JSON.stringify({
             RootPath: fix(root.path),
@@ -168,10 +171,11 @@ export class CFileServer extends CAuthServer
         let option = body["option"];
 
         let rootParam = body["RootPath"];
-        let downParam = body["RootUrl"];
         let extraQ = "";
-        if(rootParam) extraQ += `&RootPath=${encodeURIComponent(rootParam)}`;
-        if(downParam) extraQ += `&RootUrl=${encodeURIComponent(downParam)}`;
+        if (rootParam) {
+            const root = await validateRoot(rootParam);
+            if (root) extraQ += `&RootPath=${encodeURIComponent(rootParam)}&RootUrl=${encodeURIComponent(root.url)}`;
+        }
 
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
 
@@ -181,11 +185,12 @@ export class CFileServer extends CAuthServer
                 return JSON.stringify({ ok: false, msg: "Unauthorized" });
             }
 
-            const currentRootPath = await validateRoot(rootParam);
-            if (currentRootPath === null) {
+            const currentRoot = await validateRoot(rootParam);
+            if (currentRoot === null) {
                 _res.status(403);
                 return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
             }
+            const currentRootPath = currentRoot.path;
 
             if (fun?.includes("CreateFolder")) {
                 const targetPath = fix(currentRootPath + data);
@@ -219,12 +224,13 @@ export class CFileServer extends CAuthServer
 
     async onList(_json: CJSON, _req: Request, _res: Response): Promise<string> {
         let path = _json.GetStr("path") || "/";
-        const currentRootPath = await validateRoot(_json.GetStr("RootPath"));
-        if (currentRootPath === null) {
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
         }
-        let currentDown = _json.GetStr("RootUrl");
+        const currentRootPath = currentRoot.path;
+        const currentDown = currentRoot.url;
 
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
         const targetPath = fix(currentRootPath + path);
@@ -245,6 +251,11 @@ export class CFileServer extends CAuthServer
         const vcsMap = await getVcsStatus(targetPath);
         if (vcsMap.size > 0) list = applyVcsStatus(list, vcsMap);
 
+        list = list.slice().sort((a, b) => {
+            if (a.file !== b.file) return a.file ? 1 : -1;
+            return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        });
+
         return JSON.stringify({ RootPath: fix(currentRootPath), list, path, RootUrl: currentDown });
     }
 
@@ -254,11 +265,12 @@ export class CFileServer extends CAuthServer
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
-        const currentRootPath = await validateRoot(_json.GetStr("RootPath"));
-        if (currentRootPath === null) {
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
         }
+        const currentRootPath = currentRoot.path;
         const data = _json.GetStr("data");
         const targetPath = fix(currentRootPath + data);
         if (!isInsideRoot(currentRootPath, targetPath)) {
@@ -275,11 +287,12 @@ export class CFileServer extends CAuthServer
             return JSON.stringify({ ok: false, msg: "Unauthorized" });
         }
         const fix = (_str: string) => _str.replace(/\\/g, "/").replace(/\/+/g, "/");
-        const currentRootPath = await validateRoot(_json.GetStr("RootPath"));
-        if (currentRootPath === null) {
+        const currentRoot = await validateRoot(_json.GetStr("RootPath"));
+        if (currentRoot === null) {
             _res.status(403);
             return JSON.stringify({ ok: false, msg: "Invalid RootPath" });
         }
+        const currentRootPath = currentRoot.path;
         const data = _json.GetStr("data");
         const fullPath = fix(currentRootPath + data);
         if (!isInsideRoot(currentRootPath, fullPath)) {

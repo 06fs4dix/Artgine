@@ -1,0 +1,2412 @@
+import "../../artgine/artgine.js";
+import { CClass } from "../../artgine/basic/CClass.js";
+import { MountDownloadTab } from "./Downloads/DownloadTab.js";
+CClass.Push(MountDownloadTab);
+import { CPreferences } from "../../artgine/basic/CPreferences.js";
+var gPF = new CPreferences();
+gPF.mTargetWidth = 0;
+gPF.mTargetHeight = 0;
+gPF.mRenderer = "Null";
+gPF.m32fDepth = false;
+gPF.mTexture16f = false;
+gPF.mAnti = true;
+gPF.mBatchPool = true;
+gPF.mXR = false;
+gPF.mDeveloper = true;
+gPF.mIAuto = true;
+gPF.mWASM = false;
+gPF.mCanvas = "";
+gPF.mServer = 'webServer';
+gPF.mGitHub = false;
+gPF.mVersion = "mre9w8y1_7";
+import { CAtelier } from "../../artgine/app/CAtelier.js";
+var gAtl = new CAtelier();
+gAtl.mPF = gPF;
+await gAtl.Init([], "");
+import { CDOM } from "../../artgine/basic/CDOM.js";
+import { CPath } from "../../artgine/basic/CPath.js";
+import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
+import { CFileViewer } from "../../artgine/util/CModalUtil.js";
+import { CAlert } from "../../artgine/basic/CAlert.js";
+import { CFecth } from "../../artgine/network/CFecth.js";
+import { CHash } from "../../artgine/basic/CHash.js";
+import { getAuthToken, setAuthToken } from "../../artgine/server/CAuthToken.js";
+import { CIframeMsg } from "../../artgine/server/html/CIframeMsg.js";
+import { CModalStackMsg } from "../../artgine/util/CModalUtil.js";
+import { CUtilWeb } from "../../artgine/util/CUtilWeb.js";
+import { Bootstrap } from "../../artgine/basic/Bootstrap.js";
+import { CLan } from "../../artgine/basic/CLan.js";
+const appSidebar = document.getElementById('app-sidebar');
+const sidebarToggleBtnWrap = document.getElementById('sidebarToggleBtnWrap');
+const mainContainer = document.querySelector('.container');
+const SIDEBAR_WIDTH = 310;
+function updateSidebarMode() {
+    if (!appSidebar || !mainContainer)
+        return;
+    const margin = mainContainer.getBoundingClientRect().left;
+    const docked = margin >= SIDEBAR_WIDTH;
+    appSidebar.classList.toggle('sidebar-docked', docked);
+    if (sidebarToggleBtnWrap)
+        sidebarToggleBtnWrap.style.display = docked ? 'none' : '';
+}
+updateSidebarMode();
+window.addEventListener('resize', updateSidebarMode);
+const appSidebarRight = document.getElementById('app-sidebar-right');
+const sidebarToggleBtnWrapRight = document.getElementById('sidebarToggleBtnWrapRight');
+const SIDEBAR_WIDTH_RIGHT = 300;
+function updateSidebarModeRight() {
+    if (!appSidebarRight || !mainContainer)
+        return;
+    const marginRight = window.innerWidth - mainContainer.getBoundingClientRect().right;
+    const docked = marginRight >= SIDEBAR_WIDTH_RIGHT;
+    appSidebarRight.classList.toggle('sidebar-docked', docked);
+    if (sidebarToggleBtnWrapRight)
+        sidebarToggleBtnWrapRight.style.display = docked ? 'none' : '';
+}
+updateSidebarModeRight();
+window.addEventListener('resize', updateSidebarModeRight);
+const THEME_STORAGE_KEY = 'artgine-control-theme';
+const themeSelect = document.getElementById('theme-select');
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) ?? 'dark';
+if (themeSelect)
+    themeSelect.value = savedTheme;
+applyTheme(savedTheme);
+themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
+function registerControlLan() {
+    const ko = CLan.eType.ko;
+    CLan.Set(ko, "ctrl.help", "도움말");
+    CLan.Set(ko, "ctrl.kb.global", "전역 단축키");
+    CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
+    CLan.Set(ko, "ctrl.kb.f2", "<kbd>F2</kbd> 파일 검색 열기");
+    CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 사이드바 포커스/토글");
+    CLan.Set(ko, "ctrl.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)");
+    CLan.Set(ko, "ctrl.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
+}
+function applyLanIn(root) {
+    if (!root)
+        return;
+    root.querySelectorAll('[data-CLan]').forEach(el => {
+        const key = el.getAttribute('data-CLan');
+        if (!key)
+            return;
+        if (el instanceof HTMLInputElement) {
+            const t = CLan.Get(key, el.placeholder);
+            if (t != null)
+                el.placeholder = t;
+        }
+        else {
+            const t = CLan.Get(key, el.innerHTML);
+            if (t != null)
+                el.innerHTML = t;
+        }
+    });
+}
+registerControlLan();
+applyLanIn(document.getElementById('right-option-panel'));
+async function loadAiProviderStatus() {
+    const el = document.getElementById('aiProviderStatus');
+    if (!el)
+        return;
+    const btn = document.getElementById('aiProviderRefreshBtn');
+    const icon = btn?.querySelector('i');
+    if (btn)
+        btn.disabled = true;
+    icon?.classList.add('spin');
+    try {
+        const r = await fetch(CPath.WebRootUrl() + 'AIInfo/provider-state');
+        const resp = await r.json();
+        const node = resp.node;
+        const providers = resp.providers ?? [];
+        const nodeRowClass = node?.installed ? 'bg-success-subtle' : 'bg-secondary-subtle';
+        const nodeIcon = node?.installed ? 'bi-check-circle-fill text-success' : 'bi-x-circle text-secondary';
+        const nodeStatus = node?.installed ? 'Ready' : 'Not Installed';
+        const nodeVer = node?.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${node.version}</span>` : '';
+        const nodeStatusHtml = node?.installed
+            ? ''
+            : `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="aiNodeDownloadBtn"><i class="bi ${nodeIcon}"></i>${nodeStatus}</button>`;
+        const nodeRow = `<div class="d-flex align-items-center justify-content-between rounded px-2 py-1 ${nodeRowClass}" style="font-size:0.8rem;">
+                <span class="fw-semibold">Node.js${nodeVer}</span>
+                ${nodeStatusHtml}
+            </div>`;
+        el.innerHTML = nodeRow + providers.map(p => {
+            const rowClass = !p.installed ? 'bg-secondary-subtle' : p.authenticated ? 'bg-success-subtle' : 'bg-warning-subtle';
+            const pIcon = !p.installed ? 'bi-x-circle text-secondary' : p.authenticated ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning';
+            const status = !p.installed ? 'Not Installed' : p.authenticated ? 'Ready' : 'Not Authenticated';
+            const ver = p.version ? `<span class="text-secondary ms-2" style="font-size:0.85em;">v${p.version}</span>` : '';
+            const statusHtml = !p.installed
+                ? `<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 ai-provider-launch-btn" data-provider="${p.id}"><i class="bi ${pIcon}"></i>${status}</button>`
+                : p.authenticated ? '' : `<span class="d-flex align-items-center gap-1"><i class="bi ${pIcon}"></i>${status}</span>`;
+            const pct = (v) => Math.round(v * 100);
+            const usageParts = [];
+            const showUsage = p.authenticated && p.usage;
+            if (showUsage) {
+                usageParts.push(p.usage.fiveHour >= 0 ? `5h ${pct(p.usage.fiveHour)}%` : `5h ?`);
+                usageParts.push(p.usage.weekly >= 0 ? `Weekly ${pct(p.usage.weekly)}%` : `Weekly ?`);
+            }
+            const usageHtml = usageParts.length
+                ? `<div class="text-secondary" style="font-size:0.75em;">${usageParts.join(' · ')} remaining</div>`
+                : '';
+            return `<div class="rounded px-2 py-1 ${rowClass}" style="font-size:0.8rem;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-semibold text-capitalize">${p.id}${ver}</span>
+                    ${statusHtml}
+                </div>
+                ${usageHtml}
+            </div>`;
+        }).join('');
+        document.getElementById('aiNodeDownloadBtn')?.addEventListener('click', () => {
+            window.open('https://nodejs.org/en/download', '_blank');
+        });
+        el.querySelectorAll('.ai-provider-launch-btn').forEach(b => {
+            b.addEventListener('click', () => termStartNew(b.dataset.provider));
+        });
+    }
+    catch (e) {
+        console.error('provider-state error:', e);
+    }
+    finally {
+        if (btn)
+            btn.disabled = false;
+        icon?.classList.remove('spin');
+    }
+}
+loadAiProviderStatus();
+setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
+document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
+document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
+function showAddOllamaModal() {
+    const uid = `ollama_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Add OpenCode Model');
+    modal.SetBody(`
+        <div class="small text-secondary mb-3">
+            <p class="mb-2">Register a local <strong>Ollama</strong> or <strong>LM Studio</strong> server as an OpenCode model provider.</p>
+            <p class="mb-2">Paste the server address in <strong>any form<\strong> &mdash; only the IP and port are extracted and recombined into the correct base URL <code>http://&lt;ip&gt;:&lt;port&gt;/v1</code>. All of these work:</p>
+            <ul class="mb-2 ps-3">
+                <li><code>127.0.0.1:11434</code></li>
+                <li><code>http://127.0.0.1:11434</code></li>
+                <li><code>http://127.0.0.1:11434/v1/models</code></li>
+            </ul>
+            <p class="mb-2">Ollama is tried first (native API); if that doesn't respond, LM Studio's OpenAI-compatible <code>/v1/models</code> is tried next. Between the two, most local model runners are covered.</p>
+            <p class="mb-2">The server's model list is looked up automatically and written into <code>opencode.json</code> (it is created via CreateRole if missing). Tool-use support is detected for Ollama; for LM Studio it can't be queried via API, so it's assumed enabled &mdash; edit <code>opencode.json</code> manually if a model doesn't actually support tools.</p>
+            <p class="mb-0">If the server requires authentication, enter its API key below &mdash; it's sent as a Bearer token and saved into <code>opencode.json</code>. Leave blank for open/unauthenticated servers.</p>
+        </div>
+        <div class="input-group mb-2">
+            <input id="${uid}" type="text" class="form-control form-control-sm" placeholder="e.g. 127.0.0.1:11434">
+            <button id="${uid}_go" class="btn btn-primary btn-sm">Add</button>
+        </div>
+        <input id="${uid}_key" type="text" class="form-control form-control-sm" placeholder="API key (optional)">
+        <div id="${uid}_result" class="small mt-2"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(560, 400);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const input = document.getElementById(uid);
+        const keyInput = document.getElementById(`${uid}_key`);
+        const goBtn = document.getElementById(`${uid}_go`);
+        const result = document.getElementById(`${uid}_result`);
+        input?.focus();
+        const submit = async () => {
+            const host = (input?.value ?? '').trim();
+            const apiKey = (keyInput?.value ?? '').trim();
+            if (!host) {
+                input?.focus();
+                return;
+            }
+            if (goBtn)
+                goBtn.disabled = true;
+            if (result)
+                result.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> …</span>';
+            try {
+                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/push-opencode-model', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify(apiKey ? { host, apiKey } : { host }),
+                });
+                const j = await r.json();
+                if (!j.ok) {
+                    if (result) {
+                        const msg = r.status === 401 ? 'Login required' : (j.msg || 'Failed');
+                        result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(msg)}</span>`;
+                    }
+                    return;
+                }
+                const models = j.models ?? [];
+                const list = models.map(m => `${aiEscapeHtml(m.name)}${m.tools ? ' <span class="badge bg-success">tools<\span>' : ''}`).join(', ');
+                if (result)
+                    result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> ${aiEscapeHtml(j.provider)} — ${models.length} models</span><div class="text-secondary mt-1">${list}</div>`;
+                CAlert.Info(`${j.provider}: ${models.length} models → opencode.json`);
+            }
+            catch (e) {
+                if (result)
+                    result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+            }
+            finally {
+                if (goBtn)
+                    goBtn.disabled = false;
+            }
+        };
+        goBtn?.addEventListener('click', submit);
+        const onEnter = (e) => { if (e.key === 'Enter') {
+            e.preventDefault();
+            submit();
+        } };
+        input?.addEventListener('keydown', onEnter);
+        keyInput?.addEventListener('keydown', onEnter);
+    }, MODAL_DOM_DELAY);
+}
+const MODAL_DOM_DELAY = 100;
+function postFrameVisible(f, visible) {
+    if (f?.contentWindow)
+        CIframeMsg.Send(f.contentWindow, 'frame-visibility', { visible });
+}
+function rdpRemoteWebRootUrl(input) {
+    const u = new URL(input);
+    const marker = "/proj/Home/Home.html";
+    const homeIdx = u.pathname.indexOf(marker);
+    const basePath = homeIdx >= 0 ? u.pathname.substring(0, homeIdx) : u.pathname;
+    return (u.origin + (basePath || "/")).replace(/\/+$/, '') + '/';
+}
+function aiEscapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+function openSessionPopup(url, title, newWindow = false, winName = '_blank') {
+    if (newWindow) {
+        window.open(url, winName, 'width=900,height=600,toolbar=no,menubar=no,location=no,status=no');
+        return;
+    }
+    try {
+        const modal = new CModal(null);
+        modal.SetCloseToHide(false);
+        modal.SetResize(true);
+        modal.SetTitle(CModal.eTitle.TextClose);
+        modal.SetHeader(title);
+        modal.SetBody(`<div style="position:relative;width:100%;height:100%;">` +
+            `<iframe src="${url}" style="width:100%;height:100%;border:none;display:block;"></iframe>` +
+            `<div class="modal-iframe-guard" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;z-index:1;"></div>` +
+            `</div>`);
+        modal.SetSize('80%', '80%');
+        modal.Open(CModal.ePos.Center);
+        const guard = modal.mBody?.querySelector('.modal-iframe-guard');
+        if (guard) {
+            document.addEventListener('mousedown', () => { guard.style.display = 'block'; });
+            document.addEventListener('mouseup', () => { guard.style.display = 'none'; });
+        }
+    }
+    catch (e) {
+        console.error('Session popup error:', e);
+    }
+}
+function showShareLinkModal(header, descHtml, shareUrl) {
+    const uid = `share_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader(header);
+    modal.SetBody(`
+        <div class="mb-2 small text-secondary">${descHtml}</div>
+        <div class="input-group">
+            <input id="${uid}" type="text" class="form-control form-control-sm" readonly value="${aiEscapeHtml(shareUrl)}">
+            <button id="${uid}_copy" class="btn btn-outline-secondary btn-sm" title="Copy"><i class="bi bi-clipboard"></i></button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(480, 160);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const input = document.getElementById(uid);
+        const copyBtn = document.getElementById(`${uid}_copy`);
+        input?.addEventListener('click', () => input.select());
+        copyBtn?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+            }
+            catch {
+                input?.select();
+                document.execCommand('copy');
+            }
+            copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+            setTimeout(() => { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+        });
+    }, MODAL_DOM_DELAY);
+}
+const POPUP_MENU_ITEMS = '<li><button class="dropdown-item" data-act="modal"><i class="bi bi-window-stack"></i> Open in Modal</button></li>' +
+    '<li><button class="dropdown-item" data-act="window"><i class="bi bi-box-arrow-up-right"></i> Open in New Window</button></li>';
+function wirePopupActions(rootEl, getUrl, title, winName) {
+    rootEl.querySelector('[data-act="modal"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, false, winName));
+    rootEl.querySelector('[data-act="window"]')?.addEventListener('click', () => openSessionPopup(getUrl(), title, true, winName));
+}
+function isPanelShown(panelId) {
+    return CDOM.ID(panelId).classList.contains('active');
+}
+function createSessionItem(spec) {
+    const item = document.createElement('div');
+    item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+        + (spec.isActive ? ' ' + spec.activeClass : '');
+    item.dataset[spec.dataAttr.name] = spec.dataAttr.value;
+    item.innerHTML = `
+        ${spec.leftHtml}
+        ${spec.bodyHtml}
+        <div class="dropdown" style="flex-shrink:0;">
+            <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                ${POPUP_MENU_ITEMS}
+                <li><button class="dropdown-item" data-act="link">🔗 Share Link</button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item text-danger" data-act="${spec.deleteAct}">${spec.deleteLabel}</button></li>
+            </ul>
+        </div>
+    `;
+    item.addEventListener('click', (e) => {
+        if (e.target.closest('.dropdown'))
+            return;
+        spec.onClick();
+    });
+    const dropEl = item.querySelector('.dropdown');
+    new window.bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
+    item.querySelector('[data-act="link"]').addEventListener('click', spec.onShare);
+    wirePopupActions(item, spec.popup.url, spec.popup.title, spec.popup.winName);
+    item.querySelector(`[data-act="${spec.deleteAct}"]`).addEventListener('click', spec.onDelete);
+    item.addEventListener('mouseenter', () => { if (!spec.isActive)
+        item.classList.add('bg-body-secondary'); });
+    item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+    return item;
+}
+const rdpFrameContainer = CDOM.ID("rdp-frame-container");
+const rdpFramePlaceholder = CDOM.ID("rdp-frame-placeholder");
+const rdpSidebarList = CDOM.ID("rdp-sidebar-list");
+const rdpIframePool = new Map();
+let activeRdpFrameKey = null;
+function updateRdpFramePlaceholder() {
+    rdpFramePlaceholder.classList.toggle('rdp-frame-placeholder-hidden', !!activeRdpFrameKey);
+}
+function isRdpPaneActive() { return CDOM.ID('rdp-panel').classList.contains('active'); }
+function updateRdpFrameVisibility() {
+    if (!activeRdpFrameKey)
+        return;
+    postFrameVisible(rdpIframePool.get(activeRdpFrameKey), isRdpPaneActive());
+}
+function showPooledFrame(ctx, key, src) {
+    let f = ctx.pool.get(key);
+    if (!f) {
+        f = document.createElement('iframe');
+        f.src = src;
+        f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;display:none;';
+        ctx.onCreate?.(f, key);
+        ctx.container.appendChild(f);
+        ctx.pool.set(key, f);
+    }
+    const prevKey = ctx.getActiveKey();
+    if (prevKey && prevKey !== key) {
+        const prev = ctx.pool.get(prevKey);
+        if (prev)
+            prev.style.display = 'none';
+    }
+    f.style.display = 'block';
+    ctx.setActiveKey(key);
+    ctx.updatePlaceholder();
+    ctx.onActivate?.(key, prevKey);
+    return f;
+}
+const rdpFrameCtx = {
+    pool: rdpIframePool,
+    container: rdpFrameContainer,
+    getActiveKey: () => activeRdpFrameKey,
+    setActiveKey: (key) => { activeRdpFrameKey = key; },
+    updatePlaceholder: updateRdpFramePlaceholder,
+    onActivate: (_key, prevKey) => {
+        if (prevKey)
+            postFrameVisible(rdpIframePool.get(prevKey), false);
+        updateRdpFrameVisibility();
+    },
+};
+function showRdpFrame(key, src) {
+    return showPooledFrame(rdpFrameCtx, key, src);
+}
+function rdpActivatePane() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('rdp-panel-tab')).show();
+}
+let rdpRemotes = [];
+let selectedRdpKey = 'rdp:local';
+function rdpRenderList() {
+    rdpSidebarList.innerHTML = '';
+    const localItem = document.createElement('div');
+    localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
+        + (selectedRdpKey === 'rdp:local' ? ' ai-session-item-active' : '');
+    localItem.innerHTML = `<i class="bi bi-pc-display"></i><span class="flex-grow-1">Local</span>`
+        + `<button type="button" class="btn btn-sm btn-link text-secondary p-0" data-act="local-link" title="Show accessible link"><i class="bi bi-link-45deg"></i></button>`;
+    localItem.addEventListener('click', () => rdpOpenLocal());
+    localItem.querySelector('[data-act="local-link"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        rdpShowLocalAccessLink();
+    });
+    rdpSidebarList.appendChild(localItem);
+    rdpRemotes.forEach((r) => {
+        const key = `rdp:remote:${r.id}`;
+        const item = createSessionItem({
+            activeClass: 'ai-session-item-active',
+            isActive: selectedRdpKey === key,
+            dataAttr: { name: 'id', value: r.id },
+            leftHtml: `<i class="bi bi-hdd-network"></i>`,
+            bodyHtml: `<span class="flex-grow-1 text-truncate small">${aiEscapeHtml(r.url)}</span>`,
+            deleteAct: 'delete',
+            deleteLabel: '🗑️ Delete',
+            onClick: () => rdpOpenRemote(r.id),
+            onShare: () => rdpShowShareLink(r.url),
+            onDelete: () => {
+                rdpRemotes = rdpRemotes.filter(x => x.id !== r.id);
+                if (activeRdpFrameKey === key)
+                    activeRdpFrameKey = null;
+                if (selectedRdpKey === key)
+                    selectedRdpKey = 'rdp:local';
+                rdpRenderList();
+            },
+            popup: { url: () => `${rdpRemoteWebRootUrl(r.url)}artgine/server/html/RemoteDesktop.html`, title: r.url, winName: `rdp_${r.id}` },
+        });
+        rdpSidebarList.appendChild(item);
+    });
+    const divider = document.createElement('hr');
+    divider.className = 'my-2';
+    rdpSidebarList.appendChild(divider);
+}
+let currentRemoteBaseUrl = '';
+const ctrlRootSel = CDOM.ID("ctrl-root-sel");
+let ctrlRootOpts = [];
+let ctrlRootReqSeq = 0;
+let ctrlSelectedRootPath = '';
+let ctrlInitRootPathConsumed = false;
+const ctrlNormPath = (s) => s.replace(/\\/g, '/').replace(/\/+$/, '');
+function ctrlRenderRootOpts(roots) {
+    ctrlRootOpts = [...roots, { path: "./", name: "Artgine (WorkingPath)" }];
+    ctrlRootSel.innerHTML = ctrlRootOpts.map((r, i) => `<option value="${i}">${aiEscapeHtml(r.name)}</option>`).join('');
+    let defaultIdx = ctrlRootOpts.length - 1;
+    if (!ctrlInitRootPathConsumed && ctrlInitRootPath) {
+        ctrlInitRootPathConsumed = true;
+        const matchIdx = ctrlRootOpts.findIndex(r => ctrlNormPath(r.path) === ctrlNormPath(ctrlInitRootPath));
+        if (matchIdx >= 0)
+            defaultIdx = matchIdx;
+    }
+    ctrlRootSel.selectedIndex = defaultIdx;
+    ctrlSelectedRootPath = ctrlRootOpts[defaultIdx]?.path ?? '';
+}
+async function ctrlRefreshRootSelect() {
+    const baseUrl = currentRemoteBaseUrl;
+    const seq = ++ctrlRootReqSeq;
+    ctrlRootSel.innerHTML = '<option>Loading...</option>';
+    if (baseUrl && !(await rdpCheckRemoteAuth(baseUrl))) {
+        if (seq !== ctrlRootReqSeq)
+            return;
+        ctrlRootSel.innerHTML = '<option>Sign in required</option>';
+        rdpPromptRemoteAuth(baseUrl, () => {
+            if (currentRemoteBaseUrl !== baseUrl || seq !== ctrlRootReqSeq)
+                return;
+            ctrlRefreshRootSelect();
+        });
+        return;
+    }
+    try {
+        const token = baseUrl ? getAuthToken(baseUrl) : '';
+        const data = await CFecth.Exe((baseUrl || CPath.WebRootUrl()) + "File/Root", token ? { token } : {}, "json");
+        if (seq !== ctrlRootReqSeq)
+            return;
+        ctrlRenderRootOpts(data.roots ?? []);
+    }
+    catch (e) {
+        if (seq !== ctrlRootReqSeq)
+            return;
+        ctrlRootSel.innerHTML = '<option>Failed to load</option>';
+    }
+}
+ctrlRootSel.addEventListener('change', () => {
+    const idx = parseInt(ctrlRootSel.value);
+    const r = ctrlRootOpts[idx];
+    if (!r)
+        return;
+    ctrlSelectedRootPath = r.path;
+    if (!fileIframe?.contentWindow)
+        return;
+    const selKey = idx === ctrlRootOpts.length - 1 ? 'workingpath' : r.path;
+    CIframeMsg.Send(fileIframe.contentWindow, 'set-file-root', { path: r.path, url: r.url ?? '', selKey });
+});
+function rdpOpenLocal() {
+    rdpInited = true;
+    rdpActivatePane();
+    showRdpFrame('rdp:local', `${CPath.WebRootArtgineUrl()}artgine/server/html/RemoteDesktop.html`);
+    selectedRdpKey = 'rdp:local';
+    rdpRenderList();
+    currentRemoteBaseUrl = '';
+    if (fileIframe?.contentWindow)
+        CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: '' });
+    ctrlRefreshRootSelect();
+}
+function rdpOpenRemote(id) {
+    const remote = rdpRemotes.find(r => r.id === id);
+    if (!remote)
+        return;
+    rdpInited = true;
+    rdpActivatePane();
+    showRdpFrame(`rdp:remote:${id}`, `${rdpRemoteWebRootUrl(remote.url)}artgine/server/html/RemoteDesktop.html`);
+    selectedRdpKey = `rdp:remote:${id}`;
+    rdpRenderList();
+    currentRemoteBaseUrl = rdpRemoteWebRootUrl(remote.url);
+    if (fileIframe?.contentWindow)
+        CIframeMsg.Send(fileIframe.contentWindow, 'connect-remote', { url: remote.url });
+    ctrlRefreshRootSelect();
+}
+function rdpShowShareLink(remoteUrl) {
+    const shareUrl = `${rdpRemoteWebRootUrl(remoteUrl)}artgine/server/html/RemoteDesktop.html`;
+    showShareLinkModal('Remote Desktop Share Link', `Anyone with this link can access the remote desktop: <strong>${aiEscapeHtml(remoteUrl)}</strong>`, shareUrl);
+}
+async function rdpResolveAccessibleUrl() {
+    const loc = window.location;
+    const isLocalHost = loc.hostname === 'localhost' || loc.hostname === '127.0.0.1' || loc.hostname === '::1';
+    if (!isLocalHost)
+        return { url: loc.href, blocked: false };
+    let publicIp = '';
+    try {
+        publicIp = (await (await fetch('https://api.ipify.org?format=text')).text()).trim();
+    }
+    catch (_) {
+        return { url: '', blocked: true };
+    }
+    if (!publicIp)
+        return { url: '', blocked: true };
+    const port = loc.port ? `:${loc.port}` : '';
+    const url = `${loc.protocol}//${publicIp}${port}${loc.pathname}${loc.search}`;
+    const reachable = await rdpCheckPortOpen(url);
+    return { url, blocked: !reachable };
+}
+function rdpCheckPortOpen(url, timeoutMs = 4000) {
+    return new Promise(resolve => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => { ctrl.abort(); resolve(false); }, timeoutMs);
+        fetch(url, { mode: 'no-cors', signal: ctrl.signal })
+            .then(() => { clearTimeout(timer); resolve(true); })
+            .catch(() => { clearTimeout(timer); resolve(false); });
+    });
+}
+async function rdpShowLocalAccessLink() {
+    const boxId = `rdp_local_link_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Local Access Link');
+    modal.SetBody(`<div id="${boxId}" class="small text-secondary">Checking accessible link...</div>`);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(480, 160);
+    modal.Open(CModal.ePos.Center);
+    const { url, blocked } = await rdpResolveAccessibleUrl();
+    const box = document.getElementById(boxId);
+    if (!box)
+        return;
+    if (blocked || !url) {
+        box.innerHTML = `<div class="text-danger">Port appears to be blocked from outside access. Please check port forwarding.</div>`;
+        return;
+    }
+    const inputId = `${boxId}_input`;
+    const copyId = `${boxId}_copy`;
+    box.className = '';
+    box.innerHTML = `
+        <div class="mb-2 small text-secondary">Accessible link for this page:</div>
+        <div class="input-group">
+            <input id="${inputId}" type="text" class="form-control form-control-sm" readonly value="${aiEscapeHtml(url)}">
+            <button id="${copyId}" class="btn btn-outline-secondary btn-sm" title="Copy"><i class="bi bi-clipboard"></i></button>
+        </div>`;
+    const input = document.getElementById(inputId);
+    const copyBtn = document.getElementById(copyId);
+    input?.addEventListener('click', () => input.select());
+    copyBtn?.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(url);
+        }
+        catch {
+            input?.select();
+            document.execCommand('copy');
+        }
+        copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+        setTimeout(() => { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+    });
+}
+function rdpAddRemote(url) {
+    rdpRemotes.unshift({ id: genUuid(), url });
+    rdpRenderList();
+}
+let rdpInited = false;
+CDOM.ID('rdp-panel-tab').addEventListener('shown.bs.tab', () => {
+    if (!rdpInited)
+        rdpOpenLocal();
+    updateRdpFrameVisibility();
+});
+CDOM.ID('rdp-panel-tab').addEventListener('hidden.bs.tab', () => updateRdpFrameVisibility());
+rdpRenderList();
+if (CDOM.ID('rdp-panel').classList.contains('active'))
+    queueMicrotask(() => rdpOpenLocal());
+function openRdpAddModal() {
+    const modal = new CModal();
+    modal.SetHeader('Add Remote Desktop');
+    modal.SetBody(`
+        <div class="d-flex gap-1">
+            <input id="rdpModalUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Home.html URL">
+            <button id="rdpModalAddBtn" class="btn btn-outline-primary btn-sm flex-shrink-0"><i class="bi bi-plus-lg"></i> Add</button>
+        </div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(420, 140);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const input = document.getElementById('rdpModalUrlInput');
+        const btn = document.getElementById('rdpModalAddBtn');
+        input?.focus();
+        const submit = () => {
+            const url = input?.value.trim();
+            if (!url)
+                return;
+            rdpAddRemote(url);
+            modal.Close();
+        };
+        btn?.addEventListener('click', submit);
+        input?.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            submit(); });
+    }, MODAL_DOM_DELAY);
+}
+CDOM.ID('rdp-add-btn').addEventListener('click', openRdpAddModal);
+const filePanel = CDOM.ID("file-panel");
+let fileIframe = null;
+let fileLoaded = false;
+function fileEnsureLayout() {
+    if (fileIframe)
+        return;
+    filePanel.classList.add("position-relative");
+    filePanel.style.overflow = "hidden";
+    fileIframe = document.createElement("iframe");
+    fileIframe.id = "file-iframe";
+    fileIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
+    filePanel.appendChild(fileIframe);
+    wireIframeArrowKeys(fileIframe);
+}
+const ctrlInitRootPath = CUtilWeb.Parameter("path");
+function fileLoadFrame() {
+    fileEnsureLayout();
+    if (fileLoaded)
+        return;
+    fileLoaded = true;
+    const params = [];
+    if (ctrlInitRootPath)
+        params.push(`RootPath=${encodeURIComponent(ctrlInitRootPath)}`);
+    const ctrlTheme = document.documentElement.getAttribute('data-bs-theme');
+    if (ctrlTheme)
+        params.push(`theme=${encodeURIComponent(ctrlTheme)}`);
+    params.push('editorHost=control');
+    const q = params.length ? `?${params.join('&')}` : '';
+    fileIframe.src = `${CPath.WebRootArtgineUrl()}artgine/server/html/File.html${q}`;
+}
+fileLoadFrame();
+window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
+const CTRL_SEARCH_EXCLUDE_DIRS = ['node_modules'];
+const ctrlIsSearchExcluded = (name) => name.startsWith('.') || CTRL_SEARCH_EXCLUDE_DIRS.includes(name);
+const ctrlEncodeUrlPath = (p) => p.split('/').map(encodeURIComponent).join('/');
+let g_ctrlSrchCache = new Map();
+let g_ctrlSrchServerKey = '';
+async function ctrlFileSearch() {
+    let searchCancelled = false;
+    const uid = Date.now();
+    const modal = new CModal();
+    modal.SetHeader("File Search");
+    modal.SetBody(`
+        <div class="d-flex gap-2 mb-2">
+            <input type="text" id="ctrlSrchInput_${uid}" class="form-control form-control-sm" placeholder="Filename (partial match)...">
+            <button id="ctrlSrchBtn_${uid}" class="btn btn-sm btn-primary">Search</button>
+            <button id="ctrlSrchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">Stop</button>
+        </div>
+        <div id="ctrlSrchStatus_${uid}" class="small text-secondary mb-1" style="min-height:1.2em;"></div>
+        <div id="ctrlSrchResults_${uid}" class="list-group" style="max-height:360px;overflow-y:auto;font-size:13px;"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(520, 520);
+    modal.Open(CModal.ePos.Center);
+    await new Promise(r => setTimeout(r, MODAL_DOM_DELAY));
+    const input = document.getElementById(`ctrlSrchInput_${uid}`);
+    const btn = document.getElementById(`ctrlSrchBtn_${uid}`);
+    const stopBtn = document.getElementById(`ctrlSrchStop_${uid}`);
+    const status = document.getElementById(`ctrlSrchStatus_${uid}`);
+    const results = document.getElementById(`ctrlSrchResults_${uid}`);
+    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
+    const rootPathParam = ctrlSelectedRootPath || undefined;
+    let gRoot = '';
+    let gDown = '';
+    const makeItem = (fl, dirPath) => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item list-group-item-action py-1 px-2';
+        const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+        item.innerHTML =
+            `<i class="bi ${icon} me-1"></i><strong>${fl.name}</strong>` +
+                `<span class="text-muted ms-2" style="font-size:11px;">${dirPath}</span>`;
+        if (fl.file) {
+            item.addEventListener('click', () => {
+                modal.Hide();
+                editorOpenFile(gRoot + dirPath + fl.name, currentRemoteBaseUrl, gDown + ctrlEncodeUrlPath(dirPath + fl.name));
+            });
+        }
+        return item;
+    };
+    const keyOf = (dirPath, name) => dirPath + ' ' + name;
+    const renderFromCache = (startPath, query, shown) => {
+        let found = 0;
+        for (const [dirPath, list] of g_ctrlSrchCache) {
+            if (!dirPath.startsWith(startPath))
+                continue;
+            for (const fl of list) {
+                if (fl.hidden || ctrlIsSearchExcluded(fl.name))
+                    continue;
+                if (fl.name.toLowerCase().includes(query)) {
+                    const key = keyOf(dirPath, fl.name);
+                    if (shown.has(key))
+                        continue;
+                    shown.add(key);
+                    results.appendChild(makeItem(fl, dirPath));
+                    if (++found >= 200)
+                        return found;
+                }
+            }
+        }
+        return found;
+    };
+    const doSearch = async () => {
+        const query = input.value.trim().toLowerCase();
+        if (!query)
+            return;
+        const startPath = "/";
+        const serverKey = apiBase + '|' + (rootPathParam ?? '');
+        if (g_ctrlSrchServerKey !== serverKey) {
+            g_ctrlSrchCache = new Map();
+            g_ctrlSrchServerKey = serverKey;
+        }
+        searchCancelled = false;
+        btn.disabled = true;
+        stopBtn.style.display = '';
+        results.innerHTML = '';
+        const shown = new Set();
+        let found = renderFromCache(startPath, query, shown);
+        status.textContent = found > 0 ? `Cached: ${found} result(s)... Scanning` : 'Scanning...';
+        const queue = [startPath];
+        while (queue.length > 0 && !searchCancelled) {
+            const dirPath = queue.shift();
+            status.textContent = `Scanning: ${dirPath}`;
+            try {
+                const p2 = { path: dirPath };
+                if (rootPathParam)
+                    p2.RootPath = rootPathParam;
+                const token = getAuthToken(apiBase);
+                const data = await CFecth.Exe(apiBase + "File/List", { ...p2, token }, "json");
+                if (data.RootPath != null)
+                    gRoot = data.RootPath.replace(/\/+$/, '');
+                if (data.RootUrl != null)
+                    gDown = new URL(data.RootUrl, apiBase).href.replace(/\/+$/, '');
+                g_ctrlSrchCache.set(dirPath, data.list);
+                for (const fl of data.list) {
+                    if (!fl.hidden && !fl.file && !ctrlIsSearchExcluded(fl.name))
+                        queue.push(dirPath + fl.name + '/');
+                    if (!fl.hidden && fl.name.toLowerCase().includes(query) && found < 200) {
+                        const key = keyOf(dirPath, fl.name);
+                        if (shown.has(key))
+                            continue;
+                        shown.add(key);
+                        results.appendChild(makeItem(fl, dirPath));
+                        found++;
+                    }
+                }
+            }
+            catch (_) { }
+        }
+        const cap = found >= 200 ? ' (capped at 200)' : '';
+        status.textContent = searchCancelled ? `Stopped. (${found} result(s))` : found === 0 ? 'No results.' : `${found} result(s)${cap}`;
+        btn.disabled = false;
+        stopBtn.style.display = 'none';
+    };
+    stopBtn.addEventListener('click', () => { searchCancelled = true; });
+    btn.addEventListener('click', doSearch);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+        doSearch(); });
+    input.focus();
+}
+function runControlHotkey(key) {
+    switch (key) {
+        case 'F1':
+            window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
+            if (fileIframe?.contentWindow)
+                CIframeMsg.Send(fileIframe.contentWindow, 'trigger-file-btn', {});
+            return true;
+        case 'F2':
+            ctrlFileSearch();
+            return true;
+    }
+    return false;
+}
+function getActiveControlFrame() {
+    if (isPanelShown('term-panel'))
+        return { f: activeTermFrameKey ? termIframePool.get(activeTermFrameKey) ?? null : null, isTerm: true };
+    if (isPanelShown('chat-panel'))
+        return { f: activeChatFrameKey ? chatIframePool.get(activeChatFrameKey) ?? null : null, isTerm: false };
+    if (isPanelShown('rdp-panel'))
+        return { f: activeRdpFrameKey ? rdpIframePool.get(activeRdpFrameKey) ?? null : null, isTerm: false };
+    if (isPanelShown('browser-panel'))
+        return { f: activeBrowserFrameKey ? browserIframePool.get(activeBrowserFrameKey) ?? null : null, isTerm: false };
+    if (isPanelShown('editor-panel'))
+        return { f: activeEditorFrameKey ? editorIframePool.get(activeEditorFrameKey) ?? null : null, isTerm: false };
+    if (isPanelShown('file-panel'))
+        return { f: fileIframe, isTerm: false };
+    if (isPanelShown('memo-panel'))
+        return { f: memoIframe, isTerm: false };
+    return { f: null, isTerm: false };
+}
+function focusActiveControlFrame() {
+    const { f, isTerm } = getActiveControlFrame();
+    if (!f)
+        return;
+    if (isTerm) {
+        if (f.contentWindow)
+            CIframeMsg.Send(f.contentWindow, 'focus-input');
+        return;
+    }
+    try {
+        f.contentWindow?.focus();
+        const input = f.contentDocument?.querySelector('textarea, input');
+        if (input) {
+            input.focus();
+            return;
+        }
+    }
+    catch (_) { }
+    f.focus();
+}
+function runControlF3Key() {
+    if (!appSidebar)
+        return;
+    if (!appSidebar.classList.contains('sidebar-docked')) {
+        const wasShown = appSidebar.classList.contains('show');
+        window.bootstrap.Offcanvas.getOrCreateInstance(appSidebar).toggle();
+        if (wasShown)
+            focusActiveControlFrame();
+        else
+            setTimeout(() => appSidebar.focus(), 0);
+        return;
+    }
+    const focusInSidebar = document.activeElement instanceof Node && appSidebar.contains(document.activeElement);
+    if (focusInSidebar) {
+        focusActiveControlFrame();
+    }
+    else {
+        appSidebar.focus();
+    }
+}
+function isAppSidebarVisible() {
+    if (!appSidebar)
+        return false;
+    return appSidebar.classList.contains('sidebar-docked') || appSidebar.classList.contains('show');
+}
+function runControlArrowKey(dir) {
+    if (!isAppSidebarVisible())
+        return false;
+    const items = Array.from(sessionSidebarList.querySelectorAll('.ai-session-item'));
+    if (items.length === 0)
+        return false;
+    const curIdx = items.findIndex(el => el.classList.contains('ai-session-item-active'));
+    const nxt = curIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, curIdx + dir));
+    if (nxt === curIdx)
+        return false;
+    items[nxt].click();
+    items[nxt].scrollIntoView({ block: 'nearest' });
+    return true;
+}
+function wireIframeArrowKeys(f) {
+    f.addEventListener('load', () => {
+        try {
+            f.contentWindow?.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
+                        e.preventDefault();
+                }
+            }, true);
+        }
+        catch (_) { }
+    });
+}
+function wirePooledFrameHotkeys(f, key) {
+    const isTerm = key.startsWith('term:') || key.startsWith('term-new:');
+    f.addEventListener('load', () => {
+        try {
+            f.contentWindow?.addEventListener('keydown', (e) => {
+                if (e.key === 'F1' || e.key === 'F2') {
+                    e.preventDefault();
+                    runControlHotkey(e.key);
+                    return;
+                }
+                if (e.key === 'F3') {
+                    e.preventDefault();
+                    runControlF3Key();
+                    return;
+                }
+                if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                    if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
+                        e.preventDefault();
+                }
+            }, true);
+        }
+        catch (_) { }
+    });
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F1' || e.key === 'F2') {
+        e.preventDefault();
+        runControlHotkey(e.key);
+        return;
+    }
+    if (e.key === 'F3') {
+        e.preventDefault();
+        runControlF3Key();
+        return;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1))
+            e.preventDefault();
+    }
+});
+CIframeMsg.Recv({
+    'home-hotkey': (data) => {
+        const key = String(data.key ?? '');
+        if (key === 'F3')
+            runControlF3Key();
+        else
+            runControlHotkey(key);
+    },
+});
+CDOM.ID('file-search-btn').addEventListener('click', () => runControlHotkey('F2'));
+CIframeMsg.Recv({
+    'file-remote-changed': (data) => {
+        currentRemoteBaseUrl = String(data.baseUrl ?? '');
+        memoSendRemoteInfo();
+    },
+    'file-opened': (data) => {
+        editorOpenFile(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
+    },
+    'open-chat': (data) => chatStartNew(data.cwd || undefined),
+    'open-term': (data) => termStartNew('cmd', data.cwd || undefined),
+    'open-memo': (data) => {
+        window.bootstrap.Tab.getOrCreateInstance(memoTab).show();
+        memoTryInit();
+        setTimeout(() => { if (memoIframe?.contentWindow)
+            CIframeMsg.Send(memoIframe.contentWindow, 'set-folder', { folder: data.folder ?? '' }); }, 200);
+    },
+    'terminal-path-tapped': (data) => termOpenTappedPath(String(data.path ?? ''), String(data.token ?? '')),
+});
+let dlInited = false;
+CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
+    if (dlInited)
+        return;
+    dlInited = true;
+    MountDownloadTab("download-root");
+});
+if (CDOM.ID("download-panel").classList.contains("active")) {
+    dlInited = true;
+    MountDownloadTab("download-root");
+}
+const memoTab = CDOM.ID("memo-tab");
+const memoPanel = CDOM.ID("memo-panel");
+let memoIframe = null;
+let memoLoaded = false;
+function memoEnsureLayout() {
+    if (memoIframe)
+        return;
+    memoPanel.classList.add("position-relative");
+    memoPanel.style.overflow = "hidden";
+    memoIframe = document.createElement("iframe");
+    memoIframe.id = "memo-iframe";
+    memoIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
+    memoPanel.appendChild(memoIframe);
+    wireIframeArrowKeys(memoIframe);
+}
+function memoLoadFrame() {
+    memoEnsureLayout();
+    if (memoLoaded)
+        return;
+    memoLoaded = true;
+    const ctrlTheme = document.documentElement.getAttribute('data-bs-theme');
+    const q = ctrlTheme ? `?theme=${encodeURIComponent(ctrlTheme)}` : '';
+    memoIframe.src = `${CPath.WebRootArtgineUrl()}artgine/server/html/Memo.html${q}`;
+}
+memoEnsureLayout();
+let memoInited = false;
+function memoTryInit() {
+    if (memoInited)
+        return;
+    memoInited = true;
+    memoLoadFrame();
+}
+async function rdpCheckRemoteAuth(webRootUrl) {
+    const token = getAuthToken(webRootUrl);
+    if (!token)
+        return false;
+    try {
+        const j = await CFecth.Exe(webRootUrl + "auth/check", { token }, "json");
+        return !!j?.authed;
+    }
+    catch {
+        return false;
+    }
+}
+function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
+    const dlg = new CConfirm();
+    dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    const doAuth = () => {
+        const pw = CDOM.IDValue("AuthPassword");
+        CFecth.Exe(webRootUrl + "auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json").then((j) => {
+            if (j.ok) {
+                setAuthToken(webRootUrl, j.token);
+                CAlert.Info("Permission granted");
+                onSuccess?.();
+            }
+            else {
+                CAlert.E("Wrong password: " + (j.msg ?? ""));
+            }
+        }).catch(() => { CAlert.E("Server error"); });
+    };
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+        doAuth,
+        () => { },
+    ], ["OK", "Cancel"]);
+    dlg.Open();
+    setTimeout(() => {
+        const input = CDOM.ID("AuthPassword");
+        input?.focus();
+        input?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter')
+                return;
+            e.preventDefault();
+            doAuth();
+            dlg.Close();
+        });
+    }, MODAL_DOM_DELAY);
+}
+function renderSignInPrompt(container, onSuccess) {
+    container.innerHTML = `
+        <div class="text-center text-secondary small p-3 d-flex flex-column align-items-center gap-2">
+            <div>로그인이 필요합니다.</div>
+            <button type="button" class="btn btn-sm btn-outline-primary sign-in-btn">Sign In</button>
+        </div>`;
+    container.querySelector('.sign-in-btn').addEventListener('click', () => {
+        rdpPromptRemoteAuth(CPath.WebRootUrl(), onSuccess);
+    });
+}
+async function memoSendRemoteInfo() {
+    const baseUrl = currentRemoteBaseUrl;
+    if (!baseUrl) {
+        if (memoIframe?.contentWindow)
+            CIframeMsg.Send(memoIframe.contentWindow, 'set-remote', { baseUrl: '', token: '' });
+        return;
+    }
+    if (!(await rdpCheckRemoteAuth(baseUrl))) {
+        rdpPromptRemoteAuth(baseUrl, () => {
+            if (currentRemoteBaseUrl !== baseUrl)
+                return;
+            if (memoIframe?.contentWindow)
+                CIframeMsg.Send(memoIframe.contentWindow, 'set-remote', { baseUrl, token: getAuthToken(baseUrl) });
+        });
+        return;
+    }
+    if (memoIframe?.contentWindow)
+        CIframeMsg.Send(memoIframe.contentWindow, 'set-remote', { baseUrl, token: getAuthToken(baseUrl) });
+}
+memoTab.addEventListener("shown.bs.tab", () => {
+    memoTryInit();
+    if (memoIframe?.contentWindow)
+        CIframeMsg.Send(memoIframe.contentWindow, 'open-sidebar');
+    memoIframe?.contentWindow?.focus();
+    memoSendRemoteInfo();
+});
+memoTab.addEventListener("click", () => {
+    if (memoIframe?.contentWindow)
+        CIframeMsg.Send(memoIframe.contentWindow, 'open-sidebar');
+});
+if (memoTab.classList.contains("active"))
+    memoTryInit();
+const sessionSidebarList = CDOM.ID("session-sidebar-list");
+let _activeNotifCallback = null;
+function _showModalStackMsg(label, content, onClick) {
+    const m = new CModalStackMsg(CModal.ePos.TopRight);
+    m.SetBG(Bootstrap.eColor.warning);
+    m.SetSize(260, content ? 69 : 49);
+    const nid = `notif_${Date.now()}`;
+    const cursor = onClick ? 'cursor:pointer;' : '';
+    m.SetBody(`<div id="${nid}" class="px-3 py-2" style="width:260px;overflow:hidden;${cursor}">
+        <div class="small fw-semibold text-truncate">${label}</div>
+        ${content ? `<div class="small text-secondary text-truncate mt-1">${content}</div>` : ''}
+    </div>`);
+    m.Open();
+    if (onClick) {
+        _activeNotifCallback = onClick;
+        setTimeout(() => {
+            document.getElementById(nid)?.addEventListener('click', () => {
+                onClick();
+                m.Close();
+                _activeNotifCallback = null;
+            });
+        }, 0);
+    }
+    m.Close(8);
+    setTimeout(() => { if (_activeNotifCallback === onClick)
+        _activeNotifCallback = null; }, 8000);
+}
+const NOTIF_LOG_MAX = 7;
+const notifLogEl = document.getElementById('aiNotifLog');
+function _pushNotifLog(label, content, onClick, idInfo) {
+    if (!notifLogEl)
+        return;
+    const row = document.createElement('div');
+    row.className = 'small rounded px-2 py-2 notif-row notif-flash';
+    if (onClick)
+        row.style.cursor = 'pointer';
+    row.innerHTML = `${idInfo ? `<div class="text-secondary text-truncate" style="font-size:0.65rem;font-family:monospace;">${idInfo}</div>` : ''}<div class="fw-semibold text-truncate">${label}</div>${content ? `<div class="text-secondary text-truncate">${content}</div>` : ''}`;
+    if (onClick)
+        row.addEventListener('click', onClick);
+    notifLogEl.prepend(row);
+    while (notifLogEl.children.length > NOTIF_LOG_MAX)
+        notifLogEl.lastElementChild?.remove();
+}
+function _showDoneNotification(label, content, onClick, idInfo, suppressToast) {
+    _pushNotifLog(label, content, onClick, idInfo);
+    if (suppressToast)
+        return;
+    if (!document.hasFocus()) {
+        CUtilWeb.Notify(label, content ?? "", "", onClick ? () => onClick() : null).then(failed => {
+            if (!failed)
+                return;
+            _showModalStackMsg(label, content, onClick);
+        });
+    }
+    else {
+        _showModalStackMsg(label, content, onClick);
+    }
+}
+const _sessState = new Map();
+function syncSessState(id, cur, onDone, onWait) {
+    const prev = _sessState.get(id);
+    if ((prev === 'busy' || prev === 'wait') && cur === 'idle')
+        onDone();
+    if (prev !== 'wait' && cur === 'wait')
+        onWait?.();
+    _sessState.set(id, cur);
+}
+let chatAuthState = 'unknown';
+let termAuthState = 'unknown';
+let browserAuthState = 'unknown';
+let lastChatSessions = null;
+let lastTermSessions = null;
+function renderSessionSidebar() {
+    if (sessionSidebarList.querySelector('.dropdown-menu.show'))
+        return;
+    if (chatAuthState === 'signin' || termAuthState === 'signin' || browserAuthState === 'signin') {
+        renderSignInPrompt(sessionSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
+        return;
+    }
+    const entries = [];
+    if (lastChatSessions)
+        for (const s of lastChatSessions)
+            entries.push({ sortKey: s.updatedAt ?? 0, el: buildChatItem(s) });
+    if (lastTermSessions)
+        for (const s of lastTermSessions)
+            entries.push({ sortKey: s.updatedAt ?? 0, el: buildTermItem(s) });
+    for (const s of browserSessions.values())
+        entries.push({ sortKey: s.updatedAt ?? s.createdAt ?? 0, el: buildBrowserItem(s) });
+    for (const s of editorSessions.values())
+        entries.push({ sortKey: s.openedAt, el: buildEditorItem(s) });
+    entries.sort((a, b) => b.sortKey - a.sortKey);
+    sessionSidebarList.innerHTML = '';
+    for (const e of entries)
+        sessionSidebarList.appendChild(e.el);
+}
+function authedFetch(url, init) {
+    return fetch(url, init);
+}
+function chatFormatRelative(ts) {
+    if (!ts)
+        return '';
+    const diff = Date.now() - ts;
+    if (diff < 0 || isNaN(diff))
+        return '';
+    const s = Math.floor(diff / 1000);
+    if (s < 60)
+        return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60)
+        return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24)
+        return `${h}h`;
+    const d = Math.floor(h / 24);
+    if (d < 30)
+        return `${d}d`;
+    const mo = Math.floor(d / 30);
+    if (mo < 12)
+        return `${mo}mo`;
+    return `${Math.floor(mo / 12)}y`;
+}
+const chatFrameContainer = CDOM.ID("chat-frame-container");
+const chatFramePlaceholder = CDOM.ID("chat-frame-placeholder");
+const chatIframePool = new Map();
+let activeChatFrameKey = null;
+function updateChatFramePlaceholder() {
+    chatFramePlaceholder.classList.toggle('chat-frame-placeholder-hidden', !!activeChatFrameKey);
+}
+const chatFrameCtx = {
+    pool: chatIframePool,
+    container: chatFrameContainer,
+    getActiveKey: () => activeChatFrameKey,
+    setActiveKey: (key) => { activeChatFrameKey = key; },
+    updatePlaceholder: updateChatFramePlaceholder,
+    onCreate: wirePooledFrameHotkeys,
+};
+function showChatFrame(key, src) {
+    return showPooledFrame(chatFrameCtx, key, src);
+}
+function chatActivatePane() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('chat-panel-tab')).show();
+}
+const editorFrameContainer = CDOM.ID("editor-frame-container");
+const editorFramePlaceholder = CDOM.ID("editor-frame-placeholder");
+const editorIframePool = new Map();
+let activeEditorFrameKey = null;
+function updateEditorFramePlaceholder() {
+    editorFramePlaceholder.classList.toggle('editor-frame-placeholder-hidden', !!activeEditorFrameKey);
+}
+const editorFrameCtx = {
+    pool: editorIframePool,
+    container: editorFrameContainer,
+    getActiveKey: () => activeEditorFrameKey,
+    setActiveKey: (key) => { activeEditorFrameKey = key; },
+    updatePlaceholder: updateEditorFramePlaceholder,
+};
+function showEditorFrame(key, src) {
+    return showPooledFrame(editorFrameCtx, key, src);
+}
+function editorActivatePane() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('editor-panel-tab')).show();
+}
+const editorSessions = new Map();
+function editorFrameSrc(s) {
+    const root = s.baseUrl || CPath.WebRootArtgineUrl();
+    return `${root}artgine/server/html/Editor.html?path=${encodeURIComponent(s.path)}&url=${encodeURIComponent(s.url)}`;
+}
+function editorOpenFile(path, baseUrl, url) {
+    const key = `editor:${baseUrl}|${path}`;
+    let s = editorSessions.get(key);
+    if (!s) {
+        s = { key, path, baseUrl, url, openedAt: Date.now() };
+        editorSessions.set(key, s);
+    }
+    else {
+        s.url = url;
+        s.openedAt = Date.now();
+    }
+    editorActivatePane();
+    showEditorFrame(key, editorFrameSrc(s));
+    renderSessionSidebar();
+}
+function termNormAbsPath(p) {
+    return p.replace(/\\/g, '/').replace(/\/+$/, '');
+}
+async function termOpenTappedPath(tappedPath, token) {
+    if (!tappedPath)
+        return;
+    const sess = lastTermSessions?.find(s => s.token === token);
+    const workingDir = sess?.workingDir || '';
+    const isAbsolute = /^[A-Za-z]:[\\/]/.test(tappedPath);
+    const fullPath = isAbsolute
+        ? tappedPath
+        : workingDir
+            ? `${termNormAbsPath(workingDir)}/${tappedPath.replace(/\\/g, '/')}`
+            : '';
+    if (!fullPath) {
+        CAlert.E(`워킹 디렉토리를 알 수 없어 경로를 열 수 없습니다: ${tappedPath}`);
+        return;
+    }
+    try {
+        const data = await CFecth.Exe(CPath.WebRootUrl() + "File/Root", {}, "json");
+        const normFull = termNormAbsPath(fullPath);
+        const normFullLower = normFull.toLowerCase();
+        const root = (data.roots || []).find(r => {
+            const rp = termNormAbsPath(r.path).toLowerCase();
+            return normFullLower === rp || normFullLower.startsWith(rp + '/');
+        });
+        if (!root) {
+            CAlert.E(`등록된 루트 경로에 없어 열 수 없습니다: ${fullPath}`);
+            return;
+        }
+        const relPath = normFull.slice(termNormAbsPath(root.path).length);
+        const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
+        const url = downBase + relPath.split('/').map(encodeURIComponent).join('/');
+        termPromptOpenMode(fullPath, url);
+    }
+    catch (e) {
+        console.error('termOpenTappedPath error:', e);
+        CAlert.E('경로를 여는 중 오류가 발생했습니다.');
+    }
+}
+const termTextToBase64 = (text) => btoa(unescape(encodeURIComponent(text)));
+function termSaveEditedFile(fullPath, base64) {
+    const idx = fullPath.lastIndexOf('/');
+    const folder = fullPath.slice(0, idx + 1);
+    const fileName = fullPath.slice(idx + 1);
+    CFecth.Exe(CPath.WebRootUrl() + "File/Upload", { path: folder, name: [fileName], data: [base64] })
+        .then(() => CAlert.Info('저장 완료'))
+        .catch((e) => CAlert.E('저장 실패: ' + e.message));
+}
+function termPromptOpenMode(fullPath, url) {
+    const confirm = new CConfirm();
+    confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
+    confirm.SetConfirm(CConfirm.eConfirm.List, [
+        () => editorOpenFile(fullPath, '', url),
+        () => new CFileViewer([url], async (_filePath, bufStr) => termSaveEditedFile(fullPath, termTextToBase64(bufStr))).Open(),
+        () => { },
+    ], ["Source", "Edit", "Cancel"]);
+    confirm.Open();
+}
+function buildEditorItem(s) {
+    const name = s.path.split('/').pop() || s.path;
+    return createSessionItem({
+        activeClass: 'ai-session-item-active',
+        isActive: activeEditorFrameKey === s.key && isPanelShown('editor-panel'),
+        dataAttr: { name: 'key', value: s.key },
+        leftHtml: `<i class="bi bi-file-earmark-code"></i>`,
+        bodyHtml: `<span class="flex-grow-1 min-w-0 text-truncate small" title="${aiEscapeHtml(s.path)}">${aiEscapeHtml(name)}</span>`,
+        deleteAct: 'delete',
+        deleteLabel: '🗑️ Delete',
+        onClick: () => {
+            editorActivatePane();
+            showEditorFrame(s.key, editorFrameSrc(s));
+            renderSessionSidebar();
+        },
+        onShare: () => showShareLinkModal('Editor Share Link', `Anyone with this link can view: <strong>${aiEscapeHtml(s.path)}</strong>`, editorFrameSrc(s)),
+        onDelete: () => {
+            const f = editorIframePool.get(s.key);
+            if (f) {
+                f.remove();
+                editorIframePool.delete(s.key);
+            }
+            if (activeEditorFrameKey === s.key) {
+                activeEditorFrameKey = null;
+                updateEditorFramePlaceholder();
+            }
+            editorSessions.delete(s.key);
+            renderSessionSidebar();
+        },
+        popup: { url: () => editorFrameSrc(s), title: name, winName: `editor_${s.key}` },
+    });
+}
+function genUuid() {
+    if (crypto && 'randomUUID' in crypto)
+        return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+function chatStartNew(initialWorkingDir) {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">New Chat</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Working Directory</label>
+            <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chat-opt-mcp">
+                <label class="form-check-label small text-secondary" for="chat-opt-mcp">MCP</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chat-opt-mdcopy" checked>
+                <label class="form-check-label small text-secondary" for="chat-opt-mdcopy">Copy MD</label>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="chat-modal-open" class="btn btn-primary">Open</button>
+            <button id="chat-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const mcpCheck = container.querySelector('#chat-opt-mcp');
+        const mdcopyCheck = container.querySelector('#chat-opt-mdcopy');
+        const workingDirInput = container.querySelector('#chat-opt-workingDir');
+        if (initialWorkingDir)
+            workingDirInput.value = initialWorkingDir;
+        const doOpen = () => {
+            const sid = genUuid();
+            const workingDir = workingDirInput.value.trim();
+            const params = new URLSearchParams({ session: sid });
+            if (!mcpCheck.checked)
+                params.set('mcp', '0');
+            if (workingDir)
+                params.set('workingDir', workingDir);
+            if (mdcopyCheck.checked)
+                params.set('mdcopy', '1');
+            chatActivatePane();
+            showChatFrame(`chat:${sid}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?${params.toString()}`);
+            chatRenderList();
+            setTimeout(chatRenderList, 1500);
+            setTimeout(chatRenderList, 4000);
+            modal.Close();
+        };
+        container.querySelector('#chat-modal-open').addEventListener('click', doOpen);
+        container.querySelector('#chat-modal-cancel').addEventListener('click', () => modal.Close());
+        workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+    }, MODAL_DOM_DELAY);
+}
+CDOM.ID('chat-new-btn').addEventListener('click', () => chatStartNew(ctrlSelectedRootPath || undefined));
+function chatLoadSession(sid) {
+    chatActivatePane();
+    showChatFrame(`chat:${sid}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`);
+    renderSessionSidebar();
+}
+function chatShowShareLink(sid, title) {
+    const shareUrl = `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`;
+    showShareLinkModal('Chat Share Link', `Anyone with this link can access the chat: <strong>${aiEscapeHtml(title)}</strong>`, shareUrl);
+}
+function buildChatItem(s) {
+    const key = `chat:${s.sessionId}`;
+    const rel = chatFormatRelative(s.updatedAt);
+    const isLoaded = chatIframePool.has(key);
+    const st = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
+    const dot = st === 'off' ? '<span class="text-danger small" title="미연결">●</span>'
+        : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
+            : '<span class="text-success small" title="대기 중">●</span>';
+    return createSessionItem({
+        activeClass: 'ai-session-item-active',
+        isActive: activeChatFrameKey === key && isPanelShown('chat-panel'),
+        dataAttr: { name: 'key', value: key },
+        leftHtml: `
+        <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
+            ${dot}
+            ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
+        </span>`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.sessionId)}</span>
+            <span class="text-truncate small">${aiEscapeHtml(s.title)}</span>
+            ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
+        </span>`,
+        deleteAct: 'delete',
+        deleteLabel: '🗑️ Delete',
+        onClick: () => chatLoadSession(s.sessionId),
+        onShare: () => chatShowShareLink(s.sessionId, s.title),
+        onDelete: () => {
+            const delConfirm = new CConfirm();
+            delConfirm.SetBody(`Delete "${aiEscapeHtml(s.title)}"?`);
+            delConfirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+                async () => {
+                    await authedFetch(`${CPath.WebRootUrl()}AIChat/session?id=${s.sessionId}`, { method: 'DELETE' });
+                    const f = chatIframePool.get(key);
+                    if (f) {
+                        f.remove();
+                        chatIframePool.delete(key);
+                    }
+                    if (activeChatFrameKey === key) {
+                        activeChatFrameKey = null;
+                        updateChatFramePlaceholder();
+                    }
+                    chatRenderList();
+                },
+                () => { },
+            ], ["Delete", "Cancel"]);
+            delConfirm.Open();
+        },
+        popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
+    });
+}
+async function chatRenderList() {
+    const token = getAuthToken(CPath.WebRootUrl());
+    if (!token) {
+        chatAuthState = 'signin';
+        lastChatSessions = null;
+        renderSessionSidebar();
+        return;
+    }
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'AIChat/sessions?limit=30');
+        if (r.status === 401) {
+            chatAuthState = 'signin';
+            lastChatSessions = null;
+            renderSessionSidebar();
+            return;
+        }
+        if (!r.ok)
+            return;
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        chatAuthState = 'ok';
+        const sessions = j.sessions;
+        for (const s of sessions) {
+            const key = `chat:${s.sessionId}`;
+            const st = s.busy ? 'busy' : 'idle';
+            syncSessState(key, st, () => {
+                const suppressToast = activeChatFrameKey === key && document.hasFocus();
+                _showDoneNotification(aiEscapeHtml(s.title), s.lastMsg ? aiEscapeHtml(s.lastMsg) : undefined, () => chatLoadSession(s.sessionId), aiEscapeHtml(s.sessionId), suppressToast);
+            });
+        }
+        lastChatSessions = sessions;
+        renderSessionSidebar();
+    }
+    catch (e) {
+        console.error('Chat session list error:', e);
+    }
+}
+chatRenderList();
+const termFrameContainer = CDOM.ID("term-frame-container");
+const termFramePlaceholder = CDOM.ID("term-frame-placeholder");
+const termIframePool = new Map();
+let activeTermFrameKey = null;
+function updateTermFramePlaceholder() {
+    termFramePlaceholder.classList.toggle('term-frame-placeholder-hidden', !!activeTermFrameKey);
+}
+function updateTermFrameVisibility() {
+    if (!activeTermFrameKey)
+        return;
+    postFrameVisible(termIframePool.get(activeTermFrameKey), CDOM.ID('term-panel').classList.contains('active'));
+}
+const termFrameCtx = {
+    pool: termIframePool,
+    container: termFrameContainer,
+    getActiveKey: () => activeTermFrameKey,
+    setActiveKey: (key) => { activeTermFrameKey = key; },
+    updatePlaceholder: updateTermFramePlaceholder,
+    onCreate: wirePooledFrameHotkeys,
+};
+function showTermFrame(key, src) {
+    return showPooledFrame(termFrameCtx, key, src);
+}
+function termActivatePane() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('term-tab')).show();
+}
+async function termConnectSession(token) {
+    termActivatePane();
+    const key = `term:${token}`;
+    if (termIframePool.has(key)) {
+        showTermFrame(key, '');
+    }
+    else {
+        showTermFrame(key, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
+    }
+    renderSessionSidebar();
+}
+async function termKillSession(token) {
+    try {
+        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/kill-session?token=${token}`);
+        const j = await r.json();
+        if (!j.ok) {
+            CAlert.E(`삭제 실패: ${j.msg || 'unknown error'}`);
+            return;
+        }
+        const key = `term:${token}`;
+        const f = termIframePool.get(key);
+        if (f) {
+            f.remove();
+            termIframePool.delete(key);
+        }
+        if (activeTermFrameKey === key) {
+            activeTermFrameKey = null;
+            updateTermFramePlaceholder();
+        }
+        termRenderList();
+    }
+    catch (e) {
+        console.error('termKillSession error:', e);
+    }
+}
+function termConfirmKillSession(token, label) {
+    const confirm = new CConfirm();
+    confirm.SetBody(`Delete "${aiEscapeHtml(label)}"?`);
+    confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+        () => { termKillSession(token); },
+        () => { },
+    ], ["Delete", "Cancel"]);
+    confirm.Open();
+}
+function termShowShareLink(token) {
+    showShareLinkModal('Terminal Share Link', 'Anyone with this link can view the terminal in read-only mode.', `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
+}
+function buildTermItem(s) {
+    const key = `term:${s.token}`;
+    const isActive = activeTermFrameKey === key && isPanelShown('term-panel');
+    const isLoaded = termIframePool.has(key);
+    const rel = chatFormatRelative(s.updatedAt);
+    const preview = aiEscapeHtml(s.lastMsg || '(empty)');
+    const dotLabel = s.mode.slice(0, 3);
+    const dotTitle = s.key || s.mode;
+    const st = !s.alive ? 'off'
+        : s.permPending ? 'wait'
+            : !isLoaded ? 'off'
+                : s.busy ? 'busy'
+                    : 'idle';
+    const dot = st === 'off' ? `<span class="badge rounded-pill bg-danger" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
+        : st === 'wait' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
+            : st === 'busy' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
+                : `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
+    return createSessionItem({
+        activeClass: 'ai-session-item-active',
+        isActive,
+        dataAttr: { name: 'key', value: key },
+        leftHtml: `
+        <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
+            ${dot}
+            ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
+        </span>`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            <span class="text-truncate text-secondary" style="font-size:0.65rem;font-family:monospace;">${aiEscapeHtml(s.token)}</span>
+            ${s.key ? `<span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.key)}</span>` : ''}
+            <span class="text-truncate small">${preview}</span>
+            ${s.workingDir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(s.workingDir)}</span>` : ''}
+        </span>`,
+        deleteAct: 'kill',
+        deleteLabel: '🗑️ Delete',
+        onClick: () => termConnectSession(s.token),
+        onShare: () => termShowShareLink(s.token),
+        onDelete: () => termConfirmKillSession(s.token, s.key || s.mode || 'Terminal'),
+        popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.token.slice(0, 8)}` },
+    });
+}
+async function termRenderList() {
+    if (!getAuthToken(CPath.WebRootUrl())) {
+        termAuthState = 'signin';
+        lastTermSessions = null;
+        renderSessionSidebar();
+        return;
+    }
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/sessions');
+        if (r.status === 401) {
+            termAuthState = 'signin';
+            lastTermSessions = null;
+            renderSessionSidebar();
+            return;
+        }
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        termAuthState = 'ok';
+        const sessions = j.sessions;
+        const serverTokens = new Set(sessions.map(s => s.token));
+        for (const key of Array.from(termIframePool.keys())) {
+            if (!key.startsWith('term:'))
+                continue;
+            if (!serverTokens.has(key.slice(5))) {
+                const f = termIframePool.get(key);
+                if (f) {
+                    f.remove();
+                    termIframePool.delete(key);
+                }
+                if (activeTermFrameKey === key) {
+                    activeTermFrameKey = null;
+                    updateTermFramePlaceholder();
+                }
+            }
+        }
+        const termNewKeys = Array.from(termIframePool.keys()).filter(k => k.startsWith('term-new:'));
+        if (termNewKeys.length > 0) {
+            const newSessions = sessions.filter(s => !termIframePool.has(`term:${s.token}`));
+            if (newSessions.length > 0) {
+                const newest = newSessions.reduce((a, b) => (a.createdAt > b.createdAt ? a : b));
+                const key = `term:${newest.token}`;
+                const newKey = termNewKeys[0];
+                const f = termIframePool.get(newKey);
+                termIframePool.delete(newKey);
+                termIframePool.set(key, f);
+                if (activeTermFrameKey === newKey)
+                    activeTermFrameKey = key;
+            }
+        }
+        for (const s of sessions) {
+            const key = `term:${s.token}`;
+            const st = !s.alive ? 'off'
+                : s.permPending ? 'wait'
+                    : s.busy ? 'busy'
+                        : 'idle';
+            syncSessState(key, st, () => {
+                const rawPreview = s.lastMsg || '';
+                const suppressToast = activeTermFrameKey === key && document.hasFocus();
+                _showDoneNotification(`${s.key || s.mode}: ${rawPreview}`.trimEnd(), rawPreview ? aiEscapeHtml(rawPreview) : undefined, () => termConnectSession(s.token), aiEscapeHtml(s.token), suppressToast);
+            }, () => {
+                const suppressToast = activeTermFrameKey === key && document.hasFocus();
+                _showDoneNotification(`⚠️ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.token), aiEscapeHtml(s.token), suppressToast);
+            });
+        }
+        lastTermSessions = sessions;
+        renderSessionSidebar();
+    }
+    catch (e) {
+        console.error('Terminal session list error:', e);
+    }
+}
+function termStartNew(mode = 'cmd', initialWorkingDir) {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">New Terminal</p>
+        <div class="mb-3 d-flex gap-2 flex-wrap">
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="opencode">opencode</button>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Key</label>
+            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="Session key (optional)" autocomplete="off">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Working Directory</label>
+            <input id="term-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
+                <label class="form-check-label small text-secondary" for="term-opt-mcp">MCP</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
+                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">Copy MD</label>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="term-modal-open" class="btn btn-primary">Open</button>
+            <button id="term-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        let selectedMode = mode;
+        const modeButtons = container.querySelectorAll('.term-mode-btn');
+        const mcpCheck = container.querySelector('#term-opt-mcp');
+        const mdcopyCheck = container.querySelector('#term-opt-mdcopy');
+        const updateModeUI = (m) => {
+            selectedMode = m;
+            modeButtons.forEach(b => {
+                b.classList.toggle('btn-primary', b.dataset.mode === m);
+                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== m);
+            });
+        };
+        modeButtons.forEach(b => b.addEventListener('click', () => updateModeUI(b.dataset.mode)));
+        updateModeUI(selectedMode);
+        const keyInput = container.querySelector('#term-opt-key');
+        const workingDirInput = container.querySelector('#term-opt-workingDir');
+        if (initialWorkingDir)
+            workingDirInput.value = initialWorkingDir;
+        const openBtn = container.querySelector('#term-modal-open');
+        const cancelBtn = container.querySelector('#term-modal-cancel');
+        let opening = false;
+        const doOpen = async () => {
+            if (opening)
+                return;
+            opening = true;
+            openBtn.disabled = true;
+            cancelBtn.disabled = true;
+            const openBtnOrigHtml = openBtn.innerHTML;
+            openBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Opening...`;
+            try {
+                const key = keyInput.value.trim();
+                const workingDir = workingDirInput.value.trim();
+                const params = new URLSearchParams({ mode: selectedMode });
+                if (key)
+                    params.set('key', key);
+                if (workingDir)
+                    params.set('workingDir', workingDir);
+                if (!mcpCheck.checked)
+                    params.set('mcp', '0');
+                if (mdcopyCheck.checked)
+                    params.set('mdcopy', '1');
+                const r = await authedFetch(CPath.WebRootUrl() + 'cmd/start-term?' + params.toString());
+                const j = await r.json();
+                if (!j.ok) {
+                    CAlert.E(j.msg || 'Failed to start terminal');
+                    return;
+                }
+                modal.Close();
+                termActivatePane();
+                showTermFrame(`term-new:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
+                termRenderList();
+                setTimeout(termRenderList, 1500);
+                setTimeout(termRenderList, 4000);
+            }
+            catch (e) {
+                console.error('[Terminal] start-term error:', e);
+                CAlert.E('Failed to start terminal');
+            }
+            finally {
+                opening = false;
+                openBtn.disabled = false;
+                cancelBtn.disabled = false;
+                openBtn.innerHTML = openBtnOrigHtml;
+            }
+        };
+        openBtn.addEventListener('click', doOpen);
+        cancelBtn.addEventListener('click', () => modal.Close());
+        workingDirInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+    }, MODAL_DOM_DELAY);
+}
+const termTab = CDOM.ID('term-tab');
+termTab.addEventListener('click', () => termStartNew('cmd', ctrlSelectedRootPath || undefined));
+termTab.addEventListener('shown.bs.tab', () => { termRenderList(); updateTermFrameVisibility(); });
+termTab.addEventListener('hidden.bs.tab', () => updateTermFrameVisibility());
+termRenderList();
+const browserFrameContainer = CDOM.ID("browser-frame-container");
+const browserFramePlaceholder = CDOM.ID("browser-frame-placeholder");
+const browserIframePool = new Map();
+let activeBrowserFrameKey = null;
+function updateBrowserFramePlaceholder() {
+    browserFramePlaceholder.classList.toggle('browser-frame-placeholder-hidden', !!activeBrowserFrameKey);
+}
+function isBrowserPaneActive() { return CDOM.ID('browser-panel').classList.contains('active'); }
+function updateBrowserFrameVisibility() {
+    if (!activeBrowserFrameKey)
+        return;
+    postFrameVisible(browserIframePool.get(activeBrowserFrameKey), isBrowserPaneActive());
+}
+const browserFrameCtx = {
+    pool: browserIframePool,
+    container: browserFrameContainer,
+    getActiveKey: () => activeBrowserFrameKey,
+    setActiveKey: (key) => { activeBrowserFrameKey = key; },
+    updatePlaceholder: updateBrowserFramePlaceholder,
+    onCreate: wirePooledFrameHotkeys,
+    onActivate: (_key, prevKey) => {
+        if (prevKey)
+            postFrameVisible(browserIframePool.get(prevKey), false);
+        updateBrowserFrameVisibility();
+    },
+};
+function showBrowserFrame(key, src) {
+    return showPooledFrame(browserFrameCtx, key, src);
+}
+function destroyBrowserFrame(key) {
+    const f = browserIframePool.get(key);
+    if (!f)
+        return;
+    f.remove();
+    browserIframePool.delete(key);
+    if (activeBrowserFrameKey === key)
+        activeBrowserFrameKey = null;
+    updateBrowserFramePlaceholder();
+}
+function browserActivatePane() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('browser-panel-tab')).show();
+}
+const browserSessions = new Map();
+function browserLoadSession(sessionId) {
+    browserActivatePane();
+    showBrowserFrame(`browser:${sessionId}`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}`);
+    renderSessionSidebar();
+}
+function browserFmtTtl(expiresAt) {
+    const rem = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+    if (rem <= 0)
+        return '−0s';
+    const m = Math.floor(rem / 60);
+    const s = rem % 60;
+    return m > 0 ? `−${m}m${s}s` : `−${s}s`;
+}
+function buildBrowserItem(s) {
+    const key = `browser:${s.sessionId}`;
+    const isActive = activeBrowserFrameKey === key && isPanelShown('browser-panel');
+    const isLoaded = browserIframePool.has(key);
+    const rel = chatFormatRelative(s.updatedAt);
+    return createSessionItem({
+        activeClass: 'ai-session-item-active',
+        isActive,
+        dataAttr: { name: 'key', value: key },
+        leftHtml: `
+        <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
+            <span class="browser-dot ${isLoaded ? 'text-success' : 'text-danger'} small flex-shrink-0">●</span>
+            ${rel ? `<span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${rel}</span>` : ''}
+        </span>`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+            <span class="text-truncate small" title="${aiEscapeHtml(s.url)}">${aiEscapeHtml(s.url)}</span>
+            <span class="d-flex gap-2 text-secondary" style="font-size:0.7rem;">
+                <span>${aiEscapeHtml(s.browserName || 'auto')}</span>
+                <span class="browser-ttl-label">${s.expiresAt ? browserFmtTtl(s.expiresAt) : ''}</span>
+            </span>
+        </span>`,
+        deleteAct: 'delete',
+        deleteLabel: '🗑️ Delete',
+        onClick: () => browserLoadSession(s.sessionId),
+        onShare: () => browserShowShareLink(s.sessionId, s.url),
+        onDelete: () => browserRemoveSession(s.sessionId),
+        popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.sessionId}` },
+    });
+}
+function browserAddSession(sessionId, url, browserName = '', expiresAt = 0, navigate = true, createdAt = Date.now()) {
+    if (browserSessions.has(sessionId))
+        return;
+    browserSessions.set(sessionId, { sessionId, url, browserName, expiresAt, createdAt, updatedAt: createdAt });
+    renderSessionSidebar();
+    if (navigate)
+        browserLoadSession(sessionId);
+}
+async function browserRemoveSession(sessionId) {
+    if (!browserSessions.has(sessionId))
+        return;
+    browserSessions.delete(sessionId);
+    destroyBrowserFrame(`browser:${sessionId}`);
+    renderSessionSidebar();
+    try {
+        await authedFetch(`${CPath.WebRootUrl()}PlayWright/remove`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId })
+        });
+    }
+    catch (_) { }
+}
+async function browserRefreshList() {
+    if (!getAuthToken(CPath.WebRootUrl())) {
+        browserAuthState = 'signin';
+        browserSessions.clear();
+        renderSessionSidebar();
+        return;
+    }
+    try {
+        const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
+        if (r.status === 401) {
+            browserAuthState = 'signin';
+            browserSessions.clear();
+            renderSessionSidebar();
+            return;
+        }
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        browserAuthState = 'ok';
+        const serverIds = new Set(j.sessions.map(s => s.sessionId));
+        for (const sid of Array.from(browserSessions.keys())) {
+            if (!serverIds.has(sid)) {
+                browserSessions.delete(sid);
+                destroyBrowserFrame(`browser:${sid}`);
+            }
+        }
+        for (const s of j.sessions) {
+            const existing = browserSessions.get(s.sessionId);
+            if (existing) {
+                existing.expiresAt = s.expiresAt;
+                existing.updatedAt = s.updatedAt;
+            }
+            else
+                browserSessions.set(s.sessionId, { sessionId: s.sessionId, url: s.currentUrl, browserName: s.browserName, expiresAt: s.expiresAt, createdAt: s.createdAt, updatedAt: s.updatedAt });
+        }
+        renderSessionSidebar();
+    }
+    catch (_) { }
+}
+function browserShowShareLink(sessionId, url) {
+    showShareLinkModal('Browser Share Link', `Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong>`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`);
+}
+CDOM.ID('browser-new-btn').addEventListener('click', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">New Browser Session</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">URL</label>
+            <input id="brow-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="mb-3 d-flex gap-2">
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Browser</label>
+                <select id="brow-browser" class="form-select form-select-sm">
+                    <option value="">auto</option>
+                    <option value="chrome">chrome</option>
+                    <option value="msedge">msedge</option>
+                    <option value="firefox">firefox</option>
+                </select>
+            </div>
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">TTL (sec)</label>
+                <input id="brow-ttl" type="number" min="10" class="form-control form-control-sm" value="300">
+            </div>
+        </div>
+        <div class="mb-3 d-flex gap-2">
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Width</label>
+                <input id="brow-width" type="number" min="1" class="form-control form-control-sm" value="1280">
+            </div>
+            <div class="flex-fill">
+                <label class="form-label small text-secondary mb-1">Height</label>
+                <input id="brow-height" type="number" min="1" class="form-control form-control-sm" value="720">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">Stealth (sec, 0=off)</label>
+            <input id="brow-stealth" type="number" min="0" class="form-control form-control-sm" value="0">
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="brow-open" class="btn btn-primary">Open</button>
+            <button id="brow-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const urlInput = container.querySelector('#brow-url');
+        const browserSel = container.querySelector('#brow-browser');
+        const ttlInput = container.querySelector('#brow-ttl');
+        const widthInput = container.querySelector('#brow-width');
+        const heightInput = container.querySelector('#brow-height');
+        const stealthInput = container.querySelector('#brow-stealth');
+        const doOpen = async () => {
+            const url = urlInput.value.trim();
+            if (!url)
+                return;
+            const browser = browserSel.value;
+            const ttl = parseInt(ttlInput.value) || 300;
+            const width = parseInt(widthInput.value);
+            const height = parseInt(heightInput.value);
+            const stealth = parseInt(stealthInput.value) || 0;
+            modal.Close();
+            try {
+                const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, ...(browser ? { browser } : {}), ttl, logSize: 200, width, height, stealth })
+                });
+                const j = await r.json();
+                if (!j.ok) {
+                    CAlert.E(j.msg || 'Failed');
+                    return;
+                }
+                browserAddSession(j.sessionId, url, browser || 'auto', Date.now() + ttl * 1000);
+            }
+            catch (_) {
+                CAlert.E('Failed to start browser');
+            }
+        };
+        container.querySelector('#brow-open').addEventListener('click', doOpen);
+        container.querySelector('#brow-cancel').addEventListener('click', () => modal.Close());
+        urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter')
+            doOpen(); });
+        setTimeout(() => urlInput.focus(), 50);
+    }, MODAL_DOM_DELAY);
+});
+CDOM.ID('browser-panel-tab').addEventListener('shown.bs.tab', () => updateBrowserFrameVisibility());
+CDOM.ID('browser-panel-tab').addEventListener('hidden.bs.tab', () => updateBrowserFrameVisibility());
+setInterval(() => {
+    sessionSidebarList.querySelectorAll('[data-key^="browser:"]').forEach(el => {
+        const sid = el.dataset.key.slice('browser:'.length);
+        const s = browserSessions.get(sid);
+        const ttlEl = el.querySelector('.browser-ttl-label');
+        if (s && ttlEl)
+            ttlEl.textContent = s.expiresAt ? browserFmtTtl(s.expiresAt) : '';
+    });
+}, 1000);
+browserRefreshList();
+setInterval(() => {
+    chatRenderList();
+    termRenderList();
+    browserRefreshList();
+}, 5000);
+['chat-panel-tab', 'term-tab', 'browser-panel-tab', 'editor-panel-tab'].forEach((tabId) => {
+    const tabEl = CDOM.ID(tabId);
+    tabEl.addEventListener('shown.bs.tab', () => renderSessionSidebar());
+    tabEl.addEventListener('hidden.bs.tab', () => renderSessionSidebar());
+});
+const schedSessionList = CDOM.ID("schedSessionList");
+function schedIntervalStr(s) {
+    if (s.timeMode) {
+        const hh = String(s.hour ?? 0).padStart(2, '0');
+        const mm = String(s.minute ?? 0).padStart(2, '0');
+        return `${hh}:${mm}`;
+    }
+    const parts = [`${s.delay}s`];
+    if (s.count > 0)
+        parts.push(`×${s.count}`);
+    if (s.start > 0)
+        parts.push(`+${s.start}s`);
+    if (s.end > 0)
+        parts.push(`~${s.end}s`);
+    return parts.join(' ');
+}
+async function schedRefresh() {
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/schedules');
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        schedSessionList.innerHTML = '';
+        const schedules = j.schedules;
+        if (schedules.length === 0)
+            return;
+        for (const s of schedules) {
+            const item = document.createElement('div');
+            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-1 rounded';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
+                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'codex' ? 'bg-primary' : s.mode === 'opencode' ? 'bg-success' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
+                    <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
+                </span>
+                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.name)}</span>
+                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.terminalKey)}</span>
+                    <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
+                </span>
+                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+            `;
+            item.addEventListener('click', () => schedOpenModal(s));
+            item.querySelector('.sched-del-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const dlg = new CConfirm();
+                dlg.SetBody(`스케줄 "${aiEscapeHtml(s.name)}"을(를) 삭제할까요?`);
+                dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+                    async () => {
+                        await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
+                        schedRefresh();
+                    },
+                    () => { },
+                ], ["Delete", "Cancel"]);
+                dlg.Open();
+            });
+            item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
+            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            schedSessionList.appendChild(item);
+        }
+    }
+    catch (e) {
+        console.error('schedRefresh error:', e);
+    }
+}
+function schedOpenModal(existing) {
+    const isEdit = !!existing;
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <p class="fw-semibold mb-3">${isEdit ? 'Edit Schedule' : 'New Schedule'}</p>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Name (schedule key)</label>
+            <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Terminal Key</label>
+            <input id="sched-tkey" type="text" class="form-control form-control-sm" placeholder="target terminal key" autocomplete="off" value="${aiEscapeHtml(existing?.terminalKey || '')}">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Mode (created if terminal missing)</label>
+            <div class="d-flex gap-1 flex-wrap">
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="none">none</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="cmd">cmd</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="claude">claude</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
+                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="opencode">opencode</button>
+            </div>
+        </div>
+        <div class="mb-2">
+            <div class="d-flex gap-1 mb-2">
+                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${!(existing?.timeMode) ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
+                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.timeMode ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
+            </div>
+            <div id="sched-panel-interval" style="display:${!(existing?.timeMode) ? '' : 'none'}">
+                <div class="d-flex gap-2 mb-2">
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Delay (sec)</label>
+                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.delay ?? 60}">
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
+                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.count ?? 0}">
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
+                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.start ?? 0}">
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
+                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.end ?? 0}">
+                    </div>
+                </div>
+            </div>
+            <div id="sched-panel-time" style="display:${existing?.timeMode ? '' : 'none'}">
+                <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">Days of Week</label>
+                    <div class="d-flex gap-1 flex-wrap">
+                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((lbl, i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 align-items-end">
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Hour (0–23)</label>
+                        <select id="sched-hour" class="form-select form-select-sm">
+                            ${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${(existing?.hour ?? 9) === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label small text-secondary mb-1">Minute</label>
+                        <select id="sched-minute" class="form-select form-select-sm">
+                            ${Array.from({ length: 12 }, (_, i) => i * 5).map(m => `<option value="${m}" ${(existing?.minute ?? 0) === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Command</label>
+            <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
+        </div>
+        <div class="accordion accordion-flush mb-3" id="sched-accordion">
+            <div class="accordion-item" style="background:transparent;border:1px solid #444;border-radius:0.375rem;">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2 px-3 small" type="button" data-bs-toggle="collapse" data-bs-target="#sched-acc-body" style="background:transparent;color:inherit;font-size:0.75rem;">
+                        Advanced
+                    </button>
+                </h2>
+                <div id="sched-acc-body" class="accordion-collapse collapse">
+                    <div class="accordion-body py-2 px-3">
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Working Directory</label>
+                            <input id="sched-cwd" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off" value="${aiEscapeHtml(existing?.cwd || '')}">
+                        </div>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sched-clear" ${existing?.clear ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-clear">Clear</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sched-mcp" ${(existing?.mcp ?? true) ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-mcp">MCP</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sched-mdcopy" ${existing?.mdcopy ? 'checked' : ''}>
+                                <label class="form-check-label small text-secondary" for="sched-mdcopy">Copy MD</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="sched-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+            <button id="sched-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        let selectedMode = existing?.mode || 'cmd';
+        const modeBtns = container.querySelectorAll('.sched-mode-btn');
+        const updateMode = (m) => {
+            selectedMode = m;
+            modeBtns.forEach(b => {
+                b.classList.toggle('btn-primary', b.dataset.mode === m);
+                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== m);
+            });
+        };
+        modeBtns.forEach(b => b.addEventListener('click', () => updateMode(b.dataset.mode)));
+        updateMode(selectedMode);
+        let isTimeMode = existing?.timeMode ?? false;
+        const tabInterval = container.querySelector('#sched-tab-interval');
+        const tabTime = container.querySelector('#sched-tab-time');
+        const panelInterval = container.querySelector('#sched-panel-interval');
+        const panelTime = container.querySelector('#sched-panel-time');
+        const switchTab = (toTime) => {
+            isTimeMode = toTime;
+            tabInterval.className = `btn btn-sm flex-fill ${!toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
+            tabTime.className = `btn btn-sm flex-fill ${toTime ? 'btn-primary' : 'btn-outline-secondary'}`;
+            panelInterval.style.display = toTime ? 'none' : '';
+            panelTime.style.display = toTime ? '' : 'none';
+        };
+        tabInterval.addEventListener('click', () => switchTab(false));
+        tabTime.addEventListener('click', () => switchTab(true));
+        const dayBtns = container.querySelectorAll('.sched-day-btn');
+        dayBtns.forEach(b => b.addEventListener('click', () => {
+            const active = b.classList.contains('btn-primary');
+            b.classList.toggle('btn-primary', !active);
+            b.classList.toggle('btn-outline-secondary', active);
+        }));
+        const doSave = async () => {
+            const name = (container.querySelector('#sched-name')).value.trim();
+            const tkey = (container.querySelector('#sched-tkey')).value.trim();
+            const command = (container.querySelector('#sched-cmd')).value.trim();
+            const cwd = (container.querySelector('#sched-cwd')).value.trim();
+            const clear = (container.querySelector('#sched-clear')).checked;
+            const mcp = (container.querySelector('#sched-mcp')).checked;
+            const mdcopy = (container.querySelector('#sched-mdcopy')).checked;
+            if (!name || !tkey || !command) {
+                CAlert.E('Name, terminal key, and command are required');
+                return;
+            }
+            const params = new URLSearchParams({ name, terminalKey: tkey, mode: selectedMode, command,
+                clear: clear ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0',
+                timeMode: isTimeMode ? '1' : '0' });
+            if (cwd)
+                params.set('cwd', cwd);
+            if (isTimeMode) {
+                const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
+                if (selectedDays.length === 0) {
+                    CAlert.E('Select at least one day');
+                    return;
+                }
+                const hh = parseInt((container.querySelector('#sched-hour')).value) || 0;
+                const mm = parseInt((container.querySelector('#sched-minute')).value) || 0;
+                params.set('days', selectedDays.join(','));
+                params.set('hour', String(hh));
+                params.set('minute', String(mm));
+                params.set('delay', '60');
+                params.set('count', '0');
+                params.set('start', '0');
+                params.set('end', '0');
+            }
+            else {
+                const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
+                const count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
+                const start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
+                const end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
+                if (delay === 0) {
+                    CAlert.E('Delay must be at least 1 second');
+                    return;
+                }
+                params.set('delay', String(delay));
+                params.set('count', String(count));
+                params.set('start', String(start));
+                params.set('end', String(end));
+                params.set('days', '');
+                params.set('hour', '0');
+                params.set('minute', '0');
+            }
+            const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
+            const j = await r.json();
+            if (!j.ok) {
+                CAlert.E(j.msg || 'Failed');
+                return;
+            }
+            modal.Close();
+            schedRefresh();
+        };
+        container.querySelector('#sched-modal-save').addEventListener('click', doSave);
+        container.querySelector('#sched-modal-cancel').addEventListener('click', () => modal.Close());
+    }, MODAL_DOM_DELAY);
+}
+CDOM.ID('sched-new-btn').addEventListener('click', () => schedOpenModal());
+schedRefresh();
+setInterval(schedRefresh, 5000);

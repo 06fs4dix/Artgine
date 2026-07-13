@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor</title>
+<script type='text/javascript' src='../../external/legacy/monaco-editor/min/vs/loader.js'></script>
+<style>
+html,body{height:100%;margin:0;background:#1e1e1e;}
+#editor-toolbar{position:absolute;top:0;left:0;right:0;height:28px;box-sizing:border-box;padding:0 8px;
+    display:flex;align-items:center;gap:8px;background:#252526;border-bottom:1px solid #333;
+    color:#aaa;font:12px sans-serif;}
+#editor-save-btn{display:none;font:12px sans-serif;padding:2px 10px;border:1px solid #555;border-radius:3px;
+    background:#333;color:#ddd;cursor:pointer;}
+#editor-save-btn:hover{background:#3a3a3a;}
+#editor-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#editor-body{position:absolute;top:28px;left:0;right:0;bottom:0;color:#ccc;font:13px monospace;padding:8px;box-sizing:border-box;}
+</style>
+</head>
+<body>
+<div id="editor-toolbar">
+    <button id="editor-save-btn" type="button">Save (Ctrl+S)</button>
+    <span id="editor-path"></span>
+    <span id="editor-status"></span>
+</div>
+<div id="editor-body"></div>
+<script type="module" src="./Editor.js"></script>
+</body>
+</html>

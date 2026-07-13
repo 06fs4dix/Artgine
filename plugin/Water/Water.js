@@ -69,8 +69,8 @@ export class CWater3D extends CSubject {
             const accuracy = (cam.mProjFar ?? 100000) / (cam.mProjNear ?? 1);
             const worldSizeX = Math.abs(this.GetSca().x);
             const worldSizeY = Math.abs(this.GetSca().y);
-            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / 500000000 * 10), 1, 1000);
-            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / 500000000 * 10), 1, 1000);
+            const scaleX = CMath.Clamp(Math.floor(accuracy * worldSizeX / (50000 * 100000)), 1, 1000);
+            const scaleY = CMath.Clamp(Math.floor(accuracy * worldSizeY / (50000 * 100000)), 1, 1000);
             const waterMeshKey = `waterMesh${scaleX}:${scaleY}`;
             if (this.GetFrame().Res().Find(waterMeshKey) == null) {
                 const rVal = new CMeshCreateInfo();
@@ -227,7 +227,7 @@ export class CWater3D extends CSubject {
     }
 }
 export class CReflector3D extends CBrushComp {
-    mSize = 512;
+    mSize = 256;
     mCycle = 0;
     constructor() {
         super("reflector_" + CUniqueID.Get());
@@ -338,7 +338,7 @@ export class CReflector3D extends CBrushComp {
     }
 }
 export class CRefractor3D extends CBrushComp {
-    mSize = 512;
+    mSize = 256;
     mCycle = 0;
     constructor() {
         super("refractor_" + CUniqueID.Get());

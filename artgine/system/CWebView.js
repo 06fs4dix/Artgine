@@ -1,1 +1,113 @@
-import{CJSON as e}from"../basic/CJSON.js";import{CFile as i}from"./CFile.js";var t=null;export class CWebView{static eType={WPF:"WPF",CEF:"CEF",Flutter:"Flutter",Electron:"Electron",None:"None"};static IsWebView(){return null!=t?t:t=null!=window.chrome&&null!=window.chrome.webview&&null!=window.chrome.webview.hostObjects&&window.chrome.webview.hostObjects?CWebView.eType.WPF:null!=window.cefQuery?CWebView.eType.CEF:null!=window.flutter_inappwebview||null!=window.flutter?CWebView.eType.Flutter:window.electronAPI?CWebView.eType.Electron:CWebView.eType.None}static async Call(e,i=null){const t="object"==typeof i?JSON.stringify(i):i;if(await CWebView.IsWebView()===CWebView.eType.WPF){const n=window.cefQuery.webview.hostObjects.bridge;return null!=i?n[e](t):n[e]()}if(await CWebView.IsWebView()===CWebView.eType.CEF)return new Promise((i,n)=>{window.cefQuery({request:JSON.stringify({func:e,data:t}),onSuccess:function(e){try{let t=e;e.startsWith("{")&&e.endsWith("}")||e.startsWith("[")&&e.endsWith("]")?t=JSON.parse(e):isNaN(Number(e))?"true"===e?t=!0:"false"===e&&(t=!1):t=Number(e),i(t)}catch(t){i(e)}},onFailure:function(e,i){n(new Error(`cefQuery failed [${e}]: ${i}`))}})});if(await CWebView.IsWebView()===CWebView.eType.Electron){const t=window.electronAPI.ipcRenderer;return t&&"function"==typeof t.invoke?t.invoke(e,i):void console.warn("ipcRenderer가 제대로 연결되지 않았습니다.")}return await CWebView.IsWebView()===CWebView.eType.Flutter?window.flutter_inappwebview.callHandler(e,i):Promise.reject("No WebView detected")}static JToWKeyUp(e){CWebView.Call("KeyUp",e)}static async JToWConnect(e){return await CWebView.Call("Connect",e)}static async JToWFileOpen(i=!1,t=null){return new e(await CWebView.Call("FileOpen",{multi:i,_ext:t})).ToJSON({name:[],data:[]})}static async JToWFileSave(e,t,n){CWebView.IsWebView()!=CWebView.eType.None?await CWebView.Call("FileSave",{type:e,filename:t,data:n}):await i.Save(n,t,!0)}static async JToWFileDroppedPath(e){if(await CWebView.IsWebView()===CWebView.eType.Electron){let e=await CWebView.Call("FileDroppedPath");return JSON.parse(e)}return new Array(e.length)}}
+import { CJSON } from "../basic/CJSON.js";
+import { CFile } from "./CFile.js";
+var g_webViewType = null;
+export class CWebView {
+    static eType = {
+        WPF: "WPF",
+        CEF: "CEF",
+        Flutter: "Flutter",
+        Electron: "Electron",
+        None: "None",
+    };
+    static IsWebView() {
+        if (g_webViewType != null)
+            return g_webViewType;
+        if (window["chrome"] != null && window["chrome"].webview != null && window["chrome"].webview.hostObjects != null &&
+            window["chrome"].webview.hostObjects)
+            g_webViewType = CWebView.eType.WPF;
+        else if (window["cefQuery"] != null)
+            g_webViewType = CWebView.eType.CEF;
+        else if (window["flutter_inappwebview"] != null || window["flutter"] != null)
+            g_webViewType = CWebView.eType.Flutter;
+        else if (window["electronAPI"]) {
+            g_webViewType = CWebView.eType.Electron;
+        }
+        else
+            g_webViewType = CWebView.eType.None;
+        return g_webViewType;
+    }
+    static async Call(funcName, _dataToWV2 = null) {
+        const data = (typeof _dataToWV2 === "object" ? JSON.stringify(_dataToWV2) : _dataToWV2);
+        if (await CWebView.IsWebView() === CWebView.eType.WPF) {
+            const bridge = window["cefQuery"].webview.hostObjects.bridge;
+            if (_dataToWV2 != null) {
+                return bridge[funcName](data);
+            }
+            else {
+                return bridge[funcName]();
+            }
+        }
+        else if (await CWebView.IsWebView() === CWebView.eType.CEF) {
+            return new Promise((resolve, reject) => {
+                window["cefQuery"]({
+                    request: JSON.stringify({
+                        func: funcName,
+                        data: data
+                    }),
+                    onSuccess: function (response) {
+                        try {
+                            let parsed = response;
+                            if ((response.startsWith("{") && response.endsWith("}")) ||
+                                (response.startsWith("[") && response.endsWith("]"))) {
+                                parsed = JSON.parse(response);
+                            }
+                            else if (!isNaN(Number(response))) {
+                                parsed = Number(response);
+                            }
+                            else if (response === "true") {
+                                parsed = true;
+                            }
+                            else if (response === "false") {
+                                parsed = false;
+                            }
+                            resolve(parsed);
+                        }
+                        catch (e) {
+                            resolve(response);
+                        }
+                    },
+                    onFailure: function (code, msg) {
+                        reject(new Error(`cefQuery failed [${code}]: ${msg}`));
+                    }
+                });
+            });
+        }
+        else if (await CWebView.IsWebView() === CWebView.eType.Electron) {
+            const ipcRenderer = window["electronAPI"].ipcRenderer;
+            if (!ipcRenderer || typeof ipcRenderer.invoke !== "function") {
+                console.warn("ipcRenderer가 제대로 연결되지 않았습니다.");
+                return;
+            }
+            return ipcRenderer.invoke(funcName, _dataToWV2);
+        }
+        else if (await CWebView.IsWebView() === CWebView.eType.Flutter) {
+            return window["flutter_inappwebview"].callHandler(funcName, _dataToWV2);
+        }
+        return Promise.reject("No WebView detected");
+    }
+    static JToWKeyUp(_key) {
+        CWebView.Call("KeyUp", _key);
+    }
+    static async JToWConnect(_proj) {
+        return await CWebView.Call("Connect", _proj);
+    }
+    static async JToWFileOpen(_multi = false, _ext = null) {
+        var json = new CJSON(await CWebView.Call("FileOpen", { multi: _multi, _ext: _ext })).ToJSON({ name: [], data: [] });
+        return json;
+    }
+    static async JToWFileSave(_type, _filename, _data) {
+        if (CWebView.IsWebView() == CWebView.eType.None) {
+            await CFile.Save(_data, _filename, true);
+            return;
+        }
+        await CWebView.Call("FileSave", { type: _type, filename: _filename, data: _data });
+    }
+    static async JToWFileDroppedPath(_files) {
+        if (await CWebView.IsWebView() === CWebView.eType.Electron) {
+            let pathsStr = await CWebView.Call("FileDroppedPath");
+            let paths = JSON.parse(pathsStr);
+            return paths;
+        }
+        return new Array(_files.length);
+    }
+}

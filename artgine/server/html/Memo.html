@@ -53,12 +53,12 @@ body{ font-size:14px; }
      style="z-index:9998; display:none;">
     <div class="card shadow" style="width:320px;">
         <div class="card-body">
-            <h5 class="card-title mb-3"><i class="bi bi-shield-lock"></i> Authentication</h5>
+            <h5 class="card-title mb-3"><i class="bi bi-shield-lock"></i> <span data-CLan="memo.auth.title">Authentication</span></h5>
             <div class="mb-3">
-                <input type="password" id="authPwInput" class="form-control" placeholder="Password">
+                <input type="password" id="authPwInput" class="form-control" placeholder="Password" data-CLan="memo.auth.pwPlaceholder">
             </div>
             <div id="authMsg" class="text-danger small mb-2" style="min-height:1.2em;"></div>
-            <button id="authSubmitBtn" class="btn btn-primary w-100">Sign In</button>
+            <button id="authSubmitBtn" class="btn btn-primary w-100" data-CLan="memo.auth.signIn">Sign In</button>
         </div>
     </div>
 </div>
@@ -67,32 +67,32 @@ body{ font-size:14px; }
     <aside id="cat-sidebar" class="offcanvas offcanvas-start d-flex flex-column border-end bg-body-tertiary" tabindex="-1">
         <div class="cat-sidebar-header border-bottom">
             <div class="mb-2">
-                <input type="text" class="form-control form-control-sm" id="memoFolderInput" placeholder="Folder path (e.g. proj/2D/Village)">
+                <input type="text" class="form-control form-control-sm" id="memoFolderInput" placeholder="Folder path (e.g. proj/2D/Village)" data-CLan="memo.folder.placeholder">
             </div>
             <div class="d-flex gap-2">
                 <button id="addCatBtn" type="button" class="btn btn-sm btn-primary flex-fill d-flex align-items-center justify-content-center gap-1">
-                    <i class="bi bi-plus-lg"></i> Add Category
+                    <i class="bi bi-plus-lg"></i> <span data-CLan="memo.addCategory">Add Category</span>
                 </button>
                 <button id="clearCatSelectionBtn" type="button"
                     class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1"
-                    title="Clear selection - Search/Delete will look across all categories">
-                    <i class="bi bi-x-circle"></i> Deselect
+                    title="Clear selection - Search/Delete will look across all categories" data-CLan-title="memo.deselect.title">
+                    <i class="bi bi-x-circle"></i> <span data-CLan="memo.deselect">Deselect</span>
                 </button>
             </div>
         </div>
         <ul class="nav nav-tabs nav-fill" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="cat-tab-category" data-bs-toggle="tab" data-bs-target="#cat-pane-category" type="button" role="tab">Category</button>
+                <button class="nav-link active" id="cat-tab-category" data-bs-toggle="tab" data-bs-target="#cat-pane-category" type="button" role="tab" data-CLan="memo.tab.category">Category</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="cat-tab-time" data-bs-toggle="tab" data-bs-target="#cat-pane-time" type="button" role="tab">Message</button>
+                <button class="nav-link" id="cat-tab-time" data-bs-toggle="tab" data-bs-target="#cat-pane-time" type="button" role="tab" data-CLan="memo.tab.message">Message</button>
             </li>
         </ul>
         <div class="tab-content flex-grow-1 overflow-hidden">
             <div class="tab-pane fade show active h-100 overflow-hidden" id="cat-pane-category" role="tabpanel">
                 <div class="d-flex flex-column h-100">
                     <div class="p-2 border-bottom flex-shrink-0">
-                        <input type="text" class="form-control form-control-sm" id="catSearchInput" placeholder="Search category...">
+                        <input type="text" class="form-control form-control-sm" id="catSearchInput" placeholder="Search category..." data-CLan="memo.search.category">
                     </div>
                     <div class="cat-tree-scroll overflow-auto flex-grow-1" id="catTree"></div>
                 </div>
@@ -100,7 +100,7 @@ body{ font-size:14px; }
             <div class="tab-pane fade h-100 overflow-hidden" id="cat-pane-time" role="tabpanel">
                 <div class="d-flex flex-column h-100">
                     <div class="p-2 border-bottom flex-shrink-0">
-                        <input type="text" class="form-control form-control-sm" id="timeSearchInput" placeholder="Search message...">
+                        <input type="text" class="form-control form-control-sm" id="timeSearchInput" placeholder="Search message..." data-CLan="memo.search.message">
                     </div>
                     <div class="cat-tree-scroll overflow-auto flex-grow-1" id="timeList"></div>
                 </div>
@@ -112,31 +112,34 @@ body{ font-size:14px; }
         <button id="catSidebarToggle" type="button"
             class="btn btn-light position-absolute"
             style="top:48px; right:24px; z-index:10; padding:.3rem .6rem; font-size:1rem;"
-            title="Toggle sidebar (Tab)">
+            title="Toggle sidebar (Tab)" data-CLan-title="memo.sidebarToggle.title">
             <i class="bi bi-layout-sidebar-inset"></i>
         </button>
         <div id="memo-topbar" class="d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary">
-            <select id="modeSelect" class="form-select form-select-sm w-auto" title="Type /w, /s or /d in the message box to switch">
-                <option value="write">Write /w</option>
-                <option value="search">Search /s /r</option>
-                <option value="delete">Delete /d</option>
-                <option value="move">Move /m</option>
+            <select id="modeSelect" class="form-select form-select-sm w-auto" title="Type /w, /s or /d in the message box to switch" data-CLan-title="memo.mode.title">
+                <option value="write" data-CLan="memo.mode.write">Write /w</option>
+                <option value="search" data-CLan="memo.mode.search">Search /s /r</option>
+                <option value="delete" data-CLan="memo.mode.delete">Delete /d</option>
+                <option value="move" data-CLan="memo.mode.move">Move /m</option>
             </select>
             <select id="providerSelect" class="form-select form-select-sm w-auto"></select>
             <select id="modelSelect" class="form-select form-select-sm w-auto"></select>
+            <button id="helpBtn" type="button" class="btn btn-sm btn-outline-secondary ms-auto" title="Help" data-CLan-title="memo.help.title">
+                <i class="bi bi-question-circle"></i>
+            </button>
         </div>
         <div id="memo-content" class="flex-grow-1 overflow-auto p-3 bg-body">
             <div class="container-narrow mx-auto">
                 <div id="memo-log" class="d-flex flex-column gap-2">
                     <div id="memoEmptyState" class="empty-state text-center text-body-secondary">
-                        <i class="bi bi-signpost-split d-block"></i>No category selected. Select one to write, or use Search/Delete to work across all categories.
+                        <i class="bi bi-signpost-split d-block"></i><span data-CLan="memo.empty.noCategory">No category selected. Select one to write, or use Search/Delete to work across all categories.</span>
                     </div>
                 </div>
             </div>
         </div>
         <div id="memo-composer" class="p-2 border-top bg-body-tertiary">
             <div class="container-narrow mx-auto d-flex gap-2 align-items-end">
-                <textarea id="composerText" class="form-control" placeholder="Memo... #tag" rows="1"></textarea>
+                <textarea id="composerText" class="form-control" placeholder="Memo... #tag" rows="1" data-CLan="memo.composer.placeholder"></textarea>
                 <button id="submitBtn" class="btn btn-primary flex-shrink-0">
                     <i class="bi bi-send"></i>
                 </button>

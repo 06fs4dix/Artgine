@@ -2,8 +2,8 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { CCMDMgr } from "./CCMDMgr.js";
-function GetStartPort() {
-    const mainPath = fs.existsSync("settings.json") ? "settings.json" : path.join("desktop", "settings.json");
+function GetStartPort(_settingsFileName) {
+    const mainPath = fs.existsSync(_settingsFileName) ? _settingsFileName : path.join("desktop", _settingsFileName);
     if (!fs.existsSync(mainPath))
         return null;
     try {
@@ -81,8 +81,10 @@ if (CCMDMgr.IsTSC() == false || CCMDMgr.GetFileCount("node_modules") == 0) {
     await CCMDMgr.RunCMD("npm install --production", false);
     await CCMDMgr.RunCMD("npx tsc", false);
 }
-const startPort = GetStartPort();
+const settingsFileName = process.argv[2] ?? "settings.json";
+const startPort = GetStartPort(settingsFileName);
 if (startPort != null) {
     KillElectronOnPort(startPort);
 }
-await CCMDMgr.RunCMD("npx electron .", false);
+const electronArg = /\s/.test(settingsFileName) ? `"${settingsFileName}"` : settingsFileName;
+await CCMDMgr.RunCMD(`npx electron . ${electronArg}`, false);

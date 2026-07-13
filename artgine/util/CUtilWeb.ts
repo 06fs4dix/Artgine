@@ -119,7 +119,10 @@ export class CUtilWeb {
 
 
 	// }
-	static async TSImport(_source: string, _monaco = true, _github = false, _filePath: string = null) {
+	// _rewriteSource=false면 소스 텍스트(상대경로 import문)는 그대로 두고 extra lib만 등록한다.
+	// MonacoEditer가 실제 파일 URI로 모델을 만들 때 쓰는 모드 - TS가 상대경로를 스스로 해석하므로
+	// 화면/저장 시 원본 소스가 그대로 보존된다.
+	static async TSImport(_source: string, _monaco = true, _github = false, _filePath: string = null, _rewriteSource = true) {
 		let importPathArr = ExtractImportPaths(_source, false);
 		const fileDir = CString.PathSub(_filePath ?? CPath.FullPath());
 		const rootBase = (_github ? "https://06fs4dix.github.io/Artgine" : CPath.WebRootUrl()).replace(/\/$/, "");
@@ -162,6 +165,7 @@ export class CUtilWeb {
 				}
 			}
 
+			const hadJsExt = _monaco && path.indexOf(".js") !== -1;
 			if (_monaco) path = CString.ReplaceAll(path, ".js", "");
 			else if (path.indexOf(".js") == -1) path += ".js";
 
@@ -185,16 +189,20 @@ export class CUtilWeb {
 				adjustedFullPath = PickBase(path) + "/" + path;
 			}
 
-			_source = _source.replaceAll(originalPath, adjustedFullPath);
+			if (_rewriteSource) _source = _source.replaceAll(originalPath, adjustedFullPath);
 			processedPaths.set(originalPath, adjustedFullPath);
 			importPathArr[i] = adjustedFullPath;
 
 			if (_monaco && window["require"] != null) {
 				const fName = adjustedFullPath + ".ts";
 				const buf = await CFile.Load(fName);
-				window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(
-					CUtil.ArrayToString(buf), fName
-				);
+				const libSource = CUtil.ArrayToString(buf);
+				window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, fName);
+				// 소스를 치환하지 않으면 원본 import문(보통 ".js" 확장자)이 그대로 남으므로,
+				// TS가 실제로 찾는 키(확장자 그대로의 절대경로)에도 동일 내용을 등록해준다.
+				if (!_rewriteSource && hadJsExt) {
+					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, adjustedFullPath + ".js");
+				}
 			}
 		}
 
@@ -215,8 +223,12 @@ export class CUtilWeb {
 		}
 
 		(require as any)(['vs/editor/editor.main'], async function () {
+			// 실제 파일 경로(_filePath)를 알면 그 URL을 모델 URI로 써서 TypeScript가 상대경로 import를
+			// 스스로 정확히 해석하게 하고, 소스 텍스트는 원본(상대경로) 그대로 둔다(화면/저장 모두 원본 유지).
+			// 파일 경로를 모르면(스니펫 등) 예전처럼 소스를 절대경로로 치환해서 억지로 맞춘다.
+			const hasFilePath = _language == "typescript" && !!_filePath;
 			if (_language == "typescript")
-				_value = await CUtilWeb.TSImport(_value, true, _github, _filePath);
+				_value = await CUtilWeb.TSImport(_value, true, _github, _filePath, !hasFilePath);
 
 			_target.innerHTML = "";
 			// ✅ JS 파일에 대한 설정
@@ -227,7 +239,20 @@ export class CUtilWeb {
 				target: window["monaco"].languages.typescript.ScriptTarget.ES2022,
 				module: window["monaco"].languages.typescript.ModuleKind.ESNext
 			});
-			let editor = window["monaco"].editor.create(_target, {
+
+			let model = null;
+			if (hasFilePath) {
+				const uri = window["monaco"].Uri.parse(_filePath);
+				model = window["monaco"].editor.getModel(uri);
+				if (model) model.setValue(_value);
+				else model = window["monaco"].editor.createModel(_value, _language, uri);
+			}
+			let editor = window["monaco"].editor.create(_target, model ? {
+				model,
+				automaticLayout: true,
+				readOnly: false,
+				theme: _theme
+			} : {
 				value: _value,
 				language: _language,
 				automaticLayout: true,

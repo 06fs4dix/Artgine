@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+<title>File Manager</title>
+<link rel="stylesheet" href="../../external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="../../external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
+<script src="../../external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js" defer></script>
+<script type='text/javascript' src='../../external/legacy/monaco-editor/min/vs/loader.js'></script>
+<link rel='stylesheet' href='../../external/legacy/diff2html/diff2html.min.css'>
+<script src='../../external/legacy/diff2html/diff2html-ui-slim.min.js'></script>
+<style>
+html,body{height:100%;}
+body{ font-size:14px; }
+#fileUrlBar.file-list-authed {
+    background-color: var(--bs-primary-bg-subtle);
+    border-color: var(--bs-primary) !important;
+}
+#fileUrlBar.file-list-authed #fileUrlCopyBtn {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+</style>
+</head>
+<body>
+
+<div id='Menu_div'></div>
+<div id="fileUrlBar" class="d-flex align-items-center gap-1 px-2 py-1 border-bottom border-top">
+    <select id="fileRootSel" class="form-select form-select-sm flex-shrink-0" style="width:auto;max-width:160px;"></select>
+    <input id="fileUrlInput" type="text" class="form-control form-control-sm font-monospace" readonly style="font-size:0.8em;">
+    <button id="fileUrlCopyBtn" class="btn btn-sm btn-outline-secondary flex-shrink-0" title="Copy URL">
+        <i class="bi bi-clipboard"></i>
+    </button>
+</div>
+<div id='File_div'></div>
+<br>
+
+<script type="module" src="./File.js"></script>
+</body>
+</html>

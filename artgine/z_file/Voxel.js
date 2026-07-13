@@ -1,1 +1,373 @@
-import{AlphaModalFun as w,vfxMat0 as e,vfxMat1 as n,LUT0 as x,LUT1 as a,LUT2 as y,LUT3 as r,LUT4 as z,LUT5 as o,VFX as i,VFXDown2 as t}from"./ColorFun";import{ambientColor as d,ligCol as h,ligCount as v,ligDir as f,LightCac2D as g,ligMask as S,cullMask as b}from"./Light";import{SDF as l}from"./SDF";import{Build as m,CMat as u,CVec3 as M,CVec4 as p,CMat3 as c,Sam2DToColor as s,FloatToInt as A,IntToFloat as C,screenPos as V,discard as F,V2DivV2 as D,V3AddV3 as L,V3MulFloat as R,V4MulMatCoordi as W,Null as T,BranchBegin as X,BranchEnd as j,BranchDefault as k,Attribute as q,Sam2DArrToMat as B,min as E,max as G}from"./Shader";import{bias as H,normalBias as I,PCF as J,shadowCount as K,shadowRate as N,shadowWrite as O,texture16f as P,shadowBottomCasP1 as Q,shadowFarCasP0 as U,shadowLeftCasV2 as Y,shadowNearCasV0 as Z,shadowPointProj as $,shadowRightCasP2 as _,shadowTopCasV1 as ww,jitter as ew,shadowReadList as nw,CalcShadow as xw}from"./Shadow";var aw=100,yw=T(),rw=T(),zw=T(),ow=T(),iw=T(),tw=T(),dw=T(),hw=T(),vw=T(),fw=T(),gw=T(),Sw=T(),bw=q(0,"time");function lw(w,e){var n=new c(0);return w<9?(n[1]=new M(0,1,0),w-0<.5?(n[0]=new M(0,aw,0),n[2]=new M(e.x,e.y,1)):w-0<1.5?(n[0]=new M(aw,aw,aw),n[2]=new M(e.z,e.w,1)):w-0<2.5?(n[0]=new M(aw,aw,0),n[2]=new M(e.z,e.y,1)):w-0<3.5?(n[0]=new M(aw,aw,aw),n[2]=new M(e.z,e.w,1)):w-0<4.5?(n[0]=new M(0,aw,0),n[2]=new M(e.x,e.y,1)):w-0<5.5&&(n[0]=new M(0,aw,aw),n[2]=new M(e.x,e.w,1))):w<19?(n[1]=new M(0,-1,0),w-10<.5?(n[0]=new M(0,0,0),n[2]=new M(e.x,e.w,1)):w-10<1.5?(n[0]=new M(aw,0,0),n[2]=new M(e.z,e.w,1)):w-10<2.5?(n[0]=new M(aw,0,aw),n[2]=new M(e.z,e.y,1)):w-10<3.5?(n[0]=new M(0,0,0),n[2]=new M(e.x,e.w,1)):w-10<4.5?(n[0]=new M(aw,0,aw),n[2]=new M(e.z,e.y,1)):w-10<5.5&&(n[0]=new M(0,0,aw),n[2]=new M(e.x,e.y,1))):w<29?(n[1]=new M(-1,0,0),w-20<.5?(n[0]=new M(0,0,0),n[2]=new M(e.x,e.w,.8)):w-20<1.5?(n[0]=new M(0,0,aw),n[2]=new M(e.z,e.w,.8)):w-20<2.5||w-20<3.5?(n[0]=new M(0,aw,0),n[2]=new M(e.x,e.y,.8)):w-20<4.5?(n[0]=new M(0,0,aw),n[2]=new M(e.z,e.w,.8)):w-20<5.5&&(n[0]=new M(0,aw,aw),n[2]=new M(e.z,e.y,.8))):w<39?(n[1]=new M(1,0,0),w-30<.5?(n[0]=new M(aw,0,0),n[2]=new M(e.z,e.w,.8)):w-30<1.5?(n[0]=new M(aw,aw,0),n[2]=new M(e.z,e.y,.8)):w-30<2.5?(n[0]=new M(aw,0,aw),n[2]=new M(e.x,e.w,.8)):w-30<3.5?(n[0]=new M(aw,aw,0),n[2]=new M(e.z,e.y,.8)):w-30<4.5?(n[0]=new M(aw,aw,aw),n[2]=new M(e.x,e.y,.8)):w-30<5.5&&(n[0]=new M(aw,0,aw),n[2]=new M(e.x,e.w,.8))):w<49?(n[1]=new M(0,0,-1),w-40<.5?(n[0]=new M(0,0,0),n[2]=new M(e.x,e.w,.9)):w-40<1.5?(n[0]=new M(aw,aw,0),n[2]=new M(e.z,e.y,.9)):w-40<2.5?(n[0]=new M(aw,0,0),n[2]=new M(e.z,e.w,.9)):w-40<3.5?(n[0]=new M(0,aw,0),n[2]=new M(e.x,e.y,.9)):w-40<4.5?(n[0]=new M(aw,aw,0),n[2]=new M(e.z,e.y,.9)):w-40<5.5&&(n[0]=new M(0,0,0),n[2]=new M(e.x,e.w,.9))):w<59&&(n[1]=new M(0,0,1),w-50<.5?(n[0]=new M(0,0,aw),n[2]=new M(e.x,e.w,1)):w-50<1.5?(n[0]=new M(aw,0,aw),n[2]=new M(e.z,e.w,1)):w-50<2.5?(n[0]=new M(aw,aw,aw),n[2]=new M(e.z,e.y,1)):w-50<3.5?(n[0]=new M(0,aw,aw),n[2]=new M(e.x,e.y,1)):w-50<4.5?(n[0]=new M(0,0,aw),n[2]=new M(e.x,e.w,1)):w-50<5.5&&(n[0]=new M(aw,aw,aw),n[2]=new M(e.z,e.y,1))),n}m("Artgine/Shader/Voxel",[],function(w,e,n){if(w.w>65)return tw=new p(0,0,0,0),void(hw=new p(0,0,0,2));var x=lw(w.w,e),a=new p(w.xyz,1);a.xyz=L(a.xyz,x[0]),hw.xyz=x[2];var y=1*n.x;y<n.y&&(y=n.y),y*=x[2].z,e.w<-.5?(hw.xyz=e.xyz,hw.w=-y):hw.w=y,a=W(a,yw),gw=a,a=W(a,rw),a=W(a,zw),tw=a},[yw,rw,zw,ow,iw,aw,-1,1],[tw,hw,gw],function(){var l=new p(0,0,0,1),m=hw.w;if(!(hw.w>1.5)){m<-.5?(l.xyz=hw.xyz,m=-m):(X("vfx","VFX",[i,x,a,y,r,z,o,bw,e,n]),l=t(hw.xy,i,bw,gw),k(),l=s(0,hw.xy),j()),l.rgb=R(l.rgb,m),X("alphaModel","AM",[iw]),l.a=w(l.a,iw),j();var u=new p(-1,-1,-1,-1);X("shadow","S",[-1,void 0]),j();var A=new c(0);X("light","L",[f,h,S,v,d,b]),A=g(gw,l,new M(0,0,0),u,b.x),l.rgb=A[0],k(),u.a>-.5&&(l.rgb=R(l.rgb,u.a)),j(),dw=l}},[dw]),m("Artgine/Shader/VoxelShadowWrite",["shadowWrite"],function(w,e,n){var x=lw(w.w,e),a=new p(w.xyz,1);a.xyz=L(a.xyz,x[0]),hw.xyz=x[2],e.w<-.5?(hw.xyz=e.xyz,hw.w=-n.x):hw.w=n.x;var y=new u(0),r=new u(0);O.x<l.eShadow.Cas0+.5?(y=B(Z,O.y),r=B(U,O.y)):O.x<l.eShadow.Cas1+.5?(y=B(ww,O.y),r=B(Q,O.y)):O.x<l.eShadow.Cas2+.5&&(y=B(Y,O.y),r=B(_,O.y)),a=W(a,yw),a=W(a,y),vw=a,a=W(a,r),tw=a},[yw,rw,zw,ow,iw,aw,f,h,v,Z,U,ww,Q,Y,_,K,O,$,nw,N,J,P,H,I],[tw,hw,vw,fw],function(){var e=new p(0,0,0,1);hw.w>1.5||(hw.w>.5&&(e=s(0,hw.xy)),X("alphaModel","AM",[iw]),e.a=w(e.a,iw),j(),e.a,dw=vw)},[dw]),m("Artgine/Shader/VoxelShadowRead",["shadowRead"],function(w,e,n){var x=lw(w.w,e),a=new p(w.xyz,1);a.xyz=L(a.xyz,x[0]),hw.xyz=x[2];var y=1*n.x;y<n.y&&(y=n.y),e.w<-.5?(hw.xyz=e.xyz,hw.w=-y):hw.w=y,a=W(a,yw),gw=a,Sw=x[1],a=W(a,rw),tw=W(a,zw)},[yw,rw,zw,ow,iw,aw,f,h,v,Z,U,ww,Q,Y,_,K,O,$,nw,N,J,P,H,I,1,ew],[tw,hw,Sw,gw],function(){var e,n=new p(0,0,0,1);if(!(hw.w>1.5)){hw.w<-.5?(n.xyz=hw.xyz,n.rgb=R(n.rgb,-hw.w)):((n=s(0,hw.xy)).rgb=R(n.rgb,hw.w),n.rgb=R(n.rgb,hw.z)),X("alphaModel","AM",[iw]),n.a=w(n.a,iw),j(),n.a;var x=new p(1,1,1,1);X("shadowMulti","SDM",[iw]),e=0,x=new p(0,0,0,0);for(var a=0;a<l.TexSizeMax&&!(a>=A(K));++a)x[A(e)]+=xw(C(a),Sw,gw),e=E(e+1,3);x.a/=G(K-3,1),k(),x.a=xw(0,Sw,gw),x.rgb=new M(x.a,x.a,x.a),j(),dw=x}},[dw]);
+import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2 } from "./ColorFun";
+import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask } from "./Light";
+import { SDF } from "./SDF";
+import { Build, CMat, CVec3, CVec4, CMat3, Sam2DToColor, FloatToInt, IntToFloat, screenPos, discard, V2DivV2, V3AddV3, V3MulFloat, V4MulMatCoordi, Null, BranchBegin, BranchEnd, BranchDefault, Attribute, Sam2DArrToMat, min, max, } from "./Shader";
+import { bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f, shadowBottomCasP1, shadowFarCasP0, shadowLeftCasV2, shadowNearCasV0, shadowPointProj, shadowRightCasP2, shadowTopCasV1, jitter, shadowReadList, CalcShadow, } from "./Shadow";
+var size = 100;
+var worldMat = Null();
+var viewMat = Null();
+var projectMat = Null();
+var colorModel = Null();
+var alphaModel = Null();
+var out_position = Null();
+var out_color = Null();
+var to_uv = Null();
+var to_viewPos = Null();
+var to_shadowBias = Null();
+var to_worldPos = Null();
+var to_normal = Null();
+var screenSize;
+var shadowOn = -1.0;
+var sun = 1.0;
+var time = Attribute(0, "time");
+Build("Artgine/Shader/Voxel", [], vs_main, [worldMat, viewMat, projectMat, colorModel, alphaModel, size, shadowOn, sun], [out_position, to_uv, to_worldPos], ps_main, [out_color]);
+Build("Artgine/Shader/VoxelShadowWrite", ["shadowWrite"], vs_main_shadow_write, [
+    worldMat, viewMat, projectMat, colorModel, alphaModel, size,
+    ligDir, ligCol, ligCount,
+    shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowCount,
+    shadowWrite, shadowPointProj, shadowReadList,
+    shadowRate, PCF, texture16f, bias, normalBias
+], [out_position, to_uv, to_viewPos, to_shadowBias], ps_main_shadow_write, [out_color]);
+Build("Artgine/Shader/VoxelShadowRead", ["shadowRead"], vs_main_shadow_read, [
+    worldMat, viewMat, projectMat, colorModel, alphaModel, size,
+    ligDir, ligCol, ligCount,
+    shadowNearCasV0, shadowFarCasP0, shadowTopCasV1, shadowBottomCasP1, shadowLeftCasV2, shadowRightCasP2, shadowCount,
+    shadowWrite, shadowPointProj, shadowReadList,
+    shadowRate, PCF, texture16f, bias, normalBias, sun, jitter
+], [out_position, to_uv, to_normal, to_worldPos], ps_main_shadow_read, [out_color]);
+function VoxelDirData(_dir, _f4_uv) {
+    var data = new CMat3(0);
+    if (_dir < 9.0) {
+        data[1] = new CVec3(0.0, 1.0, 0.0);
+        if (_dir - 0.0 < 0.5) {
+            data[0] = new CVec3(0, size, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 0.0 < 1.5) {
+            data[0] = new CVec3(size, size, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 0.0 < 2.5) {
+            data[0] = new CVec3(size, size, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 0.0 < 3.5) {
+            data[0] = new CVec3(size, size, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 0.0 < 4.5) {
+            data[0] = new CVec3(0, size, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 0.0 < 5.5) {
+            data[0] = new CVec3(0, size, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 1.0);
+        }
+    }
+    else if (_dir < 19.0) {
+        data[1] = new CVec3(0.0, -1.0, 0.0);
+        if (_dir - 10.0 < 0.5) {
+            data[0] = new CVec3(0, 0, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 10.0 < 1.5) {
+            data[0] = new CVec3(size, 0, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 10.0 < 2.5) {
+            data[0] = new CVec3(size, 0, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 10.0 < 3.5) {
+            data[0] = new CVec3(0, 0, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 10.0 < 4.5) {
+            data[0] = new CVec3(size, 0, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 10.0 < 5.5) {
+            data[0] = new CVec3(0, 0, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 1.0);
+        }
+    }
+    else if (_dir < 29.0) {
+        data[1] = new CVec3(-1.0, 0.0, 0.0);
+        if (_dir - 20.0 < 0.5) {
+            data[0] = new CVec3(0, 0, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 0.8);
+        }
+        else if (_dir - 20.0 < 1.5) {
+            data[0] = new CVec3(0, 0, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 0.8);
+        }
+        else if (_dir - 20.0 < 2.5) {
+            data[0] = new CVec3(0, size, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 0.8);
+        }
+        else if (_dir - 20.0 < 3.5) {
+            data[0] = new CVec3(0, size, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 0.8);
+        }
+        else if (_dir - 20.0 < 4.5) {
+            data[0] = new CVec3(0, 0, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 0.8);
+        }
+        else if (_dir - 20.0 < 5.5) {
+            data[0] = new CVec3(0, size, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 0.8);
+        }
+    }
+    else if (_dir < 39.0) {
+        data[1] = new CVec3(1.0, 0.0, 0.0);
+        if (_dir - 30.0 < 0.5) {
+            data[0] = new CVec3(size, 0, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 0.8);
+        }
+        else if (_dir - 30.0 < 1.5) {
+            data[0] = new CVec3(size, size, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 0.8);
+        }
+        else if (_dir - 30.0 < 2.5) {
+            data[0] = new CVec3(size, 0, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 0.8);
+        }
+        else if (_dir - 30.0 < 3.5) {
+            data[0] = new CVec3(size, size, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 0.8);
+        }
+        else if (_dir - 30.0 < 4.5) {
+            data[0] = new CVec3(size, size, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 0.8);
+        }
+        else if (_dir - 30.0 < 5.5) {
+            data[0] = new CVec3(size, 0, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 0.8);
+        }
+    }
+    else if (_dir < 49.0) {
+        data[1] = new CVec3(0.0, 0.0, -1.0);
+        if (_dir - 40.0 < 0.5) {
+            data[0] = new CVec3(0, 0, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 0.9);
+        }
+        else if (_dir - 40.0 < 1.5) {
+            data[0] = new CVec3(size, size, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 0.9);
+        }
+        else if (_dir - 40.0 < 2.5) {
+            data[0] = new CVec3(size, 0, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 0.9);
+        }
+        else if (_dir - 40.0 < 3.5) {
+            data[0] = new CVec3(0, size, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 0.9);
+        }
+        else if (_dir - 40.0 < 4.5) {
+            data[0] = new CVec3(size, size, 0);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 0.9);
+        }
+        else if (_dir - 40.0 < 5.5) {
+            data[0] = new CVec3(0, 0, 0);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 0.9);
+        }
+    }
+    else if (_dir < 59.0) {
+        data[1] = new CVec3(0.0, 0.0, 1.0);
+        if (_dir - 50.0 < 0.5) {
+            data[0] = new CVec3(0, 0, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 50.0 < 1.5) {
+            data[0] = new CVec3(size, 0, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 50.0 < 2.5) {
+            data[0] = new CVec3(size, size, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 50.0 < 3.5) {
+            data[0] = new CVec3(0, size, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.y, 1.0);
+        }
+        else if (_dir - 50.0 < 4.5) {
+            data[0] = new CVec3(0, 0, size);
+            data[2] = new CVec3(_f4_uv.x, _f4_uv.w, 1.0);
+        }
+        else if (_dir - 50.0 < 5.5) {
+            data[0] = new CVec3(size, size, size);
+            data[2] = new CVec3(_f4_uv.z, _f4_uv.y, 1.0);
+        }
+    }
+    return data;
+}
+function vs_main(f4_ver, f4_uv, f2_color) {
+    if (f4_ver.w > 65.0) {
+        out_position = new CVec4(0.0, 0.0, 0.0, 0.0);
+        to_uv = new CVec4(0.0, 0.0, 0.0, 2.0);
+        return;
+    }
+    var data = VoxelDirData(f4_ver.w, f4_uv);
+    var P = new CVec4(f4_ver.xyz, 1.0);
+    P.xyz = V3AddV3(P.xyz, data[0]);
+    to_uv.xyz = data[2];
+    var light = f2_color.x * sun;
+    if (light < f2_color.y)
+        light = f2_color.y;
+    light *= data[2].z;
+    if (f4_uv.w < -0.5) {
+        to_uv.xyz = f4_uv.xyz;
+        to_uv.w = -light;
+    }
+    else
+        to_uv.w = light;
+    P = V4MulMatCoordi(P, worldMat);
+    to_worldPos = P;
+    P = V4MulMatCoordi(P, viewMat);
+    P = V4MulMatCoordi(P, projectMat);
+    out_position = P;
+}
+function ps_main() {
+    var L_cor = new CVec4(0.0, 0.0, 0.0, 1.0);
+    var light = to_uv.w;
+    if (to_uv.w > 1.5) {
+        discard;
+        return;
+    }
+    else if (light < -0.5) {
+        L_cor.xyz = to_uv.xyz;
+        light = -light;
+    }
+    else {
+        BranchBegin("vfx", "VFX", [VFX, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, time, vfxMat0, vfxMat1]);
+        L_cor = VFXDown2(to_uv.xy, VFX, time, to_worldPos);
+        BranchDefault();
+        L_cor = Sam2DToColor(0.0, to_uv.xy);
+        BranchEnd();
+    }
+    L_cor.rgb = V3MulFloat(L_cor.rgb, light);
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    var shadow = new CVec4(-1.0, -1.0, -1.0, -1.0);
+    BranchBegin("shadow", "S", [shadowOn, screenSize]);
+    if (shadowOn > 0.5) {
+        shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, V2DivV2(screenPos.xy, screenSize.xy));
+    }
+    BranchEnd();
+    var DSE = new CMat3(0);
+    BranchBegin("light", "L", [ligDir, ligCol, ligMask, ligCount, ambientColor, cullMask]);
+    DSE = LightCac2D(to_worldPos, L_cor, new CVec3(0.0, 0.0, 0.0), shadow, cullMask.x);
+    L_cor.rgb = DSE[0];
+    BranchDefault();
+    if (shadow.a > -0.5) {
+        L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
+    }
+    BranchEnd();
+    out_color = L_cor;
+}
+function vs_main_shadow_write(f4_ver, f4_uv, f2_color) {
+    var data = VoxelDirData(f4_ver.w, f4_uv);
+    var P = new CVec4(f4_ver.xyz, 1.0);
+    P.xyz = V3AddV3(P.xyz, data[0]);
+    to_uv.xyz = data[2];
+    if (f4_uv.w < -0.5) {
+        to_uv.xyz = f4_uv.xyz;
+        to_uv.w = -f2_color.x;
+    }
+    else
+        to_uv.w = f2_color.x;
+    var svm = new CMat(0);
+    var spm = new CMat(0);
+    if (shadowWrite.x < SDF.eShadow.Cas0 + 0.5) {
+        svm = Sam2DArrToMat(shadowNearCasV0, shadowWrite.y);
+        spm = Sam2DArrToMat(shadowFarCasP0, shadowWrite.y);
+    }
+    else if (shadowWrite.x < SDF.eShadow.Cas1 + 0.5) {
+        svm = Sam2DArrToMat(shadowTopCasV1, shadowWrite.y);
+        spm = Sam2DArrToMat(shadowBottomCasP1, shadowWrite.y);
+    }
+    else if (shadowWrite.x < SDF.eShadow.Cas2 + 0.5) {
+        svm = Sam2DArrToMat(shadowLeftCasV2, shadowWrite.y);
+        spm = Sam2DArrToMat(shadowRightCasP2, shadowWrite.y);
+    }
+    P = V4MulMatCoordi(P, worldMat);
+    P = V4MulMatCoordi(P, svm);
+    to_viewPos = P;
+    P = V4MulMatCoordi(P, spm);
+    out_position = P;
+}
+function ps_main_shadow_write() {
+    var L_cor = new CVec4(0.0, 0.0, 0.0, 1.0);
+    if (to_uv.w > 1.5) {
+        discard;
+        return;
+    }
+    else if (to_uv.w > 0.5) {
+        L_cor = Sam2DToColor(0.0, to_uv.xy);
+    }
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    out_color = to_viewPos;
+}
+function vs_main_shadow_read(f4_ver, f4_uv, f2_color) {
+    var data = VoxelDirData(f4_ver.w, f4_uv);
+    var P = new CVec4(f4_ver.xyz, 1.0);
+    P.xyz = V3AddV3(P.xyz, data[0]);
+    to_uv.xyz = data[2];
+    var light = f2_color.x * sun;
+    if (light < f2_color.y)
+        light = f2_color.y;
+    if (f4_uv.w < -0.5) {
+        to_uv.xyz = f4_uv.xyz;
+        to_uv.w = -light;
+    }
+    else
+        to_uv.w = light;
+    P = V4MulMatCoordi(P, worldMat);
+    to_worldPos = P;
+    to_normal = data[1];
+    P = V4MulMatCoordi(P, viewMat);
+    out_position = V4MulMatCoordi(P, projectMat);
+}
+function ps_main_shadow_read() {
+    var L_cor = new CVec4(0.0, 0.0, 0.0, 1.0);
+    if (to_uv.w > 1.5) {
+        discard;
+        return;
+    }
+    else if (to_uv.w < -0.5) {
+        L_cor.xyz = to_uv.xyz;
+        L_cor.rgb = V3MulFloat(L_cor.rgb, -to_uv.w);
+    }
+    else {
+        L_cor = Sam2DToColor(0.0, to_uv.xy);
+        L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.w);
+        L_cor.rgb = V3MulFloat(L_cor.rgb, to_uv.z);
+    }
+    BranchBegin("alphaModel", "AM", [alphaModel]);
+    L_cor.a = AlphaModalFun(L_cor.a, alphaModel);
+    BranchEnd();
+    if (L_cor.a <= 0.01)
+        discard;
+    var outputIndex;
+    var all = new CVec4(1.0, 1.0, 1.0, 1.0);
+    BranchBegin("shadowMulti", "SDM", [alphaModel]);
+    outputIndex = 0.0;
+    all = new CVec4(0.0, 0.0, 0.0, 0.0);
+    for (var i = 0; i < SDF.TexSizeMax; ++i) {
+        if (i >= FloatToInt(shadowCount))
+            break;
+        all[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, to_worldPos);
+        outputIndex = min(outputIndex + 1.0, 3.0);
+    }
+    all.a /= max(shadowCount - 3.0, 1.0);
+    BranchDefault();
+    all.a = CalcShadow(0.0, to_normal, to_worldPos);
+    all.rgb = new CVec3(all.a, all.a, all.a);
+    BranchEnd();
+    out_color = all;
+}

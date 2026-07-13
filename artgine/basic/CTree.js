@@ -1,1 +1,191 @@
-import{CObject as l}from"./CObject.js";export class CTree extends l{mKey;mData;mChild;mColleague;mParent;mValueArr;constructor(){super(),this.mKey="",this.mData=null,this.mChild=null,this.mColleague=null,this.mParent=null,this.mValueArr=null}ImportCJSON(l){var e=super.ImportCJSON(l);if(null!=this.mChild){this.mChild.mParent=this;for(var t=this.mChild.mColleague;null!=t;)t.mParent=this,t=t.mColleague}return e}Deserial(l){if(super.Deserial(l),null!=this.mChild){this.mChild.mParent=this;for(var e=this.mChild.mColleague;null!=e;)e.mParent=this,e=e.mColleague}}IsShould(l,e){return"mParent"!=l&&"mValueArr"!=l&&super.IsShould(l,e)}PushColleague(l){return this.mValueArr=null,null!=this.mColleague?this.mColleague.PushColleague(l):("string"==typeof l||"number"==typeof l?(this.mColleague=new CTree,this.mColleague.mKey=l+"",this.mColleague.mParent=this.mParent):(this.mColleague=l,this.mColleague.mParent=this.mParent),this.mColleague)}PushChild(l){return this.mValueArr=null,null!=this.mChild?this.mChild.PushColleague(l):("string"==typeof l||"number"==typeof l?(this.mChild=new CTree,this.mChild.mKey=l+"",this.mChild.mParent=this):(this.mChild=l,this.mChild.mParent=this),this.mChild)}Find(l){if("number"==typeof l&&(l+=""),l==this.mKey)return this;var e=null;return null!=this.mChild&&null!=(e=this.mChild.Find(l))||null!=this.mColleague&&null!=(e=this.mColleague.Find(l))?e:null}Destroy(){if(null!=this.mParent&&(this.mParent.mValueArr=null),this.mParent.mChild==this)this.mParent.mChild=this.mColleague;else if(null!=this.mParent.mChild){for(var l=this.mParent.mChild,e=l;l!=this;)l.mValueArr=null,e=l,l=l.mColleague;e.mColleague=this.mColleague}return this.mParent=null,this.mColleague=null,this}GetArray(){if(null!=this.mValueArr)return this.mValueArr;this.mValueArr=new Array;var l=new Array;l.push(this);for(let e=0;e<l.length;++e){let t=l[e];null!=t.mData&&this.mValueArr.push(t),null!=t.mChild&&l.push(t.mChild),null!=t.mColleague&&l.push(t.mColleague)}return this.mValueArr}Keys(l=!0){var e=new Array,t=new Array;t.push(this);for(let r=0;r<t.length;++r){let h=t[r];null!=h.mData&&e.push(h.mKey),null!=h.mChild&&l&&t.push(h.mChild),null!=h.mColleague&&t.push(h.mColleague)}return e}SortKey(l=!0){if(this.mValueArr=null,this.mChild){const e=[];let t=this.mChild;for(;t;)e.push(t),t=t.mColleague;e.sort((l,e)=>{const t=l.mKey||"",r=e.mKey||"";return t<r?-1:t>r?1:0}),this.mChild=null;let r=null;for(const l of e)l.mParent=this,l.mColleague=null,r?r.mColleague=l:this.mChild=l,r=l;if(l)for(const l of e)l.SortKey(!0)}return this}}
+import { CObject } from "./CObject.js";
+export class CTree extends CObject {
+    mKey;
+    mData;
+    mChild;
+    mColleague;
+    mParent;
+    mValueArr;
+    constructor() {
+        super();
+        this.mKey = "";
+        this.mData = null;
+        this.mChild = null;
+        this.mColleague = null;
+        this.mParent = null;
+        this.mValueArr = null;
+    }
+    ImportCJSON(_json) {
+        var obj = super.ImportCJSON(_json);
+        if (this.mChild != null) {
+            this.mChild.mParent = this;
+            var node = this.mChild.mColleague;
+            while (node != null) {
+                node.mParent = this;
+                node = node.mColleague;
+            }
+        }
+        return obj;
+    }
+    Deserial(_stream) {
+        super.Deserial(_stream);
+        if (this.mChild != null) {
+            this.mChild.mParent = this;
+            var node = this.mChild.mColleague;
+            while (node != null) {
+                node.mParent = this;
+                node = node.mColleague;
+            }
+        }
+    }
+    IsShould(_member, _type) {
+        if (_member == "mParent" || _member == "mValueArr")
+            return false;
+        return super.IsShould(_member, _type);
+    }
+    PushColleague(_key) {
+        this.mValueArr = null;
+        if (this.mColleague == null) {
+            if (typeof (_key) == "string" || typeof (_key) == "number") {
+                this.mColleague = new CTree();
+                this.mColleague.mKey = _key + "";
+                this.mColleague.mParent = this.mParent;
+            }
+            else {
+                this.mColleague = _key;
+                this.mColleague.mParent = this.mParent;
+            }
+        }
+        else {
+            return this.mColleague.PushColleague(_key);
+        }
+        return this.mColleague;
+    }
+    PushChild(_key) {
+        this.mValueArr = null;
+        if (this.mChild == null) {
+            if (typeof (_key) == "string" || typeof (_key) == "number") {
+                this.mChild = new CTree();
+                this.mChild.mKey = _key + "";
+                this.mChild.mParent = this;
+            }
+            else {
+                this.mChild = _key;
+                this.mChild.mParent = this;
+            }
+        }
+        else {
+            return this.mChild.PushColleague(_key);
+        }
+        return this.mChild;
+    }
+    Find(_key) {
+        if (typeof _key == "number")
+            _key = _key + "";
+        if (_key == this.mKey)
+            return this;
+        var dum = null;
+        if (this.mChild != null) {
+            dum = this.mChild.Find(_key);
+            if (dum != null)
+                return dum;
+        }
+        if (this.mColleague != null) {
+            dum = this.mColleague.Find(_key);
+            if (dum != null)
+                return dum;
+        }
+        return null;
+    }
+    Destroy() {
+        if (this.mParent != null)
+            this.mParent.mValueArr = null;
+        if (this.mParent.mChild == this) {
+            this.mParent.mChild = this.mColleague;
+        }
+        else if (this.mParent.mChild != null) {
+            var pct = this.mParent.mChild;
+            var pctb = pct;
+            while (pct != this) {
+                pct.mValueArr = null;
+                pctb = pct;
+                pct = pct.mColleague;
+            }
+            pctb.mColleague = this.mColleague;
+        }
+        this.mParent = null;
+        this.mColleague = null;
+        return this;
+    }
+    GetArray() {
+        if (this.mValueArr != null)
+            return this.mValueArr;
+        this.mValueArr = new Array();
+        var que = new Array();
+        que.push(this);
+        for (let off = 0; off < que.length; ++off) {
+            let node = que[off];
+            if (node.mData != null)
+                this.mValueArr.push(node);
+            if (node.mChild != null)
+                que.push(node.mChild);
+            if (node.mColleague != null)
+                que.push(node.mColleague);
+        }
+        return this.mValueArr;
+    }
+    Keys(_child = true) {
+        var keyArr = new Array();
+        var que = new Array();
+        que.push(this);
+        for (let off = 0; off < que.length; ++off) {
+            let node = que[off];
+            if (node.mData != null)
+                keyArr.push(node.mKey);
+            if (node.mChild != null && _child)
+                que.push(node.mChild);
+            if (node.mColleague != null)
+                que.push(node.mColleague);
+        }
+        return keyArr;
+    }
+    SortKey(recursive = true) {
+        this.mValueArr = null;
+        if (this.mChild) {
+            const list = [];
+            let node = this.mChild;
+            while (node) {
+                list.push(node);
+                node = node.mColleague;
+            }
+            list.sort((a, b) => {
+                const ak = a.mKey || "";
+                const bk = b.mKey || "";
+                if (ak < bk)
+                    return -1;
+                if (ak > bk)
+                    return 1;
+                return 0;
+            });
+            this.mChild = null;
+            let prev = null;
+            for (const n of list) {
+                n.mParent = this;
+                n.mColleague = null;
+                if (prev) {
+                    prev.mColleague = n;
+                }
+                else {
+                    this.mChild = n;
+                }
+                prev = n;
+            }
+            if (recursive) {
+                for (const n of list) {
+                    n.SortKey(true);
+                }
+            }
+        }
+        return this;
+    }
+}

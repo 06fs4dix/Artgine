@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { CCMDMgr } from "./CCMDMgr.js";
 
-function GetStartPort(): number | null {
-    const mainPath = fs.existsSync("settings.json") ? "settings.json" : path.join("desktop", "settings.json");
+function GetStartPort(_settingsFileName: string): number | null {
+    const mainPath = fs.existsSync(_settingsFileName) ? _settingsFileName : path.join("desktop", _settingsFileName);
     if (!fs.existsSync(mainPath)) return null;
 
     try {
@@ -86,12 +86,18 @@ if (CCMDMgr.IsTSC() == false || CCMDMgr.GetFileCount("node_modules")==0)
 }
 //await CCMDMgr.RunCMD("git submodule update --remote --force", false);
 
-const startPort = GetStartPort();
+// 임의 settings 파일명 지정: `npm run start -- myconfig.json` 형태의 위치 인자
+const settingsFileName = process.argv[2] ?? "settings.json";
+
+const startPort = GetStartPort(settingsFileName);
 if (startPort != null) {
     KillElectronOnPort(startPort);
 }
 
-await CCMDMgr.RunCMD("npx electron .", false);
+// Windows의 npx.cmd -> electron.cmd 배치 체인은 중첩 따옴표를 그대로 통과시켜버리므로
+// (따옴표까지 파일명 문자열에 포함됨) 공백이 있는 경우에만 따옴표를 붙인다.
+const electronArg = /\s/.test(settingsFileName) ? `"${settingsFileName}"` : settingsFileName;
+await CCMDMgr.RunCMD(`npx electron . ${electronArg}`, false);
 
 
                 

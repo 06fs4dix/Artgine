@@ -1,1 +1,28 @@
-export default class t{constructor(t){this.buffer=t,this._position=0}get dualChannel(){return this.buffer.numberOfChannels>1}get position(){return this._position}set position(t){this._position=t}extract(t,e=0,n=0){this.position=n;let i=this.buffer.getChannelData(0),s=this.dualChannel?this.buffer.getChannelData(1):this.buffer.getChannelData(0),a=0;for(;a<e;a++)t[2*a]=i[a+n],t[2*a+1]=s[a+n];return Math.min(e,i.length-n)}}
+export default class WebAudioBufferSource {
+    constructor(buffer) {
+        this.buffer = buffer;
+        this._position = 0;
+    }
+    get dualChannel() {
+        return this.buffer.numberOfChannels > 1;
+    }
+    get position() {
+        return this._position;
+    }
+    set position(value) {
+        this._position = value;
+    }
+    extract(target, numFrames = 0, position = 0) {
+        this.position = position;
+        let left = this.buffer.getChannelData(0);
+        let right = this.dualChannel
+            ? this.buffer.getChannelData(1)
+            : this.buffer.getChannelData(0);
+        let i = 0;
+        for (; i < numFrames; i++) {
+            target[i * 2] = left[i + position];
+            target[i * 2 + 1] = right[i + position];
+        }
+        return Math.min(numFrames, left.length - position);
+    }
+}
