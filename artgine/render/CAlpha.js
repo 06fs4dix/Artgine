@@ -1,6 +1,1 @@
-import { CVec2 } from "../geometry/CVec2.js";
-export class CAlpha extends CVec2 {
-    constructor(_opacity = 1, _cut = 0.1) {
-        super(_opacity, _cut);
-    }
-}
+import{CVec2 as e}from"../geometry/CVec2.js";export class CAlpha extends e{constructor(e=1,r=.1){super(e,r)}}
