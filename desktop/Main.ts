@@ -105,6 +105,16 @@ const createWindow = () => {
     });
 	gMainWindow.webContents.session.clearCache();
 
+	// 재시작(백그라운드 프로세스가 새 프로세스를 띄우는 경우) 시, Windows가 포그라운드가 아닌
+	// 프로세스가 만든 창을 자동으로 앞에 올려주지 않아 다른 창 뒤에 숨는 문제가 있다.
+	// alwaysOnTop을 순간적으로 켰다 끄는 방식으로 포커스 잠금을 우회해 강제로 최전면에 띄운다.
+	gMainWindow.once('ready-to-show', () => {
+		gMainWindow.show();
+		gMainWindow.setAlwaysOnTop(true);
+		gMainWindow.focus();
+		gMainWindow.setAlwaysOnTop(false);
+	});
+
 	// Electron BrowserWindow는 크롬과 달리 우클릭 컨텍스트 메뉴(복사/붙여넣기/검사 등)를 기본 제공하지 않으므로 직접 구현한다.
 	gMainWindow.webContents.on('context-menu', (_event, params) => {
 		const template: Electron.MenuItemConstructorOptions[] = [];

@@ -109,9 +109,10 @@ export class CCMDMgr {
         } else {
             // 현재 콘솔에서 실행하고 종료까지 대기
             const env = { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
-            const child = platform === 'win32'
+            // newWindow=false(기본값)이라 null이 반환될 일이 없다.
+            const child = (platform === 'win32'
                 ? await CUtilSystem.Spawn('cmd', ['/c', `chcp 65001 >nul && ${_cmd}`], 'inherit', '', env)
-                : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'inherit', '', env);
+                : await CUtilSystem.Spawn('bash', ['-c', _cmd], 'inherit', '', env))!;
             return new Promise<number | null>((resolve, reject) => {
                 child.on('exit', (code) => {
                     console.log(`명령어 종료됨. 종료 코드: ${code}`);

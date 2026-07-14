@@ -1,5 +1,6 @@
 let gSpawn:    typeof import('child_process')['spawn']     = null;
 let gSpawnSync: typeof import('child_process')['spawnSync'] = null;
+let gExecFileSync: typeof import('child_process')['execFileSync'] = null;
 let gOs:       typeof import('os')                          = null;
 
 async function EnsureNodeModules() {
@@ -7,6 +8,7 @@ async function EnsureNodeModules() {
         const cp  = await import('child_process');
         gSpawn    = cp.spawn;
         gSpawnSync = cp.spawnSync;
+        gExecFileSync = cp.execFileSync;
     }
     if (!gOs) gOs = await import('os');
 }
@@ -24,7 +26,7 @@ export class CUtilSystem {
         env: NodeJS.ProcessEnv | null = null,
         newWindow = false,
         windowsHide = true
-    ): Promise<import('child_process').ChildProcess> {
+    ): Promise<import('child_process').ChildProcess | null> {
         await EnsureNodeModules();
         const IS_WIN      = gOs.platform() === 'win32';
         const resolvedEnv = env ?? process.env;
@@ -32,16 +34,27 @@ export class CUtilSystem {
 
         if (newWindow) {
             if (IS_WIN) {
-                // windowsHide=true  → /b (백그라운드, 창 없음)
-                // windowsHide=false → 새 콘솔 창
-                const startFlag = windowsHide ? ['/b'] : [];
-                const child = gSpawn(
-                    'cmd.exe',
-                    ['/c', 'start', ...startFlag, '""', cmd, ...args],
-                    { detached: true, stdio: 'ignore', cwd: resolvedCwd, env: resolvedEnv }
-                );
-                child.unref();
-                return child;
+                // spawn(detached:true)로 새 창을 띄워도 윈도우에서는 부모-자식 PID 트리 관계가
+                // 그대로 남아있어서, 상위 프로세스가 taskkill /T(트리 kill)로 죽으면 이 새 창도
+                // 함께 죽는다(재시작 시 자기 자신을 죽이는 프로세스가 이 문제로 죽는 버그가 있었음).
+                // Task Scheduler(schtasks)로 1회성 작업을 만들어 즉시 실행하면 부모가 svchost.exe가
+                // 되어 현재 프로세스 트리와 완전히 분리된 독립 프로세스로 뜬다.
+                // 대신 실제 대상 프로세스의 ChildProcess 핸들은 얻을 수 없어 null을 반환한다.
+                const innerFlag = windowsHide ? '/c' : '/k';
+                const line = [cmd, ...args].map(a => /[\s"]/.test(a) ? _quoteWin(a) : a).join(' ');
+                const cdPrefix = resolvedCwd ? `cd /d "${resolvedCwd}" && ` : '';
+                const taskName = `CUtilSystemSpawn_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+                try {
+                    gExecFileSync('schtasks', [
+                        '/create', '/tn', taskName,
+                        '/tr', `cmd.exe ${innerFlag} "${cdPrefix}${line}"`,
+                        '/sc', 'once', '/st', '00:00', '/sd', '2099/01/01', '/f'
+                    ], { stdio: 'ignore', windowsHide: true });
+                    gExecFileSync('schtasks', ['/run', '/tn', taskName], { stdio: 'ignore', windowsHide: true });
+                } finally {
+                    try { gExecFileSync('schtasks', ['/delete', '/tn', taskName, '/f'], { stdio: 'ignore', windowsHide: true }); } catch {}
+                }
+                return null;
             } else if (gOs.platform() === 'darwin') {
                 if (windowsHide) {
                     const child = gSpawn(cmd, args, {

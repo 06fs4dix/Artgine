@@ -30,6 +30,8 @@ import { CEvent } from "../basic/CEvent.js"
 import { CClass } from "../basic/CClass.js"
 import { CVec3 } from "../geometry/CVec3.js"
 import { CParserULPC, CULPC } from "./parser/CParserULPC.js"
+import { CImgPro } from "../render/CImgPro.js"
+import { CVec4 } from "../geometry/CVec4.js"
 //https://github.com/JordiRos/GLGif
 //gif animation은 이걸로
 
@@ -49,6 +51,7 @@ export class CLoaderOption extends CObject
 
 	public mInch=false;
 	public mComputeNormal=true;
+    public mIsBumpHeightmap=false;
 	//public simplify=100;
 	
 	
@@ -471,19 +474,22 @@ export class CLoader
 		let texMap=new Map<string,ArrayBuffer>();
 		for (let i = 0; i < mesh.texture.length; i++)
 		{
+            // 텍스쳐가 버퍼로 되어 있음
 			if(mesh.texture[i] as any instanceof Uint8Array)
 			{
-				
 				let buf = mesh.texture[i] as any;
 				let newName = path+CUniqueID.GetHash() + ".png";
 				mesh.texture[i] = newName;
 				this.mLoadSet.add(newName);
 				texMap.set(newName,buf);
 			}
-			else 
+            // 텍스쳐가 string로 되어있음
+			else
 			{
 				let texStr=(mesh.texture[i] as string);
-				if(texStr.indexOf("base64:")!=-1)
+
+                // base64로 전환된 이미지
+				if(texStr.startsWith("base64:"))
 				{
 					
 					let base64Header = "base64:";
@@ -493,10 +499,9 @@ export class CLoader
 					this.mLoadSet.add(newName);
 					texMap.set(newName,CUtil.Base64ToArray(base64data));
 					
-
-				
 				}
-				else if(texStr.indexOf(".rgba")!=-1)
+                // rgba 단색 텍스쳐
+				else if(texStr.endsWith(".rgba"))
 				{
 					let ne = CString.LeftRightCut(texStr,"rgba",".rgba");
 					CH5Canvas.Init(1,1);
@@ -506,6 +511,22 @@ export class CLoader
 					this.mRender.BuildTexture(tex);
 					this.mRes.Push(texStr,tex);
 				}
+                // bump 텍스쳐 => 노말 텍스쳐로 전환
+                else if(texStr.endsWith(".bump"))
+                {
+                    mesh.texture[i] = mesh.texture[i].substring(0, mesh.texture[i].length - 5);
+                    texStr = mesh.texture[i];
+                    const bumpTex = await this.Exe(texStr,option);
+                    if(_option.mIsBumpHeightmap) {
+                        const normTex = CImgPro.BumpToNormalMap(bumpTex);
+                        this.mRender.BuildTexture(normTex);
+                        this.mRes.Push(texStr,normTex);
+                    }
+                    else {
+                        this.mRes.Push(texStr,bumpTex);
+                    }
+                }
+                // 텍스쳐
 				else
 					await this.Exe(texStr,option);
 			}

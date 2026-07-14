@@ -4,7 +4,8 @@ import { URLPatterns } from "../network/CServerMain.js";
 import { CFile } from "../system/CFile.js";
 import { Request, Response } from 'express';
 import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
-import { GetAppJSON, GetRootPaths } from '../../desktop/MainFunc.js';
+import { GetAppJSON, GetRootPaths, GetLoadedSettingsFileName } from '../../desktop/MainFunc.js';
+import { CUtilSystem } from '../system/CUtilSystem.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as nodePath from 'path';
@@ -129,7 +130,7 @@ function applyVcsStatus(
     });
 }
 
-@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS"])
+@URLPatterns(["/File/Root", "/File/List", "/File/Redirection", "/File/Upload", "/File/Mkdir", "/File/Delete", "/File/VCS", "/File/Restart"])
 export class CFileServer extends CAuthServer
 {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
@@ -150,6 +151,18 @@ export class CFileServer extends CAuthServer
         this.On("/File/Delete", this.onDelete.bind(this));
         this.On("/File/Upload", this.onUpload.bind(this));
         this.On("/File/VCS", this.onVCS.bind(this));
+        this.On("/File/Restart", this.onRestart.bind(this));
+    }
+
+    async onRestart(_json: CJSON, _req: Request, _res: Response): Promise<string> {
+        if (!this.IsAuth(_json, _req)) {
+            _res.status(403);
+            return JSON.stringify({ ok: false, msg: "Unauthorized" });
+        }
+        // newWindow=true: 현재 프로세스 트리와 분리된 독립 프로세스로 재실행한다(같은 트리에
+        // 묶이면, 뒤이어 이 프로세스를 taskkill /T로 죽일 때 재시작 체인 자신도 같이 죽는다).
+        await CUtilSystem.Spawn('npm', ['run', 'start', '--', GetLoadedSettingsFileName()], 'ignore', process.cwd(), null, true, false);
+        return JSON.stringify({ ok: true });
     }
 
     async onRoot(_json: CJSON, _req: Request, _res: Response): Promise<string> {

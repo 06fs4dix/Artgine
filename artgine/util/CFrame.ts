@@ -6,7 +6,8 @@ import {CWASM} from "../basic/CWASM.js"
 import {CUniqueID} from "../basic/CUniqueID.js"
 import {CEvent} from "../basic/CEvent.js"
 import {CCoroutine} from "./CCoroutine.js"
-import {CConfirm, CModal} from "../basic/CModal.js"
+import {CConfirm, CDrop, CModal} from "../basic/CModal.js"
+import {CObject} from "../basic/CObject.js"
 import { CUpdate, IAutoFixed, IAutoRender, IAutoUpdate } from "../basic/Basic.js"
 import {CPWA} from "../system/CPWA.js"
 import {CConsol} from "../basic/CConsol.js"
@@ -322,10 +323,45 @@ export class CFrame
 			canDummy.style.userSelect='none';
 			canDummy.style.outline = 'none';
 			(canDummy as HTMLCanvasElement).style.webkitUserSelect="none";
-			
-			
 
-			
+			canDummy.addEventListener("dragover",(e : DragEvent)=>
+			{
+				e.preventDefault();
+			});
+			canDummy.addEventListener("dragleave",(e : DragEvent)=>
+			{
+				e.preventDefault();
+			});
+			canDummy.addEventListener("drop",async (e : DragEvent)=>
+			{
+				e.preventDefault();
+				if(this.GetEvent(CEvent.eType.Drop).length==0)	return;
+
+				let drop=new CDrop();
+				drop.mX=e.offsetX;
+				drop.mY=(canDummy as HTMLCanvasElement).height-e.offsetY;
+
+				let hash=e.dataTransfer.getData("hash");
+				let text=e.dataTransfer.getData("text");
+				if(text!="" || hash!="")
+				{
+					drop.mObject=CObject.GetDragObj();
+					CFrame.EventCall(this.GetEvent(CEvent.eType.Drop),drop);
+					return;
+				}
+
+				const files=[...(e.dataTransfer?.files || [])];
+				if(e.dataTransfer?.files?.length)
+				{
+					let paths=await CWebView.JToWFileDroppedPath(e.dataTransfer.files);
+					drop.mFiles=files as any;
+					drop.mPaths=paths;
+					CFrame.EventCall(this.GetEvent(CEvent.eType.Drop),drop);
+				}
+			});
+
+
+
 
 		}
 		else if(_htmlObj instanceof HTMLCanvasElement)

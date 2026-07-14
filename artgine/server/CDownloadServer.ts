@@ -77,7 +77,7 @@ async function ensureFfmpeg(): Promise<boolean> {
 function updateYtdlp(): Promise<string> {
     return new Promise(async (resolve) => {
         if (!fs.existsSync(YTDLP_PATH)) { resolve('yt-dlp 없음'); return; }
-        const proc = await CUtilSystem.Spawn(YTDLP_PATH, ['-U']);
+        const proc = (await CUtilSystem.Spawn(YTDLP_PATH, ['-U']))!;
         let out = '';
         proc.stdout.on('data', (d: Buffer) => out += d.toString());
         proc.stderr.on('data', (d: Buffer) => out += d.toString());
@@ -147,7 +147,7 @@ export class CDownloadServer extends CServerRouter {
                 return JSON.stringify({ ok: false, msg: 'yt-dlp 설치 중입니다. 잠시 후 다시 시도하세요.' });
 
             return new Promise<string>(async (resolve) => {
-                const proc = await CUtilSystem.Spawn(YTDLP_PATH, ['--dump-json', '--no-playlist', '--js-runtimes', 'node', url], 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' });
+                const proc = (await CUtilSystem.Spawn(YTDLP_PATH, ['--dump-json', '--no-playlist', '--js-runtimes', 'node', url], 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }))!;
                 let out = '';
                 let err = '';
                 proc.stdout.on('data', (d: Buffer) => out += d.toString());
@@ -202,7 +202,7 @@ export class CDownloadServer extends CServerRouter {
                            '--js-runtimes', 'node',
                            '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url];
 
-                    const proc = await CUtilSystem.Spawn(YTDLP_PATH, args, 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' });
+                    const proc = (await CUtilSystem.Spawn(YTDLP_PATH, args, 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }))!;
                     let lastFile = '';
 
                     proc.stdout.on('data', (d: Buffer) => {

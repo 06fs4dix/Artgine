@@ -32,7 +32,7 @@ async function _getAgyUsageCached(): Promise<IProviderUsage> {
     return value;
 }
 
-@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/push-opencode-model"])
+@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/push-opencode-model", "/AIInfo/opencode-provider-status"])
 export class CAIInfoRouter extends CAuthServer {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
     // cross-origin(RDP로 전환된 원격 서버) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
@@ -46,6 +46,7 @@ export class CAIInfoRouter extends CAuthServer {
         this.On("/AIInfo/setting", this.onGetSettingJSON.bind(this));
         this.On("/AIInfo/provider-state", this.onProviderState.bind(this));
         this.On("/AIInfo/push-opencode-model", this.onPushOpencodeModel.bind(this));
+        this.On("/AIInfo/opencode-provider-status", this.onOpencodeProviderStatus.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -220,6 +221,78 @@ export class CAIInfoRouter extends CAuthServer {
         } catch (e: any) {
             _res.status(500).json({ ok: false, msg: String(e?.message ?? e) });
         }
+        return null;
+    }
+
+    // GET /AIInfo/opencode-provider-status
+    // opencode.json에 push-opencode-model로 등록해둔 커스텀 provider(Ollama/LM Studio)들에 실제로 접속해
+    // 연결 여부와 현재 로드된 모델(가능하면 VRAM)을 조회한다. 등록된 원격 IP를 노출하는 조회라 인증이 필요하다.
+    async onOpencodeProviderStatus(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+
+        const ocPath = path.join(CPath.WorkingPath(), 'opencode.json');
+        let config: any = {};
+        try { config = JSON.parse(fs.readFileSync(ocPath, 'utf8')); } catch { config = {}; }
+        const providerMap = (config && typeof config === 'object' && config.provider && typeof config.provider === 'object') ? config.provider : {};
+
+        // push-opencode-model이 만든 항목만 대상으로 한다(다른 표준 provider는 이 방식으로 조회할 API가 없음).
+        const entries = Object.entries(providerMap).filter(([, v]: [string, any]) => v?.npm === '@ai-sdk/openai-compatible');
+
+        const providers = await Promise.all(entries.map(async ([key, v]: [string, any]) => {
+            const backend: 'ollama' | 'lmstudio' = key.startsWith('ollama-') ? 'ollama' : 'lmstudio';
+            const baseURL: string = v?.options?.baseURL ?? '';
+            const apiKey: string | undefined = v?.options?.apiKey;
+            const root = baseURL.replace(/\/v1\/?$/, '');
+            const host = root.replace(/^https?:\/\//i, '');
+            const modelCount = Object.keys(v?.models ?? {}).length;
+            const authHeaders = CAIInfoRouter._authHeaders(apiKey);
+
+            let connected = false;
+            let error = '';
+            let running: { name: string; vramBytes?: number }[] = [];
+
+            try {
+                if (backend === 'ollama') {
+                    // /api/ps: 현재 메모리에 로드된 모델 + VRAM 사용량(size_vram)을 함께 준다.
+                    const psRes = await fetch(`${root}/api/ps`, { headers: authHeaders, signal: AbortSignal.timeout(5000) });
+                    if (psRes.ok) {
+                        connected = true;
+                        const psJson: any = await psRes.json();
+                        running = Array.isArray(psJson?.models)
+                            ? psJson.models.map((m: any) => ({ name: m?.name ?? m?.model ?? '', vramBytes: typeof m?.size_vram === 'number' ? m.size_vram : undefined }))
+                            : [];
+                    } else {
+                        // 구버전 Ollama라 /api/ps가 없을 수 있으니 /api/tags로 연결 자체만 재확인한다.
+                        const tagsRes = await fetch(`${root}/api/tags`, { headers: authHeaders, signal: AbortSignal.timeout(5000) });
+                        connected = tagsRes.ok;
+                        if (!connected) error = `HTTP ${tagsRes.status}`;
+                    }
+                } else {
+                    const modelsRes = await fetch(`${root}/v1/models`, { headers: authHeaders, signal: AbortSignal.timeout(5000) });
+                    connected = modelsRes.ok;
+                    if (!connected) error = `HTTP ${modelsRes.status}`;
+                    if (connected) {
+                        // LM Studio 확장 API(/api/v0/models)가 있으면 현재 로드된 모델을 알 수 있다(표준 OpenAI 호환 API엔 없음).
+                        try {
+                            const v0Res = await fetch(`${root}/api/v0/models`, { headers: authHeaders, signal: AbortSignal.timeout(5000) });
+                            if (v0Res.ok) {
+                                const v0Json: any = await v0Res.json();
+                                running = Array.isArray(v0Json?.data)
+                                    ? v0Json.data.filter((m: any) => m?.state === 'loaded').map((m: any) => ({ name: m?.id ?? '' }))
+                                    : [];
+                            }
+                        } catch { /* LM Studio 확장 API 미지원 서버는 무시(연결 자체는 이미 확인됨) */ }
+                    }
+                }
+            } catch (e: any) {
+                connected = false;
+                error = String(e?.message ?? e);
+            }
+
+            return { key, label: v?.name ?? key, backend, host, connected, error, modelCount, running };
+        }));
+
+        _res.json({ providers });
         return null;
     }
 }

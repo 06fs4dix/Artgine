@@ -78,6 +78,11 @@ export async function GetAppJSON(_settingsFileName?: string)
     gLoadedSettingsFileName = settingsFileName;
     return gMainConfig;
 }
+// 재시작 등에서 현재 로드된 settings 파일명이 필요할 때 사용
+export function GetLoadedSettingsFileName(): string
+{
+    return gLoadedSettingsFileName ?? "settings.json";
+}
 // rootPath는 string(구버전) 또는 string[](신버전) 모두 허용 → 항상 비어있지 않은 배열로 정규화
 export function GetRootPaths(cfg): string[]
 {

@@ -57,6 +57,9 @@ export async function GetAppJSON(_settingsFileName) {
     gLoadedSettingsFileName = settingsFileName;
     return gMainConfig;
 }
+export function GetLoadedSettingsFileName() {
+    return gLoadedSettingsFileName ?? "settings.json";
+}
 export function GetRootPaths(cfg) {
     const r = cfg?.rootPath;
     if (Array.isArray(r))

@@ -262,15 +262,13 @@ function tryNotifyEditorHost(path: string, url: string): boolean {
     return true;
 }
 function openHtml(fl: DirEntry) {
+    const url = downUrl(fl);
+    if (tryNotifyEditorHost(gRoot + gPath + fl.name, url)) return;
     const confirm = new CConfirm();
     confirm.SetBody("HTML 파일을 어떻게 열까요?");
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
-        () => { window.open(downUrl(fl), "_blank"); },
-        () => {
-            const url = downUrl(fl);
-            if (tryNotifyEditorHost(gRoot + gPath + fl.name, url)) return;
-            new CFileViewer([url], async (filePath, bufStr) => saveEditedFile(filePath, textToBase64(bufStr))).Open();
-        },
+        () => { window.open(url, "_blank"); },
+        () => { new CFileViewer([url], async (filePath, bufStr) => saveEditedFile(filePath, textToBase64(bufStr))).Open(); },
     ], ["New Window", "File Viewer"]);
     confirm.Open();
 }
@@ -280,7 +278,9 @@ function openCode(fl: DirEntry) {
     new CFileViewer([url], async (filePath, bufStr) => saveEditedFile(filePath, textToBase64(bufStr))).Open();
 }
 function openMd(fl: DirEntry) {
-    new CMDViewer(downUrl(fl));
+    const url = downUrl(fl);
+    if (tryNotifyEditorHost(gRoot + gPath + fl.name, url)) return;
+    new CMDViewer(url);
 }
 function openSheet(fl: DirEntry) {
     new CSheetViewer([downUrl(fl)], async (filePath, base64) => saveEditedFile(filePath, base64)).Open();

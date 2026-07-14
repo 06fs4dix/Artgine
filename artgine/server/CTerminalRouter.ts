@@ -3,7 +3,7 @@ import { CJSON } from '../basic/CJSON.js';
 import { Request, Response } from 'express';
 import { CAuthServer } from './CAuthServer.js';
 
-@URLPatterns(["/cmd/start-term", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode"])
+@URLPatterns(["/cmd/start-term", "/cmd/sessions", "/cmd/kill-session", "/cmd/terminal-proxy", "/cmd/terminal-proxy/token", "/cmd/schedules", "/cmd/schedule-set", "/cmd/schedule-del", "/cmd/super-mode", "/cmd/handoff"])
 export class CTerminalRouter extends CAuthServer {
     constructor() {
         super();
@@ -16,6 +16,7 @@ export class CTerminalRouter extends CAuthServer {
         this.On("/cmd/kill-session", this.onKillSession.bind(this));
         this.On("/cmd/terminal-proxy/token", this.onTerminalProxyToken.bind(this));
         this.On("/cmd/terminal-proxy", this.onTerminalProxy.bind(this));
+        this.On("/cmd/handoff", this.onHandoff.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -30,6 +31,7 @@ export class CTerminalRouter extends CAuthServer {
     async onKillSession(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onTerminalProxyToken(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
     async onTerminalProxy(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
+    async onHandoff(_json: CJSON, _req: Request, _res: Response): Promise<null> { return null; }
 }
 
 // 터미널 백엔드: node-pty + xterm (구 ttyd 구현은 제거됨).

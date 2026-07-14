@@ -31,6 +31,13 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 - node 임의 실행. `ai/tool/tsc_check.js`, `ai/tool/browser.js`, `ai/tool/c_cpp_check.js`는 제외
 - python / python3 실행
 - 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
+- 서버 재시작 명령(`POST /File/Restart`, Control 프로젝트의 "Restart Server" 버튼) — 실행 시 현재 서버 프로세스가 즉시 종료되므로 **사용자 승인 없이 절대 실행 금지**
+
+## 서버 재시작 (Server Restart)
+Control 프로젝트(`proj/Control`) 옵션 탭의 **"Restart Server"** 버튼, 또는 REST API `POST /File/Restart` (`artgine/server/CFileServer.ts`)로 서버를 재시작할 수 있다.
+- 현재 로드된 settings.json 그대로 재시작한다: 내부적으로 `npm run start -- <현재 settings 파일>`을 detached 실행하고, `desktop/Start.ts`가 기존 프로세스를 kill한 뒤 같은 설정으로 재기동한다.
+- 인증은 기존 인증 시스템(`CAuthServer`, 로그인 세션 쿠키 또는 password 토큰)을 그대로 재사용한다.
+- **호출 즉시 현재 서버 프로세스가 종료된다. 사용자의 명시적 승인 없이는 이 엔드포인트를 호출하거나 버튼을 대신 눌러서는 안 된다.**
 
 ## 접속 정보 (Connection Information)
 포트/경로는 `settings.json`의 `url` 필드 기준. 우선순위: 워킹 폴더 `settings.json` → `desktop/settings.json`.

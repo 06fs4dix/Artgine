@@ -170,6 +170,13 @@ export class CUtilWeb {
 			else if (path.indexOf(".js") == -1) path += ".js";
 
 			let adjustedFullPath: string;
+			// Monaco 모델 URI가 File/Root 프록시("/RootN")를 경유하는 경우, Monaco의 TS 언어 서비스는
+			// 실제 fileDir(=모델 URI) 기준으로 "../../../artgine/..."를 그대로 상대 해석한다.
+			// 아래 artgine 특수 분기는 항상 엔진의 "진짜" 고정 위치로 재해석하므로, 두 좌표계가 달라지면
+			// (즉 fileDir가 rootBase가 아닌 다른 프록시 경로일 때) extraLib을 아무리 정확히 등록해도
+			// Monaco가 실제로 찾으려는 키와 어긋나 "Cannot find module"이 뜬다. 이를 위해 별칭 경로를
+			// 하나 더 계산해 같은 내용으로 extraLib을 중복 등록해준다(택스트/치환 결과에는 영향 없음).
+			let monacoAliasPath: string = null;
 
 			if (path.startsWith("../") || path.startsWith("./")) {
 				// 상대경로: 현재 파일 디렉토리 기준
@@ -180,6 +187,11 @@ export class CUtilWeb {
 				if (_github || path.startsWith("artgine/")) {
 					// artgine 경로: ../개수와 무관하게 엔진 루트에서 해석
 					adjustedFullPath = PickBase(path) + "/" + path;
+					if (!_github) {
+						const base = count > 0 ? CString.PathSub(fileDir, count) : fileDir;
+						const aliasPath = base + "/" + path;
+						if (aliasPath !== adjustedFullPath) monacoAliasPath = aliasPath;
+					}
 				} else {
 					const base = count > 0 ? CString.PathSub(fileDir, count) : fileDir;
 					adjustedFullPath = base + "/" + path;
@@ -202,6 +214,12 @@ export class CUtilWeb {
 				// TS가 실제로 찾는 키(확장자 그대로의 절대경로)에도 동일 내용을 등록해준다.
 				if (!_rewriteSource && hadJsExt) {
 					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, adjustedFullPath + ".js");
+				}
+				if (monacoAliasPath != null) {
+					window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".ts");
+					if (!_rewriteSource && hadJsExt) {
+						window["monaco"].languages.typescript.typescriptDefaults.addExtraLib(libSource, monacoAliasPath + ".js");
+					}
 				}
 			}
 		}

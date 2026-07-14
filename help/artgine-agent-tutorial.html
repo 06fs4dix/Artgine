@@ -92,8 +92,8 @@
     .btn-outline-info { border-color: var(--cyan); color: #087990; }
     .btn-outline-secondary { border-color: var(--muted); color: var(--muted); }
     .btn-outline-danger { border-color: var(--red); color: var(--red); }
-    .topbar { height: 42px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
-    .nav-tabs { display: flex; align-items: end; gap: 0; padding: 0 8px; margin: 0; list-style: none; background: #fff; flex: 1; }
+    .topbar { height: 42px; flex: 0 0 42px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
+    .nav-tabs { display: flex; align-items: end; gap: 0; padding: 0 4px; margin: 0; list-style: none; background: #fff; flex: 1; position: relative; }
     .nav-link {
       height: 36px;
       border: 1px solid transparent;
@@ -102,16 +102,55 @@
       background: transparent;
       padding: .35rem .65rem;
       cursor: pointer;
+      white-space: nowrap;
     }
     .nav-link.active { background: #fff; border-color: var(--border); border-bottom-color: #fff; color: var(--blue); font-weight: 600; }
     .nav-link small { color: var(--muted); }
+    .nav-item.dropdown { position: relative; }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 36px;
+      left: 0;
+      z-index: 50;
+      min-width: 170px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: .375rem;
+      box-shadow: var(--shadow);
+      padding: 4px;
+      list-style: none;
+      margin: 0;
+    }
+    .dropdown-menu.show { display: block; }
+    .dropdown-menu li { margin: 0; }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      padding: .45rem .6rem;
+      border-radius: .25rem;
+      cursor: pointer;
+    }
+    .dropdown-item:hover { background: var(--light); }
     .topbar-actions { display: flex; align-items: center; gap: 6px; padding: 0 8px; background: #fff; }
+    .ctrl-body { position: absolute; inset: 0; display: none; grid-template-columns: 210px minmax(0,1fr) 220px; }
+    .ctrl-left, .ctrl-right { background: var(--light); overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .ctrl-left { border-right: 1px solid var(--border); }
+    .ctrl-right { border-left: 1px solid var(--border); }
+    .side-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 4px 0 -2px; }
+    .ctrl-center { min-width: 0; min-height: 0; position: relative; background: #fff; overflow: hidden; }
     .tab-content { flex: 1; min-height: 0; position: relative; background: #fff; }
     .tab-pane { display: none; height: 100%; min-height: 0; }
-    .tab-pane.active { display: block; }
-    .home { padding: 24px; overflow: auto; }
+    .tab-pane.active { display: flex; flex-direction: column; }
+    .home { position: absolute; inset: 0; padding: 24px; overflow: auto; display: none; }
+    .home.active { display: block; }
     .home h2 { margin: 0 0 10px; }
-    .home-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 16px; }
+    .home-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap: 12px; margin-top: 16px; }
     .card { border: 1px solid var(--border); border-radius: .5rem; background: #fff; padding: 16px; }
     .card h3 { margin: 0 0 8px; font-size: 16px; }
     .card p { margin: 0; color: var(--muted); }
@@ -125,6 +164,7 @@
       overflow: auto;
       min-height: 30px;
       white-space: nowrap;
+      flex: 0 0 auto;
     }
     .kbd {
       display: inline-flex;
@@ -199,7 +239,7 @@
       border-radius: .5rem;
       box-shadow: var(--shadow);
       padding: 16px;
-      z-index: 30;
+      z-index: 70;
     }
     .coach h2 { font-size: 18px; margin: 0 0 8px; line-height: 1.25; }
     .coach p { margin: 0 0 12px; color: #d1d5db; }
@@ -212,7 +252,7 @@
       position: absolute;
       inset: 0;
       background: rgba(0,0,0,.45);
-      z-index: 40;
+      z-index: 60;
       align-items: center;
       justify-content: center;
       padding: 18px;
@@ -227,7 +267,7 @@
     .popover {
       display: none;
       position: absolute;
-      z-index: 60;
+      z-index: 80;
       max-width: 300px;
       background: #212529;
       color: #fff;
@@ -238,17 +278,6 @@
       line-height: 1.45;
     }
     .popover.show { display: block; }
-    .rdp-pane.active, .ai-pane.active { display: grid; grid-template-rows: auto minmax(0,1fr); overflow: hidden; background: var(--light); }
-    .rdp-body, .ai-body { min-height: 0; display: grid; grid-template-columns: 310px minmax(0,1fr); height: 100%; }
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-      min-height: 0;
-      background: var(--light);
-    }
-    .sidebar-head { padding: 8px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; }
-    .side-section { overflow: auto; padding: 10px; min-height: 0; flex: 1; }
     .session {
       position: relative;
       border: 1px solid transparent;
@@ -258,26 +287,12 @@
       margin-bottom: 7px;
       cursor: pointer;
     }
-    .session.active-rdp { background: #cfe2ff; border-color: #9ec5fe; }
-    .session.chat-active { background: #cfe2ff; border-color: #9ec5fe; }
-    .session.term-active { background: #d1e7dd; border-color: #a3cfbb; }
-    .session.web-active { background: #e7f1ff; border-color: #9ec5fe; }
+    .session.item-active { background: #cfe2ff; border-color: #9ec5fe; box-shadow: inset 3px 0 0 var(--blue); font-weight: 600; }
     .sess-title { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
     .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
     .dot.busy { background: var(--yellow); }
     .dot.off { background: var(--red); }
     .session small { display: block; color: var(--muted); margin-left: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .frame {
-      min-width: 0;
-      min-height: 0;
-      height: 100%;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      background: var(--light);
-    }
-    .sidebar-toggle { position: absolute; right: 22px; top: 48px; z-index: 4; }
     .rdp-controls, .browser-controls {
       height: 36px;
       flex: 0 0 36px;
@@ -322,22 +337,20 @@
     .hero { height: 78px; border-radius: .4rem; background: linear-gradient(135deg,#cfe2ff,#e7f1ff); margin-bottom: 12px; }
     .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
     .mini-card { height: 86px; border: 1px solid #dee2e6; border-radius: .35rem; background: #fff; }
-    .file-pane.active { display: block; overflow: auto; }
-    .file-menu { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); background: #fff; min-height: 39px; }
+    .file-menu { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); background: #fff; min-height: 39px; flex: 0 0 auto; }
     .file-menu .path { margin-left: auto; font-family: Consolas, monospace; color: var(--muted); font-size: 12px; }
+    .file-list-wrap { overflow: auto; flex: 1; min-height: 0; }
     .file-list-wrap .list-group-item { border-left: 0; border-right: 0; border-radius: 0; padding: .72rem 1rem; }
     .file-list-wrap .list-group-item i { display: inline-block; width: 1.35rem; margin-right: .25rem; text-align: center; font-size: 1rem; vertical-align: -.1em; }
-    .file-list-hint { padding: 8px 12px; border-bottom: 1px solid var(--border); background: #f8f9fa; color: var(--muted); font-size: 12px; }
+    .file-list-hint { padding: 8px 12px; border-bottom: 1px solid var(--border); background: #f8f9fa; color: var(--muted); font-size: 12px; flex: 0 0 auto; }
     .file-list-wrap [data-view="root"] i,
     .file-list-wrap [data-view="parent"] i,
     .file-list-wrap [data-view="folder"] i { color: #d29922; }
     .file-list-wrap [data-view="html"] i { color: #0d6efd; }
     .file-list-wrap [data-view="code"] i { color: #198754; }
     .file-list-wrap [data-view="file"] i { color: #6c757d; }
-    .ai-subtabs { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--border); }
-    .ai-subtabs .nav-link { height: 40px; border-radius: 0; border: 0; border-right: 1px solid var(--border); }
-    .ai-side-pane { display: none; overflow: auto; padding: 10px; min-height: 0; flex: 1; }
-    .ai-side-pane.active { display: block; }
+    .side-sub-tabs { display: flex; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+    .side-sub-tabs .nav-link { flex: 1; height: 32px; border-radius: 0; text-align: center; }
     .chat-main { flex: 1 1 auto; min-height: 0; height: 100%; display: flex; flex-direction: column; }
     .chat-top { height: 48px; flex: 0 0 48px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #fff; }
     .messages { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px; }
@@ -346,13 +359,9 @@
     .bubble small { display: block; text-transform: uppercase; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
     .composer { flex: 0 0 auto; display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: #fff; }
     .composer textarea { min-height: 42px; max-height: 110px; resize: vertical; }
-    .terminal { display: none; flex: 1; min-height: 0; overflow: auto; background: #0f172a; color: #d1fae5; font-family: Consolas, monospace; padding: 14px; white-space: pre-wrap; }
-    .terminal.active { display: block; }
-    .term-bar { display: none; gap: 8px; padding: 9px; background: #111827; border-top: 1px solid #263244; }
-    .term-bar.active { display: flex; }
+    .terminal { flex: 1; min-height: 0; overflow: auto; background: #0f172a; color: #d1fae5; font-family: Consolas, monospace; padding: 14px; white-space: pre-wrap; }
+    .term-bar { display: flex; gap: 8px; padding: 9px; background: #111827; border-top: 1px solid #263244; flex: 0 0 auto; }
     .term-bar input { background: #0b1220; color: #d1fae5; border-color: #10b981; }
-    .browser-frame { display: none; flex: 1; min-height: 0; background: #111; color: #aaa; overflow: hidden; }
-    .browser-frame.active { display: flex; flex-direction: column; }
     .browser-shot-img { width: min(760px,92%); height: min(390px,86%); background: #f8f9fa; color: #212529; border: 1px solid #333; border-radius: .35rem; box-shadow: 0 12px 28px rgba(0,0,0,.45); overflow: hidden; }
     .browser-mock-top { height: 28px; background: #e9ecef; border-bottom: 1px solid #ced4da; display: flex; align-items: center; gap: 5px; padding: 0 8px; }
     .browser-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
@@ -363,16 +372,16 @@
     .browser-mock-side { background: #f1f3f5; border-right: 1px solid #dee2e6; padding: 12px; }
     .browser-mock-main { padding: 14px; }
     .browser-log { flex: 0 0 150px; overflow: auto; padding: 8px; font-family: Consolas, monospace; font-size: .75rem; background: #1a1a1a; color: #aaa; border-top: 1px solid #333; white-space: pre-wrap; }
-    .fake-monaco { min-height: 240px; background: #1e1e1e; color: #d4d4d4; border-radius: .375rem; padding: 14px; font-family: Consolas, monospace; white-space: pre-wrap; }
-    .shortcut-list .list-group-item { display: grid; grid-template-columns: 130px minmax(0,1fr); gap: 10px; align-items: start; }
+    .placeholder-pane { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); padding: 20px; text-align: center; }
+    .shortcut-list .list-group-item { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 10px; align-items: start; }
     .file-meta { display: block; color: var(--muted); font-size: 11px; line-height: 1.25; margin-top: 2px; }
     @media (max-width: 940px) {
       .app { grid-template-columns: 1fr; grid-template-rows: 250px minmax(0,1fr); }
       .guide { border-right: 0; border-bottom: 1px solid var(--border); }
       .workspace { padding: 8px; }
       .home-grid { grid-template-columns: 1fr; }
-      .rdp-body, .ai-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
-      .sidebar { max-height: 230px; border-right: 0; border-bottom: 1px solid var(--border); }
+      .ctrl-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+      .ctrl-left, .ctrl-right { max-height: 170px; border: 0; border-bottom: 1px solid var(--border); }
       .coach { right: 10px; bottom: 10px; width: calc(100% - 20px); }
       .file-menu { overflow: auto; }
       .file-menu .path { display: none; }
@@ -387,14 +396,16 @@
         next: '다음',
         done: '완료',
         shortcuts: 'Shortcuts',
-        homeDesc: '원격 화면, 파일, AI 작업을 한 번에 다루는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.',
+        homeDesc: 'Control은 좌측 통합 사이드바(원격/세션 목록), 상단 탭(File · Terminal · More), 우측 상태 사이드바(Provider/Option)로 구성된 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 레이아웃과 주요 작업 흐름을 다룹니다.',
         aiAuthNote: 'AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.',
         rdpCardTitle: 'RDP',
-        rdpCardDesc: 'Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.',
-        filesCardTitle: 'Files',
-        filesCardDesc: '허용된 서버 폴더를 탐색하고, 파일 보기/편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.',
-        aiCardTitle: 'AI',
-        aiCardDesc: 'Chat, Term, Web 하위 탭에서 AI 채팅, 웹 터미널, 웹 화면 원격 확인을 관리합니다.',
+        rdpCardDesc: 'Control을 열면 기본으로 표시되는 탭입니다. 좌측 사이드바에서 Local 또는 Remote를 선택해 화면을 확인합니다.',
+        fileCardTitle: 'File',
+        fileCardDesc: '상단 File 탭에서 허용된 경로를 탐색하고, Search 버튼(F2)으로 파일명을 검색합니다.',
+        termCardTitle: 'Terminal',
+        termCardDesc: '상단 Terminal 탭에서 cmd 또는 codex/claude/opencode/agy 같은 AI CLI 세션을 시작합니다.',
+        moreCardTitle: 'More',
+        moreCardDesc: 'More 메뉴에서 Memo, RDP 추가, 새 Chat, 새 Browser, Download를 엽니다. Chat/Terminal/Browser 세션은 좌측 사이드바에 함께 정렬됩니다.',
         gsTitle: '시작하기',
         gsMethod1: '방법 1: 전체 설치 & 실행',
         gsWebOnlyTitle: '웹 서버만 실행',
@@ -405,45 +416,60 @@
         gsAlt: '',
         keys: 'Keys',
         file: 'File',
-        music: 'Music',
-        addAll: 'Add All',
-        addEach: 'Add Each (w/ Folder)',
         search: 'Search',
-        ai: 'AI',
+        terminal: 'Terminal',
+        more: 'More',
+        memo: 'Memo',
         rdp: 'RDP',
+        chat: 'Chat',
+        browser: 'Browser',
+        download: 'Download',
+        ai: 'AI',
         close: 'Close',
         help: '?',
         remoteHomeUrl: 'Remote Home.html URL',
-        addRemote: 'Add Remote',
+        addRemote: 'Add',
         local: 'Local',
         remote: 'Remote',
         selectTarget: 'Select a target from the sidebar.',
         frame: 'frame',
         quality: 'quality',
         input: 'input',
-        tipRdpUrl: '원격 서버의 Home.html 주소를 입력합니다. 예: http://host:8050/Artgine/proj/Home/Home.html',
-        tipRdpAdd: '입력한 원격 Home.html을 RDP 목록에 추가합니다. 선택하면 해당 서버 기준 RemoteDesktop.html이 열립니다.',
-        tipRdpLocal: '현재 접속 중인 서버의 RemoteDesktop.html을 엽니다.',
-        tipRdpRemote: '원격 서버의 화면을 봅니다. 실제 앱에서는 선택 시 파일 서버 컨텍스트도 해당 Home.html 기준으로 전환됩니다.',
+        root: 'Root',
+        rdpSessions: 'RDP',
+        sessions: 'Sessions',
+        infoTab: 'Info',
+        optionTab: 'Option',
+        providerStatus: 'Provider Status',
+        notifLog: 'Notifications',
+        theme: 'Theme',
+        addOllama: 'Add OpenCode Model',
+        schedule: 'Schedule',
+        tipLeftSidebar: '좌측 사이드바는 Root 선택, RDP 세션(Local/Remote), Chat·Terminal·Browser 세션을 종류 구분 없이 최신순으로 함께 보여줍니다.',
+        tipRightSidebar: '우측 사이드바는 Info(Provider 상태/완료 알림)와 Option(Theme/Schedule/단축키)으로 나뉩니다.',
+        tipRdpLocal: '현재 접속 중인 서버의 원격 화면을 엽니다.',
+        tipRdpRemote: '원격 서버의 화면을 봅니다. 선택하면 File 탭의 루트도 해당 서버 기준으로 전환됩니다.',
         tipRdpRate: '화면 캡처 갱신 주기입니다. 짧을수록 빠르게 갱신되지만 서버 부하와 전송량이 늘어납니다.',
         tipRdpQuality: 'JPEG 품질입니다. 값이 높으면 선명하지만 이미지 전송량이 커집니다.',
         tipRdpInput: '입력 모드를 켜면 키보드, 클릭, 드래그, 휠 이벤트가 원격 PC로 전달됩니다.',
-        tipFile: 'File 버튼은 루트 선택, 공유, 폴더 생성, 삭제, 업로드, VCS 작업을 여는 관리 진입점입니다.',
-        tipMusic: '음악 파일을 재생 목록으로 열어 관리합니다. 폴더 추가 방식은 옆 선택 박스에서 고릅니다.',
-        tipSearch: '현재 경로 아래에서 파일명 일부로 검색합니다. 결과를 클릭하면 해당 폴더나 파일로 이동합니다.',
+        tipFile: '상단 File 탭은 서버가 허용한 경로의 파일 목록을 보여줍니다. 파일을 누르면 종류에 맞는 팝업이 열립니다.',
+        tipSearch: 'Search 버튼(F2)은 현재 경로 아래에서 파일명 일부로 검색합니다. 결과를 클릭하면 해당 폴더나 파일로 이동합니다.',
+        tipTerm: '상단 Terminal 탭 버튼을 누르면 기본 cmd 모드로 새 세션이 바로 시작됩니다. 모드를 바꾸려면 New Terminal 대화상자를 사용합니다.',
+        tipMore: 'More 메뉴에서 Memo, RDP 추가, 새 Chat, 새 Browser, Download 탭을 엽니다.',
         tipShortcuts: '최신 단축키 목록을 모달로 확인합니다.',
-        tipAIHelp: 'AI 탭에서는 Tab으로 사이드바를 열고 닫고, 1/2/3으로 Chat/Term/Web 하위 탭을 전환합니다.',
-        tipNewChat: '작업 폴더와 옵션을 정한 뒤 AI Chat 세션을 시작합니다.',
-        tipNewTerm: 'cmd 또는 AI CLI(codex, claude, opencode 등) 터미널 세션을 시작합니다.',
+        tipNewChat: 'Working Directory와 MCP/Copy MD 옵션을 정한 뒤 AI Chat 세션을 시작합니다.',
+        tipNewTerm: 'cmd, claude, codex, agy(Antigravity), opencode 중 모드를 고르고 Key/Working Directory를 지정합니다.',
         tipSchedule: '지정한 명령이나 프롬프트를 반복 실행하는 스케줄을 만듭니다.',
-        tipNewBrowser: '새 웹 화면을 열고 화면, 기록, 입력 상태를 확인합니다.',
+        tipNewBrowser: '확인할 URL, 브라우저 종류, TTL, 화면 크기, Stealth 시간을 설정합니다.',
         tipBrowserInput: '브라우저 세션으로 키보드와 마우스 입력을 전달합니다.',
+        tipProviderStatus: '연결된 AI 프로바이더(Claude, Codex, OpenCode 등)의 로그인/연결 상태를 보여줍니다.',
+        tipNotif: 'Chat/Terminal 작업이 끝나면 완료 알림이 이 목록에 최신순으로 쌓입니다.',
         fileManagerTitle: 'File Manager',
         fileSearchTitle: 'File Search',
         keyboardShortcutsTitle: 'Keyboard Shortcuts',
         newChatModalTitle: 'New Chat',
         newTermModalTitle: 'New Terminal',
-        newBrowserModalTitle: 'New Browser',
+        newBrowserModalTitle: 'New Browser Session',
         workingDir: 'Working Directory',
         mode: 'Mode',
         key: 'Key',
@@ -451,7 +477,8 @@
         copyMd: 'Copy MD',
         open: 'Open',
         cancel: 'Cancel',
-        browserModalDesc: '확인할 URL, 유지 시간, 화면 크기를 설정합니다.',
+        browserModalDesc: '확인할 URL, 브라우저 종류, TTL, 화면 크기, Stealth 시간을 설정합니다.',
+        stealth: 'Stealth (sec, 0=off)',
         share: 'Share',
         newFolder: 'New Folder',
         delete: 'Delete',
@@ -462,25 +489,17 @@
         addSvn: 'Add (SVN)',
         revert: 'Revert',
         commitPush: 'Commit & Push',
-        chat: 'Chat',
-        terminal: 'Term',
-        web: 'Web',
-        newChat: 'New Chat',
+        newChat: 'Chat',
         newTerminal: 'New Terminal',
-        newBrowser: 'New Browser',
-        schedule: 'Schedule',
-        auth: 'Authentication',
-        signIn: 'Sign In',
-        sidebar: 'Sidebar',
-        connected: 'connected',
+        newBrowser: 'Browser',
         send: 'Send',
         enter: 'Enter',
         super: 'SUPER',
-        doneText: '최신 Home 흐름은 RDP에서 대상 화면을 확인하고, Files에서 작업 위치를 검증한 뒤, AI Chat 또는 Term에서 작업을 시작하는 방식입니다.',
-        doneTip: '실제 사용 전에는 비밀번호, 작업 폴더, Allow write 같은 권한 옵션을 먼저 확인하세요.',
+        doneText: '최신 Control 흐름은 RDP로 화면 상태를 확인하고, File에서 대상 경로를 검증한 뒤, Terminal 또는 More의 Chat에서 작업을 시작하는 방식입니다.',
+        doneTip: '실제 사용 전에는 비밀번호, 작업 폴더 같은 권한 옵션을 먼저 확인하세요.',
         fileListHint: '파일을 누르면 이미지, 음악, 코드, 문서 등 파일 종류에 맞는 팝업이 열립니다.',
-        demoUserMsg: 'Home 튜토리얼을 최신 UI에 맞게 갱신해줘.',
-        demoAssistantMsg: 'RDP, Files, AI 중심으로 최신 Home 흐름에 맞춰 구성하겠습니다.',
+        demoUserMsg: 'Control 튜토리얼을 최신 UI(좌우 사이드바 + 개별 탭)에 맞게 갱신해줘.',
+        demoAssistantMsg: '좌측 통합 사이드바, 상단 File/Terminal/More 탭, 우측 상태 사이드바 구조에 맞춰 구성하겠습니다.',
         composerPlaceholder: '여기에 실제 앱에서는 AI에게 지시를 입력합니다.',
         filePreviewDesc: '선택한 파일 형식에 맞는 팝업이 열립니다. 코드와 문서는 편집 화면, 이미지와 음악은 미리보기 화면으로 확인합니다.',
         mcpDescChat: 'AI 세션에 추가 도구 서버를 연결합니다.',
@@ -491,34 +510,28 @@
         filePreviewFileNote: '파일 형식에 맞는 미리보기 팝업이 열립니다.',
         filePreviewCodeNote: '코드 파일은 팝업에서 확인하고 편집합니다.',
         steps: [
-          ['시작하기', '설치와 실행', 'home', 'tab-home', '저장소를 받은 뒤 npm install, npm start 또는 npm run start_web [port]로 실행합니다.', 'Artgine 앱에서 projectPath를 proj/Home으로 지정해 실행할 수도 있습니다.'],
-          ['최신 Home 구성', 'RDP / Files / AI', 'home', 'tab-home', '현재 Home의 주요 사용 탭은 RDP, Files, AI입니다.', 'RDP가 첫 화면 흐름에 추가되었고, 튜토리얼 단계도 그 흐름에 맞췄습니다.'],
-          ['RDP 탭', '원격 화면 보기', 'rdp', 'panel-rdp', 'RDP 탭은 Local 또는 원격 Home.html 서버의 RemoteDesktop.html을 열어 화면 캡처를 보여줍니다.', 'F3은 최신 Home에서 RDP 탭으로 이동합니다.'],
-          ['RDP 사이드바', 'Local과 원격 대상', 'rdp', 'rdpSidebar', '사이드바에서 Local을 선택하거나 Remote Home.html URL을 추가해 원격 서버 화면으로 전환합니다.', 'Tab 또는 우측 상단 사이드바 버튼으로 RDP 사이드바를 열고 닫습니다.'],
-          ['RDP 입력', '화면 제어 옵션', 'rdp', 'rdpControls', 'frame은 캡처 주기, quality는 JPEG 품질, input은 키보드/마우스 전달 여부입니다.', 'input을 켠 상태에서는 실제 원격 PC에 클릭, 드래그, 휠, 키보드 입력이 전달됩니다.'],
-          ['Files 탭', '파일 브라우저', 'file', 'panel-file', 'Files 탭은 서버가 허용한 경로의 파일 목록을 보여줍니다. 파일을 누르면 종류에 맞는 팝업이 열려 보기나 편집을 진행합니다.', 'F1은 File Manager, F2는 File Search, F4는 AI 탭으로 이동합니다.'],
-          ['File Manager', '관리 작업', 'file', 'fileModalBtn', 'File Manager에서 루트 선택, 공유, 폴더 생성, 삭제, 업로드, Git/SVN 작업을 처리합니다.', '삭제와 업로드는 실제 파일에 영향을 주므로 대상 경로를 먼저 확인하세요.'],
-          ['File Search', '파일명 검색', 'file', 'searchModalBtn', 'File Search는 현재 경로 아래에서 파일명 일부를 찾고 결과 클릭 시 해당 위치로 이동합니다.', '검색은 node_modules 같은 제외 대상과 숨김 경로를 건너뜁니다.'],
-          ['AI 탭', 'Chat / Term / Web', 'ai', 'panel-ai', 'AI 탭은 왼쪽 사이드바와 오른쪽 작업 화면으로 구성됩니다.', '사이드바가 열려 있을 때 숫자 1/2/3으로 Chat, Term, Web을 전환합니다.'],
-          ['New Chat', 'AI 작업 시작', 'ai', 'newChatBtn', 'New Chat은 Working Directory와 옵션을 정하고 AI 채팅 세션을 시작합니다.', '파일 수정을 맡길 때는 작업 폴더와 권한 범위를 명확히 지정하세요.'],
-          ['Terminal', '명령 실행 세션', 'ai', 'termSubtab', 'Term은 cmd와 codex/claude/opencode 같은 AI CLI 세션을 관리합니다.', 'Shift+N은 새 터미널, Shift+D는 현재 터미널 삭제 단축키입니다.'],
-          ['Web 세션', '웹 화면 확인', 'ai', 'webSubtab', 'Web 하위 탭은 웹 화면 목록을 보여주며 화면과 동작 기록을 확인합니다.', '입력을 켜면 확인 중인 페이지에 키보드와 마우스를 전달할 수 있습니다.'],
-          ['완료', '권장 사용 순서', 'ai', 'panel-ai', 'RDP로 화면 상태를 확인하고, Files에서 대상 경로를 검증한 뒤, AI Chat 또는 Term에서 작업을 시작합니다.', '공개망에서는 기본 비밀번호를 그대로 두지 마세요.']
+          ['시작하기', '설치와 실행', 'home', 'tab-home', '저장소를 받은 뒤 npm install, npm start 또는 npm run start_web [port]로 실행합니다.', 'Artgine 앱에서 projectPath를 proj/Control로 지정해 실행할 수도 있습니다.'],
+          ['최신 Control 구성', '좌우 사이드바 + 탭', 'home', 'tab-home', 'Control은 좌측 통합 사이드바, 중앙 탭 콘텐츠(RDP/File/Terminal/Chat/Browser/Memo/Download), 우측 상태 사이드바로 구성됩니다.', 'Chat, Terminal, Browser는 각각 독립된 탭 콘텐츠로 분리되고, 좌측 사이드바 목록에 함께 정렬됩니다.'],
+          ['좌측 사이드바', 'Root / RDP / Sessions', 'rdp', 'appSidebar', 'Root 선택, RDP 세션(Local/Remote), Chat·Terminal·Browser 세션이 한 목록에 최신순으로 정렬됩니다.', 'F3으로 사이드바에 포커스하거나 열고 닫을 수 있습니다.'],
+          ['RDP', '원격 화면 (기본 탭)', 'rdp', 'panel-rdp', 'Control을 열면 기본으로 RDP 탭이 표시되며, 좌측에서 Local 또는 Remote를 선택해 화면을 확인합니다.', '대상을 바꾸면 File 탭의 루트도 해당 서버 기준으로 전환됩니다.'],
+          ['RDP 입력', '화면 제어 옵션', 'rdp', 'rdpControls', 'frame은 캡처 주기, quality는 JPEG 품질, input은 키보드/마우스 전달 여부입니다.', 'input을 켠 상태에서는 클릭, 드래그, 휠, 키보드 입력이 실제 원격 PC로 전달됩니다.'],
+          ['File 탭', '파일 브라우저', 'file', 'panel-file', '상단 File 탭은 허용된 경로의 파일 목록을 보여줍니다. 파일을 누르면 종류에 맞는 팝업이 열립니다.', 'F1은 File 탭으로 이동하며 File Manager 모달도 함께 엽니다.'],
+          ['File Search', '파일명 검색 (F2)', 'file', 'tab-search', 'Search 버튼은 현재 경로 아래에서 파일명 일부를 찾고, 결과를 클릭하면 해당 위치로 이동합니다.', 'F2 단축키로도 동일한 검색 모달을 열 수 있습니다.'],
+          ['Terminal 탭', '명령 실행 세션', 'term', 'tab-term', '상단 Terminal 탭은 cmd 또는 codex/claude/opencode/agy 같은 AI CLI 세션을 시작하고 관리합니다.', '새 세션을 열면 좌측 사이드바 Sessions 목록과 중앙 탭이 함께 갱신됩니다.'],
+          ['More 메뉴', 'Memo / RDP / Chat / Browser / Download', 'rdp', 'tab-more', 'More 메뉴에서 Memo, RDP 추가, 새 Chat, 새 Browser, Download 탭을 엽니다.', 'Chat과 Browser는 대화상자에서 옵션을 정한 뒤 시작됩니다.'],
+          ['New Chat', '작업 폴더와 옵션 지정', 'rdp', 'chat-new-btn', 'Working Directory, MCP, Copy MD 옵션을 정한 뒤 Open을 눌러 Chat 세션을 시작합니다.', '시작한 세션은 좌측 사이드바 Sessions 목록에 추가됩니다.'],
+          ['New Terminal', '모드 선택 후 시작', 'term', 'tab-term', 'cmd, claude, codex, agy(Antigravity), opencode 중 모드를 고르고 Key와 Working Directory를 지정합니다.', 'Terminal 탭 버튼을 바로 누르면 기본 cmd 모드로 새 세션이 시작됩니다.'],
+          ['New Browser', '웹 화면 원격 확인', 'rdp', 'browser-new-btn', '확인할 URL, 브라우저 종류, TTL, 화면 크기, Stealth 시간을 설정합니다.', 'Stealth를 0보다 크게 두면 지정한 시간 동안 화면을 숨긴 채로 유지합니다.'],
+          ['우측 사이드바 - Info', 'Provider 상태 / 완료 알림', 'right', 'right-info-panel', 'Info 탭은 연결된 AI 프로바이더 상태와 Chat/Terminal 작업 완료 알림을 보여줍니다.', '알림을 클릭하면 해당 세션으로 바로 이동합니다.', 'info'],
+          ['우측 사이드바 - Option', 'Theme / Schedule / 단축키', 'right', 'right-option-panel', 'Option 탭에서 Theme, OpenCode 모델 추가, Schedule 생성, 단축키 도움말을 확인합니다.', 'Schedule은 지정한 명령이나 프롬프트를 반복 실행합니다.', 'option'],
+          ['완료', '권장 사용 순서', 'rdp', 'panel-rdp', 'RDP로 화면 상태를 확인하고, File에서 대상 경로를 검증한 뒤, Terminal 또는 More의 Chat에서 작업을 시작합니다.', '공개망에서는 기본 비밀번호를 그대로 두지 마세요.']
         ],
         shortcutRows: [
-          [['F1'], 'Files 탭으로 이동하고 File Manager 열기'],
-          [['F2'], 'Files 탭으로 이동하고 File Search 열기'],
-          [['F3'], 'RDP 탭으로 이동'],
-          [['F4'], 'AI 탭으로 이동'],
-          [['Tab'], 'RDP 또는 AI 사이드바 열기/닫기'],
-          [['1'], 'AI 사이드바가 열려 있을 때 Chat 하위 탭'],
-          [['2'], 'AI 사이드바가 열려 있을 때 Term 하위 탭'],
-          [['3'], 'AI 사이드바가 열려 있을 때 Web 하위 탭'],
-          [['Shift', 'N'], '새 터미널 세션 만들기'],
-          [['Shift', 'D'], '현재 터미널 세션 삭제'],
-          [['F6'], 'Terminal SUPER 토글'],
-          [['F7'], 'Terminal 입력 바 표시/포커스'],
-          [['Esc'], '열린 모달 닫기']
+          [['F1'], '파일 탭 + File Manager로 이동'],
+          [['F2'], '파일 검색 열기'],
+          [['F3'], '좌측 사이드바 포커스/토글'],
+          [['F6'], 'SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)'],
+          [['↑', '↓'], '세션 목록 이동 (사이드바 열린 상태)']
         ]
       },
       en: {
@@ -526,14 +539,16 @@
         next: 'Next',
         done: 'Done',
         shortcuts: 'Shortcuts',
-        homeDesc: 'A local web interface that brings remote screen, files, and AI work together in one place. This tutorial covers only the main workflow.',
+        homeDesc: 'Control is a local web interface made of a unified left sidebar (remote/session list), top tabs (File · Terminal · More), and a right status sidebar (Provider/Option). This tutorial covers the current layout and main workflow.',
         aiAuthNote: 'To use AI features, you must authenticate separately with your own account for each provider (Claude, Codex, etc.).',
         rdpCardTitle: 'RDP',
-        rdpCardDesc: 'View the screen of the local or a remote Home.html server right away, and forward keyboard/mouse input once input mode is on.',
-        filesCardTitle: 'Files',
-        filesCardDesc: 'Browse allowed server folders and handle file viewing/editing, search, sharing, uploads, and Git/SVN operations.',
-        aiCardTitle: 'AI',
-        aiCardDesc: 'Manage AI chat, web terminal, and remote web screen checks from the Chat, Term, and Web sub-tabs.',
+        rdpCardDesc: 'The tab shown by default when Control opens. Pick Local or Remote in the left sidebar to view a screen.',
+        fileCardTitle: 'File',
+        fileCardDesc: 'Browse allowed paths from the top File tab, and search file names with the Search button (F2).',
+        termCardTitle: 'Terminal',
+        termCardDesc: 'Start a cmd or AI CLI session (codex, claude, opencode, agy) from the top Terminal tab.',
+        moreCardTitle: 'More',
+        moreCardDesc: 'The More menu opens Memo, adds RDP, starts a new Chat or Browser, and opens Download. Chat/Terminal/Browser sessions are listed together in the left sidebar.',
         gsTitle: 'Getting Started',
         gsMethod1: 'Method 1: Full Setup',
         gsWebOnlyTitle: 'Web Server Only',
@@ -544,45 +559,60 @@
         gsAlt: '',
         keys: 'Keys',
         file: 'File',
-        music: 'Music',
-        addAll: 'Add All',
-        addEach: 'Add Each (w/ Folder)',
         search: 'Search',
-        ai: 'AI',
+        terminal: 'Terminal',
+        more: 'More',
+        memo: 'Memo',
         rdp: 'RDP',
+        chat: 'Chat',
+        browser: 'Browser',
+        download: 'Download',
+        ai: 'AI',
         close: 'Close',
         help: '?',
         remoteHomeUrl: 'Remote Home.html URL',
-        addRemote: 'Add Remote',
+        addRemote: 'Add',
         local: 'Local',
         remote: 'Remote',
         selectTarget: 'Select a target from the sidebar.',
         frame: 'frame',
         quality: 'quality',
         input: 'input',
-        tipRdpUrl: "Enter the remote server's Home.html address. Example: http://host:8050/Artgine/proj/Home/Home.html",
-        tipRdpAdd: 'Adds the entered remote Home.html to the RDP list. Selecting it opens RemoteDesktop.html for that server.',
-        tipRdpLocal: 'Opens RemoteDesktop.html for the server you are currently connected to.',
-        tipRdpRemote: 'View the screen of a remote server. In the real app, selecting this also switches the file server context to that Home.html.',
+        root: 'Root',
+        rdpSessions: 'RDP',
+        sessions: 'Sessions',
+        infoTab: 'Info',
+        optionTab: 'Option',
+        providerStatus: 'Provider Status',
+        notifLog: 'Notifications',
+        theme: 'Theme',
+        addOllama: 'Add OpenCode Model',
+        schedule: 'Schedule',
+        tipLeftSidebar: 'The left sidebar shows the Root select, RDP sessions (Local/Remote), and Chat/Terminal/Browser sessions together, sorted by recency regardless of type.',
+        tipRightSidebar: 'The right sidebar splits into Info (Provider status / completion notifications) and Option (Theme/Schedule/shortcuts).',
+        tipRdpLocal: 'Opens the remote screen of the server you are currently connected to.',
+        tipRdpRemote: 'View the screen of a remote server. Selecting it also switches the File tab root to that server.',
         tipRdpRate: 'The screen capture refresh interval. Shorter intervals refresh faster but increase server load and data transfer.',
         tipRdpQuality: 'JPEG quality. Higher values look sharper but increase image data size.',
         tipRdpInput: 'Turning on input mode forwards keyboard, click, drag, and wheel events to the remote PC.',
-        tipFile: 'The File button is the management entry point for selecting the root, sharing, creating folders, deleting, uploading, and VCS operations.',
-        tipMusic: 'Open music files as a playlist to manage them. Choose how folders are added from the select box next to it.',
-        tipSearch: 'Search by partial file name under the current path. Clicking a result navigates to that folder or file.',
+        tipFile: 'The top File tab shows the file list for paths the server allows. Clicking a file opens a popup suited to its type.',
+        tipSearch: 'The Search button (F2) searches by partial file name under the current path. Clicking a result navigates to that folder or file.',
+        tipTerm: 'Clicking the top Terminal tab button starts a new session in cmd mode right away. Use the New Terminal dialog to pick a different mode.',
+        tipMore: 'The More menu opens Memo, adds RDP, starts a new Chat or Browser, and opens the Download tab.',
         tipShortcuts: 'Opens a modal with the latest list of keyboard shortcuts.',
-        tipAIHelp: 'In the AI tab, press Tab to open/close the sidebar, and 1/2/3 to switch between the Chat/Term/Web sub-tabs.',
-        tipNewChat: 'Set the working folder and options, then start an AI Chat session.',
-        tipNewTerm: 'Starts a cmd or AI CLI (codex, claude, opencode, etc.) terminal session.',
+        tipNewChat: 'Set the Working Directory and MCP/Copy MD options, then start an AI Chat session.',
+        tipNewTerm: 'Pick a mode among cmd, claude, codex, agy (Antigravity), opencode, and set Key/Working Directory.',
         tipSchedule: 'Creates a schedule that repeatedly runs a specified command or prompt.',
-        tipNewBrowser: 'Opens a new web screen and checks the screen, history, and input state.',
+        tipNewBrowser: 'Set the URL to check, browser type, TTL, screen size, and Stealth duration.',
         tipBrowserInput: 'Forwards keyboard and mouse input to the browser session.',
+        tipProviderStatus: 'Shows the login/connection status of connected AI providers (Claude, Codex, OpenCode, etc.).',
+        tipNotif: 'When a Chat/Terminal task finishes, a completion notice is added to this list, newest first.',
         fileManagerTitle: 'File Manager',
         fileSearchTitle: 'File Search',
         keyboardShortcutsTitle: 'Keyboard Shortcuts',
         newChatModalTitle: 'New Chat',
         newTermModalTitle: 'New Terminal',
-        newBrowserModalTitle: 'New Browser',
+        newBrowserModalTitle: 'New Browser Session',
         workingDir: 'Working Directory',
         mode: 'Mode',
         key: 'Key',
@@ -590,7 +620,8 @@
         copyMd: 'Copy MD',
         open: 'Open',
         cancel: 'Cancel',
-        browserModalDesc: 'Set the URL to check, how long to keep it, and the screen size.',
+        browserModalDesc: 'Set the URL to check, browser type, TTL, screen size, and Stealth duration.',
+        stealth: 'Stealth (sec, 0=off)',
         share: 'Share',
         newFolder: 'New Folder',
         delete: 'Delete',
@@ -601,25 +632,17 @@
         addSvn: 'Add (SVN)',
         revert: 'Revert',
         commitPush: 'Commit & Push',
-        chat: 'Chat',
-        terminal: 'Term',
-        web: 'Web',
-        newChat: 'New Chat',
+        newChat: 'Chat',
         newTerminal: 'New Terminal',
-        newBrowser: 'New Browser',
-        schedule: 'Schedule',
-        auth: 'Authentication',
-        signIn: 'Sign In',
-        sidebar: 'Sidebar',
-        connected: 'connected',
+        newBrowser: 'Browser',
         send: 'Send',
         enter: 'Enter',
         super: 'SUPER',
-        doneText: 'In the latest Home flow, you check the target screen in RDP, verify the working location in Files, then start work in AI Chat or Term.',
-        doneTip: 'Before real use, check permission options like password, working folder, and Allow write first.',
+        doneText: 'In the latest Control flow, you check the screen status in RDP, verify the target path in File, then start work in Terminal or Chat (via More).',
+        doneTip: 'Before real use, check permission options like password and working folder first.',
         fileListHint: 'Clicking a file opens a popup suited to its type — image, music, code, document, etc.',
-        demoUserMsg: 'Please update the Home tutorial to match the latest UI.',
-        demoAssistantMsg: "I'll structure it around RDP, Files, and AI to match the latest Home flow.",
+        demoUserMsg: 'Please update the Control tutorial to match the latest UI (left/right sidebars + separate tabs).',
+        demoAssistantMsg: "I'll structure it around the unified left sidebar, top File/Terminal/More tabs, and the right status sidebar.",
         composerPlaceholder: 'In the real app, you would type instructions for the AI here.',
         filePreviewDesc: 'A popup matching the selected file type opens. Code and documents open in an edit view; images and music open in a preview view.',
         mcpDescChat: 'Connects additional tool servers to the AI session.',
@@ -630,34 +653,28 @@
         filePreviewFileNote: 'A preview popup matching the file type opens.',
         filePreviewCodeNote: 'Code files are viewed and edited in the popup.',
         steps: [
-          ['Getting Started', 'Install & Run', 'home', 'tab-home', 'After cloning the repository, run npm install, npm start, or npm run start_web [port].', 'You can also run it from the Artgine app by setting projectPath to proj/Home.'],
-          ['Latest Home Layout', 'RDP / Files / AI', 'home', 'tab-home', 'The main tabs in the current Home are RDP, Files, and AI.', 'RDP was added to the initial screen flow, and the tutorial steps follow that flow.'],
-          ['RDP Tab', 'View Remote Screen', 'rdp', 'panel-rdp', 'The RDP tab opens RemoteDesktop.html for the local or a remote Home.html server and shows the screen capture.', 'F3 moves to the RDP tab in the latest Home.'],
-          ['RDP Sidebar', 'Local and Remote Targets', 'rdp', 'rdpSidebar', 'Select Local in the sidebar, or add a Remote Home.html URL to switch to a remote server screen.', 'Open/close the RDP sidebar with Tab or the sidebar button in the top right.'],
+          ['Getting Started', 'Install & Run', 'home', 'tab-home', 'After cloning the repository, run npm install, npm start, or npm run start_web [port].', 'You can also run it from the Artgine app by setting projectPath to proj/Control.'],
+          ['Latest Control Layout', 'Left/Right sidebars + tabs', 'home', 'tab-home', 'Control consists of a unified left sidebar, center tab content (RDP/File/Terminal/Chat/Browser/Memo/Download), and a right status sidebar.', 'Chat, Terminal, and Browser are each their own tab content, and are listed together in the left sidebar.'],
+          ['Left Sidebar', 'Root / RDP / Sessions', 'rdp', 'appSidebar', 'The Root select, RDP sessions (Local/Remote), and Chat/Terminal/Browser sessions are sorted together in one list, newest first.', 'Press F3 to focus, open, or close the left sidebar.'],
+          ['RDP', 'Remote Screen (default tab)', 'rdp', 'panel-rdp', 'The RDP tab is shown by default when Control opens. Pick Local or Remote in the left sidebar to view a screen.', 'Switching targets also switches the File tab root to that server.'],
           ['RDP Input', 'Screen Control Options', 'rdp', 'rdpControls', 'frame is the capture interval, quality is the JPEG quality, and input toggles keyboard/mouse forwarding.', 'With input turned on, clicks, drags, wheel, and keyboard input are forwarded to the actual remote PC.'],
-          ['Files Tab', 'File Browser', 'file', 'panel-file', 'The Files tab shows the file list for paths the server allows. Clicking a file opens a popup suited to its type for viewing or editing.', 'F1 goes to File Manager, F2 to File Search, and F4 to the AI tab.'],
-          ['File Manager', 'Management Tasks', 'file', 'fileModalBtn', 'File Manager handles root selection, sharing, folder creation, deletion, uploads, and Git/SVN operations.', 'Deletion and uploads affect real files, so check the target path first.'],
-          ['File Search', 'Search by File Name', 'file', 'searchModalBtn', 'File Search finds files by partial name under the current path, and clicking a result navigates to that location.', 'Search skips excluded targets like node_modules and hidden paths.'],
-          ['AI Tab', 'Chat / Term / Web', 'ai', 'panel-ai', 'The AI tab consists of a left sidebar and a right workspace.', 'When the sidebar is open, use 1/2/3 to switch between Chat, Term, and Web.'],
-          ['New Chat', 'Start AI Work', 'ai', 'newChatBtn', 'New Chat sets the Working Directory and options, then starts an AI chat session.', 'When delegating file edits, clearly specify the working folder and permission scope.'],
-          ['Terminal', 'Command Sessions', 'ai', 'termSubtab', 'Term manages cmd and AI CLI sessions like codex/claude/opencode.', 'Shift+N creates a new terminal, and Shift+D deletes the current terminal.'],
-          ['Web Session', 'Check Web Screens', 'ai', 'webSubtab', 'The Web sub-tab shows a list of web screens and lets you check the screen and action history.', 'With input turned on, you can forward keyboard and mouse input to the page being checked.'],
-          ['Done', 'Recommended Workflow', 'ai', 'panel-ai', 'Check the screen status in RDP, verify the target path in Files, then start work in AI Chat or Term.', "Don't leave the default password unchanged on a public network."]
+          ['File Tab', 'File Browser', 'file', 'panel-file', 'The top File tab shows the file list for paths the server allows. Clicking a file opens a popup suited to its type.', 'F1 goes to the File tab and also opens the File Manager modal.'],
+          ['File Search', 'Search by File Name (F2)', 'file', 'tab-search', 'The Search button finds files by partial name under the current path; clicking a result navigates to that location.', 'F2 opens the same search modal as a shortcut.'],
+          ['Terminal Tab', 'Command Sessions', 'term', 'tab-term', 'The top Terminal tab starts and manages cmd or AI CLI sessions like codex/claude/opencode/agy.', 'Opening a new session refreshes both the left sidebar Sessions list and the center tab.'],
+          ['More Menu', 'Memo / RDP / Chat / Browser / Download', 'rdp', 'tab-more', 'The More menu opens Memo, adds RDP, starts a new Chat or Browser, and opens the Download tab.', 'Chat and Browser are started after setting options in their dialogs.'],
+          ['New Chat', 'Set Working Directory & Options', 'rdp', 'chat-new-btn', 'Set the Working Directory and MCP/Copy MD options, then click Open to start a Chat session.', 'The started session is added to the left sidebar Sessions list.'],
+          ['New Terminal', 'Pick a Mode, then Start', 'term', 'tab-term', 'Pick a mode among cmd, claude, codex, agy (Antigravity), opencode, and set the Key/Working Directory.', 'Clicking the Terminal tab button directly starts a new session in cmd mode.'],
+          ['New Browser', 'Check a Web Screen Remotely', 'rdp', 'browser-new-btn', 'Set the URL to check, browser type, TTL, screen size, and Stealth duration.', 'Setting Stealth above 0 keeps the screen hidden for that duration.'],
+          ['Right Sidebar - Info', 'Provider Status / Notifications', 'right', 'right-info-panel', 'The Info tab shows connected AI provider status and Chat/Terminal completion notifications.', 'Clicking a notification jumps straight to that session.', 'info'],
+          ['Right Sidebar - Option', 'Theme / Schedule / Shortcuts', 'right', 'right-option-panel', 'The Option tab has Theme, adding an OpenCode model, creating a Schedule, and the shortcuts help.', 'Schedule repeatedly runs a specified command or prompt.', 'option'],
+          ['Done', 'Recommended Workflow', 'rdp', 'panel-rdp', 'Check the screen status in RDP, verify the target path in File, then start work in Terminal or Chat (via More).', "Don't leave the default password unchanged on a public network."]
         ],
         shortcutRows: [
-          [['F1'], 'Switch to the Files tab and open File Manager'],
-          [['F2'], 'Switch to the Files tab and open File Search'],
-          [['F3'], 'Switch to the RDP tab'],
-          [['F4'], 'Switch to the AI tab'],
-          [['Tab'], 'Open/close the RDP or AI sidebar'],
-          [['1'], 'Chat sub-tab when the AI sidebar is open'],
-          [['2'], 'Term sub-tab when the AI sidebar is open'],
-          [['3'], 'Web sub-tab when the AI sidebar is open'],
-          [['Shift', 'N'], 'Create a new terminal session'],
-          [['Shift', 'D'], 'Delete the current terminal session'],
-          [['F6'], 'Toggle Terminal SUPER'],
-          [['F7'], 'Show/focus the Terminal input bar'],
-          [['Esc'], 'Close the open modal']
+          [['F1'], 'Go to the File tab + open File Manager'],
+          [['F2'], 'Open File Search'],
+          [['F3'], 'Focus/toggle the left sidebar'],
+          [['F6'], 'Toggle SUPER (auto-approve) + focus input bar (Chat/Terminal)'],
+          [['↑', '↓'], 'Move through the session list (sidebar open)']
         ]
       }
     };
@@ -669,72 +686,44 @@
 
   <div class="app">
     <aside class="guide">
-      <div class="steps" id="steps"><button class="step active" data-step="0" type="button">
-          <span class="num">1</span>
-          <span><strong>시작하기</strong><span>설치와 실행</span></span>
-        </button><button class="step " data-step="1" type="button">
-          <span class="num">2</span>
-          <span><strong>최신 Home 구성</strong><span>RDP / Files / AI</span></span>
-        </button><button class="step " data-step="2" type="button">
-          <span class="num">3</span>
-          <span><strong>RDP 탭</strong><span>원격 화면 보기</span></span>
-        </button><button class="step " data-step="3" type="button">
-          <span class="num">4</span>
-          <span><strong>RDP 사이드바</strong><span>Local과 원격 대상</span></span>
-        </button><button class="step " data-step="4" type="button">
-          <span class="num">5</span>
-          <span><strong>RDP 입력</strong><span>화면 제어 옵션</span></span>
-        </button><button class="step " data-step="5" type="button">
-          <span class="num">6</span>
-          <span><strong>Files 탭</strong><span>파일 브라우저</span></span>
-        </button><button class="step " data-step="6" type="button">
-          <span class="num">7</span>
-          <span><strong>File Manager</strong><span>관리 작업</span></span>
-        </button><button class="step " data-step="7" type="button">
-          <span class="num">8</span>
-          <span><strong>File Search</strong><span>파일명 검색</span></span>
-        </button><button class="step " data-step="8" type="button">
-          <span class="num">9</span>
-          <span><strong>AI 탭</strong><span>Chat / Term / Web</span></span>
-        </button><button class="step " data-step="9" type="button">
-          <span class="num">10</span>
-          <span><strong>New Chat</strong><span>AI 작업 시작</span></span>
-        </button><button class="step " data-step="10" type="button">
-          <span class="num">11</span>
-          <span><strong>Terminal</strong><span>명령 실행 세션</span></span>
-        </button><button class="step " data-step="11" type="button">
-          <span class="num">12</span>
-          <span><strong>Web 세션</strong><span>웹 화면 확인</span></span>
-        </button><button class="step " data-step="12" type="button">
-          <span class="num">13</span>
-          <span><strong>완료</strong><span>권장 사용 순서</span></span>
-        </button></div>
+      <div class="steps" id="steps"></div>
     </aside>
 
     <main class="workspace">
       <div class="mock-browser">
         <div class="topbar">
-          <ul class="nav-tabs">
-            <li><button class="nav-link active highlight" data-tab="home" id="tab-home" type="button">Home</button></li>
-            <li><button class="nav-link" data-tab="rdp" id="tab-rdp" type="button">RDP <small>F3</small></button></li>
-            <li><button class="nav-link" data-tab="file" id="tab-file" type="button">Files <small>F1/F2</small></button></li>
-            <li><button class="nav-link" data-tab="ai" id="tab-ai" type="button">AI <small>F4</small></button></li>
+          <ul class="nav-tabs" id="topTabs">
+            <li><button class="nav-link active highlight" data-panel="home" id="tab-home" type="button">Home</button></li>
+            <li><button class="nav-link" data-panel="file" id="tab-file" type="button"><i class="bi bi-folder-fill"></i> <span data-i18n="file">File</span></button></li>
+            <li><button class="nav-link" id="tab-search" type="button" data-tip-key="tipSearch" data-tip=""><i class="bi bi-search"></i> <span data-i18n="search">Search</span> <small>F2</small></button></li>
+            <li><button class="nav-link" data-panel="term" id="tab-term" type="button"><i class="bi bi-terminal"></i> <span data-i18n="terminal">Terminal</span></button></li>
+            <li class="nav-item dropdown">
+              <button class="nav-link" id="tab-more" type="button"><i class="bi bi-three-dots"></i> <span data-i18n="more">More</span></button>
+              <ul class="dropdown-menu" id="moreMenu">
+                <li><button class="dropdown-item" id="menu-memo" data-panel="memo" type="button"><i class="bi bi-journal-text"></i> <span data-i18n="memo">Memo</span></button></li>
+                <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> <span data-i18n="rdp">RDP</span></button></li>
+                <li><button class="dropdown-item" id="chat-new-btn" type="button" data-tip-key="tipNewChat" data-tip=""><i class="bi bi-chat-dots"></i> <span data-i18n="newChat">Chat</span></button></li>
+                <li><button class="dropdown-item" id="browser-new-btn" type="button" data-tip-key="tipNewBrowser" data-tip=""><i class="bi bi-browser-chrome"></i> <span data-i18n="newBrowser">Browser</span></button></li>
+                <li><button class="dropdown-item" id="menu-download" data-panel="download" type="button"><i class="bi bi-cloud-download-fill"></i> <span data-i18n="download">Download</span></button></li>
+              </ul>
+            </li>
           </ul>
           <div class="topbar-actions">
-            <button class="btn btn-sm btn-outline-secondary" id="shortcutsBtn" data-tip-key="tipShortcuts" type="button" data-tip="최신 단축키 목록을 모달로 확인합니다.">Shortcuts</button>
+            <button class="btn btn-sm btn-outline-secondary" id="shortcutsBtn" data-tip-key="tipShortcuts" type="button" data-tip="">Shortcuts</button>
           </div>
         </div>
 
         <div class="tab-content">
           <section class="tab-pane home active" id="panel-home">
-            <h2>Artgine Agent</h2>
-            <p class="text-secondary" data-i18n="homeDesc">원격 화면, 파일, AI 작업을 한 번에 다루는 로컬 웹 인터페이스입니다. 이 튜토리얼은 현재 주요 작업 흐름만 다룹니다.</p>
+            <h2>Artgine Agent — Control</h2>
+            <p class="text-secondary" data-i18n="homeDesc"></p>
             <div class="home-grid">
-              <div class="card"><h3 data-i18n="rdpCardTitle">RDP</h3><p data-i18n="rdpCardDesc">Local 또는 원격 Home.html 서버의 화면을 바로 확인하고, 입력 모드를 켜면 키보드와 마우스를 전달합니다.</p></div>
-              <div class="card"><h3 data-i18n="filesCardTitle">Files</h3><p data-i18n="filesCardDesc">허용된 서버 폴더를 탐색하고, 파일 보기/편집, 검색, 공유, 업로드, Git/SVN 작업을 처리합니다.</p></div>
-              <div class="card"><h3 data-i18n="aiCardTitle">AI</h3><p data-i18n="aiCardDesc">Chat, Term, Web 하위 탭에서 AI 채팅, 웹 터미널, 웹 화면 원격 확인을 관리합니다.</p></div>
+              <div class="card"><h3 data-i18n="rdpCardTitle">RDP</h3><p data-i18n="rdpCardDesc"></p></div>
+              <div class="card"><h3 data-i18n="fileCardTitle">File</h3><p data-i18n="fileCardDesc"></p></div>
+              <div class="card"><h3 data-i18n="termCardTitle">Terminal</h3><p data-i18n="termCardDesc"></p></div>
+              <div class="card"><h3 data-i18n="moreCardTitle">More</h3><p data-i18n="moreCardDesc"></p></div>
             </div>
-            <p style="font-size:.9em;margin-top:10px;color:#e8590c" data-i18n="aiAuthNote">AI 기능을 사용하려면 각 프로바이더(Claude, Codex 등)의 사용자 계정으로 개별 인증이 필요합니다.</p>
+            <p style="font-size:.9em;margin-top:10px;color:#e8590c" data-i18n="aiAuthNote"></p>
             <div style="margin-top:20px">
               <h3 style="margin:0 0 10px;font-size:15px" data-i18n="gsTitle"></h3>
 
@@ -760,46 +749,47 @@ npm start</pre>
             </div>
           </section>
 
-          <section class="tab-pane rdp-pane" id="panel-rdp">
-            <div class="shortcut-strip">
-              <span class="text-secondary small" data-i18n="keys">Keys</span>
-              <span class="kbd">F3</span><span class="small" data-i18n="rdp">RDP</span>
-              <span class="kbd">Tab</span><span class="small" data-i18n="sidebar">Sidebar</span>
-              <span class="kbd">F1</span><span class="small" data-i18n="file">File</span>
-              <span class="kbd">F2</span><span class="small" data-i18n="search">Search</span>
-              <span class="kbd">F4</span><span class="small" data-i18n="ai">AI</span>
-            </div>
-            <div class="rdp-body">
-              <aside class="sidebar" id="rdpSidebar">
-                <div class="sidebar-head">
-                  <input class="form-control" id="rdpUrl" data-tip-key="tipRdpUrl" data-tip="원격 서버의 Home.html 주소를 입력합니다. 예: http://host:8050/Artgine/proj/Home/Home.html" placeholder="Remote Home.html URL">
-                  <button class="btn btn-outline-primary btn-sm" id="rdpAddBtn" data-tip-key="tipRdpAdd" type="button" data-tip="입력한 원격 Home.html을 RDP 목록에 추가합니다. 선택하면 해당 서버 기준 RemoteDesktop.html이 열립니다.">+</button>
+          <div class="ctrl-body" id="panel-ctrl" style="display:none">
+            <aside class="ctrl-left" id="appSidebar">
+              <div class="side-label" data-i18n="root">Root</div>
+              <select class="form-select form-select-sm">
+                <option>Artgine (WorkingPath)</option>
+                <option>D:/git/Artgine</option>
+              </select>
+              <div class="side-label" data-i18n="rdpSessions">RDP</div>
+              <div id="rdpSidebarList">
+                <div class="session item-active" data-panel="rdp" data-tip-key="tipRdpLocal" data-tip="">
+                  <div class="sess-title"><span class="dot"></span><span data-i18n="local">Local</span></div>
+                  <small>./AI/RemoteDesktop.html</small>
                 </div>
-                <div class="side-section">
-                  <div class="session active-rdp" data-tip-key="tipRdpLocal" data-tip="현재 접속 중인 서버의 RemoteDesktop.html을 엽니다.">
-                    <div class="sess-title"><span class="dot"></span><span data-i18n="local">Local</span></div>
-                    <small>./AI/RemoteDesktop.html</small>
-                  </div>
-                  <div class="session" data-tip-key="tipRdpRemote" data-tip="원격 서버의 화면을 봅니다. 실제 앱에서는 선택 시 파일 서버 컨텍스트도 해당 Home.html 기준으로 전환됩니다.">
-                    <div class="sess-title"><span class="dot busy"></span><span data-i18n="remote">Remote</span></div>
-                    <small>http://192.168.0.20:8050/Artgine/proj/Home/Home.html</small>
-                  </div>
+                <div class="session" data-panel="rdp" data-tip-key="tipRdpRemote" data-tip="">
+                  <div class="sess-title"><span class="dot busy"></span><span data-i18n="remote">Remote</span></div>
+                  <small>http://192.168.0.20:8050/Artgine/proj/Control/Control.html</small>
                 </div>
-              </aside>
-              <section class="frame">
-                <button class="btn btn-sm sidebar-toggle" id="rdpSidebarToggle" type="button" data-i18n="sidebar">Sidebar</button>
+              </div>
+              <div class="side-label" data-i18n="sessions">Sessions</div>
+              <div id="sessionSidebarList">
+                <div class="session" data-panel="chat"><div class="sess-title"><span class="dot"></span>Chat · Control UI update</div><small>D:/git/Artgine</small></div>
+                <div class="session" data-panel="term"><div class="sess-title"><span class="dot"></span>cmd : local</div><small>D:/git/Artgine</small></div>
+                <div class="session" data-panel="browser"><div class="sess-title"><span class="dot"></span>localhost:8050</div><small>Web screen preview</small></div>
+                <div class="session" data-panel="term"><div class="sess-title"><span class="dot busy"></span>codex : app</div><small>Waiting for approval</small></div>
+              </div>
+            </aside>
+
+            <section class="ctrl-center">
+              <section class="tab-pane active" id="panel-rdp">
                 <div class="rdp-controls" id="rdpControls">
-                  <div class="control" data-tip-key="tipRdpRate" data-tip="화면 캡처 갱신 주기입니다. 짧을수록 빠르게 갱신되지만 서버 부하와 전송량이 늘어납니다.">
+                  <div class="control" data-tip-key="tipRdpRate" data-tip="">
                     <span data-i18n="frame">frame</span>
                     <input type="range" min="0.05" max="10" step="0.05" value="0.5">
                     <span>0.5s</span>
                   </div>
-                  <div class="control" data-tip-key="tipRdpQuality" data-tip="JPEG 품질입니다. 값이 높으면 선명하지만 이미지 전송량이 커집니다.">
+                  <div class="control" data-tip-key="tipRdpQuality" data-tip="">
                     <span data-i18n="quality">quality</span>
                     <input type="range" min="10" max="100" step="5" value="75">
                     <span>75</span>
                   </div>
-                  <div class="control" data-tip-key="tipRdpInput" data-tip="입력 모드를 켜면 키보드, 클릭, 드래그, 휠 이벤트가 원격 PC로 전달됩니다.">
+                  <div class="control" data-tip-key="tipRdpInput" data-tip="">
                     <span data-i18n="input">input</span>
                     <input type="checkbox">
                   </div>
@@ -826,135 +816,131 @@ npm start</pre>
                   </div>
                 </div>
               </section>
-            </div>
-          </section>
 
-          <section class="tab-pane file-pane" id="panel-file">
-            <div class="shortcut-strip">
-              <span class="text-secondary small" data-i18n="keys">Keys</span>
-              <span class="kbd">F1</span><span class="small" data-i18n="file">File</span>
-              <span class="kbd">F2</span><span class="small" data-i18n="search">Search</span>
-              <span class="kbd">F3</span><span class="small" data-i18n="rdp">RDP</span>
-              <span class="kbd">F4</span><span class="small" data-i18n="ai">AI</span>
-              <span class="kbd">Esc</span><span class="small" data-i18n="close">Close</span>
-            </div>
-            <div class="file-menu">
-              <button class="btn btn-sm btn-primary" id="musicBtn" data-tip-key="tipMusic" type="button" data-i18n="music" data-tip="음악 파일을 재생 목록으로 열어 관리합니다. 폴더 추가 방식은 옆 선택 박스에서 고릅니다.">Music</button>
-              <select class="form-select" style="width:150px;padding:.25rem .5rem;font-size:.875rem">
-                <option data-i18n="addAll" selected="selected">Add All</option>
-                <option data-i18n="addEach">Add Each (w/ Folder)</option>
-              </select>
-              <button class="btn btn-sm btn-outline-info" id="searchModalBtn" data-tip-key="tipSearch" type="button" data-i18n="search" data-tip="현재 경로 아래에서 파일명 일부로 검색합니다. 결과를 클릭하면 해당 폴더나 파일로 이동합니다.">Search</button>
-              <button class="btn btn-sm btn-outline-secondary" id="fileModalBtn" data-tip-key="tipFile" type="button" data-i18n="file" data-tip="File 버튼은 루트 선택, 공유, 폴더 생성, 삭제, 업로드, VCS 작업을 여는 관리 진입점입니다.">File</button>
-              <button class="help" data-tip-key="tipFile" type="button" data-i18n="help" data-tip="File 버튼은 루트 선택, 공유, 폴더 생성, 삭제, 업로드, VCS 작업을 여는 관리 진입점입니다.">?</button>
-              <span class="path">/proj/Home/</span>
-            </div>
-            <div class="file-list-wrap">
-              <div class="file-list-hint" data-i18n="fileListHint">파일을 누르면 이미지, 음악, 코드, 문서 등 파일 종류에 맞는 팝업이 열립니다.</div>
-              <ul class="list-group" id="fileList">
-                <li class="list-group-item list-group-item-warning" data-view="root"><i class="bi bi-folder"></i> Root Folder</li>
-                <li class="list-group-item list-group-item-primary" data-view="parent"><i class="bi bi-folder"></i> Parent Folder</li>
-                <li class="list-group-item" data-view="folder"><i class="bi bi-folder-fill"></i> AI <span class="badge bg-secondary" style="float:right">?</span></li>
-                <li class="list-group-item" data-view="html"><i class="bi bi-filetype-html"></i> Home.html <span class="badge bg-warning" style="float:right">M</span></li>
-                <li class="list-group-item" data-view="code"><i class="bi bi-filetype-tsx"></i> Home.ts <span class="badge bg-success" style="float:right">A</span></li>
-                <li class="list-group-item" data-view="html"><i class="bi bi-filetype-html"></i> RemoteDesktop.html</li>
-                <li class="list-group-item" data-view="code"><i class="bi bi-filetype-tsx"></i> RemoteDesktop.ts</li>
-                <li class="list-group-item" data-view="file"><i class="bi bi-filetype-json"></i> Home.webmanifest</li>
-              </ul>
-            </div>
-          </section>
+              <section class="tab-pane" id="panel-file">
+                <div class="file-menu">
+                  <button class="btn btn-sm btn-outline-info" id="searchModalBtn" data-tip-key="tipSearch" type="button" data-i18n="search" data-tip=""></button>
+                  <button class="btn btn-sm btn-outline-secondary" id="fileModalBtn" data-tip-key="tipFile" type="button" data-i18n="file" data-tip=""></button>
+                  <button class="help" data-tip-key="tipFile" type="button" data-i18n="help" data-tip="">?</button>
+                  <span class="path">/proj/Control/</span>
+                </div>
+                <div class="file-list-wrap">
+                  <div class="file-list-hint" data-i18n="fileListHint"></div>
+                  <ul class="list-group" id="fileList">
+                    <li class="list-group-item list-group-item-warning" data-view="root"><i class="bi bi-folder"></i> Root Folder</li>
+                    <li class="list-group-item list-group-item-primary" data-view="parent"><i class="bi bi-folder"></i> Parent Folder</li>
+                    <li class="list-group-item" data-view="folder"><i class="bi bi-folder-fill"></i> Downloads <span class="badge bg-secondary" style="float:right">?</span></li>
+                    <li class="list-group-item" data-view="html"><i class="bi bi-filetype-html"></i> Control.html <span class="badge bg-warning" style="float:right">M</span></li>
+                    <li class="list-group-item" data-view="code"><i class="bi bi-filetype-tsx"></i> Control.ts <span class="badge bg-success" style="float:right">A</span></li>
+                    <li class="list-group-item" data-view="code"><i class="bi bi-filetype-tsx"></i> Server.ts</li>
+                    <li class="list-group-item" data-view="file"><i class="bi bi-filetype-json"></i> Control.webmanifest</li>
+                  </ul>
+                </div>
+              </section>
 
-          <section class="tab-pane ai-pane" id="panel-ai">
-            <div class="shortcut-strip">
-              <span class="text-secondary small" data-i18n="keys">Keys</span>
-              <span class="kbd">F4</span><span class="small" data-i18n="ai">AI</span>
-              <span class="kbd">Tab</span><span class="small" data-i18n="sidebar">Sidebar</span>
-              <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="small">Chat/Term/Web</span>
-              <span class="kbd">Shift</span><span class="kbd">N</span><span class="small" data-i18n="newTerminal">New Terminal</span>
-              <span class="kbd">F6</span><span class="small">SUPER</span>
-              <span class="kbd">F7</span><span class="small">Input</span>
-              <button class="help" data-tip-key="tipAIHelp" type="button" data-i18n="help" data-tip="AI 탭에서는 Tab으로 사이드바를 열고 닫고, 1/2/3으로 Chat/Term/Web 하위 탭을 전환합니다.">?</button>
-            </div>
-            <div class="ai-body">
-              <aside class="sidebar" id="aiSidebar">
-                <div class="ai-subtabs">
-                  <button class="nav-link active" data-sub="chat" id="chatSubtab" type="button">Chat <small>1</small></button>
-                  <button class="nav-link" data-sub="term" id="termSubtab" type="button">Term <small>2</small></button>
-                  <button class="nav-link" data-sub="web" id="webSubtab" type="button">Web <small>3</small></button>
-                </div>
-                <div class="ai-side-pane active" id="chatSide">
-                  <button class="btn btn-primary" id="newChatBtn" data-tip-key="tipNewChat" type="button" style="width:100%;margin-bottom:8px" data-i18n="newChat" data-tip="작업 폴더와 옵션을 정한 뒤 AI Chat 세션을 시작합니다.">New Chat</button>
-                  <div class="session chat-active"><div class="sess-title"><span class="dot"></span>Home UI update</div><small>D:/git/Artgine</small></div>
-                  <div class="session"><div class="sess-title"><span class="dot busy"></span>README cleanup</div><small>Generating response</small></div>
-                </div>
-                <div class="ai-side-pane" id="termSide">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
-                    <button class="btn btn-sm btn-outline-success" id="newTermBtn" data-tip-key="tipNewTerm" type="button" data-i18n="newTerminal" data-tip="cmd 또는 AI CLI(codex, claude, opencode 등) 터미널 세션을 시작합니다.">New Terminal</button>
-                    <button class="btn btn-sm btn-outline-info" id="scheduleBtn" data-tip-key="tipSchedule" type="button" data-i18n="schedule" data-tip="지정한 명령이나 프롬프트를 반복 실행하는 스케줄을 만듭니다.">Schedule</button>
-                  </div>
-                  <div class="session term-active"><div class="sess-title"><span class="dot"></span>cmd : local</div><small>D:/git/Artgine</small></div>
-                  <div class="session"><div class="sess-title"><span class="dot busy"></span>codex : app</div><small>Waiting for approval</small></div>
-                </div>
-                <div class="ai-side-pane" id="webSide">
-                  <button class="btn btn-outline-primary" id="newBrowserBtn" data-tip-key="tipNewBrowser" type="button" style="width:100%;margin-bottom:8px" data-i18n="newBrowser" data-tip="새 웹 화면을 열고 화면, 기록, 입력 상태를 확인합니다.">New Browser</button>
-                  <div class="session web-active"><div class="sess-title"><span class="dot"></span>localhost:8050</div><small>Web screen preview</small></div>
-                </div>
-              </aside>
-              <section class="frame">
-                <button class="btn btn-sm sidebar-toggle" id="aiSidebarToggle" type="button" data-i18n="sidebar">Sidebar</button>
-                <div class="chat-main" id="chatFrame">
-                  <div class="chat-top">
-                    <strong>AI Chat</strong>
-                    <select class="form-select" style="width:130px"><option selected="selected">Codex</option><option>Claude</option></select>
-                    <span class="badge bg-success" data-i18n="connected">connected</span>
-                  </div>
-                  <div class="messages" id="messages">
-                    <div class="bubble user"><small>User</small><span data-i18n="demoUserMsg">Home 튜토리얼을 최신 UI에 맞게 갱신해줘.</span></div>
-                    <div class="bubble"><small>Assistant</small><span data-i18n="demoAssistantMsg">RDP, Files, AI 중심으로 최신 Home 흐름에 맞춰 구성하겠습니다.</span></div>
-                    <div class="bubble"><small>Changed files</small>help/artgine-agent-tutorial.html</div>
-                  </div>
-                  <div class="composer">
-                    <textarea class="form-control" id="composerInput">여기에 실제 앱에서는 AI에게 지시를 입력합니다.</textarea>
-                    <button class="btn btn-primary" type="button" data-i18n="send">Send</button>
-                  </div>
-                </div>
+              <section class="tab-pane" id="panel-term">
                 <div class="terminal" id="terminalFrame">$ cd D:/git/Artgine
 $ npm run start_web
 
 ServerStart
-http://localhost:8050/Artgine/proj/Home/Home.html
+http://localhost:8050/Artgine/proj/Control/Control.html
 
 &gt; codex
 Codex session started.</div>
-                <div class="term-bar" id="termBar">
+                <div class="term-bar">
                   <input class="form-control" value="/status">
                   <button class="btn btn-sm" type="button" data-i18n="enter">Enter</button>
                   <button class="btn btn-sm btn-outline-danger" type="button" data-i18n="super">SUPER</button>
                 </div>
-                <div class="browser-frame" id="browserFrame">
-                  <div class="browser-controls">
-                    <div class="control"><span>frame</span><input type="range" value="3"><span>3s</span></div>
-                    <div class="control"><span>quality</span><input type="range" value="75"><span>75</span></div>
-                    <div class="control" data-tip-key="tipBrowserInput" data-tip="브라우저 세션으로 키보드와 마우스 입력을 전달합니다."><span>input</span><input type="checkbox"></div>
+              </section>
+
+              <section class="tab-pane" id="panel-chat">
+                <div class="chat-main">
+                  <div class="chat-top">
+                    <strong>Chat</strong>
+                    <select class="form-select" style="width:130px"><option selected="selected">Codex</option><option>Claude</option></select>
+                    <span class="badge bg-success">connected</span>
                   </div>
-                  <div class="browser-shot-wrap">
-                    <div class="browser-shot-img">
-                      <div class="browser-mock-top">
-                        <span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span>
-                        <div class="browser-address">localhost:8050/Artgine/proj/Home/Home.html</div>
-                      </div>
-                      <div class="browser-mock-page">
-                        <div class="browser-mock-side"><div class="line" style="width:80%"></div><div class="line" style="width:60%"></div></div>
-                        <div class="browser-mock-main"><div class="hero"></div><div class="grid"><div class="mini-card"></div><div class="mini-card"></div><div class="mini-card"></div></div></div>
-                      </div>
-                    </div>
+                  <div class="messages" id="messages">
+                    <div class="bubble user"><small>User</small><span data-i18n="demoUserMsg"></span></div>
+                    <div class="bubble"><small>Assistant</small><span data-i18n="demoAssistantMsg"></span></div>
+                    <div class="bubble"><small>Changed files</small>help/artgine-agent-tutorial.html</div>
                   </div>
-                  <div class="browser-log">[log] console/network events
-[input] click and keyboard events appear when input is enabled</div>
+                  <div class="composer">
+                    <textarea class="form-control" id="composerInput"></textarea>
+                    <button class="btn btn-primary" type="button" data-i18n="send">Send</button>
+                  </div>
                 </div>
               </section>
-            </div>
-          </section>
+
+              <section class="tab-pane" id="panel-browser">
+                <div class="browser-controls">
+                  <div class="control"><span>frame</span><input type="range" value="3"><span>3s</span></div>
+                  <div class="control"><span>quality</span><input type="range" value="75"><span>75</span></div>
+                  <div class="control" data-tip-key="tipBrowserInput" data-tip=""><span>input</span><input type="checkbox"></div>
+                </div>
+                <div class="browser-shot-wrap">
+                  <div class="browser-shot-img">
+                    <div class="browser-mock-top">
+                      <span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span>
+                      <div class="browser-address">localhost:8050/Artgine/proj/Control/Control.html</div>
+                    </div>
+                    <div class="browser-mock-page">
+                      <div class="browser-mock-side"><div class="line" style="width:80%"></div><div class="line" style="width:60%"></div></div>
+                      <div class="browser-mock-main"><div class="hero"></div><div class="grid"><div class="mini-card"></div><div class="mini-card"></div><div class="mini-card"></div></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="browser-log">[log] console/network events
+[input] click and keyboard events appear when input is enabled</div>
+              </section>
+
+              <section class="tab-pane" id="panel-memo">
+                <div class="placeholder-pane">Memo list &amp; editor (Markdown notes, search, share)</div>
+              </section>
+
+              <section class="tab-pane" id="panel-download">
+                <div class="placeholder-pane">Download queue for files pulled from a remote server</div>
+              </section>
+            </section>
+
+            <aside class="ctrl-right" id="statusSidebar">
+              <div class="side-sub-tabs">
+                <button class="nav-link active" data-rsub="info" id="right-info-tab" type="button" data-i18n="infoTab">Info</button>
+                <button class="nav-link" data-rsub="option" id="right-option-tab" type="button" data-i18n="optionTab">Option</button>
+              </div>
+              <div class="right-side-pane" id="right-info-panel" data-tip-key="tipProviderStatus" data-tip="">
+                <div class="side-label" data-i18n="providerStatus">Provider Status</div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+                  <div class="session"><div class="sess-title"><span class="dot"></span>Claude</div><small>signed in</small></div>
+                  <div class="session"><div class="sess-title"><span class="dot busy"></span>Codex</div><small>checking...</small></div>
+                  <div class="session"><div class="sess-title"><span class="dot off"></span>OpenCode</div><small>not signed in</small></div>
+                </div>
+                <div class="side-label" data-i18n="notifLog" data-tip-key="tipNotif" data-tip="">Notifications</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div class="session"><div class="sess-title"><span class="dot"></span>Chat done</div><small>Control UI update — 2m ago</small></div>
+                  <div class="session"><div class="sess-title"><span class="dot"></span>Terminal done</div><small>cmd : local — 6m ago</small></div>
+                </div>
+              </div>
+              <div class="right-side-pane" id="right-option-panel" style="display:none">
+                <div class="side-label" data-i18n="theme">Theme</div>
+                <select class="form-select form-select-sm" style="margin-bottom:10px">
+                  <option>Light</option>
+                  <option>Dark</option>
+                </select>
+                <button class="btn btn-sm btn-outline-primary" style="margin-bottom:12px" type="button" data-i18n="addOllama">Add OpenCode Model</button>
+                <div class="side-label" style="display:flex;justify-content:space-between;align-items:center">
+                  <span data-i18n="schedule">Schedule</span>
+                  <button class="btn btn-sm btn-outline-primary" id="sched-new-btn" data-tip-key="tipSchedule" type="button" data-tip="">+ New</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+                  <div class="session"><div class="sess-title"><span class="dot"></span>Nightly build check</div><small>0 3 * * * — cmd</small></div>
+                </div>
+                <div class="side-label" data-i18n="help">Help</div>
+                <div class="list-group shortcut-list" id="shortcutList"></div>
+              </div>
+            </aside>
+          </div>
 
           <div class="modal-backdrop" id="fileModal">
             <div class="modal">
@@ -964,7 +950,7 @@ Codex session started.</div>
                   <select class="form-select"><option selected="selected">Artgine (WorkingPath)</option><option>D:/git/Artgine</option></select>
                   <div style="display:flex;gap:4px">
                     <button class="btn btn-outline-primary btn-sm" style="flex:1" type="button" data-i18n="chat">Chat</button>
-                    <button class="btn btn-outline-success btn-sm" style="flex:1" type="button" data-i18n="terminal">Term</button>
+                    <button class="btn btn-outline-success btn-sm" style="flex:1" type="button" data-i18n="terminal">Terminal</button>
                   </div>
                   <hr style="margin:0">
                   <button class="btn btn-outline-info btn-sm" type="button" data-i18n="share">Share</button>
@@ -988,34 +974,13 @@ Codex session started.</div>
               <div class="modal-header"><h2 class="modal-title" data-i18n="fileSearchTitle">File Search</h2><button class="xbtn" data-close="searchModal" type="button">×</button></div>
               <div class="modal-body">
                 <div style="display:flex;gap:8px;margin-bottom:10px">
-                  <input class="form-control" value="RemoteDesktop">
+                  <input class="form-control" value="Control">
                   <button class="btn btn-primary" type="button" data-i18n="search">Search</button>
                 </div>
                 <div class="list-group">
-                  <button class="list-group-item" type="button">RemoteDesktop.html <span class="file-meta">/proj/Home/AI/</span></button>
-                  <button class="list-group-item" type="button">RemoteDesktop.ts <span class="file-meta">/proj/Home/AI/</span></button>
-                  <button class="list-group-item" type="button">Home.ts <span class="file-meta">/proj/Home/</span></button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-backdrop" id="musicModal">
-            <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="music">Music</h2><button class="xbtn" data-close="musicModal" type="button">×</button></div>
-              <div class="modal-body">
-                <div style="display:flex;gap:6px;margin-bottom:8px">
-                  <button class="btn btn-sm btn-outline-danger" type="button">Delete All</button>
-                  <button class="btn btn-sm btn-outline-warning" type="button">Save List</button>
-                </div>
-                <div class="small text-secondary" style="margin-bottom:6px">Now Playing</div>
-                <div style="font-weight:700;color:#0d6efd;margin-bottom:8px">sample.mp3</div>
-                <audio controls="controls" style="width:100%;margin-bottom:8px"></audio>
-                <label style="display:block;margin-bottom:10px"><input type="checkbox" checked="checked"> Random Play</label>
-                <div class="list-group">
-                  <button class="list-group-item active" type="button"><i class="bi bi-folder-music"></i> sample.mp3</button>
-                  <button class="list-group-item" type="button"><i class="bi bi-folder-music"></i> theme.ogg</button>
-                  <button class="list-group-item" type="button"><i class="bi bi-folder-music"></i> notification.mp3</button>
+                  <button class="list-group-item" type="button">Control.html <span class="file-meta">/proj/Control/</span></button>
+                  <button class="list-group-item" type="button">Control.ts <span class="file-meta">/proj/Control/</span></button>
+                  <button class="list-group-item" type="button">DownloadTab.ts <span class="file-meta">/proj/Control/Downloads/</span></button>
                 </div>
               </div>
             </div>
@@ -1025,11 +990,13 @@ Codex session started.</div>
             <div class="modal">
               <div class="modal-header"><h2 class="modal-title" id="filePreviewTitle">File Preview</h2><button class="xbtn" data-close="filePreviewModal" type="button">×</button></div>
               <div class="modal-body">
-                <p class="text-secondary" style="margin-top:0" data-i18n="filePreviewDesc">선택한 파일 형식에 맞는 팝업이 열립니다. 코드와 문서는 편집 화면, 이미지와 음악은 미리보기 화면으로 확인합니다.</p>
-                <div class="fake-monaco" id="filePreviewBody">&lt;!-- Home.html --&gt;
-&lt;section class="home"&gt;
-  &lt;h1&gt;Artgine Agent&lt;/h1&gt;
-&lt;/section&gt;</div>
+                <p class="text-secondary" style="margin-top:0" data-i18n="filePreviewDesc"></p>
+                <div style="min-height:200px;background:#1e1e1e;color:#d4d4d4;border-radius:.375rem;padding:14px;font-family:Consolas,monospace;white-space:pre-wrap" id="filePreviewBody">&lt;!-- Control.html --&gt;
+&lt;div class="d-flex"&gt;
+  &lt;div id="app-sidebar"&gt;...&lt;/div&gt;
+  &lt;div id="myTabContent"&gt;...&lt;/div&gt;
+  &lt;div id="app-sidebar-right"&gt;...&lt;/div&gt;
+&lt;/div&gt;</div>
               </div>
               <div class="modal-footer">
                 <button class="btn" data-close="filePreviewModal" type="button">Close</button>
@@ -1045,10 +1012,10 @@ Codex session started.</div>
                 <label class="small text-secondary" data-i18n="workingDir">Working Directory</label>
                 <input class="form-control" value="D:/git/Artgine" style="margin:4px 0 12px">
                 <div style="display:flex;flex-direction:column;gap:10px">
-                  <label><input type="checkbox"> <b data-i18n="mcp">MCP</b><span class="file-meta" data-i18n="mcpDescChat">AI 세션에 추가 도구 서버를 연결합니다.</span></label>
-                  <label><input type="checkbox" checked="checked"> <b data-i18n="copyMd">Copy MD</b><span class="file-meta" data-i18n="copyMdDescChat">응답을 Markdown 복사 흐름에 맞춥니다.</span></label>
+                  <label><input type="checkbox"> <b data-i18n="mcp">MCP</b><span class="file-meta" data-i18n="mcpDescChat"></span></label>
+                  <label><input type="checkbox" checked="checked"> <b data-i18n="copyMd">Copy MD</b><span class="file-meta" data-i18n="copyMdDescChat"></span></label>
                 </div>
-                <div style="border:1px solid #9ec5fe;background:#e7f1ff;color:#084298;border-radius:.375rem;padding:10px;margin-top:12px" data-i18n="chatInfoBox">Chat은 작업 지시를 AI에게 보내는 세션입니다. 시작 전에 Working Directory를 확인하세요.</div>
+                <div style="border:1px solid #9ec5fe;background:#e7f1ff;color:#084298;border-radius:.375rem;padding:10px;margin-top:12px" data-i18n="chatInfoBox"></div>
               </div>
               <div class="modal-footer">
                 <button class="btn" data-close="newChatModal" type="button" data-i18n="cancel">Cancel</button>
@@ -1061,20 +1028,21 @@ Codex session started.</div>
             <div class="modal">
               <div class="modal-header"><h2 class="modal-title" data-i18n="newTermModalTitle">New Terminal</h2><button class="xbtn" data-close="newTermModal" type="button">×</button></div>
               <div class="modal-body">
-                <label class="small text-secondary" data-i18n="workingDir">Working Directory</label>
-                <input class="form-control" value="D:/git/Artgine" style="margin:4px 0 10px">
                 <label class="small text-secondary" data-i18n="mode">Mode</label>
                 <div style="display:flex;gap:6px;margin:4px 0 10px;flex-wrap:wrap">
                   <button class="btn btn-sm btn-primary" type="button">cmd</button>
-                  <button class="btn btn-sm btn-outline-secondary" type="button">codex</button>
                   <button class="btn btn-sm btn-outline-secondary" type="button">claude</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button">codex</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button">agy</button>
                   <button class="btn btn-sm btn-outline-secondary" type="button">opencode</button>
                 </div>
                 <label class="small text-secondary" data-i18n="key">Key</label>
-                <input class="form-control" value="local" style="margin:4px 0 12px">
+                <input class="form-control" placeholder="Session key (optional)" style="margin:4px 0 10px">
+                <label class="small text-secondary" data-i18n="workingDir">Working Directory</label>
+                <input class="form-control" value="D:/git/Artgine" style="margin:4px 0 12px">
                 <div style="display:flex;flex-direction:column;gap:10px">
-                  <label><input type="checkbox"> <b data-i18n="mcp">MCP</b><span class="file-meta" data-i18n="mcpDescTerm">터미널 AI 세션에 추가 도구 서버를 연결합니다.</span></label>
-                  <label><input type="checkbox" checked="checked"> <b data-i18n="copyMd">Copy MD</b><span class="file-meta" data-i18n="copyMdDescTerm">출력 복사 시 Markdown 형식을 유지합니다.</span></label>
+                  <label><input type="checkbox" checked="checked"> <b data-i18n="mcp">MCP</b><span class="file-meta" data-i18n="mcpDescTerm"></span></label>
+                  <label><input type="checkbox" checked="checked"> <b data-i18n="copyMd">Copy MD</b><span class="file-meta" data-i18n="copyMdDescTerm"></span></label>
                 </div>
               </div>
               <div class="modal-footer">
@@ -1086,9 +1054,9 @@ Codex session started.</div>
 
           <div class="modal-backdrop" id="newBrowserModal">
             <div class="modal">
-              <div class="modal-header"><h2 class="modal-title" data-i18n="newBrowserModalTitle">New Browser</h2><button class="xbtn" data-close="newBrowserModal" type="button">×</button></div>
+              <div class="modal-header"><h2 class="modal-title" data-i18n="newBrowserModalTitle">New Browser Session</h2><button class="xbtn" data-close="newBrowserModal" type="button">×</button></div>
               <div class="modal-body">
-                <p style="margin-top:0" data-i18n="browserModalDesc">확인할 URL, 유지 시간, 화면 크기를 설정합니다.</p>
+                <p style="margin-top:0" data-i18n="browserModalDesc"></p>
                 <label class="small text-secondary">URL</label>
                 <input class="form-control" value="https://example.com" style="margin:4px 0 10px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
@@ -1106,7 +1074,7 @@ Codex session started.</div>
                     <input class="form-control" type="number" value="300" style="margin-top:4px">
                   </div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
                   <div>
                     <label class="small text-secondary">Width</label>
                     <input class="form-control" type="number" value="1280" style="margin-top:4px">
@@ -1116,6 +1084,8 @@ Codex session started.</div>
                     <input class="form-control" type="number" value="720" style="margin-top:4px">
                   </div>
                 </div>
+                <label class="small text-secondary" data-i18n="stealth">Stealth (sec, 0=off)</label>
+                <input class="form-control" type="number" value="0" style="margin-top:4px">
               </div>
               <div class="modal-footer">
                 <button class="btn" data-close="newBrowserModal" type="button" data-i18n="cancel">Cancel</button>
@@ -1128,59 +1098,20 @@ Codex session started.</div>
             <div class="modal">
               <div class="modal-header"><h2 class="modal-title" data-i18n="keyboardShortcutsTitle">Keyboard Shortcuts</h2><button class="xbtn" data-close="shortcutsModal" type="button">×</button></div>
               <div class="modal-body">
-                <div class="list-group shortcut-list" id="shortcutList"><button class="list-group-item" type="button">
-          <span><span class="kbd">F1</span></span>
-          <span>Files 탭으로 이동하고 File Manager 열기</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">F2</span></span>
-          <span>Files 탭으로 이동하고 File Search 열기</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">F3</span></span>
-          <span>RDP 탭으로 이동</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">F4</span></span>
-          <span>AI 탭으로 이동</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">Tab</span></span>
-          <span>RDP 또는 AI 사이드바 열기/닫기</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">1</span></span>
-          <span>AI 사이드바가 열려 있을 때 Chat 하위 탭</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">2</span></span>
-          <span>AI 사이드바가 열려 있을 때 Term 하위 탭</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">3</span></span>
-          <span>AI 사이드바가 열려 있을 때 Web 하위 탭</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">Shift</span> + <span class="kbd">N</span></span>
-          <span>새 터미널 세션 만들기</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">Shift</span> + <span class="kbd">D</span></span>
-          <span>현재 터미널 세션 삭제</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">F6</span></span>
-          <span>Terminal SUPER 토글</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">F7</span></span>
-          <span>Terminal 입력 바 표시/포커스</span>
-        </button><button class="list-group-item" type="button">
-          <span><span class="kbd">Esc</span></span>
-          <span>열린 모달 닫기</span>
-        </button></div>
+                <div class="list-group shortcut-list" id="shortcutModalList"></div>
               </div>
             </div>
           </div>
 
           <div class="coach">
-            <h2 id="coachTitle">시작하기</h2>
-            <p id="coachText">저장소를 받은 뒤 npm install, npm start 또는 npm run start_web [port]로 실행합니다.</p>
-            <div class="tip" id="coachTip">Artgine 앱에서 projectPath를 proj/Home으로 지정해 실행할 수도 있습니다.</div>
+            <h2 id="coachTitle"></h2>
+            <p id="coachText"></p>
+            <div class="tip" id="coachTip"></div>
             <div class="coach-actions">
-              <span id="progress" class="small">1 / 13</span>
+              <span id="progress" class="small"></span>
               <div style="display:flex;gap:6px">
-                <button class="btn btn-sm" type="button" onclick="go(current-1)" data-i18n="prev">이전</button>
-                <button class="btn btn-sm btn-primary" type="button" onclick="next()" data-i18n="next">다음</button>
+                <button class="btn btn-sm" type="button" onclick="go(current-1)" data-i18n="prev">Prev</button>
+                <button class="btn btn-sm btn-primary" type="button" onclick="next()" data-i18n="next">Next</button>
               </div>
             </div>
           </div>
@@ -1193,6 +1124,7 @@ Codex session started.</div>
   <script>
     let current = 0;
     const $ = id => document.getElementById(id);
+    const MORE_MENU_IDS = ['menu-memo', 'rdp-add-btn', 'chat-new-btn', 'browser-new-btn', 'menu-download'];
 
     function applyI18n() {
       document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -1204,18 +1136,19 @@ Codex session started.</div>
         if (value !== undefined) el.dataset.tip = value;
       });
       $('shortcutsBtn').textContent = S.shortcuts;
-      $('rdpUrl').placeholder = S.remoteHomeUrl;
       $('composerInput').value = S.composerPlaceholder;
       renderShortcuts();
     }
 
     function renderShortcuts() {
-      $('shortcutList').innerHTML = S.shortcutRows.map(([keys, desc]) =>
+      const html = S.shortcutRows.map(([keys, desc]) =>
         `<button class="list-group-item" type="button">
           <span>${keys.map(k => `<span class="kbd">${k}</span>`).join(' + ')}</span>
           <span>${desc}</span>
         </button>`
       ).join('');
+      $('shortcutList').innerHTML = html;
+      $('shortcutModalList').innerHTML = html;
     }
 
     function renderSteps() {
@@ -1228,21 +1161,25 @@ Codex session started.</div>
       document.querySelectorAll('[data-step]').forEach(btn => btn.onclick = () => go(Number(btn.dataset.step)));
     }
 
-    function setTab(tab) {
-      document.querySelectorAll('[data-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
-      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-      $('panel-' + tab).classList.add('active');
+    function closeMore() { $('moreMenu').classList.remove('show'); }
+    function openMore() { $('moreMenu').classList.add('show'); }
+
+    function setPanel(panel) {
+      const isHome = panel === 'home';
+      $('panel-home').classList.toggle('active', isHome);
+      $('panel-ctrl').style.display = isHome ? 'none' : 'grid';
+      document.querySelectorAll('#topTabs [data-panel]').forEach(btn => btn.classList.toggle('active', btn.dataset.panel === panel));
+      if (isHome) return;
+      const center = panel === 'right' ? 'rdp' : panel;
+      document.querySelectorAll('.ctrl-center > .tab-pane').forEach(p => p.classList.toggle('active', p.id === 'panel-' + center));
     }
 
-    function setSub(sub) {
-      document.querySelectorAll('[data-sub]').forEach(btn => btn.classList.toggle('active', btn.dataset.sub === sub));
-      $('chatSide').classList.toggle('active', sub === 'chat');
-      $('termSide').classList.toggle('active', sub === 'term');
-      $('webSide').classList.toggle('active', sub === 'web');
-      $('chatFrame').style.display = sub === 'chat' ? 'flex' : 'none';
-      $('terminalFrame').classList.toggle('active', sub === 'term');
-      $('termBar').classList.toggle('active', sub === 'term');
-      $('browserFrame').classList.toggle('active', sub === 'web');
+    function setRightSub(sub) {
+      if (!sub) return;
+      $('right-info-tab').classList.toggle('active', sub === 'info');
+      $('right-option-tab').classList.toggle('active', sub === 'option');
+      $('right-info-panel').style.display = sub === 'info' ? 'block' : 'none';
+      $('right-option-panel').style.display = sub === 'option' ? 'block' : 'none';
     }
 
     function clearHighlight() {
@@ -1252,20 +1189,17 @@ Codex session started.</div>
     function inlineHelp(text) {
       const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       return escaped
-        .replace(/\b(F1|F2|F3|F4|F6|F7|Tab|Esc)\b/g, '<span class="kbd" style="background:#374151;color:#e5e7eb;border-color:#6b7280">$1</span>')
-        .replace(/\b(RDP|Files|AI|Chat|Term|Web|Local|RemoteDesktop\.html|Home\.html|Working Directory|Allow write|SUPER)\b/g, '<strong style="color:#93c5fd">$1</strong>');
+        .replace(/\b(F1|F2|F3|F6|Tab|Esc)\b/g, '<span class="kbd" style="background:#374151;color:#e5e7eb;border-color:#6b7280">$1</span>')
+        .replace(/\b(RDP|File|Terminal|More|Chat|Browser|Memo|Download|Local|Remote|Working Directory|Info|Option|SUPER)\b/g, '<strong style="color:#93c5fd">$1</strong>');
     }
 
     function go(index) {
       current = Math.max(0, Math.min(S.steps.length - 1, index));
       const step = S.steps[current];
-      setTab(step[2]);
-      if (step[2] === 'ai') {
-        const sub = step[3] === 'termSubtab' || step[3] === 'scheduleBtn' ? 'term'
-          : step[3] === 'webSubtab' || step[3] === 'newBrowserBtn' ? 'web'
-          : 'chat';
-        setSub(sub);
-      }
+      setPanel(step[2]);
+      closeMore();
+      if (MORE_MENU_IDS.includes(step[3])) openMore();
+      if (step[2] === 'right') setRightSub(step[6]);
       clearHighlight();
       const target = $(step[3]);
       if (target) {
@@ -1285,6 +1219,7 @@ Codex session started.</div>
         return;
       }
       clearHighlight();
+      closeMore();
       $('coachTitle').textContent = S.done;
       $('coachText').innerHTML = inlineHelp(S.doneText);
       $('coachTip').innerHTML = inlineHelp(S.doneTip);
@@ -1314,13 +1249,20 @@ Codex session started.</div>
       pop.style.top = top + 'px';
     }
 
-    document.querySelectorAll('[data-tab]').forEach(btn => btn.onclick = () => { setTab(btn.dataset.tab); clearHighlight(); });
-    document.querySelectorAll('[data-sub]').forEach(btn => btn.onclick = () => setSub(btn.dataset.sub));
+    document.querySelectorAll('#topTabs [data-panel]').forEach(btn => btn.onclick = () => { setPanel(btn.dataset.panel); closeMore(); clearHighlight(); });
+    $('tab-more').onclick = () => { $('moreMenu').classList.toggle('show'); };
+    document.querySelectorAll('#appSidebar [data-panel]').forEach(btn => btn.onclick = () => {
+      document.querySelectorAll('#appSidebar .session').forEach(s => s.classList.remove('item-active'));
+      btn.classList.add('item-active');
+      setPanel(btn.dataset.panel);
+    });
+    document.querySelectorAll('[data-rsub]').forEach(btn => btn.onclick = () => setRightSub(btn.dataset.rsub));
     document.querySelectorAll('[data-close]').forEach(btn => btn.onclick = () => closeModal(btn.dataset.close));
     document.querySelectorAll('.modal-backdrop').forEach(modal => modal.onclick = e => { if (e.target === modal) modal.classList.remove('show'); });
     document.addEventListener('click', e => {
+      if (!e.target.closest('#tab-more') && !e.target.closest('#moreMenu')) closeMore();
       const tipTarget = e.target.closest('[data-tip]');
-      if (tipTarget) {
+      if (tipTarget && tipTarget.dataset.tip) {
         showTip(tipTarget);
         e.stopPropagation();
       } else {
@@ -1330,12 +1272,11 @@ Codex session started.</div>
 
     $('fileModalBtn').onclick = () => openModal('fileModal');
     $('searchModalBtn').onclick = () => openModal('searchModal');
-    $('musicBtn').onclick = () => openModal('musicModal');
+    $('tab-search').onclick = () => { setPanel('file'); openModal('searchModal'); };
     $('shortcutsBtn').onclick = () => openModal('shortcutsModal');
-    $('newChatBtn').onclick = () => openModal('newChatModal');
-    $('newTermBtn').onclick = () => { setSub('term'); openModal('newTermModal'); };
-    $('scheduleBtn').onclick = () => setSub('term');
-    $('newBrowserBtn').onclick = () => { setSub('web'); openModal('newBrowserModal'); };
+    $('chat-new-btn').onclick = () => { setPanel('chat'); openModal('newChatModal'); };
+    $('tab-term').onclick = () => setPanel('term');
+    $('browser-new-btn').onclick = () => { setPanel('browser'); openModal('newBrowserModal'); };
     $('fileList').addEventListener('click', e => {
       const item = e.target.closest('.list-group-item');
       if (!item || ['root', 'parent', 'folder'].includes(item.dataset.view)) return;
@@ -1343,30 +1284,19 @@ Codex session started.</div>
       $('filePreviewTitle').textContent = name;
       $('filePreviewBody').textContent = item.dataset.view === 'file'
         ? `${name}\n\n${S.filePreviewFileNote}`
-        : `// ${name}\nimport { Bootstrap } from '../../artgine/basic/Bootstrap.js';\n\nexport default class Home {\n  // ${S.filePreviewCodeNote}\n}`;
+        : `// ${name}\nimport { Bootstrap } from '../../artgine/basic/Bootstrap.js';\n\nexport default class Control {\n  // ${S.filePreviewCodeNote}\n}`;
       openModal('filePreviewModal');
     });
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { if (closeTopModal()) e.preventDefault(); return; }
-      if (e.key === 'F1') { e.preventDefault(); setTab('file'); openModal('fileModal'); }
-      if (e.key === 'F2') { e.preventDefault(); setTab('file'); openModal('searchModal'); }
-      if (e.key === 'F3') { e.preventDefault(); setTab('rdp'); }
-      if (e.key === 'F4') { e.preventDefault(); setTab('ai'); }
-      if ((e.key === '1' || e.key === '2' || e.key === '3') && $('panel-ai').classList.contains('active')) {
-        e.preventDefault();
-        setSub(['chat','term','web'][Number(e.key) - 1]);
-      }
-      if (e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); setTab('ai'); setSub('term'); openModal('newTermModal'); }
-      if (e.key === 'F7') {
-        e.preventDefault();
-        setTab('ai');
-        setSub('term');
-        document.querySelector('#termBar input')?.focus();
-      }
+      if (e.key === 'F1') { e.preventDefault(); setPanel('file'); openModal('fileModal'); }
+      if (e.key === 'F2') { e.preventDefault(); setPanel('file'); openModal('searchModal'); }
+      if (e.key === 'F6') { e.preventDefault(); document.querySelector('.term-bar input')?.focus(); }
     });
 
     applyI18n();
+    renderSteps();
     go(0);
   </script>
 

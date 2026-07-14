@@ -461,7 +461,56 @@ export class CImgPro
         }
     }
 
-    static ScaleMipMapAlpha(w: number, h: number, buf: any, filtering: 'box' | 'kaiser' = 'kaiser', coverageThreshold: number = 0.4): CTexture
+    static BumpToNormalMap(_bumpMap: CTexture, _strength: number = 1.0): CTexture {
+        const w = _bumpMap.GetWidth();
+        const h = _bumpMap.GetHeight();
+        const srcBuf = _bumpMap.GetBuf()[0] as Uint8Array | Float32Array;
+        
+        const normalMap = new CTexture();
+        normalMap.SetSize(w, h);
+        normalMap.CreateBuf();
+        const dstBuf = normalMap.GetBuf()[0];
+        
+        const isFloat = srcBuf instanceof Float32Array;
+        const heightMult = isFloat ? 1.0 : (1.0 / 255.0);
+        
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const xLeft = Math.max(0, x - 1);
+                const xRight = Math.min(w - 1, x + 1);
+                const yUp = Math.max(0, y - 1);
+                const yDown = Math.min(h - 1, y + 1);
+                
+                const idxLeft = (y * w + xLeft) * 4;
+                const idxRight = (y * w + xRight) * 4;
+                const idxUp = (yUp * w + x) * 4;
+                const idxDown = (yDown * w + x) * 4;
+                
+                const hLeft = srcBuf[idxLeft] * heightMult;
+                const hRight = srcBuf[idxRight] * heightMult;
+                const hUp = srcBuf[idxUp] * heightMult;
+                const hDown = srcBuf[idxDown] * heightMult;
+                
+                const dx = (hRight - hLeft) * _strength;
+                const dy = (hDown - hUp) * _strength;
+                
+                const len = Math.sqrt(dx * dx + dy * dy + 1.0);
+                const nx = -dx / len;
+                const ny = -dy / len;
+                const nz = 1.0 / len;
+                
+                const dstIdx = (y * w + x) * 4;
+                dstBuf[dstIdx + 0] = (nx * 0.5 + 0.5) * 255;
+                dstBuf[dstIdx + 1] = (ny * 0.5 + 0.5) * 255;
+                dstBuf[dstIdx + 2] = (nz * 0.5 + 0.5) * 255;
+                dstBuf[dstIdx + 3] = srcBuf[dstIdx];
+            }
+        }
+        
+        return normalMap;
+    }
+
+    static ScaleMipMapAlpha(w: number, h: number, buf: any, filtering: 'box' | 'kaiser' = 'kaiser'): CTexture
     {
         const kWidth   = 3.0;
         const kAlpha   = 4.0;

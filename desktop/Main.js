@@ -63,6 +63,12 @@ const createWindow = () => {
         }
     });
     gMainWindow.webContents.session.clearCache();
+    gMainWindow.once('ready-to-show', () => {
+        gMainWindow.show();
+        gMainWindow.setAlwaysOnTop(true);
+        gMainWindow.focus();
+        gMainWindow.setAlwaysOnTop(false);
+    });
     gMainWindow.webContents.on('context-menu', (_event, params) => {
         const template = [];
         if (params.isEditable) {
