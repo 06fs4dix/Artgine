@@ -1,6 +1,8 @@
 import { CORMField, CRDBMS } from "./CORM.js";
 import sqlite3 from 'sqlite3'; // or: import * as sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
+import * as fs from 'fs';
+import * as path from 'path';
 
 
 export class CSQLite extends CRDBMS {
@@ -8,8 +10,10 @@ export class CSQLite extends CRDBMS {
 
     override async Init(): Promise<void> {
         //this.mType=CRDBMS.eType.Sqlite;
+        const filename = this.mDatabase || './db/artgine.sqlite';
+        fs.mkdirSync(path.dirname(filename), { recursive: true });
         this.mConn = await open({
-            filename: this.mDatabase || './db/artgine.sqlite',
+            filename,
             driver: sqlite3.Database
         });
     }
