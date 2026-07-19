@@ -2,57 +2,234 @@
   "log": true,
   "models": {
     "claude": [
-      { "value": "claude-opus-4-8",           "label": "Opus 4.8" },
-      { "value": "claude-sonnet-4-6",         "label": "Sonnet 4.6" },
-      { "value": "claude-haiku-4-5-20251001", "label": "Haiku 4.5" }
+      {
+        "value": "claude-opus-4-8",
+        "label": "Opus 4.8"
+      },
+      {
+        "value": "claude-sonnet-4-6",
+        "label": "Sonnet 4.6"
+      },
+      {
+        "value": "claude-haiku-4-5-20251001",
+        "label": "Haiku 4.5"
+      }
     ],
     "codex": [
-      { "value": "gpt-5.5",      "label": "GPT-5.5" },
-      { "value": "gpt-5.4",      "label": "GPT-5.4" },
-      { "value": "gpt-5.4-mini", "label": "GPT-5.4 Mini" }
+      {
+        "value": "gpt-5.5",
+        "label": "GPT-5.5"
+      },
+      {
+        "value": "gpt-5.4",
+        "label": "GPT-5.4"
+      },
+      {
+        "value": "gpt-5.4-mini",
+        "label": "GPT-5.4 Mini"
+      }
     ],
     "opencode": [
-      { "value": "opencode-go/qwen3.7-max",          "label": "Qwen3.7 Max (Go)" },
-      { "value": "opencode-go/qwen3.7-plus",         "label": "Qwen3.7 Plus (Go)" },
-      { "value": "opencode-go/kimi-k2.7-code",       "label": "Kimi K2.7 Code (Go)" },
-      { "value": "opencode-go/minimax-m3",           "label": "MiniMax M3 (Go, 3x usage)" },
-      { "value": "opencode-go/deepseek-v4-pro",      "label": "DeepSeek V4 Pro (Go)" },
-      { "value": "opencode-go/qwen3.6-plus",         "label": "Qwen3.6 Plus (Go)" },
-      { "value": "opencode-go/kimi-k2.6",            "label": "Kimi K2.6 (Go)" },
-      { "value": "opencode-go/mimo-v2.5-pro",        "label": "MiMo V2.5 Pro (Go)" },
-      { "value": "opencode-go/deepseek-v4-flash",    "label": "DeepSeek V4 Flash (Go)" },
-      { "value": "opencode-go/glm-5.2",              "label": "GLM-5.2 (Go)" },
-      { "value": "opencode-go/glm-5.1",              "label": "GLM-5.1 (Go)" },
-      { "value": "opencode-go/mimo-v2.5",            "label": "MiMo V2.5 (Go)" },
-      { "value": "opencode-go/minimax-m2.7",         "label": "MiniMax M2.7 (Go)" },
-      { "value": "opencode-go/minimax-m2.5",         "label": "MiniMax M2.5 (Go)" },
-      { "value": "opencode/north-mini-code-free",    "label": "North Mini Code (Free)" },
-      { "value": "opencode/nemotron-3-ultra-free",   "label": "Nemotron 3 Ultra (Free)" },
-      { "value": "opencode/mimo-v2.5-free",          "label": "MiMo V2.5 (Free)" },
-      { "value": "opencode/deepseek-v4-flash-free",  "label": "DeepSeek V4 Flash (Free)" },
-      { "value": "opencode/big-pickle",              "label": "Big Pickle (Free)" }
+      {
+        "value": "opencode-go/qwen3.7-max",
+        "label": "Qwen3.7 Max (Go)"
+      },
+      {
+        "value": "opencode-go/qwen3.7-plus",
+        "label": "Qwen3.7 Plus (Go)"
+      },
+      {
+        "value": "opencode-go/kimi-k2.7-code",
+        "label": "Kimi K2.7 Code (Go)"
+      },
+      {
+        "value": "opencode-go/minimax-m3",
+        "label": "MiniMax M3 (Go, 3x usage)"
+      },
+      {
+        "value": "opencode-go/deepseek-v4-pro",
+        "label": "DeepSeek V4 Pro (Go)"
+      },
+      {
+        "value": "opencode-go/qwen3.6-plus",
+        "label": "Qwen3.6 Plus (Go)"
+      },
+      {
+        "value": "opencode-go/kimi-k2.6",
+        "label": "Kimi K2.6 (Go)"
+      },
+      {
+        "value": "opencode-go/mimo-v2.5-pro",
+        "label": "MiMo V2.5 Pro (Go)"
+      },
+      {
+        "value": "opencode-go/deepseek-v4-flash",
+        "label": "DeepSeek V4 Flash (Go)"
+      },
+      {
+        "value": "opencode-go/glm-5.2",
+        "label": "GLM-5.2 (Go)"
+      },
+      {
+        "value": "opencode-go/glm-5.1",
+        "label": "GLM-5.1 (Go)"
+      },
+      {
+        "value": "opencode-go/mimo-v2.5",
+        "label": "MiMo V2.5 (Go)"
+      },
+      {
+        "value": "opencode-go/minimax-m2.7",
+        "label": "MiniMax M2.7 (Go)"
+      },
+      {
+        "value": "opencode-go/minimax-m2.5",
+        "label": "MiniMax M2.5 (Go)"
+      },
+      {
+        "value": "opencode/north-mini-code-free",
+        "label": "North Mini Code (Free)"
+      },
+      {
+        "value": "opencode/nemotron-3-ultra-free",
+        "label": "Nemotron 3 Ultra (Free)"
+      },
+      {
+        "value": "opencode/mimo-v2.5-free",
+        "label": "MiMo V2.5 (Free)"
+      },
+      {
+        "value": "opencode/deepseek-v4-flash-free",
+        "label": "DeepSeek V4 Flash (Free)"
+      },
+      {
+        "value": "opencode/big-pickle",
+        "label": "Big Pickle (Free)"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/huihui_ai/gemma-4-abliterated:26b",
+        "label": "Ollama (1.220.132.130:11434) - huihui_ai/gemma-4-abliterated:26b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/ornith:35b",
+        "label": "Ollama (1.220.132.130:11434) - ornith:35b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/laguna-xs-2.1:q4_K_M",
+        "label": "Ollama (1.220.132.130:11434) - laguna-xs-2.1:q4_K_M"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/ornith:9b",
+        "label": "Ollama (1.220.132.130:11434) - ornith:9b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:12b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:12b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:31b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:31b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/qwen3.6:35b",
+        "label": "Ollama (1.220.132.130:11434) - qwen3.6:35b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/mistral-small3.2:24b",
+        "label": "Ollama (1.220.132.130:11434) - mistral-small3.2:24b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/qwen3.6:27b",
+        "label": "Ollama (1.220.132.130:11434) - qwen3.6:27b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gpt-oss:20b",
+        "label": "Ollama (1.220.132.130:11434) - gpt-oss:20b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/qwen3.5:9b",
+        "label": "Ollama (1.220.132.130:11434) - qwen3.5:9b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:26b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:26b"
+      },
+      {
+        "value": "ollama-1_220_132_130_11434/gemma4:e4b",
+        "label": "Ollama (1.220.132.130:11434) - gemma4:e4b"
+      }
     ],
     "antigravity": [
-      { "value": "Gemini 3.5 Flash (Medium)",    "label": "Gemini 3.5 Flash (Medium)" },
-      { "value": "Gemini 3.5 Flash (High)",      "label": "Gemini 3.5 Flash (High)" },
-      { "value": "Gemini 3.5 Flash (Low)",       "label": "Gemini 3.5 Flash (Low)" },
-	  { "value": "Claude Sonnet 4.6 (Thinking)", "label": "Claude Sonnet 4.6 (Thinking)" },
-      { "value": "Claude Opus 4.6 (Thinking)",   "label": "Claude Opus 4.6 (Thinking)" },
-      { "value": "GPT-OSS 120B (Medium)",        "label": "GPT-OSS 120B (Medium)" },
-      { "value": "Gemini 3.1 Pro (Low)",         "label": "Gemini 3.1 Pro (Low)" },
-      { "value": "Gemini 3.1 Pro (High)",        "label": "Gemini 3.1 Pro (High)" }
-      
+      {
+        "value": "Gemini 3.5 Flash (Medium)",
+        "label": "Gemini 3.5 Flash (Medium)"
+      },
+      {
+        "value": "Gemini 3.5 Flash (High)",
+        "label": "Gemini 3.5 Flash (High)"
+      },
+      {
+        "value": "Gemini 3.5 Flash (Low)",
+        "label": "Gemini 3.5 Flash (Low)"
+      },
+      {
+        "value": "Claude Sonnet 4.6 (Thinking)",
+        "label": "Claude Sonnet 4.6 (Thinking)"
+      },
+      {
+        "value": "Claude Opus 4.6 (Thinking)",
+        "label": "Claude Opus 4.6 (Thinking)"
+      },
+      {
+        "value": "GPT-OSS 120B (Medium)",
+        "label": "GPT-OSS 120B (Medium)"
+      },
+      {
+        "value": "Gemini 3.1 Pro (Low)",
+        "label": "Gemini 3.1 Pro (Low)"
+      },
+      {
+        "value": "Gemini 3.1 Pro (High)",
+        "label": "Gemini 3.1 Pro (High)"
+      }
+    ],
+    "grok": [
+      {
+        "value": "grok-4.5",
+        "label": "Grok 4.5"
+      },
+      {
+        "value": "grok-composer-2.5-fast",
+        "label": "Composer 2.5 Fast"
+      }
     ]
   },
   "permissions": {
     "allow": [
-      {"type": "read"},
-      {"command": "node *ai/tool/tsc_check"},
-	  {"command": "node *ai/tool/browser"},
-	  {"command": "node *ai/tool/remotecmd"},
-	  {"command": "node *ai/tool/remotedesktop"},
-	  {"command": "node *ai/tool/memo"},
-	  {"command": "node *antigravity-cli/*"}
+      {
+        "type": "read"
+      },
+      {
+        "command": "node *ai/tool/tsc_check"
+      },
+      {
+        "command": "node *ai/tool/browser"
+      },
+      {
+        "command": "node *ai/tool/remotecmd"
+      },
+      {
+        "command": "node *ai/tool/remotedesktop"
+      },
+      {
+        "command": "node *ai/tool/memo"
+      },
+      {
+        "command": "node *ai/tool/work"
+      },
+      {
+        "command": "node *antigravity-cli/*"
+      }
     ],
     "deny": []
   }

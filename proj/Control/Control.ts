@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mre9w8y1_7";
+gPF.mVersion = "mrn9vafi_5";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -37,7 +37,7 @@ await gAtl.Init([],"");
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
-import { CFileViewer } from "../../artgine/util/CModalUtil.js";
+import { CMDViewer, CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
@@ -104,7 +104,8 @@ function registerControlLan(): void {
     CLan.Set(ko, "ctrl.kb.global", "전역 단축키");
     CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
     CLan.Set(ko, "ctrl.kb.f2", "<kbd>F2</kbd> 파일 검색 열기");
-    CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 사이드바 포커스/토글");
+    CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 새 터미널 열기");
+    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> 사이드바 포커스/토글");
     CLan.Set(ko, "ctrl.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)");
     CLan.Set(ko, "ctrl.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
 }
@@ -201,6 +202,55 @@ loadAiProviderStatus();
 setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
+document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
+// 아티젠 DB(db/artgine.sqlite)를 CORMRouter(/ORM/Exec) 경유로 읽어 보여주는 읽기 전용 ORM 뷰어.
+// RDP로 원격 서버를 보는 중이면 그 서버의 DB를, 아니면 로컬 DB를 연다(currentRemoteBaseUrl 기준).
+document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
+    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
+});
+
+// 임의의 DB(mysql/mssql/sqlite/ne)에 접속해 보여주는 범용 ORM 뷰어. dbType/database를 비워 넘기면
+// CORMViewer가 연결 정보 입력 폼을 먼저 띄운다.
+document.getElementById('dbViewerBtn')?.addEventListener('click', () => {
+    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    new CORMViewer(undefined, undefined, undefined, currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
+});
+
+// claude/codex/opencode/antigravity/grok이 로컬에 남기는 대화 세션 저장소에서 N개월보다 오래된 것을
+// 지운다(이 컴퓨터의 모든 프로젝트 대상 — /AIInfo/prune-conversations 참조).
+document.getElementById('pruneConvBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('pruneConvMonths') as HTMLInputElement | null;
+    const result = document.getElementById('pruneConvResult');
+    const months = Math.max(1, parseInt(input?.value ?? '1', 10) || 1);
+
+    const dlg = new CConfirm();
+    dlg.SetBody(`Delete all conversation history older than ${months} month(s)? This applies to every project on this machine and cannot be undone.`);
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+        async () => {
+            if (result) result.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+            try {
+                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/prune-conversations', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ months }),
+                });
+                const j = await r.json();
+                if (!j.ok) throw new Error(j.msg ?? 'failed');
+                const lines = Object.entries(j.results as Record<string, { installed: boolean; deleted: number; error?: string }>)
+                    .map(([provider, v]) => v.installed
+                        ? `${aiEscapeHtml(provider)}: ${v.deleted}${v.error ? ` <span class="text-danger">(${aiEscapeHtml(v.error)})</span>` : ''}`
+                        : `${aiEscapeHtml(provider)}: <span class="text-secondary">not installed</span>`)
+                    .join('<br>');
+                if (result) result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Total ${j.totalDeleted} deleted</span><div class="mt-1">${lines}</div>`;
+            } catch (e: any) {
+                if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+            }
+        },
+        () => {},
+    ], ["Delete", "Cancel"]);
+    dlg.Open();
+});
 
 // Ollama/LM Studio(OpenAI 호환) 서버 주소를 입력받아 /AIInfo/push-ollama 로 등록한다.
 // 서버가 모델 목록·툴 지원 여부를 조회해 opencode.json의 커스텀 provider로 기록한다(없으면 CreateRole).
@@ -244,7 +294,7 @@ function showAddOllamaModal() {
             if (goBtn) goBtn.disabled = true;
             if (result) result.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> …</span>';
             try {
-                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/push-opencode-model', {
+                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/opencode-pushLocal', {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
                     body: JSON.stringify(apiKey ? { host, apiKey } : { host }),
@@ -274,6 +324,80 @@ function showAddOllamaModal() {
     }, MODAL_DOM_DELAY);
 }
 
+// opencode.json에 등록해둔(Add OpenCode Model로 추가한) 커스텀 provider들의 실제 연결 상태를 조회해 테이블로 보여준다.
+// 서버가 각 provider의 baseURL에 직접 접속해 판단하므로(/AIInfo/opencode-statusLocal), 가장 중요한 정보인
+// "연결됨/끊김"을 배지로 강조하고, 그 외 현재 로드된 모델·VRAM(가능한 경우)을 함께 보여준다.
+function showOpencodeStatusModal() {
+    const modal = new CModal();
+    modal.SetHeader('OpenCode Provider Status');
+    modal.SetBody(`
+        <div class="d-flex justify-content-end mb-2">
+            <button id="opencodeStatusRefreshBtn" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                <i class="bi bi-arrow-clockwise"></i><span>Refresh</span>
+            </button>
+        </div>
+        <div id="opencodeStatusBody" class="small"><i class="bi bi-hourglass-split"></i> Loading...</div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(680, 420);
+    modal.Open(CModal.ePos.Center);
+
+    const load = async () => {
+        const body = document.getElementById('opencodeStatusBody');
+        const refreshBtn = document.getElementById('opencodeStatusRefreshBtn') as HTMLButtonElement | null;
+        if (!body) return;
+        if (refreshBtn) refreshBtn.disabled = true;
+        body.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading...';
+        try {
+            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/opencode-statusLocal');
+            if (r.status === 401) { body.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Login required</span>'; return; }
+            const j = await r.json();
+            const providers: { key: string; label: string; backend: string; host: string; connected: boolean; error?: string; modelCount: number; running: { name: string; vramBytes?: number; sizeBytes?: number }[] }[] = j.providers ?? [];
+            if (!providers.length) {
+                body.innerHTML = '<span class="text-secondary">No registered OpenCode providers yet. Use "Add OpenCode Model" first.</span>';
+                return;
+            }
+            body.innerHTML = `
+                <table class="table table-sm table-borderless align-middle mb-0">
+                    <thead>
+                        <tr class="text-secondary" style="font-size:0.8em;">
+                            <th>Connection</th><th>Provider</th><th>Host</th><th>Models</th><th>Running</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${providers.map(p => `
+                            <tr>
+                                <td>${p.connected
+                                    ? '<span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Connected</span>'
+                                    : `<span class="badge bg-danger" title="${aiEscapeHtml(p.error ?? '')}"><i class="bi bi-x-circle-fill"></i> Disconnected</span>`}</td>
+                                <td>${aiEscapeHtml(p.label)}<div class="text-secondary" style="font-size:0.75em;">${aiEscapeHtml(p.backend)}</div></td>
+                                <td class="text-secondary">${aiEscapeHtml(p.host)}</td>
+                                <td>${p.modelCount}</td>
+                                <td>${p.running.length
+                                    ? p.running.map(m => {
+                                        const mem: string[] = [];
+                                        if (m.vramBytes) mem.push(`${(m.vramBytes / 1e9).toFixed(1)}GB VRAM`);
+                                        if (m.sizeBytes) mem.push(`${(m.sizeBytes / 1e9).toFixed(1)}GB total`);
+                                        return `${aiEscapeHtml(m.name)}${mem.length ? ` <span class="text-secondary">(${mem.join(', ')})</span>` : ''}`;
+                                    }).join('<br>')
+                                    : '<span class="text-secondary">-</span>'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } catch (e: any) {
+            body.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+        } finally {
+            if (refreshBtn) refreshBtn.disabled = false;
+        }
+    };
+    setTimeout(() => {
+        document.getElementById('opencodeStatusRefreshBtn')?.addEventListener('click', load);
+        load();
+    }, MODAL_DOM_DELAY);
+}
+
 // ---- RDP: Local + Remote는 사이드바 목록에서 공통 로직(Open Modal/New Window/Share/Delete)을 공유한다 ----
 const MODAL_DOM_DELAY = 100;
 
@@ -285,9 +409,12 @@ function postFrameVisible(f: HTMLIFrameElement | null | undefined, visible: bool
 
 function rdpRemoteWebRootUrl(input: string): string {
     const u = new URL(input);
-    const marker = "/proj/Home/Home.html";
-    const homeIdx = u.pathname.indexOf(marker);
-    const basePath = homeIdx >= 0 ? u.pathname.substring(0, homeIdx) : u.pathname;
+    // Home.html뿐 아니라 Control.html 등 "/proj/<프로젝트>/<파일>.html" 형태로 끝나는 진입점 URL이면
+    // 모두 그 앞부분을 서버 base URL로 인식한다(과거엔 Home.html 마커만 인식해, Control.html 주소를
+    // 그대로 넣으면 basePath가 pathname 전체가 되어 RemoteDesktop.html 등의 경로가 그 뒤에 그대로
+    // 이어붙는 잘못된 URL이 만들어졌다).
+    const m = u.pathname.match(/^(.*)\/proj\/[^\/]+\/[^\/]+\.html$/);
+    const basePath = m ? m[1] : u.pathname;
     return (u.origin + (basePath || "/")).replace(/\/+$/, '') + '/';
 }
 
@@ -385,14 +512,22 @@ interface SessionItemSpec {
     onDelete: () => void;
     popup: { url: () => string; title: string; winName: string };
 }
+// 항목 노드는 만들어진 뒤에도 재사용되므로(renderSessionSidebar의 재조정), 리스너가 생성 시점의 spec을
+// 클로저로 붙잡으면 데이터가 굳어버린다(예: 브라우저 세션의 url이 바뀌어도 Share Link는 옛 url을 낸다).
+// 그래서 최신 spec을 노드에 얹어두고(_spec) 리스너는 항상 그걸 통해 디스패치한다.
+interface SessionItemEl extends HTMLDivElement { _spec: SessionItemSpec; _left?: string; _body?: string; }
+
+// leftHtml/bodyHtml은 갱신 대상이지만 드롭다운은 유지해야 한다(열려 있는 메뉴가 닫히고 Dropdown 인스턴스가
+// 새로 생기는 것을 막는다). 그래서 둘을 display:contents 래퍼로 감싸 갱신 슬롯을 만든다.
+// display:contents라 래퍼 자신은 레이아웃에 관여하지 않아 기존 flex 배치가 그대로 유지된다.
 function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
-    const item = document.createElement('div');
+    const item = document.createElement('div') as SessionItemEl;
     item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
         + (spec.isActive ? ' ' + spec.activeClass : '');
     item.dataset[spec.dataAttr.name] = spec.dataAttr.value;
     item.innerHTML = `
-        ${spec.leftHtml}
-        ${spec.bodyHtml}
+        <span class="sess-left" style="display:contents;">${spec.leftHtml}</span>
+        <span class="sess-body" style="display:contents;">${spec.bodyHtml}</span>
         <div class="dropdown" style="flex-shrink:0;">
             <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-three-dots-vertical"></i>
@@ -405,18 +540,43 @@ function createSessionItem(spec: SessionItemSpec): HTMLDivElement {
             </ul>
         </div>
     `;
+    item._spec = spec;
+    item._left = spec.leftHtml;
+    item._body = spec.bodyHtml;
     item.addEventListener('click', (e: Event) => {
         if ((e.target as HTMLElement).closest('.dropdown')) return;
-        spec.onClick();
+        item._spec.onClick();
     });
     const dropEl = item.querySelector('.dropdown')!;
     new (window as any).bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]')!, { popperConfig: { strategy: 'fixed' } });
-    item.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', spec.onShare);
-    wirePopupActions(item, spec.popup.url, spec.popup.title, spec.popup.winName);
-    item.querySelector<HTMLElement>(`[data-act="${spec.deleteAct}"]`)!.addEventListener('click', spec.onDelete);
-    item.addEventListener('mouseenter', () => { if (!spec.isActive) item.classList.add('bg-body-secondary'); });
-    item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+    item.querySelector<HTMLElement>('[data-act="link"]')!.addEventListener('click', () => item._spec.onShare());
+    wirePopupActions(item, () => item._spec.popup.url(), spec.popup.title, spec.popup.winName);
+    item.querySelector<HTMLElement>(`[data-act="${spec.deleteAct}"]`)!.addEventListener('click', () => item._spec.onDelete());
     return item;
+}
+
+// 이미 있는 노드를 같은 키의 새 spec으로 맞춘다. 실제로 바뀐 슬롯만 건드리므로 클릭·드롭다운·스크롤이
+// 유지된다. deleteAct/deleteLabel/popup의 title·winName은 키에 종속(=불변)이라 갱신 대상이 아니다.
+function updateSessionItem(el: HTMLDivElement, spec: SessionItemSpec) {
+    const item = el as SessionItemEl;
+    item._spec = spec;
+    if (item._left !== spec.leftHtml) {
+        item._left = spec.leftHtml;
+        item.querySelector<HTMLElement>('.sess-left')!.innerHTML = spec.leftHtml;
+    }
+    if (item._body !== spec.bodyHtml) {
+        item._body = spec.bodyHtml;
+        item.querySelector<HTMLElement>('.sess-body')!.innerHTML = spec.bodyHtml;
+    }
+    item.classList.toggle(spec.activeClass, spec.isActive);
+}
+
+// 노드를 버릴 때 Bootstrap Dropdown 인스턴스를 반드시 정리한다. dispose를 빼먹으면 popper 인스턴스와
+// 전역 리스너가 항목 수만큼 계속 쌓인다.
+function destroySessionItem(el: HTMLElement) {
+    const toggle = el.querySelector('[data-bs-toggle="dropdown"]');
+    if (toggle) (window as any).bootstrap.Dropdown.getInstance(toggle)?.dispose();
+    el.remove();
 }
 
 // ---- RDP 프레임 풀(Local + Remote 공용). 탭을 늘리는 대신 하나의 패널 안에서 iframe을 전환한다. ----
@@ -496,6 +656,9 @@ let rdpRemotes: IRdpRemote[] = [];
 let selectedRdpKey = 'rdp:local';
 
 function rdpRenderList() {
+    // RDP 목록은 이벤트가 있을 때만 다시 그리므로 통째로 만들어도 무방하지만, 버리는 항목의
+    // Bootstrap Dropdown은 반드시 정리해야 한다(innerHTML로 지우면 popper 인스턴스가 남는다).
+    for (const el of Array.from(rdpSidebarList.children)) destroySessionItem(el as HTMLElement);
     rdpSidebarList.innerHTML = '';
 
     const localItem = document.createElement('div');
@@ -591,6 +754,7 @@ async function ctrlRefreshRootSelect() {
         const data = await CFecth.Exe((baseUrl || CPath.WebRootUrl()) + "File/Root", token ? { token } : {}, "json") as { RootPath: string, RootUrl: string, roots: ICtrlRootOpt[] };
         if (seq !== ctrlRootReqSeq) return;
         ctrlRenderRootOpts(data.roots ?? []);
+        ctrlSideFileGoTo('/');
     } catch (e) {
         if (seq !== ctrlRootReqSeq) return;
         ctrlRootSel.innerHTML = '<option>Failed to load</option>';
@@ -602,6 +766,7 @@ ctrlRootSel.addEventListener('change', () => {
     const r = ctrlRootOpts[idx];
     if (!r) return;
     ctrlSelectedRootPath = r.path;
+    ctrlSideFileGoTo('/');
     if (!fileIframe?.contentWindow) return;
     const selKey = idx === ctrlRootOpts.length - 1 ? 'workingpath' : r.path;
     CIframeMsg.Send(fileIframe.contentWindow, 'set-file-root', { path: r.path, url: r.url ?? '', selKey });
@@ -940,9 +1105,94 @@ async function ctrlFileSearch() {
     input.focus();
 }
 
+// ---- 우측 사이드바: 빠른 파일 열람(목록만) ----
+// File 탭(File.html 전체 매니저)과 별개로, 폴더 이동 + 파일 열기(Editor 탭)만 지원하는 가벼운 목록.
+// apiBase/RootPath는 File 탭과 동일한 단일 출처(currentRemoteBaseUrl/ctrlSelectedRootPath)를 쓰므로,
+// 왼쪽 상단 루트 선택이나 RDP Local/Remote 전환 시 그 값들을 바꾸는 지점(ctrlRootSel change, ctrlRefreshRootSelect)에서
+// ctrlSideFileGoTo('/')를 같이 호출해 목록을 새로고침한다.
+interface CtrlSideFileEntry { file: boolean; hidden: boolean; name: string; ext: string }
+const ctrlSideFilePathEl = CDOM.ID('ctrlSideFilePath') as HTMLElement;
+const ctrlSideFileListEl = CDOM.ID('ctrlSideFileList') as HTMLDivElement;
+let ctrlSideFilePath = '/';
+let ctrlSideFileRoot = '';
+let ctrlSideFileDown = '';
+let ctrlSideFileReqSeq = 0;
+
+function ctrlSideFileRenderEmpty(msg: string) {
+    ctrlSideFileListEl.innerHTML = `<div class="text-secondary small px-1">${aiEscapeHtml(msg)}</div>`;
+}
+
+function ctrlSideFileRenderList(list: CtrlSideFileEntry[]) {
+    const visible = list
+        .filter(fl => !fl.hidden)
+        .sort((a, b) => (a.file === b.file) ? a.name.localeCompare(b.name) : (a.file ? 1 : -1));
+    if (!visible.length) { ctrlSideFileRenderEmpty('Empty'); return; }
+    ctrlSideFileListEl.innerHTML = '';
+    for (const fl of visible) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action py-1 px-2 d-flex align-items-center gap-1';
+        const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+        item.innerHTML = `<i class="bi ${icon}"></i><span class="text-truncate">${aiEscapeHtml(fl.name)}</span>`;
+        // 터미널 탭(iframe)에 드롭하면 그 안의 Terminal.html이 text/plain을 읽어 입력창에 경로를 삽입한다.
+        item.draggable = true;
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer?.setData('text/plain', ctrlSideFileRoot + ctrlSideFilePath + fl.name);
+            if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+        });
+        item.addEventListener('click', () => {
+            if (fl.file) {
+                editorOpenFile(
+                    ctrlSideFileRoot + ctrlSideFilePath + fl.name,
+                    currentRemoteBaseUrl,
+                    ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name),
+                );
+            } else {
+                ctrlSideFileGoTo(ctrlSideFilePath + fl.name + '/');
+            }
+        });
+        ctrlSideFileListEl.appendChild(item);
+    }
+}
+
+async function ctrlSideFileGoTo(pathVal: string) {
+    ctrlSideFilePath = pathVal;
+    ctrlSideFilePathEl.textContent = pathVal;
+    const seq = ++ctrlSideFileReqSeq;
+    ctrlSideFileRenderEmpty('Loading...');
+    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
+    const rootPathParam = ctrlSelectedRootPath || undefined;
+    try {
+        const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+        const p: any = { path: pathVal };
+        if (rootPathParam) p.RootPath = rootPathParam;
+        if (token) p.token = token;
+        const data = await CFecth.Exe(apiBase + "File/List", p, "json") as { list: CtrlSideFileEntry[]; RootPath?: string; RootUrl?: string; path?: string };
+        if (seq !== ctrlSideFileReqSeq) return;
+        if (data.RootPath != null) ctrlSideFileRoot = data.RootPath.replace(/\/+$/, '');
+        if (data.RootUrl != null) ctrlSideFileDown = new URL(data.RootUrl, apiBase).href.replace(/\/+$/, '');
+        if (data.path != null) { ctrlSideFilePath = data.path; ctrlSideFilePathEl.textContent = data.path; }
+        ctrlSideFileRenderList(data.list ?? []);
+    } catch (e) {
+        if (seq !== ctrlSideFileReqSeq) return;
+        ctrlSideFileRenderEmpty('Failed to load');
+    }
+}
+
+CDOM.ID('ctrlSideFileUpBtn').addEventListener('click', () => {
+    if (ctrlSideFilePath === '/' || ctrlSideFilePath === '') return;
+    const trimmed = ctrlSideFilePath.replace(/\/+$/, '');
+    const parent = trimmed.substring(0, trimmed.lastIndexOf('/') + 1) || '/';
+    ctrlSideFileGoTo(parent);
+});
+CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGoTo(ctrlSideFilePath));
+
+ctrlSideFileGoTo('/');
+
 // ---- 전역 단축키 ----
 // F1(파일 매니저, File 탭으로 전환 + 파일 탭 iframe에 트리거 메시지 전달)은 화면 크기와 무관하게 항상 동작.
 // F2(서치)는 File 탭과 무관하게 Control 페이지 자체에서 검색 모달만 띄운다(탭 전환/iframe 메시지 없음).
+// F3는 Terminal 탭 버튼 클릭과 동일하게 New Terminal 모달만 띄운다(탭 전환은 termStartNew 이후 Open을 눌러야 일어남).
 function runControlHotkey(key: string): boolean {
     switch (key) {
         case 'F1':
@@ -951,6 +1201,10 @@ function runControlHotkey(key: string): boolean {
             return true;
         case 'F2':
             ctrlFileSearch();
+            return true;
+        case 'F3':
+            if (!ctrlRequireAuthed()) return true;
+            termStartNew('cmd', ctrlSelectedRootPath || undefined);
             return true;
     }
     return false;
@@ -984,15 +1238,15 @@ function focusActiveControlFrame() {
     } catch (_) {}
     f.focus();
 }
-// F3 키: 한 번 누르면 좌측 메뉴 사이드바로 포커스(오버레이 모드면 먼저 연다), 이미 사이드바에 포커스가
+// F4 키: 한 번 누르면 좌측 메뉴 사이드바로 포커스(오버레이 모드면 먼저 연다), 이미 사이드바에 포커스가
 // 가 있는 상태에서 한 번 더 누르면 지금 보고 있는 액티브 iframe으로 포커스를 돌려준다(Home.ts의
 // Tab 키=toggleSidebar()+focusActiveFrame() 조합과 동일한 패턴).
-// - 오버레이 모드(작은 화면): data-bs-backdrop="false"라 바깥 클릭으로 안 닫히므로, F3 자체가 열고/닫는
+// - 오버레이 모드(작은 화면): data-bs-backdrop="false"라 바깥 클릭으로 안 닫히므로, F4 자체가 열고/닫는
 //   유일한 수단이다. "포커스 위치"로 판단하면 한번 열린 뒤 닫을 방법이 없어져 꼬이므로, 예전처럼 매번
 //   순수 토글(열림<->닫힘)로 처리하고 여는 순간만 사이드바로, 닫는 순간엔 액티브 iframe으로 포커스를 보낸다.
 // - 도킹 모드(큰 화면): 사이드바가 항상 보이므로 open/close 대신 "포커스가 지금 사이드바 안에 있는가"로
 //   1차/2차 누름을 구분한다.
-function runControlF3Key() {
+function runControlF4Key() {
     if (!appSidebar) return;
     if (!appSidebar.classList.contains('sidebar-docked')) {
         const wasShown = appSidebar.classList.contains('show');
@@ -1046,14 +1300,14 @@ function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
     f.addEventListener('load', () => {
         try {
             f.contentWindow?.addEventListener('keydown', (e: KeyboardEvent) => {
-                if (e.key === 'F1' || e.key === 'F2') {
+                if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
                     e.preventDefault();
                     runControlHotkey(e.key);
                     return;
                 }
-                if (e.key === 'F3') {
+                if (e.key === 'F4') {
                     e.preventDefault();
-                    runControlF3Key();
+                    runControlF4Key();
                     return;
                 }
                 // 터미널은 위/아래 화살표가 명령어 히스토리 탐색 용도이므로 제외(Home.ts와 동일 예외).
@@ -1065,14 +1319,17 @@ function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
     });
 }
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1' || e.key === 'F2') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
         e.preventDefault();
         runControlHotkey(e.key);
         return;
     }
-    if (e.key === 'F3') {
+    if (e.key === 'F4' || e.key === 'F6') {
+        // F6은 Chat/Terminal iframe 안에서는 Terminal.html이 자체 keydown으로 잡아 SUPER 토글로 쓴다.
+        // 여기(document 레벨)는 포커스가 iframe 밖 Control 페이지 자체에 있을 때만 걸리므로,
+        // 그 경우엔 F4와 동일하게 사이드바 포커스 토글로 처리한다.
         e.preventDefault();
-        runControlF3Key();
+        runControlF4Key();
         return;
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -1080,11 +1337,11 @@ document.addEventListener('keydown', (e) => {
     }
 });
 // File.ts/Memo.ts는 자체 keydown에서 F1/F2/F3/F4/F7을 잡아 'home-hotkey'로 부모에 위임한다(Home.ts와 동일 패턴).
-// Control.ts는 F1/F2/F3만 지원하므로 나머지 키는 무시한다.
+// Control.ts는 F1/F2/F3/F4만 지원하므로(F7은 무시) runControlHotkey가 알 수 없는 키는 그냥 무시된다.
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
         const key = String(data.key ?? '');
-        if (key === 'F3') runControlF3Key();
+        if (key === 'F4') runControlF4Key();
         else runControlHotkey(key);
     },
 });
@@ -1100,7 +1357,7 @@ CIframeMsg.Recv({
         memoSendRemoteInfo();
     },
     'file-opened': (data) => {
-        editorOpenFile(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
+        promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
     },
     // Chat/Terminal은 새 세션 옵션 모달만 띄우고, 현재 보고 있는 탭(File 등)은 그대로 유지한다.
     'open-chat': (data) => chatStartNew(data.cwd || undefined),
@@ -1112,6 +1369,19 @@ CIframeMsg.Recv({
         setTimeout(() => { if (memoIframe?.contentWindow) CIframeMsg.Send(memoIframe.contentWindow, 'set-folder', { folder: data.folder ?? '' }); }, 200);
     },
     'terminal-path-tapped': (data) => termOpenTappedPath(String(data.path ?? ''), String(data.token ?? '')),
+    // 핸드오프 완료: 요약을 넘겨받은 새 프로바이더 세션으로 화면을 전환한다(기존 세션은 서버가 이미 종료함).
+    // 새 세션은 아직 pending(웹소켓이 붙어야 스폰)이라 /cmd/sessions 목록에 없으므로, termConnectSession의
+    // 'term:<token>' 키를 쓰면 곧 실행되는 termRenderList 정리 로직이 목록에 없는 그 프레임을 지워버린다.
+    // termStartNew와 동일하게 'term-new:' 접두어 키로 열어(정리 대상 제외) 스폰 후 실제 토큰으로 승격되게 한다.
+    'terminal-handoff': (data) => {
+        const newToken = String(data.newToken ?? '');
+        if (!newToken) return;
+        termActivatePane();
+        showTermFrame(`term-new:${newToken}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${newToken}`);
+        termRenderList();
+        setTimeout(termRenderList, 1500);
+        setTimeout(termRenderList, 4000);
+    },
 });
 
 // ---- 다운로드 탭 (MountDownloadTab) ----
@@ -1125,6 +1395,117 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
     dlInited = true;
     MountDownloadTab("download-root");
 }
+
+// ---- 로그 탭: provider(CLI)별 대화 로그를 세션 아코디언으로 보여준다 (CProviderLog/cmd/log-* 기반) ----
+interface LogSessionEntry { name: string; offset: number; model: string; firstText: string; cwd: string; time: number; }
+interface LogRecord { id: number; key: string; provider: string; sessionId: string; cwd: string; model: string; role: string; text: string; createdAt: number; }
+
+const logAccordionList = CDOM.ID('logAccordionList') as HTMLDivElement;
+const logLoadMoreBtn = CDOM.ID('logLoadMoreBtn') as HTMLButtonElement;
+let logNextBefore: number | null = null;
+
+// createdAt은 CProviderLog.Stamp()가 만든 YYYYMMDDHHmmss 정수 — 화면 표시용으로만 문자열 분해.
+function logFormatTime(stamp: number): string {
+    const s = String(stamp);
+    if (s.length < 14) return s;
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
+}
+
+async function logLoadSessionBody(sessionId: string, bodyEl: HTMLElement) {
+    try {
+        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/log-session?sessionId=${encodeURIComponent(sessionId)}`);
+        const j = await r.json();
+        if (!j.ok) { bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(j.msg ?? 'failed')}</span>`; return; }
+        const records: LogRecord[] = j.records ?? [];
+        if (!records.length) { bodyEl.innerHTML = '<span class="text-secondary small">No messages.</span>'; return; }
+        bodyEl.innerHTML = records.map(rec => {
+            const isUser = rec.role === 'user';
+            return `<div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">` +
+                `<div class="p-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-secondary-subtle'}" style="max-width:85%;">` +
+                `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
+                `<div style="white-space:pre-wrap;word-break:break-word;">${aiEscapeHtml(rec.text.trim())}</div>` +
+                `</div></div>`;
+        }).join('');
+    } catch (e: any) {
+        bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+    }
+}
+
+// 세션 하나 = 아코디언 항목 하나. 클릭 시 최초 1회만 대화 전체를 지연 로드한다.
+function logCreateAccordionItem(entry: LogSessionEntry): HTMLDivElement {
+    const item = document.createElement('div');
+    item.className = 'border rounded';
+    item.dataset.sessionId = entry.name;
+    const bodyId = `logBody_${entry.offset}`;
+    const preview = entry.firstText.replace(/\s+/g, ' ').trim();
+    item.innerHTML = `
+        <div class="d-flex align-items-center gap-2 p-2 bg-body-tertiary rounded" style="cursor:pointer;" data-act="toggle">
+            <i class="bi bi-chevron-right log-chevron flex-shrink-0"></i>
+            <div class="flex-grow-1 overflow-hidden">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge text-bg-secondary flex-shrink-0">${aiEscapeHtml(entry.model || '?')}</span>
+                    <span class="text-truncate small">${aiEscapeHtml(preview)}</span>
+                </div>
+                <div class="text-truncate text-secondary" style="font-size:0.72em;">
+                    <i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)}
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0" data-act="del" title="Delete"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="collapse" id="${bodyId}">
+            <div class="p-2 border-top d-flex flex-column gap-2" style="max-height:400px;overflow-y:auto;" data-role="body">
+                <div class="text-secondary small"><i class="bi bi-hourglass-split"></i> Loading...</div>
+            </div>
+        </div>
+    `;
+    let loaded = false;
+    const toggleHeader = item.querySelector<HTMLElement>('[data-act="toggle"]')!;
+    const collapseEl = item.querySelector<HTMLElement>(`#${bodyId}`)!;
+    const chevron = item.querySelector<HTMLElement>('.log-chevron')!;
+    const bsCollapse = new (window as any).bootstrap.Collapse(collapseEl, { toggle: false });
+    collapseEl.addEventListener('show.bs.collapse', () => { chevron.className = 'bi bi-chevron-down log-chevron'; });
+    collapseEl.addEventListener('hide.bs.collapse', () => { chevron.className = 'bi bi-chevron-right log-chevron'; });
+    toggleHeader.addEventListener('click', () => {
+        bsCollapse.toggle();
+        if (loaded) return;
+        loaded = true;
+        logLoadSessionBody(entry.name, item.querySelector<HTMLElement>('[data-role="body"]')!);
+    });
+    item.querySelector<HTMLElement>('[data-act="del"]')!.addEventListener('click', (e: Event) => {
+        e.stopPropagation();
+        const dlg = new CConfirm();
+        dlg.SetBody(`세션 "${aiEscapeHtml(entry.name)}"의 로그를 전부 삭제할까요?`);
+        dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+            async () => {
+                await authedFetch(`${CPath.WebRootUrl()}cmd/log-session-del?sessionId=${encodeURIComponent(entry.name)}`);
+                bsCollapse.dispose();
+                item.remove();
+            },
+            () => {},
+        ], ["Delete", "Cancel"]);
+        dlg.Open();
+    });
+    return item;
+}
+
+async function logLoadSessions(reset: boolean) {
+    if (reset) { logAccordionList.innerHTML = ''; logNextBefore = null; }
+    try {
+        const url = `${CPath.WebRootUrl()}cmd/log-sessions` + (logNextBefore ? `?before=${logNextBefore}` : '');
+        const r = await authedFetch(url);
+        const j = await r.json();
+        if (!j.ok) return;
+        const sessions: LogSessionEntry[] = j.sessions ?? [];
+        for (const s of sessions) logAccordionList.appendChild(logCreateAccordionItem(s));
+        logNextBefore = sessions.length ? sessions[sessions.length - 1].offset : logNextBefore;
+        logLoadMoreBtn.style.display = sessions.length >= 30 ? '' : 'none';
+    } catch (e) { console.error('logLoadSessions error:', e); }
+}
+
+CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => logLoadSessions(true));
+if (CDOM.ID('log-panel').classList.contains('active')) { logLoadSessions(true); }
+CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
+logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 
 // ---- 메모 탭 (Home.html과 동일하게 artgine/server/html/Memo.html을 iframe으로 임베드) ----
 const memoTab = CDOM.ID("memo-tab") as HTMLButtonElement;
@@ -1180,6 +1561,9 @@ function rdpPromptRemoteAuth(webRootUrl: string, onSuccess?: () => void) {
             if (j.ok) {
                 setAuthToken(webRootUrl, j.token!);
                 CAlert.Info("Permission granted");
+                if (pw === "artgine") {
+                    CAlert.Warning("You are using the default password. Please change it for security.");
+                }
                 onSuccess?.();
             } else {
                 CAlert.E("Wrong password: " + (j.msg ?? ""));
@@ -1202,6 +1586,21 @@ function rdpPromptRemoteAuth(webRootUrl: string, onSuccess?: () => void) {
         });
     }, MODAL_DOM_DELAY);
 }
+
+// 로컬 서버 인증 여부를 확인하고, 인증 안 됐으면 경고 메시지를 띄운다(File 탭 제외 다른 탭 전환 가드용).
+function ctrlRequireAuthed(): boolean {
+    if (getAuthToken(CPath.WebRootUrl())) return true;
+    CAlert.Warning("Authentication required. Please sign in first.");
+    return false;
+}
+// File 탭을 제외한 나머지 탭은 인증 전에는 전환되지 않도록 막는다. 트리거 방식(직접 클릭/사이드바
+// 클릭으로 인한 프로그램적 Tab.show() 호출)에 상관없이 'show.bs.tab'은 실제 전환 직전에 공통으로
+// 발생하므로 여기서 preventDefault()하면 그 뒤의 shown.bs.tab 기반 초기화(패널 로드 등)도 함께 막힌다.
+['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'memo-tab', 'download-tab', 'log-tab'].forEach((tabId) => {
+    CDOM.ID(tabId).addEventListener('show.bs.tab', (e: Event) => {
+        if (!ctrlRequireAuthed()) e.preventDefault();
+    });
+});
 
 // Chat/Terminal/Browser 사이드바 목록이 인증 안 됨(토큰 없음/만료)으로 못 받아올 때 공용으로 쓰는
 // "로그인 필요" 안내 + Sign In 버튼. 클릭하면 로컬 서버(CPath.WebRootUrl())에 대해 rdpPromptRemoteAuth로
@@ -1256,18 +1655,37 @@ if (memoTab.classList.contains("active")) memoTryInit();
 // 실제 DOM 렌더링은 이 공용 renderSessionSidebar()가 세 캐시를 합쳐서 한 번에 그린다.
 const sessionSidebarList = CDOM.ID("session-sidebar-list") as HTMLDivElement;
 
+// 재정렬만 얼린다. 예전에는 "호버 중에는 렌더 자체를 통째로 스킵"했는데, 그러면 마우스를 올려둔 동안
+// 점 색/시간/active까지 전부 멈추고(터치는 mouseleave가 안 와서 영구 정지) 그걸 메우려고 예외 패치를
+// 또 만들어야 했다. 클릭이 깨지는 원인은 "갱신"이 아니라 "누르는 순간 항목이 움직이는 것"뿐이므로,
+// 포인터가 목록 위에 있거나 드롭다운이 열려 있는 동안에는 순서만 고정하고 내용 갱신은 계속한다.
+let sessionOrderFrozen = false;
+let frozenSessionOrder: string[] = [];
+function freezeSessionOrder(on: boolean) {
+    if (sessionOrderFrozen === on) return;
+    sessionOrderFrozen = on;
+    if (!on) renderSessionSidebar(); // 풀리는 즉시 밀린 정렬을 반영한다.
+}
+// pointerenter/leave는 마우스·터치·펜을 모두 커버한다(mouseenter와 달리 터치에서 한쪽만 오지 않는다).
+sessionSidebarList.addEventListener('pointerenter', () => freezeSessionOrder(true));
+sessionSidebarList.addEventListener('pointerleave', () => freezeSessionOrder(false));
+// enter는 "경계를 넘을 때"만 오므로, 페이지 로드 시점부터 커서가 이미 목록 위에 있으면 발화하지 않는다.
+// 그 상태로 누르면 여전히 mousedown~mouseup 사이에 재정렬이 끼어들 수 있어, 누르는 순간에도 잠근다.
+sessionSidebarList.addEventListener('pointerdown', () => freezeSessionOrder(true));
+
 // ---- 완료 알림(Home.html과 동일): 포커스 여부에 따라 브라우저 알림 또는 우측 상단 토스트로 표시 ----
 let _activeNotifCallback: (() => void) | null = null;
 
 function _showModalStackMsg(label: string, content?: string, onClick?: () => void) {
     const m = new CModalStackMsg(CModal.ePos.TopRight);
     m.SetBG(Bootstrap.eColor.warning);
-    m.SetSize(260, content ? 69 : 49);
+    m.SetSize(40, 40);
     const nid = `notif_${Date.now()}`;
     const cursor = onClick ? 'cursor:pointer;' : '';
-    m.SetBody(`<div id="${nid}" class="px-3 py-2" style="width:260px;overflow:hidden;${cursor}">
-        <div class="small fw-semibold text-truncate">${label}</div>
-        ${content ? `<div class="small text-secondary text-truncate mt-1">${content}</div>` : ''}
+    const icon = label.startsWith('⚠️') ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill';
+    const title = [label, content].filter(Boolean).join(' - ').replace(/"/g, '&quot;');
+    m.SetBody(`<div id="${nid}" class="d-flex align-items-center justify-content-center" title="${title}" style="width:40px;height:40px;font-size:1.2rem;${cursor}">
+        <i class="bi ${icon}"></i>
     </div>`);
     m.Open();
     if (onClick) {
@@ -1278,8 +1696,8 @@ function _showModalStackMsg(label: string, content?: string, onClick?: () => voi
             });
         }, 0);
     }
-    m.Close(8);
-    setTimeout(() => { if (_activeNotifCallback === onClick) _activeNotifCallback = null; }, 8000);
+    m.Close(2);
+    setTimeout(() => { if (_activeNotifCallback === onClick) _activeNotifCallback = null; }, 2000);
 }
 
 // 완료 알림 로그: 우측 사이드바에 최신순으로 쌓고, 7개를 넘으면 가장 오래된 것부터 제거한다.
@@ -1331,24 +1749,84 @@ let browserAuthState: ISessionAuthState = 'unknown';
 let lastChatSessions: { sessionId: string; title: string; updatedAt?: number; busy?: boolean; lastMsg?: string; workingDir?: string }[] | null = null;
 let lastTermSessions: { token: string; mode: string; key?: string; lastMsg: string; updatedAt: number; createdAt: number; alive: boolean; busy: boolean; permPending?: boolean; workingDir?: string }[] | null = null;
 
-function renderSessionSidebar() {
-    if (sessionSidebarList.querySelector('.dropdown-menu.show')) return;
+// 통합 목록의 강조는 "지금 센터에 보이는 탭"의 활성 프레임 하나만 켜야 한다(네 유형이 같은 목록을
+// 공유하므로 각자 켜면 네 개가 동시에 파래진다). 판정을 여기 한 곳에만 두고 각 항목 spec은 이걸 쓴다.
+function activeSessionKey(): string | null {
+    if (isPanelShown('chat-panel')) return activeChatFrameKey;
+    if (isPanelShown('term-panel')) return activeTermFrameKey;
+    if (isPanelShown('browser-panel')) return activeBrowserFrameKey;
+    if (isPanelShown('editor-panel')) return activeEditorFrameKey;
+    return null;
+}
 
-    // 셋 다 같은 로컬 서버 인증을 공유하므로, 하나라도 로그인이 필요하면 프롬프트 하나만 띄운다.
+// 렌더는 여러 로더가 각자 끝날 때마다 부르므로(한 주기에 3~4번) rAF로 합류시켜 실제 DOM 작업은 1번만 한다.
+let sessionRenderQueued = false;
+function renderSessionSidebar() {
+    if (sessionRenderQueued) return;
+    sessionRenderQueued = true;
+    requestAnimationFrame(() => { sessionRenderQueued = false; flushSessionSidebar(); });
+}
+
+// 렌더된 항목 노드를 키로 들고 있다가 재사용한다. 지우고 다시 만들지 않는 것이 이 목록의 핵심이다.
+const sessionItemEls = new Map<string, HTMLDivElement>();
+let sessionSidebarSignedOut = false;
+
+function clearSessionItems() {
+    for (const el of sessionItemEls.values()) destroySessionItem(el);
+    sessionItemEls.clear();
+}
+
+function flushSessionSidebar() {
+    // 탭이 숨겨져 있으면 DOM만 건너뛴다. 폴링 자체는 계속 돌아야 한다 —— 완료 알림이 폴링 결과로
+    // 발화하고, 하필 탭이 백그라운드일 때가 알림이 가장 필요한 때다.
+    if (document.hidden) return;
+
+    // 넷 다 같은 로컬 서버 인증을 공유하므로, 하나라도 로그인이 필요하면 프롬프트 하나만 띄운다.
     if (chatAuthState === 'signin' || termAuthState === 'signin' || browserAuthState === 'signin') {
-        renderSignInPrompt(sessionSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
+        if (!sessionSidebarSignedOut) {
+            sessionSidebarSignedOut = true;
+            clearSessionItems();
+            renderSignInPrompt(sessionSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
+        }
         return;
     }
+    if (sessionSidebarSignedOut) { sessionSidebarSignedOut = false; sessionSidebarList.innerHTML = ''; }
 
-    const entries: { sortKey: number; el: HTMLDivElement }[] = [];
-    if (lastChatSessions) for (const s of lastChatSessions) entries.push({ sortKey: s.updatedAt ?? 0, el: buildChatItem(s) });
-    if (lastTermSessions) for (const s of lastTermSessions) entries.push({ sortKey: s.updatedAt ?? 0, el: buildTermItem(s) });
-    for (const s of browserSessions.values()) entries.push({ sortKey: s.updatedAt ?? s.createdAt ?? 0, el: buildBrowserItem(s) });
-    for (const s of editorSessions.values()) entries.push({ sortKey: s.openedAt, el: buildEditorItem(s) });
+    const activeKey = activeSessionKey();
+    const entries: { key: string; sortKey: number; spec: SessionItemSpec }[] = [];
+    if (lastChatSessions) for (const s of lastChatSessions) entries.push({ key: `chat:${s.sessionId}`, sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
+    if (lastTermSessions) for (const s of lastTermSessions) entries.push({ key: `term:${s.token}`, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
+    for (const s of browserSessions.values()) entries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
+    for (const s of editorSessions.values()) entries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
 
     entries.sort((a, b) => b.sortKey - a.sortKey);
-    sessionSidebarList.innerHTML = '';
-    for (const e of entries) sessionSidebarList.appendChild(e.el);
+
+    // 순서가 얼어 있으면 마지막으로 확정한 순서를 유지한다. 그때 없던 항목은 뒤에 붙여 새 세션이
+    // 아예 안 보이는 일은 없게 하고, 정확한 자리는 잠금이 풀릴 때 잡는다.
+    // 드롭다운이 열려 있는 동안에도 얼린다(메뉴가 항목을 따라 움직이면 엉뚱한 세션을 지우게 된다).
+    // 포인터는 popper가 body로 띄운 메뉴 위에 있어 목록 밖일 수 있으므로 DOM을 직접 확인한다.
+    const frozen = sessionOrderFrozen || !!sessionSidebarList.querySelector('.dropdown-menu.show');
+    if (frozen) {
+        const rank = new Map(frozenSessionOrder.map((k, i) => [k, i]));
+        entries.sort((a, b) => (rank.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.key) ?? Number.MAX_SAFE_INTEGER));
+    } else {
+        frozenSessionOrder = entries.map(e => e.key);
+    }
+
+    const live = new Set(entries.map(e => e.key));
+    for (const [key, el] of Array.from(sessionItemEls)) {
+        if (!live.has(key)) { destroySessionItem(el); sessionItemEls.delete(key); }
+    }
+
+    // 목표 순서대로 훑으면서, 그 자리에 없는 노드만 insertBefore로 옮긴다(실제로 움직인 항목만 건드린다).
+    let cursor: Element | null = sessionSidebarList.firstElementChild;
+    for (const e of entries) {
+        let el = sessionItemEls.get(e.key);
+        if (!el) { el = createSessionItem(e.spec); sessionItemEls.set(e.key, el); }
+        else updateSessionItem(el, e.spec);
+        if (el === cursor) cursor = cursor.nextElementSibling;
+        else sessionSidebarList.insertBefore(el, cursor);
+    }
 }
 
 // ---- Chat 탭 (Home.html의 AI Chat 세션 목록/프레임 풀 패턴을 재사용) ----
@@ -1484,45 +1962,50 @@ async function termOpenTappedPath(tappedPath: string, token: string) {
         const relPath = normFull.slice(termNormAbsPath(root.path).length);
         const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
         const url = downBase + relPath.split('/').map(encodeURIComponent).join('/');
-        termPromptOpenMode(fullPath, url);
+        promptSourceAction(fullPath, '', url);
     } catch (e) {
         console.error('termOpenTappedPath error:', e);
         CAlert.E('경로를 여는 중 오류가 발생했습니다.');
     }
 }
 
-// File.ts의 saveEditedFile과 동일한 멀티바이트 안전 base64 인코딩.
-const termTextToBase64 = (text: string) => btoa(unescape(encodeURIComponent(text)));
-
-// File.ts의 saveEditedFile과 동일하게 File/Upload로 저장한다. 다만 File.ts는 현재 탐색 중인
-// 폴더(gRoot+gPath)를 쓰지만, 여기는 탐색 상태가 없으므로 fullPath에서 폴더/파일명을 직접 뽑는다.
-function termSaveEditedFile(fullPath: string, base64: string) {
-    const idx = fullPath.lastIndexOf('/');
-    const folder = fullPath.slice(0, idx + 1);
-    const fileName = fullPath.slice(idx + 1);
-    CFecth.Exe(CPath.WebRootUrl() + "File/Upload", { path: folder, name: [fileName], data: [base64] })
-        .then(() => CAlert.Info('저장 완료'))
-        .catch((e: any) => CAlert.E('저장 실패: ' + e.message));
+function fileExtOf(path: string): string {
+    const m = /\.([a-zA-Z0-9]+)$/.exec(path);
+    return m ? m[1].toLowerCase() : '';
 }
 
-// Source(읽기전용 Monaco iframe, 기존 editorOpenFile) / Edit(수정 가능한 CFileViewer 모달, File.ts의
-// openCode와 동일한 방식) 중 어떻게 열지 선택하는 확인창.
-function termPromptOpenMode(fullPath: string, url: string) {
+// Execute는 html/md 파일에만 해당한다: html은 새 창에서 실제 렌더링, md는 마크다운 뷰어로 렌더링.
+function executeOpenedSource(fullPath: string, url: string) {
+    const ext = fileExtOf(fullPath);
+    if (ext === 'html' || ext === 'htm') { window.open(url, "_blank"); return; }
+    if (ext === 'md') { new CMDViewer(url); return; }
+}
+
+// File 탭(file-opened)과 Terminal 탭(terminal-path-tapped)이 공유하는 단일 진입점.
+// Edit: Editor.html(Monaco, 자체 저장 지원)로 열기 / Execute: html·md만 실제 실행 / Cancel: 무시.
+function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
+    const ext = fileExtOf(fullPath);
+    const canExecute = ext === 'html' || ext === 'htm' || ext === 'md';
+    const actions = [() => editorOpenFile(fullPath, baseUrl, url)];
+    const labels = ["Edit"];
+    if (canExecute) {
+        actions.push(() => executeOpenedSource(fullPath, url));
+        labels.push("Execute");
+    }
+    actions.push(() => {});
+    labels.push("Cancel");
+
     const confirm = new CConfirm();
     confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
-    confirm.SetConfirm(CConfirm.eConfirm.List, [
-        () => editorOpenFile(fullPath, '', url),
-        () => new CFileViewer([url], async (_filePath, bufStr) => termSaveEditedFile(fullPath, termTextToBase64(bufStr))).Open(),
-        () => {},
-    ], ["Source", "Edit", "Cancel"]);
+    confirm.SetConfirm(CConfirm.eConfirm.List, actions, labels);
     confirm.Open();
 }
 
-function buildEditorItem(s: IEditorSession): HTMLDivElement {
+function editorItemSpec(s: IEditorSession, activeKey: string | null): SessionItemSpec {
     const name = s.path.split('/').pop() || s.path;
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
-        isActive: activeEditorFrameKey === s.key && isPanelShown('editor-panel'),
+        isActive: activeKey === s.key,
         dataAttr: { name: 'key', value: s.key },
         leftHtml: `<i class="bi bi-file-earmark-code"></i>`,
         bodyHtml: `<span class="flex-grow-1 min-w-0 text-truncate small" title="${aiEscapeHtml(s.path)}">${aiEscapeHtml(name)}</span>`,
@@ -1542,7 +2025,7 @@ function buildEditorItem(s: IEditorSession): HTMLDivElement {
             renderSessionSidebar();
         },
         popup: { url: () => editorFrameSrc(s), title: name, winName: `editor_${s.key}` },
-    });
+    };
 }
 
 function genUuid(): string {
@@ -1622,7 +2105,7 @@ function chatShowShareLink(sid: string, title: string) {
     showShareLinkModal('Chat Share Link', `Anyone with this link can access the chat: <strong>${aiEscapeHtml(title)}</strong>`, shareUrl);
 }
 
-function buildChatItem(s: { sessionId: string; title: string; updatedAt?: number; busy?: boolean; workingDir?: string }): HTMLDivElement {
+function chatItemSpec(s: { sessionId: string; title: string; updatedAt?: number; busy?: boolean; workingDir?: string }, activeKey: string | null): SessionItemSpec {
     const key = `chat:${s.sessionId}`;
     const rel = chatFormatRelative(s.updatedAt);
     const isLoaded = chatIframePool.has(key);
@@ -1630,9 +2113,9 @@ function buildChatItem(s: { sessionId: string; title: string; updatedAt?: number
     const dot = st === 'off'  ? '<span class="text-danger small" title="미연결">●</span>'
               : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
               :                 '<span class="text-success small" title="대기 중">●</span>';
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
-        isActive: activeChatFrameKey === key && isPanelShown('chat-panel'),
+        isActive: activeKey === key,
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -1665,9 +2148,12 @@ function buildChatItem(s: { sessionId: string; title: string; updatedAt?: number
             delConfirm.Open();
         },
         popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
-    });
+    };
 }
 
+// 폴링 루프와 이벤트성 갱신(세션 생성 직후 등)이 겹칠 수 있다. 이미 같은 조회가 떠 있으면 건너뛴다
+// —— 어차피 떠 있는 쪽이 최신 결과를 가져오고, 겹쳐 두면 늦게 온 응답이 캐시를 되돌린다.
+let chatListInFlight = false;
 async function chatRenderList() {
     const token = getAuthToken(CPath.WebRootUrl());
     if (!token) {
@@ -1676,6 +2162,8 @@ async function chatRenderList() {
         renderSessionSidebar();
         return;
     }
+    if (chatListInFlight) return;
+    chatListInFlight = true;
     try {
         const r = await authedFetch(CPath.WebRootUrl() + 'AIChat/sessions?limit=30');
         if (r.status === 401) {
@@ -1700,6 +2188,7 @@ async function chatRenderList() {
         lastChatSessions = sessions;
         renderSessionSidebar();
     } catch (e) { console.error('Chat session list error:', e); }
+    finally { chatListInFlight = false; }
 }
 
 // Chat 목록은 RDP 목록과 함께 사이드바에 항상 표시된다(탭 전환과 무관).
@@ -1782,9 +2271,9 @@ function termShowShareLink(token: string) {
     );
 }
 
-function buildTermItem(s: { token: string; mode: string; key?: string; lastMsg: string; updatedAt: number; alive: boolean; busy: boolean; permPending?: boolean; workingDir?: string }): HTMLDivElement {
+function termItemSpec(s: { token: string; mode: string; key?: string; lastMsg: string; updatedAt: number; alive: boolean; busy: boolean; permPending?: boolean; workingDir?: string }, activeKey: string | null): SessionItemSpec {
     const key = `term:${s.token}`;
-    const isActive = activeTermFrameKey === key && isPanelShown('term-panel');
+    const isActive = activeKey === key;
     const isLoaded = termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     const preview = aiEscapeHtml(s.lastMsg || '(empty)');
@@ -1799,7 +2288,7 @@ function buildTermItem(s: { token: string; mode: string; key?: string; lastMsg: 
               : st === 'wait' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
               : st === 'busy' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
               :                 `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
         isActive,
         dataAttr: { name: 'key', value: key },
@@ -1821,9 +2310,10 @@ function buildTermItem(s: { token: string; mode: string; key?: string; lastMsg: 
         onShare: () => termShowShareLink(s.token),
         onDelete: () => termConfirmKillSession(s.token, s.key || s.mode || 'Terminal'),
         popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.token.slice(0, 8)}` },
-    });
+    };
 }
 
+let termListInFlight = false;
 async function termRenderList() {
     if (!getAuthToken(CPath.WebRootUrl())) {
         termAuthState = 'signin';
@@ -1831,6 +2321,8 @@ async function termRenderList() {
         renderSessionSidebar();
         return;
     }
+    if (termListInFlight) return;
+    termListInFlight = true;
     try {
         const r = await authedFetch(CPath.WebRootUrl() + 'cmd/sessions');
         if (r.status === 401) {
@@ -1852,19 +2344,19 @@ async function termRenderList() {
                 if (activeTermFrameKey === key) { activeTermFrameKey = null; updateTermFramePlaceholder(); }
             }
         }
-        // term-new: 임시 키로 열어둔 프레임을, 서버에 등록된 실제 토큰 키로 승격한다(가장 최근 생성된 세션에 매칭).
-        const termNewKeys = Array.from(termIframePool.keys()).filter(k => k.startsWith('term-new:'));
-        if (termNewKeys.length > 0) {
-            const newSessions = sessions.filter(s => !termIframePool.has(`term:${s.token}`));
-            if (newSessions.length > 0) {
-                const newest = newSessions.reduce((a, b) => (a.createdAt > b.createdAt ? a : b));
-                const key = `term:${newest.token}`;
-                const newKey = termNewKeys[0];
-                const f = termIframePool.get(newKey)!;
-                termIframePool.delete(newKey);
-                termIframePool.set(key, f);
-                if (activeTermFrameKey === newKey) activeTermFrameKey = key;
-            }
+        // term-new:<token>:<timestamp> 임시 키로 열어둔 프레임을, 서버에 등록된 실제 토큰 키로 승격한다.
+        // 키에 생성 시점에 이미 알고 있던 토큰을 심어두고 그 토큰이 실제로 나타났을 때만 정확히 매칭한다.
+        // ("가장 최근 세션"으로 추측 매칭하면, 그 사이 존재하던 미접속 세션 — 예: 아직 한 번도 열어보지
+        // 않은 서브 에이전트 세션 — 이 새로 만든 세션으로 오인되어 서로 다른 두 세션의 iframe이 뒤바뀐다.)
+        for (const newKey of Array.from(termIframePool.keys())) {
+            if (!newKey.startsWith('term-new:')) continue;
+            const token = newKey.slice('term-new:'.length, newKey.lastIndexOf(':'));
+            if (!serverTokens.has(token)) continue;
+            const key = `term:${token}`;
+            const f = termIframePool.get(newKey)!;
+            termIframePool.delete(newKey);
+            termIframePool.set(key, f);
+            if (activeTermFrameKey === newKey) activeTermFrameKey = key;
         }
         for (const s of sessions) {
             const key = `term:${s.token}`;
@@ -1887,21 +2379,22 @@ async function termRenderList() {
         lastTermSessions = sessions;
         renderSessionSidebar();
     } catch (e) { console.error('Terminal session list error:', e); }
+    finally { termListInFlight = false; }
 }
 
 // Terminal 탭 버튼: 클릭(사용자가 직접 누른 경우)하면 항상 New Terminal 모달을 띄운다.
 // 사이드바 항목 클릭으로 프로그램적으로 탭을 활성화하는 경우(termActivatePane)는 'click'이 아니라
 // bootstrap의 show()이므로 네이티브 click 이벤트가 발생하지 않아 여기서 다시 걸리지 않는다.
-function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'opencode' = 'cmd', initialWorkingDir?: string) {
+function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'opencode' | 'grok' = 'cmd', initialWorkingDir?: string) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">New Terminal</p>
         <div class="mb-3 d-flex gap-2 flex-wrap">
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="opencode">opencode</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="cmd">cmd</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="claude">claude</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="codex">codex</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="antigravity">agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="opencode">opencode</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="grok">grok</button>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Key</label>
@@ -1927,6 +2420,8 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
         </div>`;
 
     const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader('New Terminal');
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
@@ -1974,7 +2469,7 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
                 if (!j.ok) { CAlert.E(j.msg || 'Failed to start terminal'); return; }
                 modal.Close();
                 termActivatePane();
-                showTermFrame(`term-new:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
+                showTermFrame(`term-new:${j.token}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
                 termRenderList();
                 setTimeout(termRenderList, 1500);
                 setTimeout(termRenderList, 4000);
@@ -1996,7 +2491,10 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
 }
 
 const termTab = CDOM.ID('term-tab') as HTMLButtonElement;
-termTab.addEventListener('click', () => termStartNew('cmd', ctrlSelectedRootPath || undefined));
+termTab.addEventListener('click', () => {
+    if (!ctrlRequireAuthed()) return;
+    termStartNew('cmd', ctrlSelectedRootPath || undefined);
+});
 termTab.addEventListener('shown.bs.tab', () => { termRenderList(); updateTermFrameVisibility(); });
 termTab.addEventListener('hidden.bs.tab', () => updateTermFrameVisibility());
 
@@ -2075,12 +2573,12 @@ function browserFmtTtl(expiresAt: number): string {
     return m > 0 ? `−${m}m${s}s` : `−${s}s`;
 }
 
-function buildBrowserItem(s: IBrowserSessionData): HTMLDivElement {
+function browserItemSpec(s: IBrowserSessionData, activeKey: string | null): SessionItemSpec {
     const key = `browser:${s.sessionId}`;
-    const isActive = activeBrowserFrameKey === key && isPanelShown('browser-panel');
+    const isActive = activeKey === key;
     const isLoaded = browserIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
         isActive,
         dataAttr: { name: 'key', value: key },
@@ -2103,7 +2601,7 @@ function buildBrowserItem(s: IBrowserSessionData): HTMLDivElement {
         onShare: () => browserShowShareLink(s.sessionId, s.url),
         onDelete: () => browserRemoveSession(s.sessionId),
         popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.sessionId}` },
-    });
+    };
 }
 
 function browserAddSession(sessionId: string, url: string, browserName: string = '', expiresAt: number = 0, navigate = true, createdAt: number = Date.now()) {
@@ -2127,6 +2625,7 @@ async function browserRemoveSession(sessionId: string) {
     } catch (_) {}
 }
 
+let browserListInFlight = false;
 async function browserRefreshList() {
     if (!getAuthToken(CPath.WebRootUrl())) {
         browserAuthState = 'signin';
@@ -2134,6 +2633,8 @@ async function browserRefreshList() {
         renderSessionSidebar();
         return;
     }
+    if (browserListInFlight) return;
+    browserListInFlight = true;
     try {
         const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
         if (r.status === 401) {
@@ -2156,6 +2657,7 @@ async function browserRefreshList() {
         }
         renderSessionSidebar();
     } catch (_) {}
+    finally { browserListInFlight = false; }
 }
 
 function browserShowShareLink(sessionId: string, url: string) {
@@ -2269,11 +2771,21 @@ browserRefreshList();
 // 사이드바 목록(Chat/Terminal/Browser)은 탭과 무관하게 항상 보이므로, busy/idle 상태(응답 완료 등)가
 // 실시간으로 반영되도록 5초마다 갱신한다. 세션 생성 직후의 1.5s/4s 갱신만으로는 응답이 늦게 오면
 // busy(노랑) 표시가 그대로 굳어버리는 문제가 있었다.
-setInterval(() => {
-    chatRenderList();
-    termRenderList();
-    browserRefreshList();
-}, 5000);
+// setInterval이 아니라 "셋 다 끝난 뒤 5초"로 도는 이유: 응답이 5초를 넘기면 요청이 계속 쌓이고,
+// 늦게 온 옛 응답이 새 응답을 덮어써 목록이 과거 상태로 되돌아간다.
+async function sessionPollOnce() {
+    await Promise.allSettled([chatRenderList(), termRenderList(), browserRefreshList()]);
+}
+(async function sessionPollLoop() {
+    for (;;) {
+        await new Promise(r => setTimeout(r, 5000));
+        await sessionPollOnce();
+    }
+})();
+
+// 탭이 숨겨진 동안에는 flushSessionSidebar()가 DOM 작업을 건너뛰므로(폴링은 계속 돈다),
+// 다시 보이는 순간 그동안 쌓인 최신 데이터로 한 번 그려준다.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) renderSessionSidebar(); });
 
 // Chat/Terminal/Browser/Editor 통합 목록의 강조 표시(isPanelShown 기반)는 그중 어떤 탭이 지금
 // 센터에 보이는지에 따라 달라지므로, 넷 중 하나로 전환될 때마다(꺼지는 탭/켜지는 탭 둘 다) 다시 그려
@@ -2288,18 +2800,19 @@ setInterval(() => {
 // New 버튼(#sched-new-btn) → schedOpenModal()로 생성/편집한다) ----
 const schedSessionList = CDOM.ID("schedSessionList");
 
-type ScheduleData = { name: string; terminalKey: string; mode: string; delay: number; count: number; start: number; end: number; command: string; cwd?: string; clear?: boolean; mcp?: boolean; mdcopy?: boolean; timeMode?: boolean; days?: number[]; hour?: number; minute?: number };
+type SchedulerOption = { delay?: number; count?: number; start?: number; end?: number; days?: number[]; hour?: number; minute?: number };
+type ScheduleData = { name: string; subAgentKey: string; mode: string; option: SchedulerOption; command: string };
 
 function schedIntervalStr(s: ScheduleData): string {
-    if (s.timeMode) {
-        const hh = String(s.hour ?? 0).padStart(2, '0');
-        const mm = String(s.minute ?? 0).padStart(2, '0');
+    if (s.mode === 'time') {
+        const hh = String(s.option.hour ?? 0).padStart(2, '0');
+        const mm = String(s.option.minute ?? 0).padStart(2, '0');
         return `${hh}:${mm}`;
     }
-    const parts: string[] = [`${s.delay}s`];
-    if (s.count > 0) parts.push(`×${s.count}`);
-    if (s.start > 0) parts.push(`+${s.start}s`);
-    if (s.end > 0)   parts.push(`~${s.end}s`);
+    const parts: string[] = [`${s.option.delay ?? 0}s`];
+    if ((s.option.count ?? 0) > 0) parts.push(`×${s.option.count}`);
+    if ((s.option.start ?? 0) > 0) parts.push(`+${s.option.start}s`);
+    if ((s.option.end ?? 0) > 0)   parts.push(`~${s.option.end}s`);
     return parts.join(' ');
 }
 
@@ -2317,12 +2830,12 @@ async function schedRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode==='none'?'bg-secondary':s.mode==='cmd'?'bg-info':s.mode==='claude'?'bg-warning text-dark':s.mode==='codex'?'bg-primary':s.mode==='opencode'?'bg-success':'bg-danger'}" style="font-size:0.65rem;">${s.mode==='antigravity'?'agy':s.mode}</span>
+                    <span class="badge rounded-pill ${s.mode==='time'?'bg-primary':'bg-info'}" style="font-size:0.65rem;">${s.mode}</span>
                     <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
                 </span>
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
                     <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.name)}</span>
-                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.terminalKey)}</span>
+                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.subAgentKey)}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
                 </span>
                 <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
@@ -2348,78 +2861,74 @@ async function schedRefresh() {
     } catch (e) { console.error('schedRefresh error:', e); }
 }
 
-function schedOpenModal(existing?: ScheduleData) {
+async function schedOpenModal(existing?: ScheduleData) {
     const isEdit = !!existing;
+    let agents: SubAgentData[] = [];
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
+        const j = await r.json();
+        if (j.ok) agents = j.agents as SubAgentData[];
+    } catch (e) { console.error('schedOpenModal agents fetch error:', e); }
+
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">${isEdit ? 'Edit Schedule' : 'New Schedule'}</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Name (schedule key)</label>
             <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Terminal Key</label>
-            <input id="sched-tkey" type="text" class="form-control form-control-sm" placeholder="target terminal key" autocomplete="off" value="${aiEscapeHtml(existing?.terminalKey || '')}">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Mode (created if terminal missing)</label>
-            <div class="d-flex gap-1 flex-wrap">
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="none">none</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="cmd">cmd</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="claude">claude</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="opencode">opencode</button>
-            </div>
+            <label class="form-label small text-secondary mb-1">Sub Agent</label>
+            <select id="sched-agent" class="form-select form-select-sm">
+                ${agents.map(a => `<option value="${aiEscapeHtml(a.key)}" ${existing?.subAgentKey === a.key ? 'selected' : ''}>${aiEscapeHtml(a.key)}</option>`).join('') || '<option value="">(등록된 서브 에이전트 없음)</option>'}
+            </select>
         </div>
         <div class="mb-2">
             <div class="d-flex gap-1 mb-2">
-                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${!(existing?.timeMode) ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
-                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${  existing?.timeMode  ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
+                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${existing?.mode!=='time' ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
+                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.mode==='time'  ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
             </div>
-            <div id="sched-panel-interval" style="display:${!(existing?.timeMode) ? '' : 'none'}">
+            <div id="sched-panel-interval" style="display:${existing?.mode!=='time' ? '' : 'none'}">
                 <div class="d-flex gap-2 mb-2">
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Delay (sec)</label>
-                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.delay ?? 60}">
+                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.option.delay ?? 60}">
                     </div>
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
-                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.count ?? 0}">
+                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.count ?? 0}">
                     </div>
                 </div>
                 <div class="d-flex gap-2">
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
-                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.start ?? 0}">
+                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.start ?? 0}">
                     </div>
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
-                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.end ?? 0}">
+                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.end ?? 0}">
                     </div>
                 </div>
             </div>
-            <div id="sched-panel-time" style="display:${existing?.timeMode ? '' : 'none'}">
+            <div id="sched-panel-time" style="display:${existing?.mode==='time' ? '' : 'none'}">
                 <div class="mb-2">
                     <label class="form-label small text-secondary mb-1">Days of Week</label>
                     <div class="d-flex gap-1 flex-wrap">
-                        ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((lbl,i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
+                        ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((lbl,i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.option.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
                     </div>
                 </div>
                 <div class="d-flex gap-2 align-items-end">
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Hour (0–23)</label>
                         <select id="sched-hour" class="form-select form-select-sm">
-                            ${Array.from({length:24},(_,h)=>`<option value="${h}" ${(existing?.hour??9)===h?'selected':''}>${String(h).padStart(2,'0')}</option>`).join('')}
+                            ${Array.from({length:24},(_,h)=>`<option value="${h}" ${(existing?.option.hour??9)===h?'selected':''}>${String(h).padStart(2,'0')}</option>`).join('')}
                         </select>
                     </div>
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Minute</label>
                         <select id="sched-minute" class="form-select form-select-sm">
-                            ${Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}" ${(existing?.minute??0)===m?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
+                            ${Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}" ${(existing?.option.minute??0)===m?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
                         </select>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
@@ -2427,62 +2936,21 @@ function schedOpenModal(existing?: ScheduleData) {
             <label class="form-label small text-secondary mb-1">Command</label>
             <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
         </div>
-        <div class="accordion accordion-flush mb-3" id="sched-accordion">
-            <div class="accordion-item" style="background:transparent;border:1px solid #444;border-radius:0.375rem;">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed py-2 px-3 small" type="button" data-bs-toggle="collapse" data-bs-target="#sched-acc-body" style="background:transparent;color:inherit;font-size:0.75rem;">
-                        Advanced
-                    </button>
-                </h2>
-                <div id="sched-acc-body" class="accordion-collapse collapse">
-                    <div class="accordion-body py-2 px-3">
-                        <div class="mb-2">
-                            <label class="form-label small text-secondary mb-1">Working Directory</label>
-                            <input id="sched-cwd" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off" value="${aiEscapeHtml(existing?.cwd || '')}">
-                        </div>
-                        <div class="d-flex gap-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-clear" ${existing?.clear ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-clear">Clear</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-mcp" ${(existing?.mcp ?? true) ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-mcp">MCP</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-mdcopy" ${existing?.mdcopy ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-mdcopy">Copy MD</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div class="d-flex justify-content-between">
             <button id="sched-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
             <button id="sched-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
         </div>`;
 
     const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader(isEdit ? 'Edit Schedule' : 'New Schedule');
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
-        let selectedMode = existing?.mode || 'cmd';
-        const modeBtns = container.querySelectorAll<HTMLButtonElement>('.sched-mode-btn');
-        const updateMode = (m: string) => {
-            selectedMode = m;
-            modeBtns.forEach(b => {
-                b.classList.toggle('btn-primary', b.dataset.mode === m);
-                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== m);
-            });
-        };
-        modeBtns.forEach(b => b.addEventListener('click', () => updateMode(b.dataset.mode!)));
-        updateMode(selectedMode);
-
         // 탭 전환
-        let isTimeMode = existing?.timeMode ?? false;
+        let isTimeMode = existing?.mode === 'time';
         const tabInterval = container.querySelector<HTMLButtonElement>('#sched-tab-interval')!;
         const tabTime     = container.querySelector<HTMLButtonElement>('#sched-tab-time')!;
         const panelInterval = container.querySelector<HTMLElement>('#sched-panel-interval')!;
@@ -2506,40 +2974,28 @@ function schedOpenModal(existing?: ScheduleData) {
         }));
 
         const doSave = async () => {
-            const name    = (container.querySelector<HTMLInputElement>('#sched-name')!).value.trim();
-            const tkey    = (container.querySelector<HTMLInputElement>('#sched-tkey')!).value.trim();
-            const command = (container.querySelector<HTMLTextAreaElement>('#sched-cmd')!).value.trim();
-            const cwd    = (container.querySelector<HTMLInputElement>('#sched-cwd')!).value.trim();
-            const clear  = (container.querySelector<HTMLInputElement>('#sched-clear')!).checked;
-            const mcp    = (container.querySelector<HTMLInputElement>('#sched-mcp')!).checked;
-            const mdcopy = (container.querySelector<HTMLInputElement>('#sched-mdcopy')!).checked;
-            if (!name || !tkey || !command) { CAlert.E('Name, terminal key, and command are required'); return; }
+            const name        = (container.querySelector<HTMLInputElement>('#sched-name')!).value.trim();
+            const subAgentKey = (container.querySelector<HTMLSelectElement>('#sched-agent')!).value.trim();
+            const command     = (container.querySelector<HTMLTextAreaElement>('#sched-cmd')!).value.trim();
+            if (!name || !subAgentKey || !command) { CAlert.E('Name, sub agent, and command are required'); return; }
 
-            const params = new URLSearchParams({ name, terminalKey: tkey, mode: selectedMode, command,
-                clear: clear ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0',
-                timeMode: isTimeMode ? '1' : '0' });
-            if (cwd) params.set('cwd', cwd);
-
+            const option: SchedulerOption = {};
             if (isTimeMode) {
                 const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
                 if (selectedDays.length === 0) { CAlert.E('Select at least one day'); return; }
-                const hh = parseInt((container.querySelector<HTMLSelectElement>('#sched-hour')!).value) || 0;
-                const mm = parseInt((container.querySelector<HTMLSelectElement>('#sched-minute')!).value) || 0;
-                params.set('days', selectedDays.join(','));
-                params.set('hour', String(hh));
-                params.set('minute', String(mm));
-                params.set('delay', '60'); params.set('count', '0'); params.set('start', '0'); params.set('end', '0');
+                option.days = selectedDays;
+                option.hour = parseInt((container.querySelector<HTMLSelectElement>('#sched-hour')!).value) || 0;
+                option.minute = parseInt((container.querySelector<HTMLSelectElement>('#sched-minute')!).value) || 0;
             } else {
                 const delay = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-delay')!).value) || 0);
-                const count = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-count')!).value) || 0);
-                const start = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-start')!).value) || 0);
-                const end   = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-end')!).value) || 0);
                 if (delay === 0) { CAlert.E('Delay must be at least 1 second'); return; }
-                params.set('delay', String(delay)); params.set('count', String(count));
-                params.set('start', String(start)); params.set('end', String(end));
-                params.set('days', ''); params.set('hour', '0'); params.set('minute', '0');
+                option.delay = delay;
+                option.count = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-count')!).value) || 0);
+                option.start = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-start')!).value) || 0);
+                option.end   = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-end')!).value) || 0);
             }
 
+            const params = new URLSearchParams({ name, subAgentKey, mode: isTimeMode ? 'time' : 'interval', command, option: JSON.stringify(option) });
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
             const j = await r.json();
             if (!j.ok) { CAlert.E(j.msg || 'Failed'); return; }
@@ -2557,6 +3013,358 @@ CDOM.ID('sched-new-btn').addEventListener('click', () => schedOpenModal());
 // 옵션 패널이 항상 열려있지 않아도 최신 목록을 유지하도록 첫 로딩 시 + 5초 주기로 갱신한다.
 schedRefresh();
 setInterval(schedRefresh, 5000);
+
+// ---- Sub Agent management (옵션 패널의 Sub Agent 섹션. New 버튼 또는 목록 항목 클릭 시
+// CModal로 key/provider/model/score/traits 입력폼을 띄운다. 저장은 key 기준 upsert이므로
+// 신규/편집 모두 같은 Save 버튼 하나로 처리한다) ----
+type SubAgentData = { key: string; provider: string; model: string; score: number; traits: string[]; workingDir: string; super: number; retryText: string; retryCount: number };
+
+const agentList = CDOM.ID('agentList');
+
+async function agentRefresh() {
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
+        const j = await r.json();
+        if (!j.ok) return;
+        agentList.innerHTML = '';
+        const agents = j.agents as SubAgentData[];
+        for (const a of agents) {
+            const item = document.createElement('div');
+            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-1 rounded';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(a.key)}${a.super ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;">SUPER</span>' : ''}${a.retryCount > 0 ? ` <span class="badge bg-info text-dark" style="font-size:0.6rem;">RETRY x${a.retryCount}</span>` : ''}</span>
+                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
+                    <span class="text-truncate small text-body-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.workingDir || './')}</span>
+                    <span class="text-truncate small text-body-secondary">${aiEscapeHtml(a.traits.join(', '))}</span>
+                </span>
+                <button class="agent-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+            `;
+            item.addEventListener('click', () => agentOpenModal(a));
+            item.querySelector('.agent-del-btn')!.addEventListener('click', (e: Event) => {
+                e.stopPropagation();
+                const dlg = new CConfirm();
+                dlg.SetBody(`서브 에이전트 "${aiEscapeHtml(a.key)}"을(를) 삭제할까요?`);
+                dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+                    async () => {
+                        await authedFetch(`${CPath.WebRootUrl()}cmd/agent-del?key=${encodeURIComponent(a.key)}`);
+                        agentRefresh();
+                    },
+                    () => {},
+                ], ["Delete", "Cancel"]);
+                dlg.Open();
+            });
+            item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
+            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            agentList.appendChild(item);
+        }
+    } catch (e) { console.error('agentRefresh error:', e); }
+}
+
+// Provider/Model 셀렉트박스를 채우기 위해 /AIInfo/setting을 조회한다 — Chat.ts(artgine/server/html/Chat.ts)와
+// 동일한 소스다: ai/settings.json의 "models" 필드(프로바이더별 {value,label} 목록)를 그대로 쓴다.
+// (/AIInfo/provider-state의 models는 항상 빈 배열이라 여긴 쓸 수 없다.)
+// 모달을 열 때마다 다시 부르지 않도록 최초 1회만 조회해 캐시해두고 재사용한다(진행 중인 요청은 공유해 중복 호출 방지).
+type AgentModelMap = Record<string, { value: string; label: string }[]>;
+const AGENT_PROVIDER_IDS: string[] = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
+const AGENT_PROVIDER_LABELS: Record<string, string> = { claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok' };
+
+let gAgentModelsCache: AgentModelMap | null = null;
+let gAgentModelsFetching: Promise<AgentModelMap> | null = null;
+async function agentFetchModels(): Promise<AgentModelMap> {
+    if (gAgentModelsCache) return gAgentModelsCache;
+    if (gAgentModelsFetching) return gAgentModelsFetching;
+    gAgentModelsFetching = (async () => {
+        try {
+            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/setting');
+            const setting = await r.json();
+            const models: AgentModelMap = setting.models || {};
+            gAgentModelsCache = models;
+            return models;
+        } catch (e) {
+            console.error('agentFetchModels error:', e);
+            return {};
+        } finally {
+            gAgentModelsFetching = null;
+        }
+    })();
+    return gAgentModelsFetching;
+}
+
+async function agentOpenModal(existing?: SubAgentData) {
+    const isEdit = !!existing;
+    const modelMap = await agentFetchModels();
+
+    const modelsFor = (providerId: string): { value: string; label: string }[] => modelMap[providerId] ?? [];
+
+    // 기본값: 편집이면 저장된 provider/model, 신규면 첫 번째 provider의 첫 번째 model을 그대로 선택해둔다(빈 값으로 두지 않음).
+    const defaultProvider = existing?.provider || AGENT_PROVIDER_IDS[0];
+    const defaultModel = existing?.model || modelsFor(defaultProvider)[0]?.value || '';
+
+    const buildModelOptions = (providerId: string, selected: string): string => {
+        const models = modelsFor(providerId).slice();
+        const values = models.map(m => m.value);
+        const sel = selected || models[0]?.value || '';
+        if (sel && !values.includes(sel)) models.push({ value: sel, label: sel });
+        return models.map(m => `<option value="${aiEscapeHtml(m.value)}" ${m.value === sel ? 'selected' : ''}>${aiEscapeHtml(m.label)}</option>`).join('');
+    };
+
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Key (name)</label>
+            <input id="agent-key" type="text" class="form-control form-control-sm" placeholder="e.g. code-reviewer" autocomplete="off" value="${aiEscapeHtml(existing?.key || '')}">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Provider</label>
+            <select id="agent-provider" class="form-select form-select-sm">
+                ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === defaultProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Model</label>
+            <select id="agent-model" class="form-select form-select-sm">
+                ${buildModelOptions(defaultProvider, defaultModel)}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">Traits (one per line)</label>
+            <textarea id="agent-traits" class="form-control form-control-sm" rows="5" placeholder="e.g.&#10;fast at reading large codebases&#10;cautious about destructive changes">${aiEscapeHtml((existing?.traits ?? []).join('\n'))}</textarea>
+        </div>
+        <div class="accordion mb-3" id="agent-options-accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#agent-options-body">Options</button>
+                </h2>
+                <div id="agent-options-body" class="accordion-collapse collapse" data-bs-parent="#agent-options-accordion">
+                    <div class="accordion-body">
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Working Directory</label>
+                            <input id="agent-working-dir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off" value="${aiEscapeHtml(existing?.workingDir || './')}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Score</label>
+                            <input id="agent-score" type="number" step="any" class="form-control form-control-sm" placeholder="0" value="${existing?.score ?? 0}">
+                        </div>
+                        <div class="mb-2 form-check">
+                            <input class="form-check-input" type="checkbox" id="agent-super" ${existing?.super ? 'checked' : ''}>
+                            <label class="form-check-label small text-secondary" for="agent-super">Super</label>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Retry Text (auto-repeat instruction while idle)</label>
+                            <textarea id="agent-retry-text" class="form-control form-control-sm" rows="2" placeholder="e.g. Review the result once more and improve quality">${aiEscapeHtml(existing?.retryText || '')}</textarea>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-secondary mb-1">Retry Count (0 = disabled)</label>
+                            <input id="agent-retry-count" type="number" min="0" step="1" class="form-control form-control-sm" placeholder="0" value="${existing?.retryCount ?? 0}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="agent-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+            <button id="agent-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+
+    const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader(isEdit ? 'Edit Sub Agent' : 'New Sub Agent');
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(() => {
+        const keyInput = container.querySelector<HTMLInputElement>('#agent-key')!;
+        const providerSelect = container.querySelector<HTMLSelectElement>('#agent-provider')!;
+        const modelSelect = container.querySelector<HTMLSelectElement>('#agent-model')!;
+        keyInput.focus();
+
+        // provider를 바꾸면 그 provider의 모델 목록으로 model 셀렉트를 다시 채운다(첫 번째 모델을 기본 선택).
+        providerSelect.addEventListener('change', () => {
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+        });
+
+        const doSave = async () => {
+            const key = keyInput.value.trim();
+            if (!key) { CAlert.E('Key is required'); return; }
+            const workingDir = (container.querySelector<HTMLInputElement>('#agent-working-dir')!).value.trim() || './';
+            const superChecked = (container.querySelector<HTMLInputElement>('#agent-super')!).checked;
+            const params = new URLSearchParams({
+                key,
+                provider: providerSelect.value,
+                model: modelSelect.value,
+                score: String(Number((container.querySelector<HTMLInputElement>('#agent-score')!).value) || 0),
+                traits: (container.querySelector<HTMLTextAreaElement>('#agent-traits')!).value,
+                workingDir,
+                super: superChecked ? '1' : '0',
+                retryText: (container.querySelector<HTMLTextAreaElement>('#agent-retry-text')!).value.trim(),
+                retryCount: String(Math.max(0, Number((container.querySelector<HTMLInputElement>('#agent-retry-count')!).value) || 0)),
+            });
+            const r = await authedFetch(`${CPath.WebRootUrl()}cmd/agent-set?${params.toString()}`);
+            const j = await r.json();
+            if (!j.ok) { CAlert.E(j.msg || 'Failed'); return; }
+            modal.Close();
+            agentRefresh();
+        };
+
+        container.querySelector<HTMLButtonElement>('#agent-modal-save')!.addEventListener('click', doSave);
+        container.querySelector<HTMLButtonElement>('#agent-modal-cancel')!.addEventListener('click', () => modal.Close());
+    }, MODAL_DOM_DELAY);
+}
+
+CDOM.ID('agent-new-btn').addEventListener('click', () => agentOpenModal());
+
+agentRefresh();
+setInterval(agentRefresh, 5000);
+
+// ---- Team (상단 Team 탭 = New Team 버튼. term-tab과 동일하게 클릭하면 탭 전환 없이 모달만 뜬다) ----
+// 팀 = "감독 프롬프트가 미리 입력된 터미널 세션 1개". 그래서 전용 엔드포인트 없이 New Terminal과 같은
+// cmd/start-term을 쓰고(랜덤 팀키 + initialPrompt), 화면도 Terminal 패널을 그대로 쓴다.
+// 메인은 직접 작업하지 않고 work_order로 서브 에이전트에게 발주·대기·취합만 반복한다.
+// 메인 키는 sub_agent에 등록되지 않으므로 자동 재생성(_ensureSubAgentSessions) 대상도, 워크오더 배분
+// (_dispatchWorkOrders) 대상도 아니다 - 자기가 낸 발주를 자기가 받는 일이 구조적으로 없다.
+
+async function teamOpenModal() {
+    const modelMap = await agentFetchModels();
+    const modelsFor = (providerId: string): { value: string; label: string }[] => modelMap[providerId] ?? [];
+
+    // 메인이 쓸 provider/model. 서브는 sub_agent에 이미 자기 provider/model을 갖고 있어 고르기만 하면 된다.
+    const defaultProvider = AGENT_PROVIDER_IDS[0];
+    const buildModelOptions = (providerId: string, selected: string): string => {
+        const models = modelsFor(providerId).slice();
+        const sel = selected || models[0]?.value || '';
+        if (sel && !models.some(m => m.value === sel)) models.push({ value: sel, label: sel });
+        return models.map(m => `<option value="${aiEscapeHtml(m.value)}" ${m.value === sel ? 'selected' : ''}>${aiEscapeHtml(m.label)}</option>`).join('');
+    };
+
+    let agents: SubAgentData[] = [];
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
+        const j = await r.json();
+        if (j.ok) agents = j.agents as SubAgentData[];
+    } catch { /* 목록을 못 받아도 모달은 뜬다(아래에서 안내 문구로 대체) */ }
+
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Provider (main)</label>
+            <select id="team-provider" class="form-select form-select-sm">
+                ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === defaultProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Model (main)</label>
+            <select id="team-model" class="form-select form-select-sm">${buildModelOptions(defaultProvider, '')}</select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Goal</label>
+            <textarea id="team-goal" class="form-control form-control-sm" rows="3" placeholder="e.g. Analyze the text files in the xx folder and summarize them into an md file"></textarea>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Sub Agents</label>
+            <div id="team-agents" class="border rounded p-2" style="max-height:140px;overflow-y:auto;">
+                ${agents.length === 0
+                    ? `<div class="text-secondary small">No sub agents registered. Register one first in the right sidebar → Sub Agent.</div>`
+                    : agents.map(a => `
+                        <div class="form-check">
+                            <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}" checked>
+                            <label class="form-check-label small" for="team-agent-${aiEscapeHtml(a.key)}">
+                                ${aiEscapeHtml(a.key)}
+                                <span class="text-secondary">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
+                            </label>
+                        </div>`).join('')}
+            </div>
+        </div>
+        <hr class="my-3">
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">Stop — time limit (min, 0 = unlimited)</label>
+            <input id="team-limit-min" type="number" min="0" step="1" class="form-control form-control-sm" value="60">
+            <div class="form-text" style="font-size:0.7rem;">If any task fails, the whole team stops immediately regardless of time.</div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="team-modal-create" class="btn btn-primary">Create</button>
+            <button id="team-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+
+    const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader('New Team');
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(() => {
+        const providerSelect = container.querySelector<HTMLSelectElement>('#team-provider')!;
+        const modelSelect    = container.querySelector<HTMLSelectElement>('#team-model')!;
+        const goalInput      = container.querySelector<HTMLTextAreaElement>('#team-goal')!;
+        const createBtn      = container.querySelector<HTMLButtonElement>('#team-modal-create')!;
+        const cancelBtn      = container.querySelector<HTMLButtonElement>('#team-modal-cancel')!;
+        goalInput.focus();
+
+        providerSelect.addEventListener('change', () => {
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+        });
+
+        let creating = false;
+        const doCreate = async () => {
+            if (creating) return;
+            const goal = goalInput.value.trim();
+            if (!goal) { CAlert.E('Enter a goal'); return; }
+            const subAgents = Array.from(container.querySelectorAll<HTMLInputElement>('.team-agent-check'))
+                .filter(c => c.checked).map(c => c.value);
+            if (subAgents.length === 0) { CAlert.E('Select at least one sub agent'); return; }
+
+            creating = true;
+            createBtn.disabled = true; cancelBtn.disabled = true;
+            const origHtml = createBtn.innerHTML;
+            createBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Creating...`;
+            try {
+                // 팀키 생성·감독 지시문 조립·워크오더 발주는 전부 서버(onStartTeam)가 한다.
+                const params = new URLSearchParams({
+                    provider: providerSelect.value,
+                    model: modelSelect.value,
+                    goal,
+                    subAgents: subAgents.join(','),
+                    limitMin: String(Number((container.querySelector<HTMLInputElement>('#team-limit-min')!).value) || 0),
+                });
+                const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);
+                const j = await r.json();
+                if (!j.ok) { CAlert.E(j.msg || 'Failed to start team'); return; }
+                modal.Close();
+                // New Terminal과 동일 — 메인 터미널을 Terminal 패널에 띄운다.
+                termActivatePane();
+                showTermFrame(`term-new:${j.token}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
+                termRenderList();
+                setTimeout(termRenderList, 1500);
+                setTimeout(termRenderList, 4000);
+            } catch (e) {
+                console.error('[Team] start-team error:', e);
+                CAlert.E('Failed to start team');
+            } finally {
+                creating = false;
+                createBtn.disabled = false; cancelBtn.disabled = false;
+                createBtn.innerHTML = origHtml;
+            }
+        };
+
+        createBtn.addEventListener('click', doCreate);
+        cancelBtn.addEventListener('click', () => modal.Close());
+    }, MODAL_DOM_DELAY);
+}
+
+CDOM.ID('team-tab').addEventListener('click', () => teamOpenModal());
+
+
+
+
+
+
+
+
+
+
 
 
 

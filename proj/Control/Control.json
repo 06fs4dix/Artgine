@@ -20,7 +20,7 @@
     "screenfull": true,
     "popper": true,
     "bootstrap": true,
-    "excel": false,
+    "excel": true,
     "lzstring": false,
     "firebase": false,
     "nosleep": false,
@@ -31,6 +31,7 @@
     "summernote": false,
     "tone": false,
     "soundfont": false,
-    "toastui": true
+    "toastui": true,
+    "qrcode": false
   }
 }

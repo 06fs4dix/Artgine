@@ -5,9 +5,12 @@ import { CAuthServer, isAuthedReq, isValidToken } from './CAuthServer.js';
 import { spawnSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { CAI } from '../util/CAI.js';
 import type { IProviderUsage } from '../util/CAI.js';
 import { CPath } from '../basic/CPath.js';
+import { CConsol } from '../basic/CConsol.js';
+import { CSQLite } from '../network/CSQLite.js';
 
 const SETTINGS_FILE = path.join(CAI.AIDir(), 'settings.json');
 
@@ -32,7 +35,159 @@ async function _getAgyUsageCached(): Promise<IProviderUsage> {
     return value;
 }
 
-@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/push-opencode-model", "/AIInfo/opencode-provider-status"])
+// ---------------- 오래된 대화 삭제(prune-conversations) ----------------
+// provider가 로컬 디스크에 스스로 남기는 세션 저장소를 개월 수 기준으로 정리한다. 이 컴퓨터에 있는
+// 모든 프로젝트가 대상이다(특정 cwd로 좁히지 않음 — provider 저장소 자체가 프로젝트 경계 없이 쌓이는
+// 구조라서, cwd 하나만 청소해도 나머지가 계속 쌓여 의미가 작다).
+//
+// 디렉토리를 재귀적으로 훑어 필터를 통과하는 파일 경로를 전부 모은다(prune 전용 — CAI_imple의
+// listFilesRecursive는 모듈 비공개라 재사용할 수 없어 여기서 다시 둔다).
+function _listFilesRecursive(dir: string, filter: (name: string) => boolean): string[] {
+    const out: string[] = [];
+    const walk = (d: string) => {
+        let entries: fs.Dirent[];
+        try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+        for (const e of entries) {
+            const full = path.join(d, e.name);
+            if (e.isDirectory()) walk(full);
+            else if (e.isFile() && filter(e.name)) out.push(full);
+        }
+    };
+    walk(dir);
+    return out;
+}
+
+// claude: ~/.claude/projects/**/*.jsonl — 파일 mtime 기준 삭제.
+function _pruneClaude(cutoffMs: number): number {
+    const dir = path.join(os.homedir(), '.claude', 'projects');
+    let n = 0;
+    for (const f of _listFilesRecursive(dir, name => name.endsWith('.jsonl'))) {
+        try { if (fs.statSync(f).mtimeMs < cutoffMs) { fs.unlinkSync(f); n++; } } catch {}
+    }
+    return n;
+}
+
+// codex: ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl — 파일 mtime 기준 삭제.
+function _pruneCodex(cutoffMs: number): number {
+    const dir = path.join(os.homedir(), '.codex', 'sessions');
+    let n = 0;
+    for (const f of _listFilesRecursive(dir, name => name.startsWith('rollout-') && name.endsWith('.jsonl'))) {
+        try { if (fs.statSync(f).mtimeMs < cutoffMs) { fs.unlinkSync(f); n++; } } catch {}
+    }
+    return n;
+}
+
+// grok: ~/.grok/sessions/<enc-cwd>/<uuid>/ — 세션 디렉토리 통째로 삭제(내부 chat_history.jsonl의
+// mtime 기준. 그 파일이 없으면 세션 디렉토리 자체의 mtime으로 대신 판단한다).
+function _pruneGrok(cutoffMs: number): number {
+    const base = path.join(os.homedir(), '.grok', 'sessions');
+    let n = 0;
+    let cwdDirs: fs.Dirent[];
+    try { cwdDirs = fs.readdirSync(base, { withFileTypes: true }); } catch { return 0; }
+    for (const cd of cwdDirs) {
+        if (!cd.isDirectory()) continue;
+        const cwdPath = path.join(base, cd.name);
+        let sessDirs: fs.Dirent[];
+        try { sessDirs = fs.readdirSync(cwdPath, { withFileTypes: true }); } catch { continue; }
+        for (const sd of sessDirs) {
+            if (!sd.isDirectory()) continue;
+            const sessPath = path.join(cwdPath, sd.name);
+            let mtime: number;
+            try { mtime = fs.statSync(path.join(sessPath, 'chat_history.jsonl')).mtimeMs; }
+            catch { try { mtime = fs.statSync(sessPath).mtimeMs; } catch { continue; } }
+            if (mtime < cutoffMs) {
+                try { fs.rmSync(sessPath, { recursive: true, force: true }); n++; } catch {}
+            }
+        }
+    }
+    return n;
+}
+
+// opencode: ~/.local/share/opencode/opencode.db(전역 SQLite) — session.time_updated 기준으로
+// session/message/part를 계단식 삭제한다(FK 제약이 없어 자식부터 지운다). IN 절 파라미터 수가
+// SQLite 한도를 넘지 않도록 청크로 나눠 지운다.
+async function _pruneOpencode(cutoffMs: number): Promise<number> {
+    const dbPath = path.join(os.homedir(), '.local', 'share', 'opencode', 'opencode.db');
+    if (!fs.existsSync(dbPath)) return 0;
+    const db = new CSQLite();
+    db.mDatabase = dbPath;
+    await db.Init();
+    const rows = await db.Recv('SELECT id FROM session WHERE time_updated < ?', [cutoffMs]);
+    const ids = (rows ?? []).map((r: any[]) => String(r[0]));
+    const CHUNK = 500;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunk = ids.slice(i, i + CHUNK);
+        const ph = chunk.map(() => '?').join(',');
+        await db.Send(`DELETE FROM part WHERE session_id IN (${ph})`, chunk);
+        await db.Send(`DELETE FROM message WHERE session_id IN (${ph})`, chunk);
+        await db.Send(`DELETE FROM session WHERE id IN (${ph})`, chunk);
+    }
+    return ids.length;
+}
+
+// antigravity: 저장소가 4곳으로 흩어져 있다(실측) — 각각을 자기 자신의 시각 기준으로 독립적으로 정리한다.
+//   conversations/<cid>.db      대화별 SQLite 파일 — 파일 mtime 기준 삭제
+//   brain/<cid>/                대화별 부속 디렉토리 — 디렉토리 mtime 기준 삭제
+//   conversation_summaries.db   요약 테이블(last_modified_time이 "YYYY-MM-DD HH:MM:SS.ffffff+00:00" UTC 텍스트로
+//                                저장돼 있어 같은 포맷의 문자열과 사전식 비교가 그대로 시각 비교가 된다) — 행 삭제
+//   history.jsonl                슬래시 명령·대화 시작 로그 한 줄씩(JSON) — timestamp(ms) 미만인 줄만 걸러서 재작성.
+//                                파싱 실패하거나 timestamp가 없는 줄은 보수적으로 남겨둔다.
+async function _pruneAntigravity(cutoffMs: number): Promise<number> {
+    const base = path.join(os.homedir(), '.gemini', 'antigravity-cli');
+    let n = 0;
+
+    for (const f of _listFilesRecursive(path.join(base, 'conversations'), name => name.endsWith('.db'))) {
+        try { if (fs.statSync(f).mtimeMs < cutoffMs) { fs.unlinkSync(f); n++; } } catch {}
+    }
+
+    const brainDir = path.join(base, 'brain');
+    try {
+        for (const e of fs.readdirSync(brainDir, { withFileTypes: true })) {
+            if (!e.isDirectory()) continue;
+            const full = path.join(brainDir, e.name);
+            try { if (fs.statSync(full).mtimeMs < cutoffMs) { fs.rmSync(full, { recursive: true, force: true }); n++; } } catch {}
+        }
+    } catch {}
+
+    const summariesPath = path.join(base, 'conversation_summaries.db');
+    if (fs.existsSync(summariesPath)) {
+        try {
+            const cutoffStr = new Date(cutoffMs).toISOString().replace('T', ' ').slice(0, 19);   // "YYYY-MM-DD HH:MM:SS" UTC
+            const db = new CSQLite();
+            db.mDatabase = summariesPath;
+            await db.Init();
+            const rows = await db.Recv('SELECT conversation_id FROM conversation_summaries WHERE last_modified_time < ?', [cutoffStr]);
+            const ids = (rows ?? []).map((r: any[]) => String(r[0]));
+            if (ids.length) {
+                const ph = ids.map(() => '?').join(',');
+                await db.Send(`DELETE FROM conversation_summaries WHERE conversation_id IN (${ph})`, ids);
+                n += ids.length;
+            }
+        } catch {}
+    }
+
+    const historyPath = path.join(base, 'history.jsonl');
+    try {
+        const lines = fs.readFileSync(historyPath, 'utf8').split('\n');
+        const kept: string[] = [];
+        let dropped = 0;
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+                const rec = JSON.parse(line);
+                if (typeof rec.timestamp === 'number' && rec.timestamp < cutoffMs) { dropped++; continue; }
+            } catch { /* 파싱 실패한 줄은 보수적으로 남긴다 */ }
+            kept.push(line);
+        }
+        if (dropped > 0) { fs.writeFileSync(historyPath, kept.join('\n') + '\n', 'utf8'); n += dropped; }
+    } catch {}
+
+    return n;
+}
+
+type PruneOutcome = { installed: boolean; deleted: number; error?: string };
+
+@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations"])
 export class CAIInfoRouter extends CAuthServer {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
     // cross-origin(RDP로 전환된 원격 서버) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
@@ -45,8 +200,9 @@ export class CAIInfoRouter extends CAuthServer {
         super();
         this.On("/AIInfo/setting", this.onGetSettingJSON.bind(this));
         this.On("/AIInfo/provider-state", this.onProviderState.bind(this));
-        this.On("/AIInfo/push-opencode-model", this.onPushOpencodeModel.bind(this));
-        this.On("/AIInfo/opencode-provider-status", this.onOpencodeProviderStatus.bind(this));
+        this.On("/AIInfo/opencode-pushLocal", this.onPushOpencodeModel.bind(this));
+        this.On("/AIInfo/opencode-statusLocal", this.onOpencodeProviderStatus.bind(this));
+        this.On("/AIInfo/prune-conversations", this.onPruneConversations.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -163,7 +319,7 @@ export class CAIInfoRouter extends CAuthServer {
         } catch { return null; }
     }
 
-    // POST /AIInfo/push-opencode-model  body: { host | url: "1.220.132.130:11434" | "http://.../v1/models" 등, apiKey?: string }
+    // POST /AIInfo/opencode-pushLocal  body: { host | url: "1.220.132.130:11434" | "http://.../v1/models" 등, apiKey?: string }
     // Ollama 또는 LM Studio(OpenAI 호환) 서버의 모델 목록/툴 지원 여부를 조회해 opencode.json의 커스텀 provider로 등록한다.
     // apiKey가 주어지면 조회 요청에 Bearer 토큰으로 실어 보내고, opencode.json의 provider.options.apiKey에도 기록한다.
     // opencode.json이 없으면 CAI.CreateRole(opencode)로 먼저 생성한 뒤 병합한다(해당 provider만 교체).
@@ -217,6 +373,29 @@ export class CAIInfoRouter extends CAuthServer {
             };
             fs.writeFileSync(ocPath, JSON.stringify(config, null, 2), 'utf8');
 
+            // ai/settings.json의 models.opencode 목록에도 같은 모델들을 upsert한다.
+            // opencode.json은 CLI 실행 시 참조하는 provider 정의이고, settings.json은 Chat/Memo/Control(서브에이전트)
+            // 드롭다운이 읽는 목록이라 별개 파일 — 여기서 갱신해주지 않으면 새로 등록한 로컬 모델이 UI에 안 보인다.
+            try {
+                let settings: any = {};
+                try { settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); } catch { settings = {}; }
+                if (!settings || typeof settings !== 'object') settings = {};
+                if (!settings.models || typeof settings.models !== 'object') settings.models = {};
+                if (!Array.isArray(settings.models.opencode)) settings.models.opencode = [];
+
+                const list: { value: string; label: string }[] = settings.models.opencode;
+                for (const m of models) {
+                    const value = `${key}/${m.name}`;
+                    const entryLabel = `${label} - ${m.name}`;
+                    const existing = list.find(e => e.value === value);
+                    if (existing) existing.label = entryLabel;
+                    else list.push({ value, label: entryLabel });
+                }
+                fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+            } catch (e: any) {
+                CConsol.Log(`[CAIInfoRouter] settings.json models.opencode upsert failed: ${e?.message ?? e}`, CConsol.eColor.red);
+            }
+
             _res.json({ ok: true, provider: key, backend, baseURL, path: ocPath, models });
         } catch (e: any) {
             _res.status(500).json({ ok: false, msg: String(e?.message ?? e) });
@@ -224,8 +403,8 @@ export class CAIInfoRouter extends CAuthServer {
         return null;
     }
 
-    // GET /AIInfo/opencode-provider-status
-    // opencode.json에 push-opencode-model로 등록해둔 커스텀 provider(Ollama/LM Studio)들에 실제로 접속해
+    // GET /AIInfo/opencode-statusLocal
+    // opencode.json에 opencode-pushLocal로 등록해둔 커스텀 provider(Ollama/LM Studio)들에 실제로 접속해
     // 연결 여부와 현재 로드된 모델(가능하면 VRAM)을 조회한다. 등록된 원격 IP를 노출하는 조회라 인증이 필요하다.
     async onOpencodeProviderStatus(_json: CJSON, _req: Request, _res: Response): Promise<null> {
         if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
@@ -235,7 +414,7 @@ export class CAIInfoRouter extends CAuthServer {
         try { config = JSON.parse(fs.readFileSync(ocPath, 'utf8')); } catch { config = {}; }
         const providerMap = (config && typeof config === 'object' && config.provider && typeof config.provider === 'object') ? config.provider : {};
 
-        // push-opencode-model이 만든 항목만 대상으로 한다(다른 표준 provider는 이 방식으로 조회할 API가 없음).
+        // opencode-pushLocal이 만든 항목만 대상으로 한다(다른 표준 provider는 이 방식으로 조회할 API가 없음).
         const entries = Object.entries(providerMap).filter(([, v]: [string, any]) => v?.npm === '@ai-sdk/openai-compatible');
 
         const providers = await Promise.all(entries.map(async ([key, v]: [string, any]) => {
@@ -249,17 +428,25 @@ export class CAIInfoRouter extends CAuthServer {
 
             let connected = false;
             let error = '';
-            let running: { name: string; vramBytes?: number }[] = [];
+            let running: { name: string; vramBytes?: number; sizeBytes?: number }[] = [];
 
             try {
                 if (backend === 'ollama') {
-                    // /api/ps: 현재 메모리에 로드된 모델 + VRAM 사용량(size_vram)을 함께 준다.
+                    // /api/ps: 현재 메모리에 로드된 모델 + VRAM/전체 메모리 사용량(size_vram/size)을 함께 준다.
+                    // keep_alive 때문에 여러 모델이 동시에 로드된 채 남아있을 수 있어, expires_at(마지막 사용 시
+                    // 갱신됨)이 가장 먼 미래인 것 하나만 "현재 활성" 모델로 골라 보여준다.
                     const psRes = await fetch(`${root}/api/ps`, { headers: authHeaders, signal: AbortSignal.timeout(5000) });
                     if (psRes.ok) {
                         connected = true;
                         const psJson: any = await psRes.json();
-                        running = Array.isArray(psJson?.models)
-                            ? psJson.models.map((m: any) => ({ name: m?.name ?? m?.model ?? '', vramBytes: typeof m?.size_vram === 'number' ? m.size_vram : undefined }))
+                        const models: any[] = Array.isArray(psJson?.models) ? psJson.models : [];
+                        const latest = models.reduce((best: any, m: any) => {
+                            const t = Date.parse(m?.expires_at ?? '') || 0;
+                            const bestT = best ? (Date.parse(best?.expires_at ?? '') || 0) : -Infinity;
+                            return t >= bestT ? m : best;
+                        }, null);
+                        running = latest
+                            ? [{ name: latest?.name ?? latest?.model ?? '', vramBytes: typeof latest?.size_vram === 'number' ? latest.size_vram : undefined, sizeBytes: typeof latest?.size === 'number' ? latest.size : undefined }]
                             : [];
                     } else {
                         // 구버전 Ollama라 /api/ps가 없을 수 있으니 /api/tags로 연결 자체만 재확인한다.
@@ -293,6 +480,43 @@ export class CAIInfoRouter extends CAuthServer {
         }));
 
         _res.json({ providers });
+        return null;
+    }
+
+    // POST /AIInfo/prune-conversations  body: { months?: number }
+    // 각 provider가 로컬에 남기는 세션 저장소에서 months개월보다 오래된 것을 지운다(이 컴퓨터의 모든
+    // 프로젝트 대상). 설치 안 된 provider는 건너뛴다(CAI.ProviderInfo로 확인). 파괴적 작업이라 인증 필요.
+    async onPruneConversations(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+
+        const monthsRaw = _json.GetInt('months');
+        const months = (typeof monthsRaw === 'number' && monthsRaw > 0) ? monthsRaw : 1;
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - months);
+        const cutoffMs = cutoffDate.getTime();
+
+        const results: Record<string, PruneOutcome> = {};
+        const runners: Partial<Record<CAI.eProvider, () => number | Promise<number>>> = {
+            [CAI.eProvider.claude]:      () => _pruneClaude(cutoffMs),
+            [CAI.eProvider.codex]:       () => _pruneCodex(cutoffMs),
+            [CAI.eProvider.grok]:        () => _pruneGrok(cutoffMs),
+            [CAI.eProvider.opencode]:    () => _pruneOpencode(cutoffMs),
+            [CAI.eProvider.antigravity]: () => _pruneAntigravity(cutoffMs),
+        };
+
+        for (const [provider, run] of Object.entries(runners) as [CAI.eProvider, () => number | Promise<number>][]) {
+            const info = await CAI.ProviderInfo(provider);
+            if (!info.installed) { results[provider] = { installed: false, deleted: 0 }; continue; }
+            try {
+                results[provider] = { installed: true, deleted: await run() };
+            } catch (e: any) {
+                results[provider] = { installed: true, deleted: 0, error: String(e?.message ?? e) };
+                CConsol.Log(`[CAIInfoRouter] prune failed provider=${provider}: ${e?.message ?? e}`, CConsol.eColor.red);
+            }
+        }
+
+        const totalDeleted = Object.values(results).reduce((sum, r) => sum + r.deleted, 0);
+        _res.json({ ok: true, months, cutoff: cutoffDate.toISOString(), totalDeleted, results });
         return null;
     }
 }

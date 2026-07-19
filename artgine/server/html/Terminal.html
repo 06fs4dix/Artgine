@@ -155,6 +155,8 @@
   // xterm 화면 직접 입력(term.onData)·메뉴·방향키가 전부 sendRaw를 거치므로 여기서 한 번에 차단한다.
   var _handoffLock = false;
   function sendRaw(text) { if (_handoffLock) return; if (ws && ws.readyState === 1) ws.send(text); }
+  // grok은 ESC를 취소로 받지 않아 Ctrl+C를 대신 보낸다(다른 CLI의 ESC와 같은 결과).
+  function sendEsc() { sendRaw(MODE === "grok" ? "\x03" : "\x1b"); }
   function sendResize() {
     fit.fit();
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
@@ -290,7 +292,7 @@
       else if (seq === "__RESIZE__")  sendResize();
       else if (seq === "__PAGE_UP__") _pageUp();
       else if (seq === "__PAGE_DOWN__") _pageDown();
-      else if (seq === "__ESC__")     { sendRaw("\x1b"); inp.focus(); }
+      else if (seq === "__ESC__")     { sendEsc(); inp.focus(); }
       else if (seq === "__SUPER__")   _toggleSuper();
       else if (seq === "__RESUME__")  agentAction("resume");
       else if (seq === "__COMPACT__") agentAction("compact");
@@ -325,6 +327,45 @@
     ddWrap.appendChild(ddBtn); ddWrap.appendChild(ddMenu);
     bar.appendChild(inp); bar.appendChild(ddWrap); document.body.appendChild(bar);
     showBar();
+
+    // ---- 파일 드래그앤드롭: 서버(세션 workingDir/.uploads/)에 저장하고 경로를 입력창에 삽입 ----
+    function _readAsBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var r = new FileReader();
+        r.onload = function () { resolve(String(r.result).split(",")[1] || ""); };
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+    function _insertAtCursor(text) {
+      var pos = inp.selectionStart >= 0 ? inp.selectionStart : inp.value.length;
+      inp.value = inp.value.slice(0, pos) + text + inp.value.slice(pos);
+      inp.setSelectionRange(pos + text.length, pos + text.length);
+      autoHeight(); inp.focus();
+    }
+    function _uploadDroppedFile(file) {
+      _readAsBase64(file).then(function (b64) {
+        return fetch(window.__CTX_PATH__ + "/cmd/upload-file", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: token, name: file.name, data: b64 })
+        });
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j.ok) { term.write("\r\n\x1b[31m[upload] Failed: " + (j.msg || "unknown error") + "\x1b[m\r\n"); return; }
+        _insertAtCursor('"' + j.path + '" ');
+      }).catch(function (e) {
+        term.write("\r\n\x1b[31m[upload] Error: " + e + "\x1b[m\r\n");
+      });
+    }
+    document.addEventListener("dragover", function (e) { e.preventDefault(); });
+    document.addEventListener("drop", function (e) {
+      e.preventDefault();
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) { for (var i = 0; i < files.length; i++) _uploadDroppedFile(files[i]); return; }
+      // Control.ts 우측 사이드바 파일 목록에서 드래그해온 경우: 이미 서버에 있는 파일이라
+      // 업로드 없이 text/plain으로 실어온 경로를 그대로 삽입한다.
+      var textPath = e.dataTransfer && e.dataTransfer.getData("text/plain");
+      if (textPath) _insertAtCursor('"' + textPath + '" ');
+    });
 
     // ---- autocomplete ----
     var _cmdList = ["/compact", "/resume", "/model", "/continue", "/exit", "/clear", "/status", "/help"];
@@ -428,7 +469,7 @@
         if (e.key === "Enter" && !e.shiftKey && !e.isComposing && _acIdx >= 0) { e.preventDefault(); _acApply(items[_acIdx]._it); return; }
       }
       if (e.key === "Tab") { e.preventDefault(); sendToParent("terminal-tab-key"); return; }
-      if (e.key === "Escape") { e.preventDefault(); sendRaw("\x1b"); return; }
+      if (e.key === "Escape") { e.preventDefault(); sendEsc(); return; }
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendInput(); }
       if (!inp.value) { var a = { ArrowUp: "\x1b[A", ArrowDown: "\x1b[B", ArrowLeft: "\x1b[D", ArrowRight: "\x1b[C" }; if (a[e.key]) { e.preventDefault(); sendRaw(a[e.key]); } }
     });
@@ -445,7 +486,7 @@
     if (MODE === "codex") {
       document.addEventListener("wheel", function (e) { e.preventDefault(); e.stopPropagation(); if (e.deltaY < 0) _codexUp(); else _codexDown(); }, { passive: false, capture: true });
     }
-    document.addEventListener("wheel", function (e) { if (MODE !== "opencode") return; e.preventDefault(); e.stopPropagation(); sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~"); }, { passive: false, capture: true });
+    document.addEventListener("wheel", function (e) { if (MODE !== "opencode" && MODE !== "grok") return; e.preventDefault(); e.stopPropagation(); sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~"); }, { passive: false, capture: true });
     recvFromParent({ "focus-input": function () { showBar(); inp.focus(); } });
   }
 })();

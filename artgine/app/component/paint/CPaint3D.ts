@@ -577,8 +577,6 @@ export class CPaint3D extends CPaint
 	
 	ExeLocalMat(_centerPos=false,_targetScale=0)
 	{
-		if(this.mCenterPos)
-			this.mLMat.SetV3(3,CMath.V3MulFloat(this.mBound.GetCenter(),-1))
 		if(this.mTargetScale!=0)
 		{
 			let size=this.mBound.GetSize();
@@ -587,7 +585,8 @@ export class CPaint3D extends CPaint
 			this.mLMat.mF32A[5]=this.mTargetScale/maxSize;
 			this.mLMat.mF32A[10]=this.mTargetScale/maxSize;
 		}
-		
+		if(this.mCenterPos)
+			this.mLMat.SetV3(3,CMath.V3MulV3(this.mBound.GetCenter(),new CVec3(-this.mLMat.mF32A[0],-this.mLMat.mF32A[5],-this.mLMat.mF32A[10])));
 
 		this.mLMat.UnitCheck();
 	}

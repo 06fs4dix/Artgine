@@ -45,6 +45,11 @@ export class CLight extends CBrushComp
 	// mNormalBias =new CVec1(5);
 	// mShadowRate=new CVec1(0.7);
 
+    // mMaxDistance
+    // mDistanceFade
+    // mCascadeRatios
+    // mCascadeFade
+
 
 	constructor()
 	{
@@ -306,6 +311,7 @@ export class CLight extends CBrushComp
         {
 			let srp=new CRPAuto(this.mBrush.mFrame.Pal().Sl3D().mKey);
 			srp.mCopy=false;
+            srp.mAlpha=false;
 			srp.mTag.add("shadowWrite");
 			srp.PushOr(new CCondition("class","==","CPaint3D"));
 			srp.PushOr(new CCondition("class","==","CPaint3DMerge"));
@@ -316,6 +322,7 @@ export class CLight extends CBrushComp
 	
 			srp=new CRPAuto(this.mBrush.mFrame.Pal().SlVoxel().mKey);
 			srp.mCopy=false;
+            srp.mAlpha=false;
 			srp.mTag.add("shadowWrite");
 			srp.PushAnd(new CCondition("class","==","CPaintVoxel"));
 			srp.PushAnd(new CCondition("mTag[shadow]"));
@@ -325,6 +332,7 @@ export class CLight extends CBrushComp
 
             srp=new CRPAuto(this.mBrush.mFrame.Pal().SlTerrain().mKey);
 			srp.mCopy=false;
+            srp.mAlpha=false;
 			srp.mTag.add("shadowWrite");
 			srp.PushAnd(new CCondition("class","==","CPaintTerrain"));
 			srp.PushAnd(new CCondition("mTag[shadow]"));
@@ -379,19 +387,17 @@ export class CLight extends CBrushComp
                     let seye : CVec3;
                     let sup : CVec3 = new CVec3(0,1,0);
 
-                    const AutoDigitSnapping = (_slook : CVec3, _halfSize : number) => {
+                    const AutoDigitSnapping = (_slook : CVec3, _texelSize: number) => {
                         let Zaxis = ligDir;
                         let upVec = Math.abs(CMath.V3Dot(sup, Zaxis)) > 0.99 ? new CVec3(0,0,1) : sup;
                         let Xaxis = CMath.V3Nor(CMath.V3Cross(upVec, Zaxis));
                         let Yaxis = CMath.V3Cross(Zaxis, Xaxis);
 
-                        const texelSize = (_halfSize * 2) / shadowTex.GetWidth();
-
                         const originLS_x = _slook.x * Xaxis.x + _slook.y * Xaxis.y + _slook.z * Xaxis.z;
                         const originLS_y = _slook.x * Yaxis.x + _slook.y * Yaxis.y + _slook.z * Yaxis.z;
 
-                        const dx = Math.floor(originLS_x / texelSize) * texelSize - originLS_x;
-                        const dy = Math.floor(originLS_y / texelSize) * texelSize - originLS_y;
+                        const dx = Math.floor(originLS_x / _texelSize) * _texelSize - originLS_x;
+                        const dy = Math.floor(originLS_y / _texelSize) * _texelSize - originLS_y;
 
                         const diffX = Xaxis.x * dx + Yaxis.x * dy;
                         const diffY = Xaxis.y * dx + Yaxis.y * dy;
@@ -413,7 +419,7 @@ export class CLight extends CBrushComp
 
                         slook=CMath.V3AddV3(eye,CMath.V3MulFloat(view, size*0.5));
                         if(this.mDigit == null) {   // digit없으면 자동으로 계산
-                            AutoDigitSnapping(slook, size*0.5);
+                            AutoDigitSnapping(slook, size / shadowTex.GetWidth());
                         }
                         else {
                             slook.x = Math.round(slook.x/this.mDigit)*this.mDigit;
@@ -431,6 +437,12 @@ export class CLight extends CBrushComp
                         }
                         ShadowView[i * 2 + 0].set(scam.GetViewMat().F32A(),this.mBrush.mShadowCount*16);
                         ShadowView[i * 2 + 1].set(scam.GetProjMat().F32A(),this.mBrush.mShadowCount*16);
+                        // texelSize 넘김
+                        const halfDepth = 0.5*(2*size-100);
+                        const halfSize = 0.5*size;
+                        const radius = Math.sqrt(halfDepth*halfDepth+halfSize*halfSize+halfSize*halfSize);
+                        ShadowView[i * 2 + 0][this.mBrush.mShadowCount*16+3] = 2 * radius / shadowTex.GetWidth() * 1.4142136;
+
                         scam.Update(_update);
 
                         size *= 4;  // 다음 cascade는 4배 커짐

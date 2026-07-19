@@ -36,7 +36,7 @@ export class CAI {
 }
 
 export namespace CAI {
-    export enum eProvider { claude='claude', codex='codex', manus='manus', gpt='gpt', antigravity='antigravity', opencode='opencode' }
+    export enum eProvider { claude='claude', codex='codex', manus='manus', gpt='gpt', antigravity='antigravity', opencode='opencode', grok='grok' }
 }
 
 import CAI_imple from "../util_imple/CAI.js";

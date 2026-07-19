@@ -29,6 +29,7 @@
 node ai/tool/remotecmd.js <HomeURL> login                     # 비밀번호로 세션 인증(auth/login, settings.json 자동 읽음) → 이후 cmd 호출 가능
 node ai/tool/remotecmd.js <HomeURL> remote <토큰>              # 토큰으로 세션 인증(auth/check) → 이후 cmd 호출 가능
 node ai/tool/remotecmd.js <HomeURL> cmd <콘솔 명령어 그대로...>  # 명령 실행(RemoteCMD/Exec) → {ok, stdout, stderr} JSON 출력
+node ai/tool/remotecmd.js <HomeURL> restart                   # 서버 재시작(File/Restart) → 세션 인증 필요, 즉시 현재 프로세스 종료됨
 ```
 - `cmd`는 세션 쿠키 기반 인증이 필요하다 — 먼저 `login` 또는 `remote <토큰>`으로 세션을 인증시켜야 한다.
 - 쿠키는 `ai/tool/remotecmd_cookie.txt`에 저장/로드 (다른 `ai/tool/*.js` 도구와는 별도 파일을 사용한다).
@@ -88,3 +89,14 @@ node ai/tool/remotecmd.js <HomeURL> download /proj/MyProject/file.ts
 node ai/tool/remotecmd.js <HomeURL> download /proj/MyProject/file.ts ./out/file.ts
 → {"ok":true,"file":"./out/file.ts","size":1234}
 ```
+
+### 서버 재시작 (Restart)
+REST API `POST /File/Restart` (`artgine/server/CFileServer.ts`)로 서버를 재시작한다.
+```
+node ai/tool/remotecmd.js <HomeURL> login (또는 remote <토큰>)
+node ai/tool/remotecmd.js <HomeURL> restart
+→ {"ok":true}
+```
+- 인증 필요 — 먼저 `login` 또는 `remote <토큰>`으로 세션을 인증해야 한다. 인증은 기존 인증 시스템(`CAuthServer`, 로그인 세션 쿠키 또는 password 토큰)을 그대로 재사용한다.
+- 현재 로드된 settings.json 그대로 재시작한다: 내부적으로 `npm run start -- <현재 settings 파일>`을 detached 실행하고, `desktop/Start.ts`가 기존 프로세스를 kill한 뒤 같은 설정으로 재기동한다.
+- **호출 즉시 현재 서버 프로세스가 종료된다. 사용자의 명시적 승인 없이는 이 명령을 실행해서는 안 된다** (`ai/ROLE.md` "제한 명령어" 규칙).

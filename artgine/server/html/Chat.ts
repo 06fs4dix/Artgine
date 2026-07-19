@@ -2,7 +2,7 @@
 // Talks to CAIChatRouter (/AIChat/*, /AIChat/ws)
 
 
-type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode';
+type Provider = 'claude' /* | 'gemini' */ | 'codex' | 'antigravity' | 'opencode' | 'grok';
 interface IAttachment { name: string; path: string; }
 interface IMessage {
     role: 'user' | 'assistant';
@@ -26,7 +26,7 @@ interface ISessionMeta {
 interface IHistory { meta: ISessionMeta; messages: IMessage[]; }
 
 // populated from GET /AIInfo/setting (ai/settings.json을 그대로 받아 models 필드만 사용)
-let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [] };
+let MODELS: Record<Provider, { value: string; label: string }[]> = { claude: [], /* gemini: [], */ codex: [], antigravity: [], opencode: [], grok: [] };
 const LS_LAST_SID = 'ai.lastSessionId';
 const LS_PROVIDER = 'ai.provider';
 const LS_MODEL    = 'ai.model';
@@ -258,7 +258,7 @@ async function fetchProviders(): Promise<boolean> {
         if (r.status === 401) { clearAuth(); return false; }
         const setting = await r.json();
         const models = setting.models || {};
-        for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode'] as Provider[]) {
+        for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode', 'grok'] as Provider[]) {
             MODELS[id] = models[id] || [];
         }
         return true;
@@ -267,9 +267,9 @@ async function fetchProviders(): Promise<boolean> {
 function rebuildProviderOptions() {
     elProviderSel.innerHTML = '';
     const _providerLabels: Record<Provider, string> = {
-        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode',
+        claude: 'Claude', /* gemini: 'Gemini', */ codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok',
     };
-    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode'] as Provider[]) {
+    for (const id of ['claude', /* 'gemini', */ 'codex', 'antigravity', 'opencode', 'grok'] as Provider[]) {
         const o = document.createElement('option');
         o.value = id;
         o.textContent = _providerLabels[id];

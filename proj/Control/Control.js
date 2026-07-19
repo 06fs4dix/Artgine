@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mre9w8y1_7";
+gPF.mVersion = "mrn9vafi_5";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -26,7 +26,7 @@ await gAtl.Init([], "");
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
-import { CFileViewer } from "../../artgine/util/CModalUtil.js";
+import { CMDViewer, CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
@@ -82,7 +82,8 @@ function registerControlLan() {
     CLan.Set(ko, "ctrl.kb.global", "전역 단축키");
     CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
     CLan.Set(ko, "ctrl.kb.f2", "<kbd>F2</kbd> 파일 검색 열기");
-    CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 사이드바 포커스/토글");
+    CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 새 터미널 열기");
+    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> 사이드바 포커스/토글");
     CLan.Set(ko, "ctrl.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)");
     CLan.Set(ko, "ctrl.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
 }
@@ -178,6 +179,51 @@ loadAiProviderStatus();
 setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
+document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
+document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
+    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
+});
+document.getElementById('dbViewerBtn')?.addEventListener('click', () => {
+    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    new CORMViewer(undefined, undefined, undefined, currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
+});
+document.getElementById('pruneConvBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('pruneConvMonths');
+    const result = document.getElementById('pruneConvResult');
+    const months = Math.max(1, parseInt(input?.value ?? '1', 10) || 1);
+    const dlg = new CConfirm();
+    dlg.SetBody(`Delete all conversation history older than ${months} month(s)? This applies to every project on this machine and cannot be undone.`);
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+        async () => {
+            if (result)
+                result.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+            try {
+                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/prune-conversations', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ months }),
+                });
+                const j = await r.json();
+                if (!j.ok)
+                    throw new Error(j.msg ?? 'failed');
+                const lines = Object.entries(j.results)
+                    .map(([provider, v]) => v.installed
+                    ? `${aiEscapeHtml(provider)}: ${v.deleted}${v.error ? ` <span class="text-danger">(${aiEscapeHtml(v.error)})</span>` : ''}`
+                    : `${aiEscapeHtml(provider)}: <span class="text-secondary">not installed</span>`)
+                    .join('<br>');
+                if (result)
+                    result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Total ${j.totalDeleted} deleted</span><div class="mt-1">${lines}</div>`;
+            }
+            catch (e) {
+                if (result)
+                    result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+            }
+        },
+        () => { },
+    ], ["Delete", "Cancel"]);
+    dlg.Open();
+});
 function showAddOllamaModal() {
     const uid = `ollama_${Date.now()}`;
     const modal = new CModal();
@@ -223,7 +269,7 @@ function showAddOllamaModal() {
             if (result)
                 result.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> …</span>';
             try {
-                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/push-opencode-model', {
+                const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/opencode-pushLocal', {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
                     body: JSON.stringify(apiKey ? { host, apiKey } : { host }),
@@ -260,6 +306,85 @@ function showAddOllamaModal() {
         keyInput?.addEventListener('keydown', onEnter);
     }, MODAL_DOM_DELAY);
 }
+function showOpencodeStatusModal() {
+    const modal = new CModal();
+    modal.SetHeader('OpenCode Provider Status');
+    modal.SetBody(`
+        <div class="d-flex justify-content-end mb-2">
+            <button id="opencodeStatusRefreshBtn" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                <i class="bi bi-arrow-clockwise"></i><span>Refresh</span>
+            </button>
+        </div>
+        <div id="opencodeStatusBody" class="small"><i class="bi bi-hourglass-split"></i> Loading...</div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(680, 420);
+    modal.Open(CModal.ePos.Center);
+    const load = async () => {
+        const body = document.getElementById('opencodeStatusBody');
+        const refreshBtn = document.getElementById('opencodeStatusRefreshBtn');
+        if (!body)
+            return;
+        if (refreshBtn)
+            refreshBtn.disabled = true;
+        body.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading...';
+        try {
+            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/opencode-statusLocal');
+            if (r.status === 401) {
+                body.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Login required</span>';
+                return;
+            }
+            const j = await r.json();
+            const providers = j.providers ?? [];
+            if (!providers.length) {
+                body.innerHTML = '<span class="text-secondary">No registered OpenCode providers yet. Use "Add OpenCode Model" first.</span>';
+                return;
+            }
+            body.innerHTML = `
+                <table class="table table-sm table-borderless align-middle mb-0">
+                    <thead>
+                        <tr class="text-secondary" style="font-size:0.8em;">
+                            <th>Connection</th><th>Provider</th><th>Host</th><th>Models</th><th>Running</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${providers.map(p => `
+                            <tr>
+                                <td>${p.connected
+                ? '<span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Connected</span>'
+                : `<span class="badge bg-danger" title="${aiEscapeHtml(p.error ?? '')}"><i class="bi bi-x-circle-fill"></i> Disconnected</span>`}</td>
+                                <td>${aiEscapeHtml(p.label)}<div class="text-secondary" style="font-size:0.75em;">${aiEscapeHtml(p.backend)}</div></td>
+                                <td class="text-secondary">${aiEscapeHtml(p.host)}</td>
+                                <td>${p.modelCount}</td>
+                                <td>${p.running.length
+                ? p.running.map(m => {
+                    const mem = [];
+                    if (m.vramBytes)
+                        mem.push(`${(m.vramBytes / 1e9).toFixed(1)}GB VRAM`);
+                    if (m.sizeBytes)
+                        mem.push(`${(m.sizeBytes / 1e9).toFixed(1)}GB total`);
+                    return `${aiEscapeHtml(m.name)}${mem.length ? ` <span class="text-secondary">(${mem.join(', ')})</span>` : ''}`;
+                }).join('<br>')
+                : '<span class="text-secondary">-</span>'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        catch (e) {
+            body.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+        }
+        finally {
+            if (refreshBtn)
+                refreshBtn.disabled = false;
+        }
+    };
+    setTimeout(() => {
+        document.getElementById('opencodeStatusRefreshBtn')?.addEventListener('click', load);
+        load();
+    }, MODAL_DOM_DELAY);
+}
 const MODAL_DOM_DELAY = 100;
 function postFrameVisible(f, visible) {
     if (f?.contentWindow)
@@ -267,9 +392,8 @@ function postFrameVisible(f, visible) {
 }
 function rdpRemoteWebRootUrl(input) {
     const u = new URL(input);
-    const marker = "/proj/Home/Home.html";
-    const homeIdx = u.pathname.indexOf(marker);
-    const basePath = homeIdx >= 0 ? u.pathname.substring(0, homeIdx) : u.pathname;
+    const m = u.pathname.match(/^(.*)\/proj\/[^\/]+\/[^\/]+\.html$/);
+    const basePath = m ? m[1] : u.pathname;
     return (u.origin + (basePath || "/")).replace(/\/+$/, '') + '/';
 }
 function aiEscapeHtml(s) {
@@ -350,8 +474,8 @@ function createSessionItem(spec) {
         + (spec.isActive ? ' ' + spec.activeClass : '');
     item.dataset[spec.dataAttr.name] = spec.dataAttr.value;
     item.innerHTML = `
-        ${spec.leftHtml}
-        ${spec.bodyHtml}
+        <span class="sess-left" style="display:contents;">${spec.leftHtml}</span>
+        <span class="sess-body" style="display:contents;">${spec.bodyHtml}</span>
         <div class="dropdown" style="flex-shrink:0;">
             <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-three-dots-vertical"></i>
@@ -364,20 +488,39 @@ function createSessionItem(spec) {
             </ul>
         </div>
     `;
+    item._spec = spec;
+    item._left = spec.leftHtml;
+    item._body = spec.bodyHtml;
     item.addEventListener('click', (e) => {
         if (e.target.closest('.dropdown'))
             return;
-        spec.onClick();
+        item._spec.onClick();
     });
     const dropEl = item.querySelector('.dropdown');
     new window.bootstrap.Dropdown(dropEl.querySelector('[data-bs-toggle="dropdown"]'), { popperConfig: { strategy: 'fixed' } });
-    item.querySelector('[data-act="link"]').addEventListener('click', spec.onShare);
-    wirePopupActions(item, spec.popup.url, spec.popup.title, spec.popup.winName);
-    item.querySelector(`[data-act="${spec.deleteAct}"]`).addEventListener('click', spec.onDelete);
-    item.addEventListener('mouseenter', () => { if (!spec.isActive)
-        item.classList.add('bg-body-secondary'); });
-    item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+    item.querySelector('[data-act="link"]').addEventListener('click', () => item._spec.onShare());
+    wirePopupActions(item, () => item._spec.popup.url(), spec.popup.title, spec.popup.winName);
+    item.querySelector(`[data-act="${spec.deleteAct}"]`).addEventListener('click', () => item._spec.onDelete());
     return item;
+}
+function updateSessionItem(el, spec) {
+    const item = el;
+    item._spec = spec;
+    if (item._left !== spec.leftHtml) {
+        item._left = spec.leftHtml;
+        item.querySelector('.sess-left').innerHTML = spec.leftHtml;
+    }
+    if (item._body !== spec.bodyHtml) {
+        item._body = spec.bodyHtml;
+        item.querySelector('.sess-body').innerHTML = spec.bodyHtml;
+    }
+    item.classList.toggle(spec.activeClass, spec.isActive);
+}
+function destroySessionItem(el) {
+    const toggle = el.querySelector('[data-bs-toggle="dropdown"]');
+    if (toggle)
+        window.bootstrap.Dropdown.getInstance(toggle)?.dispose();
+    el.remove();
 }
 const rdpFrameContainer = CDOM.ID("rdp-frame-container");
 const rdpFramePlaceholder = CDOM.ID("rdp-frame-placeholder");
@@ -436,6 +579,8 @@ function rdpActivatePane() {
 let rdpRemotes = [];
 let selectedRdpKey = 'rdp:local';
 function rdpRenderList() {
+    for (const el of Array.from(rdpSidebarList.children))
+        destroySessionItem(el);
     rdpSidebarList.innerHTML = '';
     const localItem = document.createElement('div');
     localItem.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-2 rounded'
@@ -517,6 +662,7 @@ async function ctrlRefreshRootSelect() {
         if (seq !== ctrlRootReqSeq)
             return;
         ctrlRenderRootOpts(data.roots ?? []);
+        ctrlSideFileGoTo('/');
     }
     catch (e) {
         if (seq !== ctrlRootReqSeq)
@@ -530,6 +676,7 @@ ctrlRootSel.addEventListener('change', () => {
     if (!r)
         return;
     ctrlSelectedRootPath = r.path;
+    ctrlSideFileGoTo('/');
     if (!fileIframe?.contentWindow)
         return;
     const selKey = idx === ctrlRootOpts.length - 1 ? 'workingpath' : r.path;
@@ -834,6 +981,89 @@ async function ctrlFileSearch() {
         doSearch(); });
     input.focus();
 }
+const ctrlSideFilePathEl = CDOM.ID('ctrlSideFilePath');
+const ctrlSideFileListEl = CDOM.ID('ctrlSideFileList');
+let ctrlSideFilePath = '/';
+let ctrlSideFileRoot = '';
+let ctrlSideFileDown = '';
+let ctrlSideFileReqSeq = 0;
+function ctrlSideFileRenderEmpty(msg) {
+    ctrlSideFileListEl.innerHTML = `<div class="text-secondary small px-1">${aiEscapeHtml(msg)}</div>`;
+}
+function ctrlSideFileRenderList(list) {
+    const visible = list
+        .filter(fl => !fl.hidden)
+        .sort((a, b) => (a.file === b.file) ? a.name.localeCompare(b.name) : (a.file ? 1 : -1));
+    if (!visible.length) {
+        ctrlSideFileRenderEmpty('Empty');
+        return;
+    }
+    ctrlSideFileListEl.innerHTML = '';
+    for (const fl of visible) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action py-1 px-2 d-flex align-items-center gap-1';
+        const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
+        item.innerHTML = `<i class="bi ${icon}"></i><span class="text-truncate">${aiEscapeHtml(fl.name)}</span>`;
+        item.draggable = true;
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer?.setData('text/plain', ctrlSideFileRoot + ctrlSideFilePath + fl.name);
+            if (e.dataTransfer)
+                e.dataTransfer.effectAllowed = 'copy';
+        });
+        item.addEventListener('click', () => {
+            if (fl.file) {
+                editorOpenFile(ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name));
+            }
+            else {
+                ctrlSideFileGoTo(ctrlSideFilePath + fl.name + '/');
+            }
+        });
+        ctrlSideFileListEl.appendChild(item);
+    }
+}
+async function ctrlSideFileGoTo(pathVal) {
+    ctrlSideFilePath = pathVal;
+    ctrlSideFilePathEl.textContent = pathVal;
+    const seq = ++ctrlSideFileReqSeq;
+    ctrlSideFileRenderEmpty('Loading...');
+    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
+    const rootPathParam = ctrlSelectedRootPath || undefined;
+    try {
+        const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+        const p = { path: pathVal };
+        if (rootPathParam)
+            p.RootPath = rootPathParam;
+        if (token)
+            p.token = token;
+        const data = await CFecth.Exe(apiBase + "File/List", p, "json");
+        if (seq !== ctrlSideFileReqSeq)
+            return;
+        if (data.RootPath != null)
+            ctrlSideFileRoot = data.RootPath.replace(/\/+$/, '');
+        if (data.RootUrl != null)
+            ctrlSideFileDown = new URL(data.RootUrl, apiBase).href.replace(/\/+$/, '');
+        if (data.path != null) {
+            ctrlSideFilePath = data.path;
+            ctrlSideFilePathEl.textContent = data.path;
+        }
+        ctrlSideFileRenderList(data.list ?? []);
+    }
+    catch (e) {
+        if (seq !== ctrlSideFileReqSeq)
+            return;
+        ctrlSideFileRenderEmpty('Failed to load');
+    }
+}
+CDOM.ID('ctrlSideFileUpBtn').addEventListener('click', () => {
+    if (ctrlSideFilePath === '/' || ctrlSideFilePath === '')
+        return;
+    const trimmed = ctrlSideFilePath.replace(/\/+$/, '');
+    const parent = trimmed.substring(0, trimmed.lastIndexOf('/') + 1) || '/';
+    ctrlSideFileGoTo(parent);
+});
+CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGoTo(ctrlSideFilePath));
+ctrlSideFileGoTo('/');
 function runControlHotkey(key) {
     switch (key) {
         case 'F1':
@@ -843,6 +1073,11 @@ function runControlHotkey(key) {
             return true;
         case 'F2':
             ctrlFileSearch();
+            return true;
+        case 'F3':
+            if (!ctrlRequireAuthed())
+                return true;
+            termStartNew('cmd', ctrlSelectedRootPath || undefined);
             return true;
     }
     return false;
@@ -884,7 +1119,7 @@ function focusActiveControlFrame() {
     catch (_) { }
     f.focus();
 }
-function runControlF3Key() {
+function runControlF4Key() {
     if (!appSidebar)
         return;
     if (!appSidebar.classList.contains('sidebar-docked')) {
@@ -941,14 +1176,14 @@ function wirePooledFrameHotkeys(f, key) {
     f.addEventListener('load', () => {
         try {
             f.contentWindow?.addEventListener('keydown', (e) => {
-                if (e.key === 'F1' || e.key === 'F2') {
+                if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
                     e.preventDefault();
                     runControlHotkey(e.key);
                     return;
                 }
-                if (e.key === 'F3') {
+                if (e.key === 'F4') {
                     e.preventDefault();
-                    runControlF3Key();
+                    runControlF4Key();
                     return;
                 }
                 if (!isTerm && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
@@ -961,14 +1196,14 @@ function wirePooledFrameHotkeys(f, key) {
     });
 }
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1' || e.key === 'F2') {
+    if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
         e.preventDefault();
         runControlHotkey(e.key);
         return;
     }
-    if (e.key === 'F3') {
+    if (e.key === 'F4' || e.key === 'F6') {
         e.preventDefault();
-        runControlF3Key();
+        runControlF4Key();
         return;
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -979,8 +1214,8 @@ document.addEventListener('keydown', (e) => {
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
         const key = String(data.key ?? '');
-        if (key === 'F3')
-            runControlF3Key();
+        if (key === 'F4')
+            runControlF4Key();
         else
             runControlHotkey(key);
     },
@@ -992,7 +1227,7 @@ CIframeMsg.Recv({
         memoSendRemoteInfo();
     },
     'file-opened': (data) => {
-        editorOpenFile(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
+        promptSourceAction(String(data.path ?? ''), String(data.baseUrl ?? ''), String(data.url ?? ''));
     },
     'open-chat': (data) => chatStartNew(data.cwd || undefined),
     'open-term': (data) => termStartNew('cmd', data.cwd || undefined),
@@ -1003,6 +1238,16 @@ CIframeMsg.Recv({
             CIframeMsg.Send(memoIframe.contentWindow, 'set-folder', { folder: data.folder ?? '' }); }, 200);
     },
     'terminal-path-tapped': (data) => termOpenTappedPath(String(data.path ?? ''), String(data.token ?? '')),
+    'terminal-handoff': (data) => {
+        const newToken = String(data.newToken ?? '');
+        if (!newToken)
+            return;
+        termActivatePane();
+        showTermFrame(`term-new:${newToken}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${newToken}`);
+        termRenderList();
+        setTimeout(termRenderList, 1500);
+        setTimeout(termRenderList, 4000);
+    },
 });
 let dlInited = false;
 CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
@@ -1015,6 +1260,124 @@ if (CDOM.ID("download-panel").classList.contains("active")) {
     dlInited = true;
     MountDownloadTab("download-root");
 }
+const logAccordionList = CDOM.ID('logAccordionList');
+const logLoadMoreBtn = CDOM.ID('logLoadMoreBtn');
+let logNextBefore = null;
+function logFormatTime(stamp) {
+    const s = String(stamp);
+    if (s.length < 14)
+        return s;
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
+}
+async function logLoadSessionBody(sessionId, bodyEl) {
+    try {
+        const r = await authedFetch(`${CPath.WebRootUrl()}cmd/log-session?sessionId=${encodeURIComponent(sessionId)}`);
+        const j = await r.json();
+        if (!j.ok) {
+            bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(j.msg ?? 'failed')}</span>`;
+            return;
+        }
+        const records = j.records ?? [];
+        if (!records.length) {
+            bodyEl.innerHTML = '<span class="text-secondary small">No messages.</span>';
+            return;
+        }
+        bodyEl.innerHTML = records.map(rec => {
+            const isUser = rec.role === 'user';
+            return `<div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">` +
+                `<div class="p-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-secondary-subtle'}" style="max-width:85%;">` +
+                `<div style="font-size:0.68em;opacity:0.75;">${aiEscapeHtml(rec.provider)} &middot; ${logFormatTime(rec.createdAt)}</div>` +
+                `<div style="white-space:pre-wrap;word-break:break-word;">${aiEscapeHtml(rec.text.trim())}</div>` +
+                `</div></div>`;
+        }).join('');
+    }
+    catch (e) {
+        bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+    }
+}
+function logCreateAccordionItem(entry) {
+    const item = document.createElement('div');
+    item.className = 'border rounded';
+    item.dataset.sessionId = entry.name;
+    const bodyId = `logBody_${entry.offset}`;
+    const preview = entry.firstText.replace(/\s+/g, ' ').trim();
+    item.innerHTML = `
+        <div class="d-flex align-items-center gap-2 p-2 bg-body-tertiary rounded" style="cursor:pointer;" data-act="toggle">
+            <i class="bi bi-chevron-right log-chevron flex-shrink-0"></i>
+            <div class="flex-grow-1 overflow-hidden">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge text-bg-secondary flex-shrink-0">${aiEscapeHtml(entry.model || '?')}</span>
+                    <span class="text-truncate small">${aiEscapeHtml(preview)}</span>
+                </div>
+                <div class="text-truncate text-secondary" style="font-size:0.72em;">
+                    <i class="bi bi-folder2"></i> ${aiEscapeHtml(entry.cwd || '-')} &middot; ${logFormatTime(entry.time)}
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0" data-act="del" title="Delete"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="collapse" id="${bodyId}">
+            <div class="p-2 border-top d-flex flex-column gap-2" style="max-height:400px;overflow-y:auto;" data-role="body">
+                <div class="text-secondary small"><i class="bi bi-hourglass-split"></i> Loading...</div>
+            </div>
+        </div>
+    `;
+    let loaded = false;
+    const toggleHeader = item.querySelector('[data-act="toggle"]');
+    const collapseEl = item.querySelector(`#${bodyId}`);
+    const chevron = item.querySelector('.log-chevron');
+    const bsCollapse = new window.bootstrap.Collapse(collapseEl, { toggle: false });
+    collapseEl.addEventListener('show.bs.collapse', () => { chevron.className = 'bi bi-chevron-down log-chevron'; });
+    collapseEl.addEventListener('hide.bs.collapse', () => { chevron.className = 'bi bi-chevron-right log-chevron'; });
+    toggleHeader.addEventListener('click', () => {
+        bsCollapse.toggle();
+        if (loaded)
+            return;
+        loaded = true;
+        logLoadSessionBody(entry.name, item.querySelector('[data-role="body"]'));
+    });
+    item.querySelector('[data-act="del"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dlg = new CConfirm();
+        dlg.SetBody(`세션 "${aiEscapeHtml(entry.name)}"의 로그를 전부 삭제할까요?`);
+        dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+            async () => {
+                await authedFetch(`${CPath.WebRootUrl()}cmd/log-session-del?sessionId=${encodeURIComponent(entry.name)}`);
+                bsCollapse.dispose();
+                item.remove();
+            },
+            () => { },
+        ], ["Delete", "Cancel"]);
+        dlg.Open();
+    });
+    return item;
+}
+async function logLoadSessions(reset) {
+    if (reset) {
+        logAccordionList.innerHTML = '';
+        logNextBefore = null;
+    }
+    try {
+        const url = `${CPath.WebRootUrl()}cmd/log-sessions` + (logNextBefore ? `?before=${logNextBefore}` : '');
+        const r = await authedFetch(url);
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        const sessions = j.sessions ?? [];
+        for (const s of sessions)
+            logAccordionList.appendChild(logCreateAccordionItem(s));
+        logNextBefore = sessions.length ? sessions[sessions.length - 1].offset : logNextBefore;
+        logLoadMoreBtn.style.display = sessions.length >= 30 ? '' : 'none';
+    }
+    catch (e) {
+        console.error('logLoadSessions error:', e);
+    }
+}
+CDOM.ID('log-tab').addEventListener('shown.bs.tab', () => logLoadSessions(true));
+if (CDOM.ID('log-panel').classList.contains('active')) {
+    logLoadSessions(true);
+}
+CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
+logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 const memoTab = CDOM.ID("memo-tab");
 const memoPanel = CDOM.ID("memo-panel");
 let memoIframe = null;
@@ -1068,6 +1431,9 @@ function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
             if (j.ok) {
                 setAuthToken(webRootUrl, j.token);
                 CAlert.Info("Permission granted");
+                if (pw === "artgine") {
+                    CAlert.Warning("You are using the default password. Please change it for security.");
+                }
                 onSuccess?.();
             }
             else {
@@ -1092,6 +1458,18 @@ function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
         });
     }, MODAL_DOM_DELAY);
 }
+function ctrlRequireAuthed() {
+    if (getAuthToken(CPath.WebRootUrl()))
+        return true;
+    CAlert.Warning("Authentication required. Please sign in first.");
+    return false;
+}
+['rdp-panel-tab', 'chat-panel-tab', 'browser-panel-tab', 'editor-panel-tab', 'term-tab', 'memo-tab', 'download-tab', 'log-tab'].forEach((tabId) => {
+    CDOM.ID(tabId).addEventListener('show.bs.tab', (e) => {
+        if (!ctrlRequireAuthed())
+            e.preventDefault();
+    });
+});
 function renderSignInPrompt(container, onSuccess) {
     container.innerHTML = `
         <div class="text-center text-secondary small p-3 d-flex flex-column align-items-center gap-2">
@@ -1135,16 +1513,29 @@ memoTab.addEventListener("click", () => {
 if (memoTab.classList.contains("active"))
     memoTryInit();
 const sessionSidebarList = CDOM.ID("session-sidebar-list");
+let sessionOrderFrozen = false;
+let frozenSessionOrder = [];
+function freezeSessionOrder(on) {
+    if (sessionOrderFrozen === on)
+        return;
+    sessionOrderFrozen = on;
+    if (!on)
+        renderSessionSidebar();
+}
+sessionSidebarList.addEventListener('pointerenter', () => freezeSessionOrder(true));
+sessionSidebarList.addEventListener('pointerleave', () => freezeSessionOrder(false));
+sessionSidebarList.addEventListener('pointerdown', () => freezeSessionOrder(true));
 let _activeNotifCallback = null;
 function _showModalStackMsg(label, content, onClick) {
     const m = new CModalStackMsg(CModal.ePos.TopRight);
     m.SetBG(Bootstrap.eColor.warning);
-    m.SetSize(260, content ? 69 : 49);
+    m.SetSize(40, 40);
     const nid = `notif_${Date.now()}`;
     const cursor = onClick ? 'cursor:pointer;' : '';
-    m.SetBody(`<div id="${nid}" class="px-3 py-2" style="width:260px;overflow:hidden;${cursor}">
-        <div class="small fw-semibold text-truncate">${label}</div>
-        ${content ? `<div class="small text-secondary text-truncate mt-1">${content}</div>` : ''}
+    const icon = label.startsWith('⚠️') ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill';
+    const title = [label, content].filter(Boolean).join(' - ').replace(/"/g, '&quot;');
+    m.SetBody(`<div id="${nid}" class="d-flex align-items-center justify-content-center" title="${title}" style="width:40px;height:40px;font-size:1.2rem;${cursor}">
+        <i class="bi ${icon}"></i>
     </div>`);
     m.Open();
     if (onClick) {
@@ -1157,9 +1548,9 @@ function _showModalStackMsg(label, content, onClick) {
             });
         }, 0);
     }
-    m.Close(8);
+    m.Close(2);
     setTimeout(() => { if (_activeNotifCallback === onClick)
-        _activeNotifCallback = null; }, 8000);
+        _activeNotifCallback = null; }, 2000);
 }
 const NOTIF_LOG_MAX = 7;
 const notifLogEl = document.getElementById('aiNotifLog');
@@ -1206,28 +1597,88 @@ let termAuthState = 'unknown';
 let browserAuthState = 'unknown';
 let lastChatSessions = null;
 let lastTermSessions = null;
+function activeSessionKey() {
+    if (isPanelShown('chat-panel'))
+        return activeChatFrameKey;
+    if (isPanelShown('term-panel'))
+        return activeTermFrameKey;
+    if (isPanelShown('browser-panel'))
+        return activeBrowserFrameKey;
+    if (isPanelShown('editor-panel'))
+        return activeEditorFrameKey;
+    return null;
+}
+let sessionRenderQueued = false;
 function renderSessionSidebar() {
-    if (sessionSidebarList.querySelector('.dropdown-menu.show'))
+    if (sessionRenderQueued)
+        return;
+    sessionRenderQueued = true;
+    requestAnimationFrame(() => { sessionRenderQueued = false; flushSessionSidebar(); });
+}
+const sessionItemEls = new Map();
+let sessionSidebarSignedOut = false;
+function clearSessionItems() {
+    for (const el of sessionItemEls.values())
+        destroySessionItem(el);
+    sessionItemEls.clear();
+}
+function flushSessionSidebar() {
+    if (document.hidden)
         return;
     if (chatAuthState === 'signin' || termAuthState === 'signin' || browserAuthState === 'signin') {
-        renderSignInPrompt(sessionSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
+        if (!sessionSidebarSignedOut) {
+            sessionSidebarSignedOut = true;
+            clearSessionItems();
+            renderSignInPrompt(sessionSidebarList, () => { chatRenderList(); termRenderList(); browserRefreshList(); });
+        }
         return;
     }
+    if (sessionSidebarSignedOut) {
+        sessionSidebarSignedOut = false;
+        sessionSidebarList.innerHTML = '';
+    }
+    const activeKey = activeSessionKey();
     const entries = [];
     if (lastChatSessions)
         for (const s of lastChatSessions)
-            entries.push({ sortKey: s.updatedAt ?? 0, el: buildChatItem(s) });
+            entries.push({ key: `chat:${s.sessionId}`, sortKey: s.updatedAt ?? 0, spec: chatItemSpec(s, activeKey) });
     if (lastTermSessions)
         for (const s of lastTermSessions)
-            entries.push({ sortKey: s.updatedAt ?? 0, el: buildTermItem(s) });
+            entries.push({ key: `term:${s.token}`, sortKey: s.updatedAt ?? 0, spec: termItemSpec(s, activeKey) });
     for (const s of browserSessions.values())
-        entries.push({ sortKey: s.updatedAt ?? s.createdAt ?? 0, el: buildBrowserItem(s) });
+        entries.push({ key: `browser:${s.sessionId}`, sortKey: s.updatedAt ?? s.createdAt ?? 0, spec: browserItemSpec(s, activeKey) });
     for (const s of editorSessions.values())
-        entries.push({ sortKey: s.openedAt, el: buildEditorItem(s) });
+        entries.push({ key: s.key, sortKey: s.openedAt, spec: editorItemSpec(s, activeKey) });
     entries.sort((a, b) => b.sortKey - a.sortKey);
-    sessionSidebarList.innerHTML = '';
-    for (const e of entries)
-        sessionSidebarList.appendChild(e.el);
+    const frozen = sessionOrderFrozen || !!sessionSidebarList.querySelector('.dropdown-menu.show');
+    if (frozen) {
+        const rank = new Map(frozenSessionOrder.map((k, i) => [k, i]));
+        entries.sort((a, b) => (rank.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.key) ?? Number.MAX_SAFE_INTEGER));
+    }
+    else {
+        frozenSessionOrder = entries.map(e => e.key);
+    }
+    const live = new Set(entries.map(e => e.key));
+    for (const [key, el] of Array.from(sessionItemEls)) {
+        if (!live.has(key)) {
+            destroySessionItem(el);
+            sessionItemEls.delete(key);
+        }
+    }
+    let cursor = sessionSidebarList.firstElementChild;
+    for (const e of entries) {
+        let el = sessionItemEls.get(e.key);
+        if (!el) {
+            el = createSessionItem(e.spec);
+            sessionItemEls.set(e.key, el);
+        }
+        else
+            updateSessionItem(el, e.spec);
+        if (el === cursor)
+            cursor = cursor.nextElementSibling;
+        else
+            sessionSidebarList.insertBefore(el, cursor);
+    }
 }
 function authedFetch(url, init) {
     return fetch(url, init);
@@ -1349,37 +1800,49 @@ async function termOpenTappedPath(tappedPath, token) {
         const relPath = normFull.slice(termNormAbsPath(root.path).length);
         const downBase = new URL(root.url, CPath.WebRootUrl()).href.replace(/\/+$/, '');
         const url = downBase + relPath.split('/').map(encodeURIComponent).join('/');
-        termPromptOpenMode(fullPath, url);
+        promptSourceAction(fullPath, '', url);
     }
     catch (e) {
         console.error('termOpenTappedPath error:', e);
         CAlert.E('경로를 여는 중 오류가 발생했습니다.');
     }
 }
-const termTextToBase64 = (text) => btoa(unescape(encodeURIComponent(text)));
-function termSaveEditedFile(fullPath, base64) {
-    const idx = fullPath.lastIndexOf('/');
-    const folder = fullPath.slice(0, idx + 1);
-    const fileName = fullPath.slice(idx + 1);
-    CFecth.Exe(CPath.WebRootUrl() + "File/Upload", { path: folder, name: [fileName], data: [base64] })
-        .then(() => CAlert.Info('저장 완료'))
-        .catch((e) => CAlert.E('저장 실패: ' + e.message));
+function fileExtOf(path) {
+    const m = /\.([a-zA-Z0-9]+)$/.exec(path);
+    return m ? m[1].toLowerCase() : '';
 }
-function termPromptOpenMode(fullPath, url) {
+function executeOpenedSource(fullPath, url) {
+    const ext = fileExtOf(fullPath);
+    if (ext === 'html' || ext === 'htm') {
+        window.open(url, "_blank");
+        return;
+    }
+    if (ext === 'md') {
+        new CMDViewer(url);
+        return;
+    }
+}
+function promptSourceAction(fullPath, baseUrl, url) {
+    const ext = fileExtOf(fullPath);
+    const canExecute = ext === 'html' || ext === 'htm' || ext === 'md';
+    const actions = [() => editorOpenFile(fullPath, baseUrl, url)];
+    const labels = ["Edit"];
+    if (canExecute) {
+        actions.push(() => executeOpenedSource(fullPath, url));
+        labels.push("Execute");
+    }
+    actions.push(() => { });
+    labels.push("Cancel");
     const confirm = new CConfirm();
     confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
-    confirm.SetConfirm(CConfirm.eConfirm.List, [
-        () => editorOpenFile(fullPath, '', url),
-        () => new CFileViewer([url], async (_filePath, bufStr) => termSaveEditedFile(fullPath, termTextToBase64(bufStr))).Open(),
-        () => { },
-    ], ["Source", "Edit", "Cancel"]);
+    confirm.SetConfirm(CConfirm.eConfirm.List, actions, labels);
     confirm.Open();
 }
-function buildEditorItem(s) {
+function editorItemSpec(s, activeKey) {
     const name = s.path.split('/').pop() || s.path;
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
-        isActive: activeEditorFrameKey === s.key && isPanelShown('editor-panel'),
+        isActive: activeKey === s.key,
         dataAttr: { name: 'key', value: s.key },
         leftHtml: `<i class="bi bi-file-earmark-code"></i>`,
         bodyHtml: `<span class="flex-grow-1 min-w-0 text-truncate small" title="${aiEscapeHtml(s.path)}">${aiEscapeHtml(name)}</span>`,
@@ -1405,7 +1868,7 @@ function buildEditorItem(s) {
             renderSessionSidebar();
         },
         popup: { url: () => editorFrameSrc(s), title: name, winName: `editor_${s.key}` },
-    });
+    };
 }
 function genUuid() {
     if (crypto && 'randomUUID' in crypto)
@@ -1481,7 +1944,7 @@ function chatShowShareLink(sid, title) {
     const shareUrl = `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(sid)}`;
     showShareLinkModal('Chat Share Link', `Anyone with this link can access the chat: <strong>${aiEscapeHtml(title)}</strong>`, shareUrl);
 }
-function buildChatItem(s) {
+function chatItemSpec(s, activeKey) {
     const key = `chat:${s.sessionId}`;
     const rel = chatFormatRelative(s.updatedAt);
     const isLoaded = chatIframePool.has(key);
@@ -1489,9 +1952,9 @@ function buildChatItem(s) {
     const dot = st === 'off' ? '<span class="text-danger small" title="미연결">●</span>'
         : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
             : '<span class="text-success small" title="대기 중">●</span>';
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
-        isActive: activeChatFrameKey === key && isPanelShown('chat-panel'),
+        isActive: activeKey === key,
         dataAttr: { name: 'key', value: key },
         leftHtml: `
         <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:1.5rem;">
@@ -1530,8 +1993,9 @@ function buildChatItem(s) {
             delConfirm.Open();
         },
         popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
-    });
+    };
 }
+let chatListInFlight = false;
 async function chatRenderList() {
     const token = getAuthToken(CPath.WebRootUrl());
     if (!token) {
@@ -1540,6 +2004,9 @@ async function chatRenderList() {
         renderSessionSidebar();
         return;
     }
+    if (chatListInFlight)
+        return;
+    chatListInFlight = true;
     try {
         const r = await authedFetch(CPath.WebRootUrl() + 'AIChat/sessions?limit=30');
         if (r.status === 401) {
@@ -1568,6 +2035,9 @@ async function chatRenderList() {
     }
     catch (e) {
         console.error('Chat session list error:', e);
+    }
+    finally {
+        chatListInFlight = false;
     }
 }
 chatRenderList();
@@ -1644,9 +2114,9 @@ function termConfirmKillSession(token, label) {
 function termShowShareLink(token) {
     showShareLinkModal('Terminal Share Link', 'Anyone with this link can view the terminal in read-only mode.', `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`);
 }
-function buildTermItem(s) {
+function termItemSpec(s, activeKey) {
     const key = `term:${s.token}`;
-    const isActive = activeTermFrameKey === key && isPanelShown('term-panel');
+    const isActive = activeKey === key;
     const isLoaded = termIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
     const preview = aiEscapeHtml(s.lastMsg || '(empty)');
@@ -1661,7 +2131,7 @@ function buildTermItem(s) {
         : st === 'wait' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}" style="filter:hue-rotate(30deg)">${dotLabel}</span>`
             : st === 'busy' ? `<span class="badge rounded-pill bg-warning" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`
                 : `<span class="badge rounded-pill bg-success" title="${aiEscapeHtml(dotTitle)}">${dotLabel}</span>`;
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
         isActive,
         dataAttr: { name: 'key', value: key },
@@ -1683,8 +2153,9 @@ function buildTermItem(s) {
         onShare: () => termShowShareLink(s.token),
         onDelete: () => termConfirmKillSession(s.token, s.key || s.mode || 'Terminal'),
         popup: { url: () => `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${s.token}`, title: s.key || s.mode || 'Terminal', winName: `term_${s.token.slice(0, 8)}` },
-    });
+    };
 }
+let termListInFlight = false;
 async function termRenderList() {
     if (!getAuthToken(CPath.WebRootUrl())) {
         termAuthState = 'signin';
@@ -1692,6 +2163,9 @@ async function termRenderList() {
         renderSessionSidebar();
         return;
     }
+    if (termListInFlight)
+        return;
+    termListInFlight = true;
     try {
         const r = await authedFetch(CPath.WebRootUrl() + 'cmd/sessions');
         if (r.status === 401) {
@@ -1721,19 +2195,18 @@ async function termRenderList() {
                 }
             }
         }
-        const termNewKeys = Array.from(termIframePool.keys()).filter(k => k.startsWith('term-new:'));
-        if (termNewKeys.length > 0) {
-            const newSessions = sessions.filter(s => !termIframePool.has(`term:${s.token}`));
-            if (newSessions.length > 0) {
-                const newest = newSessions.reduce((a, b) => (a.createdAt > b.createdAt ? a : b));
-                const key = `term:${newest.token}`;
-                const newKey = termNewKeys[0];
-                const f = termIframePool.get(newKey);
-                termIframePool.delete(newKey);
-                termIframePool.set(key, f);
-                if (activeTermFrameKey === newKey)
-                    activeTermFrameKey = key;
-            }
+        for (const newKey of Array.from(termIframePool.keys())) {
+            if (!newKey.startsWith('term-new:'))
+                continue;
+            const token = newKey.slice('term-new:'.length, newKey.lastIndexOf(':'));
+            if (!serverTokens.has(token))
+                continue;
+            const key = `term:${token}`;
+            const f = termIframePool.get(newKey);
+            termIframePool.delete(newKey);
+            termIframePool.set(key, f);
+            if (activeTermFrameKey === newKey)
+                activeTermFrameKey = key;
         }
         for (const s of sessions) {
             const key = `term:${s.token}`;
@@ -1756,17 +2229,20 @@ async function termRenderList() {
     catch (e) {
         console.error('Terminal session list error:', e);
     }
+    finally {
+        termListInFlight = false;
+    }
 }
 function termStartNew(mode = 'cmd', initialWorkingDir) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">New Terminal</p>
         <div class="mb-3 d-flex gap-2 flex-wrap">
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="cmd">cmd</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="claude">claude</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="codex">codex</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="antigravity">agy</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary flex-fill" data-mode="opencode">opencode</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="cmd">cmd</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="claude">claude</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="codex">codex</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="antigravity">agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="opencode">opencode</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="grok">grok</button>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Key</label>
@@ -1791,6 +2267,8 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
             <button id="term-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
         </div>`;
     const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader('New Terminal');
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
@@ -1843,7 +2321,7 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
                 }
                 modal.Close();
                 termActivatePane();
-                showTermFrame(`term-new:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
+                showTermFrame(`term-new:${j.token}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
                 termRenderList();
                 setTimeout(termRenderList, 1500);
                 setTimeout(termRenderList, 4000);
@@ -1866,7 +2344,11 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
     }, MODAL_DOM_DELAY);
 }
 const termTab = CDOM.ID('term-tab');
-termTab.addEventListener('click', () => termStartNew('cmd', ctrlSelectedRootPath || undefined));
+termTab.addEventListener('click', () => {
+    if (!ctrlRequireAuthed())
+        return;
+    termStartNew('cmd', ctrlSelectedRootPath || undefined);
+});
 termTab.addEventListener('shown.bs.tab', () => { termRenderList(); updateTermFrameVisibility(); });
 termTab.addEventListener('hidden.bs.tab', () => updateTermFrameVisibility());
 termRenderList();
@@ -1926,12 +2408,12 @@ function browserFmtTtl(expiresAt) {
     const s = rem % 60;
     return m > 0 ? `−${m}m${s}s` : `−${s}s`;
 }
-function buildBrowserItem(s) {
+function browserItemSpec(s, activeKey) {
     const key = `browser:${s.sessionId}`;
-    const isActive = activeBrowserFrameKey === key && isPanelShown('browser-panel');
+    const isActive = activeKey === key;
     const isLoaded = browserIframePool.has(key);
     const rel = chatFormatRelative(s.updatedAt);
-    return createSessionItem({
+    return {
         activeClass: 'ai-session-item-active',
         isActive,
         dataAttr: { name: 'key', value: key },
@@ -1954,7 +2436,7 @@ function buildBrowserItem(s) {
         onShare: () => browserShowShareLink(s.sessionId, s.url),
         onDelete: () => browserRemoveSession(s.sessionId),
         popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(s.sessionId)}`, title: s.url, winName: `browser_${s.sessionId}` },
-    });
+    };
 }
 function browserAddSession(sessionId, url, browserName = '', expiresAt = 0, navigate = true, createdAt = Date.now()) {
     if (browserSessions.has(sessionId))
@@ -1979,6 +2461,7 @@ async function browserRemoveSession(sessionId) {
     }
     catch (_) { }
 }
+let browserListInFlight = false;
 async function browserRefreshList() {
     if (!getAuthToken(CPath.WebRootUrl())) {
         browserAuthState = 'signin';
@@ -1986,6 +2469,9 @@ async function browserRefreshList() {
         renderSessionSidebar();
         return;
     }
+    if (browserListInFlight)
+        return;
+    browserListInFlight = true;
     try {
         const r = await authedFetch(`${CPath.WebRootUrl()}PlayWright/list`);
         if (r.status === 401) {
@@ -2017,6 +2503,9 @@ async function browserRefreshList() {
         renderSessionSidebar();
     }
     catch (_) { }
+    finally {
+        browserListInFlight = false;
+    }
 }
 function browserShowShareLink(sessionId, url) {
     showShareLinkModal('Browser Share Link', `Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong>`, `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`);
@@ -2119,11 +2608,17 @@ setInterval(() => {
     });
 }, 1000);
 browserRefreshList();
-setInterval(() => {
-    chatRenderList();
-    termRenderList();
-    browserRefreshList();
-}, 5000);
+async function sessionPollOnce() {
+    await Promise.allSettled([chatRenderList(), termRenderList(), browserRefreshList()]);
+}
+(async function sessionPollLoop() {
+    for (;;) {
+        await new Promise(r => setTimeout(r, 5000));
+        await sessionPollOnce();
+    }
+})();
+document.addEventListener('visibilitychange', () => { if (!document.hidden)
+    renderSessionSidebar(); });
 ['chat-panel-tab', 'term-tab', 'browser-panel-tab', 'editor-panel-tab'].forEach((tabId) => {
     const tabEl = CDOM.ID(tabId);
     tabEl.addEventListener('shown.bs.tab', () => renderSessionSidebar());
@@ -2131,18 +2626,18 @@ setInterval(() => {
 });
 const schedSessionList = CDOM.ID("schedSessionList");
 function schedIntervalStr(s) {
-    if (s.timeMode) {
-        const hh = String(s.hour ?? 0).padStart(2, '0');
-        const mm = String(s.minute ?? 0).padStart(2, '0');
+    if (s.mode === 'time') {
+        const hh = String(s.option.hour ?? 0).padStart(2, '0');
+        const mm = String(s.option.minute ?? 0).padStart(2, '0');
         return `${hh}:${mm}`;
     }
-    const parts = [`${s.delay}s`];
-    if (s.count > 0)
-        parts.push(`×${s.count}`);
-    if (s.start > 0)
-        parts.push(`+${s.start}s`);
-    if (s.end > 0)
-        parts.push(`~${s.end}s`);
+    const parts = [`${s.option.delay ?? 0}s`];
+    if ((s.option.count ?? 0) > 0)
+        parts.push(`×${s.option.count}`);
+    if ((s.option.start ?? 0) > 0)
+        parts.push(`+${s.option.start}s`);
+    if ((s.option.end ?? 0) > 0)
+        parts.push(`~${s.option.end}s`);
     return parts.join(' ');
 }
 async function schedRefresh() {
@@ -2161,12 +2656,12 @@ async function schedRefresh() {
             item.style.cursor = 'pointer';
             item.innerHTML = `
                 <span class="d-flex flex-column align-items-center flex-shrink-0" style="min-width:2rem;">
-                    <span class="badge rounded-pill ${s.mode === 'none' ? 'bg-secondary' : s.mode === 'cmd' ? 'bg-info' : s.mode === 'claude' ? 'bg-warning text-dark' : s.mode === 'codex' ? 'bg-primary' : s.mode === 'opencode' ? 'bg-success' : 'bg-danger'}" style="font-size:0.65rem;">${s.mode === 'antigravity' ? 'agy' : s.mode}</span>
+                    <span class="badge rounded-pill ${s.mode === 'time' ? 'bg-primary' : 'bg-info'}" style="font-size:0.65rem;">${s.mode}</span>
                     <span class="text-secondary" style="font-size:0.68rem;white-space:nowrap;">${schedIntervalStr(s)}</span>
                 </span>
                 <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
                     <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(s.name)}</span>
-                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.terminalKey)}</span>
+                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.subAgentKey)}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
                 </span>
                 <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
@@ -2194,78 +2689,77 @@ async function schedRefresh() {
         console.error('schedRefresh error:', e);
     }
 }
-function schedOpenModal(existing) {
+async function schedOpenModal(existing) {
     const isEdit = !!existing;
+    let agents = [];
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
+        const j = await r.json();
+        if (j.ok)
+            agents = j.agents;
+    }
+    catch (e) {
+        console.error('schedOpenModal agents fetch error:', e);
+    }
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">${isEdit ? 'Edit Schedule' : 'New Schedule'}</p>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Name (schedule key)</label>
             <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Terminal Key</label>
-            <input id="sched-tkey" type="text" class="form-control form-control-sm" placeholder="target terminal key" autocomplete="off" value="${aiEscapeHtml(existing?.terminalKey || '')}">
-        </div>
-        <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Mode (created if terminal missing)</label>
-            <div class="d-flex gap-1 flex-wrap">
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="none">none</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="cmd">cmd</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="claude">claude</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="codex">codex</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="antigravity">agy</button>
-                <button class="sched-mode-btn btn btn-sm btn-outline-secondary" data-mode="opencode">opencode</button>
-            </div>
+            <label class="form-label small text-secondary mb-1">Sub Agent</label>
+            <select id="sched-agent" class="form-select form-select-sm">
+                ${agents.map(a => `<option value="${aiEscapeHtml(a.key)}" ${existing?.subAgentKey === a.key ? 'selected' : ''}>${aiEscapeHtml(a.key)}</option>`).join('') || '<option value="">(등록된 서브 에이전트 없음)</option>'}
+            </select>
         </div>
         <div class="mb-2">
             <div class="d-flex gap-1 mb-2">
-                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${!(existing?.timeMode) ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
-                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.timeMode ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
+                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${existing?.mode !== 'time' ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
+                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.mode === 'time' ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
             </div>
-            <div id="sched-panel-interval" style="display:${!(existing?.timeMode) ? '' : 'none'}">
+            <div id="sched-panel-interval" style="display:${existing?.mode !== 'time' ? '' : 'none'}">
                 <div class="d-flex gap-2 mb-2">
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Delay (sec)</label>
-                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.delay ?? 60}">
+                        <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.option.delay ?? 60}">
                     </div>
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
-                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.count ?? 0}">
+                        <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.count ?? 0}">
                     </div>
                 </div>
                 <div class="d-flex gap-2">
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
-                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.start ?? 0}">
+                        <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.start ?? 0}">
                     </div>
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
-                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.end ?? 0}">
+                        <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.end ?? 0}">
                     </div>
                 </div>
             </div>
-            <div id="sched-panel-time" style="display:${existing?.timeMode ? '' : 'none'}">
+            <div id="sched-panel-time" style="display:${existing?.mode === 'time' ? '' : 'none'}">
                 <div class="mb-2">
                     <label class="form-label small text-secondary mb-1">Days of Week</label>
                     <div class="d-flex gap-1 flex-wrap">
-                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((lbl, i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
+                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((lbl, i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.option.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
                     </div>
                 </div>
                 <div class="d-flex gap-2 align-items-end">
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Hour (0–23)</label>
                         <select id="sched-hour" class="form-select form-select-sm">
-                            ${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${(existing?.hour ?? 9) === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`).join('')}
+                            ${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${(existing?.option.hour ?? 9) === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`).join('')}
                         </select>
                     </div>
                     <div class="flex-fill">
                         <label class="form-label small text-secondary mb-1">Minute</label>
                         <select id="sched-minute" class="form-select form-select-sm">
-                            ${Array.from({ length: 12 }, (_, i) => i * 5).map(m => `<option value="${m}" ${(existing?.minute ?? 0) === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`).join('')}
+                            ${Array.from({ length: 12 }, (_, i) => i * 5).map(m => `<option value="${m}" ${(existing?.option.minute ?? 0) === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`).join('')}
                         </select>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
@@ -2273,58 +2767,18 @@ function schedOpenModal(existing) {
             <label class="form-label small text-secondary mb-1">Command</label>
             <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
         </div>
-        <div class="accordion accordion-flush mb-3" id="sched-accordion">
-            <div class="accordion-item" style="background:transparent;border:1px solid #444;border-radius:0.375rem;">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed py-2 px-3 small" type="button" data-bs-toggle="collapse" data-bs-target="#sched-acc-body" style="background:transparent;color:inherit;font-size:0.75rem;">
-                        Advanced
-                    </button>
-                </h2>
-                <div id="sched-acc-body" class="accordion-collapse collapse">
-                    <div class="accordion-body py-2 px-3">
-                        <div class="mb-2">
-                            <label class="form-label small text-secondary mb-1">Working Directory</label>
-                            <input id="sched-cwd" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off" value="${aiEscapeHtml(existing?.cwd || '')}">
-                        </div>
-                        <div class="d-flex gap-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-clear" ${existing?.clear ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-clear">Clear</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-mcp" ${(existing?.mcp ?? true) ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-mcp">MCP</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="sched-mdcopy" ${existing?.mdcopy ? 'checked' : ''}>
-                                <label class="form-check-label small text-secondary" for="sched-mdcopy">Copy MD</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div class="d-flex justify-content-between">
             <button id="sched-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
             <button id="sched-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
         </div>`;
     const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader(isEdit ? 'Edit Schedule' : 'New Schedule');
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
-        let selectedMode = existing?.mode || 'cmd';
-        const modeBtns = container.querySelectorAll('.sched-mode-btn');
-        const updateMode = (m) => {
-            selectedMode = m;
-            modeBtns.forEach(b => {
-                b.classList.toggle('btn-primary', b.dataset.mode === m);
-                b.classList.toggle('btn-outline-secondary', b.dataset.mode !== m);
-            });
-        };
-        modeBtns.forEach(b => b.addEventListener('click', () => updateMode(b.dataset.mode)));
-        updateMode(selectedMode);
-        let isTimeMode = existing?.timeMode ?? false;
+        let isTimeMode = existing?.mode === 'time';
         const tabInterval = container.querySelector('#sched-tab-interval');
         const tabTime = container.querySelector('#sched-tab-time');
         const panelInterval = container.querySelector('#sched-panel-interval');
@@ -2346,54 +2800,35 @@ function schedOpenModal(existing) {
         }));
         const doSave = async () => {
             const name = (container.querySelector('#sched-name')).value.trim();
-            const tkey = (container.querySelector('#sched-tkey')).value.trim();
+            const subAgentKey = (container.querySelector('#sched-agent')).value.trim();
             const command = (container.querySelector('#sched-cmd')).value.trim();
-            const cwd = (container.querySelector('#sched-cwd')).value.trim();
-            const clear = (container.querySelector('#sched-clear')).checked;
-            const mcp = (container.querySelector('#sched-mcp')).checked;
-            const mdcopy = (container.querySelector('#sched-mdcopy')).checked;
-            if (!name || !tkey || !command) {
-                CAlert.E('Name, terminal key, and command are required');
+            if (!name || !subAgentKey || !command) {
+                CAlert.E('Name, sub agent, and command are required');
                 return;
             }
-            const params = new URLSearchParams({ name, terminalKey: tkey, mode: selectedMode, command,
-                clear: clear ? '1' : '0', mcp: mcp ? '1' : '0', mdcopy: mdcopy ? '1' : '0',
-                timeMode: isTimeMode ? '1' : '0' });
-            if (cwd)
-                params.set('cwd', cwd);
+            const option = {};
             if (isTimeMode) {
                 const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
                 if (selectedDays.length === 0) {
                     CAlert.E('Select at least one day');
                     return;
                 }
-                const hh = parseInt((container.querySelector('#sched-hour')).value) || 0;
-                const mm = parseInt((container.querySelector('#sched-minute')).value) || 0;
-                params.set('days', selectedDays.join(','));
-                params.set('hour', String(hh));
-                params.set('minute', String(mm));
-                params.set('delay', '60');
-                params.set('count', '0');
-                params.set('start', '0');
-                params.set('end', '0');
+                option.days = selectedDays;
+                option.hour = parseInt((container.querySelector('#sched-hour')).value) || 0;
+                option.minute = parseInt((container.querySelector('#sched-minute')).value) || 0;
             }
             else {
                 const delay = Math.max(0, parseInt((container.querySelector('#sched-delay')).value) || 0);
-                const count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
-                const start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
-                const end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
                 if (delay === 0) {
                     CAlert.E('Delay must be at least 1 second');
                     return;
                 }
-                params.set('delay', String(delay));
-                params.set('count', String(count));
-                params.set('start', String(start));
-                params.set('end', String(end));
-                params.set('days', '');
-                params.set('hour', '0');
-                params.set('minute', '0');
+                option.delay = delay;
+                option.count = Math.max(0, parseInt((container.querySelector('#sched-count')).value) || 0);
+                option.start = Math.max(0, parseInt((container.querySelector('#sched-start')).value) || 0);
+                option.end = Math.max(0, parseInt((container.querySelector('#sched-end')).value) || 0);
             }
+            const params = new URLSearchParams({ name, subAgentKey, mode: isTimeMode ? 'time' : 'interval', command, option: JSON.stringify(option) });
             const r = await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-set?${params.toString()}`);
             const j = await r.json();
             if (!j.ok) {
@@ -2410,3 +2845,328 @@ function schedOpenModal(existing) {
 CDOM.ID('sched-new-btn').addEventListener('click', () => schedOpenModal());
 schedRefresh();
 setInterval(schedRefresh, 5000);
+const agentList = CDOM.ID('agentList');
+async function agentRefresh() {
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
+        const j = await r.json();
+        if (!j.ok)
+            return;
+        agentList.innerHTML = '';
+        const agents = j.agents;
+        for (const a of agents) {
+            const item = document.createElement('div');
+            item.className = 'ai-session-item d-flex align-items-center gap-2 px-2 py-1 rounded';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;">
+                    <span class="text-truncate fw-semibold" style="font-size:0.75rem;">${aiEscapeHtml(a.key)}${a.super ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;">SUPER</span>' : ''}${a.retryCount > 0 ? ` <span class="badge bg-info text-dark" style="font-size:0.6rem;">RETRY x${a.retryCount}</span>` : ''}</span>
+                    <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
+                    <span class="text-truncate small text-body-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.workingDir || './')}</span>
+                    <span class="text-truncate small text-body-secondary">${aiEscapeHtml(a.traits.join(', '))}</span>
+                </span>
+                <button class="agent-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+            `;
+            item.addEventListener('click', () => agentOpenModal(a));
+            item.querySelector('.agent-del-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const dlg = new CConfirm();
+                dlg.SetBody(`서브 에이전트 "${aiEscapeHtml(a.key)}"을(를) 삭제할까요?`);
+                dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+                    async () => {
+                        await authedFetch(`${CPath.WebRootUrl()}cmd/agent-del?key=${encodeURIComponent(a.key)}`);
+                        agentRefresh();
+                    },
+                    () => { },
+                ], ["Delete", "Cancel"]);
+                dlg.Open();
+            });
+            item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
+            item.addEventListener('mouseleave', () => item.classList.remove('bg-body-secondary'));
+            agentList.appendChild(item);
+        }
+    }
+    catch (e) {
+        console.error('agentRefresh error:', e);
+    }
+}
+const AGENT_PROVIDER_IDS = ['claude', 'codex', 'antigravity', 'opencode', 'grok'];
+const AGENT_PROVIDER_LABELS = { claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', opencode: 'OpenCode', grok: 'Grok' };
+let gAgentModelsCache = null;
+let gAgentModelsFetching = null;
+async function agentFetchModels() {
+    if (gAgentModelsCache)
+        return gAgentModelsCache;
+    if (gAgentModelsFetching)
+        return gAgentModelsFetching;
+    gAgentModelsFetching = (async () => {
+        try {
+            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/setting');
+            const setting = await r.json();
+            const models = setting.models || {};
+            gAgentModelsCache = models;
+            return models;
+        }
+        catch (e) {
+            console.error('agentFetchModels error:', e);
+            return {};
+        }
+        finally {
+            gAgentModelsFetching = null;
+        }
+    })();
+    return gAgentModelsFetching;
+}
+async function agentOpenModal(existing) {
+    const isEdit = !!existing;
+    const modelMap = await agentFetchModels();
+    const modelsFor = (providerId) => modelMap[providerId] ?? [];
+    const defaultProvider = existing?.provider || AGENT_PROVIDER_IDS[0];
+    const defaultModel = existing?.model || modelsFor(defaultProvider)[0]?.value || '';
+    const buildModelOptions = (providerId, selected) => {
+        const models = modelsFor(providerId).slice();
+        const values = models.map(m => m.value);
+        const sel = selected || models[0]?.value || '';
+        if (sel && !values.includes(sel))
+            models.push({ value: sel, label: sel });
+        return models.map(m => `<option value="${aiEscapeHtml(m.value)}" ${m.value === sel ? 'selected' : ''}>${aiEscapeHtml(m.label)}</option>`).join('');
+    };
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Key (name)</label>
+            <input id="agent-key" type="text" class="form-control form-control-sm" placeholder="e.g. code-reviewer" autocomplete="off" value="${aiEscapeHtml(existing?.key || '')}">
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Provider</label>
+            <select id="agent-provider" class="form-select form-select-sm">
+                ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === defaultProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Model</label>
+            <select id="agent-model" class="form-select form-select-sm">
+                ${buildModelOptions(defaultProvider, defaultModel)}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">Traits (one per line)</label>
+            <textarea id="agent-traits" class="form-control form-control-sm" rows="5" placeholder="e.g.&#10;fast at reading large codebases&#10;cautious about destructive changes">${aiEscapeHtml((existing?.traits ?? []).join('\n'))}</textarea>
+        </div>
+        <div class="accordion mb-3" id="agent-options-accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#agent-options-body">Options</button>
+                </h2>
+                <div id="agent-options-body" class="accordion-collapse collapse" data-bs-parent="#agent-options-accordion">
+                    <div class="accordion-body">
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Working Directory</label>
+                            <input id="agent-working-dir" type="text" class="form-control form-control-sm" placeholder="./" autocomplete="off" value="${aiEscapeHtml(existing?.workingDir || './')}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Score</label>
+                            <input id="agent-score" type="number" step="any" class="form-control form-control-sm" placeholder="0" value="${existing?.score ?? 0}">
+                        </div>
+                        <div class="mb-2 form-check">
+                            <input class="form-check-input" type="checkbox" id="agent-super" ${existing?.super ? 'checked' : ''}>
+                            <label class="form-check-label small text-secondary" for="agent-super">Super</label>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary mb-1">Retry Text (auto-repeat instruction while idle)</label>
+                            <textarea id="agent-retry-text" class="form-control form-control-sm" rows="2" placeholder="e.g. Review the result once more and improve quality">${aiEscapeHtml(existing?.retryText || '')}</textarea>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-secondary mb-1">Retry Count (0 = disabled)</label>
+                            <input id="agent-retry-count" type="number" min="0" step="1" class="form-control form-control-sm" placeholder="0" value="${existing?.retryCount ?? 0}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="agent-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+            <button id="agent-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader(isEdit ? 'Edit Sub Agent' : 'New Sub Agent');
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const keyInput = container.querySelector('#agent-key');
+        const providerSelect = container.querySelector('#agent-provider');
+        const modelSelect = container.querySelector('#agent-model');
+        keyInput.focus();
+        providerSelect.addEventListener('change', () => {
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+        });
+        const doSave = async () => {
+            const key = keyInput.value.trim();
+            if (!key) {
+                CAlert.E('Key is required');
+                return;
+            }
+            const workingDir = (container.querySelector('#agent-working-dir')).value.trim() || './';
+            const superChecked = (container.querySelector('#agent-super')).checked;
+            const params = new URLSearchParams({
+                key,
+                provider: providerSelect.value,
+                model: modelSelect.value,
+                score: String(Number((container.querySelector('#agent-score')).value) || 0),
+                traits: (container.querySelector('#agent-traits')).value,
+                workingDir,
+                super: superChecked ? '1' : '0',
+                retryText: (container.querySelector('#agent-retry-text')).value.trim(),
+                retryCount: String(Math.max(0, Number((container.querySelector('#agent-retry-count')).value) || 0)),
+            });
+            const r = await authedFetch(`${CPath.WebRootUrl()}cmd/agent-set?${params.toString()}`);
+            const j = await r.json();
+            if (!j.ok) {
+                CAlert.E(j.msg || 'Failed');
+                return;
+            }
+            modal.Close();
+            agentRefresh();
+        };
+        container.querySelector('#agent-modal-save').addEventListener('click', doSave);
+        container.querySelector('#agent-modal-cancel').addEventListener('click', () => modal.Close());
+    }, MODAL_DOM_DELAY);
+}
+CDOM.ID('agent-new-btn').addEventListener('click', () => agentOpenModal());
+agentRefresh();
+setInterval(agentRefresh, 5000);
+async function teamOpenModal() {
+    const modelMap = await agentFetchModels();
+    const modelsFor = (providerId) => modelMap[providerId] ?? [];
+    const defaultProvider = AGENT_PROVIDER_IDS[0];
+    const buildModelOptions = (providerId, selected) => {
+        const models = modelsFor(providerId).slice();
+        const sel = selected || models[0]?.value || '';
+        if (sel && !models.some(m => m.value === sel))
+            models.push({ value: sel, label: sel });
+        return models.map(m => `<option value="${aiEscapeHtml(m.value)}" ${m.value === sel ? 'selected' : ''}>${aiEscapeHtml(m.label)}</option>`).join('');
+    };
+    let agents = [];
+    try {
+        const r = await authedFetch(CPath.WebRootUrl() + 'cmd/agents');
+        const j = await r.json();
+        if (j.ok)
+            agents = j.agents;
+    }
+    catch { }
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Provider (main)</label>
+            <select id="team-provider" class="form-select form-select-sm">
+                ${AGENT_PROVIDER_IDS.map(id => `<option value="${id}" ${id === defaultProvider ? 'selected' : ''}>${AGENT_PROVIDER_LABELS[id]}</option>`).join('')}
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Model (main)</label>
+            <select id="team-model" class="form-select form-select-sm">${buildModelOptions(defaultProvider, '')}</select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Goal</label>
+            <textarea id="team-goal" class="form-control form-control-sm" rows="3" placeholder="e.g. Analyze the text files in the xx folder and summarize them into an md file"></textarea>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small text-secondary mb-1">Sub Agents</label>
+            <div id="team-agents" class="border rounded p-2" style="max-height:140px;overflow-y:auto;">
+                ${agents.length === 0
+        ? `<div class="text-secondary small">No sub agents registered. Register one first in the right sidebar → Sub Agent.</div>`
+        : agents.map(a => `
+                        <div class="form-check">
+                            <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}" checked>
+                            <label class="form-check-label small" for="team-agent-${aiEscapeHtml(a.key)}">
+                                ${aiEscapeHtml(a.key)}
+                                <span class="text-secondary">${aiEscapeHtml(a.provider)} / ${aiEscapeHtml(a.model)} · ${a.score}</span>
+                            </label>
+                        </div>`).join('')}
+            </div>
+        </div>
+        <hr class="my-3">
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1">Stop — time limit (min, 0 = unlimited)</label>
+            <input id="team-limit-min" type="number" min="0" step="1" class="form-control form-control-sm" value="60">
+            <div class="form-text" style="font-size:0.7rem;">If any task fails, the whole team stops immediately regardless of time.</div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button id="team-modal-create" class="btn btn-primary">Create</button>
+            <button id="team-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+        </div>`;
+    const modal = new CModal();
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetHeader('New Team');
+    modal.SetBody(container);
+    modal.SetZIndex(CModal.eSort.Top);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const providerSelect = container.querySelector('#team-provider');
+        const modelSelect = container.querySelector('#team-model');
+        const goalInput = container.querySelector('#team-goal');
+        const createBtn = container.querySelector('#team-modal-create');
+        const cancelBtn = container.querySelector('#team-modal-cancel');
+        goalInput.focus();
+        providerSelect.addEventListener('change', () => {
+            modelSelect.innerHTML = buildModelOptions(providerSelect.value, '');
+        });
+        let creating = false;
+        const doCreate = async () => {
+            if (creating)
+                return;
+            const goal = goalInput.value.trim();
+            if (!goal) {
+                CAlert.E('Enter a goal');
+                return;
+            }
+            const subAgents = Array.from(container.querySelectorAll('.team-agent-check'))
+                .filter(c => c.checked).map(c => c.value);
+            if (subAgents.length === 0) {
+                CAlert.E('Select at least one sub agent');
+                return;
+            }
+            creating = true;
+            createBtn.disabled = true;
+            cancelBtn.disabled = true;
+            const origHtml = createBtn.innerHTML;
+            createBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Creating...`;
+            try {
+                const params = new URLSearchParams({
+                    provider: providerSelect.value,
+                    model: modelSelect.value,
+                    goal,
+                    subAgents: subAgents.join(','),
+                    limitMin: String(Number((container.querySelector('#team-limit-min')).value) || 0),
+                });
+                const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);
+                const j = await r.json();
+                if (!j.ok) {
+                    CAlert.E(j.msg || 'Failed to start team');
+                    return;
+                }
+                modal.Close();
+                termActivatePane();
+                showTermFrame(`term-new:${j.token}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
+                termRenderList();
+                setTimeout(termRenderList, 1500);
+                setTimeout(termRenderList, 4000);
+            }
+            catch (e) {
+                console.error('[Team] start-team error:', e);
+                CAlert.E('Failed to start team');
+            }
+            finally {
+                creating = false;
+                createBtn.disabled = false;
+                cancelBtn.disabled = false;
+                createBtn.innerHTML = origHtml;
+            }
+        };
+        createBtn.addEventListener('click', doCreate);
+        cancelBtn.addEventListener('click', () => modal.Close());
+    }, MODAL_DOM_DELAY);
+}
+CDOM.ID('team-tab').addEventListener('click', () => teamOpenModal());

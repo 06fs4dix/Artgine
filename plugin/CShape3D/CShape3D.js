@@ -74,7 +74,10 @@ export class CShape3D extends CSubject {
             }
         }
         if (_opt.shadow) {
-            this.mPaint.PushTag(_opt.shadow === 'readOnly' ? 'shadowReadOnly' : 'shadow');
+            this.mPaint.PushTag('shadow');
+            if (_opt.shadow === 'readOnly') {
+                this.mPaint.PushTag('shadowReadOnly');
+            }
         }
         if (_opt.wind !== undefined)
             this.mPaint.Wind(_opt.wind);

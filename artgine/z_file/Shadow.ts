@@ -1,6 +1,6 @@
 import { ligDir } from "./Light";
 import { SDF } from "./SDF";
-import { abs, clamp, CMat3, CVec2, CVec3, CVec4, fract, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, ShadowPosToUv, 
+import { abs, clamp, CMat, CMat3, CVec2, CVec3, CVec4, fract, max, min, mix, Sam2DArrMat, Sam2DArrSize, Sam2DArrToColor, Sam2DArrToMat, Sam2DArrToV4, Sam2DArrV4, Sam2DToColor, ShadowPosToUv, 
     sin, sqrt, TransposeMat3, V2AddV2, V2DivFloat, V2Dot, V2MulFloat, V2MulV2, V3Abs, V3AddV3, V3Dot, V3Len, V3MulFloat, V3MulMat3Normal, V3Nor, V3SubV3, V3ToMat3, V4MulMatCoordi } from "./Shader";
 
 export var shadowNearCasV0: Sam2DArrMat=new Sam2DArrMat(1,SDF.eUni.MatShadowNearCasV0);
@@ -151,18 +151,25 @@ function ApplyPCF(_uvZ0 : CVec3, _uvZ1 : CVec3, _uvZ2 : CVec3, _read : CVec4, _b
     if(cas2Valid > 0.5)                    return res2;
     return 1.0;
 }
-function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _world : CVec4, _shadowIndex : number) : CVec3
+function ProcessCascadeLevel(_isActive : number, _viewMatOff : Sam2DArrMat, _projMatOff : Sam2DArrMat, _shadowIndex : number, _world : CVec4, _normal : CVec3, _normalBias : number) : CVec3
 {
     if(_isActive < -0.5) return new CVec3(0.0, 0.0, 0.0);
-    var viewPos : CVec4 = V4MulMatCoordi(_world, Sam2DArrToMat(_viewMatOff, _shadowIndex));
+
+    var viewMat : CMat = Sam2DArrToMat(_viewMatOff, _shadowIndex);
+    var cascadeTexelSize : number = viewMat[0][3];
+    viewMat[0][3] = 0.0;
+
+    _world.xyz = V3AddV3(_world.xyz, V3MulFloat(_normal, _normalBias * cascadeTexelSize));
+
+    var viewPos : CVec4 = V4MulMatCoordi(_world, viewMat);
     var shadowPos : CVec4 = V4MulMatCoordi(viewPos, Sam2DArrToMat(_projMatOff, _shadowIndex));
     return new CVec3(ShadowPosToUv(shadowPos).xy, viewPos.z);
 }
-function CalcShadowDirectional(_read : CVec4, _index : number, _world : CVec4, _ligDir : CVec4, _bias: CVec2) : number
+function CalcShadowDirectional(_read : CVec4, _index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _bias: CVec3) : number
 {
-    var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, _world, _index);
-    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, _world, _index);
-    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, _world, _index);
+    var uvZ0 : CVec3=ProcessCascadeLevel(_read.y, shadowNearCasV0, shadowFarCasP0, _index, _world, _normal, _bias.z);
+    var uvZ1 : CVec3=ProcessCascadeLevel(_read.z, shadowTopCasV1, shadowBottomCasP1, _index, _world, _normal, _bias.z);
+    var uvZ2 : CVec3=ProcessCascadeLevel(_read.w, shadowLeftCasV2, shadowRightCasP2, _index, _world, _normal, _bias.z);
     return ApplyPCF(uvZ0, uvZ1, uvZ2, _read, _bias.x, _bias.y, _world);
 }
 
@@ -192,7 +199,7 @@ function CubeToUV(_cubeUVW : CVec3, _texelSize : CVec2, _nearTexOff : number) : 
     _cubeUVW.z += _nearTexOff - SDF.eShadow.Near;
     return _cubeUVW;
 }
-function CalcShadowPoint(_read : CVec4, _index : number, _world : CVec4, _ligDir : CVec4, _bias: CVec2) : number
+function CalcShadowPoint(_read : CVec4, _index : number, _world : CVec4, _normal : CVec3, _ligDir : CVec4, _bias: CVec3) : number
 {
     var shadowCamNear : number = _read.z;
     var shadowCamFar : number = _read.w;
@@ -243,19 +250,18 @@ export function CalcShadow(_shadowIndex: number, _normal: CVec3, _world: CVec4):
     var NdotL : number = max(V3Dot(_normal, V3Nor(lDir.xyz)), 0.05);
     var tanTheta : number = sqrt(1.0 - NdotL * NdotL) / NdotL;
 
-    // 노말 바이어스 적용
+    // 노말 바이어스 계산
     var normalScale : number = normalBias * (1.0 + clamp(tanTheta, 0.0, 4.0));
-    var normalOffset : CVec3 = V3MulFloat(V3Nor(_normal), normalScale);
-    _world.xyz = V3AddV3(_world.xyz, normalOffset);
 
     // bias 계산
     var biasConst : number = bias;                                   // 캐스케이드 공통
     var biasSlope : number = bias * clamp(tanTheta * 0.5, 0.0, 2.0); // 텍셀 배율(1/4/16) 적용 대상
-    var biasAll: CVec2 = new CVec2(biasConst, biasSlope);
+
+    var biasAll: CVec3 = new CVec3(biasConst, biasSlope, normalScale);
     
     var sVal: number;
-    if(isPointLight > 0.5) sVal = CalcShadowPoint(shadowRead, _shadowIndex, _world, lDir, biasAll);
-    else sVal = CalcShadowDirectional(shadowRead, _shadowIndex, _world, lDir, biasAll);
+    if(isPointLight > 0.5) sVal = CalcShadowPoint(shadowRead, _shadowIndex, _world, _normal, lDir, biasAll);
+    else sVal = CalcShadowDirectional(shadowRead, _shadowIndex, _world, _normal, lDir, biasAll);
     return mix(shadowRate, 1.0, sVal);
 }
 

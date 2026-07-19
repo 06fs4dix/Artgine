@@ -31,6 +31,7 @@ function usageAndExit() {
     console.error('       node ai/tool/remotecmd.js <HomeURL> cmd <콘솔 명령어 그대로...>');
     console.error('       node ai/tool/remotecmd.js <HomeURL> upload <로컬파일> <원격디렉터리>');
     console.error('       node ai/tool/remotecmd.js <HomeURL> download <원격파일경로> [로컬저장경로]');
+    console.error('       node ai/tool/remotecmd.js <HomeURL> restart');
     process.exit(1);
 }
 
@@ -74,8 +75,14 @@ if (cmd === 'login') {
     writeFileSync(savePath, buf);
     console.log(JSON.stringify({ ok: true, file: savePath, size: buf.length }));
 
+} else if (cmd === 'restart') {
+    // /File/Restart는 인증만 확인하고 현재 로드된 settings.json 그대로 서버를 재기동한다
+    // (CFileServer.onRestart). 세션 쿠키는 login/remote로 먼저 확보해야 한다.
+    const r = await call(base, 'File/Restart', {});
+    console.log(JSON.stringify(r, null, 2));
+
 } else {
     console.error(`Unknown command: ${cmd}`);
-    console.error('Commands: login, cmd, remote, upload, download');
+    console.error('Commands: login, cmd, remote, upload, download, restart');
     process.exit(1);
 }

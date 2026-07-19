@@ -283,7 +283,9 @@ function openMd(fl: DirEntry) {
     new CMDViewer(url);
 }
 function openSheet(fl: DirEntry) {
-    new CSheetViewer([downUrl(fl)], async (filePath, base64) => saveEditedFile(filePath, base64)).Open();
+    const url = downUrl(fl);
+    if (tryNotifyEditorHost(gRoot + gPath + fl.name, url)) return;
+    new CSheetViewer([url], async (filePath, base64) => saveEditedFile(filePath, base64)).Open();
 }
 // File/Memo 라우터와 동일하게, 현재 파일탭이 원격 서버에 접속된 상태면 ORM도 그 원격 서버(g_fileWebRootUrl)로 보낸다.
 function openOrm(fl: DirEntry) {

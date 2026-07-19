@@ -1,4 +1,5 @@
 import { CAlert } from "../basic/CAlert.js";
+import { CConfirm } from "../basic/CModal.js";
 import { CEvent } from "../basic/CEvent.js";
 import { CConsol } from "../basic/CConsol.js";
 import { CDOM } from "../basic/CDOM.js";
@@ -11,6 +12,10 @@ import { CChecker } from "./CChecker.js";
 
 
 var gMonaco = true;
+
+/** CUtilWeb.SheetEditor가 다루는 시트 배열(JSON) 형태. rows[0]=헤더, rows[1..]=데이터 */
+export type CSheetData = { name: string, rows: any[][] }[];
+
 export class CUtilWeb {
 	private static mNotifPool: Set<Notification> = new Set();
 	static async Notify(_title: string, _body = "", _icon = "", _onClick: ((...args: any[]) => any) | CEvent<(...args: any[]) => any> | null = null): Promise<boolean> {
@@ -285,6 +290,374 @@ export class CUtilWeb {
 
 
 
+	}
+
+	/**
+	 * 시트 배열(JSON)을 테이블로 _target에 렌더링하고, 더블클릭 인라인 편집을 붙인다.
+	 * 시트가 2개 이상이면 Bootstrap 탭으로, 1개면 단일 테이블로 렌더링한다.
+	 * _editable이 true면 변경이 발생할 때마다 액션 이름과 최소 단위 payload를 _onChange(함수 포인터)로 넘겨준다.
+	 * 최초 렌더링 시에는 호출하지 않는다 (호출 측이 이미 원본 데이터를 들고 있음).
+	 * CSV/XLSX 파싱 등 1차 가공은 호출 측(예: CSheetViewer)에서 끝내고 CSheetData 형태로 넘겨야 한다.
+	 *
+	 * _onChange(action, payload)의 action별 payload (row/col은 rows[1..] 기준 0-based 데이터 인덱스):
+	 *   update       { sheet, row, col, value }  셀 값 수정
+	 *   insert       { sheet, row, values }      row 위치에 새 행 삽입
+	 *   delete       { sheet, row }              row 위치의 행 삭제
+	 *   alter        { sheet, col, name }        col 위치의 열 이름 변경/신규 추가(헤더 스키마 변경)
+	 *   insertSheet  { name, index }             index 위치에 새 시트 추가
+	 *   deleteSheet  { name }                    시트 삭제
+	 */
+	static SheetEditor(_target: HTMLElement, _data: CSheetData,
+		_editable: boolean = true,
+		_onChange: (_action: string, _payload: any) => void = null): void {
+
+		if (!_data || _data.length === 0) {
+			_target.innerHTML = `<div class="p-3 text-muted">데이터가 없습니다.</div>`;
+			return;
+		}
+
+		if (_data.length === 1) {
+			_target.innerHTML = `<div class="overflow-auto h-100" data-sheet-name="${CUtilWeb.SheetEscapeHtml(_data[0].name)}">${CUtilWeb.SheetBuildTable(_data[0].rows)}</div>`;
+			if (_editable)
+				CUtilWeb.SheetAttachEditMode(_target, _onChange);
+			return;
+		}
+
+		const uid = 'sheet_' + Math.random().toString(36).slice(2);
+		let tabSeq = _data.length;
+
+		const tabsHtml = _data.map((s, i) =>
+			`<li class="nav-item" role="presentation">
+				<button class="nav-link${i === 0 ? ' active' : ''}"
+					id="${uid}_tab_t${i}" type="button" role="tab"
+					data-tab-key="t${i}" data-sheet-name="${CUtilWeb.SheetEscapeHtml(s.name)}">
+					${CUtilWeb.SheetEscapeHtml(s.name)}
+					${_editable ? `<span class="ms-1 text-danger sheet-tab-del" title="시트 삭제">✕</span>` : ''}
+				</button>
+			</li>`
+		).join('');
+		const addTabHtml = _editable
+			? `<li class="nav-item" role="presentation">
+				<button class="nav-link sheet-tab-add" type="button" title="시트 추가">+</button>
+			</li>`
+			: '';
+
+		const pagesHtml = _data.map((s, i) =>
+			`<div class="tab-pane${i === 0 ? ' show active' : ''} overflow-auto"
+						style="height:100%"
+						id="${uid}_pane_t${i}" data-tab-key="t${i}" data-sheet-name="${CUtilWeb.SheetEscapeHtml(s.name)}" role="tabpanel">
+				${CUtilWeb.SheetBuildTable(s.rows)}
+			</div>`
+		).join('');
+
+		_target.innerHTML = `
+			<div class="d-flex flex-column h-100">
+				<ul class="nav nav-tabs flex-shrink-0 px-1 pt-1 flex-wrap" role="tablist">
+					${tabsHtml}${addTabHtml}
+				</ul>
+				<div class="tab-content flex-grow-1 overflow-hidden position-relative">
+					${pagesHtml}
+				</div>
+			</div>`;
+
+		const activateTab = (_key: string) => {
+			_target.querySelectorAll('.nav-link[data-tab-key]').forEach(b => b.classList.remove('active'));
+			_target.querySelectorAll('.tab-pane[data-tab-key]').forEach(p => p.classList.remove('show', 'active'));
+			_target.querySelector(`.nav-link[data-tab-key="${_key}"]`)?.classList.add('active');
+			_target.querySelector(`.tab-pane[data-tab-key="${_key}"]`)?.classList.add('show', 'active');
+		};
+
+		const wireTabButton = (_btn: HTMLElement, _pane: HTMLElement) => {
+			_btn.addEventListener('click', (e) => {
+				if ((e.target as HTMLElement).closest('.sheet-tab-del')) return;
+				activateTab(_btn.dataset.tabKey);
+			});
+			if (!_editable) return;
+			_btn.querySelector('.sheet-tab-del')?.addEventListener('click', (e) => {
+				e.stopPropagation();
+				if (_target.querySelectorAll('.nav-link[data-tab-key]').length <= 1) return;
+				const name = _btn.dataset.sheetName;
+				const confirm = new CConfirm();
+				confirm.SetBody(`Delete sheet '${CUtilWeb.SheetEscapeHtml(name)}'?`);
+				confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+					() => {
+						const wasActive = _btn.classList.contains('active');
+						_btn.closest('li').remove();
+						_pane.remove();
+						if (wasActive) {
+							const remain = _target.querySelector('.nav-link[data-tab-key]') as HTMLElement;
+							if (remain) activateTab(remain.dataset.tabKey);
+						}
+						_onChange?.('deleteSheet', { name });
+					},
+					() => {},
+				], ["Delete", "Cancel"]);
+				confirm.Open();
+			});
+		};
+
+		_target.querySelectorAll<HTMLElement>('.nav-link[data-tab-key]').forEach(btn => {
+			const pane = _target.querySelector(`.tab-pane[data-tab-key="${btn.dataset.tabKey}"]`) as HTMLElement;
+			wireTabButton(btn, pane);
+		});
+
+		if (_editable) {
+			const addTabBtn = _target.querySelector('.sheet-tab-add') as HTMLElement;
+			addTabBtn?.addEventListener('click', () => {
+				const name = window.prompt('새 시트 이름을 입력하세요');
+				if (!name || !name.trim()) return;
+
+				const index = _target.querySelectorAll('.nav-link[data-tab-key]').length;
+				const key = 't' + (tabSeq++);
+
+				const li = document.createElement('li');
+				li.className = 'nav-item';
+				li.setAttribute('role', 'presentation');
+				li.innerHTML = `<button class="nav-link" id="${uid}_tab_${key}" type="button" role="tab"
+					data-tab-key="${key}" data-sheet-name="${CUtilWeb.SheetEscapeHtml(name)}">
+					${CUtilWeb.SheetEscapeHtml(name)}<span class="ms-1 text-danger sheet-tab-del" title="시트 삭제">✕</span>
+				</button>`;
+				addTabBtn.closest('li').before(li);
+
+				const pane = document.createElement('div');
+				pane.className = 'tab-pane overflow-auto';
+				pane.style.height = '100%';
+				pane.id = `${uid}_pane_${key}`;
+				pane.dataset.tabKey = key;
+				pane.dataset.sheetName = name;
+				pane.setAttribute('role', 'tabpanel');
+				pane.innerHTML = CUtilWeb.SheetBuildTable([['']]);
+				_target.querySelector('.tab-content').appendChild(pane);
+
+				const newBtn = li.querySelector('.nav-link[data-tab-key]') as HTMLElement;
+				wireTabButton(newBtn, pane);
+
+				activateTab(key);
+				_onChange?.('insertSheet', { name, index });
+			});
+		}
+
+		if (_editable)
+			CUtilWeb.SheetAttachEditMode(_target, _onChange);
+	}
+
+	/** rows[0] = 헤더, rows[1..] = 데이터 */
+	private static SheetBuildTable(rows: any[][]): string {
+		if (!rows || rows.length === 0)
+			return `<div class="p-3 text-muted">데이터가 없습니다.</div>`;
+
+		const colCount = Math.max(...rows.map(r => r.length));
+
+		// 각 열의 최대 문자 길이 계산
+		const maxLens: number[] = new Array(colCount).fill(0);
+		for (const row of rows)
+			for (let c = 0; c < row.length; c++) {
+				const len = String(row[c] ?? '').length;
+				if (len > maxLens[c]) maxLens[c] = len;
+			}
+
+		// 문자 길이 → 픽셀, 맨 끝 액션 열(헤더=열추가, 데이터행=삭제, 마지막행=행추가)은 44px 고정
+		const widths = [
+			...maxLens.map(l => Math.max(40, l * 8 + 16)),
+			44
+		];
+		const colsHtml = widths.map(w => `<col style="width:${w}px">`).join('');
+
+		const colAddTh = `<th class="px-1 text-center text-white-50 sheet-col-add" title="더블클릭하여 열 추가">+</th>`;
+		const delBtnTd = `<td class="px-1 text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 sheet-row-del">✕</button></td>`;
+
+		let html = `<table class="table table-sm table-bordered table-hover table-striped mb-0"
+			style="font-size:0.85em;white-space:nowrap;table-layout:fixed;width:auto">
+			<colgroup>${colsHtml}</colgroup>
+			<thead class="table-dark sticky-top">
+				<tr>${rows[0].map(c => `<th class="px-2">${CUtilWeb.SheetEscapeHtml(String(c ?? ''))}</th>`).join('')}${colAddTh}</tr>
+			</thead>
+			<tbody>`;
+
+		for (let i = 1; i < rows.length; i++)
+			html += `<tr>${rows[i].map((c: any) => `<td class="px-2">${CUtilWeb.SheetEscapeHtml(String(c ?? ''))}</td>`).join('')}${delBtnTd}</tr>`;
+
+		// 맨 아래 Add 전용 placeholder 행 (읽기 시 데이터에서 제외됨)
+		const blankCells = new Array(colCount).fill(`<td class="px-2"></td>`).join('');
+		html += `<tr class="sheet-row-add-placeholder">${blankCells}<td class="px-1 text-center"><button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 sheet-row-add">+</button></td></tr>`;
+
+		html += `</tbody></table>`;
+		return html;
+	}
+
+	/** 셀/행이 속한 시트 이름을 가장 가까운 [data-sheet-name] 조상에서 읽어온다. */
+	private static SheetNameOf(_el: Element): string {
+		return _el.closest('[data-sheet-name]')?.getAttribute('data-sheet-name') ?? '';
+	}
+
+	/** 맨 아래 Add placeholder 행(_tr)을 실제 데이터 행으로 전환하고 그 아래에 새 placeholder 행을 추가한 뒤 insert 이벤트를 전파한다. */
+	private static SheetConvertAddRow(_tr: HTMLElement, _onChange: (_action: string, _payload: any) => void = null): void {
+		const actionTd = _tr.querySelector('td:last-child');
+		if (actionTd) actionTd.innerHTML = `<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 sheet-row-del">✕</button>`;
+		_tr.classList.remove('sheet-row-add-placeholder');
+
+		const dataCellCount = _tr.querySelectorAll('td').length - 1;
+		const blankCells = new Array(dataCellCount).fill(`<td class="px-2"></td>`).join('');
+		const newRow = document.createElement('tr');
+		newRow.className = 'sheet-row-add-placeholder';
+		newRow.innerHTML = `${blankCells}<td class="px-1 text-center"><button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 sheet-row-add">+</button></td>`;
+		_tr.after(newRow);
+
+		const tbody = _tr.closest('tbody');
+		const row = Array.from(tbody.querySelectorAll('tr:not(.sheet-row-add-placeholder)')).indexOf(_tr);
+		const sheet = CUtilWeb.SheetNameOf(_tr);
+		_onChange?.('insert', { sheet, row, values: new Array(dataCellCount).fill('') });
+	}
+
+	/**
+	 * tbody/thead 셀 더블클릭 → 인라인 편집. 행 끝의 Delete/Add 버튼 클릭도 함께 처리.
+	 * 변경이 발생할 때마다(update/insert/delete/alter) _onChange(action, payload)를 호출한다.
+	 */
+	private static SheetAttachEditMode(_container: HTMLElement, _onChange: (_action: string, _payload: any) => void = null): void {
+		_container.addEventListener('click', (e) => {
+			const target = e.target as HTMLElement;
+
+			const delBtn = target.closest('.sheet-row-del');
+			if (delBtn) {
+				const tr = delBtn.closest('tr');
+				const tbody = tr.closest('tbody');
+				const row = Array.from(tbody.querySelectorAll('tr:not(.sheet-row-add-placeholder)')).indexOf(tr);
+				const sheet = CUtilWeb.SheetNameOf(tr);
+				const confirm = new CConfirm();
+				confirm.SetBody("Delete this row?");
+				confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
+					() => {
+						tr.remove();
+						_onChange?.('delete', { sheet, row });
+					},
+					() => {},
+				], ["Delete", "Cancel"]);
+				confirm.Open();
+				return;
+			}
+
+			const addBtn = target.closest('.sheet-row-add');
+			if (addBtn) {
+				const tr = addBtn.closest('tr');
+				if (tr) CUtilWeb.SheetConvertAddRow(tr, _onChange);
+			}
+		});
+
+		_container.addEventListener('dblclick', (e) => {
+			const target = e.target as HTMLElement;
+			if (target.closest('.sheet-row-del, .sheet-row-add')) return;
+
+			const td = target.closest('td, th');
+			if (!td || td.querySelector('.sheet-row-del, .sheet-row-add')) return;
+
+			const placeholderTr = td.closest('tr');
+			if (placeholderTr?.classList.contains('sheet-row-add-placeholder')) {
+				// 추가행의 빈 셀을 바로 더블클릭한 경우: 먼저 실제 행으로 전환한 뒤 같은 위치 셀 편집을 이어간다.
+				const colIndex = Array.from(placeholderTr.children).indexOf(td);
+				CUtilWeb.SheetConvertAddRow(placeholderTr, _onChange);
+				const newTd = placeholderTr.children[colIndex] as HTMLElement;
+				newTd?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+				return;
+			}
+
+			const isColAdd = td.classList.contains('sheet-col-add');
+			const isHeader = td.tagName === 'TH';
+			const original = isColAdd ? '' : (td.textContent ?? '');
+			let committed = false;
+
+			td.innerHTML = '';
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.className = 'form-control form-control-sm p-0 px-1 border-0';
+			input.style.cssText = 'width:100%;min-width:60px;font-size:inherit;';
+			input.value = original;
+			td.appendChild(input);
+			input.focus();
+			input.select();
+
+			const commit = () => {
+				if (committed) return;
+				committed = true;
+				const sheet = CUtilWeb.SheetNameOf(td);
+				const col = Array.from(td.parentElement.children).indexOf(td);
+
+				if (isColAdd) {
+					if (input.value.trim() === '') { td.innerHTML = '+'; return; }
+					CUtilWeb.SheetAddColumn(td as HTMLElement, input.value);
+					_onChange?.('alter', { sheet, col, name: input.value });
+					return;
+				}
+				td.innerHTML = CUtilWeb.SheetEscapeHtml(input.value);
+				if (isHeader)
+					_onChange?.('alter', { sheet, col, name: input.value });
+				else {
+					const tbody = td.closest('tbody');
+					const row = Array.from(tbody.querySelectorAll('tr:not(.sheet-row-add-placeholder)')).indexOf(td.closest('tr'));
+					_onChange?.('update', { sheet, row, col, value: input.value });
+				}
+			};
+			const cancel = () => {
+				if (committed) return;
+				committed = true;
+				td.innerHTML = isColAdd ? '+' : CUtilWeb.SheetEscapeHtml(original);
+			};
+
+			input.addEventListener('blur', commit);
+			input.addEventListener('keydown', (ke) => {
+				if (ke.key === 'Enter')  { ke.preventDefault(); commit(); }
+				if (ke.key === 'Escape') { ke.preventDefault(); cancel(); input.blur(); }
+				if (ke.key === 'Tab') {
+					ke.preventDefault();
+					commit();
+					const cells = Array.from(td.closest('table')?.querySelectorAll('td, th') ?? []);
+					const next = cells[cells.indexOf(td as HTMLElement) + (ke.shiftKey ? -1 : 1)] as HTMLElement;
+					if (next) next.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+				}
+			});
+		});
+	}
+
+	/**
+	 * 액션 열의 헤더 칸(+)에 입력된 이름으로 새 데이터 열을 그 앞에 삽입한다.
+	 * 액션 열 자체(헤더=+, 데이터행=삭제버튼, 마지막행=추가버튼)는 그대로 유지되어 다음 열 추가에도 재사용된다.
+	 */
+	private static SheetAddColumn(_actionTh: HTMLElement, _name: string): void {
+		const table = _actionTh.closest('table');
+		const headerRow = _actionTh.closest('tr');
+		if (!table || !headerRow) { _actionTh.innerHTML = '+'; return; }
+
+		const cellIndex = Array.from(headerRow.children).indexOf(_actionTh);
+
+		const newTh = document.createElement('th');
+		newTh.className = 'px-2';
+		newTh.textContent = _name;
+		_actionTh.before(newTh);
+		_actionTh.innerHTML = '+';
+
+		table.querySelectorAll('tbody tr').forEach(tr => {
+			const refCell = tr.children[cellIndex] as HTMLElement;
+			const newTd = document.createElement('td');
+			newTd.className = 'px-2';
+			if (refCell) refCell.before(newTd);
+			else tr.appendChild(newTd);
+		});
+
+		const colgroup = table.querySelector('colgroup');
+		if (colgroup) {
+			const refCol = colgroup.children[cellIndex] as HTMLElement;
+			const newCol = document.createElement('col');
+			newCol.style.width = '80px';
+			if (refCol) refCol.before(newCol);
+			else colgroup.appendChild(newCol);
+		}
+	}
+
+	private static SheetEscapeHtml(_str: string): string {
+		return _str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
 	}
 	// static async TSToJS(_source) {
 	// 	const patchImportPaths = (code) => {

@@ -68,8 +68,8 @@ export class CORMRouter extends CAuthServer {
             const projection: string[] = (_json.GetArray('projection')?.mArray ?? []);
             const limitRaw: any = _json.GetVal('limit') || {};
 
-            const condition = conditionRaw.map((c: any) => new CORMCondition(c.mKey, c.mCondition, c.mValue, c.mLogical));
-            const data = dataRaw.map((d: any) => new CORMField(d.mKey, d.mValue));
+            const condition = conditionRaw.map((c: any) => new CORMCondition(c.GetStr('mKey'), c.GetStr('mCondition'), c.GetVal('mValue'), c.GetStr('mLogical')));
+            const data = dataRaw.map((d: any) => new CORMField(d.GetStr('mKey'), d.GetVal('mValue')));
 
             const limit = new CORMOption();
             if (limitRaw.mLimitOffset != null) limit.mLimitOffset = limitRaw.mLimitOffset;

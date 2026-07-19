@@ -12,6 +12,7 @@ import {
 	BranchBegin,BranchEnd,BranchDefault,
 	Attribute, Null,
     Sam2DArrToV4,
+    gl_Position,
 } from "./Shader"
 import {
 	SDF
@@ -559,7 +560,6 @@ function ps_main()
 		shadow = Sam2DToColor(SDF.eTexSlot.SingleShadowRead, V2DivV2(screenPos.xy, screenSize.xy));  // <- 여기! 절대 size 곱하지 말기
 	}
 	BranchEnd();
-
 	
 	var world : CVec4 = to_worldPos;
 
@@ -799,14 +799,17 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
     BranchDefault();
     if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5) {
         svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+        svm[0][3] = 0.0;
         spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
     }
     else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5) {
         svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+        svm[0][3] = 0.0;
         spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
     }
     else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5) {
         svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+        svm[0][3] = 0.0;
         spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
     }
     to_viewPos = V4MulMatCoordi(P, svm);
@@ -814,7 +817,7 @@ function vs_main_shadow_write(f3_ver : Vertex3,f4_wi : WeightIndexI4, f4_we : We
     BranchEnd();
     
     // pancacking
-    out_position.z = max(out_position.z, 0.0);
+    out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write() 
 {
