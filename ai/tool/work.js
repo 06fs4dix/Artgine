@@ -1,13 +1,40 @@
 import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { CWorkOrder } from '../../artgine/server/CWorkOrder.js';
-import { CSubAgent } from '../../artgine/server/CSubAgent.js';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { existsSync, readdirSync } from 'fs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = dirname(dirname(SCRIPT_DIR));
-// CSQLite 기본 경로(./db/artgine.sqlite)는 process.cwd() 기준이라, 어디서 실행하든
-// 서버와 같은 db 파일을 보도록 프로젝트 루트로 고정한다.
-process.chdir(PROJECT_ROOT);
+const MARKER = ['artgine', 'server', 'CWorkOrder.js'];
+
+// SCRIPT_DIR에서 위로 올라가며 artgine/server/CWorkOrder.js가 실제로 있는 폴더를 프로젝트 루트로 판정한다.
+// ai/tool과 artgine/ 사이의 중첩 깊이는 프로젝트 구조마다 달라(WebContent는 2단계, 서브모듈로 한 겹
+// 더 감싼 구조(예: Artgine-Agent/Artgine/artgine/...)는 3단계라 고정 단계 수를 가정하면 깨진다.
+// 그래서 각 조상 폴더 자신뿐 아니라 그 직계 자식 폴더까지(서브모듈 폴더 한 겹) 함께 확인한다.
+function findProjectRoot(_startDir) {
+    let dir = _startDir;
+    for (let i = 0; i < 6; i++) {
+        if (existsSync(join(dir, ...MARKER))) return dir;
+        try {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+                if (!entry.isDirectory()) continue;
+                const child = join(dir, entry.name);
+                if (existsSync(join(child, ...MARKER))) return child;
+            }
+        } catch { /* 읽기 권한 없는 폴더는 건너뛴다 */ }
+        const parent = dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    throw new Error(`프로젝트 루트를 찾지 못했습니다 (기준 경로: ${_startDir})`);
+}
+
+// PROJECT_ROOT는 모듈(CWorkOrder.js)을 import하는 용도로만 쓴다. cwd를 여기로 옮기면 CSQLite
+// 기본 경로(./db/artgine.sqlite)가 실행한 위치가 아니라 이 폴더 기준으로 잡혀 서버가 쓰는 db와
+// 어긋날 수 있다(예: 감싸는 프로젝트 구조에서 실제 코드 폴더와 서버 cwd가 다른 경우) — 그래서
+// process.chdir()은 하지 않고 cwd는 실행한 위치 그대로 둔다.
+const PROJECT_ROOT = findProjectRoot(SCRIPT_DIR);
+
+const { CWorkOrder } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CWorkOrder.js')));
+const { CSubAgent } = await import(pathToFileURL(join(PROJECT_ROOT, 'artgine', 'server', 'CSubAgent.js')));
 
 const [cmd, ...rest] = process.argv.slice(2);
 
