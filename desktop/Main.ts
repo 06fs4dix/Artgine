@@ -8,7 +8,7 @@ import * as net from 'net';
 import * as fs from "fs";
 import { imageSize } from 'image-size';
 
-import { execSync } from 'child_process';
+import { execSync, spawn, ChildProcess } from 'child_process';
 import { CUtilSystem } from '../artgine/system/CUtilSystem.js';
 
 import {CFile} from '../artgine/system/CFile.js';
@@ -275,13 +275,14 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
-// 앱 종료 시 TSC 프로세스 정리
+// 앱 종료 시 TSC / Cloudflare 터널 프로세스 정리
 app.on('before-quit', async () => {
     if (gTSCPID && gTSCPID > 0) {
         CConsol.Log(`TSC 프로세스 종료 중... (PID: ${gTSCPID})`);
         await CCMDMgr.KillPID(gTSCPID);
         gTSCPID = 0;
     }
+    stopCloudflareTunnel();
 });
 
 function RefreshDevScreen()
@@ -1226,6 +1227,211 @@ ipcMain.handle("GetIPInfo", async (_event) => {
 
 	return JSON.stringify(ipInfo);
 });
+
+// ---- Cloudflare Quick Tunnel (서버 모드: 외부 포트 막힘 시 무료 임시 공개 URL) ----
+// yt-dlp와 동일하게 artgine/external/bin 에 OS별 cloudflared를 받아 실행한다. 로그인/사전 설정 없음.
+const CLOUDFLARED_RELEASE = "https://github.com/cloudflare/cloudflared/releases/latest/download";
+let gCloudflaredProc: ChildProcess | null = null;
+let gCloudflareTunnelUrl = "";
+
+function cloudflaredBinDir(): string {
+	return path.resolve(CPath.ArtgineRootPath(), "artgine", "external", "bin");
+}
+
+/** OS/arch에 맞는 배포 파일과 로컬 실행 파일명. */
+function resolveCloudflaredAsset(): { url: string; fileName: string; archive: "none" | "tgz" } {
+	const p = os.platform();
+	const a = os.arch();
+	if (p === "win32") {
+		const asset = a === "arm64" ? "cloudflared-windows-arm64.exe" : "cloudflared-windows-amd64.exe";
+		return { url: `${CLOUDFLARED_RELEASE}/${asset}`, fileName: "cloudflared.exe", archive: "none" };
+	}
+	if (p === "darwin") {
+		const asset = a === "arm64" ? "cloudflared-darwin-arm64.tgz" : "cloudflared-darwin-amd64.tgz";
+		return { url: `${CLOUDFLARED_RELEASE}/${asset}`, fileName: "cloudflared", archive: "tgz" };
+	}
+	// linux
+	let asset = "cloudflared-linux-amd64";
+	if (a === "arm64") asset = "cloudflared-linux-arm64";
+	else if (a === "arm") asset = "cloudflared-linux-arm";
+	return { url: `${CLOUDFLARED_RELEASE}/${asset}`, fileName: "cloudflared", archive: "none" };
+}
+
+async function ensureCloudflared(): Promise<string | null> {
+	const binDir = cloudflaredBinDir();
+	const asset = resolveCloudflaredAsset();
+	const binPath = path.join(binDir, asset.fileName);
+	if (fs.existsSync(binPath)) return binPath;
+
+	CConsol.Log(`[Cloudflare] cloudflared 없음 → 다운로드: ${asset.url}`);
+	await CFile.FolderCreate(binDir);
+	const data = await CFile.Load(asset.url);
+	if (!data) {
+		CConsol.Log("[Cloudflare] cloudflared 다운로드 실패", CConsol.eColor.red);
+		return null;
+	}
+
+	if (asset.archive === "tgz") {
+		const tgzPath = path.join(binDir, "cloudflared.tgz");
+		await CFile.Save(data as ArrayBuffer, tgzPath);
+		try {
+			execSync(`tar -xzf "${tgzPath}" -C "${binDir}"`, { stdio: "ignore" });
+		} catch (e) {
+			CConsol.Log("[Cloudflare] tgz 압축 해제 실패: " + e, CConsol.eColor.red);
+			try { fs.unlinkSync(tgzPath); } catch { /* ignore */ }
+			return null;
+		}
+		try { fs.unlinkSync(tgzPath); } catch { /* ignore */ }
+		// tar 결과물이 하위 폴더에 있을 수 있어 cloudflared 실행 파일을 찾아 bin 루트로 옮긴다.
+		if (!fs.existsSync(binPath)) {
+			const found = findFileRecursive(binDir, "cloudflared");
+			if (found && found !== binPath) {
+				fs.renameSync(found, binPath);
+			}
+		}
+	} else {
+		await CFile.Save(data as ArrayBuffer, binPath);
+	}
+
+	if (!fs.existsSync(binPath)) {
+		CConsol.Log("[Cloudflare] cloudflared 설치 후 파일 없음", CConsol.eColor.red);
+		return null;
+	}
+	if (process.platform !== "win32") {
+		try { fs.chmodSync(binPath, 0o755); } catch { /* ignore */ }
+	}
+	CConsol.Log("[Cloudflare] cloudflared 준비 완료: " + binPath);
+	return binPath;
+}
+
+function findFileRecursive(dir: string, name: string): string | null {
+	try {
+		for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+			const full = path.join(dir, ent.name);
+			if (ent.isFile() && ent.name === name) return full;
+			if (ent.isDirectory()) {
+				const nested = findFileRecursive(full, name);
+				if (nested) return nested;
+			}
+		}
+	} catch { /* ignore */ }
+	return null;
+}
+
+function stopCloudflareTunnel() {
+	if (gCloudflaredProc) {
+		const pid = gCloudflaredProc.pid;
+		try {
+			if (process.platform === "win32" && pid) {
+				try { execSync(`taskkill /pid ${pid} /T /F`, { stdio: "ignore" }); } catch { gCloudflaredProc.kill(); }
+			} else {
+				gCloudflaredProc.kill("SIGTERM");
+			}
+		} catch { /* ignore */ }
+		gCloudflaredProc = null;
+	}
+	gCloudflareTunnelUrl = "";
+}
+
+function buildProjectPageUrl(originBase: string): string {
+	const parsed = new URL(gAppJSON.url);
+	const pathname = (parsed.pathname || "").replace(/\/+$/, "");
+	const projectName = GetProjName(gAppJSON.projectPath);
+	const base = originBase.replace(/\/+$/, "");
+	return `${base}${pathname}/${gAppJSON.projectPath}/${projectName}.${gAppJSON.page}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
+async function startCloudflareTunnel(): Promise<{ ok: boolean; url?: string; msg?: string }> {
+	if (gCloudflaredProc && gCloudflareTunnelUrl) {
+		return { ok: true, url: gCloudflareTunnelUrl };
+	}
+	// 이전 잔여 프로세스 정리
+	stopCloudflareTunnel();
+
+	const binPath = await ensureCloudflared();
+	if (!binPath) return { ok: false, msg: "Failed to download cloudflared." };
+
+	const parsed = new URL(gAppJSON.url);
+	const port = parsed.port || (parsed.protocol === "https:" ? "443" : "80");
+	const localTarget = `http://127.0.0.1:${port}`;
+
+	return new Promise((resolve) => {
+		let settled = false;
+		let buf = "";
+		const finish = (result: { ok: boolean; url?: string; msg?: string }) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			resolve(result);
+		};
+
+		let proc: ChildProcess;
+		try {
+			proc = spawn(binPath, ["tunnel", "--url", localTarget], {
+				stdio: ["ignore", "pipe", "pipe"],
+				windowsHide: true,
+			});
+		} catch (e: any) {
+			finish({ ok: false, msg: e?.message ?? String(e) });
+			return;
+		}
+		gCloudflaredProc = proc;
+
+		const onChunk = (chunk: Buffer) => {
+			const text = chunk.toString();
+			buf += text;
+			CConsol.Log("[cloudflared] " + text.trim());
+			// Quick Tunnel URL: https://xxxx.trycloudflare.com
+			const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+			if (m) {
+				const tunnelOrigin = m[0];
+				const pageUrl = buildProjectPageUrl(tunnelOrigin);
+				gCloudflareTunnelUrl = pageUrl;
+				CConsol.Log("[Cloudflare] tunnel ready: " + pageUrl);
+				finish({ ok: true, url: pageUrl });
+			}
+		};
+		proc.stdout?.on("data", onChunk);
+		proc.stderr?.on("data", onChunk);
+		proc.on("error", (err) => {
+			gCloudflaredProc = null;
+			finish({ ok: false, msg: err.message });
+		});
+		proc.on("close", (code) => {
+			gCloudflaredProc = null;
+			if (!settled) finish({ ok: false, msg: `cloudflared exited (code ${code})` });
+			else gCloudflareTunnelUrl = "";
+		});
+
+		const timer = setTimeout(() => {
+			if (settled) return;
+			// URL을 못 받은 채 시간 초과면 잔여 프로세스 종료
+			try {
+				if (process.platform === "win32" && proc.pid) {
+					try { execSync(`taskkill /pid ${proc.pid} /T /F`, { stdio: "ignore" }); } catch { proc.kill(); }
+				} else {
+					proc.kill("SIGTERM");
+				}
+			} catch { /* ignore */ }
+			gCloudflaredProc = null;
+			finish({ ok: false, msg: "Timed out waiting for Cloudflare tunnel URL." });
+		}, 45000);
+	});
+}
+
+ipcMain.handle("StartCloudflareTunnel", async (_event) => {
+	try {
+		const r = await startCloudflareTunnel();
+		return JSON.stringify(r);
+	} catch (e: any) {
+		return JSON.stringify({ ok: false, msg: e?.message ?? String(e) });
+	}
+});
+ipcMain.handle("StopCloudflareTunnel", async (_event) => {
+	stopCloudflareTunnel();
+	return JSON.stringify({ ok: true });
+});
+
 ipcMain.handle("RunBrowser", async (_event,_url) => {
 	try {
 		await shell.openExternal(_url);

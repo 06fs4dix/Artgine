@@ -10,6 +10,57 @@ import {CHash} from "../artgine/basic/CHash.js";
 
 //var gAppJSON: { url, projectPath, projectName, program, server, width, height,fullScreen }=null;
 var gIpInfo:{url,public,private};
+
+async function applyPublicAccess(publicUrl: string) {
+    gIpInfo.public = publicUrl;
+    CDOM.IDValue("publicIP_txt", publicUrl);
+    if (publicUrl.startsWith("http")) {
+        const qrUrl = await CUtilWeb.QRCode(publicUrl, 180);
+        (document.getElementById("qr_img") as HTMLImageElement).src = qrUrl;
+        (document.getElementById("qr_area") as HTMLElement).style.display = "block";
+    } else {
+        (document.getElementById("qr_area") as HTMLElement).style.display = "none";
+    }
+}
+
+/** 외부 포트 막힘 시 Cloudflare Quick Tunnel 제안 → 수락 시 bin 다운로드·실행·링크 표시 */
+async function offerCloudflareTunnelIfNeeded() {
+    if (gIpInfo.public.startsWith("http")) return;
+    // GetIPInfo가 포트 미개방으로 판정한 문구일 때만 (인터넷 불가 메시지는 제외)
+    if (gIpInfo.public.indexOf("Port unreachable") < 0) return;
+
+    await new Promise<void>((resolve) => {
+        CConfirm.List(
+            `<p class="fw-bold">External port is unreachable.</p>
+			<p class="mb-0">Start a free <b>Cloudflare tunnel</b> for remote access?<br>
+			<span class="text-secondary small">(Downloads cloudflared once, no account required. Link is temporary.)</span></p>`,
+            [
+                async () => {
+                    CDOM.IDValue("publicIP_txt", "Starting Cloudflare tunnel…");
+                    try {
+                        const raw = await CWebView.Call("StartCloudflareTunnel");
+                        const r = typeof raw === "string" ? JSON.parse(raw) : raw;
+                        if (r?.ok && r.url) {
+                            await applyPublicAccess(r.url);
+                            CAlert.Info("Cloudflare tunnel ready.");
+                        } else {
+                            const msg = r?.msg || "Failed to start Cloudflare tunnel.";
+                            CDOM.IDValue("publicIP_txt", gIpInfo.public);
+                            CAlert.E(msg);
+                        }
+                    } catch (e: any) {
+                        CDOM.IDValue("publicIP_txt", gIpInfo.public);
+                        CAlert.E(e?.message ?? String(e));
+                    }
+                    resolve();
+                },
+                () => { resolve(); },
+            ],
+            ["Yes", "No"]
+        );
+    });
+}
+
 async function Init()
 {
     const appJSON = JSON.parse(await CWebView.Call("LoadAppJSON"));
@@ -21,9 +72,11 @@ async function Init()
 
     if(gIpInfo.public.startsWith("http"))
     {
-        const qrUrl = await CUtilWeb.QRCode(gIpInfo.public, 180);
-        (document.getElementById("qr_img") as HTMLImageElement).src = qrUrl;
-        (document.getElementById("qr_area") as HTMLElement).style.display = "block";
+        await applyPublicAccess(gIpInfo.public);
+    }
+    else
+    {
+        await offerCloudflareTunnelIfNeeded();
     }
 
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");

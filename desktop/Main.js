@@ -6,6 +6,7 @@ import * as https from 'https';
 import * as http from 'http';
 import * as fs from "fs";
 import { imageSize } from 'image-size';
+import { execSync, spawn } from 'child_process';
 import { CFile } from '../artgine/system/CFile.js';
 import { CUtil } from '../artgine/basic/CUtil.js';
 import { CConsol } from '../artgine/basic/CConsol.js';
@@ -181,6 +182,7 @@ app.on('before-quit', async () => {
         await CCMDMgr.KillPID(gTSCPID);
         gTSCPID = 0;
     }
+    stopCloudflareTunnel();
 });
 function RefreshDevScreen() {
     gMainWindow.setFullScreen(false);
@@ -836,6 +838,222 @@ ipcMain.handle("GetIPInfo", async (_event) => {
         ipInfo.public = publicPage;
     CConsol.Log(ipInfo.private + "\n" + ipInfo.public);
     return JSON.stringify(ipInfo);
+});
+const CLOUDFLARED_RELEASE = "https://github.com/cloudflare/cloudflared/releases/latest/download";
+let gCloudflaredProc = null;
+let gCloudflareTunnelUrl = "";
+function cloudflaredBinDir() {
+    return path.resolve(CPath.ArtgineRootPath(), "artgine", "external", "bin");
+}
+function resolveCloudflaredAsset() {
+    const p = os.platform();
+    const a = os.arch();
+    if (p === "win32") {
+        const asset = a === "arm64" ? "cloudflared-windows-arm64.exe" : "cloudflared-windows-amd64.exe";
+        return { url: `${CLOUDFLARED_RELEASE}/${asset}`, fileName: "cloudflared.exe", archive: "none" };
+    }
+    if (p === "darwin") {
+        const asset = a === "arm64" ? "cloudflared-darwin-arm64.tgz" : "cloudflared-darwin-amd64.tgz";
+        return { url: `${CLOUDFLARED_RELEASE}/${asset}`, fileName: "cloudflared", archive: "tgz" };
+    }
+    let asset = "cloudflared-linux-amd64";
+    if (a === "arm64")
+        asset = "cloudflared-linux-arm64";
+    else if (a === "arm")
+        asset = "cloudflared-linux-arm";
+    return { url: `${CLOUDFLARED_RELEASE}/${asset}`, fileName: "cloudflared", archive: "none" };
+}
+async function ensureCloudflared() {
+    const binDir = cloudflaredBinDir();
+    const asset = resolveCloudflaredAsset();
+    const binPath = path.join(binDir, asset.fileName);
+    if (fs.existsSync(binPath))
+        return binPath;
+    CConsol.Log(`[Cloudflare] cloudflared 없음 → 다운로드: ${asset.url}`);
+    await CFile.FolderCreate(binDir);
+    const data = await CFile.Load(asset.url);
+    if (!data) {
+        CConsol.Log("[Cloudflare] cloudflared 다운로드 실패", CConsol.eColor.red);
+        return null;
+    }
+    if (asset.archive === "tgz") {
+        const tgzPath = path.join(binDir, "cloudflared.tgz");
+        await CFile.Save(data, tgzPath);
+        try {
+            execSync(`tar -xzf "${tgzPath}" -C "${binDir}"`, { stdio: "ignore" });
+        }
+        catch (e) {
+            CConsol.Log("[Cloudflare] tgz 압축 해제 실패: " + e, CConsol.eColor.red);
+            try {
+                fs.unlinkSync(tgzPath);
+            }
+            catch { }
+            return null;
+        }
+        try {
+            fs.unlinkSync(tgzPath);
+        }
+        catch { }
+        if (!fs.existsSync(binPath)) {
+            const found = findFileRecursive(binDir, "cloudflared");
+            if (found && found !== binPath) {
+                fs.renameSync(found, binPath);
+            }
+        }
+    }
+    else {
+        await CFile.Save(data, binPath);
+    }
+    if (!fs.existsSync(binPath)) {
+        CConsol.Log("[Cloudflare] cloudflared 설치 후 파일 없음", CConsol.eColor.red);
+        return null;
+    }
+    if (process.platform !== "win32") {
+        try {
+            fs.chmodSync(binPath, 0o755);
+        }
+        catch { }
+    }
+    CConsol.Log("[Cloudflare] cloudflared 준비 완료: " + binPath);
+    return binPath;
+}
+function findFileRecursive(dir, name) {
+    try {
+        for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, ent.name);
+            if (ent.isFile() && ent.name === name)
+                return full;
+            if (ent.isDirectory()) {
+                const nested = findFileRecursive(full, name);
+                if (nested)
+                    return nested;
+            }
+        }
+    }
+    catch { }
+    return null;
+}
+function stopCloudflareTunnel() {
+    if (gCloudflaredProc) {
+        const pid = gCloudflaredProc.pid;
+        try {
+            if (process.platform === "win32" && pid) {
+                try {
+                    execSync(`taskkill /pid ${pid} /T /F`, { stdio: "ignore" });
+                }
+                catch {
+                    gCloudflaredProc.kill();
+                }
+            }
+            else {
+                gCloudflaredProc.kill("SIGTERM");
+            }
+        }
+        catch { }
+        gCloudflaredProc = null;
+    }
+    gCloudflareTunnelUrl = "";
+}
+function buildProjectPageUrl(originBase) {
+    const parsed = new URL(gAppJSON.url);
+    const pathname = (parsed.pathname || "").replace(/\/+$/, "");
+    const projectName = GetProjName(gAppJSON.projectPath);
+    const base = originBase.replace(/\/+$/, "");
+    return `${base}${pathname}/${gAppJSON.projectPath}/${projectName}.${gAppJSON.page}`.replace(/([^:]\/)\/+/g, "$1");
+}
+async function startCloudflareTunnel() {
+    if (gCloudflaredProc && gCloudflareTunnelUrl) {
+        return { ok: true, url: gCloudflareTunnelUrl };
+    }
+    stopCloudflareTunnel();
+    const binPath = await ensureCloudflared();
+    if (!binPath)
+        return { ok: false, msg: "Failed to download cloudflared." };
+    const parsed = new URL(gAppJSON.url);
+    const port = parsed.port || (parsed.protocol === "https:" ? "443" : "80");
+    const localTarget = `http://127.0.0.1:${port}`;
+    return new Promise((resolve) => {
+        let settled = false;
+        let buf = "";
+        const finish = (result) => {
+            if (settled)
+                return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(result);
+        };
+        let proc;
+        try {
+            proc = spawn(binPath, ["tunnel", "--url", localTarget], {
+                stdio: ["ignore", "pipe", "pipe"],
+                windowsHide: true,
+            });
+        }
+        catch (e) {
+            finish({ ok: false, msg: e?.message ?? String(e) });
+            return;
+        }
+        gCloudflaredProc = proc;
+        const onChunk = (chunk) => {
+            const text = chunk.toString();
+            buf += text;
+            CConsol.Log("[cloudflared] " + text.trim());
+            const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+            if (m) {
+                const tunnelOrigin = m[0];
+                const pageUrl = buildProjectPageUrl(tunnelOrigin);
+                gCloudflareTunnelUrl = pageUrl;
+                CConsol.Log("[Cloudflare] tunnel ready: " + pageUrl);
+                finish({ ok: true, url: pageUrl });
+            }
+        };
+        proc.stdout?.on("data", onChunk);
+        proc.stderr?.on("data", onChunk);
+        proc.on("error", (err) => {
+            gCloudflaredProc = null;
+            finish({ ok: false, msg: err.message });
+        });
+        proc.on("close", (code) => {
+            gCloudflaredProc = null;
+            if (!settled)
+                finish({ ok: false, msg: `cloudflared exited (code ${code})` });
+            else
+                gCloudflareTunnelUrl = "";
+        });
+        const timer = setTimeout(() => {
+            if (settled)
+                return;
+            try {
+                if (process.platform === "win32" && proc.pid) {
+                    try {
+                        execSync(`taskkill /pid ${proc.pid} /T /F`, { stdio: "ignore" });
+                    }
+                    catch {
+                        proc.kill();
+                    }
+                }
+                else {
+                    proc.kill("SIGTERM");
+                }
+            }
+            catch { }
+            gCloudflaredProc = null;
+            finish({ ok: false, msg: "Timed out waiting for Cloudflare tunnel URL." });
+        }, 45000);
+    });
+}
+ipcMain.handle("StartCloudflareTunnel", async (_event) => {
+    try {
+        const r = await startCloudflareTunnel();
+        return JSON.stringify(r);
+    }
+    catch (e) {
+        return JSON.stringify({ ok: false, msg: e?.message ?? String(e) });
+    }
+});
+ipcMain.handle("StopCloudflareTunnel", async (_event) => {
+    stopCloudflareTunnel();
+    return JSON.stringify({ ok: true });
 });
 ipcMain.handle("RunBrowser", async (_event, _url) => {
     try {
