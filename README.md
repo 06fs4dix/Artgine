@@ -1,7 +1,7 @@
 ## Introduction
 Artgine is a 2D/3D content engine and an integrated development environment built with Electron and web technologies. It combines web‑based graphics rendering with the convenience of a desktop app, so you can build interactive content and games without complex setup.
 
-[Take a Look](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-promo.html)
+[Take a Look](https://06fs4dix.github.io/Artgine/help/help.html)
 
 ## Language
 **[한국어](README-ko.md)**
@@ -11,8 +11,6 @@ Artgine is a 2D/3D content engine and an integrated development environment buil
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
 
 ## Getting Started
-
-[Guide](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
 
 - Run `start.bat` (Windows) or `start.sh` (Linux).  
   💡 You may see an **“Unknown publisher”** warning.

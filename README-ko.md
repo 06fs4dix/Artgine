@@ -2,7 +2,7 @@
 
 Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합 개발 환경입니다. 웹 기반 그래픽 렌더링과 데스크톱 앱의 편의성을 결합하여, 복잡한 설정 없이도 인터랙티브한 콘텐츠와 게임을 손쉽게 개발할 수 있도록 설계되었습니다.
 
-[소개 페이지](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-promo.html)
+[소개 페이지](https://06fs4dix.github.io/Artgine/help/help.html)
 
 ## 언어
 **[English](README.md)**
@@ -12,8 +12,6 @@ Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합
 [Artgine-Project](https://github.com/06fs4dix/Artgine-Project)
 
 ## 시작하기
-
-[안내](https://06fs4dix.github.io/Artgine/help/electron-ui-mode-guide.html)
 
 - start.bat/start.sh실행 하거나  ```💡"알 수 없는 게시자" 경고가 표시될 수 있습니다```
 	
