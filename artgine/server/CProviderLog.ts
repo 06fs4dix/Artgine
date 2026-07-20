@@ -114,6 +114,12 @@ export class CProviderLog {
         await db.Send(`DELETE FROM ${CProviderLog.sTable} WHERE sessionId = ?`, [_sessionId]);
     }
 
+    // 전체 삭제 — 로그 탭 상단 X 클릭 시 모든 세션 기록을 지운다.
+    public static async DeleteAll(): Promise<void> {
+        const db = await CProviderLog.Init();
+        await db.Send(`DELETE FROM ${CProviderLog.sTable}`, []);
+    }
+
     private static RowToRecord(_row: any[]): ProviderLogRecord {
         return {
             id: Number(_row[0]),

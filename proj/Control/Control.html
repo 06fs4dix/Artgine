@@ -149,7 +149,12 @@ if (location.protocol == 'file:' && isElectron==false){
         <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-body">
             <!-- 현재 활성 서버(Local/원격)의 File/Root 목록. Control.ts의 ctrlRefreshRootSelect()가 채우고,
                  선택 시 File 탭 iframe에 'set-file-root'를 보내 실제 루트를 바꾼다. -->
-            <select id="ctrl-root-sel" class="form-select form-select-sm mb-2"></select>
+            <div class="d-flex gap-1 mb-2">
+                <select id="ctrl-root-sel" class="form-select form-select-sm"></select>
+                <button type="button" id="ctrlRootAddFolderBtn" class="btn btn-sm btn-outline-secondary p-0 flex-shrink-0 d-flex align-items-center justify-content-center" style="width:31px;height:31px;" title="Add Working Folder">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
             <!-- RDP 세션 목록(Local + Remote). Control.ts의 rdpRenderList()가 채운다. -->
             <div id="rdp-sidebar-list" class="d-flex flex-column gap-1"></div>
             <!-- Chat/Terminal/Browser 통합 세션 목록. 유형 구분 없이 실제 최신순으로 함께 정렬된다.
@@ -164,7 +169,7 @@ if (location.protocol == 'file:' && isElectron==false){
              사이드바의 Local/Remote 항목은 이 하나의 트리거를 통해 #rdp-panel을 활성 탭으로 전환하고,
              실제로 보여줄 iframe은 풀에서 전환한다. -->
         <li class="nav-item d-none" role="presentation">
-            <button type="button" id="rdp-panel-tab" class="active" data-bs-toggle="tab" data-bs-target="#rdp-panel" role="tab" aria-controls="rdp-panel" aria-selected="true"></button>
+            <button type="button" id="rdp-panel-tab" data-bs-toggle="tab" data-bs-target="#rdp-panel" role="tab" aria-controls="rdp-panel" aria-selected="false"></button>
         </li>
         <!-- Chat 패널을 활성화하기 위한 숨은 탭 트리거(드롭다운 안의 항목을 직접 탭으로 쓰면
              Bootstrap Tab.js가 상위 dropdown-toggle(More)에도 active를 붙여 계속 켜진 것처럼 보이는
@@ -179,6 +184,11 @@ if (location.protocol == 'file:' && isElectron==false){
         <!-- Editor 패널을 활성화하기 위한 숨은 탭 트리거(File 탭에서 파일을 열면 사이드바 항목으로 추가되고, 그 항목 클릭으로 전환됨). -->
         <li class="nav-item d-none" role="presentation">
             <button type="button" id="editor-panel-tab" data-bs-toggle="tab" data-bs-target="#editor-panel" role="tab" aria-controls="editor-panel"></button>
+        </li>
+        <!-- Help 패널 숨은 탭 트리거(초기 진입 기본. More 드롭다운 항목으로 다시 열 수 있다. Chat과 같이
+             드롭다운 밖에 두어 More에 active가 붙지 않게 한다). -->
+        <li class="nav-item d-none" role="presentation">
+            <button type="button" id="help-panel-tab" class="active" data-bs-toggle="tab" data-bs-target="#help-panel" role="tab" aria-controls="help-panel" aria-selected="true"></button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-panel" type="button" role="tab"
@@ -199,6 +209,7 @@ if (location.protocol == 'file:' && isElectron==false){
                 <i class="bi bi-three-dots"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="more-tab">
+                <li><button class="dropdown-item" id="help-btn" type="button" title="Help"><i class="bi bi-question-circle"></i> Help</button></li>
                 <li><button class="dropdown-item" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo-panel" type="button" role="tab"
                     aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> Memo</button></li>
                 <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> RDP</button></li>
@@ -234,11 +245,14 @@ if (location.protocol == 'file:' && isElectron==false){
             <div class="text-secondary">사이드바에서 채팅을 선택하세요</div>
         </div>
     </div>
-    <div class="tab-pane h-100 position-relative active" id="rdp-panel" role="tabpanel" aria-labelledby="rdp-panel-tab">
+    <div class="tab-pane h-100 position-relative" id="rdp-panel" role="tabpanel" aria-labelledby="rdp-panel-tab">
         <div id="rdp-frame-container" class="position-absolute" style="inset:0;"></div>
         <div id="rdp-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
             <div class="text-secondary">사이드바에서 원격 데스크탑을 선택하세요</div>
         </div>
+    </div>
+    <!-- 초기 진입 기본 패널. Control.ts가 ./artgine-agent.html을 iframe으로 넣는다. -->
+    <div class="tab-pane h-100 position-relative active" id="help-panel" role="tabpanel" aria-labelledby="help-panel-tab">
     </div>
     <div class="tab-pane h-100 position-relative" id="term-panel" role="tabpanel" aria-labelledby="term-tab">
         <div id="term-frame-container" class="position-absolute" style="inset:0;"></div>
@@ -268,7 +282,10 @@ if (location.protocol == 'file:' && isElectron==false){
         <div class="p-2">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <h6 class="mb-0"><i class="bi bi-journal-code"></i> Provider Log</h6>
-                <button id="logRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+                <div class="d-flex align-items-center gap-1">
+                    <button id="logRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+                    <button id="logClearBtn" type="button" class="btn btn-sm btn-outline-danger" title="Delete all logs"><i class="bi bi-x-lg"></i></button>
+                </div>
             </div>
             <div id="logAccordionList" class="d-flex flex-column gap-1"></div>
             <div class="d-flex justify-content-center mt-2">
@@ -383,10 +400,10 @@ if (location.protocol == 'file:' && isElectron==false){
                     <div class="mb-0">
                         <div class="small text-secondary fw-semibold mb-1" data-CLan="ctrl.kb.global">Global Shortcuts</div>
                         <ul class="list-unstyled small mb-0">
-                            <li data-CLan="ctrl.kb.f1"><kbd>F1</kbd> Go to File tab + File Manager</li>
+                            <li data-CLan="ctrl.kb.f1"><kbd>F1</kbd> Right sidebar File ↔ Info toggle (opens sidebar on small screens)</li>
                             <li data-CLan="ctrl.kb.f2"><kbd>F2</kbd> Open File Search</li>
                             <li data-CLan="ctrl.kb.f3"><kbd>F3</kbd> Open New Terminal</li>
-                            <li data-CLan="ctrl.kb.f4"><kbd>F4</kbd> Focus/toggle sidebar</li>
+                            <li data-CLan="ctrl.kb.f4"><kbd>F4</kbd> / double-tap <kbd>Ctrl</kbd> Focus/toggle sidebar</li>
                             <li data-CLan="ctrl.kb.f6"><kbd>F6</kbd> Toggle SUPER (auto-approve) + focus input bar (Chat/Terminal)</li>
                             <li data-CLan="ctrl.kb.updown"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Move through session list (sidebar open)</li>
                         </ul>

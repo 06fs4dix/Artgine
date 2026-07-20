@@ -18,7 +18,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mrn9vafi_5";
+gPF.mVersion = "mrsjnkms_2";
 import { CAtelier } from "../../artgine/app/CAtelier.js";
 var gAtl = new CAtelier();
 gAtl.mPF = gPF;
@@ -26,7 +26,7 @@ await gAtl.Init([], "");
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
-import { CMDViewer, CORMViewer } from "../../artgine/util/CModalUtil.js";
+import { CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
@@ -80,10 +80,10 @@ function registerControlLan() {
     const ko = CLan.eType.ko;
     CLan.Set(ko, "ctrl.help", "도움말");
     CLan.Set(ko, "ctrl.kb.global", "전역 단축키");
-    CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
+    CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)");
     CLan.Set(ko, "ctrl.kb.f2", "<kbd>F2</kbd> 파일 검색 열기");
     CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 새 터미널 열기");
-    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> 사이드바 포커스/토글");
+    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글");
     CLan.Set(ko, "ctrl.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)");
     CLan.Set(ko, "ctrl.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
 }
@@ -180,6 +180,7 @@ setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
 document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
+document.getElementById('ctrlRootAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
 document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
     const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
     new CORMViewer(undefined, 'sqlite', 'db/artgine.sqlite', currentRemoteBaseUrl, token).Open(CModal.ePos.Center);
@@ -383,6 +384,102 @@ function showOpencodeStatusModal() {
     setTimeout(() => {
         document.getElementById('opencodeStatusRefreshBtn')?.addEventListener('click', load);
         load();
+    }, MODAL_DOM_DELAY);
+}
+const RESTART_RELOAD_SEC = 10;
+function scheduleReloadAfterRestart(_el) {
+    let left = RESTART_RELOAD_SEC;
+    const tick = () => {
+        if (left <= 0) {
+            location.reload();
+            return;
+        }
+        if (_el)
+            _el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Saved. Server is restarting… reloading in ${left}s</span>`;
+        left--;
+        setTimeout(tick, 1000);
+    };
+    tick();
+}
+function showWorkFolderModal() {
+    const uid = `workfolder_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Working Folder');
+    modal.SetBody(`
+        <div class="small text-secondary mb-2">
+            <p class="mb-1">Server working folders, served as <code>/Root0</code>, <code>/Root1</code> … (one per line).</p>
+            <p class="mb-0">Saving writes to <code>Env.json</code> and <strong>restarts the server</strong> to re-register the routes.</p>
+        </div>
+        <textarea id="${uid}" class="form-control form-control-sm" rows="4" placeholder="./&#10;D:/Work" spellcheck="false"></textarea>
+        <div class="d-flex justify-content-end mt-2">
+            <button id="${uid}_save" class="btn btn-primary btn-sm">Save &amp; Restart</button>
+        </div>
+        <div id="${uid}_result" class="small mt-2"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(520, 320);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(async () => {
+        const ta = document.getElementById(uid);
+        const saveBtn = document.getElementById(`${uid}_save`);
+        const result = document.getElementById(`${uid}_result`);
+        try {
+            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/workfolder');
+            if (r.status === 401) {
+                if (result)
+                    result.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Login required</span>';
+            }
+            else {
+                const j = await r.json();
+                if (j.ok && ta)
+                    ta.value = (j.rootPath ?? []).join('\n');
+            }
+        }
+        catch (e) {
+            if (result)
+                result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+        }
+        const submit = () => {
+            const list = (ta?.value ?? '').split('\n').map(s => s.trim()).filter(Boolean);
+            if (!list.length) {
+                ta?.focus();
+                return;
+            }
+            const dlg = new CConfirm();
+            dlg.SetBody(`Save working folders and restart the server now?<br><br>${list.map(aiEscapeHtml).join('<br>')}`);
+            dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+                async () => {
+                    if (saveBtn)
+                        saveBtn.disabled = true;
+                    if (result)
+                        result.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> Saving &amp; restarting…</span>';
+                    try {
+                        const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/workfolder-set', {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ rootPath: list }),
+                        });
+                        const j = await r.json();
+                        if (!j.ok) {
+                            const msg = r.status === 401 ? 'Login required' : (j.msg || 'Failed');
+                            if (result)
+                                result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(msg)}</span>`;
+                            if (saveBtn)
+                                saveBtn.disabled = false;
+                            return;
+                        }
+                        CAlert.Info('Working folder saved. Server is restarting.');
+                        scheduleReloadAfterRestart(result);
+                    }
+                    catch (e) {
+                        scheduleReloadAfterRestart(result);
+                    }
+                },
+                () => { },
+            ], ["Save & Restart", "Cancel"]);
+            dlg.Open();
+        };
+        saveBtn?.addEventListener('click', submit);
     }, MODAL_DOM_DELAY);
 }
 const MODAL_DOM_DELAY = 100;
@@ -793,12 +890,14 @@ CDOM.ID('rdp-panel-tab').addEventListener('hidden.bs.tab', () => updateRdpFrameV
 rdpRenderList();
 if (CDOM.ID('rdp-panel').classList.contains('active'))
     queueMicrotask(() => rdpOpenLocal());
+else
+    queueMicrotask(() => ctrlRefreshRootSelect());
 function openRdpAddModal() {
     const modal = new CModal();
     modal.SetHeader('Add Remote Desktop');
     modal.SetBody(`
         <div class="d-flex gap-1">
-            <input id="rdpModalUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Home.html URL">
+            <input id="rdpModalUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Control.html URL">
             <button id="rdpModalAddBtn" class="btn btn-outline-primary btn-sm flex-shrink-0"><i class="bi bi-plus-lg"></i> Add</button>
         </div>
     `);
@@ -853,7 +952,28 @@ function fileLoadFrame() {
     fileIframe.src = `${CPath.WebRootArtgineUrl()}artgine/server/html/File.html${q}`;
 }
 fileLoadFrame();
-window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
+const helpPanel = CDOM.ID("help-panel");
+let helpIframe = null;
+function helpLoadFrame() {
+    if (helpIframe)
+        return;
+    helpPanel.classList.add("position-relative");
+    helpPanel.style.overflow = "hidden";
+    helpIframe = document.createElement("iframe");
+    helpIframe.id = "help-iframe";
+    helpIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
+    helpIframe.src = new URL('./artgine-agent.html', import.meta.url).href;
+    helpPanel.appendChild(helpIframe);
+}
+helpLoadFrame();
+function helpActivatePane() {
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
+}
+if (ctrlInitRootPath)
+    window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
+else
+    helpActivatePane();
+CDOM.ID('help-btn').addEventListener('click', () => helpActivatePane());
 const CTRL_SEARCH_EXCLUDE_DIRS = ['node_modules'];
 const ctrlIsSearchExcluded = (name) => name.startsWith('.') || CTRL_SEARCH_EXCLUDE_DIRS.includes(name);
 const ctrlEncodeUrlPath = (p) => p.split('/').map(encodeURIComponent).join('/');
@@ -981,6 +1101,79 @@ async function ctrlFileSearch() {
         doSearch(); });
     input.focus();
 }
+function ctrlSideFileVcsBadge(status, filePath) {
+    if (!status)
+        return '';
+    const color = status === 'A' ? 'success' : status === 'D' ? 'danger' : status === 'M' ? 'warning' : 'secondary';
+    const canDiff = status === 'M' || status === 'A' || status === 'D';
+    if (!canDiff)
+        return `<span class="badge bg-${color} ms-auto" style="font-size:0.6rem;">${status}</span>`;
+    return `<span class="badge bg-${color} ms-auto" style="font-size:0.6rem;cursor:pointer;" title="Diff" data-vcs-diff-path="${aiEscapeHtml(filePath)}">${status}</span>`;
+}
+async function ctrlOpenVcsDiff(filePath) {
+    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
+    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    let res;
+    try {
+        res = await CFecth.Exe(apiBase + "File/VCS", { action: "diff", path: filePath, token }, "json");
+    }
+    catch (e) {
+        CAlert.Info("Diff request failed");
+        return;
+    }
+    if (!res?.ok) {
+        CAlert.Info(res?.msg || "Diff failed");
+        return;
+    }
+    if (!document.getElementById("vcs-diff-style")) {
+        const st = document.createElement("style");
+        st.id = "vcs-diff-style";
+        st.textContent = "#ctrl-vcs-diff-view .d2h-code-wrapper{position:relative;}";
+        document.head.appendChild(st);
+    }
+    const modal = new CModal();
+    modal.SetHeader(`Diff: ${filePath.replace(/\/+$/, '').split('/').pop() || filePath}`);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetBody(`<div id="ctrl-vcs-diff-view"></div>`);
+    modal.SetSize(860, 580);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(() => {
+        const el = document.getElementById("ctrl-vcs-diff-view");
+        if (!el)
+            return;
+        const D2H = window.Diff2HtmlUI;
+        if (!D2H) {
+            el.textContent = "diff2html not loaded";
+            return;
+        }
+        el.classList.toggle('d2h-dark-color-scheme', document.documentElement.getAttribute('data-bs-theme') === 'dark');
+        const cfg = { drawFileList: false, matching: "lines", outputFormat: "line-by-line", highlight: false, stickyFileHeaders: false };
+        new D2H(el, res.diff, cfg).draw();
+    }, 100);
+}
+const CTRL_EXT_KIND = {
+    png: 'image', jpg: 'image', jpeg: 'image', bmp: 'image',
+    mp3: 'audio', ogg: 'audio',
+    mp4: 'video', mov: 'video', avi: 'video',
+    soundlist: 'soundlist', html: 'html', md: 'md',
+    ts: 'code', js: 'code', txt: 'code', json: 'code',
+    csv: 'sheet', xlsx: 'sheet', xls: 'sheet',
+    sqlite: 'orm', db: 'orm',
+};
+const CTRL_FILE_ICON = {
+    folder: 'bi-folder-fill text-warning', image: 'bi-folder-image', audio: 'bi-folder-music',
+    video: 'bi-folder-play', soundlist: 'bi-flower1', html: 'bi-file-earmark-code',
+    code: 'bi-file-code', md: 'bi-file-earmark-text', sheet: 'bi-file-earmark-spreadsheet',
+    orm: 'bi-file-earmark-binary', file: 'bi-file-earmark',
+};
+function ctrlSideFileKind(fl) {
+    return fl.file
+        ? (CTRL_EXT_KIND[fl.ext] ?? 'file')
+        : (fl.name.toLowerCase().endsWith('.nedb') ? 'orm' : 'folder');
+}
+function ctrlSideFileIcon(fl) {
+    return CTRL_FILE_ICON[ctrlSideFileKind(fl)];
+}
 const ctrlSideFilePathEl = CDOM.ID('ctrlSideFilePath');
 const ctrlSideFileListEl = CDOM.ID('ctrlSideFileList');
 let ctrlSideFilePath = '/';
@@ -1003,8 +1196,13 @@ function ctrlSideFileRenderList(list) {
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'list-group-item list-group-item-action py-1 px-2 d-flex align-items-center gap-1';
-        const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
-        item.innerHTML = `<i class="bi ${icon}"></i><span class="text-truncate">${aiEscapeHtml(fl.name)}</span>`;
+        const icon = ctrlSideFileIcon(fl);
+        const vcsFilePath = ctrlSideFileRoot + ctrlSideFilePath + fl.name;
+        item.innerHTML = `<i class="bi ${icon}"></i><span class="text-truncate">${aiEscapeHtml(fl.name)}</span>${ctrlSideFileVcsBadge(fl.Status, vcsFilePath)}`;
+        item.querySelector('[data-vcs-diff-path]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ctrlOpenVcsDiff(vcsFilePath);
+        });
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
             e.dataTransfer?.setData('text/plain', ctrlSideFileRoot + ctrlSideFilePath + fl.name);
@@ -1013,7 +1211,12 @@ function ctrlSideFileRenderList(list) {
         });
         item.addEventListener('click', () => {
             if (fl.file) {
-                editorOpenFile(ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name));
+                if (ctrlSideFileKind(fl) === 'orm') {
+                    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+                    new CORMViewer(undefined, 'sqlite', ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, token).Open();
+                    return;
+                }
+                promptSourceAction(ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name));
             }
             else {
                 ctrlSideFileGoTo(ctrlSideFilePath + fl.name + '/');
@@ -1066,11 +1269,16 @@ CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGo
 ctrlSideFileGoTo('/');
 function runControlHotkey(key) {
     switch (key) {
-        case 'F1':
-            window.bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
-            if (fileIframe?.contentWindow)
-                CIframeMsg.Send(fileIframe.contentWindow, 'trigger-file-btn', {});
+        case 'F1': {
+            if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
+                window.bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
+            }
+            const fileTab = CDOM.ID('right-file-tab');
+            const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
+            const targetId = onFile ? 'right-info-tab' : 'right-file-tab';
+            window.bootstrap.Tab.getOrCreateInstance(CDOM.ID(targetId)).show();
             return true;
+        }
         case 'F2':
             ctrlFileSearch();
             return true;
@@ -1158,6 +1366,34 @@ function runControlArrowKey(dir) {
     items[nxt].scrollIntoView({ block: 'nearest' });
     return true;
 }
+function wireCtrlDoubleTap(target, onTrigger) {
+    const THRESHOLD_MS = 400;
+    let otherKeyUsed = false;
+    let lastSoloUpTime = 0;
+    target.addEventListener('keydown', ((e) => {
+        if (e.key === 'Control')
+            return;
+        if (e.ctrlKey)
+            otherKeyUsed = true;
+    }), true);
+    target.addEventListener('keyup', ((e) => {
+        if (e.key !== 'Control')
+            return;
+        if (otherKeyUsed) {
+            otherKeyUsed = false;
+            lastSoloUpTime = 0;
+            return;
+        }
+        const now = performance.now();
+        if (now - lastSoloUpTime < THRESHOLD_MS) {
+            lastSoloUpTime = 0;
+            onTrigger();
+        }
+        else {
+            lastSoloUpTime = now;
+        }
+    }), true);
+}
 function wireIframeArrowKeys(f) {
     f.addEventListener('load', () => {
         try {
@@ -1167,6 +1403,8 @@ function wireIframeArrowKeys(f) {
                         e.preventDefault();
                 }
             }, true);
+            if (f.contentWindow)
+                wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
         }
         catch (_) { }
     });
@@ -1191,6 +1429,8 @@ function wirePooledFrameHotkeys(f, key) {
                         e.preventDefault();
                 }
             }, true);
+            if (f.contentWindow)
+                wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
         }
         catch (_) { }
     });
@@ -1211,6 +1451,7 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
     }
 });
+wireCtrlDoubleTap(document, runControlF4Key);
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
         const key = String(data.key ?? '');
@@ -1238,6 +1479,18 @@ CIframeMsg.Recv({
             CIframeMsg.Send(memoIframe.contentWindow, 'set-folder', { folder: data.folder ?? '' }); }, 200);
     },
     'terminal-path-tapped': (data) => termOpenTappedPath(String(data.path ?? ''), String(data.token ?? '')),
+    'editor-dirty': (data, source) => {
+        for (const [key, f] of editorIframePool) {
+            if (f.contentWindow !== source)
+                continue;
+            const s = editorSessions.get(key);
+            if (s) {
+                s.dirty = !!data.dirty;
+                renderSessionSidebar();
+            }
+            break;
+        }
+    },
     'terminal-handoff': (data) => {
         const newToken = String(data.newToken ?? '');
         if (!newToken)
@@ -1378,6 +1631,18 @@ if (CDOM.ID('log-panel').classList.contains('active')) {
 }
 CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
 logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
+CDOM.ID('logClearBtn').addEventListener('click', () => {
+    const dlg = new CConfirm();
+    dlg.SetBody('Delete ALL logs? This will remove every session and cannot be undone.');
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+        async () => {
+            await authedFetch(`${CPath.WebRootUrl()}cmd/log-clear`);
+            logLoadSessions(true);
+        },
+        () => { },
+    ], ["Delete All", "Cancel"]);
+    dlg.Open();
+});
 const memoTab = CDOM.ID("memo-tab");
 const memoPanel = CDOM.ID("memo-panel");
 let memoIframe = null;
@@ -1461,6 +1726,7 @@ function rdpPromptRemoteAuth(webRootUrl, onSuccess) {
 function ctrlRequireAuthed() {
     if (getAuthToken(CPath.WebRootUrl()))
         return true;
+    rdpPromptRemoteAuth(CPath.WebRootUrl());
     CAlert.Warning("Authentication required. Please sign in first.");
     return false;
 }
@@ -1756,7 +2022,7 @@ function editorOpenFile(path, baseUrl, url) {
     const key = `editor:${baseUrl}|${path}`;
     let s = editorSessions.get(key);
     if (!s) {
-        s = { key, path, baseUrl, url, openedAt: Date.now() };
+        s = { key, path, baseUrl, url, openedAt: Date.now(), dirty: false };
         editorSessions.set(key, s);
     }
     else {
@@ -1812,27 +2078,17 @@ function fileExtOf(path) {
     return m ? m[1].toLowerCase() : '';
 }
 function executeOpenedSource(fullPath, url) {
-    const ext = fileExtOf(fullPath);
-    if (ext === 'html' || ext === 'htm') {
-        window.open(url, "_blank");
-        return;
-    }
-    if (ext === 'md') {
-        new CMDViewer(url);
-        return;
-    }
+    window.open(url, "_blank");
 }
 function promptSourceAction(fullPath, baseUrl, url) {
     const ext = fileExtOf(fullPath);
-    const canExecute = ext === 'html' || ext === 'htm' || ext === 'md';
-    const actions = [() => editorOpenFile(fullPath, baseUrl, url)];
-    const labels = ["Edit"];
-    if (canExecute) {
-        actions.push(() => executeOpenedSource(fullPath, url));
-        labels.push("Execute");
+    const canExecute = ext === 'html' || ext === 'htm';
+    if (!canExecute) {
+        editorOpenFile(fullPath, baseUrl, url);
+        return;
     }
-    actions.push(() => { });
-    labels.push("Cancel");
+    const actions = [() => editorOpenFile(fullPath, baseUrl, url), () => executeOpenedSource(fullPath, url), () => { }];
+    const labels = ["Edit", "Execute", "Cancel"];
     const confirm = new CConfirm();
     confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
     confirm.SetConfirm(CConfirm.eConfirm.List, actions, labels);
@@ -1840,12 +2096,20 @@ function promptSourceAction(fullPath, baseUrl, url) {
 }
 function editorItemSpec(s, activeKey) {
     const name = s.path.split('/').pop() || s.path;
+    const dir = s.path.slice(0, s.path.length - name.length);
+    const dot = s.dirty
+        ? '<span class="text-warning small" title="수정됨 (저장 안 됨)">●</span>'
+        : '<span class="text-success small" title="저장됨">●</span>';
     return {
         activeClass: 'ai-session-item-active',
         isActive: activeKey === s.key,
         dataAttr: { name: 'key', value: s.key },
-        leftHtml: `<i class="bi bi-file-earmark-code"></i>`,
-        bodyHtml: `<span class="flex-grow-1 min-w-0 text-truncate small" title="${aiEscapeHtml(s.path)}">${aiEscapeHtml(name)}</span>`,
+        leftHtml: `<i class="bi bi-file-earmark-code"></i>${dot}`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
+            <span class="text-truncate small">${aiEscapeHtml(name)}</span>
+            ${dir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(dir)}</span>` : ''}
+        </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
         onClick: () => {
@@ -2237,12 +2501,12 @@ function termStartNew(mode = 'cmd', initialWorkingDir) {
     const container = document.createElement('div');
     container.innerHTML = `
         <div class="mb-3 d-flex gap-2 flex-wrap">
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="cmd">cmd</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="claude">claude</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="codex">codex</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="antigravity">agy</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="opencode">opencode</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="grok">grok</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="cmd"><i class="bi bi-terminal"></i>cmd</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="claude"><i class="bi bi-chat-dots"></i>claude</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="codex"><i class="bi bi-code-slash"></i>codex</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="antigravity"><i class="bi bi-rocket-takeoff"></i>agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="opencode"><i class="bi bi-braces"></i>opencode</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="grok"><i class="bi bi-lightning-charge"></i>grok</button>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Key</label>
@@ -2993,6 +3257,7 @@ async function agentOpenModal(existing) {
     modal.SetHeader(isEdit ? 'Edit Sub Agent' : 'New Sub Agent');
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
+    modal.SetSize(560, 600);
     modal.Open(CModal.ePos.Center);
     setTimeout(() => {
         const keyInput = container.querySelector('#agent-key');

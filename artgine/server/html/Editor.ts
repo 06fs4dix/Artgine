@@ -5,16 +5,13 @@ import { CUtilWeb, CSheetData } from "../../util/CUtilWeb.js";
 import { CPath } from "../../basic/CPath.js";
 import { CFecth } from "../../network/CFecth.js";
 import { getAuthToken } from "../CAuthToken.js";
+import { CIframeMsg } from "./CIframeMsg.js";
 
 // path/url은 Control.ts가 file-opened 이벤트로 받은 값을 그대로 쿼리스트링에 실어 iframe src로 넘긴다.
 const gPath = CUtilWeb.Parameter("path") ?? "";
 const gUrl = CUtilWeb.Parameter("url") ?? "";
 
-const languageMap: Record<string, "typescript" | "javascript" | "json" | "html" | "wgsl" | "plaintext"> = {
-    ts: "typescript", js: "javascript", mjs: "javascript",
-    json: "json", html: "html", htm: "html", wgsl: "wgsl",
-};
-
+// 언어 맵은 CUtilWeb.sMonacoExtToLang 공유. TS 언어 서비스/TSImport는 typescript일 때만 MonacoEditer 내부에서 동작.
 const saveBtn = CDOM.ID("editor-save-btn") as HTMLButtonElement;
 const pathEl = CDOM.ID("editor-path") as HTMLSpanElement;
 const statusEl = CDOM.ID("editor-status") as HTMLSpanElement;
@@ -31,6 +28,36 @@ async function canWrite(): Promise<boolean> {
     } catch { return false; }
 }
 
+// 수정/저장 상태를 부모(Control.ts)에 알린다. 부모는 이 신호로 사이드바 항목의 초록/노랑 점을 갱신한다.
+function sendDirty(_dirty: boolean): void {
+    if (window.parent !== window) CIframeMsg.Send(window.parent, 'editor-dirty', { dirty: _dirty });
+}
+
+let gLastSaveTime: number | null = null;
+let gSaveTimerId: number | null = null;
+
+function formatElapsed(_ms: number): string {
+    const sec = Math.floor(_ms / 1000);
+    if (sec < 60) return `${sec}초 전 저장됨`;
+    return `${Math.floor(sec / 60)}분 전 저장됨`;
+}
+
+function tickSaveStatus(): void {
+    if (gLastSaveTime === null || !statusEl) return;
+    statusEl.textContent = formatElapsed(Date.now() - gLastSaveTime);
+}
+
+function startSaveTimer(): void {
+    gLastSaveTime = Date.now();
+    tickSaveStatus();
+    if (gSaveTimerId === null) gSaveTimerId = window.setInterval(tickSaveStatus, 1000);
+}
+
+function stopSaveTimer(): void {
+    if (gSaveTimerId !== null) { window.clearInterval(gSaveTimerId); gSaveTimerId = null; }
+    gLastSaveTime = null;
+}
+
 async function uploadFile(_base64: string) {
     if (!gPath) { if (statusEl) statusEl.textContent = "No path info, cannot save."; return; }
     const dirEnd = gPath.lastIndexOf('/');
@@ -38,11 +65,13 @@ async function uploadFile(_base64: string) {
     const fileName = gPath.slice(dirEnd + 1);
     const token = getAuthToken(CPath.WebRootUrl());
 
+    stopSaveTimer();
     if (statusEl) statusEl.textContent = "Saving...";
     try {
         const j = await CFecth.Exe(CPath.WebRootUrl() + 'File/Upload',
             { path: dir, name: [fileName], data: [_base64], token }, 'json') as any;
-        if (statusEl) statusEl.textContent = j.ok ? "Saved" : `Save failed: ${j.msg ?? ''}`;
+        if (j.ok) { startSaveTimer(); sendDirty(false); }
+        else if (statusEl) statusEl.textContent = `Save failed: ${j.msg ?? ''}`;
     } catch (e: any) {
         if (statusEl) statusEl.textContent = `Save failed: ${e.message}`;
     }
@@ -175,7 +204,10 @@ async function mainSheet(container: HTMLElement, ext: string, writable: boolean)
     gSheetData = data;
     gSheetExt = ext;
 
-    CUtilWeb.SheetEditor(container, data, writable, (_action, _payload) => applySheetAction(_action, _payload));
+    CUtilWeb.SheetEditor(container, data, writable, (_action, _payload) => {
+        applySheetAction(_action, _payload);
+        sendDirty(true);
+    });
 
     if (writable && saveBtn) {
         saveBtn.style.display = "inline-block";
@@ -205,7 +237,7 @@ async function main() {
         return;
     }
 
-    const language = languageMap[ext] ?? "plaintext";
+    const language = CUtilWeb.sMonacoExtToLang[ext] ?? "plaintext";
 
     CUtilWeb.MonacoEditer(container, source, language, "vs-dark", (editor) => {
         editor?.updateOptions({ readOnly: !writable });
@@ -217,6 +249,7 @@ async function main() {
         }
         const monacoNs = (window as any)["monaco"];
         editor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(editor));
+        editor.onDidChangeModelContent(() => sendDirty(true));
     }, false, gUrl);
 }
 main();

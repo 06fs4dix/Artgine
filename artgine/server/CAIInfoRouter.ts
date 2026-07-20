@@ -11,6 +11,8 @@ import type { IProviderUsage } from '../util/CAI.js';
 import { CPath } from '../basic/CPath.js';
 import { CConsol } from '../basic/CConsol.js';
 import { CSQLite } from '../network/CSQLite.js';
+import { GetAppJSON, GetRootPaths, SetRootPaths, GetLoadedSettingsFileName } from '../../desktop/MainFunc.js';
+import { CUtilSystem } from '../system/CUtilSystem.js';
 
 const SETTINGS_FILE = path.join(CAI.AIDir(), 'settings.json');
 
@@ -187,7 +189,7 @@ async function _pruneAntigravity(cutoffMs: number): Promise<number> {
 
 type PruneOutcome = { installed: boolean; deleted: number; error?: string };
 
-@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations"])
+@URLPatterns(["/AIInfo/setting", "/AIInfo/provider-state", "/AIInfo/opencode-pushLocal", "/AIInfo/opencode-statusLocal", "/AIInfo/prune-conversations", "/AIInfo/workfolder", "/AIInfo/workfolder-set"])
 export class CAIInfoRouter extends CAuthServer {
     // 토큰이 같이 오면 토큰 기준으로, 없으면 기존 세션 쿠키 기준으로 인증한다.
     // cross-origin(RDP로 전환된 원격 서버) 요청은 쿠키가 기본적으로 전달되지 않으므로 토큰이 필요하다.
@@ -203,6 +205,8 @@ export class CAIInfoRouter extends CAuthServer {
         this.On("/AIInfo/opencode-pushLocal", this.onPushOpencodeModel.bind(this));
         this.On("/AIInfo/opencode-statusLocal", this.onOpencodeProviderStatus.bind(this));
         this.On("/AIInfo/prune-conversations", this.onPruneConversations.bind(this));
+        this.On("/AIInfo/workfolder", this.onGetWorkFolder.bind(this));
+        this.On("/AIInfo/workfolder-set", this.onSetWorkFolder.bind(this));
     }
 
     override Connect() { super.Connect(); this._connectImpl(); }
@@ -215,6 +219,39 @@ export class CAIInfoRouter extends CAuthServer {
             _res.json(JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')));
         } catch {
             _res.json({});
+        }
+        return null;
+    }
+
+    // GET /AIInfo/workfolder
+    // 현재 워킹 폴더(rootPath) 배열을 반환한다. 디스크 절대경로를 노출하므로 인증이 필요하다.
+    async onGetWorkFolder(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+        try {
+            _res.json({ ok: true, rootPath: GetRootPaths(await GetAppJSON()) });
+        } catch (e: any) {
+            _res.status(500).json({ ok: false, msg: String(e?.message ?? e) });
+        }
+        return null;
+    }
+
+    // POST /AIInfo/workfolder-set  body: { rootPath: string[] }
+    // 워킹 폴더(rootPath)를 Env.json(CStorage)에 저장하고 서버를 재시작한다(/RootN 재등록을 위해).
+    // 파일시스템 서빙 경계를 바꾸는 쓰기 작업이라 인증된 사용자만 호출 가능하다.
+    async onSetWorkFolder(_json: CJSON, _req: Request, _res: Response): Promise<null> {
+        if (!this.IsAuth(_json, _req)) { _res.status(401).json({ ok: false, msg: 'Authentication required' }); return null; }
+        try {
+            const arr = _json.GetArray('rootPath');
+            const list: string[] = Array.isArray(arr?.mArray)
+                ? arr.mArray.map((s: any) => String(s).trim()).filter(Boolean)
+                : [];
+            if (!list.length) { _res.status(400).json({ ok: false, msg: 'rootPath required' }); return null; }
+            SetRootPaths(list);
+            _res.json({ ok: true, rootPath: GetRootPaths() });
+            // 응답을 보낸 뒤, 현재 프로세스 트리와 분리된 독립 프로세스로 재실행한다(CFileServer.onRestart와 동일 방식).
+            await CUtilSystem.Spawn('npm', ['run', 'start', '--', GetLoadedSettingsFileName()], 'ignore', process.cwd(), null, true, false);
+        } catch (e: any) {
+            if (!_res.headersSent) _res.status(500).json({ ok: false, msg: String(e?.message ?? e) });
         }
         return null;
     }

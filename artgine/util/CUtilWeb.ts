@@ -18,6 +18,114 @@ export type CSheetData = { name: string, rows: any[][] }[];
 
 export class CUtilWeb {
 	private static mNotifPool: Set<Notification> = new Set();
+
+	/**
+	 * Monaco 지원 확장자(소문자, 점 없음) → 언어 ID.
+	 * File Manager / Editor / CFileViewer 등에서 공통으로 참조한다.
+	 * 문법 강조(Monarch) 기준. TS 언어 서비스는 typescript일 때만 MonacoEditer 내부에서 별도 처리.
+	 */
+	static sMonacoExtToLang: Record<string, string> = {
+		// TypeScript / JavaScript / JSON / HTML / WGSL
+		ts: "typescript", tsx: "typescript", cts: "typescript", mts: "typescript",
+		js: "javascript", es6: "javascript", jsx: "javascript", mjs: "javascript", cjs: "javascript",
+		json: "json",
+		html: "html", htm: "html", shtml: "html", xhtml: "html", mdoc: "html", jsp: "html",
+		asp: "html", aspx: "html", jshtm: "html",
+		wgsl: "wgsl",
+
+		// C / C++ (c·h → c, 나머지 → cpp)
+		c: "c", h: "c",
+		cpp: "cpp", cc: "cpp", cxx: "cpp", hpp: "cpp", hh: "cpp", hxx: "cpp",
+
+		// 주요 언어
+		java: "java", jav: "java",
+		cs: "csharp", csx: "csharp", cake: "csharp",
+		py: "python", rpy: "python", pyw: "python", cpy: "python", gyp: "python", gypi: "python",
+		go: "go",
+		rs: "rust", rlib: "rust",
+		php: "php", php4: "php", php5: "php", phtml: "php", ctp: "php",
+		rb: "ruby", rbx: "ruby", rjs: "ruby", gemspec: "ruby",
+		kt: "kotlin", kts: "kotlin",
+		swift: "swift",
+		lua: "lua",
+		pl: "perl", pm: "perl",
+		r: "r", rhistory: "r", rmd: "r", rprofile: "r", rt: "r",
+		dart: "dart",
+		scala: "scala", sc: "scala", sbt: "scala",
+		fs: "fsharp", fsi: "fsharp", ml: "fsharp", mli: "fsharp", fsx: "fsharp", fsscript: "fsharp",
+		vb: "vb",
+		m: "objective-c",
+
+		// 셸 / 배치 / 파워셸
+		sh: "shell", bash: "shell",
+		bat: "bat", cmd: "bat",
+		ps1: "powershell", psm1: "powershell", psd1: "powershell",
+
+		// 웹 / 마크업 / 스타일
+		css: "css",
+		scss: "scss",
+		less: "less",
+		md: "markdown", markdown: "markdown", mdown: "markdown", mkdn: "markdown",
+		mkd: "markdown", mdwn: "markdown", mdtxt: "markdown", mdtext: "markdown",
+		mdx: "mdx",
+		xml: "xml", xsd: "xml", dtd: "xml", ascx: "xml", csproj: "xml", config: "xml",
+		props: "xml", targets: "xml", wxi: "xml", wxl: "xml", wxs: "xml", xaml: "xml",
+		svg: "xml", svgz: "xml", opf: "xml", xslt: "xml", xsl: "xml",
+		yaml: "yaml", yml: "yaml",
+		handlebars: "handlebars", hbs: "handlebars",
+		twig: "twig",
+		liquid: "liquid",
+		pug: "pug", jade: "pug",
+		razor: "razor", cshtml: "razor",
+
+		// 데이터 / 쿼리 / 설정
+		sql: "sql",
+		graphql: "graphql", gql: "graphql",
+		cypher: "cypher", cyp: "cypher",
+		sparql: "sparql", rq: "sparql",
+		redis: "redis",
+		ini: "ini", properties: "ini", gitconfig: "ini",
+		hcl: "hcl", tf: "hcl", tfvars: "hcl",
+		proto: "proto",
+		bicep: "bicep",
+
+		// 기타 언어
+		abap: "abap",
+		cls: "apex",
+		azcli: "azcli",
+		mligo: "cameligo",
+		clj: "clojure", cljs: "clojure", cljc: "clojure", edn: "clojure",
+		coffee: "coffeescript",
+		csp: "csp",
+		dockerfile: "dockerfile",
+		ecl: "ecl",
+		ex: "elixir", exs: "elixir",
+		flow: "flow9",
+		ftl: "freemarker2", ftlh: "freemarker2", ftlx: "freemarker2",
+		jl: "julia",
+		lex: "lexon",
+		m3: "m3", i3: "m3", mg: "m3", ig: "m3",
+		s: "mips",
+		dax: "msdax", msdax: "msdax",
+		pas: "pascal", p: "pascal", pp: "pascal",
+		ligo: "pascaligo",
+		pla: "pla",
+		dats: "postiats", sats: "postiats", hats: "postiats",
+		pq: "powerquery", pqm: "powerquery",
+		qs: "qsharp",
+		rst: "restructuredtext",
+		sb: "sb",
+		scm: "scheme", ss: "scheme", sch: "scheme", rkt: "scheme",
+		sol: "sol",
+		aes: "aes",
+		st: "st", iecst: "st", iecplc: "st", lc3lib: "st", tcpou: "st", tcdut: "st", tcgvl: "st", tcio: "st",
+		sv: "systemverilog", svh: "systemverilog",
+		v: "verilog", vh: "verilog",
+		tcl: "tcl",
+		tsp: "typespec",
+		// 일반 텍스트도 코드 에디터로 연다
+		txt: "plaintext",
+	};
 	static async Notify(_title: string, _body = "", _icon = "", _onClick: ((...args: any[]) => any) | CEvent<(...args: any[]) => any> | null = null): Promise<boolean> {
 		if (!("Notification" in window)) return true;
 		if (Notification.permission === "denied") return true;
@@ -232,7 +340,14 @@ export class CUtilWeb {
 		return _source;
 	}
 
-	static MonacoEditer(_target: HTMLElement, _value: string, _language: "plaintext" | "json" | "typescript" | "javascript" | "wgsl" | "html" = "plaintext",
+	/** Monaco/텍스트 소스로 열 수 있는 확장자인지. 언어 ID는 sMonacoExtToLang[ext] ?? "plaintext". */
+	static IsMonacoSourceExt(_ext: string): boolean {
+		if (!_ext) return false;
+		return _ext.toLowerCase() in CUtilWeb.sMonacoExtToLang;
+	}
+
+	// _language: Monaco 언어 ID 문자열 (plaintext/json/typescript 등 basic-languages 전체 및 내장 언어 서비스)
+	static MonacoEditer(_target: HTMLElement, _value: string, _language: string = "plaintext",
 		_theme: "vs" | "vs-dark" = "vs-dark", _exeFun = null, _github = false, _filePath: string = null) {
 		if (window["require"] == null) {
 			_target.innerHTML = "MonacoEditer not import!";

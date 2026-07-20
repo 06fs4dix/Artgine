@@ -9,8 +9,5 @@
   "server": "webServer",
   "github": false,
   "tsc": true,
-  "password": "artgine",
-  "rootPath": [
-    "./"
-  ]
+  "password": "artgine"
 }

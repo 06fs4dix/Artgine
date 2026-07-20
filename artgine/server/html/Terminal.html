@@ -415,7 +415,7 @@
     }
     // 핸드오프: 다른 프로바이더를 슬래시로 지목(예: /codex)하면, 현재 대화를 요약해 넘기고 그 프로바이더로 이어간다.
     // 셸(cmd) 세션이나 현재와 같은 프로바이더는 대상이 아니다.
-    var HANDOFF_ALIASES = { claude: "claude", codex: "codex", agy: "antigravity", opencode: "opencode" };
+    var HANDOFF_ALIASES = { claude: "claude", codex: "codex", agy: "antigravity", opencode: "opencode", grok: "grok" };
     function startHandoff(to) {
       _handoffLock = true;                    // 이 세션의 모든 입력 차단(요약이 오염되지 않도록)
       inp.disabled = true; inp.value = ""; autoHeight();
@@ -459,17 +459,31 @@
       inp.value = ""; autoHeight(); inp.focus();
     }
 
+    var _imeResetting = false; // ESC 연타 시 포커스 이동 사이클이 겹치지 않게 하는 가드
     inp.addEventListener("keydown", function (e) {
       var items = _acItems();
       if (acBox.style.display !== "none" && items.length) {
         if (e.key === "ArrowDown") { e.preventDefault(); _acSelect(Math.min(_acIdx + 1, items.length - 1)); return; }
         if (e.key === "ArrowUp")   { e.preventDefault(); _acSelect(Math.max(_acIdx - 1, 0)); return; }
         if (e.key === "Tab")       { e.preventDefault(); _acApply(items[Math.max(_acIdx, 0)]._it); return; }
-        if (e.key === "Escape")    { _acHide(); return; }
+        if (e.key === "Escape")    { e.preventDefault(); _acHide(); return; }
         if (e.key === "Enter" && !e.shiftKey && !e.isComposing && _acIdx >= 0) { e.preventDefault(); _acApply(items[_acIdx]._it); return; }
       }
       if (e.key === "Tab") { e.preventDefault(); sendToParent("terminal-tab-key"); return; }
-      if (e.key === "Escape") { e.preventDefault(); sendEsc(); return; }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        sendEsc();
+        // ESC 후 한글 IME 입력 컨텍스트가 어긋나 다음 글자가 소실되는 증상 방지.
+        // 같은 요소 blur→focus는 Chromium이 OS 입력 컨텍스트를 재생성하지 않아 효과가 없고,
+        // 실제로 다른 편집 요소(xterm의 숨겨진 textarea)로 포커스를 옮겼다 되돌려야 리셋된다
+        // (사용자가 pty를 클릭했다 입력창으로 돌아오면 복구되던 것과 동일한 원리).
+        if (!_imeResetting) {
+          _imeResetting = true;
+          term.focus();
+          setTimeout(function () { inp.focus(); _imeResetting = false; }, 0);
+        }
+        return;
+      }
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendInput(); }
       if (!inp.value) { var a = { ArrowUp: "\x1b[A", ArrowDown: "\x1b[B", ArrowLeft: "\x1b[D", ArrowRight: "\x1b[C" }; if (a[e.key]) { e.preventDefault(); sendRaw(a[e.key]); } }
     });
@@ -487,6 +501,13 @@
       document.addEventListener("wheel", function (e) { e.preventDefault(); e.stopPropagation(); if (e.deltaY < 0) _codexUp(); else _codexDown(); }, { passive: false, capture: true });
     }
     document.addEventListener("wheel", function (e) { if (MODE !== "opencode" && MODE !== "grok") return; e.preventDefault(); e.stopPropagation(); sendRaw(e.deltaY < 0 ? "\x1b[5~" : "\x1b[6~"); }, { passive: false, capture: true });
+    // codex/opencode/grok처럼 휠을 통째로 가로채지 않는 나머지 모드(claude 등)에서, 스피너/스트리밍
+    // 재출력 도중 트랙패드 미세 스크롤로 xterm의 자동 하단 추적이 멈추는 경우가 있다. 아래로 휠을
+    // 내리면(native 스크롤은 그대로 두고) 항상 강제로 맨 아래로 붙여 이 상태를 원상복구한다.
+    document.addEventListener("wheel", function (e) {
+      if (MODE === "codex" || MODE === "opencode" || MODE === "grok") return;
+      if (e.deltaY > 0) term.scrollToBottom();
+    }, { passive: true });
     recvFromParent({ "focus-input": function () { showBar(); inp.focus(); } });
   }
 })();

@@ -89,6 +89,15 @@ const createWindow = () => {
             return;
         Menu.buildFromTemplate(template).popup({ window: gMainWindow });
     });
+    gMainWindow.webContents.setWindowOpenHandler(() => {
+        return {
+            action: 'allow',
+            overrideBrowserWindowOptions: {
+                autoHideMenuBar: true,
+                icon: path.resolve(__dirname, "icon.png"),
+            }
+        };
+    });
     let err = PluginMapDependenciesChk();
     if (err != null) {
         dialog.showMessageBoxSync({
@@ -745,15 +754,11 @@ ipcMain.handle("SwitchProgram", async (_event, _program) => {
     ConfirmAndRestart();
 });
 ipcMain.handle("UpdateExtraSettings", async (_event, _json) => {
-    const rootChanged = JSON.stringify(gAppJSON.rootPath) !== JSON.stringify(_json.rootPath);
     gAppJSON.password = _json.password;
-    gAppJSON.rootPath = _json.rootPath;
     if (gAppRootPath)
         CFile.Save(gAppJSON, CPath.WorkingPath() + gSettingsFileName);
     else
         CFile.Save(gAppJSON, path.join(__dirname, gSettingsFileName));
-    if (rootChanged)
-        ConfirmAndRestart();
 });
 ipcMain.handle("LoadPlugin", async (_event) => {
     return JSON.stringify(GetPluginArr());

@@ -22,7 +22,7 @@ gPF.mWASM = false;
 gPF.mCanvas = "";
 gPF.mServer = 'webServer';
 gPF.mGitHub = false;
-gPF.mVersion = "mrn9vafi_5";
+gPF.mVersion = "mrsjnkms_2";
 
 import {CAtelier} from "../../artgine/app/CAtelier.js";
 
@@ -37,7 +37,7 @@ await gAtl.Init([],"");
 import { CDOM } from "../../artgine/basic/CDOM.js";
 import { CPath } from "../../artgine/basic/CPath.js";
 import { CModal, CConfirm } from "../../artgine/basic/CModal.js";
-import { CMDViewer, CORMViewer } from "../../artgine/util/CModalUtil.js";
+import { CORMViewer } from "../../artgine/util/CModalUtil.js";
 import { CAlert } from "../../artgine/basic/CAlert.js";
 import { CFecth } from "../../artgine/network/CFecth.js";
 import { CHash } from "../../artgine/basic/CHash.js";
@@ -102,10 +102,10 @@ function registerControlLan(): void {
     const ko = CLan.eType.ko;
     CLan.Set(ko, "ctrl.help", "도움말");
     CLan.Set(ko, "ctrl.kb.global", "전역 단축키");
-    CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 파일 탭 + 파일 관리자로 이동");
+    CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)");
     CLan.Set(ko, "ctrl.kb.f2", "<kbd>F2</kbd> 파일 검색 열기");
     CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 새 터미널 열기");
-    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> 사이드바 포커스/토글");
+    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글");
     CLan.Set(ko, "ctrl.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)");
     CLan.Set(ko, "ctrl.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
 }
@@ -203,6 +203,7 @@ setInterval(() => loadAiProviderStatus(), 5 * 60 * 1000);
 document.getElementById('aiProviderRefreshBtn')?.addEventListener('click', () => loadAiProviderStatus());
 document.getElementById('aiAddOllamaBtn')?.addEventListener('click', () => showAddOllamaModal());
 document.getElementById('aiOpencodeStatusBtn')?.addEventListener('click', () => showOpencodeStatusModal());
+document.getElementById('ctrlRootAddFolderBtn')?.addEventListener('click', () => showWorkFolderModal());
 // 아티젠 DB(db/artgine.sqlite)를 CORMRouter(/ORM/Exec) 경유로 읽어 보여주는 읽기 전용 ORM 뷰어.
 // RDP로 원격 서버를 보는 중이면 그 서버의 DB를, 아니면 로컬 DB를 연다(currentRemoteBaseUrl 기준).
 document.getElementById('sqliteViewerBtn')?.addEventListener('click', () => {
@@ -395,6 +396,95 @@ function showOpencodeStatusModal() {
     setTimeout(() => {
         document.getElementById('opencodeStatusRefreshBtn')?.addEventListener('click', load);
         load();
+    }, MODAL_DOM_DELAY);
+}
+
+// 서버 재시작을 요청한 뒤 현재 페이지를 자동으로 다시 로드한다.
+// 재시작 중에는 이 페이지가 들고 있는 루트 목록(/RootN)·세션 상태가 전부 낡은 값이라,
+// 서버가 다시 뜰 시간을 준 뒤 새로고침해야 바뀐 워킹 폴더가 반영된 화면을 볼 수 있다.
+const RESTART_RELOAD_SEC = 10;
+function scheduleReloadAfterRestart(_el: HTMLElement | null) {
+    let left = RESTART_RELOAD_SEC;
+    const tick = () => {
+        if (left <= 0) { location.reload(); return; }
+        if (_el) _el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Saved. Server is restarting… reloading in ${left}s</span>`;
+        left--;
+        setTimeout(tick, 1000);
+    };
+    tick();
+}
+
+// 서버 워킹 폴더(rootPath) 편집 모달. 현재 값(/AIInfo/workfolder)을 불러와 줄단위로 편집하고,
+// 저장(/AIInfo/workfolder-set) 시 Env.json에 기록 후 서버가 재시작된다(/RootN 재등록).
+function showWorkFolderModal() {
+    const uid = `workfolder_${Date.now()}`;
+    const modal = new CModal();
+    modal.SetHeader('Working Folder');
+    modal.SetBody(`
+        <div class="small text-secondary mb-2">
+            <p class="mb-1">Server working folders, served as <code>/Root0</code>, <code>/Root1</code> … (one per line).</p>
+            <p class="mb-0">Saving writes to <code>Env.json</code> and <strong>restarts the server</strong> to re-register the routes.</p>
+        </div>
+        <textarea id="${uid}" class="form-control form-control-sm" rows="4" placeholder="./&#10;D:/Work" spellcheck="false"></textarea>
+        <div class="d-flex justify-content-end mt-2">
+            <button id="${uid}_save" class="btn btn-primary btn-sm">Save &amp; Restart</button>
+        </div>
+        <div id="${uid}_result" class="small mt-2"></div>
+    `);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetSize(520, 320);
+    modal.Open(CModal.ePos.Center);
+    setTimeout(async () => {
+        const ta      = document.getElementById(uid) as HTMLTextAreaElement | null;
+        const saveBtn = document.getElementById(`${uid}_save`) as HTMLButtonElement | null;
+        const result  = document.getElementById(`${uid}_result`);
+        // 현재 워킹 폴더 로드
+        try {
+            const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/workfolder');
+            if (r.status === 401) {
+                if (result) result.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Login required</span>';
+            } else {
+                const j = await r.json();
+                if (j.ok && ta) ta.value = (j.rootPath ?? []).join('\n');
+            }
+        } catch (e: any) {
+            if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
+        }
+        const submit = () => {
+            const list = (ta?.value ?? '').split('\n').map(s => s.trim()).filter(Boolean);
+            if (!list.length) { ta?.focus(); return; }
+            const dlg = new CConfirm();
+            dlg.SetBody(`Save working folders and restart the server now?<br><br>${list.map(aiEscapeHtml).join('<br>')}`);
+            dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+                async () => {
+                    if (saveBtn) saveBtn.disabled = true;
+                    if (result) result.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> Saving &amp; restarting…</span>';
+                    try {
+                        const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/workfolder-set', {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ rootPath: list }),
+                        });
+                        const j = await r.json();
+                        if (!j.ok) {
+                            const msg = r.status === 401 ? 'Login required' : (j.msg || 'Failed');
+                            if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(msg)}</span>`;
+                            if (saveBtn) saveBtn.disabled = false;
+                            return;
+                        }
+                        CAlert.Info('Working folder saved. Server is restarting.');
+                        scheduleReloadAfterRestart(result);
+                    } catch (e: any) {
+                        // 재시작으로 연결이 끊겨 응답을 못 받을 수 있다 — 저장 자체는 서버에서 이미 완료된 상태다.
+                        scheduleReloadAfterRestart(result);
+                    }
+                    // 저장에 성공한 경로에서는 버튼을 다시 켜지 않는다 — 곧 새로고침되므로 중복 저장을 막는다.
+                },
+                () => {},
+            ], ["Save & Restart", "Cancel"]);
+            dlg.Open();
+        };
+        saveBtn?.addEventListener('click', submit);
     }, MODAL_DOM_DELAY);
 }
 
@@ -880,8 +970,8 @@ function rdpAddRemote(url: string) {
     rdpRenderList();
 }
 
-// RDP 탭이 기본 활성 탭(Control.html에 하드코딩)이므로 페이지 로드시 Local을 지연 초기화한다.
-// 그 외에는 사이드바에서 실제로 클릭했을 때만 프레임을 만든다.
+// RDP는 사이드바에서 실제로 클릭(또는 패널 활성화)했을 때만 프레임을 만든다.
+// (초기 기본 탭은 Help — Control/artgine-agent.html iframe)
 let rdpInited = false;
 CDOM.ID('rdp-panel-tab').addEventListener('shown.bs.tab', () => {
     if (!rdpInited) rdpOpenLocal();
@@ -893,6 +983,12 @@ rdpRenderList();
 // rdpOpenLocal()이 File 섹션에서 선언되는 fileIframe을 참조하므로, 모듈 평가가 끝난 뒤로 미뤄서
 // 호출한다(그대로 동기 호출하면 TDZ로 'fileIframe' 참조 에러가 난다).
 if (CDOM.ID('rdp-panel').classList.contains('active')) queueMicrotask(() => rdpOpenLocal());
+// 초기 기본 탭이 Help라 RDP 패널이 active가 아니면 rdpOpenLocal()이 돌지 않고, 그 안에서만 호출되는
+// ctrlRefreshRootSelect()도 실행되지 않아 루트 선택 박스가 계속 비어 있었다(Env.json의 워킹 폴더가
+// 안 보이고, ctrlSelectedRootPath가 ''로 남아 Terminal/Chat/F2 검색의 기본 경로도 비었다).
+// 그래서 RDP 진입과 무관하게 최초 1회는 로컬(currentRemoteBaseUrl='')에서 루트 목록을 받아온다.
+// (rdpOpenLocal()이 도는 경우엔 거기서 호출하므로 중복 조회를 피한다.)
+else queueMicrotask(() => ctrlRefreshRootSelect());
 
 // More > RDP: 원격 추가용 소형 모달. 추가하면 메인 탭이 아니라 사이드바 목록에 항목이 생긴다.
 function openRdpAddModal() {
@@ -900,7 +996,7 @@ function openRdpAddModal() {
     modal.SetHeader('Add Remote Desktop');
     modal.SetBody(`
         <div class="d-flex gap-1">
-            <input id="rdpModalUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Home.html URL">
+            <input id="rdpModalUrlInput" type="text" class="form-control form-control-sm" placeholder="Remote Control.html URL">
             <button id="rdpModalAddBtn" class="btn btn-outline-primary btn-sm flex-shrink-0"><i class="bi bi-plus-lg"></i> Add</button>
         </div>
     `);
@@ -963,8 +1059,31 @@ function fileLoadFrame() {
     fileIframe!.src = `${CPath.WebRootArtgineUrl()}artgine/server/html/File.html${q}`;
 }
 fileLoadFrame();
-// 초기 진입 시 File 탭을 기본으로 보이게 한다(HTML상 기본 active는 RDP 탭).
-(window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
+
+// ---- Help 패널 (Control/artgine-agent.html을 iframe으로 임베드, 초기 진입 기본 화면) ----
+// 상단 탭 없이 More > Help 버튼으로 전환. 인증 없이 열리며 탭 목록 인증 가드에 포함하지 않는다.
+const helpPanel = CDOM.ID("help-panel") as HTMLDivElement;
+let helpIframe: HTMLIFrameElement | null = null;
+function helpLoadFrame() {
+    if (helpIframe) return;
+    helpPanel.classList.add("position-relative");
+    helpPanel.style.overflow = "hidden";
+    helpIframe = document.createElement("iframe");
+    helpIframe.id = "help-iframe";
+    helpIframe.style.cssText = "position:absolute; inset:0; width:100%; height:100%; border:none;";
+    // Control 프로젝트 루트에 둔 안내 페이지(Control.html과 동일 디렉터리).
+    helpIframe.src = new URL('./artgine-agent.html', import.meta.url).href;
+    helpPanel.appendChild(helpIframe);
+}
+helpLoadFrame();
+// 초기 진입 시 Help 패널을 기본으로 보이게 한다(상단 탭 없이 More > Help로 다시 열 수 있음).
+// 단, ?path=로 특정 루트를 지정해 들어온 경우는 그 폴더를 보러 온 것이므로 File 탭을 바로 보여준다.
+function helpActivatePane() {
+    (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('help-panel-tab')).show();
+}
+if (ctrlInitRootPath) (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
+else helpActivatePane();
+CDOM.ID('help-btn').addEventListener('click', () => helpActivatePane());
 
 // ---- F2 파일 검색 모달 ----
 // File.ts의 FileSearch()와 동일한 방식(BFS 재귀 스캔 + 캐시 + hidden/node_modules 제외 + 200개 캡)이지만,
@@ -1110,7 +1229,82 @@ async function ctrlFileSearch() {
 // apiBase/RootPath는 File 탭과 동일한 단일 출처(currentRemoteBaseUrl/ctrlSelectedRootPath)를 쓰므로,
 // 왼쪽 상단 루트 선택이나 RDP Local/Remote 전환 시 그 값들을 바꾸는 지점(ctrlRootSel change, ctrlRefreshRootSelect)에서
 // ctrlSideFileGoTo('/')를 같이 호출해 목록을 새로고침한다.
-interface CtrlSideFileEntry { file: boolean; hidden: boolean; name: string; ext: string }
+interface CtrlSideFileEntry { file: boolean; hidden: boolean; name: string; ext: string; Status?: string }
+
+// File.ts의 vcsTag()와 동일한 배색/표기 규칙(M=warning, A=success, D=danger, 그 외=secondary).
+// M/A/D는 File.ts와 동일하게 클릭 시 diff 모달을 띄운다(canDiff).
+function ctrlSideFileVcsBadge(status: string | undefined, filePath: string): string {
+    if (!status) return '';
+    const color = status === 'A' ? 'success' : status === 'D' ? 'danger' : status === 'M' ? 'warning' : 'secondary';
+    const canDiff = status === 'M' || status === 'A' || status === 'D';
+    if (!canDiff) return `<span class="badge bg-${color} ms-auto" style="font-size:0.6rem;">${status}</span>`;
+    return `<span class="badge bg-${color} ms-auto" style="font-size:0.6rem;cursor:pointer;" title="Diff" data-vcs-diff-path="${aiEscapeHtml(filePath)}">${status}</span>`;
+}
+
+// File.ts의 openVcsDiff()와 동일한 File/VCS(action=diff) + Diff2HtmlUI 렌더링을 그대로 옮긴 것.
+// apiBase/token은 File 탭과 동일하게 currentRemoteBaseUrl(원격 접속 시)을 기준으로 삼는다.
+async function ctrlOpenVcsDiff(filePath: string) {
+    const apiBase = currentRemoteBaseUrl || CPath.WebRootUrl();
+    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+    let res: any;
+    try {
+        res = await CFecth.Exe(apiBase + "File/VCS", { action: "diff", path: filePath, token }, "json");
+    } catch (e) {
+        CAlert.Info("Diff request failed"); return;
+    }
+    if (!res?.ok) { CAlert.Info(res?.msg || "Diff failed"); return; }
+
+    if (!document.getElementById("vcs-diff-style")) {
+        const st = document.createElement("style");
+        st.id = "vcs-diff-style";
+        st.textContent = "#ctrl-vcs-diff-view .d2h-code-wrapper{position:relative;}";
+        document.head.appendChild(st);
+    }
+
+    const modal = new CModal();
+    modal.SetHeader(`Diff: ${filePath.replace(/\/+$/, '').split('/').pop() || filePath}`);
+    modal.SetTitle(CModal.eTitle.TextClose);
+    modal.SetBody(`<div id="ctrl-vcs-diff-view"></div>`);
+    modal.SetSize(860, 580);
+    modal.Open(CModal.ePos.Center);
+
+    setTimeout(() => {
+        const el = document.getElementById("ctrl-vcs-diff-view");
+        if (!el) return;
+        const D2H = (window as any).Diff2HtmlUI;
+        if (!D2H) { el.textContent = "diff2html not loaded"; return; }
+        // diff2html은 자체 다크 배색을 갖고 있지만 이 클래스를 붙여야 적용된다 — 안 붙이면 라이트 배색 그대로라 다크 테마에서 글자가 안 보인다.
+        el.classList.toggle('d2h-dark-color-scheme', document.documentElement.getAttribute('data-bs-theme') === 'dark');
+        const cfg = { drawFileList: false, matching: "lines", outputFormat: "line-by-line", highlight: false, stickyFileHeaders: false };
+        new D2H(el, res.diff, cfg).draw();
+    }, 100);
+}
+
+// File.ts의 EXT_KIND/FILE_ICON/kindOf를 그대로 옮긴 것 — 확장자별 아이콘을 File 탭(File.html)과 동일하게 맞춘다.
+type CtrlFileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'orm'|'file';
+const CTRL_EXT_KIND: Record<string, CtrlFileKind> = {
+    png:'image', jpg:'image', jpeg:'image', bmp:'image',
+    mp3:'audio', ogg:'audio',
+    mp4:'video', mov:'video', avi:'video',
+    soundlist:'soundlist', html:'html', md:'md',
+    ts:'code', js:'code', txt:'code', json:'code',
+    csv:'sheet', xlsx:'sheet', xls:'sheet',
+    sqlite:'orm', db:'orm',
+};
+const CTRL_FILE_ICON: Record<CtrlFileKind, string> = {
+    folder:'bi-folder-fill text-warning', image:'bi-folder-image', audio:'bi-folder-music',
+    video:'bi-folder-play', soundlist:'bi-flower1', html:'bi-file-earmark-code',
+    code:'bi-file-code', md:'bi-file-earmark-text', sheet:'bi-file-earmark-spreadsheet',
+    orm:'bi-file-earmark-binary', file:'bi-file-earmark',
+};
+function ctrlSideFileKind(fl: CtrlSideFileEntry): CtrlFileKind {
+    return fl.file
+        ? (CTRL_EXT_KIND[fl.ext] ?? 'file')
+        : (fl.name.toLowerCase().endsWith('.nedb') ? 'orm' : 'folder');
+}
+function ctrlSideFileIcon(fl: CtrlSideFileEntry): string {
+    return CTRL_FILE_ICON[ctrlSideFileKind(fl)];
+}
 const ctrlSideFilePathEl = CDOM.ID('ctrlSideFilePath') as HTMLElement;
 const ctrlSideFileListEl = CDOM.ID('ctrlSideFileList') as HTMLDivElement;
 let ctrlSideFilePath = '/';
@@ -1132,8 +1326,13 @@ function ctrlSideFileRenderList(list: CtrlSideFileEntry[]) {
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'list-group-item list-group-item-action py-1 px-2 d-flex align-items-center gap-1';
-        const icon = fl.file ? 'bi-file-earmark' : 'bi-folder-fill text-warning';
-        item.innerHTML = `<i class="bi ${icon}"></i><span class="text-truncate">${aiEscapeHtml(fl.name)}</span>`;
+        const icon = ctrlSideFileIcon(fl);
+        const vcsFilePath = ctrlSideFileRoot + ctrlSideFilePath + fl.name;
+        item.innerHTML = `<i class="bi ${icon}"></i><span class="text-truncate">${aiEscapeHtml(fl.name)}</span>${ctrlSideFileVcsBadge(fl.Status, vcsFilePath)}`;
+        item.querySelector<HTMLElement>('[data-vcs-diff-path]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ctrlOpenVcsDiff(vcsFilePath);
+        });
         // 터미널 탭(iframe)에 드롭하면 그 안의 Terminal.html이 text/plain을 읽어 입력창에 경로를 삽입한다.
         item.draggable = true;
         item.addEventListener('dragstart', (e) => {
@@ -1142,7 +1341,15 @@ function ctrlSideFileRenderList(list: CtrlSideFileEntry[]) {
         });
         item.addEventListener('click', () => {
             if (fl.file) {
-                editorOpenFile(
+                // sqlite/db는 서버가 정적 서빙 자체를 403으로 막으므로(CServerMain.ts), Editor로 열지 말고
+                // File.ts의 openOrm과 동일하게 전용 API(CORMViewer)로 연다.
+                if (ctrlSideFileKind(fl) === 'orm') {
+                    const token = currentRemoteBaseUrl ? getAuthToken(currentRemoteBaseUrl) : '';
+                    new CORMViewer(undefined, 'sqlite', ctrlSideFileRoot + ctrlSideFilePath + fl.name, currentRemoteBaseUrl, token).Open();
+                    return;
+                }
+                // File 탭('file-opened' → promptSourceAction)과 동일하게, html/md는 Edit/Execute를 물어본다.
+                promptSourceAction(
                     ctrlSideFileRoot + ctrlSideFilePath + fl.name,
                     currentRemoteBaseUrl,
                     ctrlSideFileDown + ctrlEncodeUrlPath(ctrlSideFilePath + fl.name),
@@ -1190,15 +1397,24 @@ CDOM.ID('ctrlSideFileRefreshBtn').addEventListener('click', () => ctrlSideFileGo
 ctrlSideFileGoTo('/');
 
 // ---- 전역 단축키 ----
-// F1(파일 매니저, File 탭으로 전환 + 파일 탭 iframe에 트리거 메시지 전달)은 화면 크기와 무관하게 항상 동작.
+// F1: 우측 사이드바 File ↔ Info 토글. 이미 File이면 Info로, 아니면 File로.
+// 작은 화면(사이드바 오버레이 모드)이면 우측 사이드바를 먼저 연다.
 // F2(서치)는 File 탭과 무관하게 Control 페이지 자체에서 검색 모달만 띄운다(탭 전환/iframe 메시지 없음).
 // F3는 Terminal 탭 버튼 클릭과 동일하게 New Terminal 모달만 띄운다(탭 전환은 termStartNew 이후 Open을 눌러야 일어남).
 function runControlHotkey(key: string): boolean {
     switch (key) {
-        case 'F1':
-            (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('file-tab')).show();
-            if (fileIframe?.contentWindow) CIframeMsg.Send(fileIframe.contentWindow, 'trigger-file-btn', {});
+        case 'F1': {
+            // 도킹 모드가 아니면(작은 화면) 우측 사이드바 offcanvas를 연다. 이미 열려 있으면 show()는 no-op에 가깝다.
+            if (appSidebarRight && !appSidebarRight.classList.contains('sidebar-docked')) {
+                (window as any).bootstrap.Offcanvas.getOrCreateInstance(appSidebarRight).show();
+            }
+            const fileTab = CDOM.ID('right-file-tab');
+            // File 탭이 이미 활성(aria-selected 또는 active 클래스)이면 Info로 되돌린다.
+            const onFile = fileTab?.classList.contains('active') || fileTab?.getAttribute('aria-selected') === 'true';
+            const targetId = onFile ? 'right-info-tab' : 'right-file-tab';
+            (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID(targetId)).show();
             return true;
+        }
         case 'F2':
             ctrlFileSearch();
             return true;
@@ -1238,7 +1454,7 @@ function focusActiveControlFrame() {
     } catch (_) {}
     f.focus();
 }
-// F4 키: 한 번 누르면 좌측 메뉴 사이드바로 포커스(오버레이 모드면 먼저 연다), 이미 사이드바에 포커스가
+// F4 키(또는 Ctrl 빠르게 두 번 누르기): 한 번 누르면 좌측 메뉴 사이드바로 포커스(오버레이 모드면 먼저 연다), 이미 사이드바에 포커스가
 // 가 있는 상태에서 한 번 더 누르면 지금 보고 있는 액티브 iframe으로 포커스를 돌려준다(Home.ts의
 // Tab 키=toggleSidebar()+focusActiveFrame() 조합과 동일한 패턴).
 // - 오버레이 모드(작은 화면): data-bs-backdrop="false"라 바깥 클릭으로 안 닫히므로, F4 자체가 열고/닫는
@@ -1279,8 +1495,38 @@ function runControlArrowKey(dir: 1 | -1): boolean {
     items[nxt].scrollIntoView({ block: 'nearest' });
     return true;
 }
+// Ctrl "빠른 두 번 누르기"(다른 키와 조합되지 않은 단독 Ctrl을 짧은 시간 안에 두 번) 감지기.
+// Ctrl+C/V/S 같은 흔한 조합키의 첫 keydown과는 확실히 구분해야 하므로(조합키 사용 시마다 오작동하면 안 됨),
+// 이 Ctrl을 누르고 있는 동안 다른 키가 같이 눌렸는지(otherKeyUsed)를 추적해서, 조합으로 쓰인 Ctrl은
+// "단독 탭"으로 치지 않는다. Firefox의 Alt 단독 키 = 메뉴바 노출 같은 브라우저 기본 동작이 Ctrl에는
+// 없어서 별도 preventDefault 트릭이 필요 없다(Alt 방식에서 이 문제 때문에 Ctrl로 변경).
+function wireCtrlDoubleTap(target: Document | Window, onTrigger: () => void) {
+    const THRESHOLD_MS = 400;
+    let otherKeyUsed = false;
+    let lastSoloUpTime = 0;
+    target.addEventListener('keydown', ((e: KeyboardEvent) => {
+        if (e.key === 'Control') return;
+        if (e.ctrlKey) otherKeyUsed = true;
+    }) as EventListener, true);
+    target.addEventListener('keyup', ((e: KeyboardEvent) => {
+        if (e.key !== 'Control') return;
+        if (otherKeyUsed) {
+            otherKeyUsed = false;
+            lastSoloUpTime = 0;
+            return;
+        }
+        const now = performance.now();
+        if (now - lastSoloUpTime < THRESHOLD_MS) {
+            lastSoloUpTime = 0;
+            onTrigger();
+        } else {
+            lastSoloUpTime = now;
+        }
+    }) as EventListener, true);
+}
 // File/Memo iframe은 자체 keydown에서 ArrowUp/ArrowDown을 부모로 위임하지 않으므로
 // (그 스크립트는 artgine/ 보호 경로라 직접 수정하지 않고) 같은 출처 iframe에 직접 keydown을 걸어 잡는다.
+// Ctrl 더블탭도 마찬가지로 이 iframe 안에서 직접 감지한다.
 function wireIframeArrowKeys(f: HTMLIFrameElement) {
     f.addEventListener('load', () => {
         try {
@@ -1289,6 +1535,7 @@ function wireIframeArrowKeys(f: HTMLIFrameElement) {
                     if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
                 }
             }, true);
+            if (f.contentWindow) wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
         } catch (_) {}
     });
 }
@@ -1315,6 +1562,9 @@ function wirePooledFrameHotkeys(f: HTMLIFrameElement, key: string) {
                     if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
                 }
             }, true);
+            // 터미널은 Ctrl+C가 SIGINT로 쓰이지만, 더블탭 감지기는 조합(otherKeyUsed)으로 쓰인 Ctrl은
+            // 무시하므로 Ctrl+C 자체와는 충돌하지 않는다.
+            if (f.contentWindow) wireCtrlDoubleTap(f.contentWindow, runControlF4Key);
         } catch (_) {}
     });
 }
@@ -1336,7 +1586,10 @@ document.addEventListener('keydown', (e) => {
         if (runControlArrowKey(e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
     }
 });
+wireCtrlDoubleTap(document, runControlF4Key);
 // File.ts/Memo.ts는 자체 keydown에서 F1/F2/F3/F4/F7을 잡아 'home-hotkey'로 부모에 위임한다(Home.ts와 동일 패턴).
+// Ctrl 더블탭은 File.ts/Memo.ts가 위임하지 않으므로(wireIframeArrowKeys가 해당 iframe에서 직접 잡음) 여기엔
+// 오지 않는다.
 // Control.ts는 F1/F2/F3/F4만 지원하므로(F7은 무시) runControlHotkey가 알 수 없는 키는 그냥 무시된다.
 CIframeMsg.Recv({
     'home-hotkey': (data) => {
@@ -1369,6 +1622,16 @@ CIframeMsg.Recv({
         setTimeout(() => { if (memoIframe?.contentWindow) CIframeMsg.Send(memoIframe.contentWindow, 'set-folder', { folder: data.folder ?? '' }); }, 200);
     },
     'terminal-path-tapped': (data) => termOpenTappedPath(String(data.path ?? ''), String(data.token ?? '')),
+    // Editor.html이 내용 수정/저장 시 보내는 신호. ev.source로 어느 editor iframe인지 찾아 그 세션의
+    // dirty 상태만 갱신하고 사이드바 점(초록/노랑)을 다시 그린다.
+    'editor-dirty': (data, source) => {
+        for (const [key, f] of editorIframePool) {
+            if (f.contentWindow !== source) continue;
+            const s = editorSessions.get(key);
+            if (s) { s.dirty = !!data.dirty; renderSessionSidebar(); }
+            break;
+        }
+    },
     // 핸드오프 완료: 요약을 넘겨받은 새 프로바이더 세션으로 화면을 전환한다(기존 세션은 서버가 이미 종료함).
     // 새 세션은 아직 pending(웹소켓이 붙어야 스폰)이라 /cmd/sessions 목록에 없으므로, termConnectSession의
     // 'term:<token>' 키를 쓰면 곧 실행되는 termRenderList 정리 로직이 목록에 없는 그 프레임을 지워버린다.
@@ -1507,6 +1770,20 @@ if (CDOM.ID('log-panel').classList.contains('active')) { logLoadSessions(true); 
 CDOM.ID('logRefreshBtn').addEventListener('click', () => logLoadSessions(true));
 logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 
+// 상단 X: 모든 provider 로그를 통째로 삭제(cmd/log-clear) 후 목록 갱신.
+CDOM.ID('logClearBtn').addEventListener('click', () => {
+    const dlg = new CConfirm();
+    dlg.SetBody('Delete ALL logs? This will remove every session and cannot be undone.');
+    dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
+        async () => {
+            await authedFetch(`${CPath.WebRootUrl()}cmd/log-clear`);
+            logLoadSessions(true);
+        },
+        () => {},
+    ], ["Delete All", "Cancel"]);
+    dlg.Open();
+});
+
 // ---- 메모 탭 (Home.html과 동일하게 artgine/server/html/Memo.html을 iframe으로 임베드) ----
 const memoTab = CDOM.ID("memo-tab") as HTMLButtonElement;
 const memoPanel = CDOM.ID("memo-panel") as HTMLDivElement;
@@ -1587,9 +1864,11 @@ function rdpPromptRemoteAuth(webRootUrl: string, onSuccess?: () => void) {
     }, MODAL_DOM_DELAY);
 }
 
-// 로컬 서버 인증 여부를 확인하고, 인증 안 됐으면 경고 메시지를 띄운다(File 탭 제외 다른 탭 전환 가드용).
+// 로컬 서버 인증 여부를 확인하고, 인증 안 됐으면 경고 메시지 + 패스워드 모달을 띄운다(File 탭 제외 다른 탭 전환 가드용).
+// 패스워드 모달을 먼저 열고 그 뒤에 경고를 띄워, 경고가 모달보다 앞에 보이도록 한다.
 function ctrlRequireAuthed(): boolean {
     if (getAuthToken(CPath.WebRootUrl())) return true;
+    rdpPromptRemoteAuth(CPath.WebRootUrl());
     CAlert.Warning("Authentication required. Please sign in first.");
     return false;
 }
@@ -1904,7 +2183,7 @@ function editorActivatePane() {
     (window as any).bootstrap.Tab.getOrCreateInstance(CDOM.ID('editor-panel-tab')).show();
 }
 
-interface IEditorSession { key: string; path: string; baseUrl: string; url: string; openedAt: number; }
+interface IEditorSession { key: string; path: string; baseUrl: string; url: string; openedAt: number; dirty: boolean; }
 const editorSessions = new Map<string, IEditorSession>();
 
 function editorFrameSrc(s: IEditorSession): string {
@@ -1916,7 +2195,7 @@ function editorOpenFile(path: string, baseUrl: string, url: string) {
     const key = `editor:${baseUrl}|${path}`;
     let s = editorSessions.get(key);
     if (!s) {
-        s = { key, path, baseUrl, url, openedAt: Date.now() };
+        s = { key, path, baseUrl, url, openedAt: Date.now(), dirty: false };
         editorSessions.set(key, s);
     } else {
         s.url = url;
@@ -1974,26 +2253,20 @@ function fileExtOf(path: string): string {
     return m ? m[1].toLowerCase() : '';
 }
 
-// Execute는 html/md 파일에만 해당한다: html은 새 창에서 실제 렌더링, md는 마크다운 뷰어로 렌더링.
+// Execute는 html 파일에만 해당한다: 새 창에서 실제 렌더링.
 function executeOpenedSource(fullPath: string, url: string) {
-    const ext = fileExtOf(fullPath);
-    if (ext === 'html' || ext === 'htm') { window.open(url, "_blank"); return; }
-    if (ext === 'md') { new CMDViewer(url); return; }
+    window.open(url, "_blank");
 }
 
 // File 탭(file-opened)과 Terminal 탭(terminal-path-tapped)이 공유하는 단일 진입점.
-// Edit: Editor.html(Monaco, 자체 저장 지원)로 열기 / Execute: html·md만 실제 실행 / Cancel: 무시.
+// html/htm만 Edit·Execute 확인창을 띄우고(새 창 실행 여부 선택), 그 외 소스는 기존처럼 바로 에디터로 연다.
 function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
     const ext = fileExtOf(fullPath);
-    const canExecute = ext === 'html' || ext === 'htm' || ext === 'md';
-    const actions = [() => editorOpenFile(fullPath, baseUrl, url)];
-    const labels = ["Edit"];
-    if (canExecute) {
-        actions.push(() => executeOpenedSource(fullPath, url));
-        labels.push("Execute");
-    }
-    actions.push(() => {});
-    labels.push("Cancel");
+    const canExecute = ext === 'html' || ext === 'htm';
+    if (!canExecute) { editorOpenFile(fullPath, baseUrl, url); return; }
+
+    const actions = [() => editorOpenFile(fullPath, baseUrl, url), () => executeOpenedSource(fullPath, url), () => {}];
+    const labels = ["Edit", "Execute", "Cancel"];
 
     const confirm = new CConfirm();
     confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
@@ -2003,12 +2276,20 @@ function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
 
 function editorItemSpec(s: IEditorSession, activeKey: string | null): SessionItemSpec {
     const name = s.path.split('/').pop() || s.path;
+    const dir = s.path.slice(0, s.path.length - name.length);
+    const dot = s.dirty
+        ? '<span class="text-warning small" title="수정됨 (저장 안 됨)">●</span>'
+        : '<span class="text-success small" title="저장됨">●</span>';
     return {
         activeClass: 'ai-session-item-active',
         isActive: activeKey === s.key,
         dataAttr: { name: 'key', value: s.key },
-        leftHtml: `<i class="bi bi-file-earmark-code"></i>`,
-        bodyHtml: `<span class="flex-grow-1 min-w-0 text-truncate small" title="${aiEscapeHtml(s.path)}">${aiEscapeHtml(name)}</span>`,
+        leftHtml: `<i class="bi bi-file-earmark-code"></i>${dot}`,
+        bodyHtml: `
+        <span class="flex-grow-1 min-w-0 d-flex flex-column" style="min-width:0;" title="${aiEscapeHtml(s.path)}">
+            <span class="text-truncate small">${aiEscapeHtml(name)}</span>
+            ${dir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(dir)}</span>` : ''}
+        </span>`,
         deleteAct: 'delete',
         deleteLabel: '🗑️ Delete',
         onClick: () => {
@@ -2389,12 +2670,12 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
     const container = document.createElement('div');
     container.innerHTML = `
         <div class="mb-3 d-flex gap-2 flex-wrap">
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="cmd">cmd</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="claude">claude</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="codex">codex</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="antigravity">agy</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="opencode">opencode</button>
-            <button class="term-mode-btn btn btn-sm btn-outline-secondary" style="flex: 1 1 30%;" data-mode="grok">grok</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="cmd"><i class="bi bi-terminal"></i>cmd</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="claude"><i class="bi bi-chat-dots"></i>claude</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="codex"><i class="bi bi-code-slash"></i>codex</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="antigravity"><i class="bi bi-rocket-takeoff"></i>agy</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="opencode"><i class="bi bi-braces"></i>opencode</button>
+            <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="grok"><i class="bi bi-lightning-charge"></i>grok</button>
         </div>
         <div class="mb-2">
             <label class="form-label small text-secondary mb-1">Key</label>
@@ -3173,6 +3454,9 @@ async function agentOpenModal(existing?: SubAgentData) {
     modal.SetHeader(isEdit ? 'Edit Sub Agent' : 'New Sub Agent');
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
+    // 필드가 많아(Key/Provider/Model/Traits/Options) auto 크기면 너무 작게 잡힌다. SetSize는 뷰포트보다
+    // 크면 자동으로 줄어드므로(CModal.SetSize) 모바일에서도 고정폭 그대로 안전하다.
+    modal.SetSize(560, 600);
     modal.Open(CModal.ePos.Center);
 
     setTimeout(() => {
@@ -3355,6 +3639,7 @@ async function teamOpenModal() {
 }
 
 CDOM.ID('team-tab').addEventListener('click', () => teamOpenModal());
+
 
 
 

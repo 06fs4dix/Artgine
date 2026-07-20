@@ -11,7 +11,7 @@ import {CHash} from "../artgine/basic/CHash.js";
 
 
 var gProjJSON = null;
-var gAppJSON: { url, projectPath, program, server, width, height, fullScreen, github, tsc, password, rootPath } = null;
+var gAppJSON: { url, projectPath, program, server, width, height, fullScreen, github, tsc, password } = null;
 var gManifest=null;
 var gPlugin;
 var gServiceWorker=null;
@@ -74,7 +74,6 @@ function WatchInputChanges() {
         gAppJSON.fullScreen = (document.getElementById("fullScreen_chk") as HTMLInputElement).checked;
         gAppJSON.github = (document.getElementById("github_chk") as HTMLInputElement).checked;
         gAppJSON.password = (document.getElementById("auth_password_txt") as HTMLInputElement).value;
-        gAppJSON.rootPath = (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean);
     };
     const updateManifest = () => {
         
@@ -171,10 +170,9 @@ function WatchInputChanges() {
     document.querySelectorAll("#app input, #app select, #app textarea").forEach(el =>
         el.addEventListener("change", updateAppJSON)
     );
-    // auth(Password/RootPath) 변경은 즉시 저장 + rootPath 변경 시 재시작 확인 (Server 패널과 동일)
+    // auth(Password) 변경은 즉시 저장 (Server 패널과 동일). 워킹 폴더는 Control(AIInfo)에서 편집한다.
     const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
         password: (document.getElementById("auth_password_txt") as HTMLInputElement).value,
-        rootPath: (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean),
     });
     const pwInput = document.getElementById("auth_password_txt") as HTMLInputElement;
     const hashPW = () => {
@@ -185,7 +183,6 @@ function WatchInputChanges() {
     pwInput.addEventListener("keydown", (e: KeyboardEvent) => {
         if (e.key === "Enter") { e.preventDefault(); pwInput.blur(); }
     });
-    document.getElementById("auth_rootpath_txt")?.addEventListener("change", commitAuth);
     document.querySelectorAll("#manifest input, #manifest select, #manifest textarea").forEach(el =>
         el.addEventListener("change", updateManifest)
     );
@@ -211,7 +208,6 @@ async function Init() {
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
     CDOM.IDInput("tsc_chk").checked = !!gAppJSON.tsc;
     CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(gAppJSON.rootPath) ? gAppJSON.rootPath : [gAppJSON.rootPath ?? "./"]).join("\n"));
 
     CDOM.IDInput("program_sel").value = gAppJSON.program;
 

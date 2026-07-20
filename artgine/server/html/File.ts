@@ -138,13 +138,18 @@ var folderList = {"<>":"ul","class":"list-group","html":[] as any[]};
 var fileList = {"<>":"ul","class":"list-group","html":[] as any[]};
 
 // ---- 파일 항목 종류 분류 + 종류별 (아이콘 / 클릭 동작) 테이블 ----
+// code 계열은 CUtilWeb.sMonacoExtToLang / IsMonacoSourceExt로 판별한다.
+// 특수 동작(이미지/시트/HTML 선택 다이얼로그/MD 뷰어/ORM)만 EXT_KIND에 둔다.
 type FileKind = 'folder'|'image'|'audio'|'video'|'soundlist'|'html'|'code'|'md'|'sheet'|'orm'|'file';
 const EXT_KIND: Record<string, FileKind> = {
     png:'image', jpg:'image', jpeg:'image', bmp:'image',
     mp3:'audio', ogg:'audio',
     mp4:'video', mov:'video', avi:'video',
-    soundlist:'soundlist', html:'html', md:'md',
-    ts:'code', js:'code', txt:'code', json:'code',
+    soundlist:'soundlist',
+    // HTML은 새 창 vs 에디터 선택 다이얼로그
+    html:'html', htm:'html', shtml:'html', xhtml:'html',
+    // 마크다운은 CMDViewer
+    md:'md', markdown:'md', mdown:'md', mkdn:'md', mkd:'md', mdwn:'md', mdtxt:'md', mdtext:'md',
     csv:'sheet', xlsx:'sheet', xls:'sheet',
     sqlite:'orm', db:'orm',
 };
@@ -165,7 +170,11 @@ const isDbFolder = () => {
 const kindOf = (fl: DirEntry): FileKind => {
     if (fl.file) {
         if (fl.ext === 'json' && isDbFolder()) return 'orm';
-        return EXT_KIND[fl.ext] ?? 'file';
+        const special = EXT_KIND[fl.ext];
+        if (special) return special;
+        // ts/js/java/cpp/py 등 Monaco 지원 소스 + txt → 코드 에디터
+        if (CUtilWeb.IsMonacoSourceExt(fl.ext)) return 'code';
+        return 'file';
     }
     return fl.name.toLowerCase().endsWith('.nedb') ? 'orm' : 'folder';
 };
@@ -1033,6 +1042,8 @@ async function openVcsDiff(filePath: string) {
         if (!el) return;
         const D2H = (window as any).Diff2HtmlUI;
         if (!D2H) { el.textContent = "diff2html not loaded"; return; }
+        // diff2html은 자체 다크 배색을 갖고 있지만 이 클래스를 붙여야 적용된다 — 안 붙이면 라이트 배색 그대로라 다크 테마에서 글자가 안 보인다.
+        el.classList.toggle('d2h-dark-color-scheme', document.documentElement.getAttribute('data-bs-theme') === 'dark');
         const cfg = { drawFileList: false, matching: "lines", outputFormat: "line-by-line", highlight: false, stickyFileHeaders: false };
         new D2H(el, res.diff, cfg).draw();
     }, MODAL_DOM_DELAY);

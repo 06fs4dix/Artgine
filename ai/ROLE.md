@@ -32,6 +32,7 @@ node ai/tool/c_cpp_check.js [web|window|linux|mac] 파일A.cpp 파일B.cpp
 - python / python3 실행
 - 라이브 페이지 디버깅 목적의 curl 직접 호출 (대신 `ai/tool/browser.js` 사용)
 - 서버 재시작 명령(`POST /File/Restart`, Control 프로젝트의 "Restart Server" 버튼) — 실행 시 현재 서버 프로세스가 즉시 종료되므로 **사용자 승인 없이 절대 실행 금지**
+- **`browser.js`는 느리고 노이즈가 많다. 정적 분석(파일 읽기, grep 등)으로 충분하면 쓰지 마라.**
 
 ## 접속 정보 (Connection Information)
 포트/경로는 `settings.json`의 `url` 필드 기준. 우선순위: 워킹 폴더 `settings.json` → `desktop/settings.json`.

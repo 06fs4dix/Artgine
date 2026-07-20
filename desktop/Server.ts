@@ -27,11 +27,9 @@ async function Init()
     }
 
     CDOM.IDValue("auth_password_txt", appJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(appJSON.rootPath) ? appJSON.rootPath : [appJSON.rootPath ?? "./"]).join("\n"));
 
     const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
         password: (document.getElementById("auth_password_txt") as HTMLInputElement).value,
-        rootPath: (document.getElementById("auth_rootpath_txt") as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean),
     });
     const pwInput = document.getElementById("auth_password_txt") as HTMLInputElement;
     const hashPW = () => {
@@ -42,7 +40,6 @@ async function Init()
     pwInput.addEventListener("keydown", (e: KeyboardEvent) => {
         if (e.key === "Enter") { e.preventDefault(); pwInput.blur(); }
     });
-    document.getElementById("auth_rootpath_txt")?.addEventListener("change", commitAuth);
 }
 Init();
 

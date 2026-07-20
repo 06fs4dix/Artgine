@@ -17,6 +17,8 @@ import { CPath } from '../basic/CPath.js';
 const BIN_DIR     = path.resolve(CPath.ArtgineRootPath(), 'artgine', 'external', 'bin');
 const YTDLP_PATH  = path.join(BIN_DIR, 'yt-dlp.exe');
 const FFMPEG_PATH = path.join(BIN_DIR, 'ffmpeg.exe');
+/** 하루(날짜 폴더 Downloads/YYYY-MM-DD) 저장 용량 상한 */
+const DAILY_LIMIT_BYTES = 1024 * 1024 * 1024; // 1GB
 
 function resolveAbs(p: string): string {
     return path.resolve(p).replace(/\\/g, '/');
@@ -27,6 +29,20 @@ function isInsideRoot(rootPath: string, targetPath: string): boolean {
     return target === base || target.startsWith(base + '/');
 }
 
+function getDirSizeBytes(dir: string): number {
+    if (!fs.existsSync(dir)) return 0;
+    let total = 0;
+    for (const name of fs.readdirSync(dir)) {
+        const p = path.join(dir, name);
+        try {
+            const st = fs.statSync(p);
+            if (st.isFile()) total += st.size;
+            else if (st.isDirectory()) total += getDirSizeBytes(p);
+        } catch { /* 삭제 중 등 */ }
+    }
+    return total;
+}
+
 async function getTodayDir(): Promise<string> {
     const config = await GetAppJSON();
     const d = new Date();
@@ -34,6 +50,19 @@ async function getTodayDir(): Promise<string> {
     const dir = path.join(path.resolve(GetRootPaths(config)[0]), 'Downloads', ymd);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     return dir;
+}
+
+async function getTodayUsage(): Promise<{ dir: string; used: number; limit: number; remain: number }> {
+    const dir = await getTodayDir();
+    const used = getDirSizeBytes(dir);
+    return { dir, used, limit: DAILY_LIMIT_BYTES, remain: Math.max(0, DAILY_LIMIT_BYTES - used) };
+}
+
+function formatBytes(n: number): string {
+    if (n >= 1024 * 1024 * 1024) return (n / (1024 * 1024 * 1024)).toFixed(2) + 'GB';
+    if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + 'MB';
+    if (n >= 1024) return (n / 1024).toFixed(0) + 'KB';
+    return n + 'B';
 }
 
 const YTDLP_URL      = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
@@ -86,8 +115,16 @@ function updateYtdlp(): Promise<string> {
     });
 }
 
-function downloadDirectUrl(url: string, destPath: string, onProgress: (pct: number) => void): Promise<void> {
+function downloadDirectUrl(
+    url: string,
+    destPath: string,
+    onProgress: (pct: number) => void,
+    maxBytes?: number,
+): Promise<void> {
     return new Promise((resolve, reject) => {
+        const cleanupPartial = () => {
+            try { if (fs.existsSync(destPath)) fs.unlinkSync(destPath); } catch { /* ignore */ }
+        };
         const request = (targetUrl: string) => {
             const proto = targetUrl.startsWith('https') ? https : http;
             proto.get(targetUrl, (res) => {
@@ -97,15 +134,38 @@ function downloadDirectUrl(url: string, destPath: string, onProgress: (pct: numb
                 }
                 if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
                 const total = parseInt(res.headers['content-length'] || '0', 10);
+                if (maxBytes != null && total > 0 && total > maxBytes) {
+                    res.resume();
+                    reject(new Error(`Daily download limit (1GB) would be exceeded (file ${formatBytes(total)}, remain ${formatBytes(maxBytes)})`));
+                    return;
+                }
                 let received = 0;
+                let aborted = false;
                 const file = fs.createWriteStream(destPath);
                 res.on('data', (chunk: Buffer) => {
+                    if (aborted) return;
                     received += chunk.length;
+                    if (maxBytes != null && received > maxBytes) {
+                        aborted = true;
+                        res.destroy();
+                        file.destroy();
+                        cleanupPartial();
+                        reject(new Error('Daily download limit (1GB) exceeded'));
+                        return;
+                    }
                     if (total > 0) onProgress(Math.round(received / total * 100));
                 });
                 res.pipe(file);
-                file.on('finish', () => { file.close(); resolve(); });
-                file.on('error', reject);
+                file.on('finish', () => {
+                    if (aborted) return;
+                    file.close();
+                    resolve();
+                });
+                file.on('error', (e) => {
+                    if (aborted) return;
+                    cleanupPartial();
+                    reject(e);
+                });
             }).on('error', reject);
         };
         request(url);
@@ -128,10 +188,14 @@ export class CDownloadServer extends CServerRouter {
         })();
 
         this.On("/Download/Status", async (_json: CJSON, _req: Request, _res: Response) => {
+            const usage = await getTodayUsage();
             return JSON.stringify({
                 ok    : true,
                 ytdlp : fs.existsSync(YTDLP_PATH),
                 ffmpeg: fs.existsSync(FFMPEG_PATH),
+                dailyLimit: usage.limit,
+                dailyUsed : usage.used,
+                dailyRemain: usage.remain,
             });
         });
 
@@ -171,12 +235,23 @@ export class CDownloadServer extends CServerRouter {
             const format = _json.GetStr("format") as 'mp3'|'mp4'|'direct';
             if (!url) return JSON.stringify({ ok: false, msg: 'URL이 없습니다' });
 
+            const usage = await getTodayUsage();
+            if (usage.remain <= 0) {
+                return JSON.stringify({
+                    ok: false,
+                    msg: `Daily download limit (1GB) reached (${formatBytes(usage.used)} / ${formatBytes(usage.limit)})`,
+                    dailyLimit: usage.limit,
+                    dailyUsed: usage.used,
+                    dailyRemain: 0,
+                });
+            }
+
             const jobId = Math.random().toString(36).slice(2) + Date.now().toString(36);
             gJobs.set(jobId, { status: 'running', progress: 0, msg: '시작 중...' });
 
             if (!isYouTubeUrl(url)) {
                 const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'download');
-                const todayDir = await getTodayDir();
+                const todayDir = usage.dir;
                 const destPath = path.join(todayDir, fileName);
                 if (!isInsideRoot(todayDir, destPath)) {
                     gJobs.set(jobId, { status: 'error', progress: 0, msg: 'Path escapes Downloads' });
@@ -184,7 +259,7 @@ export class CDownloadServer extends CServerRouter {
                 }
                 downloadDirectUrl(url, destPath, (pct) => {
                     gJobs.set(jobId, { status: 'running', progress: pct, msg: `${pct}%`, file: fileName });
-                }).then(() => {
+                }, usage.remain).then(() => {
                     gJobs.set(jobId, { status: 'done', progress: 100, msg: '완료', file: fileName });
                 }).catch((e: any) => {
                     gJobs.set(jobId, { status: 'error', progress: 0, msg: e.message });
@@ -193,17 +268,26 @@ export class CDownloadServer extends CServerRouter {
                 if (!fs.existsSync(YTDLP_PATH)) {
                     gJobs.set(jobId, { status: 'error', progress: 0, msg: 'yt-dlp가 아직 설치되지 않았습니다' });
                 } else {
+                    const todayDir = usage.dir;
                     const args: string[] = format === 'mp3'
                         ? ['-x', '--audio-format', 'mp3', '--ffmpeg-location', BIN_DIR,
                            '--js-runtimes', 'node',
-                           '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url]
+                           '-o', path.join(todayDir, '%(title)s.%(ext)s'), '--no-playlist', url]
                         : ['-f', 'bestvideo+bestaudio/best', '--merge-output-format', 'mp4',
                            '--ffmpeg-location', BIN_DIR,
                            '--js-runtimes', 'node',
-                           '-o', path.join(await getTodayDir(), '%(title)s.%(ext)s'), '--no-playlist', url];
+                           '-o', path.join(todayDir, '%(title)s.%(ext)s'), '--no-playlist', url];
 
                     const proc = (await CUtilSystem.Spawn(YTDLP_PATH, args, 'pipe', '', { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }))!;
                     let lastFile = '';
+                    let killedForQuota = false;
+                    // 진행 중 일일 용량 초과 시 yt-dlp 중단
+                    const quotaTimer = setInterval(() => {
+                        if (getDirSizeBytes(todayDir) > DAILY_LIMIT_BYTES) {
+                            killedForQuota = true;
+                            try { proc.kill(); } catch { /* ignore */ }
+                        }
+                    }, 2000);
 
                     proc.stdout.on('data', (d: Buffer) => {
                         const line = d.toString();
@@ -216,18 +300,24 @@ export class CDownloadServer extends CServerRouter {
                         }
                     });
                     proc.on('close', (code) => {
+                        clearInterval(quotaTimer);
+                        if (killedForQuota) {
+                            gJobs.set(jobId, { status: 'error', progress: 0, msg: 'Daily download limit (1GB) exceeded', file: lastFile });
+                            return;
+                        }
                         if (code === 0)
                             gJobs.set(jobId, { status: 'done', progress: 100, msg: '완료', file: lastFile });
                         else
                             gJobs.set(jobId, { status: 'error', progress: 0, msg: `다운로드 실패 (exit ${code})` });
                     });
                     proc.on('error', (e) => {
+                        clearInterval(quotaTimer);
                         gJobs.set(jobId, { status: 'error', progress: 0, msg: e.message });
                     });
                 }
             }
 
-            return JSON.stringify({ ok: true, jobId });
+            return JSON.stringify({ ok: true, jobId, dailyLimit: usage.limit, dailyUsed: usage.used, dailyRemain: usage.remain });
         });
 
         this.On("/Download/Poll", async (_json: CJSON, _req: Request, _res: Response) => {

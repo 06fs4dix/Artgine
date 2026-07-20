@@ -53,7 +53,6 @@ function WatchInputChanges() {
         gAppJSON.fullScreen = document.getElementById("fullScreen_chk").checked;
         gAppJSON.github = document.getElementById("github_chk").checked;
         gAppJSON.password = document.getElementById("auth_password_txt").value;
-        gAppJSON.rootPath = document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean);
     };
     const updateManifest = () => {
         gManifest.short_name = CDOM.IDValue("short_name_txt");
@@ -122,7 +121,6 @@ function WatchInputChanges() {
     document.querySelectorAll("#app input, #app select, #app textarea").forEach(el => el.addEventListener("change", updateAppJSON));
     const commitAuth = () => CWebView.Call("UpdateExtraSettings", {
         password: document.getElementById("auth_password_txt").value,
-        rootPath: document.getElementById("auth_rootpath_txt").value.split("\n").map(s => s.trim()).filter(Boolean),
     });
     const pwInput = document.getElementById("auth_password_txt");
     const hashPW = () => {
@@ -140,7 +138,6 @@ function WatchInputChanges() {
             pwInput.blur();
         }
     });
-    document.getElementById("auth_rootpath_txt")?.addEventListener("change", commitAuth);
     document.querySelectorAll("#manifest input, #manifest select, #manifest textarea").forEach(el => el.addEventListener("change", updateManifest));
     document.querySelectorAll("#serviceworker input").forEach(el => el.addEventListener("change", updateServiceWorker));
     document.querySelectorAll("#plugin_list input[type='checkbox']").forEach(el => el.addEventListener("change", updatePlugins));
@@ -156,7 +153,6 @@ async function Init() {
     CDOM.IDInput("github_chk").checked = gAppJSON.github;
     CDOM.IDInput("tsc_chk").checked = !!gAppJSON.tsc;
     CDOM.IDValue("auth_password_txt", gAppJSON.password ?? "");
-    CDOM.IDValue("auth_rootpath_txt", (Array.isArray(gAppJSON.rootPath) ? gAppJSON.rootPath : [gAppJSON.rootPath ?? "./"]).join("\n"));
     CDOM.IDInput("program_sel").value = gAppJSON.program;
     gProjJSON = JSON.parse(await CWebView.Call("LoadProjJSON", {
         projectPath: gAppJSON.projectPath,

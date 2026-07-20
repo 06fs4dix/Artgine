@@ -144,6 +144,17 @@ const createWindow = () => {
 		Menu.buildFromTemplate(template).popup({ window: gMainWindow });
 	});
 
+	// window.open()으로 열리는 자식 창(Control.ts의 팝업 등)도 메뉴바를 숨긴다.
+	gMainWindow.webContents.setWindowOpenHandler(() => {
+		return {
+			action: 'allow',
+			overrideBrowserWindowOptions: {
+				autoHideMenuBar: true,
+				icon: path.resolve(__dirname, "icon.png"),
+			}
+		};
+	});
+
 	let err=PluginMapDependenciesChk();
 	if(err!=null)
 	{
@@ -1094,15 +1105,14 @@ ipcMain.handle("SwitchProgram", async (_event, _program: string) => {
 		CFile.Save(gAppJSON, path.join(__dirname, gSettingsFileName));
 	ConfirmAndRestart();
 });
-ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string, rootPath: string[] }) => {
-	const rootChanged = JSON.stringify(gAppJSON.rootPath) !== JSON.stringify(_json.rootPath);
+// 워킹 폴더(rootPath)는 Env.json(CStorage)으로 이관되어 Control(AIInfo)에서 편집한다.
+// 데스크탑에서는 password만 settings.json에 저장한다.
+ipcMain.handle("UpdateExtraSettings", async (_event, _json: { password: string }) => {
 	gAppJSON.password = _json.password;
-	gAppJSON.rootPath = _json.rootPath;
 	if (gAppRootPath)
 		CFile.Save(gAppJSON, CPath.WorkingPath() + gSettingsFileName);
 	else
 		CFile.Save(gAppJSON, path.join(__dirname, gSettingsFileName));
-	if (rootChanged) ConfirmAndRestart(); // rootPath 변경 시 /RootN 재등록 위해 재시작 확인
 });
 ipcMain.handle("LoadPlugin", async (_event,) => 
 {

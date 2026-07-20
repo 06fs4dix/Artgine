@@ -654,35 +654,22 @@ export class CFileViewer extends CModal
             CFile.Load(_file,false,true).then((_buf : ArrayBuffer)=>{
                 let source=CUtil.ArrayToString(_buf);
                 let info=CString.ExtCut(_file);
-                if(info.ext=="ts")    
+                const language = CUtilWeb.sMonacoExtToLang[info.ext] ?? "plaintext";
+                // typescript만 TSImport/파일 URI 해석이 필요하므로 전용 경로 유지
+                if(language === "typescript")
                 {
-                 
-
                     CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"typescript","vs-dark",async (monacoEditer)=>{
                         this.mEditer=monacoEditer;
-                       
-
                         if(monacoEditer!=null)
                         {
                             const model = monacoEditer.getModel();
                             const lastLine = model.getLineCount();
-
-                           
                             monacoEditer.revealLineInCenter(lastLine);
                         }
                     },this.mGitHub,_file);
-                    
-                    
-                    
-
-
-                    
                 }
-                else if(info.ext=="js")    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"javascript","vs-dark",event);
-                else if(info.ext=="json")    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"json","vs-dark",event);
-                else if(info.ext=="html")    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"html","vs-dark",event);
-                else    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,"plaintext","vs-dark",event);
-                
+                else
+                    CUtilWeb.MonacoEditer(CDOM.ID(id+"_body"),source,language,"vs-dark",event);
             });
         };
         LoadFile(this.mFile[0]);
@@ -1050,41 +1037,15 @@ export class CMonacoViewer extends CModal {
         `);
         this.Open();
 
-        // 파일 확장자에 따른 언어 타입 자동 설정
-        let languageType  = "plaintext";
+        // 파일 확장자에 따른 언어 타입 자동 설정 (CUtilWeb.sMonacoExtToLang 공유)
+        let languageType = "plaintext";
         if (_fileName) {
-            const extension = _fileName.toLowerCase().split('.').pop();
-            switch (extension) {
-                case 'ts':
-                    languageType = 'typescript';
-                    break;
-                case 'js':
-                    languageType = 'javascript';
-                    break;
-                case 'json':
-                    languageType = 'json';
-                    break;
-                case 'html':case 'htm':
-                    languageType = 'html';
-                    break;
-                case 'wgsl':
-                    languageType = 'wgsl';
-                    break;
-                case 'css':
-                    languageType = 'css';
-                    break;
-                case 'xml':
-                    languageType = 'xml';
-                    break;
-                case 'md':
-                    languageType = 'markdown';
-                    break;
-          
-            }
+            const extension = _fileName.toLowerCase().split('.').pop() || "";
+            languageType = CUtilWeb.sMonacoExtToLang[extension] ?? "plaintext";
         }
 
         // Monaco Editor 초기화
-        CUtilWeb.MonacoEditer(CDOM.ID(id), _source, languageType as any, "vs-dark",async (monacoEditer)=>{
+        CUtilWeb.MonacoEditer(CDOM.ID(id), _source, languageType, "vs-dark",async (monacoEditer)=>{
             this.mEditor=monacoEditer;
         },this.mGithub);
     }

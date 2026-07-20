@@ -8,6 +8,7 @@ import { CPath } from "../artgine/basic/CPath.js";
 import { CAlert } from "../artgine/basic/CAlert.js";
 import { CUtil } from "../artgine/basic/CUtil.js";
 import { CJSON } from "../artgine/basic/CJSON.js";
+import { CStorage } from "../artgine/system/CStorage.js";
 
 export type AIRole = CAI.eProvider;
 
@@ -72,7 +73,7 @@ export async function GetAppJSON(_settingsFileName?: string)
 
     const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON(
         {"width":1024,"height":768,"fullScreen":false,"program":"client","url":"","projectPath":"","page":"html",
-            "server":"","github":false,"tsc":true,"password":"artgine","rootPath":["./"]}
+            "server":"","github":false,"tsc":true,"password":"artgine"}
     );
     Object.assign(gMainConfig, parsed);
     gLoadedSettingsFileName = settingsFileName;
@@ -83,12 +84,45 @@ export function GetLoadedSettingsFileName(): string
 {
     return gLoadedSettingsFileName ?? "settings.json";
 }
-// rootPath는 string(구버전) 또는 string[](신버전) 모두 허용 → 항상 비어있지 않은 배열로 정규화
-export function GetRootPaths(cfg): string[]
+// 경로 구분자를 '/'로 통일한다. Env.json은 배열을 "문자열"로 담는 구조라(rootPath: "[\"...\"]")
+// 백슬래시가 섞이면 저장할 때마다 JSON 이스케이프가 2중으로 걸려 누적된다
+// (SetRootPaths의 JSON.stringify에서 1회, CStorage.NodeSave의 JSON.stringify에서 또 1회).
+// 실제로 'D:\Artgine_svn\WebContent'가 파일에 백슬래시 8개로 기록되고 파싱 후에도 2개가 남아,
+// path.resolve()가 접어주는 덕에 동작은 하지만 루트 선택 박스에 'D:\\...'로 표시됐다.
+// 백슬래시를 아예 남기지 않으면 이스케이프할 대상이 없어 이 누적이 원천적으로 사라진다.
+// (Windows/Node 모두 '/'를 정상 인식하고, resolveAbs 등 엔진 코드도 이미 '/'로 정규화해 쓴다.)
+// 백슬래시를 '/'로 바꾼 뒤 연속된 구분자를 하나로 접는다. 이스케이프가 이미 누적돼 백슬래시가
+// 2개로 저장된 기존 값('D:\\git\\Artgine')은 단순 치환만 하면 'D://git//Artgine'이 되므로,
+// 중복 접기까지 해야 'D:/git/Artgine'으로 복구된다(CFileServer의 fix()와 동일한 패턴).
+const NormRootPath = (s: any) => String(s).trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+
+// 워킹 폴더(rootPath)는 이제 settings.json이 아니라 Env.json(CStorage)에 저장된다.
+// Env.json에 값이 없고 legacy settings.json의 rootPath가 있으면 최초 1회 Env.json으로 이관한다.
+// string(구버전) 또는 string[](신버전) 모두 허용 → 항상 비어있지 않은 배열로 정규화.
+export function GetRootPaths(cfg?): string[]
 {
-    const r = cfg?.rootPath;
-    if (Array.isArray(r)) return r.length ? r : ["./"];
-    return [r ?? "./"];
+    let raw = CStorage.Get("rootPath");
+    if (raw == null && cfg != null)
+    {
+        const legacy = cfg.rootPath;
+        const arr = Array.isArray(legacy) ? legacy : (legacy != null ? [legacy] : []);
+        const norm = arr.map(NormRootPath).filter(Boolean);
+        if (norm.length) { SetRootPaths(norm); raw = CStorage.Get("rootPath"); }
+    }
+    let parsed: any = null;
+    try { parsed = raw != null ? JSON.parse(raw) : null; } catch { parsed = null; }
+    if (!Array.isArray(parsed)) parsed = (typeof parsed === "string" && parsed) ? [parsed] : null;
+    // 저장 시점뿐 아니라 읽기 시점에도 정규화한다 — 이미 백슬래시가 누적된 채 저장된 기존 항목이
+    // 재저장 없이도 즉시 정상 표시되게 하기 위함(루트 선택 박스의 name은 이 값을 그대로 쓴다).
+    const list = Array.isArray(parsed) ? parsed.map(NormRootPath).filter(Boolean) : [];
+    return list.length ? list : ["./"];
+}
+// 워킹 폴더(rootPath) 배열을 Env.json(CStorage)에 JSON 문자열로 저장한다.
+// 사용자가 'D:\Work'처럼 Windows 표기로 입력해도 여기서 'D:/Work'로 통일해 기록한다.
+export function SetRootPaths(paths: string[]): void
+{
+    const list = Array.isArray(paths) ? paths.map(NormRootPath).filter(Boolean) : [];
+    CStorage.Set("rootPath", JSON.stringify(list.length ? list : ["./"]));
 }
 export function GetProjName(projectPath)
 {

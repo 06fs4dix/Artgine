@@ -8,6 +8,7 @@ import { CPath } from "../artgine/basic/CPath.js";
 import { CAlert } from "../artgine/basic/CAlert.js";
 import { CUtil } from "../artgine/basic/CUtil.js";
 import { CJSON } from "../artgine/basic/CJSON.js";
+import { CStorage } from "../artgine/system/CStorage.js";
 function _toProvider(model) {
     const valid = Object.values(CAI.eProvider);
     return valid.includes(model) ? model : undefined;
@@ -52,7 +53,7 @@ export async function GetAppJSON(_settingsFileName) {
         LoadPluginMap([CPath.ArtgineRootPath() + "plugin/", CPath.ArtgineRootPath() + "artgine"]);
     }
     const parsed = new CJSON(CUtil.ArrayToString(initBuf)).ToJSON({ "width": 1024, "height": 768, "fullScreen": false, "program": "client", "url": "", "projectPath": "", "page": "html",
-        "server": "", "github": false, "tsc": true, "password": "artgine", "rootPath": ["./"] });
+        "server": "", "github": false, "tsc": true, "password": "artgine" });
     Object.assign(gMainConfig, parsed);
     gLoadedSettingsFileName = settingsFileName;
     return gMainConfig;
@@ -60,11 +61,33 @@ export async function GetAppJSON(_settingsFileName) {
 export function GetLoadedSettingsFileName() {
     return gLoadedSettingsFileName ?? "settings.json";
 }
+const NormRootPath = (s) => String(s).trim().replace(/\\/g, "/").replace(/\/+/g, "/");
 export function GetRootPaths(cfg) {
-    const r = cfg?.rootPath;
-    if (Array.isArray(r))
-        return r.length ? r : ["./"];
-    return [r ?? "./"];
+    let raw = CStorage.Get("rootPath");
+    if (raw == null && cfg != null) {
+        const legacy = cfg.rootPath;
+        const arr = Array.isArray(legacy) ? legacy : (legacy != null ? [legacy] : []);
+        const norm = arr.map(NormRootPath).filter(Boolean);
+        if (norm.length) {
+            SetRootPaths(norm);
+            raw = CStorage.Get("rootPath");
+        }
+    }
+    let parsed = null;
+    try {
+        parsed = raw != null ? JSON.parse(raw) : null;
+    }
+    catch {
+        parsed = null;
+    }
+    if (!Array.isArray(parsed))
+        parsed = (typeof parsed === "string" && parsed) ? [parsed] : null;
+    const list = Array.isArray(parsed) ? parsed.map(NormRootPath).filter(Boolean) : [];
+    return list.length ? list : ["./"];
+}
+export function SetRootPaths(paths) {
+    const list = Array.isArray(paths) ? paths.map(NormRootPath).filter(Boolean) : [];
+    CStorage.Set("rootPath", JSON.stringify(list.length ? list : ["./"]));
 }
 export function GetProjName(projectPath) {
     const parts = projectPath.split(/[\\/]/);
