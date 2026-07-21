@@ -1670,10 +1670,11 @@
     <div class="feature-card p-4 mt-4" style="max-width:960px; margin-left:auto; margin-right:auto;">
       <h5 class="mb-2"><i class="bi bi-browser-chrome" style="color:#58a6ff;"></i> <span data-CLan="gsAfterTitle">After the Electron app starts</span></h5>
       <div class="text-muted small mb-0" data-CLan="gsAfterBody">
-        Open a browser and go to:
+        Open a browser and go to (replace <code class="cmd">[port]</code> with the port your server is actually using — check the Electron Server panel or <code class="cmd">settings.json</code>):
         <div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">
-          http://localhost:8050/Artgine/proj/Control/Control.html
+          http://localhost:[port]
         </div>
+        Or, in the Electron app, click the <strong>Browser</strong> button to open Control without typing the URL.
         Login password default: <strong>artgine</strong>. Use the host PC’s LAN IP instead of <code class="cmd">localhost</code> from a phone or another device.
       </div>
       <div class="small mt-3 mb-0 p-3" style="background:#1c1608; border:1px solid #6e4f1a; border-radius:8px; color:#c9d1d9;">
@@ -2680,7 +2681,7 @@ CLan.Set({
     gsMethod2Title: '실행파일 다운로드',
     gsMethod2Note: '<div class="mb-1">압축 해제 후 실행:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">Artgine.exe</code></li><li>Linux — <code class="cmd">./Artgine --no-sandbox</code></li><li>macOS — <code class="cmd">Artgine.app</code></li></ul><div class="mb-0">OS가 막으면 아래 권한 / 보안을 확인하세요.</div>',
     gsAfterTitle: '일렉트론 앱 시작 후',
-    gsAfterBody: '브라우저에서 아래 주소로 접속하세요:<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:8050/Artgine/proj/Control/Control.html</div>로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC의 LAN IP를 사용하세요.',
+    gsAfterBody: '브라우저에서 아래 주소로 접속하세요. <code class="cmd">[port]</code>는 서버가 실제로 쓰는 포트로 바꿉니다(일렉트론 Server 패널 또는 <code class="cmd">settings.json</code> 확인):<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:[port]</div>또는 일렉트론 앱에서 <strong>브라우저</strong> 버튼을 누르면 URL을 치지 않고 Control을 열 수 있습니다. 로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC의 LAN IP를 사용하세요.',
     gsAfterTunnelTitle: '터널링으로 실행할지 물어본다면',
     gsAfterTunnelBody: '시작 시 포트가 막혀 있으면 터널링으로 실행할지 물어봅니다. 동작은 하지만 <strong>서버를 재시작할 때마다 터널 주소가 바뀌어 매번 새로 인증을 받아야 합니다.</strong> 임시 방편으로만 쓰고, 가급적 포트 문제를 해결하세요 — 실제로 서버가 사용 중인 포트를 방화벽 인바운드에서 허용하고, 외부에서 접속한다면 공유기 포트포워딩까지 설정한 뒤 고정 주소로 접속하는 것이 좋습니다.',
     gsPermTitle: '권한 / 보안 차단',
