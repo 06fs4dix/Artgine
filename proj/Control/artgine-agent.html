@@ -36,7 +36,7 @@
 
   /* ── Main Tabs ── */
   .main-tab-bar { position: sticky; top: 0; z-index: 40; background: #0d1117; border-bottom: 1px solid #30363d; }
-  .main-tabs { border-bottom: 0; gap: .25rem; padding: 0 1rem; flex-wrap: wrap; }
+  .main-tabs { border-bottom: 0; gap: .25rem; padding: 0 1rem; flex-wrap: wrap; justify-content: center; }
   .main-tabs .nav-link { color: #8b949e; border: 1px solid transparent; border-radius: 8px 8px 0 0; padding: .8rem 1.4rem; font-weight: 600; display: flex; align-items: center; gap: .5rem; }
   .main-tabs .nav-link:hover { color: #c9d1d9; }
   .main-tabs .nav-link.active { color: #58a6ff; background: #161b22; border-color: #30363d; border-bottom-color: #161b22; }
@@ -1587,7 +1587,7 @@
             <ul class="mb-2 ps-3">
               <li>Windows — <code class="cmd">start.bat</code></li>
               <li>Linux / macOS — <code class="cmd">./start.sh</code></li>
-              <li>Web server only — <code class="cmd">npm run start_web</code> (default port 8050)</li>
+              <li>Web server only — <code class="cmd">npm run start_web [port]</code> (omit the port to use the one from <code class="cmd">settings.json</code>)</li>
             </ul>
             <div class="mb-0">Requires Node.js and Git.</div>
           </div>
@@ -1598,7 +1598,8 @@
           <h5 class="mb-3"><span class="badge-tag me-2" data-CLan="gsBadge2">Method 2</span> <span data-CLan="gsMethod2Title">Download Executable</span></h5>
           <div class="font-monospace small mb-3" style="background:#0d1117;padding:1rem;border-radius:8px;">
             <div class="mb-2"><span style="color:#8b949e;">Windows</span><br><a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-win32-x64.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-win32-x64.zip</a></div>
-            <div><span style="color:#8b949e;">Linux</span><br><a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip</a></div>
+            <div class="mb-2"><span style="color:#8b949e;">Linux</span><br><a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-linux-x64.zip</a></div>
+            <div><span style="color:#8b949e;">macOS</span><br><a href="https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-darwin-x64.zip" target="_blank" rel="noopener" style="color:#58a6ff;word-break:break-all;">https://github.com/06fs4dix/Artgine-Agent/releases/download/AI/Artgine-darwin-x64.zip</a></div>
           </div>
           <div class="text-muted small mb-3" data-CLan="gsMethod2Note">
             <div class="mb-1">Unzip, then run:</div>
@@ -1674,6 +1675,12 @@
           http://localhost:8050/Artgine/proj/Control/Control.html
         </div>
         Login password default: <strong>artgine</strong>. Use the host PC’s LAN IP instead of <code class="cmd">localhost</code> from a phone or another device.
+      </div>
+      <div class="small mt-3 mb-0 p-3" style="background:#1c1608; border:1px solid #6e4f1a; border-radius:8px; color:#c9d1d9;">
+        <div class="mb-2" style="color:#d29922; font-weight:600;"><i class="bi bi-exclamation-triangle me-1"></i> <span data-CLan="gsAfterTunnelTitle">If it asks to run through a tunnel</span></div>
+        <div data-CLan="gsAfterTunnelBody">
+          On startup, when the port is blocked, Artgine offers to run through a tunnel instead. That works, but the tunnel address changes every time the server restarts, so you have to authenticate again each restart. Treat it as a temporary workaround — open the port properly (allow the port the server is actually running on as a firewall inbound rule, and add router port forwarding if you connect from outside) and use the fixed address instead.
+        </div>
       </div>
     </div>
 
@@ -2666,7 +2673,7 @@ CLan.Set({
     quickStartSub: '두 가지 방법으로 바로 시작할 수 있습니다',
     gsBadge1: '방법 1',
     gsMethod1Title: '소스 설치 & 실행',
-    gsMethod1Note: '<div class="mb-1">다른 실행 방법:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">start.bat</code></li><li>Linux / macOS — <code class="cmd">./start.sh</code></li><li>웹 서버만 — <code class="cmd">npm run start_web</code> (기본 포트 8050)</li></ul><div class="mb-0">Node.js·Git 필요.</div>',
+    gsMethod1Note: '<div class="mb-1">다른 실행 방법:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">start.bat</code></li><li>Linux / macOS — <code class="cmd">./start.sh</code></li><li>웹 서버만 — <code class="cmd">npm run start_web [포트]</code> (포트 생략 시 <code class="cmd">settings.json</code>에 설정된 포트 사용)</li></ul><div class="mb-0">Node.js·Git 필요.</div>',
     gsPort: '포트',
     gsDefaultPort: '기본 포트 8050',
     gsBadge2: '방법 2',
@@ -2674,6 +2681,8 @@ CLan.Set({
     gsMethod2Note: '<div class="mb-1">압축 해제 후 실행:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">Artgine.exe</code></li><li>Linux — <code class="cmd">./Artgine --no-sandbox</code></li><li>macOS — <code class="cmd">Artgine.app</code></li></ul><div class="mb-0">OS가 막으면 아래 권한 / 보안을 확인하세요.</div>',
     gsAfterTitle: '일렉트론 앱 시작 후',
     gsAfterBody: '브라우저에서 아래 주소로 접속하세요:<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:8050/Artgine/proj/Control/Control.html</div>로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC의 LAN IP를 사용하세요.',
+    gsAfterTunnelTitle: '터널링으로 실행할지 물어본다면',
+    gsAfterTunnelBody: '시작 시 포트가 막혀 있으면 터널링으로 실행할지 물어봅니다. 동작은 하지만 <strong>서버를 재시작할 때마다 터널 주소가 바뀌어 매번 새로 인증을 받아야 합니다.</strong> 임시 방편으로만 쓰고, 가급적 포트 문제를 해결하세요 — 실제로 서버가 사용 중인 포트를 방화벽 인바운드에서 허용하고, 외부에서 접속한다면 공유기 포트포워딩까지 설정한 뒤 고정 주소로 접속하는 것이 좋습니다.',
     gsPermTitle: '권한 / 보안 차단',
     gsPermSub: '인터넷에서 받은 실행파일은 OS가 막는 경우가 많습니다. 플랫폼별로 처리한 뒤 Artgine을 다시 실행하세요.',
     gsPermWin: '<ul class="mb-0 ps-3"><li><strong>SmartScreen:</strong> “Windows에서 PC를 보호했습니다” → <em>추가 정보</em> → <em>실행</em>.</li><li><strong>차단 해제:</strong> <code>.zip</code> 또는 <code>Artgine.exe</code> 우클릭 → 속성 → <em>차단 해제</em> 체크 → 적용. PowerShell: <code class="cmd">Unblock-File -Path .\\Artgine.exe</code></li><li><strong>백신:</strong> 파일이 사라지거나 격리되면 Windows 보안에서 복원하고 해당 폴더를 허용하세요.</li><li>포트 바인드가 막히면 한 번 <em>관리자 권한으로 실행</em>하거나 Windows 방화벽에서 Artgine을 허용하세요.</li></ul>',
