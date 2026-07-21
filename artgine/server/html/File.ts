@@ -360,20 +360,36 @@ function updateFileUrlBar() {
     input.value = `${url.toString()}?${params.join('&')}`;
 }
 
+// 경로 비교용 정규화(백슬래시 통일 + 끝 슬래시 제거) - RootPath는 서버 왕복 중 형태가 바뀔 수 있어
+// 정확히 일치하지 않아도 같은 경로로 인식해야 한다(Control.ts의 ctrlNormPath와 동일한 패턴).
+const normFileRootPath = (s: string) => (s ?? '').replace(/\\/g, '/').replace(/\/+$/, '');
+
 // 루트 선택 드롭다운(#fileRootSel, 상단 바) 관련: 옵션 계산 + 렌더 + 선택 적용을 File Manager 모달과 상단 바가 공용으로 쓴다.
 function computeFileRootOpts(): { opts: Array<{path:string,name:string,url?:string}>, curIdx: number } {
     const _roots = (gRoots as Array<{path:string,name:string,url?:string}>) ?? [];
     // 설정 루트(맵 + 안티앨리싱) 경로를 텍스트로 통합
     const _opts: Array<{path:string,name:string,url?:string}> = [..._roots, { path: "./", name: "Artgine (WorkingPath)" }];
+
+    // URL에 명시적으로 붙은 ?RootPath=(Control.ts가 경로 선택 시 넘겨주는 값 포함)는 최초 1회에 한해
+    // localStorage에 남아있는 이전 SelKey보다 우선한다 - 그렇지 않으면 다른 경로를 골라 들어와도
+    // 드롭다운엔 지난번에 골랐던 항목이 그대로 표시된다.
+    if (!_fileInitRootPathConsumed && _urlRootPathParam) {
+        _fileInitRootPathConsumed = true;
+        const matchIdx = _opts.findIndex(r => normFileRootPath(r.path) === normFileRootPath(_urlRootPathParam));
+        if (matchIdx >= 0) {
+            fileRootSelKey = matchIdx === _opts.length - 1 ? 'workingpath' : _opts[matchIdx].path;
+            return { opts: _opts, curIdx: matchIdx };
+        }
+    }
+
     // 현재 활성 항목 표시: 사용자가 마지막으로 클릭한 SelKey로 직접 매칭한다.
-    // (RootPath는 서버 왕복 중 정규화되어 형태가 바뀌므로 비교 기준으로 쓰지 않는다.)
     let _curIdx = fileRootSelKey === 'workingpath'
         ? _opts.length - 1
         : (fileRootSelKey != null ? _roots.findIndex(r => r.path === fileRootSelKey) : -1);
     if (_curIdx < 0) {
-        // SelKey 기록이 없는 최초 진입 등에는 RootPath로 추정한다.
+        // SelKey 기록이 없는 최초 진입 등에는 RootPath로 추정한다(정규화 비교).
         for (let i = _opts.length - 1; i >= 0; i--) {
-            if (_opts[i].path === (RootPath || './')) { _curIdx = i; break; }
+            if (normFileRootPath(_opts[i].path) === normFileRootPath(RootPath || './')) { _curIdx = i; break; }
         }
     }
     if (_curIdx < 0) _curIdx = 0;
@@ -467,6 +483,10 @@ let fileRootSelKey: string | null = _persistedFileRoot.SelKey;
 
 let path=CUtilWeb.Parameter("path");
 let RootPath=CUtilWeb.Parameter("RootPath") ?? _persistedFileRoot.RootPath;
+// URL에 직접 붙은 RootPath만 기억해둔다(computeFileRootOpts에서 최초 1회 우선 매칭용).
+// 위 RootPath는 localStorage 폴백이 섞여 있어 "URL로 명시적으로 들어왔는지" 판단 기준으로 쓸 수 없다.
+const _urlRootPathParam = CUtilWeb.Parameter("RootPath");
+let _fileInitRootPathConsumed = false;
 let RootUrl: string | null = null; // File/Root, File/List 응답(SyncFileRoot)으로만 채워지는 파생값.
 
 // Control.html이 iframe으로 열 때 자신의 현재 테마(light/dark)를 함께 넘겨준다.
@@ -605,9 +625,11 @@ async function LoadFileList(_path) {
 
 function ParseFileHomeUrl(input: string): {webRootUrl:string, path:string, RootPath:string | null} {
     const u = new URL(input);
-    const marker = "/proj/Home/Home.html";
-    const homeIdx = u.pathname.indexOf(marker);
-    const basePath = homeIdx >= 0 ? u.pathname.substring(0, homeIdx) : u.pathname;
+    // Home.html뿐 아니라 Control.html 등 "/proj/<프로젝트>/<파일>.html" 형태로 끝나는 진입점 URL이면
+    // 모두 그 앞부분을 서버 base URL로 인식한다(Home.html 마커만 인식하면, Control.html 주소를 그대로
+    // 넣었을 때 basePath가 pathname 전체가 되어 File/Root 등의 API가 잘못된 URL로 요청된다).
+    const m = u.pathname.match(/^(.*)\/proj\/[^\/]+\/[^\/]+\.html$/);
+    const basePath = m ? m[1] : u.pathname;
     return {
         webRootUrl: NormalizeWebRootUrl(u.origin + (basePath || "/")),
         path: u.searchParams.get("path") || "/",

@@ -87,4 +87,5 @@ if (startPort != null) {
     KillElectronOnPort(startPort);
 }
 const electronArg = /\s/.test(settingsFileName) ? `"${settingsFileName}"` : settingsFileName;
-await CCMDMgr.RunCMD(`npx electron . ${electronArg}`, false);
+const sandboxArg = process.platform === "linux" ? " --no-sandbox" : "";
+await CCMDMgr.RunCMD(`npx electron . ${electronArg}${sandboxArg}`, false);

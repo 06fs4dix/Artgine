@@ -3,6 +3,7 @@ import "../../artgine/artgine.js"
 
 //Class
 import {CClass} from "../../artgine/basic/CClass.js";
+// ↓ 다운로드 탭 관련 코드. 나머지 다운로드 관련 소스는 파일 맨 아래 "다운로드(Download) 관련 소스" 구간에 모아둠.
 import { MountDownloadTab } from "./Downloads/DownloadTab.js";
 CClass.Push(MountDownloadTab);
 //Atelier
@@ -96,39 +97,122 @@ applyTheme(savedTheme);
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
 
 // ---- 다국어(CLan) ----
-// 기본 텍스트는 영문(HTML innerHTML)이고, 한국어만 추가 등록한다. 미등록 언어는 영문으로 폴백된다
-// (브라우저 언어 자동감지 = CUtil.Language(), Home.ts의 registerHomeLan()과 동일한 패턴).
+// 기본 텍스트는 영문(HTML/코드 기본값). 한국어는 아래 한곳(registerControlLan)에만 등록한다.
+// 탭/옵션 설명/모달 폼 라벨 = 영문. 도움말 + 경고/알림/에러 메시지 = 한영.
+// 미등록 키/언어는 영문으로 폴백. 브라우저 언어 = CUtil.Language().
+// 동적 문자열: L("key", "English default") 또는 LF("key", "Hello {0}", name)
+// 정적 DOM: data-CLan / data-CLan-title + applyLanIn(root)
 function registerControlLan(): void {
-    const ko = CLan.eType.ko;
-    CLan.Set(ko, "ctrl.help", "도움말");
-    CLan.Set(ko, "ctrl.kb.global", "전역 단축키");
-    CLan.Set(ko, "ctrl.kb.f1", "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)");
-    CLan.Set(ko, "ctrl.kb.f2", "<kbd>F2</kbd> 파일 검색 열기");
-    CLan.Set(ko, "ctrl.kb.f3", "<kbd>F3</kbd> 새 터미널 열기");
-    CLan.Set(ko, "ctrl.kb.f4", "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글");
-    CLan.Set(ko, "ctrl.kb.f6", "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)");
-    CLan.Set(ko, "ctrl.kb.updown", "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)");
+    // ★ 한국어 UI 문자열은 전부 이 객체에만 추가/수정한다.
+    CLan.Set({
+        ko: {
+            // Option 패널 Help + 전역 단축키
+            "ctrl.help": "도움말",
+            "ctrl.kb.global": "전역 단축키",
+            "ctrl.kb.f1": "<kbd>F1</kbd> 우측 사이드바 File ↔ Info 토글 (작은 화면이면 사이드바 열림)",
+            "ctrl.kb.f2": "<kbd>F2</kbd> 파일 검색 열기",
+            "ctrl.kb.f3": "<kbd>F3</kbd> 새 터미널 열기",
+            "ctrl.kb.f4": "<kbd>F4</kbd> / <kbd>Ctrl</kbd> 빠르게 두 번 사이드바 포커스/토글",
+            "ctrl.kb.f6": "<kbd>F6</kbd> SUPER(자동 승인) 토글 + 입력창 포커스 (Chat/Terminal)",
+            "ctrl.kb.updown": "<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> 세션 목록 이동 (사이드바 열림)",
+
+            // 경고 / 알림 / 에러 (CAlert, 토스트, 인라인 상태 메시지)
+            "ctrl.failed": "실패",
+            "ctrl.failedToLoad": "불러오기 실패",
+            "ctrl.msg.signInRequired": "로그인이 필요합니다.",
+            "ctrl.msg.loginRequired": "로그인이 필요합니다",
+            "ctrl.msg.signInOption": "로그인 필요",
+            "ctrl.msg.authRequired": "인증이 필요합니다. 먼저 로그인해 주세요.",
+            "ctrl.msg.permissionGranted": "권한이 부여되었습니다",
+            "ctrl.msg.defaultPassword": "기본 비밀번호를 사용 중입니다. 보안을 위해 변경해 주세요.",
+            "ctrl.msg.wrongPassword": "비밀번호가 올바르지 않습니다: {0}",
+            "ctrl.msg.serverError": "서버 오류",
+            "ctrl.msg.enterAdminPassword": "관리자 비밀번호 입력:",
+            "ctrl.msg.deleteFailed": "삭제 실패: {0}",
+            "ctrl.msg.cannotOpenUnknownWd": "워킹 디렉토리를 알 수 없어 경로를 열 수 없습니다: {0}",
+            "ctrl.msg.cannotOpenNotRoot": "등록된 루트 경로에 없어 열 수 없습니다: {0}",
+            "ctrl.msg.openPathError": "경로를 여는 중 오류가 발생했습니다.",
+            "ctrl.msg.approvalRequired": "⚠️ {0}: 권한 승인 필요",
+            "ctrl.msg.deleteSessionLog": "세션 \"{0}\"의 로그를 전부 삭제할까요?",
+            "ctrl.msg.deleteAllLogs": "전체 로그를 삭제할까요? 모든 세션이 삭제되며 되돌릴 수 없습니다.",
+            "ctrl.msg.deleteSchedule": "스케줄 \"{0}\"을(를) 삭제할까요?",
+            "ctrl.msg.deleteSubAgent": "서브 에이전트 \"{0}\"을(를) 삭제할까요?",
+            "ctrl.msg.deleteNamed": "\"{0}\"을(를) 삭제할까요?",
+            "ctrl.msg.pruneConfirm": "{0}개월보다 오래된 대화 기록을 모두 삭제할까요? 이 컴퓨터의 모든 프로젝트에 적용되며 되돌릴 수 없습니다.",
+            "ctrl.msg.pruneTotal": "총 {0}개 삭제됨",
+            "ctrl.msg.notInstalled": "미설치",
+            "ctrl.msg.saveFoldersRestart": "워킹 폴더를 저장하고 서버를 지금 재시작할까요?",
+            "ctrl.msg.workingFolderSaved": "워킹 폴더가 저장되었습니다. 서버를 재시작합니다.",
+            "ctrl.msg.savedReloading": "저장됨. 서버 재시작 중… {0}초 후 새로고침",
+            "ctrl.msg.portBlocked": "외부에서 포트에 접근할 수 없는 것 같습니다. 포트 포워딩을 확인해 주세요.",
+            "ctrl.msg.checkingLink": "접속 가능한 링크 확인 중...",
+            "ctrl.msg.diffFailed": "Diff 실패",
+            "ctrl.msg.diffRequestFailed": "Diff 요청 실패",
+            "ctrl.msg.failedStartTerm": "터미널 시작 실패",
+            "ctrl.msg.failedStartBrowser": "브라우저 시작 실패",
+            "ctrl.msg.failedStartTeam": "팀 시작 실패",
+            "ctrl.msg.nameAgentCmdRequired": "이름, 서브 에이전트, 명령이 필요합니다",
+            "ctrl.msg.selectOneDay": "요일을 하나 이상 선택하세요",
+            "ctrl.msg.delayMin1": "간격은 최소 1초여야 합니다",
+            "ctrl.msg.keyRequired": "Key가 필요합니다",
+            "ctrl.msg.enterGoal": "목표를 입력하세요",
+            "ctrl.msg.selectOneSubAgent": "서브 에이전트를 하나 이상 선택하세요",
+            "ctrl.msg.noSubAgents": "(등록된 서브 에이전트 없음)",
+            "ctrl.msg.noSubAgentsHint": "등록된 서브 에이전트가 없습니다. 먼저 우측 사이드바 → Sub Agent에서 등록하세요.",
+            "ctrl.msg.modelsToJson": "{0}: {1}개 모델 → opencode.json",
+            "ctrl.msg.ocNoProviders": "등록된 OpenCode provider가 없습니다. 먼저 \"Add OpenCode Model\"을 사용하세요.",
+            "ctrl.msg.scanningPath": "검색 중: {0}",
+            "ctrl.msg.cachedScanning": "캐시: {0}건... 검색 중",
+            "ctrl.msg.stoppedResults": "중지됨. ({0}건)",
+            "ctrl.msg.nResults": "{0}건{1}",
+            "ctrl.dl.enterUrl": "URL을 입력하세요",
+            "ctrl.dl.failedInfo": "정보 조회 실패",
+            "ctrl.dl.failedStart": "시작 실패",
+            "ctrl.dl.serverError": "서버 오류: {0}",
+            "ctrl.dl.serverUnavailable": "서버 응답 없음 - 서버가 제외된 버전일 수 있습니다. 서버 상태를 확인하세요",
+        }
+    });
 }
 
-// data-CLan 요소에 현재 언어 번역을 적용한다. 기존 innerHTML(영문)을 기본값으로 쓰므로
-// 미등록 키/언어는 원문이 유지된다.
-function applyLanIn(root: HTMLElement | null): void {
+/** 현재 언어 번역. en 기본값, ko 등록 시 한글. */
+function L(key: string, en: string): string {
+    return CLan.Get(key, en);
+}
+
+/** {0} {1} ... 치환 번역. */
+function LF(key: string, en: string, ...args: Array<string | number>): string {
+    let s = CLan.Get(key, en);
+    for (let i = 0; i < args.length; i++) s = s.split(`{${i}}`).join(String(args[i]));
+    return s;
+}
+
+// data-CLan / data-CLan-title 요소에 현재 언어 번역을 적용한다.
+function applyLanIn(root: ParentNode | null): void {
     if (!root) return;
     root.querySelectorAll<HTMLElement>('[data-CLan]').forEach(el => {
         const key = el.getAttribute('data-CLan');
         if (!key) return;
-        if (el instanceof HTMLInputElement) {
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
             const t = CLan.Get(key, el.placeholder);
             if (t != null) el.placeholder = t;
+        } else if (el instanceof HTMLOptionElement) {
+            const t = CLan.Get(key, el.text);
+            if (t != null) el.text = t;
         } else {
             const t = CLan.Get(key, el.innerHTML);
             if (t != null) el.innerHTML = t;
         }
     });
+    root.querySelectorAll<HTMLElement>('[data-CLan-title]').forEach(el => {
+        const key = el.getAttribute('data-CLan-title');
+        if (!key) return;
+        const t = CLan.Get(key, el.title || '');
+        if (t != null) el.title = t;
+    });
 }
 
 registerControlLan();
-applyLanIn(document.getElementById('right-option-panel'));
+applyLanIn(document.body);
 
 // ---- 우측 사이드바: AI Provider 상태 (Home.html의 Provider Status 패널을 재사용) ----
 // 인증 여부와 무관하게 즉시 호출 가능한 엔드포인트라 페이지 접속과 동시에 조회한다.
@@ -226,10 +310,10 @@ document.getElementById('pruneConvBtn')?.addEventListener('click', () => {
     const months = Math.max(1, parseInt(input?.value ?? '1', 10) || 1);
 
     const dlg = new CConfirm();
-    dlg.SetBody(`Delete all conversation history older than ${months} month(s)? This applies to every project on this machine and cannot be undone.`);
+    dlg.SetBody(LF('ctrl.msg.pruneConfirm', 'Delete all conversation history older than {0} month(s)? This applies to every project on this machine and cannot be undone.', months));
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         async () => {
-            if (result) result.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+            if (result) result.innerHTML = `<i class="bi bi-hourglass-split"></i> ${L('ctrl.deleting', 'Deleting...')}`;
             try {
                 const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/prune-conversations', {
                     method: 'POST',
@@ -237,19 +321,19 @@ document.getElementById('pruneConvBtn')?.addEventListener('click', () => {
                     body: JSON.stringify({ months }),
                 });
                 const j = await r.json();
-                if (!j.ok) throw new Error(j.msg ?? 'failed');
+                if (!j.ok) throw new Error(j.msg ?? L('ctrl.failed', 'failed'));
                 const lines = Object.entries(j.results as Record<string, { installed: boolean; deleted: number; error?: string }>)
                     .map(([provider, v]) => v.installed
                         ? `${aiEscapeHtml(provider)}: ${v.deleted}${v.error ? ` <span class="text-danger">(${aiEscapeHtml(v.error)})</span>` : ''}`
-                        : `${aiEscapeHtml(provider)}: <span class="text-secondary">not installed</span>`)
+                        : `${aiEscapeHtml(provider)}: <span class="text-secondary">${L('ctrl.msg.notInstalled', 'not installed')}</span>`)
                     .join('<br>');
-                if (result) result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Total ${j.totalDeleted} deleted</span><div class="mt-1">${lines}</div>`;
+                if (result) result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> ${LF('ctrl.msg.pruneTotal', 'Total {0} deleted', j.totalDeleted)}</span><div class="mt-1">${lines}</div>`;
             } catch (e: any) {
                 if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
             }
         },
         () => {},
-    ], ["Delete", "Cancel"]);
+    ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
     dlg.Open();
 });
 
@@ -303,15 +387,15 @@ function showAddOllamaModal() {
                 const j = await r.json();
                 if (!j.ok) {
                     if (result) {
-                        const msg = r.status === 401 ? 'Login required' : (j.msg || 'Failed');
+                        const msg = r.status === 401 ? L('ctrl.msg.loginRequired', 'Login required') : (j.msg || L('ctrl.failed', 'Failed'));
                         result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(msg)}</span>`;
                     }
                     return;
                 }
                 const models: { name: string; tools: boolean }[] = j.models ?? [];
-                const list = models.map(m => `${aiEscapeHtml(m.name)}${m.tools ? ' <span class="badge bg-success">tools<\span>' : ''}`).join(', ');
+                const list = models.map(m => `${aiEscapeHtml(m.name)}${m.tools ? ' <span class="badge bg-success">tools</span>' : ''}`).join(', ');
                 if (result) result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> ${aiEscapeHtml(j.provider)} — ${models.length} models</span><div class="text-secondary mt-1">${list}</div>`;
-                CAlert.Info(`${j.provider}: ${models.length} models → opencode.json`);
+                CAlert.Info(LF('ctrl.msg.modelsToJson', '{0}: {1} models → opencode.json', j.provider, models.length));
             } catch (e: any) {
                 if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(e?.message ?? String(e))}</span>`;
             } finally {
@@ -351,11 +435,11 @@ function showOpencodeStatusModal() {
         body.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading...';
         try {
             const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/opencode-statusLocal');
-            if (r.status === 401) { body.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Login required</span>'; return; }
+            if (r.status === 401) { body.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${L('ctrl.msg.loginRequired', 'Login required')}</span>`; return; }
             const j = await r.json();
             const providers: { key: string; label: string; backend: string; host: string; connected: boolean; error?: string; modelCount: number; running: { name: string; vramBytes?: number; sizeBytes?: number }[] }[] = j.providers ?? [];
             if (!providers.length) {
-                body.innerHTML = '<span class="text-secondary">No registered OpenCode providers yet. Use "Add OpenCode Model" first.</span>';
+                body.innerHTML = `<span class="text-secondary">${L('ctrl.msg.ocNoProviders', 'No registered OpenCode providers yet. Use "Add OpenCode Model" first.')}</span>`;
                 return;
             }
             body.innerHTML = `
@@ -407,7 +491,7 @@ function scheduleReloadAfterRestart(_el: HTMLElement | null) {
     let left = RESTART_RELOAD_SEC;
     const tick = () => {
         if (left <= 0) { location.reload(); return; }
-        if (_el) _el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Saved. Server is restarting… reloading in ${left}s</span>`;
+        if (_el) _el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> ${LF('ctrl.msg.savedReloading', 'Saved. Server is restarting… reloading in {0}s', left)}</span>`;
         left--;
         setTimeout(tick, 1000);
     };
@@ -442,7 +526,7 @@ function showWorkFolderModal() {
         try {
             const r = await authedFetch(CPath.WebRootUrl() + 'AIInfo/workfolder');
             if (r.status === 401) {
-                if (result) result.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Login required</span>';
+                if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${L('ctrl.msg.loginRequired', 'Login required')}</span>`;
             } else {
                 const j = await r.json();
                 if (j.ok && ta) ta.value = (j.rootPath ?? []).join('\n');
@@ -454,7 +538,7 @@ function showWorkFolderModal() {
             const list = (ta?.value ?? '').split('\n').map(s => s.trim()).filter(Boolean);
             if (!list.length) { ta?.focus(); return; }
             const dlg = new CConfirm();
-            dlg.SetBody(`Save working folders and restart the server now?<br><br>${list.map(aiEscapeHtml).join('<br>')}`);
+            dlg.SetBody(`${L('ctrl.msg.saveFoldersRestart', 'Save working folders and restart the server now?')}<br><br>${list.map(aiEscapeHtml).join('<br>')}`);
             dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
                 async () => {
                     if (saveBtn) saveBtn.disabled = true;
@@ -467,12 +551,12 @@ function showWorkFolderModal() {
                         });
                         const j = await r.json();
                         if (!j.ok) {
-                            const msg = r.status === 401 ? 'Login required' : (j.msg || 'Failed');
+                            const msg = r.status === 401 ? L('ctrl.msg.loginRequired', 'Login required') : (j.msg || L('ctrl.failed', 'Failed'));
                             if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${aiEscapeHtml(msg)}</span>`;
                             if (saveBtn) saveBtn.disabled = false;
                             return;
                         }
-                        CAlert.Info('Working folder saved. Server is restarting.');
+                        CAlert.Info(L('ctrl.msg.workingFolderSaved', 'Working folder saved. Server is restarting.'));
                         scheduleReloadAfterRestart(result);
                     } catch (e: any) {
                         // 재시작으로 연결이 끊겨 응답을 못 받을 수 있다 — 저장 자체는 서버에서 이미 완료된 상태다.
@@ -832,7 +916,7 @@ async function ctrlRefreshRootSelect() {
     ctrlRootSel.innerHTML = '<option>Loading...</option>';
     if (baseUrl && !(await rdpCheckRemoteAuth(baseUrl))) {
         if (seq !== ctrlRootReqSeq) return;
-        ctrlRootSel.innerHTML = '<option>Sign in required</option>';
+        ctrlRootSel.innerHTML = `<option>${L('ctrl.msg.signInOption', 'Sign in required')}</option>`;
         rdpPromptRemoteAuth(baseUrl, () => {
             if (currentRemoteBaseUrl !== baseUrl || seq !== ctrlRootReqSeq) return;
             ctrlRefreshRootSelect();
@@ -847,7 +931,7 @@ async function ctrlRefreshRootSelect() {
         ctrlSideFileGoTo('/');
     } catch (e) {
         if (seq !== ctrlRootReqSeq) return;
-        ctrlRootSel.innerHTML = '<option>Failed to load</option>';
+        ctrlRootSel.innerHTML = `<option>${L('ctrl.failedToLoad', 'Failed to load')}</option>`;
     }
 }
 
@@ -930,8 +1014,8 @@ function rdpCheckPortOpen(url: string, timeoutMs = 4000): Promise<boolean> {
 async function rdpShowLocalAccessLink() {
     const boxId = `rdp_local_link_${Date.now()}`;
     const modal = new CModal();
-    modal.SetHeader('Local Access Link');
-    modal.SetBody(`<div id="${boxId}" class="small text-secondary">Checking accessible link...</div>`);
+    modal.SetHeader(L('ctrl.hdr.localAccessLink', 'Local Access Link'));
+    modal.SetBody(`<div id="${boxId}" class="small text-secondary">${L('ctrl.msg.checkingLink', 'Checking accessible link...')}</div>`);
     modal.SetTitle(CModal.eTitle.TextClose);
     modal.SetSize(480, 160);
     modal.Open(CModal.ePos.Center);
@@ -941,7 +1025,7 @@ async function rdpShowLocalAccessLink() {
     if (!box) return;
 
     if (blocked || !url) {
-        box.innerHTML = `<div class="text-danger">Port appears to be blocked from outside access. Please check port forwarding.</div>`;
+        box.innerHTML = `<div class="text-danger">${L('ctrl.msg.portBlocked', 'Port appears to be blocked from outside access. Please check port forwarding.')}</div>`;
         return;
     }
 
@@ -1102,12 +1186,12 @@ async function ctrlFileSearch() {
     const uid = Date.now();
 
     const modal = new CModal();
-    modal.SetHeader("File Search");
+    modal.SetHeader(L('ctrl.hdr.fileSearch', 'File Search'));
     modal.SetBody(`
         <div class="d-flex gap-2 mb-2">
-            <input type="text" id="ctrlSrchInput_${uid}" class="form-control form-control-sm" placeholder="Filename (partial match)...">
-            <button id="ctrlSrchBtn_${uid}" class="btn btn-sm btn-primary">Search</button>
-            <button id="ctrlSrchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">Stop</button>
+            <input type="text" id="ctrlSrchInput_${uid}" class="form-control form-control-sm" placeholder="${L('ctrl.ph.filename', 'Filename (partial match)...')}">
+            <button id="ctrlSrchBtn_${uid}" class="btn btn-sm btn-primary">${L('ctrl.search', 'Search')}</button>
+            <button id="ctrlSrchStop_${uid}" class="btn btn-sm btn-outline-danger" style="display:none;">${L('ctrl.stop', 'Stop')}</button>
         </div>
         <div id="ctrlSrchStatus_${uid}" class="small text-secondary mb-1" style="min-height:1.2em;"></div>
         <div id="ctrlSrchResults_${uid}" class="list-group" style="max-height:360px;overflow-y:auto;font-size:13px;"></div>
@@ -1181,12 +1265,12 @@ async function ctrlFileSearch() {
 
         const shown = new Set<string>();
         let found = renderFromCache(startPath, query, shown);
-        status.textContent = found > 0 ? `Cached: ${found} result(s)... Scanning` : 'Scanning...';
+        status.textContent = found > 0 ? LF('ctrl.msg.cachedScanning', 'Cached: {0} result(s)... Scanning', found) : L('ctrl.scanning', 'Scanning...');
 
         const queue: string[] = [startPath];
         while (queue.length > 0 && !searchCancelled) {
             const dirPath = queue.shift()!;
-            status.textContent = `Scanning: ${dirPath}`;
+            status.textContent = LF('ctrl.msg.scanningPath', 'Scanning: {0}', dirPath);
             try {
                 const p2: any = { path: dirPath };
                 if (rootPathParam) p2.RootPath = rootPathParam;
@@ -1213,7 +1297,7 @@ async function ctrlFileSearch() {
         }
 
         const cap = found >= 200 ? ' (capped at 200)' : '';
-        status.textContent = searchCancelled ? `Stopped. (${found} result(s))` : found === 0 ? 'No results.' : `${found} result(s)${cap}`;
+        status.textContent = searchCancelled ? LF('ctrl.msg.stoppedResults', 'Stopped. ({0} result(s))', found) : found === 0 ? L('ctrl.noResults', 'No results.') : LF('ctrl.msg.nResults', '{0} result(s){1}', found, cap);
         btn.disabled = false;
         stopBtn.style.display = 'none';
     };
@@ -1250,9 +1334,9 @@ async function ctrlOpenVcsDiff(filePath: string) {
     try {
         res = await CFecth.Exe(apiBase + "File/VCS", { action: "diff", path: filePath, token }, "json");
     } catch (e) {
-        CAlert.Info("Diff request failed"); return;
+        CAlert.Info(L('ctrl.msg.diffRequestFailed', 'Diff request failed')); return;
     }
-    if (!res?.ok) { CAlert.Info(res?.msg || "Diff failed"); return; }
+    if (!res?.ok) { CAlert.Info(res?.msg || L('ctrl.msg.diffFailed', 'Diff failed')); return; }
 
     if (!document.getElementById("vcs-diff-style")) {
         const st = document.createElement("style");
@@ -1382,7 +1466,7 @@ async function ctrlSideFileGoTo(pathVal: string) {
         ctrlSideFileRenderList(data.list ?? []);
     } catch (e) {
         if (seq !== ctrlSideFileReqSeq) return;
-        ctrlSideFileRenderEmpty('Failed to load');
+        ctrlSideFileRenderEmpty(L('ctrl.failedToLoad', 'Failed to load'));
     }
 }
 
@@ -1647,17 +1731,7 @@ CIframeMsg.Recv({
     },
 });
 
-// ---- 다운로드 탭 (MountDownloadTab) ----
-let dlInited = false;
-CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
-    if (dlInited) return;
-    dlInited = true;
-    MountDownloadTab("download-root");
-});
-if (CDOM.ID("download-panel").classList.contains("active")) {
-    dlInited = true;
-    MountDownloadTab("download-root");
-}
+// ---- 다운로드 탭 (MountDownloadTab) ---- 파일 맨 아래 "다운로드(Download) 관련 소스" 구간으로 이동함.
 
 // ---- 로그 탭: provider(CLI)별 대화 로그를 세션 아코디언으로 보여준다 (CProviderLog/cmd/log-* 기반) ----
 interface LogSessionEntry { name: string; offset: number; model: string; firstText: string; cwd: string; time: number; }
@@ -1678,9 +1752,9 @@ async function logLoadSessionBody(sessionId: string, bodyEl: HTMLElement) {
     try {
         const r = await authedFetch(`${CPath.WebRootUrl()}cmd/log-session?sessionId=${encodeURIComponent(sessionId)}`);
         const j = await r.json();
-        if (!j.ok) { bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(j.msg ?? 'failed')}</span>`; return; }
+        if (!j.ok) { bodyEl.innerHTML = `<span class="text-danger small">${aiEscapeHtml(j.msg ?? L('ctrl.failed', 'failed'))}</span>`; return; }
         const records: LogRecord[] = j.records ?? [];
-        if (!records.length) { bodyEl.innerHTML = '<span class="text-secondary small">No messages.</span>'; return; }
+        if (!records.length) { bodyEl.innerHTML = `<span class="text-secondary small">${L('ctrl.noMessages', 'No messages.')}</span>`; return; }
         bodyEl.innerHTML = records.map(rec => {
             const isUser = rec.role === 'user';
             return `<div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">` +
@@ -1737,7 +1811,7 @@ function logCreateAccordionItem(entry: LogSessionEntry): HTMLDivElement {
     item.querySelector<HTMLElement>('[data-act="del"]')!.addEventListener('click', (e: Event) => {
         e.stopPropagation();
         const dlg = new CConfirm();
-        dlg.SetBody(`세션 "${aiEscapeHtml(entry.name)}"의 로그를 전부 삭제할까요?`);
+        dlg.SetBody(LF('ctrl.msg.deleteSessionLog', 'Delete all logs for session "{0}"?', aiEscapeHtml(entry.name)));
         dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
             async () => {
                 await authedFetch(`${CPath.WebRootUrl()}cmd/log-session-del?sessionId=${encodeURIComponent(entry.name)}`);
@@ -1745,7 +1819,7 @@ function logCreateAccordionItem(entry: LogSessionEntry): HTMLDivElement {
                 item.remove();
             },
             () => {},
-        ], ["Delete", "Cancel"]);
+        ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
         dlg.Open();
     });
     return item;
@@ -1773,14 +1847,14 @@ logLoadMoreBtn.addEventListener('click', () => logLoadSessions(false));
 // 상단 X: 모든 provider 로그를 통째로 삭제(cmd/log-clear) 후 목록 갱신.
 CDOM.ID('logClearBtn').addEventListener('click', () => {
     const dlg = new CConfirm();
-    dlg.SetBody('Delete ALL logs? This will remove every session and cannot be undone.');
+    dlg.SetBody(L('ctrl.msg.deleteAllLogs', 'Delete ALL logs? This will remove every session and cannot be undone.'));
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         async () => {
             await authedFetch(`${CPath.WebRootUrl()}cmd/log-clear`);
             logLoadSessions(true);
         },
         () => {},
-    ], ["Delete All", "Cancel"]);
+    ], [L('ctrl.deleteAll', 'Delete All'), L('ctrl.cancel', 'Cancel')]);
     dlg.Open();
 });
 
@@ -1831,26 +1905,26 @@ async function rdpCheckRemoteAuth(webRootUrl: string): Promise<boolean> {
 // 그 원격의 admin 비밀번호 인증창. 성공하면 토큰을 저장하고 onSuccess를 호출한다(Home.ts의 rdpPromptRemoteAuth와 동일).
 function rdpPromptRemoteAuth(webRootUrl: string, onSuccess?: () => void) {
     const dlg = new CConfirm();
-    dlg.SetBody('Enter admin password:<br><input type="password" id="AuthPassword" class="form-control form-control-sm">');
+    dlg.SetBody(`${L('ctrl.msg.enterAdminPassword', 'Enter admin password:')}<br><input type="password" id="AuthPassword" class="form-control form-control-sm">`);
     const doAuth = () => {
         const pw = CDOM.IDValue("AuthPassword");
         (CFecth.Exe(webRootUrl + "auth/login", { password: CHash.SHA256('artgine_' + pw) }, "json") as Promise<any>).then((j: { ok: boolean, token?: string, msg?: string }) => {
             if (j.ok) {
                 setAuthToken(webRootUrl, j.token!);
-                CAlert.Info("Permission granted");
+                CAlert.Info(L('ctrl.msg.permissionGranted', 'Permission granted'));
                 if (pw === "artgine") {
-                    CAlert.Warning("You are using the default password. Please change it for security.");
+                    CAlert.Warning(L('ctrl.msg.defaultPassword', 'You are using the default password. Please change it for security.'));
                 }
                 onSuccess?.();
             } else {
-                CAlert.E("Wrong password: " + (j.msg ?? ""));
+                CAlert.E(LF('ctrl.msg.wrongPassword', 'Wrong password: {0}', j.msg ?? ''));
             }
-        }).catch(() => { CAlert.E("Server error"); });
+        }).catch(() => { CAlert.E(L('ctrl.msg.serverError', 'Server error')); });
     };
     dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
         doAuth,
         () => {},
-    ], ["OK", "Cancel"]);
+    ], [L('ctrl.ok', 'OK'), L('ctrl.cancel', 'Cancel')]);
     dlg.Open();
     setTimeout(() => {
         const input = CDOM.ID("AuthPassword") as HTMLInputElement | null;
@@ -1869,7 +1943,7 @@ function rdpPromptRemoteAuth(webRootUrl: string, onSuccess?: () => void) {
 function ctrlRequireAuthed(): boolean {
     if (getAuthToken(CPath.WebRootUrl())) return true;
     rdpPromptRemoteAuth(CPath.WebRootUrl());
-    CAlert.Warning("Authentication required. Please sign in first.");
+    CAlert.Warning(L('ctrl.msg.authRequired', 'Authentication required. Please sign in first.'));
     return false;
 }
 // File 탭을 제외한 나머지 탭은 인증 전에는 전환되지 않도록 막는다. 트리거 방식(직접 클릭/사이드바
@@ -1887,8 +1961,8 @@ function ctrlRequireAuthed(): boolean {
 function renderSignInPrompt(container: HTMLElement, onSuccess: () => void) {
     container.innerHTML = `
         <div class="text-center text-secondary small p-3 d-flex flex-column align-items-center gap-2">
-            <div>로그인이 필요합니다.</div>
-            <button type="button" class="btn btn-sm btn-outline-primary sign-in-btn">Sign In</button>
+            <div>${L('ctrl.msg.signInRequired', 'Sign in required.')}</div>
+            <button type="button" class="btn btn-sm btn-outline-primary sign-in-btn">${L('ctrl.signIn', 'Sign In')}</button>
         </div>`;
     container.querySelector<HTMLButtonElement>('.sign-in-btn')!.addEventListener('click', () => {
         rdpPromptRemoteAuth(CPath.WebRootUrl(), onSuccess);
@@ -2223,7 +2297,7 @@ async function termOpenTappedPath(tappedPath: string, token: string) {
             ? `${termNormAbsPath(workingDir)}/${tappedPath.replace(/\\/g, '/')}`
             : '';
     if (!fullPath) {
-        CAlert.E(`워킹 디렉토리를 알 수 없어 경로를 열 수 없습니다: ${tappedPath}`);
+        CAlert.E(LF('ctrl.msg.cannotOpenUnknownWd', 'Cannot open path — working directory is unknown: {0}', tappedPath));
         return;
     }
     try {
@@ -2235,7 +2309,7 @@ async function termOpenTappedPath(tappedPath: string, token: string) {
             return normFullLower === rp || normFullLower.startsWith(rp + '/');
         });
         if (!root) {
-            CAlert.E(`등록된 루트 경로에 없어 열 수 없습니다: ${fullPath}`);
+            CAlert.E(LF('ctrl.msg.cannotOpenNotRoot', 'Cannot open path — not under a registered root: {0}', fullPath));
             return;
         }
         const relPath = normFull.slice(termNormAbsPath(root.path).length);
@@ -2244,7 +2318,7 @@ async function termOpenTappedPath(tappedPath: string, token: string) {
         promptSourceAction(fullPath, '', url);
     } catch (e) {
         console.error('termOpenTappedPath error:', e);
-        CAlert.E('경로를 여는 중 오류가 발생했습니다.');
+        CAlert.E(L('ctrl.msg.openPathError', 'An error occurred while opening the path.'));
     }
 }
 
@@ -2266,7 +2340,7 @@ function promptSourceAction(fullPath: string, baseUrl: string, url: string) {
     if (!canExecute) { editorOpenFile(fullPath, baseUrl, url); return; }
 
     const actions = [() => editorOpenFile(fullPath, baseUrl, url), () => executeOpenedSource(fullPath, url), () => {}];
-    const labels = ["Edit", "Execute", "Cancel"];
+    const labels = [L('ctrl.edit', 'Edit'), L('ctrl.execute', 'Execute'), L('ctrl.cancel', 'Cancel')];
 
     const confirm = new CConfirm();
     confirm.SetBody(`"${aiEscapeHtml(fullPath)}"`);
@@ -2278,8 +2352,8 @@ function editorItemSpec(s: IEditorSession, activeKey: string | null): SessionIte
     const name = s.path.split('/').pop() || s.path;
     const dir = s.path.slice(0, s.path.length - name.length);
     const dot = s.dirty
-        ? '<span class="text-warning small" title="수정됨 (저장 안 됨)">●</span>'
-        : '<span class="text-success small" title="저장됨">●</span>';
+        ? `<span class="text-warning small" title="${L('ctrl.st.modified', 'Modified (unsaved)')}">●</span>`
+        : `<span class="text-success small" title="${L('ctrl.st.saved', 'Saved')}">●</span>`;
     return {
         activeClass: 'ai-session-item-active',
         isActive: activeKey === s.key,
@@ -2291,13 +2365,13 @@ function editorItemSpec(s: IEditorSession, activeKey: string | null): SessionIte
             ${dir ? `<span class="text-secondary" style="font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;">${aiEscapeHtml(dir)}</span>` : ''}
         </span>`,
         deleteAct: 'delete',
-        deleteLabel: '🗑️ Delete',
+        deleteLabel: L('ctrl.deleteIcon', '🗑️ Delete'),
         onClick: () => {
             editorActivatePane();
             showEditorFrame(s.key, editorFrameSrc(s));
             renderSessionSidebar();
         },
-        onShare: () => showShareLinkModal('Editor Share Link', `Anyone with this link can view: <strong>${aiEscapeHtml(s.path)}</strong>`, editorFrameSrc(s)),
+        onShare: () => showShareLinkModal(L('ctrl.share.editorTitle', 'Editor Share Link'), LF('ctrl.share.editor', 'Anyone with this link can view: <strong>{0}</strong>', aiEscapeHtml(s.path)), editorFrameSrc(s)),
         onDelete: () => {
             const f = editorIframePool.get(s.key);
             if (f) { f.remove(); editorIframePool.delete(s.key); }
@@ -2322,9 +2396,9 @@ function genUuid(): string {
 function chatStartNew(initialWorkingDir?: string) {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">New Chat</p>
+        <p class="fw-semibold mb-3">${L('ctrl.hdr.newChat', 'New Chat')}</p>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Working Directory</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
             <input id="chat-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/MyProject" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
@@ -2338,8 +2412,8 @@ function chatStartNew(initialWorkingDir?: string) {
             </div>
         </div>
         <div class="d-flex justify-content-between">
-            <button id="chat-modal-open" class="btn btn-primary">Open</button>
-            <button id="chat-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+            <button id="chat-modal-open" class="btn btn-primary">${L('ctrl.open', 'Open')}</button>
+            <button id="chat-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
         </div>`;
 
     const modal = new CModal();
@@ -2391,9 +2465,9 @@ function chatItemSpec(s: { sessionId: string; title: string; updatedAt?: number;
     const rel = chatFormatRelative(s.updatedAt);
     const isLoaded = chatIframePool.has(key);
     const st: 'off' | 'busy' | 'idle' = !isLoaded ? 'off' : s.busy ? 'busy' : 'idle';
-    const dot = st === 'off'  ? '<span class="text-danger small" title="미연결">●</span>'
-              : st === 'busy' ? '<span class="ai-busy-dot text-warning small" title="처리 중">●</span>'
-              :                 '<span class="text-success small" title="대기 중">●</span>';
+    const dot = st === 'off'  ? `<span class="text-danger small" title="${L('ctrl.st.disconnected', 'Disconnected')}">●</span>`
+              : st === 'busy' ? `<span class="ai-busy-dot text-warning small" title="${L('ctrl.st.busy', 'Busy')}">●</span>`
+              :                 `<span class="text-success small" title="${L('ctrl.st.idle', 'Idle')}">●</span>`;
     return {
         activeClass: 'ai-session-item-active',
         isActive: activeKey === key,
@@ -2415,7 +2489,7 @@ function chatItemSpec(s: { sessionId: string; title: string; updatedAt?: number;
         onShare: () => chatShowShareLink(s.sessionId, s.title),
         onDelete: () => {
             const delConfirm = new CConfirm();
-            delConfirm.SetBody(`Delete "${aiEscapeHtml(s.title)}"?`);
+            delConfirm.SetBody(LF('ctrl.msg.deleteNamed', 'Delete "{0}"?', aiEscapeHtml(s.title)));
             delConfirm.SetConfirm(CConfirm.eConfirm.YesNo, [
                 async () => {
                     await authedFetch(`${CPath.WebRootUrl()}AIChat/session?id=${s.sessionId}`, { method: 'DELETE' });
@@ -2425,7 +2499,7 @@ function chatItemSpec(s: { sessionId: string; title: string; updatedAt?: number;
                     chatRenderList();
                 },
                 () => {},
-            ], ["Delete", "Cancel"]);
+            ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
             delConfirm.Open();
         },
         popup: { url: () => `${CPath.WebRootArtgineUrl()}artgine/server/html/Chat.html?session=${encodeURIComponent(s.sessionId)}`, title: s.title, winName: `chat_${s.sessionId}` },
@@ -2525,7 +2599,7 @@ async function termKillSession(token: string) {
     try {
         const r = await authedFetch(`${CPath.WebRootUrl()}cmd/kill-session?token=${token}`);
         const j = await r.json();
-        if (!j.ok) { CAlert.E(`삭제 실패: ${j.msg || 'unknown error'}`); return; }
+        if (!j.ok) { CAlert.E(LF('ctrl.msg.deleteFailed', 'Delete failed: {0}', j.msg || 'unknown error')); return; }
         const key = `term:${token}`;
         const f = termIframePool.get(key);
         if (f) { f.remove(); termIframePool.delete(key); }
@@ -2536,18 +2610,18 @@ async function termKillSession(token: string) {
 
 function termConfirmKillSession(token: string, label: string) {
     const confirm = new CConfirm();
-    confirm.SetBody(`Delete "${aiEscapeHtml(label)}"?`);
+    confirm.SetBody(LF('ctrl.msg.deleteNamed', 'Delete "{0}"?', aiEscapeHtml(label)));
     confirm.SetConfirm(CConfirm.eConfirm.YesNo, [
         () => { termKillSession(token); },
         () => {},
-    ], ["Delete", "Cancel"]);
+    ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
     confirm.Open();
 }
 
 function termShowShareLink(token: string) {
     showShareLinkModal(
-        'Terminal Share Link',
-        'Anyone with this link can view the terminal in read-only mode.',
+        L('ctrl.share.termTitle', 'Terminal Share Link'),
+        L('ctrl.share.term', 'Anyone with this link can view the terminal in read-only mode.'),
         `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${token}`
     );
 }
@@ -2653,7 +2727,7 @@ async function termRenderList() {
                 },
                 () => {
                     const suppressToast = activeTermFrameKey === key && document.hasFocus();
-                    _showDoneNotification(`⚠️ ${s.key || s.mode}: 권한 승인 필요`, s.lastMsg || undefined, () => termConnectSession(s.token), aiEscapeHtml(s.token), suppressToast);
+                    _showDoneNotification(LF('ctrl.msg.approvalRequired', '⚠️ {0}: Approval required', s.key || s.mode), s.lastMsg || undefined, () => termConnectSession(s.token), aiEscapeHtml(s.token), suppressToast);
                 }
             );
         }
@@ -2678,31 +2752,31 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
             <button class="term-mode-btn btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1 1 30%;" data-mode="grok"><i class="bi bi-lightning-charge"></i>grok</button>
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Key</label>
-            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="Session key (optional)" autocomplete="off">
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.key', 'Key')}</label>
+            <input id="term-opt-key" type="text" class="form-control form-control-sm" placeholder="${L('ctrl.ph.sessionKey', 'Session key (optional)')}" autocomplete="off">
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Working Directory</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.workingDir', 'Working Directory')}</label>
             <input id="term-opt-workingDir" type="text" class="form-control form-control-sm" placeholder="e.g. D:/Artgine-script" autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-4">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="term-opt-mcp" checked>
-                <label class="form-check-label small text-secondary" for="term-opt-mcp">MCP</label>
+                <label class="form-check-label small text-secondary" for="term-opt-mcp">${L('ctrl.lbl.mcp', 'MCP')}</label>
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="term-opt-mdcopy" checked>
-                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">Copy MD</label>
+                <label class="form-check-label small text-secondary" for="term-opt-mdcopy">${L('ctrl.lbl.mdcopy', 'Copy MD')}</label>
             </div>
         </div>
         <div class="d-flex justify-content-between">
-            <button id="term-modal-open" class="btn btn-primary">Open</button>
-            <button id="term-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+            <button id="term-modal-open" class="btn btn-primary">${L('ctrl.open', 'Open')}</button>
+            <button id="term-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
         </div>`;
 
     const modal = new CModal();
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetHeader('New Terminal');
+    modal.SetHeader(L('ctrl.hdr.newTerminal', 'New Terminal'));
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
@@ -2736,7 +2810,7 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
             openBtn.disabled = true;
             cancelBtn.disabled = true;
             const openBtnOrigHtml = openBtn.innerHTML;
-            openBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Opening...`;
+            openBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${L('ctrl.opening', 'Opening...')}`;
             try {
                 const key        = keyInput.value.trim();
                 const workingDir = workingDirInput.value.trim();
@@ -2747,7 +2821,7 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
                 if (mdcopyCheck.checked) params.set('mdcopy', '1');
                 const r = await authedFetch(CPath.WebRootUrl() + 'cmd/start-term?' + params.toString());
                 const j = await r.json();
-                if (!j.ok) { CAlert.E(j.msg || 'Failed to start terminal'); return; }
+                if (!j.ok) { CAlert.E(j.msg || L('ctrl.msg.failedStartTerm', 'Failed to start terminal')); return; }
                 modal.Close();
                 termActivatePane();
                 showTermFrame(`term-new:${j.token}:${Date.now()}`, `${CPath.WebRootUrl()}cmd/terminal-proxy?token=${j.token}`);
@@ -2756,7 +2830,7 @@ function termStartNew(mode: 'cmd' | 'claude' | 'codex' | 'antigravity' | 'openco
                 setTimeout(termRenderList, 4000);
             } catch (e) {
                 console.error('[Terminal] start-term error:', e);
-                CAlert.E('Failed to start terminal');
+                CAlert.E(L('ctrl.msg.failedStartTerm', 'Failed to start terminal'));
             } finally {
                 opening = false;
                 openBtn.disabled = false;
@@ -2943,8 +3017,8 @@ async function browserRefreshList() {
 
 function browserShowShareLink(sessionId: string, url: string) {
     showShareLinkModal(
-        'Browser Share Link',
-        `Anyone with this link can view the session in read-only mode: <strong>${aiEscapeHtml(url)}</strong>`,
+        L('ctrl.share.browserTitle', 'Browser Share Link'),
+        LF('ctrl.share.browser', 'Anyone with this link can view the session in read-only mode: <strong>{0}</strong>', aiEscapeHtml(url)),
         `${CPath.WebRootArtgineUrl()}artgine/server/html/Browser.html?session=${encodeURIComponent(sessionId)}&readonly=1`
     );
 }
@@ -2952,14 +3026,14 @@ function browserShowShareLink(sessionId: string, url: string) {
 CDOM.ID('browser-new-btn').addEventListener('click', () => {
     const container = document.createElement('div');
     container.innerHTML = `
-        <p class="fw-semibold mb-3">New Browser Session</p>
+        <p class="fw-semibold mb-3">${L('ctrl.hdr.newBrowser', 'New Browser Session')}</p>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">URL</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.url', 'URL')}</label>
             <input id="brow-url" type="text" class="form-control form-control-sm" placeholder="https://..." autocomplete="off">
         </div>
         <div class="mb-3 d-flex gap-2">
             <div class="flex-fill">
-                <label class="form-label small text-secondary mb-1">Browser</label>
+                <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.browser', 'Browser')}</label>
                 <select id="brow-browser" class="form-select form-select-sm">
                     <option value="">auto</option>
                     <option value="chrome">chrome</option>
@@ -2968,27 +3042,27 @@ CDOM.ID('browser-new-btn').addEventListener('click', () => {
                 </select>
             </div>
             <div class="flex-fill">
-                <label class="form-label small text-secondary mb-1">TTL (sec)</label>
+                <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.ttl', 'TTL (sec)')}</label>
                 <input id="brow-ttl" type="number" min="10" class="form-control form-control-sm" value="300">
             </div>
         </div>
         <div class="mb-3 d-flex gap-2">
             <div class="flex-fill">
-                <label class="form-label small text-secondary mb-1">Width</label>
+                <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.width', 'Width')}</label>
                 <input id="brow-width" type="number" min="1" class="form-control form-control-sm" value="1280">
             </div>
             <div class="flex-fill">
-                <label class="form-label small text-secondary mb-1">Height</label>
+                <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.height', 'Height')}</label>
                 <input id="brow-height" type="number" min="1" class="form-control form-control-sm" value="720">
             </div>
         </div>
         <div class="mb-3">
-            <label class="form-label small text-secondary mb-1">Stealth (sec, 0=off)</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.stealth', 'Stealth (sec, 0=off)')}</label>
             <input id="brow-stealth" type="number" min="0" class="form-control form-control-sm" value="0">
         </div>
         <div class="d-flex justify-content-between">
-            <button id="brow-open" class="btn btn-primary">Open</button>
-            <button id="brow-cancel" class="btn btn-danger ms-2">Cancel</button>
+            <button id="brow-open" class="btn btn-primary">${L('ctrl.open', 'Open')}</button>
+            <button id="brow-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
         </div>`;
 
     const modal = new CModal();
@@ -3022,7 +3096,7 @@ CDOM.ID('browser-new-btn').addEventListener('click', () => {
                 const j = await r.json();
                 if (!j.ok) { CAlert.E(j.msg || 'Failed'); return; }
                 browserAddSession(j.sessionId, url, browser || 'auto', Date.now() + ttl * 1000);
-            } catch (_) { CAlert.E('Failed to start browser'); }
+            } catch (_) { CAlert.E(L('ctrl.msg.failedStartBrowser', 'Failed to start browser')); }
         };
 
         container.querySelector<HTMLButtonElement>('#brow-open')!.addEventListener('click', doOpen);
@@ -3119,20 +3193,20 @@ async function schedRefresh() {
                     <span class="text-truncate text-secondary" style="font-size:0.7rem;">${aiEscapeHtml(s.subAgentKey)}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(s.command)}</span>
                 </span>
-                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+                <button class="sched-del-btn btn btn-sm btn-link text-danger p-0" title="${L('ctrl.delete', 'Delete')}"><i class="bi bi-trash"></i></button>
             `;
             item.addEventListener('click', () => schedOpenModal(s));
             item.querySelector('.sched-del-btn')!.addEventListener('click', (e: Event) => {
                 e.stopPropagation();
                 const dlg = new CConfirm();
-                dlg.SetBody(`스케줄 "${aiEscapeHtml(s.name)}"을(를) 삭제할까요?`);
+                dlg.SetBody(LF('ctrl.msg.deleteSchedule', 'Delete schedule "{0}"?', aiEscapeHtml(s.name)));
                 dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
                     async () => {
                         await authedFetch(`${CPath.WebRootUrl()}cmd/schedule-del?name=${encodeURIComponent(s.name)}`);
                         schedRefresh();
                     },
                     () => {},
-                ], ["Delete", "Cancel"]);
+                ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
                 dlg.Open();
             });
             item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
@@ -3154,58 +3228,58 @@ async function schedOpenModal(existing?: ScheduleData) {
     const container = document.createElement('div');
     container.innerHTML = `
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Name (schedule key)</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.schedName', 'Name (schedule key)')}</label>
             <input id="sched-name" type="text" class="form-control form-control-sm" placeholder="e.g. daily-backup" autocomplete="off" value="${aiEscapeHtml(existing?.name || '')}">
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Sub Agent</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.subAgent', 'Sub Agent')}</label>
             <select id="sched-agent" class="form-select form-select-sm">
-                ${agents.map(a => `<option value="${aiEscapeHtml(a.key)}" ${existing?.subAgentKey === a.key ? 'selected' : ''}>${aiEscapeHtml(a.key)}</option>`).join('') || '<option value="">(등록된 서브 에이전트 없음)</option>'}
+                ${agents.map(a => `<option value="${aiEscapeHtml(a.key)}" ${existing?.subAgentKey === a.key ? 'selected' : ''}>${aiEscapeHtml(a.key)}</option>`).join('') || `<option value="">${L('ctrl.msg.noSubAgents', '(No sub agents registered)')}</option>`}
             </select>
         </div>
         <div class="mb-2">
             <div class="d-flex gap-1 mb-2">
-                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${existing?.mode!=='time' ? 'btn-primary' : 'btn-outline-secondary'}">Interval</button>
-                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.mode==='time'  ? 'btn-primary' : 'btn-outline-secondary'}">Time</button>
+                <button id="sched-tab-interval" type="button" class="btn btn-sm flex-fill ${existing?.mode!=='time' ? 'btn-primary' : 'btn-outline-secondary'}">${L('ctrl.lbl.interval', 'Interval')}</button>
+                <button id="sched-tab-time"     type="button" class="btn btn-sm flex-fill ${existing?.mode==='time'  ? 'btn-primary' : 'btn-outline-secondary'}">${L('ctrl.lbl.time', 'Time')}</button>
             </div>
             <div id="sched-panel-interval" style="display:${existing?.mode!=='time' ? '' : 'none'}">
                 <div class="d-flex gap-2 mb-2">
                     <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">Delay (sec)</label>
+                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.delaySec', 'Delay (sec)')}</label>
                         <input id="sched-delay" type="number" min="1" class="form-control form-control-sm" placeholder="e.g. 60" value="${existing?.option.delay ?? 60}">
                     </div>
                     <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">Count (0=infinite)</label>
+                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.countInf', 'Count (0=infinite)')}</label>
                         <input id="sched-count" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.count ?? 0}">
                     </div>
                 </div>
                 <div class="d-flex gap-2">
                     <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">Start offset (sec, 0=now)</label>
+                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.startOffset', 'Start offset (sec, 0=now)')}</label>
                         <input id="sched-start" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.start ?? 0}">
                     </div>
                     <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">End offset (sec, 0=never)</label>
+                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.endOffset', 'End offset (sec, 0=never)')}</label>
                         <input id="sched-end" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="${existing?.option.end ?? 0}">
                     </div>
                 </div>
             </div>
             <div id="sched-panel-time" style="display:${existing?.mode==='time' ? '' : 'none'}">
                 <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">Days of Week</label>
+                    <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.daysOfWeek', 'Days of Week')}</label>
                     <div class="d-flex gap-1 flex-wrap">
                         ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((lbl,i) => `<button type="button" class="sched-day-btn btn btn-sm ${(existing?.option.days ?? []).includes(i) ? 'btn-primary' : 'btn-outline-secondary'}" data-day="${i}">${lbl}</button>`).join('')}
                     </div>
                 </div>
                 <div class="d-flex gap-2 align-items-end">
                     <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">Hour (0–23)</label>
+                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.hour', 'Hour (0–23)')}</label>
                         <select id="sched-hour" class="form-select form-select-sm">
                             ${Array.from({length:24},(_,h)=>`<option value="${h}" ${(existing?.option.hour??9)===h?'selected':''}>${String(h).padStart(2,'0')}</option>`).join('')}
                         </select>
                     </div>
                     <div class="flex-fill">
-                        <label class="form-label small text-secondary mb-1">Minute</label>
+                        <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.minute', 'Minute')}</label>
                         <select id="sched-minute" class="form-select form-select-sm">
                             ${Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${m}" ${(existing?.option.minute??0)===m?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
                         </select>
@@ -3214,17 +3288,17 @@ async function schedOpenModal(existing?: ScheduleData) {
             </div>
         </div>
         <div class="mb-2">
-            <label class="form-label small text-secondary mb-1">Command</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.command', 'Command')}</label>
             <textarea id="sched-cmd" class="form-control form-control-sm" rows="3" placeholder="e.g. node backup.js">${aiEscapeHtml(existing?.command || '')}</textarea>
         </div>
         <div class="d-flex justify-content-between">
-            <button id="sched-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
-            <button id="sched-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+            <button id="sched-modal-save" class="btn btn-primary">${isEdit ? L('ctrl.save', 'Save') : L('ctrl.create', 'Create')}</button>
+            <button id="sched-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
         </div>`;
 
     const modal = new CModal();
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetHeader(isEdit ? 'Edit Schedule' : 'New Schedule');
+    modal.SetHeader(isEdit ? L('ctrl.hdr.editSchedule', 'Edit Schedule') : L('ctrl.hdr.newSchedule', 'New Schedule'));
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
@@ -3258,18 +3332,18 @@ async function schedOpenModal(existing?: ScheduleData) {
             const name        = (container.querySelector<HTMLInputElement>('#sched-name')!).value.trim();
             const subAgentKey = (container.querySelector<HTMLSelectElement>('#sched-agent')!).value.trim();
             const command     = (container.querySelector<HTMLTextAreaElement>('#sched-cmd')!).value.trim();
-            if (!name || !subAgentKey || !command) { CAlert.E('Name, sub agent, and command are required'); return; }
+            if (!name || !subAgentKey || !command) { CAlert.E(L('ctrl.msg.nameAgentCmdRequired', 'Name, sub agent, and command are required')); return; }
 
             const option: SchedulerOption = {};
             if (isTimeMode) {
                 const selectedDays = Array.from(dayBtns).filter(b => b.classList.contains('btn-primary')).map(b => Number(b.dataset.day));
-                if (selectedDays.length === 0) { CAlert.E('Select at least one day'); return; }
+                if (selectedDays.length === 0) { CAlert.E(L('ctrl.msg.selectOneDay', 'Select at least one day')); return; }
                 option.days = selectedDays;
                 option.hour = parseInt((container.querySelector<HTMLSelectElement>('#sched-hour')!).value) || 0;
                 option.minute = parseInt((container.querySelector<HTMLSelectElement>('#sched-minute')!).value) || 0;
             } else {
                 const delay = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-delay')!).value) || 0);
-                if (delay === 0) { CAlert.E('Delay must be at least 1 second'); return; }
+                if (delay === 0) { CAlert.E(L('ctrl.msg.delayMin1', 'Delay must be at least 1 second')); return; }
                 option.delay = delay;
                 option.count = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-count')!).value) || 0);
                 option.start = Math.max(0, parseInt((container.querySelector<HTMLInputElement>('#sched-start')!).value) || 0);
@@ -3320,20 +3394,20 @@ async function agentRefresh() {
                     <span class="text-truncate small text-body-secondary" style="font-size:0.7rem;">${aiEscapeHtml(a.workingDir || './')}</span>
                     <span class="text-truncate small text-body-secondary">${aiEscapeHtml(a.traits.join(', '))}</span>
                 </span>
-                <button class="agent-del-btn btn btn-sm btn-link text-danger p-0" title="삭제"><i class="bi bi-trash"></i></button>
+                <button class="agent-del-btn btn btn-sm btn-link text-danger p-0" title="${L('ctrl.delete', 'Delete')}"><i class="bi bi-trash"></i></button>
             `;
             item.addEventListener('click', () => agentOpenModal(a));
             item.querySelector('.agent-del-btn')!.addEventListener('click', (e: Event) => {
                 e.stopPropagation();
                 const dlg = new CConfirm();
-                dlg.SetBody(`서브 에이전트 "${aiEscapeHtml(a.key)}"을(를) 삭제할까요?`);
+                dlg.SetBody(LF('ctrl.msg.deleteSubAgent', 'Delete sub agent "{0}"?', aiEscapeHtml(a.key)));
                 dlg.SetConfirm(CConfirm.eConfirm.YesNo, [
                     async () => {
                         await authedFetch(`${CPath.WebRootUrl()}cmd/agent-del?key=${encodeURIComponent(a.key)}`);
                         agentRefresh();
                     },
                     () => {},
-                ], ["Delete", "Cancel"]);
+                ], [L('ctrl.delete', 'Delete'), L('ctrl.cancel', 'Cancel')]);
                 dlg.Open();
             });
             item.addEventListener('mouseenter', () => item.classList.add('bg-body-secondary'));
@@ -3445,13 +3519,13 @@ async function agentOpenModal(existing?: SubAgentData) {
             </div>
         </div>
         <div class="d-flex justify-content-between">
-            <button id="agent-modal-save" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
-            <button id="agent-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+            <button id="agent-modal-save" class="btn btn-primary">${isEdit ? L('ctrl.save', 'Save') : L('ctrl.create', 'Create')}</button>
+            <button id="agent-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
         </div>`;
 
     const modal = new CModal();
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetHeader(isEdit ? 'Edit Sub Agent' : 'New Sub Agent');
+    modal.SetHeader(isEdit ? L('ctrl.hdr.editSubAgent', 'Edit Sub Agent') : L('ctrl.hdr.newSubAgent', 'New Sub Agent'));
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     // 필드가 많아(Key/Provider/Model/Traits/Options) auto 크기면 너무 작게 잡힌다. SetSize는 뷰포트보다
@@ -3472,7 +3546,7 @@ async function agentOpenModal(existing?: SubAgentData) {
 
         const doSave = async () => {
             const key = keyInput.value.trim();
-            if (!key) { CAlert.E('Key is required'); return; }
+            if (!key) { CAlert.E(L('ctrl.msg.keyRequired', 'Key is required')); return; }
             const workingDir = (container.querySelector<HTMLInputElement>('#agent-working-dir')!).value.trim() || './';
             const superChecked = (container.querySelector<HTMLInputElement>('#agent-super')!).checked;
             const params = new URLSearchParams({
@@ -3550,7 +3624,7 @@ async function teamOpenModal() {
             <label class="form-label small text-secondary mb-1">Sub Agents</label>
             <div id="team-agents" class="border rounded p-2" style="max-height:140px;overflow-y:auto;">
                 ${agents.length === 0
-                    ? `<div class="text-secondary small">No sub agents registered. Register one first in the right sidebar → Sub Agent.</div>`
+                    ? `<div class="text-secondary small">${L('ctrl.msg.noSubAgentsHint', 'No sub agents registered. Register one first in the right sidebar → Sub Agent.')}</div>`
                     : agents.map(a => `
                         <div class="form-check">
                             <input class="form-check-input team-agent-check" type="checkbox" value="${aiEscapeHtml(a.key)}" id="team-agent-${aiEscapeHtml(a.key)}" checked>
@@ -3563,18 +3637,18 @@ async function teamOpenModal() {
         </div>
         <hr class="my-3">
         <div class="mb-3">
-            <label class="form-label small text-secondary mb-1">Stop — time limit (min, 0 = unlimited)</label>
+            <label class="form-label small text-secondary mb-1">${L('ctrl.lbl.stopLimit', 'Stop — time limit (min, 0 = unlimited)')}</label>
             <input id="team-limit-min" type="number" min="0" step="1" class="form-control form-control-sm" value="60">
-            <div class="form-text" style="font-size:0.7rem;">If any task fails, the whole team stops immediately regardless of time.</div>
+            <div class="form-text" style="font-size:0.7rem;">${L('ctrl.lbl.stopHint', 'If any task fails, the whole team stops immediately regardless of time.')}</div>
         </div>
         <div class="d-flex justify-content-between">
-            <button id="team-modal-create" class="btn btn-primary">Create</button>
-            <button id="team-modal-cancel" class="btn btn-danger ms-2">Cancel</button>
+            <button id="team-modal-create" class="btn btn-primary">${L('ctrl.create', 'Create')}</button>
+            <button id="team-modal-cancel" class="btn btn-danger ms-2">${L('ctrl.cancel', 'Cancel')}</button>
         </div>`;
 
     const modal = new CModal();
     modal.SetTitle(CModal.eTitle.TextClose);
-    modal.SetHeader('New Team');
+    modal.SetHeader(L('ctrl.hdr.newTeam', 'New Team'));
     modal.SetBody(container);
     modal.SetZIndex(CModal.eSort.Top);
     modal.Open(CModal.ePos.Center);
@@ -3595,15 +3669,15 @@ async function teamOpenModal() {
         const doCreate = async () => {
             if (creating) return;
             const goal = goalInput.value.trim();
-            if (!goal) { CAlert.E('Enter a goal'); return; }
+            if (!goal) { CAlert.E(L('ctrl.msg.enterGoal', 'Enter a goal')); return; }
             const subAgents = Array.from(container.querySelectorAll<HTMLInputElement>('.team-agent-check'))
                 .filter(c => c.checked).map(c => c.value);
-            if (subAgents.length === 0) { CAlert.E('Select at least one sub agent'); return; }
+            if (subAgents.length === 0) { CAlert.E(L('ctrl.msg.selectOneSubAgent', 'Select at least one sub agent')); return; }
 
             creating = true;
             createBtn.disabled = true; cancelBtn.disabled = true;
             const origHtml = createBtn.innerHTML;
-            createBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Creating...`;
+            createBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${L('ctrl.creating', 'Creating...')}`;
             try {
                 // 팀키 생성·감독 지시문 조립·워크오더 발주는 전부 서버(onStartTeam)가 한다.
                 const params = new URLSearchParams({
@@ -3615,7 +3689,7 @@ async function teamOpenModal() {
                 });
                 const r = await authedFetch(`${CPath.WebRootUrl()}cmd/start-team?${params.toString()}`);
                 const j = await r.json();
-                if (!j.ok) { CAlert.E(j.msg || 'Failed to start team'); return; }
+                if (!j.ok) { CAlert.E(j.msg || L('ctrl.msg.failedStartTeam', 'Failed to start team')); return; }
                 modal.Close();
                 // New Terminal과 동일 — 메인 터미널을 Terminal 패널에 띄운다.
                 termActivatePane();
@@ -3625,7 +3699,7 @@ async function teamOpenModal() {
                 setTimeout(termRenderList, 4000);
             } catch (e) {
                 console.error('[Team] start-team error:', e);
-                CAlert.E('Failed to start team');
+                CAlert.E(L('ctrl.msg.failedStartTeam', 'Failed to start team'));
             } finally {
                 creating = false;
                 createBtn.disabled = false; cancelBtn.disabled = false;
@@ -3639,6 +3713,29 @@ async function teamOpenModal() {
 }
 
 CDOM.ID('team-tab').addEventListener('click', () => teamOpenModal());
+
+// ============================================================
+// ↓↓↓ 다운로드(Download) 관련 소스 — 아래 전부 다운로드 탭 관련 코드입니다 ↓↓↓
+// (import/CClass.Push는 6-7행의 "자동 생성, 수정 금지" 보호 구간 안에 있어 그대로 둠)
+// ============================================================
+
+// 다운로드 탭 (MountDownloadTab)
+let dlInited = false;
+CDOM.ID("download-tab").addEventListener("shown.bs.tab", () => {
+    if (dlInited) return;
+    dlInited = true;
+    MountDownloadTab("download-root");
+    applyLanIn(document.getElementById('download-root'));
+});
+if (CDOM.ID("download-panel").classList.contains("active")) {
+    dlInited = true;
+    MountDownloadTab("download-root");
+    applyLanIn(document.getElementById('download-root'));
+}
+
+// ============================================================
+// ↑↑↑ 다운로드(Download) 관련 소스 끝 ↑↑↑
+// ============================================================
 
 
 

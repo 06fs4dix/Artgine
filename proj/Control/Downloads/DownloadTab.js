@@ -1,6 +1,16 @@
 import { CDOM } from '../../../artgine/basic/CDOM.js';
 import { CFecth } from '../../../artgine/network/CFecth.js';
 import { CAlert } from '../../../artgine/basic/CAlert.js';
+import { CLan } from '../../../artgine/basic/CLan.js';
+function L(key, en) {
+    return CLan.Get(key, en);
+}
+function LF(key, en, ...args) {
+    let s = CLan.Get(key, en);
+    for (let i = 0; i < args.length; i++)
+        s = s.split(`{${i}}`).join(String(args[i]));
+    return s;
+}
 export function MountDownloadTab(rootId) {
     const root = CDOM.ID(rootId);
     if (!root)
@@ -10,15 +20,15 @@ export function MountDownloadTab(rootId) {
 
   <!-- 바이너리 상태 표시줄 -->
   <div class="d-flex align-items-center gap-2 mb-3">
-    <span id="dl-ytdlp-badge" class="badge bg-secondary">yt-dlp checking...</span>
-    <span id="dl-ffmpeg-badge" class="badge bg-secondary">ffmpeg checking...</span>
+    <span id="dl-ytdlp-badge" class="badge bg-secondary">${L('ctrl.dl.ytdlpChecking', 'yt-dlp checking...')}</span>
+    <span id="dl-ffmpeg-badge" class="badge bg-secondary">${L('ctrl.dl.ffmpegChecking', 'ffmpeg checking...')}</span>
   </div>
 
   <!-- URL 입력 -->
   <div class="input-group mb-2">
     <input id="dl-url" type="text" class="form-control font-monospace"
-      placeholder="https://www.youtube.com/watch?v=... or direct file URL">
-    <button class="btn btn-outline-primary" id="dl-info-btn">Fetch Info</button>
+      placeholder="${L('ctrl.dl.phUrl', 'https://www.youtube.com/watch?v=... or direct file URL')}">
+    <button class="btn btn-outline-primary" id="dl-info-btn">${L('ctrl.dl.fetchInfo', 'Fetch Info')}</button>
   </div>
 
   <!-- 영상 정보 -->
@@ -31,19 +41,19 @@ export function MountDownloadTab(rootId) {
   <div class="d-flex align-items-center gap-3 mb-3">
     <div class="form-check">
       <input class="form-check-input" type="radio" name="dl-format" id="dl-fmt-mp3" value="mp3" checked>
-      <label class="form-check-label" for="dl-fmt-mp3">MP3 (audio only)</label>
+      <label class="form-check-label" for="dl-fmt-mp3">${L('ctrl.dl.mp3', 'MP3 (audio only)')}</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="radio" name="dl-format" id="dl-fmt-mp4" value="mp4">
-      <label class="form-check-label" for="dl-fmt-mp4">MP4 (video)</label>
+      <label class="form-check-label" for="dl-fmt-mp4">${L('ctrl.dl.mp4', 'MP4 (video)')}</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="radio" name="dl-format" id="dl-fmt-direct" value="direct">
-      <label class="form-check-label" for="dl-fmt-direct">Direct download (file URL)</label>
+      <label class="form-check-label" for="dl-fmt-direct">${L('ctrl.dl.direct', 'Direct download (file URL)')}</label>
     </div>
   </div>
 
-  <button class="btn btn-success" id="dl-start-btn">Start Download</button>
+  <button class="btn btn-success" id="dl-start-btn">${L('ctrl.dl.start', 'Start Download')}</button>
 
   <!-- 진행 목록 -->
   <div id="dl-job-list" class="mt-3"></div>
@@ -78,19 +88,33 @@ function getFormat() {
             return r.value;
     return 'mp3';
 }
-function checkBinaryStatus() {
+const MAX_STATUS_FAILS = 5;
+function checkBinaryStatus(failCount = 0) {
     CFecth.Exe('Download/Status', {}, 'json')
         .then((data) => {
         const ytBadge = CDOM.ID('dl-ytdlp-badge');
         const ffBadge = CDOM.ID('dl-ffmpeg-badge');
-        ytBadge.textContent = data.ytdlp ? 'yt-dlp ✅' : 'yt-dlp installing...';
+        ytBadge.textContent = data.ytdlp ? 'yt-dlp ✅' : L('ctrl.dl.ytdlpInstalling', 'yt-dlp installing...');
         ytBadge.className = 'badge ' + (data.ytdlp ? 'bg-success' : 'bg-warning text-dark');
-        ffBadge.textContent = data.ffmpeg ? 'ffmpeg ✅' : 'ffmpeg installing...';
+        ffBadge.textContent = data.ffmpeg ? 'ffmpeg ✅' : L('ctrl.dl.ffmpegInstalling', 'ffmpeg installing...');
         ffBadge.className = 'badge ' + (data.ffmpeg ? 'bg-success' : 'bg-warning text-dark');
         if (!data.ytdlp || !data.ffmpeg)
-            setTimeout(checkBinaryStatus, 3000);
+            setTimeout(() => checkBinaryStatus(0), 3000);
     })
-        .catch(() => setTimeout(checkBinaryStatus, 5000));
+        .catch(() => {
+        const nextFailCount = failCount + 1;
+        if (nextFailCount >= MAX_STATUS_FAILS) {
+            const msg = L('ctrl.dl.serverUnavailable', 'Server not responding - this may be a build without the server, please check server status');
+            const ytBadge = CDOM.ID('dl-ytdlp-badge');
+            const ffBadge = CDOM.ID('dl-ffmpeg-badge');
+            ytBadge.textContent = msg;
+            ytBadge.className = 'badge bg-danger';
+            ffBadge.textContent = msg;
+            ffBadge.className = 'badge bg-danger';
+            return;
+        }
+        setTimeout(() => checkBinaryStatus(nextFailCount), 5000);
+    });
 }
 async function fetchInfo() {
     const url = CDOM.ID('dl-url').value.trim();
@@ -98,7 +122,7 @@ async function fetchInfo() {
         return;
     const btn = CDOM.ID('dl-info-btn');
     btn.disabled = true;
-    btn.textContent = 'Fetching...';
+    btn.textContent = L('ctrl.dl.fetching', 'Fetching...');
     try {
         const res = await CFecth.Exe('Download/Info', { url }, 'json');
         if (res.ok) {
@@ -107,22 +131,22 @@ async function fetchInfo() {
             CDOM.ID('dl-info-box').style.display = '';
         }
         else {
-            CAlert.E(res.msg || 'Failed to fetch info');
+            CAlert.E(res.msg || L('ctrl.dl.failedInfo', 'Failed to fetch info'));
         }
     }
     catch (e) {
-        CAlert.E('Server error: ' + e.message);
+        CAlert.E(LF('ctrl.dl.serverError', 'Server error: {0}', e.message));
     }
     finally {
         btn.disabled = false;
-        btn.textContent = 'Fetch Info';
+        btn.textContent = L('ctrl.dl.fetchInfo', 'Fetch Info');
     }
 }
 async function startDownload() {
     const url = CDOM.ID('dl-url').value.trim();
     const format = getFormat();
     if (!url) {
-        CAlert.E('Please enter a URL');
+        CAlert.E(L('ctrl.dl.enterUrl', 'Please enter a URL'));
         return;
     }
     const btn = CDOM.ID('dl-start-btn');
@@ -130,7 +154,7 @@ async function startDownload() {
     try {
         const res = await CFecth.Exe('Download/Start', { url, format }, 'json');
         if (!res.ok) {
-            CAlert.E(res.msg || 'Failed to start');
+            CAlert.E(res.msg || L('ctrl.dl.failedStart', 'Failed to start'));
             return;
         }
         addJobRow(res.jobId, url);
@@ -138,7 +162,7 @@ async function startDownload() {
         CDOM.ID('dl-info-box').style.display = 'none';
     }
     catch (e) {
-        CAlert.E('Server error: ' + e.message);
+        CAlert.E(LF('ctrl.dl.serverError', 'Server error: {0}', e.message));
     }
     finally {
         btn.disabled = false;
@@ -154,7 +178,7 @@ function addJobRow(jobId, url) {
     row.innerHTML = `
 <div class="d-flex justify-content-between align-items-center mb-1">
   <small class="text-muted font-monospace" style="word-break:break-all;">${label}</small>
-  <span class="badge bg-primary job-status">Starting</span>
+  <span class="badge bg-primary job-status">${L('ctrl.dl.starting', 'Starting')}</span>
 </div>
 <div class="progress" style="height:6px;">
   <div class="progress-bar job-bar" role="progressbar" style="width:0%"></div>
@@ -176,12 +200,12 @@ function pollJob(jobId, rowId) {
         if (data.file)
             file.textContent = '📁 ' + data.file;
         if (data.status === 'done') {
-            badge.textContent = 'Done';
+            badge.textContent = L('ctrl.dl.done', 'Done');
             badge.className = 'badge bg-success job-status';
             bar.className = 'progress-bar bg-success job-bar';
         }
         else if (data.status === 'error') {
-            badge.textContent = 'Error';
+            badge.textContent = L('ctrl.dl.error', 'Error');
             badge.className = 'badge bg-danger job-status';
             bar.className = 'progress-bar bg-danger job-bar';
             file.textContent = '⚠ ' + data.msg;

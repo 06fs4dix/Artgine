@@ -953,8 +953,9 @@ function ps_main_shadow_read()
     }
     dShadow.a /= max(shadowCount - 3.0, 1.0);
 	BranchDefault();
-    dShadow.a = CalcShadow(0.0, to_normal, world);
-    dShadow.rgb = new CVec3(dShadow.a, dShadow.a, dShadow.a);   // 하나만 사용하기 때문에 rgba 같은값으로 넣어줌
+    dShadow.r = CalcShadow(0.0, to_normal, world);
+    dShadow.rgb = new CVec3(dShadow.r, dShadow.r, dShadow.r);   // 하나만 사용하기 때문에 rgba 같은값으로 넣어줌
+    dShadow.a = 1.0;
 	BranchEnd();
 
     out_color = V4Min(dShadow, pShadow);

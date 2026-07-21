@@ -231,7 +231,7 @@ export class CFileServer extends CAuthServer
             }
         }
 
-        _res.redirect(302, "../proj/Home/Home.html" + `?path=${path}${extraQ}`);
+        _res.redirect(302, "../proj/Control/Control.html" + `?path=${path}${extraQ}`);
         return null;
     }
 

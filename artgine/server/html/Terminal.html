@@ -7,6 +7,9 @@
 <style>
   html, body { margin:0; height:100%; background:#000; overflow:hidden; }
   #xt { position:fixed; top:0; left:0; right:0; bottom:0; }
+  /* xterm 뷰포트의 네이티브 스크롤바가 모바일에서 폭을 잡아먹으므로 시각적으로만 숨긴다(스크롤 기능은 유지). */
+  #xt .xterm-viewport { scrollbar-width: none; }
+  #xt .xterm-viewport::-webkit-scrollbar { width: 0; height: 0; }
   #mi-bar { position:fixed;bottom:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:8px;padding:6px 8px;border-top:1px solid #444;background:#1a1a1a;box-sizing:border-box; }
   #mi-bar textarea { flex:1;padding:5px 8px;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#fff;font-family:monospace;font-size:0.9rem;resize:none;line-height:1.4;max-height:200px;overflow-y:auto;min-width:0;box-sizing:border-box; }
   #mi-bar textarea:focus { outline:none;border-color:#00e5a0; }
@@ -57,6 +60,13 @@
   term.loadAddon(new Unicode11Addon.Unicode11Addon());
   term.unicode.activeVersion = "11";
   term.open(document.getElementById("xt"));
+  // xterm 코어는 스크롤바를 실측해 폭이 0이면(우리가 CSS로 숨겼으므로) "0 || FALLBACK_SCROLL_BAR_WIDTH"
+  // 폴백(15px)에 걸려 스크롤바가 안 보여도 그 폭만큼 컬럼 계산에서 항상 빼버린다(우측에 빈 여백 발생).
+  // FitAddon.fit() 호출마다 이 값을 0으로 되돌려 실제 폭을 온전히 컬럼 계산에 쓰게 한다.
+  (function () {
+    var origFit = fit.fit.bind(fit);
+    fit.fit = function () { term._core.viewport.scrollBarWidth = 0; origFit(); };
+  })();
   // webgl 렌더러: DOM 렌더러 대신 글리프를 텍스처로 정수 스냅 렌더링 → 행/셀 미세 간극 제거.
   // open() 이후에 로드해야 캔버스를 부착(실패 시 자동으로 DOM 렌더러 fallback).
   try { term.loadAddon(new WebglAddon.WebglAddon()); } catch (e) { console.warn("[terminal] webgl addon failed, fallback to DOM:", e); }
@@ -270,11 +280,11 @@
     function _pageDown()  { if (MODE === "codex") { _codexDown(); return; } sendRaw("\x1b[6~"); }
 
     function agentAction(kind) {
-      if (kind === "resume")  { if (MODE === "claude" || MODE === "codex" || MODE === "antigravity") return sendRaw("/resume"); if (MODE === "gemini") return sendRaw("/chat resume"); }
-      if (kind === "compact") { if (MODE === "claude" || MODE === "gemini" || MODE === "codex") return sendRaw("/compact"); }
-      if (kind === "exit")    { if (MODE === "codex") return sendRaw("\x04"); if (MODE === "claude" || MODE === "gemini") return sendRaw("/exit"); }
-      if (kind === "clear")   { if (MODE === "cmd") return sendRaw("cls\r"); return sendRaw("/clear"); }
-      if (kind === "status")  { if (MODE === "gemini") return sendRaw("/stats"); if (MODE === "antigravity") return sendRaw("/usage"); if (MODE === "cmd") return; sendRaw("/status"); }
+      if (kind === "resume")  { if (MODE === "claude" || MODE === "codex" || MODE === "antigravity" || MODE === "grok") return sendRaw("/resume\r"); if (MODE === "gemini") return sendRaw("/chat resume\r"); if (MODE === "opencode") return sendRaw("/sessions\r"); }
+      if (kind === "compact") { if (MODE === "claude" || MODE === "gemini" || MODE === "codex") return sendRaw("/compact\r"); }
+      if (kind === "exit")    { if (MODE === "codex") return sendRaw("\x04"); if (MODE === "claude" || MODE === "gemini") return sendRaw("/exit\r"); }
+      if (kind === "clear")   { if (MODE === "cmd") return sendRaw("cls\r"); return sendRaw("/clear\r"); }
+      if (kind === "status")  { if (MODE === "gemini") return sendRaw("/stats\r"); if (MODE === "antigravity") return sendRaw("/usage\r"); if (MODE === "cmd") return; sendRaw("/status\r"); }
     }
 
     function closeSubs() { ddMenu.querySelectorAll(".mi-submenu").forEach(function (m) { m.classList.remove("show"); }); }
@@ -508,6 +518,32 @@
       if (MODE === "codex" || MODE === "opencode" || MODE === "grok") return;
       if (e.deltaY > 0) term.scrollToBottom();
     }, { passive: true });
+
+    // 모바일 터치 드래그는 wheel 이벤트를 발생시키지 않아 위 wheel 가로채기가 무력화된다.
+    // codex/opencode/grok은 스크롤백이 없는 alt-screen 앱이라 xterm 내장 터치 스크롤(handleTouchStart/Move,
+    // xterm.js 코어가 자체 등록)이 동작해도 의미가 없으므로, wheel과 동일하게 document 캡처 단계에서
+    // stopPropagation으로 xterm 내장 리스너(버블 단계, non-capture)에 도달하기 전에 가로채 PageUp/Down으로 치환한다.
+    // claude/antigravity 등 나머지 모드는 이 블록 자체를 안 타므로 xterm 기본 터치 스크롤이 그대로 동작한다.
+    if (MODE === "codex" || MODE === "opencode" || MODE === "grok") {
+      var _touchY = null, _touchAccum = 0;
+      var TOUCH_SCROLL_STEP = 40; // px: wheel 한 노치에 대응하는 드래그 거리
+      document.addEventListener("touchstart", function (e) {
+        if (e.touches.length !== 1) { _touchY = null; return; }
+        _touchY = e.touches[0].clientY;
+        _touchAccum = 0;
+      }, { passive: true, capture: true });
+      document.addEventListener("touchmove", function (e) {
+        if (_touchY == null || e.touches.length !== 1) return;
+        var y = e.touches[0].clientY;
+        var dy = y - _touchY;
+        _touchY = y;
+        _touchAccum += dy;
+        while (_touchAccum >= TOUCH_SCROLL_STEP) { _touchAccum -= TOUCH_SCROLL_STEP; _pageUp(); }
+        while (_touchAccum <= -TOUCH_SCROLL_STEP) { _touchAccum += TOUCH_SCROLL_STEP; _pageDown(); }
+        e.preventDefault(); e.stopPropagation();
+      }, { passive: false, capture: true });
+      document.addEventListener("touchend", function () { _touchY = null; _touchAccum = 0; }, { passive: true, capture: true });
+    }
     recvFromParent({ "focus-input": function () { showBar(); inp.focus(); } });
   }
 })();

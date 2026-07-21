@@ -73,8 +73,10 @@ export class CCMDMgr {
                 else {
                     const tryTerms = [
                         { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${_cmd}; exec bash`] },
+                        { bin: 'ptyxis', args: ['--', 'bash', '-c', `${_cmd}; exec bash`] },
                         { bin: 'konsole', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
                         { bin: 'xterm', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
+                        { bin: 'x-terminal-emulator', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
                     ];
                     for (const t of tryTerms) {
                         if (this.IsCommandAvailable(t.bin)) {

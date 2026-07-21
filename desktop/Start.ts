@@ -97,7 +97,13 @@ if (startPort != null) {
 // Windows의 npx.cmd -> electron.cmd 배치 체인은 중첩 따옴표를 그대로 통과시켜버리므로
 // (따옴표까지 파일명 문자열에 포함됨) 공백이 있는 경우에만 따옴표를 붙인다.
 const electronArg = /\s/.test(settingsFileName) ? `"${settingsFileName}"` : settingsFileName;
-await CCMDMgr.RunCMD(`npx electron . ${electronArg}`, false);
+// Linux에서는 Electron의 setuid 샌드박스(chrome-sandbox)가 root 소유 + 4755 권한을
+// 요구해, 소스로 직접 실행하면 권한 미설정으로 즉시 종료된다(FATAL: setuid_sandbox_host).
+// Main.ts의 app.commandLine.appendSwitch('no-sandbox')는 zygote 프로세스엔 적용되지 않아
+// 이 에러를 못 막으므로, electron 실행 시 명령행 인자로 직접 --no-sandbox를 전달한다.
+// Windows/Mac은 샌드박스가 정상 동작하므로 붙이지 않는다.
+const sandboxArg = process.platform === "linux" ? " --no-sandbox" : "";
+await CCMDMgr.RunCMD(`npx electron . ${electronArg}${sandboxArg}`, false);
 
 
                 

@@ -6,6 +6,7 @@
 <title>Artgine Agent — Local Web Work Interface</title>
 <link rel="stylesheet" href="../../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="../../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
+<script src="../../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js"></script>
 <style>
   :root { color-scheme: dark; }
   body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif; }
@@ -1603,7 +1604,7 @@
             <div class="mb-1">Unzip, then run:</div>
             <ul class="mb-2 ps-3">
               <li>Windows — <code class="cmd">Artgine.exe</code></li>
-              <li>Linux — <code class="cmd">./Artgine</code></li>
+              <li>Linux — <code class="cmd">./Artgine --no-sandbox</code></li>
               <li>macOS — <code class="cmd">Artgine.app</code></li>
             </ul>
             <div class="mb-0">If the OS blocks it, use Permission / security below.</div>
@@ -1637,6 +1638,7 @@
                       <div class="text-muted small mb-0" data-CLan="gsPermLinux">
                         <ul class="mb-0 ps-3">
                           <li><strong>Execute bit:</strong> After unzip, grant run permission on the binary, e.g. <code class="cmd">chmod +x ./Artgine</code> (or the actual executable name inside the zip), then <code class="cmd">./Artgine</code>.</li>
+                          <li><strong>Electron sandbox:</strong> On most distros the Electron app fails to start (or exits silently) unless the sandbox is disabled — run it as <code class="cmd">./Artgine --no-sandbox</code>.</li>
                           <li><strong>Permission denied:</strong> Confirm the file is not on a <code>noexec</code> mount; move it to your home folder if needed.</li>
                           <li><strong>Shared libraries / sandbox:</strong> If the app fails to start, install missing deps from your distro, or run from a user-writable path (avoid read-only system dirs).</li>
                           <li>Firewall may block the listen port — open it or pick another port if your build supports it.</li>
@@ -1733,6 +1735,48 @@
               </div>
             </div>
             <p class="mb-0 mt-3 text-secondary" data-CLan="gsSecTipFooter">Also change the default web password, keep the server off public networks when possible, and use VPN/reverse-proxy auth if you must open it remotely.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ai folder & project permissions -->
+    <div class="accordion mt-3" id="gsAiFolderAccordion" style="max-width:960px; margin-left:auto; margin-right:auto;">
+      <div class="accordion-item" style="background:#161b22; border-color:#30363d;">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gsAiFolderCollapse" aria-expanded="false" aria-controls="gsAiFolderCollapse" style="background:#161b22; color:#c9d1d9; box-shadow:none;">
+            <i class="bi bi-folder2-open me-2" style="color:#58a6ff;"></i>
+            <span data-CLan="gsAiFolderTitle">ai folder &amp; project permissions</span>
+          </button>
+        </h2>
+        <div id="gsAiFolderCollapse" class="accordion-collapse collapse" data-bs-parent="#gsAiFolderAccordion">
+          <div class="accordion-body text-muted small" style="background:#0d1117; border-top:1px solid #30363d;">
+            <p class="mb-3" data-CLan="gsAiFolderLead">Each project can keep an <code>ai/</code> folder at its root — the AI coding agent (Claude, Codex, ...) reads it before working on that project, so project-specific rules and permissions live there instead of in the assistant's memory.</p>
+
+            <h6 class="mb-2" style="color:#58a6ff;"><i class="bi bi-journal-text"></i> <span data-CLan="gsAiFolderDocsTitle">Guide documents</span></h6>
+            <div class="mb-4" data-CLan="gsAiFolderDocsBody">
+              <ul class="mb-0 ps-3">
+                <li><strong>ROLE.md:</strong> what the agent is responsible for on this project.</li>
+                <li><strong>ProjectSetupGuide.md:</strong> steps to create a new project.</li>
+                <li><strong>EngineUsageGuide.md:</strong> where to look up engine (<code>artgine/</code>) APIs before writing new logic.</li>
+                <li><strong>CodeNamingGuide.md, RemoteCMDGuide.md, MemoGuide.md, BrowserDebugGuide.md, RemoteDesktopGuide.md:</strong> naming rules and how-tos for remote command execution, memo search, browser debugging, and remote-desktop control.</li>
+                <li>A project's <code>CLAUDE.md</code> tells the agent which guide here to read before that kind of task.</li>
+              </ul>
+            </div>
+
+            <h6 class="mb-2" style="color:#3fb950;"><i class="bi bi-shield-check"></i> <span data-CLan="gsAiPermTitle">ai/settings.json permissions</span></h6>
+            <div data-CLan="gsAiPermBody">
+              <p class="mb-2"><code>ai/settings.json</code> is separate from the server's root <code>settings.json</code> (login password, working folders). Besides the <strong>models</strong> list shown in Chat/Terminal dropdowns, its <code>permissions.allow</code> / <code>permissions.deny</code> arrays control auto-approval of the <em>permission prompts</em> that Claude/Codex/Grok/opencode print inside a Chat or Terminal session (e.g. "Allow this command? y/n").</p>
+              <p class="mb-2">Each rule can test <code>type</code> (<code>"read" | "write" | "reply"</code> — read vs. file-changing action), <code>tool</code> (the CLI's tool name, e.g. <code>Bash</code>, <code>Edit</code>, <code>MCPTool</code>), and/or <code>command</code> (a prefix of the actual shell command, <code>*</code> wildcard supported). On a prompt, <code>deny</code> rules are checked first, then <code>allow</code>; if neither matches, SUPER mode (<kbd>F6</kbd>) auto-approves everything else, otherwise it just waits for you to click.</p>
+              <p class="mb-1 fw-semibold" style="color:#c9d1d9;">Examples</p>
+              <ul class="mb-0 ps-3">
+                <li>Auto-approve every read-only prompt (viewing/listing files can't change anything):<br><code class="cmd">{ "type": "read" }</code></li>
+                <li>Auto-approve one specific safe project script by path prefix — matches any path ending in that prefix, not the literal string <code>tsc_check_bad</code>:<br><code class="cmd">{ "command": "node *ai/tool/tsc_check" }</code></li>
+                <li>Only auto-approve when tool, type, and command all match — a narrower rule than command alone:<br><code class="cmd">{ "type": "write", "tool": "Bash", "command": "npm test" }</code></li>
+                <li>Always auto-reject a dangerous command, even under SUPER mode — <code>deny</code> wins over both <code>allow</code> and SUPER:<br><code class="cmd">{ "command": "rm -rf" }</code> (in <code>permissions.deny</code>)</li>
+                <li>Block every MCP tool call regardless of the command it carries:<br><code class="cmd">{ "tool": "MCPTool" }</code> (in <code>permissions.deny</code>)</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -2439,11 +2483,43 @@
   </div>
 </footer>
 
-<script src="../../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js"></script>
-<script type="module">
-import { CLan } from "../../artgine/basic/CLan.js";
 
+<script type="module">
 // ---- 다국어(CLan) ----
+// 원래는 ../../artgine/basic/CLan.js를 import해서 썼지만, 이 페이지는 서빙 경로 깊이가
+// 달라질 수 있어 상대경로 import가 깨지는 문제가 있었다. 그래서 이 페이지에서 실제로
+// 쓰는 기능(Set/Get/GetCode)만 그대로 옮겨와 이 파일 안에 직접 구현한다.
+class CLan {
+  static #map = {};
+  static #code = (() => {
+    const language = navigator.language || navigator.languages?.[0] || 'en';
+    return language.split('-')[0].toLowerCase();
+  })();
+
+  static Set(_country, _sub = null, _text = null) {
+    if (_country != null && typeof _country == "object") {
+      for (const countryEach in _country)
+        for (const subEach in _country[countryEach])
+          CLan.Set(countryEach, subEach, _country[countryEach][subEach]);
+    } else {
+      if (_country == null || _country == "") _country = CLan.#code;
+      if (typeof _sub == "number") _sub = _sub + "";
+      if (CLan.#map[_country] == null) CLan.#map[_country] = {};
+      CLan.#map[_country][_sub] = _text;
+    }
+  }
+
+  static Get(_sub, _defaultText = null) {
+    if (CLan.#map[CLan.#code] == null) CLan.#map[CLan.#code] = {};
+    if (CLan.#map[CLan.#code][_sub] == null) CLan.#map[CLan.#code][_sub] = _defaultText;
+    return CLan.#map[CLan.#code][_sub];
+  }
+
+  static GetCode() {
+    return CLan.#code;
+  }
+}
+
 // 기본 텍스트는 영문(HTML)이고 한국어만 CLan.Set으로 추가 등록한다.
 // 미등록 언어/키는 원문(영문)으로 폴백되므로 안전하다.
 CLan.Set({
@@ -2595,13 +2671,13 @@ CLan.Set({
     gsDefaultPort: '기본 포트 8050',
     gsBadge2: '방법 2',
     gsMethod2Title: '실행파일 다운로드',
-    gsMethod2Note: '<div class="mb-1">압축 해제 후 실행:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">Artgine.exe</code></li><li>Linux — <code class="cmd">./Artgine</code></li><li>macOS — <code class="cmd">Artgine.app</code></li></ul><div class="mb-0">OS가 막으면 아래 권한 / 보안을 확인하세요.</div>',
+    gsMethod2Note: '<div class="mb-1">압축 해제 후 실행:</div><ul class="mb-2 ps-3"><li>Windows — <code class="cmd">Artgine.exe</code></li><li>Linux — <code class="cmd">./Artgine --no-sandbox</code></li><li>macOS — <code class="cmd">Artgine.app</code></li></ul><div class="mb-0">OS가 막으면 아래 권한 / 보안을 확인하세요.</div>',
     gsAfterTitle: '일렉트론 앱 시작 후',
     gsAfterBody: '브라우저에서 아래 주소로 접속하세요:<div class="font-monospace my-2" style="background:#0d1117;padding:.65rem 1rem;border-radius:8px;color:#7ee787;">http://localhost:8050/Artgine/proj/Control/Control.html</div>로그인 기본 비밀번호: <strong>artgine</strong>. 폰·다른 PC에서는 <code class="cmd">localhost</code> 대신 호스트 PC의 LAN IP를 사용하세요.',
     gsPermTitle: '권한 / 보안 차단',
     gsPermSub: '인터넷에서 받은 실행파일은 OS가 막는 경우가 많습니다. 플랫폼별로 처리한 뒤 Artgine을 다시 실행하세요.',
     gsPermWin: '<ul class="mb-0 ps-3"><li><strong>SmartScreen:</strong> “Windows에서 PC를 보호했습니다” → <em>추가 정보</em> → <em>실행</em>.</li><li><strong>차단 해제:</strong> <code>.zip</code> 또는 <code>Artgine.exe</code> 우클릭 → 속성 → <em>차단 해제</em> 체크 → 적용. PowerShell: <code class="cmd">Unblock-File -Path .\\Artgine.exe</code></li><li><strong>백신:</strong> 파일이 사라지거나 격리되면 Windows 보안에서 복원하고 해당 폴더를 허용하세요.</li><li>포트 바인드가 막히면 한 번 <em>관리자 권한으로 실행</em>하거나 Windows 방화벽에서 Artgine을 허용하세요.</li></ul>',
-    gsPermLinux: '<ul class="mb-0 ps-3"><li><strong>실행 권한:</strong> 압축 해제 후 바이너리에 실행 비트를 줍니다. 예: <code class="cmd">chmod +x ./Artgine</code> (zip 안 실제 실행 파일 이름 사용) 후 <code class="cmd">./Artgine</code>.</li><li><strong>Permission denied:</strong> 파티션이 <code>noexec</code>인지 확인하고, 필요하면 홈 폴더로 옮겨 실행하세요.</li><li><strong>공유 라이브러리 / 경로:</strong> 시작 실패 시 배포판에 맞는 의존성을 설치하거나, 읽기 전용 시스템 경로 대신 사용자 쓰기 가능 경로에서 실행하세요.</li><li>방화벽이 listen 포트를 막을 수 있습니다 — 포트를 열거나 지원되면 다른 포트를 사용하세요.</li></ul>',
+    gsPermLinux: '<ul class="mb-0 ps-3"><li><strong>실행 권한:</strong> 압축 해제 후 바이너리에 실행 비트를 줍니다. 예: <code class="cmd">chmod +x ./Artgine</code> (zip 안 실제 실행 파일 이름 사용) 후 <code class="cmd">./Artgine</code>.</li><li><strong>Electron 샌드박스:</strong> 대부분의 배포판에서는 샌드박스를 끄지 않으면 실행이 안 되거나 조용히 종료됩니다 — <code class="cmd">./Artgine --no-sandbox</code>로 실행하세요.</li><li><strong>Permission denied:</strong> 파티션이 <code>noexec</code>인지 확인하고, 필요하면 홈 폴더로 옮겨 실행하세요.</li><li><strong>공유 라이브러리 / 경로:</strong> 시작 실패 시 배포판에 맞는 의존성을 설치하거나, 읽기 전용 시스템 경로 대신 사용자 쓰기 가능 경로에서 실행하세요.</li><li>방화벽이 listen 포트를 막을 수 있습니다 — 포트를 열거나 지원되면 다른 포트를 사용하세요.</li></ul>',
     gsPermMac: '<ul class="mb-0 ps-3"><li><strong>Gatekeeper:</strong> “확인되지 않은 개발자…” → 앱을 우클릭(Control-클릭) → <em>열기</em> → 다시 <em>열기</em>. 또는 시스템 설정 → 개인정보 보호 및 보안 → <em>확인 없이 열기</em>.</li><li><strong>격리 속성:</strong> 터미널에서 <code class="cmd">xattr -dr com.apple.quarantine /path/to/Artgine.app</code> (또는 압축 푼 폴더) 후 다시 실행.</li><li><strong>실행 비트</strong>(바이너리 직접 실행 시): <code class="cmd">chmod +x ./Artgine</code> 후 <code class="cmd">./Artgine</code>.</li><li>네트워크/로컬 서버 접근이 막히면 개인정보 보호 및 보안 / 방화벽 프롬프트에서 허용하세요.</li></ul>',
     gsPassword: '기본 비밀번호는 <strong>artgine</strong>입니다. 외부 네트워크에 노출하기 전에 반드시 변경하세요.',
     gsPasswordBody: '<p class="mb-2">로컬 네트워크 밖으로 URL을 공개하기 전에 Control 로그인 비밀번호부터 바꾸세요. 기본값을 아는 사람은 파일·터미널·RDP에 접근할 수 있습니다.</p><ul class="mb-0 ps-3"><li><strong>일렉트론 데스크톱 앱:</strong> Server 패널을 열어 비밀번호 입력창을 수정하세요 — 포커스를 벗어나면 자동으로 해시되어 저장됩니다.</li><li><strong>settings.json:</strong> 웹 서버를 직접 실행 중이라면 서버를 실행한 워킹 디렉토리에 있는 <code>settings.json</code>의 <code>password</code> 필드를 직접 수정하세요. 평문으로 짧게 넣어도 다음 로그인 확인 시 자동으로 해시됩니다.</li></ul>',
@@ -2613,6 +2689,13 @@ CLan.Set({
     gsSecTipFolderTitle: '폴더 접근 권한을 따로 설정',
     gsSecTipFolderBody: '<ul class="mb-0 ps-3"><li><strong>OS 단:</strong> 전용 계정에는 꼭 필요한 프로젝트/작업 폴더에만 읽기·쓰기 권한을 줍니다. 문서 홈, 시스템 폴더, 다른 사용자 데이터는 제외하거나 거부합니다.</li><li><strong>Artgine 단:</strong> Control 왼쪽 Root → 워킹 폴더 추가(<code>+</code>)에 그 경로만 등록합니다. 목록에 없는 경로는 File/Root로 서비스되지 않으니 목록을 최소로 유지하세요.</li><li>정말 필요하지 않다면 디스크 전체(<code>C:\\</code>, <code>/</code> 등)를 워킹 폴더에 넣지 마세요.</li><li>두 층을 함께 쓰세요: OS ACL은 프로세스 자체를 막고, Working Folder는 프로세스가 더 닿을 수 있어도 UI에 노출되는 범위를 줄입니다.</li></ul>',
     gsSecTipFooter: '기본 웹 비밀번호 변경, 가능하면 공인망에 직접 노출하지 않기, 원격이 필요하면 VPN·리버스 프록시 인증을 함께 쓰는 것도 권장합니다.',
+
+    gsAiFolderTitle: 'ai 폴더 & 프로젝트 권한',
+    gsAiFolderLead: '프로젝트마다 루트에 <code>ai/</code> 폴더를 둘 수 있습니다 — AI 코딩 에이전트(Claude, Codex 등)가 작업 전에 이 폴더를 읽으므로, 프로젝트별 규칙과 권한 설정을 에이전트의 기억이 아니라 여기에 남겨둘 수 있습니다.',
+    gsAiFolderDocsTitle: '가이드 문서',
+    gsAiFolderDocsBody: '<ul class="mb-0 ps-3"><li><strong>ROLE.md:</strong> 이 프로젝트에서 에이전트가 맡는 역할.</li><li><strong>ProjectSetupGuide.md:</strong> 새 프로젝트 생성 절차.</li><li><strong>EngineUsageGuide.md:</strong> 새 로직을 짜기 전에 엔진(<code>artgine/</code>) API를 먼저 찾아볼 위치.</li><li><strong>CodeNamingGuide.md, RemoteCMDGuide.md, MemoGuide.md, BrowserDebugGuide.md, RemoteDesktopGuide.md:</strong> 명명 규칙과 원격 명령 실행·메모 검색·브라우저 디버깅·원격 데스크톱 제어 방법.</li><li>프로젝트의 <code>CLAUDE.md</code>가 해당 작업 전 여기서 어떤 가이드를 먼저 읽어야 하는지 지정합니다.</li></ul>',
+    gsAiPermTitle: 'ai/settings.json 권한 설정',
+    gsAiPermBody: '<p class="mb-2"><code>ai/settings.json</code>은 서버 루트의 <code>settings.json</code>(로그인 비밀번호, 워킹 폴더)과는 별개입니다. Chat/Terminal 드롭다운에 쓰이는 <strong>models</strong> 목록 외에, <code>permissions.allow</code> / <code>permissions.deny</code> 배열이 Chat·Terminal 세션 안에서 Claude/Codex/Grok/opencode가 띄우는 <em>승인 프롬프트</em>("이 명령을 실행할까요? y/n" 같은)를 자동 승인/거부할지 결정합니다.</p><p class="mb-2">각 규칙은 <code>type</code>(<code>"read" | "write" | "reply"</code> — 읽기냐 파일을 바꾸는 동작이냐), <code>tool</code>(CLI의 툴 이름, 예: <code>Bash</code>, <code>Edit</code>, <code>MCPTool</code>), <code>command</code>(실제 셸 명령의 접두사, <code>*</code> 와일드카드 지원) 중 원하는 조건을 검사합니다. 프롬프트가 뜨면 <code>deny</code> 규칙을 먼저 검사하고, 안 걸리면 <code>allow</code>를 검사합니다. 둘 다 안 맞으면 SUPER 모드(<kbd>F6</kbd>)가 나머지를 전부 자동 승인하고, 그것도 아니면 클릭할 때까지 대기합니다.</p><p class="mb-1 fw-semibold" style="color:#c9d1d9;">예시</p><ul class="mb-0 ps-3"><li>읽기 전용 프롬프트는 전부 자동 승인 — 파일 보기/목록 조회는 아무것도 바꾸지 않으므로 안전합니다:<br><code class="cmd">{ "type": "read" }</code></li><li>특정 안전 스크립트 하나만 경로 접두사로 자동 승인 — 해당 접두사로 끝나는 어떤 경로든 매칭되고, <code>tsc_check_bad</code> 같은 글자만 비슷한 명령은 매칭되지 않습니다:<br><code class="cmd">{ "command": "node *ai/tool/tsc_check" }</code></li><li>tool·type·command가 모두 맞아야 자동 승인 — command 단독 규칙보다 더 좁은 조건입니다:<br><code class="cmd">{ "type": "write", "tool": "Bash", "command": "npm test" }</code></li><li>위험한 명령은 SUPER 모드에서도 항상 자동 거부 — <code>deny</code>는 <code>allow</code>와 SUPER 모드보다 먼저/우선 적용됩니다:<br><code class="cmd">{ "command": "rm -rf" }</code> (<code>permissions.deny</code>에 등록)</li><li>어떤 명령을 담고 있든 MCP 툴 호출은 전부 차단:<br><code class="cmd">{ "tool": "MCPTool" }</code> (<code>permissions.deny</code>에 등록)</li></ul>',
 
     providerTitle: 'AI 프로바이더',
     providerSub: 'Node.js가 필요하고, CLI 프로바이더는 Terminal을 열 때 자동 설치됩니다',

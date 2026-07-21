@@ -238,9 +238,10 @@ export class CDensityMap extends CSubject implements IMapSchema
                     else
                     {
                         const size    = bound.GetSize();
-                        scale.x *= density.mSize.x / size.x;
-                        scale.y *= density.mSize.y / size.y;
-                        scale.z *= density.mSize.z / size.z;
+                        const maxSize = CMath.Max(CMath.Max(size.x, size.y), size.z);
+                        scale.x *= density.mSize.x / maxSize;
+                        scale.y *= density.mSize.y / maxSize;
+                        scale.z *= density.mSize.z / maxSize;
 
                         pos.x += worldX; pos.z += worldY;
                         CMath.V3SubV3(pos, bound.GetCenter(), pos); // 오브젝트 중심이 포지션으로 가도록 이동

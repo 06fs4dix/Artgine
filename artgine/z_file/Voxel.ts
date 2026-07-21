@@ -24,6 +24,8 @@ import {
 	Sam2DArrToMat,
     min,
     max,
+    V3Len,
+    V3SubV3,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
@@ -412,30 +414,47 @@ function vs_main_shadow_write(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 	else
 		to_uv.w=f2_color.x;
 
+    P = V4MulMatCoordi(P, worldMat);
+
 	var svm : CMat=new CMat(0);
 	var spm : CMat=new CMat(0);
-	
-	if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5)
-	{
-		svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
-		spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
-	}
-	else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5)
-	{
-		svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
-		spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
-	}
-	else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5)
-	{
-		svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
-		spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
-	}
-	
-	P = V4MulMatCoordi(P, worldMat);
-	P = V4MulMatCoordi(P, svm);
-	to_viewPos = P;
-	P = V4MulMatCoordi(P, spm);
-	out_position = P;
+    BranchBegin("PointLightShadowV","PLSV",[]);
+    if(shadowWrite.x<SDF.eShadow.Near + 0.5)
+        svm = Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Far + 0.5)
+        svm = Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Top + 0.5)
+        svm = Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Bottom + 0.5)
+        svm = Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Left + 0.5)
+        svm = Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+    else if(shadowWrite.x<SDF.eShadow.Right + 0.5)
+        svm = Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+    to_viewPos = P;
+    out_position = V4MulMatCoordi(P, svm);
+    BranchDefault();
+    if(shadowWrite.x<SDF.eShadow.Cas0 + 0.5) {
+        svm =Sam2DArrToMat(shadowNearCasV0,shadowWrite.y);
+        svm[0][3] = 0.0;
+        spm =Sam2DArrToMat(shadowFarCasP0,shadowWrite.y);
+    }
+    else if(shadowWrite.x<SDF.eShadow.Cas1 + 0.5) {
+        svm =Sam2DArrToMat(shadowTopCasV1,shadowWrite.y);
+        svm[0][3] = 0.0;
+        spm =Sam2DArrToMat(shadowBottomCasP1,shadowWrite.y);
+    }
+    else if(shadowWrite.x<SDF.eShadow.Cas2 + 0.5) {
+        svm =Sam2DArrToMat(shadowLeftCasV2,shadowWrite.y);
+        svm[0][3] = 0.0;
+        spm =Sam2DArrToMat(shadowRightCasP2,shadowWrite.y);
+    }
+    to_viewPos = V4MulMatCoordi(P, svm);
+    out_position = V4MulMatCoordi(to_viewPos, spm);
+	BranchEnd();
+
+    // pancacking
+    out_position.z = min(out_position.z, out_position.w);
 }
 function ps_main_shadow_write()
 {
@@ -455,9 +474,16 @@ function ps_main_shadow_write()
 	BranchEnd();
 	if ( L_cor.a <= 0.01 ) discard;
 
-    
-
-	out_color=to_viewPos;
+    var shadowRead: CVec4;
+    var lDir: CVec4;
+    BranchBegin("PointLightShadowF","PLSF",[ligDir]);
+    shadowRead = Sam2DArrToV4(shadowReadList, shadowWrite.y);
+    lDir = Sam2DArrToV4(ligDir, shadowRead.x);
+    out_color.b = (V3Len(V3SubV3(to_viewPos.xyz, lDir.xyz)) - shadowRead.z) / (shadowRead.w - shadowRead.z);
+    out_color.a = 1.0;
+    BranchDefault();
+    out_color = to_viewPos;
+    BranchEnd();
 }
 
 function vs_main_shadow_read(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
@@ -529,8 +555,9 @@ function ps_main_shadow_read()
     }
     all.a /= max(shadowCount - 3.0, 1.0);
 	BranchDefault();
-	all.a = CalcShadow(0.0, to_normal, to_worldPos);
-    all.rgb = new CVec3(all.a, all.a, all.a);
+	all.r = CalcShadow(0.0, to_normal, to_worldPos);
+    all.rgb = new CVec3(all.r, all.r, all.r);
+    all.a = 1.0;
 	BranchEnd();
 	
 	out_color = all;

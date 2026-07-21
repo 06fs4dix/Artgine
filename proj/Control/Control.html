@@ -143,15 +143,15 @@ if (location.protocol == 'file:' && isElectron==false){
     <!-- 통합 사이드바 (RDP/터미널/브라우저/파일/다운로드 공용, 메모 탭 제외) -->
     <div class="offcanvas offcanvas-start d-flex flex-column bg-body-tertiary" tabindex="-1" id="app-sidebar" data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="app-sidebar-label">
         <div class="offcanvas-header border-bottom">
-            <h6 class="offcanvas-title" id="app-sidebar-label">Menu</h6>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar" aria-label="Close"></button>
+            <h6 class="offcanvas-title" id="app-sidebar-label" data-CLan="ctrl.menu">Menu</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar" aria-label="Close" data-CLan-title="ctrl.close" title="Close"></button>
         </div>
         <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-body">
             <!-- 현재 활성 서버(Local/원격)의 File/Root 목록. Control.ts의 ctrlRefreshRootSelect()가 채우고,
                  선택 시 File 탭 iframe에 'set-file-root'를 보내 실제 루트를 바꾼다. -->
             <div class="d-flex gap-1 mb-2">
                 <select id="ctrl-root-sel" class="form-select form-select-sm"></select>
-                <button type="button" id="ctrlRootAddFolderBtn" class="btn btn-sm btn-outline-secondary p-0 flex-shrink-0 d-flex align-items-center justify-content-center" style="width:31px;height:31px;" title="Add Working Folder">
+                <button type="button" id="ctrlRootAddFolderBtn" class="btn btn-sm btn-outline-secondary p-0 flex-shrink-0 d-flex align-items-center justify-content-center" style="width:31px;height:31px;" data-CLan-title="ctrl.addWorkingFolder" title="Add Working Folder">
                     <i class="bi bi-plus-lg"></i>
                 </button>
             </div>
@@ -192,46 +192,46 @@ if (location.protocol == 'file:' && isElectron==false){
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-panel" type="button" role="tab"
-                aria-controls="file-panel" aria-selected="false"><i class="bi bi-folder-fill"></i> File</button>
+                aria-controls="file-panel" aria-selected="false"><i class="bi bi-folder-fill"></i> <span data-CLan="ctrl.file">File</span></button>
         </li>
         <li class="nav-item" role="presentation">
             <!-- File 탭으로 이동한 뒤 File.ts의 FileSearch() 모달을 연다(Home.ts의 F2 단축키와 동일한 trigger-file-search 메시지 사용). -->
-            <button type="button" class="nav-link" id="file-search-btn" title="File Search"><i class="bi bi-search"></i> Search</button>
+            <button type="button" class="nav-link" id="file-search-btn" data-CLan-title="ctrl.fileSearch" title="File Search"><i class="bi bi-search"></i> <span data-CLan="ctrl.search">Search</span></button>
         </li>
         <li class="nav-item" role="presentation">
             <!-- data-bs-toggle="tab"을 일부러 빼서 클릭해도 자동으로 탭이 전환되지 않게 한다(보고 있던 화면 유지).
                  실제 전환은 termActivatePane()이 New Terminal 모달에서 세션을 실제로 열었을 때만 수행한다. -->
             <button class="nav-link" id="term-tab" data-bs-target="#term-panel" type="button"
-                role="tab" aria-controls="term-panel" aria-selected="false"><i class="bi bi-terminal"></i> Terminal</button>
+                role="tab" aria-controls="term-panel" aria-selected="false"><i class="bi bi-terminal"></i> <span data-CLan="ctrl.terminal">Terminal</span></button>
         </li>
         <li class="nav-item dropdown" role="presentation">
-            <button class="nav-link dropdown-toggle" id="more-tab" data-bs-toggle="dropdown" type="button" aria-expanded="false" title="More">
+            <button class="nav-link dropdown-toggle" id="more-tab" data-bs-toggle="dropdown" type="button" aria-expanded="false" data-CLan-title="ctrl.more" title="More">
                 <i class="bi bi-three-dots"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="more-tab">
-                <li><button class="dropdown-item" id="help-btn" type="button" title="Help"><i class="bi bi-question-circle"></i> Help</button></li>
+                <li><button class="dropdown-item" id="help-btn" type="button" data-CLan-title="ctrl.help" title="Help"><i class="bi bi-question-circle"></i> <span data-CLan="ctrl.help">Help</span></button></li>
                 <li><button class="dropdown-item" id="memo-tab" data-bs-toggle="tab" data-bs-target="#memo-panel" type="button" role="tab"
-                    aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> Memo</button></li>
-                <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> RDP</button></li>
-                <li><button class="dropdown-item" id="chat-new-btn" type="button"><i class="bi bi-chat-dots"></i> Chat</button></li>
-                <li><button class="dropdown-item" id="browser-new-btn" type="button"><i class="bi bi-browser-chrome"></i> Browser</button></li>
+                    aria-controls="memo-panel" aria-selected="false"><i class="bi bi-journal-text"></i> <span data-CLan="ctrl.memo">Memo</span></button></li>
+                <li><button class="dropdown-item" id="rdp-add-btn" type="button"><i class="bi bi-display"></i> <span data-CLan="ctrl.rdp">RDP</span></button></li>
+                <li><button class="dropdown-item" id="chat-new-btn" type="button"><i class="bi bi-chat-dots"></i> <span data-CLan="ctrl.chat">Chat</span></button></li>
+                <li><button class="dropdown-item" id="browser-new-btn" type="button"><i class="bi bi-browser-chrome"></i> <span data-CLan="ctrl.browser">Browser</span></button></li>
                 <!-- 팀의 메인 터미널은 생성 후 Terminal 패널에 표시되므로 별도 Team 패널은 두지 않는다. -->
-                <li><button class="dropdown-item" id="team-tab" type="button" title="New Team"><i class="bi bi-people"></i> Team</button></li>
+                <li><button class="dropdown-item" id="team-tab" type="button" data-CLan-title="ctrl.newTeam" title="New Team"><i class="bi bi-people"></i> <span data-CLan="ctrl.team">Team</span></button></li>
                 <li><button class="dropdown-item" id="download-tab" data-bs-toggle="tab" data-bs-target="#download-panel" type="button"
-                    role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> Download</button></li>
+                    role="tab" aria-controls="download-panel" aria-selected="false"><i class="bi bi-cloud-download-fill"></i> <span data-CLan="ctrl.download">Download</span></button></li>
                 <li><button class="dropdown-item" id="log-tab" data-bs-toggle="tab" data-bs-target="#log-panel" type="button"
-                    role="tab" aria-controls="log-panel" aria-selected="false"><i class="bi bi-journal-code"></i> Log</button></li>
+                    role="tab" aria-controls="log-panel" aria-selected="false"><i class="bi bi-journal-code"></i> <span data-CLan="ctrl.log">Log</span></button></li>
             </ul>
         </li>
         <li class="nav-item ms-auto" role="presentation" style="display:none;" id="sidebarToggleBtnWrap">
             <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtn" type="button"
-                data-bs-toggle="offcanvas" data-bs-target="#app-sidebar" aria-controls="app-sidebar" title="Menu">
+                data-bs-toggle="offcanvas" data-bs-target="#app-sidebar" aria-controls="app-sidebar" data-CLan-title="ctrl.menu" title="Menu">
                 <i class="bi bi-list"></i>
             </button>
         </li>
         <li class="nav-item" role="presentation" style="display:none;" id="sidebarToggleBtnWrapRight">
             <button class="btn btn-outline-secondary mt-1" id="sidebarToggleBtnRight" type="button"
-                data-bs-toggle="offcanvas" data-bs-target="#app-sidebar-right" aria-controls="app-sidebar-right" title="Provider Status">
+                data-bs-toggle="offcanvas" data-bs-target="#app-sidebar-right" aria-controls="app-sidebar-right" data-CLan-title="ctrl.providerStatus" title="Provider Status">
                 <i class="bi bi-robot"></i>
             </button>
         </li>
@@ -242,13 +242,13 @@ if (location.protocol == 'file:' && isElectron==false){
     <div class="tab-pane h-100 position-relative" id="chat-panel" role="tabpanel" aria-labelledby="chat-panel-tab">
         <div id="chat-frame-container" class="position-absolute" style="inset:0;"></div>
         <div id="chat-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
-            <div class="text-secondary">사이드바에서 채팅을 선택하세요</div>
+            <div class="text-secondary" data-CLan="ctrl.ph.chat">Select a chat from the sidebar</div>
         </div>
     </div>
     <div class="tab-pane h-100 position-relative" id="rdp-panel" role="tabpanel" aria-labelledby="rdp-panel-tab">
         <div id="rdp-frame-container" class="position-absolute" style="inset:0;"></div>
         <div id="rdp-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
-            <div class="text-secondary">사이드바에서 원격 데스크탑을 선택하세요</div>
+            <div class="text-secondary" data-CLan="ctrl.ph.rdp">Select a remote desktop from the sidebar</div>
         </div>
     </div>
     <!-- 초기 진입 기본 패널. Control.ts가 ./artgine-agent.html을 iframe으로 넣는다. -->
@@ -262,7 +262,7 @@ if (location.protocol == 'file:' && isElectron==false){
     <div class="tab-pane h-100 position-relative" id="browser-panel" role="tabpanel" aria-labelledby="browser-panel-tab">
         <div id="browser-frame-container" class="position-absolute" style="inset:0;"></div>
         <div id="browser-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
-            <div class="text-secondary">사이드바에서 브라우저 세션을 선택하거나 새로 만드세요</div>
+            <div class="text-secondary" data-CLan="ctrl.ph.browser">Select a browser session from the sidebar or create a new one</div>
         </div>
     </div>
     <div class="tab-pane h-100" id="file-panel" role="tabpanel" aria-labelledby="file-tab">
@@ -270,7 +270,7 @@ if (location.protocol == 'file:' && isElectron==false){
     <div class="tab-pane h-100 position-relative" id="editor-panel" role="tabpanel" aria-labelledby="editor-panel-tab">
         <div id="editor-frame-container" class="position-absolute" style="inset:0;"></div>
         <div id="editor-frame-placeholder" class="position-absolute d-flex align-items-center justify-content-center" style="inset:0;">
-            <div class="text-secondary">File 탭에서 파일을 열면 여기에 표시됩니다</div>
+            <div class="text-secondary" data-CLan="ctrl.ph.editor">Open a file from the File tab to view it here</div>
         </div>
     </div>
     <div class="tab-pane h-100" id="memo-panel" role="tabpanel" aria-labelledby="memo-tab" style="overflow-x:hidden;">
@@ -281,15 +281,15 @@ if (location.protocol == 'file:' && isElectron==false){
     <div class="tab-pane h-100" id="log-panel" role="tabpanel" aria-labelledby="log-tab" style="overflow-y:auto;">
         <div class="p-2">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="mb-0"><i class="bi bi-journal-code"></i> Provider Log</h6>
+                <h6 class="mb-0"><i class="bi bi-journal-code"></i> <span data-CLan="ctrl.providerLog">Provider Log</span></h6>
                 <div class="d-flex align-items-center gap-1">
-                    <button id="logRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
-                    <button id="logClearBtn" type="button" class="btn btn-sm btn-outline-danger" title="Delete all logs"><i class="bi bi-x-lg"></i></button>
+                    <button id="logRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary" data-CLan-title="ctrl.refresh" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+                    <button id="logClearBtn" type="button" class="btn btn-sm btn-outline-danger" data-CLan-title="ctrl.deleteAllLogsTitle" title="Delete all logs"><i class="bi bi-x-lg"></i></button>
                 </div>
             </div>
             <div id="logAccordionList" class="d-flex flex-column gap-1"></div>
             <div class="d-flex justify-content-center mt-2">
-                <button id="logLoadMoreBtn" type="button" class="btn btn-sm btn-outline-secondary" style="display:none;">Load more</button>
+                <button id="logLoadMoreBtn" type="button" class="btn btn-sm btn-outline-secondary" style="display:none;" data-CLan="ctrl.loadMore">Load more</button>
             </div>
         </div>
     </div>
@@ -299,29 +299,29 @@ if (location.protocol == 'file:' && isElectron==false){
     <!-- 우측 상태 사이드바 (AI Provider 상태 전용). 좌측과 동일하게 여백에 고정되거나 열고닫는 오버레이. -->
     <div class="offcanvas offcanvas-end d-flex flex-column bg-body-tertiary" tabindex="-1" id="app-sidebar-right" data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="app-sidebar-right-label">
         <div class="offcanvas-header border-bottom">
-            <h6 class="offcanvas-title" id="app-sidebar-right-label">Status</h6>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar-right" aria-label="Close"></button>
+            <h6 class="offcanvas-title" id="app-sidebar-right-label" data-CLan="ctrl.status">Status</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#app-sidebar-right" aria-label="Close" data-CLan-title="ctrl.close" title="Close"></button>
         </div>
         <div class="offcanvas-body p-2 flex-grow-1 overflow-auto d-flex flex-column" id="app-sidebar-right-body">
             <ul class="nav nav-tabs mb-2" id="rightSidebarTab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="right-info-tab" data-bs-toggle="tab" data-bs-target="#right-info-panel" type="button"
-                        role="tab" aria-controls="right-info-panel" aria-selected="true"><i class="bi bi-info-circle"></i> Info</button>
+                        role="tab" aria-controls="right-info-panel" aria-selected="true"><i class="bi bi-info-circle"></i> <span data-CLan="ctrl.info">Info</span></button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="right-file-tab" data-bs-toggle="tab" data-bs-target="#right-file-panel" type="button"
-                        role="tab" aria-controls="right-file-panel" aria-selected="false"><i class="bi bi-folder"></i> File</button>
+                        role="tab" aria-controls="right-file-panel" aria-selected="false"><i class="bi bi-folder"></i> <span data-CLan="ctrl.file">File</span></button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="right-option-tab" data-bs-toggle="tab" data-bs-target="#right-option-panel" type="button"
-                        role="tab" aria-controls="right-option-panel" aria-selected="false"><i class="bi bi-gear"></i> Option</button>
+                        role="tab" aria-controls="right-option-panel" aria-selected="false"><i class="bi bi-gear"></i> <span data-CLan="ctrl.option">Option</span></button>
                 </li>
             </ul>
             <div class="tab-content flex-grow-1 overflow-auto">
                 <div class="tab-pane fade show active" id="right-info-panel" role="tabpanel" aria-labelledby="right-info-tab">
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <span class="text-secondary fw-semibold"><i class="bi bi-robot"></i> Provider Status</span>
-                        <button id="aiProviderRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" title="Refresh">
+                        <span class="text-secondary fw-semibold"><i class="bi bi-robot"></i> <span data-CLan="ctrl.providerStatus">Provider Status</span></span>
+                        <button id="aiProviderRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" data-CLan-title="ctrl.refresh" title="Refresh">
                             <i class="bi bi-arrow-clockwise"></i>
                         </button>
                     </div>
@@ -335,11 +335,11 @@ if (location.protocol == 'file:' && isElectron==false){
                      파일은 File 탭의 File.html과 별개로 Editor 탭(editorOpenFile)에서 연다. -->
                 <div class="tab-pane fade" id="right-file-panel" role="tabpanel" aria-labelledby="right-file-tab">
                     <div class="d-flex align-items-center gap-1 mb-2">
-                        <button id="ctrlSideFileUpBtn" type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" title="Up">
+                        <button id="ctrlSideFileUpBtn" type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-CLan-title="ctrl.up" title="Up">
                             <i class="bi bi-arrow-up"></i>
                         </button>
                         <span id="ctrlSideFilePath" class="small text-secondary text-truncate flex-grow-1">/</span>
-                        <button id="ctrlSideFileRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" title="Refresh">
+                        <button id="ctrlSideFileRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-CLan-title="ctrl.refresh" title="Refresh">
                             <i class="bi bi-arrow-clockwise"></i>
                         </button>
                     </div>
@@ -347,51 +347,51 @@ if (location.protocol == 'file:' && isElectron==false){
                 </div>
                 <div class="tab-pane fade" id="right-option-panel" role="tabpanel" aria-labelledby="right-option-tab">
                     <div class="mb-2">
-                        <label for="theme-select" class="form-label text-secondary small mb-1"><i class="bi bi-palette"></i> Theme</label>
+                        <label for="theme-select" class="form-label text-secondary small mb-1"><i class="bi bi-palette"></i> <span data-CLan="ctrl.theme">Theme</span></label>
                         <select id="theme-select" class="form-select form-select-sm">
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
+                            <option value="light" data-CLan="ctrl.light">Light</option>
+                            <option value="dark" data-CLan="ctrl.dark">Dark</option>
                         </select>
                     </div>
                     <div class="mt-3 d-flex gap-2">
                         <button id="aiAddOllamaBtn" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
-                            <i class="bi bi-plus-circle"></i><span>Add OpenCode Model</span>
+                            <i class="bi bi-plus-circle"></i><span data-CLan="ctrl.addOpenCodeModel">Add OpenCode Model</span>
                         </button>
-                        <button id="aiOpencodeStatusBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" title="Check connection status">
-                            <i class="bi bi-hdd-network"></i><span>Status</span>
+                        <button id="aiOpencodeStatusBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" data-CLan-title="ctrl.ocStatusTitle" title="Check connection status">
+                            <i class="bi bi-hdd-network"></i><span data-CLan="ctrl.ocStatus">Status</span>
                         </button>
                     </div>
                     <hr class="my-3">
                     <div class="d-flex align-items-center justify-content-between">
-                        <h6 class="text-secondary mb-0"><i class="bi bi-database"></i> Database</h6>
+                        <h6 class="text-secondary mb-0"><i class="bi bi-database"></i> <span data-CLan="ctrl.database">Database</span></h6>
                         <div class="d-flex gap-1">
                             <button id="sqliteViewerBtn" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
-                                <i class="bi bi-table"></i><span>SQLite</span>
+                                <i class="bi bi-table"></i><span data-CLan="ctrl.sqlite">SQLite</span>
                             </button>
-                            <button id="dbViewerBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" title="Connect to any DB (mysql/mssql/sqlite/ne)">
-                                <i class="bi bi-hdd-stack"></i><span>DB Viewer</span>
+                            <button id="dbViewerBtn" type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" data-CLan-title="ctrl.dbViewerTitle" title="Connect to any DB (mysql/mssql/sqlite/ne)">
+                                <i class="bi bi-hdd-stack"></i><span data-CLan="ctrl.dbViewer">DB Viewer</span>
                             </button>
                         </div>
                     </div>
                     <hr class="my-3">
-                    <h6 class="text-secondary mb-2"><i class="bi bi-trash3"></i> Delete history</h6>
+                    <h6 class="text-secondary mb-2"><i class="bi bi-trash3"></i> <span data-CLan="ctrl.deleteHistory">Delete history</span></h6>
                     <div class="d-flex align-items-center gap-2">
                         <input id="pruneConvMonths" type="number" min="1" class="form-control form-control-sm" style="width:60px" value="1">
-                        <span class="small text-secondary text-nowrap">month(s)</span>
-                        <button id="pruneConvBtn" type="button" class="btn btn-sm btn-outline-danger">Delete</button>
+                        <span class="small text-secondary text-nowrap" data-CLan="ctrl.months">month(s)</span>
+                        <button id="pruneConvBtn" type="button" class="btn btn-sm btn-outline-danger" data-CLan="ctrl.delete">Delete</button>
                     </div>
                     <div id="pruneConvResult" class="small text-secondary mt-1"></div>
                     <hr class="my-3">
                     <div class="d-flex align-items-center justify-content-between">
-                        <h6 class="text-secondary mb-0"><i class="bi bi-clock"></i> Schedule</h6>
-                        <button id="sched-new-btn" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> New</button>
+                        <h6 class="text-secondary mb-0"><i class="bi bi-clock"></i> <span data-CLan="ctrl.schedule">Schedule</span></h6>
+                        <button id="sched-new-btn" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> <span data-CLan="ctrl.new">New</span></button>
                     </div>
                     <!-- 저장된 스케줄 목록. Control.ts의 schedRefresh()가 채운다(생성/편집은 위 New 버튼). -->
                     <div id="schedSessionList" class="d-flex flex-column gap-1"></div>
                     <hr class="my-3">
                     <div class="d-flex align-items-center justify-content-between">
-                        <h6 class="text-secondary mb-0"><i class="bi bi-robot"></i> Sub Agent</h6>
-                        <button id="agent-new-btn" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> New</button>
+                        <h6 class="text-secondary mb-0"><i class="bi bi-robot"></i> <span data-CLan="ctrl.subAgent">Sub Agent</span></h6>
+                        <button id="agent-new-btn" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> <span data-CLan="ctrl.new">New</span></button>
                     </div>
                     <!-- 등록된 서브 에이전트 목록. Control.ts의 agentRefresh()가 채운다(생성은 위 New 버튼, 편집은 항목 클릭 → 모달). -->
                     <div id="agentList" class="d-flex flex-column gap-1"></div>

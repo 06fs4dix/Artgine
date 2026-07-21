@@ -38,6 +38,9 @@ import { CHash } from "../../basic/CHash.js";
 import { getAuthToken, setAuthToken, removeAuthToken } from "../CAuthToken.js";
 import { CLan } from "../../basic/CLan.js";
 import { CIframeMsg } from "./CIframeMsg.js";
+import { marked } from "../../external/esnext/md/marked.esm.js";
+
+marked.setOptions({ gfm: true, breaks: true });
 
 // ---- 다국어(CLan) ----
 // 기본 텍스트는 영문(HTML innerHTML)이고 한국어만 추가 등록한다.
@@ -232,13 +235,8 @@ function escapeHtml(s: string): string {
     return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]!));
 }
 function renderMarkdown(s: string): string {
-    // very small subset: code blocks, inline code, bold, link
-    let h = escapeHtml(s);
-    h = h.replace(/```([\s\S]*?)```/g, (_m, code) => `<pre><code>${code}</code></pre>`);
-    h = h.replace(/`([^`\n]+?)`/g, (_m, code) => `<code>${code}</code>`);
-    h = h.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
-    h = h.replace(/(?:^|\s)(https?:\/\/[^\s<]+)/g, ' <a href="$1" target="_blank" rel="noopener">$1</a>');
-    return h;
+    // AI 응답에 섞인 raw HTML이 그대로 실행되지 않도록 먼저 escape한 뒤 marked로 파싱한다.
+    return marked.parse(escapeHtml(s), { xhtml: false }) as string;
 }
 function isImagePath(p: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(p);

@@ -1322,23 +1322,31 @@ export class CPaint2DMerge extends CPaint
 
 		const nor = new CVec3(0, 0, 1);
 
-        const scaB = new CVec3();
-        const scaT = new CVec3();
+        const scaBR = new CVec3();
+        const scaBL = new CVec3();
+        const scaTR = new CVec3();
+        const scaTL = new CVec3();
 
 		for(let i = posb[0].bufF.Size(3); i < this.mMatList.length; i++)
 		{
 			const pMat = this.mMatList[i];
 
-            scaB.x = CMath.V3Len(pMat.GetV3(0));
-            scaB.y = CMath.V3Len(pMat.GetV3(1));
-            scaB.z = CMath.V3Len(pMat.GetV3(2));
+            CMath.MatDecomposeSca(pMat, scaTR);
 
-            scaT.x = -scaB.x;
-            scaT.y = -scaB.y;
-            scaT.z = -scaB.z;
+            scaTL.x = -scaTR.x;
+            scaTL.y = scaTR.y;
+            scaTL.z = scaTR.z;
+
+            scaBR.x = scaTR.x;
+            scaBR.y = -scaTR.y;
+            scaBR.z = scaTR.z;
+
+            scaBL.x = -scaTR.x;
+            scaBL.y = -scaTR.y;
+            scaBL.z = scaTR.z;
 
 			if(this.mYSort) {
-				const ySortOrigin = -0.5 * scaB.y + 1;
+				const ySortOrigin = -0.5 * scaBR.y + 1;
 				const yVal = pMat.mF32A[13] + ySortOrigin;
 				const yRatio = (CPaint2D.YSortRange.y - yVal) / (CPaint2D.YSortRange.y - CPaint2D.YSortRange.x);
 				pMat.mF32A[14] += yRatio * CPaint2D.YSortZShift;
@@ -1354,10 +1362,10 @@ export class CPaint2DMerge extends CPaint
 			posb[0].bufF.Push(rb);
 			posb[0].bufF.Push(rt);
 			posb[0].bufF.Push(lt);
-            posb[1].bufF.Push(scaB);
-            posb[1].bufF.Push(scaB);
-            posb[1].bufF.Push(scaT);
-            posb[1].bufF.Push(scaT);
+            posb[1].bufF.Push(scaBL);
+            posb[1].bufF.Push(scaBR);
+            posb[1].bufF.Push(scaTR);
+            posb[1].bufF.Push(scaTL);
 			this.mBound.InitBound(lb);
 			this.mBound.InitBound(rb);
 			this.mBound.InitBound(rt);

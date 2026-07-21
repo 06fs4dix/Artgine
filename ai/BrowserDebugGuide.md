@@ -51,7 +51,7 @@ BASE_URL=<접속정보.주소>:<접속정보.포트>/<접속정보.기본경로>
 node ai/tool/browser.js $BASE_URL login
 → ok
 
-node ai/tool/browser.js $BASE_URL push $BASE_URL/proj/Home/Home.html 600 100 1280 720
+node ai/tool/browser.js $BASE_URL push $BASE_URL/proj/Control/Control.html 600 100 1280 720
 → 3he4wj8iy6vmqf86ham   (이 값이 sessionId)
 
 node ai/tool/browser.js $BASE_URL exec 3he4wj8iy6vmqf86ham title

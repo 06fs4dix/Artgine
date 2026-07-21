@@ -87,8 +87,12 @@ export class CCMDMgr {
                     // Linux: 가용한 터미널 에뮬레이터 우선 사용
                     const tryTerms: Array<{ bin: string; args: string[] }> = [
                         { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${_cmd}; exec bash`] },
+                        // ptyxis: 최신 GNOME/우분투 기본 터미널(gnome-terminal 대체). '--' 뒤 명령 실행.
+                        { bin: 'ptyxis', args: ['--', 'bash', '-c', `${_cmd}; exec bash`] },
                         { bin: 'konsole', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
                         { bin: 'xterm', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
+                        // x-terminal-emulator: 데비안/우분투의 "시스템 기본 터미널" 심볼릭 링크. 어떤 배포든 마지막 폴백.
+                        { bin: 'x-terminal-emulator', args: ['-e', 'bash', '-c', `${_cmd}; exec bash`] },
                     ];
                     for (const t of tryTerms) {
                         if (this.IsCommandAvailable(t.bin)) {

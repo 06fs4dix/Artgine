@@ -59,7 +59,7 @@ export class CLight extends CBrushComp
 		this.mColor=new CVec4();
         this.mCullMask=new CVec4();
 		
-		this.mDirPos.w = 1;
+		this.mDirPos.w = -1;
 		
 		this.mColor.x = 1;
 		this.mColor.y = 1;

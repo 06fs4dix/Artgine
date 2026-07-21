@@ -9,7 +9,7 @@ const COOKIE_FILE = join(SCRIPT_DIR, 'remotecmd_cookie.txt');
 
 const { call } = createApiClient(COOKIE_FILE);
 
-// HomeURL = <주소>:<포트>/<기본경로>/proj/.../Home.html?path=...&RootPath=...&RootUrl=...
+// HomeURL = <주소>:<포트>/<기본경로>/proj/.../Control.html?path=...&RootPath=...&RootUrl=...
 // 기본경로(예: /Artgine)까지가 API 베이스. RootPath+path를 합쳐 RemoteCMD/Exec의 cwd로 사용한다.
 function parseHomeUrl(homeUrlArg) {
     const u = new URL(homeUrlArg);
