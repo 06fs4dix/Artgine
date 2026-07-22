@@ -1,99 +1,146 @@
 <!DOCTYPE html>
-<html lang="ko" data-bs-theme="dark">
+<html lang="en" data-bs-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artgine - 앱 개발과 실행을 한 화면에서</title>
+<title>Artgine — Develop and run in one screen</title>
 <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-5.3.3-dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="../artgine/external/legacy/bootstrap-icons-1.11.3/bootstrap-icons.css">
-<script src="../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.min.js"></script>
+<script src="../artgine/external/legacy/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js"></script>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif; background:#0d1117; color:#c9d1d9; }
-  .hero { min-height:72vh; display:flex; align-items:center; background:radial-gradient(circle at 20% 20%,#16395c 0,#0d1117 32%), linear-gradient(135deg,#0d1117,#111827); border-bottom:1px solid #30363d; }
+
+  /* ── Hero ── */
+  .hero { min-height:56vh; display:flex; align-items:center; background:radial-gradient(circle at 20% 20%,#16395c 0,#0d1117 32%), linear-gradient(135deg,#0d1117,#111827); border-bottom:1px solid #30363d; }
   .hero h1 { font-size:clamp(3.4rem,8vw,6.5rem); font-weight:850; letter-spacing:0; line-height:1; }
   .hero p { color:#9ca3af; font-size:1.3rem; max-width:720px; }
-  .brand-img { width:min(320px,60vw); border-radius:28px; box-shadow:0 24px 60px rgba(0,0,0,.45); }
+  .brand-img { width:min(300px,55vw); border-radius:28px; box-shadow:0 24px 60px rgba(0,0,0,.45); }
   .badge-tag { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .75rem; border:1px solid #30363d; border-radius:999px; color:#8ab4f8; background:#161b22; font-size:.86rem; }
-  .section { padding:72px 0; }
+
+  /* ── Main Tabs ── */
+  .main-tab-bar { position:sticky; top:0; z-index:40; background:#0d1117; border-bottom:1px solid #30363d; }
+  .main-tabs { border-bottom:0; gap:.25rem; padding:0 1rem; flex-wrap:wrap; justify-content:center; }
+  .main-tabs .nav-link { color:#8b949e; border:1px solid transparent; border-radius:8px 8px 0 0; padding:.85rem 1.5rem; font-weight:650; display:flex; align-items:center; gap:.5rem; }
+  .main-tabs .nav-link:hover { color:#c9d1d9; }
+  .main-tabs .nav-link.active { color:#58a6ff; background:#161b22; border-color:#30363d; border-bottom-color:#161b22; }
+  /* Language toggle */
+  .lang-toggle { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#161b22; border:1px solid #30363d; color:#c9d1d9; border-radius:999px; padding:.35rem .85rem; font-size:.82rem; font-weight:650; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer; }
+  .lang-toggle:hover { border-color:#58a6ff; color:#58a6ff; }
+  @media(max-width:640px){ .lang-toggle { position:static; transform:none; display:block; margin:6px auto 8px; } }
+
+  .section { padding:56px 0; }
   .section-title { font-size:2rem; font-weight:780; margin-bottom:.55rem; }
   .section-sub { color:#8b949e; max-width:760px; margin:0 auto 2rem; }
-  .feature-card { height:100%; background:#161b22; border:1px solid #30363d; border-radius:12px; padding:24px; }
-  .feature-card i { font-size:2rem; color:#58a6ff; }
+
+  /* ── Feature cards ── */
+  .feature-card { height:100%; background:#161b22; border:1px solid #30363d; border-radius:12px; padding:24px; transition:all .2s; }
+  .feature-card:hover { border-color:#58a6ff; transform:translateY(-2px); box-shadow:0 8px 24px rgba(88,166,255,.12); }
+  .feature-card i.ic { font-size:2rem; color:#58a6ff; }
   .feature-card h3 { font-size:1.08rem; font-weight:720; margin:14px 0 8px; }
   .feature-card p { color:#8b949e; margin:0; font-size:.94rem; }
-  .mock-window { background:#f8f9fa; color:#212529; border-radius:12px; overflow:hidden; border:1px solid #30363d; box-shadow:0 28px 70px rgba(0,0,0,.4); }
-  .mock-title { height:36px; background:#212529; display:flex; align-items:center; gap:7px; padding:0 12px; }
-  .dot { width:10px; height:10px; border-radius:50%; display:block; }
-  .dot.red { background:#ff5f56; } .dot.yellow { background:#ffbd2e; } .dot.green { background:#27c93f; }
-  .mock-body { min-height:430px; background:#eef1f5; }
-  .mock-main { padding:18px; }
-  .mock-card { background:#fff; border:1px solid #dee2e6; border-radius:8px; padding:14px; margin-bottom:12px; }
-  .mock-tabs { display:flex; gap:6px; border-bottom:1px solid #dee2e6; margin-bottom:12px; overflow:hidden; }
-  .mock-tab { padding:8px 10px; background:#fff; border:1px solid #dee2e6; border-bottom:0; border-radius:8px 8px 0 0; font-size:.82rem; }
-  .mock-tab.active { color:#0d6efd; font-weight:700; }
-  .code { background:#0d1117; color:#d1fae5; border-radius:8px; padding:16px; font-family:Consolas,monospace; font-size:.9rem; }
-  .mode-pill { display:inline-flex; align-items:center; gap:.4rem; background:#161b22; border:1px solid #30363d; color:#c9d1d9; border-radius:999px; padding:.45rem .85rem; margin:.25rem; font-size:.9rem; }
-  .flow-line { position:relative; padding-left:34px; }
-  .flow-line:before { content:""; position:absolute; left:12px; top:8px; bottom:8px; width:2px; background:#30363d; }
-  .flow-item { position:relative; margin-bottom:22px; }
-  .flow-item:before { content:""; position:absolute; left:-27px; top:4px; width:14px; height:14px; border-radius:50%; background:#58a6ff; box-shadow:0 0 0 4px #162338; }
-  .footer { border-top:1px solid #30363d; color:#6e7681; padding:32px 0; font-size:.9rem; }
-  @media(max-width:900px){ .hero{padding:64px 0; min-height:auto;} }
 
-  /* --- electron-ui-mode-guide.html embedded styles (scoped to #guideEmbed) --- */
-  #guideEmbed{height:900px;margin:0;background:#eef1f5;color:#212529;}
-  #guideEmbed .tutorial-app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}
-  #guideEmbed .guide{background:#fff;border-right:1px solid var(--bs-border-color);display:flex;flex-direction:column;min-height:0}
-  #guideEmbed .guide-head{padding:18px;border-bottom:1px solid var(--bs-border-color)}
-  #guideEmbed .guide-head h1{font-size:19px;margin:0 0 6px}#guideEmbed .guide-head p{margin:0;color:var(--bs-secondary)}
-  #guideEmbed .modebar{display:flex;gap:6px;padding:12px;border-bottom:1px solid var(--bs-border-color);background:var(--bs-tertiary-bg)}
-  #guideEmbed .modebar .btn{flex:1;font-size:13px}
-  #guideEmbed .steps{padding:12px;overflow:auto;min-height:0;flex:1}
-  #guideEmbed .step{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;text-align:left;border:1px solid var(--bs-border-color);background:#fff;border-radius:.375rem;padding:10px;margin-bottom:8px;cursor:pointer}
-  #guideEmbed .step.active{background:#e7f1ff;border-color:#9ec5fe}
-  #guideEmbed .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e9ecef;color:#495057;font-weight:700;font-size:13px}
-  #guideEmbed .step.active .num{background:var(--bs-blue);color:#fff}#guideEmbed .step strong{display:block;margin-bottom:3px}#guideEmbed .step span:last-child{font-size:12px;color:var(--bs-secondary)}
-  #guideEmbed .workspace{height:100%;min-width:0;padding:14px}
-  #guideEmbed .electron-window{height:100%;min-height:0;background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;box-shadow:0 .25rem .75rem rgba(0,0,0,.08);overflow:auto;position:relative}
-  #guideEmbed .mode-screen{display:none;height:100%;overflow:auto}#guideEmbed .mode-screen.active{display:block}
-  #guideEmbed .server-wrap{max-width:500px}
-  #guideEmbed .setup-intro{background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;padding:16px 18px}
-  #guideEmbed .setup-flow{position:relative;padding-left:48px}
-  #guideEmbed .setup-flow:before{content:"";position:absolute;left:17px;top:6px;bottom:6px;width:2px;background:var(--bs-border-color)}
-  #guideEmbed .setup-item{position:relative;margin-bottom:20px}
-  #guideEmbed .setup-item:last-child{margin-bottom:0}
-  #guideEmbed .setup-icon{position:absolute;left:-48px;top:0;width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid var(--bs-blue);color:var(--bs-blue);display:grid;place-items:center;font-size:16px;z-index:1}
-  #guideEmbed .setup-content{background:#fff;border:1px solid var(--bs-border-color);border-radius:.5rem;padding:14px 16px}
-  #guideEmbed .setup-content-title{font-weight:700;margin-bottom:8px}
-  #guideEmbed .source-screen{height:100%;display:flex;flex-direction:column;min-height:0}
-  #guideEmbed .source-tabs{border-bottom:1px solid var(--bs-border-color);background:var(--bs-tertiary-bg);padding:6px 10px}
-  #guideEmbed .source-main{min-width:0;min-height:0;flex:1;padding:10px;display:flex;flex-direction:column;gap:8px}
-  #guideEmbed .fake-qr{width:180px;height:180px;margin:0;border:8px solid #fff;background:#fff;box-shadow:0 0 0 1px var(--bs-border-color);display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(13,1fr);gap:2px;padding:8px}
-  #guideEmbed .fake-qr i{display:block;background:#111}#guideEmbed .fake-qr i.blank{background:#fff}
-  #guideEmbed .fake-qr .finder{grid-column:span 4;grid-row:span 4;border:8px solid #111;background:#fff;position:relative}
-  #guideEmbed .fake-qr .finder:after{content:"";position:absolute;inset:8px;background:#111}
-  #guideEmbed .source-legend{display:flex;flex-wrap:wrap;gap:6px;color:var(--bs-secondary);font-size:12px}
-  #guideEmbed .source-legend span{border:1px solid var(--bs-border-color);border-radius:999px;background:#fff;padding:5px 8px}
-  #guideEmbed .danger-mark{color:var(--bs-danger);font-weight:800}#guideEmbed .ok-mark{color:var(--bs-success);font-weight:800}
-  #guideEmbed .code{flex:1;margin:0;min-height:0;overflow:auto;background:#f8f9fa;color:#212529;border:1px solid var(--bs-border-color);border-radius:.375rem;padding:14px;font-family:Consolas,monospace;white-space:pre-wrap;line-height:1.55}
-  #guideEmbed .danger{color:#dc3545;background:rgba(220,53,69,.12);border-radius:.25rem;padding:1px 3px}#guideEmbed .ok{color:#198754;background:rgba(25,135,84,.12);border-radius:.25rem;padding:1px 3px}#guideEmbed .comment{color:#6c757d}#guideEmbed .keyword{color:#0d6efd}#guideEmbed .string{color:#a3760a}
-  #guideEmbed .coach{position:absolute;right:18px;bottom:18px;width:min(520px,calc(100% - 36px));background:#fff;color:#212529;border:1px solid var(--bs-border-color);border-radius:.5rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15);padding:16px;z-index:30}
-  #guideEmbed .coach.collapsed{display:none}
-  #guideEmbed .coach h2{font-size:18px;margin:0 0 8px;padding-right:24px}#guideEmbed .coach p{margin:0 0 12px;color:#495057;line-height:1.45}
-  #guideEmbed .coach-close{position:absolute;top:10px;right:10px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.06);color:#212529;line-height:1;font-size:14px;cursor:pointer}
-  #guideEmbed .coach-close:hover{background:rgba(0,0,0,.12)}
-  #guideEmbed .tip{border:1px solid var(--bs-border-color);background:#f8f9fa;border-radius:.375rem;padding:9px;color:#495057;line-height:1.45}
-  #guideEmbed .coach-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px}#guideEmbed .coach-actions .btn{background:#e9ecef;color:#212529;border-color:#ced4da}#guideEmbed .coach-actions .btn-primary{background:#0d6efd;border-color:#0d6efd;color:#fff}
-  #guideEmbed .coach-reopen{display:none;position:absolute;right:18px;bottom:18px;z-index:30;border-radius:999px;padding:.5rem 1rem;background:#0d6efd;color:#fff;border:0;box-shadow:0 .5rem 1rem rgba(0,0,0,.15);cursor:pointer}
-  #guideEmbed .coach-reopen.show{display:inline-flex;align-items:center;gap:.4rem}
-  #guideEmbed .highlight{outline:3px solid #f7c948;outline-offset:3px;position:relative;z-index:4}
-  #guideEmbed .click-tooltip{display:none;position:fixed;z-index:80;max-width:320px;background:#212529;color:#fff;border-radius:.375rem;padding:10px 12px;box-shadow:0 .5rem 1rem rgba(0,0,0,.2);font-size:13px;line-height:1.45}
-  #guideEmbed .click-tooltip.show{display:block}
-  @media(max-width:940px){#guideEmbed .tutorial-app{grid-template-columns:1fr;grid-template-rows:1fr}#guideEmbed .guide{display:none}#guideEmbed .workspace{padding:8px}#guideEmbed .coach{right:10px;bottom:10px;width:calc(100% - 20px)}}
+  /* ── Install flow ── */
+  .flow { position:relative; padding-left:48px; max-width:760px; }
+  .flow:before { content:""; position:absolute; left:17px; top:6px; bottom:6px; width:2px; background:#30363d; }
+  .flow-item { position:relative; margin-bottom:22px; }
+  .flow-item:last-child { margin-bottom:0; }
+  .flow-icon { position:absolute; left:-48px; top:0; width:36px; height:36px; border-radius:50%; background:#0d1117; border:2px solid #58a6ff; color:#58a6ff; display:grid; place-items:center; font-size:16px; }
+  .flow-content { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:14px 16px; }
+  .flow-content h4 { font-size:1rem; font-weight:720; margin:0 0 8px; }
+  .flow-content p { color:#8b949e; margin:0; font-size:.9rem; }
+  pre.cmd { background:#0a0f18; color:#7ee787; border:1px solid #21262d; border-radius:8px; padding:14px; font-family:Consolas,monospace; font-size:.88rem; margin:0; white-space:pre-wrap; }
+  code.inl { color:#7ee787; background:#0d1117; padding:.1rem .4rem; border-radius:4px; }
+
+  /* ── Electron sub pills ── */
+  .mode-pills { gap:.5rem; }
+  .mode-pills .nav-link { color:#8b949e; background:#161b22; border:1px solid #30363d; border-radius:999px; padding:.5rem 1.2rem; font-weight:650; }
+  .mode-pills .nav-link.active { color:#fff; }
+  .mode-pills .nav-link[data-m="dev"].active { background:#1f6feb; border-color:#1f6feb; }
+  .mode-pills .nav-link[data-m="server"].active { background:#238636; border-color:#238636; }
+  .mode-pills .nav-link[data-m="client"].active { background:#8957e5; border-color:#8957e5; }
+
+  /* ── Mock window ── */
+  .win { background:#f3f3f3; color:#212529; border-radius:10px 10px 6px 6px; overflow:hidden; border:1px solid rgba(0,0,0,.35); box-shadow:0 20px 50px rgba(0,0,0,.45); }
+  .win-title { height:34px; background:#212529; display:flex; align-items:center; gap:7px; padding:0 12px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:block; }
+  .dot.red{background:#ff5f56;} .dot.yellow{background:#ffbd2e;} .dot.green{background:#27c93f;}
+  .win-title .cap { margin-left:8px; color:#adb5bd; font-size:.78rem; }
+  .win-body { background:#fff; padding:16px; }
+
+  /* Explain card */
+  .explain-card { background:#161b22; border:1px solid #30363d; border-left:3px solid #58a6ff; border-radius:8px; padding:14px 16px; }
+  .explain-card h5 { font-size:.98rem; font-weight:700; margin:0 0 6px; color:#e6edf3; display:flex; align-items:center; gap:8px; }
+  .explain-card p { margin:0; color:#8b949e; font-size:.88rem; line-height:1.5; }
+  .explain-card .badge-mode { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:5px; background:#1a2332; color:#58a6ff; }
+
+  /* Dev tab detail panel */
+  .dev-detail { background:#161b22; border:1px solid #30363d; border-radius:12px; overflow:hidden; }
+  .dev-detail-head { padding:14px 18px; border-bottom:1px solid #30363d; background:#0f1723; }
+  .dev-detail-head h5 { margin:0 0 4px; font-size:1.05rem; font-weight:750; color:#e6edf3; display:flex; align-items:center; gap:10px; }
+  .dev-detail-head .badge-mode { font-size:.72rem; font-weight:700; padding:3px 10px; border-radius:6px; background:#1f6feb; color:#fff; }
+  .dev-detail-head p { margin:0; color:#8b949e; font-size:.9rem; }
+  .dev-item-list { list-style:none; margin:0; padding:8px; }
+  .dev-item { display:grid; grid-template-columns:180px 1fr; gap:14px; padding:11px 12px; border-radius:8px; align-items:start; }
+  .dev-item + .dev-item { border-top:1px solid #21262d; }
+  .dev-item:hover { background:#1b222c; }
+  .dev-item .k { font-family:Consolas,monospace; font-size:.86rem; color:#7ee787; font-weight:600; word-break:break-word; }
+  .dev-item .k small { display:block; color:#6e7681; font-family:-apple-system,sans-serif; font-weight:400; font-size:.72rem; margin-top:2px; }
+  .dev-item .v { color:#8b949e; font-size:.9rem; line-height:1.5; }
+  @media(max-width:640px){ .dev-item { grid-template-columns:1fr; gap:3px; } }
+
+  /* Auto-generation flow */
+  .genflow { display:flex; flex-direction:column; align-items:flex-start; gap:0; }
+  .genflow-node { width:100%; max-width:560px; background:#161b22; border:1px solid #30363d; border-radius:10px; padding:14px 18px; text-align:left; }
+  .genflow-node .n { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:#1f6feb; color:#fff; font-weight:700; font-size:.82rem; margin-right:8px; }
+  .genflow-node h4 { display:inline; font-size:1rem; font-weight:700; color:#e6edf3; }
+  .genflow-node p { margin:8px 0 0; color:#8b949e; font-size:.88rem; }
+  .genflow-arrow { color:#3fb950; font-size:1.4rem; line-height:1; padding:6px 0 6px 20px; }
+  .genflow-files { width:100%; max-width:560px; background:#0a0f18; border:1px solid #21262d; border-radius:10px; padding:10px; }
+  .genfile { display:grid; grid-template-columns:auto 200px 1fr; align-items:center; gap:10px; padding:9px 10px; border-radius:7px; }
+  .genfile + .genfile { border-top:1px solid #21262d; }
+  .genfile .tag { font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:5px; white-space:nowrap; }
+  .genfile .tag.gen { background:#3a1114; color:#ff7b72; }
+  .genfile .fn { font-family:Consolas,monospace; font-size:.86rem; color:#e6edf3; word-break:break-all; }
+  .genfile .fd { color:#8b949e; font-size:.84rem; }
+  @media(max-width:640px){ .genfile { grid-template-columns:1fr; gap:3px; text-align:left; } .genfile .tag{ justify-self:start; } }
+
+  /* Tunnel warning */
+  .tunnel-note { background:#1c1608; border:1px solid #6e4f1a; border-radius:10px; padding:16px 18px; }
+  .tunnel-note-title { color:#d29922; font-weight:650; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .tunnel-note p { color:#c9d1d9; font-size:.9rem; line-height:1.55; }
+
+  /* Server mock */
+  .server-form { max-width:440px; margin:0 auto; }
+  .fake-qr { width:150px; height:150px; margin:12px auto 0; border:8px solid #fff; background:#fff; box-shadow:0 0 0 1px #dee2e6; display:grid; grid-template-columns:repeat(13,1fr); grid-template-rows:repeat(13,1fr); gap:2px; padding:6px; }
+  .fake-qr i{ display:block; background:#111; } .fake-qr i.blank{ background:#fff; }
+  .fake-qr .finder{ grid-column:span 4; grid-row:span 4; border:7px solid #111; background:#fff; position:relative; }
+  .fake-qr .finder:after{ content:""; position:absolute; inset:7px; background:#111; }
+
+  /* Client visual */
+  .client-visual { background:#0a0f18; border:1px solid #21262d; border-radius:10px; padding:24px; text-align:center; }
+  .client-flow-step { display:inline-flex; align-items:center; gap:10px; color:#c9d1d9; font-size:.9rem; }
+  .client-arrow { color:#484f58; font-size:1.4rem; }
+
+  /* Workflow code area */
+  .legend { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  .legend span { border:1px solid #30363d; border-radius:999px; background:#161b22; padding:5px 10px; font-size:.8rem; color:#8b949e; }
+  .code-block { background:#0a0f18; border:1px solid #21262d; border-radius:10px; padding:16px; font-family:Consolas,monospace; font-size:.86rem; white-space:pre-wrap; line-height:1.6; overflow:auto; }
+  .code-block .danger { color:#ff7b72; background:rgba(248,81,73,.1); border-radius:3px; padding:1px 3px; }
+  .code-block .ok { color:#7ee787; background:rgba(63,185,80,.1); border-radius:3px; padding:1px 3px; }
+  .code-block .comment { color:#6e7681; }
+  .code-block .keyword { color:#79c0ff; }
+  .src-tabs .nav-link { color:#8b949e; font-size:.9rem; }
+  .src-tabs .nav-link.active { color:#58a6ff; }
+
+  .footer { border-top:1px solid #30363d; color:#6e7681; padding:32px 0; font-size:.9rem; }
+
+  @media(max-width:900px){ .hero{padding:56px 0; min-height:auto;} }
 </style>
 </head>
 <body>
+
+<!-- ══════════ Hero ══════════ -->
 <section class="hero">
   <div class="container">
     <div class="row align-items-center g-4">
@@ -105,16 +152,10 @@
           <span class="badge-tag"><i class="bi bi-phone"></i> PWA</span>
         </div>
         <h1>Artgine</h1>
-        <p class="mt-4">
-          Artgine은 Electron 기반 개발 앱과 웹 서버, 렌더링 엔진, 프로젝트 생성 도구를 하나로 묶은 통합 개발 환경입니다.
-          프로젝트 경로를 선택하고, 렌더링 옵션과 포함 라이브러리를 설정한 뒤, Run(F9)으로 바로 실행 흐름을 확인할 수 있습니다.
+        <p class="mt-4" data-CLan="heroDesc">
+          Artgine is an integrated development environment that bundles an Electron-based dev app, a web server, a rendering engine, and a project generator into one.
+          Choose a project path, configure rendering options and included libraries, then press Run(F9) to check the execution flow right away.
         </p>
-        <div class="d-flex gap-2 flex-wrap mt-4">
-          <a class="btn btn-primary px-4" href="https://github.com/06fs4dix/Artgine" target="_blank"><i class="bi bi-github"></i> GitHub</a>
-          <a class="btn btn-outline-light px-4" href="./artgine-agent-promo.html"><i class="bi bi-robot"></i> Agent</a>
-          <a class="btn btn-outline-light px-4" href="https://github.com/06fs4dix/Artgine-Project" target="_blank"><i class="bi bi-github"></i> Sample</a>
-          <a class="btn btn-outline-light px-4" href="https://github.com/06fs4dix/ULPC" target="_blank"><i class="bi bi-github"></i> ULPC</a>
-        </div>
       </div>
       <div class="col-lg-4 text-center">
         <img class="brand-img" src="./Artgine.png" alt="Artgine">
@@ -123,281 +164,634 @@
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
-    <h2 class="section-title text-center">앱이 담당하는 일</h2>
-    <p class="section-sub text-center">Artgine 앱은 프로젝트 설정, 실행, 서버 접속 정보 확인, 생성 파일 구조 안내까지 개발 흐름을 한 화면에 모읍니다.</p>
-    <div class="row g-3">
-      <div class="col-md-6 col-lg-3"><div class="feature-card"><i class="bi bi-play-circle"></i><h3>프로젝트 실행</h3><p>projectPath를 선택하고 Run(F9)으로 프로젝트 HTML과 서버 실행 흐름을 시작합니다.</p></div></div>
-      <div class="col-md-6 col-lg-3"><div class="feature-card"><i class="bi bi-sliders"></i><h3>렌더링 설정</h3><p>targetWidth, targetHeight, Renderer, Canvas, XR, 개발자 옵션을 UI에서 조정합니다.</p></div></div>
-      <div class="col-md-6 col-lg-3"><div class="feature-card"><i class="bi bi-box-seam"></i><h3>Include / Plugin</h3><p>Bootstrap, Monaco, Excel, Firebase 같은 라이브러리와 엔진 플러그인을 선택합니다.</p></div></div>
-      <div class="col-md-6 col-lg-3"><div class="feature-card"><i class="bi bi-broadcast"></i><h3>서버 모드</h3><p>URL, Private IP, Public IP, QR 정보를 확인하고 브라우저로 바로 열 수 있습니다.</p></div></div>
-    </div>
-  </div>
-</section>
-
-<section class="section pt-0">
-  <div class="container">
-    <div class="mock-window">
-      <div class="mock-title"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="ms-2 text-light small">electron-ui-mode-guide.html</span></div>
-      <div class="mock-body">
-        <div id="guideEmbed" data-bs-theme="light">
-  <div class="tutorial-app">
-    <aside class="guide">
-      <div class="modebar">
-        <button class="btn btn-primary"          data-mode="setup"  data-i18n="modeSetup"  type="button"></button>
-        <button class="btn btn-outline-secondary" data-mode="dev"    data-i18n="modeDev"    type="button"></button>
-        <button class="btn btn-outline-success"   data-mode="server" data-i18n="modeServer" type="button"></button>
-        <button class="btn btn-outline-secondary" data-mode="source" data-i18n="modeSource" type="button"></button>
-      </div>
-      <div class="steps" id="steps"></div>
-    </aside>
-
-    <main class="workspace">
-      <section class="electron-window">
-        <div class="mode-screen active" id="screen-setup">
-          <div class="mt-3 ms-3" style="max-width:760px;">
-            <h4 class="mb-3" data-i18n="setupTitle"></h4>
-            <div class="setup-intro mb-4">
-              <div class="setup-content-title" data-i18n="introTitle"></div>
-              <p class="mb-0 text-secondary" data-i18n="introBody"></p>
-            </div>
-            <div class="setup-flow">
-              <div class="setup-item" id="setupCommandBox">
-                <div class="setup-icon"><i class="bi bi-terminal"></i></div>
-                <div class="setup-content">
-                  <div class="setup-content-title" data-i18n="setupConsoleTitle"></div>
-                  <pre class="mb-0 bg-dark text-light p-3 rounded">git clone https://github.com/06fs4dix/Artgine.git
-cd Artgine
-npm install
-npm start</pre>
-                </div>
-              </div>
-              <div class="setup-item" id="setupStartBox">
-                <div class="setup-icon"><i class="bi bi-window"></i></div>
-                <div class="setup-content">
-                  <div class="setup-content-title" data-i18n="setupStartTitle"></div>
-                  <p class="mb-0" data-i18n="setupStartBody"></p>
-                </div>
-              </div>
-              <div class="setup-item" id="setupServerBox">
-                <div class="setup-icon"><i class="bi bi-hdd-network"></i></div>
-                <div class="setup-content">
-                  <div class="setup-content-title" data-i18n="setupServerTitle"></div>
-                  <code>npm run start_web</code>
-                </div>
-              </div>
-              <div class="setup-item" id="setupRunBox">
-                <div class="setup-icon"><i class="bi bi-play-circle"></i></div>
-                <div class="setup-content">
-                  <div class="setup-content-title" data-i18n="setupRunTitle"></div>
-                  <div data-i18n-html="setupRunBody"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mode-screen" id="screen-dev">
-          <div class="p-4">
-            <ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
-              <li class="nav-item" role="presentation"><button class="nav-link active" id="app-tab" data-bs-toggle="tab" data-bs-target="#app" type="button" role="tab">App</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" id="pref-tab" data-bs-toggle="tab" data-bs-target="#preference" type="button" role="tab">Preference</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" id="include-tab" data-bs-toggle="tab" data-bs-target="#include" type="button" role="tab">Include</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" id="manifest-tab" data-bs-toggle="tab" data-bs-target="#manifest" type="button" role="tab">Manifest</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" id="service-tab" data-bs-toggle="tab" data-bs-target="#serviceworker" type="button" role="tab">ServiceWorker</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" id="plugin-tab" data-bs-toggle="tab" data-bs-target="#plugin" type="button" role="tab">Plugin</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button" role="tab">AI</button></li>
-            </ul>
-
-            <div class="tab-content" id="settingsTabsContent">
-              <div class="tab-pane fade show active" id="app" role="tabpanel">
-                <div class="mb-2" id="urlBox">
-                  <label class="form-label">url</label>
-                  <input type="text" class="form-control" id="url_txt" value="http://localhost:8082/Artgine">
-                </div>
-                <div class="mb-2" id="projectPathBox">
-                  <label class="form-label">projectPath</label>
-                  <div class="input-group">
-                    <input type="text" class="form-control" id="projectPath_txt" value="proj/Sample">
-                    <button class="btn btn-outline-secondary" type="button" id="selectProjectPath_btn">Folder</button>
-                  </div>
-                </div>
-                <div class="row mb-2" id="sizeBox">
-                  <div class="col"><label class="form-label">width</label><input type="number" class="form-control" id="width_num" value="1024"></div>
-                  <div class="col"><label class="form-label">height</label><input type="number" class="form-control" id="height_num" value="768"></div>
-                </div>
-                <div class="mb-2" id="programBox">
-                  <label class="form-label">program</label>
-                  <select class="form-select" id="program_sel"><option>developer</option><option>client</option><option>server</option></select>
-                </div>
-                <div class="mb-2" id="serverBox">
-                  <label class="form-label">server</label>
-                  <select class="form-select" id="server_sel"><option>local</option><option>remote</option><option>webServer</option></select>
-                </div>
-                <div class="row mb-2">
-                  <div class="col d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" id="fullScreen_chk"><label class="form-check-label" for="fullScreen_chk">fullScreen</label></div></div>
-                  <div class="col d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" id="github_chk"><label class="form-check-label" for="github_chk">github</label></div></div>
-                </div>
-                <div class="accordion mb-2" id="authRootAccordion">
-                  <div class="accordion-item">
-                    <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button">Extra Server Settings</button></h2>
-                  </div>
-                </div>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-primary" id="Run_btn">Run(F9</button>
-                  <button class="btn btn-dark" id="VSCode_btn">VSCode(F4</button>
-                </div>
-              </div>
-
-              <div class="tab-pane fade" id="preference" role="tabpanel">
-                <div class="row mb-2">
-                  <div class="col">
-                    <label class="form-label">targetWidth</label><input id="targetWidth" type="number" class="form-control" value="0">
-                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="depth"><label class="form-check-label" for="depth">32fDepth</label></div>
-                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="anti"><label class="form-check-label" for="anti">anti</label></div>
-                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="xr"><label class="form-check-label" for="xr">xr</label></div>
-                  </div>
-                  <div class="col">
-                    <label class="form-label">targetHeight</label><input id="targetHeight" type="number" class="form-control" value="0">
-                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="devTool" checked><label class="form-check-label" for="devTool">developer</label></div>
-                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="IAuto" checked><label class="form-check-label" for="IAuto">IAuto(CAtelier Include</label></div>
-                  </div>
-                </div>
-                <div class="mb-3"><label class="form-label">Renderer</label><select class="form-select"><option>Null</option><option selected>GL</option><option>GPU</option></select></div>
-                <div class="mb-2"><label class="form-label">Canvas</label><input type="text" class="form-control" id="canvas_txt" value=""></div>
-                <button class="btn btn-secondary">Default</button>
-              </div>
-
-              <div class="tab-pane fade" id="include" role="tabpanel">
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">PakoZlib(FBX)</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">JSZip</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">ScreenFull</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Popper</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Bootstrap</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">MonacoEditor</label></div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Excel</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Firebase</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">NoSleep</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Tone</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">QRCode</label></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tab-pane fade" id="manifest" role="tabpanel">
-                <div class="mb-2"><label class="form-label">short_name</label><input type="text" class="form-control" id="short_name_txt"></div>
-                <div class="mb-2"><label class="form-label">name</label><input type="text" class="form-control" id="name_txt"></div>
-                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="iconsAdd_btn">+ Add Icon</button>
-                <div class="mb-2 mt-3"><label class="form-label">orientation</label><select class="form-select" id="orientation_sel"><option>any</option><option>landscape</option></select></div>
-                <div class="mb-2"><label class="form-label">display</label><select class="form-select" id="display_sel"><option>standalone</option><option>fullscreen</option></select></div>
-                <div class="mb-2"><label class="form-label">background_color</label><input type="color" class="form-control form-control-color" id="background_color_pick" value="#ffffff"></div>
-                <div class="mb-2"><label class="form-label">theme_color</label><input type="color" class="form-control form-control-color" id="theme_color_pick" value="#000000"></div>
-              </div>
-
-              <div class="tab-pane fade" id="serviceworker" role="tabpanel">
-                <div class="mb-2"><label class="form-label">CACHE_NAME</label><input type="text" class="form-control" id="cache_name_txt" value="ServiceWorker-1" readonly></div>
-                <div class="mb-2"><label class="form-label">max_cache_size</label><input type="number" class="form-control" id="max_cache_size_num" min="1" value="50"></div>
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="log_chk"><label class="form-check-label" for="log_chk">log</label></div>
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="api_cache_chk"><label class="form-check-label" for="api_cache_chk">api cache</label></div>
-              </div>
-
-              <div class="tab-pane fade" id="plugin" role="tabpanel">
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Bloom</label></div>
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Rapier</label></div>
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Water</label></div>
-              </div>
-
-              <div class="tab-pane fade" id="ai" role="tabpanel">
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Claude</label></div>
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">Antigravity</label></div>
-                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Codex</label></div>
-                <button class="btn btn-primary" id="aiCreate_btn">Create</button>
-                <button class="btn btn-danger" id="aiDelete_btn">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mode-screen" id="screen-server">
-          <div class="mt-3 ms-3 server-wrap">
-            <div class="row align-items-center mb-2" id="serverUrlBox">
-              <label class="col-sm-4 col-form-label">URL</label>
-              <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="http://localhost:8082/Artgine" readonly><button class="btn btn-outline-secondary">Copy</button></div>
-            </div>
-            <div class="mb-3 row align-items-center" id="privateIpBox">
-              <label class="col-sm-4 col-form-label">Private IP</label>
-              <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="192.168.0.12" readonly><button class="btn btn-outline-secondary">Copy</button></div>
-            </div>
-            <div class="mb-3 row align-items-center" id="publicIpBox">
-              <label class="col-sm-4 col-form-label">Public IP</label>
-              <div class="col-sm-8 d-flex"><input type="text" class="form-control me-2" value="singleton88.iptime.org" readonly><button class="btn btn-outline-secondary">Copy</button></div>
-            </div>
-            <div class="accordion mb-3" id="serverExtraBox">
-              <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button">Extra Server Settings</button></h2></div>
-            </div>
-            <div class="d-flex gap-2">
-              <button class="btn btn-primary" id="browser_btn">Browser</button>
-              <button class="btn btn-secondary" id="switchDev_btn">Developer</button>
-            </div>
-            <div class="mt-3" id="qr_area">
-              <div class="fake-qr" aria-label="QR">
-                <span class="finder"></span><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><span class="finder"></span>
-                <i class="blank"></i><i></i><i></i><i class="blank"></i><i></i>
-                <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i>
-                <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
-                <span class="finder"></span><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i>
-                <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
-                <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i class="blank"></i><i></i><i></i>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mode-screen" id="screen-source">
-          <div class="source-screen">
-            <div class="source-tabs">
-              <div class="nav nav-tabs" role="tablist">
-                <button class="nav-link active" data-source="auto" id="sourceAuto" data-i18n="sourceTabAuto" type="button"></button>
-                <button class="nav-link" data-source="ts"   id="sourceTs"   data-i18n="sourceTabTs"   type="button"></button>
-                <button class="nav-link" data-source="html" id="sourceHtml" data-i18n="sourceTabHtml" type="button"></button>
-              </div>
-            </div>
-            <div class="source-main">
-              <div class="source-legend">
-                <span><b class="danger-mark" data-i18n="legendRedLabel"></b> <span data-i18n="legendRedDesc"></span></span>
-                <span><b class="ok-mark"     data-i18n="legendGreenLabel"></b> <span data-i18n="legendGreenDesc"></span></span>
-                <span><b class="danger-mark" data-i18n="legendJsonLabel"></b> <span data-i18n="legendJsonDesc"></span></span>
-              </div>
-              <pre class="code" id="sourceCode"></pre>
-            </div>
-          </div>
-        </div>
-
-        <aside class="coach" id="coach">
-          <button class="coach-close" id="coachClose" type="button" title="hide">&times;</button>
-          <h2 id="coachTitle"></h2>
-          <p id="coachBody"></p>
-          <div class="tip" id="coachTip"></div>
-          <div class="coach-actions">
-            <span id="progress"></span>
-            <button class="btn btn-primary" id="coachNext" type="button"></button>
-          </div>
-        </aside>
-        <button class="coach-reopen" id="coachReopen" type="button"><i class="bi bi-chat-dots"></i> <span id="coachReopenLabel"></span></button>
-      </section>
-    </main>
-  </div>
-  <div class="click-tooltip" id="clickTooltip"></div>
+<!-- ══════════ Main Tabs ══════════ -->
+<div class="main-tab-bar">
+  <ul class="nav main-tabs" id="mainTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-intro" type="button" role="tab">
+        <i class="bi bi-stars"></i> <span data-CLan="tabIntro">Overview</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-install" type="button" role="tab">
+        <i class="bi bi-download"></i> <span data-CLan="tabInstall">Install</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-electron" type="button" role="tab">
+        <i class="bi bi-window-stack"></i> <span data-CLan="tabElectron">Electron Modes</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-work" type="button" role="tab">
+        <i class="bi bi-file-earmark-code"></i> <span data-CLan="tabWork">Workflow</span>
+      </button>
+    </li>
+  </ul>
+  <button id="langBtn" class="lang-toggle" type="button"><i class="bi bi-translate"></i> <span id="langBtnLabel">한국어</span></button>
 </div>
+
+<div class="tab-content">
+
+<!-- ═══════════════════ Overview ═══════════════════ -->
+<div class="tab-pane fade show active" id="tab-intro" role="tabpanel">
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title text-center" data-CLan="introTitle">Key Features</h2>
+      <p class="section-sub text-center" data-CLan="introSub">The Artgine app gathers the whole flow — from development to deployment/hosting — into one screen, minimizing setup and repetitive work.</p>
+
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <div class="feature-card h-100">
+            <i class="bi bi-window-stack ic"></i>
+            <h3><span data-CLan="f1Title">Three run modes</span></h3>
+            <p class="mb-2" data-CLan="f1Desc">Run one app in three modes, each suited to its purpose.</p>
+            <ul class="text-secondary small ps-3 mb-0">
+              <li data-CLan="f1Li1"><b>developer</b> — author &amp; debug with the settings UI</li>
+              <li data-CLan="f1Li2"><b>server</b> — run a web server to host &amp; show connection info</li>
+              <li data-CLan="f1Li3"><b>client</b> — run the finished result directly</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="feature-card h-100">
+            <i class="bi bi-sliders ic" style="color:#3fb950;"></i>
+            <h3><span data-CLan="f2Title">Easy project &amp; server setup</span></h3>
+            <p class="mb-2" data-CLan="f2Desc">Configure the run environment with UI checkboxes/inputs instead of code.</p>
+            <ul class="text-secondary small ps-3 mb-0">
+              <li data-CLan="f2Li1"><b>Rendering</b> — Renderer (GL/GPU), resolution, XR, etc.</li>
+              <li data-CLan="f2Li2"><b>Include</b> — libraries like Bootstrap, Monaco</li>
+              <li data-CLan="f2Li3"><b>Plugin</b> — engine plugins like Bloom</li>
+              <li data-CLan="f2Li4"><b>PWA</b> — Manifest &amp; ServiceWorker</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="feature-card h-100">
+            <i class="bi bi-magic ic" style="color:#d29922;"></i>
+            <h3><span data-CLan="f3Title">Automatic file generation</span></h3>
+            <p class="mb-2" data-CLan="f3Desc">A single Run(F9) creates/updates the needed files, cutting repetitive work.</p>
+            <ul class="text-secondary small ps-3 mb-0">
+              <li data-CLan="f3Li1"><code class="inl">.ts</code> / <code class="inl">.html</code> entry files</li>
+              <li data-CLan="f3Li2"><code class="inl">.json</code> project config</li>
+              <li data-CLan="f3Li3"><code class="inl">.webmanifest</code> / <code class="inl">ServiceWorker.js</code></li>
+            </ul>
+            <p class="mb-0 mt-2" data-CLan="f3Note"><small class="text-secondary">No need to write boilerplate by hand.</small></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Examples -->
+      <h3 class="mt-5 mb-2" style="font-size:1.3rem;font-weight:720;"><i class="bi bi-lightbulb text-warning"></i> <span data-CLan="exTitle">When it helps</span></h3>
+      <p class="text-secondary mb-3" style="font-size:.92rem;" data-CLan="exSub">Situations where the Artgine app reduces repetitive work and environment issues in real development/operations.</p>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="explain-card h-100">
+            <h5><i class="bi bi-box-arrow-up-right text-primary"></i> <span data-CLan="ex1Title">Dev → server/client deployment switch</span></h5>
+            <p data-CLan="ex1Desc">Keep the project you built in developer mode and just change the App tab's <code class="inl">program</code> to <b>server</b> or <b>client</b> to switch it into a deployment/hosting form. No need to build a separate pipeline — the <b>same project, only the run mode changes</b>, all the way to deployment.</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="explain-card h-100" style="border-left-color:#3fb950;">
+            <h5><i class="bi bi-box-seam" style="color:#3fb950;"></i> <span data-CLan="ex2Title">Manage Plugin · Include · PWA at once</span></h5>
+            <p data-CLan="ex2Desc">Manage engine plugins, external libraries (Include), and PWA (Manifest·ServiceWorker) with UI checks <b>instead of editing each file</b>. Settings are reflected into the auto-generated area of <code class="inl">.ts</code>/<code class="inl">.html</code>, so adding/removing dependencies takes just a few clicks.</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="explain-card h-100" style="border-left-color:#d29922;">
+            <h5><i class="bi bi-hdd" style="color:#d29922;"></i> <span data-CLan="ex3Title">Local mode — free from path/permission limits</span></h5>
+            <p data-CLan="ex3Desc">Running with <code class="inl">server = local</code> loads straight from the local file path (<code class="inl">loadFile</code>), so it is not blocked by web server, port, CORS, or browser security policies. You can <b>work by just opening files</b> without a separate server setup or admin rights.</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="explain-card h-100" style="border-left-color:#8957e5;">
+            <h5><i class="bi bi-diagram-3" style="color:#a371f7;"></i> <span data-CLan="ex4Title">Artgine engine — consistent dev environment</span></h5>
+            <p data-CLan="ex4Desc">Server startup, the web rendering environment, and the engine source are bundled with <b>the same configuration inside one app</b>, so different teammates/PCs work in an identical environment. No "works only on my machine" gaps — renderer, server, and engine versions stay unified.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related projects -->
+      <h3 class="mt-5 mb-2" style="font-size:1.3rem;font-weight:720;"><i class="bi bi-collection text-info"></i> <span data-CLan="relTitle">Related Projects</span></h3>
+      <p class="text-secondary mb-3" style="font-size:.92rem;" data-CLan="relSub">Repositories and tools worth checking out alongside the Artgine engine.</p>
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card h-100 d-flex flex-column">
+            <h3><i class="bi bi-box"></i> Artgine</h3>
+            <p class="flex-grow-1" data-CLan="rel1Desc">The engine &amp; dev app itself. An integrated dev-environment repo including the renderer, web server, and project generator.</p>
+            <a class="btn btn-primary btn-sm mt-2" href="https://github.com/06fs4dix/Artgine" target="_blank"><i class="bi bi-github"></i> GitHub</a>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card h-100 d-flex flex-column">
+            <h3><i class="bi bi-collection-play"></i> Artgine-Project</h3>
+            <p class="flex-grow-1" data-CLan="rel2Desc">A collection of sample projects. Reference project structure and engine usage patterns through 2D/3D examples.</p>
+            <a class="btn btn-outline-light btn-sm mt-2" href="https://github.com/06fs4dix/Artgine-Project" target="_blank"><i class="bi bi-github"></i> Sample</a>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card h-100 d-flex flex-column">
+            <h3><i class="bi bi-person-bounding-box"></i> ULPC</h3>
+            <p class="flex-grow-1" data-CLan="rel3Desc">A project based on Universal LPC-style character resources. An example of 2D character composition &amp; animation.</p>
+            <a class="btn btn-outline-light btn-sm mt-2" href="https://github.com/06fs4dix/ULPC" target="_blank"><i class="bi bi-github"></i> ULPC</a>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card h-100 d-flex flex-column">
+            <h3><i class="bi bi-robot"></i> Artgine Agent</h3>
+            <p class="flex-grow-1" data-CLan="rel4Desc">A local web tool that remotely controls your PC screen, files, and AI coding agents from a browser.</p>
+            <a class="btn btn-outline-light btn-sm mt-2" href="https://github.com/06fs4dix/Artgine-Agent" target="_blank"><i class="bi bi-github"></i> GitHub</a>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
+</div>
+
+<!-- ═══════════════════ Install ═══════════════════ -->
+<div class="tab-pane fade" id="tab-install" role="tabpanel">
+  <section class="section">
+    <div class="container">
+
+      <!-- 1. Install -->
+      <h2 class="section-title text-center" data-CLan="insTitle1">① Install</h2>
+      <p class="section-sub text-center mb-2" data-CLan="insSub1">Clone the repo and install dependencies. Do this once.</p>
+      <div class="text-center mb-4">
+        <a class="btn btn-primary px-4" href="https://github.com/06fs4dix/Artgine" target="_blank"><i class="bi bi-github"></i> <span data-CLan="btnOrigGithub">Original GitHub</span></a>
+      </div>
+      <div class="d-flex justify-content-center mb-2">
+        <div class="flow">
+          <div class="flow-item">
+            <div class="flow-icon"><i class="bi bi-git"></i></div>
+            <div class="flow-content">
+              <h4 data-CLan="insStepTitle">Get source &amp; install dependencies</h4>
+              <p class="mb-2" data-CLan="insStepDesc">Clone the repo from GitHub, move into the folder, and run <code class="inl">npm install</code> to install dependencies. If you already have the source, skip the clone.</p>
+              <pre class="cmd">git clone https://github.com/06fs4dix/Artgine.git
+cd Artgine
+npm install</pre>
+              <p class="mt-2 mb-0" data-CLan="insStepNote"><small class="text-secondary">Using <code class="inl">start.bat</code> / <code class="inl">start.sh</code> in the <b>Run methods</b> below also auto-installs Node.js/Git if missing and initializes submodules, so you can skip this install step and run directly.</small></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-5" style="border-color:#30363d;">
+
+      <!-- 2. Run methods -->
+      <h2 class="section-title text-center" data-CLan="insTitle2">② Run methods (3)</h2>
+      <p class="section-sub text-center" data-CLan="insSub2">These three are <b>different ways to run, not the same result</b>. Pick one for your purpose.</p>
+      <div class="row g-3 mb-2">
+        <div class="col-lg-4">
+          <div class="feature-card h-100">
+            <i class="bi bi-window ic" style="color:#3fb950;"></i>
+            <h3>start.bat / start.sh</h3>
+            <p class="mb-2" data-CLan="run1Desc">Executable (double-click). <code class="inl">start.bat</code> on Windows, <code class="inl">start.sh</code> on Linux.</p>
+            <ul class="text-secondary small ps-3 mb-2">
+              <li data-CLan="run1Li1"><b>Auto-install</b> Node.js/Git if missing (winget)</li>
+              <li data-CLan="run1Li2">Initialize git submodules</li>
+              <li data-CLan="run1Li3">Then run <code class="inl">node desktop/Start.js</code> → <b>Electron GUI</b></li>
+            </ul>
+            <p class="mb-0" data-CLan="run1Note"><small class="text-secondary">When you want first-time setup done in one go. Same GUI result as npm start.</small></p>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="feature-card h-100">
+            <i class="bi bi-terminal ic" style="color:#58a6ff;"></i>
+            <h3>npm start</h3>
+            <p class="mb-2" data-CLan="run2Desc">Runs <code class="inl">node desktop/Start.js</code> directly.</p>
+            <ul class="text-secondary small ps-3 mb-2">
+              <li data-CLan="run2Li1">Auto-runs <code class="inl">npm install</code> + <code class="inl">npx tsc</code> if needed</li>
+              <li data-CLan="run2Li2">Cleans up any Electron on the open port</li>
+              <li data-CLan="run2Li3">Launches the <b>Electron GUI</b> (developer/server/client window)</li>
+            </ul>
+            <p class="mb-0" data-CLan="run2Note"><small class="text-secondary">When Node/Git already exist and you work in the GUI.</small></p>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="feature-card h-100">
+            <i class="bi bi-hdd-network ic" style="color:#d29922;"></i>
+            <h3>npm run start_web <small class="text-secondary">[port]</small></h3>
+            <p class="mb-2" data-CLan="run3Desc">Runs <code class="inl">node desktop/WebStart.js</code>.</p>
+            <ul class="text-secondary small ps-3 mb-2">
+              <li data-CLan="run3Li1">Starts only the web server (CServerMain), <b>no Electron window</b></li>
+              <li data-CLan="run3Li2">Port comes from <code class="inl">url</code> in <code class="inl">settings.json</code>. Pass an argument (<code class="inl">npm run start_web 8080</code>) to use that port, or omit to use the settings.json value.</li>
+              <li data-CLan="run3Li3">Open <code class="inl">http://localhost:[port]</code> in a browser (<code class="inl">[port]</code> is the actual server port)</li>
+              <li data-CLan="run3Li4">Shuts down automatically when the parent process ends</li>
+            </ul>
+            <p class="mb-0" data-CLan="run3Note"><small class="text-secondary">When you only need browser/other-device access. From other devices use the host PC's LAN IP instead of <code class="inl">localhost</code>. <b>No GUI, so no Run(F9).</b></small></p>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-5" style="border-color:#30363d;">
+
+      <!-- 3. Run the project -->
+      <h2 class="section-title text-center" data-CLan="insTitle3">③ Run the project</h2>
+      <p class="section-sub text-center" data-CLan="insSub3">When you launch the <b>GUI</b> via <code class="inl">start.bat</code>/<code class="inl">npm start</code> (<b>not</b> the web-server-only <code class="inl">npm run start_web</code>), you run the project. The method depends on the App tab's <code class="inl">program</code> value.</p>
+
+      <div class="row g-4">
+        <!-- developer -->
+        <div class="col-lg-6">
+          <h4 class="mb-3"><span class="badge-mode" style="background:#1f6feb;color:#fff;padding:3px 10px;border-radius:6px;font-size:.8rem;">developer</span> <span data-CLan="devModeLabel">Developer mode</span> — <span class="text-secondary fs-6">Folder → Run(F9)</span></h4>
+          <p class="text-secondary" style="font-size:.92rem;" data-CLan="devModeIntro">Running with <code class="inl">program</code> set to <b>developer</b> in the App tab opens the settings screen (Developer.html) first. There you pick a project and run it with <code class="inl">Run(F9)</code>.</p>
+          <div class="flow">
+            <div class="flow-item">
+              <div class="flow-icon"><i class="bi bi-folder2-open"></i></div>
+              <div class="flow-content">
+                <h4 data-CLan="devStep1Title">1. Folder — pick a project</h4>
+                <p data-CLan="devStep1Desc">With the <b>Folder</b> button next to the App tab's <code class="inl">projectPath</code>, pick a project folder under <code class="inl">proj</code> (e.g. <code class="inl">proj/Sample</code>). On selection it reads that project's <code class="inl">.json</code>·<code class="inl">webmanifest</code>·<code class="inl">ServiceWorker</code> settings into the UI. The folder name becomes <code class="inl">[Name]</code> (the project name).</p>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-icon"><i class="bi bi-file-earmark-plus"></i></div>
+              <div class="flow-content">
+                <h4>2. Run(F9) → <span data-CLan="devStep2Title">generate/update files</span> <small class="text-secondary">NewPage</small></h4>
+                <p data-CLan="devStep2Desc">Based on the current App / Preference / Include / Manifest / ServiceWorker / Plugin settings, it creates or updates the files needed to run: <code class="inl">[Name].ts</code>, <code class="inl">[Name].html</code>, <code class="inl">[Name].json</code>, <code class="inl">[Name].webmanifest</code>, <code class="inl">ServiceWorker.js</code> (and <code class="inl">chrome_start.bat</code> when the github option is on).</p>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-icon"><i class="bi bi-play-circle"></i></div>
+              <div class="flow-content">
+                <h4>3. Run(F9) → <span data-CLan="devStep3Title">run</span> <small class="text-secondary">PageRun</small></h4>
+                <p data-CLan="devStep3Desc">Once files are ready it loads the project. If no server is running it starts one first, then opens <code class="inl">[Name].html</code> — via the local file path (<code class="inl">loadFile</code>) when <code class="inl">server = local</code>, or via <code class="inl">url</code> (<code class="inl">loadURL</code>) for <code class="inl">remote</code>/<code class="inl">webServer</code>. If a TS build is needed, it waits for <code class="inl">[Name].js</code> (the build output of <code class="inl">[Name].ts</code>) before loading.</p>
+                <p class="mb-0 mt-1" data-CLan="devStep3Note"><small class="text-secondary">Pressing <code class="inl">F9</code> again while running returns to the dev screen (Developer.html) and the server is cleaned up.</small></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- server -->
+        <div class="col-lg-6">
+          <h4 class="mb-3"><span class="badge-mode" style="background:#238636;color:#fff;padding:3px 10px;border-radius:6px;font-size:.8rem;">server</span> <span data-CLan="srvModeLabel">Server mode</span> — <span class="text-secondary fs-6" data-CLan="srvModeSub">no Folder·Run(F9)</span></h4>
+          <p class="text-secondary" style="font-size:.92rem;" data-CLan="srvModeIntro">Running with <code class="inl">program</code> set to <b>server</b> in the App tab has <b>no settings screen and no Folder·Run(F9) steps</b>; the moment the app starts, <b>the server launches immediately</b> and the connection-info screen (Server.html) appears.</p>
+          <div class="flow">
+            <div class="flow-item">
+              <div class="flow-icon"><i class="bi bi-hdd-network"></i></div>
+              <div class="flow-content">
+                <h4 data-CLan="srvStep1Title">1. Web server auto-starts on launch</h4>
+                <p data-CLan="srvStep1Desc">As soon as Electron opens it auto-starts the web server (CServerMain). The window opens small (480×650), and if <code class="inl">server</code> has no <code class="inl">web</code> it internally uses <code class="inl">webServer+other</code> to run the server. <b>There is no folder picker or Run button.</b></p>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-icon"><i class="bi bi-card-list"></i></div>
+              <div class="flow-content">
+                <h4 data-CLan="srvStep2Title">2. Server.html — shows connection info</h4>
+                <p data-CLan="srvStep2Desc">Once the server is up, <code class="inl">Server.html</code> opens and shows <b>URL / Private IP / Public IP / QR</b>. With no settings tabs, it focuses on connection info.</p>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-icon"><i class="bi bi-box-arrow-up-right"></i></div>
+              <div class="flow-content">
+                <h4 data-CLan="srvStep3Title">3. Connect via Browser · QR / switch to Developer</h4>
+                <p data-CLan="srvStep3Desc">The <b>Browser</b> button opens the current address (public IP first) in the default browser. Other devices like mobile connect by scanning the <b>QR</b>. The <b>Developer</b> button switches to the dev screen.</p>
+              </div>
+            </div>
+          </div>
+          <p class="mb-0 mt-2" data-CLan="srvModeNote"><small class="text-secondary">Server mode is for <b>hosting</b> a project, so there is no file-generation step. The project files must already be built beforehand with Run(F9) in developer mode.</small></p>
+        </div>
+      </div>
+
+      <p class="text-center mt-4" data-CLan="insOutro"><small class="text-secondary">See the <b>Workflow</b> tab for which files are generated/modified and where to edit directly.</small></p>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════════════ Electron Modes ═══════════════════ -->
+<div class="tab-pane fade" id="tab-electron" role="tabpanel">
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title text-center" data-CLan="elecTitle">Electron Run Modes</h2>
+      <p class="section-sub text-center" data-CLan="elecSub">Depending on the App tab's <code class="inl">program</code> value, the Electron window opens as one of three screens. Each mode has a different UI for its purpose.</p>
+
+      <!-- Common: where settings are stored -->
+      <div class="explain-card mb-4" style="border-left-color:#58a6ff;max-width:900px;margin-left:auto;margin-right:auto;">
+        <h5><i class="bi bi-info-circle text-primary"></i> <span data-CLan="commonTitle">Common — where settings are stored</span></h5>
+        <ul class="mb-0 text-secondary small ps-3" style="line-height:1.7;">
+          <li data-CLan="commonLi1"><b>App-wide settings</b> (program, url, window size, server method, github, tsc, password, etc.) are stored in <code class="inl">settings.json</code>.</li>
+          <li data-CLan="commonLi2"><b>Each project's settings</b> are stored in that project's folder — <code class="inl">[Name].json</code>, <code class="inl">[Name].webmanifest</code>, <code class="inl">ServiceWorker.js</code>. Switching projects carries that project's settings along.</li>
+          <li data-CLan="commonLi3"><code class="inl">settings.json</code> is <b>looked up in the working folder first</b>, then in the <b>desktop folder</b> if not found. (working folder takes priority)</li>
+        </ul>
+      </div>
+
+      <ul class="nav mode-pills justify-content-center mb-4" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-m="dev" data-bs-toggle="pill" data-bs-target="#m-dev" type="button" role="tab"><i class="bi bi-code-slash"></i> <span data-CLan="pillDev">Developer</span> (developer)</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-m="server" data-bs-toggle="pill" data-bs-target="#m-server" type="button" role="tab"><i class="bi bi-hdd-network"></i> <span data-CLan="pillServer">Server</span> (server)</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-m="client" data-bs-toggle="pill" data-bs-target="#m-client" type="button" role="tab"><i class="bi bi-window"></i> <span data-CLan="pillClient">Client</span> (client)</button></li>
+      </ul>
+
+      <div class="tab-content">
+
+        <!-- Developer mode -->
+        <div class="tab-pane fade show active" id="m-dev" role="tabpanel">
+          <p class="text-secondary text-center mb-4" style="max-width:760px;margin:0 auto;" data-CLan="devPaneIntro">The authoring/debugging screen. <b>Developer.html</b> loads, and the top tabs (App / Preference / Include / Manifest / ServiceWorker / Plugin / AI) set the project run and generation options.</p>
+
+          <div class="win mb-4" data-bs-theme="light">
+            <div class="win-title"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="cap">Artgine — Developer</span></div>
+            <div class="win-body text-dark bg-white">
+              <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#d-app" type="button">App</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#d-pref" type="button">Preference</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#d-inc" type="button">Include</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#d-man" type="button">Manifest</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#d-sw" type="button">ServiceWorker</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#d-plug" type="button">Plugin</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#d-ai" type="button">AI</button></li>
+              </ul>
+              <div class="tab-content">
+                <div class="tab-pane fade show active" id="d-app" role="tabpanel">
+                  <div class="mb-2"><label class="form-label">url</label><input type="text" class="form-control" value="http://localhost:8082/Artgine"></div>
+                  <div class="mb-2"><label class="form-label">projectPath</label>
+                    <div class="input-group"><input type="text" class="form-control" value="proj/Sample"><button class="btn btn-outline-secondary" type="button">Folder</button></div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col"><label class="form-label">width</label><input type="number" class="form-control" value="1024"></div>
+                    <div class="col"><label class="form-label">height</label><input type="number" class="form-control" value="768"></div>
+                  </div>
+                  <div class="mb-2"><label class="form-label">program</label><select class="form-select"><option>developer</option><option>client</option><option>server</option></select></div>
+                  <div class="mb-2"><label class="form-label">server</label><select class="form-select"><option>local</option><option>remote</option><option>webServer</option></select></div>
+                  <div class="row mb-2">
+                    <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">fullScreen</label></div></div>
+                    <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">github</label></div></div>
+                  </div>
+                  <div class="d-flex gap-2 mt-3"><button class="btn btn-primary">Run(F9)</button><button class="btn btn-dark">VSCode(F4)</button></div>
+                </div>
+                <div class="tab-pane fade" id="d-pref" role="tabpanel">
+                  <div class="row mb-2">
+                    <div class="col">
+                      <label class="form-label">targetWidth</label><input type="number" class="form-control" value="0">
+                      <div class="form-check mt-1"><input class="form-check-input" type="checkbox"><label class="form-check-label">32fDepth</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">anti</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">xr</label></div>
+                    </div>
+                    <div class="col">
+                      <label class="form-label">targetHeight</label><input type="number" class="form-control" value="0">
+                      <div class="form-check mt-1"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">developer</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">IAuto(CAtelier Include)</label></div>
+                    </div>
+                  </div>
+                  <div class="mb-3"><label class="form-label">Renderer</label><select class="form-select"><option>Null</option><option selected>GL</option><option>GPU</option></select></div>
+                  <div class="mb-2"><label class="form-label">Canvas</label><input type="text" class="form-control"></div>
+                  <button class="btn btn-secondary">Default</button>
+                </div>
+                <div class="tab-pane fade" id="d-inc" role="tabpanel">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">PakoZlib(FBX)</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">JSZip</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">ScreenFull</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Bootstrap</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">MonacoEditor</label></div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Excel</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Firebase</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Tone</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">QRCode</label></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="d-man" role="tabpanel">
+                  <div class="mb-2"><label class="form-label">short_name</label><input type="text" class="form-control"></div>
+                  <div class="mb-2"><label class="form-label">name</label><input type="text" class="form-control"></div>
+                  <button type="button" class="btn btn-sm btn-outline-primary mb-3">+ Add Icon</button>
+                  <div class="mb-2"><label class="form-label">display</label><select class="form-select"><option>standalone</option><option>fullscreen</option></select></div>
+                  <div class="row">
+                    <div class="col mb-2"><label class="form-label">background_color</label><input type="color" class="form-control form-control-color" value="#ffffff"></div>
+                    <div class="col mb-2"><label class="form-label">theme_color</label><input type="color" class="form-control form-control-color" value="#000000"></div>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="d-sw" role="tabpanel">
+                  <div class="mb-3"><label class="form-label">CACHE_NAME</label><input type="text" class="form-control" value="ServiceWorker-1" readonly></div>
+                  <div class="mb-3"><label class="form-label">MAX_CACHE_SIZE <small class="text-muted">(MB)</small></label><input type="number" class="form-control" value="50"></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Log</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">API_CACHE</label></div>
+                </div>
+                <div class="tab-pane fade" id="d-plug" role="tabpanel">
+                  <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Bloom</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Rapier</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Water</label></div>
+                </div>
+                <div class="tab-pane fade" id="d-ai" role="tabpanel">
+                  <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Claude</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Antigravity</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" checked><label class="form-check-label">Codex</label></div>
+                  <div class="d-flex gap-2 mt-3"><button class="btn btn-primary">Create</button><button class="btn btn-danger">Delete</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-secondary small mb-2" data-CLan="devHint"><i class="bi bi-hand-index-thumb"></i> Click a tab in the preview above to show that tab's detailed item descriptions below.</p>
+          <div id="devTabDetail"></div>
+        </div>
+
+        <!-- Server mode -->
+        <div class="tab-pane fade" id="m-server" role="tabpanel">
+          <p class="text-secondary text-center mb-4" style="max-width:760px;margin:0 auto;" data-CLan="srvPaneIntro">The connection-info screen. <b>Server.html</b> opens in a small window (480×650) and, with no settings tabs, shows a centered form focused on URL·IP·QR.</p>
+
+          <div class="row align-items-center g-4">
+            <div class="col-lg-4 order-lg-1 order-2">
+              <div class="explain-card mb-3"><h5><i class="bi bi-link-45deg"></i> URL</h5><p data-CLan="srvUrlDesc">Base URL to reach the project. Copy it with the adjacent Copy button and paste into another browser.</p></div>
+              <div class="explain-card"><h5><i class="bi bi-hdd-network"></i> Private IP</h5><p data-CLan="srvPrivDesc">Internal IP used to connect from other devices on the same network (LAN).</p></div>
+            </div>
+
+            <div class="col-lg-4 order-lg-2 order-1">
+              <div class="win" data-bs-theme="light">
+                <div class="win-title"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="cap">Artgine — Server</span></div>
+                <div class="win-body text-dark bg-white">
+                  <div class="server-form">
+                    <div class="row align-items-center mb-2">
+                      <label class="col-4 col-form-label">URL</label>
+                      <div class="col-8 d-flex"><input type="text" class="form-control form-control-sm me-2" value="http://localhost:8082/Artgine" readonly><button class="btn btn-sm btn-outline-secondary">Copy</button></div>
+                    </div>
+                    <div class="row align-items-center mb-2">
+                      <label class="col-4 col-form-label">Private IP</label>
+                      <div class="col-8 d-flex"><input type="text" class="form-control form-control-sm me-2" value="192.168.0.12" readonly><button class="btn btn-sm btn-outline-secondary">Copy</button></div>
+                    </div>
+                    <div class="row align-items-center mb-3">
+                      <label class="col-4 col-form-label">Public IP</label>
+                      <div class="col-8 d-flex"><input type="text" class="form-control form-control-sm me-2" value="singleton88.iptime.org" readonly><button class="btn btn-sm btn-outline-secondary">Copy</button></div>
+                    </div>
+                    <div class="d-flex justify-content-center gap-2">
+                      <button class="btn btn-sm btn-primary">Browser</button>
+                      <button class="btn btn-sm btn-secondary">Developer</button>
+                    </div>
+                    <div class="fake-qr" aria-label="QR">
+                      <span class="finder"></span><i class="blank"></i><i></i><i class="blank"></i><i></i><span class="finder"></span>
+                      <i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
+                      <i class="blank"></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i>
+                      <span class="finder"></span><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i class="blank"></i>
+                      <i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i><i class="blank"></i><i></i><i></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4 order-3">
+              <div class="explain-card mb-3"><h5><i class="bi bi-globe"></i> Public IP</h5><p data-CLan="srvPubDesc">Public IP/DNS used to connect from an external network. Used together with port forwarding·DDNS settings.</p></div>
+              <div class="explain-card mb-3"><h5><i class="bi bi-qr-code"></i> QR</h5><p data-CLan="srvQrDesc">A QR code you can scan with a mobile camera to connect right away.</p></div>
+              <div class="explain-card"><h5><i class="bi bi-box-arrow-up-right"></i> Browser / Developer</h5><p data-CLan="srvBtnDesc"><b>Browser</b> opens the current URL in the default browser; <b>Developer</b> returns to the dev settings screen.</p></div>
+            </div>
+          </div>
+
+          <div class="tunnel-note mt-4">
+            <div class="tunnel-note-title"><i class="bi bi-exclamation-triangle"></i> <span data-CLan="tunnelTitle">If it asks to run through a tunnel</span></div>
+            <p class="mb-0" data-CLan="tunnelBody">When the <b>port is blocked</b> at server start, Artgine asks whether to <b>run through a tunnel</b>. It works, but <b>the tunnel address changes on every server restart, so you must re-authenticate each time.</b> Use it only as a temporary workaround; better to fix the port — <b>allow the port the server actually uses in the firewall inbound rules</b>, and if connecting from outside also set up <b>router port forwarding</b>, then connect via a <b>fixed address</b>.</p>
+          </div>
+        </div>
+
+        <!-- Client mode -->
+        <div class="tab-pane fade" id="m-client" role="tabpanel">
+          <div class="row justify-content-center">
+            <div class="col-lg-8">
+              <div class="explain-card mb-4" style="border-left-color:#8957e5;">
+                <h5><i class="bi bi-window" style="color:#a371f7;"></i> <span data-CLan="cliTitle">What is client mode</span></h5>
+                <p data-CLan="cliDesc">The end-user run mode. Without going through the developer settings UI (Developer.html) or the server info screen (Server.html), the app loads the project page (<code class="inl">[Name].html</code>) into the Electron window as soon as it starts. Use it when you want to show the finished result immediately — deployment, exhibitions, kiosks.</p>
+              </div>
+
+              <div class="client-visual mb-4">
+                <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
+                  <span class="client-flow-step"><i class="bi bi-power text-success fs-4"></i> <span data-CLan="cliStep1">App start</span></span>
+                  <span class="client-arrow"><i class="bi bi-arrow-right"></i></span>
+                  <span class="client-flow-step"><i class="bi bi-hdd-network text-info fs-4"></i> <span data-CLan="cliStep2">Server connect (auto-start / remote)</span></span>
+                  <span class="client-arrow"><i class="bi bi-arrow-right"></i></span>
+                  <span class="client-flow-step"><i class="bi bi-window-fullscreen fs-4" style="color:#a371f7;"></i> <span data-CLan="cliStep3">Load project page</span></span>
+                </div>
+                <p class="text-secondary small mb-0 mt-3" data-CLan="cliVisualNote">With no settings screen, <code class="inl">program = client</code> makes the project appear the moment it runs.</p>
+              </div>
+
+              <div class="tunnel-note mb-4">
+                <div class="tunnel-note-title"><i class="bi bi-exclamation-triangle"></i> <span data-CLan="cliNoUiTitle">Client mode has no settings UI</span></div>
+                <p class="mb-0" data-CLan="cliNoUiBody">Unlike developer mode, <b>no screen (tool) for adjusting settings is provided.</b> To run in client mode you must <b>open <code class="inl">settings.json</code> directly</b> and <b>edit it by hand</b> — set <code class="inl">program</code> to <code class="inl">client</code>, and adjust <code class="inl">projectPath</code>·<code class="inl">server</code>·<code class="inl">url</code>, etc. (You can also reuse the <code class="inl">settings.json</code> you saved with the App tab values in developer mode and just change program to client.)</p>
+              </div>
+
+              <h5 class="mb-3"><i class="bi bi-diagram-3" style="color:#a371f7;"></i> <span data-CLan="cliAccessTitle">Server connection method (App tab's <code class="inl">server</code> value)</span></h5>
+              <p class="text-secondary small mb-3" data-CLan="cliAccessSub">Where the client opens the project page depends on the <code class="inl">server</code> value. Typically these two are used.</p>
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <div class="explain-card h-100" style="border-left-color:#238636;">
+                    <h5><span class="badge-mode" style="background:#0f2417;color:#3fb950;">webServer</span> <span data-CLan="cliWebTitle">Web-server auto-start access</span></h5>
+                    <p data-CLan="cliWebDesc">When the app starts it <b>auto-starts its own web server (CServerMain)</b> and opens the project via that local URL (<code class="inl">loadURL</code>). Use it to run a project needing server API/routing standalone on one PC. (<code class="inl">local</code>, which only opens files, loads directly via <code class="inl">loadFile</code>.)</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="explain-card h-100" style="border-left-color:#1f6feb;">
+                    <h5><span class="badge-mode">remote</span> <span data-CLan="cliRemoteTitle">Remote (other server) access</span></h5>
+                    <p data-CLan="cliRemoteDesc">The app <b>does not start a server</b>; it connects to an <b>already-running other server's URL</b> to open the project (<code class="inl">loadURL</code>). Suited to deploying on a central server with multiple client PCs connecting to the same server.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-6"><div class="explain-card" style="border-left-color:#8957e5;"><h5><i class="bi bi-toggle-on" style="color:#a371f7;"></i> <span data-CLan="cliSwitchTitle">How to switch</span></h5><p data-CLan="cliSwitchDesc">In developer mode's App tab, change <code class="inl">program</code> to <b>client</b> and run — it opens in client mode.</p></div></div>
+                <div class="col-md-6"><div class="explain-card" style="border-left-color:#8957e5;"><h5><i class="bi bi-arrows-fullscreen" style="color:#a371f7;"></i> fullScreen</h5><p data-CLan="cliFsDesc">Combined with the App tab's fullScreen option, only the project shows in full screen — suited to exhibition/kiosk runs.</p></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════════════ Workflow ═══════════════════ -->
+<div class="tab-pane fade" id="tab-work" role="tabpanel">
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title text-center" data-CLan="workTitle">Workflow (editing source)</h2>
+      <p class="section-sub text-center" data-CLan="workSub">Pressing Run(F9) generates/modifies the files needed based on project settings. The key is distinguishing the auto-generated area from the manually-editable area.</p>
+
+      <div class="legend">
+        <span data-CLan="legRed"><b class="text-danger">Red</b> · Auto-generated area / edit with caution</span>
+        <span data-CLan="legGreen"><b class="text-success">Green</b> · Manual area / editable directly</span>
+        <span data-CLan="legJson"><b class="text-danger">.json</b> · Project config file / edit manually with caution</span>
+      </div>
+
+      <ul class="nav nav-tabs src-tabs mb-3" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#w-auto" type="button" data-CLan="workTab1">Auto-generated files</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#w-ts" type="button" data-CLan="workTab2">TS edit location</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#w-html" type="button" data-CLan="workTab3">HTML edit location</button></li>
+      </ul>
+
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="w-auto" role="tabpanel">
+          <div class="genflow">
+            <div class="genflow-node">
+              <span class="n">1</span><h4>Run(F9)</h4>
+              <p data-CLan="gen1Desc">Reads the project settings (App/Preference/Include/Manifest/ServiceWorker/Plugin).</p>
+            </div>
+            <div class="genflow-arrow"><i class="bi bi-arrow-down"></i></div>
+            <div class="genflow-node">
+              <span class="n">2</span><h4 data-CLan="gen2Title">Generate / update files</h4>
+              <p data-CLan="gen2Desc">Creates or updates the files needed to run, based on the settings.</p>
+            </div>
+
+            <div class="genflow-arrow"><i class="bi bi-arrow-down"></i></div>
+            <div class="genflow-files">
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">[Name].ts</span><span class="fd" data-CLan="gfTs">Project entry TS file <b class="text-success">(area below EntryPoint preserved)</b></span></div>
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">[Name].html</span><span class="fd" data-CLan="gfHtml">Project entry HTML file <b class="text-success">(area below EntryPoint preserved)</b></span></div>
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">[Name].js</span><span class="fd" data-CLan="gfJs">Build output of [Name].ts · do not edit directly</span></div>
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">[Name].json</span><span class="fd" data-CLan="gfJson">Project config file · edit manually with caution</span></div>
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">[Name].webmanifest</span><span class="fd" data-CLan="gfManifest">Generated from Manifest settings</span></div>
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">ServiceWorker.js</span><span class="fd" data-CLan="gfSw">Generated from ServiceWorker settings</span></div>
+              <div class="genfile"><span class="tag gen" data-CLan="tagGen">auto-gen</span><span class="fn">chrome_start.bat</span><span class="fd" data-CLan="gfBat">Generated when the github option is on</span></div>
+            </div>
+
+            <div class="genflow-arrow"><i class="bi bi-arrow-down"></i></div>
+            <div class="genflow-node">
+              <span class="n">3</span><h4 data-CLan="gen3Title">Load the project</h4>
+              <p data-CLan="gen3Desc">Loads the project HTML in the Electron window. If a TS build is needed, it waits for <code class="inl">[Name].js</code> (the build output of <code class="inl">[Name].ts</code>) before loading.</p>
+            </div>
+          </div>
+
+          <div class="legend mt-3">
+            <span data-CLan="leg2Gen"><b class="text-danger">Auto-generated files</b> · may be regenerated on Run(F9) (edit with caution)</span>
+            <span data-CLan="leg2Keep"><b class="text-success">Below EntryPoint</b> · where your written code is preserved</span>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="w-ts" role="tabpanel">
+<pre class="code-block"><span class="comment" data-CLan="tsCmt0a">// At the //Version //Class //Atelier //EntryPoint placeholders in desktop/Template/Basic.ts</span>
+<span class="comment" data-CLan="tsCmt0b">// the code below is auto-generated during Run(F9)'s file-prep step.</span>
+<span class="danger">import { CPreferences } from "../../../artgine/basic/CPreferences.js";</span>
+<span class="danger">var gPF = new CPreferences();</span>
+<span class="danger">gPF.mTargetWidth = 0;</span>
+<span class="danger">gPF.mRenderer = "GL";</span>
+<span class="danger">gPF.mServer = "local";</span>
+<span class="danger">import { CAtelier } from "../../../artgine/app/CAtelier.js";</span>
+<span class="danger">import { CPlugin } from "../../../artgine/util/CPlugin.js";</span>
+<span class="danger">CPlugin.PushPath("Bloom", "../../../plugin/Bloom/");</span>
+<span class="danger">var gAtl = new CAtelier();</span>
+<span class="danger">gAtl.mPF = gPF;</span>
+<span class="danger"><span class="keyword">await</span> gAtl.Init(["Main.json"], "");</span>
+<span class="danger">var Main = gAtl.Canvas("Main.json");</span>
+<span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
+<span class="danger">//EntryPoint</span>
+<span class="ok" data-CLan="tsCmt1">// Editable from here.</span>
+<span class="ok">import { CClass } from "../../../artgine/basic/CClass.js";</span>
+<span class="ok">import { CObject } from "../../../artgine/basic/CObject.js";</span>
+
+<span class="ok" data-CLan="tsCmt2">// Write game logic, component registration, and user code below EntryPoint.</span></pre>
+        </div>
+
+        <div class="tab-pane fade" id="w-html" role="tabpanel">
+<pre class="code-block"><span class="danger">&lt;!--Include--&gt;</span>
+<span class="danger">&lt;script type='module' src='../../../artgine/artgine.js'&gt;&lt;/script&gt;</span>
+<span class="danger">&lt;link rel='manifest' href='./Sample.webmanifest'/&gt;</span>
+<span class="danger">&lt;!--Manifest--&gt;</span>
+<span class="danger">&lt;!--EntryPoint--&gt;</span>
+<span class="ok" data-CLan="htmlCmt1">&lt;!-- Editable from here. You can place HTML user scripts and UI wiring. --&gt;</span>
+<span class="ok">&lt;script type='module' src='Sample.js'&gt;&lt;/script&gt;</span></pre>
+          <div class="explain-card mt-3"><p class="mb-0" data-CLan="htmlNote">You can also edit the HTML. But the area above <code class="inl">&lt;!--Include--&gt;</code> · <code class="inl">&lt;!--Manifest--&gt;</code> · <code class="inl">&lt;!--EntryPoint--&gt;</code> is auto-generated; edit below <code class="inl">&lt;!--EntryPoint--&gt;</code>.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+</div><!-- /.tab-content -->
 
 <footer class="footer text-center">
   <div class="container">
@@ -406,556 +800,387 @@ npm start</pre>
 </footer>
 
 <script>
-  /* --- electron-ui-mode-guide.html embedded data (STRINGS) --- */
-  const GUIDE_STRINGS = {
-    ko: {
-      pageTitle: 'Electron UI Guide',
+/* ── i18n (CLan) — English base in HTML, Korean dictionary; same mechanism as Control ── */
+(function(){
+  var STORE_KEY = 'helpLang';
+  var CODE = (function(){
+    var saved = null;
+    try { saved = localStorage.getItem(STORE_KEY); } catch(e){}
+    if (saved) return saved;
+    var l = (navigator.language || (navigator.languages && navigator.languages[0]) || 'en');
+    return l.split('-')[0].toLowerCase();
+  })();
 
-      modeSetup:  '초기 셋업',
-      modeDev:    '개발 모드',
-      modeServer: '서버 모드',
-      modeSource: '소스 수정 법',
+  var MAP = { en:{}, ko:{} };
+  function set(code, key, text){ if(!MAP[code]) MAP[code]={}; MAP[code][key]=text; }
+  function getRaw(code, key){ return (MAP[code] && MAP[code][key]!=null) ? MAP[code][key] : null; }
 
-      next: '다음',
-      done: '완료',
-      hideCoach: '숨기기',
-      showCoach: '가이드 열기',
+  /* Korean dictionary */
+  var KO = {
+    tabIntro:'소개', tabInstall:'설치', tabElectron:'일렉트론 설명', tabWork:'작업방식',
 
-      /* Setup screen */
-      setupTitle:       '초기 셋업',
-      introTitle:       'Artgine이란',
-      introBody:        'Artgine은 Electron과 웹 기술로 구축된 2D/3D 콘텐츠 엔진 및 통합 개발 환경입니다. 웹 기반 그래픽 렌더링과 데스크톱 앱의 편의성을 결합하여, 복잡한 설정 없이도 인터랙티브한 콘텐츠와 게임을 손쉽게 개발할 수 있도록 설계되었습니다.',
-      setupConsoleTitle:'콘솔 설치',
-      setupStartTitle:  'GUI 실행',
-      setupStartBody:   '소스를 받은 뒤 Windows에서는 start.bat, Linux에서는 start.sh를 실행하면 같은 방식으로 Electron GUI가 실행됩니다.',
-      setupServerTitle: '서버만 실행',
-      setupRunTitle:    '프로젝트 실행',
-      setupRunBody:     '<ol class="mb-2"><li><code>projectPath</code>에서 Folder를 눌러 <code>proj</code> 아래 프로젝트 폴더를 선택합니다.</li><li><code>Run(F9)</code>을 누르면 프로젝트가 로드됩니다.</li></ol><small class="text-secondary">원하는 프로젝트를 선택하면 됩니다. (예: <code>proj/Sample</code>)</small>',
+    heroDesc:'Artgine은 Electron 기반 개발 앱과 웹 서버, 렌더링 엔진, 프로젝트 생성 도구를 하나로 묶은 통합 개발 환경입니다. 프로젝트 경로를 선택하고, 렌더링 옵션과 포함 라이브러리를 설정한 뒤, Run(F9)으로 바로 실행 흐름을 확인할 수 있습니다.',
 
-      /* Source screen */
-      sourceTabAuto:    '자동 생성 파일',
-      sourceTabTs:      'TS 수정 위치',
-      sourceTabHtml:    'HTML 수정 위치',
-      legendRedLabel:   '빨강',
-      legendRedDesc:    '자동 생성 영역 / 직접 수정 주의',
-      legendGreenLabel: '초록',
-      legendGreenDesc:  '수동 작성 영역 / 직접 수정 가능',
-      legendJsonLabel:  '.json',
-      legendJsonDesc:   '프로젝트 설정 파일 / 수동 편집 주의',
+    introTitle:'주요 기능',
+    introSub:'Artgine 앱은 개발부터 배포·서비스까지의 흐름을 한 화면에 모아, 설정과 반복 작업을 최소화합니다.',
+    f1Title:'3가지 실행 모드 지원',
+    f1Desc:'하나의 앱에서 목적에 맞는 세 가지 모드로 실행합니다.',
+    f1Li1:'<b>개발자(developer)</b> — 설정 UI로 제작·디버깅',
+    f1Li2:'<b>서버(server)</b> — 웹서버를 띄워 서비스·접속 정보 제공',
+    f1Li3:'<b>클라이언트(client)</b> — 완성 결과물을 바로 실행',
+    f2Title:'손쉬운 프로젝트·서버 세팅',
+    f2Desc:'코드 대신 UI 체크·입력만으로 실행 환경을 구성합니다.',
+    f2Li1:'<b>렌더링</b> — Renderer(GL/GPU), 해상도, XR 등',
+    f2Li2:'<b>Include</b> — Bootstrap·Monaco 등 라이브러리',
+    f2Li3:'<b>Plugin</b> — Bloom 등 엔진 플러그인',
+    f2Li4:'<b>PWA</b> — Manifest·ServiceWorker',
+    f3Title:'파일 자동 생성',
+    f3Desc:'Run(F9) 한 번으로 필요한 파일을 생성·갱신해 반복 작업을 줄입니다.',
+    f3Li1:'<code class="inl">.ts</code> / <code class="inl">.html</code> 진입 파일',
+    f3Li2:'<code class="inl">.json</code> 프로젝트 설정',
+    f3Li3:'<code class="inl">.webmanifest</code> / <code class="inl">ServiceWorker.js</code>',
+    f3Note:'<small class="text-secondary">보일러플레이트를 직접 작성할 필요가 없습니다.</small>',
 
-      /* stepsByMode */
-      stepsByMode: {
-        setup: [
-          ["콘솔 설치", "git clone → npm start", "setupCommandBox", "콘솔에서 직접 실행할 때는 저장소를 받은 뒤 npm install, npm start 순서로 실행합니다.", "이미 프로젝트를 받은 상태라면 git clone 단계는 생략하고 프로젝트 루트에서 npm install, npm start를 실행합니다."],
-          ["GUI 실행", "start.bat / start.sh", "setupStartBox", "소스를 받은 뒤 Windows에서는 start.bat, Linux에서는 start.sh를 실행해도 같은 방식으로 Electron GUI가 실행됩니다.", "처음 실행할 때 '알 수 없는 게시자' 경고가 표시될 수 있습니다."],
-          ["서버만 실행", "npm run start_web", "setupServerBox", "Electron 개발 UI 없이 서버만 단독으로 실행하려면 npm start 대신 npm run start_web을 사용합니다.", "외부 브라우저나 다른 장치에서 서버 접근을 확인할 때 사용합니다."],
-          ["프로젝트 실행", "Folder → Run(F9)", "setupRunBox", "projectPath에서 Folder를 눌러 proj 아래 프로젝트 폴더를 선택하고 Run(F9)을 누르면 프로젝트가 로드됩니다.", "Run(F9) 후 생성/수정되는 파일과 코드 수정 위치는 소스 수정 법에서 확인합니다."]
-        ],
-        dev: [
-          ["App 탭", "프로젝트 실행 기본 설정", "projectPathBox", "App 탭은 Artgine 프로젝트를 어떤 경로에서, 어떤 창 크기와 실행 방식으로 열지 정하는 기본 실행 설정입니다.", "처음 실행할 때는 projectPath를 프로젝트 폴더로 맞추고, server 방식과 program 값을 확인한 뒤 Run(F9)을 누릅니다."],
-          ["Run(F9)", "프로젝트 실행", "Run_btn", "Run(F9)을 누르면 현재 App 탭 설정을 기준으로 프로젝트 파일을 준비하고 프로젝트 HTML을 실행합니다.", "자동 생성되는 파일과 수정 위치는 뒤쪽의 소스 수정 법에서 확인합니다."],
-          ["Preference", "렌더러와 개발 옵션", "pref-tab", "Preference 탭은 targetWidth, targetHeight, depth, anti, xr, developer, IAuto, Renderer, Canvas 값을 다룹니다.", "developer 체크는 개발자 도구 표시와 연결됩니다."],
-          ["Include", "HTML include 자동 구성", "include-tab", "Include 탭의 체크 항목은 HTML의 Include 자동 생성 영역에 반영됩니다.", "EntryPoint 위쪽 자동 생성 영역을 직접 고치면 다음 생성 때 덮어써질 수 있습니다."],
-          ["Manifest / ServiceWorker", "PWA 파일 생성", "manifest-tab", "Manifest와 ServiceWorker 탭은 webmanifest와 ServiceWorker.js 생성에 필요한 설정입니다.", "설정은 UI에서 관리하고 생성 파일은 직접 수정하지 않는 흐름입니다."],
-          ["Plugin / AI", "플러그인과 AI 도구", "plugin-tab", "Plugin 탭은 프로젝트에 사용할 플러그인을 선택하고, AI 탭은 Codex 같은 도구 생성을 다룹니다.", "플러그인 선택은 TS 자동 생성 영역의 CPlugin.PushPath 구성에도 반영됩니다."]
-        ],
-        server: [
-          ["Server 화면", "URL/IP 중앙 폼", "serverUrlBox", "서버 모드는 실제 Server.html처럼 Bootstrap container 안의 중앙 500px 폼입니다.", "Developer 화면과 달리 설정 탭이 아니라 접속 정보 확인 중심입니다."],
-          ["Copy 버튼", "URL/IP 복사", "privateIpBox", "URL, Private IP, Public IP 옆 Copy 버튼으로 접속 정보를 복사합니다.", "다른 장치에서 접속할 때 Public IP와 QR 영역을 확인합니다."],
-          ["Browser", "브라우저 열기", "browser_btn", "Browser 버튼은 현재 서버 URL을 브라우저로 열어 Electron 밖에서 프로젝트를 확인합니다.", "Developer 버튼은 다시 개발 설정 화면으로 돌아가는 역할입니다."]
-        ],
-        source: [
-          ["자동 생성 파일", "Run(F9) 시 생성/수정", "sourceAuto", "Run(F9)을 누르면 프로젝트 설정을 기준으로 필요한 파일을 생성/수정한 뒤 프로젝트를 로드합니다.", "수정은 [Name].ts와 [Name].html의 EntryPoint 아래에서 합니다. [Name].js, [Name].json, webmanifest, ServiceWorker.js는 직접 수정하지 않는 쪽이 안전합니다.", "auto"],
-          ["TS 수정 법", "Template + 자동 생성", "sourceTs", "TS는 desktop/Template/Basic.ts의 //Version, //Class, //Atelier, //EntryPoint 자리표시자를 기준으로 Run(F9)의 파일 준비 단계에서 자동 코드가 채워집니다.", "CPreferences, CPlugin.PushPath, CAtelier, gAtl.Init, Canvas 변수는 자동 생성 영역입니다. EntryPoint 아래 초록 영역부터 직접 수정합니다.", "ts"],
-          ["HTML 수정 법", "EntryPoint 아래", "sourceHtml", "HTML도 수정할 수 있습니다. 단, Include와 Manifest가 있는 EntryPoint 위쪽은 자동 생성 영역이고 EntryPoint 아래부터 직접 수정합니다.", "HTML 사용자 스크립트 연결이나 별도 마크업은 EntryPoint 아래에 둡니다.", "html"]
-        ]
-      },
+    exTitle:'이럴 때 편합니다',
+    exSub:'실제 개발·운영에서 Artgine 앱이 반복 작업과 환경 문제를 줄여주는 상황들입니다.',
+    ex1Title:'개발 → 서버·클라이언트 배포 전환',
+    ex1Desc:'개발자 모드에서 만든 프로젝트를 그대로 두고 App 탭의 <code class="inl">program</code>만 <b>server</b> 또는 <b>client</b>로 바꾸면 배포/서비스 형태로 전환됩니다. 별도 빌드 파이프라인을 새로 짤 필요 없이, <b>같은 프로젝트를 실행 모드만 바꿔</b> 배포까지 이어집니다.',
+    ex2Title:'Plugin · Include · PWA 일괄 관리',
+    ex2Desc:'엔진 플러그인, 외부 라이브러리(Include), PWA(Manifest·ServiceWorker)를 <b>파일마다 직접 수정하지 않고</b> UI 체크로 관리합니다. 설정이 <code class="inl">.ts</code>/<code class="inl">.html</code>의 자동 생성 영역에 반영되어, 의존성 추가·제거가 클릭 몇 번으로 끝납니다.',
+    ex3Title:'로컬 모드 — 경로·권한 제약에서 자유',
+    ex3Desc:'<code class="inl">server = local</code>로 실행하면 로컬 파일 경로로 바로 로드(<code class="inl">loadFile</code>)되어, 웹서버·포트·CORS·브라우저 보안 정책에 막히지 않습니다. 별도 서버 세팅이나 관리자 권한 없이 <b>파일만 열어 작업</b>할 수 있습니다.',
+    ex4Title:'아티젠 엔진 — 일관된 개발 환경 유지',
+    ex4Desc:'서버 구동, 웹 렌더링 환경, 엔진 소스가 <b>하나의 앱 안에서 같은 구성</b>으로 묶여 있어, 팀원·PC가 달라도 동일한 환경에서 작업합니다. "내 PC에서만 되는" 환경 차이 없이 렌더러·서버·엔진 버전을 통일할 수 있습니다.',
 
-      /* guideTips */
-      guideTips: {
-        "app-tab": "App 탭입니다. Artgine 프로젝트 실행에 필요한 기본값을 설정합니다. 프로젝트 경로, 실행 URL, 창 크기, 실행 프로그램, 서버 방식을 여기서 정합니다.",
-        "pref-tab": "Preference 탭입니다. 렌더러, 캔버스, 개발자 도구, Include 자동 갱신 같은 실행 옵션을 조정합니다.",
-        "include-tab": "Include 탭입니다. HTML 자동 생성 영역에 포함할 외부 라이브러리를 선택합니다.",
-        "manifest-tab": "Manifest 탭입니다. PWA용 webmanifest에 들어갈 이름, 아이콘, 색상, 표시 방식을 설정합니다.",
-        "service-tab": "ServiceWorker 탭입니다. 캐시 이름, 캐시 개수, 로그, API 캐시 같은 ServiceWorker 생성 옵션입니다.",
-        "plugin-tab": "Plugin 탭입니다. 프로젝트에서 사용할 플러그인을 선택합니다. 선택 내용은 생성되는 소스 설정에 반영됩니다.",
-        "ai-tab": "AI 탭입니다. Codex, Claude 같은 AI 도구 실행 구성을 만들거나 삭제합니다.",
-        "url_txt": "webServer 또는 remote 방식에서 프로젝트 HTML을 열 기준 주소입니다. local 실행에서는 파일 경로로 열기 때문에 URL이 비워질 수 있습니다.",
-        "projectPath_txt": "실행할 Artgine 프로젝트 폴더입니다. 이 경로의 이름이 프로젝트 이름이 되고, [Name].html, [Name].ts 같은 파일 생성 기준이 됩니다.",
-        "selectProjectPath_btn": "실행할 프로젝트 폴더를 탐색해서 선택합니다.",
-        "width_num": "프로젝트 실행 창의 너비입니다. 화면 비율과 UI 배치를 확인할 때 사용하는 값입니다.",
-        "height_num": "프로젝트 실행 창의 높이입니다. width와 함께 Electron 실행 창 크기를 결정합니다.",
-        "program_sel": "실행할 프로그램 모드입니다. developer는 제작/디버깅용, client는 클라이언트 실행용, server는 서버 화면 실행용으로 사용합니다.",
-        "server_sel": "프로젝트를 여는 방식입니다. local은 로컬 파일 기준, remote/webServer는 URL 기준으로 실행 흐름이 달라집니다.",
-        "fullScreen_chk": "프로젝트를 전체 화면으로 실행할지 정합니다. 키오스크나 전시용 실행을 확인할 때 사용합니다.",
-        "github_chk": "GitHub Pages처럼 정적 배포 경로를 기준으로 실행할 때 사용하는 옵션입니다. 켜면 경로와 chrome_start.bat 생성 흐름이 달라집니다.",
-        "Run_btn": "Run(F9)입니다. 현재 설정을 반영해 필요한 프로젝트 파일을 준비한 뒤 프로젝트 HTML을 실행합니다. 자동 생성 원리는 소스 수정 법에서 확인합니다.",
-        "VSCode_btn": "현재 프로젝트 경로를 VS Code로 엽니다.",
-        "targetWidth": "렌더링 대상 너비입니다. 0이면 기본 창 크기를 따릅니다.",
-        "targetHeight": "렌더링 대상 높이입니다. 0이면 기본 창 크기를 따릅니다.",
-        "depth": "32비트 depth 사용 옵션입니다.",
-        "anti": "안티앨리어싱 사용 옵션입니다.",
-        "xr": "XR 실행 옵션입니다.",
-        "devTool": "개발자 도구를 함께 열지 결정하는 옵션입니다.",
-        "IAuto": "CAtelier Include 자동 갱신 옵션입니다.",
-        "canvas_txt": "사용할 Canvas 설정 이름 또는 경로를 입력하는 칸입니다.",
-        "short_name_txt": "Manifest에 들어가는 짧은 앱 이름입니다.",
-        "name_txt": "Manifest에 들어가는 전체 앱 이름입니다.",
-        "iconsAdd_btn": "Manifest 아이콘 항목을 추가합니다.",
-        "orientation_sel": "앱 화면 방향 설정입니다.",
-        "display_sel": "PWA 표시 방식입니다. standalone, fullscreen 같은 값을 설정합니다.",
-        "background_color_pick": "Manifest 배경색입니다.",
-        "theme_color_pick": "Manifest 테마색입니다.",
-        "cache_name_txt": "ServiceWorker 캐시 이름입니다. 생성 파일에서 캐시 식별자로 사용됩니다.",
-        "max_cache_size_num": "ServiceWorker가 유지할 최대 캐시 개수입니다.",
-        "log_chk": "ServiceWorker 로그 출력 여부입니다.",
-        "api_cache_chk": "API 요청 캐시 사용 여부입니다.",
-        "aiCreate_btn": "선택한 AI 도구 구성을 생성합니다.",
-        "aiDelete_btn": "선택한 AI 도구 구성을 삭제합니다.",
-        "browser_btn": "현재 서버 URL을 기본 브라우저로 엽니다.",
-        "switchDev_btn": "서버 화면에서 개발 모드 화면으로 돌아갑니다.",
-        "sourceTs": "TS 수정 위치입니다. desktop/Template/Basic.ts의 자리표시자와 Main.ts의 자동 생성 결과를 같이 보여줍니다. EntryPoint 아래 초록 영역부터 직접 수정합니다.",
-        "sourceHtml": "HTML 수정 위치입니다. EntryPoint 위쪽 Include/Manifest는 자동 생성, 아래쪽은 직접 수정 가능합니다.",
-        "sourceAuto": "자동 생성 파일 목록입니다. 빨강은 직접 수정 주의, 초록은 수동 작성 가능 영역입니다.",
-        "setupStartBox": "소스를 받은 뒤 start.bat 또는 start.sh로도 Electron 앱을 실행할 수 있습니다.",
-        "setupCommandBox": "콘솔에서 직접 설치/실행하는 명령입니다. npm install 후 npm start로 Electron 앱을 실행합니다.",
-        "setupServerBox": "서버만 단독 실행할 때 사용하는 명령입니다. Electron UI 없이 웹 서버만 띄웁니다.",
-        "setupRunBox": "초기 실행 절차입니다. projectPath에서 프로젝트를 선택하고 Run(F9)으로 로드합니다."
-      },
+    relTitle:'관련 프로젝트',
+    relSub:'Artgine 엔진과 함께 살펴보면 좋은 저장소와 도구입니다.',
+    rel1Desc:'엔진·개발 앱 본체. 렌더러, 웹서버, 프로젝트 생성 도구가 포함된 통합 개발 환경 저장소입니다.',
+    rel2Desc:'샘플 프로젝트 모음. 2D/3D 예제를 통해 프로젝트 구성과 엔진 사용 패턴을 참고할 수 있습니다.',
+    rel3Desc:'Universal LPC 스타일 캐릭터 리소스 기반 프로젝트. 2D 캐릭터 조합·애니메이션 활용 예시입니다.',
+    rel4Desc:'브라우저에서 PC 화면·파일·AI 코딩 에이전트를 원격 제어하는 로컬 웹 도구입니다.',
 
-      /* sourceSamples */
-      sourceSamples: {
-        ts: `<span class="comment">// desktop/Template/Basic.ts</span>
-<span class="danger">//Version</span>
-<span class="danger">//Class</span>
-<span class="danger">//Atelier</span>
-<span class="danger">//EntryPoint</span>
+    insTitle1:'① 설치',
+    insSub1:'저장소를 받고 의존성을 설치합니다. 처음 한 번만 수행합니다.',
+    btnOrigGithub:'원본 GitHub',
+    insStepTitle:'소스 받기 &amp; 의존성 설치',
+    insStepDesc:'GitHub에서 저장소를 clone 한 뒤 폴더로 이동해 <code class="inl">npm install</code>로 의존성을 설치합니다. 이미 소스를 받았다면 clone은 생략합니다.',
+    insStepNote:'<small class="text-secondary">아래 <b>구동 방법</b>의 <code class="inl">start.bat</code> / <code class="inl">start.sh</code>를 쓰면 Node.js·Git 미설치 시 자동 설치와 서브모듈 초기화까지 대신 처리하므로, 이 설치 단계를 건너뛰고 바로 실행할 수도 있습니다.</small>',
 
-<span class="comment">// Run(F9)의 파일 준비 단계에서 실제 TS에는 위 자리표시자에 아래 코드가 자동 생성됩니다.</span>
-<span class="danger">import { CPreferences } from "../../../artgine/basic/CPreferences.js";</span>
-<span class="danger">var gPF = new CPreferences();</span>
-<span class="danger">gPF.mTargetWidth = 0;</span>
-<span class="danger">gPF.mTargetHeight = 0;</span>
-<span class="danger">gPF.mRenderer = "GL";</span>
-<span class="danger">gPF.mServer = "local";</span>
-<span class="danger">gPF.mGitHub = false;</span>
-<span class="danger">gPF.mVersion = "자동 생성 버전값";</span>
+    insTitle2:'② 구동 방법 (3가지)',
+    insSub2:'아래 3가지는 <b>같은 결과가 아니라 구동 방식의 차이</b>입니다. 목적에 맞게 하나를 선택합니다.',
+    run1Desc:'실행 파일(더블클릭). Windows는 <code class="inl">start.bat</code>, Linux는 <code class="inl">start.sh</code>.',
+    run1Li1:'Node.js·Git 미설치 시 <b>자동 설치</b>(winget)',
+    run1Li2:'git 서브모듈 초기화',
+    run1Li3:'이후 <code class="inl">node desktop/Start.js</code> 실행 → <b>Electron GUI</b>',
+    run1Note:'<small class="text-secondary">처음 받아서 사전 준비까지 한 번에 하고 싶을 때. 결과는 npm start와 동일한 GUI.</small>',
+    run2Desc:'<code class="inl">node desktop/Start.js</code> 를 직접 실행.',
+    run2Li1:'필요 시 <code class="inl">npm install</code> + <code class="inl">npx tsc</code> 자동 수행',
+    run2Li2:'기존에 열린 포트의 Electron 정리',
+    run2Li3:'<b>Electron GUI</b>(개발/서버/클라이언트 창) 실행',
+    run2Note:'<small class="text-secondary">Node/Git이 이미 있고 GUI로 작업할 때.</small>',
+    run3Desc:'<code class="inl">node desktop/WebStart.js</code> 를 실행.',
+    run3Li1:'<b>Electron 창 없이</b> 웹서버(CServerMain)만 기동',
+    run3Li2:'포트는 <code class="inl">settings.json</code>의 <code class="inl">url</code>에서 가져옵니다. 인자로 넘기면(<code class="inl">npm run start_web 8080</code>) 그 포트를, 생략하면 settings.json 값을 사용합니다.',
+    run3Li3:'브라우저에서 <code class="inl">http://localhost:[port]</code> 로 접속 (<code class="inl">[port]</code>는 실제 서버 포트)',
+    run3Li4:'부모 프로세스 종료 시 자동 종료',
+    run3Note:'<small class="text-secondary">브라우저·다른 장치에서 접속만 필요할 때. 다른 기기에서는 <code class="inl">localhost</code> 대신 호스트 PC의 LAN IP를 사용합니다. <b>GUI가 없어 Run(F9)이 없습니다.</b></small>',
 
-<span class="danger">import { CAtelier } from "../../../artgine/app/CAtelier.js";</span>
-<span class="danger">import { CPlugin } from "../../../artgine/util/CPlugin.js";</span>
-<span class="danger">CPlugin.PushPath("Bloom", "../../../plugin/Bloom/");</span>
-<span class="danger">import "../../../plugin/Bloom/Bloom.js";</span>
-<span class="danger">var gAtl = new CAtelier();</span>
-<span class="danger">gAtl.mPF = gPF;</span>
-<span class="danger"><span class="keyword">await</span> gAtl.Init(["Main.json"], "");</span>
-<span class="danger">var Main = gAtl.Canvas("Main.json");</span>
-<span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
-<span class="danger">//EntryPoint</span>
-<span class="ok">//여기서부터 수정가능.</span>
-<span class="ok">import { CClass } from "../../../artgine/basic/CClass.js";</span>
-<span class="ok">import { CObject } from "../../../artgine/basic/CObject.js";</span>
+    insTitle3:'③ 프로젝트 실행',
+    insSub3:'<b>웹서버 전용 실행(<code class="inl">npm run start_web</code>)이 아닌</b>, <code class="inl">start.bat</code>·<code class="inl">npm start</code>로 <b>GUI를 띄웠을 때</b> 프로젝트를 실행합니다. 실행 방식은 App 탭의 <code class="inl">program</code> 값에 따라 다릅니다.',
+    devModeLabel:'개발자 모드',
+    devModeIntro:'App 탭에서 <code class="inl">program</code>을 <b>developer</b>로 두고 실행하면 설정 화면(Developer.html)이 먼저 뜹니다. 여기서 프로젝트를 골라 <code class="inl">Run(F9)</code>으로 실행합니다.',
+    devStep1Title:'1. Folder — 프로젝트 선택',
+    devStep1Desc:'App 탭 <code class="inl">projectPath</code> 옆 <b>Folder</b> 버튼으로 <code class="inl">proj</code> 아래 프로젝트 폴더를 선택합니다. (예: <code class="inl">proj/Sample</code>) 선택 시 해당 프로젝트의 <code class="inl">.json</code>·<code class="inl">webmanifest</code>·<code class="inl">ServiceWorker</code> 설정을 읽어 UI에 채웁니다. 폴더명이 <code class="inl">[Name]</code>(프로젝트 이름)이 됩니다.',
+    devStep2Title:'파일 생성/갱신',
+    devStep2Desc:'현재 App / Preference / Include / Manifest / ServiceWorker / Plugin 설정을 기준으로 실행에 필요한 파일을 만들거나 갱신합니다: <code class="inl">[Name].ts</code>, <code class="inl">[Name].html</code>, <code class="inl">[Name].json</code>, <code class="inl">[Name].webmanifest</code>, <code class="inl">ServiceWorker.js</code> (github 옵션 시 <code class="inl">chrome_start.bat</code>).',
+    devStep3Title:'실행',
+    devStep3Desc:'파일 준비가 끝나면 프로젝트를 로드합니다. 서버가 안 떠 있으면 먼저 서버를 기동한 뒤, <code class="inl">server = local</code> 이면 로컬 파일 경로로(<code class="inl">loadFile</code>), <code class="inl">remote</code>/<code class="inl">webServer</code> 이면 <code class="inl">url</code> 기준으로(<code class="inl">loadURL</code>) <code class="inl">[Name].html</code>을 엽니다. TS 빌드가 필요하면 <code class="inl">[Name].ts</code>의 빌드 결과 <code class="inl">[Name].js</code>를 기다린 뒤 로드합니다.',
+    devStep3Note:'<small class="text-secondary">실행 중 다시 <code class="inl">F9</code>를 누르면 개발 화면(Developer.html)으로 돌아오고 서버는 정리됩니다.</small>',
+    srvModeLabel:'서버 모드',
+    srvModeSub:'Folder·Run(F9) 없음',
+    srvModeIntro:'App 탭에서 <code class="inl">program</code>을 <b>server</b>로 두고 실행하면 <b>설정 화면이나 Folder·Run(F9) 절차 없이</b>, 앱이 켜지는 즉시 <b>바로 서버가 구동</b>되고 접속 정보 화면(Server.html)이 뜹니다.',
+    srvStep1Title:'1. 실행 즉시 웹서버 자동 기동',
+    srvStep1Desc:'일렉트론이 켜지자마자 웹서버(CServerMain)를 자동으로 띄웁니다. 창은 작은 크기(480×650)로 열리며, <code class="inl">server</code> 값에 <code class="inl">web</code>이 없으면 내부적으로 <code class="inl">webServer+other</code>로 맞춰 서버를 구동합니다. <b>폴더 선택·Run 버튼은 없습니다.</b>',
+    srvStep2Title:'2. Server.html — 접속 정보 표시',
+    srvStep2Desc:'서버가 뜨면 바로 <code class="inl">Server.html</code>이 열려 <b>URL / Private IP / Public IP / QR</b>을 보여줍니다. 설정 탭 없이 접속 정보 확인 중심 화면입니다.',
+    srvStep3Title:'3. Browser · QR로 접속 / Developer로 전환',
+    srvStep3Desc:'<b>Browser</b> 버튼을 누르면 현재 주소(공인 IP 우선)를 기본 브라우저로 엽니다. 모바일 등 다른 기기는 <b>QR</b>을 스캔해 접속합니다. <b>Developer</b> 버튼으로 개발 화면으로 전환할 수 있습니다.',
+    srvModeNote:'<small class="text-secondary">서버 모드는 프로젝트를 <b>서비스(호스팅)</b>하는 용도라 파일 생성 단계가 없습니다. 프로젝트 파일은 개발자 모드에서 Run(F9)으로 미리 만들어 둔 상태여야 합니다.</small>',
+    insOutro:'<small class="text-secondary">생성/수정되는 파일과 어디를 직접 고쳐야 하는지는 <b>작업방식</b> 탭에서 확인합니다.</small>',
 
-<span class="ok">// 게임 로직, 컴포넌트 등록, 사용자 코드는 EntryPoint 아래에 작성합니다.</span>`,
-        html: `<span class="danger">&lt;!--Include--&gt;</span>
-<span class="danger">&lt;script type='module' src='../../../artgine/artgine.js'&gt;&lt;/script&gt;</span>
-<span class="danger">&lt;link rel='manifest' href='./Sample.webmanifest'/&gt;</span>
-<span class="danger">&lt;!--Manifest--&gt;</span>
-<span class="danger">&lt;!--EntryPoint--&gt;</span>
-<span class="ok">&lt;!-- 여기서부터 수정가능. HTML 사용자 스크립트와 UI 연결을 둘 수 있습니다. --&gt;</span>
-<span class="ok">&lt;script type='module' src='Sample.js'&gt;&lt;/script&gt;</span>`,
-        auto: `<span class="comment">Run(F9) 시 프로젝트를 로드합니다.</span>
-1. Run(F9)을 누르면 프로젝트 설정을 기준으로 필요한 파일을 생성/수정합니다.
-2. 파일 생성이 끝나면 프로젝트 HTML을 Electron 창에서 로드합니다.
-3. TS 빌드가 필요하면 [Name].ts 빌드 결과인 [Name].js를 기다립니다.
-4. 내부 자동 생성 원리는 아래 파일 목록과 수정 위치를 기준으로 보면 됩니다.
+    elecTitle:'일렉트론 실행 모드',
+    elecSub:'App 탭의 <code class="inl">program</code> 값에 따라 Electron 창이 세 가지 화면으로 열립니다. 각 모드는 목적에 맞게 UI가 다릅니다.',
+    commonTitle:'공통 — 설정은 어디에 저장되나',
+    commonLi1:'<b>앱 전역 설정</b>(program, url, 창 크기, server 방식, github, tsc, 비밀번호 등)은 <code class="inl">settings.json</code>에 저장됩니다.',
+    commonLi2:'<b>각 프로젝트 설정</b>은 해당 프로젝트 폴더에 저장됩니다 — <code class="inl">[Name].json</code>, <code class="inl">[Name].webmanifest</code>, <code class="inl">ServiceWorker.js</code>. 프로젝트를 바꿔도 그 프로젝트의 설정이 함께 따라갑니다.',
+    commonLi3:'<code class="inl">settings.json</code>은 <b>워킹 폴더에서 먼저 찾고</b>, 없으면 <b>desktop 폴더</b>에서 찾습니다. (워킹 폴더 우선)',
+    pillDev:'개발', pillServer:'서버', pillClient:'클라이언트',
+    devPaneIntro:'제작·디버깅용 화면입니다. <b>Developer.html</b>이 로드되며 상단 탭(App / Preference / Include / Manifest / ServiceWorker / Plugin / AI)에서 프로젝트 실행과 생성 옵션을 설정합니다.',
+    devHint:'<i class="bi bi-hand-index-thumb"></i> 위 미리보기에서 탭을 누르면 아래에 해당 탭의 세부 항목 설명이 표시됩니다.',
+    srvPaneIntro:'서버 접속 정보 확인용 화면입니다. <b>Server.html</b>이 작은 창(480×650)으로 열리며, 설정 탭 없이 URL·IP·QR 중심의 중앙 폼만 보여줍니다.',
+    srvUrlDesc:'프로젝트에 접속할 기준 주소입니다. 옆 Copy 버튼으로 복사해 다른 브라우저에 붙여넣습니다.',
+    srvPrivDesc:'같은 네트워크(LAN) 안의 다른 장치에서 접속할 때 쓰는 내부 IP입니다.',
+    srvPubDesc:'외부 네트워크에서 접속할 때 쓰는 공인 IP/DNS입니다. 포트포워딩·DDNS 설정과 함께 사용합니다.',
+    srvQrDesc:'모바일 기기에서 카메라로 스캔해 바로 접속할 수 있는 QR 코드입니다.',
+    srvBtnDesc:'<b>Browser</b>는 현재 URL을 기본 브라우저로 열고, <b>Developer</b>는 개발 설정 화면으로 돌아갑니다.',
+    tunnelTitle:'터널링으로 실행할지 물어본다면',
+    tunnelBody:'서버 시작 시 <b>포트가 막혀 있으면</b> Artgine이 <b>터널링으로 실행할지</b> 물어봅니다. 동작은 하지만 <b>서버를 재시작할 때마다 터널 주소가 바뀌어 매번 새로 인증을 받아야 합니다.</b> 임시 방편으로만 쓰고, 가급적 포트 문제를 해결하세요 — 실제로 서버가 사용 중인 포트를 <b>방화벽 인바운드에서 허용</b>하고, 외부에서 접속한다면 <b>공유기 포트포워딩</b>까지 설정한 뒤 <b>고정 주소</b>로 접속하는 것이 좋습니다.',
 
-<span class="comment">생성/수정되는 파일</span>
-<span class="danger">[Name].ts             ← 프로젝트 실행 TS 파일</span>
-<span class="danger">[Name].html           ← 프로젝트 실행 HTML 파일</span>
-<span class="danger">[Name].js             ← [Name].ts 빌드 결과, 직접 수정 금지</span>
-<span class="danger">[Name].json           ← 프로젝트 설정 파일, 수동 편집 주의</span>
-<span class="danger">[Name].webmanifest    ← Manifest 설정에서 자동 생성</span>
-<span class="danger">ServiceWorker.js      ← ServiceWorker 설정에서 자동 생성</span>
-<span class="danger">chrome_start.bat      ← github 옵션이 켜진 경우 생성</span>
+    cliTitle:'클라이언트 모드란',
+    cliDesc:'최종 사용자용 실행 모드입니다. 개발자 설정 UI(Developer.html)나 서버 정보 화면(Server.html)을 거치지 않고, 앱이 켜지면 곧바로 프로젝트 페이지(<code class="inl">[Name].html</code>)를 Electron 창에 로드합니다. 배포·전시·키오스크처럼 "완성된 결과물을 바로 보여줄 때" 사용합니다.',
+    cliStep1:'앱 실행',
+    cliStep2:'서버 연결 (자동 기동 / 원격)',
+    cliStep3:'프로젝트 페이지 로드',
+    cliVisualNote:'설정 화면 없이 <code class="inl">program = client</code> 이면 실행과 동시에 프로젝트가 나타납니다.',
+    cliNoUiTitle:'클라이언트 모드는 설정 UI가 없습니다',
+    cliNoUiBody:'개발자 모드처럼 설정을 조정하는 <b>화면(툴)이 제공되지 않습니다.</b> 클라이언트 모드로 실행하려면 <code class="inl">settings.json</code>을 <b>직접 열어</b> <code class="inl">program</code>을 <code class="inl">client</code>로, <code class="inl">projectPath</code>·<code class="inl">server</code>·<code class="inl">url</code> 등을 <b>손으로 수정</b>해야 합니다. (개발자 모드에서 App 탭 값을 맞춰 저장해 둔 <code class="inl">settings.json</code>을 그대로 쓰고 program만 client로 바꾸는 방법도 있습니다.)',
+    cliAccessTitle:'서버 접속 방식 (App 탭의 <code class="inl">server</code> 값)',
+    cliAccessSub:'클라이언트가 프로젝트 페이지를 어디에서 여는지가 <code class="inl">server</code> 값으로 갈립니다. 일반적으로 다음 두 가지를 씁니다.',
+    cliWebTitle:'웹서버 자동 구동 접속',
+    cliWebDesc:'앱이 켜지면 <b>자체 웹서버(CServerMain)를 자동으로 기동</b>한 뒤, 그 로컬 주소(<code class="inl">url</code>)로 프로젝트를 엽니다(<code class="inl">loadURL</code>). 서버 API·라우팅이 필요한 프로젝트를 한 대의 PC에서 단독 실행할 때 씁니다. (파일만 여는 <code class="inl">local</code>은 <code class="inl">loadFile</code>로 직접 로드)',
+    cliRemoteTitle:'원격(타 서버) 접속',
+    cliRemoteDesc:'앱은 <b>서버를 띄우지 않고</b>, 이미 운영 중인 <b>다른 서버의 URL</b>에 접속해 프로젝트를 엽니다(<code class="inl">loadURL</code>). 중앙 서버에 배포해 두고 여러 클라이언트 PC가 같은 서버에 붙는 구성에 적합합니다.',
+    cliSwitchTitle:'전환 방법',
+    cliSwitchDesc:'개발 모드의 App 탭에서 <code class="inl">program</code>을 <b>client</b>로 바꾼 뒤 실행하면 클라이언트 모드로 열립니다.',
+    cliFsDesc:'App 탭의 fullScreen 옵션과 함께 쓰면 전체 화면으로 프로젝트만 표시되어 전시·키오스크 실행에 적합합니다.',
 
-<span class="comment">수정해야 하는 파일</span>
-<span class="ok">[Name].ts</span>
-  <span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
-  <span class="danger">//EntryPoint</span>
-  <span class="ok">//여기서부터 수정가능.</span>
+    workTitle:'작업 방식 (소스 수정)',
+    workSub:'Run(F9)을 누르면 프로젝트 설정을 기준으로 필요한 파일이 생성/수정됩니다. 자동 생성 영역과 직접 수정 영역을 구분하는 것이 핵심입니다.',
+    legRed:'<b class="text-danger">빨강</b> · 자동 생성 영역 / 직접 수정 주의',
+    legGreen:'<b class="text-success">초록</b> · 수동 작성 영역 / 직접 수정 가능',
+    legJson:'<b class="text-danger">.json</b> · 프로젝트 설정 파일 / 수동 편집 주의',
+    workTab1:'자동 생성 파일', workTab2:'TS 수정 위치', workTab3:'HTML 수정 위치',
+    gen1Desc:'프로젝트 설정(App/Preference/Include/Manifest/ServiceWorker/Plugin)을 읽습니다.',
+    gen2Title:'파일 생성 / 갱신',
+    gen2Desc:'설정을 기준으로 실행에 필요한 파일을 만들거나 갱신합니다.',
+    tagGen:'자동생성',
+    gfTs:'프로젝트 실행 TS 파일 <b class="text-success">(EntryPoint 아래는 보존)</b>',
+    gfHtml:'프로젝트 실행 HTML 파일 <b class="text-success">(EntryPoint 아래는 보존)</b>',
+    gfJs:'[Name].ts 빌드 결과 · 직접 수정 금지',
+    gfJson:'프로젝트 설정 파일 · 수동 편집 주의',
+    gfManifest:'Manifest 설정에서 생성',
+    gfSw:'ServiceWorker 설정에서 생성',
+    gfBat:'github 옵션이 켜진 경우 생성',
+    gen3Title:'프로젝트 로드',
+    gen3Desc:'프로젝트 HTML을 Electron 창에서 로드합니다. TS 빌드가 필요하면 <code class="inl">[Name].ts</code>의 빌드 결과 <code class="inl">[Name].js</code>를 기다린 뒤 로드합니다.',
+    leg2Gen:'<b class="text-danger">자동생성 파일</b> · Run(F9) 때 다시 생성될 수 있음 (직접 수정 주의)',
+    leg2Keep:'<b class="text-success">EntryPoint 아래</b> · 사용자가 작성한 코드가 보존되는 위치',
+    tsCmt0a:'// desktop/Template/Basic.ts 의 //Version //Class //Atelier //EntryPoint 자리표시자에',
+    tsCmt0b:'// Run(F9)의 파일 준비 단계에서 아래 코드가 자동 생성됩니다.',
+    tsCmt1:'//여기서부터 수정가능.',
+    tsCmt2:'// 게임 로직, 컴포넌트 등록, 사용자 코드는 EntryPoint 아래에 작성합니다.',
+    htmlCmt1:'&lt;!-- 여기서부터 수정가능. HTML 사용자 스크립트와 UI 연결을 둘 수 있습니다. --&gt;',
+    htmlNote:'HTML도 수정할 수 있습니다. 단, <code class="inl">&lt;!--Include--&gt;</code> · <code class="inl">&lt;!--Manifest--&gt;</code> · <code class="inl">&lt;!--EntryPoint--&gt;</code> 위쪽은 자동 생성 영역이고, <code class="inl">&lt;!--EntryPoint--&gt;</code> 아래부터 직접 수정합니다.'
+  };
+  for (var k in KO) set('ko', k, KO[k]);
 
-<span class="ok">[Name].html</span>
-  <span class="danger">&lt;!--Include--&gt;, &lt;!--Manifest--&gt;, &lt;!--EntryPoint--&gt; 위쪽은 자동 생성 영역</span>
-  <span class="ok">&lt;!--EntryPoint--&gt; 아래부터 직접 수정 가능</span>
+  /* Snapshot English defaults from HTML (so toggling both ways works) */
+  var nodes = document.querySelectorAll('[data-CLan]');
+  nodes.forEach(function(el){
+    var key = el.getAttribute('data-CLan');
+    if (getRaw('en', key) == null) set('en', key, (el.tagName==='INPUT') ? el.placeholder : el.innerHTML);
+  });
 
-<span class="comment">주의</span>
-<span class="danger">빨강 영역은 Run(F9) 때 다시 생성될 수 있습니다.</span>
-<span class="ok">초록 영역은 사용자가 작성한 코드가 보존되는 위치입니다.</span>`
-      }
-    },
+  function applyLan(){
+    nodes.forEach(function(el){
+      var key = el.getAttribute('data-CLan');
+      var t = getRaw(CODE, key); if (t==null) t = getRaw('en', key);
+      if (t==null) return;
+      if (el.tagName==='INPUT') el.placeholder = t; else el.innerHTML = t;
+    });
+    document.documentElement.lang = CODE;
+    var lbl = document.getElementById('langBtnLabel');
+    if (lbl) lbl.textContent = (CODE==='ko') ? 'EN' : '한국어';
+  }
 
+  /* ── Dev-mode preview: per-tab detail (bilingual) ── */
+  var DEV_TABS = {
     en: {
-      pageTitle: 'Electron UI Guide',
-
-      modeSetup:  'Initial Setup',
-      modeDev:    'Developer Mode',
-      modeServer: 'Server Mode',
-      modeSource: 'Source Editing',
-
-      next: 'Next',
-      done: 'Done',
-      hideCoach: 'Hide',
-      showCoach: 'Open Guide',
-
-      /* Setup screen */
-      setupTitle:       'Initial Setup',
-      introTitle:       'What is Artgine?',
-      introBody:        'Artgine is a 2D/3D content engine and integrated development environment built with Electron and web technologies. It combines web-based graphics rendering with the convenience of a desktop app, making it easy to build interactive content and games without complex setup.',
-      setupConsoleTitle:'Console Install',
-      setupStartTitle:  'Run via GUI',
-      setupStartBody:   'After getting the source, you can also launch the same Electron GUI by running start.bat on Windows or start.sh on Linux.',
-      setupServerTitle: 'Server Only',
-      setupRunTitle:    'Run Project',
-      setupRunBody:     '<ol class="mb-2"><li>Click <code>Folder</code> in <code>projectPath</code> and select the project folder under <code>proj</code>.</li><li>Press <code>Run(F9)</code> to load the project.</li></ol><small class="text-secondary">Just pick any project you like. (e.g. <code>proj/Sample</code>)</small>',
-
-      /* Source screen */
-      sourceTabAuto:    'Auto-generated Files',
-      sourceTabTs:      'TS Edit Location',
-      sourceTabHtml:    'HTML Edit Location',
-      legendRedLabel:   'Red',
-      legendRedDesc:    'Auto-generated area / caution when editing directly',
-      legendGreenLabel: 'Green',
-      legendGreenDesc:  'Manual write area / editable directly',
-      legendJsonLabel:  '.json',
-      legendJsonDesc:   'Project config file / caution when editing manually',
-
-      /* stepsByMode */
-      stepsByMode: {
-        setup: [
-          ["Console Install", "git clone → npm start", "setupCommandBox", "To run from the console, clone the repo then run npm install followed by npm start.", "If you already have the project, skip git clone and run npm install then npm start from the project root."],
-          ["Run via GUI", "start.bat / start.sh", "setupStartBox", "After getting the source, running start.bat on Windows or start.sh on Linux launches the same Electron GUI.", "An 'unknown publisher' warning may appear on first run."],
-          ["Server Only", "npm run start_web", "setupServerBox", "To run only the server without the Electron developer UI, use npm run start_web instead of npm start.", "Useful for verifying server access from an external browser or another device."],
-          ["Run Project", "Folder → Run(F9)", "setupRunBox", "Click Folder in projectPath to select the project folder under proj, then press Run(F9) to load it.", "See Source Editing for details on files generated/modified after Run(F9) and where to make code changes."]
-        ],
-        dev: [
-          ["App Tab", "Basic project run settings", "projectPathBox", "The App tab configures the fundamental run settings: which path to open the project from, window size, and execution mode.", "On first run, set projectPath to the project folder, confirm server mode and program value, then press Run(F9)."],
-          ["Run(F9)", "Run the project", "Run_btn", "Pressing Run(F9) prepares project files based on the current App tab settings and launches the project HTML.", "See Source Editing for details on auto-generated files and edit locations."],
-          ["Preference", "Renderer and dev options", "pref-tab", "The Preference tab covers targetWidth, targetHeight, depth, anti, xr, developer, IAuto, Renderer, and Canvas.", "Keeping developer checked lets you open DevTools."],
-          ["Include", "Auto-configure HTML includes", "include-tab", "Checked items in the Include tab are reflected in the HTML auto-generation area.", "Editing the auto-generated area above EntryPoint directly may be overwritten on the next generation."],
-          ["Manifest / ServiceWorker", "Generate PWA files", "manifest-tab", "The Manifest and ServiceWorker tabs provide settings for generating webmanifest and ServiceWorker.js.", "Manage settings through the UI; do not edit the generated files directly."],
-          ["Plugin / AI", "Plugins and AI tools", "plugin-tab", "The Plugin tab selects plugins for the project; the AI tab manages tools like Codex.", "Plugin selections are also reflected in the CPlugin.PushPath configuration in the auto-generated TS area."]
-        ],
-        server: [
-          ["Server Screen", "URL/IP center form", "serverUrlBox", "Server mode shows a centered 500px form inside a Bootstrap container, just like the real Server.html.", "Unlike the Developer screen, the focus is on connection info rather than settings tabs."],
-          ["Copy Button", "Copy URL/IP", "privateIpBox", "Use the Copy button next to URL, Private IP, and Public IP to copy connection info.", "Check Public IP and the QR area when connecting from another device."],
-          ["Browser", "Open in browser", "browser_btn", "The Browser button opens the current server URL in a browser to verify the project outside of Electron.", "The Developer button returns to the development settings screen."]
-        ],
-        source: [
-          ["Auto-generated Files", "Generated/modified on Run(F9)", "sourceAuto", "Pressing Run(F9) generates/modifies the necessary files based on project settings, then loads the project.", "Edit in [Name].ts and [Name].html below EntryPoint. Avoid editing [Name].js, [Name].json, webmanifest, and ServiceWorker.js directly.", "auto"],
-          ["Editing TS", "Template + auto-generation", "sourceTs", "The TS file uses placeholders in desktop/Template/Basic.ts (//Version, //Class, //Atelier, //EntryPoint) that are filled by auto-generation during the Run(F9) file prep step.", "CPreferences, CPlugin.PushPath, CAtelier, gAtl.Init, and Canvas variables are auto-generated. Edit from the green EntryPoint area down.", "ts"],
-          ["Editing HTML", "Below EntryPoint", "sourceHtml", "HTML can also be edited. The area above EntryPoint (Include and Manifest) is auto-generated; edit below EntryPoint only.", "Place HTML user scripts or additional markup below EntryPoint.", "html"]
-        ]
-      },
-
-      /* guideTips */
-      guideTips: {
-        "app-tab": "This is the App tab. Set the basic values required to run an Artgine project: project path, execution URL, window size, program mode, and server mode.",
-        "pref-tab": "This is the Preference tab. Adjust renderer, canvas, developer tools, and Include auto-refresh settings.",
-        "include-tab": "This is the Include tab. Select external libraries to include in the HTML auto-generation area.",
-        "manifest-tab": "This is the Manifest tab. Configure the name, icon, colors, and display mode for the PWA webmanifest.",
-        "service-tab": "This is the ServiceWorker tab. Set cache name, cache size, logging, and API cache options for ServiceWorker generation.",
-        "plugin-tab": "This is the Plugin tab. Select plugins to use in the project. Selections are reflected in the generated source settings.",
-        "ai-tab": "This is the AI tab. Create or delete execution configurations for AI tools like Codex and Claude.",
-        "url_txt": "The base URL to open the project HTML in webServer or remote mode. In local mode it may be left empty since files are opened by path.",
-        "projectPath_txt": "The Artgine project folder to run. This path's name becomes the project name and the basis for generating [Name].html, [Name].ts, etc.",
-        "selectProjectPath_btn": "Browse and select the project folder to run.",
-        "width_num": "The width of the project execution window.",
-        "height_num": "The height of the project execution window.",
-        "program_sel": "The program mode to run. developer is for authoring/debugging; client is for client execution; server is for the server info screen.",
-        "server_sel": "The method for opening the project. local uses local file paths; remote/webServer changes the flow to URL-based loading.",
-        "fullScreen_chk": "Whether to run the project in fullscreen mode. Useful for kiosk or exhibition setups.",
-        "github_chk": "Option for static deployment paths like GitHub Pages. Enabling it changes the path and chrome_start.bat generation flow.",
-        "Run_btn": "Run (F9). Prepares the necessary project files based on current settings and runs the project HTML. See Source Editing for the auto-generation details.",
-        "VSCode_btn": "Opens the current project path in VS Code.",
-        "targetWidth": "Target render width. 0 follows the window size.",
-        "targetHeight": "Target render height. 0 follows the window size.",
-        "depth": "Enable 32-bit depth option.",
-        "anti": "Enable anti-aliasing option.",
-        "xr": "XR execution option.",
-        "devTool": "Option to open DevTools alongside the project.",
-        "IAuto": "CAtelier Include auto-refresh option.",
-        "canvas_txt": "Canvas configuration name or path to use.",
-        "short_name_txt": "Short app name for the Manifest.",
-        "name_txt": "Full app name for the Manifest.",
-        "iconsAdd_btn": "Add a Manifest icon entry.",
-        "orientation_sel": "Screen orientation setting.",
-        "display_sel": "PWA display mode. Set values like standalone or fullscreen.",
-        "background_color_pick": "Manifest background color.",
-        "theme_color_pick": "Manifest theme color.",
-        "cache_name_txt": "ServiceWorker cache name. Used as the cache identifier in the generated file.",
-        "max_cache_size_num": "Maximum cache count the ServiceWorker will maintain.",
-        "log_chk": "Whether to output ServiceWorker logs.",
-        "api_cache_chk": "Whether to use API request caching.",
-        "aiCreate_btn": "Create the selected AI tool configuration.",
-        "aiDelete_btn": "Delete the selected AI tool configuration.",
-        "browser_btn": "Open the current server URL in the default browser.",
-        "switchDev_btn": "Return to the developer mode screen from the server screen.",
-        "sourceTs": "TS edit location. Shows the placeholders in desktop/Template/Basic.ts and the auto-generated results. Edit from the green EntryPoint area down.",
-        "sourceHtml": "HTML edit location. Include/Manifest above EntryPoint is auto-generated; below EntryPoint can be edited directly.",
-        "sourceAuto": "Auto-generated file list. Red = caution when editing directly; green = manual edit area.",
-        "setupStartBox": "After getting the source, you can also launch the Electron app with start.bat or start.sh.",
-        "setupCommandBox": "Commands to install and run directly from the console. Run npm install then npm start to launch the Electron app.",
-        "setupServerBox": "Command to run only the server standalone. Starts the web server without the Electron UI.",
-        "setupRunBox": "Initial run procedure. Select the project in projectPath and press Run(F9) to load it."
-      },
-
-      /* sourceSamples */
-      sourceSamples: {
-        ts: `<span class="comment">// desktop/Template/Basic.ts</span>
-<span class="danger">//Version</span>
-<span class="danger">//Class</span>
-<span class="danger">//Atelier</span>
-<span class="danger">//EntryPoint</span>
-
-<span class="comment">// During the Run(F9) file prep step, the code below is auto-generated into the actual TS at these placeholders.</span>
-<span class="danger">import { CPreferences } from "../../../artgine/basic/CPreferences.js";</span>
-<span class="danger">var gPF = new CPreferences();</span>
-<span class="danger">gPF.mTargetWidth = 0;</span>
-<span class="danger">gPF.mTargetHeight = 0;</span>
-<span class="danger">gPF.mRenderer = "GL";</span>
-<span class="danger">gPF.mServer = "local";</span>
-<span class="danger">gPF.mGitHub = false;</span>
-<span class="danger">gPF.mVersion = "auto-generated version value";</span>
-
-<span class="danger">import { CAtelier } from "../../../artgine/app/CAtelier.js";</span>
-<span class="danger">import { CPlugin } from "../../../artgine/util/CPlugin.js";</span>
-<span class="danger">CPlugin.PushPath("Bloom", "../../../plugin/Bloom/");</span>
-<span class="danger">import "../../../plugin/Bloom/Bloom.js";</span>
-<span class="danger">var gAtl = new CAtelier();</span>
-<span class="danger">gAtl.mPF = gPF;</span>
-<span class="danger"><span class="keyword">await</span> gAtl.Init(["Main.json"], "");</span>
-<span class="danger">var Main = gAtl.Canvas("Main.json");</span>
-<span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
-<span class="danger">//EntryPoint</span>
-<span class="ok">// Editable from here.</span>
-<span class="ok">import { CClass } from "../../../artgine/basic/CClass.js";</span>
-<span class="ok">import { CObject } from "../../../artgine/basic/CObject.js";</span>
-
-<span class="ok">// Game logic, component registration, and user code go below EntryPoint.</span>`,
-        html: `<span class="danger">&lt;!--Include--&gt;</span>
-<span class="danger">&lt;script type='module' src='../../../artgine/artgine.js'&gt;&lt;/script&gt;</span>
-<span class="danger">&lt;link rel='manifest' href='./Sample.webmanifest'/&gt;</span>
-<span class="danger">&lt;!--Manifest--&gt;</span>
-<span class="danger">&lt;!--EntryPoint--&gt;</span>
-<span class="ok">&lt;!-- Editable from here. You can add HTML user scripts and UI wiring. --&gt;</span>
-<span class="ok">&lt;script type='module' src='Sample.js'&gt;&lt;/script&gt;</span>`,
-        auto: `<span class="comment">Run(F9) loads the project.</span>
-1. Pressing Run(F9) generates/modifies the necessary files based on project settings.
-2. Once file generation is complete, the project HTML is loaded in the Electron window.
-3. If a TS build is needed, it waits for [Name].js, the build output of [Name].ts.
-4. To understand the auto-generation internals, refer to the file list and edit locations below.
-
-<span class="comment">Files generated/modified</span>
-<span class="danger">[Name].ts             ← Project entry TS file</span>
-<span class="danger">[Name].html           ← Project entry HTML file</span>
-<span class="danger">[Name].js             ← Build output of [Name].ts — do not edit directly</span>
-<span class="danger">[Name].json           ← Project config file — caution when editing manually</span>
-<span class="danger">[Name].webmanifest    ← Auto-generated from Manifest settings</span>
-<span class="danger">ServiceWorker.js      ← Auto-generated from ServiceWorker settings</span>
-<span class="danger">chrome_start.bat      ← Generated when github option is enabled</span>
-
-<span class="comment">Files to edit</span>
-<span class="ok">[Name].ts</span>
-  <span class="danger">//The content above this line is automatically set by the program. Do not modify.🚫💥🔥</span>
-  <span class="danger">//EntryPoint</span>
-  <span class="ok">// Editable from here.</span>
-
-<span class="ok">[Name].html</span>
-  <span class="danger">&lt;!--Include--&gt;, &lt;!--Manifest--&gt;, &lt;!--EntryPoint--&gt; above is the auto-generated area</span>
-  <span class="ok">&lt;!--EntryPoint--&gt; below is editable directly</span>
-
-<span class="comment">Note</span>
-<span class="danger">Red areas may be regenerated on Run(F9).</span>
-<span class="ok">Green areas preserve user-written code.</span>`
-      }
+      "d-app": { badge:"App", title:"Basic run settings", desc:"The run-settings tab that decides which path/size/method the project opens with.", items:[
+        ["url","text","Base URL to open the project HTML. Used when server is webServer/remote; with local it opens by file path and may be left empty."],
+        ["projectPath","text + Folder","Project folder to run. Pick a folder under proj with the Folder button; the folder name becomes the project name ([Name])."],
+        ["width / height","number","Width/height of the Electron window."],
+        ["program","select","Run mode. developer (settings UI) / client (run project directly) / server (connection-info screen)."],
+        ["server","select","Connection method. local (local file) / remote (remote server) / webServer (auto-start own web server)."],
+        ["fullScreen","checkbox","Run the project in full screen."],
+        ["github","checkbox","Run based on a static deploy path like GitHub Pages. Enabling it changes the path and chrome_start.bat generation flow."],
+        ["tsc -w","checkbox","Also start a TypeScript watch build (tsc -w)."],
+        ["Extra Server Settings","accordion","Extra server settings such as the auth Password."],
+        ["Run(F9) / VSCode(F4)","button","Run generates files then runs the project; VSCode opens the current project path in VS Code."]
+      ]},
+      "d-pref": { badge:"Preference", title:"Renderer & dev options", desc:"Handles the render target, renderer, and dev-convenience options.", items:[
+        ["targetWidth / targetHeight","number","Render target size. 0 follows the window size."],
+        ["32fDepth","checkbox","Use a 32-bit depth buffer."],
+        ["anti","checkbox","Use anti-aliasing."],
+        ["xr","checkbox","XR (VR/AR) run option."],
+        ["developer","checkbox","Show DevTools. When off, the dev window is hidden."],
+        ["IAuto(CAtelier Include)","checkbox","Auto-refresh CAtelier Include. When off, refresh state manually."],
+        ["Renderer","select","Renderer choice. Null / GL / GPU."],
+        ["Canvas","text","Canvas config name or path to use."],
+        ["Default","button","Reset Preference values to defaults."]
+      ]},
+      "d-inc": { badge:"Include", title:"HTML include auto-config", desc:"Checked libraries are reflected into the HTML include auto-generation area (above EntryPoint).", items:[
+        ["PakoZlib(FBX)","checkbox","pako zlib decompression library used by FBX, etc."],
+        ["JSZip","checkbox","ZIP compress/decompress library."],
+        ["ScreenFull","checkbox","Fullscreen toggle helper."],
+        ["Popper","checkbox","Tooltip/popover positioning (Bootstrap dependency)."],
+        ["Bootstrap","checkbox","Bootstrap UI framework."],
+        ["MonacoEditor","checkbox","VS Code-based code editor."],
+        ["Diff2Html","checkbox","Render diff results as HTML."],
+        ["Excel","checkbox","Excel (xlsx) processing library."],
+        ["Firebase","checkbox","Firebase integration."],
+        ["NoSleep","checkbox","Prevent screen lock."],
+        ["Tone / SoundFont","checkbox","Audio synthesis / SoundFont playback."],
+        ["ToastUI","checkbox","ToastUI editor/grid, etc."],
+        ["QRCode","checkbox","QR code generation."]
+      ]},
+      "d-man": { badge:"Manifest", title:"PWA manifest", desc:"Values needed to generate the PWA [Name].webmanifest.", items:[
+        ["short_name / name","text","App short name and full name."],
+        ["Icons","list + Add","App icon list (192x192+, 512x512 recommended). Add with + Add Icon."],
+        ["orientation","select","Screen orientation. any / portrait / landscape."],
+        ["display","select","Display mode. fullscreen / standalone / minimal-ui / browser."],
+        ["background_color / theme_color","color","Start background color and theme color."],
+        ["start_url / id / scope","text","Start URL, app id, and scope."],
+        ["description / categories","text","App description and categories (comma-separated)."],
+        ["screenshots / shortcuts","JSON","Store screenshots / shortcuts (JSON array)."]
+      ]},
+      "d-sw": { badge:"ServiceWorker", title:"Cache & offline settings", desc:"ServiceWorker.js generation options. Decides PWA cache and offline behavior.", items:[
+        ["CACHE_NAME","text (read-only)","Cache identifier. Used as the cache name in the generated file."],
+        ["MAX_CACHE_SIZE","number (MB)","Max cache size the ServiceWorker keeps."],
+        ["Log","checkbox","Whether the ServiceWorker outputs logs."],
+        ["API_CACHE","checkbox","Whether to cache API requests."]
+      ]},
+      "d-plug": { badge:"Plugin", title:"Engine plugin selection", desc:"Select engine plugins to use. Selections are reflected in the CPlugin.PushPath config in the TS auto-generation area.", items:[
+        ["Bloom","checkbox","Bloom (glow) post-process plugin."],
+        ["Rapier","checkbox","Rapier physics engine plugin."],
+        ["Water","checkbox","Water rendering plugin."],
+        ["(others)","checkbox","Plugins detected in the plugin folder appear in the list."]
+      ]},
+      "d-ai": { badge:"AI", title:"AI coding tool setup", desc:"Create or delete AI coding tool run configs for the project.", items:[
+        ["Claude","checkbox","Include Claude tool config."],
+        ["Antigravity","checkbox","Include Antigravity tool config."],
+        ["Manus","checkbox","Include Manus tool config."],
+        ["GitHub Copilot","checkbox","Include GitHub Copilot config."],
+        ["Codex","checkbox","Include Codex tool config."],
+        ["OpenCode","checkbox","Include OpenCode tool config."],
+        ["Create / Delete","button","Create / delete the selected AI tool config."]
+      ]}
+    },
+    ko: {
+      "d-app": { badge:"App", title:"기본 실행 설정", desc:"프로젝트를 어떤 경로·크기·방식으로 열지 정하는 실행 설정 탭입니다.", items:[
+        ["url","텍스트","프로젝트 HTML을 열 기준 주소. server가 webServer/remote일 때 사용하며, local이면 파일 경로로 열려 비워둘 수 있습니다."],
+        ["projectPath","텍스트 + Folder","실행할 프로젝트 폴더. Folder 버튼으로 proj 아래 폴더를 선택하며, 폴더명이 프로젝트 이름([Name])이 됩니다."],
+        ["width / height","숫자","Electron 실행 창의 너비·높이."],
+        ["program","선택","실행 모드. developer(설정 UI) / client(프로젝트 바로 실행) / server(접속 정보 화면)."],
+        ["server","선택","접속 방식. local(로컬 파일) / remote(원격 서버) / webServer(자체 웹서버 자동 기동)."],
+        ["fullScreen","체크","프로젝트를 전체 화면으로 실행."],
+        ["github","체크","GitHub Pages 등 정적 배포 경로 기준 실행. 켜면 경로와 chrome_start.bat 생성 흐름이 달라집니다."],
+        ["tsc -w","체크","TypeScript watch 빌드(tsc -w)를 함께 켭니다."],
+        ["Extra Server Settings","아코디언","서버 인증 Password 등 추가 서버 설정."],
+        ["Run(F9) / VSCode(F4)","버튼","Run은 파일 생성 후 프로젝트 실행, VSCode는 현재 프로젝트 경로를 VS Code로 엽니다."]
+      ]},
+      "d-pref": { badge:"Preference", title:"렌더러·개발 옵션", desc:"렌더링 대상과 렌더러, 개발 편의 옵션을 다루는 탭입니다.", items:[
+        ["targetWidth / targetHeight","숫자","렌더링 대상 크기. 0이면 창 크기를 따릅니다."],
+        ["32fDepth","체크","32비트 depth 버퍼 사용."],
+        ["anti","체크","안티앨리어싱 사용."],
+        ["xr","체크","XR(VR/AR) 실행 옵션."],
+        ["developer","체크","개발자 도구(DevTools) 표시. 꺼지면 개발창을 숨깁니다."],
+        ["IAuto(CAtelier Include)","체크","CAtelier Include 자동 갱신. 꺼지면 상태 갱신을 수동으로 해야 합니다."],
+        ["Renderer","선택","렌더러 선택. Null / GL / GPU."],
+        ["Canvas","텍스트","사용할 Canvas 설정 이름 또는 경로."],
+        ["Default","버튼","Preference 값을 기본값으로 되돌립니다."]
+      ]},
+      "d-inc": { badge:"Include", title:"HTML include 자동 구성", desc:"체크한 라이브러리가 HTML의 Include 자동 생성 영역(EntryPoint 위쪽)에 반영됩니다.", items:[
+        ["PakoZlib(FBX)","체크","FBX 등에서 쓰는 pako zlib 압축 해제 라이브러리."],
+        ["JSZip","체크","ZIP 압축/해제 라이브러리."],
+        ["ScreenFull","체크","전체 화면 전환 헬퍼."],
+        ["Popper","체크","툴팁·팝오버 위치 계산(Bootstrap 의존)."],
+        ["Bootstrap","체크","Bootstrap UI 프레임워크."],
+        ["MonacoEditor","체크","VS Code 기반 코드 에디터."],
+        ["Diff2Html","체크","diff 결과를 HTML로 표시."],
+        ["Excel","체크","엑셀(xlsx) 처리 라이브러리."],
+        ["Firebase","체크","Firebase 연동."],
+        ["NoSleep","체크","화면 잠금 방지."],
+        ["Tone / SoundFont","체크","오디오 합성·사운드폰트 재생."],
+        ["ToastUI","체크","ToastUI 에디터/그리드 등."],
+        ["QRCode","체크","QR 코드 생성."]
+      ]},
+      "d-man": { badge:"Manifest", title:"PWA 매니페스트", desc:"PWA용 [Name].webmanifest 생성에 필요한 값을 설정합니다.", items:[
+        ["short_name / name","텍스트","앱의 짧은 이름과 전체 이름."],
+        ["Icons","목록 + Add","앱 아이콘 목록(192×192 이상, 512×512 권장). + Add Icon으로 추가."],
+        ["orientation","선택","화면 방향. any / portrait / landscape."],
+        ["display","선택","표시 방식. fullscreen / standalone / minimal-ui / browser."],
+        ["background_color / theme_color","색상","시작 배경색과 테마색."],
+        ["start_url / id / scope","텍스트","시작 URL, 앱 식별자, 적용 범위."],
+        ["description / categories","텍스트","앱 설명과 카테고리(쉼표 구분)."],
+        ["screenshots / shortcuts","JSON","스토어용 스크린샷·바로가기(JSON 배열)."]
+      ]},
+      "d-sw": { badge:"ServiceWorker", title:"캐시·오프라인 설정", desc:"ServiceWorker.js 생성 옵션입니다. PWA 캐시와 오프라인 동작을 결정합니다.", items:[
+        ["CACHE_NAME","텍스트(읽기전용)","캐시 식별자. 생성 파일에서 캐시 이름으로 사용됩니다."],
+        ["MAX_CACHE_SIZE","숫자(MB)","ServiceWorker가 유지할 최대 캐시 크기."],
+        ["Log","체크","ServiceWorker 로그 출력 여부."],
+        ["API_CACHE","체크","API 요청 캐시 사용 여부."]
+      ]},
+      "d-plug": { badge:"Plugin", title:"엔진 플러그인 선택", desc:"프로젝트에서 사용할 엔진 플러그인을 선택합니다. 선택 내용은 TS 자동 생성 영역의 CPlugin.PushPath 구성에 반영됩니다.", items:[
+        ["Bloom","체크","블룸(발광) 포스트 프로세스 플러그인."],
+        ["Rapier","체크","Rapier 물리 엔진 플러그인."],
+        ["Water","체크","물 렌더링 플러그인."],
+        ["(그 외)","체크","plugin 폴더에서 감지된 플러그인이 목록으로 표시됩니다."]
+      ]},
+      "d-ai": { badge:"AI", title:"AI 코딩 도구 구성", desc:"프로젝트에 AI 코딩 도구 실행 구성을 생성하거나 삭제합니다.", items:[
+        ["Claude","체크","Claude 도구 구성 포함."],
+        ["Antigravity","체크","Antigravity 도구 구성 포함."],
+        ["Manus","체크","Manus 도구 구성 포함."],
+        ["GitHub Copilot","체크","GitHub Copilot 구성 포함."],
+        ["Codex","체크","Codex 도구 구성 포함."],
+        ["OpenCode","체크","OpenCode 도구 구성 포함."],
+        ["Create / Delete","버튼","선택한 AI 도구 구성을 생성 / 삭제합니다."]
+      ]}
     }
   };
 
-  const GUIDE_LANG = (navigator.language || navigator.userLanguage || 'en').toLowerCase().startsWith('ko') ? 'ko' : 'en';
-  const S = GUIDE_STRINGS[GUIDE_LANG] || GUIDE_STRINGS.en;
+  var currentDevKey = 'd-app';
+  function renderDev(key){
+    if (key) currentDevKey = key;
+    var box = document.getElementById('devTabDetail');
+    if (!box) return;
+    var lang = (CODE==='ko') ? 'ko' : 'en';
+    var pack = DEV_TABS[lang] || DEV_TABS.en;
+    var d = pack[currentDevKey] || DEV_TABS.en[currentDevKey];
+    if (!d) return;
+    var rows = d.items.map(function(it){
+      return '<li class="dev-item"><div class="k">'+it[0]+'<small>'+it[1]+'</small></div><div class="v">'+it[2]+'</div></li>';
+    }).join('');
+    box.innerHTML =
+      '<div class="dev-detail">'+
+        '<div class="dev-detail-head"><h5><span class="badge-mode">'+d.badge+'</span> '+d.title+'</h5><p>'+d.desc+'</p></div>'+
+        '<ul class="dev-item-list">'+rows+'</ul>'+
+      '</div>';
+  }
+
+  var devMock = document.querySelector('#m-dev .win .nav-tabs');
+  if (devMock){
+    devMock.querySelectorAll('button[data-bs-target]').forEach(function(btn){
+      btn.addEventListener('shown.bs.tab', function(e){
+        renderDev(e.target.getAttribute('data-bs-target').slice(1));
+      });
+    });
+  }
+
+  var langBtn = document.getElementById('langBtn');
+  if (langBtn){
+    langBtn.addEventListener('click', function(){
+      CODE = (CODE==='ko') ? 'en' : 'ko';
+      try { localStorage.setItem(STORE_KEY, CODE); } catch(e){}
+      applyLan();
+      renderDev();
+    });
+  }
+
+  applyLan();
+  renderDev('d-app');
+})();
 </script>
 
-<script>
-  /* --- electron-ui-mode-guide.html embedded logic (scoped to #guideEmbed) --- */
-  (function(){
-    const root = document.getElementById('guideEmbed');
-
-    function applyI18n() {
-      root.querySelectorAll('[data-i18n]').forEach(el => {
-        const v = S[el.dataset.i18n];
-        if (v !== undefined) el.textContent = v;
-      });
-      root.querySelectorAll('[data-i18n-html]').forEach(el => {
-        const v = S[el.dataset.i18nHtml];
-        if (v !== undefined) el.innerHTML = v;
-      });
-      $("coachReopenLabel").textContent = S.showCoach;
-    }
-
-    const sourceSamples = S.sourceSamples;
-    const stepsByMode   = S.stepsByMode;
-    const guideTips     = S.guideTips;
-
-    let mode = "setup";
-    let current = 0;
-    let activeTooltipTarget = null;
-    const modeOrder = ["setup", "dev", "server", "source"];
-    const $ = id => root.querySelector("#" + id);
-
-    function setMode(nextMode){
-      mode = nextMode;
-      current = 0;
-      root.querySelectorAll("[data-mode]").forEach(btn=>{
-        const active = btn.dataset.mode === mode;
-        btn.className = "btn " + (active ? "btn-primary" : btn.dataset.mode === "server" ? "btn-outline-success" : "btn-outline-secondary");
-      });
-      root.querySelectorAll(".mode-screen").forEach(screen=>screen.classList.remove("active"));
-      $("screen-" + mode).classList.add("active");
-      render();
-    }
-
-    function renderSteps(){
-      $("steps").innerHTML = stepsByMode[mode].map((step,index)=>
-        `<button class="step ${index===current?"active":""}" data-step="${index}" type="button">
-          <span class="num">${index+1}</span>
-          <span><strong>${step[0]}</strong><span>${step[1]}</span></span>
-        </button>`).join("");
-      root.querySelectorAll("[data-step]").forEach(btn=>btn.onclick=()=>{current=+btn.dataset.step;render();});
-    }
-
-    function showDevTab(buttonId){
-      if(!buttonId) return;
-      const button = $(buttonId);
-      if(!button || !button.dataset.bsTarget) return;
-      bootstrap.Tab.getOrCreateInstance(button).show();
-    }
-
-    function render(){
-      const steps = stepsByMode[mode];
-      const step = steps[current];
-      renderSteps();
-      root.querySelectorAll(".highlight").forEach(el=>el.classList.remove("highlight"));
-      if(mode === "dev"){
-        const tab = {"pref-tab":"pref-tab","include-tab":"include-tab","manifest-tab":"manifest-tab","plugin-tab":"plugin-tab"}[step[2]] || "app-tab";
-        showDevTab(tab);
-      }
-      if(step[5]) setSource(step[5]);
-      $(step[2])?.classList.add("highlight");
-      $("coachTitle").textContent = step[0];
-      $("coachBody").textContent = step[3];
-      $("coachTip").textContent = step[4];
-      $("progress").textContent = `${current+1} / ${steps.length}`;
-      $("coachNext").textContent = current === steps.length - 1 ? S.done : S.next;
-    }
-
-    function setSource(name){
-      root.querySelectorAll("[data-source]").forEach(btn=>btn.classList.toggle("active",btn.dataset.source===name));
-      $("sourceCode").innerHTML = sourceSamples[name];
-    }
-
-    function inferTip(target){
-      const explicit = target.closest("[data-guide-tip]");
-      if(explicit) return explicit.dataset.guideTip;
-      const element = target.closest("button,input,select,textarea,label,.form-check,.card,.alert");
-      if(!element) return "";
-      const id = element.id || element.getAttribute("for") || element.querySelector("input")?.id;
-      if(id && guideTips[id]) return guideTips[id];
-      if(element.classList.contains("nav-link")){
-        const tabName = element.textContent.trim();
-        return guideTips[element.id] || tabName;
-      }
-      if(element.classList.contains("form-check")){
-        const label = element.querySelector("label")?.textContent.trim() || "";
-        const inputId = element.querySelector("input")?.id;
-        return (inputId && guideTips[inputId]) || label;
-      }
-      const group = element.closest(".mb-2,.mb-3,.row");
-      const label = group?.querySelector(".form-label,.col-form-label")?.textContent.trim();
-      if(label) return label;
-      if(element.tagName === "BUTTON") return guideTips[element.id] || element.textContent.trim();
-      return "";
-    }
-
-    function showClickTooltip(target, text){
-      const tooltip = $("clickTooltip");
-      if(!text){ tooltip.classList.remove("show"); return; }
-      if(activeTooltipTarget === target && tooltip.classList.contains("show")){
-        tooltip.classList.remove("show");
-        activeTooltipTarget = null;
-        return;
-      }
-      activeTooltipTarget = target;
-      tooltip.textContent = text;
-      tooltip.classList.add("show");
-      const rect = target.getBoundingClientRect();
-      const margin = 10;
-      let left = rect.right + 8;
-      if(left + tooltip.offsetWidth > window.innerWidth - margin) left = rect.left - tooltip.offsetWidth - 8;
-      if(left < margin) left = margin;
-      let top = rect.top;
-      if(top + tooltip.offsetHeight > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - tooltip.offsetHeight - margin);
-      tooltip.style.left = left + "px";
-      tooltip.style.top = top + "px";
-    }
-
-    root.querySelectorAll("[data-mode]").forEach(btn=>btn.onclick=()=>setMode(btn.dataset.mode));
-    root.querySelectorAll("[data-source]").forEach(btn=>btn.onclick=()=>{
-      setSource(btn.dataset.source);
-      if(mode==="source"){
-        const index = stepsByMode.source.findIndex(step=>step[5]===btn.dataset.source);
-        if(index>=0){current=index;render();}
-      }
-    });
-    $("coachNext").onclick=()=>{
-      if(current < stepsByMode[mode].length - 1){
-        current++;
-        render();
-        return;
-      }
-      const nextMode = modeOrder[modeOrder.indexOf(mode) + 1];
-      if(nextMode) setMode(nextMode);
-      else render();
-    };
-    root.querySelector(".electron-window").addEventListener("click", event=>{
-      if(event.target.closest(".coach,.coach-reopen")) return;
-      const target = event.target.closest("button,input,select,textarea,label,.form-check,.card,.alert");
-      if(!target) return;
-      const text = inferTip(target);
-      if(text) showClickTooltip(target, text);
-    });
-    document.addEventListener("click", event=>{
-      if(!event.target.closest(".electron-window") && !event.target.closest("#clickTooltip")){
-        $("clickTooltip").classList.remove("show");
-        activeTooltipTarget = null;
-      }
-    });
-    $("clickTooltip").onclick=()=>{
-      $("clickTooltip").classList.remove("show");
-      activeTooltipTarget = null;
-    };
-    $("coachClose").onclick=()=>{
-      $("coach").classList.add("collapsed");
-      $("coachReopen").classList.add("show");
-    };
-    $("coachReopen").onclick=()=>{
-      $("coach").classList.remove("collapsed");
-      $("coachReopen").classList.remove("show");
-    };
-
-    applyI18n();
-    setSource("auto");
-    setMode("setup");
-  })();
-</script>
 </body>
 </html>
