@@ -14,9 +14,10 @@ html,body{height:100%;margin:0;background:#1e1e1e;}
 #editor-toolbar{position:absolute;top:0;left:0;right:0;height:28px;box-sizing:border-box;padding:0 8px;
     display:flex;align-items:center;gap:8px;background:#252526;border-bottom:1px solid #333;
     color:#aaa;font:12px sans-serif;}
-#editor-save-btn{display:none;font:12px sans-serif;padding:2px 10px;border:1px solid #555;border-radius:3px;
-    background:#333;color:#ddd;cursor:pointer;}
-#editor-save-btn:hover{background:#3a3a3a;}
+#editor-save-btn,#editor-refresh-btn{display:none;font:12px sans-serif;padding:2px 10px;border:1px solid #555;border-radius:3px;
+    background:#333;color:#ddd;cursor:pointer;line-height:1.2;}
+#editor-refresh-btn{padding:2px 7px;}
+#editor-save-btn:hover,#editor-refresh-btn:hover{background:#3a3a3a;}
 #editor-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #editor-body{position:absolute;top:28px;left:0;right:0;bottom:0;color:#ccc;font:13px monospace;padding:8px;box-sizing:border-box;}
 </style>
@@ -24,6 +25,7 @@ html,body{height:100%;margin:0;background:#1e1e1e;}
 <body>
 <div id="editor-toolbar">
     <button id="editor-save-btn" type="button">Save (Ctrl+S)</button>
+    <button id="editor-refresh-btn" type="button" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
     <span id="editor-path"></span>
     <span id="editor-status"></span>
 </div>

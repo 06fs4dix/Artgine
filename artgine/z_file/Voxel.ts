@@ -1,7 +1,7 @@
 
 import { AlphaModalFun, vfxMat0, vfxMat1, LUT0, LUT1, LUT2, LUT3, LUT4, LUT5, VFX, VFXDown2 } from "./ColorFun";
 import { DecalCac, decalInvWorldMat, decalParam } from "./Decal";
-import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask } from "./Light";
+import { ambientColor, ligCol, ligCount, ligDir, LightCac2D, ligMask, cullMask, LightCac3D, material, ligStep0, ligStep1, ligStep2, ligStep3, envmapOn, sam2DCount, samCubeCount } from "./Light";
 import { SDF } from "./SDF";
 import { 
 	Build, CMat, CVec2, CVec3, CVec4, CMat3, OutColor, OutPosition,   
@@ -26,6 +26,7 @@ import {
     max,
     V3Len,
     V3SubV3,
+    V3Nor,
 } from "./Shader"
 import { 
 	bias, normalBias, PCF, shadowCount, shadowRate, shadowWrite, texture16f,
@@ -42,6 +43,8 @@ var viewMat : CMat=Null();
 var projectMat : CMat=Null();
 var colorModel : CVec4=Null();
 var alphaModel : CVec2=Null();
+
+var camPos: CVec3=Null();
 
 var out_position : OutPosition=Null();
 var out_color : OutColor=Null();
@@ -60,7 +63,7 @@ var sun : number=1.0;
 var time : number=Attribute(0,"time");
 
 Build("Artgine/Shader/Voxel",[],
-	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun],[out_position,to_uv,to_worldPos],
+	vs_main,[worldMat,viewMat,projectMat,colorModel,alphaModel,size,shadowOn,sun],[out_position,to_uv,to_worldPos,to_normal],
     ps_main,[out_color]
 );
 	
@@ -331,6 +334,8 @@ function vs_main(f4_ver : Vertex4,f4_uv : UV4,f2_color : Color2)
 	else
 		to_uv.w=light;
 
+    to_normal = data[1];
+
 	P=V4MulMatCoordi(P,worldMat);
 	to_worldPos=P;
 	P=V4MulMatCoordi(P,viewMat);
@@ -385,12 +390,12 @@ function ps_main()
     BranchEnd();
 
 	var DSE : CMat3=new CMat3(0);
-	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,ambientColor,cullMask]);
-	DSE = LightCac2D(to_worldPos,L_cor,new CVec3(0.0,0.0,0.0),shadow,cullMask.x);
-	L_cor.rgb=DSE[0];
+	BranchBegin("light","L",[ligDir,ligCol,ligMask,ligCount,camPos,material,ligStep0,ligStep1,ligStep2,ligStep3,ambientColor,envmapOn,sam2DCount,samCubeCount,cullMask]);
+	DSE = LightCac3D(camPos,to_worldPos,L_cor,to_normal,shadow,material.y,material.x,material.z,cullMask.x);
+	L_cor.rgb=V3AddV3(DSE[0],DSE[1]);
     BranchDefault();
-    if(shadow.a > -0.5) {
-		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
+    if(shadow.r > -0.5) {
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
 	}
 	BranchEnd();
 
@@ -550,12 +555,12 @@ function ps_main_shadow_read()
     all = new CVec4(0.0,0.0,0.0,0.0);
     for(var i=0;i<SDF.TexSizeMax;++i) {
         if(i >= FloatToInt(shadowCount)) break;
-        all[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), to_normal, to_worldPos);
+        all[FloatToInt(outputIndex)] += CalcShadow(IntToFloat(i), V3Nor(to_normal), to_worldPos);
         outputIndex = min(outputIndex + 1.0, 3.0);
     }
     all.a /= max(shadowCount - 3.0, 1.0);
 	BranchDefault();
-	all.r = CalcShadow(0.0, to_normal, to_worldPos);
+	all.r = CalcShadow(0.0, V3Nor(to_normal), to_worldPos);
     all.rgb = new CVec3(all.r, all.r, all.r);
     all.a = 1.0;
 	BranchEnd();

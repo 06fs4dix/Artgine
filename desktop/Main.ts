@@ -27,6 +27,20 @@ import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 import { CLogRouter } from '../artgine/server/CLogRouter.js';
 
+// 전역 크래시 가드 — 가장 먼저 등록해 이후 모든 라우터/서버 코드를 보호한다.
+// stdout/stderr가 파이프(콘솔 창 등)일 때, 읽는 쪽이 드레인을 멈추면(예: Windows 콘솔
+// QuickEdit 선택 모드, 창 최소화) 파이프 버퍼가 차서 write가 EAGAIN을 던진다. 핸들러가
+// 없으면 이 비동기 스트림 에러가 메인 프로세스 uncaughtException으로 올라가 앱이 멈춘다
+// ("A JavaScript error occurred in the main process"). 파이프 백프레셔(EAGAIN/EPIPE)는
+// 로그만 유실하고 앱은 계속 돌게 흡수한다. 그 외 예외는 로깅만 하고 프로세스는 유지한다.
+process.stdout.on('error', (e: any) => { if (e?.code === 'EAGAIN' || e?.code === 'EPIPE') return; });
+process.stderr.on('error', (e: any) => { if (e?.code === 'EAGAIN' || e?.code === 'EPIPE') return; });
+process.on('uncaughtException', (e: any) => {
+	if (e?.code === 'EAGAIN' || e?.code === 'EPIPE') return;
+	console.error('[uncaughtException]', e);
+});
+process.on('unhandledRejection', (e: any) => { console.error('[unhandledRejection]', e); });
+
 // __dirname 대체 코드 (TS + ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

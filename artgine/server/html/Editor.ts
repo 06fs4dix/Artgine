@@ -13,9 +13,19 @@ const gUrl = CUtilWeb.Parameter("url") ?? "";
 
 // 언어 맵은 CUtilWeb.sMonacoExtToLang 공유. TS 언어 서비스/TSImport는 typescript일 때만 MonacoEditer 내부에서 동작.
 const saveBtn = CDOM.ID("editor-save-btn") as HTMLButtonElement;
+const refreshBtn = CDOM.ID("editor-refresh-btn") as HTMLButtonElement;
 const pathEl = CDOM.ID("editor-path") as HTMLSpanElement;
 const statusEl = CDOM.ID("editor-status") as HTMLSpanElement;
 if (pathEl) { pathEl.textContent = gPath || gUrl; pathEl.title = gPath || gUrl; }
+
+let gDirty = false;
+let gSuppressDirty = false;
+let gEditor: any = null;
+let gMode: "text" | "sheet" | null = null;
+let gWritable = false;
+let gExt = "";
+let gContainer: HTMLElement | null = null;
+let gToolbarBound = false;
 
 // 이 페이지가 로드된 origin(로컬/원격 서버 공통)의 admin 토큰이 이미 저장돼 있는지로 쓰기 가능 여부를 판단한다.
 // Home/Control 쪽에서 로그인하면 같은 origin의 localStorage 토큰을 공유하므로 여기서 별도 로그인 UI는 두지 않는다.
@@ -30,6 +40,7 @@ async function canWrite(): Promise<boolean> {
 
 // 수정/저장 상태를 부모(Control.ts)에 알린다. 부모는 이 신호로 사이드바 항목의 초록/노랑 점을 갱신한다.
 function sendDirty(_dirty: boolean): void {
+    gDirty = _dirty;
     if (window.parent !== window) CIframeMsg.Send(window.parent, 'editor-dirty', { dirty: _dirty });
 }
 
@@ -56,6 +67,25 @@ function startSaveTimer(): void {
 function stopSaveTimer(): void {
     if (gSaveTimerId !== null) { window.clearInterval(gSaveTimerId); gSaveTimerId = null; }
     gLastSaveTime = null;
+}
+
+function showToolbar(): void {
+    if (refreshBtn) refreshBtn.style.display = "inline-block";
+    if (saveBtn && gWritable) saveBtn.style.display = "inline-block";
+}
+
+function bindToolbarOnce(): void {
+    if (gToolbarBound) return;
+    gToolbarBound = true;
+    if (saveBtn) {
+        saveBtn.addEventListener("click", () => {
+            if (gMode === "sheet") saveSheetFile();
+            else if (gEditor) saveFile(gEditor);
+        });
+    }
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", () => { void refreshFile(); });
+    }
 }
 
 async function uploadFile(_base64: string) {
@@ -171,47 +201,82 @@ async function saveSheetFile() {
     await uploadFile(base64);
 }
 
+async function loadSheetData(ext: string): Promise<CSheetData> {
+    const res = await fetch(gUrl, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+
+    if (ext === 'csv') {
+        const str = CUtil.ArrayToString(buf);
+        const lines = str.split(/\r?\n/).filter(l => l.trim());
+        return [{ name: 'Sheet1', rows: lines.map(l => parseCSVLine(l)) }];
+    }
+
+    const XLSX = (window as any)["XLSX"];
+    if (!XLSX) throw new Error("xlsx library not loaded.");
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    return (wb.SheetNames as string[]).map((name: string) => {
+        const sheet = wb.Sheets[name];
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        return { name, rows };
+    });
+}
+
 async function mainSheet(container: HTMLElement, ext: string, writable: boolean) {
-    let buf: ArrayBuffer;
+    gMode = "sheet";
+    gContainer = container;
+    gExt = ext;
+    gWritable = writable;
+
+    let data: CSheetData;
     try {
-        const res = await fetch(gUrl);
-        if (!res.ok) { container.textContent = `Failed to load file: HTTP ${res.status}`; return; }
-        buf = await res.arrayBuffer();
+        data = await loadSheetData(ext);
     } catch (e: any) {
         container.textContent = `Failed to load file: ${e.message}`;
         return;
     }
 
-    let data: CSheetData;
-    if (ext === 'csv') {
-        const str = CUtil.ArrayToString(buf);
-        const lines = str.split(/\r?\n/).filter(l => l.trim());
-        data = [{ name: 'Sheet1', rows: lines.map(l => parseCSVLine(l)) }];
-    } else {
-        const XLSX = (window as any)["XLSX"];
-        if (!XLSX) {
-            container.textContent = "xlsx 라이브러리가 로드되지 않았습니다.";
-            return;
-        }
-        const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-        data = (wb.SheetNames as string[]).map((name: string) => {
-            const sheet = wb.Sheets[name];
-            const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-            return { name, rows };
-        });
-    }
-
     gSheetData = data;
     gSheetExt = ext;
+    container.innerHTML = "";
 
     CUtilWeb.SheetEditor(container, data, writable, (_action, _payload) => {
         applySheetAction(_action, _payload);
         sendDirty(true);
     });
 
-    if (writable && saveBtn) {
-        saveBtn.style.display = "inline-block";
-        saveBtn.addEventListener("click", () => saveSheetFile());
+    bindToolbarOnce();
+    showToolbar();
+}
+
+async function refreshFile(): Promise<void> {
+    if (!gUrl || !gMode) return;
+    if (gDirty && !confirm("저장되지 않은 변경이 있습니다. 서버 내용으로 덮어쓸까요?")) return;
+
+    if (statusEl) statusEl.textContent = "Refreshing...";
+    try {
+        if (gMode === "text" && gEditor) {
+            const res = await fetch(gUrl, { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const source = await res.text();
+            gSuppressDirty = true;
+            gEditor.setValue(source);
+            gSuppressDirty = false;
+            sendDirty(false);
+            stopSaveTimer();
+            if (statusEl) statusEl.textContent = "Refreshed";
+            return;
+        }
+
+        if (gMode === "sheet" && gContainer) {
+            await mainSheet(gContainer, gExt, gWritable);
+            sendDirty(false);
+            stopSaveTimer();
+            if (statusEl) statusEl.textContent = "Refreshed";
+        }
+    } catch (e: any) {
+        gSuppressDirty = false;
+        if (statusEl) statusEl.textContent = `Refresh failed: ${e.message}`;
     }
 }
 
@@ -221,15 +286,19 @@ async function main() {
 
     const { ext } = CString.ExtCut(gPath || gUrl);
     const writable = await canWrite();
+    gWritable = writable;
+    gExt = ext;
+    gContainer = container;
 
     if (ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
         await mainSheet(container, ext, writable);
         return;
     }
 
+    gMode = "text";
     let source: string;
     try {
-        const res = await fetch(gUrl);
+        const res = await fetch(gUrl, { cache: "no-store" });
         if (!res.ok) { container.textContent = `Failed to load file: HTTP ${res.status}`; return; }
         source = await res.text();
     } catch (e: any) {
@@ -240,16 +309,17 @@ async function main() {
     const language = CUtilWeb.sMonacoExtToLang[ext] ?? "plaintext";
 
     CUtilWeb.MonacoEditer(container, source, language, "vs-dark", (editor) => {
+        gEditor = editor;
         editor?.updateOptions({ readOnly: !writable });
+        bindToolbarOnce();
+        showToolbar();
         if (!writable) return;
 
-        if (saveBtn) {
-            saveBtn.style.display = "inline-block";
-            saveBtn.addEventListener("click", () => saveFile(editor));
-        }
         const monacoNs = (window as any)["monaco"];
         editor.addCommand(monacoNs.KeyMod.CtrlCmd | monacoNs.KeyCode.KeyS, () => saveFile(editor));
-        editor.onDidChangeModelContent(() => sendDirty(true));
+        editor.onDidChangeModelContent(() => {
+            if (!gSuppressDirty) sendDirty(true);
+        });
     }, false, gUrl);
 }
 main();

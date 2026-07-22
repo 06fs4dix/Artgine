@@ -17,6 +17,16 @@ import { BackUp, CreateRole, DeleteRole, DependenciesChk, ExtractServiceWorkerCo
 import { CServerMain } from '../artgine/network/CServerMain.js';
 import { CUniqueID } from '../artgine/basic/CUniqueID.js';
 import { CLogRouter } from '../artgine/server/CLogRouter.js';
+process.stdout.on('error', (e) => { if (e?.code === 'EAGAIN' || e?.code === 'EPIPE')
+    return; });
+process.stderr.on('error', (e) => { if (e?.code === 'EAGAIN' || e?.code === 'EPIPE')
+    return; });
+process.on('uncaughtException', (e) => {
+    if (e?.code === 'EAGAIN' || e?.code === 'EPIPE')
+        return;
+    console.error('[uncaughtException]', e);
+});
+process.on('unhandledRejection', (e) => { console.error('[unhandledRejection]', e); });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 if (app.isPackaged) {

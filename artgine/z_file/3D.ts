@@ -634,7 +634,7 @@ function ps_main()
     
 	BranchDefault();
 	if(shadow.a > -0.5) {
-		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
 	}
 	//L_cor.rgb = V3MulFloat(L_cor.rgb,shadow);
 	BranchEnd();

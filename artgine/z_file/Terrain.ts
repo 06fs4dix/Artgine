@@ -459,6 +459,10 @@ function ps_main()
     dseMat = LightCac3D(camPos, to_worldPos, L_cor, normal, shadow, lmaterial.y, lmaterial.x, lmaterial.z, cullMask.x);
 
     L_cor.rgb = V3AddV3(dseMat[0],dseMat[1]);
+    BranchDefault();
+    if(shadow.r > -0.5) {
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
+	}
 	BranchEnd();
 
     out_color = L_cor;

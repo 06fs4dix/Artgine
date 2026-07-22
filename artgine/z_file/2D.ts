@@ -471,8 +471,8 @@ function ps_main()
 	DSE =LightCac2D(to_worldPos,L_cor,normal,shadow,cullMask.x);
 	L_cor.rgb=DSE[0];
     BranchDefault();
-    if(shadow.a > -0.5) {
-		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.a);
+    if(shadow.r > -0.5) {
+		L_cor.rgb = V3MulFloat(L_cor.rgb, shadow.r);
 	}
 	BranchEnd();
 	
