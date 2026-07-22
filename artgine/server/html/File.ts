@@ -743,8 +743,8 @@ var g_menuList={"<>":"div","class":"d-flex align-items-center p-1","html":[
             {"<>":"option","value":"0","text":"Add All"},
             {"<>":"option","value":"1","text":"Add Each (w/ Folder)"},
         ]},
-        {"<>":"button","type":"button","class":"btn btn-sm btn-outline-info","html":"Search","onclick":()=>{FileSearch();}},
-        {"<>":"button","type":"button","class":"btn btn-sm btn-outline-secondary","html":"File","onclick":()=>{FileBtn();}},
+        {"<>":"button","type":"button","class":"btn btn-sm btn-outline-info","text":"Search","onclick":()=>{FileSearch();}},
+        {"<>":"button","type":"button","class":"btn btn-sm btn-outline-secondary","text":"File","onclick":()=>{FileBtn();}},
     ]},
 ]};
 
